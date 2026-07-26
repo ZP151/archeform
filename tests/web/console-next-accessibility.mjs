@@ -75,6 +75,30 @@ async function expectKeyboardVisibleFocus(page, locator, message) {
   assert.deepEqual(focus, { offset: '2px', style: 'solid', width: '3px' }, `${message} It must have the shared keyboard-visible focus treatment.`);
 }
 
+async function resetFocusTrace(page) {
+  await page.evaluate(() => {
+    const target = window;
+    target.__factoryFocusTrace = [];
+    if (target.__factoryFocusTraceInstalled) return;
+    document.addEventListener('focusin', (event) => {
+      const element = event.target;
+      target.__factoryFocusTrace.push(element instanceof HTMLElement ? element.innerText.trim() || element.getAttribute('aria-label') || element.id || element.tagName : String(element));
+    });
+    target.__factoryFocusTraceInstalled = true;
+  });
+}
+
+async function focusTrace(page) {
+  return page.evaluate(() => window.__factoryFocusTrace.slice());
+}
+
+async function waitForFocusRestore(page, label) {
+  await page.waitForFunction((expectedLabel) => {
+    const active = document.activeElement;
+    return active instanceof HTMLElement && active.innerText.trim() === expectedLabel;
+  }, label);
+}
+
 async function runAccessibilityEvidence() {
   assert.equal(existsSync(join(consoleRoot, 'package-lock.json')), true, 'the checked-in Console Next lockfile is required.');
   assertRuntimeContainment();
@@ -109,9 +133,13 @@ async function runAccessibilityEvidence() {
     await page.getByRole('heading', { name: 'Local connection' }).waitFor();
     const capability = page.getByLabel('Local session capability');
     await expectFocused(page, capability, 'opening the connection Sheet must move focus to its labelled control.');
+    await resetFocusTrace(page);
     await page.keyboard.press('Escape');
     await page.getByRole('heading', { name: 'Local connection' }).waitFor({ state: 'hidden' });
+    await waitForFocusRestore(page, 'Local connection');
+    console.log(`console-next accessibility: sheet focus sequence ${JSON.stringify(await focusTrace(page))}`);
     assert.equal(await connection.evaluate((element) => document.activeElement === element), true, 'closing the Sheet must restore focus to its trigger.');
+    assert.equal((await focusTrace(page)).at(-1), 'Local connection', 'the Sheet focus sequence must finish at its trigger.');
 
     await connection.focus();
     await page.keyboard.press('Enter');
@@ -150,13 +178,17 @@ async function runAccessibilityEvidence() {
 
     const stop = page.getByRole('button', { name: 'Stop preview' });
     await expectFocused(page, stop, 'the stop-preview control must be keyboard focusable.');
+    await resetFocusTrace(page);
     await page.keyboard.press('Enter');
     const dialog = page.getByRole('dialog');
     await dialog.waitFor();
     assert.equal(await dialog.getByRole('button', { name: 'Confirm stop preview' }).isVisible(), true, 'the confirmation Dialog must expose its action.');
     await page.keyboard.press('Escape');
     await dialog.waitFor({ state: 'hidden' });
+    await waitForFocusRestore(page, 'Stop preview');
+    console.log(`console-next accessibility: dialog focus sequence ${JSON.stringify(await focusTrace(page))}`);
     assert.equal(await stop.evaluate((element) => document.activeElement === element), true, 'closing the Dialog must restore focus to its trigger.');
+    assert.equal((await focusTrace(page)).at(-1), 'Stop preview', 'the Dialog focus sequence must finish at its trigger.');
 
     const diagnostics = page.getByRole('button', { name: 'Bounded log and diagnostics' });
     await expectFocused(page, diagnostics, 'the diagnostic Accordion trigger must be keyboard focusable.');
