@@ -9,7 +9,7 @@ single named writer may modify production paths.
 
 | Field | Value |
 | --- | --- |
-| State | implementing |
+| State | accepted |
 | Scope | A shadcn-derived, local Console Next preview for Factory Pilot. |
 | Approved design | `docs/superpowers/specs/2026-07-26-console-next-shadcn-design.md` — approved by the founder on 2026-07-26. |
 | Approved ADR | ADR-005, limited to source intake and Console Next preview; no generated application v2 selection or promotion. |
@@ -35,8 +35,8 @@ single named writer may modify production paths.
 | ID | Task | Owner | State | Allowed write paths | Completion gate |
 | --- | --- | --- | --- | --- | --- |
 | CNP-01 | Intake verifier and fixed source snapshot | Integration | accepted | `tools/console_next_intake.py`; `tests/api/test_console_next_intake.py`; `packages/vendor/shadcn-ui/**` | Accepted after focused 8/8 hostile tests and independent re-review with no P0/P1/P2. |
-| CNP-02/03 | Locked Console Next vertical slice: local primitives, workflow parity, and browser E2E | Frontend | implementing | `apps/console-next/**`; `tests/web/console-next-e2e.mjs`; `tests/web/fixture-control-plane.mjs`; smallest export-only change to `tests/web/workspace-e2e.mjs`; complete lockfile capture in the vendor closure; source-intake tests for fail-closed preflight | Exact lock/source attribution and Next build pass; full fixture-backed workflow passes. |
-| CNP-04 | Accessibility, QA, review, and acceptance | QA / Reviewer / PM | planned | `tests/web/console-next-accessibility.mjs`; `THIRD_PARTY_NOTICES.md`; ledger/status after hand-off | Fresh full evidence and no unresolved P0/P1. |
+| CNP-02/03 | Locked Console Next vertical slice: local primitives, workflow parity, and browser E2E | Frontend | accepted | `apps/console-next/**`; `tests/web/console-next-e2e.mjs`; `tests/web/fixture-control-plane.mjs`; smallest export-only change to `tests/web/workspace-e2e.mjs`; complete lockfile capture in the vendor closure; source-intake tests for fail-closed preflight | Accepted after fixed-digest lifecycle preflight, structured editor/artifact E2E, and source-containment review. |
+| CNP-04 | Accessibility, QA, review, and acceptance | QA / Reviewer / PM | accepted | `tests/web/console-next-accessibility.mjs`; `THIRD_PARTY_NOTICES.md`; ledger/status after hand-off | Accepted after final independent GO review and five consecutive accessibility passes with loopback cleanup. |
 
 ## Stop rules
 
@@ -48,3 +48,18 @@ single named writer may modify production paths.
 - A hand-off reports changed paths, exact commands, RED/GREEN evidence,
   residual risks, and an assertion that no secret/raw source archive/raw
   evidence entered browser or generated output.
+
+## Acceptance evidence and residual risk
+
+- Final release review: GO with no P0/P1/P2 findings after the focus-restoration
+  repair.
+- Final QA: five serial accessibility passes; preflight, production build,
+  source closure, full loopback workflow including artifact download and stop,
+  intake hostile tests, static rollback syntax, and final port cleanup all
+  passed.
+- `npm audit --omit=dev --json` still reports three high-severity advisories
+  through the exact locked Next.js dependency tree (`next`, `postcss`, and
+  `sharp`). There is no compatible automatic fix for the approved Next 15
+  profile. This is a recorded preview-only P2: it blocks production or Golden
+  promotion until a separate dependency-security ADR and remediation slice are
+  accepted.

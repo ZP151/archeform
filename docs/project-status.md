@@ -2,7 +2,12 @@
 
 ## Current milestone
 
-Trusted Registry and Local Supply Chain (Stage 2) is implementing under accepted ADR-004. It adds offline-verifiable sidecar trust evidence and lifecycle controls while preserving the accepted Composable Internal Approval Suite and every frozen Stage 1 package/lock unchanged. ADR-005 is accepted as a future, quarantined shadcn-derived UI v2 migration path; its programme is planned and no external source has been acquired.
+Trusted Registry and Local Supply Chain (Stage 2) remains the next core platform
+milestone under accepted ADR-004. The quarantined ADR-005 Console Next preview
+is now accepted: its fixed shadcn source snapshot, exact dependency closure,
+local-only lifecycle preflight, and loopback control console provide a
+production-quality founder preview while leaving generated applications and
+the Stage 1 component contracts unchanged.
 
 ## Completed evidence
 
@@ -32,6 +37,12 @@ Trusted Registry and Local Supply Chain (Stage 2) is implementing under accepted
 - The generated session capability is a local development identity boundary backed by environment-supplied user directory and signing key; production OIDC, password KDFs, secret management, and multi-user operations require a future ADR.
 - The repository has an initial local baseline and reproducible review point. It has no configured remote, so remote backup, collaboration, and publication remain deliberately out of scope.
 - Generated applications use browser cookie sessions for the MVP, but their local user directory and signing key must remain external environment inputs and never enter output evidence.
+- Console Next is an accepted local preview, not a Golden/generated-application
+  component. Its fixed Next.js dependency tree has three high-severity audit
+  advisories through `next`, `postcss`, and `sharp`; no compatible automatic
+  upgrade exists for the approved profile. It must not be promoted to a
+  production or Golden runtime until a dedicated dependency-security ADR and
+  remediation slice are accepted.
 - A paid live OpenAI call is intentionally not part of CI; the documented guarded smoke must be run manually with a locally configured `OPENAI_API_KEY` before enabling a live model-backed environment.
 - Live-model reliability is not yet measured. During the first real founder test, a more detailed equipment-access brief was correctly rejected without persistent state because its output did not satisfy the frozen approval-app policy; an equivalent concise brief succeeded. The product needs an evaluation set and measured first-pass validity before broadening scope.
 - The Executor is deliberately separate and must remain running to process explicit stop and TTL requests. The current console reports this correctly, but local startup still requires multiple manual processes rather than a founder-oriented development launcher.
@@ -39,7 +50,11 @@ Trusted Registry and Local Supply Chain (Stage 2) is implementing under accepted
 
 ## Next smallest slice
 
-Integration-owned TR-04: implement the append-only Trusted Registry lifecycle, explicit legacy handling, revocations, and the per-package trust-evidence/policy promotion blocker against the accepted frozen trust contract. Stage 1 contracts, packages, locks, and Composer behavior remain frozen. The ADR-005 quarantined-intake programme remains planned behind this slice.
+Integration-owned TR-04: implement the append-only Trusted Registry lifecycle,
+explicit legacy handling, revocations, and the per-package trust-evidence/policy
+promotion blocker against the accepted frozen trust contract. Stage 1 contracts,
+packages, locks, and Composer behavior remain frozen. The accepted Console Next
+preview remains a local control-console path only.
 
 ## Completion gate
 
