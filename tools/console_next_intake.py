@@ -65,6 +65,17 @@ APPROVED_PRIMITIVES = (
     "tooltip",
 )
 
+LOCAL_PRIMITIVE_TRANSFORMS = {
+    "alert-dialog": (
+        'import { Button } from "@/registry/new-york-v4/ui/button"',
+        'import { Button } from "@/components/ui/button"',
+    ),
+    "dialog": (
+        'import { Button } from "@/registry/new-york-v4/ui/button"',
+        'import { Button } from "@/components/ui/button"',
+    ),
+}
+
 
 class SnapshotError(ValueError):
     """A stable, non-secret offline intake denial."""
@@ -384,7 +395,26 @@ def _lock_inventory(lockfile: Path | None) -> dict[str, Any]:
     }
 
 
-def console_next_closure(index: SnapshotIndex, lockfile: Path | None = None) -> dict[str, Any]:
+def _local_primitive_transforms(root: Path, primitives: list[dict[str, Any]]) -> list[dict[str, str]]:
+    """Record the only allowed local import rewrites without changing source authority."""
+    output: list[dict[str, str]] = []
+    by_name = {item["name"]: item for item in primitives}
+    for name, (source_import, local_import) in sorted(LOCAL_PRIMITIVE_TRANSFORMS.items()):
+        source = by_name[name]["files"][0]
+        path = _contained(root, root / source["path"])
+        raw = path.read_bytes()
+        source_text = raw.decode("utf-8")
+        if source_text.count(source_import) != 1:
+            _fail("invalid_transform_source", name)
+        output.append({
+            "name": name,
+            "output_sha256": _sha256(source_text.replace(source_import, local_import).encode("utf-8")),
+            "source_sha256": source["sha256"],
+        })
+    return output
+
+
+def console_next_closure(root: Path, index: SnapshotIndex, lockfile: Path | None = None) -> dict[str, Any]:
     """Build the approved primitive-only closure from verified registry data."""
     by_name = {item.name: item for item in index.registry_ui}
     missing = [name for name in APPROVED_PRIMITIVES if name not in by_name]
@@ -392,9 +422,11 @@ def console_next_closure(index: SnapshotIndex, lockfile: Path | None = None) -> 
         _fail("missing_approved_primitive", ",".join(missing))
     primitives = [by_name[name].as_dict() for name in APPROVED_PRIMITIVES]
     direct_dependencies = sorted({dependency for item in primitives for dependency in item["dependencies"]})
+    snapshot_root = _absolute_root(Path(root))
     return {
         "license": {"expression": "MIT", "sha256": index.license_sha256},
         "lockfile": _lock_inventory(lockfile),
+        "local_transformations": _local_primitive_transforms(snapshot_root, primitives),
         "primitives": primitives,
         "schema_version": "factory-console-next-closure/v1",
         "snapshot_digest": index.digest,
@@ -410,7 +442,34 @@ def write_console_next_closure(root: Path, index: SnapshotIndex, lockfile: Path 
     if target.exists() and (target.is_symlink() or not target.is_file()):
         _fail("non_regular_file", CLOSURE_FILE)
     try:
-        target.write_bytes(canonical_json_bytes(console_next_closure(index, lockfile)) + b"\n")
+        target.write_bytes(canonical_json_bytes(console_next_closure(snapshot, index, lockfile)) + b"\n")
     except OSError as error:
         _fail("write_failed", str(error))
     return target
+
+
+def verify_console_next_closure(root: Path, expected_commit: str, lockfile: Path) -> dict[str, Any]:
+    """Fail closed unless the checked-in closure exactly captures a local lockfile."""
+    snapshot = _absolute_root(Path(root))
+    index = verify_snapshot(snapshot, expected_commit)
+    target = snapshot / CLOSURE_FILE
+    if target.is_symlink() or not target.is_file():
+        _fail("missing_closure")
+    try:
+        actual = json.loads(_contained(snapshot, target).read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        _fail("invalid_closure", str(error))
+    expected = console_next_closure(snapshot, index, lockfile)
+    if actual.get("lockfile", {}).get("status") == "pending_task_2":
+        _fail("pending_closure")
+    if not expected["lockfile"]["packages"]:
+        _fail("pending_closure")
+    if actual != expected:
+        _fail("closure_mismatch")
+    try:
+        raw = target.read_bytes()
+    except OSError as error:
+        _fail("invalid_closure", str(error))
+    if raw != canonical_json_bytes(actual) + b"\n":
+        _fail("closure_mismatch")
+    return actual

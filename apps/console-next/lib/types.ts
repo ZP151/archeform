@@ -1,4 +1,20 @@
-export type Definition = Record<string, unknown> & { metadata?: { version?: string }; primary_record?: { label?: string; fields?: Array<{ id: string; label: string }> } };
+export type FieldType = 'string' | 'number' | 'date' | 'enum';
+export type RoleKind = 'submitter' | 'approver' | 'auditor' | 'observer';
+export type Field = { id: string; label: string; type: FieldType; required?: boolean; options?: string[] };
+export type Role = { id: string; label: string; kind: RoleKind };
+export type Page = { id: string; label: string; kind: 'form' | 'list' | 'queue' | 'audit'; actor_kinds: RoleKind[] };
+export type Definition = {
+  apiVersion?: string;
+  kind?: string;
+  metadata: { name?: string; version?: string };
+  profile?: string;
+  roles: Role[];
+  primary_record: { id: string; label: string; fields: Field[] };
+  pages: Page[];
+  assumptions: string[];
+  open_questions: string[];
+  workflow?: unknown;
+};
 export type Version = { id: string; status: string; created_at?: string; definition: Definition; parent_version_id?: string | null };
 export type Plan = { id: string; version_id: string; status: string; components?: Array<{ key: string; version: string; trust_level?: string; selected_for?: string }> };
 export type Run = { id: string; plan_id: string; status: string; phase?: string; preview_url?: string | null; artifacts?: Array<{ id: string; path: string; url: string }>; executor?: { status?: string; message?: string | null } };

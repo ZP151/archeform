@@ -16,8 +16,16 @@ function definition(name, version = '1') {
   return {
     apiVersion: 'factory/v1', kind: 'Application',
     metadata: { name, version }, profile: 'internal-workflow-app',
-    primary_record: { id: 'request', label: 'Approval request', fields: [{ id: 'reason', label: 'Reason' }] },
+    primary_record: { id: 'request', label: 'Approval request', fields: [{ id: 'reason', label: 'Reason', type: 'string', required: true }] },
     roles: [{ id: 'employee', label: 'Employee', kind: 'submitter' }, { id: 'manager', label: 'Manager', kind: 'approver' }],
+    pages: [
+      { id: 'submit', label: 'Submit request', kind: 'form', actor_kinds: ['submitter'] },
+      { id: 'my_records', label: 'My requests', kind: 'list', actor_kinds: ['submitter'] },
+      { id: 'approval_queue', label: 'Approval queue', kind: 'queue', actor_kinds: ['approver'] },
+      { id: 'audit', label: 'Audit history', kind: 'audit', actor_kinds: ['approver'] },
+    ],
+    assumptions: [],
+    open_questions: [],
   };
 }
 

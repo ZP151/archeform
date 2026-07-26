@@ -15,6 +15,8 @@ from tools.console_next_intake import (
     SnapshotError,
     canonical_json_bytes,
     verify_snapshot,
+    verify_console_next_closure,
+    write_console_next_closure,
     write_candidate_index,
 )
 
@@ -137,6 +139,37 @@ class ConsoleNextIntakeTests(unittest.TestCase):
         candidate_path.write_bytes(canonical_json_bytes(candidate) + b"\n")
 
         self._assert_code(root, "snapshot_digest_mismatch", PINNED_COMMIT)
+
+    def test_rejects_pending_empty_and_mismatched_console_next_closures(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name) / "snapshot"
+        shutil.copytree(VENDORED_SNAPSHOT, root)
+        index = verify_snapshot(root, PINNED_COMMIT)
+        lockfile = Path(temporary.name) / "package-lock.json"
+        lockfile.write_bytes(canonical_json_bytes({
+            "lockfileVersion": 3,
+            "packages": {"node_modules/example": {"version": "1.0.0", "integrity": "sha512-example"}},
+        }) + b"\n")
+        write_console_next_closure(root, index)
+        with self.assertRaises(SnapshotError) as pending:
+            verify_console_next_closure(root, PINNED_COMMIT, lockfile)
+        self.assertEqual("pending_closure", pending.exception.code)
+
+        write_console_next_closure(root, index, lockfile)
+        closure_path = root / "console-next-closure.json"
+        closure = json.loads(closure_path.read_text(encoding="utf-8"))
+        closure["lockfile"]["packages"] = []
+        closure_path.write_bytes(canonical_json_bytes(closure) + b"\n")
+        with self.assertRaises(SnapshotError) as empty:
+            verify_console_next_closure(root, PINNED_COMMIT, lockfile)
+        self.assertEqual("closure_mismatch", empty.exception.code)
+
+        write_console_next_closure(root, index, lockfile)
+        lockfile.write_bytes(lockfile.read_bytes() + b" ")
+        with self.assertRaises(SnapshotError) as mismatch:
+            verify_console_next_closure(root, PINNED_COMMIT, lockfile)
+        self.assertEqual("closure_mismatch", mismatch.exception.code)
 
 
 if __name__ == "__main__":

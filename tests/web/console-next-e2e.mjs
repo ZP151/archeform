@@ -35,21 +35,34 @@ function assertPackageAndSourceOrigin() {
   assert.equal(pkg.dependencies.next, '15.5.21');
   assert.equal(pkg.dependencies.react, '19.2.7');
   assert.equal(pkg.dependencies['react-dom'], '19.2.7');
+  assert.equal(pkg.scripts.preflight, 'node scripts/preflight.mjs');
+  for (const script of ['dev', 'build', 'start']) assert.match(pkg.scripts[script], /^node scripts\/preflight\.mjs && /);
   assert.match(pkg.scripts.dev, /127\.0\.0\.1/);
   assert.match(pkg.scripts.dev, /5173/);
 
   const closure = JSON.parse(readFileSync(closurePath, 'utf8'));
   assert.match(closure.lockfile.consoleNextLockDigest || '', /^sha256:[a-f0-9]{64}$/);
+  assert.equal(closure.lockfile.status, 'captured', 'a pending closure must fail closed');
+  assert.ok(closure.lockfile.packages?.length, 'the closure must retain exact locked package evidence');
   const primitiveSources = new Map(
     closure.primitives.flatMap((primitive) => primitive.files.map((file) => [primitive.name, file.sha256])),
   );
+  const localTransforms = new Map((closure.local_transformations || []).map((entry) => [entry.name, entry]));
   const uiRoot = join(consoleRoot, 'components', 'ui');
   const uiFiles = files(uiRoot).filter((path) => path.endsWith('.tsx'));
   assert.equal(uiFiles.length, primitiveSources.size, 'only approved primitive files may be copied');
   for (const path of uiFiles) {
     const name = relative(uiRoot, path).replace(/\.tsx$/, '');
     assert.equal(primitiveSources.has(name), true, `${name} must be an approved primitive`);
-    assert.equal(sha256(path), primitiveSources.get(name), `${name} must match its verified source digest`);
+    const expected = localTransforms.get(name)?.output_sha256 || primitiveSources.get(name);
+    assert.equal(sha256(path), expected, `${name} must match its verified source or controlled transformation digest`);
+  }
+  assert.equal(existsSync(join(consoleRoot, 'registry', 'new-york-v4', 'ui', 'button.tsx')), false, 'no unverified registry wrapper may resolve a primitive import');
+  assert.deepEqual([...localTransforms.keys()], ['alert-dialog', 'dialog']);
+  for (const transform of closure.local_transformations || []) {
+    const path = join(uiRoot, `${transform.name}.tsx`);
+    assert.equal(sha256(path), transform.output_sha256, `${transform.name} must match its recorded local transformation`);
+    assert.match(readFileSync(path, 'utf8'), /@\/components\/ui\/button/);
   }
 }
 
@@ -93,9 +106,26 @@ async function runWorkflow() {
     await page.getByRole('button', { name: 'Generate application definition' }).click();
     await page.getByRole('heading', { name: 'Application definition' }).waitFor();
     console.log('console-next workflow: definition created');
+    await page.getByLabel('Role 1 label').fill('Claimant');
+    await page.getByLabel('Record ID').fill('expense_claim');
     await page.getByLabel('Primary record label').fill('Expense claim');
+    await page.getByRole('button', { name: 'Add field' }).click();
+    await page.getByLabel('Field 2 ID').fill('expense_type');
+    await page.getByLabel('Field 2 label').fill('Expense type');
+    await page.getByLabel('Field 2 type').selectOption('enum');
+    await page.getByLabel('Field 2 options').fill('Travel, Meals');
+    await page.getByLabel('audit page label').fill('Expense audit');
+    await page.getByLabel('Assumptions').fill('Managers are assigned.');
+    await page.getByLabel('Open questions').fill('Who reconciles receipts?');
     await page.getByRole('button', { name: 'Create next version' }).click();
     await page.getByText('Version 2 · draft').waitFor();
+    const savedDefinition = fixture.state.projects[0].versions.at(-1).definition;
+    assert.equal(savedDefinition.roles[0].label, 'Claimant');
+    assert.equal(savedDefinition.primary_record.id, 'expense_claim');
+    assert.deepEqual(savedDefinition.primary_record.fields.at(-1).options, ['Travel', 'Meals']);
+    assert.equal(savedDefinition.pages.find((item) => item.id === 'audit').label, 'Expense audit');
+    assert.deepEqual(savedDefinition.assumptions, ['Managers are assigned.']);
+    assert.deepEqual(savedDefinition.open_questions, ['Who reconciles receipts?']);
     console.log('console-next workflow: child version created');
     await page.getByRole('button', { name: 'Approve application definition' }).click();
     await page.getByRole('button', { name: 'Create build plan' }).click();
@@ -108,6 +138,10 @@ async function runWorkflow() {
     await page.getByRole('button', { name: 'Queue local build' }).click();
     await page.getByText('ready', { exact: true }).waitFor({ timeout: 8000 });
     console.log('console-next workflow: preview ready');
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Download component-lock.json' }).click();
+    assert.equal((await downloadPromise).suggestedFilename(), 'component-lock.json');
+    assert.equal(fixture.state.artifactToken, fixture.token, 'artifact download must retain the in-memory capability header');
     const preview = context.waitForEvent('page');
     await page.getByRole('button', { name: 'Open preview' }).click();
     await (await preview).close();

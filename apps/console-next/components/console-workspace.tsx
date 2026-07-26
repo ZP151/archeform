@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { FactoryApi } from '@/lib/factory-api';
+import { DefinitionEditor, validateDefinition } from '@/components/definition-editor';
 import type { Definition, Plan, Project, Run, Version } from '@/lib/types';
 
 const stages = ['brief', 'definition', 'plan', 'build'] as const;
@@ -25,10 +26,9 @@ function messageFor(error: unknown) {
   return error instanceof Error ? error.message : 'The local control plane did not return a usable response.';
 }
 
-function nextDefinition(version: Version, recordLabel: string): Definition {
-  const definition = structuredClone(version.definition) as Definition;
-  definition.metadata = { ...(definition.metadata || {}), version: String(Number(definition.metadata?.version || '0') + 1) };
-  definition.primary_record = { ...(definition.primary_record || {}), label: recordLabel };
+function nextDefinition(version: Version, draft: Definition): Definition {
+  const definition = structuredClone(draft);
+  definition.metadata = { ...definition.metadata, version: String(Number(version.definition.metadata.version || '0') + 1) };
   return definition;
 }
 
@@ -43,7 +43,7 @@ export function ConsoleWorkspace() {
   const [stage, setStage] = useState<Stage>('brief');
   const [projectName, setProjectName] = useState('');
   const [brief, setBrief] = useState('');
-  const [recordLabel, setRecordLabel] = useState('');
+  const [definitionDraft, setDefinitionDraft] = useState<Definition | null>(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -55,7 +55,7 @@ export function ConsoleWorkspace() {
     setProjects((current) => [...current.filter((item) => item.id !== id), result.project]);
     const chosen = result.project.versions.find((item) => item.id === chosenVersionId) || result.project.versions.at(-1) || null;
     setVersion(chosen);
-    setRecordLabel(chosen?.definition.primary_record?.label || '');
+    setDefinitionDraft(chosen ? structuredClone(chosen.definition) : null);
     const chosenPlan = chosen ? [...result.project.plans].reverse().find((item) => item.version_id === chosen.id) || null : null;
     setPlan(chosenPlan);
     const chosenRun = chosenPlan ? [...result.project.runs].reverse().find((item) => item.plan_id === chosenPlan.id) || null : null;
@@ -98,14 +98,19 @@ export function ConsoleWorkspace() {
   });
 
   const createChild = () => execute(async () => {
-    if (!project || !version) return;
-    const created = await api.request<{ version: Version }>(`/projects/${project.id}/versions`, { method: 'POST', body: JSON.stringify({ base_version_id: version.id, definition: nextDefinition(version, recordLabel) }) });
+    if (!project || !version || !definitionDraft) return;
+    const validationError = validateDefinition(definitionDraft);
+    if (validationError) throw new Error(validationError);
+    const created = await api.request<{ version: Version }>(`/projects/${project.id}/versions`, { method: 'POST', body: JSON.stringify({ base_version_id: version.id, definition: nextDefinition(version, definitionDraft) }) });
     await loadProject(project.id, created.version.id);
     setNotice(`Version ${created.version.definition.metadata?.version || ''} was created as an immutable child draft.`);
   });
 
   const approveDefinition = () => execute(async () => {
-    if (!version || recordLabel !== (version.definition.primary_record?.label || '')) throw new Error('Create the next version before approving unsaved edits.');
+    if (!version || !definitionDraft) throw new Error('Select an application definition first.');
+    const validationError = validateDefinition(definitionDraft);
+    if (validationError) throw new Error(validationError);
+    if (JSON.stringify(definitionDraft) !== JSON.stringify(version.definition)) throw new Error('Create the next version before approving unsaved edits.');
     const result = await api.request<{ version: Version }>(`/versions/${version.id}/approve`, { method: 'POST', body: '{}' });
     setVersion(result.version); setProject((current) => current ? { ...current, versions: current.versions.map((item) => item.id === result.version.id ? result.version : item) } : current);
     setNotice('Application definition approved. Create its immutable Golden build plan.');
@@ -151,10 +156,15 @@ export function ConsoleWorkspace() {
       <Sheet><SheetTrigger asChild><Button variant="outline">Local connection</Button></SheetTrigger><SheetContent><SheetHeader><SheetTitle>Local connection</SheetTitle><SheetDescription>The capability remains in this browser memory only.</SheetDescription></SheetHeader><div className="form-stack"><Label htmlFor="capability">Local session capability</Label><Input id="capability" value={capability} onChange={(event) => setCapability(event.target.value)} type="password" autoComplete="off" /><SheetClose asChild><Button onClick={() => { api.setCapability(capability); setNotice('Local capability loaded for this session.'); }}>Use local capability</Button></SheetClose></div></SheetContent></Sheet>
       <Tooltip><TooltipTrigger asChild><span className="muted">Loopback control plane only</span></TooltipTrigger><TooltipContent>Console Next calls the existing Factory API.</TooltipContent></Tooltip>
     </section>
-    <section className="lineage"><aside><h2>Product lineage</h2><Button variant="outline" onClick={() => { setProject(null); setVersion(null); setPlan(null); setRun(null); setStage('brief'); }}>New project</Button>{projects.length ? projects.map((item) => <Button key={item.id} variant="ghost" className="project-link" onClick={() => loadProject(item.id)}>{item.name}</Button>) : <p className="muted">No projects selected.</p>}<Separator /><h3>{project?.name || 'Project versions'}</h3>{project?.versions.slice().reverse().map((item) => <Button key={item.id} variant={version?.id === item.id ? 'secondary' : 'ghost'} className="project-link" onClick={() => { setVersion(item); setRecordLabel(item.definition.primary_record?.label || ''); setStage('definition'); }}>{`Version ${item.definition.metadata?.version || '—'} · ${item.status}`}</Button>)}</aside>
+    <section className="lineage"><aside><h2>Product lineage</h2><Button variant="outline" onClick={() => { setProject(null); setVersion(null); setDefinitionDraft(null); setPlan(null); setRun(null); setStage('brief'); }}>New project</Button>{projects.length ? projects.map((item) => <Button key={item.id} variant="ghost" className="project-link" onClick={() => loadProject(item.id)}>{item.name}</Button>) : <p className="muted">No projects selected.</p>}<Separator /><h3>{project?.name || 'Project versions'}</h3>{project?.versions.slice().reverse().map((item) => <Button key={item.id} variant={version?.id === item.id ? 'secondary' : 'ghost'} className="project-link" onClick={() => { setVersion(item); setDefinitionDraft(structuredClone(item.definition)); setStage('definition'); }}>{`Version ${item.definition.metadata?.version || '—'} · ${item.status}`}</Button>)}</aside>
       <div className="stages"><Tabs value={stage} onValueChange={(value) => setStage(value as Stage)}><TabsList>{stages.map((item, index) => <TabsTrigger value={item} key={item} disabled={item === 'definition' && !version || item === 'plan' && !plan || item === 'build' && plan?.status !== 'approved'}>{`0${index + 1} ${item === 'brief' ? 'Brief' : item === 'definition' ? 'Application definition' : item === 'plan' ? 'Build plan' : 'Build & preview'}`}</TabsTrigger>)}</TabsList>
         <TabsContent value="brief"><Card><CardHeader><CardTitle role="heading" aria-level={2}>Describe an internal application</CardTitle><CardDescription>Generate a bounded, editable application definition from the supplied business requirement.</CardDescription></CardHeader><CardContent><div className="form-stack"><Label htmlFor="project-name">Project name</Label><Input id="project-name" value={projectName} onChange={(event) => setProjectName(event.target.value)} placeholder="leave-management" /><Label htmlFor="requirement-brief">Requirement brief</Label><Textarea id="requirement-brief" value={brief} onChange={(event) => setBrief(event.target.value)} placeholder="Describe roles, records, approval rules, and audit expectations." /><Button disabled={busy} onClick={createProject}>Generate application definition</Button></div></CardContent></Card></TabsContent>
-        <TabsContent value="definition"><Card><CardHeader><CardTitle role="heading" aria-level={2}>Application definition</CardTitle><CardDescription>Review the immutable version and create a child version for permitted changes.</CardDescription></CardHeader><CardContent>{version ? <div className="form-stack"><Label htmlFor="record-label">Primary record label</Label><Input id="record-label" value={recordLabel} onChange={(event) => setRecordLabel(event.target.value)} /><pre className="evidence">{JSON.stringify(version.definition, null, 2)}</pre><div className="actions"><Button disabled={busy || version.status !== 'draft'} onClick={createChild}>Create next version</Button><Button variant="secondary" disabled={busy || version.status !== 'draft'} onClick={approveDefinition}>Approve application definition</Button><Button variant="outline" disabled={busy || version.status !== 'approved'} onClick={createPlan}>{planRetry ? 'Retry build plan' : 'Create build plan'}</Button></div></div> : <Skeleton className="skeleton" />}</CardContent></Card></TabsContent>
+        <TabsContent value="definition">
+          <Card>
+            <CardHeader><CardTitle role="heading" aria-level={2}>Application definition</CardTitle><CardDescription>Edit roles, record fields, page labels, assumptions, and questions as structured data. Saving creates an immutable child version.</CardDescription></CardHeader>
+            <CardContent>{version && definitionDraft ? <div className="form-stack"><DefinitionEditor value={definitionDraft} onChange={setDefinitionDraft} /><pre className="evidence">{JSON.stringify(definitionDraft, null, 2)}</pre><div className="actions"><Button disabled={busy || version.status !== 'draft'} onClick={createChild}>Create next version</Button><Button variant="secondary" disabled={busy || version.status !== 'draft'} onClick={approveDefinition}>Approve application definition</Button><Button variant="outline" disabled={busy || version.status !== 'approved'} onClick={createPlan}>{planRetry ? 'Retry build plan' : 'Create build plan'}</Button></div></div> : <Skeleton className="skeleton" />}</CardContent>
+          </Card>
+        </TabsContent>
         <TabsContent value="plan"><Card><CardHeader><CardTitle role="heading" aria-level={2}>Build plan</CardTitle><CardDescription>Only version-pinned Golden packages can enter this plan.</CardDescription></CardHeader><CardContent>{plan ? <><Table><TableHeader><TableRow><TableHead>Component</TableHead><TableHead>Version</TableHead><TableHead>Trust</TableHead></TableRow></TableHeader><TableBody>{plan.components?.map((component) => <TableRow key={component.key}><TableCell>{component.key}</TableCell><TableCell>{component.version}</TableCell><TableCell>{component.trust_level || 'golden'}</TableCell></TableRow>)}</TableBody></Table><Button disabled={busy || plan.status !== 'draft'} onClick={approvePlan}>Approve build plan</Button></> : <p className="muted">Create and approve an application definition before planning.</p>}</CardContent></Card></TabsContent>
         <TabsContent value="build"><Card><CardHeader><CardTitle role="heading" aria-level={2}>Build & preview</CardTitle><CardDescription>A separate local Executor builds the approved application and exposes loopback preview evidence.</CardDescription></CardHeader><CardContent>{run ? <><p><Badge>{run.status}</Badge> {run.executor?.status === 'offline' ? 'Executor offline — Start the local Executor.' : run.phase || 'Queued'}</p><div className="actions"><Button disabled={busy || !plan} onClick={queueRun}>{run.status === 'stopped' || run.status === 'failed' ? 'Queue another local build' : 'Queue local build'}</Button><Button variant="outline" disabled={run.status !== 'ready' || !run.preview_url} onClick={() => run.preview_url && window.open(run.preview_url, '_blank', 'noopener')}>Open preview</Button><Dialog><DialogTrigger asChild><Button variant="destructive" disabled={run.status !== 'ready'}>Stop preview</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Stop preview?</DialogTitle><DialogDescription>The request is immutable. The local Executor confirms teardown separately.</DialogDescription></DialogHeader><DialogFooter><Button variant="destructive" onClick={stopRun}>Confirm stop preview</Button></DialogFooter></DialogContent></Dialog></div>{run.artifacts?.map((artifact) => <Button key={artifact.id} variant="link" onClick={() => download(artifact)}>Download {artifact.path}</Button>)}<Accordion type="single" collapsible><AccordionItem value="diagnostics"><AccordionTrigger>Bounded log and diagnostics</AccordionTrigger><AccordionContent><pre className="evidence">{JSON.stringify(run, null, 2)}</pre></AccordionContent></AccordionItem></Accordion></> : <Button disabled={busy || plan?.status !== 'approved'} onClick={queueRun}>Queue local build</Button>}</CardContent></Card></TabsContent>
       </Tabs></div>
