@@ -35,7 +35,7 @@ single named writer may modify production paths.
 | ID | Task | Owner | State | Allowed write paths | Completion gate |
 | --- | --- | --- | --- | --- | --- |
 | CNP-01 | Intake verifier and fixed source snapshot | Integration | accepted | `tools/console_next_intake.py`; `tests/api/test_console_next_intake.py`; `packages/vendor/shadcn-ui/**` | Accepted after focused 8/8 hostile tests and independent re-review with no P0/P1/P2. |
-| CNP-02/03 | Locked Console Next vertical slice: local primitives, workflow parity, and browser E2E | Frontend | implementing | `apps/console-next/**`; `tests/web/console-next-e2e.mjs`; `tests/web/fixture-control-plane.mjs`; smallest export-only change to `tests/web/workspace-e2e.mjs`; lock-digest field in the vendor closure | Exact lock/source attribution and Next build pass; full fixture-backed workflow passes. |
+| CNP-02/03 | Locked Console Next vertical slice: local primitives, workflow parity, and browser E2E | Frontend | implementing | `apps/console-next/**`; `tests/web/console-next-e2e.mjs`; `tests/web/fixture-control-plane.mjs`; smallest export-only change to `tests/web/workspace-e2e.mjs`; complete lockfile capture in the vendor closure; source-intake tests for fail-closed preflight | Exact lock/source attribution and Next build pass; full fixture-backed workflow passes. |
 | CNP-04 | Accessibility, QA, review, and acceptance | QA / Reviewer / PM | planned | `tests/web/console-next-accessibility.mjs`; `THIRD_PARTY_NOTICES.md`; ledger/status after hand-off | Fresh full evidence and no unresolved P0/P1. |
 
 ## Stop rules
