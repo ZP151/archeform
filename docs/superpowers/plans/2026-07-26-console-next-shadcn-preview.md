@@ -220,11 +220,34 @@ and stop interactions.
 
   Expected: the complete fixture-backed workflow passes on Console Next.
 
+## Accelerated execution amendment
+
+The Controller may assign Tasks 2 and 3 to one Frontend writer as one
+vertical slice. This is an execution optimization, not a contract change: the
+writer must satisfy Task 2's lock/source/build gates before implementing Task
+3's workflow, then provide one combined hand-off for independent QA and
+review. No second writer may touch `apps/console-next/**` while that slice is
+active.
+
+Task 1 records the selected primitive source closure without an application
+lock digest, because that lockfile does not exist yet. The combined Task 2/3
+writer may update only the `consoleNextLockDigest` field of
+`console-next-closure.json` after creating the exact checked-in lockfile. The
+final intake verification and QA gate must reject a missing or mismatched
+digest. This resolves the otherwise impossible ordering without allowing any
+runtime source resolution.
+
+For E2E reuse, the combined writer may create
+`tests/web/fixture-control-plane.mjs` and may make the smallest export-only
+change to `tests/web/workspace-e2e.mjs` needed to reuse its fixture. Existing
+static-console assertions must remain unchanged.
+
 ## Task 4: Accessibility, runtime containment, QA, and acceptance
 
 **Files:**
 - Create: `tests/web/console-next-accessibility.mjs`
 - Modify: `apps/console-next/README.md`
+- Modify: `THIRD_PARTY_NOTICES.md`
 - Modify: `docs/project-status.md`
 - Modify: `docs/superpowers/ledgers/console-next-shadcn-preview.md`
 
