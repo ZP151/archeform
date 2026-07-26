@@ -7,6 +7,7 @@ package-manager, or version-control integration.
 
 from __future__ import annotations
 
+import argparse
 from dataclasses import dataclass
 import hashlib
 import json
@@ -22,6 +23,7 @@ _EXPECTED_LICENSE_SHA256 = "1564074e13439397221ffd522e2e504d56561994a23d371aa5e3
 _PINNED_SNAPSHOT_DIGESTS = {
     "7774cd7dcee1e98d0815aa6e829f33a7fc952fdf": "sha256:df12b78e24e409519461ce7be8cb5fb776223759fd079cb0618f3feb607460e0",
 }
+PINNED_CONSOLE_NEXT_COMMIT = "7774cd7dcee1e98d0815aa6e829f33a7fc952fdf"
 MIT_LICENSE_BYTES = b"""MIT License
 
 Copyright (c) 2023 shadcn
@@ -473,3 +475,87 @@ def verify_console_next_closure(root: Path, expected_commit: str, lockfile: Path
     if raw != canonical_json_bytes(actual) + b"\n":
         _fail("closure_mismatch")
     return actual
+
+
+def verify_console_next_preflight(
+    snapshot_root: Path,
+    expected_commit: str,
+    lockfile: Path,
+    console_root: Path,
+) -> dict[str, Any]:
+    """Verify the immutable source, captured closure, and exact local primitive tree.
+
+    This is deliberately a local-file-only gate for package lifecycle scripts.
+    It trusts neither a regenerated candidate index nor the set of files that
+    happen to exist under ``components/ui``.
+    """
+    snapshot = _absolute_root(Path(snapshot_root))
+    closure = verify_console_next_closure(snapshot, expected_commit, Path(lockfile))
+    console = _absolute_root(Path(console_root))
+    ui_root = console / "components" / "ui"
+    if ui_root.is_symlink() or not ui_root.is_dir():
+        _fail("missing_local_primitive", "components/ui")
+    ui_root = _contained(console, ui_root, code="invalid_console_root")
+
+    expected_names = tuple(item["name"] for item in closure["primitives"])
+    if expected_names != APPROVED_PRIMITIVES:
+        _fail("closure_mismatch")
+    expected_paths = {f"{name}.tsx" for name in expected_names}
+    actual_paths: set[str] = set()
+    for path in sorted(ui_root.rglob("*"), key=lambda item: item.as_posix()):
+        relative = _relative_path(ui_root, path)
+        if path.is_symlink() or not path.is_file():
+            _fail("unexpected_local_primitive", relative)
+        actual_paths.add(relative)
+    missing = sorted(expected_paths - actual_paths)
+    if missing:
+        _fail("missing_local_primitive", ",".join(missing))
+    unexpected = sorted(actual_paths - expected_paths)
+    if unexpected:
+        _fail("unexpected_local_primitive", ",".join(unexpected))
+
+    transforms = {item["name"]: item for item in closure["local_transformations"]}
+    for primitive in closure["primitives"]:
+        name = primitive["name"]
+        source = primitive["files"][0]
+        source_path = _contained(snapshot, snapshot / source["path"])
+        source_bytes = source_path.read_bytes()
+        if _sha256(source_bytes) != source["sha256"]:
+            _fail("closure_mismatch", name)
+        expected_bytes = source_bytes
+        transform = transforms.get(name)
+        if transform is not None:
+            source_import, local_import = LOCAL_PRIMITIVE_TRANSFORMS.get(name, (None, None))
+            if source_import is None:
+                _fail("closure_mismatch", name)
+            expected_bytes = source_bytes.decode("utf-8").replace(source_import, local_import).encode("utf-8")
+            if transform.get("source_sha256") != source["sha256"] or transform.get("output_sha256") != _sha256(expected_bytes):
+                _fail("closure_mismatch", name)
+        local_path = _contained(ui_root, ui_root / f"{name}.tsx", code="unexpected_local_primitive")
+        if _sha256(local_path.read_bytes()) != _sha256(expected_bytes):
+            _fail("local_primitive_mismatch", name)
+    if (console / "registry").exists():
+        _fail("unverified_registry_wrapper")
+    return closure
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Run the fixed-digest Console Next preflight without source acquisition."""
+    parser = argparse.ArgumentParser(description="Verify the local Console Next source closure.")
+    subcommands = parser.add_subparsers(dest="command", required=True)
+    command = subcommands.add_parser("verify-console-next")
+    command.add_argument("--snapshot", type=Path, required=True)
+    command.add_argument("--lockfile", type=Path, required=True)
+    command.add_argument("--console-root", type=Path, required=True)
+    args = parser.parse_args(argv)
+    try:
+        verify_console_next_preflight(args.snapshot, PINNED_CONSOLE_NEXT_COMMIT, args.lockfile, args.console_root)
+    except SnapshotError as error:
+        print(f"console-next-preflight:{error.code}")
+        return 1
+    print("console-next preflight: PASS")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

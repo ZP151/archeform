@@ -1,3 +1,30 @@
+const FACTORY_API_BASE_ERROR = 'Factory API base must be http://127.0.0.1:<port>/api.';
+
+export function validateFactoryApiBase(value: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error(FACTORY_API_BASE_ERROR);
+  }
+  const port = Number(parsed.port);
+  if (
+    parsed.protocol !== 'http:' ||
+    parsed.hostname !== '127.0.0.1' ||
+    !Number.isInteger(port) ||
+    port < 1 ||
+    port > 65535 ||
+    parsed.pathname !== '/api' ||
+    parsed.search ||
+    parsed.hash ||
+    parsed.username ||
+    parsed.password
+  ) {
+    throw new Error(FACTORY_API_BASE_ERROR);
+  }
+  return `http://127.0.0.1:${port}/api`;
+}
+
 export class FactoryApi {
   private readonly base: string;
   private capability = '';
@@ -6,7 +33,7 @@ export class FactoryApi {
     const configured = typeof window !== 'undefined'
       ? (window as Window & { FACTORY_API_BASE?: string }).FACTORY_API_BASE
       : undefined;
-    this.base = base || configured || 'http://127.0.0.1:8080/api';
+    this.base = validateFactoryApiBase(base || configured || 'http://127.0.0.1:8080/api');
   }
 
   setCapability(value: string) { this.capability = value; }

@@ -3,10 +3,10 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "preflight": "node scripts/preflight.mjs",
-    "dev": "node scripts/preflight.mjs && next dev --hostname 127.0.0.1 --port 5173",
-    "build": "node scripts/preflight.mjs && next build",
-    "start": "node scripts/preflight.mjs && next start --hostname 127.0.0.1 --port 5173"
+    "preflight": "python ../../tools/console_next_intake.py verify-console-next --snapshot ../../packages/vendor/shadcn-ui/7774cd7dcee1e98d0815aa6e829f33a7fc952fdf --lockfile package-lock.json --console-root .",
+    "dev": "python ../../tools/console_next_intake.py verify-console-next --snapshot ../../packages/vendor/shadcn-ui/7774cd7dcee1e98d0815aa6e829f33a7fc952fdf --lockfile package-lock.json --console-root . && next dev --hostname 127.0.0.1 --port 5173",
+    "build": "python ../../tools/console_next_intake.py verify-console-next --snapshot ../../packages/vendor/shadcn-ui/7774cd7dcee1e98d0815aa6e829f33a7fc952fdf --lockfile package-lock.json --console-root . && next build",
+    "start": "python ../../tools/console_next_intake.py verify-console-next --snapshot ../../packages/vendor/shadcn-ui/7774cd7dcee1e98d0815aa6e829f33a7fc952fdf --lockfile package-lock.json --console-root . && next start --hostname 127.0.0.1 --port 5173"
   },
   "dependencies": {
     "class-variance-authority": "0.7.1",

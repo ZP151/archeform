@@ -11,9 +11,11 @@ from pathlib import Path
 from unittest import mock
 
 from tools.console_next_intake import (
+    LOCAL_PRIMITIVE_TRANSFORMS,
     MIT_LICENSE_BYTES,
     SnapshotError,
     canonical_json_bytes,
+    verify_console_next_preflight,
     verify_snapshot,
     verify_console_next_closure,
     write_console_next_closure,
@@ -24,9 +26,28 @@ from tools.console_next_intake import (
 COMMIT = "1" * 40
 PINNED_COMMIT = "7774cd7dcee1e98d0815aa6e829f33a7fc952fdf"
 VENDORED_SNAPSHOT = Path(__file__).resolve().parents[2] / "packages" / "vendor" / "shadcn-ui" / PINNED_COMMIT
+CONSOLE_ROOT = Path(__file__).resolve().parents[2] / "apps" / "console-next"
+CONSOLE_LOCKFILE = CONSOLE_ROOT / "package-lock.json"
 
 
 class ConsoleNextIntakeTests(unittest.TestCase):
+    def _local_console(self, directory: Path) -> Path:
+        """Create a minimal local primitive tree from the approved source closure."""
+        root = directory / "console-next"
+        ui = root / "components" / "ui"
+        ui.mkdir(parents=True)
+        closure = json.loads((VENDORED_SNAPSHOT / "console-next-closure.json").read_text(encoding="utf-8"))
+        transforms = {item["name"]: item for item in closure["local_transformations"]}
+        for primitive in closure["primitives"]:
+            name = primitive["name"]
+            source = VENDORED_SNAPSHOT / primitive["files"][0]["path"]
+            content = source.read_bytes()
+            if name in transforms:
+                source_import, local_import = LOCAL_PRIMITIVE_TRANSFORMS[name]
+                content = content.decode("utf-8").replace(source_import, local_import).encode("utf-8")
+            (ui / f"{name}.tsx").write_bytes(content)
+        return root
+
     def _snapshot(self) -> tuple[tempfile.TemporaryDirectory[str], Path]:
         temporary = tempfile.TemporaryDirectory()
         root = Path(temporary.name) / "snapshot"
@@ -138,7 +159,26 @@ class ConsoleNextIntakeTests(unittest.TestCase):
             self.fail("candidate snapshot did not index README.md")
         candidate_path.write_bytes(canonical_json_bytes(candidate) + b"\n")
 
-        self._assert_code(root, "snapshot_digest_mismatch", PINNED_COMMIT)
+        with self.assertRaises(SnapshotError) as captured:
+            verify_console_next_preflight(root, PINNED_COMMIT, CONSOLE_LOCKFILE, CONSOLE_ROOT)
+        self.assertEqual("snapshot_digest_mismatch", captured.exception.code)
+
+    def test_rejects_a_missing_unused_local_primitive(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        local_console = self._local_console(Path(temporary.name))
+
+        with (
+            mock.patch.object(socket, "create_connection", side_effect=AssertionError("network forbidden")),
+            mock.patch.object(subprocess, "run", side_effect=AssertionError("shell forbidden")),
+            mock.patch("urllib.request.urlopen", side_effect=AssertionError("url opening forbidden")),
+        ):
+            verify_console_next_preflight(VENDORED_SNAPSHOT, PINNED_COMMIT, CONSOLE_LOCKFILE, local_console)
+        (local_console / "components" / "ui" / "tooltip.tsx").unlink()
+
+        with self.assertRaises(SnapshotError) as captured:
+            verify_console_next_preflight(VENDORED_SNAPSHOT, PINNED_COMMIT, CONSOLE_LOCKFILE, local_console)
+        self.assertEqual("missing_local_primitive", captured.exception.code)
 
     def test_rejects_pending_empty_and_mismatched_console_next_closures(self) -> None:
         temporary = tempfile.TemporaryDirectory()

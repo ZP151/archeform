@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { join, relative } from 'node:path';
 import { startFixtureControlPlane } from './fixture-control-plane.mjs';
@@ -35,8 +35,9 @@ function assertPackageAndSourceOrigin() {
   assert.equal(pkg.dependencies.next, '15.5.21');
   assert.equal(pkg.dependencies.react, '19.2.7');
   assert.equal(pkg.dependencies['react-dom'], '19.2.7');
-  assert.equal(pkg.scripts.preflight, 'node scripts/preflight.mjs');
-  for (const script of ['dev', 'build', 'start']) assert.match(pkg.scripts[script], /^node scripts\/preflight\.mjs && /);
+  const preflight = 'python ../../tools/console_next_intake.py verify-console-next --snapshot ../../packages/vendor/shadcn-ui/7774cd7dcee1e98d0815aa6e829f33a7fc952fdf --lockfile package-lock.json --console-root .';
+  assert.equal(pkg.scripts.preflight, preflight);
+  for (const script of ['dev', 'build', 'start']) assert.match(pkg.scripts[script], new RegExp(`^${preflight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} && `));
   assert.match(pkg.scripts.dev, /127\.0\.0\.1/);
   assert.match(pkg.scripts.dev, /5173/);
 
@@ -64,6 +65,33 @@ function assertPackageAndSourceOrigin() {
     assert.equal(sha256(path), transform.output_sha256, `${transform.name} must match its recorded local transformation`);
     assert.match(readFileSync(path, 'utf8'), /@\/components\/ui\/button/);
   }
+}
+
+function assertApiContainment() {
+  const apiPath = join(consoleRoot, 'lib', 'factory-api.ts').replaceAll('\\', '/');
+  const program = `
+    import assert from 'node:assert/strict';
+    import { FactoryApi, validateFactoryApiBase } from ${JSON.stringify(`file:///${apiPath}`)};
+    const rejected = [
+      'https://127.0.0.1:49152/api',
+      'http://localhost:49152/api',
+      'http://127.0.0.1:49152/not-api',
+      'http://127.0.0.1:49152/api/',
+      'http://127.0.0.1:49152/api?redirect=https://example.test',
+      'http://127.0.0.1/api',
+      'http://127.0.0.1:0/api',
+    ];
+    let fetchCalls = 0;
+    globalThis.fetch = () => { fetchCalls += 1; throw new Error('fetch must not run'); };
+    for (const base of rejected) {
+      assert.throws(() => validateFactoryApiBase(base), { message: 'Factory API base must be http://127.0.0.1:<port>/api.' });
+      assert.throws(() => new FactoryApi(base), { message: 'Factory API base must be http://127.0.0.1:<port>/api.' });
+    }
+    assert.equal(validateFactoryApiBase('http://127.0.0.1:49152/api'), 'http://127.0.0.1:49152/api');
+    assert.equal(fetchCalls, 0, 'invalid bases must be rejected before any request can leave loopback');
+  `;
+  const result = spawnSync(process.execPath, ['--experimental-strip-types', '--input-type=module', '--eval', program], { encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr || result.stdout || 'FactoryApi containment assertion failed.');
 }
 
 async function waitForServer(url, child) {
@@ -159,8 +187,10 @@ async function runWorkflow() {
 
 if (process.argv.includes('--assert-package-only')) {
   assertPackageAndSourceOrigin();
+  assertApiContainment();
   console.log('console-next package/source origin: PASS');
 } else {
   assertPackageAndSourceOrigin();
+  assertApiContainment();
   await runWorkflow();
 }

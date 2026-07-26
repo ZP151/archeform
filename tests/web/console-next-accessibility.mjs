@@ -42,8 +42,9 @@ function assertRuntimeContainment() {
   for (const path of files.filter((path) => path !== apiPath)) {
     assert.equal(/\bfetch\s*\(/.test(readFileSync(path, 'utf8')), false, `${path} must not make network calls outside FactoryApi.`);
   }
-  const urls = [...api.matchAll(/https?:\/\/[^\s'"`)}]+/g)].map((match) => match[0]);
-  assert.deepEqual(urls, ['http://127.0.0.1:8080/api'], 'FactoryApi must default only to the loopback Factory API.');
+  assert.match(api, /parsed\.hostname !== '127\.0\.0\.1'/, 'FactoryApi must enforce the loopback host before accepting a base.');
+  assert.match(api, /parsed\.pathname !== '\/api'/, 'FactoryApi must enforce the exact API path before accepting a base.');
+  assert.match(api, /'http:\/\/127\.0\.0\.1:8080\/api'/, 'FactoryApi must retain a loopback-only default.');
 }
 
 async function waitForServer(url, child) {
@@ -63,6 +64,15 @@ async function waitForServer(url, child) {
 async function expectFocused(page, locator, message) {
   await locator.focus();
   assert.equal(await locator.evaluate((element) => document.activeElement === element), true, message);
+}
+
+async function expectKeyboardVisibleFocus(page, locator, message) {
+  await expectFocused(page, locator, message);
+  const focus = await locator.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { offset: style.outlineOffset, style: style.outlineStyle, width: style.outlineWidth };
+  });
+  assert.deepEqual(focus, { offset: '2px', style: 'solid', width: '3px' }, `${message} It must have the shared keyboard-visible focus treatment.`);
 }
 
 async function runAccessibilityEvidence() {
@@ -117,6 +127,12 @@ async function runAccessibilityEvidence() {
     await page.getByRole('button', { name: 'Generate application definition' }).click();
     await page.getByRole('heading', { name: 'Application definition' }).waitFor();
     assert.match(await status.textContent() || '', /structured definition is ready/i);
+    for (const label of ['Role 1 ID', 'Role 1 label', 'Role 1 responsibility', 'Record ID', 'Primary record label', 'Field 1 ID', 'Field 1 label', 'Field 1 type', 'submit page label', 'Assumptions', 'Open questions']) {
+      assert.equal(await page.getByLabel(label).count(), 1, `${label} must label its dynamic structured-definition control.`);
+    }
+    await expectKeyboardVisibleFocus(page, page.getByLabel('Role 1 label'), 'the dynamic role editor input must be keyboard focusable.');
+    await expectKeyboardVisibleFocus(page, page.getByLabel('Role 1 responsibility'), 'the dynamic role editor select must be keyboard focusable.');
+    await expectKeyboardVisibleFocus(page, page.getByLabel('Field 1 type'), 'the dynamic field editor select must be keyboard focusable.');
 
     const navigation = page.getByRole('button', { name: 'New project' });
     await expectFocused(page, navigation, 'the product-lineage navigation control must be keyboard focusable.');
