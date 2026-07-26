@@ -24,6 +24,7 @@ _PINNED_SNAPSHOT_DIGESTS = {
     "7774cd7dcee1e98d0815aa6e829f33a7fc952fdf": "sha256:df12b78e24e409519461ce7be8cb5fb776223759fd079cb0618f3feb607460e0",
 }
 PINNED_CONSOLE_NEXT_COMMIT = "7774cd7dcee1e98d0815aa6e829f33a7fc952fdf"
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 MIT_LICENSE_BYTES = b"""MIT License
 
 Copyright (c) 2023 shadcn
@@ -89,6 +90,12 @@ class SnapshotError(ValueError):
 
 def _fail(code: str, detail: str = "") -> None:
     raise SnapshotError(code, detail)
+
+
+def repository_path(value: str | Path) -> Path:
+    """Resolve CLI paths from this verifier's repository, never the caller CWD."""
+    candidate = Path(value)
+    return candidate if candidate.is_absolute() else REPOSITORY_ROOT / candidate
 
 
 def canonical_json_bytes(value: Any) -> bytes:
@@ -549,7 +556,12 @@ def main(argv: list[str] | None = None) -> int:
     command.add_argument("--console-root", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
-        verify_console_next_preflight(args.snapshot, PINNED_CONSOLE_NEXT_COMMIT, args.lockfile, args.console_root)
+        verify_console_next_preflight(
+            repository_path(args.snapshot),
+            PINNED_CONSOLE_NEXT_COMMIT,
+            repository_path(args.lockfile),
+            repository_path(args.console_root),
+        )
     except SnapshotError as error:
         print(f"console-next-preflight:{error.code}")
         return 1

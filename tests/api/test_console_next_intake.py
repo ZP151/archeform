@@ -15,6 +15,7 @@ from tools.console_next_intake import (
     MIT_LICENSE_BYTES,
     SnapshotError,
     canonical_json_bytes,
+    repository_path,
     verify_console_next_preflight,
     verify_snapshot,
     verify_console_next_closure,
@@ -31,6 +32,11 @@ CONSOLE_LOCKFILE = CONSOLE_ROOT / "package-lock.json"
 
 
 class ConsoleNextIntakeTests(unittest.TestCase):
+    def test_repository_relative_preflight_paths_ignore_the_caller_working_directory(self) -> None:
+        repository = Path(__file__).resolve().parents[2]
+        self.assertEqual(repository / "apps" / "console-next", repository_path("apps/console-next"))
+        self.assertEqual(repository / "packages" / "vendor", repository_path("packages/vendor"))
+
     def _local_console(self, directory: Path) -> Path:
         """Create a minimal local primitive tree from the approved source closure."""
         root = directory / "console-next"
