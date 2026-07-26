@@ -27,10 +27,10 @@ Trusted Registry and Local Supply Chain (Stage 2) is implementing under accepted
 ## Risks and decisions
 
 - Component digests are locally verified but are not externally signed or provenance-verified; SBOM, signatures, license promotion, and candidate-to-Golden workflow remain Stage 2 work.
-- `source_baseline_absent` is an explicit Stage 2 promotion block: the repository has no full immutable Git commit baseline, so no non-legacy candidate may become Golden or claim source provenance. This does not authorize creating a commit, remote, branch, or external account.
+- Initial local Git source baseline `d14b41dec8dd5009e1c7393e76b540ec7522a71b` is established with pinned LF text checkout rules and no remote. It satisfies the repository-baseline prerequisite only; no package thereby gains provenance, and non-legacy promotion still requires exact source evidence, trust verification, lifecycle/policy decision, and explicit promotion approval.
 - ADR-005 accepts a fixed-source, offline-only third-party UI intake design, not an intake action. No source snapshot, package manager/CLI, `ui.*@2.0.0` package, or v2 new-plan selection exists. Its work cannot start before Stage 2 is accepted and separately authorized external-source acquisition and promotion gates are satisfied.
 - The generated session capability is a local development identity boundary backed by environment-supplied user directory and signing key; production OIDC, password KDFs, secret management, and multi-user operations require a future ADR.
-- The repository has no committed baseline yet: all current project files are untracked. Delivery evidence is reproducible locally, but history, review diffs, and rollback points do not yet exist.
+- The repository has an initial local baseline and reproducible review point. It has no configured remote, so remote backup, collaboration, and publication remain deliberately out of scope.
 - Generated applications use browser cookie sessions for the MVP, but their local user directory and signing key must remain external environment inputs and never enter output evidence.
 - A paid live OpenAI call is intentionally not part of CI; the documented guarded smoke must be run manually with a locally configured `OPENAI_API_KEY` before enabling a live model-backed environment.
 - Live-model reliability is not yet measured. During the first real founder test, a more detailed equipment-access brief was correctly rejected without persistent state because its output did not satisfy the frozen approval-app policy; an equivalent concise brief succeeded. The product needs an evaluation set and measured first-pass validity before broadening scope.
@@ -39,7 +39,7 @@ Trusted Registry and Local Supply Chain (Stage 2) is implementing under accepted
 
 ## Next smallest slice
 
-Integration-owned TR-04: implement the append-only Trusted Registry lifecycle, explicit legacy handling, revocations, and the `source_baseline_absent` promotion blocker against the accepted frozen trust contract. Stage 1 contracts, packages, locks, and Composer behavior remain frozen. The ADR-005 quarantined-intake programme remains planned behind this slice.
+Integration-owned TR-04: implement the append-only Trusted Registry lifecycle, explicit legacy handling, revocations, and the per-package trust-evidence/policy promotion blocker against the accepted frozen trust contract. Stage 1 contracts, packages, locks, and Composer behavior remain frozen. The ADR-005 quarantined-intake programme remains planned behind this slice.
 
 ## Completion gate
 

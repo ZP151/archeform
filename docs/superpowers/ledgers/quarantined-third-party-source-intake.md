@@ -16,8 +16,8 @@ the single writer for every implementation task in this ledger.
 | Dependencies | ADR-004 Stage 2 trust formats, lifecycle Registry, and Composer trust gate must be accepted first. |
 | Contract owner | Integration |
 | Frozen contracts | Stage 1 component, adapter, composition, HTTP, role, and Compose contracts remain unchanged. |
-| Source baseline | `source_baseline_absent`: no immutable project Git commit exists. |
-| Promotion decision | Blocked. No third-party candidate can become Golden, be selected by a new plan, alter the v1 policy, or enter generated output until an explicitly authorized Git baseline, offline evidence verification, and explicit promotion decision exist. |
+| Source baseline | Established locally at root commit `d14b41dec8dd5009e1c7393e76b540ec7522a71b`; no remote is configured. |
+| Promotion decision | Still blocked. No third-party candidate can become Golden, be selected by a new plan, alter the v1 policy, or enter generated output until offline evidence verification and an explicit promotion decision exist. The Git-baseline prerequisite alone authorizes neither intake nor promotion. |
 | External action | None assigned. No download, clone, vendoring, account, publication, or network intake is authorized by this ledger. |
 
 ## Outcome and non-goals
