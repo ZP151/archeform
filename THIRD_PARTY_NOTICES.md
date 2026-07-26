@@ -1,5 +1,35 @@
 # Third-party notices
 
+## shadcn/ui
+
+Console Next derives its local UI primitive source solely from the complete,
+quarantined snapshot of [shadcn-ui/ui](https://github.com/shadcn-ui/ui) at
+commit `7774cd7dcee1e98d0815aa6e829f33a7fc952fdf`. The unmodified upstream
+notice is retained at
+`packages/vendor/shadcn-ui/7774cd7dcee1e98d0815aa6e829f33a7fc952fdf/LICENSE.md`.
+
+MIT License
+
+Copyright (c) 2023 shadcn
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
 ## obra/superpowers
 
 The complete `obra/superpowers` skill directories in `.agents/skills/` are direct, unmodified copies from [obra/superpowers](https://github.com/obra/superpowers), commit `3dcbd5c4b48e02263fbf4a3c01e3fe4f81d584d9` (copied 2026-07-25). Project-specific agent configuration and `AGENTS.md` only declare how those source skills are used with Factory Pilot's existing approval and security constraints.
