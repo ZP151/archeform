@@ -1,0 +1,18 @@
+"""Configured single-level approval transition guard."""
+
+from fastapi import HTTPException, status
+
+
+WORKFLOW_NAME = {{python_string:workflow_name}}
+APPROVER_ROLE = {{python_string:approver_role}}
+
+
+def require_approver(actor: str) -> None:
+    if actor != APPROVER_ROLE:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the configured approver may decide a record")
+
+
+def transition_action(decision: str) -> str:
+    if decision not in {"approved", "rejected"}:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Decision must be approved or rejected")
+    return decision

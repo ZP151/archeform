@@ -1,0 +1,4 @@
+interface:
+  display_name: "Evidence Testing"
+  short_description: "Verify a slice with reproducible evidence."
+  default_prompt: "Validate the current Factory Pilot slice and report reproducible evidence."

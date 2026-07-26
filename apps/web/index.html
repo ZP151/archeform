@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>Factory Pilot | Product Workspace</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="Factory Pilot home">Factory <span>Pilot</span></a>
+      <div class="environment"><i></i><span>Requirement-to-product workspace</span><code>local</code></div>
+    </header>
+
+    <main id="top" class="shell">
+      <section class="intro">
+        <div>
+          <p class="eyebrow">PRODUCT WORKSPACE</p>
+          <h1>Shape a requirement into<br /><em>a runnable product.</em></h1>
+        </div>
+        <p>Review the business definition, approve its Golden component plan, then build a controlled local preview with evidence.</p>
+      </section>
+
+      <details id="connection-panel" class="connection-panel">
+        <summary>Local connection</summary>
+        <div class="connection-grid">
+          <div>
+            <label for="capability-token">Local session capability</label>
+            <input id="capability-token" type="password" autocomplete="off" />
+          </div>
+          <p>Read this value from your local <code>FACTORY_API_TOKEN</code>. It remains only in this browser tab and is never saved across reloads.</p>
+        </div>
+      </details>
+
+      <div class="workspace">
+        <aside class="sidebar" aria-label="Project and version navigation">
+          <div class="sidebar-heading">
+            <div><p class="eyebrow">PROJECTS</p><h2>Product lineage</h2></div>
+            <button id="new-project" class="icon-button" type="button" aria-label="New project">+</button>
+          </div>
+          <div id="project-list" class="project-list"></div>
+          <div class="sidebar-divider"></div>
+          <div class="sidebar-heading compact">
+            <div><p class="eyebrow">VERSIONS</p><h3 id="version-heading">No project selected</h3></div>
+          </div>
+          <div id="version-list" class="version-list"></div>
+        </aside>
+
+        <section class="workspace-main">
+          <nav class="stage-nav" aria-label="Product generation stages">
+            <button class="stage active" type="button" data-stage-target="brief"><b>01</b><span>Brief</span></button>
+            <button class="stage" type="button" data-stage-target="definition"><b>02</b><span>Application definition</span></button>
+            <button class="stage" type="button" data-stage-target="plan"><b>03</b><span>Build plan</span></button>
+            <button class="stage" type="button" data-stage-target="build"><b>04</b><span>Build &amp; preview</span></button>
+          </nav>
+
+          <div id="workspace-notice" class="notice hidden" role="status"></div>
+
+          <section id="stage-brief" class="stage-panel">
+            <div class="stage-heading">
+              <div><p class="eyebrow">01 / BRIEF</p><h2>Start with the business outcome</h2></div>
+              <span class="tag">Approval app profile</span>
+            </div>
+            <p class="stage-copy">Describe one internal request, one submitter-to-approver decision, and any audit participants. The brief is discarded after generation; only its checksum and the structured result are retained.</p>
+            <form id="project-form" class="form-stack">
+              <div>
+                <label for="project-name">Project name</label>
+                <input id="project-name" value="expense-approval" autocomplete="off" required pattern="[a-z][a-z0-9\-]{2,62}" />
+                <p class="field-hint">Lowercase letters, numbers, and hyphens.</p>
+              </div>
+              <div>
+                <label for="requirement-brief">Requirement brief</label>
+                <textarea id="requirement-brief" required>Employees submit expense claims, managers approve or reject them, and finance can audit every decision.</textarea>
+              </div>
+              <button id="generate-definition" class="button primary" type="submit">Generate application definition</button>
+              <p id="brief-error" class="form-error" role="alert"></p>
+            </form>
+          </section>
+
+          <section id="stage-definition" class="stage-panel hidden">
+            <div class="stage-heading">
+              <div><p class="eyebrow">02 / APPLICATION DEFINITION</p><h2>Application definition</h2></div>
+              <span id="definition-status" class="state">Draft</span>
+            </div>
+            <p class="stage-copy">Edit the business model as structured data. Saving creates a child version; prior versions, approvals, plans, and runs remain immutable.</p>
+            <div id="definition-summary" class="summary-strip"></div>
+            <form id="definition-form">
+              <section class="editor-section">
+                <div class="section-title"><div><h3>Roles</h3><p>Two to five roles: one submitter, one approver, and up to three auditor or observer roles.</p></div><button id="add-role" class="text-button" type="button">Add role</button></div>
+                <div id="role-editor" class="editor-list"></div>
+              </section>
+              <section class="editor-section">
+                <div class="section-title"><div><h3>Primary record</h3><p>The single business record moving through approval. IDs use lowercase snake case and cannot use reserved platform names.</p></div></div>
+                <div class="form-grid two">
+                  <div><label for="record-id">Record ID</label><input id="record-id" required /></div>
+                  <div><label for="record-label">Primary record label</label><input id="record-label" required /></div>
+                </div>
+              </section>
+              <section class="editor-section">
+                <div class="section-title"><div><h3>Fields</h3><p>One to eight fields; labels are at most 80 characters and enum fields use one to twelve unique options.</p></div><button id="add-field" class="text-button" type="button">Add field</button></div>
+                <div id="field-editor" class="editor-list"></div>
+              </section>
+              <section class="editor-section">
+                <div class="section-title"><div><h3>Pages</h3><p>Labels are editable; the four Golden page responsibilities remain fixed.</p></div></div>
+                <div id="page-editor" class="editor-list"></div>
+              </section>
+              <section class="editor-section">
+                <div class="section-title"><div><h3>Lifecycle</h3><p>The Golden profile fixes the approval state machine.</p></div></div>
+                <div id="workflow-summary" class="workflow-summary"></div>
+              </section>
+              <section class="editor-section">
+                <div class="form-grid two">
+                  <div><label for="assumptions">Assumptions <span>up to 12, one per line, 300 characters each</span></label><textarea id="assumptions" class="short-textarea"></textarea></div>
+                  <div><label for="open-questions">Open questions <span>up to 12, one per line, 300 characters each</span></label><textarea id="open-questions" class="short-textarea"></textarea></div>
+                </div>
+                <p class="field-hint">Labels, statements, and enum options cannot contain credential assignments such as “password:” or “API key=”.</p>
+              </section>
+              <div class="action-row">
+                <button id="create-next-version" class="button secondary" type="button">Create next version</button>
+                <button id="approve-definition" class="button primary" type="button">Approve application definition</button>
+                <button id="create-plan" class="button primary hidden" type="button">Create build plan</button>
+              </div>
+              <p id="definition-error" class="form-error" role="alert"></p>
+            </form>
+          </section>
+
+          <section id="stage-plan" class="stage-panel hidden">
+            <div class="stage-heading">
+              <div><p class="eyebrow">03 / BUILD PLAN</p><h2>Build plan</h2></div>
+              <span id="plan-status" class="state">Pending approval</span>
+            </div>
+            <p class="stage-copy">Inspect why each repository-owned Golden component was selected and exactly what it will receive.</p>
+            <div id="profile-limit" class="profile-limit"></div>
+            <div id="component-list" class="component-list"></div>
+            <section class="plan-evidence">
+              <div><h3>Expected artifacts</h3><ul id="artifact-checklist" class="check-list"></ul></div>
+              <div><h3>Plan identity</h3><dl id="plan-identity" class="key-values"></dl></div>
+            </section>
+            <button id="approve-plan" class="button primary" type="button">Approve build plan</button>
+            <p id="plan-error" class="form-error" role="alert"></p>
+          </section>
+
+          <section id="stage-build" class="stage-panel hidden">
+            <div class="stage-heading">
+              <div><p class="eyebrow">04 / BUILD &amp; PREVIEW</p><h2>Build &amp; preview</h2></div>
+              <span id="run-status" class="state muted">Not queued</span>
+            </div>
+            <p class="stage-copy">A separate local Executor verifies immutable artifacts, builds the approved application, runs its smoke test, and exposes only a loopback preview.</p>
+            <section id="run-history-section" class="run-history-section hidden" aria-label="Run history">
+              <div class="section-title"><div><h3>Run history</h3><p>Select any prior run to inspect its immutable evidence.</p></div></div>
+              <div id="run-history" class="run-history"></div>
+            </section>
+            <div id="build-empty" class="empty-state"><strong>Ready to queue</strong><span>Approve the build plan, then queue an isolated local build.</span></div>
+            <div id="run-content" class="hidden">
+              <div id="run-banner" class="run-banner"></div>
+              <div class="metrics">
+                <div><span>Phase</span><strong id="run-phase">—</strong></div>
+                <div><span>Elapsed</span><strong id="run-elapsed">—</strong></div>
+                <div><span>Executor</span><strong id="executor-status">—</strong></div>
+                <div><span>Smoke</span><strong id="smoke-status">—</strong></div>
+              </div>
+              <div id="executor-warning" class="warning hidden"></div>
+              <section class="evidence-grid">
+                <div><h3>Bounded log excerpt</h3><ol id="run-logs" class="log-list"></ol></div>
+                <div><h3>Artifacts</h3><div id="run-artifacts" class="artifact-list"></div></div>
+              </section>
+            </div>
+            <div class="action-row">
+              <button id="queue-build" class="button primary" type="button">Queue local build</button>
+              <button id="open-preview" class="button secondary hidden" type="button" disabled>Open preview</button>
+              <button id="stop-preview" class="button danger hidden" type="button">Stop preview</button>
+            </div>
+            <p id="build-error" class="form-error" role="alert"></p>
+          </section>
+
+          <details id="evidence-panel" class="evidence-details">
+            <summary>Evidence and diagnostic JSON</summary>
+            <pre id="evidence-json"></pre>
+          </details>
+        </section>
+      </div>
+    </main>
+    <footer>Factory Pilot VNext · Structured approvals · Golden components · Local isolated preview</footer>
+    <script src="./app.js"></script>
+  </body>
+</html>

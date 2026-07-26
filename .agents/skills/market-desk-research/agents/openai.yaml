@@ -1,0 +1,4 @@
+interface:
+  display_name: "Market Desk Research"
+  short_description: "Research public market evidence without outreach."
+  default_prompt: "Research the current market for Factory Pilot using public sources."

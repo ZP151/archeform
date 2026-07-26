@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "factory-component/v1",
+  "title": "Factory Component Package v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "key",
+    "version",
+    "category",
+    "package_root",
+    "digest",
+    "inventory",
+    "provides",
+    "requires",
+    "compatibility",
+    "input_schema",
+    "output_slots",
+    "lifecycle",
+    "verification"
+  ],
+  "properties": {
+    "schema_version": {"const": "factory-component/v1"},
+    "key": {"$ref": "#/$defs/component_key"},
+    "version": {"$ref": "#/$defs/semver"},
+    "category": {"enum": ["ui", "backend", "workflow", "ops", "data"]},
+    "package_root": {"const": "."},
+    "digest": {"$ref": "#/$defs/digest"},
+    "inventory": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/inventory_item"}
+    },
+    "provides": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/capability"}
+    },
+    "requires": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/dependency"}
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile", "application_definition"],
+      "properties": {
+        "profile": {"const": "internal-approval-app"},
+        "application_definition": {"const": "factory/v1"}
+      }
+    },
+    "input_schema": {
+      "type": "object",
+      "required": ["type", "additionalProperties", "properties"],
+      "properties": {
+        "type": {"const": "object"},
+        "additionalProperties": {"const": false},
+        "properties": {"type": "object"},
+        "required": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": true
+    },
+    "output_slots": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"enum": [
+        "frontend/app-shell",
+        "frontend/routes/login",
+        "frontend/routes/home",
+        "frontend/routes/profile",
+        "frontend/routes/system-settings",
+        "frontend/features/approval-form",
+        "frontend/features/my-requests",
+        "frontend/features/approval-queue",
+        "frontend/features/audit",
+        "backend/auth",
+        "backend/authz",
+        "backend/api/records",
+        "backend/workflow/approval",
+        "backend/audit",
+        "data/record-schema",
+        "data/audit-schema",
+        "runtime/postgres",
+        "tests/fixtures"
+      ]}
+    },
+    "lifecycle": {"enum": ["candidate", "golden", "deprecated", "revoked"]},
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "source_revision",
+        "verified_at",
+        "license_expression",
+        "license_list_version",
+        "sbom_reference",
+        "provenance_reference"
+      ],
+      "properties": {
+        "status": {"enum": ["passed", "failed", "not_run"]},
+        "source_revision": {"type": "string", "pattern": "^[0-9a-f]{7,64}$"},
+        "verified_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+        "license_expression": {"type": "string", "minLength": 1, "maxLength": 200, "pattern": "^[A-Za-z0-9.+()\\- ]+$"},
+        "license_list_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+$"},
+        "sbom_reference": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+        "provenance_reference": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"}
+      }
+    }
+  },
+  "$defs": {
+    "component_key": {"type": "string", "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$"},
+    "semver": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"},
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "relative_path": {"type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.?/)[A-Za-z0-9][A-Za-z0-9._/-]*$"},
+    "inventory_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {"path": {"$ref": "#/$defs/relative_path"}, "sha256": {"$ref": "#/$defs/digest"}}
+    },
+    "capability": {"type": "string", "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)*$"},
+    "dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "version"],
+      "properties": {"key": {"$ref": "#/$defs/component_key"}, "version": {"$ref": "#/$defs/semver"}}
+    }
+  }
+}

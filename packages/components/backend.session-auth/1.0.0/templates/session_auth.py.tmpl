@@ -1,0 +1,121 @@
+"""Bounded local signed-session authentication for an approval application."""
+
+import base64
+import hashlib
+import hmac
+import json
+import os
+import time
+
+from fastapi import APIRouter, Cookie, HTTPException, Response, status
+from pydantic import BaseModel
+
+
+ALLOWED_ROLES = frozenset({{json_value:allowed_roles}})
+SESSION_COOKIE_NAME = {{python_string:cookie_name}}
+LOCAL_USERS_ENV = {{python_string:local_users_env}}
+SESSION_SIGNING_KEY_ENV = {{python_string:signing_key_env}}
+SESSION_TTL_SECONDS = {{json_value:session_ttl_seconds}}
+
+
+def _session_key() -> bytes:
+    value = os.environ.get(SESSION_SIGNING_KEY_ENV)
+    if not value:
+        raise RuntimeError("the local session signing key is unavailable")
+    return value.encode("utf-8")
+
+
+def _encode_payload(payload: dict[str, object]) -> str:
+    raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return base64.urlsafe_b64encode(raw).rstrip(b"=").decode("ascii")
+
+
+def _decode_payload(encoded: str) -> dict[str, object] | None:
+    try:
+        padding = "=" * (-len(encoded) % 4)
+        value = json.loads(base64.urlsafe_b64decode(encoded + padding).decode("utf-8"))
+    except (UnicodeDecodeError, ValueError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def _signature(encoded_payload: str) -> str:
+    return hmac.new(_session_key(), encoded_payload.encode("ascii"), hashlib.sha256).hexdigest()
+
+
+def authenticate_local_user(username: str, password: str) -> str | None:
+    """Resolve a role only from the server-owned local development directory."""
+    try:
+        directory = json.loads(os.environ.get(LOCAL_USERS_ENV, ""))
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(directory, dict):
+        return None
+    record = directory.get(username)
+    if not isinstance(record, dict):
+        return None
+    role = record.get("role")
+    expected_password_digest = record.get("password_sha256")
+    received_password_digest = hashlib.sha256(password.encode("utf-8")).hexdigest()
+    if (
+        not isinstance(role, str)
+        or role not in ALLOWED_ROLES
+        or not isinstance(expected_password_digest, str)
+        or not hmac.compare_digest(received_password_digest, expected_password_digest)
+    ):
+        return None
+    return role
+
+
+def issue_session(role: str, now: int | None = None) -> str:
+    if role not in ALLOWED_ROLES:
+        raise ValueError("the selected role is not permitted")
+    issued_at = int(time.time() if now is None else now)
+    encoded_payload = _encode_payload({"role": role, "exp": issued_at + SESSION_TTL_SECONDS})
+    return f"{encoded_payload}.{_signature(encoded_payload)}"
+
+
+def resolve_session_actor(token: str | None, now: int | None = None) -> str | None:
+    if not token or token.count(".") != 1:
+        return None
+    encoded_payload, received_signature = token.split(".", 1)
+    try:
+        expected_signature = _signature(encoded_payload)
+    except RuntimeError:
+        return None
+    if not hmac.compare_digest(received_signature, expected_signature):
+        return None
+    payload = _decode_payload(encoded_payload)
+    if payload is None or not isinstance(payload.get("role"), str) or not isinstance(payload.get("exp"), int):
+        return None
+    if payload["role"] not in ALLOWED_ROLES or payload["exp"] <= int(time.time() if now is None else now):
+        return None
+    return payload["role"]
+
+
+class SignInRequest(BaseModel):
+    username: str
+    password: str
+
+
+router = APIRouter()
+
+
+@router.post("/session/sign-in")
+def sign_in(payload: SignInRequest, response: Response) -> dict[str, str]:
+    actor = authenticate_local_user(payload.username, payload.password)
+    if actor is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Local sign-in was not accepted")
+    try:
+        token = issue_session(actor)
+    except (RuntimeError, ValueError) as error:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Local sign-in was not accepted") from error
+    response.set_cookie(SESSION_COOKIE_NAME, token, httponly=True, samesite="lax", secure=False, max_age=SESSION_TTL_SECONDS)
+    return {"actor": actor}
+
+
+def get_actor(session_token: str | None = Cookie(default=None, alias=SESSION_COOKIE_NAME)) -> str:
+    actor = resolve_session_actor(session_token)
+    if actor is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="A valid unexpired local session is required")
+    return actor

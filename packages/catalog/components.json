@@ -1,0 +1,104 @@
+[
+  {
+    "key": "frontend.admin-shell",
+    "version": "0.1.0",
+    "category": "frontend",
+    "trust_level": "golden",
+    "capabilities": ["responsive-web", "admin-layout", "forms", "tables"],
+    "provides": ["responsive-web"],
+    "requires": ["backend.rest-api", "auth.rbac-local"],
+    "input_contract": {
+      "profile": "internal-approval-app",
+      "workflow": "approval",
+      "supported_field_types": ["string", "number", "date", "enum"],
+      "required_page_kinds": ["form", "list", "queue", "audit"]
+    },
+    "selection_explanation": "Provides the required responsive form, personal record list, approval queue, and audit workspace.",
+    "artifact_digest": "sha256:f9835c14868e66006f6041866c1069f9cdd1e31fd05122af4e71e604eee362af"
+  },
+  {
+    "key": "backend.fastapi-crud",
+    "version": "0.1.0",
+    "category": "backend",
+    "trust_level": "golden",
+    "capabilities": ["backend.rest-api", "crud", "health-check"],
+    "provides": ["backend.rest-api"],
+    "requires": ["data.postgresql"],
+    "input_contract": {
+      "profile": "internal-approval-app",
+      "workflow": "approval",
+      "supported_field_types": ["string", "number", "date", "enum"],
+      "required_page_kinds": ["form", "list", "queue", "audit"]
+    },
+    "selection_explanation": "Provides the required typed record API, role-filtered reads, decisions, and health endpoint.",
+    "artifact_digest": "sha256:8ac3a8b62f3fc80d9c718781468a2a3853d31c61f01dec390620ae87577c7e52"
+  },
+  {
+    "key": "auth.rbac-local",
+    "version": "0.1.0",
+    "category": "security",
+    "trust_level": "golden",
+    "capabilities": ["rbac", "local-auth"],
+    "provides": ["auth.rbac-local"],
+    "requires": [],
+    "input_contract": {
+      "profile": "internal-approval-app",
+      "workflow": "approval",
+      "supported_field_types": ["string", "number", "date", "enum"],
+      "required_page_kinds": ["form", "list", "queue", "audit"]
+    },
+    "selection_explanation": "Provides the required local role boundaries for submitter, approver, and audit access.",
+    "artifact_digest": "sha256:6e27f179f0d2d3315dd515366942058b84d8b835d71563e1fe16d019b151e4c1"
+  },
+  {
+    "key": "workflow.single-level-approval",
+    "version": "0.1.0",
+    "category": "workflow",
+    "trust_level": "golden",
+    "capabilities": ["single-level-approval", "notification"],
+    "provides": ["approval.workflow"],
+    "requires": ["backend.rest-api", "auth.rbac-local", "ops.audit-log"],
+    "input_contract": {
+      "profile": "internal-approval-app",
+      "workflow": "approval",
+      "supported_field_types": ["string", "number", "date", "enum"],
+      "required_page_kinds": ["form", "list", "queue", "audit"]
+    },
+    "selection_explanation": "Provides the required submit, approve, and reject lifecycle with one approver decision.",
+    "artifact_digest": "sha256:db8a2c4d38e50f920f354166ab0a66724e8b27c69aebbf8b3e169c49f075e9c4"
+  },
+  {
+    "key": "ops.audit-log",
+    "version": "0.1.0",
+    "category": "operations",
+    "trust_level": "golden",
+    "capabilities": ["audit-log"],
+    "provides": ["ops.audit-log"],
+    "requires": ["backend.rest-api"],
+    "input_contract": {
+      "profile": "internal-approval-app",
+      "workflow": "approval",
+      "supported_field_types": ["string", "number", "date", "enum"],
+      "required_page_kinds": ["form", "list", "queue", "audit"]
+    },
+    "selection_explanation": "Provides the required append-only history for submission and every approval decision.",
+    "artifact_digest": "sha256:18e21658bb498e6b15204592a2399c93efc271e3cc09dad9186dfe6b22c9f292"
+  },
+  {
+    "key": "data.postgres-compose",
+    "version": "0.1.0",
+    "category": "data",
+    "trust_level": "golden",
+    "capabilities": ["postgresql", "local-compose"],
+    "provides": ["data.postgresql"],
+    "requires": [],
+    "input_contract": {
+      "profile": "internal-approval-app",
+      "workflow": "approval",
+      "supported_field_types": ["string", "number", "date", "enum"],
+      "required_page_kinds": ["form", "list", "queue", "audit"]
+    },
+    "selection_explanation": "Provides the required local PostgreSQL persistence and append-only audit storage.",
+    "artifact_digest": "sha256:9f9dc9ab910d18fb9c808154f502a75c8388f538af7146933be020d3947b955e"
+  }
+]

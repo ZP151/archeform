@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "factory-component-adapter/v1",
+  "title": "Factory Component Declarative Adapter v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "component_key", "component_version", "contributions"],
+  "properties": {
+    "schema_version": {"const": "factory-component-adapter/v1"},
+    "component_key": {"$ref": "#/$defs/component_key"},
+    "component_version": {"$ref": "#/$defs/semver"},
+    "contributions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/contribution"}
+    }
+  },
+  "$defs": {
+    "component_key": {"type": "string", "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$"},
+    "semver": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"},
+    "relative_path": {"type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.?/)[A-Za-z0-9][A-Za-z0-9._/-]*$"},
+    "contribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation", "source", "slot", "target", "bindings"],
+      "properties": {
+        "operation": {"const": "render_template"},
+        "source": {"type": "string", "pattern": "^templates/[A-Za-z0-9][A-Za-z0-9._/-]*$"},
+        "slot": {"type": "string", "minLength": 1},
+        "target": {"$ref": "#/$defs/relative_path"},
+        "bindings": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/binding"}
+        }
+      }
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "context"],
+      "properties": {
+        "source": {"type": "string", "pattern": "^input\\.[a-z][a-z0-9_]{0,62}$"},
+        "context": {"enum": ["python_string", "json_value", "typescript_string", "tsx_text"]}
+      }
+    }
+  }
+}

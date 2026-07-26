@@ -1,0 +1,4 @@
+interface:
+  display_name: "Release Review"
+  short_description: "Perform an evidence-based release review."
+  default_prompt: "Review the current Factory Pilot changes for release-blocking risks."

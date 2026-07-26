@@ -1,0 +1,200 @@
+{
+  "fixture_version": 1,
+  "purpose": "Offline deterministic regression corpus for the bounded internal approval-app profile.",
+  "cases": [
+    {
+      "id": "leave-basic",
+      "project_name": "leave-approval",
+      "brief": "Employees submit leave requests and managers approve them.",
+      "expected": {
+        "profile": "internal-approval-app",
+        "semantic_outcome": "valid",
+        "definition": {
+          "role_kinds": ["submitter", "approver", "auditor"],
+          "primary_record": {
+            "id": "leave_request",
+            "label": "Leave request",
+            "fields": [
+              {"id": "start_date", "type": "date", "required": true},
+              {"id": "end_date", "type": "date", "required": true},
+              {"id": "reason", "type": "string", "required": true}
+            ]
+          },
+          "page_kinds": ["form", "list", "queue", "audit"]
+        },
+        "component_keys": ["frontend.admin-shell", "backend.fastapi-crud", "auth.rbac-local", "workflow.single-level-approval", "ops.audit-log", "data.postgres-compose"]
+      }
+    },
+    {
+      "id": "leave-vacation",
+      "project_name": "vacation-approval",
+      "brief": "Employees request annual leave and one manager approves or rejects each request.",
+      "expected": {
+        "profile": "internal-approval-app",
+        "semantic_outcome": "valid",
+        "definition": {
+          "role_kinds": ["submitter", "approver", "auditor"],
+          "primary_record": {
+            "id": "leave_request",
+            "label": "Leave request",
+            "fields": [
+              {"id": "start_date", "type": "date", "required": true},
+              {"id": "end_date", "type": "date", "required": true},
+              {"id": "reason", "type": "string", "required": true}
+            ]
+          },
+          "page_kinds": ["form", "list", "queue", "audit"]
+        },
+        "component_keys": ["frontend.admin-shell", "backend.fastapi-crud", "auth.rbac-local", "workflow.single-level-approval", "ops.audit-log", "data.postgres-compose"]
+      }
+    },
+    {
+      "id": "expense-basic",
+      "project_name": "expense-approval",
+      "brief": "Employees submit expense claims and finance managers approve them.",
+      "expected": {
+        "profile": "internal-approval-app",
+        "semantic_outcome": "valid",
+        "definition": {
+          "role_kinds": ["submitter", "approver", "auditor"],
+          "primary_record": {
+            "id": "expense_claim",
+            "label": "Expense claim",
+            "fields": [
+              {"id": "amount", "type": "number", "required": true},
+              {"id": "description", "type": "string", "required": true}
+            ]
+          },
+          "page_kinds": ["form", "list", "queue", "audit"]
+        },
+        "component_keys": ["frontend.admin-shell", "backend.fastapi-crud", "auth.rbac-local", "workflow.single-level-approval", "ops.audit-log", "data.postgres-compose"]
+      }
+    },
+    {
+      "id": "expense-reimbursement",
+      "project_name": "reimbursement-approval",
+      "brief": "Staff submit expense reimbursement claims for manager approval and audit review.",
+      "expected": {
+        "profile": "internal-approval-app",
+        "semantic_outcome": "valid",
+        "definition": {
+          "role_kinds": ["submitter", "approver", "auditor"],
+          "primary_record": {
+            "id": "expense_claim",
+            "label": "Expense claim",
+            "fields": [
+              {"id": "amount", "type": "number", "required": true},
+              {"id": "description", "type": "string", "required": true}
+            ]
+          },
+          "page_kinds": ["form", "list", "queue", "audit"]
+        },
+        "component_keys": ["frontend.admin-shell", "backend.fastapi-crud", "auth.rbac-local", "workflow.single-level-approval", "ops.audit-log", "data.postgres-compose"]
+      }
+    },
+    {
+      "id": "equipment-basic",
+      "project_name": "equipment-access",
+      "brief": "Staff request access to laboratory equipment and security approves the request.",
+      "expected": {
+        "profile": "internal-approval-app",
+        "semantic_outcome": "valid",
+        "definition": {
+          "role_kinds": ["submitter", "approver", "auditor"],
+          "primary_record": {
+            "id": "equipment_access_request",
+            "label": "Equipment access request",
+            "fields": [
+              {"id": "equipment_name", "type": "string", "required": true},
+              {"id": "access_date", "type": "date", "required": true}
+            ]
+          },
+          "page_kinds": ["form", "list", "queue", "audit"]
+        },
+        "component_keys": ["frontend.admin-shell", "backend.fastapi-crud", "auth.rbac-local", "workflow.single-level-approval", "ops.audit-log", "data.postgres-compose"]
+      }
+    },
+    {
+      "id": "equipment-access",
+      "project_name": "system-access",
+      "brief": "Contractors request equipment access for a date and a security approver makes the decision.",
+      "expected": {
+        "profile": "internal-approval-app",
+        "semantic_outcome": "valid",
+        "definition": {
+          "role_kinds": ["submitter", "approver", "auditor"],
+          "primary_record": {
+            "id": "equipment_access_request",
+            "label": "Equipment access request",
+            "fields": [
+              {"id": "equipment_name", "type": "string", "required": true},
+              {"id": "access_date", "type": "date", "required": true}
+            ]
+          },
+          "page_kinds": ["form", "list", "queue", "audit"]
+        },
+        "component_keys": ["frontend.admin-shell", "backend.fastapi-crud", "auth.rbac-local", "workflow.single-level-approval", "ops.audit-log", "data.postgres-compose"]
+      }
+    },
+    {
+      "id": "non-approval-trading-platform",
+      "project_name": "trading-platform",
+      "brief": "Build a real-time cryptocurrency trading platform with market data, matching, and risk controls.",
+      "expected": {
+        "profile": "unsupported",
+        "semantic_outcome": "unsupported_profile"
+      },
+      "definition_mutation": { "kind": "unsupported_profile" }
+    },
+    {
+      "id": "credential-bearing-brief",
+      "project_name": "vendor-access",
+      "brief": "Build a vendor access request workflow. api_key=do-not-accept-or-store-this-value.",
+      "expected": {
+        "profile": "internal-approval-app",
+        "semantic_outcome": "credential_like_text_rejected"
+      },
+      "definition_mutation": { "kind": "credential_assignment" }
+    },
+    {
+      "id": "multi-level-approval",
+      "project_name": "capital-request",
+      "brief": "Create a capital request with manager, director, and CFO approvals in sequence.",
+      "expected": {
+        "profile": "internal-approval-app",
+        "semantic_outcome": "fixed_workflow_rejected"
+      },
+      "definition_mutation": { "kind": "extra_workflow_state" }
+    },
+    {
+      "id": "arbitrary-code-request",
+      "project_name": "automation-request",
+      "brief": "Create an approval request and run arbitrary Python commands after it is approved.",
+      "expected": {
+        "profile": "internal-approval-app",
+        "semantic_outcome": "unsafe_definition_rejected"
+      },
+      "definition_mutation": { "kind": "reserved_field_identifier" }
+    },
+    {
+      "id": "invalid-audit-coverage",
+      "project_name": "audit-approval",
+      "brief": "Build an approval request where a submitter can directly edit the audit history.",
+      "expected": {
+        "profile": "internal-approval-app",
+        "semantic_outcome": "audit_coverage_rejected"
+      },
+      "definition_mutation": { "kind": "invalid_audit_coverage" }
+    },
+    {
+      "id": "missing-primary-data",
+      "project_name": "empty-request",
+      "brief": "Create an approval request without any business fields or record data.",
+      "expected": {
+        "profile": "internal-approval-app",
+        "semantic_outcome": "primary_record_rejected"
+      },
+      "definition_mutation": { "kind": "missing_required_field" }
+    }
+  ]
+}

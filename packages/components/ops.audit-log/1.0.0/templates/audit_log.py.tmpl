@@ -1,0 +1,31 @@
+"""Owned append-only audit writes and protected audit-query route."""
+
+from __future__ import annotations
+
+from typing import Any
+from uuid import uuid4
+
+from fastapi import APIRouter, Depends
+
+from app.runtime import connect
+from auth.session_auth import get_actor
+from authz.rbac import require_role
+
+
+EVENT_PREFIX = {{python_string:event_prefix}}
+AUDITOR_ROLE = {{python_string:auditor_role}}
+router = APIRouter()
+
+
+def append_audit_event(connection: Any, record_id: str, action: str, actor: str) -> None:
+    connection.execute(
+        "INSERT INTO audit_events (id, record_id, action, actor) VALUES (%s, %s, %s, %s)",
+        (uuid4(), record_id, f"{EVENT_PREFIX}.{action}", actor),
+    )
+
+
+@router.get("/audit-events")
+def list_audit_events(actor: str = Depends(get_actor)) -> list[dict[str, Any]]:
+    require_role(actor, AUDITOR_ROLE)
+    with connect() as connection:
+        return [dict(row) for row in connection.execute("SELECT id, record_id, action, actor, created_at FROM audit_events ORDER BY created_at, id").fetchall()]

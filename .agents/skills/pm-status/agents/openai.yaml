@@ -1,0 +1,4 @@
+interface:
+  display_name: "PM Status"
+  short_description: "Refresh evidence-backed project status."
+  default_prompt: "Refresh the current Factory Pilot project status with repository evidence."

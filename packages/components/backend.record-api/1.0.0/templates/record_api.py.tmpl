@@ -1,0 +1,79 @@
+"""Owned CRUD routes for one configured approval record."""
+
+from __future__ import annotations
+
+import json
+from typing import Any
+from uuid import UUID, uuid4
+
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from app.runtime import connect
+from audit.audit_log import append_audit_event
+from auth.session_auth import get_actor
+from authz.rbac import require_role
+from workflow.approval.single_level import require_approver, transition_action
+
+
+RECORD_LABEL = {{python_string:record_label}}
+RECORD_PATH = {{python_string:record_path}}
+RECORD_TABLE = {{python_string:record_table}}
+SUBMITTER_ROLE = {{python_string:submitter_role}}
+router = APIRouter()
+
+
+def require_pending_record(row: dict | None) -> dict:
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"{RECORD_LABEL} was not found")
+    if row["status"] != "pending":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"{RECORD_LABEL} has already been decided")
+    return row
+
+
+def _record_response(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": str(row["id"]),
+        "submitter_id": row["submitter_id"],
+        "payload": row["payload"],
+        "status": row["status"],
+        "created_at": row["created_at"],
+        "decided_at": row["decided_at"],
+        "decided_by": row["decided_by"],
+    }
+
+
+@router.post(RECORD_PATH, status_code=status.HTTP_201_CREATED)
+def submit_record(payload: dict[str, Any], actor: str = Depends(get_actor)) -> dict[str, Any]:
+    require_role(actor, SUBMITTER_ROLE)
+    if not payload:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="A record payload is required")
+    record_id = uuid4()
+    with connect() as connection, connection.transaction():
+        row = connection.execute(
+            f"INSERT INTO {RECORD_TABLE} (id, submitter_id, payload, status) VALUES (%s, %s, %s::jsonb, 'pending') RETURNING id, submitter_id, payload, status, created_at, decided_at, decided_by",
+            (record_id, actor, json.dumps(payload, sort_keys=True)),
+        ).fetchone()
+        append_audit_event(connection, str(record_id), "submitted", actor)
+    return _record_response(row)
+
+
+@router.get(RECORD_PATH)
+def list_records(actor: str = Depends(get_actor)) -> list[dict[str, Any]]:
+    with connect() as connection:
+        if actor == SUBMITTER_ROLE:
+            rows = connection.execute(f"SELECT id, submitter_id, payload, status, created_at, decided_at, decided_by FROM {RECORD_TABLE} WHERE submitter_id = %s ORDER BY created_at, id", (actor,)).fetchall()
+        else:
+            rows = connection.execute(f"SELECT id, submitter_id, payload, status, created_at, decided_at, decided_by FROM {RECORD_TABLE} ORDER BY created_at, id").fetchall()
+    return [_record_response(row) for row in rows]
+
+
+@router.post(RECORD_PATH + "/{record_id}/decision")
+def decide_record(record_id: UUID, payload: dict[str, str], actor: str = Depends(get_actor)) -> dict[str, Any]:
+    require_approver(actor)
+    decision = transition_action(payload.get("decision", ""))
+    with connect() as connection, connection.transaction():
+        current = connection.execute(f"SELECT id, submitter_id, payload, status, created_at, decided_at, decided_by FROM {RECORD_TABLE} WHERE id = %s", (record_id,)).fetchone()
+        require_pending_record(current)
+        row = connection.execute(f"UPDATE {RECORD_TABLE} SET status = %s, decided_at = CURRENT_TIMESTAMP, decided_by = %s WHERE id = %s RETURNING id, submitter_id, payload, status, created_at, decided_at, decided_by", (decision, actor, record_id)).fetchone()
+        append_audit_event(connection, str(record_id), decision, actor)
+    return _record_response(row)
