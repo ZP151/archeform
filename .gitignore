@@ -7,3 +7,4 @@ node_modules/
 apps/api/runs/
 apps/api/state/
 coverage/
+.worktrees/
