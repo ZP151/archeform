@@ -35,7 +35,7 @@ function assertPackageAndSourceOrigin() {
   assert.equal(pkg.dependencies.next, '15.5.21');
   assert.equal(pkg.dependencies.react, '19.2.7');
   assert.equal(pkg.dependencies['react-dom'], '19.2.7');
-  const preflight = 'python ../../tools/console_next_intake.py verify-console-next --snapshot ../../packages/vendor/shadcn-ui/7774cd7dcee1e98d0815aa6e829f33a7fc952fdf --lockfile package-lock.json --console-root .';
+  const preflight = 'python ../../tools/console_next_intake.py verify-console-next --snapshot packages/vendor/shadcn-ui/7774cd7dcee1e98d0815aa6e829f33a7fc952fdf --lockfile apps/console-next/package-lock.json --console-root apps/console-next';
   assert.equal(pkg.scripts.preflight, preflight);
   for (const script of ['dev', 'build', 'start']) assert.match(pkg.scripts[script], new RegExp(`^${preflight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} && `));
   assert.match(pkg.scripts.dev, /127\.0\.0\.1/);
@@ -92,6 +92,16 @@ function assertApiContainment() {
   `;
   const result = spawnSync(process.execPath, ['--experimental-strip-types', '--input-type=module', '--eval', program], { encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr || result.stdout || 'FactoryApi containment assertion failed.');
+}
+
+function assertRootPrefixPreflight() {
+  const result = spawnSync('npm', ['--prefix', 'apps/console-next', 'run', 'preflight'], {
+    cwd: root,
+    encoding: 'utf8',
+    shell: process.platform === 'win32',
+  });
+  assert.equal(result.status, 0, result.stderr || result.stdout || 'root-cwd Console Next preflight failed.');
+  assert.match(result.stdout, /console-next preflight: PASS/, 'root-cwd preflight must retain the fixed-digest verifier.');
 }
 
 async function waitForServer(url, child) {
@@ -188,6 +198,7 @@ async function runWorkflow() {
 if (process.argv.includes('--assert-package-only')) {
   assertPackageAndSourceOrigin();
   assertApiContainment();
+  assertRootPrefixPreflight();
   console.log('console-next package/source origin: PASS');
 } else {
   assertPackageAndSourceOrigin();
