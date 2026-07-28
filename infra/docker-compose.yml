@@ -35,6 +35,10 @@ services:
       DATABASE_URL: postgresql://factory:factory@postgres:5432/factory_pilot?schema=public
       REDIS_URL: redis://redis:6379
       PORT: 3000
+      # Optional and intentionally passed only into the local Control Plane.
+      # Neither the Worker nor generated applications receive model credentials.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5}
     depends_on:
       postgres:
         condition: service_healthy
