@@ -97,6 +97,9 @@ importers:
       '@factory/adapters':
         specifier: workspace:*
         version: link:../../packages/adapters
+      '@factory/capabilities':
+        specifier: workspace:*
+        version: link:../../packages/capabilities
       '@factory/graph':
         specifier: workspace:*
         version: link:../../packages/graph

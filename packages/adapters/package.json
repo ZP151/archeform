@@ -13,6 +13,10 @@
     "./ai": {
       "types": "./dist/ai.d.ts",
       "default": "./dist/ai.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "default": "./dist/browser.js"
     }
   },
   "scripts": {

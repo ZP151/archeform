@@ -9,7 +9,7 @@ import {
   useNodesState,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import type { ReactFlowDiagram } from "@factory/adapters";
+import type { ReactFlowDiagram } from "@factory/adapters/browser";
 import type { FlowModel } from "@factory/graph";
 import { addFlowTransition } from "../lib/graph-editors";
 

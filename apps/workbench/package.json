@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@factory/adapters": "workspace:*",
+    "@factory/capabilities": "workspace:*",
     "@factory/graph": "workspace:*",
     "@puckeditor/core": "^0.22.3",
     "@xyflow/react": "^12.3.6",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useReducer, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import {
   Bot,
   Check,
@@ -37,12 +37,17 @@ import {
   type WorkbenchDraft,
   type WorkbenchPublishedRevision,
 } from "../lib/control-plane-client";
+import {
+  createProfileDraft,
+  profileStarterOptions,
+} from "../lib/profile-starters";
+import type { FactoryProfile } from "@factory/capabilities";
 import { PageStudio } from "./page-studio";
 import { FlowStudio } from "./flow-studio";
 import {
   flowModelToReactFlow,
   pageModelToPuckDocument,
-} from "@factory/adapters";
+} from "@factory/adapters/browser";
 import type {
   ApplicationGraphV1,
   DomainModel,
@@ -92,6 +97,7 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   const [draftDirty, setDraftDirty] = useState(false);
   const [operationError, setOperationError] = useState<string | null>(null);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const bootstrapRequest = useRef(0);
   const controlPlane = useMemo(
     () => new ControlPlaneClient(controlPlaneUrl),
     [controlPlaneUrl],
@@ -105,25 +111,36 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
     [graph.flow],
   );
 
-  useEffect(() => {
-    let active = true;
+  const bootstrapGraph = useCallback((nextGraph: ApplicationGraphV1) => {
+    const request = ++bootstrapRequest.current;
+    setGraph(nextGraph);
+    setRemoteDraft(null);
+    setPublishedRevision(null);
+    setCompilation(null);
+    setDraftDirty(false);
+    setAiSummary(null);
+    setOperationError(null);
+    dispatch({ type: "synchronize-draft", revision: "r.0" });
+    setConnectionState("connecting");
+
     void controlPlane
-      .bootstrapLocalDraft(initialGraph)
+      .bootstrapLocalDraft(nextGraph)
       .then((draft) => {
-        if (!active) return;
+        if (request !== bootstrapRequest.current) return;
         setRemoteDraft(draft);
         setGraph(draft.graph);
         dispatch({ type: "synchronize-draft", revision: `r.${draft.revisionNumber}` });
         setConnectionState("ready");
       })
       .catch(() => {
-        if (!active) return;
+        if (request !== bootstrapRequest.current) return;
         setConnectionState("offline");
       });
-    return () => {
-      active = false;
-    };
-  }, [controlPlane, initialGraph]);
+  }, [controlPlane]);
+
+  useEffect(() => {
+    bootstrapGraph(initialGraph);
+  }, [bootstrapGraph, initialGraph]);
 
   useEffect(() => {
     if (!compilation || !isPendingCompilation(compilation.result.status)) return;
@@ -248,6 +265,12 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
     navigation.find((item) => item.id === state.activeSurface) ?? navigation[0];
   const proposeDraftChange = (source: string) =>
     dispatch({ type: "propose-draft-change", source });
+  const selectedProfile = profileStarterOptions.find(
+    (option) => createProfileDraft(option.profile).metadata.id === graph.metadata.id,
+  )?.profile ?? "";
+  const openProfile = (profile: FactoryProfile) => {
+    bootstrapGraph(createProfileDraft(profile));
+  };
 
   return (
     <main className={`workbench theme-${state.theme}`} data-theme={state.theme}>
@@ -288,13 +311,29 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
       <section className="shell">
         <header className="topbar">
           <div className="project-control">
-            <button className="project-picker" aria-label="Select project">
+            <label className="project-picker">
               <span className="project-glyph">
                 <FolderKanban size={15} />
               </span>
-              <strong>{graph.metadata.name}</strong>
-              <ChevronDown size={15} />
-            </button>
+              <span className="project-name">{graph.metadata.name}</span>
+              <select
+                aria-label="Open a profile starter"
+                className="profile-select"
+                onChange={(event) => {
+                  const profile = event.target.value as FactoryProfile;
+                  if (profile) openProfile(profile);
+                }}
+                value={selectedProfile}
+              >
+                {!selectedProfile && <option value="">Custom Graph</option>}
+                {profileStarterOptions.map((option) => (
+                  <option key={option.profile} value={option.profile}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown aria-hidden="true" size={15} />
+            </label>
             <span className="top-divider" />
             <button className="revision-picker" aria-label="Select revision">
               {state.revision}

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Puck, type Config, type Data } from "@puckeditor/core";
 import "@puckeditor/core/puck.css";
-import type { PuckPageDocument } from "@factory/adapters";
+import type { PuckPageDocument } from "@factory/adapters/browser";
 import type { PageModel } from "@factory/graph";
 import { replaceHeroHeading } from "../lib/page-model";
 

@@ -185,9 +185,28 @@ input:focus-visible {
   color: var(--accent-dark);
   background: var(--accent-soft);
 }
-.project-picker strong {
+.project-name {
   font-size: 13px;
+  font-weight: 720;
   letter-spacing: -0.015em;
+}
+.profile-select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.project-picker {
+  position: relative;
+  cursor: pointer;
+}
+.project-picker:focus-within {
+  outline: 2px solid color-mix(in srgb, var(--accent) 46%, transparent);
+  outline-offset: 2px;
 }
 .top-divider {
   width: 1px;
