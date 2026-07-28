@@ -66,6 +66,7 @@ describe("compilation target registry", () => {
     expect(bundle.files).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ path: "web/app/application-manifest.ts", content: expect.stringContaining("Expense approval") }),
+        expect.objectContaining({ path: "web/app/favicon.ico/route.ts", content: expect.stringContaining("image/svg+xml") }),
         expect.objectContaining({ path: "web/package.json", content: expect.stringContaining("next") }),
         expect.objectContaining({ path: "api/src/main.ts", content: expect.stringContaining("NestFactory") }),
         expect.objectContaining({ path: "api/package.json", content: expect.stringContaining("@nestjs/core") }),
@@ -381,5 +382,7 @@ describe("compilation target registry", () => {
     expect(files["api/src/application-runtime.ts"]).toContain("decrementInventory");
     expect(files["api/src/prisma-record-store.ts"]).toContain("commerceLineItem");
     expect(files["api/src/main.ts"]).toContain("commerce/:entity/:recordId/items");
+    expect(files["web/app/generated-application-client.tsx"]).toContain("addToCart");
+    expect(files["web/app/generated-application-client.tsx"]).toContain("Checkout cart");
   });
 });
