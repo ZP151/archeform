@@ -156,6 +156,73 @@ describe("ControlPlaneClient", () => {
     );
   });
 
+  it("reads only a registered generated artifact snapshot by compilation and encoded path", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          path: "docs/api-reference.md",
+          digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          content: "# API reference\n",
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(client.getCompilationArtifact("compilation-1", "docs/api-reference.md")).resolves.toEqual({
+      path: "docs/api-reference.md",
+      digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      content: "# API reference\n",
+    });
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/compilations/compilation-1/artifact-content?path=docs%2Fapi-reference.md",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("reads ordered Draft and Published revision snapshots for the Workbench timeline", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([
+            { id: "draft-1", revisionNumber: 1, graph: workbenchGraph },
+            { id: "draft-2", revisionNumber: 2, graph: workbenchGraph },
+          ]),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([
+            { id: "published-1", revisionNumber: 1, graphHash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", graph: workbenchGraph },
+          ]),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(client.listRevisionTimeline("graph-1")).resolves.toEqual({
+      drafts: [
+        { id: "draft-1", revisionNumber: 1, graph: workbenchGraph },
+        { id: "draft-2", revisionNumber: 2, graph: workbenchGraph },
+      ],
+      published: [
+        { id: "published-1", revisionNumber: 1, graphHash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", graph: workbenchGraph },
+      ],
+    });
+    expect(fetcher).toHaveBeenNthCalledWith(
+      1,
+      "http://control-plane.test/application-graphs/graph-1/draft-revisions",
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(fetcher).toHaveBeenNthCalledWith(
+      2,
+      "http://control-plane.test/application-graphs/graph-1/published-revisions",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
   it("submits a brief only to the Draft-scoped AI proposal boundary", async () => {
     const fetcher = vi.fn().mockResolvedValue(
       new Response(

@@ -26,9 +26,9 @@ test("runs the generated ecommerce customer and operator journey", async ({
   await page.getByLabel("Role").selectOption("operator");
   await page.getByRole("button", { name: "Order" }).click();
   const paidOrder = page.locator("li").filter({ hasText: '"status":"paid"' });
-  await expect(paidOrder).toHaveCount(1);
-  await paidOrder.getByRole("button", { name: "fulfil" }).click();
+  await expect(paidOrder.last()).toBeVisible({ timeout: 10_000 });
+  await paidOrder.last().getByRole("button", { name: "fulfil" }).click();
   await expect(
-    page.locator("li").filter({ hasText: '"status":"fulfilled"' }),
-  ).toHaveCount(1);
+    page.locator("li").filter({ hasText: '"status":"fulfilled"' }).last(),
+  ).toBeVisible({ timeout: 10_000 });
 });

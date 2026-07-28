@@ -20,9 +20,11 @@ const lifecycle = {
   createCompilation: vi.fn(),
   createLocalApplicationGraph: vi.fn(),
   exportPublishedGraph: vi.fn(),
+  listDraftRevisions: vi.fn(),
   getLocalApplicationGraph: vi.fn(),
   importPublishedGraph: vi.fn(),
   getDraft: vi.fn(),
+  getCompilationArtifact: vi.fn(),
   getCompilation: vi.fn(),
   listPublishedRevisions: vi.fn(),
   publishDraft: vi.fn(),
@@ -51,6 +53,13 @@ describe("LifecycleController", () => {
   afterAll(async () => app.close());
 
   it.each([
+    {
+      method: "GET",
+      path: "/application-graphs/graph-1/draft-revisions",
+      handler: lifecycle.listDraftRevisions,
+      arguments: ["graph-1"],
+      response: [{ id: "draft-1", revisionNumber: 1 }],
+    },
     {
       method: "POST",
       path: "/workspaces/local/application-graphs/import",
@@ -139,6 +148,13 @@ describe("LifecycleController", () => {
         },
       ],
       response: { id: "compilation-1" },
+    },
+    {
+      method: "GET",
+      path: "/compilations/compilation-1/artifact-content?path=docs%2Fapi-reference.md",
+      handler: lifecycle.getCompilationArtifact,
+      arguments: ["compilation-1", "docs/api-reference.md"],
+      response: { path: "docs/api-reference.md", digest: "sha256:artifact", content: "# API reference" },
     },
     {
       method: "GET",

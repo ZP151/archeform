@@ -34,6 +34,21 @@ test("edits a Draft, publishes an immutable revision, and compiles it", async ({
     timeout: 30_000,
   });
   await expect(page.getByText(/immutable outputs/)).toBeVisible();
+  await page.getByRole("button", { name: "api/.dockerignore" }).click();
+  await expect(page.getByLabel("Generated source snapshot")).toContainText(
+    "verified snapshot",
+  );
+
+  await page.getByRole("button", { name: "History" }).click();
+  await expect(
+    page.getByLabel("Application Graph revision timeline"),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByLabel("Application Graph revision timeline")
+      .getByText("Published", { exact: true })
+      .first(),
+  ).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Page" }).click();

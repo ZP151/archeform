@@ -18,6 +18,7 @@ import {
 } from "@factory/graph";
 import { GraphProposalError } from "@factory/adapters/ai";
 
+import { GeneratedArtifactReader } from "./artifact-content.js";
 import { PrismaService } from "./prisma.service.js";
 import {
   COMPILATION_QUEUE,
@@ -193,6 +194,8 @@ function assertGraphIdentity(
 
 @Injectable()
 export class LifecycleService {
+  private readonly artifactReader = new GeneratedArtifactReader();
+
   constructor(
     private readonly prisma: PrismaService,
     @Inject(COMPILATION_QUEUE)
@@ -280,6 +283,18 @@ export class LifecycleService {
         revisionNumber: (latest?.revisionNumber ?? 0) + 1,
         graph: graph as unknown as Prisma.InputJsonValue,
       },
+    });
+  }
+
+  async listDraftRevisions(applicationGraphId: string) {
+    const aggregate = await this.prisma.applicationGraph.findUnique({
+      where: { id: applicationGraphId },
+    });
+    if (!aggregate)
+      throw new NotFoundException("Application Graph was not found.");
+    return this.prisma.draftRevision.findMany({
+      where: { applicationGraphId },
+      orderBy: { revisionNumber: "asc" },
     });
   }
 
@@ -459,6 +474,31 @@ export class LifecycleService {
     });
     if (!compilation) throw new NotFoundException("Compilation was not found.");
     return compilation;
+  }
+
+  async getCompilationArtifact(compilationId: string, path: string | undefined) {
+    const id = requiredString({ compilationId }, "compilationId");
+    const artifactPath = requiredString({ path }, "path");
+    const artifact = await this.prisma.artifact.findFirst({
+      where: { compilationId: id, path: artifactPath },
+    });
+    if (!artifact) throw new NotFoundException("Generated artifact was not found.");
+    const metadata = artifact.metadata;
+    const rootDirectory = metadata && typeof metadata === "object" && !Array.isArray(metadata)
+      ? (metadata as UnknownRecord).rootDirectory
+      : undefined;
+    if (typeof rootDirectory !== "string") {
+      throw new ConflictException("Generated artifact has no registered root directory.");
+    }
+    try {
+      return await this.artifactReader.read({
+        rootDirectory,
+        path: artifact.path,
+        digest: artifact.digest,
+      });
+    } catch {
+      throw new ConflictException("Generated artifact content does not match registered evidence.");
+    }
   }
 
   async completeCompilation(compilationId: string, input: unknown) {

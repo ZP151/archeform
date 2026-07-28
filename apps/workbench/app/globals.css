@@ -306,6 +306,93 @@ input:focus-visible {
   color: var(--muted);
   font-size: 11px;
 }
+.revision-timeline {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  width: min(860px, 100%);
+  margin: 18px 0 0 auto;
+  padding: 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+.revision-timeline-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+.revision-timeline-heading span,
+.revision-timeline-heading strong,
+.revision-timeline li,
+.revision-timeline button {
+  font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.revision-timeline-heading span,
+.revision-timeline li small {
+  display: block;
+  color: var(--muted);
+}
+.revision-timeline-heading strong {
+  color: var(--ink);
+}
+.revision-timeline-heading button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--muted);
+  background: var(--paper);
+  cursor: pointer;
+}
+.revision-timeline ol {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(156px, 1fr));
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.revision-timeline li {
+  display: grid;
+  gap: 4px;
+  min-height: 94px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--paper);
+}
+.revision-timeline li.is-current {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent-soft);
+}
+.revision-kind {
+  width: max-content;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.revision-kind-draft {
+  color: var(--accent-dark);
+  background: var(--accent-soft);
+}
+.revision-kind-published {
+  color: #786020;
+  background: #fff2ce;
+}
+.revision-timeline li em {
+  color: var(--accent-dark);
+  font-style: normal;
+  font-weight: 700;
+}
+.timeline-empty {
+  color: var(--muted);
+}
 .connection-dot {
   width: 7px;
   height: 7px;
@@ -1154,11 +1241,56 @@ input:focus-visible {
   justify-content: space-between;
   gap: 14px;
 }
+.compilation-artifacts li button {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.compilation-artifacts li button:hover code {
+  color: #8de7c8;
+}
 .compilation-artifacts code {
   color: #c7d7dc;
 }
 .compilation-artifacts .artifact-more {
   color: #8de7c8;
+}
+.artifact-snapshot {
+  display: grid;
+  gap: 10px;
+  padding: 15px 17px 17px;
+  border-top: 1px solid #263644;
+  color: #d9e9ea;
+}
+.artifact-snapshot > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.artifact-snapshot strong,
+.artifact-snapshot small {
+  font: 10px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.artifact-snapshot small {
+  color: #8395a6;
+}
+.artifact-snapshot pre {
+  max-height: 320px;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid #263644;
+  border-radius: 7px;
+  color: #c7d7dc;
+  background: #0a1017;
+  font: 10px/1.65 ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre;
 }
 .studio-shell {
   display: grid;

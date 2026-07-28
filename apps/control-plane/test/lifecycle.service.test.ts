@@ -14,7 +14,7 @@ function prismaMock() {
   return {
     workspace: { upsert: vi.fn() },
     applicationGraph: { create: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn() },
-    draftRevision: { create: vi.fn(), findFirst: vi.fn() },
+    draftRevision: { create: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
     publishedRevision: {
       count: vi.fn(),
       create: vi.fn(),
@@ -28,7 +28,7 @@ function prismaMock() {
       findUnique: vi.fn(),
       update: vi.fn(),
     },
-    artifact: { createMany: vi.fn() },
+    artifact: { createMany: vi.fn(), findFirst: vi.fn() },
   };
 }
 
@@ -251,6 +251,23 @@ describe("LifecycleService", () => {
     expect(prisma.draftRevision.findFirst).toHaveBeenCalledWith({
       where: { applicationGraphId: applicationGraph.id },
       orderBy: { revisionNumber: "desc" },
+    });
+  });
+
+  it("lists immutable Draft snapshots in their append-only order for revision history", async () => {
+    prisma.applicationGraph.findUnique.mockResolvedValue(applicationGraph);
+    prisma.draftRevision.findMany.mockResolvedValue([
+      { ...draftRevision, revisionNumber: 1 },
+      { ...draftRevision, id: "draft-2", revisionNumber: 2 },
+    ]);
+
+    await expect(service.listDraftRevisions(applicationGraph.id)).resolves.toEqual([
+      { ...draftRevision, revisionNumber: 1 },
+      { ...draftRevision, id: "draft-2", revisionNumber: 2 },
+    ]);
+    expect(prisma.draftRevision.findMany).toHaveBeenCalledWith({
+      where: { applicationGraphId: applicationGraph.id },
+      orderBy: { revisionNumber: "asc" },
     });
   });
 

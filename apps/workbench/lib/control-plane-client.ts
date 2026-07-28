@@ -42,6 +42,16 @@ export type WorkbenchPublishedRevision = {
   readonly id: string;
   readonly revisionNumber: number;
   readonly graphHash: string;
+  readonly graph?: ApplicationGraphV1;
+};
+
+export type WorkbenchRevisionTimeline = {
+  readonly drafts: readonly {
+    readonly id: string;
+    readonly revisionNumber: number;
+    readonly graph: ApplicationGraphV1;
+  }[];
+  readonly published: readonly WorkbenchPublishedRevision[];
 };
 
 export type WorkbenchCompilation = {
@@ -55,6 +65,12 @@ export type WorkbenchCompilation = {
     readonly mediaType: string;
     readonly sizeBytes?: number | null;
   }[];
+};
+
+export type WorkbenchArtifactContent = {
+  readonly path: string;
+  readonly digest: string;
+  readonly content: string;
 };
 
 export class ControlPlaneError extends Error {
@@ -156,6 +172,23 @@ export class ControlPlaneClient {
     );
   }
 
+  async listRevisionTimeline(
+    applicationGraphId: string,
+  ): Promise<WorkbenchRevisionTimeline> {
+    const encodedId = encodeURIComponent(applicationGraphId);
+    const [drafts, published] = await Promise.all([
+      this.request<WorkbenchRevisionTimeline["drafts"]>(
+        `/application-graphs/${encodedId}/draft-revisions`,
+        { method: "GET" },
+      ),
+      this.request<WorkbenchRevisionTimeline["published"]>(
+        `/application-graphs/${encodedId}/published-revisions`,
+        { method: "GET" },
+      ),
+    ]);
+    return { drafts, published };
+  }
+
   exportPublishedGraph(
     applicationGraphId: string,
     publishedRevisionId: string,
@@ -192,6 +225,16 @@ export class ControlPlaneClient {
   getCompilation(compilationId: string): Promise<WorkbenchCompilation> {
     return this.request(
       `/compilations/${encodeURIComponent(compilationId)}`,
+      { method: "GET" },
+    );
+  }
+
+  getCompilationArtifact(
+    compilationId: string,
+    artifactPath: string,
+  ): Promise<WorkbenchArtifactContent> {
+    return this.request(
+      `/compilations/${encodeURIComponent(compilationId)}/artifact-content?path=${encodeURIComponent(artifactPath)}`,
       { method: "GET" },
     );
   }

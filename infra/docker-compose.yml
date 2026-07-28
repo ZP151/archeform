@@ -35,6 +35,7 @@ services:
       DATABASE_URL: postgresql://factory:factory@postgres:5432/factory_pilot?schema=public
       REDIS_URL: redis://redis:6379
       PORT: 3000
+      FACTORY_ARTIFACT_ROOT: /artifacts
       # Optional and intentionally passed only into the local Control Plane.
       # Neither the Worker nor generated applications receive model credentials.
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
@@ -46,6 +47,8 @@ services:
         condition: service_healthy
     ports:
       - "${FACTORY_CONTROL_PLANE_PORT:-3000}:3000"
+    volumes:
+      - factory-artifacts:/artifacts:ro
 
   compiler-worker:
     build:

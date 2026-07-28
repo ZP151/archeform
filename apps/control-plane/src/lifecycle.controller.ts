@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Post, Query } from "@nestjs/common";
 
 import { LifecycleService } from "./lifecycle.service.js";
 
@@ -29,6 +29,13 @@ export class LifecycleController {
     @Body() body: unknown,
   ) {
     return this.lifecycle.appendDraftRevision(applicationGraphId, body);
+  }
+
+  @Get("application-graphs/:applicationGraphId/draft-revisions")
+  listDraftRevisions(
+    @Param("applicationGraphId") applicationGraphId: string,
+  ) {
+    return this.lifecycle.listDraftRevisions(applicationGraphId);
   }
 
   @Post("application-graphs/:applicationGraphId/ai-proposals")
@@ -78,6 +85,14 @@ export class LifecycleController {
   @Get("compilations/:compilationId")
   getCompilation(@Param("compilationId") compilationId: string) {
     return this.lifecycle.getCompilation(compilationId);
+  }
+
+  @Get("compilations/:compilationId/artifact-content")
+  getCompilationArtifact(
+    @Param("compilationId") compilationId: string,
+    @Query("path") path: string | undefined,
+  ) {
+    return this.lifecycle.getCompilationArtifact(compilationId, path);
   }
 
   @Post("internal/compilations/:compilationId/complete")

@@ -11,7 +11,11 @@ const publishedExpense: PublishedGraphInput = {
   publishedRevisionId: "published-expense-1",
   graph: {
     apiVersion: "factory.application-graph/v1",
-    metadata: { id: "expense-approval", workspaceId: "local-workspace", name: "Expense approval" },
+    metadata: {
+      id: "expense-approval",
+      workspaceId: "local-workspace",
+      name: "Expense approval",
+    },
     page: { pages: [], navigation: [] },
     domain: {
       entities: [{ key: "expense", label: "Expense", fields: [], indexes: [] }],
@@ -48,15 +52,20 @@ describe("compilation target registry", () => {
       expect.arrayContaining([
         expect.objectContaining({ target: "next-web", path: "web/" }),
         expect.objectContaining({ target: "nest-api", path: "api/" }),
-        expect.objectContaining({ target: "prisma-postgres", path: "database/prisma/schema.prisma" }),
+        expect.objectContaining({
+          target: "prisma-postgres",
+          path: "database/prisma/schema.prisma",
+        }),
       ]),
     );
   });
 
   it("refuses a mutable or malformed compilation input", () => {
-    expect(() => buildCompilationPlan({ graph: publishedExpense.graph } as PublishedGraphInput)).toThrow(
-      "Published revision id is required",
-    );
+    expect(() =>
+      buildCompilationPlan({
+        graph: publishedExpense.graph,
+      } as PublishedGraphInput),
+    ).toThrow("Published revision id is required");
   });
 
   it("generates deterministic, isolated Web/API/database source from a published Graph", () => {
@@ -65,14 +74,38 @@ describe("compilation target registry", () => {
     expect(bundle.rootDirectory).toBe("expense-approval-published-expense-1");
     expect(bundle.files).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ path: "web/app/application-manifest.ts", content: expect.stringContaining("Expense approval") }),
-        expect.objectContaining({ path: "web/app/favicon.ico/route.ts", content: expect.stringContaining("image/svg+xml") }),
-        expect.objectContaining({ path: "web/package.json", content: expect.stringContaining("next") }),
-        expect.objectContaining({ path: "api/src/main.ts", content: expect.stringContaining("NestFactory") }),
-        expect.objectContaining({ path: "api/package.json", content: expect.stringContaining("@nestjs/core") }),
-        expect.objectContaining({ path: "database/prisma/schema.prisma", content: expect.stringContaining("model Expense") }),
-        expect.objectContaining({ path: "docker-compose.yml", content: expect.stringContaining("postgres") }),
-        expect.objectContaining({ path: "api/policy/policy.csv", content: expect.any(String) }),
+        expect.objectContaining({
+          path: "web/app/application-manifest.ts",
+          content: expect.stringContaining("Expense approval"),
+        }),
+        expect.objectContaining({
+          path: "web/app/favicon.ico/route.ts",
+          content: expect.stringContaining("image/svg+xml"),
+        }),
+        expect.objectContaining({
+          path: "web/package.json",
+          content: expect.stringContaining("next"),
+        }),
+        expect.objectContaining({
+          path: "api/src/main.ts",
+          content: expect.stringContaining("NestFactory"),
+        }),
+        expect.objectContaining({
+          path: "api/package.json",
+          content: expect.stringContaining("@nestjs/core"),
+        }),
+        expect.objectContaining({
+          path: "database/prisma/schema.prisma",
+          content: expect.stringContaining("model Expense"),
+        }),
+        expect.objectContaining({
+          path: "docker-compose.yml",
+          content: expect.stringContaining("postgres"),
+        }),
+        expect.objectContaining({
+          path: "api/policy/policy.csv",
+          content: expect.any(String),
+        }),
       ]),
     );
     expect(generateApplicationBundle(publishedExpense)).toEqual(bundle);
@@ -80,28 +113,120 @@ describe("compilation target registry", () => {
 
   it("emits a deployable initial Prisma migration and isolated Compose lifecycle", () => {
     const files = Object.fromEntries(
-      generateApplicationBundle(publishedExpense).files.map((file) => [file.path, file.content]),
+      generateApplicationBundle(publishedExpense).files.map((file) => [
+        file.path,
+        file.content,
+      ]),
     );
 
-    expect(files["database/prisma/migrations/0001_initial/migration.sql"]).toContain(
-      'CREATE TABLE "Expense"',
-    );
-    expect(files["database/prisma/migrations/0001_initial/migration.sql"]).toContain(
-      'CREATE TABLE "AuditEvent"',
-    );
+    expect(
+      files["database/prisma/migrations/0001_initial/migration.sql"],
+    ).toContain('CREATE TABLE "Expense"');
+    expect(
+      files["database/prisma/migrations/0001_initial/migration.sql"],
+    ).toContain('CREATE TABLE "AuditEvent"');
     expect(files["database/Dockerfile"]).toContain("prisma migrate deploy");
     expect(files["api/Dockerfile"]).not.toContain("prisma db push");
     expect(files["web/.dockerignore"]).toContain("node_modules");
     expect(files["api/.dockerignore"]).toContain("node_modules");
     expect(files["api/package.json"]).toContain("@types/node");
     expect(files["docker-compose.yml"]).toContain("migrate:");
-    expect(files["docker-compose.yml"]).toContain("FACTORY_COMPOSE_PROJECT_NAME");
+    expect(files["docker-compose.yml"]).toContain(
+      "FACTORY_COMPOSE_PROJECT_NAME",
+    );
     expect(files["docker-compose.yml"]).toContain(
       "factory-expense-approval-published-expense-1",
     );
     expect(files["pnpm-workspace.yaml"]).toContain("web");
-    expect(files["README.md"]).toContain("factory-expense-approval-published-expense-1");
-    expect(files["README.md"]).toContain("docker compose down --volumes --remove-orphans");
+    expect(files["README.md"]).toContain(
+      "factory-expense-approval-published-expense-1",
+    );
+    expect(files["README.md"]).toContain(
+      "docker compose down --volumes --remove-orphans",
+    );
+  });
+
+  it("emits reviewable API, relationship, and permission documents from the Published Graph", () => {
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "published-documentation-1",
+        graph: {
+          ...publishedExpense.graph,
+          domain: {
+            entities: [
+              {
+                key: "expense",
+                label: "Expense",
+                fields: [
+                  { key: "amount", type: "decimal", required: true },
+                  {
+                    key: "status",
+                    type: "enum",
+                    required: true,
+                    values: ["draft", "approved"],
+                  },
+                ],
+                indexes: [{ fields: ["status"] }],
+              },
+              { key: "receipt", label: "Receipt", fields: [], indexes: [] },
+            ],
+            relations: [
+              { from: "expense", to: "receipt", kind: "one-to-many" },
+            ],
+          },
+          policy: {
+            roles: ["employee", "manager"],
+            permissions: [
+              {
+                role: "employee",
+                resource: "expense",
+                actions: ["create", "read"],
+              },
+              { role: "manager", resource: "expense", actions: ["approve"] },
+            ],
+          },
+          flow: {
+            flows: [
+              {
+                id: "expense-review",
+                entity: "expense",
+                initialState: "draft",
+                states: ["draft", "approved"],
+                events: ["approve"],
+                transitions: [
+                  {
+                    from: "draft",
+                    event: "approve",
+                    to: "approved",
+                    roles: ["manager"],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      }).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(files["docs/api-reference.md"]).toContain(
+      "| POST | `/api/:entity` |",
+    );
+    expect(files["docs/api-reference.md"]).toContain(
+      "| POST | `/api/:entity/:recordId/events/:event` |",
+    );
+    expect(files["docs/entity-relationship.md"]).toContain(
+      "`expense` 1 → * `receipt`",
+    );
+    expect(files["docs/entity-relationship.md"]).toContain(
+      "`status`: enum (required)",
+    );
+    expect(files["docs/permission-matrix.md"]).toContain(
+      "| employee | expense | create, read |",
+    );
+    expect(files["docs/permission-matrix.md"]).toContain(
+      "| manager | expense | approve |",
+    );
+    expect(files["docs/application.md"]).toContain("Generated documentation");
   });
 
   it("emits a role-aware Next application that reaches the generated API through a same-origin proxy", () => {
@@ -112,28 +237,54 @@ describe("compilation target registry", () => {
           ...publishedExpense.graph,
           policy: {
             roles: ["employee"],
-            permissions: [{ role: "employee", resource: "expense", actions: ["create", "read"] }],
+            permissions: [
+              {
+                role: "employee",
+                resource: "expense",
+                actions: ["create", "read"],
+              },
+            ],
           },
         },
       }).files.map((file) => [file.path, file.content]),
     );
 
     expect(files["web/app/page.tsx"]).toContain("GeneratedApplicationClient");
-    expect(files["web/app/generated-application-client.tsx"]).toContain('"use client"');
-    expect(files["web/app/generated-application-client.tsx"]).toContain("x-factory-role");
-    expect(files["web/app/generated-application-client.tsx"]).toContain("actions: readonly string[]");
-    expect(files["web/app/application-manifest.ts"]).toContain("Create expense");
-    expect(files["web/app/api/[...path]/route.ts"]).toContain("FACTORY_API_URL");
+    expect(files["web/app/generated-application-client.tsx"]).toContain(
+      '"use client"',
+    );
+    expect(files["web/app/generated-application-client.tsx"]).toContain(
+      "x-factory-role",
+    );
+    expect(files["web/app/generated-application-client.tsx"]).toContain(
+      "actions: readonly string[]",
+    );
+    expect(files["web/app/application-manifest.ts"]).toContain(
+      "Create expense",
+    );
+    expect(files["web/app/api/[...path]/route.ts"]).toContain(
+      "FACTORY_API_URL",
+    );
     expect(files["api/src/main.ts"]).toContain("enableCors");
-    expect(files["api/src/main.ts"]).toContain("return await applicationRuntime.create");
-    expect(files["docker-compose.yml"]).toContain("FACTORY_API_URL: http://api:3001");
+    expect(files["api/src/main.ts"]).toContain(
+      "return await applicationRuntime.create",
+    );
+    expect(files["docker-compose.yml"]).toContain(
+      "FACTORY_API_URL: http://api:3001",
+    );
   });
 
   it("preconfigures generated Next projects so a build does not rewrite their TypeScript contract", () => {
     const files = Object.fromEntries(
-      generateApplicationBundle(publishedExpense).files.map((file) => [file.path, file.content]),
+      generateApplicationBundle(publishedExpense).files.map((file) => [
+        file.path,
+        file.content,
+      ]),
     );
-    const tsconfig = JSON.parse(files["web/tsconfig.json"] as string) as { compilerOptions: Record<string, unknown>; include: string[] };
+    const tsconfig = JSON.parse(files["web/tsconfig.json"] as string) as {
+      compilerOptions: Record<string, unknown>;
+      include: string[];
+    };
 
     expect(tsconfig.compilerOptions.module).toBe("esnext");
     expect(tsconfig.compilerOptions.moduleResolution).toBe("node");
@@ -150,17 +301,24 @@ describe("compilation target registry", () => {
           ...publishedExpense.graph,
           policy: { roles: ["employee", "manager"], permissions: [] },
           flow: {
-            flows: [{
-              id: "expense-review",
-              entity: "expense",
-              initialState: "draft",
-              states: ["draft", "submitted", "approved"],
-              events: ["submit", "approve"],
-              transitions: [
-                { from: "draft", event: "submit", to: "submitted" },
-                { from: "submitted", event: "approve", to: "approved", roles: ["manager"] },
-              ],
-            }],
+            flows: [
+              {
+                id: "expense-review",
+                entity: "expense",
+                initialState: "draft",
+                states: ["draft", "submitted", "approved"],
+                events: ["submit", "approve"],
+                transitions: [
+                  { from: "draft", event: "submit", to: "submitted" },
+                  {
+                    from: "submitted",
+                    event: "approve",
+                    to: "approved",
+                    roles: ["manager"],
+                  },
+                ],
+              },
+            ],
           },
         },
       }).files.map((file) => [file.path, file.content]),
@@ -183,7 +341,9 @@ describe("compilation target registry", () => {
               { key: "order", label: "Order", fields: [], indexes: [] },
               { key: "menu-item", label: "Menu item", fields: [], indexes: [] },
             ],
-            relations: [{ from: "order", to: "menu-item", kind: "many-to-many" }],
+            relations: [
+              { from: "order", to: "menu-item", kind: "many-to-many" },
+            ],
           },
         },
       }).files.map((file) => [file.path, file.content]),
@@ -225,9 +385,21 @@ describe("compilation target registry", () => {
         policy: {
           roles: ["employee", "manager", "finance"],
           permissions: [
-            { role: "employee", resource: "expense", actions: ["create", "read"] },
-            { role: "manager", resource: "expense", actions: ["read", "approve", "reject"] },
-            { role: "finance", resource: "expense", actions: ["read", "audit"] },
+            {
+              role: "employee",
+              resource: "expense",
+              actions: ["create", "read"],
+            },
+            {
+              role: "manager",
+              resource: "expense",
+              actions: ["read", "approve", "reject"],
+            },
+            {
+              role: "finance",
+              resource: "expense",
+              actions: ["read", "audit"],
+            },
           ],
         },
         flow: {
@@ -240,8 +412,18 @@ describe("compilation target registry", () => {
               events: ["submit", "approve", "reject"],
               transitions: [
                 { from: "draft", event: "submit", to: "submitted" },
-                { from: "submitted", event: "approve", to: "approved", roles: ["manager"] },
-                { from: "submitted", event: "reject", to: "rejected", roles: ["manager"] },
+                {
+                  from: "submitted",
+                  event: "approve",
+                  to: "approved",
+                  roles: ["manager"],
+                },
+                {
+                  from: "submitted",
+                  event: "reject",
+                  to: "rejected",
+                  roles: ["manager"],
+                },
               ],
             },
           ],
@@ -249,7 +431,10 @@ describe("compilation target registry", () => {
       },
     };
     const files = Object.fromEntries(
-      generateApplicationBundle(input).files.map((file) => [file.path, file.content]),
+      generateApplicationBundle(input).files.map((file) => [
+        file.path,
+        file.content,
+      ]),
     );
 
     expect(files["api/src/application-runtime.ts"]).toContain(
@@ -264,7 +449,9 @@ describe("compilation target registry", () => {
     expect(files["api/src/application-runtime.ts"]).toContain(
       "effects?: readonly",
     );
-    expect(files["api/src/application-runtime.ts"]).toContain("async transition(");
+    expect(files["api/src/application-runtime.ts"]).toContain(
+      "async transition(",
+    );
     expect(files["api/src/application-runtime.ts"]).toContain(
       "assertTransitionAllowed",
     );
@@ -292,44 +479,72 @@ describe("compilation target registry", () => {
           ...publishedExpense.graph,
           integration: {
             providers: [],
-            capabilities: [{ key: "payment.simulate", providerId: "factory", operation: "simulate" }],
+            capabilities: [
+              {
+                key: "payment.simulate",
+                providerId: "factory",
+                operation: "simulate",
+              },
+            ],
           },
           policy: {
             roles: ["customer", "finance"],
             permissions: [
-              { role: "customer", resource: "expense", actions: ["create", "read"] },
+              {
+                role: "customer",
+                resource: "expense",
+                actions: ["create", "read"],
+              },
               { role: "finance", resource: "expense", actions: ["audit"] },
             ],
           },
           flow: {
-            flows: [{
-              id: "expense-payment",
-              entity: "expense",
-              initialState: "draft",
-              states: ["draft", "paid"],
-              events: ["pay"],
-              transitions: [{
-                from: "draft",
-                event: "pay",
-                to: "paid",
-                effects: [{ capability: "payment.simulate", operation: "simulate" }],
-              }],
-            }],
+            flows: [
+              {
+                id: "expense-payment",
+                entity: "expense",
+                initialState: "draft",
+                states: ["draft", "paid"],
+                events: ["pay"],
+                transitions: [
+                  {
+                    from: "draft",
+                    event: "pay",
+                    to: "paid",
+                    effects: [
+                      { capability: "payment.simulate", operation: "simulate" },
+                    ],
+                  },
+                ],
+              },
+            ],
           },
         },
       }).files.map((file) => [file.path, file.content]),
     );
 
     expect(files["api/src/application-runtime.ts"]).toContain("executeEffects");
-    expect(files["api/src/application-runtime.ts"]).toContain("Unsupported capability effect");
-    expect(files["api/src/application-runtime.ts"]).toContain("appendCapabilityEvent");
-    expect(files["api/src/prisma-record-store.ts"]).toContain("capabilityEvent");
-    expect(files["api/prisma/schema.prisma"]).toContain("model CapabilityEvent");
-    expect(files["api/test/journey.generated.test.ts"]).toContain("capabilityEvents");
-    expect(files["api/test/journey.generated.test.ts"]).toContain("payment.simulate");
-    expect(files["database/prisma/migrations/0001_initial/migration.sql"]).toContain(
-      'CREATE TABLE "CapabilityEvent"',
+    expect(files["api/src/application-runtime.ts"]).toContain(
+      "Unsupported capability effect",
     );
+    expect(files["api/src/application-runtime.ts"]).toContain(
+      "appendCapabilityEvent",
+    );
+    expect(files["api/src/prisma-record-store.ts"]).toContain(
+      "capabilityEvent",
+    );
+    expect(files["api/prisma/schema.prisma"]).toContain(
+      "model CapabilityEvent",
+    );
+    expect(files["api/test/journey.generated.test.ts"]).toContain(
+      "capabilityEvents",
+    );
+    expect(files["api/test/journey.generated.test.ts"]).toContain(
+      "payment.simulate",
+    );
+    expect(
+      files["database/prisma/migrations/0001_initial/migration.sql"],
+    ).toContain('CREATE TABLE "CapabilityEvent"');
   });
 
   it("compiles DomainModel seed scenarios into idempotent Prisma data", () => {
@@ -339,18 +554,22 @@ describe("compilation target registry", () => {
         graph: {
           ...publishedExpense.graph,
           domain: {
-            entities: [{
-              key: "expense",
-              label: "Expense",
-              fields: [{ key: "amount", type: "decimal", required: true }],
-              indexes: [],
-            }],
+            entities: [
+              {
+                key: "expense",
+                label: "Expense",
+                fields: [{ key: "amount", type: "decimal", required: true }],
+                indexes: [],
+              },
+            ],
             relations: [],
-            seedData: [{
-              entity: "expense",
-              id: "seed-expense-1",
-              values: { amount: 42 },
-            }],
+            seedData: [
+              {
+                entity: "expense",
+                id: "seed-expense-1",
+                values: { amount: 42 },
+              },
+            ],
           },
         },
       }).files.map((file) => [file.path, file.content]),
@@ -371,22 +590,38 @@ describe("compilation target registry", () => {
             providers: [],
             capabilities: [
               { key: "cart.add", providerId: "factory", operation: "add" },
-              { key: "inventory.decrement", providerId: "factory", operation: "decrement" },
+              {
+                key: "inventory.decrement",
+                providerId: "factory",
+                operation: "decrement",
+              },
             ],
           },
         },
       }).files.map((file) => [file.path, file.content]),
     );
 
-    expect(files["api/prisma/schema.prisma"]).toContain("model CommerceLineItem");
-    expect(files["database/prisma/migrations/0001_initial/migration.sql"]).toContain(
-      'CREATE TABLE "CommerceLineItem"',
+    expect(files["api/prisma/schema.prisma"]).toContain(
+      "model CommerceLineItem",
     );
+    expect(
+      files["database/prisma/migrations/0001_initial/migration.sql"],
+    ).toContain('CREATE TABLE "CommerceLineItem"');
     expect(files["api/src/application-runtime.ts"]).toContain("addCartItem");
-    expect(files["api/src/application-runtime.ts"]).toContain("decrementInventory");
-    expect(files["api/src/prisma-record-store.ts"]).toContain("commerceLineItem");
-    expect(files["api/src/main.ts"]).toContain("commerce/:entity/:recordId/items");
-    expect(files["web/app/generated-application-client.tsx"]).toContain("addToCart");
-    expect(files["web/app/generated-application-client.tsx"]).toContain("Checkout cart");
+    expect(files["api/src/application-runtime.ts"]).toContain(
+      "decrementInventory",
+    );
+    expect(files["api/src/prisma-record-store.ts"]).toContain(
+      "commerceLineItem",
+    );
+    expect(files["api/src/main.ts"]).toContain(
+      "commerce/:entity/:recordId/items",
+    );
+    expect(files["web/app/generated-application-client.tsx"]).toContain(
+      "addToCart",
+    );
+    expect(files["web/app/generated-application-client.tsx"]).toContain(
+      "Checkout cart",
+    );
   });
 });

@@ -35,7 +35,9 @@ import {
   ControlPlaneClient,
   type WorkbenchCompilation,
   type WorkbenchDraft,
+  type WorkbenchArtifactContent,
   type WorkbenchPublishedRevision,
+  type WorkbenchRevisionTimeline,
 } from "../lib/control-plane-client";
 import {
   createProfileDraft,
@@ -107,6 +109,11 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   const [operationError, setOperationError] = useState<string | null>(null);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [exchangeStatus, setExchangeStatus] = useState<string | null>(null);
+  const [revisionTimeline, setRevisionTimeline] = useState<WorkbenchRevisionTimeline | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [artifactSnapshot, setArtifactSnapshot] = useState<WorkbenchArtifactContent | null>(null);
+  const [artifactLoading, setArtifactLoading] = useState(false);
   const bootstrapRequest = useRef(0);
   const controlPlane = useMemo(
     () => new ControlPlaneClient(controlPlaneUrl),
@@ -227,6 +234,38 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
         setConnectionState("offline");
         setOperationError(error instanceof Error ? error.message : "Compilation could not be queued.");
       });
+  };
+
+  const toggleRevisionTimeline = () => {
+    if (historyOpen) {
+      setHistoryOpen(false);
+      return;
+    }
+    if (!remoteDraft) return;
+    setHistoryLoading(true);
+    setOperationError(null);
+    void controlPlane.listRevisionTimeline(remoteDraft.applicationGraphId)
+      .then((timeline) => {
+        setRevisionTimeline(timeline);
+        setHistoryOpen(true);
+      })
+      .catch((error) => {
+        setOperationError(error instanceof Error ? error.message : "Revision history could not be read.");
+      })
+      .finally(() => setHistoryLoading(false));
+  };
+
+  const inspectArtifact = (artifactPath: string) => {
+    if (!compilation) return;
+    setArtifactLoading(true);
+    setOperationError(null);
+    void controlPlane.getCompilationArtifact(compilation.id, artifactPath)
+      .then(setArtifactSnapshot)
+      .catch((error) => {
+        setArtifactSnapshot(null);
+        setOperationError(error instanceof Error ? error.message : "Generated artifact could not be inspected.");
+      })
+      .finally(() => setArtifactLoading(false));
   };
 
   const downloadPublishedGraphExchange = (exchange: PublishedGraphExchangeV1) => {
@@ -467,7 +506,7 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
               <button className="quiet-button">
                 <Plus size={15} /> Add
               </button>
-              <button className="quiet-button">
+              <button className="quiet-button" disabled={!remoteDraft || historyLoading} onClick={toggleRevisionTimeline}>
                 <GitBranch size={15} /> History
               </button>
             </div>
@@ -514,7 +553,10 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
                   graph={graph}
                   onExportPublishedGraph={exportPublishedGraph}
                   onImportPublishedGraph={importPublishedGraph}
+                  onInspectArtifact={inspectArtifact}
                   publishedRevision={publishedRevision}
+                  artifactLoading={artifactLoading}
+                  artifactSnapshot={artifactSnapshot}
                 />
               )}
             </section>
@@ -528,6 +570,14 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
               <PropertiesPanel surface={state.activeSurface} />
             )}
           </div>
+          {historyOpen && (
+            <RevisionTimeline
+              currentDraftId={remoteDraft?.draftRevisionId ?? null}
+              currentPublishedId={publishedRevision?.id ?? null}
+              onClose={() => setHistoryOpen(false)}
+              timeline={revisionTimeline}
+            />
+          )}
           <div className="workbench-operations" role="status">
             <span className={`connection-dot connection-${connectionState}`} />
             <span>{connectionState === "offline" ? "Control Plane unavailable" : `Control Plane ${connectionState}`}</span>
@@ -542,6 +592,57 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
         </section>
       </section>
     </main>
+  );
+}
+
+function RevisionTimeline({
+  currentDraftId,
+  currentPublishedId,
+  onClose,
+  timeline,
+}: {
+  currentDraftId: string | null;
+  currentPublishedId: string | null;
+  onClose: () => void;
+  timeline: WorkbenchRevisionTimeline | null;
+}) {
+  const entries = [
+    ...(timeline?.drafts ?? []).map((revision) => ({
+      id: revision.id,
+      kind: "Draft" as const,
+      revision: revision.revisionNumber,
+      isCurrent: revision.id === currentDraftId,
+      detail: `${revision.graph.page.pages.length} pages · ${revision.graph.domain.entities.length} entities · ${revision.graph.flow.flows.length} flows`,
+    })),
+    ...(timeline?.published ?? []).map((revision) => ({
+      id: revision.id,
+      kind: "Published" as const,
+      revision: revision.revisionNumber,
+      isCurrent: revision.id === currentPublishedId,
+      detail: revision.graphHash.slice(0, 18),
+    })),
+  ];
+  return (
+    <section className="revision-timeline" aria-label="Application Graph revision timeline">
+      <div className="revision-timeline-heading">
+        <div>
+          <span>Revision timeline</span>
+          <strong>Draft snapshots and immutable publications</strong>
+        </div>
+        <button aria-label="Close revision timeline" onClick={onClose} type="button">×</button>
+      </div>
+      <ol>
+        {entries.map((entry) => (
+          <li className={entry.isCurrent ? "is-current" : ""} key={`${entry.kind}:${entry.id}`}>
+            <span className={`revision-kind revision-kind-${entry.kind.toLowerCase()}`}>{entry.kind}</span>
+            <strong>r.{entry.revision}</strong>
+            <small>{entry.detail}</small>
+            {entry.isCurrent && <em>Current</em>}
+          </li>
+        ))}
+        {entries.length === 0 && <li className="timeline-empty">No persisted revisions yet.</li>}
+      </ol>
+    </section>
   );
 }
 
@@ -737,6 +838,9 @@ function CodeCanvas({
   exchangeStatus,
   onExportPublishedGraph,
   onImportPublishedGraph,
+  onInspectArtifact,
+  artifactLoading,
+  artifactSnapshot,
 }: {
   graph: ApplicationGraphV1;
   publishedRevision: WorkbenchPublishedRevision | null;
@@ -745,6 +849,9 @@ function CodeCanvas({
   exchangeStatus: string | null;
   onExportPublishedGraph: () => void;
   onImportPublishedGraph: (file: File) => void;
+  onInspectArtifact: (path: string) => void;
+  artifactLoading: boolean;
+  artifactSnapshot: WorkbenchArtifactContent | null;
 }) {
   const importInput = useRef<HTMLInputElement>(null);
   const artifacts = compilation?.artifacts ?? [];
@@ -801,13 +908,24 @@ function CodeCanvas({
             <ul>
               {artifacts.slice(0, 6).map((artifact) => (
                 <li key={artifact.path}>
-                  <code>{artifact.path}</code>
+                  <button onClick={() => onInspectArtifact(artifact.path)} type="button">
+                    <code>{artifact.path}</code>
+                  </button>
                   <span>{artifact.digest.slice(0, 18)}…</span>
                 </li>
               ))}
               {artifacts.length > 6 && <li className="artifact-more">+{artifacts.length - 6} more</li>}
             </ul>
           )}
+        </section>
+      )}
+      {(artifactLoading || artifactSnapshot) && (
+        <section className="artifact-snapshot" aria-label="Generated source snapshot">
+          <div>
+            <strong>{artifactLoading ? "Verifying generated artifact…" : artifactSnapshot?.path}</strong>
+            {artifactSnapshot && <small>{artifactSnapshot.digest.slice(0, 18)}… · verified snapshot</small>}
+          </div>
+          {artifactSnapshot && <pre><code>{artifactSnapshot.content}</code></pre>}
         </section>
       )}
     </div>

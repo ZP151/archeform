@@ -20,14 +20,46 @@ export interface CompilationTarget {
   readonly description: string;
 }
 export const compilationTargets: readonly CompilationTarget[] = Object.freeze([
-  { key: "simulator", label: "Role simulator", description: "Browser-only seed scenario simulator." },
-  { key: "next-web", label: "Next.js web", description: "Standalone customer and operator web application." },
-  { key: "nest-api", label: "NestJS API", description: "Standalone REST API and flow handlers." },
-  { key: "prisma-postgres", label: "Prisma PostgreSQL", description: "Schema, migrations, and seed data." },
-  { key: "casbin-policy", label: "Casbin policy", description: "Compiled authorization policy and guards." },
-  { key: "xstate-flow", label: "XState flows", description: "Compiled declared state machines." },
-  { key: "test-suite", label: "Journey tests", description: "Role, API, flow, and smoke tests." },
-  { key: "documentation", label: "Documentation", description: "API reference, ERD, and permission matrix." },
+  {
+    key: "simulator",
+    label: "Role simulator",
+    description: "Browser-only seed scenario simulator.",
+  },
+  {
+    key: "next-web",
+    label: "Next.js web",
+    description: "Standalone customer and operator web application.",
+  },
+  {
+    key: "nest-api",
+    label: "NestJS API",
+    description: "Standalone REST API and flow handlers.",
+  },
+  {
+    key: "prisma-postgres",
+    label: "Prisma PostgreSQL",
+    description: "Schema, migrations, and seed data.",
+  },
+  {
+    key: "casbin-policy",
+    label: "Casbin policy",
+    description: "Compiled authorization policy and guards.",
+  },
+  {
+    key: "xstate-flow",
+    label: "XState flows",
+    description: "Compiled declared state machines.",
+  },
+  {
+    key: "test-suite",
+    label: "Journey tests",
+    description: "Role, API, flow, and smoke tests.",
+  },
+  {
+    key: "documentation",
+    label: "Documentation",
+    description: "API reference, ERD, and permission matrix.",
+  },
 ]);
 
 export interface PublishedGraphInput {
@@ -58,9 +90,16 @@ export interface GeneratedApplicationBundle {
   readonly files: readonly GeneratedFile[];
 }
 
-const artifactBlueprint: Readonly<Record<CompilationTargetKey, readonly Omit<CompilationArtifactPlan, "target">[]>> = {
+const artifactBlueprint: Readonly<
+  Record<
+    CompilationTargetKey,
+    readonly Omit<CompilationArtifactPlan, "target">[]
+  >
+> = {
   simulator: [{ path: "simulator/", mediaType: "text/html" }],
-  "next-web": [{ path: "web/", mediaType: "application/vnd.factory.source-tree" }],
+  "next-web": [
+    { path: "web/", mediaType: "application/vnd.factory.source-tree" },
+  ],
   "nest-api": [
     { path: "api/", mediaType: "application/vnd.factory.source-tree" },
     { path: "api/src/application-runtime.ts", mediaType: "text/typescript" },
@@ -68,12 +107,25 @@ const artifactBlueprint: Readonly<Record<CompilationTargetKey, readonly Omit<Com
   ],
   "prisma-postgres": [
     { path: "database/prisma/schema.prisma", mediaType: "text/plain" },
-    { path: "database/prisma/migrations/", mediaType: "application/vnd.factory.source-tree" },
+    {
+      path: "database/prisma/migrations/",
+      mediaType: "application/vnd.factory.source-tree",
+    },
     { path: "database/prisma/seed.ts", mediaType: "text/typescript" },
   ],
-  "casbin-policy": [{ path: "api/policy/model.conf", mediaType: "text/plain" }, { path: "api/policy/policy.csv", mediaType: "text/csv" }],
-  "xstate-flow": [{ path: "api/src/flows/", mediaType: "application/vnd.factory.source-tree" }],
-  "test-suite": [{ path: "api/test/", mediaType: "application/vnd.factory.source-tree" }],
+  "casbin-policy": [
+    { path: "api/policy/model.conf", mediaType: "text/plain" },
+    { path: "api/policy/policy.csv", mediaType: "text/csv" },
+  ],
+  "xstate-flow": [
+    {
+      path: "api/src/flows/",
+      mediaType: "application/vnd.factory.source-tree",
+    },
+  ],
+  "test-suite": [
+    { path: "api/test/", mediaType: "application/vnd.factory.source-tree" },
+  ],
   documentation: [
     { path: "docs/api-reference.md", mediaType: "text/markdown" },
     { path: "docs/entity-relationship.md", mediaType: "text/markdown" },
@@ -85,14 +137,19 @@ const artifactBlueprint: Readonly<Record<CompilationTargetKey, readonly Omit<Com
  * Produces a deterministic, non-executable output map. Target writers consume
  * this plan later; only a Published Revision can form its input.
  */
-export function buildCompilationPlan(input: PublishedGraphInput): CompilationPlan {
+export function buildCompilationPlan(
+  input: PublishedGraphInput,
+): CompilationPlan {
   if (!input.publishedRevisionId) {
     throw new Error("Published revision id is required for compilation.");
   }
 
   const graph = assertValidApplicationGraph(input.graph);
   const artifacts = compilationTargets.flatMap((target) =>
-    artifactBlueprint[target.key].map((artifact) => ({ target: target.key, ...artifact })),
+    artifactBlueprint[target.key].map((artifact) => ({
+      target: target.key,
+      ...artifact,
+    })),
   );
 
   return {
@@ -127,15 +184,24 @@ function hasCommerceCapabilities(graph: ApplicationGraphV1): boolean {
   );
 }
 
-function prismaType(type: ApplicationGraphV1["domain"]["entities"][number]["fields"][number]["type"]): string {
+function prismaType(
+  type: ApplicationGraphV1["domain"]["entities"][number]["fields"][number]["type"],
+): string {
   switch (type) {
-    case "integer": return "Int";
-    case "decimal": return "Decimal";
-    case "boolean": return "Boolean";
-    case "date": return "DateTime @db.Date";
-    case "datetime": return "DateTime";
-    case "json": return "Json";
-    default: return "String";
+    case "integer":
+      return "Int";
+    case "decimal":
+      return "Decimal";
+    case "boolean":
+      return "Boolean";
+    case "date":
+      return "DateTime @db.Date";
+    case "datetime":
+      return "DateTime";
+    case "json":
+      return "Json";
+    default:
+      return "String";
   }
 }
 
@@ -239,21 +305,23 @@ function renderPrismaSchema(graph: ApplicationGraphV1): string {
     "  @@index([entity, recordId])",
     "  @@index([capability, operation])",
     "}",
-    ...(hasCommerceCapabilities(graph) ? [
-      "",
-      "model CommerceLineItem {",
-      "  id String @id @default(cuid())",
-      "  actor String",
-      "  orderEntity String",
-      "  orderRecordId String",
-      "  catalogEntity String",
-      "  catalogRecordId String",
-      "  quantity Int",
-      "  createdAt DateTime @default(now())",
-      "  @@index([orderEntity, orderRecordId])",
-      "  @@index([catalogEntity, catalogRecordId])",
-      "}",
-    ] : []),
+    ...(hasCommerceCapabilities(graph)
+      ? [
+          "",
+          "model CommerceLineItem {",
+          "  id String @id @default(cuid())",
+          "  actor String",
+          "  orderEntity String",
+          "  orderRecordId String",
+          "  catalogEntity String",
+          "  catalogRecordId String",
+          "  quantity Int",
+          "  createdAt DateTime @default(now())",
+          "  @@index([orderEntity, orderRecordId])",
+          "  @@index([catalogEntity, catalogRecordId])",
+          "}",
+        ]
+      : []),
     "",
   ].join("\n");
 }
@@ -262,13 +330,20 @@ function postgresType(
   type: ApplicationGraphV1["domain"]["entities"][number]["fields"][number]["type"],
 ): string {
   switch (type) {
-    case "integer": return "INTEGER";
-    case "decimal": return "DECIMAL";
-    case "boolean": return "BOOLEAN";
-    case "date": return "DATE";
-    case "datetime": return "TIMESTAMP(3)";
-    case "json": return "JSONB";
-    default: return "TEXT";
+    case "integer":
+      return "INTEGER";
+    case "decimal":
+      return "DECIMAL";
+    case "boolean":
+      return "BOOLEAN";
+    case "date":
+      return "DATE";
+    case "datetime":
+      return "TIMESTAMP(3)";
+    case "json":
+      return "JSONB";
+    default:
+      return "TEXT";
   }
 }
 
@@ -282,12 +357,15 @@ function relationColumnDefinitions(
 ): readonly string[] {
   return graph.domain.relations.flatMap((relation) => {
     if (relation.kind === "many-to-many") return [];
-    const sourceIsOne = relation.kind === "one-to-many" || relation.kind === "one-to-one";
+    const sourceIsOne =
+      relation.kind === "one-to-many" || relation.kind === "one-to-one";
     const oneKey = sourceIsOne ? relation.from : relation.to;
     const manyKey = sourceIsOne ? relation.to : relation.from;
     if (entityKey !== manyKey) return [];
     const column = `${toCamelCase(oneKey)}Id`;
-    return [`${quoteSqlIdentifier(column)} TEXT NOT NULL${relation.kind === "one-to-one" ? " UNIQUE" : ""}`];
+    return [
+      `${quoteSqlIdentifier(column)} TEXT NOT NULL${relation.kind === "one-to-one" ? " UNIQUE" : ""}`,
+    ];
   });
 }
 
@@ -295,8 +373,9 @@ function renderInitialMigration(graph: ApplicationGraphV1): string {
   const createTables = graph.domain.entities.map((entity) => {
     const columns = [
       '"id" TEXT NOT NULL PRIMARY KEY',
-      ...entity.fields.map((field) =>
-        `${quoteSqlIdentifier(field.key)} ${postgresType(field.type)}${field.required ? " NOT NULL" : ""}${field.unique ? " UNIQUE" : ""}`,
+      ...entity.fields.map(
+        (field) =>
+          `${quoteSqlIdentifier(field.key)} ${postgresType(field.type)}${field.required ? " NOT NULL" : ""}${field.unique ? " UNIQUE" : ""}`,
       ),
       ...relationColumnDefinitions(graph, entity.key),
       '"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP',
@@ -305,8 +384,9 @@ function renderInitialMigration(graph: ApplicationGraphV1): string {
     return `CREATE TABLE ${quoteSqlIdentifier(toPascalCase(entity.key))} (\n  ${columns.join(",\n  ")}\n);`;
   });
   const indexes = graph.domain.entities.flatMap((entity) =>
-    entity.indexes.map((index, indexNumber) =>
-      `CREATE ${index.unique ? "UNIQUE " : ""}INDEX ${quoteSqlIdentifier(`${toPascalCase(entity.key)}_${indexNumber}_idx`)} ON ${quoteSqlIdentifier(toPascalCase(entity.key))} (${index.fields.map(quoteSqlIdentifier).join(", ")});`,
+    entity.indexes.map(
+      (index, indexNumber) =>
+        `CREATE ${index.unique ? "UNIQUE " : ""}INDEX ${quoteSqlIdentifier(`${toPascalCase(entity.key)}_${indexNumber}_idx`)} ON ${quoteSqlIdentifier(toPascalCase(entity.key))} (${index.fields.map(quoteSqlIdentifier).join(", ")});`,
     ),
   );
   const relationTables = graph.domain.relations.flatMap((relation) => {
@@ -321,7 +401,8 @@ function renderInitialMigration(graph: ApplicationGraphV1): string {
   });
   const relationConstraints = graph.domain.relations.flatMap((relation) => {
     if (relation.kind === "many-to-many") return [];
-    const sourceIsOne = relation.kind === "one-to-many" || relation.kind === "one-to-one";
+    const sourceIsOne =
+      relation.kind === "one-to-many" || relation.kind === "one-to-one";
     const oneKey = sourceIsOne ? relation.from : relation.to;
     const manyKey = sourceIsOne ? relation.to : relation.from;
     const relationName = `${toPascalCase(oneKey)}To${toPascalCase(manyKey)}`;
@@ -338,11 +419,13 @@ function renderInitialMigration(graph: ApplicationGraphV1): string {
     'CREATE TABLE "CapabilityEvent" (\n  "id" TEXT NOT NULL PRIMARY KEY,\n  "actor" TEXT NOT NULL,\n  "capability" TEXT NOT NULL,\n  "operation" TEXT NOT NULL,\n  "entity" TEXT NOT NULL,\n  "recordId" TEXT NOT NULL,\n  "outcome" TEXT NOT NULL,\n  "at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP\n);',
     'CREATE INDEX "CapabilityEvent_entity_recordId_idx" ON "CapabilityEvent" ("entity", "recordId");',
     'CREATE INDEX "CapabilityEvent_capability_operation_idx" ON "CapabilityEvent" ("capability", "operation");',
-    ...(hasCommerceCapabilities(graph) ? [
-      'CREATE TABLE "CommerceLineItem" (\n  "id" TEXT NOT NULL PRIMARY KEY,\n  "actor" TEXT NOT NULL,\n  "orderEntity" TEXT NOT NULL,\n  "orderRecordId" TEXT NOT NULL,\n  "catalogEntity" TEXT NOT NULL,\n  "catalogRecordId" TEXT NOT NULL,\n  "quantity" INTEGER NOT NULL,\n  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP\n);',
-      'CREATE INDEX "CommerceLineItem_orderEntity_orderRecordId_idx" ON "CommerceLineItem" ("orderEntity", "orderRecordId");',
-      'CREATE INDEX "CommerceLineItem_catalogEntity_catalogRecordId_idx" ON "CommerceLineItem" ("catalogEntity", "catalogRecordId");',
-    ] : []),
+    ...(hasCommerceCapabilities(graph)
+      ? [
+          'CREATE TABLE "CommerceLineItem" (\n  "id" TEXT NOT NULL PRIMARY KEY,\n  "actor" TEXT NOT NULL,\n  "orderEntity" TEXT NOT NULL,\n  "orderRecordId" TEXT NOT NULL,\n  "catalogEntity" TEXT NOT NULL,\n  "catalogRecordId" TEXT NOT NULL,\n  "quantity" INTEGER NOT NULL,\n  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP\n);',
+          'CREATE INDEX "CommerceLineItem_orderEntity_orderRecordId_idx" ON "CommerceLineItem" ("orderEntity", "orderRecordId");',
+          'CREATE INDEX "CommerceLineItem_catalogEntity_catalogRecordId_idx" ON "CommerceLineItem" ("catalogEntity", "catalogRecordId");',
+        ]
+      : []),
     ...indexes,
     ...relationTables,
     ...relationConstraints,
@@ -383,7 +466,9 @@ function renderPrismaSeed(graph: ApplicationGraphV1): string {
 
 function renderCasbinPolicy(graph: ApplicationGraphV1): string {
   const lines = graph.policy.permissions.flatMap((permission) =>
-    permission.actions.map((action) => `p, ${permission.role}, ${permission.resource}, ${action}`),
+    permission.actions.map(
+      (action) => `p, ${permission.role}, ${permission.resource}, ${action}`,
+    ),
   );
   return `${lines.join("\n")}\n`;
 }
@@ -437,7 +522,7 @@ function renderPolicyModule(graph: ApplicationGraphV1): string {
     "e = some(where (p.eft == allow))",
     "",
     "[matchers]",
-    "m = r.sub == p.sub && (r.obj == p.obj || p.obj == \"*\") && r.act == p.act",
+    'm = r.sub == p.sub && (r.obj == p.obj || p.obj == "*") && r.act == p.act',
   ].join("\n");
   return [
     'import { newEnforcer, newModelFromString, StringAdapter } from "casbin";',
@@ -462,7 +547,10 @@ function runtimeDefinition(graph: ApplicationGraphV1) {
   return {
     entities: graph.domain.entities.map((entity) => ({
       key: entity.key,
-      fields: entity.fields.map((field) => ({ key: field.key, required: field.required })),
+      fields: entity.fields.map((field) => ({
+        key: field.key,
+        required: field.required,
+      })),
     })),
     permissions: graph.policy.permissions,
     capabilities: graph.integration.capabilities,
@@ -478,9 +566,11 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "export type StoredRecord = Record<string, unknown> & { id: string; status?: string };",
     "export type AuditEvent = { actor: string; action: string; entity: string; recordId: string; at: string };",
     "export type CapabilityEvent = { actor: string; capability: string; operation: string; entity: string; recordId: string; outcome: 'completed'; at: string };",
-    ...(commerce ? [
-      "export type CommerceLineItem = { id: string; actor: string; orderEntity: string; orderRecordId: string; catalogEntity: string; catalogRecordId: string; quantity: number };",
-    ] : []),
+    ...(commerce
+      ? [
+          "export type CommerceLineItem = { id: string; actor: string; orderEntity: string; orderRecordId: string; catalogEntity: string; catalogRecordId: string; quantity: number };",
+        ]
+      : []),
     "export interface RecordStore {",
     "  list(entityKey: string): Promise<readonly StoredRecord[]>;",
     "  find(entityKey: string, recordId: string): Promise<StoredRecord | undefined>;",
@@ -490,18 +580,22 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "  listAudit(): Promise<readonly AuditEvent[]>;",
     "  appendCapabilityEvent(event: CapabilityEvent): Promise<void>;",
     "  listCapabilityEvents(): Promise<readonly CapabilityEvent[]>;",
-    ...(commerce ? [
-      "  addCartItem(input: Omit<CommerceLineItem, 'id'>): Promise<CommerceLineItem>;",
-      "  listCartItems(orderEntity: string, orderRecordId: string): Promise<readonly CommerceLineItem[]>;",
-      "  decrementInventory(entityKey: string, recordId: string, quantity: number): Promise<StoredRecord>;",
-    ] : []),
+    ...(commerce
+      ? [
+          "  addCartItem(input: Omit<CommerceLineItem, 'id'>): Promise<CommerceLineItem>;",
+          "  listCartItems(orderEntity: string, orderRecordId: string): Promise<readonly CommerceLineItem[]>;",
+          "  decrementInventory(entityKey: string, recordId: string, quantity: number): Promise<StoredRecord>;",
+        ]
+      : []),
     "}",
     "",
     "export class InMemoryRecordStore implements RecordStore {",
     "  private readonly records = new Map<string, Map<string, StoredRecord>>();",
     "  private readonly auditEvents: AuditEvent[] = [];",
     "  private readonly capabilityEvents: CapabilityEvent[] = [];",
-    ...(commerce ? ["  private readonly cartItems: CommerceLineItem[] = [];"] : []),
+    ...(commerce
+      ? ["  private readonly cartItems: CommerceLineItem[] = [];"]
+      : []),
     "",
     "  private collection(entityKey: string): Map<string, StoredRecord> {",
     "    let collection = this.records.get(entityKey);",
@@ -531,22 +625,24 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "  async listAudit(): Promise<readonly AuditEvent[]> { return [...this.auditEvents]; }",
     "  async appendCapabilityEvent(event: CapabilityEvent): Promise<void> { this.capabilityEvents.push(event); }",
     "  async listCapabilityEvents(): Promise<readonly CapabilityEvent[]> { return [...this.capabilityEvents]; }",
-    ...(commerce ? [
-      "  async addCartItem(input: Omit<CommerceLineItem, 'id'>): Promise<CommerceLineItem> {",
-      "    const item = { id: `line-${this.cartItems.length + 1}`, ...input };",
-      "    this.cartItems.push(item);",
-      "    return item;",
-      "  }",
-      "  async listCartItems(orderEntity: string, orderRecordId: string): Promise<readonly CommerceLineItem[]> {",
-      "    return this.cartItems.filter((item) => item.orderEntity === orderEntity && item.orderRecordId === orderRecordId);",
-      "  }",
-      "  async decrementInventory(entityKey: string, recordId: string, quantity: number): Promise<StoredRecord> {",
-      "    const record = await this.find(entityKey, recordId);",
-      "    if (!record || typeof record.stock !== 'number') throw new Error(`Catalog record '${recordId}' has no numeric stock.`);",
-      "    if (record.stock < quantity) throw new Error(`Catalog record '${recordId}' has insufficient stock.`);",
-      "    return this.update(entityKey, recordId, { stock: record.stock - quantity });",
-      "  }",
-    ] : []),
+    ...(commerce
+      ? [
+          "  async addCartItem(input: Omit<CommerceLineItem, 'id'>): Promise<CommerceLineItem> {",
+          "    const item = { id: `line-${this.cartItems.length + 1}`, ...input };",
+          "    this.cartItems.push(item);",
+          "    return item;",
+          "  }",
+          "  async listCartItems(orderEntity: string, orderRecordId: string): Promise<readonly CommerceLineItem[]> {",
+          "    return this.cartItems.filter((item) => item.orderEntity === orderEntity && item.orderRecordId === orderRecordId);",
+          "  }",
+          "  async decrementInventory(entityKey: string, recordId: string, quantity: number): Promise<StoredRecord> {",
+          "    const record = await this.find(entityKey, recordId);",
+          "    if (!record || typeof record.stock !== 'number') throw new Error(`Catalog record '${recordId}' has no numeric stock.`);",
+          "    if (record.stock < quantity) throw new Error(`Catalog record '${recordId}' has insufficient stock.`);",
+          "    return this.update(entityKey, recordId, { stock: record.stock - quantity });",
+          "  }",
+        ]
+      : []),
     "}",
     "type RuntimeDefinition = {",
     "  entities: readonly { key: string; fields: readonly { key: string; required: boolean }[] }[];",
@@ -607,13 +703,15 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "      if (effect.capability === 'audit.record') {",
     "        await this.store.appendAudit({ actor: role, action: effect.operation, entity: entityKey, recordId, at });",
     "      }",
-    ...(commerce ? [
-      "      if (effect.capability === 'inventory.decrement') {",
-      "        const items = await this.store.listCartItems(entityKey, recordId);",
-      "        if (items.length === 0) throw new Error(`Cannot decrement inventory for an empty cart '${recordId}'.`);",
-      "        for (const item of items) await this.store.decrementInventory(item.catalogEntity, item.catalogRecordId, item.quantity);",
-      "      }",
-    ] : []),
+    ...(commerce
+      ? [
+          "      if (effect.capability === 'inventory.decrement') {",
+          "        const items = await this.store.listCartItems(entityKey, recordId);",
+          "        if (items.length === 0) throw new Error(`Cannot decrement inventory for an empty cart '${recordId}'.`);",
+          "        for (const item of items) await this.store.decrementInventory(item.catalogEntity, item.catalogRecordId, item.quantity);",
+          "      }",
+        ]
+      : []),
     "      await this.store.appendCapabilityEvent({ actor: role, capability: effect.capability, operation: effect.operation, entity: entityKey, recordId, outcome: 'completed', at });",
     "    }",
     "  }",
@@ -643,33 +741,35 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "    return record;",
     "  }",
     "",
-    ...(commerce ? [
-      "  async addCartItem(role: string, orderEntity: string, orderRecordId: string, input: { catalogEntity: string; catalogRecordId: string; quantity: number }): Promise<CommerceLineItem> {",
-      "    this.entity(orderEntity);",
-      "    this.entity(input.catalogEntity);",
-      "    this.assertCapability('cart.add', 'add');",
-      "    await this.assertAllowed(role, orderEntity, 'create');",
-      "    await this.assertAllowed(role, input.catalogEntity, 'read');",
-      "    const order = await this.store.find(orderEntity, orderRecordId);",
-      "    if (!order) throw new Error(`Cart '${orderRecordId}' was not found.`);",
-      "    if (order.status !== 'cart') throw new Error(`Order '${orderRecordId}' is not an active cart.`);",
-      "    const catalogRecord = await this.store.find(input.catalogEntity, input.catalogRecordId);",
-      "    if (!catalogRecord) throw new Error(`Catalog record '${input.catalogRecordId}' was not found.`);",
-      "    if (!Number.isInteger(input.quantity) || input.quantity < 1) throw new Error('Cart quantity must be a positive integer.');",
-      "    const item = await this.store.addCartItem({ actor: role, orderEntity, orderRecordId, ...input });",
-      "    const at = new Date().toISOString();",
-      "    await this.store.appendAudit({ actor: role, action: 'cart.add', entity: orderEntity, recordId: orderRecordId, at });",
-      "    await this.store.appendCapabilityEvent({ actor: role, capability: 'cart.add', operation: 'add', entity: orderEntity, recordId: orderRecordId, outcome: 'completed', at });",
-      "    return item;",
-      "  }",
-      "",
-      "  async cartItems(role: string, orderEntity: string, orderRecordId: string): Promise<readonly CommerceLineItem[]> {",
-      "    this.entity(orderEntity);",
-      "    await this.assertAllowed(role, orderEntity, 'read');",
-      "    return this.store.listCartItems(orderEntity, orderRecordId);",
-      "  }",
-      "",
-    ] : []),
+    ...(commerce
+      ? [
+          "  async addCartItem(role: string, orderEntity: string, orderRecordId: string, input: { catalogEntity: string; catalogRecordId: string; quantity: number }): Promise<CommerceLineItem> {",
+          "    this.entity(orderEntity);",
+          "    this.entity(input.catalogEntity);",
+          "    this.assertCapability('cart.add', 'add');",
+          "    await this.assertAllowed(role, orderEntity, 'create');",
+          "    await this.assertAllowed(role, input.catalogEntity, 'read');",
+          "    const order = await this.store.find(orderEntity, orderRecordId);",
+          "    if (!order) throw new Error(`Cart '${orderRecordId}' was not found.`);",
+          "    if (order.status !== 'cart') throw new Error(`Order '${orderRecordId}' is not an active cart.`);",
+          "    const catalogRecord = await this.store.find(input.catalogEntity, input.catalogRecordId);",
+          "    if (!catalogRecord) throw new Error(`Catalog record '${input.catalogRecordId}' was not found.`);",
+          "    if (!Number.isInteger(input.quantity) || input.quantity < 1) throw new Error('Cart quantity must be a positive integer.');",
+          "    const item = await this.store.addCartItem({ actor: role, orderEntity, orderRecordId, ...input });",
+          "    const at = new Date().toISOString();",
+          "    await this.store.appendAudit({ actor: role, action: 'cart.add', entity: orderEntity, recordId: orderRecordId, at });",
+          "    await this.store.appendCapabilityEvent({ actor: role, capability: 'cart.add', operation: 'add', entity: orderEntity, recordId: orderRecordId, outcome: 'completed', at });",
+          "    return item;",
+          "  }",
+          "",
+          "  async cartItems(role: string, orderEntity: string, orderRecordId: string): Promise<readonly CommerceLineItem[]> {",
+          "    this.entity(orderEntity);",
+          "    await this.assertAllowed(role, orderEntity, 'read');",
+          "    return this.store.listCartItems(orderEntity, orderRecordId);",
+          "  }",
+          "",
+        ]
+      : []),
     "  async transition(role: string, entityKey: string, recordId: string, event: string): Promise<StoredRecord> {",
     "    this.entity(entityKey);",
     "    const flow = this.flow(entityKey);",
@@ -736,12 +836,14 @@ function renderPrismaRecordStore(graph: ApplicationGraphV1): string {
     "  create(input: { data: Record<string, unknown> }): Promise<unknown>;",
     "  findMany(input: { orderBy: { at: 'asc' } }): Promise<unknown[]>;",
     "};",
-    ...(commerce ? [
-      "type CommerceLineDelegate = {",
-      "  create(input: { data: Record<string, unknown> }): Promise<unknown>;",
-      "  findMany(input: { where: { orderEntity: string; orderRecordId: string }; orderBy: { createdAt: 'asc' } }): Promise<unknown[]>;",
-      "};",
-    ] : []),
+    ...(commerce
+      ? [
+          "type CommerceLineDelegate = {",
+          "  create(input: { data: Record<string, unknown> }): Promise<unknown>;",
+          "  findMany(input: { where: { orderEntity: string; orderRecordId: string }; orderBy: { createdAt: 'asc' } }): Promise<unknown[]>;",
+          "};",
+        ]
+      : []),
     `const delegates: Readonly<Record<string, string>> = ${JSON.stringify(delegates, null, 2)};`,
     "",
     "function asStoredRecord(value: unknown): StoredRecord { return value as StoredRecord; }",
@@ -763,12 +865,14 @@ function renderPrismaRecordStore(graph: ApplicationGraphV1): string {
     "  private capabilityDelegate(): CapabilityDelegate {",
     "    return (this.prisma as unknown as { capabilityEvent: CapabilityDelegate }).capabilityEvent;",
     "  }",
-    ...(commerce ? [
-      "",
-      "  private commerceLineDelegate(): CommerceLineDelegate {",
-      "    return (this.prisma as unknown as { commerceLineItem: CommerceLineDelegate }).commerceLineItem;",
-      "  }",
-    ] : []),
+    ...(commerce
+      ? [
+          "",
+          "  private commerceLineDelegate(): CommerceLineDelegate {",
+          "    return (this.prisma as unknown as { commerceLineItem: CommerceLineDelegate }).commerceLineItem;",
+          "  }",
+        ]
+      : []),
     "",
     "  async list(entityKey: string): Promise<readonly StoredRecord[]> {",
     "    return (await this.delegate(entityKey).findMany()).map(asStoredRecord);",
@@ -808,23 +912,25 @@ function renderPrismaRecordStore(graph: ApplicationGraphV1): string {
     "      return { ...event, at: event.at.toISOString(), outcome: 'completed' as const };",
     "    });",
     "  }",
-    ...(commerce ? [
-      "",
-      "  async addCartItem(input: Omit<CommerceLineItem, 'id'>): Promise<CommerceLineItem> {",
-      "    return asStoredRecord(await this.commerceLineDelegate().create({ data: input })) as CommerceLineItem;",
-      "  }",
-      "",
-      "  async listCartItems(orderEntity: string, orderRecordId: string): Promise<readonly CommerceLineItem[]> {",
-      "    return (await this.commerceLineDelegate().findMany({ where: { orderEntity, orderRecordId }, orderBy: { createdAt: 'asc' } })) as CommerceLineItem[];",
-      "  }",
-      "",
-      "  async decrementInventory(entityKey: string, recordId: string, quantity: number): Promise<StoredRecord> {",
-      "    const record = await this.find(entityKey, recordId);",
-      "    if (!record || typeof record.stock !== 'number') throw new Error(`Catalog record '${recordId}' has no numeric stock.`);",
-      "    if (record.stock < quantity) throw new Error(`Catalog record '${recordId}' has insufficient stock.`);",
-      "    return this.update(entityKey, recordId, { stock: record.stock - quantity });",
-      "  }",
-    ] : []),
+    ...(commerce
+      ? [
+          "",
+          "  async addCartItem(input: Omit<CommerceLineItem, 'id'>): Promise<CommerceLineItem> {",
+          "    return asStoredRecord(await this.commerceLineDelegate().create({ data: input })) as CommerceLineItem;",
+          "  }",
+          "",
+          "  async listCartItems(orderEntity: string, orderRecordId: string): Promise<readonly CommerceLineItem[]> {",
+          "    return (await this.commerceLineDelegate().findMany({ where: { orderEntity, orderRecordId }, orderBy: { createdAt: 'asc' } })) as CommerceLineItem[];",
+          "  }",
+          "",
+          "  async decrementInventory(entityKey: string, recordId: string, quantity: number): Promise<StoredRecord> {",
+          "    const record = await this.find(entityKey, recordId);",
+          "    if (!record || typeof record.stock !== 'number') throw new Error(`Catalog record '${recordId}' has no numeric stock.`);",
+          "    if (record.stock < quantity) throw new Error(`Catalog record '${recordId}' has insufficient stock.`);",
+          "    return this.update(entityKey, recordId, { stock: record.stock - quantity });",
+          "  }",
+        ]
+      : []),
     "}",
     "",
   ].join("\n");
@@ -845,7 +951,7 @@ function renderWebPage(graph: ApplicationGraphV1): string {
 function renderFaviconRoute(): string {
   return [
     "export function GET() {",
-    "  return new Response('<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\"><rect width=\"64\" height=\"64\" rx=\"16\" fill=\"#0b766e\"/><path d=\"M17 32h30M32 17v30\" stroke=\"white\" stroke-width=\"6\" stroke-linecap=\"round\"/></svg>', { headers: { 'content-type': 'image/svg+xml', 'cache-control': 'public, max-age=86400' } });",
+    '  return new Response(\'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#0b766e"/><path d="M17 32h30M32 17v30" stroke="white" stroke-width="6" stroke-linecap="round"/></svg>\', { headers: { \'content-type\': \'image/svg+xml\', \'cache-control\': \'public, max-age=86400\' } });',
     "}",
     "",
   ].join("\n");
@@ -853,17 +959,24 @@ function renderFaviconRoute(): string {
 
 function renderWebManifest(graph: ApplicationGraphV1): string {
   const creationLabels = Object.fromEntries(
-    graph.domain.entities.map((entity) => [entity.key, `Create ${entity.label.toLowerCase()}`]),
+    graph.domain.entities.map((entity) => [
+      entity.key,
+      `Create ${entity.label.toLowerCase()}`,
+    ]),
   );
-  return `export const applicationManifest = ${JSON.stringify({
-    metadata: graph.metadata,
-    page: graph.page,
-    domain: graph.domain,
-    policy: graph.policy,
-    flow: graph.flow,
-    integration: graph.integration,
-    creationLabels,
-  }, null, 2)} as const;\n`;
+  return `export const applicationManifest = ${JSON.stringify(
+    {
+      metadata: graph.metadata,
+      page: graph.page,
+      domain: graph.domain,
+      policy: graph.policy,
+      flow: graph.flow,
+      integration: graph.integration,
+      creationLabels,
+    },
+    null,
+    2,
+  )} as const;\n`;
 }
 
 function renderGeneratedApplicationClient(): string {
@@ -951,17 +1064,17 @@ function renderGeneratedApplicationClient(): string {
     "    await refresh();",
     "  };",
     "  const events = manifest.flow.flows.find((flow) => flow.entity === entityKey)?.events ?? [];",
-    "  if (!entity) return <main className=\"generated-app\"><p>No domain entities are declared in this Published Graph.</p></main>;",
+    '  if (!entity) return <main className="generated-app"><p>No domain entities are declared in this Published Graph.</p></main>;',
     "  return (",
-    "    <main className=\"generated-app\">",
+    '    <main className="generated-app">',
     "      <header><div><p>Generated application</p><h1>{manifest.metadata.name}</h1></div><label>Role<select value={role} onChange={(event) => setRole(event.target.value)}>{manifest.policy.roles.map((candidate) => <option key={candidate}>{candidate}</option>)}</select></label></header>",
     "      <nav aria-label=\"Application routes\">{manifest.page.navigation.map((item) => <a href={manifest.page.pages.find((page) => page.id === item.pageId)?.route ?? '#'} key={item.id}>{item.label}</a>)}</nav>",
-    "      <section className=\"generated-workspace\">",
+    '      <section className="generated-workspace">',
     "        <aside><h2>Records</h2>{entities.map((candidate) => <button className={candidate.key === entityKey ? 'active' : ''} key={candidate.key} onClick={() => setEntityKey(candidate.key)} type=\"button\">{candidate.label}</button>)}</aside>",
-    "        <div className=\"generated-content\">",
-    "          <div className=\"generated-title\"><div><p>{role} view</p><h2>{entity.label}</h2></div><div className=\"generated-actions\">{commerceEnabled && <span className=\"generated-cart\">Cart {cartCount}</span>}{commerceEnabled && cartId && <button onClick={() => void checkoutCart().catch((reason) => setError(reason instanceof Error ? reason.message : 'Unable to check out cart.'))} type=\"button\">Checkout cart</button>}<button onClick={() => void refresh().catch((reason) => setError(reason instanceof Error ? reason.message : 'Unable to refresh records.'))} type=\"button\">Refresh</button></div></div>",
+    '        <div className="generated-content">',
+    '          <div className="generated-title"><div><p>{role} view</p><h2>{entity.label}</h2></div><div className="generated-actions">{commerceEnabled && <span className="generated-cart">Cart {cartCount}</span>}{commerceEnabled && cartId && <button onClick={() => void checkoutCart().catch((reason) => setError(reason instanceof Error ? reason.message : \'Unable to check out cart.\'))} type="button">Checkout cart</button>}<button onClick={() => void refresh().catch((reason) => setError(reason instanceof Error ? reason.message : \'Unable to refresh records.\'))} type="button">Refresh</button></div></div>',
     "          {can('create') && <form onSubmit={(event) => { event.preventDefault(); void create().catch((reason) => setError(reason instanceof Error ? reason.message : 'Unable to create record.')); }}><h3>{manifest.creationLabels[entity.key]}</h3>{entity.fields.filter((field) => field.key !== 'status').map((field) => <label key={field.key}>{field.key}<input required={field.required} value={values[field.key] ?? ''} onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))} /></label>)}<button type=\"submit\">Create</button></form>}",
-    "          {error && <p role=\"alert\" className=\"generated-error\">{error}</p>}",
+    '          {error && <p role="alert" className="generated-error">{error}</p>}',
     "          <ul className=\"generated-records\">{records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code><span>{commerceEnabled && entityKey === catalogEntity && can('read') && <button onClick={() => void addToCart(String(record.id)).catch((reason) => setError(reason instanceof Error ? reason.message : 'Unable to add item to cart.'))} type=\"button\">Add to cart</button>}{events.map((event) => <button key={event} onClick={() => void transition(String(record.id), event).catch((reason) => setError(reason instanceof Error ? reason.message : 'Unable to transition record.'))} type=\"button\">{event}</button>)}</span></li>)}</ul>",
     "        </div>",
     "      </section>",
@@ -1105,18 +1218,20 @@ function renderApiMain(graph: ApplicationGraphV1): string {
     "    try { return await applicationRuntime.auditLog(roleFrom(request)); } catch (error) { throw rejected(error); }",
     "  }",
     "",
-    ...(commerce ? [
-      "  @Get('commerce/:entity/:recordId/items')",
-      "  async cartItems(@Param('entity') entity: string, @Param('recordId') recordId: string, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
-      "    try { return await applicationRuntime.cartItems(roleFrom(request), entity, recordId); } catch (error) { throw rejected(error); }",
-      "  }",
-      "",
-      "  @Post('commerce/:entity/:recordId/items')",
-      "  async addCartItem(@Param('entity') entity: string, @Param('recordId') recordId: string, @Body() body: { catalogEntity: string; catalogRecordId: string; quantity: number }, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
-      "    try { return await applicationRuntime.addCartItem(roleFrom(request), entity, recordId, body); } catch (error) { throw rejected(error); }",
-      "  }",
-      "",
-    ] : []),
+    ...(commerce
+      ? [
+          "  @Get('commerce/:entity/:recordId/items')",
+          "  async cartItems(@Param('entity') entity: string, @Param('recordId') recordId: string, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
+          "    try { return await applicationRuntime.cartItems(roleFrom(request), entity, recordId); } catch (error) { throw rejected(error); }",
+          "  }",
+          "",
+          "  @Post('commerce/:entity/:recordId/items')",
+          "  async addCartItem(@Param('entity') entity: string, @Param('recordId') recordId: string, @Body() body: { catalogEntity: string; catalogRecordId: string; quantity: number }, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
+          "    try { return await applicationRuntime.addCartItem(roleFrom(request), entity, recordId, body); } catch (error) { throw rejected(error); }",
+          "  }",
+          "",
+        ]
+      : []),
     "  @Get('capability-events')",
     "  async capabilityEvents(@Req() request: { headers: Record<string, string | string[] | undefined> }) {",
     "    try { return await applicationRuntime.capabilityEvents(roleFrom(request)); } catch (error) { throw rejected(error); }",
@@ -1169,10 +1284,16 @@ function defaultJourneyValue(
 
 function renderJourneyTest(graph: ApplicationGraphV1): string {
   const flow = graph.flow.flows[0];
-  const entity = flow && graph.domain.entities.find((candidate) => candidate.key === flow.entity);
-  const createPermission = entity && graph.policy.permissions.find(
-    (permission) => permission.resource === entity.key && permission.actions.includes("create"),
-  );
+  const entity =
+    flow &&
+    graph.domain.entities.find((candidate) => candidate.key === flow.entity);
+  const createPermission =
+    entity &&
+    graph.policy.permissions.find(
+      (permission) =>
+        permission.resource === entity.key &&
+        permission.actions.includes("create"),
+    );
   if (!flow || !entity || !createPermission) {
     return [
       'import { describe, expect, it } from "vitest";',
@@ -1188,22 +1309,32 @@ function renderJourneyTest(graph: ApplicationGraphV1): string {
   const payload = Object.fromEntries(
     entity.fields
       .filter((field) => field.required)
-      .map((field) => [field.key, defaultJourneyValue(field, flow.initialState)]),
+      .map((field) => [
+        field.key,
+        defaultJourneyValue(field, flow.initialState),
+      ]),
   );
-  const transitions: ApplicationGraphV1["flow"]["flows"][number]["transitions"] = [];
+  const transitions: ApplicationGraphV1["flow"]["flows"][number]["transitions"] =
+    [];
   let state = flow.initialState;
   const visited = new Set<string>();
   while (true) {
     const transition = flow.transitions.find(
-      (candidate) => candidate.from === state && !visited.has(`${candidate.from}:${candidate.event}`),
+      (candidate) =>
+        candidate.from === state &&
+        !visited.has(`${candidate.from}:${candidate.event}`),
     );
     if (!transition) break;
     transitions.push(transition);
     visited.add(`${transition.from}:${transition.event}`);
     state = transition.to;
   }
-  const auditRole = graph.policy.permissions.find((permission) => permission.actions.includes("audit"))?.role;
-  const capabilityEffects = transitions.flatMap((transition) => transition.effects ?? []);
+  const auditRole = graph.policy.permissions.find((permission) =>
+    permission.actions.includes("audit"),
+  )?.role;
+  const capabilityEffects = transitions.flatMap(
+    (transition) => transition.effects ?? [],
+  );
   return [
     'import { describe, expect, it } from "vitest";',
     'import { applicationRuntime } from "../src/application-runtime.js";',
@@ -1216,22 +1347,145 @@ function renderJourneyTest(graph: ApplicationGraphV1): string {
       `    await applicationRuntime.transition(${JSON.stringify(transition.roles?.[0] ?? createPermission.role)}, ${JSON.stringify(entity.key)}, record.id, ${JSON.stringify(transition.event)});`,
       `    expect(record.status).toBe(${JSON.stringify(transition.to)});`,
     ]),
-    ...(auditRole ? [
-      `    expect(await applicationRuntime.auditLog(${JSON.stringify(auditRole)})).toHaveLength(${transitions.length + 1});`,
-    ] : []),
-    ...(auditRole && capabilityEffects.length > 0 ? [
-      `    const capabilityEvents = await applicationRuntime.capabilityEvents(${JSON.stringify(auditRole)});`,
-      `    expect(capabilityEvents.map((entry) => [entry.capability, entry.operation])).toEqual(${JSON.stringify(capabilityEffects.map((effect) => [effect.capability, effect.operation]))});`,
-    ] : []),
+    ...(auditRole
+      ? [
+          `    expect(await applicationRuntime.auditLog(${JSON.stringify(auditRole)})).toHaveLength(${transitions.length + 1});`,
+        ]
+      : []),
+    ...(auditRole && capabilityEffects.length > 0
+      ? [
+          `    const capabilityEvents = await applicationRuntime.capabilityEvents(${JSON.stringify(auditRole)});`,
+          `    expect(capabilityEvents.map((entry) => [entry.capability, entry.operation])).toEqual(${JSON.stringify(capabilityEffects.map((effect) => [effect.capability, effect.operation]))});`,
+        ]
+      : []),
     "  });",
     "});",
     "",
   ].join("\n");
 }
 
+function markdownCell(value: string): string {
+  return value.replaceAll("|", "\\|").replaceAll("\n", " ");
+}
+
+function relationshipCardinality(
+  kind: ApplicationGraphV1["domain"]["relations"][number]["kind"],
+): readonly [string, string] {
+  switch (kind) {
+    case "one-to-one":
+      return ["1", "1"];
+    case "one-to-many":
+      return ["1", "*"];
+    case "many-to-one":
+      return ["*", "1"];
+    case "many-to-many":
+      return ["*", "*"];
+  }
+}
+
+function renderApiReference(graph: ApplicationGraphV1): string {
+  const endpoints = [
+    ["GET", "/api/health", "Return generated application health."],
+    [
+      "GET",
+      "/api/:entity",
+      "List a declared DomainModel entity for the caller role.",
+    ],
+    [
+      "POST",
+      "/api/:entity",
+      "Create a declared DomainModel entity for the caller role.",
+    ],
+    [
+      "POST",
+      "/api/:entity/:recordId/events/:event",
+      "Trigger a declared FlowModel event when policy and state allow it.",
+    ],
+    [
+      "GET",
+      "/api/audit",
+      "Read immutable audit events when policy permits audit.",
+    ],
+    [
+      "GET",
+      "/api/capability-events",
+      "Read executed declared capability effects when policy permits audit.",
+    ],
+    ...(hasCommerceCapabilities(graph)
+      ? [
+          [
+            "GET",
+            "/api/commerce/:entity/:recordId/items",
+            "Read cart items for the caller role.",
+          ],
+          [
+            "POST",
+            "/api/commerce/:entity/:recordId/items",
+            "Add a declared catalog item to a cart for the caller role.",
+          ],
+        ]
+      : []),
+  ] as const;
+  const entities = graph.domain.entities.length
+    ? graph.domain.entities
+        .map((entity) => `- \`${entity.key}\` — ${entity.label}`)
+        .join("\n")
+    : "- No entities declared.";
+  const flows = graph.flow.flows.length
+    ? graph.flow.flows
+        .map(
+          (flow) =>
+            `- \`${flow.id}\` on \`${flow.entity}\`: ${flow.events.map((event) => `\`${event}\``).join(", ") || "no events"}`,
+        )
+        .join("\n")
+    : "- No flows declared.";
+  return `# API reference\n\nThis API is compiled from the immutable Published Graph for **${graph.metadata.name}**. Every request is role-scoped through the \`x-factory-role\` header.\n\n## Endpoints\n\n| Method | Path | Contract |\n| --- | --- | --- |\n${endpoints.map(([method, path, description]) => `| ${method} | \`${path}\` | ${description} |`).join("\n")}\n\n## Domain endpoints\n\n${entities}\n\n## Declared flow events\n\n${flows}\n`;
+}
+
+function renderEntityRelationshipDiagram(graph: ApplicationGraphV1): string {
+  const entities = graph.domain.entities.map((entity) => {
+    const fields = entity.fields.length
+      ? entity.fields
+          .map(
+            (field) =>
+              `- \`${field.key}\`: ${field.type}${field.required ? " (required)" : ""}${field.unique ? ", unique" : ""}`,
+          )
+          .join("\n")
+      : "- No fields declared.";
+    const indexes = entity.indexes.length
+      ? `\n\nIndexes: ${entity.indexes.map((index) => `\`${index.fields.join(", ")}\`${index.unique ? " (unique)" : ""}`).join("; ")}`
+      : "";
+    return `### ${entity.label} (\`${entity.key}\`)\n\n${fields}${indexes}`;
+  });
+  const relationships = graph.domain.relations.length
+    ? graph.domain.relations
+        .map((relation) => {
+          const [from, to] = relationshipCardinality(relation.kind);
+          return `- \`${relation.from}\` ${from} → ${to} \`${relation.to}\`${relation.field ? ` via \`${relation.field}\`` : ""}`;
+        })
+        .join("\n")
+    : "- No relationships declared.";
+  return `# Entity relationship diagram\n\nThis document is a deterministic DomainModel projection, not a reverse-engineered database schema.\n\n## Relationships\n\n${relationships}\n\n## Entities\n\n${entities.join("\n\n") || "No entities declared."}\n`;
+}
+
+function renderPermissionMatrix(graph: ApplicationGraphV1): string {
+  const rows = graph.policy.permissions.length
+    ? graph.policy.permissions
+        .map(
+          (permission) =>
+            `| ${markdownCell(permission.role)} | ${markdownCell(permission.resource)} | ${permission.actions.map(markdownCell).join(", ")} |`,
+        )
+        .join("\n")
+    : "| — | — | No permissions declared |";
+  return `# Permission matrix\n\nThis is the reviewable PolicyModel projection that compiles to \`api/policy/policy.csv\`.\n\n| Role | Resource | Allowed actions |\n| --- | --- | --- |\n${rows}\n\n## Declared roles\n\n${graph.policy.roles.length ? graph.policy.roles.map((role) => `- \`${role}\``).join("\n") : "- No roles declared."}\n`;
+}
+
 function renderDocumentation(graph: ApplicationGraphV1): string {
-  const entities = graph.domain.entities.map((entity) => `- **${entity.label}**: ${entity.fields.map((field) => field.key).join(", ") || "No fields"}`);
-  return `# ${graph.metadata.name}\n\n## Entities\n${entities.join("\n")}\n`;
+  const entities = graph.domain.entities.map(
+    (entity) =>
+      `- **${entity.label}**: ${entity.fields.map((field) => field.key).join(", ") || "No fields"}`,
+  );
+  return `# ${graph.metadata.name}\n\nThis application was compiled from a Factory Published Graph.\n\n## Generated documentation\n\n- [API reference](api-reference.md)\n- [Entity relationship diagram](entity-relationship.md)\n- [Permission matrix](permission-matrix.md)\n\n## Entities\n${entities.join("\n") || "- No entities declared."}\n`;
 }
 
 /**
@@ -1239,20 +1493,27 @@ function renderDocumentation(graph: ApplicationGraphV1): string {
  * This function is pure: the Worker owns filesystem writes, Compose identity,
  * artifact digests, and cleanup.
  */
-export function generateApplicationBundle(input: PublishedGraphInput): GeneratedApplicationBundle {
+export function generateApplicationBundle(
+  input: PublishedGraphInput,
+): GeneratedApplicationBundle {
   const plan = buildCompilationPlan(input);
   const graph = assertValidApplicationGraph(input.graph);
   const rootDirectory = `${graph.metadata.id}-${input.publishedRevisionId}`;
   const files: GeneratedFile[] = [
     {
       path: "package.json",
-      content: JSON.stringify({
-        name: rootDirectory,
-        private: true,
-        packageManager: "pnpm@9.0.0",
-        workspaces: ["web", "api", "database"],
-        scripts: { test: "pnpm --filter generated-api test" },
-      }, null, 2) + "\n",
+      content:
+        JSON.stringify(
+          {
+            name: rootDirectory,
+            private: true,
+            packageManager: "pnpm@9.0.0",
+            workspaces: ["web", "api", "database"],
+            scripts: { test: "pnpm --filter generated-api test" },
+          },
+          null,
+          2,
+        ) + "\n",
     },
     {
       path: "pnpm-workspace.yaml",
@@ -1261,121 +1522,226 @@ export function generateApplicationBundle(input: PublishedGraphInput): Generated
     { path: "simulator/index.html", content: renderSimulator(graph) },
     {
       path: "web/package.json",
-      content: JSON.stringify({
-        name: "generated-web",
-        private: true,
-        scripts: { dev: "next dev --port 3000", build: "next build", start: "next start --port 3000" },
-        dependencies: { next: "^15.5.0", react: "^19.0.0", "react-dom": "^19.0.0" },
-        devDependencies: { "@types/node": "^22.10.0", "@types/react": "^19.0.0", typescript: "^5.7.0" },
-      }, null, 2) + "\n",
+      content:
+        JSON.stringify(
+          {
+            name: "generated-web",
+            private: true,
+            scripts: {
+              dev: "next dev --port 3000",
+              build: "next build",
+              start: "next start --port 3000",
+            },
+            dependencies: {
+              next: "^15.5.0",
+              react: "^19.0.0",
+              "react-dom": "^19.0.0",
+            },
+            devDependencies: {
+              "@types/node": "^22.10.0",
+              "@types/react": "^19.0.0",
+              typescript: "^5.7.0",
+            },
+          },
+          null,
+          2,
+        ) + "\n",
     },
     {
       path: "web/tsconfig.json",
-      content: JSON.stringify({
-        compilerOptions: {
-          target: "ES2017",
-          lib: ["dom", "dom.iterable", "esnext"],
-          allowJs: true,
-          skipLibCheck: true,
-          strict: true,
-          noEmit: true,
-          incremental: true,
-          module: "esnext",
-          esModuleInterop: true,
-          moduleResolution: "node",
-          resolveJsonModule: true,
-          isolatedModules: true,
-          jsx: "preserve",
-          plugins: [{ name: "next" }],
-        },
-        include: ["next-env.d.ts", "app/**/*.ts", "app/**/*.tsx", ".next/types/**/*.ts"],
-        exclude: ["node_modules"],
-      }, null, 2) + "\n",
+      content:
+        JSON.stringify(
+          {
+            compilerOptions: {
+              target: "ES2017",
+              lib: ["dom", "dom.iterable", "esnext"],
+              allowJs: true,
+              skipLibCheck: true,
+              strict: true,
+              noEmit: true,
+              incremental: true,
+              module: "esnext",
+              esModuleInterop: true,
+              moduleResolution: "node",
+              resolveJsonModule: true,
+              isolatedModules: true,
+              jsx: "preserve",
+              plugins: [{ name: "next" }],
+            },
+            include: [
+              "next-env.d.ts",
+              "app/**/*.ts",
+              "app/**/*.tsx",
+              ".next/types/**/*.ts",
+            ],
+            exclude: ["node_modules"],
+          },
+          null,
+          2,
+        ) + "\n",
     },
-    { path: "web/next-env.d.ts", content: '/// <reference types="next" />\n/// <reference types="next/image-types/global" />\n\n// This file is generated by Factory Pilot.\n' },
+    {
+      path: "web/next-env.d.ts",
+      content:
+        '/// <reference types="next" />\n/// <reference types="next/image-types/global" />\n\n// This file is generated by Factory Pilot.\n',
+    },
     {
       path: "web/app/layout.tsx",
-      content: "import type { ReactNode } from \"react\";\nimport \"./globals.css\";\n\nexport default function RootLayout({ children }: { children: ReactNode }) { return <html lang=\"en\"><body>{children}</body></html>; }\n",
+      content:
+        'import type { ReactNode } from "react";\nimport "./globals.css";\n\nexport default function RootLayout({ children }: { children: ReactNode }) { return <html lang="en"><body>{children}</body></html>; }\n',
     },
     { path: "web/app/page.tsx", content: renderWebPage(graph) },
     { path: "web/app/favicon.ico/route.ts", content: renderFaviconRoute() },
-    { path: "web/app/application-manifest.ts", content: renderWebManifest(graph) },
-    { path: "web/app/generated-application-client.tsx", content: renderGeneratedApplicationClient() },
+    {
+      path: "web/app/application-manifest.ts",
+      content: renderWebManifest(graph),
+    },
+    {
+      path: "web/app/generated-application-client.tsx",
+      content: renderGeneratedApplicationClient(),
+    },
     { path: "web/app/api/[...path]/route.ts", content: renderWebProxyRoute() },
     { path: "web/app/globals.css", content: renderWebStyles() },
     {
       path: "api/package.json",
-      content: JSON.stringify({
-        name: "generated-api",
-        private: true,
-        scripts: {
-          dev: "tsx watch src/main.ts",
-          build: "tsc -p tsconfig.json",
-          start: "node dist/main.js",
-          test: "vitest run",
-        },
-        dependencies: {
-          "@prisma/client": "^6.19.0",
-          "@nestjs/common": "^10.4.0",
-          "@nestjs/core": "^10.4.0",
-          "@nestjs/platform-express": "^10.4.0",
-          casbin: "^5.37.0",
-          "reflect-metadata": "^0.2.2",
-          rxjs: "^7.8.1",
-          xstate: "^5.19.0",
-        },
-        devDependencies: { "@types/node": "^22.10.0", prisma: "^6.19.0", tsx: "^4.19.0", typescript: "^5.7.0", vitest: "^2.1.0" },
-      }, null, 2) + "\n",
+      content:
+        JSON.stringify(
+          {
+            name: "generated-api",
+            private: true,
+            scripts: {
+              dev: "tsx watch src/main.ts",
+              build: "tsc -p tsconfig.json",
+              start: "node dist/main.js",
+              test: "vitest run",
+            },
+            dependencies: {
+              "@prisma/client": "^6.19.0",
+              "@nestjs/common": "^10.4.0",
+              "@nestjs/core": "^10.4.0",
+              "@nestjs/platform-express": "^10.4.0",
+              casbin: "^5.37.0",
+              "reflect-metadata": "^0.2.2",
+              rxjs: "^7.8.1",
+              xstate: "^5.19.0",
+            },
+            devDependencies: {
+              "@types/node": "^22.10.0",
+              prisma: "^6.19.0",
+              tsx: "^4.19.0",
+              typescript: "^5.7.0",
+              vitest: "^2.1.0",
+            },
+          },
+          null,
+          2,
+        ) + "\n",
     },
     {
       path: "api/tsconfig.json",
-      content: JSON.stringify({ compilerOptions: { target: "ES2022", module: "NodeNext", moduleResolution: "NodeNext", outDir: "dist", strict: true, experimentalDecorators: true, emitDecoratorMetadata: true }, include: ["src/**/*.ts"] }, null, 2) + "\n",
+      content:
+        JSON.stringify(
+          {
+            compilerOptions: {
+              target: "ES2022",
+              module: "NodeNext",
+              moduleResolution: "NodeNext",
+              outDir: "dist",
+              strict: true,
+              experimentalDecorators: true,
+              emitDecoratorMetadata: true,
+            },
+            include: ["src/**/*.ts"],
+          },
+          null,
+          2,
+        ) + "\n",
     },
     {
       path: "api/Dockerfile",
-      content: "FROM node:22-alpine\nWORKDIR /app\nCOPY package.json ./\nCOPY prisma ./prisma\nRUN npm config set fetch-retries 5 && npm install --global pnpm@9.0.0 && pnpm install && pnpm prisma generate --schema prisma/schema.prisma\nCOPY tsconfig.json ./\nCOPY src ./src\nRUN pnpm build\nCMD [\"node\", \"dist/main.js\"]\n",
+      content:
+        'FROM node:22-alpine\nWORKDIR /app\nCOPY package.json ./\nCOPY prisma ./prisma\nRUN npm config set fetch-retries 5 && npm install --global pnpm@9.0.0 && pnpm install && pnpm prisma generate --schema prisma/schema.prisma\nCOPY tsconfig.json ./\nCOPY src ./src\nRUN pnpm build\nCMD ["node", "dist/main.js"]\n',
     },
     { path: "api/.dockerignore", content: "node_modules\ndist\n.env\n" },
     { path: "api/src/main.ts", content: renderApiMain(graph) },
-    { path: "api/src/application-runtime.ts", content: renderApplicationRuntime(graph) },
-    { path: "api/src/prisma-record-store.ts", content: renderPrismaRecordStore(graph) },
+    {
+      path: "api/src/application-runtime.ts",
+      content: renderApplicationRuntime(graph),
+    },
+    {
+      path: "api/src/prisma-record-store.ts",
+      content: renderPrismaRecordStore(graph),
+    },
     { path: "api/src/policy.ts", content: renderPolicyModule(graph) },
     { path: "api/prisma/schema.prisma", content: renderPrismaSchema(graph) },
-    { path: "database/prisma/schema.prisma", content: renderPrismaSchema(graph) },
-    { path: "database/prisma/migrations/0001_initial/migration.sql", content: renderInitialMigration(graph) },
+    {
+      path: "database/prisma/schema.prisma",
+      content: renderPrismaSchema(graph),
+    },
+    {
+      path: "database/prisma/migrations/0001_initial/migration.sql",
+      content: renderInitialMigration(graph),
+    },
     {
       path: "database/package.json",
-      content: JSON.stringify({
-        name: "generated-database",
-        private: true,
-        scripts: {
-          generate: "prisma generate --schema prisma/schema.prisma",
-          "migrate:deploy": "prisma migrate deploy --schema prisma/schema.prisma",
-          seed: "tsx prisma/seed.ts",
-        },
-        dependencies: { "@prisma/client": "^6.19.0" },
-        devDependencies: { prisma: "^6.19.0", tsx: "^4.19.0" },
-      }, null, 2) + "\n",
+      content:
+        JSON.stringify(
+          {
+            name: "generated-database",
+            private: true,
+            scripts: {
+              generate: "prisma generate --schema prisma/schema.prisma",
+              "migrate:deploy":
+                "prisma migrate deploy --schema prisma/schema.prisma",
+              seed: "tsx prisma/seed.ts",
+            },
+            dependencies: { "@prisma/client": "^6.19.0" },
+            devDependencies: { prisma: "^6.19.0", tsx: "^4.19.0" },
+          },
+          null,
+          2,
+        ) + "\n",
     },
     { path: "database/prisma/seed.ts", content: renderPrismaSeed(graph) },
     {
       path: "database/Dockerfile",
-      content: "FROM node:22-alpine\nWORKDIR /app\nCOPY package.json ./\nCOPY prisma ./prisma\nRUN npm config set fetch-retries 5 && npm install --global pnpm@9.0.0 && pnpm install && pnpm prisma generate --schema prisma/schema.prisma\nCMD [\"sh\", \"-c\", \"pnpm prisma migrate deploy --schema prisma/schema.prisma && pnpm tsx prisma/seed.ts\"]\n",
+      content:
+        'FROM node:22-alpine\nWORKDIR /app\nCOPY package.json ./\nCOPY prisma ./prisma\nRUN npm config set fetch-retries 5 && npm install --global pnpm@9.0.0 && pnpm install && pnpm prisma generate --schema prisma/schema.prisma\nCMD ["sh", "-c", "pnpm prisma migrate deploy --schema prisma/schema.prisma && pnpm tsx prisma/seed.ts"]\n',
     },
     { path: "database/.dockerignore", content: "node_modules\n.env\n" },
     {
       path: "api/policy/model.conf",
-      content: "[request_definition]\nr = sub, obj, act\n\n[policy_definition]\np = sub, obj, act\n\n[policy_effect]\ne = some(where (p.eft == allow))\n\n[matchers]\nm = r.sub == p.sub && r.obj == p.obj && r.act == p.act\n",
+      content:
+        "[request_definition]\nr = sub, obj, act\n\n[policy_definition]\np = sub, obj, act\n\n[policy_effect]\ne = some(where (p.eft == allow))\n\n[matchers]\nm = r.sub == p.sub && r.obj == p.obj && r.act == p.act\n",
     },
     { path: "api/policy/policy.csv", content: renderCasbinPolicy(graph) },
-    { path: "api/src/flows/definitions.ts", content: renderFlowDefinitions(graph) },
+    {
+      path: "api/src/flows/definitions.ts",
+      content: renderFlowDefinitions(graph),
+    },
     { path: "api/src/flows/machines.ts", content: renderFlowMachines() },
-    { path: "api/test/journey.generated.test.ts", content: renderJourneyTest(graph) },
-    { path: "tests/journeys.generated.md", content: `# Generated role journeys\n\nGraph: ${plan.graphHash}\n` },
+    {
+      path: "api/test/journey.generated.test.ts",
+      content: renderJourneyTest(graph),
+    },
+    {
+      path: "tests/journeys.generated.md",
+      content: `# Generated role journeys\n\nGraph: ${plan.graphHash}\n`,
+    },
+    { path: "docs/api-reference.md", content: renderApiReference(graph) },
+    {
+      path: "docs/entity-relationship.md",
+      content: renderEntityRelationshipDiagram(graph),
+    },
+    {
+      path: "docs/permission-matrix.md",
+      content: renderPermissionMatrix(graph),
+    },
     { path: "docs/application.md", content: renderDocumentation(graph) },
     {
       path: "web/Dockerfile",
-      content: "FROM node:22-alpine\nWORKDIR /app\nCOPY package.json ./\nRUN npm config set fetch-retries 5 && npm install --global pnpm@9.0.0 && pnpm install\nCOPY . .\nRUN pnpm build\nCMD [\"pnpm\", \"start\"]\n",
+      content:
+        'FROM node:22-alpine\nWORKDIR /app\nCOPY package.json ./\nRUN npm config set fetch-retries 5 && npm install --global pnpm@9.0.0 && pnpm install\nCOPY . .\nRUN pnpm build\nCMD ["pnpm", "start"]\n',
     },
     { path: "web/.dockerignore", content: "node_modules\n.next\n.env\n" },
     {
