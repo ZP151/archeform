@@ -61,6 +61,7 @@ import {
   parseGraphExchangeText,
   serializeGraphExchange,
 } from "../lib/graph-exchange";
+import { compileCasbinPolicyPreview } from "../lib/policy-preview";
 
 type Navigation = {
   id: Surface;
@@ -625,6 +626,7 @@ function PolicyCanvas({
   onPolicyChange: (policy: PolicyModel) => void;
 }) {
   const actions = ["create", "read", "update", "delete", "submit", "approve", "reject", "audit"];
+  const preview = compileCasbinPolicyPreview(graph.policy);
   return (
     <div className="policy-canvas">
       <div className="policy-header">
@@ -659,6 +661,10 @@ function PolicyCanvas({
           }),
         )}
       </div>
+      <details className="casbin-preview">
+        <summary>Casbin projection · {preview.rows.length} rules</summary>
+        <pre aria-label="Compiled Casbin policy preview">{preview.policy || "# No policy rules declared\n"}</pre>
+      </details>
     </div>
   );
 }

@@ -896,6 +896,24 @@ input:focus-visible {
   color: var(--ink);
   font-size: 12px;
 }
+.casbin-preview {
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+}
+.casbin-preview summary {
+  cursor: pointer;
+  padding: 14px 20px;
+  color: var(--ink);
+  font: 10px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.casbin-preview pre {
+  max-height: 180px;
+  overflow: auto;
+  margin: 0;
+  padding: 0 20px 18px;
+  color: var(--muted);
+  font: 11px/1.75 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
 .ai-canvas {
   display: grid;
   grid-template-columns: 190px minmax(0, 360px);
