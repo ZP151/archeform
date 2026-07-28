@@ -28,6 +28,33 @@
 
 ## Ecosystem
 
-Graph-first Git export/import, an Amplication study record, Medusa and OpenFGA
-provider contracts, and third-party notices precede optional provider runtime
-integration.
+Factory Pilot adopts external open-source projects through explicit roles, not
+as competing sources of business truth. The adoption register is maintained in
+[`ecosystem/open-source-adoption.md`](ecosystem/open-source-adoption.md).
+
+### Direct dependencies
+
+- Puck supplies the Page Studio canvas.
+- React Flow supplies Flow, relation, dependency, and lineage canvases.
+- XState executes compiled FlowModel state machines.
+- Prisma supplies generated PostgreSQL schemas, migrations, and typed access.
+- node-casbin supplies generated policy enforcement.
+
+### Controlled future adapters
+
+- Blockly and bpmn-js may become authoring adapters once their output is
+  constrained to the Factory FlowModel.
+- Appwrite, Medusa, and OpenFGA are runtime providers behind versioned
+  contracts; none is a v1 runtime dependency.
+
+### Study-only references
+
+- Amplication is studied for generator, plugin, and Git-sync patterns under a
+  source-study record. Its `ee/` tree is excluded.
+- Vendure is a read-only commerce architecture reference. Its GPLv3 code is
+  never copied or embedded unless Factory Pilot is deliberately relicensed.
+
+Every new dependency, snapshot, or copied source fragment must pass the
+license, provenance, security, and adapter-boundary gates before it reaches a
+Factory package. Graph-first Git export/import, provider contracts, and
+third-party notices precede optional provider runtime integration.
