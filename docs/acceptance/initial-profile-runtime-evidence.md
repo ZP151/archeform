@@ -5,9 +5,9 @@
 ## Scope
 
 This record covers deterministic local runtime evidence for independently
-published Graphs. It does not constitute final profile acceptance: each
-profile still requires its guarded, environment-only real OpenAI Graph-Diff
-run before that status can be assigned.
+published Graphs and the guarded real-model acceptance completed so far.
+Restaurant Ordering and Simple Ecommerce still require their own guarded,
+environment-only real OpenAI Graph-Diff runs before final acceptance.
 
 ## Common path
 
@@ -33,8 +33,29 @@ its PostgreSQL, migration, Nest API, and Next.js Web services.
 - No real-model call, credential, raw prompt, or raw model response was used
   or recorded in this deterministic runtime evidence.
 
+## Guarded real-model acceptance
+
+Expense Approval is independently accepted.
+
+- The Control Plane received one real OpenAI proposal using only a local
+  environment variable. The provider returned a schema-valid Graph Diff that
+  was applied only to a mutable Draft.
+- The resulting Draft revision 2 was published as immutable revision 1 and
+  compiled successfully into 39 artifacts.
+- Its isolated generated runtime persisted the model-added optional receipt
+  field, completed the employee submit and manager approve journey, recorded
+  five audit events and two capability events, and served its Web application
+  with HTTP 200.
+- Only the outcome, revisions, artifact count, and journey assertions are
+  recorded here. No credential, raw brief, or raw provider response is stored.
+
+Restaurant Ordering and Simple Ecommerce remain independently runnable from
+their deterministic published Graphs. Their final real-model acceptance is
+intentionally deferred to the next guarded call budget rather than replaced
+with fixtures.
+
 ## Cleanup
 
 All temporary Compose projects, volumes, and copied generated directories from
-this verification must be removed after the evidence has been captured. The
-source of truth remains the Published Graph and its immutable artifact record.
+this verification are removed after the evidence has been captured. The source
+of truth remains the Published Graph and its immutable artifact record.
