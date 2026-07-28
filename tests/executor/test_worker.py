@@ -142,6 +142,35 @@ class ExecutorWorkerTests(unittest.TestCase):
         for name in ("OPENAI_API_KEY", "AWS_SECRET_ACCESS_KEY", "AZURE_CLIENT_SECRET"):
             self.assertNotIn(name, environment)
 
+    def test_status_write_retries_a_transient_windows_replace_denial(self) -> None:
+        worker = self._worker(FakeRunner())
+        path = self.plane.runs_root / self.run["id"] / "output" / "evidence" / "executor-status.json"
+        status = worker._new_status(self.run["id"], "sha256:" + "0" * 64, event_sequence_start=4)
+        original_replace = Path.replace
+        calls = 0
+
+        def replace_once(source: Path, target: Path) -> Path:
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                raise PermissionError("transient sharing violation")
+            return original_replace(source, target)
+
+        with (
+            patch.object(Path, "replace", autospec=True, side_effect=replace_once),
+            patch("apps.executor.worker.time.sleep"),
+        ):
+            worker._write_status(path, status)
+
+        self.assertEqual(2, calls)
+        self.assertTrue(path.is_file())
+
+    def test_compose_project_name_normalizes_urlsafe_run_identifiers(self) -> None:
+        self.assertEqual(
+            "factory-abcd-efgh",
+            ExecutorWorker._project_name("run_ABCD_EFGH"),
+        )
+
     def test_worker_runs_only_fixed_array_commands_and_reports_ready(self) -> None:
         runner = FakeRunner()
         worker = self._worker(runner)
@@ -150,7 +179,7 @@ class ExecutorWorkerTests(unittest.TestCase):
 
         view = self.plane.get_run(self.run["id"])
         output = (self.plane.runs_root / self.run["id"] / "output").resolve()
-        project_name = "factory_" + self.run["id"].removeprefix("run_").lower()
+        project_name = "factory-" + self.run["id"].removeprefix("run_").lower().replace("_", "-")
         compose_prefix = [
             "docker",
             "compose",

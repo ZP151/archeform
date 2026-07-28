@@ -171,6 +171,11 @@ def _normalize_openai_candidate(value: Any) -> Any:
     candidate = copy.deepcopy(value)
     if not isinstance(candidate, dict):
         return candidate
+    workflow = candidate.get("workflow")
+    if isinstance(workflow, dict):
+        frozen_workflow = _schema()["properties"]["workflow"]["properties"]
+        workflow["states"] = copy.deepcopy(frozen_workflow["states"]["const"])
+        workflow["transitions"] = copy.deepcopy(frozen_workflow["transitions"]["const"])
     primary_record = candidate.get("primary_record")
     if not isinstance(primary_record, dict):
         return candidate

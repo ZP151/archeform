@@ -29,10 +29,32 @@ function definition(name, version = '1') {
   };
 }
 
-export async function startFixtureControlPlane() {
-  const state = { projects: [], planAttempts: 0, previewOpened: false, artifactToken: '' };
+export async function startFixtureControlPlane(options = {}) {
+  const {
+    initialProjects = [],
+    failInitialProjectsOnce = false,
+    delayInitialProjectsMs = 0,
+    delayProjectLoadMs = 0,
+    failRunPollOnce = false,
+    runCreateDelayMs = 0,
+    stopDelayMs = 0,
+    artifactDelayMs = 0,
+  } = options;
+  const state = {
+    projects: [], planAttempts: 0, previewOpened: false, artifactToken: '',
+    initialProjectsRequests: 0, projectLoadRequests: 0, runCreateRequests: 0, runPollRequests: 0, stopRequests: 0,
+  };
   let sequence = 0;
   const id = (kind) => `${kind}_${++sequence}`;
+  const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+  let initialProjectsShouldFail = failInitialProjectsOnce;
+  let runPollShouldFail = failRunPollOnce;
+  for (const entry of initialProjects) {
+    const name = typeof entry === 'string' ? entry : entry.name;
+    const project = { id: id('project'), name, versions: [], plans: [], runs: [] };
+    project.versions.push({ id: id('version'), status: 'draft', created_at: now, definition: definition(name) });
+    state.projects.push(project);
+  }
   const server = createServer(async (req, res) => {
     const origin = req.headers.origin;
     if (req.method === 'OPTIONS') return response(res, origin, 204, {});
@@ -41,7 +63,12 @@ export async function startFixtureControlPlane() {
     console.log(`fixture-control-plane: ${req.method} ${path}`);
     const needsCapability = path.startsWith('/api/');
     if (needsCapability && req.headers['x-factory-capability'] !== token) return response(res, origin, 401, { error: { message: 'Capability token is required.' } });
-    if (path === '/api/projects' && req.method === 'GET') return response(res, origin, 200, { projects: state.projects.map(({ id: projectId }) => ({ id: projectId })) });
+    if (path === '/api/projects' && req.method === 'GET') {
+      state.initialProjectsRequests += 1;
+      if (delayInitialProjectsMs) await wait(delayInitialProjectsMs);
+      if (initialProjectsShouldFail) { initialProjectsShouldFail = false; return response(res, origin, 503, { error: { message: 'Fixture project index is temporarily unavailable.' } }); }
+      return response(res, origin, 200, { projects: state.projects.map(({ id: projectId, name }) => ({ id: projectId, name })) });
+    }
     if (path === '/api/projects' && req.method === 'POST') {
       const project = { id: id('project'), name: body.name, versions: [], plans: [], runs: [] };
       const version = { id: id('version'), status: 'draft', created_at: now, definition: definition(body.name) }; project.versions.push(version); state.projects.push(project);
@@ -49,6 +76,8 @@ export async function startFixtureControlPlane() {
     }
     const projectMatch = path.match(/^\/api\/projects\/([^/]+)$/);
     if (projectMatch && req.method === 'GET') {
+      state.projectLoadRequests += 1;
+      if (delayProjectLoadMs) await wait(delayProjectLoadMs);
       const project = state.projects.find((item) => item.id === projectMatch[1]); return project ? response(res, origin, 200, { project }) : response(res, origin, 404, { error: { message: 'Project not found.' } });
     }
     const childMatch = path.match(/^\/api\/projects\/([^/]+)\/versions$/);
@@ -65,16 +94,16 @@ export async function startFixtureControlPlane() {
     const approvePlan = path.match(/^\/api\/plans\/([^/]+)\/approve$/);
     if (approvePlan && req.method === 'POST') { for (const project of state.projects) { const plan = project.plans.find((item) => item.id === approvePlan[1]); if (plan) { plan.status = 'approved'; return response(res, origin, 200, { plan }); } } }
     const createRun = path.match(/^\/api\/plans\/([^/]+)\/runs$/);
-    if (createRun && req.method === 'POST') { for (const project of state.projects) { const plan = project.plans.find((item) => item.id === createRun[1]); if (plan) { const run = { id: id('run'), plan_id: plan.id, status: 'queued', phase: 'queued', executor: { status: 'online' }, artifacts: [{ id: 'component-lock', path: 'component-lock.json', url: `/api/runs/pending/artifacts/component-lock` }] }; run.artifacts[0].url = `/api/runs/${run.id}/artifacts/component-lock`; project.runs.push(run); return response(res, origin, 201, { run }); } } }
+    if (createRun && req.method === 'POST') { state.runCreateRequests += 1; if (runCreateDelayMs) await wait(runCreateDelayMs); for (const project of state.projects) { const plan = project.plans.find((item) => item.id === createRun[1]); if (plan) { const run = { id: id('run'), plan_id: plan.id, status: 'queued', phase: 'queued', executor: { status: 'online' }, artifacts: [{ id: 'component-lock', path: 'component-lock.json', url: `/api/runs/pending/artifacts/component-lock` }] }; run.artifacts[0].url = `/api/runs/${run.id}/artifacts/component-lock`; project.runs.push(run); return response(res, origin, 201, { run }); } } }
     const runMatch = path.match(/^\/api\/runs\/([^/]+)$/);
-    if (runMatch && req.method === 'GET') { for (const project of state.projects) { const run = project.runs.find((item) => item.id === runMatch[1]); if (run) { if (run.phase === 'stopping') { run.phase = 'stopped'; run.status = 'stopped'; run.preview_url = null; } else if (run.status !== 'stopped') { run.phase = 'ready'; run.status = 'ready'; run.preview_url = 'http://127.0.0.1:5173/fixture-preview'; } return response(res, origin, 200, { run }); } } }
+    if (runMatch && req.method === 'GET') { state.runPollRequests += 1; if (runPollShouldFail) { runPollShouldFail = false; return response(res, origin, 503, { error: { message: 'Fixture run status is temporarily unavailable.' } }); } for (const project of state.projects) { const run = project.runs.find((item) => item.id === runMatch[1]); if (run) { if (run.phase === 'stopping') { run.phase = 'stopped'; run.status = 'stopped'; run.preview_url = null; } else if (run.status !== 'stopped') { run.phase = 'ready'; run.status = 'ready'; run.preview_url = 'http://127.0.0.1:5173/fixture-preview'; } return response(res, origin, 200, { run }); } } }
     const artifact = path.match(/^\/api\/runs\/([^/]+)\/artifacts\/([^/]+)$/);
-    if (artifact && req.method === 'GET') { state.artifactToken = req.headers['x-factory-capability']; res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Disposition': 'attachment; filename="component-lock.json"', 'Access-Control-Allow-Origin': origin || 'http://127.0.0.1:5173' }); return res.end('{"components":["backend.fastapi-crud"]}\n'); }
+    if (artifact && req.method === 'GET') { if (artifactDelayMs) await wait(artifactDelayMs); state.artifactToken = req.headers['x-factory-capability']; res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Disposition': 'attachment; filename="component-lock.json"', 'Access-Control-Allow-Origin': origin || 'http://127.0.0.1:5173' }); return res.end('{"components":["backend.fastapi-crud"]}\n'); }
     const stopMatch = path.match(/^\/api\/runs\/([^/]+)\/stop$/);
-    if (stopMatch && req.method === 'POST') { for (const project of state.projects) { const run = project.runs.find((item) => item.id === stopMatch[1]); if (run) { run.phase = 'stopping'; return response(res, origin, 202, { run }); } } }
+    if (stopMatch && req.method === 'POST') { state.stopRequests += 1; if (stopDelayMs) await wait(stopDelayMs); for (const project of state.projects) { const run = project.runs.find((item) => item.id === stopMatch[1]); if (run) { run.phase = 'stopping'; return response(res, origin, 202, { run }); } } }
     return response(res, origin, 404, { error: { message: 'Fixture route was not found.' } });
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const port = server.address().port;
-  return { token, state, base: `http://127.0.0.1:${port}/api`, close: () => new Promise((resolve) => server.close(resolve)) };
+  return { token, state, base: `http://127.0.0.1:${port}/api`, close: () => { server.closeAllConnections?.(); return new Promise((resolve) => server.close(resolve)); } };
 }

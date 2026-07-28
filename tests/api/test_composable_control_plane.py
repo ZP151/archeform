@@ -48,6 +48,11 @@ class ComposableControlPlaneTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temp.cleanup()
 
+    def test_local_server_enables_the_composable_planning_path(self) -> None:
+        """The user-facing local server must not silently fall back to the old renderer."""
+        source = (ROOT / "apps" / "api" / "server.py").read_text(encoding="utf-8")
+        self.assertIn("control_plane = ControlPlane(composable_enabled=True)", source)
+
     def _approved_plan(self, name: str, brief: str) -> tuple[dict, dict]:
         created = self.plane.create_project(name, brief)
         version = self.plane.approve_version(created["version"]["id"], "founder")
@@ -78,6 +83,43 @@ class ComposableControlPlaneTests(unittest.TestCase):
         self.assertEqual(
             "Expense claim",
             expense["composition"]["validated_inputs"]["ui.approval-form"]["record_label"],
+        )
+
+    def test_shell_navigation_exposes_home_account_and_settings_as_declared_component_inputs(self) -> None:
+        """The Composer may render only views that the approved shell input declares."""
+        _, plan = self._approved_plan(
+            "expense-approval-navigation", "Employees submit expense claims and managers approve them."
+        )
+
+        navigation = plan["composition"]["validated_inputs"]["ui.app-shell"]["navigation"]
+        self.assertEqual(
+            ["/", "/submit", "/my-records", "/approval-queue", "/audit", "/profile", "/settings"],
+            [item["href"] for item in navigation],
+        )
+
+    def test_promoted_v2_1_ui_assets_are_selected_for_new_composable_plans(self) -> None:
+        """New plans must select the canonical 2.1 suite, never the historical held assets."""
+        _, plan = self._approved_plan(
+            "leave-approval-v2", "Employees submit leave requests and managers approve them."
+        )
+
+        ui_locks = {
+            lock["key"]: lock["version"]
+            for lock in plan["composition"]["component_locks"]
+            if lock["key"].startswith("ui.")
+        }
+        self.assertEqual(
+            {
+                "ui.app-shell": "2.1.0",
+                "ui.approval-form": "2.1.0",
+                "ui.approval-queue": "2.1.0",
+                "ui.home-page": "2.1.0",
+                "ui.login-page": "2.1.0",
+                "ui.my-requests": "2.1.0",
+                "ui.profile-page": "2.1.0",
+                "ui.system-settings-page": "2.1.0",
+            },
+            ui_locks,
         )
 
     def test_run_materializes_only_locked_component_contributions_and_composition_evidence(self) -> None:
@@ -166,7 +208,7 @@ class ComposableControlPlaneTests(unittest.TestCase):
         shutil.rmtree(scaffold)
         shutil.copytree(ROOT / "packages" / "composer-scaffold" / "1.0.0", scaffold)
         collision = scaffold / "frontend" / "app-shell" / "ApplicationShell.tsx"
-        collision.parent.mkdir(parents=True)
+        collision.parent.mkdir(parents=True, exist_ok=True)
         collision.write_text("export const collision = true;\n", encoding="utf-8")
         manifest_path = scaffold / "scaffold.json"
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -300,7 +342,6 @@ class ComposableControlPlaneTests(unittest.TestCase):
         ):
             with self.subTest(relative=relative):
                 self.assertTrue((frontend / relative).is_file())
-        self.assertIn('from "../app-shell/ApplicationShell"', page)
         self.assertIn('from "../features/approval-form/ApprovalForm"', page)
         self.assertIn('from "../features/approval-queue/ApprovalQueue"', page)
         self.assertIn('from "../features/audit/AuditLog"', page)
@@ -310,10 +351,10 @@ class ComposableControlPlaneTests(unittest.TestCase):
         self.assertIn("<MyRequests", page)
         self.assertIn("<ProfilePage", page)
         self.assertIn("<SystemSettingsPage", page)
-        self.assertIn(
-            '</section>}{(activeActor?.kind === "auditor" || activeActor?.kind === "observer")',
-            page,
-        )
+        self.assertIn('activeView === "/audit"', page)
+        self.assertIn('aria-label="Primary navigation"', page)
+        self.assertIn('aria-current={activeView === route.href ? "page" : undefined}', page)
+        self.assertIn('data-theme={theme}', page)
         self.assertIn("Expense claim", (frontend / "features" / "approval-form" / "ApprovalForm.tsx").read_text(encoding="utf-8"))
         self.assertIn("context: ./frontend", compose)
         self.assertIn(

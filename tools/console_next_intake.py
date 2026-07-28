@@ -547,15 +547,27 @@ def verify_console_next_preflight(
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Run the fixed-digest Console Next preflight without source acquisition."""
+    """Run a deterministic Console Next closure operation without acquisition."""
     parser = argparse.ArgumentParser(description="Verify the local Console Next source closure.")
     subcommands = parser.add_subparsers(dest="command", required=True)
     command = subcommands.add_parser("verify-console-next")
     command.add_argument("--snapshot", type=Path, required=True)
     command.add_argument("--lockfile", type=Path, required=True)
     command.add_argument("--console-root", type=Path, required=True)
+    capture = subcommands.add_parser("capture-console-next")
+    capture.add_argument("--snapshot", type=Path, required=True)
+    capture.add_argument("--lockfile", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
+        if args.command == "capture-console-next":
+            snapshot = repository_path(args.snapshot)
+            write_console_next_closure(
+                snapshot,
+                verify_snapshot(snapshot, PINNED_CONSOLE_NEXT_COMMIT),
+                repository_path(args.lockfile),
+            )
+            print("console-next closure: CAPTURED")
+            return 0
         verify_console_next_preflight(
             repository_path(args.snapshot),
             PINNED_CONSOLE_NEXT_COMMIT,

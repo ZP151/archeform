@@ -1,0 +1,22 @@
+{
+  "schema_version": "factory-component/v1",
+  "key": "ui.home-page",
+  "version": "2.0.0",
+  "category": "ui",
+  "package_root": ".",
+  "digest": "sha256:d288fe3118e34f5c129e3942a8583b246e4322febf35838b389e2192a3abbab0",
+  "lifecycle": "golden",
+  "provides": ["ui.route.home"],
+  "requires": [{"key": "ui.app-shell", "version": "2.0.0"}],
+  "compatibility": {"application_definition": "factory/v1", "profile": "internal-approval-app"},
+  "input_schema": {"type": "object", "additionalProperties": false, "required": ["headline", "summary"], "properties": {"headline": {"type": "string", "minLength": 1}, "summary": {"type": "string", "minLength": 1}}},
+  "output_slots": ["frontend/routes/home"],
+  "verification": {"status": "passed", "license_expression": "MIT", "license_list_version": "3.0", "source_revision": "c0ffee0", "sbom_reference": null, "provenance_reference": null, "verified_at": "2026-07-26T00:00:00Z"},
+  "inventory": [
+    {"path": "adapter.json", "sha256": "sha256:709f7b33f82577caa2132bb120eaa2f4dc216cf0b52236947d9a79ea096e9948"},
+    {"path": "fixtures/valid-input.json", "sha256": "sha256:d6d93e9b2492fc8676b9d0d7a2ddf54d72eba10d166064099a6ae5871031c8de"},
+    {"path": "templates/HomePage.tsx", "sha256": "sha256:ead39229995f7d3f294d0b9715135b349b3b8544a5fa1d422ff43d90dad6ad73"},
+    {"path": "tests/test_package.py", "sha256": "sha256:054e1b998dbcac59865eff91b71eb54e2c851d5bf074b21fc1ca5a912983ba0d"},
+    {"path": "trust.json", "sha256": "sha256:c5122065760c131335ef740d0d2bcfbe0233d8c0b8deec235ff5f4fbabf2c103"}
+  ]
+}

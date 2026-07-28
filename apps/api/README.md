@@ -53,7 +53,7 @@ print(
 '@ | python -
 ```
 
-Set a random local development capability before starting the server. The static UI asks for this value in the browser tab and the server derives the control-plane approver identity from its environment, not request JSON. This protects the local development console only; it is not the authentication model for the multi-user applications that Factory Pilot will generate.
+Set a random local development capability before starting the server. The Console Next local proxy reads the matching value from its server process environment and forwards it only to the loopback API; browser code never receives it. The server derives the control-plane approver identity from its environment, not request JSON. This protects the local development console only; it is not the authentication model for the multi-user applications that Factory Pilot will generate.
 
 ```powershell
 $env:FACTORY_API_TOKEN = [guid]::NewGuid().ToString('N')
@@ -64,7 +64,7 @@ python -m apps.api.server
 The server listens only on `127.0.0.1:8080`. Example flow:
 
 ```powershell
-Use the browser console at `http://127.0.0.1:5173` for the supported API workflow. The capability is deliberately not included in command examples or source control.
+Use the browser console at `http://127.0.0.1:5173` for the supported API workflow. Start the Console server with the same value as `FACTORY_CONSOLE_API_TOKEN`; the capability is deliberately not included in command examples, browser state, or source control.
 ```
 
 ## Static UI API and CORS

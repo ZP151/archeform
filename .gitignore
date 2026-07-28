@@ -3,6 +3,12 @@ __pycache__/
 .pytest_cache/
 .venv/
 node_modules/
+.playwright-cli/
+.next/
+apps/console-next/.next/
+apps/console-next/.next-*
+output/
+lineage-current.png
 .env
 apps/api/runs/
 apps/api/state/

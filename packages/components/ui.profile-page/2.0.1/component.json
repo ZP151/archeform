@@ -1,0 +1,22 @@
+{
+  "schema_version": "factory-component/v1",
+  "key": "ui.profile-page",
+  "version": "2.0.1",
+  "category": "ui",
+  "package_root": ".",
+  "digest": "sha256:019ebec61ccd5e7737be93e5bf5e3d6160c554e30dccaab4178117f9e738b5e1",
+  "lifecycle": "golden",
+  "provides": ["ui.route.profile"],
+  "requires": [{"key": "ui.app-shell", "version": "2.0.0"}],
+  "compatibility": {"application_definition": "factory/v1", "profile": "internal-approval-app"},
+  "input_schema": {"type": "object", "additionalProperties": false, "required": ["heading", "editable_fields"], "properties": {"heading": {"type": "string", "minLength": 1}, "editable_fields": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}}},
+  "output_slots": ["frontend/routes/profile"],
+  "verification": {"status": "passed", "license_expression": "MIT", "license_list_version": "3.0", "source_revision": "c0ffee0", "sbom_reference": null, "provenance_reference": null, "verified_at": "2026-07-27T00:00:00Z"},
+  "inventory": [
+    {"path": "adapter.json", "sha256": "sha256:6ad6da1d54f91d82c4bdd7cc7e9fe1baadbfa72e168e379ba1f6d6f25b9927e9"},
+    {"path": "fixtures/valid-input.json", "sha256": "sha256:4d6bacdd9079bc5b650a2ca2b479bff07254b675569bd53bf36963d47dab0adb"},
+    {"path": "templates/ProfilePage.tsx", "sha256": "sha256:42b964ade3789739f4c2326ad665bc19283c9d9a2f17ca826bb2f9288aea84b1"},
+    {"path": "tests/test_package.py", "sha256": "sha256:efd4714f060bb5816f10c3707d96d83df6b6d0117d5a0135a931084854a6cb8d"},
+    {"path": "trust.json", "sha256": "sha256:3a8f3bf136122db90277f3306bd5474bcef943083ba9f31c730559a3ac07376e"}
+  ]
+}

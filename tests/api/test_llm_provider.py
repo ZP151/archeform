@@ -134,6 +134,34 @@ class RequirementToDefinitionProviderTests(unittest.TestCase):
         self.assertEqual(expected, generated.candidate)
         self.assertTrue(all("options" not in field for field in generated.candidate["primary_record"]["fields"]))
 
+    def test_openai_adapter_restores_the_frozen_workflow_before_local_validation(self) -> None:
+        expected = FixtureRequirementToDefinitionProvider().generate(
+            "expense-approval",
+            "Employees submit expense claims.",
+        ).candidate
+        transport_candidate = json.loads(json.dumps(expected))
+        transport_candidate["workflow"]["states"] = ["new", "in_review", "done"]
+        transport_candidate["workflow"]["transitions"] = []
+        for field in transport_candidate["primary_record"]["fields"]:
+            field["options"] = None
+
+        class Response:
+            id = "resp_fixed_workflow"
+            output_text = json.dumps(transport_candidate)
+            usage = None
+
+        class Responses:
+            def create(self, **_kwargs: object) -> Response:
+                return Response()
+
+        client = type("Client", (), {"responses": Responses()})()
+        generated = OpenAIRequirementToDefinitionProvider(
+            api_key="test-only",
+            client_factory=lambda **_kwargs: client,
+        ).generate("expense-approval", "Employees submit expense claims.")
+
+        self.assertEqual(expected["workflow"], generated.candidate["workflow"])
+
     def test_openai_adapter_applies_frozen_policy_after_transport_schema_accepts_candidate(self) -> None:
         candidate = FixtureRequirementToDefinitionProvider().generate(
             "expense-approval",

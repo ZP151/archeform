@@ -1,0 +1,1 @@
+{"component_key":"ui.home-page","component_version":"2.4.0","contributions":[{"bindings":{"headline":{"context":"tsx_text","source":"input.headline"},"summary":{"context":"tsx_text","source":"input.summary"}},"operation":"render_template","slot":"frontend/routes/home","source":"templates/HomePage.tsx","target":"HomePage.tsx"}],"schema_version":"factory-component-adapter/v1"}

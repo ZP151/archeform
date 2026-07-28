@@ -4,11 +4,11 @@
   "files": [
     {"path": "frontend/.dockerignore", "sha256": "sha256:f48647861bcc526caa65f0b247425dc6c2ce6eb0a20ef76d0457157f52664dd5"},
     {"path": "frontend/Dockerfile", "sha256": "sha256:a8394bbca518101790989625c8e740e9975f99644f817e49ef3d692be38e505d"},
-    {"path": "frontend/app/globals.css", "sha256": "sha256:315c0c69c1732268f3dcd2004be082aa9ca1b355ef896c1d9492294ad33c837b"},
+    {"path": "frontend/app/globals.css", "sha256": "sha256:7bac060c85455e1a1baf2380d1296dddf17ab2f594b88202c51c0bf30d58ff2e"},
     {"path": "frontend/next-env.d.ts", "sha256": "sha256:ec94f2df20b2570e7d5e3d8040e1f616014e51b31debc574b41d3e1b87669997"},
     {"path": "frontend/next.config.mjs", "sha256": "sha256:fa9985c1ad17604adf103a8679e60211459053a947f7a73619faae0fcbb5d8e3"},
-    {"path": "frontend/package-lock.json", "sha256": "sha256:08df2ef9b9dcec96d55c468eb9f581f9633d5f12c1e4b6943f6f322045150cd3"},
-    {"path": "frontend/package.json", "sha256": "sha256:48bf2d951a6a254a425cc82357750d238d072f5bcf4f320b4f1a8a31f7f11f6b"},
+    {"path": "frontend/package-lock.json", "sha256": "sha256:7f57ff31bc41f0e941499e928a036bdb0fcd538bd12b8f4708b14333dfe4abea"},
+    {"path": "frontend/package.json", "sha256": "sha256:afe21c1973b02c57bba9641624fc34fadfca0591d31ad53da441fd81a8ea1ecb"},
     {"path": "frontend/tsconfig.json", "sha256": "sha256:1421c4d1395b90b4d32904de1dc044146a334c140990d6fb74f654e1f99a5bf6"}
   ]
 }

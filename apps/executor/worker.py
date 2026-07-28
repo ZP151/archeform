@@ -68,11 +68,23 @@ COMPOSABLE_COMPONENT_KEYS = [
     "ui.system-settings-page",
     "workflow.single-level-approval",
 ]
+COMPOSABLE_COMPONENT_ALLOWED_VERSIONS = {
+    key: (
+        frozenset({"2.0.0", "2.0.1", "2.1.0"})
+        if key in {"ui.approval-form", "ui.profile-page"}
+        else frozenset({"2.0.0", "2.1.0"})
+        if key.startswith("ui.")
+        else frozenset({"1.0.0"})
+    )
+    for key in COMPOSABLE_COMPONENT_KEYS
+}
 STATUS_RELATIVE_PATH = "evidence/executor-status.json"
 SMOKE_RELATIVE_PATH = "evidence/smoke-evidence.json"
 TERMINAL_RELATIVE_PATH = "executor-terminal.json"
 CLAIM_RELATIVE_PATH = "executor-claim.json"
 CLAIM_LEASE_SECONDS = 15
+ATOMIC_REPLACE_ATTEMPTS = 3
+ATOMIC_REPLACE_DELAY_SECONDS = 0.05
 REQUEST_KEYS = {
     "schema_version",
     "run_id",
@@ -109,6 +121,18 @@ class CommandError(RuntimeError):
 
 class ExpiryReached(RuntimeError):
     """The fixed local preview lifetime ended during execution."""
+
+
+def _replace_with_retry(temporary: Path, target: Path) -> None:
+    """Retry a short Windows sharing violation without weakening atomic writes."""
+    for attempt in range(ATOMIC_REPLACE_ATTEMPTS):
+        try:
+            temporary.replace(target)
+            return
+        except PermissionError:
+            if attempt + 1 == ATOMIC_REPLACE_ATTEMPTS:
+                raise
+            time.sleep(ATOMIC_REPLACE_DELAY_SECONDS)
 
 
 @dataclass(frozen=True)
@@ -341,7 +365,7 @@ class ExecutorWorker:
         signed["claim_signature"] = self._signature(body)
         temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
         temporary.write_text(_canonical(signed) + "\n", encoding="utf-8")
-        temporary.replace(path)
+        _replace_with_retry(temporary, path)
 
     def _process_claimed(self, run_dir: Path) -> bool:
         try:
@@ -910,7 +934,7 @@ class ExecutorWorker:
                 f".{path.name}.{os.getpid()}.{threading.get_ident()}.tmp"
             )
             temporary.write_text(_canonical(persisted) + "\n", encoding="utf-8")
-            temporary.replace(path)
+            _replace_with_retry(temporary, path)
 
     def _write_smoke(self, handoff: Handoff, smoke: dict[str, Any]) -> None:
         path = handoff.output / SMOKE_RELATIVE_PATH
@@ -925,7 +949,7 @@ class ExecutorWorker:
         envelope["evidence_signature"] = self._signature(envelope)
         temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
         temporary.write_text(_canonical(envelope) + "\n", encoding="utf-8")
-        temporary.replace(path)
+        _replace_with_retry(temporary, path)
 
     def _write_terminal(self, run_dir: Path, status: dict[str, Any]) -> None:
         path = run_dir / TERMINAL_RELATIVE_PATH
@@ -936,7 +960,7 @@ class ExecutorWorker:
         persisted["evidence_signature"] = self._signature(persisted)
         temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
         temporary.write_text(_canonical(persisted) + "\n", encoding="utf-8")
-        temporary.replace(path)
+        _replace_with_retry(temporary, path)
 
     def _append_output(self, status: dict[str, Any], output: object) -> None:
         if not isinstance(output, str):
@@ -1106,9 +1130,7 @@ class ExecutorWorker:
             compose_path=compose_path,
             smoke_path=smoke_path,
             expires_at=expires_at,
-            project_name=(
-                "factory_" + run_dir.name.removeprefix("run_").lower()
-            ),
+            project_name=self._project_name(run_dir.name),
         )
 
     def _validate_cleanup_handoff(
@@ -1177,9 +1199,7 @@ class ExecutorWorker:
             compose_path=compose_path,
             smoke_path=compose_path,
             expires_at=_parse_timestamp(request["expires_at"]),
-            project_name=(
-                "factory_" + run_dir.name.removeprefix("run_").lower()
-            ),
+            project_name=self._project_name(run_dir.name),
         )
 
     def _validate_component_lock(
@@ -1212,7 +1232,7 @@ class ExecutorWorker:
                 if (
                     not isinstance(lock, dict)
                     or set(lock) != {"key", "version", "digest"}
-                    or lock.get("version") != "1.0.0"
+                    or lock.get("version") not in COMPOSABLE_COMPONENT_ALLOWED_VERSIONS.get(lock.get("key"), frozenset())
                     or not DIGEST_PATTERN.fullmatch(str(lock.get("digest")))
                 ):
                     raise HandoffError("component lock contains an untrusted composed component")
@@ -1498,6 +1518,11 @@ class ExecutorWorker:
         status["_next_sequence"] = next_sequence
         status.pop("evidence_signature", None)
         return status
+
+    @staticmethod
+    def _project_name(run_id: str) -> str:
+        """Map a URL-safe run identity to a Docker image-safe project name."""
+        return "factory-" + run_id.removeprefix("run_").lower().replace("_", "-")
 
     @staticmethod
     def _compose_prefix(handoff: Handoff) -> list[str]:

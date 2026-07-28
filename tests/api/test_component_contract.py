@@ -22,6 +22,16 @@ from apps.api.component_contract import (
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_PACKAGE = ROOT / "tests" / "fixtures" / "component-contract" / "valid-ui-login" / "1.0.0"
+APPROVAL_UI_PACKAGE_KEYS = (
+    "ui.app-shell",
+    "ui.approval-form",
+    "ui.approval-queue",
+    "ui.home-page",
+    "ui.login-page",
+    "ui.my-requests",
+    "ui.profile-page",
+    "ui.system-settings-page",
+)
 
 
 def _canonical(value: object) -> str:
@@ -72,6 +82,90 @@ class ComponentContractTests(unittest.TestCase):
         self.assertEqual(package["digest"], calculate_package_digest(package_root, package))
         plan = validate_composition_plan(_valid_plan(package))
         self.assertEqual(["ui.login-page"], [item["key"] for item in plan["component_locks"]])
+
+    def test_approval_ui_v2_golden_packages_are_complete_and_depend_on_the_v2_shell(self) -> None:
+        roots = [ROOT / "packages" / "components" / key / "2.0.0" for key in APPROVAL_UI_PACKAGE_KEYS]
+        available = {(key, "2.0.0") for key in APPROVAL_UI_PACKAGE_KEYS}
+        packages = [validate_component_package(root, available_identities=available, approved_package_root=ROOT / "packages" / "components") for root in roots]
+
+        self.assertEqual(list(APPROVAL_UI_PACKAGE_KEYS), [package["key"] for package in packages])
+        for package, root in zip(packages, roots, strict=True):
+            self.assertEqual("2.0.0", package["version"])
+            self.assertEqual("golden", package["lifecycle"])
+            self.assertTrue((root / "trust.json").is_file())
+            if package["key"] == "ui.app-shell":
+                self.assertEqual([], package["requires"])
+            else:
+                self.assertEqual([{"key": "ui.app-shell", "version": "2.0.0"}], package["requires"])
+
+    def test_generated_ui_v2_1_golden_packages_bind_canonical_assets_without_mutating_v2_history(self) -> None:
+        """The promoted successor suite must keep its own immutable evidence."""
+        roots = [ROOT / "packages" / "components" / key / "2.1.0" for key in APPROVAL_UI_PACKAGE_KEYS]
+        available = {(key, "2.1.0") for key in APPROVAL_UI_PACKAGE_KEYS}
+        packages = [
+            validate_component_package(
+                root,
+                available_identities=available,
+                approved_package_root=ROOT / "packages" / "components",
+            )
+            for root in roots
+        ]
+
+        for package, root in zip(packages, roots, strict=True):
+            self.assertEqual("2.1.0", package["version"])
+            self.assertEqual("golden", package["lifecycle"])
+            self.assertTrue((root / "canonical-ui.json").is_file())
+            self.assertTrue((root / "trust.json").is_file())
+            if package["key"] == "ui.app-shell":
+                inventory_paths = {item["path"] for item in package["inventory"]}
+                self.assertIn("templates/factory-ui.css", inventory_paths)
+                self.assertIn("templates/tokens.css", inventory_paths)
+            else:
+                self.assertEqual([{"key": "ui.app-shell", "version": "2.1.0"}], package["requires"])
+
+    def test_candidate_ui_2_2_templates_do_not_claim_historical_component_identities(self) -> None:
+        """A coherent candidate family cannot emit a predecessor component marker."""
+        roots = [ROOT / "packages" / "components" / key / "2.2.0" for key in APPROVAL_UI_PACKAGE_KEYS]
+
+        for root in roots:
+            for template in (root / "templates").rglob("*"):
+                if not template.is_file():
+                    continue
+                with self.subTest(template=template.relative_to(ROOT)):
+                    self.assertNotIn("@2.1.0", template.read_text(encoding="utf-8"))
+
+    def test_candidate_ui_2_4_packages_are_complete_and_require_only_the_2_4_shell(self) -> None:
+        """A mixed auth/navigation candidate family must not validate as a composable suite."""
+        roots = [ROOT / "packages" / "components" / key / "2.4.0" for key in APPROVAL_UI_PACKAGE_KEYS]
+        available = {(key, "2.4.0") for key in APPROVAL_UI_PACKAGE_KEYS}
+        packages = [
+            validate_component_package(
+                root,
+                available_identities=available,
+                approved_package_root=ROOT / "packages" / "components",
+            )
+            for root in roots
+        ]
+
+        self.assertEqual(list(APPROVAL_UI_PACKAGE_KEYS), [package["key"] for package in packages])
+        for package in packages:
+            self.assertEqual("2.4.0", package["version"])
+            self.assertEqual("candidate", package["lifecycle"])
+            if package["key"] == "ui.app-shell":
+                self.assertEqual([], package["requires"])
+            else:
+                self.assertEqual([{"key": "ui.app-shell", "version": "2.4.0"}], package["requires"])
+
+    def test_profile_page_patch_asset_is_golden_and_removes_the_nonfunctional_edit_control(self) -> None:
+        root = ROOT / "packages" / "components" / "ui.profile-page" / "2.0.1"
+        package = validate_component_package(
+            root,
+            available_identities={("ui.profile-page", "2.0.1"), ("ui.app-shell", "2.0.0")},
+            approved_package_root=ROOT / "packages" / "components",
+        )
+
+        self.assertEqual("golden", package["lifecycle"])
+        self.assertNotIn("fp-icon-button", (root / "templates" / "ProfilePage.tsx").read_text(encoding="utf-8"))
 
     def test_rejects_unsupported_contract_versions_and_unknown_manifest_fields(self) -> None:
         for field, value in (("schema_version", "factory-component/v2"), ("unapproved", True)):

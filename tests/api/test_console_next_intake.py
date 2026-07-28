@@ -15,6 +15,7 @@ from tools.console_next_intake import (
     MIT_LICENSE_BYTES,
     SnapshotError,
     canonical_json_bytes,
+    main,
     repository_path,
     verify_console_next_preflight,
     verify_snapshot,
@@ -216,6 +217,29 @@ class ConsoleNextIntakeTests(unittest.TestCase):
         with self.assertRaises(SnapshotError) as mismatch:
             verify_console_next_closure(root, PINNED_COMMIT, lockfile)
         self.assertEqual("closure_mismatch", mismatch.exception.code)
+
+    def test_capture_command_writes_canonical_closure(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name) / "snapshot"
+        shutil.copytree(VENDORED_SNAPSHOT, root)
+        lockfile = Path(temporary.name) / "package-lock.json"
+        lockfile.write_bytes(canonical_json_bytes({
+            "lockfileVersion": 3,
+            "packages": {"node_modules/example": {"version": "1.0.0", "integrity": "sha512-example"}},
+        }) + b"\n")
+        (root / "console-next-closure.json").unlink()
+
+        status = main([
+            "capture-console-next",
+            "--snapshot", str(root),
+            "--lockfile", str(lockfile),
+        ])
+
+        self.assertEqual(0, status)
+        closure = json.loads((root / "console-next-closure.json").read_text(encoding="utf-8"))
+        self.assertEqual("captured", closure["lockfile"]["status"])
+        self.assertEqual("example", closure["lockfile"]["packages"][0]["name"])
 
 
 if __name__ == "__main__":

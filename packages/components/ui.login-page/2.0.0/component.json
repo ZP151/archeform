@@ -1,0 +1,22 @@
+{
+  "schema_version": "factory-component/v1",
+  "key": "ui.login-page",
+  "version": "2.0.0",
+  "category": "ui",
+  "package_root": ".",
+  "digest": "sha256:50906d885d314132d2a83855ea54dfd4ad06401f4594e70ad0cca446686cea98",
+  "lifecycle": "golden",
+  "provides": ["ui.authentication.login"],
+  "requires": [{"key": "ui.app-shell", "version": "2.0.0"}],
+  "compatibility": {"application_definition": "factory/v1", "profile": "internal-approval-app"},
+  "input_schema": {"type": "object", "additionalProperties": false, "required": ["product_name", "sign_in_label"], "properties": {"product_name": {"type": "string", "minLength": 1}, "sign_in_label": {"type": "string", "minLength": 1}}},
+  "output_slots": ["frontend/routes/login"],
+  "verification": {"status": "passed", "license_expression": "MIT", "license_list_version": "3.0", "source_revision": "c0ffee0", "sbom_reference": null, "provenance_reference": null, "verified_at": "2026-07-26T00:00:00Z"},
+  "inventory": [
+    {"path": "adapter.json", "sha256": "sha256:5ae28c35fc48f547200ca6e9cdbaafd86151e69125ff7ef0ee4e85cf5ac920b0"},
+    {"path": "fixtures/valid-input.json", "sha256": "sha256:df1642b45201e8851b2fb667bf4f0dd4b5826d3a4b4842477c67e199b63e5910"},
+    {"path": "templates/LoginPage.tsx", "sha256": "sha256:cabe44bb2b77dc74525ef58efa7aa0898cb8bb47cb768f70f0335d83b2eef0c6"},
+    {"path": "tests/test_package.py", "sha256": "sha256:9d942bff48e640cff0a389352e7dd25458dfd64b6d9a09e1924e35c830b6b5d8"},
+    {"path": "trust.json", "sha256": "sha256:72880736b929aaf458578cb33010c0b290ead2f93d9ed544c3eae95c8f4c2321"}
+  ]
+}

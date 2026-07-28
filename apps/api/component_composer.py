@@ -65,6 +65,16 @@ def _copy_json(value: Any) -> Any:
     return json.loads(_canonical(value))
 
 
+def _is_historical_held_ui_generation(manifest: dict[str, Any]) -> bool:
+    """Keep the immutable v2.0 UI family available only to exact replay."""
+    return (
+        isinstance(manifest.get("key"), str)
+        and manifest["key"].startswith("ui.")
+        and isinstance(manifest.get("version"), str)
+        and manifest["version"].startswith("2.0.")
+    )
+
+
 def _is_reparse_point(path: Path) -> bool:
     if path.is_symlink() or getattr(os.path, "isjunction", lambda _: False)(str(path)):
         return True
@@ -82,6 +92,7 @@ class RegisteredComponent:
     root: Path
     manifest: dict[str, Any]
     adapter: dict[str, Any]
+    trust: dict[str, Any]
     template_bytes: dict[str, bytes]
     approved_package_root: Path
     available_identities: frozenset[tuple[str, str]]
@@ -103,10 +114,11 @@ class RegisteredComponent:
                 approved_package_root=self.approved_package_root,
             )
             adapter = ComponentRegistry._read_adapter(self.root)
+            trust = ComponentRegistry._read_trust(self.root, manifest)
             templates = ComponentRegistry._snapshot_templates(self.root, adapter)
         except (ComponentContractError, CompositionError) as error:
             raise CompositionError(f"component package {self.manifest['key']} changed or became invalid after discovery") from error
-        if manifest != self.manifest or adapter != self.adapter or templates != self.template_bytes:
+        if manifest != self.manifest or adapter != self.adapter or trust != self.trust or templates != self.template_bytes:
             raise CompositionError(f"component package {self.manifest['key']} changed after discovery")
 
 
@@ -138,10 +150,12 @@ class ComponentRegistry:
                     approved_package_root=self._root,
                 )
                 adapter = self._read_adapter(root)
+                trust = self._read_trust(root, manifest)
                 package = RegisteredComponent(
                     root=root,
                     manifest=manifest,
                     adapter=adapter,
+                    trust=trust,
                     template_bytes=self._snapshot_templates(root, adapter),
                     approved_package_root=self._root,
                     available_identities=frozenset(identities),
@@ -161,12 +175,14 @@ class ComponentRegistry:
         by_identity = {package.identity: package for package in packages}
         golden_by_key: dict[str, list[RegisteredComponent]] = {}
         for package in packages:
-            if package.manifest["lifecycle"] == "golden":
+            if self._is_selectable_trust(package) and not _is_historical_held_ui_generation(package.manifest):
                 golden_by_key.setdefault(package.manifest["key"], []).append(package)
         selected: dict[tuple[str, str], RegisteredComponent] = {}
 
         def add(package: RegisteredComponent) -> None:
-            if package.manifest["lifecycle"] != "golden":
+            if _is_historical_held_ui_generation(package.manifest):
+                raise CompositionError("historical_ui_generation_not_selectable")
+            if not self._is_selectable_trust(package):
                 raise CompositionError(f"component {package.manifest['key']} is not Golden")
             if package.manifest["compatibility"] != {
                 "profile": "internal-approval-app",
@@ -187,13 +203,33 @@ class ComponentRegistry:
         for key in sorted(requested):
             candidates = golden_by_key.get(key, [])
             if not candidates:
+                if any(
+                    package.manifest["key"] == key
+                    and package.manifest["lifecycle"] == "golden"
+                    and _is_historical_held_ui_generation(package.manifest)
+                    for package in packages
+                ):
+                    raise CompositionError("historical_ui_generation_not_selectable")
+                if any(
+                    package.manifest["key"] == key
+                    and package.manifest["lifecycle"] == "golden"
+                    and not self._is_selectable_trust(package)
+                    for package in packages
+                ):
+                    raise CompositionError(f"component {key} is not trusted for selection")
                 raise CompositionError(f"no Golden component is available for {key}")
-            if len(candidates) != 1:
-                raise CompositionError(f"Golden component selection for {key} is ambiguous")
-            add(candidates[0])
+            # Existing plans retain exact locks. New plans select the highest
+            # validated semantic version, allowing a promoted asset suite to
+            # replace an older Golden implementation without rewriting history.
+            add(max(candidates, key=lambda package: tuple(int(part) for part in package.manifest["version"].split("."))))
         return tuple(sorted(selected.values(), key=lambda package: package.identity))
 
-    def resolve_locks(self, locks: Iterable[dict[str, str]]) -> tuple[RegisteredComponent, ...]:
+    def resolve_locks(
+        self,
+        locks: Iterable[dict[str, str]],
+        *,
+        allow_historical_replay: bool = False,
+    ) -> tuple[RegisteredComponent, ...]:
         """Resolve exact Golden locks without accepting any unpinned version."""
         requested = tuple(_copy_json(list(locks)))
         if not requested:
@@ -215,8 +251,45 @@ class ComponentRegistry:
                 raise CompositionError(f"component lock {key}@{version} is unavailable or digest-mismatched")
             if package.manifest["lifecycle"] != "golden":
                 raise CompositionError(f"component lock {key}@{version} is not Golden")
+            if not self._is_selectable_trust(package):
+                raise CompositionError(f"component lock {key}@{version} is not trusted for selection")
+            if _is_historical_held_ui_generation(package.manifest) and not allow_historical_replay:
+                raise CompositionError("historical_ui_generation_not_selectable")
             resolved.append(package)
         return tuple(sorted(resolved, key=lambda package: package.identity))
+
+    @staticmethod
+    def _read_trust(root: Path, manifest: dict[str, Any]) -> dict[str, Any]:
+        requires_trust = (
+            isinstance(manifest.get("key"), str)
+            and manifest["key"].startswith("ui.")
+            and isinstance(manifest.get("version"), str)
+            and manifest["version"].startswith("2.")
+        )
+        try:
+            trust = json.loads((root / "trust.json").read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            if not requires_trust:
+                return {
+                    "schema_version": "factory-component-trust/v1",
+                    "lifecycle": manifest["lifecycle"],
+                    "status": "promoted",
+                    "subject": {"key": manifest["key"], "version": manifest["version"]},
+                }
+            raise CompositionError("component trust evidence is unavailable or invalid") from error
+        if (
+            not isinstance(trust, dict)
+            or trust.get("schema_version") != "factory-component-trust/v1"
+            or trust.get("lifecycle") != manifest["lifecycle"]
+            or trust.get("subject") != {"key": manifest["key"], "version": manifest["version"]}
+            or trust.get("status") not in {"promoted", "candidate", "revoked", "unsigned", "stale"}
+        ):
+            raise CompositionError("component trust evidence is invalid")
+        return _copy_json(trust)
+
+    @staticmethod
+    def _is_selectable_trust(package: RegisteredComponent) -> bool:
+        return package.manifest["lifecycle"] == "golden" and package.trust["status"] == "promoted"
 
     def _package_roots(self) -> tuple[Path, ...]:
         if not self._root.is_dir() or _is_reparse_point(self._root):
@@ -326,7 +399,10 @@ class ComponentComposer:
             raise CompositionError(f"composition plan validation failed: {error}") from error
         expected = self._create_plan(
             application_definition_checksum=validated_plan["application_definition_checksum"],
-            packages=self._registry.resolve_locks(validated_plan["component_locks"]),
+            packages=self._registry.resolve_locks(
+                validated_plan["component_locks"],
+                allow_historical_replay=True,
+            ),
             component_inputs=validated_plan["validated_inputs"],
             include_runtime_scaffold=self._plan_includes_runtime_scaffold(validated_plan),
         )
@@ -341,7 +417,10 @@ class ComponentComposer:
         try:
             packages = {
                 package.manifest["key"]: package
-                for package in self._registry.resolve_locks(expected["component_locks"])
+                for package in self._registry.resolve_locks(
+                    expected["component_locks"],
+                    allow_historical_replay=True,
+                )
             }
             rendered_files: list[tuple[str, bytes]] = []
             for lock in expected["adapter_order"]:
@@ -357,7 +436,12 @@ class ComponentComposer:
                     )
                     rendered_files.append((relative, contents))
             if self._plan_includes_runtime_scaffold(expected):
-                rendered_files.extend(self._runtime_scaffold_files(expected["validated_inputs"]))
+                rendered_files.extend(
+                    self._runtime_scaffold_files(
+                        expected["validated_inputs"],
+                        packages["ui.app-shell"].manifest["version"],
+                    )
+                )
             self._reject_duplicate_output_paths(rendered_files)
             observed = {
                 "files": [
@@ -423,7 +507,10 @@ class ComponentComposer:
         if include_runtime_scaffold:
             output_manifest = self._merge_output_manifest(
                 output_manifest,
-                self._runtime_scaffold_files(validated_inputs),
+                self._runtime_scaffold_files(
+                    validated_inputs,
+                    by_key["ui.app-shell"].manifest["version"],
+                ),
             )
         plan = {**skeleton, "validated_inputs": validated_inputs, "output_manifest": output_manifest}
         try:
@@ -530,7 +617,7 @@ class ComponentComposer:
         )
 
     def _runtime_scaffold_files(
-        self, inputs: dict[str, dict[str, Any]]
+        self, inputs: dict[str, dict[str, Any]], shell_version: str
     ) -> list[tuple[str, bytes]]:
         """Build the fixed Composer-owned local application boundary.
 
@@ -568,6 +655,27 @@ class ComponentComposer:
             )}
             for role in roles
         ]
+        assembled_route_packages = {
+            "/": "ui.home-page",
+            "/submit": "ui.approval-form",
+            "/my-records": "ui.my-requests",
+            "/approval-queue": "ui.approval-queue",
+            "/audit": "ui.app-shell",
+            "/profile": "ui.profile-page",
+            "/settings": "ui.system-settings-page",
+        }
+        candidate_ui = shell_version in {"2.2.0", "2.3.0", "2.4.0"}
+        compact_workspace = shell_version in {"2.3.0", "2.4.0"}
+        auth_safe_candidate = shell_version == "2.4.0"
+        declared_navigation = {item["href"] for item in shell["navigation"]}
+        available_routes = (
+            {
+                href for href, component_key in assembled_route_packages.items()
+                if href in declared_navigation and component_key in inputs
+            }
+            if candidate_ui
+            else None
+        )
         files: dict[str, str] = {
             "backend/app/__init__.py": "",
             "backend/app/runtime.py": textwrap.dedent('''\
@@ -606,8 +714,26 @@ class ComponentComposer:
             "backend/Dockerfile": "FROM python:3.12.8-slim\nWORKDIR /app\nENV PYTHONPATH=/app\nCOPY requirements.txt ./\nRUN pip install --no-cache-dir -r requirements.txt\nCOPY . .\nEXPOSE 8000\nCMD [\"uvicorn\", \"app.main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]\n",
             "docker-compose.yml": self._compose_file(auth, users),
             "smoke_test.py": self._smoke_test(record_path, submitter, approver, auditor, form["fields"]),
-            "frontend/app/page.tsx": self._frontend_page(record_path, actor_items, submitter),
-            "frontend/app/layout.tsx": self._frontend_layout(shell["product_name"]),
+            "frontend/app/page.tsx": (
+                self._frontend_page if shell_version in {"2.1.0", "2.2.0", "2.3.0", "2.4.0"} else self._legacy_frontend_page
+            )(
+                record_path,
+                actor_items,
+                submitter,
+                {field["id"]: field["label"] for field in form["fields"]},
+                navigation=shell["navigation"],
+                available_routes=available_routes,
+                filter_available_routes=candidate_ui,
+                supports_pending_decision=candidate_ui,
+                use_application_shell=candidate_ui,
+                compact_workspace=compact_workspace,
+                auth_safe_candidate=auth_safe_candidate,
+                **({"factory_ui_version": "1.4.0" if compact_workspace else "1.3.0"} if candidate_ui else {}),
+            ),
+            "frontend/app/layout.tsx": self._frontend_layout(
+                shell["product_name"],
+                include_component_stylesheet=shell_version in {"2.1.0", "2.2.0", "2.3.0", "2.4.0"},
+            ),
         }
         files.update(static)
         return [(path, contents.encode("utf-8")) for path, contents in sorted(files.items())]
@@ -735,20 +861,358 @@ if __name__ == "__main__": run()
 '''
 
     @staticmethod
-    def _frontend_layout(product_name: str) -> str:
+    def _frontend_layout(product_name: str, include_component_stylesheet: bool = True) -> str:
+        stylesheet = 'import "../app-shell/factory-ui.css";' if include_component_stylesheet else ""
         return textwrap.dedent(f'''\
             import type {{ Metadata }} from "next";
             import type {{ ReactNode }} from "react";
             import "./globals.css";
-            export const metadata: Metadata = {{ title: {json.dumps(product_name + " approval")}, description: "A bounded local Factory Pilot preview" }};
+            {stylesheet}
+            export const metadata: Metadata = {{ title: {json.dumps(product_name)}, description: "A bounded local Factory Pilot preview" }};
             export default function RootLayout({{ children }}: Readonly<{{ children: ReactNode }}>) {{ return <html lang="en"><body>{{children}}</body></html>; }}
             ''')
 
     @staticmethod
-    def _frontend_page(record_path: str, actors: list[dict[str, str]], submitter: str) -> str:
+    def _frontend_page(
+        record_path: str,
+        actors: list[dict[str, str]],
+        submitter: str,
+        field_labels: dict[str, str],
+        factory_ui_version: str = "1.0.0",
+        navigation: list[dict[str, str]] | None = None,
+        available_routes: set[str] | None = None,
+        filter_available_routes: bool = False,
+        supports_pending_decision: bool = False,
+        use_application_shell: bool = False,
+        compact_workspace: bool = False,
+        auth_safe_candidate: bool = False,
+    ) -> str:
+        approval_queue_pending_prop = (
+            " pendingDecisionId={decisionPending ? confirmation?.id : undefined}"
+            if supports_pending_decision else ""
+        )
+        application_shell_import = (
+            'import { ApplicationShell } from "../app-shell/ApplicationShell";'
+            if use_application_shell else ""
+        )
+        route_filter_declaration = (
+            f'const AVAILABLE_ROUTES = {_canonical(sorted(available_routes or set()))};'
+            if filter_available_routes
+            else ""
+        )
+        routes_for_body = (
+            '(ROUTES[kind ?? ""] ?? []).filter((route) => AVAILABLE_ROUTES.includes(route.href))'
+            if filter_available_routes
+            else 'ROUTES[kind ?? ""] ?? []'
+        )
+        active_view_expression = "resolvedActiveView" if filter_available_routes else "activeView"
+        active_view_declaration = (
+            'const resolvedActiveView = allowedRoutes.some((route) => route.href === activeView) ? activeView : (allowedRoutes[0]?.href ?? "/");'
+            if filter_available_routes
+            else ""
+        )
+        route_fallback_effect = (
+            'useEffect(() => { if (signedIn && !allowedRoutes.some((route) => route.href === activeView)) setActiveView(allowedRoutes[0]?.href ?? "/"); }, [signedIn, activeActor?.kind, activeView]);'
+            if filter_available_routes
+            else ""
+        )
+        application_shell_sign_out_prop = " onSignOut={switchRole}" if compact_workspace else ""
+        signed_out_account_label_declaration = (
+            'const signedOutAccountLabel = (index: number) => `Local account ${index + 1}`;'
+            if auth_safe_candidate
+            else ""
+        )
+        signed_out_actor_options = (
+            '{ACTORS.map((candidate, index) => <option key={candidate.id} value={candidate.id}>{signedOutAccountLabel(index)}</option>)}'
+            if auth_safe_candidate
+            else '{ACTORS.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.label}</option>)}'
+        )
+        signed_out_account_control = (
+            '<label className="fp-field">Local account<select value={actor} onChange={(event) => setActor(event.target.value)}>'
+            f'{signed_out_actor_options}</select></label>'
+            if auth_safe_candidate
+            else '<label className="fp-field">Preview role<select value={actor} onChange={(event) => setActor(event.target.value)}>'
+            f'{signed_out_actor_options}</select></label>'
+        )
+        signed_in_shell_open = (
+            f'return <ApplicationShell activeView={{{active_view_expression}}} navigation={{allowedRoutes}} onNavigate={{(href) => setActiveView(href)}} onThemeChange={{() => setTheme((current) => current === "light" ? "dark" : "light")}} theme={{theme}}{application_shell_sign_out_prop}>'
+            if use_application_shell else
+            f'<div className="fp-app" data-factory-ui={json.dumps(factory_ui_version)} data-theme={{theme}}><div className="fp-frame"><header className="fp-topbar"><div className="fp-identity"><strong>{{activeActor?.label ?? "Local preview"}}</strong><small>Local preview</small></div><button className="fp-secondary" type="button" aria-label={{theme === "light" ? "Switch to dark theme" : "Switch to light theme"}} onClick={{() => setTheme((current) => current === "light" ? "dark" : "light")}}>{{theme === "light" ? "Dark" : "Light"}}</button></header><main className="fp-workspace"><nav className="fp-nav" aria-label="Primary navigation">{{allowedRoutes.map((route) => <button aria-current={{activeView === route.href ? "page" : undefined}} key={{route.href}} onClick={{() => setActiveView(route.href)}} type="button">{{route.label}}</button>)}}</nav>'
+        )
+        signed_in_shell_close = "</ApplicationShell>" if use_application_shell else "</main></div></div>"
+        page = textwrap.dedent(f'''
+            "use client";
+            import {{ useEffect, useRef, useState }} from "react";
+            import {{ ApprovalForm }} from "../features/approval-form/ApprovalForm";
+            import {{ ApprovalQueue }} from "../features/approval-queue/ApprovalQueue";
+            import {{ AuditLog }} from "../features/audit/AuditLog";
+            import {{ MyRequests }} from "../features/my-requests/MyRequests";
+            import {{ HomePage }} from "../routes/home/HomePage";
+            import {{ LoginPage }} from "../routes/login/LoginPage";
+            import {{ ProfilePage }} from "../routes/profile/ProfilePage";
+            import {{ SystemSettingsPage }} from "../routes/system-settings/SystemSettingsPage";
+            {application_shell_import}
+            const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
+            const RECORD_PATH = {json.dumps(record_path)};
+            const ACTORS = {_canonical(actors)};
+            const INITIAL_ACTOR = {json.dumps(submitter)};
+            const FIELD_LABELS: Record<string, string> = {_canonical(field_labels)};
+            const ROUTE_LABELS: Record<string, string> = {_canonical({item["href"]: item["label"] for item in navigation or []})};
+            {signed_out_account_label_declaration}
+            {route_filter_declaration}
+            const ROUTES: Record<string, Array<{{href: string; label: string}}>> = {{
+              submitter: [{{href: "/", label: ROUTE_LABELS["/"] ?? "Home"}}, {{href: "/submit", label: ROUTE_LABELS["/submit"] ?? "Submit"}}, {{href: "/my-records", label: ROUTE_LABELS["/my-records"] ?? "My requests"}}, {{href: "/profile", label: ROUTE_LABELS["/profile"] ?? "Profile"}}, {{href: "/settings", label: ROUTE_LABELS["/settings"] ?? "Settings"}}],
+              approver: [{{href: "/", label: ROUTE_LABELS["/"] ?? "Home"}}, {{href: "/approval-queue", label: ROUTE_LABELS["/approval-queue"] ?? "Approval queue"}}, {{href: "/profile", label: ROUTE_LABELS["/profile"] ?? "Profile"}}, {{href: "/settings", label: ROUTE_LABELS["/settings"] ?? "Settings"}}],
+              auditor: [{{href: "/", label: ROUTE_LABELS["/"] ?? "Home"}}, {{href: "/audit", label: ROUTE_LABELS["/audit"] ?? "Audit"}}, {{href: "/profile", label: ROUTE_LABELS["/profile"] ?? "Profile"}}, {{href: "/settings", label: ROUTE_LABELS["/settings"] ?? "Settings"}}],
+              observer: [{{href: "/", label: ROUTE_LABELS["/"] ?? "Home"}}, {{href: "/audit", label: ROUTE_LABELS["/audit"] ?? "Audit"}}, {{href: "/profile", label: ROUTE_LABELS["/profile"] ?? "Profile"}}, {{href: "/settings", label: ROUTE_LABELS["/settings"] ?? "Settings"}}],
+            }};
+            function routesFor(kind?: string) {{ return {routes_for_body}; }}
+            function summaryFor(payload: Record<string, unknown>) {{ return Object.entries(payload).map(([key, value]) => `${{FIELD_LABELS[key] ?? key}}: ${{String(value)}}`).join(" · "); }}
+            async function api(path: string, init?: RequestInit) {{ const response = await fetch(`${{API_BASE_URL}}${{path}}`, {{...init, credentials: "include", headers: {{"Content-Type": "application/json", ...init?.headers}}}}); if (!response.ok) throw new Error(`Request failed with status ${{response.status}}`); return response.json(); }}
+            type Feedback = {{ tone: "success" | "error"; message: string }};
+            type Confirmation = {{ id: string; decision: "approved" | "rejected"; summary: string }};
+            function GovernedFeedback({{ feedback, target }}: {{ feedback: Feedback | null; target: React.RefObject<HTMLParagraphElement | null> }}) {{
+              if (!feedback) return null;
+              return feedback.tone === "error"
+                ? <p className="fp-feedback fp-feedback-error" ref={{target}} role="alert" tabIndex={{-1}}>{{feedback.message}}</p>
+                : <p className="fp-feedback" ref={{target}} role="status" aria-live="polite" tabIndex={{-1}}>{{feedback.message}}</p>;
+            }}
+            export default function ComposedApprovalApplication() {{
+              const [actor, setActor] = useState(INITIAL_ACTOR);
+              const [signedIn, setSignedIn] = useState(false);
+              const [records, setRecords] = useState<any[]>([]);
+              const [auditEvents, setAuditEvents] = useState<any[]>([]);
+              const [activeView, setActiveView] = useState("/");
+              const [theme, setTheme] = useState<"light" | "dark">("light");
+              const [feedback, setFeedback] = useState<Feedback | null>(null);
+              const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
+              const [decisionPending, setDecisionPending] = useState(false);
+              const feedbackTarget = useRef<HTMLParagraphElement>(null);
+              const confirmationDialog = useRef<HTMLDivElement>(null);
+              const decisionOrigin = useRef<HTMLElement | null>(null);
+              const activeActor = ACTORS.find((candidate) => candidate.id === actor);
+              const allowedRoutes = routesFor(activeActor?.kind);
+              {active_view_declaration}
+              function reportError() {{ setFeedback({{tone: "error", message: "We could not complete that request. Try again."}}); }}
+              async function load() {{
+                if (!signedIn) return;
+                try {{
+                  setRecords(await api(RECORD_PATH));
+                  if (activeActor?.kind === "auditor" || activeActor?.kind === "observer") setAuditEvents(await api("/audit-events"));
+                }} catch {{ reportError(); }}
+              }}
+              useEffect(() => {{ void load(); }}, [signedIn, actor]);
+              useEffect(() => {{ if (confirmation) window.requestAnimationFrame(() => confirmationDialog.current?.focus()); }}, [confirmation]);
+              useEffect(() => {{ if (feedback?.tone === "error") window.requestAnimationFrame(() => feedbackTarget.current?.focus()); }}, [feedback]);
+              {route_fallback_effect}
+              async function signIn() {{
+                try {{
+                  setFeedback(null);
+                  await api("/session/sign-in", {{method: "POST", body: JSON.stringify({{username: actor, password: `demo-${{actor}}`}})}});
+                  setSignedIn(true);
+                  setActiveView("/");
+                }} catch {{ reportError(); }}
+              }}
+              function switchRole() {{ setSignedIn(false); setRecords([]); setAuditEvents([]); setFeedback(null); setConfirmation(null); setActiveView("/"); }}
+              async function submit(form: FormData) {{
+                try {{ setFeedback(null); await api(RECORD_PATH, {{method: "POST", body: JSON.stringify(Object.fromEntries(form.entries()))}}); await load(); setActiveView("/my-records"); setFeedback({{tone: "success", message: "Request submitted."}}); }} catch {{ reportError(); }}
+              }}
+              function requestDecision(id: string, decision: "approved" | "rejected") {{
+                decisionOrigin.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+                const request = pending.find((candidate) => candidate.id === id);
+                setConfirmation({{id, decision, summary: request?.summary ?? "Pending request"}});
+              }}
+              function cancelDecision() {{
+                setConfirmation(null);
+                window.requestAnimationFrame(() => decisionOrigin.current?.focus());
+              }}
+              async function confirmDecision() {{
+                if (!confirmation || decisionPending) return;
+                setDecisionPending(true);
+                try {{
+                  setFeedback(null);
+                  await api(`${{RECORD_PATH}}/${{confirmation.id}}/decision`, {{method: "POST", body: JSON.stringify({{decision: confirmation.decision}})}});
+                  setConfirmation(null);
+                  await load();
+                  setFeedback({{tone: "success", message: confirmation.decision === "approved" ? "Request approved." : "Request rejected."}});
+                  window.requestAnimationFrame(() => document.querySelector<HTMLElement>('[aria-label="Approval queue"]')?.focus());
+                }} catch {{ setConfirmation(null); reportError(); }} finally {{ setDecisionPending(false); }}
+              }}
+              if (!signedIn) return <main className="fp-login" data-factory-ui={json.dumps(factory_ui_version)} data-theme={{theme}}><header className="fp-topbar"><div className="fp-identity"><strong>Local preview</strong><small>Sign in to continue</small></div><button className="fp-secondary" type="button" aria-label={{theme === "light" ? "Switch to dark theme" : "Switch to light theme"}} onClick={{() => setTheme((current) => current === "light" ? "dark" : "light")}}>{{theme === "light" ? "Dark" : "Light"}}</button></header><section className="fp-card"><div className="fp-card-body">{signed_out_account_control}</div></section><GovernedFeedback feedback={{feedback}} target={{feedbackTarget}} /><LoginPage onSignIn={{() => void signIn()}} /></main>;
+              const requests = records.map((record) => ({{id: record.id, status: record.status, summary: summaryFor(record.payload)}}));
+              const pending = records.filter((record) => record.status === "pending").map((record) => ({{id: record.id, summary: summaryFor(record.payload)}}));
+              return <div className="fp-app" data-factory-ui={json.dumps(factory_ui_version)} data-theme={{theme}}><div className="fp-frame"><header className="fp-topbar"><div className="fp-identity"><strong>{{activeActor?.label ?? "Local preview"}}</strong><small>Local preview</small></div><button className="fp-secondary" type="button" aria-label={{theme === "light" ? "Switch to dark theme" : "Switch to light theme"}} onClick={{() => setTheme((current) => current === "light" ? "dark" : "light")}}>{{theme === "light" ? "Dark" : "Light"}}</button></header><main className="fp-workspace"><nav className="fp-nav" aria-label="Primary navigation">{{allowedRoutes.map((route) => <button aria-current={{activeView === route.href ? "page" : undefined}} key={{route.href}} onClick={{() => setActiveView(route.href)}} type="button">{{route.label}}</button>)}}</nav><div className="fp-rolebar"><label>Signed in as<select value={{actor}} onChange={{(event) => (setActor(event.target.value), switchRole())}}>{{ACTORS.map((candidate) => <option key={{candidate.id}} value={{candidate.id}}>{{candidate.label}}</option>)}}</select></label><button className="fp-icon-button" type="button" aria-label="Switch role" onClick={{switchRole}}>Sign out</button></div><GovernedFeedback feedback={{feedback}} target={{feedbackTarget}} /><div className="fp-app-content">{{activeView === "/" && <section aria-label="Home"><HomePage /></section>}}{{activeView === "/submit" && <section aria-label="Submit request"><ApprovalForm onSubmit={{(form) => void submit(form)}} /></section>}}{{activeView === "/my-records" && <section aria-label="My requests"><MyRequests requests={{requests}} /></section>}}{{activeView === "/approval-queue" && <section aria-label="Approval queue" tabIndex={{-1}}><ApprovalQueue requests={{pending}} onDecision={{(id, decision) => requestDecision(id, decision)}}{approval_queue_pending_prop} /></section>}}{{activeView === "/audit" && <section aria-label="Audit"><AuditLog events={{auditEvents.map((event) => ({{id: event.id, action: event.action, actor: event.actor, occurredAt: event.created_at}}))}} /></section>}}{{activeView === "/profile" && <section aria-label="Profile"><p className="fp-card-meta">Read only</p><ProfilePage /></section>}}{{activeView === "/settings" && <section aria-label="Settings"><p className="fp-card-meta">Read only</p><SystemSettingsPage /></section>}}</div>{{confirmation && <div className="fp-confirmation" ref={{confirmationDialog}} role="dialog" aria-labelledby="decision-title" aria-modal="true" tabIndex={{-1}} onKeyDown={{(event) => {{ if (event.key === "Escape") cancelDecision(); }}}}><h2 id="decision-title">Confirm {{confirmation.decision}}</h2><p>{{confirmation.summary}}</p><div className="fp-actions"><button className="fp-secondary" type="button" onClick={{cancelDecision}} disabled={{decisionPending}}>Cancel</button><button className="fp-primary" type="button" onClick={{() => void confirmDecision()}} disabled={{decisionPending}} aria-busy={{decisionPending}}>Confirm</button></div></div>}}</main></div></div>;
+            }}
+            ''')
+        if use_application_shell:
+            page = re.sub(
+                rf'return <div className="fp-app" data-factory-ui="{re.escape(factory_ui_version)}" data-theme=\{{theme\}}><div className="fp-frame"><header.*?</nav>',
+                signed_in_shell_open,
+                page,
+                count=1,
+                flags=re.DOTALL,
+            ).replace("</main></div></div>;\n}", f"{signed_in_shell_close};\n}}", 1)
+        if compact_workspace:
+            page = page.replace(
+                "const confirmationDialog = useRef<HTMLDivElement>(null);",
+                "const confirmationDialog = useRef<HTMLDivElement>(null);\n  const confirmationCancel = useRef<HTMLButtonElement>(null);",
+            ).replace(
+                "confirmationDialog.current?.focus()",
+                "confirmationCancel.current?.focus()",
+            ).replace(
+                "\n  if (!signedIn) return <main",
+                """
+  function trapConfirmationFocus(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "Escape") { event.preventDefault(); if (!decisionPending) cancelDecision(); return; }
+    if (event.key !== "Tab") return;
+    const controls = confirmationDialog.current?.querySelectorAll<HTMLElement>('button:not([disabled]), [href], select:not([disabled]), input:not([disabled])') ?? [];
+    if (!controls.length) return;
+    const first = controls[0];
+    const last = controls[controls.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  }
+  if (!signedIn) return <main""",
+                1,
+            ).replace(
+                '<div className="fp-confirmation" ref={confirmationDialog}',
+                '<div className="fp-confirmation-backdrop" role="presentation"><div className="fp-confirmation" ref={confirmationDialog}',
+            ).replace(
+                'tabIndex={-1} onKeyDown={(event) => { if (event.key === "Escape") cancelDecision(); }}>',
+                'tabIndex={-1} onKeyDown={trapConfirmationFocus}>',
+            ).replace(
+                '<button className="fp-secondary" type="button" onClick={cancelDecision}',
+                '<button className="fp-secondary" type="button" ref={confirmationCancel} onClick={cancelDecision}',
+            ).replace(
+                '</div>}</ApplicationShell>',
+                '</div></div>}</ApplicationShell>',
+                1,
+            )
+            page = page.replace(
+                '<button className="fp-icon-button" type="button" aria-label="Switch role" onClick={switchRole}>Sign out</button>',
+                "",
+            )
+        if auth_safe_candidate:
+            # This source transformation is intentionally applied only after the
+            # common page has been rendered.  The historic branch therefore keeps
+            # its exact emitted client source while 2.4 receives the session epoch.
+            page = page.replace(
+                'async function api(path: string, init?: RequestInit) { const response = await fetch(`${API_BASE_URL}${path}`, {...init, credentials: "include", headers: {"Content-Type": "application/json", ...init?.headers}}); if (!response.ok) throw new Error(`Request failed with status ${response.status}`); return response.json(); }',
+                'async function api(path: string, init?: RequestInit, signal?: AbortSignal) { const response = await fetch(`${API_BASE_URL}${path}`, {...init, signal, credentials: "include", headers: {"Content-Type": "application/json", ...init?.headers}}); if (!response.ok) throw new Error(`Request failed with status ${response.status}`); return response.json(); }',
+            ).replace(
+                '  const decisionOrigin = useRef<HTMLElement | null>(null);\n  const activeActor',
+                '''  const decisionOrigin = useRef<HTMLElement | null>(null);
+  const sessionGeneration = useRef(0);
+  const requestAbortController = useRef<AbortController | null>(null);
+  const activeActor''',
+            )
+            page = re.sub(
+                r'  function reportError\(\) \{.*?\n  useEffect\(\(\) => \{ void load\(\); \}, \[signedIn, actor\]\);',
+                '''  function reportError() { setFeedback({tone: "error", message: "We could not complete that request. Try again."}); }
+  function generationMatches(generation: number, sessionActor: string) { return sessionGeneration.current === generation && actor === sessionActor; }
+  function sessionIsCurrent(generation: number, sessionActor: string) { return signedIn && generationMatches(generation, sessionActor); }
+  function beginRequest() { requestAbortController.current?.abort(); const controller = new AbortController(); requestAbortController.current = controller; return controller; }
+  function invalidateSession() { sessionGeneration.current += 1; requestAbortController.current?.abort(); requestAbortController.current = null; }
+  async function load(generation = sessionGeneration.current, sessionActor = actor) {
+    if (!signedIn || !sessionIsCurrent(generation, sessionActor)) return false;
+    const controller = beginRequest();
+    const sessionKind = ACTORS.find((candidate) => candidate.id === sessionActor)?.kind;
+    try {
+      const nextRecords = await api(RECORD_PATH, undefined, controller.signal);
+      if (!sessionIsCurrent(generation, sessionActor)) return false;
+      setRecords(nextRecords);
+      if (sessionKind === "auditor" || sessionKind === "observer") {
+        const nextAuditEvents = await api("/audit-events", undefined, controller.signal);
+        if (!sessionIsCurrent(generation, sessionActor)) return false;
+        setAuditEvents(nextAuditEvents);
+      }
+      return true;
+    } catch {
+      if (sessionIsCurrent(generation, sessionActor)) reportError();
+      return false;
+    }
+  }
+  useEffect(() => { void load(sessionGeneration.current, actor); }, [signedIn, actor]);''',
+                page,
+                count=1,
+                flags=re.DOTALL,
+            )
+            page = re.sub(
+                r'  async function signIn\(\) \{.*?\n  function requestDecision',
+                '''  async function signIn() {
+    const generation = sessionGeneration.current + 1;
+    const sessionActor = actor;
+    sessionGeneration.current = generation;
+    const controller = beginRequest();
+    try {
+      setFeedback(null);
+      await api("/session/sign-in", {method: "POST", body: JSON.stringify({username: actor, password: `demo-${actor}`})}, controller.signal);
+      if (!generationMatches(generation, sessionActor)) return;
+      setSignedIn(true);
+      setActiveView("/");
+    } catch { if (generationMatches(generation, sessionActor)) reportError(); }
+  }
+  function switchRole() { invalidateSession(); setSignedIn(false); setRecords([]); setAuditEvents([]); setFeedback(null); setConfirmation(null); setDecisionPending(false); setActiveView("/"); }
+  async function submit(form: FormData) {
+    const generation = sessionGeneration.current;
+    const sessionActor = actor;
+    const controller = beginRequest();
+    try {
+      setFeedback(null);
+      await api(RECORD_PATH, {method: "POST", body: JSON.stringify(Object.fromEntries(form.entries()))}, controller.signal);
+      if (!sessionIsCurrent(generation, sessionActor)) return;
+      const refreshed = await load(generation, sessionActor);
+      if (!refreshed || !sessionIsCurrent(generation, sessionActor)) return;
+      setActiveView("/my-records");
+      setFeedback({tone: "success", message: "Request submitted."});
+    } catch { if (sessionIsCurrent(generation, sessionActor)) reportError(); }
+  }
+  function requestDecision''',
+                page,
+                count=1,
+                flags=re.DOTALL,
+            )
+            page = re.sub(
+                r'  async function confirmDecision\(\) \{.*?\n  \}\n  function trapConfirmationFocus',
+                '''  async function confirmDecision() {
+    if (!confirmation || decisionPending) return;
+    const decision = confirmation;
+    const generation = sessionGeneration.current;
+    const sessionActor = actor;
+    const controller = beginRequest();
+    setDecisionPending(true);
+    try {
+      setFeedback(null);
+      await api(`${RECORD_PATH}/${decision.id}/decision`, {method: "POST", body: JSON.stringify({decision: decision.decision})}, controller.signal);
+      if (!sessionIsCurrent(generation, sessionActor)) return;
+      setConfirmation(null);
+      const refreshed = await load(generation, sessionActor);
+      if (!refreshed || !sessionIsCurrent(generation, sessionActor)) return;
+      setFeedback({tone: "success", message: decision.decision === "approved" ? "Request approved." : "Request rejected."});
+      window.requestAnimationFrame(() => { if (sessionIsCurrent(generation, sessionActor)) document.querySelector<HTMLElement>('[aria-label="Approval queue"]')?.focus(); });
+    } catch {
+      if (sessionIsCurrent(generation, sessionActor)) { setConfirmation(null); reportError(); }
+    } finally { if (sessionIsCurrent(generation, sessionActor)) setDecisionPending(false); }
+  }
+  function trapConfirmationFocus''',
+                page,
+                count=1,
+                flags=re.DOTALL,
+            )
+        if filter_available_routes:
+            page = page.replace("activeView ===", "resolvedActiveView ===")
+        return page
+
+    @staticmethod
+    def _legacy_frontend_page(
+        record_path: str,
+        actors: list[dict[str, str]],
+        submitter: str,
+        field_labels: dict[str, str],
+    ) -> str:
         return textwrap.dedent(f'''\
             "use client";
-            import {{ FormEvent, useEffect, useState }} from "react";
+            import {{ useEffect, useState }} from "react";
             import {{ ApplicationShell }} from "../app-shell/ApplicationShell";
             import {{ ApprovalForm }} from "../features/approval-form/ApprovalForm";
             import {{ ApprovalQueue }} from "../features/approval-queue/ApprovalQueue";
@@ -762,6 +1226,8 @@ if __name__ == "__main__": run()
             const RECORD_PATH = {json.dumps(record_path)};
             const ACTORS = {_canonical(actors)};
             const INITIAL_ACTOR = {json.dumps(submitter)};
+            const FIELD_LABELS: Record<string, string> = {_canonical(field_labels)};
+            function summaryFor(payload: Record<string, unknown>) {{ return Object.entries(payload).map(([key, value]) => `${{FIELD_LABELS[key] ?? key}}: ${{String(value)}}`).join(" · "); }}
             async function api(path: string, init?: RequestInit) {{ const response = await fetch(`${{API_BASE_URL}}${{path}}`, {{...init, credentials: "include", headers: {{"Content-Type": "application/json", ...init?.headers}}}}); if (!response.ok) throw new Error(`Request failed with status ${{response.status}}`); return response.json(); }}
             export default function ComposedApprovalApplication() {{
               const [actor, setActor] = useState(INITIAL_ACTOR); const [signedIn, setSignedIn] = useState(false); const [records, setRecords] = useState<any[]>([]); const [auditEvents, setAuditEvents] = useState<any[]>([]); const activeActor = ACTORS.find((candidate) => candidate.id === actor);
@@ -771,9 +1237,9 @@ if __name__ == "__main__": run()
               function switchRole() {{ setSignedIn(false); setRecords([]); setAuditEvents([]); }}
               async function submit(form: FormData) {{ await api(RECORD_PATH, {{method: "POST", body: JSON.stringify(Object.fromEntries(form.entries()))}}); await load(); }}
               async function decide(id: string, decision: "approved" | "rejected") {{ await api(`${{RECORD_PATH}}/${{id}}/decision`, {{method: "POST", body: JSON.stringify({{decision}})}}); await load(); }}
-              if (!signedIn) return <div className="shell"><label>Demo role<select value={{actor}} onChange={{(event) => setActor(event.target.value)}}>{{ACTORS.map((candidate) => <option key={{candidate.id}} value={{candidate.id}}>{{candidate.label}}</option>)}}</select></label><LoginPage onSignIn={{() => void signIn()}} /></div>;
-              const requests = records.map((record) => ({{id: record.id, status: record.status, summary: JSON.stringify(record.payload)}})); const pending = records.filter((record) => record.status === "pending").map((record) => ({{id: record.id, summary: JSON.stringify(record.payload)}}));
-              return <ApplicationShell><div className="shell"><button type="button" className="secondary" aria-label="Switch role or sign out" onClick={{switchRole}}>Switch role</button><section id="home" className="panel"><HomePage /></section>{{activeActor?.kind === "submitter" && <section id="submit" className="panel"><ApprovalForm onSubmit={{(form) => void submit(form)}} /></section>}}<section id="my-records" className="panel"><MyRequests requests={{requests}} /></section>{{activeActor?.kind === "approver" && <section id="approval-queue" className="panel"><ApprovalQueue requests={{pending}} onDecision={{(id, decision) => void decide(id, decision)}} /></section>}}{{(activeActor?.kind === "auditor" || activeActor?.kind === "observer") && <section id="audit" className="panel"><AuditLog events={{auditEvents.map((event) => ({{id: event.id, action: event.action, actor: event.actor, occurredAt: event.created_at}}))}} /></section>}}<section id="profile" className="panel"><ProfilePage /></section><section id="system-settings" className="panel"><SystemSettingsPage /></section></div></ApplicationShell>;
+              if (!signedIn) return <ApplicationShell><main className="fp-login"><div className="fp-card"><div className="fp-card-body"><label className="fp-field">Preview role<select value={{actor}} onChange={{(event) => setActor(event.target.value)}}>{{ACTORS.map((candidate) => <option key={{candidate.id}} value={{candidate.id}}>{{candidate.label}}</option>)}}</select></label></div></div><LoginPage onSignIn={{() => void signIn()}} /></main></ApplicationShell>;
+              const requests = records.map((record) => ({{id: record.id, status: record.status, summary: summaryFor(record.payload)}})); const pending = records.filter((record) => record.status === "pending").map((record) => ({{id: record.id, summary: summaryFor(record.payload)}}));
+              return <ApplicationShell><HomePage /><div className="fp-rolebar"><label>Signed in as<select value={{actor}} onChange={{(event) => (setActor(event.target.value), switchRole())}}>{{ACTORS.map((candidate) => <option key={{candidate.id}} value={{candidate.id}}>{{candidate.label}}</option>)}}</select></label><button className="fp-icon-button" type="button" aria-label="Switch role or sign out" onClick={{switchRole}}>×</button></div><div className="fp-app-content"><div className="fp-main">{{activeActor?.kind === "submitter" && <section id="submit"><ApprovalForm onSubmit={{(form) => void submit(form)}} /></section>}}<section id="my-records"><MyRequests requests={{requests}} /></section>{{activeActor?.kind === "approver" && <section id="approval-queue"><ApprovalQueue requests={{pending}} onDecision={{(id, decision) => void decide(id, decision)}} /></section>}}{{(activeActor?.kind === "auditor" || activeActor?.kind === "observer") && <section id="audit"><AuditLog events={{auditEvents.map((event) => ({{id: event.id, action: event.action, actor: event.actor, occurredAt: event.created_at}}))}} /></section>}}</div><aside className="fp-side"><ProfilePage /><SystemSettingsPage /></aside></div></ApplicationShell>;
             }}
             ''')
 

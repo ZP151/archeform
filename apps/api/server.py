@@ -16,7 +16,7 @@ MAX_BODY_BYTES = 100_000
 
 
 class Handler(BaseHTTPRequestHandler):
-    control_plane = ControlPlane()
+    control_plane = ControlPlane(composable_enabled=True)
     capability_token = os.environ.get("FACTORY_API_TOKEN")
     authenticated_actor = os.environ.get("FACTORY_API_ACTOR", "local-ui-user")
     allowed_origin = "http://127.0.0.1:5173"

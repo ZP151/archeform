@@ -1,0 +1,22 @@
+{
+  "schema_version": "factory-component/v1",
+  "key": "ui.my-requests",
+  "version": "2.0.0",
+  "category": "ui",
+  "package_root": ".",
+  "digest": "sha256:53a040f9de11ca50f443421b5ada930e9ff2dc3472de6bc15ca454f440d7b538",
+  "lifecycle": "golden",
+  "provides": ["ui.approval.my-requests"],
+  "requires": [{"key": "ui.app-shell", "version": "2.0.0"}],
+  "compatibility": {"application_definition": "factory/v1", "profile": "internal-approval-app"},
+  "input_schema": {"type": "object", "additionalProperties": false, "required": ["heading", "empty_state"], "properties": {"heading": {"type": "string", "minLength": 1}, "empty_state": {"type": "string", "minLength": 1}}},
+  "output_slots": ["frontend/features/my-requests"],
+  "verification": {"status": "passed", "license_expression": "MIT", "license_list_version": "3.0", "source_revision": "c0ffee0", "sbom_reference": null, "provenance_reference": null, "verified_at": "2026-07-26T00:00:00Z"},
+  "inventory": [
+    {"path": "adapter.json", "sha256": "sha256:fb820f093f3742fb50c17510d17fb59238c3c1b25ca3db2d12a5e3245b2236b8"},
+    {"path": "fixtures/valid-input.json", "sha256": "sha256:348f96b40a3b61123513568b54b308d8443c0cc2bcc3773972fd3c00a807eb38"},
+    {"path": "templates/MyRequests.tsx", "sha256": "sha256:6584262d4e200da396ff0e440f1d345554c6ab19a6065cc6583b4d0cba3fa53e"},
+    {"path": "tests/test_package.py", "sha256": "sha256:9a644137b06e25136c18eb29c4c0663d4264841364b94c78fe70f3c68750ffd2"},
+    {"path": "trust.json", "sha256": "sha256:f5244f8e24f0257de17e3d967bf41aaa16fc2f681c472df395830a000a54d55a"}
+  ]
+}

@@ -693,8 +693,13 @@ class ControlPlane:
                 "product_name": record_label + " approval",
                 "audit_heading": pages["audit"],
                 "navigation": [
-                    {"label": pages[page_id], "href": "/" + page_id.replace("_", "-")}
-                    for page_id in ("submit", "my_records", "approval_queue", "audit")
+                    {"label": "Home", "href": "/"},
+                    *[
+                        {"label": pages[page_id], "href": "/" + page_id.replace("_", "-")}
+                        for page_id in ("submit", "my_records", "approval_queue", "audit")
+                    ],
+                    {"label": "Profile", "href": "/profile"},
+                    {"label": "Settings", "href": "/settings"},
                 ],
             },
             "ui.home-page": {

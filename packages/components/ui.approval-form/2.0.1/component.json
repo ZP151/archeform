@@ -1,0 +1,22 @@
+{
+  "schema_version": "factory-component/v1",
+  "key": "ui.approval-form",
+  "version": "2.0.1",
+  "category": "ui",
+  "package_root": ".",
+  "digest": "sha256:65980127e9315b1496be9ffb971be4e709ebd2cc00d86a07aec098c77f7d6823",
+  "lifecycle": "golden",
+  "provides": ["ui.approval.submit-form"],
+  "requires": [{"key": "ui.app-shell", "version": "2.0.0"}],
+  "compatibility": {"application_definition": "factory/v1", "profile": "internal-approval-app"},
+  "input_schema": {"type": "object", "additionalProperties": false, "required": ["record_label", "submit_label", "fields"], "properties": {"record_label": {"type": "string", "minLength": 1}, "submit_label": {"type": "string", "minLength": 1}, "fields": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": false, "required": ["id", "label", "type", "required"], "properties": {"id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}, "label": {"type": "string", "minLength": 1}, "type": {"enum": ["string", "number", "date", "enum"]}, "required": {"type": "boolean"}, "options": {"type": "array", "items": {"type": "string", "minLength": 1}}}, "allOf": [{"if": {"properties": {"type": {"const": "enum"}}, "required": ["type"]}, "then": {"properties": {"options": {"minItems": 1}}, "required": ["options"]}}]}}}},
+  "output_slots": ["frontend/features/approval-form"],
+  "verification": {"status": "passed", "license_expression": "MIT", "license_list_version": "3.0", "source_revision": "c0ffee0", "sbom_reference": null, "provenance_reference": null, "verified_at": "2026-07-26T00:00:00Z"},
+  "inventory": [
+    {"path": "adapter.json", "sha256": "sha256:fc3d220bb43d9b07e3474af158a4907d4600be9d847fa26364851dddde5bf963"},
+    {"path": "fixtures/valid-input.json", "sha256": "sha256:2b16885bea366ddf747351c04247093cc0cc92fe2e3ec8ec8ec8aaf72645cf56"},
+    {"path": "templates/ApprovalForm.tsx", "sha256": "sha256:82e0658a8fe24c9917cb7c7b521ac186e1e1b763f06f139d5c7a240d8e328573"},
+    {"path": "tests/test_package.py", "sha256": "sha256:abf6b00d7f00e26b320b01e24bfe02ed5ff12642422986aafa38a66393b0a99b"},
+    {"path": "trust.json", "sha256": "sha256:c8d00ea492bff1c6681376d5fa12dd13901ee1dd538ca372fa50dd48bde7eda9"}
+  ]
+}

@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import '@/components/factory-ui/factory-ui.css';
+import { FactoryTheme } from '@/components/factory-ui/factory-ui';
 
 export const metadata: Metadata = {
   title: 'Factory Pilot',
@@ -7,5 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body>{children}</body></html>;
+  return <html lang="en" suppressHydrationWarning><body><FactoryTheme>{children}</FactoryTheme></body></html>;
 }

@@ -1,0 +1,22 @@
+{
+  "schema_version": "factory-component/v1",
+  "key": "ui.system-settings-page",
+  "version": "2.0.0",
+  "category": "ui",
+  "package_root": ".",
+  "digest": "sha256:9193627719f328278d578ef74ed88eec65b2c75e170043f5bda389a339ade48a",
+  "lifecycle": "golden",
+  "provides": ["ui.route.system-settings"],
+  "requires": [{"key": "ui.app-shell", "version": "2.0.0"}],
+  "compatibility": {"application_definition": "factory/v1", "profile": "internal-approval-app"},
+  "input_schema": {"type": "object", "additionalProperties": false, "required": ["heading", "settings"], "properties": {"heading": {"type": "string", "minLength": 1}, "settings": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": false, "required": ["key", "label"], "properties": {"key": {"type": "string", "minLength": 1}, "label": {"type": "string", "minLength": 1}}}}}},
+  "output_slots": ["frontend/routes/system-settings"],
+  "verification": {"status": "passed", "license_expression": "MIT", "license_list_version": "3.0", "source_revision": "c0ffee0", "sbom_reference": null, "provenance_reference": null, "verified_at": "2026-07-26T00:00:00Z"},
+  "inventory": [
+    {"path": "adapter.json", "sha256": "sha256:8c5681c4dbe7744247103bbcb812ac1d7fafb5a5c7bd3d5ae5043f17be948610"},
+    {"path": "fixtures/valid-input.json", "sha256": "sha256:25eef4a76c9c02932645582ff3654249dc00e2ecb8100255d964d71d4bcda5bc"},
+    {"path": "templates/SystemSettingsPage.tsx", "sha256": "sha256:1cf46f31fdc5697fd12b489286680ac9982e9e880ca5f102d9d730e6a0409787"},
+    {"path": "tests/test_package.py", "sha256": "sha256:7f22b4de4bcafb0eb7a19919f60fe2b135171f6edede813197afc38603ac72df"},
+    {"path": "trust.json", "sha256": "sha256:48dfba401bc7cd460d0c0456319e6b683a10707a69ea2a8c7aca4aaf9c2bbab0"}
+  ]
+}
