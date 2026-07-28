@@ -160,6 +160,14 @@ export type FlowModel = ApplicationGraphV1["flow"];
 export type IntegrationModel = ApplicationGraphV1["integration"];
 export type ExperienceModel = ApplicationGraphV1["experience"];
 
+export function parsePageModel(input: unknown): PageModel {
+  return pageModelSchema.parse(input);
+}
+
+export function parseFlowModel(input: unknown): FlowModel {
+  return flowModelSchema.parse(input);
+}
+
 export type GraphValidationIssue = {
   code: string;
   message: string;

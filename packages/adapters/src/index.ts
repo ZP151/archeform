@@ -1,6 +1,8 @@
 import type { Edge, Node } from "@xyflow/react";
 import type { PageModel, FlowModel } from "@factory/graph";
 
+export * from "./authoring-contract.js";
+
 /**
  * Data owned by Factory Pilot while Puck supplies the editing canvas. The
  * explicit envelope keeps Puck's runtime document from becoming the source of
