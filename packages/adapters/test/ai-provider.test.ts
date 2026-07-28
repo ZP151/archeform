@@ -11,6 +11,7 @@ import {
   FixtureGraphProposalProvider,
   GraphProposalError,
   OpenAIGraphProposalProvider,
+  classifyOpenAITransportFailure,
   type OpenAIResponseTransport,
 } from "../src/ai.js";
 
@@ -38,6 +39,14 @@ const addReceiptField: GraphDiffV1 = {
 };
 
 describe("AI Graph proposal adapter", () => {
+  it("reduces provider transport failures to safe diagnostic categories", () => {
+    expect(classifyOpenAITransportFailure({ status: 400 })).toBe("provider_request_rejected");
+    expect(classifyOpenAITransportFailure({ status: 401 })).toBe("provider_authentication_failed");
+    expect(classifyOpenAITransportFailure({ status: 404 })).toBe("model_unavailable");
+    expect(classifyOpenAITransportFailure({ status: 429 })).toBe("provider_rate_limited");
+    expect(classifyOpenAITransportFailure(new Error("sensitive provider message"))).toBe("provider_request_failed");
+  });
+
   it("returns a fixture proposal that has already been validated against the in-memory Draft", async () => {
     const provider = new FixtureGraphProposalProvider({
       diff: addReceiptField,

@@ -41,14 +41,40 @@ export interface GraphProposalProvider {
   propose(request: GraphProposalRequest): Promise<GraphProposal>;
 }
 
+export type GraphProposalErrorCode =
+  | "configuration_missing"
+  | "provider_request_failed"
+  | "provider_request_rejected"
+  | "provider_authentication_failed"
+  | "provider_access_denied"
+  | "model_unavailable"
+  | "provider_rate_limited"
+  | "proposal_invalid";
+
 export class GraphProposalError extends Error {
   public constructor(
     message: string,
-    public readonly code: "configuration_missing" | "provider_request_failed" | "proposal_invalid" = "proposal_invalid",
+    public readonly code: GraphProposalErrorCode = "proposal_invalid",
   ) {
     super(message);
     this.name = "GraphProposalError";
   }
+}
+
+/**
+ * Keeps transport diagnostics useful without leaking provider error messages,
+ * request bodies, model output, or credentials into application state.
+ */
+export function classifyOpenAITransportFailure(error: unknown): GraphProposalErrorCode {
+  const status = typeof error === "object" && error !== null && "status" in error
+    ? (error as { status?: unknown }).status
+    : undefined;
+  if (status === 400) return "provider_request_rejected";
+  if (status === 401) return "provider_authentication_failed";
+  if (status === 403) return "provider_access_denied";
+  if (status === 404) return "model_unavailable";
+  if (status === 429) return "provider_rate_limited";
+  return "provider_request_failed";
 }
 
 export type OpenAITransportRequest = {
@@ -201,10 +227,10 @@ export class OpenAIGraphProposalProvider implements GraphProposalProvider {
         jsonSchema: graphProposalJsonSchema,
       });
       outputText = response.outputText;
-    } catch {
+    } catch (error) {
       // Do not surface a provider response: upstream errors can include request
       // context, which is intentionally not an application artifact.
-      throw new GraphProposalError("OpenAI Graph proposal request failed.", "provider_request_failed");
+      throw new GraphProposalError("OpenAI Graph proposal request failed.", classifyOpenAITransportFailure(error));
     }
 
     return validateProposal(graph, outputText);
