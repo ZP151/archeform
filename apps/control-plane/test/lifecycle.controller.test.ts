@@ -21,6 +21,7 @@ const lifecycle = {
   createLocalApplicationGraph: vi.fn(),
   getLocalApplicationGraph: vi.fn(),
   getDraft: vi.fn(),
+  getCompilation: vi.fn(),
   listPublishedRevisions: vi.fn(),
   publishDraft: vi.fn(),
   proposeDraftRevision: vi.fn(),
@@ -121,6 +122,13 @@ describe("LifecycleController", () => {
         },
       ],
       response: { id: "compilation-1" },
+    },
+    {
+      method: "GET",
+      path: "/compilations/compilation-1",
+      handler: lifecycle.getCompilation,
+      arguments: ["compilation-1"],
+      response: { id: "compilation-1", result: { status: "succeeded" } },
     },
     {
       method: "POST",

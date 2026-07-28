@@ -409,6 +409,16 @@ export class LifecycleService {
     return compilation;
   }
 
+  async getCompilation(compilationId: string) {
+    const id = requiredString({ compilationId }, "compilationId");
+    const compilation = await this.prisma.compilation.findUnique({
+      where: { id },
+      include: { artifacts: { orderBy: { path: "asc" } } },
+    });
+    if (!compilation) throw new NotFoundException("Compilation was not found.");
+    return compilation;
+  }
+
   async completeCompilation(compilationId: string, input: unknown) {
     const evidence = completionEvidence(input);
     const compilation = await this.prisma.compilation.findUnique({

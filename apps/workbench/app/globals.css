@@ -251,6 +251,28 @@ input:focus-visible {
   background: var(--accent-soft);
   cursor: default;
 }
+.compile-button {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--paper);
+  font-size: 12px;
+  font-weight: 700;
+}
+.compile-button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent-dark);
+  background: var(--accent-soft);
+}
+.compile-button:disabled {
+  color: var(--muted);
+  cursor: progress;
+}
 .work-area {
   width: min(1500px, calc(100vw - 104px));
   margin: 0 auto;

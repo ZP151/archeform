@@ -81,6 +81,52 @@ describe("ControlPlaneClient", () => {
     );
   });
 
+  it("queues compilation only from an immutable Published revision", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({ id: "compilation-1", publishedRevisionId: "published-1", target: "application-bundle", result: { status: "queued" } }),
+        { status: 201, headers: { "content-type": "application/json" } },
+      ),
+    );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(client.createCompilation("published-1")).resolves.toMatchObject({
+      id: "compilation-1",
+      publishedRevisionId: "published-1",
+      result: { status: "queued" },
+    });
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/compilations",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          publishedRevisionId: "published-1",
+          target: "application-bundle",
+          compilerVersion: "factory-compiler/v1",
+        }),
+      }),
+    );
+  });
+
+  it("reads compilation status without accessing a mutable Draft", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({ id: "compilation-1", publishedRevisionId: "published-1", target: "application-bundle", result: { status: "succeeded" } }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(client.getCompilation("compilation-1")).resolves.toMatchObject({
+      id: "compilation-1",
+      result: { status: "succeeded" },
+    });
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/compilations/compilation-1",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
   it("submits a brief only to the Draft-scoped AI proposal boundary", async () => {
     const fetcher = vi.fn().mockResolvedValue(
       new Response(

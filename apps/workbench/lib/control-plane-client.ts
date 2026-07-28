@@ -35,6 +35,19 @@ export type WorkbenchAiProposal = {
   readonly summary: string;
 };
 
+export type WorkbenchPublishedRevision = {
+  readonly id: string;
+  readonly revisionNumber: number;
+  readonly graphHash: string;
+};
+
+export type WorkbenchCompilation = {
+  readonly id: string;
+  readonly publishedRevisionId: string;
+  readonly target: string;
+  readonly result: { readonly status: string };
+};
+
 export class ControlPlaneError extends Error {
   constructor(readonly status: number) {
     super(`Control Plane request failed with ${status}.`);
@@ -123,10 +136,33 @@ export class ControlPlaneClient {
     };
   }
 
-  publishDraft(applicationGraphId: string, draftRevisionId: string): Promise<unknown> {
+  publishDraft(
+    applicationGraphId: string,
+    draftRevisionId: string,
+  ): Promise<WorkbenchPublishedRevision> {
     return this.request(
       `/application-graphs/${encodeURIComponent(applicationGraphId)}/published-revisions`,
       { method: "POST", body: JSON.stringify({ draftRevisionId }) },
+    );
+  }
+
+  createCompilation(
+    publishedRevisionId: string,
+  ): Promise<WorkbenchCompilation> {
+    return this.request("/compilations", {
+      method: "POST",
+      body: JSON.stringify({
+        publishedRevisionId,
+        target: "application-bundle",
+        compilerVersion: "factory-compiler/v1",
+      }),
+    });
+  }
+
+  getCompilation(compilationId: string): Promise<WorkbenchCompilation> {
+    return this.request(
+      `/compilations/${encodeURIComponent(compilationId)}`,
+      { method: "GET" },
     );
   }
 }

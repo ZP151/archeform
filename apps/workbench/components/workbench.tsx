@@ -26,13 +26,16 @@ import {
   transitionWorkbench,
   type Surface,
 } from "../lib/workbench-model";
+import { isPendingCompilation } from "../lib/compilation-status";
 import {
   addDomainField,
   setPolicyAction,
 } from "../lib/graph-editors";
 import {
   ControlPlaneClient,
+  type WorkbenchCompilation,
   type WorkbenchDraft,
+  type WorkbenchPublishedRevision,
 } from "../lib/control-plane-client";
 import { PageStudio } from "./page-studio";
 import { FlowStudio } from "./flow-studio";
@@ -81,8 +84,10 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   );
   const [graph, setGraph] = useState(initialGraph);
   const [remoteDraft, setRemoteDraft] = useState<WorkbenchDraft | null>(null);
+  const [publishedRevision, setPublishedRevision] = useState<WorkbenchPublishedRevision | null>(null);
+  const [compilation, setCompilation] = useState<WorkbenchCompilation | null>(null);
   const [connectionState, setConnectionState] = useState<
-    "connecting" | "ready" | "offline" | "saving" | "proposing" | "publishing" | "published"
+    "connecting" | "ready" | "offline" | "saving" | "proposing" | "publishing" | "published" | "compiling"
   >("connecting");
   const [draftDirty, setDraftDirty] = useState(false);
   const [operationError, setOperationError] = useState<string | null>(null);
@@ -120,6 +125,29 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
     };
   }, [controlPlane, initialGraph]);
 
+  useEffect(() => {
+    if (!compilation || !isPendingCompilation(compilation.result.status)) return;
+    let active = true;
+    const refresh = () => {
+      void controlPlane.getCompilation(compilation.id)
+        .then((next) => {
+          if (!active) return;
+          setCompilation(next);
+          if (!isPendingCompilation(next.result.status)) setConnectionState("published");
+        })
+        .catch((error) => {
+          if (!active) return;
+          setOperationError(error instanceof Error ? error.message : "Compilation status could not be read.");
+        });
+    };
+    refresh();
+    const interval = window.setInterval(refresh, 1_500);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [compilation, controlPlane]);
+
   const persistDraft = async (): Promise<WorkbenchDraft> => {
     if (!remoteDraft) {
       throw new Error("The local Control Plane is unavailable.");
@@ -148,13 +176,30 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
       const draft = draftDirty ? await persistDraft() : remoteDraft;
       if (!draft) throw new Error("The local Control Plane is unavailable.");
       setConnectionState("publishing");
-      await controlPlane.publishDraft(draft.applicationGraphId, draft.draftRevisionId);
+      const published = await controlPlane.publishDraft(draft.applicationGraphId, draft.draftRevisionId);
+      setPublishedRevision(published);
       dispatch({ type: "publish" });
       setConnectionState("published");
     })().catch((error) => {
       setConnectionState("offline");
       setOperationError(error instanceof Error ? error.message : "Publish failed.");
     });
+  };
+
+  const queueCompilation = () => {
+    if (!publishedRevision) return;
+    setOperationError(null);
+    setConnectionState("compiling");
+    void controlPlane.createCompilation(publishedRevision.id)
+      .then((next) => {
+        setCompilation(next);
+        setConnectionState("published");
+        dispatch({ type: "open", surface: "code" });
+      })
+      .catch((error) => {
+        setConnectionState("offline");
+        setOperationError(error instanceof Error ? error.message : "Compilation could not be queued.");
+      });
   };
 
   const changePageModel = (page: PageModel) => {
@@ -285,7 +330,7 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
             <button
               className="publish-button"
               onClick={publish}
-              disabled={!remoteDraft || connectionState === "saving" || connectionState === "proposing" || connectionState === "publishing" || state.lifecycle === "published"}
+              disabled={!remoteDraft || connectionState === "saving" || connectionState === "proposing" || connectionState === "publishing" || connectionState === "compiling" || state.lifecycle === "published"}
             >
               {state.lifecycle === "published" ? (
                 <>
@@ -296,6 +341,16 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
                 "Publish"
               )}
             </button>
+            {publishedRevision && (
+              <button
+                className="compile-button"
+                onClick={queueCompilation}
+                disabled={connectionState === "compiling"}
+              >
+                <Code2 size={15} />
+                {connectionState === "compiling" ? "Queueing…" : "Compile"}
+              </button>
+            )}
           </div>
         </header>
 
@@ -351,7 +406,13 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
                   summary={aiSummary}
                 />
               )}
-              {state.activeSurface === "code" && <CodeCanvas graph={graph} />}
+              {state.activeSurface === "code" && (
+                <CodeCanvas
+                  compilation={compilation}
+                  graph={graph}
+                  publishedRevision={publishedRevision}
+                />
+              )}
             </section>
             {state.lastProposal && (
               <p className="draft-proposal-status" role="status">
@@ -554,13 +615,21 @@ function AiCanvas({
   );
 }
 
-function CodeCanvas({ graph }: { graph: ApplicationGraphV1 }) {
+function CodeCanvas({
+  graph,
+  publishedRevision,
+  compilation,
+}: {
+  graph: ApplicationGraphV1;
+  publishedRevision: WorkbenchPublishedRevision | null;
+  compilation: WorkbenchCompilation | null;
+}) {
   return (
     <div className="code-canvas">
       <div className="code-tabs">
         <span className="selected">application-graph.json</span>
-        <span>generated-api</span>
-        <span>policy.csv</span>
+        <span>{publishedRevision ? `Published r.${publishedRevision.revisionNumber}` : "Draft only"}</span>
+        <span>{compilation ? `Compile ${compilation.result.status}` : "No compilation"}</span>
       </div>
       <pre>
         <code>
@@ -568,7 +637,9 @@ function CodeCanvas({ graph }: { graph: ApplicationGraphV1 }) {
           <i>02</i> pages: <b>{graph.page.pages.length}</b>,{"\n"}
           <i>03</i> entities: <b>{graph.domain.entities.length}</b>,{"\n"}
           <i>04</i> flows: <b>{graph.flow.flows.length}</b>,{"\n"}
-          <i>05</i> lifecycle: <b>{JSON.stringify("Draft → Publish → Compile")}</b>
+          <i>05</i> lifecycle: <b>{JSON.stringify("Draft → Publish → Compile")}</b>,{"\n"}
+          <i>06</i> graphHash: <b>{JSON.stringify(publishedRevision?.graphHash ?? "pending publish")}</b>,{"\n"}
+          <i>07</i> compilation: <b>{JSON.stringify(compilation?.result.status ?? "not queued")}</b>
         </code>
       </pre>
     </div>

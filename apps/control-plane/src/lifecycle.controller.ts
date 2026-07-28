@@ -59,6 +59,11 @@ export class LifecycleController {
     return this.lifecycle.createCompilation(body);
   }
 
+  @Get("compilations/:compilationId")
+  getCompilation(@Param("compilationId") compilationId: string) {
+    return this.lifecycle.getCompilation(compilationId);
+  }
+
   @Post("internal/compilations/:compilationId/complete")
   completeCompilation(
     @Param("compilationId") compilationId: string,
