@@ -1,17 +1,17 @@
 import { Queue, Worker } from "bullmq";
+import type { PublishedGraphInput } from "@factory/compiler";
 
+import { executeCompilation } from "./compilation-executor.js";
 import { readWorkerConfig } from "./config.js";
 
 const config = readWorkerConfig();
 const connection = { url: config.redisUrl };
 
 const queue = new Queue(config.queueName, { connection });
-const worker = new Worker(
+const worker = new Worker<PublishedGraphInput>(
   config.queueName,
   async (job) => {
-    // A later slice invokes the deterministic target registry. This bootstrap
-    // intentionally acknowledges no arbitrary code or provider payload.
-    return { compilationId: job.data.compilationId, status: "queued" };
+    return executeCompilation(config.artifactRoot, job.data);
   },
   { connection },
 );

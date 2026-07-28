@@ -256,7 +256,7 @@ export function generateApplicationBundle(input: PublishedGraphInput): Generated
     },
     {
       path: "api/Dockerfile",
-      content: "FROM node:22-alpine\nWORKDIR /app\nCOPY package.json ./\nRUN corepack enable && pnpm install\nCOPY . .\nRUN corepack enable && pnpm build\nCMD [\"node\", \"dist/main.js\"]\n",
+      content: "FROM node:22-alpine\nWORKDIR /app\nCOPY package.json ./\nRUN npm config set fetch-retries 5 && npm install --global pnpm@9.0.0 && pnpm install\nCOPY . .\nRUN pnpm build\nCMD [\"node\", \"dist/main.js\"]\n",
     },
     { path: "api/src/main.ts", content: renderApiMain(graph) },
     { path: "database/prisma/schema.prisma", content: renderPrismaSchema(graph) },
@@ -281,7 +281,7 @@ export function generateApplicationBundle(input: PublishedGraphInput): Generated
     { path: "docs/application.md", content: renderDocumentation(graph) },
     {
       path: "web/Dockerfile",
-      content: "FROM node:22-alpine\nWORKDIR /app\nCOPY package.json ./\nRUN corepack enable && pnpm install\nCOPY . .\nRUN corepack enable && pnpm build\nCMD [\"pnpm\", \"start\"]\n",
+      content: "FROM node:22-alpine\nWORKDIR /app\nCOPY package.json ./\nRUN npm config set fetch-retries 5 && npm install --global pnpm@9.0.0 && pnpm install\nCOPY . .\nRUN pnpm build\nCMD [\"pnpm\", \"start\"]\n",
     },
     {
       path: "docker-compose.yml",

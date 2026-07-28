@@ -7,6 +7,7 @@ describe("worker configuration", () => {
     expect(readWorkerConfig({})).toEqual({
       redisUrl: "redis://localhost:6379",
       queueName: "factory-compilations",
+      artifactRoot: "generated",
     });
   });
 
@@ -15,10 +16,12 @@ describe("worker configuration", () => {
       readWorkerConfig({
         REDIS_URL: "redis://redis:6379/2",
         FACTORY_COMPILATION_QUEUE: "integration-compilations",
+        FACTORY_ARTIFACT_ROOT: "C:/artifacts",
       }),
     ).toEqual({
       redisUrl: "redis://redis:6379/2",
       queueName: "integration-compilations",
+      artifactRoot: "C:/artifacts",
     });
   });
 });

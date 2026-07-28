@@ -27,5 +27,41 @@ services:
       timeout: 3s
       retries: 20
 
+  control-plane:
+    build:
+      context: ..
+      dockerfile: apps/control-plane/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://factory:factory@postgres:5432/factory_pilot?schema=public
+      PORT: 3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+
+  compiler-worker:
+    build:
+      context: ..
+      dockerfile: apps/compiler-worker/Dockerfile
+    environment:
+      REDIS_URL: redis://redis:6379
+      FACTORY_ARTIFACT_ROOT: /artifacts
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - factory-artifacts:/artifacts
+
+  workbench:
+    build:
+      context: ..
+      dockerfile: apps/workbench/Dockerfile
+    depends_on:
+      - control-plane
+    ports:
+      - "5174:5174"
+
 volumes:
   factory-postgres:
+  factory-artifacts:
