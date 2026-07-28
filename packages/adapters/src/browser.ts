@@ -1,5 +1,5 @@
 import type { Edge, Node } from "@xyflow/react";
-import type { FlowModel, PageModel } from "@factory/graph";
+import type { DomainModel, FlowModel, PageModel } from "@factory/graph";
 
 /**
  * Data owned by Factory Pilot while Puck supplies the editing canvas. The
@@ -42,6 +42,50 @@ export interface FactoryFlowEdgeData extends Record<string, unknown> {
 export interface ReactFlowDiagram {
   readonly nodes: readonly Node<FactoryFlowNodeData>[];
   readonly edges: readonly Edge<FactoryFlowEdgeData>[];
+}
+
+export interface FactoryDomainNodeData extends Record<string, unknown> {
+  readonly entityKey: string;
+  readonly label: string;
+  readonly fieldKeys: readonly string[];
+  readonly indexes: number;
+}
+
+export interface FactoryDomainEdgeData extends Record<string, unknown> {
+  readonly kind: DomainModel["relations"][number]["kind"];
+}
+
+export interface DomainReactFlowDiagram {
+  readonly nodes: readonly Node<FactoryDomainNodeData>[];
+  readonly edges: readonly Edge<FactoryDomainEdgeData>[];
+}
+
+/**
+ * Produces a visual relation map from declared DomainModel semantics. Entity
+ * positions are presentation-only; relationships remain owned by the Graph.
+ */
+export function domainModelToReactFlow(domain: DomainModel): DomainReactFlowDiagram {
+  const nodes: Node<FactoryDomainNodeData>[] = domain.entities.map((entity, index) => ({
+    id: `domain:${entity.key}`,
+    type: "default",
+    position: { x: (index % 3) * 260, y: Math.floor(index / 3) * 196 },
+    data: {
+      entityKey: entity.key,
+      label: entity.label,
+      fieldKeys: entity.fields.map((field) => field.key),
+      indexes: entity.indexes.length,
+    },
+  }));
+  const edges: Edge<FactoryDomainEdgeData>[] = domain.relations.map((relation, index) => ({
+    id: `domain:${relation.from}:${relation.kind}:${relation.to}:${index}`,
+    source: `domain:${relation.from}`,
+    target: `domain:${relation.to}`,
+    label: relation.kind,
+    type: "smoothstep",
+    animated: false,
+    data: { kind: relation.kind },
+  }));
+  return { nodes, edges };
 }
 
 /**

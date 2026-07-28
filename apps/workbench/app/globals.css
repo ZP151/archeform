@@ -643,6 +643,34 @@ input:focus-visible {
   gap: 0;
   padding: 42px;
 }
+.domain-relation-graph {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  min-height: 252px;
+  margin-bottom: 30px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--paper);
+  box-shadow: 0 12px 26px rgb(26 43 58/0.06);
+}
+.domain-relation-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 15px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  font: 10px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.domain-relation-heading small {
+  color: var(--muted);
+  font: inherit;
+}
+.domain-react-flow-stage {
+  height: 210px;
+  background: color-mix(in srgb, var(--surface) 70%, var(--paper));
+}
 .record-card {
   display: grid;
   gap: 8px;

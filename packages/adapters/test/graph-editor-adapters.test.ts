@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { assertValidApplicationGraph } from "@factory/graph";
 
 import {
+  domainModelToReactFlow,
   flowModelToReactFlow,
   pageModelToPuckDocument,
   puckDocumentToPageModel,
@@ -50,5 +51,25 @@ describe("Graph editor adapters", () => {
     expect(diagram.edges).toEqual(expect.arrayContaining([
       expect.objectContaining({ data: expect.objectContaining({ event: "submit" }) }),
     ]));
+  });
+
+  it("projects declared DomainModel relations without making React Flow coordinates semantic", () => {
+    const diagram = domainModelToReactFlow({
+      entities: [
+        { key: "order", label: "Order", fields: [{ key: "status", type: "string", required: true }], indexes: [] },
+        { key: "lineItem", label: "Line item", fields: [{ key: "quantity", type: "integer", required: true }], indexes: [] },
+      ],
+      relations: [{ from: "order", to: "lineItem", kind: "one-to-many" }],
+    });
+
+    expect(diagram.nodes.map((node) => node.data.entityKey)).toEqual(["order", "lineItem"]);
+    expect(diagram.edges).toEqual([
+      expect.objectContaining({
+        source: "domain:order",
+        target: "domain:lineItem",
+        label: "one-to-many",
+        data: { kind: "one-to-many" },
+      }),
+    ]);
   });
 });

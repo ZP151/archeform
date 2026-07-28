@@ -44,7 +44,9 @@ import {
 import type { FactoryProfile } from "@factory/capabilities";
 import { PageStudio } from "./page-studio";
 import { FlowStudio } from "./flow-studio";
+import { DomainRelationGraph } from "./domain-relation-graph";
 import {
+  domainModelToReactFlow,
   flowModelToReactFlow,
   pageModelToPuckDocument,
 } from "@factory/adapters/browser";
@@ -556,6 +558,10 @@ function DomainCanvas({
   const [required, setRequired] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const primary = graph.domain.entities.find((entity) => entity.key === entityKey) ?? graph.domain.entities[0];
+  const relationDiagram = useMemo(
+    () => domainModelToReactFlow(graph.domain),
+    [graph.domain],
+  );
 
   const addField = () => {
     const key = fieldKey.trim();
@@ -571,6 +577,7 @@ function DomainCanvas({
 
   return (
     <div className="domain-canvas">
+      <DomainRelationGraph diagram={relationDiagram} />
       <div className="record-card primary-record">
         <span className="record-icon">
           <FileText size={16} />
