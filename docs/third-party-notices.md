@@ -4,6 +4,12 @@ Factory Pilot keeps the Application Graph as its source of truth. These direct
 dependencies may render, edit, compile, or enforce Graph projections; none
 owns stored business semantics or may mutate a Published Revision.
 
+## Research-only upstream records
+
+Amplication and Medusa are not Factory Pilot dependencies. Their pinned,
+reference-only studies live in `docs/ecosystem/source-studies/`; no upstream
+package, source, asset, or generated output is included in Factory Pilot.
+
 ## Package: `@puckeditor/core`
 
 - Declared range: `^0.22.3`
