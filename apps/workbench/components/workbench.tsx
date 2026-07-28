@@ -27,6 +27,10 @@ import {
   type Surface,
 } from "../lib/workbench-model";
 import {
+  addDomainField,
+  setPolicyAction,
+} from "../lib/graph-editors";
+import {
   ControlPlaneClient,
   type WorkbenchDraft,
 } from "../lib/control-plane-client";
@@ -36,7 +40,13 @@ import {
   flowModelToReactFlow,
   pageModelToPuckDocument,
 } from "@factory/adapters";
-import type { ApplicationGraphV1, PageModel } from "@factory/graph";
+import type {
+  ApplicationGraphV1,
+  DomainModel,
+  FlowModel,
+  PageModel,
+  PolicyModel,
+} from "@factory/graph";
 
 type Navigation = {
   id: Surface;
@@ -149,6 +159,18 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
 
   const changePageModel = (page: PageModel) => {
     setGraph((current) => ({ ...current, page }));
+    setDraftDirty(true);
+  };
+  const changeDomainModel = (domain: DomainModel) => {
+    setGraph((current) => ({ ...current, domain }));
+    setDraftDirty(true);
+  };
+  const changePolicyModel = (policy: PolicyModel) => {
+    setGraph((current) => ({ ...current, policy }));
+    setDraftDirty(true);
+  };
+  const changeFlowModel = (flow: FlowModel) => {
+    setGraph((current) => ({ ...current, flow }));
     setDraftDirty(true);
   };
   const proposeWithAi = async (brief: string): Promise<string> => {
@@ -307,14 +329,21 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
                   onPageModelChange={changePageModel}
                 />
               )}
-              {state.activeSurface === "domain" && <DomainCanvas graph={graph} />}
+              {state.activeSurface === "domain" && (
+                <DomainCanvas graph={graph} onDomainChange={changeDomainModel} />
+              )}
               {state.activeSurface === "flow" && (
                 <FlowStudio
                   diagram={flowDiagram}
+                  flow={graph.flow}
+                  roles={graph.policy.roles}
+                  onFlowChange={changeFlowModel}
                   onDraftProposal={proposeDraftChange}
                 />
               )}
-              {state.activeSurface === "policy" && <PolicyCanvas graph={graph} />}
+              {state.activeSurface === "policy" && (
+                <PolicyCanvas graph={graph} onPolicyChange={changePolicyModel} />
+              )}
               {state.activeSurface === "ai" && (
                 <AiCanvas
                   disabled={!remoteDraft || connectionState === "proposing"}
@@ -351,8 +380,32 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   );
 }
 
-function DomainCanvas({ graph }: { graph: ApplicationGraphV1 }) {
-  const [primary, secondary] = graph.domain.entities;
+function DomainCanvas({
+  graph,
+  onDomainChange,
+}: {
+  graph: ApplicationGraphV1;
+  onDomainChange: (domain: DomainModel) => void;
+}) {
+  const [entityKey, setEntityKey] = useState(graph.domain.entities[0]?.key ?? "");
+  const [fieldKey, setFieldKey] = useState("");
+  const [fieldType, setFieldType] = useState<DomainModel["entities"][number]["fields"][number]["type"]>("string");
+  const [required, setRequired] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const primary = graph.domain.entities.find((entity) => entity.key === entityKey) ?? graph.domain.entities[0];
+
+  const addField = () => {
+    const key = fieldKey.trim();
+    if (!key) return;
+    try {
+      onDomainChange(addDomainField(graph.domain, entityKey, { key, type: fieldType, required }));
+      setFieldKey("");
+      setError(null);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to add field.");
+    }
+  };
+
   return (
     <div className="domain-canvas">
       <div className="record-card primary-record">
@@ -360,30 +413,56 @@ function DomainCanvas({ graph }: { graph: ApplicationGraphV1 }) {
           <FileText size={16} />
         </span>
         <strong>{primary?.label ?? "No entity"}</strong>
-        <small>Primary record</small>
+        <small>Selected record</small>
         <div>
           {primary?.fields.map((field) => <code key={field.key}>{field.key}</code>)}
         </div>
       </div>
-      <div className="record-link" />
-      <div className="record-card">
-        <span className="record-icon violet">
-          <FolderKanban size={16} />
-        </span>
-        <strong>{secondary?.label ?? "No related entity"}</strong>
-        <small>Supporting record</small>
-        <div>
-          {secondary?.fields.map((field) => <code key={field.key}>{field.key}</code>)}
-        </div>
-      </div>
+      <div className="record-link" aria-hidden="true" />
+      <form
+        className="domain-field-editor"
+        onSubmit={(event) => {
+          event.preventDefault();
+          addField();
+        }}
+      >
+        <label>
+          Entity
+          <select value={entityKey} onChange={(event) => setEntityKey(event.target.value)}>
+            {graph.domain.entities.map((entity) => <option key={entity.key} value={entity.key}>{entity.label}</option>)}
+          </select>
+        </label>
+        <label>
+          Field key
+          <input value={fieldKey} onChange={(event) => setFieldKey(event.target.value)} placeholder="priority" pattern="[a-z][a-zA-Z0-9_]*" />
+        </label>
+        <label>
+          Type
+          <select value={fieldType} onChange={(event) => setFieldType(event.target.value as typeof fieldType)}>
+            {["string", "text", "integer", "decimal", "boolean", "date", "datetime", "json", "url", "email"].map((type) => <option key={type} value={type}>{type}</option>)}
+          </select>
+        </label>
+        <label className="required-field">
+          <input checked={required} onChange={(event) => setRequired(event.target.checked)} type="checkbox" /> Required
+        </label>
+        <button type="submit"><Plus size={15} /> Add field</button>
+        {error && <small className="studio-error">{error}</small>}
+      </form>
       <div className="record-note">
-        {graph.domain.relations.length} declared relation{graph.domain.relations.length === 1 ? "" : "s"}
+        {graph.domain.relations.length} declared relation{graph.domain.relations.length === 1 ? "" : "s"} · {primary?.fields.length ?? 0} fields
       </div>
     </div>
   );
 }
 
-function PolicyCanvas({ graph }: { graph: ApplicationGraphV1 }) {
+function PolicyCanvas({
+  graph,
+  onPolicyChange,
+}: {
+  graph: ApplicationGraphV1;
+  onPolicyChange: (policy: PolicyModel) => void;
+}) {
+  const actions = ["create", "read", "update", "delete", "submit", "approve", "reject", "audit"];
   return (
     <div className="policy-canvas">
       <div className="policy-header">
@@ -393,13 +472,31 @@ function PolicyCanvas({ graph }: { graph: ApplicationGraphV1 }) {
           <small>{graph.policy.roles.length} declared roles</small>
         </div>
       </div>
-      {graph.policy.permissions.map((permission) => (
-        <div className="policy-row" key={`${permission.role}:${permission.resource}`}>
-          <span>{permission.role}</span>
-          <strong>{permission.resource} · {permission.actions.join(", ")}</strong>
-          <ChevronDown size={15} />
-        </div>
-      ))}
+      <div className="policy-matrix" role="table" aria-label="Role and resource policy matrix">
+        {graph.policy.roles.flatMap((role) =>
+          graph.domain.entities.map((entity) => {
+            const permission = graph.policy.permissions.find((entry) => entry.role === role && entry.resource === entity.key);
+            return (
+              <div className="policy-row" key={`${role}:${entity.key}`} role="row">
+                <span>{role}</span>
+                <strong>{entity.label}</strong>
+                <div className="policy-actions">
+                  {actions.map((action) => (
+                    <label key={action} title={`${role} · ${entity.key} · ${action}`}>
+                      <input
+                        checked={permission?.actions.includes(action) ?? false}
+                        onChange={(event) => onPolicyChange(setPolicyAction(graph.policy, role, entity.key, action, event.target.checked))}
+                        type="checkbox"
+                      />
+                      {action}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            );
+          }),
+        )}
+      </div>
     </div>
   );
 }

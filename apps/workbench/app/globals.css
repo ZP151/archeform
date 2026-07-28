@@ -12,6 +12,7 @@
   --accent-soft: #e4f6f0;
   --violet: #7659d6;
   --amber: #c57b05;
+  --danger: #b42318;
   --shadow: 0 16px 45px rgb(26 43 58/0.08);
 }
 * {
@@ -65,6 +66,7 @@ input:focus-visible {
   --accent-soft: #133c36;
   --violet: #ab9afa;
   --amber: #f2ba54;
+  --danger: #ff8d82;
   --shadow: 0 18px 55px rgb(0 0 0/0.28);
 }
 .rail {
@@ -594,7 +596,7 @@ input:focus-visible {
 }
 .domain-canvas {
   display: grid;
-  grid-template-columns: 190px 90px 190px;
+  grid-template-columns: 190px 56px minmax(240px, 330px);
   align-content: center;
   justify-content: center;
   gap: 0;
@@ -650,6 +652,58 @@ input:focus-visible {
   align-self: center;
   height: 1px;
   background: var(--accent);
+}
+.domain-field-editor {
+  display: grid;
+  gap: 11px;
+  align-self: center;
+  padding: 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--paper);
+  box-shadow: 0 12px 26px rgb(26 43 58/0.07);
+}
+.domain-field-editor label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.domain-field-editor input:not([type="checkbox"]),
+.domain-field-editor select {
+  width: 100%;
+  padding: 8px 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  color: var(--ink);
+  background: var(--surface);
+  font: inherit;
+}
+.domain-field-editor .required-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.domain-field-editor button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 11px;
+  border: 0;
+  border-radius: 7px;
+  color: #fff;
+  background: var(--accent);
+  cursor: pointer;
+}
+.studio-error {
+  color: var(--danger);
+  font-size: 11px;
 }
 .record-note {
   grid-column: 1/-1;
@@ -741,7 +795,7 @@ input:focus-visible {
   border-top: 1px dashed var(--line-strong);
 }
 .policy-canvas {
-  width: min(540px, calc(100% - 48px));
+  width: min(760px, calc(100% - 48px));
   margin: 70px auto;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -770,13 +824,29 @@ input:focus-visible {
 }
 .policy-row {
   display: grid;
-  grid-template-columns: 1fr auto 18px;
+  grid-template-columns: 110px 110px minmax(0, 1fr);
   gap: 10px;
   align-items: center;
   padding: 17px 20px;
   border-bottom: 1px solid var(--line);
   color: var(--muted);
   font-size: 12px;
+}
+.policy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 10px;
+}
+.policy-actions label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: capitalize;
+}
+.policy-actions input {
+  accent-color: var(--accent);
 }
 .policy-row:last-child {
   border-bottom: 0;
@@ -1021,6 +1091,46 @@ input:focus-visible {
     radial-gradient(circle at 64% 34%, rgb(0 139 120 / 0.08), transparent 31%),
     var(--canvas);
 }
+.flow-transition-editor {
+  display: grid;
+  grid-template-columns: minmax(118px, 1.2fr) repeat(4, minmax(100px, 1fr)) auto;
+  align-items: end;
+  gap: 10px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--paper) 88%, var(--accent-soft));
+}
+.flow-transition-editor label {
+  display: grid;
+  gap: 5px;
+  color: var(--ink-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.flow-transition-editor select {
+  min-width: 0;
+  height: 33px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+}
+.flow-transition-editor button {
+  height: 33px;
+  padding: 0 12px;
+  border: 1px solid var(--accent);
+  border-radius: 7px;
+  background: var(--accent);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
 .react-flow-stage {
   min-height: 574px;
 }
@@ -1190,6 +1300,9 @@ input:focus-visible {
   }
   .flow-canvas {
     min-width: 760px;
+  }
+  .flow-transition-editor {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .policy-canvas,
   .code-canvas {
