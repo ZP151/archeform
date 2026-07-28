@@ -4,6 +4,27 @@ import { ControlPlaneClient } from "./control-plane-client";
 import { workbenchGraph } from "./workbench-graph";
 
 describe("ControlPlaneClient", () => {
+  it("calls a browser-style fetch function without binding it to the client", async () => {
+    let receiver: unknown = "not-called";
+    const fetcher = function (this: unknown): Promise<Response> {
+      receiver = this;
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            id: "graph-1",
+            draftRevisions: [{ id: "draft-1", revisionNumber: 1, graph: workbenchGraph }],
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      );
+    };
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await client.bootstrapLocalDraft(workbenchGraph);
+
+    expect(receiver).toBeUndefined();
+  });
+
   it("uses an existing local Draft instead of creating another Graph", async () => {
     const fetcher = vi.fn().mockResolvedValue(
       new Response(

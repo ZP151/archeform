@@ -75,7 +75,8 @@ export class ControlPlaneClient {
   }
 
   private async request<T>(path: string, init: RequestInit): Promise<T> {
-    const response = await this.fetcher(`${this.baseUrl}${path}`, {
+    const fetcher = this.fetcher;
+    const response = await fetcher(`${this.baseUrl}${path}`, {
       ...init,
       headers: { "content-type": "application/json", ...init.headers },
     });

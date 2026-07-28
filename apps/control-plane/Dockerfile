@@ -4,11 +4,12 @@ COPY . .
 RUN npm config set fetch-retries 5 && npm config set fetch-retry-maxtimeout 120000 && npm install --global pnpm@9.0.0
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @factory/control-plane prisma:generate
-RUN pnpm --filter @factory/control-plane build
+RUN pnpm --filter @factory/graph build && pnpm --filter @factory/adapters build && pnpm --filter @factory/control-plane build
 
 FROM node:22-alpine
 WORKDIR /workspace
 COPY --from=build /workspace /workspace
+RUN npm install --global pnpm@9.0.0
 ENV NODE_ENV=production
 EXPOSE 3000
 CMD ["sh", "-c", "pnpm --filter @factory/control-plane exec prisma db push && pnpm --filter @factory/control-plane start"]
