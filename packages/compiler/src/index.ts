@@ -62,7 +62,11 @@ export interface GeneratedApplicationBundle {
 const artifactBlueprint: Readonly<Record<CompilationTargetKey, readonly Omit<CompilationArtifactPlan, "target">[]>> = {
   simulator: [{ path: "simulator/", mediaType: "text/html" }],
   "next-web": [{ path: "web/", mediaType: "application/vnd.factory.source-tree" }],
-  "nest-api": [{ path: "api/", mediaType: "application/vnd.factory.source-tree" }],
+  "nest-api": [
+    { path: "api/", mediaType: "application/vnd.factory.source-tree" },
+    { path: "api/src/application-runtime.ts", mediaType: "text/typescript" },
+    { path: "api/src/policy.ts", mediaType: "text/typescript" },
+  ],
   "prisma-postgres": [
     { path: "database/prisma/schema.prisma", mediaType: "text/plain" },
     { path: "database/prisma/migrations/", mediaType: "application/vnd.factory.source-tree" },
@@ -70,7 +74,7 @@ const artifactBlueprint: Readonly<Record<CompilationTargetKey, readonly Omit<Com
   ],
   "casbin-policy": [{ path: "api/policy/model.conf", mediaType: "text/plain" }, { path: "api/policy/policy.csv", mediaType: "text/csv" }],
   "xstate-flow": [{ path: "api/src/flows/", mediaType: "application/vnd.factory.source-tree" }],
-  "test-suite": [{ path: "tests/", mediaType: "application/vnd.factory.source-tree" }],
+  "test-suite": [{ path: "api/test/", mediaType: "application/vnd.factory.source-tree" }],
   documentation: [
     { path: "docs/api-reference.md", mediaType: "text/markdown" },
     { path: "docs/entity-relationship.md", mediaType: "text/markdown" },
@@ -164,6 +168,194 @@ function renderFlowDefinitions(graph: ApplicationGraphV1): string {
   return `export const flowDefinitions = ${JSON.stringify(flows, null, 2)} as const;\n`;
 }
 
+function renderFlowMachines(): string {
+  return [
+    'import { createMachine } from "xstate";',
+    'import { flowDefinitions } from "./definitions.js";',
+    "",
+    "export const flowMachines = flowDefinitions.map((flow) =>",
+    "  createMachine({",
+    "    id: flow.id,",
+    "    initial: flow.initial,",
+    "    states: Object.fromEntries(",
+    "      flow.states.map((state) => [",
+    "        state,",
+    "        {",
+    "          on: Object.fromEntries(",
+    "            flow.transitions",
+    "              .filter((transition) => transition.from === state)",
+    "              .map((transition) => [transition.event, transition.to]),",
+    "          ),",
+    "        },",
+    "      ]),",
+    "    ),",
+    "  } as any),",
+    ");",
+    "",
+  ].join("\n");
+}
+
+function renderPolicyModule(graph: ApplicationGraphV1): string {
+  const model = [
+    "[request_definition]",
+    "r = sub, obj, act",
+    "",
+    "[policy_definition]",
+    "p = sub, obj, act",
+    "",
+    "[policy_effect]",
+    "e = some(where (p.eft == allow))",
+    "",
+    "[matchers]",
+    "m = r.sub == p.sub && (r.obj == p.obj || p.obj == \"*\") && r.act == p.act",
+  ].join("\n");
+  return [
+    'import { newEnforcer, newModelFromString, StringAdapter } from "casbin";',
+    "",
+    `const model = ${JSON.stringify(model)};`,
+    `const policy = ${JSON.stringify(renderCasbinPolicy(graph))};`,
+    "let enforcerPromise: ReturnType<typeof newEnforcer> | undefined;",
+    "",
+    "async function enforcer() {",
+    "  enforcerPromise ??= newEnforcer(newModelFromString(model), new StringAdapter(policy));",
+    "  return enforcerPromise;",
+    "}",
+    "",
+    "export async function enforce(role: string, resource: string, action: string): Promise<boolean> {",
+    "  return (await enforcer()).enforce(role, resource, action);",
+    "}",
+    "",
+  ].join("\n");
+}
+
+function runtimeDefinition(graph: ApplicationGraphV1) {
+  return {
+    entities: graph.domain.entities.map((entity) => ({
+      key: entity.key,
+      fields: entity.fields.map((field) => ({ key: field.key, required: field.required })),
+    })),
+    permissions: graph.policy.permissions,
+    flows: graph.flow.flows,
+  };
+}
+
+function renderApplicationRuntime(graph: ApplicationGraphV1): string {
+  return [
+    'import { enforce } from "./policy.js";',
+    "",
+    "type StoredRecord = Record<string, unknown> & { id: string; status?: string };",
+    "type AuditEvent = { actor: string; action: string; entity: string; recordId: string; at: string };",
+    "type RuntimeDefinition = {",
+    "  entities: readonly { key: string; fields: readonly { key: string; required: boolean }[] }[];",
+    "  permissions: readonly { role: string; resource: string; actions: readonly string[] }[];",
+    "  flows: readonly {",
+    "    id: string;",
+    "    entity: string;",
+    "    initialState: string;",
+    "    states: readonly string[];",
+    "    events: readonly string[];",
+    "    transitions: readonly { from: string; event: string; to: string; roles?: readonly string[]; effects?: readonly { capability: string; operation: string }[] }[];",
+    "  }[];",
+    "};",
+    `const definition: RuntimeDefinition = ${JSON.stringify(runtimeDefinition(graph), null, 2)};`,
+    "",
+    "export class ApplicationRuntime {",
+    "  private readonly records = new Map<string, Map<string, StoredRecord>>();",
+    "  private readonly auditEvents: AuditEvent[] = [];",
+    "",
+    "  private entity(entityKey: string) {",
+    "    const entity = definition.entities.find((candidate) => candidate.key === entityKey);",
+    "    if (!entity) throw new Error(`Unknown entity '${entityKey}'.`);",
+    "    return entity;",
+    "  }",
+    "",
+    "  private flow(entityKey: string) {",
+    "    return definition.flows.find((candidate) => candidate.entity === entityKey);",
+    "  }",
+    "",
+    "  private collection(entityKey: string): Map<string, StoredRecord> {",
+    "    let collection = this.records.get(entityKey);",
+    "    if (!collection) {",
+    "      collection = new Map<string, StoredRecord>();",
+    "      this.records.set(entityKey, collection);",
+    "    }",
+    "    return collection;",
+    "  }",
+    "",
+    "  private async assertAllowed(role: string, entityKey: string, action: string): Promise<void> {",
+    "    if (!(await enforce(role, entityKey, action))) {",
+    "      throw new Error(`Role '${role}' cannot ${action} '${entityKey}'.`);",
+    "    }",
+    "  }",
+    "",
+    "  private async assertTransitionAllowed(role: string, entityKey: string, event: string): Promise<void> {",
+    "    if (await enforce(role, entityKey, event)) return;",
+    "    await this.assertAllowed(role, entityKey, 'update');",
+    "  }",
+    "",
+    "  async list(role: string, entityKey: string): Promise<readonly StoredRecord[]> {",
+    "    this.entity(entityKey);",
+    "    await this.assertAllowed(role, entityKey, 'read');",
+    "    return [...this.collection(entityKey).values()];",
+    "  }",
+    "",
+    "  async create(role: string, entityKey: string, input: Record<string, unknown>): Promise<StoredRecord> {",
+    "    const entity = this.entity(entityKey);",
+    "    await this.assertAllowed(role, entityKey, 'create');",
+    "    const allowedFields = new Set(entity.fields.map((field) => field.key));",
+    "    const unknown = Object.keys(input).find((key) => !allowedFields.has(key));",
+    "    if (unknown) throw new Error(`Unknown field '${unknown}' for '${entityKey}'.`);",
+    "    const flow = this.flow(entityKey);",
+    "    for (const field of entity.fields) {",
+    "      const supplied = input[field.key];",
+    "      const suppliedByFlow = field.key === 'status' && !!flow;",
+    "      if (field.required && supplied === undefined && !suppliedByFlow) {",
+    "        throw new Error(`Required field '${field.key}' is missing.`);",
+    "      }",
+    "    }",
+    "    const collection = this.collection(entityKey);",
+    "    const record: StoredRecord = {",
+    "      id: `${entityKey}-${collection.size + 1}`,",
+    "      ...input,",
+    "      ...(flow ? { status: flow.initialState } : {}),",
+    "    };",
+    "    collection.set(record.id, record);",
+    "    this.auditEvents.push({ actor: role, action: 'create', entity: entityKey, recordId: record.id, at: new Date().toISOString() });",
+    "    return record;",
+    "  }",
+    "",
+    "  async transition(role: string, entityKey: string, recordId: string, event: string): Promise<StoredRecord> {",
+    "    this.entity(entityKey);",
+    "    const flow = this.flow(entityKey);",
+    "    if (!flow) throw new Error(`Entity '${entityKey}' has no declared flow.`);",
+    "    const record = this.collection(entityKey).get(recordId);",
+    "    if (!record) throw new Error(`Record '${recordId}' was not found.`);",
+    "    const transition = flow.transitions.find((candidate) => candidate.from === record.status && candidate.event === event);",
+    "    if (!transition) throw new Error(`Event '${event}' is not valid from '${record.status}'.`);",
+    "    if (transition.roles?.length && !transition.roles.includes(role)) {",
+    "      throw new Error(`Role '${role}' cannot trigger '${event}'.`);",
+    "    }",
+    "    if (transition.roles?.length) await this.assertTransitionAllowed(role, entityKey, event);",
+    "    else await this.assertAllowed(role, entityKey, 'read');",
+    "    record.status = transition.to;",
+    "    this.auditEvents.push({ actor: role, action: event, entity: entityKey, recordId, at: new Date().toISOString() });",
+    "    return record;",
+    "  }",
+    "",
+    "  async auditLog(role: string): Promise<readonly AuditEvent[]> {",
+    "    const permitted = definition.permissions.some((permission) =>",
+    "      permission.role === role && permission.actions.includes('audit'),",
+    "    );",
+    "    if (!permitted) throw new Error(`Role '${role}' cannot read audit evidence.`);",
+    "    return [...this.auditEvents];",
+    "  }",
+    "}",
+    "",
+    "export const applicationRuntime = new ApplicationRuntime();",
+    "",
+  ].join("\n");
+}
+
 function renderWebPage(graph: ApplicationGraphV1): string {
   const pages = graph.page.pages.map((page) => ({ route: page.route, title: page.title }));
   return [
@@ -183,12 +375,42 @@ function renderWebPage(graph: ApplicationGraphV1): string {
 
 function renderApiMain(graph: ApplicationGraphV1): string {
   return [
-    'import { Controller, Get, Module } from "@nestjs/common";',
+    'import { Body, Controller, Get, HttpException, HttpStatus, Module, Param, Post, Req } from "@nestjs/common";',
     'import { NestFactory } from "@nestjs/core";',
+    'import { applicationRuntime } from "./application-runtime.js";',
     "",
-    "@Controller()",
+    "function roleFrom(request: { headers: Record<string, string | string[] | undefined> }): string {",
+    "  const value = request.headers['x-factory-role'];",
+    "  return typeof value === 'string' && value ? value : 'anonymous';",
+    "}",
+    "",
+    "function rejected(error: unknown): HttpException {",
+    "  return new HttpException(error instanceof Error ? error.message : 'Request rejected.', HttpStatus.FORBIDDEN);",
+    "}",
+    "",
+    '@Controller("api")',
     "class GeneratedController {",
     `  @Get("health") health() { return { application: ${JSON.stringify(graph.metadata.name)}, status: "ok" }; }`,
+    "",
+    "  @Get('audit')",
+    "  async audit(@Req() request: { headers: Record<string, string | string[] | undefined> }) {",
+    "    try { return applicationRuntime.auditLog(roleFrom(request)); } catch (error) { throw rejected(error); }",
+    "  }",
+    "",
+    "  @Get(':entity')",
+    "  async list(@Param('entity') entity: string, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
+    "    try { return applicationRuntime.list(roleFrom(request), entity); } catch (error) { throw rejected(error); }",
+    "  }",
+    "",
+    "  @Post(':entity')",
+    "  async create(@Param('entity') entity: string, @Body() body: Record<string, unknown>, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
+    "    try { return applicationRuntime.create(roleFrom(request), entity, body); } catch (error) { throw rejected(error); }",
+    "  }",
+    "",
+    "  @Post(':entity/:recordId/events/:event')",
+    "  async transition(@Param('entity') entity: string, @Param('recordId') recordId: string, @Param('event') event: string, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
+    "    try { return applicationRuntime.transition(roleFrom(request), entity, recordId, event); } catch (error) { throw rejected(error); }",
+    "  }",
     "}",
     "",
     "@Module({ controllers: [GeneratedController] })",
@@ -199,6 +421,79 @@ function renderApiMain(graph: ApplicationGraphV1): string {
     "  await app.listen(process.env.PORT ?? 3001);",
     "}",
     "void bootstrap();",
+    "",
+  ].join("\n");
+}
+
+function defaultJourneyValue(
+  field: ApplicationGraphV1["domain"]["entities"][number]["fields"][number],
+  initialState: string | undefined,
+): unknown {
+  if (field.key === "status" && initialState) return initialState;
+  if (field.type === "integer" || field.type === "decimal") return 1;
+  if (field.type === "boolean") return true;
+  if (field.type === "date") return "2026-01-01";
+  if (field.type === "datetime") return "2026-01-01T00:00:00.000Z";
+  if (field.type === "enum") return field.values?.[0] ?? "sample";
+  if (field.type === "email") return "user@example.test";
+  if (field.type === "url") return "https://example.test";
+  if (field.type === "json") return { sample: true };
+  return `sample-${field.key}`;
+}
+
+function renderJourneyTest(graph: ApplicationGraphV1): string {
+  const flow = graph.flow.flows[0];
+  const entity = flow && graph.domain.entities.find((candidate) => candidate.key === flow.entity);
+  const createPermission = entity && graph.policy.permissions.find(
+    (permission) => permission.resource === entity.key && permission.actions.includes("create"),
+  );
+  if (!flow || !entity || !createPermission) {
+    return [
+      'import { describe, expect, it } from "vitest";',
+      "",
+      "describe('generated journey', () => {",
+      "  it('records that this Graph has no declared create-and-flow journey', () => {",
+      "    expect(true).toBe(true);",
+      "  });",
+      "});",
+      "",
+    ].join("\n");
+  }
+  const payload = Object.fromEntries(
+    entity.fields
+      .filter((field) => field.required)
+      .map((field) => [field.key, defaultJourneyValue(field, flow.initialState)]),
+  );
+  const transitions: ApplicationGraphV1["flow"]["flows"][number]["transitions"] = [];
+  let state = flow.initialState;
+  const visited = new Set<string>();
+  while (true) {
+    const transition = flow.transitions.find(
+      (candidate) => candidate.from === state && !visited.has(`${candidate.from}:${candidate.event}`),
+    );
+    if (!transition) break;
+    transitions.push(transition);
+    visited.add(`${transition.from}:${transition.event}`);
+    state = transition.to;
+  }
+  const auditRole = graph.policy.permissions.find((permission) => permission.actions.includes("audit"))?.role;
+  return [
+    'import { describe, expect, it } from "vitest";',
+    'import { applicationRuntime } from "../src/application-runtime.js";',
+    "",
+    "describe('generated role journey', () => {",
+    "  it('executes the declared record flow', async () => {",
+    `    const record = await applicationRuntime.create(${JSON.stringify(createPermission.role)}, ${JSON.stringify(entity.key)}, ${JSON.stringify(payload)});`,
+    `    expect(record.status).toBe(${JSON.stringify(flow.initialState)});`,
+    ...transitions.flatMap((transition) => [
+      `    await applicationRuntime.transition(${JSON.stringify(transition.roles?.[0] ?? createPermission.role)}, ${JSON.stringify(entity.key)}, record.id, ${JSON.stringify(transition.event)});`,
+      `    expect(record.status).toBe(${JSON.stringify(transition.to)});`,
+    ]),
+    ...(auditRole ? [
+      `    expect(await applicationRuntime.auditLog(${JSON.stringify(auditRole)})).toHaveLength(${transitions.length + 1});`,
+    ] : []),
+    "  });",
+    "});",
     "",
   ].join("\n");
 }
@@ -220,7 +515,13 @@ export function generateApplicationBundle(input: PublishedGraphInput): Generated
   const files: GeneratedFile[] = [
     {
       path: "package.json",
-      content: JSON.stringify({ name: rootDirectory, private: true, packageManager: "pnpm@9.0.0", workspaces: ["web", "api", "database"] }, null, 2) + "\n",
+      content: JSON.stringify({
+        name: rootDirectory,
+        private: true,
+        packageManager: "pnpm@9.0.0",
+        workspaces: ["web", "api", "database"],
+        scripts: { test: "pnpm --filter generated-api test" },
+      }, null, 2) + "\n",
     },
     {
       path: "web/package.json",
@@ -245,9 +546,22 @@ export function generateApplicationBundle(input: PublishedGraphInput): Generated
       content: JSON.stringify({
         name: "generated-api",
         private: true,
-        scripts: { dev: "tsx watch src/main.ts", build: "tsc -p tsconfig.json", start: "node dist/main.js" },
-        dependencies: { "@nestjs/common": "^10.4.0", "@nestjs/core": "^10.4.0", "@nestjs/platform-express": "^10.4.0", "reflect-metadata": "^0.2.2", rxjs: "^7.8.1" },
-        devDependencies: { tsx: "^4.19.0", typescript: "^5.7.0" },
+        scripts: {
+          dev: "tsx watch src/main.ts",
+          build: "tsc -p tsconfig.json",
+          start: "node dist/main.js",
+          test: "vitest run",
+        },
+        dependencies: {
+          "@nestjs/common": "^10.4.0",
+          "@nestjs/core": "^10.4.0",
+          "@nestjs/platform-express": "^10.4.0",
+          casbin: "^5.37.0",
+          "reflect-metadata": "^0.2.2",
+          rxjs: "^7.8.1",
+          xstate: "^5.19.0",
+        },
+        devDependencies: { tsx: "^4.19.0", typescript: "^5.7.0", vitest: "^2.1.0" },
       }, null, 2) + "\n",
     },
     {
@@ -259,6 +573,8 @@ export function generateApplicationBundle(input: PublishedGraphInput): Generated
       content: "FROM node:22-alpine\nWORKDIR /app\nCOPY package.json ./\nRUN npm config set fetch-retries 5 && npm install --global pnpm@9.0.0 && pnpm install\nCOPY . .\nRUN pnpm build\nCMD [\"node\", \"dist/main.js\"]\n",
     },
     { path: "api/src/main.ts", content: renderApiMain(graph) },
+    { path: "api/src/application-runtime.ts", content: renderApplicationRuntime(graph) },
+    { path: "api/src/policy.ts", content: renderPolicyModule(graph) },
     { path: "database/prisma/schema.prisma", content: renderPrismaSchema(graph) },
     {
       path: "database/package.json",
@@ -277,6 +593,8 @@ export function generateApplicationBundle(input: PublishedGraphInput): Generated
     },
     { path: "api/policy/policy.csv", content: renderCasbinPolicy(graph) },
     { path: "api/src/flows/definitions.ts", content: renderFlowDefinitions(graph) },
+    { path: "api/src/flows/machines.ts", content: renderFlowMachines() },
+    { path: "api/test/journey.generated.test.ts", content: renderJourneyTest(graph) },
     { path: "tests/journeys.generated.md", content: `# Generated role journeys\n\nGraph: ${plan.graphHash}\n` },
     { path: "docs/application.md", content: renderDocumentation(graph) },
     {

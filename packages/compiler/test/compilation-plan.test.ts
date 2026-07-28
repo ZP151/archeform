@@ -76,4 +76,87 @@ describe("compilation target registry", () => {
     );
     expect(generateApplicationBundle(publishedExpense)).toEqual(bundle);
   });
+
+  it("generates a role-guarded record runtime, XState machines, and an executable journey", () => {
+    const input: PublishedGraphInput = {
+      publishedRevisionId: "published-expense-runtime-1",
+      graph: {
+        ...publishedExpense.graph,
+        domain: {
+          entities: [
+            {
+              key: "expense",
+              label: "Expense",
+              fields: [
+                { key: "amount", type: "decimal", required: true },
+                { key: "description", type: "text", required: true },
+                {
+                  key: "status",
+                  type: "enum",
+                  required: true,
+                  values: ["draft", "submitted", "approved", "rejected"],
+                },
+              ],
+              indexes: [{ fields: ["status"] }],
+            },
+          ],
+          relations: [],
+        },
+        policy: {
+          roles: ["employee", "manager", "finance"],
+          permissions: [
+            { role: "employee", resource: "expense", actions: ["create", "read"] },
+            { role: "manager", resource: "expense", actions: ["read", "approve", "reject"] },
+            { role: "finance", resource: "expense", actions: ["read", "audit"] },
+          ],
+        },
+        flow: {
+          flows: [
+            {
+              id: "expense-review",
+              entity: "expense",
+              initialState: "draft",
+              states: ["draft", "submitted", "approved", "rejected"],
+              events: ["submit", "approve", "reject"],
+              transitions: [
+                { from: "draft", event: "submit", to: "submitted" },
+                { from: "submitted", event: "approve", to: "approved", roles: ["manager"] },
+                { from: "submitted", event: "reject", to: "rejected", roles: ["manager"] },
+              ],
+            },
+          ],
+        },
+      },
+    };
+    const files = Object.fromEntries(
+      generateApplicationBundle(input).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(files["api/src/application-runtime.ts"]).toContain(
+      "export class ApplicationRuntime",
+    );
+    expect(files["api/src/application-runtime.ts"]).toContain(
+      "type RuntimeDefinition",
+    );
+    expect(files["api/src/application-runtime.ts"]).toContain(
+      "const definition: RuntimeDefinition",
+    );
+    expect(files["api/src/application-runtime.ts"]).toContain(
+      "effects?: readonly",
+    );
+    expect(files["api/src/application-runtime.ts"]).toContain("async transition(");
+    expect(files["api/src/application-runtime.ts"]).toContain(
+      "assertTransitionAllowed",
+    );
+    expect(files["api/src/application-runtime.ts"]).toContain(
+      "this.assertAllowed(role, entityKey, 'update')",
+    );
+    expect(files["api/src/policy.ts"]).toContain("newEnforcer");
+    expect(files["api/src/flows/machines.ts"]).toContain("createMachine");
+    expect(files["api/src/main.ts"]).toContain('@Controller("api")');
+    expect(files["api/test/journey.generated.test.ts"]).toContain(
+      "applicationRuntime.create",
+    );
+    expect(files["api/package.json"]).toContain("vitest");
+  });
 });
