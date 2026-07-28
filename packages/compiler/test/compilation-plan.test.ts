@@ -65,7 +65,7 @@ describe("compilation target registry", () => {
     expect(bundle.rootDirectory).toBe("expense-approval-published-expense-1");
     expect(bundle.files).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ path: "web/app/page.tsx", content: expect.stringContaining("Expense approval") }),
+        expect.objectContaining({ path: "web/app/application-manifest.ts", content: expect.stringContaining("Expense approval") }),
         expect.objectContaining({ path: "web/package.json", content: expect.stringContaining("next") }),
         expect.objectContaining({ path: "api/src/main.ts", content: expect.stringContaining("NestFactory") }),
         expect.objectContaining({ path: "api/package.json", content: expect.stringContaining("@nestjs/core") }),
@@ -75,6 +75,66 @@ describe("compilation target registry", () => {
       ]),
     );
     expect(generateApplicationBundle(publishedExpense)).toEqual(bundle);
+  });
+
+  it("emits a deployable initial Prisma migration and isolated Compose lifecycle", () => {
+    const files = Object.fromEntries(
+      generateApplicationBundle(publishedExpense).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(files["database/prisma/migrations/0001_initial/migration.sql"]).toContain(
+      'CREATE TABLE "Expense"',
+    );
+    expect(files["database/prisma/migrations/0001_initial/migration.sql"]).toContain(
+      'CREATE TABLE "AuditEvent"',
+    );
+    expect(files["database/Dockerfile"]).toContain("prisma migrate deploy");
+    expect(files["api/Dockerfile"]).not.toContain("prisma db push");
+    expect(files["web/.dockerignore"]).toContain("node_modules");
+    expect(files["api/.dockerignore"]).toContain("node_modules");
+    expect(files["api/package.json"]).toContain("@types/node");
+    expect(files["docker-compose.yml"]).toContain("migrate:");
+    expect(files["docker-compose.yml"]).toContain("FACTORY_COMPOSE_PROJECT_NAME");
+    expect(files["pnpm-workspace.yaml"]).toContain("web");
+    expect(files["README.md"]).toContain("docker compose down --volumes --remove-orphans");
+  });
+
+  it("emits a role-aware Next application that reaches the generated API through a same-origin proxy", () => {
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "published-expense-web-1",
+        graph: {
+          ...publishedExpense.graph,
+          policy: {
+            roles: ["employee"],
+            permissions: [{ role: "employee", resource: "expense", actions: ["create", "read"] }],
+          },
+        },
+      }).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(files["web/app/page.tsx"]).toContain("GeneratedApplicationClient");
+    expect(files["web/app/generated-application-client.tsx"]).toContain('"use client"');
+    expect(files["web/app/generated-application-client.tsx"]).toContain("x-factory-role");
+    expect(files["web/app/generated-application-client.tsx"]).toContain("actions: readonly string[]");
+    expect(files["web/app/application-manifest.ts"]).toContain("Create expense");
+    expect(files["web/app/api/[...path]/route.ts"]).toContain("FACTORY_API_URL");
+    expect(files["api/src/main.ts"]).toContain("enableCors");
+    expect(files["api/src/main.ts"]).toContain("return await applicationRuntime.create");
+    expect(files["docker-compose.yml"]).toContain("FACTORY_API_URL: http://api:3001");
+  });
+
+  it("preconfigures generated Next projects so a build does not rewrite their TypeScript contract", () => {
+    const files = Object.fromEntries(
+      generateApplicationBundle(publishedExpense).files.map((file) => [file.path, file.content]),
+    );
+    const tsconfig = JSON.parse(files["web/tsconfig.json"] as string) as { compilerOptions: Record<string, unknown>; include: string[] };
+
+    expect(tsconfig.compilerOptions.module).toBe("esnext");
+    expect(tsconfig.compilerOptions.moduleResolution).toBe("node");
+    expect(tsconfig.compilerOptions.isolatedModules).toBe(true);
+    expect(tsconfig.include).toContain(".next/types/**/*.ts");
+    expect(files["web/next-env.d.ts"]).toContain('reference types="next"');
   });
 
   it("compiles declared DomainModel relations into Prisma relation fields", () => {

@@ -222,6 +222,90 @@ function renderPrismaSchema(graph: ApplicationGraphV1): string {
   ].join("\n");
 }
 
+function postgresType(
+  type: ApplicationGraphV1["domain"]["entities"][number]["fields"][number]["type"],
+): string {
+  switch (type) {
+    case "integer": return "INTEGER";
+    case "decimal": return "DECIMAL";
+    case "boolean": return "BOOLEAN";
+    case "date": return "DATE";
+    case "datetime": return "TIMESTAMP(3)";
+    case "json": return "JSONB";
+    default: return "TEXT";
+  }
+}
+
+function quoteSqlIdentifier(value: string): string {
+  return `"${value.replaceAll('"', '""')}"`;
+}
+
+function relationColumnDefinitions(
+  graph: ApplicationGraphV1,
+  entityKey: string,
+): readonly string[] {
+  return graph.domain.relations.flatMap((relation) => {
+    if (relation.kind === "many-to-many") return [];
+    const sourceIsOne = relation.kind === "one-to-many" || relation.kind === "one-to-one";
+    const oneKey = sourceIsOne ? relation.from : relation.to;
+    const manyKey = sourceIsOne ? relation.to : relation.from;
+    if (entityKey !== manyKey) return [];
+    const column = `${toCamelCase(oneKey)}Id`;
+    return [`${quoteSqlIdentifier(column)} TEXT NOT NULL${relation.kind === "one-to-one" ? " UNIQUE" : ""}`];
+  });
+}
+
+function renderInitialMigration(graph: ApplicationGraphV1): string {
+  const createTables = graph.domain.entities.map((entity) => {
+    const columns = [
+      '"id" TEXT NOT NULL PRIMARY KEY',
+      ...entity.fields.map((field) =>
+        `${quoteSqlIdentifier(field.key)} ${postgresType(field.type)}${field.required ? " NOT NULL" : ""}${field.unique ? " UNIQUE" : ""}`,
+      ),
+      ...relationColumnDefinitions(graph, entity.key),
+      '"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP',
+      '"updatedAt" TIMESTAMP(3) NOT NULL',
+    ];
+    return `CREATE TABLE ${quoteSqlIdentifier(toPascalCase(entity.key))} (\n  ${columns.join(",\n  ")}\n);`;
+  });
+  const indexes = graph.domain.entities.flatMap((entity) =>
+    entity.indexes.map((index, indexNumber) =>
+      `CREATE ${index.unique ? "UNIQUE " : ""}INDEX ${quoteSqlIdentifier(`${toPascalCase(entity.key)}_${indexNumber}_idx`)} ON ${quoteSqlIdentifier(toPascalCase(entity.key))} (${index.fields.map(quoteSqlIdentifier).join(", ")});`,
+    ),
+  );
+  const relationTables = graph.domain.relations.flatMap((relation) => {
+    if (relation.kind !== "many-to-many") return [];
+    const relationName = `${toPascalCase(relation.from)}To${toPascalCase(relation.to)}`;
+    const sourceModel = toPascalCase(relation.from);
+    const targetModel = toPascalCase(relation.to);
+    return [
+      `CREATE TABLE ${quoteSqlIdentifier(`_${relationName}`)} (\n  "A" TEXT NOT NULL,\n  "B" TEXT NOT NULL,\n  CONSTRAINT ${quoteSqlIdentifier(`_${relationName}_AB_pkey`)} PRIMARY KEY ("A", "B"),\n  CONSTRAINT ${quoteSqlIdentifier(`_${relationName}_A_fkey`)} FOREIGN KEY ("A") REFERENCES ${quoteSqlIdentifier(sourceModel)} ("id") ON DELETE CASCADE ON UPDATE CASCADE,\n  CONSTRAINT ${quoteSqlIdentifier(`_${relationName}_B_fkey`)} FOREIGN KEY ("B") REFERENCES ${quoteSqlIdentifier(targetModel)} ("id") ON DELETE CASCADE ON UPDATE CASCADE\n);`,
+      `CREATE INDEX ${quoteSqlIdentifier(`_${relationName}_B_index`)} ON ${quoteSqlIdentifier(`_${relationName}`)} ("B");`,
+    ];
+  });
+  const relationConstraints = graph.domain.relations.flatMap((relation) => {
+    if (relation.kind === "many-to-many") return [];
+    const sourceIsOne = relation.kind === "one-to-many" || relation.kind === "one-to-one";
+    const oneKey = sourceIsOne ? relation.from : relation.to;
+    const manyKey = sourceIsOne ? relation.to : relation.from;
+    const relationName = `${toPascalCase(oneKey)}To${toPascalCase(manyKey)}`;
+    const column = `${toCamelCase(oneKey)}Id`;
+    return [
+      `ALTER TABLE ${quoteSqlIdentifier(toPascalCase(manyKey))} ADD CONSTRAINT ${quoteSqlIdentifier(`${relationName}_fkey`)} FOREIGN KEY (${quoteSqlIdentifier(column)}) REFERENCES ${quoteSqlIdentifier(toPascalCase(oneKey))} ("id") ON DELETE RESTRICT ON UPDATE CASCADE;`,
+    ];
+  });
+  return [
+    "-- Generated from a Published Factory Application Graph. Do not edit manually.",
+    ...createTables,
+    'CREATE TABLE "AuditEvent" (\n  "id" TEXT NOT NULL PRIMARY KEY,\n  "actor" TEXT NOT NULL,\n  "action" TEXT NOT NULL,\n  "entity" TEXT NOT NULL,\n  "recordId" TEXT NOT NULL,\n  "at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP\n);',
+    'CREATE INDEX "AuditEvent_entity_recordId_idx" ON "AuditEvent" ("entity", "recordId");',
+    ...indexes,
+    ...relationTables,
+    ...relationConstraints,
+    "",
+  ].join("\n\n");
+}
+
 function renderCasbinPolicy(graph: ApplicationGraphV1): string {
   const lines = graph.policy.permissions.flatMap((permission) =>
     permission.actions.map((action) => `p, ${permission.role}, ${permission.resource}, ${action}`),
@@ -523,18 +607,137 @@ function renderPrismaRecordStore(graph: ApplicationGraphV1): string {
 }
 
 function renderWebPage(graph: ApplicationGraphV1): string {
-  const pages = graph.page.pages.map((page) => ({ route: page.route, title: page.title }));
   return [
+    'import { GeneratedApplicationClient } from "./generated-application-client";',
+    'import { applicationManifest } from "./application-manifest";',
+    "",
     "export default function GeneratedApplication() {",
-    `  const applicationName = ${JSON.stringify(graph.metadata.name)};`,
-    `  const pages = ${JSON.stringify(pages)};`,
+    "  return <GeneratedApplicationClient manifest={applicationManifest} />;",
+    "}",
+    "",
+  ].join("\n");
+}
+
+function renderWebManifest(graph: ApplicationGraphV1): string {
+  const creationLabels = Object.fromEntries(
+    graph.domain.entities.map((entity) => [entity.key, `Create ${entity.label.toLowerCase()}`]),
+  );
+  return `export const applicationManifest = ${JSON.stringify({
+    metadata: graph.metadata,
+    page: graph.page,
+    domain: graph.domain,
+    policy: graph.policy,
+    flow: graph.flow,
+    creationLabels,
+  }, null, 2)} as const;\n`;
+}
+
+function renderGeneratedApplicationClient(): string {
+  return [
+    '"use client";',
+    "",
+    'import { useEffect, useMemo, useState } from "react";',
+    "type Manifest = {",
+    "  readonly metadata: { readonly name: string };",
+    "  readonly page: { readonly pages: readonly { readonly id: string; readonly route: string; readonly title: string }[]; readonly navigation: readonly { readonly id: string; readonly label: string; readonly pageId: string }[] };",
+    "  readonly domain: { readonly entities: readonly { readonly key: string; readonly label: string; readonly fields: readonly { readonly key: string; readonly required: boolean }[] }[] };",
+    "  readonly policy: { readonly roles: readonly string[]; readonly permissions: readonly { readonly role: string; readonly resource: string; readonly actions: readonly string[] }[] };",
+    "  readonly flow: { readonly flows: readonly { readonly entity: string; readonly events: readonly string[] }[] };",
+    "  readonly creationLabels: Readonly<Record<string, string>>;",
+    "};",
+    "type JsonRecord = Record<string, unknown>;",
+    "",
+    "export function GeneratedApplicationClient({ manifest }: { manifest: Manifest }) {",
+    "  const entities = manifest.domain.entities;",
+    "  const [role, setRole] = useState(manifest.policy.roles[0] ?? 'anonymous');",
+    "  const [entityKey, setEntityKey] = useState(entities[0]?.key ?? '');",
+    "  const [records, setRecords] = useState<readonly JsonRecord[]>([]);",
+    "  const [values, setValues] = useState<Record<string, string>>({});",
+    "  const [error, setError] = useState<string | null>(null);",
+    "  const entity = useMemo(() => entities.find((candidate) => candidate.key === entityKey), [entities, entityKey]);",
+    "  const can = (action: string) => manifest.policy.permissions.some((permission) => permission.role === role && (permission.resource === entityKey || permission.resource === '*') && permission.actions.includes(action));",
+    "  const headers = () => ({ 'content-type': 'application/json', 'x-factory-role': role });",
+    "  const refresh = async () => {",
+    "    if (!entityKey || !can('read')) { setRecords([]); return; }",
+    "    const response = await fetch(`/api/${entityKey}`, { headers: headers() });",
+    "    if (!response.ok) throw new Error(await response.text());",
+    "    setRecords(await response.json() as readonly JsonRecord[]);",
+    "  };",
+    "  useEffect(() => { void refresh().catch((reason) => setError(reason instanceof Error ? reason.message : 'Unable to load records.')); }, [entityKey, role]);",
+    "  const create = async () => {",
+    "    if (!entity || !can('create')) return;",
+    "    setError(null);",
+    "    const payload = Object.fromEntries(entity.fields.filter((field) => field.key !== 'status').map((field) => [field.key, values[field.key] ?? '']));",
+    "    const response = await fetch(`/api/${entity.key}`, { method: 'POST', headers: headers(), body: JSON.stringify(payload) });",
+    "    if (!response.ok) throw new Error(await response.text());",
+    "    setValues({});",
+    "    await refresh();",
+    "  };",
+    "  const transition = async (recordId: string, event: string) => {",
+    "    setError(null);",
+    "    const response = await fetch(`/api/${entityKey}/${recordId}/events/${event}`, { method: 'POST', headers: headers() });",
+    "    if (!response.ok) throw new Error(await response.text());",
+    "    await refresh();",
+    "  };",
+    "  const events = manifest.flow.flows.find((flow) => flow.entity === entityKey)?.events ?? [];",
+    "  if (!entity) return <main className=\"generated-app\"><p>No domain entities are declared in this Published Graph.</p></main>;",
     "  return (",
-    "    <main>",
-    "      <h1>{applicationName}</h1>",
-    "      <nav>{pages.map((page) => <a key={page.route} href={page.route}>{page.title}</a>)}</nav>",
+    "    <main className=\"generated-app\">",
+    "      <header><div><p>Generated application</p><h1>{manifest.metadata.name}</h1></div><label>Role<select value={role} onChange={(event) => setRole(event.target.value)}>{manifest.policy.roles.map((candidate) => <option key={candidate}>{candidate}</option>)}</select></label></header>",
+    "      <nav aria-label=\"Application routes\">{manifest.page.navigation.map((item) => <a href={manifest.page.pages.find((page) => page.id === item.pageId)?.route ?? '#'} key={item.id}>{item.label}</a>)}</nav>",
+    "      <section className=\"generated-workspace\">",
+    "        <aside><h2>Records</h2>{entities.map((candidate) => <button className={candidate.key === entityKey ? 'active' : ''} key={candidate.key} onClick={() => setEntityKey(candidate.key)} type=\"button\">{candidate.label}</button>)}</aside>",
+    "        <div className=\"generated-content\">",
+    "          <div className=\"generated-title\"><div><p>{role} view</p><h2>{entity.label}</h2></div><button onClick={() => void refresh().catch((reason) => setError(reason instanceof Error ? reason.message : 'Unable to refresh records.'))} type=\"button\">Refresh</button></div>",
+    "          {can('create') && <form onSubmit={(event) => { event.preventDefault(); void create().catch((reason) => setError(reason instanceof Error ? reason.message : 'Unable to create record.')); }}><h3>{manifest.creationLabels[entity.key]}</h3>{entity.fields.filter((field) => field.key !== 'status').map((field) => <label key={field.key}>{field.key}<input required={field.required} value={values[field.key] ?? ''} onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))} /></label>)}<button type=\"submit\">Create</button></form>}",
+    "          {error && <p role=\"alert\" className=\"generated-error\">{error}</p>}",
+    "          <ul className=\"generated-records\">{records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code><span>{events.map((event) => <button key={event} onClick={() => void transition(String(record.id), event).catch((reason) => setError(reason instanceof Error ? reason.message : 'Unable to transition record.'))} type=\"button\">{event}</button>)}</span></li>)}</ul>",
+    "        </div>",
+    "      </section>",
     "    </main>",
     "  );",
     "}",
+    "",
+  ].join("\n");
+}
+
+function renderWebProxyRoute(): string {
+  return [
+    'export const dynamic = "force-dynamic";',
+    "",
+    "type RouteContext = { params: Promise<{ path: string[] }> };",
+    "",
+    "async function proxy(request: Request, context: RouteContext): Promise<Response> {",
+    "  const { path } = await context.params;",
+    "  const incoming = new URL(request.url);",
+    "  const upstream = new URL(`/api/${path.map(encodeURIComponent).join('/')}`, process.env.FACTORY_API_URL ?? process.env.NEXT_PUBLIC_FACTORY_API_URL ?? 'http://localhost:3001');",
+    "  upstream.search = incoming.search;",
+    "  const response = await fetch(upstream, {",
+    "    method: request.method,",
+    "    headers: { 'content-type': request.headers.get('content-type') ?? 'application/json', 'x-factory-role': request.headers.get('x-factory-role') ?? 'anonymous' },",
+    "    body: ['GET', 'HEAD'].includes(request.method) ? undefined : await request.text(),",
+    "  });",
+    "  return new Response(await response.text(), { status: response.status, headers: { 'content-type': response.headers.get('content-type') ?? 'application/json' } });",
+    "}",
+    "",
+    "export const GET = proxy;",
+    "export const POST = proxy;",
+    "",
+  ].join("\n");
+}
+
+function renderWebStyles(): string {
+  return [
+    ":root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #f6f8fb; color: #122022; }",
+    "* { box-sizing: border-box; } body { margin: 0; } button, input, select { font: inherit; }",
+    ".generated-app { max-width: 1120px; margin: 0 auto; padding: 40px 24px 72px; }",
+    ".generated-app header, .generated-title, .generated-app nav, .generated-workspace, .generated-records li { display: flex; align-items: center; gap: 16px; }",
+    ".generated-app header, .generated-title { justify-content: space-between; } .generated-app h1, .generated-app h2 { margin: 4px 0; } .generated-app p { color: #5b6870; }",
+    ".generated-app nav { margin: 24px 0; } .generated-app nav a, .generated-app button { border: 1px solid #cbd6d9; border-radius: 8px; padding: 8px 12px; background: #fff; color: inherit; text-decoration: none; cursor: pointer; }",
+    ".generated-workspace { align-items: flex-start; background: #fff; border: 1px solid #dce4e7; border-radius: 16px; overflow: hidden; } .generated-workspace aside { display: grid; gap: 8px; min-width: 180px; padding: 20px; border-right: 1px solid #dce4e7; } .generated-workspace aside button.active, .generated-content form button { background: #0b766e; color: white; border-color: #0b766e; }",
+    ".generated-content { flex: 1; padding: 24px; min-width: 0; } .generated-content form { display: grid; gap: 12px; padding: 16px; margin: 20px 0; background: #f6f8fb; border-radius: 12px; } .generated-content form label { display: grid; gap: 6px; } .generated-content input { border: 1px solid #cbd6d9; border-radius: 8px; padding: 9px; }",
+    ".generated-records { display: grid; gap: 8px; padding: 0; list-style: none; } .generated-records li { justify-content: space-between; padding: 12px; background: #f6f8fb; border-radius: 10px; } .generated-records span { display: flex; gap: 6px; flex-wrap: wrap; } .generated-error { color: #b42318; }",
+    "@media (max-width: 720px) { .generated-workspace { display: block; } .generated-workspace aside { border-right: 0; border-bottom: 1px solid #dce4e7; } .generated-app header { align-items: flex-start; flex-direction: column; } }",
     "",
   ].join("\n");
 }
@@ -565,22 +768,22 @@ function renderApiMain(graph: ApplicationGraphV1): string {
     "",
     "  @Get('audit')",
     "  async audit(@Req() request: { headers: Record<string, string | string[] | undefined> }) {",
-    "    try { return applicationRuntime.auditLog(roleFrom(request)); } catch (error) { throw rejected(error); }",
+    "    try { return await applicationRuntime.auditLog(roleFrom(request)); } catch (error) { throw rejected(error); }",
     "  }",
     "",
     "  @Get(':entity')",
     "  async list(@Param('entity') entity: string, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
-    "    try { return applicationRuntime.list(roleFrom(request), entity); } catch (error) { throw rejected(error); }",
+    "    try { return await applicationRuntime.list(roleFrom(request), entity); } catch (error) { throw rejected(error); }",
     "  }",
     "",
     "  @Post(':entity')",
     "  async create(@Param('entity') entity: string, @Body() body: Record<string, unknown>, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
-    "    try { return applicationRuntime.create(roleFrom(request), entity, body); } catch (error) { throw rejected(error); }",
+    "    try { return await applicationRuntime.create(roleFrom(request), entity, body); } catch (error) { throw rejected(error); }",
     "  }",
     "",
     "  @Post(':entity/:recordId/events/:event')",
     "  async transition(@Param('entity') entity: string, @Param('recordId') recordId: string, @Param('event') event: string, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
-    "    try { return applicationRuntime.transition(roleFrom(request), entity, recordId, event); } catch (error) { throw rejected(error); }",
+    "    try { return await applicationRuntime.transition(roleFrom(request), entity, recordId, event); } catch (error) { throw rejected(error); }",
     "  }",
     "}",
     "",
@@ -589,6 +792,7 @@ function renderApiMain(graph: ApplicationGraphV1): string {
     "",
     "async function bootstrap() {",
     "  const app = await NestFactory.create(GeneratedModule);",
+    "  app.enableCors({ origin: process.env.WEB_ORIGIN?.split(',') ?? true });",
     "  await app.listen(process.env.PORT ?? 3001);",
     "}",
     "void bootstrap();",
@@ -695,23 +899,52 @@ export function generateApplicationBundle(input: PublishedGraphInput): Generated
       }, null, 2) + "\n",
     },
     {
+      path: "pnpm-workspace.yaml",
+      content: "packages:\n  - web\n  - api\n  - database\n",
+    },
+    {
       path: "web/package.json",
       content: JSON.stringify({
         name: "generated-web",
         private: true,
         scripts: { dev: "next dev --port 3000", build: "next build", start: "next start --port 3000" },
         dependencies: { next: "^15.5.0", react: "^19.0.0", "react-dom": "^19.0.0" },
+        devDependencies: { "@types/node": "^22.10.0", "@types/react": "^19.0.0", typescript: "^5.7.0" },
       }, null, 2) + "\n",
     },
     {
       path: "web/tsconfig.json",
-      content: JSON.stringify({ compilerOptions: { jsx: "preserve", strict: true, noEmit: true }, include: ["app/**/*.ts", "app/**/*.tsx"] }, null, 2) + "\n",
+      content: JSON.stringify({
+        compilerOptions: {
+          target: "ES2017",
+          lib: ["dom", "dom.iterable", "esnext"],
+          allowJs: true,
+          skipLibCheck: true,
+          strict: true,
+          noEmit: true,
+          incremental: true,
+          module: "esnext",
+          esModuleInterop: true,
+          moduleResolution: "node",
+          resolveJsonModule: true,
+          isolatedModules: true,
+          jsx: "preserve",
+          plugins: [{ name: "next" }],
+        },
+        include: ["next-env.d.ts", "app/**/*.ts", "app/**/*.tsx", ".next/types/**/*.ts"],
+        exclude: ["node_modules"],
+      }, null, 2) + "\n",
     },
+    { path: "web/next-env.d.ts", content: '/// <reference types="next" />\n/// <reference types="next/image-types/global" />\n\n// This file is generated by Factory Pilot.\n' },
     {
       path: "web/app/layout.tsx",
-      content: "import type { ReactNode } from \"react\";\n\nexport default function RootLayout({ children }: { children: ReactNode }) { return <html lang=\"en\"><body>{children}</body></html>; }\n",
+      content: "import type { ReactNode } from \"react\";\nimport \"./globals.css\";\n\nexport default function RootLayout({ children }: { children: ReactNode }) { return <html lang=\"en\"><body>{children}</body></html>; }\n",
     },
     { path: "web/app/page.tsx", content: renderWebPage(graph) },
+    { path: "web/app/application-manifest.ts", content: renderWebManifest(graph) },
+    { path: "web/app/generated-application-client.tsx", content: renderGeneratedApplicationClient() },
+    { path: "web/app/api/[...path]/route.ts", content: renderWebProxyRoute() },
+    { path: "web/app/globals.css", content: renderWebStyles() },
     {
       path: "api/package.json",
       content: JSON.stringify({
@@ -733,7 +966,7 @@ export function generateApplicationBundle(input: PublishedGraphInput): Generated
           rxjs: "^7.8.1",
           xstate: "^5.19.0",
         },
-        devDependencies: { prisma: "^6.19.0", tsx: "^4.19.0", typescript: "^5.7.0", vitest: "^2.1.0" },
+        devDependencies: { "@types/node": "^22.10.0", prisma: "^6.19.0", tsx: "^4.19.0", typescript: "^5.7.0", vitest: "^2.1.0" },
       }, null, 2) + "\n",
     },
     {
@@ -742,25 +975,36 @@ export function generateApplicationBundle(input: PublishedGraphInput): Generated
     },
     {
       path: "api/Dockerfile",
-      content: "FROM node:22-alpine\nWORKDIR /app\nCOPY package.json ./\nCOPY prisma ./prisma\nRUN npm config set fetch-retries 5 && npm install --global pnpm@9.0.0 && pnpm install && pnpm prisma generate --schema prisma/schema.prisma\nCOPY tsconfig.json ./\nCOPY src ./src\nRUN pnpm build\nCMD [\"sh\", \"-c\", \"pnpm prisma db push --schema prisma/schema.prisma && node dist/main.js\"]\n",
+      content: "FROM node:22-alpine\nWORKDIR /app\nCOPY package.json ./\nCOPY prisma ./prisma\nRUN npm config set fetch-retries 5 && npm install --global pnpm@9.0.0 && pnpm install && pnpm prisma generate --schema prisma/schema.prisma\nCOPY tsconfig.json ./\nCOPY src ./src\nRUN pnpm build\nCMD [\"node\", \"dist/main.js\"]\n",
     },
+    { path: "api/.dockerignore", content: "node_modules\ndist\n.env\n" },
     { path: "api/src/main.ts", content: renderApiMain(graph) },
     { path: "api/src/application-runtime.ts", content: renderApplicationRuntime(graph) },
     { path: "api/src/prisma-record-store.ts", content: renderPrismaRecordStore(graph) },
     { path: "api/src/policy.ts", content: renderPolicyModule(graph) },
     { path: "api/prisma/schema.prisma", content: renderPrismaSchema(graph) },
     { path: "database/prisma/schema.prisma", content: renderPrismaSchema(graph) },
+    { path: "database/prisma/migrations/0001_initial/migration.sql", content: renderInitialMigration(graph) },
     {
       path: "database/package.json",
       content: JSON.stringify({
         name: "generated-database",
         private: true,
-        scripts: { generate: "prisma generate", migrate: "prisma migrate dev", seed: "tsx prisma/seed.ts" },
+        scripts: {
+          generate: "prisma generate --schema prisma/schema.prisma",
+          "migrate:deploy": "prisma migrate deploy --schema prisma/schema.prisma",
+          seed: "tsx prisma/seed.ts",
+        },
         dependencies: { "@prisma/client": "^6.19.0" },
         devDependencies: { prisma: "^6.19.0", tsx: "^4.19.0" },
       }, null, 2) + "\n",
     },
     { path: "database/prisma/seed.ts", content: "export async function seed() { return { status: \"ready\" }; }\n" },
+    {
+      path: "database/Dockerfile",
+      content: "FROM node:22-alpine\nWORKDIR /app\nCOPY package.json ./\nCOPY prisma ./prisma\nRUN npm config set fetch-retries 5 && npm install --global pnpm@9.0.0 && pnpm install\nCMD [\"sh\", \"-c\", \"pnpm prisma migrate deploy --schema prisma/schema.prisma\"]\n",
+    },
+    { path: "database/.dockerignore", content: "node_modules\n.env\n" },
     {
       path: "api/policy/model.conf",
       content: "[request_definition]\nr = sub, obj, act\n\n[policy_definition]\np = sub, obj, act\n\n[policy_effect]\ne = some(where (p.eft == allow))\n\n[matchers]\nm = r.sub == p.sub && r.obj == p.obj && r.act == p.act\n",
@@ -775,9 +1019,14 @@ export function generateApplicationBundle(input: PublishedGraphInput): Generated
       path: "web/Dockerfile",
       content: "FROM node:22-alpine\nWORKDIR /app\nCOPY package.json ./\nRUN npm config set fetch-retries 5 && npm install --global pnpm@9.0.0 && pnpm install\nCOPY . .\nRUN pnpm build\nCMD [\"pnpm\", \"start\"]\n",
     },
+    { path: "web/.dockerignore", content: "node_modules\n.next\n.env\n" },
     {
       path: "docker-compose.yml",
-      content: "name: generated-application\n\nservices:\n  postgres:\n    image: postgres:16-alpine\n    environment:\n      POSTGRES_USER: generated\n      POSTGRES_PASSWORD: generated\n      POSTGRES_DB: generated\n    ports:\n      - \"5433:5432\"\n  api:\n    build: ./api\n    environment:\n      DATABASE_URL: postgresql://generated:generated@postgres:5432/generated\n    depends_on:\n      - postgres\n  web:\n    build: ./web\n    depends_on:\n      - api\n",
+      content: `name: \${FACTORY_COMPOSE_PROJECT_NAME:-factory-${graph.metadata.id}}\n\nservices:\n  postgres:\n    image: postgres:16-alpine\n    environment:\n      POSTGRES_USER: generated\n      POSTGRES_PASSWORD: generated\n      POSTGRES_DB: generated\n    healthcheck:\n      test: [\"CMD-SHELL\", \"pg_isready -U generated -d generated\"]\n      interval: 5s\n      timeout: 3s\n      retries: 20\n  migrate:\n    build: ./database\n    environment:\n      DATABASE_URL: postgresql://generated:generated@postgres:5432/generated\n    depends_on:\n      postgres:\n        condition: service_healthy\n  api:\n    build: ./api\n    environment:\n      DATABASE_URL: postgresql://generated:generated@postgres:5432/generated\n    ports:\n      - \"\${FACTORY_API_PORT:-3001}:3001\"\n    depends_on:\n      migrate:\n        condition: service_completed_successfully\n  web:\n    build: ./web\n    environment:\n      FACTORY_API_URL: http://api:3001\n      NEXT_PUBLIC_FACTORY_API_URL: http://localhost:\${FACTORY_API_PORT:-3001}\n    ports:\n      - \"\${FACTORY_WEB_PORT:-3000}:3000\"\n    depends_on:\n      - api\n`,
+    },
+    {
+      path: "README.md",
+      content: `# ${graph.metadata.name}\n\nThis application was compiled from the immutable Published Graph \`${plan.graphHash}\`.\n\n## Run locally\n\nChoose unique host ports for every generated application.\n\n\`\`\`sh\nFACTORY_COMPOSE_PROJECT_NAME=factory-${graph.metadata.id} FACTORY_WEB_PORT=4300 FACTORY_API_PORT=4301 docker compose up --build\n\`\`\`\n\nThe migration service must complete before the API starts. To remove this isolated local runtime and its database volume:\n\n\`\`\`sh\ndocker compose down --volumes --remove-orphans\n\`\`\`\n`,
     },
   ];
 
