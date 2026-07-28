@@ -1,17 +1,21 @@
 import { Queue, Worker } from "bullmq";
-import type { PublishedGraphInput } from "@factory/compiler";
 
-import { executeCompilation } from "./compilation-executor.js";
+import { createControlPlaneReporter } from "./control-plane-reporter.js";
 import { readWorkerConfig } from "./config.js";
+import {
+  executeQueuedCompilation,
+  type CompilationJob,
+} from "./queued-compilation.js";
 
 const config = readWorkerConfig();
 const connection = { url: config.redisUrl };
+const reporter = createControlPlaneReporter(config.controlPlaneUrl);
 
 const queue = new Queue(config.queueName, { connection });
-const worker = new Worker<PublishedGraphInput>(
+const worker = new Worker<CompilationJob>(
   config.queueName,
   async (job) => {
-    return executeCompilation(config.artifactRoot, job.data);
+    return executeQueuedCompilation(config.artifactRoot, job.data, reporter);
   },
   { connection },
 );

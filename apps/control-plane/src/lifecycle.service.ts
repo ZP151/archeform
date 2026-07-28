@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -12,6 +13,10 @@ import {
 } from "@factory/graph";
 
 import { PrismaService } from "./prisma.service.js";
+import {
+  COMPILATION_QUEUE,
+  type CompilationQueue,
+} from "./compilation-queue.js";
 
 const LOCAL_WORKSPACE_SLUG = "local-workspace";
 const LOCAL_WORKSPACE_NAME = "Local workspace";
@@ -48,6 +53,88 @@ function requiredString(record: UnknownRecord, key: string): string {
     throw new BadRequestException(`${key} must be a non-empty string.`);
   }
   return value.trim();
+}
+
+function requiredSha256(record: UnknownRecord, key: string): string {
+  const value = requiredString(record, key);
+  if (!/^sha256:[a-f0-9]{64}$/.test(value)) {
+    throw new BadRequestException(`${key} must be a SHA-256 digest.`);
+  }
+  return value;
+}
+
+function generatedRootDirectory(record: UnknownRecord): string {
+  const value = requiredString(record, "rootDirectory");
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(value)) {
+    throw new BadRequestException(
+      "rootDirectory must be a single generated application directory name.",
+    );
+  }
+  return value;
+}
+
+type ArtifactEvidence = {
+  readonly path: string;
+  readonly digest: string;
+  readonly sizeBytes: number;
+};
+
+function artifactEvidence(input: unknown): ArtifactEvidence {
+  const record = exactRecord(input, ["path", "digest", "sizeBytes"], [
+    "path",
+    "digest",
+    "sizeBytes",
+  ]);
+  const path = requiredString(record, "path");
+  if (
+    path.startsWith("/") ||
+    path.includes("\\") ||
+    path.split("/").some((segment) => segment === "" || segment === "." || segment === "..")
+  ) {
+    throw new BadRequestException("Artifact path must be a safe relative path.");
+  }
+  const sizeBytes = record.sizeBytes;
+  if (
+    typeof sizeBytes !== "number" ||
+    !Number.isSafeInteger(sizeBytes) ||
+    sizeBytes < 0
+  ) {
+    throw new BadRequestException("Artifact sizeBytes must be a non-negative integer.");
+  }
+  return { path, digest: requiredSha256(record, "digest"), sizeBytes };
+}
+
+function completionEvidence(input: unknown): {
+  readonly graphHash: string;
+  readonly rootDirectory: string;
+  readonly artifacts: readonly ArtifactEvidence[];
+} {
+  const body = exactRecord(input, ["graphHash", "rootDirectory", "artifacts"], [
+    "graphHash",
+    "rootDirectory",
+    "artifacts",
+  ]);
+  if (!Array.isArray(body.artifacts)) {
+    throw new BadRequestException("artifacts must be an array.");
+  }
+  const artifacts = body.artifacts.map(artifactEvidence);
+  if (new Set(artifacts.map((artifact) => artifact.path)).size !== artifacts.length) {
+    throw new BadRequestException("Artifact paths must be unique.");
+  }
+  return {
+    graphHash: requiredSha256(body, "graphHash"),
+    rootDirectory: generatedRootDirectory(body),
+    artifacts,
+  };
+}
+
+function queuedCompilation(result: unknown): boolean {
+  return (
+    !!result &&
+    typeof result === "object" &&
+    !Array.isArray(result) &&
+    (result as UnknownRecord).status === "queued"
+  );
 }
 
 function jsonValue(value: unknown, key: string): Prisma.InputJsonValue {
@@ -88,7 +175,11 @@ function assertGraphIdentity(
 
 @Injectable()
 export class LifecycleService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(COMPILATION_QUEUE)
+    private readonly compilationQueue: CompilationQueue,
+  ) {}
 
   async createLocalApplicationGraph(input: unknown) {
     const body = exactRecord(input, ["graph"], ["graph"]);
@@ -203,29 +294,75 @@ export class LifecycleService {
   async createCompilation(input: unknown) {
     const body = exactRecord(
       input,
-      ["publishedRevisionId", "target", "compilerVersion", "result"],
-      ["publishedRevisionId", "target", "compilerVersion", "result"],
+      ["publishedRevisionId", "target", "compilerVersion"],
+      ["publishedRevisionId", "target", "compilerVersion"],
     );
     const publishedRevisionId = requiredString(body, "publishedRevisionId");
     const target = requiredString(body, "target");
     const compilerVersion = requiredString(body, "compilerVersion");
-    const result = jsonValue(body.result, "result");
     const published = await this.prisma.publishedRevision.findUnique({
       where: { id: publishedRevisionId },
     });
     if (!published)
       throw new NotFoundException("Published revision was not found.");
+    const { graph, graphHash } = validatedGraph(published.graph);
+    if (graphHash !== published.graphHash) {
+      throw new ConflictException(
+        "Published Revision Graph hash does not match its stored hash.",
+      );
+    }
     const compilationCount = await this.prisma.compilation.count({
       where: { publishedRevisionId },
     });
-    return this.prisma.compilation.create({
+    const compilation = await this.prisma.compilation.create({
       data: {
         publishedRevisionId,
         sequence: compilationCount + 1,
         target,
         inputGraphHash: published.graphHash,
         compilerVersion,
-        result,
+        result: jsonValue({ status: "queued" }, "result"),
+      },
+    });
+    await this.compilationQueue.enqueue({
+      compilationId: compilation.id,
+      publishedRevisionId,
+      target,
+      compilerVersion,
+      graph,
+    });
+    return compilation;
+  }
+
+  async completeCompilation(compilationId: string, input: unknown) {
+    const evidence = completionEvidence(input);
+    const compilation = await this.prisma.compilation.findUnique({
+      where: { id: compilationId },
+    });
+    if (!compilation) throw new NotFoundException("Compilation was not found.");
+    if (!queuedCompilation(compilation.result)) {
+      throw new ConflictException("Compilation is no longer awaiting Worker evidence.");
+    }
+    if (compilation.inputGraphHash !== evidence.graphHash) {
+      throw new ConflictException(
+        "Worker evidence Graph hash does not match the Compilation input.",
+      );
+    }
+    await this.prisma.artifact.createMany({
+      data: evidence.artifacts.map((artifact) => ({
+        compilationId,
+        kind: "generated-file",
+        path: artifact.path,
+        digest: artifact.digest,
+        mediaType: "application/vnd.factory.generated-file",
+        sizeBytes: artifact.sizeBytes,
+        metadata: { rootDirectory: evidence.rootDirectory },
+      })),
+    });
+    return this.prisma.compilation.update({
+      where: { id: compilationId },
+      data: {
+        result: { status: "succeeded", artifactCount: evidence.artifacts.length },
       },
     });
   }

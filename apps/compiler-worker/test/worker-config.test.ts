@@ -8,6 +8,7 @@ describe("worker configuration", () => {
       redisUrl: "redis://localhost:6379",
       queueName: "factory-compilations",
       artifactRoot: "generated",
+      controlPlaneUrl: "http://localhost:3000",
     });
   });
 
@@ -17,11 +18,13 @@ describe("worker configuration", () => {
         REDIS_URL: "redis://redis:6379/2",
         FACTORY_COMPILATION_QUEUE: "integration-compilations",
         FACTORY_ARTIFACT_ROOT: "C:/artifacts",
+        FACTORY_CONTROL_PLANE_URL: "http://control-plane:3000",
       }),
     ).toEqual({
       redisUrl: "redis://redis:6379/2",
       queueName: "integration-compilations",
       artifactRoot: "C:/artifacts",
+      controlPlaneUrl: "http://control-plane:3000",
     });
   });
 });

@@ -21,7 +21,13 @@ function prismaMock() {
       findMany: vi.fn(),
       findUnique: vi.fn(),
     },
-    compilation: { count: vi.fn(), create: vi.fn() },
+    compilation: {
+      count: vi.fn(),
+      create: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
+    },
+    artifact: { createMany: vi.fn() },
   };
 }
 
@@ -53,10 +59,15 @@ const draftRevision = {
 describe("LifecycleService", () => {
   let prisma: ReturnType<typeof prismaMock>;
   let service: LifecycleService;
+  let queue: { enqueue: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     prisma = prismaMock();
-    service = new LifecycleService(prisma as unknown as PrismaService);
+    queue = { enqueue: vi.fn() };
+    service = new (LifecycleService as unknown as new (
+      prismaService: PrismaService,
+      compilationQueue: typeof queue,
+    ) => LifecycleService)(prisma as unknown as PrismaService, queue);
   });
 
   it("creates the local workspace, graph aggregate, and first draft revision", async () => {
@@ -243,33 +254,100 @@ describe("LifecycleService", () => {
     });
   });
 
-  it("creates a compilation from a PublishedRevision and never a DraftRevision", async () => {
+  it("rejects a client supplied compilation result", async () => {
+    await expect(
+      service.createCompilation({
+        publishedRevisionId: "published-1",
+        target: "application-bundle",
+        compilerVersion: "0.1.0",
+        result: { status: "succeeded" },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.compilation.create).not.toHaveBeenCalled();
+  });
+
+  it("queues a validated Published Graph and never accepts a client supplied result", async () => {
     prisma.publishedRevision.findUnique.mockResolvedValue({
       id: "published-1",
+      graph: localApplicationGraph,
       graphHash:
         "sha256:762e834186c8fec51569cc8fe690f4ca90219c6f5b179fa6121bb73867c268fb",
     });
     prisma.compilation.count.mockResolvedValue(0);
     prisma.compilation.create.mockResolvedValue({ id: "compilation-1" });
+    queue.enqueue.mockResolvedValue(undefined);
 
     await expect(
       service.createCompilation({
         publishedRevisionId: "published-1",
-        target: "simulator",
+        target: "application-bundle",
         compilerVersion: "0.1.0",
-        result: { status: "succeeded" },
       }),
     ).resolves.toEqual({ id: "compilation-1" });
+
     expect(prisma.compilation.create).toHaveBeenCalledWith({
       data: {
         publishedRevisionId: "published-1",
         sequence: 1,
-        target: "simulator",
+        target: "application-bundle",
         inputGraphHash:
           "sha256:762e834186c8fec51569cc8fe690f4ca90219c6f5b179fa6121bb73867c268fb",
         compilerVersion: "0.1.0",
-        result: { status: "succeeded" },
+        result: { status: "queued" },
       },
+    });
+    expect(queue.enqueue).toHaveBeenCalledWith({
+      compilationId: "compilation-1",
+      publishedRevisionId: "published-1",
+      target: "application-bundle",
+      compilerVersion: "0.1.0",
+      graph: localApplicationGraph,
+    });
+  });
+
+  it("records matching Worker artifact evidence without storing the Graph", async () => {
+    prisma.compilation.findUnique.mockResolvedValue({
+      id: "compilation-1",
+      inputGraphHash:
+        "sha256:762e834186c8fec51569cc8fe690f4ca90219c6f5b179fa6121bb73867c268fb",
+      result: { status: "queued" },
+    });
+    prisma.artifact.createMany.mockResolvedValue({ count: 1 });
+    prisma.compilation.update.mockResolvedValue({ id: "compilation-1" });
+
+    await expect(
+      service.completeCompilation("compilation-1", {
+        graphHash:
+          "sha256:762e834186c8fec51569cc8fe690f4ca90219c6f5b179fa6121bb73867c268fb",
+        rootDirectory: "expense-approval-published-1",
+        artifacts: [
+          {
+            path: "api/src/main.ts",
+            digest:
+              "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            sizeBytes: 48,
+          },
+        ],
+      }),
+    ).resolves.toEqual({ id: "compilation-1" });
+
+    expect(prisma.artifact.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          compilationId: "compilation-1",
+          kind: "generated-file",
+          path: "api/src/main.ts",
+          digest:
+            "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          mediaType: "application/vnd.factory.generated-file",
+          sizeBytes: 48,
+          metadata: { rootDirectory: "expense-approval-published-1" },
+        },
+      ],
+    });
+    expect(prisma.compilation.update).toHaveBeenCalledWith({
+      where: { id: "compilation-1" },
+      data: { result: { status: "succeeded", artifactCount: 1 } },
     });
   });
 
@@ -293,9 +371,8 @@ describe("LifecycleService", () => {
     await expect(
       service.createCompilation({
         publishedRevisionId: "missing-published",
-        target: "simulator",
+        target: "application-bundle",
         compilerVersion: "0.1.0",
-        result: {},
       }),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.compilation.create).not.toHaveBeenCalled();

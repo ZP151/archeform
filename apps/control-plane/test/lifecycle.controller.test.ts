@@ -16,6 +16,7 @@ import { LifecycleService } from "../src/lifecycle.service.js";
 
 const lifecycle = {
   appendDraftRevision: vi.fn(),
+  completeCompilation: vi.fn(),
   createCompilation: vi.fn(),
   createLocalApplicationGraph: vi.fn(),
   getDraft: vi.fn(),
@@ -91,17 +92,36 @@ describe("LifecycleController", () => {
       path: "/compilations",
       body: {
         publishedRevisionId: "published-1",
-        target: "simulator",
+        target: "application-bundle",
         compilerVersion: "0.1.0",
-        result: { status: "succeeded" },
       },
       handler: lifecycle.createCompilation,
       arguments: [
         {
           publishedRevisionId: "published-1",
-          target: "simulator",
+          target: "application-bundle",
           compilerVersion: "0.1.0",
-          result: { status: "succeeded" },
+        },
+      ],
+      response: { id: "compilation-1" },
+    },
+    {
+      method: "POST",
+      path: "/internal/compilations/compilation-1/complete",
+      body: {
+        graphHash:
+          "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        rootDirectory: "expense-approval-published-1",
+        artifacts: [],
+      },
+      handler: lifecycle.completeCompilation,
+      arguments: [
+        "compilation-1",
+        {
+          graphHash:
+            "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          rootDirectory: "expense-approval-published-1",
+          artifacts: [],
         },
       ],
       response: { id: "compilation-1" },

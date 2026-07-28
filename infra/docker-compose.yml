@@ -33,9 +33,12 @@ services:
       dockerfile: apps/control-plane/Dockerfile
     environment:
       DATABASE_URL: postgresql://factory:factory@postgres:5432/factory_pilot?schema=public
+      REDIS_URL: redis://redis:6379
       PORT: 3000
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     ports:
       - "3000:3000"
@@ -47,9 +50,12 @@ services:
     environment:
       REDIS_URL: redis://redis:6379
       FACTORY_ARTIFACT_ROOT: /artifacts
+      FACTORY_CONTROL_PLANE_URL: http://control-plane:3000
     depends_on:
       redis:
         condition: service_healthy
+      control-plane:
+        condition: service_started
     volumes:
       - factory-artifacts:/artifacts
 
