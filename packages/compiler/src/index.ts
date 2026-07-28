@@ -19,7 +19,6 @@ export interface CompilationTarget {
   readonly label: string;
   readonly description: string;
 }
-
 export const compilationTargets: readonly CompilationTarget[] = Object.freeze([
   { key: "simulator", label: "Role simulator", description: "Browser-only seed scenario simulator." },
   { key: "next-web", label: "Next.js web", description: "Standalone customer and operator web application." },
@@ -111,6 +110,15 @@ function toPascalCase(value: string): string {
     .join("");
 }
 
+function toCamelCase(value: string): string {
+  const pascal = toPascalCase(value);
+  return pascal ? `${pascal[0]!.toLowerCase()}${pascal.slice(1)}` : pascal;
+}
+
+function pluralize(value: string): string {
+  return value.endsWith("s") ? `${value}es` : `${value}s`;
+}
+
 function prismaType(type: ApplicationGraphV1["domain"]["entities"][number]["fields"][number]["type"]): string {
   switch (type) {
     case "integer": return "Int";
@@ -124,17 +132,65 @@ function prismaType(type: ApplicationGraphV1["domain"]["entities"][number]["fiel
 }
 
 function renderPrismaSchema(graph: ApplicationGraphV1): string {
+  const relationFields = (entityKey: string): readonly string[] =>
+    graph.domain.relations.flatMap((relation) => {
+      const relationName = `${toPascalCase(relation.from)}To${toPascalCase(relation.to)}`;
+      const fromModel = toPascalCase(relation.from);
+      const toModel = toPascalCase(relation.to);
+      const fromField = toCamelCase(relation.from);
+      const toField = toCamelCase(relation.to);
+
+      if (relation.kind === "many-to-many") {
+        if (entityKey === relation.from) {
+          return [
+            `  ${pluralize(toField)} ${toModel}[] @relation("${relationName}")`,
+          ];
+        }
+        if (entityKey === relation.to) {
+          return [
+            `  ${pluralize(fromField)} ${fromModel}[] @relation("${relationName}")`,
+          ];
+        }
+        return [];
+      }
+
+      const sourceIsOne =
+        relation.kind === "one-to-many" || relation.kind === "one-to-one";
+      const oneKey = sourceIsOne ? relation.from : relation.to;
+      const manyKey = sourceIsOne ? relation.to : relation.from;
+      const oneModel = toPascalCase(oneKey);
+      const manyModel = toPascalCase(manyKey);
+      const oneField = toCamelCase(oneKey);
+      const manyField = toCamelCase(manyKey);
+      const oneToOne = relation.kind === "one-to-one";
+
+      if (entityKey === oneKey) {
+        return [
+          `  ${oneToOne ? manyField : pluralize(manyField)} ${manyModel}${oneToOne ? "?" : "[]"} @relation("${relationName}")`,
+        ];
+      }
+      if (entityKey === manyKey) {
+        return [
+          `  ${oneField}Id String${oneToOne ? " @unique" : ""}`,
+          `  ${oneField} ${oneModel} @relation("${relationName}", fields: [${oneField}Id], references: [id])`,
+        ];
+      }
+      return [];
+    });
   const models = graph.domain.entities.map((entity) => {
     const fields = entity.fields.map((field) => {
       const optional = field.required ? "" : "?";
       const unique = field.unique ? " @unique" : "";
       return `  ${field.key} ${prismaType(field.type)}${optional}${unique}`;
     });
-    const indexes = entity.indexes.map((index) => `  @@index([${index.fields.join(", ")}])`);
+    const indexes = entity.indexes.map(
+      (index) => `  @@index([${index.fields.join(", ")}])`,
+    );
     return [
       `model ${toPascalCase(entity.key)} {`,
       "  id String @id @default(cuid())",
       ...fields,
+      ...relationFields(entity.key),
       "  createdAt DateTime @default(now())",
       "  updatedAt DateTime @updatedAt",
       ...indexes,
@@ -142,11 +198,26 @@ function renderPrismaSchema(graph: ApplicationGraphV1): string {
     ].join("\n");
   });
   return [
-    'generator client { provider = "prisma-client-js" }',
+    "generator client {",
+    '  provider = "prisma-client-js"',
+    "}",
     "",
-    'datasource db { provider = "postgresql"; url = env("DATABASE_URL") }',
+    "datasource db {",
+    '  provider = "postgresql"',
+    '  url = env("DATABASE_URL")',
+    "}",
     "",
     ...models,
+    "",
+    "model AuditEvent {",
+    "  id String @id @default(cuid())",
+    "  actor String",
+    "  action String",
+    "  entity String",
+    "  recordId String",
+    "  at DateTime @default(now())",
+    "  @@index([entity, recordId])",
+    "}",
     "",
   ].join("\n");
 }
@@ -243,8 +314,48 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
   return [
     'import { enforce } from "./policy.js";',
     "",
-    "type StoredRecord = Record<string, unknown> & { id: string; status?: string };",
-    "type AuditEvent = { actor: string; action: string; entity: string; recordId: string; at: string };",
+    "export type StoredRecord = Record<string, unknown> & { id: string; status?: string };",
+    "export type AuditEvent = { actor: string; action: string; entity: string; recordId: string; at: string };",
+    "export interface RecordStore {",
+    "  list(entityKey: string): Promise<readonly StoredRecord[]>;",
+    "  find(entityKey: string, recordId: string): Promise<StoredRecord | undefined>;",
+    "  create(entityKey: string, input: Record<string, unknown>): Promise<StoredRecord>;",
+    "  update(entityKey: string, recordId: string, input: Record<string, unknown>): Promise<StoredRecord>;",
+    "  appendAudit(event: AuditEvent): Promise<void>;",
+    "  listAudit(): Promise<readonly AuditEvent[]>;",
+    "}",
+    "",
+    "export class InMemoryRecordStore implements RecordStore {",
+    "  private readonly records = new Map<string, Map<string, StoredRecord>>();",
+    "  private readonly auditEvents: AuditEvent[] = [];",
+    "",
+    "  private collection(entityKey: string): Map<string, StoredRecord> {",
+    "    let collection = this.records.get(entityKey);",
+    "    if (!collection) {",
+    "      collection = new Map<string, StoredRecord>();",
+    "      this.records.set(entityKey, collection);",
+    "    }",
+    "    return collection;",
+    "  }",
+    "",
+    "  async list(entityKey: string): Promise<readonly StoredRecord[]> { return [...this.collection(entityKey).values()]; }",
+    "  async find(entityKey: string, recordId: string): Promise<StoredRecord | undefined> { return this.collection(entityKey).get(recordId); }",
+    "  async create(entityKey: string, input: Record<string, unknown>): Promise<StoredRecord> {",
+    "    const collection = this.collection(entityKey);",
+    "    const record: StoredRecord = { id: `${entityKey}-${collection.size + 1}`, ...input };",
+    "    collection.set(record.id, record);",
+    "    return record;",
+    "  }",
+    "  async update(entityKey: string, recordId: string, input: Record<string, unknown>): Promise<StoredRecord> {",
+    "    const record = await this.find(entityKey, recordId);",
+    "    if (!record) throw new Error(`Record '${recordId}' was not found.`);",
+    "    Object.assign(record, input);",
+    "    this.collection(entityKey).set(recordId, record);",
+    "    return record;",
+    "  }",
+    "  async appendAudit(event: AuditEvent): Promise<void> { this.auditEvents.push(event); }",
+    "  async listAudit(): Promise<readonly AuditEvent[]> { return [...this.auditEvents]; }",
+    "}",
     "type RuntimeDefinition = {",
     "  entities: readonly { key: string; fields: readonly { key: string; required: boolean }[] }[];",
     "  permissions: readonly { role: string; resource: string; actions: readonly string[] }[];",
@@ -260,8 +371,7 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     `const definition: RuntimeDefinition = ${JSON.stringify(runtimeDefinition(graph), null, 2)};`,
     "",
     "export class ApplicationRuntime {",
-    "  private readonly records = new Map<string, Map<string, StoredRecord>>();",
-    "  private readonly auditEvents: AuditEvent[] = [];",
+    "  constructor(private readonly store: RecordStore = new InMemoryRecordStore()) {}",
     "",
     "  private entity(entityKey: string) {",
     "    const entity = definition.entities.find((candidate) => candidate.key === entityKey);",
@@ -271,15 +381,6 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "",
     "  private flow(entityKey: string) {",
     "    return definition.flows.find((candidate) => candidate.entity === entityKey);",
-    "  }",
-    "",
-    "  private collection(entityKey: string): Map<string, StoredRecord> {",
-    "    let collection = this.records.get(entityKey);",
-    "    if (!collection) {",
-    "      collection = new Map<string, StoredRecord>();",
-    "      this.records.set(entityKey, collection);",
-    "    }",
-    "    return collection;",
     "  }",
     "",
     "  private async assertAllowed(role: string, entityKey: string, action: string): Promise<void> {",
@@ -296,7 +397,7 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "  async list(role: string, entityKey: string): Promise<readonly StoredRecord[]> {",
     "    this.entity(entityKey);",
     "    await this.assertAllowed(role, entityKey, 'read');",
-    "    return [...this.collection(entityKey).values()];",
+    "    return this.store.list(entityKey);",
     "  }",
     "",
     "  async create(role: string, entityKey: string, input: Record<string, unknown>): Promise<StoredRecord> {",
@@ -313,14 +414,8 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "        throw new Error(`Required field '${field.key}' is missing.`);",
     "      }",
     "    }",
-    "    const collection = this.collection(entityKey);",
-    "    const record: StoredRecord = {",
-    "      id: `${entityKey}-${collection.size + 1}`,",
-    "      ...input,",
-    "      ...(flow ? { status: flow.initialState } : {}),",
-    "    };",
-    "    collection.set(record.id, record);",
-    "    this.auditEvents.push({ actor: role, action: 'create', entity: entityKey, recordId: record.id, at: new Date().toISOString() });",
+    "    const record = await this.store.create(entityKey, { ...input, ...(flow ? { status: flow.initialState } : {}) });",
+    "    await this.store.appendAudit({ actor: role, action: 'create', entity: entityKey, recordId: record.id, at: new Date().toISOString() });",
     "    return record;",
     "  }",
     "",
@@ -328,7 +423,7 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "    this.entity(entityKey);",
     "    const flow = this.flow(entityKey);",
     "    if (!flow) throw new Error(`Entity '${entityKey}' has no declared flow.`);",
-    "    const record = this.collection(entityKey).get(recordId);",
+    "    const record = await this.store.find(entityKey, recordId);",
     "    if (!record) throw new Error(`Record '${recordId}' was not found.`);",
     "    const transition = flow.transitions.find((candidate) => candidate.from === record.status && candidate.event === event);",
     "    if (!transition) throw new Error(`Event '${event}' is not valid from '${record.status}'.`);",
@@ -337,9 +432,9 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "    }",
     "    if (transition.roles?.length) await this.assertTransitionAllowed(role, entityKey, event);",
     "    else await this.assertAllowed(role, entityKey, 'read');",
-    "    record.status = transition.to;",
-    "    this.auditEvents.push({ actor: role, action: event, entity: entityKey, recordId, at: new Date().toISOString() });",
-    "    return record;",
+    "    const updated = await this.store.update(entityKey, recordId, { status: transition.to });",
+    "    await this.store.appendAudit({ actor: role, action: event, entity: entityKey, recordId, at: new Date().toISOString() });",
+    "    return updated;",
     "  }",
     "",
     "  async auditLog(role: string): Promise<readonly AuditEvent[]> {",
@@ -347,11 +442,82 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "      permission.role === role && permission.actions.includes('audit'),",
     "    );",
     "    if (!permitted) throw new Error(`Role '${role}' cannot read audit evidence.`);",
-    "    return [...this.auditEvents];",
+    "    return this.store.listAudit();",
     "  }",
     "}",
     "",
     "export const applicationRuntime = new ApplicationRuntime();",
+    "",
+  ].join("\n");
+}
+
+function renderPrismaRecordStore(graph: ApplicationGraphV1): string {
+  const delegates = Object.fromEntries(
+    graph.domain.entities.map((entity) => [
+      entity.key,
+      toCamelCase(entity.key),
+    ]),
+  );
+  return [
+    'import { PrismaClient } from "@prisma/client";',
+    'import type { AuditEvent, RecordStore, StoredRecord } from "./application-runtime.js";',
+    "",
+    "type CrudDelegate = {",
+    "  findMany(): Promise<unknown[]>;",
+    "  findUnique(input: { where: { id: string } }): Promise<unknown | null>;",
+    "  create(input: { data: Record<string, unknown> }): Promise<unknown>;",
+    "  update(input: { where: { id: string }; data: Record<string, unknown> }): Promise<unknown>;",
+    "};",
+    "type AuditDelegate = {",
+    "  create(input: { data: Record<string, unknown> }): Promise<unknown>;",
+    "  findMany(input: { orderBy: { at: 'asc' } }): Promise<unknown[]>;",
+    "};",
+    `const delegates: Readonly<Record<string, string>> = ${JSON.stringify(delegates, null, 2)};`,
+    "",
+    "function asStoredRecord(value: unknown): StoredRecord { return value as StoredRecord; }",
+    "",
+    "export class PrismaRecordStore implements RecordStore {",
+    "  constructor(private readonly prisma: PrismaClient) {}",
+    "",
+    "  private delegate(entityKey: string): CrudDelegate {",
+    "    const delegateKey = delegates[entityKey];",
+    "    if (!delegateKey) throw new Error(`Unknown persisted entity '${entityKey}'.`);",
+    "    const client = this.prisma as unknown as Record<string, CrudDelegate>;",
+    "    return client[delegateKey]!;",
+    "  }",
+    "",
+    "  private auditDelegate(): AuditDelegate {",
+    "    return (this.prisma as unknown as { auditEvent: AuditDelegate }).auditEvent;",
+    "  }",
+    "",
+    "  async list(entityKey: string): Promise<readonly StoredRecord[]> {",
+    "    return (await this.delegate(entityKey).findMany()).map(asStoredRecord);",
+    "  }",
+    "",
+    "  async find(entityKey: string, recordId: string): Promise<StoredRecord | undefined> {",
+    "    const record = await this.delegate(entityKey).findUnique({ where: { id: recordId } });",
+    "    return record ? asStoredRecord(record) : undefined;",
+    "  }",
+    "",
+    "  async create(entityKey: string, input: Record<string, unknown>): Promise<StoredRecord> {",
+    "    return asStoredRecord(await this.delegate(entityKey).create({ data: input }));",
+    "  }",
+    "",
+    "  async update(entityKey: string, recordId: string, input: Record<string, unknown>): Promise<StoredRecord> {",
+    "    return asStoredRecord(await this.delegate(entityKey).update({ where: { id: recordId }, data: input }));",
+    "  }",
+    "",
+    "  async appendAudit(event: AuditEvent): Promise<void> {",
+    "    await this.auditDelegate().create({ data: { ...event, at: new Date(event.at) } });",
+    "  }",
+    "",
+    "  async listAudit(): Promise<readonly AuditEvent[]> {",
+    "    return (await this.auditDelegate().findMany({ orderBy: { at: 'asc' } })).map((entry) => {",
+    "      const event = entry as Omit<AuditEvent, 'at'> & { at: Date };",
+    "      return { ...event, at: event.at.toISOString() };",
+    "    });",
+    "  }",
+    "}",
     "",
   ].join("\n");
 }
@@ -377,7 +543,12 @@ function renderApiMain(graph: ApplicationGraphV1): string {
   return [
     'import { Body, Controller, Get, HttpException, HttpStatus, Module, Param, Post, Req } from "@nestjs/common";',
     'import { NestFactory } from "@nestjs/core";',
-    'import { applicationRuntime } from "./application-runtime.js";',
+    'import { PrismaClient } from "@prisma/client";',
+    'import { ApplicationRuntime } from "./application-runtime.js";',
+    'import { PrismaRecordStore } from "./prisma-record-store.js";',
+    "",
+    "const prisma = new PrismaClient();",
+    "const applicationRuntime = new ApplicationRuntime(new PrismaRecordStore(prisma));",
     "",
     "function roleFrom(request: { headers: Record<string, string | string[] | undefined> }): string {",
     "  const value = request.headers['x-factory-role'];",
@@ -553,6 +724,7 @@ export function generateApplicationBundle(input: PublishedGraphInput): Generated
           test: "vitest run",
         },
         dependencies: {
+          "@prisma/client": "^6.19.0",
           "@nestjs/common": "^10.4.0",
           "@nestjs/core": "^10.4.0",
           "@nestjs/platform-express": "^10.4.0",
@@ -561,7 +733,7 @@ export function generateApplicationBundle(input: PublishedGraphInput): Generated
           rxjs: "^7.8.1",
           xstate: "^5.19.0",
         },
-        devDependencies: { tsx: "^4.19.0", typescript: "^5.7.0", vitest: "^2.1.0" },
+        devDependencies: { prisma: "^6.19.0", tsx: "^4.19.0", typescript: "^5.7.0", vitest: "^2.1.0" },
       }, null, 2) + "\n",
     },
     {
@@ -570,11 +742,13 @@ export function generateApplicationBundle(input: PublishedGraphInput): Generated
     },
     {
       path: "api/Dockerfile",
-      content: "FROM node:22-alpine\nWORKDIR /app\nCOPY package.json ./\nRUN npm config set fetch-retries 5 && npm install --global pnpm@9.0.0 && pnpm install\nCOPY . .\nRUN pnpm build\nCMD [\"node\", \"dist/main.js\"]\n",
+      content: "FROM node:22-alpine\nWORKDIR /app\nCOPY package.json ./\nCOPY prisma ./prisma\nRUN npm config set fetch-retries 5 && npm install --global pnpm@9.0.0 && pnpm install && pnpm prisma generate --schema prisma/schema.prisma\nCOPY tsconfig.json ./\nCOPY src ./src\nRUN pnpm build\nCMD [\"sh\", \"-c\", \"pnpm prisma db push --schema prisma/schema.prisma && node dist/main.js\"]\n",
     },
     { path: "api/src/main.ts", content: renderApiMain(graph) },
     { path: "api/src/application-runtime.ts", content: renderApplicationRuntime(graph) },
+    { path: "api/src/prisma-record-store.ts", content: renderPrismaRecordStore(graph) },
     { path: "api/src/policy.ts", content: renderPolicyModule(graph) },
+    { path: "api/prisma/schema.prisma", content: renderPrismaSchema(graph) },
     { path: "database/prisma/schema.prisma", content: renderPrismaSchema(graph) },
     {
       path: "database/package.json",

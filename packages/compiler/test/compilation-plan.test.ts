@@ -77,6 +77,31 @@ describe("compilation target registry", () => {
     expect(generateApplicationBundle(publishedExpense)).toEqual(bundle);
   });
 
+  it("compiles declared DomainModel relations into Prisma relation fields", () => {
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "published-relations-1",
+        graph: {
+          ...publishedExpense.graph,
+          domain: {
+            entities: [
+              { key: "order", label: "Order", fields: [], indexes: [] },
+              { key: "menu-item", label: "Menu item", fields: [], indexes: [] },
+            ],
+            relations: [{ from: "order", to: "menu-item", kind: "many-to-many" }],
+          },
+        },
+      }).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(files["api/prisma/schema.prisma"]).toContain(
+      'menuItems MenuItem[] @relation("OrderToMenuItem")',
+    );
+    expect(files["api/prisma/schema.prisma"]).toContain(
+      'orders Order[] @relation("OrderToMenuItem")',
+    );
+  });
+
   it("generates a role-guarded record runtime, XState machines, and an executable journey", () => {
     const input: PublishedGraphInput = {
       publishedRevisionId: "published-expense-runtime-1",
@@ -153,10 +178,14 @@ describe("compilation target registry", () => {
     );
     expect(files["api/src/policy.ts"]).toContain("newEnforcer");
     expect(files["api/src/flows/machines.ts"]).toContain("createMachine");
+    expect(files["api/src/prisma-record-store.ts"]).toContain("PrismaClient");
+    expect(files["api/prisma/schema.prisma"]).toContain("model Expense");
+    expect(files["api/src/main.ts"]).toContain("PrismaRecordStore");
     expect(files["api/src/main.ts"]).toContain('@Controller("api")');
     expect(files["api/test/journey.generated.test.ts"]).toContain(
       "applicationRuntime.create",
     );
     expect(files["api/package.json"]).toContain("vitest");
+    expect(files["api/package.json"]).toContain("@prisma/client");
   });
 });
