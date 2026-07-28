@@ -28,6 +28,22 @@ const proposalPayloadSchema = z.object({
   testSuggestions: z.array(testSuggestionSchema).max(25),
 });
 
+const structuredOperationSchema = z.object({
+  op: z.enum(["add", "replace", "remove"]),
+  path: z.string().min(1).startsWith("/"),
+  valueJson: z.string().max(50_000).nullable(),
+});
+
+const structuredProposalPayloadSchema = z.object({
+  diff: z.object({
+    apiVersion: z.literal("factory.graph-diff/v1"),
+    baseGraphHash: z.string().regex(/^sha256:[a-f0-9]{64}$/).nullable(),
+    operations: z.array(structuredOperationSchema).min(1).max(100),
+  }),
+  impact: impactSchema,
+  testSuggestions: z.array(testSuggestionSchema).max(25),
+});
+
 export type GraphProposal = z.infer<typeof proposalPayloadSchema>;
 
 export type GraphProposalRequest = {
@@ -103,10 +119,15 @@ const graphProposalJsonSchema: Record<string, unknown> = {
     diff: {
       type: "object",
       additionalProperties: false,
-      required: ["apiVersion", "operations"],
+      required: ["apiVersion", "baseGraphHash", "operations"],
       properties: {
         apiVersion: { const: "factory.graph-diff/v1" },
-        baseGraphHash: { type: "string", pattern: "^sha256:[a-f0-9]{64}$" },
+        baseGraphHash: {
+          anyOf: [
+            { type: "string", pattern: "^sha256:[a-f0-9]{64}$" },
+            { type: "null" },
+          ],
+        },
         operations: {
           type: "array",
           minItems: 1,
@@ -114,11 +135,16 @@ const graphProposalJsonSchema: Record<string, unknown> = {
           items: {
             type: "object",
             additionalProperties: false,
-            required: ["op", "path"],
+            required: ["op", "path", "valueJson"],
             properties: {
               op: { enum: ["add", "replace", "remove"] },
               path: { type: "string", pattern: "^/" },
-              value: {},
+              valueJson: {
+                anyOf: [
+                  { type: "string" },
+                  { type: "null" },
+                ],
+              },
             },
           },
         },
@@ -158,6 +184,8 @@ const proposalInstructions = [
   "Return only a JSON object matching the provided schema.",
   "Propose a narrowly scoped factory.graph-diff/v1. Never modify metadata.id or metadata.workspaceId.",
   "Use RFC 6901 JSON Pointer paths against the supplied Graph and make the fewest operations possible.",
+  "Every output object property is required. Use null for baseGraphHash unless it exactly matches the supplied Graph. Use null valueJson only for remove operations.",
+  "For add and replace operations, valueJson must be a JSON-encoded value, not a nested JSON object.",
   "If adding a domain field, add exactly one complete field object at /domain/entities/<matching entity index>/fields/- with key, type, and required. The only field types are string, text, integer, decimal, boolean, date, datetime, enum, json, url, and email. Include values only for enum fields.",
   "Do not infer a field, entity, role, event, capability, or provider that is not required by the user request. Do not include baseGraphHash unless it exactly matches the supplied Graph.",
   "Do not propose package names, filesystem paths, URLs, executable code, credentials, or arbitrary runtime configuration.",
@@ -249,7 +277,9 @@ export class FixtureGraphProposalProvider implements GraphProposalProvider {
 
 function validateProposal(graph: ApplicationGraphV1, candidate: unknown): GraphProposal {
   try {
-    const proposal = typeof candidate === "string" ? proposalPayloadSchema.parse(JSON.parse(candidate)) : proposalPayloadSchema.parse(candidate);
+    const proposal = typeof candidate === "string"
+      ? parseStructuredProposal(JSON.parse(candidate))
+      : proposalPayloadSchema.parse(candidate);
     // This performs base-hash, path boundary, schema, and cross-model semantic
     // validation without retaining the resulting Draft or any model text.
     applyGraphDiffToDraft(createDraftRevision(graph, "proposal-validation"), proposal.diff);
@@ -257,6 +287,36 @@ function validateProposal(graph: ApplicationGraphV1, candidate: unknown): GraphP
   } catch {
     throw new GraphProposalError("AI proposal failed Factory Application Graph validation.", "proposal_invalid");
   }
+}
+
+function parseStructuredProposal(candidate: unknown): GraphProposal {
+  const structured = structuredProposalPayloadSchema.parse(candidate);
+  const operations = structured.diff.operations.map((operation) => {
+    if (operation.op === "remove") {
+      if (operation.valueJson !== null) {
+        throw new GraphProposalError("AI proposal failed Factory Application Graph validation.", "proposal_invalid");
+      }
+      return { op: operation.op, path: operation.path };
+    }
+    if (operation.valueJson === null) {
+      throw new GraphProposalError("AI proposal failed Factory Application Graph validation.", "proposal_invalid");
+    }
+    return {
+      op: operation.op,
+      path: operation.path,
+      value: JSON.parse(operation.valueJson),
+    };
+  });
+
+  return proposalPayloadSchema.parse({
+    diff: {
+      apiVersion: structured.diff.apiVersion,
+      ...(structured.diff.baseGraphHash ? { baseGraphHash: structured.diff.baseGraphHash } : {}),
+      operations,
+    },
+    impact: structured.impact,
+    testSuggestions: structured.testSuggestions,
+  });
 }
 
 export type { GraphDiffV1 };

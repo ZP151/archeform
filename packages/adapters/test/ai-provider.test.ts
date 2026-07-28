@@ -38,6 +38,16 @@ const addReceiptField: GraphDiffV1 = {
   operations: [{ op: "add", path: "/domain/entities/0/fields/-", value: { key: "receiptUrl", type: "url", required: false } }],
 };
 
+const serializedAddReceiptField = {
+  apiVersion: "factory.graph-diff/v1",
+  baseGraphHash: addReceiptField.baseGraphHash ?? null,
+  operations: addReceiptField.operations.map((operation) => ({
+    op: operation.op,
+    path: operation.path,
+    valueJson: operation.op === "remove" ? null : JSON.stringify(operation.value),
+  })),
+};
+
 describe("AI Graph proposal adapter", () => {
   it("reduces provider transport failures to safe diagnostic categories", () => {
     expect(classifyOpenAITransportFailure({ status: 400 })).toBe("provider_request_rejected");
@@ -70,7 +80,7 @@ describe("AI Graph proposal adapter", () => {
         receivedRequest = request;
         return {
           outputText: JSON.stringify({
-            diff: addReceiptField,
+            diff: serializedAddReceiptField,
             impact: { summary: "Adds a receipt URL.", affectedModels: ["domain"], risks: [] },
             testSuggestions: [],
           }),
@@ -94,6 +104,10 @@ describe("AI Graph proposal adapter", () => {
     expect(receivedRequest?.input).toContain("Add optional receipts.");
     expect(receivedRequest?.instructions).toContain("RFC 6901 JSON Pointer");
     expect(receivedRequest?.instructions).toContain("If adding a domain field");
+    const diffSchema = (receivedRequest?.jsonSchema.properties as Record<string, unknown>).diff as Record<string, unknown>;
+    const operationSchema = ((diffSchema.properties as Record<string, unknown>).operations as Record<string, unknown>).items as Record<string, unknown>;
+    expect(diffSchema.required).toEqual(["apiVersion", "baseGraphHash", "operations"]);
+    expect(operationSchema.required).toEqual(["op", "path", "valueJson"]);
   });
 
   it("rejects a response whose Graph Diff cannot apply to the draft", async () => {
