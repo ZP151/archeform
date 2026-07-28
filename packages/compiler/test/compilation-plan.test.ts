@@ -326,4 +326,33 @@ describe("compilation target registry", () => {
       'CREATE TABLE "CapabilityEvent"',
     );
   });
+
+  it("compiles DomainModel seed scenarios into idempotent Prisma data", () => {
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "published-seed-data-1",
+        graph: {
+          ...publishedExpense.graph,
+          domain: {
+            entities: [{
+              key: "expense",
+              label: "Expense",
+              fields: [{ key: "amount", type: "decimal", required: true }],
+              indexes: [],
+            }],
+            relations: [],
+            seedData: [{
+              entity: "expense",
+              id: "seed-expense-1",
+              values: { amount: 42 },
+            }],
+          },
+        },
+      }).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(files["database/prisma/seed.ts"]).toContain("upsert");
+    expect(files["database/prisma/seed.ts"]).toContain("seed-expense-1");
+    expect(files["database/Dockerfile"]).toContain("tsx prisma/seed.ts");
+  });
 });

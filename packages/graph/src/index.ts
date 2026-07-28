@@ -71,6 +71,13 @@ const domainModelSchema = z.object({
       field: fieldKey.optional(),
     }),
   ),
+  seedData: z.array(
+    z.object({
+      entity: identifier,
+      id: identifier.optional(),
+      values: z.record(z.unknown()),
+    }),
+  ).optional(),
 });
 
 const policyModelSchema = z.object({
@@ -248,6 +255,19 @@ export function validateApplicationGraph(input: unknown): GraphValidationIssue[]
     if (!entityKeys.has(relation.to)) {
       issue("domain.relation.target_missing", `Relation target '${relation.to}' is unknown.`, ["domain", "relations", index, "to"]);
     }
+  });
+  (graph.domain.seedData ?? []).forEach((seed, index) => {
+    const entity = graph.domain.entities.find((candidate) => candidate.key === seed.entity);
+    if (!entity) {
+      issue("domain.seed.entity_missing", `Seed record references unknown entity '${seed.entity}'.`, ["domain", "seedData", index, "entity"]);
+      return;
+    }
+    const fieldKeys = new Set(entity.fields.map((field) => field.key));
+    Object.keys(seed.values).forEach((field) => {
+      if (!fieldKeys.has(field)) {
+        issue("domain.seed.field_missing", `Seed record for '${seed.entity}' contains unknown field '${field}'.`, ["domain", "seedData", index, "values", field]);
+      }
+    });
   });
   graph.page.pages.forEach((page, pageIndex) =>
     page.blocks.forEach((block, blockIndex) => {

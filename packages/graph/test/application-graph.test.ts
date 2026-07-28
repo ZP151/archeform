@@ -97,6 +97,29 @@ describe("ApplicationGraphV1", () => {
     );
   });
 
+  it("accepts bounded seed scenarios and rejects records outside the DomainModel", () => {
+    const seeded = structuredClone(expenseGraph);
+    seeded.domain.seedData = [
+      {
+        entity: "expense",
+        id: "seed-expense-1",
+        values: { amount: 42, status: "draft" },
+      },
+    ];
+    expect(validateApplicationGraph(seeded)).toEqual([]);
+
+    seeded.domain.seedData = [
+      { entity: "missing", values: { amount: 42 } },
+      { entity: "expense", values: { impossible: true } },
+    ];
+    expect(validateApplicationGraph(seeded)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "domain.seed.entity_missing" }),
+        expect.objectContaining({ code: "domain.seed.field_missing" }),
+      ]),
+    );
+  });
+
   it("hashes equivalent object-key order deterministically", () => {
     const reordered = {
       ...expenseGraph,

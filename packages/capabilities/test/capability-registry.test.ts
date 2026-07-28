@@ -56,6 +56,18 @@ describe("capability catalog", () => {
     }
   });
 
+  it("ships deterministic catalog seed scenarios for Restaurant and Ecommerce", () => {
+    const restaurant = profileGraphs.find(({ profile }) => profile === "restaurant-ordering")!.graph;
+    const ecommerce = profileGraphs.find(({ profile }) => profile === "simple-ecommerce")!.graph;
+
+    expect(restaurant.domain.seedData).toEqual(
+      expect.arrayContaining([expect.objectContaining({ entity: "menu-item" })]),
+    );
+    expect(ecommerce.domain.seedData).toEqual(
+      expect.arrayContaining([expect.objectContaining({ entity: "product" })]),
+    );
+  });
+
   it.each(profileGraphs)("compiles $profile as an independent published application", ({ profile, graph }) => {
     const bundle = generateApplicationBundle({
       publishedRevisionId: `${profile}-published-1`,

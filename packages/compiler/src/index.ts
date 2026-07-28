@@ -322,6 +322,37 @@ function renderInitialMigration(graph: ApplicationGraphV1): string {
   ].join("\n\n");
 }
 
+function renderPrismaSeed(graph: ApplicationGraphV1): string {
+  const records = (graph.domain.seedData ?? []).map((seed, index) => ({
+    delegate: toCamelCase(seed.entity),
+    id: seed.id ?? `seed-${seed.entity}-${index + 1}`,
+    values: seed.values,
+  }));
+  return [
+    'import { PrismaClient } from "@prisma/client";',
+    "",
+    "const prisma = new PrismaClient();",
+    `const records = ${JSON.stringify(records, null, 2)} as const;`,
+    "",
+    "type SeedDelegate = { upsert(input: { where: { id: string }; update: Record<string, unknown>; create: Record<string, unknown> }): Promise<unknown> };",
+    "",
+    "export async function seed() {",
+    "  const delegates = prisma as unknown as Record<string, SeedDelegate>;",
+    "  for (const record of records) {",
+    "    await delegates[record.delegate]!.upsert({",
+    "      where: { id: record.id },",
+    "      update: record.values,",
+    "      create: { id: record.id, ...record.values },",
+    "    });",
+    "  }",
+    "  return { seeded: records.length };",
+    "}",
+    "",
+    "void seed().catch((error: unknown) => { console.error(error); process.exitCode = 1; }).finally(() => prisma.$disconnect());",
+    "",
+  ].join("\n");
+}
+
 function renderCasbinPolicy(graph: ApplicationGraphV1): string {
   const lines = graph.policy.permissions.flatMap((permission) =>
     permission.actions.map((action) => `p, ${permission.role}, ${permission.resource}, ${action}`),
@@ -1142,10 +1173,10 @@ export function generateApplicationBundle(input: PublishedGraphInput): Generated
         devDependencies: { prisma: "^6.19.0", tsx: "^4.19.0" },
       }, null, 2) + "\n",
     },
-    { path: "database/prisma/seed.ts", content: "export async function seed() { return { status: \"ready\" }; }\n" },
+    { path: "database/prisma/seed.ts", content: renderPrismaSeed(graph) },
     {
       path: "database/Dockerfile",
-      content: "FROM node:22-alpine\nWORKDIR /app\nCOPY package.json ./\nCOPY prisma ./prisma\nRUN npm config set fetch-retries 5 && npm install --global pnpm@9.0.0 && pnpm install\nCMD [\"sh\", \"-c\", \"pnpm prisma migrate deploy --schema prisma/schema.prisma\"]\n",
+      content: "FROM node:22-alpine\nWORKDIR /app\nCOPY package.json ./\nCOPY prisma ./prisma\nRUN npm config set fetch-retries 5 && npm install --global pnpm@9.0.0 && pnpm install && pnpm prisma generate --schema prisma/schema.prisma\nCMD [\"sh\", \"-c\", \"pnpm prisma migrate deploy --schema prisma/schema.prisma && pnpm tsx prisma/seed.ts\"]\n",
     },
     { path: "database/.dockerignore", content: "node_modules\n.env\n" },
     {

@@ -207,10 +207,14 @@ export const profileGraphs: readonly ProfileGraphStarter[] = Object.freeze([
       },
       {
         entities: [
-          { key: "menu-item", label: "Menu item", fields: [{ key: "name", type: "string", required: true }, { key: "price", type: "decimal", required: true }], indexes: [] },
+          { key: "menu-item", label: "Menu item", fields: [{ key: "name", type: "string", required: true }, { key: "price", type: "decimal", required: true }, { key: "available", type: "boolean", required: true }], indexes: [] },
           { key: "order", label: "Order", fields: [{ key: "status", type: "enum", required: true, values: ["cart", "paid", "preparing", "ready"] }], indexes: [{ fields: ["status"] }] },
         ],
         relations: [{ from: "order", to: "menu-item", kind: "many-to-many" }],
+        seedData: [
+          { entity: "menu-item", id: "margherita-pizza", values: { name: "Margherita pizza", price: 14, available: true } },
+          { entity: "menu-item", id: "mushroom-risotto", values: { name: "Mushroom risotto", price: 18, available: true } },
+        ],
       },
       {
         roles: ["customer", "kitchen", "manager"],
@@ -258,6 +262,10 @@ export const profileGraphs: readonly ProfileGraphStarter[] = Object.freeze([
           { key: "order", label: "Order", fields: [{ key: "status", type: "enum", required: true, values: ["cart", "paid", "fulfilled"] }], indexes: [{ fields: ["status"] }] },
         ],
         relations: [{ from: "order", to: "product", kind: "many-to-many" }],
+        seedData: [
+          { entity: "product", id: "everyday-tote", values: { name: "Everyday tote", price: 48, stock: 20 } },
+          { entity: "product", id: "studio-lamp", values: { name: "Studio lamp", price: 85, stock: 8 } },
+        ],
       },
       {
         roles: ["customer", "operator"],
