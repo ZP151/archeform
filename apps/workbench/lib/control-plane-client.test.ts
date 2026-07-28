@@ -13,7 +13,9 @@ describe("ControlPlaneClient", () => {
         new Response(
           JSON.stringify({
             id: "graph-1",
-            draftRevisions: [{ id: "draft-1", revisionNumber: 1, graph: workbenchGraph }],
+            draftRevisions: [
+              { id: "draft-1", revisionNumber: 1, graph: workbenchGraph },
+            ],
           }),
           { status: 200, headers: { "content-type": "application/json" } },
         ),
@@ -32,7 +34,9 @@ describe("ControlPlaneClient", () => {
         JSON.stringify({
           id: "graph-1",
           key: workbenchGraph.metadata.id,
-          draftRevisions: [{ id: "draft-4", revisionNumber: 4, graph: workbenchGraph }],
+          draftRevisions: [
+            { id: "draft-4", revisionNumber: 4, graph: workbenchGraph },
+          ],
           publishedRevisions: [],
         }),
         { status: 200, headers: { "content-type": "application/json" } },
@@ -40,7 +44,9 @@ describe("ControlPlaneClient", () => {
     );
     const client = new ControlPlaneClient("http://control-plane.test", fetcher);
 
-    await expect(client.bootstrapLocalDraft(workbenchGraph)).resolves.toMatchObject({
+    await expect(
+      client.bootstrapLocalDraft(workbenchGraph),
+    ).resolves.toMatchObject({
       applicationGraphId: "graph-1",
       draftRevisionId: "draft-4",
       revisionNumber: 4,
@@ -61,14 +67,18 @@ describe("ControlPlaneClient", () => {
         new Response(
           JSON.stringify({
             id: "graph-1",
-            draftRevisions: [{ id: "draft-1", revisionNumber: 1, graph: workbenchGraph }],
+            draftRevisions: [
+              { id: "draft-1", revisionNumber: 1, graph: workbenchGraph },
+            ],
           }),
           { status: 201, headers: { "content-type": "application/json" } },
         ),
       );
     const client = new ControlPlaneClient("http://control-plane.test", fetcher);
 
-    await expect(client.bootstrapLocalDraft(workbenchGraph)).resolves.toMatchObject({
+    await expect(
+      client.bootstrapLocalDraft(workbenchGraph),
+    ).resolves.toMatchObject({
       applicationGraphId: "graph-1",
       draftRevisionId: "draft-1",
     });
@@ -84,7 +94,10 @@ describe("ControlPlaneClient", () => {
   it("publishes only the known immutable Draft revision", async () => {
     const fetcher = vi.fn().mockResolvedValue(
       new Response(
-        JSON.stringify({ id: "published-1", sourceDraftRevisionId: "draft-4" }),
+        JSON.stringify({
+          id: "published-1",
+          sourceDraftRevisionId: "draft-4",
+        }),
         { status: 201, headers: { "content-type": "application/json" } },
       ),
     );
@@ -106,13 +119,20 @@ describe("ControlPlaneClient", () => {
   it("queues compilation only from an immutable Published revision", async () => {
     const fetcher = vi.fn().mockResolvedValue(
       new Response(
-        JSON.stringify({ id: "compilation-1", publishedRevisionId: "published-1", target: "application-bundle", result: { status: "queued" } }),
+        JSON.stringify({
+          id: "compilation-1",
+          publishedRevisionId: "published-1",
+          target: "application-bundle",
+          result: { status: "queued" },
+        }),
         { status: 201, headers: { "content-type": "application/json" } },
       ),
     );
     const client = new ControlPlaneClient("http://control-plane.test", fetcher);
 
-    await expect(client.createCompilation("published-1")).resolves.toMatchObject({
+    await expect(
+      client.createCompilation("published-1"),
+    ).resolves.toMatchObject({
       id: "compilation-1",
       publishedRevisionId: "published-1",
       result: { status: "queued" },
@@ -138,18 +158,26 @@ describe("ControlPlaneClient", () => {
           publishedRevisionId: "published-1",
           target: "application-bundle",
           result: { status: "succeeded" },
-          artifacts: [{ path: "web/app/page.tsx", digest: "sha256:abc", mediaType: "text/typescript" }],
+          artifacts: [
+            {
+              path: "web/app/page.tsx",
+              digest: "sha256:abc",
+              mediaType: "text/typescript",
+            },
+          ],
         }),
         { status: 200, headers: { "content-type": "application/json" } },
       ),
     );
     const client = new ControlPlaneClient("http://control-plane.test", fetcher);
 
-    await expect(client.getCompilation("compilation-1")).resolves.toMatchObject({
-      id: "compilation-1",
-      result: { status: "succeeded" },
-      artifacts: [{ path: "web/app/page.tsx" }],
-    });
+    await expect(client.getCompilation("compilation-1")).resolves.toMatchObject(
+      {
+        id: "compilation-1",
+        result: { status: "succeeded" },
+        artifacts: [{ path: "web/app/page.tsx" }],
+      },
+    );
     expect(fetcher).toHaveBeenCalledWith(
       "http://control-plane.test/compilations/compilation-1",
       expect.objectContaining({ method: "GET" }),
@@ -161,7 +189,8 @@ describe("ControlPlaneClient", () => {
       new Response(
         JSON.stringify({
           path: "docs/api-reference.md",
-          digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          digest:
+            "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           content: "# API reference\n",
         }),
         { status: 200, headers: { "content-type": "application/json" } },
@@ -169,9 +198,12 @@ describe("ControlPlaneClient", () => {
     );
     const client = new ControlPlaneClient("http://control-plane.test", fetcher);
 
-    await expect(client.getCompilationArtifact("compilation-1", "docs/api-reference.md")).resolves.toEqual({
+    await expect(
+      client.getCompilationArtifact("compilation-1", "docs/api-reference.md"),
+    ).resolves.toEqual({
       path: "docs/api-reference.md",
-      digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      digest:
+        "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       content: "# API reference\n",
     });
     expect(fetcher).toHaveBeenCalledWith(
@@ -195,7 +227,13 @@ describe("ControlPlaneClient", () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify([
-            { id: "published-1", revisionNumber: 1, graphHash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", graph: workbenchGraph },
+            {
+              id: "published-1",
+              revisionNumber: 1,
+              graphHash:
+                "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              graph: workbenchGraph,
+            },
           ]),
           { status: 200, headers: { "content-type": "application/json" } },
         ),
@@ -208,7 +246,13 @@ describe("ControlPlaneClient", () => {
         { id: "draft-2", revisionNumber: 2, graph: workbenchGraph },
       ],
       published: [
-        { id: "published-1", revisionNumber: 1, graphHash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", graph: workbenchGraph },
+        {
+          id: "published-1",
+          revisionNumber: 1,
+          graphHash:
+            "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          graph: workbenchGraph,
+        },
       ],
     });
     expect(fetcher).toHaveBeenNthCalledWith(
@@ -227,8 +271,25 @@ describe("ControlPlaneClient", () => {
     const fetcher = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
-          draftRevision: { id: "draft-5", revisionNumber: 5, graph: workbenchGraph },
-          proposal: { impact: { summary: "Adds an optional receipt.", affectedModels: ["domain"], risks: [] } },
+          draftRevision: {
+            id: "draft-5",
+            revisionNumber: 5,
+            graph: workbenchGraph,
+          },
+          proposal: {
+            impact: {
+              summary: "Adds an optional receipt.",
+              affectedModels: ["domain"],
+              risks: [],
+            },
+            testSuggestions: [
+              {
+                id: "receipt-journey",
+                title: "Adds a receipt",
+                type: "journey",
+              },
+            ],
+          },
         }),
         { status: 201, headers: { "content-type": "application/json" } },
       ),
@@ -238,8 +299,16 @@ describe("ControlPlaneClient", () => {
     await expect(
       client.proposeDraft("graph-1", "Add an optional receipt field."),
     ).resolves.toMatchObject({
-      draft: { applicationGraphId: "graph-1", draftRevisionId: "draft-5", revisionNumber: 5 },
+      draft: {
+        applicationGraphId: "graph-1",
+        draftRevisionId: "draft-5",
+        revisionNumber: 5,
+      },
       summary: "Adds an optional receipt.",
+      affectedModels: ["domain"],
+      testSuggestions: [
+        { id: "receipt-journey", title: "Adds a receipt", type: "journey" },
+      ],
     });
     expect(fetcher).toHaveBeenCalledWith(
       "http://control-plane.test/application-graphs/graph-1/ai-proposals",
@@ -260,7 +329,9 @@ describe("ControlPlaneClient", () => {
     );
     const client = new ControlPlaneClient("http://control-plane.test", fetcher);
 
-    await expect(client.exportPublishedGraph("graph-1", "published-2")).resolves.toEqual(exchange);
+    await expect(
+      client.exportPublishedGraph("graph-1", "published-2"),
+    ).resolves.toEqual(exchange);
     expect(fetcher).toHaveBeenCalledWith(
       "http://control-plane.test/application-graphs/graph-1/published-revisions/published-2/export",
       expect.objectContaining({ method: "GET" }),
@@ -273,7 +344,9 @@ describe("ControlPlaneClient", () => {
       new Response(
         JSON.stringify({
           id: "imported-graph",
-          draftRevisions: [{ id: "imported-draft", revisionNumber: 1, graph: workbenchGraph }],
+          draftRevisions: [
+            { id: "imported-draft", revisionNumber: 1, graph: workbenchGraph },
+          ],
         }),
         { status: 201, headers: { "content-type": "application/json" } },
       ),

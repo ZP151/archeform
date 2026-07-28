@@ -29,13 +29,29 @@ export type WorkbenchDraft = {
 type AiProposalResponse = {
   readonly draftRevision: DraftRecord;
   readonly proposal: {
-    readonly impact: { readonly summary: string };
+    readonly impact: {
+      readonly summary: string;
+      readonly affectedModels: readonly string[];
+      readonly risks: readonly string[];
+    };
+    readonly testSuggestions: readonly {
+      readonly id: string;
+      readonly title: string;
+      readonly type: string;
+    }[];
   };
 };
 
 export type WorkbenchAiProposal = {
   readonly draft: WorkbenchDraft;
   readonly summary: string;
+  readonly affectedModels: readonly string[];
+  readonly risks: readonly string[];
+  readonly testSuggestions: readonly {
+    readonly id: string;
+    readonly title: string;
+    readonly type: string;
+  }[];
 };
 
 export type WorkbenchPublishedRevision = {
@@ -81,8 +97,15 @@ export class ControlPlaneError extends Error {
 
 function recordAsDraft(record: LocalGraphRecord): WorkbenchDraft {
   const draft = record.draftRevisions[0];
-  if (!record.id || !draft?.id || !Number.isInteger(draft.revisionNumber) || !draft.graph) {
-    throw new Error("Control Plane response did not contain a current Draft revision.");
+  if (
+    !record.id ||
+    !draft?.id ||
+    !Number.isInteger(draft.revisionNumber) ||
+    !draft.graph
+  ) {
+    throw new Error(
+      "Control Plane response did not contain a current Draft revision.",
+    );
   }
   return {
     applicationGraphId: record.id,
@@ -95,7 +118,10 @@ function recordAsDraft(record: LocalGraphRecord): WorkbenchDraft {
 export class ControlPlaneClient {
   private readonly baseUrl: string;
 
-  constructor(baseUrl: string, private readonly fetcher: Fetcher = fetch) {
+  constructor(
+    baseUrl: string,
+    private readonly fetcher: Fetcher = fetch,
+  ) {
     this.baseUrl = baseUrl.replace(/\/$/, "");
   }
 
@@ -109,7 +135,9 @@ export class ControlPlaneClient {
     return response.json() as Promise<T>;
   }
 
-  async bootstrapLocalDraft(graph: ApplicationGraphV1): Promise<WorkbenchDraft> {
+  async bootstrapLocalDraft(
+    graph: ApplicationGraphV1,
+  ): Promise<WorkbenchDraft> {
     try {
       const existing = await this.request<LocalGraphRecord>(
         `/workspaces/local/application-graphs/${encodeURIComponent(graph.metadata.id)}`,
@@ -117,7 +145,8 @@ export class ControlPlaneClient {
       );
       return recordAsDraft(existing);
     } catch (error) {
-      if (!(error instanceof ControlPlaneError) || error.status !== 404) throw error;
+      if (!(error instanceof ControlPlaneError) || error.status !== 404)
+        throw error;
     }
 
     const created = await this.request<LocalGraphRecord>(
@@ -159,6 +188,9 @@ export class ControlPlaneClient {
         graph: response.draftRevision.graph,
       },
       summary: response.proposal.impact.summary,
+      affectedModels: response.proposal.impact.affectedModels,
+      risks: response.proposal.impact.risks,
+      testSuggestions: response.proposal.testSuggestions,
     };
   }
 
@@ -223,10 +255,9 @@ export class ControlPlaneClient {
   }
 
   getCompilation(compilationId: string): Promise<WorkbenchCompilation> {
-    return this.request(
-      `/compilations/${encodeURIComponent(compilationId)}`,
-      { method: "GET" },
-    );
+    return this.request(`/compilations/${encodeURIComponent(compilationId)}`, {
+      method: "GET",
+    });
   }
 
   getCompilationArtifact(

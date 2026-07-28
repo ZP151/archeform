@@ -34,6 +34,19 @@ describe("transitionWorkbench", () => {
     expect(proposed.lastProposal).toBe("Puck Page Studio");
   });
 
+  it("reopens authoring as Draft when an editor changes a previously Published revision", () => {
+    const published = transitionWorkbench(initialWorkbenchState, {
+      type: "publish",
+    });
+    const edited = transitionWorkbench(published, {
+      type: "propose-draft-change",
+      source: "Domain Studio",
+    });
+
+    expect(edited.lifecycle).toBe("draft");
+    expect(edited.lastProposal).toBe("Domain Studio");
+  });
+
   it("adopts a persisted Draft revision without treating it as published", () => {
     const synced = transitionWorkbench(initialWorkbenchState, {
       type: "synchronize-draft",

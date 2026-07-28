@@ -10,33 +10,42 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { ReactFlowDiagram } from "@factory/adapters/browser";
-import type { FlowModel } from "@factory/graph";
-import { addFlowTransition } from "../lib/graph-editors";
+import type { FlowModel, IntegrationModel } from "@factory/graph";
+import {
+  addFlowTransition,
+  setFlowTransitionEffects,
+} from "../lib/graph-editors";
 
 type Props = {
   diagram: ReactFlowDiagram;
   flow: FlowModel;
   roles: string[];
+  capabilities: readonly IntegrationModel["capabilities"][number][];
   onFlowChange: (flow: FlowModel) => void;
-  onDraftProposal: (source: string) => void;
 };
 
 export function FlowStudio({
   diagram,
   flow,
   roles,
+  capabilities,
   onFlowChange,
-  onDraftProposal,
 }: Props) {
   const ownedDiagram = useMemo(() => diagram, [diagram]);
-  const [nodes, setNodes, onNodesChange] = useNodesState([...ownedDiagram.nodes]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([...ownedDiagram.edges]);
+  const [nodes, setNodes, onNodesChange] = useNodesState([
+    ...ownedDiagram.nodes,
+  ]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([
+    ...ownedDiagram.edges,
+  ]);
   const [flowId, setFlowId] = useState(flow.flows[0]?.id ?? "");
-  const activeFlow = flow.flows.find((candidate) => candidate.id === flowId) ?? flow.flows[0];
+  const activeFlow =
+    flow.flows.find((candidate) => candidate.id === flowId) ?? flow.flows[0];
   const [from, setFrom] = useState(activeFlow?.states[0] ?? "");
   const [event, setEvent] = useState(activeFlow?.events[0] ?? "");
   const [to, setTo] = useState(activeFlow?.states[0] ?? "");
   const [role, setRole] = useState("");
+  const [effectKey, setEffectKey] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -52,26 +61,78 @@ export function FlowStudio({
 
   useEffect(() => {
     if (!activeFlow) return;
-    setFrom((current) => activeFlow.states.includes(current) ? current : activeFlow.states[0] ?? "");
-    setTo((current) => activeFlow.states.includes(current) ? current : activeFlow.states[0] ?? "");
-    setEvent((current) => activeFlow.events.includes(current) ? current : activeFlow.events[0] ?? "");
+    setFrom((current) =>
+      activeFlow.states.includes(current)
+        ? current
+        : (activeFlow.states[0] ?? ""),
+    );
+    setTo((current) =>
+      activeFlow.states.includes(current)
+        ? current
+        : (activeFlow.states[0] ?? ""),
+    );
+    setEvent((current) =>
+      activeFlow.events.includes(current)
+        ? current
+        : (activeFlow.events[0] ?? ""),
+    );
   }, [activeFlow]);
 
   const addTransition = () => {
     if (!activeFlow) return;
     try {
+      const next = addFlowTransition(flow, activeFlow.id, {
+        from,
+        event,
+        to,
+        ...(role ? { roles: [role] } : {}),
+      });
+      const effect = capabilities.find(
+        (capability) => capability.key === effectKey,
+      );
       onFlowChange(
-        addFlowTransition(flow, activeFlow.id, {
-          from,
-          event,
-          to,
-          ...(role ? { roles: [role] } : {}),
-        }),
+        effect
+          ? setFlowTransitionEffects(
+              next,
+              activeFlow.id,
+              from,
+              event,
+              [{ capability: effect.key, operation: effect.operation }],
+              capabilities,
+            )
+          : next,
       );
       setError(null);
-      onDraftProposal("Flow Studio transition");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Unable to add transition.");
+      setError(
+        reason instanceof Error ? reason.message : "Unable to add transition.",
+      );
+    }
+  };
+
+  const replaceEffect = () => {
+    if (!activeFlow) return;
+    const effect = capabilities.find(
+      (capability) => capability.key === effectKey,
+    );
+    try {
+      onFlowChange(
+        setFlowTransitionEffects(
+          flow,
+          activeFlow.id,
+          from,
+          event,
+          effect
+            ? [{ capability: effect.key, operation: effect.operation }]
+            : [],
+          capabilities,
+        ),
+      );
+      setError(null);
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Unable to update effect.",
+      );
     }
   };
 
@@ -85,7 +146,9 @@ export function FlowStudio({
           <span>React Flow Studio</span>
           <strong>Lifecycle flow</strong>
         </div>
-        <small>Transitions are constrained by the declared Graph vocabulary.</small>
+        <small>
+          Transitions are constrained by the declared Graph vocabulary.
+        </small>
       </div>
       <form
         className="flow-transition-editor"
@@ -96,36 +159,89 @@ export function FlowStudio({
       >
         <label>
           Flow
-          <select value={activeFlow?.id ?? ""} onChange={(change) => setFlowId(change.target.value)}>
-            {flow.flows.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.id}</option>)}
+          <select
+            value={activeFlow?.id ?? ""}
+            onChange={(change) => setFlowId(change.target.value)}
+          >
+            {flow.flows.map((candidate) => (
+              <option key={candidate.id} value={candidate.id}>
+                {candidate.id}
+              </option>
+            ))}
           </select>
         </label>
         <label>
           From
-          <select value={from} onChange={(change) => setFrom(change.target.value)}>
-            {activeFlow?.states.map((state) => <option key={state} value={state}>{state}</option>)}
+          <select
+            value={from}
+            onChange={(change) => setFrom(change.target.value)}
+          >
+            {activeFlow?.states.map((state) => (
+              <option key={state} value={state}>
+                {state}
+              </option>
+            ))}
           </select>
         </label>
         <label>
           Event
-          <select value={event} onChange={(change) => setEvent(change.target.value)}>
-            {activeFlow?.events.map((candidate) => <option key={candidate} value={candidate}>{candidate}</option>)}
+          <select
+            value={event}
+            onChange={(change) => setEvent(change.target.value)}
+          >
+            {activeFlow?.events.map((candidate) => (
+              <option key={candidate} value={candidate}>
+                {candidate}
+              </option>
+            ))}
           </select>
         </label>
         <label>
           To
           <select value={to} onChange={(change) => setTo(change.target.value)}>
-            {activeFlow?.states.map((state) => <option key={state} value={state}>{state}</option>)}
+            {activeFlow?.states.map((state) => (
+              <option key={state} value={state}>
+                {state}
+              </option>
+            ))}
           </select>
         </label>
         <label>
           Role
-          <select value={role} onChange={(change) => setRole(change.target.value)}>
+          <select
+            value={role}
+            onChange={(change) => setRole(change.target.value)}
+          >
             <option value="">Any declared role</option>
-            {roles.map((candidate) => <option key={candidate} value={candidate}>{candidate}</option>)}
+            {roles.map((candidate) => (
+              <option key={candidate} value={candidate}>
+                {candidate}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Capability effect
+          <select
+            value={effectKey}
+            onChange={(change) => setEffectKey(change.target.value)}
+          >
+            <option value="">No capability effect</option>
+            {capabilities.map((capability) => (
+              <option key={capability.key} value={capability.key}>
+                {capability.key} · {capability.operation}
+              </option>
+            ))}
           </select>
         </label>
         <button type="submit">Add transition</button>
+        <button
+          type="button"
+          className="secondary-flow-action"
+          onClick={replaceEffect}
+        >
+          Set effect
+        </button>
         {error && <small className="studio-error">{error}</small>}
       </form>
       <div className="react-flow-stage">

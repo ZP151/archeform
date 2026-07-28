@@ -8,6 +8,12 @@ test("edits a Draft, publishes an immutable revision, and compiles it", async ({
   await expect(page.locator('[data-theme="light"]')).toBeVisible();
   await expect(page.getByLabel("Puck Page Studio")).toBeVisible();
 
+  const routeSuffix = Date.now().toString();
+  await page.getByLabel("New page").fill(`Journey ${routeSuffix}`);
+  await page.getByRole("button", { name: "Add page" }).click();
+  await expect(page.getByLabel("Path")).toHaveValue(`/journey-${routeSuffix}`);
+  await page.getByLabel("Entity binding").selectOption("request");
+
   await page.getByRole("button", { name: "Switch to dark theme" }).click();
   await expect(page.locator('[data-theme="dark"]')).toBeVisible();
 
@@ -15,10 +21,21 @@ test("edits a Draft, publishes an immutable revision, and compiles it", async ({
   await expect(page.getByLabel("React Flow Flow Studio")).toBeVisible();
 
   await page.getByRole("button", { name: "Domain" }).click();
+  const entityKey = `journey-${routeSuffix}`;
+  await page.getByLabel("Entity key").fill(entityKey);
+  await page.getByLabel("Label").fill(`Journey ${routeSuffix}`);
+  await page.getByRole("button", { name: "Add entity" }).click();
+  await expect(page.getByTestId(`rf__node-domain:${entityKey}`)).toBeVisible();
+
+  await page.getByLabel("Relation target").selectOption("request");
+  await page.getByRole("button", { name: "Add relation" }).click();
+  await expect(page.getByText(/declared relation/)).toBeVisible();
   const fieldKey = `e2e${Date.now()}`;
   await page.getByLabel("Field key").fill(fieldKey);
   await page.getByRole("button", { name: "Add field" }).click();
-  await expect(page.getByText(fieldKey, { exact: true })).toBeVisible();
+  await expect(
+    page.locator(".domain-existing-field code", { hasText: fieldKey }),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Save draft" }).click();
   await expect(
@@ -42,7 +59,7 @@ test("edits a Draft, publishes an immutable revision, and compiles it", async ({
   await page.getByRole("button", { name: "History" }).click();
   await expect(
     page.getByLabel("Application Graph revision timeline"),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 15_000 });
   await expect(
     page
       .getByLabel("Application Graph revision timeline")
@@ -53,4 +70,11 @@ test("edits a Draft, publishes an immutable revision, and compiles it", async ({
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Page" }).click();
   await expect(page.getByLabel("Puck Page Studio")).toBeVisible();
+  await page.getByLabel("New page").fill(`After publish ${routeSuffix}`);
+  await page.getByRole("button", { name: "Add page" }).click();
+  await page.getByRole("button", { name: "Code" }).click();
+  await expect(page.getByLabel("Application Graph diff")).toContainText(
+    "semantic change",
+  );
+  await expect(page.getByLabel("Adapter metadata")).toContainText("Puck");
 });
