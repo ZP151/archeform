@@ -1,6 +1,0 @@
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "factory-revocation-event/v1", "title": "Factory Revocation Event v1", "type": "object", "additionalProperties": false,
-  "required": ["schema_version", "event_digest", "subject", "reason_code", "effective_at", "policy_version", "signer_fingerprint", "signature_digest"],
-  "properties": {"schema_version": {"const": "factory-revocation-event/v1"}, "event_digest": {"$ref": "#/$defs/digest"}, "subject": {"$ref": "#/$defs/subject"}, "reason_code": {"enum": ["compromised", "policy_denied", "evidence_invalid", "operator_revoked"]}, "effective_at": {"$ref": "#/$defs/timestamp"}, "policy_version": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"}, "signer_fingerprint": {"$ref": "#/$defs/digest"}, "signature_digest": {"$ref": "#/$defs/digest"}},
-  "$defs": {"digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}, "timestamp": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"}, "subject": {"type": "object", "additionalProperties": false, "required": ["key", "version", "digest"], "properties": {"key": {"type": "string", "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$"}, "version": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"}, "digest": {"$ref": "#/$defs/digest"}}}}
-}

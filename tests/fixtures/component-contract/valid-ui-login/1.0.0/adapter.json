@@ -1,1 +1,0 @@
-{"schema_version":"factory-component-adapter/v1","component_key":"ui.login-page","component_version":"1.0.0","contributions":[{"operation":"render_template","source":"templates/login.tsx","slot":"frontend/routes/login","target":"page.tsx","bindings":{"title":{"source":"input.title","context":"typescript_string"}}}]}

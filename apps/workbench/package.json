@@ -1,0 +1,28 @@
+{
+  "name": "@factory/workbench",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 5174",
+    "build": "next build",
+    "start": "next start --port 5174",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "prettier --check app components lib"
+  },
+  "dependencies": {
+    "@factory/adapters": "workspace:*",
+    "@factory/graph": "workspace:*",
+    "@puckeditor/core": "^0.22.3",
+    "@xyflow/react": "^12.3.6",
+    "lucide-react": "^0.468.0",
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "vitest": "^2.1.8"
+  }
+}

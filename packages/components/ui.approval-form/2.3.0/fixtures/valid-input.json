@@ -1,1 +1,0 @@
-{"record_label":"Leave request","submit_label":"Submit request","fields":[{"id":"start_date","label":"Start date","type":"date","required":true},{"id":"reason","label":"Reason","type":"string","required":true},{"id":"leave_type","label":"Leave type","type":"enum","required":true,"options":["Annual","Sick"]}]}

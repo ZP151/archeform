@@ -1,9 +1,0 @@
-CREATE TABLE IF NOT EXISTS {{python_string:record_table}} (
-    id UUID PRIMARY KEY,
-    submitter_id TEXT NOT NULL,
-    payload JSONB NOT NULL,
-    status TEXT NOT NULL CHECK (status IN ('pending', 'approved', 'rejected')),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    decided_at TIMESTAMPTZ,
-    decided_by TEXT
-);

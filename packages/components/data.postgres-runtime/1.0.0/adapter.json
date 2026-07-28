@@ -1,1 +1,0 @@
-{"schema_version":"factory-component-adapter/v1","component_key":"data.postgres-runtime","component_version":"1.0.0","contributions":[{"operation":"render_template","source":"templates/postgres_runtime.sql.tmpl","slot":"runtime/postgres","target":"001-runtime-role.sql","bindings":{}}]}

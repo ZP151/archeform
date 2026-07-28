@@ -1,0 +1,24 @@
+{
+  "name": "@factory/adapters",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "prettier --check src test"
+  },
+  "dependencies": {
+    "@factory/graph": "workspace:*",
+    "@xyflow/react": "^12.3.6",
+    "@puckeditor/core": "^0.22.3",
+    "openai": "^4.77.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.8"
+  }
+}

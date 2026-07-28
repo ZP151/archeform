@@ -1,1 +1,0 @@
-{"allowed_roles":["employee","manager","hr_admin"],"cookie_name":"approval_session","local_users_env":"APP_LOCAL_USERS_JSON","signing_key_env":"APP_SESSION_SIGNING_KEY","session_ttl_seconds":3600}

@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Workspace {
+  id                String             @id @default(cuid())
+  slug              String             @unique
+  name              String
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  applicationGraphs ApplicationGraph[]
+}
+
+model ApplicationGraph {
+  id                 String              @id @default(cuid())
+  workspaceId        String
+  key                String
+  name               String
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  workspace          Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  draftRevisions     DraftRevision[]
+  publishedRevisions PublishedRevision[]
+
+  @@unique([workspaceId, key])
+  @@index([workspaceId])
+}
+
+/// Ordered, immutable snapshots make up the mutable draft timeline. Editing creates
+/// a new revision instead of overwriting an existing Graph snapshot.
+model DraftRevision {
+  id                 String             @id @default(cuid())
+  applicationGraphId String
+  revisionNumber     Int
+  graph              Json
+  createdAt          DateTime           @default(now())
+  applicationGraph   ApplicationGraph   @relation(fields: [applicationGraphId], references: [id], onDelete: Restrict)
+  publishedRevision  PublishedRevision?
+
+  @@unique([applicationGraphId, revisionNumber])
+  @@unique([id, applicationGraphId])
+  @@index([applicationGraphId])
+}
+
+/// Append-only publication snapshot. Application code must never update or delete a
+/// published revision; republishing always creates a new row with a new sequence.
+model PublishedRevision {
+  id                    String           @id @default(cuid())
+  applicationGraphId    String
+  sourceDraftRevisionId String
+  revisionNumber        Int
+  graph                 Json
+  graphHash             String
+  publishedAt           DateTime         @default(now())
+  applicationGraph      ApplicationGraph @relation(fields: [applicationGraphId], references: [id], onDelete: Restrict)
+  sourceDraftRevision   DraftRevision    @relation(fields: [sourceDraftRevisionId, applicationGraphId], references: [id, applicationGraphId], onDelete: Restrict)
+  compilations          Compilation[]
+
+  @@unique([applicationGraphId, revisionNumber])
+  @@unique([sourceDraftRevisionId, applicationGraphId])
+  @@index([applicationGraphId])
+}
+
+/// Append-only compiler result. A compiler receives only this model's required
+/// PublishedRevision relation; mutable DraftRevision rows are not compilation inputs.
+model Compilation {
+  id                  String             @id @default(cuid())
+  publishedRevisionId String
+  sequence            Int
+  target              String
+  inputGraphHash      String
+  compilerVersion     String
+  result              Json
+  compiledAt          DateTime           @default(now())
+  publishedRevision   PublishedRevision  @relation(fields: [publishedRevisionId], references: [id], onDelete: Restrict)
+  artifacts           Artifact[]
+  providerMetadata    ProviderMetadata[]
+
+  @@unique([publishedRevisionId, sequence])
+  @@index([publishedRevisionId])
+}
+
+model Artifact {
+  id            String      @id @default(cuid())
+  compilationId String
+  kind          String
+  path          String
+  digest        String
+  mediaType     String
+  sizeBytes     Int?
+  metadata      Json?
+  createdAt     DateTime    @default(now())
+  compilation   Compilation @relation(fields: [compilationId], references: [id], onDelete: Restrict)
+
+  @@unique([compilationId, path])
+  @@index([compilationId])
+}
+
+/// Non-secret resolved provider identity and configuration for a compilation.
+/// Credentials, tokens, prompts, and provider responses must never be persisted here.
+model ProviderMetadata {
+  id             String      @id @default(cuid())
+  compilationId  String
+  role           String
+  provider       String
+  version        String
+  resolvedConfig Json
+  createdAt      DateTime    @default(now())
+  compilation    Compilation @relation(fields: [compilationId], references: [id], onDelete: Restrict)
+
+  @@unique([compilationId, role])
+  @@index([compilationId])
+}
