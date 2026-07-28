@@ -19,7 +19,9 @@ const lifecycle = {
   completeCompilation: vi.fn(),
   createCompilation: vi.fn(),
   createLocalApplicationGraph: vi.fn(),
+  exportPublishedGraph: vi.fn(),
   getLocalApplicationGraph: vi.fn(),
+  importPublishedGraph: vi.fn(),
   getDraft: vi.fn(),
   getCompilation: vi.fn(),
   listPublishedRevisions: vi.fn(),
@@ -50,11 +52,26 @@ describe("LifecycleController", () => {
 
   it.each([
     {
+      method: "POST",
+      path: "/workspaces/local/application-graphs/import",
+      body: { exchange: { apiVersion: "factory.published-graph-exchange/v1" } },
+      handler: lifecycle.importPublishedGraph,
+      arguments: [{ exchange: { apiVersion: "factory.published-graph-exchange/v1" } }],
+      response: { id: "graph-imported", draftRevisions: [{ id: "draft-imported" }] },
+    },
+    {
       method: "GET",
       path: "/workspaces/local/application-graphs/expense-approval",
       handler: lifecycle.getLocalApplicationGraph,
       arguments: ["expense-approval"],
       response: { id: "graph-1", draftRevisions: [{ id: "draft-1" }] },
+    },
+    {
+      method: "GET",
+      path: "/application-graphs/graph-1/published-revisions/published-1/export",
+      handler: lifecycle.exportPublishedGraph,
+      arguments: ["graph-1", "published-1"],
+      response: { apiVersion: "factory.published-graph-exchange/v1", kind: "published-application-graph" },
     },
     {
       method: "POST",

@@ -394,6 +394,58 @@ export function hashApplicationGraph(input: unknown): string {
   return `sha256:${createHash("sha256").update(canonicalJson).digest("hex")}`;
 }
 
+export const publishedGraphExchangeSchema = z.object({
+  apiVersion: z.literal("factory.published-graph-exchange/v1"),
+  kind: z.literal("published-application-graph"),
+  publishedRevision: z.object({
+    revisionNumber: z.number().int().positive(),
+    graphHash: z.string().regex(/^sha256:[a-f0-9]{64}$/),
+  }).strict(),
+  graph: applicationGraphSchema,
+}).strict();
+
+export type PublishedGraphExchangeV1 = z.infer<typeof publishedGraphExchangeSchema>;
+
+export class GraphExchangeError extends Error {
+  public constructor(message: string) {
+    super(message);
+    this.name = "GraphExchangeError";
+  }
+}
+
+/**
+ * A Graph-first Git payload. It contains no generated source, provider
+ * credentials, raw prompts, or compiler artifacts.
+ */
+export function createPublishedGraphExchange(
+  input: unknown,
+  revisionNumber: number,
+): PublishedGraphExchangeV1 {
+  const graph = assertValidApplicationGraph(input);
+  if (!Number.isInteger(revisionNumber) || revisionNumber < 1) {
+    throw new GraphExchangeError("Published Graph exchange requires a positive revision number.");
+  }
+  return {
+    apiVersion: "factory.published-graph-exchange/v1",
+    kind: "published-application-graph",
+    publishedRevision: { revisionNumber, graphHash: hashApplicationGraph(graph) },
+    graph,
+  };
+}
+
+export function parsePublishedGraphExchange(input: unknown): PublishedGraphExchangeV1 {
+  try {
+    const exchange = publishedGraphExchangeSchema.parse(input);
+    if (exchange.publishedRevision.graphHash !== hashApplicationGraph(exchange.graph)) {
+      throw new GraphExchangeError("Published Graph exchange digest does not match its Graph.");
+    }
+    return exchange;
+  } catch (error) {
+    if (error instanceof GraphExchangeError) throw error;
+    throw new GraphExchangeError("Published Graph exchange is invalid.");
+  }
+}
+
 const graphDiffOperationSchema = z.object({
   op: z.enum(["add", "replace", "remove"]),
   path: z.string().min(1).startsWith("/"),

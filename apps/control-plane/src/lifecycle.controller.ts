@@ -13,6 +13,11 @@ export class LifecycleController {
     return this.lifecycle.createLocalApplicationGraph(body);
   }
 
+  @Post("workspaces/local/application-graphs/import")
+  importPublishedGraph(@Body() body: unknown) {
+    return this.lifecycle.importPublishedGraph(body);
+  }
+
   @Get("workspaces/local/application-graphs/:key")
   getLocalApplicationGraph(@Param("key") key: string) {
     return this.lifecycle.getLocalApplicationGraph(key);
@@ -52,6 +57,17 @@ export class LifecycleController {
     @Param("applicationGraphId") applicationGraphId: string,
   ) {
     return this.lifecycle.listPublishedRevisions(applicationGraphId);
+  }
+
+  @Get("application-graphs/:applicationGraphId/published-revisions/:publishedRevisionId/export")
+  exportPublishedGraph(
+    @Param("applicationGraphId") applicationGraphId: string,
+    @Param("publishedRevisionId") publishedRevisionId: string,
+  ) {
+    return this.lifecycle.exportPublishedGraph(
+      applicationGraphId,
+      publishedRevisionId,
+    );
   }
 
   @Post("compilations")

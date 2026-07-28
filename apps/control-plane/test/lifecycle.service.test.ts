@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createPublishedGraphExchange, hashApplicationGraph } from "@factory/graph";
 
 import { LifecycleService } from "../src/lifecycle.service.js";
 import type { PrismaService } from "../src/prisma.service.js";
@@ -148,6 +149,46 @@ describe("LifecycleService", () => {
         draftRevisions: {
           create: { revisionNumber: 1, graph: localApplicationGraph },
         },
+      },
+      include: { draftRevisions: true },
+    });
+  });
+
+  it("exports only an immutable Published Revision as a digest-verified Graph exchange", async () => {
+    prisma.publishedRevision.findFirst.mockResolvedValue({
+      id: "published-3",
+      applicationGraphId: applicationGraph.id,
+      revisionNumber: 3,
+      graph: localApplicationGraph,
+      graphHash: hashApplicationGraph(localApplicationGraph),
+    });
+
+    await expect(service.exportPublishedGraph(applicationGraph.id, "published-3")).resolves.toEqual(
+      createPublishedGraphExchange(localApplicationGraph, 3),
+    );
+    expect(prisma.publishedRevision.findFirst).toHaveBeenCalledWith({
+      where: { id: "published-3", applicationGraphId: applicationGraph.id },
+    });
+  });
+
+  it("imports a verified published Graph exchange as a new mutable Draft only", async () => {
+    prisma.workspace.upsert.mockResolvedValue(workspace);
+    prisma.applicationGraph.create.mockResolvedValue({
+      ...applicationGraph,
+      draftRevisions: [draftRevision],
+    });
+    const exchange = createPublishedGraphExchange(localApplicationGraph, 3);
+
+    await expect(service.importPublishedGraph({ exchange })).resolves.toEqual({
+      ...applicationGraph,
+      draftRevisions: [draftRevision],
+    });
+    expect(prisma.applicationGraph.create).toHaveBeenCalledWith({
+      data: {
+        workspaceId: workspace.id,
+        key: localApplicationGraph.metadata.id,
+        name: localApplicationGraph.metadata.name,
+        draftRevisions: { create: { revisionNumber: 1, graph: localApplicationGraph } },
       },
       include: { draftRevisions: true },
     });

@@ -3,9 +3,12 @@ import { describe, expect, it } from "vitest";
 import {
   applyGraphDiffToDraft,
   createDraftRevision,
+  createPublishedGraphExchange,
   GraphDiffError,
+  GraphExchangeError,
   GraphSemanticError,
   hashApplicationGraph,
+  parsePublishedGraphExchange,
   parseApplicationGraph,
   validateApplicationGraph,
   type ApplicationGraphV1,
@@ -132,6 +135,30 @@ describe("ApplicationGraphV1", () => {
 
     expect(hashApplicationGraph(expenseGraph)).toBe(hashApplicationGraph(reordered));
     expect(hashApplicationGraph(expenseGraph)).toMatch(/^sha256:[a-f0-9]{64}$/);
+  });
+
+  it("round-trips a published Graph exchange and rejects a mismatched digest", () => {
+    const exchange = createPublishedGraphExchange(expenseGraph, 3);
+
+    expect(parsePublishedGraphExchange(exchange)).toEqual(exchange);
+    expect(exchange.publishedRevision).toEqual({
+      revisionNumber: 3,
+      graphHash: hashApplicationGraph(expenseGraph),
+    });
+
+    expect(() =>
+      parsePublishedGraphExchange({
+        ...exchange,
+        publishedRevision: { ...exchange.publishedRevision, graphHash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
+      }),
+    ).toThrow(GraphExchangeError);
+
+    expect(() =>
+      parsePublishedGraphExchange({
+        ...exchange,
+        source: "arbitrary generated source is not an exchange field",
+      }),
+    ).toThrow(GraphExchangeError);
   });
 
   it("applies a validated proposal only to a mutable draft", () => {

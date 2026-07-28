@@ -10,8 +10,10 @@ import { Prisma } from "@prisma/client";
 import {
   applyGraphDiffToDraft,
   createDraftRevision,
+  createPublishedGraphExchange,
   hashApplicationGraph,
   parseApplicationGraph,
+  parsePublishedGraphExchange,
   type ApplicationGraphV1,
 } from "@factory/graph";
 import { GraphProposalError } from "@factory/adapters/ai";
@@ -243,6 +245,21 @@ export class LifecycleService {
     });
   }
 
+  /**
+   * Imports only a verified Graph exchange. Generated source, arbitrary Git
+   * history, and provider credentials are deliberately not accepted here.
+   */
+  async importPublishedGraph(input: unknown) {
+    const body = exactRecord(input, ["exchange"], ["exchange"]);
+    let graph: ApplicationGraphV1;
+    try {
+      graph = parsePublishedGraphExchange(body.exchange).graph;
+    } catch {
+      throw new BadRequestException("Published Graph exchange is invalid.");
+    }
+    return this.createLocalApplicationGraph({ graph });
+  }
+
   async appendDraftRevision(applicationGraphId: string, input: unknown) {
     const body = exactRecord(input, ["graph"], ["graph"]);
     const { graph } = validatedGraph(body.graph);
@@ -368,6 +385,27 @@ export class LifecycleService {
       where: { applicationGraphId },
       orderBy: { revisionNumber: "asc" },
     });
+  }
+
+  async exportPublishedGraph(
+    applicationGraphId: string,
+    publishedRevisionId: string,
+  ) {
+    const published = await this.prisma.publishedRevision.findFirst({
+      where: { id: publishedRevisionId, applicationGraphId },
+    });
+    if (!published) {
+      throw new NotFoundException(
+        "Published Revision was not found for this Graph.",
+      );
+    }
+    const { graph, graphHash } = validatedGraph(published.graph);
+    if (graphHash !== published.graphHash) {
+      throw new ConflictException(
+        "Published Revision Graph hash does not match its stored hash.",
+      );
+    }
+    return createPublishedGraphExchange(graph, published.revisionNumber);
   }
 
   async createCompilation(input: unknown) {

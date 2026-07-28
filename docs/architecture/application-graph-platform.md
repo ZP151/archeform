@@ -23,6 +23,29 @@ visualization. AI submits schema-validated Graph Diffs that can only alter a
 Draft. Git export/import remains Graph-first and never parses arbitrary source
 as an application definition.
 
+## Graph-first Git exchange
+
+The Control Plane exports only a verified immutable Published Revision as a
+`factory.published-graph-exchange/v1` JSON document. Its payload contains the
+Graph, the published revision number, and the SHA-256 Graph digest. It excludes
+generated source, compilation artifacts, provider metadata, credentials, raw
+AI prompts, and raw AI responses.
+
+Store that document in a Git repository as the durable, reviewable input to a
+future Factory workspace. Import verifies the exchange shape and digest, then
+creates a new mutable Draft; it never creates a Published Revision or attempts
+to reverse-parse arbitrary source. The local Control Plane routes are:
+
+```text
+GET  /application-graphs/:applicationGraphId/published-revisions/:publishedRevisionId/export
+POST /workspaces/local/application-graphs/import
+```
+
+The import body is `{ "exchange": <published-graph-exchange> }`. A Graph's
+workspace ID must match the local v1 workspace, and its Graph key must be new.
+These constraints make import fail closed instead of overwriting an existing
+application.
+
 The same boundary applies to every ecosystem project. A library can render,
 edit, compile, enforce, or host a Graph projection, but it may not become the
 stored business model, mutate a Published Revision, or execute an unrestricted
