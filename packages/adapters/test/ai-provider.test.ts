@@ -108,6 +108,10 @@ describe("AI Graph proposal adapter", () => {
     const operationSchema = ((diffSchema.properties as Record<string, unknown>).operations as Record<string, unknown>).items as Record<string, unknown>;
     expect(diffSchema.required).toEqual(["apiVersion", "baseGraphHash", "operations"]);
     expect(operationSchema.required).toEqual(["op", "path", "valueJson"]);
+    expect((diffSchema.properties as Record<string, Record<string, unknown>>).apiVersion).toMatchObject({
+      type: "string",
+      const: "factory.graph-diff/v1",
+    });
   });
 
   it("rejects a response whose Graph Diff cannot apply to the draft", async () => {

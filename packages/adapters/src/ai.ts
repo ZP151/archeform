@@ -121,7 +121,7 @@ const graphProposalJsonSchema: Record<string, unknown> = {
       additionalProperties: false,
       required: ["apiVersion", "baseGraphHash", "operations"],
       properties: {
-        apiVersion: { const: "factory.graph-diff/v1" },
+        apiVersion: { type: "string", const: "factory.graph-diff/v1" },
         baseGraphHash: {
           anyOf: [
             { type: "string", pattern: "^sha256:[a-f0-9]{64}$" },
@@ -137,7 +137,7 @@ const graphProposalJsonSchema: Record<string, unknown> = {
             additionalProperties: false,
             required: ["op", "path", "valueJson"],
             properties: {
-              op: { enum: ["add", "replace", "remove"] },
+              op: { type: "string", enum: ["add", "replace", "remove"] },
               path: { type: "string", pattern: "^/" },
               valueJson: {
                 anyOf: [
@@ -158,7 +158,7 @@ const graphProposalJsonSchema: Record<string, unknown> = {
         summary: { type: "string" },
         affectedModels: {
           type: "array",
-          items: { enum: ["metadata", "page", "domain", "policy", "flow", "integration", "experience"] },
+          items: { type: "string", enum: ["metadata", "page", "domain", "policy", "flow", "integration", "experience"] },
         },
         risks: { type: "array", items: { type: "string" } },
       },
@@ -172,7 +172,7 @@ const graphProposalJsonSchema: Record<string, unknown> = {
         properties: {
           id: { type: "string" },
           title: { type: "string" },
-          type: { enum: ["unit", "api", "flow", "journey", "smoke"] },
+          type: { type: "string", enum: ["unit", "api", "flow", "journey", "smoke"] },
         },
       },
     },
