@@ -742,6 +742,68 @@ function renderWebStyles(): string {
   ].join("\n");
 }
 
+function renderSimulator(graph: ApplicationGraphV1): string {
+  const definition = JSON.stringify({
+    applicationName: graph.metadata.name,
+    roles: graph.policy.roles,
+    flows: graph.flow.flows.map((flow) => ({
+      id: flow.id,
+      entity: flow.entity,
+      initialState: flow.initialState,
+      transitions: flow.transitions,
+    })),
+  }).replaceAll("<", "\\u003c");
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${graph.metadata.name} simulator</title>
+    <style>
+      :root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #f6f8fb; color: #122022; }
+      body { margin: 0; } main { max-width: 880px; margin: 0 auto; padding: 48px 24px; } header, .controls, .event-list, .history li { display: flex; gap: 12px; align-items: center; } header { justify-content: space-between; } h1 { margin: 4px 0; } p { color: #5b6870; } select, button { border: 1px solid #cad5d9; border-radius: 8px; padding: 9px 12px; font: inherit; background: #fff; } button { cursor: pointer; } button:not(:disabled) { background: #08756d; border-color: #08756d; color: #fff; } button:disabled { cursor: not-allowed; opacity: .48; } .card { margin-top: 24px; padding: 24px; border: 1px solid #dce4e7; border-radius: 16px; background: #fff; } .state { font-size: 1.25rem; font-weight: 700; } .history { display: grid; gap: 8px; padding: 0; list-style: none; } .history li { padding: 9px 12px; border-radius: 8px; background: #f2f7f7; } .denied { color: #b42318; } @media (max-width: 640px) { header, .controls { align-items: flex-start; flex-direction: column; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header><div><p>Published Graph projection</p><h1 id="application-name"></h1></div><strong>Role simulator</strong></header>
+      <section class="card"><div class="controls"><label>Role <select id="role"></select></label><label>Flow <select id="flow"></select></label><button id="reset" type="button">Reset scenario</button></div><p>Current state</p><div class="state" id="state"></div><div class="event-list" id="events"></div></section>
+      <section class="card"><h2>Scenario history</h2><ul class="history" id="history"></ul></section>
+    </main>
+    <script>
+      const definition = ${definition};
+      const selectedRole = document.querySelector('#role');
+      const selectedFlow = document.querySelector('#flow');
+      const stateElement = document.querySelector('#state');
+      const eventsElement = document.querySelector('#events');
+      const historyElement = document.querySelector('#history');
+      let currentState = '';
+      let history = [];
+      document.querySelector('#application-name').textContent = definition.applicationName;
+      for (const role of definition.roles) { const option = document.createElement('option'); option.value = role; option.textContent = role; selectedRole.append(option); }
+      for (const flow of definition.flows) { const option = document.createElement('option'); option.value = flow.id; option.textContent = flow.id + ' · ' + flow.entity; selectedFlow.append(option); }
+      function flow() { return definition.flows.find((candidate) => candidate.id === selectedFlow.value); }
+      function reset() { const active = flow(); currentState = active ? active.initialState : 'No FlowModel declared'; history = active ? ['Scenario reset to ' + currentState + '.'] : ['No FlowModel is available.']; render(); }
+      function render() {
+        const active = flow(); stateElement.textContent = currentState;
+        eventsElement.replaceChildren();
+        if (!active) return;
+        const transitions = active.transitions.filter((transition) => transition.from === currentState);
+        for (const transition of transitions) {
+          const allowed = !transition.roles || transition.roles.includes(selectedRole.value);
+          const button = document.createElement('button'); button.type = 'button'; button.textContent = transition.event; button.disabled = !allowed;
+          button.onclick = () => { if (!allowed) { history.unshift('Transition denied: ' + selectedRole.value + ' cannot trigger ' + transition.event + '.'); render(); return; } currentState = transition.to; history.unshift(selectedRole.value + ' triggered ' + transition.event + ' → ' + currentState + '.'); render(); };
+          eventsElement.append(button);
+        }
+        historyElement.replaceChildren(...history.map((entry) => { const item = document.createElement('li'); item.textContent = entry; if (entry.startsWith('Transition denied')) item.className = 'denied'; return item; }));
+      }
+      selectedRole.addEventListener('change', render); selectedFlow.addEventListener('change', reset); document.querySelector('#reset').addEventListener('click', reset); reset();
+    </script>
+  </body>
+</html>
+`;
+}
+
 function renderApiMain(graph: ApplicationGraphV1): string {
   return [
     'import { Body, Controller, Get, HttpException, HttpStatus, Module, Param, Post, Req } from "@nestjs/common";',
@@ -902,6 +964,7 @@ export function generateApplicationBundle(input: PublishedGraphInput): Generated
       path: "pnpm-workspace.yaml",
       content: "packages:\n  - web\n  - api\n  - database\n",
     },
+    { path: "simulator/index.html", content: renderSimulator(graph) },
     {
       path: "web/package.json",
       content: JSON.stringify({

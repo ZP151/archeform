@@ -137,6 +137,36 @@ describe("compilation target registry", () => {
     expect(files["web/next-env.d.ts"]).toContain('reference types="next"');
   });
 
+  it("emits a browser-only role simulator that replays declared FlowModel transitions", () => {
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "published-expense-simulator-1",
+        graph: {
+          ...publishedExpense.graph,
+          policy: { roles: ["employee", "manager"], permissions: [] },
+          flow: {
+            flows: [{
+              id: "expense-review",
+              entity: "expense",
+              initialState: "draft",
+              states: ["draft", "submitted", "approved"],
+              events: ["submit", "approve"],
+              transitions: [
+                { from: "draft", event: "submit", to: "submitted" },
+                { from: "submitted", event: "approve", to: "approved", roles: ["manager"] },
+              ],
+            }],
+          },
+        },
+      }).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(files["simulator/index.html"]).toContain("Role simulator");
+    expect(files["simulator/index.html"]).toContain("expense-review");
+    expect(files["simulator/index.html"]).toContain("Transition denied");
+    expect(files["simulator/index.html"]).toContain("selectedRole");
+  });
+
   it("compiles declared DomainModel relations into Prisma relation fields", () => {
     const files = Object.fromEntries(
       generateApplicationBundle({
