@@ -147,6 +147,9 @@ importers:
 
   packages/capabilities:
     dependencies:
+      '@factory/compiler':
+        specifier: workspace:*
+        version: link:../compiler
       '@factory/graph':
         specifier: workspace:*
         version: link:../graph

@@ -7,6 +7,7 @@ import {
   profileGraphs,
 } from "../src/index.js";
 import { validateApplicationGraph } from "@factory/graph";
+import { generateApplicationBundle } from "@factory/compiler";
 
 describe("capability catalog", () => {
   it("exposes independently composable core and commerce capabilities", () => {
@@ -53,5 +54,24 @@ describe("capability catalog", () => {
     for (const profile of profileGraphs) {
       expect(validateApplicationGraph(profile.graph)).toEqual([]);
     }
+  });
+
+  it.each(profileGraphs)("compiles $profile as an independent published application", ({ profile, graph }) => {
+    const bundle = generateApplicationBundle({
+      publishedRevisionId: `${profile}-published-1`,
+      graph,
+    });
+
+    expect(bundle.rootDirectory).toBe(`${profile}-${profile}-published-1`);
+    expect(bundle.files.map((file) => file.path)).toEqual(
+      expect.arrayContaining([
+        "web/app/page.tsx",
+        "api/src/main.ts",
+        "database/prisma/schema.prisma",
+        "api/policy/policy.csv",
+        "api/src/flows/definitions.ts",
+        "tests/journeys.generated.md",
+      ]),
+    );
   });
 });
