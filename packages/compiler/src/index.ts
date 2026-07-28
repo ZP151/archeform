@@ -119,6 +119,14 @@ function pluralize(value: string): string {
   return value.endsWith("s") ? `${value}es` : `${value}s`;
 }
 
+function hasCommerceCapabilities(graph: ApplicationGraphV1): boolean {
+  return graph.integration.capabilities.some((capability) =>
+    ["catalog.", "cart.", "inventory.", "order.", "payment."].some((prefix) =>
+      capability.key.startsWith(prefix),
+    ),
+  );
+}
+
 function prismaType(type: ApplicationGraphV1["domain"]["entities"][number]["fields"][number]["type"]): string {
   switch (type) {
     case "integer": return "Int";
@@ -231,6 +239,21 @@ function renderPrismaSchema(graph: ApplicationGraphV1): string {
     "  @@index([entity, recordId])",
     "  @@index([capability, operation])",
     "}",
+    ...(hasCommerceCapabilities(graph) ? [
+      "",
+      "model CommerceLineItem {",
+      "  id String @id @default(cuid())",
+      "  actor String",
+      "  orderEntity String",
+      "  orderRecordId String",
+      "  catalogEntity String",
+      "  catalogRecordId String",
+      "  quantity Int",
+      "  createdAt DateTime @default(now())",
+      "  @@index([orderEntity, orderRecordId])",
+      "  @@index([catalogEntity, catalogRecordId])",
+      "}",
+    ] : []),
     "",
   ].join("\n");
 }
@@ -315,6 +338,11 @@ function renderInitialMigration(graph: ApplicationGraphV1): string {
     'CREATE TABLE "CapabilityEvent" (\n  "id" TEXT NOT NULL PRIMARY KEY,\n  "actor" TEXT NOT NULL,\n  "capability" TEXT NOT NULL,\n  "operation" TEXT NOT NULL,\n  "entity" TEXT NOT NULL,\n  "recordId" TEXT NOT NULL,\n  "outcome" TEXT NOT NULL,\n  "at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP\n);',
     'CREATE INDEX "CapabilityEvent_entity_recordId_idx" ON "CapabilityEvent" ("entity", "recordId");',
     'CREATE INDEX "CapabilityEvent_capability_operation_idx" ON "CapabilityEvent" ("capability", "operation");',
+    ...(hasCommerceCapabilities(graph) ? [
+      'CREATE TABLE "CommerceLineItem" (\n  "id" TEXT NOT NULL PRIMARY KEY,\n  "actor" TEXT NOT NULL,\n  "orderEntity" TEXT NOT NULL,\n  "orderRecordId" TEXT NOT NULL,\n  "catalogEntity" TEXT NOT NULL,\n  "catalogRecordId" TEXT NOT NULL,\n  "quantity" INTEGER NOT NULL,\n  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP\n);',
+      'CREATE INDEX "CommerceLineItem_orderEntity_orderRecordId_idx" ON "CommerceLineItem" ("orderEntity", "orderRecordId");',
+      'CREATE INDEX "CommerceLineItem_catalogEntity_catalogRecordId_idx" ON "CommerceLineItem" ("catalogEntity", "catalogRecordId");',
+    ] : []),
     ...indexes,
     ...relationTables,
     ...relationConstraints,
@@ -443,12 +471,16 @@ function runtimeDefinition(graph: ApplicationGraphV1) {
 }
 
 function renderApplicationRuntime(graph: ApplicationGraphV1): string {
+  const commerce = hasCommerceCapabilities(graph);
   return [
     'import { enforce } from "./policy.js";',
     "",
     "export type StoredRecord = Record<string, unknown> & { id: string; status?: string };",
     "export type AuditEvent = { actor: string; action: string; entity: string; recordId: string; at: string };",
     "export type CapabilityEvent = { actor: string; capability: string; operation: string; entity: string; recordId: string; outcome: 'completed'; at: string };",
+    ...(commerce ? [
+      "export type CommerceLineItem = { id: string; actor: string; orderEntity: string; orderRecordId: string; catalogEntity: string; catalogRecordId: string; quantity: number };",
+    ] : []),
     "export interface RecordStore {",
     "  list(entityKey: string): Promise<readonly StoredRecord[]>;",
     "  find(entityKey: string, recordId: string): Promise<StoredRecord | undefined>;",
@@ -458,12 +490,18 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "  listAudit(): Promise<readonly AuditEvent[]>;",
     "  appendCapabilityEvent(event: CapabilityEvent): Promise<void>;",
     "  listCapabilityEvents(): Promise<readonly CapabilityEvent[]>;",
+    ...(commerce ? [
+      "  addCartItem(input: Omit<CommerceLineItem, 'id'>): Promise<CommerceLineItem>;",
+      "  listCartItems(orderEntity: string, orderRecordId: string): Promise<readonly CommerceLineItem[]>;",
+      "  decrementInventory(entityKey: string, recordId: string, quantity: number): Promise<StoredRecord>;",
+    ] : []),
     "}",
     "",
     "export class InMemoryRecordStore implements RecordStore {",
     "  private readonly records = new Map<string, Map<string, StoredRecord>>();",
     "  private readonly auditEvents: AuditEvent[] = [];",
     "  private readonly capabilityEvents: CapabilityEvent[] = [];",
+    ...(commerce ? ["  private readonly cartItems: CommerceLineItem[] = [];"] : []),
     "",
     "  private collection(entityKey: string): Map<string, StoredRecord> {",
     "    let collection = this.records.get(entityKey);",
@@ -493,6 +531,22 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "  async listAudit(): Promise<readonly AuditEvent[]> { return [...this.auditEvents]; }",
     "  async appendCapabilityEvent(event: CapabilityEvent): Promise<void> { this.capabilityEvents.push(event); }",
     "  async listCapabilityEvents(): Promise<readonly CapabilityEvent[]> { return [...this.capabilityEvents]; }",
+    ...(commerce ? [
+      "  async addCartItem(input: Omit<CommerceLineItem, 'id'>): Promise<CommerceLineItem> {",
+      "    const item = { id: `line-${this.cartItems.length + 1}`, ...input };",
+      "    this.cartItems.push(item);",
+      "    return item;",
+      "  }",
+      "  async listCartItems(orderEntity: string, orderRecordId: string): Promise<readonly CommerceLineItem[]> {",
+      "    return this.cartItems.filter((item) => item.orderEntity === orderEntity && item.orderRecordId === orderRecordId);",
+      "  }",
+      "  async decrementInventory(entityKey: string, recordId: string, quantity: number): Promise<StoredRecord> {",
+      "    const record = await this.find(entityKey, recordId);",
+      "    if (!record || typeof record.stock !== 'number') throw new Error(`Catalog record '${recordId}' has no numeric stock.`);",
+      "    if (record.stock < quantity) throw new Error(`Catalog record '${recordId}' has insufficient stock.`);",
+      "    return this.update(entityKey, recordId, { stock: record.stock - quantity });",
+      "  }",
+    ] : []),
     "}",
     "type RuntimeDefinition = {",
     "  entities: readonly { key: string; fields: readonly { key: string; required: boolean }[] }[];",
@@ -533,10 +587,15 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "    await this.assertAllowed(role, entityKey, 'update');",
     "  }",
     "",
+    "  private assertCapability(capabilityKey: string, operation: string): void {",
+    "    if (!definition.capabilities.some((capability) => capability.key === capabilityKey && capability.operation === operation)) {",
+    "      throw new Error(`Capability '${capabilityKey}.${operation}' is not declared by this Application Graph.`);",
+    "    }",
+    "  }",
+    "",
     "  private async executeEffects(role: string, entityKey: string, recordId: string, effects: readonly { capability: string; operation: string }[] | undefined): Promise<void> {",
     "    for (const effect of effects ?? []) {",
-    "      const declared = definition.capabilities.some((capability) => capability.key === effect.capability && capability.operation === effect.operation);",
-    "      if (!declared) throw new Error(`Capability effect '${effect.capability}.${effect.operation}' is not declared by this Application Graph.`);",
+    "      this.assertCapability(effect.capability, effect.operation);",
     "      const supported = [",
     "        'audit.record:record',",
     "        'notification.send:send',",
@@ -548,6 +607,13 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "      if (effect.capability === 'audit.record') {",
     "        await this.store.appendAudit({ actor: role, action: effect.operation, entity: entityKey, recordId, at });",
     "      }",
+    ...(commerce ? [
+      "      if (effect.capability === 'inventory.decrement') {",
+      "        const items = await this.store.listCartItems(entityKey, recordId);",
+      "        if (items.length === 0) throw new Error(`Cannot decrement inventory for an empty cart '${recordId}'.`);",
+      "        for (const item of items) await this.store.decrementInventory(item.catalogEntity, item.catalogRecordId, item.quantity);",
+      "      }",
+    ] : []),
     "      await this.store.appendCapabilityEvent({ actor: role, capability: effect.capability, operation: effect.operation, entity: entityKey, recordId, outcome: 'completed', at });",
     "    }",
     "  }",
@@ -577,6 +643,33 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "    return record;",
     "  }",
     "",
+    ...(commerce ? [
+      "  async addCartItem(role: string, orderEntity: string, orderRecordId: string, input: { catalogEntity: string; catalogRecordId: string; quantity: number }): Promise<CommerceLineItem> {",
+      "    this.entity(orderEntity);",
+      "    this.entity(input.catalogEntity);",
+      "    this.assertCapability('cart.add', 'add');",
+      "    await this.assertAllowed(role, orderEntity, 'create');",
+      "    await this.assertAllowed(role, input.catalogEntity, 'read');",
+      "    const order = await this.store.find(orderEntity, orderRecordId);",
+      "    if (!order) throw new Error(`Cart '${orderRecordId}' was not found.`);",
+      "    if (order.status !== 'cart') throw new Error(`Order '${orderRecordId}' is not an active cart.`);",
+      "    const catalogRecord = await this.store.find(input.catalogEntity, input.catalogRecordId);",
+      "    if (!catalogRecord) throw new Error(`Catalog record '${input.catalogRecordId}' was not found.`);",
+      "    if (!Number.isInteger(input.quantity) || input.quantity < 1) throw new Error('Cart quantity must be a positive integer.');",
+      "    const item = await this.store.addCartItem({ actor: role, orderEntity, orderRecordId, ...input });",
+      "    const at = new Date().toISOString();",
+      "    await this.store.appendAudit({ actor: role, action: 'cart.add', entity: orderEntity, recordId: orderRecordId, at });",
+      "    await this.store.appendCapabilityEvent({ actor: role, capability: 'cart.add', operation: 'add', entity: orderEntity, recordId: orderRecordId, outcome: 'completed', at });",
+      "    return item;",
+      "  }",
+      "",
+      "  async cartItems(role: string, orderEntity: string, orderRecordId: string): Promise<readonly CommerceLineItem[]> {",
+      "    this.entity(orderEntity);",
+      "    await this.assertAllowed(role, orderEntity, 'read');",
+      "    return this.store.listCartItems(orderEntity, orderRecordId);",
+      "  }",
+      "",
+    ] : []),
     "  async transition(role: string, entityKey: string, recordId: string, event: string): Promise<StoredRecord> {",
     "    this.entity(entityKey);",
     "    const flow = this.flow(entityKey);",
@@ -590,9 +683,9 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "    }",
     "    if (transition.roles?.length) await this.assertTransitionAllowed(role, entityKey, event);",
     "    else await this.assertAllowed(role, entityKey, 'read');",
+    "    await this.executeEffects(role, entityKey, recordId, transition.effects);",
     "    const updated = await this.store.update(entityKey, recordId, { status: transition.to });",
     "    await this.store.appendAudit({ actor: role, action: event, entity: entityKey, recordId, at: new Date().toISOString() });",
-    "    await this.executeEffects(role, entityKey, recordId, transition.effects);",
     "    return updated;",
     "  }",
     "",
@@ -618,6 +711,7 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
 }
 
 function renderPrismaRecordStore(graph: ApplicationGraphV1): string {
+  const commerce = hasCommerceCapabilities(graph);
   const delegates = Object.fromEntries(
     graph.domain.entities.map((entity) => [
       entity.key,
@@ -626,7 +720,7 @@ function renderPrismaRecordStore(graph: ApplicationGraphV1): string {
   );
   return [
     'import { PrismaClient } from "@prisma/client";',
-    'import type { AuditEvent, CapabilityEvent, RecordStore, StoredRecord } from "./application-runtime.js";',
+    `import type { AuditEvent, CapabilityEvent,${commerce ? " CommerceLineItem," : ""} RecordStore, StoredRecord } from "./application-runtime.js";`,
     "",
     "type CrudDelegate = {",
     "  findMany(): Promise<unknown[]>;",
@@ -642,6 +736,12 @@ function renderPrismaRecordStore(graph: ApplicationGraphV1): string {
     "  create(input: { data: Record<string, unknown> }): Promise<unknown>;",
     "  findMany(input: { orderBy: { at: 'asc' } }): Promise<unknown[]>;",
     "};",
+    ...(commerce ? [
+      "type CommerceLineDelegate = {",
+      "  create(input: { data: Record<string, unknown> }): Promise<unknown>;",
+      "  findMany(input: { where: { orderEntity: string; orderRecordId: string }; orderBy: { createdAt: 'asc' } }): Promise<unknown[]>;",
+      "};",
+    ] : []),
     `const delegates: Readonly<Record<string, string>> = ${JSON.stringify(delegates, null, 2)};`,
     "",
     "function asStoredRecord(value: unknown): StoredRecord { return value as StoredRecord; }",
@@ -663,6 +763,12 @@ function renderPrismaRecordStore(graph: ApplicationGraphV1): string {
     "  private capabilityDelegate(): CapabilityDelegate {",
     "    return (this.prisma as unknown as { capabilityEvent: CapabilityDelegate }).capabilityEvent;",
     "  }",
+    ...(commerce ? [
+      "",
+      "  private commerceLineDelegate(): CommerceLineDelegate {",
+      "    return (this.prisma as unknown as { commerceLineItem: CommerceLineDelegate }).commerceLineItem;",
+      "  }",
+    ] : []),
     "",
     "  async list(entityKey: string): Promise<readonly StoredRecord[]> {",
     "    return (await this.delegate(entityKey).findMany()).map(asStoredRecord);",
@@ -702,6 +808,23 @@ function renderPrismaRecordStore(graph: ApplicationGraphV1): string {
     "      return { ...event, at: event.at.toISOString(), outcome: 'completed' as const };",
     "    });",
     "  }",
+    ...(commerce ? [
+      "",
+      "  async addCartItem(input: Omit<CommerceLineItem, 'id'>): Promise<CommerceLineItem> {",
+      "    return asStoredRecord(await this.commerceLineDelegate().create({ data: input })) as CommerceLineItem;",
+      "  }",
+      "",
+      "  async listCartItems(orderEntity: string, orderRecordId: string): Promise<readonly CommerceLineItem[]> {",
+      "    return (await this.commerceLineDelegate().findMany({ where: { orderEntity, orderRecordId }, orderBy: { createdAt: 'asc' } })) as CommerceLineItem[];",
+      "  }",
+      "",
+      "  async decrementInventory(entityKey: string, recordId: string, quantity: number): Promise<StoredRecord> {",
+      "    const record = await this.find(entityKey, recordId);",
+      "    if (!record || typeof record.stock !== 'number') throw new Error(`Catalog record '${recordId}' has no numeric stock.`);",
+      "    if (record.stock < quantity) throw new Error(`Catalog record '${recordId}' has insufficient stock.`);",
+      "    return this.update(entityKey, recordId, { stock: record.stock - quantity });",
+      "  }",
+    ] : []),
     "}",
     "",
   ].join("\n");
@@ -906,6 +1029,7 @@ function renderSimulator(graph: ApplicationGraphV1): string {
 }
 
 function renderApiMain(graph: ApplicationGraphV1): string {
+  const commerce = hasCommerceCapabilities(graph);
   return [
     'import { Body, Controller, Get, HttpException, HttpStatus, Module, Param, Post, Req } from "@nestjs/common";',
     'import { NestFactory } from "@nestjs/core";',
@@ -934,6 +1058,18 @@ function renderApiMain(graph: ApplicationGraphV1): string {
     "    try { return await applicationRuntime.auditLog(roleFrom(request)); } catch (error) { throw rejected(error); }",
     "  }",
     "",
+    ...(commerce ? [
+      "  @Get('commerce/:entity/:recordId/items')",
+      "  async cartItems(@Param('entity') entity: string, @Param('recordId') recordId: string, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
+      "    try { return await applicationRuntime.cartItems(roleFrom(request), entity, recordId); } catch (error) { throw rejected(error); }",
+      "  }",
+      "",
+      "  @Post('commerce/:entity/:recordId/items')",
+      "  async addCartItem(@Param('entity') entity: string, @Param('recordId') recordId: string, @Body() body: { catalogEntity: string; catalogRecordId: string; quantity: number }, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
+      "    try { return await applicationRuntime.addCartItem(roleFrom(request), entity, recordId, body); } catch (error) { throw rejected(error); }",
+      "  }",
+      "",
+    ] : []),
     "  @Get('capability-events')",
     "  async capabilityEvents(@Req() request: { headers: Record<string, string | string[] | undefined> }) {",
     "    try { return await applicationRuntime.capabilityEvents(roleFrom(request)); } catch (error) { throw rejected(error); }",

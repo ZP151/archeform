@@ -355,4 +355,31 @@ describe("compilation target registry", () => {
     expect(files["database/prisma/seed.ts"]).toContain("seed-expense-1");
     expect(files["database/Dockerfile"]).toContain("tsx prisma/seed.ts");
   });
+
+  it("compiles reusable catalog, cart, and inventory capability runtime assets", () => {
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "published-commerce-runtime-1",
+        graph: {
+          ...publishedExpense.graph,
+          integration: {
+            providers: [],
+            capabilities: [
+              { key: "cart.add", providerId: "factory", operation: "add" },
+              { key: "inventory.decrement", providerId: "factory", operation: "decrement" },
+            ],
+          },
+        },
+      }).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(files["api/prisma/schema.prisma"]).toContain("model CommerceLineItem");
+    expect(files["database/prisma/migrations/0001_initial/migration.sql"]).toContain(
+      'CREATE TABLE "CommerceLineItem"',
+    );
+    expect(files["api/src/application-runtime.ts"]).toContain("addCartItem");
+    expect(files["api/src/application-runtime.ts"]).toContain("decrementInventory");
+    expect(files["api/src/prisma-record-store.ts"]).toContain("commerceLineItem");
+    expect(files["api/src/main.ts"]).toContain("commerce/:entity/:recordId/items");
+  });
 });

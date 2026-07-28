@@ -68,6 +68,26 @@ describe("capability catalog", () => {
     );
   });
 
+  it("declares cart and inventory operations for each commerce profile", () => {
+    for (const profile of ["restaurant-ordering", "simple-ecommerce"] as const) {
+      const graph = profileGraphs.find((entry) => entry.profile === profile)!.graph;
+      expect(graph.integration.capabilities.map((capability) => capability.key)).toEqual(
+        expect.arrayContaining(["cart.add", "inventory.decrement", "payment.simulate"]),
+      );
+    }
+    const restaurant = profileGraphs.find(({ profile }) => profile === "restaurant-ordering")!.graph;
+    expect(restaurant.domain.entities.find((entity) => entity.key === "menu-item")!.fields).toEqual(
+      expect.arrayContaining([expect.objectContaining({ key: "stock", type: "integer" })]),
+    );
+  });
+
+  it("grants the Restaurant manager read-only audit access to generated capability evidence", () => {
+    const restaurant = profileGraphs.find(({ profile }) => profile === "restaurant-ordering")!.graph;
+    expect(restaurant.policy.permissions).toContainEqual(
+      { role: "manager", resource: "order", actions: ["read", "audit"] },
+    );
+  });
+
   it.each(profileGraphs)("compiles $profile as an independent published application", ({ profile, graph }) => {
     const bundle = generateApplicationBundle({
       publishedRevisionId: `${profile}-published-1`,

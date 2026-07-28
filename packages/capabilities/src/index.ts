@@ -207,13 +207,13 @@ export const profileGraphs: readonly ProfileGraphStarter[] = Object.freeze([
       },
       {
         entities: [
-          { key: "menu-item", label: "Menu item", fields: [{ key: "name", type: "string", required: true }, { key: "price", type: "decimal", required: true }, { key: "available", type: "boolean", required: true }], indexes: [] },
+          { key: "menu-item", label: "Menu item", fields: [{ key: "name", type: "string", required: true }, { key: "price", type: "decimal", required: true }, { key: "available", type: "boolean", required: true }, { key: "stock", type: "integer", required: true }], indexes: [] },
           { key: "order", label: "Order", fields: [{ key: "status", type: "enum", required: true, values: ["cart", "paid", "preparing", "ready"] }], indexes: [{ fields: ["status"] }] },
         ],
         relations: [{ from: "order", to: "menu-item", kind: "many-to-many" }],
         seedData: [
-          { entity: "menu-item", id: "margherita-pizza", values: { name: "Margherita pizza", price: 14, available: true } },
-          { entity: "menu-item", id: "mushroom-risotto", values: { name: "Mushroom risotto", price: 18, available: true } },
+          { entity: "menu-item", id: "margherita-pizza", values: { name: "Margherita pizza", price: 14, available: true, stock: 12 } },
+          { entity: "menu-item", id: "mushroom-risotto", values: { name: "Mushroom risotto", price: 18, available: true, stock: 8 } },
         ],
       },
       {
@@ -222,6 +222,7 @@ export const profileGraphs: readonly ProfileGraphStarter[] = Object.freeze([
           { role: "customer", resource: "menu-item", actions: ["read"] },
           { role: "customer", resource: "order", actions: ["create", "read"] },
           { role: "kitchen", resource: "order", actions: ["read", "update"] },
+          { role: "manager", resource: "order", actions: ["read", "audit"] },
         ],
       },
       {
@@ -232,13 +233,13 @@ export const profileGraphs: readonly ProfileGraphStarter[] = Object.freeze([
           states: ["cart", "paid", "preparing", "ready"],
           events: ["pay", "start-preparing", "mark-ready"],
           transitions: [
-            { from: "cart", event: "pay", to: "paid", effects: [{ capability: "payment.simulate", operation: "simulate" }] },
+            { from: "cart", event: "pay", to: "paid", effects: [{ capability: "payment.simulate", operation: "simulate" }, { capability: "inventory.decrement", operation: "decrement" }] },
             { from: "paid", event: "start-preparing", to: "preparing", roles: ["kitchen"] },
             { from: "preparing", event: "mark-ready", to: "ready", roles: ["kitchen"], effects: [{ capability: "notification.send", operation: "send" }] },
           ],
         }],
       },
-      ["payment.simulate", "notification.send"],
+      ["catalog.list", "catalog.read", "cart.add", "cart.remove", "cart.checkout", "inventory.reserve", "inventory.release", "inventory.decrement", "order.create", "order.transition", "payment.simulate", "notification.send"],
     ),
   },
   {
@@ -289,7 +290,7 @@ export const profileGraphs: readonly ProfileGraphStarter[] = Object.freeze([
           ],
         }],
       },
-      ["payment.simulate", "inventory.decrement", "audit.record"],
+      ["catalog.list", "catalog.read", "cart.add", "cart.remove", "cart.checkout", "inventory.reserve", "inventory.release", "inventory.decrement", "order.create", "order.transition", "payment.simulate", "audit.record"],
     ),
   },
 ]);
