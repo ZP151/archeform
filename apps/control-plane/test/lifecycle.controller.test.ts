@@ -1,0 +1,124 @@
+import { type INestApplication, Module } from "@nestjs/common";
+import { NestFactory } from "@nestjs/core";
+import type { AddressInfo } from "node:net";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+
+import { LifecycleController } from "../src/lifecycle.controller.js";
+import { LifecycleService } from "../src/lifecycle.service.js";
+
+const lifecycle = {
+  appendDraftRevision: vi.fn(),
+  createCompilation: vi.fn(),
+  createLocalApplicationGraph: vi.fn(),
+  getDraft: vi.fn(),
+  listPublishedRevisions: vi.fn(),
+  publishDraft: vi.fn(),
+};
+
+@Module({
+  controllers: [LifecycleController],
+  providers: [{ provide: LifecycleService, useValue: lifecycle }],
+})
+class TestModule {}
+
+describe("LifecycleController", () => {
+  let app: INestApplication;
+  let baseUrl: string;
+
+  beforeAll(async () => {
+    app = await NestFactory.create(TestModule, { logger: ["error"] });
+    await app.listen(0, "127.0.0.1");
+    const address = app.getHttpServer().address() as AddressInfo;
+    baseUrl = `http://127.0.0.1:${address.port}`;
+  });
+
+  beforeEach(() => vi.clearAllMocks());
+
+  afterAll(async () => app.close());
+
+  it.each([
+    {
+      method: "POST",
+      path: "/workspaces/local/application-graphs",
+      body: { graph: { apiVersion: "factory.application-graph/v1" } },
+      handler: lifecycle.createLocalApplicationGraph,
+      arguments: [{ graph: { apiVersion: "factory.application-graph/v1" } }],
+      response: { id: "graph-1" },
+    },
+    {
+      method: "POST",
+      path: "/application-graphs/graph-1/draft-revisions",
+      body: { graph: { apiVersion: "factory.application-graph/v1" } },
+      handler: lifecycle.appendDraftRevision,
+      arguments: [
+        "graph-1",
+        { graph: { apiVersion: "factory.application-graph/v1" } },
+      ],
+      response: { id: "draft-2" },
+    },
+    {
+      method: "GET",
+      path: "/application-graphs/graph-1/draft",
+      handler: lifecycle.getDraft,
+      arguments: ["graph-1"],
+      response: { id: "draft-2" },
+    },
+    {
+      method: "POST",
+      path: "/application-graphs/graph-1/published-revisions",
+      body: { draftRevisionId: "draft-2" },
+      handler: lifecycle.publishDraft,
+      arguments: ["graph-1", { draftRevisionId: "draft-2" }],
+      response: { id: "published-1" },
+    },
+    {
+      method: "GET",
+      path: "/application-graphs/graph-1/published-revisions",
+      handler: lifecycle.listPublishedRevisions,
+      arguments: ["graph-1"],
+      response: [{ id: "published-1" }],
+    },
+    {
+      method: "POST",
+      path: "/compilations",
+      body: {
+        publishedRevisionId: "published-1",
+        target: "simulator",
+        compilerVersion: "0.1.0",
+        result: { status: "succeeded" },
+      },
+      handler: lifecycle.createCompilation,
+      arguments: [
+        {
+          publishedRevisionId: "published-1",
+          target: "simulator",
+          compilerVersion: "0.1.0",
+          result: { status: "succeeded" },
+        },
+      ],
+      response: { id: "compilation-1" },
+    },
+  ])("maps $method $path to the lifecycle boundary", async (scenario) => {
+    scenario.handler.mockResolvedValueOnce(scenario.response);
+
+    const response = await fetch(`${baseUrl}${scenario.path}`, {
+      method: scenario.method,
+      headers: scenario.body
+        ? { "content-type": "application/json" }
+        : undefined,
+      body: scenario.body ? JSON.stringify(scenario.body) : undefined,
+    });
+
+    expect(response.status).toBe(scenario.method === "POST" ? 201 : 200);
+    expect(await response.json()).toEqual(scenario.response);
+    expect(scenario.handler).toHaveBeenCalledWith(...scenario.arguments);
+  });
+});

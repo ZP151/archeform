@@ -861,6 +861,175 @@ input:focus-visible {
   color: #8de7c8;
   font-weight: 500;
 }
+.studio-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 640px;
+  overflow: hidden;
+  background: var(--paper);
+}
+.studio-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 66px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--paper) 92%, var(--accent-soft));
+}
+.studio-intro > div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.studio-intro span,
+.studio-intro small {
+  color: var(--ink-muted);
+  font:
+    10px/1.25 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.studio-intro strong {
+  color: var(--ink);
+  font-size: 15px;
+  letter-spacing: -0.02em;
+}
+.puck-studio {
+  --puck-color-azure-04: #e7f5f2;
+  --puck-color-azure-08: #007e70;
+  --puck-color-azure-09: #006b60;
+  --puck-color-azure-10: #005c52;
+  --puck-color-white: var(--paper);
+  --puck-color-grey-01: var(--canvas);
+  --puck-color-grey-03: var(--line);
+  --puck-color-grey-05: var(--line-strong);
+  --puck-font-family: var(--font-sans);
+}
+.puck-studio [class*="_PuckLayout_"] {
+  height: 574px;
+}
+.puck-studio [class*="_PuckLayout-inner_"] {
+  border: 0;
+}
+.puck-studio [class*="_PuckHeader_"] {
+  border-bottom-color: var(--line);
+  box-shadow: none;
+}
+.puck-hero-block {
+  display: grid;
+  align-content: center;
+  min-height: 390px;
+  padding: clamp(32px, 7vw, 88px);
+  border: 1px solid #c4dfda;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 82% 18%, rgb(0 139 120 / 0.12), transparent 29%),
+    linear-gradient(135deg, #f9fffd, #edf7f5);
+  color: #152b29;
+}
+.puck-hero-block small {
+  color: #007e70;
+  font:
+    11px/1 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.puck-hero-block h2 {
+  max-width: 12ch;
+  margin: 16px 0 24px;
+  font-size: clamp(35px, 4.2vw, 64px);
+  letter-spacing: -0.07em;
+  line-height: 0.94;
+}
+.puck-hero-block button {
+  width: fit-content;
+  padding: 11px 14px;
+  border: 0;
+  border-radius: 9px;
+  background: #007e70;
+  color: #fff;
+  font-weight: 700;
+}
+.flow-studio {
+  background:
+    radial-gradient(circle at 64% 34%, rgb(0 139 120 / 0.08), transparent 31%),
+    var(--canvas);
+}
+.react-flow-stage {
+  min-height: 574px;
+}
+.react-flow__node {
+  min-width: 132px;
+  padding: 12px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--paper);
+  box-shadow: 0 14px 32px rgb(22 49 46 / 0.08);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+.react-flow__node.selected {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 3px var(--accent-soft),
+    0 14px 32px rgb(22 49 46 / 0.08);
+}
+.react-flow__edge-path {
+  stroke: #7eaba4;
+  stroke-width: 1.5;
+}
+.react-flow__controls {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  box-shadow: 0 8px 24px rgb(22 49 46 / 0.1);
+}
+.react-flow__controls-button {
+  border-bottom-color: var(--line) !important;
+  background: var(--paper);
+  color: var(--ink-muted);
+}
+.draft-proposal-status {
+  position: absolute;
+  right: 18px;
+  bottom: 16px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--paper) 92%, var(--accent-soft));
+  box-shadow: 0 8px 24px rgb(22 49 46 / 0.08);
+  color: var(--ink-muted);
+  font-size: 11px;
+}
+.draft-proposal-status > span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.draft-proposal-status small {
+  min-width: 16px;
+  padding-left: 5px;
+  border-left: 1px solid var(--line);
+  color: var(--ink);
+  font-weight: 700;
+  text-align: center;
+}
 @media (max-width: 1050px) {
   .canvas {
     grid-template-columns: minmax(0, 1fr) 248px;

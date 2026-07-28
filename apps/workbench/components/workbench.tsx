@@ -13,7 +13,6 @@ import {
   LayoutPanelLeft,
   Moon,
   PanelRight,
-  Play,
   Plus,
   Settings2,
   ShieldCheck,
@@ -27,6 +26,9 @@ import {
   transitionWorkbench,
   type Surface,
 } from "../lib/workbench-model";
+import { PageStudio } from "./page-studio";
+import { FlowStudio } from "./flow-studio";
+import type { PuckPageDocument, ReactFlowDiagram } from "@factory/adapters";
 
 type Navigation = {
   id: Surface;
@@ -49,20 +51,20 @@ const navigation: Navigation[] = [
   { id: "code", label: "Code", icon: Code2, hint: "Inspect generated output" },
 ];
 
-const flowNodes = [
-  ["Request", "Employee", "#34d399"],
-  ["Review", "Manager", "#8b5cf6"],
-  ["Policy", "Rules", "#f59e0b"],
-  ["Record", "Audit log", "#38bdf8"],
-] as const;
+type Props = {
+  pageDocument: PuckPageDocument;
+  flowDiagram: ReactFlowDiagram;
+};
 
-export function Workbench() {
+export function Workbench({ pageDocument, flowDiagram }: Props) {
   const [state, dispatch] = useReducer(
     transitionWorkbench,
     initialWorkbenchState,
   );
   const active =
     navigation.find((item) => item.id === state.activeSurface) ?? navigation[0];
+  const proposeDraftChange = (source: string) =>
+    dispatch({ type: "propose-draft-change", source });
 
   return (
     <main className={`workbench theme-${state.theme}`} data-theme={state.theme}>
@@ -178,13 +180,29 @@ export function Workbench() {
               className="canvas-board"
               aria-label={`${active.label} canvas`}
             >
-              {state.activeSurface === "page" && <PageCanvas />}
+              {state.activeSurface === "page" && (
+                <PageStudio
+                  pageDocument={pageDocument}
+                  onDraftProposal={proposeDraftChange}
+                />
+              )}
               {state.activeSurface === "domain" && <DomainCanvas />}
-              {state.activeSurface === "flow" && <FlowCanvas />}
+              {state.activeSurface === "flow" && (
+                <FlowStudio
+                  diagram={flowDiagram}
+                  onDraftProposal={proposeDraftChange}
+                />
+              )}
               {state.activeSurface === "policy" && <PolicyCanvas />}
               {state.activeSurface === "ai" && <AiCanvas />}
               {state.activeSurface === "code" && <CodeCanvas />}
             </section>
+            {state.lastProposal && (
+              <p className="draft-proposal-status" role="status">
+                <span /> {state.lastProposal} proposed a Draft change
+                <small>{state.draftProposals}</small>
+              </p>
+            )}
             {state.propertiesOpen && (
               <PropertiesPanel surface={state.activeSurface} />
             )}
@@ -192,54 +210,6 @@ export function Workbench() {
         </section>
       </section>
     </main>
-  );
-}
-
-function PageCanvas() {
-  return (
-    <div className="page-canvas">
-      <div className="canvas-toolbar">
-        <button className="toolbar-active">Desktop</button>
-        <button>Tablet</button>
-        <button>Mobile</button>
-        <span />
-        <button aria-label="Preview">
-          <Play size={14} /> Preview
-        </button>
-      </div>
-      <div className="site-frame">
-        <div className="site-nav">
-          <strong>Northstar</strong>
-          <span>Overview</span>
-          <span>Requests</span>
-          <span>Activity</span>
-          <button>New request</button>
-        </div>
-        <div className="site-body">
-          <div className="site-copy">
-            <p>Operations, without the handoffs.</p>
-            <h2>Move work through the right decision.</h2>
-            <button>
-              Start a request <span>↗</span>
-            </button>
-          </div>
-          <div className="site-stat">
-            <span>Open requests</span>
-            <strong>24</strong>
-            <small>+12% from last week</small>
-            <div className="bars">
-              <i />
-              <i />
-              <i />
-              <i />
-              <i />
-              <i />
-              <i />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -273,35 +243,6 @@ function DomainCanvas() {
       </div>
       <div className="record-note">
         A clear domain model keeps components composable.
-      </div>
-    </div>
-  );
-}
-
-function FlowCanvas() {
-  return (
-    <div className="flow-canvas">
-      <div className="flow-start">Start</div>
-      <div className="flow-line" />
-      {flowNodes.map(([name, owner, color], index) => (
-        <div
-          className="flow-item"
-          style={{ left: `${106 + index * 194}px` }}
-          key={name}
-        >
-          <div
-            className="flow-node"
-            style={{ "--node-color": color } as React.CSSProperties}
-          >
-            <span>{index + 1}</span>
-            <strong>{name}</strong>
-            <small>{owner}</small>
-          </div>
-          {index < flowNodes.length - 1 && <i className="node-connector" />}
-        </div>
-      ))}
-      <div className="flow-end">
-        <Check size={16} /> Complete
       </div>
     </div>
   );

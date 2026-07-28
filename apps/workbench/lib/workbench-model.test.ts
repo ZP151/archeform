@@ -22,4 +22,15 @@ describe("transitionWorkbench", () => {
     expect(next.theme).toBe("dark");
     expect(next.activeSurface).toBe("page");
   });
+
+  it("records editor intent as a Draft proposal without mutating lifecycle ownership", () => {
+    const proposed = transitionWorkbench(initialWorkbenchState, {
+      type: "propose-draft-change",
+      source: "Puck Page Studio",
+    });
+
+    expect(proposed.lifecycle).toBe("draft");
+    expect(proposed.draftProposals).toBe(1);
+    expect(proposed.lastProposal).toBe("Puck Page Studio");
+  });
 });
