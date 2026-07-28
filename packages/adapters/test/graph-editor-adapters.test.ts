@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { assertValidApplicationGraph } from "@factory/graph";
 
 import {
   flowModelToReactFlow,
@@ -21,6 +22,7 @@ describe("Graph editor adapters", () => {
     };
 
     expect(puckDocumentToPageModel(pageModelToPuckDocument(page))).toEqual(page);
+    expect(() => assertValidApplicationGraph(pageModelToPuckDocument(page))).toThrow();
   });
 
   it("exposes declared FlowModel transitions as read-only React Flow nodes and edges", () => {
@@ -45,5 +47,8 @@ describe("Graph editor adapters", () => {
       "expense-review:approved",
     ]);
     expect(diagram.edges.map((edge) => edge.label)).toEqual(["submit", "approve"]);
+    expect(diagram.edges).toEqual(expect.arrayContaining([
+      expect.objectContaining({ data: expect.objectContaining({ event: "submit" }) }),
+    ]));
   });
 });
