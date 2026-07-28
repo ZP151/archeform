@@ -133,7 +133,13 @@ describe("ControlPlaneClient", () => {
   it("reads compilation status without accessing a mutable Draft", async () => {
     const fetcher = vi.fn().mockResolvedValue(
       new Response(
-        JSON.stringify({ id: "compilation-1", publishedRevisionId: "published-1", target: "application-bundle", result: { status: "succeeded" } }),
+        JSON.stringify({
+          id: "compilation-1",
+          publishedRevisionId: "published-1",
+          target: "application-bundle",
+          result: { status: "succeeded" },
+          artifacts: [{ path: "web/app/page.tsx", digest: "sha256:abc", mediaType: "text/typescript" }],
+        }),
         { status: 200, headers: { "content-type": "application/json" } },
       ),
     );
@@ -142,6 +148,7 @@ describe("ControlPlaneClient", () => {
     await expect(client.getCompilation("compilation-1")).resolves.toMatchObject({
       id: "compilation-1",
       result: { status: "succeeded" },
+      artifacts: [{ path: "web/app/page.tsx" }],
     });
     expect(fetcher).toHaveBeenCalledWith(
       "http://control-plane.test/compilations/compilation-1",

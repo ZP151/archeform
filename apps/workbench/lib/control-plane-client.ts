@@ -49,6 +49,12 @@ export type WorkbenchCompilation = {
   readonly publishedRevisionId: string;
   readonly target: string;
   readonly result: { readonly status: string };
+  readonly artifacts?: readonly {
+    readonly path: string;
+    readonly digest: string;
+    readonly mediaType: string;
+    readonly sizeBytes?: number | null;
+  }[];
 };
 
 export class ControlPlaneError extends Error {

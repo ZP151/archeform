@@ -747,6 +747,7 @@ function CodeCanvas({
   onImportPublishedGraph: (file: File) => void;
 }) {
   const importInput = useRef<HTMLInputElement>(null);
+  const artifacts = compilation?.artifacts ?? [];
   return (
     <div className="code-canvas">
       <div className="code-tabs">
@@ -790,6 +791,25 @@ function CodeCanvas({
         </button>
       </div>
       {exchangeStatus && <p className="graph-exchange-status" role="status">{exchangeStatus}</p>}
+      {compilation && (
+        <section className="compilation-artifacts" aria-label="Generated artifact manifest">
+          <div>
+            <strong>Generated artifact manifest</strong>
+            <small>{artifacts.length ? `${artifacts.length} immutable outputs` : "Awaiting Worker evidence"}</small>
+          </div>
+          {artifacts.length > 0 && (
+            <ul>
+              {artifacts.slice(0, 6).map((artifact) => (
+                <li key={artifact.path}>
+                  <code>{artifact.path}</code>
+                  <span>{artifact.digest.slice(0, 18)}…</span>
+                </li>
+              ))}
+              {artifacts.length > 6 && <li className="artifact-more">+{artifacts.length - 6} more</li>}
+            </ul>
+          )}
+        </section>
+      )}
     </div>
   );
 }

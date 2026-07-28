@@ -1122,6 +1122,44 @@ input:focus-visible {
   color: #8de7c8;
   font: 10px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
 }
+.compilation-artifacts {
+  padding: 15px 17px 17px;
+  border-top: 1px solid #263644;
+  color: #d9e9ea;
+}
+.compilation-artifacts > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.compilation-artifacts strong,
+.compilation-artifacts small,
+.compilation-artifacts li {
+  font: 10px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.compilation-artifacts small,
+.compilation-artifacts li span {
+  color: #8395a6;
+}
+.compilation-artifacts ul {
+  display: grid;
+  gap: 6px;
+  margin: 11px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.compilation-artifacts li {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+.compilation-artifacts code {
+  color: #c7d7dc;
+}
+.compilation-artifacts .artifact-more {
+  color: #8de7c8;
+}
 .studio-shell {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
