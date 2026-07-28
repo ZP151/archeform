@@ -4,10 +4,8 @@
 
 ## Scope
 
-This record covers deterministic local runtime evidence for independently
-published Graphs and the guarded real-model acceptance completed so far.
-Restaurant Ordering and Simple Ecommerce still require their own guarded,
-environment-only real OpenAI Graph-Diff runs before final acceptance.
+This record covers deterministic local runtime evidence and the guarded
+real-model acceptance for each independently published profile.
 
 ## Common path
 
@@ -18,11 +16,11 @@ its PostgreSQL, migration, Nest API, and Next.js Web services.
 
 ## Evidence
 
-| Profile | Generated runtime journey | Web result |
-| --- | --- | --- |
-| Expense Approval | Employee created and submitted an expense; manager approved it; finance read audit evidence. | HTTP 200 |
-| Restaurant Ordering | Customer selected a seeded menu item, added it to a cart, simulated payment, and kitchen progressed it to `ready`. | HTTP 200 |
-| Simple Ecommerce | Customer added a seeded product to a cart, paid, and an operator fulfilled it; stock decreased by one. The operator was correctly denied access to capability evidence (HTTP 403). | HTTP 200 |
+| Profile             | Generated runtime journey                                                                                                                                                          | Web result |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| Expense Approval    | Employee created and submitted an expense; manager approved it; finance read audit evidence.                                                                                       | HTTP 200   |
+| Restaurant Ordering | Customer selected a seeded menu item, added it to a cart, simulated payment, and kitchen progressed it to `ready`.                                                                 | HTTP 200   |
+| Simple Ecommerce    | Customer added a seeded product to a cart, paid, and an operator fulfilled it; stock decreased by one. The operator was correctly denied access to capability evidence (HTTP 403). | HTTP 200   |
 
 ## Boundary checks
 
@@ -35,27 +33,50 @@ its PostgreSQL, migration, Nest API, and Next.js Web services.
 
 ## Guarded real-model acceptance
 
-Expense Approval is independently accepted.
+Expense Approval, Restaurant Ordering, and Simple Ecommerce are independently
+accepted.
 
-- The Control Plane received one real OpenAI proposal using only a local
-  environment variable. The provider returned a schema-valid Graph Diff that
-  was applied only to a mutable Draft.
-- The resulting Draft revision 2 was published as immutable revision 1 and
-  compiled successfully into 39 artifacts.
-- Its isolated generated runtime persisted the model-added optional receipt
-  field, completed the employee submit and manager approve journey, recorded
-  five audit events and two capability events, and served its Web application
+- **Expense Approval:** one environment-only real OpenAI proposal produced a
+  schema-valid Graph Diff that was applied only to a mutable Draft. Its
+  resulting immutable revision compiled into 39 artifacts. The isolated
+  generated runtime persisted the model-added optional receipt field, completed
+  employee submission and manager approval, recorded five audit events and two
+  capability events, and served its Web application with HTTP 200.
+- **Restaurant Ordering:** one environment-only real OpenAI proposal produced
+  a schema-valid Graph Diff that was applied only to a mutable Draft. Its
+  resulting immutable revision compiled into 39 artifacts. The isolated
+  generated runtime read seeded menu data, created a cart, added a menu item,
+  completed simulated payment, advanced the kitchen flow to `ready`, recorded
+  five audit events and four capability events, and served its Web application
   with HTTP 200.
-- Only the outcome, revisions, artifact count, and journey assertions are
-  recorded here. No credential, raw brief, or raw provider response is stored.
+- **Simple Ecommerce:** one environment-only real OpenAI proposal produced a
+  schema-valid Graph Diff that was applied only to a mutable Draft. Its
+  resulting immutable revision compiled into 39 artifacts. The isolated
+  generated runtime read seeded catalog data, created a cart, completed
+  simulated payment, decreased stock from 20 to 19, fulfilled the order, denied
+  an operator access to capability evidence with HTTP 403, and served its Web
+  application with HTTP 200.
 
-Restaurant Ordering and Simple Ecommerce remain independently runnable from
-their deterministic published Graphs. Their final real-model acceptance is
-intentionally deferred to the next guarded call budget rather than replaced
-with fixtures.
+Only the acceptance outcome, artifact count, and journey assertions are
+recorded here. Credentials, raw briefs, and raw provider responses are neither
+persisted nor included in this evidence.
+
+## Automated browser evidence
+
+- `pnpm test:e2e` against the isolated Workbench validates the Page and Flow
+  authoring surfaces, light and dark themes, responsive Page Studio visibility,
+  a Draft edit, publication, immutable compilation, and generated artifact
+  visibility.
+- With `FACTORY_GENERATED_E2E_URL` set to an isolated compiled Ecommerce Web
+  application, the same suite validates a customer adding a seeded product to a
+  cart and checking out, then an operator fulfilling the paid order.
+- The final local run completed both browser tests successfully. This browser
+  evidence complements the API-level role journeys above; it does not persist
+  real-model input or output.
 
 ## Cleanup
 
-All temporary Compose projects, volumes, and copied generated directories from
-this verification are removed after the evidence has been captured. The source
-of truth remains the Published Graph and its immutable artifact record.
+Temporary Compose projects and volumes are removed after the verification gates
+complete. Any host-side copied generated bundle is untracked and disposable.
+The source of truth remains the Published Graph and its immutable artifact
+record.

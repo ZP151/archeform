@@ -11,6 +11,7 @@
     "build": "turbo run build",
     "dev": "turbo run dev --parallel",
     "test": "turbo run test",
+    "test:e2e": "playwright test",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "format:check": "prettier --check .",
@@ -20,6 +21,7 @@
     "compose:down": "docker compose --env-file .env -f infra/docker-compose.yml down -v"
   },
   "devDependencies": {
+    "@playwright/test": "1.51.1",
     "@types/node": "^22.10.2",
     "prettier": "^3.4.2",
     "turbo": "^2.3.3",
