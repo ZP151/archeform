@@ -16,8 +16,8 @@
     "format:check": "prettier --check .",
     "verify:third-party": "node scripts/verify-third-party-notices.mjs",
     "verify:source-studies": "node scripts/verify-source-studies.mjs",
-    "compose:up": "docker compose -f infra/docker-compose.yml up --build",
-    "compose:down": "docker compose -f infra/docker-compose.yml down -v"
+    "compose:up": "docker compose --env-file .env -f infra/docker-compose.yml up --build",
+    "compose:down": "docker compose --env-file .env -f infra/docker-compose.yml down -v"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

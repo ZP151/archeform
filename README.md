@@ -23,16 +23,19 @@ compiled artifacts, and acceptance evidence.
 
 ## Local development
 
-```bash
+```powershell
 pnpm install
 pnpm dev
 pnpm test
-docker compose -f infra/docker-compose.yml up --build
+Copy-Item .env.example .env
+pnpm compose:up
 ```
 
-Copy `.env.example` to `.env` only when you need local service or real AI
-configuration. The OpenAI key is optional for normal development and never
-becomes persisted product data.
+`compose:up` explicitly reads the repository-root `.env`, even though the
+Compose file lives under `infra/`. The OpenAI key remains optional for normal
+development; leave it blank unless running a guarded real-model acceptance.
+It never becomes persisted product data. Use `pnpm compose:down` to remove the
+local Compose resources.
 
 See [the platform architecture](docs/architecture/application-graph-platform.md)
 and [the delivery roadmap](docs/roadmap.md).
