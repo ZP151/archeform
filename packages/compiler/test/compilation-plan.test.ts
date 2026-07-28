@@ -96,7 +96,11 @@ describe("compilation target registry", () => {
     expect(files["api/package.json"]).toContain("@types/node");
     expect(files["docker-compose.yml"]).toContain("migrate:");
     expect(files["docker-compose.yml"]).toContain("FACTORY_COMPOSE_PROJECT_NAME");
+    expect(files["docker-compose.yml"]).toContain(
+      "factory-expense-approval-published-expense-1",
+    );
     expect(files["pnpm-workspace.yaml"]).toContain("web");
+    expect(files["README.md"]).toContain("factory-expense-approval-published-expense-1");
     expect(files["README.md"]).toContain("docker compose down --volumes --remove-orphans");
   });
 
