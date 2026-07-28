@@ -1030,6 +1030,52 @@ input:focus-visible {
   color: #8de7c8;
   font-weight: 500;
 }
+.graph-exchange-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 17px;
+  border-top: 1px solid #263644;
+  color: #d9e9ea;
+}
+.graph-exchange-actions strong,
+.graph-exchange-actions small {
+  display: block;
+  font: 10px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.graph-exchange-actions small {
+  margin-top: 2px;
+  color: #8395a6;
+}
+.graph-exchange-spacer {
+  flex: 1;
+}
+.graph-exchange-input {
+  display: none;
+}
+.graph-exchange-actions button {
+  padding: 7px 9px;
+  border: 1px solid #385063;
+  border-radius: 6px;
+  color: #c7d7dc;
+  background: #17232e;
+  font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  cursor: pointer;
+}
+.graph-exchange-actions button:hover:not(:disabled) {
+  border-color: #8de7c8;
+  color: #8de7c8;
+}
+.graph-exchange-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.graph-exchange-status {
+  margin: 0;
+  padding: 0 17px 14px;
+  color: #8de7c8;
+  font: 10px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
 .studio-shell {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);

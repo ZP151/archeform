@@ -1,4 +1,7 @@
-import type { ApplicationGraphV1 } from "@factory/graph";
+import type {
+  ApplicationGraphV1,
+  PublishedGraphExchangeV1,
+} from "@factory/graph";
 
 type Fetcher = (
   input: RequestInfo | URL,
@@ -145,6 +148,26 @@ export class ControlPlaneClient {
       `/application-graphs/${encodeURIComponent(applicationGraphId)}/published-revisions`,
       { method: "POST", body: JSON.stringify({ draftRevisionId }) },
     );
+  }
+
+  exportPublishedGraph(
+    applicationGraphId: string,
+    publishedRevisionId: string,
+  ): Promise<PublishedGraphExchangeV1> {
+    return this.request(
+      `/application-graphs/${encodeURIComponent(applicationGraphId)}/published-revisions/${encodeURIComponent(publishedRevisionId)}/export`,
+      { method: "GET" },
+    );
+  }
+
+  async importPublishedGraph(
+    exchange: PublishedGraphExchangeV1,
+  ): Promise<WorkbenchDraft> {
+    const created = await this.request<LocalGraphRecord>(
+      "/workspaces/local/application-graphs/import",
+      { method: "POST", body: JSON.stringify({ exchange }) },
+    );
+    return recordAsDraft(created);
   }
 
   createCompilation(

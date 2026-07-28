@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { createPublishedGraphExchange } from "@factory/graph";
 
 import { ControlPlaneClient } from "./control-plane-client";
 import { workbenchGraph } from "./workbench-graph";
@@ -171,6 +172,51 @@ describe("ControlPlaneClient", () => {
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({ brief: "Add an optional receipt field." }),
+      }),
+    );
+  });
+
+  it("exports only a Published Graph exchange for Git storage", async () => {
+    const exchange = createPublishedGraphExchange(workbenchGraph, 2);
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(exchange), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(client.exportPublishedGraph("graph-1", "published-2")).resolves.toEqual(exchange);
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/application-graphs/graph-1/published-revisions/published-2/export",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("imports a verified Graph exchange as a new Draft", async () => {
+    const exchange = createPublishedGraphExchange(workbenchGraph, 2);
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: "imported-graph",
+          draftRevisions: [{ id: "imported-draft", revisionNumber: 1, graph: workbenchGraph }],
+        }),
+        { status: 201, headers: { "content-type": "application/json" } },
+      ),
+    );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(client.importPublishedGraph(exchange)).resolves.toMatchObject({
+      applicationGraphId: "imported-graph",
+      draftRevisionId: "imported-draft",
+      revisionNumber: 1,
+      graph: workbenchGraph,
+    });
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/workspaces/local/application-graphs/import",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ exchange }),
       }),
     );
   });

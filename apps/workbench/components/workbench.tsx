@@ -54,7 +54,13 @@ import type {
   FlowModel,
   PageModel,
   PolicyModel,
+  PublishedGraphExchangeV1,
 } from "@factory/graph";
+import {
+  graphExchangeFilename,
+  parseGraphExchangeText,
+  serializeGraphExchange,
+} from "../lib/graph-exchange";
 
 type Navigation = {
   id: Surface;
@@ -97,6 +103,7 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   const [draftDirty, setDraftDirty] = useState(false);
   const [operationError, setOperationError] = useState<string | null>(null);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [exchangeStatus, setExchangeStatus] = useState<string | null>(null);
   const bootstrapRequest = useRef(0);
   const controlPlane = useMemo(
     () => new ControlPlaneClient(controlPlaneUrl),
@@ -216,6 +223,57 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
       .catch((error) => {
         setConnectionState("offline");
         setOperationError(error instanceof Error ? error.message : "Compilation could not be queued.");
+      });
+  };
+
+  const downloadPublishedGraphExchange = (exchange: PublishedGraphExchangeV1) => {
+    const url = URL.createObjectURL(
+      new Blob([serializeGraphExchange(exchange)], { type: "application/json" }),
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = graphExchangeFilename(exchange);
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportPublishedGraph = () => {
+    if (!remoteDraft || !publishedRevision) return;
+    setOperationError(null);
+    setExchangeStatus("Preparing verified Graph exchange…");
+    void controlPlane
+      .exportPublishedGraph(remoteDraft.applicationGraphId, publishedRevision.id)
+      .then((exchange) => {
+        downloadPublishedGraphExchange(exchange);
+        setExchangeStatus(`Exported Published r.${exchange.publishedRevision.revisionNumber}.`);
+      })
+      .catch((error) => {
+        setExchangeStatus(null);
+        setOperationError(error instanceof Error ? error.message : "Graph export failed.");
+      });
+  };
+
+  const importPublishedGraph = (file: File) => {
+    setOperationError(null);
+    setExchangeStatus("Validating Graph exchange…");
+    void file.text()
+      .then(parseGraphExchangeText)
+      .then((exchange) => controlPlane.importPublishedGraph(exchange))
+      .then((draft) => {
+        ++bootstrapRequest.current;
+        setGraph(draft.graph);
+        setRemoteDraft(draft);
+        setPublishedRevision(null);
+        setCompilation(null);
+        setDraftDirty(false);
+        setAiSummary(null);
+        dispatch({ type: "synchronize-draft", revision: `r.${draft.revisionNumber}` });
+        setConnectionState("ready");
+        setExchangeStatus(`Imported as Draft r.${draft.revisionNumber}.`);
+      })
+      .catch((error) => {
+        setExchangeStatus(null);
+        setOperationError(error instanceof Error ? error.message : "Graph import failed.");
       });
   };
 
@@ -447,8 +505,12 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
               )}
               {state.activeSurface === "code" && (
                 <CodeCanvas
+                  canExport={Boolean(remoteDraft && publishedRevision)}
                   compilation={compilation}
+                  exchangeStatus={exchangeStatus}
                   graph={graph}
+                  onExportPublishedGraph={exportPublishedGraph}
+                  onImportPublishedGraph={importPublishedGraph}
                   publishedRevision={publishedRevision}
                 />
               )}
@@ -658,11 +720,20 @@ function CodeCanvas({
   graph,
   publishedRevision,
   compilation,
+  canExport,
+  exchangeStatus,
+  onExportPublishedGraph,
+  onImportPublishedGraph,
 }: {
   graph: ApplicationGraphV1;
   publishedRevision: WorkbenchPublishedRevision | null;
   compilation: WorkbenchCompilation | null;
+  canExport: boolean;
+  exchangeStatus: string | null;
+  onExportPublishedGraph: () => void;
+  onImportPublishedGraph: (file: File) => void;
 }) {
+  const importInput = useRef<HTMLInputElement>(null);
   return (
     <div className="code-canvas">
       <div className="code-tabs">
@@ -681,6 +752,31 @@ function CodeCanvas({
           <i>07</i> compilation: <b>{JSON.stringify(compilation?.result.status ?? "not queued")}</b>
         </code>
       </pre>
+      <div className="graph-exchange-actions">
+        <div>
+          <strong>Graph-first Git exchange</strong>
+          <small>Published Graph only · no source or runtime artifacts</small>
+        </div>
+        <span className="graph-exchange-spacer" />
+        <input
+          ref={importInput}
+          accept="application/json,.json"
+          className="graph-exchange-input"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) onImportPublishedGraph(file);
+            event.target.value = "";
+          }}
+          type="file"
+        />
+        <button onClick={() => importInput.current?.click()} type="button">
+          Import Draft
+        </button>
+        <button disabled={!canExport} onClick={onExportPublishedGraph} type="button">
+          Export Published
+        </button>
+      </div>
+      {exchangeStatus && <p className="graph-exchange-status" role="status">{exchangeStatus}</p>}
     </div>
   );
 }
