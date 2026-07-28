@@ -2,6 +2,29 @@
 
 **Date:** 2026-07-29
 
+## Current deterministic revalidation
+
+The current committed compiler materialized a new isolated bundle for every
+profile after the Graph Studio authoring slice. Each bundle contained **42**
+tracked artifacts and was started with its own Compose project and non-default
+host ports. The deterministic, credential-free journeys passed again:
+
+| Profile             | Current runtime verification                                                                                                                                                              |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Expense Approval    | Employee created and submitted an expense; manager approved it; finance read audit evidence; Web returned HTTP 200.                                                                       |
+| Restaurant Ordering | Customer selected a seeded menu item, added it to a cart, paid, and kitchen advanced the order to `ready`; Web returned HTTP 200.                                                         |
+| Simple Ecommerce    | Customer added a seeded product to a cart, paid, and an operator fulfilled it; stock changed from 20 to 19; operator capability-evidence access returned HTTP 403; Web returned HTTP 200. |
+
+The generated browser journeys are now repository tests. With the three
+environment-only generated-app URLs set, the following completed together:
+
+```text
+pnpm test:e2e -- generated-expense.spec.ts generated-restaurant.spec.ts generated-ecommerce.spec.ts
+```
+
+No real-model call was used for this deterministic revalidation. The guarded
+real-model acceptance below remains a separate final gate.
+
 ## Scope
 
 This record covers deterministic local runtime evidence and the guarded
@@ -10,7 +33,7 @@ real-model acceptance for each independently published profile.
 ## Common path
 
 For each profile, the local Control Plane accepted a Draft, produced an
-immutable Published Revision, queued it to the Worker, and recorded 39
+immutable Published Revision, queued it to the Worker, and recorded its
 generated artifacts. Each resulting isolated Compose project built and started
 its PostgreSQL, migration, Nest API, and Next.js Web services.
 
