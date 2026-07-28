@@ -4,9 +4,12 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import {
+  applyGraphDiffToDraft,
+  createDraftRevision,
   hashApplicationGraph,
   parseApplicationGraph,
   type ApplicationGraphV1,
@@ -17,6 +20,10 @@ import {
   COMPILATION_QUEUE,
   type CompilationQueue,
 } from "./compilation-queue.js";
+import {
+  GRAPH_PROPOSAL_PROVIDER,
+  type FactoryGraphProposalProvider,
+} from "./graph-proposal.provider.js";
 
 const LOCAL_WORKSPACE_SLUG = "local-workspace";
 const LOCAL_WORKSPACE_NAME = "Local workspace";
@@ -61,6 +68,14 @@ function requiredSha256(record: UnknownRecord, key: string): string {
     throw new BadRequestException(`${key} must be a SHA-256 digest.`);
   }
   return value;
+}
+
+function requiredBrief(record: UnknownRecord): string {
+  const brief = requiredString(record, "brief");
+  if (brief.length > 12_000) {
+    throw new BadRequestException("brief must not exceed 12000 characters.");
+  }
+  return brief;
 }
 
 function generatedRootDirectory(record: UnknownRecord): string {
@@ -179,6 +194,8 @@ export class LifecycleService {
     private readonly prisma: PrismaService,
     @Inject(COMPILATION_QUEUE)
     private readonly compilationQueue: CompilationQueue,
+    @Inject(GRAPH_PROPOSAL_PROVIDER)
+    private readonly graphProposalProvider: FactoryGraphProposalProvider,
   ) {}
 
   async getLocalApplicationGraph(key: string) {
@@ -246,6 +263,49 @@ export class LifecycleService {
         graph: graph as unknown as Prisma.InputJsonValue,
       },
     });
+  }
+
+  async proposeDraftRevision(applicationGraphId: string, input: unknown) {
+    const body = exactRecord(input, ["brief"], ["brief"]);
+    const brief = requiredBrief(body);
+    const latestDraft = await this.prisma.draftRevision.findFirst({
+      where: { applicationGraphId },
+      orderBy: { revisionNumber: "desc" },
+      include: { applicationGraph: { include: { workspace: true } } },
+    });
+    if (!latestDraft) {
+      throw new NotFoundException("Draft revision was not found.");
+    }
+    const { graph } = validatedGraph(latestDraft.graph);
+    assertGraphIdentity(graph, latestDraft.applicationGraph);
+
+    try {
+      const proposal = await this.graphProposalProvider.propose({ graph, brief });
+      const nextDraft = applyGraphDiffToDraft(
+        createDraftRevision(graph, latestDraft.id),
+        proposal.diff,
+      );
+      const draftRevision = await this.prisma.draftRevision.create({
+        data: {
+          applicationGraphId,
+          revisionNumber: latestDraft.revisionNumber + 1,
+          graph: nextDraft.graph as unknown as Prisma.InputJsonValue,
+        },
+      });
+      return {
+        draftRevision,
+        proposal: {
+          diff: proposal.diff,
+          impact: proposal.impact,
+          testSuggestions: proposal.testSuggestions,
+        },
+      };
+    } catch {
+      // Raw model responses and user briefs never leave the adapter's call frame.
+      throw new UnprocessableEntityException(
+        "AI proposal could not be validated against this Draft.",
+      );
+    }
   }
 
   async getDraft(applicationGraphId: string) {

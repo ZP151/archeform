@@ -23,6 +23,18 @@ export type WorkbenchDraft = {
   readonly graph: ApplicationGraphV1;
 };
 
+type AiProposalResponse = {
+  readonly draftRevision: DraftRecord;
+  readonly proposal: {
+    readonly impact: { readonly summary: string };
+  };
+};
+
+export type WorkbenchAiProposal = {
+  readonly draft: WorkbenchDraft;
+  readonly summary: string;
+};
+
 export class ControlPlaneError extends Error {
   constructor(readonly status: number) {
     super(`Control Plane request failed with ${status}.`);
@@ -89,6 +101,25 @@ export class ControlPlaneClient {
       draftRevisionId: draft.id,
       revisionNumber: draft.revisionNumber,
       graph: draft.graph,
+    };
+  }
+
+  async proposeDraft(
+    applicationGraphId: string,
+    brief: string,
+  ): Promise<WorkbenchAiProposal> {
+    const response = await this.request<AiProposalResponse>(
+      `/application-graphs/${encodeURIComponent(applicationGraphId)}/ai-proposals`,
+      { method: "POST", body: JSON.stringify({ brief }) },
+    );
+    return {
+      draft: {
+        applicationGraphId,
+        draftRevisionId: response.draftRevision.id,
+        revisionNumber: response.draftRevision.revisionNumber,
+        graph: response.draftRevision.graph,
+      },
+      summary: response.proposal.impact.summary,
     };
   }
 

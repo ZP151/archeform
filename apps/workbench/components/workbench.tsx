@@ -72,10 +72,11 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   const [graph, setGraph] = useState(initialGraph);
   const [remoteDraft, setRemoteDraft] = useState<WorkbenchDraft | null>(null);
   const [connectionState, setConnectionState] = useState<
-    "connecting" | "ready" | "offline" | "saving" | "publishing" | "published"
+    "connecting" | "ready" | "offline" | "saving" | "proposing" | "publishing" | "published"
   >("connecting");
   const [draftDirty, setDraftDirty] = useState(false);
   const [operationError, setOperationError] = useState<string | null>(null);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
   const controlPlane = useMemo(
     () => new ControlPlaneClient(controlPlaneUrl),
     [controlPlaneUrl],
@@ -149,6 +150,32 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   const changePageModel = (page: PageModel) => {
     setGraph((current) => ({ ...current, page }));
     setDraftDirty(true);
+  };
+  const proposeWithAi = async (brief: string): Promise<string> => {
+    if (!remoteDraft) {
+      throw new Error("The local Control Plane is unavailable.");
+    }
+    setOperationError(null);
+    setConnectionState("proposing");
+    try {
+      const result = await controlPlane.proposeDraft(
+        remoteDraft.applicationGraphId,
+        brief,
+      );
+      setRemoteDraft(result.draft);
+      setGraph(result.draft.graph);
+      setDraftDirty(false);
+      setAiSummary(result.summary);
+      dispatch({ type: "synchronize-draft", revision: `r.${result.draft.revisionNumber}` });
+      dispatch({ type: "propose-draft-change", source: "AI Studio" });
+      setConnectionState("ready");
+      return result.summary;
+    } catch (error) {
+      setConnectionState("offline");
+      const message = error instanceof Error ? error.message : "AI proposal failed.";
+      setOperationError(message);
+      throw error;
+    }
   };
   const active =
     navigation.find((item) => item.id === state.activeSurface) ?? navigation[0];
@@ -236,7 +263,7 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
             <button
               className="publish-button"
               onClick={publish}
-              disabled={!remoteDraft || connectionState === "saving" || connectionState === "publishing" || state.lifecycle === "published"}
+              disabled={!remoteDraft || connectionState === "saving" || connectionState === "proposing" || connectionState === "publishing" || state.lifecycle === "published"}
             >
               {state.lifecycle === "published" ? (
                 <>
@@ -288,7 +315,13 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
                 />
               )}
               {state.activeSurface === "policy" && <PolicyCanvas graph={graph} />}
-              {state.activeSurface === "ai" && <AiCanvas />}
+              {state.activeSurface === "ai" && (
+                <AiCanvas
+                  disabled={!remoteDraft || connectionState === "proposing"}
+                  onPropose={proposeWithAi}
+                  summary={aiSummary}
+                />
+              )}
               {state.activeSurface === "code" && <CodeCanvas graph={graph} />}
             </section>
             {state.lastProposal && (
@@ -371,7 +404,30 @@ function PolicyCanvas({ graph }: { graph: ApplicationGraphV1 }) {
   );
 }
 
-function AiCanvas() {
+function AiCanvas({
+  disabled,
+  onPropose,
+  summary,
+}: {
+  disabled: boolean;
+  onPropose: (brief: string) => Promise<string>;
+  summary: string | null;
+}) {
+  const [brief, setBrief] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = () => {
+    const value = brief.trim();
+    if (!value) return;
+    setSubmitting(true);
+    setError(null);
+    void onPropose(value)
+      .then(() => setBrief(""))
+      .catch((reason) => setError(reason instanceof Error ? reason.message : "Proposal failed."))
+      .finally(() => setSubmitting(false));
+  };
+
   return (
     <div className="ai-canvas">
       <div className="ai-orbit">
@@ -382,8 +438,20 @@ function AiCanvas() {
       </div>
       <div>
         <p>AI policy assistant</p>
-        <h2>Suggest actions inside approved boundaries.</h2>
-        <button>Configure assistant</button>
+        <h2>Propose a Graph change inside declared boundaries.</h2>
+        <textarea
+          aria-label="Describe a Graph change"
+          disabled={disabled || submitting}
+          maxLength={12_000}
+          onChange={(event) => setBrief(event.target.value)}
+          placeholder="Add a receipt field to expenses and suggest the test coverage."
+          value={brief}
+        />
+        <button disabled={disabled || submitting || !brief.trim()} onClick={submit} type="button">
+          {submitting ? "Proposing…" : "Propose Draft change"}
+        </button>
+        {summary && <small className="ai-result">{summary}</small>}
+        {error && <small className="ai-error">{error}</small>}
       </div>
     </div>
   );

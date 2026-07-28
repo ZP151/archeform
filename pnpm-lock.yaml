@@ -45,6 +45,9 @@ importers:
 
   apps/control-plane:
     dependencies:
+      '@factory/adapters':
+        specifier: workspace:*
+        version: link:../../packages/adapters
       '@factory/graph':
         specifier: workspace:*
         version: link:../../packages/graph

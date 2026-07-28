@@ -23,6 +23,7 @@ const lifecycle = {
   getDraft: vi.fn(),
   listPublishedRevisions: vi.fn(),
   publishDraft: vi.fn(),
+  proposeDraftRevision: vi.fn(),
 };
 
 @Module({
@@ -53,6 +54,14 @@ describe("LifecycleController", () => {
       handler: lifecycle.getLocalApplicationGraph,
       arguments: ["expense-approval"],
       response: { id: "graph-1", draftRevisions: [{ id: "draft-1" }] },
+    },
+    {
+      method: "POST",
+      path: "/application-graphs/graph-1/ai-proposals",
+      body: { brief: "Add a receipt field." },
+      handler: lifecycle.proposeDraftRevision,
+      arguments: ["graph-1", { brief: "Add a receipt field." }],
+      response: { draftRevision: { id: "draft-3" }, proposal: { impact: { summary: "Adds receipt." } } },
     },
     {
       method: "POST",

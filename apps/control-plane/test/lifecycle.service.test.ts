@@ -60,14 +60,64 @@ describe("LifecycleService", () => {
   let prisma: ReturnType<typeof prismaMock>;
   let service: LifecycleService;
   let queue: { enqueue: ReturnType<typeof vi.fn> };
+  let proposalProvider: { propose: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     prisma = prismaMock();
     queue = { enqueue: vi.fn() };
+    proposalProvider = { propose: vi.fn() };
     service = new (LifecycleService as unknown as new (
       prismaService: PrismaService,
       compilationQueue: typeof queue,
-    ) => LifecycleService)(prisma as unknown as PrismaService, queue);
+      graphProposalProvider: typeof proposalProvider,
+    ) => LifecycleService)(prisma as unknown as PrismaService, queue, proposalProvider);
+  });
+
+  it("applies a validated AI Graph Diff only by appending a new Draft revision", async () => {
+    prisma.draftRevision.findFirst.mockResolvedValue({
+      ...draftRevision,
+      applicationGraph: { ...applicationGraph, workspace },
+    });
+    proposalProvider.propose.mockResolvedValue({
+      diff: {
+        apiVersion: "factory.graph-diff/v1",
+        baseGraphHash:
+          "sha256:762e834186c8fec51569cc8fe690f4ca90219c6f5b179fa6121bb73867c268fb",
+        operations: [
+          { op: "replace", path: "/metadata/name", value: "AI-updated expense approval" },
+        ],
+      },
+      impact: { summary: "Renames the application.", affectedModels: ["metadata"], risks: [] },
+      testSuggestions: [{ id: "name-visible", title: "Shows the new product name", type: "journey" }],
+    });
+    prisma.draftRevision.create.mockResolvedValue({ id: "draft-2", revisionNumber: 2 });
+
+    const result = await service.proposeDraftRevision(applicationGraph.id, {
+      brief: "Rename the expense approval product.",
+    });
+
+    expect(proposalProvider.propose).toHaveBeenCalledWith({
+      graph: localApplicationGraph,
+      brief: "Rename the expense approval product.",
+    });
+    expect(prisma.draftRevision.create).toHaveBeenCalledWith({
+      data: {
+        applicationGraphId: applicationGraph.id,
+        revisionNumber: 2,
+        graph: expect.objectContaining({
+          metadata: expect.objectContaining({ name: "AI-updated expense approval" }),
+        }),
+      },
+    });
+    expect(result).toEqual({
+      draftRevision: { id: "draft-2", revisionNumber: 2 },
+      proposal: {
+        diff: expect.any(Object),
+        impact: { summary: "Renames the application.", affectedModels: ["metadata"], risks: [] },
+        testSuggestions: [{ id: "name-visible", title: "Shows the new product name", type: "journey" }],
+      },
+    });
+    expect(JSON.stringify(result)).not.toContain("Rename the expense approval product.");
   });
 
   it("creates the local workspace, graph aggregate, and first draft revision", async () => {

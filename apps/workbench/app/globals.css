@@ -274,6 +274,7 @@ input:focus-visible {
   background: var(--accent);
 }
 .connection-saving,
+.connection-proposing,
 .connection-publishing {
   background: var(--amber);
 }
@@ -843,6 +844,31 @@ input:focus-visible {
   font-size: 32px;
   letter-spacing: -0.055em;
   line-height: 1.02;
+}
+.ai-canvas textarea {
+  display: block;
+  width: 100%;
+  min-height: 96px;
+  margin-top: 20px;
+  padding: 11px;
+  resize: vertical;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--paper);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.ai-result,
+.ai-error {
+  display: block;
+  margin-top: 13px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.ai-error {
+  color: #c95b5b;
 }
 .ai-canvas button {
   margin-top: 22px;

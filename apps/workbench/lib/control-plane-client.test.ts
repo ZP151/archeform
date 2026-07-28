@@ -80,4 +80,31 @@ describe("ControlPlaneClient", () => {
       }),
     );
   });
+
+  it("submits a brief only to the Draft-scoped AI proposal boundary", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          draftRevision: { id: "draft-5", revisionNumber: 5, graph: workbenchGraph },
+          proposal: { impact: { summary: "Adds an optional receipt.", affectedModels: ["domain"], risks: [] } },
+        }),
+        { status: 201, headers: { "content-type": "application/json" } },
+      ),
+    );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(
+      client.proposeDraft("graph-1", "Add an optional receipt field."),
+    ).resolves.toMatchObject({
+      draft: { applicationGraphId: "graph-1", draftRevisionId: "draft-5", revisionNumber: 5 },
+      summary: "Adds an optional receipt.",
+    });
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/application-graphs/graph-1/ai-proposals",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ brief: "Add an optional receipt field." }),
+      }),
+    );
+  });
 });

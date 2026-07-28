@@ -26,6 +26,14 @@ export class LifecycleController {
     return this.lifecycle.appendDraftRevision(applicationGraphId, body);
   }
 
+  @Post("application-graphs/:applicationGraphId/ai-proposals")
+  proposeDraftRevision(
+    @Param("applicationGraphId") applicationGraphId: string,
+    @Body() body: unknown,
+  ) {
+    return this.lifecycle.proposeDraftRevision(applicationGraphId, body);
+  }
+
   @Get("application-graphs/:applicationGraphId/draft")
   getDraft(@Param("applicationGraphId") applicationGraphId: string) {
     return this.lifecycle.getDraft(applicationGraphId);
