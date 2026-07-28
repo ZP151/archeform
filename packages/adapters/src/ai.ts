@@ -42,7 +42,10 @@ export interface GraphProposalProvider {
 }
 
 export class GraphProposalError extends Error {
-  public constructor(message: string) {
+  public constructor(
+    message: string,
+    public readonly code: "configuration_missing" | "provider_request_failed" | "proposal_invalid" = "proposal_invalid",
+  ) {
     super(message);
     this.name = "GraphProposalError";
   }
@@ -128,6 +131,9 @@ const proposalInstructions = [
   "You are the Factory Pilot Application Graph proposal adapter.",
   "Return only a JSON object matching the provided schema.",
   "Propose a narrowly scoped factory.graph-diff/v1. Never modify metadata.id or metadata.workspaceId.",
+  "Use RFC 6901 JSON Pointer paths against the supplied Graph and make the fewest operations possible.",
+  "If adding a domain field, add exactly one complete field object at /domain/entities/<matching entity index>/fields/- with key, type, and required. The only field types are string, text, integer, decimal, boolean, date, datetime, enum, json, url, and email. Include values only for enum fields.",
+  "Do not infer a field, entity, role, event, capability, or provider that is not required by the user request. Do not include baseGraphHash unless it exactly matches the supplied Graph.",
   "Do not propose package names, filesystem paths, URLs, executable code, credentials, or arbitrary runtime configuration.",
   "The Graph Diff will be applied only to a mutable Draft and independently validated.",
 ].join(" ");
@@ -181,7 +187,7 @@ export class OpenAIGraphProposalProvider implements GraphProposalProvider {
   public async propose(request: GraphProposalRequest): Promise<GraphProposal> {
     const graph = parseApplicationGraph(request.graph);
     const apiKey = this.readEnvironment();
-    if (!apiKey) throw new GraphProposalError("OPENAI_API_KEY must be set in the local process environment.");
+    if (!apiKey) throw new GraphProposalError("OPENAI_API_KEY must be set in the local process environment.", "configuration_missing");
 
     let outputText: string;
     try {
@@ -198,7 +204,7 @@ export class OpenAIGraphProposalProvider implements GraphProposalProvider {
     } catch {
       // Do not surface a provider response: upstream errors can include request
       // context, which is intentionally not an application artifact.
-      throw new GraphProposalError("OpenAI Graph proposal request failed.");
+      throw new GraphProposalError("OpenAI Graph proposal request failed.", "provider_request_failed");
     }
 
     return validateProposal(graph, outputText);
@@ -223,7 +229,7 @@ function validateProposal(graph: ApplicationGraphV1, candidate: unknown): GraphP
     applyGraphDiffToDraft(createDraftRevision(graph, "proposal-validation"), proposal.diff);
     return proposal;
   } catch {
-    throw new GraphProposalError("AI proposal failed Factory Application Graph validation.");
+    throw new GraphProposalError("AI proposal failed Factory Application Graph validation.", "proposal_invalid");
   }
 }
 

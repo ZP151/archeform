@@ -83,6 +83,8 @@ describe("AI Graph proposal adapter", () => {
     expect(receivedRequest).toMatchObject({ store: false, strictJson: true });
     expect(receivedRequest?.apiKey).toBe("test-key");
     expect(receivedRequest?.input).toContain("Add optional receipts.");
+    expect(receivedRequest?.instructions).toContain("RFC 6901 JSON Pointer");
+    expect(receivedRequest?.instructions).toContain("If adding a domain field");
   });
 
   it("rejects a response whose Graph Diff cannot apply to the draft", async () => {
@@ -96,6 +98,18 @@ describe("AI Graph proposal adapter", () => {
     });
 
     await expect(provider.propose({ graph, brief: "Do not move this workspace." })).rejects.toBeInstanceOf(GraphProposalError);
+  });
+
+  it("classifies a transport rejection without exposing provider data", async () => {
+    const provider = new OpenAIGraphProposalProvider({
+      transport: { async create() { throw new Error("provider-specific detail must stay private"); } },
+      readEnvironment: () => "test-key",
+    });
+
+    await expect(provider.propose({ graph, brief: "Add a field." })).rejects.toMatchObject({
+      code: "provider_request_failed",
+      message: "OpenAI Graph proposal request failed.",
+    });
   });
 
   it("fails closed when the environment-only API key is unavailable", async () => {

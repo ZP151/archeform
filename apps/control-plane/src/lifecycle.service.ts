@@ -14,6 +14,7 @@ import {
   parseApplicationGraph,
   type ApplicationGraphV1,
 } from "@factory/graph";
+import { GraphProposalError } from "@factory/adapters/ai";
 
 import { PrismaService } from "./prisma.service.js";
 import {
@@ -300,10 +301,13 @@ export class LifecycleService {
           testSuggestions: proposal.testSuggestions,
         },
       };
-    } catch {
+    } catch (error) {
       // Raw model responses and user briefs never leave the adapter's call frame.
       throw new UnprocessableEntityException(
-        "AI proposal could not be validated against this Draft.",
+        {
+          code: "ai_proposal_rejected",
+          reason: error instanceof GraphProposalError ? error.code : "proposal_invalid",
+        },
       );
     }
   }
