@@ -278,4 +278,52 @@ describe("compilation target registry", () => {
     expect(files["api/package.json"]).toContain("vitest");
     expect(files["api/package.json"]).toContain("@prisma/client");
   });
+
+  it("executes declared capability effects as durable evidence and fails closed for unknown effects", () => {
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "published-payment-effects-1",
+        graph: {
+          ...publishedExpense.graph,
+          integration: {
+            providers: [],
+            capabilities: [{ key: "payment.simulate", providerId: "factory", operation: "simulate" }],
+          },
+          policy: {
+            roles: ["customer", "finance"],
+            permissions: [
+              { role: "customer", resource: "expense", actions: ["create", "read"] },
+              { role: "finance", resource: "expense", actions: ["audit"] },
+            ],
+          },
+          flow: {
+            flows: [{
+              id: "expense-payment",
+              entity: "expense",
+              initialState: "draft",
+              states: ["draft", "paid"],
+              events: ["pay"],
+              transitions: [{
+                from: "draft",
+                event: "pay",
+                to: "paid",
+                effects: [{ capability: "payment.simulate", operation: "simulate" }],
+              }],
+            }],
+          },
+        },
+      }).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(files["api/src/application-runtime.ts"]).toContain("executeEffects");
+    expect(files["api/src/application-runtime.ts"]).toContain("Unsupported capability effect");
+    expect(files["api/src/application-runtime.ts"]).toContain("appendCapabilityEvent");
+    expect(files["api/src/prisma-record-store.ts"]).toContain("capabilityEvent");
+    expect(files["api/prisma/schema.prisma"]).toContain("model CapabilityEvent");
+    expect(files["api/test/journey.generated.test.ts"]).toContain("capabilityEvents");
+    expect(files["api/test/journey.generated.test.ts"]).toContain("payment.simulate");
+    expect(files["database/prisma/migrations/0001_initial/migration.sql"]).toContain(
+      'CREATE TABLE "CapabilityEvent"',
+    );
+  });
 });
