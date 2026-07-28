@@ -65,6 +65,8 @@ services:
       dockerfile: apps/workbench/Dockerfile
     depends_on:
       - control-plane
+    environment:
+      NEXT_PUBLIC_CONTROL_PLANE_URL: http://localhost:3000
     ports:
       - "5174:5174"
 

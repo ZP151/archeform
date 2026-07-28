@@ -1,13 +1,13 @@
 "use client";
 
-import type { PuckPageDocument, ReactFlowDiagram } from "@factory/adapters";
+import type { ApplicationGraphV1 } from "@factory/graph";
 import { Workbench } from "../components/workbench";
 
 type Props = {
-  pageDocument: PuckPageDocument;
-  flowDiagram: ReactFlowDiagram;
+  initialGraph: ApplicationGraphV1;
+  controlPlaneUrl: string;
 };
 
-export function WorkbenchClient({ pageDocument, flowDiagram }: Props) {
-  return <Workbench pageDocument={pageDocument} flowDiagram={flowDiagram} />;
+export function WorkbenchClient({ initialGraph, controlPlaneUrl }: Props) {
+  return <Workbench initialGraph={initialGraph} controlPlaneUrl={controlPlaneUrl} />;
 }

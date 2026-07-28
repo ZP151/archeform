@@ -19,6 +19,7 @@ const lifecycle = {
   completeCompilation: vi.fn(),
   createCompilation: vi.fn(),
   createLocalApplicationGraph: vi.fn(),
+  getLocalApplicationGraph: vi.fn(),
   getDraft: vi.fn(),
   listPublishedRevisions: vi.fn(),
   publishDraft: vi.fn(),
@@ -46,6 +47,13 @@ describe("LifecycleController", () => {
   afterAll(async () => app.close());
 
   it.each([
+    {
+      method: "GET",
+      path: "/workspaces/local/application-graphs/expense-approval",
+      handler: lifecycle.getLocalApplicationGraph,
+      arguments: ["expense-approval"],
+      response: { id: "graph-1", draftRevisions: [{ id: "draft-1" }] },
+    },
     {
       method: "POST",
       path: "/workspaces/local/application-graphs",

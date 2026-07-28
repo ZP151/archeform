@@ -254,6 +254,38 @@ input:focus-visible {
   margin: 0 auto;
   padding: 34px 0 48px;
 }
+.workbench-operations {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 11px 2px 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.connection-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.connection-ready,
+.connection-published {
+  background: var(--accent);
+}
+.connection-saving,
+.connection-publishing {
+  background: var(--amber);
+}
+.connection-offline {
+  background: #c95b5b;
+}
+.draft-changed {
+  color: var(--amber);
+}
+.operation-error {
+  color: #c95b5b;
+}
 .workspace-heading {
   display: flex;
   align-items: flex-end;

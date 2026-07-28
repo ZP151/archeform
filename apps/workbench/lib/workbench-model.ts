@@ -14,6 +14,7 @@ export type WorkbenchState = {
 export type WorkbenchAction =
   | { type: "open"; surface: Surface }
   | { type: "publish" }
+  | { type: "synchronize-draft"; revision: string }
   | { type: "toggle-theme" }
   | { type: "toggle-properties" }
   | { type: "propose-draft-change"; source: string };
@@ -37,6 +38,8 @@ export function transitionWorkbench(
       return { ...state, activeSurface: action.surface };
     case "publish":
       return { ...state, lifecycle: "published" };
+    case "synchronize-draft":
+      return { ...state, lifecycle: "draft", revision: action.revision };
     case "toggle-theme":
       return { ...state, theme: state.theme === "light" ? "dark" : "light" };
     case "toggle-properties":

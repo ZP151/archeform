@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer } from "react";
+import { useEffect, useMemo, useReducer, useState } from "react";
 import {
   Bot,
   Check,
@@ -26,9 +26,17 @@ import {
   transitionWorkbench,
   type Surface,
 } from "../lib/workbench-model";
+import {
+  ControlPlaneClient,
+  type WorkbenchDraft,
+} from "../lib/control-plane-client";
 import { PageStudio } from "./page-studio";
 import { FlowStudio } from "./flow-studio";
-import type { PuckPageDocument, ReactFlowDiagram } from "@factory/adapters";
+import {
+  flowModelToReactFlow,
+  pageModelToPuckDocument,
+} from "@factory/adapters";
+import type { ApplicationGraphV1, PageModel } from "@factory/graph";
 
 type Navigation = {
   id: Surface;
@@ -52,15 +60,96 @@ const navigation: Navigation[] = [
 ];
 
 type Props = {
-  pageDocument: PuckPageDocument;
-  flowDiagram: ReactFlowDiagram;
+  initialGraph: ApplicationGraphV1;
+  controlPlaneUrl: string;
 };
 
-export function Workbench({ pageDocument, flowDiagram }: Props) {
+export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   const [state, dispatch] = useReducer(
     transitionWorkbench,
     initialWorkbenchState,
   );
+  const [graph, setGraph] = useState(initialGraph);
+  const [remoteDraft, setRemoteDraft] = useState<WorkbenchDraft | null>(null);
+  const [connectionState, setConnectionState] = useState<
+    "connecting" | "ready" | "offline" | "saving" | "publishing" | "published"
+  >("connecting");
+  const [draftDirty, setDraftDirty] = useState(false);
+  const [operationError, setOperationError] = useState<string | null>(null);
+  const controlPlane = useMemo(
+    () => new ControlPlaneClient(controlPlaneUrl),
+    [controlPlaneUrl],
+  );
+  const pageDocument = useMemo(
+    () => pageModelToPuckDocument(graph.page),
+    [graph.page],
+  );
+  const flowDiagram = useMemo(
+    () => flowModelToReactFlow(graph.flow),
+    [graph.flow],
+  );
+
+  useEffect(() => {
+    let active = true;
+    void controlPlane
+      .bootstrapLocalDraft(initialGraph)
+      .then((draft) => {
+        if (!active) return;
+        setRemoteDraft(draft);
+        setGraph(draft.graph);
+        dispatch({ type: "synchronize-draft", revision: `r.${draft.revisionNumber}` });
+        setConnectionState("ready");
+      })
+      .catch(() => {
+        if (!active) return;
+        setConnectionState("offline");
+      });
+    return () => {
+      active = false;
+    };
+  }, [controlPlane, initialGraph]);
+
+  const persistDraft = async (): Promise<WorkbenchDraft> => {
+    if (!remoteDraft) {
+      throw new Error("The local Control Plane is unavailable.");
+    }
+    setConnectionState("saving");
+    const next = await controlPlane.appendDraft(remoteDraft.applicationGraphId, graph);
+    setRemoteDraft(next);
+    setGraph(next.graph);
+    dispatch({ type: "synchronize-draft", revision: `r.${next.revisionNumber}` });
+    setDraftDirty(false);
+    setConnectionState("ready");
+    return next;
+  };
+
+  const saveDraft = () => {
+    setOperationError(null);
+    void persistDraft().catch((error) => {
+      setConnectionState("offline");
+      setOperationError(error instanceof Error ? error.message : "Draft save failed.");
+    });
+  };
+
+  const publish = () => {
+    setOperationError(null);
+    void (async () => {
+      const draft = draftDirty ? await persistDraft() : remoteDraft;
+      if (!draft) throw new Error("The local Control Plane is unavailable.");
+      setConnectionState("publishing");
+      await controlPlane.publishDraft(draft.applicationGraphId, draft.draftRevisionId);
+      dispatch({ type: "publish" });
+      setConnectionState("published");
+    })().catch((error) => {
+      setConnectionState("offline");
+      setOperationError(error instanceof Error ? error.message : "Publish failed.");
+    });
+  };
+
+  const changePageModel = (page: PageModel) => {
+    setGraph((current) => ({ ...current, page }));
+    setDraftDirty(true);
+  };
   const active =
     navigation.find((item) => item.id === state.activeSurface) ?? navigation[0];
   const proposeDraftChange = (source: string) =>
@@ -109,7 +198,7 @@ export function Workbench({ pageDocument, flowDiagram }: Props) {
               <span className="project-glyph">
                 <FolderKanban size={15} />
               </span>
-              <strong>Ops workspace</strong>
+              <strong>{graph.metadata.name}</strong>
               <ChevronDown size={15} />
             </button>
             <span className="top-divider" />
@@ -119,7 +208,11 @@ export function Workbench({ pageDocument, flowDiagram }: Props) {
             </button>
             <span className={`lifecycle lifecycle-${state.lifecycle}`}>
               <CircleDot size={12} />
-              {state.lifecycle === "draft" ? "Draft" : "Published"}
+              {connectionState === "offline"
+                ? "Offline"
+                : state.lifecycle === "draft"
+                  ? "Draft"
+                  : "Published"}
             </span>
           </div>
           <div className="top-actions">
@@ -142,8 +235,8 @@ export function Workbench({ pageDocument, flowDiagram }: Props) {
             </button>
             <button
               className="publish-button"
-              onClick={() => dispatch({ type: "publish" })}
-              disabled={state.lifecycle === "published"}
+              onClick={publish}
+              disabled={!remoteDraft || connectionState === "saving" || connectionState === "publishing" || state.lifecycle === "published"}
             >
               {state.lifecycle === "published" ? (
                 <>
@@ -184,18 +277,19 @@ export function Workbench({ pageDocument, flowDiagram }: Props) {
                 <PageStudio
                   pageDocument={pageDocument}
                   onDraftProposal={proposeDraftChange}
+                  onPageModelChange={changePageModel}
                 />
               )}
-              {state.activeSurface === "domain" && <DomainCanvas />}
+              {state.activeSurface === "domain" && <DomainCanvas graph={graph} />}
               {state.activeSurface === "flow" && (
                 <FlowStudio
                   diagram={flowDiagram}
                   onDraftProposal={proposeDraftChange}
                 />
               )}
-              {state.activeSurface === "policy" && <PolicyCanvas />}
+              {state.activeSurface === "policy" && <PolicyCanvas graph={graph} />}
               {state.activeSurface === "ai" && <AiCanvas />}
-              {state.activeSurface === "code" && <CodeCanvas />}
+              {state.activeSurface === "code" && <CodeCanvas graph={graph} />}
             </section>
             {state.lastProposal && (
               <p className="draft-proposal-status" role="status">
@@ -207,26 +301,35 @@ export function Workbench({ pageDocument, flowDiagram }: Props) {
               <PropertiesPanel surface={state.activeSurface} />
             )}
           </div>
+          <div className="workbench-operations" role="status">
+            <span className={`connection-dot connection-${connectionState}`} />
+            <span>{connectionState === "offline" ? "Control Plane unavailable" : `Control Plane ${connectionState}`}</span>
+            {draftDirty && <span className="draft-changed">Unsaved Draft</span>}
+            {operationError && <span className="operation-error">{operationError}</span>}
+            {draftDirty && remoteDraft && (
+              <button className="quiet-button" onClick={saveDraft} disabled={connectionState === "saving"}>
+                Save draft
+              </button>
+            )}
+          </div>
         </section>
       </section>
     </main>
   );
 }
 
-function DomainCanvas() {
+function DomainCanvas({ graph }: { graph: ApplicationGraphV1 }) {
+  const [primary, secondary] = graph.domain.entities;
   return (
     <div className="domain-canvas">
       <div className="record-card primary-record">
         <span className="record-icon">
           <FileText size={16} />
         </span>
-        <strong>Request</strong>
+        <strong>{primary?.label ?? "No entity"}</strong>
         <small>Primary record</small>
         <div>
-          <code>title</code>
-          <code>owner</code>
-          <code>status</code>
-          <code>priority</code>
+          {primary?.fields.map((field) => <code key={field.key}>{field.key}</code>)}
         </div>
       </div>
       <div className="record-link" />
@@ -234,38 +337,33 @@ function DomainCanvas() {
         <span className="record-icon violet">
           <FolderKanban size={16} />
         </span>
-        <strong>Attachment</strong>
+        <strong>{secondary?.label ?? "No related entity"}</strong>
         <small>Supporting record</small>
         <div>
-          <code>file</code>
-          <code>source</code>
+          {secondary?.fields.map((field) => <code key={field.key}>{field.key}</code>)}
         </div>
       </div>
       <div className="record-note">
-        A clear domain model keeps components composable.
+        {graph.domain.relations.length} declared relation{graph.domain.relations.length === 1 ? "" : "s"}
       </div>
     </div>
   );
 }
 
-function PolicyCanvas() {
+function PolicyCanvas({ graph }: { graph: ApplicationGraphV1 }) {
   return (
     <div className="policy-canvas">
       <div className="policy-header">
         <ShieldCheck size={20} />
         <div>
-          <strong>Publishing controls</strong>
-          <small>Applies to the request lifecycle</small>
+          <strong>Compiled policy preview</strong>
+          <small>{graph.policy.roles.length} declared roles</small>
         </div>
       </div>
-      {[
-        ["Required approval", "Manager sign-off"],
-        ["Retention", "7 years"],
-        ["Access", "Operations team"],
-      ].map(([label, value]) => (
-        <div className="policy-row" key={label}>
-          <span>{label}</span>
-          <strong>{value}</strong>
+      {graph.policy.permissions.map((permission) => (
+        <div className="policy-row" key={`${permission.role}:${permission.resource}`}>
+          <span>{permission.role}</span>
+          <strong>{permission.resource} · {permission.actions.join(", ")}</strong>
           <ChevronDown size={15} />
         </div>
       ))}
@@ -291,22 +389,21 @@ function AiCanvas() {
   );
 }
 
-function CodeCanvas() {
+function CodeCanvas({ graph }: { graph: ApplicationGraphV1 }) {
   return (
     <div className="code-canvas">
       <div className="code-tabs">
-        <span className="selected">request-flow.ts</span>
-        <span>request.schema.ts</span>
-        <span>policy.yaml</span>
+        <span className="selected">application-graph.json</span>
+        <span>generated-api</span>
+        <span>policy.csv</span>
       </div>
       <pre>
         <code>
-          <i>01</i> export const requestFlow = flow({"{"}
-          {"\n"}
-          <i>02</i> trigger: <b>"request.created"</b>,{"\n"}
-          <i>03</i> next: <b>"manager.review"</b>,{"\n"}
-          <i>04</i> audit: <b>true</b>,{"\n"}
-          <i>05</i> {"}"});
+          <i>01</i> metadata: <b>{JSON.stringify(graph.metadata.id)}</b>,{"\n"}
+          <i>02</i> pages: <b>{graph.page.pages.length}</b>,{"\n"}
+          <i>03</i> entities: <b>{graph.domain.entities.length}</b>,{"\n"}
+          <i>04</i> flows: <b>{graph.flow.flows.length}</b>,{"\n"}
+          <i>05</i> lifecycle: <b>{JSON.stringify("Draft → Publish → Compile")}</b>
         </code>
       </pre>
     </div>

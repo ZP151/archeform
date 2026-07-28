@@ -1,13 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Puck, type Config, type Data } from "@puckeditor/core";
 import "@puckeditor/core/puck.css";
 import type { PuckPageDocument } from "@factory/adapters";
+import type { PageModel } from "@factory/graph";
+import { replaceHeroHeading } from "../lib/page-model";
 
 type Props = {
   pageDocument: PuckPageDocument;
   onDraftProposal: (source: string) => void;
+  onPageModelChange: (page: PageModel) => void;
 };
 
 const config: Config = {
@@ -46,9 +49,28 @@ function toEditorData(document: PuckPageDocument): Data {
   };
 }
 
-export function PageStudio({ pageDocument, onDraftProposal }: Props) {
+export function PageStudio({
+  pageDocument,
+  onDraftProposal,
+  onPageModelChange,
+}: Props) {
   const editorSeed = useMemo(() => toEditorData(pageDocument), [pageDocument]);
   const [editorData, setEditorData] = useState<Data>(editorSeed);
+
+  useEffect(() => setEditorData(editorSeed), [editorSeed]);
+
+  const proposeEditorData = (nextData: Data, source: string) => {
+    setEditorData(nextData);
+    const hero = nextData.content.find((block) => block.type === "Hero");
+    const blockId = hero?.props.id;
+    const heading = hero?.props.heading;
+    if (typeof blockId === "string" && typeof heading === "string") {
+      onPageModelChange(
+        replaceHeroHeading(pageDocument.pageModel, blockId, heading),
+      );
+    }
+    onDraftProposal(source);
+  };
 
   return (
     <section className="studio-shell puck-studio" aria-label="Puck Page Studio">
@@ -63,14 +85,10 @@ export function PageStudio({ pageDocument, onDraftProposal }: Props) {
         config={config}
         data={editorData}
         headerTitle="Request intake"
-        onChange={(nextData) => {
-          setEditorData(nextData);
-          onDraftProposal("Puck Page Studio");
-        }}
-        onPublish={(nextData) => {
-          setEditorData(nextData);
-          onDraftProposal("Puck Page Studio publish proposal");
-        }}
+        onChange={(nextData) => proposeEditorData(nextData, "Puck Page Studio")}
+        onPublish={(nextData) =>
+          proposeEditorData(nextData, "Puck Page Studio publish proposal")
+        }
       />
     </section>
   );

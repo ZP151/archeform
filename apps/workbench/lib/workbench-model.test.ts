@@ -33,4 +33,14 @@ describe("transitionWorkbench", () => {
     expect(proposed.draftProposals).toBe(1);
     expect(proposed.lastProposal).toBe("Puck Page Studio");
   });
+
+  it("adopts a persisted Draft revision without treating it as published", () => {
+    const synced = transitionWorkbench(initialWorkbenchState, {
+      type: "synchronize-draft",
+      revision: "r.4",
+    });
+
+    expect(synced.revision).toBe("r.4");
+    expect(synced.lifecycle).toBe("draft");
+  });
 });

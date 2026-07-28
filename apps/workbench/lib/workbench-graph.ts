@@ -4,7 +4,7 @@ export const workbenchGraph: ApplicationGraphV1 = {
   apiVersion: "factory.application-graph/v1",
   metadata: {
     id: "ops-workspace",
-    workspaceId: "factory",
+    workspaceId: "local-workspace",
     name: "Ops workspace",
   },
   page: {

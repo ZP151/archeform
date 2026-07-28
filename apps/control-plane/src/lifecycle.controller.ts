@@ -13,6 +13,11 @@ export class LifecycleController {
     return this.lifecycle.createLocalApplicationGraph(body);
   }
 
+  @Get("workspaces/local/application-graphs/:key")
+  getLocalApplicationGraph(@Param("key") key: string) {
+    return this.lifecycle.getLocalApplicationGraph(key);
+  }
+
   @Post("application-graphs/:applicationGraphId/draft-revisions")
   appendDraftRevision(
     @Param("applicationGraphId") applicationGraphId: string,

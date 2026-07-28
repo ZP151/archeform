@@ -181,6 +181,21 @@ export class LifecycleService {
     private readonly compilationQueue: CompilationQueue,
   ) {}
 
+  async getLocalApplicationGraph(key: string) {
+    const graphKey = requiredString({ key }, "key");
+    const aggregate = await this.prisma.applicationGraph.findFirst({
+      where: { key: graphKey, workspace: { slug: LOCAL_WORKSPACE_SLUG } },
+      include: {
+        draftRevisions: { orderBy: { revisionNumber: "desc" }, take: 1 },
+        publishedRevisions: { orderBy: { revisionNumber: "desc" }, take: 1 },
+      },
+    });
+    if (!aggregate) {
+      throw new NotFoundException("Local Application Graph was not found.");
+    }
+    return aggregate;
+  }
+
   async createLocalApplicationGraph(input: unknown) {
     const body = exactRecord(input, ["graph"], ["graph"]);
     const { graph } = validatedGraph(body.graph);

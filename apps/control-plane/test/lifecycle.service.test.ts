@@ -12,7 +12,7 @@ import { localApplicationGraph } from "./application-graph.fixture.js";
 function prismaMock() {
   return {
     workspace: { upsert: vi.fn() },
-    applicationGraph: { create: vi.fn(), findUnique: vi.fn() },
+    applicationGraph: { create: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn() },
     draftRevision: { create: vi.fn(), findFirst: vi.fn() },
     publishedRevision: {
       count: vi.fn(),
@@ -100,6 +100,27 @@ describe("LifecycleService", () => {
         },
       },
       include: { draftRevisions: true },
+    });
+  });
+
+  it("finds a local Graph with its newest Draft revision for Workbench bootstrap", async () => {
+    prisma.applicationGraph.findFirst.mockResolvedValue({
+      ...applicationGraph,
+      draftRevisions: [draftRevision],
+    });
+
+    await expect(
+      service.getLocalApplicationGraph(applicationGraph.key),
+    ).resolves.toEqual({
+      ...applicationGraph,
+      draftRevisions: [draftRevision],
+    });
+    expect(prisma.applicationGraph.findFirst).toHaveBeenCalledWith({
+      where: { key: applicationGraph.key, workspace: { slug: "local-workspace" } },
+      include: {
+        draftRevisions: { orderBy: { revisionNumber: "desc" }, take: 1 },
+        publishedRevisions: { orderBy: { revisionNumber: "desc" }, take: 1 },
+      },
     });
   });
 
