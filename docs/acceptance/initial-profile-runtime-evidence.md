@@ -25,6 +25,18 @@ pnpm test:e2e -- generated-expense.spec.ts generated-restaurant.spec.ts generate
 No real-model call was used for this deterministic revalidation. The guarded
 real-model acceptance below remains a separate final gate.
 
+## Current guarded real-model revalidation
+
+One guarded OpenAI proposal was accepted for each of Expense Approval,
+Restaurant Ordering, and Simple Ecommerce. Every proposal was applied only as
+a new Draft, then published and compiled through the normal immutable path.
+All three resulting compilations succeeded with 42 artifacts.
+
+The persisted Graph snapshots contain the validated optional
+`acceptance_note` field proposed by the model, while a database-level
+non-sensitive check found zero persisted `brief` properties. No credentials,
+raw briefs, or raw model responses were read back or recorded by this check.
+
 ## Scope
 
 This record covers deterministic local runtime evidence and the guarded
