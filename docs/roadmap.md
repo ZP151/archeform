@@ -29,6 +29,11 @@
 
 - Compile published Graphs into the simulator, generated Web/API/database,
   policy, flow handlers, tests, and docs.
+- Compile the published PageModel into the Factory-owned
+  `factory.generated-page-runtime/v1` document and responsive standalone Web
+  routes. The accepted v1 blocks are `hero`, `form`, `collection`, `catalog`,
+  `cart`, `queue`, and `checkout`; generated Web packages contain no Puck or
+  other editor runtime dependency.
 - Provide CRUD, audit, notification, workflow, catalog, cart, order, inventory,
   and simulated-payment capabilities.
 
