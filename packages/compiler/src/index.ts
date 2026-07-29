@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 
 import {
   assertGoldenCapabilityAssetLocks,
-  getCapabilityAsset,
+  resolveCapabilityAssetLock,
 } from "@factory/capabilities";
 import {
   loadCapabilityAssetTemplates,
@@ -268,7 +268,7 @@ function resolveCapabilityTemplateContributions(
   const root = findFactoryRepositoryRoot(repositoryRoot ?? process.cwd());
   const targets = new Set<string>();
   const contributions = locks.flatMap((lock) => {
-    const asset = getCapabilityAsset(lock.key);
+    const asset = resolveCapabilityAssetLock(lock);
     return loadCapabilityAssetTemplates(asset, root).map((template) => ({
       ...template,
       effects: asset.manifest.effects,

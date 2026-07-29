@@ -214,6 +214,48 @@ describe("compilation target registry", () => {
     );
   });
 
+  it("compiles a historical Golden asset lock from its physical package", () => {
+    const graph = structuredClone(publishedExpense.graph);
+    graph.integration = {
+      providers: [],
+      capabilities: [
+        {
+          key: "audit.record",
+          providerId: "factory",
+          operation: "record",
+        },
+      ],
+      compositionProfile: "expense-approval",
+      assetLocks: [
+        {
+          key: "core.audit",
+          version: "1.0.0",
+          packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
+          manifestDigest:
+            "sha256:6eab1ec3580703b32f236b9ba6c191318a442acb7b70b8550aa51370444526a8",
+          lifecycle: "golden",
+        },
+      ],
+    };
+
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "published-historical-audit-1",
+        graph,
+      }).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(files["api/src/capabilities/core.audit.ts"]).toContain(
+      'version: "1.0.0"',
+    );
+    expect(files["api/src/capabilities/core.audit.ts"]).not.toContain(
+      "core.audit v1.0.1",
+    );
+    expect(files["capability-template-lock.json"]).toContain(
+      '"assetVersion": "1.0.0"',
+    );
+  });
+
   it("rejects a Graph capability without a locked Golden package", () => {
     const graph = structuredClone(publishedExpense.graph);
     graph.integration.capabilities = [

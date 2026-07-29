@@ -1,0 +1,44 @@
+import {
+  removeAuditPermissions,
+  removeCapabilityOperations,
+  type CapabilityAssetV1,
+} from "../contract.js";
+
+export const auditAssetV1_0_1: CapabilityAssetV1 = {
+  manifest: {
+    apiVersion: "factory.capability/v1",
+    key: "core.audit",
+    version: "1.0.1",
+    category: "core",
+    name: "Audit trail",
+    description:
+      "Records actor, action, subject, and immutable timestamp evidence.",
+    packageRoot: "packages/capabilities/assets/core.audit/1.0.1",
+    manifestDigest:
+      "sha256:54da93b37e3a2140d4de14b7acd0579d60b35d6f8a7cb258c1c0f8aef6c27694",
+    lifecycle: "golden",
+    profiles: ["expense-approval", "restaurant-ordering", "simple-ecommerce"],
+    effects: ["audit.record"],
+    inputSchema: [{ key: "retention", type: "duration", required: false }],
+    outputSlots: ["api.runtime", "policy.rule", "test.fixture", "flow.effect"],
+    templates: [
+      {
+        id: "api-capability-module",
+        source: "templates/api/capability-module.ts.tpl",
+        target: "api/src/capabilities/core.audit.ts",
+        outputSlot: "api.runtime",
+        digest:
+          "sha256:9bb2507b6d1e72605a9782257a6dd3e2cee130273391b331534005bb78c3a71f",
+      },
+    ],
+    verification: {
+      fixture: "fixtures/default.json",
+      contractTest: "tests/contract.json",
+      status: "verified",
+    },
+  },
+  disable(graph) {
+    removeCapabilityOperations(graph, ["audit.record"]);
+    removeAuditPermissions(graph);
+  },
+};

@@ -5,6 +5,7 @@ import {
 
 import {
   auditAsset,
+  auditAssetV1_0_1,
   cartAsset,
   catalogAsset,
   crudAsset,
@@ -36,8 +37,8 @@ export interface CapabilityDefinition {
   readonly effects: readonly string[];
 }
 
-export const capabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
-  auditAsset,
+const currentCapabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
+  auditAssetV1_0_1,
   crudAsset,
   notificationAsset,
   workflowAsset,
@@ -46,6 +47,11 @@ export const capabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
   inventoryAsset,
   orderAsset,
   simulatedPaymentAsset,
+]);
+
+export const capabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
+  ...currentCapabilityAssets,
+  auditAsset,
 ]);
 
 const definitionFor = (asset: CapabilityAssetV1): CapabilityDefinition => ({
@@ -58,7 +64,7 @@ const definitionFor = (asset: CapabilityAssetV1): CapabilityDefinition => ({
 });
 
 export const capabilityCatalog = Object.freeze(
-  capabilityAssets.map(definitionFor),
+  currentCapabilityAssets.map(definitionFor),
 );
 
 export interface GoldenAssetValidationContext {
@@ -67,10 +73,36 @@ export interface GoldenAssetValidationContext {
 }
 
 export function getCapabilityAsset(key: string): CapabilityAssetV1 {
-  const asset = capabilityAssets.find(
+  const asset = currentCapabilityAssets.find(
     (candidate) => candidate.manifest.key === key,
   );
   if (!asset) throw new Error(`Unknown Factory capability: ${key}`);
+  return asset;
+}
+
+/**
+ * Resolves a Published Graph lock to the exact Golden package identity it
+ * recorded. Current profile composition intentionally uses getCapabilityAsset
+ * instead, so new Drafts adopt the default package version.
+ */
+export function resolveCapabilityAssetLock(
+  lock: CapabilityAssetLockV1,
+): CapabilityAssetV1 {
+  const asset = capabilityAssets.find((candidate) => {
+    const expected = lockCapabilityAsset(candidate);
+    return (
+      expected.key === lock.key &&
+      expected.version === lock.version &&
+      expected.packageRoot === lock.packageRoot &&
+      expected.manifestDigest === lock.manifestDigest &&
+      expected.lifecycle === lock.lifecycle
+    );
+  });
+  if (!asset) {
+    throw new Error(
+      `Capability asset lock '${lock.key}' does not match a registered Golden asset.`,
+    );
+  }
   return asset;
 }
 
@@ -84,18 +116,7 @@ export function assertGoldenCapabilityAssetLocks(
 ): void {
   const providedEffects = new Set<string>();
   for (const lock of locks) {
-    const manifest = getCapabilityAsset(lock.key).manifest;
-    const expected = lockCapabilityAsset({ manifest });
-    if (
-      expected.version !== lock.version ||
-      expected.packageRoot !== lock.packageRoot ||
-      expected.manifestDigest !== lock.manifestDigest ||
-      expected.lifecycle !== lock.lifecycle
-    ) {
-      throw new Error(
-        `Capability asset lock '${lock.key}' does not match a registered Golden asset.`,
-      );
-    }
+    const manifest = resolveCapabilityAssetLock(lock).manifest;
     if (!manifest.profiles.includes(context.profile as FactoryProfile)) {
       throw new Error(
         `Capability asset lock '${lock.key}' does not support profile '${context.profile}'.`,

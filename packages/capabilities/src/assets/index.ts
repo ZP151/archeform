@@ -1,5 +1,6 @@
 export * from "./contract.js";
 export { auditAsset } from "./core/audit.js";
+export { auditAssetV1_0_1 } from "./core/audit-v1-0-1.js";
 export { crudAsset } from "./core/crud.js";
 export { notificationAsset } from "./core/notification.js";
 export { workflowAsset } from "./core/workflow.js";

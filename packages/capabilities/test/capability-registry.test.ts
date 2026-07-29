@@ -47,9 +47,9 @@ describe("capability catalog", () => {
     expect(asset.manifest).toMatchObject({
       apiVersion: "factory.capability/v1",
       key: "core.audit",
-      version: "1.0.0",
+      version: "1.0.1",
       lifecycle: "golden",
-      packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
+      packageRoot: "packages/capabilities/assets/core.audit/1.0.1",
     });
     expect(asset.manifest.manifestDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
     expect(asset.manifest.outputSlots).toEqual(
@@ -57,8 +57,26 @@ describe("capability catalog", () => {
     );
   });
 
+  it("validates a historical Golden lock by its full immutable identity", () => {
+    const historicalAuditLock = {
+      key: "core.audit",
+      version: "1.0.0",
+      packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
+      manifestDigest:
+        "sha256:6eab1ec3580703b32f236b9ba6c191318a442acb7b70b8550aa51370444526a8",
+      lifecycle: "golden" as const,
+    };
+
+    expect(() =>
+      assertGoldenCapabilityAssetLocks([historicalAuditLock], {
+        profile: "expense-approval",
+        capabilityKeys: ["audit.record"],
+      }),
+    ).not.toThrow();
+  });
+
   it("verifies every registered capability manifest against its declared digest", () => {
-    expect(capabilityAssets).toHaveLength(9);
+    expect(capabilityAssets).toHaveLength(10);
     for (const asset of capabilityAssets) {
       expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     }
