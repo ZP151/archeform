@@ -140,6 +140,12 @@ handlers. `ApplicationRuntime.executeEffects` dispatches selected module code
 instead of branching on `audit.record` or silently treating notification as a
 generic event.
 
+**Regression guard:** Existing Restaurant and Ecommerce published profiles use
+`inventory.decrement` and `payment.simulate` transition effects. This task
+also migrates those two effect handlers into their locked Commerce packages so
+the new dispatcher does not reintroduce a centralized fallback or make either
+profile's payment transition fail.
+
 - [ ] **Step 1: Write failing tests for handler-owned core effects**
 
 ```ts
@@ -201,6 +207,36 @@ await handler({
 
 The runtime still appends the generic capability evidence after the selected
 handler succeeds.
+
+- [ ] **Step 5a: Preserve independent Commerce profile execution**
+
+Write a failing generated journey test for Restaurant/Ecommerce payment that
+exercises `payment.simulate` and `inventory.decrement`. Add static verified
+handlers to `commerce.simulated-payment` and `commerce.inventory`; extend the
+generated `CapabilityStore` contract only with the existing bounded cart and
+inventory methods those handlers require. Move the inventory mutation out of
+`ApplicationRuntime.executeEffects`, update both physical manifests/adapters
+and Registry projections with exact digests, then verify the runtime contains
+no `inventory.decrement` branch.
+
+```ts
+effectHandler: async ({ store, entityKey, recordId }) => {
+  const items = await store.listCartItems(entityKey, recordId);
+  if (items.length === 0)
+    throw new Error(
+      `Cannot decrement inventory for an empty cart '${recordId}'.`,
+    );
+  for (const item of items)
+    await store.decrementInventory(
+      item.catalogEntity,
+      item.catalogRecordId,
+      item.quantity,
+    );
+};
+```
+
+The simulated-payment handler records only its bounded package delivery event.
+Both handlers must execute before the generic capability evidence is appended.
 
 - [ ] **Step 6: Run focused capability and Compiler tests**
 
