@@ -37,6 +37,13 @@ function prismaMock() {
       update: vi.fn(),
     },
     artifact: { createMany: vi.fn(), findFirst: vi.fn() },
+    previewRun: {
+      count: vi.fn(),
+      create: vi.fn(),
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
+    },
   };
 }
 
@@ -75,19 +82,27 @@ describe("LifecycleService", () => {
   let prisma: ReturnType<typeof prismaMock>;
   let service: LifecycleService;
   let queue: { enqueue: ReturnType<typeof vi.fn> };
+  let previewQueue: { enqueue: ReturnType<typeof vi.fn> };
   let proposalProvider: { propose: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     prisma = prismaMock();
     queue = { enqueue: vi.fn() };
+    previewQueue = { enqueue: vi.fn() };
     proposalProvider = { propose: vi.fn() };
     service = new (
       LifecycleService as unknown as new (
         prismaService: PrismaService,
         compilationQueue: typeof queue,
         graphProposalProvider: typeof proposalProvider,
+        previewRunQueue: typeof previewQueue,
       ) => LifecycleService
-    )(prisma as unknown as PrismaService, queue, proposalProvider);
+    )(
+      prisma as unknown as PrismaService,
+      queue,
+      proposalProvider,
+      previewQueue,
+    );
   });
 
   it("applies a validated AI Graph Diff only by appending a new Draft revision", async () => {
@@ -634,5 +649,166 @@ describe("LifecycleService", () => {
       }),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.compilation.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects a queued compilation before a preview can start", async () => {
+    prisma.compilation.findUnique.mockResolvedValue({
+      id: "compilation-queued",
+      result: { status: "queued" },
+      artifacts: [
+        { metadata: { rootDirectory: "expense-approval-published-1" } },
+      ],
+    });
+
+    await expect(
+      service.createPreviewRun("compilation-queued"),
+    ).rejects.toThrow("Compilation must succeed before a preview can start.");
+    expect(prisma.previewRun.create).not.toHaveBeenCalled();
+  });
+
+  it("creates a Factory-controlled preview run for a succeeded compilation and queues its start", async () => {
+    prisma.compilation.findUnique.mockResolvedValue({
+      id: "compilation-succeeded",
+      result: { status: "succeeded", artifactCount: 1 },
+      artifacts: [
+        { metadata: { rootDirectory: "expense-approval-published-1" } },
+      ],
+    });
+    prisma.previewRun.count.mockResolvedValue(0);
+    prisma.previewRun.create.mockImplementation(async ({ data }) => data);
+
+    const preview = await service.createPreviewRun("compilation-succeeded");
+
+    expect(preview).toMatchObject({
+      id: expect.stringMatching(/^preview-/),
+      status: "starting",
+      compilationId: "compilation-succeeded",
+      composeProjectName: expect.stringMatching(/^factory-preview-preview-/),
+    });
+    expect(previewQueue.enqueue).toHaveBeenCalledWith({
+      action: "start",
+      previewRunId: preview.id,
+      compilationId: "compilation-succeeded",
+      rootDirectory: "expense-approval-published-1",
+      composeProjectName: `factory-preview-${preview.id}`,
+    });
+  });
+
+  it("returns the current starting preview without enqueuing a second start", async () => {
+    const current = { id: "preview-1", status: "starting" };
+    prisma.compilation.findUnique.mockResolvedValue({
+      id: "compilation-succeeded",
+      result: { status: "succeeded" },
+      artifacts: [
+        { metadata: { rootDirectory: "expense-approval-published-1" } },
+      ],
+    });
+    prisma.previewRun.findFirst.mockResolvedValue(current);
+
+    await expect(
+      service.createPreviewRun("compilation-succeeded"),
+    ).resolves.toEqual(current);
+    expect(prisma.previewRun.create).not.toHaveBeenCalled();
+    expect(previewQueue.enqueue).not.toHaveBeenCalled();
+  });
+
+  it("returns a stopping preview without enqueuing a duplicate stop", async () => {
+    const current = {
+      id: "preview-1",
+      status: "stopping",
+      compilationId: "compilation-succeeded",
+      composeProjectName: "factory-preview-preview-1",
+      compilation: {
+        artifacts: [
+          { metadata: { rootDirectory: "expense-approval-published-1" } },
+        ],
+      },
+    };
+    prisma.previewRun.findUnique.mockResolvedValue(current);
+
+    await expect(service.stopPreviewRun("preview-1")).resolves.toEqual(current);
+    expect(prisma.previewRun.update).not.toHaveBeenCalled();
+    expect(previewQueue.enqueue).not.toHaveBeenCalled();
+  });
+
+  it("reports ready evidence only from starting runs with loopback ports and URL", async () => {
+    prisma.previewRun.findUnique.mockResolvedValue({
+      id: "preview-1",
+      status: "starting",
+      compilationId: "compilation-succeeded",
+      composeProjectName: "factory-preview-preview-1",
+    });
+    prisma.previewRun.update.mockResolvedValue({
+      id: "preview-1",
+      status: "ready",
+    });
+
+    await expect(
+      service.reportPreviewReady("preview-1", {
+        webPort: 43101,
+        apiPort: 43102,
+        previewUrl: "http://127.0.0.1:43101",
+      }),
+    ).resolves.toEqual({ id: "preview-1", status: "ready" });
+    expect(prisma.previewRun.update).toHaveBeenCalledWith({
+      where: { id: "preview-1" },
+      data: {
+        status: "ready",
+        webPort: 43101,
+        apiPort: 43102,
+        previewUrl: "http://127.0.0.1:43101",
+      },
+    });
+  });
+
+  it("rejects Worker evidence that attempts a non-loopback preview URL", async () => {
+    await expect(
+      service.reportPreviewReady("preview-1", {
+        webPort: 43101,
+        apiPort: 43102,
+        previewUrl: "https://example.com",
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it("records bounded failure evidence only while a preview is transitioning", async () => {
+    prisma.previewRun.findUnique.mockResolvedValue({
+      id: "preview-1",
+      status: "starting",
+    });
+    prisma.previewRun.update.mockResolvedValue({
+      id: "preview-1",
+      status: "failed",
+    });
+
+    await expect(
+      service.reportPreviewFailed("preview-1", {
+        diagnostic: "Preview startup failed.",
+      }),
+    ).resolves.toEqual({ id: "preview-1", status: "failed" });
+    expect(prisma.previewRun.update).toHaveBeenCalledWith({
+      where: { id: "preview-1" },
+      data: { status: "failed", diagnostic: "Preview startup failed." },
+    });
+  });
+
+  it("records stopped evidence only after a queued stop", async () => {
+    prisma.previewRun.findUnique.mockResolvedValue({
+      id: "preview-1",
+      status: "stopping",
+    });
+    prisma.previewRun.update.mockResolvedValue({
+      id: "preview-1",
+      status: "stopped",
+    });
+
+    await expect(service.reportPreviewStopped("preview-1")).resolves.toEqual({
+      id: "preview-1",
+      status: "stopped",
+    });
+    expect(prisma.previewRun.update).toHaveBeenCalledWith({
+      where: { id: "preview-1" },
+      data: { status: "stopped" },
+    });
   });
 });

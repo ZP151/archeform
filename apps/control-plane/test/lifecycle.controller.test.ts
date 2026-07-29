@@ -17,6 +17,7 @@ import { LifecycleService } from "../src/lifecycle.service.js";
 const lifecycle = {
   appendDraftRevision: vi.fn(),
   completeCompilation: vi.fn(),
+  createPreviewRun: vi.fn(),
   createCompilation: vi.fn(),
   createLocalApplicationGraph: vi.fn(),
   exportPublishedGraph: vi.fn(),
@@ -26,9 +27,14 @@ const lifecycle = {
   getDraft: vi.fn(),
   getCompilationArtifact: vi.fn(),
   getCompilation: vi.fn(),
+  getCurrentPreviewRun: vi.fn(),
   listPublishedRevisions: vi.fn(),
   publishDraft: vi.fn(),
   proposeDraftRevision: vi.fn(),
+  reportPreviewFailed: vi.fn(),
+  reportPreviewReady: vi.fn(),
+  reportPreviewStopped: vi.fn(),
+  stopPreviewRun: vi.fn(),
 };
 
 @Module({
@@ -54,6 +60,61 @@ describe("LifecycleController", () => {
 
   it.each([
     {
+      method: "POST",
+      path: "/compilations/compilation-1/preview-runs",
+      handler: lifecycle.createPreviewRun,
+      arguments: ["compilation-1"],
+      response: { id: "preview-1", status: "starting" },
+    },
+    {
+      method: "GET",
+      path: "/compilations/compilation-1/preview-runs/current",
+      handler: lifecycle.getCurrentPreviewRun,
+      arguments: ["compilation-1"],
+      response: { id: "preview-1", status: "ready" },
+    },
+    {
+      method: "POST",
+      path: "/preview-runs/preview-1/stop",
+      handler: lifecycle.stopPreviewRun,
+      arguments: ["preview-1"],
+      response: { id: "preview-1", status: "stopping" },
+    },
+    {
+      method: "POST",
+      path: "/internal/preview-runs/preview-1/ready",
+      body: {
+        webPort: 43101,
+        apiPort: 43102,
+        previewUrl: "http://127.0.0.1:43101",
+      },
+      handler: lifecycle.reportPreviewReady,
+      arguments: [
+        "preview-1",
+        {
+          webPort: 43101,
+          apiPort: 43102,
+          previewUrl: "http://127.0.0.1:43101",
+        },
+      ],
+      response: { id: "preview-1", status: "ready" },
+    },
+    {
+      method: "POST",
+      path: "/internal/preview-runs/preview-1/failed",
+      body: { diagnostic: "Preview startup failed." },
+      handler: lifecycle.reportPreviewFailed,
+      arguments: ["preview-1", { diagnostic: "Preview startup failed." }],
+      response: { id: "preview-1", status: "failed" },
+    },
+    {
+      method: "POST",
+      path: "/internal/preview-runs/preview-1/stopped",
+      handler: lifecycle.reportPreviewStopped,
+      arguments: ["preview-1"],
+      response: { id: "preview-1", status: "stopped" },
+    },
+    {
       method: "GET",
       path: "/application-graphs/graph-1/draft-revisions",
       handler: lifecycle.listDraftRevisions,
@@ -65,8 +126,13 @@ describe("LifecycleController", () => {
       path: "/workspaces/local/application-graphs/import",
       body: { exchange: { apiVersion: "factory.published-graph-exchange/v1" } },
       handler: lifecycle.importPublishedGraph,
-      arguments: [{ exchange: { apiVersion: "factory.published-graph-exchange/v1" } }],
-      response: { id: "graph-imported", draftRevisions: [{ id: "draft-imported" }] },
+      arguments: [
+        { exchange: { apiVersion: "factory.published-graph-exchange/v1" } },
+      ],
+      response: {
+        id: "graph-imported",
+        draftRevisions: [{ id: "draft-imported" }],
+      },
     },
     {
       method: "GET",
@@ -80,7 +146,10 @@ describe("LifecycleController", () => {
       path: "/application-graphs/graph-1/published-revisions/published-1/export",
       handler: lifecycle.exportPublishedGraph,
       arguments: ["graph-1", "published-1"],
-      response: { apiVersion: "factory.published-graph-exchange/v1", kind: "published-application-graph" },
+      response: {
+        apiVersion: "factory.published-graph-exchange/v1",
+        kind: "published-application-graph",
+      },
     },
     {
       method: "POST",
@@ -88,7 +157,10 @@ describe("LifecycleController", () => {
       body: { brief: "Add a receipt field." },
       handler: lifecycle.proposeDraftRevision,
       arguments: ["graph-1", { brief: "Add a receipt field." }],
-      response: { draftRevision: { id: "draft-3" }, proposal: { impact: { summary: "Adds receipt." } } },
+      response: {
+        draftRevision: { id: "draft-3" },
+        proposal: { impact: { summary: "Adds receipt." } },
+      },
     },
     {
       method: "POST",
@@ -154,7 +226,11 @@ describe("LifecycleController", () => {
       path: "/compilations/compilation-1/artifact-content?path=docs%2Fapi-reference.md",
       handler: lifecycle.getCompilationArtifact,
       arguments: ["compilation-1", "docs/api-reference.md"],
-      response: { path: "docs/api-reference.md", digest: "sha256:artifact", content: "# API reference" },
+      response: {
+        path: "docs/api-reference.md",
+        digest: "sha256:artifact",
+        content: "# API reference",
+      },
     },
     {
       method: "GET",
@@ -198,5 +274,19 @@ describe("LifecycleController", () => {
     expect(response.status).toBe(scenario.method === "POST" ? 201 : 200);
     expect(await response.json()).toEqual(scenario.response);
     expect(scenario.handler).toHaveBeenCalledWith(...scenario.arguments);
+  });
+
+  it("rejects preview requests that attach caller-controlled runtime fields", async () => {
+    const response = await fetch(
+      `${baseUrl}/compilations/compilation-1/preview-runs`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ rootDirectory: "outside", webPort: 43101 }),
+      },
+    );
+
+    expect(response.status).toBe(400);
+    expect(lifecycle.createPreviewRun).not.toHaveBeenCalled();
   });
 });

@@ -6,6 +6,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from "@nestjs/common";
+import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { assertGoldenCapabilityAssetLocks } from "@factory/capabilities";
 import {
@@ -29,6 +30,10 @@ import {
   GRAPH_PROPOSAL_PROVIDER,
   type FactoryGraphProposalProvider,
 } from "./graph-proposal.provider.js";
+import {
+  PREVIEW_RUN_QUEUE,
+  type PreviewRunQueue,
+} from "./preview-run-queue.js";
 
 const LOCAL_WORKSPACE_SLUG = "local-workspace";
 const LOCAL_WORKSPACE_NAME = "Local workspace";
@@ -166,6 +171,73 @@ function queuedCompilation(result: unknown): boolean {
   );
 }
 
+function succeededCompilation(result: unknown): boolean {
+  return (
+    !!result &&
+    typeof result === "object" &&
+    !Array.isArray(result) &&
+    (result as UnknownRecord).status === "succeeded"
+  );
+}
+
+function previewPort(value: unknown, key: string): number {
+  if (
+    typeof value !== "number" ||
+    !Number.isSafeInteger(value) ||
+    value < 1 ||
+    value > 65_535
+  ) {
+    throw new BadRequestException(`${key} must be a valid port number.`);
+  }
+  return value;
+}
+
+function loopbackPreviewUrl(value: unknown): string {
+  const previewUrl = requiredString({ previewUrl: value }, "previewUrl");
+  let parsed: URL;
+  try {
+    parsed = new URL(previewUrl);
+  } catch {
+    throw new BadRequestException("previewUrl must be a valid loopback URL.");
+  }
+  if (
+    parsed.protocol !== "http:" ||
+    parsed.hostname !== "127.0.0.1" ||
+    parsed.username ||
+    parsed.password ||
+    parsed.search ||
+    parsed.hash
+  ) {
+    throw new BadRequestException("previewUrl must be a valid loopback URL.");
+  }
+  return parsed.toString().replace(/\/$/, "");
+}
+
+function previewReadyEvidence(input: unknown) {
+  const body = exactRecord(
+    input,
+    ["webPort", "apiPort", "previewUrl"],
+    ["webPort", "apiPort", "previewUrl"],
+  );
+  const webPort = previewPort(body.webPort, "webPort");
+  const apiPort = previewPort(body.apiPort, "apiPort");
+  const previewUrl = loopbackPreviewUrl(body.previewUrl);
+  const parsed = new URL(previewUrl);
+  if (Number(parsed.port) !== webPort || apiPort === webPort) {
+    throw new BadRequestException("Preview evidence ports are invalid.");
+  }
+  return { webPort, apiPort, previewUrl };
+}
+
+function previewFailedEvidence(input: unknown) {
+  const body = exactRecord(input, ["diagnostic"], ["diagnostic"]);
+  const diagnostic = requiredString(body, "diagnostic");
+  if (diagnostic.length > 500) {
+    throw new BadRequestException("diagnostic must not exceed 500 characters.");
+  }
+  return { diagnostic };
+}
+
 function jsonValue(value: unknown, key: string): Prisma.InputJsonValue {
   try {
     const serialized = JSON.stringify(value);
@@ -223,6 +295,8 @@ export class LifecycleService {
     private readonly compilationQueue: CompilationQueue,
     @Inject(GRAPH_PROPOSAL_PROVIDER)
     private readonly graphProposalProvider: FactoryGraphProposalProvider,
+    @Inject(PREVIEW_RUN_QUEUE)
+    private readonly previewRunQueue: PreviewRunQueue,
   ) {}
 
   async getLocalApplicationGraph(key: string) {
@@ -532,6 +606,161 @@ export class LifecycleService {
         "Generated artifact content does not match registered evidence.",
       );
     }
+  }
+
+  async createPreviewRun(compilationId: string) {
+    const id = requiredString({ compilationId }, "compilationId");
+    const compilation = await this.prisma.compilation.findUnique({
+      where: { id },
+      include: { artifacts: true },
+    });
+    if (!compilation) throw new NotFoundException("Compilation was not found.");
+    if (!succeededCompilation(compilation.result)) {
+      throw new ConflictException(
+        "Compilation must succeed before a preview can start.",
+      );
+    }
+    const current = await this.prisma.previewRun.findFirst({
+      where: { compilationId: id },
+      orderBy: { sequence: "desc" },
+    });
+    if (current?.status === "starting" || current?.status === "ready") {
+      return current;
+    }
+    const rootDirectory = this.previewRootDirectory(compilation.artifacts);
+    const sequence =
+      (await this.prisma.previewRun.count({
+        where: { compilationId: id },
+      })) + 1;
+    const previewRunId = `preview-${randomUUID()}`;
+    const composeProjectName = `factory-preview-${previewRunId}`;
+    const preview = await this.prisma.previewRun.create({
+      data: {
+        id: previewRunId,
+        compilationId: id,
+        sequence,
+        composeProjectName,
+        status: "starting",
+      },
+    });
+    await this.previewRunQueue.enqueue({
+      action: "start",
+      previewRunId: preview.id,
+      compilationId: id,
+      rootDirectory,
+      composeProjectName: preview.composeProjectName,
+    });
+    return preview;
+  }
+
+  async getCurrentPreviewRun(compilationId: string) {
+    const id = requiredString({ compilationId }, "compilationId");
+    const compilation = await this.prisma.compilation.findUnique({
+      where: { id },
+    });
+    if (!compilation) throw new NotFoundException("Compilation was not found.");
+    return this.prisma.previewRun.findFirst({
+      where: { compilationId: id },
+      orderBy: { sequence: "desc" },
+    });
+  }
+
+  async stopPreviewRun(previewRunId: string) {
+    const id = requiredString({ previewRunId }, "previewRunId");
+    const preview = await this.prisma.previewRun.findUnique({
+      where: { id },
+      include: { compilation: { include: { artifacts: true } } },
+    });
+    if (!preview) throw new NotFoundException("Preview run was not found.");
+    if (preview.status === "stopping" || preview.status === "stopped") {
+      return preview;
+    }
+    if (preview.status !== "ready" && preview.status !== "failed") {
+      throw new ConflictException(
+        "Preview run cannot be stopped from its current state.",
+      );
+    }
+    const rootDirectory = this.previewRootDirectory(
+      preview.compilation.artifacts,
+    );
+    const stopping = await this.prisma.previewRun.update({
+      where: { id },
+      data: { status: "stopping" },
+    });
+    await this.previewRunQueue.enqueue({
+      action: "stop",
+      previewRunId: id,
+      compilationId: preview.compilationId,
+      rootDirectory,
+      composeProjectName: preview.composeProjectName,
+    });
+    return stopping;
+  }
+
+  async reportPreviewReady(previewRunId: string, input: unknown) {
+    const id = requiredString({ previewRunId }, "previewRunId");
+    const evidence = previewReadyEvidence(input);
+    const preview = await this.prisma.previewRun.findUnique({ where: { id } });
+    if (!preview) throw new NotFoundException("Preview run was not found.");
+    if (preview.status !== "starting") {
+      throw new ConflictException(
+        "Preview run is not awaiting start evidence.",
+      );
+    }
+    return this.prisma.previewRun.update({
+      where: { id },
+      data: { status: "ready", ...evidence },
+    });
+  }
+
+  async reportPreviewFailed(previewRunId: string, input: unknown) {
+    const id = requiredString({ previewRunId }, "previewRunId");
+    const evidence = previewFailedEvidence(input);
+    const preview = await this.prisma.previewRun.findUnique({ where: { id } });
+    if (!preview) throw new NotFoundException("Preview run was not found.");
+    if (preview.status !== "starting" && preview.status !== "stopping") {
+      throw new ConflictException(
+        "Preview run cannot accept failure evidence.",
+      );
+    }
+    return this.prisma.previewRun.update({
+      where: { id },
+      data: { status: "failed", ...evidence },
+    });
+  }
+
+  async reportPreviewStopped(previewRunId: string) {
+    const id = requiredString({ previewRunId }, "previewRunId");
+    const preview = await this.prisma.previewRun.findUnique({ where: { id } });
+    if (!preview) throw new NotFoundException("Preview run was not found.");
+    if (preview.status !== "stopping") {
+      throw new ConflictException("Preview run is not awaiting stop evidence.");
+    }
+    return this.prisma.previewRun.update({
+      where: { id },
+      data: { status: "stopped" },
+    });
+  }
+
+  private previewRootDirectory(
+    artifacts: readonly { metadata: unknown }[],
+  ): string {
+    const roots = artifacts
+      .map((artifact) => artifact.metadata)
+      .filter(
+        (metadata): metadata is UnknownRecord =>
+          !!metadata &&
+          typeof metadata === "object" &&
+          !Array.isArray(metadata),
+      )
+      .map((metadata) => metadata.rootDirectory)
+      .filter((root): root is string => typeof root === "string");
+    if (roots.length === 0 || new Set(roots).size !== 1) {
+      throw new ConflictException(
+        "Compilation has no single registered generated artifact root.",
+      );
+    }
+    return generatedRootDirectory({ rootDirectory: roots[0] });
   }
 
   async completeCompilation(compilationId: string, input: unknown) {

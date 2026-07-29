@@ -13,6 +13,10 @@ import {
 import { LifecycleController } from "./lifecycle.controller.js";
 import { LifecycleService } from "./lifecycle.service.js";
 import { PrismaService } from "./prisma.service.js";
+import {
+  BullMqPreviewRunQueue,
+  PREVIEW_RUN_QUEUE,
+} from "./preview-run-queue.js";
 
 @Module({
   controllers: [AppController, LifecycleController],
@@ -21,8 +25,13 @@ import { PrismaService } from "./prisma.service.js";
     LifecycleService,
     PrismaService,
     BullMqCompilationQueue,
+    BullMqPreviewRunQueue,
     { provide: COMPILATION_QUEUE, useExisting: BullMqCompilationQueue },
-    { provide: GRAPH_PROPOSAL_PROVIDER, useFactory: createGraphProposalProvider },
+    { provide: PREVIEW_RUN_QUEUE, useExisting: BullMqPreviewRunQueue },
+    {
+      provide: GRAPH_PROPOSAL_PROVIDER,
+      useFactory: createGraphProposalProvider,
+    },
   ],
 })
 export class AppModule {}

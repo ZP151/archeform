@@ -80,9 +80,31 @@ model Compilation {
   publishedRevision   PublishedRevision  @relation(fields: [publishedRevisionId], references: [id], onDelete: Restrict)
   artifacts           Artifact[]
   providerMetadata    ProviderMetadata[]
+  previewRuns         PreviewRun[]
 
   @@unique([publishedRevisionId, sequence])
   @@index([publishedRevisionId])
+}
+
+/// A local, Factory-governed execution request for generated artifacts from one
+/// immutable compilation. It intentionally excludes artifact paths, Graph data,
+/// commands, environments, and credentials.
+model PreviewRun {
+  id                 String      @id
+  compilationId      String
+  sequence           Int
+  composeProjectName String      @unique
+  webPort            Int?
+  apiPort            Int?
+  status             String
+  previewUrl         String?
+  diagnostic         String?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  compilation        Compilation @relation(fields: [compilationId], references: [id], onDelete: Restrict)
+
+  @@unique([compilationId, sequence])
+  @@index([compilationId])
 }
 
 model Artifact {

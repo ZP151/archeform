@@ -26,6 +26,7 @@ describe("control-plane lifecycle schema", () => {
         "DraftRevision",
         "PublishedRevision",
         "Compilation",
+        "PreviewRun",
         "Artifact",
         "ProviderMetadata",
       ]),
@@ -51,10 +52,56 @@ describe("control-plane lifecycle schema", () => {
       type: "Artifact",
       isList: true,
     });
+    expect(field("Compilation", "previewRuns")).toMatchObject({
+      type: "PreviewRun",
+      isList: true,
+    });
     expect(field("Compilation", "providerMetadata")).toMatchObject({
       type: "ProviderMetadata",
       isList: true,
     });
+  });
+
+  it("persists preview runs against an immutable compilation without runtime source or credentials", () => {
+    expect(field("PreviewRun", "compilationId")).toMatchObject({
+      type: "String",
+      isRequired: true,
+    });
+    expect(field("PreviewRun", "sequence")).toMatchObject({
+      type: "Int",
+      isRequired: true,
+    });
+    expect(field("PreviewRun", "composeProjectName")).toMatchObject({
+      type: "String",
+      isRequired: true,
+    });
+    expect(field("PreviewRun", "webPort")).toMatchObject({
+      type: "Int",
+      isRequired: false,
+    });
+    expect(field("PreviewRun", "apiPort")).toMatchObject({
+      type: "Int",
+      isRequired: false,
+    });
+    expect(field("PreviewRun", "previewUrl")).toMatchObject({
+      type: "String",
+      isRequired: false,
+    });
+    expect(field("PreviewRun", "compilation")).toMatchObject({
+      type: "Compilation",
+      isRequired: true,
+    });
+    expect(model("PreviewRun").uniqueFields).toContainEqual([
+      "compilationId",
+      "sequence",
+    ]);
+    expect(
+      model("PreviewRun").fields.some(({ name }) =>
+        /graph|source|credential|token|command|environment|directory|path/i.test(
+          name,
+        ),
+      ),
+    ).toBe(false);
   });
 
   it("stores draft and published graph snapshots as JSON", () => {

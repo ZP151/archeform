@@ -1,6 +1,28 @@
-import { Body, Controller, Get, Inject, Param, Post, Query } from "@nestjs/common";
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Param,
+  Post,
+  Query,
+} from "@nestjs/common";
 
 import { LifecycleService } from "./lifecycle.service.js";
+
+function emptyBody(body: unknown): void {
+  if (body === undefined) return;
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw new BadRequestException("Request body must be an empty object.");
+  }
+  const fields = Object.keys(body);
+  if (fields.length > 0) {
+    throw new BadRequestException(
+      `Unsupported request field: ${fields.sort()[0]}.`,
+    );
+  }
+}
 
 @Controller()
 export class LifecycleController {
@@ -32,9 +54,7 @@ export class LifecycleController {
   }
 
   @Get("application-graphs/:applicationGraphId/draft-revisions")
-  listDraftRevisions(
-    @Param("applicationGraphId") applicationGraphId: string,
-  ) {
+  listDraftRevisions(@Param("applicationGraphId") applicationGraphId: string) {
     return this.lifecycle.listDraftRevisions(applicationGraphId);
   }
 
@@ -66,7 +86,9 @@ export class LifecycleController {
     return this.lifecycle.listPublishedRevisions(applicationGraphId);
   }
 
-  @Get("application-graphs/:applicationGraphId/published-revisions/:publishedRevisionId/export")
+  @Get(
+    "application-graphs/:applicationGraphId/published-revisions/:publishedRevisionId/export",
+  )
   exportPublishedGraph(
     @Param("applicationGraphId") applicationGraphId: string,
     @Param("publishedRevisionId") publishedRevisionId: string,
@@ -95,11 +117,59 @@ export class LifecycleController {
     return this.lifecycle.getCompilationArtifact(compilationId, path);
   }
 
+  @Post("compilations/:compilationId/preview-runs")
+  createPreviewRun(
+    @Param("compilationId") compilationId: string,
+    @Body() body: unknown,
+  ) {
+    emptyBody(body);
+    return this.lifecycle.createPreviewRun(compilationId);
+  }
+
+  @Get("compilations/:compilationId/preview-runs/current")
+  getCurrentPreviewRun(@Param("compilationId") compilationId: string) {
+    return this.lifecycle.getCurrentPreviewRun(compilationId);
+  }
+
+  @Post("preview-runs/:previewRunId/stop")
+  stopPreviewRun(
+    @Param("previewRunId") previewRunId: string,
+    @Body() body: unknown,
+  ) {
+    emptyBody(body);
+    return this.lifecycle.stopPreviewRun(previewRunId);
+  }
+
   @Post("internal/compilations/:compilationId/complete")
   completeCompilation(
     @Param("compilationId") compilationId: string,
     @Body() body: unknown,
   ) {
     return this.lifecycle.completeCompilation(compilationId, body);
+  }
+
+  @Post("internal/preview-runs/:previewRunId/ready")
+  reportPreviewReady(
+    @Param("previewRunId") previewRunId: string,
+    @Body() body: unknown,
+  ) {
+    return this.lifecycle.reportPreviewReady(previewRunId, body);
+  }
+
+  @Post("internal/preview-runs/:previewRunId/failed")
+  reportPreviewFailed(
+    @Param("previewRunId") previewRunId: string,
+    @Body() body: unknown,
+  ) {
+    return this.lifecycle.reportPreviewFailed(previewRunId, body);
+  }
+
+  @Post("internal/preview-runs/:previewRunId/stopped")
+  reportPreviewStopped(
+    @Param("previewRunId") previewRunId: string,
+    @Body() body: unknown,
+  ) {
+    emptyBody(body);
+    return this.lifecycle.reportPreviewStopped(previewRunId);
   }
 }
