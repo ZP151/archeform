@@ -16,6 +16,12 @@ an absent or duplicate handler before it changes application state.
 **Tech Stack:** TypeScript, Node crypto/fs/path, Vitest, NestJS generated API,
 Prisma generated store, pnpm, Docker Compose, Playwright.
 
+> **Completion note (2026-07-29):** Existing `1.0.0` Golden assets remain
+> immutable historical inputs. The executable package implementations are
+> published as `1.0.1`; a uniform historical lock set compiles through the
+> explicit `metadata-v1` runtime family, while `1.0.1` uses
+> `package-handlers-v1`. Mixed handler-family locks fail before output.
+
 ## Global Constraints
 
 - `ApplicationGraphV1` remains the only business source of truth.
@@ -43,9 +49,9 @@ Prisma generated store, pnpm, Docker Compose, Playwright.
 | `packages/compiler/src/index.ts`                                                   | Renders capability contracts, modules, registry dispatch, and generated API runtime. |
 | `packages/compiler/test/compilation-plan.test.ts`                                  | Verifies generated source, handler registration, and fail-closed compiler behavior.  |
 | `packages/compiler/test/profile-compilation.test.ts`                               | Verifies Expense composition and generated journey output.                           |
-| `packages/capabilities/assets/core.*/1.0.0/component.json`                         | Declares the versioned executable source contribution and digest.                    |
-| `packages/capabilities/assets/core.*/1.0.0/adapter.json`                           | Mirrors the allowed declarative contribution.                                        |
-| `packages/capabilities/assets/core.*/1.0.0/templates/api/capability-module.ts.tpl` | Implements the package-local generated handler.                                      |
+| `packages/capabilities/assets/core.*/1.0.1/component.json`                         | Declares the executable source contribution and digest.                              |
+| `packages/capabilities/assets/core.*/1.0.1/adapter.json`                           | Mirrors the allowed declarative contribution.                                        |
+| `packages/capabilities/assets/core.*/1.0.1/templates/api/capability-module.ts.tpl` | Implements the package-local generated handler.                                      |
 | `packages/capabilities/src/assets/core/*.ts`                                       | Mirrors the physical package manifest in the trusted Registry projection.            |
 | `packages/capabilities/src/node.ts`                                                | Validates package-local contributions before the Compiler receives them.             |
 | `packages/capabilities/test/capability-registry.test.ts`                           | Verifies each core package and tamper/unsafe rejection behavior.                     |
@@ -121,12 +127,12 @@ git commit -m "feat: add generated capability handler contract"
 
 **Files:**
 
-- Modify: `packages/capabilities/assets/core.audit/1.0.0/component.json`
-- Modify: `packages/capabilities/assets/core.audit/1.0.0/adapter.json`
-- Modify: `packages/capabilities/assets/core.audit/1.0.0/templates/api/capability-module.ts.tpl`
-- Modify: `packages/capabilities/assets/core.notification/1.0.0/component.json`
-- Modify: `packages/capabilities/assets/core.notification/1.0.0/adapter.json`
-- Modify: `packages/capabilities/assets/core.notification/1.0.0/templates/api/capability-module.ts.tpl`
+- Modify: `packages/capabilities/assets/core.audit/1.0.1/component.json`
+- Modify: `packages/capabilities/assets/core.audit/1.0.1/adapter.json`
+- Modify: `packages/capabilities/assets/core.audit/1.0.1/templates/api/capability-module.ts.tpl`
+- Modify: `packages/capabilities/assets/core.notification/1.0.1/component.json`
+- Modify: `packages/capabilities/assets/core.notification/1.0.1/adapter.json`
+- Modify: `packages/capabilities/assets/core.notification/1.0.1/templates/api/capability-module.ts.tpl`
 - Modify: `packages/capabilities/src/assets/core/audit.ts`
 - Modify: `packages/capabilities/src/assets/core/notification.ts`
 - Modify: `packages/capabilities/test/capability-registry.test.ts`
@@ -261,12 +267,12 @@ git commit -m "feat: dispatch core effects from capability packages"
 
 **Files:**
 
-- Modify: `packages/capabilities/assets/core.crud/1.0.0/component.json`
-- Modify: `packages/capabilities/assets/core.crud/1.0.0/adapter.json`
-- Modify: `packages/capabilities/assets/core.crud/1.0.0/templates/api/capability-module.ts.tpl`
-- Modify: `packages/capabilities/assets/core.workflow/1.0.0/component.json`
-- Modify: `packages/capabilities/assets/core.workflow/1.0.0/adapter.json`
-- Modify: `packages/capabilities/assets/core.workflow/1.0.0/templates/api/capability-module.ts.tpl`
+- Modify: `packages/capabilities/assets/core.crud/1.0.1/component.json`
+- Modify: `packages/capabilities/assets/core.crud/1.0.1/adapter.json`
+- Modify: `packages/capabilities/assets/core.crud/1.0.1/templates/api/capability-module.ts.tpl`
+- Modify: `packages/capabilities/assets/core.workflow/1.0.1/component.json`
+- Modify: `packages/capabilities/assets/core.workflow/1.0.1/adapter.json`
+- Modify: `packages/capabilities/assets/core.workflow/1.0.1/templates/api/capability-module.ts.tpl`
 - Modify: `packages/capabilities/src/assets/core/crud.ts`
 - Modify: `packages/capabilities/src/assets/core/workflow.ts`
 - Modify: `packages/compiler/src/index.ts`
@@ -441,8 +447,9 @@ git push origin main
 ## Self-review
 
 - Scope is intentionally limited to the four core packages and the Expense
-  profile. Commerce package execution remains a separate slice, preserving the
-  same handler contract.
+  profile. Commerce handler execution is covered only as a regression guard
+  for the independently accepted Restaurant and Ecommerce profiles; it uses
+  the same handler contract.
 - All generated executable behavior enters only through physical, Golden,
   digest-verified templates and has an explicit Compiler-owned interface.
 - The plan contains no runtime dependency on raw AI output, URL imports, or
