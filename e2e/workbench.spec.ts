@@ -1,6 +1,45 @@
 import { expect, test } from "@playwright/test";
 import type { ApplicationGraphV1 } from "@factory/graph";
 
+const expenseCapabilityTemplateLocks = [
+  {
+    assetKey: "core.audit",
+    assetVersion: "1.0.1",
+    source: "templates/api/capability-module.ts.tpl",
+    target: "api/src/capabilities/core.audit.ts",
+    outputSlot: "api.runtime",
+    digest:
+      "sha256:9bb2507b6d1e72605a9782257a6dd3e2cee130273391b331534005bb78c3a71f",
+  },
+  {
+    assetKey: "core.crud",
+    assetVersion: "1.0.0",
+    source: "templates/api/capability-module.ts.tpl",
+    target: "api/src/capabilities/core.crud.ts",
+    outputSlot: "api.runtime",
+    digest:
+      "sha256:5e1bcc06560ccdd1062c786618a883de6df9234d2134c89361b3adaab0700955",
+  },
+  {
+    assetKey: "core.notification",
+    assetVersion: "1.0.0",
+    source: "templates/api/capability-module.ts.tpl",
+    target: "api/src/capabilities/core.notification.ts",
+    outputSlot: "api.runtime",
+    digest:
+      "sha256:b9a745255d242339486fff29d6f7abd3f751e36df3e348f896956a31c6b53266",
+  },
+  {
+    assetKey: "core.workflow",
+    assetVersion: "1.0.0",
+    source: "templates/api/capability-module.ts.tpl",
+    target: "api/src/capabilities/core.workflow.ts",
+    outputSlot: "api.runtime",
+    digest:
+      "sha256:209d5d649840437f334ac53aa593634c9cdb8fbfe5cc7525ed96f80ac91947bb",
+  },
+];
+
 test("creates a named application Draft through the guided business-user journey", async ({
   page,
 }) => {
@@ -86,6 +125,19 @@ test("edits a Draft, publishes an immutable revision, and compiles it", async ({
 }) => {
   await page.goto("/");
 
+  const name = `Executable expense ${Date.now().toString()}`;
+  await page.getByRole("button", { name: "New application" }).click();
+  await page.getByTestId("guided-template-expense-approval").click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Application name").fill(name);
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByTestId("guided-create").click();
+  await expect(
+    page.getByRole("dialog", { name: "Create application left-side drawer" }),
+  ).toBeHidden();
+  await expect(page.getByLabel("Current application")).toHaveText(name);
+
   await expect(page.locator('[data-theme="light"]')).toBeVisible();
   await expect(page.getByLabel("Puck Page Studio")).toBeVisible();
 
@@ -93,7 +145,7 @@ test("edits a Draft, publishes an immutable revision, and compiles it", async ({
   await page.getByLabel("New page").fill(`Journey ${routeSuffix}`);
   await page.getByRole("button", { name: "Add page" }).click();
   await expect(page.getByLabel("Path")).toHaveValue(`/journey-${routeSuffix}`);
-  await page.getByLabel("Entity binding").selectOption("request");
+  await page.getByLabel("Entity binding").selectOption("expense");
 
   await page.getByRole("button", { name: "Switch to dark theme" }).click();
   await expect(page.locator('[data-theme="dark"]')).toBeVisible();
@@ -108,7 +160,7 @@ test("edits a Draft, publishes an immutable revision, and compiles it", async ({
   await page.getByRole("button", { name: "Add entity" }).click();
   await expect(page.getByTestId(`rf__node-domain:${entityKey}`)).toBeVisible();
 
-  await page.getByLabel("Relation target").selectOption("request");
+  await page.getByLabel("Relation target").selectOption("expense");
   await page.getByRole("button", { name: "Add relation" }).click();
   await expect(page.getByText(/declared relation/)).toBeVisible();
   const fieldKey = `e2e${Date.now()}`;
@@ -145,6 +197,14 @@ test("edits a Draft, publishes an immutable revision, and compiles it", async ({
   await expect(
     page.getByText("factory.capability-template-lock/v1"),
   ).toBeVisible();
+  const lockArtifact = JSON.parse(
+    (await page
+      .getByLabel("Generated source snapshot")
+      .locator("pre")
+      .textContent()) ?? "{}",
+  ) as { apiVersion: string; templates: unknown };
+  expect(lockArtifact.apiVersion).toBe("factory.capability-template-lock/v1");
+  expect(lockArtifact.templates).toEqual(expenseCapabilityTemplateLocks);
 
   await page.getByRole("button", { name: "History" }).click();
   await expect(

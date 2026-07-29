@@ -46,12 +46,12 @@ expected `notification.send` evidence records.
 The default revision's `capability-template-lock.json` contains
 `factory.capability-template-lock/v1` and exactly these generated API modules:
 
-| Locked Golden package | Version | Generated target                            |
-| --------------------- | ------- | ------------------------------------------- |
-| `core.crud`           | `1.0.0` | `api/src/capabilities/core.crud.ts`         |
-| `core.workflow`       | `1.0.0` | `api/src/capabilities/core.workflow.ts`     |
-| `core.audit`          | `1.0.0` | `api/src/capabilities/core.audit.ts`        |
-| `core.notification`   | `1.0.0` | `api/src/capabilities/core.notification.ts` |
+| Locked Golden package | Version | Template digest                                                           | Generated target                            |
+| --------------------- | ------- | ------------------------------------------------------------------------- | ------------------------------------------- |
+| `core.crud`           | `1.0.0` | `sha256:5e1bcc06560ccdd1062c786618a883de6df9234d2134c89361b3adaab0700955` | `api/src/capabilities/core.crud.ts`         |
+| `core.workflow`       | `1.0.0` | `sha256:209d5d649840437f334ac53aa593634c9cdb8fbfe5cc7525ed96f80ac91947bb` | `api/src/capabilities/core.workflow.ts`     |
+| `core.audit`          | `1.0.1` | `sha256:9bb2507b6d1e72605a9782257a6dd3e2cee130273391b331534005bb78c3a71f` | `api/src/capabilities/core.audit.ts`        |
+| `core.notification`   | `1.0.0` | `sha256:b9a745255d242339486fff29d6f7abd3f751e36df3e348f896956a31c6b53266` | `api/src/capabilities/core.notification.ts` |
 
 ## Isolated Workbench evidence
 
@@ -75,9 +75,12 @@ FACTORY_E2E_BASE_URL=http://127.0.0.1:15179 \
 3 passed
 ```
 
-The browser proof creates and publishes an Expense Draft, waits for
-`Compile succeeded`, opens `capability-template-lock.json`, and displays
-`factory.capability-template-lock/v1` from the immutable compilation artifact.
+The compile journey creates a guided Expense Approval Draft, edits Page, Flow,
+and Domain state, saves, publishes, and compiles it. It then waits for
+`Compile succeeded`, opens `capability-template-lock.json`, parses the
+immutable artifact, and requires exactly the four package identities, versions,
+template digests, and generated targets recorded above. The separate guided
+creation journey verifies Draft creation without publishing it.
 
 ## Repository gates
 
@@ -97,8 +100,27 @@ git diff --check
 
 ## Cleanup
 
-After verification, only the named Compose project is removed with its
-containers, volumes, and network. Only Task 4 temporary output directories
-beginning `factory-pilot-executable-expense-` beneath
-`%LOCALAPPDATA%\Temp` are removed; no user services or unrelated temporary
-data are affected.
+The following exact teardown command removed only the named project:
+
+```text
+docker compose -p factory-pilot-executable-expense-e2e \
+  -f infra/docker-compose.yml down -v
+```
+
+It removed that project's five containers, two named volumes, and one network;
+a follow-up `docker compose -p factory-pilot-executable-expense-e2e -f
+infra/docker-compose.yml ps --format json` returned no rows.
+
+The following scoped PowerShell cleanup removed only the temporary directory
+created for this Task 4 fix run:
+
+```powershell
+$task4FixTemp = Join-Path $env:LOCALAPPDATA 'Temp\factory-pilot-executable-expense-20260729-task4fix'
+$task4FixTemp = (Resolve-Path -LiteralPath $task4FixTemp).Path
+if ($task4FixTemp -notmatch '^[A-Za-z]:\\Users\\15492\\AppData\\Local\\Temp\\factory-pilot-executable-expense-[^\\]+$') { throw 'Unexpected temporary target' }
+Remove-Item -LiteralPath $task4FixTemp -Recurse -Force
+Test-Path -LiteralPath $task4FixTemp
+```
+
+`Test-Path` returned `False`. No user services or unrelated temporary data were
+modified.
