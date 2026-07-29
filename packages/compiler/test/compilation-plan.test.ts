@@ -127,7 +127,7 @@ describe("compilation target registry", () => {
         version: "1.0.0",
         packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
         manifestDigest:
-          "sha256:fe69596d29f87db7e491eeb5c77160dc800669fbc49eb6572deaf2ecc65f55d3",
+          "sha256:6eab1ec3580703b32f236b9ba6c191318a442acb7b70b8550aa51370444526a8",
         lifecycle: "golden",
       },
     ];
@@ -162,7 +162,7 @@ describe("compilation target registry", () => {
           version: "1.0.0",
           packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
           manifestDigest:
-            "sha256:fe69596d29f87db7e491eeb5c77160dc800669fbc49eb6572deaf2ecc65f55d3",
+            "sha256:6eab1ec3580703b32f236b9ba6c191318a442acb7b70b8550aa51370444526a8",
           lifecycle: "golden",
         },
       ],
@@ -201,7 +201,7 @@ describe("compilation target registry", () => {
       "declaredEffectOperations.has(effectOperationKey(capability, operation))",
     );
     expect(files["api/src/application-runtime.ts"]).toContain(
-      'import { providedEffects } from "./capabilities/registry.js";',
+      'import { getEffectHandler } from "./capabilities/registry.js";',
     );
     expect(files["capability-template-lock.json"]).toContain(
       '"assetKey": "core.audit"',
