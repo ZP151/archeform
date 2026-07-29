@@ -201,8 +201,12 @@ describe("compilation target registry", () => {
     expect(bundle.files).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          path: "web/app/application-manifest.ts",
+          path: "web/app/page-runtime.tsx",
           content: expect.stringContaining("Expense approval"),
+        }),
+        expect.objectContaining({
+          path: "web/app/[...path]/page.tsx",
+          content: expect.stringContaining("GeneratedApplication"),
         }),
         expect.objectContaining({
           path: "web/app/favicon.ico/route.ts",
@@ -632,9 +636,6 @@ describe("compilation target registry", () => {
     expect(files["api/src/application-runtime.ts"]).toContain(
       '"providerId": "mail"',
     );
-    expect(files["web/app/application-manifest.ts"]).toContain(
-      '"providerId": "mail"',
-    );
   });
 
   it("fails a declared external effect at the provider boundary before state changes", async () => {
@@ -999,18 +1000,14 @@ describe("compilation target registry", () => {
       }).files.map((file) => [file.path, file.content]),
     );
 
-    expect(files["web/app/page.tsx"]).toContain("GeneratedApplicationClient");
-    expect(files["web/app/generated-application-client.tsx"]).toContain(
-      '"use client"',
-    );
-    expect(files["web/app/generated-application-client.tsx"]).toContain(
-      "x-factory-role",
-    );
-    expect(files["web/app/generated-application-client.tsx"]).toContain(
+    expect(files["web/app/page.tsx"]).toContain("GeneratedApplication");
+    expect(files["web/app/page-runtime.tsx"]).toContain('"use client"');
+    expect(files["web/app/page-runtime.tsx"]).toContain("x-factory-role");
+    expect(files["web/app/page-runtime.tsx"]).toContain(
       "actions: readonly string[]",
     );
-    expect(files["web/app/application-manifest.ts"]).toContain(
-      "Create expense",
+    expect(files["web/app/[...path]/page.tsx"]).toContain(
+      "GeneratedApplication",
     );
     expect(files["web/app/api/[...path]/route.ts"]).toContain(
       "FACTORY_API_URL",
@@ -1022,6 +1019,38 @@ describe("compilation target registry", () => {
     expect(files["docker-compose.yml"]).toContain(
       "FACTORY_API_URL: http://api:3001",
     );
+  });
+
+  it("emits a Factory-owned PageModel runtime and only declared Next routes", () => {
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "restaurant-page-runtime-1",
+        graph: composeProfileDraft({ profile: "restaurant-ordering" }).graph,
+      }).files.map((file) => [file.path, file.content]),
+    );
+    const runtime = files["web/app/page-runtime.tsx"]!;
+
+    expect(runtime).toContain("factory.generated-page-runtime/v1");
+    expect(runtime).toContain("applicationName");
+    expect(runtime).toContain("canTriggerEvent");
+    expect(runtime).toContain("HeroBlock");
+    expect(runtime).toContain("FormBlock");
+    expect(runtime).toContain("CollectionBlock");
+    expect(runtime).toContain("CatalogBlock");
+    expect(runtime).toContain("CartBlock");
+    expect(runtime).toContain("QueueBlock");
+    expect(runtime).toContain("CheckoutBlock");
+    expect(runtime).toContain("formRouteByEntity");
+    expect(runtime).toContain('"/menu"');
+    expect(runtime).not.toContain("@puckeditor/core");
+    expect(runtime).not.toContain("reactflow");
+    expect(runtime).not.toContain("<aside>");
+    expect(files["web/app/page.tsx"]).toContain('requestedPath="/"');
+    expect(files["web/app/[...path]/page.tsx"]).toContain(
+      "GeneratedApplication",
+    );
+    expect(files["web/app/generated-application-client.tsx"]).toBeUndefined();
+    expect(files["web/app/application-manifest.ts"]).toBeUndefined();
   });
 
   it("preconfigures generated Next projects so a build does not rewrite their TypeScript contract", () => {
@@ -1420,11 +1449,7 @@ describe("compilation target registry", () => {
     expect(files["api/src/main.ts"]).toContain(
       "commerce/:entity/:recordId/items",
     );
-    expect(files["web/app/generated-application-client.tsx"]).toContain(
-      "addToCart",
-    );
-    expect(files["web/app/generated-application-client.tsx"]).toContain(
-      "Checkout cart",
-    );
+    expect(files["web/app/page-runtime.tsx"]).toContain("addToCart");
+    expect(files["web/app/page-runtime.tsx"]).toContain("Checkout cart");
   });
 });
