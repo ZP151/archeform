@@ -8,6 +8,7 @@ import {
   createPublishedGraphExchange,
   hashApplicationGraph,
 } from "@factory/graph";
+import { getCapabilityAsset } from "@factory/capabilities";
 
 import { LifecycleService } from "../src/lifecycle.service.js";
 import type { PrismaService } from "../src/prisma.service.js";
@@ -63,6 +64,12 @@ const draftRevision = {
   graph: localApplicationGraph,
   createdAt: new Date("2026-07-29T00:01:00.000Z"),
 };
+
+const coreAuditLock = (() => {
+  const { key, version, packageRoot, manifestDigest, lifecycle } =
+    getCapabilityAsset("core.audit").manifest;
+  return { key, version, packageRoot, manifestDigest, lifecycle };
+})();
 
 describe("LifecycleService", () => {
   let prisma: ReturnType<typeof prismaMock>;
@@ -169,16 +176,7 @@ describe("LifecycleService", () => {
         integration: {
           ...localApplicationGraph.integration,
           compositionProfile: "expense-approval",
-          assetLocks: [
-            {
-              key: "core.audit",
-              version: "1.0.0",
-              packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
-              manifestDigest:
-                "sha256:fe69596d29f87db7e491eeb5c77160dc800669fbc49eb6572deaf2ecc65f55d3",
-              lifecycle: "golden",
-            },
-          ],
+          assetLocks: [coreAuditLock],
         },
       },
       applicationGraph: { ...applicationGraph, workspace },
