@@ -1344,35 +1344,86 @@ describe("compilation target registry", () => {
     );
   });
 
-  it("compiles undeclared relation requiredness as an optional foreign key", () => {
-    const files = Object.fromEntries(
-      generateApplicationBundle({
-        publishedRevisionId: "published-optional-relation-1",
-        graph: {
-          ...publishedExpense.graph,
-          domain: {
-            entities: [
-              { key: "journey", label: "Journey", fields: [], indexes: [] },
-              { key: "expense", label: "Expense", fields: [], indexes: [] },
-            ],
-            relations: [
-              { from: "journey", to: "expense", kind: "one-to-many" },
-            ],
-          },
-        },
-      }).files.map((file) => [file.path, file.content]),
-    );
+  it("compiles every non-many-to-many relation mode as an optional foreign key", () => {
+    const cases = [
+      {
+        kind: "one-to-many" as const,
+        from: "journey",
+        to: "expense",
+        foreignKey: "journeyId",
+        relation:
+          'journey Journey? @relation("JourneyToExpense", fields: [journeyId], references: [id])',
+        constraint: '"JourneyToExpense_fkey"',
+      },
+      {
+        kind: "many-to-one" as const,
+        from: "expense",
+        to: "journey",
+        foreignKey: "journeyId",
+        relation:
+          'journey Journey? @relation("ExpenseToJourney", fields: [journeyId], references: [id])',
+        constraint: '"JourneyToExpense_fkey"',
+      },
+      {
+        kind: "one-to-one" as const,
+        from: "account",
+        to: "profile",
+        foreignKey: "accountId",
+        relation:
+          'account Account? @relation("AccountToProfile", fields: [accountId], references: [id])',
+        constraint: '"AccountToProfile_fkey"',
+      },
+    ];
 
-    expect(files["api/prisma/schema.prisma"]).toContain("journeyId String?");
-    expect(files["api/prisma/schema.prisma"]).toContain(
-      'journey Journey? @relation("JourneyToExpense", fields: [journeyId], references: [id])',
-    );
-    expect(
-      files["database/prisma/migrations/0001_initial/migration.sql"],
-    ).toContain('"journeyId" TEXT');
-    expect(
-      files["database/prisma/migrations/0001_initial/migration.sql"],
-    ).not.toContain('"journeyId" TEXT NOT NULL');
+    for (const relationCase of cases) {
+      const files = Object.fromEntries(
+        generateApplicationBundle({
+          publishedRevisionId: `published-optional-${relationCase.kind}-1`,
+          graph: {
+            ...publishedExpense.graph,
+            domain: {
+              entities: [
+                {
+                  key: relationCase.from,
+                  label: relationCase.from,
+                  fields: [],
+                  indexes: [],
+                },
+                {
+                  key: relationCase.to,
+                  label: relationCase.to,
+                  fields: [],
+                  indexes: [],
+                },
+              ],
+              relations: [
+                {
+                  from: relationCase.from,
+                  to: relationCase.to,
+                  kind: relationCase.kind,
+                },
+              ],
+            },
+          },
+        }).files.map((file) => [file.path, file.content]),
+      );
+      const prismaSchema = files["api/prisma/schema.prisma"]!;
+      const migration =
+        files["database/prisma/migrations/0001_initial/migration.sql"]!;
+
+      expect(prismaSchema).toContain(`${relationCase.foreignKey} String?`);
+      expect(prismaSchema).toContain(relationCase.relation);
+      expect(migration).toContain(`"${relationCase.foreignKey}" TEXT`);
+      expect(migration).not.toContain(
+        `"${relationCase.foreignKey}" TEXT NOT NULL`,
+      );
+      expect(migration).toContain(relationCase.constraint);
+
+      if (relationCase.kind === "one-to-one") {
+        expect(prismaSchema).toContain("accountId String? @unique");
+        expect(migration).toContain('"accountId" TEXT UNIQUE');
+      }
+    }
   });
 
   it("generates a role-guarded record runtime, XState machines, and an executable journey", () => {
