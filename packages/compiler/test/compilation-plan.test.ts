@@ -1350,6 +1350,8 @@ describe("compilation target registry", () => {
         kind: "one-to-many" as const,
         from: "journey",
         to: "expense",
+        owningModel: "Expense",
+        targetModel: "Journey",
         foreignKey: "journeyId",
         relation:
           'journey Journey? @relation("JourneyToExpense", fields: [journeyId], references: [id])',
@@ -1359,6 +1361,8 @@ describe("compilation target registry", () => {
         kind: "many-to-one" as const,
         from: "expense",
         to: "journey",
+        owningModel: "Expense",
+        targetModel: "Journey",
         foreignKey: "journeyId",
         relation:
           'journey Journey? @relation("ExpenseToJourney", fields: [journeyId], references: [id])',
@@ -1368,6 +1372,8 @@ describe("compilation target registry", () => {
         kind: "one-to-one" as const,
         from: "account",
         to: "profile",
+        owningModel: "Profile",
+        targetModel: "Account",
         foreignKey: "accountId",
         relation:
           'account Account? @relation("AccountToProfile", fields: [accountId], references: [id])',
@@ -1410,18 +1416,28 @@ describe("compilation target registry", () => {
       const prismaSchema = files["api/prisma/schema.prisma"]!;
       const migration =
         files["database/prisma/migrations/0001_initial/migration.sql"]!;
+      const prismaModel = prismaSchema.match(
+        new RegExp(`model ${relationCase.owningModel} \\{[\\s\\S]*?\\n\\}`),
+      )?.[0];
+      const migrationTable = migration.match(
+        new RegExp(
+          `CREATE TABLE "${relationCase.owningModel}" \\([\\s\\S]*?\\n\\);`,
+        ),
+      )?.[0];
 
-      expect(prismaSchema).toContain(`${relationCase.foreignKey} String?`);
-      expect(prismaSchema).toContain(relationCase.relation);
-      expect(migration).toContain(`"${relationCase.foreignKey}" TEXT`);
-      expect(migration).not.toContain(
+      expect(prismaModel).toContain(`${relationCase.foreignKey} String?`);
+      expect(prismaModel).toContain(relationCase.relation);
+      expect(migrationTable).toContain(`"${relationCase.foreignKey}" TEXT`);
+      expect(migrationTable).not.toContain(
         `"${relationCase.foreignKey}" TEXT NOT NULL`,
       );
-      expect(migration).toContain(relationCase.constraint);
+      expect(migration).toContain(
+        `ALTER TABLE "${relationCase.owningModel}" ADD CONSTRAINT ${relationCase.constraint} FOREIGN KEY ("${relationCase.foreignKey}") REFERENCES "${relationCase.targetModel}" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;`,
+      );
 
       if (relationCase.kind === "one-to-one") {
-        expect(prismaSchema).toContain("accountId String? @unique");
-        expect(migration).toContain('"accountId" TEXT UNIQUE');
+        expect(prismaModel).toContain("accountId String? @unique");
+        expect(migrationTable).toContain('"accountId" TEXT UNIQUE');
       }
     }
   });
