@@ -25,8 +25,11 @@ Prisma generated store, pnpm, Docker Compose, Playwright.
   output, fetch a URL, or write outside `api/src/capabilities/`.
 - The Compiler owns authorization and path confinement; capability modules own
   only their declared storage/effect behavior.
-- A missing, duplicate, incompatible, or unsigned capability module fails
-  closed before generated application output is returned.
+- A missing, duplicate, incompatible, or unsigned physical capability package
+  or template contribution fails closed before generated application output is
+  returned. A missing or duplicate runtime operation handler fails closed
+  before its first state-affecting invocation; Tasks 2 and 3 add those
+  handlers incrementally without changing existing execution paths in Task 1.
 - Code, tests, documentation, and user-visible copy are English.
 - Credentials and raw AI input/output never enter source, artifacts, evidence,
   or logs.
