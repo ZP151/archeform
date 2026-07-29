@@ -15,7 +15,7 @@ export const auditAsset: CapabilityAssetV1 = {
       "Records actor, action, subject, and immutable timestamp evidence.",
     packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
     manifestDigest:
-      "sha256:fe69596d29f87db7e491eeb5c77160dc800669fbc49eb6572deaf2ecc65f55d3",
+      "sha256:6eab1ec3580703b32f236b9ba6c191318a442acb7b70b8550aa51370444526a8",
     lifecycle: "golden",
     profiles: ["expense-approval", "restaurant-ordering", "simple-ecommerce"],
     effects: ["audit.record"],
@@ -28,7 +28,7 @@ export const auditAsset: CapabilityAssetV1 = {
         target: "api/src/capabilities/core.audit.ts",
         outputSlot: "api.runtime",
         digest:
-          "sha256:8ced82a4c3db325ab13c454b081a3f81add5e8bb3f341d51474e04d69e42a06b",
+          "sha256:883eb54bad1d3a0e9da7542e8a342231f3d1ab8f7d9e4824d9aacb530268447f",
       },
     ],
     verification: {

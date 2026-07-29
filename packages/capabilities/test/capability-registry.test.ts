@@ -95,6 +95,75 @@ describe("capability catalog", () => {
     }
   });
 
+  it("rejects a changed core audit effect handler template", async () => {
+    const repositoryRoot = await mkdtemp(
+      join(tmpdir(), "factory-changed-handler-"),
+    );
+    const registered = getCapabilityAsset("core.audit").manifest;
+    const packageRoot =
+      "packages/capabilities/assets/test.changed-handler/1.0.0";
+    const draftManifest = {
+      ...registered,
+      key: "test.changed-handler",
+      packageRoot,
+    };
+    const manifest = {
+      ...draftManifest,
+      manifestDigest: capabilityManifestDigest(draftManifest),
+    };
+    const asset: CapabilityAssetV1 = { manifest };
+    const physicalRoot = resolve(repositoryRoot, packageRoot);
+    const sourceTemplate = readFileSync(
+      resolve(
+        dirname(fileURLToPath(import.meta.url)),
+        "../assets/core.audit/1.0.0/templates/api/capability-module.ts.tpl",
+      ),
+      "utf8",
+    );
+
+    try {
+      await mkdir(resolve(physicalRoot, "templates/api"), { recursive: true });
+      await mkdir(resolve(physicalRoot, "fixtures"), { recursive: true });
+      await mkdir(resolve(physicalRoot, "tests"), { recursive: true });
+      await writeFile(
+        resolve(physicalRoot, "component.json"),
+        JSON.stringify(manifest, null, 2),
+      );
+      await writeFile(
+        resolve(physicalRoot, "adapter.json"),
+        JSON.stringify(
+          {
+            apiVersion: "factory.adapter/v1",
+            kind: "declarative",
+            outputSlots: manifest.outputSlots,
+            templates: manifest.templates,
+          },
+          null,
+          2,
+        ),
+      );
+      await writeFile(resolve(physicalRoot, "fixtures/default.json"), "{}");
+      await writeFile(resolve(physicalRoot, "tests/contract.json"), "{}");
+      await writeFile(
+        resolve(physicalRoot, "templates/api/capability-module.ts.tpl"),
+        sourceTemplate.replace(
+          "effectHandler: async",
+          "effectHandler: async /* changed */",
+        ),
+      );
+
+      expect(verifyCapabilityAssetPackage(asset, repositoryRoot)).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining(
+            "template: Capability template 'api-capability-module' digest does not match.",
+          ),
+        ]),
+      );
+    } finally {
+      await rm(repositoryRoot, { recursive: true, force: true });
+    }
+  });
+
   it("rejects a package template that targets outside its declared output slot", async () => {
     const repositoryRoot = await mkdtemp(
       join(tmpdir(), "factory-unsafe-template-"),

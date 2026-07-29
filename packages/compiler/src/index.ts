@@ -829,7 +829,7 @@ function runtimeDefinition(graph: ApplicationGraphV1) {
 function renderApplicationRuntime(graph: ApplicationGraphV1): string {
   const commerce = hasCommerceCapabilities(graph);
   return [
-    'import { providedEffects } from "./capabilities/registry.js";',
+    'import { getEffectHandler } from "./capabilities/registry.js";',
     'import { enforce } from "./policy.js";',
     "",
     "export type StoredRecord = Record<string, unknown> & { id: string; status?: string };",
@@ -961,11 +961,9 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "  private async executeEffects(role: string, entityKey: string, recordId: string, effects: readonly { capability: string; operation: string }[] | undefined): Promise<void> {",
     "    for (const effect of effects ?? []) {",
     "      this.assertCapability(effect.capability, effect.operation);",
-    "      if (!providedEffects.has(effect.capability)) throw new Error(`Unsupported capability effect '${effect.capability}.${effect.operation}'.`);",
     "      const at = new Date().toISOString();",
-    "      if (effect.capability === 'audit.record') {",
-    "        await this.store.appendAudit({ actor: role, action: effect.operation, entity: entityKey, recordId, at });",
-    "      }",
+    "      const handler = getEffectHandler(effect.capability, effect.operation);",
+    "      await handler({ role, entityKey, recordId, operation: effect.operation, store: this.store, now: at });",
     ...(commerce
       ? [
           "      if (effect.capability === 'inventory.decrement') {",

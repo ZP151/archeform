@@ -5,6 +5,28 @@ import { composeProfileDraft } from "@factory/capabilities";
 import { generateApplicationBundle } from "../src/index.js";
 
 describe("profile compilation", () => {
+  it("generates package-owned handlers for audit and notification effects", () => {
+    const graph = composeProfileDraft({
+      profile: "expense-approval",
+    }).graph;
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "core-effect-handlers-1",
+        graph,
+      }).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(files["api/src/capabilities/core.audit.ts"]).toContain(
+      "effectHandler: async",
+    );
+    expect(files["api/src/capabilities/core.notification.ts"]).toContain(
+      "effectHandler: async",
+    );
+    expect(files["api/src/application-runtime.ts"]).not.toContain(
+      "effect.capability === 'audit.record'",
+    );
+  });
+
   it("compiles an audit-free Expense Graph deterministically", () => {
     const graph = composeProfileDraft({
       profile: "expense-approval",
