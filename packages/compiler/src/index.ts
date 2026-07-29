@@ -303,6 +303,40 @@ function resolveCapabilityTemplateContributions(
   );
 }
 
+type GeneratedRuntimeMode = "metadata-v1" | "package-handlers-v1";
+
+const handlerBackedCapabilityPackages = new Set<string>([
+  "core.audit",
+  "core.crud",
+  "core.notification",
+  "core.workflow",
+  "commerce.inventory",
+  "commerce.simulated-payment",
+]);
+
+function resolveGeneratedRuntimeMode(
+  graph: ApplicationGraphV1,
+): GeneratedRuntimeMode {
+  const handlerLocks = (graph.integration.assetLocks ?? []).filter((lock) =>
+    handlerBackedCapabilityPackages.has(lock.key),
+  );
+  if (!handlerLocks.length) return "package-handlers-v1";
+
+  const versions = new Set(handlerLocks.map((lock) => lock.version));
+  if (versions.size !== 1) {
+    throw new Error(
+      "Mixed historical and package-handler Golden locks cannot compile into one generated runtime.",
+    );
+  }
+
+  const [version] = versions;
+  if (version === "1.0.0") return "metadata-v1";
+  if (version === "1.0.1") return "package-handlers-v1";
+  throw new Error(
+    `Handler-backed Golden package version '${version}' does not declare generated runtime semantics.`,
+  );
+}
+
 function renderCapabilityRegistry(
   contributions: readonly ResolvedCapabilityTemplateContribution[],
 ): string {
@@ -848,10 +882,16 @@ function runtimeDefinition(graph: ApplicationGraphV1) {
   };
 }
 
-function renderApplicationRuntime(graph: ApplicationGraphV1): string {
+function renderApplicationRuntime(
+  graph: ApplicationGraphV1,
+  mode: GeneratedRuntimeMode,
+): string {
   const commerce = hasCommerceCapabilities(graph);
+  const packageHandlers = mode === "package-handlers-v1";
   return [
-    'import { getEffectHandler, getRecordHandler, getWorkflowHandler, providedEffects } from "./capabilities/registry.js";',
+    packageHandlers
+      ? 'import { getEffectHandler, getRecordHandler, getWorkflowHandler, providedEffects } from "./capabilities/registry.js";'
+      : 'import { providedEffects } from "./capabilities/registry.js";',
     'import { enforce } from "./policy.js";',
     "",
     "export type StoredRecord = Record<string, unknown> & { id: string; status?: string };",
@@ -996,8 +1036,26 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "    }",
     "    for (const { effect } of declaredEffects) {",
     "      const at = new Date().toISOString();",
-    "      const handler = getEffectHandler(effect.capability, effect.operation);",
-    "      await handler({ role, entityKey, recordId, operation: effect.operation, store: this.store, now: at });",
+    ...(packageHandlers
+      ? [
+          "      const handler = getEffectHandler(effect.capability, effect.operation);",
+          "      await handler({ role, entityKey, recordId, operation: effect.operation, store: this.store, now: at });",
+        ]
+      : [
+          "      if (!providedEffects.has(effect.capability)) throw new Error(`Unsupported capability effect '${effect.capability}.${effect.operation}'.`);",
+          "      if (effect.capability === 'audit.record') {",
+          "        await this.store.appendAudit({ actor: role, action: effect.operation, entity: entityKey, recordId, at });",
+          "      }",
+          ...(commerce
+            ? [
+                "      if (effect.capability === 'inventory.decrement') {",
+                "        const items = await this.store.listCartItems(entityKey, recordId);",
+                "        if (items.length === 0) throw new Error(`Cannot decrement inventory for an empty cart '${recordId}'.`);",
+                "        for (const item of items) await this.store.decrementInventory(item.catalogEntity, item.catalogRecordId, item.quantity);",
+                "      }",
+              ]
+            : []),
+        ]),
     "      await this.store.appendCapabilityEvent({ actor: role, capability: effect.capability, operation: effect.operation, entity: entityKey, recordId, outcome: 'completed', at });",
     "    }",
     "  }",
@@ -1005,7 +1063,9 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "  async list(role: string, entityKey: string): Promise<readonly StoredRecord[]> {",
     "    this.entity(entityKey);",
     "    await this.assertAllowed(role, entityKey, 'read');",
-    "    return getRecordHandler().list({ store: this.store, entityKey });",
+    packageHandlers
+      ? "    return getRecordHandler().list({ store: this.store, entityKey });"
+      : "    return this.store.list(entityKey);",
     "  }",
     "",
     "  async create(role: string, entityKey: string, input: Record<string, unknown>): Promise<StoredRecord> {",
@@ -1022,11 +1082,17 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "        throw new Error(`Required field '${field.key}' is missing.`);",
     "      }",
     "    }",
-    "    const record = await getRecordHandler().create({",
-    "      store: this.store,",
-    "      entityKey,",
-    "      input: { ...input, ...(flow ? { status: flow.initialState } : {}) },",
-    "    });",
+    ...(packageHandlers
+      ? [
+          "    const record = await getRecordHandler().create({",
+          "      store: this.store,",
+          "      entityKey,",
+          "      input: { ...input, ...(flow ? { status: flow.initialState } : {}) },",
+          "    });",
+        ]
+      : [
+          "    const record = await this.store.create(entityKey, { ...input, ...(flow ? { status: flow.initialState } : {}) });",
+        ]),
     "    await this.store.appendAudit({ actor: role, action: 'create', entity: entityKey, recordId: record.id, at: new Date().toISOString() });",
     "    return record;",
     "  }",
@@ -1074,14 +1140,21 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "    }",
     "    if (transition.roles?.length) await this.assertTransitionAllowed(role, entityKey, event);",
     "    else await this.assertAllowed(role, entityKey, 'read');",
-    "    const workflowHandler = getWorkflowHandler();",
-    "    await this.executeEffects(role, entityKey, recordId, transition.effects);",
-    "    const updated = await workflowHandler.applyTransition({",
-    "      store: this.store,",
-    "      entityKey,",
-    "      recordId,",
-    "      nextState: transition.to,",
-    "    });",
+    ...(packageHandlers
+      ? [
+          "    const workflowHandler = getWorkflowHandler();",
+          "    await this.executeEffects(role, entityKey, recordId, transition.effects);",
+          "    const updated = await workflowHandler.applyTransition({",
+          "      store: this.store,",
+          "      entityKey,",
+          "      recordId,",
+          "      nextState: transition.to,",
+          "    });",
+        ]
+      : [
+          "    await this.executeEffects(role, entityKey, recordId, transition.effects);",
+          "    const updated = await this.store.update(entityKey, recordId, { status: transition.to });",
+        ]),
     "    await this.store.appendAudit({ actor: role, action: event, entity: entityKey, recordId, at: new Date().toISOString() });",
     "    return updated;",
     "  }",
@@ -1877,6 +1950,7 @@ export function generateApplicationBundle(
     graph,
     options.repositoryRoot,
   );
+  const runtimeMode = resolveGeneratedRuntimeMode(graph);
   const rootDirectory = `${graph.metadata.id}-${input.publishedRevisionId}`;
   const files: GeneratedFile[] = [
     {
@@ -2062,7 +2136,7 @@ export function generateApplicationBundle(
     },
     {
       path: "api/src/application-runtime.ts",
-      content: renderApplicationRuntime(graph),
+      content: renderApplicationRuntime(graph, runtimeMode),
     },
     {
       path: "api/src/prisma-record-store.ts",

@@ -70,6 +70,9 @@ type GeneratedRuntime = {
   ): Promise<
     readonly { capability: string; operation: string; recordId: string }[]
   >;
+  auditLog(
+    role: string,
+  ): Promise<readonly { action: string; recordId: string }[]>;
 };
 
 async function withGeneratedRuntime<T>(
@@ -323,7 +326,7 @@ describe("compilation target registry", () => {
       "declaredEffectOperations.has(effectOperationKey(capability, operation))",
     );
     expect(files["api/src/application-runtime.ts"]).toContain(
-      'import { getEffectHandler, getRecordHandler, getWorkflowHandler, providedEffects } from "./capabilities/registry.js";',
+      'import { providedEffects } from "./capabilities/registry.js";',
     );
     expect(files["capability-template-lock.json"]).toContain(
       '"assetKey": "core.audit"',
@@ -429,6 +432,163 @@ describe("compilation target registry", () => {
         ]),
       );
     }
+  });
+
+  it("runs a fully locked historical Expense lifecycle without package handlers", async () => {
+    const historicalLocksByKey = new Map(
+      historicalExecutableLocks.map((lock) => [lock.key, lock]),
+    );
+    const graph = structuredClone(
+      composeProfileDraft({ profile: "expense-approval" }).graph,
+    );
+    graph.integration.assetLocks = graph.integration.assetLocks?.map(
+      (lock) => historicalLocksByKey.get(lock.key) ?? lock,
+    );
+
+    await withGeneratedRuntime(
+      { publishedRevisionId: "historical-expense-lifecycle-1", graph },
+      async (runtime) => {
+        const created = await runtime.create("employee", "expense", {
+          amount: 125,
+          description: "Historical lock lifecycle",
+        });
+        expect(created.status).toBe("draft");
+        const submitted = await runtime.transition(
+          "employee",
+          "expense",
+          created.id,
+          "submit",
+        );
+        expect(submitted.status).toBe("submitted");
+        const approved = await runtime.transition(
+          "manager",
+          "expense",
+          created.id,
+          "approve",
+        );
+
+        expect(approved.status).toBe("approved");
+        expect(await runtime.auditLog("finance")).toHaveLength(5);
+        expect(
+          (await runtime.capabilityEvents("finance")).map((event) => [
+            event.capability,
+            event.operation,
+          ]),
+        ).toEqual([
+          ["audit.record", "record"],
+          ["audit.record", "record"],
+        ]);
+      },
+    );
+  });
+
+  it("keeps current handler runtime alongside unchanged metadata packages", () => {
+    const graph = composeProfileDraft({ profile: "simple-ecommerce" }).graph;
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "current-handler-metadata-coexistence-1",
+        graph,
+      }).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(graph.integration.assetLocks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: "core.crud", version: "1.0.1" }),
+        expect.objectContaining({ key: "core.workflow", version: "1.0.1" }),
+        expect.objectContaining({
+          key: "commerce.inventory",
+          version: "1.0.1",
+        }),
+        expect.objectContaining({
+          key: "commerce.simulated-payment",
+          version: "1.0.1",
+        }),
+        expect.objectContaining({ key: "commerce.catalog", version: "1.0.0" }),
+        expect.objectContaining({ key: "commerce.cart", version: "1.0.0" }),
+        expect.objectContaining({ key: "commerce.order", version: "1.0.0" }),
+      ]),
+    );
+    expect(files["api/src/application-runtime.ts"]).toContain(
+      "getRecordHandler().create({",
+    );
+    expect(files["api/src/application-runtime.ts"]).toContain(
+      "const workflowHandler = getWorkflowHandler();",
+    );
+  });
+
+  it("rejects mixed historical and package-handler locks before output", () => {
+    const historicalCrudLock = historicalExecutableLocks.find(
+      (lock) => lock.key === "core.crud",
+    )!;
+    const graph = structuredClone(
+      composeProfileDraft({ profile: "expense-approval" }).graph,
+    );
+    graph.integration.assetLocks = graph.integration.assetLocks?.map((lock) =>
+      lock.key === "core.crud" ? historicalCrudLock : lock,
+    );
+
+    expect(() =>
+      generateApplicationBundle({
+        publishedRevisionId: "mixed-handler-family-1",
+        graph,
+      }),
+    ).toThrow("Mixed historical and package-handler Golden locks");
+  });
+
+  it("preflights historical external providers before changing record state", async () => {
+    const historicalLocksByKey = new Map(
+      historicalExecutableLocks.map((lock) => [lock.key, lock]),
+    );
+    const composed = composeProfileDraft({
+      profile: "expense-approval",
+    }).graph;
+    const graph = {
+      ...composed,
+      integration: {
+        ...composed.integration,
+        assetLocks: composed.integration.assetLocks?.map(
+          (lock) => historicalLocksByKey.get(lock.key) ?? lock,
+        ),
+        providers: [{ id: "mail", type: "email", version: "1.0.0" }],
+        capabilities: [
+          ...composed.integration.capabilities,
+          { key: "email.send", providerId: "mail", operation: "send" },
+        ],
+      },
+      flow: {
+        ...composed.flow,
+        flows: composed.flow.flows.map((flow) => ({
+          ...flow,
+          transitions: flow.transitions.map((transition) =>
+            transition.event === "submit"
+              ? {
+                  ...transition,
+                  effects: [{ capability: "email.send", operation: "send" }],
+                }
+              : transition,
+          ),
+        })),
+      },
+    };
+
+    await withGeneratedRuntime(
+      { publishedRevisionId: "historical-external-provider-1", graph },
+      async (runtime) => {
+        const record = await runtime.create("employee", "expense", {
+          amount: 1,
+          description: "Historical provider boundary",
+        });
+
+        await expect(
+          runtime.transition("employee", "expense", record.id, "submit"),
+        ).rejects.toThrow(
+          "External provider capability 'email.send' requires an activated adapter for provider 'mail'.",
+        );
+        expect((await runtime.list("employee", "expense"))[0]?.status).toBe(
+          "draft",
+        );
+      },
+    );
   });
 
   it("rejects a Graph capability without a locked Golden package", () => {
