@@ -181,6 +181,7 @@ export function buildCompilationPlan(
 
 interface ResolvedCapabilityTemplateContribution extends ResolvedCapabilityAssetTemplate {
   readonly effects: readonly string[];
+  readonly operations: readonly { capability: string; operation: string }[];
 }
 
 function findFactoryRepositoryRoot(startDirectory: string): string {
@@ -271,6 +272,12 @@ function resolveCapabilityTemplateContributions(
     return loadCapabilityAssetTemplates(asset, root).map((template) => ({
       ...template,
       effects: asset.manifest.effects,
+      operations: graph.integration.capabilities
+        .filter((capability) => asset.manifest.effects.includes(capability.key))
+        .map((capability) => ({
+          capability: capability.key,
+          operation: capability.operation,
+        })),
     }));
   });
   for (const contribution of contributions) {
@@ -309,13 +316,113 @@ function renderCapabilityRegistry(
     );
   });
   const modules = contributions.map((_, index) => "capabilityModule" + index);
+  const operations = Array.from(
+    new Set(
+      contributions.flatMap((contribution) =>
+        contribution.operations.map(
+          (operation) => operation.capability + "\u0000" + operation.operation,
+        ),
+      ),
+    ),
+  ).sort();
   return [
+    'import type { CapabilityRuntimeModule, EffectHandler, RecordHandler, WorkflowHandler } from "./contract.js";',
+    "",
     ...imports,
     ...(imports.length ? [""] : []),
-    "export const capabilityModules = [" + modules.join(", ") + "] as const;",
+    "export const capabilityModules: readonly CapabilityRuntimeModule[] = [" +
+      modules.join(", ") +
+      "];",
     "export const providedEffects = new Set<string>(",
     "  capabilityModules.flatMap((module) => module.effects),",
     ");",
+    "",
+    "const declaredEffectOperations = new Set<string>(" +
+      JSON.stringify(operations) +
+      ");",
+    "",
+    "function effectOperationKey(capability: string, operation: string): string {",
+    "  return `${capability}\\u0000${operation}`;",
+    "}",
+    "",
+    "function singleHandler<T>(handlers: readonly T[], label: string): T {",
+    "  if (handlers.length === 0) throw new Error(`No ${label} handler.`);",
+    "  if (handlers.length > 1) throw new Error(`Multiple ${label} handlers are registered.`);",
+    "  return handlers[0]!;",
+    "}",
+    "",
+    "function assertUniqueEffectHandlers(): void {",
+    "  const registered = new Set<string>();",
+    "  for (const module of capabilityModules) {",
+    "    if (!module.effectHandler) continue;",
+    "    for (const effect of module.effects) {",
+    "      if (registered.has(effect)) throw new Error(`Multiple handlers for '${effect}'.`);",
+    "      registered.add(effect);",
+    "    }",
+    "  }",
+    "}",
+    "",
+    "assertUniqueEffectHandlers();",
+    "",
+    "export function getEffectHandler(capability: string, operation: string): EffectHandler {",
+    "  if (!declaredEffectOperations.has(effectOperationKey(capability, operation))) {",
+    "    throw new Error(`No handler for '${capability}.${operation}'.`);",
+    "  }",
+    "  const module = capabilityModules.find((candidate) =>",
+    "    candidate.effects.includes(capability) && candidate.effectHandler,",
+    "  );",
+    "  if (!module?.effectHandler) throw new Error(`No handler for '${capability}'.`);",
+    "  return module.effectHandler;",
+    "}",
+    "",
+    "export function getRecordHandler(): RecordHandler {",
+    "  return singleHandler(",
+    "    capabilityModules.flatMap((module) => module.recordHandler ? [module.recordHandler] : []),",
+    '    "record",',
+    "  );",
+    "}",
+    "",
+    "export function getWorkflowHandler(): WorkflowHandler {",
+    "  return singleHandler(",
+    "    capabilityModules.flatMap((module) => module.workflowHandler ? [module.workflowHandler] : []),",
+    '    "workflow",',
+    "  );",
+    "}",
+    "",
+  ].join("\n");
+}
+
+function renderCapabilityContract(): string {
+  return [
+    "export type CapabilityStoredRecord = Record<string, unknown> & { id: string; status?: string };",
+    "",
+    "export interface CapabilityStore {",
+    "  list(entityKey: string): Promise<readonly CapabilityStoredRecord[]>;",
+    "  find(entityKey: string, recordId: string): Promise<CapabilityStoredRecord | undefined>;",
+    "  create(entityKey: string, input: Record<string, unknown>): Promise<CapabilityStoredRecord>;",
+    "  update(entityKey: string, recordId: string, input: Record<string, unknown>): Promise<CapabilityStoredRecord>;",
+    "  appendAudit(event: { actor: string; action: string; entity: string; recordId: string; at: string }): Promise<void>;",
+    "  appendCapabilityEvent(event: { actor: string; capability: string; operation: string; entity: string; recordId: string; outcome: 'completed'; at: string }): Promise<void>;",
+    "}",
+    "",
+    "export interface RecordHandler {",
+    "  create(input: { store: CapabilityStore; entityKey: string; input: Record<string, unknown> }): Promise<CapabilityStoredRecord>;",
+    "  list(input: { store: CapabilityStore; entityKey: string }): Promise<readonly CapabilityStoredRecord[]>;",
+    "}",
+    "",
+    "export interface WorkflowHandler {",
+    "  applyTransition(input: { store: CapabilityStore; entityKey: string; recordId: string; nextState: string }): Promise<CapabilityStoredRecord>;",
+    "}",
+    "",
+    "export type EffectHandler = (input: { role: string; entityKey: string; recordId: string; operation: string; store: CapabilityStore; now: string }) => Promise<void>;",
+    "",
+    "export interface CapabilityRuntimeModule {",
+    "  readonly key: string;",
+    "  readonly effects: readonly string[];",
+    "  readonly recordHandler?: RecordHandler;",
+    "  readonly workflowHandler?: WorkflowHandler;",
+    "  readonly effectHandler?: EffectHandler;",
+    "}",
     "",
   ].join("\n");
 }
@@ -1874,6 +1981,10 @@ export function generateApplicationBundle(
     },
     { path: "api/.dockerignore", content: "node_modules\ndist\n.env\n" },
     { path: "api/src/main.ts", content: renderApiMain(graph) },
+    {
+      path: "api/src/capabilities/contract.ts",
+      content: renderCapabilityContract(),
+    },
     ...capabilityTemplates.map((template) => ({
       path: template.target,
       content: renderCapabilityTemplate(template, graph),

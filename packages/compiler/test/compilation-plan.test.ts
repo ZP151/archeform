@@ -182,8 +182,23 @@ describe("compilation target registry", () => {
       'effects: ["audit.record"],',
     );
     expect(files["api/src/capabilities/core.audit.ts"]).not.toContain("{{");
+    expect(files["api/src/capabilities/contract.ts"]).toContain(
+      "export interface CapabilityRuntimeModule",
+    );
     expect(files["api/src/capabilities/registry.ts"]).toContain(
       'from "./core.audit.js"',
+    );
+    expect(files["api/src/capabilities/registry.ts"]).toContain(
+      "getEffectHandler",
+    );
+    expect(files["api/src/capabilities/registry.ts"]).toContain(
+      "getRecordHandler",
+    );
+    expect(files["api/src/capabilities/registry.ts"]).toContain(
+      "getEffectHandler(capability: string, operation: string)",
+    );
+    expect(files["api/src/capabilities/registry.ts"]).toContain(
+      "declaredEffectOperations.has(effectOperationKey(capability, operation))",
     );
     expect(files["api/src/application-runtime.ts"]).toContain(
       'import { providedEffects } from "./capabilities/registry.js";',
