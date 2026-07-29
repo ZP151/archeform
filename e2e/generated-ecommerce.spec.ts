@@ -23,8 +23,15 @@ test("runs the generated ecommerce customer and operator journey", async ({
   ).toBeVisible();
   await page.getByRole("button", { name: "Checkout cart" }).click();
 
+  const checkoutUrl = new URL(generatedApplicationUrl!);
+  checkoutUrl.pathname = "/checkout";
+  await page.goto(checkoutUrl.toString());
+  await expect(page).toHaveURL(/\/checkout$/);
+  await expect(page.getByRole("heading", { name: "Checkout" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Orders" }).click();
+  await expect(page).toHaveURL(/\/orders$/);
   await page.getByLabel("Role").selectOption("operator");
-  await page.getByRole("button", { name: "Order" }).click();
   const paidOrder = page.locator("li").filter({ hasText: '"status":"paid"' });
   await expect(paidOrder.last()).toBeVisible({ timeout: 10_000 });
   await paidOrder.last().getByRole("button", { name: "fulfil" }).click();

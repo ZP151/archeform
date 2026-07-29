@@ -152,4 +152,41 @@ describe("profile compilation", () => {
       );
     },
   );
+
+  it.each([
+    {
+      profile: "expense-approval" as const,
+      routes: ["/expenses", "/expenses/new"],
+      blockTypes: ["collection", "form"],
+    },
+    {
+      profile: "restaurant-ordering" as const,
+      routes: ["/menu", "/cart", "/kitchen"],
+      blockTypes: ["catalog", "cart", "queue"],
+    },
+    {
+      profile: "simple-ecommerce" as const,
+      routes: ["/", "/checkout", "/orders"],
+      blockTypes: ["catalog", "checkout", "collection"],
+    },
+  ])(
+    "emits the declared $profile PageModel routes and block types",
+    ({ profile, routes, blockTypes }) => {
+      const files = Object.fromEntries(
+        generateApplicationBundle({
+          publishedRevisionId: `${profile}-page-routes-1`,
+          graph: composeProfileDraft({ profile }).graph,
+        }).files.map((file) => [file.path, file.content]),
+      );
+      const runtime = files["web/app/page-runtime.tsx"];
+
+      expect(runtime).toBeDefined();
+      for (const route of routes) {
+        expect(runtime).toContain(`"route": "${route}"`);
+      }
+      for (const blockType of blockTypes) {
+        expect(runtime).toContain(`"type": "${blockType}"`);
+      }
+    },
+  );
 });

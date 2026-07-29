@@ -11,7 +11,10 @@ test.skip(
 test("runs the generated restaurant customer and kitchen journey", async ({
   page,
 }) => {
-  await page.goto(generatedApplicationUrl!);
+  const menuUrl = new URL(generatedApplicationUrl!);
+  menuUrl.pathname = "/menu";
+  await page.goto(menuUrl.toString());
+  await expect(page).toHaveURL(/\/menu$/);
   await expect(
     page.getByRole("heading", { name: "Restaurant ordering" }),
   ).toBeVisible();
@@ -24,8 +27,11 @@ test("runs the generated restaurant customer and kitchen journey", async ({
   ).toBeVisible();
   await page.getByRole("button", { name: "Checkout cart" }).click();
 
+  await page.getByRole("link", { name: "Cart" }).click();
+  await expect(page).toHaveURL(/\/cart$/);
+  await page.getByRole("link", { name: "Kitchen" }).click();
+  await expect(page).toHaveURL(/\/kitchen$/);
   await page.getByLabel("Role").selectOption("kitchen");
-  await page.getByRole("button", { name: "Order" }).click();
   const paidOrder = page.locator("li").filter({ hasText: '"status":"paid"' });
   await expect(paidOrder.last()).toBeVisible({ timeout: 10_000 });
   await paidOrder
