@@ -1,0 +1,12 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": [
+    "api.runtime",
+    "database.schema",
+    "page.block",
+    "flow.effect",
+    "test.fixture"
+  ],
+  "contributes": { "effects": ["order.create", "order.transition"] }
+}

@@ -1,14 +1,24 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
 
 import {
+  assertGoldenCapabilityAssetLocks,
   capabilityCatalog,
+  capabilityAssets,
   capabilitiesForProfile,
   composeProfileDraft,
+  getCapabilityAsset,
   getCapability,
   getProfileComposition,
   profileGraphs,
   type FactoryProfile,
 } from "../src/index.js";
+import {
+  verifyCapabilityAssetDigest,
+  verifyCapabilityAssetPackage,
+} from "../src/node.js";
 import { validateApplicationGraph } from "@factory/graph";
 import { generateApplicationBundle } from "@factory/compiler";
 
@@ -25,6 +35,84 @@ describe("capability catalog", () => {
       "commerce.order",
       "commerce.simulated-payment",
     ]);
+  });
+
+  it("resolves each catalog entry to an immutable Golden capability asset", () => {
+    const asset = getCapabilityAsset("core.audit");
+
+    expect(asset.manifest).toMatchObject({
+      apiVersion: "factory.capability/v1",
+      key: "core.audit",
+      version: "1.0.0",
+      lifecycle: "golden",
+      packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
+    });
+    expect(asset.manifest.manifestDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
+    expect(asset.manifest.outputSlots).toEqual(
+      expect.arrayContaining(["api.runtime", "test.fixture"]),
+    );
+  });
+
+  it("verifies every registered capability manifest against its declared digest", () => {
+    expect(capabilityAssets).toHaveLength(9);
+    for (const asset of capabilityAssets) {
+      expect(verifyCapabilityAssetDigest(asset)).toBe(true);
+    }
+  });
+
+  it("ships each Golden asset as a self-contained package with adapter and evidence", () => {
+    const repositoryRoot = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "../../..",
+    );
+
+    for (const asset of capabilityAssets) {
+      expect(verifyCapabilityAssetPackage(asset, repositoryRoot)).toEqual([]);
+    }
+  });
+
+  it("keeps each physical package manifest aligned with its registry contract", () => {
+    const repositoryRoot = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "../../..",
+    );
+
+    for (const asset of capabilityAssets) {
+      const component = JSON.parse(
+        readFileSync(
+          resolve(repositoryRoot, asset.manifest.packageRoot, "component.json"),
+          "utf8",
+        ),
+      ) as Record<string, unknown>;
+      expect(component).toEqual(asset.manifest);
+
+      const adapter = JSON.parse(
+        readFileSync(
+          resolve(repositoryRoot, asset.manifest.packageRoot, "adapter.json"),
+          "utf8",
+        ),
+      ) as Record<string, unknown>;
+      expect(adapter).not.toHaveProperty("source");
+      expect(adapter.outputSlots).toEqual(asset.manifest.outputSlots);
+    }
+  });
+
+  it("rejects a lock that does not exactly match a registered Golden asset", () => {
+    expect(() =>
+      assertGoldenCapabilityAssetLocks(
+        [
+          {
+            key: "core.audit",
+            version: "1.0.0",
+            packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
+            manifestDigest:
+              "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            lifecycle: "golden",
+          },
+        ],
+        { profile: "expense-approval", capabilityKeys: ["audit.record"] },
+      ),
+    ).toThrow("does not match a registered Golden asset");
   });
 
   it("returns a complete, deterministic capability set for each initial profile", () => {
@@ -151,6 +239,50 @@ describe("capability catalog", () => {
     expect(composition.enabledEffects).toEqual(
       expect.arrayContaining(["audit.record", "notification.send"]),
     );
+  });
+
+  it("locks the selected Golden asset versions directly into composed Graphs", () => {
+    const graph = composeProfileDraft({
+      profile: "expense-approval",
+      optionalCapabilities: ["core.audit"],
+    }).graph;
+
+    expect(graph.integration.assetLocks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: "core.audit", lifecycle: "golden" }),
+        expect.objectContaining({ key: "core.crud", lifecycle: "golden" }),
+        expect.objectContaining({ key: "core.workflow", lifecycle: "golden" }),
+      ]),
+    );
+    expect(graph.integration.assetLocks).not.toContainEqual(
+      expect.objectContaining({ key: "core.notification" }),
+    );
+    expect(graph.integration.compositionProfile).toBe("expense-approval");
+  });
+
+  it("rejects a Golden asset outside the declared profile or without its declared effects", () => {
+    const cartLock = {
+      key: "commerce.cart",
+      version: "1.0.0",
+      packageRoot: "packages/capabilities/assets/commerce.cart/1.0.0",
+      manifestDigest:
+        "sha256:c7b9a3a6a221f9e00be74f968863db344a61970854a1e5b3ff66a1c5c1b3e19c",
+      lifecycle: "golden" as const,
+    };
+
+    expect(() =>
+      assertGoldenCapabilityAssetLocks([cartLock], {
+        profile: "expense-approval",
+        capabilityKeys: ["cart.add"],
+      }),
+    ).toThrow("does not support profile");
+
+    expect(() =>
+      assertGoldenCapabilityAssetLocks([cartLock], {
+        profile: "restaurant-ordering",
+        capabilityKeys: ["unlocked.operation"],
+      }),
+    ).toThrow("is not provided by a locked Golden asset");
   });
 
   it("marks catalog-supported audit and notification capabilities as locked recipe requirements", () => {

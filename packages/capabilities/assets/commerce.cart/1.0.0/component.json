@@ -1,0 +1,28 @@
+{
+  "apiVersion": "factory.capability/v1",
+  "key": "commerce.cart",
+  "version": "1.0.0",
+  "category": "commerce",
+  "name": "Cart",
+  "description": "Maintains a customer-owned set of purchasable line items.",
+  "packageRoot": "packages/capabilities/assets/commerce.cart/1.0.0",
+  "manifestDigest": "sha256:c7b9a3a6a221f9e00be74f968863db344a61970854a1e5b3ff66a1c5c1b3e19c",
+  "lifecycle": "golden",
+  "profiles": ["restaurant-ordering", "simple-ecommerce"],
+  "effects": ["cart.add", "cart.remove", "cart.checkout"],
+  "inputSchema": [
+    { "key": "catalogEntity", "type": "domain.entity", "required": true },
+    { "key": "orderEntity", "type": "domain.entity", "required": true }
+  ],
+  "outputSlots": [
+    "api.runtime",
+    "database.schema",
+    "page.block",
+    "test.fixture"
+  ],
+  "verification": {
+    "fixture": "fixtures/default.json",
+    "contractTest": "tests/contract.json",
+    "status": "verified"
+  }
+}

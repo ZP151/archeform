@@ -1,0 +1,27 @@
+{
+  "apiVersion": "factory.capability/v1",
+  "key": "commerce.catalog",
+  "version": "1.0.0",
+  "category": "commerce",
+  "name": "Catalog",
+  "description": "Publishes browsable products or menu items.",
+  "packageRoot": "packages/capabilities/assets/commerce.catalog/1.0.0",
+  "manifestDigest": "sha256:2239cd684e63b26ab26abaecff816d1c5c2b0d5db6fb794c4935c62d4f21c791",
+  "lifecycle": "golden",
+  "profiles": ["restaurant-ordering", "simple-ecommerce"],
+  "effects": ["catalog.list", "catalog.read"],
+  "inputSchema": [
+    { "key": "catalogEntity", "type": "domain.entity", "required": true }
+  ],
+  "outputSlots": [
+    "api.runtime",
+    "database.schema",
+    "page.block",
+    "test.fixture"
+  ],
+  "verification": {
+    "fixture": "fixtures/default.json",
+    "contractTest": "tests/contract.json",
+    "status": "verified"
+  }
+}

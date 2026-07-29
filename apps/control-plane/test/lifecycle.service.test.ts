@@ -4,7 +4,10 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createPublishedGraphExchange, hashApplicationGraph } from "@factory/graph";
+import {
+  createPublishedGraphExchange,
+  hashApplicationGraph,
+} from "@factory/graph";
 
 import { LifecycleService } from "../src/lifecycle.service.js";
 import type { PrismaService } from "../src/prisma.service.js";
@@ -13,7 +16,11 @@ import { localApplicationGraph } from "./application-graph.fixture.js";
 function prismaMock() {
   return {
     workspace: { upsert: vi.fn() },
-    applicationGraph: { create: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn() },
+    applicationGraph: {
+      create: vi.fn(),
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
+    },
     draftRevision: { create: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
     publishedRevision: {
       count: vi.fn(),
@@ -67,11 +74,13 @@ describe("LifecycleService", () => {
     prisma = prismaMock();
     queue = { enqueue: vi.fn() };
     proposalProvider = { propose: vi.fn() };
-    service = new (LifecycleService as unknown as new (
-      prismaService: PrismaService,
-      compilationQueue: typeof queue,
-      graphProposalProvider: typeof proposalProvider,
-    ) => LifecycleService)(prisma as unknown as PrismaService, queue, proposalProvider);
+    service = new (
+      LifecycleService as unknown as new (
+        prismaService: PrismaService,
+        compilationQueue: typeof queue,
+        graphProposalProvider: typeof proposalProvider,
+      ) => LifecycleService
+    )(prisma as unknown as PrismaService, queue, proposalProvider);
   });
 
   it("applies a validated AI Graph Diff only by appending a new Draft revision", async () => {
@@ -85,13 +94,30 @@ describe("LifecycleService", () => {
         baseGraphHash:
           "sha256:762e834186c8fec51569cc8fe690f4ca90219c6f5b179fa6121bb73867c268fb",
         operations: [
-          { op: "replace", path: "/metadata/name", value: "AI-updated expense approval" },
+          {
+            op: "replace",
+            path: "/metadata/name",
+            value: "AI-updated expense approval",
+          },
         ],
       },
-      impact: { summary: "Renames the application.", affectedModels: ["metadata"], risks: [] },
-      testSuggestions: [{ id: "name-visible", title: "Shows the new product name", type: "journey" }],
+      impact: {
+        summary: "Renames the application.",
+        affectedModels: ["metadata"],
+        risks: [],
+      },
+      testSuggestions: [
+        {
+          id: "name-visible",
+          title: "Shows the new product name",
+          type: "journey",
+        },
+      ],
     });
-    prisma.draftRevision.create.mockResolvedValue({ id: "draft-2", revisionNumber: 2 });
+    prisma.draftRevision.create.mockResolvedValue({
+      id: "draft-2",
+      revisionNumber: 2,
+    });
 
     const result = await service.proposeDraftRevision(applicationGraph.id, {
       brief: "Rename the expense approval product.",
@@ -106,7 +132,9 @@ describe("LifecycleService", () => {
         applicationGraphId: applicationGraph.id,
         revisionNumber: 2,
         graph: expect.objectContaining({
-          metadata: expect.objectContaining({ name: "AI-updated expense approval" }),
+          metadata: expect.objectContaining({
+            name: "AI-updated expense approval",
+          }),
         }),
       },
     });
@@ -114,11 +142,81 @@ describe("LifecycleService", () => {
       draftRevision: { id: "draft-2", revisionNumber: 2 },
       proposal: {
         diff: expect.any(Object),
-        impact: { summary: "Renames the application.", affectedModels: ["metadata"], risks: [] },
-        testSuggestions: [{ id: "name-visible", title: "Shows the new product name", type: "journey" }],
+        impact: {
+          summary: "Renames the application.",
+          affectedModels: ["metadata"],
+          risks: [],
+        },
+        testSuggestions: [
+          {
+            id: "name-visible",
+            title: "Shows the new product name",
+            type: "journey",
+          },
+        ],
       },
     });
-    expect(JSON.stringify(result)).not.toContain("Rename the expense approval product.");
+    expect(JSON.stringify(result)).not.toContain(
+      "Rename the expense approval product.",
+    );
+  });
+
+  it("rejects an AI Graph Diff that attempts to select a different Golden asset", async () => {
+    prisma.draftRevision.findFirst.mockResolvedValue({
+      ...draftRevision,
+      graph: {
+        ...localApplicationGraph,
+        integration: {
+          ...localApplicationGraph.integration,
+          compositionProfile: "expense-approval",
+          assetLocks: [
+            {
+              key: "core.audit",
+              version: "1.0.0",
+              packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
+              manifestDigest:
+                "sha256:a04575f365a2218de74f2aeb571d4e0db1311492a6e2fbb408f9633aec75902b",
+              lifecycle: "golden",
+            },
+          ],
+        },
+      },
+      applicationGraph: { ...applicationGraph, workspace },
+    });
+    proposalProvider.propose.mockResolvedValue({
+      diff: {
+        apiVersion: "factory.graph-diff/v1",
+        operations: [
+          {
+            op: "add",
+            path: "/integration/assetLocks/1",
+            value: {
+              key: "commerce.cart",
+              version: "1.0.0",
+              packageRoot: "packages/capabilities/assets/commerce.cart/1.0.0",
+              manifestDigest:
+                "sha256:c7b9a3a6a221f9e00be74f968863db344a61970854a1e5b3ff66a1c5c1b3e19c",
+              lifecycle: "golden",
+            },
+          },
+        ],
+      },
+      impact: {
+        summary: "Selects another asset.",
+        affectedModels: [],
+        risks: [],
+      },
+      testSuggestions: [],
+    });
+
+    await expect(
+      service.proposeDraftRevision(applicationGraph.id, {
+        brief: "Add a cart.",
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: "ai_proposal_rejected" }),
+    });
+    expect(prisma.draftRevision.create).not.toHaveBeenCalled();
   });
 
   it("creates the local workspace, graph aggregate, and first draft revision", async () => {
@@ -163,9 +261,9 @@ describe("LifecycleService", () => {
       graphHash: hashApplicationGraph(localApplicationGraph),
     });
 
-    await expect(service.exportPublishedGraph(applicationGraph.id, "published-3")).resolves.toEqual(
-      createPublishedGraphExchange(localApplicationGraph, 3),
-    );
+    await expect(
+      service.exportPublishedGraph(applicationGraph.id, "published-3"),
+    ).resolves.toEqual(createPublishedGraphExchange(localApplicationGraph, 3));
     expect(prisma.publishedRevision.findFirst).toHaveBeenCalledWith({
       where: { id: "published-3", applicationGraphId: applicationGraph.id },
     });
@@ -188,7 +286,9 @@ describe("LifecycleService", () => {
         workspaceId: workspace.id,
         key: localApplicationGraph.metadata.id,
         name: localApplicationGraph.metadata.name,
-        draftRevisions: { create: { revisionNumber: 1, graph: localApplicationGraph } },
+        draftRevisions: {
+          create: { revisionNumber: 1, graph: localApplicationGraph },
+        },
       },
       include: { draftRevisions: true },
     });
@@ -207,7 +307,10 @@ describe("LifecycleService", () => {
       draftRevisions: [draftRevision],
     });
     expect(prisma.applicationGraph.findFirst).toHaveBeenCalledWith({
-      where: { key: applicationGraph.key, workspace: { slug: "local-workspace" } },
+      where: {
+        key: applicationGraph.key,
+        workspace: { slug: "local-workspace" },
+      },
       include: {
         draftRevisions: { orderBy: { revisionNumber: "desc" }, take: 1 },
         publishedRevisions: { orderBy: { revisionNumber: "desc" }, take: 1 },
@@ -261,7 +364,9 @@ describe("LifecycleService", () => {
       { ...draftRevision, id: "draft-2", revisionNumber: 2 },
     ]);
 
-    await expect(service.listDraftRevisions(applicationGraph.id)).resolves.toEqual([
+    await expect(
+      service.listDraftRevisions(applicationGraph.id),
+    ).resolves.toEqual([
       { ...draftRevision, revisionNumber: 1 },
       { ...draftRevision, id: "draft-2", revisionNumber: 2 },
     ]);
@@ -354,6 +459,32 @@ describe("LifecycleService", () => {
       label: "Missing",
       pageId: "missing-page",
     });
+    prisma.draftRevision.findFirst.mockResolvedValue({
+      ...draftRevision,
+      graph: invalidGraph,
+      applicationGraph: { ...applicationGraph, workspace },
+    });
+
+    await expect(
+      service.publishDraft(applicationGraph.id, {
+        draftRevisionId: draftRevision.id,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.publishedRevision.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects publishing a Draft with a tampered Golden capability asset lock", async () => {
+    const invalidGraph = structuredClone(localApplicationGraph);
+    invalidGraph.integration.assetLocks = [
+      {
+        key: "core.audit",
+        version: "1.0.0",
+        packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
+        manifestDigest:
+          "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        lifecycle: "golden",
+      },
+    ];
     prisma.draftRevision.findFirst.mockResolvedValue({
       ...draftRevision,
       graph: invalidGraph,

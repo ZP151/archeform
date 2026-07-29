@@ -191,6 +191,14 @@ function assertPermittedDiffPath(path: string): string[] {
       "Graph Diff may update metadata.name but never Graph identity or workspace scope.",
     );
   }
+  if (
+    root === "integration" &&
+    (second === "assetLocks" || second === "compositionProfile")
+  ) {
+    throw new GraphDiffError(
+      "Graph Diff cannot select capability assets or change the composition profile.",
+    );
+  }
   return segments;
 }
 

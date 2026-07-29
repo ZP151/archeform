@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import {
+  getCapabilityAsset,
   getProfileComposition,
   type FactoryProfile,
 } from "@factory/capabilities";
@@ -374,6 +375,27 @@ export function GuidedCreationDrawer({ open, onClose, onCreate }: Props) {
                     ].map((capability) => (
                       <em key={capability.key}>{capability.name}</em>
                     ))}
+                  </div>
+                </div>
+                <div className="guided-review-capabilities">
+                  <span>Golden assets</span>
+                  <div>
+                    {[
+                      ...composition.requiredCapabilities,
+                      ...composition.optionalCapabilities.filter((capability) =>
+                        state.input.optionalCapabilities.includes(
+                          capability.key as "core.audit" | "core.notification",
+                        ),
+                      ),
+                    ].map((capability) => {
+                      const asset = getCapabilityAsset(capability.key);
+                      return (
+                        <em key={asset.manifest.key}>
+                          <LockKeyhole size={12} /> {asset.manifest.key} ·{" "}
+                          {asset.manifest.version}
+                        </em>
+                      );
+                    })}
                   </div>
                 </div>
                 <p className="guided-boundary">

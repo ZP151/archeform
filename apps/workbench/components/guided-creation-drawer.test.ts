@@ -18,6 +18,8 @@ describe("GuidedCreationDrawer", () => {
     );
     expect(source).toContain('data-testid="guided-create"');
     expect(source).toContain("Keep only what you need");
+    expect(source).toContain("Golden assets");
+    expect(source).toContain("getCapabilityAsset");
     expect(source).toContain("left-side");
   });
 });

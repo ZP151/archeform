@@ -130,6 +130,7 @@ const artifactBlueprint: Readonly<
     { path: "docs/api-reference.md", mediaType: "text/markdown" },
     { path: "docs/entity-relationship.md", mediaType: "text/markdown" },
     { path: "docs/permission-matrix.md", mediaType: "text/markdown" },
+    { path: "capability-lock.json", mediaType: "application/json" },
   ],
 };
 
@@ -1488,6 +1489,21 @@ function renderDocumentation(graph: ApplicationGraphV1): string {
   return `# ${graph.metadata.name}\n\nThis application was compiled from a Factory Published Graph.\n\n## Generated documentation\n\n- [API reference](api-reference.md)\n- [Entity relationship diagram](entity-relationship.md)\n- [Permission matrix](permission-matrix.md)\n\n## Entities\n${entities.join("\n") || "- No entities declared."}\n`;
 }
 
+function renderCapabilityLock(graph: ApplicationGraphV1): string {
+  return (
+    JSON.stringify(
+      {
+        apiVersion: "factory.capability-lock/v1",
+        applicationId: graph.metadata.id,
+        graphHash: hashApplicationGraph(graph),
+        assets: graph.integration.assetLocks ?? [],
+      },
+      null,
+      2,
+    ) + "\n"
+  );
+}
+
 /**
  * Renders deterministic source files for one isolated generated application.
  * This function is pure: the Worker owns filesystem writes, Compose identity,
@@ -1519,6 +1535,7 @@ export function generateApplicationBundle(
       path: "pnpm-workspace.yaml",
       content: "packages:\n  - web\n  - api\n  - database\n",
     },
+    { path: "capability-lock.json", content: renderCapabilityLock(graph) },
     { path: "simulator/index.html", content: renderSimulator(graph) },
     {
       path: "web/package.json",

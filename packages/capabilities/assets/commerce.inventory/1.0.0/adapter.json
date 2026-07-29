@@ -1,0 +1,13 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": [
+    "api.runtime",
+    "database.schema",
+    "flow.effect",
+    "test.fixture"
+  ],
+  "contributes": {
+    "effects": ["inventory.reserve", "inventory.release", "inventory.decrement"]
+  }
+}

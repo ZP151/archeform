@@ -65,6 +65,16 @@ test("creates an audit-free Expense Draft from the capability picker", async ({
       flow.transitions.flatMap((transition) => transition.effects ?? []),
     ),
   ).not.toContainEqual(expect.objectContaining({ capability: "audit.record" }));
+  expect(graph.integration.compositionProfile).toBe("expense-approval");
+  expect(graph.integration.assetLocks).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ key: "core.crud", lifecycle: "golden" }),
+      expect.objectContaining({ key: "core.workflow", lifecycle: "golden" }),
+    ]),
+  );
+  expect(graph.integration.assetLocks).not.toContainEqual(
+    expect.objectContaining({ key: "core.audit" }),
+  );
   await expect(
     page.getByRole("dialog", { name: "Create application left-side drawer" }),
   ).toBeHidden();

@@ -1,0 +1,10 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": ["api.runtime", "policy.rule", "test.fixture", "flow.effect"],
+  "contributes": { "effects": ["audit.record"] },
+  "disable": {
+    "removeIntegrationCapabilities": ["audit.record"],
+    "removePolicyActions": ["audit"]
+  }
+}

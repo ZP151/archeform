@@ -152,6 +152,18 @@ const integrationModelSchema = z.object({
       operation: identifier,
     }),
   ),
+  compositionProfile: identifier.optional(),
+  assetLocks: z
+    .array(
+      z.object({
+        key: z.string().min(1).max(160),
+        version: z.string().regex(/^\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.-]+)?$/),
+        packageRoot: z.string().min(1).max(512),
+        manifestDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/),
+        lifecycle: z.literal("golden"),
+      }),
+    )
+    .optional(),
 });
 
 const experienceModelSchema = z.object({
@@ -254,6 +266,16 @@ export function validateApplicationGraph(
       "page",
       "pages",
     ]);
+  }
+  if (
+    (graph.integration.assetLocks?.length ?? 0) > 0 &&
+    !graph.integration.compositionProfile
+  ) {
+    issue(
+      "integration.asset_lock.profile_missing",
+      "Golden capability asset locks require an explicit composition profile.",
+      ["integration", "compositionProfile"],
+    );
   }
   for (const duplicate of duplicateValues(
     graph.page.pages.map((page) => page.route),
@@ -410,6 +432,15 @@ export function validateApplicationGraph(
       "integration.capability.duplicate",
       `Capability '${duplicate}' is duplicated.`,
       ["integration", "capabilities"],
+    );
+  }
+  for (const duplicate of duplicateValues(
+    (graph.integration.assetLocks ?? []).map((assetLock) => assetLock.key),
+  )) {
+    issue(
+      "integration.asset_lock.duplicate",
+      `Capability asset lock '${duplicate}' is duplicated.`,
+      ["integration", "assetLocks"],
     );
   }
   graph.integration.capabilities.forEach((capability, index) => {

@@ -3,10 +3,29 @@ import {
   type ApplicationGraphV1,
 } from "@factory/graph/browser";
 
-export type FactoryProfile =
-  "expense-approval" | "restaurant-ordering" | "simple-ecommerce";
+import {
+  auditAsset,
+  cartAsset,
+  catalogAsset,
+  crudAsset,
+  inventoryAsset,
+  lockCapabilityAsset,
+  notificationAsset,
+  orderAsset,
+  simulatedPaymentAsset,
+  workflowAsset,
+  type CapabilityAssetV1,
+  type CapabilityAssetLockV1,
+  type CapabilityCategory,
+  type FactoryProfile,
+} from "./assets/index.js";
 
-export type CapabilityCategory = "core" | "commerce";
+export type {
+  CapabilityAssetLockV1,
+  CapabilityAssetManifestV1,
+  CapabilityCategory,
+  FactoryProfile,
+} from "./assets/index.js";
 
 export interface CapabilityDefinition {
   readonly key: string;
@@ -17,92 +36,84 @@ export interface CapabilityDefinition {
   readonly effects: readonly string[];
 }
 
-const catalog: readonly CapabilityDefinition[] = [
-  {
-    key: "core.audit",
-    name: "Audit trail",
-    category: "core",
-    description:
-      "Records actor, action, subject, and immutable timestamp evidence.",
-    profiles: ["expense-approval", "restaurant-ordering", "simple-ecommerce"],
-    effects: ["audit.record"],
-  },
-  {
-    key: "core.crud",
-    name: "Managed records",
-    category: "core",
-    description:
-      "Creates, reads, updates, and deletes validated domain records.",
-    profiles: ["expense-approval", "restaurant-ordering", "simple-ecommerce"],
-    effects: ["data.create", "data.read", "data.update", "data.delete"],
-  },
-  {
-    key: "core.notification",
-    name: "Notifications",
-    category: "core",
-    description: "Emits bounded in-app and provider-ready notification events.",
-    profiles: ["expense-approval", "restaurant-ordering", "simple-ecommerce"],
-    effects: ["notification.send"],
-  },
-  {
-    key: "core.workflow",
-    name: "Workflow",
-    category: "core",
-    description: "Runs declared state transitions, guards, and human tasks.",
-    profiles: ["expense-approval", "restaurant-ordering", "simple-ecommerce"],
-    effects: ["flow.transition", "flow.assign-task"],
-  },
-  {
-    key: "commerce.catalog",
-    name: "Catalog",
-    category: "commerce",
-    description: "Publishes browsable products or menu items.",
-    profiles: ["restaurant-ordering", "simple-ecommerce"],
-    effects: ["catalog.list", "catalog.read"],
-  },
-  {
-    key: "commerce.cart",
-    name: "Cart",
-    category: "commerce",
-    description: "Maintains a customer-owned set of purchasable line items.",
-    profiles: ["restaurant-ordering", "simple-ecommerce"],
-    effects: ["cart.add", "cart.remove", "cart.checkout"],
-  },
-  {
-    key: "commerce.inventory",
-    name: "Inventory",
-    category: "commerce",
-    description: "Tracks and reserves available stock or menu availability.",
-    profiles: ["restaurant-ordering", "simple-ecommerce"],
-    effects: ["inventory.reserve", "inventory.release", "inventory.decrement"],
-  },
-  {
-    key: "commerce.order",
-    name: "Order lifecycle",
-    category: "commerce",
-    description: "Creates orders and manages declared fulfilment states.",
-    profiles: ["restaurant-ordering", "simple-ecommerce"],
-    effects: ["order.create", "order.transition"],
-  },
-  {
-    key: "commerce.simulated-payment",
-    name: "Simulated payment",
-    category: "commerce",
-    description:
-      "Confirms a deterministic, credential-free payment simulation.",
-    profiles: ["restaurant-ordering", "simple-ecommerce"],
-    effects: ["payment.simulate"],
-  },
-] as const;
+export const capabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
+  auditAsset,
+  crudAsset,
+  notificationAsset,
+  workflowAsset,
+  catalogAsset,
+  cartAsset,
+  inventoryAsset,
+  orderAsset,
+  simulatedPaymentAsset,
+]);
 
-export const capabilityCatalog = Object.freeze([...catalog]);
+const definitionFor = (asset: CapabilityAssetV1): CapabilityDefinition => ({
+  key: asset.manifest.key,
+  name: asset.manifest.name,
+  category: asset.manifest.category,
+  description: asset.manifest.description,
+  profiles: asset.manifest.profiles,
+  effects: asset.manifest.effects,
+});
+
+export const capabilityCatalog = Object.freeze(
+  capabilityAssets.map(definitionFor),
+);
+
+export interface GoldenAssetValidationContext {
+  readonly profile: string;
+  readonly capabilityKeys: readonly string[];
+}
+
+export function getCapabilityAsset(key: string): CapabilityAssetV1 {
+  const asset = capabilityAssets.find(
+    (candidate) => candidate.manifest.key === key,
+  );
+  if (!asset) throw new Error(`Unknown Factory capability: ${key}`);
+  return asset;
+}
+
+/**
+ * The browser-safe Registry boundary: callers may only lock the exact Golden
+ * asset/version/digest already shipped by this Factory workspace.
+ */
+export function assertGoldenCapabilityAssetLocks(
+  locks: readonly CapabilityAssetLockV1[],
+  context: GoldenAssetValidationContext,
+): void {
+  const providedEffects = new Set<string>();
+  for (const lock of locks) {
+    const manifest = getCapabilityAsset(lock.key).manifest;
+    const expected = lockCapabilityAsset({ manifest });
+    if (
+      expected.version !== lock.version ||
+      expected.packageRoot !== lock.packageRoot ||
+      expected.manifestDigest !== lock.manifestDigest ||
+      expected.lifecycle !== lock.lifecycle
+    ) {
+      throw new Error(
+        `Capability asset lock '${lock.key}' does not match a registered Golden asset.`,
+      );
+    }
+    if (!manifest.profiles.includes(context.profile as FactoryProfile)) {
+      throw new Error(
+        `Capability asset lock '${lock.key}' does not support profile '${context.profile}'.`,
+      );
+    }
+    for (const effect of manifest.effects) providedEffects.add(effect);
+  }
+  for (const capabilityKey of context.capabilityKeys) {
+    if (!providedEffects.has(capabilityKey)) {
+      throw new Error(
+        `Graph capability '${capabilityKey}' is not provided by a locked Golden asset.`,
+      );
+    }
+  }
+}
 
 export function getCapability(key: string): CapabilityDefinition {
-  const capability = capabilityCatalog.find((entry) => entry.key === key);
-  if (!capability) {
-    throw new Error(`Unknown Factory capability: ${key}`);
-  }
-  return capability;
+  return definitionFor(getCapabilityAsset(key));
 }
 
 export function capabilitiesForProfile(
@@ -137,6 +148,9 @@ export interface ProfileCompositionResult {
   readonly graph: ApplicationGraphV1;
   readonly optionalCapabilities: readonly OptionalCapabilityKey[];
   readonly enabledEffects: readonly string[];
+  readonly assetLocks: NonNullable<
+    ApplicationGraphV1["integration"]["assetLocks"]
+  >;
 }
 
 type ProfileCompositionRecipe = {
@@ -177,13 +191,6 @@ const compositionRecipes: Readonly<
     ],
     optionalCapabilities: ["core.audit"],
   },
-};
-
-const optionalCapabilityOperations: Readonly<
-  Record<OptionalCapabilityKey, readonly string[]>
-> = {
-  "core.audit": ["audit.record"],
-  "core.notification": ["notification.send"],
 };
 
 const factoryCapabilities = (keys: readonly string[]) =>
@@ -638,37 +645,9 @@ export function getProfileComposition(
   };
 }
 
-function removeCapabilityOperations(
-  graph: ApplicationGraphV1,
-  operations: readonly string[],
-): void {
-  const excluded = new Set(operations);
-  graph.integration.capabilities = graph.integration.capabilities.filter(
-    (capability) => !excluded.has(capability.key),
-  );
-  graph.flow.flows = graph.flow.flows.map((flow) => ({
-    ...flow,
-    transitions: flow.transitions.map((transition) => {
-      const effects = transition.effects?.filter(
-        (effect) => !excluded.has(effect.capability),
-      );
-      if (effects?.length) return { ...transition, effects };
-      const { effects: _effects, ...withoutEffects } = transition;
-      return withoutEffects;
-    }),
-  }));
-}
-
-function removeAuditPermissions(graph: ApplicationGraphV1): void {
-  graph.policy.permissions = graph.policy.permissions.flatMap((permission) => {
-    const actions = permission.actions.filter((action) => action !== "audit");
-    return actions.length ? [{ ...permission, actions }] : [];
-  });
-}
-
 /**
  * Creates and validates a fresh Graph from a trusted profile starter, applying
- * only declared optional-capability removals. Control Plane repeats validation
+ * only each selected asset's declared adapter. Control Plane repeats validation
  * before persistence as an independent server-side boundary.
  */
 export function composeProfileDraft(
@@ -697,11 +676,36 @@ export function composeProfileDraft(
   const graph = structuredClone(profileStarterFor(input.profile).graph);
   for (const capability of composition.defaultOptionalCapabilities) {
     if (requestedSet.has(capability)) continue;
-    removeCapabilityOperations(graph, optionalCapabilityOperations[capability]);
-    if (capability === "core.audit") removeAuditPermissions(graph);
+    const asset = getCapabilityAsset(capability);
+    if (!asset.disable) {
+      throw new Error(
+        `Optional capability asset '${capability}' does not declare a bounded disable adapter.`,
+      );
+    }
+    asset.disable(graph);
   }
 
+  const selectedAssets = [
+    ...composition.requiredCapabilities.map((capability) =>
+      getCapabilityAsset(capability.key),
+    ),
+    ...composition.defaultOptionalCapabilities
+      .filter((capability) => requestedSet.has(capability))
+      .map(getCapabilityAsset),
+  ];
+  graph.integration.compositionProfile = input.profile;
+  graph.integration.assetLocks = selectedAssets.map(lockCapabilityAsset);
+
   const validatedGraph = assertValidApplicationGraph(graph);
+  assertGoldenCapabilityAssetLocks(
+    validatedGraph.integration.assetLocks ?? [],
+    {
+      profile: input.profile,
+      capabilityKeys: validatedGraph.integration.capabilities.map(
+        (capability) => capability.key,
+      ),
+    },
+  );
   return {
     profile: input.profile,
     graph: validatedGraph,
@@ -711,5 +715,6 @@ export function composeProfileDraft(
     enabledEffects: validatedGraph.integration.capabilities.map(
       (capability) => capability.key,
     ),
+    assetLocks: validatedGraph.integration.assetLocks ?? [],
   };
 }

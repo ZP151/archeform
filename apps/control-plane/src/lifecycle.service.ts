@@ -7,6 +7,7 @@ import {
   UnprocessableEntityException,
 } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
+import { assertGoldenCapabilityAssetLocks } from "@factory/capabilities";
 import {
   applyGraphDiffToDraft,
   createDraftRevision,
@@ -99,18 +100,22 @@ type ArtifactEvidence = {
 };
 
 function artifactEvidence(input: unknown): ArtifactEvidence {
-  const record = exactRecord(input, ["path", "digest", "sizeBytes"], [
-    "path",
-    "digest",
-    "sizeBytes",
-  ]);
+  const record = exactRecord(
+    input,
+    ["path", "digest", "sizeBytes"],
+    ["path", "digest", "sizeBytes"],
+  );
   const path = requiredString(record, "path");
   if (
     path.startsWith("/") ||
     path.includes("\\") ||
-    path.split("/").some((segment) => segment === "" || segment === "." || segment === "..")
+    path
+      .split("/")
+      .some((segment) => segment === "" || segment === "." || segment === "..")
   ) {
-    throw new BadRequestException("Artifact path must be a safe relative path.");
+    throw new BadRequestException(
+      "Artifact path must be a safe relative path.",
+    );
   }
   const sizeBytes = record.sizeBytes;
   if (
@@ -118,7 +123,9 @@ function artifactEvidence(input: unknown): ArtifactEvidence {
     !Number.isSafeInteger(sizeBytes) ||
     sizeBytes < 0
   ) {
-    throw new BadRequestException("Artifact sizeBytes must be a non-negative integer.");
+    throw new BadRequestException(
+      "Artifact sizeBytes must be a non-negative integer.",
+    );
   }
   return { path, digest: requiredSha256(record, "digest"), sizeBytes };
 }
@@ -128,16 +135,19 @@ function completionEvidence(input: unknown): {
   readonly rootDirectory: string;
   readonly artifacts: readonly ArtifactEvidence[];
 } {
-  const body = exactRecord(input, ["graphHash", "rootDirectory", "artifacts"], [
-    "graphHash",
-    "rootDirectory",
-    "artifacts",
-  ]);
+  const body = exactRecord(
+    input,
+    ["graphHash", "rootDirectory", "artifacts"],
+    ["graphHash", "rootDirectory", "artifacts"],
+  );
   if (!Array.isArray(body.artifacts)) {
     throw new BadRequestException("artifacts must be an array.");
   }
   const artifacts = body.artifacts.map(artifactEvidence);
-  if (new Set(artifacts.map((artifact) => artifact.path)).size !== artifacts.length) {
+  if (
+    new Set(artifacts.map((artifact) => artifact.path)).size !==
+    artifacts.length
+  ) {
     throw new BadRequestException("Artifact paths must be unique.");
   }
   return {
@@ -172,6 +182,17 @@ function validatedGraph(input: unknown): {
 } {
   try {
     const graph = parseApplicationGraph(input);
+    if (graph.integration.assetLocks?.length) {
+      if (!graph.integration.compositionProfile) {
+        throw new Error("Golden asset locks require a composition profile.");
+      }
+      assertGoldenCapabilityAssetLocks(graph.integration.assetLocks, {
+        profile: graph.integration.compositionProfile,
+        capabilityKeys: graph.integration.capabilities.map(
+          (capability) => capability.key,
+        ),
+      });
+    }
     return { graph, graphHash: hashApplicationGraph(graph) };
   } catch {
     throw new BadRequestException("Application Graph validation failed.");
@@ -313,16 +334,20 @@ export class LifecycleService {
     assertGraphIdentity(graph, latestDraft.applicationGraph);
 
     try {
-      const proposal = await this.graphProposalProvider.propose({ graph, brief });
+      const proposal = await this.graphProposalProvider.propose({
+        graph,
+        brief,
+      });
       const nextDraft = applyGraphDiffToDraft(
         createDraftRevision(graph, latestDraft.id),
         proposal.diff,
       );
+      const { graph: validatedNextGraph } = validatedGraph(nextDraft.graph);
       const draftRevision = await this.prisma.draftRevision.create({
         data: {
           applicationGraphId,
           revisionNumber: latestDraft.revisionNumber + 1,
-          graph: nextDraft.graph as unknown as Prisma.InputJsonValue,
+          graph: validatedNextGraph as unknown as Prisma.InputJsonValue,
         },
       });
       return {
@@ -335,12 +360,11 @@ export class LifecycleService {
       };
     } catch (error) {
       // Raw model responses and user briefs never leave the adapter's call frame.
-      throw new UnprocessableEntityException(
-        {
-          code: "ai_proposal_rejected",
-          reason: error instanceof GraphProposalError ? error.code : "proposal_invalid",
-        },
-      );
+      throw new UnprocessableEntityException({
+        code: "ai_proposal_rejected",
+        reason:
+          error instanceof GraphProposalError ? error.code : "proposal_invalid",
+      });
     }
   }
 
@@ -476,19 +500,26 @@ export class LifecycleService {
     return compilation;
   }
 
-  async getCompilationArtifact(compilationId: string, path: string | undefined) {
+  async getCompilationArtifact(
+    compilationId: string,
+    path: string | undefined,
+  ) {
     const id = requiredString({ compilationId }, "compilationId");
     const artifactPath = requiredString({ path }, "path");
     const artifact = await this.prisma.artifact.findFirst({
       where: { compilationId: id, path: artifactPath },
     });
-    if (!artifact) throw new NotFoundException("Generated artifact was not found.");
+    if (!artifact)
+      throw new NotFoundException("Generated artifact was not found.");
     const metadata = artifact.metadata;
-    const rootDirectory = metadata && typeof metadata === "object" && !Array.isArray(metadata)
-      ? (metadata as UnknownRecord).rootDirectory
-      : undefined;
+    const rootDirectory =
+      metadata && typeof metadata === "object" && !Array.isArray(metadata)
+        ? (metadata as UnknownRecord).rootDirectory
+        : undefined;
     if (typeof rootDirectory !== "string") {
-      throw new ConflictException("Generated artifact has no registered root directory.");
+      throw new ConflictException(
+        "Generated artifact has no registered root directory.",
+      );
     }
     try {
       return await this.artifactReader.read({
@@ -497,7 +528,9 @@ export class LifecycleService {
         digest: artifact.digest,
       });
     } catch {
-      throw new ConflictException("Generated artifact content does not match registered evidence.");
+      throw new ConflictException(
+        "Generated artifact content does not match registered evidence.",
+      );
     }
   }
 
@@ -508,7 +541,9 @@ export class LifecycleService {
     });
     if (!compilation) throw new NotFoundException("Compilation was not found.");
     if (!queuedCompilation(compilation.result)) {
-      throw new ConflictException("Compilation is no longer awaiting Worker evidence.");
+      throw new ConflictException(
+        "Compilation is no longer awaiting Worker evidence.",
+      );
     }
     if (compilation.inputGraphHash !== evidence.graphHash) {
       throw new ConflictException(
@@ -529,7 +564,10 @@ export class LifecycleService {
     return this.prisma.compilation.update({
       where: { id: compilationId },
       data: {
-        result: { status: "succeeded", artifactCount: evidence.artifacts.length },
+        result: {
+          status: "succeeded",
+          artifactCount: evidence.artifacts.length,
+        },
       },
     });
   }

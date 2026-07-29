@@ -1,0 +1,7 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": ["api.runtime", "test.fixture", "flow.effect"],
+  "contributes": { "effects": ["notification.send"] },
+  "disable": { "removeIntegrationCapabilities": ["notification.send"] }
+}

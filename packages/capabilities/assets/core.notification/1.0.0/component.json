@@ -1,0 +1,22 @@
+{
+  "apiVersion": "factory.capability/v1",
+  "key": "core.notification",
+  "version": "1.0.0",
+  "category": "core",
+  "name": "Notifications",
+  "description": "Emits bounded in-app and provider-ready notification events.",
+  "packageRoot": "packages/capabilities/assets/core.notification/1.0.0",
+  "manifestDigest": "sha256:5e0acaf6c9d0a5f8b4bdd325c9c88015d72a40dc277b07d9c4c651bcfccc4b03",
+  "lifecycle": "golden",
+  "profiles": ["expense-approval", "restaurant-ordering", "simple-ecommerce"],
+  "effects": ["notification.send"],
+  "inputSchema": [
+    { "key": "template", "type": "message.template", "required": false }
+  ],
+  "outputSlots": ["api.runtime", "test.fixture", "flow.effect"],
+  "verification": {
+    "fixture": "fixtures/default.json",
+    "contractTest": "tests/contract.json",
+    "status": "verified"
+  }
+}

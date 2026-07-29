@@ -27,7 +27,9 @@ const expenseGraph: ApplicationGraphV1 = {
         id: "expense-list",
         route: "/expenses",
         title: "Expenses",
-        blocks: [{ id: "expense-table", type: "data-table", entity: "expense" }],
+        blocks: [
+          { id: "expense-table", type: "data-table", entity: "expense" },
+        ],
       },
     ],
     navigation: [{ id: "expenses", label: "Expenses", pageId: "expense-list" }],
@@ -63,15 +65,27 @@ const expenseGraph: ApplicationGraphV1 = {
         events: ["submit", "approve", "reject"],
         transitions: [
           { from: "draft", event: "submit", to: "submitted" },
-          { from: "submitted", event: "approve", to: "approved", roles: ["manager"] },
-          { from: "submitted", event: "reject", to: "rejected", roles: ["manager"] },
+          {
+            from: "submitted",
+            event: "approve",
+            to: "approved",
+            roles: ["manager"],
+          },
+          {
+            from: "submitted",
+            event: "reject",
+            to: "rejected",
+            roles: ["manager"],
+          },
         ],
       },
     ],
   },
   integration: {
     providers: [],
-    capabilities: [{ key: "audit.record", providerId: "factory", operation: "record" }],
+    capabilities: [
+      { key: "audit.record", providerId: "factory", operation: "record" },
+    ],
   },
   experience: {
     theme: { mode: "system", tokens: { accent: "#0f766e" } },
@@ -85,10 +99,83 @@ describe("ApplicationGraphV1", () => {
     expect(validateApplicationGraph(expenseGraph)).toEqual([]);
   });
 
+  it("retains immutable Golden capability asset locks in a valid Graph", () => {
+    const locked = structuredClone(expenseGraph);
+    locked.integration.compositionProfile = "expense-approval";
+    locked.integration.assetLocks = [
+      {
+        key: "core.audit",
+        version: "1.0.0",
+        packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
+        manifestDigest:
+          "sha256:0f2d3b5b4dc3f351b53e9b874842afd6c7b4bcd9aeddfd8421199e95f2f544a6",
+        lifecycle: "golden",
+      },
+    ];
+
+    expect(parseApplicationGraph(locked)).toEqual(locked);
+    expect(validateApplicationGraph(locked)).toEqual([]);
+  });
+
+  it("rejects duplicate capability asset locks", () => {
+    const invalid = structuredClone(expenseGraph);
+    invalid.integration.compositionProfile = "expense-approval";
+    invalid.integration.assetLocks = [
+      {
+        key: "core.audit",
+        version: "1.0.0",
+        packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
+        manifestDigest:
+          "sha256:0f2d3b5b4dc3f351b53e9b874842afd6c7b4bcd9aeddfd8421199e95f2f544a6",
+        lifecycle: "golden",
+      },
+      {
+        key: "core.audit",
+        version: "1.0.0",
+        packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
+        manifestDigest:
+          "sha256:0f2d3b5b4dc3f351b53e9b874842afd6c7b4bcd9aeddfd8421199e95f2f544a6",
+        lifecycle: "golden",
+      },
+    ];
+
+    expect(validateApplicationGraph(invalid)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "integration.asset_lock.duplicate" }),
+      ]),
+    );
+  });
+
+  it("requires an explicit composition profile whenever Graph assets are locked", () => {
+    const invalid = structuredClone(expenseGraph);
+    invalid.integration.assetLocks = [
+      {
+        key: "core.audit",
+        version: "1.0.0",
+        packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
+        manifestDigest:
+          "sha256:0f2d3b5b4dc3f351b53e9b874842afd6c7b4bcd9aeddfd8421199e95f2f544a6",
+        lifecycle: "golden",
+      },
+    ];
+
+    expect(validateApplicationGraph(invalid)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "integration.asset_lock.profile_missing",
+        }),
+      ]),
+    );
+  });
+
   it("finds cross-model semantic errors", () => {
     const invalid = structuredClone(expenseGraph);
     invalid.page.navigation[0].pageId = "missing-page";
-    invalid.domain.relations.push({ from: "expense", to: "missing", kind: "many-to-one" });
+    invalid.domain.relations.push({
+      from: "expense",
+      to: "missing",
+      kind: "many-to-one",
+    });
     invalid.flow.flows[0].transitions[0].to = "missing-state";
 
     expect(validateApplicationGraph(invalid)).toEqual(
@@ -133,7 +220,9 @@ describe("ApplicationGraphV1", () => {
       },
     };
 
-    expect(hashApplicationGraph(expenseGraph)).toBe(hashApplicationGraph(reordered));
+    expect(hashApplicationGraph(expenseGraph)).toBe(
+      hashApplicationGraph(reordered),
+    );
     expect(hashApplicationGraph(expenseGraph)).toMatch(/^sha256:[a-f0-9]{64}$/);
   });
 
@@ -149,7 +238,11 @@ describe("ApplicationGraphV1", () => {
     expect(() =>
       parsePublishedGraphExchange({
         ...exchange,
-        publishedRevision: { ...exchange.publishedRevision, graphHash: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
+        publishedRevision: {
+          ...exchange.publishedRevision,
+          graphHash:
+            "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        },
       }),
     ).toThrow(GraphExchangeError);
 
@@ -167,7 +260,11 @@ describe("ApplicationGraphV1", () => {
       apiVersion: "factory.graph-diff/v1",
       baseGraphHash: hashApplicationGraph(expenseGraph),
       operations: [
-        { op: "replace", path: "/metadata/name", value: "Travel expense approval" },
+        {
+          op: "replace",
+          path: "/metadata/name",
+          value: "Travel expense approval",
+        },
         {
           op: "add",
           path: "/domain/entities/0/fields/-",
@@ -191,7 +288,9 @@ describe("ApplicationGraphV1", () => {
     expect(() =>
       applyGraphDiffToDraft(draft, {
         apiVersion: "factory.graph-diff/v1",
-        operations: [{ op: "replace", path: "/metadata/workspaceId", value: "other" }],
+        operations: [
+          { op: "replace", path: "/metadata/workspaceId", value: "other" },
+        ],
       }),
     ).toThrow(GraphDiffError);
 
@@ -200,9 +299,48 @@ describe("ApplicationGraphV1", () => {
         { ...draft, status: "published" },
         {
           apiVersion: "factory.graph-diff/v1",
-          operations: [{ op: "replace", path: "/metadata/name", value: "Blocked" }],
+          operations: [
+            { op: "replace", path: "/metadata/name", value: "Blocked" },
+          ],
         },
       ),
     ).toThrow(GraphSemanticError);
+  });
+
+  it("rejects graph diffs that modify component selection or composition scope", () => {
+    const draft = createDraftRevision(expenseGraph, "draft-1");
+
+    expect(() =>
+      applyGraphDiffToDraft(draft, {
+        apiVersion: "factory.graph-diff/v1",
+        operations: [
+          {
+            op: "add",
+            path: "/integration/assetLocks/0",
+            value: {
+              key: "core.audit",
+              version: "1.0.0",
+              packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
+              manifestDigest:
+                "sha256:0f2d3b5b4dc3f351b53e9b874842afd6c7b4bcd9aeddfd8421199e95f2f544a6",
+              lifecycle: "golden",
+            },
+          },
+        ],
+      }),
+    ).toThrow(GraphDiffError);
+
+    expect(() =>
+      applyGraphDiffToDraft(draft, {
+        apiVersion: "factory.graph-diff/v1",
+        operations: [
+          {
+            op: "add",
+            path: "/integration/compositionProfile",
+            value: "simple-ecommerce",
+          },
+        ],
+      }),
+    ).toThrow(GraphDiffError);
   });
 });

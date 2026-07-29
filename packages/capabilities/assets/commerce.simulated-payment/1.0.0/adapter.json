@@ -1,0 +1,6 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": ["api.runtime", "flow.effect", "test.fixture"],
+  "contributes": { "effects": ["payment.simulate"] }
+}

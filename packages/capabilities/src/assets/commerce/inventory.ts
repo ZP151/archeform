@@ -1,0 +1,30 @@
+import type { CapabilityAssetV1 } from "../contract.js";
+
+export const inventoryAsset: CapabilityAssetV1 = {
+  manifest: {
+    apiVersion: "factory.capability/v1",
+    key: "commerce.inventory",
+    version: "1.0.0",
+    category: "commerce",
+    name: "Inventory",
+    description: "Tracks and reserves available stock or menu availability.",
+    packageRoot: "packages/capabilities/assets/commerce.inventory/1.0.0",
+    manifestDigest:
+      "sha256:b40c6043032adec3579fb4028978cb3d4ea2baa8a555a06a925121918181a78d",
+    lifecycle: "golden",
+    profiles: ["restaurant-ordering", "simple-ecommerce"],
+    effects: ["inventory.reserve", "inventory.release", "inventory.decrement"],
+    inputSchema: [{ key: "stockField", type: "domain.field", required: true }],
+    outputSlots: [
+      "api.runtime",
+      "database.schema",
+      "flow.effect",
+      "test.fixture",
+    ],
+    verification: {
+      fixture: "fixtures/default.json",
+      contractTest: "tests/contract.json",
+      status: "verified",
+    },
+  },
+};

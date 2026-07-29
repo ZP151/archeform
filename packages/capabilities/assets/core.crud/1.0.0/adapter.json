@@ -1,0 +1,13 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": [
+    "api.runtime",
+    "database.schema",
+    "page.block",
+    "test.fixture"
+  ],
+  "contributes": {
+    "effects": ["data.create", "data.read", "data.update", "data.delete"]
+  }
+}

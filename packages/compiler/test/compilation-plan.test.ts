@@ -111,6 +111,32 @@ describe("compilation target registry", () => {
     expect(generateApplicationBundle(publishedExpense)).toEqual(bundle);
   });
 
+  it("emits the immutable capability asset lock alongside generated source", () => {
+    const graph = structuredClone(publishedExpense.graph);
+    graph.integration.compositionProfile = "expense-approval";
+    graph.integration.assetLocks = [
+      {
+        key: "core.audit",
+        version: "1.0.0",
+        packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
+        manifestDigest:
+          "sha256:0f2d3b5b4dc3f351b53e9b874842afd6c7b4bcd9aeddfd8421199e95f2f544a6",
+        lifecycle: "golden",
+      },
+    ];
+
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "published-locked-capability-1",
+        graph,
+      }).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(files["capability-lock.json"]).toContain('"key": "core.audit"');
+    expect(files["capability-lock.json"]).toContain('"lifecycle": "golden"');
+    expect(files["capability-lock.json"]).toContain('"graphHash": "sha256:');
+  });
+
   it("emits a deployable initial Prisma migration and isolated Compose lifecycle", () => {
     const files = Object.fromEntries(
       generateApplicationBundle(publishedExpense).files.map((file) => [
