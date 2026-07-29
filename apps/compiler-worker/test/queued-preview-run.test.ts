@@ -42,6 +42,47 @@ function collaborators() {
 }
 
 describe("queued preview run", () => {
+  it("lets stop overtake delayed start dispatch without publishing start evidence", async () => {
+    const { dispatchClient, reporter, runtime } = collaborators();
+    const stopDispatch = { ...startDispatch, action: "stop" as const };
+    let releaseStartDispatch:
+      ((value: typeof startDispatch) => void) | undefined;
+    const delayedStartDispatch = new Promise<typeof startDispatch>(
+      (resolve) => {
+        releaseStartDispatch = resolve;
+      },
+    );
+    dispatchClient.get.mockImplementation((action) =>
+      action === "start" ? delayedStartDispatch : Promise.resolve(stopDispatch),
+    );
+
+    const starting = executeQueuedPreviewRun(
+      "C:/artifacts",
+      startJob,
+      dispatchClient,
+      reporter,
+      runtime,
+    );
+    const stopping = executeQueuedPreviewRun(
+      "C:/artifacts",
+      { action: "stop", previewRunId: "preview-1" },
+      dispatchClient,
+      reporter,
+      runtime,
+    );
+    releaseStartDispatch?.(startDispatch);
+
+    await expect(Promise.all([starting, stopping])).resolves.toEqual([
+      undefined,
+      undefined,
+    ]);
+    expect(runtime.start).not.toHaveBeenCalled();
+    expect(runtime.stop).not.toHaveBeenCalled();
+    expect(reporter.ready).not.toHaveBeenCalled();
+    expect(reporter.failed).not.toHaveBeenCalled();
+    expect(reporter.stopped).toHaveBeenCalledWith("preview-1");
+  });
+
   it("fetches the authoritative dispatch before starting the runtime", async () => {
     const { dispatchClient, reporter, runtime } = collaborators();
 
@@ -186,6 +227,46 @@ describe("queued preview run", () => {
     ).rejects.toThrow("Preview run failed.");
     expect(reporter.failed).toHaveBeenCalledWith("preview-1", {
       diagnostic: "preview_health_check_failed",
+    });
+  });
+
+  it("resolves a cancelled start without publishing ready or failed evidence", async () => {
+    const { dispatchClient, reporter, runtime } = collaborators();
+    runtime.start.mockRejectedValue(
+      new PreviewRunFailure("preview_start_cancelled"),
+    );
+
+    await expect(
+      executeQueuedPreviewRun(
+        "C:/artifacts",
+        startJob,
+        dispatchClient,
+        reporter,
+        runtime,
+      ),
+    ).resolves.toBeUndefined();
+    expect(reporter.ready).not.toHaveBeenCalled();
+    expect(reporter.failed).not.toHaveBeenCalled();
+    expect(reporter.stopped).not.toHaveBeenCalled();
+  });
+
+  it("reports only the allowlisted start-timeout diagnostic", async () => {
+    const { dispatchClient, reporter, runtime } = collaborators();
+    runtime.start.mockRejectedValue(
+      new PreviewRunFailure("preview_start_timeout"),
+    );
+
+    await expect(
+      executeQueuedPreviewRun(
+        "C:/artifacts",
+        startJob,
+        dispatchClient,
+        reporter,
+        runtime,
+      ),
+    ).rejects.toThrow("Preview run failed.");
+    expect(reporter.failed).toHaveBeenCalledWith("preview-1", {
+      diagnostic: "preview_start_timeout",
     });
   });
 });

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { EventEmitter } from "node:events";
 import {
   mkdir,
   mkdtemp,
@@ -13,11 +14,13 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  PreviewRunFailure,
   startPreviewRun,
   stopPreviewRun,
   type PreviewProcessRunner,
   type PreviewRuntimeRequest,
 } from "../src/preview-runner.js";
+import * as previewRunnerModule from "../src/preview-runner.js";
 
 const compose = Buffer.from("services:\n  web:\n    image: example\n", "utf8");
 const application = Buffer.from("export const value = 1;\n", "utf8");
@@ -56,6 +59,186 @@ const registeredArtifacts = [
 ];
 
 describe("preview runner", () => {
+  it("terminates an aborted Docker child and waits for its exit", async () => {
+    const child = new EventEmitter() as EventEmitter & {
+      stdout: EventEmitter;
+      kill(signal?: string): boolean;
+    };
+    child.stdout = new EventEmitter();
+    let terminated = false;
+    child.kill = () => {
+      terminated = true;
+      return true;
+    };
+    const createDockerComposeRunner = (
+      previewRunnerModule as unknown as {
+        createDockerComposeRunner: (
+          spawnProcess: () => typeof child,
+        ) => PreviewProcessRunner;
+      }
+    ).createDockerComposeRunner;
+    const processRunner = createDockerComposeRunner(() => child);
+    const controller = new AbortController();
+    const operation = processRunner(
+      {
+        file: "docker",
+        args: ["compose", "up"],
+        environment: {},
+      },
+      controller.signal,
+    );
+    let settled = false;
+    void operation.then(
+      () => {
+        settled = true;
+      },
+      () => {
+        settled = true;
+      },
+    );
+
+    controller.abort(new PreviewRunFailure("preview_start_timeout"));
+    await Promise.resolve();
+
+    expect(terminated).toBe(true);
+    expect(settled).toBe(false);
+    child.emit("exit", null, "SIGTERM");
+    await expect(operation).rejects.toMatchObject({
+      code: "preview_start_timeout",
+    });
+  });
+
+  it("times out a pending start, removes Docker resources, and retains verified Stop recovery", async () => {
+    const { root } = await sourceFixture();
+    const preview = join(root, ".preview-runs", "preview-1");
+    const commands: Parameters<PreviewProcessRunner>[0][] = [];
+    const processRunner = ((
+      command: Parameters<PreviewProcessRunner>[0],
+      signal: AbortSignal,
+    ) => {
+      commands.push(command);
+      if (command.args.includes("down")) return Promise.resolve(undefined);
+      return new Promise<string | undefined>((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(signal.reason), {
+          once: true,
+        });
+      });
+    }) as PreviewProcessRunner;
+
+    try {
+      await expect(
+        startPreviewRun(root, request(registeredArtifacts), processRunner, {
+          operationTimeoutMs: 10,
+        }),
+      ).rejects.toMatchObject({ code: "preview_start_timeout" });
+      expect(commands).toHaveLength(2);
+      expect(commands[0]?.args).toContain("up");
+      expect(commands[1]?.args).toContain("down");
+      expect(commands.at(-1)).toMatchObject({
+        args: expect.arrayContaining([
+          "--project-name",
+          "factory-preview-preview-1",
+          "--project-directory",
+          preview,
+          "down",
+        ]),
+      });
+      await expect(
+        readFile(join(preview, "docker-compose.yml")),
+      ).resolves.toEqual(compose);
+
+      await expect(
+        stopPreviewRun(root, request(registeredArtifacts), processRunner, {
+          operationTimeoutMs: 10,
+        }),
+      ).resolves.toBeUndefined();
+      expect(commands).toHaveLength(3);
+      expect(commands[2]?.args).toContain("down");
+      await expect(
+        readFile(join(preview, "docker-compose.yml")),
+      ).rejects.toThrow();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("cancels only the exact pending start before its stop removes the derived project", async () => {
+    const { root } = await sourceFixture();
+    const preview = join(root, ".preview-runs", "preview-1");
+    const otherPreview = join(root, ".preview-runs", "preview-2");
+    const commands: Parameters<PreviewProcessRunner>[0][] = [];
+    let markStartEntered: (() => void) | undefined;
+    const startEntered = new Promise<void>((resolve) => {
+      markStartEntered = resolve;
+    });
+    const processRunner = ((
+      command: Parameters<PreviewProcessRunner>[0],
+      signal: AbortSignal | undefined,
+    ) => {
+      commands.push(command);
+      if (command.args.includes("down")) return Promise.resolve(undefined);
+      markStartEntered?.();
+      return new Promise<string | undefined>((_resolve, reject) => {
+        const fallback = setTimeout(
+          () => reject(new Error("Pending start was not cancelled.")),
+          250,
+        );
+        signal?.addEventListener(
+          "abort",
+          () => {
+            clearTimeout(fallback);
+            reject(signal.reason);
+          },
+          { once: true },
+        );
+      });
+    }) as PreviewProcessRunner;
+
+    try {
+      await mkdir(otherPreview, { recursive: true });
+      await writeFile(join(otherPreview, "sentinel.txt"), "other preview");
+      const starting = startPreviewRun(
+        root,
+        request(registeredArtifacts),
+        processRunner,
+        { operationTimeoutMs: 1_000 },
+      );
+      const cancelledStart = expect(starting).rejects.toMatchObject({
+        code: "preview_start_cancelled",
+      });
+      await startEntered;
+
+      await expect(
+        stopPreviewRun(root, request(registeredArtifacts), processRunner, {
+          operationTimeoutMs: 1_000,
+        }),
+      ).resolves.toBeUndefined();
+      await cancelledStart;
+
+      const downCommands = commands.filter((command) =>
+        command.args.includes("down"),
+      );
+      expect(downCommands).toHaveLength(1);
+      expect(downCommands[0]).toMatchObject({
+        args: expect.arrayContaining([
+          "--project-name",
+          "factory-preview-preview-1",
+          "--project-directory",
+          preview,
+          "down",
+        ]),
+      });
+      await expect(
+        readFile(join(preview, "docker-compose.yml")),
+      ).rejects.toThrow();
+      await expect(
+        readFile(join(otherPreview, "sentinel.txt"), "utf8"),
+      ).resolves.toBe("other preview");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("rejects a generated directory that escapes the Factory artifact root", async () => {
     const processRunner = vi
       .fn<PreviewProcessRunner>()
@@ -352,24 +535,27 @@ describe("preview runner", () => {
       await stopPreviewRun(root, request(registeredArtifacts), processRunner);
 
       const preview = join(root, ".preview-runs", "preview-1");
-      expect(processRunner).toHaveBeenLastCalledWith({
-        file: "docker",
-        args: [
-          "compose",
-          "--file",
-          join(preview, "docker-compose.yml"),
-          "--project-name",
-          "factory-preview-preview-1",
-          "--project-directory",
-          preview,
-          "down",
-          "--volumes",
-          "--remove-orphans",
-        ],
-        environment: {
-          FACTORY_COMPOSE_PROJECT_NAME: "factory-preview-preview-1",
+      expect(processRunner).toHaveBeenLastCalledWith(
+        {
+          file: "docker",
+          args: [
+            "compose",
+            "--file",
+            join(preview, "docker-compose.yml"),
+            "--project-name",
+            "factory-preview-preview-1",
+            "--project-directory",
+            preview,
+            "down",
+            "--volumes",
+            "--remove-orphans",
+          ],
+          environment: {
+            FACTORY_COMPOSE_PROJECT_NAME: "factory-preview-preview-1",
+          },
         },
-      });
+        expect.any(AbortSignal),
+      );
       await expect(readFile(join(source, "src", "app.ts"))).resolves.toEqual(
         application,
       );

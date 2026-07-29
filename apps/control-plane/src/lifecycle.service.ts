@@ -245,6 +245,7 @@ function previewFailedEvidence(input: unknown) {
   const diagnosticCode = requiredString(body, "diagnostic");
   const messages: Record<string, string> = {
     preview_start_failed: "Preview startup failed.",
+    preview_start_timeout: "Preview startup timed out.",
     preview_stop_failed: "Preview cleanup failed.",
     preview_health_check_failed: "Preview health check failed.",
   };
@@ -727,7 +728,11 @@ export class LifecycleService {
     if (preview.status === "stopping" || preview.status === "stopped") {
       return preview;
     }
-    if (preview.status !== "ready" && preview.status !== "failed") {
+    if (
+      preview.status !== "starting" &&
+      preview.status !== "ready" &&
+      preview.status !== "failed"
+    ) {
       throw new ConflictException(
         "Preview run cannot be stopped from its current state.",
       );

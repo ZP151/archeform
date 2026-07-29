@@ -31,6 +31,42 @@ const runtime: PreviewRuntime = {
   stop: stopPreviewRun,
 };
 
+type QueuedPreviewStart = {
+  stopRequested: boolean;
+  runtimeEntered: boolean;
+  readonly settled: Promise<void>;
+  settle(): void;
+};
+
+const queuedPreviewStarts = new Map<string, QueuedPreviewStart>();
+const skippedPreviewStarts = new Set<string>();
+
+function registerQueuedPreviewStart(previewRunId: string): QueuedPreviewStart {
+  let settle: () => void = () => undefined;
+  const queuedStart: QueuedPreviewStart = {
+    stopRequested: false,
+    runtimeEntered: false,
+    settled: new Promise<void>((resolvePromise) => {
+      settle = resolvePromise;
+    }),
+    settle: () => settle(),
+  };
+  queuedPreviewStarts.set(previewRunId, queuedStart);
+  return queuedStart;
+}
+
+export function createPreviewRuntime(
+  operationTimeoutMs: number,
+): PreviewRuntime {
+  const options = { operationTimeoutMs };
+  return {
+    start: (artifactRoot, request) =>
+      startPreviewRun(artifactRoot, request, undefined, options),
+    stop: (artifactRoot, request) =>
+      stopPreviewRun(artifactRoot, request, undefined, options),
+  };
+}
+
 function previewRunJob(input: unknown): PreviewRunJob {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     throw new Error("Invalid preview queue job.");
@@ -61,6 +97,13 @@ export async function executeQueuedPreviewRun(
   previewRuntime: PreviewRuntime = runtime,
 ): Promise<void> {
   const job = previewRunJob(input);
+  const queuedStart =
+    job.action === "start"
+      ? registerQueuedPreviewStart(job.previewRunId)
+      : queuedPreviewStarts.get(job.previewRunId);
+  if (job.action === "stop" && queuedStart) {
+    queuedStart.stopRequested = true;
+  }
   try {
     const dispatch = await dispatchClient.get(job.action, job.previewRunId);
     if (
@@ -70,15 +113,39 @@ export async function executeQueuedPreviewRun(
       throw new Error("Control Plane preview dispatch did not match the job.");
     }
     if (job.action === "start") {
+      if (queuedStart?.stopRequested) {
+        skippedPreviewStarts.add(job.previewRunId);
+        return;
+      }
+      if (queuedStart) queuedStart.runtimeEntered = true;
       await reporter.ready(
         job.previewRunId,
         await previewRuntime.start(artifactRoot, dispatch),
       );
       return;
     }
+    if (queuedStart && !queuedStart.runtimeEntered) {
+      await queuedStart.settled;
+    }
+    if (skippedPreviewStarts.has(job.previewRunId)) {
+      await reporter.stopped(job.previewRunId);
+      skippedPreviewStarts.delete(job.previewRunId);
+      return;
+    }
     await previewRuntime.stop(artifactRoot, dispatch);
     await reporter.stopped(job.previewRunId);
   } catch (error) {
+    if (
+      job.action === "start" &&
+      (queuedStart?.stopRequested ||
+        (error instanceof PreviewRunFailure &&
+          error.code === "preview_start_cancelled"))
+    ) {
+      if (!queuedStart?.runtimeEntered) {
+        skippedPreviewStarts.add(job.previewRunId);
+      }
+      return;
+    }
     const diagnostic =
       error instanceof PreviewRunFailure
         ? error.code
@@ -87,5 +154,12 @@ export async function executeQueuedPreviewRun(
           : "preview_stop_failed";
     await reporter.failed(job.previewRunId, { diagnostic });
     throw new Error("Preview run failed.");
+  } finally {
+    if (job.action === "start" && queuedStart) {
+      queuedStart.settle();
+      if (queuedPreviewStarts.get(job.previewRunId) === queuedStart) {
+        queuedPreviewStarts.delete(job.previewRunId);
+      }
+    }
   }
 }

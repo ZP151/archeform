@@ -68,7 +68,7 @@ describe("previewRunPresentation", () => {
     ["ready", "Preview ready", false, true, true],
     ["stopping", "Preview stopping", false, false, false],
     ["stopped", "Preview stopped", true, false, false],
-    ["failed", "Preview failed", true, false, true],
+    ["failed", "Preview failed", false, false, true],
   ] as const)(
     "presents %s without exposing controls before the Compilation succeeds",
     (status, label, canStart, canOpen, canStop) => {

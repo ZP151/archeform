@@ -93,7 +93,8 @@ export function previewRunPresentation(
   const active =
     preview.status === "starting" ||
     preview.status === "ready" ||
-    preview.status === "stopping";
+    preview.status === "stopping" ||
+    preview.status === "failed";
 
   return {
     visible: compilationSucceeded,

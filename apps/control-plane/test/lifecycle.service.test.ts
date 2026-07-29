@@ -837,6 +837,36 @@ describe("LifecycleService", () => {
     expect(previewQueue.enqueue).not.toHaveBeenCalled();
   });
 
+  it("stops a starting preview without clearing its active key before stopped evidence", async () => {
+    const current = {
+      id: "preview-1",
+      status: "starting",
+      activeKey: "compilation-succeeded",
+      compilationId: "compilation-succeeded",
+      composeProjectName: "factory-preview-preview-1",
+      compilation: {
+        artifacts: [
+          { metadata: { rootDirectory: "expense-approval-published-1" } },
+        ],
+      },
+    };
+    prisma.previewRun.findUnique.mockResolvedValue(current);
+    prisma.previewRun.updateMany.mockResolvedValue({ count: 1 });
+
+    await expect(service.stopPreviewRun("preview-1")).resolves.toMatchObject({
+      status: "stopping",
+      activeKey: "compilation-succeeded",
+    });
+    expect(prisma.previewRun.updateMany).toHaveBeenCalledWith({
+      where: { id: "preview-1", status: "starting" },
+      data: { status: "stopping" },
+    });
+    expect(previewQueue.enqueue).toHaveBeenCalledWith({
+      action: "stop",
+      previewRunId: "preview-1",
+    });
+  });
+
   it("reports ready evidence only from starting runs with loopback ports and URL", async () => {
     prisma.previewRun.findUnique.mockResolvedValue({
       id: "preview-1",
@@ -936,6 +966,27 @@ describe("LifecycleService", () => {
       service.reportPreviewFailed("preview-1", { diagnostic }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.previewRun.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("maps a preview start timeout to bounded failure evidence", async () => {
+    prisma.previewRun.findUnique.mockResolvedValue({
+      id: "preview-1",
+      status: "starting",
+    });
+    prisma.previewRun.updateMany.mockResolvedValue({ count: 1 });
+
+    await expect(
+      service.reportPreviewFailed("preview-1", {
+        diagnostic: "preview_start_timeout",
+      }),
+    ).resolves.toMatchObject({
+      status: "failed",
+      diagnostic: "Preview startup timed out.",
+    });
+    expect(prisma.previewRun.updateMany).toHaveBeenCalledWith({
+      where: { id: "preview-1", status: "starting" },
+      data: { status: "failed", diagnostic: "Preview startup timed out." },
+    });
   });
 
   it("compensates a failed start enqueue so a retry creates a new run", async () => {

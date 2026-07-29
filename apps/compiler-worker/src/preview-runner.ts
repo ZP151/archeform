@@ -25,6 +25,8 @@ export type StartedPreview = {
 
 export type PreviewFailureCode =
   | "preview_start_failed"
+  | "preview_start_timeout"
+  | "preview_start_cancelled"
   | "preview_stop_failed"
   | "preview_health_check_failed";
 
@@ -46,7 +48,16 @@ export type PreviewProcessCommand = {
 
 export type PreviewProcessRunner = (
   command: PreviewProcessCommand,
+  signal: AbortSignal,
 ) => Promise<string | undefined>;
+
+export type PreviewOperationOptions = {
+  readonly operationTimeoutMs: number;
+};
+
+const defaultOperationOptions: PreviewOperationOptions = {
+  operationTimeoutMs: 600_000,
+};
 
 function isInside(parent: string, candidate: string): boolean {
   const fromParent = relative(parent, candidate);
@@ -111,29 +122,104 @@ function composeCommand(
   };
 }
 
-export const runDockerCompose: PreviewProcessRunner = async ({
-  file,
-  args,
-  environment,
-}) => {
-  return new Promise<string>((resolvePromise, reject) => {
-    const child = spawn(file, [...args], {
-      env: environment,
-      shell: false,
-      stdio: ["ignore", "pipe", "ignore"],
+export function createDockerComposeRunner(
+  spawnProcess: typeof spawn,
+): PreviewProcessRunner {
+  return async ({ file, args, environment }, signal) => {
+    if (signal.aborted) throw previewAbortReason(signal.reason);
+    return new Promise<string>((resolvePromise, reject) => {
+      const child = spawnProcess(file, [...args], {
+        env: environment,
+        shell: false,
+        stdio: ["ignore", "pipe", "ignore"],
+      });
+      let stdout = "";
+      let abortReason: PreviewRunFailure | undefined;
+      let forceKill: NodeJS.Timeout | undefined;
+      const onAbort = () => {
+        abortReason = previewAbortReason(signal.reason);
+        child.kill("SIGTERM");
+        forceKill = setTimeout(() => child.kill("SIGKILL"), 1_000);
+        forceKill.unref();
+      };
+      child.stdout?.on("data", (chunk: Buffer) => {
+        stdout += chunk.toString("utf8");
+      });
+      signal.addEventListener("abort", onAbort, { once: true });
+      child.once("error", () => {
+        signal.removeEventListener("abort", onAbort);
+        if (forceKill) clearTimeout(forceKill);
+        reject(abortReason ?? new Error("Preview Docker operation failed."));
+      });
+      child.once("exit", (code) => {
+        signal.removeEventListener("abort", onAbort);
+        if (forceKill) clearTimeout(forceKill);
+        if (abortReason) {
+          reject(abortReason);
+        } else if (code === 0) {
+          resolvePromise(stdout);
+        } else {
+          reject(new Error("Preview Docker operation failed."));
+        }
+      });
     });
-    let stdout = "";
-    child.stdout?.on("data", (chunk: Buffer) => {
-      stdout += chunk.toString("utf8");
-    });
-    child.once("error", reject);
-    child.once("exit", (code) =>
-      code === 0
-        ? resolvePromise(stdout)
-        : reject(new Error("Preview Docker operation failed.")),
-    );
-  });
+  };
+}
+
+export const runDockerCompose = createDockerComposeRunner(spawn);
+
+function previewAbortReason(reason: unknown): PreviewRunFailure {
+  return reason instanceof PreviewRunFailure &&
+    (reason.code === "preview_start_timeout" ||
+      reason.code === "preview_start_cancelled" ||
+      reason.code === "preview_stop_failed")
+    ? reason
+    : new PreviewRunFailure("preview_start_cancelled");
+}
+
+async function runPreviewOperation(
+  processRunner: PreviewProcessRunner,
+  command: PreviewProcessCommand,
+  operationTimeoutMs: number,
+  timeoutCode: "preview_start_timeout" | "preview_stop_failed",
+  cancellationSignal?: AbortSignal,
+): Promise<string | undefined> {
+  const operation = new AbortController();
+  const cancel = () =>
+    operation.abort(new PreviewRunFailure("preview_start_cancelled"));
+  if (cancellationSignal?.aborted) cancel();
+  else cancellationSignal?.addEventListener("abort", cancel, { once: true });
+  const timeout = setTimeout(
+    () => operation.abort(new PreviewRunFailure(timeoutCode)),
+    operationTimeoutMs,
+  );
+  try {
+    return await processRunner(command, operation.signal);
+  } catch (error) {
+    if (operation.signal.aborted)
+      throw previewAbortReason(operation.signal.reason);
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+    cancellationSignal?.removeEventListener("abort", cancel);
+  }
+}
+
+type ActivePreviewStart = {
+  readonly controller: AbortController;
+  readonly settled: Promise<void>;
+  settle(): void;
 };
+
+const activePreviewStarts = new Map<string, ActivePreviewStart>();
+
+function activePreviewStart(): ActivePreviewStart {
+  let settle: () => void = () => undefined;
+  const settled = new Promise<void>((resolvePromise) => {
+    settle = resolvePromise;
+  });
+  return { controller: new AbortController(), settled, settle };
+}
 
 function dockerLoopbackPort(output: string | undefined): number {
   const match = /^127\.0\.0\.1:(\d+)\s*$/.exec(output ?? "");
@@ -314,6 +400,7 @@ export async function startPreviewRun(
   artifactRoot: string,
   request: PreviewRuntimeRequest,
   processRunner: PreviewProcessRunner = runDockerCompose,
+  options: PreviewOperationOptions = defaultOperationOptions,
 ): Promise<StartedPreview> {
   const sourceDirectory = generatedDirectory(
     artifactRoot,
@@ -327,91 +414,143 @@ export async function startPreviewRun(
     FACTORY_WEB_PORT: "0",
     FACTORY_API_PORT: "0",
   };
-  try {
-    await materializeArtifacts(
-      directory,
-      await verifiedArtifacts(sourceDirectory, request.artifacts),
-    );
-  } catch {
+  const activeStart = activePreviewStart();
+  if (activePreviewStarts.has(request.previewRunId)) {
     throw new PreviewRunFailure("preview_start_failed");
   }
+  activePreviewStarts.set(request.previewRunId, activeStart);
   try {
-    await processRunner(
-      composeCommand(
-        directory,
-        composeFile,
-        project,
-        ["up", "--build", "--detach", "--wait"],
-        environment,
-      ),
-    );
-    const webPort = dockerLoopbackPort(
-      await processRunner(
-        composeCommand(
-          directory,
-          composeFile,
-          project,
-          ["port", "web", "3000"],
-          environment,
-        ),
-      ),
-    );
-    const apiPort = dockerLoopbackPort(
-      await processRunner(
-        composeCommand(
-          directory,
-          composeFile,
-          project,
-          ["port", "api", "3001"],
-          environment,
-        ),
-      ),
-    );
     try {
-      await processRunner(
-        composeCommand(
-          directory,
-          composeFile,
-          project,
-          [
-            "exec",
-            "-T",
-            "web",
-            "wget",
-            "-q",
-            "-O",
-            "/dev/null",
-            "http://127.0.0.1:3000",
-          ],
-          environment,
-        ),
+      await materializeArtifacts(
+        directory,
+        await verifiedArtifacts(sourceDirectory, request.artifacts),
       );
     } catch {
-      throw new PreviewRunFailure("preview_health_check_failed");
+      throw new PreviewRunFailure("preview_start_failed");
     }
-    return { webPort, apiPort, previewUrl: `http://127.0.0.1:${webPort}` };
-  } catch (error) {
-    let cleanedUp = false;
-    await verifyComposeArtifact(composeFile, request.artifacts)
-      .then(() =>
-        processRunner(
+    try {
+      await runPreviewOperation(
+        processRunner,
+        composeCommand(
+          directory,
+          composeFile,
+          project,
+          ["up", "--build", "--detach", "--wait"],
+          environment,
+        ),
+        options.operationTimeoutMs,
+        "preview_start_timeout",
+        activeStart.controller.signal,
+      );
+      const webPort = dockerLoopbackPort(
+        await runPreviewOperation(
+          processRunner,
           composeCommand(
             directory,
             composeFile,
             project,
-            ["down", "--volumes", "--remove-orphans"],
-            { FACTORY_COMPOSE_PROJECT_NAME: project },
+            ["port", "web", "3000"],
+            environment,
           ),
+          options.operationTimeoutMs,
+          "preview_start_timeout",
+          activeStart.controller.signal,
         ),
-      )
-      .then(() => {
-        cleanedUp = true;
-      })
-      .catch(() => undefined);
-    if (cleanedUp) await rm(directory, { recursive: true, force: true });
-    throw error instanceof PreviewRunFailure
-      ? error
-      : new PreviewRunFailure("preview_start_failed");
+      );
+      const apiPort = dockerLoopbackPort(
+        await runPreviewOperation(
+          processRunner,
+          composeCommand(
+            directory,
+            composeFile,
+            project,
+            ["port", "api", "3001"],
+            environment,
+          ),
+          options.operationTimeoutMs,
+          "preview_start_timeout",
+          activeStart.controller.signal,
+        ),
+      );
+      try {
+        await runPreviewOperation(
+          processRunner,
+          composeCommand(
+            directory,
+            composeFile,
+            project,
+            [
+              "exec",
+              "-T",
+              "web",
+              "wget",
+              "-q",
+              "-O",
+              "/dev/null",
+              "http://127.0.0.1:3000",
+            ],
+            environment,
+          ),
+          options.operationTimeoutMs,
+          "preview_start_timeout",
+          activeStart.controller.signal,
+        );
+      } catch (error) {
+        if (
+          error instanceof PreviewRunFailure &&
+          (error.code === "preview_start_timeout" ||
+            error.code === "preview_start_cancelled")
+        ) {
+          throw error;
+        }
+        throw new PreviewRunFailure("preview_health_check_failed");
+      }
+      return { webPort, apiPort, previewUrl: `http://127.0.0.1:${webPort}` };
+    } catch (error) {
+      if (
+        error instanceof PreviewRunFailure &&
+        error.code === "preview_start_cancelled"
+      ) {
+        throw error;
+      }
+      let cleanedUp = false;
+      await verifyComposeArtifact(composeFile, request.artifacts)
+        .then(() =>
+          runPreviewOperation(
+            processRunner,
+            composeCommand(
+              directory,
+              composeFile,
+              project,
+              ["down", "--volumes", "--remove-orphans"],
+              { FACTORY_COMPOSE_PROJECT_NAME: project },
+            ),
+            options.operationTimeoutMs,
+            "preview_stop_failed",
+          ),
+        )
+        .then(() => {
+          cleanedUp = true;
+        })
+        .catch(() => undefined);
+      if (
+        cleanedUp &&
+        !(
+          error instanceof PreviewRunFailure &&
+          error.code === "preview_start_timeout"
+        )
+      ) {
+        await rm(directory, { recursive: true, force: true });
+      }
+      throw error instanceof PreviewRunFailure
+        ? error
+        : new PreviewRunFailure("preview_start_failed");
+    }
+  } finally {
+    activeStart.settle();
+    if (activePreviewStarts.get(request.previewRunId) === activeStart) {
+      activePreviewStarts.delete(request.previewRunId);
+    }
   }
 }
 
@@ -419,13 +558,22 @@ export async function stopPreviewRun(
   artifactRoot: string,
   request: PreviewRuntimeRequest,
   processRunner: PreviewProcessRunner = runDockerCompose,
+  options: PreviewOperationOptions = defaultOperationOptions,
 ): Promise<void> {
   const directory = previewDirectory(artifactRoot, request.previewRunId);
   const project = factoryProjectName(request);
   const composeFile = join(directory, "docker-compose.yml");
   try {
+    const activeStart = activePreviewStarts.get(request.previewRunId);
+    if (activeStart) {
+      activeStart.controller.abort(
+        new PreviewRunFailure("preview_start_cancelled"),
+      );
+      await activeStart.settled;
+    }
     await verifyComposeArtifact(composeFile, request.artifacts);
-    await processRunner(
+    await runPreviewOperation(
+      processRunner,
       composeCommand(
         directory,
         composeFile,
@@ -433,6 +581,8 @@ export async function stopPreviewRun(
         ["down", "--volumes", "--remove-orphans"],
         { FACTORY_COMPOSE_PROJECT_NAME: project },
       ),
+      options.operationTimeoutMs,
+      "preview_stop_failed",
     );
     await rm(directory, { recursive: true, force: true });
   } catch {

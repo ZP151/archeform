@@ -7,6 +7,7 @@ import {
   type CompilationJob,
 } from "./queued-compilation.js";
 import {
+  createPreviewRuntime,
   executeQueuedPreviewRun,
   type PreviewRunJob,
 } from "./queued-preview-run.js";
@@ -30,6 +31,7 @@ const previewDispatchClient = createPreviewDispatchClient(
   config.controlPlaneUrl,
   config.internalWorkerToken,
 );
+const previewRuntime = createPreviewRuntime(config.previewOperationTimeoutMs);
 
 const queue = new Queue(config.queueName, { connection });
 const worker = new Worker<CompilationJob>(
@@ -48,8 +50,9 @@ const previewWorker = new Worker<PreviewRunJob>(
       job.data,
       previewDispatchClient,
       previewReporter,
+      previewRuntime,
     ),
-  { connection },
+  { connection, concurrency: 2 },
 );
 
 worker.on("ready", () => {
