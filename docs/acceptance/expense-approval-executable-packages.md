@@ -20,7 +20,7 @@ notification-enabled Expense API journey are green.
 
 ## Generated application evidence
 
-Two fresh immutable Expense revisions were written only beneath
+Two earlier fresh immutable Expense revisions were written only beneath
 `%LOCALAPPDATA%\Temp` and removed during cleanup:
 
 - the default Expense profile proves submit and approve transitions plus audit
@@ -43,15 +43,27 @@ journey covers create, submit, approve, and two declared `audit.record`
 effects. The notification-enabled journey additionally verifies the two
 expected `notification.send` evidence records.
 
-The default revision's `capability-template-lock.json` contains
+The current default Expense composition has a
+`capability-template-lock.json` containing
 `factory.capability-template-lock/v1` and exactly these generated API modules:
 
 | Locked Golden package | Version | Template digest                                                           | Generated target                            |
 | --------------------- | ------- | ------------------------------------------------------------------------- | ------------------------------------------- |
-| `core.crud`           | `1.0.0` | `sha256:5e1bcc06560ccdd1062c786618a883de6df9234d2134c89361b3adaab0700955` | `api/src/capabilities/core.crud.ts`         |
-| `core.workflow`       | `1.0.0` | `sha256:209d5d649840437f334ac53aa593634c9cdb8fbfe5cc7525ed96f80ac91947bb` | `api/src/capabilities/core.workflow.ts`     |
+| `core.crud`           | `1.0.1` | `sha256:5e1bcc06560ccdd1062c786618a883de6df9234d2134c89361b3adaab0700955` | `api/src/capabilities/core.crud.ts`         |
+| `core.workflow`       | `1.0.1` | `sha256:209d5d649840437f334ac53aa593634c9cdb8fbfe5cc7525ed96f80ac91947bb` | `api/src/capabilities/core.workflow.ts`     |
 | `core.audit`          | `1.0.1` | `sha256:9bb2507b6d1e72605a9782257a6dd3e2cee130273391b331534005bb78c3a71f` | `api/src/capabilities/core.audit.ts`        |
-| `core.notification`   | `1.0.0` | `sha256:b9a745255d242339486fff29d6f7abd3f751e36df3e348f896956a31c6b53266` | `api/src/capabilities/core.notification.ts` |
+| `core.notification`   | `1.0.1` | `sha256:b9a745255d242339486fff29d6f7abd3f751e36df3e348f896956a31c6b53266` | `api/src/capabilities/core.notification.ts` |
+
+The current refresh materialises a fresh default Expense workspace and runs
+the same install, Prisma generation, build, and generated API journey gates.
+The immutable-lock browser assertion verifies the table's full entries by
+exact equality; it does not infer versions from the generated source files.
+
+Task 2 separately recorded fresh generated API proof for Restaurant Ordering
+and Simple Ecommerce after `a112482` and `87e40cb`: each profile completed
+`pnpm install`, Prisma generation, build, and its generated API journey test
+(`1/1`). This Task 4 refresh cites that cross-profile evidence and does not
+claim to have rerun those two workspaces.
 
 ## Isolated Workbench evidence
 
@@ -87,8 +99,8 @@ creation journey verifies Draft creation without publishing it.
 All final gates completed successfully on 2026-07-29:
 
 ```text
-pnpm --filter @factory/capabilities test      # 25 passed
-pnpm --filter @factory/compiler test          # 28 passed
+pnpm --filter @factory/capabilities test      # 26 passed
+pnpm --filter @factory/compiler test          # 35 passed
 pnpm test                                     # 11 Turbo tasks successful
 pnpm typecheck                                # 11 Turbo tasks successful
 pnpm build                                    # 7 Turbo tasks successful
@@ -111,16 +123,22 @@ It removed that project's five containers, two named volumes, and one network;
 a follow-up `docker compose -p factory-pilot-executable-expense-e2e -f
 infra/docker-compose.yml ps --format json` returned no rows.
 
-The following scoped PowerShell cleanup removed only the temporary directory
-created for this Task 4 fix run:
+The current refresh created only the following two task-specific temporary
+directories. This scoped PowerShell cleanup removed both after their evidence
+was recorded:
 
 ```powershell
-$task4FixTemp = Join-Path $env:LOCALAPPDATA 'Temp\factory-pilot-executable-expense-20260729-task4fix'
-$task4FixTemp = (Resolve-Path -LiteralPath $task4FixTemp).Path
-if ($task4FixTemp -notmatch '^[A-Za-z]:\\Users\\15492\\AppData\\Local\\Temp\\factory-pilot-executable-expense-[^\\]+$') { throw 'Unexpected temporary target' }
-Remove-Item -LiteralPath $task4FixTemp -Recurse -Force
-Test-Path -LiteralPath $task4FixTemp
+$task4RefreshDirectories = @(
+  Join-Path $env:LOCALAPPDATA 'Temp\factory-pilot-executable-expense-20260729-refresh'
+  Join-Path $env:LOCALAPPDATA 'Temp\factory-pilot-executable-expense-20260729-refresh-api'
+)
+foreach ($directory in $task4RefreshDirectories) {
+  $resolved = (Resolve-Path -LiteralPath $directory).Path
+  if ($resolved -notmatch '^[A-Za-z]:\\Users\\15492\\AppData\\Local\\Temp\\factory-pilot-executable-expense-[^\\]+$') { throw 'Unexpected temporary target' }
+  Remove-Item -LiteralPath $resolved -Recurse -Force
+  Test-Path -LiteralPath $resolved
+}
 ```
 
-`Test-Path` returned `False`. No user services or unrelated temporary data were
-modified.
+Both `Test-Path` results were `False`. No user services or unrelated temporary
+data were modified.

@@ -13,7 +13,7 @@ const expenseCapabilityTemplateLocks = [
   },
   {
     assetKey: "core.crud",
-    assetVersion: "1.0.0",
+    assetVersion: "1.0.1",
     source: "templates/api/capability-module.ts.tpl",
     target: "api/src/capabilities/core.crud.ts",
     outputSlot: "api.runtime",
@@ -22,7 +22,7 @@ const expenseCapabilityTemplateLocks = [
   },
   {
     assetKey: "core.notification",
-    assetVersion: "1.0.0",
+    assetVersion: "1.0.1",
     source: "templates/api/capability-module.ts.tpl",
     target: "api/src/capabilities/core.notification.ts",
     outputSlot: "api.runtime",
@@ -31,7 +31,7 @@ const expenseCapabilityTemplateLocks = [
   },
   {
     assetKey: "core.workflow",
-    assetVersion: "1.0.0",
+    assetVersion: "1.0.1",
     source: "templates/api/capability-module.ts.tpl",
     target: "api/src/capabilities/core.workflow.ts",
     outputSlot: "api.runtime",
