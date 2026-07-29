@@ -113,6 +113,35 @@ describe("generated page runtime projection", () => {
     );
   });
 
+  it.each([
+    ["/api"],
+    ["/api/orders"],
+    ["/_next"],
+    ["/_next/static/chunk.js"],
+    ["/favicon.ico"],
+  ])("rejects the generated Next route namespace %s", (route) => {
+    const graph = profileGraph("restaurant-ordering");
+    graph.page.pages[0]!.route = route;
+
+    expect(() => createGeneratedPageRuntimeProjection(graph)).toThrow(
+      `PageModel route '${route}' is reserved by the generated Next application.`,
+    );
+  });
+
+  it.each([
+    ["//external.example"],
+    ["/menu?preview=true"],
+    ["/menu#section"],
+    ["https://external.example/menu"],
+  ])("retains canonical-local rejection for route %s", (route) => {
+    const graph = profileGraph("restaurant-ordering");
+    graph.page.pages[0]!.route = route;
+
+    expect(() => createGeneratedPageRuntimeProjection(graph)).toThrow(
+      `PageModel route '${route}' must be a canonical local route.`,
+    );
+  });
+
   it("rejects unsupported PageModel blocks before projection", () => {
     const graph = profileGraph("restaurant-ordering");
     blockById(graph, "menu-catalog").type = "custom-html";
@@ -166,18 +195,28 @@ describe("generated page runtime projection", () => {
   );
 
   it.each([
-    ["catalog", "cart.add", "restaurant-ordering"],
-    ["checkout", "payment.simulate", "simple-ecommerce"],
+    [
+      "catalog",
+      "cart.add",
+      "restaurant-ordering",
+      "Interactive commerce PageModel blocks require Factory capability 'cart.add' with operation 'add'.",
+    ],
+    [
+      "checkout",
+      "payment.simulate",
+      "simple-ecommerce",
+      "PageModel block 'checkout' requires Factory capability 'payment.simulate'.",
+    ],
   ] as const)(
     "rejects %s blocks when Factory capability %s is absent",
-    (blockType, capabilityKey, profile) => {
+    (blockType, capabilityKey, profile, message) => {
       const graph = profileGraph(profile);
       graph.integration.capabilities = graph.integration.capabilities.filter(
         (capability) => capability.key !== capabilityKey,
       );
 
       expect(() => createGeneratedPageRuntimeProjection(graph)).toThrow(
-        `PageModel block '${blockType}' requires Factory capability '${capabilityKey}'.`,
+        message,
       );
     },
   );
@@ -192,9 +231,27 @@ describe("generated page runtime projection", () => {
     );
 
     expect(() => createGeneratedPageRuntimeProjection(graph)).toThrow(
-      "PageModel block 'catalog' requires Factory capability 'cart.add'.",
+      "Interactive commerce PageModel blocks require Factory capability 'cart.add' with operation 'add'.",
     );
   });
+
+  it.each([
+    ["catalog", "restaurant-ordering"],
+    ["cart", "restaurant-ordering"],
+    ["checkout", "simple-ecommerce"],
+  ] as const)(
+    "rejects the %s interaction when the exact Factory cart capability is absent",
+    (_blockType, profile) => {
+      const graph = profileGraph(profile);
+      graph.integration.capabilities = graph.integration.capabilities.filter(
+        (capability) => capability.key !== "cart.add",
+      );
+
+      expect(() => createGeneratedPageRuntimeProjection(graph)).toThrow(
+        "Interactive commerce PageModel blocks require Factory capability 'cart.add' with operation 'add'.",
+      );
+    },
+  );
 
   it.each([
     ["catalog", "cart.add", "remove", "restaurant-ordering"],
@@ -211,7 +268,9 @@ describe("generated page runtime projection", () => {
       );
 
       expect(() => createGeneratedPageRuntimeProjection(graph)).toThrow(
-        `PageModel block '${blockType}' requires Factory capability '${capabilityKey}'.`,
+        blockType === "catalog"
+          ? "Interactive commerce PageModel blocks require Factory capability 'cart.add' with operation 'add'."
+          : `PageModel block '${blockType}' requires Factory capability '${capabilityKey}'.`,
       );
     },
   );

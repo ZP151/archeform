@@ -4,6 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { composeProfileDraft } from "@factory/capabilities";
+import type { ApplicationGraphV1 } from "@factory/graph";
 
 import {
   buildCompilationPlan,
@@ -36,6 +37,12 @@ const publishedExpense: PublishedGraphInput = {
 const simpleEcommerceAssetLocks = composeProfileDraft({
   profile: "simple-ecommerce",
 }).assetLocks;
+
+function profileGraph(
+  profile: "expense-approval" | "restaurant-ordering" | "simple-ecommerce",
+): ApplicationGraphV1 {
+  return structuredClone(composeProfileDraft({ profile }).graph);
+}
 
 const compilerTestDirectory = dirname(fileURLToPath(import.meta.url));
 
@@ -1041,6 +1048,9 @@ describe("compilation target registry", () => {
     expect(runtime).toContain("QueueBlock");
     expect(runtime).toContain("CheckoutBlock");
     expect(runtime).toContain("formRouteByEntity");
+    expect(runtime).toContain(
+      "routeFallback: { readonly rootRoute: string | null; readonly unknownRoute: 'not-found' }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null }",
+    );
     expect(runtime).toContain('"/menu"');
     expect(runtime).not.toContain("@puckeditor/core");
     expect(runtime).not.toContain("reactflow");
@@ -1051,6 +1061,165 @@ describe("compilation target registry", () => {
     );
     expect(files["web/app/generated-application-client.tsx"]).toBeUndefined();
     expect(files["web/app/application-manifest.ts"]).toBeUndefined();
+  });
+
+  it("uses the validated order flow for a catalog-only commerce PageModel", () => {
+    const composed = composeProfileDraft({
+      profile: "restaurant-ordering",
+    }).graph;
+    const graph = {
+      ...composed,
+      page: {
+        pages: [composed.page.pages[0]!],
+        navigation: [composed.page.navigation[0]!],
+      },
+    };
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "catalog-only-commerce-1",
+        graph,
+      }).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(files["web/app/page-runtime.tsx"]).toContain(
+      '"orderEntity": "order"',
+    );
+    expect(files["web/app/page-runtime.tsx"]).toContain(
+      '"paymentEvent": "pay"',
+    );
+  });
+
+  it("emits the validated payment event for a checkout PageModel", () => {
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "checkout-commerce-1",
+        graph: composeProfileDraft({ profile: "simple-ecommerce" }).graph,
+      }).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(files["web/app/page-runtime.tsx"]).toContain(
+      '"orderEntity": "order"',
+    );
+    expect(files["web/app/page-runtime.tsx"]).toContain(
+      '"paymentEvent": "pay"',
+    );
+    expect(files["web/app/page-runtime.tsx"]).not.toContain(
+      '"paymentEvent": null',
+    );
+  });
+
+  it.each([
+    {
+      name: "is missing the exact Factory cart capability",
+      mutate(graph: ApplicationGraphV1) {
+        graph.integration.capabilities = graph.integration.capabilities.filter(
+          (capability) => capability.key !== "cart.add",
+        );
+      },
+      message:
+        "Interactive commerce PageModel blocks require Factory capability 'cart.add' with operation 'add'.",
+    },
+    {
+      name: "does not declare the order DomainModel entity",
+      mutate(graph: ApplicationGraphV1) {
+        graph.domain.entities = graph.domain.entities.filter(
+          (entity) => entity.key !== "order",
+        );
+        graph.domain.relations = graph.domain.relations.filter(
+          (relation) => relation.from !== "order" && relation.to !== "order",
+        );
+        graph.policy.permissions = graph.policy.permissions.filter(
+          (permission) => permission.resource !== "order",
+        );
+        graph.flow.flows = graph.flow.flows.filter(
+          (flow) => flow.entity !== "order",
+        );
+      },
+      message:
+        "Interactive commerce PageModel blocks require declared DomainModel entity 'order'.",
+    },
+    {
+      name: "does not declare an order FlowModel",
+      mutate(graph: ApplicationGraphV1) {
+        graph.flow.flows = graph.flow.flows.filter(
+          (flow) => flow.entity !== "order",
+        );
+      },
+      message:
+        "Interactive commerce PageModel blocks require a FlowModel for entity 'order'.",
+    },
+  ])(
+    "rejects a catalog-only commerce PageModel that $name before returning files",
+    ({ mutate, message }) => {
+      const source = composeProfileDraft({
+        profile: "restaurant-ordering",
+      }).graph;
+      const graph = structuredClone({
+        ...source,
+        page: {
+          pages: [source.page.pages[0]!],
+          navigation: [source.page.navigation[0]!],
+        },
+      });
+      mutate(graph);
+
+      expect(() =>
+        generateApplicationBundle({
+          publishedRevisionId: "invalid-catalog-commerce-1",
+          graph,
+        }),
+      ).toThrow(message);
+    },
+  );
+
+  it("rejects checkout before returning files when its order flow lacks simulated payment", () => {
+    const graph = structuredClone(
+      composeProfileDraft({ profile: "simple-ecommerce" }).graph,
+    );
+    graph.flow.flows = graph.flow.flows.map((flow) =>
+      flow.entity === "order"
+        ? {
+            ...flow,
+            transitions: flow.transitions.map((transition) => ({
+              ...transition,
+              effects: (transition.effects ?? []).filter(
+                (effect) => effect.capability !== "payment.simulate",
+              ),
+            })),
+          }
+        : flow,
+    );
+
+    expect(() =>
+      generateApplicationBundle({
+        publishedRevisionId: "invalid-checkout-payment-1",
+        graph,
+      }),
+    ).toThrow(
+      "Checkout PageModel blocks require an 'order' FlowModel transition with Factory effect 'payment.simulate' and operation 'simulate'.",
+    );
+  });
+
+  it("rejects reserved generated Next routes before returning files", () => {
+    for (const route of [
+      "/api",
+      "/api/orders",
+      "/_next",
+      "/_next/static/chunk.js",
+      "/favicon.ico",
+    ]) {
+      const graph = profileGraph("restaurant-ordering");
+      graph.page.pages[0]!.route = route;
+
+      expect(() =>
+        generateApplicationBundle({
+          publishedRevisionId: `reserved-route-${route.replaceAll("/", "-")}`,
+          graph,
+        }),
+      ).toThrow(
+        `PageModel route '${route}' is reserved by the generated Next application.`,
+      );
+    }
   });
 
   it("preconfigures generated Next projects so a build does not rewrite their TypeScript contract", () => {

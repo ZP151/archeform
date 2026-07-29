@@ -22,6 +22,7 @@ export {
   generatedPageRuntimeBlockTypes,
   type GeneratedPageRuntimeBlockTypeV1,
   type GeneratedPageRuntimeBlockV1,
+  type GeneratedPageRuntimeCommerceV1,
   type GeneratedPageRuntimeNavigationV1,
   type GeneratedPageRuntimePageV1,
   type GeneratedPageRuntimeProjectionV1,
@@ -1357,26 +1358,6 @@ function renderFaviconRoute(): string {
 
 function renderPageRuntime(graph: ApplicationGraphV1): string {
   const projection = createGeneratedPageRuntimeProjection(graph);
-  const paymentTransition = graph.flow.flows
-    .flatMap((flow) =>
-      flow.transitions.map((transition) => ({
-        entity: flow.entity,
-        event: transition.event,
-        effects: transition.effects ?? [],
-      })),
-    )
-    .find((transition) =>
-      transition.effects.some(
-        (effect) =>
-          effect.capability === "payment.simulate" &&
-          effect.operation === "simulate",
-      ),
-    );
-  const declaredOrderEntity = projection.pages
-    .flatMap((page) => page.blocks)
-    .find(
-      (block) => block.type === "cart" || block.type === "checkout",
-    )?.entity;
   const runtimeDefinition = {
     applicationName: graph.metadata.name,
     themeMode: graph.experience.theme.mode,
@@ -1398,10 +1379,7 @@ function renderPageRuntime(graph: ApplicationGraphV1): string {
         })),
       })),
     },
-    commerce: {
-      orderEntity: declaredOrderEntity ?? paymentTransition?.entity ?? null,
-      paymentEvent: paymentTransition?.event ?? null,
-    },
+    commerce: projection.commerce,
   };
   const serializedProjection = JSON.stringify(projection, null, 2).replaceAll(
     "<",
@@ -1420,7 +1398,7 @@ function renderPageRuntime(graph: ApplicationGraphV1): string {
     "",
     "type JsonRecord = Record<string, unknown>;",
     "type PageRuntimeBlock = { readonly id: string; readonly type: 'hero' | 'form' | 'collection' | 'catalog' | 'cart' | 'queue' | 'checkout'; readonly entity?: string; readonly props: Readonly<Record<string, string>> };",
-    "type PageRuntimeProjection = { readonly apiVersion: 'factory.generated-page-runtime/v1'; readonly applicationName: string; readonly themeMode: 'light' | 'dark' | 'system'; readonly pages: readonly { readonly id: string; readonly route: string; readonly title: string; readonly blocks: readonly PageRuntimeBlock[] }[]; readonly navigation: readonly { readonly id: string; readonly label: string; readonly route: string }[]; readonly routeFallback: { readonly rootRoute: string | null; readonly unknownRoute: 'not-found' } };",
+    "type PageRuntimeProjection = { readonly apiVersion: 'factory.generated-page-runtime/v1'; readonly applicationName: string; readonly themeMode: 'light' | 'dark' | 'system'; readonly pages: readonly { readonly id: string; readonly route: string; readonly title: string; readonly blocks: readonly PageRuntimeBlock[] }[]; readonly navigation: readonly { readonly id: string; readonly label: string; readonly route: string }[]; readonly routeFallback: { readonly rootRoute: string | null; readonly unknownRoute: 'not-found' }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null } };",
     "type RuntimeEntity = { readonly key: string; readonly label: string; readonly fields: readonly { readonly key: string; readonly required: boolean }[] };",
     "type RuntimeDefinition = { readonly applicationName: string; readonly themeMode: 'light' | 'dark' | 'system'; readonly entities: readonly RuntimeEntity[]; readonly policy: { readonly roles: readonly string[]; readonly permissions: readonly { readonly role: string; readonly resource: string; readonly actions: readonly string[] }[] }; readonly flow: { readonly flows: readonly { readonly entity: string; readonly transitions: readonly { readonly event: string; readonly roles: readonly string[] }[] }[] }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null } };",
     "type BlockContext = { readonly role: string; readonly formRouteByEntity: Readonly<Record<string, string>>; readonly cartItems: readonly JsonRecord[]; readonly cartId: string | null; readonly reportError: (reason: unknown) => void; readonly addToCart: (catalogEntity: string, catalogRecordId: string) => Promise<void>; readonly checkoutCart: () => Promise<void> };",

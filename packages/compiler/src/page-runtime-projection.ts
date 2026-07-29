@@ -45,6 +45,11 @@ export interface GeneratedPageRuntimeRouteFallbackV1 {
   readonly unknownRoute: "not-found";
 }
 
+export interface GeneratedPageRuntimeCommerceV1 {
+  readonly orderEntity: string | null;
+  readonly paymentEvent: string | null;
+}
+
 export interface GeneratedPageRuntimeProjectionV1 {
   readonly apiVersion: typeof generatedPageRuntimeApiVersion;
   readonly applicationName: string;
@@ -52,6 +57,7 @@ export interface GeneratedPageRuntimeProjectionV1 {
   readonly pages: readonly GeneratedPageRuntimePageV1[];
   readonly navigation: readonly GeneratedPageRuntimeNavigationV1[];
   readonly routeFallback: GeneratedPageRuntimeRouteFallbackV1;
+  readonly commerce: GeneratedPageRuntimeCommerceV1;
 }
 
 type PageBlock = ApplicationGraphV1["page"]["pages"][number]["blocks"][number];
@@ -66,6 +72,12 @@ const entityBoundBlockTypes = new Set<GeneratedPageRuntimeBlockTypeV1>([
 ]);
 
 const orderEntityBlockTypes = new Set<GeneratedPageRuntimeBlockTypeV1>([
+  "cart",
+  "checkout",
+]);
+
+const interactiveCommerceBlockTypes = new Set<GeneratedPageRuntimeBlockTypeV1>([
+  "catalog",
   "cart",
   "checkout",
 ]);
@@ -136,6 +148,77 @@ function assertCanonicalLocalRoute(route: string): void {
       `PageModel route '${route}' must be a canonical local route.`,
     );
   }
+  if (
+    route === "/api" ||
+    route.startsWith("/api/") ||
+    route === "/_next" ||
+    route.startsWith("/_next/") ||
+    route === "/favicon.ico"
+  ) {
+    throw new Error(
+      `PageModel route '${route}' is reserved by the generated Next application.`,
+    );
+  }
+}
+
+function resolveCommerceRuntime(
+  graph: ApplicationGraphV1,
+  factoryCapabilities: readonly ApplicationGraphV1["integration"]["capabilities"][number][],
+): GeneratedPageRuntimeCommerceV1 {
+  const commerceBlocks = graph.page.pages.flatMap((page) =>
+    page.blocks.filter(
+      (block): block is PageBlock & { type: GeneratedPageRuntimeBlockTypeV1 } =>
+        interactiveCommerceBlockTypes.has(
+          block.type as GeneratedPageRuntimeBlockTypeV1,
+        ),
+    ),
+  );
+  if (commerceBlocks.length === 0) {
+    return { orderEntity: null, paymentEvent: null };
+  }
+
+  if (
+    !factoryCapabilities.some(
+      (capability) =>
+        capability.key === "cart.add" && capability.operation === "add",
+    )
+  ) {
+    throw new Error(
+      "Interactive commerce PageModel blocks require Factory capability 'cart.add' with operation 'add'.",
+    );
+  }
+
+  if (!graph.domain.entities.some((entity) => entity.key === "order")) {
+    throw new Error(
+      "Interactive commerce PageModel blocks require declared DomainModel entity 'order'.",
+    );
+  }
+
+  const orderFlow = graph.flow.flows.find((flow) => flow.entity === "order");
+  if (!orderFlow) {
+    throw new Error(
+      "Interactive commerce PageModel blocks require a FlowModel for entity 'order'.",
+    );
+  }
+
+  const hasCheckout = commerceBlocks.some((block) => block.type === "checkout");
+  const paymentTransition = orderFlow.transitions.find((transition) =>
+    (transition.effects ?? []).some(
+      (effect) =>
+        effect.capability === "payment.simulate" &&
+        effect.operation === "simulate",
+    ),
+  );
+  if (hasCheckout && !paymentTransition) {
+    throw new Error(
+      "Checkout PageModel blocks require an 'order' FlowModel transition with Factory effect 'payment.simulate' and operation 'simulate'.",
+    );
+  }
+
+  return {
+    orderEntity: "order",
+    paymentEvent: paymentTransition?.event ?? null,
+  };
 }
 
 function projectBlock(
@@ -190,6 +273,7 @@ export function createGeneratedPageRuntimeProjection(
   const factoryCapabilities = graph.integration.capabilities.filter(
     (capability) => capability.providerId === "factory",
   );
+  const commerce = resolveCommerceRuntime(graph, factoryCapabilities);
   const pages = graph.page.pages.map((page) => {
     assertCanonicalLocalRoute(page.route);
     return {
@@ -224,5 +308,6 @@ export function createGeneratedPageRuntimeProjection(
         null,
       unknownRoute: "not-found",
     },
+    commerce,
   };
 }
