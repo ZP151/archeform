@@ -231,11 +231,27 @@ function previewReadyEvidence(input: unknown) {
 
 function previewFailedEvidence(input: unknown) {
   const body = exactRecord(input, ["diagnostic"], ["diagnostic"]);
-  const diagnostic = requiredString(body, "diagnostic");
-  if (diagnostic.length > 500) {
-    throw new BadRequestException("diagnostic must not exceed 500 characters.");
+  const diagnosticCode = requiredString(body, "diagnostic");
+  const messages: Record<string, string> = {
+    preview_start_failed: "Preview startup failed.",
+    preview_stop_failed: "Preview cleanup failed.",
+    preview_health_check_failed: "Preview health check failed.",
+  };
+  const diagnostic = messages[diagnosticCode];
+  if (!diagnostic) {
+    throw new BadRequestException(
+      "diagnostic must be a supported failure code.",
+    );
   }
   return { diagnostic };
+}
+
+function uniqueConstraint(error: unknown): boolean {
+  return (
+    !!error &&
+    typeof error === "object" &&
+    (error as { code?: unknown }).code === "P2002"
+  );
 }
 
 function jsonValue(value: unknown, key: string): Prisma.InputJsonValue {
@@ -634,22 +650,43 @@ export class LifecycleService {
       })) + 1;
     const previewRunId = `preview-${randomUUID()}`;
     const composeProjectName = `factory-preview-${previewRunId}`;
-    const preview = await this.prisma.previewRun.create({
-      data: {
-        id: previewRunId,
+    let preview;
+    try {
+      preview = await this.prisma.previewRun.create({
+        data: {
+          id: previewRunId,
+          compilationId: id,
+          activeKey: id,
+          sequence,
+          composeProjectName,
+          status: "starting",
+        },
+      });
+    } catch (error) {
+      if (!uniqueConstraint(error)) throw error;
+      const winner = await this.prisma.previewRun.findFirst({
+        where: { compilationId: id },
+        orderBy: { sequence: "desc" },
+      });
+      if (winner?.status === "starting" || winner?.status === "ready") {
+        return winner;
+      }
+      throw new ConflictException("Preview run creation conflicted.");
+    }
+    try {
+      await this.previewRunQueue.enqueue({
+        action: "start",
+        previewRunId: preview.id,
         compilationId: id,
-        sequence,
-        composeProjectName,
-        status: "starting",
-      },
-    });
-    await this.previewRunQueue.enqueue({
-      action: "start",
-      previewRunId: preview.id,
-      compilationId: id,
-      rootDirectory,
-      composeProjectName: preview.composeProjectName,
-    });
+        rootDirectory,
+        composeProjectName: preview.composeProjectName,
+      });
+    } catch (error) {
+      await this.prisma.previewRun.deleteMany({
+        where: { id: preview.id, status: "starting" },
+      });
+      throw error;
+    }
     return preview;
   }
 
@@ -683,18 +720,35 @@ export class LifecycleService {
     const rootDirectory = this.previewRootDirectory(
       preview.compilation.artifacts,
     );
-    const stopping = await this.prisma.previewRun.update({
-      where: { id },
+    const transitioned = await this.prisma.previewRun.updateMany({
+      where: { id, status: preview.status },
       data: { status: "stopping" },
     });
-    await this.previewRunQueue.enqueue({
-      action: "stop",
-      previewRunId: id,
-      compilationId: preview.compilationId,
-      rootDirectory,
-      composeProjectName: preview.composeProjectName,
-    });
-    return stopping;
+    if (transitioned.count !== 1) {
+      const current = await this.prisma.previewRun.findUnique({
+        where: { id },
+      });
+      if (current?.status === "stopping" || current?.status === "stopped") {
+        return current;
+      }
+      throw new ConflictException("Preview run stop conflicted.");
+    }
+    try {
+      await this.previewRunQueue.enqueue({
+        action: "stop",
+        previewRunId: id,
+        compilationId: preview.compilationId,
+        rootDirectory,
+        composeProjectName: preview.composeProjectName,
+      });
+    } catch (error) {
+      await this.prisma.previewRun.updateMany({
+        where: { id, status: "stopping" },
+        data: { status: preview.status },
+      });
+      throw error;
+    }
+    return { ...preview, status: "stopping" };
   }
 
   async reportPreviewReady(previewRunId: string, input: unknown) {
@@ -707,10 +761,14 @@ export class LifecycleService {
         "Preview run is not awaiting start evidence.",
       );
     }
-    return this.prisma.previewRun.update({
-      where: { id },
+    const transitioned = await this.prisma.previewRun.updateMany({
+      where: { id, status: "starting" },
       data: { status: "ready", ...evidence },
     });
+    if (transitioned.count !== 1) {
+      throw new ConflictException("Preview run start evidence conflicted.");
+    }
+    return { ...preview, status: "ready", ...evidence };
   }
 
   async reportPreviewFailed(previewRunId: string, input: unknown) {
@@ -723,10 +781,14 @@ export class LifecycleService {
         "Preview run cannot accept failure evidence.",
       );
     }
-    return this.prisma.previewRun.update({
-      where: { id },
+    const transitioned = await this.prisma.previewRun.updateMany({
+      where: { id, status: preview.status },
       data: { status: "failed", ...evidence },
     });
+    if (transitioned.count !== 1) {
+      throw new ConflictException("Preview run failure evidence conflicted.");
+    }
+    return { ...preview, status: "failed", ...evidence };
   }
 
   async reportPreviewStopped(previewRunId: string) {
@@ -736,10 +798,14 @@ export class LifecycleService {
     if (preview.status !== "stopping") {
       throw new ConflictException("Preview run is not awaiting stop evidence.");
     }
-    return this.prisma.previewRun.update({
-      where: { id },
-      data: { status: "stopped" },
+    const transitioned = await this.prisma.previewRun.updateMany({
+      where: { id, status: "stopping" },
+      data: { status: "stopped", activeKey: null },
     });
+    if (transitioned.count !== 1) {
+      throw new ConflictException("Preview run stop evidence conflicted.");
+    }
+    return { ...preview, status: "stopped", activeKey: null };
   }
 
   private previewRootDirectory(

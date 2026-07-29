@@ -71,6 +71,11 @@ describe("control-plane lifecycle schema", () => {
       type: "Int",
       isRequired: true,
     });
+    expect(field("PreviewRun", "activeKey")).toMatchObject({
+      type: "String",
+      isRequired: false,
+      isUnique: true,
+    });
     expect(field("PreviewRun", "composeProjectName")).toMatchObject({
       type: "String",
       isRequired: true,

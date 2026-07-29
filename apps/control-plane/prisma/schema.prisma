@@ -92,6 +92,7 @@ model Compilation {
 model PreviewRun {
   id                 String      @id
   compilationId      String
+  activeKey          String?     @unique
   sequence           Int
   composeProjectName String      @unique
   webPort            Int?

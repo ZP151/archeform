@@ -43,6 +43,8 @@ function prismaMock() {
       findFirst: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
+      deleteMany: vi.fn(),
     },
   };
 }
@@ -738,10 +740,7 @@ describe("LifecycleService", () => {
       compilationId: "compilation-succeeded",
       composeProjectName: "factory-preview-preview-1",
     });
-    prisma.previewRun.update.mockResolvedValue({
-      id: "preview-1",
-      status: "ready",
-    });
+    prisma.previewRun.updateMany.mockResolvedValue({ count: 1 });
 
     await expect(
       service.reportPreviewReady("preview-1", {
@@ -749,9 +748,9 @@ describe("LifecycleService", () => {
         apiPort: 43102,
         previewUrl: "http://127.0.0.1:43101",
       }),
-    ).resolves.toEqual({ id: "preview-1", status: "ready" });
-    expect(prisma.previewRun.update).toHaveBeenCalledWith({
-      where: { id: "preview-1" },
+    ).resolves.toMatchObject({ id: "preview-1", status: "ready" });
+    expect(prisma.previewRun.updateMany).toHaveBeenCalledWith({
+      where: { id: "preview-1", status: "starting" },
       data: {
         status: "ready",
         webPort: 43101,
@@ -776,18 +775,24 @@ describe("LifecycleService", () => {
       id: "preview-1",
       status: "starting",
     });
-    prisma.previewRun.update.mockResolvedValue({
-      id: "preview-1",
-      status: "failed",
-    });
+    prisma.previewRun.updateMany.mockResolvedValue({ count: 1 });
+    prisma.previewRun.findUnique
+      .mockResolvedValueOnce({
+        id: "preview-1",
+        status: "starting",
+      })
+      .mockResolvedValueOnce({
+        id: "preview-1",
+        status: "failed",
+      });
 
     await expect(
       service.reportPreviewFailed("preview-1", {
-        diagnostic: "Preview startup failed.",
+        diagnostic: "preview_start_failed",
       }),
-    ).resolves.toEqual({ id: "preview-1", status: "failed" });
-    expect(prisma.previewRun.update).toHaveBeenCalledWith({
-      where: { id: "preview-1" },
+    ).resolves.toMatchObject({ id: "preview-1", status: "failed" });
+    expect(prisma.previewRun.updateMany).toHaveBeenCalledWith({
+      where: { id: "preview-1", status: "starting" },
       data: { status: "failed", diagnostic: "Preview startup failed." },
     });
   });
@@ -797,18 +802,132 @@ describe("LifecycleService", () => {
       id: "preview-1",
       status: "stopping",
     });
-    prisma.previewRun.update.mockResolvedValue({
+    prisma.previewRun.updateMany.mockResolvedValue({ count: 1 });
+    prisma.previewRun.findUnique
+      .mockResolvedValueOnce({
+        id: "preview-1",
+        status: "stopping",
+      })
+      .mockResolvedValueOnce({
+        id: "preview-1",
+        status: "stopped",
+      });
+
+    await expect(
+      service.reportPreviewStopped("preview-1"),
+    ).resolves.toMatchObject({
       id: "preview-1",
       status: "stopped",
+    });
+    expect(prisma.previewRun.updateMany).toHaveBeenCalledWith({
+      where: { id: "preview-1", status: "stopping" },
+      data: { status: "stopped", activeKey: null },
+    });
+  });
+
+  it("rejects arbitrary failure text and never persists source or credential-looking content", async () => {
+    const diagnostic = "docker compose --env-file .env API_TOKEN=not-safe";
+
+    await expect(
+      service.reportPreviewFailed("preview-1", { diagnostic }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.previewRun.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("compensates a failed start enqueue so a retry creates a new run", async () => {
+    prisma.compilation.findUnique.mockResolvedValue({
+      id: "compilation-succeeded",
+      result: { status: "succeeded" },
+      artifacts: [
+        { metadata: { rootDirectory: "expense-approval-published-1" } },
+      ],
+    });
+    prisma.previewRun.count.mockResolvedValue(0);
+    prisma.previewRun.create.mockImplementation(async ({ data }) => data);
+    previewQueue.enqueue.mockRejectedValueOnce(new Error("Redis unavailable"));
+    prisma.previewRun.updateMany.mockResolvedValue({ count: 1 });
+
+    await expect(
+      service.createPreviewRun("compilation-succeeded"),
+    ).rejects.toThrow("Redis unavailable");
+    expect(prisma.previewRun.deleteMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ status: "starting" }),
+      }),
+    );
+
+    prisma.previewRun.create.mockImplementation(async ({ data }) => data);
+    await expect(
+      service.createPreviewRun("compilation-succeeded"),
+    ).resolves.toMatchObject({
+      status: "starting",
+    });
+  });
+
+  it("compensates a failed stop enqueue back to ready so a retry can enqueue", async () => {
+    const current = {
+      id: "preview-1",
+      status: "ready",
+      compilationId: "compilation-succeeded",
+      composeProjectName: "factory-preview-preview-1",
+      compilation: {
+        artifacts: [
+          { metadata: { rootDirectory: "expense-approval-published-1" } },
+        ],
+      },
+    };
+    prisma.previewRun.findUnique.mockResolvedValue(current);
+    prisma.previewRun.updateMany.mockResolvedValue({ count: 1 });
+    previewQueue.enqueue.mockRejectedValueOnce(new Error("Redis unavailable"));
+
+    await expect(service.stopPreviewRun("preview-1")).rejects.toThrow(
+      "Redis unavailable",
+    );
+    expect(prisma.previewRun.updateMany).toHaveBeenLastCalledWith({
+      where: { id: "preview-1", status: "stopping" },
+      data: { status: "ready" },
     });
 
-    await expect(service.reportPreviewStopped("preview-1")).resolves.toEqual({
+    await expect(service.stopPreviewRun("preview-1")).resolves.toMatchObject({
+      status: "stopping",
+    });
+    expect(previewQueue.enqueue).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns the winning current run when concurrent start creation loses the sequence race", async () => {
+    prisma.compilation.findUnique.mockResolvedValue({
+      id: "compilation-succeeded",
+      result: { status: "succeeded" },
+      artifacts: [
+        { metadata: { rootDirectory: "expense-approval-published-1" } },
+      ],
+    });
+    prisma.previewRun.count.mockResolvedValue(0);
+    prisma.previewRun.create.mockRejectedValue({ code: "P2002" });
+    const winner = { id: "preview-winner", status: "starting" };
+    prisma.previewRun.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(winner);
+
+    await expect(
+      service.createPreviewRun("compilation-succeeded"),
+    ).resolves.toEqual(winner);
+    expect(previewQueue.enqueue).not.toHaveBeenCalled();
+  });
+
+  it("rejects a stale ready callback when its conditional transition loses a race", async () => {
+    prisma.previewRun.findUnique.mockResolvedValue({
       id: "preview-1",
-      status: "stopped",
+      status: "starting",
     });
-    expect(prisma.previewRun.update).toHaveBeenCalledWith({
-      where: { id: "preview-1" },
-      data: { status: "stopped" },
-    });
+    prisma.previewRun.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(
+      service.reportPreviewReady("preview-1", {
+        webPort: 43101,
+        apiPort: 43102,
+        previewUrl: "http://127.0.0.1:43101",
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 });
