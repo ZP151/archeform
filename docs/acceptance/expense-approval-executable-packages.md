@@ -26,22 +26,22 @@ Expense API rather than a source-level mock.
 
 The materialized Graph used the current exact Golden manifest locks:
 
-| Package | Version | Manifest digest |
-| --- | --- | --- |
-| `core.crud` | `1.0.1` | `sha256:3bdeb98b04633b531d4f43a82caff8027b247b54bbb2b43a00874d52bb79e714` |
-| `core.workflow` | `1.0.1` | `sha256:04ecbfceff872ed4c4f73467568bce657ad326faaa0546b09c1bbe1f7860cb44` |
-| `core.audit` | `1.0.1` | `sha256:54da93b37e3a2140d4de14b7acd0579d60b35d6f8a7cb258c1c0f8aef6c27694` |
+| Package             | Version | Manifest digest                                                           |
+| ------------------- | ------- | ------------------------------------------------------------------------- |
+| `core.crud`         | `1.0.1` | `sha256:3bdeb98b04633b531d4f43a82caff8027b247b54bbb2b43a00874d52bb79e714` |
+| `core.workflow`     | `1.0.1` | `sha256:04ecbfceff872ed4c4f73467568bce657ad326faaa0546b09c1bbe1f7860cb44` |
+| `core.audit`        | `1.0.1` | `sha256:54da93b37e3a2140d4de14b7acd0579d60b35d6f8a7cb258c1c0f8aef6c27694` |
 | `core.notification` | `1.0.1` | `sha256:9ff11a37cbc2255d0efe5586ffc1a25bbd879dcef3af76e6854f15f83a30a489` |
 
 Its immutable `capability-template-lock.json` has schema
 `factory.capability-template-lock/v1` and exactly these API module entries:
 
-| Locked Golden package | Version | Template digest | Generated target |
-| --- | --- | --- | --- |
-| `core.crud` | `1.0.1` | `sha256:5e1bcc06560ccdd1062c786618a883de6df9234d2134c89361b3adaab0700955` | `api/src/capabilities/core.crud.ts` |
-| `core.workflow` | `1.0.1` | `sha256:209d5d649840437f334ac53aa593634c9cdb8fbfe5cc7525ed96f80ac91947bb` | `api/src/capabilities/core.workflow.ts` |
-| `core.audit` | `1.0.1` | `sha256:9bb2507b6d1e72605a9782257a6dd3e2cee130273391b331534005bb78c3a71f` | `api/src/capabilities/core.audit.ts` |
-| `core.notification` | `1.0.1` | `sha256:b9a745255d242339486fff29d6f7abd3f751e36df3e348f896956a31c6b53266` | `api/src/capabilities/core.notification.ts` |
+| Locked Golden package | Version | Template digest                                                           | Generated target                            |
+| --------------------- | ------- | ------------------------------------------------------------------------- | ------------------------------------------- |
+| `core.crud`           | `1.0.1` | `sha256:5e1bcc06560ccdd1062c786618a883de6df9234d2134c89361b3adaab0700955` | `api/src/capabilities/core.crud.ts`         |
+| `core.workflow`       | `1.0.1` | `sha256:209d5d649840437f334ac53aa593634c9cdb8fbfe5cc7525ed96f80ac91947bb` | `api/src/capabilities/core.workflow.ts`     |
+| `core.audit`          | `1.0.1` | `sha256:9bb2507b6d1e72605a9782257a6dd3e2cee130273391b331534005bb78c3a71f` | `api/src/capabilities/core.audit.ts`        |
+| `core.notification`   | `1.0.1` | `sha256:b9a745255d242339486fff29d6f7abd3f751e36df3e348f896956a31c6b53266` | `api/src/capabilities/core.notification.ts` |
 
 The generated `1.0.1` API is in `package-handlers-v1` mode: it imports and
 dispatches to package-local record, workflow, and effect handlers. The exact
@@ -66,12 +66,12 @@ Compiler regressions cover the boundary: mixed handler-backed `1.0.0` and
 A fresh named Docker Compose project,
 `factory-pilot-executable-expense-e2e`, used only these dedicated ports:
 
-| Service | Port |
-| --- | --- |
-| PostgreSQL | `15434` |
-| Redis | `16381` |
+| Service       | Port    |
+| ------------- | ------- |
+| PostgreSQL    | `15434` |
+| Redis         | `16381` |
 | Control Plane | `15302` |
-| Workbench | `15179` |
+| Workbench     | `15179` |
 
 The final readiness protocol required both `http://127.0.0.1:15179` and
 `http://127.0.0.1:15302/health` to return `200` before executing:
