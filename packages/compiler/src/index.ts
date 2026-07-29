@@ -579,8 +579,8 @@ function renderPrismaSchema(graph: ApplicationGraphV1): string {
       }
       if (entityKey === manyKey) {
         return [
-          `  ${oneField}Id String${oneToOne ? " @unique" : ""}`,
-          `  ${oneField} ${oneModel} @relation("${relationName}", fields: [${oneField}Id], references: [id])`,
+          `  ${oneField}Id String?${oneToOne ? " @unique" : ""}`,
+          `  ${oneField} ${oneModel}? @relation("${relationName}", fields: [${oneField}Id], references: [id])`,
         ];
       }
       return [];
@@ -698,7 +698,7 @@ function relationColumnDefinitions(
     if (entityKey !== manyKey) return [];
     const column = `${toCamelCase(oneKey)}Id`;
     return [
-      `${quoteSqlIdentifier(column)} TEXT NOT NULL${relation.kind === "one-to-one" ? " UNIQUE" : ""}`,
+      `${quoteSqlIdentifier(column)} TEXT${relation.kind === "one-to-one" ? " UNIQUE" : ""}`,
     ];
   });
 }

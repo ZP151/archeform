@@ -1344,6 +1344,37 @@ describe("compilation target registry", () => {
     );
   });
 
+  it("compiles undeclared relation requiredness as an optional foreign key", () => {
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "published-optional-relation-1",
+        graph: {
+          ...publishedExpense.graph,
+          domain: {
+            entities: [
+              { key: "journey", label: "Journey", fields: [], indexes: [] },
+              { key: "expense", label: "Expense", fields: [], indexes: [] },
+            ],
+            relations: [
+              { from: "journey", to: "expense", kind: "one-to-many" },
+            ],
+          },
+        },
+      }).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(files["api/prisma/schema.prisma"]).toContain("journeyId String?");
+    expect(files["api/prisma/schema.prisma"]).toContain(
+      'journey Journey? @relation("JourneyToExpense", fields: [journeyId], references: [id])',
+    );
+    expect(
+      files["database/prisma/migrations/0001_initial/migration.sql"],
+    ).toContain('"journeyId" TEXT');
+    expect(
+      files["database/prisma/migrations/0001_initial/migration.sql"],
+    ).not.toContain('"journeyId" TEXT NOT NULL');
+  });
+
   it("generates a role-guarded record runtime, XState machines, and an executable journey", () => {
     const input: PublishedGraphInput = {
       publishedRevisionId: "published-expense-runtime-1",
