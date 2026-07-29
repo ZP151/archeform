@@ -8,7 +8,7 @@
       "source": "templates/api/capability-module.ts.tpl",
       "target": "api/src/capabilities/core.notification.ts",
       "outputSlot": "api.runtime",
-      "digest": "sha256:b9a745255d242339486fff29d6f7abd3f751e36df3e348f896956a31c6b53266"
+      "digest": "sha256:8ced82a4c3db325ab13c454b081a3f81add5e8bb3f341d51474e04d69e42a06b"
     }
   ],
   "contributes": { "effects": ["notification.send"] },

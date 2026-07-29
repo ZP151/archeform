@@ -1,22 +1,6 @@
-import type { CapabilityRuntimeModule } from "./contract.js";
-
-export const capabilityModule: CapabilityRuntimeModule & {
-  readonly version: string;
-  readonly applicationId: string;
-} = {
+export const capabilityModule = {
   key: "{{asset.key}}",
   version: "{{asset.version}}",
   applicationId: "{{graph.metadata.id}}",
   effects: {{asset.effectsJson}},
-  effectHandler: async ({ role, entityKey, recordId, operation, store, now }) => {
-    await store.appendCapabilityEvent({
-      actor: role,
-      capability: "notification.send",
-      operation,
-      entity: entityKey,
-      recordId,
-      outcome: "completed",
-      at: now,
-    });
-  },
-};
+} as const;

@@ -1,0 +1,37 @@
+import type { CapabilityAssetV1 } from "../contract.js";
+
+export const simulatedPaymentAssetV1_0_1: CapabilityAssetV1 = {
+  manifest: {
+    apiVersion: "factory.capability/v1",
+    key: "commerce.simulated-payment",
+    version: "1.0.1",
+    category: "commerce",
+    name: "Simulated payment",
+    description:
+      "Confirms a deterministic, credential-free payment simulation.",
+    packageRoot:
+      "packages/capabilities/assets/commerce.simulated-payment/1.0.1",
+    manifestDigest:
+      "sha256:277e5bf9d54e94203074f934211901ebb780b14316e86b8a990353be2ac61b50",
+    lifecycle: "golden",
+    profiles: ["restaurant-ordering", "simple-ecommerce"],
+    effects: ["payment.simulate"],
+    inputSchema: [{ key: "currency", type: "currency.code", required: false }],
+    outputSlots: ["api.runtime", "flow.effect", "test.fixture"],
+    templates: [
+      {
+        id: "api-capability-module",
+        source: "templates/api/capability-module.ts.tpl",
+        target: "api/src/capabilities/commerce.simulated-payment.ts",
+        outputSlot: "api.runtime",
+        digest:
+          "sha256:33a173be2367de708d6b1ed8e43d58e5ed8ff4d4250966c326016bb821236a44",
+      },
+    ],
+    verification: {
+      fixture: "fixtures/default.json",
+      contractTest: "tests/contract.json",
+      status: "verified",
+    },
+  },
+};

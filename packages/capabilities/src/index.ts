@@ -9,12 +9,17 @@ import {
   cartAsset,
   catalogAsset,
   crudAsset,
+  crudAssetV1_0_1,
   inventoryAsset,
+  inventoryAssetV1_0_1,
   lockCapabilityAsset,
   notificationAsset,
+  notificationAssetV1_0_1,
   orderAsset,
   simulatedPaymentAsset,
+  simulatedPaymentAssetV1_0_1,
   workflowAsset,
+  workflowAssetV1_0_1,
   type CapabilityAssetV1,
   type CapabilityAssetLockV1,
   type CapabilityCategory,
@@ -39,19 +44,24 @@ export interface CapabilityDefinition {
 
 const currentCapabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
   auditAssetV1_0_1,
-  crudAsset,
-  notificationAsset,
-  workflowAsset,
+  crudAssetV1_0_1,
+  notificationAssetV1_0_1,
+  workflowAssetV1_0_1,
   catalogAsset,
   cartAsset,
-  inventoryAsset,
+  inventoryAssetV1_0_1,
   orderAsset,
-  simulatedPaymentAsset,
+  simulatedPaymentAssetV1_0_1,
 ]);
 
 export const capabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
   ...currentCapabilityAssets,
   auditAsset,
+  crudAsset,
+  notificationAsset,
+  workflowAsset,
+  inventoryAsset,
+  simulatedPaymentAsset,
 ]);
 
 const definitionFor = (asset: CapabilityAssetV1): CapabilityDefinition => ({

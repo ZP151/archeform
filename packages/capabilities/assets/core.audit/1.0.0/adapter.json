@@ -8,7 +8,7 @@
       "source": "templates/api/capability-module.ts.tpl",
       "target": "api/src/capabilities/core.audit.ts",
       "outputSlot": "api.runtime",
-      "digest": "sha256:883eb54bad1d3a0e9da7542e8a342231f3d1ab8f7d9e4824d9aacb530268447f"
+      "digest": "sha256:8ced82a4c3db325ab13c454b081a3f81add5e8bb3f341d51474e04d69e42a06b"
     }
   ],
   "contributes": { "effects": ["audit.record"] },

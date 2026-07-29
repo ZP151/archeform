@@ -35,6 +35,58 @@ const simpleEcommerceAssetLocks = composeProfileDraft({
   profile: "simple-ecommerce",
 }).assetLocks;
 
+const historicalExecutableLocks = [
+  {
+    key: "core.audit",
+    version: "1.0.0",
+    packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
+    manifestDigest:
+      "sha256:fe69596d29f87db7e491eeb5c77160dc800669fbc49eb6572deaf2ecc65f55d3",
+    lifecycle: "golden" as const,
+  },
+  {
+    key: "core.crud",
+    version: "1.0.0",
+    packageRoot: "packages/capabilities/assets/core.crud/1.0.0",
+    manifestDigest:
+      "sha256:69bad8aab8bf23fe3820bba3d6fcf12e39c17399ae98390910f61e0792e8dfb7",
+    lifecycle: "golden" as const,
+  },
+  {
+    key: "core.notification",
+    version: "1.0.0",
+    packageRoot: "packages/capabilities/assets/core.notification/1.0.0",
+    manifestDigest:
+      "sha256:25eaacb88682dffeb80340ad7dcdd0dc78a49dfcd1eaf1f2bd0a0618750a67b2",
+    lifecycle: "golden" as const,
+  },
+  {
+    key: "core.workflow",
+    version: "1.0.0",
+    packageRoot: "packages/capabilities/assets/core.workflow/1.0.0",
+    manifestDigest:
+      "sha256:a16fc83805e0e6b2468b93241374f790ac23b024cee1e8b4a1d54020b93fbd75",
+    lifecycle: "golden" as const,
+  },
+  {
+    key: "commerce.inventory",
+    version: "1.0.0",
+    packageRoot: "packages/capabilities/assets/commerce.inventory/1.0.0",
+    manifestDigest:
+      "sha256:b503c3ce6ad627a09ec22d26b9a5cd675bfd3e04c6b0f45f9e02a72c5eba5de8",
+    lifecycle: "golden" as const,
+  },
+  {
+    key: "commerce.simulated-payment",
+    version: "1.0.0",
+    packageRoot:
+      "packages/capabilities/assets/commerce.simulated-payment/1.0.0",
+    manifestDigest:
+      "sha256:0dff9794484428c760b0113c543891e3df87cd73f8082c4e15958f88e2b80981",
+    lifecycle: "golden" as const,
+  },
+] as const;
+
 describe("compilation target registry", () => {
   it("defines the complete initial target set", () => {
     expect(compilationTargets.map((target) => target.key)).toEqual([
@@ -127,7 +179,7 @@ describe("compilation target registry", () => {
         version: "1.0.0",
         packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
         manifestDigest:
-          "sha256:6eab1ec3580703b32f236b9ba6c191318a442acb7b70b8550aa51370444526a8",
+          "sha256:fe69596d29f87db7e491eeb5c77160dc800669fbc49eb6572deaf2ecc65f55d3",
         lifecycle: "golden",
       },
     ];
@@ -162,7 +214,7 @@ describe("compilation target registry", () => {
           version: "1.0.0",
           packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
           manifestDigest:
-            "sha256:6eab1ec3580703b32f236b9ba6c191318a442acb7b70b8550aa51370444526a8",
+            "sha256:fe69596d29f87db7e491eeb5c77160dc800669fbc49eb6572deaf2ecc65f55d3",
           lifecycle: "golden",
         },
       ],
@@ -232,7 +284,7 @@ describe("compilation target registry", () => {
           version: "1.0.0",
           packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
           manifestDigest:
-            "sha256:6eab1ec3580703b32f236b9ba6c191318a442acb7b70b8550aa51370444526a8",
+            "sha256:fe69596d29f87db7e491eeb5c77160dc800669fbc49eb6572deaf2ecc65f55d3",
           lifecycle: "golden",
         },
       ],
@@ -255,8 +307,64 @@ describe("compilation target registry", () => {
       '"assetVersion": "1.0.0"',
     );
     expect(files["capability-template-lock.json"]).toContain(
-      '"digest": "sha256:883eb54bad1d3a0e9da7542e8a342231f3d1ab8f7d9e4824d9aacb530268447f"',
+      '"digest": "sha256:8ced82a4c3db325ab13c454b081a3f81add5e8bb3f341d51474e04d69e42a06b"',
     );
+  });
+
+  it("renders every changed base package from its historical template", () => {
+    const currentGraph = composeProfileDraft({
+      profile: "simple-ecommerce",
+    }).graph;
+    const historicalLocksByKey = new Map(
+      historicalExecutableLocks.map((lock) => [lock.key, lock]),
+    );
+    const historicalGraph = structuredClone(currentGraph);
+    historicalGraph.integration.assetLocks =
+      historicalGraph.integration.assetLocks?.map(
+        (lock) => historicalLocksByKey.get(lock.key) ?? lock,
+      );
+
+    const currentFiles = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "current-executable-packages-1",
+        graph: currentGraph,
+      }).files.map((file) => [file.path, file.content]),
+    );
+    const historicalFiles = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "historical-executable-packages-1",
+        graph: historicalGraph,
+      }).files.map((file) => [file.path, file.content]),
+    );
+    const historicalTemplateLock = JSON.parse(
+      historicalFiles["capability-template-lock.json"] as string,
+    ) as {
+      templates: readonly {
+        assetKey: string;
+        assetVersion: string;
+        digest: string;
+      }[];
+    };
+
+    for (const lock of historicalExecutableLocks) {
+      const path = `api/src/capabilities/${lock.key}.ts`;
+      expect(currentGraph.integration.assetLocks).toContainEqual(
+        expect.objectContaining({ key: lock.key, version: "1.0.1" }),
+      );
+      expect(currentFiles[path]).toContain('version: "1.0.1"');
+      expect(historicalFiles[path]).toContain('version: "1.0.0"');
+      expect(historicalFiles[path]).toContain("} as const;");
+      expect(historicalTemplateLock.templates).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            assetKey: lock.key,
+            assetVersion: "1.0.0",
+            digest:
+              "sha256:8ced82a4c3db325ab13c454b081a3f81add5e8bb3f341d51474e04d69e42a06b",
+          }),
+        ]),
+      );
+    }
   });
 
   it("rejects a Graph capability without a locked Golden package", () => {

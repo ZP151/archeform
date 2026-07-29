@@ -1,0 +1,22 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": [
+    "api.runtime",
+    "database.schema",
+    "page.block",
+    "test.fixture"
+  ],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/core.crud.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:5e1bcc06560ccdd1062c786618a883de6df9234d2134c89361b3adaab0700955"
+    }
+  ],
+  "contributes": {
+    "effects": ["data.create", "data.read", "data.update", "data.delete"]
+  }
+}

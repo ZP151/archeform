@@ -1,0 +1,15 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": ["api.runtime", "flow.effect", "test.fixture"],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/core.workflow.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:209d5d649840437f334ac53aa593634c9cdb8fbfe5cc7525ed96f80ac91947bb"
+    }
+  ],
+  "contributes": { "effects": ["flow.transition", "flow.assign-task"] }
+}

@@ -1,0 +1,22 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": [
+    "api.runtime",
+    "database.schema",
+    "flow.effect",
+    "test.fixture"
+  ],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/commerce.inventory.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:fb3da1d03b9165d844dd5af38a0abbe7caabd8bfcf8dfc46105c034c899a15cb"
+    }
+  ],
+  "contributes": {
+    "effects": ["inventory.reserve", "inventory.release", "inventory.decrement"]
+  }
+}

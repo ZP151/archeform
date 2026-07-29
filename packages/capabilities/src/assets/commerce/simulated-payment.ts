@@ -12,7 +12,7 @@ export const simulatedPaymentAsset: CapabilityAssetV1 = {
     packageRoot:
       "packages/capabilities/assets/commerce.simulated-payment/1.0.0",
     manifestDigest:
-      "sha256:249747fd95f01b3158588756a657166a76e44abf1bb06a2bdf6c59b9e7d16839",
+      "sha256:0dff9794484428c760b0113c543891e3df87cd73f8082c4e15958f88e2b80981",
     lifecycle: "golden",
     profiles: ["restaurant-ordering", "simple-ecommerce"],
     effects: ["payment.simulate"],
@@ -25,7 +25,7 @@ export const simulatedPaymentAsset: CapabilityAssetV1 = {
         target: "api/src/capabilities/commerce.simulated-payment.ts",
         outputSlot: "api.runtime",
         digest:
-          "sha256:33a173be2367de708d6b1ed8e43d58e5ed8ff4d4250966c326016bb821236a44",
+          "sha256:8ced82a4c3db325ab13c454b081a3f81add5e8bb3f341d51474e04d69e42a06b",
       },
     ],
     verification: {

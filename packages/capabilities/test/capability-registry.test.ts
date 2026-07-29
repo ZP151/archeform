@@ -26,6 +26,58 @@ import {
 } from "../src/node.js";
 import { validateApplicationGraph } from "@factory/graph";
 
+const historicalExecutableLocks = [
+  {
+    key: "core.audit",
+    version: "1.0.0",
+    packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
+    manifestDigest:
+      "sha256:fe69596d29f87db7e491eeb5c77160dc800669fbc49eb6572deaf2ecc65f55d3",
+    lifecycle: "golden" as const,
+  },
+  {
+    key: "core.crud",
+    version: "1.0.0",
+    packageRoot: "packages/capabilities/assets/core.crud/1.0.0",
+    manifestDigest:
+      "sha256:69bad8aab8bf23fe3820bba3d6fcf12e39c17399ae98390910f61e0792e8dfb7",
+    lifecycle: "golden" as const,
+  },
+  {
+    key: "core.notification",
+    version: "1.0.0",
+    packageRoot: "packages/capabilities/assets/core.notification/1.0.0",
+    manifestDigest:
+      "sha256:25eaacb88682dffeb80340ad7dcdd0dc78a49dfcd1eaf1f2bd0a0618750a67b2",
+    lifecycle: "golden" as const,
+  },
+  {
+    key: "core.workflow",
+    version: "1.0.0",
+    packageRoot: "packages/capabilities/assets/core.workflow/1.0.0",
+    manifestDigest:
+      "sha256:a16fc83805e0e6b2468b93241374f790ac23b024cee1e8b4a1d54020b93fbd75",
+    lifecycle: "golden" as const,
+  },
+  {
+    key: "commerce.inventory",
+    version: "1.0.0",
+    packageRoot: "packages/capabilities/assets/commerce.inventory/1.0.0",
+    manifestDigest:
+      "sha256:b503c3ce6ad627a09ec22d26b9a5cd675bfd3e04c6b0f45f9e02a72c5eba5de8",
+    lifecycle: "golden" as const,
+  },
+  {
+    key: "commerce.simulated-payment",
+    version: "1.0.0",
+    packageRoot:
+      "packages/capabilities/assets/commerce.simulated-payment/1.0.0",
+    manifestDigest:
+      "sha256:0dff9794484428c760b0113c543891e3df87cd73f8082c4e15958f88e2b80981",
+    lifecycle: "golden" as const,
+  },
+] as const;
+
 describe("capability catalog", () => {
   it("exposes independently composable core and commerce capabilities", () => {
     expect(capabilityCatalog.map((capability) => capability.key)).toEqual([
@@ -57,26 +109,27 @@ describe("capability catalog", () => {
     );
   });
 
-  it("validates a historical Golden lock by its full immutable identity", () => {
-    const historicalAuditLock = {
-      key: "core.audit",
-      version: "1.0.0",
-      packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
-      manifestDigest:
-        "sha256:6eab1ec3580703b32f236b9ba6c191318a442acb7b70b8550aa51370444526a8",
-      lifecycle: "golden" as const,
-    };
-
+  it("preserves every base executable package lock while defaults select current versions", () => {
+    for (const lock of historicalExecutableLocks) {
+      expect(getCapabilityAsset(lock.key).manifest.version).toBe("1.0.1");
+    }
     expect(() =>
-      assertGoldenCapabilityAssetLocks([historicalAuditLock], {
-        profile: "expense-approval",
-        capabilityKeys: ["audit.record"],
+      assertGoldenCapabilityAssetLocks(historicalExecutableLocks, {
+        profile: "simple-ecommerce",
+        capabilityKeys: [
+          "audit.record",
+          "data.create",
+          "notification.send",
+          "flow.transition",
+          "inventory.decrement",
+          "payment.simulate",
+        ],
       }),
     ).not.toThrow();
   });
 
   it("verifies every registered capability manifest against its declared digest", () => {
-    expect(capabilityAssets).toHaveLength(10);
+    expect(capabilityAssets).toHaveLength(15);
     for (const asset of capabilityAssets) {
       expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     }

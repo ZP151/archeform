@@ -1,0 +1,35 @@
+import type { CapabilityAssetV1 } from "../contract.js";
+
+export const workflowAssetV1_0_1: CapabilityAssetV1 = {
+  manifest: {
+    apiVersion: "factory.capability/v1",
+    key: "core.workflow",
+    version: "1.0.1",
+    category: "core",
+    name: "Workflow",
+    description: "Runs declared state transitions, guards, and human tasks.",
+    packageRoot: "packages/capabilities/assets/core.workflow/1.0.1",
+    manifestDigest:
+      "sha256:04ecbfceff872ed4c4f73467568bce657ad326faaa0546b09c1bbe1f7860cb44",
+    lifecycle: "golden",
+    profiles: ["expense-approval", "restaurant-ordering", "simple-ecommerce"],
+    effects: ["flow.transition", "flow.assign-task"],
+    inputSchema: [{ key: "flows", type: "flow.model", required: true }],
+    outputSlots: ["api.runtime", "flow.effect", "test.fixture"],
+    templates: [
+      {
+        id: "api-capability-module",
+        source: "templates/api/capability-module.ts.tpl",
+        target: "api/src/capabilities/core.workflow.ts",
+        outputSlot: "api.runtime",
+        digest:
+          "sha256:209d5d649840437f334ac53aa593634c9cdb8fbfe5cc7525ed96f80ac91947bb",
+      },
+    ],
+    verification: {
+      fixture: "fixtures/default.json",
+      contractTest: "tests/contract.json",
+      status: "verified",
+    },
+  },
+};
