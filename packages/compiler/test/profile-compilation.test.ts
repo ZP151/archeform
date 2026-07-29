@@ -5,6 +5,25 @@ import { composeProfileDraft } from "@factory/capabilities";
 import { generateApplicationBundle } from "../src/index.js";
 
 describe("profile compilation", () => {
+  it("compiles Expense execution through the locked core package handlers", () => {
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "expense-executable-package-acceptance-1",
+        graph: composeProfileDraft({ profile: "expense-approval" }).graph,
+      }).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(files["api/src/application-runtime.ts"]).toContain(
+      "getRecordHandler",
+    );
+    expect(files["api/src/application-runtime.ts"]).toContain(
+      "getWorkflowHandler",
+    );
+    expect(files["api/src/capabilities/core.audit.ts"]).toContain(
+      "effectHandler",
+    );
+  });
+
   it("generates package-owned handlers for audit and notification effects", () => {
     const graph = composeProfileDraft({
       profile: "expense-approval",

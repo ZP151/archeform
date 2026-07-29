@@ -131,6 +131,9 @@ test("edits a Draft, publishes an immutable revision, and compiles it", async ({
   await expect(page.getByLabel("Generated artifact manifest")).toBeVisible({
     timeout: 30_000,
   });
+  await expect(
+    page.getByText("Compile succeeded", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByText(/immutable outputs/)).toBeVisible();
   await page.getByRole("button", { name: "api/.dockerignore" }).click();
   await expect(page.getByLabel("Generated source snapshot")).toContainText(
@@ -139,9 +142,9 @@ test("edits a Draft, publishes an immutable revision, and compiles it", async ({
   await page
     .getByRole("button", { name: "capability-template-lock.json" })
     .click();
-  await expect(page.getByLabel("Generated source snapshot")).toContainText(
-    "factory.capability-template-lock/v1",
-  );
+  await expect(
+    page.getByText("factory.capability-template-lock/v1"),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "History" }).click();
   await expect(
