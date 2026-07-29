@@ -63,7 +63,7 @@ Prisma generated store, pnpm, Docker Compose, Playwright.
 **Produces:** Generated `api/src/capabilities/contract.ts` and a Registry that
 can find one handler by effect or operation without a centralized allow-list.
 
-- [ ] **Step 1: Write the failing Compiler test**
+- [x] **Step 1: Write the failing Compiler test**
 
 ```ts
 expect(files["api/src/capabilities/contract.ts"]).toContain(
@@ -73,14 +73,14 @@ expect(files["api/src/capabilities/registry.ts"]).toContain("getEffectHandler");
 expect(files["api/src/capabilities/registry.ts"]).toContain("getRecordHandler");
 ```
 
-- [ ] **Step 2: Run the test to prove the contract does not exist**
+- [x] **Step 2: Run the test to prove the contract does not exist**
 
 Run: `pnpm --filter @factory/compiler test -- compilation-plan.test.ts`
 
 Expected: FAIL because the bundle lacks `contract.ts` and registry dispatch
 exports.
 
-- [ ] **Step 3: Render the contract and registry dispatch helpers**
+- [x] **Step 3: Render the contract and registry dispatch helpers**
 
 ```ts
 export interface CapabilityRuntimeModule {
@@ -104,13 +104,13 @@ export function getEffectHandler(capability: string): EffectHandler {
 The registry must reject duplicate handlers for the same effect and must never
 infer a handler from a component key not selected by the lock.
 
-- [ ] **Step 4: Run the focused Compiler test**
+- [x] **Step 4: Run the focused Compiler test**
 
 Run: `pnpm --filter @factory/compiler test -- compilation-plan.test.ts`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit the contract boundary**
+- [x] **Step 5: Commit the contract boundary**
 
 ```bash
 git add packages/compiler/src/index.ts packages/compiler/test/compilation-plan.test.ts
@@ -146,7 +146,7 @@ also migrates those two effect handlers into their locked Commerce packages so
 the new dispatcher does not reintroduce a centralized fallback or make either
 profile's payment transition fail.
 
-- [ ] **Step 1: Write failing tests for handler-owned core effects**
+- [x] **Step 1: Write failing tests for handler-owned core effects**
 
 ```ts
 expect(files["api/src/capabilities/core.audit.ts"]).toContain(
@@ -160,14 +160,14 @@ expect(files["api/src/application-runtime.ts"]).not.toContain(
 );
 ```
 
-- [ ] **Step 2: Run the focused test to prove the shared branch exists**
+- [x] **Step 2: Run the focused test to prove the shared branch exists**
 
 Run: `pnpm --filter @factory/compiler test -- profile-compilation.test.ts`
 
 Expected: FAIL because core effect templates do not export handlers and the
 shared runtime still branches on `audit.record`.
 
-- [ ] **Step 3: Implement static package-local effect handlers**
+- [x] **Step 3: Implement static package-local effect handlers**
 
 ```ts
 effectHandler: async ({ role, entityKey, recordId, operation, store, now }) => {
@@ -185,13 +185,13 @@ The notification handler must append only its declared capability-delivery
 event. Both templates import their contract types with `import type` and must
 not import external packages or generated application files at runtime.
 
-- [ ] **Step 4: Recalculate and synchronize all affected digests**
+- [x] **Step 4: Recalculate and synchronize all affected digests**
 
 Update physical manifests, adapters, and Registry projections to the same
 canonical SHA-256 values. Extend the package Registry test so a changed handler
 file fails verification.
 
-- [ ] **Step 5: Route `executeEffects` through the registry**
+- [x] **Step 5: Route `executeEffects` through the registry**
 
 ```ts
 const handler = getEffectHandler(effect.capability);
@@ -208,7 +208,7 @@ await handler({
 The runtime still appends the generic capability evidence after the selected
 handler succeeds.
 
-- [ ] **Step 5a: Preserve independent Commerce profile execution**
+- [x] **Step 5a: Preserve independent Commerce profile execution**
 
 Write a failing generated journey test for Restaurant/Ecommerce payment that
 exercises `payment.simulate` and `inventory.decrement`. Add static verified
@@ -238,7 +238,7 @@ effectHandler: async ({ store, entityKey, recordId }) => {
 The simulated-payment handler records only its bounded package delivery event.
 Both handlers must execute before the generic capability evidence is appended.
 
-- [ ] **Step 6: Run focused capability and Compiler tests**
+- [x] **Step 6: Run focused capability and Compiler tests**
 
 Run:
 
@@ -250,7 +250,7 @@ pnpm --filter @factory/compiler test -- profile-compilation.test.ts
 Expected: PASS, including audit-free Expense compilation without an audit
 handler module.
 
-- [ ] **Step 7: Commit executable core effects**
+- [x] **Step 7: Commit executable core effects**
 
 ```bash
 git add packages/capabilities packages/compiler
@@ -279,7 +279,7 @@ git commit -m "feat: dispatch core effects from capability packages"
 handlers. The shared runtime retains only Graph lookup, validation, and Casbin
 authorization before calling those handlers.
 
-- [ ] **Step 1: Write failing generated-source and journey tests**
+- [x] **Step 1: Write failing generated-source and journey tests**
 
 ```ts
 expect(files["api/src/capabilities/core.crud.ts"]).toContain("recordHandler");
@@ -294,13 +294,13 @@ expect(files["api/src/application-runtime.ts"]).not.toContain(
 );
 ```
 
-- [ ] **Step 2: Run the focused test to confirm centralized persistence**
+- [x] **Step 2: Run the focused test to confirm centralized persistence**
 
 Run: `pnpm --filter @factory/compiler test -- compilation-plan.test.ts`
 
 Expected: FAIL because the old runtime owns create and transition persistence.
 
-- [ ] **Step 3: Implement static record and workflow handlers**
+- [x] **Step 3: Implement static record and workflow handlers**
 
 ```ts
 recordHandler: {
@@ -318,13 +318,13 @@ Keep required-field validation, role checks, and transition selection in the
 Compiler-owned runtime; no capability module receives a raw HTTP request or
 arbitrary Graph source.
 
-- [ ] **Step 4: Update manifests and Registry projections**
+- [x] **Step 4: Update manifests and Registry projections**
 
 Declare the executable template contribution, regenerate exact digests, and
 verify the physical JSON and TypeScript projection remain byte-for-byte aligned
 through the existing package loader.
 
-- [ ] **Step 5: Dispatch from `ApplicationRuntime`**
+- [x] **Step 5: Dispatch from `ApplicationRuntime`**
 
 ```ts
 const record = await getRecordHandler().create({
@@ -345,7 +345,7 @@ store. The audit append after a successful create/transition remains a
 Compiler-owned lifecycle event, distinct from the optional `audit.record`
 effect handler.
 
-- [ ] **Step 6: Run focused package and generated-journey tests**
+- [x] **Step 6: Run focused package and generated-journey tests**
 
 Run:
 
@@ -357,7 +357,7 @@ pnpm --filter @factory/compiler test
 Expected: PASS for Expense, Restaurant, and Ecommerce compilation; only
 Expense execution ownership changes in this slice.
 
-- [ ] **Step 7: Commit executable core operations**
+- [x] **Step 7: Commit executable core operations**
 
 ```bash
 git add packages/capabilities packages/compiler
@@ -378,7 +378,7 @@ git commit -m "feat: move core record and workflow handlers into packages"
 the exact selected core packages and succeeds in submit, approve/reject, audit,
 and optional-notification journeys.
 
-- [ ] **Step 1: Write a failing generated-app acceptance assertion**
+- [x] **Step 1: Write a failing generated-app acceptance assertion**
 
 ```ts
 expect(files["api/src/application-runtime.ts"]).toContain("getRecordHandler");
@@ -386,7 +386,7 @@ expect(files["api/src/application-runtime.ts"]).toContain("getWorkflowHandler");
 expect(files["api/src/capabilities/core.audit.ts"]).toContain("effectHandler");
 ```
 
-- [ ] **Step 2: Run the generated-app API journey**
+- [x] **Step 2: Run the generated-app API journey**
 
 ```bash
 pnpm install
@@ -398,7 +398,7 @@ pnpm --filter generated-api test
 Expected: Expense submit, approve/reject, audit, and optional-notification
 journeys pass against the generated API.
 
-- [ ] **Step 3: Add an isolated browser evidence assertion**
+- [x] **Step 3: Add an isolated browser evidence assertion**
 
 ```ts
 await page
@@ -412,7 +412,7 @@ await expect(
 The browser test must also confirm the published graph reaches completed
 compilation in the isolated Docker Compose project.
 
-- [ ] **Step 4: Run acceptance gates and record evidence**
+- [x] **Step 4: Run acceptance gates and record evidence**
 
 Run:
 
@@ -430,7 +430,7 @@ Record commands, result counts, package lock evidence, and named test-project
 cleanup in `docs/acceptance/expense-approval-executable-packages.md`. Do not
 record raw prompts, credentials, or model responses.
 
-- [ ] **Step 5: Obtain P0/P1 review, commit, and push**
+- [x] **Step 5: Obtain P0/P1 review, commit, and push**
 
 ```bash
 git add docs/acceptance packages/capabilities packages/compiler e2e
