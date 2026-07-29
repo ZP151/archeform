@@ -23,8 +23,6 @@ describe("preview runner", () => {
           composeProjectName: "factory-preview-preview-1",
         },
         processRunner,
-        async () => 43101,
-        async () => true,
       ),
     ).rejects.toThrow("outside the Factory artifact root");
     expect(processRunner).not.toHaveBeenCalled();
