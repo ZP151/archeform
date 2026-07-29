@@ -22,7 +22,6 @@
     "lint": "prettier --check src test"
   },
   "dependencies": {
-    "@factory/compiler": "workspace:*",
     "@factory/graph": "workspace:*",
     "zod": "^3.24.1"
   },

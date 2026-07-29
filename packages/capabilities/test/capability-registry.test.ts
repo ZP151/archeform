@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 import {
   assertGoldenCapabilityAssetLocks,
@@ -13,14 +15,16 @@ import {
   getCapability,
   getProfileComposition,
   profileGraphs,
+  type CapabilityAssetV1,
   type FactoryProfile,
 } from "../src/index.js";
 import {
+  capabilityManifestDigest,
   verifyCapabilityAssetDigest,
   verifyCapabilityAssetPackage,
+  loadCapabilityAssetTemplates,
 } from "../src/node.js";
 import { validateApplicationGraph } from "@factory/graph";
-import { generateApplicationBundle } from "@factory/compiler";
 
 describe("capability catalog", () => {
   it("exposes independently composable core and commerce capabilities", () => {
@@ -68,6 +72,87 @@ describe("capability catalog", () => {
 
     for (const asset of capabilityAssets) {
       expect(verifyCapabilityAssetPackage(asset, repositoryRoot)).toEqual([]);
+    }
+  });
+
+  it("resolves exactly one digest-verified package-local API template for every Golden asset", () => {
+    const repositoryRoot = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "../../..",
+    );
+
+    for (const asset of capabilityAssets) {
+      const templates = loadCapabilityAssetTemplates(asset, repositoryRoot);
+      expect(templates).toHaveLength(1);
+      expect(templates[0]).toMatchObject({
+        assetKey: asset.manifest.key,
+        outputSlot: "api.runtime",
+        source: "templates/api/capability-module.ts.tpl",
+        target: `api/src/capabilities/${asset.manifest.key}.ts`,
+      });
+      expect(templates[0]?.content).toContain("{{asset.key}}");
+      expect(templates[0]?.digest).toMatch(/^sha256:[a-f0-9]{64}$/);
+    }
+  });
+
+  it("rejects a package template that targets outside its declared output slot", async () => {
+    const repositoryRoot = await mkdtemp(
+      join(tmpdir(), "factory-unsafe-template-"),
+    );
+    const packageRoot = "packages/capabilities/assets/test.unsafe/1.0.0";
+    const template = {
+      id: "unsafe-target",
+      source: "templates/api/module.ts.tpl",
+      target: "../outside.ts",
+      outputSlot: "api.runtime" as const,
+      digest:
+        "sha256:8ced82a4c3db325ab13c454b081a3f81add5e8bb3f341d51474e04d69e42a06b",
+    };
+    const draftManifest = {
+      ...getCapabilityAsset("core.audit").manifest,
+      key: "test.unsafe",
+      packageRoot,
+      templates: [template],
+      manifestDigest: "sha256:placeholder",
+    };
+    const manifest = {
+      ...draftManifest,
+      manifestDigest: capabilityManifestDigest(draftManifest),
+    };
+    const asset: CapabilityAssetV1 = { manifest };
+    const physicalRoot = resolve(repositoryRoot, packageRoot);
+
+    try {
+      await mkdir(resolve(physicalRoot, "fixtures"), { recursive: true });
+      await mkdir(resolve(physicalRoot, "tests"), { recursive: true });
+      await writeFile(
+        resolve(physicalRoot, "component.json"),
+        JSON.stringify(manifest, null, 2),
+      );
+      await writeFile(
+        resolve(physicalRoot, "adapter.json"),
+        JSON.stringify(
+          {
+            apiVersion: "factory.adapter/v1",
+            kind: "declarative",
+            outputSlots: manifest.outputSlots,
+            templates: manifest.templates,
+          },
+          null,
+          2,
+        ),
+      );
+      await writeFile(resolve(physicalRoot, "fixtures/default.json"), "{}");
+      await writeFile(resolve(physicalRoot, "tests/contract.json"), "{}");
+
+      expect(verifyCapabilityAssetPackage(asset, repositoryRoot)).toEqual(
+        expect.arrayContaining([expect.stringContaining("unsafe target path")]),
+      );
+      expect(() => loadCapabilityAssetTemplates(asset, repositoryRoot)).toThrow(
+        "unsafe target path",
+      );
+    } finally {
+      await rm(repositoryRoot, { recursive: true, force: true });
     }
   });
 
@@ -266,7 +351,7 @@ describe("capability catalog", () => {
       version: "1.0.0",
       packageRoot: "packages/capabilities/assets/commerce.cart/1.0.0",
       manifestDigest:
-        "sha256:c7b9a3a6a221f9e00be74f968863db344a61970854a1e5b3ff66a1c5c1b3e19c",
+        "sha256:f3f0ba58748cd7a8464950b56b68f77fa9826f7c9c7839813e4d2126e048d2cb",
       lifecycle: "golden" as const,
     };
 
@@ -296,27 +381,6 @@ describe("capability catalog", () => {
         ({ key }) => key,
       ),
     ).toContain("core.notification");
-  });
-
-  it("compiles an audit-free Expense Graph deterministically", () => {
-    const graph = composeProfileDraft({
-      profile: "expense-approval",
-      optionalCapabilities: ["core.notification"],
-    }).graph;
-    const first = generateApplicationBundle({
-      publishedRevisionId: "expense-audit-free-published-1",
-      graph,
-    });
-    const second = generateApplicationBundle({
-      publishedRevisionId: "expense-audit-free-published-1",
-      graph,
-    });
-
-    expect(first).toEqual(second);
-    expect(
-      first.files.find((file) => file.path === "api/policy/policy.csv")
-        ?.content,
-    ).not.toContain(", audit");
   });
 
   it("rejects optional capability selections that are not declared by the profile recipe", () => {
@@ -403,26 +467,4 @@ describe("capability catalog", () => {
       actions: ["read", "audit"],
     });
   });
-
-  it.each(profileGraphs)(
-    "compiles $profile as an independent published application",
-    ({ profile, graph }) => {
-      const bundle = generateApplicationBundle({
-        publishedRevisionId: `${profile}-published-1`,
-        graph,
-      });
-
-      expect(bundle.rootDirectory).toBe(`${profile}-${profile}-published-1`);
-      expect(bundle.files.map((file) => file.path)).toEqual(
-        expect.arrayContaining([
-          "web/app/page.tsx",
-          "api/src/main.ts",
-          "database/prisma/schema.prisma",
-          "api/policy/policy.csv",
-          "api/src/flows/definitions.ts",
-          "tests/journeys.generated.md",
-        ]),
-      );
-    },
-  );
 });

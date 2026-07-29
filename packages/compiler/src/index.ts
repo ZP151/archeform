@@ -1,3 +1,14 @@
+import { existsSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+
+import {
+  assertGoldenCapabilityAssetLocks,
+  getCapabilityAsset,
+} from "@factory/capabilities";
+import {
+  loadCapabilityAssetTemplates,
+  type ResolvedCapabilityAssetTemplate,
+} from "@factory/capabilities/node";
 import {
   assertValidApplicationGraph,
   hashApplicationGraph,
@@ -90,6 +101,10 @@ export interface GeneratedApplicationBundle {
   readonly files: readonly GeneratedFile[];
 }
 
+export interface GenerateApplicationBundleOptions {
+  readonly repositoryRoot?: string;
+}
+
 const artifactBlueprint: Readonly<
   Record<
     CompilationTargetKey,
@@ -131,6 +146,10 @@ const artifactBlueprint: Readonly<
     { path: "docs/entity-relationship.md", mediaType: "text/markdown" },
     { path: "docs/permission-matrix.md", mediaType: "text/markdown" },
     { path: "capability-lock.json", mediaType: "application/json" },
+    {
+      path: "capability-template-lock.json",
+      mediaType: "application/json",
+    },
   ],
 };
 
@@ -158,6 +177,147 @@ export function buildCompilationPlan(
     graphHash: hashApplicationGraph(graph),
     artifacts,
   };
+}
+
+interface ResolvedCapabilityTemplateContribution extends ResolvedCapabilityAssetTemplate {
+  readonly effects: readonly string[];
+}
+
+function findFactoryRepositoryRoot(startDirectory: string): string {
+  let candidate = resolve(startDirectory);
+  while (true) {
+    const workspace = resolve(candidate, "pnpm-workspace.yaml");
+    const capabilityAssets = resolve(
+      candidate,
+      "packages",
+      "capabilities",
+      "assets",
+    );
+    if (existsSync(workspace) && existsSync(capabilityAssets)) {
+      return candidate;
+    }
+    const parent = dirname(candidate);
+    if (parent === candidate) {
+      throw new Error(
+        "Factory repository root with Golden capability packages could not be resolved.",
+      );
+    }
+    candidate = parent;
+  }
+}
+
+function templateString(value: string): string {
+  return JSON.stringify(value).slice(1, -1);
+}
+
+function renderCapabilityTemplate(
+  template: ResolvedCapabilityTemplateContribution,
+  graph: ApplicationGraphV1,
+): string {
+  const values: Readonly<Record<string, string>> = {
+    "asset.key": templateString(template.assetKey),
+    "asset.version": templateString(template.assetVersion),
+    "asset.effectsJson": JSON.stringify(template.effects),
+    "graph.metadata.id": templateString(graph.metadata.id),
+  };
+  return template.content.replace(
+    /{{([A-Za-z.]+)}}/g,
+    (marker, key: string) => {
+      const value = values[key];
+      if (value === undefined) {
+        throw new Error(
+          "Capability template '" +
+            template.assetKey +
+            "' declares unsupported token '" +
+            marker +
+            "'.",
+        );
+      }
+      return value;
+    },
+  );
+}
+
+function resolveCapabilityTemplateContributions(
+  graph: ApplicationGraphV1,
+  repositoryRoot?: string,
+): readonly ResolvedCapabilityTemplateContribution[] {
+  const locks = graph.integration.assetLocks ?? [];
+  const capabilityKeys = graph.integration.capabilities.map(
+    (capability) => capability.key,
+  );
+  if (!locks.length) {
+    if (capabilityKeys.length) {
+      throw new Error(
+        "Graph capabilities require matching Golden asset locks before compilation.",
+      );
+    }
+    return [];
+  }
+  if (!graph.integration.compositionProfile) {
+    throw new Error(
+      "Golden asset locks require a composition profile before compilation.",
+    );
+  }
+
+  assertGoldenCapabilityAssetLocks(locks, {
+    profile: graph.integration.compositionProfile,
+    capabilityKeys,
+  });
+  const root = findFactoryRepositoryRoot(repositoryRoot ?? process.cwd());
+  const targets = new Set<string>();
+  const contributions = locks.flatMap((lock) => {
+    const asset = getCapabilityAsset(lock.key);
+    return loadCapabilityAssetTemplates(asset, root).map((template) => ({
+      ...template,
+      effects: asset.manifest.effects,
+    }));
+  });
+  for (const contribution of contributions) {
+    if (targets.has(contribution.target)) {
+      throw new Error(
+        "Golden capability packages declare duplicate target '" +
+          contribution.target +
+          "'.",
+      );
+    }
+    if (contribution.target === "api/src/capabilities/registry.ts") {
+      throw new Error(
+        "Golden capability packages cannot replace the generated capability registry.",
+      );
+    }
+    targets.add(contribution.target);
+  }
+  return contributions.sort((left, right) =>
+    left.target.localeCompare(right.target),
+  );
+}
+
+function renderCapabilityRegistry(
+  contributions: readonly ResolvedCapabilityTemplateContribution[],
+): string {
+  const imports = contributions.map((contribution, index) => {
+    const relativeModule = contribution.target
+      .replace("api/src/capabilities/", "./")
+      .replace(/\.ts$/, ".js");
+    return (
+      "import { capabilityModule as capabilityModule" +
+      index +
+      ' } from "' +
+      relativeModule +
+      '";'
+    );
+  });
+  const modules = contributions.map((_, index) => "capabilityModule" + index);
+  return [
+    ...imports,
+    ...(imports.length ? [""] : []),
+    "export const capabilityModules = [" + modules.join(", ") + "] as const;",
+    "export const providedEffects = new Set<string>(",
+    "  capabilityModules.flatMap((module) => module.effects),",
+    ");",
+    "",
+  ].join("\n");
 }
 
 function toPascalCase(value: string): string {
@@ -562,6 +722,7 @@ function runtimeDefinition(graph: ApplicationGraphV1) {
 function renderApplicationRuntime(graph: ApplicationGraphV1): string {
   const commerce = hasCommerceCapabilities(graph);
   return [
+    'import { providedEffects } from "./capabilities/registry.js";',
     'import { enforce } from "./policy.js";',
     "",
     "export type StoredRecord = Record<string, unknown> & { id: string; status?: string };",
@@ -693,13 +854,7 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "  private async executeEffects(role: string, entityKey: string, recordId: string, effects: readonly { capability: string; operation: string }[] | undefined): Promise<void> {",
     "    for (const effect of effects ?? []) {",
     "      this.assertCapability(effect.capability, effect.operation);",
-    "      const supported = [",
-    "        'audit.record:record',",
-    "        'notification.send:send',",
-    "        'payment.simulate:simulate',",
-    "        'inventory.decrement:decrement',",
-    "      ].includes(`${effect.capability}:${effect.operation}`);",
-    "      if (!supported) throw new Error(`Unsupported capability effect '${effect.capability}.${effect.operation}'.`);",
+    "      if (!providedEffects.has(effect.capability)) throw new Error(`Unsupported capability effect '${effect.capability}.${effect.operation}'.`);",
     "      const at = new Date().toISOString();",
     "      if (effect.capability === 'audit.record') {",
     "        await this.store.appendAudit({ actor: role, action: effect.operation, entity: entityKey, recordId, at });",
@@ -748,6 +903,7 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
           "    this.entity(orderEntity);",
           "    this.entity(input.catalogEntity);",
           "    this.assertCapability('cart.add', 'add');",
+          "    if (!providedEffects.has('cart.add')) throw new Error('Unsupported capability effect \\'cart.add\\'.');",
           "    await this.assertAllowed(role, orderEntity, 'create');",
           "    await this.assertAllowed(role, input.catalogEntity, 'read');",
           "    const order = await this.store.find(orderEntity, orderRecordId);",
@@ -1336,6 +1492,9 @@ function renderJourneyTest(graph: ApplicationGraphV1): string {
   const capabilityEffects = transitions.flatMap(
     (transition) => transition.effects ?? [],
   );
+  const auditEffectCount = capabilityEffects.filter(
+    (effect) => effect.capability === "audit.record",
+  ).length;
   return [
     'import { describe, expect, it } from "vitest";',
     'import { applicationRuntime } from "../src/application-runtime.js";',
@@ -1350,7 +1509,7 @@ function renderJourneyTest(graph: ApplicationGraphV1): string {
     ]),
     ...(auditRole
       ? [
-          `    expect(await applicationRuntime.auditLog(${JSON.stringify(auditRole)})).toHaveLength(${transitions.length + 1});`,
+          `    expect(await applicationRuntime.auditLog(${JSON.stringify(auditRole)})).toHaveLength(${transitions.length + 1 + auditEffectCount});`,
         ]
       : []),
     ...(auditRole && capabilityEffects.length > 0
@@ -1504,6 +1663,31 @@ function renderCapabilityLock(graph: ApplicationGraphV1): string {
   );
 }
 
+function renderCapabilityTemplateLock(
+  graph: ApplicationGraphV1,
+  contributions: readonly ResolvedCapabilityTemplateContribution[],
+): string {
+  return (
+    JSON.stringify(
+      {
+        apiVersion: "factory.capability-template-lock/v1",
+        applicationId: graph.metadata.id,
+        graphHash: hashApplicationGraph(graph),
+        templates: contributions.map((contribution) => ({
+          assetKey: contribution.assetKey,
+          assetVersion: contribution.assetVersion,
+          source: contribution.source,
+          target: contribution.target,
+          outputSlot: contribution.outputSlot,
+          digest: contribution.digest,
+        })),
+      },
+      null,
+      2,
+    ) + "\n"
+  );
+}
+
 /**
  * Renders deterministic source files for one isolated generated application.
  * This function is pure: the Worker owns filesystem writes, Compose identity,
@@ -1511,9 +1695,14 @@ function renderCapabilityLock(graph: ApplicationGraphV1): string {
  */
 export function generateApplicationBundle(
   input: PublishedGraphInput,
+  options: GenerateApplicationBundleOptions = {},
 ): GeneratedApplicationBundle {
   const plan = buildCompilationPlan(input);
   const graph = assertValidApplicationGraph(input.graph);
+  const capabilityTemplates = resolveCapabilityTemplateContributions(
+    graph,
+    options.repositoryRoot,
+  );
   const rootDirectory = `${graph.metadata.id}-${input.publishedRevisionId}`;
   const files: GeneratedFile[] = [
     {
@@ -1536,6 +1725,10 @@ export function generateApplicationBundle(
       content: "packages:\n  - web\n  - api\n  - database\n",
     },
     { path: "capability-lock.json", content: renderCapabilityLock(graph) },
+    {
+      path: "capability-template-lock.json",
+      content: renderCapabilityTemplateLock(graph, capabilityTemplates),
+    },
     { path: "simulator/index.html", content: renderSimulator(graph) },
     {
       path: "web/package.json",
@@ -1681,6 +1874,14 @@ export function generateApplicationBundle(
     },
     { path: "api/.dockerignore", content: "node_modules\ndist\n.env\n" },
     { path: "api/src/main.ts", content: renderApiMain(graph) },
+    ...capabilityTemplates.map((template) => ({
+      path: template.target,
+      content: renderCapabilityTemplate(template, graph),
+    })),
+    {
+      path: "api/src/capabilities/registry.ts",
+      content: renderCapabilityRegistry(capabilityTemplates),
+    },
     {
       path: "api/src/application-runtime.ts",
       content: renderApplicationRuntime(graph),

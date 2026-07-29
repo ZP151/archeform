@@ -1,11 +1,30 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve, sep } from "node:path";
 
 import type {
   CapabilityAssetManifestV1,
   CapabilityAssetV1,
+  CapabilityTemplateContributionV1,
 } from "./assets/index.js";
+
+export interface ResolvedCapabilityAssetTemplate {
+  readonly assetKey: string;
+  readonly assetVersion: string;
+  readonly source: string;
+  readonly target: string;
+  readonly outputSlot: CapabilityTemplateContributionV1["outputSlot"];
+  readonly digest: string;
+  readonly content: string;
+}
+
+const templateTargetPrefixes: Readonly<
+  Partial<
+    Record<CapabilityTemplateContributionV1["outputSlot"], readonly string[]>
+  >
+> = {
+  "api.runtime": ["api/src/capabilities/"],
+};
 
 function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) {
@@ -18,6 +37,69 @@ function canonicalJson(value: unknown): string {
       .join(",")}}`;
   }
   return JSON.stringify(value);
+}
+
+function sha256(content: string): string {
+  return `sha256:${createHash("sha256").update(content).digest("hex")}`;
+}
+
+function safePackageRelativePath(path: string): boolean {
+  return (
+    path.length > 0 &&
+    !path.startsWith("/") &&
+    !path.includes("\\") &&
+    !path
+      .split("/")
+      .some((segment) => !segment || segment === "." || segment === "..")
+  );
+}
+
+function assertTemplateContribution(
+  template: CapabilityTemplateContributionV1,
+  packageRoot: string,
+): ResolvedCapabilityAssetTemplate {
+  if (!safePackageRelativePath(template.source)) {
+    throw new Error(
+      `Capability template '${template.id}' has an unsafe source path.`,
+    );
+  }
+  if (!safePackageRelativePath(template.target)) {
+    throw new Error(
+      `Capability template '${template.id}' has an unsafe target path.`,
+    );
+  }
+  const prefixes = templateTargetPrefixes[template.outputSlot];
+  if (!prefixes?.some((prefix) => template.target.startsWith(prefix))) {
+    throw new Error(
+      `Capability template '${template.id}' targets '${template.target}' outside '${template.outputSlot}'.`,
+    );
+  }
+  const sourcePath = resolve(packageRoot, template.source);
+  if (!sourcePath.startsWith(`${packageRoot}${sep}`)) {
+    throw new Error(
+      `Capability template '${template.id}' escapes its package.`,
+    );
+  }
+  if (!existsSync(sourcePath)) {
+    throw new Error(
+      `Capability template '${template.id}' is missing from its package.`,
+    );
+  }
+  const content = readFileSync(sourcePath, "utf8");
+  if (sha256(content) !== template.digest) {
+    throw new Error(
+      `Capability template '${template.id}' digest does not match.`,
+    );
+  }
+  return {
+    assetKey: "",
+    assetVersion: "",
+    source: template.source,
+    target: template.target,
+    outputSlot: template.outputSlot,
+    digest: template.digest,
+    content,
+  };
 }
 
 export function capabilityManifestPayload(
@@ -67,6 +149,7 @@ export function verifyCapabilityAssetPackage(
     kind?: string;
     source?: unknown;
     outputSlots?: unknown;
+    templates?: unknown;
   };
 
   const invalid: string[] = [];
@@ -87,5 +170,47 @@ export function verifyCapabilityAssetPackage(
   ) {
     invalid.push("adapter.json: outputSlots");
   }
+  if (canonicalJson(adapter.templates) !== canonicalJson(component.templates)) {
+    invalid.push("adapter.json: templates");
+  }
+  for (const template of component.templates ?? []) {
+    try {
+      assertTemplateContribution(template, packageRoot);
+    } catch (error) {
+      invalid.push(
+        error instanceof Error
+          ? `template: ${error.message}`
+          : "template: invalid",
+      );
+    }
+  }
   return invalid;
+}
+
+export function loadCapabilityAssetTemplates(
+  asset: CapabilityAssetV1,
+  repositoryRoot: string,
+): readonly ResolvedCapabilityAssetTemplate[] {
+  const invalid = verifyCapabilityAssetPackage(asset, repositoryRoot);
+  if (invalid.length) {
+    throw new Error(
+      `Capability package '${asset.manifest.key}' is invalid: ${invalid.join(", ")}`,
+    );
+  }
+  const packageRoot = resolve(repositoryRoot, asset.manifest.packageRoot);
+  const targets = new Set<string>();
+  return asset.manifest.templates.map((template) => {
+    if (targets.has(template.target)) {
+      throw new Error(
+        `Capability package '${asset.manifest.key}' declares duplicate template target '${template.target}'.`,
+      );
+    }
+    targets.add(template.target);
+    const resolved = assertTemplateContribution(template, packageRoot);
+    return {
+      ...resolved,
+      assetKey: asset.manifest.key,
+      assetVersion: asset.manifest.version,
+    };
+  });
 }

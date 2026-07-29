@@ -13,6 +13,14 @@ export type CapabilityOutputSlot =
   | "test.fixture"
   | "flow.effect";
 
+export interface CapabilityTemplateContributionV1 {
+  readonly id: string;
+  readonly source: string;
+  readonly target: string;
+  readonly outputSlot: CapabilityOutputSlot;
+  readonly digest: string;
+}
+
 export interface CapabilityAssetManifestV1 {
   readonly apiVersion: "factory.capability/v1";
   readonly key: string;
@@ -31,6 +39,7 @@ export interface CapabilityAssetManifestV1 {
     readonly required: boolean;
   }[];
   readonly outputSlots: readonly CapabilityOutputSlot[];
+  readonly templates: readonly CapabilityTemplateContributionV1[];
   readonly verification: {
     readonly fixture: string;
     readonly contractTest: string;

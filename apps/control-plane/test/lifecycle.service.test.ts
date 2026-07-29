@@ -175,7 +175,7 @@ describe("LifecycleService", () => {
               version: "1.0.0",
               packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
               manifestDigest:
-                "sha256:a04575f365a2218de74f2aeb571d4e0db1311492a6e2fbb408f9633aec75902b",
+                "sha256:fe69596d29f87db7e491eeb5c77160dc800669fbc49eb6572deaf2ecc65f55d3",
               lifecycle: "golden",
             },
           ],
@@ -195,7 +195,7 @@ describe("LifecycleService", () => {
               version: "1.0.0",
               packageRoot: "packages/capabilities/assets/commerce.cart/1.0.0",
               manifestDigest:
-                "sha256:c7b9a3a6a221f9e00be74f968863db344a61970854a1e5b3ff66a1c5c1b3e19c",
+                "sha256:f3f0ba58748cd7a8464950b56b68f77fa9826f7c9c7839813e4d2126e048d2cb",
               lifecycle: "golden",
             },
           },

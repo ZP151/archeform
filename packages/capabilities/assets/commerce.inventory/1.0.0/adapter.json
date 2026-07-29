@@ -7,6 +7,15 @@
     "flow.effect",
     "test.fixture"
   ],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/commerce.inventory.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:8ced82a4c3db325ab13c454b081a3f81add5e8bb3f341d51474e04d69e42a06b"
+    }
+  ],
   "contributes": {
     "effects": ["inventory.reserve", "inventory.release", "inventory.decrement"]
   }

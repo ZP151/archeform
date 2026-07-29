@@ -6,7 +6,7 @@
   "name": "Managed records",
   "description": "Creates, reads, updates, and deletes validated domain records.",
   "packageRoot": "packages/capabilities/assets/core.crud/1.0.0",
-  "manifestDigest": "sha256:22225b5eab4d86d135469e6f93805e90ba4a1f16b47250ac8ea406a8989ed956",
+  "manifestDigest": "sha256:69bad8aab8bf23fe3820bba3d6fcf12e39c17399ae98390910f61e0792e8dfb7",
   "lifecycle": "golden",
   "profiles": ["expense-approval", "restaurant-ordering", "simple-ecommerce"],
   "effects": ["data.create", "data.read", "data.update", "data.delete"],
@@ -18,6 +18,15 @@
     "database.schema",
     "page.block",
     "test.fixture"
+  ],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/core.crud.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:8ced82a4c3db325ab13c454b081a3f81add5e8bb3f341d51474e04d69e42a06b"
+    }
   ],
   "verification": {
     "fixture": "fixtures/default.json",

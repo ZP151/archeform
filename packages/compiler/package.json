@@ -12,6 +12,7 @@
     "lint": "prettier --check src test"
   },
   "dependencies": {
+    "@factory/capabilities": "workspace:*",
     "@factory/graph": "workspace:*",
     "casbin": "^5.37.0",
     "xstate": "^5.19.2",

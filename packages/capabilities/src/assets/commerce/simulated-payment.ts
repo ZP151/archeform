@@ -12,12 +12,22 @@ export const simulatedPaymentAsset: CapabilityAssetV1 = {
     packageRoot:
       "packages/capabilities/assets/commerce.simulated-payment/1.0.0",
     manifestDigest:
-      "sha256:76df8730957c6970f3804a6a4a8ece0e493785d3e546add174530795370e6901",
+      "sha256:0dff9794484428c760b0113c543891e3df87cd73f8082c4e15958f88e2b80981",
     lifecycle: "golden",
     profiles: ["restaurant-ordering", "simple-ecommerce"],
     effects: ["payment.simulate"],
     inputSchema: [{ key: "currency", type: "currency.code", required: false }],
     outputSlots: ["api.runtime", "flow.effect", "test.fixture"],
+    templates: [
+      {
+        id: "api-capability-module",
+        source: "templates/api/capability-module.ts.tpl",
+        target: "api/src/capabilities/commerce.simulated-payment.ts",
+        outputSlot: "api.runtime",
+        digest:
+          "sha256:8ced82a4c3db325ab13c454b081a3f81add5e8bb3f341d51474e04d69e42a06b",
+      },
+    ],
     verification: {
       fixture: "fixtures/default.json",
       contractTest: "tests/contract.json",

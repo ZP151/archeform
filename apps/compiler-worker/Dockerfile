@@ -3,7 +3,7 @@ WORKDIR /workspace
 COPY . .
 RUN npm config set fetch-retries 5 && npm config set fetch-retry-maxtimeout 120000 && npm install --global pnpm@9.0.0
 RUN pnpm install --frozen-lockfile
-RUN pnpm --filter @factory/graph build && pnpm --filter @factory/compiler build && pnpm --filter @factory/compiler-worker build
+RUN pnpm --filter @factory/graph build && pnpm --filter @factory/capabilities build && pnpm --filter @factory/compiler build && pnpm --filter @factory/compiler-worker build
 
 FROM node:22-alpine
 WORKDIR /workspace

@@ -1419,6 +1419,18 @@ function CodeCanvas({
 }) {
   const importInput = useRef<HTMLInputElement>(null);
   const artifacts = compilation?.artifacts ?? [];
+  const artifactPreview = [
+    ...artifacts.filter(
+      (artifact) =>
+        artifact.path === "capability-template-lock.json" ||
+        artifact.path === "capability-lock.json",
+    ),
+    ...artifacts.filter(
+      (artifact) =>
+        artifact.path !== "capability-template-lock.json" &&
+        artifact.path !== "capability-lock.json",
+    ),
+  ].slice(0, 6);
   const graphDiff = publishedRevision?.graph
     ? diffApplicationGraphs(publishedRevision.graph, graph)
     : null;
@@ -1552,7 +1564,7 @@ function CodeCanvas({
           </div>
           {artifacts.length > 0 && (
             <ul>
-              {artifacts.slice(0, 6).map((artifact) => (
+              {artifactPreview.map((artifact) => (
                 <li key={artifact.path}>
                   <button
                     onClick={() => onInspectArtifact(artifact.path)}
@@ -1563,8 +1575,10 @@ function CodeCanvas({
                   <span>{artifact.digest.slice(0, 18)}…</span>
                 </li>
               ))}
-              {artifacts.length > 6 && (
-                <li className="artifact-more">+{artifacts.length - 6} more</li>
+              {artifacts.length > artifactPreview.length && (
+                <li className="artifact-more">
+                  +{artifacts.length - artifactPreview.length} more
+                </li>
               )}
             </ul>
           )}

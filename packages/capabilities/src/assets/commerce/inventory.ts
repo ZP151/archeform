@@ -10,7 +10,7 @@ export const inventoryAsset: CapabilityAssetV1 = {
     description: "Tracks and reserves available stock or menu availability.",
     packageRoot: "packages/capabilities/assets/commerce.inventory/1.0.0",
     manifestDigest:
-      "sha256:b40c6043032adec3579fb4028978cb3d4ea2baa8a555a06a925121918181a78d",
+      "sha256:b503c3ce6ad627a09ec22d26b9a5cd675bfd3e04c6b0f45f9e02a72c5eba5de8",
     lifecycle: "golden",
     profiles: ["restaurant-ordering", "simple-ecommerce"],
     effects: ["inventory.reserve", "inventory.release", "inventory.decrement"],
@@ -20,6 +20,16 @@ export const inventoryAsset: CapabilityAssetV1 = {
       "database.schema",
       "flow.effect",
       "test.fixture",
+    ],
+    templates: [
+      {
+        id: "api-capability-module",
+        source: "templates/api/capability-module.ts.tpl",
+        target: "api/src/capabilities/commerce.inventory.ts",
+        outputSlot: "api.runtime",
+        digest:
+          "sha256:8ced82a4c3db325ab13c454b081a3f81add5e8bb3f341d51474e04d69e42a06b",
+      },
     ],
     verification: {
       fixture: "fixtures/default.json",

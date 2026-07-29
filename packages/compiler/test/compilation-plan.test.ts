@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { resolve } from "node:path";
+
+import { composeProfileDraft } from "@factory/capabilities";
 
 import {
   buildCompilationPlan,
@@ -27,6 +30,10 @@ const publishedExpense: PublishedGraphInput = {
     experience: { theme: { mode: "light", tokens: {} }, locales: ["en"] },
   },
 };
+
+const simpleEcommerceAssetLocks = composeProfileDraft({
+  profile: "simple-ecommerce",
+}).assetLocks;
 
 describe("compilation target registry", () => {
   it("defines the complete initial target set", () => {
@@ -120,7 +127,7 @@ describe("compilation target registry", () => {
         version: "1.0.0",
         packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
         manifestDigest:
-          "sha256:0f2d3b5b4dc3f351b53e9b874842afd6c7b4bcd9aeddfd8421199e95f2f544a6",
+          "sha256:fe69596d29f87db7e491eeb5c77160dc800669fbc49eb6572deaf2ecc65f55d3",
         lifecycle: "golden",
       },
     ];
@@ -135,6 +142,90 @@ describe("compilation target registry", () => {
     expect(files["capability-lock.json"]).toContain('"key": "core.audit"');
     expect(files["capability-lock.json"]).toContain('"lifecycle": "golden"');
     expect(files["capability-lock.json"]).toContain('"graphHash": "sha256:');
+  });
+
+  it("composes each locked Golden package template into the API runtime", () => {
+    const graph = structuredClone(publishedExpense.graph);
+    graph.integration = {
+      providers: [],
+      capabilities: [
+        {
+          key: "audit.record",
+          providerId: "factory",
+          operation: "record",
+        },
+      ],
+      compositionProfile: "expense-approval",
+      assetLocks: [
+        {
+          key: "core.audit",
+          version: "1.0.0",
+          packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
+          manifestDigest:
+            "sha256:fe69596d29f87db7e491eeb5c77160dc800669fbc49eb6572deaf2ecc65f55d3",
+          lifecycle: "golden",
+        },
+      ],
+    };
+
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "published-package-template-1",
+        graph,
+      }).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(files["api/src/capabilities/core.audit.ts"]).toContain(
+      'key: "core.audit"',
+    );
+    expect(files["api/src/capabilities/core.audit.ts"]).toContain(
+      'effects: ["audit.record"],',
+    );
+    expect(files["api/src/capabilities/core.audit.ts"]).not.toContain("{{");
+    expect(files["api/src/capabilities/registry.ts"]).toContain(
+      'from "./core.audit.js"',
+    );
+    expect(files["api/src/application-runtime.ts"]).toContain(
+      'import { providedEffects } from "./capabilities/registry.js";',
+    );
+    expect(files["capability-template-lock.json"]).toContain(
+      '"assetKey": "core.audit"',
+    );
+  });
+
+  it("rejects a Graph capability without a locked Golden package", () => {
+    const graph = structuredClone(publishedExpense.graph);
+    graph.integration.capabilities = [
+      {
+        key: "audit.record",
+        providerId: "factory",
+        operation: "record",
+      },
+    ];
+
+    expect(() =>
+      generateApplicationBundle({
+        publishedRevisionId: "published-unlocked-capability-1",
+        graph,
+      }),
+    ).toThrow("require matching Golden asset locks");
+  });
+
+  it("rejects a locked package when its Factory repository root is unavailable", () => {
+    const graph = composeProfileDraft({
+      profile: "expense-approval",
+      optionalCapabilities: [],
+    }).graph;
+
+    expect(() =>
+      generateApplicationBundle(
+        {
+          publishedRevisionId: "published-missing-package-root-1",
+          graph,
+        },
+        { repositoryRoot: resolve("C:/factory-missing-root") },
+      ),
+    ).toThrow("could not be resolved");
   });
 
   it("emits a deployable initial Prisma migration and isolated Compose lifecycle", () => {
@@ -505,6 +596,8 @@ describe("compilation target registry", () => {
           ...publishedExpense.graph,
           integration: {
             providers: [],
+            compositionProfile: "simple-ecommerce",
+            assetLocks: simpleEcommerceAssetLocks,
             capabilities: [
               {
                 key: "payment.simulate",
@@ -614,6 +707,8 @@ describe("compilation target registry", () => {
           ...publishedExpense.graph,
           integration: {
             providers: [],
+            compositionProfile: "simple-ecommerce",
+            assetLocks: simpleEcommerceAssetLocks,
             capabilities: [
               { key: "cart.add", providerId: "factory", operation: "add" },
               {
