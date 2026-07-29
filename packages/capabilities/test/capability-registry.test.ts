@@ -485,6 +485,44 @@ describe("capability catalog", () => {
     expect(graph.integration.compositionProfile).toBe("expense-approval");
   });
 
+  it("locks every current core and commerce asset required by the Restaurant starter", () => {
+    const graph = composeProfileDraft({
+      profile: "restaurant-ordering",
+    }).graph;
+
+    expect(
+      graph.integration.assetLocks?.map((lock) => lock.key).sort(),
+    ).toEqual([
+      "commerce.cart",
+      "commerce.catalog",
+      "commerce.inventory",
+      "commerce.order",
+      "commerce.simulated-payment",
+      "core.audit",
+      "core.crud",
+      "core.notification",
+      "core.workflow",
+    ]);
+  });
+
+  it("supplies every Restaurant starter operation from exactly one locked asset", () => {
+    const graph = composeProfileDraft({
+      profile: "restaurant-ordering",
+    }).graph;
+    const lockedAssets = graph.integration.assetLocks!.map((lock) =>
+      getCapabilityAsset(lock.key),
+    );
+
+    for (const operation of graph.integration.capabilities) {
+      expect(
+        lockedAssets.filter((asset) =>
+          asset.manifest.effects.includes(operation.key),
+        ),
+        operation.key,
+      ).toHaveLength(1);
+    }
+  });
+
   it("rejects a Golden asset outside the declared profile or without its declared effects", () => {
     const cartLock = {
       key: "commerce.cart",

@@ -3,15 +3,20 @@ import type { ApplicationGraphV1 } from "@factory/graph/browser";
 export type FactoryProfile =
   "expense-approval" | "restaurant-ordering" | "simple-ecommerce";
 
-export type CapabilityCategory = "core" | "commerce";
+export type CapabilityCategory = "core" | "commerce" | "restaurant";
 
 export type CapabilityOutputSlot =
   | "api.runtime"
+  | "api.command"
   | "database.schema"
   | "page.block"
   | "policy.rule"
   | "test.fixture"
-  | "flow.effect";
+  | "flow.effect"
+  | "web.customer"
+  | "web.merchant"
+  | "report.read-model"
+  | "realtime.event";
 
 export interface CapabilityTemplateContributionV1 {
   readonly id: string;

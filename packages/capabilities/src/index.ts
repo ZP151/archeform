@@ -25,13 +25,25 @@ import {
   type CapabilityCategory,
   type FactoryProfile,
 } from "./assets/index.js";
+import { assertRestaurantOrderingProfile } from "./restaurant/profile.js";
 
 export type {
   CapabilityAssetLockV1,
   CapabilityAssetManifestV1,
   CapabilityCategory,
+  CapabilityOutputSlot,
   FactoryProfile,
 } from "./assets/index.js";
+
+export {
+  assertRestaurantOrderingProfile,
+  validateRestaurantOrderingProfile,
+} from "./restaurant/profile.js";
+export type {
+  RestaurantEntityKey,
+  RestaurantProfileProjectionV1,
+  RestaurantProfileValidationIssue,
+} from "./restaurant/profile.js";
 
 export interface CapabilityDefinition {
   readonly key: string;
@@ -370,120 +382,634 @@ export const profileGraphs: readonly ProfileGraphStarter[] = Object.freeze([
       {
         pages: [
           {
-            id: "menu",
-            route: "/menu",
-            title: "Menu",
+            id: "table-entry",
+            route: "/table/:token",
+            title: "Join table",
             blocks: [
-              { id: "menu-catalog", type: "catalog", entity: "menu-item" },
+              {
+                id: "table-session-entry",
+                type: "restaurant-entry",
+                entity: "table-session",
+              },
             ],
           },
           {
-            id: "cart",
-            route: "/cart",
-            title: "Cart",
-            blocks: [{ id: "cart-lines", type: "cart", entity: "order" }],
+            id: "customer-menu",
+            route: "/menu",
+            title: "Menu",
+            blocks: [
+              { id: "menu-browser", type: "menu-browser", entity: "menu-item" },
+            ],
           },
           {
-            id: "kitchen",
-            route: "/kitchen",
+            id: "customer-cart",
+            route: "/cart",
+            title: "Cart",
+            blocks: [
+              { id: "order-cart", type: "order-cart", entity: "order" },
+              {
+                id: "payment-checkout",
+                type: "payment-checkout",
+                entity: "order",
+              },
+            ],
+          },
+          {
+            id: "current-order",
+            route: "/orders/current",
+            title: "Current order",
+            blocks: [
+              { id: "order-tracker", type: "order-tracker", entity: "order" },
+            ],
+          },
+          {
+            id: "customer-receipt",
+            route: "/receipt/:id",
+            title: "Receipt",
+            blocks: [{ id: "receipt", type: "receipt", entity: "order" }],
+          },
+          {
+            id: "merchant-tables",
+            route: "/merchant/tables",
+            title: "Tables",
+            blocks: [
+              {
+                id: "table-board",
+                type: "table-board",
+                entity: "restaurant-table",
+              },
+            ],
+          },
+          {
+            id: "merchant-menu",
+            route: "/merchant/menu",
+            title: "Menu management",
+            blocks: [
+              { id: "menu-manager", type: "menu-manager", entity: "menu-item" },
+            ],
+          },
+          {
+            id: "merchant-kitchen",
+            route: "/merchant/kitchen",
             title: "Kitchen",
-            blocks: [{ id: "kitchen-queue", type: "queue", entity: "order" }],
+            blocks: [
+              {
+                id: "kitchen-board",
+                type: "kitchen-board",
+                entity: "kitchen-ticket",
+              },
+            ],
+          },
+          {
+            id: "merchant-cashier",
+            route: "/merchant/cashier",
+            title: "Cashier",
+            blocks: [
+              {
+                id: "cashier-console",
+                type: "cashier-console",
+                entity: "order",
+              },
+            ],
+          },
+          {
+            id: "merchant-analytics",
+            route: "/merchant/analytics",
+            title: "Restaurant analytics",
+            blocks: [
+              { id: "restaurant-dashboard", type: "restaurant-dashboard" },
+            ],
           },
         ],
         navigation: [
-          { id: "menu", label: "Menu", pageId: "menu", icon: "utensils" },
-          { id: "cart", label: "Cart", pageId: "cart", icon: "shopping-bag" },
           {
-            id: "kitchen",
+            id: "customer-menu",
+            label: "Menu",
+            pageId: "customer-menu",
+            icon: "utensils",
+          },
+          {
+            id: "customer-cart",
+            label: "Cart",
+            pageId: "customer-cart",
+            icon: "shopping-bag",
+          },
+          {
+            id: "current-order",
+            label: "Current order",
+            pageId: "current-order",
+            icon: "receipt",
+          },
+          {
+            id: "merchant-tables",
+            label: "Tables",
+            pageId: "merchant-tables",
+            icon: "layout-grid",
+          },
+          {
+            id: "merchant-menu",
+            label: "Menu management",
+            pageId: "merchant-menu",
+            icon: "notebook-tabs",
+          },
+          {
+            id: "merchant-kitchen",
             label: "Kitchen",
-            pageId: "kitchen",
+            pageId: "merchant-kitchen",
             icon: "chef-hat",
+          },
+          {
+            id: "merchant-cashier",
+            label: "Cashier",
+            pageId: "merchant-cashier",
+            icon: "badge-dollar-sign",
+          },
+          {
+            id: "merchant-analytics",
+            label: "Analytics",
+            pageId: "merchant-analytics",
+            icon: "chart-no-axes-combined",
           },
         ],
       },
       {
         entities: [
           {
+            key: "restaurant-location",
+            label: "Restaurant location",
+            fields: [
+              { key: "name", type: "string", required: true },
+              { key: "currency", type: "string", required: true },
+              { key: "active", type: "boolean", required: true },
+            ],
+            indexes: [],
+          },
+          {
+            key: "restaurant-table",
+            label: "Restaurant table",
+            fields: [
+              { key: "code", type: "string", required: true, unique: true },
+              { key: "number", type: "integer", required: true, unique: true },
+              {
+                key: "status",
+                type: "enum",
+                required: true,
+                values: ["open", "seated", "closed"],
+              },
+              { key: "active", type: "boolean", required: true },
+            ],
+            indexes: [{ fields: ["status"] }],
+          },
+          {
+            key: "table-session",
+            label: "Table session",
+            fields: [
+              { key: "tableCode", type: "string", required: true },
+              {
+                key: "tokenDigest",
+                type: "string",
+                required: true,
+                unique: true,
+              },
+              {
+                key: "status",
+                type: "enum",
+                required: true,
+                values: ["open", "active", "closed"],
+              },
+              { key: "openedAt", type: "datetime", required: true },
+              { key: "expiresAt", type: "datetime", required: true },
+              { key: "guestCount", type: "integer", required: true },
+            ],
+            indexes: [
+              { fields: ["tableCode", "status"] },
+              { fields: ["expiresAt"] },
+            ],
+          },
+          {
+            key: "menu-category",
+            label: "Menu category",
+            fields: [
+              { key: "name", type: "string", required: true },
+              { key: "sortOrder", type: "integer", required: true },
+              { key: "active", type: "boolean", required: true },
+            ],
+            indexes: [{ fields: ["active", "sortOrder"] }],
+          },
+          {
             key: "menu-item",
             label: "Menu item",
             fields: [
+              { key: "categoryKey", type: "string", required: true },
               { key: "name", type: "string", required: true },
+              { key: "description", type: "text", required: true },
               { key: "price", type: "decimal", required: true },
               { key: "available", type: "boolean", required: true },
               { key: "stock", type: "integer", required: true },
+              {
+                key: "preparationMinutes",
+                type: "integer",
+                required: true,
+              },
+              { key: "imageUrl", type: "url", required: true },
             ],
-            indexes: [],
+            indexes: [
+              { fields: ["categoryKey", "available"] },
+              { fields: ["stock"] },
+            ],
           },
           {
             key: "order",
             label: "Order",
             fields: [
+              { key: "tableSessionId", type: "string", required: true },
               {
                 key: "status",
                 type: "enum",
                 required: true,
-                values: ["cart", "paid", "preparing", "ready"],
+                values: [
+                  "cart",
+                  "submitted",
+                  "paid",
+                  "accepted",
+                  "preparing",
+                  "ready",
+                  "served",
+                  "cancelled",
+                ],
               },
+              {
+                key: "paymentStatus",
+                type: "enum",
+                required: true,
+                values: ["unpaid", "paid", "reversal-requested"],
+              },
+              {
+                key: "fulfilmentType",
+                type: "enum",
+                required: true,
+                values: ["dine-in"],
+              },
+              { key: "orderNote", type: "text", required: true },
+              { key: "priority", type: "integer", required: true },
+              { key: "total", type: "decimal", required: true },
+              { key: "orderVersion", type: "integer", required: true },
+              { key: "submittedAt", type: "datetime", required: false },
+              { key: "paidAt", type: "datetime", required: false },
             ],
-            indexes: [{ fields: ["status"] }],
+            indexes: [
+              { fields: ["tableSessionId", "status"] },
+              { fields: ["paymentStatus", "paidAt"] },
+            ],
+          },
+          {
+            key: "order-line",
+            label: "Order line",
+            fields: [
+              { key: "orderId", type: "string", required: true },
+              { key: "menuItemId", type: "string", required: true },
+              { key: "quantity", type: "integer", required: true },
+              { key: "unitPrice", type: "decimal", required: true },
+              { key: "lineNote", type: "text", required: true },
+              { key: "modifiers", type: "json", required: true },
+            ],
+            indexes: [{ fields: ["orderId"] }],
+          },
+          {
+            key: "payment-attempt",
+            label: "Payment attempt",
+            fields: [
+              { key: "orderId", type: "string", required: true },
+              {
+                key: "method",
+                type: "enum",
+                required: true,
+                values: ["cash", "card"],
+              },
+              { key: "amount", type: "decimal", required: true },
+              {
+                key: "status",
+                type: "enum",
+                required: true,
+                values: ["pending", "succeeded", "failed", "reversed"],
+              },
+              {
+                key: "idempotencyKey",
+                type: "string",
+                required: true,
+                unique: true,
+              },
+              { key: "paidAt", type: "datetime", required: false },
+            ],
+            indexes: [
+              { fields: ["orderId", "status"] },
+              { fields: ["idempotencyKey"], unique: true },
+            ],
+          },
+          {
+            key: "kitchen-ticket",
+            label: "Kitchen ticket",
+            fields: [
+              { key: "orderId", type: "string", required: true, unique: true },
+              { key: "tableNumber", type: "integer", required: true },
+              { key: "priority", type: "integer", required: true },
+              {
+                key: "status",
+                type: "enum",
+                required: true,
+                values: ["paid", "accepted", "preparing", "ready"],
+              },
+              { key: "acceptedAt", type: "datetime", required: false },
+              { key: "startedAt", type: "datetime", required: false },
+              { key: "readyAt", type: "datetime", required: false },
+            ],
+            indexes: [{ fields: ["priority", "status", "tableNumber"] }],
+          },
+          {
+            key: "inventory-ledger",
+            label: "Inventory ledger",
+            fields: [
+              { key: "menuItemId", type: "string", required: true },
+              { key: "orderId", type: "string", required: true },
+              { key: "delta", type: "integer", required: true },
+              {
+                key: "reason",
+                type: "enum",
+                required: true,
+                values: ["reserve", "decrement", "release", "adjustment"],
+              },
+              { key: "recordedAt", type: "datetime", required: true },
+            ],
+            indexes: [
+              { fields: ["menuItemId", "recordedAt"] },
+              { fields: ["orderId"] },
+            ],
           },
         ],
-        relations: [{ from: "order", to: "menu-item", kind: "many-to-many" }],
+        relations: [
+          {
+            from: "restaurant-location",
+            to: "restaurant-table",
+            kind: "one-to-many",
+          },
+          {
+            from: "table-session",
+            to: "restaurant-table",
+            kind: "many-to-one",
+            field: "tableCode",
+          },
+          {
+            from: "menu-item",
+            to: "menu-category",
+            kind: "many-to-one",
+            field: "categoryKey",
+          },
+          {
+            from: "order",
+            to: "table-session",
+            kind: "many-to-one",
+            field: "tableSessionId",
+          },
+          {
+            from: "order-line",
+            to: "order",
+            kind: "many-to-one",
+            field: "orderId",
+          },
+          {
+            from: "order-line",
+            to: "menu-item",
+            kind: "many-to-one",
+            field: "menuItemId",
+          },
+          {
+            from: "payment-attempt",
+            to: "order",
+            kind: "many-to-one",
+            field: "orderId",
+          },
+          {
+            from: "kitchen-ticket",
+            to: "order",
+            kind: "one-to-one",
+            field: "orderId",
+          },
+          {
+            from: "inventory-ledger",
+            to: "menu-item",
+            kind: "many-to-one",
+            field: "menuItemId",
+          },
+          {
+            from: "inventory-ledger",
+            to: "order",
+            kind: "many-to-one",
+            field: "orderId",
+          },
+        ],
         seedData: [
+          {
+            entity: "restaurant-location",
+            id: "main-location",
+            values: { name: "Main restaurant", currency: "USD", active: true },
+          },
+          {
+            entity: "restaurant-table",
+            id: "table-12",
+            values: { code: "T12", number: 12, status: "open", active: true },
+          },
+          {
+            entity: "menu-category",
+            id: "mains",
+            values: { name: "Mains", sortOrder: 1, active: true },
+          },
           {
             entity: "menu-item",
             id: "margherita-pizza",
             values: {
+              categoryKey: "mains",
               name: "Margherita pizza",
+              description: "Tomato, mozzarella, and basil",
               price: 14,
               available: true,
               stock: 12,
+              preparationMinutes: 12,
+              imageUrl: "/menu/margherita-pizza.jpg",
             },
           },
           {
             entity: "menu-item",
             id: "mushroom-risotto",
             values: {
+              categoryKey: "mains",
               name: "Mushroom risotto",
+              description: "Arborio rice and mushrooms",
               price: 18,
               available: true,
               stock: 8,
+              preparationMinutes: 18,
+              imageUrl: "/menu/mushroom-risotto.jpg",
             },
           },
         ],
       },
       {
-        roles: ["customer", "kitchen", "manager"],
+        roles: ["customer", "kitchen", "cashier", "manager"],
         permissions: [
+          { role: "customer", resource: "table-session", actions: ["read"] },
+          { role: "customer", resource: "menu-category", actions: ["read"] },
           { role: "customer", resource: "menu-item", actions: ["read"] },
-          { role: "customer", resource: "order", actions: ["create", "read"] },
+          {
+            role: "customer",
+            resource: "order",
+            actions: ["create", "read", "update"],
+          },
+          {
+            role: "customer",
+            resource: "order-line",
+            actions: ["create", "read", "update", "delete"],
+          },
+          {
+            role: "kitchen",
+            resource: "kitchen-ticket",
+            actions: ["read", "update"],
+          },
           { role: "kitchen", resource: "order", actions: ["read", "update"] },
-          { role: "manager", resource: "order", actions: ["read", "audit"] },
+          {
+            role: "cashier",
+            resource: "payment-attempt",
+            actions: ["create", "read"],
+          },
+          { role: "cashier", resource: "order", actions: ["read", "update"] },
+          {
+            role: "manager",
+            resource: "restaurant-table",
+            actions: ["create", "read", "update"],
+          },
+          {
+            role: "manager",
+            resource: "table-session",
+            actions: ["create", "read", "update"],
+          },
+          {
+            role: "manager",
+            resource: "menu-category",
+            actions: ["create", "read", "update"],
+          },
+          {
+            role: "manager",
+            resource: "menu-item",
+            actions: ["create", "read", "update"],
+          },
+          {
+            role: "manager",
+            resource: "order",
+            actions: ["read", "audit"],
+          },
+          {
+            role: "manager",
+            resource: "order",
+            actions: ["update", "cancel"],
+          },
+          {
+            role: "manager",
+            resource: "inventory-ledger",
+            actions: ["create", "read", "audit"],
+          },
         ],
       },
       {
         flows: [
           {
+            id: "restaurant-table-session",
+            entity: "table-session",
+            initialState: "open",
+            states: ["open", "active", "closed"],
+            events: ["activate", "close", "expire"],
+            transitions: [
+              {
+                from: "open",
+                event: "activate",
+                to: "active",
+                roles: ["manager"],
+              },
+              {
+                from: "active",
+                event: "close",
+                to: "closed",
+                roles: ["manager"],
+                effects: [{ capability: "audit.record", operation: "record" }],
+              },
+              { from: "open", event: "expire", to: "closed" },
+              { from: "active", event: "expire", to: "closed" },
+            ],
+          },
+          {
             id: "restaurant-order",
             entity: "order",
             initialState: "cart",
-            states: ["cart", "paid", "preparing", "ready"],
-            events: ["pay", "start-preparing", "mark-ready"],
+            states: [
+              "cart",
+              "submitted",
+              "paid",
+              "accepted",
+              "preparing",
+              "ready",
+              "served",
+              "cancelled",
+            ],
+            events: [
+              "submit",
+              "pay",
+              "accept",
+              "start-preparing",
+              "mark-ready",
+              "serve",
+              "cancel",
+            ],
             transitions: [
               {
                 from: "cart",
+                event: "submit",
+                to: "submitted",
+                roles: ["customer"],
+                effects: [
+                  { capability: "order.create", operation: "create" },
+                  { capability: "inventory.reserve", operation: "reserve" },
+                  { capability: "audit.record", operation: "record" },
+                ],
+              },
+              {
+                from: "submitted",
                 event: "pay",
                 to: "paid",
+                roles: ["customer", "cashier"],
                 effects: [
                   { capability: "payment.simulate", operation: "simulate" },
                   { capability: "inventory.decrement", operation: "decrement" },
+                  { capability: "order.transition", operation: "transition" },
+                  { capability: "audit.record", operation: "record" },
                 ],
               },
               {
                 from: "paid",
+                event: "accept",
+                to: "accepted",
+                roles: ["kitchen"],
+                effects: [
+                  { capability: "order.transition", operation: "transition" },
+                  { capability: "audit.record", operation: "record" },
+                ],
+              },
+              {
+                from: "accepted",
                 event: "start-preparing",
                 to: "preparing",
                 roles: ["kitchen"],
+                effects: [
+                  { capability: "order.transition", operation: "transition" },
+                  { capability: "audit.record", operation: "record" },
+                ],
               },
               {
                 from: "preparing",
@@ -491,7 +1017,40 @@ export const profileGraphs: readonly ProfileGraphStarter[] = Object.freeze([
                 to: "ready",
                 roles: ["kitchen"],
                 effects: [
+                  { capability: "order.transition", operation: "transition" },
                   { capability: "notification.send", operation: "send" },
+                  { capability: "audit.record", operation: "record" },
+                ],
+              },
+              {
+                from: "ready",
+                event: "serve",
+                to: "served",
+                roles: ["cashier"],
+                effects: [
+                  { capability: "order.transition", operation: "transition" },
+                  { capability: "audit.record", operation: "record" },
+                ],
+              },
+              {
+                from: "submitted",
+                event: "cancel",
+                to: "cancelled",
+                roles: ["manager"],
+                effects: [
+                  { capability: "inventory.release", operation: "release" },
+                  { capability: "order.transition", operation: "transition" },
+                  { capability: "audit.record", operation: "record" },
+                ],
+              },
+              {
+                from: "paid",
+                event: "cancel",
+                to: "cancelled",
+                roles: ["manager"],
+                effects: [
+                  { capability: "order.transition", operation: "transition" },
+                  { capability: "audit.record", operation: "record" },
                 ],
               },
             ],
@@ -737,6 +1296,9 @@ export function composeProfileDraft(
       ),
     },
   );
+  if (input.profile === "restaurant-ordering") {
+    assertRestaurantOrderingProfile(validatedGraph);
+  }
   return {
     profile: input.profile,
     graph: validatedGraph,

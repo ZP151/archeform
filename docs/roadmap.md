@@ -50,7 +50,18 @@
 ## Independent profiles
 
 - Expense Approval: submit, approve/reject, and audit.
-- Restaurant Ordering: menu, cart, payment simulation, and kitchen status.
+- Restaurant Ordering customer acceptance: enter through a verified table
+  session, browse and search the menu, add quantities, modifiers, and notes,
+  submit and simulate full payment, then track status and view a receipt and
+  session order history.
+- Restaurant Ordering merchant acceptance: manage tables, sessions, menu, and
+  stock; operate deterministic kitchen and cashier surfaces; cancel eligible
+  orders with inventory and audit evidence; and inspect the operational
+  dashboard.
+- Restaurant Profile validation currently enforces its complete Graph semantics
+  and current core/commerce Golden locks. Enforcement of the six
+  Restaurant-specific asset locks activates with their real package manifests
+  in the next capability-packaging task; no placeholder locks are admitted.
 - Simple Ecommerce: catalog, checkout, inventory update, payment simulation,
   and order lifecycle.
 
