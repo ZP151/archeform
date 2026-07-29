@@ -254,6 +254,9 @@ describe("compilation target registry", () => {
     expect(files["capability-template-lock.json"]).toContain(
       '"assetVersion": "1.0.0"',
     );
+    expect(files["capability-template-lock.json"]).toContain(
+      '"digest": "sha256:883eb54bad1d3a0e9da7542e8a342231f3d1ab8f7d9e4824d9aacb530268447f"',
+    );
   });
 
   it("rejects a Graph capability without a locked Golden package", () => {
