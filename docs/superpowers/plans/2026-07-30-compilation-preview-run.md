@@ -468,6 +468,172 @@ git add e2e docs
 git commit -m "test: prove generated compilation preview"
 ```
 
+### Task 5: Preserve optional DomainModel relations in generated applications
+
+**Files:**
+
+- Modify: `packages/compiler/src/index.ts`
+- Modify: `packages/compiler/test/compilation-plan.test.ts`
+
+**Consumes:** The relation cardinality already declared by `DomainModel` and
+the generated Web/API create contract exercised by Task 4.
+
+**Produces:** A generated Prisma schema and initial migration that do not make
+a relation mandatory when `ApplicationGraphV1` has no relation-requiredness
+property. A form that creates a record without selecting an optional relation
+must therefore remain valid.
+
+- [ ] **Step 1: Write a failing compiler regression test**
+
+Use a Graph containing `journey one-to-many expense`, and assert that the
+generated Prisma schema represents the `expense` → `journey` association as
+optional and that the initial PostgreSQL migration emits a nullable foreign-key
+column. The test must prove the exact generated artifacts; it must not inspect
+or mutate compiler internals.
+
+- [ ] **Step 2: Run the focused test to verify RED**
+
+Run:
+
+```bash
+pnpm --filter @factory/compiler test -- compilation-plan.test.ts
+```
+
+Expected: FAIL because the compiler currently emits a required relation field
+and `TEXT NOT NULL` foreign-key column for every non-many-to-many relation.
+
+- [ ] **Step 3: Compile undeclared relation requiredness as optional**
+
+For one-to-one, one-to-many, and many-to-one relations, emit nullable Prisma
+foreign-key and relation fields and a nullable PostgreSQL migration column.
+Retain cardinality, uniqueness for one-to-one, foreign-key constraints, and
+all many-to-many behavior. Do not invent a Graph input field, seed record, or
+caller-supplied data to satisfy a relationship that the Graph did not mark as
+required.
+
+- [ ] **Step 4: Verify GREEN and re-run the isolated preview proof**
+
+Run:
+
+```bash
+pnpm --filter @factory/compiler test -- compilation-plan.test.ts
+pnpm --filter @factory/compiler typecheck
+pnpm --filter @factory/compiler lint
+pnpm exec playwright test e2e/workbench.spec.ts --reporter=line
+```
+
+The E2E must create an Expense after the Domain Studio relation edit, submit
+it, approve it as Manager, stop the PreviewRun, and prove that only its named
+resources were removed.
+
+- [ ] **Step 5: Commit Task 5**
+
+```bash
+git add packages/compiler e2e docs
+git commit -m "fix: compile optional graph relations"
+```
+
+### Task 6: Prove the browser create action and eliminate its generated-app alert
+
+**Files:**
+
+- Modify: `e2e/workbench.spec.ts`
+- Modify: `packages/compiler/src/index.ts` only if the focused browser evidence
+  identifies a generated-Web runtime defect.
+- Modify: `packages/compiler/test/compilation-plan.test.ts` only if a compiler
+  output contract changes.
+
+**Consumes:** Task 5's optional-relation compilation fix and the isolated
+PreviewRun created by Tasks 1–3.
+
+**Produces:** Bounded, reproducible browser evidence that the generated form
+uses the same-origin proxy successfully and does not display an error after a
+successful record creation.
+
+- [ ] **Step 1: Strengthen the failing browser regression**
+
+Before clicking **Create Expense**, wait for the generated browser page's
+same-origin `POST /api/expense` response. Assert its status is `201`, assert
+the form clears its amount field, and keep the requirement that no generated
+application alert remains. Ensure a failed assertion retains only safe request
+method, route, status, and visible error category; it must not persist Graphs,
+source snapshots, credentials, raw prompts, or raw model responses.
+
+- [ ] **Step 2: Run the named isolated E2E to verify RED or expose the exact failure**
+
+Run the Workbench E2E only against a uniquely named Factory Compose project
+and dedicated ports. If the response is non-201 or an alert remains, capture
+the bounded response/alert category and trace the failure through the
+generated same-origin proxy and API before changing production code.
+
+- [ ] **Step 3: Fix only the identified generated-runtime cause**
+
+If evidence identifies a generated-Web or proxy defect, add a failing focused
+compiler-output test and apply the smallest correction in the compiler. Do
+not weaken the alert assertion, skip the generated browser action, or replace
+it with a direct API request. If browser POST is `201` and no action-generated
+error exists, retain the stricter response/form assertions and remove only a
+demonstrably stale test assumption.
+
+- [ ] **Step 4: Verify the complete journey and cleanup**
+
+Run the compiler test/typecheck/lint when compiler output changes, then run
+the named isolated browser journey. It must create Expense, submit it as the
+employee, approve it as Manager, stop the PreviewRun, and prove only its named
+resources were removed.
+
+- [ ] **Step 5: Commit Task 6**
+
+```bash
+git add e2e packages/compiler docs
+git commit -m "test: verify generated preview browser journey"
+```
+
+### Task 7: Finalize isolated preview acceptance evidence
+
+**Files:**
+
+- Modify: `docs/acceptance/compilation-preview-run.md`
+- Modify: `docs/roadmap.md`
+
+**Consumes:** The reviewed Task 1–6 lifecycle, compiler, Workbench, and
+focused browser evidence.
+
+**Produces:** An English acceptance record that distinguishes a passed focused
+PreviewRun journey from unrelated Workbench tests, and a roadmap statement of
+the accepted immutable-compilation preview capability.
+
+- [ ] **Step 1: Replace stale blocked-attempt wording**
+
+Retain only concise historical context necessary to explain the final result.
+Record that the accepted focused browser proof uses a named isolated Factory
+project, opens a generated application in a separate tab, proves a same-origin
+record creation response, performs employee submit and manager approval, then
+stops and removes only the derived PreviewRun resources.
+
+- [ ] **Step 2: Preserve evidence boundaries**
+
+Do not record credentials, Graph content, prompts, model traffic, generated
+source, subprocess output, or unbounded browser response data. State plainly
+that the focused PreviewRun gate passed independently and that unrelated
+Workbench timing failures remain outside this acceptance record.
+
+- [ ] **Step 3: Verify and commit**
+
+Run:
+
+```bash
+pnpm exec prettier --check docs/acceptance/compilation-preview-run.md docs/roadmap.md
+git diff --check
+```
+
+Commit only the documentation evidence:
+
+```bash
+git add docs/acceptance/compilation-preview-run.md docs/roadmap.md
+git commit -m "docs: accept isolated compilation preview"
+```
+
 ## Self-review
 
 - Task 1 creates a persistent safe lifecycle and rejects uncompiled inputs.
