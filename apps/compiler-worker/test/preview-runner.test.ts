@@ -379,6 +379,122 @@ describe("preview runner", () => {
     }
   });
 
+  it("rejects stop without a registered Compose artifact before Docker runs", async () => {
+    const root = await mkdtemp(join(tmpdir(), "factory-preview-root-"));
+    const processRunner = vi
+      .fn<PreviewProcessRunner>()
+      .mockResolvedValue(undefined);
+    try {
+      await expect(
+        stopPreviewRun(
+          root,
+          request([artifact("src/app.ts", application)]),
+          processRunner,
+        ),
+      ).rejects.toMatchObject({ code: "preview_stop_failed" });
+      expect(processRunner).not.toHaveBeenCalled();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects stop when the registered derived Compose file is missing before Docker runs", async () => {
+    const root = await mkdtemp(join(tmpdir(), "factory-preview-root-"));
+    const processRunner = vi
+      .fn<PreviewProcessRunner>()
+      .mockResolvedValue(undefined);
+    try {
+      await mkdir(join(root, ".preview-runs", "preview-1"), {
+        recursive: true,
+      });
+
+      await expect(
+        stopPreviewRun(root, request(registeredArtifacts), processRunner),
+      ).rejects.toMatchObject({ code: "preview_stop_failed" });
+      expect(processRunner).not.toHaveBeenCalled();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    {
+      name: "same-size digest change",
+      contents: (() => {
+        const changed = Buffer.from(compose);
+        changed[0] = changed[0]! ^ 1;
+        return changed;
+      })(),
+    },
+    {
+      name: "byte-size change",
+      contents: Buffer.concat([compose, Buffer.from("# changed\n", "utf8")]),
+    },
+  ])(
+    "rejects stop after a derived Compose $name before Docker runs",
+    async ({ contents }) => {
+      const root = await mkdtemp(join(tmpdir(), "factory-preview-root-"));
+      const preview = join(root, ".preview-runs", "preview-1");
+      const processRunner = vi
+        .fn<PreviewProcessRunner>()
+        .mockResolvedValue(undefined);
+      try {
+        await mkdir(preview, { recursive: true });
+        await writeFile(join(preview, "docker-compose.yml"), contents);
+
+        await expect(
+          stopPreviewRun(root, request(registeredArtifacts), processRunner),
+        ).rejects.toMatchObject({ code: "preview_stop_failed" });
+        expect(processRunner).not.toHaveBeenCalled();
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it("rejects stop with a symlinked derived Compose path before Docker runs", async () => {
+    const root = await mkdtemp(join(tmpdir(), "factory-preview-root-"));
+    const preview = join(root, ".preview-runs", "preview-1");
+    const target = join(root, "compose-target");
+    const processRunner = vi
+      .fn<PreviewProcessRunner>()
+      .mockResolvedValue(undefined);
+    try {
+      await mkdir(preview, { recursive: true });
+      await mkdir(target, { recursive: true });
+      await symlink(target, join(preview, "docker-compose.yml"), "junction");
+
+      await expect(
+        stopPreviewRun(root, request(registeredArtifacts), processRunner),
+      ).rejects.toMatchObject({ code: "preview_stop_failed" });
+      expect(processRunner).not.toHaveBeenCalled();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not run failed-start cleanup with a changed derived Compose file", async () => {
+    const { root } = await sourceFixture();
+    const preview = join(root, ".preview-runs", "preview-1");
+    const commands: Parameters<PreviewProcessRunner>[0][] = [];
+    const processRunner: PreviewProcessRunner = async (command) => {
+      commands.push(command);
+      const changed = Buffer.from(compose);
+      changed[0] = changed[0]! ^ 1;
+      await writeFile(join(preview, "docker-compose.yml"), changed);
+      throw new Error("Docker failed.");
+    };
+    try {
+      await expect(
+        startPreviewRun(root, request(registeredArtifacts), processRunner),
+      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      expect(commands).toHaveLength(1);
+      expect(commands[0]?.args).toContain("up");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("retains a failed-start runtime copy until the allowed stop cleans its named project", async () => {
     const { root, source } = await sourceFixture();
     const preview = join(root, ".preview-runs", "preview-1");

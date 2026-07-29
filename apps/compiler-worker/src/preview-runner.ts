@@ -146,6 +146,8 @@ type VerifiedArtifact = {
   readonly contents: Buffer;
 };
 
+type ArtifactEvidence = PreviewRuntimeRequest["artifacts"][number];
+
 function safeArtifactManifest(
   artifacts: PreviewRuntimeRequest["artifacts"],
 ): PreviewRuntimeRequest["artifacts"] {
@@ -216,6 +218,51 @@ function samePaths(actual: readonly string[], expected: readonly string[]) {
   );
 }
 
+function noFollowFlag(): number {
+  return "O_NOFOLLOW" in constants
+    ? (constants as typeof constants & { O_NOFOLLOW: number }).O_NOFOLLOW
+    : 0;
+}
+
+async function verifiedArtifactContents(
+  path: string,
+  artifact: ArtifactEvidence,
+): Promise<Buffer> {
+  const sourceEntry = await lstat(path);
+  if (sourceEntry.isSymbolicLink() || !sourceEntry.isFile())
+    throw new Error("Invalid artifact source.");
+  const handle = await open(path, constants.O_RDONLY | noFollowFlag());
+  try {
+    const openedEntry = await handle.stat();
+    if (!openedEntry.isFile()) throw new Error("Invalid artifact source.");
+    const contents = await handle.readFile();
+    const digest = `sha256:${createHash("sha256")
+      .update(contents)
+      .digest("hex")}`;
+    if (
+      contents.byteLength !== artifact.sizeBytes ||
+      digest !== artifact.digest
+    ) {
+      throw new Error("Invalid artifact source.");
+    }
+    return contents;
+  } finally {
+    await handle.close();
+  }
+}
+
+async function verifyComposeArtifact(
+  composeFile: string,
+  artifacts: PreviewRuntimeRequest["artifacts"],
+): Promise<void> {
+  const manifest = safeArtifactManifest(artifacts);
+  const composeArtifact = manifest.find(
+    (artifact) => artifact.path === "docker-compose.yml",
+  );
+  if (!composeArtifact) throw new Error("Invalid artifact manifest.");
+  await verifiedArtifactContents(composeFile, composeArtifact);
+}
+
 async function verifiedArtifacts(
   sourceDirectory: string,
   artifacts: PreviewRuntimeRequest["artifacts"],
@@ -230,34 +277,13 @@ async function verifiedArtifacts(
   if (!samePaths(initialPaths, expectedPaths))
     throw new Error("Invalid artifact source.");
 
-  const noFollow =
-    "O_NOFOLLOW" in constants
-      ? (constants as typeof constants & { O_NOFOLLOW: number }).O_NOFOLLOW
-      : 0;
   const verified: VerifiedArtifact[] = [];
   for (const artifact of manifest) {
     const sourcePath = join(sourceDirectory, ...artifact.path.split("/"));
-    const sourceEntry = await lstat(sourcePath);
-    if (sourceEntry.isSymbolicLink() || !sourceEntry.isFile())
-      throw new Error("Invalid artifact source.");
-    const handle = await open(sourcePath, constants.O_RDONLY | noFollow);
-    try {
-      const openedEntry = await handle.stat();
-      if (!openedEntry.isFile()) throw new Error("Invalid artifact source.");
-      const contents = await handle.readFile();
-      const digest = `sha256:${createHash("sha256")
-        .update(contents)
-        .digest("hex")}`;
-      if (
-        contents.byteLength !== artifact.sizeBytes ||
-        digest !== artifact.digest
-      ) {
-        throw new Error("Invalid artifact source.");
-      }
-      verified.push({ path: artifact.path, contents });
-    } finally {
-      await handle.close();
-    }
+    verified.push({
+      path: artifact.path,
+      contents: await verifiedArtifactContents(sourcePath, artifact),
+    });
   }
 
   const finalPaths = await walkRegularFiles(sourceDirectory);
@@ -366,15 +392,18 @@ export async function startPreviewRun(
     return { webPort, apiPort, previewUrl: `http://127.0.0.1:${webPort}` };
   } catch (error) {
     let cleanedUp = false;
-    await processRunner(
-      composeCommand(
-        directory,
-        composeFile,
-        project,
-        ["down", "--volumes", "--remove-orphans"],
-        { FACTORY_COMPOSE_PROJECT_NAME: project },
-      ),
-    )
+    await verifyComposeArtifact(composeFile, request.artifacts)
+      .then(() =>
+        processRunner(
+          composeCommand(
+            directory,
+            composeFile,
+            project,
+            ["down", "--volumes", "--remove-orphans"],
+            { FACTORY_COMPOSE_PROJECT_NAME: project },
+          ),
+        ),
+      )
       .then(() => {
         cleanedUp = true;
       })
@@ -395,6 +424,7 @@ export async function stopPreviewRun(
   const project = factoryProjectName(request);
   const composeFile = join(directory, "docker-compose.yml");
   try {
+    await verifyComposeArtifact(composeFile, request.artifacts);
     await processRunner(
       composeCommand(
         directory,
