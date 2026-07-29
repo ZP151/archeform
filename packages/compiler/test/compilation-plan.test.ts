@@ -201,7 +201,7 @@ describe("compilation target registry", () => {
       "declaredEffectOperations.has(effectOperationKey(capability, operation))",
     );
     expect(files["api/src/application-runtime.ts"]).toContain(
-      'import { getEffectHandler } from "./capabilities/registry.js";',
+      'import { getEffectHandler, getRecordHandler, getWorkflowHandler } from "./capabilities/registry.js";',
     );
     expect(files["capability-template-lock.json"]).toContain(
       '"assetKey": "core.audit"',
@@ -494,6 +494,9 @@ describe("compilation target registry", () => {
       publishedRevisionId: "published-expense-runtime-1",
       graph: {
         ...publishedExpense.graph,
+        integration: composeProfileDraft({
+          profile: "expense-approval",
+        }).graph.integration,
         domain: {
           entities: [
             {
@@ -589,6 +592,18 @@ describe("compilation target registry", () => {
     );
     expect(files["api/src/application-runtime.ts"]).toContain(
       "this.assertAllowed(role, entityKey, 'update')",
+    );
+    expect(files["api/src/capabilities/core.crud.ts"]).toContain(
+      "recordHandler",
+    );
+    expect(files["api/src/capabilities/core.workflow.ts"]).toContain(
+      "workflowHandler",
+    );
+    expect(files["api/src/application-runtime.ts"]).not.toContain(
+      "await this.store.create(entityKey",
+    );
+    expect(files["api/src/application-runtime.ts"]).not.toContain(
+      "await this.store.update(entityKey, recordId, { status: transition.to })",
     );
     expect(files["api/src/policy.ts"]).toContain("newEnforcer");
     expect(files["api/src/flows/machines.ts"]).toContain("createMachine");

@@ -22,8 +22,20 @@ describe("profile compilation", () => {
     expect(files["api/src/capabilities/core.notification.ts"]).toContain(
       "effectHandler: async",
     );
+    expect(files["api/src/capabilities/core.crud.ts"]).toContain(
+      "recordHandler: {",
+    );
+    expect(files["api/src/capabilities/core.workflow.ts"]).toContain(
+      "workflowHandler: {",
+    );
     expect(files["api/src/application-runtime.ts"]).not.toContain(
       "effect.capability === 'audit.record'",
+    );
+    expect(files["api/src/application-runtime.ts"]).toContain(
+      "getRecordHandler().create({",
+    );
+    expect(files["api/src/application-runtime.ts"]).toContain(
+      "const workflowHandler = getWorkflowHandler();",
     );
   });
 

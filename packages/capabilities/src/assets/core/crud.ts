@@ -11,7 +11,7 @@ export const crudAsset: CapabilityAssetV1 = {
       "Creates, reads, updates, and deletes validated domain records.",
     packageRoot: "packages/capabilities/assets/core.crud/1.0.0",
     manifestDigest:
-      "sha256:69bad8aab8bf23fe3820bba3d6fcf12e39c17399ae98390910f61e0792e8dfb7",
+      "sha256:a5ccea32f8afd153bbc94fe3cbd240e0440441f9e3cb0c2b1b720ef4d151e936",
     lifecycle: "golden",
     profiles: ["expense-approval", "restaurant-ordering", "simple-ecommerce"],
     effects: ["data.create", "data.read", "data.update", "data.delete"],
@@ -29,7 +29,7 @@ export const crudAsset: CapabilityAssetV1 = {
         target: "api/src/capabilities/core.crud.ts",
         outputSlot: "api.runtime",
         digest:
-          "sha256:8ced82a4c3db325ab13c454b081a3f81add5e8bb3f341d51474e04d69e42a06b",
+          "sha256:5e1bcc06560ccdd1062c786618a883de6df9234d2134c89361b3adaab0700955",
       },
     ],
     verification: {
