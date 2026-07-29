@@ -12,6 +12,16 @@
 - Prove Puck and React Flow round trips without making either library the source
   of truth.
 
+## Guided application creation
+
+- Let a business user choose an accepted application outcome, name it, set its
+  experience mode, review its bounded Graph shape, and create a new mutable
+  Draft without editing Graph JSON.
+- Use a left-side three-step creation drawer; it must never publish, compile,
+  invoke a model, or bypass the Control Plane Graph validation boundary.
+- Continue from the new Draft in Page, Domain, Flow, Policy, AI, and Code
+  Studio before the user explicitly publishes it.
+
 ## Compiler and capabilities
 
 - Compile published Graphs into the simulator, generated Web/API/database,

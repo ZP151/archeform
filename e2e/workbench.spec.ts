@@ -1,5 +1,31 @@
 import { expect, test } from "@playwright/test";
 
+test("creates a named application Draft through the guided business-user journey", async ({
+  page,
+}) => {
+  const name = `Travel approvals ${Date.now().toString()}`;
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "New application" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Create application left-side drawer" }),
+  ).toBeVisible();
+  await page.getByTestId("guided-template-expense-approval").click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Application name").fill(name);
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByText("Draft only · light mode")).toBeVisible();
+  await page.getByTestId("guided-create").click();
+
+  await expect(
+    page.getByRole("dialog", { name: "Create application left-side drawer" }),
+  ).toBeHidden();
+  await expect(page.getByLabel("Current application")).toHaveText(name);
+  await expect(page.getByLabel("Puck Page Studio")).toBeVisible();
+  await expect(page.getByText("Draft", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Published" })).toHaveCount(0);
+});
+
 test("edits a Draft, publishes an immutable revision, and compiles it", async ({
   page,
 }) => {
