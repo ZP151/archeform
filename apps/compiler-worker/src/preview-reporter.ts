@@ -1,11 +1,11 @@
-import type { StartedPreview } from "./preview-runner.js";
+import type { PreviewFailureCode, StartedPreview } from "./preview-runner.js";
 
 export interface PreviewReporter {
   ready(previewRunId: string, evidence: StartedPreview): Promise<void>;
   failed(
     previewRunId: string,
     evidence: {
-      readonly diagnostic: "preview_start_failed" | "preview_stop_failed";
+      readonly diagnostic: PreviewFailureCode;
     },
   ): Promise<void>;
   stopped(previewRunId: string): Promise<void>;

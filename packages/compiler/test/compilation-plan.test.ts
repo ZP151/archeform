@@ -893,6 +893,12 @@ describe("compilation target registry", () => {
       "FACTORY_COMPOSE_PROJECT_NAME",
     );
     expect(files["docker-compose.yml"]).toContain(
+      '"127.0.0.1:${FACTORY_API_PORT:-0}:3001"',
+    );
+    expect(files["docker-compose.yml"]).toContain(
+      '"127.0.0.1:${FACTORY_WEB_PORT:-0}:3000"',
+    );
+    expect(files["docker-compose.yml"]).toContain(
       "factory-expense-approval-published-expense-1",
     );
     expect(files["pnpm-workspace.yaml"]).toContain("web");

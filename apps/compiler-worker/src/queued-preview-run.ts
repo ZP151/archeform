@@ -1,6 +1,6 @@
 import type { PreviewReporter } from "./preview-reporter.js";
 import {
-  removePreviewDirectory,
+  PreviewRunFailure,
   startPreviewRun,
   stopPreviewRun,
   type PreviewRuntimeRequest,
@@ -32,7 +32,6 @@ export async function executeQueuedPreviewRun(
   job: PreviewRunJob,
   previewRuntime: PreviewRuntime = runtime,
   reporter: PreviewReporter,
-  removeDirectory: typeof removePreviewDirectory = removePreviewDirectory,
 ): Promise<void> {
   try {
     if (job.action === "start") {
@@ -43,11 +42,14 @@ export async function executeQueuedPreviewRun(
       return;
     }
     await previewRuntime.stop(artifactRoot, job);
-    await removeDirectory(artifactRoot, job.rootDirectory);
     await reporter.stopped(job.previewRunId);
-  } catch {
+  } catch (error) {
     const diagnostic =
-      job.action === "start" ? "preview_start_failed" : "preview_stop_failed";
+      error instanceof PreviewRunFailure
+        ? error.code
+        : job.action === "start"
+          ? "preview_start_failed"
+          : "preview_stop_failed";
     await reporter.failed(job.previewRunId, { diagnostic });
     throw new Error("Preview run failed.");
   }

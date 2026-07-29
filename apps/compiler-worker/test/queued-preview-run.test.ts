@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { executeQueuedPreviewRun } from "../src/queued-preview-run.js";
+import { PreviewRunFailure } from "../src/preview-runner.js";
 
 const startJob = {
   action: "start" as const,
@@ -36,7 +37,7 @@ describe("queued preview run", () => {
     expect(reporter.failed).not.toHaveBeenCalled();
   });
 
-  it("cleans the named preview directory before reporting a stopped run", async () => {
+  it("reports a stopped run only after its named runtime cleanup succeeds", async () => {
     const reporter = {
       ready: vi.fn(),
       failed: vi.fn(),
@@ -46,23 +47,16 @@ describe("queued preview run", () => {
       start: vi.fn(),
       stop: vi.fn().mockResolvedValue(undefined),
     };
-    const removePreviewDirectory = vi.fn().mockResolvedValue(undefined);
-
     await executeQueuedPreviewRun(
       "C:/artifacts",
       { ...startJob, action: "stop" },
       runtime,
       reporter,
-      removePreviewDirectory,
     );
 
     expect(runtime.stop).toHaveBeenCalledWith(
       "C:/artifacts",
       expect.objectContaining({ ...startJob, action: "stop" }),
-    );
-    expect(removePreviewDirectory).toHaveBeenCalledWith(
-      "C:/artifacts",
-      "expense-published-1",
     );
     expect(reporter.stopped).toHaveBeenCalledWith("preview-1");
   });
@@ -87,6 +81,29 @@ describe("queued preview run", () => {
     ).rejects.toThrow("Preview run failed.");
     expect(reporter.failed).toHaveBeenCalledWith("preview-1", {
       diagnostic: "preview_start_failed",
+    });
+  });
+
+  it("preserves the health-check failure code from the Worker runtime", async () => {
+    const reporter = {
+      ready: vi.fn(),
+      failed: vi.fn().mockResolvedValue(undefined),
+      stopped: vi.fn(),
+    };
+    const runtime = {
+      start: vi
+        .fn()
+        .mockRejectedValue(
+          new PreviewRunFailure("preview_health_check_failed"),
+        ),
+      stop: vi.fn(),
+    };
+
+    await expect(
+      executeQueuedPreviewRun("C:/artifacts", startJob, runtime, reporter),
+    ).rejects.toThrow("Preview run failed.");
+    expect(reporter.failed).toHaveBeenCalledWith("preview-1", {
+      diagnostic: "preview_health_check_failed",
     });
   });
 });

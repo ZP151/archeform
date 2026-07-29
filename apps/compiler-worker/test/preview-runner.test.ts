@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -30,12 +30,16 @@ describe("preview runner", () => {
     expect(processRunner).not.toHaveBeenCalled();
   });
 
-  it("starts only a Factory-named generated project through an argument-array Docker invocation", async () => {
+  it("runs a copied PreviewRun directory and discovers Docker-assigned loopback ports", async () => {
     const root = await mkdtemp(join(tmpdir(), "factory-preview-root-"));
     const generated = join(root, "expense-published-1");
     const spawned: Parameters<PreviewProcessRunner>[0][] = [];
     const processRunner: PreviewProcessRunner = async (command) => {
       spawned.push(command);
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "web")
+        return "127.0.0.1:49101\n";
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "api")
+        return "127.0.0.1:49102\n";
     };
     const allocate = vi
       .fn()
@@ -43,6 +47,11 @@ describe("preview runner", () => {
       .mockResolvedValueOnce(43102);
 
     try {
+      await mkdir(generated, { recursive: true });
+      await writeFile(
+        join(root, "expense-published-1", "immutable.txt"),
+        "source",
+      );
       await expect(
         startPreviewRun(
           root,
@@ -53,14 +62,15 @@ describe("preview runner", () => {
           },
           processRunner,
           allocate,
-          async (url) => url === "http://127.0.0.1:43101",
+          async () => true,
         ),
       ).resolves.toEqual({
-        webPort: 43101,
-        apiPort: 43102,
-        previewUrl: "http://127.0.0.1:43101",
+        webPort: 49101,
+        apiPort: 49102,
+        previewUrl: "http://127.0.0.1:49101",
       });
 
+      const previewDirectory = join(root, ".preview-runs", "preview-1");
       expect(spawned).toEqual([
         expect.objectContaining({
           file: "docker",
@@ -69,7 +79,7 @@ describe("preview runner", () => {
             "--project-name",
             "factory-preview-preview-1",
             "--project-directory",
-            generated,
+            previewDirectory,
             "up",
             "--build",
             "--detach",
@@ -77,23 +87,82 @@ describe("preview runner", () => {
           ],
           environment: {
             FACTORY_COMPOSE_PROJECT_NAME: "factory-preview-preview-1",
-            FACTORY_WEB_PORT: "43101",
-            FACTORY_API_PORT: "43102",
+            FACTORY_WEB_PORT: "0",
+            FACTORY_API_PORT: "0",
           },
         }),
+        expect.objectContaining({
+          args: [
+            "compose",
+            "--project-name",
+            "factory-preview-preview-1",
+            "--project-directory",
+            previewDirectory,
+            "port",
+            "web",
+            "3000",
+          ],
+        }),
+        expect.objectContaining({
+          args: [
+            "compose",
+            "--project-name",
+            "factory-preview-preview-1",
+            "--project-directory",
+            previewDirectory,
+            "port",
+            "api",
+            "3001",
+          ],
+        }),
+        expect.objectContaining({
+          args: [
+            "compose",
+            "--project-name",
+            "factory-preview-preview-1",
+            "--project-directory",
+            previewDirectory,
+            "exec",
+            "-T",
+            "web",
+            "wget",
+            "-q",
+            "-O",
+            "/dev/null",
+            "http://127.0.0.1:3000",
+          ],
+        }),
       ]);
+      expect(await readFile(join(generated, "immutable.txt"), "utf8")).toBe(
+        "source",
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
 
-  it("stops only the recorded Factory project with volumes and orphan cleanup", async () => {
+  it("stops only the copied PreviewRun project and preserves its immutable source", async () => {
     const root = await mkdtemp(join(tmpdir(), "factory-preview-root-"));
     const generated = join(root, "expense-published-1");
     const processRunner = vi
       .fn<PreviewProcessRunner>()
       .mockResolvedValue(undefined);
     try {
+      await mkdir(generated, { recursive: true });
+      await writeFile(join(generated, "immutable.txt"), "source");
+      await startPreviewRun(
+        root,
+        {
+          previewRunId: "preview-1",
+          rootDirectory: "expense-published-1",
+          composeProjectName: "factory-preview-preview-1",
+        },
+        async (command) => {
+          processRunner(command);
+          if (command.args.at(-2) === "web") return "127.0.0.1:49101\n";
+          if (command.args.at(-2) === "api") return "127.0.0.1:49102\n";
+        },
+      );
       await stopPreviewRun(
         root,
         {
@@ -103,14 +172,14 @@ describe("preview runner", () => {
         },
         processRunner,
       );
-      expect(processRunner).toHaveBeenCalledWith({
+      expect(processRunner).toHaveBeenLastCalledWith({
         file: "docker",
         args: [
           "compose",
           "--project-name",
           "factory-preview-preview-1",
           "--project-directory",
-          generated,
+          join(root, ".preview-runs", "preview-1"),
           "down",
           "--volumes",
           "--remove-orphans",
@@ -119,6 +188,15 @@ describe("preview runner", () => {
           FACTORY_COMPOSE_PROJECT_NAME: "factory-preview-preview-1",
         },
       });
+      await expect(
+        readFile(join(generated, "immutable.txt"), "utf8"),
+      ).resolves.toBe("source");
+      await expect(
+        readFile(
+          join(root, ".preview-runs", "preview-1", "immutable.txt"),
+          "utf8",
+        ),
+      ).rejects.toThrow();
     } finally {
       await rm(root, { recursive: true, force: true });
     }
