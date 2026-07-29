@@ -20,14 +20,11 @@ describe("BullMqPreviewRunQueue", () => {
     await previewQueue.enqueue({
       action: "stop",
       previewRunId: "preview-1",
-      compilationId: "compilation-1",
-      rootDirectory: "expense-approval-published-1",
-      composeProjectName: "factory-preview-preview-1",
     });
 
     expect(add).toHaveBeenCalledWith(
       "stop",
-      expect.objectContaining({ previewRunId: "preview-1" }),
+      { action: "stop", previewRunId: "preview-1" },
       acceptedRetention,
     );
     await previewQueue.onModuleDestroy();

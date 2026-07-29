@@ -1,14 +1,13 @@
 import { Injectable, type OnModuleDestroy } from "@nestjs/common";
 import { Queue } from "bullmq";
 
+import { redisConnection } from "./compilation-queue.js";
+
 export const PREVIEW_RUN_QUEUE = Symbol("PREVIEW_RUN_QUEUE");
 
 export type PreviewRunJob = {
   readonly action: "start" | "stop";
   readonly previewRunId: string;
-  readonly compilationId: string;
-  readonly rootDirectory: string;
-  readonly composeProjectName: string;
 };
 
 export interface PreviewRunQueue {
@@ -19,7 +18,7 @@ export interface PreviewRunQueue {
 export class BullMqPreviewRunQueue implements PreviewRunQueue, OnModuleDestroy {
   private readonly queue = new Queue<PreviewRunJob>(
     process.env.FACTORY_PREVIEW_QUEUE ?? "factory-preview-runs",
-    { connection: { url: process.env.REDIS_URL ?? "redis://localhost:6379" } },
+    { connection: redisConnection() },
   );
 
   async enqueue(job: PreviewRunJob): Promise<void> {

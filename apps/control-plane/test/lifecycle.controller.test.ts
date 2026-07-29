@@ -28,6 +28,7 @@ const lifecycle = {
   getCompilationArtifact: vi.fn(),
   getCompilation: vi.fn(),
   getCurrentPreviewRun: vi.fn(),
+  getPreviewDispatch: vi.fn(),
   listPublishedRevisions: vi.fn(),
   publishDraft: vi.fn(),
   proposeDraftRevision: vi.fn(),
@@ -46,8 +47,10 @@ class TestModule {}
 describe("LifecycleController", () => {
   let app: INestApplication;
   let baseUrl: string;
+  const originalWorkerToken = process.env.FACTORY_INTERNAL_WORKER_TOKEN;
 
   beforeAll(async () => {
+    process.env.FACTORY_INTERNAL_WORKER_TOKEN = "configured-worker-token";
     app = await NestFactory.create(TestModule, { logger: ["error"] });
     await app.listen(0, "127.0.0.1");
     const address = app.getHttpServer().address() as AddressInfo;
@@ -56,7 +59,14 @@ describe("LifecycleController", () => {
 
   beforeEach(() => vi.clearAllMocks());
 
-  afterAll(async () => app.close());
+  afterAll(async () => {
+    if (originalWorkerToken === undefined) {
+      delete process.env.FACTORY_INTERNAL_WORKER_TOKEN;
+    } else {
+      process.env.FACTORY_INTERNAL_WORKER_TOKEN = originalWorkerToken;
+    }
+    await app.close();
+  });
 
   it.each([
     {
@@ -83,6 +93,7 @@ describe("LifecycleController", () => {
     {
       method: "POST",
       path: "/internal/preview-runs/preview-1/ready",
+      internal: true,
       body: {
         webPort: 43101,
         apiPort: 43102,
@@ -102,6 +113,7 @@ describe("LifecycleController", () => {
     {
       method: "POST",
       path: "/internal/preview-runs/preview-1/failed",
+      internal: true,
       body: { diagnostic: "Preview startup failed." },
       handler: lifecycle.reportPreviewFailed,
       arguments: ["preview-1", { diagnostic: "Preview startup failed." }],
@@ -110,6 +122,7 @@ describe("LifecycleController", () => {
     {
       method: "POST",
       path: "/internal/preview-runs/preview-1/stopped",
+      internal: true,
       handler: lifecycle.reportPreviewStopped,
       arguments: ["preview-1"],
       response: { id: "preview-1", status: "stopped" },
@@ -242,6 +255,7 @@ describe("LifecycleController", () => {
     {
       method: "POST",
       path: "/internal/compilations/compilation-1/complete",
+      internal: true,
       body: {
         graphHash:
           "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
@@ -260,20 +274,84 @@ describe("LifecycleController", () => {
       ],
       response: { id: "compilation-1" },
     },
+    {
+      method: "GET",
+      path: "/internal/preview-runs/preview-1/dispatch?action=start",
+      internal: true,
+      handler: lifecycle.getPreviewDispatch,
+      arguments: ["preview-1", "start"],
+      response: {
+        action: "start",
+        previewRunId: "preview-1",
+        rootDirectory: "expense-approval-published-1",
+        composeProjectName: "factory-preview-preview-1",
+        artifacts: [],
+      },
+    },
   ])("maps $method $path to the lifecycle boundary", async (scenario) => {
     scenario.handler.mockResolvedValueOnce(scenario.response);
 
     const response = await fetch(`${baseUrl}${scenario.path}`, {
       method: scenario.method,
-      headers: scenario.body
-        ? { "content-type": "application/json" }
-        : undefined,
+      headers: {
+        ...(scenario.body ? { "content-type": "application/json" } : {}),
+        ...("internal" in scenario && scenario.internal
+          ? { "x-factory-internal-token": "configured-worker-token" }
+          : {}),
+      },
       body: scenario.body ? JSON.stringify(scenario.body) : undefined,
     });
 
     expect(response.status).toBe(scenario.method === "POST" ? 201 : 200);
     expect(await response.json()).toEqual(scenario.response);
     expect(scenario.handler).toHaveBeenCalledWith(...scenario.arguments);
+  });
+
+  it.each([
+    {
+      method: "POST",
+      path: "/internal/compilations/compilation-1/complete",
+      body: {},
+      handler: lifecycle.completeCompilation,
+    },
+    {
+      method: "GET",
+      path: "/internal/preview-runs/preview-1/dispatch?action=start",
+      handler: lifecycle.getPreviewDispatch,
+    },
+    {
+      method: "POST",
+      path: "/internal/preview-runs/preview-1/ready",
+      body: {},
+      handler: lifecycle.reportPreviewReady,
+    },
+    {
+      method: "POST",
+      path: "/internal/preview-runs/preview-1/failed",
+      body: {},
+      handler: lifecycle.reportPreviewFailed,
+    },
+    {
+      method: "POST",
+      path: "/internal/preview-runs/preview-1/stopped",
+      handler: lifecycle.reportPreviewStopped,
+    },
+  ])("rejects unauthenticated $method $path requests", async (scenario) => {
+    for (const providedToken of [undefined, "wrong-worker-token"]) {
+      const response = await fetch(`${baseUrl}${scenario.path}`, {
+        method: scenario.method,
+        headers: {
+          ...(scenario.body ? { "content-type": "application/json" } : {}),
+          ...(providedToken
+            ? { "x-factory-internal-token": providedToken }
+            : {}),
+        },
+        body: scenario.body ? JSON.stringify(scenario.body) : undefined,
+      });
+
+      expect(response.status).toBe(401);
+      expect(scenario.handler).not.toHaveBeenCalled();
+    }
   });
 
   it("rejects preview requests that attach caller-controlled runtime fields", async () => {

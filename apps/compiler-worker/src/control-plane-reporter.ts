@@ -9,6 +9,7 @@ type FetchImplementation = typeof fetch;
  */
 export function createControlPlaneReporter(
   controlPlaneUrl: string,
+  internalWorkerToken: string,
   fetchImplementation: FetchImplementation = fetch,
 ): CompilationReporter {
   const baseUrl = controlPlaneUrl.replace(/\/+$/, "");
@@ -18,7 +19,10 @@ export function createControlPlaneReporter(
         `${baseUrl}/internal/compilations/${encodeURIComponent(evidence.compilationId)}/complete`,
         {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: {
+            "content-type": "application/json",
+            "x-factory-internal-token": internalWorkerToken,
+          },
           body: JSON.stringify({
             graphHash: evidence.graphHash,
             rootDirectory: evidence.rootDirectory,

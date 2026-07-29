@@ -6,29 +6,58 @@ import { PreviewRunFailure } from "../src/preview-runner.js";
 const startJob = {
   action: "start" as const,
   previewRunId: "preview-1",
-  compilationId: "compilation-1",
-  rootDirectory: "expense-published-1",
-  composeProjectName: "factory-preview-preview-1",
 };
 
-describe("queued preview run", () => {
-  it("reports only declared start evidence after the generated application is ready", async () => {
-    const reporter = {
+const startDispatch = {
+  ...startJob,
+  rootDirectory: "expense-published-1",
+  composeProjectName: "factory-preview-preview-1",
+  artifacts: [
+    {
+      path: "docker-compose.yml",
+      digest:
+        "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      sizeBytes: 512,
+    },
+  ],
+};
+
+function collaborators() {
+  return {
+    dispatchClient: { get: vi.fn().mockResolvedValue(startDispatch) },
+    reporter: {
       ready: vi.fn().mockResolvedValue(undefined),
-      failed: vi.fn(),
-      stopped: vi.fn(),
-    };
-    const runtime = {
+      failed: vi.fn().mockResolvedValue(undefined),
+      stopped: vi.fn().mockResolvedValue(undefined),
+    },
+    runtime: {
       start: vi.fn().mockResolvedValue({
         webPort: 43101,
         apiPort: 43102,
         previewUrl: "http://127.0.0.1:43101",
       }),
-      stop: vi.fn(),
-    };
+      stop: vi.fn().mockResolvedValue(undefined),
+    },
+  };
+}
 
-    await executeQueuedPreviewRun("C:/artifacts", startJob, runtime, reporter);
+describe("queued preview run", () => {
+  it("fetches the authoritative dispatch before starting the runtime", async () => {
+    const { dispatchClient, reporter, runtime } = collaborators();
 
+    await executeQueuedPreviewRun(
+      "C:/artifacts",
+      startJob,
+      dispatchClient,
+      reporter,
+      runtime,
+    );
+
+    expect(dispatchClient.get).toHaveBeenCalledWith("start", "preview-1");
+    expect(dispatchClient.get.mock.invocationCallOrder[0]).toBeLessThan(
+      runtime.start.mock.invocationCallOrder[0] ?? 0,
+    );
+    expect(runtime.start).toHaveBeenCalledWith("C:/artifacts", startDispatch);
     expect(reporter.ready).toHaveBeenCalledWith("preview-1", {
       webPort: 43101,
       apiPort: 43102,
@@ -37,47 +66,103 @@ describe("queued preview run", () => {
     expect(reporter.failed).not.toHaveBeenCalled();
   });
 
-  it("reports a stopped run only after its named runtime cleanup succeeds", async () => {
-    const reporter = {
-      ready: vi.fn(),
-      failed: vi.fn(),
-      stopped: vi.fn().mockResolvedValue(undefined),
-    };
-    const runtime = {
-      start: vi.fn(),
-      stop: vi.fn().mockResolvedValue(undefined),
-    };
+  it("fetches the authoritative dispatch before stopping the named runtime", async () => {
+    const { dispatchClient, reporter, runtime } = collaborators();
+    const stopDispatch = { ...startDispatch, action: "stop" as const };
+    dispatchClient.get.mockResolvedValue(stopDispatch);
+
     await executeQueuedPreviewRun(
       "C:/artifacts",
-      { ...startJob, action: "stop" },
-      runtime,
+      { action: "stop", previewRunId: "preview-1" },
+      dispatchClient,
       reporter,
+      runtime,
     );
 
-    expect(runtime.stop).toHaveBeenCalledWith(
-      "C:/artifacts",
-      expect.objectContaining({ ...startJob, action: "stop" }),
+    expect(dispatchClient.get.mock.invocationCallOrder[0]).toBeLessThan(
+      runtime.stop.mock.invocationCallOrder[0] ?? 0,
     );
+    expect(runtime.stop).toHaveBeenCalledWith("C:/artifacts", stopDispatch);
     expect(reporter.stopped).toHaveBeenCalledWith("preview-1");
   });
 
-  it("reports an allowlisted failure code without raw process diagnostics", async () => {
-    const reporter = {
-      ready: vi.fn(),
-      failed: vi.fn().mockResolvedValue(undefined),
-      stopped: vi.fn(),
-    };
-    const runtime = {
-      start: vi
-        .fn()
-        .mockRejectedValue(
-          new Error("docker compose --env-file secret.env failed"),
-        ),
-      stop: vi.fn(),
-    };
+  it.each([
+    { ...startJob, rootDirectory: "caller-controlled" },
+    { ...startJob, compilationId: "compilation-1" },
+    { ...startJob, composeProjectName: "caller-controlled" },
+    { action: "restart", previewRunId: "preview-1" },
+    { action: "start" },
+  ])("rejects a structurally invalid public queue job", async (job) => {
+    const { dispatchClient, reporter, runtime } = collaborators();
 
     await expect(
-      executeQueuedPreviewRun("C:/artifacts", startJob, runtime, reporter),
+      executeQueuedPreviewRun(
+        "C:/artifacts",
+        job,
+        dispatchClient,
+        reporter,
+        runtime,
+      ),
+    ).rejects.toThrow("Invalid preview queue job.");
+    expect(dispatchClient.get).not.toHaveBeenCalled();
+    expect(runtime.start).not.toHaveBeenCalled();
+    expect(runtime.stop).not.toHaveBeenCalled();
+  });
+
+  it("does not invoke the runtime when authenticated dispatch resolution fails", async () => {
+    const { dispatchClient, reporter, runtime } = collaborators();
+    dispatchClient.get.mockRejectedValue(new Error("Dispatch rejected."));
+
+    await expect(
+      executeQueuedPreviewRun(
+        "C:/artifacts",
+        startJob,
+        dispatchClient,
+        reporter,
+        runtime,
+      ),
+    ).rejects.toThrow("Preview run failed.");
+    expect(runtime.start).not.toHaveBeenCalled();
+    expect(runtime.stop).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { ...startDispatch, action: "stop" as const },
+    { ...startDispatch, previewRunId: "preview-other" },
+  ])(
+    "does not invoke the runtime for a mismatched dispatch",
+    async (dispatch) => {
+      const { dispatchClient, reporter, runtime } = collaborators();
+      dispatchClient.get.mockResolvedValue(dispatch);
+
+      await expect(
+        executeQueuedPreviewRun(
+          "C:/artifacts",
+          startJob,
+          dispatchClient,
+          reporter,
+          runtime,
+        ),
+      ).rejects.toThrow("Preview run failed.");
+      expect(runtime.start).not.toHaveBeenCalled();
+      expect(runtime.stop).not.toHaveBeenCalled();
+    },
+  );
+
+  it("reports an allowlisted failure code without raw process diagnostics", async () => {
+    const { dispatchClient, reporter, runtime } = collaborators();
+    runtime.start.mockRejectedValue(
+      new Error("docker compose --env-file secret.env failed"),
+    );
+
+    await expect(
+      executeQueuedPreviewRun(
+        "C:/artifacts",
+        startJob,
+        dispatchClient,
+        reporter,
+        runtime,
+      ),
     ).rejects.toThrow("Preview run failed.");
     expect(reporter.failed).toHaveBeenCalledWith("preview-1", {
       diagnostic: "preview_start_failed",
@@ -85,22 +170,19 @@ describe("queued preview run", () => {
   });
 
   it("preserves the health-check failure code from the Worker runtime", async () => {
-    const reporter = {
-      ready: vi.fn(),
-      failed: vi.fn().mockResolvedValue(undefined),
-      stopped: vi.fn(),
-    };
-    const runtime = {
-      start: vi
-        .fn()
-        .mockRejectedValue(
-          new PreviewRunFailure("preview_health_check_failed"),
-        ),
-      stop: vi.fn(),
-    };
+    const { dispatchClient, reporter, runtime } = collaborators();
+    runtime.start.mockRejectedValue(
+      new PreviewRunFailure("preview_health_check_failed"),
+    );
 
     await expect(
-      executeQueuedPreviewRun("C:/artifacts", startJob, runtime, reporter),
+      executeQueuedPreviewRun(
+        "C:/artifacts",
+        startJob,
+        dispatchClient,
+        reporter,
+        runtime,
+      ),
     ).rejects.toThrow("Preview run failed.");
     expect(reporter.failed).toHaveBeenCalledWith("preview-1", {
       diagnostic: "preview_health_check_failed",

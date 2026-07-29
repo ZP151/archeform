@@ -11,11 +11,25 @@ import {
   type PreviewRunJob,
 } from "./queued-preview-run.js";
 import { createPreviewReporter } from "./preview-reporter.js";
+import { createPreviewDispatchClient } from "./preview-dispatch-client.js";
 
 const config = readWorkerConfig();
-const connection = { url: config.redisUrl };
-const reporter = createControlPlaneReporter(config.controlPlaneUrl);
-const previewReporter = createPreviewReporter(config.controlPlaneUrl);
+const connection = {
+  url: config.redisUrl,
+  ...(config.redisPassword ? { password: config.redisPassword } : {}),
+};
+const reporter = createControlPlaneReporter(
+  config.controlPlaneUrl,
+  config.internalWorkerToken,
+);
+const previewReporter = createPreviewReporter(
+  config.controlPlaneUrl,
+  config.internalWorkerToken,
+);
+const previewDispatchClient = createPreviewDispatchClient(
+  config.controlPlaneUrl,
+  config.internalWorkerToken,
+);
 
 const queue = new Queue(config.queueName, { connection });
 const worker = new Worker<CompilationJob>(
@@ -32,7 +46,7 @@ const previewWorker = new Worker<PreviewRunJob>(
     executeQueuedPreviewRun(
       config.artifactRoot,
       job.data,
-      undefined,
+      previewDispatchClient,
       previewReporter,
     ),
   { connection },

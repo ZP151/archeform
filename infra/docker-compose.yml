@@ -19,10 +19,20 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "${FACTORY_REDIS_PORT:-6379}:6379"
+    command:
+      [
+        "sh",
+        "-ec",
+        'exec redis-server --requirepass "$${FACTORY_REDIS_PASSWORD}"',
+      ]
+    environment:
+      FACTORY_REDIS_PASSWORD: ${FACTORY_REDIS_PASSWORD:?required}
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test:
+        [
+          "CMD-SHELL",
+          'REDISCLI_AUTH="$${FACTORY_REDIS_PASSWORD}" redis-cli ping',
+        ]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -34,6 +44,8 @@ services:
     environment:
       DATABASE_URL: postgresql://factory:factory@postgres:5432/factory_pilot?schema=public
       REDIS_URL: redis://redis:6379
+      FACTORY_REDIS_PASSWORD: ${FACTORY_REDIS_PASSWORD:?required}
+      FACTORY_INTERNAL_WORKER_TOKEN: ${FACTORY_INTERNAL_WORKER_TOKEN:?required}
       PORT: 3000
       FACTORY_ARTIFACT_ROOT: /artifacts
       # Optional and intentionally passed only into the local Control Plane.
@@ -56,6 +68,8 @@ services:
       dockerfile: apps/compiler-worker/Dockerfile
     environment:
       REDIS_URL: redis://redis:6379
+      FACTORY_REDIS_PASSWORD: ${FACTORY_REDIS_PASSWORD:?required}
+      FACTORY_INTERNAL_WORKER_TOKEN: ${FACTORY_INTERNAL_WORKER_TOKEN:?required}
       FACTORY_ARTIFACT_ROOT: /artifacts
       FACTORY_CONTROL_PLANE_URL: http://control-plane:3000
     depends_on:

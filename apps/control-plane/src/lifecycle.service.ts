@@ -104,6 +104,14 @@ type ArtifactEvidence = {
   readonly sizeBytes: number;
 };
 
+export type PreviewDispatch = {
+  readonly action: "start" | "stop";
+  readonly previewRunId: string;
+  readonly rootDirectory: string;
+  readonly composeProjectName: string;
+  readonly artifacts: readonly ArtifactEvidence[];
+};
+
 function artifactEvidence(input: unknown): ArtifactEvidence {
   const record = exactRecord(
     input,
@@ -244,6 +252,13 @@ function previewFailedEvidence(input: unknown) {
     );
   }
   return { diagnostic };
+}
+
+function previewAction(input: unknown): "start" | "stop" {
+  if (input !== "start" && input !== "stop") {
+    throw new BadRequestException("action must be start or stop.");
+  }
+  return input;
 }
 
 function uniqueConstraint(error: unknown): boolean {
@@ -643,7 +658,7 @@ export class LifecycleService {
     if (current?.status === "starting" || current?.status === "ready") {
       return current;
     }
-    const rootDirectory = this.previewRootDirectory(compilation.artifacts);
+    this.previewRootDirectory(compilation.artifacts);
     const sequence =
       (await this.prisma.previewRun.count({
         where: { compilationId: id },
@@ -677,9 +692,6 @@ export class LifecycleService {
       await this.previewRunQueue.enqueue({
         action: "start",
         previewRunId: preview.id,
-        compilationId: id,
-        rootDirectory,
-        composeProjectName: preview.composeProjectName,
       });
     } catch (error) {
       await this.prisma.previewRun.deleteMany({
@@ -717,9 +729,7 @@ export class LifecycleService {
         "Preview run cannot be stopped from its current state.",
       );
     }
-    const rootDirectory = this.previewRootDirectory(
-      preview.compilation.artifacts,
-    );
+    this.previewRootDirectory(preview.compilation.artifacts);
     const transitioned = await this.prisma.previewRun.updateMany({
       where: { id, status: preview.status },
       data: { status: "stopping" },
@@ -737,9 +747,6 @@ export class LifecycleService {
       await this.previewRunQueue.enqueue({
         action: "stop",
         previewRunId: id,
-        compilationId: preview.compilationId,
-        rootDirectory,
-        composeProjectName: preview.composeProjectName,
       });
     } catch (error) {
       await this.prisma.previewRun.updateMany({
@@ -749,6 +756,41 @@ export class LifecycleService {
       throw error;
     }
     return { ...preview, status: "stopping" };
+  }
+
+  async getPreviewDispatch(
+    previewRunId: string,
+    requestedAction: unknown,
+  ): Promise<PreviewDispatch> {
+    const id = requiredString({ previewRunId }, "previewRunId");
+    const action = previewAction(requestedAction);
+    const preview = await this.prisma.previewRun.findUnique({
+      where: { id },
+      include: {
+        compilation: { include: { artifacts: { orderBy: { path: "asc" } } } },
+      },
+    });
+    if (!preview) throw new NotFoundException("Preview run was not found.");
+    const expectedStatus = action === "start" ? "starting" : "stopping";
+    if (preview.status !== expectedStatus) {
+      throw new ConflictException(
+        "Preview run is not awaiting the requested Worker action.",
+      );
+    }
+    const artifacts = preview.compilation.artifacts.map((artifact) =>
+      artifactEvidence({
+        path: artifact.path,
+        digest: artifact.digest,
+        sizeBytes: artifact.sizeBytes,
+      }),
+    );
+    return {
+      action,
+      previewRunId: preview.id,
+      rootDirectory: this.previewRootDirectory(preview.compilation.artifacts),
+      composeProjectName: preview.composeProjectName,
+      artifacts,
+    };
   }
 
   async reportPreviewReady(previewRunId: string, input: unknown) {

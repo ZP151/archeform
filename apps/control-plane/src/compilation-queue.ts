@@ -17,6 +17,16 @@ export interface CompilationQueue {
   enqueue(job: CompilationJob): Promise<void>;
 }
 
+export function redisConnection(
+  environment: Record<string, string | undefined> = process.env,
+) {
+  const password = environment.FACTORY_REDIS_PASSWORD;
+  return {
+    url: environment.REDIS_URL ?? "redis://localhost:6379",
+    ...(password && password.length > 0 ? { password } : {}),
+  };
+}
+
 /**
  * The queue boundary keeps the lifecycle service independent from BullMQ and
  * prevents callers from supplying a Worker result. The Worker receives a
@@ -28,7 +38,7 @@ export class BullMqCompilationQueue
 {
   private readonly queue = new Queue<CompilationJob>(
     process.env.FACTORY_COMPILATION_QUEUE ?? "factory-compilations",
-    { connection: { url: process.env.REDIS_URL ?? "redis://localhost:6379" } },
+    { connection: redisConnection() },
   );
 
   async enqueue(job: CompilationJob): Promise<void> {

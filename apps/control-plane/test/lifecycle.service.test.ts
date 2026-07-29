@@ -690,11 +690,113 @@ describe("LifecycleService", () => {
     expect(previewQueue.enqueue).toHaveBeenCalledWith({
       action: "start",
       previewRunId: preview.id,
-      compilationId: "compilation-succeeded",
-      rootDirectory: "expense-approval-published-1",
-      composeProjectName: `factory-preview-${preview.id}`,
     });
   });
+
+  it.each([
+    { action: "start" as const, status: "starting" },
+    { action: "stop" as const, status: "stopping" },
+  ])(
+    "returns an authoritative $action dispatch only while the run is $status",
+    async ({ action, status }) => {
+      prisma.previewRun.findUnique.mockResolvedValue({
+        id: "preview-1",
+        status,
+        composeProjectName: "factory-preview-preview-1",
+        compilation: {
+          artifacts: [
+            {
+              path: "api/src/main.ts",
+              digest:
+                "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+              sizeBytes: 48,
+              metadata: { rootDirectory: "expense-approval-published-1" },
+            },
+            {
+              path: "docker-compose.yml",
+              digest:
+                "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+              sizeBytes: 512,
+              metadata: { rootDirectory: "expense-approval-published-1" },
+            },
+          ],
+        },
+      });
+
+      await expect(
+        service.getPreviewDispatch("preview-1", action),
+      ).resolves.toEqual({
+        action,
+        previewRunId: "preview-1",
+        rootDirectory: "expense-approval-published-1",
+        composeProjectName: "factory-preview-preview-1",
+        artifacts: [
+          {
+            path: "api/src/main.ts",
+            digest:
+              "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+            sizeBytes: 48,
+          },
+          {
+            path: "docker-compose.yml",
+            digest:
+              "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            sizeBytes: 512,
+          },
+        ],
+      });
+    },
+  );
+
+  it.each([
+    { action: "start" as const, status: "stopping" },
+    { action: "stop" as const, status: "starting" },
+  ])(
+    "rejects a $action dispatch while the run is $status",
+    async ({ action, status }) => {
+      prisma.previewRun.findUnique.mockResolvedValue({
+        id: "preview-1",
+        status,
+        composeProjectName: "factory-preview-preview-1",
+        compilation: { artifacts: [] },
+      });
+
+      await expect(
+        service.getPreviewDispatch("preview-1", action),
+      ).rejects.toBeInstanceOf(ConflictException);
+    },
+  );
+
+  it.each([
+    { field: "path", value: "../outside.ts" },
+    { field: "digest", value: "sha256:not-a-digest" },
+    { field: "sizeBytes", value: -1 },
+  ])(
+    "rejects dispatch artifact evidence with an invalid $field",
+    async ({ field, value }) => {
+      prisma.previewRun.findUnique.mockResolvedValue({
+        id: "preview-1",
+        status: "starting",
+        composeProjectName: "factory-preview-preview-1",
+        compilation: {
+          artifacts: [
+            {
+              path: "api/src/main.ts",
+              digest:
+                "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+              sizeBytes: 48,
+              metadata: { rootDirectory: "expense-approval-published-1" },
+              [field]: value,
+            },
+          ],
+        },
+      });
+
+      await expect(
+        service.getPreviewDispatch("preview-1", "start"),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    },
+  );
 
   it("returns the current starting preview without enqueuing a second start", async () => {
     const current = { id: "preview-1", status: "starting" };
@@ -892,6 +994,10 @@ describe("LifecycleService", () => {
       status: "stopping",
     });
     expect(previewQueue.enqueue).toHaveBeenCalledTimes(2);
+    expect(previewQueue.enqueue).toHaveBeenLastCalledWith({
+      action: "stop",
+      previewRunId: "preview-1",
+    });
   });
 
   it("returns the winning current run when concurrent start creation loses the sequence race", async () => {

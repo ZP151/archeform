@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Inject,
   Param,
   Post,
@@ -10,6 +11,7 @@ import {
 } from "@nestjs/common";
 
 import { LifecycleService } from "./lifecycle.service.js";
+import { assertInternalWorkerToken } from "./internal-worker-auth.js";
 
 function emptyBody(body: unknown): void {
   if (body === undefined) return;
@@ -144,15 +146,29 @@ export class LifecycleController {
   completeCompilation(
     @Param("compilationId") compilationId: string,
     @Body() body: unknown,
+    @Headers("x-factory-internal-token") internalToken: string | undefined,
   ) {
+    assertInternalWorkerToken(internalToken);
     return this.lifecycle.completeCompilation(compilationId, body);
+  }
+
+  @Get("internal/preview-runs/:previewRunId/dispatch")
+  getPreviewDispatch(
+    @Param("previewRunId") previewRunId: string,
+    @Query("action") action: string | undefined,
+    @Headers("x-factory-internal-token") internalToken: string | undefined,
+  ) {
+    assertInternalWorkerToken(internalToken);
+    return this.lifecycle.getPreviewDispatch(previewRunId, action);
   }
 
   @Post("internal/preview-runs/:previewRunId/ready")
   reportPreviewReady(
     @Param("previewRunId") previewRunId: string,
     @Body() body: unknown,
+    @Headers("x-factory-internal-token") internalToken: string | undefined,
   ) {
+    assertInternalWorkerToken(internalToken);
     return this.lifecycle.reportPreviewReady(previewRunId, body);
   }
 
@@ -160,7 +176,9 @@ export class LifecycleController {
   reportPreviewFailed(
     @Param("previewRunId") previewRunId: string,
     @Body() body: unknown,
+    @Headers("x-factory-internal-token") internalToken: string | undefined,
   ) {
+    assertInternalWorkerToken(internalToken);
     return this.lifecycle.reportPreviewFailed(previewRunId, body);
   }
 
@@ -168,7 +186,9 @@ export class LifecycleController {
   reportPreviewStopped(
     @Param("previewRunId") previewRunId: string,
     @Body() body: unknown,
+    @Headers("x-factory-internal-token") internalToken: string | undefined,
   ) {
+    assertInternalWorkerToken(internalToken);
     emptyBody(body);
     return this.lifecycle.reportPreviewStopped(previewRunId);
   }

@@ -7,6 +7,7 @@ describe("control-plane reporter", () => {
     const fetchImplementation = vi.fn().mockResolvedValue({ ok: true });
     const reporter = createControlPlaneReporter(
       "http://control-plane:3000/",
+      "configured-worker-token",
       fetchImplementation as typeof fetch,
     );
     const evidence = {
@@ -30,7 +31,10 @@ describe("control-plane reporter", () => {
       "http://control-plane:3000/internal/compilations/compilation-1/complete",
       {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          "x-factory-internal-token": "configured-worker-token",
+        },
         body: JSON.stringify({
           graphHash: evidence.graphHash,
           rootDirectory: evidence.rootDirectory,

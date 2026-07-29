@@ -13,13 +13,17 @@ export interface PreviewReporter {
 
 export function createPreviewReporter(
   controlPlaneUrl: string,
+  internalWorkerToken: string,
   fetchImplementation: typeof fetch = fetch,
 ): PreviewReporter {
   const baseUrl = controlPlaneUrl.replace(/\/+$/, "");
   async function post(path: string, body?: unknown): Promise<void> {
     const response = await fetchImplementation(`${baseUrl}${path}`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        "x-factory-internal-token": internalWorkerToken,
+      },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
     if (!response.ok)
