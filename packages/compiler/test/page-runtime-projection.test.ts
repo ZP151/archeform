@@ -104,6 +104,15 @@ describe("generated page runtime projection", () => {
     ]);
   });
 
+  it("rejects protocol-relative PageModel routes before projection", () => {
+    const graph = profileGraph("restaurant-ordering");
+    graph.page.pages[0]!.route = "//external.example";
+
+    expect(() => createGeneratedPageRuntimeProjection(graph)).toThrow(
+      "PageModel route '//external.example' must be a canonical local route.",
+    );
+  });
+
   it("rejects unsupported PageModel blocks before projection", () => {
     const graph = profileGraph("restaurant-ordering");
     blockById(graph, "menu-catalog").type = "custom-html";
@@ -186,4 +195,24 @@ describe("generated page runtime projection", () => {
       "PageModel block 'catalog' requires Factory capability 'cart.add'.",
     );
   });
+
+  it.each([
+    ["catalog", "cart.add", "remove", "restaurant-ordering"],
+    ["checkout", "payment.simulate", "other", "simple-ecommerce"],
+  ] as const)(
+    "rejects %s blocks when Factory capability %s declares operation %s",
+    (blockType, capabilityKey, wrongOperation, profile) => {
+      const graph = profileGraph(profile);
+      graph.integration.capabilities = graph.integration.capabilities.map(
+        (capability) =>
+          capability.key === capabilityKey
+            ? { ...capability, operation: wrongOperation }
+            : capability,
+      );
+
+      expect(() => createGeneratedPageRuntimeProjection(graph)).toThrow(
+        `PageModel block '${blockType}' requires Factory capability '${capabilityKey}'.`,
+      );
+    },
+  );
 });

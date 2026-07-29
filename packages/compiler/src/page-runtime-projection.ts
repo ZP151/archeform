@@ -71,10 +71,15 @@ const orderEntityBlockTypes = new Set<GeneratedPageRuntimeBlockTypeV1>([
 ]);
 
 const requiredFactoryCapabilityByBlockType: Readonly<
-  Partial<Record<GeneratedPageRuntimeBlockTypeV1, string>>
+  Partial<
+    Record<
+      GeneratedPageRuntimeBlockTypeV1,
+      Readonly<{ key: string; operation: string }>
+    >
+  >
 > = {
-  catalog: "cart.add",
-  checkout: "payment.simulate",
+  catalog: { key: "cart.add", operation: "add" },
+  checkout: { key: "payment.simulate", operation: "simulate" },
 };
 
 const safePropKeys: readonly GeneratedPageRuntimeSafePropV1[] = [
@@ -117,19 +122,42 @@ function requireBoundEntity(
   return block.entity;
 }
 
+function assertCanonicalLocalRoute(route: string): void {
+  const localOrigin = "https://factory.invalid";
+  const resolved = new URL(route, localOrigin);
+  if (
+    !route.startsWith("/") ||
+    resolved.origin !== localOrigin ||
+    resolved.pathname !== route ||
+    resolved.search ||
+    resolved.hash
+  ) {
+    throw new Error(
+      `PageModel route '${route}' must be a canonical local route.`,
+    );
+  }
+}
+
 function projectBlock(
   block: PageBlock,
   entityKeys: ReadonlySet<string>,
-  factoryCapabilityKeys: ReadonlySet<string>,
+  factoryCapabilities: readonly ApplicationGraphV1["integration"]["capabilities"][number][],
 ): GeneratedPageRuntimeBlockV1 {
   if (!isGeneratedPageRuntimeBlockType(block.type)) {
     throw new Error(`Unsupported PageModel block '${block.type}'.`);
   }
 
   const requiredCapability = requiredFactoryCapabilityByBlockType[block.type];
-  if (requiredCapability && !factoryCapabilityKeys.has(requiredCapability)) {
+  if (
+    requiredCapability &&
+    !factoryCapabilities.some(
+      (capability) =>
+        capability.key === requiredCapability.key &&
+        capability.operation === requiredCapability.operation,
+    )
+  ) {
     throw new Error(
-      `PageModel block '${block.type}' requires Factory capability '${requiredCapability}'.`,
+      `PageModel block '${block.type}' requires Factory capability '${requiredCapability.key}'.`,
     );
   }
 
@@ -159,19 +187,20 @@ export function createGeneratedPageRuntimeProjection(
   graph: ApplicationGraphV1,
 ): GeneratedPageRuntimeProjectionV1 {
   const entityKeys = new Set(graph.domain.entities.map((entity) => entity.key));
-  const factoryCapabilityKeys = new Set(
-    graph.integration.capabilities
-      .filter((capability) => capability.providerId === "factory")
-      .map((capability) => capability.key),
+  const factoryCapabilities = graph.integration.capabilities.filter(
+    (capability) => capability.providerId === "factory",
   );
-  const pages = graph.page.pages.map((page) => ({
-    id: page.id,
-    route: page.route,
-    title: page.title,
-    blocks: page.blocks.map((block) =>
-      projectBlock(block, entityKeys, factoryCapabilityKeys),
-    ),
-  }));
+  const pages = graph.page.pages.map((page) => {
+    assertCanonicalLocalRoute(page.route);
+    return {
+      id: page.id,
+      route: page.route,
+      title: page.title,
+      blocks: page.blocks.map((block) =>
+        projectBlock(block, entityKeys, factoryCapabilities),
+      ),
+    };
+  });
   const pagesById = new Map(pages.map((page) => [page.id, page]));
 
   return {
