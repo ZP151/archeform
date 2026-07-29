@@ -15,6 +15,19 @@ import {
   type ApplicationGraphV1,
 } from "@factory/graph";
 
+export {
+  createGeneratedPageRuntimeProjection,
+  generatedPageRuntimeApiVersion,
+  generatedPageRuntimeBlockTypes,
+  type GeneratedPageRuntimeBlockTypeV1,
+  type GeneratedPageRuntimeBlockV1,
+  type GeneratedPageRuntimeNavigationV1,
+  type GeneratedPageRuntimePageV1,
+  type GeneratedPageRuntimeProjectionV1,
+  type GeneratedPageRuntimeRouteFallbackV1,
+  type GeneratedPageRuntimeSafePropV1,
+} from "./page-runtime-projection.js";
+
 export type CompilationTargetKey =
   | "simulator"
   | "next-web"
