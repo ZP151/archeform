@@ -12,7 +12,7 @@
 
 - Code, tests, UI text, and documentation are English.
 - Keep `FACTORY_REDIS_PASSWORD` and `FACTORY_INTERNAL_WORKER_TOKEN` only in the local `.env`; never commit, log, expose, or include their values in reports.
-- Redis has no host-published port and requires its local environment password. Only Control Plane and Compiler Worker receive its URL.
+- Redis has no host-published port and requires its local environment password. Only Control Plane and Compiler Worker receive its host-only URL and a separate password connection option; password values must not be interpolated into a URI.
 - All `/internal/*` callbacks and dispatch reads require the Worker token using a constant-time comparison.
 - A BullMQ preview payload contains only `{ action, previewRunId }`; Worker runtime paths, project names, and artifact manifests are resolved from the authenticated Control Plane dispatch endpoint.
 - A preview is reconstructed from every registered artifact's safe relative path, SHA-256 digest, and exact byte size. Unexpected, missing, changed, or symlinked source files fail closed.
@@ -46,9 +46,11 @@
 - Modify: `apps/control-plane/src/lifecycle.controller.ts`
 - Modify: `apps/control-plane/src/lifecycle.service.ts`
 - Modify: `apps/control-plane/src/preview-run-queue.ts`
+- Modify: `apps/control-plane/src/compilation-queue.ts`
 - Modify: `apps/control-plane/test/lifecycle.controller.test.ts`
 - Modify: `apps/control-plane/test/lifecycle.service.test.ts`
 - Modify: `apps/control-plane/test/preview-run-queue.test.ts`
+- Modify: `apps/control-plane/test/compilation-queue.test.ts`
 - Create: `apps/control-plane/test/internal-worker-auth.test.ts`
 - Create: `apps/compiler-worker/src/preview-dispatch-client.ts`
 - Modify: `apps/compiler-worker/src/config.ts`
@@ -119,8 +121,9 @@ dispatch, verify action/id equality, then invoke the runtime. Callback
 reporters attach the token but never serialize it into their payload.
 
 Configure Redis with `requirepass`, remove its `ports` section, pass its
-password URL only to Control Plane and Worker, and require the distinct
-Worker callback token for both services. Do not add a default token or
+host-only URL and a separate password option only to Control Plane and Worker,
+and require the distinct Worker callback token for both services. Do not
+interpolate the password into a URI, add a default token, or add a default
 password. Compose must fail closed when either local environment value is
 absent.
 
@@ -366,4 +369,3 @@ git commit -m "test: harden preview release acceptance"
   starting, and removes the contradictory failed-preview Start affordance.
 - Task 4 validates the actual generated application journey and exact cleanup
   in an isolated environment, then records the result accurately.
-
