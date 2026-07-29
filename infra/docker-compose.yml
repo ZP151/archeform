@@ -65,6 +65,7 @@ services:
         condition: service_started
     volumes:
       - factory-artifacts:/artifacts
+      - /var/run/docker.sock:/var/run/docker.sock
 
   workbench:
     build:

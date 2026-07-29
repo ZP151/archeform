@@ -8,6 +8,7 @@ RUN pnpm --filter @factory/graph build && pnpm --filter @factory/capabilities bu
 FROM node:22-alpine
 WORKDIR /workspace
 COPY --from=build /workspace /workspace
+RUN apk add --no-cache docker-cli docker-cli-compose
 RUN npm install --global pnpm@9.0.0
 ENV NODE_ENV=production
 CMD ["pnpm", "--filter", "@factory/compiler-worker", "start"]
