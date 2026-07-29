@@ -1,4 +1,12 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -8,19 +16,57 @@ import {
   startPreviewRun,
   stopPreviewRun,
   type PreviewProcessRunner,
+  type PreviewRuntimeRequest,
 } from "../src/preview-runner.js";
+
+const compose = Buffer.from("services:\n  web:\n    image: example\n", "utf8");
+const application = Buffer.from("export const value = 1;\n", "utf8");
+
+function artifact(path: string, contents: Uint8Array) {
+  return {
+    path,
+    digest: `sha256:${createHash("sha256").update(contents).digest("hex")}`,
+    sizeBytes: contents.byteLength,
+  };
+}
+
+function request(
+  artifacts: PreviewRuntimeRequest["artifacts"],
+): PreviewRuntimeRequest {
+  return {
+    previewRunId: "preview-1",
+    rootDirectory: "expense-published-1",
+    composeProjectName: "factory-preview-preview-1",
+    artifacts,
+  };
+}
+
+async function sourceFixture() {
+  const root = await mkdtemp(join(tmpdir(), "factory-preview-root-"));
+  const source = join(root, "expense-published-1");
+  await mkdir(join(source, "src"), { recursive: true });
+  await writeFile(join(source, "docker-compose.yml"), compose);
+  await writeFile(join(source, "src", "app.ts"), application);
+  return { root, source };
+}
+
+const registeredArtifacts = [
+  artifact("docker-compose.yml", compose),
+  artifact("src/app.ts", application),
+];
 
 describe("preview runner", () => {
   it("rejects a generated directory that escapes the Factory artifact root", async () => {
-    const processRunner: PreviewProcessRunner = vi.fn();
+    const processRunner = vi
+      .fn<PreviewProcessRunner>()
+      .mockResolvedValue(undefined);
 
     await expect(
       startPreviewRun(
         "C:/factory/artifacts",
         {
-          previewRunId: "preview-1",
+          ...request([]),
           rootDirectory: "../outside",
-          composeProjectName: "factory-preview-preview-1",
         },
         processRunner,
       ),
@@ -28,9 +74,8 @@ describe("preview runner", () => {
     expect(processRunner).not.toHaveBeenCalled();
   });
 
-  it("runs a copied PreviewRun directory and discovers Docker-assigned loopback ports", async () => {
-    const root = await mkdtemp(join(tmpdir(), "factory-preview-root-"));
-    const generated = join(root, "expense-published-1");
+  it("materializes only the complete registered manifest and uses its explicit Compose file", async () => {
+    const { root, source } = await sourceFixture();
     const spawned: Parameters<PreviewProcessRunner>[0][] = [];
     const processRunner: PreviewProcessRunner = async (command) => {
       spawned.push(command);
@@ -40,137 +85,283 @@ describe("preview runner", () => {
         return "127.0.0.1:49102\n";
     };
     try {
-      await mkdir(generated, { recursive: true });
-      await writeFile(
-        join(root, "expense-published-1", "immutable.txt"),
-        "source",
-      );
       await expect(
-        startPreviewRun(
-          root,
-          {
-            previewRunId: "preview-1",
-            rootDirectory: "expense-published-1",
-            composeProjectName: "factory-preview-preview-1",
-          },
-          processRunner,
-        ),
+        startPreviewRun(root, request(registeredArtifacts), processRunner),
       ).resolves.toEqual({
         webPort: 49101,
         apiPort: 49102,
         previewUrl: "http://127.0.0.1:49101",
       });
 
-      const previewDirectory = join(root, ".preview-runs", "preview-1");
-      expect(spawned).toEqual([
-        expect.objectContaining({
-          file: "docker",
-          args: [
-            "compose",
-            "--project-name",
-            "factory-preview-preview-1",
-            "--project-directory",
-            previewDirectory,
-            "up",
-            "--build",
-            "--detach",
-            "--wait",
-          ],
-          environment: {
-            FACTORY_COMPOSE_PROJECT_NAME: "factory-preview-preview-1",
-            FACTORY_WEB_PORT: "0",
-            FACTORY_API_PORT: "0",
-          },
-        }),
-        expect.objectContaining({
-          args: [
-            "compose",
-            "--project-name",
-            "factory-preview-preview-1",
-            "--project-directory",
-            previewDirectory,
-            "port",
-            "web",
-            "3000",
-          ],
-        }),
-        expect.objectContaining({
-          args: [
-            "compose",
-            "--project-name",
-            "factory-preview-preview-1",
-            "--project-directory",
-            previewDirectory,
-            "port",
-            "api",
-            "3001",
-          ],
-        }),
-        expect.objectContaining({
-          args: [
-            "compose",
-            "--project-name",
-            "factory-preview-preview-1",
-            "--project-directory",
-            previewDirectory,
-            "exec",
-            "-T",
-            "web",
-            "wget",
-            "-q",
-            "-O",
-            "/dev/null",
-            "http://127.0.0.1:3000",
-          ],
-        }),
-      ]);
-      expect(await readFile(join(generated, "immutable.txt"), "utf8")).toBe(
-        "source",
+      const preview = join(root, ".preview-runs", "preview-1");
+      const composeFile = join(preview, "docker-compose.yml");
+      await expect(readFile(composeFile)).resolves.toEqual(compose);
+      await expect(readFile(join(preview, "src", "app.ts"))).resolves.toEqual(
+        application,
       );
+      await expect(readFile(join(source, "src", "app.ts"))).resolves.toEqual(
+        application,
+      );
+      expect(spawned).toHaveLength(4);
+      for (const command of spawned) {
+        expect(command.args.slice(0, 8)).toEqual([
+          "compose",
+          "--file",
+          composeFile,
+          "--project-name",
+          "factory-preview-preview-1",
+          "--project-directory",
+          preview,
+          expect.any(String),
+        ]);
+      }
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
 
-  it("stops only the copied PreviewRun project and preserves its immutable source", async () => {
+  it("accepts an exact manifest independent of source traversal ordering", async () => {
     const root = await mkdtemp(join(tmpdir(), "factory-preview-root-"));
-    const generated = join(root, "expense-published-1");
+    const source = join(root, "expense-published-1");
+    const nested = Buffer.from("nested", "utf8");
+    const sibling = Buffer.from("sibling", "utf8");
+    const processRunner: PreviewProcessRunner = async (command) => {
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "web")
+        return "127.0.0.1:49101\n";
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "api")
+        return "127.0.0.1:49102\n";
+    };
+    try {
+      await mkdir(join(source, "a"), { recursive: true });
+      await writeFile(join(source, "docker-compose.yml"), compose);
+      await writeFile(join(source, "a", "file.txt"), nested);
+      await writeFile(join(source, "a-b.txt"), sibling);
+
+      await expect(
+        startPreviewRun(
+          root,
+          request([
+            artifact("docker-compose.yml", compose),
+            artifact("a/file.txt", nested),
+            artifact("a-b.txt", sibling),
+          ]),
+          processRunner,
+        ),
+      ).resolves.toMatchObject({ previewUrl: "http://127.0.0.1:49101" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a registered file whose digest changed before Docker runs", async () => {
+    const { root, source } = await sourceFixture();
     const processRunner = vi
       .fn<PreviewProcessRunner>()
       .mockResolvedValue(undefined);
     try {
-      await mkdir(generated, { recursive: true });
-      await writeFile(join(generated, "immutable.txt"), "source");
+      const changed = Buffer.from(application);
+      changed[0] = changed[0]! ^ 1;
+      await writeFile(join(source, "src", "app.ts"), changed);
+
+      await expect(
+        startPreviewRun(root, request(registeredArtifacts), processRunner),
+      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      expect(processRunner).not.toHaveBeenCalled();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a registered file whose byte size changed before Docker runs", async () => {
+    const { root } = await sourceFixture();
+    const processRunner = vi
+      .fn<PreviewProcessRunner>()
+      .mockResolvedValue(undefined);
+    const wrongSize = registeredArtifacts.map((entry) =>
+      entry.path === "src/app.ts"
+        ? { ...entry, sizeBytes: entry.sizeBytes + 1 }
+        : entry,
+    );
+    try {
+      await expect(
+        startPreviewRun(root, request(wrongSize), processRunner),
+      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      expect(processRunner).not.toHaveBeenCalled();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a missing registered file before Docker runs", async () => {
+    const { root, source } = await sourceFixture();
+    const processRunner = vi
+      .fn<PreviewProcessRunner>()
+      .mockResolvedValue(undefined);
+    try {
+      await rm(join(source, "src", "app.ts"));
+
+      await expect(
+        startPreviewRun(root, request(registeredArtifacts), processRunner),
+      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      expect(processRunner).not.toHaveBeenCalled();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects an unregistered source file before Docker runs", async () => {
+    const { root, source } = await sourceFixture();
+    const processRunner = vi
+      .fn<PreviewProcessRunner>()
+      .mockResolvedValue(undefined);
+    try {
+      await writeFile(
+        join(source, "docker-compose.override.yml"),
+        "services:\n  web:\n    privileged: true\n",
+      );
+
+      await expect(
+        startPreviewRun(root, request(registeredArtifacts), processRunner),
+      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      expect(processRunner).not.toHaveBeenCalled();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects duplicate registered paths before Docker runs", async () => {
+    const { root } = await sourceFixture();
+    const processRunner = vi
+      .fn<PreviewProcessRunner>()
+      .mockResolvedValue(undefined);
+    try {
+      await expect(
+        startPreviewRun(
+          root,
+          request([...registeredArtifacts, registeredArtifacts[1]!]),
+          processRunner,
+        ),
+      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      expect(processRunner).not.toHaveBeenCalled();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a symlinked source entry before Docker runs", async () => {
+    const { root, source } = await sourceFixture();
+    const processRunner = vi
+      .fn<PreviewProcessRunner>()
+      .mockResolvedValue(undefined);
+    try {
+      await symlink(
+        join(source, "src"),
+        join(source, "linked-source"),
+        "junction",
+      );
+
+      await expect(
+        startPreviewRun(root, request(registeredArtifacts), processRunner),
+      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      expect(processRunner).not.toHaveBeenCalled();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    {
+      name: "unsafe path",
+      entry: { ...registeredArtifacts[1]!, path: "../app.ts" },
+    },
+    {
+      name: "Windows path",
+      entry: { ...registeredArtifacts[1]!, path: "C:/app.ts" },
+    },
+    {
+      name: "malformed digest",
+      entry: { ...registeredArtifacts[1]!, digest: "sha256:not-a-digest" },
+    },
+    {
+      name: "negative size",
+      entry: { ...registeredArtifacts[1]!, sizeBytes: -1 },
+    },
+    {
+      name: "fractional size",
+      entry: { ...registeredArtifacts[1]!, sizeBytes: 1.5 },
+    },
+  ])(
+    "rejects manifest metadata with a $name before Docker runs",
+    async ({ entry }) => {
+      const { root } = await sourceFixture();
+      const processRunner = vi
+        .fn<PreviewProcessRunner>()
+        .mockResolvedValue(undefined);
+      try {
+        await expect(
+          startPreviewRun(
+            root,
+            request([registeredArtifacts[0]!, entry]),
+            processRunner,
+          ),
+        ).rejects.toMatchObject({ code: "preview_start_failed" });
+        expect(processRunner).not.toHaveBeenCalled();
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it("requires docker-compose.yml to be a registered source file", async () => {
+    const { root, source } = await sourceFixture();
+    const processRunner = vi
+      .fn<PreviewProcessRunner>()
+      .mockResolvedValue(undefined);
+    try {
+      await rm(join(source, "docker-compose.yml"));
+
+      await expect(
+        startPreviewRun(
+          root,
+          request([artifact("src/app.ts", application)]),
+          processRunner,
+        ),
+      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      expect(processRunner).not.toHaveBeenCalled();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("stops only the copied PreviewRun project with its explicit Compose file", async () => {
+    const { root, source } = await sourceFixture();
+    const processRunner = vi
+      .fn<PreviewProcessRunner>()
+      .mockResolvedValue(undefined);
+    try {
       await startPreviewRun(
         root,
-        {
-          previewRunId: "preview-1",
-          rootDirectory: "expense-published-1",
-          composeProjectName: "factory-preview-preview-1",
-        },
+        request(registeredArtifacts),
         async (command) => {
-          processRunner(command);
-          if (command.args.at(-2) === "web") return "127.0.0.1:49101\n";
-          if (command.args.at(-2) === "api") return "127.0.0.1:49102\n";
+          if (command.args.at(-3) === "port" && command.args.at(-2) === "web")
+            return "127.0.0.1:49101\n";
+          if (command.args.at(-3) === "port" && command.args.at(-2) === "api")
+            return "127.0.0.1:49102\n";
         },
       );
-      await stopPreviewRun(
-        root,
-        {
-          previewRunId: "preview-1",
-          rootDirectory: "expense-published-1",
-          composeProjectName: "factory-preview-preview-1",
-        },
-        processRunner,
-      );
+      await stopPreviewRun(root, request(registeredArtifacts), processRunner);
+
+      const preview = join(root, ".preview-runs", "preview-1");
       expect(processRunner).toHaveBeenLastCalledWith({
         file: "docker",
         args: [
           "compose",
+          "--file",
+          join(preview, "docker-compose.yml"),
           "--project-name",
           "factory-preview-preview-1",
           "--project-directory",
-          join(root, ".preview-runs", "preview-1"),
+          preview,
           "down",
           "--volumes",
           "--remove-orphans",
@@ -179,28 +370,17 @@ describe("preview runner", () => {
           FACTORY_COMPOSE_PROJECT_NAME: "factory-preview-preview-1",
         },
       });
-      await expect(
-        readFile(join(generated, "immutable.txt"), "utf8"),
-      ).resolves.toBe("source");
-      await expect(
-        readFile(
-          join(root, ".preview-runs", "preview-1", "immutable.txt"),
-          "utf8",
-        ),
-      ).rejects.toThrow();
+      await expect(readFile(join(source, "src", "app.ts"))).resolves.toEqual(
+        application,
+      );
+      await expect(readFile(join(preview, "src", "app.ts"))).rejects.toThrow();
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
 
   it("retains a failed-start runtime copy until the allowed stop cleans its named project", async () => {
-    const root = await mkdtemp(join(tmpdir(), "factory-preview-root-"));
-    const source = join(root, "expense-published-1");
-    const request = {
-      previewRunId: "preview-1",
-      rootDirectory: "expense-published-1",
-      composeProjectName: "factory-preview-preview-1",
-    };
+    const { root, source } = await sourceFixture();
     const preview = join(root, ".preview-runs", "preview-1");
     const startRunner: PreviewProcessRunner = async () => {
       throw new Error("Docker failed.");
@@ -211,35 +391,30 @@ describe("preview runner", () => {
     };
 
     try {
-      await mkdir(source, { recursive: true });
-      await writeFile(join(source, "immutable.txt"), "source");
-
       await expect(
-        startPreviewRun(root, request, startRunner),
-      ).rejects.toMatchObject({
-        code: "preview_start_failed",
-      });
-      await expect(
-        readFile(join(preview, "immutable.txt"), "utf8"),
-      ).resolves.toBe("source");
+        startPreviewRun(root, request(registeredArtifacts), startRunner),
+      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      await expect(readFile(join(preview, "src", "app.ts"))).resolves.toEqual(
+        application,
+      );
 
-      await stopPreviewRun(root, request, stopRunner);
+      await stopPreviewRun(root, request(registeredArtifacts), stopRunner);
 
       expect(stopped).toContainEqual(
         expect.objectContaining({
           args: expect.arrayContaining([
+            "--file",
+            join(preview, "docker-compose.yml"),
             "down",
             "--volumes",
             "--remove-orphans",
           ]),
         }),
       );
-      await expect(
-        readFile(join(source, "immutable.txt"), "utf8"),
-      ).resolves.toBe("source");
-      await expect(
-        readFile(join(preview, "immutable.txt"), "utf8"),
-      ).rejects.toThrow();
+      await expect(readFile(join(source, "src", "app.ts"))).resolves.toEqual(
+        application,
+      );
+      await expect(readFile(join(preview, "src", "app.ts"))).rejects.toThrow();
     } finally {
       await rm(root, { recursive: true, force: true });
     }
