@@ -1,5 +1,75 @@
 import { expect, test } from "@playwright/test";
+import { execFileSync } from "node:child_process";
 import type { ApplicationGraphV1 } from "@factory/graph";
+
+type PreviewRunResponse = {
+  readonly id: string;
+  readonly compilationId: string;
+};
+
+const factoryE2eProject = process.env.FACTORY_E2E_FACTORY_PROJECT;
+
+function dockerOutput(args: readonly string[]): string {
+  return execFileSync("docker", [...args], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  }).trim();
+}
+
+function expectPreviewResourcesRemoved(
+  previewRunId: string,
+  composeProjectName: string,
+): void {
+  if (!factoryE2eProject)
+    throw new Error(
+      "FACTORY_E2E_FACTORY_PROJECT is required for isolated preview cleanup checks.",
+    );
+
+  expect(
+    dockerOutput([
+      "compose",
+      "--project-name",
+      factoryE2eProject,
+      "-f",
+      "infra/docker-compose.yml",
+      "exec",
+      "-T",
+      "compiler-worker",
+      "test",
+      "!",
+      "-d",
+      `/artifacts/.preview-runs/${previewRunId}`,
+    ]),
+  ).toBe("");
+  expect(
+    dockerOutput([
+      "ps",
+      "--all",
+      "--filter",
+      `label=com.docker.compose.project=${composeProjectName}`,
+      "--quiet",
+    ]),
+  ).toBe("");
+  expect(
+    dockerOutput([
+      "network",
+      "ls",
+      "--filter",
+      `label=com.docker.compose.project=${composeProjectName}`,
+      "--quiet",
+    ]),
+  ).toBe("");
+  expect(
+    dockerOutput([
+      "volume",
+      "ls",
+      "--filter",
+      `label=com.docker.compose.project=${composeProjectName}`,
+      "--quiet",
+    ]),
+  ).toBe("");
+}
 
 const expenseCapabilityTemplateLocks = [
   {
@@ -123,6 +193,7 @@ test("creates an audit-free Expense Draft from the capability picker", async ({
 test("edits a Draft, publishes an immutable revision, and compiles it", async ({
   page,
 }) => {
+  test.setTimeout(360_000);
   await page.goto("/");
 
   const name = `Executable expense ${Date.now().toString()}`;
@@ -187,6 +258,67 @@ test("edits a Draft, publishes an immutable revision, and compiles it", async ({
     page.getByText("Compile succeeded", { exact: true }),
   ).toBeVisible();
   await expect(page.getByText(/immutable outputs/)).toBeVisible();
+
+  const startedPreview = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      /\/compilations\/[^/]+\/preview-runs$/.test(response.url()),
+  );
+  await page.getByRole("button", { name: "Start preview" }).click();
+  const previewRun = (
+    await startedPreview
+  ).json() as Promise<PreviewRunResponse>;
+  const { id: previewRunId, compilationId: previewCompilationId } =
+    await previewRun;
+  expect(previewRunId).toMatch(/^preview-[a-z0-9-]+$/);
+  expect(previewCompilationId).toMatch(/\S/);
+  const composeProjectName = `factory-preview-${previewRunId}`;
+  await expect(page.getByText("Preview ready", { exact: true })).toBeVisible({
+    timeout: 300_000,
+  });
+
+  const previewPage = page.context().waitForEvent("page");
+  await page.getByRole("button", { name: "Open preview" }).click();
+  const preview = await previewPage;
+  await expect(preview).toHaveURL(/127\.0\.0\.1/);
+  await expect(preview.locator("main.generated-app")).toBeVisible();
+  await expect(preview.getByLabel("Puck Page Studio")).toHaveCount(0);
+  await expect(
+    preview.getByRole("link", { name: "New expense" }),
+  ).toBeVisible();
+  await preview.getByRole("link", { name: "New expense" }).click();
+  await expect(preview).toHaveURL(/\/expenses\/new$/);
+  await preview.getByLabel("amount").fill("125");
+  await preview.getByLabel("description").fill("Preview lifecycle journey");
+  const createdExpense = preview.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname === "/api/expense",
+  );
+  await preview.getByRole("button", { name: "Create Expense" }).click();
+  const createResponse = await createdExpense;
+  expect(createResponse.status(), "Generated preview POST /api/expense").toBe(
+    201,
+  );
+  await expect(preview.getByLabel("amount")).toHaveValue("");
+  await expect(
+    preview.locator(".generated-error[role='alert']"),
+    "Generated preview application errors after POST /api/expense=201",
+  ).toHaveCount(0);
+  await preview.getByRole("link", { name: "Expenses" }).click();
+  await expect(preview.getByRole("button", { name: "submit" })).toBeVisible();
+  await preview.getByRole("button", { name: "submit" }).click();
+  await preview.getByLabel("Role").selectOption("manager");
+  await expect(preview.getByRole("button", { name: "approve" })).toBeVisible();
+  await preview.getByRole("button", { name: "approve" }).click();
+  await expect(preview.locator(".generated-records")).toContainText("approved");
+
+  await page.getByRole("button", { name: "Stop preview" }).click();
+  await expect(page.getByText("Preview stopped", { exact: true })).toBeVisible({
+    timeout: 60_000,
+  });
+  expectPreviewResourcesRemoved(previewRunId, composeProjectName);
+
   await page.getByRole("button", { name: "api/.dockerignore" }).click();
   await expect(page.getByLabel("Generated source snapshot")).toContainText(
     "verified snapshot",
