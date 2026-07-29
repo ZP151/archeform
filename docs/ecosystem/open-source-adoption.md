@@ -37,7 +37,19 @@ output and must pass the intake gates below.
 | [OpenFGA](https://github.com/openfga/openfga) | Provider contract | Later fine-grained authorization provider. | Provider-contract milestone | Define contract and conformance fixtures first; the Casbin compiler remains the v1 baseline. |
 | [Amplication](https://github.com/amplication/amplication) | Source study | Study generator, plugin, template, and Git-sync patterns. | Ecosystem study milestone | Never consume `ee/`. A copied fragment requires a separate immutable-commit source-study record and confirmed compatible licence. |
 | [Medusa](https://github.com/medusajs/medusa) | Provider contract and source study | Later commerce provider; inspiration for bounded catalog/cart/order integrations. | After Simple Ecommerce independent acceptance | v1 implements Factory-owned minimal commerce capabilities. Do not make Medusa a dependency until a provider contract and conformance suite pass. |
+| [Saleor](https://github.com/saleor/saleor) | Provider contract and source study | Future API-first commerce-provider comparison. | After native commerce Profile acceptance | Do not make Saleor a v1 dependency. Use it only to ensure the provider contract is not Medusa-specific. |
 | [Vendure](https://github.com/vendurehq/vendure) | Reference only | Commerce architecture and plugin-boundary study. | Read-only research | GPLv3 source, packages, generated output, and runtime are excluded unless Factory Pilot is intentionally relicensed GPLv3. |
+| [Workbox](https://github.com/GoogleChrome/workbox) | Candidate direct dependency | Generated-Web service-worker and offline shell tooling. | Restaurant offline-read slice | Pin an MIT-licensed published version in generated Web only. Cached menu reads and static assets are never authoritative payment or order mutations. |
+| [TanStack Query](https://github.com/TanStack/query) | Candidate direct dependency | Generated-Web query cache and retry boundary. | Restaurant offline-write slice | Require Factory-generated idempotency, cart revisions, and conflict tests before enabling offline mutation replay. |
+| [Socket.IO](https://github.com/socketio/socket.io) | Candidate direct dependency | Generated-runtime realtime kitchen-event adapter. | Restaurant realtime kitchen slice | Order transitions remain persisted Graph-runtime actions. Socket events are emitted after commits and cannot mutate order state. |
+| [Centrifugo](https://github.com/centrifugal/centrifugo) | Provider contract | Optional higher-scale realtime provider. | After realtime-event contract acceptance | Implement only against a Factory-owned, transport-neutral event envelope. |
+| [qrcode.react](https://github.com/zpao/qrcode.react) | Candidate direct dependency | Generated-Web QR presentation. | Restaurant table-session slice | Render only opaque, signed, expiring Factory table-session tokens. It must not expose an authorisation credential or raw table identifier. |
+| [react-to-print](https://github.com/MatthewHerbst/react-to-print) | Candidate direct dependency | Generated-Web browser receipt printing. | Restaurant cashier slice | Compile a Factory receipt projection and print CSS. Browser print status is not payment or kitchen-print completion evidence. |
+| [QZ Tray](https://github.com/qzind/tray) | Provider contract | Later silent thermal-print provider. | Deferred | LGPL source is never vendored. Use an externally installed, signed-request adapter only after security and licence review. |
+| [Apache ECharts](https://github.com/apache/echarts) | Candidate direct dependency | Generated merchant dashboard charts. | Restaurant reporting slice | Retain Apache-2.0 and embedded third-party notices; charts consume Factory-owned aggregate read models only. |
+| [Open Source POS](https://github.com/opensourcepos/opensourcepos) | Reference only | Restaurant/POS domain-pattern research. | Read-only research | Its additional visible-footer condition makes its UI, code, and assets unsuitable for Factory reuse. |
+| [ERPNext](https://github.com/frappe/erpnext) | Reference only | POS-domain research. | Read-only research | GPL-3.0 source, packages, generated output, and runtime are excluded. |
+| [Plausible Analytics](https://github.com/Plausible/analytics) | Reference only | Analytics-domain research. | Read-only research | AGPL-3.0 source, packages, generated output, and runtime are excluded. |
 | [shadcn/ui](https://github.com/shadcn-ui/ui) | Source study | Candidate component primitives for the Factory Workbench and generated-app design systems. | Workbench design-system slice | Each selected component requires an exact version/source record, compatible notice, accessibility test, and Factory-owned wrapper. |
 
 The listed Puck, React Flow, XState, node-casbin, OpenFGA, Blockly, Amplication,
@@ -119,14 +131,20 @@ reviewed package can become an approved capability or provider.
 3. **Authoring adapters.** Evaluate Blockly, bpmn-js, and GrapesJS with
    contract-only prototypes. Acceptance: unsupported constructs fail closed;
    round trips preserve Graph semantics; no generated arbitrary code runs.
-4. **Provider contracts.** Add OpenFGA and Appwrite contracts with fixture
-   providers. Acceptance: Factory can swap fixtures without a Graph change and
+4. **Restaurant runtime adapters.** Evaluate QR presentation, browser receipts,
+   realtime kitchen events, offline reads, and merchant charts as bounded
+   generated-runtime capabilities. Acceptance: all adapter inputs derive from
+   Published Graph data, orders stay server-authoritative, and their tests
+   prove no adapter can bypass policy, audit, or the order lifecycle.
+5. **Provider contracts.** Add OpenFGA, Appwrite, Centrifugo, Medusa, Saleor,
+   and QZ Tray contracts with fixture providers as their respective Profiles
+   need them. Acceptance: Factory can swap fixtures without a Graph change and
    no provider is required to compile native targets.
-5. **Source studies.** Create the Amplication study, then a Medusa provider
+6. **Source studies.** Create the Amplication study, then a Medusa provider
    study/contract. Acceptance: exact commits and licence evidence, selected
    patterns documented, and no prohibited directories or source reaches the
    runtime.
-6. **Optional runtime providers.** Activate a provider only behind a dedicated
+7. **Optional runtime providers.** Activate a provider only behind a dedicated
    profile and its own acceptance suite. Vendure stays excluded unless a future
    relicensing decision explicitly changes this policy.
 
