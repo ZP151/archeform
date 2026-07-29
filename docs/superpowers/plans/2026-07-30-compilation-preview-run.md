@@ -170,10 +170,12 @@ git commit -m "feat: govern compilation preview runs"
 - Modify: `apps/compiler-worker/src/main.ts`
 - Modify: `apps/compiler-worker/Dockerfile`
 - Modify: `infra/docker-compose.yml`
+- Modify: `packages/compiler/src/index.ts`
 - Create: `apps/compiler-worker/test/preview-runner.test.ts`
 - Create: `apps/compiler-worker/test/queued-preview-run.test.ts`
 - Modify: `apps/compiler-worker/test/worker-config.test.ts`
 - Modify: `apps/compiler-worker/test/dockerfile.test.ts`
+- Modify: `packages/compiler/test/compilation-plan.test.ts`
 
 **Consumes:** Task 1 `PreviewRunJob` and safe Worker reporting endpoints.
 
@@ -241,13 +243,18 @@ type StartedPreview = {
 };
 ```
 
-Resolve the generated root from `FACTORY_ARTIFACT_ROOT` with the same
-non-escaping semantics as the artifact writer. Allocate two loopback ports in
-the Worker; do not accept caller input. Invoke `docker compose` as an argument
-array with `--project-name`, `--project-directory`, `up --build --detach
---wait`, and only generated project/port environment values. Confirm the Web
-URL responds before reporting `ready`. On failure, attempt cleanup of only
-that project and return a bounded diagnostic.
+Resolve the immutable generated source root from `FACTORY_ARTIFACT_ROOT` with
+the same non-escaping semantics as the artifact writer. Copy it into a
+PreviewRun-specific directory below that root before Compose starts; never
+delete or mutate the immutable compilation directory. Ask Docker Compose to
+choose loopback host ports, obtain those ports with `docker compose port`, and
+report the browser-safe `127.0.0.1` URL. Readiness must execute from the Docker
+daemon namespace (for example with `docker compose exec` against the generated
+Web service), not against the Worker container's own loopback namespace.
+Invoke `docker compose` as an argument array with `--project-name`,
+`--project-directory`, `up --build --detach --wait`, and only generated
+project/port environment values. On failure, clean up only that named project
+and PreviewRun directory, then return a bounded allowlisted failure code.
 
 - [ ] **Step 4: Add preview queue dispatch and reporting**
 
@@ -265,6 +272,12 @@ In Factory's local Compose file mount the Docker socket only into
 `compiler-worker`; do not mount it into Control Plane or Workbench. Extend
 Dockerfile/config tests to prove the mount and client belong solely to the
 Worker service.
+
+Update the generated Compose contract so Web and API port mappings bind only
+to `127.0.0.1` and accept Docker-selected ephemeral ports for Factory-run
+previews. Keep explicit environment port values usable for the generated
+application's documented manual run. Add a compiler assertion for both
+loopback mappings.
 
 - [ ] **Step 6: Verify GREEN and materialize a generated runtime**
 
