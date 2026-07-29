@@ -1196,7 +1196,40 @@ describe("compilation target registry", () => {
         graph,
       }),
     ).toThrow(
-      "Checkout PageModel blocks require an 'order' FlowModel transition with Factory effect 'payment.simulate' and operation 'simulate'.",
+      "Interactive commerce PageModel blocks require an 'order' FlowModel transition with Factory effect 'payment.simulate' and operation 'simulate'.",
+    );
+  });
+
+  it("rejects a catalog-only commerce PageModel before returning files when its order flow lacks simulated payment", () => {
+    const source = composeProfileDraft({
+      profile: "restaurant-ordering",
+    }).graph;
+    const graph = structuredClone({
+      ...source,
+      page: {
+        pages: [source.page.pages[0]!],
+        navigation: [source.page.navigation[0]!],
+      },
+      flow: {
+        flows: source.flow.flows.map((flow) => ({
+          ...flow,
+          transitions: flow.transitions.map((transition) => ({
+            ...transition,
+            effects: (transition.effects ?? []).filter(
+              (effect) => effect.capability !== "payment.simulate",
+            ),
+          })),
+        })),
+      },
+    });
+
+    expect(() =>
+      generateApplicationBundle({
+        publishedRevisionId: "invalid-catalog-payment-1",
+        graph,
+      }),
+    ).toThrow(
+      "Interactive commerce PageModel blocks require an 'order' FlowModel transition with Factory effect 'payment.simulate' and operation 'simulate'.",
     );
   });
 

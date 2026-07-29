@@ -188,6 +188,18 @@ function resolveCommerceRuntime(
     );
   }
 
+  if (
+    !factoryCapabilities.some(
+      (capability) =>
+        capability.key === "payment.simulate" &&
+        capability.operation === "simulate",
+    )
+  ) {
+    throw new Error(
+      "Interactive commerce PageModel blocks require Factory capability 'payment.simulate' with operation 'simulate'.",
+    );
+  }
+
   if (!graph.domain.entities.some((entity) => entity.key === "order")) {
     throw new Error(
       "Interactive commerce PageModel blocks require declared DomainModel entity 'order'.",
@@ -201,7 +213,6 @@ function resolveCommerceRuntime(
     );
   }
 
-  const hasCheckout = commerceBlocks.some((block) => block.type === "checkout");
   const paymentTransition = orderFlow.transitions.find((transition) =>
     (transition.effects ?? []).some(
       (effect) =>
@@ -209,9 +220,9 @@ function resolveCommerceRuntime(
         effect.operation === "simulate",
     ),
   );
-  if (hasCheckout && !paymentTransition) {
+  if (!paymentTransition) {
     throw new Error(
-      "Checkout PageModel blocks require an 'order' FlowModel transition with Factory effect 'payment.simulate' and operation 'simulate'.",
+      "Interactive commerce PageModel blocks require an 'order' FlowModel transition with Factory effect 'payment.simulate' and operation 'simulate'.",
     );
   }
 

@@ -205,7 +205,7 @@ describe("generated page runtime projection", () => {
       "checkout",
       "payment.simulate",
       "simple-ecommerce",
-      "PageModel block 'checkout' requires Factory capability 'payment.simulate'.",
+      "Interactive commerce PageModel blocks require Factory capability 'payment.simulate' with operation 'simulate'.",
     ],
   ] as const)(
     "rejects %s blocks when Factory capability %s is absent",
@@ -254,6 +254,59 @@ describe("generated page runtime projection", () => {
   );
 
   it.each([
+    ["catalog", "restaurant-ordering"],
+    ["cart", "restaurant-ordering"],
+    ["checkout", "simple-ecommerce"],
+  ] as const)(
+    "rejects the %s interaction when simulated payment is not an exact Factory capability",
+    (_blockType, profile) => {
+      const graph = profileGraph(profile);
+      graph.integration.providers = [
+        ...graph.integration.providers,
+        { id: "external", type: "payment-provider" },
+      ];
+      graph.integration.capabilities = graph.integration.capabilities.map(
+        (capability) =>
+          capability.key === "payment.simulate"
+            ? { ...capability, providerId: "external" }
+            : capability,
+      );
+
+      expect(() => createGeneratedPageRuntimeProjection(graph)).toThrow(
+        "Interactive commerce PageModel blocks require Factory capability 'payment.simulate' with operation 'simulate'.",
+      );
+    },
+  );
+
+  it.each([
+    ["catalog", "restaurant-ordering"],
+    ["cart", "restaurant-ordering"],
+    ["checkout", "simple-ecommerce"],
+  ] as const)(
+    "rejects the %s interaction when the order flow lacks exact simulated payment",
+    (_blockType, profile) => {
+      const graph = profileGraph(profile);
+      graph.flow.flows = graph.flow.flows.map((flow) =>
+        flow.entity === "order"
+          ? {
+              ...flow,
+              transitions: flow.transitions.map((transition) => ({
+                ...transition,
+                effects: (transition.effects ?? []).filter(
+                  (effect) => effect.capability !== "payment.simulate",
+                ),
+              })),
+            }
+          : flow,
+      );
+
+      expect(() => createGeneratedPageRuntimeProjection(graph)).toThrow(
+        "Interactive commerce PageModel blocks require an 'order' FlowModel transition with Factory effect 'payment.simulate' and operation 'simulate'.",
+      );
+    },
+  );
+
+  it.each([
     ["catalog", "cart.add", "remove", "restaurant-ordering"],
     ["checkout", "payment.simulate", "other", "simple-ecommerce"],
   ] as const)(
@@ -270,7 +323,7 @@ describe("generated page runtime projection", () => {
       expect(() => createGeneratedPageRuntimeProjection(graph)).toThrow(
         blockType === "catalog"
           ? "Interactive commerce PageModel blocks require Factory capability 'cart.add' with operation 'add'."
-          : `PageModel block '${blockType}' requires Factory capability '${capabilityKey}'.`,
+          : "Interactive commerce PageModel blocks require Factory capability 'payment.simulate' with operation 'simulate'.",
       );
     },
   );
