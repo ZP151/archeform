@@ -525,6 +525,92 @@ describe("compilation target registry", () => {
     );
   });
 
+  it("preflights an external effect before Factory payment and inventory handlers", async () => {
+    const composed = composeProfileDraft({
+      profile: "restaurant-ordering",
+    }).graph;
+    const order = composed.domain.entities.find(
+      (entity) => entity.key === "order",
+    )!;
+    const catalogEntity = composed.domain.relations.find(
+      (relation) => relation.from === order.key,
+    )!.to;
+    const catalogSeed = composed.domain.seedData!.find(
+      (seed) => seed.entity === catalogEntity,
+    )!;
+    const customer = composed.policy.permissions.find(
+      (permission) =>
+        permission.resource === order.key &&
+        permission.actions.includes("create"),
+    )!.role;
+    const auditRole = composed.policy.permissions.find((permission) =>
+      permission.actions.includes("audit"),
+    )!.role;
+    const graph = {
+      ...composed,
+      integration: {
+        ...composed.integration,
+        providers: [{ id: "mail", type: "email", version: "1.0.0" }],
+        capabilities: [
+          ...composed.integration.capabilities,
+          { key: "email.send", providerId: "mail", operation: "send" },
+        ],
+      },
+      flow: {
+        ...composed.flow,
+        flows: composed.flow.flows.map((flow) => ({
+          ...flow,
+          transitions: flow.transitions.map((transition) =>
+            transition.event === "pay"
+              ? {
+                  ...transition,
+                  effects: [
+                    ...(transition.effects ?? []),
+                    { capability: "email.send", operation: "send" },
+                  ],
+                }
+              : transition,
+          ),
+        })),
+      },
+    };
+
+    await withGeneratedRuntime(
+      { publishedRevisionId: "published-mixed-provider-effects-1", graph },
+      async (runtime) => {
+        const record = await runtime.create(customer, order.key, {});
+        await runtime.addCartItem(customer, order.key, record.id, {
+          catalogEntity,
+          catalogRecordId: catalogSeed.id!,
+          quantity: 1,
+        });
+        const stockBefore = (await runtime.list(customer, catalogEntity)).find(
+          (candidate) => candidate.id === catalogSeed.id,
+        )!.stock;
+        const capabilityEventsBefore =
+          await runtime.capabilityEvents(auditRole);
+
+        await expect(
+          runtime.transition(customer, order.key, record.id, "pay"),
+        ).rejects.toThrow(
+          "External provider capability 'email.send' requires an activated adapter for provider 'mail'.",
+        );
+
+        expect(
+          (await runtime.list(customer, catalogEntity)).find(
+            (candidate) => candidate.id === catalogSeed.id,
+          )!.stock,
+        ).toBe(stockBefore);
+        expect(await runtime.capabilityEvents(auditRole)).toEqual(
+          capabilityEventsBefore,
+        );
+        expect((await runtime.list(customer, order.key))[0]?.status).toBe(
+          "cart",
+        );
+      },
+    );
+  });
+
   it.each(["restaurant-ordering", "simple-ecommerce"] as const)(
     "executes a seeded $profile cart and payment journey",
     async (profile) => {
