@@ -1,8 +1,5 @@
 import type { FactoryProfile } from "@factory/capabilities";
-import {
-  assertValidApplicationGraph,
-  type ApplicationGraphV1,
-} from "@factory/graph";
+import type { ApplicationGraphV1 } from "@factory/graph";
 
 import { createProfileDraft } from "./profile-starters";
 
@@ -68,7 +65,7 @@ export function createGuidedApplicationDraft(
       mode: input.theme,
     },
   };
-  return assertValidApplicationGraph(graph);
+  return graph;
 }
 
 export function guidedProfileSummary(
@@ -81,4 +78,3 @@ export function guidedProfileSummary(
     flows: graph.flow.flows.length,
   };
 }
-

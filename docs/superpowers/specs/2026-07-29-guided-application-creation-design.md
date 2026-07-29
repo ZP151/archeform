@@ -12,8 +12,10 @@ mutable Draft that can be refined in the existing Studios and then published.
 The first slice supports Expense approval, Restaurant ordering, and Simple
 ecommerce. It may customize Graph identity, display name, and experience mode,
 but may not generate arbitrary schema, code, providers, routes, or effects.
-Every result passes `assertValidApplicationGraph` before the Control Plane
-receives it.
+The browser creates Graphs only from pinned, validated starters and constrained
+identity/experience edits. The Control Plane runs `assertValidApplicationGraph`
+before persisting a Draft; the browser must not import the Node-only hashing
+entry point.
 
 ## Experience
 
@@ -40,8 +42,9 @@ createGuidedApplicationDraft(input, nonce): ApplicationGraphV1
 ```
 
 The helper rejects blank names, creates a bounded deterministic key from the
-name and nonce, clones the starter, validates the result, and never mutates a
-starter. The browser supplies the nonce, allowing deterministic tests.
+name and nonce, clones the starter, and never mutates a starter. The browser
+supplies the nonce, allowing deterministic tests. Server-side Graph validation
+remains the persistence boundary.
 
 ## Acceptance evidence
 
@@ -50,4 +53,3 @@ starter. The browser supplies the nonce, allowing deterministic tests.
 - Browser E2E creates a named Expense application through the drawer and lands
   in Page Studio while remaining in Draft.
 - No automatic Publish, Compilation, model call, or persisted raw prompt occurs.
-

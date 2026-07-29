@@ -52,13 +52,13 @@ import {
   type WorkbenchRevisionTimeline,
 } from "../lib/control-plane-client";
 import {
-  createProfileDraft,
-  profileStarterOptions,
-} from "../lib/profile-starters";
-import type { FactoryProfile } from "@factory/capabilities";
+  createGuidedApplicationDraft,
+  type GuidedApplicationInput,
+} from "../lib/guided-application";
 import { PageStudio } from "./page-studio";
 import { FlowStudio } from "./flow-studio";
 import { DomainRelationGraph } from "./domain-relation-graph";
+import { GuidedCreationDrawer } from "./guided-creation-drawer";
 import {
   domainModelToReactFlow,
   flowModelToReactFlow,
@@ -141,6 +141,7 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   const [artifactSnapshot, setArtifactSnapshot] =
     useState<WorkbenchArtifactContent | null>(null);
   const [artifactLoading, setArtifactLoading] = useState(false);
+  const [guidedCreationOpen, setGuidedCreationOpen] = useState(false);
   const bootstrapRequest = useRef(0);
   const controlPlane = useMemo(
     () => new ControlPlaneClient(controlPlaneUrl),
@@ -156,7 +157,7 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   );
 
   const bootstrapGraph = useCallback(
-    (nextGraph: ApplicationGraphV1) => {
+    async (nextGraph: ApplicationGraphV1): Promise<void> => {
       const request = ++bootstrapRequest.current;
       setGraph(nextGraph);
       setRemoteDraft(null);
@@ -168,28 +169,28 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
       dispatch({ type: "synchronize-draft", revision: "r.0" });
       setConnectionState("connecting");
 
-      void controlPlane
-        .bootstrapLocalDraft(nextGraph)
-        .then((draft) => {
-          if (request !== bootstrapRequest.current) return;
-          setRemoteDraft(draft);
-          setGraph(draft.graph);
-          dispatch({
-            type: "synchronize-draft",
-            revision: `r.${draft.revisionNumber}`,
-          });
-          setConnectionState("ready");
-        })
-        .catch(() => {
-          if (request !== bootstrapRequest.current) return;
-          setConnectionState("offline");
+      try {
+        const draft = await controlPlane.bootstrapLocalDraft(nextGraph);
+        if (request !== bootstrapRequest.current) return;
+        setRemoteDraft(draft);
+        setGraph(draft.graph);
+        dispatch({
+          type: "synchronize-draft",
+          revision: `r.${draft.revisionNumber}`,
         });
+        setConnectionState("ready");
+      } catch (error) {
+        if (request === bootstrapRequest.current) {
+          setConnectionState("offline");
+        }
+        throw error;
+      }
     },
     [controlPlane],
   );
 
   useEffect(() => {
-    bootstrapGraph(initialGraph);
+    void bootstrapGraph(initialGraph).catch(() => undefined);
   }, [bootstrapGraph, initialGraph]);
 
   useEffect(() => {
@@ -456,13 +457,11 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   };
   const active =
     navigation.find((item) => item.id === state.activeSurface) ?? navigation[0];
-  const selectedProfile =
-    profileStarterOptions.find(
-      (option) =>
-        createProfileDraft(option.profile).metadata.id === graph.metadata.id,
-    )?.profile ?? "";
-  const openProfile = (profile: FactoryProfile) => {
-    bootstrapGraph(createProfileDraft(profile));
+  const createGuidedDraft = async (input: GuidedApplicationInput) => {
+    setOperationError(null);
+    const nonce = globalThis.crypto.randomUUID().toLowerCase();
+    await bootstrapGraph(createGuidedApplicationDraft(input, nonce));
+    dispatch({ type: "open", surface: "page" });
   };
 
   return (
@@ -504,29 +503,19 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
       <section className="shell">
         <header className="topbar">
           <div className="project-control">
-            <label className="project-picker">
+            <button
+              className="new-application-button"
+              onClick={() => setGuidedCreationOpen(true)}
+              type="button"
+            >
+              <Plus size={15} /> New application
+            </button>
+            <div className="project-picker" aria-label="Current application">
               <span className="project-glyph">
                 <FolderKanban size={15} />
               </span>
               <span className="project-name">{graph.metadata.name}</span>
-              <select
-                aria-label="Open a profile starter"
-                className="profile-select"
-                onChange={(event) => {
-                  const profile = event.target.value as FactoryProfile;
-                  if (profile) openProfile(profile);
-                }}
-                value={selectedProfile}
-              >
-                {!selectedProfile && <option value="">Custom Graph</option>}
-                {profileStarterOptions.map((option) => (
-                  <option key={option.profile} value={option.profile}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown aria-hidden="true" size={15} />
-            </label>
+            </div>
             <span className="top-divider" />
             <button className="revision-picker" aria-label="Select revision">
               {state.revision}
@@ -603,7 +592,11 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
               <p className="heading-description">{active.hint}</p>
             </div>
             <div className="heading-actions">
-              <button className="quiet-button">
+              <button
+                className="quiet-button"
+                onClick={() => setGuidedCreationOpen(true)}
+                type="button"
+              >
                 <Plus size={15} /> Add
               </button>
               <button
@@ -711,6 +704,11 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
           </div>
         </section>
       </section>
+      <GuidedCreationDrawer
+        onClose={() => setGuidedCreationOpen(false)}
+        onCreate={createGuidedDraft}
+        open={guidedCreationOpen}
+      />
     </main>
   );
 }
