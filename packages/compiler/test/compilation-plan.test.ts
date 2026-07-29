@@ -185,6 +185,12 @@ describe("compilation target registry", () => {
     expect(files["api/src/capabilities/contract.ts"]).toContain(
       "export interface CapabilityRuntimeModule",
     );
+    expect(files["api/src/capabilities/contract.ts"]).toContain(
+      "readonly version: string;",
+    );
+    expect(files["api/src/capabilities/contract.ts"]).toContain(
+      "readonly applicationId: string;",
+    );
     expect(files["api/src/capabilities/registry.ts"]).toContain(
       'from "./core.audit.js"',
     );

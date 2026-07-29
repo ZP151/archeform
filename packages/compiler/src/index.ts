@@ -430,6 +430,8 @@ function renderCapabilityContract(graph: ApplicationGraphV1): string {
     "",
     "export interface CapabilityRuntimeModule {",
     "  readonly key: string;",
+    "  readonly version: string;",
+    "  readonly applicationId: string;",
     "  readonly effects: readonly string[];",
     "  readonly recordHandler?: RecordHandler;",
     "  readonly workflowHandler?: WorkflowHandler;",
