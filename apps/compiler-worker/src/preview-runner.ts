@@ -146,13 +146,16 @@ export function createDockerComposeRunner(
         stdout += chunk.toString("utf8");
       });
       signal.addEventListener("abort", onAbort, { once: true });
-      child.once("error", () => {
+      const onError = () => {
+        if (abortReason) return;
         signal.removeEventListener("abort", onAbort);
-        if (forceKill) clearTimeout(forceKill);
-        reject(abortReason ?? new Error("Preview Docker operation failed."));
-      });
+        child.removeListener("error", onError);
+        reject(new Error("Preview Docker operation failed."));
+      };
+      child.on("error", onError);
       child.once("exit", (code) => {
         signal.removeEventListener("abort", onAbort);
+        child.removeListener("error", onError);
         if (forceKill) clearTimeout(forceKill);
         if (abortReason) {
           reject(abortReason);

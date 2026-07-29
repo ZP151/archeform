@@ -108,6 +108,52 @@ describe("preview runner", () => {
     });
   });
 
+  it("keeps an aborted Docker operation pending after child error until exit", async () => {
+    const child = new EventEmitter() as EventEmitter & {
+      stdout: EventEmitter;
+      kill(signal?: string): boolean;
+    };
+    child.stdout = new EventEmitter();
+    child.kill = () => true;
+    const createDockerComposeRunner = (
+      previewRunnerModule as unknown as {
+        createDockerComposeRunner: (
+          spawnProcess: () => typeof child,
+        ) => PreviewProcessRunner;
+      }
+    ).createDockerComposeRunner;
+    const processRunner = createDockerComposeRunner(() => child);
+    const controller = new AbortController();
+    const operation = processRunner(
+      {
+        file: "docker",
+        args: ["compose", "up"],
+        environment: {},
+      },
+      controller.signal,
+    );
+    let settled = false;
+    void operation.then(
+      () => {
+        settled = true;
+      },
+      () => {
+        settled = true;
+      },
+    );
+
+    controller.abort(new PreviewRunFailure("preview_start_timeout"));
+    child.emit("error", new Error("Child termination is in progress."));
+    child.emit("error", new Error("Child escalation is in progress."));
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(settled).toBe(false);
+    child.emit("exit", null, "SIGTERM");
+    await expect(operation).rejects.toMatchObject({
+      code: "preview_start_timeout",
+    });
+  });
+
   it("times out a pending start, removes Docker resources, and retains verified Stop recovery", async () => {
     const { root } = await sourceFixture();
     const preview = join(root, ".preview-runs", "preview-1");

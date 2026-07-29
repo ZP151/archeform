@@ -243,19 +243,19 @@ function previewReadyEvidence(input: unknown) {
 function previewFailedEvidence(input: unknown) {
   const body = exactRecord(input, ["diagnostic"], ["diagnostic"]);
   const diagnosticCode = requiredString(body, "diagnostic");
-  const messages: Record<string, string> = {
+  const messages = {
     preview_start_failed: "Preview startup failed.",
     preview_start_timeout: "Preview startup timed out.",
     preview_stop_failed: "Preview cleanup failed.",
     preview_health_check_failed: "Preview health check failed.",
-  };
-  const diagnostic = messages[diagnosticCode];
-  if (!diagnostic) {
+  } as const;
+  if (!Object.prototype.hasOwnProperty.call(messages, diagnosticCode)) {
     throw new BadRequestException(
       "diagnostic must be a supported failure code.",
     );
   }
-  return { diagnostic };
+  const code = diagnosticCode as keyof typeof messages;
+  return { diagnosticCode: code, diagnostic: messages[code] };
 }
 
 function previewAction(input: unknown): "start" | "stop" {
@@ -826,19 +826,23 @@ export class LifecycleService {
     const evidence = previewFailedEvidence(input);
     const preview = await this.prisma.previewRun.findUnique({ where: { id } });
     if (!preview) throw new NotFoundException("Preview run was not found.");
-    if (preview.status !== "starting" && preview.status !== "stopping") {
+    const expectedStatus =
+      evidence.diagnosticCode === "preview_stop_failed"
+        ? "stopping"
+        : "starting";
+    if (preview.status !== expectedStatus) {
       throw new ConflictException(
         "Preview run cannot accept failure evidence.",
       );
     }
     const transitioned = await this.prisma.previewRun.updateMany({
-      where: { id, status: preview.status },
-      data: { status: "failed", ...evidence },
+      where: { id, status: expectedStatus },
+      data: { status: "failed", diagnostic: evidence.diagnostic },
     });
     if (transitioned.count !== 1) {
       throw new ConflictException("Preview run failure evidence conflicted.");
     }
-    return { ...preview, status: "failed", ...evidence };
+    return { ...preview, status: "failed", diagnostic: evidence.diagnostic };
   }
 
   async reportPreviewStopped(previewRunId: string) {

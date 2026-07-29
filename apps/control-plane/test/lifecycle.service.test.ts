@@ -989,6 +989,69 @@ describe("LifecycleService", () => {
     });
   });
 
+  it("keeps Stop ownership when stale start-timeout evidence races stopped evidence", async () => {
+    prisma.previewRun.findUnique.mockResolvedValue({
+      id: "preview-1",
+      status: "stopping",
+      activeKey: "compilation-succeeded",
+    });
+    prisma.previewRun.updateMany.mockResolvedValue({ count: 1 });
+
+    await expect(
+      service.reportPreviewFailed("preview-1", {
+        diagnostic: "preview_start_timeout",
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(prisma.previewRun.updateMany).not.toHaveBeenCalled();
+
+    await expect(
+      service.reportPreviewStopped("preview-1"),
+    ).resolves.toMatchObject({
+      status: "stopped",
+      activeKey: null,
+    });
+    expect(prisma.previewRun.updateMany).toHaveBeenCalledWith({
+      where: { id: "preview-1", status: "stopping" },
+      data: { status: "stopped", activeKey: null },
+    });
+  });
+
+  it("rejects stop-failure evidence while a preview is still starting", async () => {
+    prisma.previewRun.findUnique.mockResolvedValue({
+      id: "preview-1",
+      status: "starting",
+    });
+    prisma.previewRun.updateMany.mockResolvedValue({ count: 1 });
+
+    await expect(
+      service.reportPreviewFailed("preview-1", {
+        diagnostic: "preview_stop_failed",
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(prisma.previewRun.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("accepts stop-failure evidence only while a preview is stopping", async () => {
+    prisma.previewRun.findUnique.mockResolvedValue({
+      id: "preview-1",
+      status: "stopping",
+    });
+    prisma.previewRun.updateMany.mockResolvedValue({ count: 1 });
+
+    await expect(
+      service.reportPreviewFailed("preview-1", {
+        diagnostic: "preview_stop_failed",
+      }),
+    ).resolves.toMatchObject({
+      status: "failed",
+      diagnostic: "Preview cleanup failed.",
+    });
+    expect(prisma.previewRun.updateMany).toHaveBeenCalledWith({
+      where: { id: "preview-1", status: "stopping" },
+      data: { status: "failed", diagnostic: "Preview cleanup failed." },
+    });
+  });
+
   it("compensates a failed start enqueue so a retry creates a new run", async () => {
     prisma.compilation.findUnique.mockResolvedValue({
       id: "compilation-succeeded",
