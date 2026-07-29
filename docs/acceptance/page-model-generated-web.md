@@ -26,10 +26,17 @@ not import Puck, React Flow, Workbench editor source, arbitrary URLs, arbitrary
 component names, or executable PageModel values.
 
 Projection validation fails before an output bundle for an unsupported block,
-non-local route, missing or unknown entity binding, an invalid order binding, a
-missing navigation target, or a missing required Factory capability. `catalog`
-requires `cart.add`; `checkout` requires `payment.simulate`; `cart` and
-`checkout` require the `order` entity. The generated root resolves the declared
+non-local or reserved generated-Next route, missing or unknown entity binding,
+an invalid order binding, a missing navigation target, or a missing required
+Factory capability. `/api`, `/api/**`, `/_next`, `/_next/**`, and
+`/favicon.ico` are reserved and cannot be PageModel routes.
+
+Every interactive commerce block—`catalog`, `cart`, and `checkout`—requires
+the exact Factory capability contracts `cart.add`/`add` and
+`payment.simulate`/`simulate`, a declared DomainModel `order` entity, and an
+`order` FlowModel transition with the exact `payment.simulate`/`simulate`
+effect. These prerequisites apply even when a `catalog` block itself binds a
+catalog entity rather than `order`. The generated root resolves the declared
 `/` page when present, otherwise the first declared page. The catch-all entry
 renders only declared routes and produces a controlled Not Found state for an
 unknown route.
@@ -96,6 +103,7 @@ continue to keep credentials and raw model traffic out of state and evidence.
 ## Residual scope
 
 This acceptance covers the bounded v1 block vocabulary and the three accepted
-profile route journeys. It does not make third-party visual editors or external
-runtime providers part of generated applications; those remain adapters behind
-their own contracts and verification slices.
+profile route journeys, including the P1 commerce and reserved-route rejection
+boundaries introduced by `9d6aa78` and `60a7882`. It does not make third-party
+visual editors or external runtime providers part of generated applications;
+those remain adapters behind their own contracts and verification slices.

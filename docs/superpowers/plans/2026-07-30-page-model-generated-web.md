@@ -13,7 +13,8 @@
 - `ApplicationGraphV1` remains the sole business source of truth.
 - Only `hero`, `form`, `collection`, `catalog`, `cart`, `queue`, and `checkout` are executable v1 page blocks.
 - Generated Web packages never import Puck, React Flow, editor source, model output, arbitrary URLs, or arbitrary source code.
-- A published Graph with an unsupported block, missing entity binding, or missing required Factory capability fails before an output bundle is returned.
+- A published Graph with an unsupported block, a reserved generated-Next route, a missing entity binding, or a missing required Factory capability fails before an output bundle is returned.
+- Every `catalog`, `cart`, and `checkout` block requires a DomainModel `order` entity, an `order` FlowModel transition with `payment.simulate`/`simulate`, and exact Factory `cart.add`/`add` plus `payment.simulate`/`simulate` capabilities.
 - Generated applications stay responsive, light/dark-aware, keyboard accessible, and role/policy constrained.
 - Use fixture-based deterministic verification only; no real model call belongs to this slice.
 
@@ -43,7 +44,7 @@
 
 **Produces:** `createGeneratedPageRuntimeProjection(graph)` and `GeneratedPageRuntimeProjectionV1`.
 
-- [ ] **Step 1: Write failing projection tests**
+- [x] **Step 1: Write failing projection tests**
 
 ```ts
 const projection = createGeneratedPageRuntimeProjection(
@@ -60,13 +61,13 @@ expect(() =>
 ).toThrow("Unsupported PageModel block");
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `pnpm --filter @factory/compiler test -- page-runtime-projection.test.ts`
 
 Expected: FAIL because the projection module does not exist.
 
-- [ ] **Step 3: Implement the bounded projection**
+- [x] **Step 3: Implement the bounded projection**
 
 ```ts
 export function createGeneratedPageRuntimeProjection(
@@ -82,15 +83,21 @@ export function createGeneratedPageRuntimeProjection(
 }
 ```
 
-Validate block types, entity requirements, and Factory capability requirements before producing the projection. Copy only safe string props (`title`, `eyebrow`, `heading`) and never preserve executable values.
+Validate block types, entity requirements, reserved generated-Next routes, and
+Factory capability requirements before producing the projection. For every
+`catalog`, `cart`, and `checkout` block, require the declared DomainModel
+`order` entity, the exact Factory `cart.add`/`add` and
+`payment.simulate`/`simulate` capabilities, and an `order` FlowModel transition
+with the exact `payment.simulate`/`simulate` effect. Copy only safe string props
+(`title`, `eyebrow`, `heading`) and never preserve executable values.
 
-- [ ] **Step 4: Run focused projection tests**
+- [x] **Step 4: Run focused projection tests**
 
 Run: `pnpm --filter @factory/compiler test -- page-runtime-projection.test.ts`
 
 Expected: PASS, including root fallback and missing capability rejection.
 
-- [ ] **Step 5: Commit the projection boundary**
+- [x] **Step 5: Commit the projection boundary**
 
 ```bash
 git add packages/compiler/src/page-runtime-projection.ts packages/compiler/test/page-runtime-projection.test.ts
@@ -108,7 +115,7 @@ git commit -m "feat: derive generated page runtime projection"
 
 **Produces:** `web/app/page-runtime.tsx`, root and catch-all page entrypoints, and generated responsive styles.
 
-- [ ] **Step 1: Write failing generated-source tests**
+- [x] **Step 1: Write failing generated-source tests**
 
 ```ts
 expect(files["web/app/page-runtime.tsx"]).toContain(
@@ -119,13 +126,13 @@ expect(files["web/app/page-runtime.tsx"]).toContain("CollectionBlock");
 expect(files["web/app/page-runtime.tsx"]).not.toContain("@puckeditor/core");
 ```
 
-- [ ] **Step 2: Run the focused test to verify it fails**
+- [x] **Step 2: Run the focused test to verify it fails**
 
 Run: `pnpm --filter @factory/compiler test -- compilation-plan.test.ts`
 
 Expected: FAIL because the bundle has only the generic page client.
 
-- [ ] **Step 3: Emit the page runtime and route entrypoints**
+- [x] **Step 3: Emit the page runtime and route entrypoints**
 
 ```ts
 { path: "web/app/page-runtime.tsx", content: renderPageRuntime(graph) },
@@ -135,13 +142,13 @@ Expected: FAIL because the bundle has only the generic page client.
 
 The runtime must render ordered PageModel blocks, resolve the active declared route, and use only generated API proxy calls. `collection` exposes a derived same-entity form route; `form`, `catalog`, `cart`, `queue`, and `checkout` preserve their bounded existing workflows. No generic all-entity sidebar is emitted.
 
-- [ ] **Step 4: Run Compiler tests and generated Web build**
+- [x] **Step 4: Run Compiler tests and generated Web build**
 
 Run: `pnpm --filter @factory/compiler test && pnpm --filter @factory/compiler build`
 
 Expected: PASS, and a materialized generated Web project builds with Next.js.
 
-- [ ] **Step 5: Commit generated Web rendering**
+- [x] **Step 5: Commit generated Web rendering**
 
 ```bash
 git add packages/compiler/src/index.ts packages/compiler/test/compilation-plan.test.ts
@@ -161,7 +168,7 @@ git commit -m "feat: render PageModel blocks in generated web apps"
 
 **Produces:** Browser evidence that the three independent profiles use their published PageModel pages while retaining role journeys.
 
-- [ ] **Step 1: Write failing route-aware browser assertions**
+- [x] **Step 1: Write failing route-aware browser assertions**
 
 ```ts
 await page.getByRole("link", { name: "New expense" }).click();
@@ -170,21 +177,21 @@ await page.getByRole("link", { name: "Kitchen" }).click();
 await expect(page).toHaveURL(/\/kitchen$/);
 ```
 
-- [ ] **Step 2: Run against current generated applications**
+- [x] **Step 2: Run against current generated applications**
 
 Run: `pnpm exec playwright test e2e/generated-expense.spec.ts e2e/generated-restaurant.spec.ts e2e/generated-ecommerce.spec.ts --reporter=line`
 
 Expected: FAIL before Task 2 generated applications are rematerialized because the generic client does not expose the designed route sequence.
 
-- [ ] **Step 3: Update journeys and source-level profile coverage**
+- [x] **Step 3: Update journeys and source-level profile coverage**
 
 Assert the Expense form route, Restaurant menu/cart/kitchen pages, and Ecommerce catalog/checkout/orders pages each emit their declared block types. Keep the existing API actions, role switches, and state assertions.
 
-- [ ] **Step 4: Materialize and run isolated generated profile browsers**
+- [x] **Step 4: Materialize and run isolated generated profile browsers**
 
 Run the three profile apps under distinct Compose project names and non-default ports. Set only the generated-app URL variables, run the three Playwright journeys, and remove all named projects, volumes, and temporary artifacts.
 
-- [ ] **Step 5: Commit route-aware profile proof**
+- [x] **Step 5: Commit route-aware profile proof**
 
 ```bash
 git add e2e packages/compiler/test/profile-compilation.test.ts
@@ -202,7 +209,7 @@ git commit -m "test: prove generated profile page routes"
 
 **Produces:** Reproducible evidence that the visual PageModel affects each generated application independently.
 
-- [ ] **Step 1: Record generated bundle and route evidence**
+- [x] **Step 1: Record generated bundle and route evidence**
 
 Document the exact selected Graph block routes, compiler output checks, isolated ports/projects, browser journey totals, and cleanup result. Do not record credentials, raw model input, or raw model output.
 
@@ -237,3 +244,10 @@ git push origin main
 - The PageModel remains data; no editor, external component registry, or raw source is included in generated applications.
 - Every supported v1 block has a constrained visual and behavior projection.
 - Route behavior, compiler rejection, generated Next build, and all three independent profile browser journeys are verified.
+
+## Release status
+
+Tasks 1–3 and Task 4 Step 1 are evidenced by commits `09d8666`, `e5fc83e`,
+`978fbd8`, and `00c9be4`, plus the acceptance record. Task 4 Steps 2–3 remain
+open until final post-P1 release gates, independent review, and the release
+commit/push are complete.

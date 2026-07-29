@@ -33,7 +33,11 @@
   `factory.generated-page-runtime/v1` document and responsive standalone Web
   routes. The accepted v1 blocks are `hero`, `form`, `collection`, `catalog`,
   `cart`, `queue`, and `checkout`; generated Web packages contain no Puck or
-  other editor runtime dependency.
+  other editor runtime dependency. Any `catalog`, `cart`, or `checkout` page
+  requires a declared DomainModel `order` entity, an `order` FlowModel payment
+  transition, and exact Factory `cart.add`/`add` plus
+  `payment.simulate`/`simulate` contracts. PageModel routes cannot claim
+  `/api`, `/_next`, or `/favicon.ico` generated-Next paths.
 - Provide CRUD, audit, notification, workflow, catalog, cart, order, inventory,
   and simulated-payment capabilities.
 

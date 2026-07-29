@@ -22,19 +22,25 @@ generated Nest API, role header, flow events, and capability APIs.
 
 ## Supported block contract
 
-| PageModel block | Required Graph data                                | Generated behavior                                    |
-| --------------- | -------------------------------------------------- | ----------------------------------------------------- |
-| `hero`          | `eyebrow` and `heading` props are optional         | Headline and safe primary route action.               |
-| `form`          | Bound entity                                       | Role-guarded create form for declared entity fields.  |
-| `collection`    | Bound entity                                       | Role-guarded records and a derived route to its form. |
-| `catalog`       | Bound entity plus Factory cart capability          | Seeded/loaded records with add-to-cart action.        |
-| `cart`          | Bound order entity                                 | Current cart state and simulated checkout action.     |
-| `queue`         | Bound entity                                       | Records and declared transition controls.             |
-| `checkout`      | Bound order entity plus Factory payment capability | Current cart state and simulated checkout action.     |
+| PageModel block | Required Graph data                                                                                   | Generated behavior                                    |
+| --------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `hero`          | `eyebrow` and `heading` props are optional                                                            | Headline and safe primary route action.               |
+| `form`          | Bound entity                                                                                          | Role-guarded create form for declared entity fields.  |
+| `collection`    | Bound entity                                                                                          | Role-guarded records and a derived route to its form. |
+| `catalog`       | Bound catalog entity; declared `order` entity and FlowModel; exact Factory cart and payment contracts | Seeded/loaded records with add-to-cart action.        |
+| `cart`          | Bound `order` entity; declared `order` FlowModel; exact Factory cart and payment contracts            | Current cart state and simulated checkout action.     |
+| `queue`         | Bound entity                                                                                          | Records and declared transition controls.             |
+| `checkout`      | Bound `order` entity; declared `order` FlowModel; exact Factory cart and payment contracts            | Current cart state and simulated checkout action.     |
 
-The compiler rejects unsupported block types, missing required bindings, or a
-catalog/checkout block whose required Factory capability is absent. It never
-evaluates PageModel props as code, HTML, URLs, imports, or component names.
+For every `catalog`, `cart`, or `checkout` block, the compiler requires all of
+the following before it emits an output bundle: a DomainModel `order` entity;
+an `order` FlowModel; Factory capability `cart.add` with operation `add`; and
+Factory capability `payment.simulate` with operation `simulate`. The declared
+`order` FlowModel must contain a transition with a
+`payment.simulate`/`simulate` effect. The compiler rejects unsupported block
+types, missing required bindings, or any missing commerce prerequisite. It
+never evaluates PageModel props as code, HTML, URLs, imports, or component
+names.
 
 ## Route and interaction model
 
@@ -43,9 +49,15 @@ declared PageModel page when no root page exists. A catch-all route resolves
 all other declared paths. Unknown paths show a controlled Not Found state;
 they never infer a new route.
 
+PageModel routes must be canonical local paths and may not claim generated
+Next application internals: `/api`, `/api/**`, `/_next`, `/_next/**`, or
+`/favicon.ico`. Such a Graph fails during projection before an output bundle is
+returned.
+
 `collection` derives a create action only when a declared `form` page is bound
-to the same entity. `catalog`, `cart`, and `checkout` preserve the existing
-bounded cart/payment behavior. `queue` presents only FlowModel events for its
+to the same entity. `catalog`, `cart`, and `checkout` use the validated order
+flow and its declared simulated-payment event; they do not infer a payment
+operation from the page block. `queue` presents only FlowModel events for its
 bound entity and lets generated API policy enforcement make the final decision.
 All data-bearing blocks use the declared role and generated API proxy.
 
