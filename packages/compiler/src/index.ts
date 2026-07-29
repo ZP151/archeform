@@ -244,13 +244,16 @@ function resolveCapabilityTemplateContributions(
   repositoryRoot?: string,
 ): readonly ResolvedCapabilityTemplateContribution[] {
   const locks = graph.integration.assetLocks ?? [];
-  const capabilityKeys = graph.integration.capabilities.map(
+  const factoryCapabilities = graph.integration.capabilities.filter(
+    (capability) => capability.providerId === "factory",
+  );
+  const capabilityKeys = factoryCapabilities.map(
     (capability) => capability.key,
   );
   if (!locks.length) {
     if (capabilityKeys.length) {
       throw new Error(
-        "Graph capabilities require matching Golden asset locks before compilation.",
+        "Factory Graph capabilities require matching Golden asset locks before compilation.",
       );
     }
     return [];
@@ -272,7 +275,7 @@ function resolveCapabilityTemplateContributions(
     return loadCapabilityAssetTemplates(asset, root).map((template) => ({
       ...template,
       effects: asset.manifest.effects,
-      operations: graph.integration.capabilities
+      operations: factoryCapabilities
         .filter((capability) => asset.manifest.effects.includes(capability.key))
         .map((capability) => ({
           capability: capability.key,
@@ -836,6 +839,11 @@ function runtimeDefinition(graph: ApplicationGraphV1) {
     })),
     permissions: graph.policy.permissions,
     capabilities: graph.integration.capabilities,
+    seedData: (graph.domain.seedData ?? []).map((seed, index) => ({
+      entity: seed.entity,
+      id: seed.id ?? `seed-${seed.entity}-${index + 1}`,
+      values: seed.values,
+    })),
     flows: graph.flow.flows,
   };
 }
@@ -843,7 +851,7 @@ function runtimeDefinition(graph: ApplicationGraphV1) {
 function renderApplicationRuntime(graph: ApplicationGraphV1): string {
   const commerce = hasCommerceCapabilities(graph);
   return [
-    'import { getEffectHandler, getRecordHandler, getWorkflowHandler } from "./capabilities/registry.js";',
+    'import { getEffectHandler, getRecordHandler, getWorkflowHandler, providedEffects } from "./capabilities/registry.js";',
     'import { enforce } from "./policy.js";',
     "",
     "export type StoredRecord = Record<string, unknown> & { id: string; status?: string };",
@@ -879,6 +887,12 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     ...(commerce
       ? ["  private readonly cartItems: CommerceLineItem[] = [];"]
       : []),
+    "",
+    "  constructor() {",
+    "    for (const seed of definition.seedData) {",
+    "      this.collection(seed.entity).set(seed.id, { id: seed.id, ...seed.values });",
+    "    }",
+    "  }",
     "",
     "  private collection(entityKey: string): Map<string, StoredRecord> {",
     "    let collection = this.records.get(entityKey);",
@@ -931,6 +945,7 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "  entities: readonly { key: string; fields: readonly { key: string; required: boolean }[] }[];",
     "  permissions: readonly { role: string; resource: string; actions: readonly string[] }[];",
     "  capabilities: readonly { key: string; providerId: string; operation: string }[];",
+    "  seedData: readonly { entity: string; id: string; values: Record<string, unknown> }[];",
     "  flows: readonly {",
     "    id: string;",
     "    entity: string;",
@@ -966,15 +981,18 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "    await this.assertAllowed(role, entityKey, 'update');",
     "  }",
     "",
-    "  private assertCapability(capabilityKey: string, operation: string): void {",
-    "    if (!definition.capabilities.some((capability) => capability.key === capabilityKey && capability.operation === operation)) {",
+    "  private assertCapability(capabilityKey: string, operation: string): { key: string; providerId: string; operation: string } {",
+    "    const capability = definition.capabilities.find((candidate) => candidate.key === capabilityKey && candidate.operation === operation);",
+    "    if (!capability) {",
     "      throw new Error(`Capability '${capabilityKey}.${operation}' is not declared by this Application Graph.`);",
     "    }",
+    "    return capability;",
     "  }",
     "",
     "  private async executeEffects(role: string, entityKey: string, recordId: string, effects: readonly { capability: string; operation: string }[] | undefined): Promise<void> {",
     "    for (const effect of effects ?? []) {",
-    "      this.assertCapability(effect.capability, effect.operation);",
+    "      const capability = this.assertCapability(effect.capability, effect.operation);",
+    "      if (capability.providerId !== 'factory') throw new Error(`External provider capability '${effect.capability}' requires an activated adapter for provider '${capability.providerId}'.`);",
     "      const at = new Date().toISOString();",
     "      const handler = getEffectHandler(effect.capability, effect.operation);",
     "      await handler({ role, entityKey, recordId, operation: effect.operation, store: this.store, now: at });",
@@ -1612,9 +1630,35 @@ function renderJourneyTest(graph: ApplicationGraphV1): string {
   const capabilityEffects = transitions.flatMap(
     (transition) => transition.effects ?? [],
   );
-  const capabilityEventPairs = capabilityEffects.flatMap((effect) =>
-    effect.capability === "notification.send" ? [effect, effect] : [effect],
+  const catalogEntity = graph.domain.relations.find(
+    (relation) => relation.from === entity.key,
+  )?.to;
+  const catalogSeed = catalogEntity
+    ? graph.domain.seedData?.find((seed) => seed.entity === catalogEntity)
+    : undefined;
+  const includesCartAdd = graph.integration.capabilities.some(
+    (capability) =>
+      capability.key === "cart.add" && capability.operation === "add",
   );
+  const cartJourney =
+    !!catalogEntity &&
+    !!catalogSeed &&
+    includesCartAdd &&
+    transitions.some((transition) =>
+      transition.effects?.some(
+        (effect) =>
+          effect.capability === "payment.simulate" ||
+          effect.capability === "inventory.decrement",
+      ),
+    );
+  const capabilityEventPairs = [
+    ...(cartJourney ? [{ capability: "cart.add", operation: "add" }] : []),
+    ...capabilityEffects.flatMap((effect) =>
+      ["notification.send", "payment.simulate"].includes(effect.capability)
+        ? [effect, effect]
+        : [effect],
+    ),
+  ];
   const auditEffectCount = capabilityEffects.filter(
     (effect) => effect.capability === "audit.record",
   ).length;
@@ -1626,13 +1670,18 @@ function renderJourneyTest(graph: ApplicationGraphV1): string {
     "  it('executes the declared record flow', async () => {",
     `    const record = await applicationRuntime.create(${JSON.stringify(createPermission.role)}, ${JSON.stringify(entity.key)}, ${JSON.stringify(payload)});`,
     `    expect(record.status).toBe(${JSON.stringify(flow.initialState)});`,
+    ...(cartJourney
+      ? [
+          `    await applicationRuntime.addCartItem(${JSON.stringify(createPermission.role)}, ${JSON.stringify(entity.key)}, record.id, ${JSON.stringify({ catalogEntity, catalogRecordId: catalogSeed!.id ?? `seed-${catalogSeed!.entity}-1`, quantity: 1 })});`,
+        ]
+      : []),
     ...transitions.flatMap((transition) => [
       `    await applicationRuntime.transition(${JSON.stringify(transition.roles?.[0] ?? createPermission.role)}, ${JSON.stringify(entity.key)}, record.id, ${JSON.stringify(transition.event)});`,
       `    expect(record.status).toBe(${JSON.stringify(transition.to)});`,
     ]),
     ...(auditRole
       ? [
-          `    expect(await applicationRuntime.auditLog(${JSON.stringify(auditRole)})).toHaveLength(${transitions.length + 1 + auditEffectCount});`,
+          `    expect(await applicationRuntime.auditLog(${JSON.stringify(auditRole)})).toHaveLength(${transitions.length + 1 + auditEffectCount + (cartJourney ? 1 : 0)});`,
         ]
       : []),
     ...(auditRole && capabilityEffects.length > 0

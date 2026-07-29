@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { resolve } from "node:path";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { composeProfileDraft } from "@factory/capabilities";
 
@@ -34,6 +36,68 @@ const publishedExpense: PublishedGraphInput = {
 const simpleEcommerceAssetLocks = composeProfileDraft({
   profile: "simple-ecommerce",
 }).assetLocks;
+
+const compilerTestDirectory = dirname(fileURLToPath(import.meta.url));
+
+type GeneratedRuntime = {
+  create(
+    role: string,
+    entityKey: string,
+    input: Record<string, unknown>,
+  ): Promise<Record<string, unknown> & { id: string; status?: string }>;
+  transition(
+    role: string,
+    entityKey: string,
+    recordId: string,
+    event: string,
+  ): Promise<Record<string, unknown> & { id: string; status?: string }>;
+  addCartItem(
+    role: string,
+    orderEntity: string,
+    orderRecordId: string,
+    input: {
+      catalogEntity: string;
+      catalogRecordId: string;
+      quantity: number;
+    },
+  ): Promise<unknown>;
+  list(
+    role: string,
+    entityKey: string,
+  ): Promise<readonly (Record<string, unknown> & { id: string })[]>;
+  capabilityEvents(
+    role: string,
+  ): Promise<
+    readonly { capability: string; operation: string; recordId: string }[]
+  >;
+};
+
+async function withGeneratedRuntime<T>(
+  input: PublishedGraphInput,
+  run: (runtime: GeneratedRuntime) => Promise<T>,
+): Promise<T> {
+  const directory = await mkdtemp(
+    join(compilerTestDirectory, "generated-runtime-"),
+  );
+  try {
+    const bundle = generateApplicationBundle(input);
+    await Promise.all(
+      bundle.files
+        .filter((file) => file.path.startsWith("api/src/"))
+        .map(async (file) => {
+          const path = resolve(directory, file.path);
+          await mkdir(dirname(path), { recursive: true });
+          await writeFile(path, file.content, "utf8");
+        }),
+    );
+    const module = (await import(
+      pathToFileURL(resolve(directory, "api/src/application-runtime.ts")).href
+    )) as { applicationRuntime: GeneratedRuntime };
+    return await run(module.applicationRuntime);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+}
 
 const historicalExecutableLocks = [
   {
@@ -259,7 +323,7 @@ describe("compilation target registry", () => {
       "declaredEffectOperations.has(effectOperationKey(capability, operation))",
     );
     expect(files["api/src/application-runtime.ts"]).toContain(
-      'import { getEffectHandler, getRecordHandler, getWorkflowHandler } from "./capabilities/registry.js";',
+      'import { getEffectHandler, getRecordHandler, getWorkflowHandler, providedEffects } from "./capabilities/registry.js";',
     );
     expect(files["capability-template-lock.json"]).toContain(
       '"assetKey": "core.audit"',
@@ -384,6 +448,155 @@ describe("compilation target registry", () => {
       }),
     ).toThrow("require matching Golden asset locks");
   });
+
+  it("compiles declared external capabilities without Golden package locks", () => {
+    const graph = {
+      ...publishedExpense.graph,
+      integration: {
+        providers: [{ id: "mail", type: "email", version: "1.0.0" }],
+        capabilities: [
+          { key: "email.send", providerId: "mail", operation: "send" },
+        ],
+      },
+    };
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "published-external-capability-1",
+        graph,
+      }).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(files["api/src/capabilities/registry.ts"]).toContain(
+      "capabilityModules: readonly CapabilityRuntimeModule[] = [];",
+    );
+    expect(files["api/src/application-runtime.ts"]).toContain(
+      '"providerId": "mail"',
+    );
+    expect(files["web/app/application-manifest.ts"]).toContain(
+      '"providerId": "mail"',
+    );
+  });
+
+  it("fails a declared external effect at the provider boundary before state changes", async () => {
+    const composed = composeProfileDraft({ profile: "expense-approval" }).graph;
+    const graph = {
+      ...composed,
+      integration: {
+        ...composed.integration,
+        providers: [{ id: "mail", type: "email", version: "1.0.0" }],
+        capabilities: [
+          ...composed.integration.capabilities,
+          { key: "email.send", providerId: "mail", operation: "send" },
+        ],
+      },
+      flow: {
+        ...composed.flow,
+        flows: composed.flow.flows.map((flow) => ({
+          ...flow,
+          transitions: flow.transitions.map((transition) =>
+            transition.event === "submit"
+              ? {
+                  ...transition,
+                  effects: [{ capability: "email.send", operation: "send" }],
+                }
+              : transition,
+          ),
+        })),
+      },
+    };
+
+    await withGeneratedRuntime(
+      { publishedRevisionId: "published-external-effect-1", graph },
+      async (runtime) => {
+        const record = await runtime.create("employee", "expense", {
+          amount: 1,
+          description: "provider boundary",
+        });
+
+        await expect(
+          runtime.transition("employee", "expense", record.id, "submit"),
+        ).rejects.toThrow(
+          "External provider capability 'email.send' requires an activated adapter for provider 'mail'.",
+        );
+        expect((await runtime.list("employee", "expense"))[0]?.status).toBe(
+          "draft",
+        );
+      },
+    );
+  });
+
+  it.each(["restaurant-ordering", "simple-ecommerce"] as const)(
+    "executes a seeded $profile cart and payment journey",
+    async (profile) => {
+      const graph = composeProfileDraft({ profile }).graph;
+      const order = graph.domain.entities.find(
+        (entity) => entity.key === "order",
+      )!;
+      const catalogEntity = graph.domain.relations.find(
+        (relation) => relation.from === order.key,
+      )!.to;
+      const catalogSeed = graph.domain.seedData!.find(
+        (seed) => seed.entity === catalogEntity,
+      )!;
+      const customer = graph.policy.permissions.find(
+        (permission) =>
+          permission.resource === order.key &&
+          permission.actions.includes("create"),
+      )!.role;
+      const auditRole = graph.policy.permissions.find((permission) =>
+        permission.actions.includes("audit"),
+      )?.role;
+      const files = Object.fromEntries(
+        generateApplicationBundle({
+          publishedRevisionId: `${profile}-commerce-journey-1`,
+          graph,
+        }).files.map((file) => [file.path, file.content]),
+      );
+      const journey = files["api/test/journey.generated.test.ts"]!;
+
+      expect(journey.indexOf("applicationRuntime.addCartItem")).toBeLessThan(
+        journey.indexOf('record.id, "pay"'),
+      );
+
+      await withGeneratedRuntime(
+        { publishedRevisionId: `${profile}-commerce-runtime-1`, graph },
+        async (runtime) => {
+          const record = await runtime.create(customer, order.key, {});
+          await runtime.addCartItem(customer, order.key, record.id, {
+            catalogEntity,
+            catalogRecordId: catalogSeed.id!,
+            quantity: 1,
+          });
+          const paid = await runtime.transition(
+            customer,
+            order.key,
+            record.id,
+            "pay",
+          );
+
+          expect(paid.status).toBe("paid");
+          expect(
+            (await runtime.list(customer, catalogEntity)).find(
+              (candidate) => candidate.id === catalogSeed.id,
+            )?.stock,
+          ).toBe((catalogSeed.values.stock as number) - 1);
+          if (auditRole) {
+            expect(
+              (await runtime.capabilityEvents(auditRole)).map((event) => [
+                event.capability,
+                event.operation,
+              ]),
+            ).toEqual([
+              ["cart.add", "add"],
+              ["payment.simulate", "simulate"],
+              ["payment.simulate", "simulate"],
+              ["inventory.decrement", "decrement"],
+            ]);
+          }
+        },
+      );
+    },
+  );
 
   it("rejects a locked package when its Factory repository root is unavailable", () => {
     const graph = composeProfileDraft({
