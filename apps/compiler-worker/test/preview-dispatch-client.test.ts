@@ -60,6 +60,28 @@ describe("preview dispatch client", () => {
     );
   });
 
+  it.each(["C:/outside.ts", "C:outside.ts"])(
+    "rejects a dispatch containing the unsafe artifact path %s",
+    async (path) => {
+      const fetchImplementation = vi.fn().mockResolvedValue({
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          ...dispatch,
+          artifacts: [{ ...dispatch.artifacts[0], path }],
+        }),
+      });
+      const client = createPreviewDispatchClient(
+        "http://control-plane:3000",
+        "configured-worker-token",
+        fetchImplementation as typeof fetch,
+      );
+
+      await expect(client.get("start", "preview-1")).rejects.toThrow(
+        "Control Plane returned an invalid preview dispatch.",
+      );
+    },
+  );
+
   it("rejects a non-successful dispatch response", async () => {
     const fetchImplementation = vi.fn().mockResolvedValue({ ok: false });
     const client = createPreviewDispatchClient(

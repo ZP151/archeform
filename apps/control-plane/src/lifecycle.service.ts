@@ -7,6 +7,7 @@ import {
   UnprocessableEntityException,
 } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
+import { posix, win32 } from "node:path";
 import { Prisma } from "@prisma/client";
 import { assertGoldenCapabilityAssetLocks } from "@factory/capabilities";
 import {
@@ -120,7 +121,9 @@ function artifactEvidence(input: unknown): ArtifactEvidence {
   );
   const path = requiredString(record, "path");
   if (
-    path.startsWith("/") ||
+    posix.isAbsolute(path) ||
+    win32.isAbsolute(path) ||
+    win32.parse(path).root.length > 0 ||
     path.includes("\\") ||
     path
       .split("/")

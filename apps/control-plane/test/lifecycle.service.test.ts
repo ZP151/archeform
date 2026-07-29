@@ -769,6 +769,8 @@ describe("LifecycleService", () => {
 
   it.each([
     { field: "path", value: "../outside.ts" },
+    { field: "path", value: "C:/outside.ts" },
+    { field: "path", value: "C:outside.ts" },
     { field: "digest", value: "sha256:not-a-digest" },
     { field: "sizeBytes", value: -1 },
   ])(

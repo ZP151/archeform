@@ -1,3 +1,5 @@
+import { posix, win32 } from "node:path";
+
 export type PreviewDispatchAction = "start" | "stop";
 
 export type PreviewDispatch = {
@@ -47,7 +49,9 @@ function parseArtifact(input: unknown) {
   if (!artifact || !nonEmptyString(artifact.path)) return;
   const path = artifact.path;
   if (
-    path.startsWith("/") ||
+    posix.isAbsolute(path) ||
+    win32.isAbsolute(path) ||
+    win32.parse(path).root.length > 0 ||
     path.includes("\\") ||
     path
       .split("/")
