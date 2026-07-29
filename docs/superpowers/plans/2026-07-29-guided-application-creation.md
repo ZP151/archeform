@@ -24,18 +24,18 @@
 **Files:**
 - Create: `apps/workbench/lib/guided-application.ts`
 - Create: `apps/workbench/lib/guided-application.test.ts`
-- Modify: `apps/workbench/lib/profile-starters.ts`
 
 **Interfaces:** `createGuidedApplicationDraft(input, nonce)` consumes a
-`FactoryProfile`, display name, and theme; it returns a validated new Graph.
+`FactoryProfile`, display name, and theme; it returns a constrained new Graph
+that the Control Plane validates before persistence.
 `guidedProfileSummary(graph)` returns page, entity, role, and flow counts.
 
-- [ ] Write a failing Vitest suite proving deterministic identity, validated
+- [x] Write a failing Vitest suite proving deterministic identity, validated
   dark/light experience selection, blank-name rejection, and starter immutability.
-- [ ] Run `pnpm --filter @factory/workbench test -- guided-application.test.ts`
+- [x] Run `pnpm --filter @factory/workbench test -- guided-application.test.ts`
   and observe the missing-module failure.
-- [ ] Implement the minimal pure composition helper.
-- [ ] Re-run the focused suite and commit
+- [x] Implement the minimal pure composition helper.
+- [x] Re-run the focused suite and commit
   `feat: compose guided application Drafts`.
 
 ### Task 2: Create the left-side guided drawer
@@ -50,11 +50,11 @@
 exposes profile selection, name/theme details, review, back, close, and create
 actions. Creation waits for a Control Plane Draft response before closing.
 
-- [ ] Write a failing source contract test for `New application` and
+- [x] Write a failing source contract test for `New application` and
   `data-testid="guided-create"`; run it and observe the missing-file failure.
-- [ ] Implement the three-stage accessible drawer and Workbench handoff.
-- [ ] Run focused Workbench tests and type checking.
-- [ ] Commit `feat: guide business users into new Drafts`.
+- [x] Implement the three-stage accessible drawer and Workbench handoff.
+- [x] Run focused Workbench tests and type checking.
+- [x] Commit `feat: guide business users into new Drafts`.
 
 ### Task 3: Prove a business-user journey
 
@@ -66,21 +66,20 @@ actions. Creation waits for a Control Plane Draft response before closing.
 a named Expense approval Draft, and asserts the name, Page Studio, and Draft
 state. It must not auto-publish or auto-compile.
 
-- [ ] Write the failing Playwright journey beginning with
+- [x] Write the failing Playwright journey beginning with
   `getByRole("button", { name: "New application" })`.
-- [ ] Run `pnpm test:e2e -- workbench.spec.ts` and observe the missing-control
+- [x] Run the journey against the pre-rebuild instance and observe the missing-control
   failure.
-- [ ] Make the real journey green and record the new creation layer in the
+- [x] Make the real journey green and record the new creation layer in the
   roadmap.
-- [ ] Commit `test: prove guided application creation`.
+- [x] Commit `test: prove guided application creation`.
 
 ### Task 4: Release evidence
 
 **Files:**
 - Create: `docs/acceptance/guided-application-creation.md`
 
-- [ ] Run `pnpm test; pnpm typecheck; pnpm build;
+- [x] Run `pnpm test; pnpm typecheck; pnpm build;
   pnpm verify:third-party; pnpm verify:source-studies; git diff --check`.
-- [ ] Record only non-sensitive Draft-creation evidence.
-- [ ] Commit `docs: record guided creation evidence` and push.
-
+- [x] Record only non-sensitive Draft-creation evidence.
+- [x] Commit `docs: record guided creation evidence` and push.
