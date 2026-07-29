@@ -1,5 +1,20 @@
 export type Surface = "page" | "domain" | "flow" | "policy" | "ai" | "code";
 export type Theme = "light" | "dark";
+export type PreviewRunStatus =
+  "starting" | "ready" | "stopping" | "stopped" | "failed";
+
+type PreviewRunState = {
+  readonly status: PreviewRunStatus;
+  readonly previewUrl: string | null;
+};
+
+export type PreviewRunPresentation = {
+  readonly visible: boolean;
+  readonly label: string;
+  readonly canStart: boolean;
+  readonly canOpen: boolean;
+  readonly canStop: boolean;
+};
 
 export type WorkbenchState = {
   activeSurface: Surface;
@@ -52,4 +67,44 @@ export function transitionWorkbench(
         lastProposal: action.source,
       };
   }
+}
+
+export function previewRunPresentation(
+  compilationSucceeded: boolean,
+  preview: PreviewRunState | null,
+): PreviewRunPresentation {
+  if (!preview) {
+    return {
+      visible: compilationSucceeded,
+      label: "Preview not started",
+      canStart: compilationSucceeded,
+      canOpen: false,
+      canStop: false,
+    };
+  }
+
+  const label: Record<PreviewRunStatus, string> = {
+    starting: "Preview starting",
+    ready: "Preview ready",
+    stopping: "Preview stopping",
+    stopped: "Preview stopped",
+    failed: "Preview failed",
+  };
+  const active =
+    preview.status === "starting" ||
+    preview.status === "ready" ||
+    preview.status === "stopping";
+
+  return {
+    visible: compilationSucceeded,
+    label: label[preview.status],
+    canStart: compilationSucceeded && !active,
+    canOpen:
+      compilationSucceeded &&
+      preview.status === "ready" &&
+      preview.previewUrl !== null,
+    canStop:
+      compilationSucceeded &&
+      (preview.status === "ready" || preview.status === "failed"),
+  };
 }

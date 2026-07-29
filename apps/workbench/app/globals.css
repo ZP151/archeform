@@ -1481,6 +1481,60 @@ input:focus-visible {
     Menlo,
     monospace;
 }
+.generated-preview {
+  display: grid;
+  gap: 11px;
+  padding: 15px 17px 17px;
+  border-top: 1px solid #263644;
+  color: #d9e9ea;
+}
+.generated-preview > div:first-child {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.generated-preview strong,
+.generated-preview small,
+.generated-preview p,
+.generated-preview button {
+  font:
+    10px/1.45 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+}
+.generated-preview > div:first-child small,
+.generated-preview p {
+  color: #8395a6;
+}
+.generated-preview p {
+  margin: 0;
+}
+.generated-preview-diagnostic {
+  color: #f1c875;
+}
+.generated-preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.generated-preview-actions button {
+  padding: 7px 9px;
+  border: 1px solid #385063;
+  border-radius: 6px;
+  color: #c7d7dc;
+  background: #17232e;
+  cursor: pointer;
+}
+.generated-preview-actions button:hover:not(:disabled) {
+  border-color: #8de7c8;
+  color: #8de7c8;
+}
+.generated-preview-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
 .compilation-artifacts {
   padding: 15px 17px 17px;
   border-top: 1px solid #263644;

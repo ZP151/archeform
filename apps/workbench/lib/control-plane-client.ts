@@ -89,6 +89,32 @@ export type WorkbenchArtifactContent = {
   readonly content: string;
 };
 
+export type WorkbenchPreviewRun = {
+  readonly id: string;
+  readonly compilationId: string;
+  readonly status: "starting" | "ready" | "stopping" | "stopped" | "failed";
+  readonly previewUrl: string | null;
+  readonly webPort: number | null;
+  readonly apiPort: number | null;
+  readonly diagnostic: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
+function workbenchPreviewRun(record: WorkbenchPreviewRun): WorkbenchPreviewRun {
+  return {
+    id: record.id,
+    compilationId: record.compilationId,
+    status: record.status,
+    previewUrl: record.previewUrl,
+    webPort: record.webPort,
+    apiPort: record.apiPort,
+    diagnostic: record.diagnostic,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+  };
+}
+
 export class ControlPlaneError extends Error {
   constructor(readonly status: number) {
     super(`Control Plane request failed with ${status}.`);
@@ -268,5 +294,28 @@ export class ControlPlaneClient {
       `/compilations/${encodeURIComponent(compilationId)}/artifact-content?path=${encodeURIComponent(artifactPath)}`,
       { method: "GET" },
     );
+  }
+
+  startPreviewRun(compilationId: string): Promise<WorkbenchPreviewRun> {
+    return this.request<WorkbenchPreviewRun>(
+      `/compilations/${encodeURIComponent(compilationId)}/preview-runs`,
+      { method: "POST", body: JSON.stringify({}) },
+    ).then(workbenchPreviewRun);
+  }
+
+  getCurrentPreviewRun(
+    compilationId: string,
+  ): Promise<WorkbenchPreviewRun | null> {
+    return this.request<WorkbenchPreviewRun | null>(
+      `/compilations/${encodeURIComponent(compilationId)}/preview-runs/current`,
+      { method: "GET" },
+    ).then((preview) => (preview ? workbenchPreviewRun(preview) : null));
+  }
+
+  stopPreviewRun(previewRunId: string): Promise<WorkbenchPreviewRun> {
+    return this.request<WorkbenchPreviewRun>(
+      `/preview-runs/${encodeURIComponent(previewRunId)}/stop`,
+      { method: "POST", body: JSON.stringify({}) },
+    ).then(workbenchPreviewRun);
   }
 }

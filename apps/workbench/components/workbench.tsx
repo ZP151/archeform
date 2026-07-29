@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import {
   initialWorkbenchState,
+  previewRunPresentation,
   transitionWorkbench,
   type Surface,
 } from "../lib/workbench-model";
@@ -49,6 +50,7 @@ import {
   type WorkbenchArtifactContent,
   type WorkbenchAiProposal,
   type WorkbenchPublishedRevision,
+  type WorkbenchPreviewRun,
   type WorkbenchRevisionTimeline,
 } from "../lib/control-plane-client";
 import {
@@ -118,6 +120,9 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   const [compilation, setCompilation] = useState<WorkbenchCompilation | null>(
     null,
   );
+  const [previewRun, setPreviewRun] = useState<WorkbenchPreviewRun | null>(
+    null,
+  );
   const [connectionState, setConnectionState] = useState<
     | "connecting"
     | "ready"
@@ -163,6 +168,7 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
       setRemoteDraft(null);
       setPublishedRevision(null);
       setCompilation(null);
+      setPreviewRun(null);
       setDraftDirty(false);
       setAiProposal(null);
       setOperationError(null);
@@ -222,6 +228,56 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
       window.clearInterval(interval);
     };
   }, [compilation, controlPlane]);
+
+  useEffect(() => {
+    if (!compilation || compilation.result.status !== "succeeded") {
+      setPreviewRun(null);
+      return;
+    }
+    let active = true;
+    void controlPlane
+      .getCurrentPreviewRun(compilation.id)
+      .then((next) => {
+        if (active) setPreviewRun(next);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setOperationError(
+          error instanceof Error
+            ? error.message
+            : "Generated preview status could not be read.",
+        );
+      });
+    return () => {
+      active = false;
+    };
+  }, [compilation?.id, compilation?.result.status, controlPlane]);
+
+  useEffect(() => {
+    if (previewRun?.status !== "starting" && previewRun?.status !== "stopping")
+      return;
+    let active = true;
+    const refresh = () => {
+      void controlPlane
+        .getCurrentPreviewRun(previewRun.compilationId)
+        .then((next) => {
+          if (active) setPreviewRun(next);
+        })
+        .catch((error) => {
+          if (!active) return;
+          setOperationError(
+            error instanceof Error
+              ? error.message
+              : "Generated preview status could not be read.",
+          );
+        });
+    };
+    const interval = window.setInterval(refresh, 1_500);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [controlPlane, previewRun]);
 
   const persistDraft = async (): Promise<WorkbenchDraft> => {
     if (!remoteDraft) {
@@ -335,6 +391,41 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
         );
       })
       .finally(() => setArtifactLoading(false));
+  };
+
+  const startPreview = () => {
+    if (!compilation || compilation.result.status !== "succeeded") return;
+    setOperationError(null);
+    void controlPlane
+      .startPreviewRun(compilation.id)
+      .then(setPreviewRun)
+      .catch((error) => {
+        setOperationError(
+          error instanceof Error
+            ? error.message
+            : "Generated preview failed to start.",
+        );
+      });
+  };
+
+  const stopPreview = () => {
+    if (!previewRun) return;
+    setOperationError(null);
+    void controlPlane
+      .stopPreviewRun(previewRun.id)
+      .then(setPreviewRun)
+      .catch((error) => {
+        setOperationError(
+          error instanceof Error
+            ? error.message
+            : "Generated preview failed to stop.",
+        );
+      });
+  };
+
+  const openPreview = () => {
+    if (previewRun?.status !== "ready" || !previewRun.previewUrl) return;
+    window.open(previewRun.previewUrl, "_blank", "noopener,noreferrer");
   };
 
   const downloadPublishedGraphExchange = (
@@ -657,7 +748,11 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
                   onExportPublishedGraph={exportPublishedGraph}
                   onImportPublishedGraph={importPublishedGraph}
                   onInspectArtifact={inspectArtifact}
+                  onOpenPreview={openPreview}
+                  onStartPreview={startPreview}
+                  onStopPreview={stopPreview}
                   publishedRevision={publishedRevision}
+                  previewRun={previewRun}
                   artifactLoading={artifactLoading}
                   artifactSnapshot={artifactSnapshot}
                 />
@@ -1403,8 +1498,12 @@ function CodeCanvas({
   onExportPublishedGraph,
   onImportPublishedGraph,
   onInspectArtifact,
+  onOpenPreview,
+  onStartPreview,
+  onStopPreview,
   artifactLoading,
   artifactSnapshot,
+  previewRun,
 }: {
   graph: ApplicationGraphV1;
   publishedRevision: WorkbenchPublishedRevision | null;
@@ -1414,8 +1513,12 @@ function CodeCanvas({
   onExportPublishedGraph: () => void;
   onImportPublishedGraph: (file: File) => void;
   onInspectArtifact: (path: string) => void;
+  onOpenPreview: () => void;
+  onStartPreview: () => void;
+  onStopPreview: () => void;
   artifactLoading: boolean;
   artifactSnapshot: WorkbenchArtifactContent | null;
+  previewRun: WorkbenchPreviewRun | null;
 }) {
   const importInput = useRef<HTMLInputElement>(null);
   const artifacts = compilation?.artifacts ?? [];
@@ -1434,6 +1537,10 @@ function CodeCanvas({
   const graphDiff = publishedRevision?.graph
     ? diffApplicationGraphs(publishedRevision.graph, graph)
     : null;
+  const preview = previewRunPresentation(
+    compilation?.result.status === "succeeded",
+    previewRun,
+  );
   const adapterMetadata = [
     ["Puck", "PageModel adapter", "puck/v1"],
     ["React Flow", "Flow and relation adapter", "react-flow/v1"],
@@ -1548,6 +1655,49 @@ function CodeCanvas({
         <p className="graph-exchange-status" role="status">
           {exchangeStatus}
         </p>
+      )}
+      {preview.visible && (
+        <section
+          className="generated-preview"
+          aria-label="Generated application preview"
+        >
+          <div>
+            <strong>Generated preview</strong>
+            <small role="status">{preview.label}</small>
+          </div>
+          <p>
+            Runs only this immutable generated Compilation. Stopping removes its
+            isolated preview resources.
+          </p>
+          {previewRun?.status === "failed" && previewRun.diagnostic && (
+            <small className="generated-preview-diagnostic">
+              {previewRun.diagnostic}
+            </small>
+          )}
+          <div className="generated-preview-actions">
+            <button
+              disabled={!preview.canStart}
+              onClick={onStartPreview}
+              type="button"
+            >
+              Start preview
+            </button>
+            <button
+              disabled={!preview.canOpen}
+              onClick={onOpenPreview}
+              type="button"
+            >
+              Open preview
+            </button>
+            <button
+              disabled={!preview.canStop}
+              onClick={onStopPreview}
+              type="button"
+            >
+              Stop preview
+            </button>
+          </div>
+        </section>
       )}
       {compilation && (
         <section

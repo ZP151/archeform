@@ -1,10 +1,107 @@
 import { describe, expect, it, vi } from "vitest";
 import { createPublishedGraphExchange } from "@factory/graph";
 
-import { ControlPlaneClient } from "./control-plane-client";
+import {
+  ControlPlaneClient,
+  type WorkbenchPreviewRun,
+} from "./control-plane-client";
 import { workbenchGraph } from "./workbench-graph";
 
 describe("ControlPlaneClient", () => {
+  it("starts a preview using only the immutable compilation identifier", async () => {
+    const preview: WorkbenchPreviewRun = {
+      id: "preview-1",
+      compilationId: "compilation-1",
+      status: "starting",
+      previewUrl: null,
+      webPort: null,
+      apiPort: null,
+      diagnostic: null,
+      createdAt: "2026-07-30T00:00:00.000Z",
+      updatedAt: "2026-07-30T00:00:00.000Z",
+    };
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify(preview), { status: 201 }),
+      );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(client.startPreviewRun("compilation-1")).resolves.toEqual(
+      preview,
+    );
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/compilations/compilation-1/preview-runs",
+      expect.objectContaining({ method: "POST", body: JSON.stringify({}) }),
+    );
+  });
+
+  it("retains only safe PreviewRun lifecycle fields from the response", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: "preview-1",
+          compilationId: "compilation-1",
+          status: "ready",
+          previewUrl: "http://127.0.0.1:43101",
+          webPort: 43101,
+          apiPort: 43102,
+          diagnostic: null,
+          createdAt: "2026-07-30T00:00:00.000Z",
+          updatedAt: "2026-07-30T00:00:00.000Z",
+          composeProjectName: "factory-preview-preview-1",
+        }),
+        { status: 200 },
+      ),
+    );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(client.getCurrentPreviewRun("compilation-1")).resolves.toEqual(
+      {
+        id: "preview-1",
+        compilationId: "compilation-1",
+        status: "ready",
+        previewUrl: "http://127.0.0.1:43101",
+        webPort: 43101,
+        apiPort: 43102,
+        diagnostic: null,
+        createdAt: "2026-07-30T00:00:00.000Z",
+        updatedAt: "2026-07-30T00:00:00.000Z",
+      },
+    );
+  });
+
+  it("reads the current preview using only the immutable compilation identifier", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(new Response("null", { status: 200 }));
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(
+      client.getCurrentPreviewRun("compilation-1"),
+    ).resolves.toBeNull();
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/compilations/compilation-1/preview-runs/current",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("stops a preview using only its Factory-issued run identifier", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ id: "preview-1", status: "stopping" }), {
+        status: 200,
+      }),
+    );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await client.stopPreviewRun("preview-1");
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/preview-runs/preview-1/stop",
+      expect.objectContaining({ method: "POST", body: JSON.stringify({}) }),
+    );
+  });
+
   it("calls a browser-style fetch function without binding it to the client", async () => {
     let receiver: unknown = "not-called";
     const fetcher = function (this: unknown): Promise<Response> {

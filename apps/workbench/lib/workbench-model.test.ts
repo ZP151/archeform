@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { initialWorkbenchState, transitionWorkbench } from "./workbench-model";
+import {
+  initialWorkbenchState,
+  previewRunPresentation,
+  transitionWorkbench,
+} from "./workbench-model";
 
 describe("transitionWorkbench", () => {
   it("keeps one active workbench surface while preserving the published revision", () => {
@@ -55,5 +59,45 @@ describe("transitionWorkbench", () => {
 
     expect(synced.revision).toBe("r.4");
     expect(synced.lifecycle).toBe("draft");
+  });
+});
+
+describe("previewRunPresentation", () => {
+  it.each([
+    ["starting", "Preview starting", false, false, false],
+    ["ready", "Preview ready", false, true, true],
+    ["stopping", "Preview stopping", false, false, false],
+    ["stopped", "Preview stopped", true, false, false],
+    ["failed", "Preview failed", true, false, true],
+  ] as const)(
+    "presents %s without exposing controls before the Compilation succeeds",
+    (status, label, canStart, canOpen, canStop) => {
+      const preview = { status, previewUrl: "http://127.0.0.1:43101" };
+
+      expect(previewRunPresentation(false, preview)).toEqual({
+        visible: false,
+        label,
+        canStart: false,
+        canOpen: false,
+        canStop: false,
+      });
+      expect(previewRunPresentation(true, preview)).toEqual({
+        visible: true,
+        label,
+        canStart,
+        canOpen,
+        canStop,
+      });
+    },
+  );
+
+  it("starts a succeeded Compilation when no preview run has been created", () => {
+    expect(previewRunPresentation(true, null)).toEqual({
+      visible: true,
+      label: "Preview not started",
+      canStart: true,
+      canOpen: false,
+      canStop: false,
+    });
   });
 });
