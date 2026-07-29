@@ -24,7 +24,6 @@ export class BullMqPreviewRunQueue implements PreviewRunQueue, OnModuleDestroy {
 
   async enqueue(job: PreviewRunJob): Promise<void> {
     await this.queue.add(job.action, job, {
-      jobId: `${job.action}:${job.previewRunId}`,
       removeOnComplete: 100,
       removeOnFail: 100,
     });
