@@ -213,7 +213,7 @@ git commit -m "test: prove generated profile page routes"
 
 Document the exact selected Graph block routes, compiler output checks, isolated ports/projects, browser journey totals, and cleanup result. Do not record credentials, raw model input, or raw model output.
 
-- [ ] **Step 2: Run release gates**
+- [x] **Step 2: Run release gates**
 
 Run:
 
@@ -229,7 +229,7 @@ git diff --check
 
 Expected: all commands pass.
 
-- [ ] **Step 3: Obtain review, commit, and push**
+- [x] **Step 3: Obtain review, commit, and push**
 
 Run:
 
@@ -247,7 +247,7 @@ git push origin main
 
 ## Release status
 
-Tasks 1–3 and Task 4 Step 1 are evidenced by commits `09d8666`, `e5fc83e`,
-`978fbd8`, and `00c9be4`, plus the acceptance record. Task 4 Steps 2–3 remain
-open until final post-P1 release gates, independent review, and the release
-commit/push are complete.
+Tasks 1–3 and Task 4 are evidenced by commits `09d8666`, `e5fc83e`,
+`978fbd8`, `00c9be4`, `2d5bfcc`, `9d6aa78`, `60a7882`, and `448c18c`.
+The post-P1 release gates and independent final review passed. The release
+commit is pushed to `origin/main` with the plan status update.
