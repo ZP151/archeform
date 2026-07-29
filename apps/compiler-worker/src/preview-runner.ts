@@ -202,6 +202,7 @@ export async function startPreviewRun(
     }
     return { webPort, apiPort, previewUrl: `http://127.0.0.1:${webPort}` };
   } catch (error) {
+    let cleanedUp = false;
     await processRunner(
       composeCommand(
         directory,
@@ -209,8 +210,12 @@ export async function startPreviewRun(
         ["down", "--volumes", "--remove-orphans"],
         { FACTORY_COMPOSE_PROJECT_NAME: project },
       ),
-    ).catch(() => undefined);
-    await rm(directory, { recursive: true, force: true });
+    )
+      .then(() => {
+        cleanedUp = true;
+      })
+      .catch(() => undefined);
+    if (cleanedUp) await rm(directory, { recursive: true, force: true });
     throw error instanceof PreviewRunFailure
       ? error
       : new PreviewRunFailure("preview_start_failed");

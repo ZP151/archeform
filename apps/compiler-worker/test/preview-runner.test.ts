@@ -41,11 +41,6 @@ describe("preview runner", () => {
       if (command.args.at(-3) === "port" && command.args.at(-2) === "api")
         return "127.0.0.1:49102\n";
     };
-    const allocate = vi
-      .fn()
-      .mockResolvedValueOnce(43101)
-      .mockResolvedValueOnce(43102);
-
     try {
       await mkdir(generated, { recursive: true });
       await writeFile(
@@ -61,8 +56,6 @@ describe("preview runner", () => {
             composeProjectName: "factory-preview-preview-1",
           },
           processRunner,
-          allocate,
-          async () => true,
         ),
       ).resolves.toEqual({
         webPort: 49101,
@@ -196,6 +189,58 @@ describe("preview runner", () => {
           join(root, ".preview-runs", "preview-1", "immutable.txt"),
           "utf8",
         ),
+      ).rejects.toThrow();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("retains a failed-start runtime copy until the allowed stop cleans its named project", async () => {
+    const root = await mkdtemp(join(tmpdir(), "factory-preview-root-"));
+    const source = join(root, "expense-published-1");
+    const request = {
+      previewRunId: "preview-1",
+      rootDirectory: "expense-published-1",
+      composeProjectName: "factory-preview-preview-1",
+    };
+    const preview = join(root, ".preview-runs", "preview-1");
+    const startRunner: PreviewProcessRunner = async () => {
+      throw new Error("Docker failed.");
+    };
+    const stopped: Parameters<PreviewProcessRunner>[0][] = [];
+    const stopRunner: PreviewProcessRunner = async (command) => {
+      stopped.push(command);
+    };
+
+    try {
+      await mkdir(source, { recursive: true });
+      await writeFile(join(source, "immutable.txt"), "source");
+
+      await expect(
+        startPreviewRun(root, request, startRunner),
+      ).rejects.toMatchObject({
+        code: "preview_start_failed",
+      });
+      await expect(
+        readFile(join(preview, "immutable.txt"), "utf8"),
+      ).resolves.toBe("source");
+
+      await stopPreviewRun(root, request, stopRunner);
+
+      expect(stopped).toContainEqual(
+        expect.objectContaining({
+          args: expect.arrayContaining([
+            "down",
+            "--volumes",
+            "--remove-orphans",
+          ]),
+        }),
+      );
+      await expect(
+        readFile(join(source, "immutable.txt"), "utf8"),
+      ).resolves.toBe("source");
+      await expect(
+        readFile(join(preview, "immutable.txt"), "utf8"),
       ).rejects.toThrow();
     } finally {
       await rm(root, { recursive: true, force: true });
