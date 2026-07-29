@@ -239,8 +239,10 @@ and a UI that treats failure as a cleanup/recovery state.
 
 Add a process-runner test whose promise does not resolve. With a short
 injected operation deadline, start must reject with only
-`preview_start_timeout`, call exact-project cleanup, and leave no active
-runtime directory. Add a runtime test that starts a cancellable command then
+`preview_start_timeout`, call exact-project Docker cleanup, and leave no
+active Docker runtime. Retain only the already verified per-run directory so a
+later failed-state Stop can re-verify and remove it before releasing
+`activeKey`. Add a runtime test that starts a cancellable command then
 calls stop: the start resolves as cancellation without publishing ready/failed
 evidence, the stop completes with stopped evidence, and only that derived
 project is removed. Add lifecycle coverage that `stopPreviewRun` transitions
@@ -271,7 +273,8 @@ runs exact-project `down`, and deletes only its derived directory. Use preview
 queue concurrency of at least two solely so its stop can be processed while a
 start is pending. A cancelled start does not publish ready or failure evidence;
 the stop action owns the stopped transition. Any ordinary timeout publishes the
-allowlisted timeout diagnostic and fails closed after cleanup.
+allowlisted timeout diagnostic, stops the exact Docker project, and retains
+only its verified per-run directory for failed-state Stop recovery.
 
 Allow Control Plane stop from `starting`, `ready`, and `failed`. Preserve
 `activeKey` until the Worker reports stopped. A failed run remains stop-only in
