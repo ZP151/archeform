@@ -40,6 +40,12 @@
   `/api`, `/_next`, or `/favicon.ico` generated-Next paths.
 - Provide CRUD, audit, notification, workflow, catalog, cart, order, inventory,
   and simulated-payment capabilities.
+- Accepted: a succeeded immutable Compilation can run as a locally isolated
+  generated preview, opened in a separate browser tab and removed with
+  ID-scoped runtime cleanup. The focused employee-create, submit, and manager-
+  approve journey proves the generated application boundary. Drafts,
+  Workbench, and editor state are never preview runtimes; unrelated Workbench
+  timing coverage remains outside this acceptance.
 
 ## Independent profiles
 
