@@ -392,9 +392,15 @@ function renderCapabilityRegistry(
   ].join("\n");
 }
 
-function renderCapabilityContract(): string {
+function renderCapabilityContract(graph: ApplicationGraphV1): string {
+  const commerce = hasCommerceCapabilities(graph);
   return [
     "export type CapabilityStoredRecord = Record<string, unknown> & { id: string; status?: string };",
+    ...(commerce
+      ? [
+          "export type CapabilityCommerceLineItem = { catalogEntity: string; catalogRecordId: string; quantity: number };",
+        ]
+      : []),
     "",
     "export interface CapabilityStore {",
     "  list(entityKey: string): Promise<readonly CapabilityStoredRecord[]>;",
@@ -403,6 +409,12 @@ function renderCapabilityContract(): string {
     "  update(entityKey: string, recordId: string, input: Record<string, unknown>): Promise<CapabilityStoredRecord>;",
     "  appendAudit(event: { actor: string; action: string; entity: string; recordId: string; at: string }): Promise<void>;",
     "  appendCapabilityEvent(event: { actor: string; capability: string; operation: string; entity: string; recordId: string; outcome: 'completed'; at: string }): Promise<void>;",
+    ...(commerce
+      ? [
+          "  listCartItems(orderEntity: string, orderRecordId: string): Promise<readonly CapabilityCommerceLineItem[]>;",
+          "  decrementInventory(entityKey: string, recordId: string, quantity: number): Promise<CapabilityStoredRecord>;",
+        ]
+      : []),
     "}",
     "",
     "export interface RecordHandler {",
@@ -964,15 +976,6 @@ function renderApplicationRuntime(graph: ApplicationGraphV1): string {
     "      const at = new Date().toISOString();",
     "      const handler = getEffectHandler(effect.capability, effect.operation);",
     "      await handler({ role, entityKey, recordId, operation: effect.operation, store: this.store, now: at });",
-    ...(commerce
-      ? [
-          "      if (effect.capability === 'inventory.decrement') {",
-          "        const items = await this.store.listCartItems(entityKey, recordId);",
-          "        if (items.length === 0) throw new Error(`Cannot decrement inventory for an empty cart '${recordId}'.`);",
-          "        for (const item of items) await this.store.decrementInventory(item.catalogEntity, item.catalogRecordId, item.quantity);",
-          "      }",
-        ]
-      : []),
     "      await this.store.appendCapabilityEvent({ actor: role, capability: effect.capability, operation: effect.operation, entity: entityKey, recordId, outcome: 'completed', at });",
     "    }",
     "  }",
@@ -1981,7 +1984,7 @@ export function generateApplicationBundle(
     { path: "api/src/main.ts", content: renderApiMain(graph) },
     {
       path: "api/src/capabilities/contract.ts",
-      content: renderCapabilityContract(),
+      content: renderCapabilityContract(graph),
     },
     ...capabilityTemplates.map((template) => ({
       path: template.target,

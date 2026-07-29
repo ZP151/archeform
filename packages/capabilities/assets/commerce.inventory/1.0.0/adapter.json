@@ -13,7 +13,7 @@
       "source": "templates/api/capability-module.ts.tpl",
       "target": "api/src/capabilities/commerce.inventory.ts",
       "outputSlot": "api.runtime",
-      "digest": "sha256:8ced82a4c3db325ab13c454b081a3f81add5e8bb3f341d51474e04d69e42a06b"
+      "digest": "sha256:fb3da1d03b9165d844dd5af38a0abbe7caabd8bfcf8dfc46105c034c899a15cb"
     }
   ],
   "contributes": {

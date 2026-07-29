@@ -68,6 +68,31 @@ describe("profile compilation", () => {
     );
   });
 
+  it.each(["restaurant-ordering", "simple-ecommerce"] as const)(
+    "generates a payment journey with package-owned Commerce effects for $profile",
+    (profile) => {
+      const files = Object.fromEntries(
+        generateApplicationBundle({
+          publishedRevisionId: `${profile}-payment-effects-1`,
+          graph: composeProfileDraft({ profile }).graph,
+        }).files.map((file) => [file.path, file.content]),
+      );
+
+      expect(files["api/test/journey.generated.test.ts"]).toContain(
+        'applicationRuntime.transition("customer", "order", record.id, "pay")',
+      );
+      expect(
+        files["api/src/capabilities/commerce.simulated-payment.ts"],
+      ).toContain("effectHandler: async");
+      expect(files["api/src/capabilities/commerce.inventory.ts"]).toContain(
+        "effectHandler: async",
+      );
+      expect(files["api/src/application-runtime.ts"]).not.toContain(
+        "effect.capability === 'inventory.decrement'",
+      );
+    },
+  );
+
   it.each([
     "expense-approval",
     "restaurant-ordering",
