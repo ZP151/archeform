@@ -14,7 +14,10 @@ describe("guided creation state", () => {
       type: "select-profile",
       profile: "expense-approval",
     });
-    const details = transitionGuidedCreation(withProfile, { type: "next" });
+    const capabilities = transitionGuidedCreation(withProfile, {
+      type: "next",
+    });
+    const details = transitionGuidedCreation(capabilities, { type: "next" });
     const rejected = transitionGuidedCreation(details, { type: "next" });
     const named = transitionGuidedCreation(rejected, {
       type: "set-name",
@@ -22,6 +25,7 @@ describe("guided creation state", () => {
     });
     const reviewed = transitionGuidedCreation(named, { type: "next" });
 
+    expect(capabilities.stage).toBe("capabilities");
     expect(details.stage).toBe("details");
     expect(rejected.stage).toBe("details");
     expect(rejected.error).toBe("Application name is required.");
@@ -31,8 +35,35 @@ describe("guided creation state", () => {
         profile: "expense-approval",
         name: "Travel approvals",
         theme: "light",
+        optionalCapabilities: ["core.audit", "core.notification"],
       },
     });
+  });
+
+  it("resets optional selections to the selected profile defaults", () => {
+    const opened = transitionGuidedCreation(initialGuidedCreationState, {
+      type: "open",
+    });
+    const expense = transitionGuidedCreation(opened, {
+      type: "select-profile",
+      profile: "expense-approval",
+    });
+    const withoutAudit = transitionGuidedCreation(expense, {
+      type: "toggle-optional-capability",
+      capability: "core.audit",
+    });
+    const restaurant = transitionGuidedCreation(withoutAudit, {
+      type: "select-profile",
+      profile: "restaurant-ordering",
+    });
+
+    expect(withoutAudit.input.optionalCapabilities).toEqual([
+      "core.notification",
+    ]);
+    expect(restaurant.input.optionalCapabilities).toEqual([
+      "core.notification",
+    ]);
+    expect(restaurant.error).toBeNull();
   });
 
   it("retains selections while a draft creation attempt is pending or fails", () => {
@@ -41,6 +72,7 @@ describe("guided creation state", () => {
       stage: "review" as const,
       input: {
         profile: "simple-ecommerce" as const,
+        optionalCapabilities: ["core.audit" as const],
         name: "Storefront",
         theme: "dark" as const,
       },
@@ -64,4 +96,3 @@ describe("guided creation state", () => {
     });
   });
 });
-

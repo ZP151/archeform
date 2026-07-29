@@ -33,6 +33,32 @@ describe("guided application composition", () => {
     });
   });
 
+  it("applies only selected optional capabilities before a Draft is persisted", () => {
+    const graph = createGuidedApplicationDraft(
+      {
+        profile: "expense-approval",
+        name: "Travel approvals without audit",
+        theme: "light",
+        optionalCapabilities: ["core.notification"],
+      },
+      "test-42a",
+    );
+
+    expect(graph.integration.capabilities).not.toContainEqual(
+      expect.objectContaining({ key: "audit.record" }),
+    );
+    expect(
+      graph.flow.flows.flatMap((flow) => flow.transitions),
+    ).not.toContainEqual(
+      expect.objectContaining({
+        effects: expect.arrayContaining([
+          expect.objectContaining({ capability: "audit.record" }),
+        ]),
+      }),
+    );
+    expect(() => assertValidApplicationGraph(graph)).not.toThrow();
+  });
+
   it("rejects an empty product name before a Draft can be created", () => {
     expect(() =>
       createGuidedApplicationDraft(

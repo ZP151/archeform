@@ -1,9 +1,15 @@
-import type { FactoryProfile } from "@factory/capabilities";
+import {
+  getProfileComposition,
+  type FactoryProfile,
+  type OptionalCapabilityKey,
+} from "@factory/capabilities";
 
-export type GuidedCreationStage = "template" | "details" | "review";
+export type GuidedCreationStage =
+  "template" | "capabilities" | "details" | "review";
 
 export type GuidedCreationInput = {
   readonly profile: FactoryProfile | null;
+  readonly optionalCapabilities: readonly OptionalCapabilityKey[];
   readonly name: string;
   readonly theme: "light" | "dark";
 };
@@ -20,6 +26,10 @@ export type GuidedCreationAction =
   | { readonly type: "open" }
   | { readonly type: "close" }
   | { readonly type: "select-profile"; readonly profile: FactoryProfile }
+  | {
+      readonly type: "toggle-optional-capability";
+      readonly capability: OptionalCapabilityKey;
+    }
   | { readonly type: "set-name"; readonly name: string }
   | { readonly type: "set-theme"; readonly theme: "light" | "dark" }
   | { readonly type: "next" }
@@ -33,6 +43,7 @@ export const initialGuidedCreationState: GuidedCreationState = {
   stage: "template",
   input: {
     profile: null,
+    optionalCapabilities: [],
     name: "",
     theme: "light",
   },
@@ -61,9 +72,42 @@ export function transitionGuidedCreation(
     case "select-profile":
       return {
         ...state,
-        input: { ...state.input, profile: action.profile },
+        input: {
+          ...state.input,
+          profile: action.profile,
+          optionalCapabilities: [
+            ...getProfileComposition(action.profile)
+              .defaultOptionalCapabilities,
+          ],
+        },
         error: null,
       };
+    case "toggle-optional-capability": {
+      if (!state.input.profile) {
+        return { ...state, error: "Choose an application outcome." };
+      }
+      const available = getProfileComposition(
+        state.input.profile,
+      ).defaultOptionalCapabilities;
+      if (!available.includes(action.capability)) {
+        return {
+          ...state,
+          error: `Capability '${action.capability}' is not available for this outcome.`,
+        };
+      }
+      const selected = state.input.optionalCapabilities.includes(
+        action.capability,
+      )
+        ? state.input.optionalCapabilities.filter(
+            (capability) => capability !== action.capability,
+          )
+        : [...state.input.optionalCapabilities, action.capability];
+      return {
+        ...state,
+        input: { ...state.input, optionalCapabilities: selected },
+        error: null,
+      };
+    }
     case "set-name":
       return {
         ...state,
@@ -80,13 +124,18 @@ export function transitionGuidedCreation(
       return state.stage === "review"
         ? { ...state, stage: "details", error: null }
         : state.stage === "details"
-          ? { ...state, stage: "template", error: null }
-          : state;
+          ? { ...state, stage: "capabilities", error: null }
+          : state.stage === "capabilities"
+            ? { ...state, stage: "template", error: null }
+            : state;
     case "next":
       if (state.stage === "template") {
         return state.input.profile
-          ? { ...state, stage: "details", error: null }
+          ? { ...state, stage: "capabilities", error: null }
           : { ...state, error: "Choose an application outcome." };
+      }
+      if (state.stage === "capabilities") {
+        return { ...state, stage: "details", error: null };
       }
       if (state.stage === "details") {
         const error = nameError(state.input.name);
@@ -101,6 +150,7 @@ export function transitionGuidedCreation(
         : state;
     case "create-failed":
       return { ...state, creating: false, error: action.message };
+    default:
+      return state;
   }
 }
-

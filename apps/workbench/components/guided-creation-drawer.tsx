@@ -4,14 +4,20 @@ import { useEffect, useMemo, useReducer } from "react";
 import {
   ArrowLeft,
   ArrowRight,
+  BellRing,
   Check,
   CircleDot,
+  LockKeyhole,
   Moon,
+  ScrollText,
   Sparkles,
   Sun,
   X,
 } from "lucide-react";
-import type { FactoryProfile } from "@factory/capabilities";
+import {
+  getProfileComposition,
+  type FactoryProfile,
+} from "@factory/capabilities";
 
 import {
   createGuidedApplicationDraft,
@@ -32,6 +38,7 @@ type Props = {
 
 const stages = [
   { id: "template", label: "Outcome" },
+  { id: "capabilities", label: "Capabilities" },
   { id: "details", label: "Details" },
   { id: "review", label: "Review" },
 ] as const;
@@ -40,6 +47,12 @@ function profileIcon(profile: FactoryProfile): string {
   if (profile === "expense-approval") return "Approval";
   if (profile === "restaurant-ordering") return "Ordering";
   return "Commerce";
+}
+
+function capabilityIcon(key: string) {
+  if (key === "core.audit") return <ScrollText size={16} />;
+  if (key === "core.notification") return <BellRing size={16} />;
+  return <CircleDot size={16} />;
 }
 
 export function GuidedCreationDrawer({ open, onClose, onCreate }: Props) {
@@ -59,6 +72,11 @@ export function GuidedCreationDrawer({ open, onClose, onCreate }: Props) {
       ) ?? null,
     [state.input.profile],
   );
+  const composition = useMemo(
+    () =>
+      state.input.profile ? getProfileComposition(state.input.profile) : null,
+    [state.input.profile],
+  );
   const summary = useMemo(() => {
     if (!state.input.profile || !state.input.name.trim()) return null;
     try {
@@ -68,6 +86,7 @@ export function GuidedCreationDrawer({ open, onClose, onCreate }: Props) {
             profile: state.input.profile,
             name: state.input.name,
             theme: state.input.theme,
+            optionalCapabilities: state.input.optionalCapabilities,
           },
           "preview",
         ),
@@ -91,6 +110,7 @@ export function GuidedCreationDrawer({ open, onClose, onCreate }: Props) {
       profile: state.input.profile,
       name: state.input.name,
       theme: state.input.theme,
+      optionalCapabilities: state.input.optionalCapabilities,
     })
       .then(() => {
         dispatch({ type: "create-succeeded" });
@@ -149,7 +169,9 @@ export function GuidedCreationDrawer({ open, onClose, onCreate }: Props) {
                 className={active ? "is-active" : complete ? "is-complete" : ""}
                 key={id}
               >
-                <span>{complete ? <Check size={12} /> : "0" + (index + 1)}</span>
+                <span>
+                  {complete ? <Check size={12} /> : "0" + (index + 1)}
+                </span>
                 {label}
               </li>
             );
@@ -199,6 +221,63 @@ export function GuidedCreationDrawer({ open, onClose, onCreate }: Props) {
             </section>
           )}
 
+          {state.stage === "capabilities" && composition && (
+            <section aria-labelledby="guided-capabilities-heading">
+              <p className="guided-section-label">Verified building blocks</p>
+              <h3 id="guided-capabilities-heading">Keep only what you need</h3>
+              <p className="guided-copy">
+                These options change the initial Graph. You can refine every
+                declared surface after the Draft is created.
+              </p>
+              <div className="guided-capability-list">
+                {composition.optionalCapabilities.map((capability) => {
+                  const selected = state.input.optionalCapabilities.includes(
+                    capability.key as "core.audit" | "core.notification",
+                  );
+                  return (
+                    <button
+                      aria-pressed={selected}
+                      className={
+                        selected
+                          ? "guided-capability-row is-selected"
+                          : "guided-capability-row"
+                      }
+                      data-testid={"guided-capability-" + capability.key}
+                      key={capability.key}
+                      onClick={() =>
+                        dispatch({
+                          type: "toggle-optional-capability",
+                          capability: capability.key as
+                            "core.audit" | "core.notification",
+                        })
+                      }
+                      type="button"
+                    >
+                      <span className="guided-capability-icon">
+                        {capabilityIcon(capability.key)}
+                      </span>
+                      <span className="guided-capability-copy">
+                        <strong>{capability.name}</strong>
+                        <small>{capability.description}</small>
+                      </span>
+                      <span className="guided-capability-state">
+                        {selected ? <Check size={14} /> : <span />}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="guided-required-capabilities">
+                <span>Included with this outcome</span>
+                {composition.requiredCapabilities.map((capability) => (
+                  <p key={capability.key}>
+                    <LockKeyhole size={12} /> {capability.name}
+                  </p>
+                ))}
+              </div>
+            </section>
+          )}
+
           {state.stage === "details" && (
             <section aria-labelledby="guided-details-heading">
               <p className="guided-section-label">Make it yours</p>
@@ -224,19 +303,17 @@ export function GuidedCreationDrawer({ open, onClose, onCreate }: Props) {
                 <legend>Generated application mode</legend>
                 <button
                   aria-pressed={state.input.theme === "light"}
-                  className={
-                    state.input.theme === "light" ? "is-selected" : ""
+                  className={state.input.theme === "light" ? "is-selected" : ""}
+                  onClick={() =>
+                    dispatch({ type: "set-theme", theme: "light" })
                   }
-                  onClick={() => dispatch({ type: "set-theme", theme: "light" })}
                   type="button"
                 >
                   <Sun size={16} /> Light
                 </button>
                 <button
                   aria-pressed={state.input.theme === "dark"}
-                  className={
-                    state.input.theme === "dark" ? "is-selected" : ""
-                  }
+                  className={state.input.theme === "dark" ? "is-selected" : ""}
                   onClick={() => dispatch({ type: "set-theme", theme: "dark" })}
                   type="button"
                 >
@@ -246,46 +323,64 @@ export function GuidedCreationDrawer({ open, onClose, onCreate }: Props) {
             </section>
           )}
 
-          {state.stage === "review" && selectedStarter && summary && (
-            <section aria-labelledby="guided-review-heading">
-              <p className="guided-section-label">Draft review</p>
-              <h3 id="guided-review-heading">Ready to shape</h3>
-              <p className="guided-copy">
-                Factory will create a mutable Draft. Nothing is published or
-                compiled until you decide.
-              </p>
-              <div className="guided-review-title">
-                <span className="guided-template-icon">
-                  <Sparkles size={16} />
-                </span>
-                <div>
-                  <strong>{state.input.name.trim()}</strong>
-                  <small>{selectedStarter.label}</small>
+          {state.stage === "review" &&
+            selectedStarter &&
+            summary &&
+            composition && (
+              <section aria-labelledby="guided-review-heading">
+                <p className="guided-section-label">Draft review</p>
+                <h3 id="guided-review-heading">Ready to shape</h3>
+                <p className="guided-copy">
+                  Factory will create a mutable Draft. Nothing is published or
+                  compiled until you decide.
+                </p>
+                <div className="guided-review-title">
+                  <span className="guided-template-icon">
+                    <Sparkles size={16} />
+                  </span>
+                  <div>
+                    <strong>{state.input.name.trim()}</strong>
+                    <small>{selectedStarter.label}</small>
+                  </div>
                 </div>
-              </div>
-              <dl className="guided-summary">
-                <div>
-                  <dt>Pages</dt>
-                  <dd>{summary.pages}</dd>
+                <dl className="guided-summary">
+                  <div>
+                    <dt>Pages</dt>
+                    <dd>{summary.pages}</dd>
+                  </div>
+                  <div>
+                    <dt>Records</dt>
+                    <dd>{summary.entities}</dd>
+                  </div>
+                  <div>
+                    <dt>Roles</dt>
+                    <dd>{summary.roles}</dd>
+                  </div>
+                  <div>
+                    <dt>Flows</dt>
+                    <dd>{summary.flows}</dd>
+                  </div>
+                </dl>
+                <div className="guided-review-capabilities">
+                  <span>Selected capabilities</span>
+                  <div>
+                    {[
+                      ...composition.requiredCapabilities,
+                      ...composition.optionalCapabilities.filter((capability) =>
+                        state.input.optionalCapabilities.includes(
+                          capability.key as "core.audit" | "core.notification",
+                        ),
+                      ),
+                    ].map((capability) => (
+                      <em key={capability.key}>{capability.name}</em>
+                    ))}
+                  </div>
                 </div>
-                <div>
-                  <dt>Records</dt>
-                  <dd>{summary.entities}</dd>
-                </div>
-                <div>
-                  <dt>Roles</dt>
-                  <dd>{summary.roles}</dd>
-                </div>
-                <div>
-                  <dt>Flows</dt>
-                  <dd>{summary.flows}</dd>
-                </div>
-              </dl>
-              <p className="guided-boundary">
-                <span /> Draft only · {state.input.theme} mode
-              </p>
-            </section>
-          )}
+                <p className="guided-boundary">
+                  <span /> Draft only · {state.input.theme} mode
+                </p>
+              </section>
+            )}
         </div>
 
         {state.error && (

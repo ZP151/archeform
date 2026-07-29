@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import type { ApplicationGraphV1 } from "@factory/graph";
 
 test("creates a named application Draft through the guided business-user journey", async ({
   page,
@@ -12,6 +13,7 @@ test("creates a named application Draft through the guided business-user journey
   ).toBeVisible();
   await page.getByTestId("guided-template-expense-approval").click();
   await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
   await page.getByLabel("Application name").fill(name);
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByText("Draft only · light mode")).toBeVisible();
@@ -24,6 +26,49 @@ test("creates a named application Draft through the guided business-user journey
   await expect(page.getByLabel("Puck Page Studio")).toBeVisible();
   await expect(page.getByText("Draft", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Published" })).toHaveCount(0);
+});
+
+test("creates an audit-free Expense Draft from the capability picker", async ({
+  page,
+}) => {
+  const name = `Audit free expense ${Date.now().toString()}`;
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "New application" }).click();
+  await page.getByTestId("guided-template-expense-approval").click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  const audit = page.getByTestId("guided-capability-core.audit");
+  await expect(audit).toHaveAttribute("aria-pressed", "true");
+  await audit.click();
+  await expect(audit).toHaveAttribute("aria-pressed", "false");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Application name").fill(name);
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByText("Selected capabilities")).toBeVisible();
+
+  const persistedDraft = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().includes("/workspaces/local/application-graphs"),
+  );
+  await page.getByTestId("guided-create").click();
+  const payload = (await persistedDraft).json() as Promise<{
+    draftRevisions: Array<{ graph: ApplicationGraphV1 }>;
+  }>;
+  const graph = (await payload).draftRevisions[0]!.graph;
+
+  expect(
+    graph.integration.capabilities.map((capability) => capability.key),
+  ).not.toContain("audit.record");
+  expect(
+    graph.flow.flows.flatMap((flow) =>
+      flow.transitions.flatMap((transition) => transition.effects ?? []),
+    ),
+  ).not.toContainEqual(expect.objectContaining({ capability: "audit.record" }));
+  await expect(
+    page.getByRole("dialog", { name: "Create application left-side drawer" }),
+  ).toBeHidden();
+  await expect(page.getByLabel("Current application")).toHaveText(name);
 });
 
 test("edits a Draft, publishes an immutable revision, and compiles it", async ({

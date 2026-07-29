@@ -21,6 +21,9 @@
   invoke a model, or bypass the Control Plane Graph validation boundary.
 - Continue from the new Draft in Page, Domain, Flow, Policy, AI, and Code
   Studio before the user explicitly publishes it.
+- Add constrained capability composition before Draft creation. Profile recipes
+  expose only verified optional capabilities and deterministically remove their
+  declared Graph projections when the user turns them off.
 
 ## Compiler and capabilities
 
