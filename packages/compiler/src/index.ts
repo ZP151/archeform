@@ -1612,6 +1612,9 @@ function renderJourneyTest(graph: ApplicationGraphV1): string {
   const capabilityEffects = transitions.flatMap(
     (transition) => transition.effects ?? [],
   );
+  const capabilityEventPairs = capabilityEffects.flatMap((effect) =>
+    effect.capability === "notification.send" ? [effect, effect] : [effect],
+  );
   const auditEffectCount = capabilityEffects.filter(
     (effect) => effect.capability === "audit.record",
   ).length;
@@ -1635,7 +1638,7 @@ function renderJourneyTest(graph: ApplicationGraphV1): string {
     ...(auditRole && capabilityEffects.length > 0
       ? [
           `    const capabilityEvents = await applicationRuntime.capabilityEvents(${JSON.stringify(auditRole)});`,
-          `    expect(capabilityEvents.map((entry) => [entry.capability, entry.operation])).toEqual(${JSON.stringify(capabilityEffects.map((effect) => [effect.capability, effect.operation]))});`,
+          `    expect(capabilityEvents.map((entry) => [entry.capability, entry.operation])).toEqual(${JSON.stringify(capabilityEventPairs.map((effect) => [effect.capability, effect.operation]))});`,
         ]
       : []),
     "  });",

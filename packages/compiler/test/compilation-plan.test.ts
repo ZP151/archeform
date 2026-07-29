@@ -624,6 +624,40 @@ describe("compilation target registry", () => {
     expect(files["api/package.json"]).toContain("@prisma/client");
   });
 
+  it("expects notification delivery and generic evidence in an Expense journey", () => {
+    const composed = composeProfileDraft({ profile: "expense-approval" }).graph;
+    const graph = {
+      ...composed,
+      flow: {
+        ...composed.flow,
+        flows: composed.flow.flows.map((flow) => ({
+          ...flow,
+          transitions: flow.transitions.map((transition) =>
+            transition.event === "submit"
+              ? {
+                  ...transition,
+                  effects: [
+                    ...(transition.effects ?? []),
+                    { capability: "notification.send", operation: "send" },
+                  ],
+                }
+              : transition,
+          ),
+        })),
+      },
+    };
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "published-expense-notification-journey-1",
+        graph,
+      }).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(files["api/test/journey.generated.test.ts"]).toContain(
+      '[["audit.record","record"],["notification.send","send"],["notification.send","send"],["audit.record","record"]]',
+    );
+  });
+
   it("executes declared capability effects as durable evidence and fails closed for unknown effects", () => {
     const files = Object.fromEntries(
       generateApplicationBundle({
