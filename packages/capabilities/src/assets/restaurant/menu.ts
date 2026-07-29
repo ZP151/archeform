@@ -1,0 +1,53 @@
+import type { CapabilityAssetV1 } from "../contract.js";
+
+export const restaurantMenuAsset: CapabilityAssetV1 = {
+  manifest: {
+    apiVersion: "factory.capability/v1",
+    key: "restaurant.menu",
+    version: "1.0.0",
+    category: "restaurant",
+    name: "Restaurant menu",
+    description:
+      "Lists and searches the customer menu and manages merchant inventory.",
+    packageRoot: "packages/capabilities/assets/restaurant.menu/1.0.0",
+    manifestDigest:
+      "sha256:0f02482633421d04ef987e5239ad717f1b1b207d5ad6319e1d5f3604e7313fcd",
+    lifecycle: "golden",
+    profiles: ["restaurant-ordering"],
+    effects: [
+      "menu.category.list",
+      "menu.item.list",
+      "menu.item.search",
+      "menu.item.manage",
+      "inventory.adjust",
+    ],
+    inputSchema: [
+      { key: "categoryEntity", type: "domain.entity", required: true },
+      { key: "itemEntity", type: "domain.entity", required: true },
+      { key: "inventoryEntity", type: "domain.entity", required: true },
+    ],
+    outputSlots: [
+      "api.runtime",
+      "api.command",
+      "database.schema",
+      "web.customer",
+      "web.merchant",
+      "test.fixture",
+    ],
+    templates: [
+      {
+        id: "api-capability-module",
+        source: "templates/api/capability-module.ts.tpl",
+        target: "api/src/capabilities/restaurant.menu.ts",
+        outputSlot: "api.runtime",
+        digest:
+          "sha256:f0d92517f5052d0791b9ba33f1be83d404ff8fac15d5b6612bb1da57bdf1215e",
+      },
+    ],
+    verification: {
+      fixture: "fixtures/default.json",
+      contractTest: "tests/contract.json",
+      status: "verified",
+    },
+  },
+};

@@ -1,0 +1,9 @@
+{
+  "status": "verified",
+  "checks": [
+    "table-session.create",
+    "table-session.validate",
+    "table-session.close",
+    "table-session.expire"
+  ]
+}

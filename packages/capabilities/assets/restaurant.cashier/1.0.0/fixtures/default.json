@@ -1,0 +1,4 @@
+{
+  "payment": { "orderId": "order-1", "method": "simulated-card", "amount": 42 },
+  "receipt": { "orderId": "order-1", "status": "paid" }
+}

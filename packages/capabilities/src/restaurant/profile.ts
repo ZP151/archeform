@@ -243,8 +243,15 @@ const requiredAssetLocks = [
   "commerce.cart",
   "commerce.inventory",
   "commerce.order",
-  "commerce.simulated-payment",
+  "restaurant.table-session",
+  "restaurant.menu",
+  "restaurant.ordering",
+  "restaurant.kitchen",
+  "restaurant.cashier",
+  "restaurant.reporting",
 ] as const;
+
+const forbiddenAssetLocks = ["commerce.simulated-payment"] as const;
 
 const requiredOperations = [
   "audit.record",
@@ -559,6 +566,15 @@ export function validateRestaurantOrderingProfile(
       issue(
         "restaurant.asset-lock.missing",
         `Restaurant profile requires Golden asset lock '${assetKey}'.`,
+        ["integration", "assetLocks", assetKey],
+      );
+    }
+  }
+  for (const assetKey of forbiddenAssetLocks) {
+    if (assetLocks.has(assetKey)) {
+      issue(
+        "restaurant.asset-lock.unexpected",
+        `Restaurant profile does not allow Golden asset lock '${assetKey}' because Restaurant cashier owns payment simulation.`,
         ["integration", "assetLocks", assetKey],
       );
     }

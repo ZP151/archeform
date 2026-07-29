@@ -1,0 +1,4 @@
+{
+  "category": { "name": "Mains", "sortOrder": 1, "active": true },
+  "item": { "name": "Noodle bowl", "available": true, "stock": 12 }
+}

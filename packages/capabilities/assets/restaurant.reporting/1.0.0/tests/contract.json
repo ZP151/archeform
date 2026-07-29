@@ -1,0 +1,7 @@
+{
+  "status": "verified",
+  "checks": [
+    "report.restaurant.summary",
+    "report.restaurant.low-stock"
+  ]
+}

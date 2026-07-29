@@ -1,0 +1,10 @@
+{
+  "status": "verified",
+  "checks": [
+    "menu.category.list",
+    "menu.item.list",
+    "menu.item.search",
+    "menu.item.manage",
+    "inventory.adjust"
+  ]
+}

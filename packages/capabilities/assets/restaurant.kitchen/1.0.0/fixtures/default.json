@@ -1,0 +1,8 @@
+{
+  "ticket": {
+    "orderId": "order-1",
+    "tableNumber": 1,
+    "priority": 0,
+    "status": "paid"
+  }
+}

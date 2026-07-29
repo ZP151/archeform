@@ -1,0 +1,4 @@
+{
+  "order": { "status": "cart", "orderVersion": 1, "orderNote": "No chilli" },
+  "line": { "menuItemId": "item-1", "quantity": 2, "lineNote": "One mild" }
+}

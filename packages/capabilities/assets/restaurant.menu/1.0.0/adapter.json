@@ -1,0 +1,30 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": [
+    "api.runtime",
+    "api.command",
+    "database.schema",
+    "web.customer",
+    "web.merchant",
+    "test.fixture"
+  ],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/restaurant.menu.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:f0d92517f5052d0791b9ba33f1be83d404ff8fac15d5b6612bb1da57bdf1215e"
+    }
+  ],
+  "contributes": {
+    "effects": [
+      "menu.category.list",
+      "menu.item.list",
+      "menu.item.search",
+      "menu.item.manage",
+      "inventory.adjust"
+    ]
+  }
+}

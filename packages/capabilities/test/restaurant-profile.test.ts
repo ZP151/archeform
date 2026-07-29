@@ -100,6 +100,46 @@ describe("Restaurant Ordering profile", () => {
     expect(() => assertRestaurantOrderingProfile(graph)).toThrow("tokenDigest");
   });
 
+  it("requires the six Restaurant assets instead of generic simulated payment", () => {
+    const graph = restaurantGraph();
+    expect(graph.integration.assetLocks?.map((lock) => lock.key)).toEqual(
+      expect.arrayContaining([
+        "restaurant.table-session",
+        "restaurant.menu",
+        "restaurant.ordering",
+        "restaurant.kitchen",
+        "restaurant.cashier",
+        "restaurant.reporting",
+      ]),
+    );
+    expect(graph.integration.assetLocks).not.toContainEqual(
+      expect.objectContaining({ key: "commerce.simulated-payment" }),
+    );
+
+    expect(
+      validateRestaurantOrderingProfile(graph).filter((issue) =>
+        issue.code.startsWith("restaurant.asset-lock."),
+      ),
+    ).toEqual([]);
+  });
+
+  it("rejects generic simulated payment when the Restaurant cashier owns payment", () => {
+    const graph = restaurantGraph();
+    graph.integration.assetLocks!.push({
+      ...graph.integration.assetLocks![0]!,
+      key: "commerce.simulated-payment",
+    });
+
+    expect(validateRestaurantOrderingProfile(graph)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "restaurant.asset-lock.unexpected",
+          message: expect.stringContaining("commerce.simulated-payment"),
+        }),
+      ]),
+    );
+  });
+
   it("identifies every missing Restaurant contract kind", () => {
     const cases = [
       {

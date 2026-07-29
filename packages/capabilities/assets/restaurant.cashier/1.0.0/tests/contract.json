@@ -1,0 +1,9 @@
+{
+  "status": "verified",
+  "checks": [
+    "payment.simulate",
+    "payment.reversal.request",
+    "order.serve",
+    "receipt.render"
+  ]
+}

@@ -78,6 +78,103 @@ const historicalExecutableLocks = [
   },
 ] as const;
 
+const restaurantOperations = {
+  "restaurant.table-session": [
+    "table-session.create",
+    "table-session.validate",
+    "table-session.close",
+    "table-session.expire",
+  ],
+  "restaurant.menu": [
+    "menu.category.list",
+    "menu.item.list",
+    "menu.item.search",
+    "menu.item.manage",
+    "inventory.adjust",
+  ],
+  "restaurant.ordering": [
+    "order.line.add",
+    "order.line.update",
+    "order.line.remove",
+    "order.submit",
+    "order.cancel",
+    "order.history",
+  ],
+  "restaurant.kitchen": [
+    "kitchen.ticket.create",
+    "kitchen.ticket.accept",
+    "kitchen.ticket.prepare",
+    "kitchen.ticket.ready",
+  ],
+  "restaurant.cashier": [
+    "payment.simulate",
+    "payment.reversal.request",
+    "order.serve",
+    "receipt.render",
+  ],
+  "restaurant.reporting": [
+    "report.restaurant.summary",
+    "report.restaurant.low-stock",
+  ],
+} as const;
+
+const restaurantOutputSlots = {
+  "restaurant.table-session": [
+    "api.runtime",
+    "api.command",
+    "database.schema",
+    "flow.effect",
+    "web.customer",
+    "web.merchant",
+    "test.fixture",
+  ],
+  "restaurant.menu": [
+    "api.runtime",
+    "api.command",
+    "database.schema",
+    "web.customer",
+    "web.merchant",
+    "test.fixture",
+  ],
+  "restaurant.ordering": [
+    "api.runtime",
+    "api.command",
+    "database.schema",
+    "flow.effect",
+    "web.customer",
+    "realtime.event",
+    "test.fixture",
+  ],
+  "restaurant.kitchen": [
+    "api.runtime",
+    "api.command",
+    "database.schema",
+    "flow.effect",
+    "web.merchant",
+    "realtime.event",
+    "test.fixture",
+  ],
+  "restaurant.cashier": [
+    "api.runtime",
+    "api.command",
+    "database.schema",
+    "flow.effect",
+    "web.customer",
+    "web.merchant",
+    "test.fixture",
+  ],
+  "restaurant.reporting": [
+    "api.runtime",
+    "report.read-model",
+    "web.merchant",
+    "test.fixture",
+  ],
+} as const;
+
+const restaurantAssetKeys = Object.keys(
+  restaurantOperations,
+) as (keyof typeof restaurantOperations)[];
+
 describe("capability catalog", () => {
   it("exposes independently composable core and commerce capabilities", () => {
     expect(capabilityCatalog.map((capability) => capability.key)).toEqual([
@@ -90,8 +187,59 @@ describe("capability catalog", () => {
       "commerce.inventory",
       "commerce.order",
       "commerce.simulated-payment",
+      "restaurant.table-session",
+      "restaurant.menu",
+      "restaurant.ordering",
+      "restaurant.kitchen",
+      "restaurant.cashier",
+      "restaurant.reporting",
     ]);
   });
+
+  it.each(restaurantAssetKeys)(
+    "locks verified Restaurant asset %s with its exact operations",
+    (key) => {
+      const asset = capabilityAssets.find(
+        (candidate) => candidate.manifest.key === key,
+      );
+
+      expect(asset?.manifest).toMatchObject({
+        apiVersion: "factory.capability/v1",
+        key,
+        version: "1.0.0",
+        category: "restaurant",
+        lifecycle: "golden",
+        profiles: ["restaurant-ordering"],
+        effects: restaurantOperations[key],
+        verification: { status: "verified" },
+      });
+      expect(asset?.manifest.templates.length).toBeGreaterThan(0);
+    },
+  );
+
+  it.each(restaurantAssetKeys)(
+    "bounds Restaurant asset %s templates to its declared output slots",
+    (key) => {
+      const asset = capabilityAssets.find(
+        (candidate) => candidate.manifest.key === key,
+      );
+      expect(asset).toBeDefined();
+      if (!asset) return;
+
+      expect(asset.manifest.outputSlots).toEqual(restaurantOutputSlots[key]);
+      expect(asset.manifest.templates).toEqual([
+        expect.objectContaining({
+          id: "api-capability-module",
+          source: "templates/api/capability-module.ts.tpl",
+          target: `api/src/capabilities/${key}.ts`,
+          outputSlot: "api.runtime",
+        }),
+      ]);
+      for (const template of asset.manifest.templates) {
+        expect(asset.manifest.outputSlots).toContain(template.outputSlot);
+      }
+    },
+  );
 
   it("resolves each catalog entry to an immutable Golden capability asset", () => {
     const asset = getCapabilityAsset("core.audit");
@@ -129,7 +277,7 @@ describe("capability catalog", () => {
   });
 
   it("verifies every registered capability manifest against its declared digest", () => {
-    expect(capabilityAssets).toHaveLength(15);
+    expect(capabilityAssets).toHaveLength(21);
     for (const asset of capabilityAssets) {
       expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     }
@@ -485,7 +633,7 @@ describe("capability catalog", () => {
     expect(graph.integration.compositionProfile).toBe("expense-approval");
   });
 
-  it("locks every current core and commerce asset required by the Restaurant starter", () => {
+  it("locks every exact core, commerce, and Restaurant asset required by the Restaurant starter", () => {
     const graph = composeProfileDraft({
       profile: "restaurant-ordering",
     }).graph;
@@ -497,21 +645,44 @@ describe("capability catalog", () => {
       "commerce.catalog",
       "commerce.inventory",
       "commerce.order",
-      "commerce.simulated-payment",
       "core.audit",
       "core.crud",
       "core.notification",
       "core.workflow",
+      "restaurant.cashier",
+      "restaurant.kitchen",
+      "restaurant.menu",
+      "restaurant.ordering",
+      "restaurant.reporting",
+      "restaurant.table-session",
     ]);
+    expect(graph.integration.assetLocks).not.toContainEqual(
+      expect.objectContaining({ key: "commerce.simulated-payment" }),
+    );
   });
 
-  it("supplies every Restaurant starter operation from exactly one locked asset", () => {
+  it("supplies every exact Restaurant operation from exactly one locked asset", () => {
     const graph = composeProfileDraft({
       profile: "restaurant-ordering",
     }).graph;
     const lockedAssets = graph.integration.assetLocks!.map((lock) =>
       getCapabilityAsset(lock.key),
     );
+
+    for (const [key, operations] of Object.entries(restaurantOperations)) {
+      for (const operation of operations) {
+        expect(
+          graph.integration.capabilities.map((capability) => capability.key),
+          operation,
+        ).toContain(operation);
+        expect(
+          lockedAssets
+            .filter((asset) => asset.manifest.effects.includes(operation))
+            .map((asset) => asset.manifest.key),
+          operation,
+        ).toEqual([key]);
+      }
+    }
 
     for (const operation of graph.integration.capabilities) {
       expect(

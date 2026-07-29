@@ -1,0 +1,25 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": [
+    "api.runtime",
+    "report.read-model",
+    "web.merchant",
+    "test.fixture"
+  ],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/restaurant.reporting.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:f0d92517f5052d0791b9ba33f1be83d404ff8fac15d5b6612bb1da57bdf1215e"
+    }
+  ],
+  "contributes": {
+    "effects": [
+      "report.restaurant.summary",
+      "report.restaurant.low-stock"
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "summary": { "salesTotal": 120, "orderCount": 3, "cancellations": 1 },
+  "lowStock": [{ "menuItemId": "item-1", "stock": 2 }]
+}
