@@ -15,6 +15,7 @@ import {
   type ApplicationGraphV1,
 } from "@factory/graph";
 import { createGeneratedPageRuntimeProjection } from "./page-runtime-projection.js";
+import { renderRestaurantRuntime } from "./restaurant-runtime.js";
 
 export {
   createGeneratedPageRuntimeProjection,
@@ -29,6 +30,12 @@ export {
   type GeneratedPageRuntimeRouteFallbackV1,
   type GeneratedPageRuntimeSafePropV1,
 } from "./page-runtime-projection.js";
+export {
+  renderRestaurantRuntime,
+  restaurantRuntimeApiVersion,
+  restaurantRuntimeEndpoints,
+  type RestaurantRuntimeArtifacts,
+} from "./restaurant-runtime.js";
 
 export type CompilationTargetKey =
   | "simulator"
@@ -773,7 +780,31 @@ function renderPrismaSeed(graph: ApplicationGraphV1): string {
     id: seed.id ?? `seed-${seed.entity}-${index + 1}`,
     values: seed.values,
   }));
+  const restaurantTableSeed =
+    graph.integration.compositionProfile === "restaurant-ordering"
+      ? (graph.domain.seedData ?? []).find(
+          (seed) => seed.entity === "restaurant-table",
+        )
+      : undefined;
+  const restaurantTableCode = restaurantTableSeed?.values.code;
+  if (
+    graph.integration.compositionProfile === "restaurant-ordering" &&
+    (typeof restaurantTableCode !== "string" || !restaurantTableCode)
+  ) {
+    throw new Error(
+      "Restaurant seed generation requires a restaurant-table code.",
+    );
+  }
+  const restaurantSessionSeed = restaurantTableSeed
+    ? {
+        id: `${restaurantTableSeed.id ?? "restaurant-table"}-demo-session`,
+        tableCode: restaurantTableCode as string,
+      }
+    : null;
   return [
+    ...(restaurantSessionSeed
+      ? ['import { createHash } from "node:crypto";']
+      : []),
     'import { PrismaClient } from "@prisma/client";',
     "",
     "const prisma = new PrismaClient();",
@@ -790,7 +821,21 @@ function renderPrismaSeed(graph: ApplicationGraphV1): string {
     "      create: { id: record.id, ...record.values },",
     "    });",
     "  }",
-    "  return { seeded: records.length };",
+    ...(restaurantSessionSeed
+      ? [
+          "  const demoTableToken = process.env.RESTAURANT_DEMO_TABLE_TOKEN;",
+          '  if (!demoTableToken || demoTableToken.length < 16) throw new Error("RESTAURANT_DEMO_TABLE_TOKEN must contain at least 16 characters.");',
+          '  const tokenDigest = createHash("sha256").update(demoTableToken, "utf8").digest("hex");',
+          "  const openedAt = new Date();",
+          "  const expiresAt = new Date(openedAt.getTime() + 24 * 60 * 60 * 1000);",
+          "  await prisma.tableSession.upsert({",
+          `    where: { id: ${JSON.stringify(restaurantSessionSeed.id)} },`,
+          '    update: { tokenDigest, status: "active", openedAt, expiresAt, guestCount: 2 },',
+          `    create: { id: ${JSON.stringify(restaurantSessionSeed.id)}, tableCode: ${JSON.stringify(restaurantSessionSeed.tableCode)}, tokenDigest, status: "active", openedAt, expiresAt, guestCount: 2 },`,
+          "  });",
+        ]
+      : []),
+    `  return { seeded: records.length${restaurantSessionSeed ? " + 1" : ""} };`,
     "}",
     "",
     "void seed().catch((error: unknown) => { console.error(error); process.exitCode = 1; }).finally(() => prisma.$disconnect());",
@@ -1197,6 +1242,10 @@ function renderApplicationRuntime(
 
 function renderPrismaRecordStore(graph: ApplicationGraphV1): string {
   const commerce = hasCommerceCapabilities(graph);
+  const capabilityOutcome =
+    graph.integration.compositionProfile === "restaurant-ordering"
+      ? "succeeded"
+      : "completed";
   const delegates = Object.fromEntries(
     graph.domain.entities.map((entity) => [
       entity.key,
@@ -1294,7 +1343,7 @@ function renderPrismaRecordStore(graph: ApplicationGraphV1): string {
     "  async listCapabilityEvents(): Promise<readonly CapabilityEvent[]> {",
     "    return (await this.capabilityDelegate().findMany({ orderBy: { at: 'asc' } })).map((entry) => {",
     "      const event = entry as Omit<CapabilityEvent, 'at'> & { at: Date };",
-    "      return { ...event, at: event.at.toISOString(), outcome: 'completed' as const };",
+    `      return { ...event, at: event.at.toISOString(), outcome: '${capabilityOutcome}' as const };`,
     "    });",
     "  }",
     ...(commerce
@@ -2061,6 +2110,10 @@ export function generateApplicationBundle(
 ): GeneratedApplicationBundle {
   const plan = buildCompilationPlan(input);
   const graph = assertValidApplicationGraph(input.graph);
+  const restaurantRuntime =
+    graph.integration.compositionProfile === "restaurant-ordering"
+      ? renderRestaurantRuntime(graph)
+      : null;
   const capabilityTemplates = resolveCapabilityTemplateContributions(
     graph,
     options.repositoryRoot,
@@ -2163,7 +2216,11 @@ export function generateApplicationBundle(
       content:
         'import type { ReactNode } from "react";\nimport "./globals.css";\n\nexport default function RootLayout({ children }: { children: ReactNode }) { return <html lang="en"><body>{children}</body></html>; }\n',
     },
-    { path: "web/app/page-runtime.tsx", content: renderPageRuntime(graph) },
+    {
+      path: "web/app/page-runtime.tsx",
+      content:
+        restaurantRuntime?.transitionalWebShell ?? renderPageRuntime(graph),
+    },
     { path: "web/app/page.tsx", content: renderWebRootPage() },
     {
       path: "web/app/[...path]/page.tsx",
@@ -2233,7 +2290,18 @@ export function generateApplicationBundle(
         'FROM node:22-alpine\nWORKDIR /app\nCOPY package.json ./\nCOPY prisma ./prisma\nRUN npm config set fetch-retries 5 && npm install --global pnpm@9.0.0 && pnpm install && pnpm prisma generate --schema prisma/schema.prisma\nCOPY tsconfig.json ./\nCOPY src ./src\nRUN pnpm build\nCMD ["node", "dist/main.js"]\n',
     },
     { path: "api/.dockerignore", content: "node_modules\ndist\n.env\n" },
-    { path: "api/src/main.ts", content: renderApiMain(graph) },
+    {
+      path: "api/src/main.ts",
+      content: restaurantRuntime?.main ?? renderApiMain(graph),
+    },
+    ...(restaurantRuntime
+      ? [
+          {
+            path: "api/src/restaurant/restaurant-command.service.ts",
+            content: restaurantRuntime.commandService,
+          },
+        ]
+      : []),
     {
       path: "api/src/capabilities/contract.ts",
       content: renderCapabilityContract(graph),
@@ -2248,21 +2316,27 @@ export function generateApplicationBundle(
     },
     {
       path: "api/src/application-runtime.ts",
-      content: renderApplicationRuntime(graph, runtimeMode),
+      content:
+        restaurantRuntime?.applicationRuntimeContract ??
+        renderApplicationRuntime(graph, runtimeMode),
     },
     {
       path: "api/src/prisma-record-store.ts",
       content: renderPrismaRecordStore(graph),
     },
     { path: "api/src/policy.ts", content: renderPolicyModule(graph) },
-    { path: "api/prisma/schema.prisma", content: renderPrismaSchema(graph) },
+    {
+      path: "api/prisma/schema.prisma",
+      content: restaurantRuntime?.prismaSchema ?? renderPrismaSchema(graph),
+    },
     {
       path: "database/prisma/schema.prisma",
-      content: renderPrismaSchema(graph),
+      content: restaurantRuntime?.prismaSchema ?? renderPrismaSchema(graph),
     },
     {
       path: "database/prisma/migrations/0001_initial/migration.sql",
-      content: renderInitialMigration(graph),
+      content:
+        restaurantRuntime?.initialMigration ?? renderInitialMigration(graph),
     },
     {
       path: "database/package.json",
@@ -2304,13 +2378,24 @@ export function generateApplicationBundle(
     { path: "api/src/flows/machines.ts", content: renderFlowMachines() },
     {
       path: "api/test/journey.generated.test.ts",
-      content: renderJourneyTest(graph),
+      content: restaurantRuntime?.generatedTests ?? renderJourneyTest(graph),
     },
+    ...(restaurantRuntime
+      ? [
+          {
+            path: "api/test/restaurant-runtime.generated.test.ts",
+            content: restaurantRuntime.generatedTests,
+          },
+        ]
+      : []),
     {
       path: "tests/journeys.generated.md",
       content: `# Generated role journeys\n\nGraph: ${plan.graphHash}\n`,
     },
-    { path: "docs/api-reference.md", content: renderApiReference(graph) },
+    {
+      path: "docs/api-reference.md",
+      content: restaurantRuntime?.apiReference ?? renderApiReference(graph),
+    },
     {
       path: "docs/entity-relationship.md",
       content: renderEntityRelationshipDiagram(graph),
@@ -2328,11 +2413,11 @@ export function generateApplicationBundle(
     { path: "web/.dockerignore", content: "node_modules\n.next\n.env\n" },
     {
       path: "docker-compose.yml",
-      content: `name: \${FACTORY_COMPOSE_PROJECT_NAME:-factory-${rootDirectory}}\n\nservices:\n  postgres:\n    image: postgres:16-alpine\n    environment:\n      POSTGRES_USER: generated\n      POSTGRES_PASSWORD: generated\n      POSTGRES_DB: generated\n    healthcheck:\n      test: [\"CMD-SHELL\", \"pg_isready -U generated -d generated\"]\n      interval: 5s\n      timeout: 3s\n      retries: 20\n  migrate:\n    build: ./database\n    environment:\n      DATABASE_URL: postgresql://generated:generated@postgres:5432/generated\n    depends_on:\n      postgres:\n        condition: service_healthy\n  api:\n    build: ./api\n    environment:\n      DATABASE_URL: postgresql://generated:generated@postgres:5432/generated\n    ports:\n      - \"127.0.0.1:\${FACTORY_API_PORT:-0}:3001\"\n    depends_on:\n      migrate:\n        condition: service_completed_successfully\n  web:\n    build: ./web\n    environment:\n      FACTORY_API_URL: http://api:3001\n      NEXT_PUBLIC_FACTORY_API_URL: http://localhost:\${FACTORY_API_PORT:-0}\n    ports:\n      - \"127.0.0.1:\${FACTORY_WEB_PORT:-0}:3000\"\n    depends_on:\n      - api\n`,
+      content: `name: \${FACTORY_COMPOSE_PROJECT_NAME:-factory-${rootDirectory}}\n\nservices:\n  postgres:\n    image: postgres:16-alpine\n    environment:\n      POSTGRES_USER: generated\n      POSTGRES_PASSWORD: generated\n      POSTGRES_DB: generated\n    healthcheck:\n      test: [\"CMD-SHELL\", \"pg_isready -U generated -d generated\"]\n      interval: 5s\n      timeout: 3s\n      retries: 20\n  migrate:\n    build: ./database\n    environment:\n      DATABASE_URL: postgresql://generated:generated@postgres:5432/generated\n${restaurantRuntime ? '      RESTAURANT_DEMO_TABLE_TOKEN: \"${RESTAURANT_DEMO_TABLE_TOKEN:?Set RESTAURANT_DEMO_TABLE_TOKEN for local demo bootstrap}\"\n' : ""}    depends_on:\n      postgres:\n        condition: service_healthy\n  api:\n    build: ./api\n    environment:\n      DATABASE_URL: postgresql://generated:generated@postgres:5432/generated\n    ports:\n      - \"127.0.0.1:\${FACTORY_API_PORT:-0}:3001\"\n    depends_on:\n      migrate:\n        condition: service_completed_successfully\n  web:\n    build: ./web\n    environment:\n      FACTORY_API_URL: http://api:3001\n      NEXT_PUBLIC_FACTORY_API_URL: http://localhost:\${FACTORY_API_PORT:-0}\n    ports:\n      - \"127.0.0.1:\${FACTORY_WEB_PORT:-0}:3000\"\n    depends_on:\n      - api\n`,
     },
     {
       path: "README.md",
-      content: `# ${graph.metadata.name}\n\nThis application was compiled from the immutable Published Graph \`${plan.graphHash}\`.\n\n## Run locally\n\nThe default Compose project name is revision-isolated. Choose unique host ports for every generated application.\n\n\`\`\`sh\nFACTORY_COMPOSE_PROJECT_NAME=factory-${rootDirectory} FACTORY_WEB_PORT=4300 FACTORY_API_PORT=4301 docker compose up --build\n\`\`\`\n\nThe migration service must complete before the API starts. To remove this isolated local runtime and its database volume:\n\n\`\`\`sh\ndocker compose down --volumes --remove-orphans\n\`\`\`\n`,
+      content: `# ${graph.metadata.name}\n\nThis application was compiled from the immutable Published Graph \`${plan.graphHash}\`.\n\n## Run locally\n\nThe default Compose project name is revision-isolated. Choose unique host ports for every generated application.${restaurantRuntime ? " Set `RESTAURANT_DEMO_TABLE_TOKEN` to a local demo bootstrap input of at least 16 characters before running; Compose requires and forwards the current shell value without a default." : ""}\n\n\`\`\`sh\n${restaurantRuntime ? 'RESTAURANT_DEMO_TABLE_TOKEN=\"$RESTAURANT_DEMO_TABLE_TOKEN\" ' : ""}FACTORY_COMPOSE_PROJECT_NAME=factory-${rootDirectory} FACTORY_WEB_PORT=4300 FACTORY_API_PORT=4301 docker compose up --build\n\`\`\`\n\nThe migration service must complete before the API starts. To remove this isolated local runtime and its database volume:\n\n\`\`\`sh\ndocker compose down --volumes --remove-orphans\n\`\`\`\n`,
     },
   ];
 

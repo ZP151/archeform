@@ -99,7 +99,7 @@ describe("profile compilation", () => {
     );
   });
 
-  it.each(["restaurant-ordering", "simple-ecommerce"] as const)(
+  it.each(["simple-ecommerce"] as const)(
     "generates a payment journey with package-owned Commerce effects for $profile",
     (profile) => {
       const files = Object.fromEntries(
@@ -123,6 +123,32 @@ describe("profile compilation", () => {
       );
     },
   );
+
+  it("selects the authoritative Restaurant command runtime only for the Restaurant Profile", () => {
+    const restaurantFiles = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "restaurant-authoritative-runtime-1",
+        graph: composeProfileDraft({ profile: "restaurant-ordering" }).graph,
+      }).files.map((file) => [file.path, file.content]),
+    );
+    const expenseFiles = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "expense-generic-runtime-1",
+        graph: composeProfileDraft({ profile: "expense-approval" }).graph,
+      }).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(
+      restaurantFiles["api/src/restaurant/restaurant-command.service.ts"],
+    ).toContain("prisma.$transaction");
+    expect(restaurantFiles["api/src/main.ts"]).toContain(
+      "RestaurantCommandService",
+    );
+    expect(expenseFiles["api/src/main.ts"]).toContain("ApplicationRuntime");
+    expect(
+      expenseFiles["api/src/restaurant/restaurant-command.service.ts"],
+    ).toBeUndefined();
+  });
 
   it.each([
     "expense-approval",
@@ -160,11 +186,6 @@ describe("profile compilation", () => {
       blockTypes: ["collection", "form"],
     },
     {
-      profile: "restaurant-ordering" as const,
-      routes: ["/menu", "/cart", "/kitchen"],
-      blockTypes: ["catalog", "cart", "queue"],
-    },
-    {
       profile: "simple-ecommerce" as const,
       routes: ["/", "/checkout", "/orders"],
       blockTypes: ["catalog", "checkout", "collection"],
@@ -189,4 +210,18 @@ describe("profile compilation", () => {
       }
     },
   );
+
+  it("keeps Restaurant page interpretation behind the Task 4 projection boundary", () => {
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "restaurant-task-3-shell-1",
+        graph: composeProfileDraft({ profile: "restaurant-ordering" }).graph,
+      }).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(files["web/app/page-runtime.tsx"]).toContain(
+      "factory.restaurant-runtime-shell/v1",
+    );
+    expect(files["web/app/page-runtime.tsx"]).not.toContain("menu-browser");
+  });
 });

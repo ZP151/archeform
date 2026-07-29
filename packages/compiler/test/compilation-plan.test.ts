@@ -248,6 +248,36 @@ describe("compilation target registry", () => {
     expect(generateApplicationBundle(publishedExpense)).toEqual(bundle);
   });
 
+  it("plans one deterministic Restaurant bundle with transaction and projection artifacts", () => {
+    const graph = composeProfileDraft({ profile: "restaurant-ordering" }).graph;
+    const bundle = generateApplicationBundle({
+      publishedRevisionId: "restaurant-transaction-plan-1",
+      graph,
+    });
+    const paths = bundle.files.map((file) => file.path);
+
+    expect(new Set(paths).size).toBe(paths.length);
+    expect(paths).toEqual(
+      expect.arrayContaining([
+        "api/src/restaurant/restaurant-command.service.ts",
+        "api/prisma/schema.prisma",
+        "database/prisma/migrations/0001_initial/migration.sql",
+        "api/policy/policy.csv",
+        "api/src/flows/definitions.ts",
+        "api/test/restaurant-runtime.generated.test.ts",
+        "docs/api-reference.md",
+        "docs/entity-relationship.md",
+        "docs/permission-matrix.md",
+      ]),
+    );
+    expect(
+      generateApplicationBundle({
+        publishedRevisionId: "restaurant-transaction-plan-1",
+        graph,
+      }),
+    ).toEqual(bundle);
+  });
+
   it("emits the immutable capability asset lock alongside generated source", () => {
     const graph = structuredClone(publishedExpense.graph);
     graph.integration.compositionProfile = "expense-approval";
@@ -695,7 +725,7 @@ describe("compilation target registry", () => {
 
   it("preflights an external effect before Factory payment and inventory handlers", async () => {
     const composed = composeProfileDraft({
-      profile: "restaurant-ordering",
+      profile: "simple-ecommerce",
     }).graph;
     const order = composed.domain.entities.find(
       (entity) => entity.key === "order",
@@ -711,11 +741,16 @@ describe("compilation target registry", () => {
         permission.resource === order.key &&
         permission.actions.includes("create"),
     )!.role;
-    const auditRole = composed.policy.permissions.find((permission) =>
-      permission.actions.includes("audit"),
-    )!.role;
+    const auditRole = "operator";
     const graph = {
       ...composed,
+      policy: {
+        ...composed.policy,
+        permissions: [
+          ...composed.policy.permissions,
+          { role: auditRole, resource: order.key, actions: ["audit"] },
+        ],
+      },
       integration: {
         ...composed.integration,
         providers: [{ id: "mail", type: "email", version: "1.0.0" }],
@@ -779,7 +814,7 @@ describe("compilation target registry", () => {
     );
   });
 
-  it.each(["restaurant-ordering", "simple-ecommerce"] as const)(
+  it.each(["simple-ecommerce"] as const)(
     "executes a seeded $profile cart and payment journey",
     async (profile) => {
       const graph = composeProfileDraft({ profile }).graph;
@@ -1037,8 +1072,8 @@ describe("compilation target registry", () => {
   it("emits a Factory-owned PageModel runtime and only declared Next routes", () => {
     const files = Object.fromEntries(
       generateApplicationBundle({
-        publishedRevisionId: "restaurant-page-runtime-1",
-        graph: composeProfileDraft({ profile: "restaurant-ordering" }).graph,
+        publishedRevisionId: "ecommerce-page-runtime-1",
+        graph: composeProfileDraft({ profile: "simple-ecommerce" }).graph,
       }).files.map((file) => [file.path, file.content]),
     );
     const runtime = files["web/app/page-runtime.tsx"]!;
@@ -1057,7 +1092,7 @@ describe("compilation target registry", () => {
     expect(runtime).toContain(
       "routeFallback: { readonly rootRoute: string | null; readonly unknownRoute: 'not-found' }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null }",
     );
-    expect(runtime).toContain('"/menu"');
+    expect(runtime).toContain('"/checkout"');
     expect(runtime).not.toContain("@puckeditor/core");
     expect(runtime).not.toContain("reactflow");
     expect(runtime).not.toContain("<aside>");
@@ -1071,7 +1106,7 @@ describe("compilation target registry", () => {
 
   it("uses the validated order flow for a catalog-only commerce PageModel", () => {
     const composed = composeProfileDraft({
-      profile: "restaurant-ordering",
+      profile: "simple-ecommerce",
     }).graph;
     const graph = {
       ...composed,
@@ -1158,7 +1193,7 @@ describe("compilation target registry", () => {
     "rejects a catalog-only commerce PageModel that $name before returning files",
     ({ mutate, message }) => {
       const source = composeProfileDraft({
-        profile: "restaurant-ordering",
+        profile: "simple-ecommerce",
       }).graph;
       const graph = structuredClone({
         ...source,
@@ -1208,7 +1243,7 @@ describe("compilation target registry", () => {
 
   it("rejects a catalog-only commerce PageModel before returning files when its order flow lacks simulated payment", () => {
     const source = composeProfileDraft({
-      profile: "restaurant-ordering",
+      profile: "simple-ecommerce",
     }).graph;
     const graph = structuredClone({
       ...source,
@@ -1247,7 +1282,7 @@ describe("compilation target registry", () => {
       "/_next/static/chunk.js",
       "/favicon.ico",
     ]) {
-      const graph = profileGraph("restaurant-ordering");
+      const graph = profileGraph("simple-ecommerce");
       graph.page.pages[0]!.route = route;
 
       expect(() =>

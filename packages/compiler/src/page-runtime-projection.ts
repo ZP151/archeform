@@ -11,6 +11,17 @@ export const generatedPageRuntimeBlockTypes = [
   "cart",
   "queue",
   "checkout",
+  "restaurant-entry",
+  "menu-browser",
+  "order-cart",
+  "payment-checkout",
+  "order-tracker",
+  "receipt",
+  "table-board",
+  "menu-manager",
+  "kitchen-board",
+  "cashier-console",
+  "restaurant-dashboard",
 ] as const;
 
 export type GeneratedPageRuntimeBlockTypeV1 =
@@ -69,11 +80,26 @@ const entityBoundBlockTypes = new Set<GeneratedPageRuntimeBlockTypeV1>([
   "cart",
   "queue",
   "checkout",
+  "restaurant-entry",
+  "menu-browser",
+  "order-cart",
+  "payment-checkout",
+  "order-tracker",
+  "receipt",
+  "table-board",
+  "menu-manager",
+  "kitchen-board",
+  "cashier-console",
 ]);
 
 const orderEntityBlockTypes = new Set<GeneratedPageRuntimeBlockTypeV1>([
   "cart",
   "checkout",
+  "order-cart",
+  "payment-checkout",
+  "order-tracker",
+  "receipt",
+  "cashier-console",
 ]);
 
 const interactiveCommerceBlockTypes = new Set<GeneratedPageRuntimeBlockTypeV1>([
@@ -81,6 +107,22 @@ const interactiveCommerceBlockTypes = new Set<GeneratedPageRuntimeBlockTypeV1>([
   "cart",
   "checkout",
 ]);
+
+const restaurantStructuralBlockTypes = new Set<GeneratedPageRuntimeBlockTypeV1>(
+  [
+    "restaurant-entry",
+    "menu-browser",
+    "order-cart",
+    "payment-checkout",
+    "order-tracker",
+    "receipt",
+    "table-board",
+    "menu-manager",
+    "kitchen-board",
+    "cashier-console",
+    "restaurant-dashboard",
+  ],
+);
 
 const requiredFactoryCapabilityByBlockType: Readonly<
   Partial<
@@ -236,9 +278,18 @@ function projectBlock(
   block: PageBlock,
   entityKeys: ReadonlySet<string>,
   factoryCapabilities: readonly ApplicationGraphV1["integration"]["capabilities"][number][],
+  compositionProfile: string | undefined,
 ): GeneratedPageRuntimeBlockV1 {
   if (!isGeneratedPageRuntimeBlockType(block.type)) {
     throw new Error(`Unsupported PageModel block '${block.type}'.`);
+  }
+  if (
+    restaurantStructuralBlockTypes.has(block.type) &&
+    compositionProfile !== "restaurant-ordering"
+  ) {
+    throw new Error(
+      `Restaurant PageModel block '${block.type}' requires compositionProfile 'restaurant-ordering'.`,
+    );
   }
 
   const requiredCapability = requiredFactoryCapabilityByBlockType[block.type];
@@ -292,7 +343,12 @@ export function createGeneratedPageRuntimeProjection(
       route: page.route,
       title: page.title,
       blocks: page.blocks.map((block) =>
-        projectBlock(block, entityKeys, factoryCapabilities),
+        projectBlock(
+          block,
+          entityKeys,
+          factoryCapabilities,
+          graph.integration.compositionProfile,
+        ),
       ),
     };
   });

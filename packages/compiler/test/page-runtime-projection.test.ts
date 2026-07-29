@@ -20,6 +20,30 @@ function blockById(graph: ApplicationGraphV1, id: string) {
   return block;
 }
 
+function genericCommerceGraph(
+  blockType: "catalog" | "cart" | "checkout",
+): ApplicationGraphV1 {
+  const graph = profileGraph("simple-ecommerce");
+  graph.page = {
+    pages: [
+      {
+        id: "commerce-test",
+        route: "/",
+        title: "Commerce test",
+        blocks: [
+          {
+            id: `${blockType}-test`,
+            type: blockType,
+            entity: blockType === "catalog" ? "product" : "order",
+          },
+        ],
+      },
+    ],
+    navigation: [],
+  };
+  return graph;
+}
+
 describe("generated page runtime projection", () => {
   it("derives deterministic restaurant routes and first-page root fallback", () => {
     const graph = profileGraph("restaurant-ordering");
@@ -32,28 +56,111 @@ describe("generated page runtime projection", () => {
     expect(first.applicationName).toBe("Restaurant ordering");
     expect(first.themeMode).toBe("light");
     expect(first.pages.map((page) => page.route)).toEqual([
+      "/table/:token",
       "/menu",
       "/cart",
-      "/kitchen",
+      "/orders/current",
+      "/receipt/:id",
+      "/merchant/tables",
+      "/merchant/menu",
+      "/merchant/kitchen",
+      "/merchant/cashier",
+      "/merchant/analytics",
     ]);
     expect(first.routeFallback).toEqual({
-      rootRoute: "/menu",
+      rootRoute: "/table/:token",
       unknownRoute: "not-found",
     });
     expect(first.navigation).toEqual([
-      { id: "menu", label: "Menu", route: "/menu" },
-      { id: "cart", label: "Cart", route: "/cart" },
-      { id: "kitchen", label: "Kitchen", route: "/kitchen" },
+      { id: "customer-menu", label: "Menu", route: "/menu" },
+      { id: "customer-cart", label: "Cart", route: "/cart" },
+      {
+        id: "current-order",
+        label: "Current order",
+        route: "/orders/current",
+      },
+      {
+        id: "merchant-tables",
+        label: "Tables",
+        route: "/merchant/tables",
+      },
+      {
+        id: "merchant-menu",
+        label: "Menu management",
+        route: "/merchant/menu",
+      },
+      {
+        id: "merchant-kitchen",
+        label: "Kitchen",
+        route: "/merchant/kitchen",
+      },
+      {
+        id: "merchant-cashier",
+        label: "Cashier",
+        route: "/merchant/cashier",
+      },
+      {
+        id: "merchant-analytics",
+        label: "Analytics",
+        route: "/merchant/analytics",
+      },
     ]);
     expect(first.pages[0]?.blocks).toEqual([
       {
-        id: "menu-catalog",
-        type: "catalog",
-        entity: "menu-item",
+        id: "table-session-entry",
+        type: "restaurant-entry",
+        entity: "table-session",
         props: {},
       },
     ]);
+    expect(first.commerce).toEqual({
+      orderEntity: null,
+      paymentEvent: null,
+    });
     expect(createPublicProjection).toBe(createGeneratedPageRuntimeProjection);
+  });
+
+  it("projects Restaurant blocks as bounded structure without interaction data", () => {
+    const graph = profileGraph("restaurant-ordering");
+    const menu = blockById(graph, "menu-browser");
+    menu.props = {
+      title: "Menu",
+      href: "https://external.example/must-not-be-emitted",
+      onClick: "must-not-be-emitted()",
+      renderer: { component: "must-not-be-emitted" },
+    };
+    menu.bindings = {
+      request: "must-not-be-emitted",
+      transition: "must-not-be-emitted",
+    };
+
+    const projection = createGeneratedPageRuntimeProjection(graph);
+    const projectedMenu = projection.pages
+      .flatMap((page) => page.blocks)
+      .find((block) => block.id === "menu-browser");
+
+    expect(projectedMenu).toEqual({
+      id: "menu-browser",
+      type: "menu-browser",
+      entity: "menu-item",
+      props: { title: "Menu" },
+    });
+    expect(JSON.stringify(projectedMenu)).not.toContain("external.example");
+    expect(JSON.stringify(projectedMenu)).not.toContain("onClick");
+    expect(JSON.stringify(projectedMenu)).not.toContain("bindings");
+    expect(projection.commerce).toEqual({
+      orderEntity: null,
+      paymentEvent: null,
+    });
+  });
+
+  it("rejects Restaurant-only blocks outside the validated Restaurant Profile", () => {
+    const graph = profileGraph("simple-ecommerce");
+    blockById(graph, "product-catalog").type = "menu-browser";
+
+    expect(() => createGeneratedPageRuntimeProjection(graph)).toThrow(
+      "Restaurant PageModel block 'menu-browser' requires compositionProfile 'restaurant-ordering'.",
+    );
   });
 
   it("uses a declared root page and reduces block props to safe strings", () => {
@@ -144,7 +251,7 @@ describe("generated page runtime projection", () => {
 
   it("rejects unsupported PageModel blocks before projection", () => {
     const graph = profileGraph("restaurant-ordering");
-    blockById(graph, "menu-catalog").type = "custom-html";
+    blockById(graph, "menu-browser").type = "custom-html";
 
     expect(() => createGeneratedPageRuntimeProjection(graph)).toThrow(
       "Unsupported PageModel block 'custom-html'.",
@@ -154,9 +261,10 @@ describe("generated page runtime projection", () => {
   it.each([
     ["collection", "expense-approval", "expense-list"],
     ["form", "expense-approval", "expense-form"],
-    ["catalog", "restaurant-ordering", "menu-catalog"],
-    ["cart", "restaurant-ordering", "cart-lines"],
-    ["queue", "restaurant-ordering", "kitchen-queue"],
+    ["restaurant-entry", "restaurant-ordering", "table-session-entry"],
+    ["menu-browser", "restaurant-ordering", "menu-browser"],
+    ["order-cart", "restaurant-ordering", "order-cart"],
+    ["kitchen-board", "restaurant-ordering", "kitchen-board"],
     ["checkout", "simple-ecommerce", "checkout-form"],
   ] as const)(
     "rejects the missing entity binding required by %s blocks",
@@ -180,7 +288,13 @@ describe("generated page runtime projection", () => {
   });
 
   it.each([
-    ["cart", "restaurant-ordering", "cart-lines", "menu-item"],
+    ["order-cart", "restaurant-ordering", "order-cart", "menu-item"],
+    [
+      "payment-checkout",
+      "restaurant-ordering",
+      "payment-checkout",
+      "menu-item",
+    ],
     ["checkout", "simple-ecommerce", "checkout-form", "product"],
   ] as const)(
     "rejects %s blocks bound to a non-order entity",
@@ -198,19 +312,17 @@ describe("generated page runtime projection", () => {
     [
       "catalog",
       "cart.add",
-      "restaurant-ordering",
       "Interactive commerce PageModel blocks require Factory capability 'cart.add' with operation 'add'.",
     ],
     [
       "checkout",
       "payment.simulate",
-      "simple-ecommerce",
       "Interactive commerce PageModel blocks require Factory capability 'payment.simulate' with operation 'simulate'.",
     ],
   ] as const)(
     "rejects %s blocks when Factory capability %s is absent",
-    (blockType, capabilityKey, profile, message) => {
-      const graph = profileGraph(profile);
+    (blockType, capabilityKey, message) => {
+      const graph = genericCommerceGraph(blockType);
       graph.integration.capabilities = graph.integration.capabilities.filter(
         (capability) => capability.key !== capabilityKey,
       );
@@ -222,7 +334,7 @@ describe("generated page runtime projection", () => {
   );
 
   it("does not accept a non-Factory capability with the required key", () => {
-    const graph = profileGraph("restaurant-ordering");
+    const graph = genericCommerceGraph("catalog");
     graph.integration.capabilities = graph.integration.capabilities.map(
       (capability) =>
         capability.key === "cart.add"
@@ -235,14 +347,10 @@ describe("generated page runtime projection", () => {
     );
   });
 
-  it.each([
-    ["catalog", "restaurant-ordering"],
-    ["cart", "restaurant-ordering"],
-    ["checkout", "simple-ecommerce"],
-  ] as const)(
+  it.each(["catalog", "cart", "checkout"] as const)(
     "rejects the %s interaction when the exact Factory cart capability is absent",
-    (_blockType, profile) => {
-      const graph = profileGraph(profile);
+    (blockType) => {
+      const graph = genericCommerceGraph(blockType);
       graph.integration.capabilities = graph.integration.capabilities.filter(
         (capability) => capability.key !== "cart.add",
       );
@@ -253,14 +361,10 @@ describe("generated page runtime projection", () => {
     },
   );
 
-  it.each([
-    ["catalog", "restaurant-ordering"],
-    ["cart", "restaurant-ordering"],
-    ["checkout", "simple-ecommerce"],
-  ] as const)(
+  it.each(["catalog", "cart", "checkout"] as const)(
     "rejects the %s interaction when simulated payment is not an exact Factory capability",
-    (_blockType, profile) => {
-      const graph = profileGraph(profile);
+    (blockType) => {
+      const graph = genericCommerceGraph(blockType);
       graph.integration.providers = [
         ...graph.integration.providers,
         { id: "external", type: "payment-provider" },
@@ -278,14 +382,10 @@ describe("generated page runtime projection", () => {
     },
   );
 
-  it.each([
-    ["catalog", "restaurant-ordering"],
-    ["cart", "restaurant-ordering"],
-    ["checkout", "simple-ecommerce"],
-  ] as const)(
+  it.each(["catalog", "cart", "checkout"] as const)(
     "rejects the %s interaction when the order flow lacks exact simulated payment",
-    (_blockType, profile) => {
-      const graph = profileGraph(profile);
+    (blockType) => {
+      const graph = genericCommerceGraph(blockType);
       graph.flow.flows = graph.flow.flows.map((flow) =>
         flow.entity === "order"
           ? {
@@ -307,12 +407,12 @@ describe("generated page runtime projection", () => {
   );
 
   it.each([
-    ["catalog", "cart.add", "remove", "restaurant-ordering"],
-    ["checkout", "payment.simulate", "other", "simple-ecommerce"],
+    ["catalog", "cart.add", "remove"],
+    ["checkout", "payment.simulate", "other"],
   ] as const)(
     "rejects %s blocks when Factory capability %s declares operation %s",
-    (blockType, capabilityKey, wrongOperation, profile) => {
-      const graph = profileGraph(profile);
+    (blockType, capabilityKey, wrongOperation) => {
+      const graph = genericCommerceGraph(blockType);
       graph.integration.capabilities = graph.integration.capabilities.map(
         (capability) =>
           capability.key === capabilityKey
