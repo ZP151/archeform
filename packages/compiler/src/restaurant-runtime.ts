@@ -10,6 +10,11 @@ export const restaurantRuntimeApiVersion =
 
 export const restaurantRuntimeEndpoints = Object.freeze([
   ["POST", "/api/restaurant/table-sessions/resolve"],
+  ["GET", "/api/restaurant/menu/categories"],
+  ["GET", "/api/restaurant/menu/items"],
+  ["GET", "/api/restaurant/orders/history"],
+  ["GET", "/api/restaurant/orders/:id/status"],
+  ["GET", "/api/restaurant/orders/:id/receipt"],
   ["POST", "/api/restaurant/orders/:id/lines"],
   ["PATCH", "/api/restaurant/orders/:id/lines/:lineId"],
   ["POST", "/api/restaurant/orders/:id/submit"],
@@ -169,6 +174,62 @@ export type RestaurantCommandBody = Record<string, unknown> & {
 
 export type RestaurantCommandOutcome = Record<string, unknown>;
 
+export type RestaurantMenuQuery = {
+  readonly category?: string;
+  readonly query?: string;
+};
+
+export type RestaurantMenuCategoryView = {
+  readonly id: string;
+  readonly name: string;
+  readonly sortOrder: number;
+};
+
+export type RestaurantMenuItemView = {
+  readonly id: string;
+  readonly categoryKey: string;
+  readonly name: string;
+  readonly description: string;
+  readonly price: number;
+  readonly available: true;
+  readonly stock: number;
+  readonly preparationMinutes: number;
+  readonly imageUrl: string;
+};
+
+export type RestaurantCustomerOrderView = RestaurantSafeOrderState & {
+  readonly fulfilmentType: string;
+  readonly orderNote: string;
+  readonly submittedAt: Date | null;
+  readonly paidAt: Date | null;
+  readonly createdAt: Date;
+};
+
+export type RestaurantReceiptModifierView = {
+  readonly key: string;
+  readonly label: string;
+  readonly value: string;
+};
+
+export type RestaurantReceiptView = RestaurantCustomerOrderView & {
+  readonly lines: readonly {
+    readonly id: string;
+    readonly menuItemId: string;
+    readonly menuItemName: string;
+    readonly quantity: number;
+    readonly unitPrice: number;
+    readonly lineNote: string;
+    readonly modifiers: readonly RestaurantReceiptModifierView[];
+  }[];
+  readonly payments: readonly {
+    readonly id: string;
+    readonly method: string;
+    readonly amount: number;
+    readonly status: string;
+    readonly paidAt: Date | null;
+  }[];
+};
+
 export type RestaurantSafeOrderState = {
   readonly id: string;
   readonly status: string;
@@ -265,6 +326,15 @@ export function assertCancellationReason(reason: unknown): asserts reason is str
   }
 }
 
+export function assertOrderNote(value: unknown): string {
+  if (value === undefined) return "";
+  if (typeof value !== "string") throw new Error("Order note must be a string.");
+  const note = value.trim();
+  if (note.length > 500) throw new Error("Order note must contain at most 500 characters.");
+  if (/[\u0000-\u001f\u007f]/.test(note)) throw new Error("Order note contains unsupported control characters.");
+  return note;
+}
+
 export function assertRestaurantRole(role: string, allowed: readonly string[]): void {
   if (!allowed.includes(role)) throw new Error("Denied Restaurant command for role '" + role + "'.");
 }
@@ -279,6 +349,34 @@ function requiredNumber(body: Record<string, unknown>, key: string): number {
   const value = body[key];
   if (typeof value !== "number" || !Number.isFinite(value)) throw new Error(key + " must be a number.");
   return value;
+}
+
+function optionalSafeQueryValue(value: unknown, key: string): string | undefined {
+  if (value === undefined || value === "") return undefined;
+  if (typeof value !== "string") throw new Error(key + " must be a string.");
+  const normalized = value.trim();
+  if (!normalized) return undefined;
+  if (normalized.length > 100) throw new Error(key + " must contain at most 100 characters.");
+  if (/[\u0000-\u001f\u007f]/.test(normalized)) throw new Error(key + " contains unsupported control characters.");
+  return normalized;
+}
+
+export function sanitizeReceiptModifiers(value: Prisma.JsonValue): readonly RestaurantReceiptModifierView[] {
+  if (!Array.isArray(value)) return [];
+  const modifiers: RestaurantReceiptModifierView[] = [];
+  for (const candidate of value.slice(0, 20)) {
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) continue;
+    const modifier = candidate as Record<string, unknown>;
+    if (typeof modifier.key !== "string" || typeof modifier.label !== "string" || typeof modifier.value !== "string") continue;
+    const key = modifier.key.trim();
+    const label = modifier.label.trim();
+    const modifierValue = modifier.value.trim();
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,49}$/.test(key)) continue;
+    if (!label || label.length > 100 || /[\u0000-\u001f\u007f]/.test(label)) continue;
+    if (!modifierValue || modifierValue.length > 100 || /[\u0000-\u001f\u007f]/.test(modifierValue)) continue;
+    modifiers.push({ key, label, value: modifierValue });
+  }
+  return modifiers;
 }
 
 function jsonOutcome(value: unknown): RestaurantCommandOutcome {
@@ -298,6 +396,28 @@ function safeOrderState(order: {
     paymentStatus: order.paymentStatus,
     orderVersion: order.orderVersion,
     total: Number(order.total),
+  };
+}
+
+function customerOrderView(order: {
+  id: string;
+  status: string;
+  paymentStatus: string;
+  fulfilmentType: string;
+  orderNote: string;
+  orderVersion: number;
+  total: unknown;
+  submittedAt: Date | null;
+  paidAt: Date | null;
+  createdAt: Date;
+}): RestaurantCustomerOrderView {
+  return {
+    ...safeOrderState(order),
+    fulfilmentType: order.fulfilmentType,
+    orderNote: order.orderNote,
+    submittedAt: order.submittedAt,
+    paidAt: order.paidAt,
+    createdAt: order.createdAt,
   };
 }
 
@@ -425,6 +545,33 @@ export class RestaurantCommandService {
     }
   }
 
+  private async activeCustomerSession(role: string, sessionToken: string | undefined) {
+    assertRestaurantRole(role, [profile.roles.customer]);
+    const token = this.requireSessionToken(sessionToken);
+    const session = await this.prisma.tableSession.findUnique({ where: { tokenDigest: hashOpaqueToken(token) } });
+    if (!session) throw new Error("Table session token is invalid.");
+    this.assertActiveSession(session);
+    const table = await this.prisma.restaurantTable.findUnique({ where: { code: session.tableCode } });
+    if (!table?.active || table.status === "closed") throw new Error("Restaurant table is not active.");
+    if (!table.restaurantLocationId) throw new Error("Restaurant table is not associated with a location.");
+    const location = await this.prisma.restaurantLocation.findUnique({ where: { id: table.restaurantLocationId } });
+    if (!location?.active) throw new Error("Restaurant location is not active.");
+    return { session, table, location };
+  }
+
+  private async customerOrder(role: string, sessionToken: string | undefined, orderId: string) {
+    const { session, table, location } = await this.activeCustomerSession(role, sessionToken);
+    const order = await this.prisma.order.findFirst({
+      where: {
+        id: orderId,
+        tableSessionId: session.id,
+        tableSession: { id: session.id, tableCode: table.code, table: { restaurantLocationId: location.id } },
+      },
+    });
+    if (!order) throw new Error("Order is not available for this table session.");
+    return order;
+  }
+
   private async commandScope(role: string, orderId: string, sessionToken: string | undefined): Promise<string> {
     const order = await this.prisma.order.findUnique({ where: { id: orderId } });
     if (!order) throw new Error("Order not found.");
@@ -439,8 +586,10 @@ export class RestaurantCommandService {
     }
     const table = await this.prisma.restaurantTable.findUnique({ where: { code: session.tableCode } });
     if (!table?.active || table.status === "closed") throw new Error("Restaurant table is not active.");
-    const locationId = table.restaurantLocationId ?? "main-location";
-    return "location:" + locationId + ":table:" + table.id + ":session:" + session.id + ":order:" + orderId;
+    if (!table.restaurantLocationId) throw new Error("Restaurant table is not associated with a location.");
+    const location = await this.prisma.restaurantLocation.findUnique({ where: { id: table.restaurantLocationId } });
+    if (!location?.active) throw new Error("Restaurant location is not active.");
+    return "location:" + location.id + ":table:" + table.id + ":session:" + session.id + ":order:" + orderId;
   }
 
   private async assertOrderSession(
@@ -460,7 +609,10 @@ export class RestaurantCommandService {
     }
     const table = await tx.restaurantTable.findUnique({ where: { code: session.tableCode } });
     if (!table?.active || table.status === "closed") throw new Error("Restaurant table is not active.");
-    return table.restaurantLocationId ?? "main-location";
+    if (!table.restaurantLocationId) throw new Error("Restaurant table is not associated with a location.");
+    const location = await tx.restaurantLocation.findUnique({ where: { id: table.restaurantLocationId } });
+    if (!location?.active) throw new Error("Restaurant location is not active.");
+    return location.id;
   }
 
   private async recordEvidence(
@@ -543,14 +695,19 @@ export class RestaurantCommandService {
     this.assertActiveSession(scopedSession);
     const scopedTable = await this.prisma.restaurantTable.findUnique({ where: { code: scopedSession.tableCode } });
     if (!scopedTable?.active || scopedTable.status === "closed") throw new Error("Restaurant table is not active.");
-    const locationId = scopedTable.restaurantLocationId ?? "main-location";
-    const scope = "location:" + locationId + ":table:" + scopedTable.id + ":session:" + scopedSession.id + ":resolve";
+    if (!scopedTable.restaurantLocationId) throw new Error("Restaurant table is not associated with a location.");
+    const scopedLocation = await this.prisma.restaurantLocation.findUnique({ where: { id: scopedTable.restaurantLocationId } });
+    if (!scopedLocation?.active) throw new Error("Restaurant location is not active.");
+    const scope = "location:" + scopedLocation.id + ":table:" + scopedTable.id + ":session:" + scopedSession.id + ":resolve";
     return this.executeCommand(scope, idempotencyKey, body, async (tx) => {
       const session = await tx.tableSession.findUnique({ where: { tokenDigest } });
       if (!session) throw new Error("Table session token is invalid.");
       this.assertActiveSession(session);
       const table = await tx.restaurantTable.findUnique({ where: { code: session.tableCode } });
       if (!table?.active || table.status === "closed") throw new Error("Restaurant table is not active.");
+      if (!table.restaurantLocationId) throw new Error("Restaurant table is not associated with a location.");
+      const location = await tx.restaurantLocation.findUnique({ where: { id: table.restaurantLocationId } });
+      if (!location?.active) throw new Error("Restaurant location is not active.");
       let order = await tx.order.findFirst({
         where: { tableSessionId: session.id, status: { in: ["cart", "submitted", "paid", "accepted", "preparing", "ready"] } },
         orderBy: { createdAt: "desc" },
@@ -562,9 +719,77 @@ export class RestaurantCommandService {
         });
       }
       const outcome = jsonOutcome({ session: tableSessionOutcome(session), order });
-      await this.recordEvidence(tx, role, order.id, order.orderVersion, created ? "order.created" : "table-session.resolved", locationId, outcome, restaurantCommandEffects.resolveTableSession);
+      await this.recordEvidence(tx, role, order.id, order.orderVersion, created ? "order.created" : "table-session.resolved", location.id, outcome, restaurantCommandEffects.resolveTableSession);
       return outcome;
     });
+  }
+
+  async listMenuCategories(role: string): Promise<readonly RestaurantMenuCategoryView[]> {
+    assertRestaurantRole(role, [profile.roles.customer]);
+    return this.prisma.menuCategory.findMany({
+      where: { active: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, sortOrder: true },
+    });
+  }
+
+  async listMenuItems(role: string, input: RestaurantMenuQuery): Promise<readonly RestaurantMenuItemView[]> {
+    assertRestaurantRole(role, [profile.roles.customer]);
+    const category = optionalSafeQueryValue(input.category, "category");
+    const query = optionalSafeQueryValue(input.query, "query");
+    const where: Prisma.MenuItemWhereInput = {
+      available: true,
+      category: { active: true },
+      ...(category ? { categoryKey: category } : {}),
+      ...(query ? { name: { contains: query, mode: "insensitive" } } : {}),
+    };
+    const items = await this.prisma.menuItem.findMany({
+      where,
+      orderBy: [{ category: { sortOrder: "asc" } }, { name: "asc" }],
+      select: { id: true, categoryKey: true, name: true, description: true, price: true, available: true, stock: true, preparationMinutes: true, imageUrl: true },
+    });
+    return items.map((item) => ({ ...item, price: Number(item.price), available: true as const }));
+  }
+
+  async listSessionOrders(role: string, sessionToken: string | undefined): Promise<readonly RestaurantCustomerOrderView[]> {
+    const { session, table, location } = await this.activeCustomerSession(role, sessionToken);
+    const orders = await this.prisma.order.findMany({
+      where: {
+        tableSessionId: session.id,
+        tableSession: { id: session.id, tableCode: table.code, table: { restaurantLocationId: location.id } },
+      },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, status: true, paymentStatus: true, fulfilmentType: true, orderNote: true, total: true, orderVersion: true, submittedAt: true, paidAt: true, createdAt: true },
+    });
+    return orders.map(customerOrderView);
+  }
+
+  async getOrderStatus(role: string, sessionToken: string | undefined, orderId: string): Promise<RestaurantCustomerOrderView> {
+    return customerOrderView(await this.customerOrder(role, sessionToken, orderId));
+  }
+
+  async getReceipt(role: string, sessionToken: string | undefined, orderId: string): Promise<RestaurantReceiptView> {
+    const order = await this.customerOrder(role, sessionToken, orderId);
+    if (order.paymentStatus !== "paid" && order.paymentStatus !== "reversal-requested") {
+      throw new Error("Receipt is not available until payment succeeds.");
+    }
+    const [lines, payments] = await Promise.all([
+      this.prisma.orderLine.findMany({
+        where: { orderId },
+        orderBy: { createdAt: "asc" },
+        include: { menuItem: { select: { name: true } } },
+      }),
+      this.prisma.paymentAttempt.findMany({
+        where: { orderId, status: { in: ["succeeded", "reversed"] } },
+        orderBy: { createdAt: "asc" },
+        select: { id: true, method: true, amount: true, status: true, paidAt: true },
+      }),
+    ]);
+    return {
+      ...customerOrderView(order),
+      lines: lines.map((line) => ({ id: line.id, menuItemId: line.menuItemId, menuItemName: line.menuItem.name, quantity: line.quantity, unitPrice: Number(line.unitPrice), lineNote: line.lineNote, modifiers: sanitizeReceiptModifiers(line.modifiers) })),
+      payments: payments.map((payment) => ({ ...payment, amount: Number(payment.amount) })),
+    };
   }
 
   async addLine(role: string, sessionToken: string | undefined, orderId: string, idempotencyKey: string | undefined, body: RestaurantCommandBody) {
@@ -621,6 +846,7 @@ export class RestaurantCommandService {
 
   async submitOrder(role: string, sessionToken: string | undefined, orderId: string, idempotencyKey: string | undefined, body: RestaurantCommandBody) {
     assertRestaurantRole(role, [profile.roles.customer]);
+    const orderNote = assertOrderNote(body.orderNote);
     const scope = await this.commandScope(role, orderId, sessionToken);
     return this.executeCommand(scope + ":submit", idempotencyKey, body, async (tx) => {
       const order = await this.orderAtVersion(tx, orderId, body.expectedVersion);
@@ -639,9 +865,9 @@ export class RestaurantCommandService {
         await tx.inventoryLedger.create({ data: { menuItemId: line.menuItemId, orderId, delta: -line.quantity, reason: "reserve", recordedAt: new Date() } });
       }
       const nextVersion = order.orderVersion + 1;
-      const updated = await tx.order.updateMany({ where: { id: orderId, orderVersion: order.orderVersion }, data: { status: "submitted", submittedAt: new Date(), orderVersion: nextVersion } });
+      const updated = await tx.order.updateMany({ where: { id: orderId, orderVersion: order.orderVersion }, data: { status: "submitted", submittedAt: new Date(), orderNote: orderNote, orderVersion: nextVersion } });
       if (updated.count !== 1) await this.throwVersionConflict(tx, orderId);
-      const outcome = jsonOutcome({ orderId, status: "submitted", orderVersion: nextVersion });
+      const outcome = jsonOutcome({ orderId, status: "submitted", orderNote: orderNote, orderVersion: nextVersion });
       await this.recordEvidence(tx, role, orderId, nextVersion, "inventory.changed", locationId, outcome, {
         kind: "transition",
         from: order.status,
@@ -795,12 +1021,12 @@ export class RestaurantCommandService {
 }
 
 function renderMain(applicationName: string): string {
-  return String.raw`import { Body, Controller, Get, Headers, HttpException, HttpStatus, Module, Param, Patch, Post, Req } from "@nestjs/common";
+  return String.raw`import { Body, Controller, Get, Headers, HttpException, HttpStatus, Module, Param, Patch, Post, Query, Req } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { PrismaClient } from "@prisma/client";
 import { enforce } from "./policy.js";
 import { PrismaRecordStore } from "./prisma-record-store.js";
-import { RestaurantCommandService, RestaurantVersionConflict, type RestaurantCommandBody } from "./restaurant/restaurant-command.service.js";
+import { RestaurantCommandService, RestaurantVersionConflict, type RestaurantCommandBody, type RestaurantMenuQuery } from "./restaurant/restaurant-command.service.js";
 
 const prisma = new PrismaClient();
 const authoritativeStore = new PrismaRecordStore(prisma);
@@ -841,6 +1067,31 @@ class GeneratedController {
   @Post("restaurant/table-sessions/resolve")
   async resolveSession(@Headers("x-factory-idempotency-key") key: string | undefined, @Body() body: RestaurantCommandBody, @Req() request: RequestHeaders) {
     try { const role = roleFrom(request); await assertAllowed(role, "table-session", "read"); return await restaurantCommands.resolveTableSession(role, key, body); } catch (error) { throw rejected(error); }
+  }
+
+  @Get("restaurant/menu/categories")
+  async menuCategories(@Req() request: RequestHeaders) {
+    try { const role = roleFrom(request); await assertAllowed(role, "menu-category", "read"); return await restaurantCommands.listMenuCategories(role); } catch (error) { throw rejected(error); }
+  }
+
+  @Get("restaurant/menu/items")
+  async menuItems(@Query() query: RestaurantMenuQuery, @Req() request: RequestHeaders) {
+    try { const role = roleFrom(request); await assertAllowed(role, "menu-item", "read"); return await restaurantCommands.listMenuItems(role, query); } catch (error) { throw rejected(error); }
+  }
+
+  @Get("restaurant/orders/history")
+  async orderHistory(@Req() request: RequestHeaders) {
+    try { const role = roleFrom(request); await assertAllowed(role, "order", "read"); return await restaurantCommands.listSessionOrders(role, sessionTokenFrom(request)); } catch (error) { throw rejected(error); }
+  }
+
+  @Get("restaurant/orders/:id/status")
+  async orderStatus(@Param("id") id: string, @Req() request: RequestHeaders) {
+    try { const role = roleFrom(request); await assertAllowed(role, "order", "read"); return await restaurantCommands.getOrderStatus(role, sessionTokenFrom(request), id); } catch (error) { throw rejected(error); }
+  }
+
+  @Get("restaurant/orders/:id/receipt")
+  async receipt(@Param("id") id: string, @Req() request: RequestHeaders) {
+    try { const role = roleFrom(request); await assertAllowed(role, "order", "read"); return await restaurantCommands.getReceipt(role, sessionTokenFrom(request), id); } catch (error) { throw rejected(error); }
   }
 
   @Post("restaurant/orders/:id/lines")
@@ -1241,12 +1492,16 @@ type TestOrder = {
   orderVersion: number;
   submittedAt: Date | null;
   paidAt: Date | null;
+  createdAt: Date;
 };
 
 type TestState = {
   order: TestOrder | null;
+  otherOrders: TestOrder[];
   session: Record<string, unknown>;
   table: Record<string, unknown>;
+  location: Record<string, unknown>;
+  categories: Array<Record<string, unknown>>;
   menuItems: Array<Record<string, unknown>>;
   lines: Array<Record<string, unknown>>;
   commands: Array<Record<string, unknown>>;
@@ -1278,6 +1533,8 @@ function createHarness(options: {
   total?: number;
   ticketStatus?: string | null;
   withoutOrder?: boolean;
+  locationId?: string | null;
+  locationActive?: boolean;
 } = {}) {
   const token = "generated-service-test-token";
   const session = {
@@ -1295,7 +1552,13 @@ function createHarness(options: {
     number: 12,
     status: "open",
     active: true,
-    restaurantLocationId: "main-location",
+    restaurantLocationId: options.locationId === undefined ? "main-location" : options.locationId,
+  };
+  const location = {
+    id: "main-location",
+    name: "Main location",
+    currency: "USD",
+    active: options.locationActive ?? true,
   };
   const order: TestOrder = {
     id: "order-1",
@@ -1309,12 +1572,24 @@ function createHarness(options: {
     orderVersion: options.orderVersion ?? 0,
     submittedAt: null,
     paidAt: null,
+    createdAt: new Date("2026-07-30T00:00:00.000Z"),
   };
   const state: TestState = {
     order: options.withoutOrder ? null : order,
+    otherOrders: [],
     session,
     table,
-    menuItems: [{ id: "menu-1", categoryKey: "mains", name: "Meal", description: "", price: 5, available: true, stock: options.stock ?? 5, preparationMinutes: 5, imageUrl: "/meal.jpg" }],
+    location,
+    categories: [
+      { id: "mains", name: "Mains", sortOrder: 1, active: true },
+      { id: "hidden", name: "Hidden", sortOrder: 2, active: false },
+    ],
+    menuItems: [
+      { id: "menu-1", categoryKey: "mains", name: "Meal", description: "", price: 5, available: true, stock: options.stock ?? 5, preparationMinutes: 5, imageUrl: "/meal.jpg" },
+      { id: "menu-2", categoryKey: "mains", name: "Tomato Soup", description: "", price: 4, available: true, stock: 2, preparationMinutes: 4, imageUrl: "/soup.jpg" },
+      { id: "menu-3", categoryKey: "hidden", name: "Secret", description: "", price: 9, available: true, stock: 1, preparationMinutes: 9, imageUrl: "/secret.jpg" },
+      { id: "menu-4", categoryKey: "mains", name: "Unavailable", description: "", price: 3, available: false, stock: 0, preparationMinutes: 3, imageUrl: "/unavailable.jpg" },
+    ],
     lines: options.withoutOrder ? [] : [{ id: "line-1", orderId: order.id, menuItemId: "menu-1", quantity: 2, unitPrice: 5, lineNote: "", modifiers: [] }],
     commands: [],
     payments: [],
@@ -1324,7 +1599,7 @@ function createHarness(options: {
     capabilities: [],
     outbox: [],
   };
-  const controls = { forceStaleWrite: false, failCapabilityAfter: null as number | null, failOutbox: false };
+  const controls = { forceStaleWrite: false, failCapabilityAfter: null as number | null, failOutbox: false, orderLocationId: "main-location" };
   let nextId = 1;
   const id = (prefix: string) => prefix + "-" + nextId++;
   const clone = <T>(value: T): T => structuredClone(value);
@@ -1358,11 +1633,27 @@ function createHarness(options: {
     restaurantTable: {
       findUnique: async ({ where }: Record<string, any>) => where.code === state.table.code ? clone(state.table) : null,
     },
+    restaurantLocation: {
+      findUnique: async ({ where }: Record<string, any>) => where.id === state.location.id ? clone(state.location) : null,
+    },
+    menuCategory: {
+      findMany: async () => clone(state.categories.filter((category) => category.active).sort((left, right) => Number(left.sortOrder) - Number(right.sortOrder) || String(left.name).localeCompare(String(right.name))).map((category) => ({ id: category.id, name: category.name, sortOrder: category.sortOrder }))),
+    },
     order: {
-      findUnique: async ({ where }: Record<string, any>) => state.order?.id === where.id ? clone(state.order) : null,
-      findFirst: async () => state.order ? clone(state.order) : null,
+      findUnique: async ({ where }: Record<string, any>) => clone([state.order, ...state.otherOrders].find((candidate) => candidate?.id === where.id) ?? null),
+      findFirst: async ({ where }: Record<string, any>) => {
+        if (!where.id) return state.order ? clone(state.order) : null;
+        const order = [state.order, ...state.otherOrders].find((candidate) => candidate?.id === where.id);
+        const locationId = where.tableSession?.table?.restaurantLocationId;
+        return order?.tableSessionId === where.tableSessionId && controls.orderLocationId === locationId ? clone(order) : null;
+      },
+      findMany: async ({ where }: Record<string, any>) => {
+        const locationId = where.tableSession?.table?.restaurantLocationId;
+        if (locationId && controls.orderLocationId !== locationId) return [];
+        return clone([state.order, ...state.otherOrders].filter((candidate) => candidate?.tableSessionId === where.tableSessionId));
+      },
       create: async ({ data }: Record<string, any>) => {
-        state.order = { id: id("order"), submittedAt: null, paidAt: null, ...data } as TestOrder;
+        state.order = { id: id("order"), submittedAt: null, paidAt: null, createdAt: new Date("2026-07-30T00:00:00.000Z"), ...data } as TestOrder;
         return clone(state.order);
       },
       updateMany: async ({ where, data }: Record<string, any>) => {
@@ -1377,7 +1668,7 @@ function createHarness(options: {
       },
     },
     orderLine: {
-      findMany: async ({ where }: Record<string, any>) => clone(state.lines.filter((line) => line.orderId === where.orderId)),
+      findMany: async ({ where, include }: Record<string, any>) => clone(state.lines.filter((line) => line.orderId === where.orderId).map((line) => include?.menuItem ? { ...line, menuItem: { name: state.menuItems.find((item) => item.id === line.menuItemId)?.name } } : line)),
       findFirst: async ({ where }: Record<string, any>) => clone(state.lines.find((line) => line.id === where.id && line.orderId === where.orderId) ?? null),
       create: async ({ data }: Record<string, any>) => {
         const line = { id: id("line"), ...data };
@@ -1392,6 +1683,11 @@ function createHarness(options: {
     },
     menuItem: {
       findUnique: async ({ where }: Record<string, any>) => clone(state.menuItems.find((item) => item.id === where.id) ?? null),
+      findMany: async ({ where }: Record<string, any>) => clone(state.menuItems.filter((item) => {
+        const category = state.categories.find((candidate) => candidate.id === item.categoryKey);
+        const matchesQuery = !where.name?.contains || String(item.name).toLowerCase().includes(String(where.name.contains).toLowerCase());
+        return item.available === where.available && category?.active === where.category?.active && (!where.categoryKey || item.categoryKey === where.categoryKey) && matchesQuery;
+      })),
       updateMany: async ({ where, data }: Record<string, any>) => {
         const item = state.menuItems.find((candidate) => candidate.id === where.id);
         if (!item || item.available !== where.available || Number(item.stock) < Number(where.stock?.gte)) return { count: 0 };
@@ -1412,6 +1708,7 @@ function createHarness(options: {
       },
     },
     paymentAttempt: {
+      findMany: async ({ where }: Record<string, any>) => clone(state.payments.filter((payment) => payment.orderId === where.orderId && where.status.in.includes(payment.status))),
       create: async ({ data }: Record<string, any>) => {
         const payment = { id: id("payment"), ...data };
         state.payments.push(payment);
@@ -1586,7 +1883,11 @@ describe("generated Restaurant transaction service", () => {
   it("enforces actual Casbin allow and deny decisions", async () => {
     await expect(enforce("manager", "order", "cancel")).resolves.toBe(true);
     await expect(enforce("kitchen", "kitchen-ticket", "update")).resolves.toBe(true);
+    await expect(enforce("customer", "menu-category", "read")).resolves.toBe(true);
+    await expect(enforce("customer", "menu-item", "read")).resolves.toBe(true);
+    await expect(enforce("customer", "order", "read")).resolves.toBe(true);
     await expect(enforce("customer", "order", "cancel")).resolves.toBe(false);
+    await expect(enforce("anonymous", "order", "read")).resolves.toBe(false);
   });
 
   it("persists and replays non-transition command evidence exactly once", async () => {
@@ -1667,6 +1968,116 @@ describe("generated Restaurant transaction service", () => {
     expect(harness.state.outbox).toHaveLength(1);
   });
 
+  it("lists active categories and filters available menu items", async () => {
+    const harness = createHarness();
+
+    await expect(harness.service.listMenuCategories("customer")).resolves.toEqual([
+      { id: "mains", name: "Mains", sortOrder: 1 },
+    ]);
+    await expect(harness.service.listMenuItems("customer", { category: "mains", query: "soup" })).resolves.toEqual([
+      { id: "menu-2", categoryKey: "mains", name: "Tomato Soup", description: "", price: 4, available: true, stock: 2, preparationMinutes: 4, imageUrl: "/soup.jpg" },
+    ]);
+    await expect(harness.service.listMenuItems("customer", { query: "unsafe\u0000query" })).rejects.toThrow("unsupported control characters");
+  });
+
+  it("rejects invalid and expired tokens for customer reads", async () => {
+    const invalid = createHarness();
+    await expect(invalid.service.listSessionOrders("customer", "not-the-token")).rejects.toThrow("token is invalid");
+
+    const expired = createHarness();
+    expired.state.session.expiresAt = new Date("2000-01-01T00:00:00.000Z");
+    await expect(expired.service.listSessionOrders("customer", expired.token)).rejects.toThrow("expired or closed");
+  });
+
+  it("rejects a table without a Restaurant location", async () => {
+    const harness = createHarness({ locationId: null });
+
+    await expect(harness.service.listSessionOrders("customer", harness.token)).rejects.toThrow("not associated with a location");
+  });
+
+  it("rejects an inactive Restaurant location", async () => {
+    const harness = createHarness({ locationActive: false });
+
+    await expect(harness.service.listSessionOrders("customer", harness.token)).rejects.toThrow("location is not active");
+  });
+
+  it("rejects wrong-location order and session linkage", async () => {
+    const harness = createHarness({ status: "paid", paymentStatus: "paid" });
+    harness.controls.orderLocationId = "other-location";
+
+    await expect(harness.service.listSessionOrders("customer", harness.token)).resolves.toEqual([]);
+    await expect(harness.service.getOrderStatus("customer", harness.token, "order-1")).rejects.toThrow("not available for this table session");
+    await expect(harness.service.getReceipt("customer", harness.token, "order-1")).rejects.toThrow("not available for this table session");
+  });
+
+  it("returns only the token-bound session order history", async () => {
+    const harness = createHarness({ status: "paid", paymentStatus: "paid" });
+    harness.state.otherOrders.push({
+      ...structuredClone(harness.state.order!),
+      id: "other-order",
+      tableSessionId: "session-2",
+      createdAt: new Date("2026-07-30T01:00:00.000Z"),
+    });
+
+    const history = await harness.service.listSessionOrders("customer", harness.token);
+
+    expect(history.map((order) => order.id)).toEqual(["order-1"]);
+    expect(history[0]).not.toHaveProperty("tableSessionId");
+  });
+
+  it("denies cross-session order status and receipt reads", async () => {
+    const harness = createHarness({ status: "paid", paymentStatus: "paid" });
+    harness.state.payments.push({ id: "payment-1", orderId: "order-1", method: "cash", amount: 10, status: "succeeded", paidAt: new Date("2026-07-30T00:05:00.000Z") });
+    harness.state.otherOrders.push({
+      ...structuredClone(harness.state.order!),
+      id: "other-order",
+      tableSessionId: "session-2",
+    });
+
+    await expect(harness.service.getOrderStatus("customer", harness.token, "order-1")).resolves.toMatchObject({ id: "order-1", status: "paid", paymentStatus: "paid", total: 10 });
+    await expect(harness.service.getReceipt("customer", harness.token, "order-1")).resolves.toMatchObject({
+      id: "order-1",
+      lines: [{ menuItemId: "menu-1", menuItemName: "Meal", quantity: 2 }],
+      payments: [{ id: "payment-1", method: "cash", amount: 10, status: "succeeded" }],
+    });
+    await expect(harness.service.getOrderStatus("customer", harness.token, "other-order")).rejects.toThrow("not available for this table session");
+    await expect(harness.service.getReceipt("customer", harness.token, "other-order")).rejects.toThrow("not available for this table session");
+  });
+
+  it("strips malformed and undeclared receipt modifier data", async () => {
+    const harness = createHarness({ status: "paid", paymentStatus: "paid" });
+    harness.state.lines[0]!.modifiers = [
+      { key: "size", label: "Size", value: "Large", executable: "alert(1)" },
+      { key: "", label: "Missing key", value: "bad" },
+      { key: "heat", label: "Heat", value: { arbitrary: true } },
+      "raw-json",
+    ];
+    harness.state.payments.push({ id: "payment-1", orderId: "order-1", method: "cash", amount: 10, status: "succeeded", paidAt: new Date("2026-07-30T00:05:00.000Z") });
+
+    const receipt = await harness.service.getReceipt("customer", harness.token, "order-1");
+
+    expect(receipt.lines[0]!.modifiers).toEqual([{ key: "size", label: "Size", value: "Large" }]);
+    expect(JSON.stringify(receipt)).not.toContain("executable");
+    expect(JSON.stringify(receipt)).not.toContain("arbitrary");
+    expect(JSON.stringify(receipt)).not.toContain("raw-json");
+  });
+
+  it("persists a validated whole-order note on submit", async () => {
+    const harness = createHarness();
+    const outcome = await harness.service.submitOrder("customer", harness.token, "order-1", "submit-with-note", {
+      expectedVersion: 0,
+      orderNote: "  Please serve together  ",
+    });
+
+    expect(harness.state.order).toMatchObject({ orderNote: "Please serve together", status: "submitted", orderVersion: 1 });
+    expect(outcome).toMatchObject({ orderNote: "Please serve together", status: "submitted", orderVersion: 1 });
+
+    const invalid = createHarness();
+    await expect(invalid.service.submitOrder("customer", invalid.token, "order-1", "invalid-note", { expectedVersion: 0, orderNote: "x".repeat(501) })).rejects.toThrow("at most 500 characters");
+    expect(invalid.state.order).toMatchObject({ orderNote: "", status: "cart", orderVersion: 0 });
+    expect(invalid.state.menuItems[0]!.stock).toBe(5);
+  });
+
   it("keeps pure input guards deterministic", () => {
     expect(() => assertSufficientStock(1, 2)).toThrow("Insufficient stock");
     expect(() => assertCancellationReason(" ")).toThrow("Cancellation reason");
@@ -1679,10 +2090,25 @@ describe("generated Restaurant transaction service", () => {
 
 function renderApiReference(applicationName: string): string {
   const rows = restaurantRuntimeEndpoints
-    .map(
-      ([method, path]) =>
-        `| ${method} | \`${path}\` | ${method === "GET" ? "Server-authoritative read model." : "Requires \`x-factory-idempotency-key\` and \`body.expectedVersion\`."} |`,
-    )
+    .map(([method, path]) => {
+      const contract =
+        path === "/api/restaurant/menu/categories"
+          ? "Returns active categories only."
+          : path === "/api/restaurant/menu/items"
+            ? "Returns available items in active categories; optional `category` and `query` values are trimmed, reject control characters, and are limited to 100 characters."
+            : path === "/api/restaurant/orders/history"
+              ? "Requires `x-factory-table-session-token`; returns orders for the validated active token session only."
+              : path.endsWith("/status")
+                ? "Requires `x-factory-table-session-token`; returns safe server state only when the order belongs to the validated active token session."
+                : path.endsWith("/receipt")
+                  ? "Requires `x-factory-table-session-token`; returns paid receipt data only when the order belongs to the validated active token session."
+                  : method === "GET"
+                    ? "Server-authoritative read model."
+                    : path.endsWith("/submit")
+                      ? "Requires `x-factory-idempotency-key`, `body.expectedVersion`, and an optional validated `body.orderNote` of at most 500 characters."
+                      : "Requires `x-factory-idempotency-key` and `body.expectedVersion`.";
+      return `| ${method} | \`${path}\` | ${contract} |`;
+    })
     .join("\n");
   return `# API reference\n\nThis Restaurant API is compiled from the immutable Published Graph for **${applicationName}**. Mutations execute through one Prisma transaction and emit audit, capability, and outbox evidence.\n\n## Local demo bootstrap\n\nThe database seed requires a local \`RESTAURANT_DEMO_TABLE_TOKEN\` input of at least 16 characters. The input is never logged or persisted; only its SHA-256 digest is stored in a 24-hour active session for the seeded table. There is no predictable default.\n\n| Method | Path | Contract |\n| --- | --- | --- |\n${rows}\n`;
 }

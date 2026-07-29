@@ -82,6 +82,87 @@ describe("Restaurant transaction runtime compilation", () => {
     );
   });
 
+  it("emits the complete typed Customer read API without raw table identifiers", () => {
+    const files = restaurantFiles();
+    const main = files["api/src/main.ts"]!;
+    const service = files["api/src/restaurant/restaurant-command.service.ts"]!;
+    const apiReference = files["docs/api-reference.md"]!;
+
+    for (const endpoint of [
+      "restaurant/menu/categories",
+      "restaurant/menu/items",
+      "restaurant/orders/history",
+      "restaurant/orders/:id/status",
+      "restaurant/orders/:id/receipt",
+    ]) {
+      expect(main).toContain(endpoint);
+      expect(apiReference).toContain(`/api/${endpoint}`);
+    }
+    expect(main).toContain("RestaurantMenuQuery");
+    expect(main).toContain("sessionTokenFrom(request)");
+    expect(service).toContain("listMenuCategories");
+    expect(service).toContain("listMenuItems");
+    expect(service).toContain("listSessionOrders");
+    expect(service).toContain("getOrderStatus");
+    expect(service).toContain("getReceipt");
+    expect(service).not.toContain("rawTableId");
+  });
+
+  it("emits executable Customer read and whole-order-note regression coverage", () => {
+    const files = restaurantFiles();
+    const service = files["api/src/restaurant/restaurant-command.service.ts"]!;
+    const generatedTests =
+      files["api/test/restaurant-runtime.generated.test.ts"]!;
+
+    for (const behavior of [
+      "lists active categories and filters available menu items",
+      "rejects invalid and expired tokens for customer reads",
+      "returns only the token-bound session order history",
+      "denies cross-session order status and receipt reads",
+      "persists a validated whole-order note on submit",
+    ]) {
+      expect(generatedTests).toContain(behavior);
+    }
+    expect(service).toContain("assertOrderNote");
+    expect(service).toContain("orderNote: orderNote");
+  });
+
+  it("requires the complete active location chain for token-bound Customer reads", () => {
+    const files = restaurantFiles();
+    const service = files["api/src/restaurant/restaurant-command.service.ts"]!;
+    const generatedTests =
+      files["api/test/restaurant-runtime.generated.test.ts"]!;
+
+    expect(service).toContain("restaurantLocation.findUnique");
+    expect(service).toContain("Restaurant location is not active.");
+    expect(service).toContain(
+      "tableSession: { id: session.id, tableCode: table.code, table: { restaurantLocationId: location.id } }",
+    );
+    expect(service).not.toContain('?? "main-location"');
+    for (const behavior of [
+      "rejects a table without a Restaurant location",
+      "rejects an inactive Restaurant location",
+      "rejects wrong-location order and session linkage",
+    ]) {
+      expect(generatedTests).toContain(behavior);
+    }
+  });
+
+  it("projects receipt modifiers through a bounded allowlisted DTO", () => {
+    const files = restaurantFiles();
+    const service = files["api/src/restaurant/restaurant-command.service.ts"]!;
+    const generatedTests =
+      files["api/test/restaurant-runtime.generated.test.ts"]!;
+
+    expect(service).toContain("RestaurantReceiptModifierView");
+    expect(service).toContain("sanitizeReceiptModifiers");
+    expect(service).not.toContain("readonly modifiers: unknown");
+    expect(service).not.toContain("modifiers: line.modifiers");
+    expect(generatedTests).toContain(
+      "strips malformed and undeclared receipt modifier data",
+    );
+  });
+
   it("creates the authoritative cart when a table session resolves", () => {
     const files = restaurantFiles();
     const service = files["api/src/restaurant/restaurant-command.service.ts"]!;
