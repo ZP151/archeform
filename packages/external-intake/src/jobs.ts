@@ -9,6 +9,7 @@ import {
 import {
   PINNED_MODULE_INVENTORY_IDENTITY,
   runModuleInventory,
+  validateStoredModuleInventory,
   type ModuleInventoryAdapterV1,
   type StoredModuleInventoryV1,
 } from "./module-inventory.js";
@@ -17,10 +18,12 @@ import {
   PINNED_SCANNER_IDENTITIES,
   SCAN_KIND_ORDER,
   runPinnedLocalScans,
+  validateScanCheckpoint,
   validateReadonlySnapshotView,
   type CompletedScanBundleV1,
   type LocalScannerV1,
   type ReadonlySnapshotView,
+  type ScanCheckpointV1,
 } from "./scans.js";
 import { compareCanonicalPaths } from "./snapshot.js";
 import { ExternalIntakeStore, type StoredRecordRef } from "./store.js";
@@ -39,6 +42,8 @@ export interface IntakeJobV1 {
 export interface EvidenceResumeV1 {
   readonly executionId: string;
   readonly receipts: readonly StoredRecordRef[];
+  readonly scanCheckpoint?: ScanCheckpointV1;
+  readonly inventory?: StoredModuleInventoryV1;
 }
 
 export interface CompletedEvidenceRefV1 {
@@ -48,14 +53,30 @@ export interface CompletedEvidenceRefV1 {
   readonly scans: CompletedScanBundleV1;
   readonly inventory: StoredModuleInventoryV1;
   readonly receipts: readonly StoredRecordRef[];
+  readonly resume: EvidenceResumeV1;
 }
 
 export type EvidenceBatchItemV1 =
   | CompletedEvidenceRefV1
-  | { readonly status: "blocked"; readonly failureCode: string };
+  | {
+      readonly status: "blocked";
+      readonly failureCode: string;
+      readonly resume?: EvidenceResumeV1;
+    };
 
 export interface EvidenceBatchResultV1 {
   readonly byId: Readonly<Record<string, EvidenceBatchItemV1>>;
+}
+
+export class EvidenceJobFailure extends EvidencePipelineFailure {
+  constructor(
+    code: string,
+    message: string,
+    recordDigests: readonly Sha256Digest[],
+    readonly resume: EvidenceResumeV1,
+  ) {
+    super(code, message, recordDigests);
+  }
 }
 
 type ReceiptStatus = IntakeReceiptV1["status"];
@@ -164,7 +185,11 @@ function validateJob(input: IntakeJobV1): IntakeJobV1 {
 function validateResumeShape(input: EvidenceResumeV1): void {
   if (
     !isPlainObject(input) ||
-    !hasExactKeys(input, ["executionId", "receipts"]) ||
+    !hasRequiredAndOptionalKeys(
+      input,
+      ["executionId", "receipts"],
+      ["scanCheckpoint", "inventory"],
+    ) ||
     typeof input.executionId !== "string" ||
     !/^evidence-[a-f0-9]{24}$/u.test(input.executionId) ||
     !Array.isArray(input.receipts) ||
@@ -174,6 +199,16 @@ function validateResumeShape(input: EvidenceResumeV1): void {
     throw new EvidencePipelineFailure(
       "receipt-chain-invalid",
       "Evidence resume receipt chain is malformed.",
+    );
+  }
+  if (
+    (input.scanCheckpoint !== undefined &&
+      !isPlainObject(input.scanCheckpoint)) ||
+    (input.inventory !== undefined && !isPlainObject(input.inventory))
+  ) {
+    throw new EvidencePipelineFailure(
+      "receipt-chain-invalid",
+      "Evidence resume checkpoints are malformed.",
     );
   }
   const digests = new Set<string>();
@@ -195,12 +230,19 @@ function validateResumeShape(input: EvidenceResumeV1): void {
   }
 }
 
+interface ValidatedResumeV1 {
+  readonly scanCheckpoint: ScanCheckpointV1;
+  readonly inventory?: StoredModuleInventoryV1;
+  readonly complete: boolean;
+}
+
 function validateResumePrefix(
   job: IntakeJobV1,
   resume: EvidenceResumeV1,
   store: ExternalIntakeStore,
-): void {
+): ValidatedResumeV1 {
   let previous: StoredRecordRef | undefined;
+  const loaded: IntakeReceiptV1[] = [];
   for (const [index, ref] of resume.receipts.entries()) {
     let unknownReceipt: ReturnType<ExternalIntakeStore["getRecord"]>;
     try {
@@ -253,7 +295,88 @@ function validateResumePrefix(
       );
     }
     previous = ref;
+    loaded.push(unknownReceipt as IntakeReceiptV1);
   }
+  const scanCheckpoint = validateScanCheckpoint(
+    job.snapshotView,
+    resume.scanCheckpoint ?? { scans: [] },
+  );
+  const scanDigests = [
+    ...scanCheckpoint.scans.map(({ resultDigest }) => resultDigest),
+    ...(scanCheckpoint.sbom === undefined ? [] : [scanCheckpoint.sbom.digest]),
+  ];
+  const scannedReceipt = loaded.find(
+    ({ status, code }) =>
+      status === "scanned" && code === "pinned-scans-complete",
+  );
+  const terminal = loaded.at(-1)!;
+  if (scanCheckpoint.scans.length === SCAN_KIND_ORDER.length) {
+    if (
+      scannedReceipt === undefined ||
+      scanDigests.some(
+        (digest) => !scannedReceipt.recordDigests.includes(digest),
+      )
+    ) {
+      throw new EvidencePipelineFailure(
+        "receipt-chain-invalid",
+        "Completed scan checkpoint is not bound to the receipt prefix.",
+      );
+    }
+  } else if (
+    scannedReceipt !== undefined ||
+    scanDigests.some((digest) => !terminal.recordDigests.includes(digest))
+  ) {
+    throw new EvidencePipelineFailure(
+      "receipt-chain-invalid",
+      "Partial scan checkpoint is not bound to the blocked receipt.",
+    );
+  }
+
+  const inventoriedReceipt = loaded.find(
+    ({ status, code }) =>
+      status === "inventoried" && code === "module-inventory-complete",
+  );
+  let inventory: StoredModuleInventoryV1 | undefined;
+  if (resume.inventory !== undefined) {
+    inventory = validateStoredModuleInventory(
+      job.snapshotView,
+      resume.inventory,
+    );
+    if (
+      inventoriedReceipt === undefined ||
+      !inventoriedReceipt.recordDigests.includes(inventory.inventoryDigest)
+    ) {
+      throw new EvidencePipelineFailure(
+        "receipt-chain-invalid",
+        "Module inventory checkpoint is not bound to the receipt prefix.",
+      );
+    }
+  } else if (inventoriedReceipt !== undefined) {
+    throw new EvidencePipelineFailure(
+      "receipt-chain-invalid",
+      "Receipt prefix is missing its module inventory checkpoint.",
+    );
+  }
+
+  const complete =
+    terminal.status === "evidenced" &&
+    terminal.code === "evidence-bundle-stored";
+  if (
+    complete &&
+    (scanCheckpoint.scans.length !== SCAN_KIND_ORDER.length ||
+      scanCheckpoint.sbom === undefined ||
+      inventory === undefined)
+  ) {
+    throw new EvidencePipelineFailure(
+      "receipt-chain-invalid",
+      "Completed receipt prefix is missing durable phase checkpoints.",
+    );
+  }
+  return {
+    scanCheckpoint,
+    ...(inventory === undefined ? {} : { inventory }),
+    complete,
+  };
 }
 
 function executionId(job: IntakeJobV1, outcome: unknown): string {
@@ -321,6 +444,7 @@ class ReceiptChain {
     private readonly job: IntakeJobV1,
     private readonly id: string,
     private readonly store: ExternalIntakeStore,
+    private readonly resumedFrom?: StoredRecordRef,
   ) {}
 
   append(
@@ -331,6 +455,9 @@ class ReceiptChain {
     this.#sequence += 1;
     const parents = uniqueDigests([
       ...(this.#previous === undefined ? [] : [recordDigest(this.#previous)]),
+      ...(this.#previous === undefined && this.resumedFrom !== undefined
+        ? [recordDigest(this.resumedFrom)]
+        : []),
       recordDigest(this.job.snapshot),
       recordDigest(this.job.acquisition),
     ]);
@@ -419,12 +546,18 @@ function persistReceiptOutcome(input: {
   readonly scans?: CompletedScanBundleV1;
   readonly inventory?: StoredModuleInventoryV1;
   readonly evidence?: StoredRecordRef;
+  readonly resumedFrom?: StoredRecordRef;
   readonly failure?: {
     readonly code: string;
     readonly recordDigests: readonly Sha256Digest[];
   };
 }): readonly StoredRecordRef[] {
-  const receipts = new ReceiptChain(input.job, input.id, input.store);
+  const receipts = new ReceiptChain(
+    input.job,
+    input.id,
+    input.store,
+    input.resumedFrom,
+  );
   const refs: StoredRecordRef[] = [];
   refs.push(receipts.append("requested", "evidence-request-accepted", []));
   if (input.parentsLoaded) {
@@ -595,9 +728,10 @@ export async function runEvidencePipeline(
   store: ExternalIntakeStore,
 ): Promise<CompletedEvidenceRefV1> {
   const job = validateJob(input);
-  if (job.resume !== undefined) {
-    validateResumePrefix(job, job.resume, store);
-  }
+  const resumed =
+    job.resume === undefined
+      ? undefined
+      : validateResumePrefix(job, job.resume, store);
   let parentsLoaded = false;
   let scanBundle: CompletedScanBundleV1 | undefined;
   let inventory: StoredModuleInventoryV1 | undefined;
@@ -607,13 +741,16 @@ export async function runEvidencePipeline(
     const parents = loadParents(job, store);
     parentsLoaded = true;
 
-    scanBundle = await runPinnedLocalScans(job.snapshotView, scanners, store);
-
-    inventory = await runModuleInventory(
+    scanBundle = await runPinnedLocalScans(
       job.snapshotView,
-      inventoryAdapter,
+      scanners,
       store,
+      resumed?.scanCheckpoint,
     );
+
+    inventory =
+      resumed?.inventory ??
+      (await runModuleInventory(job.snapshotView, inventoryAdapter, store));
 
     const evidence = store.putRecord(
       "evidence",
@@ -631,15 +768,27 @@ export async function runEvidencePipeline(
       scan: scanFingerprint(scanBundle),
       inventory: inventoryFingerprint(inventory),
     });
-    const receipts = persistReceiptOutcome({
-      job,
-      id,
-      store,
-      parentsLoaded,
-      scans: scanBundle,
+    const receipts =
+      resumed?.complete === true && job.resume?.executionId === id
+        ? job.resume.receipts
+        : persistReceiptOutcome({
+            job,
+            id,
+            store,
+            parentsLoaded,
+            scans: scanBundle,
+            inventory,
+            evidence,
+            ...(job.resume === undefined
+              ? {}
+              : { resumedFrom: job.resume.receipts.at(-1)! }),
+          });
+    const resume: EvidenceResumeV1 = {
+      executionId: id,
+      receipts,
+      scanCheckpoint: { scans: scanBundle.scans, sbom: scanBundle.sbom },
       inventory,
-      evidence,
-    });
+    };
     return {
       executionId: id,
       status: "evidenced",
@@ -647,6 +796,7 @@ export async function runEvidencePipeline(
       scans: scanBundle,
       inventory,
       receipts,
+      resume,
     };
   } catch (error) {
     const code = failureCode(error);
@@ -662,19 +812,38 @@ export async function runEvidencePipeline(
         ? {}
         : { inventory: inventoryFingerprint(inventory) }),
     });
-    persistReceiptOutcome({
+    const scanCheckpoint =
+      scanBundle === undefined
+        ? error instanceof EvidencePipelineFailure
+          ? error.scanCheckpoint
+          : undefined
+        : { scans: scanBundle.scans, sbom: scanBundle.sbom };
+    const receipts = persistReceiptOutcome({
       job,
       id,
       store,
       parentsLoaded,
       ...(scanBundle === undefined ? {} : { scans: scanBundle }),
       ...(inventory === undefined ? {} : { inventory }),
+      ...(job.resume === undefined
+        ? {}
+        : { resumedFrom: job.resume.receipts.at(-1)! }),
       failure: { code, recordDigests },
     });
-    if (error instanceof EvidencePipelineFailure) {
-      throw error;
-    }
-    throw new EvidencePipelineFailure(code, "Evidence pipeline failed closed.");
+    const resume: EvidenceResumeV1 = {
+      executionId: id,
+      receipts,
+      ...(scanCheckpoint === undefined ? {} : { scanCheckpoint }),
+      ...(inventory === undefined ? {} : { inventory }),
+    };
+    throw new EvidenceJobFailure(
+      code,
+      error instanceof EvidencePipelineFailure
+        ? error.message
+        : "Evidence pipeline failed closed.",
+      recordDigests,
+      resume,
+    );
   }
 }
 
@@ -704,7 +873,13 @@ export async function runEvidenceBatch(
         store,
       );
     } catch (error) {
-      byId[job.id] = { status: "blocked", failureCode: failureCode(error) };
+      byId[job.id] = {
+        status: "blocked",
+        failureCode: failureCode(error),
+        ...(error instanceof EvidenceJobFailure
+          ? { resume: error.resume }
+          : {}),
+      };
     }
   }
   return { byId };

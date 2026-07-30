@@ -242,6 +242,41 @@ describe("pinned module inventory", () => {
     expect(result).not.toHaveProperty("transformedSource");
   });
 
+  it("attests the fully normalized inventory when opaque report bytes are identical", async () => {
+    const root = mkdtempSync(join(tmpdir(), "factory-inventory-attestation-"));
+    roots.push(root);
+    const store = new ExternalIntakeStore(root);
+    const base = inventoryResult().modules[0]!;
+
+    const first = await runModuleInventory(view(), adapter(), store);
+    const changed = await runModuleInventory(
+      view(),
+      adapter({ modules: [{ ...base, symbols: ["changedSymbol"] }] }),
+      store,
+    );
+
+    expect(changed.rawReport).toEqual(first.rawReport);
+    expect(changed.inventoryDigest).not.toBe(first.inventoryDigest);
+    expect(
+      JSON.parse(
+        readFileSync(
+          join(
+            root,
+            "blobs",
+            "evidence",
+            `${changed.inventoryDigest.slice(7)}.bin`,
+          ),
+          "utf8",
+        ),
+      ),
+    ).toMatchObject({
+      apiVersion: "factory.external-module-inventory/v1",
+      parser: PINNED_MODULE_INVENTORY_IDENTITY.parser,
+      parserVersion: PINNED_MODULE_INVENTORY_IDENTITY.parserVersion,
+      modules: [{ path: "src/safe.ts", symbols: ["changedSymbol"] }],
+    });
+  });
+
   it.each([
     ["parser failure", { parseStatus: "failed" }, "parser-failure"],
     ["dynamic evaluation", { dynamicEvaluation: true }, "dynamic-evaluation"],

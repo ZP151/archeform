@@ -1,4 +1,4 @@
-import { digestBytes, type Sha256Digest } from "./canonical.js";
+import { canonicalJson, digestBytes, type Sha256Digest } from "./canonical.js";
 import {
   assertSafeSourcePath,
   canonicalTreeDigest,
@@ -107,7 +107,7 @@ export interface StoredNormalizedScanV1 {
   readonly resultDigest: Sha256Digest;
   readonly status: "pass" | "fail" | "unavailable";
   readonly findings: readonly NormalizedFindingV1[];
-  readonly rawReport: StoredBlobRef;
+  readonly summary: StoredBlobRef;
   readonly scannerExpression?: string;
 }
 
@@ -115,7 +115,22 @@ export interface StoredCycloneDxSbomV1 {
   readonly format: "CycloneDX";
   readonly digest: Sha256Digest;
   readonly components: number;
+  readonly schema: typeof CYCLONEDX_SCHEMA;
+  readonly specVersion: "1.6";
+  readonly version: number;
+  readonly componentIdentities: readonly CycloneDxComponentIdentityV1[];
   readonly rawReport: StoredBlobRef;
+}
+
+export interface CycloneDxComponentIdentityV1 {
+  readonly type: string;
+  readonly name: string;
+  readonly version: string;
+}
+
+export interface ScanCheckpointV1 {
+  readonly scans: readonly StoredNormalizedScanV1[];
+  readonly sbom?: StoredCycloneDxSbomV1;
 }
 
 export interface CompletedScanBundleV1 {
@@ -128,6 +143,7 @@ export class EvidencePipelineFailure extends Error {
     readonly code: string,
     message: string,
     readonly recordDigests: readonly Sha256Digest[] = [],
+    readonly scanCheckpoint?: ScanCheckpointV1,
   ) {
     super(message);
   }
@@ -136,6 +152,10 @@ export class EvidencePipelineFailure extends Error {
 const SHA256 = /^sha256:[a-f0-9]{64}$/u;
 const STABLE_CODE = /^[a-z][a-z0-9-]{0,127}$/u;
 const TOOL_VERSION = /^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?$/u;
+const MAX_REDACTED_REPORT_BYTES = 256 * 1024;
+const MAX_SBOM_BYTES = 1024 * 1024;
+const MAX_SBOM_COMPONENTS = 10_000;
+const CYCLONEDX_SCHEMA = "http://cyclonedx.org/schema/bom-1.6.schema.json";
 const SEVERITIES = new Set<FindingSeverityV1>([
   "info",
   "low",
@@ -402,12 +422,131 @@ function validateSbom(input: unknown): CycloneDxScanResultV1 {
       "Dependency SBOM output is malformed.",
     );
   }
+  if (digestBytes(input.report) !== input.reportDigest) {
+    throw new EvidencePipelineFailure(
+      "sbom-report-drift",
+      "Dependency SBOM bytes differ from their declared digest.",
+    );
+  }
+  const document = parseJsonBytes(
+    input.report,
+    "sbom-output-malformed",
+    MAX_SBOM_BYTES,
+  );
+  if (
+    !isPlainObject(document) ||
+    !hasOnlyKeys(document, [
+      "$schema",
+      "bomFormat",
+      "specVersion",
+      "version",
+      "components",
+    ]) ||
+    Object.keys(document).length !== 5 ||
+    document.$schema !== CYCLONEDX_SCHEMA ||
+    document.bomFormat !== "CycloneDX" ||
+    document.specVersion !== "1.6" ||
+    !Number.isSafeInteger(document.version) ||
+    (document.version as number) <= 0 ||
+    !Array.isArray(document.components) ||
+    document.components.length > MAX_SBOM_COMPONENTS ||
+    document.components.some(
+      (component) =>
+        !isPlainObject(component) ||
+        !hasOnlyKeys(component, ["type", "name", "version"]) ||
+        Object.keys(component).length !== 3 ||
+        typeof component.type !== "string" ||
+        component.type.length === 0 ||
+        component.type.length > 64 ||
+        typeof component.name !== "string" ||
+        component.name.length === 0 ||
+        component.name.length > 256 ||
+        typeof component.version !== "string" ||
+        component.version.length === 0 ||
+        component.version.length > 128,
+    )
+  ) {
+    throw new EvidencePipelineFailure(
+      "sbom-output-malformed",
+      "Dependency SBOM does not match the bounded CycloneDX contract.",
+    );
+  }
+  if (document.components.length !== input.components) {
+    throw new EvidencePipelineFailure(
+      "sbom-component-count-drift",
+      "Declared SBOM component count differs from the validated document.",
+    );
+  }
+  const normalizedReport = new TextEncoder().encode(canonicalJson(document));
   return {
     format: "CycloneDX",
-    components: input.components as number,
-    report: input.report,
-    reportDigest: input.reportDigest,
+    components: document.components.length,
+    report: normalizedReport,
+    reportDigest: digestBytes(normalizedReport),
   };
+}
+
+function parseJsonBytes(
+  input: Uint8Array,
+  code: string,
+  maximumBytes = MAX_REDACTED_REPORT_BYTES,
+): unknown {
+  if (input.byteLength === 0 || input.byteLength > maximumBytes) {
+    throw new EvidencePipelineFailure(code, "Report JSON is not bounded.");
+  }
+  try {
+    return JSON.parse(
+      new TextDecoder("utf-8", { fatal: true }).decode(input),
+    ) as unknown;
+  } catch {
+    throw new EvidencePipelineFailure(code, "Report JSON is malformed.");
+  }
+}
+
+function validateRedactedReport(result: NormalizedScanResultV1): void {
+  if (digestBytes(result.report) !== result.reportDigest) {
+    throw new EvidencePipelineFailure(
+      "scan-report-drift",
+      "Report bytes differ from their declared digest.",
+    );
+  }
+  const report = parseJsonBytes(result.report, "scan-report-malformed");
+  const expectedKeys =
+    result.kind === "licence" && result.scannerExpression !== undefined
+      ? ["status", "findings", "expression"]
+      : ["status", "findings"];
+  if (!isPlainObject(report) || !hasOnlyKeys(report, expectedKeys)) {
+    throw new EvidencePipelineFailure(
+      "scan-report-unsafe",
+      "Scanner report contains fields outside the redacted contract.",
+    );
+  }
+  if (
+    Object.keys(report).length !== expectedKeys.length ||
+    report.status !== result.status ||
+    (result.kind === "licence" &&
+      report.expression !== result.scannerExpression)
+  ) {
+    throw new EvidencePipelineFailure(
+      "scan-report-drift",
+      "Scanner report differs from normalized scanner output.",
+    );
+  }
+  let reportFindings: readonly NormalizedFindingV1[];
+  try {
+    reportFindings = normalizeFindings(report.findings);
+  } catch {
+    throw new EvidencePipelineFailure(
+      "scan-report-unsafe",
+      "Scanner report findings are outside the redacted contract.",
+    );
+  }
+  if (canonicalJson(reportFindings) !== canonicalJson(result.findings)) {
+    throw new EvidencePipelineFailure(
+      "scan-report-drift",
+      "Scanner report findings differ from normalized scanner output.",
+    );
+  }
 }
 
 function storeVerifiedReport(
@@ -427,6 +566,53 @@ function storeVerifiedReport(
     throw new EvidencePipelineFailure(
       driftCode,
       "Stored report differs from its declared digest.",
+    );
+  }
+  return ref;
+}
+
+function safeScanSummary(
+  snapshot: ReadonlySnapshotView,
+  result: Pick<
+    StoredNormalizedScanV1,
+    | "kind"
+    | "tool"
+    | "toolVersion"
+    | "rulesetDigest"
+    | "status"
+    | "findings"
+    | "scannerExpression"
+  >,
+): unknown {
+  return {
+    apiVersion: "factory.external-scan-summary/v1",
+    snapshotDigest: snapshot.snapshotDigest,
+    treeDigest: snapshot.treeDigest,
+    kind: result.kind,
+    tool: result.tool,
+    toolVersion: result.toolVersion,
+    rulesetDigest: result.rulesetDigest,
+    status: result.status,
+    findings: result.findings,
+    ...(result.scannerExpression === undefined
+      ? {}
+      : { scannerExpression: result.scannerExpression }),
+  };
+}
+
+function storeSafeScanSummary(
+  store: ExternalIntakeStore,
+  snapshot: ReadonlySnapshotView,
+  result: NormalizedScanResultV1,
+): StoredBlobRef {
+  validateRedactedReport(result);
+  const summary = safeScanSummary(snapshot, result);
+  const bytes = new TextEncoder().encode(canonicalJson(summary));
+  const ref = store.putBytes("evidence", bytes);
+  if (ref.digest !== digestBytes(bytes)) {
+    throw new EvidencePipelineFailure(
+      "scan-summary-drift",
+      "Stored scanner summary differs from its canonical digest.",
     );
   }
   return ref;
@@ -471,10 +657,176 @@ function assertScanPasses(
   }
 }
 
+function isEvidenceBlobRef(input: unknown): input is StoredBlobRef {
+  return (
+    isPlainObject(input) &&
+    Object.keys(input).length === 2 &&
+    input.kind === "evidence" &&
+    isDigest(input.digest)
+  );
+}
+
+function isCycloneDxComponent(
+  input: unknown,
+): input is CycloneDxComponentIdentityV1 {
+  return (
+    isPlainObject(input) &&
+    Object.keys(input).length === 3 &&
+    hasOnlyKeys(input, ["type", "name", "version"]) &&
+    typeof input.type === "string" &&
+    input.type.length > 0 &&
+    input.type.length <= 64 &&
+    typeof input.name === "string" &&
+    input.name.length > 0 &&
+    input.name.length <= 256 &&
+    typeof input.version === "string" &&
+    input.version.length > 0 &&
+    input.version.length <= 128
+  );
+}
+
+export function validateScanCheckpoint(
+  snapshot: ReadonlySnapshotView,
+  input: ScanCheckpointV1,
+): ScanCheckpointV1 {
+  validateReadonlySnapshotView(snapshot);
+  if (
+    !isPlainObject(input) ||
+    !hasOnlyKeys(input, ["scans", "sbom"]) ||
+    !Array.isArray(input.scans) ||
+    input.scans.length > SCAN_KIND_ORDER.length
+  ) {
+    throw new EvidencePipelineFailure(
+      "receipt-chain-invalid",
+      "Scan resume checkpoint is malformed.",
+    );
+  }
+  const scans: StoredNormalizedScanV1[] = [];
+  for (const [index, unknownScan] of input.scans.entries()) {
+    const expectedKind = SCAN_KIND_ORDER[index];
+    if (
+      expectedKind === undefined ||
+      !isPlainObject(unknownScan) ||
+      !hasOnlyKeys(unknownScan, [
+        "kind",
+        "tool",
+        "toolVersion",
+        "rulesetDigest",
+        "resultDigest",
+        "status",
+        "findings",
+        "summary",
+        "scannerExpression",
+      ]) ||
+      unknownScan.kind !== expectedKind ||
+      unknownScan.status !== "pass" ||
+      !isDigest(unknownScan.resultDigest) ||
+      !isEvidenceBlobRef(unknownScan.summary) ||
+      unknownScan.summary.digest !== unknownScan.resultDigest
+    ) {
+      throw new EvidencePipelineFailure(
+        "receipt-chain-invalid",
+        "Scan resume checkpoint is malformed.",
+      );
+    }
+    try {
+      assertIdentity(expectedKind, unknownScan as unknown as LocalScannerV1);
+    } catch {
+      throw new EvidencePipelineFailure(
+        "receipt-chain-invalid",
+        "Scan resume identity differs from the code-owned pin.",
+      );
+    }
+    const findings = normalizeFindings(unknownScan.findings);
+    if (canonicalJson(findings) !== canonicalJson(unknownScan.findings)) {
+      throw new EvidencePipelineFailure(
+        "receipt-chain-invalid",
+        "Scan resume findings are not normalized.",
+      );
+    }
+    const scan = unknownScan as unknown as StoredNormalizedScanV1;
+    const expectedDigest = digestBytes(
+      new TextEncoder().encode(canonicalJson(safeScanSummary(snapshot, scan))),
+    );
+    if (expectedDigest !== scan.resultDigest) {
+      throw new EvidencePipelineFailure(
+        "receipt-chain-invalid",
+        "Scan resume checkpoint differs from its bound summary.",
+      );
+    }
+    scans.push(scan);
+  }
+
+  let sbom: StoredCycloneDxSbomV1 | undefined;
+  if (input.sbom !== undefined) {
+    const unknownSbom = input.sbom as unknown;
+    if (
+      scans.length !== SCAN_KIND_ORDER.length ||
+      !isPlainObject(unknownSbom) ||
+      !hasOnlyKeys(unknownSbom, [
+        "format",
+        "digest",
+        "components",
+        "schema",
+        "specVersion",
+        "version",
+        "componentIdentities",
+        "rawReport",
+      ]) ||
+      Object.keys(unknownSbom).length !== 8 ||
+      unknownSbom.format !== "CycloneDX" ||
+      !isDigest(unknownSbom.digest) ||
+      unknownSbom.schema !== CYCLONEDX_SCHEMA ||
+      unknownSbom.specVersion !== "1.6" ||
+      !Number.isSafeInteger(unknownSbom.version) ||
+      (unknownSbom.version as number) <= 0 ||
+      !Number.isSafeInteger(unknownSbom.components) ||
+      (unknownSbom.components as number) < 0 ||
+      !Array.isArray(unknownSbom.componentIdentities) ||
+      unknownSbom.componentIdentities.length !== unknownSbom.components ||
+      unknownSbom.componentIdentities.length > MAX_SBOM_COMPONENTS ||
+      unknownSbom.componentIdentities.some(
+        (component) => !isCycloneDxComponent(component),
+      ) ||
+      !isEvidenceBlobRef(unknownSbom.rawReport) ||
+      unknownSbom.rawReport.digest !== unknownSbom.digest
+    ) {
+      throw new EvidencePipelineFailure(
+        "receipt-chain-invalid",
+        "SBOM resume checkpoint is malformed.",
+      );
+    }
+    const document = {
+      $schema: CYCLONEDX_SCHEMA,
+      bomFormat: "CycloneDX",
+      specVersion: "1.6",
+      version: unknownSbom.version,
+      components: unknownSbom.componentIdentities,
+    };
+    if (
+      digestBytes(new TextEncoder().encode(canonicalJson(document))) !==
+      unknownSbom.digest
+    ) {
+      throw new EvidencePipelineFailure(
+        "receipt-chain-invalid",
+        "SBOM resume checkpoint differs from its validated document.",
+      );
+    }
+    sbom = unknownSbom as unknown as StoredCycloneDxSbomV1;
+  } else if (scans.length === SCAN_KIND_ORDER.length) {
+    throw new EvidencePipelineFailure(
+      "receipt-chain-invalid",
+      "Completed scan resume checkpoint is missing its SBOM.",
+    );
+  }
+  return { scans, ...(sbom === undefined ? {} : { sbom }) };
+}
+
 export async function runPinnedLocalScans(
   snapshot: ReadonlySnapshotView,
   scanners: readonly LocalScannerV1[],
   store: ExternalIntakeStore,
+  checkpoint?: ScanCheckpointV1,
 ): Promise<CompletedScanBundleV1> {
   validateReadonlySnapshotView(snapshot);
   if (!Array.isArray(scanners) || scanners.length !== SCAN_KIND_ORDER.length) {
@@ -495,9 +847,13 @@ export async function runPinnedLocalScans(
     byKind.set(scanner.kind, scanner);
   }
 
-  const stored: StoredNormalizedScanV1[] = [];
-  let storedSbom: StoredCycloneDxSbomV1 | undefined;
-  for (const kind of SCAN_KIND_ORDER) {
+  const resumed =
+    checkpoint === undefined
+      ? ({ scans: [] } satisfies ScanCheckpointV1)
+      : validateScanCheckpoint(snapshot, checkpoint);
+  const stored: StoredNormalizedScanV1[] = [...resumed.scans];
+  let storedSbom: StoredCycloneDxSbomV1 | undefined = resumed.sbom;
+  for (const kind of SCAN_KIND_ORDER.slice(stored.length)) {
     const scanner = byKind.get(kind);
     if (scanner === undefined) {
       throw new EvidencePipelineFailure(
@@ -509,64 +865,99 @@ export async function runPinnedLocalScans(
       ...stored.map(({ resultDigest }) => resultDigest),
       ...(storedSbom === undefined ? [] : [storedSbom.digest]),
     ]);
+    const priorSbom = storedSbom;
     let output: unknown;
     try {
       output = await scanner.scan(cloneReadonlySnapshotView(snapshot));
     } catch (error) {
       if (error instanceof EvidencePipelineFailure) {
-        throw new EvidencePipelineFailure(error.code, error.message, [
-          ...priorReportDigests,
-          ...error.recordDigests,
-        ]);
+        throw new EvidencePipelineFailure(
+          error.code,
+          error.message,
+          [...priorReportDigests, ...error.recordDigests],
+          {
+            scans: [...stored],
+            ...(storedSbom === undefined ? {} : { sbom: storedSbom }),
+          },
+        );
       }
       throw new EvidencePipelineFailure(
         "scanner-failed",
         "A required scanner failed.",
         priorReportDigests,
+        {
+          scans: [...stored],
+          ...(storedSbom === undefined ? {} : { sbom: storedSbom }),
+        },
       );
     }
-    const result = validateResultShape(kind, output);
-    const rawReport = storeVerifiedReport(
-      store,
-      result.report,
-      result.reportDigest,
-      "scan-report-drift",
-    );
-    if (result.sbom !== undefined) {
-      const rawSbom = storeVerifiedReport(
-        store,
-        result.sbom.report,
-        result.sbom.reportDigest,
-        "sbom-report-drift",
+    try {
+      const result = validateResultShape(kind, output);
+      const summary = storeSafeScanSummary(store, snapshot, result);
+      if (result.sbom !== undefined) {
+        const rawSbom = storeVerifiedReport(
+          store,
+          result.sbom.report,
+          result.sbom.reportDigest,
+          "sbom-report-drift",
+        );
+        const document = JSON.parse(
+          new TextDecoder("utf-8", { fatal: true }).decode(result.sbom.report),
+        ) as {
+          readonly $schema: typeof CYCLONEDX_SCHEMA;
+          readonly specVersion: "1.6";
+          readonly version: number;
+          readonly components: readonly CycloneDxComponentIdentityV1[];
+        };
+        storedSbom = {
+          format: "CycloneDX",
+          digest: rawSbom.digest,
+          components: result.sbom.components,
+          schema: document.$schema,
+          specVersion: document.specVersion,
+          version: document.version,
+          componentIdentities: document.components,
+          rawReport: rawSbom,
+        };
+      }
+      assertScanPasses(
+        result,
+        uniqueReportDigests([
+          ...stored.map(({ resultDigest }) => resultDigest),
+          summary.digest,
+          ...(storedSbom === undefined ? [] : [storedSbom.digest]),
+        ]),
       );
-      storedSbom = {
-        format: "CycloneDX",
-        digest: rawSbom.digest,
-        components: result.sbom.components,
-        rawReport: rawSbom,
-      };
+      stored.push({
+        kind,
+        tool: result.tool,
+        toolVersion: result.toolVersion,
+        rulesetDigest: result.rulesetDigest,
+        resultDigest: summary.digest,
+        status: result.status,
+        findings: result.findings,
+        summary,
+        ...(result.scannerExpression === undefined
+          ? {}
+          : { scannerExpression: result.scannerExpression }),
+      });
+    } catch (error) {
+      if (
+        error instanceof EvidencePipelineFailure &&
+        error.scanCheckpoint === undefined
+      ) {
+        throw new EvidencePipelineFailure(
+          error.code,
+          error.message,
+          uniqueReportDigests([...priorReportDigests, ...error.recordDigests]),
+          {
+            scans: [...stored],
+            ...(priorSbom === undefined ? {} : { sbom: priorSbom }),
+          },
+        );
+      }
+      throw error;
     }
-    assertScanPasses(
-      result,
-      uniqueReportDigests([
-        ...stored.map(({ resultDigest }) => resultDigest),
-        rawReport.digest,
-        ...(storedSbom === undefined ? [] : [storedSbom.digest]),
-      ]),
-    );
-    stored.push({
-      kind,
-      tool: result.tool,
-      toolVersion: result.toolVersion,
-      rulesetDigest: result.rulesetDigest,
-      resultDigest: rawReport.digest,
-      status: result.status,
-      findings: result.findings,
-      rawReport,
-      ...(result.scannerExpression === undefined
-        ? {}
-        : { scannerExpression: result.scannerExpression }),
-    });
   }
   if (storedSbom === undefined) {
     throw new EvidencePipelineFailure(

@@ -1,4 +1,4 @@
-import { digestBytes, type Sha256Digest } from "./canonical.js";
+import { canonicalJson, digestBytes, type Sha256Digest } from "./canonical.js";
 import {
   cloneReadonlySnapshotView,
   EvidencePipelineFailure,
@@ -52,6 +52,7 @@ export interface StoredModuleInventoryV1 {
   readonly parserVersion: string;
   readonly inventoryDigest: Sha256Digest;
   readonly modules: readonly ModuleInventoryEntryV1[];
+  readonly inventory: StoredBlobRef;
   readonly rawReport: StoredBlobRef;
 }
 
@@ -264,6 +265,123 @@ function normalizeModule(
   };
 }
 
+function normalizeInventoryModules(
+  snapshot: ReadonlySnapshotView,
+  inputs: readonly unknown[],
+): ModuleInventoryEntryV1[] {
+  const modules = inputs.map((module) => normalizeModule(module, snapshot));
+  const applicablePaths = applicableInventoryPaths(snapshot);
+  const applicable = new Set(applicablePaths);
+  const dispositionCounts = new Map<string, number>();
+  for (const module of modules) {
+    if (!applicable.has(module.path)) {
+      throw new EvidencePipelineFailure(
+        "inventory-file-not-applicable",
+        "Module inventory contains a disposition outside the allow-list.",
+      );
+    }
+    const count = (dispositionCounts.get(module.path) ?? 0) + 1;
+    if (count > 1) {
+      throw new EvidencePipelineFailure(
+        "inventory-file-duplicate",
+        "Applicable snapshot files require exactly one inventory disposition.",
+      );
+    }
+    dispositionCounts.set(module.path, count);
+  }
+  for (const path of applicablePaths) {
+    if (!dispositionCounts.has(path)) {
+      throw new EvidencePipelineFailure(
+        "inventory-file-missing",
+        "An applicable snapshot file is missing its inventory disposition.",
+      );
+    }
+  }
+  modules.sort((left, right) => compareCanonicalPaths(left.path, right.path));
+  return modules;
+}
+
+function normalizedInventoryBytes(
+  snapshot: ReadonlySnapshotView,
+  modules: readonly ModuleInventoryEntryV1[],
+): Uint8Array {
+  return new TextEncoder().encode(
+    canonicalJson({
+      apiVersion: "factory.external-module-inventory/v1",
+      snapshotDigest: snapshot.snapshotDigest,
+      treeDigest: snapshot.treeDigest,
+      ...PINNED_MODULE_INVENTORY_IDENTITY,
+      modules,
+    }),
+  );
+}
+
+function isEvidenceBlobRef(input: unknown): input is StoredBlobRef {
+  return (
+    isPlainObject(input) &&
+    Object.keys(input).length === 2 &&
+    input.kind === "evidence" &&
+    isDigest(input.digest)
+  );
+}
+
+export function validateStoredModuleInventory(
+  snapshot: ReadonlySnapshotView,
+  input: StoredModuleInventoryV1,
+): StoredModuleInventoryV1 {
+  validateReadonlySnapshotView(snapshot);
+  if (
+    !isPlainObject(input) ||
+    !hasOnlyKeys(input, [
+      "parser",
+      "parserVersion",
+      "inventoryDigest",
+      "modules",
+      "inventory",
+      "rawReport",
+    ]) ||
+    Object.keys(input).length !== 6 ||
+    !isDigest(input.inventoryDigest) ||
+    !Array.isArray(input.modules) ||
+    !isEvidenceBlobRef(input.inventory) ||
+    input.inventory.digest !== input.inventoryDigest ||
+    !isEvidenceBlobRef(input.rawReport)
+  ) {
+    throw new EvidencePipelineFailure(
+      "receipt-chain-invalid",
+      "Module inventory resume checkpoint is malformed.",
+    );
+  }
+  try {
+    assertParserIdentity(input);
+  } catch {
+    throw new EvidencePipelineFailure(
+      "receipt-chain-invalid",
+      "Module inventory resume identity differs from the code-owned pin.",
+    );
+  }
+  let modules: ModuleInventoryEntryV1[];
+  try {
+    modules = normalizeInventoryModules(snapshot, input.modules);
+  } catch {
+    throw new EvidencePipelineFailure(
+      "receipt-chain-invalid",
+      "Module inventory resume checkpoint is invalid.",
+    );
+  }
+  if (
+    canonicalJson(modules) !== canonicalJson(input.modules) ||
+    digestBytes(normalizedInventoryBytes(snapshot, modules)) !==
+      input.inventoryDigest
+  ) {
+    throw new EvidencePipelineFailure(
+      "receipt-chain-invalid",
+      "Module inventory resume checkpoint differs from its normalized digest.",
+    );
+  }
+  return input;
+}
+
 function assertParserIdentity(
   input: Pick<ModuleInventoryAdapterV1, "parser" | "parserVersion">,
 ): void {
@@ -358,9 +476,7 @@ export async function runModuleInventory(
   }
   let modules: ModuleInventoryEntryV1[];
   try {
-    modules = unknownResult.modules.map((module) =>
-      normalizeModule(module, snapshot),
-    );
+    modules = normalizeInventoryModules(snapshot, unknownResult.modules);
   } catch (error) {
     if (error instanceof EvidencePipelineFailure) {
       throw new EvidencePipelineFailure(error.code, error.message, [
@@ -370,38 +486,13 @@ export async function runModuleInventory(
     }
     throw error;
   }
-  const applicablePaths = applicableInventoryPaths(snapshot);
-  const applicable = new Set(applicablePaths);
-  const dispositionCounts = new Map<string, number>();
-  for (const module of modules) {
-    if (!applicable.has(module.path)) {
-      throw new EvidencePipelineFailure(
-        "inventory-file-not-applicable",
-        "Module inventory contains a disposition outside the allow-list.",
-      );
-    }
-    const count = (dispositionCounts.get(module.path) ?? 0) + 1;
-    if (count > 1) {
-      throw new EvidencePipelineFailure(
-        "inventory-file-duplicate",
-        "Applicable snapshot files require exactly one inventory disposition.",
-      );
-    }
-    dispositionCounts.set(module.path, count);
-  }
-  for (const path of applicablePaths) {
-    if (!dispositionCounts.has(path)) {
-      throw new EvidencePipelineFailure(
-        "inventory-file-missing",
-        "An applicable snapshot file is missing its inventory disposition.",
-      );
-    }
-  }
-  modules.sort((left, right) => compareCanonicalPaths(left.path, right.path));
+  const normalizedInventory = normalizedInventoryBytes(snapshot, modules);
+  const inventory = store.putBytes("evidence", normalizedInventory);
   return {
     ...PINNED_MODULE_INVENTORY_IDENTITY,
-    inventoryDigest: rawReport.digest,
+    inventoryDigest: inventory.digest,
     modules,
+    inventory,
     rawReport,
   };
 }

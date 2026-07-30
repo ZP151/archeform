@@ -4,6 +4,7 @@ import {
   readFileSync,
   readdirSync,
   rmSync,
+  statSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -154,7 +155,22 @@ function scanResult(
   kind: ScanKindV1,
   overrides: Partial<NormalizedScanResultV1> = {},
 ): NormalizedScanResultV1 {
-  const report = bytes(`${kind}-report-v1`);
+  const report = bytes(
+    JSON.stringify({
+      status: "pass",
+      findings: [],
+      ...(kind === "licence" ? { expression: "MIT" } : {}),
+    }),
+  );
+  const sbomReport = bytes(
+    JSON.stringify({
+      $schema: "http://cyclonedx.org/schema/bom-1.6.schema.json",
+      bomFormat: "CycloneDX",
+      specVersion: "1.6",
+      version: 1,
+      components: [],
+    }),
+  );
   const base: NormalizedScanResultV1 = {
     kind,
     ...PINNED_SCANNER_IDENTITIES[kind],
@@ -168,13 +184,33 @@ function scanResult(
           sbom: {
             format: "CycloneDX" as const,
             components: 0,
-            report: bytes("cyclonedx-sbom-v1"),
-            reportDigest: digestBytes(bytes("cyclonedx-sbom-v1")),
+            report: sbomReport,
+            reportDigest: digestBytes(sbomReport),
           },
         }
       : {}),
   };
-  return { ...base, ...overrides } as NormalizedScanResultV1;
+  const result = { ...base, ...overrides } as NormalizedScanResultV1;
+  if (
+    overrides.report === undefined &&
+    (overrides.status !== undefined ||
+      overrides.findings !== undefined ||
+      overrides.scannerExpression !== undefined)
+  ) {
+    const normalizedReport = bytes(
+      JSON.stringify({
+        status: result.status,
+        findings: result.findings,
+        ...(kind === "licence" ? { expression: result.scannerExpression } : {}),
+      }),
+    );
+    return {
+      ...result,
+      report: normalizedReport,
+      reportDigest: digestBytes(normalizedReport),
+    };
+  }
+  return result;
 }
 
 function scanners(
@@ -243,6 +279,25 @@ function receiptRecords(root: string): unknown[] {
     );
 }
 
+function persistedArtifactText(root: string): string {
+  const texts: string[] = [];
+  const visit = (path: string): void => {
+    if (!existsSync(path)) {
+      return;
+    }
+    if (statSync(path).isDirectory()) {
+      for (const entry of readdirSync(path)) {
+        visit(join(path, entry));
+      }
+      return;
+    }
+    texts.push(readFileSync(path, "utf8"));
+  };
+  visit(join(root, "blobs", "evidence"));
+  visit(join(root, "records", "receipt"));
+  return texts.join("\n");
+}
+
 afterEach(() => {
   for (const root of roots.splice(0)) {
     rmSync(root, { recursive: true, force: true });
@@ -282,27 +337,43 @@ describe("evidence jobs", () => {
   it("reuses every immutable reference on an identical resume", async () => {
     const { store } = tempStore();
     const job = createJob(store, "resume-source");
+    let scanCalls = 0;
+    let inventoryCalls = 0;
+    const countedScanners = scanners().map((scanner) => ({
+      ...scanner,
+      async scan(input: ReadonlySnapshotView) {
+        scanCalls += 1;
+        return scanner.scan(input);
+      },
+    }));
+    const baseInventory = inventory(job);
+    const countedInventory: ModuleInventoryAdapterV1 = {
+      ...baseInventory,
+      async inventory(input) {
+        inventoryCalls += 1;
+        return baseInventory.inventory(input);
+      },
+    };
 
     const first = await runEvidencePipeline(
       job,
-      scanners(),
-      inventory(job),
+      countedScanners,
+      countedInventory,
       store,
     );
     const resumed = await runEvidencePipeline(
       {
         ...structuredClone(job),
-        resume: {
-          executionId: first.executionId,
-          receipts: first.receipts,
-        },
+        resume: first.resume,
       },
-      scanners(),
-      inventory(job),
+      countedScanners,
+      countedInventory,
       store,
     );
 
     expect(resumed).toEqual(first);
+    expect(scanCalls).toBe(4);
+    expect(inventoryCalls).toBe(1);
   });
 
   it("creates a new evidence revision when immutable parents change", async () => {
@@ -368,6 +439,104 @@ describe("evidence jobs", () => {
     expect(attempts.size).toBe(2);
   });
 
+  it("resumes after a scanner failure without rerunning completed scanners", async () => {
+    const { store } = tempStore();
+    const job = createJob(store, "partial-scan-resume-source");
+    const calls: Record<ScanKindV1, number> = {
+      licence: 0,
+      secret: 0,
+      sast: 0,
+      dependency: 0,
+    };
+    const firstScanners = scanners().map((scanner) => ({
+      ...scanner,
+      async scan(input: ReadonlySnapshotView) {
+        calls[scanner.kind] += 1;
+        if (scanner.kind === "secret") {
+          throw new Error("transient scanner failure");
+        }
+        return scanner.scan(input);
+      },
+    }));
+    let resume: IntakeJobV1["resume"];
+
+    try {
+      await runEvidencePipeline(job, firstScanners, inventory(job), store);
+    } catch (error) {
+      expect(error).toMatchObject({ code: "scanner-failed" });
+      resume = (error as { readonly resume?: IntakeJobV1["resume"] }).resume;
+    }
+
+    expect(resume).toBeDefined();
+    const recoveryScanners = scanners().map((scanner) => ({
+      ...scanner,
+      async scan(input: ReadonlySnapshotView) {
+        calls[scanner.kind] += 1;
+        return scanner.scan(input);
+      },
+    }));
+    const recovered = await runEvidencePipeline(
+      { ...job, resume: resume! },
+      recoveryScanners,
+      inventory(job),
+      store,
+    );
+    expect(store.getRecord(recovered.receipts[0]!)).toMatchObject({
+      parentDigests: expect.arrayContaining([resume!.receipts.at(-1)!.digest]),
+    });
+    expect(calls).toEqual({ licence: 1, secret: 2, sast: 1, dependency: 1 });
+  });
+
+  it("resumes after inventory failure without rerunning completed scanners", async () => {
+    const { store } = tempStore();
+    const job = createJob(store, "inventory-failure-resume-source");
+    let scanCalls = 0;
+    let inventoryCalls = 0;
+    const countedScanners = scanners().map((scanner) => ({
+      ...scanner,
+      async scan(input: ReadonlySnapshotView) {
+        scanCalls += 1;
+        return scanner.scan(input);
+      },
+    }));
+    const failedInventory = inventory(job, { status: "fail", modules: [] });
+    const firstInventory: ModuleInventoryAdapterV1 = {
+      ...failedInventory,
+      async inventory(input) {
+        inventoryCalls += 1;
+        return failedInventory.inventory(input);
+      },
+    };
+    let resume: IntakeJobV1["resume"];
+
+    try {
+      await runEvidencePipeline(job, countedScanners, firstInventory, store);
+    } catch (error) {
+      expect(error).toMatchObject({ code: "parser-failure" });
+      resume = (error as { readonly resume?: IntakeJobV1["resume"] }).resume;
+    }
+
+    expect(resume).toBeDefined();
+    const safeInventory = inventory(job);
+    const recoveryInventory: ModuleInventoryAdapterV1 = {
+      ...safeInventory,
+      async inventory(input) {
+        inventoryCalls += 1;
+        return safeInventory.inventory(input);
+      },
+    };
+    await expect(
+      runEvidencePipeline(
+        { ...job, resume: resume! },
+        countedScanners,
+        recoveryInventory,
+        store,
+      ),
+    ).resolves.toMatchObject({ status: "evidenced" });
+    expect(scanCalls).toBe(4);
+    expect(inventoryCalls).toBe(2);
+  });
+
   it("creates a distinct evidence revision when a normalized report changes", async () => {
     const { store } = tempStore();
     const job = createJob(store, "report-revision-source");
@@ -377,22 +546,14 @@ describe("evidence jobs", () => {
       inventory(job),
       store,
     );
-    const changedReport = bytes("licence-report-v2");
     const changedScanners = scanners({
       licence: {
-        report: changedReport,
-        reportDigest: digestBytes(changedReport),
+        scannerExpression: "Apache-2.0",
       },
     });
 
     const changed = await runEvidencePipeline(
-      {
-        ...job,
-        resume: {
-          executionId: first.executionId,
-          receipts: first.receipts,
-        },
-      },
+      job,
       changedScanners,
       inventory(job),
       store,
@@ -400,6 +561,95 @@ describe("evidence jobs", () => {
 
     expect(changed.executionId).not.toBe(first.executionId);
     expect(changed.evidence.digest).not.toBe(first.evidence.digest);
+  });
+
+  it("binds EvidenceBundle identity to normalized inventory rather than opaque report bytes", async () => {
+    const { store } = tempStore();
+    const job = createJob(store, "inventory-revision-source");
+    const baseInventory = inventory(job);
+    const adapterResult = await baseInventory.inventory(job.snapshotView);
+    const first = await runEvidencePipeline(
+      job,
+      scanners(),
+      baseInventory,
+      store,
+    );
+    const changed = await runEvidencePipeline(
+      job,
+      scanners(),
+      inventory(job, {
+        report: adapterResult.report,
+        reportDigest: adapterResult.reportDigest,
+        modules: [{ ...adapterResult.modules[0]!, symbols: ["changedSymbol"] }],
+      }),
+      store,
+    );
+
+    expect(changed.inventory.rawReport).toEqual(first.inventory.rawReport);
+    expect(changed.inventory.inventoryDigest).not.toBe(
+      first.inventory.inventoryDigest,
+    );
+    expect(changed.evidence.digest).not.toBe(first.evidence.digest);
+  });
+
+  it("keeps raw secret sentinels out of every persisted blob and receipt", async () => {
+    const { root, store } = tempStore();
+    const job = createJob(store, "raw-secret-sentinel-source");
+    const sentinel = "FACTORY-JOB-RAW-SECRET-SENTINEL-a7c2";
+    const report = bytes(
+      JSON.stringify({
+        status: "fail",
+        findings: [{ code: "secret-token", severity: "high", count: 1 }],
+        source: "src/index.ts",
+        match: "token",
+        value: sentinel,
+      }),
+    );
+    const calls: Record<ScanKindV1, number> = {
+      licence: 0,
+      secret: 0,
+      sast: 0,
+      dependency: 0,
+    };
+    const unsafeScanners = scanners({
+      secret: {
+        status: "fail",
+        findings: [{ code: "secret-token", severity: "high", count: 1 }],
+        report,
+        reportDigest: digestBytes(report),
+      },
+    }).map((scanner) => ({
+      ...scanner,
+      async scan(input: ReadonlySnapshotView) {
+        calls[scanner.kind] += 1;
+        return scanner.scan(input);
+      },
+    }));
+    let resume: IntakeJobV1["resume"];
+
+    try {
+      await runEvidencePipeline(job, unsafeScanners, inventory(job), store);
+    } catch (error) {
+      expect(error).toMatchObject({ code: "scan-report-unsafe" });
+      resume = (error as { readonly resume?: IntakeJobV1["resume"] }).resume;
+    }
+    expect(persistedArtifactText(root)).not.toContain(sentinel);
+    const recoveryScanners = scanners().map((scanner) => ({
+      ...scanner,
+      async scan(input: ReadonlySnapshotView) {
+        calls[scanner.kind] += 1;
+        return scanner.scan(input);
+      },
+    }));
+    await expect(
+      runEvidencePipeline(
+        { ...job, resume: resume! },
+        recoveryScanners,
+        inventory(job),
+        store,
+      ),
+    ).resolves.toMatchObject({ status: "evidenced" });
+    expect(calls).toEqual({ licence: 1, secret: 2, sast: 1, dependency: 1 });
   });
 
   it("rejects resume when a referenced receipt prefix is missing", async () => {
@@ -420,16 +670,111 @@ describe("evidence jobs", () => {
       runEvidencePipeline(
         {
           ...job,
-          resume: {
-            executionId: first.executionId,
-            receipts: first.receipts,
-          },
+          resume: first.resume,
         },
         scanners(),
         inventory(job),
         store,
       ),
     ).rejects.toMatchObject({ code: "receipt-chain-invalid" });
+  });
+
+  it.each([
+    ["scanner identity", { toolVersion: "9.9.9" }],
+    [
+      "scanner ruleset",
+      { rulesetDigest: `sha256:${"f".repeat(64)}` as Sha256Digest },
+    ],
+    [
+      "normalized report binding",
+      { findings: [{ code: "resume-drift", severity: "low", count: 1 }] },
+    ],
+  ] as const)(
+    "rejects resume with drifted %s before invoking an adapter",
+    async (_label, mutation) => {
+      const { store } = tempStore();
+      const job = createJob(store, "drifted-resume-checkpoint");
+      const first = await runEvidencePipeline(
+        job,
+        scanners(),
+        inventory(job),
+        store,
+      );
+      let calls = 0;
+      const countedScanners = scanners().map((scanner) => ({
+        ...scanner,
+        async scan(input: ReadonlySnapshotView) {
+          calls += 1;
+          return scanner.scan(input);
+        },
+      }));
+      const scanCheckpoint = structuredClone(first.resume.scanCheckpoint!);
+      const driftedCheckpoint = {
+        ...scanCheckpoint,
+        scans: [
+          { ...scanCheckpoint.scans[0]!, ...mutation },
+          ...scanCheckpoint.scans.slice(1),
+        ],
+      };
+
+      await expect(
+        runEvidencePipeline(
+          {
+            ...job,
+            resume: { ...first.resume, scanCheckpoint: driftedCheckpoint },
+          },
+          countedScanners,
+          inventory(job),
+          store,
+        ),
+      ).rejects.toMatchObject({ code: "receipt-chain-invalid" });
+      expect(calls).toBe(0);
+    },
+  );
+
+  it("rejects a drifted parser resume checkpoint before invoking an adapter", async () => {
+    const { store } = tempStore();
+    const job = createJob(store, "drifted-parser-resume-checkpoint");
+    const first = await runEvidencePipeline(
+      job,
+      scanners(),
+      inventory(job),
+      store,
+    );
+    let scanCalls = 0;
+    let inventoryCalls = 0;
+    const countedScanners = scanners().map((scanner) => ({
+      ...scanner,
+      async scan(input: ReadonlySnapshotView) {
+        scanCalls += 1;
+        return scanner.scan(input);
+      },
+    }));
+    const baseInventory = inventory(job);
+    const countedInventory: ModuleInventoryAdapterV1 = {
+      ...baseInventory,
+      async inventory(input) {
+        inventoryCalls += 1;
+        return baseInventory.inventory(input);
+      },
+    };
+
+    await expect(
+      runEvidencePipeline(
+        {
+          ...job,
+          resume: {
+            ...first.resume,
+            inventory: { ...first.resume.inventory!, parserVersion: "9.9.9" },
+          },
+        },
+        countedScanners,
+        countedInventory,
+        store,
+      ),
+    ).rejects.toMatchObject({ code: "receipt-chain-invalid" });
+    expect(scanCalls).toBe(0);
+    expect(inventoryCalls).toBe(0);
   });
 
   it("rejects a digest-valid receipt chain whose phases do not match the pipeline", async () => {
@@ -485,9 +830,11 @@ describe("evidence jobs", () => {
     );
 
     expect(result.byId[safeJob.id]).toMatchObject({ status: "evidenced" });
-    expect(result.byId[secretJob.id]).toEqual({
+    const blocked = result.byId[secretJob.id]!;
+    expect(blocked).toMatchObject({
       status: "blocked",
       failureCode: "secret-finding",
+      resume: { scanCheckpoint: { scans: [{ kind: "licence" }] } },
     });
     const receipts = receiptRecords(root) as Array<Record<string, unknown>>;
     expect(receipts.some(({ status }) => status === "evidenced")).toBe(true);
@@ -496,16 +843,20 @@ describe("evidence jobs", () => {
         ({ status, code }) => status === "blocked" && code === "secret-finding",
       ),
     ).toBe(true);
+    const blockedDigests = receipts.find(
+      ({ status, code }) => status === "blocked" && code === "secret-finding",
+    )?.recordDigests as string[];
+    expect(blockedDigests).toHaveLength(2);
+    expect(blockedDigests).toContain(
+      blocked.status === "blocked"
+        ? blocked.resume!.scanCheckpoint!.scans[0]!.resultDigest
+        : "unreachable",
+    );
     expect(
       receipts.find(
         ({ status, code }) => status === "blocked" && code === "secret-finding",
       )?.recordDigests,
-    ).toEqual(
-      expect.arrayContaining([
-        scanResult("licence").reportDigest,
-        scanResult("secret").reportDigest,
-      ]),
-    );
+    ).not.toContain(scanResult("secret").reportDigest);
     expect(JSON.stringify(receipts)).not.toContain("actual-secret-value");
   });
 
@@ -576,15 +927,19 @@ describe("evidence jobs", () => {
         : scanner,
     );
 
-    await expect(
-      runEvidencePipeline(job, failingScanners, inventory(job), store),
-    ).rejects.toMatchObject({ code: "scanner-failed" });
+    let resume: IntakeJobV1["resume"];
+    try {
+      await runEvidencePipeline(job, failingScanners, inventory(job), store);
+    } catch (error) {
+      expect(error).toMatchObject({ code: "scanner-failed" });
+      resume = (error as { readonly resume?: IntakeJobV1["resume"] }).resume;
+    }
     const receipts = receiptRecords(root) as Array<Record<string, unknown>>;
     expect(
       receipts.find(
         ({ status, code }) => status === "blocked" && code === "scanner-failed",
       )?.recordDigests,
-    ).toContain(scanResult("licence").reportDigest);
+    ).toContain(resume!.scanCheckpoint!.scans[0]!.resultDigest);
   });
 
   it("fails closed when a persisted parent or snapshot view drifts", async () => {
