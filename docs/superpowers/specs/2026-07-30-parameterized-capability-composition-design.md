@@ -74,6 +74,30 @@ Parameter values are canonicalized before they enter the immutable lock. A
 binding cannot contain a source path, URL, executable code, secret, or an
 undeclared Graph mutation.
 
+### Closed composition-binding grammar
+
+`factory.composition/v1` bindings are a constrained configuration channel, not
+a transport for requirement text, page copy, source, commands, credentials, or
+raw model material. A binding value is only one of:
+
+- a finite number;
+- a boolean; or
+- an exact Factory Graph symbol object.
+
+Free-form string values are deliberately excluded. Current Golden packages use
+Graph symbols for route, entity, role, state, permission, and component
+references; they do not require a free-text composition value. User-visible
+labels, messages, descriptions, and page copy remain PageModel component props
+and are validated as Draft page content rather than being package-selection
+inputs. This distinction lets a user write `Make a reservation` on a page
+without allowing the composition channel to store `process.env.SECRET`, an API
+key, a SQL statement, a shell command, or a raw model prompt.
+
+If a future package needs a literal finite choice, it must introduce a new
+declared enum-parameter contract with a manifest-owned allowed-value set and
+validation before every Draft write. It must not reopen arbitrary strings in
+`factory.composition/v1`.
+
 ### Graph contributions
 
 Packages declare additive contributions to Domain, Policy, Flow, Page,
@@ -144,8 +168,9 @@ selected path.
   failed package verification, invalid parameter, unsigned/non-Golden package,
   or undeclared merge fails closed before generation.
 - The model may propose a mutable Graph Diff and desired capability intent.
-  It cannot provide package identities, parameters outside schema, paths,
-  URLs, arbitrary source, secrets, runtime commands, or deployment targets.
+  It cannot provide package identities, free-text composition parameters,
+  paths, URLs, arbitrary source, secrets, runtime commands, raw prompts,
+  raw responses, or deployment targets.
 - Raw model prompts, responses, and credentials remain process-local and are
   not stored in Graphs, locks, artifacts, tests, logs, screenshots, or reports.
 

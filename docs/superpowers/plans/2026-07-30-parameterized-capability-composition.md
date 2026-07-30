@@ -42,6 +42,7 @@ Vitest, Node 22 generated runtimes.
 | --- | --- |
 | `packages/capabilities/src/assets/contract.ts` | The v1 package manifest, parameter, interface, Graph, and executable contribution contracts. |
 | `packages/capabilities/src/composition.ts` | Canonical parameter encoding, requirements resolution, contribution ordering, immutable lock creation, and fail-closed validation. |
+| `packages/capabilities/src/assets/contract.ts` | Closed v1 capability-parameter value types; free text is not a composition binding. |
 | `packages/capabilities/src/node.ts` | Physical package verification and safe, digest-verified contribution loading. |
 | `packages/capabilities/src/index.ts` | Browser-safe registry, generic recipe entry points, and migration of profile helpers to the generic resolver. |
 | `packages/graph/src/model.ts` | Schema validation for a Draft's capability selections and bindings, while keeping the Published composition lock outside mutable Graph state. |
@@ -250,6 +251,9 @@ git commit -m "feat: verify multi-target capability contributions"
 **Files:**
 - Modify: `packages/graph/src/model.ts`
 - Modify: `packages/graph/test/application-graph.test.ts`
+- Modify: `packages/capabilities/src/assets/contract.ts`
+- Modify: `packages/capabilities/src/composition.ts`
+- Modify: `packages/capabilities/test/composition-contract.test.ts`
 - Modify: `apps/control-plane/prisma/schema.prisma`
 - Create: `apps/control-plane/prisma/migrations/20260730_add_composition_lock/migration.sql`
 - Modify: `apps/control-plane/src/lifecycle.service.ts`
@@ -331,11 +335,21 @@ ALTER TABLE "PublishedRevision"
 ```
 
 Add optional Draft-only `integration.compositionSelections`, each with exactly
-the five Golden identity fields and a binding object containing strings,
-finite numbers, booleans, or an exact `{ graphSymbol }` object. Reject unknown
-selection/lock/binding object fields at Graph parsing time. The capability
-registry remains responsible for validating that selections match Golden
-manifests and declared package parameters.
+the five Golden identity fields and a binding object containing only finite
+numbers, booleans, or an exact `{ graphSymbol }` object. Reject unknown
+selection/lock/binding object fields and every free-form string at Graph
+parsing time. The capability registry remains responsible for validating that
+selections match Golden manifests and declared package parameters.
+
+This is a deliberate v1 architecture correction. Do not attempt to recognize
+every possible secret, prompt, SQL statement, source fragment, or command with
+an expanding string denylist. Composition bindings are not user-visible text;
+PageModel props own labels, messages, and content. Remove the `string`
+capability-parameter type from this unaccepted v1 contract, make the Graph and
+capability resolver share the closed value grammar, and add adversarial tests
+that demonstrate direct strings cannot reach Draft persistence while normal
+PageModel labels remain valid. A future enum contract must be a separately
+declared manifest-owned allowed-value type, never an arbitrary string escape.
 
 Do not backfill existing immutable rows: they remain view-only historical
 evidence and are rejected by the new composition compiler with a bounded
