@@ -88,6 +88,41 @@ profile and becomes a separate Factory package or contribution group.
 - Keep payment local and simulated until a separate regulated provider contract is accepted.
 - Screenshots and interaction patterns may guide independent design; they do not permit copying code, trademarks, artwork, or assets.
 
+## Puck AI boundary update — 2026-07-30
+
+This update classifies Puck AI modes after a public documentation review. It
+does not approve a Puck Cloud account, package, credential, or integration.
+
+| Mode | Observed upstream behavior | Factory decision |
+| --- | --- | --- |
+| Assembly | Puck Cloud can generate Puck `Data` from a natural-language prompt and a supplied component configuration. | Deferred provider study. It could propose a Draft-only PageModel candidate only after privacy, credential, retention, cost, availability, and prompt-injection controls are accepted. Its input must be a finite Factory-generated Golden component configuration, and its output must pass the same PageModel validator as Factory AI. |
+| Design | Puck Cloud can create new component types and records them in `_dynamicConfig`; it can also introduce page-wide styles and optionally scripts. | Rejected for Factory. Dynamic component definitions do not have a Golden package identity, verified digest, declared schema, or declared target namespace, so they cannot participate in an immutable composition lock. |
+| Tools | Puck Cloud documents host-server tools that can query systems or perform effects. | Rejected in v1. No model-selected Puck tool may read Factory data or perform side effects. A future read-only tool would require its own declared contract and policy gate. |
+
+Factory will therefore use self-hosted Puck Core only as a PageModel editor
+until a future `PuckAiPageProposalProvider/v1` passes a dedicated provider
+decision. Puck Core may edit approved visual components, tokens, responsive
+layout, and declared route links; it cannot add business effects, source,
+scripts, URLs, policy, domain, or flow semantics.
+
+## Restaurant capability boundary update — 2026-07-30
+
+The official MIT-licensed TastyIgniter extension releases below were inspected
+as source-study references, not dependencies or source-copy approval:
+
+| Fixed public reference | Useful bounded concepts | Factory package direction |
+| --- | --- | --- |
+| [Cart v4.3.1](https://github.com/tastyigniter/ti-ext-cart/releases/tag/v4.3.1), commit [`287ec45dc3f545814c24c5a97f180a97409108fd`](https://github.com/tastyigniter/ti-ext-cart/commit/287ec45dc3f545814c24c5a97f180a97409108fd) | explicit menu option groups, selectable option values, quantity/cardinality, price deltas, comments, availability, stock history | `restaurant.menu-option-group`, `restaurant.menu-option`, `commerce.line-note`, `commerce.inventory` |
+| [Local v4.1.5](https://github.com/tastyigniter/ti-ext-local/releases/tag/v4.1.5), commit [`305d39fd6d83dde68f6793692fadf91b073ea6ba`](https://github.com/tastyigniter/ti-ext-local/commit/305d39fd6d83dde68f6793692fadf91b073ea6ba) | current store selection, search, service area, operating-hour context | `core.location-context` |
+| [Reservation v4.1.4](https://github.com/tastyigniter/ti-ext-reservation/releases/tag/v4.1.4), commit [`4b7f8559b77f8c1599b996067f67b6e8abb86432`](https://github.com/tastyigniter/ti-ext-reservation/commit/4b7f8559b77f8c1599b996067f67b6e8abb86432) | booking, dining area, table, availability, wait-state vocabulary | `restaurant.reservation`, `restaurant.table-session`, `core.queue` |
+
+The first operational expansion after shared commerce should make modifier
+groups, choices, cardinality, availability, and price deltas typed Graph
+facts. These packages can compose into Restaurant Ordering but have no place
+in an Ecommerce profile unless that profile selects them. Do not copy Laravel
+conventions, PHP source, migrations, templates, session behavior, payment
+gateways, delivery geometry, or extension discovery rules.
+
 ## Confidence and limitations
 
 Licenses and maintenance signals are sourced from upstream repositories,
