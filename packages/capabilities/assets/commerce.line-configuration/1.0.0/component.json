@@ -1,0 +1,112 @@
+{
+  "apiVersion": "factory.capability/v1",
+  "key": "commerce.line-configuration",
+  "version": "1.0.0",
+  "category": "commerce",
+  "name": "Line configuration",
+  "description": "Validates bounded item options and computes configured line prices on the server.",
+  "packageRoot": "packages/capabilities/assets/commerce.line-configuration/1.0.0",
+  "manifestDigest": "sha256:d060be51ecf763ec5e00aa0187d73f0908cfcc5d434812000c1c414b10909b17",
+  "lifecycle": "golden",
+  "profiles": ["restaurant-ordering", "simple-ecommerce"],
+  "effects": [
+    "line.configuration.validate",
+    "line.configuration.price",
+    "line.configuration.availability.manage"
+  ],
+  "inputSchema": [
+    { "key": "catalogEntity", "type": "domain.entity", "required": true },
+    { "key": "lineEntity", "type": "domain.entity", "required": true },
+    { "key": "optionGroupEntity", "type": "domain.entity", "required": true },
+    { "key": "optionEntity", "type": "domain.entity", "required": true },
+    { "key": "customerRole", "type": "policy.role", "required": true },
+    { "key": "merchantRole", "type": "policy.role", "required": true },
+    { "key": "catalogPage", "type": "page.page", "required": true },
+    { "key": "merchantPage", "type": "page.page", "required": true }
+  ],
+  "outputSlots": [
+    "api.runtime",
+    "api.service",
+    "database.schema",
+    "web.customer",
+    "web.merchant",
+    "test.fixture"
+  ],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/commerce.line-configuration.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:8ced82a4c3db325ab13c454b081a3f81add5e8bb3f341d51474e04d69e42a06b"
+    }
+  ],
+  "parameters": [
+    { "key": "catalogEntity", "type": "graph-symbol", "required": true },
+    { "key": "lineEntity", "type": "graph-symbol", "required": true },
+    { "key": "optionGroupEntity", "type": "graph-symbol", "required": true },
+    { "key": "optionEntity", "type": "graph-symbol", "required": true },
+    { "key": "customerRole", "type": "graph-symbol", "required": true },
+    { "key": "merchantRole", "type": "graph-symbol", "required": true },
+    { "key": "catalogPage", "type": "graph-symbol", "required": true },
+    { "key": "merchantPage", "type": "graph-symbol", "required": true }
+  ],
+  "graphContributions": [
+    {
+      "id": "configured-line-entities",
+      "model": "domain",
+      "collection": "entities",
+      "operation": "extend",
+      "parameterRefs": [
+        "catalogEntity",
+        "lineEntity",
+        "optionGroupEntity",
+        "optionEntity"
+      ],
+      "digest": "sha256:e871d8aa4247e16097f88fdecfd2d0ccb9260b8da6bbab60f497a7a26eaa172e"
+    },
+    {
+      "id": "configured-line-pages",
+      "model": "page",
+      "collection": "pages",
+      "operation": "extend",
+      "parameterRefs": ["catalogPage", "merchantPage"],
+      "digest": "sha256:2d90947cde1cc4a6040c98f484fee2ed6ae5a813a6be9f822f30cdda516dfb89"
+    }
+  ],
+  "executableContributions": [
+    {
+      "id": "line-configuration-service",
+      "outputSlot": "api.service",
+      "namespace": "packages/commerce.line-configuration/api/services/",
+      "source": "templates/api/line-configuration.service.ts.tpl",
+      "target": "api/src/services/{{lineEntity}}-line-configuration.service.ts",
+      "parameterRefs": [
+        "catalogEntity",
+        "lineEntity",
+        "optionGroupEntity",
+        "optionEntity",
+        "customerRole",
+        "merchantRole",
+        "catalogPage",
+        "merchantPage"
+      ],
+      "targetRuntimeInterfaceVersion": "factory.api-service/v1",
+      "orderingRequirements": [],
+      "mergeProtocol": "replace-file",
+      "digest": "sha256:e23d1e5d5ffbee9fc0399c6d2458638d5160c140b7017696874b3fbf5512f630"
+    }
+  ],
+  "requires": [
+    { "interfaceKey": "commerce.catalog-item", "version": "v1" },
+    { "interfaceKey": "core.location-context", "version": "v1" }
+  ],
+  "provides": [
+    { "interfaceKey": "commerce.configured-line", "version": "v1" }
+  ],
+  "verification": {
+    "fixture": "fixtures/default.json",
+    "contractTest": "tests/contract.json",
+    "status": "verified"
+  }
+}

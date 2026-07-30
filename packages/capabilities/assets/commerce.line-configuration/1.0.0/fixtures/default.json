@@ -1,0 +1,14 @@
+{
+  "basePrice": "12.00",
+  "optionGroups": [
+    {
+      "minimum": 1,
+      "maximum": 1,
+      "options": [
+        { "available": true, "priceDelta": "0.00" },
+        { "available": true, "priceDelta": "2.50" }
+      ]
+    }
+  ],
+  "expectedConfiguredPrice": "14.50"
+}

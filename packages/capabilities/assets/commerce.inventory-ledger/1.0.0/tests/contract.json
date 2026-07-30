@@ -1,0 +1,9 @@
+{
+  "status": "verified",
+  "checks": [
+    "idempotent-movement",
+    "nonnegative-stock",
+    "order-reference",
+    "atomic-stock-and-ledger-write"
+  ]
+}

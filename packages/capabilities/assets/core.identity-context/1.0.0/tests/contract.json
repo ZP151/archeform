@@ -1,0 +1,9 @@
+{
+  "status": "verified",
+  "checks": [
+    "opaque-subject",
+    "active-session",
+    "declared-role",
+    "reject-expired-context"
+  ]
+}

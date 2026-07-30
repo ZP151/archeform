@@ -1,0 +1,4 @@
+{
+  "principal": { "status": "active", "role": "customer" },
+  "session": { "status": "active" }
+}

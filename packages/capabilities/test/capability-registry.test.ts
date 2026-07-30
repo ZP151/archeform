@@ -568,9 +568,13 @@ describe("capability catalog", () => {
       "core.crud",
       "core.notification",
       "core.workflow",
+      "core.identity-context",
+      "core.location-context",
       "commerce.catalog",
       "commerce.cart",
+      "commerce.line-configuration",
       "commerce.inventory",
+      "commerce.inventory-ledger",
       "commerce.order",
       "commerce.simulated-payment",
       "restaurant.table-session",
@@ -663,7 +667,7 @@ describe("capability catalog", () => {
   });
 
   it("verifies every registered capability manifest against its declared digest", () => {
-    expect(capabilityAssets).toHaveLength(21);
+    expect(capabilityAssets).toHaveLength(25);
     for (const asset of capabilityAssets) {
       expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     }

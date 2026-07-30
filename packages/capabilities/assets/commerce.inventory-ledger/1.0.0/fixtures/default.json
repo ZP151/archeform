@@ -1,0 +1,8 @@
+{
+  "stock": { "available": 20, "reserved": 2 },
+  "movement": {
+    "kind": "reserve",
+    "quantityDelta": -2,
+    "reason": "submitted-order"
+  }
+}

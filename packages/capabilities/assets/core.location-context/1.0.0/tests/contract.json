@@ -1,0 +1,9 @@
+{
+  "status": "verified",
+  "checks": [
+    "opaque-session-resolution",
+    "manual-code-validation",
+    "inactive-location-rejection",
+    "safe-context-projection"
+  ]
+}

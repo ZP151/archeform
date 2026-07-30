@@ -1,0 +1,9 @@
+{
+  "status": "verified",
+  "checks": [
+    "catalog-item-ownership",
+    "selection-cardinality",
+    "option-availability",
+    "server-computed-decimal-price"
+  ]
+}
