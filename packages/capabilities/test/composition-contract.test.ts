@@ -247,6 +247,22 @@ describe("capability composition contract", () => {
     ).not.toThrow();
   });
 
+  it.each(["<img src=x onerror=alert(1)>", "process.exit(1)"])(
+    "rejects executable source string %s",
+    (value) => {
+      const parameterAsset = asset("core.executable-source-test", {
+        parameters: [{ key: "value", type: "string", required: true }],
+      });
+
+      expect(() =>
+        resolveSyntheticComposition({
+          assets: [parameterAsset],
+          selections: [selection(parameterAsset, { value })],
+        }),
+      ).toThrow("must not contain source delimiters");
+    },
+  );
+
   it("rejects a missing required parameter", () => {
     const parameterAsset = asset("core.required-test", {
       parameters: [{ key: "enabled", type: "boolean", required: true }],
@@ -258,6 +274,23 @@ describe("capability composition contract", () => {
         selections: [selection(parameterAsset)],
       }),
     ).toThrow("requires parameter 'enabled'");
+  });
+
+  it("allows an intended permissionResource parameter", () => {
+    const parameterAsset = asset("core.permission-test", {
+      parameters: [
+        { key: "permissionResource", type: "string", required: true },
+      ],
+    });
+
+    expect(() =>
+      resolveSyntheticComposition({
+        assets: [parameterAsset],
+        selections: [
+          selection(parameterAsset, { permissionResource: "order" }),
+        ],
+      }),
+    ).not.toThrow();
   });
 
   it.each(["constructor", "toString", "__proto__"])(

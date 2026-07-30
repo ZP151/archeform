@@ -47,12 +47,19 @@ const graphSymbolPattern =
 const urlSchemePattern = /\b[a-z][a-z0-9+.-]*:\S/i;
 const controlCharacterPattern = /[\u0000-\u001f\u007f-\u009f]/;
 const sourceDelimiterPattern =
-  /[`{}\[\];]|=>|\$\(|<\s*\/?\s*(?:script|style)\b/i;
+  /[`{}\[\];<>]|=>|\$\(|\b[a-z_$][a-z0-9_$]*(?:\.[a-z_$][a-z0-9_$]*)*\(/i;
 const commandPattern =
   /^\s*(?:bash|cmd|curl|del|git|invoke-webrequest|node|npm|pnpm|powershell|python|remove-item|rm|sh|sudo|wget|yarn)(?:\.exe)?\s/i;
-const forbiddenParameterKeyPattern =
-  /(?:secret|password|credential|api[-_]?key|access[-_]?token|command|source|url|path)/i;
 const parameterKeyPattern = /^[a-z][a-zA-Z0-9]*$/;
+const forbiddenParameterKeyTokens = new Set([
+  "command",
+  "credential",
+  "password",
+  "path",
+  "secret",
+  "source",
+  "url",
+]);
 const prototypeReservedParameterKeys = new Set([
   "constructor",
   "hasOwnProperty",
@@ -66,6 +73,19 @@ const prototypeReservedParameterKeys = new Set([
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function isForbiddenParameterKey(key: string): boolean {
+  const tokens = key
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .toLowerCase()
+    .split(" ");
+  const compact = tokens.join("");
+  return (
+    tokens.some((token) => forbiddenParameterKeyTokens.has(token)) ||
+    compact === "apikey" ||
+    compact === "accesstoken"
+  );
 }
 
 function canonicalJson(value: unknown): string {
@@ -328,7 +348,7 @@ function validateBindings(
         `Capability package '${manifest.key}' parameter '${schema.key}' must use a safe parameter key.`,
       );
     }
-    if (forbiddenParameterKeyPattern.test(schema.key)) {
+    if (isForbiddenParameterKey(schema.key)) {
       throw new Error(
         `Capability package '${manifest.key}' parameter '${schema.key}' is not safe for composition bindings.`,
       );
