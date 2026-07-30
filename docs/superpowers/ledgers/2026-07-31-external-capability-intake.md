@@ -35,8 +35,10 @@ Planning is complete for the first quarantine-first bulk Candidate Intake
 slice, and the Controller has accepted the design contract. Task 1 is now
 `accepted` with its bounded shared-contract amendment reconciled; its original
 release behavior remains accepted and frozen. Task 2 is `accepted` after Fix
-Round 2/5. Task 3 is `reviewed` after Fix Round 4/5 independent re-review and QA
-passed with no P0/P1/P2; Tasks 4 through 6 remain `planned`. The system will
+Round 2/5. Task 3 is `accepted` after Fix Round 4/5 independent re-review, QA,
+release review, and fresh final verification all passed with no P0/P1/P2. Task
+4 is dependency-ready but remains unstarted and `planned`; Tasks 5 and 6 also
+remain `planned`. The system will
 ingest the 43 fixed-reference portfolio as metadata, retain the 108 scenarios as
 composition demand signals, and produce only quarantined evidence,
 non-executable Candidate records, and pending-review promotion packets.
@@ -66,7 +68,12 @@ PASSED with no P0/P1/P2, and the PM moved Task 3
 returned Task 3 `reviewed -> implementing` for Fix Round 4/5. Fix Round 4
 independent re-review subsequently PASSED with no P0/P1/P2, and the PM moved
 Task 3 `implementing -> ready_for_qa`. Independent QA then PASSED with no
-P0/P1/P2, and the PM moved Task 3 `ready_for_qa -> reviewed`.
+P0/P1/P2, and the PM moved Task 3 `ready_for_qa -> reviewed`. Independent
+release review then PASSED with no P0/P1/P2. Fresh Controller verification on
+Node v22.11.0 passed 197/197 External Intake tests, typecheck, lint/Prettier,
+`git diff --check c2f3c87 HEAD`, and clean-worktree verification. The PM moved
+Task 3 `reviewed -> accepted`; its External Evidence Pipeline contract and
+accepted recovery behavior are frozen.
 
 Independent Task 2 review FAILED with three P1 findings and one P2. The
 Controller resolved its schema incompatibility by selecting a distinct
@@ -92,8 +99,8 @@ remain frozen.
 | ------------------------------------------------ | ---------- | ------------------- | -------------------------------- | ----------------------------------------------------------- |
 | 1. Candidate contracts and immutable persistence | `accepted` | `integration`       | External Intake Contract         | Original release and bounded amendment accepted and frozen. |
 | 2. Fixed-source provenance and notices           | `accepted` | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
-| 3. Deterministic scan orchestration              | `reviewed` | `platform-security` | External Evidence Pipeline       | Fix Round 4 QA PASS; release review required.               |
-| 4. Candidate registry, API, CLI, and isolation   | `planned`  | `integration`       | Candidate Registry               | Tasks 1-3 and Commercial Foundation Task 1 accepted.        |
+| 3. Deterministic scan orchestration              | `accepted` | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
+| 4. Candidate registry, API, CLI, and isolation   | `planned`  | `integration`       | Candidate Registry               | Dependency-ready; not dispatched or started.                |
 | 5. Review-only promotion packets                 | `planned`  | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.           |
 | 6. Bulk acceptance and release evidence          | `planned`  | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.        |
 
@@ -451,7 +458,7 @@ paths. Tasks 4 through 6 remain `planned`.
 
 ## Task 3 card: Deterministic local scans and module inventory
 
-- **State:** `reviewed`
+- **State:** `accepted`
 - **Specialization:** `platform-security`
 - **Contract owner:** External Evidence Pipeline
 - **Contract artifact:** accepted Task 1 records/store including the acquisition
@@ -664,6 +671,27 @@ independent release review and fresh final verification remain required. The
 frozen contract, task scope, and exact paths remain unchanged. No downstream
 work has started; Tasks 4 through 6 remain `planned`.
 
+### Fix Round 4 release and acceptance reconciliation
+
+Independent release review PASSED with no P0/P1/P2. Fresh Controller
+verification on local Node v22.11.0 passed 197/197 full External Intake tests,
+typecheck, lint/Prettier, `git diff --check c2f3c87 HEAD`, and clean-worktree
+verification.
+
+The accepted deterministic rehydration decision is part of the frozen release
+behavior: recovery re-puts receipt-bound canonical scanner summaries,
+CycloneDX SBOMs, and normalized inventories through `putBytes`; missing blobs
+are restored and rebound only when the canonical bytes reproduce the verified
+checkpoint, while tampered, conflicting, or non-reconstructable content fails
+closed before skip. Completed adapters are not rerun, and no terminal
+EvidenceBundle can attest unverifiable data. The frozen Task 2 store remains
+unchanged.
+
+The PM moved Task 3 `reviewed -> accepted`. Its contract, task scope, exact
+paths, and accepted behavior are frozen. Task 4 now satisfies its recorded
+dependency gate but remains unstarted and `planned`; Tasks 5 and 6 also remain
+`planned`.
+
 ## Task 4 card: Candidate registry, module API, CLI, and isolation
 
 - **State:** `planned`
@@ -673,6 +701,10 @@ work has started; Tasks 4 through 6 remain `planned`.
   Foundation Golden/Publish verification boundary.
 - **Dependencies:** Tasks 1-3 `accepted`; Commercial Capability Foundation Task
   1 `accepted`.
+
+All recorded dependencies are accepted and frozen. Task 4 is dependency-ready,
+but this update does not dispatch or start it. Its Candidate Registry contract,
+scope, and exact allowed paths below are the frozen handoff boundary.
 
 ### Exact allowed paths
 
@@ -808,13 +840,13 @@ work has started; Tasks 4 through 6 remain `planned`.
 - **Governance risk:** `conformance-passed` could be mistaken for Golden. It has
   no promotion authority, and the first slice creates no Golden asset.
 - **Coordination risk:** Candidate isolation tests touch frozen Graph,
-  Capabilities, and compiler test paths. Task 4 waits for Commercial Foundation
-  Task 1 acceptance and exclusive path ownership.
+  Capabilities, and compiler test paths. Task 4 dependencies are accepted;
+  dispatch still requires exclusive ownership of every frozen path.
 
-The active smallest valuable slice is independent release review and fresh
-verification for Task 3 repair commit `8b31d3a` under its frozen External
-Evidence Pipeline contract, task scope, and exact paths. The frozen Task 2 store
-is unchanged. Task 1's original release and bounded amendment and Task 2's
-accepted code set
-`515e0ba + 3dcb20f + dcaddf4` remain frozen. No downstream work has started;
-Tasks 4 through 6 remain `planned` and retain their recorded dependency gates.
+The active smallest valuable slice is Task 4 implementation under its frozen
+Candidate Registry contract and exact allowed paths. It is dependency-ready but
+has not been dispatched or started in this update. The frozen Task 2 store is
+unchanged. Task 1's original release and bounded amendment, Task 2's accepted
+code set `515e0ba + 3dcb20f + dcaddf4`, and Task 3's accepted repair commit
+`8b31d3a` remain frozen. Tasks 4 through 6 remain `planned`; Tasks 5 and 6 retain
+their recorded dependency gates.
