@@ -106,3 +106,21 @@ surface and whose worker has the process-only Restaurant bootstrap input. Then
 repeat: create Restaurant in Workbench, Publish, compile, start its run-scoped
 preview, execute the same 2/2 generated journey, stop from Workbench, and
 verify only that run's containers/network/volume/runtime directory are removed.
+
+## Fresh-stack retry blocker
+
+Task 7.1 added the required process-only compiler-worker handoff at `e13b00c`.
+On a fresh retry, a new Factory project was assigned unique loopback ports and
+generated process-only Redis, internal-worker, and Restaurant bootstrap values.
+`docker compose config --quiet` accepted that configuration without reading an
+environment file or printing a value. The fresh build produced its dedicated
+Control Plane and compiler-worker images, but Docker created no containers for
+the project and then stopped responding to read-only `docker version`,
+`docker info`, and project-label queries. The exact Compose client was stopped;
+no user-owned stack was stopped or restarted. Docker Desktop backend processes
+remained responsive, but restarting the daemon would disrupt user-owned
+containers and is outside Task 7 authority.
+
+This environmental Docker/BuildKit stall blocks the required current-source
+Factory lifecycle proof. After the daemon is restored, rerun the exact fresh
+project flow above rather than relying on the earlier stale Factory stack.
