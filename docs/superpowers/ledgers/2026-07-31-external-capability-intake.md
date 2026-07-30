@@ -33,15 +33,14 @@ recorded repair round. Five failed repair/review rounds require escalation.
 
 Planning is complete for the first quarantine-first bulk Candidate Intake
 slice, and the Controller has accepted the design contract. Task 1 is now
-`ready_for_qa`; Tasks 2 through 6 remain `planned`. The system will ingest the
+`accepted`; Tasks 2 through 6 remain `planned`. The system will ingest the
 43 fixed-reference portfolio as metadata, retain the 108 scenarios as
 composition demand signals, and produce only quarantined evidence,
 non-executable Candidate records, and pending-review promotion packets.
 
-Task 1 Fix Round 2 independent re-review PASSED with no P0/P1/P2. The PM
-reconciled Fix Rounds 1 and 2 and moved Task 1 from `implementing` to
-`ready_for_qa`. Its original contract, scope, and exact allowed paths remain
-frozen. No dependent task is dispatched.
+Task 1 independent QA and release review PASSED. The PM reconciled the evidence
+through `ready_for_qa -> reviewed -> accepted`. Its release code set, contract,
+scope, and exact allowed paths are frozen. No dependent task is yet dispatched.
 
 The Commercial Capability Foundation remains the Golden execution boundary.
 External Intake Task 1 has been dispatched with its existing contract artifact
@@ -50,18 +49,18 @@ acceptance. Tasks 4-6 are additionally
 blocked until Commercial Foundation Task 1 is `accepted` and its Publish-time
 physical verification contract is frozen.
 
-| Task                                             | State          | Specialization      | Contract owner                   | Dependency gate                                              |
-| ------------------------------------------------ | -------------- | ------------------- | -------------------------------- | ------------------------------------------------------------ |
-| 1. Candidate contracts and immutable persistence | `ready_for_qa` | `integration`       | External Intake Contract         | Fix Round 2 re-review PASS; independent QA remains required. |
-| 2. Fixed-source provenance and notices           | `planned`      | `platform`          | External Source Provenance       | Task 1 accepted.                                             |
-| 3. Deterministic scan orchestration              | `planned`      | `platform-security` | External Evidence Pipeline       | Task 1 accepted; may parallel Task 2 on disjoint paths.      |
-| 4. Candidate registry, API, CLI, and isolation   | `planned`      | `integration`       | Candidate Registry               | Tasks 1-3 and Commercial Foundation Task 1 accepted.         |
-| 5. Review-only promotion packets                 | `planned`      | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.            |
-| 6. Bulk acceptance and release evidence          | `planned`      | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.         |
+| Task                                             | State      | Specialization      | Contract owner                   | Dependency gate                                              |
+| ------------------------------------------------ | ---------- | ------------------- | -------------------------------- | ------------------------------------------------------------ |
+| 1. Candidate contracts and immutable persistence | `accepted` | `integration`       | External Intake Contract         | QA and release review PASS; release set and contract frozen. |
+| 2. Fixed-source provenance and notices           | `planned`  | `platform`          | External Source Provenance       | Task 1 accepted.                                             |
+| 3. Deterministic scan orchestration              | `planned`  | `platform-security` | External Evidence Pipeline       | Task 1 accepted; may parallel Task 2 on disjoint paths.      |
+| 4. Candidate registry, API, CLI, and isolation   | `planned`  | `integration`       | Candidate Registry               | Tasks 1-3 and Commercial Foundation Task 1 accepted.         |
+| 5. Review-only promotion packets                 | `planned`  | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.            |
+| 6. Bulk acceptance and release evidence          | `planned`  | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.         |
 
 ## Task 1 card: Candidate contracts and immutable persistence
 
-- **State:** `ready_for_qa`
+- **State:** `accepted`
 - **Specialization:** `integration`
 - **Contract owner:** External Intake Contract
 - **Contract artifact:** design Core records, Candidate/Golden registry table,
@@ -145,10 +144,44 @@ Fix Round 2 independent re-review PASSED with no P0/P1/P2. The reconciled Task
 - `f0a73f7` (`fix: harden external intake contracts`)
 - `e4c2314` (`fix: validate receipt index backing records`)
 
-Task 1 moved `implementing -> ready_for_qa`; independent behavioral QA remains
-required before any further state transition. The original Task 1 contract,
-scope, and exact allowed paths remain frozen, and Tasks 2 through 6 remain
-`planned`.
+Task 1 moved `implementing -> ready_for_qa`; at that handoff, independent
+behavioral QA remained required. The original Task 1 contract, scope, and exact
+allowed paths remained frozen, and Tasks 2 through 6 remained `planned`.
+
+### QA, release review, and acceptance reconciliation
+
+The explicit Task 1 release code set is:
+
+- `9ea692c` (`feat: add external intake contracts`)
+- `f0a73f7` (`fix: harden external intake contracts`)
+- `e4c2314` (`fix: validate receipt index backing records`)
+
+Independent QA passed the Task 1 slice with no Task-1-owned P0/P1/P2. Evidence
+included 49/49 focused and full Intake tests across three files, Node 22.11.0
+package test/typecheck/lint gates, 12/12 workspace test and typecheck tasks,
+five third-party notices, two immutable source studies, clean diff state, and
+the frozen-path boundary.
+
+The repository-wide formatting gate separately reports inherited debt:
+`pnpm format:check` finds 81 pre-existing files, and workspace lint reproduces
+an unchanged formatting failure in
+`apps/compiler-worker/src/artifact-writer.ts`. None of those files changed in
+the Task 1 release set, while the External Intake package formatter and lint
+pass. This inherited global debt is not represented as Task 1 release content
+or a Task 1-owned defect.
+
+Independent release review PASSED after separating that inherited debt from
+the bounded Task 1 release set. State-transition history is preserved:
+
+1. `implementing -> ready_for_qa` after Fix Round 2 re-review PASS, recorded by
+   PM commit `bead907`;
+2. `ready_for_qa -> reviewed` after independent QA PASS and PM reconciliation;
+3. `reviewed -> accepted` after release review PASS and final evidence
+   reconciliation in this ledger update.
+
+Task 1 is accepted and frozen. Reopening its release set, contract, scope, or
+exact allowed paths requires a new recorded repair state. Tasks 2 through 6
+remain `planned`.
 
 ## Task 2 card: Fixed-source provenance, licences, and notices
 
@@ -362,8 +395,7 @@ scope, and exact allowed paths remain frozen, and Tasks 2 through 6 remain
   Capabilities, and compiler test paths. Task 4 waits for Commercial Foundation
   Task 1 acceptance and exclusive path ownership.
 
-The active smallest valuable slice is Task 1: strict Candidate contracts,
-canonical hashing, immutable quarantine persistence, and a verified
-machine-readable projection of all 43 sources and 108 scenario demand signals.
-Implementation is bounded to the frozen contract and exact allowed paths; Tasks
-2 through 6 remain `planned` until their recorded dependency gates are met.
+The next smallest valuable slice is bounded PM dispatch of Task 2: fixed-source
+provenance, licences, notices, and fail-closed acquisition. Task 1 remains
+accepted and frozen; Tasks 2 through 6 remain `planned` until explicitly
+dispatched after their recorded dependency gates are met.
