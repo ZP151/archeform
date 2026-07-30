@@ -39,7 +39,11 @@ Round 2/5. Task 3 is `accepted` after Fix Round 4/5 independent re-review, QA,
 release review, and fresh final verification all passed with no P0/P1/P2. Task
 4 is now `implementing` under its frozen Candidate Registry contract, exact
 allowed paths, and non-goals, with one exclusive `integration` writer and no
-other Task 4 writer. Tasks 5 and 6 remain `planned`. The system will
+other Task 4 writer. A Controller-approved bounded test-contract amendment adds
+only `packages/external-intake/test/portfolio.test.ts` to permit
+`apps/intake-cli/package.json` as the single `@factory/external-intake`
+importer/dependency; the prohibition remains everywhere else. Tasks 5 and 6
+remain `planned`. The system will
 ingest the 43 fixed-reference portfolio as metadata, retain the 108 scenarios as
 composition demand signals, and produce only quarantined evidence,
 non-executable Candidate records, and pending-review promotion packets.
@@ -82,6 +86,16 @@ Task 4 `planned -> implementing`. Its existing Candidate Registry contract,
 exact allowed paths, non-goals, and acceptance evidence are frozen. No other
 Task 4 writer is authorized; Tasks 5 and 6 remain `planned`.
 
+Task 4 verification then reached 215/216 because the accepted Task 1
+`portfolio.test.ts` prohibition rejected the plan-required Intake CLI
+dependency. The Controller approved a minimal Task 4/Task 1 test-contract
+amendment: add exactly `packages/external-intake/test/portfolio.test.ts` to Task
+4 ownership solely to exempt `apps/intake-cli/package.json` as the single
+permitted `@factory/external-intake` importer/dependency. The prohibition
+remains unchanged for every other package and path. There is no Graph, Golden,
+compiler, or production linkage and no other Task 1 change. Task 4 remains
+`implementing`, and its sole writer has been notified.
+
 Independent Task 2 review FAILED with three P1 findings and one P2. The
 Controller resolved its schema incompatibility by selecting a distinct
 `factory.external-source-acquisition/v1` record. Task 2 entered Fix Round 1/5
@@ -107,7 +121,7 @@ remain frozen.
 | 1. Candidate contracts and immutable persistence | `accepted`     | `integration`       | External Intake Contract         | Original release and bounded amendment accepted and frozen. |
 | 2. Fixed-source provenance and notices           | `accepted`     | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
 | 3. Deterministic scan orchestration              | `accepted`     | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
-| 4. Candidate registry, API, CLI, and isolation   | `implementing` | `integration`       | Candidate Registry               | Exclusively dispatched under frozen contract and paths.     |
+| 4. Candidate registry, API, CLI, and isolation   | `implementing` | `integration`       | Candidate Registry               | Exclusive dispatch; bounded importer-test amendment active. |
 | 5. Review-only promotion packets                 | `planned`      | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.           |
 | 6. Bulk acceptance and release evidence          | `planned`      | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.        |
 
@@ -717,6 +731,21 @@ Registry contract, task scope, exact allowed paths, non-goals, and acceptance
 evidence are frozen. Any overlap or contract, path, or scope change stops work
 and returns Task 4 for Controller review.
 
+### Controller-approved bounded test-contract amendment
+
+The initial Task 4 verification reached 215/216 because the accepted Task 1
+portfolio isolation test prohibited the one importer required by the frozen
+Task 4 plan. The Controller authorizes the sole Task 4 writer to modify exactly
+`packages/external-intake/test/portfolio.test.ts`, and only to exempt
+`apps/intake-cli/package.json` as the single permitted
+`@factory/external-intake` importer/dependency.
+
+The prohibition remains enforced for every other package and path. This
+amendment creates no Graph, Golden registry/lock, compiler, product, generated
+application, or other production linkage and changes no other Task 1 behavior,
+test, contract, or path. Task 4 remains `implementing`; all other Task 4
+contract, path, scope, non-goal, and sole-writer constraints remain frozen.
+
 ### Exact allowed paths
 
 - `packages/external-intake/src/candidates.ts`
@@ -726,6 +755,7 @@ and returns Task 4 for Controller review.
 - `packages/external-intake/test/candidates.test.ts`
 - `packages/external-intake/test/api.test.ts`
 - `packages/external-intake/test/conformance.test.ts`
+- `packages/external-intake/test/portfolio.test.ts`
 - `apps/intake-cli/package.json`
 - `apps/intake-cli/tsconfig.json`
 - `apps/intake-cli/vitest.config.ts`
@@ -857,8 +887,10 @@ and returns Task 4 for Controller review.
 The active smallest valuable slice is Task 4 implementation under its frozen
 Candidate Registry contract, exact allowed paths, and non-goals. It is
 `implementing` with one exclusive `integration` writer and no other Task 4
-writer. The frozen Task 2 store is unchanged. Task 1's original release and
-bounded amendment, Task 2's accepted code set
+writer. Its bounded test-contract amendment permits only the Intake CLI package
+manifest to import `@factory/external-intake`; all other isolation prohibitions
+remain enforced. The frozen Task 2 store is unchanged. Task 1's original
+release and bounded amendments, Task 2's accepted code set
 `515e0ba + 3dcb20f + dcaddf4`, and Task 3's accepted repair commit `8b31d3a`
 remain frozen. Tasks 5 and 6 remain `planned` and retain their recorded
 dependency gates.
