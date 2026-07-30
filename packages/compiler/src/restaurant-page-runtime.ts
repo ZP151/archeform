@@ -134,6 +134,30 @@ export function projectRestaurantCustomerLine(value: unknown): RestaurantCustome
   };
 }
 
+export type RestaurantCustomerLineMutationProjection = {
+  readonly line: RestaurantCustomerLineState;
+  readonly orderVersion: number;
+  readonly total: number;
+  readonly modifiers: unknown;
+};
+
+export function commitRestaurantCustomerLineMutation(
+  value: unknown,
+  commit: (projection: RestaurantCustomerLineMutationProjection) => void,
+): void {
+  if (!isRecord(value) || !Number.isInteger(value.orderVersion)) {
+    throw new Error("The Restaurant API returned an invalid line mutation outcome.");
+  }
+  const line = projectRestaurantCustomerLine(value.line);
+  const total = restaurantDecimalNumber(value.total, "order total");
+  commit({
+    line,
+    orderVersion: value.orderVersion as number,
+    total,
+    modifiers: isRecord(value.line) ? value.line.modifiers : null,
+  });
+}
+
 function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) return "[" + value.map(canonicalJson).join(",") + "]";
   if (isRecord(value)) return "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + canonicalJson(value[key])).join(",") + "}";
@@ -360,6 +384,7 @@ export function renderRestaurantPageRuntime(graph: ApplicationGraphV1): string {
 
 import { useEffect, useState } from "react";
 import {
+  commitRestaurantCustomerLineMutation,
   confirmLogicalCommand,
   createCustomerCommandJournalCoordinator,
   projectRestaurantCustomerLine,
@@ -368,7 +393,6 @@ import {
   projectRestaurantCustomerReceipt,
   projectCustomerCommandJournal,
   reconcileLogicalCommandConflict,
-  restaurantDecimalNumber,
   restaurantPaymentMethod,
   restaurantPaymentMethods,
   retainLogicalCommand,
@@ -657,8 +681,10 @@ function MenuPage({ scope, commit, reportError }: { readonly scope: SessionScope
       body,
       onConflict: (order) => commit({ ...scope, order }),
     });
-    const line = cartLine(command.outcome.line, item.name);
-    commit({ ...scope, order: { ...scope.order, orderVersion: command.outcome.orderVersion, total: restaurantDecimalNumber(command.outcome.total, "order total") }, lines: [...scope.lines, line] });
+    commitRestaurantCustomerLineMutation(command.outcome, (projection) => {
+      const line = { ...projection.line, menuItemName: item.name, modifiers: projectedReceiptModifiers(projection.modifiers) };
+      commit({ ...scope, order: { ...scope.order, orderVersion: projection.orderVersion, total: projection.total }, lines: [...scope.lines, line] });
+    });
     await command.confirm();
   };
   return <section className="generated-card"><div className="generated-section-heading"><div><p>Customer menu</p><h2>Menu</h2></div><button type="button" onClick={() => void loadMenu().catch(reportError)}>Refresh</button></div><form onSubmit={(event) => { event.preventDefault(); void loadMenu().catch(reportError); }}><label>Search menu<input value={query} onChange={(event) => setQuery(event.target.value)} /></label><label>Category<select value={category} onChange={(event) => setCategory(event.target.value)}><option value="">All categories</option>{categories.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}</select></label><button type="submit">Search</button></form><ul className="generated-records">{items.map((item) => { const draft = drafts[item.id] ?? { quantity: "1", note: "" }; return <li key={item.id}><div><h3>{item.name}</h3><p>{item.description}</p><p>{item.price.toFixed(2)} · {item.stock} available</p></div><span><label>Quantity<input aria-label="Quantity" inputMode="numeric" value={draft.quantity} onChange={(event) => setDrafts((current) => ({ ...current, [item.id]: { ...draft, quantity: event.target.value } }))} /></label><label>Item note<input aria-label="Item note" value={draft.note} onChange={(event) => setDrafts((current) => ({ ...current, [item.id]: { ...draft, note: event.target.value } }))} /></label><button className="generated-primary" type="button" onClick={() => void add(item).catch(reportError)}>Add {item.name}</button></span></li>; })}</ul></section>;
@@ -680,8 +706,10 @@ function CartPage({ scope, commit, reportError }: { readonly scope: SessionScope
       body,
       onConflict: (order) => commit({ ...scope, order }),
     });
-    const updatedLine = cartLine(command.outcome.line, line.menuItemName);
-    commit({ ...scope, order: { ...scope.order, orderVersion: command.outcome.orderVersion, total: restaurantDecimalNumber(command.outcome.total, "order total") }, lines: scope.lines.map((candidate) => candidate.id === line.id ? updatedLine : candidate) });
+    commitRestaurantCustomerLineMutation(command.outcome, (projection) => {
+      const updatedLine = { ...projection.line, menuItemName: line.menuItemName, modifiers: projectedReceiptModifiers(projection.modifiers) };
+      commit({ ...scope, order: { ...scope.order, orderVersion: projection.orderVersion, total: projection.total }, lines: scope.lines.map((candidate) => candidate.id === line.id ? updatedLine : candidate) });
+    });
     await command.confirm();
   };
   const pay = async () => {

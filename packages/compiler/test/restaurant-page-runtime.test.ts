@@ -47,6 +47,21 @@ type GeneratedCommandRuntime = {
     readonly unitPrice: number;
     readonly lineNote: string;
   };
+  readonly commitRestaurantCustomerLineMutation: (
+    value: unknown,
+    commit: (projection: {
+      readonly line: {
+        readonly id: string;
+        readonly menuItemId: string;
+        readonly quantity: number;
+        readonly unitPrice: number;
+        readonly lineNote: string;
+      };
+      readonly orderVersion: number;
+      readonly total: number;
+      readonly modifiers: unknown;
+    }) => void,
+  ) => void;
   readonly projectRestaurantCustomerOrderState: (value: unknown) => {
     readonly id: string;
     readonly status: string;
@@ -166,6 +181,54 @@ describe("generated Restaurant Customer page runtime", () => {
       lineNote: "No basil",
     });
   });
+
+  it.each([
+    [
+      "line price",
+      { line: { unitPrice: "Infinity" } },
+      "invalid order line unit price",
+    ],
+    ["order total", { total: "Infinity" }, "invalid order total"],
+  ])(
+    "rejects an invalid %s before committing cart state",
+    async (_field, invalidOutcome, expectedMessage) => {
+      const runtime = await generatedCommandRuntime();
+      if (!runtime) return;
+      const validOutcome = {
+        line: {
+          id: "order-line-1",
+          orderId: "order-1",
+          menuItemId: "margherita-pizza",
+          quantity: 2,
+          unitPrice: "12.50",
+          lineNote: "No basil",
+          modifiers: [],
+          createdAt: "2026-07-30T00:00:00.000Z",
+          updatedAt: "2026-07-30T00:00:00.000Z",
+        },
+        orderVersion: 1,
+        total: "25.00",
+      };
+      const outcome = {
+        ...validOutcome,
+        ...invalidOutcome,
+        line: {
+          ...validOutcome.line,
+          ...(typeof invalidOutcome.line === "object"
+            ? invalidOutcome.line
+            : {}),
+        },
+      };
+      let committedProjection: unknown;
+
+      expect(() =>
+        runtime.commitRestaurantCustomerLineMutation(outcome, (projection) => {
+          committedProjection = projection;
+        }),
+      ).toThrow(expectedMessage);
+      expect(committedProjection).toBeUndefined();
+    },
+  );
 
   it.each([
     [12.5, 12.5],
