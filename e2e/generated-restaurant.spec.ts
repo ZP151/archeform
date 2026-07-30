@@ -2,51 +2,53 @@ import { expect, test } from "@playwright/test";
 
 const generatedApplicationUrl =
   process.env.FACTORY_GENERATED_RESTAURANT_E2E_URL;
+const tableSessionToken =
+  process.env.FACTORY_GENERATED_RESTAURANT_TABLE_SESSION_TOKEN;
 
 test.skip(
-  !generatedApplicationUrl,
-  "Set FACTORY_GENERATED_RESTAURANT_E2E_URL for an isolated generated-app journey.",
+  !generatedApplicationUrl || !tableSessionToken,
+  "Set the generated Restaurant URL and opaque table-session token for an isolated generated-app journey.",
 );
 
-test("runs the generated restaurant customer and kitchen journey", async ({
+test("customer resolves a table session, adds notes, pays, and sees status and receipt", async ({
   page,
 }) => {
-  const menuUrl = new URL(generatedApplicationUrl!);
-  menuUrl.pathname = "/menu";
-  await page.goto(menuUrl.toString());
-  await expect(page).toHaveURL(/\/menu$/);
+  const tableUrl = new URL(generatedApplicationUrl!);
+  tableUrl.pathname = `/table/${encodeURIComponent(tableSessionToken!)}`;
+  await page.goto(tableUrl.toString());
   await expect(
     page.getByRole("heading", { name: "Restaurant ordering" }),
   ).toBeVisible();
+  await expect(page.getByText("Table session active")).toBeVisible();
+
+  await page.getByRole("link", { name: "Menu" }).click();
+  await expect(page).toHaveURL(/\/menu$/);
+  await page.getByLabel("Search menu").fill("Margherita");
+  await page.getByRole("button", { name: "Search" }).click();
 
   const pizza = page.locator("li").filter({ hasText: "Margherita pizza" });
   await expect(pizza).toHaveCount(1);
-  await pizza.getByRole("button", { name: "Add to cart" }).click();
-  await expect(
-    page.getByRole("button", { name: "Checkout cart" }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Checkout cart" }).click();
+  await expect(page.getByText("Mushroom risotto")).toHaveCount(0);
+  await pizza.getByLabel("Quantity").fill("2");
+  await pizza.getByLabel("Item note").fill("No basil");
+  await pizza.getByRole("button", { name: "Add Margherita pizza" }).click();
 
   await page.getByRole("link", { name: "Cart" }).click();
   await expect(page).toHaveURL(/\/cart$/);
-  await page.getByRole("link", { name: "Kitchen" }).click();
-  await expect(page).toHaveURL(/\/kitchen$/);
-  await page.getByLabel("Role").selectOption("kitchen");
-  const paidOrder = page.locator("li").filter({ hasText: '"status":"paid"' });
-  await expect(paidOrder.last()).toBeVisible({ timeout: 10_000 });
-  await paidOrder
-    .last()
-    .getByRole("button", { name: "start-preparing" })
+  await page.getByLabel("Order note").fill("Please serve together");
+  await page.getByRole("button", { name: "Pay simulated payment" }).click();
+  await expect(page.getByText("Paid", { exact: true })).toBeVisible();
+
+  await page.getByRole("link", { name: "Current order" }).click();
+  await expect(page.getByText("Session order history")).toBeVisible();
+  await expect(page.getByText("Paid", { exact: true }).first()).toBeVisible();
+  await page
+    .getByRole("navigation", { name: "Customer routes" })
+    .getByRole("link", { name: "Receipt" })
     .click();
-  const preparingOrder = page
-    .locator("li")
-    .filter({ hasText: '"status":"preparing"' });
-  await expect(preparingOrder.last()).toBeVisible({ timeout: 10_000 });
-  await preparingOrder
-    .last()
-    .getByRole("button", { name: "mark-ready" })
-    .click();
-  await expect(
-    page.locator("li").filter({ hasText: '"status":"ready"' }).last(),
-  ).toBeVisible({ timeout: 10_000 });
+  await expect(page).toHaveURL(/\/receipt\//);
+  await expect(page.getByRole("heading", { name: "Receipt" })).toBeVisible();
+  await expect(page.getByText("Margherita pizza")).toBeVisible();
+  await expect(page.getByText("No basil")).toBeVisible();
+  await expect(page.getByText("Please serve together")).toBeVisible();
 });

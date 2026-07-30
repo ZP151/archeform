@@ -124,6 +124,31 @@ const restaurantStructuralBlockTypes = new Set<GeneratedPageRuntimeBlockTypeV1>(
   ],
 );
 
+const restaurantCustomerBlockTypes = new Set<GeneratedPageRuntimeBlockTypeV1>([
+  "restaurant-entry",
+  "menu-browser",
+  "order-cart",
+  "payment-checkout",
+  "order-tracker",
+  "receipt",
+]);
+
+const restaurantAuthorityKeys = new Set([
+  "locationid",
+  "restaurantlocationid",
+  "restauranttablecode",
+  "restauranttableid",
+  "session",
+  "sessionid",
+  "sessiontoken",
+  "tablecode",
+  "tableid",
+  "tablesessionid",
+  "tablesessiontoken",
+  "token",
+  "tokendigest",
+]);
+
 const requiredFactoryCapabilityByBlockType: Readonly<
   Partial<
     Record<
@@ -290,6 +315,17 @@ function projectBlock(
     throw new Error(
       `Restaurant PageModel block '${block.type}' requires compositionProfile 'restaurant-ordering'.`,
     );
+  }
+  if (restaurantCustomerBlockTypes.has(block.type)) {
+    const authorityKeys = [
+      ...Object.keys(block.props ?? {}),
+      ...Object.keys(block.bindings ?? {}),
+    ].map((key) => key.replace(/[-_]/g, "").toLowerCase());
+    if (authorityKeys.some((key) => restaurantAuthorityKeys.has(key))) {
+      throw new Error(
+        `Restaurant Customer block '${block.type}' accepts only an opaque table-session route token; raw table or session bindings are forbidden.`,
+      );
+    }
   }
 
   const requiredCapability = requiredFactoryCapabilityByBlockType[block.type];

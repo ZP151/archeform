@@ -15,6 +15,10 @@ import {
   type ApplicationGraphV1,
 } from "@factory/graph";
 import { createGeneratedPageRuntimeProjection } from "./page-runtime-projection.js";
+import {
+  renderRestaurantCustomerCommandRuntime,
+  renderRestaurantPageRuntime,
+} from "./restaurant-page-runtime.js";
 import { renderRestaurantRuntime } from "./restaurant-runtime.js";
 
 export {
@@ -30,6 +34,13 @@ export {
   type GeneratedPageRuntimeRouteFallbackV1,
   type GeneratedPageRuntimeSafePropV1,
 } from "./page-runtime-projection.js";
+export {
+  projectRestaurantReceiptModifiers,
+  renderRestaurantCustomerCommandRuntime,
+  renderRestaurantPageRuntime,
+  restaurantCustomerPageRuntimeApiVersion,
+  type RestaurantReceiptModifierProjection,
+} from "./restaurant-page-runtime.js";
 export {
   renderRestaurantRuntime,
   restaurantRuntimeApiVersion,
@@ -1612,7 +1623,7 @@ function renderPageRuntime(graph: ApplicationGraphV1): string {
   ].join("\n");
 }
 
-function renderWebProxyRoute(): string {
+function renderWebProxyRoute(restaurant: boolean): string {
   return [
     'export const dynamic = "force-dynamic";',
     "",
@@ -1623,9 +1634,20 @@ function renderWebProxyRoute(): string {
     "  const incoming = new URL(request.url);",
     "  const upstream = new URL(`/api/${path.map(encodeURIComponent).join('/')}`, process.env.FACTORY_API_URL ?? process.env.NEXT_PUBLIC_FACTORY_API_URL ?? 'http://localhost:3001');",
     "  upstream.search = incoming.search;",
+    ...(restaurant
+      ? [
+          "  const forwardedHeaders: Record<string, string> = { 'content-type': request.headers.get('content-type') ?? 'application/json', 'x-factory-role': request.headers.get('x-factory-role') ?? 'anonymous' };",
+          "  const sessionToken = request.headers.get('x-factory-table-session-token');",
+          "  const idempotencyKey = request.headers.get('x-factory-idempotency-key');",
+          "  if (sessionToken) forwardedHeaders['x-factory-table-session-token'] = sessionToken;",
+          "  if (idempotencyKey) forwardedHeaders['x-factory-idempotency-key'] = idempotencyKey;",
+        ]
+      : []),
     "  const response = await fetch(upstream, {",
     "    method: request.method,",
-    "    headers: { 'content-type': request.headers.get('content-type') ?? 'application/json', 'x-factory-role': request.headers.get('x-factory-role') ?? 'anonymous' },",
+    restaurant
+      ? "    headers: forwardedHeaders,"
+      : "    headers: { 'content-type': request.headers.get('content-type') ?? 'application/json', 'x-factory-role': request.headers.get('x-factory-role') ?? 'anonymous' },",
     "    body: ['GET', 'HEAD'].includes(request.method) ? undefined : await request.text(),",
     "  });",
     "  return new Response(await response.text(), { status: response.status, headers: { 'content-type': response.headers.get('content-type') ?? 'application/json' } });",
@@ -1633,6 +1655,7 @@ function renderWebProxyRoute(): string {
     "",
     "export const GET = proxy;",
     "export const POST = proxy;",
+    ...(restaurant ? ["export const PATCH = proxy;"] : []),
     "",
   ].join("\n");
 }
@@ -2219,15 +2242,28 @@ export function generateApplicationBundle(
     {
       path: "web/app/page-runtime.tsx",
       content:
-        restaurantRuntime?.transitionalWebShell ?? renderPageRuntime(graph),
+        restaurantRuntime !== null
+          ? renderRestaurantPageRuntime(graph)
+          : renderPageRuntime(graph),
     },
+    ...(restaurantRuntime !== null
+      ? [
+          {
+            path: "web/app/restaurant-customer-command.ts",
+            content: renderRestaurantCustomerCommandRuntime(),
+          },
+        ]
+      : []),
     { path: "web/app/page.tsx", content: renderWebRootPage() },
     {
       path: "web/app/[...path]/page.tsx",
       content: renderWebCatchAllPage(),
     },
     { path: "web/app/favicon.ico/route.ts", content: renderFaviconRoute() },
-    { path: "web/app/api/[...path]/route.ts", content: renderWebProxyRoute() },
+    {
+      path: "web/app/api/[...path]/route.ts",
+      content: renderWebProxyRoute(restaurantRuntime !== null),
+    },
     { path: "web/app/globals.css", content: renderWebStyles() },
     {
       path: "api/package.json",
