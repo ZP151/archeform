@@ -152,6 +152,33 @@ describe("preview runner", () => {
     }
   });
 
+  it("caps the web readiness budget at the overall operation timeout", async () => {
+    const { root } = await sourceFixture();
+    let healthChecks = 0;
+    const processRunner: PreviewProcessRunner = async (command) => {
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "web")
+        return "127.0.0.1:49101\n";
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "api")
+        return "127.0.0.1:49102\n";
+      if (command.args.includes("exec")) {
+        healthChecks += 1;
+        throw new Error("Generated Web remains unavailable.");
+      }
+    };
+
+    try {
+      await expect(
+        startPreviewRun(root, request(registeredArtifacts), processRunner, {
+          operationTimeoutMs: 20,
+          readinessTimeoutMs: 600,
+        }),
+      ).rejects.toMatchObject({ code: "preview_health_check_failed" });
+      expect(healthChecks).toBe(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("cancels promptly while waiting to retry web readiness", async () => {
     const { root } = await sourceFixture();
     const preview = join(root, ".preview-runs", "preview-1");
