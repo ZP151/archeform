@@ -43,7 +43,10 @@ other Task 4 writer. A Controller-approved bounded test-contract amendment adds
 only `packages/external-intake/test/portfolio.test.ts` to permit
 `apps/intake-cli/package.json` as the single `@factory/external-intake`
 importer/dependency; the prohibition remains everywhere else. Tasks 5 and 6
-remain `planned`. The system will
+remain `planned`. Independent Task 4 review of commit `33fd204` then FAILED with
+four P1 findings and one P2. The Controller authorized bounded Repair Round 1/5
+and exactly three additional production paths; Task 4 remains `implementing`
+under the amended frozen scope. The system will
 ingest the 43 fixed-reference portfolio as metadata, retain the 108 scenarios as
 composition demand signals, and produce only quarantined evidence,
 non-executable Candidate records, and pending-review promotion packets.
@@ -96,6 +99,17 @@ remains unchanged for every other package and path. There is no Graph, Golden,
 compiler, or production linkage and no other Task 1 change. Task 4 remains
 `implementing`, and its sole writer has been notified.
 
+Independent Task 4 review of commit `33fd204` FAILED with four P1 findings and
+one P2: Candidate identity crossed valid Graph/compiler boundaries; registry,
+API, and CLI discovery was process-local; Candidate evidence validation weakly
+reimplemented rather than reused the accepted Task 3 chain; a raw public status
+append could forge `conformance-passed`; and forbidden mutation effects were
+accepted. The Controller authorized bounded Repair Round 1/5 and added exactly
+`packages/graph/src/model.ts`, `packages/compiler/src/index.ts`, and
+`packages/external-intake/src/jobs.ts` to the Task 4 production paths for the
+recorded repair only. Task 4 remains `implementing`; Tasks 5 and 6 remain
+`planned`.
+
 Independent Task 2 review FAILED with three P1 findings and one P2. The
 Controller resolved its schema incompatibility by selecting a distinct
 `factory.external-source-acquisition/v1` record. Task 2 entered Fix Round 1/5
@@ -121,7 +135,7 @@ remain frozen.
 | 1. Candidate contracts and immutable persistence | `accepted`     | `integration`       | External Intake Contract         | Original release and bounded amendment accepted and frozen. |
 | 2. Fixed-source provenance and notices           | `accepted`     | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
 | 3. Deterministic scan orchestration              | `accepted`     | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
-| 4. Candidate registry, API, CLI, and isolation   | `implementing` | `integration`       | Candidate Registry               | Exclusive dispatch; bounded importer-test amendment active. |
+| 4. Candidate registry, API, CLI, and isolation   | `implementing` | `integration`       | Candidate Registry               | Repair Round 1/5 under bounded amended scope.               |
 | 5. Review-only promotion packets                 | `planned`      | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.           |
 | 6. Bulk acceptance and release evidence          | `planned`      | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.        |
 
@@ -746,11 +760,45 @@ application, or other production linkage and changes no other Task 1 behavior,
 test, contract, or path. Task 4 remains `implementing`; all other Task 4
 contract, path, scope, non-goal, and sole-writer constraints remain frozen.
 
+### Independent Task Review: Repair Round 1/5
+
+Independent review of Task 4 implementation commit `33fd204` FAILED with four
+P1 findings and one P2. The Controller authorized one bounded repair and added
+exactly `packages/graph/src/model.ts`, `packages/compiler/src/index.ts`, and
+`packages/external-intake/src/jobs.ts` to the production paths below. The repair
+scope is limited to:
+
+1. Reserve the non-overlapping `candidate.` identity namespace and require it
+   for Candidate creation. Graph parsing/semantic validation and the compiler
+   must reject that namespace even when it appears as an otherwise-valid
+   external-provider capability.
+2. Export and reuse a pure accepted Task 3 completed-evidence verification
+   boundary. Candidate create and verify must validate all seven phases,
+   execution identity, parents, checkpoints, deterministic blob rehydration,
+   and terminal bindings without reimplementing a weaker receipt chain.
+3. Make Candidate, API, and CLI discovery durable through the existing
+   immutable store/receipt index or receipt-addressed opaque references. A fresh
+   process must load, report status, and verify prior Candidates while enforcing
+   deterministic `id@version` uniqueness. The frozen Task 2 store must not
+   change.
+4. Permit `conformance-passed` only through one validated operation that
+   persists and rereads a strict pass result bound to the current Candidate and
+   artifact digests. No raw public append transition may create that status.
+5. Allow-list only nonmutating, Candidate-safe declarative manifest and
+   conformance effects. Reject Graph, Policy, Flow, publication, compiler,
+   runtime, approval, and promotion mutations.
+
+All repair tests remain within the existing Task 4 test paths. No other code,
+source, Task 1-3 behavior, dependency, network, process, or runtime change is
+authorized. Task 4 remains `implementing` with the same sole writer. Tasks 5 and
+6 remain `planned`; independent re-review is required before any state advance.
+
 ### Exact allowed paths
 
 - `packages/external-intake/src/candidates.ts`
 - `packages/external-intake/src/api.ts`
 - `packages/external-intake/src/conformance.ts`
+- `packages/external-intake/src/jobs.ts`
 - `packages/external-intake/src/index.ts`
 - `packages/external-intake/test/candidates.test.ts`
 - `packages/external-intake/test/api.test.ts`
@@ -761,8 +809,10 @@ contract, path, scope, non-goal, and sole-writer constraints remain frozen.
 - `apps/intake-cli/vitest.config.ts`
 - `apps/intake-cli/src/main.ts`
 - `apps/intake-cli/test/cli.test.ts`
+- `packages/graph/src/model.ts`
 - `packages/graph/test/application-graph.test.ts`
 - `packages/capabilities/test/capability-registry.test.ts`
+- `packages/compiler/src/index.ts`
 - `packages/compiler/test/compilation-plan.test.ts`
 - `pnpm-lock.yaml`
 
@@ -889,8 +939,11 @@ Candidate Registry contract, exact allowed paths, and non-goals. It is
 `implementing` with one exclusive `integration` writer and no other Task 4
 writer. Its bounded test-contract amendment permits only the Intake CLI package
 manifest to import `@factory/external-intake`; all other isolation prohibitions
-remain enforced. The frozen Task 2 store is unchanged. Task 1's original
-release and bounded amendments, Task 2's accepted code set
+remain enforced. Repair Round 1/5 is limited to Candidate namespace defense,
+reuse of accepted Task 3 completed-evidence verification, durable opaque
+discovery and uniqueness, validated conformance-pass transition, and
+Candidate-safe effect allow-listing. The frozen Task 2 store is unchanged. Task
+1's original release and bounded amendments, Task 2's accepted code set
 `515e0ba + 3dcb20f + dcaddf4`, and Task 3's accepted repair commit `8b31d3a`
 remain frozen. Tasks 5 and 6 remain `planned` and retain their recorded
 dependency gates.
