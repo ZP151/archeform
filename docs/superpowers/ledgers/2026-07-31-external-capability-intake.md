@@ -34,8 +34,8 @@ recorded repair round. Five failed repair/review rounds require escalation.
 Planning is complete for the first quarantine-first bulk Candidate Intake
 slice, and the Controller has accepted the design contract. Task 1 is now
 `accepted` with its bounded shared-contract amendment reconciled; its original
-release behavior remains accepted and frozen. Task 2 is `ready_for_qa` after
-Fix Round 1/5, and Tasks 3 through 6 remain `planned`. The system will ingest the
+release behavior remains accepted and frozen. Task 2 is `implementing` in Fix
+Round 2/5, and Tasks 3 through 6 remain `planned`. The system will ingest the
 43 fixed-reference portfolio as metadata, retain the 108 scenarios as
 composition demand signals, and produce only quarantined evidence,
 non-executable Candidate records, and pending-review promotion packets.
@@ -58,7 +58,9 @@ under its original scope and exact frozen paths. Tasks 3 through 6 remained
 
 Task 2 Fix Round 1 re-review PASSED with no P0/P1/P2. The PM reconciled the
 repair and moved Task 2 `implementing -> ready_for_qa`; independent behavioral
-QA remains required.
+QA subsequently passed. Release review PASSED with two P2 findings, and the
+Controller classified the failure-receipt finding as material to audit
+integrity. Task 2 therefore returned to `implementing` for Fix Round 2/5.
 
 Acquisition amendment Fix Round 2 re-review PASSED with no P0/P1/P2. The PM
 reconciled Fix Rounds 1 and 2 and moved the amendment
@@ -68,7 +70,7 @@ remain frozen.
 | Task                                             | State          | Specialization      | Contract owner                   | Dependency gate                                             |
 | ------------------------------------------------ | -------------- | ------------------- | -------------------------------- | ----------------------------------------------------------- |
 | 1. Candidate contracts and immutable persistence | `accepted`     | `integration`       | External Intake Contract         | Original release and bounded amendment accepted and frozen. |
-| 2. Fixed-source provenance and notices           | `ready_for_qa` | `platform`          | External Source Provenance       | Fix Round 1 re-review PASS; independent QA required.        |
+| 2. Fixed-source provenance and notices           | `implementing` | `platform`          | External Source Provenance       | Material P2; Fix Round 2/5 active.                          |
 | 3. Deterministic scan orchestration              | `planned`      | `platform-security` | External Evidence Pipeline       | Task 1 amendment and Task 2 acquisition must be accepted.   |
 | 4. Candidate registry, API, CLI, and isolation   | `planned`      | `integration`       | Candidate Registry               | Tasks 1-3 and Commercial Foundation Task 1 accepted.        |
 | 5. Review-only promotion packets                 | `planned`      | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.           |
@@ -303,7 +305,7 @@ its unchanged scope and exact paths. Tasks 3 through 6 remain `planned`.
 
 ## Task 2 card: Fixed-source provenance, licences, and notices
 
-- **State:** `ready_for_qa`
+- **State:** `implementing` in Fix Round 2/5
 - **Specialization:** `platform`
 - **Contract owner:** External Source Provenance
 - **Contract artifact:** accepted Task 1 records/store plus the design's source
@@ -311,7 +313,7 @@ its unchanged scope and exact paths. Tasks 3 through 6 remain `planned`.
   `factory.external-source-acquisition/v1`.
 - **Dependencies:** accepted Task 1 release behavior plus accepted bounded
   acquisition-record amendment. Both dependencies are satisfied; Fix Round 1/5
-  is reconciled.
+  is reconciled and Fix Round 2/5 is active.
 
 The accepted Task 1 records/store, the design's source acquisition and
 fail-closed rules, and the exact allowed paths below are frozen for Task 2.
@@ -372,6 +374,27 @@ with the focused Task 2 suite, typecheck, and lint. Task 2 moved
 `implementing -> ready_for_qa`; independent behavioral QA remains required.
 Its contract, scope, and exact paths remain frozen, and Tasks 3 through 6 remain
 `planned`.
+
+### QA and release review: Fix Round 2/5
+
+Independent QA passed on Node 22 with 46/46 focused Task 2 tests, 72/72
+contract/store tests, 123/123 full External Intake tests, typecheck, lint, and
+the bounded code-set diff all clean. Release review then PASSED with two P2
+findings. The Controller classified the failure-receipt P2 as material to audit
+integrity, so Task 2 returned `ready_for_qa -> implementing` for Fix Round 2/5.
+
+The bounded repairs are:
+
+1. Normalize unknown caught errors before receipt creation so `null` or
+   `undefined` rejections still append a redacted immutable blocked receipt;
+   add an adversarial regression for this behavior.
+2. Correct and supersede the Task 2 report's obsolete fake-scan summary. Task 2
+   emits only `{ snapshot, acquisition }`; it emits no EvidenceBundle, SBOM,
+   scanner, scan-result, or AST identity. Task 3 creates the first truthful
+   EvidenceBundle from real scan and inventory outputs.
+
+Task 2's contract, scope, and exact allowed paths remain frozen. Tasks 3 through
+6 remain `planned`.
 
 ## Task 3 card: Deterministic local scans and module inventory
 
@@ -554,8 +577,10 @@ Its contract, scope, and exact paths remain frozen, and Tasks 3 through 6 remain
   Capabilities, and compiler test paths. Task 4 waits for Commercial Foundation
   Task 1 acceptance and exclusive path ownership.
 
-The active smallest valuable slice is independent QA for Task 2 code set
-`515e0ba + 3dcb20f` with its accepted acquisition-amendment dependency. Task 1's
-original release and bounded amendment remain accepted and frozen. Tasks 3
-through 6 remain `planned` until explicitly dispatched after their recorded
-dependency gates are met.
+The active smallest valuable slice is Task 2 Fix Round 2/5: normalize unknown
+caught errors before failure-receipt creation, prove `null` and `undefined`
+rejections append redacted blocked receipts, and correct the obsolete Task 2
+report summary. Task 1's original release and bounded amendment remain accepted
+and frozen. Task 2's scope and exact paths remain unchanged. Tasks 3 through 6
+remain `planned` until explicitly dispatched after their recorded dependency
+gates are met.
