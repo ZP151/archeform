@@ -15,6 +15,10 @@ const portfolioPath = join(
   workspaceRoot,
   "ecosystem/portfolio/2026-07-30-external-business-logic.json",
 );
+const requestProvenance = {
+  createdAt: "2026-07-31T00:00:00.000Z",
+  producerVersion: "0.1.0",
+};
 
 describe("external business-logic portfolio", () => {
   it("loads 43 references and 108 scenario demand mappings", () => {
@@ -76,16 +80,18 @@ describe("external business-logic portfolio", () => {
     expect(eligible).toHaveLength(19);
     expect(policyOnly).toHaveLength(24);
     for (const source of eligible) {
-      expect(createPortfolioIntakeRequest(portfolio, source.id)).toMatchObject({
+      expect(
+        createPortfolioIntakeRequest(portfolio, source.id, requestProvenance),
+      ).toMatchObject({
         apiVersion: "factory.external-intake-request/v1",
         source: { portfolioRecord: source.id },
         classification: source.intakeClassification,
       });
     }
     for (const source of policyOnly) {
-      expect(() => createPortfolioIntakeRequest(portfolio, source.id)).toThrow(
-        /policy-only/i,
-      );
+      expect(() =>
+        createPortfolioIntakeRequest(portfolio, source.id, requestProvenance),
+      ).toThrow(/policy-only/i);
     }
   });
 

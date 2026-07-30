@@ -6,6 +6,7 @@ import {
   intakeContractPrimitives,
   parseIntakeRequest,
   type IntakeRequestV1,
+  type PersistentRecordProvenanceV1,
 } from "./contracts.js";
 
 const portfolioClassSchema = z.enum([
@@ -133,6 +134,10 @@ export function loadExternalPortfolio(path: string): ExternalPortfolioV1 {
 export function createPortfolioIntakeRequest(
   portfolio: ExternalPortfolioV1,
   sourceId: string,
+  provenance: Pick<
+    PersistentRecordProvenanceV1,
+    "createdAt" | "producerVersion"
+  >,
 ): IntakeRequestV1 {
   const parsedPortfolio = externalPortfolioSchema.parse(portfolio);
   const parsedSourceId =
@@ -150,6 +155,9 @@ export function createPortfolioIntakeRequest(
   }
   return parseIntakeRequest({
     apiVersion: "factory.external-intake-request/v1",
+    createdAt: provenance.createdAt,
+    producerVersion: provenance.producerVersion,
+    parentDigests: [],
     source: {
       canonicalRepositoryUrl: source.canonicalRepositoryUrl,
       requestedRef: source.fixedRef,

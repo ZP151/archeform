@@ -39,6 +39,25 @@ const storedRecordRefSchema = z
     digest: intakeContractPrimitives.sha256DigestSchema,
   })
   .strict();
+const receiptIndexSchema = z
+  .object({
+    apiVersion: z.literal("factory.external-intake-receipt-index/v1"),
+    createdAt: intakeContractPrimitives.canonicalTimestampSchema,
+    producerVersion: intakeContractPrimitives.versionSchema,
+    parentDigests: z
+      .array(intakeContractPrimitives.sha256DigestSchema)
+      .length(1),
+    jobId: intakeContractPrimitives.opaqueIdSchema,
+    sequence: z.number().int().positive().finite(),
+    receiptDigest: intakeContractPrimitives.sha256DigestSchema,
+  })
+  .strict()
+  .refine(
+    ({ parentDigests, receiptDigest }) => parentDigests[0] === receiptDigest,
+    "Receipt index parent must be its receipt digest.",
+  );
+
+type ReceiptIndexV1 = z.infer<typeof receiptIndexSchema>;
 
 export type StoredRecordRef = z.infer<typeof storedRecordRefSchema>;
 export type StoredBlobRef = {
@@ -124,7 +143,73 @@ export class ExternalIntakeStore {
     if (parsed.jobId !== parsedJobId) {
       throw new Error("Receipt job ID does not match the append target.");
     }
+    if (parsed.sequence > 1) {
+      const previous = this.#readReceiptIndex(parsedJobId, parsed.sequence - 1);
+      if (previous === null) {
+        throw new Error(
+          `Receipt sequence ${parsed.sequence} is out of order for ${parsedJobId}.`,
+        );
+      }
+      if (!parsed.parentDigests.includes(previous.receiptDigest)) {
+        throw new Error(
+          `Receipt sequence ${parsed.sequence} must include the previous receipt digest.`,
+        );
+      }
+    }
+
+    const receiptDigest = canonicalRecordDigest(parsed);
+    const index: ReceiptIndexV1 = {
+      apiVersion: "factory.external-intake-receipt-index/v1",
+      createdAt: parsed.createdAt,
+      producerVersion: parsed.producerVersion,
+      parentDigests: [receiptDigest],
+      jobId: parsedJobId,
+      sequence: parsed.sequence,
+      receiptDigest,
+    };
+    const indexBytes = new TextEncoder().encode(canonicalJson(index));
+    const indexPath = this.#managedPath([
+      "jobs",
+      parsedJobId,
+      "receipts",
+      `${parsed.sequence}.json`,
+    ]);
+    this.#writeExclusiveVerified(
+      indexPath,
+      indexBytes,
+      digestBytes(indexBytes),
+      true,
+      `Receipt sequence conflict for ${parsedJobId}#${parsed.sequence}.`,
+    );
     return this.#putRecord("receipt", parsed);
+  }
+
+  #readReceiptIndex(jobId: string, sequence: number): ReceiptIndexV1 | null {
+    const path = this.#managedPath([
+      "jobs",
+      jobId,
+      "receipts",
+      `${sequence}.json`,
+    ]);
+    let bytes: Uint8Array;
+    try {
+      bytes = this.#readRegularFile(path);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        return null;
+      }
+      throw error;
+    }
+    const decoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    const parsed = receiptIndexSchema.parse(JSON.parse(decoded) as unknown);
+    if (
+      parsed.jobId !== jobId ||
+      parsed.sequence !== sequence ||
+      canonicalJson(parsed) !== decoded
+    ) {
+      throw new Error("Receipt sequence index is not canonical or consistent.");
+    }
+    return parsed;
   }
 
   #putRecord(kind: IntakeRecordKind, record: IntakeRecordV1): StoredRecordRef {
@@ -196,6 +281,7 @@ export class ExternalIntakeStore {
     bytes: Uint8Array,
     digest: Sha256Digest,
     canonicalRecord: boolean,
+    conflictMessage = "Existing immutable quarantine entry differs from requested bytes.",
   ): void {
     try {
       writeFileSync(path, bytes, {
@@ -208,9 +294,7 @@ export class ExternalIntakeStore {
       }
       const existing = this.#readRegularFile(path);
       if (!buffersEqual(existing, bytes) || digestBytes(existing) !== digest) {
-        throw new Error(
-          "Existing immutable quarantine entry differs from requested bytes.",
-        );
+        throw new Error(conflictMessage);
       }
       return;
     }

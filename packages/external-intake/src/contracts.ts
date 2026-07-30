@@ -73,6 +73,21 @@ const canonicalTimestampSchema = z
     );
   }, "Timestamp must be a canonical UTC ISO-8601 instant.");
 
+const persistentRecordProvenanceShape = {
+  createdAt: canonicalTimestampSchema,
+  producerVersion: versionSchema,
+  parentDigests: z
+    .array(sha256DigestSchema)
+    .max(256)
+    .refine(
+      (digests) => new Set(digests).size === digests.length,
+      "Parent digests must be unique.",
+    ),
+} as const;
+const persistentRecordProvenanceSchema = z
+  .object(persistentRecordProvenanceShape)
+  .strict();
+
 const unsafeWindowsName = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i;
 const relativePathSchema = z
   .string()
@@ -88,6 +103,7 @@ const relativePathSchema = z
         segment.length > 0 &&
         segment !== "." &&
         segment !== ".." &&
+        !/[<>:"|?*\u0000-\u001f]/u.test(segment) &&
         !unsafeWindowsName.test(segment) &&
         !/[.: ]$/u.test(segment),
     );
@@ -179,6 +195,7 @@ const requestedModuleSchema = z
 export const intakeRequestSchema = z
   .object({
     apiVersion: z.literal("factory.external-intake-request/v1"),
+    ...persistentRecordProvenanceShape,
     source: z
       .object({
         canonicalRepositoryUrl: canonicalRepositoryUrlSchema,
@@ -198,7 +215,11 @@ export const intakeRequestSchema = z
       ),
     allowNetworkRetrieval: z.literal(true),
   })
-  .strict();
+  .strict()
+  .refine(
+    ({ parentDigests }) => parentDigests.length === 0,
+    "Intake requests cannot declare parent records.",
+  );
 
 const originEvidenceSchema = z
   .object({
@@ -211,6 +232,7 @@ const originEvidenceSchema = z
 export const sourceSnapshotSchema = z
   .object({
     apiVersion: z.literal("factory.external-source-snapshot/v1"),
+    ...persistentRecordProvenanceShape,
     repositoryUrl: canonicalRepositoryUrlSchema,
     requestedRef: fixedReferenceSchema,
     resolvedCommit: commitSchema,
@@ -242,6 +264,13 @@ export const sourceSnapshotSchema = z
   })
   .strict()
   .superRefine((snapshot, context) => {
+    if (snapshot.parentDigests.length === 0) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Source snapshots require a parent Intake request digest.",
+        path: ["parentDigests"],
+      });
+    }
     const included = new Set(snapshot.includedPaths);
     for (const path of snapshot.excludedPaths) {
       if (included.has(path)) {
@@ -275,6 +304,7 @@ const scanSchema = z
 export const evidenceBundleSchema = z
   .object({
     apiVersion: z.literal("factory.external-evidence/v1"),
+    ...persistentRecordProvenanceShape,
     snapshotDigest: sha256DigestSchema,
     licence: z
       .object({
@@ -312,7 +342,7 @@ export const evidenceBundleSchema = z
       .strict(),
     scans: z
       .array(scanSchema)
-      .max(4)
+      .length(4)
       .refine(
         (scans) => uniqueBy(scans, ({ kind }) => kind),
         "Scan kinds must be unique.",
@@ -325,7 +355,15 @@ export const evidenceBundleSchema = z
       })
       .strict(),
   })
-  .strict();
+  .strict()
+  .refine(
+    ({ parentDigests, snapshotDigest }) =>
+      parentDigests.includes(snapshotDigest),
+    {
+      message: "Evidence parent digests must include its snapshot digest.",
+      path: ["parentDigests"],
+    },
+  );
 
 const selectedModuleSchema = z
   .object({
@@ -346,6 +384,7 @@ const requiredCandidateProhibitions = [
 export const candidateCapabilitySchema = z
   .object({
     apiVersion: z.literal("factory.candidate-capability/v1"),
+    ...persistentRecordProvenanceShape,
     id: opaqueIdSchema,
     version: versionSchema,
     status: z.enum([
@@ -392,6 +431,19 @@ export const candidateCapabilitySchema = z
   })
   .strict()
   .superRefine((candidate, context) => {
+    for (const parent of [
+      candidate.sourceSnapshotDigest,
+      candidate.evidenceDigest,
+    ]) {
+      if (!candidate.parentDigests.includes(parent)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "Candidate parent digests must include snapshot and evidence.",
+          path: ["parentDigests"],
+        });
+      }
+    }
     const prohibitions = new Set(candidate.prohibited);
     for (const required of requiredCandidateProhibitions) {
       if (!prohibitions.has(required)) {
@@ -421,6 +473,7 @@ const sourceCopySchema = z
 export const promotionDecisionSchema = z
   .object({
     apiVersion: z.literal("factory.external-capability-promotion/v1"),
+    ...persistentRecordProvenanceShape,
     candidateDigest: sha256DigestSchema,
     decision: z.enum(["promoted", "rejected"]),
     reviewedBy: z
@@ -450,22 +503,22 @@ export const promotionDecisionSchema = z
       .strict()
       .optional(),
   })
-  .strict();
+  .strict()
+  .refine(
+    ({ candidateDigest, parentDigests }) =>
+      parentDigests.includes(candidateDigest),
+    {
+      message: "Promotion parent digests must include its Candidate digest.",
+      path: ["parentDigests"],
+    },
+  );
 
 export const intakeReceiptSchema = z
   .object({
     apiVersion: z.literal("factory.external-intake-receipt/v1"),
+    ...persistentRecordProvenanceShape,
     jobId: opaqueIdSchema,
-    sequence: z.number().int().nonnegative().finite(),
-    createdAt: canonicalTimestampSchema,
-    producerVersion: versionSchema,
-    parentDigests: z
-      .array(sha256DigestSchema)
-      .max(256)
-      .refine(
-        (digests) => uniqueBy(digests, (digest) => digest),
-        "Parent digests must be unique.",
-      ),
+    sequence: z.number().int().positive().finite(),
     status: z.enum([
       "requested",
       "resolved",
@@ -494,6 +547,9 @@ export type EvidenceBundleV1 = z.infer<typeof evidenceBundleSchema>;
 export type CandidateCapabilityV1 = z.infer<typeof candidateCapabilitySchema>;
 export type PromotionDecisionV1 = z.infer<typeof promotionDecisionSchema>;
 export type IntakeReceiptV1 = z.infer<typeof intakeReceiptSchema>;
+export type PersistentRecordProvenanceV1 = z.infer<
+  typeof persistentRecordProvenanceSchema
+>;
 
 export type IntakeRecordKind =
   "request" | "snapshot" | "evidence" | "candidate" | "promotion" | "receipt";
@@ -562,6 +618,8 @@ export function parseIntakeRecord(
 export const intakeContractPrimitives = {
   opaqueIdSchema,
   sha256DigestSchema,
+  canonicalTimestampSchema,
+  versionSchema,
   canonicalRepositoryUrlSchema,
   canonicalHttpsUrlSchema,
   fixedReferenceSchema,

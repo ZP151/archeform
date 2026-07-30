@@ -12,9 +12,15 @@ import {
 
 const digest = `sha256:${"a".repeat(64)}`;
 const otherDigest = `sha256:${"b".repeat(64)}`;
+const rootProvenance = {
+  createdAt: "2026-07-31T00:00:00.000Z",
+  producerVersion: "0.1.0",
+  parentDigests: [] as string[],
+};
 
 const validRequest = {
   apiVersion: "factory.external-intake-request/v1",
+  ...rootProvenance,
   source: {
     canonicalRepositoryUrl: "https://github.com/example/project.git",
     requestedRef: "v1.2.3",
@@ -28,6 +34,8 @@ const validRequest = {
 
 const validCandidate = {
   apiVersion: "factory.candidate-capability/v1",
+  ...rootProvenance,
+  parentDigests: [digest, otherDigest],
   id: "example-rules",
   version: "1.0.0",
   status: "quarantined",
@@ -56,6 +64,86 @@ const validCandidate = {
 };
 
 describe("external intake contracts", () => {
+  it("requires creation, producer, and parent provenance on every persistent record", () => {
+    const request = { ...validRequest };
+    const snapshot = {
+      apiVersion: "factory.external-source-snapshot/v1",
+      ...rootProvenance,
+      parentDigests: [digest],
+      repositoryUrl: "https://github.com/example/project.git",
+      requestedRef: "v1.2.3",
+      resolvedCommit: "c".repeat(40),
+      retrievedAt: "2026-07-31T00:00:00.000Z",
+      archiveDigest: digest,
+      treeDigest: otherDigest,
+      includedPaths: ["LICENSE"],
+      excludedPaths: [],
+      originEvidence: [
+        {
+          url: "https://github.com/example/project/blob/v1.2.3/LICENSE",
+          retrievedAt: "2026-07-31T00:00:00.000Z",
+          digest,
+        },
+      ],
+    };
+    const scans = ["licence", "secret", "sast", "dependency"].map((kind) => ({
+      kind,
+      tool: `${kind}-scanner`,
+      toolVersion: "1.0.0",
+      rulesetDigest: digest,
+      resultDigest: otherDigest,
+      status: "pass",
+    }));
+    const evidence = {
+      apiVersion: "factory.external-evidence/v1",
+      ...rootProvenance,
+      parentDigests: [digest],
+      snapshotDigest: digest,
+      licence: {
+        primaryPaths: ["LICENSE"],
+        textDigests: [otherDigest],
+        manualStatus: "unreviewed",
+      },
+      notices: [],
+      sbom: { format: "CycloneDX", digest, components: 0 },
+      scans,
+      ast: {
+        parser: "fixture-parser",
+        parserVersion: "1.0.0",
+        inventoryDigest: digest,
+      },
+    };
+    const candidate = {
+      ...validCandidate,
+      ...rootProvenance,
+      parentDigests: [digest, otherDigest],
+    };
+    const promotion = {
+      apiVersion: "factory.external-capability-promotion/v1",
+      ...rootProvenance,
+      parentDigests: [digest],
+      candidateDigest: digest,
+      decision: "rejected",
+      reviewedBy: ["licence-reviewer"],
+      reviewedAt: "2026-07-31T00:00:00.000Z",
+      sourceCopy: [],
+      licenceDecision: "incompatible",
+      replacementPath: "packages/capabilities/assets/example/1.0.0",
+    };
+
+    expect(parseIntakeRequest(request)).toEqual(request);
+    expect(parseSourceSnapshot(snapshot)).toEqual(snapshot);
+    expect(parseEvidenceBundle(evidence)).toEqual(evidence);
+    expect(parseCandidateCapability(candidate)).toEqual(candidate);
+    expect(parsePromotionDecision(promotion)).toEqual(promotion);
+
+    for (const field of ["createdAt", "producerVersion", "parentDigests"]) {
+      const missing = structuredClone(request) as Record<string, unknown>;
+      delete missing[field];
+      expect(() => parseIntakeRequest(missing)).toThrow();
+    }
+  });
+
   it("keeps Candidate records outside the Golden capability contract", () => {
     const candidate = parseCandidateCapability(validCandidate);
 
@@ -166,9 +254,29 @@ describe("external intake contracts", () => {
     ).toThrow();
   });
 
+  it.each([
+    "src/file.ts:alternate-stream",
+    "src/file?.ts",
+    "src/file*.ts",
+    "src/file|name.ts",
+    'src/file"name.ts',
+    "src/file<name.ts",
+    "src/file>name.ts",
+    "src/\u0001file.ts",
+  ])("rejects Windows-invalid or ADS path %s", (path) => {
+    expect(() =>
+      parseIntakeRequest({
+        ...validRequest,
+        requestedModules: [{ path }],
+      }),
+    ).toThrow(/path/i);
+  });
+
   it("strictly validates snapshot timestamps, paths, commits, and digests", () => {
     const snapshot = {
       apiVersion: "factory.external-source-snapshot/v1",
+      ...rootProvenance,
+      parentDigests: [digest],
       repositoryUrl: "https://github.com/example/project.git",
       requestedRef: "v1.2.3",
       resolvedCommit: "c".repeat(40),
@@ -207,17 +315,19 @@ describe("external intake contracts", () => {
     ).toThrow();
   });
 
-  it("rejects non-finite evidence counts and duplicate scan kinds", () => {
-    const scan = {
-      kind: "licence",
-      tool: "fixture-scanner",
+  it("requires exactly one scan for every evidence kind", () => {
+    const scans = ["licence", "secret", "sast", "dependency"].map((kind) => ({
+      kind,
+      tool: `${kind}-scanner`,
       toolVersion: "1.0.0",
       rulesetDigest: digest,
       resultDigest: otherDigest,
       status: "pass",
-    };
+    }));
     const evidence = {
       apiVersion: "factory.external-evidence/v1",
+      ...rootProvenance,
+      parentDigests: [digest],
       snapshotDigest: digest,
       licence: {
         primaryPaths: ["LICENSE"],
@@ -226,7 +336,7 @@ describe("external intake contracts", () => {
       },
       notices: [],
       sbom: { format: "CycloneDX", digest, components: 0 },
-      scans: [scan],
+      scans,
       ast: {
         parser: "fixture-parser",
         parserVersion: "1.0.0",
@@ -241,14 +351,27 @@ describe("external intake contracts", () => {
         sbom: { ...evidence.sbom, components: Number.POSITIVE_INFINITY },
       }),
     ).toThrow();
+    for (const missingKind of ["licence", "secret", "sast", "dependency"]) {
+      expect(() =>
+        parseEvidenceBundle({
+          ...evidence,
+          scans: scans.filter(({ kind }) => kind !== missingKind),
+        }),
+      ).toThrow(/scan/i);
+    }
     expect(() =>
-      parseEvidenceBundle({ ...evidence, scans: [scan, scan] }),
-    ).toThrow();
+      parseEvidenceBundle({
+        ...evidence,
+        scans: [...scans.slice(1), scans[1]],
+      }),
+    ).toThrow(/scan/i);
   });
 
   it("keeps promotion evidence strict and separate from Candidate parsing", () => {
     const decision = {
       apiVersion: "factory.external-capability-promotion/v1",
+      ...rootProvenance,
+      parentDigests: [digest],
       candidateDigest: digest,
       decision: "rejected",
       reviewedBy: ["licence-reviewer"],

@@ -21,6 +21,9 @@ import {
 const roots: string[] = [];
 const validRequest = {
   apiVersion: "factory.external-intake-request/v1" as const,
+  createdAt: "2026-07-31T00:00:00.000Z",
+  producerVersion: "0.1.0",
+  parentDigests: [],
   source: {
     canonicalRepositoryUrl: "https://github.com/example/project.git",
     requestedRef: "v1.0.0",
@@ -34,6 +37,24 @@ function tempRoot(): string {
   const root = mkdtempSync(join(tmpdir(), "factory-external-intake-"));
   roots.push(root);
   return root;
+}
+
+function receiptAt(
+  sequence: number,
+  parentDigests: IntakeReceiptV1["parentDigests"] = [],
+  code = `receipt-${sequence}`,
+): IntakeReceiptV1 {
+  return {
+    apiVersion: "factory.external-intake-receipt/v1",
+    jobId: "job-1",
+    sequence,
+    createdAt: `2026-07-31T00:00:0${sequence}.000Z`,
+    producerVersion: "0.1.0",
+    parentDigests,
+    status: sequence === 1 ? "requested" : "resolved",
+    code,
+    recordDigests: [],
+  };
 }
 
 afterEach(() => {
@@ -142,6 +163,65 @@ describe("ExternalIntakeStore", () => {
         rawResponse: "private",
       } as never),
     ).toThrow();
+  });
+
+  it("indexes each job receipt sequence and retries identical content idempotently", () => {
+    const root = tempRoot();
+    const store = new ExternalIntakeStore(root);
+    const receipt = receiptAt(1);
+
+    const first = store.appendReceipt("job-1", receipt);
+    const retry = store.appendReceipt("job-1", structuredClone(receipt));
+    const index = JSON.parse(
+      readFileSync(join(root, "jobs", "job-1", "receipts", "1.json"), "utf8"),
+    ) as unknown;
+
+    expect(retry).toEqual(first);
+    expect(index).toEqual({
+      apiVersion: "factory.external-intake-receipt-index/v1",
+      createdAt: receipt.createdAt,
+      producerVersion: receipt.producerVersion,
+      parentDigests: [first.digest],
+      jobId: "job-1",
+      sequence: 1,
+      receiptDigest: first.digest,
+    });
+  });
+
+  it("rejects conflicting content for an existing job receipt sequence", () => {
+    const store = new ExternalIntakeStore(tempRoot());
+    const receipt = receiptAt(1);
+    const first = store.appendReceipt("job-1", receipt);
+
+    expect(() =>
+      store.appendReceipt("job-1", {
+        ...receipt,
+        code: "different-outcome",
+      }),
+    ).toThrow(/receipt sequence conflict/i);
+    expect(store.getRecord(first)).toEqual(receipt);
+  });
+
+  it("rejects missing, out-of-order, and unlinked job receipt sequences", () => {
+    const store = new ExternalIntakeStore(tempRoot());
+
+    expect(() => store.appendReceipt("job-1", receiptAt(2))).toThrow(
+      /out of order/i,
+    );
+    const first = store.appendReceipt("job-1", receiptAt(1));
+    expect(() => store.appendReceipt("job-1", receiptAt(3))).toThrow(
+      /out of order/i,
+    );
+    expect(() => store.appendReceipt("job-1", receiptAt(2))).toThrow(
+      /previous receipt digest/i,
+    );
+
+    const second = store.appendReceipt("job-1", receiptAt(2, [first.digest]));
+    expect(store.getRecord(second)).toMatchObject({
+      jobId: "job-1",
+      sequence: 2,
+      parentDigests: [first.digest],
+    });
   });
 
   it("rejects symlinks in the managed quarantine path", () => {

@@ -17,6 +17,7 @@ export {
   type IntakeRecordKind,
   type IntakeRecordV1,
   type IntakeRequestV1,
+  type PersistentRecordProvenanceV1,
   type PromotionDecisionV1,
   type SourceSnapshotV1,
 } from "./contracts.js";
