@@ -36,16 +36,16 @@ release review found one load-bearing compiler source-of-truth defect. Fix round
 no P0/P1/P2. Repeated broad release review approved with no P0/P1/P2, and fresh
 root verification passed. Task 4 is accepted and frozen. Task 5 now owns the
 bounded release gate and migrated-dispatch retirement. Implementation commit
-`b616a0c` passed independent task review with no P0/P1/P2; Task 5 is
-`ready_for_qa`.
+`b616a0c` passed independent task review and independent QA with no P0/P1/P2;
+Task 5 is `reviewed`. Root release review and fresh verification remain.
 
-| Task                                                   | State          | Evidence-backed status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| ------------------------------------------------------ | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1. Composition contract and canonical immutable lock   | `accepted`     | Commits `d2f6517..27a8433`; final independent re-review clean. The accepted contract canonicalizes exact Golden package identities and fails closed on invalid composition input.                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| 2. Physical Graph and target contribution verification | `accepted`     | Commits `33f9f31..0e1cc33`; final independent re-review clean. Physical packages, digests, runtime metadata, namespaces, and contribution collisions are verified fail closed.                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| 3. Publish and compile an immutable composition lock   | `accepted`     | Baseline commit `a2fac21`; repairs through `e509b6c`. Final task review and release review approved with no P0/P1/P2; independent QA passed with no P0/P1. Fresh verification passed Graph 19/19, Capabilities 108/108, Control Plane 111/111, compiler 169/169, Worker 74/74, all five typechecks, targeted Prettier, and `git diff --check`. The immutable publication, closed binding grammar, raw-before-canonicalization validation, and pre-generation collision contracts are accepted.                                                                                                             |
-| 4. Shared-commerce composition with different bindings | `accepted`     | Implementation range `ed87dfd`, `b2a9d45`, `6410b92`, `f054802`, and `1cfae6e`. Scoped re-review, repeated independent QA, and repeated broad release review passed with no P0/P1/P2. Fresh root verification passed Graph 23/23, Capabilities 112/112, Control Plane 115/115, compiler 173/173, Worker 74/74, five TypeScript typechecks, compiler lint, scoped Prettier, `git diff --check`, and a clean worktree. Compiler decisions come only from the verified immutable composition lock; active Workbench uses `composeDefaultCapabilityDraft`; legacy fixtures cannot substitute a published lock. |
-| 5. Release gate and migrated-dispatch retirement       | `ready_for_qa` | Implementation commit `b616a0c`; independent task review found no P0/P1/P2 and approved specification compliance and quality. Review verified lock-derived migrated dispatch, the bounded unmigrated Restaurant branch, Worker composition-lock fail-closed behavior, shared Prisma relation mapping including `tableCode` and `categoryKey`, scoped documentation, and no unsafe raw or cleanup behavior. Independent QA must reproduce deterministic compiler/Worker behavior and both isolated Node 22 Restaurant and Ecommerce Compose lifecycles with exact scoped cleanup.                           |
+| Task                                                   | State      | Evidence-backed status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------------------------------------------ | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Composition contract and canonical immutable lock   | `accepted` | Commits `d2f6517..27a8433`; final independent re-review clean. The accepted contract canonicalizes exact Golden package identities and fails closed on invalid composition input.                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 2. Physical Graph and target contribution verification | `accepted` | Commits `33f9f31..0e1cc33`; final independent re-review clean. Physical packages, digests, runtime metadata, namespaces, and contribution collisions are verified fail closed.                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 3. Publish and compile an immutable composition lock   | `accepted` | Baseline commit `a2fac21`; repairs through `e509b6c`. Final task review and release review approved with no P0/P1/P2; independent QA passed with no P0/P1. Fresh verification passed Graph 19/19, Capabilities 108/108, Control Plane 111/111, compiler 169/169, Worker 74/74, all five typechecks, targeted Prettier, and `git diff --check`. The immutable publication, closed binding grammar, raw-before-canonicalization validation, and pre-generation collision contracts are accepted.                                                                                                             |
+| 4. Shared-commerce composition with different bindings | `accepted` | Implementation range `ed87dfd`, `b2a9d45`, `6410b92`, `f054802`, and `1cfae6e`. Scoped re-review, repeated independent QA, and repeated broad release review passed with no P0/P1/P2. Fresh root verification passed Graph 23/23, Capabilities 112/112, Control Plane 115/115, compiler 173/173, Worker 74/74, five TypeScript typechecks, compiler lint, scoped Prettier, `git diff --check`, and a clean worktree. Compiler decisions come only from the verified immutable composition lock; active Workbench uses `composeDefaultCapabilityDraft`; legacy fixtures cannot substitute a published lock. |
+| 5. Release gate and migrated-dispatch retirement       | `reviewed` | Implementation commit `b616a0c`; independent task review and QA found no P0/P1/P2. QA passed focused compiler 54/54, Worker 3/3, full compiler 175/175, full Worker 74/74, compiler/Worker typechecks, and Graph/Capabilities/compiler/Worker builds. Restaurant and Ecommerce each produced 58 artifacts from the same nine package identities with different bindings and outputs, ran API/Web on Node v22.23.1, passed role journey 1/1, reached stopped state, and cleaned only exact run-owned Docker/runtime resources. Root release review and fresh verification remain.                           |
 
 Development, review, QA, release review, and fresh verification for Tasks 1
 through 3 ran on host Node 24. This is valid Task 3 acceptance evidence. It is
@@ -57,11 +57,11 @@ v24.18.0 while repository engines declare Node 22. This development-environment
 warning is nonblocking for Task 4 acceptance. Node 22 generated-runtime and
 isolated Compose evidence remain Task 5 gates.
 
-## Active ownership: Task 5 independent release-gate QA
+## Active ownership: Task 5 root release review and fresh verification
 
-- Specialization and active owner: `qa`
+- Specialization and active owner: `release-review / verification`
 - Contract owner: Factory Platform Integration (root controller)
-- State: `ready_for_qa`
+- State: `reviewed`
 - Contract status: Tasks 1 through 4 are accepted and frozen. Task 5 consumes
   fully published immutable composition locks and generic compiler output; it
   does not reopen the Graph, capability, Publish, or compilation-input contract.
@@ -104,27 +104,39 @@ authorized. This PM transition changes no product code or contract.
 - Task review explicitly deferred reproducibility of both Node 22 Compose
   lifecycles to independent QA.
 
-### Independent QA requirements before Task 5 can leave `ready_for_qa`
+### Independent QA evidence
 
-- Reproduce the focused compiler composition and compilation-plan tests proving
-  deterministic compilation, lock-derived migrated behavior, and no migrated
-  profile/version dispatch.
-- Reproduce the focused Worker executor test proving a job whose persisted
-  composition-lock artifact digest differs rejects fail closed.
-- Run one Restaurant and one Ecommerce Published revision as isolated generated
-  applications on Node 22, using unique Compose project names and loopback ports.
-- Verify each generated application's role journey and stopped-preview state.
-- Verify exact label-scoped removal of each run's containers, network, volumes,
-  and runtime directory. Do not touch any other Docker project.
-- Reconcile the acceptance record using only redacted immutable revision IDs,
-  Graph hashes, composition-lock digests, artifact counts, exact test commands,
-  outcomes, and scoped cleanup results.
-- Report findings by P0/P1/P2 severity. Release review and fresh verification
-  remain required before `accepted`.
+- Independent QA verdict: PASS with no P0/P1/P2.
+- Focused compiler composition and compilation-plan tests passed 54/54, covering
+  deterministic compilation, no migrated `compositionProfile` dispatch,
+  Graph-declared relation-scalar reuse, and fail-closed rejection when no unique
+  relation target field resolves. Focused Worker executor tests passed 3/3,
+  including persisted composition-lock artifact digest mismatch rejection.
+- Full compiler passed 175/175 and full Worker passed 74/74. Compiler and Worker
+  typechecks passed. Graph, Capabilities, compiler, and Worker builds passed.
+- Restaurant and Ecommerce each produced 58 artifacts from immutable Published
+  inputs. Both locks contained the same nine exact package identities, while
+  bindings, Graph/lock digests, routes, schemas, labels, fixtures, and role
+  journeys differed as required.
+- Both generated applications ran API and Web on Node v22.23.1 in isolated
+  Compose projects with unique project names and loopback-only ports. Migration
+  and seed completed, API health and Web readiness passed, each generated role
+  journey passed 1/1, and each seeded application table contained two rows.
+- Before teardown, each exact project owned four containers, one network, and
+  its resolved anonymous PostgreSQL volume. Exact `down --volumes
+--remove-orphans` cleanup left zero labeled containers, networks, and volumes
+  and removed only the contained QA runtime directories. Five containers from
+  unrelated project `factory-task7-evidence2` remained untouched.
+- A generated-content scan found no model credential, OpenAI API key, raw prompt,
+  or raw response pattern; no external AI/provider call was made. The initial
+  Restaurant `/health` probe was corrected to documented `/api/health` and was
+  not a product failure.
+- QA ran from `175c382`; its later HEAD contained only an unrelated research
+  document beyond the QA baseline and no production or test path change.
 
-Dependencies are Tasks 1 through 4, all `accepted`. Independent QA owns the next
-gate and may not edit product code. A reproducible load-bearing defect returns
-Task 5 to `implementing` under a recorded repair round.
+Dependencies are Tasks 1 through 4, all `accepted`. Root release review and fresh
+verification own the remaining gate. Task 5 is not `accepted`; a reproducible
+load-bearing defect returns it to `implementing` under a recorded repair round.
 
 ## Frozen implementation path ownership for Task 4
 
@@ -488,16 +500,14 @@ Task 3 has reconciled all required behavioral and governance evidence:
 
 ## Blocked decisions and risks
 
-- Blocked decisions: none for independent Task 5 QA. Tasks 1 through 4
-  are accepted, and the approved plan and generated brief freeze the permitted
-  paths, dispatch-removal boundary, and acceptance evidence.
+- Blocked decisions: none for Task 5 root release review. Tasks 1 through 4 are
+  accepted, and task review plus independent QA are reconciled with no
+  P0/P1/P2.
 - Risk: removing an unmigrated Restaurant runtime module or dispatch branch
   would exceed Task 4 proof and break behavior not yet carried by a
   parameterized asset.
-- Risk: host Node 24 checks cannot substitute for the required isolated Node 22
-  Restaurant and Ecommerce generated-runtime evidence.
-- Risk: unscoped Docker cleanup could affect user-owned projects; cleanup must
-  target only exact project labels and run-owned runtime directories.
+- Risk: fresh root verification must not infer deterministic or generated-runtime
+  health solely from the completed QA report.
 - Risk: an acceptance record containing unredacted identifiers, credentials, or
   raw model material would violate the evidence boundary.
 - Deferred nonblocking maintenance: the duplicated Graph-symbol resolver remains
@@ -529,9 +539,9 @@ Task 3 has reconciled all required behavioral and governance evidence:
   RED/GREEN and nine-root verification evidence non-reproducible.
 - Risk: Task 5 must retire only migrated dispatch behavior proven by accepted
   Task 4 evidence.
-- Risk: Node 22 generated-runtime evidence and isolated Compose lifecycle
-  evidence are still required at the Task 5 release gate and must not be
-  inferred from host Node 24 task checks.
+- Evidence: independent QA reproduced both isolated Node 22 generated-runtime
+  Compose lifecycles and exact cleanup; root release review and fresh verification
+  remain before acceptance.
 
 ## Explicit non-goals and Task 5 boundaries
 
@@ -555,8 +565,7 @@ Task 3 has reconciled all required behavioral and governance evidence:
 
 ## Next smallest valuable slice
 
-Independent QA reproduces the deterministic compiler and fail-closed Worker
-evidence, then runs both isolated Node 22 Restaurant and Ecommerce Compose
-lifecycles with unique project names and loopback ports. QA verifies both role
-journeys, stopped-preview states, and exact label-scoped cleanup before the task
-can move to `reviewed`.
+Root release review audits the complete Task 5 implementation, task-review, and
+independent-QA evidence for scope, safety, and acceptance compliance. If clean,
+fresh verification repeats the load-bearing deterministic and release gates
+before the controller may move Task 5 to `accepted`.
