@@ -12,10 +12,10 @@ import { ExternalIntakeStore } from "../src/store.js";
 const roots: string[] = [];
 const createdAt = "2026-07-31T06:00:00.000Z";
 
-function tempStore(): ExternalIntakeStore {
+function tempStore(): { root: string; store: ExternalIntakeStore } {
   const root = mkdtempSync(join(tmpdir(), "factory-intake-api-test-"));
   roots.push(root);
-  return new ExternalIntakeStore(root);
+  return { root, store: new ExternalIntakeStore(root) };
 }
 
 function request(id: string): IntakeRequestV1 {
@@ -43,8 +43,8 @@ afterEach(() => {
 
 describe("External Intake module API", () => {
   it("submits local batch data as independent immutable request items", () => {
-    const store = tempStore();
-    const api = createExternalIntakeApi(store);
+    const { root, store } = tempStore();
+    const api = createExternalIntakeApi(store, root);
 
     const result = api.submitBatch({
       apiVersion: "factory.external-intake-batch/v1",
@@ -76,7 +76,7 @@ describe("External Intake module API", () => {
     });
     const lookupId = result.byId["safe-source"]!.lookupId!;
     expect(lookupId).toMatch(/^job-[a-f0-9]{64}$/u);
-    expect(createExternalIntakeApi(store).status(lookupId)).toEqual({
+    expect(createExternalIntakeApi(store, root).status(lookupId)).toEqual({
       id: "safe-source",
       status: "requested",
       producerVersion: "0.1.0",
@@ -85,8 +85,8 @@ describe("External Intake module API", () => {
   });
 
   it("returns evidence metadata without source, findings, or report bytes", () => {
-    const store = tempStore();
-    const api = createExternalIntakeApi(store);
+    const { root, store } = tempStore();
+    const api = createExternalIntakeApi(store, root);
     const snapshotDigest = digestBytes(new TextEncoder().encode("snapshot"));
     const resultDigest = digestBytes(new TextEncoder().encode("scan"));
     const evidence: EvidenceBundleV1 = {
@@ -157,7 +157,8 @@ describe("External Intake module API", () => {
       },
     ],
   ])("rejects %s at the module API boundary", (_, input) => {
-    const api = createExternalIntakeApi(tempStore());
+    const { root, store } = tempStore();
+    const api = createExternalIntakeApi(store, root);
 
     expect(() => api.submitBatch(input as never)).toThrow("strict batch input");
   });

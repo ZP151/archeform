@@ -77,8 +77,10 @@ describe("repository-local intake CLI", () => {
     const root = tempRoot();
     const requestPath = validRequestFile(root);
     const original = readFileSync(requestPath, "utf8");
+    const quarantine = join(root, "quarantine");
     const api = createExternalIntakeApi(
-      new ExternalIntakeStore(join(root, "quarantine")),
+      new ExternalIntakeStore(quarantine),
+      quarantine,
     );
     const output = outputHarness(api, root);
 
@@ -106,7 +108,7 @@ describe("repository-local intake CLI", () => {
     const requestPath = validRequestFile(root);
     const quarantine = join(root, "quarantine");
     const submitted = outputHarness(
-      createExternalIntakeApi(new ExternalIntakeStore(quarantine)),
+      createExternalIntakeApi(new ExternalIntakeStore(quarantine), quarantine),
       root,
     );
     expect(
@@ -120,7 +122,7 @@ describe("repository-local intake CLI", () => {
     };
     const lookupId = result.byId["safe-source"]!.lookupId;
     const fresh = outputHarness(
-      createExternalIntakeApi(new ExternalIntakeStore(quarantine)),
+      createExternalIntakeApi(new ExternalIntakeStore(quarantine), quarantine),
       root,
     );
 
@@ -143,8 +145,10 @@ describe("repository-local intake CLI", () => {
     ["path-like opaque ID", ["status", "../safe-source"]],
   ])("rejects %s", async (_, args) => {
     const root = tempRoot();
+    const quarantine = join(root, "quarantine");
     const api = createExternalIntakeApi(
-      new ExternalIntakeStore(join(root, "quarantine")),
+      new ExternalIntakeStore(quarantine),
+      quarantine,
     );
     const output = outputHarness(api, root);
 

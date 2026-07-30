@@ -110,8 +110,9 @@ function jobLookupId(receiptDigest: string): string {
 
 export function createExternalIntakeApi(
   store: ExternalIntakeStore,
+  verificationRoot: string,
 ): ExternalIntakeApiV1 {
-  const registry = new CandidateRegistry(store);
+  const registry = new CandidateRegistry(store, verificationRoot);
   const statuses = new Map<string, ExternalIntakeStatusV1>();
 
   return {

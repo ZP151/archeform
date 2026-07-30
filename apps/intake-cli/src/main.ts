@@ -151,8 +151,10 @@ export async function runIntakeCli(
 }
 
 async function main(): Promise<void> {
+  const quarantineRoot = resolve(process.cwd(), "ecosystem", "intake");
   const api = createExternalIntakeApi(
-    new ExternalIntakeStore(resolve(process.cwd(), "ecosystem", "intake")),
+    new ExternalIntakeStore(quarantineRoot),
+    quarantineRoot,
   );
   process.exitCode = await runIntakeCli(process.argv.slice(2), {
     api,

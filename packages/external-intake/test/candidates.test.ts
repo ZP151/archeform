@@ -1,5 +1,6 @@
 import {
   mkdtempSync,
+  mkdirSync,
   existsSync,
   readFileSync,
   readdirSync,
@@ -8,7 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -24,6 +25,7 @@ import type {
   IntakeRequestV1,
   SourceSnapshotV1,
 } from "../src/contracts.js";
+import { parseIntakeReceipt } from "../src/contracts.js";
 import {
   runEvidencePipeline,
   verifyCompletedEvidence,
@@ -60,6 +62,7 @@ function tempStore(): { root: string; store: ExternalIntakeStore } {
 class ForgingReceiptStore extends ExternalIntakeStore {
   forgeConformanceReceipt = false;
   forgeEvidenceJob = false;
+  truncateCandidateChain = false;
 
   override getRecord(
     ...args: Parameters<ExternalIntakeStore["getRecord"]>
@@ -85,8 +88,41 @@ class ForgingReceiptStore extends ExternalIntakeStore {
     ) {
       return { ...record, jobId: "evidence-forged" };
     }
+    if (
+      this.truncateCandidateChain &&
+      record.apiVersion === "factory.external-intake-receipt/v1" &&
+      record.code === "candidate-quarantined"
+    ) {
+      return { ...record, recordDigests: record.recordDigests.slice(0, -1) };
+    }
     return record;
   }
+}
+
+function blobPath(
+  root: string,
+  kind: "snapshot" | "evidence",
+  digest: string,
+): string {
+  return join(root, "blobs", kind, `${digest.slice("sha256:".length)}.bin`);
+}
+
+function recordPath(root: string, kind: string, digest: string): string {
+  return join(root, "records", kind, `${digest.slice("sha256:".length)}.json`);
+}
+
+function verificationStatePath(
+  root: string,
+  store: ExternalIntakeStore,
+  lookupId: string,
+): string {
+  const receipt = parseIntakeReceipt(
+    store.getRecord({
+      kind: "receipt",
+      digest: `sha256:${lookupId.slice("candidate-".length)}`,
+    }),
+  );
+  return blobPath(root, "evidence", receipt.recordDigests[1]!);
 }
 
 function safeArtifacts(): CandidateArtifactsV1 {
@@ -547,7 +583,7 @@ describe("Candidate registry", () => {
   });
 
   it("records conformance-passed only through a validated immutable result", async () => {
-    const { store } = tempStore();
+    const { root, store } = tempStore();
     const registry = new CandidateRegistry(store);
     const initial = await registry.create(await acceptedProposal(store));
     const result = evaluateCandidateConformance(
@@ -573,7 +609,7 @@ describe("Candidate registry", () => {
     await expect(registry.verify(passed)).resolves.toMatchObject({
       valid: true,
     });
-    const fresh = new CandidateRegistry(store);
+    const fresh = new CandidateRegistry(store, root);
     expect(fresh.get(passed.lookupId, passed.version).status).toBe(
       "conformance-passed",
     );
@@ -698,10 +734,10 @@ describe("Candidate registry", () => {
   });
 
   it("loads and verifies a prior Candidate through its receipt-addressed reference", async () => {
-    const { store } = tempStore();
+    const { root, store } = tempStore();
     const first = new CandidateRegistry(store);
     const ref = await first.create(await acceptedProposal(store));
-    const fresh = new CandidateRegistry(store);
+    const fresh = new CandidateRegistry(store, root);
 
     expect(ref.lookupId).toMatch(/^candidate-[a-f0-9]{64}$/u);
     expect(fresh.get(ref.lookupId, ref.version)).toMatchObject({
@@ -722,9 +758,186 @@ describe("Candidate registry", () => {
     const forged = new ForgingReceiptStore(root);
     forged.forgeEvidenceJob = true;
 
-    expect(() =>
-      new CandidateRegistry(forged).getRef(ref.lookupId, ref.version),
-    ).toThrow("evidence attestation");
+    await expect(
+      new CandidateRegistry(forged, root).verify(ref),
+    ).resolves.toMatchObject({ valid: false });
+  });
+
+  it("persists redacted strict state and rehydrates every fresh-process artifact and checkpoint", async () => {
+    const { root, store } = tempStore();
+    const proposal = await acceptedProposal(store);
+    const ref = await new CandidateRegistry(store).create(proposal);
+    const statePath = verificationStatePath(root, store, ref.lookupId);
+    const source = proposal.evidenceJob.snapshotView.files[0]!;
+    const sourcePath = blobPath(root, "snapshot", source.digest);
+    const summaryPath = blobPath(
+      root,
+      "evidence",
+      proposal.completedEvidence.scans.scans[0]!.summary.digest,
+    );
+    const manifestPath = blobPath(
+      root,
+      "evidence",
+      digestBytes(bytes(canonicalJson(proposal.artifacts.manifest))),
+    );
+
+    expect(existsSync(statePath)).toBe(true);
+    expect(existsSync(sourcePath)).toBe(true);
+    expect(readFileSync(statePath, "utf8")).not.toContain(
+      "export const safe = true;",
+    );
+    expect(readFileSync(sourcePath)).toEqual(Buffer.from(source.content));
+    rmSync(summaryPath);
+    rmSync(manifestPath);
+
+    await expect(
+      new CandidateRegistry(store, root).verify(ref),
+    ).resolves.toMatchObject({ valid: true, issues: [] });
+    expect(existsSync(summaryPath)).toBe(true);
+    expect(existsSync(manifestPath)).toBe(true);
+  });
+
+  it.each(["snapshot", "acquisition"] as const)(
+    "fails fresh verification when the immutable %s parent is missing",
+    async (kind) => {
+      const { root, store } = tempStore();
+      const proposal = await acceptedProposal(store);
+      const ref = await new CandidateRegistry(store).create(proposal);
+      const parent =
+        kind === "snapshot" ? proposal.snapshot : proposal.acquisition;
+      rmSync(recordPath(root, kind, parent.digest));
+
+      await expect(
+        new CandidateRegistry(store, root).verify(ref),
+      ).resolves.toMatchObject({ valid: false });
+    },
+  );
+
+  it.each(["missing", "tampered"])(
+    "fails fresh verification when a required source blob is %s",
+    async (failure) => {
+      const { root, store } = tempStore();
+      const proposal = await acceptedProposal(store);
+      const ref = await new CandidateRegistry(store).create(proposal);
+      const sourcePath = blobPath(
+        root,
+        "snapshot",
+        proposal.evidenceJob.snapshotView.files[0]!.digest,
+      );
+      if (failure === "missing") rmSync(sourcePath, { force: true });
+      else {
+        mkdirSync(dirname(sourcePath), { recursive: true });
+        writeFileSync(sourcePath, "tampered-source");
+      }
+
+      await expect(
+        new CandidateRegistry(store, root).verify(ref),
+      ).resolves.toMatchObject({ valid: false });
+    },
+  );
+
+  it("fails fresh verification when strict verification state is missing", async () => {
+    const { root, store } = tempStore();
+    const ref = await new CandidateRegistry(store).create(
+      await acceptedProposal(store),
+    );
+    rmSync(verificationStatePath(root, store, ref.lookupId), { force: true });
+
+    await expect(
+      new CandidateRegistry(store, root).verify(ref),
+    ).resolves.toMatchObject({ valid: false });
+  });
+
+  it("fails fresh verification when persisted snapshot metadata is missing", async () => {
+    const { root, store } = tempStore();
+    const ref = await new CandidateRegistry(store).create(
+      await acceptedProposal(store),
+    );
+    const statePath = verificationStatePath(root, store, ref.lookupId);
+    const state = JSON.parse(readFileSync(statePath, "utf8")) as {
+      evidenceJob: { snapshotView: { files: Array<Record<string, unknown>> } };
+    };
+    delete state.evidenceJob.snapshotView.files[0]!.mode;
+    writeFileSync(statePath, canonicalJson(state));
+
+    await expect(
+      new CandidateRegistry(store, root).verify(ref),
+    ).resolves.toMatchObject({ valid: false });
+  });
+
+  it("fails fresh verification when persisted evidence state truncates the accepted chain", async () => {
+    const { root, store } = tempStore();
+    const ref = await new CandidateRegistry(store).create(
+      await acceptedProposal(store),
+    );
+    const statePath = verificationStatePath(root, store, ref.lookupId);
+    expect(existsSync(statePath)).toBe(true);
+    const state = JSON.parse(readFileSync(statePath, "utf8")) as {
+      completedEvidence: { receipts: unknown[] };
+    };
+    state.completedEvidence.receipts = state.completedEvidence.receipts.slice(
+      0,
+      -1,
+    );
+    writeFileSync(statePath, canonicalJson(state));
+
+    await expect(
+      new CandidateRegistry(store, root).verify(ref),
+    ).resolves.toMatchObject({ valid: false });
+  });
+
+  it("fails fresh verification for a fabricated Candidate receipt chain", async () => {
+    const { root, store } = tempStore();
+    const ref = await new CandidateRegistry(store).create(
+      await acceptedProposal(store),
+    );
+    const forged = new ForgingReceiptStore(root);
+    forged.truncateCandidateChain = true;
+
+    await expect(
+      new CandidateRegistry(forged, root).verify(ref),
+    ).resolves.toMatchObject({ valid: false });
+  });
+
+  it("fails fresh verification when a Candidate artifact is tampered", async () => {
+    const { root, store } = tempStore();
+    const registry = new CandidateRegistry(store);
+    const ref = await registry.create(await acceptedProposal(store));
+    const candidate = registry.get(ref.id, ref.version);
+    writeFileSync(
+      blobPath(root, "evidence", candidate.candidateManifestDigest),
+      "tampered-candidate-artifact",
+    );
+
+    await expect(
+      new CandidateRegistry(store, root).verify(ref),
+    ).resolves.toMatchObject({ valid: false });
+  });
+
+  it("fails fresh verification when a conformance result is tampered", async () => {
+    const { root, store } = tempStore();
+    const registry = new CandidateRegistry(store);
+    const initial = await registry.create(await acceptedProposal(store));
+    const result = evaluateCandidateConformance(
+      registry.getConformanceBundle(initial.id, initial.version),
+    );
+    const passed = await registry.recordConformancePass(
+      initial.id,
+      initial.version,
+      result,
+    );
+    writeFileSync(
+      blobPath(
+        root,
+        "evidence",
+        registry.get(passed.id, passed.version).conformanceResultDigest!,
+      ),
+      "tampered-conformance-result",
+    );
+
+    await expect(
+      new CandidateRegistry(store, root).verify(passed),
+    ).resolves.toMatchObject({ valid: false });
   });
 
   it("rehydrates accepted evidence during Candidate create and verify", async () => {
