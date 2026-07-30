@@ -35,8 +35,8 @@ Planning is complete for the first quarantine-first bulk Candidate Intake
 slice, and the Controller has accepted the design contract. Task 1 is now
 `accepted` with its bounded shared-contract amendment reconciled; its original
 release behavior remains accepted and frozen. Task 2 is `accepted` after Fix
-Round 2/5. Task 3 is `reviewed` after Fix Round 1/5 re-review and independent QA
-passed with no P0/P1/P2; Tasks 4 through 6 remain `planned`. The system will
+Round 2/5. Task 3 is `implementing` in Fix Round 2/5 after release review found
+three P1 defects and one P2; Tasks 4 through 6 remain `planned`. The system will
 ingest the 43 fixed-reference portfolio as metadata, retain the 108 scenarios as
 composition demand signals, and produce only quarantined evidence,
 non-executable Candidate records, and pending-review promotion packets.
@@ -55,7 +55,9 @@ FAILED with three P1 findings, so Task 3 remains `implementing` in Fix Round
 and the PM moved Task 3 `implementing -> ready_for_qa`. Independent QA then
 PASSED with no P0/P1/P2, and the PM moved Task 3
 `ready_for_qa -> reviewed`. No downstream work has started; Tasks 4-6 remain
-blocked on their preceding Intake dependencies.
+blocked on their preceding Intake dependencies. Release review then FAILED
+with three P1 findings and one P2, so the PM returned Task 3
+`reviewed -> implementing` for Fix Round 2/5.
 
 Independent Task 2 review FAILED with three P1 findings and one P2. The
 Controller resolved its schema incompatibility by selecting a distinct
@@ -77,14 +79,14 @@ reconciled Fix Rounds 1 and 2 and moved the amendment
 `implementing -> ready_for_qa`; its contract and exact amendment-owned paths
 remain frozen.
 
-| Task                                             | State      | Specialization      | Contract owner                   | Dependency gate                                             |
-| ------------------------------------------------ | ---------- | ------------------- | -------------------------------- | ----------------------------------------------------------- |
-| 1. Candidate contracts and immutable persistence | `accepted` | `integration`       | External Intake Contract         | Original release and bounded amendment accepted and frozen. |
-| 2. Fixed-source provenance and notices           | `accepted` | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
-| 3. Deterministic scan orchestration              | `reviewed` | `platform-security` | External Evidence Pipeline       | QA PASS; release review and fresh verification required.    |
-| 4. Candidate registry, API, CLI, and isolation   | `planned`  | `integration`       | Candidate Registry               | Tasks 1-3 and Commercial Foundation Task 1 accepted.        |
-| 5. Review-only promotion packets                 | `planned`  | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.           |
-| 6. Bulk acceptance and release evidence          | `planned`  | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.        |
+| Task                                             | State          | Specialization      | Contract owner                   | Dependency gate                                             |
+| ------------------------------------------------ | -------------- | ------------------- | -------------------------------- | ----------------------------------------------------------- |
+| 1. Candidate contracts and immutable persistence | `accepted`     | `integration`       | External Intake Contract         | Original release and bounded amendment accepted and frozen. |
+| 2. Fixed-source provenance and notices           | `accepted`     | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
+| 3. Deterministic scan orchestration              | `implementing` | `platform-security` | External Evidence Pipeline       | Release FAILED P1x3/P2x1; Fix Round 2/5 active.             |
+| 4. Candidate registry, API, CLI, and isolation   | `planned`      | `integration`       | Candidate Registry               | Tasks 1-3 and Commercial Foundation Task 1 accepted.        |
+| 5. Review-only promotion packets                 | `planned`      | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.           |
+| 6. Bulk acceptance and release evidence          | `planned`      | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.        |
 
 ## Task 1 card: Candidate contracts and immutable persistence
 
@@ -440,7 +442,7 @@ paths. Tasks 4 through 6 remain `planned`.
 
 ## Task 3 card: Deterministic local scans and module inventory
 
-- **State:** `reviewed`
+- **State:** `implementing` in Fix Round 2/5
 - **Specialization:** `platform-security`
 - **Contract owner:** External Evidence Pipeline
 - **Contract artifact:** accepted Task 1 records/store including the acquisition
@@ -524,6 +526,32 @@ The PM moved Task 3 `ready_for_qa -> reviewed`. This is not release acceptance:
 independent release review and fresh final verification remain required before
 `accepted`. The original contract and exact paths remain frozen. No Task 4,
 Task 5, or Task 6 work has started; all three remain `planned`.
+
+### Release review: Fix Round 2/5
+
+Independent release review FAILED with three P1 findings and one P2:
+
+1. **P1 — report privacy:** Raw secret-match or scanner-report bytes can reach
+   persistence. Define and enforce a strict redacted report contract, create a
+   canonical safe summary before persistence, and add a sentinel raw-secret
+   regression proving no secret or raw match survives in persisted evidence.
+2. **P1 — inventory attestation:** `inventoryDigest` currently attests an
+   opaque report rather than the normalized module inventory. Canonically
+   serialize, digest, and persist the normalized validated inventory and bind
+   that digest into the EvidenceBundle. Add a same-report/different-modules
+   regression proving the inventory identity changes or the mismatch rejects.
+3. **P1 — SBOM semantics:** The persisted wrapper claims CycloneDX without
+   bounded JSON semantic validation. Strictly parse and validate `bomFormat`,
+   specification/schema shape, and component count before persistence. Add
+   malformed JSON, non-JSON, and component-count drift regressions.
+4. **P2 — truthful resume:** A verified durable receipt prefix must be exposed,
+   loaded, and continued rather than restarting work. Add coverage proving
+   completed adapters are not rerun after a verified prefix.
+
+The PM returned Task 3 `reviewed -> implementing` for Fix Round 2/5. The
+original External Evidence Pipeline contract, task scope, and exact allowed
+paths remain frozen. Task 3 is not accepted. No downstream work has started;
+Tasks 4 through 6 remain `planned`.
 
 ## Task 4 card: Candidate registry, module API, CLI, and isolation
 
@@ -672,9 +700,11 @@ Task 5, or Task 6 work has started; all three remain `planned`.
   Capabilities, and compiler test paths. Task 4 waits for Commercial Foundation
   Task 1 acceptance and exclusive path ownership.
 
-The active smallest valuable slice is independent release review and fresh
-verification for Task 3 repair commit `0030859` under its frozen External
-Evidence Pipeline contract and exact paths. Task 1's original release and
-bounded amendment and Task 2's accepted code set
+The active smallest valuable slice is Task 3 Fix Round 2/5 under its frozen
+External Evidence Pipeline contract, task scope, and exact paths: persist only
+canonical redacted scanner summaries, attest the normalized module inventory,
+semantically validate bounded CycloneDX JSON, and continue verified durable
+receipt prefixes without rerunning completed adapters. Task 1's original
+release and bounded amendment and Task 2's accepted code set
 `515e0ba + 3dcb20f + dcaddf4` remain frozen. No downstream work has started;
 Tasks 4 through 6 remain `planned` and retain their recorded dependency gates.
