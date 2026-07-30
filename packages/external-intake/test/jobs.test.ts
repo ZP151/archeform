@@ -585,7 +585,6 @@ describe("evidence jobs", () => {
       store,
     );
 
-    expect(changed.inventory.rawReport).toEqual(first.inventory.rawReport);
     expect(changed.inventory.inventoryDigest).not.toBe(
       first.inventory.inventoryDigest,
     );
@@ -650,6 +649,25 @@ describe("evidence jobs", () => {
       ),
     ).resolves.toMatchObject({ status: "evidenced" });
     expect(calls).toEqual({ licence: 1, secret: 2, sast: 1, dependency: 1 });
+  });
+
+  it("keeps opaque inventory source and secret bytes out of persistence", async () => {
+    const { root, store } = tempStore();
+    const job = createJob(store, "inventory-report-sentinel-source");
+    const sentinel = "FACTORY-INVENTORY-RAW-SOURCE-SECRET-71d9";
+    const report = bytes(
+      `source=export const credential = "${sentinel}"; match=${sentinel}`,
+    );
+
+    await expect(
+      runEvidencePipeline(
+        job,
+        scanners(),
+        inventory(job, { report, reportDigest: digestBytes(report) }),
+        store,
+      ),
+    ).resolves.toMatchObject({ status: "evidenced" });
+    expect(persistedArtifactText(root)).not.toContain(sentinel);
   });
 
   it("rejects resume when a referenced receipt prefix is missing", async () => {
@@ -799,6 +817,48 @@ describe("evidence jobs", () => {
         {
           ...job,
           resume: { executionId, receipts: [wrongRef] },
+        },
+        scanners(),
+        inventory(job),
+        store,
+      ),
+    ).rejects.toMatchObject({ code: "receipt-chain-invalid" });
+  });
+
+  it("rejects a completed receipt whose terminal digest does not bind the recomputed evidence", async () => {
+    const { store: sourceStore } = tempStore();
+    const sourceJob = createJob(sourceStore, "forged-terminal-evidence");
+    const first = await runEvidencePipeline(
+      sourceJob,
+      scanners(),
+      inventory(sourceJob),
+      sourceStore,
+    );
+
+    const { store } = tempStore();
+    const job = createJob(store, "forged-terminal-evidence");
+    const forgedReceipts: StoredRecordRef[] = [];
+    for (const [index, ref] of first.receipts.entries()) {
+      const original = sourceStore.getRecord(ref) as IntakeReceiptV1;
+      const forged: IntakeReceiptV1 = {
+        ...original,
+        parentDigests: [
+          ...(index === 0 ? [] : [forgedReceipts[index - 1]!.digest]),
+          job.snapshot.digest,
+          job.acquisition.digest,
+        ],
+        ...(index === first.receipts.length - 1
+          ? { recordDigests: [job.snapshot.digest] }
+          : {}),
+      };
+      forgedReceipts.push(store.appendReceipt(first.executionId, forged));
+    }
+
+    await expect(
+      runEvidencePipeline(
+        {
+          ...job,
+          resume: { ...first.resume, receipts: forgedReceipts },
         },
         scanners(),
         inventory(job),

@@ -12,11 +12,16 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { digestBytes, type Sha256Digest } from "../src/canonical.js";
+import {
+  canonicalJson,
+  digestBytes,
+  type Sha256Digest,
+} from "../src/canonical.js";
 import {
   PINNED_SCANNER_IDENTITIES,
   SCAN_KIND_ORDER,
   runPinnedLocalScans,
+  validateScanCheckpoint,
   type LocalScannerV1,
   type NormalizedScanResultV1,
   type ReadonlySnapshotView,
@@ -443,4 +448,68 @@ describe("pinned local scan orchestration", () => {
       ).rejects.toMatchObject({ code });
     },
   );
+
+  it("rejects a component type outside the CycloneDX 1.6 enumeration", async () => {
+    const { store } = tempStore();
+    const report = new TextEncoder().encode(
+      JSON.stringify({
+        $schema: "http://cyclonedx.org/schema/bom-1.6.schema.json",
+        bomFormat: "CycloneDX",
+        specVersion: "1.6",
+        version: 1,
+        components: [
+          { type: "source-module", name: "unsafe", version: "1.0.0" },
+        ],
+      }),
+    );
+    const input = scanners().map((item) =>
+      item.kind === "dependency"
+        ? scanner("dependency", {
+            sbom: {
+              format: "CycloneDX",
+              components: 1,
+              report,
+              reportDigest: digestBytes(report),
+            },
+          })
+        : item,
+    );
+
+    await expect(
+      runPinnedLocalScans(snapshotView(), input, store),
+    ).rejects.toMatchObject({ code: "sbom-output-malformed" });
+  });
+
+  it("rejects a digest-consistent resume checkpoint with an invalid CycloneDX component type", async () => {
+    const { store } = tempStore();
+    const snapshot = snapshotView();
+    const result = await runPinnedLocalScans(snapshot, scanners(), store);
+    const componentIdentities = [
+      { type: "source-module", name: "unsafe", version: "1.0.0" },
+    ];
+    const digest = digestBytes(
+      new TextEncoder().encode(
+        canonicalJson({
+          $schema: "http://cyclonedx.org/schema/bom-1.6.schema.json",
+          bomFormat: "CycloneDX",
+          specVersion: "1.6",
+          version: 1,
+          components: componentIdentities,
+        }),
+      ),
+    );
+
+    expect(() =>
+      validateScanCheckpoint(snapshot, {
+        scans: result.scans,
+        sbom: {
+          ...result.sbom,
+          digest,
+          components: 1,
+          componentIdentities,
+          rawReport: { kind: "evidence", digest },
+        },
+      }),
+    ).toThrowError(expect.objectContaining({ code: "receipt-chain-invalid" }));
+  });
 });

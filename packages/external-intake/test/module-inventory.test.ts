@@ -236,7 +236,7 @@ describe("pinned module inventory", () => {
           sourceDigest: digestBytes(source()),
         },
       ],
-      rawReport: { kind: "evidence" },
+      inventory: { kind: "evidence" },
     });
     expect(result.modules[0]).not.toHaveProperty("content");
     expect(result).not.toHaveProperty("transformedSource");
@@ -255,7 +255,6 @@ describe("pinned module inventory", () => {
       store,
     );
 
-    expect(changed.rawReport).toEqual(first.rawReport);
     expect(changed.inventoryDigest).not.toBe(first.inventoryDigest);
     expect(
       JSON.parse(
@@ -336,7 +335,7 @@ describe("pinned module inventory", () => {
     ).rejects.toMatchObject({ code });
   });
 
-  it("quarantines an unavailable parser report before failing closed", async () => {
+  it("does not persist an unavailable parser report before failing closed", async () => {
     const root = mkdtempSync(join(tmpdir(), "factory-inventory-test-"));
     roots.push(root);
     const store = new ExternalIntakeStore(root);
@@ -354,7 +353,7 @@ describe("pinned module inventory", () => {
           `${unavailable.reportDigest.slice(7)}.bin`,
         ),
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("rejects a module digest that differs from the immutable snapshot view", async () => {

@@ -53,7 +53,6 @@ export interface StoredModuleInventoryV1 {
   readonly inventoryDigest: Sha256Digest;
   readonly modules: readonly ModuleInventoryEntryV1[];
   readonly inventory: StoredBlobRef;
-  readonly rawReport: StoredBlobRef;
 }
 
 const SHA256 = /^sha256:[a-f0-9]{64}$/u;
@@ -338,14 +337,12 @@ export function validateStoredModuleInventory(
       "inventoryDigest",
       "modules",
       "inventory",
-      "rawReport",
     ]) ||
-    Object.keys(input).length !== 6 ||
+    Object.keys(input).length !== 5 ||
     !isDigest(input.inventoryDigest) ||
     !Array.isArray(input.modules) ||
     !isEvidenceBlobRef(input.inventory) ||
-    input.inventory.digest !== input.inventoryDigest ||
-    !isEvidenceBlobRef(input.rawReport)
+    input.inventory.digest !== input.inventoryDigest
   ) {
     throw new EvidencePipelineFailure(
       "receipt-chain-invalid",
@@ -453,25 +450,16 @@ export async function runModuleInventory(
       "Inventory report bytes differ from their declared digest.",
     );
   }
-  const rawReport = store.putBytes("evidence", unknownResult.report);
-  if (rawReport.digest !== unknownResult.reportDigest) {
-    throw new EvidencePipelineFailure(
-      "inventory-report-drift",
-      "Stored inventory report differs from its declared digest.",
-    );
-  }
   if (unknownResult.status === "unavailable") {
     throw new EvidencePipelineFailure(
       "parser-unavailable",
       "The pinned module parser is unavailable.",
-      [rawReport.digest],
     );
   }
   if (unknownResult.status === "fail") {
     throw new EvidencePipelineFailure(
       "parser-failure",
       "The pinned module parser failed closed.",
-      [rawReport.digest],
     );
   }
   let modules: ModuleInventoryEntryV1[];
@@ -479,10 +467,11 @@ export async function runModuleInventory(
     modules = normalizeInventoryModules(snapshot, unknownResult.modules);
   } catch (error) {
     if (error instanceof EvidencePipelineFailure) {
-      throw new EvidencePipelineFailure(error.code, error.message, [
-        rawReport.digest,
-        ...error.recordDigests,
-      ]);
+      throw new EvidencePipelineFailure(
+        error.code,
+        error.message,
+        error.recordDigests,
+      );
     }
     throw error;
   }
@@ -493,6 +482,5 @@ export async function runModuleInventory(
     inventoryDigest: inventory.digest,
     modules,
     inventory,
-    rawReport,
   };
 }

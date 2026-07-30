@@ -156,6 +156,21 @@ const MAX_REDACTED_REPORT_BYTES = 256 * 1024;
 const MAX_SBOM_BYTES = 1024 * 1024;
 const MAX_SBOM_COMPONENTS = 10_000;
 const CYCLONEDX_SCHEMA = "http://cyclonedx.org/schema/bom-1.6.schema.json";
+const CYCLONEDX_COMPONENT_TYPES = new Set([
+  "application",
+  "framework",
+  "library",
+  "container",
+  "platform",
+  "operating-system",
+  "device",
+  "device-driver",
+  "firmware",
+  "file",
+  "machine-learning-model",
+  "data",
+  "cryptographic-asset",
+]);
 const SEVERITIES = new Set<FindingSeverityV1>([
   "info",
   "low",
@@ -450,21 +465,7 @@ function validateSbom(input: unknown): CycloneDxScanResultV1 {
     (document.version as number) <= 0 ||
     !Array.isArray(document.components) ||
     document.components.length > MAX_SBOM_COMPONENTS ||
-    document.components.some(
-      (component) =>
-        !isPlainObject(component) ||
-        !hasOnlyKeys(component, ["type", "name", "version"]) ||
-        Object.keys(component).length !== 3 ||
-        typeof component.type !== "string" ||
-        component.type.length === 0 ||
-        component.type.length > 64 ||
-        typeof component.name !== "string" ||
-        component.name.length === 0 ||
-        component.name.length > 256 ||
-        typeof component.version !== "string" ||
-        component.version.length === 0 ||
-        component.version.length > 128,
-    )
+    document.components.some((component) => !isCycloneDxComponent(component))
   ) {
     throw new EvidencePipelineFailure(
       "sbom-output-malformed",
@@ -674,8 +675,7 @@ function isCycloneDxComponent(
     Object.keys(input).length === 3 &&
     hasOnlyKeys(input, ["type", "name", "version"]) &&
     typeof input.type === "string" &&
-    input.type.length > 0 &&
-    input.type.length <= 64 &&
+    CYCLONEDX_COMPONENT_TYPES.has(input.type) &&
     typeof input.name === "string" &&
     input.name.length > 0 &&
     input.name.length <= 256 &&

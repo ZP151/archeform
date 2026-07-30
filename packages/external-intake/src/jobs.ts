@@ -234,6 +234,7 @@ interface ValidatedResumeV1 {
   readonly scanCheckpoint: ScanCheckpointV1;
   readonly inventory?: StoredModuleInventoryV1;
   readonly complete: boolean;
+  readonly terminal: IntakeReceiptV1;
 }
 
 function validateResumePrefix(
@@ -376,6 +377,7 @@ function validateResumePrefix(
     scanCheckpoint,
     ...(inventory === undefined ? {} : { inventory }),
     complete,
+    terminal,
   };
 }
 
@@ -762,6 +764,16 @@ export async function runEvidencePipeline(
         inventory,
       ),
     );
+    if (
+      resumed?.complete === true &&
+      (resumed.terminal.recordDigests.length !== 1 ||
+        resumed.terminal.recordDigests[0] !== evidence.digest)
+    ) {
+      throw new EvidencePipelineFailure(
+        "receipt-chain-invalid",
+        "Completed receipt does not bind the recomputed evidence bundle.",
+      );
+    }
     const id = executionId(job, {
       status: "evidenced",
       evidenceDigest: evidence.digest,
