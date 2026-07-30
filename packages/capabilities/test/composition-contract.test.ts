@@ -142,6 +142,53 @@ describe("capability composition contract", () => {
     ]);
   });
 
+  it("removes unknown scalar fields from a runtime selection lock", () => {
+    const runtimeSelection = JSON.parse(
+      JSON.stringify({
+        lock: {
+          ...lockCapabilityAsset(cartAsset),
+          rawPrompt: "SHOULD_NOT_SURVIVE",
+          credential: "SHOULD_NOT_SURVIVE",
+        },
+        bindings: {},
+      }),
+    ) as CapabilitySelectionV1;
+
+    const lock = createCapabilityCompositionLock({
+      graphChecksum: digest("a"),
+      selections: [runtimeSelection],
+    });
+
+    expect(lock.packages[0]?.lock).toEqual(lockCapabilityAsset(cartAsset));
+    expect(Object.keys(lock.packages[0]?.lock ?? {})).toEqual([
+      "key",
+      "version",
+      "packageRoot",
+      "manifestDigest",
+      "lifecycle",
+    ]);
+  });
+
+  it("removes unknown nested fields from a runtime selection lock", () => {
+    const runtimeSelection = JSON.parse(
+      JSON.stringify({
+        lock: {
+          ...lockCapabilityAsset(cartAsset),
+          metadata: { rawPrompt: "SHOULD_NOT_SURVIVE" },
+        },
+        bindings: {},
+      }),
+    ) as CapabilitySelectionV1;
+
+    const lock = createCapabilityCompositionLock({
+      graphChecksum: digest("a"),
+      selections: [runtimeSelection],
+    });
+
+    expect(lock.packages[0]?.lock).toEqual(lockCapabilityAsset(cartAsset));
+    expect(JSON.stringify(lock.packages[0]?.lock)).not.toContain("rawPrompt");
+  });
+
   it("rejects an undeclared parameter and an unsafe string parameter", () => {
     const pathAsset = asset("core.path-test", {
       parameters: [{ key: "route", type: "string", required: true }],

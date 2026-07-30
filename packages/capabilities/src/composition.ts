@@ -290,6 +290,7 @@ function assertBindingValue(
 
 function canonicalSelection(
   selection: CapabilitySelectionV1,
+  manifest: CapabilityAssetManifestV1,
 ): CapabilitySelectionV1 {
   const bindings = Object.create(null) as Record<
     string,
@@ -302,7 +303,13 @@ function canonicalSelection(
       typeof value === "object" ? { graphSymbol: value.graphSymbol } : value;
   }
   return {
-    lock: { ...selection.lock },
+    lock: {
+      key: manifest.key,
+      version: manifest.version,
+      packageRoot: manifest.packageRoot,
+      manifestDigest: manifest.manifestDigest,
+      lifecycle: manifest.lifecycle,
+    },
     bindings,
   };
 }
@@ -461,14 +468,18 @@ export function resolveCapabilityCompositionForAssets(
     seenPackageKeys.add(selection.lock.key);
   }
 
-  const packages = input.selections
-    .map(canonicalSelection)
-    .sort((left, right) => compareText(left.lock.key, right.lock.key));
-  const manifests = packages.map(({ lock, bindings }) => {
-    const manifest = matchingManifest(lock, assets);
-    validateBindings(manifest, bindings);
-    return manifest;
+  const matchedSelections = input.selections
+    .map((selection) => ({
+      selection,
+      manifest: matchingManifest(selection.lock, assets),
+    }))
+    .sort((left, right) => compareText(left.manifest.key, right.manifest.key));
+  const packages = matchedSelections.map(({ selection, manifest }) => {
+    const packageSelection = canonicalSelection(selection, manifest);
+    validateBindings(manifest, packageSelection.bindings);
+    return packageSelection;
   });
+  const manifests = matchedSelections.map(({ manifest }) => manifest);
   const resolvedDependencyOrder = resolveDependencyOrder(manifests);
 
   const contributionDigests = new Set<string>();
