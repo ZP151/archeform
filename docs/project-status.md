@@ -6,11 +6,11 @@ Updated: 2026-07-30
 
 Factory Pilot has a TypeScript Application Graph platform with mutable Drafts,
 immutable Published revisions, deterministic compilation, a Workbench Home,
-and three composed starter profiles. The active release slice is Restaurant
-Ordering. Its generated Customer and Merchant applications are functionally
-substantial, but the profile is not release-accepted until the same artifact
-is started and stopped through a current Workbench, Control Plane, and Worker
-stack.
+and three composed starter profiles. Restaurant Ordering is now release-accepted
+as an isolated generated application. The next active slice is Parameterized
+Capability Composition: replace starter-Graph copying and compiler-owned profile
+branches with independently versioned packages that contribute Graph and target
+artifacts through declared parameters and immutable composition locks.
 
 ## Current evidence
 
@@ -35,18 +35,25 @@ Restaurant Ordering evidence is documented in
   bootstrap value only to the Worker. Generic preview configuration remains
   independent of that input; Restaurant preview remains fail-closed when it is
   absent.
+- The current-source Workbench lifecycle has been independently accepted. It
+  created a Restaurant Draft, published it, compiled 65 immutable artifacts,
+  started a generated Node 22 preview, completed Customer and Merchant
+  journeys, stopped the preview, and removed only the run-owned generated
+  containers, network, volumes, and Worker runtime directory. The reproducible,
+  redacted run identity, digests, images, ports, command shapes, and cleanup
+  evidence are in the acceptance record.
+- Preview Web readiness now tolerates the proven short post-Compose startup
+  race, but caps all sanitized readiness retries at 30 seconds (and at the
+  broader operation timeout when shorter). Worker regression coverage is 73/73
+  for the focused package suite, including transient recovery, permanent
+  failure, cancellation, and exact-project cleanup.
 
-## Release gate and active blocker
+## Accepted release gate
 
 The full `Workbench → Publish → Control Plane → Worker preview → generated
-Restaurant → Stop → scoped cleanup` sequence remains unproven. The prior
-running Factory stack is stale; a fresh current-source stack began building,
-then Docker Desktop's daemon reported that it could not start. No user-owned
-container or daemon was stopped. Restarting Docker Desktop would interrupt
-user-owned local containers, so it requires explicit authorization.
-
-Until that rerun passes, Restaurant Ordering must remain **not accepted** even
-though its direct generated Node 22 application journeys pass.
+Restaurant → Stop → scoped cleanup` sequence is accepted. No user-owned Docker
+resource was stopped or removed during validation. The reviewed acceptance
+record is [`acceptance/restaurant-ordering-mvp.md`](acceptance/restaurant-ordering-mvp.md).
 
 ## Product capability gap
 
@@ -61,24 +68,27 @@ commercial point-of-sale scope. The requirement-by-requirement evidence is in
 | Checkout            | Submit, full simulated `cash` or `card` payment, receipt                                 | Real payment providers, split/partial payment, member balance, suspended credit                 |
 | Customer lifecycle  | Status, session history, receipt                                                         | Reviews, images, repeat order, membership, points, coupons, delivery, pickup                    |
 | Merchant operations | Tables, menu availability, stock, kitchen queue, cashier, cancellation, audit, dashboard | Merge/move tables, order amendment, printing, promotions, member operations, data import/export |
-| Platform proof      | Draft, Publish, deterministic compile, direct generated-app Node 22 proof                | Current Workbench-driven Restaurant preview and cleanup release proof                           |
+| Platform proof      | Draft, Publish, deterministic compile, Workbench-driven Node 22 generated-app proof      | Parameterized asset composition, generic target contributions, and Puck PageModel round trips  |
 
 ## Recommended next slices
 
-1. Restore Docker Desktop and complete the current Workbench-driven Restaurant
-   release gate without changing the user-owned local stack.
-2. Design and implement **Restaurant order amendments and declared menu
-   modifiers**: profile-declared option groups, bounded per-line selections,
-   versioned Merchant changes/cancellations, inventory/audit/report effects,
-   and generated Customer/Merchant surfaces. This is the most reusable next
-   capability because it improves Restaurant and establishes a parameterized
-   configuration pattern for future commerce profiles.
-3. Add Customer identity and membership as a separate Policy/Identity slice;
-   do not mix it with payment, loyalty, coupons, or real-money integrations.
-4. Expand independent profiles from Factory-owned contracts—Appointment and
-   Ticketing are candidates—only after fixed-version source studies and
-   capability designs. External projects remain governed dependencies,
-   provider contracts, or reference-only sources.
+1. Design and freeze **Parameterized Capability Composition v1**: typed
+   package parameters; additive Graph contributions; executable target
+   contributions; typed requirements/provides; canonical immutable composition
+   locks; and safe collision/merge rules.
+2. Convert the shared core and commerce assets so Restaurant Ordering and
+   Simple Ecommerce select identical package versions with different validated
+   parameter bindings. Remove compiler-owned handler/version selection for
+   those assets.
+3. Make Puck a validated PageModel adapter: Factory owns route, component,
+   interaction, and design-token semantics; Puck edits only approved visual
+   component data. Add a role-aware browser simulator from the same Graph.
+4. Move Restaurant-specific behavior into parameterized assets and remove the
+   Restaurant compiler fork. New feature breadth then arrives as reusable
+   capability packages, not manual Profile-only implementation.
+5. Conduct fixed-version source studies for high-value candidate ecosystems
+   before adopting any dependency or implementation pattern. External projects
+   remain governed dependencies, provider contracts, or reference-only sources.
 
 ## Constraints
 
