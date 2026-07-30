@@ -1,11 +1,20 @@
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import type { EvidenceBundleV1, IntakeRequestV1 } from "../src/contracts.js";
+import type {
+  ExternalSourceAcquisitionV1,
+  IntakeRequestV1,
+} from "../src/contracts.js";
 import { acquireSourceEvidence } from "../src/evidence.js";
 import type {
   FixedSourceClient,
@@ -118,23 +127,44 @@ afterEach(() => {
 });
 
 describe("licence, notice, and provenance acquisition", () => {
-  it("stores exact licence and notice bytes with unreviewed fail-closed evidence", async () => {
+  it("stores exact licence and notice bytes in a truthful unreviewed acquisition", async () => {
     const { root, store } = tempStore();
     const result = await acquireSourceEvidence(
       request,
       new EvidenceFixtureClient(),
       store,
     );
-    const evidence = store.getRecord(result.evidence) as EvidenceBundleV1;
+    const acquisition = store.getRecord(
+      result.acquisition,
+    ) as ExternalSourceAcquisitionV1;
 
-    expect(evidence.licence).toEqual({
+    expect(acquisition).toMatchObject({
+      apiVersion: "factory.external-source-acquisition/v1",
+      sourceRequestDigest: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
+      source: {
+        canonicalRepositoryUrl: request.source.canonicalRepositoryUrl,
+        requestedRef: request.source.requestedRef,
+        resolvedCommit: commit,
+      },
+      snapshot: {
+        recordDigest: result.snapshot.digest,
+        archiveDigest:
+          "sha256:767703ba01ffd23ad7347bd263964c7fbeb6f9a691d6f3665e9d7de67fe946ac",
+        treeDigest:
+          "sha256:6ef898d0e1e4a4a47a172782c536fe11e9539e34a014813a1e35a9042d7b0cf4",
+        entryCount: 4,
+        declaredBytes: 167,
+      },
+      manualStatus: "unreviewed",
+      acquisitionState: "acquired",
+    });
+    expect(acquisition.licence).toEqual({
       primaryPaths: ["LICENSE"],
       textDigests: [
         "sha256:4a786b39a74b8476d53e364c77902fa965ff8a74809cc69bcfbd9cc0b69cfa85",
       ],
-      manualStatus: "unreviewed",
     });
-    expect(evidence.notices).toEqual([
+    expect(acquisition.notices).toEqual([
       {
         path: "NOTICE",
         digest:
@@ -142,22 +172,29 @@ describe("licence, notice, and provenance acquisition", () => {
         required: true,
       },
     ]);
-    expect(evidence.scans.map(({ status }) => status)).toEqual([
-      "unavailable",
-      "unavailable",
-      "unavailable",
-      "unavailable",
+    expect(acquisition).not.toHaveProperty("sbom");
+    expect(acquisition).not.toHaveProperty("scans");
+    expect(acquisition).not.toHaveProperty("ast");
+    expect(acquisition).not.toHaveProperty("snapshotDigest");
+    expect(existsSync(join(root, "records", "evidence"))).toBe(false);
+    expect(acquisition.parentDigests).toEqual([
+      acquisition.sourceRequestDigest,
+      result.snapshot.digest,
+    ]);
+    expect(readdirSync(join(root, "blobs", "evidence")).sort()).toEqual([
+      "4a786b39a74b8476d53e364c77902fa965ff8a74809cc69bcfbd9cc0b69cfa85.bin",
+      "78588cd2264ed321499cecaf2d9c92fcf871cb038241e3361efbaa2a9c91e832.bin",
     ]);
 
     for (const digest of [
-      evidence.licence.textDigests[0]!,
-      evidence.notices[0]!.digest,
+      acquisition.licence.textDigests[0]!,
+      acquisition.notices[0]!.digest,
     ]) {
       expect(
         readFileSync(join(root, "blobs", "evidence", `${digest.slice(7)}.bin`)),
       ).toEqual(
         Buffer.from(
-          digest === evidence.notices[0]!.digest
+          digest === acquisition.notices[0]!.digest
             ? bytes("NOTICE")
             : bytes("LICENSE"),
         ),

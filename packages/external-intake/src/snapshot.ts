@@ -74,6 +74,28 @@ export const DEFAULT_SNAPSHOT_LIMITS: SnapshotLimits = {
   maxTotalBytes: 250 * 1024 * 1024,
 };
 
+export type SourceTreeMetadataEntryV1 =
+  | {
+      readonly path: string;
+      readonly mode: string;
+      readonly type: "blob";
+      readonly size: number;
+    }
+  | {
+      readonly path: string;
+      readonly mode: string;
+      readonly type: "tree" | "commit";
+    };
+
+export interface PreflightSourceTreeV1 {
+  readonly entries: readonly SourceTreeMetadataEntryV1[];
+  readonly blobEntries: readonly Extract<
+    SourceTreeMetadataEntryV1,
+    { readonly type: "blob" }
+  >[];
+  readonly totalBytes: number;
+}
+
 export interface ValidatedSourceTreeV1 {
   readonly entries: readonly SourceTreeEntryV1[];
   readonly blobEntries: readonly Extract<
@@ -89,6 +111,10 @@ function safeIntegerLimit(value: number, name: string): number {
     throw new TypeError(`${name} must be a non-negative safe integer.`);
   }
   return value;
+}
+
+export function compareCanonicalPaths(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 export function assertSafeSourcePath(path: string): void {
@@ -165,14 +191,14 @@ export function canonicalTreeDigest(
         entry.type === "blob",
     )
     .map(({ path, mode, blobDigest }) => ({ path, mode, blobDigest }))
-    .sort((left, right) => left.path.localeCompare(right.path, "en"));
+    .sort((left, right) => compareCanonicalPaths(left.path, right.path));
   return canonicalRecordDigest(records);
 }
 
-export function validateSourceTree(
-  input: readonly SourceTreeEntryV1[],
+export function preflightSourceTreeMetadata(
+  input: readonly SourceTreeMetadataEntryV1[],
   overrides: Partial<SnapshotLimits> = {},
-): ValidatedSourceTreeV1 {
+): PreflightSourceTreeV1 {
   if (!Array.isArray(input)) {
     throw new TypeError("Source tree inventory must be an array.");
   }
@@ -196,9 +222,10 @@ export function validateSourceTree(
 
   const paths = new Set<string>();
   const foldedPaths = new Map<string, string>();
-  const entries: SourceTreeEntryV1[] = [];
-  const blobs: Array<Extract<SourceTreeEntryV1, { readonly type: "blob" }>> =
-    [];
+  const entries: SourceTreeMetadataEntryV1[] = [];
+  const blobs: Array<
+    Extract<SourceTreeMetadataEntryV1, { readonly type: "blob" }>
+  > = [];
   let totalBytes = 0;
 
   for (const unknownEntry of input as readonly unknown[]) {
@@ -222,7 +249,7 @@ export function validateSourceTree(
       throw new Error("Source tree contains a duplicate path.");
     }
     paths.add(path);
-    const folded = path.toLocaleLowerCase("en-US");
+    const folded = path.toLowerCase();
     const prior = foldedPaths.get(folded);
     if (prior !== undefined) {
       throw new Error(`Source tree contains a case-fold collision: ${prior}.`);
@@ -240,13 +267,7 @@ export function validateSourceTree(
       throw new Error("Source tree contains a symlink or special file mode.");
     }
     const size = entry.size;
-    const blobDigest = entry.blobDigest;
-    if (
-      !Number.isSafeInteger(size) ||
-      (size as number) < 0 ||
-      typeof blobDigest !== "string" ||
-      !SHA256.test(blobDigest)
-    ) {
+    if (!Number.isSafeInteger(size) || (size as number) < 0) {
       throw new Error("Source tree blob metadata is malformed.");
     }
     if ((size as number) > limits.maxFileBytes) {
@@ -259,24 +280,53 @@ export function validateSourceTree(
     ) {
       throw new Error("Source tree exceeds the configured total byte limit.");
     }
+    const blob = { path, mode, type, size: size as number } as const;
+    entries.push(blob);
+    blobs.push(blob);
+  }
+
+  entries.sort((left, right) => compareCanonicalPaths(left.path, right.path));
+  blobs.sort((left, right) => compareCanonicalPaths(left.path, right.path));
+  return { entries, blobEntries: blobs, totalBytes };
+}
+
+export function validateSourceTree(
+  input: readonly SourceTreeEntryV1[],
+  overrides: Partial<SnapshotLimits> = {},
+): ValidatedSourceTreeV1 {
+  const preflight = preflightSourceTreeMetadata(input, overrides);
+  const sourceByPath = new Map(
+    (input as readonly SourceTreeEntryV1[]).map((entry) => [entry.path, entry]),
+  );
+  const entries: SourceTreeEntryV1[] = [];
+  const blobs: Array<Extract<SourceTreeEntryV1, { readonly type: "blob" }>> =
+    [];
+
+  for (const metadata of preflight.entries) {
+    if (metadata.type !== "blob") {
+      entries.push(metadata);
+      continue;
+    }
+    const source = sourceByPath.get(metadata.path);
+    const blobDigest =
+      source !== undefined && source.type === "blob"
+        ? source.blobDigest
+        : undefined;
+    if (typeof blobDigest !== "string" || !SHA256.test(blobDigest)) {
+      throw new Error("Source tree blob metadata is malformed.");
+    }
     const blob = {
-      path,
-      mode,
-      type,
-      size: size as number,
+      ...metadata,
       blobDigest: blobDigest as Sha256Digest,
     } as const;
     entries.push(blob);
     blobs.push(blob);
   }
-
-  entries.sort((left, right) => left.path.localeCompare(right.path, "en"));
-  blobs.sort((left, right) => left.path.localeCompare(right.path, "en"));
   return {
     entries,
     blobEntries: blobs,
     treeDigest: canonicalTreeDigest(blobs),
-    totalBytes,
+    totalBytes: preflight.totalBytes,
   };
 }
 

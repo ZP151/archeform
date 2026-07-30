@@ -1,12 +1,8 @@
+import { canonicalRecordDigest, digestBytes } from "./canonical.js";
 import {
-  canonicalJson,
-  canonicalRecordDigest,
-  digestBytes,
-} from "./canonical.js";
-import {
-  parseEvidenceBundle,
+  parseExternalSourceAcquisition,
   parseIntakeRequest,
-  type EvidenceBundleV1,
+  type ExternalSourceAcquisitionV1,
   type IntakeReceiptV1,
   type IntakeRequestV1,
 } from "./contracts.js";
@@ -17,6 +13,7 @@ import {
   type SourceTreeEntryV1,
 } from "./source-client.js";
 import {
+  compareCanonicalPaths,
   createSourceSnapshot,
   validateSourceTree,
   type ValidatedSourceTreeV1,
@@ -116,7 +113,7 @@ function discoverEvidence(
   ]);
   const notices = [...noticePaths]
     .map((path) => byPath.get(path)!)
-    .sort((left, right) => left.path.localeCompare(right.path, "en"));
+    .sort((left, right) => compareCanonicalPaths(left.path, right.path));
   return { licence: licences[0]!, notices };
 }
 
@@ -156,50 +153,51 @@ async function readExactEvidence(
   return output;
 }
 
-function provisionalEvidence(
+function createAcquisitionRecord(
   request: IntakeRequestV1,
+  requestRef: StoredRecordRef,
   snapshot: StoredRecordRef,
+  snapshotRecord: {
+    readonly archiveDigest: `sha256:${string}`;
+    readonly treeDigest: `sha256:${string}`;
+    readonly resolvedCommit: string;
+  },
+  tree: ValidatedSourceTreeV1,
   licence: BlobTreeEntry,
   notices: readonly BlobTreeEntry[],
-  phaseDigest: `sha256:${string}`,
+  provenance: ExternalSourceAcquisitionV1["provenance"],
   createdAt: string,
-): EvidenceBundleV1 {
-  return parseEvidenceBundle({
-    apiVersion: "factory.external-evidence/v1",
+): ExternalSourceAcquisitionV1 {
+  return parseExternalSourceAcquisition({
+    apiVersion: "factory.external-source-acquisition/v1",
     createdAt,
     producerVersion: request.producerVersion,
-    parentDigests: [snapshot.digest],
-    snapshotDigest: snapshot.digest,
+    parentDigests: [requestRef.digest, snapshot.digest],
+    sourceRequestDigest: requestRef.digest,
+    source: {
+      canonicalRepositoryUrl: request.source.canonicalRepositoryUrl,
+      requestedRef: request.source.requestedRef,
+      resolvedCommit: snapshotRecord.resolvedCommit,
+    },
+    snapshot: {
+      recordDigest: snapshot.digest,
+      archiveDigest: snapshotRecord.archiveDigest,
+      treeDigest: snapshotRecord.treeDigest,
+      entryCount: tree.entries.length,
+      declaredBytes: tree.totalBytes,
+    },
     licence: {
       primaryPaths: [licence.path],
       textDigests: [licence.blobDigest],
-      manualStatus: "unreviewed",
     },
     notices: notices.map(({ path, blobDigest }) => ({
       path,
       digest: blobDigest,
       required: true,
     })),
-    sbom: {
-      format: "CycloneDX",
-      digest: phaseDigest,
-      components: 0,
-    },
-    scans: (["licence", "secret", "sast", "dependency"] as const).map(
-      (kind) => ({
-        kind,
-        tool: `pending-${kind}`,
-        toolVersion: request.producerVersion,
-        rulesetDigest: phaseDigest,
-        resultDigest: phaseDigest,
-        status: "unavailable" as const,
-      }),
-    ),
-    ast: {
-      parser: "pending-inventory",
-      parserVersion: request.producerVersion,
-      inventoryDigest: phaseDigest,
-    },
+    provenance,
+    manualStatus: "unreviewed",
+    acquisitionState: "acquired",
   });
 }
 
@@ -228,7 +226,7 @@ export async function acquireSourceEvidence(
   input: IntakeRequestV1,
   client: FixedSourceClient,
   store: ExternalIntakeStore,
-): Promise<{ snapshot: StoredRecordRef; evidence: StoredRecordRef }> {
+): Promise<{ snapshot: StoredRecordRef; acquisition: StoredRecordRef }> {
   const request = parseIntakeRequest(input);
   let createdAt = request.createdAt;
   const storedDigests: Array<`sha256:${string}`> = [];
@@ -289,37 +287,33 @@ export async function acquireSourceEvidence(
       tree,
       originEvidence: origins,
     });
+    const requestRef = store.putRecord("request", request);
+    storedDigests.push(requestRef.digest);
     const snapshot = store.putRecord("snapshot", snapshotRecord);
     storedDigests.push(snapshot.digest);
 
-    const phaseBytes = new TextEncoder().encode(
-      canonicalJson({
-        apiVersion: "factory.external-evidence-phase/v1",
-        snapshotDigest: snapshot.digest,
-        status: "pending-task-3",
-      }),
-    );
-    const phaseRef = store.putBytes("evidence", phaseBytes);
-    storedDigests.push(phaseRef.digest);
-    const evidenceRecord = provisionalEvidence(
+    const acquisitionRecord = createAcquisitionRecord(
       request,
+      requestRef,
       snapshot,
+      snapshotRecord,
+      tree,
       discovered.licence,
       discovered.notices,
-      phaseRef.digest,
+      origins,
       reference.retrievedAt,
     );
-    const evidence = store.putRecord("evidence", evidenceRecord);
-    storedDigests.push(evidence.digest);
+    const acquisition = store.putRecord("acquisition", acquisitionRecord);
+    storedDigests.push(acquisition.digest);
     appendReceipt(
       store,
       request,
       "evidenced",
-      "source-evidence-acquired",
+      "source-acquisition-acquired",
       [...new Set(storedDigests)],
       reference.retrievedAt,
     );
-    return { snapshot, evidence };
+    return { snapshot, acquisition };
   } catch (error) {
     const failure =
       error instanceof AcquisitionFailure

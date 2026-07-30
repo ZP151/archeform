@@ -278,6 +278,162 @@ describe("GitHubFixedSourceClient", () => {
     expect(transport.calls).toHaveLength(2);
   });
 
+  it.each([
+    [
+      "entry count",
+      { maxEntries: 1 },
+      [
+        {
+          path: "LICENSE",
+          mode: "100644",
+          type: "blob",
+          sha: "c".repeat(40),
+          size: 3,
+        },
+        { path: "src", mode: "040000", type: "tree", sha: "d".repeat(40) },
+      ],
+    ],
+    [
+      "single-file bytes",
+      { maxFileBytes: 2 },
+      [
+        {
+          path: "LICENSE",
+          mode: "100644",
+          type: "blob",
+          sha: "c".repeat(40),
+          size: 3,
+        },
+      ],
+    ],
+    [
+      "invalid declared bytes",
+      {},
+      [
+        {
+          path: "LICENSE",
+          mode: "100644",
+          type: "blob",
+          sha: "c".repeat(40),
+          size: -1,
+        },
+      ],
+    ],
+    [
+      "symlink mode",
+      {},
+      [
+        {
+          path: "LICENSE",
+          mode: "120000",
+          type: "blob",
+          sha: "c".repeat(40),
+          size: 3,
+        },
+      ],
+    ],
+    [
+      "cumulative bytes",
+      { maxTotalBytes: 5 },
+      [
+        {
+          path: "LICENSE",
+          mode: "100644",
+          type: "blob",
+          sha: "c".repeat(40),
+          size: 3,
+        },
+        {
+          path: "NOTICE",
+          mode: "100644",
+          type: "blob",
+          sha: "d".repeat(40),
+          size: 3,
+        },
+      ],
+    ],
+    [
+      "unsafe late path",
+      {},
+      [
+        {
+          path: "LICENSE",
+          mode: "100644",
+          type: "blob",
+          sha: "c".repeat(40),
+          size: 3,
+        },
+        {
+          path: "../escape.ts",
+          mode: "100644",
+          type: "blob",
+          sha: "d".repeat(40),
+          size: 3,
+        },
+      ],
+    ],
+  ])(
+    "preflights %s metadata before issuing any blob fetch",
+    async (_case, snapshotLimits, tree) => {
+      const transport = scriptedFetch([
+        jsonResponse({ truncated: false, tree }),
+      ]);
+      const client = new GitHubFixedSourceClient({
+        fetch: transport.fetch,
+        snapshotLimits,
+      });
+
+      await expect(client.fetchTree(resolvedReference)).rejects.toThrow(
+        /limit|unsafe|metadata|mode|byte size/i,
+      );
+      expect(transport.calls).toHaveLength(1);
+      expect(transport.calls[0]?.url).toContain("/git/trees/");
+    },
+  );
+
+  it("bounds cached evidence bytes and refetches uncached evidence", async () => {
+    const firstObject = "c".repeat(40);
+    const secondObject = "d".repeat(40);
+    const transport = scriptedFetch([
+      jsonResponse({
+        truncated: false,
+        tree: [
+          {
+            path: "LICENSE",
+            mode: "100644",
+            type: "blob",
+            sha: firstObject,
+            size: 3,
+          },
+          {
+            path: "NOTICE",
+            mode: "100644",
+            type: "blob",
+            sha: secondObject,
+            size: 3,
+          },
+        ],
+      }),
+      new Response("abc"),
+      new Response("xyz"),
+      new Response("xyz"),
+    ]);
+    const client = new GitHubFixedSourceClient({
+      fetch: transport.fetch,
+      maxEvidenceCacheBytes: 3,
+    });
+
+    await client.fetchTree(resolvedReference);
+    await expect(
+      client.fetchEvidence(resolvedReference, "LICENSE"),
+    ).resolves.toEqual(new TextEncoder().encode("abc"));
+    await expect(
+      client.fetchEvidence(resolvedReference, "NOTICE"),
+    ).resolves.toEqual(new TextEncoder().encode("xyz"));
+    expect(transport.calls).toHaveLength(4);
+    expect(transport.calls[3]?.url).toContain("/contents/NOTICE?");
+  });
+
   it("rejects non-evidence paths without retrieval", async () => {
     const fetch = vi.fn<SourceFetch>();
     const client = new GitHubFixedSourceClient({ fetch });

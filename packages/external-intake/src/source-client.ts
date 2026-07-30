@@ -1,5 +1,10 @@
 import { digestBytes, type Sha256Digest } from "./canonical.js";
 import { parseIntakeRequest, type IntakeRequestV1 } from "./contracts.js";
+import {
+  preflightSourceTreeMetadata,
+  type SnapshotLimits,
+  type SourceTreeMetadataEntryV1,
+} from "./snapshot.js";
 
 const FULL_COMMIT = /^[a-f0-9]{40}$/u;
 const GIT_OBJECT = /^[a-f0-9]{40}$/u;
@@ -58,6 +63,8 @@ export interface GitHubFixedSourceClientOptions {
   readonly maxMetadataResponseBytes?: number;
   readonly maxArchiveResponseBytes?: number;
   readonly maxEvidenceResponseBytes?: number;
+  readonly maxEvidenceCacheBytes?: number;
+  readonly snapshotLimits?: Partial<SnapshotLimits>;
   readonly requiredNoticePaths?: Readonly<Record<string, readonly string[]>>;
 }
 
@@ -97,6 +104,13 @@ function canonicalTimestamp(date: Date): string {
 function positiveInteger(value: number, label: string): number {
   if (!Number.isSafeInteger(value) || value <= 0) {
     throw new TypeError(`${label} must be a positive safe integer.`);
+  }
+  return value;
+}
+
+function nonnegativeInteger(value: number, label: string): number {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new TypeError(`${label} must be a non-negative safe integer.`);
   }
   return value;
 }
@@ -183,8 +197,11 @@ export class GitHubFixedSourceClient implements FixedSourceClient {
   readonly #maxMetadataResponseBytes: number;
   readonly #maxArchiveResponseBytes: number;
   readonly #maxEvidenceResponseBytes: number;
+  readonly #maxEvidenceCacheBytes: number;
+  readonly #snapshotLimits: Partial<SnapshotLimits>;
   readonly #requiredNoticePaths: Readonly<Record<string, readonly string[]>>;
   readonly #treeBytes = new Map<string, Uint8Array>();
+  #cachedEvidenceBytes = 0;
 
   constructor(options: GitHubFixedSourceClientOptions = {}) {
     if (options.fetch === undefined && globalThis.fetch === undefined) {
@@ -212,6 +229,11 @@ export class GitHubFixedSourceClient implements FixedSourceClient {
       options.maxEvidenceResponseBytes ?? 10 * 1024 * 1024,
       "Evidence response limit",
     );
+    this.#maxEvidenceCacheBytes = nonnegativeInteger(
+      options.maxEvidenceCacheBytes ?? 32 * 1024 * 1024,
+      "Evidence cache limit",
+    );
+    this.#snapshotLimits = options.snapshotLimits ?? {};
     this.#requiredNoticePaths = options.requiredNoticePaths ?? {};
   }
 
@@ -306,14 +328,15 @@ export class GitHubFixedSourceClient implements FixedSourceClient {
       throw new Error("GitHub tree inventory is truncated or malformed.");
     }
 
-    const entries: SourceTreeEntryV1[] = [];
+    const metadata: SourceTreeMetadataEntryV1[] = [];
+    const objectIds = new Map<string, string>();
     for (const input of response.tree) {
       const entry = record(input, "tree entry");
       const path = stringField(entry, "path", "tree entry");
       const mode = stringField(entry, "mode", "tree entry");
       const type = stringField(entry, "type", "tree entry");
       if (type === "tree" || type === "commit") {
-        entries.push({ path, mode, type });
+        metadata.push({ path, mode, type });
         continue;
       }
       if (type !== "blob") {
@@ -327,19 +350,40 @@ export class GitHubFixedSourceClient implements FixedSourceClient {
       if (!GIT_OBJECT.test(objectId)) {
         throw new Error("GitHub tree entry has an invalid object hash.");
       }
+      metadata.push({ path, mode, type, size: size as number });
+      objectIds.set(path, objectId);
+    }
+
+    const preflight = preflightSourceTreeMetadata(
+      metadata,
+      this.#snapshotLimits,
+    );
+    const entries: SourceTreeEntryV1[] = [];
+    for (const entry of preflight.entries) {
+      if (entry.type !== "blob") {
+        entries.push(entry);
+        continue;
+      }
+      const objectId = objectIds.get(entry.path)!;
       const raw = await this.#requestBytes(
         `https://api.github.com/repos/${identity.owner}/${identity.repository}/git/blobs/${objectId}`,
         this.#maxEvidenceResponseBytes,
         "application/vnd.github.raw+json",
       );
-      if (raw.byteLength !== size) {
+      if (raw.byteLength !== entry.size) {
         throw new Error("GitHub blob bytes differ from the tree byte size.");
       }
-      this.#treeBytes.set(
-        `${reference.repositoryUrl}\0${reference.resolvedCommit}\0${path}`,
-        raw,
-      );
-      entries.push({ path, mode, type, size, blobDigest: digestBytes(raw) });
+      const cacheKey = `${reference.repositoryUrl}\0${reference.resolvedCommit}\0${entry.path}`;
+      if (
+        allowedEvidencePath(reference, entry.path) &&
+        !this.#treeBytes.has(cacheKey) &&
+        this.#cachedEvidenceBytes + raw.byteLength <=
+          this.#maxEvidenceCacheBytes
+      ) {
+        this.#treeBytes.set(cacheKey, raw);
+        this.#cachedEvidenceBytes += raw.byteLength;
+      }
+      entries.push({ ...entry, blobDigest: digestBytes(raw) });
     }
     return entries;
   }

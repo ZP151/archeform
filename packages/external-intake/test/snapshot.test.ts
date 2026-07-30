@@ -185,6 +185,37 @@ describe("source snapshot acquisition", () => {
     );
   });
 
+  it("uses total locale-independent ordering for reversed mixed Unicode and ASCII paths", () => {
+    const mixed = [
+      "中.ts",
+      "Ωmega.ts",
+      "Ångstrom.ts",
+      "alpha.ts",
+      "Zeta.ts",
+    ].map((path) => ({
+      path,
+      mode: "100644",
+      type: "blob" as const,
+      size: 1,
+      blobDigest: `sha256:${"1".repeat(64)}` as const,
+    }));
+
+    const forward = validateSourceTree(mixed);
+    const reversed = validateSourceTree([...mixed].reverse());
+
+    expect(forward.blobEntries.map(({ path }) => path)).toEqual([
+      "Zeta.ts",
+      "alpha.ts",
+      "Ångstrom.ts",
+      "Ωmega.ts",
+      "中.ts",
+    ]);
+    expect(reversed.blobEntries.map(({ path }) => path)).toEqual(
+      forward.blobEntries.map(({ path }) => path),
+    );
+    expect(reversed.treeDigest).toBe(forward.treeDigest);
+  });
+
   it.each([
     [
       "path traversal",
