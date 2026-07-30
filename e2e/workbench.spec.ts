@@ -5,9 +5,30 @@ import type { ApplicationGraphV1 } from "@factory/graph";
 type PreviewRunResponse = {
   readonly id: string;
   readonly compilationId: string;
+  readonly composeProjectName?: string;
+  readonly webPort?: number | null;
+  readonly apiPort?: number | null;
+  readonly status?: string;
+};
+
+type PublishedRevisionResponse = {
+  readonly id: string;
+  readonly graphHash: string;
+};
+
+type CompilationResponse = {
+  readonly id: string;
+  readonly publishedRevisionId: string;
+  readonly inputGraphHash: string;
+  readonly result: { readonly status: string };
+  readonly artifacts?: readonly {
+    readonly path: string;
+    readonly digest: string;
+  }[];
 };
 
 const factoryE2eProject = process.env.FACTORY_E2E_FACTORY_PROJECT;
+const factoryE2eControlPlaneUrl = process.env.FACTORY_E2E_CONTROL_PLANE_URL;
 
 function dockerOutput(args: readonly string[]): string {
   return execFileSync("docker", [...args], {
@@ -15,6 +36,42 @@ function dockerOutput(args: readonly string[]): string {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   }).trim();
+}
+
+function generatedImageIds(composeProjectName: string): Record<string, string> {
+  const rows = dockerOutput([
+    "ps",
+    "--all",
+    "--filter",
+    `label=com.docker.compose.project=${composeProjectName}`,
+    "--format",
+    '{{.Label "com.docker.compose.service"}}|{{.Image}}',
+  ]);
+  const images = new Map<string, string>();
+  for (const row of rows.split("\n").filter(Boolean)) {
+    const [service, image] = row.split("|", 2);
+    if (service && image) {
+      images.set(
+        service,
+        dockerOutput(["image", "inspect", image, "--format", "{{.Id}}"]),
+      );
+    }
+  }
+  for (const service of ["web", "api", "migrate"]) {
+    expect(images.get(service), `Generated ${service} image ID`).toMatch(
+      /^sha256:[a-f0-9]{64}$/,
+    );
+  }
+  return Object.fromEntries(images);
+}
+
+function controlPlaneUrl(path: string): string {
+  if (!factoryE2eControlPlaneUrl) {
+    throw new Error(
+      "FACTORY_E2E_CONTROL_PLANE_URL is required for isolated acceptance evidence.",
+    );
+  }
+  return new URL(path, `${factoryE2eControlPlaneUrl}/`).toString();
 }
 
 function expectPreviewResourcesRemoved(
@@ -214,6 +271,7 @@ test("creates a named application Draft through the guided business-user journey
 
 test("Home creates, publishes, compiles, previews, and operates a Restaurant application", async ({
   page,
+  request,
 }) => {
   test.setTimeout(360_000);
   const suffix = Date.now().toString();
@@ -222,7 +280,7 @@ test("Home creates, publishes, compiles, previews, and operates a Restaurant app
 
   await expect(page.getByLabel("Workbench Home")).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Restaurant ordering" }),
+    page.getByRole("heading", { name: "Restaurant ordering", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "New application" }).first().click();
   await page.getByTestId("guided-template-restaurant-ordering").click();
@@ -256,7 +314,17 @@ test("Home creates, publishes, compiles, previews, and operates a Restaurant app
     `/home-verification-${suffix}`,
   );
 
+  const publishedResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      /\/application-graphs\/[^/]+\/published-revisions$/.test(response.url()),
+  );
   await page.getByRole("button", { name: "Publish" }).click();
+  const published = (await (
+    await publishedResponse
+  ).json()) as PublishedRevisionResponse;
+  expect(published.id).toMatch(/\S/);
+  expect(published.graphHash).toMatch(/^sha256:[a-f0-9]{64}$/);
   await expect(page.getByRole("button", { name: "Published" })).toBeVisible();
   await page.getByRole("button", { name: "Home", exact: true }).click();
   const publishedProject = page.getByRole("article").filter({ hasText: name });
@@ -265,7 +333,18 @@ test("Home creates, publishes, compiles, previews, and operates a Restaurant app
     name: `Compile ${name}`,
   });
   await expect(compile).toBeEnabled();
+  const compilationResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname === "/compilations",
+  );
   await compile.click();
+  const queuedCompilation = (await (
+    await compilationResponse
+  ).json()) as CompilationResponse;
+  expect(queuedCompilation.id).toMatch(/\S/);
+  expect(queuedCompilation.publishedRevisionId).toBe(published.id);
+  expect(queuedCompilation.inputGraphHash).toBe(published.graphHash);
 
   await expect(page.getByLabel("Generated artifact manifest")).toBeVisible({
     timeout: 30_000,
@@ -277,6 +356,24 @@ test("Home creates, publishes, compiles, previews, and operates a Restaurant app
   await expect(page.getByLabel("Generated source snapshot")).toContainText(
     "verified snapshot",
   );
+  const compilationResult = await request.get(
+    controlPlaneUrl(
+      `/compilations/${encodeURIComponent(queuedCompilation.id)}`,
+    ),
+  );
+  expect(
+    compilationResult.ok(),
+    "Generated compilation evidence request",
+  ).toBeTruthy();
+  const completedCompilation =
+    (await compilationResult.json()) as CompilationResponse;
+  expect(completedCompilation.id).toBe(queuedCompilation.id);
+  expect(completedCompilation.result.status).toBe("succeeded");
+  const composeArtifact = completedCompilation.artifacts?.find(
+    (artifact) => artifact.path === "docker-compose.yml",
+  );
+  expect(composeArtifact, "Generated Compose artifact").toBeDefined();
+  expect(composeArtifact?.digest).toMatch(/^sha256:[a-f0-9]{64}$/);
 
   const tableSessionToken = process.env.RESTAURANT_DEMO_TABLE_TOKEN;
   expect(
@@ -305,6 +402,22 @@ test("Home creates, publishes, compiles, previews, and operates a Restaurant app
     await expect(page.getByText("Preview ready", { exact: true })).toBeVisible({
       timeout: 300_000,
     });
+    const previewStatus = await request.get(
+      controlPlaneUrl(
+        `/compilations/${encodeURIComponent(queuedCompilation.id)}/preview-runs/current`,
+      ),
+    );
+    expect(
+      previewStatus.ok(),
+      "Generated preview evidence request",
+    ).toBeTruthy();
+    const readyPreview = (await previewStatus.json()) as PreviewRunResponse;
+    expect(readyPreview.id).toBe(previewRunId);
+    expect(readyPreview.status).toBe("ready");
+    expect(readyPreview.composeProjectName).toBe(composeProjectName);
+    expect(readyPreview.webPort).toEqual(expect.any(Number));
+    expect(readyPreview.apiPort).toEqual(expect.any(Number));
+    const imageIds = generatedImageIds(composeProjectName);
 
     const previewPage = page.context().waitForEvent("page");
     await page.getByRole("button", { name: "Open preview" }).click();
@@ -476,6 +589,21 @@ test("Home creates, publishes, compiles, previews, and operates a Restaurant app
     await expect(preview.getByText(/Audit recorded/)).toBeVisible();
     await expect(metric("Cancellations")).toHaveText("1");
     await expect(preview.getByText("Margherita pizza: 5")).toBeVisible();
+    console.info(
+      "TASK7_ACCEPTANCE_EVIDENCE",
+      JSON.stringify({
+        factoryComposeProject: factoryE2eProject,
+        publishedRevisionId: published.id,
+        graphDigest: published.graphHash,
+        compilationId: queuedCompilation.id,
+        generatedComposeArtifactDigest: composeArtifact?.digest,
+        previewRunId,
+        generatedComposeProject: composeProjectName,
+        generatedWebPort: readyPreview.webPort,
+        generatedApiPort: readyPreview.apiPort,
+        generatedImageIds: imageIds,
+      }),
+    );
   } finally {
     if (previewRunId && composeProjectName) {
       try {
