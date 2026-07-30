@@ -33,10 +33,9 @@ recorded repair round. Five failed repair/review rounds require escalation.
 
 Planning is complete for the first quarantine-first bulk Candidate Intake
 slice, and the Controller has accepted the design contract. Task 1 is now
-returned to `implementing` for its bounded shared-contract amendment; its
-accepted release behavior remains frozen. Task 2 remains `implementing` but is
-BLOCKED on that amendment, and Tasks 3 through 6 remain `planned`. The system
-will ingest the
+`ready_for_qa` for its bounded shared-contract amendment; its accepted release
+behavior remains frozen. Task 2 remains `implementing` but is BLOCKED on that
+amendment, and Tasks 3 through 6 remain `planned`. The system will ingest the
 43 fixed-reference portfolio as metadata, retain the 108 scenarios as
 composition demand signals, and produce only quarantined evidence,
 non-executable Candidate records, and pending-review promotion packets.
@@ -58,13 +57,14 @@ Controller resolved its schema incompatibility by selecting a distinct
 but BLOCKED on the Task 1 contract amendment; its original scope and exact
 paths remain frozen. Tasks 3 through 6 remain `planned`.
 
-Acquisition amendment Fix Round 1 re-review FAILED with one remaining P1. The
-amendment remains `implementing` in Fix Round 2/5; its contract and exact
-amendment-owned paths remain frozen.
+Acquisition amendment Fix Round 2 re-review PASSED with no P0/P1/P2. The PM
+reconciled Fix Rounds 1 and 2 and moved the amendment
+`implementing -> ready_for_qa`; its contract and exact amendment-owned paths
+remain frozen.
 
 | Task                                             | State          | Specialization      | Contract owner                   | Dependency gate                                               |
 | ------------------------------------------------ | -------------- | ------------------- | -------------------------------- | ------------------------------------------------------------- |
-| 1. Candidate contracts and immutable persistence | `implementing` | `integration`       | External Intake Contract         | Amendment re-review FAIL; Fix Round 2/5.                      |
+| 1. Candidate contracts and immutable persistence | `ready_for_qa` | `integration`       | External Intake Contract         | Fix Round 2 re-review PASS; independent QA required.          |
 | 2. Fixed-source provenance and notices           | `implementing` | `platform`          | External Source Provenance       | BLOCKED on accepted Task 1 amendment; scope and paths frozen. |
 | 3. Deterministic scan orchestration              | `planned`      | `platform-security` | External Evidence Pipeline       | Task 1 amendment and Task 2 acquisition must be accepted.     |
 | 4. Candidate registry, API, CLI, and isolation   | `planned`      | `integration`       | Candidate Registry               | Tasks 1-3 and Commercial Foundation Task 1 accepted.          |
@@ -73,7 +73,7 @@ amendment-owned paths remain frozen.
 
 ## Task 1 card: Candidate contracts and immutable persistence
 
-- **State:** `implementing` for bounded amendment Fix Round 2/5; accepted
+- **State:** `ready_for_qa` for the bounded amendment; accepted
   release behavior remains frozen.
 - **Specialization:** `integration`
 - **Contract owner:** External Intake Contract
@@ -261,9 +261,21 @@ Fix Round 1 re-review FAILED with one remaining P1. When a request
 Required repair: enforce that equality and add an adversarial regression for a
 full-SHA `requestedRef` mismatch without `expectedCommit`.
 
-The amendment remains `implementing` with no scope or path change. The accepted
-Task 1 release behavior remains frozen, Task 2 remains BLOCKED, and Tasks 3
-through 6 remain `planned`.
+At that repair gate, the amendment remained `implementing` with no scope or
+path change. The accepted Task 1 release behavior remained frozen, Task 2
+remained BLOCKED, and Tasks 3 through 6 remained `planned`.
+
+Fix Round 2 independent re-review PASSED with no P0/P1/P2. Fix Rounds 1 and 2
+are reconciled. The bounded amendment code set is:
+
+- `989c75b`
+- `af4973c`
+- `174d2a0`
+
+The amendment moved `implementing -> ready_for_qa`; independent behavioral QA
+remains required before acceptance. Its contract and paths remain frozen, the
+original Task 1 release behavior remains accepted and frozen, Task 2 remains
+BLOCKED, and Tasks 3 through 6 remain `planned`.
 
 ## Task 2 card: Fixed-source provenance, licences, and notices
 
@@ -508,9 +520,8 @@ allowed paths. Tasks 3 through 6 remain `planned`.
   Capabilities, and compiler test paths. Task 4 waits for Commercial Foundation
   Task 1 acceptance and exclusive path ownership.
 
-The active smallest valuable slice is bounded amendment Fix Round 2/5: enforce
-full-SHA `requestedRef` equality with acquisition/snapshot `resolvedCommit`
-without relying on `expectedCommit`. Task 1's accepted release behavior remains
+The active smallest valuable slice is independent QA for bounded amendment code
+set `989c75b + af4973c + 174d2a0`. Task 1's accepted release behavior remains
 frozen. Task 2 is BLOCKED while its scope and exact paths remain frozen; Tasks
 3 through 6 remain `planned` until explicitly dispatched after their recorded
 dependency gates are met.
