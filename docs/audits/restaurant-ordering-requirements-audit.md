@@ -4,13 +4,18 @@ Updated: 2026-07-30
 
 ## Release conclusion
 
-**Not accepted.** The direct generated Restaurant application passed its
-isolated Node 22 Customer and Merchant browser journeys, but the required
-current-source `Workbench → Publish → Control Plane → Worker preview → Stop →
-scoped cleanup` release path remains unproven while Docker Desktop's daemon is
-unavailable. See
+**Accepted for the implemented local Restaurant MVP.** The current-source
+`Workbench → Publish → Control Plane → Worker preview → generated application
+→ Stop → scoped cleanup` lifecycle passed with isolated Node 22 Customer and
+Merchant browser journeys. See
 [`../acceptance/restaurant-ordering-mvp.md`](../acceptance/restaurant-ordering-mvp.md)
-for redacted runtime evidence and the exact environment blocker.
+for the immutable identifiers, redacted launch evidence, and exact cleanup
+postconditions.
+
+This acceptance does not establish the composition-first platform goal. The
+current Profile remains a full starter Graph with Restaurant-specific compiler
+behavior; the missing parameterized capability composition kernel is the next
+platform priority.
 
 Status labels:
 
@@ -72,7 +77,7 @@ Status labels:
 | Factory-owned Graph and Golden assets                 | Proven                          | Restaurant profile validates entities, relations, roles, pages, operations, flow semantics, and Golden asset locks.                                                           |
 | Draft → Publish → immutable compile                   | Proven at integration scope     | Graph, Control Plane, compiler, and Worker tests protect the published-only boundary.                                                                                         |
 | Generated Web/API/PostgreSQL/Casbin/XState/tests/docs | Proven for direct compilation   | Restaurant compiler emits deterministic artifacts; Node 22 generated Compose passed.                                                                                          |
-| Current Workbench-driven preview lifecycle            | Unverified                      | Docker release gate is blocked by the unavailable Docker daemon; do not infer this from direct Compose evidence.                                                              |
+| Current Workbench-driven preview lifecycle            | Proven for local Node 22 scope  | The accepted isolated lifecycle created a Draft, published it, compiled 65 artifacts, ran Customer and Merchant journeys, stopped the same preview, and verified exact cleanup. |
 | Command consistency and idempotency                   | Proven for implemented commands | Transactional Prisma operations use expected version, idempotency, audit, capability events, and outbox evidence.                                                             |
 | Offline experience                                    | Absent                          | No service worker, cache, reconciliation policy, offline command queue, or offline E2E evidence.                                                                              |
 | First load ≤1.5 seconds                               | Unverified                      | No performance budget or browser measurement.                                                                                                                                 |
@@ -81,21 +86,26 @@ Status labels:
 
 ## Dependency-ordered delivery
 
-1. Restore Docker Desktop and prove the current Workbench-driven Restaurant
-   preview/cleanup gate. This is required before release acceptance.
-2. Add **declared menu option groups and modifiers** as versioned Restaurant
+1. Implement **Parameterized Capability Composition v1** before adding more
+   Restaurant-only behavior: typed bindings, additive Graph and executable
+   target contributions, typed requirements/provides, immutable composition
+   locks, and fail-closed collision/namespace validation.
+2. Convert shared commerce assets so Restaurant and Simple Ecommerce compile
+   from identical package versions with different validated bindings. Remove
+   compiler-owned Restaurant behavior as each asset migrates.
+3. Add **declared menu option groups and modifiers** as versioned Restaurant
    Graph assets: option groups, options, bounded rules, price deltas,
    availability, Customer selectors, and Merchant configuration.
-3. Add **versioned order amendments** on the same line configuration model:
+4. Add **versioned order amendments** on the same line configuration model:
    Merchant add/remove/change operations, compensation rules, inventory
    differences, audit/outbox events, and report consistency. Post-payment
    refund remains a later payment-provider slice.
-4. Add a reusable **Identity and Membership** foundation before loyal points,
+5. Add a reusable **Identity and Membership** foundation before loyal points,
    coupons, reviews, saved stores, member prices, or real payment.
-5. Make `fulfilmentType` executable through a pickup slice, then a separate
+6. Make `fulfilmentType` executable through a pickup slice, then a separate
    delivery/address/courier slice; add reservations/waitlist independently.
-6. Introduce payment, printer, realtime, offline, and performance providers
+7. Introduce payment, printer, realtime, offline, and performance providers
    only behind their own contracts, fixtures, conformance tests, and release
    gates.
-7. Expand Appointment, Ticketing, and other profiles only from Factory-owned
+8. Expand Appointment, Ticketing, and other profiles only from Factory-owned
    contracts informed by fixed-version, license-reviewed source studies.

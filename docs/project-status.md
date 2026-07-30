@@ -12,6 +12,13 @@ Capability Composition: replace starter-Graph copying and compiler-owned profile
 branches with independently versioned packages that contribute Graph and target
 artifacts through declared parameters and immutable composition locks.
 
+The active design and task-level migration plan are
+[`superpowers/specs/2026-07-30-parameterized-capability-composition-design.md`](superpowers/specs/2026-07-30-parameterized-capability-composition-design.md)
+and
+[`superpowers/plans/2026-07-30-parameterized-capability-composition.md`](superpowers/plans/2026-07-30-parameterized-capability-composition.md).
+The public-source candidate map is
+[`research/2026-07-30-profile-capability-source-study.md`](research/2026-07-30-profile-capability-source-study.md).
+
 ## Current evidence
 
 `pnpm test` passed on this branch on 2026-07-30: 11 Turbo tasks and 490 tests
