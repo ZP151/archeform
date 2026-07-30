@@ -447,6 +447,7 @@ git commit -m "feat: compile immutable capability composition locks"
   `packages/capabilities/assets/commerce.simulated-payment/1.0.1/`.
 - Modify: `packages/capabilities/test/capability-registry.test.ts`
 - Modify: `packages/capabilities/test/composition-contract.test.ts`
+- Modify: `packages/capabilities/test/restaurant-profile.test.ts`
 - Modify: `packages/graph/src/model.ts`
 - Modify: `packages/graph/test/application-graph.test.ts`
 - Modify: `apps/control-plane/src/lifecycle.service.ts`
