@@ -79,11 +79,20 @@ function resolveSyntheticComposition(input: {
 
 const cartSelection: CapabilitySelectionV1 = {
   lock: lockCapabilityAsset(cartAsset),
-  bindings: {},
+  bindings: {
+    catalogEntity: { graphSymbol: "graph.domain.product" },
+    orderEntity: { graphSymbol: "graph.domain.order" },
+    cartPage: { graphSymbol: "graph.page.checkout" },
+    customerRole: { graphSymbol: "graph.policy.customer" },
+  },
 };
 const catalogSelection: CapabilitySelectionV1 = {
   lock: lockCapabilityAsset(catalogAsset),
-  bindings: {},
+  bindings: {
+    catalogEntity: { graphSymbol: "graph.domain.product" },
+    catalogPage: { graphSymbol: "graph.page.catalog" },
+    customerRole: { graphSymbol: "graph.policy.customer" },
+  },
 };
 
 describe("capability composition contract", () => {
@@ -104,7 +113,7 @@ describe("capability composition contract", () => {
     ]);
     expect(lock.lockDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
     expect(lock.lockDigest).toBe(
-      "sha256:1ed2caf694231c8f343a2070d48e67f12abcaed180a2f53520a805b47cc3f47c",
+      "sha256:9f48d968ed136c8ed505975995b09e99b631e8ef8cc719b94ca30cda1da14463",
     );
     expect(Object.isFrozen(lock)).toBe(true);
     expect(Object.isFrozen(lock.packages)).toBe(true);
@@ -147,13 +156,13 @@ describe("capability composition contract", () => {
           rawPrompt: "SHOULD_NOT_SURVIVE",
           credential: "SHOULD_NOT_SURVIVE",
         },
-        bindings: {},
+        bindings: cartSelection.bindings,
       }),
     ) as CapabilitySelectionV1;
 
     const lock = createCapabilityCompositionLock({
       graphChecksum: digest("a"),
-      selections: [runtimeSelection],
+      selections: [runtimeSelection, catalogSelection],
     });
 
     expect(lock.packages[0]?.lock).toEqual(lockCapabilityAsset(cartAsset));
@@ -173,13 +182,13 @@ describe("capability composition contract", () => {
           ...lockCapabilityAsset(cartAsset),
           metadata: { rawPrompt: "SHOULD_NOT_SURVIVE" },
         },
-        bindings: {},
+        bindings: cartSelection.bindings,
       }),
     ) as CapabilitySelectionV1;
 
     const lock = createCapabilityCompositionLock({
       graphChecksum: digest("a"),
-      selections: [runtimeSelection],
+      selections: [runtimeSelection, catalogSelection],
     });
 
     expect(lock.packages[0]?.lock).toEqual(lockCapabilityAsset(cartAsset));

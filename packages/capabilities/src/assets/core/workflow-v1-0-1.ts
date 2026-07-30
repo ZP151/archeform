@@ -10,7 +10,7 @@ export const workflowAssetV1_0_1: CapabilityAssetV1 = {
     description: "Runs declared state transitions, guards, and human tasks.",
     packageRoot: "packages/capabilities/assets/core.workflow/1.0.1",
     manifestDigest:
-      "sha256:04ecbfceff872ed4c4f73467568bce657ad326faaa0546b09c1bbe1f7860cb44",
+      "sha256:8de6fdf5675c757d775ab5d563a738896f48473a0bbaa3d250790bccea5fcff0",
     lifecycle: "golden",
     profiles: ["expense-approval", "restaurant-ordering", "simple-ecommerce"],
     effects: ["flow.transition", "flow.assign-task"],
@@ -26,6 +26,7 @@ export const workflowAssetV1_0_1: CapabilityAssetV1 = {
           "sha256:209d5d649840437f334ac53aa593634c9cdb8fbfe5cc7525ed96f80ac91947bb",
       },
     ],
+    parameters: [{ key: "flowKey", type: "graph-symbol", required: true }],
     verification: {
       fixture: "fixtures/default.json",
       contractTest: "tests/contract.json",

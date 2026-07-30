@@ -12,6 +12,11 @@ import {
   type CapabilityCategory,
   type FactoryProfile,
 } from "./assets/index.js";
+import {
+  resolveCapabilityComposition,
+  type CapabilityCompositionV1,
+  type CapabilitySelectionV1,
+} from "./composition.js";
 import { assertRestaurantOrderingProfile } from "./restaurant/profile.js";
 
 export type {
@@ -126,11 +131,6 @@ export function assertGoldenCapabilityAssetLocks(
   const providedEffects = new Set<string>();
   for (const lock of locks) {
     const manifest = resolveCapabilityAssetLock(lock).manifest;
-    if (!manifest.profiles.includes(context.profile as FactoryProfile)) {
-      throw new Error(
-        `Capability asset lock '${lock.key}' does not support profile '${context.profile}'.`,
-      );
-    }
     for (const effect of manifest.effects) providedEffects.add(effect);
   }
   for (const capabilityKey of context.capabilityKeys) {
@@ -181,6 +181,84 @@ export interface ProfileCompositionResult {
   readonly assetLocks: NonNullable<
     ApplicationGraphV1["integration"]["assetLocks"]
   >;
+}
+
+export interface CapabilityDraftCompositionInput {
+  readonly graph: ApplicationGraphV1;
+  readonly selections: readonly CapabilitySelectionV1[];
+}
+
+export interface CapabilityDraftCompositionResult {
+  readonly graph: ApplicationGraphV1;
+  readonly composition: CapabilityCompositionV1;
+}
+
+function graphSymbolIds(
+  graph: ApplicationGraphV1,
+): Readonly<Record<string, ReadonlySet<string>>> {
+  return {
+    page: new Set([
+      ...graph.page.pages.map(({ id }) => id),
+      ...graph.page.navigation.map(({ id }) => id),
+    ]),
+    domain: new Set([
+      ...graph.domain.entities.map(({ key }) => key),
+      ...graph.domain.entities.flatMap(({ fields }) =>
+        fields.map(({ key }) => key),
+      ),
+    ]),
+    policy: new Set(graph.policy.roles),
+    flow: new Set([
+      ...graph.flow.flows.map(({ id }) => id),
+      ...graph.flow.flows.flatMap(({ states }) => states),
+      ...graph.flow.flows.flatMap(({ events }) => events),
+    ]),
+    integration: new Set([
+      ...graph.integration.providers.map(({ id }) => id),
+      ...graph.integration.capabilities.map(({ key }) => key),
+    ]),
+    experience: new Set([
+      ...Object.keys(graph.experience.theme.tokens),
+      ...graph.experience.locales,
+    ]),
+  };
+}
+
+function assertCompositionGraphSymbols(
+  graph: ApplicationGraphV1,
+  composition: CapabilityCompositionV1,
+): void {
+  const symbols = graphSymbolIds(graph);
+  for (const selectedPackage of composition.packages) {
+    for (const [bindingKey, bindingValue] of Object.entries(
+      selectedPackage.bindings,
+    )) {
+      if (typeof bindingValue !== "object") continue;
+      const [, model, id] = bindingValue.graphSymbol.split(".");
+      if (!model || !id || !symbols[model]?.has(id)) {
+        throw new Error(
+          `Graph symbol '${bindingValue.graphSymbol}' does not exist in the base Graph for capability package '${selectedPackage.lock.key}' binding '${bindingKey}'.`,
+        );
+      }
+    }
+  }
+}
+
+export function composeCapabilityDraft(
+  input: CapabilityDraftCompositionInput,
+): CapabilityDraftCompositionResult {
+  const graph = structuredClone(assertValidApplicationGraph(input.graph));
+  const composition = resolveCapabilityComposition({
+    selections: input.selections,
+  });
+  assertCompositionGraphSymbols(graph, composition);
+  graph.integration.compositionSelections = composition.packages.map(
+    (selection) => structuredClone(selection),
+  );
+  return {
+    graph: assertValidApplicationGraph(graph),
+    composition,
+  };
 }
 
 type ProfileCompositionRecipe = {

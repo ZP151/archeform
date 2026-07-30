@@ -6,7 +6,7 @@
   "name": "Simulated payment",
   "description": "Confirms a deterministic, credential-free payment simulation.",
   "packageRoot": "packages/capabilities/assets/commerce.simulated-payment/1.0.1",
-  "manifestDigest": "sha256:277e5bf9d54e94203074f934211901ebb780b14316e86b8a990353be2ac61b50",
+  "manifestDigest": "sha256:7e09745d72204d8930020217f379424962dc9ab24d4c4017d7a6a5d3623e81f9",
   "lifecycle": "golden",
   "profiles": ["restaurant-ordering", "simple-ecommerce"],
   "effects": ["payment.simulate"],
@@ -23,6 +23,11 @@
       "digest": "sha256:33a173be2367de708d6b1ed8e43d58e5ed8ff4d4250966c326016bb821236a44"
     }
   ],
+  "parameters": [
+    { "key": "orderEntity", "type": "graph-symbol", "required": true },
+    { "key": "orderFlow", "type": "graph-symbol", "required": true }
+  ],
+  "requires": [{ "interfaceKey": "commerce.order-event", "version": "v1" }],
   "verification": {
     "fixture": "fixtures/default.json",
     "contractTest": "tests/contract.json",

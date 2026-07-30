@@ -11,5 +11,8 @@
       "digest": "sha256:209d5d649840437f334ac53aa593634c9cdb8fbfe5cc7525ed96f80ac91947bb"
     }
   ],
+  "parameters": [
+    { "key": "flowKey", "type": "graph-symbol", "required": true }
+  ],
   "contributes": { "effects": ["flow.transition", "flow.assign-task"] }
 }

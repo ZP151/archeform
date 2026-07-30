@@ -10,7 +10,7 @@ export const catalogAsset: CapabilityAssetV1 = {
     description: "Publishes browsable products or menu items.",
     packageRoot: "packages/capabilities/assets/commerce.catalog/1.0.0",
     manifestDigest:
-      "sha256:0b5fe8f5bfb42c7854eee257a8ddc50c822f81b003e36a91be10faf6e3a9bd5a",
+      "sha256:650a56c597ba71cbd7cfdbce15e7e19d1b7fc40a0d4f15ba0d2ed4eb2e66b42b",
     lifecycle: "golden",
     profiles: ["restaurant-ordering", "simple-ecommerce"],
     effects: ["catalog.list", "catalog.read"],
@@ -33,6 +33,12 @@ export const catalogAsset: CapabilityAssetV1 = {
           "sha256:8ced82a4c3db325ab13c454b081a3f81add5e8bb3f341d51474e04d69e42a06b",
       },
     ],
+    parameters: [
+      { key: "catalogEntity", type: "graph-symbol", required: true },
+      { key: "catalogPage", type: "graph-symbol", required: true },
+      { key: "customerRole", type: "graph-symbol", required: true },
+    ],
+    provides: [{ interfaceKey: "commerce.catalog-item", version: "v1" }],
     verification: {
       fixture: "fixtures/default.json",
       contractTest: "tests/contract.json",

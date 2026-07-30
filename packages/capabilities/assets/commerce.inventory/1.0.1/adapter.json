@@ -16,6 +16,10 @@
       "digest": "sha256:fb3da1d03b9165d844dd5af38a0abbe7caabd8bfcf8dfc46105c034c899a15cb"
     }
   ],
+  "parameters": [
+    { "key": "catalogEntity", "type": "graph-symbol", "required": true },
+    { "key": "stockField", "type": "graph-symbol", "required": true }
+  ],
   "contributes": {
     "effects": ["inventory.reserve", "inventory.release", "inventory.decrement"]
   }

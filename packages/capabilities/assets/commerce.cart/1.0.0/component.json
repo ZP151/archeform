@@ -6,7 +6,7 @@
   "name": "Cart",
   "description": "Maintains a customer-owned set of purchasable line items.",
   "packageRoot": "packages/capabilities/assets/commerce.cart/1.0.0",
-  "manifestDigest": "sha256:f3f0ba58748cd7a8464950b56b68f77fa9826f7c9c7839813e4d2126e048d2cb",
+  "manifestDigest": "sha256:38cf669fe2b0f3bbff51c10980fe3c50cfd9dd7349688576a677c7c12398cd0f",
   "lifecycle": "golden",
   "profiles": ["restaurant-ordering", "simple-ecommerce"],
   "effects": ["cart.add", "cart.remove", "cart.checkout"],
@@ -29,6 +29,14 @@
       "digest": "sha256:8ced82a4c3db325ab13c454b081a3f81add5e8bb3f341d51474e04d69e42a06b"
     }
   ],
+  "parameters": [
+    { "key": "catalogEntity", "type": "graph-symbol", "required": true },
+    { "key": "orderEntity", "type": "graph-symbol", "required": true },
+    { "key": "cartPage", "type": "graph-symbol", "required": true },
+    { "key": "customerRole", "type": "graph-symbol", "required": true }
+  ],
+  "requires": [{ "interfaceKey": "commerce.catalog-item", "version": "v1" }],
+  "provides": [{ "interfaceKey": "commerce.cart", "version": "v1" }],
   "verification": {
     "fixture": "fixtures/default.json",
     "contractTest": "tests/contract.json",

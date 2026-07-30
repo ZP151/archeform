@@ -16,5 +16,11 @@
       "digest": "sha256:8ced82a4c3db325ab13c454b081a3f81add5e8bb3f341d51474e04d69e42a06b"
     }
   ],
+  "parameters": [
+    { "key": "catalogEntity", "type": "graph-symbol", "required": true },
+    { "key": "orderEntity", "type": "graph-symbol", "required": true },
+    { "key": "cartPage", "type": "graph-symbol", "required": true },
+    { "key": "customerRole", "type": "graph-symbol", "required": true }
+  ],
   "contributes": { "effects": ["cart.add", "cart.remove", "cart.checkout"] }
 }

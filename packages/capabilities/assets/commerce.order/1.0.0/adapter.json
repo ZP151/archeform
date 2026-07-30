@@ -17,5 +17,9 @@
       "digest": "sha256:8ced82a4c3db325ab13c454b081a3f81add5e8bb3f341d51474e04d69e42a06b"
     }
   ],
+  "parameters": [
+    { "key": "orderEntity", "type": "graph-symbol", "required": true },
+    { "key": "orderFlow", "type": "graph-symbol", "required": true }
+  ],
   "contributes": { "effects": ["order.create", "order.transition"] }
 }

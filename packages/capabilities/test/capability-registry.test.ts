@@ -11,6 +11,7 @@ import {
   capabilityCatalog,
   capabilityAssets,
   capabilitiesForProfile,
+  composeCapabilityDraft,
   composeProfileDraft,
   getCapabilityAsset,
   getCapability,
@@ -20,8 +21,10 @@ import {
   type CapabilityAssetV1,
   type CapabilityExecutableContributionV1,
   type CapabilityGraphContributionV1,
+  type CapabilitySelectionV1,
   type FactoryProfile,
 } from "../src/index.js";
+import { lockCapabilityAsset } from "../src/assets/index.js";
 import {
   capabilityManifestDigest,
   verifyCapabilityAssetDigest,
@@ -365,6 +368,198 @@ const restaurantAssetKeys = Object.keys(
 ) as (keyof typeof restaurantOperations)[];
 
 describe("capability catalog", () => {
+  it("locks shared commerce packages at identical versions for Restaurant and Ecommerce", () => {
+    const restaurantBaseGraph = structuredClone(
+      profileGraphs.find(({ profile }) => profile === "restaurant-ordering")!
+        .graph,
+    );
+    restaurantBaseGraph.metadata.id = "restaurant-composed-proof";
+    restaurantBaseGraph.metadata.name = "Restaurant composed proof";
+
+    const ecommerceBaseGraph = structuredClone(
+      profileGraphs.find(({ profile }) => profile === "simple-ecommerce")!
+        .graph,
+    );
+    ecommerceBaseGraph.metadata.id = "ecommerce-composed-proof";
+    ecommerceBaseGraph.metadata.name = "Ecommerce composed proof";
+    ecommerceBaseGraph.policy.roles = ecommerceBaseGraph.policy.roles.map(
+      (role) => (role === "customer" ? "shopper" : role),
+    );
+    ecommerceBaseGraph.policy.permissions =
+      ecommerceBaseGraph.policy.permissions.map((permission) => ({
+        ...permission,
+        role: permission.role === "customer" ? "shopper" : permission.role,
+      }));
+
+    const selection = (
+      key: string,
+      bindings: CapabilitySelectionV1["bindings"],
+    ): CapabilitySelectionV1 => ({
+      lock: lockCapabilityAsset(getCapabilityAsset(key)),
+      bindings,
+    });
+    const restaurantSelections = [
+      selection("core.audit", {
+        actorRole: { graphSymbol: "graph.policy.customer" },
+      }),
+      selection("core.crud", {
+        entityKey: { graphSymbol: "graph.domain.menu-item" },
+        routeKey: { graphSymbol: "graph.page.customer-menu" },
+      }),
+      selection("core.notification", {
+        recipientRole: { graphSymbol: "graph.policy.customer" },
+      }),
+      selection("core.workflow", {
+        flowKey: { graphSymbol: "graph.flow.restaurant-order" },
+      }),
+      selection("commerce.catalog", {
+        catalogEntity: { graphSymbol: "graph.domain.menu-item" },
+        catalogPage: { graphSymbol: "graph.page.customer-menu" },
+        customerRole: { graphSymbol: "graph.policy.customer" },
+      }),
+      selection("commerce.cart", {
+        catalogEntity: { graphSymbol: "graph.domain.menu-item" },
+        orderEntity: { graphSymbol: "graph.domain.order" },
+        cartPage: { graphSymbol: "graph.page.customer-cart" },
+        customerRole: { graphSymbol: "graph.policy.customer" },
+      }),
+      selection("commerce.inventory", {
+        catalogEntity: { graphSymbol: "graph.domain.menu-item" },
+        stockField: { graphSymbol: "graph.domain.stock" },
+      }),
+      selection("commerce.order", {
+        orderEntity: { graphSymbol: "graph.domain.order" },
+        orderFlow: { graphSymbol: "graph.flow.restaurant-order" },
+      }),
+      selection("commerce.simulated-payment", {
+        orderEntity: { graphSymbol: "graph.domain.order" },
+        orderFlow: { graphSymbol: "graph.flow.restaurant-order" },
+      }),
+    ] as const;
+    const ecommerceSelections = [
+      selection("core.audit", {
+        actorRole: { graphSymbol: "graph.policy.shopper" },
+      }),
+      selection("core.crud", {
+        entityKey: { graphSymbol: "graph.domain.product" },
+        routeKey: { graphSymbol: "graph.page.catalog" },
+      }),
+      selection("core.notification", {
+        recipientRole: { graphSymbol: "graph.policy.shopper" },
+      }),
+      selection("core.workflow", {
+        flowKey: { graphSymbol: "graph.flow.ecommerce-order" },
+      }),
+      selection("commerce.catalog", {
+        catalogEntity: { graphSymbol: "graph.domain.product" },
+        catalogPage: { graphSymbol: "graph.page.catalog" },
+        customerRole: { graphSymbol: "graph.policy.shopper" },
+      }),
+      selection("commerce.cart", {
+        catalogEntity: { graphSymbol: "graph.domain.product" },
+        orderEntity: { graphSymbol: "graph.domain.order" },
+        cartPage: { graphSymbol: "graph.page.checkout" },
+        customerRole: { graphSymbol: "graph.policy.shopper" },
+      }),
+      selection("commerce.inventory", {
+        catalogEntity: { graphSymbol: "graph.domain.product" },
+        stockField: { graphSymbol: "graph.domain.stock" },
+      }),
+      selection("commerce.order", {
+        orderEntity: { graphSymbol: "graph.domain.order" },
+        orderFlow: { graphSymbol: "graph.flow.ecommerce-order" },
+      }),
+      selection("commerce.simulated-payment", {
+        orderEntity: { graphSymbol: "graph.domain.order" },
+        orderFlow: { graphSymbol: "graph.flow.ecommerce-order" },
+      }),
+    ] as const;
+
+    const restaurant = composeCapabilityDraft({
+      graph: restaurantBaseGraph,
+      selections: restaurantSelections,
+    });
+    const ecommerce = composeCapabilityDraft({
+      graph: ecommerceBaseGraph,
+      selections: ecommerceSelections,
+    });
+    const sharedLocks = (composition: typeof restaurant) =>
+      composition.composition.packages.map(({ lock }) => lock);
+    const canonicalBindings = (composition: typeof restaurant) =>
+      composition.composition.packages.map(({ lock, bindings }) => ({
+        key: lock.key,
+        bindings,
+      }));
+
+    expect(sharedLocks(restaurant)).toEqual(sharedLocks(ecommerce));
+    expect(sharedLocks(restaurant)).toHaveLength(9);
+    expect(getCapabilityAsset("commerce.catalog").manifest.provides).toEqual([
+      { interfaceKey: "commerce.catalog-item", version: "v1" },
+    ]);
+    expect(getCapabilityAsset("commerce.cart").manifest).toMatchObject({
+      requires: [{ interfaceKey: "commerce.catalog-item", version: "v1" }],
+      provides: [{ interfaceKey: "commerce.cart", version: "v1" }],
+    });
+    expect(getCapabilityAsset("commerce.order").manifest).toMatchObject({
+      requires: [{ interfaceKey: "commerce.cart", version: "v1" }],
+      provides: [{ interfaceKey: "commerce.order-event", version: "v1" }],
+    });
+    for (const key of ["commerce.inventory", "commerce.simulated-payment"]) {
+      expect(getCapabilityAsset(key).manifest.requires).toEqual([
+        { interfaceKey: "commerce.order-event", version: "v1" },
+      ]);
+    }
+    expect(canonicalBindings(restaurant)).not.toEqual(
+      canonicalBindings(ecommerce),
+    );
+    expect(ecommerce.composition.packages).toContainEqual(
+      expect.objectContaining({
+        lock: expect.objectContaining({ key: "commerce.catalog" }),
+        bindings: expect.objectContaining({
+          customerRole: { graphSymbol: "graph.policy.shopper" },
+        }),
+      }),
+    );
+    expect(restaurant.graph.metadata.id).toBe("restaurant-composed-proof");
+    expect(ecommerce.graph.metadata.id).toBe("ecommerce-composed-proof");
+    expect(restaurant.graph.integration.compositionSelections).toEqual(
+      restaurant.composition.packages,
+    );
+    expect(ecommerce.graph.integration.compositionSelections).toEqual(
+      ecommerce.composition.packages,
+    );
+    expect(restaurantBaseGraph.integration).not.toHaveProperty(
+      "compositionSelections",
+    );
+    expect(ecommerceBaseGraph.integration).not.toHaveProperty(
+      "compositionSelections",
+    );
+    expect(validateApplicationGraph(restaurant.graph)).toEqual([]);
+    expect(validateApplicationGraph(ecommerce.graph)).toEqual([]);
+  });
+
+  it("rejects a capability selection whose Graph symbol is absent from the base Graph", () => {
+    const graph = structuredClone(
+      profileGraphs.find(({ profile }) => profile === "restaurant-ordering")!
+        .graph,
+    );
+
+    expect(() =>
+      composeCapabilityDraft({
+        graph,
+        selections: [
+          {
+            lock: lockCapabilityAsset(getCapabilityAsset("core.crud")),
+            bindings: {
+              entityKey: { graphSymbol: "graph.domain.missing-entity" },
+              routeKey: { graphSymbol: "graph.page.customer-menu" },
+            },
+          },
+        ],
+      }),
+    ).toThrow("Graph symbol 'graph.domain.missing-entity' does not exist");
+  });
+
   it("exposes independently composable core and commerce capabilities", () => {
     expect(capabilityCatalog.map((capability) => capability.key)).toEqual([
       "core.audit",
@@ -1339,13 +1534,13 @@ describe("capability catalog", () => {
     }
   });
 
-  it("rejects a Golden asset outside the declared profile or without its declared effects", () => {
+  it("admits exact Golden assets by declared effects rather than profile membership", () => {
     const cartLock = {
       key: "commerce.cart",
       version: "1.0.0",
       packageRoot: "packages/capabilities/assets/commerce.cart/1.0.0",
       manifestDigest:
-        "sha256:f3f0ba58748cd7a8464950b56b68f77fa9826f7c9c7839813e4d2126e048d2cb",
+        "sha256:38cf669fe2b0f3bbff51c10980fe3c50cfd9dd7349688576a677c7c12398cd0f",
       lifecycle: "golden" as const,
     };
 
@@ -1354,7 +1549,7 @@ describe("capability catalog", () => {
         profile: "expense-approval",
         capabilityKeys: ["cart.add"],
       }),
-    ).toThrow("does not support profile");
+    ).not.toThrow();
 
     expect(() =>
       assertGoldenCapabilityAssetLocks([cartLock], {

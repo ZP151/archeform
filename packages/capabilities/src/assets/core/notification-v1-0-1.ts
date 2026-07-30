@@ -13,7 +13,7 @@ export const notificationAssetV1_0_1: CapabilityAssetV1 = {
     description: "Emits bounded in-app and provider-ready notification events.",
     packageRoot: "packages/capabilities/assets/core.notification/1.0.1",
     manifestDigest:
-      "sha256:9ff11a37cbc2255d0efe5586ffc1a25bbd879dcef3af76e6854f15f83a30a489",
+      "sha256:3df4c1c47c26f0d9ab5c7c770721079b83a1d1b8655052e3030455b45c4d2f4e",
     lifecycle: "golden",
     profiles: ["expense-approval", "restaurant-ordering", "simple-ecommerce"],
     effects: ["notification.send"],
@@ -30,6 +30,9 @@ export const notificationAssetV1_0_1: CapabilityAssetV1 = {
         digest:
           "sha256:b9a745255d242339486fff29d6f7abd3f751e36df3e348f896956a31c6b53266",
       },
+    ],
+    parameters: [
+      { key: "recipientRole", type: "graph-symbol", required: true },
     ],
     verification: {
       fixture: "fixtures/default.json",

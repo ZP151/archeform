@@ -5,6 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  composeCapabilityDraft,
   createCapabilityCompositionLock,
   getCapabilityAsset,
 } from "@factory/capabilities";
@@ -136,6 +137,140 @@ describe("immutable composition compilation", () => {
     );
   });
 
+  it("compiles different routes and schemas from the same shared package version", () => {
+    const application = (input: {
+      readonly id: string;
+      readonly name: string;
+      readonly pageId: string;
+      readonly route: string;
+      readonly pageTitle: string;
+      readonly entityKey: string;
+      readonly entityLabel: string;
+    }): PublishedGraphInput => {
+      const baseGraph: ApplicationGraphV1 = {
+        ...graph,
+        metadata: {
+          id: input.id,
+          workspaceId: "local",
+          name: input.name,
+        },
+        page: {
+          pages: [
+            {
+              id: input.pageId,
+              route: input.route,
+              title: input.pageTitle,
+              blocks: [],
+            },
+          ],
+          navigation: [
+            {
+              id: input.pageId,
+              label: input.pageTitle,
+              pageId: input.pageId,
+            },
+          ],
+        },
+        domain: {
+          entities: [
+            {
+              key: input.entityKey,
+              label: input.entityLabel,
+              fields: [{ key: "name", type: "string", required: true }],
+              indexes: [],
+            },
+          ],
+          relations: [],
+          seedData: [
+            {
+              entity: input.entityKey,
+              id: `${input.entityKey}-seed`,
+              values: { name: input.entityLabel },
+            },
+          ],
+        },
+      };
+      const composed = composeCapabilityDraft({
+        graph: baseGraph,
+        selections: [
+          {
+            lock: crudLock,
+            bindings: {
+              entityKey: { graphSymbol: `graph.domain.${input.entityKey}` },
+              routeKey: { graphSymbol: `graph.page.${input.pageId}` },
+            },
+          },
+        ],
+      });
+      const publishedGraph = structuredClone(composed.graph);
+      delete publishedGraph.integration.compositionSelections;
+      return {
+        publishedRevisionId: `published-${input.id}`,
+        graph: publishedGraph,
+        compositionLock: createCapabilityCompositionLock({
+          graphChecksum: hashApplicationGraph(publishedGraph),
+          selections: composed.composition.packages,
+        }),
+      };
+    };
+    const restaurantInput = application({
+      id: "restaurant-shared-commerce",
+      name: "Restaurant shared commerce",
+      pageId: "menu",
+      route: "/menu",
+      pageTitle: "Menu",
+      entityKey: "menu-item",
+      entityLabel: "Menu item",
+    });
+    const ecommerceInput = application({
+      id: "ecommerce-shared-commerce",
+      name: "Ecommerce shared commerce",
+      pageId: "catalog",
+      route: "/catalog",
+      pageTitle: "Catalog",
+      entityKey: "product",
+      entityLabel: "Product",
+    });
+
+    expect(restaurantInput.compositionLock.packages[0]?.lock).toEqual(
+      ecommerceInput.compositionLock.packages[0]?.lock,
+    );
+    const restaurant = generateApplicationBundle(restaurantInput);
+    const ecommerce = generateApplicationBundle(ecommerceInput);
+    expect(restaurant.files).toContainEqual(
+      expect.objectContaining({ path: "web/src/app/menu/page.tsx" }),
+    );
+    expect(ecommerce.files).toContainEqual(
+      expect.objectContaining({ path: "web/src/app/catalog/page.tsx" }),
+    );
+    expect(restaurant.files).toContainEqual(
+      expect.objectContaining({
+        path: "database/prisma/fragments/menu-item.prisma",
+      }),
+    );
+    expect(ecommerce.files).toContainEqual(
+      expect.objectContaining({
+        path: "database/prisma/fragments/product.prisma",
+      }),
+    );
+    expect(
+      restaurant.files.find(({ path }) => path === "web/app/page-runtime.tsx")
+        ?.content,
+    ).toContain("Menu");
+    expect(
+      ecommerce.files.find(({ path }) => path === "web/app/page-runtime.tsx")
+        ?.content,
+    ).toContain("Catalog");
+    expect(
+      restaurant.files.find(({ path }) => path === "database/prisma/seed.ts")
+        ?.content,
+    ).toContain("Menu item");
+    expect(
+      ecommerce.files.find(({ path }) => path === "database/prisma/seed.ts")
+        ?.content,
+    ).toContain("Product");
+  });
+
   it("rejects a tampered persisted lock before rendering", () => {
     expect(() =>
       resolveTargetContributions({
@@ -193,7 +328,12 @@ describe("immutable composition compilation", () => {
       graphChecksum: hashApplicationGraph(graph),
       selections: [
         ...compositionLock.packages,
-        { lock: auditLock, bindings: {} },
+        {
+          lock: auditLock,
+          bindings: {
+            actorRole: { graphSymbol: "graph.policy.operator" },
+          },
+        },
       ],
     });
     const crudAsset = getCapabilityAsset("core.crud");
@@ -302,7 +442,12 @@ describe("immutable composition compilation", () => {
       graphChecksum: hashApplicationGraph(collisionGraph),
       selections: [
         ...compositionLock.packages,
-        { lock: auditLock, bindings: {} },
+        {
+          lock: auditLock,
+          bindings: {
+            actorRole: { graphSymbol: "graph.policy.operator" },
+          },
+        },
       ],
     });
     const crudAsset = getCapabilityAsset("core.crud");
