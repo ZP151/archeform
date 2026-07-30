@@ -258,7 +258,9 @@ acquisition, snapshot/tree, licence/notice, provenance, the literal
 `manualStatus: "unreviewed"`, and its explicit acquisition state. Its strict
 schema rejects SBOM, scanner, scan-result, and AST identities or fields. Task 3
 consumes the acquisition record with pinned scanner and inventory outputs to
-create the first truthful `EvidenceBundleV1`.
+create the first truthful `EvidenceBundleV1`. The immutable store must register
+a distinct acquisition record kind and prove write/read round trip without
+mapping it to Candidate or EvidenceBundle storage.
 
 Source bytes and scan reports are content-addressed. A job records only
 references to them. Re-running a request with the same resolved commit,

@@ -231,6 +231,7 @@ separate Task 2 acquisition facts from Task 3 scan and AST evidence.
 
 - Modify: `packages/external-intake/src/contracts.ts`
 - Modify: `packages/external-intake/src/index.ts`
+- Modify: `packages/external-intake/src/store.ts`
 - Modify: `packages/external-intake/test/contracts.test.ts`
 - Modify: `packages/external-intake/test/store.test.ts`
 
@@ -248,8 +249,9 @@ export function parseExternalSourceAcquisition(
       explicit `acquisitionState`.
 - [ ] Reject Candidate/Golden identity and every SBOM, scanner, scan-result, or
       AST identity/field. This record is never `EvidenceBundleV1`.
-- [ ] Prove immutable-store persistence and round trip under a distinct
-      acquisition record kind while preserving all accepted Task 1 behavior.
+- [ ] Register a distinct acquisition record kind in `ExternalIntakeStore` and
+      prove immutable write/read round trip while preserving all accepted Task
+      1 behavior.
 - [ ] Run the focused contract/store suites, full External Intake suite,
       typecheck, and lint on Node 22 before independent review.
 

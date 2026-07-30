@@ -208,6 +208,7 @@ Exact amendment-owned paths:
 
 - `packages/external-intake/src/contracts.ts`
 - `packages/external-intake/src/index.ts`
+- `packages/external-intake/src/store.ts`
 - `packages/external-intake/test/contracts.test.ts`
 - `packages/external-intake/test/store.test.ts`
 
@@ -217,8 +218,9 @@ Amendment acceptance requires:
   and explicit acquisition state;
 - rejection of Candidate/Golden/EvidenceBundle identity and every SBOM,
   scanner, scan-result, or AST identity/field;
-- immutable persistence and round-trip evidence under a distinct acquisition
-  record kind without changing accepted Task 1 behavior;
+- registration of a distinct acquisition kind in `ExternalIntakeStore` plus
+  immutable write/read round-trip evidence without changing accepted Task 1
+  behavior;
 - focused contract/store, full External Intake, typecheck, and lint evidence on
   Node 22, followed by independent review, QA, and release reconciliation.
 
