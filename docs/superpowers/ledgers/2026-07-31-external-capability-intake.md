@@ -50,7 +50,10 @@ under the amended frozen scope. Repair Round 1 re-review then FAILED with one
 P1 fresh-process verification finding. Task 4 remains `implementing` in Repair
 Round 2/5 without another path amendment. Repair Round 2 re-review then FAILED
 with one P1 lifecycle-bypass finding. Task 4 remains `implementing` in Repair
-Round 3/5 within its existing Candidate/API/CLI/test paths. The system will
+Round 3/5 within its existing Candidate/API/CLI/test paths. Repair Round 3
+re-review then FAILED with one P1 exactly-once concurrency finding. Task 4
+remains `implementing` in Repair Round 4/5 within its existing
+Candidate/API/test paths. The system will
 ingest the 43 fixed-reference portfolio as metadata, retain the 108 scenarios as
 composition demand signals, and produce only quarantined evidence,
 non-executable Candidate records, and pending-review promotion packets.
@@ -129,6 +132,13 @@ Controller authorized Repair Round 3/5 within the existing Task 4
 Candidate/API/CLI/test paths. Task 4 remains `implementing`; Task 2, Graph,
 compiler, dependencies, runtime behavior, and Tasks 5-6 states are unchanged.
 
+Repair Round 3 re-review of commit `1c52a42` FAILED with one P1: two overlapping
+fresh conformance calls could append duplicate Candidate revisions and receipts,
+create an unsupported sequence-3 chain, and make later fresh discovery fail.
+The Controller authorized Repair Round 4/5 within the existing Task 4
+Candidate/API/test paths. Task 4 remains `implementing`; Task 2, the immutable
+store, dependencies, Graph, compiler, and Tasks 5-6 states are unchanged.
+
 Independent Task 2 review FAILED with three P1 findings and one P2. The
 Controller resolved its schema incompatibility by selecting a distinct
 `factory.external-source-acquisition/v1` record. Task 2 entered Fix Round 1/5
@@ -154,7 +164,7 @@ remain frozen.
 | 1. Candidate contracts and immutable persistence | `accepted`     | `integration`       | External Intake Contract         | Original release and bounded amendment accepted and frozen. |
 | 2. Fixed-source provenance and notices           | `accepted`     | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
 | 3. Deterministic scan orchestration              | `accepted`     | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
-| 4. Candidate registry, API, CLI, and isolation   | `implementing` | `integration`       | Candidate Registry               | Repair Round 3/5; verified recovery must precede lifecycle. |
+| 4. Candidate registry, API, CLI, and isolation   | `implementing` | `integration`       | Candidate Registry               | Repair Round 4/5; exactly-once transition P1 remains.       |
 | 5. Review-only promotion packets                 | `planned`      | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.           |
 | 6. Bulk acceptance and release evidence          | `planned`      | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.        |
 
@@ -868,6 +878,31 @@ No Task 2, Graph, compiler, dependency, network, process, or runtime change is
 authorized. Task 4 remains `implementing` with its sole writer. Tasks 5 and 6
 remain `planned`; independent re-review is required before any state advance.
 
+### Repair Round 3 re-review: Repair Round 4/5
+
+Independent re-review of repair commit `1c52a42` FAILED with one P1. Two
+concurrent fresh `candidateTest` callers could both persist a
+`conformance-passed` revision, append two receipt deltas, create an unsupported
+sequence-3 chain, and make subsequent fresh discovery fail strict verification.
+
+The Controller authorizes Repair Round 4/5 within the existing Task 4
+Candidate/API/test paths. `recordConformancePass` must perform a durable
+compare-and-set immediately before persistence against the verified quarantined
+Candidate creation receipt and revision. Only the deterministic sequence-2
+conformance transition may be written.
+
+Overlapping fresh callers must converge on the same immutable Candidate revision
+and receipt, or one caller must reject cleanly. No caller may append sequence 3
+or use a stale mutable entry. Add a two-process concurrent `candidateTest`
+regression proving exactly one Candidate revision delta, exactly one receipt
+delta, subsequent fresh show remains valid and `conformance-passed`, and retry
+is idempotent.
+
+No Task 2, immutable-store, dependency, Graph, compiler, network, process, or
+runtime change is authorized. Task 4 remains `implementing` with its sole
+writer. Tasks 5 and 6 remain `planned`; independent re-review is required before
+any state advance.
+
 ### Exact allowed paths
 
 - `packages/external-intake/src/candidates.ts`
@@ -1022,8 +1057,11 @@ persisted fresh-process verification state, unconditional accepted Task 3
 verification and blob rehydration, conformance-result verification, fail-closed
 recovery, and the recorded adversarial tests. Repair Round 3/5 now requires
 verified recovery before any API, CLI, lifecycle, or conformance consumption or
-transition, plus the two-process adversarial proof. The frozen Task 2 store is
-unchanged. Task 1's original release and bounded amendments, Task 2's accepted code set
+transition, plus the two-process adversarial proof. Repair Round 4/5 now requires
+durable compare-and-set against the verified quarantined creation revision,
+deterministic sequence-2 persistence, concurrent convergence or clean rejection,
+and exactly-once two-process evidence. The frozen Task 2 store is unchanged.
+Task 1's original release and bounded amendments, Task 2's accepted code set
 `515e0ba + 3dcb20f + dcaddf4`, and Task 3's accepted repair commit `8b31d3a`
 remain frozen. Tasks 5 and 6 remain `planned` and retain their recorded
 dependency gates.
