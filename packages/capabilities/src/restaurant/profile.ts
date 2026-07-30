@@ -36,7 +36,38 @@ export type RestaurantProfileProjectionV1 = {
     readonly states: readonly string[];
     readonly versionField: "orderVersion";
   };
+  readonly inventoryLedger: {
+    readonly entity: "inventory-ledger";
+    readonly orderIdField: "orderId";
+    readonly provenanceField: "provenance";
+    readonly provenance: {
+      readonly orderReservation: "order-reservation";
+      readonly orderRelease: "order-release";
+      readonly managerAdjustment: "manager-adjustment";
+    };
+    readonly adjustmentReasonField: "adjustmentReason";
+    readonly adjustmentReasons: readonly RestaurantAdjustmentReason[];
+    readonly managerAdjustment: {
+      readonly role: "manager";
+      readonly capability: "inventory.adjust";
+      readonly operation: "adjust";
+      readonly auditCapability: "audit.record";
+      readonly auditOperation: "record";
+      readonly orderId: "forbidden";
+      readonly reason: "required";
+    };
+    readonly orderDerived: {
+      readonly orderId: "required";
+      readonly provenance: readonly ["order-reservation", "order-release"];
+    };
+  };
 };
+
+export type RestaurantInventoryLedgerProvenance =
+  "order-reservation" | "order-release" | "manager-adjustment";
+
+export type RestaurantAdjustmentReason =
+  "stock-count" | "restock" | "spoilage" | "damage" | "correction";
 
 type FieldType =
   ApplicationGraphV1["domain"]["entities"][number]["fields"][number]["type"];
@@ -119,7 +150,8 @@ const requiredEntityFields: Readonly<
     menuItemId: "string",
     orderId: "string",
     delta: "integer",
-    reason: "enum",
+    provenance: "enum",
+    adjustmentReason: "enum",
     recordedAt: "datetime",
   },
 };
@@ -181,14 +213,30 @@ const requiredPermissions = [
   },
 ] as const;
 
-const optionalLifecycleFields = new Set([
+const optionalRestaurantFields = new Set([
   "order.submittedAt",
   "order.paidAt",
   "payment-attempt.paidAt",
   "kitchen-ticket.acceptedAt",
   "kitchen-ticket.startedAt",
   "kitchen-ticket.readyAt",
+  "inventory-ledger.orderId",
+  "inventory-ledger.adjustmentReason",
 ]);
+
+const inventoryLedgerProvenance = [
+  "order-reservation",
+  "order-release",
+  "manager-adjustment",
+] as const satisfies readonly RestaurantInventoryLedgerProvenance[];
+
+const inventoryAdjustmentReasons = [
+  "stock-count",
+  "restock",
+  "spoilage",
+  "damage",
+  "correction",
+] as const satisfies readonly RestaurantAdjustmentReason[];
 
 const customerPages = [
   {
@@ -263,6 +311,7 @@ const requiredOperations = [
   "inventory.reserve",
   "inventory.release",
   "inventory.decrement",
+  "inventory.adjust",
   "order.create",
   "order.transition",
   "payment.simulate",
@@ -398,6 +447,21 @@ const requiredTableSessionTransitions = [
   ["active", "expire", "closed", [], []],
 ] as const;
 
+const requiredInventoryLedgerStates = ["recorded"] as const;
+const requiredInventoryLedgerEvents = ["record-manager-adjustment"] as const;
+const requiredInventoryLedgerTransitions = [
+  [
+    "recorded",
+    "record-manager-adjustment",
+    "recorded",
+    ["manager"],
+    [
+      ["inventory.adjust", "adjust"],
+      ["audit.record", "record"],
+    ],
+  ],
+] as const;
+
 const issueSortKey = (issue: RestaurantProfileValidationIssue) =>
   `${JSON.stringify(issue.path)}:${issue.code}`;
 
@@ -458,7 +522,7 @@ export function validateRestaurantOrderingProfile(
         continue;
       }
       const field = entity.fields[fieldIndex]!;
-      const expectedRequired = !optionalLifecycleFields.has(
+      const expectedRequired = !optionalRestaurantFields.has(
         `${entityKey}.${fieldKey}`,
       );
       if (field.type !== fieldType || field.required !== expectedRequired) {
@@ -470,6 +534,8 @@ export function validateRestaurantOrderingProfile(
       }
     }
   }
+
+  validateInventoryLedgerFields(graph, issue);
 
   for (const [from, to, kind] of requiredRelations) {
     if (
@@ -604,6 +670,16 @@ export function validateRestaurantOrderingProfile(
   );
   validateFlow(
     graph,
+    "inventory-ledger",
+    "recorded",
+    requiredInventoryLedgerStates,
+    requiredInventoryLedgerEvents,
+    requiredInventoryLedgerTransitions,
+    issue,
+  );
+  validateInventoryAdjustmentPaths(graph, issue);
+  validateFlow(
+    graph,
     "order",
     "cart",
     requiredOrderStates,
@@ -619,7 +695,7 @@ export function validateRestaurantOrderingProfile(
 
 function validateFlow(
   graph: ApplicationGraphV1,
-  entityKey: "table-session" | "order",
+  entityKey: "table-session" | "order" | "inventory-ledger",
   initialState: string,
   states: readonly string[],
   events: readonly string[],
@@ -721,6 +797,187 @@ function validateFlow(
   }
 }
 
+function validateInventoryLedgerFields(
+  graph: ApplicationGraphV1,
+  issue: (
+    code: string,
+    message: string,
+    path: readonly (string | number)[],
+  ) => void,
+): void {
+  const entityIndex = graph.domain.entities.findIndex(
+    (entity) => entity.key === "inventory-ledger",
+  );
+  if (entityIndex < 0) return;
+
+  const entity = graph.domain.entities[entityIndex]!;
+  const checks = [
+    {
+      key: "orderId",
+      type: "string",
+      required: false,
+      values: undefined,
+    },
+    {
+      key: "provenance",
+      type: "enum",
+      required: true,
+      values: inventoryLedgerProvenance,
+    },
+    {
+      key: "adjustmentReason",
+      type: "enum",
+      required: false,
+      values: inventoryAdjustmentReasons,
+    },
+  ] as const;
+
+  for (const expected of checks) {
+    const fieldIndex = entity.fields.findIndex(
+      (field) => field.key === expected.key,
+    );
+    if (fieldIndex < 0) continue;
+    const field = entity.fields[fieldIndex]!;
+    const valuesValid = expected.values
+      ? sameValues(field.values ?? [], expected.values)
+      : field.values === undefined;
+    if (
+      field.type !== expected.type ||
+      field.required !== expected.required ||
+      !valuesValid
+    ) {
+      issue(
+        "restaurant.inventory-provenance.invalid",
+        `Restaurant field 'inventory-ledger.${expected.key}' does not preserve the bounded inventory provenance contract.`,
+        ["domain", "entities", entityIndex, "fields", fieldIndex],
+      );
+    }
+  }
+
+  const orderRelationIndex = graph.domain.relations.findIndex(
+    (relation) =>
+      relation.from === "inventory-ledger" &&
+      relation.to === "order" &&
+      relation.kind === "many-to-one",
+  );
+  const orderRelation = graph.domain.relations[orderRelationIndex];
+  if (orderRelation && orderRelation.field !== "orderId") {
+    issue(
+      "restaurant.inventory-provenance.invalid",
+      "Restaurant order-derived inventory records require the inventory-ledger.orderId relation.",
+      ["domain", "relations", orderRelationIndex, "field"],
+    );
+  }
+}
+
+function validateInventoryAdjustmentPaths(
+  graph: ApplicationGraphV1,
+  issue: (
+    code: string,
+    message: string,
+    path: readonly (string | number)[],
+  ) => void,
+): void {
+  const ledgerFlows = graph.flow.flows
+    .map((flow, index) => ({ flow, index }))
+    .filter(({ flow }) => flow.entity === "inventory-ledger");
+  const ledgerFlow = ledgerFlows[0];
+  const managerTransition = ledgerFlow?.flow.transitions[0];
+  const effectKeys = (managerTransition?.effects ?? []).map(
+    (effect) => `${effect.capability}/${effect.operation}`,
+  );
+  const exactStandalonePath =
+    ledgerFlows.length === 1 &&
+    ledgerFlow?.flow.id === "restaurant-inventory-ledger" &&
+    sameValues(ledgerFlow.flow.states, requiredInventoryLedgerStates) &&
+    sameValues(ledgerFlow.flow.events, requiredInventoryLedgerEvents) &&
+    ledgerFlow.flow.transitions.length === 1 &&
+    managerTransition?.from === "recorded" &&
+    managerTransition.event === "record-manager-adjustment" &&
+    managerTransition.to === "recorded" &&
+    sameValues(managerTransition.roles ?? [], ["manager"]) &&
+    sameValues(effectKeys, ["inventory.adjust/adjust", "audit.record/record"]);
+  if (!exactStandalonePath) {
+    issue(
+      "restaurant.inventory-provenance.invalid",
+      "Restaurant manager adjustment must be the sole standalone ledger path with exact manager, inventory adjustment, and audit constraints.",
+      ["flow", "flows", ledgerFlow?.index ?? "inventory-ledger"],
+    );
+  }
+
+  graph.flow.flows.forEach((flow, flowIndex) => {
+    flow.transitions.forEach((transition, transitionIndex) => {
+      const provenanceEffects = (transition.effects ?? [])
+        .filter((effect) =>
+          [
+            "inventory.reserve",
+            "inventory.release",
+            "inventory.adjust",
+          ].includes(effect.capability),
+        )
+        .map((effect) => `${effect.capability}/${effect.operation}`)
+        .sort(compareCodeUnits);
+      let expectedEffect: string | undefined;
+      if (
+        flow.entity === "order" &&
+        transition.from === "cart" &&
+        transition.event === "submit" &&
+        transition.to === "submitted"
+      ) {
+        expectedEffect = "inventory.reserve/reserve";
+      } else if (
+        flow.entity === "order" &&
+        transition.from === "submitted" &&
+        transition.event === "cancel" &&
+        transition.to === "cancelled"
+      ) {
+        expectedEffect = "inventory.release/release";
+      } else if (
+        flow.entity === "inventory-ledger" &&
+        transition.from === "recorded" &&
+        transition.event === "record-manager-adjustment" &&
+        transition.to === "recorded"
+      ) {
+        expectedEffect = "inventory.adjust/adjust";
+      }
+
+      if (expectedEffect) {
+        if (
+          provenanceEffects.length !== 1 ||
+          provenanceEffects[0] !== expectedEffect
+        ) {
+          issue(
+            "restaurant.inventory-provenance.invalid",
+            `Restaurant '${flow.entity}' transition '${transition.from} --${transition.event}--> ${transition.to}' must declare exactly one inventory provenance effect '${expectedEffect}' and no conflicting provenance effect.`,
+            [
+              "flow",
+              "flows",
+              flowIndex,
+              "transitions",
+              transitionIndex,
+              "effects",
+            ],
+          );
+        }
+        return;
+      }
+
+      if (provenanceEffects.length === 0) return;
+
+      const hasMisplacedAdjustment = provenanceEffects.includes(
+        "inventory.adjust/adjust",
+      );
+      issue(
+        "restaurant.inventory-provenance.invalid",
+        hasMisplacedAdjustment
+          ? "Restaurant manager adjustment must not carry an order context or use an order-derived flow."
+          : `Restaurant transition '${transition.from} --${transition.event}--> ${transition.to}' must not declare misplaced order-derived inventory provenance effects.`,
+        ["flow", "flows", flowIndex, "transitions", transitionIndex, "effects"],
+      );
+    });
+  });
+}
+
 export function assertRestaurantOrderingProfile(
   graph: ApplicationGraphV1,
 ): RestaurantProfileProjectionV1 {
@@ -754,6 +1011,31 @@ export function assertRestaurantOrderingProfile(
       entity: "order",
       states: requiredOrderStates,
       versionField: "orderVersion",
+    },
+    inventoryLedger: {
+      entity: "inventory-ledger",
+      orderIdField: "orderId",
+      provenanceField: "provenance",
+      provenance: {
+        orderReservation: "order-reservation",
+        orderRelease: "order-release",
+        managerAdjustment: "manager-adjustment",
+      },
+      adjustmentReasonField: "adjustmentReason",
+      adjustmentReasons: inventoryAdjustmentReasons,
+      managerAdjustment: {
+        role: "manager",
+        capability: "inventory.adjust",
+        operation: "adjust",
+        auditCapability: "audit.record",
+        auditOperation: "record",
+        orderId: "forbidden",
+        reason: "required",
+      },
+      orderDerived: {
+        orderId: "required",
+        provenance: ["order-reservation", "order-release"],
+      },
     },
   };
 }

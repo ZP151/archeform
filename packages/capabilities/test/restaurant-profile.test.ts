@@ -85,7 +85,406 @@ describe("Restaurant Ordering profile", () => {
         ],
         versionField: "orderVersion",
       },
+      inventoryLedger: {
+        entity: "inventory-ledger",
+        orderIdField: "orderId",
+        provenanceField: "provenance",
+        provenance: {
+          orderReservation: "order-reservation",
+          orderRelease: "order-release",
+          managerAdjustment: "manager-adjustment",
+        },
+        adjustmentReasonField: "adjustmentReason",
+        adjustmentReasons: [
+          "stock-count",
+          "restock",
+          "spoilage",
+          "damage",
+          "correction",
+        ],
+        managerAdjustment: {
+          role: "manager",
+          capability: "inventory.adjust",
+          operation: "adjust",
+          auditCapability: "audit.record",
+          auditOperation: "record",
+          orderId: "forbidden",
+          reason: "required",
+        },
+        orderDerived: {
+          orderId: "required",
+          provenance: ["order-reservation", "order-release"],
+        },
+      },
     });
+  });
+
+  it("models order provenance and bounded manager adjustment reasons without a fake order", () => {
+    const graph = restaurantGraph();
+    const orderId = restaurantField(graph, "inventory-ledger", "orderId");
+    const provenance = restaurantField(graph, "inventory-ledger", "provenance");
+    const adjustmentReason = restaurantField(
+      graph,
+      "inventory-ledger",
+      "adjustmentReason",
+    );
+
+    expect(orderId).toMatchObject({ type: "string", required: false });
+    expect(provenance).toEqual({
+      key: "provenance",
+      type: "enum",
+      required: true,
+      values: ["order-reservation", "order-release", "manager-adjustment"],
+    });
+    expect(adjustmentReason).toEqual({
+      key: "adjustmentReason",
+      type: "enum",
+      required: false,
+      values: ["stock-count", "restock", "spoilage", "damage", "correction"],
+    });
+  });
+
+  it("requires the sole standalone inventory adjustment path to be manager-audited", () => {
+    const graph = restaurantGraph();
+    const flow = graph.flow.flows.find(
+      (candidate) => candidate.entity === "inventory-ledger",
+    );
+
+    expect(flow).toEqual({
+      id: "restaurant-inventory-ledger",
+      entity: "inventory-ledger",
+      initialState: "recorded",
+      states: ["recorded"],
+      events: ["record-manager-adjustment"],
+      transitions: [
+        {
+          from: "recorded",
+          event: "record-manager-adjustment",
+          to: "recorded",
+          roles: ["manager"],
+          effects: [
+            { capability: "inventory.adjust", operation: "adjust" },
+            { capability: "audit.record", operation: "record" },
+          ],
+        },
+      ],
+    });
+  });
+
+  it("rejects widened inventory provenance and adjustment reason fields", () => {
+    const cases = [
+      {
+        expected: "inventory-ledger.orderId",
+        mutate: (graph: ReturnType<typeof restaurantGraph>) => {
+          restaurantField(graph, "inventory-ledger", "orderId").required = true;
+        },
+      },
+      {
+        expected: "inventory-ledger.provenance",
+        mutate: (graph: ReturnType<typeof restaurantGraph>) => {
+          restaurantField(graph, "inventory-ledger", "provenance").values = [
+            "order-reservation",
+            "manager-adjustment",
+            "unknown",
+          ];
+        },
+      },
+      {
+        expected: "inventory-ledger.adjustmentReason",
+        mutate: (graph: ReturnType<typeof restaurantGraph>) => {
+          restaurantField(
+            graph,
+            "inventory-ledger",
+            "adjustmentReason",
+          ).values = ["stock-count", ""];
+        },
+      },
+      {
+        expected: "inventory-ledger.adjustmentReason",
+        mutate: (graph: ReturnType<typeof restaurantGraph>) => {
+          restaurantField(
+            graph,
+            "inventory-ledger",
+            "adjustmentReason",
+          ).required = true;
+        },
+      },
+    ] as const;
+
+    for (const testCase of cases) {
+      const graph = restaurantGraph();
+      testCase.mutate(graph);
+
+      expect(validateRestaurantOrderingProfile(graph)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: "restaurant.inventory-provenance.invalid",
+            message: expect.stringContaining(testCase.expected),
+          }),
+        ]),
+      );
+    }
+  });
+
+  it("rejects every incomplete manager adjustment constraint", () => {
+    const cases = [
+      {
+        expected: "manager",
+        mutate: (graph: ReturnType<typeof restaurantGraph>) => {
+          graph.flow.flows.find(
+            (flow) => flow.entity === "inventory-ledger",
+          )!.transitions[0]!.roles = [];
+        },
+      },
+      {
+        expected: "inventory.adjust/adjust",
+        mutate: (graph: ReturnType<typeof restaurantGraph>) => {
+          graph.flow.flows.find(
+            (flow) => flow.entity === "inventory-ledger",
+          )!.transitions[0]!.effects = [
+            { capability: "audit.record", operation: "record" },
+          ];
+        },
+      },
+      {
+        expected: "audit.record/record",
+        mutate: (graph: ReturnType<typeof restaurantGraph>) => {
+          graph.flow.flows.find(
+            (flow) => flow.entity === "inventory-ledger",
+          )!.transitions[0]!.effects = [
+            { capability: "inventory.adjust", operation: "adjust" },
+          ];
+        },
+      },
+      {
+        expected: "inventory.adjust",
+        mutate: (graph: ReturnType<typeof restaurantGraph>) => {
+          graph.integration.capabilities =
+            graph.integration.capabilities.filter(
+              (capability) => capability.key !== "inventory.adjust",
+            );
+        },
+      },
+    ] as const;
+
+    for (const testCase of cases) {
+      const graph = restaurantGraph();
+      testCase.mutate(graph);
+
+      expect(validateRestaurantOrderingProfile(graph)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            message: expect.stringContaining(testCase.expected),
+          }),
+        ]),
+      );
+    }
+  });
+
+  it("rejects a manager adjustment attached to an order context", () => {
+    const graph = restaurantGraph();
+    restaurantTransition(graph, "order", "submitted", "pay").effects!.push({
+      capability: "inventory.adjust",
+      operation: "adjust",
+    });
+
+    expect(validateRestaurantOrderingProfile(graph)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "restaurant.inventory-provenance.invalid",
+          message: expect.stringContaining(
+            "manager adjustment must not carry an order context",
+          ),
+        }),
+      ]),
+    );
+  });
+
+  it("rejects an additional unattributed inventory-ledger recording path", () => {
+    const graph = restaurantGraph();
+    const flow = graph.flow.flows.find(
+      (candidate) => candidate.entity === "inventory-ledger",
+    )!;
+    flow.events.push("record-unattributed");
+    flow.transitions.push({
+      from: "recorded",
+      event: "record-unattributed",
+      to: "recorded",
+      roles: ["manager"],
+      effects: [{ capability: "audit.record", operation: "record" }],
+    });
+
+    expect(validateRestaurantOrderingProfile(graph)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "restaurant.inventory-provenance.invalid",
+          message: expect.stringContaining("sole standalone ledger path"),
+        }),
+      ]),
+    );
+  });
+
+  it("rejects mixed order-derived inventory provenance effects deterministically", () => {
+    const cases = [
+      {
+        from: "cart",
+        event: "submit",
+        conflicting: {
+          capability: "inventory.release",
+          operation: "release",
+        },
+        expectedEffect: "inventory.reserve/reserve",
+        transitionIndex: 0,
+      },
+      {
+        from: "cart",
+        event: "submit",
+        conflicting: {
+          capability: "inventory.adjust",
+          operation: "adjust",
+        },
+        expectedEffect: "inventory.reserve/reserve",
+        transitionIndex: 0,
+      },
+      {
+        from: "submitted",
+        event: "cancel",
+        conflicting: {
+          capability: "inventory.reserve",
+          operation: "reserve",
+        },
+        expectedEffect: "inventory.release/release",
+        transitionIndex: 6,
+      },
+      {
+        from: "submitted",
+        event: "cancel",
+        conflicting: {
+          capability: "inventory.adjust",
+          operation: "adjust",
+        },
+        expectedEffect: "inventory.release/release",
+        transitionIndex: 6,
+      },
+    ] as const;
+
+    for (const testCase of cases) {
+      const graph = restaurantGraph();
+      restaurantTransition(
+        graph,
+        "order",
+        testCase.from,
+        testCase.event,
+      ).effects!.push(testCase.conflicting);
+
+      const first = validateRestaurantOrderingProfile(graph).filter(
+        (issue) => issue.code === "restaurant.inventory-provenance.invalid",
+      );
+      const second = validateRestaurantOrderingProfile(graph).filter(
+        (issue) => issue.code === "restaurant.inventory-provenance.invalid",
+      );
+
+      expect(first).toEqual([
+        {
+          code: "restaurant.inventory-provenance.invalid",
+          message: `Restaurant 'order' transition '${testCase.from} --${testCase.event}--> ${testCase.event === "submit" ? "submitted" : "cancelled"}' must declare exactly one inventory provenance effect '${testCase.expectedEffect}' and no conflicting provenance effect.`,
+          path: [
+            "flow",
+            "flows",
+            1,
+            "transitions",
+            testCase.transitionIndex,
+            "effects",
+          ],
+        },
+      ]);
+      expect(second).toEqual(first);
+    }
+  });
+
+  it("rejects order-derived provenance effects on manager adjustment", () => {
+    for (const orderEffect of [
+      { capability: "inventory.reserve", operation: "reserve" },
+      { capability: "inventory.release", operation: "release" },
+    ]) {
+      const graph = restaurantGraph();
+      const transition = graph.flow.flows.find(
+        (flow) => flow.entity === "inventory-ledger",
+      )!.transitions[0]!;
+      transition.effects!.push(orderEffect);
+
+      expect(validateRestaurantOrderingProfile(graph)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: "restaurant.inventory-provenance.invalid",
+            message: expect.stringContaining(
+              "exactly one inventory provenance effect 'inventory.adjust/adjust'",
+            ),
+            path: expect.arrayContaining(["transitions", "effects"]),
+          }),
+        ]),
+      );
+    }
+  });
+
+  it("rejects misplaced reservation or release effects on other transitions", () => {
+    const cases = [
+      {
+        from: "submitted",
+        event: "pay",
+        misplaced: {
+          capability: "inventory.reserve",
+          operation: "reserve",
+        },
+      },
+      {
+        from: "paid",
+        event: "cancel",
+        misplaced: {
+          capability: "inventory.release",
+          operation: "release",
+        },
+      },
+    ] as const;
+
+    for (const testCase of cases) {
+      const graph = restaurantGraph();
+      restaurantTransition(
+        graph,
+        "order",
+        testCase.from,
+        testCase.event,
+      ).effects!.push(testCase.misplaced);
+
+      expect(validateRestaurantOrderingProfile(graph)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: "restaurant.inventory-provenance.invalid",
+            message: expect.stringContaining(
+              "must not declare misplaced order-derived inventory provenance effects",
+            ),
+            path: expect.arrayContaining(["transitions", "effects"]),
+          }),
+        ]),
+      );
+    }
+  });
+
+  it("requires order-derived inventory records to retain the orderId relation", () => {
+    const graph = restaurantGraph();
+    graph.domain.relations.find(
+      (relation) =>
+        relation.from === "inventory-ledger" && relation.to === "order",
+    )!.field = "menuItemId";
+
+    expect(validateRestaurantOrderingProfile(graph)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "restaurant.inventory-provenance.invalid",
+          message: expect.stringContaining("orderId relation"),
+        }),
+      ]),
+    );
   });
 
   it("rejects a Restaurant Graph without a table-session token digest", () => {
@@ -312,7 +711,6 @@ describe("Restaurant Ordering profile", () => {
 
   it("compiles lifecycle-produced timestamps to nullable Prisma and SQL columns", () => {
     const graph = restaurantGraph();
-    graph.page = { pages: [], navigation: [] };
     const files = Object.fromEntries(
       generateApplicationBundle({
         publishedRevisionId: "published-restaurant-nullable-timestamps-1",

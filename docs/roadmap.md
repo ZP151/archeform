@@ -58,10 +58,14 @@
   stock; operate deterministic kitchen and cashier surfaces; cancel eligible
   orders with inventory and audit evidence; and inspect the operational
   dashboard.
-- Restaurant Profile validation currently enforces its complete Graph semantics
-  and current core/commerce Golden locks. Enforcement of the six
-  Restaurant-specific asset locks activates with their real package manifests
-  in the next capability-packaging task; no placeholder locks are admitted.
+- Restaurant Profile validation enforces its complete Graph semantics and all
+  current core, commerce, and Restaurant Golden asset locks; no placeholder
+  locks are admitted.
+- Inventory ledger provenance is explicit and closed: order reservations and
+  releases require an order reference, while the only order-free record is a
+  manager adjustment with a bounded reason, the locked `inventory.adjust`
+  operation, and append-only audit evidence. Fake or reused orders are not a
+  valid adjustment workaround.
 - Simple Ecommerce: catalog, checkout, inventory update, payment simulation,
   and order lifecycle.
 

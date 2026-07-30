@@ -46,7 +46,9 @@ export {
   validateRestaurantOrderingProfile,
 } from "./restaurant/profile.js";
 export type {
+  RestaurantAdjustmentReason,
   RestaurantEntityKey,
+  RestaurantInventoryLedgerProvenance,
   RestaurantProfileProjectionV1,
   RestaurantProfileValidationIssue,
 } from "./restaurant/profile.js";
@@ -747,13 +749,29 @@ export const profileGraphs: readonly ProfileGraphStarter[] = Object.freeze([
             label: "Inventory ledger",
             fields: [
               { key: "menuItemId", type: "string", required: true },
-              { key: "orderId", type: "string", required: true },
+              { key: "orderId", type: "string", required: false },
               { key: "delta", type: "integer", required: true },
               {
-                key: "reason",
+                key: "provenance",
                 type: "enum",
                 required: true,
-                values: ["reserve", "decrement", "release", "adjustment"],
+                values: [
+                  "order-reservation",
+                  "order-release",
+                  "manager-adjustment",
+                ],
+              },
+              {
+                key: "adjustmentReason",
+                type: "enum",
+                required: false,
+                values: [
+                  "stock-count",
+                  "restock",
+                  "spoilage",
+                  "damage",
+                  "correction",
+                ],
               },
               { key: "recordedAt", type: "datetime", required: true },
             ],
@@ -1067,6 +1085,25 @@ export const profileGraphs: readonly ProfileGraphStarter[] = Object.freeze([
                 roles: ["manager"],
                 effects: [
                   { capability: "order.transition", operation: "transition" },
+                  { capability: "audit.record", operation: "record" },
+                ],
+              },
+            ],
+          },
+          {
+            id: "restaurant-inventory-ledger",
+            entity: "inventory-ledger",
+            initialState: "recorded",
+            states: ["recorded"],
+            events: ["record-manager-adjustment"],
+            transitions: [
+              {
+                from: "recorded",
+                event: "record-manager-adjustment",
+                to: "recorded",
+                roles: ["manager"],
+                effects: [
+                  { capability: "inventory.adjust", operation: "adjust" },
                   { capability: "audit.record", operation: "record" },
                 ],
               },
