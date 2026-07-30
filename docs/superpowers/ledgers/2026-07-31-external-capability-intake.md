@@ -50,6 +50,10 @@ and exact allowed paths frozen. Task 3's Task 1 dependency is satisfied, but it
 remains `planned` until a separate PM dispatch. Tasks 4-6 remain blocked on
 their preceding Intake dependencies.
 
+Independent Task 2 review FAILED with three P1 findings and one P2. Task 2
+remains `implementing` in Fix Round 1/5; its original contract, scope, and exact
+allowed paths remain frozen. Tasks 3 through 6 remain `planned`.
+
 | Task                                             | State          | Specialization      | Contract owner                   | Dependency gate                                              |
 | ------------------------------------------------ | -------------- | ------------------- | -------------------------------- | ------------------------------------------------------------ |
 | 1. Candidate contracts and immutable persistence | `accepted`     | `integration`       | External Intake Contract         | QA and release review PASS; release set and contract frozen. |
@@ -220,6 +224,24 @@ dispatch.
   host/redirect, response-limit, raw archive/tree digest, path/mode/collision,
   licence/notice, provenance, and immutable failure-receipt tests pass.
 - All tests are deterministic through an injected client and use no network.
+
+### Independent review: Fix Round 1/5
+
+Review FAILED on these P1 findings:
+
+1. Preflight tree metadata count, path, mode, declared size, and cumulative
+   limit before any blob fetch. Add bounded-cache and no-fetch-over-limit
+   regression coverage.
+2. Do not falsely identify a phase marker as SBOM, scanner, or AST evidence.
+   Persist an honest Task 2 acquisition/provisional record or distinct
+   schema-valid unavailable artifacts, escalating a schema mismatch if needed.
+3. Use total, locale-independent canonical ordering and add a reversed mixed
+   Unicode/ASCII test.
+
+P2: rerun the focused suite, full suite, typecheck, and lint on Node 22.
+
+Repair remains bounded to the original Task 2 contract, scope, and exact
+allowed paths. Tasks 3 through 6 remain `planned`.
 
 ## Task 3 card: Deterministic local scans and module inventory
 
