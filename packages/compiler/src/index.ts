@@ -269,6 +269,14 @@ export function buildCompilationPlan(
     throw new Error("Published revision id is required for compilation.");
   }
 
+  if (
+    input.graph.integration.capabilities.some(({ key }) =>
+      key.startsWith("candidate."),
+    )
+  ) {
+    throw new Error("Candidate capabilities cannot be compiled.");
+  }
+
   assertCanonicalCompositionLock(input);
   const graph = assertValidApplicationGraph(input.graph);
   const artifacts = compilationTargets.flatMap((target) =>

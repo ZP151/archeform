@@ -101,6 +101,37 @@ describe("repository-local intake CLI", () => {
     expect(output.stderr).toEqual([]);
   });
 
+  it("loads status and verifies a prior job in a fresh CLI process", async () => {
+    const root = tempRoot();
+    const requestPath = validRequestFile(root);
+    const quarantine = join(root, "quarantine");
+    const submitted = outputHarness(
+      createExternalIntakeApi(new ExternalIntakeStore(quarantine)),
+      root,
+    );
+    expect(
+      await runIntakeCli(
+        ["batch", "submit", "--file", requestPath],
+        submitted.options,
+      ),
+    ).toBe(0);
+    const result = JSON.parse(submitted.stdout[0]!) as {
+      byId: Record<string, { lookupId: string }>;
+    };
+    const lookupId = result.byId["safe-source"]!.lookupId;
+    const fresh = outputHarness(
+      createExternalIntakeApi(new ExternalIntakeStore(quarantine)),
+      root,
+    );
+
+    expect(await runIntakeCli(["status", lookupId], fresh.options)).toBe(0);
+    expect(
+      await runIntakeCli(["verify", "--job", lookupId], fresh.options),
+    ).toBe(0);
+    expect(fresh.stdout.join("\n")).toContain('\"valid\":true');
+    expect(fresh.stderr).toEqual([]);
+  });
+
   it.each([
     [
       "remote request URL",

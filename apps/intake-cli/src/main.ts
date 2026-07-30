@@ -109,13 +109,13 @@ export async function runIntakeCli(
       args[1] === "submit" &&
       args[2] === "--file"
     ) {
-      result = options.api.submitBatch(localJson(args[3], options.cwd));
+      result = await options.api.submitBatch(localJson(args[3], options.cwd));
     } else if (args.length === 2 && args[0] === "status") {
-      result = options.api.status(opaqueId(args[1]));
+      result = await options.api.status(opaqueId(args[1]));
     } else if (args.length === 2 && args[0] === "evidence") {
       if (!DIGEST.test(args[1]!))
         throw new CliInputError("evidence digest required");
-      result = options.api.evidence(args[1]!);
+      result = await options.api.evidence(args[1]!);
     } else if (
       args.length === 3 &&
       args[0] === "candidate" &&
@@ -124,14 +124,14 @@ export async function runIntakeCli(
       const identity = candidateIdentity(args[2]);
       result =
         args[1] === "show"
-          ? options.api.candidateShow(identity.id, identity.version)
-          : options.api.candidateTest(identity.id, identity.version);
+          ? await options.api.candidateShow(identity.id, identity.version)
+          : await options.api.candidateTest(identity.id, identity.version);
     } else if (
       args.length === 3 &&
       args[0] === "verify" &&
       args[1] === "--job"
     ) {
-      result = options.api.verifyJob(opaqueId(args[2]));
+      result = await options.api.verifyJob(opaqueId(args[2]));
     } else {
       throw new CliInputError("unknown command");
     }

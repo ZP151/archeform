@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { canonicalJson, digestBytes, type Sha256Digest } from "./canonical.js";
+import type { Sha256Digest } from "./canonical.js";
 import {
   CandidateRegistry,
   type CandidateProposalV1,
@@ -15,6 +15,7 @@ import {
 } from "./conformance.js";
 import {
   parseEvidenceBundle,
+  parseIntakeReceipt,
   parseIntakeRequest,
   type EvidenceBundleV1,
   type IntakeRequestV1,
@@ -54,6 +55,7 @@ export interface ExternalIntakeBatchV1 {
 export interface ExternalIntakeBatchItemResultV1 {
   readonly status: "requested" | "blocked";
   readonly request?: StoredRecordRef;
+  readonly lookupId?: string;
   readonly failureCode?: "invalid-intake-request";
 }
 
@@ -88,16 +90,22 @@ export interface ExternalIntakeApiV1 {
   submitBatch(input: unknown): ExternalIntakeBatchResultV1;
   status(id: string): ExternalIntakeStatusV1;
   evidence(digest: string): ExternalEvidenceSummaryV1;
-  candidateCreate(input: CandidateProposalV1): StoredCandidateRefV1;
+  candidateCreate(input: CandidateProposalV1): Promise<StoredCandidateRefV1>;
   candidateShow(id: string, version: string): CandidateSummaryV1;
   candidateList(filter: CandidateQueryV1): readonly CandidateSummaryV1[];
-  candidateTest(id: string, version: string): CandidateConformanceResultV1;
-  candidateVerify(id: string, version: string): CandidateVerificationResultV1;
+  candidateTest(
+    id: string,
+    version: string,
+  ): Promise<CandidateConformanceResultV1>;
+  candidateVerify(
+    id: string,
+    version: string,
+  ): Promise<CandidateVerificationResultV1>;
   verifyJob(id: string): { readonly id: string; readonly valid: boolean };
 }
 
-function resultDigest(result: CandidateConformanceResultV1): Sha256Digest {
-  return digestBytes(new TextEncoder().encode(canonicalJson(result)));
+function jobLookupId(receiptDigest: string): string {
+  return `job-${receiptDigest.slice("sha256:".length)}`;
 }
 
 export function createExternalIntakeApi(
@@ -120,7 +128,7 @@ export function createExternalIntakeApi(
         try {
           const request: IntakeRequestV1 = parseIntakeRequest(item.request);
           const ref = store.putRecord("request", request);
-          store.appendReceipt(item.id, {
+          const receipt = store.appendReceipt(item.id, {
             apiVersion: "factory.external-intake-receipt/v1",
             createdAt: request.createdAt,
             producerVersion: request.producerVersion,
@@ -131,13 +139,15 @@ export function createExternalIntakeApi(
             code: "intake-request-accepted",
             recordDigests: [ref.digest],
           });
-          byId[item.id] = { status: "requested", request: ref };
+          const lookupId = jobLookupId(receipt.digest);
+          byId[item.id] = { status: "requested", request: ref, lookupId };
           statuses.set(item.id, {
             id: item.id,
             status: "requested",
             producerVersion: request.producerVersion,
             recordDigests: [ref.digest],
           });
+          statuses.set(lookupId, statuses.get(item.id)!);
         } catch {
           byId[item.id] = {
             status: "blocked",
@@ -157,9 +167,33 @@ export function createExternalIntakeApi(
     status(id: string): ExternalIntakeStatusV1 {
       const parsed = opaqueIdSchema.parse(id);
       const status = statuses.get(parsed);
-      if (status === undefined)
+      if (status !== undefined) return status;
+      if (!/^job-[a-f0-9]{64}$/u.test(parsed)) {
         throw new Error(`Unknown intake job '${parsed}'.`);
-      return status;
+      }
+      const receipt = parseIntakeReceipt(
+        store.getRecord({
+          kind: "receipt",
+          digest: `sha256:${parsed.slice("job-".length)}`,
+        }),
+      );
+      if (
+        receipt.sequence !== 1 ||
+        receipt.status !== "requested" ||
+        receipt.code !== "intake-request-accepted" ||
+        receipt.recordDigests.length !== 1
+      ) {
+        throw new Error("Intake job receipt-addressed reference is invalid.");
+      }
+      const request = parseIntakeRequest(
+        store.getRecord({ kind: "request", digest: receipt.recordDigests[0]! }),
+      );
+      return {
+        id: receipt.jobId,
+        status: "requested",
+        producerVersion: request.producerVersion,
+        recordDigests: [receipt.recordDigests[0]!],
+      };
     },
 
     evidence(digest: string): ExternalEvidenceSummaryV1 {
@@ -185,7 +219,9 @@ export function createExternalIntakeApi(
       };
     },
 
-    candidateCreate(input: CandidateProposalV1): StoredCandidateRefV1 {
+    async candidateCreate(
+      input: CandidateProposalV1,
+    ): Promise<StoredCandidateRefV1> {
       return registry.create(input);
     },
 
@@ -196,6 +232,7 @@ export function createExternalIntakeApi(
         id: candidate.id,
         version: candidate.version,
         status: candidate.status,
+        lookupId: ref.lookupId,
         proposedFactoryKey: candidate.proposedFactoryKey,
         candidateDigest: ref.digest,
         evidenceDigest: candidate.evidenceDigest,
@@ -206,40 +243,23 @@ export function createExternalIntakeApi(
       return registry.list(filter);
     },
 
-    candidateTest(id: string, version: string): CandidateConformanceResultV1 {
+    async candidateTest(
+      id: string,
+      version: string,
+    ): Promise<CandidateConformanceResultV1> {
       const bundle = registry.getConformanceBundle(id, version);
       const result = evaluateCandidateConformance(bundle);
       if (result.status !== "pass") return result;
-      const digest = resultDigest(result);
-      const stored = store.putBytes(
-        "evidence",
-        new TextEncoder().encode(canonicalJson(result)),
-      );
-      if (stored.digest !== digest) {
-        throw new Error(
-          "Conformance result digest changed during immutable write.",
-        );
-      }
       if (bundle.candidate.status === "quarantined") {
-        registry.appendStatus({
-          apiVersion: "factory.candidate-status-receipt/v1",
-          id,
-          version,
-          from: "quarantined",
-          to: "conformance-passed",
-          createdAt: bundle.candidate.createdAt,
-          producerVersion: bundle.candidate.producerVersion,
-          parentCandidateDigest: registry.getRef(id, version).digest,
-          conformanceResultDigest: digest,
-        });
+        await registry.recordConformancePass(id, version, result);
       }
       return result;
     },
 
-    candidateVerify(
+    async candidateVerify(
       id: string,
       version: string,
-    ): CandidateVerificationResultV1 {
+    ): Promise<CandidateVerificationResultV1> {
       return registry.verify(registry.getRef(id, version));
     },
 

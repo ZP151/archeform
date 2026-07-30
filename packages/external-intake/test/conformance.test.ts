@@ -12,7 +12,7 @@ function safeInput(): CandidateConformanceInputV1 {
       apiVersion: "factory.candidate-manifest/v1",
       id: "safe-adapter",
       version: "1.0.0",
-      proposedFactoryKey: "provider.safe-adapter",
+      proposedFactoryKey: "candidate.safe-adapter",
       inputSchema: {
         type: "object",
         properties: { message: { type: "string" } },
@@ -25,7 +25,7 @@ function safeInput(): CandidateConformanceInputV1 {
         required: ["message"],
         additionalProperties: false,
       },
-      effects: ["message.echo"],
+      effects: ["candidate.project"],
     },
     fixture: {
       apiVersion: "factory.candidate-fixture/v1",
@@ -37,7 +37,7 @@ function safeInput(): CandidateConformanceInputV1 {
       apiVersion: "factory.candidate-adapter/v1",
       id: "safe-adapter",
       projection: { message: "message" },
-      effects: ["message.echo"],
+      effects: ["candidate.project"],
     },
     conformancePlan: {
       apiVersion: "factory.candidate-conformance-plan/v1",
@@ -69,7 +69,7 @@ function safeInput(): CandidateConformanceInputV1 {
       status: "quarantined",
       sourceSnapshotDigest: `sha256:${"a".repeat(64)}`,
       evidenceDigest: `sha256:${"b".repeat(64)}`,
-      proposedFactoryKey: "provider.safe-adapter",
+      proposedFactoryKey: "candidate.safe-adapter",
       proposedClassification: "provider-adapter",
       selectedModules: [
         {

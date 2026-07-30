@@ -1,5 +1,6 @@
 import {
   mkdtempSync,
+  existsSync,
   readFileSync,
   readdirSync,
   rmSync,
@@ -23,7 +24,11 @@ import type {
   IntakeRequestV1,
   SourceSnapshotV1,
 } from "../src/contracts.js";
-import { runEvidencePipeline, type IntakeJobV1 } from "../src/jobs.js";
+import {
+  runEvidencePipeline,
+  verifyCompletedEvidence,
+  type IntakeJobV1,
+} from "../src/jobs.js";
 import {
   PINNED_MODULE_INVENTORY_IDENTITY,
   type ModuleInventoryAdapterV1,
@@ -52,13 +57,45 @@ function tempStore(): { root: string; store: ExternalIntakeStore } {
   return { root, store: new ExternalIntakeStore(root) };
 }
 
+class ForgingReceiptStore extends ExternalIntakeStore {
+  forgeConformanceReceipt = false;
+  forgeEvidenceJob = false;
+
+  override getRecord(
+    ...args: Parameters<ExternalIntakeStore["getRecord"]>
+  ): ReturnType<ExternalIntakeStore["getRecord"]> {
+    const record = super.getRecord(...args);
+    if (
+      this.forgeConformanceReceipt &&
+      record.apiVersion === "factory.external-intake-receipt/v1" &&
+      record.code === "candidate-conformance-passed"
+    ) {
+      return {
+        ...record,
+        recordDigests: [
+          record.recordDigests[0]!,
+          digestBytes(bytes("forged-conformance-result")),
+        ],
+      };
+    }
+    if (
+      this.forgeEvidenceJob &&
+      record.apiVersion === "factory.external-intake-receipt/v1" &&
+      record.code === "source-acquisition-verified"
+    ) {
+      return { ...record, jobId: "evidence-forged" };
+    }
+    return record;
+  }
+}
+
 function safeArtifacts(): CandidateArtifactsV1 {
   return {
     manifest: {
       apiVersion: "factory.candidate-manifest/v1",
       id: "safe-adapter",
       version: "1.0.0",
-      proposedFactoryKey: "provider.safe-adapter",
+      proposedFactoryKey: "candidate.safe-adapter",
       inputSchema: {
         type: "object",
         properties: { message: { type: "string" } },
@@ -71,7 +108,7 @@ function safeArtifacts(): CandidateArtifactsV1 {
         required: ["message"],
         additionalProperties: false,
       },
-      effects: ["message.echo"],
+      effects: ["candidate.project"],
     },
     fixture: {
       apiVersion: "factory.candidate-fixture/v1",
@@ -83,7 +120,7 @@ function safeArtifacts(): CandidateArtifactsV1 {
       apiVersion: "factory.candidate-adapter/v1",
       id: "safe-adapter",
       projection: { message: "message" },
-      effects: ["message.echo"],
+      effects: ["candidate.project"],
     },
     conformancePlan: {
       apiVersion: "factory.candidate-conformance-plan/v1",
@@ -139,6 +176,7 @@ function scannerResult(kind: ScanKindV1): NormalizedScanResultV1 {
 
 async function acceptedProposal(
   store: ExternalIntakeStore,
+  captureJob?: (job: IntakeJobV1) => void,
 ): Promise<CandidateProposalV1> {
   const content = bytes("export const safe = true;");
   const sourceDigest = digestBytes(content);
@@ -278,6 +316,7 @@ async function acceptedProposal(
       };
     },
   };
+  captureJob?.(job);
   const completedEvidence = await runEvidencePipeline(
     job,
     scanners,
@@ -292,8 +331,9 @@ async function acceptedProposal(
     version: "1.0.0",
     snapshot: snapshotRef,
     acquisition: acquisitionRef,
+    evidenceJob: job,
     completedEvidence,
-    proposedFactoryKey: "provider.safe-adapter",
+    proposedFactoryKey: "candidate.safe-adapter",
     proposedClassification: "provider-adapter",
     selectedModules: [
       {
@@ -327,12 +367,86 @@ afterEach(() => {
 });
 
 describe("Candidate registry", () => {
+  it("reuses the complete Task 3 verifier and rehydrates every completed checkpoint", async () => {
+    const { root, store } = tempStore();
+    let evidenceJob: IntakeJobV1 | undefined;
+    const proposal = await acceptedProposal(store, (job) => {
+      evidenceJob = job;
+    });
+    const summaryDigest =
+      proposal.completedEvidence.scans.scans[0]!.summary.digest;
+    const summaryPath = join(
+      root,
+      "blobs",
+      "evidence",
+      `${summaryDigest.slice(7)}.bin`,
+    );
+    rmSync(summaryPath);
+    expect(existsSync(summaryPath)).toBe(false);
+
+    const verified = await verifyCompletedEvidence(
+      evidenceJob!,
+      proposal.completedEvidence,
+      store,
+    );
+
+    expect(verified.receipts).toHaveLength(7);
+    expect(verified.evidence).toEqual(proposal.completedEvidence.evidence);
+    expect(existsSync(summaryPath)).toBe(true);
+  });
+
+  it("requires the reserved Candidate identity namespace", async () => {
+    const { store } = tempStore();
+    const registry = new CandidateRegistry(store);
+    const proposal = await acceptedProposal(store);
+
+    await expect(
+      registry.create({
+        ...proposal,
+        proposedFactoryKey: "provider.safe-adapter",
+        artifacts: {
+          ...proposal.artifacts,
+          manifest: {
+            ...proposal.artifacts.manifest,
+            proposedFactoryKey: "provider.safe-adapter",
+          },
+        },
+      }),
+    ).rejects.toThrow("candidate.");
+  });
+
+  it.each([
+    "graph.mutate",
+    "policy.write",
+    "flow.transition",
+    "publication.publish",
+    "compiler.generate",
+    "runtime.execute",
+    "approval.grant",
+    "promotion.promote",
+  ])("rejects reserved mutation effect %s", async (effect) => {
+    const { store } = tempStore();
+    const registry = new CandidateRegistry(store);
+    const proposal = await acceptedProposal(store);
+
+    await expect(
+      registry.create({
+        ...proposal,
+        artifacts: {
+          ...proposal.artifacts,
+          manifest: { ...proposal.artifacts.manifest, effects: [effect] },
+          adapter: { ...proposal.artifacts.adapter, effects: [effect] },
+        },
+      }),
+    ).rejects.toThrow();
+  });
+
   it("creates a quarantined Candidate from accepted evidence with declarative artifacts only", async () => {
     const { store } = tempStore();
     const registry = new CandidateRegistry(store);
     const proposal = await acceptedProposal(store);
 
-    const ref = registry.create(proposal);
+    const ref = await registry.create(proposal);
     const candidate = registry.get(ref.id, ref.version);
 
     expect(candidate.status).toBe("quarantined");
@@ -354,7 +468,10 @@ describe("Candidate registry", () => {
     );
     expect(candidate).not.toHaveProperty("source");
     expect(candidate).not.toHaveProperty("outputSlots");
-    expect(registry.verify(ref)).toMatchObject({ valid: true, issues: [] });
+    await expect(registry.verify(ref)).resolves.toMatchObject({
+      valid: true,
+      issues: [],
+    });
   });
 
   it.each([
@@ -394,59 +511,131 @@ describe("Candidate registry", () => {
         producerVersion: "0.2.0",
       }),
     ],
+    [
+      "execution identity",
+      (proposal: CandidateProposalV1) => ({
+        ...proposal,
+        completedEvidence: {
+          ...proposal.completedEvidence,
+          executionId: `evidence-${"f".repeat(24)}`,
+        },
+      }),
+    ],
+    [
+      "receipt phase order",
+      (proposal: CandidateProposalV1) => ({
+        ...proposal,
+        completedEvidence: {
+          ...proposal.completedEvidence,
+          receipts: [
+            proposal.completedEvidence.receipts[1]!,
+            proposal.completedEvidence.receipts[0]!,
+            ...proposal.completedEvidence.receipts.slice(2),
+          ],
+        },
+      }),
+    ],
   ])("rejects Candidate %s linkage drift", async (_, mutate) => {
     const { store } = tempStore();
     const registry = new CandidateRegistry(store);
     const proposal = await acceptedProposal(store);
 
-    expect(() =>
+    await expect(
       registry.create(mutate(proposal) as CandidateProposalV1),
-    ).toThrow();
+    ).rejects.toThrow();
     expect(registry.list({})).toEqual([]);
   });
 
-  it("records status transitions as immutable Candidate revisions and receipts", async () => {
+  it("records conformance-passed only through a validated immutable result", async () => {
     const { store } = tempStore();
     const registry = new CandidateRegistry(store);
-    const initial = registry.create(await acceptedProposal(store));
+    const initial = await registry.create(await acceptedProposal(store));
     const result = evaluateCandidateConformance(
       registry.getConformanceBundle(initial.id, initial.version),
     );
     expect(result.status).toBe("pass");
-    const resultDigest = store.putBytes(
-      "evidence",
-      bytes(canonicalJson(result)),
-    ).digest;
+    await expect(
+      registry.recordConformancePass(initial.id, initial.version, {
+        ...result,
+        candidateDigest: digestBytes(bytes("forged-candidate")),
+      }),
+    ).rejects.toThrow("current Candidate and artifacts");
+    const passed = await registry.recordConformancePass(
+      initial.id,
+      initial.version,
+      result,
+    );
 
-    const receipt = registry.appendStatus({
-      apiVersion: "factory.candidate-status-receipt/v1",
-      id: initial.id,
-      version: initial.version,
-      from: "quarantined",
-      to: "conformance-passed",
-      createdAt: "2026-07-31T05:01:00.000Z",
-      producerVersion: "0.1.0",
-      parentCandidateDigest: initial.digest,
-      conformanceResultDigest: resultDigest,
-    });
-
-    expect(receipt.kind).toBe("receipt");
+    expect(passed.status).toBe("conformance-passed");
     expect(registry.get(initial.id, initial.version).status).toBe(
       "conformance-passed",
     );
-    expect(registry.verify(initial)).toMatchObject({ valid: true });
-    expect(() =>
-      registry.appendStatus({
-        apiVersion: "factory.candidate-status-receipt/v1",
-        id: initial.id,
-        version: initial.version,
-        from: "conformance-passed",
-        to: "quarantined",
-        createdAt: "2026-07-31T05:02:00.000Z",
-        producerVersion: "0.1.0",
-        parentCandidateDigest: initial.digest,
-      } as never),
-    ).toThrow("append-only");
+    await expect(registry.verify(passed)).resolves.toMatchObject({
+      valid: true,
+    });
+    const fresh = new CandidateRegistry(store);
+    expect(fresh.get(passed.lookupId, passed.version).status).toBe(
+      "conformance-passed",
+    );
+    await expect(
+      fresh.verify(fresh.getRef(passed.lookupId, passed.version)),
+    ).resolves.toMatchObject({ valid: true, issues: [] });
+    expect(
+      (registry as unknown as { appendStatus?: unknown }).appendStatus,
+    ).toBeUndefined();
+  });
+
+  it("fails closed when a conformance receipt is not bound to its result", async () => {
+    const root = mkdtempSync(join(tmpdir(), "factory-candidate-test-"));
+    roots.push(root);
+    const store = new ForgingReceiptStore(root);
+    const registry = new CandidateRegistry(store);
+    const initial = await registry.create(await acceptedProposal(store));
+    const result = evaluateCandidateConformance(
+      registry.getConformanceBundle(initial.id, initial.version),
+    );
+    const passed = await registry.recordConformancePass(
+      initial.id,
+      initial.version,
+      result,
+    );
+    store.forgeConformanceReceipt = true;
+
+    await expect(registry.verify(passed)).resolves.toMatchObject({
+      valid: false,
+      issues: expect.arrayContaining([
+        "Candidate conformance receipt is invalid.",
+      ]),
+    });
+  });
+
+  it("fails closed when the persisted conformance result is tampered", async () => {
+    const { root, store } = tempStore();
+    const registry = new CandidateRegistry(store);
+    const initial = await registry.create(await acceptedProposal(store));
+    const result = evaluateCandidateConformance(
+      registry.getConformanceBundle(initial.id, initial.version),
+    );
+    const passed = await registry.recordConformancePass(
+      initial.id,
+      initial.version,
+      result,
+    );
+    const candidate = registry.get(passed.id, passed.version);
+    const resultPath = join(
+      root,
+      "blobs",
+      "evidence",
+      `${candidate.conformanceResultDigest!.slice(7)}.bin`,
+    );
+    writeFileSync(resultPath, "tampered-conformance-result");
+
+    await expect(registry.verify(passed)).resolves.toMatchObject({
+      valid: false,
+      issues: expect.arrayContaining([
+        "Candidate conformance result is absent, conflicting, or digest-invalid.",
+      ]),
+    });
   });
 
   it("rejects source-fragment Candidates until licence compatibility is approved", async () => {
@@ -454,7 +643,7 @@ describe("Candidate registry", () => {
     const registry = new CandidateRegistry(store);
     const proposal = await acceptedProposal(store);
 
-    expect(() =>
+    await expect(
       registry.create({
         ...proposal,
         proposedClassification: "source-fragment",
@@ -463,7 +652,7 @@ describe("Candidate registry", () => {
           purpose: "proposed-copy" as const,
         })),
       }),
-    ).toThrow("approved licence");
+    ).rejects.toThrow("approved licence");
   });
 
   it("rejects secret-like fixture data before any Candidate artifact is persisted", async () => {
@@ -472,7 +661,7 @@ describe("Candidate registry", () => {
     const proposal = await acceptedProposal(store);
     const sentinel = `sk-proj-${"x".repeat(40)}`;
 
-    expect(() =>
+    await expect(
       registry.create({
         ...proposal,
         artifacts: {
@@ -483,14 +672,14 @@ describe("Candidate registry", () => {
           },
         },
       }),
-    ).toThrow("safe declarative data");
+    ).rejects.toThrow("safe declarative data");
     expect(persistedText(root)).not.toContain(sentinel);
   });
 
   it("fails closed when an immutable Candidate artifact is tampered", async () => {
     const { root, store } = tempStore();
     const registry = new CandidateRegistry(store);
-    const ref = registry.create(await acceptedProposal(store));
+    const ref = await registry.create(await acceptedProposal(store));
     const candidate = registry.get(ref.id, ref.version);
     const manifestPath = join(
       root,
@@ -500,11 +689,87 @@ describe("Candidate registry", () => {
     );
     writeFileSync(manifestPath, "tampered-candidate-artifact");
 
-    expect(registry.verify(ref)).toMatchObject({
+    await expect(registry.verify(ref)).resolves.toMatchObject({
       valid: false,
       issues: expect.arrayContaining([
         "Candidate artifact is absent, conflicting, or digest-invalid.",
       ]),
     });
+  });
+
+  it("loads and verifies a prior Candidate through its receipt-addressed reference", async () => {
+    const { store } = tempStore();
+    const first = new CandidateRegistry(store);
+    const ref = await first.create(await acceptedProposal(store));
+    const fresh = new CandidateRegistry(store);
+
+    expect(ref.lookupId).toMatch(/^candidate-[a-f0-9]{64}$/u);
+    expect(fresh.get(ref.lookupId, ref.version)).toMatchObject({
+      id: "safe-adapter",
+      version: "1.0.0",
+      status: "quarantined",
+    });
+    await expect(
+      fresh.verify(fresh.getRef(ref.lookupId, ref.version)),
+    ).resolves.toMatchObject({ valid: true, issues: [] });
+  });
+
+  it("rejects a receipt-addressed Candidate with mixed evidence executions", async () => {
+    const { root, store } = tempStore();
+    const ref = await new CandidateRegistry(store).create(
+      await acceptedProposal(store),
+    );
+    const forged = new ForgingReceiptStore(root);
+    forged.forgeEvidenceJob = true;
+
+    expect(() =>
+      new CandidateRegistry(forged).getRef(ref.lookupId, ref.version),
+    ).toThrow("evidence attestation");
+  });
+
+  it("rehydrates accepted evidence during Candidate create and verify", async () => {
+    const { root, store } = tempStore();
+    const registry = new CandidateRegistry(store);
+    const proposal = await acceptedProposal(store);
+    const summaryDigest =
+      proposal.completedEvidence.scans.scans[0]!.summary.digest;
+    const summaryPath = join(
+      root,
+      "blobs",
+      "evidence",
+      `${summaryDigest.slice(7)}.bin`,
+    );
+    rmSync(summaryPath);
+
+    const ref = await registry.create(proposal);
+    expect(existsSync(summaryPath)).toBe(true);
+    rmSync(summaryPath);
+
+    await expect(registry.verify(ref)).resolves.toMatchObject({ valid: true });
+    expect(existsSync(summaryPath)).toBe(true);
+  });
+
+  it("enforces deterministic id@version uniqueness across registry instances", async () => {
+    const { store } = tempStore();
+    const proposal = await acceptedProposal(store);
+    const first = await new CandidateRegistry(store).create(proposal);
+    const replayed = await new CandidateRegistry(store).create(
+      structuredClone(proposal),
+    );
+
+    expect(replayed).toEqual(first);
+    await expect(
+      new CandidateRegistry(store).create({
+        ...structuredClone(proposal),
+        proposedFactoryKey: "candidate.other-adapter",
+        artifacts: {
+          ...structuredClone(proposal.artifacts),
+          manifest: {
+            ...structuredClone(proposal.artifacts.manifest),
+            proposedFactoryKey: "candidate.other-adapter",
+          },
+        },
+      }),
+    ).rejects.toThrow("Receipt sequence conflict");
   });
 });

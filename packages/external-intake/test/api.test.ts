@@ -43,7 +43,8 @@ afterEach(() => {
 
 describe("External Intake module API", () => {
   it("submits local batch data as independent immutable request items", () => {
-    const api = createExternalIntakeApi(tempStore());
+    const store = tempStore();
+    const api = createExternalIntakeApi(store);
 
     const result = api.submitBatch({
       apiVersion: "factory.external-intake-batch/v1",
@@ -68,6 +69,14 @@ describe("External Intake module API", () => {
       failureCode: "invalid-intake-request",
     });
     expect(api.status("safe-source")).toEqual({
+      id: "safe-source",
+      status: "requested",
+      producerVersion: "0.1.0",
+      recordDigests: [result.byId["safe-source"]!.request!.digest],
+    });
+    const lookupId = result.byId["safe-source"]!.lookupId!;
+    expect(lookupId).toMatch(/^job-[a-f0-9]{64}$/u);
+    expect(createExternalIntakeApi(store).status(lookupId)).toEqual({
       id: "safe-source",
       status: "requested",
       producerVersion: "0.1.0",

@@ -280,11 +280,30 @@ export class GraphSemanticError extends Error {
   }
 }
 
+function candidateCapabilityIssues(
+  graph: ApplicationGraphV1,
+): GraphValidationIssue[] {
+  return graph.integration.capabilities.flatMap((capability, index) =>
+    capability.key.startsWith("candidate.")
+      ? [
+          {
+            code: "integration.capability.candidate_reserved",
+            message: `Capability '${capability.key}' uses the reserved Candidate namespace.`,
+            path: ["integration", "capabilities", index, "key"] as const,
+          },
+        ]
+      : [],
+  );
+}
+
 export function parseApplicationGraph(input: unknown): ApplicationGraphV1 {
   const graph = applicationGraphSchema.parse(input);
-  const compositionIssues = compositionGraphSymbolIssues(graph);
-  if (compositionIssues.length > 0) {
-    throw new GraphSemanticError(compositionIssues);
+  const parsingIssues = [
+    ...candidateCapabilityIssues(graph),
+    ...compositionGraphSymbolIssues(graph),
+  ];
+  if (parsingIssues.length > 0) {
+    throw new GraphSemanticError(parsingIssues);
   }
   return graph;
 }
@@ -378,6 +397,7 @@ export function validateApplicationGraph(
     message: string,
     path: readonly (string | number)[],
   ) => issues.push({ code, message, path });
+  issues.push(...candidateCapabilityIssues(graph));
 
   const pageIds = new Set(graph.page.pages.map((page) => page.id));
   for (const duplicate of duplicateValues(

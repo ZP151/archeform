@@ -256,6 +256,29 @@ describe("compilation target registry", () => {
     ).toThrow("Published revision id is required");
   });
 
+  it("rejects a Candidate capability before compilation even with a declared external provider", () => {
+    const graph = structuredClone(publishedExpense.graph);
+    graph.integration = {
+      providers: [{ id: "external-adapter", type: "http", version: "1.0.0" }],
+      capabilities: [
+        {
+          key: "candidate.safe-adapter",
+          providerId: "external-adapter",
+          operation: "project",
+        },
+      ],
+    };
+    const input: PublishedGraphInput = {
+      publishedRevisionId: "published-candidate-capability-1",
+      graph,
+      compositionLock: publishedExpense.compositionLock,
+    };
+
+    expect(() => buildCompilationPlan(input)).toThrow(
+      "Candidate capabilities cannot be compiled",
+    );
+  });
+
   it("generates deterministic, isolated Web/API/database source from a published Graph", () => {
     const bundle = generateApplicationBundle(publishedExpense);
 

@@ -139,6 +139,28 @@ describe("ApplicationGraphV1", () => {
     expect(validateApplicationGraph(locked)).toEqual([]);
   });
 
+  it("rejects the reserved Candidate capability namespace in parsing and semantic validation", () => {
+    const invalid = structuredClone(expenseGraph);
+    invalid.integration = {
+      providers: [{ id: "external-adapter", type: "http", version: "1.0.0" }],
+      capabilities: [
+        {
+          key: "candidate.safe-adapter",
+          providerId: "external-adapter",
+          operation: "project",
+        },
+      ],
+    };
+
+    expect(() => parseApplicationGraph(invalid)).toThrow(GraphSemanticError);
+    expect(validateApplicationGraph(invalid)).toContainEqual({
+      code: "integration.capability.candidate_reserved",
+      message:
+        "Capability 'candidate.safe-adapter' uses the reserved Candidate namespace.",
+      path: ["integration", "capabilities", 0, "key"],
+    });
+  });
+
   it.each([
     ["API version", { apiVersion: "factory.candidate-capability/v1" }],
     ["identity", { id: "safe-adapter", version: "1.0.0" }],

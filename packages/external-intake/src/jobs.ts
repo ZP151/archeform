@@ -1,4 +1,8 @@
-import { canonicalRecordDigest, type Sha256Digest } from "./canonical.js";
+import {
+  canonicalJson,
+  canonicalRecordDigest,
+  type Sha256Digest,
+} from "./canonical.js";
 import {
   parseEvidenceBundle,
   type EvidenceBundleV1,
@@ -727,6 +731,114 @@ function evidenceRecord(
       inventoryDigest: inventory.inventoryDigest,
     },
   });
+}
+
+function completedVerificationScanners(): readonly LocalScannerV1[] {
+  return SCAN_KIND_ORDER.map((kind) => ({
+    kind,
+    ...PINNED_SCANNER_IDENTITIES[kind],
+    async scan() {
+      throw new EvidencePipelineFailure(
+        "receipt-chain-invalid",
+        "Completed evidence verification cannot execute a scanner.",
+      );
+    },
+  }));
+}
+
+/**
+ * Reuses the accepted Task 3 completion boundary without executing scanners.
+ * It validates the seven-phase receipt chain, immutable parents, normalized
+ * checkpoints, deterministic artifact rehydration, execution identity, and
+ * terminal EvidenceBundle binding.
+ */
+export async function verifyCompletedEvidence(
+  input: IntakeJobV1,
+  completed: CompletedEvidenceRefV1,
+  store: ExternalIntakeStore,
+): Promise<CompletedEvidenceRefV1> {
+  if (
+    !isPlainObject(completed) ||
+    !hasExactKeys(completed, [
+      "executionId",
+      "status",
+      "evidence",
+      "scans",
+      "inventory",
+      "receipts",
+      "resume",
+    ]) ||
+    completed.status !== "evidenced" ||
+    completed.executionId !== completed.resume.executionId ||
+    canonicalJson(completed.receipts) !==
+      canonicalJson(completed.resume.receipts) ||
+    completed.receipts.length !== RECEIPT_PHASE_PREFIX.length
+  ) {
+    throw new EvidencePipelineFailure(
+      "receipt-chain-invalid",
+      "Completed evidence reference is malformed.",
+    );
+  }
+  const job = validateJob({ ...input, resume: completed.resume });
+  const resumed = validateResumePrefix(job, completed.resume, store);
+  if (!resumed.complete || resumed.inventory === undefined) {
+    throw new EvidencePipelineFailure(
+      "receipt-chain-invalid",
+      "Completed evidence does not contain all durable phases.",
+    );
+  }
+  const scans = await runPinnedLocalScans(
+    job.snapshotView,
+    completedVerificationScanners(),
+    store,
+    resumed.scanCheckpoint,
+  );
+  const parents = loadParents(job, store);
+  const expectedEvidence = evidenceRecord(
+    job,
+    job.acquisition,
+    parents.acquisition,
+    scans,
+    resumed.inventory,
+  );
+  let storedEvidence: EvidenceBundleV1;
+  try {
+    if (
+      !isPlainObject(completed.evidence) ||
+      !hasExactKeys(completed.evidence, ["kind", "digest"]) ||
+      completed.evidence.kind !== "evidence"
+    ) {
+      throw new Error("invalid evidence reference");
+    }
+    storedEvidence = parseEvidenceBundle(store.getRecord(completed.evidence));
+  } catch {
+    throw new EvidencePipelineFailure(
+      "receipt-chain-invalid",
+      "Completed EvidenceBundle is absent or invalid.",
+    );
+  }
+  const expectedDigest = canonicalRecordDigest(expectedEvidence);
+  const expectedExecutionId = executionId(job, {
+    status: "evidenced",
+    evidenceDigest: expectedDigest,
+    scan: scanFingerprint(scans),
+    inventory: inventoryFingerprint(resumed.inventory),
+  });
+  if (
+    completed.evidence.digest !== expectedDigest ||
+    canonicalJson(storedEvidence) !== canonicalJson(expectedEvidence) ||
+    completed.executionId !== expectedExecutionId ||
+    canonicalJson(completed.scans) !== canonicalJson(scans) ||
+    canonicalJson(completed.inventory) !== canonicalJson(resumed.inventory) ||
+    resumed.terminal.recordDigests.length !== 1 ||
+    resumed.terminal.recordDigests[0] !== expectedDigest
+  ) {
+    throw new EvidencePipelineFailure(
+      "receipt-chain-invalid",
+      "Completed evidence identity or terminal binding is invalid.",
+    );
+  }
+  return completed;
 }
 
 export async function runEvidencePipeline(
