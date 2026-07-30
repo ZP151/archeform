@@ -31,13 +31,13 @@ pre-generation collision contracts. Task 4 now owns the bounded proof that
 Restaurant and Ecommerce can compose the same Golden package identities through
 different Graph-symbol bindings and produce different outputs.
 
-| Task                                                   | State                             | Evidence-backed status                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| ------------------------------------------------------ | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1. Composition contract and canonical immutable lock   | `accepted`                        | Commits `d2f6517..27a8433`; final independent re-review clean. The accepted contract canonicalizes exact Golden package identities and fails closed on invalid composition input.                                                                                                                                                                                                                                                                                                              |
-| 2. Physical Graph and target contribution verification | `accepted`                        | Commits `33f9f31..0e1cc33`; final independent re-review clean. Physical packages, digests, runtime metadata, namespaces, and contribution collisions are verified fail closed.                                                                                                                                                                                                                                                                                                                 |
-| 3. Publish and compile an immutable composition lock   | `accepted`                        | Baseline commit `a2fac21`; repairs through `e509b6c`. Final task review and release review approved with no P0/P1/P2; independent QA passed with no P0/P1. Fresh verification passed Graph 19/19, Capabilities 108/108, Control Plane 111/111, compiler 169/169, Worker 74/74, all five typechecks, targeted Prettier, and `git diff --check`. The immutable publication, closed binding grammar, raw-before-canonicalization validation, and pre-generation collision contracts are accepted. |
-| 4. Shared-commerce composition with different bindings | `implementing` (fix round 3 of 5) | Baseline implementation `ed87dfd`; round-1 repair `b2a9d45`; round-2 repair `6410b92`. Round-2 re-review found one P1: a Restaurant-only compiler exception permits empty persisted composition locks. Remove it, make every profile with Factory capabilities fail on an empty persisted lock, and give all Restaurant runtime, page-runtime, and merchant-runtime fixtures explicit canonical locks. `a57ea6c` adds only the merchant fixture test; full compiler 172/172 remains required.  |
-| 5. Release gate and migrated-dispatch retirement       | `planned`                         | Blocked on accepted Task 4. Node 22 generated-runtime and isolated Compose evidence remains this task's later release gate.                                                                                                                                                                                                                                                                                                                                                                    |
+| Task                                                   | State                             | Evidence-backed status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------------------------------------------------------ | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Composition contract and canonical immutable lock   | `accepted`                        | Commits `d2f6517..27a8433`; final independent re-review clean. The accepted contract canonicalizes exact Golden package identities and fails closed on invalid composition input.                                                                                                                                                                                                                                                                                                                                                            |
+| 2. Physical Graph and target contribution verification | `accepted`                        | Commits `33f9f31..0e1cc33`; final independent re-review clean. Physical packages, digests, runtime metadata, namespaces, and contribution collisions are verified fail closed.                                                                                                                                                                                                                                                                                                                                                               |
+| 3. Publish and compile an immutable composition lock   | `accepted`                        | Baseline commit `a2fac21`; repairs through `e509b6c`. Final task review and release review approved with no P0/P1/P2; independent QA passed with no P0/P1. Fresh verification passed Graph 19/19, Capabilities 108/108, Control Plane 111/111, compiler 169/169, Worker 74/74, all five typechecks, targeted Prettier, and `git diff --check`. The immutable publication, closed binding grammar, raw-before-canonicalization validation, and pre-generation collision contracts are accepted.                                               |
+| 4. Shared-commerce composition with different bindings | `implementing` (fix round 3 of 5) | Baseline implementation `ed87dfd`; round-1 repair `b2a9d45`; round-2 repair `6410b92`. Round-2 re-review found one P1: a Restaurant-only compiler exception permits empty persisted composition locks. Remove it, make every profile with Factory capabilities fail on an empty persisted lock, and give all Restaurant compiler and capability-profile fixtures explicit canonical locks. `afc92d9` adds only the stale capability-profile fixture test; full Capabilities 112/112, compiler 172/172, and all frozen gates remain required. |
+| 5. Release gate and migrated-dispatch retirement       | `planned`                         | Blocked on accepted Task 4. Node 22 generated-runtime and isolated Compose evidence remains this task's later release gate.                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 Development, review, QA, release review, and fresh verification for Tasks 1
 through 3 ran on host Node 24. This is valid Task 3 acceptance evidence. It is
@@ -53,15 +53,16 @@ Task 5 release gate.
   ownership were frozen by `99801cd` and expanded only for the four review
   repairs by `65855a0`; `f9ac86b` adds only two legacy compiler test fixtures
   that require explicit persisted locks, and `a57ea6c` adds only the merchant
-  runtime test fixture for the same purpose. Existing Restaurant-specific
-  compiler dispatch remains untouched until Task 5 removes only behavior proven
-  migrated by Task 4.
+  runtime test fixture for the same purpose. `afc92d9` adds only the stale
+  capability-profile test fixture. Existing Restaurant-specific compiler
+  dispatch remains untouched until Task 5 removes only behavior proven migrated
+  by Task 4.
 - Contract artifact:
   `docs/superpowers/specs/2026-07-30-parameterized-capability-composition-design.md`
 - Task brief and plan slice:
   `docs/superpowers/plans/2026-07-30-parameterized-capability-composition.md`
   Task 4, as amended by `99801cd`, repair commit `65855a0`, and regression-scope
-  commits `f9ac86b` and `a57ea6c`.
+  commits `f9ac86b`, `a57ea6c`, and `afc92d9`.
 - Repair brief and task report:
   `.superpowers/sdd/2026-07-30-parameterized-capability-composition/task-4-r1-brief.md`
   and
@@ -103,6 +104,9 @@ other product path or contract change is authorized.
   - `packages/capabilities/assets/commerce.simulated-payment/1.0.1/`
 - `packages/capabilities/test/capability-registry.test.ts`
 - `packages/capabilities/test/composition-contract.test.ts`
+- `packages/capabilities/test/restaurant-profile.test.ts`, only to give the
+  stale test fixture helper an explicit nonempty canonical persisted composition
+  lock
 - `packages/graph/src/model.ts`
 - `packages/graph/test/application-graph.test.ts`
 - `apps/control-plane/src/lifecycle.service.ts`
@@ -130,6 +134,10 @@ is authorized.
 The three added compiler test files authorize fixture updates only. They do not
 authorize a production source fallback, generated-runtime behavior change, or
 Restaurant runtime dispatch change.
+
+The added capability profile test path authorizes only its stale fixture helper
+to supply an explicit nonempty canonical persisted composition lock. It does not
+authorize a Capabilities production source, runtime, or fallback change.
 
 ## Frozen Task 4 behavior and acceptance evidence
 
@@ -217,13 +225,18 @@ exact product paths:
    manifest declares no parameters. Add a Restaurant empty-lock rejection
    regression.
 
+   The Restaurant capability-profile test fixture helper must likewise use an
+   explicit nonempty canonical persisted composition lock; it must not preserve
+   a test-only empty-lock fallback.
+
 Round-3 evidence must also prove that targeted Prettier includes every changed
 source and test file, including
 `packages/compiler/test/restaurant-runtime.test.ts` and
 `packages/compiler/test/restaurant-page-runtime.test.ts`, and
 `packages/compiler/test/restaurant-merchant-runtime.test.ts`. The Task 4 report
 must name the exact executable script or command used for fresh verification of
-all nine physical package roots.
+all nine physical package roots. Targeted Prettier must also include
+`packages/capabilities/test/restaurant-profile.test.ts` when changed.
 
 Task 4 must produce all of the following evidence before moving to
 `ready_for_qa`:
@@ -264,18 +277,25 @@ Task 4 must produce all of the following evidence before moving to
 - The full compiler regression suite passes 172/172 with legacy test inputs
   carrying explicit nonempty persisted locks and without adding a source
   fallback or changing runtime dispatch.
+- The full Capabilities regression suite passes 112/112 with the Restaurant
+  profile fixture helper carrying an explicit nonempty canonical persisted lock.
+  All previously frozen Task 4 verification gates remain required.
 - Compiler evidence proves the Restaurant-only empty-lock exception is removed,
   every profile with Factory capabilities rejects an empty persisted lock, all
   Restaurant runtime/page-runtime/merchant-runtime fixture helpers use canonical
   locks matching Graph identity, and the Restaurant empty-lock regression
   passes.
+- Capability evidence proves the Restaurant profile fixture helper also uses an
+  explicit nonempty canonical persisted lock and preserves no test-only
+  empty-lock fallback.
 - The Task 4 report appends the exact focused RED commands and observed failure
   outcomes, focused GREEN commands and outcomes, and final verification commands
   and outcomes, explicitly including targeted Prettier and fresh verification
   of all nine physical package roots.
-- Targeted Prettier covers every changed source and test file, including both
-  newly authorized Restaurant runtime fixture tests. The Task 4 report names
-  the exact executable script or command for fresh nine-root verification.
+- Targeted Prettier covers every changed source and test file, including all
+  three Restaurant compiler fixture tests and the Restaurant capability-profile
+  fixture test. The Task 4 report names the exact executable script or command
+  for fresh nine-root verification.
 - Independent task re-review confirming the original four P1 themes and all
   three scoped round-2 P1s plus the round-3 P1 are closed, the proof is
   load-bearing and confined to the permitted paths, and no compatibility
@@ -371,6 +391,8 @@ Task 3 has reconciled all required behavioral and governance evidence:
   the deferred P2 maintenance concern.
 - No production fallback or runtime dispatch change is authorized by the three
   added compiler regression-fixture paths.
+- No Capabilities production source, runtime, or fallback change is authorized
+  by the Restaurant profile test-fixture path.
 - No profile-specific empty-lock exception is permitted; historical empty
   bindings are valid only for a selected package whose manifest declares no
   parameters, inside a nonempty persisted composition lock.
@@ -389,8 +411,10 @@ Task 3 has reconciled all required behavioral and governance evidence:
 The integration owner removes the Restaurant-only empty-lock exception, adds a
 Restaurant rejection regression, and updates every Restaurant runtime and
 page-runtime and merchant-runtime fixture helper with an explicit canonical
-persisted lock matching Graph identity. Targeted Prettier covers every changed
-file, the report names the executable nine-root verification command, and the
-full compiler regression passes 172/172. Independent task re-review must close
-the P1 before Task 4 can move to `ready_for_qa`; Task 5 remains blocked until
-Task 4 reaches `accepted`.
+persisted lock matching Graph identity, and updates the stale Restaurant
+capability-profile fixture helper with the same canonical persisted-lock
+boundary. Targeted Prettier covers every changed file, the report names the
+executable nine-root verification command, full Capabilities passes 112/112,
+full compiler passes 172/172, and every frozen gate remains green. Independent
+task re-review must close the P1 before Task 4 can move to `ready_for_qa`; Task 5
+remains blocked until Task 4 reaches `accepted`.
