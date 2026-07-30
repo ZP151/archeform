@@ -24,6 +24,8 @@ describe("guided application composition", () => {
       name: "Travel approvals",
     });
     expect(graph.experience.theme.mode).toBe("dark");
+    expect(graph.integration).not.toHaveProperty("assetLocks");
+    expect(graph.integration.compositionSelections).toHaveLength(4);
     expect(() => assertValidApplicationGraph(graph)).not.toThrow();
     expect(guidedProfileSummary(graph)).toEqual({
       pages: 2,

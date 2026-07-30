@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import {
+  getCapabilityAsset,
+  resolveCapabilityComposition,
+} from "@factory/capabilities";
 import { createProfileDraft, profileStarterOptions } from "./profile-starters";
 
 describe("profile starters", () => {
@@ -19,7 +23,9 @@ describe("profile starters", () => {
     expect(ecommerce.metadata.name).toBe("Simple ecommerce");
     expect(expense.metadata.id).not.toBe(restaurant.metadata.id);
     expect(restaurant.integration.capabilities).toEqual(
-      expect.arrayContaining([expect.objectContaining({ key: "catalog.list" })]),
+      expect.arrayContaining([
+        expect.objectContaining({ key: "catalog.list" }),
+      ]),
     );
   });
 
@@ -29,6 +35,45 @@ describe("profile starters", () => {
 
     expect(createProfileDraft("expense-approval").metadata.name).toBe(
       "Expense approval",
+    );
+  });
+
+  it("composes every active profile from canonical Graph-symbol selections", () => {
+    const expectedPackageCounts = {
+      "expense-approval": 4,
+      "restaurant-ordering": 9,
+      "simple-ecommerce": 9,
+    } as const;
+
+    for (const { profile } of profileStarterOptions) {
+      const graph = createProfileDraft(profile);
+      const selections = graph.integration.compositionSelections ?? [];
+
+      expect(graph.integration).not.toHaveProperty("assetLocks");
+      expect(selections).toHaveLength(expectedPackageCounts[profile]);
+      expect(resolveCapabilityComposition({ selections }).packages).toEqual(
+        selections,
+      );
+      for (const selection of selections) {
+        const requiredParameters =
+          getCapabilityAsset(selection.lock.key).manifest.parameters?.filter(
+            ({ required }) => required,
+          ) ?? [];
+        for (const parameter of requiredParameters) {
+          expect(selection.bindings).toHaveProperty(parameter.key);
+        }
+      }
+    }
+
+    const restaurant = createProfileDraft("restaurant-ordering").integration
+      .compositionSelections!;
+    const ecommerce =
+      createProfileDraft("simple-ecommerce").integration.compositionSelections!;
+    expect(restaurant.map(({ lock }) => lock)).toEqual(
+      ecommerce.map(({ lock }) => lock),
+    );
+    expect(restaurant.map(({ bindings }) => bindings)).not.toEqual(
+      ecommerce.map(({ bindings }) => bindings),
     );
   });
 });

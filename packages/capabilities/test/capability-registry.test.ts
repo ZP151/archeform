@@ -8,10 +8,12 @@ import { dirname, join, resolve } from "node:path";
 
 import {
   assertGoldenCapabilityAssetLocks,
+  assertGoldenCapabilityComposition,
   capabilityCatalog,
   capabilityAssets,
   capabilitiesForProfile,
   composeCapabilityDraft,
+  composeDefaultCapabilityDraft,
   composeProfileDraft,
   getCapabilityAsset,
   getCapability,
@@ -1454,87 +1456,94 @@ describe("capability catalog", () => {
     );
   });
 
-  it("locks the selected Golden asset versions directly into composed Graphs", () => {
-    const graph = composeProfileDraft({
+  it("persists selected Golden identities as canonical composition selections", () => {
+    const graph = composeDefaultCapabilityDraft({
       profile: "expense-approval",
       optionalCapabilities: ["core.audit"],
     }).graph;
 
-    expect(graph.integration.assetLocks).toEqual(
+    expect(graph.integration.compositionSelections).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ key: "core.audit", lifecycle: "golden" }),
-        expect.objectContaining({ key: "core.crud", lifecycle: "golden" }),
-        expect.objectContaining({ key: "core.workflow", lifecycle: "golden" }),
+        expect.objectContaining({
+          lock: expect.objectContaining({
+            key: "core.audit",
+            lifecycle: "golden",
+          }),
+        }),
+        expect.objectContaining({
+          lock: expect.objectContaining({
+            key: "core.crud",
+            lifecycle: "golden",
+          }),
+        }),
+        expect.objectContaining({
+          lock: expect.objectContaining({
+            key: "core.workflow",
+            lifecycle: "golden",
+          }),
+        }),
       ]),
     );
-    expect(graph.integration.assetLocks).not.toContainEqual(
-      expect.objectContaining({ key: "core.notification" }),
+    expect(graph.integration.compositionSelections).not.toContainEqual(
+      expect.objectContaining({
+        lock: expect.objectContaining({ key: "core.notification" }),
+      }),
     );
-    expect(graph.integration.compositionProfile).toBe("expense-approval");
+    expect(graph.integration).not.toHaveProperty("assetLocks");
+    expect(graph.integration).not.toHaveProperty("compositionProfile");
   });
 
-  it("locks every exact core, commerce, and Restaurant asset required by the Restaurant starter", () => {
-    const graph = composeProfileDraft({
+  it("selects the complete nine-package shared recipe for Restaurant", () => {
+    const graph = composeDefaultCapabilityDraft({
       profile: "restaurant-ordering",
     }).graph;
 
     expect(
-      graph.integration.assetLocks?.map((lock) => lock.key).sort(),
+      graph.integration.compositionSelections
+        ?.map(({ lock }) => lock.key)
+        .sort(),
     ).toEqual([
       "commerce.cart",
       "commerce.catalog",
       "commerce.inventory",
       "commerce.order",
+      "commerce.simulated-payment",
       "core.audit",
       "core.crud",
       "core.notification",
       "core.workflow",
-      "restaurant.cashier",
-      "restaurant.kitchen",
-      "restaurant.menu",
-      "restaurant.ordering",
-      "restaurant.reporting",
-      "restaurant.table-session",
     ]);
-    expect(graph.integration.assetLocks).not.toContainEqual(
-      expect.objectContaining({ key: "commerce.simulated-payment" }),
-    );
+    expect(graph.integration).not.toHaveProperty("assetLocks");
   });
 
-  it("supplies every exact Restaurant operation from exactly one locked asset", () => {
-    const graph = composeProfileDraft({
+  it("supplies each declared shared-commerce operation from one selected asset", () => {
+    const graph = composeDefaultCapabilityDraft({
       profile: "restaurant-ordering",
     }).graph;
-    const lockedAssets = graph.integration.assetLocks!.map((lock) =>
-      getCapabilityAsset(lock.key),
+    const selectedAssets = graph.integration.compositionSelections!.map(
+      ({ lock }) => getCapabilityAsset(lock.key),
     );
 
-    for (const [key, operations] of Object.entries(restaurantOperations)) {
-      for (const operation of operations) {
-        expect(
-          graph.integration.capabilities.map((capability) => capability.key),
-          operation,
-        ).toContain(operation);
-        expect(
-          lockedAssets
-            .filter((asset) => asset.manifest.effects.includes(operation))
-            .map((asset) => asset.manifest.key),
-          operation,
-        ).toEqual([key]);
-      }
-    }
-
-    for (const operation of graph.integration.capabilities) {
+    for (const effect of [
+      "catalog.list",
+      "cart.add",
+      "inventory.reserve",
+      "order.create",
+      "payment.simulate",
+    ]) {
+      expect(graph.integration.capabilities.map(({ key }) => key)).toContain(
+        effect,
+      );
       expect(
-        lockedAssets.filter((asset) =>
-          asset.manifest.effects.includes(operation.key),
+        selectedAssets.filter((asset) =>
+          asset.manifest.effects.includes(effect),
         ),
-        operation.key,
+        effect,
       ).toHaveLength(1);
     }
   });
 
-  it("admits exact Golden assets by declared effects rather than profile membership", () => {
+  it("enforces recipe eligibility without using manifest profile membership", () => {
     const cartLock = {
       key: "commerce.cart",
       version: "1.0.0",
@@ -1549,7 +1558,7 @@ describe("capability catalog", () => {
         profile: "expense-approval",
         capabilityKeys: ["cart.add"],
       }),
-    ).not.toThrow();
+    ).toThrow("is not eligible for recipe 'expense-approval'");
 
     expect(() =>
       assertGoldenCapabilityAssetLocks([cartLock], {
@@ -1557,6 +1566,56 @@ describe("capability catalog", () => {
         capabilityKeys: ["unlocked.operation"],
       }),
     ).toThrow("is not provided by a locked Golden asset");
+  });
+
+  it("admits a dependency-complete Golden commerce composition", () => {
+    const baseGraph = structuredClone(
+      profileGraphs.find(({ profile }) => profile === "simple-ecommerce")!
+        .graph,
+    );
+    const activeSelections = composeDefaultCapabilityDraft({
+      profile: "simple-ecommerce",
+    }).graph.integration.compositionSelections!;
+    const commerceKeys = new Set([
+      "commerce.catalog",
+      "commerce.cart",
+      "commerce.inventory",
+      "commerce.order",
+      "commerce.simulated-payment",
+    ]);
+    const commerceSelections = activeSelections.filter(({ lock }) =>
+      commerceKeys.has(lock.key),
+    );
+    const context = {
+      profile: "simple-ecommerce",
+      capabilityKeys: [
+        "catalog.list",
+        "cart.add",
+        "inventory.reserve",
+        "order.create",
+        "payment.simulate",
+      ],
+      graph: baseGraph,
+    } as const;
+
+    expect(() =>
+      assertGoldenCapabilityComposition(
+        commerceSelections.filter(({ lock }) => lock.key === "commerce.cart"),
+        context,
+      ),
+    ).toThrow("requirement 'commerce.catalog-item@v1' has no provider");
+
+    const composition = assertGoldenCapabilityComposition(
+      commerceSelections,
+      context,
+    );
+    expect(composition.resolvedDependencyOrder).toEqual([
+      "commerce.catalog",
+      "commerce.cart",
+      "commerce.order",
+      "commerce.inventory",
+      "commerce.simulated-payment",
+    ]);
   });
 
   it("marks catalog-supported audit and notification capabilities as locked recipe requirements", () => {

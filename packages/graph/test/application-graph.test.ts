@@ -231,12 +231,37 @@ describe("ApplicationGraphV1", () => {
 
   it("keeps PageModel copy and exact Graph-symbol bindings in their separate valid boundaries", () => {
     const selected = draftGraphWithBindings({
+      entityKey: { graphSymbol: "graph.domain.expense" },
       routeKey: { graphSymbol: "graph.page.expense-list" },
+      actorRole: { graphSymbol: "graph.policy.employee" },
+      flowKey: { graphSymbol: "graph.flow.expense-approval" },
     }) as ApplicationGraphV1;
     selected.page.navigation[0]!.label = "Make a reservation";
 
     expect(parseApplicationGraph(selected)).toEqual(selected);
   });
+
+  it.each([
+    ["domain", "graph.domain.missing"],
+    ["page", "graph.page.missing"],
+    ["policy", "graph.policy.missing"],
+    ["flow", "graph.flow.missing"],
+  ])(
+    "rejects a Draft binding whose %s Graph symbol does not resolve",
+    (_, graphSymbol) => {
+      const selected = draftGraphWithBindings({
+        reference: { graphSymbol },
+      });
+
+      expect(() => parseApplicationGraph(selected)).toThrow(GraphSemanticError);
+      expect(validateApplicationGraph(selected)).toContainEqual(
+        expect.objectContaining({
+          code: "integration.composition_binding.symbol_missing",
+          message: `Graph symbol '${graphSymbol}' does not exist in the Application Graph.`,
+        }),
+      );
+    },
+  );
 
   it("rejects prototype-reserved Draft composition binding keys", () => {
     expect(() =>

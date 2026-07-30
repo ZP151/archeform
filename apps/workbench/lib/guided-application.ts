@@ -1,8 +1,7 @@
-import {
-  composeProfileDraft,
-  type FactoryProfile,
-} from "@factory/capabilities";
+import type { FactoryProfile } from "@factory/capabilities";
 import type { ApplicationGraphV1 } from "@factory/graph";
+
+import { createProfileDraft } from "./profile-starters";
 
 export type GuidedApplicationInput = {
   readonly profile: FactoryProfile;
@@ -59,10 +58,7 @@ export function createGuidedApplicationDraft(
   nonce: string,
 ): ApplicationGraphV1 {
   const name = normalizedApplicationName(input.name);
-  const graph = composeProfileDraft({
-    profile: input.profile,
-    optionalCapabilities: input.optionalCapabilities,
-  }).graph;
+  const graph = createProfileDraft(input.profile, input.optionalCapabilities);
   graph.metadata = {
     ...graph.metadata,
     id: applicationKey(name, normalizedNonce(nonce)),

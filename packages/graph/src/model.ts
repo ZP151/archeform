@@ -281,7 +281,12 @@ export class GraphSemanticError extends Error {
 }
 
 export function parseApplicationGraph(input: unknown): ApplicationGraphV1 {
-  return applicationGraphSchema.parse(input);
+  const graph = applicationGraphSchema.parse(input);
+  const compositionIssues = compositionGraphSymbolIssues(graph);
+  if (compositionIssues.length > 0) {
+    throw new GraphSemanticError(compositionIssues);
+  }
+  return graph;
 }
 
 function duplicateValues(values: readonly string[]): string[] {
@@ -292,6 +297,62 @@ function duplicateValues(values: readonly string[]): string[] {
     seen.add(value);
   }
   return [...duplicates].sort();
+}
+
+function compositionGraphSymbolIssues(
+  graph: ApplicationGraphV1,
+): GraphValidationIssue[] {
+  const symbolIds: Readonly<Record<string, ReadonlySet<string>>> = {
+    page: new Set([
+      ...graph.page.pages.map(({ id }) => id),
+      ...graph.page.navigation.map(({ id }) => id),
+    ]),
+    domain: new Set([
+      ...graph.domain.entities.map(({ key }) => key),
+      ...graph.domain.entities.flatMap(({ fields }) =>
+        fields.map(({ key }) => key),
+      ),
+    ]),
+    policy: new Set(graph.policy.roles),
+    flow: new Set([
+      ...graph.flow.flows.map(({ id }) => id),
+      ...graph.flow.flows.flatMap(({ states }) => states),
+      ...graph.flow.flows.flatMap(({ events }) => events),
+    ]),
+    integration: new Set([
+      ...graph.integration.providers.map(({ id }) => id),
+      ...graph.integration.capabilities.map(({ key }) => key),
+    ]),
+    experience: new Set([
+      ...Object.keys(graph.experience.theme.tokens),
+      ...graph.experience.locales,
+    ]),
+  };
+  const issues: GraphValidationIssue[] = [];
+  graph.integration.compositionSelections?.forEach(
+    (selection, selectionIndex) => {
+      for (const [bindingKey, bindingValue] of Object.entries(
+        selection.bindings,
+      )) {
+        if (typeof bindingValue !== "object") continue;
+        const [, model, id] = bindingValue.graphSymbol.split(".");
+        if (model && id && symbolIds[model]?.has(id)) continue;
+        issues.push({
+          code: "integration.composition_binding.symbol_missing",
+          message: `Graph symbol '${bindingValue.graphSymbol}' does not exist in the Application Graph.`,
+          path: [
+            "integration",
+            "compositionSelections",
+            selectionIndex,
+            "bindings",
+            bindingKey,
+            "graphSymbol",
+          ],
+        });
+      }
+    },
+  );
+  return issues;
 }
 
 /**
@@ -515,6 +576,7 @@ export function validateApplicationGraph(
       );
     }
   });
+  issues.push(...compositionGraphSymbolIssues(graph));
 
   graph.flow.flows.forEach((flow, flowIndex) => {
     const states = new Set(flow.states);

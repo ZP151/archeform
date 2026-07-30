@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   composeCapabilityDraft,
+  composeDefaultCapabilityDraft,
   createCapabilityCompositionLock,
   getCapabilityAsset,
 } from "@factory/capabilities";
@@ -271,6 +272,73 @@ describe("immutable composition compilation", () => {
     ).toContain("Product");
   });
 
+  it("compiles complete immutable Restaurant and Ecommerce composition recipes", () => {
+    const publishedProfile = (
+      profile: "restaurant-ordering" | "simple-ecommerce",
+    ): PublishedGraphInput => {
+      const draft = composeDefaultCapabilityDraft({ profile }).graph;
+      const selections = draft.integration.compositionSelections!;
+      const publishedGraph = structuredClone(draft);
+      delete publishedGraph.integration.compositionSelections;
+
+      expect(draft.integration).not.toHaveProperty("assetLocks");
+      expect(selections).toHaveLength(9);
+      expect(publishedGraph.integration).not.toHaveProperty(
+        "compositionSelections",
+      );
+      return {
+        publishedRevisionId: `published-${profile}-composition`,
+        graph: publishedGraph,
+        compositionLock: createCapabilityCompositionLock({
+          graphChecksum: hashApplicationGraph(publishedGraph),
+          selections,
+        }),
+      };
+    };
+    const restaurantInput = publishedProfile("restaurant-ordering");
+    const ecommerceInput = publishedProfile("simple-ecommerce");
+
+    expect(
+      restaurantInput.compositionLock.packages.map(({ lock }) => lock),
+    ).toEqual(ecommerceInput.compositionLock.packages.map(({ lock }) => lock));
+    expect(
+      restaurantInput.compositionLock.packages.map(({ bindings }) => bindings),
+    ).not.toEqual(
+      ecommerceInput.compositionLock.packages.map(({ bindings }) => bindings),
+    );
+
+    const restaurant = generateApplicationBundle(restaurantInput);
+    const ecommerce = generateApplicationBundle(ecommerceInput);
+    const restaurantFiles = Object.fromEntries(
+      restaurant.files.map(({ path, content }) => [path, content]),
+    );
+    const ecommerceFiles = Object.fromEntries(
+      ecommerce.files.map(({ path, content }) => [path, content]),
+    );
+
+    expect(restaurantFiles).toHaveProperty(
+      "web/src/app/customer-menu/page.tsx",
+    );
+    expect(ecommerceFiles).toHaveProperty("web/src/app/catalog/page.tsx");
+    expect(restaurantFiles).toHaveProperty(
+      "database/prisma/fragments/menu-item.prisma",
+    );
+    expect(ecommerceFiles).toHaveProperty(
+      "database/prisma/fragments/product.prisma",
+    );
+    expect(restaurantFiles["web/app/page-runtime.tsx"]).toContain("Menu");
+    expect(ecommerceFiles["web/app/page-runtime.tsx"]).toContain("Catalog");
+    expect(restaurantFiles["database/prisma/seed.ts"]).toContain(
+      "Margherita pizza",
+    );
+    expect(ecommerceFiles["database/prisma/seed.ts"]).toContain(
+      "Everyday tote",
+    );
+    expect(restaurantFiles["api/test/journey.generated.test.ts"]).not.toEqual(
+      ecommerceFiles["api/test/journey.generated.test.ts"],
+    );
+  });
+
   it("rejects a tampered persisted lock before rendering", () => {
     expect(() =>
       resolveTargetContributions({
@@ -387,7 +455,6 @@ describe("immutable composition compilation", () => {
             ]
           : loadContributions(asset, root),
       );
-
     try {
       expect(() =>
         resolveTargetContributions({
@@ -479,6 +546,7 @@ describe("immutable composition compilation", () => {
     };
     const resolveAsset = capabilityRegistry.resolveCapabilityAssetLock;
     const loadContributions = capabilityNode.loadCapabilityAssetContributions;
+    const loadTemplates = capabilityNode.loadCapabilityAssetTemplates;
     const resolveSpy = vi
       .spyOn(capabilityRegistry, "resolveCapabilityAssetLock")
       .mockImplementation((lock) =>
@@ -504,6 +572,13 @@ describe("immutable composition compilation", () => {
             ]
           : loadContributions(asset, root),
       );
+    const templateSpy = vi
+      .spyOn(capabilityNode, "loadCapabilityAssetTemplates")
+      .mockImplementation((asset, root) =>
+        asset.manifest.key === auditLock.key
+          ? loadTemplates(auditAsset, root)
+          : loadTemplates(asset, root),
+      );
     const rendererSpy = vi
       .spyOn(restaurantRuntimeRenderer, "renderRestaurantRuntime")
       .mockImplementation(() => {
@@ -525,6 +600,7 @@ describe("immutable composition compilation", () => {
       expect(rendererSpy).not.toHaveBeenCalled();
     } finally {
       rendererSpy.mockRestore();
+      templateSpy.mockRestore();
       loadSpy.mockRestore();
       resolveSpy.mockRestore();
     }

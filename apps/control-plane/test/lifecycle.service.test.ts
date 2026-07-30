@@ -91,16 +91,65 @@ const coreAuditLock = (() => {
   return { key, version, packageRoot, manifestDigest, lifecycle };
 })();
 
+const historicalCoreAuditLock = {
+  key: "core.audit",
+  version: "1.0.0",
+  packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
+  manifestDigest:
+    "sha256:fe69596d29f87db7e491eeb5c77160dc800669fbc49eb6572deaf2ecc65f55d3",
+  lifecycle: "golden" as const,
+};
+
 const coreCrudLock = (() => {
   const { key, version, packageRoot, manifestDigest, lifecycle } =
     getCapabilityAsset("core.crud").manifest;
   return { key, version, packageRoot, manifestDigest, lifecycle };
 })();
 
-const selectedDraftGraph = {
+const coreWorkflowLock = (() => {
+  const { key, version, packageRoot, manifestDigest, lifecycle } =
+    getCapabilityAsset("core.workflow").manifest;
+  return { key, version, packageRoot, manifestDigest, lifecycle };
+})();
+
+const selectedPublishedGraph: ApplicationGraphV1 = {
   ...localApplicationGraph,
+  page: {
+    pages: [
+      { id: "expenses", route: "/expenses", title: "Expenses", blocks: [] },
+    ],
+    navigation: [{ id: "expenses", label: "Expenses", pageId: "expenses" }],
+  },
+  domain: {
+    entities: [
+      {
+        key: "expense",
+        label: "Expense",
+        fields: [{ key: "amount", type: "decimal", required: true }],
+        indexes: [],
+      },
+    ],
+    relations: [],
+  },
+  policy: { roles: ["employee"], permissions: [] },
+  flow: {
+    flows: [
+      {
+        id: "expense-approval",
+        entity: "expense",
+        initialState: "draft",
+        states: ["draft"],
+        events: [],
+        transitions: [],
+      },
+    ],
+  },
+};
+
+const selectedDraftGraph = {
+  ...selectedPublishedGraph,
   integration: {
-    ...localApplicationGraph.integration,
+    ...selectedPublishedGraph.integration,
     compositionSelections: [
       {
         lock: coreCrudLock,
@@ -113,8 +162,19 @@ const selectedDraftGraph = {
   },
 };
 
+function selectedDraftWithMissingSymbol(
+  bindingKey: string,
+  graphSymbol: string,
+): ApplicationGraphV1 {
+  const graph = structuredClone(selectedDraftGraph) as ApplicationGraphV1;
+  Object.assign(graph.integration.compositionSelections![0]!.bindings, {
+    [bindingKey]: { graphSymbol },
+  });
+  return graph;
+}
+
 const selectedCompositionLock = createCapabilityCompositionLock({
-  graphChecksum: hashApplicationGraph(localApplicationGraph),
+  graphChecksum: hashApplicationGraph(selectedPublishedGraph),
   selections: selectedDraftGraph.integration.compositionSelections,
 });
 const emptyCompositionLock = createCapabilityCompositionLock({
@@ -340,6 +400,24 @@ describe("LifecycleService", () => {
     },
   );
 
+  it("rejects an unresolved domain binding before creating the first Draft", async () => {
+    prisma.workspace.upsert.mockResolvedValue(workspace);
+    prisma.applicationGraph.create.mockResolvedValue({
+      ...applicationGraph,
+      draftRevisions: [draftRevision],
+    });
+    const unsafeGraph = selectedDraftWithMissingSymbol(
+      "entityKey",
+      "graph.domain.missing",
+    );
+
+    await expect(
+      service.createLocalApplicationGraph({ graph: unsafeGraph }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.workspace.upsert).not.toHaveBeenCalled();
+    expect(prisma.applicationGraph.create).not.toHaveBeenCalled();
+  });
+
   it("rejects direct string composition copy before persisting a proposed Draft", async () => {
     prisma.draftRevision.findFirst.mockResolvedValue({
       ...draftRevision,
@@ -368,6 +446,41 @@ describe("LifecycleService", () => {
     await expect(
       service.proposeDraftRevision(applicationGraph.id, {
         brief: "Update the integration configuration.",
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: "ai_proposal_rejected" }),
+    });
+    expect(prisma.draftRevision.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unresolved page binding before persisting a proposed Draft", async () => {
+    prisma.draftRevision.findFirst.mockResolvedValue({
+      ...draftRevision,
+      graph: selectedDraftGraph,
+      applicationGraph: { ...applicationGraph, workspace },
+    });
+    proposalProvider.propose.mockResolvedValue({
+      diff: {
+        apiVersion: "factory.graph-diff/v1",
+        operations: [
+          {
+            op: "replace",
+            path: "/integration/compositionSelections/0/bindings/routeKey/graphSymbol",
+            value: "graph.page.missing",
+          },
+        ],
+      },
+      impact: {
+        summary: "Changes a composition reference.",
+        affectedModels: ["integration"],
+        risks: [],
+      },
+      testSuggestions: [],
+    });
+
+    await expect(
+      service.proposeDraftRevision(applicationGraph.id, {
+        brief: "Update the composition reference.",
       }),
     ).rejects.toMatchObject({
       response: expect.objectContaining({ code: "ai_proposal_rejected" }),
@@ -608,6 +721,22 @@ describe("LifecycleService", () => {
     },
   );
 
+  it("rejects an unresolved policy binding before appending a Draft revision", async () => {
+    prisma.applicationGraph.findUnique.mockResolvedValue({
+      ...applicationGraph,
+      workspace,
+    });
+    const unsafeGraph = selectedDraftWithMissingSymbol(
+      "actorRole",
+      "graph.policy.missing",
+    );
+
+    await expect(
+      service.appendDraftRevision(applicationGraph.id, { graph: unsafeGraph }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.draftRevision.create).not.toHaveBeenCalled();
+  });
+
   it("reads the latest draft revision", async () => {
     prisma.applicationGraph.findUnique.mockResolvedValue(applicationGraph);
     prisma.draftRevision.findFirst.mockResolvedValue(draftRevision);
@@ -698,15 +827,15 @@ describe("LifecycleService", () => {
     });
 
     expect(published).toMatchObject({
-      graph: localApplicationGraph,
+      graph: selectedPublishedGraph,
       compositionLock: selectedCompositionLock,
       compositionLockHash: selectedCompositionLock.lockDigest,
     });
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
     expect(prisma.publishedRevision.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        graph: localApplicationGraph,
-        graphHash: hashApplicationGraph(localApplicationGraph),
+        graph: selectedPublishedGraph,
+        graphHash: hashApplicationGraph(selectedPublishedGraph),
         compositionLock: selectedCompositionLock,
         compositionLockHash: selectedCompositionLock.lockDigest,
       }),
@@ -763,18 +892,53 @@ describe("LifecycleService", () => {
     expect(prisma.publishedRevision.create).not.toHaveBeenCalled();
   });
 
+  it("rejects an unresolved flow binding before creating an immutable lock", async () => {
+    const unsafeGraph: ApplicationGraphV1 = {
+      ...localApplicationGraph,
+      integration: {
+        ...localApplicationGraph.integration,
+        compositionSelections: [
+          {
+            lock: coreWorkflowLock,
+            bindings: {
+              flowKey: { graphSymbol: "graph.flow.missing" },
+            },
+          },
+        ],
+      },
+    };
+    prisma.draftRevision.findFirst.mockResolvedValue({
+      ...draftRevision,
+      graph: unsafeGraph,
+      applicationGraph: { ...applicationGraph, workspace },
+    });
+    prisma.publishedRevision.findFirst.mockResolvedValue(null);
+    prisma.publishedRevision.count.mockResolvedValue(0);
+    prisma.publishedRevision.create.mockImplementation(async ({ data }) => ({
+      id: "published-unresolved-flow",
+      ...data,
+    }));
+
+    await expect(
+      service.publishDraft(applicationGraph.id, {
+        draftRevisionId: draftRevision.id,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.publishedRevision.create).not.toHaveBeenCalled();
+  });
+
   it("publishes a legacy asset-lock Draft when every selected package needs no bindings", async () => {
     const graph = {
       ...localApplicationGraph,
       integration: {
         ...localApplicationGraph.integration,
         compositionProfile: "expense-approval",
-        assetLocks: [coreAuditLock],
+        assetLocks: [historicalCoreAuditLock],
       },
     };
     const expectedLock = createCapabilityCompositionLock({
       graphChecksum: hashApplicationGraph(graph),
-      selections: [{ lock: coreAuditLock, bindings: {} }],
+      selections: [{ lock: historicalCoreAuditLock, bindings: {} }],
     });
     prisma.draftRevision.findFirst.mockResolvedValue({
       ...draftRevision,

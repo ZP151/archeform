@@ -3,7 +3,6 @@ import { dirname, resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 
 import {
-  assertGoldenCapabilityAssetLocks,
   createCapabilityCompositionLock,
   resolveCapabilityAssetLock,
   type CapabilityBindingValueV1,
@@ -579,9 +578,18 @@ function renderCapabilityTemplate(
 
 function resolveCapabilityTemplateContributions(
   graph: ApplicationGraphV1,
+  compositionLock: CapabilityCompositionLockV1,
   repositoryRoot?: string,
 ): readonly ResolvedCapabilityTemplateContribution[] {
-  const locks = graph.integration.assetLocks ?? [];
+  const immutableLocks = compositionLock.packages.map(({ lock }) => lock);
+  // Explicit legacy profile compilations predate composition locks. Keep that
+  // adapter isolated behind the legacy profile marker; active generic Drafts
+  // have neither this marker nor Graph-owned asset locks.
+  const locks = immutableLocks.length
+    ? immutableLocks
+    : graph.integration.compositionProfile
+      ? (graph.integration.assetLocks ?? [])
+      : [];
   const factoryCapabilities = graph.integration.capabilities.filter(
     (capability) => capability.providerId === "factory",
   );
@@ -596,16 +604,6 @@ function resolveCapabilityTemplateContributions(
     }
     return [];
   }
-  if (!graph.integration.compositionProfile) {
-    throw new Error(
-      "Golden asset locks require a composition profile before compilation.",
-    );
-  }
-
-  assertGoldenCapabilityAssetLocks(locks, {
-    profile: graph.integration.compositionProfile,
-    capabilityKeys,
-  });
   const root = findFactoryRepositoryRoot(repositoryRoot ?? process.cwd());
   const targets = new Set<string>();
   const contributions = locks.flatMap((lock) => {
@@ -2481,14 +2479,23 @@ function renderDocumentation(graph: ApplicationGraphV1): string {
   return `# ${graph.metadata.name}\n\nThis application was compiled from a Factory Published Graph.\n\n## Generated documentation\n\n- [API reference](api-reference.md)\n- [Entity relationship diagram](entity-relationship.md)\n- [Permission matrix](permission-matrix.md)\n\n## Entities\n${entities.join("\n") || "- No entities declared."}\n`;
 }
 
-function renderCapabilityLock(graph: ApplicationGraphV1): string {
+function renderCapabilityLock(
+  graph: ApplicationGraphV1,
+  compositionLock: CapabilityCompositionLockV1,
+): string {
+  const immutableLocks = compositionLock.packages.map(({ lock }) => lock);
+  const assets = immutableLocks.length
+    ? immutableLocks
+    : graph.integration.compositionProfile
+      ? (graph.integration.assetLocks ?? [])
+      : [];
   return (
     JSON.stringify(
       {
         apiVersion: "factory.capability-lock/v1",
         applicationId: graph.metadata.id,
         graphHash: hashApplicationGraph(graph),
-        assets: graph.integration.assetLocks ?? [],
+        assets,
       },
       null,
       2,
@@ -2543,6 +2550,7 @@ export function generateApplicationBundle(
   };
   const capabilityTemplates = resolveCapabilityTemplateContributions(
     graph,
+    input.compositionLock,
     options.repositoryRoot,
   );
   const targetContributionPlans = resolveTargetContributionPlans(
@@ -2573,7 +2581,7 @@ export function generateApplicationBundle(
     },
     {
       path: "capability-lock.json",
-      render: () => renderCapabilityLock(graph),
+      render: () => renderCapabilityLock(graph, input.compositionLock),
     },
     {
       path: "composition-lock.json",

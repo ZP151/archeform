@@ -1,5 +1,5 @@
 import {
-  profileGraphs,
+  composeDefaultCapabilityDraft,
   type FactoryProfile,
 } from "@factory/capabilities";
 import type { ApplicationGraphV1 } from "@factory/graph";
@@ -28,8 +28,9 @@ export const profileStarterOptions: readonly ProfileStarterOption[] = [
   },
 ] as const;
 
-export function createProfileDraft(profile: FactoryProfile): ApplicationGraphV1 {
-  const starter = profileGraphs.find((candidate) => candidate.profile === profile);
-  if (!starter) throw new Error(`Unknown profile starter '${profile}'.`);
-  return structuredClone(starter.graph);
+export function createProfileDraft(
+  profile: FactoryProfile,
+  optionalCapabilities?: readonly string[],
+): ApplicationGraphV1 {
+  return composeDefaultCapabilityDraft({ profile, optionalCapabilities }).graph;
 }
