@@ -35,9 +35,9 @@ Planning is complete for the first quarantine-first bulk Candidate Intake
 slice, and the Controller has accepted the design contract. Task 1 is now
 `accepted` with its bounded shared-contract amendment reconciled; its original
 release behavior remains accepted and frozen. Task 2 is `accepted` after Fix
-Round 2/5. Tasks 3 through 6 remain `planned`, with Task 3 ready for bounded
-dispatch. The system will ingest the
-43 fixed-reference portfolio as metadata, retain the 108 scenarios as
+Round 2/5. Task 3 is `implementing`; Tasks 4 through 6 remain `planned`. The
+system will ingest the 43 fixed-reference portfolio as metadata, retain the 108
+scenarios as
 composition demand signals, and produce only quarantined evidence,
 non-executable Candidate records, and pending-review promotion packets.
 
@@ -48,8 +48,9 @@ amendment has now passed re-QA and release review and is accepted.
 
 The Commercial Capability Foundation remains the Golden execution boundary.
 External Intake Task 2 is accepted and frozen. Its acceptance satisfies Task
-3's recorded dependency gate, so Task 3 is ready for bounded dispatch. Tasks
-4-6 remain blocked on their preceding Intake dependencies.
+3's recorded dependency gate. The PM has dispatched Task 3 under its frozen
+External Evidence Pipeline contract and exact paths. Tasks 4-6 remain blocked
+on their preceding Intake dependencies.
 
 Independent Task 2 review FAILED with three P1 findings and one P2. The
 Controller resolved its schema incompatibility by selecting a distinct
@@ -71,14 +72,14 @@ reconciled Fix Rounds 1 and 2 and moved the amendment
 `implementing -> ready_for_qa`; its contract and exact amendment-owned paths
 remain frozen.
 
-| Task                                             | State      | Specialization      | Contract owner                   | Dependency gate                                             |
-| ------------------------------------------------ | ---------- | ------------------- | -------------------------------- | ----------------------------------------------------------- |
-| 1. Candidate contracts and immutable persistence | `accepted` | `integration`       | External Intake Contract         | Original release and bounded amendment accepted and frozen. |
-| 2. Fixed-source provenance and notices           | `accepted` | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
-| 3. Deterministic scan orchestration              | `planned`  | `platform-security` | External Evidence Pipeline       | Dependencies satisfied; ready for bounded dispatch.         |
-| 4. Candidate registry, API, CLI, and isolation   | `planned`  | `integration`       | Candidate Registry               | Tasks 1-3 and Commercial Foundation Task 1 accepted.        |
-| 5. Review-only promotion packets                 | `planned`  | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.           |
-| 6. Bulk acceptance and release evidence          | `planned`  | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.        |
+| Task                                             | State          | Specialization      | Contract owner                   | Dependency gate                                             |
+| ------------------------------------------------ | -------------- | ------------------- | -------------------------------- | ----------------------------------------------------------- |
+| 1. Candidate contracts and immutable persistence | `accepted`     | `integration`       | External Intake Contract         | Original release and bounded amendment accepted and frozen. |
+| 2. Fixed-source provenance and notices           | `accepted`     | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
+| 3. Deterministic scan orchestration              | `implementing` | `platform-security` | External Evidence Pipeline       | Dependencies accepted; contract and exact paths frozen.     |
+| 4. Candidate registry, API, CLI, and isolation   | `planned`      | `integration`       | Candidate Registry               | Tasks 1-3 and Commercial Foundation Task 1 accepted.        |
+| 5. Review-only promotion packets                 | `planned`      | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.           |
+| 6. Bulk acceptance and release evidence          | `planned`      | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.        |
 
 ## Task 1 card: Candidate contracts and immutable persistence
 
@@ -429,19 +430,25 @@ The PM preserved the final transitions:
    reconciliation in this ledger update.
 
 Task 2 is accepted and frozen. Its acceptance satisfies Task 3's dependency
-gate, making Task 3 ready for bounded dispatch under its recorded contract and
-exact paths. Tasks 4 through 6 remain `planned`.
+gate; the PM has now dispatched Task 3 under its recorded contract and exact
+paths. Tasks 4 through 6 remain `planned`.
 
 ## Task 3 card: Deterministic local scans and module inventory
 
-- **State:** `planned`
+- **State:** `implementing`
 - **Specialization:** `platform-security`
 - **Contract owner:** External Evidence Pipeline
 - **Contract artifact:** accepted Task 1 records/store including the acquisition
   record, accepted Task 2 snapshot/acquisition output, and code-owned pinned
   scanner/module-inventory interfaces.
 - **Dependencies:** Task 1 bounded amendment and Task 2 `accepted`. Both are
-  satisfied; Task 3 is ready for bounded dispatch.
+  accepted and frozen; Task 3 is dispatched.
+
+The accepted Task 1 acquisition-record amendment, accepted Task 2
+`{ snapshot, acquisition }` output, code-owned pinned scanner/module-inventory
+interfaces, and exact allowed paths below are frozen for Task 3. Any contract,
+dependency, or path change stops implementation and returns Task 3 to a
+recorded repair round. Tasks 4 through 6 remain `planned`.
 
 ### Exact allowed paths
 
@@ -614,9 +621,8 @@ exact paths. Tasks 4 through 6 remain `planned`.
   Capabilities, and compiler test paths. Task 4 waits for Commercial Foundation
   Task 1 acceptance and exclusive path ownership.
 
-The active smallest valuable slice is bounded Task 3 dispatch under its recorded
-External Evidence Pipeline contract and exact paths. Task 1's original release
-and bounded amendment and Task 2's accepted code set
-`515e0ba + 3dcb20f + dcaddf4` remain frozen. Tasks 3 through 6 remain `planned`
-until explicitly dispatched; Tasks 4 through 6 retain their recorded dependency
-gates.
+The active smallest valuable slice is bounded Task 3 implementation under its
+frozen External Evidence Pipeline contract and exact paths. Task 1's original
+release and bounded amendment and Task 2's accepted code set
+`515e0ba + 3dcb20f + dcaddf4` remain frozen. Tasks 4 through 6 remain `planned`
+and retain their recorded dependency gates.
