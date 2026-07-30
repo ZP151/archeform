@@ -281,6 +281,7 @@ git commit -m "feat: verify multi-target capability contributions"
 - Modify: `packages/compiler/test/restaurant-runtime.test.ts`
 - Modify: `packages/compiler/test/restaurant-page-runtime.test.ts`
 - Modify: `packages/compiler/test/restaurant-merchant-runtime.test.ts`
+- Modify: `packages/compiler/test/restaurant-merchant-runtime.test.ts`
 - Modify: `packages/capabilities/test/restaurant-profile.test.ts`
 
 **Interfaces:**
