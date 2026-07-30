@@ -26,16 +26,19 @@ function expectPreviewResourcesRemoved(
       "FACTORY_E2E_FACTORY_PROJECT is required for isolated preview cleanup checks.",
     );
 
+  const workerContainer = dockerOutput([
+    "ps",
+    "--filter",
+    `label=com.docker.compose.project=${factoryE2eProject}`,
+    "--filter",
+    "label=com.docker.compose.service=compiler-worker",
+    "--quiet",
+  ]);
+  expect(workerContainer).toMatch(/\S/);
   expect(
     dockerOutput([
-      "compose",
-      "--project-name",
-      factoryE2eProject,
-      "-f",
-      "infra/docker-compose.yml",
       "exec",
-      "-T",
-      "compiler-worker",
+      workerContainer,
       "test",
       "!",
       "-d",
@@ -209,9 +212,10 @@ test("creates a named application Draft through the guided business-user journey
   await expect(page.getByRole("button", { name: "Published" })).toHaveCount(0);
 });
 
-test("Home creates, opens, publishes, and compiles a Restaurant application", async ({
+test("Home creates, publishes, compiles, previews, and operates a Restaurant application", async ({
   page,
 }) => {
+  test.setTimeout(360_000);
   const suffix = Date.now().toString();
   const name = `Home restaurant ${suffix}`;
   await page.goto("/");
@@ -237,7 +241,7 @@ test("Home creates, opens, publishes, and compiles a Restaurant application", as
     page.getByText("Control Plane ready", { exact: true }),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "Home" }).click();
+  await page.getByRole("button", { name: "Home", exact: true }).click();
   const draftProject = page.getByRole("article").filter({ hasText: name });
   await expect(draftProject).toContainText("Draft r.2");
   await expect(
@@ -254,7 +258,7 @@ test("Home creates, opens, publishes, and compiles a Restaurant application", as
 
   await page.getByRole("button", { name: "Publish" }).click();
   await expect(page.getByRole("button", { name: "Published" })).toBeVisible();
-  await page.getByRole("button", { name: "Home" }).click();
+  await page.getByRole("button", { name: "Home", exact: true }).click();
   const publishedProject = page.getByRole("article").filter({ hasText: name });
   await expect(publishedProject).toContainText("Published r.1");
   const compile = publishedProject.getByRole("button", {
@@ -273,6 +277,219 @@ test("Home creates, opens, publishes, and compiles a Restaurant application", as
   await expect(page.getByLabel("Generated source snapshot")).toContainText(
     "verified snapshot",
   );
+
+  const tableSessionToken = process.env.RESTAURANT_DEMO_TABLE_TOKEN;
+  expect(
+    tableSessionToken,
+    "RESTAURANT_DEMO_TABLE_TOKEN is required for the generated Restaurant Customer journey.",
+  ).toBeTruthy();
+
+  let previewRunId: string | null = null;
+  let composeProjectName: string | null = null;
+
+  try {
+    const startedPreview = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        /\/compilations\/[^/]+\/preview-runs$/.test(response.url()),
+    );
+    await page.getByRole("button", { name: "Start preview" }).click();
+    const { id, compilationId } = await ((
+      await startedPreview
+    ).json() as Promise<PreviewRunResponse>);
+    expect(id).toMatch(/^preview-[a-z0-9-]+$/);
+    expect(compilationId).toMatch(/\S/);
+    previewRunId = id;
+    composeProjectName = `factory-preview-${id}`;
+
+    await expect(page.getByText("Preview ready", { exact: true })).toBeVisible({
+      timeout: 300_000,
+    });
+
+    const previewPage = page.context().waitForEvent("page");
+    await page.getByRole("button", { name: "Open preview" }).click();
+    const preview = await previewPage;
+    await expect(preview).toHaveURL(/127\.0\.0\.1/);
+    const previewOrigin = new URL(preview.url()).origin;
+    await expect(preview.locator("main.generated-app")).toBeVisible();
+    await expect(preview.getByLabel("Puck Page Studio")).toHaveCount(0);
+
+    const tableUrl = new URL(previewOrigin);
+    tableUrl.pathname = `/table/${encodeURIComponent(tableSessionToken!)}`;
+    await preview.goto(tableUrl.toString());
+    await expect(
+      preview.getByRole("heading", { name: "Restaurant ordering" }),
+    ).toBeVisible({ timeout: 30_000 });
+    await expect(preview.getByText("Table session active")).toBeVisible({
+      timeout: 30_000,
+    });
+    await preview.getByRole("link", { name: "Menu", exact: true }).click();
+    await expect(preview).toHaveURL(/\/menu$/);
+    await preview.getByLabel("Search menu").fill("Margherita");
+    await preview.getByRole("button", { name: "Search" }).click();
+    const pizza = preview.locator("li").filter({ hasText: "Margherita pizza" });
+    await expect(pizza).toHaveCount(1);
+    await expect(preview.getByText("Mushroom risotto")).toHaveCount(0);
+    await pizza.getByLabel("Quantity").fill("2");
+    await pizza.getByLabel("Item note").fill("No basil");
+    const lineAdded = preview.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        new URL(response.url()).pathname.endsWith("/lines"),
+    );
+    await pizza.getByRole("button", { name: "Add Margherita pizza" }).click();
+    expect((await lineAdded).ok()).toBeTruthy();
+    await preview.getByRole("link", { name: "Cart" }).click();
+    await expect(preview).toHaveURL(/\/cart$/);
+    await expect(
+      preview.getByRole("button", { name: "Pay simulated payment" }),
+    ).toBeEnabled();
+    await preview.getByLabel("Order note").fill("Please serve together");
+    await preview
+      .getByRole("button", { name: "Pay simulated payment" })
+      .click();
+    await expect(preview.getByText("Paid", { exact: true })).toBeVisible();
+    await preview.getByRole("link", { name: "Current order" }).click();
+    await expect(preview.getByText("Session order history")).toBeVisible();
+    await preview
+      .getByRole("navigation", { name: "Customer routes" })
+      .getByRole("link", { name: "Receipt" })
+      .click();
+    await expect(preview).toHaveURL(/\/receipt\//);
+    await expect(
+      preview.getByRole("heading", { name: "Receipt" }),
+    ).toBeVisible();
+    await expect(preview.getByText("Margherita pizza")).toBeVisible();
+    await expect(preview.getByText("No basil")).toBeVisible();
+    await expect(preview.getByText("Please serve together")).toBeVisible();
+
+    const merchantUrl = new URL(previewOrigin);
+    merchantUrl.pathname = "/merchant/tables";
+    await preview.goto(merchantUrl.toString());
+    await expect(
+      preview.getByRole("heading", { name: "Table board" }),
+    ).toBeVisible();
+    await preview.getByRole("link", { name: "Menu" }).click();
+    await expect(preview).toHaveURL(/\/merchant\/menu$/);
+    const menuItem = preview
+      .locator("li")
+      .filter({ hasText: "Margherita pizza" });
+    await expect(menuItem).toHaveCount(1);
+    await menuItem.getByRole("button", { name: "Disable" }).click();
+    await expect(menuItem.getByText("Disabled")).toBeVisible();
+    const availabilityChanged = preview.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        new URL(response.url()).pathname.endsWith("/availability"),
+    );
+    await menuItem.getByRole("button", { name: "Enable" }).click();
+    expect((await availabilityChanged).ok()).toBeTruthy();
+    await expect(menuItem.getByText("Available")).toBeVisible();
+    const stockMatch = /stock (\d+)/.exec(await menuItem.innerText());
+    expect(stockMatch).not.toBeNull();
+    const currentStock = Number(stockMatch![1]);
+    expect(currentStock).toBeGreaterThan(4);
+    await menuItem
+      .getByLabel("Stock adjustment")
+      .fill(String(4 - currentStock));
+    const stockAdjusted = preview.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        new URL(response.url()).pathname.endsWith("/stock-adjustments"),
+    );
+    await menuItem.getByRole("button", { name: "Adjust stock" }).click();
+    expect((await stockAdjusted).ok()).toBeTruthy();
+    await expect(menuItem).toContainText("stock 4");
+
+    await preview.getByRole("link", { name: "Cashier" }).click();
+    await expect(
+      preview.getByRole("heading", { name: "Cashier console" }),
+    ).toBeVisible();
+    const cashierOrder = preview.locator("li").filter({ hasText: "Table 98" });
+    await expect(cashierOrder).toHaveCount(1);
+    await expect(cashierOrder).toContainText("submitted");
+    await cashierOrder
+      .getByRole("button", { name: "Capture simulated payment" })
+      .click();
+    await expect(cashierOrder).toContainText("paid");
+    await cashierOrder.getByRole("button", { name: "View receipt" }).click();
+    const browserReceipt = preview.getByRole("article", {
+      name: "Browser receipt",
+    });
+    await expect(browserReceipt).toBeVisible();
+    await expect(
+      browserReceipt.getByRole("heading", { name: "Receipt" }),
+    ).toBeVisible();
+    await expect(browserReceipt.getByText("Margherita pizza")).toBeVisible();
+    await expect(browserReceipt.getByText("Total: 14.00")).toBeVisible();
+
+    await preview.getByRole("link", { name: "Kitchen" }).click();
+    await expect(
+      preview.getByRole("heading", { name: "Kitchen board" }),
+    ).toBeVisible();
+    const kitchenOrder = preview.locator("li").filter({ hasText: "Table 98" });
+    await expect(kitchenOrder).toHaveCount(1);
+    await kitchenOrder.getByRole("button", { name: "Accept order" }).click();
+    await kitchenOrder.getByRole("button", { name: "Start preparing" }).click();
+    await kitchenOrder.getByRole("button", { name: "Mark ready" }).click();
+    await preview.getByRole("link", { name: "Cashier" }).click();
+    const readyOrder = preview.locator("li").filter({ hasText: "Table 98" });
+    await expect(readyOrder).toContainText("ready");
+    await readyOrder.getByRole("button", { name: "Mark served" }).click();
+    await expect(readyOrder).toHaveCount(0);
+
+    await preview.getByRole("link", { name: "Analytics" }).click();
+    await expect(
+      preview.getByRole("heading", { name: "Restaurant dashboard" }),
+    ).toBeVisible();
+    const metric = (label: string) =>
+      preview
+        .locator("dt")
+        .filter({ hasText: new RegExp(`^${label}$`) })
+        .locator("xpath=following-sibling::dd[1]");
+    await expect(metric("Sales total")).toHaveText(/^\d+\.\d{2}$/);
+    await expect(metric("Order count")).toHaveText(/^\d+$/);
+    await expect(metric("Average preparation")).toHaveText(/^\d+ seconds$/);
+    await expect(metric("Cancellations")).toHaveText("0");
+    expect(
+      Number(await metric("Sales total").innerText()),
+    ).toBeGreaterThanOrEqual(14);
+    expect(
+      Number(await metric("Order count").innerText()),
+    ).toBeGreaterThanOrEqual(2);
+    await expect(preview.getByText("Margherita pizza: 4")).toBeVisible();
+    const cancellationOrder = preview
+      .locator("li")
+      .filter({ hasText: "Table 99" });
+    await expect(cancellationOrder).toHaveCount(1);
+    await expect(cancellationOrder).toContainText("submitted");
+    await cancellationOrder
+      .getByLabel("Cancellation reason")
+      .fill("Guest left");
+    await cancellationOrder
+      .getByRole("button", { name: "Cancel order" })
+      .click();
+    await expect(
+      preview.getByText(/Inventory released|No inventory release required/),
+    ).toBeVisible();
+    await expect(preview.getByText(/Guest left/)).toBeVisible();
+    await expect(preview.getByText(/Audit recorded/)).toBeVisible();
+    await expect(metric("Cancellations")).toHaveText("1");
+    await expect(preview.getByText("Margherita pizza: 5")).toBeVisible();
+  } finally {
+    if (previewRunId && composeProjectName) {
+      try {
+        const stopPreview = page.getByRole("button", { name: "Stop preview" });
+        await expect(stopPreview).toBeEnabled({ timeout: 60_000 });
+        await stopPreview.click();
+        await expect(
+          page.getByText("Preview stopped", { exact: true }),
+        ).toBeVisible({ timeout: 60_000 });
+      } finally {
+        expectPreviewResourcesRemoved(previewRunId, composeProjectName);
+      }
+    }
+  }
 });
 
 test("creates an audit-free Expense Draft from the capability picker", async ({

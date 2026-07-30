@@ -68,6 +68,39 @@ const restaurantRegisteredArtifacts = [
 ];
 
 describe("preview runner", () => {
+  it("retries a transient generated web readiness failure", async () => {
+    const { root } = await sourceFixture();
+    const commands: Parameters<PreviewProcessRunner>[0][] = [];
+    let healthChecks = 0;
+    const processRunner: PreviewProcessRunner = async (command) => {
+      commands.push(command);
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "web")
+        return "127.0.0.1:49101\n";
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "api")
+        return "127.0.0.1:49102\n";
+      if (command.args.includes("exec")) {
+        healthChecks += 1;
+        if (healthChecks === 1) throw new Error("Connection refused.");
+      }
+    };
+
+    try {
+      await expect(
+        startPreviewRun(root, request(registeredArtifacts), processRunner),
+      ).resolves.toEqual({
+        webPort: 49101,
+        apiPort: 49102,
+        previewUrl: "http://127.0.0.1:49101",
+      });
+      expect(healthChecks).toBe(2);
+      expect(
+        commands.filter((command) => command.args.includes("down")),
+      ).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("rejects a Restaurant preview without its process-only bootstrap token", async () => {
     const { root } = await sourceFixture(restaurantCompose);
     const processRunner = vi

@@ -12,6 +12,25 @@ acceptance stack serves an older Workbench image and its worker lacks the
 required process-only Restaurant bootstrap input. No release pass is claimed
 until that lifecycle is rerun against a current configured stack.
 
+### Current-source retry — 2026-07-30
+
+Docker Engine `29.6.2` ran a fresh current-source Factory project with unique
+loopback ports and process-local configuration. The Workbench lifecycle passed
+Home → Restaurant template → Draft → Publish → Compile → Start preview, and
+the generated preview reached `ready`. A focused Worker regression first
+failed, then passed, for a transient generated-Web connection refusal after
+Compose reports ready; the Worker now retries that bounded health check while
+preserving cancellation, timeout, and persistent-failure behavior.
+
+The full browser journey remains blocked at the Customer table route: opening
+the generated preview with the configured process-local table-session input
+never rendered the `Restaurant ordering` heading, including after a 30-second
+bounded wait. Preview Stop completed and its run-scoped runtime directory,
+containers, network, and volumes were removed. Therefore Customer, Merchant,
+audit, and reporting acceptance cannot be claimed from the current Workbench
+lifecycle. This is a release-blocking generated Restaurant table-session route
+or bootstrap-input contract defect requiring product-owner investigation.
+
 ## Environment and immutable compilation
 
 - Docker Engine `29.0.1`, Docker Compose `v2.40.3-desktop.1`, Linux daemon.

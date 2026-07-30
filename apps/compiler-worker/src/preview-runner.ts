@@ -58,6 +58,7 @@ export type PreviewOperationOptions = {
 const defaultOperationOptions: PreviewOperationOptions = {
   operationTimeoutMs: 600_000,
 };
+const previewHealthRetryDelayMs = 250;
 
 function isInside(parent: string, candidate: string): boolean {
   const fromParent = relative(parent, candidate);
@@ -205,6 +206,65 @@ async function runPreviewOperation(
   } finally {
     clearTimeout(timeout);
     cancellationSignal?.removeEventListener("abort", cancel);
+  }
+}
+
+function waitForPreviewRetry(
+  delayMs: number,
+  cancellationSignal: AbortSignal,
+): Promise<void> {
+  if (cancellationSignal.aborted)
+    return Promise.reject(previewAbortReason(cancellationSignal.reason));
+  return new Promise((resolvePromise, reject) => {
+    const timer = setTimeout(() => {
+      cancellationSignal.removeEventListener("abort", onAbort);
+      resolvePromise();
+    }, delayMs);
+    const onAbort = () => {
+      clearTimeout(timer);
+      cancellationSignal.removeEventListener("abort", onAbort);
+      reject(previewAbortReason(cancellationSignal.reason));
+    };
+    cancellationSignal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+async function waitForWebReadiness(
+  processRunner: PreviewProcessRunner,
+  command: PreviewProcessCommand,
+  operationTimeoutMs: number,
+  cancellationSignal: AbortSignal,
+): Promise<void> {
+  const deadline = Date.now() + operationTimeoutMs;
+  for (;;) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0)
+      throw new PreviewRunFailure("preview_health_check_failed");
+    try {
+      await runPreviewOperation(
+        processRunner,
+        command,
+        remaining,
+        "preview_start_timeout",
+        cancellationSignal,
+      );
+      return;
+    } catch (error) {
+      if (
+        error instanceof PreviewRunFailure &&
+        (error.code === "preview_start_timeout" ||
+          error.code === "preview_start_cancelled")
+      ) {
+        throw error;
+      }
+      const retryDelay = Math.min(
+        previewHealthRetryDelayMs,
+        Math.max(0, deadline - Date.now()),
+      );
+      if (retryDelay === 0)
+        throw new PreviewRunFailure("preview_health_check_failed");
+      await waitForPreviewRetry(retryDelay, cancellationSignal);
+    }
   }
 }
 
@@ -512,39 +572,27 @@ export async function startPreviewRun(
           activeStart.controller.signal,
         ),
       );
-      try {
-        await runPreviewOperation(
-          processRunner,
-          composeCommand(
-            directory,
-            composeFile,
-            project,
-            [
-              "exec",
-              "-T",
-              "web",
-              "wget",
-              "-q",
-              "-O",
-              "/dev/null",
-              "http://127.0.0.1:3000",
-            ],
-            environment,
-          ),
-          options.operationTimeoutMs,
-          "preview_start_timeout",
-          activeStart.controller.signal,
-        );
-      } catch (error) {
-        if (
-          error instanceof PreviewRunFailure &&
-          (error.code === "preview_start_timeout" ||
-            error.code === "preview_start_cancelled")
-        ) {
-          throw error;
-        }
-        throw new PreviewRunFailure("preview_health_check_failed");
-      }
+      await waitForWebReadiness(
+        processRunner,
+        composeCommand(
+          directory,
+          composeFile,
+          project,
+          [
+            "exec",
+            "-T",
+            "web",
+            "wget",
+            "-q",
+            "-O",
+            "/dev/null",
+            "http://127.0.0.1:3000",
+          ],
+          environment,
+        ),
+        options.operationTimeoutMs,
+        activeStart.controller.signal,
+      );
       return { webPort, apiPort, previewUrl: `http://127.0.0.1:${webPort}` };
     } catch (error) {
       if (
