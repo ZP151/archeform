@@ -317,9 +317,9 @@ test("Home creates, publishes, compiles, previews, and operates a Restaurant app
     const tableUrl = new URL(previewOrigin);
     tableUrl.pathname = `/table/${encodeURIComponent(tableSessionToken!)}`;
     await preview.goto(tableUrl.toString());
-    await expect(
-      preview.getByRole("heading", { name: "Restaurant ordering" }),
-    ).toBeVisible({ timeout: 30_000 });
+    await expect(preview.getByRole("heading", { name })).toBeVisible({
+      timeout: 30_000,
+    });
     await expect(preview.getByText("Table session active")).toBeVisible({
       timeout: 30_000,
     });

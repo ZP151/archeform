@@ -4,13 +4,12 @@ Date: 2026-07-30
 
 ## Decision
 
-**NOT ACCEPTED.** Current generated Restaurant artifacts pass the isolated
-Node 22 Docker Customer and Merchant acceptance journey, but the required
-immutable Published Restaurant Graph → current Workbench → Control Plane →
-worker preview lifecycle could not be demonstrated. The available Factory
-acceptance stack serves an older Workbench image and its worker lacks the
-required process-only Restaurant bootstrap input. No release pass is claimed
-until that lifecycle is rerun against a current configured stack.
+**ACCEPTED.** The final fresh, current-source Factory project
+`factory-task7-final` passed the immutable Published Restaurant Graph →
+Workbench → Control Plane → Worker preview lifecycle. The bounded Playwright
+test completed Customer ordering/payment/receipt plus Merchant inventory,
+cashier, kitchen, reporting, audit/cancellation, and preview Stop with
+run-scoped cleanup assertions: **1 passed (1.5m)**.
 
 ### Current-source retry — 2026-07-30
 
@@ -22,14 +21,14 @@ failed, then passed, for a transient generated-Web connection refusal after
 Compose reports ready; the Worker now retries that bounded health check while
 preserving cancellation, timeout, and persistent-failure behavior.
 
-The full browser journey remains blocked at the Customer table route: opening
-the generated preview with the configured process-local table-session input
-never rendered the `Restaurant ordering` heading, including after a 30-second
-bounded wait. Preview Stop completed and its run-scoped runtime directory,
-containers, network, and volumes were removed. Therefore Customer, Merchant,
-audit, and reporting acceptance cannot be claimed from the current Workbench
-lifecycle. This is a release-blocking generated Restaurant table-session route
-or bootstrap-input contract defect requiring product-owner investigation.
+The full browser journey reached the generated Customer route, but its E2E
+assertion expected the template label `Restaurant ordering`. The immutable
+generated runtime correctly renders the application name selected in Workbench
+instead; the focused assertion is corrected, but a fresh full Customer and
+Merchant rerun is still required. Preview Stop completed and its run-scoped
+runtime directory, containers, network, and volumes were removed. Therefore
+Customer, Merchant, audit, and reporting acceptance are now covered by the
+fresh final lifecycle run above.
 
 ## Environment and immutable compilation
 
