@@ -11,6 +11,7 @@ import {
 import * as capabilityRegistry from "@factory/capabilities";
 import * as capabilityNode from "@factory/capabilities/node";
 import { hashApplicationGraph, type ApplicationGraphV1 } from "@factory/graph";
+import * as restaurantRuntimeRenderer from "../src/restaurant-runtime.js";
 
 import {
   generateApplicationBundle,
@@ -282,6 +283,13 @@ describe("immutable composition compilation", () => {
   });
 
   it("rejects a package contribution that collides with a compiler-owned migration", () => {
+    const collisionGraph: ApplicationGraphV1 = {
+      ...graph,
+      integration: {
+        ...graph.integration,
+        compositionProfile: "restaurant-ordering",
+      },
+    };
     const auditAsset = getCapabilityAsset("core.audit");
     const auditLock = {
       key: auditAsset.manifest.key,
@@ -291,7 +299,7 @@ describe("immutable composition compilation", () => {
       lifecycle: auditAsset.manifest.lifecycle,
     };
     const collisionLock = createCapabilityCompositionLock({
-      graphChecksum: hashApplicationGraph(graph),
+      graphChecksum: hashApplicationGraph(collisionGraph),
       selections: [
         ...compositionLock.packages,
         { lock: auditLock, bindings: {} },
@@ -351,14 +359,27 @@ describe("immutable composition compilation", () => {
             ]
           : loadContributions(asset, root),
       );
+    const rendererSpy = vi
+      .spyOn(restaurantRuntimeRenderer, "renderRestaurantRuntime")
+      .mockImplementation(() => {
+        throw new Error(
+          "Content renderer was invoked before generated-path preflight.",
+        );
+      });
 
     try {
       expect(() =>
-        generateApplicationBundle({ ...input, compositionLock: collisionLock }),
+        generateApplicationBundle({
+          ...input,
+          graph: collisionGraph,
+          compositionLock: collisionLock,
+        }),
       ).toThrow(
         "Generated output collision at 'database/prisma/migrations/0001_initial/migration.sql'.",
       );
+      expect(rendererSpy).not.toHaveBeenCalled();
     } finally {
+      rendererSpy.mockRestore();
       loadSpy.mockRestore();
       resolveSpy.mockRestore();
     }

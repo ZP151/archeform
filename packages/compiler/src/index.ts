@@ -151,7 +151,14 @@ export interface GeneratedApplicationBundle {
   readonly files: readonly GeneratedFile[];
 }
 
-function assertUniqueGeneratedFilePaths(files: readonly GeneratedFile[]): void {
+interface PlannedGeneratedFile {
+  readonly path: string;
+  readonly render: () => string;
+}
+
+function assertUniqueGeneratedFilePaths(
+  files: readonly Pick<GeneratedFile, "path">[],
+): void {
   const paths = new Set<string>();
   for (const file of files) {
     if (paths.has(file.path)) {
@@ -285,6 +292,13 @@ type LoadedTargetContribution = {
   readonly loaded: ResolvedCapabilityAssetContribution;
 };
 
+interface PlannedTargetContribution extends Omit<
+  ResolvedTargetContribution,
+  "content"
+> {
+  readonly loadedContribution: LoadedTargetContribution;
+}
+
 function renderedBindingValue(value: CapabilityBindingValueV1): string {
   if (typeof value === "object") {
     return value.graphSymbol.slice(value.graphSymbol.lastIndexOf(".") + 1);
@@ -405,10 +419,10 @@ function orderTargetContributions(
   return resolved;
 }
 
-export function resolveTargetContributions(
+function resolveTargetContributionPlans(
   input: PublishedGraphInput,
   options: GenerateApplicationBundleOptions = {},
-): readonly ResolvedTargetContribution[] {
+): readonly PlannedTargetContribution[] {
   const lock = assertCanonicalCompositionLock(input);
   if (lock.packages.length === 0) return [];
   const root = findFactoryRepositoryRoot(
@@ -475,12 +489,31 @@ export function resolveTargetContributions(
         digest: contribution.loaded.digest,
         targetRuntimeInterfaceVersion:
           contribution.loaded.targetRuntimeInterfaceVersion,
-        content: renderDeclaredContribution(
-          contribution.loaded.content,
-          contribution,
-        ),
+        loadedContribution: contribution,
       };
     },
+  );
+}
+
+function renderTargetContribution(
+  plan: PlannedTargetContribution,
+): ResolvedTargetContribution {
+  const { loadedContribution, ...target } = plan;
+  return {
+    ...target,
+    content: renderDeclaredContribution(
+      loadedContribution.loaded.content,
+      loadedContribution,
+    ),
+  };
+}
+
+export function resolveTargetContributions(
+  input: PublishedGraphInput,
+  options: GenerateApplicationBundleOptions = {},
+): readonly ResolvedTargetContribution[] {
+  return resolveTargetContributionPlans(input, options).map(
+    renderTargetContribution,
   );
 }
 
@@ -2499,21 +2532,29 @@ export function generateApplicationBundle(
 ): GeneratedApplicationBundle {
   const plan = buildCompilationPlan(input);
   const graph = assertValidApplicationGraph(input.graph);
-  const restaurantRuntime =
-    graph.integration.compositionProfile === "restaurant-ordering"
-      ? renderRestaurantRuntime(graph)
-      : null;
+  const restaurantRuntimeEnabled =
+    graph.integration.compositionProfile === "restaurant-ordering";
+  let renderedRestaurantRuntime:
+    ReturnType<typeof renderRestaurantRuntime> | undefined;
+  const restaurantRuntime = () => {
+    if (!restaurantRuntimeEnabled) return null;
+    renderedRestaurantRuntime ??= renderRestaurantRuntime(graph);
+    return renderedRestaurantRuntime;
+  };
   const capabilityTemplates = resolveCapabilityTemplateContributions(
     graph,
     options.repositoryRoot,
   );
-  const targetContributions = resolveTargetContributions(input, options);
+  const targetContributionPlans = resolveTargetContributionPlans(
+    input,
+    options,
+  );
   const runtimeMode = resolveGeneratedRuntimeMode(graph);
   const rootDirectory = `${graph.metadata.id}-${input.publishedRevisionId}`;
-  const files: GeneratedFile[] = [
+  const plannedFiles: PlannedGeneratedFile[] = [
     {
       path: "package.json",
-      content:
+      render: () =>
         JSON.stringify(
           {
             name: rootDirectory,
@@ -2528,21 +2569,27 @@ export function generateApplicationBundle(
     },
     {
       path: "pnpm-workspace.yaml",
-      content: "packages:\n  - web\n  - api\n  - database\n",
+      render: () => "packages:\n  - web\n  - api\n  - database\n",
     },
-    { path: "capability-lock.json", content: renderCapabilityLock(graph) },
+    {
+      path: "capability-lock.json",
+      render: () => renderCapabilityLock(graph),
+    },
     {
       path: "composition-lock.json",
-      content: JSON.stringify(input.compositionLock, null, 2) + "\n",
+      render: () => JSON.stringify(input.compositionLock, null, 2) + "\n",
     },
     {
       path: "capability-template-lock.json",
-      content: renderCapabilityTemplateLock(graph, capabilityTemplates),
+      render: () => renderCapabilityTemplateLock(graph, capabilityTemplates),
     },
-    { path: "simulator/index.html", content: renderSimulator(graph) },
+    {
+      path: "simulator/index.html",
+      render: () => renderSimulator(graph),
+    },
     {
       path: "web/package.json",
-      content:
+      render: () =>
         JSON.stringify(
           {
             name: "generated-web",
@@ -2569,7 +2616,7 @@ export function generateApplicationBundle(
     },
     {
       path: "web/tsconfig.json",
-      content:
+      render: () =>
         JSON.stringify(
           {
             compilerOptions: {
@@ -2602,47 +2649,53 @@ export function generateApplicationBundle(
     },
     {
       path: "web/next-env.d.ts",
-      content:
+      render: () =>
         '/// <reference types="next" />\n/// <reference types="next/image-types/global" />\n\n// This file is generated by Factory Pilot.\n',
     },
     {
       path: "web/app/layout.tsx",
-      content:
+      render: () =>
         'import type { ReactNode } from "react";\nimport "./globals.css";\n\nexport default function RootLayout({ children }: { children: ReactNode }) { return <html lang="en"><body>{children}</body></html>; }\n',
     },
     {
       path: "web/app/page-runtime.tsx",
-      content:
-        restaurantRuntime !== null
+      render: () =>
+        restaurantRuntimeEnabled
           ? renderRestaurantPageRuntime(graph)
           : renderPageRuntime(graph),
     },
-    ...(restaurantRuntime !== null
+    ...(restaurantRuntimeEnabled
       ? [
           {
             path: "web/app/restaurant-customer-command.ts",
-            content: renderRestaurantCustomerCommandRuntime(),
+            render: () => renderRestaurantCustomerCommandRuntime(),
           },
           {
             path: "web/app/restaurant-merchant-runtime.tsx",
-            content: renderRestaurantMerchantPageRuntime(graph),
+            render: () => renderRestaurantMerchantPageRuntime(graph),
           },
         ]
       : []),
-    { path: "web/app/page.tsx", content: renderWebRootPage() },
+    { path: "web/app/page.tsx", render: () => renderWebRootPage() },
     {
       path: "web/app/[...path]/page.tsx",
-      content: renderWebCatchAllPage(restaurantRuntime !== null),
+      render: () => renderWebCatchAllPage(restaurantRuntimeEnabled),
     },
-    { path: "web/app/favicon.ico/route.ts", content: renderFaviconRoute() },
+    {
+      path: "web/app/favicon.ico/route.ts",
+      render: () => renderFaviconRoute(),
+    },
     {
       path: "web/app/api/[...path]/route.ts",
-      content: renderWebProxyRoute(restaurantRuntime !== null),
+      render: () => renderWebProxyRoute(restaurantRuntimeEnabled),
     },
-    { path: "web/app/globals.css", content: renderWebStyles() },
+    {
+      path: "web/app/globals.css",
+      render: () => renderWebStyles(),
+    },
     {
       path: "api/package.json",
-      content:
+      render: () =>
         JSON.stringify(
           {
             name: "generated-api",
@@ -2677,7 +2730,7 @@ export function generateApplicationBundle(
     },
     {
       path: "api/tsconfig.json",
-      content:
+      render: () =>
         JSON.stringify(
           {
             compilerOptions: {
@@ -2697,65 +2750,73 @@ export function generateApplicationBundle(
     },
     {
       path: "api/Dockerfile",
-      content:
+      render: () =>
         'FROM node:22-alpine\nWORKDIR /app\nCOPY package.json ./\nCOPY prisma ./prisma\nRUN npm config set fetch-retries 5 && npm install --global pnpm@9.0.0 && pnpm install && pnpm prisma generate --schema prisma/schema.prisma\nCOPY tsconfig.json ./\nCOPY src ./src\nRUN pnpm build\nCMD ["node", "dist/main.js"]\n',
     },
-    { path: "api/.dockerignore", content: "node_modules\ndist\n.env\n" },
+    {
+      path: "api/.dockerignore",
+      render: () => "node_modules\ndist\n.env\n",
+    },
     {
       path: "api/src/main.ts",
-      content: restaurantRuntime?.main ?? renderApiMain(graph),
+      render: () => restaurantRuntime()?.main ?? renderApiMain(graph),
     },
-    ...(restaurantRuntime
+    ...(restaurantRuntimeEnabled
       ? [
           {
             path: "api/src/restaurant/restaurant-command.service.ts",
-            content: restaurantRuntime.commandService,
+            render: () => restaurantRuntime()!.commandService,
           },
         ]
       : []),
     {
       path: "api/src/capabilities/contract.ts",
-      content: renderCapabilityContract(graph),
+      render: () => renderCapabilityContract(graph),
     },
     ...capabilityTemplates.map((template) => ({
       path: template.target,
-      content: renderCapabilityTemplate(template, graph),
+      render: () => renderCapabilityTemplate(template, graph),
     })),
-    ...targetContributions.map((contribution) => ({
+    ...targetContributionPlans.map((contribution) => ({
       path: contribution.path,
-      content: contribution.content,
+      render: () => renderTargetContribution(contribution).content,
     })),
     {
       path: "api/src/capabilities/registry.ts",
-      content: renderCapabilityRegistry(capabilityTemplates),
+      render: () => renderCapabilityRegistry(capabilityTemplates),
     },
     {
       path: "api/src/application-runtime.ts",
-      content:
-        restaurantRuntime?.applicationRuntimeContract ??
+      render: () =>
+        restaurantRuntime()?.applicationRuntimeContract ??
         renderApplicationRuntime(graph, runtimeMode),
     },
     {
       path: "api/src/prisma-record-store.ts",
-      content: renderPrismaRecordStore(graph),
+      render: () => renderPrismaRecordStore(graph),
     },
-    { path: "api/src/policy.ts", content: renderPolicyModule(graph) },
+    {
+      path: "api/src/policy.ts",
+      render: () => renderPolicyModule(graph),
+    },
     {
       path: "api/prisma/schema.prisma",
-      content: restaurantRuntime?.prismaSchema ?? renderPrismaSchema(graph),
+      render: () =>
+        restaurantRuntime()?.prismaSchema ?? renderPrismaSchema(graph),
     },
     {
       path: "database/prisma/schema.prisma",
-      content: restaurantRuntime?.prismaSchema ?? renderPrismaSchema(graph),
+      render: () =>
+        restaurantRuntime()?.prismaSchema ?? renderPrismaSchema(graph),
     },
     {
       path: "database/prisma/migrations/0001_initial/migration.sql",
-      content:
-        restaurantRuntime?.initialMigration ?? renderInitialMigration(graph),
+      render: () =>
+        restaurantRuntime()?.initialMigration ?? renderInitialMigration(graph),
     },
     {
       path: "database/package.json",
-      content:
+      render: () =>
         JSON.stringify(
           {
             name: "generated-database",
@@ -2773,73 +2834,99 @@ export function generateApplicationBundle(
           2,
         ) + "\n",
     },
-    { path: "database/prisma/seed.ts", content: renderPrismaSeed(graph) },
+    {
+      path: "database/prisma/seed.ts",
+      render: () => renderPrismaSeed(graph),
+    },
     {
       path: "database/Dockerfile",
-      content:
+      render: () =>
         'FROM node:22-alpine\nWORKDIR /app\nCOPY package.json ./\nCOPY prisma ./prisma\nRUN npm config set fetch-retries 5 && npm install --global pnpm@9.0.0 && pnpm install && pnpm prisma generate --schema prisma/schema.prisma\nCMD ["sh", "-c", "pnpm prisma migrate deploy --schema prisma/schema.prisma && pnpm tsx prisma/seed.ts"]\n',
     },
-    { path: "database/.dockerignore", content: "node_modules\n.env\n" },
+    {
+      path: "database/.dockerignore",
+      render: () => "node_modules\n.env\n",
+    },
     {
       path: "api/policy/model.conf",
-      content:
+      render: () =>
         "[request_definition]\nr = sub, obj, act\n\n[policy_definition]\np = sub, obj, act\n\n[policy_effect]\ne = some(where (p.eft == allow))\n\n[matchers]\nm = r.sub == p.sub && r.obj == p.obj && r.act == p.act\n",
     },
-    { path: "api/policy/policy.csv", content: renderCasbinPolicy(graph) },
+    {
+      path: "api/policy/policy.csv",
+      render: () => renderCasbinPolicy(graph),
+    },
     {
       path: "api/src/flows/definitions.ts",
-      content: renderFlowDefinitions(graph),
+      render: () => renderFlowDefinitions(graph),
     },
-    { path: "api/src/flows/machines.ts", content: renderFlowMachines() },
+    {
+      path: "api/src/flows/machines.ts",
+      render: () => renderFlowMachines(),
+    },
     {
       path: "api/test/journey.generated.test.ts",
-      content: restaurantRuntime?.generatedTests ?? renderJourneyTest(graph),
+      render: () =>
+        restaurantRuntime()?.generatedTests ?? renderJourneyTest(graph),
     },
-    ...(restaurantRuntime
+    ...(restaurantRuntimeEnabled
       ? [
           {
             path: "api/src/restaurant/restaurant-event-publisher.ts",
-            content: renderRestaurantEventPublisher(),
+            render: () => renderRestaurantEventPublisher(),
           },
           {
             path: "api/test/restaurant-runtime.generated.test.ts",
-            content: restaurantRuntime.generatedTests,
+            render: () => restaurantRuntime()!.generatedTests,
           },
         ]
       : []),
     {
       path: "tests/journeys.generated.md",
-      content: `# Generated role journeys\n\nGraph: ${plan.graphHash}\n`,
+      render: () => `# Generated role journeys\n\nGraph: ${plan.graphHash}\n`,
     },
     {
       path: "docs/api-reference.md",
-      content: restaurantRuntime?.apiReference ?? renderApiReference(graph),
+      render: () =>
+        restaurantRuntime()?.apiReference ?? renderApiReference(graph),
     },
     {
       path: "docs/entity-relationship.md",
-      content: renderEntityRelationshipDiagram(graph),
+      render: () => renderEntityRelationshipDiagram(graph),
     },
     {
       path: "docs/permission-matrix.md",
-      content: renderPermissionMatrix(graph),
+      render: () => renderPermissionMatrix(graph),
     },
-    { path: "docs/application.md", content: renderDocumentation(graph) },
+    {
+      path: "docs/application.md",
+      render: () => renderDocumentation(graph),
+    },
     {
       path: "web/Dockerfile",
-      content:
+      render: () =>
         'FROM node:22-alpine\nWORKDIR /app\nCOPY package.json ./\nRUN npm config set fetch-retries 5 && npm install --global pnpm@9.0.0 && pnpm install\nCOPY . .\nRUN pnpm build\nCMD ["pnpm", "start"]\n',
     },
-    { path: "web/.dockerignore", content: "node_modules\n.next\n.env\n" },
+    {
+      path: "web/.dockerignore",
+      render: () => "node_modules\n.next\n.env\n",
+    },
     {
       path: "docker-compose.yml",
-      content: `name: \${FACTORY_COMPOSE_PROJECT_NAME:-factory-${rootDirectory}}\n\nservices:\n  postgres:\n    image: postgres:16-alpine\n    environment:\n      POSTGRES_USER: generated\n      POSTGRES_PASSWORD: generated\n      POSTGRES_DB: generated\n    healthcheck:\n      test: [\"CMD-SHELL\", \"pg_isready -U generated -d generated\"]\n      interval: 5s\n      timeout: 3s\n      retries: 20\n  migrate:\n    build: ./database\n    environment:\n      DATABASE_URL: postgresql://generated:generated@postgres:5432/generated\n${restaurantRuntime ? '      RESTAURANT_DEMO_TABLE_TOKEN: \"${RESTAURANT_DEMO_TABLE_TOKEN:?Set RESTAURANT_DEMO_TABLE_TOKEN for local demo bootstrap}\"\n' : ""}    depends_on:\n      postgres:\n        condition: service_healthy\n  api:\n    build: ./api\n    environment:\n      DATABASE_URL: postgresql://generated:generated@postgres:5432/generated\n    ports:\n      - \"127.0.0.1:\${FACTORY_API_PORT:-0}:3001\"\n    depends_on:\n      migrate:\n        condition: service_completed_successfully\n  web:\n    build: ./web\n    environment:\n      FACTORY_API_URL: http://api:3001\n      NEXT_PUBLIC_FACTORY_API_URL: http://localhost:\${FACTORY_API_PORT:-0}\n    ports:\n      - \"127.0.0.1:\${FACTORY_WEB_PORT:-0}:3000\"\n    depends_on:\n      - api\n`,
+      render: () =>
+        `name: \${FACTORY_COMPOSE_PROJECT_NAME:-factory-${rootDirectory}}\n\nservices:\n  postgres:\n    image: postgres:16-alpine\n    environment:\n      POSTGRES_USER: generated\n      POSTGRES_PASSWORD: generated\n      POSTGRES_DB: generated\n    healthcheck:\n      test: [\"CMD-SHELL\", \"pg_isready -U generated -d generated\"]\n      interval: 5s\n      timeout: 3s\n      retries: 20\n  migrate:\n    build: ./database\n    environment:\n      DATABASE_URL: postgresql://generated:generated@postgres:5432/generated\n${restaurantRuntimeEnabled ? '      RESTAURANT_DEMO_TABLE_TOKEN: \"${RESTAURANT_DEMO_TABLE_TOKEN:?Set RESTAURANT_DEMO_TABLE_TOKEN for local demo bootstrap}\"\n' : ""}    depends_on:\n      postgres:\n        condition: service_healthy\n  api:\n    build: ./api\n    environment:\n      DATABASE_URL: postgresql://generated:generated@postgres:5432/generated\n    ports:\n      - \"127.0.0.1:\${FACTORY_API_PORT:-0}:3001\"\n    depends_on:\n      migrate:\n        condition: service_completed_successfully\n  web:\n    build: ./web\n    environment:\n      FACTORY_API_URL: http://api:3001\n      NEXT_PUBLIC_FACTORY_API_URL: http://localhost:\${FACTORY_API_PORT:-0}\n    ports:\n      - \"127.0.0.1:\${FACTORY_WEB_PORT:-0}:3000\"\n    depends_on:\n      - api\n`,
     },
     {
       path: "README.md",
-      content: `# ${graph.metadata.name}\n\nThis application was compiled from the immutable Published Graph \`${plan.graphHash}\`.\n\n## Run locally\n\nThe default Compose project name is revision-isolated. Choose unique host ports for every generated application.${restaurantRuntime ? " Set `RESTAURANT_DEMO_TABLE_TOKEN` to a local demo bootstrap input of at least 16 characters before running; Compose requires and forwards the current shell value without a default." : ""}\n\n\`\`\`sh\n${restaurantRuntime ? 'RESTAURANT_DEMO_TABLE_TOKEN=\"$RESTAURANT_DEMO_TABLE_TOKEN\" ' : ""}FACTORY_COMPOSE_PROJECT_NAME=factory-${rootDirectory} FACTORY_WEB_PORT=4300 FACTORY_API_PORT=4301 docker compose up --build\n\`\`\`\n\nThe migration service must complete before the API starts. To remove this isolated local runtime and its database volume:\n\n\`\`\`sh\ndocker compose down --volumes --remove-orphans\n\`\`\`\n`,
+      render: () =>
+        `# ${graph.metadata.name}\n\nThis application was compiled from the immutable Published Graph \`${plan.graphHash}\`.\n\n## Run locally\n\nThe default Compose project name is revision-isolated. Choose unique host ports for every generated application.${restaurantRuntimeEnabled ? " Set `RESTAURANT_DEMO_TABLE_TOKEN` to a local demo bootstrap input of at least 16 characters before running; Compose requires and forwards the current shell value without a default." : ""}\n\n\`\`\`sh\n${restaurantRuntimeEnabled ? 'RESTAURANT_DEMO_TABLE_TOKEN=\"$RESTAURANT_DEMO_TABLE_TOKEN\" ' : ""}FACTORY_COMPOSE_PROJECT_NAME=factory-${rootDirectory} FACTORY_WEB_PORT=4300 FACTORY_API_PORT=4301 docker compose up --build\n\`\`\`\n\nThe migration service must complete before the API starts. To remove this isolated local runtime and its database volume:\n\n\`\`\`sh\ndocker compose down --volumes --remove-orphans\n\`\`\`\n`,
     },
   ];
 
-  assertUniqueGeneratedFilePaths(files);
+  assertUniqueGeneratedFilePaths(plannedFiles);
+  const files = plannedFiles.map(({ path, render }) => ({
+    path,
+    content: render(),
+  }));
   return { rootDirectory, graphHash: plan.graphHash, files };
 }

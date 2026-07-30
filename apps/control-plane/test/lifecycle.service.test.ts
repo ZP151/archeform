@@ -313,6 +313,58 @@ describe("LifecycleService", () => {
     });
   });
 
+  it("rejects credential-shaped binding material before creating the first Draft", async () => {
+    prisma.workspace.upsert.mockResolvedValue(workspace);
+    prisma.applicationGraph.create.mockResolvedValue({
+      ...applicationGraph,
+      draftRevisions: [draftRevision],
+    });
+    const unsafeGraph = structuredClone(selectedDraftGraph);
+    unsafeGraph.integration.compositionSelections[0]!.bindings.routeKey =
+      `sk-proj-${"x".repeat(32)}` as never;
+
+    await expect(
+      service.createLocalApplicationGraph({ graph: unsafeGraph }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.workspace.upsert).not.toHaveBeenCalled();
+    expect(prisma.applicationGraph.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects raw-response binding semantics before persisting a proposed Draft", async () => {
+    prisma.draftRevision.findFirst.mockResolvedValue({
+      ...draftRevision,
+      graph: selectedDraftGraph,
+      applicationGraph: { ...applicationGraph, workspace },
+    });
+    proposalProvider.propose.mockResolvedValue({
+      diff: {
+        apiVersion: "factory.graph-diff/v1",
+        operations: [
+          {
+            op: "add",
+            path: "/integration/compositionSelections/0/bindings/rawResponse",
+            value: "blocked-material",
+          },
+        ],
+      },
+      impact: {
+        summary: "Attempts to persist prohibited material.",
+        affectedModels: ["integration"],
+        risks: [],
+      },
+      testSuggestions: [],
+    });
+
+    await expect(
+      service.proposeDraftRevision(applicationGraph.id, {
+        brief: "Update the integration configuration.",
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: "ai_proposal_rejected" }),
+    });
+    expect(prisma.draftRevision.create).not.toHaveBeenCalled();
+  });
+
   it("exports only an immutable Published Revision as a digest-verified Graph exchange", async () => {
     prisma.publishedRevision.findFirst.mockResolvedValue({
       id: "published-3",
@@ -519,14 +571,14 @@ describe("LifecycleService", () => {
     });
   });
 
-  it("rejects an unsafe composition string before appending a Draft revision", async () => {
+  it("rejects a command-shaped composition string before appending a Draft revision", async () => {
     prisma.applicationGraph.findUnique.mockResolvedValue({
       ...applicationGraph,
       workspace,
     });
     const unsafeGraph = structuredClone(selectedDraftGraph);
     unsafeGraph.integration.compositionSelections[0]!.bindings.routeKey =
-      "https://example.invalid/catalog" as never;
+      "docker compose down" as never;
 
     await expect(
       service.appendDraftRevision(applicationGraph.id, { graph: unsafeGraph }),

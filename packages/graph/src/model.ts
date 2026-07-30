@@ -142,25 +142,32 @@ const compositionBindingKey = z
   .regex(/^[a-z][a-zA-Z0-9]*$/)
   .refine(
     (key) =>
-      !/(?:command|credential|password|path|secret|source|url|apiKey|accessToken)/i.test(
+      !/(?:accessToken|apiKey|authToken|command|completion|credential|modelInput|modelOutput|password|path|prompt|response|secret|source|token|url)/i.test(
         key,
       ),
     "Composition binding key is not safe.",
   );
+const compositionCredentialSignaturePattern =
+  /(?:\b(?:AKIA|ASIA)[A-Z0-9]{16}\b|\bgh[pousr]_[a-z0-9]{20,}\b|\bsk-(?:proj-)?[a-z0-9_-]{16,}\b|\bsk_(?:live|test)_[a-z0-9]{16,}\b|\bbearer\s+[a-z0-9._~+-]{16,}\b|-----BEGIN (?:EC |OPENSSH |RSA )?PRIVATE KEY-----|\beyJ[a-z0-9_-]{10,}\.[a-z0-9_-]{10,}\.[a-z0-9_-]{10,}\b)/i;
+const compositionSourceSyntaxPattern =
+  /[`{}\[\];<>]|=>|\$\(|&&|\|{1,2}|\b[a-z_$][a-z0-9_$]*(?:\.[a-z_$][a-z0-9_$]*)*\(/i;
+const compositionSourceStatementPattern =
+  /^\s*(?:#!|(?:async\s+)?function\s|class\s+[a-z_$]|(?:const|let|var)\s+[a-z_$][a-z0-9_$]*\s*=|export\s|import\s|require\s*\(|select\b.+\bfrom\b|insert\s+into\b|update\b.+\bset\b|delete\s+from\b|create\s+(?:database|function|index|procedure|schema|table|trigger|view)\b)/i;
+const compositionCommandPattern =
+  /^\s*(?:ansible|bash|bitsadmin|bun|certutil|cmd|curl|del|deno|docker|dotnet|ftp|git|helm|invoke-webrequest|java|kubectl|make|net|node|npm|npx|pnpm|powershell|python|reg|remove-item|rm|sc|scp|service|sh|ssh|sudo|systemctl|terraform|tsx|wget|yarn)(?:\.exe)?(?:\s|$)/i;
 const compositionBindingStringSchema = z
   .string()
+  .max(256)
   .refine(
     (value) =>
+      !compositionCredentialSignaturePattern.test(value) &&
       !/\b[a-z][a-z0-9+.-]*:\S/i.test(value) &&
       !value.includes("/") &&
       !value.includes("\\") &&
       !/[\u0000-\u001f\u007f-\u009f]/.test(value) &&
-      !/[`{}\[\];<>]|=>|\$\(|\b[a-z_$][a-z0-9_$]*(?:\.[a-z_$][a-z0-9_$]*)*\(/i.test(
-        value,
-      ) &&
-      !/^\s*(?:bash|cmd|curl|del|git|invoke-webrequest|node|npm|pnpm|powershell|python|remove-item|rm|sh|sudo|wget|yarn)(?:\.exe)?\s/i.test(
-        value,
-      ),
+      !compositionSourceSyntaxPattern.test(value) &&
+      !compositionSourceStatementPattern.test(value) &&
+      !compositionCommandPattern.test(value),
     "Composition string binding is not safe.",
   );
 const compositionBindingValueSchema = z.union([

@@ -93,6 +93,28 @@ const expenseGraph: ApplicationGraphV1 = {
   },
 };
 
+function draftGraphWithBindings(bindings: Record<string, unknown>): unknown {
+  return {
+    ...expenseGraph,
+    integration: {
+      ...expenseGraph.integration,
+      compositionSelections: [
+        {
+          lock: {
+            key: "core.crud",
+            version: "1.0.1",
+            packageRoot: "packages/capabilities/assets/core.crud/1.0.1",
+            manifestDigest:
+              "sha256:ac6197b00e529f519f1b062c9189a368eb9b94be125444a7c2f90cec46200f26",
+            lifecycle: "golden",
+          },
+          bindings,
+        },
+      ],
+    },
+  };
+}
+
 describe("ApplicationGraphV1", () => {
   it("parses a graph that can represent the expense profile", () => {
     expect(parseApplicationGraph(expenseGraph)).toEqual(expenseGraph);
@@ -218,6 +240,72 @@ describe("ApplicationGraphV1", () => {
     ];
 
     expect(() => parseApplicationGraph(selected)).toThrow();
+  });
+
+  it.each([
+    {
+      boundary: "provider credential signature",
+      value: `sk-proj-${"x".repeat(32)}`,
+    },
+    {
+      boundary: "cloud access-key signature",
+      value: `AKIA${"A".repeat(16)}`,
+    },
+    {
+      boundary: "source-host token signature",
+      value: `ghp_${"x".repeat(36)}`,
+    },
+  ])("rejects a $boundary in a Draft binding", ({ value }) => {
+    expect(() =>
+      parseApplicationGraph(draftGraphWithBindings({ label: value })),
+    ).toThrow();
+  });
+
+  it.each(["rawPrompt", "rawResponse"])(
+    "rejects Draft binding key semantics for %s material",
+    (key) => {
+      expect(() =>
+        parseApplicationGraph(
+          draftGraphWithBindings({ [key]: "blocked-material" }),
+        ),
+      ).toThrow();
+    },
+  );
+
+  it("rejects a Draft binding string beyond the ingestion size bound", () => {
+    expect(() =>
+      parseApplicationGraph(draftGraphWithBindings({ label: "x".repeat(257) })),
+    ).toThrow();
+  });
+
+  it.each([
+    { boundary: "container command", value: "docker compose down" },
+    { boundary: "shell control operator", value: "catalog && shutdown" },
+    {
+      boundary: "source declaration",
+      value: "const processValue = process.env.VALUE",
+    },
+    { boundary: "SQL source statement", value: "SELECT value FROM records" },
+  ])("rejects a $boundary in a Draft binding", ({ value }) => {
+    expect(() =>
+      parseApplicationGraph(draftGraphWithBindings({ label: value })),
+    ).toThrow();
+  });
+
+  it("keeps bounded user-facing labels and route keys legitimate", () => {
+    expect(
+      parseApplicationGraph(
+        draftGraphWithBindings({
+          label: "Seasonal specials & chef picks",
+          routeKey: "catalog-v2",
+        }),
+      ),
+    ).toEqual(
+      draftGraphWithBindings({
+        label: "Seasonal specials & chef picks",
+        routeKey: "catalog-v2",
+      }),
+    );
   });
 
   it("rejects simultaneous legacy asset locks and Draft composition selections", () => {
