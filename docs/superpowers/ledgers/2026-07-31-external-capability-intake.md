@@ -86,6 +86,10 @@ recorded repair round and stops dependent dispatch.
 - `.gitignore`
 - `pnpm-lock.yaml`
 
+Ignored operational-evidence exception (not a product or runtime path):
+
+- `.superpowers/sdd/2026-07-31-external-capability-intake/task-1-report.md`
+
 ### Non-goals
 
 - No source retrieval, scanner, Candidate creation, conformance, CLI, promotion,
