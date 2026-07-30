@@ -31,30 +31,30 @@ to `implementing` after its scope and ownership are re-recorded.
 
 ## Current milestone
 
-The Commercial Capability Foundation is starting contract implementation. The
-accepted design selects four reusable Golden packages:
+The Commercial Capability Foundation has accepted its physical package and
+Publish-verification contract. The accepted design selects four reusable Golden
+packages:
 `core.identity-context`, `core.location-context`,
 `commerce.line-configuration`, and `commerce.inventory-ledger`. Task 1 is the
-contract owner for their physical package and interface boundary.
-Fix round 1 of 5 closed both P1 defects and the exact-raw-byte P2 in commit
-`4f320fd`. Independent re-review returned PASS with no remaining P0/P1/P2, so
-Task 1 is `ready_for_qa`. Independent behavioral QA remains required; Task 1 is
-not reviewed or accepted.
-Tasks 2 through 5 remain `planned`. Tasks 3 and 4 may run in parallel only after
+contract owner for their physical package and interface boundary. Task 1's
+explicit release set is implementation commit `b2f3b9e` plus repair commit
+`4f320fd`. Independent QA and release review passed, and the PM reconciled the
+evidence through `ready_for_qa -> reviewed -> accepted`. Task 1 is frozen and
+accepted. Tasks 2 through 5 remain `planned`. Tasks 3 and 4 may run in parallel only after
 Task 2 is accepted because they consume the same frozen profile composition
 metadata but write disjoint compiler and Workbench paths.
 
-| Task                                          | State          | Specialization | Contract owner                  | Contract status                                                                                             |
-| --------------------------------------------- | -------------- | -------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| 1. Capability contracts and physical packages | `ready_for_qa` | `integration`  | Factory Capability Registry     | Commit `4f320fd` passed independent re-review with no P0/P1/P2; independent behavioral QA remains required. |
-| 2. Restaurant and Ecommerce profile recipes   | `planned`      | `integration`  | Profile Composition Integration | Blocked on accepted Task 1 package identities and interfaces.                                               |
-| 3. Generic commercial generated runtime       | `planned`      | `backend`      | Compiler Runtime                | Blocked on accepted Task 2 Published Graph recipes and immutable locks.                                     |
-| 4. Workbench profile composition visibility   | `planned`      | `frontend`     | Workbench Product Surface       | Blocked on accepted Task 2 profile composition metadata.                                                    |
-| 5. Cross-profile acceptance and evidence      | `planned`      | `qa`           | Factory Release Evidence        | Blocked on accepted Tasks 1 through 4.                                                                      |
+| Task                                          | State      | Specialization | Contract owner                  | Contract status                                                                                     |
+| --------------------------------------------- | ---------- | -------------- | ------------------------------- | --------------------------------------------------------------------------------------------------- |
+| 1. Capability contracts and physical packages | `accepted` | `integration`  | Factory Capability Registry     | Release set `b2f3b9e` + `4f320fd`; QA and release review PASS, with inherited limitations recorded. |
+| 2. Restaurant and Ecommerce profile recipes   | `planned`  | `integration`  | Profile Composition Integration | Task 1 accepted; ready for bounded PM dispatch.                                                     |
+| 3. Generic commercial generated runtime       | `planned`  | `backend`      | Compiler Runtime                | Blocked on accepted Task 2 Published Graph recipes and immutable locks.                             |
+| 4. Workbench profile composition visibility   | `planned`  | `frontend`     | Workbench Product Surface       | Blocked on accepted Task 2 profile composition metadata.                                            |
+| 5. Cross-profile acceptance and evidence      | `planned`  | `qa`           | Factory Release Evidence        | Blocked on accepted Tasks 1 through 4.                                                              |
 
 ## Task 1: Freeze capability contracts and physical package verification
 
-- **State:** `ready_for_qa`
+- **State:** `accepted`
 - **Specialization:** `integration`
 - **Contract owner:** Factory Capability Registry
 - **Contract artifact:**
@@ -139,7 +139,13 @@ P0/P1/P2.
 
 ### Implemented and independently reviewed evidence
 
-- Repair commit: `4f320fd` (`fix: verify capability packages before publish`).
+- Explicit Task 1 release set:
+  - implementation `b2f3b9e` (`feat: add commercial foundation capability contracts`);
+  - repair `4f320fd` (`fix: verify capability packages before publish`).
+- Commits `75fcd9a` (`docs: add external business logic portfolio`) and
+  `61c5b45` (`docs: design external capability intake`) are independent intake
+  research/design work and are explicitly excluded from the Task 1 release
+  set, review scope, and acceptance claim.
 - The server-only verified-lock factory resolves every selected registry
   identity, verifies its physical package, exact Foundation fixture and
   contract-evidence bytes, fatal UTF-8 decoding, and JSON parsing, then
@@ -162,6 +168,37 @@ P0/P1/P2.
   `src/main.ts`. Neither file differs from repair base `c8a35e7`; both are
   outside the Task 1 write boundary, so this repair did not modify them. This
   is recorded for QA and is not represented as a passing Task 1 lint gate.
+
+### QA, release review, and state-transition evidence
+
+- Independent QA result: PASS. Focused Foundation verification passed 7/7 and
+  the actual Publish lifecycle passed 68/68. Full Capabilities passed 119/119;
+  full Control Plane passed 116/116. Both typechecks, Capabilities lint,
+  `git diff --check`, the Node-builtin-denial browser-safe import check, and the
+  verified-factory entrypoint isolation check passed.
+- QA found no P0/P1. Its P2 limitations are inherited and explicit:
+  `pnpm --filter @factory/control-plane lint` reports only unchanged formatting
+  failures in `src/graph-proposal.provider.ts` and `src/main.ts`, and testing ran
+  on host Node `v24.18.0` while the workspace declares `>=22.11.0 <23` because a
+  Node 22 runtime and standalone browser bundler were unavailable.
+- The unchanged lint files are outside Task 1 and unchanged from repair base
+  `c8a35e7`. Node 22 generated-runtime evidence remains the Task 5 release gate;
+  Task 1 changes package verification and Publish-time server behavior but does
+  not claim generated-runtime Node 22 acceptance.
+- Independent release review result: PASS after P2 provenance remediation. It
+  reviewed only the explicit non-contiguous release set `b2f3b9e` + `4f320fd`,
+  excluded `75fcd9a` and `61c5b45`, accepted the recorded inherited limitations,
+  and found no release-blocking P0/P1.
+- State transition history was preserved:
+  1. `implementing -> ready_for_qa` after repair/re-review, recorded by PM commit
+     `53196fa`;
+  2. `ready_for_qa -> reviewed` after independent QA PASS and reconciliation;
+  3. `reviewed -> accepted` after independent release review PASS and final
+     evidence reconciliation in this ledger update.
+
+Task 1 package identities, Foundation evidence digests, server-only verified
+lock factory, and Publish boundary are now accepted and frozen. Reopening any
+of them requires a new recorded scope and repair state.
 
 ## Task 2: Compose Foundation Graph recipes for Restaurant and Ecommerce
 
@@ -350,9 +387,7 @@ P0/P1/P2.
 
 ## Next smallest valuable slice
 
-Run independent Task 1 behavioral QA against commit `4f320fd`, including the
-direct verified-factory and actual Publish-path tamper boundaries, exact
-raw-byte evidence authentication, all four physical roots, and the recorded
-baseline Control Plane lint limitation. Do not start profile recipe, compiler,
-or Workbench implementation until the PM has advanced Task 1 through every
-required state to `accepted`.
+Dispatch Task 2 to compose Restaurant and Ecommerce Foundation Graph recipes
+from the accepted Task 1 identities and interfaces. Keep Tasks 3 and 4 planned
+until Task 2 is accepted, and preserve the accepted Task 1 physical package,
+evidence digest, verified-lock, and Publish-boundary contracts unchanged.
