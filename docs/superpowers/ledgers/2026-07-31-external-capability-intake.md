@@ -46,7 +46,9 @@ importer/dependency; the prohibition remains everywhere else. Tasks 5 and 6
 remain `planned`. Independent Task 4 review of commit `33fd204` then FAILED with
 four P1 findings and one P2. The Controller authorized bounded Repair Round 1/5
 and exactly three additional production paths; Task 4 remains `implementing`
-under the amended frozen scope. The system will
+under the amended frozen scope. Repair Round 1 re-review then FAILED with one
+P1 fresh-process verification finding. Task 4 remains `implementing` in Repair
+Round 2/5 without another path amendment. The system will
 ingest the 43 fixed-reference portfolio as metadata, retain the 108 scenarios as
 composition demand signals, and produce only quarantined evidence,
 non-executable Candidate records, and pending-review promotion packets.
@@ -110,6 +112,14 @@ accepted. The Controller authorized bounded Repair Round 1/5 and added exactly
 recorded repair only. Task 4 remains `implementing`; Tasks 5 and 6 remain
 `planned`.
 
+Repair Round 1 re-review of commit `53f2150` FAILED with one P1: receipt-addressed
+fresh-process verification could skip the accepted Task 3 verifier, artifact
+rehydration, and persisted conformance-result verification when optional
+volatile fields were absent. The Controller authorized Repair Round 2/5 within
+the existing Task 4 Candidate/API/test paths. Task 4 remains `implementing`;
+the frozen Task 2 store, isolation contract, dependencies, and Tasks 5-6 states
+are unchanged.
+
 Independent Task 2 review FAILED with three P1 findings and one P2. The
 Controller resolved its schema incompatibility by selecting a distinct
 `factory.external-source-acquisition/v1` record. Task 2 entered Fix Round 1/5
@@ -135,7 +145,7 @@ remain frozen.
 | 1. Candidate contracts and immutable persistence | `accepted`     | `integration`       | External Intake Contract         | Original release and bounded amendment accepted and frozen. |
 | 2. Fixed-source provenance and notices           | `accepted`     | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
 | 3. Deterministic scan orchestration              | `accepted`     | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
-| 4. Candidate registry, API, CLI, and isolation   | `implementing` | `integration`       | Candidate Registry               | Repair Round 1/5 under bounded amended scope.               |
+| 4. Candidate registry, API, CLI, and isolation   | `implementing` | `integration`       | Candidate Registry               | Repair Round 2/5; fresh verification P1 remains.            |
 | 5. Review-only promotion packets                 | `planned`      | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.           |
 | 6. Bulk acceptance and release evidence          | `planned`      | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.        |
 
@@ -793,6 +803,37 @@ source, Task 1-3 behavior, dependency, network, process, or runtime change is
 authorized. Task 4 remains `implementing` with the same sole writer. Tasks 5 and
 6 remain `planned`; independent re-review is required before any state advance.
 
+### Repair Round 1 re-review: Repair Round 2/5
+
+Independent re-review of repair commit `53f2150` FAILED with one P1. Fresh
+receipt-addressed recovery could construct an entry without canonical
+artifacts, strict `IntakeJobV1`, or `CompletedEvidenceRefV1`, then fall back to a
+weaker receipt-only result instead of invoking the accepted Task 3 verifier.
+
+The Controller authorizes Repair Round 2/5 within the existing Task 4
+Candidate/API/test paths unless implementation proves a genuine blocker. The
+sole repair scope is:
+
+1. Persist immutable, redacted, strict Candidate verification state sufficient
+   to reconstruct the `IntakeJobV1`, `CompletedEvidenceRefV1`, canonical
+   artifacts, and current Candidate revision after restart.
+2. Make fresh receipt-addressed locator recovery unconditionally invoke the
+   exported `verifyCompletedEvidence` boundary, validate and re-put every
+   artifact and checkpoint blob, and verify the persisted conformance result
+   whenever the Candidate is `conformance-passed`.
+3. Remove every optional volatile-field fallback and weak receipt-only valid
+   result. If the strict verification state cannot be reconstructed, fail
+   closed.
+4. Add fresh-process adversarial coverage for fabricated or truncated chains,
+   missing snapshot/acquisition records, missing artifacts, tampered artifacts,
+   and tampered conformance results.
+
+The frozen Task 2 store must not change. The Candidate isolation contract and
+dependency set remain unchanged; no new network, process, runtime, or external
+dependency behavior is authorized. Task 4 remains `implementing` with its sole
+writer. Tasks 5 and 6 remain `planned`; independent re-review is required before
+any state advance.
+
 ### Exact allowed paths
 
 - `packages/external-intake/src/candidates.ts`
@@ -942,8 +983,11 @@ manifest to import `@factory/external-intake`; all other isolation prohibitions
 remain enforced. Repair Round 1/5 is limited to Candidate namespace defense,
 reuse of accepted Task 3 completed-evidence verification, durable opaque
 discovery and uniqueness, validated conformance-pass transition, and
-Candidate-safe effect allow-listing. The frozen Task 2 store is unchanged. Task
-1's original release and bounded amendments, Task 2's accepted code set
+Candidate-safe effect allow-listing. Repair Round 2/5 is now limited to strict
+persisted fresh-process verification state, unconditional accepted Task 3
+verification and blob rehydration, conformance-result verification, fail-closed
+recovery, and the recorded adversarial tests. The frozen Task 2 store is
+unchanged. Task 1's original release and bounded amendments, Task 2's accepted code set
 `515e0ba + 3dcb20f + dcaddf4`, and Task 3's accepted repair commit `8b31d3a`
 remain frozen. Tasks 5 and 6 remain `planned` and retain their recorded
 dependency gates.
