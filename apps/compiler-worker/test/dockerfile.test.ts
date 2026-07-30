@@ -32,4 +32,21 @@ describe("local worker Docker runtime", () => {
       "/var/run/docker.sock",
     );
   });
+
+  it("forwards the optional local Restaurant bootstrap only to compiler-worker", async () => {
+    const compose = await readFile(
+      new URL("../../../infra/docker-compose.yml", import.meta.url),
+      "utf8",
+    );
+    const worker = compose.slice(
+      compose.indexOf("  compiler-worker:"),
+      compose.indexOf("  workbench:"),
+    );
+    const outsideWorker = `${compose.slice(0, compose.indexOf("  compiler-worker:"))}${compose.slice(compose.indexOf("  workbench:"))}`;
+
+    expect(worker).toContain(
+      "RESTAURANT_DEMO_TABLE_TOKEN: ${RESTAURANT_DEMO_TABLE_TOKEN:-}",
+    );
+    expect(outsideWorker).not.toContain("RESTAURANT_DEMO_TABLE_TOKEN");
+  });
 });

@@ -72,6 +72,7 @@ services:
       FACTORY_INTERNAL_WORKER_TOKEN: ${FACTORY_INTERNAL_WORKER_TOKEN:?required}
       FACTORY_ARTIFACT_ROOT: /artifacts
       FACTORY_CONTROL_PLANE_URL: http://control-plane:3000
+      RESTAURANT_DEMO_TABLE_TOKEN: ${RESTAURANT_DEMO_TABLE_TOKEN:-}
     depends_on:
       redis:
         condition: service_healthy
