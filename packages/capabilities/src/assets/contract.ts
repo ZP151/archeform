@@ -8,15 +8,71 @@ export type CapabilityCategory = "core" | "commerce" | "restaurant";
 export type CapabilityOutputSlot =
   | "api.runtime"
   | "api.command"
+  | "api.router"
+  | "api.service"
   | "database.schema"
+  | "database.migration"
   | "page.block"
   | "policy.rule"
   | "test.fixture"
+  | "test.journey"
   | "flow.effect"
+  | "flow.handler"
   | "web.customer"
   | "web.merchant"
+  | "web.component"
+  | "web.route"
+  | "web.navigation"
   | "report.read-model"
-  | "realtime.event";
+  | "realtime.event"
+  | "docs.section";
+
+export type CapabilityParameterTypeV1 =
+  "string" | "number" | "boolean" | "graph-symbol";
+
+export interface CapabilityParameterSchemaV1 {
+  readonly key: string;
+  readonly type: CapabilityParameterTypeV1;
+  readonly required: boolean;
+}
+
+export type CapabilityGraphModelV1 = Exclude<
+  keyof ApplicationGraphV1,
+  "apiVersion" | "metadata"
+>;
+
+export interface CapabilityGraphContributionV1 {
+  readonly id: string;
+  readonly model: CapabilityGraphModelV1;
+  readonly collection: string;
+  readonly operation: "append" | "extend";
+  readonly parameterRefs: readonly string[];
+  readonly digest: string;
+}
+
+export interface CapabilityExecutableContributionV1 {
+  readonly id: string;
+  readonly outputSlot: CapabilityOutputSlot;
+  readonly namespace: string;
+  readonly source: string;
+  readonly target: string;
+  readonly parameterRefs: readonly string[];
+  readonly targetRuntimeInterfaceVersion: string;
+  readonly orderingRequirements: readonly string[];
+  readonly mergeProtocol: "replace-file" | "append-fragment";
+  readonly digest: string;
+}
+
+export interface CapabilityRequirementV1 {
+  readonly interfaceKey: string;
+  readonly version: string;
+  readonly multiProvider?: boolean;
+}
+
+export interface CapabilityProvideV1 {
+  readonly interfaceKey: string;
+  readonly version: string;
+}
 
 export interface CapabilityTemplateContributionV1 {
   readonly id: string;
@@ -45,6 +101,11 @@ export interface CapabilityAssetManifestV1 {
   }[];
   readonly outputSlots: readonly CapabilityOutputSlot[];
   readonly templates: readonly CapabilityTemplateContributionV1[];
+  readonly parameters?: readonly CapabilityParameterSchemaV1[];
+  readonly graphContributions?: readonly CapabilityGraphContributionV1[];
+  readonly executableContributions?: readonly CapabilityExecutableContributionV1[];
+  readonly requires?: readonly CapabilityRequirementV1[];
+  readonly provides?: readonly CapabilityProvideV1[];
   readonly verification: {
     readonly fixture: string;
     readonly contractTest: string;

@@ -4,28 +4,9 @@ import {
 } from "@factory/graph/browser";
 
 import {
-  auditAsset,
-  auditAssetV1_0_1,
-  cartAsset,
-  catalogAsset,
-  crudAsset,
-  crudAssetV1_0_1,
-  inventoryAsset,
-  inventoryAssetV1_0_1,
+  capabilityAssets,
+  currentCapabilityAssets,
   lockCapabilityAsset,
-  notificationAsset,
-  notificationAssetV1_0_1,
-  orderAsset,
-  restaurantCashierAsset,
-  restaurantKitchenAsset,
-  restaurantMenuAsset,
-  restaurantOrderingAsset,
-  restaurantReportingAsset,
-  restaurantTableSessionAsset,
-  simulatedPaymentAsset,
-  simulatedPaymentAssetV1_0_1,
-  workflowAsset,
-  workflowAssetV1_0_1,
   type CapabilityAssetV1,
   type CapabilityAssetLockV1,
   type CapabilityCategory,
@@ -37,9 +18,27 @@ export type {
   CapabilityAssetLockV1,
   CapabilityAssetManifestV1,
   CapabilityCategory,
+  CapabilityExecutableContributionV1,
+  CapabilityGraphContributionV1,
   CapabilityOutputSlot,
+  CapabilityParameterSchemaV1,
+  CapabilityProvideV1,
+  CapabilityRequirementV1,
   FactoryProfile,
 } from "./assets/index.js";
+
+export {
+  createCapabilityCompositionLock,
+  resolveCapabilityComposition,
+} from "./composition.js";
+export type {
+  CapabilityBindingValueV1,
+  CapabilityCompositionLockV1,
+  CapabilityCompositionV1,
+  CapabilitySelectionV1,
+  CreateCapabilityCompositionLockInput,
+  ResolveCapabilityCompositionInput,
+} from "./composition.js";
 
 export {
   assertRestaurantOrderingProfile,
@@ -62,33 +61,7 @@ export interface CapabilityDefinition {
   readonly effects: readonly string[];
 }
 
-const currentCapabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
-  auditAssetV1_0_1,
-  crudAssetV1_0_1,
-  notificationAssetV1_0_1,
-  workflowAssetV1_0_1,
-  catalogAsset,
-  cartAsset,
-  inventoryAssetV1_0_1,
-  orderAsset,
-  simulatedPaymentAssetV1_0_1,
-  restaurantTableSessionAsset,
-  restaurantMenuAsset,
-  restaurantOrderingAsset,
-  restaurantKitchenAsset,
-  restaurantCashierAsset,
-  restaurantReportingAsset,
-]);
-
-export const capabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
-  ...currentCapabilityAssets,
-  auditAsset,
-  crudAsset,
-  notificationAsset,
-  workflowAsset,
-  inventoryAsset,
-  simulatedPaymentAsset,
-]);
+export { capabilityAssets };
 
 const definitionFor = (asset: CapabilityAssetV1): CapabilityDefinition => ({
   key: asset.manifest.key,
