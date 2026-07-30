@@ -44,7 +44,7 @@ Vitest, Node 22 generated runtimes.
 | `packages/capabilities/src/composition.ts` | Canonical parameter encoding, requirements resolution, contribution ordering, immutable lock creation, and fail-closed validation. |
 | `packages/capabilities/src/node.ts` | Physical package verification and safe, digest-verified contribution loading. |
 | `packages/capabilities/src/index.ts` | Browser-safe registry, generic recipe entry points, and migration of profile helpers to the generic resolver. |
-| `packages/graph/src/model.ts` | Schema validation for a Draft's capability selections, while keeping the Published composition lock outside mutable Graph state. |
+| `packages/graph/src/model.ts` | Schema validation for a Draft's capability selections and bindings, while keeping the Published composition lock outside mutable Graph state. |
 | `apps/control-plane/prisma/schema.prisma` | Immutable composition lock and lock hash on `PublishedRevision`. |
 | `apps/control-plane/prisma/migrations/20260730_add_composition_lock/migration.sql` | Additive database migration for the new immutable fields. |
 | `apps/control-plane/src/lifecycle.service.ts` | Validate Draft selections, create the lock atomically at Publish, and pass it to compilation. |
@@ -248,23 +248,57 @@ git commit -m "feat: verify multi-target capability contributions"
 ### Task 3: Publish and compile an immutable composition lock
 
 **Files:**
+- Modify: `packages/graph/src/model.ts`
+- Modify: `packages/graph/test/application-graph.test.ts`
 - Modify: `apps/control-plane/prisma/schema.prisma`
 - Create: `apps/control-plane/prisma/migrations/20260730_add_composition_lock/migration.sql`
 - Modify: `apps/control-plane/src/lifecycle.service.ts`
 - Modify: `apps/control-plane/test/lifecycle.service.test.ts`
+- Modify: `apps/control-plane/src/compilation-queue.ts`
+- Modify: `apps/control-plane/test/compilation-queue.test.ts`
+- Modify: `apps/compiler-worker/src/queued-compilation.ts`
+- Modify: `apps/compiler-worker/src/compilation-executor.ts`
+- Modify: `apps/compiler-worker/test/compilation-executor.test.ts`
 - Modify: `packages/compiler/src/index.ts`
 - Create: `packages/compiler/test/composition-compilation.test.ts`
+- Modify: `packages/compiler/test/compilation-plan.test.ts`
+- Modify: `packages/compiler/test/profile-compilation.test.ts`
+- Modify: `packages/compiler/test/restaurant-runtime.test.ts`
+- Modify: `packages/compiler/test/restaurant-page-runtime.test.ts`
+- Modify: `packages/compiler/test/restaurant-merchant-runtime.test.ts`
+- Modify: `packages/capabilities/test/restaurant-profile.test.ts`
 
 **Interfaces:**
 - Consumes: `CapabilityCompositionLockV1` from Task 1 and contribution loader
   from Task 2.
-- Produces: non-null `PublishedRevision.compositionLock` and
+- Produces: Draft `integration.compositionSelections`; non-null
+  `PublishedRevision.compositionLock` and
   `compositionLockHash`; `PublishedGraphInput.compositionLock`; generated
   `composition-lock.json`; and `resolveTargetContributions(input)`.
 
 - [ ] **Step 1: Write failing Publish lifecycle tests**
 
 ```ts
+it("accepts only a Draft selection with a full Golden identity and typed bindings", () => {
+  expect(() => parseApplicationGraph({
+    ...graph,
+    integration: {
+      ...graph.integration,
+      compositionSelections: [{
+        lock: validLock,
+        bindings: { routeKey: "catalog", enabled: true },
+      }],
+    },
+  })).not.toThrow();
+  expect(() => parseApplicationGraph({
+    ...graph,
+    integration: {
+      ...graph.integration,
+      compositionSelections: [{ lock: validLock, bindings: { sourcePath: "x" } }],
+    },
+  })).toThrow();
+});
+
 it("stores a composition lock only when a validated Draft is published", async () => {
   const published = await service.publishLocalApplicationGraph("store");
   expect(published.compositionLock.apiVersion).toBe("factory.composition/v1");
@@ -281,8 +315,9 @@ it("does not let compilation replace a persisted composition lock", async () => 
 
 Run: `pnpm --filter @factory/control-plane test -- --run test/lifecycle.service.test.ts`
 
-Expected: FAIL because `PublishedRevision` has no lock fields and the compiler
-input does not receive a composition lock.
+Expected: FAIL because Draft Graphs have no typed capability selections,
+`PublishedRevision` has no lock fields, and the compiler input does not receive
+a composition lock.
 
 - [ ] **Step 3: Persist and enforce the immutable lock**
 
@@ -295,13 +330,24 @@ ALTER TABLE "PublishedRevision"
   ADD COLUMN "compositionLockHash" TEXT;
 ```
 
+Add optional Draft-only `integration.compositionSelections`, each with exactly
+the five Golden identity fields and a binding object containing strings,
+finite numbers, booleans, or an exact `{ graphSymbol }` object. Reject unknown
+selection/lock/binding object fields at Graph parsing time. The capability
+registry remains responsible for validating that selections match Golden
+manifests and declared package parameters.
+
 Do not backfill existing immutable rows: they remain view-only historical
 evidence and are rejected by the new composition compiler with a bounded
 `Published revision has no composition lock.` error. At Publish, construct the
-lock from the parsed Draft Graph and Golden selections inside the same Prisma
-transaction that creates `PublishedRevision`. At compilation queue time, read
-the stored lock with the Published revision and verify its digest independently
-before enqueueing. Do not accept a lock in an HTTP request.
+lock from the parsed Draft Graph selections inside the same Prisma transaction
+that creates `PublishedRevision`. For an existing Draft that has exact
+`assetLocks` but no selections, create an in-memory zero-binding selection only
+when every selected manifest declares no required parameter; the resulting
+Published snapshot contains the new composition lock and does not mutate its
+source Draft. At compilation queue time, read the stored lock with the
+Published revision and verify its digest independently before enqueueing. Do
+not accept a lock in an HTTP request.
 
 Update `PublishedGraphInput` so the compiler requires:
 
@@ -315,13 +361,15 @@ export interface PublishedGraphInput {
 
 - [ ] **Step 4: Make the compiler emit generic lock and target evidence**
 
-Replace `resolveGeneratedRuntimeMode` and the migrated package-version set with
-`resolveTargetContributions(input)`. It must verify every contribution digest,
-interface version, dependency order, safe namespace, and cross-package target
-collision before rendering. Emit `composition-lock.json` from the persisted
-lock. Preserve generic Graph renderers for Prisma, Casbin, XState, API tests,
-documentation, simulator, and web base files; only package contributions add
-their declared slots.
+Add `resolveTargetContributions(input)` alongside the existing renderer first.
+It must verify every contribution digest, interface version, dependency order,
+safe namespace, and cross-package target collision before rendering. Emit
+`composition-lock.json` from the persisted lock. Preserve generic Graph
+renderers for Prisma, Casbin, XState, API tests, documentation, simulator, and
+web base files; only package contributions add their declared slots. Do not
+remove `resolveGeneratedRuntimeMode` or Restaurant dispatch until Task 4 has
+migrated the shared commerce assets and proved equivalent generic target
+contributions.
 
 Write compiler tests for an exact persisted lock, a tampered lock digest,
 duplicate `web.route` target, contribution order determinism, and a package
@@ -338,9 +386,8 @@ Run: `pnpm --filter @factory/compiler test -- --run test/composition-compilation
 Expected: PASS.
 
 ```bash
-git add apps/control-plane/prisma apps/control-plane/src/lifecycle.service.ts \
-  apps/control-plane/test/lifecycle.service.test.ts packages/compiler/src/index.ts \
-  packages/compiler/test/composition-compilation.test.ts
+git add packages/graph apps/control-plane apps/compiler-worker packages/compiler \
+  packages/capabilities/test/restaurant-profile.test.ts
 git commit -m "feat: compile immutable capability composition locks"
 ```
 
