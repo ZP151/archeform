@@ -5,6 +5,9 @@ import { dirname, resolve, sep } from "node:path";
 import type {
   CapabilityAssetManifestV1,
   CapabilityAssetV1,
+  CapabilityExecutableContributionV1,
+  CapabilityGraphContributionV1,
+  CapabilityOutputSlot,
   CapabilityTemplateContributionV1,
 } from "./assets/index.js";
 
@@ -18,12 +21,47 @@ export interface ResolvedCapabilityAssetTemplate {
   readonly content: string;
 }
 
-const templateTargetPrefixes: Readonly<
-  Partial<
-    Record<CapabilityTemplateContributionV1["outputSlot"], readonly string[]>
-  >
+export interface ResolvedCapabilityAssetContribution {
+  readonly assetKey: string;
+  readonly assetVersion: string;
+  readonly namespace: string;
+  readonly source: string;
+  readonly target: string;
+  readonly outputSlot: CapabilityExecutableContributionV1["outputSlot"];
+  readonly digest: string;
+  readonly content: string;
+  readonly targetRuntimeInterfaceVersion: string;
+}
+
+const targetPrefixes = {
+  "web.component": ["web/src/components/"],
+  "web.route": ["web/src/app/"],
+  "web.navigation": ["web/src/navigation/"],
+  "api.router": ["api/src/routes/"],
+  "api.service": ["api/src/services/"],
+  "database.schema": ["database/prisma/fragments/"],
+  "database.migration": ["database/prisma/migrations/"],
+  "flow.handler": ["api/src/flows/handlers/"],
+  "policy.rule": ["api/policy/fragments/"],
+  "test.fixture": ["api/test/fixtures/"],
+  "test.journey": ["api/test/journeys/"],
+  "docs.section": ["docs/generated/"],
+} as const satisfies Partial<Record<CapabilityOutputSlot, readonly string[]>>;
+
+const legacyTemplateTargetPrefixes: Readonly<
+  Partial<Record<CapabilityOutputSlot, readonly string[]>>
 > = {
   "api.runtime": ["api/src/capabilities/"],
+};
+
+const additiveGraphCollections: Readonly<
+  Partial<Record<CapabilityGraphContributionV1["model"], readonly string[]>>
+> = {
+  page: ["pages", "navigation"],
+  domain: ["entities", "relations", "seedData"],
+  policy: ["roles", "permissions"],
+  flow: ["flows"],
+  integration: ["providers", "capabilities"],
 };
 
 function canonicalJson(value: unknown): string {
@@ -54,6 +92,131 @@ function safePackageRelativePath(path: string): boolean {
   );
 }
 
+function insideRoot(root: string, path: string): boolean {
+  return path.startsWith(`${root}${sep}`);
+}
+
+function templateTargetPrefixesFor(
+  outputSlot: CapabilityOutputSlot,
+): readonly string[] | undefined {
+  return (
+    (
+      targetPrefixes as Partial<Record<CapabilityOutputSlot, readonly string[]>>
+    )[outputSlot] ?? legacyTemplateTargetPrefixes[outputSlot]
+  );
+}
+
+function assertDeclaredParameterReferences(
+  contributionType: "Graph" | "executable",
+  contribution: {
+    readonly id: string;
+    readonly parameterRefs: readonly string[];
+  },
+  declaredParameters: ReadonlySet<string>,
+): void {
+  for (const parameterRef of contribution.parameterRefs) {
+    if (!declaredParameters.has(parameterRef)) {
+      throw new Error(
+        `Capability ${contributionType} contribution '${contribution.id}' references undeclared parameter '${parameterRef}'.`,
+      );
+    }
+  }
+}
+
+function assertGraphContribution(
+  contribution: CapabilityGraphContributionV1,
+  declaredParameters: ReadonlySet<string>,
+): void {
+  assertDeclaredParameterReferences("Graph", contribution, declaredParameters);
+  const collections = additiveGraphCollections[contribution.model];
+  if (!collections?.includes(contribution.collection)) {
+    throw new Error(
+      `Capability Graph contribution '${contribution.id}' collection '${contribution.model}.${contribution.collection}' is not an allowed additive collection.`,
+    );
+  }
+  const { digest: _digest, ...unsignedContribution } = contribution;
+  if (sha256(canonicalJson(unsignedContribution)) !== contribution.digest) {
+    throw new Error(
+      `Capability Graph contribution '${contribution.id}' digest does not match.`,
+    );
+  }
+}
+
+function assertExecutableContribution(
+  contribution: CapabilityExecutableContributionV1,
+  manifest: CapabilityAssetManifestV1,
+  packageRoot: string,
+): ResolvedCapabilityAssetContribution {
+  if (!safePackageRelativePath(contribution.source)) {
+    throw new Error(
+      `Capability executable contribution '${contribution.id}' has an unsafe source path.`,
+    );
+  }
+  if (!safePackageRelativePath(contribution.target)) {
+    throw new Error(
+      `Capability executable contribution '${contribution.id}' has an unsafe target path.`,
+    );
+  }
+  if (!manifest.outputSlots.includes(contribution.outputSlot)) {
+    throw new Error(
+      `Capability executable contribution '${contribution.id}' uses undeclared output slot '${contribution.outputSlot}'.`,
+    );
+  }
+  const prefixes = (
+    targetPrefixes as Partial<Record<CapabilityOutputSlot, readonly string[]>>
+  )[contribution.outputSlot];
+  if (!prefixes?.some((prefix) => contribution.target.startsWith(prefix))) {
+    throw new Error(
+      `Capability executable contribution '${contribution.id}' targets '${contribution.target}' outside '${contribution.outputSlot}'.`,
+    );
+  }
+  const namespacePath = contribution.namespace.endsWith("/")
+    ? contribution.namespace.slice(0, -1)
+    : contribution.namespace;
+  const namespacePrefix = `packages/${manifest.key}/`;
+  if (
+    !safePackageRelativePath(namespacePath) ||
+    !contribution.namespace.startsWith(namespacePrefix)
+  ) {
+    throw new Error(
+      `Capability executable contribution '${contribution.id}' namespace '${contribution.namespace}' is outside declared namespace '${namespacePrefix}'.`,
+    );
+  }
+  assertDeclaredParameterReferences(
+    "executable",
+    contribution,
+    new Set((manifest.parameters ?? []).map(({ key }) => key)),
+  );
+  const sourcePath = resolve(packageRoot, contribution.source);
+  if (!insideRoot(packageRoot, sourcePath)) {
+    throw new Error(
+      `Capability executable contribution '${contribution.id}' escapes its package.`,
+    );
+  }
+  if (!existsSync(sourcePath)) {
+    throw new Error(
+      `Capability executable contribution '${contribution.id}' is missing from its package.`,
+    );
+  }
+  const content = readFileSync(sourcePath, "utf8");
+  if (sha256(content) !== contribution.digest) {
+    throw new Error(
+      `Capability executable contribution '${contribution.id}' digest does not match.`,
+    );
+  }
+  return {
+    assetKey: manifest.key,
+    assetVersion: manifest.version,
+    namespace: contribution.namespace,
+    source: contribution.source,
+    target: contribution.target,
+    outputSlot: contribution.outputSlot,
+    digest: contribution.digest,
+    content,
+    targetRuntimeInterfaceVersion: contribution.targetRuntimeInterfaceVersion,
+  };
+}
+
 function assertTemplateContribution(
   template: CapabilityTemplateContributionV1,
   packageRoot: string,
@@ -68,7 +231,7 @@ function assertTemplateContribution(
       `Capability template '${template.id}' has an unsafe target path.`,
     );
   }
-  const prefixes = templateTargetPrefixes[template.outputSlot];
+  const prefixes = templateTargetPrefixesFor(template.outputSlot);
   if (!prefixes?.some((prefix) => template.target.startsWith(prefix))) {
     throw new Error(
       `Capability template '${template.id}' targets '${template.target}' outside '${template.outputSlot}'.`,
@@ -127,14 +290,19 @@ export function verifyCapabilityAssetPackage(
   asset: CapabilityAssetV1,
   repositoryRoot: string,
 ): string[] {
-  const packageRoot = resolve(repositoryRoot, asset.manifest.packageRoot);
-  const required = [
-    "component.json",
-    "adapter.json",
-    asset.manifest.verification.fixture,
-    asset.manifest.verification.contractTest,
-  ];
-  const missing = required.filter(
+  const resolvedRepositoryRoot = resolve(repositoryRoot);
+  if (!safePackageRelativePath(asset.manifest.packageRoot)) {
+    return ["packageRoot: unsafe package path"];
+  }
+  const packageRoot = resolve(
+    resolvedRepositoryRoot,
+    asset.manifest.packageRoot,
+  );
+  if (!insideRoot(resolvedRepositoryRoot, packageRoot)) {
+    return ["packageRoot: escapes repository"];
+  }
+  const requiredPackageFiles = ["component.json", "adapter.json"];
+  const missing = requiredPackageFiles.filter(
     (relativePath) => !existsSync(resolve(packageRoot, relativePath)),
   );
   if (missing.length) return missing;
@@ -150,9 +318,27 @@ export function verifyCapabilityAssetPackage(
     source?: unknown;
     outputSlots?: unknown;
     templates?: unknown;
+    parameters?: unknown;
+    graphContributions?: unknown;
+    executableContributions?: unknown;
   };
 
   const invalid: string[] = [];
+  for (const [evidenceType, relativePath] of [
+    ["fixture", asset.manifest.verification.fixture],
+    ["contract test", asset.manifest.verification.contractTest],
+  ] as const) {
+    if (!safePackageRelativePath(relativePath)) {
+      invalid.push(`verification: unsafe ${evidenceType} path`);
+      continue;
+    }
+    const evidencePath = resolve(packageRoot, relativePath);
+    if (!insideRoot(packageRoot, evidencePath)) {
+      invalid.push(`verification: ${evidenceType} escapes package`);
+    } else if (!existsSync(evidencePath)) {
+      invalid.push(relativePath);
+    }
+  }
   if (canonicalJson(component) !== canonicalJson(asset.manifest)) {
     invalid.push("component.json: canonical manifest mismatch");
   }
@@ -172,6 +358,40 @@ export function verifyCapabilityAssetPackage(
   }
   if (canonicalJson(adapter.templates) !== canonicalJson(component.templates)) {
     invalid.push("adapter.json: templates");
+  }
+  for (const field of [
+    "parameters",
+    "graphContributions",
+    "executableContributions",
+  ] as const) {
+    if (canonicalJson(adapter[field]) !== canonicalJson(component[field])) {
+      invalid.push(`adapter.json: ${field}`);
+    }
+  }
+  const declaredParameters = new Set(
+    (component.parameters ?? []).map(({ key }) => key),
+  );
+  for (const contribution of component.graphContributions ?? []) {
+    try {
+      assertGraphContribution(contribution, declaredParameters);
+    } catch (error) {
+      invalid.push(
+        error instanceof Error
+          ? `graph contribution: ${error.message}`
+          : "graph contribution: invalid",
+      );
+    }
+  }
+  for (const contribution of component.executableContributions ?? []) {
+    try {
+      assertExecutableContribution(contribution, component, packageRoot);
+    } catch (error) {
+      invalid.push(
+        error instanceof Error
+          ? `executable contribution: ${error.message}`
+          : "executable contribution: invalid",
+      );
+    }
   }
   for (const template of component.templates ?? []) {
     try {
@@ -212,5 +432,32 @@ export function loadCapabilityAssetTemplates(
       assetKey: asset.manifest.key,
       assetVersion: asset.manifest.version,
     };
+  });
+}
+
+export function loadCapabilityAssetContributions(
+  asset: CapabilityAssetV1,
+  repositoryRoot: string,
+): readonly ResolvedCapabilityAssetContribution[] {
+  const invalid = verifyCapabilityAssetPackage(asset, repositoryRoot);
+  if (invalid.length) {
+    throw new Error(
+      `Capability package '${asset.manifest.key}' is invalid: ${invalid.join(", ")}`,
+    );
+  }
+  const packageRoot = resolve(repositoryRoot, asset.manifest.packageRoot);
+  const targets = new Set<string>();
+  return (asset.manifest.executableContributions ?? []).map((contribution) => {
+    if (targets.has(contribution.target)) {
+      throw new Error(
+        `Capability package '${asset.manifest.key}' declares duplicate contribution target '${contribution.target}'.`,
+      );
+    }
+    targets.add(contribution.target);
+    return assertExecutableContribution(
+      contribution,
+      asset.manifest,
+      packageRoot,
+    );
   });
 }

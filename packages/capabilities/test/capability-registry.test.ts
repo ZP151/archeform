@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -15,7 +16,10 @@ import {
   getCapability,
   getProfileComposition,
   profileGraphs,
+  type CapabilityAssetManifestV1,
   type CapabilityAssetV1,
+  type CapabilityExecutableContributionV1,
+  type CapabilityGraphContributionV1,
   type FactoryProfile,
 } from "../src/index.js";
 import {
@@ -24,7 +28,171 @@ import {
   verifyCapabilityAssetPackage,
   loadCapabilityAssetTemplates,
 } from "../src/node.js";
+import * as capabilityNode from "../src/node.js";
 import { validateApplicationGraph } from "@factory/graph";
+
+interface LoadedContribution {
+  readonly assetKey: string;
+  readonly assetVersion: string;
+  readonly namespace: string;
+  readonly source: string;
+  readonly target: string;
+  readonly outputSlot: CapabilityExecutableContributionV1["outputSlot"];
+  readonly digest: string;
+  readonly content: string;
+  readonly targetRuntimeInterfaceVersion: string;
+}
+
+type ContributionLoader = (
+  asset: CapabilityAssetV1,
+  repositoryRoot: string,
+) => readonly LoadedContribution[];
+
+const loadCapabilityAssetContributions =
+  (
+    capabilityNode as typeof capabilityNode & {
+      loadCapabilityAssetContributions?: ContributionLoader;
+    }
+  ).loadCapabilityAssetContributions ??
+  (loadCapabilityAssetTemplates as unknown as ContributionLoader);
+
+const executableContent = "export const capability = '{{entityKey}}';\n";
+
+function testDigest(content: string): string {
+  return `sha256:${createHash("sha256").update(content).digest("hex")}`;
+}
+
+function executableContribution(
+  overrides: Partial<CapabilityExecutableContributionV1> = {},
+): CapabilityExecutableContributionV1 {
+  return {
+    id: "managed-route",
+    outputSlot: "web.route",
+    namespace: "packages/test.contribution/web/routes/",
+    source: "templates/web/route.tsx.tpl",
+    target: "web/src/app/{{routeKey}}/page.tsx",
+    parameterRefs: ["entityKey", "routeKey"],
+    targetRuntimeInterfaceVersion: "factory.web-route/v1",
+    orderingRequirements: [],
+    mergeProtocol: "replace-file",
+    digest: testDigest(executableContent),
+    ...overrides,
+  };
+}
+
+function testContributionAsset(input: {
+  readonly executableContributions?: readonly CapabilityExecutableContributionV1[];
+  readonly graphContributions?: readonly CapabilityGraphContributionV1[];
+  readonly outputSlots?: CapabilityAssetManifestV1["outputSlots"];
+  readonly fixture?: string;
+  readonly contractTest?: string;
+}): CapabilityAssetV1 {
+  const registered = getCapabilityAsset("core.crud").manifest;
+  const draftManifest: CapabilityAssetManifestV1 = {
+    ...registered,
+    key: "test.contribution",
+    version: "1.0.0",
+    packageRoot: "packages/capabilities/assets/test.contribution/1.0.0",
+    manifestDigest: "sha256:placeholder",
+    outputSlots: input.outputSlots ?? ["web.route"],
+    templates: [],
+    parameters: [
+      { key: "entityKey", type: "graph-symbol", required: true },
+      { key: "routeKey", type: "graph-symbol", required: true },
+    ],
+    graphContributions: input.graphContributions ?? [],
+    executableContributions: input.executableContributions ?? [
+      executableContribution(),
+    ],
+    verification: {
+      fixture: input.fixture ?? "fixtures/default.json",
+      contractTest: input.contractTest ?? "tests/contract.json",
+      status: "verified",
+    },
+  };
+  return {
+    manifest: {
+      ...draftManifest,
+      manifestDigest: capabilityManifestDigest(draftManifest),
+    },
+  };
+}
+
+async function writeTestContributionPackage(
+  repositoryRoot: string,
+  asset: CapabilityAssetV1,
+  sources: Readonly<Record<string, string>> = {
+    "templates/web/route.tsx.tpl": executableContent,
+  },
+  evidence: {
+    readonly fixture?: boolean;
+    readonly contractTest?: boolean;
+  } = {},
+): Promise<void> {
+  const physicalRoot = resolve(repositoryRoot, asset.manifest.packageRoot);
+  await mkdir(physicalRoot, { recursive: true });
+  await writeFile(
+    resolve(physicalRoot, "component.json"),
+    JSON.stringify(asset.manifest, null, 2),
+  );
+  await writeFile(
+    resolve(physicalRoot, "adapter.json"),
+    JSON.stringify(
+      {
+        apiVersion: "factory.adapter/v1",
+        kind: "declarative",
+        outputSlots: asset.manifest.outputSlots,
+        templates: asset.manifest.templates,
+        parameters: asset.manifest.parameters,
+        graphContributions: asset.manifest.graphContributions,
+        executableContributions: asset.manifest.executableContributions,
+      },
+      null,
+      2,
+    ),
+  );
+  if (evidence.fixture !== false) {
+    const fixturePath = resolve(
+      physicalRoot,
+      asset.manifest.verification.fixture,
+    );
+    await mkdir(dirname(fixturePath), { recursive: true });
+    await writeFile(fixturePath, "{}");
+  }
+  if (evidence.contractTest !== false) {
+    const contractPath = resolve(
+      physicalRoot,
+      asset.manifest.verification.contractTest,
+    );
+    await mkdir(dirname(contractPath), { recursive: true });
+    await writeFile(contractPath, "{}");
+  }
+  for (const [source, content] of Object.entries(sources)) {
+    const sourcePath = resolve(physicalRoot, source);
+    await mkdir(dirname(sourcePath), { recursive: true });
+    await writeFile(sourcePath, content);
+  }
+}
+
+async function withTestContributionPackage(
+  asset: CapabilityAssetV1,
+  assertion: (repositoryRoot: string) => void,
+  sources?: Readonly<Record<string, string>>,
+  evidence?: { readonly fixture?: boolean; readonly contractTest?: boolean },
+): Promise<void> {
+  const repositoryRoot = await mkdtemp(join(tmpdir(), "factory-contribution-"));
+  try {
+    await writeTestContributionPackage(
+      repositoryRoot,
+      asset,
+      sources,
+      evidence,
+    );
+    assertion(repositoryRoot);
+  } finally {
+    await rm(repositoryRoot, { recursive: true, force: true });
+  }
+}
 
 const historicalExecutableLocks = [
   {
@@ -312,6 +480,240 @@ describe("capability catalog", () => {
       expect(templates[0]?.content).toContain("{{asset.key}}");
       expect(templates[0]?.digest).toMatch(/^sha256:[a-f0-9]{64}$/);
     }
+  });
+
+  it("loads declared web and database contributions only inside their slots", () => {
+    const repositoryRoot = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "../../..",
+    );
+
+    const contributions = loadCapabilityAssetContributions(
+      getCapabilityAsset("core.crud"),
+      repositoryRoot,
+    );
+
+    expect(contributions.map(({ outputSlot }) => outputSlot)).toEqual(
+      expect.arrayContaining(["web.route", "database.schema"]),
+    );
+    expect(contributions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          assetKey: "core.crud",
+          assetVersion: "1.0.1",
+          namespace: "packages/core.crud/web/routes/",
+          outputSlot: "web.route",
+          target: "web/src/app/{{routeKey}}/page.tsx",
+          targetRuntimeInterfaceVersion: "factory.web-route/v1",
+        }),
+        expect.objectContaining({
+          namespace: "packages/core.crud/database/schema/",
+          outputSlot: "database.schema",
+          target: "database/prisma/fragments/{{entityKey}}.prisma",
+          targetRuntimeInterfaceVersion: "factory.prisma-schema/v1",
+        }),
+      ]),
+    );
+  });
+
+  it("rejects a route contribution that writes into another package namespace", async () => {
+    const asset = testContributionAsset({
+      executableContributions: [
+        executableContribution({ namespace: "packages/other.package/web/" }),
+      ],
+    });
+
+    await withTestContributionPackage(asset, (repositoryRoot) => {
+      expect(() =>
+        loadCapabilityAssetContributions(asset, repositoryRoot),
+      ).toThrow("outside declared namespace");
+    });
+  });
+
+  it.each([
+    ["source", { source: "../route.tsx.tpl" }, "unsafe source path"],
+    ["target", { target: "web/src/app/../page.tsx" }, "unsafe target path"],
+  ] as const)(
+    "rejects an executable contribution with an unsafe %s path",
+    async (_pathKind, overrides, expectedMessage) => {
+      const asset = testContributionAsset({
+        executableContributions: [executableContribution(overrides)],
+      });
+
+      await withTestContributionPackage(asset, (repositoryRoot) => {
+        expect(() =>
+          loadCapabilityAssetContributions(asset, repositoryRoot),
+        ).toThrow(expectedMessage);
+      });
+    },
+  );
+
+  it("rejects an executable contribution in an undeclared output slot", async () => {
+    const asset = testContributionAsset({
+      executableContributions: [executableContribution()],
+      outputSlots: ["database.schema"],
+    });
+
+    await withTestContributionPackage(asset, (repositoryRoot) => {
+      expect(() =>
+        loadCapabilityAssetContributions(asset, repositoryRoot),
+      ).toThrow("undeclared output slot 'web.route'");
+    });
+  });
+
+  it("does not authorize executable contributions through a legacy template slot", async () => {
+    const asset = testContributionAsset({
+      executableContributions: [
+        executableContribution({
+          outputSlot: "api.runtime",
+          namespace: "packages/test.contribution/api/runtime/",
+          target: "api/src/capabilities/test.contribution.ts",
+        }),
+      ],
+      outputSlots: ["api.runtime"],
+    });
+
+    await withTestContributionPackage(asset, (repositoryRoot) => {
+      expect(() =>
+        loadCapabilityAssetContributions(asset, repositoryRoot),
+      ).toThrow("outside 'api.runtime'");
+    });
+  });
+
+  it("rejects duplicate executable targets within one package", async () => {
+    const asset = testContributionAsset({
+      executableContributions: [
+        executableContribution(),
+        executableContribution({
+          id: "duplicate-route",
+          source: "templates/web/duplicate-route.tsx.tpl",
+        }),
+      ],
+    });
+
+    await withTestContributionPackage(
+      asset,
+      (repositoryRoot) => {
+        expect(() =>
+          loadCapabilityAssetContributions(asset, repositoryRoot),
+        ).toThrow("duplicate contribution target");
+      },
+      {
+        "templates/web/route.tsx.tpl": executableContent,
+        "templates/web/duplicate-route.tsx.tpl": executableContent,
+      },
+    );
+  });
+
+  it("rejects a digest-tampered executable contribution", async () => {
+    const asset = testContributionAsset({
+      executableContributions: [
+        executableContribution({ digest: `sha256:${"a".repeat(64)}` }),
+      ],
+    });
+
+    await withTestContributionPackage(asset, (repositoryRoot) => {
+      expect(() =>
+        loadCapabilityAssetContributions(asset, repositoryRoot),
+      ).toThrow("digest does not match");
+    });
+  });
+
+  it("rejects undeclared executable contribution parameter references", async () => {
+    const asset = testContributionAsset({
+      executableContributions: [
+        executableContribution({ parameterRefs: ["undeclaredParameter"] }),
+      ],
+    });
+
+    await withTestContributionPackage(asset, (repositoryRoot) => {
+      expect(() =>
+        loadCapabilityAssetContributions(asset, repositoryRoot),
+      ).toThrow("undeclared parameter 'undeclaredParameter'");
+    });
+  });
+
+  it("rejects undeclared Graph contribution parameter references", async () => {
+    const asset = testContributionAsset({
+      executableContributions: [],
+      graphContributions: [
+        {
+          id: "managed-entity",
+          model: "domain",
+          collection: "entities",
+          operation: "append",
+          parameterRefs: ["undeclaredParameter"],
+          digest: `sha256:${"a".repeat(64)}`,
+        },
+      ],
+    });
+
+    await withTestContributionPackage(asset, (repositoryRoot) => {
+      expect(() =>
+        loadCapabilityAssetContributions(asset, repositoryRoot),
+      ).toThrow("undeclared parameter 'undeclaredParameter'");
+    });
+  });
+
+  it("rejects a Graph contribution outside an additive collection", async () => {
+    const asset = testContributionAsset({
+      executableContributions: [],
+      graphContributions: [
+        {
+          id: "managed-entity",
+          model: "domain",
+          collection: "providers",
+          operation: "append",
+          parameterRefs: ["entityKey"],
+          digest: `sha256:${"a".repeat(64)}`,
+        },
+      ],
+    });
+
+    await withTestContributionPackage(asset, (repositoryRoot) => {
+      expect(() =>
+        loadCapabilityAssetContributions(asset, repositoryRoot),
+      ).toThrow("is not an allowed additive collection");
+    });
+  });
+
+  it("rejects a Graph contribution whose declared digest is invalid", async () => {
+    const asset = testContributionAsset({
+      executableContributions: [],
+      graphContributions: [
+        {
+          id: "managed-entity",
+          model: "domain",
+          collection: "entities",
+          operation: "append",
+          parameterRefs: ["entityKey"],
+          digest: `sha256:${"a".repeat(64)}`,
+        },
+      ],
+    });
+
+    await withTestContributionPackage(asset, (repositoryRoot) => {
+      expect(() =>
+        loadCapabilityAssetContributions(asset, repositoryRoot),
+      ).toThrow("Graph contribution 'managed-entity' digest does not match");
+    });
+  });
+
+  it("rejects verification evidence paths that escape the package", async () => {
+    const asset = testContributionAsset({ fixture: "../outside.json" });
+
+    await withTestContributionPackage(
+      asset,
+      (repositoryRoot) => {
+        expect(verifyCapabilityAssetPackage(asset, repositoryRoot)).toEqual(
+          expect.arrayContaining([
+            expect.stringContaining("unsafe fixture path"),
+          ]),
+        );
+      },
+      undefined,
+      { fixture: false },
+    );
   });
 
   it("rejects a changed core audit effect handler template", async () => {
