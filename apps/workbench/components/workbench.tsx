@@ -17,6 +17,7 @@ import {
   FileText,
   FolderKanban,
   GitBranch,
+  House,
   LayoutPanelLeft,
   Moon,
   PanelRight,
@@ -47,8 +48,10 @@ import {
   ControlPlaneClient,
   type WorkbenchCompilation,
   type WorkbenchDraft,
+  type WorkbenchOpenedApplication,
   type WorkbenchArtifactContent,
   type WorkbenchAiProposal,
+  type WorkbenchApplicationSummary,
   type WorkbenchPublishedRevision,
   type WorkbenchPreviewRun,
   type WorkbenchRevisionTimeline,
@@ -61,6 +64,7 @@ import { PageStudio } from "./page-studio";
 import { FlowStudio } from "./flow-studio";
 import { DomainRelationGraph } from "./domain-relation-graph";
 import { GuidedCreationDrawer } from "./guided-creation-drawer";
+import { WorkbenchHome } from "./workbench-home";
 import {
   domainModelToReactFlow,
   flowModelToReactFlow,
@@ -90,6 +94,12 @@ type Navigation = {
 };
 
 const navigation: Navigation[] = [
+  {
+    id: "home",
+    label: "Home",
+    icon: House,
+    hint: "Operate applications and Profiles",
+  },
   {
     id: "page",
     label: "Page",
@@ -147,7 +157,15 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
     useState<WorkbenchArtifactContent | null>(null);
   const [artifactLoading, setArtifactLoading] = useState(false);
   const [guidedCreationOpen, setGuidedCreationOpen] = useState(false);
+  const [applications, setApplications] = useState<
+    readonly WorkbenchApplicationSummary[]
+  >([]);
+  const [applicationsLoading, setApplicationsLoading] = useState(true);
+  const [compilingApplicationKey, setCompilingApplicationKey] = useState<
+    string | null
+  >(null);
   const bootstrapRequest = useRef(0);
+  const applicationsRequest = useRef(0);
   const controlPlane = useMemo(
     () => new ControlPlaneClient(controlPlaneUrl),
     [controlPlaneUrl],
@@ -159,6 +177,56 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   const flowDiagram = useMemo(
     () => flowModelToReactFlow(graph.flow),
     [graph.flow],
+  );
+
+  const refreshApplications = useCallback(async (): Promise<void> => {
+    const request = ++applicationsRequest.current;
+    setApplicationsLoading(true);
+    try {
+      const next = await controlPlane.listLocalApplicationSummaries();
+      if (request === applicationsRequest.current) setApplications(next);
+    } catch (error) {
+      if (request === applicationsRequest.current) {
+        setOperationError(
+          error instanceof Error
+            ? error.message
+            : "Local applications could not be read.",
+        );
+      }
+    } finally {
+      if (request === applicationsRequest.current) {
+        setApplicationsLoading(false);
+      }
+    }
+  }, [controlPlane]);
+
+  const adoptOpenedApplication = useCallback(
+    (opened: WorkbenchOpenedApplication): void => {
+      ++bootstrapRequest.current;
+      setGraph(opened.draft.graph);
+      setRemoteDraft(opened.draft);
+      setPublishedRevision(opened.publishedRevision);
+      setCompilation(null);
+      setPreviewRun(null);
+      setDraftDirty(false);
+      setAiProposal(null);
+      setHistoryOpen(false);
+      setRevisionTimeline(null);
+      dispatch({
+        type: "synchronize-draft",
+        revision: `r.${opened.draft.revisionNumber}`,
+      });
+      if (
+        opened.publishedRevision?.sourceDraftRevisionId ===
+        opened.draft.draftRevisionId
+      ) {
+        dispatch({ type: "publish" });
+        setConnectionState("published");
+      } else {
+        setConnectionState("ready");
+      }
+    },
+    [],
   );
 
   const bootstrapGraph = useCallback(
@@ -196,8 +264,14 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   );
 
   useEffect(() => {
-    void bootstrapGraph(initialGraph).catch(() => undefined);
-  }, [bootstrapGraph, initialGraph]);
+    void bootstrapGraph(initialGraph)
+      .catch(() => undefined)
+      .finally(() => void refreshApplications());
+  }, [bootstrapGraph, initialGraph, refreshApplications]);
+
+  useEffect(() => {
+    if (state.activeSurface === "home") void refreshApplications();
+  }, [refreshApplications, state.activeSurface]);
 
   useEffect(() => {
     if (!compilation || !isPendingCompilation(compilation.result.status))
@@ -209,8 +283,10 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
         .then((next) => {
           if (!active) return;
           setCompilation(next);
-          if (!isPendingCompilation(next.result.status))
+          if (!isPendingCompilation(next.result.status)) {
             setConnectionState("published");
+            void refreshApplications();
+          }
         })
         .catch((error) => {
           if (!active) return;
@@ -227,7 +303,7 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
       active = false;
       window.clearInterval(interval);
     };
-  }, [compilation, controlPlane]);
+  }, [compilation, controlPlane, refreshApplications]);
 
   useEffect(() => {
     if (!compilation || compilation.result.status !== "succeeded") {
@@ -301,12 +377,14 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
 
   const saveDraft = () => {
     setOperationError(null);
-    void persistDraft().catch((error) => {
-      setConnectionState("offline");
-      setOperationError(
-        error instanceof Error ? error.message : "Draft save failed.",
-      );
-    });
+    void persistDraft()
+      .then(() => refreshApplications())
+      .catch((error) => {
+        setConnectionState("offline");
+        setOperationError(
+          error instanceof Error ? error.message : "Draft save failed.",
+        );
+      });
   };
 
   const publish = () => {
@@ -322,6 +400,7 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
       setPublishedRevision({ ...published, graph: draft.graph });
       dispatch({ type: "publish" });
       setConnectionState("published");
+      await refreshApplications();
     })().catch((error) => {
       setConnectionState("offline");
       setOperationError(
@@ -340,6 +419,7 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
         setCompilation(next);
         setConnectionState("published");
         dispatch({ type: "open", surface: "code" });
+        void refreshApplications();
       })
       .catch((error) => {
         setConnectionState("offline");
@@ -552,13 +632,69 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
     setOperationError(null);
     const nonce = globalThis.crypto.randomUUID().toLowerCase();
     await bootstrapGraph(createGuidedApplicationDraft(input, nonce));
+    await refreshApplications();
     dispatch({ type: "open", surface: "page" });
+  };
+
+  const openApplication = (applicationKey: string) => {
+    setOperationError(null);
+    setConnectionState("connecting");
+    void controlPlane
+      .openLocalApplication(applicationKey)
+      .then((opened) => {
+        adoptOpenedApplication(opened);
+        dispatch({ type: "open", surface: "page" });
+      })
+      .catch((error) => {
+        setConnectionState("offline");
+        setOperationError(
+          error instanceof Error
+            ? error.message
+            : "Application could not be opened.",
+        );
+      });
+  };
+
+  const compileApplication = (applicationKey: string) => {
+    setOperationError(null);
+    setCompilingApplicationKey(applicationKey);
+    setConnectionState("compiling");
+    void controlPlane
+      .openLocalApplication(applicationKey)
+      .then(async (opened) => {
+        if (!opened.publishedRevision) {
+          throw new Error("Publish this application before compiling.");
+        }
+        adoptOpenedApplication(opened);
+        setConnectionState("compiling");
+        const next = await controlPlane.createCompilation(
+          opened.publishedRevision.id,
+        );
+        setCompilation(next);
+        setConnectionState("published");
+        dispatch({ type: "open", surface: "code" });
+        await refreshApplications();
+      })
+      .catch((error) => {
+        setConnectionState("offline");
+        setOperationError(
+          error instanceof Error
+            ? error.message
+            : "Compilation could not be queued.",
+        );
+      })
+      .finally(() => setCompilingApplicationKey(null));
   };
 
   return (
     <main className={`workbench theme-${state.theme}`} data-theme={state.theme}>
       <aside className="rail" aria-label="Workbench navigation">
-        <button className="brand-mark" aria-label="Factory Pilot home">
+        <button
+          className="brand-mark"
+          aria-label="Factory Pilot home"
+          onClick={() => dispatch({ type: "open", surface: "home" })}
+          type="button"
+        >
           <Sparkles size={18} strokeWidth={2.2} />
         </button>
         <nav className="rail-nav">
@@ -704,6 +840,16 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
               className="canvas-board"
               aria-label={`${active.label} canvas`}
             >
+              {state.activeSurface === "home" && (
+                <WorkbenchHome
+                  applications={applications}
+                  compilingKey={compilingApplicationKey}
+                  loading={applicationsLoading}
+                  onCompile={compileApplication}
+                  onCreate={() => setGuidedCreationOpen(true)}
+                  onOpen={openApplication}
+                />
+              )}
               {state.activeSurface === "page" && (
                 <PageStudio
                   pageDocument={pageDocument}
@@ -764,7 +910,7 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
                 <small>{state.draftProposals}</small>
               </p>
             )}
-            {state.propertiesOpen && (
+            {state.propertiesOpen && state.activeSurface !== "home" && (
               <PropertiesPanel surface={state.activeSurface} />
             )}
           </div>
@@ -1764,6 +1910,7 @@ function CodeCanvas({
 
 function PropertiesPanel({ surface }: { surface: Surface }) {
   const titles: Record<Surface, string> = {
+    home: "Application portfolio",
     page: "Page settings",
     domain: "Record details",
     flow: "Step properties",

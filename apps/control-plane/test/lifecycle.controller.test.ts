@@ -23,6 +23,7 @@ const lifecycle = {
   exportPublishedGraph: vi.fn(),
   listDraftRevisions: vi.fn(),
   getLocalApplicationGraph: vi.fn(),
+  listLocalApplicationSummaries: vi.fn(),
   importPublishedGraph: vi.fn(),
   getDraft: vi.fn(),
   getCompilationArtifact: vi.fn(),
@@ -146,6 +147,20 @@ describe("LifecycleController", () => {
         id: "graph-imported",
         draftRevisions: [{ id: "draft-imported" }],
       },
+    },
+    {
+      method: "GET",
+      path: "/workspaces/local/application-graphs",
+      handler: lifecycle.listLocalApplicationSummaries,
+      arguments: [],
+      response: [
+        {
+          id: "graph-restaurant",
+          key: "restaurant-ordering",
+          name: "Restaurant ordering",
+          compositionProfile: "restaurant-ordering",
+        },
+      ],
     },
     {
       method: "GET",

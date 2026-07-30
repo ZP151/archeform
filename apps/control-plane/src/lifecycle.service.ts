@@ -41,6 +41,31 @@ const LOCAL_WORKSPACE_NAME = "Local workspace";
 
 type UnknownRecord = Record<string, unknown>;
 
+export type WorkbenchApplicationSummary = {
+  readonly id: string;
+  readonly key: string;
+  readonly name: string;
+  readonly compositionProfile: string | null;
+  readonly latestDraft: {
+    readonly revisionNumber: number;
+    readonly createdAt: string;
+  } | null;
+  readonly latestPublished: {
+    readonly revisionNumber: number;
+    readonly publishedAt: string;
+  } | null;
+  readonly latestCompilation: {
+    readonly id: string;
+    readonly status: string;
+    readonly completedAt: string | null;
+  } | null;
+  readonly goldenAssetMaturity: {
+    readonly status: "golden" | "incomplete";
+    readonly goldenAssets: number;
+    readonly totalAssets: number;
+  };
+};
+
 function exactRecord(
   input: unknown,
   allowedKeys: readonly string[],
@@ -180,6 +205,79 @@ function queuedCompilation(result: unknown): boolean {
     !Array.isArray(result) &&
     (result as UnknownRecord).status === "queued"
   );
+}
+
+function summaryGraphFields(
+  graph: unknown,
+): Pick<
+  WorkbenchApplicationSummary,
+  "compositionProfile" | "goldenAssetMaturity"
+> {
+  const record =
+    graph && typeof graph === "object" && !Array.isArray(graph)
+      ? (graph as UnknownRecord)
+      : {};
+  const integration =
+    record.integration &&
+    typeof record.integration === "object" &&
+    !Array.isArray(record.integration)
+      ? (record.integration as UnknownRecord)
+      : {};
+  const profile = integration.compositionProfile;
+  const compositionProfile =
+    typeof profile === "string" &&
+    /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(profile) &&
+    profile.length <= 80
+      ? profile
+      : null;
+  const assetLocks = Array.isArray(integration.assetLocks)
+    ? integration.assetLocks
+    : [];
+  const goldenAssets = assetLocks.filter(
+    (asset) =>
+      !!asset &&
+      typeof asset === "object" &&
+      !Array.isArray(asset) &&
+      (asset as UnknownRecord).lifecycle === "golden",
+  ).length;
+  return {
+    compositionProfile,
+    goldenAssetMaturity: {
+      status:
+        assetLocks.length > 0 && goldenAssets === assetLocks.length
+          ? "golden"
+          : "incomplete",
+      goldenAssets,
+      totalAssets: assetLocks.length,
+    },
+  };
+}
+
+function summaryCompilationStatus(result: unknown): string {
+  if (!result || typeof result !== "object" || Array.isArray(result)) {
+    return "unknown";
+  }
+  const status = (result as UnknownRecord).status;
+  return typeof status === "string" &&
+    ["queued", "running", "succeeded", "failed"].includes(status)
+    ? status
+    : "unknown";
+}
+
+function summaryCompilationCompletedAt(result: unknown): string | null {
+  if (!result || typeof result !== "object" || Array.isArray(result)) {
+    return null;
+  }
+  const record = result as UnknownRecord;
+  if (record.status !== "succeeded" && record.status !== "failed") {
+    return null;
+  }
+  const completedAt = record.completedAt;
+  if (typeof completedAt !== "string") return null;
+  const parsed = new Date(completedAt);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString() === completedAt
+    ? completedAt
+    : null;
 }
 
 function succeededCompilation(result: unknown): boolean {
@@ -347,6 +445,82 @@ export class LifecycleService {
       throw new NotFoundException("Local Application Graph was not found.");
     }
     return aggregate;
+  }
+
+  async listLocalApplicationSummaries(): Promise<
+    readonly WorkbenchApplicationSummary[]
+  > {
+    const applications = await this.prisma.applicationGraph.findMany({
+      where: { workspace: { slug: LOCAL_WORKSPACE_SLUG } },
+      orderBy: [{ updatedAt: "desc" }, { key: "asc" }],
+      select: {
+        id: true,
+        key: true,
+        name: true,
+        draftRevisions: {
+          orderBy: { revisionNumber: "desc" },
+          take: 1,
+          select: { revisionNumber: true, createdAt: true, graph: true },
+        },
+        publishedRevisions: {
+          orderBy: { revisionNumber: "desc" },
+          select: {
+            id: true,
+            revisionNumber: true,
+            publishedAt: true,
+            compilations: {
+              orderBy: { compiledAt: "desc" },
+              take: 1,
+              select: { id: true, result: true, compiledAt: true },
+            },
+          },
+        },
+      },
+    });
+
+    return applications.map((application) => {
+      const latestDraft = application.draftRevisions[0] ?? null;
+      const latestPublished = application.publishedRevisions[0] ?? null;
+      const latestCompilation =
+        application.publishedRevisions
+          .flatMap((published) => published.compilations)
+          .sort(
+            (left, right) =>
+              right.compiledAt.getTime() - left.compiledAt.getTime(),
+          )[0] ?? null;
+      const graphFields = summaryGraphFields(latestDraft?.graph);
+      const compilationStatus = latestCompilation
+        ? summaryCompilationStatus(latestCompilation.result)
+        : null;
+      return {
+        id: application.id,
+        key: application.key,
+        name: application.name,
+        ...graphFields,
+        latestDraft: latestDraft
+          ? {
+              revisionNumber: latestDraft.revisionNumber,
+              createdAt: latestDraft.createdAt.toISOString(),
+            }
+          : null,
+        latestPublished: latestPublished
+          ? {
+              revisionNumber: latestPublished.revisionNumber,
+              publishedAt: latestPublished.publishedAt.toISOString(),
+            }
+          : null,
+        latestCompilation:
+          latestCompilation && compilationStatus
+            ? {
+                id: latestCompilation.id,
+                status: compilationStatus,
+                completedAt: summaryCompilationCompletedAt(
+                  latestCompilation.result,
+                ),
+              }
+            : null,
+      };
+    });
   }
 
   async createLocalApplicationGraph(input: unknown) {
@@ -916,6 +1090,7 @@ export class LifecycleService {
         result: {
           status: "succeeded",
           artifactCount: evidence.artifacts.length,
+          completedAt: new Date().toISOString(),
         },
       },
     });

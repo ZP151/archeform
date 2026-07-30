@@ -8,6 +8,80 @@ import {
 import { workbenchGraph } from "./workbench-graph";
 
 describe("ControlPlaneClient", () => {
+  it("projects only safe application summary fields from the local workspace endpoint", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify([
+          {
+            id: "graph-restaurant",
+            key: "restaurant-ordering",
+            name: "Restaurant ordering",
+            compositionProfile: "restaurant-ordering",
+            latestDraft: {
+              revisionNumber: 3,
+              createdAt: "2026-07-30T03:00:00.000Z",
+              graph: workbenchGraph,
+            },
+            latestPublished: {
+              revisionNumber: 2,
+              publishedAt: "2026-07-30T03:10:00.000Z",
+            },
+            latestCompilation: {
+              id: "compilation-4",
+              status: "failed",
+              completedAt: "2026-07-30T03:15:00.000Z",
+              artifactContent: "do-not-return",
+            },
+            goldenAssetMaturity: {
+              status: "golden",
+              goldenAssets: 6,
+              totalAssets: 6,
+            },
+            credential: "do-not-return",
+          },
+        ]),
+        { status: 200 },
+      ),
+    );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    const summaries = await client.listLocalApplicationSummaries();
+
+    expect(summaries).toEqual([
+      {
+        id: "graph-restaurant",
+        key: "restaurant-ordering",
+        name: "Restaurant ordering",
+        compositionProfile: "restaurant-ordering",
+        latestDraft: {
+          revisionNumber: 3,
+          createdAt: "2026-07-30T03:00:00.000Z",
+        },
+        latestPublished: {
+          revisionNumber: 2,
+          publishedAt: "2026-07-30T03:10:00.000Z",
+        },
+        latestCompilation: {
+          id: "compilation-4",
+          status: "failed",
+          completedAt: "2026-07-30T03:15:00.000Z",
+        },
+        goldenAssetMaturity: {
+          status: "golden",
+          goldenAssets: 6,
+          totalAssets: 6,
+        },
+      },
+    ]);
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/workspaces/local/application-graphs",
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(JSON.stringify(summaries)).not.toMatch(
+      /"(?:graph|artifactContent|credential)":/,
+    );
+  });
+
   it("starts a preview using only the immutable compilation identifier", async () => {
     const preview: WorkbenchPreviewRun = {
       id: "preview-1",
@@ -154,6 +228,88 @@ describe("ControlPlaneClient", () => {
       "http://control-plane.test/workspaces/local/application-graphs/ops-workspace",
       expect.objectContaining({ method: "GET" }),
     );
+  });
+
+  it("opens an existing local application through the exact Graph bootstrap path", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: "graph-restaurant",
+          key: "restaurant-ordering",
+          draftRevisions: [
+            { id: "draft-4", revisionNumber: 4, graph: workbenchGraph },
+          ],
+          publishedRevisions: [
+            {
+              id: "published-2",
+              revisionNumber: 2,
+              sourceDraftRevisionId: "draft-4",
+              graphHash: "sha256:published",
+              graph: { credential: "do-not-retain" },
+            },
+          ],
+          credential: "do-not-retain",
+        }),
+        { status: 200 },
+      ),
+    );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(
+      client.openLocalApplication("restaurant-ordering"),
+    ).resolves.toEqual({
+      draft: {
+        applicationGraphId: "graph-restaurant",
+        draftRevisionId: "draft-4",
+        revisionNumber: 4,
+        graph: workbenchGraph,
+      },
+      publishedRevision: {
+        id: "published-2",
+        revisionNumber: 2,
+        sourceDraftRevisionId: "draft-4",
+        graphHash: "sha256:published",
+        graph: workbenchGraph,
+      },
+    });
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/workspaces/local/application-graphs/restaurant-ordering",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("does not attach the current Draft Graph to mismatched Published metadata", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: "graph-restaurant",
+          key: "restaurant-ordering",
+          draftRevisions: [
+            { id: "draft-4", revisionNumber: 4, graph: workbenchGraph },
+          ],
+          publishedRevisions: [
+            {
+              id: "published-2",
+              revisionNumber: 2,
+              sourceDraftRevisionId: "draft-2",
+              graphHash: "sha256:published",
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    const opened = await client.openLocalApplication("restaurant-ordering");
+
+    expect(opened.publishedRevision).toEqual({
+      id: "published-2",
+      revisionNumber: 2,
+      sourceDraftRevisionId: "draft-2",
+      graphHash: "sha256:published",
+    });
+    expect(opened.publishedRevision).not.toHaveProperty("graph");
   });
 
   it("creates a local Graph only after the named Draft is absent", async () => {

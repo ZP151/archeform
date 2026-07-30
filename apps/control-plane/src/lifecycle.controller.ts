@@ -37,6 +37,11 @@ export class LifecycleController {
     return this.lifecycle.createLocalApplicationGraph(body);
   }
 
+  @Get("workspaces/local/application-graphs")
+  listLocalApplicationSummaries() {
+    return this.lifecycle.listLocalApplicationSummaries();
+  }
+
   @Post("workspaces/local/application-graphs/import")
   importPublishedGraph(@Body() body: unknown) {
     return this.lifecycle.importPublishedGraph(body);

@@ -6,6 +6,17 @@ import {
 } from "./workbench-model";
 
 describe("transitionWorkbench", () => {
+  it("starts on Home and opens an application editor surface on demand", () => {
+    expect(initialWorkbenchState.activeSurface).toBe("home");
+
+    const opened = transitionWorkbench(initialWorkbenchState, {
+      type: "open",
+      surface: "page",
+    });
+
+    expect(opened.activeSurface).toBe("page");
+  });
+
   it("keeps one active workbench surface while preserving the published revision", () => {
     const draft = transitionWorkbench(initialWorkbenchState, {
       type: "open",
@@ -24,7 +35,7 @@ describe("transitionWorkbench", () => {
     });
 
     expect(next.theme).toBe("dark");
-    expect(next.activeSurface).toBe("page");
+    expect(next.activeSurface).toBe("home");
   });
 
   it("records editor intent as a Draft proposal without mutating lifecycle ownership", () => {

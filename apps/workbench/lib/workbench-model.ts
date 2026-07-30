@@ -1,4 +1,5 @@
-export type Surface = "page" | "domain" | "flow" | "policy" | "ai" | "code";
+export type Surface =
+  "home" | "page" | "domain" | "flow" | "policy" | "ai" | "code";
 export type Theme = "light" | "dark";
 export type PreviewRunStatus =
   "starting" | "ready" | "stopping" | "stopped" | "failed";
@@ -35,7 +36,7 @@ export type WorkbenchAction =
   | { type: "propose-draft-change"; source: string };
 
 export const initialWorkbenchState: WorkbenchState = {
-  activeSurface: "page",
+  activeSurface: "home",
   lifecycle: "draft",
   revision: "r.18",
   theme: "light",

@@ -17,6 +17,7 @@ type DraftRecord = {
 type LocalGraphRecord = {
   readonly id: string;
   readonly draftRevisions: readonly DraftRecord[];
+  readonly publishedRevisions?: readonly WorkbenchPublishedRevision[];
 };
 
 export type WorkbenchDraft = {
@@ -57,8 +58,14 @@ export type WorkbenchAiProposal = {
 export type WorkbenchPublishedRevision = {
   readonly id: string;
   readonly revisionNumber: number;
+  readonly sourceDraftRevisionId?: string;
   readonly graphHash: string;
   readonly graph?: ApplicationGraphV1;
+};
+
+export type WorkbenchOpenedApplication = {
+  readonly draft: WorkbenchDraft;
+  readonly publishedRevision: WorkbenchPublishedRevision | null;
 };
 
 export type WorkbenchRevisionTimeline = {
@@ -74,13 +81,41 @@ export type WorkbenchCompilation = {
   readonly id: string;
   readonly publishedRevisionId: string;
   readonly target: string;
-  readonly result: { readonly status: string };
+  readonly result: {
+    readonly status: string;
+    readonly completedAt?: string | null;
+  };
   readonly artifacts?: readonly {
     readonly path: string;
     readonly digest: string;
     readonly mediaType: string;
     readonly sizeBytes?: number | null;
   }[];
+};
+
+export type WorkbenchApplicationSummary = {
+  readonly id: string;
+  readonly key: string;
+  readonly name: string;
+  readonly compositionProfile: string | null;
+  readonly latestDraft: {
+    readonly revisionNumber: number;
+    readonly createdAt: string;
+  } | null;
+  readonly latestPublished: {
+    readonly revisionNumber: number;
+    readonly publishedAt: string;
+  } | null;
+  readonly latestCompilation: {
+    readonly id: string;
+    readonly status: string;
+    readonly completedAt: string | null;
+  } | null;
+  readonly goldenAssetMaturity: {
+    readonly status: "golden" | "incomplete";
+    readonly goldenAssets: number;
+    readonly totalAssets: number;
+  };
 };
 
 export type WorkbenchArtifactContent = {
@@ -141,6 +176,64 @@ function recordAsDraft(record: LocalGraphRecord): WorkbenchDraft {
   };
 }
 
+function recordAsOpenedApplication(
+  record: LocalGraphRecord,
+): WorkbenchOpenedApplication {
+  const draft = recordAsDraft(record);
+  const published = record.publishedRevisions?.[0] ?? null;
+  return {
+    draft,
+    publishedRevision: published
+      ? {
+          id: published.id,
+          revisionNumber: published.revisionNumber,
+          ...(published.sourceDraftRevisionId
+            ? { sourceDraftRevisionId: published.sourceDraftRevisionId }
+            : {}),
+          graphHash: published.graphHash,
+          ...(published.sourceDraftRevisionId === draft.draftRevisionId
+            ? { graph: draft.graph }
+            : {}),
+        }
+      : null,
+  };
+}
+
+function applicationSummary(
+  record: WorkbenchApplicationSummary,
+): WorkbenchApplicationSummary {
+  return {
+    id: record.id,
+    key: record.key,
+    name: record.name,
+    compositionProfile: record.compositionProfile,
+    latestDraft: record.latestDraft
+      ? {
+          revisionNumber: record.latestDraft.revisionNumber,
+          createdAt: record.latestDraft.createdAt,
+        }
+      : null,
+    latestPublished: record.latestPublished
+      ? {
+          revisionNumber: record.latestPublished.revisionNumber,
+          publishedAt: record.latestPublished.publishedAt,
+        }
+      : null,
+    latestCompilation: record.latestCompilation
+      ? {
+          id: record.latestCompilation.id,
+          status: record.latestCompilation.status,
+          completedAt: record.latestCompilation.completedAt,
+        }
+      : null,
+    goldenAssetMaturity: {
+      status: record.goldenAssetMaturity.status,
+      goldenAssets: record.goldenAssetMaturity.goldenAssets,
+      totalAssets: record.goldenAssetMaturity.totalAssets,
+    },
+  };
+}
+
 export class ControlPlaneClient {
   private readonly baseUrl: string;
 
@@ -180,6 +273,26 @@ export class ControlPlaneClient {
       { method: "POST", body: JSON.stringify({ graph }) },
     );
     return recordAsDraft(created);
+  }
+
+  async listLocalApplicationSummaries(): Promise<
+    readonly WorkbenchApplicationSummary[]
+  > {
+    const records = await this.request<readonly WorkbenchApplicationSummary[]>(
+      "/workspaces/local/application-graphs",
+      { method: "GET" },
+    );
+    return records.map(applicationSummary);
+  }
+
+  async openLocalApplication(
+    applicationKey: string,
+  ): Promise<WorkbenchOpenedApplication> {
+    const record = await this.request<LocalGraphRecord>(
+      `/workspaces/local/application-graphs/${encodeURIComponent(applicationKey)}`,
+      { method: "GET" },
+    );
+    return recordAsOpenedApplication(record);
   }
 
   async appendDraft(

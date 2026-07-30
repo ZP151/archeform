@@ -209,6 +209,72 @@ test("creates a named application Draft through the guided business-user journey
   await expect(page.getByRole("button", { name: "Published" })).toHaveCount(0);
 });
 
+test("Home creates, opens, publishes, and compiles a Restaurant application", async ({
+  page,
+}) => {
+  const suffix = Date.now().toString();
+  const name = `Home restaurant ${suffix}`;
+  await page.goto("/");
+
+  await expect(page.getByLabel("Workbench Home")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Restaurant ordering" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "New application" }).first().click();
+  await page.getByTestId("guided-template-restaurant-ordering").click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Application name").fill(name);
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByTestId("guided-create").click();
+
+  await expect(page.getByLabel("Current application")).toHaveText(name);
+  await expect(page.getByLabel("Puck Page Studio")).toBeVisible();
+  await page.getByLabel("New page").fill(`Home verification ${suffix}`);
+  await page.getByRole("button", { name: "Add page" }).click();
+  await page.getByRole("button", { name: "Save draft" }).click();
+  await expect(
+    page.getByText("Control Plane ready", { exact: true }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Home" }).click();
+  const draftProject = page.getByRole("article").filter({ hasText: name });
+  await expect(draftProject).toContainText("Draft r.2");
+  await expect(
+    draftProject.getByRole("button", { name: `Compile ${name}` }),
+  ).toBeDisabled();
+  await draftProject.getByRole("button", { name: `Open ${name}` }).click();
+  await expect(page.getByLabel("Puck Page Studio")).toBeVisible();
+  await page
+    .getByLabel("Route")
+    .selectOption({ label: `/home-verification-${suffix}` });
+  await expect(page.getByLabel("Path")).toHaveValue(
+    `/home-verification-${suffix}`,
+  );
+
+  await page.getByRole("button", { name: "Publish" }).click();
+  await expect(page.getByRole("button", { name: "Published" })).toBeVisible();
+  await page.getByRole("button", { name: "Home" }).click();
+  const publishedProject = page.getByRole("article").filter({ hasText: name });
+  await expect(publishedProject).toContainText("Published r.1");
+  const compile = publishedProject.getByRole("button", {
+    name: `Compile ${name}`,
+  });
+  await expect(compile).toBeEnabled();
+  await compile.click();
+
+  await expect(page.getByLabel("Generated artifact manifest")).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(
+    page.getByText("Compile succeeded", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "api/.dockerignore" }).click();
+  await expect(page.getByLabel("Generated source snapshot")).toContainText(
+    "verified snapshot",
+  );
+});
+
 test("creates an audit-free Expense Draft from the capability picker", async ({
   page,
 }) => {

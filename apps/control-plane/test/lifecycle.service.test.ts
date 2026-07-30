@@ -3,7 +3,7 @@ import {
   ConflictException,
   NotFoundException,
 } from "@nestjs/common";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createPublishedGraphExchange,
   hashApplicationGraph,
@@ -20,6 +20,7 @@ function prismaMock() {
     applicationGraph: {
       create: vi.fn(),
       findFirst: vi.fn(),
+      findMany: vi.fn(),
       findUnique: vi.fn(),
     },
     draftRevision: { create: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
@@ -105,6 +106,10 @@ describe("LifecycleService", () => {
       proposalProvider,
       previewQueue,
     );
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("applies a validated AI Graph Diff only by appending a new Draft revision", async () => {
@@ -331,6 +336,120 @@ describe("LifecycleService", () => {
         publishedRevisions: { orderBy: { revisionNumber: "desc" }, take: 1 },
       },
     });
+  });
+
+  it("returns only local lifecycle summaries without Graph, AI, artifact, or credential data", async () => {
+    prisma.applicationGraph.findMany.mockResolvedValue([
+      {
+        id: "graph-restaurant",
+        key: "restaurant-ordering",
+        name: "Restaurant ordering",
+        draftRevisions: [
+          {
+            revisionNumber: 3,
+            createdAt: new Date("2026-07-30T03:00:00.000Z"),
+            graph: {
+              domain: { credential: "do-not-return" },
+              ai: { prompt: "do-not-return" },
+              integration: {
+                compositionProfile: "restaurant-ordering",
+                assetLocks: [
+                  { key: "restaurant.ordering", lifecycle: "golden" },
+                  { key: "restaurant.kitchen", lifecycle: "golden" },
+                ],
+              },
+            },
+          },
+        ],
+        publishedRevisions: [
+          {
+            id: "published-2",
+            revisionNumber: 2,
+            publishedAt: new Date("2026-07-30T03:10:00.000Z"),
+            compilations: [
+              {
+                id: "compilation-4",
+                compiledAt: new Date("2026-07-30T03:15:00.000Z"),
+                result: {
+                  status: "failed",
+                  completedAt: "2026-07-30T03:45:00.000Z",
+                  artifactContent: "do-not-return",
+                  rawResponse: "do-not-return",
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    const result = await service.listLocalApplicationSummaries();
+
+    expect(result).toEqual([
+      {
+        id: "graph-restaurant",
+        key: "restaurant-ordering",
+        name: "Restaurant ordering",
+        compositionProfile: "restaurant-ordering",
+        latestDraft: {
+          revisionNumber: 3,
+          createdAt: "2026-07-30T03:00:00.000Z",
+        },
+        latestPublished: {
+          revisionNumber: 2,
+          publishedAt: "2026-07-30T03:10:00.000Z",
+        },
+        latestCompilation: {
+          id: "compilation-4",
+          status: "failed",
+          completedAt: "2026-07-30T03:45:00.000Z",
+        },
+        goldenAssetMaturity: {
+          status: "golden",
+          goldenAssets: 2,
+          totalAssets: 2,
+        },
+      },
+    ]);
+    expect(prisma.applicationGraph.findMany).toHaveBeenCalledWith({
+      where: { workspace: { slug: "local-workspace" } },
+      orderBy: [{ updatedAt: "desc" }, { key: "asc" }],
+      select: {
+        id: true,
+        key: true,
+        name: true,
+        draftRevisions: {
+          orderBy: { revisionNumber: "desc" },
+          take: 1,
+          select: { revisionNumber: true, createdAt: true, graph: true },
+        },
+        publishedRevisions: {
+          orderBy: { revisionNumber: "desc" },
+          select: {
+            id: true,
+            revisionNumber: true,
+            publishedAt: true,
+            compilations: {
+              orderBy: { compiledAt: "desc" },
+              take: 1,
+              select: { id: true, result: true, compiledAt: true },
+            },
+          },
+        },
+      },
+    });
+    const serialized = JSON.stringify(result);
+    for (const forbidden of [
+      '"graph"',
+      '"domain"',
+      '"ai"',
+      "artifactContent",
+      "rawResponse",
+      "credential",
+      "prompt",
+    ]) {
+      expect(serialized).not.toContain(forbidden);
+    }
   });
 
   it("appends the next immutable draft revision", async () => {
@@ -581,6 +700,8 @@ describe("LifecycleService", () => {
   });
 
   it("records matching Worker artifact evidence without storing the Graph", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-30T04:00:00.000Z"));
     prisma.compilation.findUnique.mockResolvedValue({
       id: "compilation-1",
       inputGraphHash:
@@ -622,7 +743,13 @@ describe("LifecycleService", () => {
     });
     expect(prisma.compilation.update).toHaveBeenCalledWith({
       where: { id: "compilation-1" },
-      data: { result: { status: "succeeded", artifactCount: 1 } },
+      data: {
+        result: {
+          status: "succeeded",
+          artifactCount: 1,
+          completedAt: "2026-07-30T04:00:00.000Z",
+        },
+      },
     });
   });
 
