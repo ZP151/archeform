@@ -1065,6 +1065,53 @@ describe("Candidate registry", () => {
     });
   });
 
+  it("converges overlapping fresh Candidate tests on one durable sequence-2 transition", async () => {
+    const { root, store } = tempStore();
+    const first = new CandidateRegistry(store);
+    const ref = await first.create(await acceptedProposal(store));
+    const before = lifecycleRecordCounts(root);
+    const concurrentApi = createExternalIntakeApi(
+      new ExternalIntakeStore(root),
+      root,
+    );
+
+    const [left, right] = await Promise.all([
+      concurrentApi.candidateTest(ref.lookupId, ref.version),
+      concurrentApi.candidateTest(ref.lookupId, ref.version),
+    ]);
+
+    expect(right).toEqual(left);
+    expect(lifecycleRecordCounts(root)).toEqual({
+      candidates: before.candidates + 1,
+      receipts: before.receipts + 1,
+    });
+    const transitioned = await concurrentApi.candidateShow(
+      ref.lookupId,
+      ref.version,
+    );
+    expect(transitioned.status).toBe("conformance-passed");
+
+    const laterApi = createExternalIntakeApi(
+      new ExternalIntakeStore(root),
+      root,
+    );
+    await expect(
+      laterApi.candidateShow(transitioned.lookupId, ref.version),
+    ).resolves.toMatchObject({
+      status: "conformance-passed",
+      lookupId: transitioned.lookupId,
+    });
+    await expect(
+      laterApi.candidateVerify(transitioned.lookupId, ref.version),
+    ).resolves.toMatchObject({ valid: true, issues: [] });
+
+    const beforeRetry = lifecycleRecordCounts(root);
+    await expect(
+      laterApi.candidateTest(transitioned.lookupId, ref.version),
+    ).resolves.toEqual(left);
+    expect(lifecycleRecordCounts(root)).toEqual(beforeRetry);
+  });
+
   it("rehydrates accepted evidence during Candidate create and verify", async () => {
     const { root, store } = tempStore();
     const registry = new CandidateRegistry(store);

@@ -996,12 +996,42 @@ export class CandidateRegistry implements CandidateRegistryV1 {
     }
     const entry = this.#entry(id, version);
     const current = verification.candidate;
-    if (current.status !== "quarantined") {
+    if (
+      current.status !== "quarantined" &&
+      current.status !== "conformance-passed"
+    ) {
       throw new Error("Candidate conformance lifecycle is append-only.");
     }
     const { evaluateCandidateConformance } = await import("./conformance.js");
+    const creationRef = entry.history[0];
+    const creationReceiptRef = entry.receipts[0];
+    if (creationRef === undefined || creationReceiptRef === undefined) {
+      throw new Error("Candidate creation compare-and-set state is absent.");
+    }
+    const creation = parseCandidateCapability(
+      this.store.getRecord(exactRef(creationRef)),
+    );
+    const creationReceipt = parseIntakeReceipt(
+      this.store.getRecord(creationReceiptRef),
+    );
+    if (
+      creation.status !== "quarantined" ||
+      creation.id !== entry.id ||
+      creation.version !== entry.version ||
+      canonicalRecordDigest(creation) !== creationRef.digest ||
+      creationReceipt.status !== "candidate-ready" ||
+      creationReceipt.code !== "candidate-quarantined" ||
+      creationReceipt.sequence !== 1 ||
+      creationReceipt.parentDigests.length !== 1 ||
+      creationReceipt.parentDigests[0] !== creationRef.digest ||
+      creationReceipt.recordDigests[0] !== creationRef.digest ||
+      candidateLookupId(creationReceiptRef.digest as Sha256Digest) !==
+        creationRef.lookupId
+    ) {
+      throw new Error("Candidate creation compare-and-set state is invalid.");
+    }
     const expected = evaluateCandidateConformance({
-      candidate: current,
+      candidate: creation,
       artifacts: entry.artifacts,
     });
     if (
@@ -1019,23 +1049,31 @@ export class CandidateRegistry implements CandidateRegistryV1 {
       throw new Error("Candidate conformance result persistence drifted.");
     }
     const next = parseCandidateCapability({
-      ...current,
+      ...creation,
       parentDigests: unique([
-        ...current.parentDigests,
-        entry.latest.digest,
+        ...creation.parentDigests,
+        creationRef.digest,
         resultDigest,
       ]),
       status: "conformance-passed",
       conformanceResultDigest: resultDigest,
     });
+    if (
+      current.status === "conformance-passed" &&
+      canonicalJson(current) !== canonicalJson(next)
+    ) {
+      throw new Error(
+        "Candidate conformance retry conflicts with the durable transition.",
+      );
+    }
     const stored = this.store.putRecord("candidate", next);
     const receiptRecord: IntakeReceiptV1 = {
       apiVersion: "factory.external-intake-receipt/v1",
-      createdAt: current.createdAt,
-      producerVersion: current.producerVersion,
-      parentDigests: [entry.receipts.at(-1)!.digest, stored.digest],
-      jobId: entry.jobId,
-      sequence: entry.receipts.length + 1,
+      createdAt: creation.createdAt,
+      producerVersion: creation.producerVersion,
+      parentDigests: [creationReceiptRef.digest, stored.digest],
+      jobId: creationReceipt.jobId,
+      sequence: 2,
       status: "candidate-ready",
       code: "candidate-conformance-passed",
       recordDigests: [
@@ -1044,10 +1082,23 @@ export class CandidateRegistry implements CandidateRegistryV1 {
         entry.verificationStateRef.digest,
       ],
     };
+    const parsedReceipt = parseIntakeReceipt(receiptRecord);
     const receipt = this.store.appendReceipt(
-      entry.jobId,
-      parseIntakeReceipt(receiptRecord),
+      creationReceipt.jobId,
+      parsedReceipt,
     );
+    const persistedCandidate = parseCandidateCapability(
+      this.store.getRecord(exactRef(stored)),
+    );
+    const persistedReceipt = parseIntakeReceipt(this.store.getRecord(receipt));
+    if (
+      canonicalJson(persistedCandidate) !== canonicalJson(next) ||
+      canonicalJson(persistedReceipt) !== canonicalJson(parsedReceipt)
+    ) {
+      throw new Error(
+        "Candidate conformance compare-and-set persistence drifted.",
+      );
+    }
     const nextRef: StoredCandidateRefV1 = {
       ...stored,
       kind: "candidate",
@@ -1057,8 +1108,12 @@ export class CandidateRegistry implements CandidateRegistryV1 {
       lookupId: candidateLookupId(receipt.digest as Sha256Digest),
     };
     entry.latest = nextRef;
-    entry.history.push(nextRef);
-    entry.receipts.push(receipt);
+    if (!entry.history.some(({ digest }) => digest === nextRef.digest)) {
+      entry.history.push(nextRef);
+    }
+    if (!entry.receipts.some(({ digest }) => digest === receipt.digest)) {
+      entry.receipts.push(receipt);
+    }
     return nextRef;
   }
 
@@ -1240,8 +1295,18 @@ export class CandidateRegistry implements CandidateRegistryV1 {
       );
     }
     const entry = this.#entry(id, version);
+    const creationRef = entry.history[0];
+    if (creationRef === undefined) {
+      throw new Error("Candidate creation revision is absent.");
+    }
+    const creation = parseCandidateCapability(
+      this.store.getRecord(exactRef(creationRef)),
+    );
+    if (creation.status !== "quarantined") {
+      throw new Error("Candidate creation revision is invalid.");
+    }
     return {
-      candidate: verification.candidate,
+      candidate: creation,
       artifacts: structuredClone(entry.artifacts),
     };
   }
