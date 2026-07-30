@@ -1,4 +1,5 @@
 import {
+  existsSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
@@ -200,6 +201,60 @@ describe("ExternalIntakeStore", () => {
       }),
     ).toThrow(/receipt sequence conflict/i);
     expect(store.getRecord(first)).toEqual(receipt);
+  });
+
+  it("does not publish a receipt index when backing verification fails", () => {
+    const root = tempRoot();
+    const store = new ExternalIntakeStore(root);
+    const receipt = receiptAt(1);
+    const digest = canonicalRecordDigest(receipt);
+    const recordPath = join(
+      root,
+      "records",
+      "receipt",
+      `${digest.slice(7)}.json`,
+    );
+    mkdirSync(join(root, "records", "receipt"), { recursive: true });
+    writeFileSync(recordPath, "{}", "utf8");
+
+    expect(() => store.appendReceipt("job-1", receipt)).toThrow(
+      /immutable|digest|existing/i,
+    );
+    expect(existsSync(join(root, "jobs", "job-1", "receipts", "1.json"))).toBe(
+      false,
+    );
+  });
+
+  it("rejects chain extension when indexed backing receipt is missing", () => {
+    const root = tempRoot();
+    const store = new ExternalIntakeStore(root);
+    const first = store.appendReceipt("job-1", receiptAt(1));
+    rmSync(join(root, "records", "receipt", `${first.digest.slice(7)}.json`));
+
+    expect(() =>
+      store.appendReceipt("job-1", receiptAt(2, [first.digest])),
+    ).toThrow(/indexed backing receipt/i);
+    expect(existsSync(join(root, "jobs", "job-1", "receipts", "2.json"))).toBe(
+      false,
+    );
+  });
+
+  it("rejects chain extension when indexed backing receipt is tampered", () => {
+    const root = tempRoot();
+    const store = new ExternalIntakeStore(root);
+    const first = store.appendReceipt("job-1", receiptAt(1));
+    writeFileSync(
+      join(root, "records", "receipt", `${first.digest.slice(7)}.json`),
+      "{}",
+      "utf8",
+    );
+
+    expect(() =>
+      store.appendReceipt("job-1", receiptAt(2, [first.digest])),
+    ).toThrow(/indexed backing receipt/i);
+    expect(existsSync(join(root, "jobs", "job-1", "receipts", "2.json"))).toBe(
+      false,
+    );
   });
 
   it("rejects missing, out-of-order, and unlinked job receipt sequences", () => {

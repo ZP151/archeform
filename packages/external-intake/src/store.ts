@@ -150,6 +150,28 @@ export class ExternalIntakeStore {
           `Receipt sequence ${parsed.sequence} is out of order for ${parsedJobId}.`,
         );
       }
+      let previousReceipt: IntakeReceiptV1;
+      try {
+        previousReceipt = parseIntakeReceipt(
+          this.getRecord({
+            kind: "receipt",
+            digest: previous.receiptDigest,
+          }),
+        );
+      } catch {
+        throw new Error(
+          `Indexed backing receipt ${parsedJobId}#${previous.sequence} is missing or invalid.`,
+        );
+      }
+      if (
+        previousReceipt.jobId !== parsedJobId ||
+        previousReceipt.sequence !== previous.sequence ||
+        canonicalRecordDigest(previousReceipt) !== previous.receiptDigest
+      ) {
+        throw new Error(
+          `Indexed backing receipt ${parsedJobId}#${previous.sequence} is inconsistent.`,
+        );
+      }
       if (!parsed.parentDigests.includes(previous.receiptDigest)) {
         throw new Error(
           `Receipt sequence ${parsed.sequence} must include the previous receipt digest.`,
@@ -157,7 +179,8 @@ export class ExternalIntakeStore {
       }
     }
 
-    const receiptDigest = canonicalRecordDigest(parsed);
+    const recordRef = this.#putRecord("receipt", parsed);
+    const receiptDigest = recordRef.digest;
     const index: ReceiptIndexV1 = {
       apiVersion: "factory.external-intake-receipt-index/v1",
       createdAt: parsed.createdAt,
@@ -181,7 +204,7 @@ export class ExternalIntakeStore {
       true,
       `Receipt sequence conflict for ${parsedJobId}#${parsed.sequence}.`,
     );
-    return this.#putRecord("receipt", parsed);
+    return recordRef;
   }
 
   #readReceiptIndex(jobId: string, sequence: number): ReceiptIndexV1 | null {
