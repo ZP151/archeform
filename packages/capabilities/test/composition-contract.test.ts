@@ -12,7 +12,10 @@ import {
   resolveCapabilityComposition,
   type CapabilitySelectionV1,
 } from "../src/index.js";
-import { resolveCapabilityCompositionForAssets } from "../src/composition.js";
+import {
+  createCapabilityCompositionLockForAssets,
+  resolveCapabilityCompositionForAssets,
+} from "../src/composition.js";
 
 const digest = (character: string): string => `sha256:${character.repeat(64)}`;
 
@@ -106,6 +109,39 @@ describe("capability composition contract", () => {
     expect(Object.isFrozen(lock.packages)).toBe(true);
   });
 
+  it("creates the same lock for bindings inserted in a different key order", () => {
+    const parameterAsset = asset("core.binding-order-test", {
+      parameters: [
+        { key: "alpha", type: "string", required: true },
+        { key: "beta", type: "string", required: true },
+      ],
+    });
+    const first = createCapabilityCompositionLockForAssets(
+      {
+        graphChecksum: digest("a"),
+        selections: [
+          selection(parameterAsset, { alpha: "first", beta: "second" }),
+        ],
+      },
+      [parameterAsset],
+    );
+    const reordered = createCapabilityCompositionLockForAssets(
+      {
+        graphChecksum: digest("a"),
+        selections: [
+          selection(parameterAsset, { beta: "second", alpha: "first" }),
+        ],
+      },
+      [parameterAsset],
+    );
+
+    expect(first).toEqual(reordered);
+    expect(Object.keys(first.packages[0]?.bindings ?? {})).toEqual([
+      "alpha",
+      "beta",
+    ]);
+  });
+
   it("rejects an undeclared parameter and an unsafe string parameter", () => {
     const pathAsset = asset("core.path-test", {
       parameters: [{ key: "route", type: "string", required: true }],
@@ -188,6 +224,18 @@ describe("capability composition contract", () => {
     expect(() =>
       resolveSyntheticComposition({
         assets: [parameterAsset],
+        selections: [selection(parameterAsset, { value: "  mailto:user" })],
+      }),
+    ).toThrow("must not contain a URL");
+    expect(() =>
+      resolveSyntheticComposition({
+        assets: [parameterAsset],
+        selections: [selection(parameterAsset, { value: "Open mailto:user" })],
+      }),
+    ).toThrow("must not contain a URL");
+    expect(() =>
+      resolveSyntheticComposition({
+        assets: [parameterAsset],
         selections: [selection(parameterAsset, { value: "rm workspace" })],
       }),
     ).toThrow("must not contain a command");
@@ -205,6 +253,22 @@ describe("capability composition contract", () => {
       }),
     ).toThrow("requires parameter 'enabled'");
   });
+
+  it.each(["constructor", "toString", "__proto__"])(
+    "rejects prototype-reserved parameter key %s",
+    (parameterKey) => {
+      const parameterAsset = asset("core.prototype-test", {
+        parameters: [{ key: parameterKey, type: "string", required: true }],
+      });
+
+      expect(() =>
+        resolveSyntheticComposition({
+          assets: [parameterAsset],
+          selections: [selection(parameterAsset)],
+        }),
+      ).toThrow("must use a safe parameter key");
+    },
+  );
 
   it("rejects a requirement with no provider", () => {
     const consumer = asset("core.consumer", {

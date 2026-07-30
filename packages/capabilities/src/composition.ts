@@ -44,7 +44,7 @@ export interface CreateCapabilityCompositionLockInput extends ResolveCapabilityC
 const sha256Pattern = /^sha256:[a-f0-9]{64}$/;
 const graphSymbolPattern =
   /^graph\.(?:page|domain|policy|flow|integration|experience)\.[a-z][a-z0-9-]*$/;
-const urlSchemePattern = /^[a-z][a-z0-9+.-]*:/i;
+const urlSchemePattern = /\b[a-z][a-z0-9+.-]*:/i;
 const controlCharacterPattern = /[\u0000-\u001f\u007f-\u009f]/;
 const sourceDelimiterPattern =
   /[`{}\[\];]|=>|\$\(|<\s*\/?\s*(?:script|style)\b/i;
@@ -52,6 +52,17 @@ const commandPattern =
   /^\s*(?:bash|cmd|curl|del|git|invoke-webrequest|node|npm|pnpm|powershell|python|remove-item|rm|sh|sudo|wget|yarn)(?:\.exe)?\s/i;
 const forbiddenParameterKeyPattern =
   /(?:secret|password|credential|api[-_]?key|access[-_]?token|command|source|url|path)/i;
+const parameterKeyPattern = /^[a-z][a-zA-Z0-9]*$/;
+const prototypeReservedParameterKeys = new Set([
+  "constructor",
+  "hasOwnProperty",
+  "isPrototypeOf",
+  "propertyIsEnumerable",
+  "prototype",
+  "toLocaleString",
+  "toString",
+  "valueOf",
+]);
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -261,7 +272,10 @@ function assertBindingValue(
 function canonicalSelection(
   selection: CapabilitySelectionV1,
 ): CapabilitySelectionV1 {
-  const bindings: Record<string, CapabilityBindingValueV1> = {};
+  const bindings = Object.create(null) as Record<
+    string,
+    CapabilityBindingValueV1
+  >;
   for (const key of Object.keys(selection.bindings).sort()) {
     const value = selection.bindings[key];
     if (value === undefined) continue;
@@ -306,6 +320,14 @@ function validateBindings(
         `Capability package '${manifest.key}' declares duplicate parameter '${schema.key}'.`,
       );
     }
+    if (
+      !parameterKeyPattern.test(schema.key) ||
+      prototypeReservedParameterKeys.has(schema.key)
+    ) {
+      throw new Error(
+        `Capability package '${manifest.key}' parameter '${schema.key}' must use a safe parameter key.`,
+      );
+    }
     if (forbiddenParameterKeyPattern.test(schema.key)) {
       throw new Error(
         `Capability package '${manifest.key}' parameter '${schema.key}' is not safe for composition bindings.`,
@@ -324,7 +346,7 @@ function validateBindings(
     assertBindingValue(manifest.key, schema, value);
   }
   for (const schema of parameters) {
-    if (schema.required && !(schema.key in bindings)) {
+    if (schema.required && !Object.hasOwn(bindings, schema.key)) {
       throw new Error(
         `Capability package '${manifest.key}' requires parameter '${schema.key}'.`,
       );
@@ -477,15 +499,16 @@ export function resolveCapabilityComposition(
   return resolveCapabilityCompositionForAssets(input, capabilityAssets);
 }
 
-export function createCapabilityCompositionLock(
+export function createCapabilityCompositionLockForAssets(
   input: CreateCapabilityCompositionLockInput,
+  assets: readonly CapabilityAssetV1[],
 ): CapabilityCompositionLockV1 {
   if (!sha256Pattern.test(input.graphChecksum)) {
     throw new Error(
       "Application Graph checksum must be a sha256-prefixed lowercase digest.",
     );
   }
-  const composition = resolveCapabilityComposition(input);
+  const composition = resolveCapabilityCompositionForAssets(input, assets);
   const unsignedLock = {
     apiVersion: "factory.composition/v1" as const,
     applicationGraphChecksum: input.graphChecksum,
@@ -499,4 +522,10 @@ export function createCapabilityCompositionLock(
     ...unsignedLock,
     lockDigest: sha256(canonicalJson(unsignedLock)),
   });
+}
+
+export function createCapabilityCompositionLock(
+  input: CreateCapabilityCompositionLockInput,
+): CapabilityCompositionLockV1 {
+  return createCapabilityCompositionLockForAssets(input, capabilityAssets);
 }
