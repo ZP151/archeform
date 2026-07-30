@@ -284,7 +284,7 @@ input does not receive a composition lock.
 
 - [ ] **Step 3: Persist and enforce the immutable lock**
 
-Add non-null `compositionLock Json` and `compositionLockHash String` to
+Add nullable `compositionLock Json?` and `compositionLockHash String?` to
 `PublishedRevision`, with the SQL migration:
 
 ```sql
@@ -293,12 +293,13 @@ ALTER TABLE "PublishedRevision"
   ADD COLUMN "compositionLockHash" TEXT;
 ```
 
-Backfill existing immutable rows with a migration-only `factory.composition/v1`
-legacy fixture lock, then apply `NOT NULL`. At Publish, construct the lock from
-the parsed Draft Graph and Golden selections inside the same Prisma transaction
-that creates `PublishedRevision`. At compilation queue time, read the stored
-lock with the Published revision and verify its digest independently before
-enqueueing. Do not accept a lock in an HTTP request.
+Do not backfill existing immutable rows: they remain view-only historical
+evidence and are rejected by the new composition compiler with a bounded
+`Published revision has no composition lock.` error. At Publish, construct the
+lock from the parsed Draft Graph and Golden selections inside the same Prisma
+transaction that creates `PublishedRevision`. At compilation queue time, read
+the stored lock with the Published revision and verify its digest independently
+before enqueueing. Do not accept a lock in an HTTP request.
 
 Update `PublishedGraphInput` so the compiler requires:
 
