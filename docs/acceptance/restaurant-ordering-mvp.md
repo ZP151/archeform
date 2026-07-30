@@ -4,77 +4,105 @@ Date: 2026-07-30
 
 ## Decision
 
-**NOT ACCEPTED.** The generated Node 22 Compose stack starts and its Merchant
-journey passes, but the required Customer journey cannot pay after adding a
-line. Release acceptance remains blocked until the generated Customer renderer
-is corrected and this evidence is rerun.
+**NOT ACCEPTED.** Current generated Restaurant artifacts pass the isolated
+Node 22 Docker Customer and Merchant acceptance journey, but the required
+immutable Published Restaurant Graph → current Workbench → Control Plane →
+worker preview lifecycle could not be demonstrated. The available Factory
+acceptance stack serves an older Workbench image and its worker lacks the
+required process-only Restaurant bootstrap input. No release pass is claimed
+until that lifecycle is rerun against a current configured stack.
 
-## Environment and deterministic compilation
+## Environment and immutable compilation
 
 - Docker Engine `29.0.1`, Docker Compose `v2.40.3-desktop.1`, Linux daemon.
-- Host Node was `v24.18.0`; it was used only for orchestration. Generated API,
-  migration, and Web images are based on `node:22-alpine`.
-- A Restaurant `PublishedGraphInput` compiled through the worker executor to
-  65 artifacts with graph digest
+- Local orchestration used Node `v24.18.0`; generated API, migration, and Web
+  services ran `node:22-alpine` and reported Node `v22.23.1`.
+- A Restaurant `PublishedGraphInput` was compiled through
+  `executeCompilation` with published revision ID
+  `restaurant-task7-rerun-published-1`. No mutable Draft was supplied.
+- Output: 65 deterministic artifacts rooted at
+  `restaurant-ordering-restaurant-task7-rerun-published-1`, graph digest
   `sha256:cab4c371818a32a2bea08819e12f80b0bed2583953a5b86887f4eb99b5ee6e24`.
-- `docker compose config --quiet` rejected an absent process-only bootstrap
-  input and succeeded when it was supplied only to the current process. No
-  bootstrap token value was logged or persisted.
+- The Customer decimal remediation was independently accepted at `7717bdb` and
+  `3652181`; this run uses those current artifacts.
 
-## Node 22 Docker evidence
+## Isolated Node 22 generated-runtime evidence
 
-Using unique projects with `FACTORY_WEB_PORT=0` and `FACTORY_API_PORT=0`:
+The generated Compose project `factory-restaurant-task7-rerun` used dynamic,
+loopback-only ports: Web `127.0.0.1:33002` and API `127.0.0.1:33001`. A
+process-only bootstrap input was supplied without printing, persisting, or
+committing its value.
 
-- `factory-restaurant-task7-3674e371` and
-  `factory-restaurant-task7-2cfc178f` proved the sequence Postgres healthy →
-  migration exit `0` → API healthy → Web healthy, with loopback-only dynamic
-  ports.
-- Image IDs from the final isolated build were API
-  `sha256:5d9f22aa809ebaa8a62bd64d6d50950042d3ed5fd3f41ac83f6b68762c2efb80`,
-  Web `sha256:25d95d0ceef11bc45d24f5c23ba89b0087bd6850adb366744d12f73ef0e64ac2`,
-  and migration
-  `sha256:88cf0e76199543dc97f849472f719f95f91afe42485d819ed78cd432f8e5ab07`.
-- The Merchant browser journey passed against the generated Web application:
-  availability and stock adjustment, simulated payment, receipt, kitchen
-  transition, serve, reporting, cancellation/audit evidence, and table
-  lifecycle.
-- Each run used `docker compose down --volumes --remove-orphans`. Checks after
-  teardown found no containers, networks, or volumes labelled with the named
-  run projects. The QA-created `.task7-artifacts` runtime directory was then
-  removed.
+Observed sequence:
 
-## Blocking findings
+1. Postgres became healthy.
+2. Migration exited successfully before API and Web began.
+3. API and Web became healthy.
+4. `GET /api/health` returned a bounded payload with `status: "ok"` and
+   `persistence: "PrismaRecordStore"`.
+5. API and Web containers reported Node `v22.23.1`.
 
-1. **P1 — Customer cart state is not committed after an accepted line add.**
-   In a live Node 22 generated stack, the line-add response was successful,
-   then `/cart` displayed a disabled `Pay simulated payment` button. The
-   generated `cartLine` parser accepts `unitPrice` only when it is a JavaScript
-   number, while the Prisma-backed line response uses a decimal representation
-   outside that check. The async handler reports the parsing error and does not
-   commit the line to session state. This is in the compiler Customer renderer,
-   outside Task 7 ownership.
-2. **P1 — Full compiler-worker lint is not clean.**
-   `pnpm --filter @factory/compiler-worker lint` fails only on the pre-existing,
-   out-of-scope `apps/compiler-worker/src/artifact-writer.ts` formatting.
+Image IDs recorded before teardown:
 
-## Task 7 regression and gate evidence
+- API: `sha256:de337afabf6c9dc6d5191f71ab163f526709d4f717682c4bcdf97dab9c0003c1`
+- Web: `sha256:8862528987a4f9f6bd101d4bd49c76c1f78fd117cca3d9a8386174188c9cd8b2`
+- Migration: `sha256:fc0c35256f128fe120ae93d1b229686f9bedc8ecbf3a1043e80b28b1ead98228`
 
-- `pnpm --filter @factory/compiler-worker test` — PASS, 68/68.
-- `pnpm --filter @factory/compiler-worker typecheck` — PASS.
-- `pnpm --filter @factory/compiler-worker lint` — FAIL only on the out-of-scope
-  `src/artifact-writer.ts` formatting finding.
-- `git diff --check` — PASS at the latest QA verification.
+Browser evidence:
 
-The new preview-runner tests prove that a Restaurant preview without the
-required process-only bootstrap input fails before Docker is invoked, and that
-the Docker child environment contains only the derived project name, dynamic
-loopback ports, and that required input. Generic previews retain their existing
-narrow environment. The value is neither logged nor written to the generated
-runtime directory.
+```powershell
+$env:FACTORY_GENERATED_RESTAURANT_E2E_URL = 'http://127.0.0.1:33002'
+# The table-session token was provided only as a process-local value.
+pnpm exec playwright test e2e/generated-restaurant.spec.ts
+```
 
-## Coverage gap
+Result: **PASS, 2/2**.
 
-The full Workbench-driven Published revision → Control Plane queue → worker
-preview browser journey remains unaccepted because the Customer runtime blocker
-prevents the required end-to-end path. It must be repeated after the renderer
-fix, including the run-scoped worker start/stop callback path.
+- Customer: resolves opaque table context; adds two Margherita pizzas with an
+  item note; submits and pays; verifies Paid status/history; and views the
+  receipt including item and order notes.
+- Merchant: changes availability and stock; captures simulated payment; views
+  receipt; runs kitchen accept/prepare/ready; serves; checks dashboard and
+  low-stock reporting; cancels the seeded order with audit/inventory result;
+  and performs table lifecycle transitions.
+
+`docker compose down --volumes --remove-orphans` removed only the named
+project's containers, network, and volume. Follow-up label-scoped Docker
+queries found zero containers, networks, and volumes. The exact
+`.task7-rerun-artifacts` directory is QA-created and will be removed after
+this report update.
+
+## Current Workbench/worker lifecycle gap
+
+The current live Factory project is `factory-pilot-acceptance` on Node
+`v22.23.1`, but it cannot supply the release proof:
+
+- Its compiler-worker reports `RESTAURANT_DEMO_TABLE_TOKEN=UNSET` using a
+  presence-only diagnostic. Restaurant preview start therefore correctly fails
+  closed rather than passing an absent bootstrap input to Compose.
+- `pnpm exec playwright test e2e/workbench.spec.ts --grep 'Home|Restaurant'`
+  against its Workbench endpoint failed before product actions because the
+  rendered app had no `Workbench Home` element. This demonstrates the stack is
+  stale relative to the accepted current Workbench source, not a current
+  Workbench behavior result.
+
+The Task 7 preview regression remains covered by worker tests: absent required
+input is rejected before Docker invocation, while a Restaurant Compose receives
+only the derived project, dynamic ports, and required process-only input. The
+value is never logged or written to the preview directory.
+
+## Quality gates
+
+- `pnpm --filter @factory/compiler-worker test` — previously PASS, 68/68.
+- `pnpm --filter @factory/compiler-worker typecheck` — previously PASS.
+- `pnpm --filter @factory/compiler-worker lint` — still fails only on the
+  pre-existing, out-of-scope formatting in `src/artifact-writer.ts`.
+- `git diff --check` is required again after this report update.
+
+## Required rerun
+
+Provision a current Factory stack whose Workbench contains the accepted Home
+surface and whose worker has the process-only Restaurant bootstrap input. Then
+repeat: create Restaurant in Workbench, Publish, compile, start its run-scoped
+preview, execute the same 2/2 generated journey, stop from Workbench, and
+verify only that run's containers/network/volume/runtime directory are removed.
