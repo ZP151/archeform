@@ -31,33 +31,33 @@ pre-generation collision contracts. Task 4 now owns the bounded proof that
 Restaurant and Ecommerce can compose the same Golden package identities through
 different Graph-symbol bindings and produce different outputs.
 
-| Task                                                   | State          | Evidence-backed status                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| ------------------------------------------------------ | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1. Composition contract and canonical immutable lock   | `accepted`     | Commits `d2f6517..27a8433`; final independent re-review clean. The accepted contract canonicalizes exact Golden package identities and fails closed on invalid composition input.                                                                                                                                                                                                                                                                                                              |
-| 2. Physical Graph and target contribution verification | `accepted`     | Commits `33f9f31..0e1cc33`; final independent re-review clean. Physical packages, digests, runtime metadata, namespaces, and contribution collisions are verified fail closed.                                                                                                                                                                                                                                                                                                                 |
-| 3. Publish and compile an immutable composition lock   | `accepted`     | Baseline commit `a2fac21`; repairs through `e509b6c`. Final task review and release review approved with no P0/P1/P2; independent QA passed with no P0/P1. Fresh verification passed Graph 19/19, Capabilities 108/108, Control Plane 111/111, compiler 169/169, Worker 74/74, all five typechecks, targeted Prettier, and `git diff --check`. The immutable publication, closed binding grammar, raw-before-canonicalization validation, and pre-generation collision contracts are accepted. |
-| 4. Shared-commerce composition with different bindings | `implementing` | Contract and exact path ownership frozen by `99801cd`. The integration owner must prove identical shared package identities, different canonical Graph-symbol bindings, different outputs, generated digest regeneration, and no profile-clone or profile-dispatch admission dependency.                                                                                                                                                                                                       |
-| 5. Release gate and migrated-dispatch retirement       | `planned`      | Blocked on accepted Task 4. Node 22 generated-runtime and isolated Compose evidence remains this task's later release gate.                                                                                                                                                                                                                                                                                                                                                                    |
+| Task                                                   | State                             | Evidence-backed status                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------------------------------ | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Composition contract and canonical immutable lock   | `accepted`                        | Commits `d2f6517..27a8433`; final independent re-review clean. The accepted contract canonicalizes exact Golden package identities and fails closed on invalid composition input.                                                                                                                                                                                                                                                                                                              |
+| 2. Physical Graph and target contribution verification | `accepted`                        | Commits `33f9f31..0e1cc33`; final independent re-review clean. Physical packages, digests, runtime metadata, namespaces, and contribution collisions are verified fail closed.                                                                                                                                                                                                                                                                                                                 |
+| 3. Publish and compile an immutable composition lock   | `accepted`                        | Baseline commit `a2fac21`; repairs through `e509b6c`. Final task review and release review approved with no P0/P1/P2; independent QA passed with no P0/P1. Fresh verification passed Graph 19/19, Capabilities 108/108, Control Plane 111/111, compiler 169/169, Worker 74/74, all five typechecks, targeted Prettier, and `git diff --check`. The immutable publication, closed binding grammar, raw-before-canonicalization validation, and pre-generation collision contracts are accepted. |
+| 4. Shared-commerce composition with different bindings | `implementing` (fix round 1 of 5) | Baseline implementation commit `ed87dfd`. Independent review requested changes with four P1 findings: unresolved Graph symbols cross Draft/Publish boundaries; active Workbench profile helpers still use the legacy path; public admission is not dependency- and recipe-complete; and compiler evidence uses a CRUD surrogate instead of complete nine-package immutable recipes. Repair contract and expanded exact paths are frozen by `65855a0`.                                          |
+| 5. Release gate and migrated-dispatch retirement       | `planned`                         | Blocked on accepted Task 4. Node 22 generated-runtime and isolated Compose evidence remains this task's later release gate.                                                                                                                                                                                                                                                                                                                                                                    |
 
 Development, review, QA, release review, and fresh verification for Tasks 1
 through 3 ran on host Node 24. This is valid Task 3 acceptance evidence. It is
 not generated-runtime Node 22 or isolated Compose evidence, which remains the
 Task 5 release gate.
 
-## Active ownership: Task 4 shared-commerce composition
+## Active ownership: Task 4 fix round 1
 
 - Specialization and implementation owner: `integration`
 - Contract owner: Factory Platform Integration (root controller)
 - Contract status: Tasks 1 through 3 are accepted and frozen. Task 4 may consume
   only those contracts. The Graph-symbol recipe realization and exact path
-  ownership are frozen by commit `99801cd`. Existing Restaurant-specific
-  compiler dispatch remains untouched until Task 5 removes only behavior proven
-  migrated by Task 4.
+  ownership were frozen by `99801cd` and expanded only for the four review
+  repairs by `65855a0`. Existing Restaurant-specific compiler dispatch remains
+  untouched until Task 5 removes only behavior proven migrated by Task 4.
 - Contract artifact:
   `docs/superpowers/specs/2026-07-30-parameterized-capability-composition-design.md`
 - Task brief and plan slice:
   `docs/superpowers/plans/2026-07-30-parameterized-capability-composition.md`
-  Task 4, as amended by `99801cd`.
+  Task 4, as amended by `99801cd` and repair commit `65855a0`.
 - Interface: `composeCapabilityDraft({ graph, selections })` consumes an
   already-valid Graph and accepts only finite numbers, booleans, or exact
   `{ graphSymbol }` binding objects. Task 4 does not add a string or enum
@@ -70,6 +70,7 @@ other product path or contract change is authorized.
 ## Exact permitted paths for Task 4
 
 - `packages/capabilities/src/index.ts`
+- `packages/capabilities/src/composition.ts`
 - `packages/capabilities/src/assets/index.ts`
 - `packages/capabilities/src/assets/core/audit-v1-0-1.ts`
 - `packages/capabilities/src/assets/core/crud-v1-0-1.ts`
@@ -92,16 +93,22 @@ other product path or contract change is authorized.
   - `packages/capabilities/assets/commerce.simulated-payment/1.0.1/`
 - `packages/capabilities/test/capability-registry.test.ts`
 - `packages/capabilities/test/composition-contract.test.ts`
+- `packages/graph/src/model.ts`
+- `packages/graph/test/application-graph.test.ts`
+- `apps/control-plane/src/lifecycle.service.ts`
+- `apps/control-plane/test/lifecycle.service.test.ts`
+- `packages/compiler/src/index.ts`
 - `packages/compiler/test/composition-compilation.test.ts`
-- Only if the profile-choice adapter must switch to the generic resolver:
-  - `apps/workbench/lib/profile-starters.ts`
-  - `apps/workbench/lib/profile-starters.test.ts`
-  - `apps/workbench/lib/guided-application.ts`
-  - `apps/workbench/lib/guided-application.test.ts`
+- `packages/compiler/test/profile-compilation.test.ts`
+- `packages/compiler/test/compilation-plan.test.ts`
+- `apps/workbench/lib/profile-starters.ts`
+- `apps/workbench/lib/profile-starters.test.ts`
+- `apps/workbench/lib/guided-application.ts`
+- `apps/workbench/lib/guided-application.test.ts`
 
-No sibling asset key or version, Graph package, Control Plane, Worker, compiler
-source, plan, specification, project status, or other Workbench path is
-authorized.
+No sibling asset key or version, other Capabilities, Graph, Control Plane,
+compiler, or Workbench path, Worker path, plan, specification, or project status
+is authorized.
 
 ## Frozen Task 4 behavior and acceptance evidence
 
@@ -112,34 +119,75 @@ boolean, or an exact `{ graphSymbol }` object. Shared-commerce compositions must
 use Graph symbols for entity, page, route, role, field, and flow references;
 Task 4 must not add a direct string or enum binding type.
 
+### Open independent-review findings: fix round 1 of 5
+
+The same integration owner must repair all four P1 findings without a separate
+feature or compatibility layer:
+
+1. **Graph-symbol resolution is not a Draft and Publish boundary.** A
+   syntactically valid selection can reference an absent
+   `graph.domain.missing`, `graph.page.missing`, `graph.policy.missing`, or
+   `graph.flow.missing` symbol. The parser and every Draft-to-Publish route must
+   reject it before persistence or immutable-lock creation while continuing to
+   accept exact symbols that resolve to the matching entity, page, role, and
+   flow object.
+2. **The active Workbench profile path is not generic composition.** Each active
+   profile choice must pass a validated default base Graph and exact
+   Graph-symbol selections to `composeCapabilityDraft`. Restaurant and
+   Ecommerce must produce `integration.compositionSelections` for every package
+   with required parameters. The active helper must not clone `profileGraphs`
+   or rely on an `assetLocks` fallback; `profileGraphs` may remain only as
+   expected-output fixtures.
+3. **Public shared-package admission is not dependency- and recipe-complete.**
+   Any public admission path currently fails to prove that an otherwise exact
+   `commerce.cart` selection is rejected when the
+   `commerce.catalog-item/v1` provider is absent. A valid ordered
+   catalog/cart/order/inventory/payment selection must pass exact identity,
+   declared provides/requires, resolved Graph symbols, and recipe eligibility
+   without profile membership. The repair must reuse the canonical composition
+   resolver rather than duplicate requirement resolution in a lock helper.
+4. **The compiler proof is a CRUD surrogate, not a complete immutable
+   composition recipe.** The proof must compile the complete nine-package
+   Restaurant and Ecommerce selections from the generic profile-choice path,
+   each with its persisted immutable composition lock. It must assert the same
+   package identities but different canonical bindings and generated schema,
+   route, PageModel label, fixture, and role-journey artifacts, accept no legacy
+   profile or asset-lock fallback, and retain pre-render collision checking.
+
 Task 4 must produce all of the following evidence before moving to
 `ready_for_qa`:
 
-- Focused RED evidence proving the current profile starter clones a
-  profile-specific whole Graph and no generic resolver binds packages to an
-  already-valid Graph through Graph symbols.
-- Focused GREEN evidence proving Restaurant and Ecommerce compose through
-  `composeCapabilityDraft` using Graph-symbol-only selections over already-valid
-  Graphs. Finite-number and boolean support may remain, but no composition may
-  depend on a direct string or enum binding.
+- Focused RED evidence for each of the four P1 findings before its production
+  repair, followed by focused GREEN evidence for the exact boundary.
+- Graph and lifecycle evidence proving all composition Graph symbols resolve at
+  Draft parsing and every Draft-to-Publish route before persistence or
+  immutable-lock creation, while valid entity, page, role, and flow symbols
+  remain accepted.
+- Workbench evidence proving every active profile choice uses a validated base
+  Graph plus exact Graph-symbol selections through `composeCapabilityDraft`,
+  emits required `integration.compositionSelections`, and has no active
+  `profileGraphs` clone or `assetLocks` fallback.
+- Public-admission evidence proving a missing catalog provider rejects cart and
+  the full ordered catalog/cart/order/inventory/payment recipe passes exact
+  identity, provides/requires, resolved Graph symbols, and recipe eligibility
+  through the canonical composition resolver without profile membership.
 - Generated manifest and template digest regeneration for every changed
   physical package. Digests must be derived from package content, never edited
   manually, and physical verification must remain fail closed.
-- Cross-profile evidence proving Restaurant and Ecommerce lock the same
-  `core.*` and `commerce.*` package key/version/digest identities, retain
-  different canonical bindings, and compile different schema, routes, page
-  labels, fixtures, and journeys.
-- Evidence that generic composition does not clone `profileGraphs` and package
-  admission does not depend on profile membership or hard-coded profile/version
-  dispatch. Requirement/provide compatibility and recipe eligibility own
-  admission. Existing unmigrated compiler dispatch is not removed in Task 4.
-- Focused capability-registry and composition-contract tests, focused compiler
-  composition tests, relevant package regressions, typechecks, formatting, and
-  `git diff --check`, with exact commands and outcomes recorded.
-- Independent task review confirming the proof is load-bearing, confined to the
-  permitted paths, and introduces no compatibility fallback or hidden profile
-  fork. Independent QA, release review, and fresh verification remain required
-  before Task 4 can become `accepted`.
+- Complete immutable compiler evidence proving the generic profile-choice path
+  creates nine-package Restaurant and Ecommerce locks with the same package
+  identities, different canonical bindings, and different generated schema,
+  routes, PageModel labels, fixtures, and role journeys, without a legacy
+  profile/asset-lock fallback and without weakening pre-render collision checks.
+- Focused Graph, lifecycle, Workbench, capability-registry,
+  composition-contract, and compiler composition tests; affected Capabilities,
+  Graph, Control Plane, Workbench, and compiler regressions; relevant
+  typechecks; targeted Prettier; physical digest verification for all nine
+  package roots; and `git diff --check`, with exact commands and outcomes.
+- Independent task re-review confirming all four P1s are closed, the proof is
+  load-bearing and confined to the permitted paths, and no compatibility
+  fallback or hidden profile fork remains. Independent QA, release review, and
+  fresh verification remain required before Task 4 can become `accepted`.
 
 ## Task 3 accepted evidence
 
@@ -187,16 +235,23 @@ Task 3 has reconciled all required behavioral and governance evidence:
 
 ## Blocked decisions and risks
 
-- Blocked decisions: none for Task 4. A future finite enum parameter would
-  require a separate, manifest-owned allowed-value contract and is outside this
-  task; Task 4 must not reopen arbitrary strings or add an enum binding.
+- Blocked decisions: none for Task 4 fix round 1. A future finite enum parameter
+  would require a separate, manifest-owned allowed-value contract and is
+  outside this task; Task 4 must not reopen arbitrary strings or add an enum
+  binding.
 - Risk: a compatibility fallback or partial denylist could reopen the rejected
   Draft-persistence channel for credentials, commands, source, or raw model
   material.
+- Risk: shape-valid but unresolved Graph symbols could persist into a Draft or
+  immutable lock unless every Draft and Publish boundary resolves them.
 - Risk: a partial physical-package update or manually edited digest could leave
   TypeScript registration and Golden package content inconsistent.
-- Risk: retaining a profile clone, membership check, or hidden profile/version
-  admission branch would invalidate the shared-composition proof.
+- Risk: retaining the active Workbench clone or `assetLocks` fallback would
+  bypass the generic selections proven only in helper tests.
+- Risk: a public admission path that skips dependency and recipe eligibility
+  could accept an incomplete shared-commerce package chain.
+- Risk: a CRUD-only compiler surrogate could stay green while the complete
+  nine-package immutable recipes fail to generate distinct user-facing outputs.
 - Risk: Task 5 remains blocked until Task 4 is accepted.
 - Risk: Node 22 generated-runtime evidence and isolated Compose lifecycle
   evidence are still required at the Task 5 release gate and must not be
@@ -206,9 +261,9 @@ Task 3 has reconciled all required behavioral and governance evidence:
 
 - No free-form string, label channel, or enum design is added to composition
   bindings; the already-valid Graph and PageModel remain the content boundary.
-- No Graph package, Control Plane, Worker, compiler source, plan, specification,
-  project-status, sibling physical package version, or Workbench path outside
-  the four conditional adapter files belongs to Task 4.
+- No file outside the exact permitted paths, sibling physical package version,
+  Worker path, plan, specification, or project status belongs to Task 4 fix
+  round 1.
 - No full profile Graph clone, new profile membership gate, or hard-coded
   profile/version admission branch is added.
 - No Task 5 dispatch removal, Node 22 generated-runtime acceptance, isolated
@@ -221,9 +276,11 @@ Task 3 has reconciled all required behavioral and governance evidence:
 
 ## Next smallest valuable slice
 
-The integration owner writes the focused cross-profile RED proof, implements
-`composeCapabilityDraft({ graph, selections })` and Graph-symbol-only shared
-package bindings inside the permitted paths, regenerates all changed physical
-digests from content, and produces the required GREEN and regression evidence.
-The task then advances to `ready_for_qa`; Task 5 remains blocked until Task 4
-reaches `accepted`.
+The integration owner writes focused RED tests for all four P1s, resolves every
+composition Graph symbol at Draft and Publish, moves the active Workbench
+profile path to generic selections, enforces dependencies and recipe eligibility
+at public admission, and compiles complete nine-package immutable Restaurant
+and Ecommerce recipes with distinct schema, routes, labels, fixtures, and
+journeys. After generated digest regeneration and the required GREEN/regression
+evidence, independent task re-review must close every P1 before Task 4 can move
+to `ready_for_qa`; Task 5 remains blocked until Task 4 reaches `accepted`.
