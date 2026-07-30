@@ -30,28 +30,29 @@ lock, physical contribution-verification, immutable publication, and
 pre-generation collision contracts. Task 4 now owns the bounded proof that
 Restaurant and Ecommerce can compose the same Golden package identities through
 different Graph-symbol bindings and produce different outputs. Its implementation
-and scoped review are complete; independent behavioral QA owns the next gate.
+and scoped review are complete, and independent behavioral QA passed. Release
+review and fresh verification own the next gate.
 
-| Task                                                   | State                                   | Evidence-backed status                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| ------------------------------------------------------ | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1. Composition contract and canonical immutable lock   | `accepted`                              | Commits `d2f6517..27a8433`; final independent re-review clean. The accepted contract canonicalizes exact Golden package identities and fails closed on invalid composition input.                                                                                                                                                                                                                                                                                                              |
-| 2. Physical Graph and target contribution verification | `accepted`                              | Commits `33f9f31..0e1cc33`; final independent re-review clean. Physical packages, digests, runtime metadata, namespaces, and contribution collisions are verified fail closed.                                                                                                                                                                                                                                                                                                                 |
-| 3. Publish and compile an immutable composition lock   | `accepted`                              | Baseline commit `a2fac21`; repairs through `e509b6c`. Final task review and release review approved with no P0/P1/P2; independent QA passed with no P0/P1. Fresh verification passed Graph 19/19, Capabilities 108/108, Control Plane 111/111, compiler 169/169, Worker 74/74, all five typechecks, targeted Prettier, and `git diff --check`. The immutable publication, closed binding grammar, raw-before-canonicalization validation, and pre-generation collision contracts are accepted. |
-| 4. Shared-commerce composition with different bindings | `ready_for_qa` (fix round 3 reconciled) | Implementation range `ed87dfd`, `b2a9d45`, `6410b92`, and `f054802`. Final round-3 scoped re-review approved the original P1 repair and code quality with no new P0/P1/P2. Generic Graph-symbol composition, persisted-lock-only compilation, canonical package admission, and complete nine-package proof are implemented. Independent QA, release review, and fresh verification remain.                                                                                                     |
-| 5. Release gate and migrated-dispatch retirement       | `planned`                               | Blocked on accepted Task 4. Node 22 generated-runtime and isolated Compose evidence remains this task's later release gate.                                                                                                                                                                                                                                                                                                                                                                    |
+| Task                                                   | State                               | Evidence-backed status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------------------------------------------------------ | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Composition contract and canonical immutable lock   | `accepted`                          | Commits `d2f6517..27a8433`; final independent re-review clean. The accepted contract canonicalizes exact Golden package identities and fails closed on invalid composition input.                                                                                                                                                                                                                                                                                                                                                                    |
+| 2. Physical Graph and target contribution verification | `accepted`                          | Commits `33f9f31..0e1cc33`; final independent re-review clean. Physical packages, digests, runtime metadata, namespaces, and contribution collisions are verified fail closed.                                                                                                                                                                                                                                                                                                                                                                       |
+| 3. Publish and compile an immutable composition lock   | `accepted`                          | Baseline commit `a2fac21`; repairs through `e509b6c`. Final task review and release review approved with no P0/P1/P2; independent QA passed with no P0/P1. Fresh verification passed Graph 19/19, Capabilities 108/108, Control Plane 111/111, compiler 169/169, Worker 74/74, all five typechecks, targeted Prettier, and `git diff --check`. The immutable publication, closed binding grammar, raw-before-canonicalization validation, and pre-generation collision contracts are accepted.                                                       |
+| 4. Shared-commerce composition with different bindings | `reviewed` (fix round 3 reconciled) | Implementation range `ed87dfd`, `b2a9d45`, `6410b92`, and `f054802`. Final scoped review approved with no new P0/P1/P2; independent QA passed with no P0/P1/P2. Focused Graph 7/7, Capabilities 7/7, Workbench 2/2, Control Plane 11/11, and compiler 2/2 passed. Full Graph 23/23, Capabilities 112/112, compiler 172/172, Workbench 66/66, and Control Plane 115/115 passed with five typechecks, the all-profile empty-lock probe, exact nine-root verification, targeted Prettier, and clean diff. Release review and fresh verification remain. |
+| 5. Release gate and migrated-dispatch retirement       | `planned`                           | Blocked on accepted Task 4. Node 22 generated-runtime and isolated Compose evidence remains this task's later release gate.                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 Development, review, QA, release review, and fresh verification for Tasks 1
 through 3 ran on host Node 24. This is valid Task 3 acceptance evidence. It is
 not generated-runtime Node 22 or isolated Compose evidence, which remains the
 Task 5 release gate.
 
-Task 4 implementation and scoped review also ran on host Node 24. This is valid
-development evidence only; independent QA remains required, and Node 22 plus
-isolated Compose remain Task 5 gates.
+Task 4 implementation, scoped review, and QA ran on host Node 24. This is valid
+task evidence; the engine warning is nonblocking. Node 22 plus isolated Compose
+remain Task 5 gates.
 
-## Active ownership: Task 4 independent QA
+## Active ownership: Task 4 release review and fresh verification
 
-- Specialization and active owner: `qa`
+- Specialization and active owner: `release-review` and `verification`
 - Contract owner: Factory Platform Integration (root controller)
 - Contract status: Tasks 1 through 3 are accepted and frozen. Task 4 may consume
   only those contracts. The Graph-symbol recipe realization and exact path
@@ -67,6 +68,11 @@ isolated Compose remain Task 5 gates.
   `f054802`.
 - Review status: final fix-round-3 scoped re-review approved the original P1
   repair and code quality with no new P0/P1/P2.
+- QA status: PASS with no P0/P1/P2. Focused Graph 7/7, Capabilities 7/7,
+  Workbench 2/2, Control Plane 11/11, and compiler 2/2 passed. Full Graph 23/23,
+  Capabilities 112/112, compiler 172/172, Workbench 66/66, and Control Plane
+  115/115 passed, along with five typechecks, the all-profile empty-lock probe,
+  exact nine-root verification, targeted Prettier, and `git diff --check`.
 - Contract artifact:
   `docs/superpowers/specs/2026-07-30-parameterized-capability-composition-design.md`
 - Task brief and plan slice:
@@ -87,9 +93,9 @@ isolated Compose remain Task 5 gates.
   binding contract.
 - Dependency baseline: Tasks 1 through 3, all `accepted`.
 
-Independent QA owns the next gate. No product edit is authorized during this
-handoff. A reproducible load-bearing defect returns Task 4 to `implementing`
-under a separately recorded repair round.
+Independent release review and fresh verification own the next gate. No product
+edit is authorized during this handoff. A reproducible load-bearing defect
+returns Task 4 to `implementing` under a separately recorded repair round.
 
 ## Frozen implementation path ownership for Task 4
 
@@ -152,10 +158,10 @@ The added capability profile test path authorizes only its stale fixture helper
 to supply an explicit nonempty canonical persisted composition lock. It does not
 authorize a Capabilities production source, runtime, or fallback change.
 
-## Independent QA scope for Task 4
+## Independent QA evidence for Task 4
 
-Independent QA must behaviorally validate all of the following against the
-frozen implementation:
+Independent QA behaviorally validated all of the following against the frozen
+implementation:
 
 - Generic `composeCapabilityDraft` composition over already-valid Graphs using
   finite numbers, booleans, and exact Graph-symbol bindings only.
@@ -178,8 +184,14 @@ frozen implementation:
 - The Task 4 report is reproducible from its exact RED, GREEN, final, targeted
   Prettier, and executable nine-root verification commands and outcomes.
 
-QA must record exact commands, runner version, test counts, outcomes, and a
-finding severity. Task 5 remains blocked until Task 4 reaches `accepted`.
+QA recorded exact commands, the Node 24 runner, test counts, outcomes, and no
+P0/P1/P2. Focused Graph 7/7, Capabilities 7/7, Workbench 2/2, Control Plane
+11/11, and compiler 2/2 passed. Full Graph 23/23, Capabilities 112/112, compiler
+172/172, Workbench 66/66, and Control Plane 115/115 passed. Five typechecks, the
+all-profile empty-lock probe, exact nine-root verification, targeted Prettier,
+and `git diff --check` also passed. The Node 24 engine warning and deferred
+duplicated Graph-symbol resolver are nonblocking. Task 5 remains blocked until
+Task 4 reaches `accepted`.
 
 ## Frozen Task 4 behavior and acceptance evidence
 
@@ -279,9 +291,9 @@ must name the exact executable script or command used for fresh verification of
 all nine physical package roots. Targeted Prettier must also include
 `packages/capabilities/test/restaurant-profile.test.ts` when changed.
 
-Task 4 implementation and review produced the following evidence to reach
-`ready_for_qa`; independent QA must now reproduce the load-bearing behavior
-before the task can become `reviewed`:
+Task 4 implementation, review, and independent QA reconciled the following
+load-bearing evidence to reach `reviewed`; release review and fresh verification
+remain required before the task can become `accepted`:
 
 - Focused RED evidence for each of the four P1 findings before its production
   repair, followed by focused GREEN evidence for the exact boundary.
@@ -341,8 +353,9 @@ before the task can become `reviewed`:
 - Final independent task re-review confirmed the original four P1 themes, all
   three scoped round-2 P1s, and the round-3 P1 are closed; the proof is
   load-bearing and confined to the permitted paths; and no compatibility
-  fallback or hidden profile fork remains. Independent QA, release review, and
-  fresh verification remain required before Task 4 can become `accepted`.
+  fallback or hidden profile fork remains. Independent QA has passed; release
+  review and fresh verification remain required before Task 4 can become
+  `accepted`.
 
 ## Task 3 accepted evidence
 
@@ -390,11 +403,11 @@ Task 3 has reconciled all required behavioral and governance evidence:
 
 ## Blocked decisions and risks
 
-- Blocked decisions: none for Task 4 independent QA. The duplicated Graph-symbol
-  resolver is deferred P2 maintenance and must not expand this repair. A future
-  finite enum parameter would require a separate, manifest-owned allowed-value
-  contract and is outside this task; Task 4 must not reopen arbitrary strings or
-  add an enum binding.
+- Blocked decisions: none for Task 4 release review or fresh verification. The
+  duplicated Graph-symbol resolver is deferred nonblocking P2 maintenance and
+  must not expand this gate. A future finite enum parameter would require a
+  separate, manifest-owned allowed-value contract and is outside this task;
+  Task 4 must not reopen arbitrary strings or add an enum binding.
 - Risk: a compatibility fallback or partial denylist could reopen the rejected
   Draft-persistence channel for credentials, commands, source, or raw model
   material.
@@ -450,10 +463,8 @@ Task 3 has reconciled all required behavioral and governance evidence:
 
 ## Next smallest valuable slice
 
-Independent QA reproduces generic Graph-symbol composition, active Workbench
-selections, direct Draft/Publish symbol resolution, dependent public admission,
-the complete nine-package same-identity/different-binding/different-output proof,
-all-profile empty-lock rejection, physical digest verification, and Task 4
-report reproducibility. If QA is clean, the controller reconciles it with the
-approved final review and advances Task 4 to `reviewed`. Task 5 remains blocked
-until Task 4 reaches `accepted`.
+Independent release review reconciles the frozen contract, implementation,
+final task review, and QA evidence while fresh verification reruns the
+load-bearing gates at the current commit. If both are clean, the controller may
+advance Task 4 from `reviewed` to `accepted`. Task 5 remains blocked until that
+acceptance transition is recorded.
