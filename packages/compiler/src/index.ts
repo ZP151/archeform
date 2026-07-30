@@ -643,11 +643,11 @@ const handlerBackedCapabilityPackages = new Set<string>([
 ]);
 
 function resolveGeneratedRuntimeMode(
-  graph: ApplicationGraphV1,
+  compositionLock: CapabilityCompositionLockV1,
 ): GeneratedRuntimeMode {
-  const handlerLocks = (graph.integration.assetLocks ?? []).filter((lock) =>
-    handlerBackedCapabilityPackages.has(lock.key),
-  );
+  const handlerLocks = compositionLock.packages
+    .map(({ lock }) => lock)
+    .filter((lock) => handlerBackedCapabilityPackages.has(lock.key));
   if (!handlerLocks.length) return "package-handlers-v1";
 
   const versions = new Set(handlerLocks.map((lock) => lock.version));
@@ -2544,7 +2544,7 @@ export function generateApplicationBundle(
     input,
     options,
   );
-  const runtimeMode = resolveGeneratedRuntimeMode(graph);
+  const runtimeMode = resolveGeneratedRuntimeMode(input.compositionLock);
   const rootDirectory = `${graph.metadata.id}-${input.publishedRevisionId}`;
   const plannedFiles: PlannedGeneratedFile[] = [
     {

@@ -44,6 +44,14 @@ const crudLock = {
   manifestDigest: crudManifest.manifestDigest,
   lifecycle: crudManifest.lifecycle,
 };
+const historicalCrudLock = {
+  key: "core.crud",
+  version: "1.0.0",
+  packageRoot: "packages/capabilities/assets/core.crud/1.0.0",
+  manifestDigest:
+    "sha256:69bad8aab8bf23fe3820bba3d6fcf12e39c17399ae98390910f61e0792e8dfb7",
+  lifecycle: "golden" as const,
+};
 const compositionLock = createCapabilityCompositionLock({
   graphChecksum: hashApplicationGraph(graph),
   selections: [
@@ -174,6 +182,31 @@ describe("immutable composition compilation", () => {
     }).files.find(({ path }) => path === "capability-lock.json")?.content;
 
     expect(JSON.parse(capabilityLock ?? "{}").assets).toEqual([]);
+  });
+
+  it("selects runtime mode only from persisted composition lock packages", () => {
+    const graphWithConflictingLock = structuredClone(graph);
+    graphWithConflictingLock.integration = {
+      ...graphWithConflictingLock.integration,
+      compositionProfile: "expense-approval",
+      assetLocks: [historicalCrudLock],
+    };
+    const persistedLock = createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(graphWithConflictingLock),
+      selections: compositionLock.packages,
+    });
+
+    const runtime = generateApplicationBundle({
+      publishedRevisionId: "published-persisted-runtime-mode-1",
+      graph: graphWithConflictingLock,
+      compositionLock: persistedLock,
+    }).files.find(
+      ({ path }) => path === "api/src/application-runtime.ts",
+    )?.content;
+
+    expect(runtime).toContain(
+      'import { getEffectHandler, getRecordHandler, getWorkflowHandler, providedEffects } from "./capabilities/registry.js";',
+    );
   });
 
   it("renders deterministic target contributions from the exact persisted lock", () => {
