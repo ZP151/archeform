@@ -17,8 +17,10 @@ import {
 } from "./canonical.js";
 import {
   intakeContractPrimitives,
+  parseExternalSourceAcquisition,
   parseIntakeReceipt,
   parseIntakeRecord,
+  type ExternalSourceAcquisitionV1,
   type IntakeReceiptV1,
   type IntakeRecordKind,
   type IntakeRecordV1,
@@ -95,6 +97,11 @@ export class ExternalIntakeStore {
     record: IntakeRecordV1,
   ): StoredRecordRef {
     const parsedKind = recordKindSchema.exclude(["receipt"]).parse(kind);
+    if (parsedKind === "acquisition") {
+      const parsed = parseExternalSourceAcquisition(record);
+      this.#validateAcquisitionParents(parsed);
+      return this.#putRecord(parsedKind, parsed);
+    }
     const parsed = parseIntakeRecord(parsedKind, record);
     return this.#putRecord(parsedKind, parsed);
   }
@@ -234,6 +241,93 @@ export class ExternalIntakeStore {
       throw new Error("Receipt sequence index is not canonical or consistent.");
     }
     return parsed;
+  }
+
+  #validateAcquisitionParents(acquisition: ExternalSourceAcquisitionV1): void {
+    const expectedParents = [
+      acquisition.sourceRequestDigest,
+      acquisition.snapshot.recordDigest,
+    ];
+    if (
+      acquisition.parentDigests.length !== expectedParents.length ||
+      expectedParents.some(
+        (digest) => !acquisition.parentDigests.includes(digest),
+      )
+    ) {
+      throw new Error(
+        "Acquisition must declare exactly its request and snapshot parents.",
+      );
+    }
+
+    const request = this.#readAcquisitionParent(
+      "request",
+      acquisition.sourceRequestDigest,
+    );
+    const snapshot = this.#readAcquisitionParent(
+      "snapshot",
+      acquisition.snapshot.recordDigest,
+    );
+
+    if (
+      request.apiVersion !== "factory.external-intake-request/v1" ||
+      snapshot.apiVersion !== "factory.external-source-snapshot/v1"
+    ) {
+      throw new Error(
+        "Acquisition parents must use the request and snapshot record kinds.",
+      );
+    }
+    if (
+      request.source.canonicalRepositoryUrl !==
+        acquisition.source.canonicalRepositoryUrl ||
+      snapshot.repositoryUrl !== acquisition.source.canonicalRepositoryUrl
+    ) {
+      throw new Error(
+        "Acquisition repository URL does not match its request and snapshot parents.",
+      );
+    }
+    if (
+      request.source.requestedRef !== acquisition.source.requestedRef ||
+      snapshot.requestedRef !== acquisition.source.requestedRef
+    ) {
+      throw new Error(
+        "Acquisition requested ref does not match its request and snapshot parents.",
+      );
+    }
+    if (
+      snapshot.resolvedCommit !== acquisition.source.resolvedCommit ||
+      (request.source.expectedCommit !== undefined &&
+        request.source.expectedCommit !== acquisition.source.resolvedCommit)
+    ) {
+      throw new Error(
+        "Acquisition resolved commit does not match its request and snapshot parents.",
+      );
+    }
+    if (
+      snapshot.archiveDigest !== acquisition.snapshot.archiveDigest ||
+      snapshot.treeDigest !== acquisition.snapshot.treeDigest
+    ) {
+      throw new Error(
+        "Acquisition archive or tree digest does not match its snapshot parent.",
+      );
+    }
+    if (!snapshot.parentDigests.includes(acquisition.sourceRequestDigest)) {
+      throw new Error(
+        "Acquisition snapshot parent is not linked to its request parent.",
+      );
+    }
+  }
+
+  #readAcquisitionParent(
+    kind: "request" | "snapshot",
+    digest: Sha256Digest,
+  ): IntakeRecordV1 {
+    try {
+      return this.getRecord({ kind, digest });
+    } catch {
+      throw new Error(
+        `Acquisition ${kind} parent is absent, tampered, or stored under the wrong kind.`,
+      );
+    }
   }
 
   #putRecord(kind: IntakeRecordKind, record: IntakeRecordV1): StoredRecordRef {

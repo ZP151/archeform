@@ -18,6 +18,9 @@ import {
   canonicalRecordDigest,
   type ExternalSourceAcquisitionV1,
   type IntakeReceiptV1,
+  type IntakeRequestV1,
+  type SourceSnapshotV1,
+  type StoredRecordRef,
 } from "../src/index.js";
 
 const roots: string[] = [];
@@ -70,6 +73,53 @@ const validAcquisition: ExternalSourceAcquisitionV1 = {
   acquisitionState: "acquired",
 };
 
+function recordPath(root: string, ref: StoredRecordRef): string {
+  return join(root, "records", ref.kind, `${ref.digest.slice(7)}.json`);
+}
+
+function storeAcquisitionParents(
+  store: ExternalIntakeStore,
+  options: {
+    readonly request?: IntakeRequestV1;
+    readonly snapshotParentDigests?: SourceSnapshotV1["parentDigests"];
+  } = {},
+): {
+  readonly acquisition: ExternalSourceAcquisitionV1;
+  readonly requestRef: StoredRecordRef;
+  readonly snapshotRef: StoredRecordRef;
+} {
+  const requestRef = store.putRecord(
+    "request",
+    options.request ?? validRequest,
+  );
+  const snapshot: SourceSnapshotV1 = {
+    apiVersion: "factory.external-source-snapshot/v1",
+    createdAt: "2026-07-31T00:00:01.000Z",
+    producerVersion: "0.1.0",
+    parentDigests: options.snapshotParentDigests ?? [requestRef.digest],
+    repositoryUrl: validAcquisition.source.canonicalRepositoryUrl,
+    requestedRef: validAcquisition.source.requestedRef,
+    resolvedCommit: validAcquisition.source.resolvedCommit,
+    retrievedAt: "2026-07-31T00:00:01.000Z",
+    archiveDigest: validAcquisition.snapshot.archiveDigest,
+    treeDigest: validAcquisition.snapshot.treeDigest,
+    includedPaths: ["LICENSE", "NOTICE"],
+    excludedPaths: [],
+    originEvidence: validAcquisition.provenance,
+  };
+  const snapshotRef = store.putRecord("snapshot", snapshot);
+  const acquisition: ExternalSourceAcquisitionV1 = {
+    ...validAcquisition,
+    parentDigests: [requestRef.digest, snapshotRef.digest],
+    sourceRequestDigest: requestRef.digest,
+    snapshot: {
+      ...validAcquisition.snapshot,
+      recordDigest: snapshotRef.digest,
+    },
+  };
+  return { acquisition, requestRef, snapshotRef };
+}
+
 function tempRoot(): string {
   const root = mkdtempSync(join(tmpdir(), "factory-external-intake-"));
   roots.push(root);
@@ -104,25 +154,166 @@ describe("ExternalIntakeStore", () => {
   it("stores acquisition records under a distinct immutable kind", () => {
     const root = tempRoot();
     const store = new ExternalIntakeStore(root);
+    const { acquisition } = storeAcquisitionParents(store);
 
-    const ref = store.putRecord("acquisition", validAcquisition);
+    const ref = store.putRecord("acquisition", acquisition);
 
     expect(ref).toEqual({
       kind: "acquisition",
-      digest: canonicalRecordDigest(validAcquisition),
+      digest: canonicalRecordDigest(acquisition),
     });
-    expect(store.getRecord(ref)).toEqual(validAcquisition);
+    expect(store.getRecord(ref)).toEqual(acquisition);
     expect(
       lstatSync(
         join(root, "records", "acquisition", `${ref.digest.slice(7)}.json`),
       ).isFile(),
     ).toBe(true);
+    expect(() => store.putRecord("candidate", acquisition as never)).toThrow();
+    expect(() => store.putRecord("evidence", acquisition as never)).toThrow();
+  });
+
+  it("requires exactly the request and snapshot acquisition parents", () => {
+    const store = new ExternalIntakeStore(tempRoot());
+    const { acquisition } = storeAcquisitionParents(store);
+
     expect(() =>
-      store.putRecord("candidate", validAcquisition as never),
-    ).toThrow();
+      store.putRecord("acquisition", {
+        ...acquisition,
+        parentDigests: [
+          ...acquisition.parentDigests,
+          `sha256:${"f".repeat(64)}`,
+        ],
+      }),
+    ).toThrow(/parent/i);
+  });
+
+  it.each([
+    ["request", "missing"],
+    ["request", "tampered"],
+    ["snapshot", "missing"],
+    ["snapshot", "tampered"],
+  ] as const)(
+    "rejects a %s parent whose backing record is %s",
+    (kind, state) => {
+      const root = tempRoot();
+      const store = new ExternalIntakeStore(root);
+      const { acquisition, requestRef, snapshotRef } =
+        storeAcquisitionParents(store);
+      const ref = kind === "request" ? requestRef : snapshotRef;
+
+      if (state === "missing") {
+        rmSync(recordPath(root, ref));
+      } else {
+        writeFileSync(recordPath(root, ref), "{}", "utf8");
+      }
+
+      expect(() => store.putRecord("acquisition", acquisition)).toThrow(
+        /parent|digest|immutable/i,
+      );
+    },
+  );
+
+  it("rejects acquisition parent digests stored under the wrong record kinds", () => {
+    const store = new ExternalIntakeStore(tempRoot());
+    const { acquisition, requestRef, snapshotRef } =
+      storeAcquisitionParents(store);
+
     expect(() =>
-      store.putRecord("evidence", validAcquisition as never),
-    ).toThrow();
+      store.putRecord("acquisition", {
+        ...acquisition,
+        parentDigests: [snapshotRef.digest, requestRef.digest],
+        sourceRequestDigest: snapshotRef.digest,
+        snapshot: {
+          ...acquisition.snapshot,
+          recordDigest: requestRef.digest,
+        },
+      }),
+    ).toThrow(/request|snapshot|parent/i);
+  });
+
+  it.each([
+    "repository-url",
+    "requested-ref",
+    "resolved-commit",
+    "archive-digest",
+    "tree-digest",
+  ] as const)("rejects acquisition %s mismatches", (mismatch) => {
+    const store = new ExternalIntakeStore(tempRoot());
+    const { acquisition } = storeAcquisitionParents(store);
+    let altered: ExternalSourceAcquisitionV1;
+
+    switch (mismatch) {
+      case "repository-url":
+        altered = {
+          ...acquisition,
+          source: {
+            ...acquisition.source,
+            canonicalRepositoryUrl: "https://github.com/example/different.git",
+          },
+        };
+        break;
+      case "requested-ref":
+        altered = {
+          ...acquisition,
+          source: { ...acquisition.source, requestedRef: "v9.9.9" },
+        };
+        break;
+      case "resolved-commit":
+        altered = {
+          ...acquisition,
+          source: { ...acquisition.source, resolvedCommit: "d".repeat(40) },
+        };
+        break;
+      case "archive-digest":
+        altered = {
+          ...acquisition,
+          snapshot: {
+            ...acquisition.snapshot,
+            archiveDigest: `sha256:${"e".repeat(64)}`,
+          },
+        };
+        break;
+      case "tree-digest":
+        altered = {
+          ...acquisition,
+          snapshot: {
+            ...acquisition.snapshot,
+            treeDigest: `sha256:${"e".repeat(64)}`,
+          },
+        };
+        break;
+    }
+
+    expect(() => store.putRecord("acquisition", altered)).toThrow(
+      /match|link/i,
+    );
+  });
+
+  it("rejects a snapshot that is not linked to the acquisition request", () => {
+    const store = new ExternalIntakeStore(tempRoot());
+    const { acquisition } = storeAcquisitionParents(store, {
+      snapshotParentDigests: [`sha256:${"f".repeat(64)}`],
+    });
+
+    expect(() => store.putRecord("acquisition", acquisition)).toThrow(
+      /request|link/i,
+    );
+  });
+
+  it("rejects a resolved commit that conflicts with the request expectation", () => {
+    const store = new ExternalIntakeStore(tempRoot());
+    const request: IntakeRequestV1 = {
+      ...validRequest,
+      source: {
+        ...validRequest.source,
+        expectedCommit: "d".repeat(40),
+      },
+    };
+    const { acquisition } = storeAcquisitionParents(store, { request });
+
+    expect(() => store.putRecord("acquisition", acquisition)).toThrow(
+      /commit|request/i,
+    );
   });
 
   it("stores canonical records immutably and returns matching writes idempotently", () => {
