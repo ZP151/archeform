@@ -13,6 +13,7 @@ import { dirname, join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { createExternalIntakeApi } from "../src/api.js";
 import { canonicalJson, digestBytes } from "../src/canonical.js";
 import {
   CandidateRegistry,
@@ -123,6 +124,16 @@ function verificationStatePath(
     }),
   );
   return blobPath(root, "evidence", receipt.recordDigests[1]!);
+}
+
+function lifecycleRecordCounts(root: string): {
+  readonly candidates: number;
+  readonly receipts: number;
+} {
+  return {
+    candidates: readdirSync(join(root, "records", "candidate")).length,
+    receipts: readdirSync(join(root, "records", "receipt")).length,
+  };
 }
 
 function safeArtifacts(): CandidateArtifactsV1 {
@@ -587,7 +598,7 @@ describe("Candidate registry", () => {
     const registry = new CandidateRegistry(store);
     const initial = await registry.create(await acceptedProposal(store));
     const result = evaluateCandidateConformance(
-      registry.getConformanceBundle(initial.id, initial.version),
+      await registry.getConformanceBundle(initial.id, initial.version),
     );
     expect(result.status).toBe("pass");
     await expect(
@@ -610,12 +621,12 @@ describe("Candidate registry", () => {
       valid: true,
     });
     const fresh = new CandidateRegistry(store, root);
+    await expect(
+      fresh.verifyIdentity(passed.lookupId, passed.version),
+    ).resolves.toMatchObject({ valid: true, issues: [] });
     expect(fresh.get(passed.lookupId, passed.version).status).toBe(
       "conformance-passed",
     );
-    await expect(
-      fresh.verify(fresh.getRef(passed.lookupId, passed.version)),
-    ).resolves.toMatchObject({ valid: true, issues: [] });
     expect(
       (registry as unknown as { appendStatus?: unknown }).appendStatus,
     ).toBeUndefined();
@@ -628,7 +639,7 @@ describe("Candidate registry", () => {
     const registry = new CandidateRegistry(store);
     const initial = await registry.create(await acceptedProposal(store));
     const result = evaluateCandidateConformance(
-      registry.getConformanceBundle(initial.id, initial.version),
+      await registry.getConformanceBundle(initial.id, initial.version),
     );
     const passed = await registry.recordConformancePass(
       initial.id,
@@ -650,7 +661,7 @@ describe("Candidate registry", () => {
     const registry = new CandidateRegistry(store);
     const initial = await registry.create(await acceptedProposal(store));
     const result = evaluateCandidateConformance(
-      registry.getConformanceBundle(initial.id, initial.version),
+      await registry.getConformanceBundle(initial.id, initial.version),
     );
     const passed = await registry.recordConformancePass(
       initial.id,
@@ -740,14 +751,14 @@ describe("Candidate registry", () => {
     const fresh = new CandidateRegistry(store, root);
 
     expect(ref.lookupId).toMatch(/^candidate-[a-f0-9]{64}$/u);
+    await expect(
+      fresh.verifyIdentity(ref.lookupId, ref.version),
+    ).resolves.toMatchObject({ valid: true, issues: [] });
     expect(fresh.get(ref.lookupId, ref.version)).toMatchObject({
       id: "safe-adapter",
       version: "1.0.0",
       status: "quarantined",
     });
-    await expect(
-      fresh.verify(fresh.getRef(ref.lookupId, ref.version)),
-    ).resolves.toMatchObject({ valid: true, issues: [] });
   });
 
   it("rejects a receipt-addressed Candidate with mixed evidence executions", async () => {
@@ -763,7 +774,7 @@ describe("Candidate registry", () => {
     ).resolves.toMatchObject({ valid: false });
   });
 
-  it("persists redacted strict state and rehydrates every fresh-process artifact and checkpoint", async () => {
+  it("persists redacted strict state and rehydrates every fresh-process Task 3 checkpoint", async () => {
     const { root, store } = tempStore();
     const proposal = await acceptedProposal(store);
     const ref = await new CandidateRegistry(store).create(proposal);
@@ -775,11 +786,6 @@ describe("Candidate registry", () => {
       "evidence",
       proposal.completedEvidence.scans.scans[0]!.summary.digest,
     );
-    const manifestPath = blobPath(
-      root,
-      "evidence",
-      digestBytes(bytes(canonicalJson(proposal.artifacts.manifest))),
-    );
 
     expect(existsSync(statePath)).toBe(true);
     expect(existsSync(sourcePath)).toBe(true);
@@ -788,13 +794,11 @@ describe("Candidate registry", () => {
     );
     expect(readFileSync(sourcePath)).toEqual(Buffer.from(source.content));
     rmSync(summaryPath);
-    rmSync(manifestPath);
 
     await expect(
       new CandidateRegistry(store, root).verify(ref),
     ).resolves.toMatchObject({ valid: true, issues: [] });
     expect(existsSync(summaryPath)).toBe(true);
-    expect(existsSync(manifestPath)).toBe(true);
   });
 
   it.each(["snapshot", "acquisition"] as const)(
@@ -919,7 +923,7 @@ describe("Candidate registry", () => {
     const registry = new CandidateRegistry(store);
     const initial = await registry.create(await acceptedProposal(store));
     const result = evaluateCandidateConformance(
-      registry.getConformanceBundle(initial.id, initial.version),
+      await registry.getConformanceBundle(initial.id, initial.version),
     );
     const passed = await registry.recordConformancePass(
       initial.id,
@@ -938,6 +942,127 @@ describe("Candidate registry", () => {
     await expect(
       new CandidateRegistry(store, root).verify(passed),
     ).resolves.toMatchObject({ valid: false });
+  });
+
+  it.each([
+    ["missing", "snapshot"],
+    ["tampered", "snapshot"],
+    ["missing", "acquisition"],
+    ["tampered", "acquisition"],
+    ["missing", "evidence"],
+    ["tampered", "evidence"],
+    ["missing", "artifact"],
+    ["tampered", "artifact"],
+  ] as const)(
+    "blocks fresh Candidate test and lifecycle transition for %s %s bytes",
+    async (failure, target) => {
+      const { root, store } = tempStore();
+      const registry = new CandidateRegistry(store);
+      const proposal = await acceptedProposal(store);
+      const ref = await registry.create(proposal);
+      const result = evaluateCandidateConformance(
+        await registry.getConformanceBundle(ref.id, ref.version),
+      );
+      const candidate = registry.get(ref.id, ref.version);
+      const targetPath =
+        target === "artifact"
+          ? blobPath(root, "evidence", candidate.candidateManifestDigest)
+          : recordPath(
+              root,
+              target,
+              target === "snapshot"
+                ? proposal.snapshot.digest
+                : target === "acquisition"
+                  ? proposal.acquisition.digest
+                  : proposal.completedEvidence.evidence.digest,
+            );
+      if (failure === "missing") rmSync(targetPath, { force: true });
+      else writeFileSync(targetPath, `tampered-${target}`);
+      const before = lifecycleRecordCounts(root);
+      const freshApi = createExternalIntakeApi(
+        new ExternalIntakeStore(root),
+        root,
+      );
+
+      await expect(
+        freshApi.candidateShow(ref.lookupId, ref.version),
+      ).rejects.toThrow("Candidate verification");
+      await expect(
+        freshApi.candidateTest(ref.lookupId, ref.version),
+      ).rejects.toThrow("Candidate verification");
+      expect(freshApi.candidateList({})).toEqual([]);
+      expect(lifecycleRecordCounts(root)).toEqual(before);
+
+      const freshRegistry = new CandidateRegistry(
+        new ExternalIntakeStore(root),
+        root,
+      );
+      await expect(
+        freshRegistry.recordConformancePass(ref.lookupId, ref.version, result),
+      ).rejects.toThrow("Candidate verification");
+      expect(lifecycleRecordCounts(root)).toEqual(before);
+    },
+  );
+
+  it.each(["missing", "tampered"] as const)(
+    "blocks fresh Candidate test when persisted conformance bytes are %s",
+    async (failure) => {
+      const { root, store } = tempStore();
+      const registry = new CandidateRegistry(store);
+      const initial = await registry.create(await acceptedProposal(store));
+      const result = evaluateCandidateConformance(
+        await registry.getConformanceBundle(initial.id, initial.version),
+      );
+      const passed = await registry.recordConformancePass(
+        initial.id,
+        initial.version,
+        result,
+      );
+      const candidate = registry.get(passed.id, passed.version);
+      const resultPath = blobPath(
+        root,
+        "evidence",
+        candidate.conformanceResultDigest!,
+      );
+      if (failure === "missing") rmSync(resultPath, { force: true });
+      else writeFileSync(resultPath, "tampered-conformance-result");
+      const before = lifecycleRecordCounts(root);
+      const freshApi = createExternalIntakeApi(
+        new ExternalIntakeStore(root),
+        root,
+      );
+
+      await expect(
+        freshApi.candidateShow(passed.lookupId, passed.version),
+      ).rejects.toThrow("Candidate verification");
+      await expect(
+        freshApi.candidateTest(passed.lookupId, passed.version),
+      ).rejects.toThrow("Candidate verification");
+      expect(freshApi.candidateList({})).toEqual([]);
+      expect(lifecycleRecordCounts(root)).toEqual(before);
+    },
+  );
+
+  it("fully verifies a fresh Candidate before recording its conformance pass", async () => {
+    const { root, store } = tempStore();
+    const first = new CandidateRegistry(store);
+    const ref = await first.create(await acceptedProposal(store));
+    const before = lifecycleRecordCounts(root);
+    const freshApi = createExternalIntakeApi(
+      new ExternalIntakeStore(root),
+      root,
+    );
+
+    await expect(
+      freshApi.candidateTest(ref.lookupId, ref.version),
+    ).resolves.toMatchObject({ status: "pass" });
+    const shown = await freshApi.candidateShow(ref.lookupId, ref.version);
+    expect(shown.status).toBe("conformance-passed");
+    expect(freshApi.candidateList({})).toEqual([shown]);
+    expect(lifecycleRecordCounts(root)).toEqual({
+      candidates: before.candidates + 1,
+      receipts: before.receipts + 1,
+    });
   });
 
   it("rehydrates accepted evidence during Candidate create and verify", async () => {

@@ -267,6 +267,10 @@ export interface CandidateRegistryV1 {
     result: unknown,
   ): Promise<StoredCandidateRefV1>;
   verify(ref: StoredCandidateRefV1): Promise<CandidateVerificationResultV1>;
+  verifyIdentity(
+    id: string,
+    version: string,
+  ): Promise<CandidateVerificationResultV1>;
 }
 
 interface CandidateEntry {
@@ -281,6 +285,7 @@ interface CandidateEntry {
   readonly verificationStateRef: StoredRecordRef;
   readonly jobId: string;
   readonly receipts: StoredRecordRef[];
+  verified: boolean;
 }
 
 interface PersistedSnapshotFileV1 {
@@ -936,6 +941,7 @@ export class CandidateRegistry implements CandidateRegistryV1 {
       verificationStateRef: verification.ref,
       jobId,
       receipts: [receipt],
+      verified: true,
     });
     return ref;
   }
@@ -950,6 +956,7 @@ export class CandidateRegistry implements CandidateRegistryV1 {
   list(filter: CandidateQueryV1): readonly CandidateSummaryV1[] {
     assertExactKeys(filter, [], ["id", "status", "proposedFactoryKey"]);
     return [...this.#entries.values()]
+      .filter((entry) => entry.verified)
       .map((entry) => {
         const candidate = this.get(entry.id, entry.version);
         return {
@@ -981,8 +988,14 @@ export class CandidateRegistry implements CandidateRegistryV1 {
     version: string,
     result: unknown,
   ): Promise<StoredCandidateRefV1> {
+    const verification = await this.verifyIdentity(id, version);
+    if (!verification.valid || verification.candidate === undefined) {
+      throw new Error(
+        "Strict Candidate verification must pass before a lifecycle transition.",
+      );
+    }
     const entry = this.#entry(id, version);
-    const current = this.get(id, version);
+    const current = verification.candidate;
     if (current.status !== "quarantined") {
       throw new Error("Candidate conformance lifecycle is append-only.");
     }
@@ -1054,6 +1067,7 @@ export class CandidateRegistry implements CandidateRegistryV1 {
   ): Promise<CandidateVerificationResultV1> {
     const issues: string[] = [];
     let candidate: CandidateCapabilityV1 | undefined;
+    let entry: CandidateEntry | undefined;
     try {
       assertExactKeys(ref, [
         "kind",
@@ -1075,7 +1089,7 @@ export class CandidateRegistry implements CandidateRegistryV1 {
           "Candidate reference identity does not match its immutable record.",
         );
       }
-      const entry = this.#entry(ref.lookupId, ref.version);
+      entry = this.#entry(ref.lookupId, ref.version, true);
       if (!entry.history.some(({ digest }) => digest === ref.digest)) {
         issues.push(
           "Candidate reference is not present in this registry timeline.",
@@ -1104,6 +1118,7 @@ export class CandidateRegistry implements CandidateRegistryV1 {
         try {
           for (const [recordedDigest, artifact] of artifacts) {
             const expectedDigest = digestBytes(artifactBytes(artifact));
+            this.#reader?.read("evidence", expectedDigest);
             if (
               (recordedDigest !== undefined &&
                 recordedDigest !== expectedDigest) ||
@@ -1147,6 +1162,7 @@ export class CandidateRegistry implements CandidateRegistryV1 {
           });
           const expectedBytes = artifactBytes(expectedResult);
           const expectedDigest = digestBytes(expectedBytes);
+          this.#reader?.read("evidence", expectedDigest);
           if (
             expectedResult.status !== "pass" ||
             candidate.conformanceResultDigest !== expectedDigest ||
@@ -1192,24 +1208,40 @@ export class CandidateRegistry implements CandidateRegistryV1 {
     } catch {
       issues.push("Candidate record is absent, malformed, or digest-invalid.");
     }
+    const valid = issues.length === 0;
+    if (entry !== undefined) entry.verified = valid;
     return {
-      valid: issues.length === 0,
+      valid,
       issues,
       ...(candidate === undefined ? {} : { candidate }),
     };
+  }
+
+  async verifyIdentity(
+    id: string,
+    version: string,
+  ): Promise<CandidateVerificationResultV1> {
+    const entry = this.#entry(id, version, true);
+    return this.verify(entry.latest);
   }
 
   getRef(id: string, version: string): StoredCandidateRefV1 {
     return this.#entry(id, version).latest;
   }
 
-  getConformanceBundle(
+  async getConformanceBundle(
     id: string,
     version: string,
-  ): CandidateConformanceBundleV1 {
+  ): Promise<CandidateConformanceBundleV1> {
+    const verification = await this.verifyIdentity(id, version);
+    if (!verification.valid || verification.candidate === undefined) {
+      throw new Error(
+        "Strict Candidate verification must pass before conformance access.",
+      );
+    }
     const entry = this.#entry(id, version);
     return {
-      candidate: this.get(id, version),
+      candidate: verification.candidate,
       artifacts: structuredClone(entry.artifacts),
     };
   }
@@ -1221,18 +1253,31 @@ export class CandidateRegistry implements CandidateRegistryV1 {
     return `${id}@${version}`;
   }
 
-  #entry(id: string, version: string): CandidateEntry {
+  #entry(id: string, version: string, allowUnverified = false): CandidateEntry {
     const key = this.#key(id, version);
     const entry =
       this.#entries.get(key) ??
       [...this.#entries.values()].find((candidate) =>
         candidate.history.some(({ lookupId }) => lookupId === id),
       );
-    if (entry !== undefined) return entry;
+    if (entry !== undefined) {
+      if (!allowUnverified && !entry.verified) {
+        throw new Error(
+          "Strict Candidate verification is required before access.",
+        );
+      }
+      return entry;
+    }
     if (!/^candidate-[a-f0-9]{64}$/u.test(id)) {
       throw new Error(`Unknown Candidate '${key}'.`);
     }
-    return this.#loadReceiptAddressedEntry(id, version);
+    const loaded = this.#loadReceiptAddressedEntry(id, version);
+    if (!allowUnverified) {
+      throw new Error(
+        "Strict Candidate verification is required before access.",
+      );
+    }
+    return loaded;
   }
 
   #loadReceiptAddressedEntry(id: string, version: string): CandidateEntry {
@@ -1448,6 +1493,7 @@ export class CandidateRegistry implements CandidateRegistryV1 {
       verificationStateRef,
       jobId: terminal.jobId,
       receipts,
+      verified: false,
     };
     this.#entries.set(this.#key(current.id, current.version), loaded);
     return loaded;

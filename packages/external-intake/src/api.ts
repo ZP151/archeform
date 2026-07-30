@@ -91,7 +91,7 @@ export interface ExternalIntakeApiV1 {
   status(id: string): ExternalIntakeStatusV1;
   evidence(digest: string): ExternalEvidenceSummaryV1;
   candidateCreate(input: CandidateProposalV1): Promise<StoredCandidateRefV1>;
-  candidateShow(id: string, version: string): CandidateSummaryV1;
+  candidateShow(id: string, version: string): Promise<CandidateSummaryV1>;
   candidateList(filter: CandidateQueryV1): readonly CandidateSummaryV1[];
   candidateTest(
     id: string,
@@ -226,8 +226,15 @@ export function createExternalIntakeApi(
       return registry.create(input);
     },
 
-    candidateShow(id: string, version: string): CandidateSummaryV1 {
-      const candidate = registry.get(id, version);
+    async candidateShow(
+      id: string,
+      version: string,
+    ): Promise<CandidateSummaryV1> {
+      const verification = await registry.verifyIdentity(id, version);
+      if (!verification.valid || verification.candidate === undefined) {
+        throw new Error("Strict Candidate verification failed.");
+      }
+      const candidate = verification.candidate;
       const ref = registry.getRef(id, version);
       return {
         id: candidate.id,
@@ -248,7 +255,7 @@ export function createExternalIntakeApi(
       id: string,
       version: string,
     ): Promise<CandidateConformanceResultV1> {
-      const bundle = registry.getConformanceBundle(id, version);
+      const bundle = await registry.getConformanceBundle(id, version);
       const result = evaluateCandidateConformance(bundle);
       if (result.status !== "pass") return result;
       if (bundle.candidate.status === "quarantined") {
@@ -261,7 +268,7 @@ export function createExternalIntakeApi(
       id: string,
       version: string,
     ): Promise<CandidateVerificationResultV1> {
-      return registry.verify(registry.getRef(id, version));
+      return registry.verifyIdentity(id, version);
     },
 
     verifyJob(id: string): { readonly id: string; readonly valid: boolean } {
