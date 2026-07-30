@@ -11,7 +11,7 @@ export const inventoryLedgerAssetV1_0_0: CapabilityAssetV1 = {
       "Records immutable, idempotent stock movements scoped to a declared location.",
     packageRoot: "packages/capabilities/assets/commerce.inventory-ledger/1.0.0",
     manifestDigest:
-      "sha256:1cf74efd27b618acde7ac99b50e663afaf237e015b754298d265e2045f4b620d",
+      "sha256:eaf32edcc1aedd8f79f6c44a27c72ba9781cb654061c25f82f9b52601047ff7e",
     lifecycle: "golden",
     profiles: ["restaurant-ordering", "simple-ecommerce"],
     effects: [
@@ -106,7 +106,11 @@ export const inventoryLedgerAssetV1_0_0: CapabilityAssetV1 = {
     provides: [{ interfaceKey: "commerce.stock-movement", version: "v1" }],
     verification: {
       fixture: "fixtures/default.json",
+      fixtureDigest:
+        "sha256:582b408b9ada232cca271538f57202c5738717020815b901194b6faf3cd990b0",
       contractTest: "tests/contract.json",
+      contractTestDigest:
+        "sha256:1e39d52256eb44a7ea380a70bda290555ffb16b3d7d28e0a6ce1f4c842680d9a",
       status: "verified",
     },
   },

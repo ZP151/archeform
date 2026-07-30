@@ -107,7 +107,9 @@ export interface CapabilityAssetManifestV1 {
   readonly provides?: readonly CapabilityProvideV1[];
   readonly verification: {
     readonly fixture: string;
+    readonly fixtureDigest?: string;
     readonly contractTest: string;
+    readonly contractTestDigest?: string;
     readonly status: "verified";
   };
 }

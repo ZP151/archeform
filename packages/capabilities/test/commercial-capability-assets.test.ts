@@ -13,6 +13,8 @@ import {
 } from "../src/index.js";
 import { lockCapabilityAsset } from "../src/assets/index.js";
 import {
+  capabilityManifestDigest,
+  createVerifiedCapabilityCompositionLock,
   verifyCapabilityAssetDigest,
   verifyCapabilityAssetPackage,
 } from "../src/node.js";
@@ -179,7 +181,11 @@ describe("commercial capability foundation assets", () => {
         version: "1.0.0",
         packageRoot: `packages/capabilities/assets/${key}/1.0.0`,
         lifecycle: "golden",
-        verification: { status: "verified" },
+        verification: {
+          status: "verified",
+          fixtureDigest: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
+          contractTestDigest: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
+        },
       });
       expect(asset.manifest.provides).toEqual(expectedInterfaces[key].provides);
       expect(asset.manifest.requires).toEqual(expectedInterfaces[key].requires);
@@ -225,6 +231,118 @@ describe("commercial capability foundation assets", () => {
       expect.arrayContaining([
         expect.stringContaining("contribution"),
         expect.stringContaining("digest does not match"),
+      ]),
+    );
+  });
+
+  it("rejects tampered Foundation evidence before creating a composition lock", async () => {
+    const asset = getCapabilityAsset("core.identity-context");
+    const temporaryRoot = await mkdtemp(
+      join(tmpdir(), "factory-commercial-evidence-"),
+    );
+    temporaryRoots.push(temporaryRoot);
+    const temporaryPackageRoot = resolve(
+      temporaryRoot,
+      asset.manifest.packageRoot,
+    );
+    await cp(
+      resolve(repositoryRoot, asset.manifest.packageRoot),
+      temporaryPackageRoot,
+      { recursive: true },
+    );
+    await writeFile(
+      resolve(temporaryPackageRoot, asset.manifest.verification.fixture),
+      '{"principal":{"status":"disabled"}}\n',
+    );
+
+    expect(() =>
+      createVerifiedCapabilityCompositionLock(
+        {
+          graphChecksum:
+            "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          selections: [identity()],
+        },
+        temporaryRoot,
+      ),
+    ).toThrow("verification evidence digest");
+  });
+
+  it("rejects malformed Foundation contract evidence even when the file is present", async () => {
+    const asset = getCapabilityAsset("core.identity-context");
+    const temporaryRoot = await mkdtemp(
+      join(tmpdir(), "factory-commercial-contract-"),
+    );
+    temporaryRoots.push(temporaryRoot);
+    const temporaryPackageRoot = resolve(
+      temporaryRoot,
+      asset.manifest.packageRoot,
+    );
+    await cp(
+      resolve(repositoryRoot, asset.manifest.packageRoot),
+      temporaryPackageRoot,
+      { recursive: true },
+    );
+    await writeFile(
+      resolve(temporaryPackageRoot, asset.manifest.verification.contractTest),
+      "not-json\n",
+    );
+
+    expect(verifyCapabilityAssetPackage(asset, temporaryRoot)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("verification evidence digest"),
+        expect.stringContaining("contract test invalid JSON"),
+      ]),
+    );
+  });
+
+  it("rejects malformed UTF-8 evidence whose decoded text matches authenticated replacement bytes", async () => {
+    const asset = getCapabilityAsset("core.identity-context");
+    const temporaryRoot = await mkdtemp(
+      join(tmpdir(), "factory-commercial-raw-evidence-"),
+    );
+    temporaryRoots.push(temporaryRoot);
+    const temporaryPackageRoot = resolve(
+      temporaryRoot,
+      asset.manifest.packageRoot,
+    );
+    await cp(
+      resolve(repositoryRoot, asset.manifest.packageRoot),
+      temporaryPackageRoot,
+      { recursive: true },
+    );
+    const validReplacementJson = '{"marker":"\uFFFD"}\n';
+    const manifestWithoutDigest = {
+      ...asset.manifest,
+      manifestDigest: "",
+      verification: {
+        ...asset.manifest.verification,
+        fixtureDigest: `sha256:${createHash("sha256")
+          .update(validReplacementJson)
+          .digest("hex")}`,
+      },
+    };
+    const manifest = {
+      ...manifestWithoutDigest,
+      manifestDigest: capabilityManifestDigest(manifestWithoutDigest),
+    };
+    await writeFile(
+      resolve(temporaryPackageRoot, "component.json"),
+      `${JSON.stringify(manifest, null, 2)}\n`,
+    );
+    await writeFile(
+      resolve(temporaryPackageRoot, asset.manifest.verification.fixture),
+      Buffer.concat([
+        Buffer.from('{"marker":"'),
+        Buffer.from([0x80]),
+        Buffer.from('"}\n'),
+      ]),
+    );
+
+    expect(
+      verifyCapabilityAssetPackage({ ...asset, manifest }, temporaryRoot),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("fixture invalid UTF-8"),
       ]),
     );
   });

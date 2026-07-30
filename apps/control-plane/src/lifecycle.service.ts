@@ -7,7 +7,8 @@ import {
   UnprocessableEntityException,
 } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
-import { posix, win32 } from "node:path";
+import { dirname, posix, resolve, win32 } from "node:path";
+import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 import { Prisma } from "@prisma/client";
 import {
@@ -16,6 +17,7 @@ import {
   type CapabilityCompositionLockV1,
   type CapabilitySelectionV1,
 } from "@factory/capabilities";
+import { createVerifiedCapabilityCompositionLock } from "@factory/capabilities/node";
 import {
   applyGraphDiffToDraft,
   createDraftRevision,
@@ -44,6 +46,10 @@ import {
 
 const LOCAL_WORKSPACE_SLUG = "local-workspace";
 const LOCAL_WORKSPACE_NAME = "Local workspace";
+const FACTORY_REPOSITORY_ROOT = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../..",
+);
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -433,12 +439,16 @@ function draftCompositionSelections(
 function createPublishedCompositionLock(
   draftGraph: ApplicationGraphV1,
   publishedGraph: ApplicationGraphV1,
+  repositoryRoot: string,
 ): CapabilityCompositionLockV1 {
   try {
-    return createCapabilityCompositionLock({
-      graphChecksum: hashApplicationGraph(publishedGraph),
-      selections: draftCompositionSelections(draftGraph),
-    });
+    return createVerifiedCapabilityCompositionLock(
+      {
+        graphChecksum: hashApplicationGraph(publishedGraph),
+        selections: draftCompositionSelections(draftGraph),
+      },
+      repositoryRoot,
+    );
   } catch {
     throw new BadRequestException("Application Graph validation failed.");
   }
@@ -493,6 +503,7 @@ function assertGraphIdentity(
 @Injectable()
 export class LifecycleService {
   private readonly artifactReader = new GeneratedArtifactReader();
+  private readonly capabilityRepositoryRoot = FACTORY_REPOSITORY_ROOT;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -764,6 +775,7 @@ export class LifecycleService {
       const compositionLock = createPublishedCompositionLock(
         graph,
         publishedGraph,
+        this.capabilityRepositoryRoot,
       );
       return transaction.publishedRevision.create({
         data: {

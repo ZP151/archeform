@@ -11,7 +11,7 @@ export const identityContextAssetV1_0_0: CapabilityAssetV1 = {
       "Resolves a provider-neutral principal and session into a declared role context.",
     packageRoot: "packages/capabilities/assets/core.identity-context/1.0.0",
     manifestDigest:
-      "sha256:eb95ef44c7fd5b1abe21ff0a53a6500b6c7a1fb6dcff6a8e20c62266f30dadf6",
+      "sha256:6d717ecf2dc70db0096cf75d3241f55462402d7e0822c52e66c80677d20b5ec5",
     lifecycle: "golden",
     profiles: ["restaurant-ordering", "simple-ecommerce"],
     effects: ["identity.context.resolve", "identity.context.validate"],
@@ -72,7 +72,11 @@ export const identityContextAssetV1_0_0: CapabilityAssetV1 = {
     provides: [{ interfaceKey: "core.principal-context", version: "v1" }],
     verification: {
       fixture: "fixtures/default.json",
+      fixtureDigest:
+        "sha256:a21ce291cbb396b86c829e498ddd5d8046ba52689cc9c434325b3d162db5a008",
       contractTest: "tests/contract.json",
+      contractTestDigest:
+        "sha256:557907a4a9f1ab43f603a0f7956164b136c8820a02207d7756629960958a38dc",
       status: "verified",
     },
   },

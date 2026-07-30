@@ -3,6 +3,10 @@ import {
   ConflictException,
   NotFoundException,
 } from "@nestjs/common";
+import { cp, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createPublishedGraphExchange,
@@ -16,6 +20,12 @@ import {
 import { LifecycleService } from "../src/lifecycle.service.js";
 import type { PrismaService } from "../src/prisma.service.js";
 import { localApplicationGraph } from "./application-graph.fixture.js";
+
+const repositoryRoot = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../..",
+);
+const temporaryRoots: string[] = [];
 
 function prismaMock() {
   const prisma = {
@@ -112,6 +122,12 @@ const coreWorkflowLock = (() => {
   return { key, version, packageRoot, manifestDigest, lifecycle };
 })();
 
+const identityContextLock = (() => {
+  const { key, version, packageRoot, manifestDigest, lifecycle } =
+    getCapabilityAsset("core.identity-context").manifest;
+  return { key, version, packageRoot, manifestDigest, lifecycle };
+})();
+
 const selectedPublishedGraph: ApplicationGraphV1 = {
   ...localApplicationGraph,
   page: {
@@ -182,6 +198,41 @@ const emptyCompositionLock = createCapabilityCompositionLock({
   selections: [],
 });
 
+const identityContextDraftGraph: ApplicationGraphV1 = {
+  ...localApplicationGraph,
+  domain: {
+    entities: [
+      {
+        key: "principal",
+        label: "Principal",
+        fields: [{ key: "status", type: "string", required: true }],
+        indexes: [],
+      },
+      {
+        key: "principal-session",
+        label: "Principal session",
+        fields: [{ key: "status", type: "string", required: true }],
+        indexes: [],
+      },
+    ],
+    relations: [],
+  },
+  policy: { roles: ["customer"], permissions: [] },
+  integration: {
+    ...localApplicationGraph.integration,
+    compositionSelections: [
+      {
+        lock: identityContextLock,
+        bindings: {
+          principalEntity: { graphSymbol: "graph.domain.principal" },
+          sessionEntity: { graphSymbol: "graph.domain.principal-session" },
+          defaultRole: { graphSymbol: "graph.policy.customer" },
+        },
+      },
+    ],
+  },
+};
+
 describe("LifecycleService", () => {
   let prisma: ReturnType<typeof prismaMock>;
   let service: LifecycleService;
@@ -209,8 +260,13 @@ describe("LifecycleService", () => {
     );
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     vi.useRealTimers();
+    await Promise.all(
+      temporaryRoots
+        .splice(0)
+        .map((root) => rm(root, { recursive: true, force: true })),
+    );
   });
 
   it("applies a validated AI Graph Diff only by appending a new Draft revision", async () => {
@@ -843,6 +899,50 @@ describe("LifecycleService", () => {
     expect(selectedDraftGraph.integration).toHaveProperty(
       "compositionSelections",
     );
+  });
+
+  it("rejects physically tampered Foundation evidence before Publish persists a revision or lock", async () => {
+    const asset = getCapabilityAsset("core.identity-context");
+    const temporaryRoot = await mkdtemp(
+      join(tmpdir(), "factory-publish-evidence-"),
+    );
+    temporaryRoots.push(temporaryRoot);
+    const temporaryPackageRoot = resolve(
+      temporaryRoot,
+      asset.manifest.packageRoot,
+    );
+    await cp(
+      resolve(repositoryRoot, asset.manifest.packageRoot),
+      temporaryPackageRoot,
+      { recursive: true },
+    );
+    await writeFile(
+      resolve(temporaryPackageRoot, asset.manifest.verification.fixture),
+      '{"principal":{"status":"disabled"}}\n',
+    );
+    (
+      service as unknown as {
+        capabilityRepositoryRoot: string;
+      }
+    ).capabilityRepositoryRoot = temporaryRoot;
+    prisma.draftRevision.findFirst.mockResolvedValue({
+      ...draftRevision,
+      graph: identityContextDraftGraph,
+      applicationGraph: { ...applicationGraph, workspace },
+    });
+    prisma.publishedRevision.findFirst.mockResolvedValue(null);
+    prisma.publishedRevision.count.mockResolvedValue(0);
+    prisma.publishedRevision.create.mockImplementation(async ({ data }) => ({
+      id: "published-tampered-foundation",
+      ...data,
+    }));
+
+    await expect(
+      service.publishDraft(applicationGraph.id, {
+        draftRevisionId: draftRevision.id,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.publishedRevision.create).not.toHaveBeenCalled();
   });
 
   it("rejects a legacy asset-lock Draft when a selected package now requires bindings", async () => {

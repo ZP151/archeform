@@ -7,6 +7,7 @@ import {
   statSync,
 } from "node:fs";
 import { isAbsolute, relative, resolve, sep } from "node:path";
+import { TextDecoder } from "node:util";
 import { z } from "zod";
 
 import type {
@@ -17,6 +18,12 @@ import type {
   CapabilityOutputSlot,
   CapabilityTemplateContributionV1,
 } from "./assets/index.js";
+import {
+  createCapabilityCompositionLock,
+  type CapabilityCompositionLockV1,
+  type CreateCapabilityCompositionLockInput,
+} from "./composition.js";
+import { resolveCapabilityAssetLock } from "./index.js";
 
 export interface ResolvedCapabilityAssetTemplate {
   readonly assetKey: string;
@@ -199,7 +206,9 @@ const capabilityManifestSchema = z
     verification: z
       .object({
         fixture: z.string().min(1),
+        fixtureDigest: digestSchema.optional(),
         contractTest: z.string().min(1),
+        contractTestDigest: digestSchema.optional(),
         status: z.literal("verified"),
       })
       .strict(),
@@ -238,7 +247,7 @@ function canonicalJson(value: unknown): string {
   return JSON.stringify(value);
 }
 
-function sha256(content: string): string {
+function sha256(content: string | Buffer): string {
   return `sha256:${createHash("sha256").update(content).digest("hex")}`;
 }
 
@@ -569,9 +578,29 @@ export function verifyCapabilityAssetPackage(
   const component = componentResult.data as CapabilityAssetManifestV1;
   const adapter = adapterResult.data;
 
-  for (const [evidenceType, relativePath] of [
-    ["fixture", asset.manifest.verification.fixture],
-    ["contract test", asset.manifest.verification.contractTest],
+  const evidenceDigestsDeclared =
+    component.verification.fixtureDigest !== undefined ||
+    component.verification.contractTestDigest !== undefined;
+  if (
+    evidenceDigestsDeclared &&
+    (component.verification.fixtureDigest === undefined ||
+      component.verification.contractTestDigest === undefined)
+  ) {
+    invalid.push(
+      "verification evidence digest: fixture and contract test digests must be declared together",
+    );
+  }
+  for (const [evidenceType, relativePath, expectedDigest] of [
+    [
+      "fixture",
+      component.verification.fixture,
+      component.verification.fixtureDigest,
+    ],
+    [
+      "contract test",
+      component.verification.contractTest,
+      component.verification.contractTestDigest,
+    ],
   ] as const) {
     if (!safePackageRelativePath(relativePath)) {
       invalid.push(`verification: unsafe ${evidenceType} path`);
@@ -586,6 +615,28 @@ export function verifyCapabilityAssetPackage(
       invalid.push(
         `verification: ${evidenceType} is not a regular package file`,
       );
+    } else if (evidenceDigestsDeclared) {
+      const content = readFileSync(evidencePath);
+      if (expectedDigest === undefined || sha256(content) !== expectedDigest) {
+        invalid.push(
+          `verification evidence digest: ${evidenceType} does not match`,
+        );
+      }
+      let decodedEvidence: string | undefined;
+      try {
+        decodedEvidence = new TextDecoder("utf-8", { fatal: true }).decode(
+          content,
+        );
+      } catch {
+        invalid.push(`verification: ${evidenceType} invalid UTF-8`);
+      }
+      if (decodedEvidence !== undefined) {
+        try {
+          JSON.parse(decodedEvidence);
+        } catch {
+          invalid.push(`verification: ${evidenceType} invalid JSON`);
+        }
+      }
     }
   }
   if (canonicalJson(component) !== canonicalJson(asset.manifest)) {
@@ -728,4 +779,25 @@ export function loadCapabilityAssetContributions(
       packageRoot,
     );
   });
+}
+
+/**
+ * Server-only publication boundary. It authenticates the exact selected
+ * physical package and evidence bytes before constructing the canonical
+ * immutable lock with the browser-compatible pure composition factory.
+ */
+export function createVerifiedCapabilityCompositionLock(
+  input: CreateCapabilityCompositionLockInput,
+  repositoryRoot: string,
+): CapabilityCompositionLockV1 {
+  for (const selection of input.selections) {
+    const asset = resolveCapabilityAssetLock(selection.lock);
+    const invalid = verifyCapabilityAssetPackage(asset, repositoryRoot);
+    if (invalid.length > 0) {
+      throw new Error(
+        `Capability package '${asset.manifest.key}' is invalid: ${invalid.join(", ")}`,
+      );
+    }
+  }
+  return createCapabilityCompositionLock(input);
 }

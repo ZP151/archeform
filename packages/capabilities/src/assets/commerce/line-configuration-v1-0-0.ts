@@ -12,7 +12,7 @@ export const lineConfigurationAssetV1_0_0: CapabilityAssetV1 = {
     packageRoot:
       "packages/capabilities/assets/commerce.line-configuration/1.0.0",
     manifestDigest:
-      "sha256:d060be51ecf763ec5e00aa0187d73f0908cfcc5d434812000c1c414b10909b17",
+      "sha256:b08878b33e7a5cc66af11c495f11790be115c054f13b1bf5e0f80f82506bc282",
     lifecycle: "golden",
     profiles: ["restaurant-ordering", "simple-ecommerce"],
     effects: [
@@ -114,7 +114,11 @@ export const lineConfigurationAssetV1_0_0: CapabilityAssetV1 = {
     provides: [{ interfaceKey: "commerce.configured-line", version: "v1" }],
     verification: {
       fixture: "fixtures/default.json",
+      fixtureDigest:
+        "sha256:e511cab8cf25fbdb7631861efbae140186165aa42ab312beafdae01e33444bf0",
       contractTest: "tests/contract.json",
+      contractTestDigest:
+        "sha256:9f31b57a1dd554a58c62c13d110af27094196041be2664bf4c40d287fb601691",
       status: "verified",
     },
   },
