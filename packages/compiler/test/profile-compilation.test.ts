@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  composeDefaultCapabilityDraft,
   composeProfileDraft,
   createCapabilityCompositionLock,
+  type CapabilitySelectionV1,
+  type FactoryProfile,
 } from "@factory/capabilities";
-import { hashApplicationGraph } from "@factory/graph";
+import { hashApplicationGraph, type ApplicationGraphV1 } from "@factory/graph";
 
 import {
   generateApplicationBundle as compileApplicationBundle,
@@ -16,6 +19,33 @@ function generateApplicationBundle(
   input: Omit<PublishedGraphInput, "compositionLock"> | PublishedGraphInput,
   options?: GenerateApplicationBundleOptions,
 ) {
+  const persistedSelections = (
+    graph: ApplicationGraphV1,
+  ): readonly CapabilitySelectionV1[] => {
+    const profile = graph.integration.compositionProfile as
+      FactoryProfile | undefined;
+    const selectionByKey = new Map(
+      profile
+        ? composeDefaultCapabilityDraft({
+            profile,
+          }).graph.integration.compositionSelections?.map((selection) => [
+            selection.lock.key,
+            selection,
+          ])
+        : [],
+    );
+    return (graph.integration.assetLocks ?? []).map((lock) => {
+      const selection = selectionByKey.get(lock.key);
+      return {
+        lock,
+        bindings:
+          selection?.lock.version === lock.version &&
+          selection.lock.manifestDigest === lock.manifestDigest
+            ? selection.bindings
+            : {},
+      };
+    });
+  };
   return compileApplicationBundle(
     "compositionLock" in input
       ? input
@@ -23,7 +53,7 @@ function generateApplicationBundle(
           ...input,
           compositionLock: createCapabilityCompositionLock({
             graphChecksum: hashApplicationGraph(input.graph),
-            selections: [],
+            selections: persistedSelections(input.graph),
           }),
         },
     options,

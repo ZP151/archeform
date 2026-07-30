@@ -581,15 +581,7 @@ function resolveCapabilityTemplateContributions(
   compositionLock: CapabilityCompositionLockV1,
   repositoryRoot?: string,
 ): readonly ResolvedCapabilityTemplateContribution[] {
-  const immutableLocks = compositionLock.packages.map(({ lock }) => lock);
-  // Explicit legacy profile compilations predate composition locks. Keep that
-  // adapter isolated behind the legacy profile marker; active generic Drafts
-  // have neither this marker nor Graph-owned asset locks.
-  const locks = immutableLocks.length
-    ? immutableLocks
-    : graph.integration.compositionProfile
-      ? (graph.integration.assetLocks ?? [])
-      : [];
+  const locks = compositionLock.packages.map(({ lock }) => lock);
   const factoryCapabilities = graph.integration.capabilities.filter(
     (capability) => capability.providerId === "factory",
   );
@@ -597,7 +589,10 @@ function resolveCapabilityTemplateContributions(
     (capability) => capability.key,
   );
   if (!locks.length) {
-    if (capabilityKeys.length) {
+    if (
+      capabilityKeys.length &&
+      graph.integration.compositionProfile !== "restaurant-ordering"
+    ) {
       throw new Error(
         "Factory Graph capabilities require matching Golden asset locks before compilation.",
       );
@@ -2483,12 +2478,7 @@ function renderCapabilityLock(
   graph: ApplicationGraphV1,
   compositionLock: CapabilityCompositionLockV1,
 ): string {
-  const immutableLocks = compositionLock.packages.map(({ lock }) => lock);
-  const assets = immutableLocks.length
-    ? immutableLocks
-    : graph.integration.compositionProfile
-      ? (graph.integration.assetLocks ?? [])
-      : [];
+  const assets = compositionLock.packages.map(({ lock }) => lock);
   return (
     JSON.stringify(
       {

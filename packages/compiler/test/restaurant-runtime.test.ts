@@ -1,4 +1,5 @@
 import {
+  composeDefaultCapabilityDraft,
   composeProfileDraft,
   createCapabilityCompositionLock,
 } from "@factory/capabilities";
@@ -9,6 +10,18 @@ import {
   generateApplicationBundle as compileApplicationBundle,
   type PublishedGraphInput,
 } from "../src/index.js";
+
+function persistedProfileLock(
+  profile: "simple-ecommerce",
+  graph: PublishedGraphInput["graph"],
+) {
+  return createCapabilityCompositionLock({
+    graphChecksum: hashApplicationGraph(graph),
+    selections:
+      composeDefaultCapabilityDraft({ profile }).graph.integration
+        .compositionSelections ?? [],
+  });
+}
 
 function generateApplicationBundle(
   input: Omit<PublishedGraphInput, "compositionLock"> | PublishedGraphInput,
@@ -424,10 +437,12 @@ describe("Restaurant transaction runtime compilation", () => {
   });
 
   it("leaves the generic Ecommerce runtime renderer unchanged", () => {
+    const graph = composeProfileDraft({ profile: "simple-ecommerce" }).graph;
     const files = Object.fromEntries(
       generateApplicationBundle({
         publishedRevisionId: "ecommerce-runtime-regression-1",
-        graph: composeProfileDraft({ profile: "simple-ecommerce" }).graph,
+        graph,
+        compositionLock: persistedProfileLock("simple-ecommerce", graph),
       }).files.map((file) => [file.path, file.content]),
     );
 

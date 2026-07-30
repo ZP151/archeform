@@ -132,10 +132,27 @@ export function assertGoldenCapabilityAssetLocks(
   locks: readonly CapabilityAssetLockV1[],
   context: GoldenAssetValidationContext,
 ): void {
+  const assets = locks.map(resolveCapabilityAssetLock);
+  assertResolvedGoldenCapabilityAssets(assets, context);
+  for (const asset of assets) {
+    if (
+      currentCapabilityAssets.includes(asset) &&
+      (asset.manifest.requires?.length ?? 0) > 0
+    ) {
+      throw new Error(
+        `Current capability package '${asset.manifest.key}' requires canonical composition selections for dependency/provider admission.`,
+      );
+    }
+  }
+}
+
+function assertResolvedGoldenCapabilityAssets(
+  assets: readonly CapabilityAssetV1[],
+  context: GoldenAssetValidationContext,
+): void {
   const providedEffects = new Set<string>();
   const packageKeys: string[] = [];
-  for (const lock of locks) {
-    const manifest = resolveCapabilityAssetLock(lock).manifest;
+  for (const { manifest } of assets) {
     packageKeys.push(manifest.key);
     for (const effect of manifest.effects) providedEffects.add(effect);
   }
@@ -364,8 +381,8 @@ export function assertGoldenCapabilityComposition(
     graph: context.graph,
     selections,
   });
-  assertGoldenCapabilityAssetLocks(
-    composition.packages.map(({ lock }) => lock),
+  assertResolvedGoldenCapabilityAssets(
+    composition.packages.map(({ lock }) => resolveCapabilityAssetLock(lock)),
     context,
   );
   return composition;
@@ -1758,19 +1775,27 @@ export function composeProfileDraft(
       .filter((capability) => requestedSet.has(capability))
       .map(getCapabilityAsset),
   ];
-  graph.integration.compositionProfile = input.profile;
-  graph.integration.assetLocks = selectedAssets.map(lockCapabilityAsset);
-
-  const validatedGraph = assertValidApplicationGraph(graph);
-  assertGoldenCapabilityAssetLocks(
-    validatedGraph.integration.assetLocks ?? [],
+  const admittedComposition = assertGoldenCapabilityComposition(
+    selectedAssets.map((asset) => ({
+      lock: lockCapabilityAsset(asset),
+      bindings: structuredClone(
+        profileCompositionBindings[input.profile][asset.manifest.key] ?? {},
+      ),
+    })),
     {
       profile: input.profile,
-      capabilityKeys: validatedGraph.integration.capabilities.map(
+      capabilityKeys: graph.integration.capabilities.map(
         (capability) => capability.key,
       ),
+      graph,
     },
   );
+  graph.integration.compositionProfile = input.profile;
+  graph.integration.assetLocks = admittedComposition.packages.map(
+    ({ lock }) => lock,
+  );
+
+  const validatedGraph = assertValidApplicationGraph(graph);
   if (input.profile === "restaurant-ordering") {
     assertRestaurantOrderingProfile(validatedGraph);
   }

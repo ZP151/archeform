@@ -119,6 +119,47 @@ describe("immutable composition compilation", () => {
     ).toEqual([]);
   });
 
+  it("never substitutes Graph asset locks for an empty persisted composition lock", () => {
+    const legacyGraph = structuredClone(graph);
+    legacyGraph.integration = {
+      providers: [],
+      capabilities: [
+        {
+          key: "crud.create",
+          providerId: "factory",
+          operation: "create",
+        },
+      ],
+      compositionProfile: "expense-approval",
+      assetLocks: [crudLock],
+    };
+    const emptyLock = createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(legacyGraph),
+      selections: [],
+    });
+
+    expect(() =>
+      generateApplicationBundle({
+        publishedRevisionId: "published-no-graph-lock-fallback-1",
+        graph: legacyGraph,
+        compositionLock: emptyLock,
+      }),
+    ).toThrow("require matching Golden asset locks");
+
+    legacyGraph.integration.capabilities = [];
+    const noCapabilityLock = createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(legacyGraph),
+      selections: [],
+    });
+    const capabilityLock = generateApplicationBundle({
+      publishedRevisionId: "published-empty-capability-lock-1",
+      graph: legacyGraph,
+      compositionLock: noCapabilityLock,
+    }).files.find(({ path }) => path === "capability-lock.json")?.content;
+
+    expect(JSON.parse(capabilityLock ?? "{}").assets).toEqual([]);
+  });
+
   it("renders deterministic target contributions from the exact persisted lock", () => {
     const first = resolveTargetContributions(input);
     const second = resolveTargetContributions(input);

@@ -1563,9 +1563,29 @@ describe("capability catalog", () => {
     expect(() =>
       assertGoldenCapabilityAssetLocks([cartLock], {
         profile: "restaurant-ordering",
-        capabilityKeys: ["unlocked.operation"],
+        capabilityKeys: ["cart.add"],
       }),
-    ).toThrow("is not provided by a locked Golden asset");
+    ).toThrow("requires canonical composition selections");
+  });
+
+  it("rejects an eligible Restaurant cart-only composition without its catalog provider", () => {
+    const baseGraph = structuredClone(
+      profileGraphs.find(({ profile }) => profile === "restaurant-ordering")!
+        .graph,
+    );
+    const cartSelection = composeDefaultCapabilityDraft({
+      profile: "restaurant-ordering",
+    }).graph.integration.compositionSelections!.find(
+      ({ lock }) => lock.key === "commerce.cart",
+    )!;
+
+    expect(() =>
+      assertGoldenCapabilityComposition([cartSelection], {
+        profile: "restaurant-ordering",
+        capabilityKeys: ["cart.add"],
+        graph: baseGraph,
+      }),
+    ).toThrow("requirement 'commerce.catalog-item@v1' has no provider");
   });
 
   it("admits a dependency-complete Golden commerce composition", () => {

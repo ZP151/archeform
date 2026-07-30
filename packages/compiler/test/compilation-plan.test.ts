@@ -4,8 +4,11 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
+  composeDefaultCapabilityDraft,
   composeProfileDraft,
   createCapabilityCompositionLock,
+  type CapabilitySelectionV1,
+  type FactoryProfile,
 } from "@factory/capabilities";
 import { hashApplicationGraph, type ApplicationGraphV1 } from "@factory/graph";
 
@@ -20,13 +23,40 @@ import {
 function withCompositionLock(
   input: Omit<PublishedGraphInput, "compositionLock"> | PublishedGraphInput,
 ): PublishedGraphInput {
+  const persistedSelections = (
+    graph: ApplicationGraphV1,
+  ): readonly CapabilitySelectionV1[] => {
+    const profile = graph.integration.compositionProfile as
+      FactoryProfile | undefined;
+    const selectionByKey = new Map(
+      profile
+        ? composeDefaultCapabilityDraft({
+            profile,
+          }).graph.integration.compositionSelections?.map((selection) => [
+            selection.lock.key,
+            selection,
+          ])
+        : [],
+    );
+    return (graph.integration.assetLocks ?? []).map((lock) => {
+      const selection = selectionByKey.get(lock.key);
+      return {
+        lock,
+        bindings:
+          selection?.lock.version === lock.version &&
+          selection.lock.manifestDigest === lock.manifestDigest
+            ? selection.bindings
+            : {},
+      };
+    });
+  };
   return "compositionLock" in input
     ? input
     : {
         ...input,
         compositionLock: createCapabilityCompositionLock({
           graphChecksum: hashApplicationGraph(input.graph),
-          selections: [],
+          selections: persistedSelections(input.graph),
         }),
       };
 }
