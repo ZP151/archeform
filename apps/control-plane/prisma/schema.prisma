@@ -56,6 +56,8 @@ model PublishedRevision {
   revisionNumber        Int
   graph                 Json
   graphHash             String
+  compositionLock       Json?
+  compositionLockHash   String?
   publishedAt           DateTime         @default(now())
   applicationGraph      ApplicationGraph @relation(fields: [applicationGraphId], references: [id], onDelete: Restrict)
   sourceDraftRevision   DraftRevision    @relation(fields: [sourceDraftRevisionId, applicationGraphId], references: [id, applicationGraphId], onDelete: Restrict)

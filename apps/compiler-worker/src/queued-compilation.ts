@@ -1,16 +1,14 @@
-import type { ApplicationGraphV1 } from "@factory/graph";
+import type { PublishedGraphInput } from "@factory/compiler";
 
 import {
   executeCompilation,
   type CompilationExecutionResult,
 } from "./compilation-executor.js";
 
-export interface CompilationJob {
+export interface CompilationJob extends PublishedGraphInput {
   readonly compilationId: string;
-  readonly publishedRevisionId: string;
   readonly target: string;
   readonly compilerVersion: string;
-  readonly graph: ApplicationGraphV1;
 }
 
 export interface CompilationReporter {
@@ -34,6 +32,7 @@ export async function executeQueuedCompilation(
   const result = await executeCompilation(artifactRoot, {
     publishedRevisionId: job.publishedRevisionId,
     graph: job.graph,
+    compositionLock: job.compositionLock,
   });
   await reporter.complete({
     compilationId: job.compilationId,

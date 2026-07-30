@@ -1,8 +1,34 @@
 import { describe, expect, it } from "vitest";
 
-import { composeProfileDraft } from "@factory/capabilities";
+import {
+  composeProfileDraft,
+  createCapabilityCompositionLock,
+} from "@factory/capabilities";
+import { hashApplicationGraph } from "@factory/graph";
 
-import { generateApplicationBundle } from "../src/index.js";
+import {
+  generateApplicationBundle as compileApplicationBundle,
+  type GenerateApplicationBundleOptions,
+  type PublishedGraphInput,
+} from "../src/index.js";
+
+function generateApplicationBundle(
+  input: Omit<PublishedGraphInput, "compositionLock"> | PublishedGraphInput,
+  options?: GenerateApplicationBundleOptions,
+) {
+  return compileApplicationBundle(
+    "compositionLock" in input
+      ? input
+      : {
+          ...input,
+          compositionLock: createCapabilityCompositionLock({
+            graphChecksum: hashApplicationGraph(input.graph),
+            selections: [],
+          }),
+        },
+    options,
+  );
+}
 
 describe("profile compilation", () => {
   it("compiles Expense execution through the locked core package handlers", () => {

@@ -3,17 +3,42 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { composeProfileDraft } from "@factory/capabilities";
-import type { ApplicationGraphV1 } from "@factory/graph";
+import {
+  composeProfileDraft,
+  createCapabilityCompositionLock,
+} from "@factory/capabilities";
+import { hashApplicationGraph, type ApplicationGraphV1 } from "@factory/graph";
 
 import {
   buildCompilationPlan,
   compilationTargets,
-  generateApplicationBundle,
+  generateApplicationBundle as compileApplicationBundle,
+  type GenerateApplicationBundleOptions,
   type PublishedGraphInput,
 } from "../src/index.js";
 
-const publishedExpense: PublishedGraphInput = {
+function withCompositionLock(
+  input: Omit<PublishedGraphInput, "compositionLock"> | PublishedGraphInput,
+): PublishedGraphInput {
+  return "compositionLock" in input
+    ? input
+    : {
+        ...input,
+        compositionLock: createCapabilityCompositionLock({
+          graphChecksum: hashApplicationGraph(input.graph),
+          selections: [],
+        }),
+      };
+}
+
+function generateApplicationBundle(
+  input: Omit<PublishedGraphInput, "compositionLock"> | PublishedGraphInput,
+  options?: GenerateApplicationBundleOptions,
+) {
+  return compileApplicationBundle(withCompositionLock(input), options);
+}
+
+const publishedExpense = withCompositionLock({
   publishedRevisionId: "published-expense-1",
   graph: {
     apiVersion: "factory.application-graph/v1",
@@ -32,7 +57,7 @@ const publishedExpense: PublishedGraphInput = {
     integration: { providers: [], capabilities: [] },
     experience: { theme: { mode: "light", tokens: {} }, locales: ["en"] },
   },
-};
+});
 
 const simpleEcommerceAssetLocks = composeProfileDraft({
   profile: "simple-ecommerce",
@@ -1478,7 +1503,7 @@ describe("compilation target registry", () => {
   });
 
   it("generates a role-guarded record runtime, XState machines, and an executable journey", () => {
-    const input: PublishedGraphInput = {
+    const input = withCompositionLock({
       publishedRevisionId: "published-expense-runtime-1",
       graph: {
         ...publishedExpense.graph,
@@ -1552,7 +1577,7 @@ describe("compilation target registry", () => {
           ],
         },
       },
-    };
+    });
     const files = Object.fromEntries(
       generateApplicationBundle(input).files.map((file) => [
         file.path,

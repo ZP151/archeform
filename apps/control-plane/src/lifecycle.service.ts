@@ -8,8 +8,14 @@ import {
 } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import { posix, win32 } from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import { Prisma } from "@prisma/client";
-import { assertGoldenCapabilityAssetLocks } from "@factory/capabilities";
+import {
+  assertGoldenCapabilityAssetLocks,
+  createCapabilityCompositionLock,
+  type CapabilityCompositionLockV1,
+  type CapabilitySelectionV1,
+} from "@factory/capabilities";
 import {
   applyGraphDiffToDraft,
   createDraftRevision,
@@ -404,6 +410,72 @@ function validatedGraph(input: unknown): {
   }
 }
 
+function publishedGraphFromDraft(
+  graph: ApplicationGraphV1,
+): ApplicationGraphV1 {
+  const { compositionSelections: _compositionSelections, ...integration } =
+    graph.integration;
+  return { ...graph, integration };
+}
+
+function draftCompositionSelections(
+  graph: ApplicationGraphV1,
+): readonly CapabilitySelectionV1[] {
+  return (
+    graph.integration.compositionSelections ??
+    (graph.integration.assetLocks ?? []).map((lock) => ({
+      lock,
+      bindings: {},
+    }))
+  );
+}
+
+function createPublishedCompositionLock(
+  draftGraph: ApplicationGraphV1,
+  publishedGraph: ApplicationGraphV1,
+): CapabilityCompositionLockV1 {
+  try {
+    return createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(publishedGraph),
+      selections: draftCompositionSelections(draftGraph),
+    });
+  } catch {
+    throw new BadRequestException("Application Graph validation failed.");
+  }
+}
+
+function verifiedPublishedCompositionLock(
+  input: unknown,
+  storedHash: string | null,
+  graphHash: string,
+): CapabilityCompositionLockV1 {
+  if (input === null || input === undefined || storedHash === null) {
+    throw new ConflictException("Published revision has no composition lock.");
+  }
+  try {
+    if (!input || typeof input !== "object" || Array.isArray(input)) {
+      throw new Error("invalid lock");
+    }
+    const packages = (input as { packages?: unknown }).packages;
+    if (!Array.isArray(packages)) throw new Error("invalid lock packages");
+    const canonical = createCapabilityCompositionLock({
+      graphChecksum: graphHash,
+      selections: packages as readonly CapabilitySelectionV1[],
+    });
+    if (
+      storedHash !== canonical.lockDigest ||
+      !isDeepStrictEqual(input, canonical)
+    ) {
+      throw new Error("lock mismatch");
+    }
+    return canonical;
+  } catch {
+    throw new ConflictException(
+      "Published revision composition lock does not match its stored hash.",
+    );
+  }
+}
+
 function assertGraphIdentity(
   graph: ApplicationGraphV1,
   aggregate: { key: string; workspace: { slug: string } },
@@ -676,24 +748,34 @@ export class LifecycleService {
       throw new NotFoundException(
         "Draft revision was not found for this Graph.",
       );
-    const { graph, graphHash } = validatedGraph(draft.graph);
+    const { graph } = validatedGraph(draft.graph);
     assertGraphIdentity(graph, draft.applicationGraph);
-    const existing = await this.prisma.publishedRevision.findFirst({
-      where: { sourceDraftRevisionId: draftRevisionId, applicationGraphId },
-    });
-    if (existing)
-      throw new ConflictException("Draft revision is already published.");
-    const publishedCount = await this.prisma.publishedRevision.count({
-      where: { applicationGraphId },
-    });
-    return this.prisma.publishedRevision.create({
-      data: {
-        applicationGraphId,
-        sourceDraftRevisionId: draftRevisionId,
-        revisionNumber: publishedCount + 1,
-        graph: graph as unknown as Prisma.InputJsonValue,
-        graphHash,
-      },
+    return this.prisma.$transaction(async (transaction) => {
+      const existing = await transaction.publishedRevision.findFirst({
+        where: { sourceDraftRevisionId: draftRevisionId, applicationGraphId },
+      });
+      if (existing)
+        throw new ConflictException("Draft revision is already published.");
+      const publishedCount = await transaction.publishedRevision.count({
+        where: { applicationGraphId },
+      });
+      const publishedGraph = publishedGraphFromDraft(graph);
+      const graphHash = hashApplicationGraph(publishedGraph);
+      const compositionLock = createPublishedCompositionLock(
+        graph,
+        publishedGraph,
+      );
+      return transaction.publishedRevision.create({
+        data: {
+          applicationGraphId,
+          sourceDraftRevisionId: draftRevisionId,
+          revisionNumber: publishedCount + 1,
+          graph: publishedGraph as unknown as Prisma.InputJsonValue,
+          graphHash,
+          compositionLock: jsonValue(compositionLock, "compositionLock"),
+          compositionLockHash: compositionLock.lockDigest,
+        },
+      });
     });
   }
 
@@ -750,6 +832,11 @@ export class LifecycleService {
         "Published Revision Graph hash does not match its stored hash.",
       );
     }
+    const compositionLock = verifiedPublishedCompositionLock(
+      published.compositionLock,
+      published.compositionLockHash,
+      graphHash,
+    );
     const compilationCount = await this.prisma.compilation.count({
       where: { publishedRevisionId },
     });
@@ -769,6 +856,7 @@ export class LifecycleService {
       target,
       compilerVersion,
       graph,
+      compositionLock,
     });
     return compilation;
   }

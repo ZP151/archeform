@@ -1,11 +1,32 @@
-import { composeProfileDraft } from "@factory/capabilities";
+import {
+  composeProfileDraft,
+  createCapabilityCompositionLock,
+} from "@factory/capabilities";
+import { hashApplicationGraph } from "@factory/graph";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 import {
-  generateApplicationBundle,
+  generateApplicationBundle as compileApplicationBundle,
   renderRestaurantEventPublisher,
+  type PublishedGraphInput,
 } from "../src/index.js";
+
+function generateApplicationBundle(
+  input: Omit<PublishedGraphInput, "compositionLock"> | PublishedGraphInput,
+) {
+  return compileApplicationBundle(
+    "compositionLock" in input
+      ? input
+      : {
+          ...input,
+          compositionLock: createCapabilityCompositionLock({
+            graphChecksum: hashApplicationGraph(input.graph),
+            selections: [],
+          }),
+        },
+  );
+}
 
 function merchantFiles() {
   return Object.fromEntries(

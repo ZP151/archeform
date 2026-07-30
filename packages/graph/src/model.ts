@@ -137,6 +137,45 @@ const flowModelSchema = z.object({
   ),
 });
 
+const compositionBindingKey = z
+  .string()
+  .regex(/^[a-z][a-zA-Z0-9]*$/)
+  .refine(
+    (key) =>
+      !/(?:command|credential|password|path|secret|source|url|apiKey|accessToken)/i.test(
+        key,
+      ),
+    "Composition binding key is not safe.",
+  );
+const compositionBindingValueSchema = z.union([
+  z.string(),
+  z.number().finite(),
+  z.boolean(),
+  z
+    .object({
+      graphSymbol: z
+        .string()
+        .regex(
+          /^graph\.(?:page|domain|policy|flow|integration|experience)\.[a-z][a-z0-9-]*$/,
+        ),
+    })
+    .strict(),
+]);
+const capabilitySelectionSchema = z
+  .object({
+    lock: z
+      .object({
+        key: z.string().min(1).max(160),
+        version: z.string().regex(/^\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.-]+)?$/),
+        packageRoot: z.string().min(1).max(512),
+        manifestDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/),
+        lifecycle: z.literal("golden"),
+      })
+      .strict(),
+    bindings: z.record(compositionBindingKey, compositionBindingValueSchema),
+  })
+  .strict();
+
 const integrationModelSchema = z.object({
   providers: z.array(
     z.object({
@@ -164,6 +203,7 @@ const integrationModelSchema = z.object({
       }),
     )
     .optional(),
+  compositionSelections: z.array(capabilitySelectionSchema).optional(),
 });
 
 const experienceModelSchema = z.object({

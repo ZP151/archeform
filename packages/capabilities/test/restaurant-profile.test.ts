@@ -3,9 +3,30 @@ import { describe, expect, it } from "vitest";
 import {
   assertRestaurantOrderingProfile,
   composeProfileDraft,
+  createCapabilityCompositionLock,
   validateRestaurantOrderingProfile,
 } from "../src/index.js";
-import { generateApplicationBundle } from "../../compiler/src/index.js";
+import { hashApplicationGraph } from "../../graph/src/index.js";
+import {
+  generateApplicationBundle as compileApplicationBundle,
+  type PublishedGraphInput,
+} from "../../compiler/src/index.js";
+
+function generateApplicationBundle(
+  input: Omit<PublishedGraphInput, "compositionLock"> | PublishedGraphInput,
+) {
+  return compileApplicationBundle(
+    "compositionLock" in input
+      ? input
+      : {
+          ...input,
+          compositionLock: createCapabilityCompositionLock({
+            graphChecksum: hashApplicationGraph(input.graph),
+            selections: [],
+          }),
+        },
+  );
+}
 
 const restaurantGraph = () =>
   composeProfileDraft({ profile: "restaurant-ordering" }).graph;

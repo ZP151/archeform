@@ -8,14 +8,17 @@ import {
   createPublishedGraphExchange,
   hashApplicationGraph,
 } from "@factory/graph";
-import { getCapabilityAsset } from "@factory/capabilities";
+import {
+  createCapabilityCompositionLock,
+  getCapabilityAsset,
+} from "@factory/capabilities";
 
 import { LifecycleService } from "../src/lifecycle.service.js";
 import type { PrismaService } from "../src/prisma.service.js";
 import { localApplicationGraph } from "./application-graph.fixture.js";
 
 function prismaMock() {
-  return {
+  const prisma = {
     workspace: { upsert: vi.fn() },
     applicationGraph: {
       create: vi.fn(),
@@ -47,6 +50,13 @@ function prismaMock() {
       updateMany: vi.fn(),
       deleteMany: vi.fn(),
     },
+  };
+  return {
+    ...prisma,
+    $transaction: vi.fn(
+      async (operation: (transaction: typeof prisma) => Promise<unknown>) =>
+        operation(prisma),
+    ),
   };
 }
 
@@ -80,6 +90,37 @@ const coreAuditLock = (() => {
     getCapabilityAsset("core.audit").manifest;
   return { key, version, packageRoot, manifestDigest, lifecycle };
 })();
+
+const coreCrudLock = (() => {
+  const { key, version, packageRoot, manifestDigest, lifecycle } =
+    getCapabilityAsset("core.crud").manifest;
+  return { key, version, packageRoot, manifestDigest, lifecycle };
+})();
+
+const selectedDraftGraph = {
+  ...localApplicationGraph,
+  integration: {
+    ...localApplicationGraph.integration,
+    compositionSelections: [
+      {
+        lock: coreCrudLock,
+        bindings: {
+          entityKey: { graphSymbol: "graph.domain.expense" },
+          routeKey: { graphSymbol: "graph.page.expenses" },
+        },
+      },
+    ],
+  },
+};
+
+const selectedCompositionLock = createCapabilityCompositionLock({
+  graphChecksum: hashApplicationGraph(localApplicationGraph),
+  selections: selectedDraftGraph.integration.compositionSelections,
+});
+const emptyCompositionLock = createCapabilityCompositionLock({
+  graphChecksum: hashApplicationGraph(localApplicationGraph),
+  selections: [],
+});
 
 describe("LifecycleService", () => {
   let prisma: ReturnType<typeof prismaMock>;
@@ -525,6 +566,8 @@ describe("LifecycleService", () => {
       graph: localApplicationGraph,
       graphHash:
         "sha256:762e834186c8fec51569cc8fe690f4ca90219c6f5b179fa6121bb73867c268fb",
+      compositionLock: emptyCompositionLock,
+      compositionLockHash: emptyCompositionLock.lockDigest,
       publishedAt: new Date("2026-07-29T00:02:00.000Z"),
     };
     prisma.publishedRevision.create.mockResolvedValue(published);
@@ -542,7 +585,104 @@ describe("LifecycleService", () => {
         graph: localApplicationGraph,
         graphHash:
           "sha256:762e834186c8fec51569cc8fe690f4ca90219c6f5b179fa6121bb73867c268fb",
+        compositionLock: emptyCompositionLock,
+        compositionLockHash: emptyCompositionLock.lockDigest,
       },
+    });
+  });
+
+  it("stores an immutable composition lock only when a validated Draft is published", async () => {
+    prisma.draftRevision.findFirst.mockResolvedValue({
+      ...draftRevision,
+      graph: selectedDraftGraph,
+      applicationGraph: { ...applicationGraph, workspace },
+    });
+    prisma.publishedRevision.findFirst.mockResolvedValue(null);
+    prisma.publishedRevision.count.mockResolvedValue(0);
+    prisma.publishedRevision.create.mockImplementation(async ({ data }) => ({
+      id: "published-1",
+      ...data,
+    }));
+
+    const published = await service.publishDraft(applicationGraph.id, {
+      draftRevisionId: draftRevision.id,
+    });
+
+    expect(published).toMatchObject({
+      graph: localApplicationGraph,
+      compositionLock: selectedCompositionLock,
+      compositionLockHash: selectedCompositionLock.lockDigest,
+    });
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(prisma.publishedRevision.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        graph: localApplicationGraph,
+        graphHash: hashApplicationGraph(localApplicationGraph),
+        compositionLock: selectedCompositionLock,
+        compositionLockHash: selectedCompositionLock.lockDigest,
+      }),
+    });
+    expect(selectedDraftGraph.integration).toHaveProperty(
+      "compositionSelections",
+    );
+  });
+
+  it("rejects a legacy asset-lock Draft when a selected package now requires bindings", async () => {
+    prisma.draftRevision.findFirst.mockResolvedValue({
+      ...draftRevision,
+      graph: {
+        ...localApplicationGraph,
+        integration: {
+          ...localApplicationGraph.integration,
+          compositionProfile: "expense-approval",
+          assetLocks: [coreCrudLock],
+        },
+      },
+      applicationGraph: { ...applicationGraph, workspace },
+    });
+    prisma.publishedRevision.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.publishDraft(applicationGraph.id, {
+        draftRevisionId: draftRevision.id,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.publishedRevision.create).not.toHaveBeenCalled();
+  });
+
+  it("publishes a legacy asset-lock Draft when every selected package needs no bindings", async () => {
+    const graph = {
+      ...localApplicationGraph,
+      integration: {
+        ...localApplicationGraph.integration,
+        compositionProfile: "expense-approval",
+        assetLocks: [coreAuditLock],
+      },
+    };
+    const expectedLock = createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(graph),
+      selections: [{ lock: coreAuditLock, bindings: {} }],
+    });
+    prisma.draftRevision.findFirst.mockResolvedValue({
+      ...draftRevision,
+      graph,
+      applicationGraph: { ...applicationGraph, workspace },
+    });
+    prisma.publishedRevision.findFirst.mockResolvedValue(null);
+    prisma.publishedRevision.count.mockResolvedValue(0);
+    prisma.publishedRevision.create.mockImplementation(async ({ data }) => ({
+      id: "published-legacy-lock",
+      ...data,
+    }));
+
+    await expect(
+      service.publishDraft(applicationGraph.id, {
+        draftRevisionId: draftRevision.id,
+      }),
+    ).resolves.toMatchObject({
+      graph,
+      compositionLock: expectedLock,
+      compositionLockHash: expectedLock.lockDigest,
     });
   });
 
@@ -660,12 +800,27 @@ describe("LifecycleService", () => {
     expect(prisma.compilation.create).not.toHaveBeenCalled();
   });
 
+  it("rejects a client supplied composition lock", async () => {
+    await expect(
+      service.createCompilation({
+        publishedRevisionId: "published-1",
+        target: "application-bundle",
+        compilerVersion: "0.1.0",
+        compositionLock: emptyCompositionLock,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.publishedRevision.findUnique).not.toHaveBeenCalled();
+    expect(queue.enqueue).not.toHaveBeenCalled();
+  });
+
   it("queues a validated Published Graph and never accepts a client supplied result", async () => {
     prisma.publishedRevision.findUnique.mockResolvedValue({
       id: "published-1",
       graph: localApplicationGraph,
       graphHash:
         "sha256:762e834186c8fec51569cc8fe690f4ca90219c6f5b179fa6121bb73867c268fb",
+      compositionLock: emptyCompositionLock,
+      compositionLockHash: emptyCompositionLock.lockDigest,
     });
     prisma.compilation.count.mockResolvedValue(0);
     prisma.compilation.create.mockResolvedValue({ id: "compilation-1" });
@@ -696,7 +851,52 @@ describe("LifecycleService", () => {
       target: "application-bundle",
       compilerVersion: "0.1.0",
       graph: localApplicationGraph,
+      compositionLock: expect.objectContaining({
+        apiVersion: "factory.composition/v1",
+      }),
     });
+  });
+
+  it("rejects compilation of a historical Published revision without a composition lock", async () => {
+    prisma.publishedRevision.findUnique.mockResolvedValue({
+      id: "published-legacy",
+      graph: localApplicationGraph,
+      graphHash: hashApplicationGraph(localApplicationGraph),
+      compositionLock: null,
+      compositionLockHash: null,
+    });
+
+    await expect(
+      service.createCompilation({
+        publishedRevisionId: "published-legacy",
+        target: "application-bundle",
+        compilerVersion: "0.1.0",
+      }),
+    ).rejects.toThrow("Published revision has no composition lock.");
+    expect(queue.enqueue).not.toHaveBeenCalled();
+  });
+
+  it("rejects a persisted composition lock whose independently derived digest differs", async () => {
+    prisma.publishedRevision.findUnique.mockResolvedValue({
+      id: "published-1",
+      graph: localApplicationGraph,
+      graphHash: hashApplicationGraph(localApplicationGraph),
+      compositionLock: {
+        ...selectedCompositionLock,
+        applicationGraphChecksum: hashApplicationGraph(localApplicationGraph),
+      },
+      compositionLockHash:
+        "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    });
+
+    await expect(
+      service.createCompilation({
+        publishedRevisionId: "published-1",
+        target: "application-bundle",
+        compilerVersion: "0.1.0",
+      }),
+    ).rejects.toThrow("composition lock does not match");
+    expect(queue.enqueue).not.toHaveBeenCalled();
   });
 
   it("records matching Worker artifact evidence without storing the Graph", async () => {

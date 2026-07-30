@@ -4,6 +4,8 @@ import { join } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
+import { hashApplicationGraph } from "@factory/graph";
+
 import { executeCompilation } from "../src/compilation-executor.js";
 import { executeQueuedCompilation } from "../src/queued-compilation.js";
 
@@ -24,6 +26,18 @@ const graph = {
   },
 };
 
+const compositionLock = {
+  apiVersion: "factory.composition/v1" as const,
+  applicationGraphChecksum: hashApplicationGraph(graph),
+  packages: [],
+  resolvedContributionDigests: [],
+  providedAndRequiredInterfaces: [],
+  targetRuntimeInterfaceVersions: [],
+  resolvedDependencyOrder: [],
+  lockDigest:
+    "sha256:ccf08f784c7426786dfa8999acb57db22ae1764679a15d1d5a4297de7cf05a58",
+};
+
 describe("compilation executor", () => {
   it("compiles only a published Graph into a materialized isolated application", async () => {
     const directory = await mkdtemp(join(tmpdir(), "factory-compile-"));
@@ -31,6 +45,7 @@ describe("compilation executor", () => {
       const result = await executeCompilation(directory, {
         publishedRevisionId: "published-1",
         graph,
+        compositionLock,
       });
 
       expect(result.rootDirectory).toBe("expense-published-1");
@@ -53,6 +68,7 @@ describe("compilation executor", () => {
           target: "application-bundle",
           compilerVersion: "0.1.0",
           graph,
+          compositionLock,
         },
         reporter,
       );
@@ -65,6 +81,34 @@ describe("compilation executor", () => {
         artifacts: result.artifacts,
       });
       expect(reporter.complete.mock.calls[0]?.[0]).not.toHaveProperty("graph");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a queued job with a tampered persisted composition lock", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "factory-compile-"));
+    const reporter = { complete: vi.fn().mockResolvedValue(undefined) };
+    try {
+      await expect(
+        executeQueuedCompilation(
+          directory,
+          {
+            compilationId: "compilation-1",
+            publishedRevisionId: "published-1",
+            target: "application-bundle",
+            compilerVersion: "0.1.0",
+            graph,
+            compositionLock: {
+              ...compositionLock,
+              lockDigest:
+                "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            },
+          },
+          reporter,
+        ),
+      ).rejects.toThrow("composition lock");
+      expect(reporter.complete).not.toHaveBeenCalled();
     } finally {
       await rm(directory, { recursive: true, force: true });
     }

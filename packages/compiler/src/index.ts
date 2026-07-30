@@ -1,12 +1,20 @@
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { isDeepStrictEqual } from "node:util";
 
 import {
   assertGoldenCapabilityAssetLocks,
+  createCapabilityCompositionLock,
   resolveCapabilityAssetLock,
+  type CapabilityBindingValueV1,
+  type CapabilityCompositionLockV1,
+  type CapabilityExecutableContributionV1,
+  type CapabilitySelectionV1,
 } from "@factory/capabilities";
 import {
+  loadCapabilityAssetContributions,
   loadCapabilityAssetTemplates,
+  type ResolvedCapabilityAssetContribution,
   type ResolvedCapabilityAssetTemplate,
 } from "@factory/capabilities/node";
 import {
@@ -117,6 +125,7 @@ export const compilationTargets: readonly CompilationTarget[] = Object.freeze([
 export interface PublishedGraphInput {
   readonly publishedRevisionId: string;
   readonly graph: ApplicationGraphV1;
+  readonly compositionLock: CapabilityCompositionLockV1;
 }
 
 export interface CompilationArtifactPlan {
@@ -144,6 +153,19 @@ export interface GeneratedApplicationBundle {
 
 export interface GenerateApplicationBundleOptions {
   readonly repositoryRoot?: string;
+}
+
+export interface ResolvedTargetContribution {
+  readonly packageKey: string;
+  readonly packageVersion: string;
+  readonly contributionId: string;
+  readonly namespace: string;
+  readonly source: string;
+  readonly path: string;
+  readonly outputSlot: CapabilityExecutableContributionV1["outputSlot"];
+  readonly digest: string;
+  readonly targetRuntimeInterfaceVersion: string;
+  readonly content: string;
 }
 
 const artifactBlueprint: Readonly<
@@ -191,8 +213,34 @@ const artifactBlueprint: Readonly<
       path: "capability-template-lock.json",
       mediaType: "application/json",
     },
+    { path: "composition-lock.json", mediaType: "application/json" },
   ],
 };
+
+function assertCanonicalCompositionLock(
+  input: PublishedGraphInput,
+): CapabilityCompositionLockV1 {
+  if (!input.compositionLock) {
+    throw new Error("Published revision has no composition lock.");
+  }
+  const graphHash = hashApplicationGraph(
+    assertValidApplicationGraph(input.graph),
+  );
+  try {
+    const canonical = createCapabilityCompositionLock({
+      graphChecksum: graphHash,
+      selections: input.compositionLock.packages,
+    });
+    if (!isDeepStrictEqual(input.compositionLock, canonical)) {
+      throw new Error("mismatch");
+    }
+    return canonical;
+  } catch {
+    throw new Error(
+      "Published revision composition lock does not match the Published Graph.",
+    );
+  }
+}
 
 /**
  * Produces a deterministic, non-executable output map. Target writers consume
@@ -205,6 +253,7 @@ export function buildCompilationPlan(
     throw new Error("Published revision id is required for compilation.");
   }
 
+  assertCanonicalCompositionLock(input);
   const graph = assertValidApplicationGraph(input.graph);
   const artifacts = compilationTargets.flatMap((target) =>
     artifactBlueprint[target.key].map((artifact) => ({
@@ -218,6 +267,211 @@ export function buildCompilationPlan(
     graphHash: hashApplicationGraph(graph),
     artifacts,
   };
+}
+
+type LoadedTargetContribution = {
+  readonly selection: CapabilitySelectionV1;
+  readonly declared: CapabilityExecutableContributionV1;
+  readonly loaded: ResolvedCapabilityAssetContribution;
+};
+
+function renderedBindingValue(value: CapabilityBindingValueV1): string {
+  if (typeof value === "object") {
+    return value.graphSymbol.slice(value.graphSymbol.lastIndexOf(".") + 1);
+  }
+  return String(value);
+}
+
+function renderDeclaredContribution(
+  value: string,
+  contribution: LoadedTargetContribution,
+): string {
+  const declaredParameters = new Set(contribution.declared.parameterRefs);
+  const rendered = value.replace(
+    /{{([a-z][a-zA-Z0-9]*)}}/g,
+    (_, key: string) => {
+      if (!declaredParameters.has(key)) {
+        throw new Error(
+          `Capability target contribution '${contribution.declared.id}' uses undeclared binding '${key}'.`,
+        );
+      }
+      const binding = contribution.selection.bindings[key];
+      if (binding === undefined) {
+        throw new Error(
+          `Capability target contribution '${contribution.declared.id}' has no binding for '${key}'.`,
+        );
+      }
+      return renderedBindingValue(binding);
+    },
+  );
+  if (/{{[^{}]+}}/.test(rendered)) {
+    throw new Error(
+      `Capability target contribution '${contribution.declared.id}' contains an unsupported binding token.`,
+    );
+  }
+  return rendered;
+}
+
+function assertSafeGeneratedTarget(path: string): void {
+  const segments = path.split("/");
+  if (
+    path === "docker-compose.yml" ||
+    path.includes("\\") ||
+    path.startsWith("/") ||
+    segments.some(
+      (segment) =>
+        !segment ||
+        segment === "." ||
+        segment === ".." ||
+        /[:\u0000-\u001f\u007f]/.test(segment),
+    )
+  ) {
+    throw new Error(
+      `Capability target '${path}' is outside its safe namespace.`,
+    );
+  }
+}
+
+function orderTargetContributions(
+  contributions: readonly LoadedTargetContribution[],
+  packageOrder: readonly string[],
+): readonly LoadedTargetContribution[] {
+  const packageRanks = new Map(packageOrder.map((key, index) => [key, index]));
+  const identities = new Map(
+    contributions.map((contribution) => [
+      `${contribution.selection.lock.key}:${contribution.declared.id}`,
+      contribution,
+    ]),
+  );
+  const dependencies = new Map<
+    LoadedTargetContribution,
+    Set<LoadedTargetContribution>
+  >();
+  for (const contribution of contributions) {
+    const required = new Set<LoadedTargetContribution>();
+    for (const requirement of contribution.declared.orderingRequirements) {
+      const dependency = identities.get(
+        `${contribution.selection.lock.key}:${requirement}`,
+      );
+      if (!dependency) {
+        throw new Error(
+          `Capability target contribution '${contribution.declared.id}' has unknown ordering requirement '${requirement}'.`,
+        );
+      }
+      required.add(dependency);
+    }
+    dependencies.set(contribution, required);
+  }
+  const compare = (
+    left: LoadedTargetContribution,
+    right: LoadedTargetContribution,
+  ) =>
+    (packageRanks.get(left.selection.lock.key) ?? Number.MAX_SAFE_INTEGER) -
+      (packageRanks.get(right.selection.lock.key) ?? Number.MAX_SAFE_INTEGER) ||
+    left.loaded.target.localeCompare(right.loaded.target) ||
+    left.declared.id.localeCompare(right.declared.id);
+  const ready = contributions
+    .filter((contribution) => dependencies.get(contribution)?.size === 0)
+    .sort(compare);
+  const resolved: LoadedTargetContribution[] = [];
+  while (ready.length > 0) {
+    const next = ready.shift();
+    if (!next) break;
+    resolved.push(next);
+    for (const contribution of contributions) {
+      const remaining = dependencies.get(contribution);
+      if (!remaining?.delete(next) || remaining.size !== 0) continue;
+      if (!resolved.includes(contribution) && !ready.includes(contribution)) {
+        ready.push(contribution);
+        ready.sort(compare);
+      }
+    }
+  }
+  if (resolved.length !== contributions.length) {
+    throw new Error(
+      "Capability target contributions contain an ordering cycle.",
+    );
+  }
+  return resolved;
+}
+
+export function resolveTargetContributions(
+  input: PublishedGraphInput,
+  options: GenerateApplicationBundleOptions = {},
+): readonly ResolvedTargetContribution[] {
+  const lock = assertCanonicalCompositionLock(input);
+  if (lock.packages.length === 0) return [];
+  const root = findFactoryRepositoryRoot(
+    options.repositoryRoot ?? process.cwd(),
+  );
+  const loaded = lock.packages.flatMap((selection) => {
+    const asset = resolveCapabilityAssetLock(selection.lock);
+    const physical = loadCapabilityAssetContributions(asset, root);
+    const declared = asset.manifest.executableContributions ?? [];
+    if (physical.length !== declared.length) {
+      throw new Error(
+        `Capability package '${asset.manifest.key}' contribution set does not match its manifest.`,
+      );
+    }
+    return physical.map((contribution) => {
+      const metadata = declared.find(
+        (candidate) =>
+          candidate.source === contribution.source &&
+          candidate.target === contribution.target &&
+          candidate.digest === contribution.digest,
+      );
+      if (!metadata) {
+        throw new Error(
+          `Capability package '${asset.manifest.key}' contribution does not match its manifest.`,
+        );
+      }
+      const runtimeIdentity = `${metadata.outputSlot}@${metadata.targetRuntimeInterfaceVersion}`;
+      if (
+        !lock.resolvedContributionDigests.includes(metadata.digest) ||
+        !lock.targetRuntimeInterfaceVersions.includes(runtimeIdentity) ||
+        contribution.targetRuntimeInterfaceVersion !==
+          metadata.targetRuntimeInterfaceVersion
+      ) {
+        throw new Error(
+          `Capability target contribution '${metadata.id}' does not match the composition lock.`,
+        );
+      }
+      return { selection, declared: metadata, loaded: contribution };
+    });
+  });
+  const targets = new Map<string, string>();
+  return orderTargetContributions(loaded, lock.resolvedDependencyOrder).map(
+    (contribution) => {
+      const path = renderDeclaredContribution(
+        contribution.loaded.target,
+        contribution,
+      );
+      assertSafeGeneratedTarget(path);
+      const previous = targets.get(path);
+      if (previous) {
+        throw new Error(
+          `Capability target collision at '${path}' between '${previous}' and '${contribution.selection.lock.key}'.`,
+        );
+      }
+      targets.set(path, contribution.selection.lock.key);
+      return {
+        packageKey: contribution.selection.lock.key,
+        packageVersion: contribution.selection.lock.version,
+        contributionId: contribution.declared.id,
+        namespace: contribution.loaded.namespace,
+        source: contribution.loaded.source,
+        path,
+        outputSlot: contribution.loaded.outputSlot,
+        digest: contribution.loaded.digest,
+        targetRuntimeInterfaceVersion:
+          contribution.loaded.targetRuntimeInterfaceVersion,
+        content: renderDeclaredContribution(
+          contribution.loaded.content,
+          contribution,
+        ),
+      };
+    },
+  );
 }
 
 interface ResolvedCapabilityTemplateContribution extends ResolvedCapabilityAssetTemplate {
@@ -2243,6 +2497,7 @@ export function generateApplicationBundle(
     graph,
     options.repositoryRoot,
   );
+  const targetContributions = resolveTargetContributions(input, options);
   const runtimeMode = resolveGeneratedRuntimeMode(graph);
   const rootDirectory = `${graph.metadata.id}-${input.publishedRevisionId}`;
   const files: GeneratedFile[] = [
@@ -2266,6 +2521,10 @@ export function generateApplicationBundle(
       content: "packages:\n  - web\n  - api\n  - database\n",
     },
     { path: "capability-lock.json", content: renderCapabilityLock(graph) },
+    {
+      path: "composition-lock.json",
+      content: JSON.stringify(input.compositionLock, null, 2) + "\n",
+    },
     {
       path: "capability-template-lock.json",
       content: renderCapabilityTemplateLock(graph, capabilityTemplates),
@@ -2451,6 +2710,10 @@ export function generateApplicationBundle(
     ...capabilityTemplates.map((template) => ({
       path: template.target,
       content: renderCapabilityTemplate(template, graph),
+    })),
+    ...targetContributions.map((contribution) => ({
+      path: contribution.path,
+      content: contribution.content,
     })),
     {
       path: "api/src/capabilities/registry.ts",

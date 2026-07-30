@@ -3,14 +3,34 @@ import path from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
-import { composeProfileDraft } from "@factory/capabilities";
-import type { ApplicationGraphV1 } from "@factory/graph";
+import {
+  composeProfileDraft,
+  createCapabilityCompositionLock,
+} from "@factory/capabilities";
+import { hashApplicationGraph, type ApplicationGraphV1 } from "@factory/graph";
 
 import {
   createGeneratedPageRuntimeProjection,
-  generateApplicationBundle,
+  generateApplicationBundle as compileApplicationBundle,
+  type PublishedGraphInput,
 } from "../src/index.js";
 import * as restaurantPageRuntime from "../src/restaurant-page-runtime.js";
+
+function generateApplicationBundle(
+  input: Omit<PublishedGraphInput, "compositionLock"> | PublishedGraphInput,
+) {
+  return compileApplicationBundle(
+    "compositionLock" in input
+      ? input
+      : {
+          ...input,
+          compositionLock: createCapabilityCompositionLock({
+            graphChecksum: hashApplicationGraph(input.graph),
+            selections: [],
+          }),
+        },
+  );
+}
 
 function restaurantGraph(): ApplicationGraphV1 {
   return structuredClone(

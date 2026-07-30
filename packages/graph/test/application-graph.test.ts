@@ -117,6 +117,80 @@ describe("ApplicationGraphV1", () => {
     expect(validateApplicationGraph(locked)).toEqual([]);
   });
 
+  it("accepts only Draft composition selections with exact Golden identities and typed bindings", () => {
+    const validLock = {
+      key: "core.crud",
+      version: "1.0.1",
+      packageRoot: "packages/capabilities/assets/core.crud/1.0.1",
+      manifestDigest:
+        "sha256:ac6197b00e529f519f1b062c9189a368eb9b94be125444a7c2f90cec46200f26",
+      lifecycle: "golden" as const,
+    };
+    const selected = {
+      ...expenseGraph,
+      integration: {
+        ...expenseGraph.integration,
+        compositionSelections: [
+          {
+            lock: validLock,
+            bindings: {
+              routeKey: "catalog",
+              enabled: true,
+              priority: 1,
+              entityKey: { graphSymbol: "graph.domain.expense" },
+            },
+          },
+        ],
+      },
+    };
+
+    expect(parseApplicationGraph(selected)).toEqual(selected);
+    expect(() =>
+      parseApplicationGraph({
+        ...selected,
+        integration: {
+          ...selected.integration,
+          compositionSelections: [
+            { lock: validLock, bindings: { sourcePath: "x" } },
+          ],
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      parseApplicationGraph({
+        ...selected,
+        integration: {
+          ...selected.integration,
+          compositionSelections: [
+            {
+              lock: { ...validLock, source: "untrusted" },
+              bindings: {},
+            },
+          ],
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      parseApplicationGraph({
+        ...selected,
+        integration: {
+          ...selected.integration,
+          compositionSelections: [
+            {
+              lock: validLock,
+              bindings: {
+                entityKey: {
+                  graphSymbol: "graph.domain.expense",
+                  sourcePath: "x",
+                },
+              },
+            },
+          ],
+        },
+      }),
+    ).toThrow();
+  });
+
   it("rejects duplicate capability asset locks", () => {
     const invalid = structuredClone(expenseGraph);
     invalid.integration.compositionProfile = "expense-approval";

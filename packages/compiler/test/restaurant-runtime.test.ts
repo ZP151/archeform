@@ -1,7 +1,30 @@
-import { composeProfileDraft } from "@factory/capabilities";
+import {
+  composeProfileDraft,
+  createCapabilityCompositionLock,
+} from "@factory/capabilities";
+import { hashApplicationGraph } from "@factory/graph";
 import { describe, expect, it } from "vitest";
 
-import { generateApplicationBundle } from "../src/index.js";
+import {
+  generateApplicationBundle as compileApplicationBundle,
+  type PublishedGraphInput,
+} from "../src/index.js";
+
+function generateApplicationBundle(
+  input: Omit<PublishedGraphInput, "compositionLock"> | PublishedGraphInput,
+) {
+  return compileApplicationBundle(
+    "compositionLock" in input
+      ? input
+      : {
+          ...input,
+          compositionLock: createCapabilityCompositionLock({
+            graphChecksum: hashApplicationGraph(input.graph),
+            selections: [],
+          }),
+        },
+  );
+}
 
 function restaurantFiles(revision = "restaurant-runtime-published-1") {
   return Object.fromEntries(
