@@ -589,10 +589,7 @@ function resolveCapabilityTemplateContributions(
     (capability) => capability.key,
   );
   if (!locks.length) {
-    if (
-      capabilityKeys.length &&
-      graph.integration.compositionProfile !== "restaurant-ordering"
-    ) {
+    if (capabilityKeys.length) {
       throw new Error(
         "Factory Graph capabilities require matching Golden asset locks before compilation.",
       );

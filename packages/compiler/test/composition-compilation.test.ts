@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import {
   composeCapabilityDraft,
   composeDefaultCapabilityDraft,
+  composeProfileDraft,
   createCapabilityCompositionLock,
   getCapabilityAsset,
 } from "@factory/capabilities";
@@ -143,6 +144,21 @@ describe("immutable composition compilation", () => {
         publishedRevisionId: "published-no-graph-lock-fallback-1",
         graph: legacyGraph,
         compositionLock: emptyLock,
+      }),
+    ).toThrow("require matching Golden asset locks");
+
+    const restaurantGraph = composeProfileDraft({
+      profile: "restaurant-ordering",
+    }).graph;
+    const emptyRestaurantLock = createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(restaurantGraph),
+      selections: [],
+    });
+    expect(() =>
+      generateApplicationBundle({
+        publishedRevisionId: "published-restaurant-empty-lock-1",
+        graph: restaurantGraph,
+        compositionLock: emptyRestaurantLock,
       }),
     ).toThrow("require matching Golden asset locks");
 

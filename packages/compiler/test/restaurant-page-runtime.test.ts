@@ -7,6 +7,9 @@ import {
   composeDefaultCapabilityDraft,
   composeProfileDraft,
   createCapabilityCompositionLock,
+  resolveCapabilityAssetLock,
+  type CapabilitySelectionV1,
+  type FactoryProfile,
 } from "@factory/capabilities";
 import { hashApplicationGraph, type ApplicationGraphV1 } from "@factory/graph";
 
@@ -17,17 +20,39 @@ import {
 } from "../src/index.js";
 import * as restaurantPageRuntime from "../src/restaurant-page-runtime.js";
 
-type GenericProfile = "expense-approval" | "simple-ecommerce";
-
 function persistedProfileLock(
-  profile: GenericProfile,
+  profile: FactoryProfile,
   graph: ApplicationGraphV1,
 ) {
+  const canonicalSelections = new Map(
+    composeDefaultCapabilityDraft({
+      profile,
+    }).graph.integration.compositionSelections?.map((selection) => [
+      `${selection.lock.key}@${selection.lock.version}:${selection.lock.manifestDigest}`,
+      selection,
+    ]),
+  );
+  const selections = (graph.integration.assetLocks ?? []).map(
+    (lock): CapabilitySelectionV1 => {
+      const canonical = canonicalSelections.get(
+        `${lock.key}@${lock.version}:${lock.manifestDigest}`,
+      );
+      if (canonical) return canonical;
+      const manifest = resolveCapabilityAssetLock(lock).manifest;
+      if ((manifest.parameters ?? []).some(({ required }) => required)) {
+        throw new Error(
+          `Fixture package '${manifest.key}@${manifest.version}' requires canonical bindings.`,
+        );
+      }
+      return { lock, bindings: {} };
+    },
+  );
+  if (!selections.length) {
+    throw new Error(`Fixture profile '${profile}' requires a nonempty lock.`);
+  }
   return createCapabilityCompositionLock({
     graphChecksum: hashApplicationGraph(graph),
-    selections:
-      composeDefaultCapabilityDraft({ profile }).graph.integration
-        .compositionSelections ?? [],
+    selections,
   });
 }
 
@@ -39,10 +64,10 @@ function generateApplicationBundle(
       ? input
       : {
           ...input,
-          compositionLock: createCapabilityCompositionLock({
-            graphChecksum: hashApplicationGraph(input.graph),
-            selections: [],
-          }),
+          compositionLock: persistedProfileLock(
+            input.graph.integration.compositionProfile as FactoryProfile,
+            input.graph,
+          ),
         },
   );
 }
@@ -61,15 +86,11 @@ function menuBlock(graph: ApplicationGraphV1) {
   return block;
 }
 
-function generatedFiles(
-  graph: ApplicationGraphV1 = restaurantGraph(),
-  compositionLock?: PublishedGraphInput["compositionLock"],
-) {
+function generatedFiles(graph: ApplicationGraphV1 = restaurantGraph()) {
   return Object.fromEntries(
     generateApplicationBundle({
       publishedRevisionId: "restaurant-customer-web-1",
       graph,
-      ...(compositionLock ? { compositionLock } : {}),
     }).files.map((file) => [file.path, file.content]),
   );
 }
@@ -388,10 +409,7 @@ describe("generated Restaurant Customer page runtime", () => {
 
   it("leaves generic profile page generation unchanged", () => {
     const graph = composeProfileDraft({ profile: "simple-ecommerce" }).graph;
-    const files = generatedFiles(
-      graph,
-      persistedProfileLock("simple-ecommerce", graph),
-    );
+    const files = generatedFiles(graph);
 
     expect(files["web/app/page-runtime.tsx"]).toContain(
       "factory.generated-page-runtime/v1",
@@ -405,7 +423,7 @@ describe("generated Restaurant Customer page runtime", () => {
     "keeps the generic %s proxy contract unchanged",
     (profile) => {
       const graph = composeProfileDraft({ profile }).graph;
-      const files = generatedFiles(graph, persistedProfileLock(profile, graph));
+      const files = generatedFiles(graph);
       const proxy = files["web/app/api/[...path]/route.ts"]!;
 
       expect(proxy).toContain(
