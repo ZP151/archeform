@@ -6,11 +6,12 @@ Updated: 2026-07-30
 
 Factory Pilot has a TypeScript Application Graph platform with mutable Drafts,
 immutable Published revisions, deterministic compilation, a Workbench Home,
-and three composed starter profiles. Restaurant Ordering is now release-accepted
-as an isolated generated application. The next active slice is Parameterized
-Capability Composition: replace starter-Graph copying and compiler-owned profile
-branches with independently versioned packages that contribute Graph and target
-artifacts through declared parameters and immutable composition locks.
+and three composed starter profiles. Restaurant Ordering is release-accepted
+as an isolated generated application. Parameterized Capability Composition has
+now reached its Task 5 implementation gate: Restaurant Ordering and Simple
+Ecommerce use the same nine shared package identities with different canonical
+bindings and independently runnable generated output. Independent task review,
+QA, release review, and fresh root verification remain before ledger acceptance.
 
 The active design and task-level migration plan are
 [`superpowers/specs/2026-07-30-parameterized-capability-composition-design.md`](superpowers/specs/2026-07-30-parameterized-capability-composition-design.md)
@@ -20,6 +21,23 @@ The public-source candidate map is
 [`research/2026-07-30-profile-capability-source-study.md`](research/2026-07-30-profile-capability-source-study.md).
 
 ## Current evidence
+
+Parameterized Capability Composition Task 5 evidence is documented in
+[`acceptance/parameterized-capability-composition.md`](acceptance/parameterized-capability-composition.md):
+
+- Migrated core/shared-commerce handler selection no longer uses a package-key
+  allowlist, `compositionProfile`, Graph asset locks, or an asset-version switch;
+  it uses the immutable lock's resolved contribution list.
+- Focused deterministic compiler verification passed 54/54 and Worker
+  composition-lock integrity verification passed 3/3.
+- Separate Restaurant and Ecommerce bundles each produced 58 artifacts, ran
+  API and Web on Node v22.23.1 over loopback-only ports, returned healthy
+  responses, passed their generated role journey 1/1, reached stopped state,
+  and cleaned only their exact labeled Docker resources.
+- The runtime gate exposed and closed relation-field drift in both generic
+  Prisma schema and migration artifacts: declared foreign-key scalars and
+  natural-key targets are now reused consistently, with unresolved targets
+  rejected before output.
 
 `pnpm test` passed on this branch on 2026-07-30: 11 Turbo tasks and 490 tests
 across Graph (12), capabilities (66), adapters (20), compiler (161),
@@ -75,7 +93,7 @@ commercial point-of-sale scope. The requirement-by-requirement evidence is in
 | Checkout            | Submit, full simulated `cash` or `card` payment, receipt                                 | Real payment providers, split/partial payment, member balance, suspended credit                 |
 | Customer lifecycle  | Status, session history, receipt                                                         | Reviews, images, repeat order, membership, points, coupons, delivery, pickup                    |
 | Merchant operations | Tables, menu availability, stock, kitchen queue, cashier, cancellation, audit, dashboard | Merge/move tables, order amendment, printing, promotions, member operations, data import/export |
-| Platform proof      | Draft, Publish, deterministic compile, Workbench-driven Node 22 generated-app proof      | Parameterized asset composition, generic target contributions, and Puck PageModel round trips  |
+| Platform proof      | Draft, Publish, deterministic compile, Workbench-driven Node 22 generated-app proof      | Parameterized asset composition, generic target contributions, and Puck PageModel round trips   |
 
 ## Recommended next slices
 

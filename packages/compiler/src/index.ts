@@ -631,40 +631,6 @@ function resolveCapabilityTemplateContributions(
   );
 }
 
-type GeneratedRuntimeMode = "metadata-v1" | "package-handlers-v1";
-
-const handlerBackedCapabilityPackages = new Set<string>([
-  "core.audit",
-  "core.crud",
-  "core.notification",
-  "core.workflow",
-  "commerce.inventory",
-  "commerce.simulated-payment",
-]);
-
-function resolveGeneratedRuntimeMode(
-  compositionLock: CapabilityCompositionLockV1,
-): GeneratedRuntimeMode {
-  const handlerLocks = compositionLock.packages
-    .map(({ lock }) => lock)
-    .filter((lock) => handlerBackedCapabilityPackages.has(lock.key));
-  if (!handlerLocks.length) return "package-handlers-v1";
-
-  const versions = new Set(handlerLocks.map((lock) => lock.version));
-  if (versions.size !== 1) {
-    throw new Error(
-      "Mixed historical and package-handler Golden locks cannot compile into one generated runtime.",
-    );
-  }
-
-  const [version] = versions;
-  if (version === "1.0.0") return "metadata-v1";
-  if (version === "1.0.1") return "package-handlers-v1";
-  throw new Error(
-    `Handler-backed Golden package version '${version}' does not declare generated runtime semantics.`,
-  );
-}
-
 function renderCapabilityRegistry(
   contributions: readonly ResolvedCapabilityTemplateContribution[],
 ): string {
@@ -852,6 +818,117 @@ function prismaType(
   }
 }
 
+type GraphRelation = ApplicationGraphV1["domain"]["relations"][number];
+
+interface ResolvedRelationForeignKey {
+  readonly ownerKey: string;
+  readonly targetKey: string;
+  readonly scalarField: string;
+  readonly targetField: string;
+  readonly required: boolean;
+  readonly oneToOne: boolean;
+}
+
+function resolveRelationForeignKey(
+  graph: ApplicationGraphV1,
+  relation: GraphRelation,
+): ResolvedRelationForeignKey {
+  if (relation.kind === "many-to-many") {
+    throw new Error(
+      "Many-to-many relations do not have an owning scalar field.",
+    );
+  }
+  if (relation.field && relation.kind === "one-to-many") {
+    throw new Error(
+      `Relation '${relation.from}' to '${relation.to}' cannot declare owning field '${relation.field}' for one-to-many cardinality.`,
+    );
+  }
+
+  const sourceIsOne =
+    relation.kind === "one-to-many" || relation.kind === "one-to-one";
+  const ownerKey = relation.field
+    ? relation.from
+    : sourceIsOne
+      ? relation.to
+      : relation.from;
+  const targetKey = relation.field
+    ? relation.to
+    : sourceIsOne
+      ? relation.from
+      : relation.to;
+  const owner = graph.domain.entities.find((entity) => entity.key === ownerKey);
+  const target = graph.domain.entities.find(
+    (entity) => entity.key === targetKey,
+  );
+  if (!owner || !target) {
+    throw new Error(
+      `Relation '${relation.from}' to '${relation.to}' references an unknown entity.`,
+    );
+  }
+
+  const scalarField = relation.field ?? `${toCamelCase(targetKey)}Id`;
+  const declaredScalar = owner.fields.find(
+    (field) => field.key === scalarField,
+  );
+  if (relation.field && !declaredScalar) {
+    throw new Error(
+      `Relation '${relation.from}' to '${relation.to}' field '${relation.field}' is not declared on '${relation.from}'.`,
+    );
+  }
+  if (
+    relation.kind === "one-to-one" &&
+    declaredScalar &&
+    !declaredScalar.unique
+  ) {
+    throw new Error(
+      `One-to-one relation '${relation.from}' to '${relation.to}' requires unique owning field '${scalarField}'.`,
+    );
+  }
+
+  let targetField = "id";
+  if (relation.field) {
+    const naturalKeyCandidates = target.fields.filter(
+      (field) =>
+        field.unique === true &&
+        relation.field!.toLowerCase().endsWith(field.key.toLowerCase()),
+    );
+    if (naturalKeyCandidates.length === 1) {
+      targetField = naturalKeyCandidates[0]!.key;
+    } else if (
+      naturalKeyCandidates.length > 1 ||
+      !/(?:id|key)$/i.test(relation.field)
+    ) {
+      throw new Error(
+        `Relation '${relation.from}' to '${relation.to}' field '${relation.field}' cannot resolve a unique target field.`,
+      );
+    }
+  }
+
+  if (targetField !== "id") {
+    const referencedField = target.fields.find(
+      (field) => field.key === targetField,
+    )!;
+    if (declaredScalar?.type !== referencedField.type) {
+      throw new Error(
+        `Relation '${relation.from}' to '${relation.to}' field '${scalarField}' must match target field '${targetField}' type.`,
+      );
+    }
+  } else if (declaredScalar && declaredScalar.type !== "string") {
+    throw new Error(
+      `Relation '${relation.from}' to '${relation.to}' field '${scalarField}' must be a string to reference target id.`,
+    );
+  }
+
+  return {
+    ownerKey,
+    targetKey,
+    scalarField,
+    targetField,
+    required: declaredScalar?.required ?? false,
+    oneToOne: relation.kind === "one-to-one",
+  };
+}
+
 function renderPrismaSchema(graph: ApplicationGraphV1): string {
   const relationFields = (entityKey: string): readonly string[] =>
     graph.domain.relations.flatMap((relation) => {
@@ -875,25 +952,29 @@ function renderPrismaSchema(graph: ApplicationGraphV1): string {
         return [];
       }
 
-      const sourceIsOne =
-        relation.kind === "one-to-many" || relation.kind === "one-to-one";
-      const oneKey = sourceIsOne ? relation.from : relation.to;
-      const manyKey = sourceIsOne ? relation.to : relation.from;
-      const oneModel = toPascalCase(oneKey);
-      const manyModel = toPascalCase(manyKey);
-      const oneField = toCamelCase(oneKey);
-      const manyField = toCamelCase(manyKey);
-      const oneToOne = relation.kind === "one-to-one";
+      const foreignKey = resolveRelationForeignKey(graph, relation);
+      const ownerModel = toPascalCase(foreignKey.ownerKey);
+      const targetModel = toPascalCase(foreignKey.targetKey);
+      const ownerField = toCamelCase(foreignKey.ownerKey);
+      const targetField = toCamelCase(foreignKey.targetKey);
 
-      if (entityKey === oneKey) {
+      if (entityKey === foreignKey.targetKey) {
         return [
-          `  ${oneToOne ? manyField : pluralize(manyField)} ${manyModel}${oneToOne ? "?" : "[]"} @relation("${relationName}")`,
+          `  ${foreignKey.oneToOne ? ownerField : pluralize(ownerField)} ${ownerModel}${foreignKey.oneToOne ? "?" : "[]"} @relation("${relationName}")`,
         ];
       }
-      if (entityKey === manyKey) {
+      if (entityKey === foreignKey.ownerKey) {
+        const declaredScalar = graph.domain.entities
+          .find((entity) => entity.key === foreignKey.ownerKey)
+          ?.fields.find((field) => field.key === foreignKey.scalarField);
+        const optional = foreignKey.required ? "" : "?";
         return [
-          `  ${oneField}Id String?${oneToOne ? " @unique" : ""}`,
-          `  ${oneField} ${oneModel}? @relation("${relationName}", fields: [${oneField}Id], references: [id])`,
+          ...(declaredScalar
+            ? []
+            : [
+                `  ${foreignKey.scalarField} String?${foreignKey.oneToOne ? " @unique" : ""}`,
+              ]),
+          `  ${targetField} ${targetModel}${optional} @relation("${relationName}", fields: [${foreignKey.scalarField}], references: [${foreignKey.targetField}])`,
         ];
       }
       return [];
@@ -1004,14 +1085,17 @@ function relationColumnDefinitions(
 ): readonly string[] {
   return graph.domain.relations.flatMap((relation) => {
     if (relation.kind === "many-to-many") return [];
-    const sourceIsOne =
-      relation.kind === "one-to-many" || relation.kind === "one-to-one";
-    const oneKey = sourceIsOne ? relation.from : relation.to;
-    const manyKey = sourceIsOne ? relation.to : relation.from;
-    if (entityKey !== manyKey) return [];
-    const column = `${toCamelCase(oneKey)}Id`;
+    const foreignKey = resolveRelationForeignKey(graph, relation);
+    if (entityKey !== foreignKey.ownerKey) return [];
+    if (
+      graph.domain.entities
+        .find((entity) => entity.key === foreignKey.ownerKey)
+        ?.fields.some((field) => field.key === foreignKey.scalarField)
+    ) {
+      return [];
+    }
     return [
-      `${quoteSqlIdentifier(column)} TEXT${relation.kind === "one-to-one" ? " UNIQUE" : ""}`,
+      `${quoteSqlIdentifier(foreignKey.scalarField)} TEXT${foreignKey.oneToOne ? " UNIQUE" : ""}`,
     ];
   });
 }
@@ -1048,14 +1132,10 @@ function renderInitialMigration(graph: ApplicationGraphV1): string {
   });
   const relationConstraints = graph.domain.relations.flatMap((relation) => {
     if (relation.kind === "many-to-many") return [];
-    const sourceIsOne =
-      relation.kind === "one-to-many" || relation.kind === "one-to-one";
-    const oneKey = sourceIsOne ? relation.from : relation.to;
-    const manyKey = sourceIsOne ? relation.to : relation.from;
-    const relationName = `${toPascalCase(oneKey)}To${toPascalCase(manyKey)}`;
-    const column = `${toCamelCase(oneKey)}Id`;
+    const foreignKey = resolveRelationForeignKey(graph, relation);
+    const relationName = `${toPascalCase(foreignKey.targetKey)}To${toPascalCase(foreignKey.ownerKey)}`;
     return [
-      `ALTER TABLE ${quoteSqlIdentifier(toPascalCase(manyKey))} ADD CONSTRAINT ${quoteSqlIdentifier(`${relationName}_fkey`)} FOREIGN KEY (${quoteSqlIdentifier(column)}) REFERENCES ${quoteSqlIdentifier(toPascalCase(oneKey))} ("id") ON DELETE RESTRICT ON UPDATE CASCADE;`,
+      `ALTER TABLE ${quoteSqlIdentifier(toPascalCase(foreignKey.ownerKey))} ADD CONSTRAINT ${quoteSqlIdentifier(`${relationName}_fkey`)} FOREIGN KEY (${quoteSqlIdentifier(foreignKey.scalarField)}) REFERENCES ${quoteSqlIdentifier(toPascalCase(foreignKey.targetKey))} (${quoteSqlIdentifier(foreignKey.targetField)}) ON DELETE RESTRICT ON UPDATE CASCADE;`,
     ];
   });
   return [
@@ -1334,12 +1414,11 @@ function runtimeDefinition(graph: ApplicationGraphV1) {
 
 function renderApplicationRuntime(
   graph: ApplicationGraphV1,
-  mode: GeneratedRuntimeMode,
+  useResolvedContributions: boolean,
 ): string {
   const commerce = hasCommerceCapabilities(graph);
-  const packageHandlers = mode === "package-handlers-v1";
   return [
-    packageHandlers
+    useResolvedContributions
       ? 'import { getEffectHandler, getRecordHandler, getWorkflowHandler, providedEffects } from "./capabilities/registry.js";'
       : 'import { providedEffects } from "./capabilities/registry.js";',
     'import { enforce } from "./policy.js";',
@@ -1486,7 +1565,7 @@ function renderApplicationRuntime(
     "    }",
     "    for (const { effect } of declaredEffects) {",
     "      const at = new Date().toISOString();",
-    ...(packageHandlers
+    ...(useResolvedContributions
       ? [
           "      const handler = getEffectHandler(effect.capability, effect.operation);",
           "      await handler({ role, entityKey, recordId, operation: effect.operation, store: this.store, now: at });",
@@ -1513,7 +1592,7 @@ function renderApplicationRuntime(
     "  async list(role: string, entityKey: string): Promise<readonly StoredRecord[]> {",
     "    this.entity(entityKey);",
     "    await this.assertAllowed(role, entityKey, 'read');",
-    packageHandlers
+    useResolvedContributions
       ? "    return getRecordHandler().list({ store: this.store, entityKey });"
       : "    return this.store.list(entityKey);",
     "  }",
@@ -1532,7 +1611,7 @@ function renderApplicationRuntime(
     "        throw new Error(`Required field '${field.key}' is missing.`);",
     "      }",
     "    }",
-    ...(packageHandlers
+    ...(useResolvedContributions
       ? [
           "    const record = await getRecordHandler().create({",
           "      store: this.store,",
@@ -1590,7 +1669,7 @@ function renderApplicationRuntime(
     "    }",
     "    if (transition.roles?.length) await this.assertTransitionAllowed(role, entityKey, event);",
     "    else await this.assertAllowed(role, entityKey, 'read');",
-    ...(packageHandlers
+    ...(useResolvedContributions
       ? [
           "    const workflowHandler = getWorkflowHandler();",
           "    await this.executeEffects(role, entityKey, recordId, transition.effects);",
@@ -2544,7 +2623,8 @@ export function generateApplicationBundle(
     input,
     options,
   );
-  const runtimeMode = resolveGeneratedRuntimeMode(input.compositionLock);
+  const useResolvedContributions =
+    input.compositionLock.resolvedContributionDigests.length > 0;
   const rootDirectory = `${graph.metadata.id}-${input.publishedRevisionId}`;
   const plannedFiles: PlannedGeneratedFile[] = [
     {
@@ -2784,7 +2864,7 @@ export function generateApplicationBundle(
       path: "api/src/application-runtime.ts",
       render: () =>
         restaurantRuntime()?.applicationRuntimeContract ??
-        renderApplicationRuntime(graph, runtimeMode),
+        renderApplicationRuntime(graph, useResolvedContributions),
     },
     {
       path: "api/src/prisma-record-store.ts",

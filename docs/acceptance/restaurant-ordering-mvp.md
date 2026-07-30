@@ -105,3 +105,19 @@ for `factory-task7-evidence3`.
 This acceptance proves local Node 22 generated runtime behavior and scoped
 cleanup. It does not validate cloud deployment, real payment providers, or
 external identity providers.
+
+## Parameterized shared-commerce follow-up
+
+Task 5 of Parameterized Capability Composition re-ran Restaurant Ordering from
+an immutable generic nine-package composition alongside Simple Ecommerce. The
+Restaurant bundle produced 58 artifacts, ran API and Web on Node v22.23.1 over
+loopback-only ports, returned healthy API/Web responses, passed its generated
+role journey 1/1, reached an explicit stopped state, and removed only the exact
+run-owned four containers, one network, and one anonymous PostgreSQL volume.
+The same rerun proved that `tableCode` owns the RestaurantTable relation through
+its unique `code`; no unrelated `restaurantTableId` column was generated.
+
+The shared package identities, redacted immutable input evidence, deterministic
+commands, separate Ecommerce lifecycle, and remaining review gates are recorded
+in
+[`parameterized-capability-composition.md`](parameterized-capability-composition.md).

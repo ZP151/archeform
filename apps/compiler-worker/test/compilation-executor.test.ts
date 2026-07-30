@@ -86,7 +86,7 @@ describe("compilation executor", () => {
     }
   });
 
-  it("rejects a queued job with a tampered persisted composition lock", async () => {
+  it("refuses a Worker job whose persisted composition-lock artifact digest differs", async () => {
     const directory = await mkdtemp(join(tmpdir(), "factory-compile-"));
     const reporter = { complete: vi.fn().mockResolvedValue(undefined) };
     try {

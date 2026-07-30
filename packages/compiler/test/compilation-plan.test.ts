@@ -612,23 +612,34 @@ describe("compilation target registry", () => {
     );
   });
 
-  it("rejects mixed historical and package-handler locks before output", () => {
+  it("does not select a migrated target contribution from compositionProfile", () => {
     const historicalCrudLock = historicalExecutableLocks.find(
       (lock) => lock.key === "core.crud",
     )!;
-    const graph = structuredClone(
+    const graphWithUnknownProfile = structuredClone(
       composeProfileDraft({ profile: "expense-approval" }).graph,
     );
-    graph.integration.assetLocks = graph.integration.assetLocks?.map((lock) =>
-      lock.key === "core.crud" ? historicalCrudLock : lock,
-    );
+    graphWithUnknownProfile.integration.assetLocks =
+      graphWithUnknownProfile.integration.assetLocks?.map((lock) =>
+        lock.key === "core.crud" ? historicalCrudLock : lock,
+      );
+    const persisted = withCompositionLock({
+      publishedRevisionId: "unknown-profile-contribution-1",
+      graph: graphWithUnknownProfile,
+    });
+    graphWithUnknownProfile.integration.compositionProfile = "unknown-profile";
+    const compositionLock = createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(graphWithUnknownProfile),
+      selections: persisted.compositionLock.packages,
+    });
 
     expect(() =>
       generateApplicationBundle({
-        publishedRevisionId: "mixed-handler-family-1",
-        graph,
+        publishedRevisionId: "unknown-profile-contribution-1",
+        graph: graphWithUnknownProfile,
+        compositionLock,
       }),
-    ).toThrow("Mixed historical and package-handler Golden locks");
+    ).not.toThrow();
   });
 
   it("preflights historical external providers before changing record state", async () => {
@@ -997,6 +1008,103 @@ describe("compilation target registry", () => {
     );
     expect(files["README.md"]).toContain(
       "docker compose down --volumes --remove-orphans",
+    );
+  });
+
+  it("does not duplicate declared relation scalar fields in generic database artifacts", () => {
+    const draft = composeDefaultCapabilityDraft({
+      profile: "restaurant-ordering",
+    }).graph;
+    const selections = draft.integration.compositionSelections!;
+    const graph = structuredClone(draft);
+    delete graph.integration.compositionSelections;
+    const compositionLock = createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(graph),
+      selections,
+    });
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "published-generic-relation-schema-1",
+        graph,
+        compositionLock,
+      }).files.map(({ path, content }) => [path, content]),
+    );
+    const schema = files["database/prisma/schema.prisma"];
+    const migration =
+      files["database/prisma/migrations/0001_initial/migration.sql"];
+
+    expect(schema).toBeDefined();
+    expect(migration).toBeDefined();
+    for (const [field, count] of [
+      ["tableSessionId", 1],
+      ["orderId", 4],
+      ["menuItemId", 2],
+    ] as const) {
+      expect(
+        schema?.match(new RegExp(`^  ${field} String`, "gm")),
+      ).toHaveLength(count);
+      expect(migration?.match(new RegExp(`^  "${field}" `, "gm"))).toHaveLength(
+        count,
+      );
+    }
+    expect(schema).toContain(
+      'restaurantTable RestaurantTable @relation("TableSessionToRestaurantTable", fields: [tableCode], references: [code])',
+    );
+    expect(schema).toContain(
+      'menuCategory MenuCategory @relation("MenuItemToMenuCategory", fields: [categoryKey], references: [id])',
+    );
+    expect(schema).not.toContain("restaurantTableId");
+    expect(schema).not.toContain("menuCategoryId");
+    expect(migration).toContain(
+      'FOREIGN KEY ("tableCode") REFERENCES "RestaurantTable" ("code")',
+    );
+    expect(migration).toContain(
+      'FOREIGN KEY ("categoryKey") REFERENCES "MenuCategory" ("id")',
+    );
+    expect(migration).not.toContain('"restaurantTableId"');
+    expect(migration).not.toContain('"menuCategoryId"');
+  });
+
+  it("fails closed when a declared relation field cannot resolve a unique target field", () => {
+    expect(() =>
+      generateApplicationBundle({
+        publishedRevisionId: "published-unresolved-relation-field-1",
+        graph: {
+          ...publishedExpense.graph,
+          domain: {
+            entities: [
+              {
+                key: "expense",
+                label: "Expense",
+                fields: [
+                  {
+                    key: "accountReference",
+                    type: "string",
+                    required: true,
+                  },
+                ],
+                indexes: [],
+              },
+              {
+                key: "account",
+                label: "Account",
+                fields: [{ key: "name", type: "string", required: true }],
+                indexes: [],
+              },
+            ],
+            relations: [
+              {
+                from: "expense",
+                to: "account",
+                kind: "many-to-one",
+                field: "accountReference",
+              },
+            ],
+          },
+        },
+      }),
+    ).toThrow(
+      "Relation 'expense' to 'account' field 'accountReference' cannot resolve a unique target field.",
     );
   });
 
