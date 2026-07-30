@@ -58,13 +58,13 @@ Controller resolved its schema incompatibility by selecting a distinct
 but BLOCKED on the Task 1 contract amendment; its original scope and exact
 paths remain frozen. Tasks 3 through 6 remain `planned`.
 
-Acquisition amendment release review FAILED with one P1. The amendment remains
-`implementing` in Fix Round 1/5; its contract and exact amendment-owned paths
-remain frozen.
+Acquisition amendment Fix Round 1 re-review FAILED with one remaining P1. The
+amendment remains `implementing` in Fix Round 2/5; its contract and exact
+amendment-owned paths remain frozen.
 
 | Task                                             | State          | Specialization      | Contract owner                   | Dependency gate                                               |
 | ------------------------------------------------ | -------------- | ------------------- | -------------------------------- | ------------------------------------------------------------- |
-| 1. Candidate contracts and immutable persistence | `implementing` | `integration`       | External Intake Contract         | Amendment release FAIL; Fix Round 1/5.                        |
+| 1. Candidate contracts and immutable persistence | `implementing` | `integration`       | External Intake Contract         | Amendment re-review FAIL; Fix Round 2/5.                      |
 | 2. Fixed-source provenance and notices           | `implementing` | `platform`          | External Source Provenance       | BLOCKED on accepted Task 1 amendment; scope and paths frozen. |
 | 3. Deterministic scan orchestration              | `planned`      | `platform-security` | External Evidence Pipeline       | Task 1 amendment and Task 2 acquisition must be accepted.     |
 | 4. Candidate registry, API, CLI, and isolation   | `planned`      | `integration`       | Candidate Registry               | Tasks 1-3 and Commercial Foundation Task 1 accepted.          |
@@ -73,7 +73,7 @@ remain frozen.
 
 ## Task 1 card: Candidate contracts and immutable persistence
 
-- **State:** `implementing` for bounded amendment Fix Round 1/5; accepted
+- **State:** `implementing` for bounded amendment Fix Round 2/5; accepted
   release behavior remains frozen.
 - **Specialization:** `integration`
 - **Contract owner:** External Intake Contract
@@ -251,6 +251,19 @@ Release review FAILED with one P1. Acquisition store writes must:
 The amendment remains `implementing` with its contract and exact paths frozen.
 The accepted Task 1 release behavior is unchanged, Task 2 remains BLOCKED, and
 Tasks 3 through 6 remain `planned`.
+
+#### Amendment Fix Round 2/5
+
+Fix Round 1 re-review FAILED with one remaining P1. When a request
+`requestedRef` is a full 40-character SHA, the acquisition and snapshot
+`resolvedCommit` must equal it even when `expectedCommit` is undefined.
+
+Required repair: enforce that equality and add an adversarial regression for a
+full-SHA `requestedRef` mismatch without `expectedCommit`.
+
+The amendment remains `implementing` with no scope or path change. The accepted
+Task 1 release behavior remains frozen, Task 2 remains BLOCKED, and Tasks 3
+through 6 remain `planned`.
 
 ## Task 2 card: Fixed-source provenance, licences, and notices
 
@@ -495,8 +508,9 @@ allowed paths. Tasks 3 through 6 remain `planned`.
   Capabilities, and compiler test paths. Task 4 waits for Commercial Foundation
   Task 1 acceptance and exclusive path ownership.
 
-The active smallest valuable slice is bounded amendment Fix Round 1/5: enforce
-and verify the exact request/snapshot parent chain before acquisition storage.
-Task 1's accepted release behavior remains frozen. Task 2 is BLOCKED while its
-scope and exact paths remain frozen; Tasks 3 through 6 remain `planned` until
-explicitly dispatched after their recorded dependency gates are met.
+The active smallest valuable slice is bounded amendment Fix Round 2/5: enforce
+full-SHA `requestedRef` equality with acquisition/snapshot `resolvedCommit`
+without relying on `expectedCommit`. Task 1's accepted release behavior remains
+frozen. Task 2 is BLOCKED while its scope and exact paths remain frozen; Tasks
+3 through 6 remain `planned` until explicitly dispatched after their recorded
+dependency gates are met.
