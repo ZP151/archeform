@@ -38,6 +38,10 @@ slice, and the Controller has accepted the design contract. Task 1 is now
 composition demand signals, and produce only quarantined evidence,
 non-executable Candidate records, and pending-review promotion packets.
 
+Independent Task 1 review is BLOCKED with four P1 findings. Task 1 remains
+`implementing` in Fix Round 1/5; its original contract, scope, and exact allowed
+paths remain frozen. No dependent task is dispatched.
+
 The Commercial Capability Foundation remains the Golden execution boundary.
 External Intake Task 1 has been dispatched with its existing contract artifact
 and exact allowed paths frozen. Tasks 2 and 3 remain blocked on Task 1
@@ -105,6 +109,20 @@ Ignored operational-evidence exception (not a product or runtime path):
   numbered scenario demand mappings, and class totals 1/11/7/8/16 without
   creating an Intake request for excluded/architecture-only records.
 - Quarantine is ignored and no product manifest imports External Intake.
+
+### Independent review: Fix Round 1/5
+
+Review is BLOCKED on these four P1 findings:
+
+1. Add common provenance fields on every persistent record.
+2. Require exactly one each licence, secret, SAST, and dependency scan in the
+   evidence bundle.
+3. Reject ADS and Windows-invalid filesystem characters in safe path segments.
+4. Add a job/sequence receipt index with exclusive-create, idempotent retry,
+   conflict, and out-of-order checks.
+
+Repair remains bounded to the original Task 1 contract, scope, and exact
+allowed paths. Tasks 2 through 6 remain `planned`.
 
 ## Task 2 card: Fixed-source provenance, licences, and notices
 
