@@ -40,9 +40,8 @@ Vitest, Node 22 generated runtimes.
 
 | Path | Responsibility |
 | --- | --- |
-| `packages/capabilities/src/assets/contract.ts` | The v1 package manifest, parameter, interface, Graph, and executable contribution contracts. |
+| `packages/capabilities/src/assets/contract.ts` | The v1 package manifest, closed parameter-value grammar, interface, Graph, and executable contribution contracts. |
 | `packages/capabilities/src/composition.ts` | Canonical parameter encoding, requirements resolution, contribution ordering, immutable lock creation, and fail-closed validation. |
-| `packages/capabilities/src/assets/contract.ts` | Closed v1 capability-parameter value types; free text is not a composition binding. |
 | `packages/capabilities/src/node.ts` | Physical package verification and safe, digest-verified contribution loading. |
 | `packages/capabilities/src/index.ts` | Browser-safe registry, generic recipe entry points, and migration of profile helpers to the generic resolver. |
 | `packages/graph/src/model.ts` | Schema validation for a Draft's capability selections and bindings, while keeping the Published composition lock outside mutable Graph state. |
