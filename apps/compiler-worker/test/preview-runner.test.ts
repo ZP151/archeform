@@ -101,6 +101,121 @@ describe("preview runner", () => {
     }
   });
 
+  it("bounds permanent web readiness failure and cleans only its exact project", async () => {
+    const { root } = await sourceFixture();
+    const preview = join(root, ".preview-runs", "preview-1");
+    const commands: Parameters<PreviewProcessRunner>[0][] = [];
+    let healthChecks = 0;
+    const processRunner: PreviewProcessRunner = async (command) => {
+      commands.push(command);
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "web")
+        return "127.0.0.1:49101\n";
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "api")
+        return "127.0.0.1:49102\n";
+      if (command.args.includes("exec")) {
+        healthChecks += 1;
+        throw new Error("Permanent generated Web provisioning failure.");
+      }
+    };
+
+    try {
+      await expect(
+        startPreviewRun(root, request(registeredArtifacts), processRunner, {
+          operationTimeoutMs: 600,
+          readinessTimeoutMs: 10,
+        }),
+      ).rejects.toMatchObject({ code: "preview_health_check_failed" });
+
+      expect(healthChecks).toBe(1);
+      const downCommands = commands.filter((command) =>
+        command.args.includes("down"),
+      );
+      expect(downCommands).toHaveLength(1);
+      expect(downCommands[0]).toMatchObject({
+        args: expect.arrayContaining([
+          "--file",
+          join(preview, "docker-compose.yml"),
+          "--project-name",
+          "factory-preview-preview-1",
+          "--project-directory",
+          preview,
+          "down",
+          "--volumes",
+          "--remove-orphans",
+        ]),
+      });
+      await expect(
+        readFile(join(preview, "docker-compose.yml")),
+      ).rejects.toThrow();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("cancels promptly while waiting to retry web readiness", async () => {
+    const { root } = await sourceFixture();
+    const preview = join(root, ".preview-runs", "preview-1");
+    const commands: Parameters<PreviewProcessRunner>[0][] = [];
+    let markReadinessFailure: (() => void) | undefined;
+    const readinessFailed = new Promise<void>((resolve) => {
+      markReadinessFailure = resolve;
+    });
+    let healthChecks = 0;
+    const processRunner: PreviewProcessRunner = async (command) => {
+      commands.push(command);
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "web")
+        return "127.0.0.1:49101\n";
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "api")
+        return "127.0.0.1:49102\n";
+      if (command.args.includes("exec")) {
+        healthChecks += 1;
+        markReadinessFailure?.();
+        throw new Error("Generated Web is not ready yet.");
+      }
+    };
+
+    try {
+      const starting = startPreviewRun(
+        root,
+        request(registeredArtifacts),
+        processRunner,
+        { operationTimeoutMs: 1_000, readinessTimeoutMs: 750 },
+      );
+      const cancelledStart = expect(starting).rejects.toMatchObject({
+        code: "preview_start_cancelled",
+      });
+      await readinessFailed;
+      await new Promise<void>((resolve) => setImmediate(resolve));
+
+      await expect(
+        stopPreviewRun(root, request(registeredArtifacts), processRunner, {
+          operationTimeoutMs: 1_000,
+        }),
+      ).resolves.toBeUndefined();
+      await cancelledStart;
+
+      expect(healthChecks).toBe(1);
+      const downCommands = commands.filter((command) =>
+        command.args.includes("down"),
+      );
+      expect(downCommands).toHaveLength(1);
+      expect(downCommands[0]).toMatchObject({
+        args: expect.arrayContaining([
+          "--project-name",
+          "factory-preview-preview-1",
+          "--project-directory",
+          preview,
+          "down",
+        ]),
+      });
+      await expect(
+        readFile(join(preview, "docker-compose.yml")),
+      ).rejects.toThrow();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("rejects a Restaurant preview without its process-only bootstrap token", async () => {
     const { root } = await sourceFixture(restaurantCompose);
     const processRunner = vi

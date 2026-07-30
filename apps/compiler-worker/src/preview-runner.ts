@@ -53,12 +53,22 @@ export type PreviewProcessRunner = (
 
 export type PreviewOperationOptions = {
   readonly operationTimeoutMs: number;
+  readonly readinessTimeoutMs?: number;
 };
 
 const defaultOperationOptions: PreviewOperationOptions = {
   operationTimeoutMs: 600_000,
 };
 const previewHealthRetryDelayMs = 250;
+const maximumPreviewHealthWaitMs = 30_000;
+
+function previewHealthWaitMs(options: PreviewOperationOptions): number {
+  return Math.min(
+    options.operationTimeoutMs,
+    options.readinessTimeoutMs ?? maximumPreviewHealthWaitMs,
+    maximumPreviewHealthWaitMs,
+  );
+}
 
 function isInside(parent: string, candidate: string): boolean {
   const fromParent = relative(parent, candidate);
@@ -590,7 +600,7 @@ export async function startPreviewRun(
           ],
           environment,
         ),
-        options.operationTimeoutMs,
+        previewHealthWaitMs(options),
         activeStart.controller.signal,
       );
       return { webPort, apiPort, previewUrl: `http://127.0.0.1:${webPort}` };
