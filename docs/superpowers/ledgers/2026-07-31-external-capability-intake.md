@@ -62,7 +62,11 @@ to test evidence and `pnpm-lock.yaml` formatting. Repair Round 5 independent
 re-review then PASSED with no P0/P1/P2, and the PM moved Task 4
 `implementing -> ready_for_qa`. Independent behavioral QA then PASSED with no
 P0/P1/P2, and the PM moved Task 4 `ready_for_qa -> reviewed`. Independent
-release review and fresh final verification remain required. The system will
+release review then FAILED with two P1 findings and one P2. After the final
+scheduled repair round, the Controller escalated and authorized one strict
+convergence Repair Round 6/6. The PM returned Task 4
+`reviewed -> implementing`; fresh task review, QA, release review, and final
+verification will all be required again. The system will
 ingest the 43 fixed-reference portfolio as metadata, retain the 108 scenarios as
 composition demand signals, and produce only quarantined evidence,
 non-executable Candidate records, and pending-review promotion packets.
@@ -181,6 +185,15 @@ and forced workspace 14/14. The PM moved Task 4
 4 scope; independent release review and fresh final verification are still
 required. Task 4 is not accepted, and Tasks 5 and 6 remain `planned`.
 
+Independent release review then FAILED with two P1 findings and one P2:
+Candidate artifacts could persist sensitive credentials or prompt/response
+data; warm locator fallback did not enforce the requested Candidate version;
+and the frozen append-only `blocked` and `rejected` lifecycle operations were
+absent. The Controller escalated after Repair Round 5/5 and authorized one
+strict convergence Repair Round 6/6 within the existing Task 4
+Candidate/API/CLI/test paths. The PM returned Task 4
+`reviewed -> implementing`. Tasks 5 and 6 remain `planned` and unstarted.
+
 Independent Task 2 review FAILED with three P1 findings and one P2. The
 Controller resolved its schema incompatibility by selecting a distinct
 `factory.external-source-acquisition/v1` record. Task 2 entered Fix Round 1/5
@@ -201,14 +214,14 @@ reconciled Fix Rounds 1 and 2 and moved the amendment
 `implementing -> ready_for_qa`; its contract and exact amendment-owned paths
 remain frozen.
 
-| Task                                             | State      | Specialization      | Contract owner                   | Dependency gate                                              |
-| ------------------------------------------------ | ---------- | ------------------- | -------------------------------- | ------------------------------------------------------------ |
-| 1. Candidate contracts and immutable persistence | `accepted` | `integration`       | External Intake Contract         | Original release and bounded amendment accepted and frozen.  |
-| 2. Fixed-source provenance and notices           | `accepted` | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.          |
-| 3. Deterministic scan orchestration              | `accepted` | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.     |
-| 4. Candidate registry, API, CLI, and isolation   | `reviewed` | `integration`       | Candidate Registry               | Final QA PASS; release review and final verification remain. |
-| 5. Review-only promotion packets                 | `planned`  | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.            |
-| 6. Bulk acceptance and release evidence          | `planned`  | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.         |
+| Task                                             | State          | Specialization      | Contract owner                   | Dependency gate                                             |
+| ------------------------------------------------ | -------------- | ------------------- | -------------------------------- | ----------------------------------------------------------- |
+| 1. Candidate contracts and immutable persistence | `accepted`     | `integration`       | External Intake Contract         | Original release and bounded amendment accepted and frozen. |
+| 2. Fixed-source provenance and notices           | `accepted`     | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
+| 3. Deterministic scan orchestration              | `accepted`     | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
+| 4. Candidate registry, API, CLI, and isolation   | `implementing` | `integration`       | Candidate Registry               | Controller-escalated Repair Round 6/6 strict convergence.   |
+| 5. Review-only promotion packets                 | `planned`      | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.           |
+| 6. Bulk acceptance and release evidence          | `planned`      | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.        |
 
 ## Task 1 card: Candidate contracts and immutable persistence
 
@@ -800,7 +813,7 @@ dependency gate but remains unstarted and `planned`; Tasks 5 and 6 also remain
 
 ## Task 4 card: Candidate registry, module API, CLI, and isolation
 
-- **State:** `reviewed`
+- **State:** `implementing`
 - **Specialization:** `integration`
 - **Contract owner:** Candidate Registry
 - **Contract artifact:** accepted Tasks 1-3 contracts and the frozen Commercial
@@ -1046,6 +1059,38 @@ accepted, promoted, or released; its complete repair history, Candidate Registry
 contract, exact paths, non-goals, and acceptance evidence remain frozen. Task 5
 and Task 6 remain `planned` and unstarted.
 
+### Release review escalation: Repair Round 6/6
+
+Independent release review FAILED with two P1 findings and one P2. The
+Controller authorized one escalated strict-convergence repair after the final
+scheduled Round 5/5 and returned Task 4 to its sole writer. Repair Round 6/6 is
+limited to the existing Task 4 Candidate/API/CLI/test paths:
+
+1. Recursively and with bounded traversal reject sensitive artifact, manifest,
+   and adapter key families including `token`, `auth`, `apiKey`, `clientSecret`,
+   `privateKey`, `password`, `credential`, `prompt`, and `response`, plus
+   credential-like high-entropy values. Rejection must occur before any
+   artifact, verification-state, receipt, conformance-result, bundle,
+   persistence, or output boundary. Regressions must prove no rejected input
+   reaches artifacts, persisted state, receipts, or conformance bundles.
+2. Bind every locator fallback to the exact requested `id@version` in both warm
+   and fresh APIs. Wrong-version show, verify, test, conformance-bundle, and
+   transition operations must always reject with zero Candidate or receipt
+   mutation.
+3. Implement the frozen append-only validated `blocked` and `rejected`
+   lifecycle operations with durable receipts and exact Candidate-revision
+   binding. `conformance-passed` remains available only through the exclusive
+   verified conformance operation. Tests must reject invalid or duplicate
+   transitions and every lifecycle bypass.
+
+All previous privacy, provenance, rehydration, isolation, exact-version,
+fail-closed recovery, and exactly-once race guarantees remain mandatory. No
+Task 2, immutable-store, Graph, compiler, dependency, network, process, or
+runtime change is authorized. No other Task 4 writer is authorized. Task 4
+remains `implementing`; Tasks 5 and 6 remain `planned`. Independent task review,
+QA, release review, and fresh final verification are all required again before
+acceptance.
+
 ### Exact allowed paths
 
 - `packages/external-intake/src/candidates.ts`
@@ -1187,10 +1232,11 @@ and Task 6 remain `planned` and unstarted.
   Capabilities, and compiler test paths. The dispatched Task 4 writer has
   exclusive ownership of every frozen path; any overlap stops work.
 
-The active smallest valuable slice is independent release review and fresh final
-verification for Task 4 repair commit `0f7811a` under its frozen Candidate
-Registry contract, exact allowed paths, non-goals, and complete Repair Round
-1-5 history. Its bounded
+The active smallest valuable slice is Controller-escalated Task 4 Repair Round
+6/6 under its frozen Candidate Registry contract, existing Candidate/API/CLI/test
+paths, non-goals, and complete Repair Round 1-5 history. It is limited to
+recursive sensitive-data rejection, exact `id@version` locator binding, and
+validated append-only `blocked`/`rejected` lifecycle operations. Its bounded
 test-contract amendment permits only the Intake CLI package
 manifest to import `@factory/external-intake`; all other isolation prohibitions
 remain enforced. Repair Round 1/5 is limited to Candidate namespace defense,
