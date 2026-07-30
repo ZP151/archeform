@@ -63,8 +63,11 @@ PostgreSQL, Casbin, BullMQ, Docker Compose, Vitest, Playwright.
 - Create: `packages/capabilities/assets/commerce.inventory-ledger/1.0.0/**`
 - Modify: `packages/capabilities/src/assets/contract.ts`
 - Modify: `packages/capabilities/src/assets/index.ts`
+- Modify: `packages/capabilities/src/node.ts`
 - Modify: `packages/capabilities/test/capability-registry.test.ts`
 - Test: `packages/capabilities/test/commercial-capability-assets.test.ts`
+- Modify: `apps/control-plane/src/lifecycle.service.ts`
+- Modify: `apps/control-plane/test/lifecycle.service.test.ts`
 
 **Consumes:** accepted `factory.capability/v1` and immutable
 `factory.composition/v1` contracts.
@@ -100,6 +103,15 @@ it("rejects a line configuration without its location-context provider", () => {
     resolveCapabilityComposition({ selections: withoutLocation }),
   ).toThrow("commerce.line-configuration");
 });
+
+it("rejects Foundation evidence with bytes that do not match its digest", () => {
+  expect(() =>
+    createVerifiedCapabilityCompositionLock(
+      tamperedEvidenceInput,
+      repositoryRoot,
+    ),
+  ).toThrow("verification evidence digest");
+});
 ```
 
 - [ ] **Step 2: Run the focused test and record the expected failure**
@@ -116,22 +128,50 @@ uses only Graph-symbol parameters, exactly declared output slots, fixed
 digests, and verification paths. Register the assets in current assets without
 changing any historical asset identity.
 
-- [ ] **Step 4: Run focused and registry verification**
+For these four Foundation packages, `verification` also records the SHA-256
+digest of the exact fixture bytes and contract-evidence bytes. The server-only
+Node verifier reads both regular files within the verified package root,
+compares their exact bytes with the declared digests, and parses both as JSON.
+Malformed JSON, a digest mismatch, a symlink, a missing file, or a package-root
+escape rejects the package. This Foundation-only addition does not reinterpret
+or silently upgrade historical package identities.
+
+- [ ] **Step 4: Repair the verified Publish lock boundary**
+
+Export a server-only verified composition-lock factory from
+`packages/capabilities/src/node.ts`. It must resolve every selected registry
+identity, verify the physical package plus Foundation fixture/contract evidence,
+and only then delegate to the existing pure composition-lock factory. Keep
+Node filesystem imports out of browser-compatible `composition.ts`; do not
+loosen or replace the pure factory.
+
+`apps/control-plane/src/lifecycle.service.ts` must call the verified Node
+factory before persisting a Published revision's immutable lock. Add an actual
+Publish-path test that changes one selected physical package or evidence file
+and proves Publish rejects without persisting a Published revision or lock.
+Also retain a direct verified-factory tamper test so the boundary is proven
+below and through the lifecycle service.
+
+- [ ] **Step 5: Run focused, lifecycle, and registry verification**
 
 Run:
 
 ```text
 pnpm --filter @factory/capabilities test -- --run test/commercial-capability-assets.test.ts test/capability-registry.test.ts test/composition-contract.test.ts
 pnpm --filter @factory/capabilities typecheck
+pnpm --filter @factory/control-plane test -- --run test/lifecycle.service.test.ts
+pnpm --filter @factory/control-plane typecheck
 ```
 
 Expected: all selected tests and typecheck pass; missing-provider and tampered
-package cases reject before a composition lock is produced.
+package/evidence cases reject before a composition lock is produced, and the
+actual Publish path persists neither a Published revision nor a lock after
+physical tampering.
 
-- [ ] **Step 5: Commit the bounded contract slice**
+- [ ] **Step 6: Commit the bounded contract slice**
 
 ```text
-git add packages/capabilities
+git add packages/capabilities apps/control-plane/src/lifecycle.service.ts apps/control-plane/test/lifecycle.service.test.ts
 git commit -m "feat: add commercial foundation capability contracts"
 ```
 

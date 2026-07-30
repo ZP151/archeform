@@ -175,6 +175,26 @@ complete dependency graph, validates all Graph symbols at Draft and Publish
 boundaries, and writes the exact package identities and contribution digests
 to the immutable Published composition lock.
 
+Each Foundation package declares SHA-256 digests for the exact bytes of its
+fixture and contract evidence in addition to its manifest, template, and
+executable-contribution digests. Those two evidence files are JSON contracts:
+the server-only Node verifier must confirm they are regular files inside the
+verified package root, match the declared exact-byte digests, and parse as
+JSON. A missing, malformed, symlinked, escaped, or byte-mismatched evidence file
+invalidates the package. This requirement is Foundation-only for this slice;
+it does not change or reinterpret the identity of an accepted historical
+package.
+
+The pure composition factory remains browser-compatible and performs registry,
+dependency, binding, and canonical-lock validation without filesystem access.
+A separate server-only Node factory first resolves each selected registry
+identity and verifies its physical package and evidence, then delegates to that
+pure factory to create the canonical composition lock. The Control Plane
+Publish boundary must use the server-only verified factory before persisting a
+Published revision or immutable composition lock. No browser-compatible module
+may import Node filesystem code, and successful Draft-only composition is not
+physical-package acceptance evidence.
+
 The generic Compiler reads only the lock for Foundation target contributions.
 It must reject missing providers, a non-Golden package, changed content,
 duplicate target paths, a Graph/lock mismatch, or a handler that writes outside
@@ -217,7 +237,8 @@ Customer or Merchant page
 
 Draft Graph + package selections
   -> semantic and composition validation
-  -> Publish immutable Graph + package lock
+  -> server-only registry + physical package/evidence verification
+  -> Publish immutable Graph + verified package lock
   -> Compiler contribution resolution
   -> isolated Web / API / PostgreSQL / journeys / docs
 ```
@@ -236,7 +257,8 @@ The Foundation is accepted only when all of these are evidenced:
 
 1. Each of the four packages is independently physical, registered, versioned,
    digest-verified, Golden, fixture-backed, contract-tested, and provides its
-   declared interface.
+   declared interface. Fixture and contract-evidence exact bytes are
+   digest-protected and valid JSON.
 2. Restaurant and Ecommerce select the same package identities where their
    declared requirements overlap, but use different validated Graph bindings,
    routes, fields, fixtures, UI labels, and journeys.
@@ -254,7 +276,9 @@ The Foundation is accepted only when all of these are evidenced:
    Draft creation.
 7. Missing/incompatible package, invalid binding, tampered digest, invalid
    option selection, stale command, invalid context, or unauthorised stock
-   action fails closed.
+   action fails closed. Direct verified-factory and actual Control Plane Publish
+   tests prove physical package or evidence tampering cannot produce or persist
+   an immutable composition lock.
 8. Unit, composition, compiler, Workbench, generated API, generated role
    journey, and isolated Node 22 Compose tests cover both profiles. The final
    release evidence verifies scoped cleanup and at most five guarded real AI

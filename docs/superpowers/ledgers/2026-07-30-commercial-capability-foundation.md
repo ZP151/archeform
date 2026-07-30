@@ -36,17 +36,20 @@ accepted design selects four reusable Golden packages:
 `core.identity-context`, `core.location-context`,
 `commerce.line-configuration`, and `commerce.inventory-ledger`. Task 1 is the
 only active writer and owns their physical package and interface contract.
+Independent review found two P1 defects, so Task 1 remains `implementing` in
+fix round 1 of 5: physical bytes were not verified at the actual Publish lock
+boundary, and Foundation fixture/contract evidence was not digest-protected.
 Tasks 2 through 5 remain `planned`. Tasks 3 and 4 may run in parallel only after
 Task 2 is accepted because they consume the same frozen profile composition
 metadata but write disjoint compiler and Workbench paths.
 
-| Task                                          | State          | Specialization | Contract owner                  | Contract status                                                                                                                                          |
-| --------------------------------------------- | -------------- | -------------- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1. Capability contracts and physical packages | `implementing` | `integration`  | Factory Capability Registry     | Accepted `factory.capability/v1` and `factory.composition/v1` are frozen inputs; the four Foundation package identities and interfaces are being frozen. |
-| 2. Restaurant and Ecommerce profile recipes   | `planned`      | `integration`  | Profile Composition Integration | Blocked on accepted Task 1 package identities and interfaces.                                                                                            |
-| 3. Generic commercial generated runtime       | `planned`      | `backend`      | Compiler Runtime                | Blocked on accepted Task 2 Published Graph recipes and immutable locks.                                                                                  |
-| 4. Workbench profile composition visibility   | `planned`      | `frontend`     | Workbench Product Surface       | Blocked on accepted Task 2 profile composition metadata.                                                                                                 |
-| 5. Cross-profile acceptance and evidence      | `planned`      | `qa`           | Factory Release Evidence        | Blocked on accepted Tasks 1 through 4.                                                                                                                   |
+| Task                                          | State          | Specialization | Contract owner                  | Contract status                                                                                                                         |
+| --------------------------------------------- | -------------- | -------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Capability contracts and physical packages | `implementing` | `integration`  | Factory Capability Registry     | Fix round 1/5 repairs physical/evidence verification at the actual Publish lock boundary; accepted base contracts remain frozen inputs. |
+| 2. Restaurant and Ecommerce profile recipes   | `planned`      | `integration`  | Profile Composition Integration | Blocked on accepted Task 1 package identities and interfaces.                                                                           |
+| 3. Generic commercial generated runtime       | `planned`      | `backend`      | Compiler Runtime                | Blocked on accepted Task 2 Published Graph recipes and immutable locks.                                                                 |
+| 4. Workbench profile composition visibility   | `planned`      | `frontend`     | Workbench Product Surface       | Blocked on accepted Task 2 profile composition metadata.                                                                                |
+| 5. Cross-profile acceptance and evidence      | `planned`      | `qa`           | Factory Release Evidence        | Blocked on accepted Tasks 1 through 4.                                                                                                  |
 
 ## Task 1: Freeze capability contracts and physical package verification
 
@@ -75,13 +78,39 @@ metadata but write disjoint compiler and Workbench paths.
 - `packages/capabilities/assets/commerce.inventory-ledger/1.0.0/**`
 - `packages/capabilities/src/assets/contract.ts`
 - `packages/capabilities/src/assets/index.ts`
+- `packages/capabilities/src/node.ts`
 - `packages/capabilities/test/capability-registry.test.ts`
 - `packages/capabilities/test/commercial-capability-assets.test.ts`
+- `apps/control-plane/src/lifecycle.service.ts`
+- `apps/control-plane/test/lifecycle.service.test.ts`
+
+### Fix round 1 of 5: open P1 findings
+
+1. **Physical package bytes are not verified at the actual Publish lock
+   boundary.** The pure composition factory can create the canonical lock from
+   registry metadata without reading the package. The repair must add a
+   server-only Node factory that resolves selected registry identities,
+   validates their physical package/evidence, and delegates to the unchanged
+   pure factory. `lifecycle.service` must use it before any Published revision
+   or lock is persisted. Browser-compatible `composition.ts` must not import
+   Node filesystem code.
+2. **Foundation fixtures and contract evidence are not digest-protected.** The
+   four Foundation manifests must declare fixture and contract-evidence
+   SHA-256 digests. Node verification must compare the exact file bytes, parse
+   both files as JSON, and reject missing, malformed, symlinked, escaped, or
+   mismatched evidence. Historical package identities are not expanded by this
+   Foundation-only requirement.
+
+The repair requires both a direct verified-factory tamper regression and an
+actual Control Plane Publish-path tamper regression. Task 1 cannot advance to
+`ready_for_qa` until both P1 findings pass independent re-review.
 
 ### Non-goals
 
-- No profile Graph recipe, compiler runtime, Workbench, lifecycle, payment,
-  external identity provider, provider credential, or third-party source copy.
+- No profile Graph recipe, compiler runtime, Workbench, payment, external
+  identity provider, provider credential, or third-party source copy.
+- No lifecycle behavior change beyond making the existing Published-lock
+  creation path call the server-only verified factory before persistence.
 - No historical asset identity change and no compatibility or profile-name
   dispatch branch.
 - No free-form string, source, URL, command, path, credential, or raw model
@@ -92,9 +121,13 @@ metadata but write disjoint compiler and Workbench paths.
 - Focused RED proves the Foundation packages are not yet registered.
 - Focused GREEN proves all four physical roots verify, dependencies resolve in
   deterministic order, missing providers and tampered content fail before lock
-  creation, and every registration agrees with its physical manifest.
-- Capability registry and composition-contract regressions plus Capabilities
-  typecheck pass.
+  creation, every registration agrees with its physical manifest, and fixture
+  and contract-evidence exact bytes match declared digests and parse as JSON.
+- Direct verified-factory and actual Control Plane Publish tests prove physical
+  package/evidence tampering produces and persists no immutable lock or
+  Published revision.
+- Capability registry, composition-contract, and lifecycle regressions plus
+  Capabilities and Control Plane typechecks pass.
 - Independent task review finds no open P0/P1/P2 before transition to
   `ready_for_qa`; later QA, release review, and fresh verification are required
   before `accepted`.
