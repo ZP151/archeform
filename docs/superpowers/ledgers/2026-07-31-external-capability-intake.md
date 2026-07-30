@@ -66,7 +66,10 @@ release review then FAILED with two P1 findings and one P2. After the final
 scheduled repair round, the Controller escalated and authorized one strict
 convergence Repair Round 6/6. The PM returned Task 4
 `reviewed -> implementing`; fresh task review, QA, release review, and final
-verification will all be required again. The system will
+verification will all be required again. Implementation review then exposed a
+P1 mixed-terminal process race, and the Controller authorized the exact
+`store.ts`/`store.test.ts` atomic terminal sequence-2 CAS amendment recorded in
+the Task 4 card. The system will
 ingest the 43 fixed-reference portfolio as metadata, retain the 108 scenarios as
 composition demand signals, and produce only quarantined evidence,
 non-executable Candidate records, and pending-review promotion packets.
@@ -1083,13 +1086,33 @@ limited to the existing Task 4 Candidate/API/CLI/test paths:
    verified conformance operation. Tests must reject invalid or duplicate
    transitions and every lifecycle bypass.
 
+Implementation review then identified a P1 mixed-terminal process race: two
+concurrent `blocked`/`rejected` writers could both pass the Candidate-layer
+precheck, while the losing write could leave recoverable orphan records before
+the sequence-index conflict was observed. The Controller therefore authorizes
+one exact Task 2 store amendment inside this same Round 6/6:
+
+- `packages/external-intake/src/store.ts` may add only an atomic immutable
+  terminal sequence-2 compare-and-set primitive. It must verify the expected
+  sequence-1 creation receipt and current Candidate parent, then atomically
+  create and persist exactly one terminal Candidate record plus its sequence-2
+  receipt and index winner. A conflict must leave no orphan record, blob, or
+  locator, and recovery may accept only the indexed winner.
+- `packages/external-intake/test/store.test.ts` must add a two-OS-process mixed
+  `blocked`/`rejected` concurrency regression. An identical retry must be
+  idempotent; a conflicting terminal transition must fail cleanly with no
+  orphan persistence or recoverable locator.
+- The Candidate privacy repair remains inside the existing Task 4 paths and
+  must explicitly reject recursively nested Bearer and JWT structured
+  credentials before any persistence or output boundary.
+
 All previous privacy, provenance, rehydration, isolation, exact-version,
 fail-closed recovery, and exactly-once race guarantees remain mandatory. No
-Task 2, immutable-store, Graph, compiler, dependency, network, process, or
-runtime change is authorized. No other Task 4 writer is authorized. Task 4
-remains `implementing`; Tasks 5 and 6 remain `planned`. Independent task review,
-QA, release review, and fresh final verification are all required again before
-acceptance.
+other Task 2/store behavior or path, Graph, compiler, dependency, network,
+process, or runtime change is authorized. No other Task 4 writer is authorized.
+Task 4 remains `implementing`; Tasks 5 and 6 remain `planned`. Independent task
+review, QA, release review, and fresh final verification are all required again
+before acceptance.
 
 ### Exact allowed paths
 
@@ -1098,10 +1121,13 @@ acceptance.
 - `packages/external-intake/src/conformance.ts`
 - `packages/external-intake/src/jobs.ts`
 - `packages/external-intake/src/index.ts`
+- `packages/external-intake/src/store.ts` (Round 6/6 atomic terminal CAS only)
 - `packages/external-intake/test/candidates.test.ts`
 - `packages/external-intake/test/api.test.ts`
 - `packages/external-intake/test/conformance.test.ts`
 - `packages/external-intake/test/portfolio.test.ts`
+- `packages/external-intake/test/store.test.ts` (Round 6/6 atomic terminal CAS
+  regression only)
 - `apps/intake-cli/package.json`
 - `apps/intake-cli/tsconfig.json`
 - `apps/intake-cli/vitest.config.ts`
