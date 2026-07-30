@@ -615,12 +615,20 @@ Independent release review FAILED with one P1 recovery-integrity finding. A
 resume must not skip a completed scanner, SBOM, or inventory checkpoint when
 any referenced quarantined canonical blob is missing or tampered.
 
-Before skipping completed work, recovery must load and validate the exact
-canonical bytes through the accepted store, or deterministically rehydrate
-those exact canonical bytes and verify their digest. Missing, tampered, or
-conflicting content must fail closed. Add adversarial regressions for missing
-and tampered scanner summaries, CycloneDX SBOMs, and normalized inventories;
-none may produce a falsely successful terminal EvidenceBundle.
+The Controller selected the release reviewer's permitted deterministic
+rehydration interpretation; the frozen Task 2 store must not be amended. Before
+skipping completed work, recovery must re-put the exact canonical scanner
+summary, CycloneDX SBOM, and normalized inventory bytes through `putBytes`. An
+absent blob may be repaired only from receipt-bound deterministic canonical
+bytes, and the returned reference/digest must rebind exactly to the verified
+checkpoint. Any existing digest/byte inconsistency, conflicting content, or
+inability to reconstruct those canonical bytes deterministically must fail
+closed.
+
+Add adversarial regressions proving missing blobs are rehydrated and rebound,
+while tampered or conflicting scanner summaries, SBOMs, and normalized
+inventories reject. A terminal EvidenceBundle must never attest unverifiable
+data.
 
 The PM returned Task 3 `reviewed -> implementing` for Fix Round 4/5. The frozen
 External Evidence Pipeline contract, task scope, and exact allowed paths remain
@@ -775,10 +783,11 @@ through 6 remain `planned`.
   Task 1 acceptance and exclusive path ownership.
 
 The active smallest valuable slice is Task 3 Fix Round 4/5 under its frozen
-External Evidence Pipeline contract, task scope, and exact paths: validate or
-deterministically rehydrate every referenced canonical scanner summary, SBOM,
-and normalized inventory blob before a resumed checkpoint can be skipped, and
-fail closed on missing, tampered, or conflicting content. Task 1's original
-release and bounded amendment and Task 2's accepted code set
+External Evidence Pipeline contract, task scope, and exact paths: re-put exact
+receipt-bound canonical scanner summary, SBOM, and normalized inventory bytes
+through `putBytes` before a resumed checkpoint can be skipped; rebind repaired
+missing blobs and fail closed on tampered, conflicting, or non-reconstructable
+content. The frozen Task 2 store is unchanged. Task 1's original release and
+bounded amendment and Task 2's accepted code set
 `515e0ba + 3dcb20f + dcaddf4` remain frozen. No downstream work has started;
 Tasks 4 through 6 remain `planned` and retain their recorded dependency gates.
