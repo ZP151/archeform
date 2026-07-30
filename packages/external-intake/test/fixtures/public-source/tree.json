@@ -1,0 +1,28 @@
+[
+  {
+    "path": "LICENSE",
+    "mode": "100644",
+    "type": "blob",
+    "size": 63,
+    "blobDigest": "sha256:4a786b39a74b8476d53e364c77902fa965ff8a74809cc69bcfbd9cc0b69cfa85"
+  },
+  {
+    "path": "NOTICE",
+    "mode": "100644",
+    "type": "blob",
+    "size": 47,
+    "blobDigest": "sha256:78588cd2264ed321499cecaf2d9c92fcf871cb038241e3361efbaa2a9c91e832"
+  },
+  {
+    "path": "src",
+    "mode": "040000",
+    "type": "tree"
+  },
+  {
+    "path": "src/rules.ts",
+    "mode": "100644",
+    "type": "blob",
+    "size": 57,
+    "blobDigest": "sha256:54cfd5acb0e79175a32a3a0f0da0908dd6c8b67665928fefa82cf681b34079e3"
+  }
+]
