@@ -431,6 +431,7 @@ git commit -m "feat: compile immutable capability composition locks"
 **Files:**
 
 - Modify: `packages/capabilities/src/index.ts`
+- Modify: `packages/capabilities/src/composition.ts`
 - Modify: `packages/capabilities/src/assets/index.ts`
 - Modify: `packages/capabilities/src/assets/core/{audit-v1-0-1,crud-v1-0-1,notification-v1-0-1,workflow-v1-0-1}.ts`
 - Modify: `packages/capabilities/src/assets/commerce/{catalog,cart,inventory-v1-0-1,order,simulated-payment-v1-0-1}.ts`
@@ -446,10 +447,18 @@ git commit -m "feat: compile immutable capability composition locks"
   `packages/capabilities/assets/commerce.simulated-payment/1.0.1/`.
 - Modify: `packages/capabilities/test/capability-registry.test.ts`
 - Modify: `packages/capabilities/test/composition-contract.test.ts`
+- Modify: `packages/graph/src/model.ts`
+- Modify: `packages/graph/test/application-graph.test.ts`
+- Modify: `apps/control-plane/src/lifecycle.service.ts`
+- Modify: `apps/control-plane/test/lifecycle.service.test.ts`
+- Modify: `packages/compiler/src/index.ts`
 - Modify: `packages/compiler/test/composition-compilation.test.ts`
+- Modify: `packages/compiler/test/profile-compilation.test.ts`
+- Modify: `packages/compiler/test/compilation-plan.test.ts`
 - Modify: `apps/workbench/lib/profile-starters.ts`,
-  `apps/workbench/lib/guided-application.ts`, and their tests only when a
-  profile-choice adapter must switch to the generic resolver.
+  `apps/workbench/lib/profile-starters.test.ts`,
+  `apps/workbench/lib/guided-application.ts`, and
+  `apps/workbench/lib/guided-application.test.ts`.
 
 **Interfaces:**
 
@@ -537,6 +546,59 @@ Restaurant/Ecommerce schema, routes, page labels, fixtures, and journeys.
 git add packages/capabilities packages/compiler/test/composition-compilation.test.ts
 git commit -m "feat: compose shared commerce packages with bindings"
 ```
+
+#### Review-repair requirements
+
+The independent Task 4 review found four load-bearing gaps. The same Task 4
+implementation owner must repair them before the task can move to QA; no
+separate feature or compatibility layer is authorized.
+
+- [ ] **Repair 1: Make Graph-symbol resolution a Draft and Publish boundary**
+
+Write focused failing Graph and lifecycle tests for a syntactically valid
+selection whose `graph.domain.missing`, `graph.page.missing`,
+`graph.policy.missing`, or `graph.flow.missing` symbol is absent from the
+Graph. The parser and every Draft-to-Publish route must reject it before
+persistence or immutable-lock creation. Continue accepting exact symbols that
+resolve to the matching entity, page, role, and flow object.
+
+- [ ] **Repair 2: Replace active profile convenience with generic composition**
+
+Write a failing Workbench profile-starter and guided-application test proving
+each active profile choice passes a validated default base Graph and exact
+Graph-symbol selections to `composeCapabilityDraft`. Restaurant and Ecommerce
+must therefore produce `integration.compositionSelections` for every package
+with required parameters. The active helper must not clone `profileGraphs` or
+rely on an `assetLocks` fallback; `profileGraphs` may remain only as
+expected-output fixtures.
+
+- [ ] **Repair 3: Make shared package admission dependency-complete**
+
+Write a failing capability test in which a Golden `commerce.cart` selection is
+otherwise exact but lacks the `commerce.catalog-item/v1` provider. Any public
+admission path must reject it. A valid ordered catalog/cart/order/inventory/
+payment selection must pass through exact identity, declared provides/requires,
+Graph-symbol resolution, and recipe eligibility without using profile
+membership. Reuse the canonical composition resolver rather than duplicating
+requirement resolution in a lock helper.
+
+- [ ] **Repair 4: Compile complete composition recipes, not a CRUD surrogate**
+
+Write a failing compiler test that takes the complete nine-package Restaurant
+and Ecommerce selections created by the generic profile-choice path, each with
+its persisted immutable composition lock. Assert same package identities but
+different canonical bindings and generated schema, route, PageModel label,
+fixture, and role-journey artifacts. The compiler must accept no legacy
+profile/asset-lock fallback for this proof and must retain pre-render collision
+checking.
+
+- [ ] **Repair 5: Verify and commit the repair**
+
+Run the focused RED/GREEN tests above, capability and compiler regressions,
+Graph/Control Plane/Workbench tests affected by the new boundary, relevant
+typechecks, targeted Prettier, physical digest verification for all nine
+package roots, and `git diff --check`. Then commit the repair with a message
+that describes the behavior rather than the review process.
 
 ### Task 5: Release-gate the composition proof and retire migrated dispatch
 
