@@ -237,6 +237,9 @@ type VerifiedArtifact = {
 
 type ArtifactEvidence = PreviewRuntimeRequest["artifacts"][number];
 
+const restaurantDemoTokenComposeContract =
+  'RESTAURANT_DEMO_TABLE_TOKEN: "${RESTAURANT_DEMO_TABLE_TOKEN:?Set RESTAURANT_DEMO_TABLE_TOKEN for local demo bootstrap}"';
+
 function safeArtifactManifest(
   artifacts: PreviewRuntimeRequest["artifacts"],
 ): PreviewRuntimeRequest["artifacts"] {
@@ -352,6 +355,31 @@ async function verifyComposeArtifact(
   await verifiedArtifactContents(composeFile, composeArtifact);
 }
 
+async function previewEnvironment(
+  composeFile: string,
+  artifacts: PreviewRuntimeRequest["artifacts"],
+  project: string,
+  includePorts: boolean,
+  missingTokenFailure: PreviewFailureCode,
+): Promise<Readonly<Record<string, string>>> {
+  const manifest = safeArtifactManifest(artifacts);
+  const composeArtifact = manifest.find(
+    (artifact) => artifact.path === "docker-compose.yml",
+  );
+  if (!composeArtifact) throw new Error("Invalid artifact manifest.");
+  const compose = await verifiedArtifactContents(composeFile, composeArtifact);
+  const environment: Record<string, string> = {
+    FACTORY_COMPOSE_PROJECT_NAME: project,
+    ...(includePorts ? { FACTORY_WEB_PORT: "0", FACTORY_API_PORT: "0" } : {}),
+  };
+  if (!compose.toString("utf8").includes(restaurantDemoTokenComposeContract))
+    return environment;
+
+  const token = process.env.RESTAURANT_DEMO_TABLE_TOKEN;
+  if (!token) throw new PreviewRunFailure(missingTokenFailure);
+  return { ...environment, RESTAURANT_DEMO_TABLE_TOKEN: token };
+}
+
 async function verifiedArtifacts(
   sourceDirectory: string,
   artifacts: PreviewRuntimeRequest["artifacts"],
@@ -411,12 +439,21 @@ export async function startPreviewRun(
   );
   const directory = previewDirectory(artifactRoot, request.previewRunId);
   const project = factoryProjectName(request);
+  let environment: Readonly<Record<string, string>>;
+  try {
+    environment = await previewEnvironment(
+      join(sourceDirectory, "docker-compose.yml"),
+      request.artifacts,
+      project,
+      true,
+      "preview_start_failed",
+    );
+  } catch (error) {
+    throw error instanceof PreviewRunFailure
+      ? error
+      : new PreviewRunFailure("preview_start_failed");
+  }
   const composeFile = join(directory, "docker-compose.yml");
-  const environment = {
-    FACTORY_COMPOSE_PROJECT_NAME: project,
-    FACTORY_WEB_PORT: "0",
-    FACTORY_API_PORT: "0",
-  };
   const activeStart = activePreviewStart();
   if (activePreviewStarts.has(request.previewRunId)) {
     throw new PreviewRunFailure("preview_start_failed");
@@ -526,7 +563,7 @@ export async function startPreviewRun(
               composeFile,
               project,
               ["down", "--volumes", "--remove-orphans"],
-              { FACTORY_COMPOSE_PROJECT_NAME: project },
+              environment,
             ),
             options.operationTimeoutMs,
             "preview_stop_failed",
@@ -575,6 +612,13 @@ export async function stopPreviewRun(
       await activeStart.settled;
     }
     await verifyComposeArtifact(composeFile, request.artifacts);
+    const environment = await previewEnvironment(
+      composeFile,
+      request.artifacts,
+      project,
+      false,
+      "preview_stop_failed",
+    );
     await runPreviewOperation(
       processRunner,
       composeCommand(
@@ -582,7 +626,7 @@ export async function stopPreviewRun(
         composeFile,
         project,
         ["down", "--volumes", "--remove-orphans"],
-        { FACTORY_COMPOSE_PROJECT_NAME: project },
+        environment,
       ),
       options.operationTimeoutMs,
       "preview_stop_failed",

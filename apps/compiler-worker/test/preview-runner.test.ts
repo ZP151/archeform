@@ -44,11 +44,11 @@ function request(
   };
 }
 
-async function sourceFixture() {
+async function sourceFixture(composeContents = compose) {
   const root = await mkdtemp(join(tmpdir(), "factory-preview-root-"));
   const source = join(root, "expense-published-1");
   await mkdir(join(source, "src"), { recursive: true });
-  await writeFile(join(source, "docker-compose.yml"), compose);
+  await writeFile(join(source, "docker-compose.yml"), composeContents);
   await writeFile(join(source, "src", "app.ts"), application);
   return { root, source };
 }
@@ -58,7 +58,73 @@ const registeredArtifacts = [
   artifact("src/app.ts", application),
 ];
 
+const restaurantCompose = Buffer.from(
+  'services:\n  migrate:\n    environment:\n      RESTAURANT_DEMO_TABLE_TOKEN: "${RESTAURANT_DEMO_TABLE_TOKEN:?Set RESTAURANT_DEMO_TABLE_TOKEN for local demo bootstrap}"\n',
+  "utf8",
+);
+const restaurantRegisteredArtifacts = [
+  artifact("docker-compose.yml", restaurantCompose),
+  artifact("src/app.ts", application),
+];
+
 describe("preview runner", () => {
+  it("rejects a Restaurant preview without its process-only bootstrap token", async () => {
+    const { root } = await sourceFixture(restaurantCompose);
+    const processRunner = vi
+      .fn<PreviewProcessRunner>()
+      .mockResolvedValue(undefined);
+    vi.stubEnv("RESTAURANT_DEMO_TABLE_TOKEN", "");
+
+    try {
+      await expect(
+        startPreviewRun(
+          root,
+          request(restaurantRegisteredArtifacts),
+          processRunner,
+        ),
+      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      expect(processRunner).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("forwards only the required Restaurant bootstrap token to preview Docker commands", async () => {
+    const { root } = await sourceFixture(restaurantCompose);
+    const spawned: Parameters<PreviewProcessRunner>[0][] = [];
+    const processRunner: PreviewProcessRunner = async (command) => {
+      spawned.push(command);
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "web")
+        return "127.0.0.1:49101\n";
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "api")
+        return "127.0.0.1:49102\n";
+    };
+    vi.stubEnv("RESTAURANT_DEMO_TABLE_TOKEN", "test-run-scoped-token");
+
+    try {
+      await expect(
+        startPreviewRun(
+          root,
+          request(restaurantRegisteredArtifacts),
+          processRunner,
+        ),
+      ).resolves.toMatchObject({ previewUrl: "http://127.0.0.1:49101" });
+      expect(spawned).toHaveLength(4);
+      for (const command of spawned) {
+        expect(command.environment).toEqual({
+          FACTORY_COMPOSE_PROJECT_NAME: "factory-preview-preview-1",
+          FACTORY_WEB_PORT: "0",
+          FACTORY_API_PORT: "0",
+          RESTAURANT_DEMO_TABLE_TOKEN: "test-run-scoped-token",
+        });
+      }
+    } finally {
+      vi.unstubAllEnvs();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("terminates an aborted Docker child and waits for its exit", async () => {
     const child = new EventEmitter() as EventEmitter & {
       stdout: EventEmitter;

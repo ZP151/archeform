@@ -11,11 +11,17 @@ const graph = {
   apiVersion: "factory.application-graph/v1" as const,
   metadata: { id: "expense", workspaceId: "local", name: "Expense" },
   page: { pages: [], navigation: [] },
-  domain: { entities: [{ key: "expense", label: "Expense", fields: [], indexes: [] }], relations: [] },
+  domain: {
+    entities: [{ key: "expense", label: "Expense", fields: [], indexes: [] }],
+    relations: [],
+  },
   policy: { roles: ["employee"], permissions: [] },
   flow: { flows: [] },
   integration: { providers: [], capabilities: [] },
-  experience: { theme: { mode: "light" as const, tokens: {} }, locales: ["en"] },
+  experience: {
+    theme: { mode: "light" as const, tokens: {} },
+    locales: ["en"],
+  },
 };
 
 describe("compilation executor", () => {

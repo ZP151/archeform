@@ -14,15 +14,24 @@ describe("generated bundle materialization", () => {
         rootDirectory: "expense-published-1",
         graphHash: "sha256:abc",
         files: [
-          { path: "web/app/page.tsx", content: "export default function Page() { return null; }\n" },
+          {
+            path: "web/app/page.tsx",
+            content: "export default function Page() { return null; }\n",
+          },
           { path: "docs/application.md", content: "# Expense\n" },
         ],
       });
 
       expect(result.directory).toBe(join(directory, "expense-published-1"));
       expect(result.artifacts).toHaveLength(2);
-      expect(result.artifacts.every((artifact) => artifact.digest.startsWith("sha256:"))).toBe(true);
-      await expect(readFile(join(result.directory, "docs/application.md"), "utf8")).resolves.toBe("# Expense\n");
+      expect(
+        result.artifacts.every((artifact) =>
+          artifact.digest.startsWith("sha256:"),
+        ),
+      ).toBe(true);
+      await expect(
+        readFile(join(result.directory, "docs/application.md"), "utf8"),
+      ).resolves.toBe("# Expense\n");
     } finally {
       await rm(directory, { recursive: true, force: true });
     }

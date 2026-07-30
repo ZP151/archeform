@@ -24,7 +24,7 @@ test("customer resolves a table session, adds notes, pays, and sees status and r
   ).toBeVisible();
   await expect(page.getByText("Table session active")).toBeVisible();
 
-  await page.getByRole("link", { name: "Menu" }).click();
+  await page.getByRole("link", { name: "Menu", exact: true }).click();
   await expect(page).toHaveURL(/\/menu$/);
   await page.getByLabel("Search menu").fill("Margherita");
   await page.getByRole("button", { name: "Search" }).click();
@@ -34,10 +34,19 @@ test("customer resolves a table session, adds notes, pays, and sees status and r
   await expect(page.getByText("Mushroom risotto")).toHaveCount(0);
   await pizza.getByLabel("Quantity").fill("2");
   await pizza.getByLabel("Item note").fill("No basil");
+  const lineAdded = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname.endsWith("/lines"),
+  );
   await pizza.getByRole("button", { name: "Add Margherita pizza" }).click();
+  expect((await lineAdded).ok()).toBeTruthy();
 
   await page.getByRole("link", { name: "Cart" }).click();
   await expect(page).toHaveURL(/\/cart$/);
+  await expect(
+    page.getByRole("button", { name: "Pay simulated payment" }),
+  ).toBeEnabled();
   await page.getByLabel("Order note").fill("Please serve together");
   await page.getByRole("button", { name: "Pay simulated payment" }).click();
   await expect(page.getByText("Paid", { exact: true })).toBeVisible();
@@ -77,13 +86,26 @@ test("merchant manages inventory, kitchen, cashier, cancellation, and reporting"
   await expect(menuItem).toHaveCount(1);
   await menuItem.getByRole("button", { name: "Disable" }).click();
   await expect(menuItem.getByText("Disabled")).toBeVisible();
+  const availabilityChanged = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PATCH" &&
+      new URL(response.url()).pathname.endsWith("/availability"),
+  );
   await menuItem.getByRole("button", { name: "Enable" }).click();
+  expect((await availabilityChanged).ok()).toBeTruthy();
+  await expect(menuItem.getByText("Available")).toBeVisible();
   const stockMatch = /stock (\d+)/.exec(await menuItem.innerText());
   expect(stockMatch).not.toBeNull();
   const currentStock = Number(stockMatch![1]);
   expect(currentStock).toBeGreaterThan(4);
   await menuItem.getByLabel("Stock adjustment").fill(String(4 - currentStock));
+  const stockAdjusted = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname.endsWith("/stock-adjustments"),
+  );
   await menuItem.getByRole("button", { name: "Adjust stock" }).click();
+  expect((await stockAdjusted).ok()).toBeTruthy();
   await expect(menuItem).toContainText("stock 4");
 
   await page.getByRole("link", { name: "Cashier" }).click();
