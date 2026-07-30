@@ -79,6 +79,7 @@ const BINARY_EXTENSIONS = new Set([
   ".so",
   ".wasm",
 ]);
+const APPLICABLE_SOURCE_EXTENSION = /\.(?:[cm]?[jt]sx?)$/u;
 
 function isPlainObject(input: unknown): input is Record<string, unknown> {
   if (input === null || typeof input !== "object" || Array.isArray(input)) {
@@ -147,6 +148,18 @@ function assertAllowedModulePath(path: string): void {
       "Module inventory contains a prohibited path.",
     );
   }
+}
+
+function applicableInventoryPaths(
+  snapshot: ReadonlySnapshotView,
+): readonly string[] {
+  return snapshot.files
+    .filter(({ path }) => APPLICABLE_SOURCE_EXTENSION.test(path.toLowerCase()))
+    .map(({ path }) => {
+      assertAllowedModulePath(path);
+      return path;
+    })
+    .sort(compareCanonicalPaths);
 }
 
 function normalizeModule(
@@ -357,16 +370,32 @@ export async function runModuleInventory(
     }
     throw error;
   }
-  const seen = new Set<string>();
+  const applicablePaths = applicableInventoryPaths(snapshot);
+  const applicable = new Set(applicablePaths);
+  const dispositionCounts = new Map<string, number>();
   for (const module of modules) {
-    const key = `${module.path}\0${module.symbols.join("\0")}`;
-    if (seen.has(key)) {
+    if (!applicable.has(module.path)) {
       throw new EvidencePipelineFailure(
-        "inventory-output-malformed",
-        "Module inventory locators must be unique.",
+        "inventory-file-not-applicable",
+        "Module inventory contains a disposition outside the allow-list.",
       );
     }
-    seen.add(key);
+    const count = (dispositionCounts.get(module.path) ?? 0) + 1;
+    if (count > 1) {
+      throw new EvidencePipelineFailure(
+        "inventory-file-duplicate",
+        "Applicable snapshot files require exactly one inventory disposition.",
+      );
+    }
+    dispositionCounts.set(module.path, count);
+  }
+  for (const path of applicablePaths) {
+    if (!dispositionCounts.has(path)) {
+      throw new EvidencePipelineFailure(
+        "inventory-file-missing",
+        "An applicable snapshot file is missing its inventory disposition.",
+      );
+    }
   }
   modules.sort((left, right) => compareCanonicalPaths(left.path, right.path));
   return {

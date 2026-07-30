@@ -13,6 +13,7 @@ import {
   type ModuleInventoryResultV1,
 } from "../src/module-inventory.js";
 import type { ReadonlySnapshotView } from "../src/scans.js";
+import { canonicalTreeDigest } from "../src/snapshot.js";
 import { ExternalIntakeStore } from "../src/store.js";
 
 const fixtureRoot = join(
@@ -22,7 +23,6 @@ const fixtureRoot = join(
 );
 const roots: string[] = [];
 const snapshotDigest = `sha256:${"1".repeat(64)}` as Sha256Digest;
-const treeDigest = `sha256:${"2".repeat(64)}` as Sha256Digest;
 
 function source(name = "safe.ts.fixture"): Uint8Array {
   return readFileSync(join(fixtureRoot, name));
@@ -32,11 +32,33 @@ function view(
   name = "safe.ts.fixture",
   path = "src/safe.ts",
 ): ReadonlySnapshotView {
-  const content = source(name);
+  return viewWithFiles([{ name, path }]);
+}
+
+function viewWithFiles(
+  inputs: readonly { readonly name: string; readonly path: string }[],
+): ReadonlySnapshotView {
+  const files = inputs.map(({ name, path }) => {
+    const content = source(name);
+    return {
+      path,
+      mode: "100644" as const,
+      digest: digestBytes(content),
+      content,
+    };
+  });
   return {
     snapshotDigest,
-    treeDigest,
-    files: [{ path, digest: digestBytes(content), content }],
+    treeDigest: canonicalTreeDigest(
+      files.map(({ path, mode, digest, content }) => ({
+        path,
+        mode,
+        type: "blob" as const,
+        size: content.byteLength,
+        blobDigest: digest,
+      })),
+    ),
+    files,
   };
 }
 
@@ -93,6 +115,57 @@ function adapter(
   };
 }
 
+function pinnedFixtureAdapter(): ModuleInventoryAdapterV1 {
+  return {
+    ...PINNED_MODULE_INVENTORY_IDENTITY,
+    async inventory(input) {
+      const modules = input.files
+        .filter(({ path }) => /\.[cm]?[jt]sx?$/u.test(path.toLowerCase()))
+        .map((file) => {
+          const text = new TextDecoder("utf-8", { fatal: true }).decode(
+            file.content,
+          );
+          return {
+            path: file.path,
+            symbols: [],
+            imports: [],
+            exports: [],
+            dependencies: [],
+            size: file.content.byteLength,
+            noticeMarker: /copyright|licen[cs]e/iu.test(text),
+            generated: false,
+            binary: false,
+            sourceDigest: file.digest,
+            dynamicEvaluation: /\beval\s*\(/u.test(text),
+            dynamicLoad: false,
+            processAccess: false,
+            filesystemAccess: false,
+            networkAccess: false,
+            parseStatus: /\(\s*$/u.test(text)
+              ? ("failed" as const)
+              : ("parsed" as const),
+          };
+        });
+      const report = new TextEncoder().encode(
+        JSON.stringify(
+          modules.map(({ path, parseStatus, dynamicEvaluation }) => ({
+            path,
+            parseStatus,
+            dynamicEvaluation,
+          })),
+        ),
+      );
+      return {
+        ...PINNED_MODULE_INVENTORY_IDENTITY,
+        status: "pass",
+        report,
+        reportDigest: digestBytes(report),
+        modules,
+      };
+    },
+  };
+}
+
 afterEach(() => {
   for (const root of roots.splice(0)) {
     rmSync(root, { recursive: true, force: true });
@@ -100,6 +173,55 @@ afterEach(() => {
 });
 
 describe("pinned module inventory", () => {
+  it("requires exactly one inventory disposition for every applicable snapshot file", async () => {
+    const snapshot = viewWithFiles([
+      { name: "safe.ts.fixture", path: "src/safe.ts" },
+      { name: "safe.ts.fixture", path: "src/second.ts" },
+    ]);
+
+    await expect(
+      runModuleInventory(snapshot, adapter(), tempStore()),
+    ).rejects.toMatchObject({ code: "inventory-file-missing" });
+
+    const first = inventoryResult().modules[0]!;
+    await expect(
+      runModuleInventory(
+        view(),
+        adapter({
+          modules: [first, { ...first, symbols: ["second-disposition"] }],
+        }),
+        tempStore(),
+      ),
+    ).rejects.toMatchObject({ code: "inventory-file-duplicate" });
+  });
+
+  it("does not require a parser disposition for non-applicable evidence files", async () => {
+    const snapshot = viewWithFiles([
+      { name: "safe.ts.fixture", path: "src/safe.ts" },
+      { name: "safe-licence-report.json", path: "LICENSE" },
+    ]);
+
+    await expect(
+      runModuleInventory(snapshot, adapter(), tempStore()),
+    ).resolves.toMatchObject({ modules: [{ path: "src/safe.ts" }] });
+  });
+
+  it.each([
+    ["parser-error.ts.fixture", "src/parser-error.ts", "parser-failure"],
+    ["dynamic-eval.ts.fixture", "src/dynamic-eval.ts", "dynamic-evaluation"],
+  ])(
+    "blocks committed %s source through the pinned fixture adapter",
+    async (name, path, code) => {
+      await expect(
+        runModuleInventory(
+          view(name, path),
+          pinnedFixtureAdapter(),
+          tempStore(),
+        ),
+      ).rejects.toMatchObject({ code });
+    },
+  );
+
   it("normalizes deterministic locator metadata without emitting source", async () => {
     const result = await runModuleInventory(view(), adapter(), tempStore());
 

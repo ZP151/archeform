@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { digestBytes, type Sha256Digest } from "../src/canonical.js";
 import type {
   ExternalSourceAcquisitionV1,
+  IntakeReceiptV1,
   IntakeRequestV1,
   SourceSnapshotV1,
 } from "../src/contracts.js";
@@ -33,6 +34,7 @@ import {
   type ReadonlySnapshotView,
   type ScanKindV1,
 } from "../src/scans.js";
+import { canonicalTreeDigest } from "../src/snapshot.js";
 import { ExternalIntakeStore, type StoredRecordRef } from "../src/store.js";
 
 const roots: string[] = [];
@@ -71,7 +73,16 @@ function createJob(
   const requestRef = store.putRecord("request", request);
   const content = bytes(sourceText);
   const sourceDigest = digestBytes(content);
-  const treeDigest = digestBytes(bytes(`tree:${sourceDigest}`));
+  const mode = "100644" as const;
+  const treeDigest = canonicalTreeDigest([
+    {
+      path: "src/index.ts",
+      mode,
+      type: "blob",
+      size: content.byteLength,
+      blobDigest: sourceDigest,
+    },
+  ]);
   const archiveDigest = digestBytes(bytes(`archive:${sourceDigest}`));
   const snapshot: SourceSnapshotV1 = {
     apiVersion: "factory.external-source-snapshot/v1",
@@ -126,7 +137,7 @@ function createJob(
   const view: ReadonlySnapshotView = {
     snapshotDigest: snapshotRef.digest,
     treeDigest,
-    files: [{ path: "src/index.ts", digest: sourceDigest, content }],
+    files: [{ path: "src/index.ts", mode, digest: sourceDigest, content }],
   };
   return {
     apiVersion: "factory.external-evidence-job/v1",
@@ -279,7 +290,13 @@ describe("evidence jobs", () => {
       store,
     );
     const resumed = await runEvidencePipeline(
-      structuredClone(job),
+      {
+        ...structuredClone(job),
+        resume: {
+          executionId: first.executionId,
+          receipts: first.receipts,
+        },
+      },
       scanners(),
       inventory(job),
       store,
@@ -316,6 +333,133 @@ describe("evidence jobs", () => {
 
     expect(changed.evidence.digest).not.toBe(first.evidence.digest);
     expect(changed.executionId).not.toBe(first.executionId);
+  });
+
+  it("creates a distinct immutable attempt when a failed source later succeeds", async () => {
+    const { root, store } = tempStore();
+    const job = createJob(store, "failure-recovery-source");
+
+    await expect(
+      runEvidencePipeline(
+        job,
+        scanners({
+          secret: {
+            status: "fail",
+            findings: [{ code: "secret-token", severity: "high", count: 1 }],
+          },
+        }),
+        inventory(job),
+        store,
+      ),
+    ).rejects.toMatchObject({ code: "secret-finding" });
+    const recovered = await runEvidencePipeline(
+      job,
+      scanners(),
+      inventory(job),
+      store,
+    );
+    const attempts = new Set(
+      (receiptRecords(root) as Array<{ jobId: string }>).map(
+        ({ jobId }) => jobId,
+      ),
+    );
+
+    expect(recovered.status).toBe("evidenced");
+    expect(attempts.size).toBe(2);
+  });
+
+  it("creates a distinct evidence revision when a normalized report changes", async () => {
+    const { store } = tempStore();
+    const job = createJob(store, "report-revision-source");
+    const first = await runEvidencePipeline(
+      job,
+      scanners(),
+      inventory(job),
+      store,
+    );
+    const changedReport = bytes("licence-report-v2");
+    const changedScanners = scanners({
+      licence: {
+        report: changedReport,
+        reportDigest: digestBytes(changedReport),
+      },
+    });
+
+    const changed = await runEvidencePipeline(
+      {
+        ...job,
+        resume: {
+          executionId: first.executionId,
+          receipts: first.receipts,
+        },
+      },
+      changedScanners,
+      inventory(job),
+      store,
+    );
+
+    expect(changed.executionId).not.toBe(first.executionId);
+    expect(changed.evidence.digest).not.toBe(first.evidence.digest);
+  });
+
+  it("rejects resume when a referenced receipt prefix is missing", async () => {
+    const { root, store } = tempStore();
+    const job = createJob(store, "missing-resume-prefix");
+    const first = await runEvidencePipeline(
+      job,
+      scanners(),
+      inventory(job),
+      store,
+    );
+    const firstReceipt = first.receipts[0]!;
+    rmSync(
+      join(root, "records", "receipt", `${firstReceipt.digest.slice(7)}.json`),
+    );
+
+    await expect(
+      runEvidencePipeline(
+        {
+          ...job,
+          resume: {
+            executionId: first.executionId,
+            receipts: first.receipts,
+          },
+        },
+        scanners(),
+        inventory(job),
+        store,
+      ),
+    ).rejects.toMatchObject({ code: "receipt-chain-invalid" });
+  });
+
+  it("rejects a digest-valid receipt chain whose phases do not match the pipeline", async () => {
+    const { store } = tempStore();
+    const job = createJob(store, "wrong-resume-phase");
+    const executionId = `evidence-${"f".repeat(24)}`;
+    const wrongPhase: IntakeReceiptV1 = {
+      apiVersion: "factory.external-intake-receipt/v1",
+      createdAt,
+      producerVersion: "0.1.0",
+      parentDigests: [job.snapshot.digest, job.acquisition.digest],
+      jobId: executionId,
+      sequence: 1,
+      status: "resolved",
+      code: "source-reference-verified",
+      recordDigests: [job.snapshot.digest, job.acquisition.digest],
+    };
+    const wrongRef = store.appendReceipt(executionId, wrongPhase);
+
+    await expect(
+      runEvidencePipeline(
+        {
+          ...job,
+          resume: { executionId, receipts: [wrongRef] },
+        },
+        scanners(),
+        inventory(job),
+        store,
+      ),
+    ).rejects.toMatchObject({ code: "receipt-chain-invalid" });
   });
 
   it("blocks only the failed source item and preserves sibling receipts", async () => {

@@ -15,6 +15,7 @@ import {
   type ReadonlySnapshotView,
   type ScanKindV1,
 } from "../src/scans.js";
+import { canonicalTreeDigest } from "../src/snapshot.js";
 import { ExternalIntakeStore } from "../src/store.js";
 
 const fixtureRoot = join(
@@ -24,25 +25,34 @@ const fixtureRoot = join(
 );
 const roots: string[] = [];
 const snapshotDigest = `sha256:${"1".repeat(64)}` as Sha256Digest;
-const treeDigest = `sha256:${"2".repeat(64)}` as Sha256Digest;
 
 function fixture(name: string): Uint8Array {
   return readFileSync(join(fixtureRoot, name));
 }
 
 function snapshotView(): ReadonlySnapshotView {
-  const content = fixture("safe.ts.fixture");
+  return canonicallyBoundSnapshotView();
+}
+
+function canonicallyBoundSnapshotView(
+  content = fixture("safe.ts.fixture"),
+): ReadonlySnapshotView {
+  const path = "src/safe.ts";
+  const mode = "100644" as const;
+  const digest = digestBytes(content);
   return {
     snapshotDigest,
-    treeDigest,
-    files: [
+    treeDigest: canonicalTreeDigest([
       {
-        path: "src/safe.ts",
-        digest: digestBytes(content),
-        content,
+        path,
+        mode,
+        type: "blob",
+        size: content.byteLength,
+        blobDigest: digest,
       },
-    ],
-  };
+    ]),
+    files: [{ path, mode, digest, content }],
+  } as ReadonlySnapshotView;
 }
 
 function tempStore(): { root: string; store: ExternalIntakeStore } {
@@ -117,6 +127,36 @@ afterEach(() => {
 });
 
 describe("pinned local scan orchestration", () => {
+  it("accepts snapshot bytes only when their modes and digests reproduce the canonical tree", async () => {
+    const { store } = tempStore();
+
+    await expect(
+      runPinnedLocalScans(canonicallyBoundSnapshotView(), scanners(), store),
+    ).resolves.toMatchObject({ scans: expect.any(Array) });
+  });
+
+  it("rejects substituted content with a matching self-digest under the accepted tree label", async () => {
+    const { store } = tempStore();
+    const accepted = canonicallyBoundSnapshotView();
+    const substitutedContent = new TextEncoder().encode(
+      "export const substituted = true;",
+    );
+    const substituted = {
+      ...accepted,
+      files: [
+        {
+          ...accepted.files[0]!,
+          content: substitutedContent,
+          digest: digestBytes(substitutedContent),
+        },
+      ],
+    } as ReadonlySnapshotView;
+
+    await expect(
+      runPinnedLocalScans(substituted, scanners(), store),
+    ).rejects.toMatchObject({ code: "snapshot-evidence-drift" });
+  });
+
   it("records all four pinned scanner identities in deterministic order", async () => {
     const { store } = tempStore();
 

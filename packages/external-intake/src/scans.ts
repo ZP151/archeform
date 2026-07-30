@@ -1,5 +1,9 @@
 import { digestBytes, type Sha256Digest } from "./canonical.js";
-import { assertSafeSourcePath, compareCanonicalPaths } from "./snapshot.js";
+import {
+  assertSafeSourcePath,
+  canonicalTreeDigest,
+  compareCanonicalPaths,
+} from "./snapshot.js";
 import { ExternalIntakeStore, type StoredBlobRef } from "./store.js";
 
 export const SCAN_KIND_ORDER = [
@@ -50,6 +54,7 @@ export const PINNED_SCANNER_IDENTITIES = {
 
 export interface ReadonlySnapshotFileV1 {
   readonly path: string;
+  readonly mode: "100644" | "100755";
   readonly digest: Sha256Digest;
   readonly content: Uint8Array;
 }
@@ -178,11 +183,19 @@ export function validateReadonlySnapshotView(
   }
 
   const paths = new Set<string>();
+  const canonicalEntries: Array<{
+    readonly path: string;
+    readonly mode: "100644" | "100755";
+    readonly type: "blob";
+    readonly size: number;
+    readonly blobDigest: Sha256Digest;
+  }> = [];
   for (const unknownFile of input.files as readonly unknown[]) {
     if (
       !isPlainObject(unknownFile) ||
-      !hasOnlyKeys(unknownFile, ["path", "digest", "content"]) ||
+      !hasOnlyKeys(unknownFile, ["path", "mode", "digest", "content"]) ||
       typeof unknownFile.path !== "string" ||
+      (unknownFile.mode !== "100644" && unknownFile.mode !== "100755") ||
       !isDigest(unknownFile.digest) ||
       !(unknownFile.content instanceof Uint8Array)
     ) {
@@ -212,6 +225,19 @@ export function validateReadonlySnapshotView(
         "Snapshot evidence bytes differ from their immutable digest.",
       );
     }
+    canonicalEntries.push({
+      path: unknownFile.path,
+      mode: unknownFile.mode,
+      type: "blob",
+      size: unknownFile.content.byteLength,
+      blobDigest: unknownFile.digest,
+    });
+  }
+  if (canonicalTreeDigest(canonicalEntries) !== input.treeDigest) {
+    throw new EvidencePipelineFailure(
+      "snapshot-evidence-drift",
+      "Snapshot evidence bytes and modes do not reproduce the accepted tree digest.",
+    );
   }
   return input;
 }

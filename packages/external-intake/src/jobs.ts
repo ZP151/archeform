@@ -33,6 +33,12 @@ export interface IntakeJobV1 {
   readonly snapshot: StoredRecordRef;
   readonly acquisition: StoredRecordRef;
   readonly snapshotView: ReadonlySnapshotView;
+  readonly resume?: EvidenceResumeV1;
+}
+
+export interface EvidenceResumeV1 {
+  readonly executionId: string;
+  readonly receipts: readonly StoredRecordRef[];
 }
 
 export interface CompletedEvidenceRefV1 {
@@ -41,6 +47,7 @@ export interface CompletedEvidenceRefV1 {
   readonly evidence: StoredRecordRef;
   readonly scans: CompletedScanBundleV1;
   readonly inventory: StoredModuleInventoryV1;
+  readonly receipts: readonly StoredRecordRef[];
 }
 
 export type EvidenceBatchItemV1 =
@@ -55,6 +62,15 @@ type ReceiptStatus = IntakeReceiptV1["status"];
 
 const OPAQUE_ID = /^[a-z][a-z0-9-]{0,127}$/u;
 const VERSION = /^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/u;
+const RECEIPT_PHASE_PREFIX = [
+  { status: "requested", code: "evidence-request-accepted" },
+  { status: "resolved", code: "source-reference-verified" },
+  { status: "snapshotted", code: "source-snapshot-verified" },
+  { status: "evidenced", code: "source-acquisition-verified" },
+  { status: "scanned", code: "pinned-scans-complete" },
+  { status: "inventoried", code: "module-inventory-complete" },
+  { status: "evidenced", code: "evidence-bundle-stored" },
+] as const;
 
 function isPlainObject(input: unknown): input is Record<string, unknown> {
   if (input === null || typeof input !== "object" || Array.isArray(input)) {
@@ -75,6 +91,19 @@ function hasExactKeys(
   );
 }
 
+function hasRequiredAndOptionalKeys(
+  input: Record<string, unknown>,
+  required: readonly string[],
+  optional: readonly string[],
+): boolean {
+  const keys = Object.keys(input);
+  const allowed = new Set([...required, ...optional]);
+  return (
+    required.every((key) => keys.includes(key)) &&
+    keys.every((key) => allowed.has(key))
+  );
+}
+
 function isCanonicalTimestamp(input: unknown): input is string {
   if (typeof input !== "string") {
     return false;
@@ -88,15 +117,19 @@ function isCanonicalTimestamp(input: unknown): input is string {
 function validateJob(input: IntakeJobV1): IntakeJobV1 {
   if (
     !isPlainObject(input) ||
-    !hasExactKeys(input, [
-      "apiVersion",
-      "id",
-      "createdAt",
-      "producerVersion",
-      "snapshot",
-      "acquisition",
-      "snapshotView",
-    ]) ||
+    !hasRequiredAndOptionalKeys(
+      input,
+      [
+        "apiVersion",
+        "id",
+        "createdAt",
+        "producerVersion",
+        "snapshot",
+        "acquisition",
+        "snapshotView",
+      ],
+      ["resume"],
+    ) ||
     input.apiVersion !== "factory.external-evidence-job/v1" ||
     typeof input.id !== "string" ||
     !OPAQUE_ID.test(input.id) ||
@@ -122,10 +155,108 @@ function validateJob(input: IntakeJobV1): IntakeJobV1 {
       "Evidence job parent has the wrong record kind.",
     );
   }
+  if (input.resume !== undefined) {
+    validateResumeShape(input.resume);
+  }
   return input;
 }
 
-function executionId(job: IntakeJobV1): string {
+function validateResumeShape(input: EvidenceResumeV1): void {
+  if (
+    !isPlainObject(input) ||
+    !hasExactKeys(input, ["executionId", "receipts"]) ||
+    typeof input.executionId !== "string" ||
+    !/^evidence-[a-f0-9]{24}$/u.test(input.executionId) ||
+    !Array.isArray(input.receipts) ||
+    input.receipts.length === 0 ||
+    input.receipts.length > 7
+  ) {
+    throw new EvidencePipelineFailure(
+      "receipt-chain-invalid",
+      "Evidence resume receipt chain is malformed.",
+    );
+  }
+  const digests = new Set<string>();
+  for (const unknownRef of input.receipts as readonly unknown[]) {
+    if (
+      !isPlainObject(unknownRef) ||
+      !hasExactKeys(unknownRef, ["kind", "digest"]) ||
+      unknownRef.kind !== "receipt" ||
+      typeof unknownRef.digest !== "string" ||
+      !/^sha256:[a-f0-9]{64}$/u.test(unknownRef.digest) ||
+      digests.has(unknownRef.digest)
+    ) {
+      throw new EvidencePipelineFailure(
+        "receipt-chain-invalid",
+        "Evidence resume receipt references are malformed.",
+      );
+    }
+    digests.add(unknownRef.digest);
+  }
+}
+
+function validateResumePrefix(
+  job: IntakeJobV1,
+  resume: EvidenceResumeV1,
+  store: ExternalIntakeStore,
+): void {
+  let previous: StoredRecordRef | undefined;
+  for (const [index, ref] of resume.receipts.entries()) {
+    let unknownReceipt: ReturnType<ExternalIntakeStore["getRecord"]>;
+    try {
+      unknownReceipt = store.getRecord(ref);
+    } catch {
+      throw new EvidencePipelineFailure(
+        "receipt-chain-invalid",
+        "Evidence resume receipt is absent or invalid.",
+      );
+    }
+    if (
+      unknownReceipt.apiVersion !== "factory.external-intake-receipt/v1" ||
+      unknownReceipt.jobId !== resume.executionId ||
+      unknownReceipt.sequence !== index + 1 ||
+      !unknownReceipt.parentDigests.includes(job.snapshot.digest) ||
+      !unknownReceipt.parentDigests.includes(job.acquisition.digest) ||
+      (previous !== undefined &&
+        !unknownReceipt.parentDigests.includes(previous.digest))
+    ) {
+      throw new EvidencePipelineFailure(
+        "receipt-chain-invalid",
+        "Evidence resume receipt prefix is inconsistent.",
+      );
+    }
+    const expectedPhase = RECEIPT_PHASE_PREFIX[index];
+    const terminalBlock =
+      unknownReceipt.status === "blocked" &&
+      index > 0 &&
+      index === resume.receipts.length - 1;
+    if (
+      expectedPhase === undefined ||
+      (!terminalBlock &&
+        (unknownReceipt.status !== expectedPhase.status ||
+          unknownReceipt.code !== expectedPhase.code))
+    ) {
+      throw new EvidencePipelineFailure(
+        "receipt-chain-invalid",
+        "Evidence resume receipt phases do not match the pipeline prefix.",
+      );
+    }
+    try {
+      const replayed = store.appendReceipt(resume.executionId, unknownReceipt);
+      if (replayed.digest !== ref.digest) {
+        throw new Error("Receipt replay digest differs.");
+      }
+    } catch {
+      throw new EvidencePipelineFailure(
+        "receipt-chain-invalid",
+        "Evidence resume receipt index is absent or invalid.",
+      );
+    }
+    previous = ref;
+  }
+}
+
+function executionId(job: IntakeJobV1, outcome: unknown): string {
   const digest = canonicalRecordDigest({
     jobId: job.id,
     snapshotDigest: job.snapshot.digest,
@@ -139,13 +270,15 @@ function executionId(job: IntakeJobV1): string {
       snapshotDigest: job.snapshotView.snapshotDigest,
       treeDigest: job.snapshotView.treeDigest,
       files: [...job.snapshotView.files]
-        .map(({ path, digest, content }) => ({
+        .map(({ path, mode, digest, content }) => ({
           path,
+          mode,
           digest,
           size: content.byteLength,
         }))
         .sort((left, right) => compareCanonicalPaths(left.path, right.path)),
     },
+    outcome,
   });
   return `evidence-${digest.slice(7, 31)}`;
 }
@@ -212,9 +345,137 @@ class ReceiptChain {
       code,
       recordDigests: [...uniqueDigests(records)],
     };
+    const expected: StoredRecordRef = {
+      kind: "receipt",
+      digest: canonicalRecordDigest(receipt),
+    };
+    try {
+      const existing = this.store.getRecord(expected);
+      if (
+        existing.apiVersion !== "factory.external-intake-receipt/v1" ||
+        existing.jobId !== this.id ||
+        existing.sequence !== this.#sequence ||
+        canonicalRecordDigest(existing) !== expected.digest
+      ) {
+        throw new Error("Existing receipt prefix is inconsistent.");
+      }
+    } catch {
+      // The immutable store distinguishes an absent prefix from a tampered or
+      // conflicting one when appendReceipt publishes or verifies its index.
+    }
     this.#previous = this.store.appendReceipt(this.id, receipt);
+    if (this.#previous.digest !== expected.digest) {
+      throw new Error("Stored receipt differs from the expected prefix.");
+    }
     return this.#previous;
   }
+}
+
+function scanFingerprint(scans: CompletedScanBundleV1): unknown {
+  return {
+    scans: scans.scans.map(
+      ({
+        kind,
+        tool,
+        toolVersion,
+        rulesetDigest,
+        resultDigest,
+        status,
+        findings,
+        scannerExpression,
+      }) => ({
+        kind,
+        tool,
+        toolVersion,
+        rulesetDigest,
+        resultDigest,
+        status,
+        findings,
+        ...(scannerExpression === undefined ? {} : { scannerExpression }),
+      }),
+    ),
+    sbom: {
+      format: scans.sbom.format,
+      digest: scans.sbom.digest,
+      components: scans.sbom.components,
+    },
+  };
+}
+
+function inventoryFingerprint(inventory: StoredModuleInventoryV1): unknown {
+  return {
+    parser: inventory.parser,
+    parserVersion: inventory.parserVersion,
+    inventoryDigest: inventory.inventoryDigest,
+    modules: inventory.modules,
+  };
+}
+
+function persistReceiptOutcome(input: {
+  readonly job: IntakeJobV1;
+  readonly id: string;
+  readonly store: ExternalIntakeStore;
+  readonly parentsLoaded: boolean;
+  readonly scans?: CompletedScanBundleV1;
+  readonly inventory?: StoredModuleInventoryV1;
+  readonly evidence?: StoredRecordRef;
+  readonly failure?: {
+    readonly code: string;
+    readonly recordDigests: readonly Sha256Digest[];
+  };
+}): readonly StoredRecordRef[] {
+  const receipts = new ReceiptChain(input.job, input.id, input.store);
+  const refs: StoredRecordRef[] = [];
+  refs.push(receipts.append("requested", "evidence-request-accepted", []));
+  if (input.parentsLoaded) {
+    refs.push(
+      receipts.append("resolved", "source-reference-verified", [
+        recordDigest(input.job.snapshot),
+        recordDigest(input.job.acquisition),
+      ]),
+    );
+    refs.push(
+      receipts.append("snapshotted", "source-snapshot-verified", [
+        recordDigest(input.job.snapshot),
+      ]),
+    );
+    refs.push(
+      receipts.append("evidenced", "source-acquisition-verified", [
+        recordDigest(input.job.acquisition),
+      ]),
+    );
+  }
+  if (input.scans !== undefined) {
+    refs.push(
+      receipts.append("scanned", "pinned-scans-complete", [
+        ...input.scans.scans.map(({ resultDigest }) => resultDigest),
+        input.scans.sbom.digest,
+      ]),
+    );
+  }
+  if (input.inventory !== undefined) {
+    refs.push(
+      receipts.append("inventoried", "module-inventory-complete", [
+        input.inventory.inventoryDigest,
+      ]),
+    );
+  }
+  if (input.evidence !== undefined) {
+    refs.push(
+      receipts.append("evidenced", "evidence-bundle-stored", [
+        input.evidence.digest,
+      ]),
+    );
+  } else if (input.failure !== undefined) {
+    refs.push(
+      receipts.append(
+        "blocked",
+        input.failure.code,
+        input.failure.recordDigests,
+      ),
+    );
+  }
+  return refs;
 }
 
 function loadParents(
@@ -334,42 +595,25 @@ export async function runEvidencePipeline(
   store: ExternalIntakeStore,
 ): Promise<CompletedEvidenceRefV1> {
   const job = validateJob(input);
-  const id = executionId(job);
-  const receipts = new ReceiptChain(job, id, store);
-  receipts.append("requested", "evidence-request-accepted", []);
+  if (job.resume !== undefined) {
+    validateResumePrefix(job, job.resume, store);
+  }
+  let parentsLoaded = false;
+  let scanBundle: CompletedScanBundleV1 | undefined;
+  let inventory: StoredModuleInventoryV1 | undefined;
 
   try {
     validateReadonlySnapshotView(job.snapshotView);
     const parents = loadParents(job, store);
-    receipts.append("resolved", "source-reference-verified", [
-      recordDigest(job.snapshot),
-      recordDigest(job.acquisition),
-    ]);
-    receipts.append("snapshotted", "source-snapshot-verified", [
-      recordDigest(job.snapshot),
-    ]);
-    receipts.append("evidenced", "source-acquisition-verified", [
-      recordDigest(job.acquisition),
-    ]);
+    parentsLoaded = true;
 
-    const scanBundle = await runPinnedLocalScans(
-      job.snapshotView,
-      scanners,
-      store,
-    );
-    receipts.append("scanned", "pinned-scans-complete", [
-      ...scanBundle.scans.map(({ resultDigest }) => resultDigest),
-      scanBundle.sbom.digest,
-    ]);
+    scanBundle = await runPinnedLocalScans(job.snapshotView, scanners, store);
 
-    const inventory = await runModuleInventory(
+    inventory = await runModuleInventory(
       job.snapshotView,
       inventoryAdapter,
       store,
     );
-    receipts.append("inventoried", "module-inventory-complete", [
-      inventory.inventoryDigest,
-    ]);
 
     const evidence = store.putRecord(
       "evidence",
@@ -381,17 +625,52 @@ export async function runEvidencePipeline(
         inventory,
       ),
     );
-    receipts.append("evidenced", "evidence-bundle-stored", [evidence.digest]);
+    const id = executionId(job, {
+      status: "evidenced",
+      evidenceDigest: evidence.digest,
+      scan: scanFingerprint(scanBundle),
+      inventory: inventoryFingerprint(inventory),
+    });
+    const receipts = persistReceiptOutcome({
+      job,
+      id,
+      store,
+      parentsLoaded,
+      scans: scanBundle,
+      inventory,
+      evidence,
+    });
     return {
       executionId: id,
       status: "evidenced",
       evidence,
       scans: scanBundle,
       inventory,
+      receipts,
     };
   } catch (error) {
     const code = failureCode(error);
-    receipts.append("blocked", code, failureRecordDigests(error));
+    const recordDigests = failureRecordDigests(error);
+    const id = executionId(job, {
+      status: "blocked",
+      code,
+      recordDigests: [...recordDigests].sort(compareCanonicalPaths),
+      ...(scanBundle === undefined
+        ? {}
+        : { scan: scanFingerprint(scanBundle) }),
+      ...(inventory === undefined
+        ? {}
+        : { inventory: inventoryFingerprint(inventory) }),
+    });
+    persistReceiptOutcome({
+      job,
+      id,
+      store,
+      parentsLoaded,
+      ...(scanBundle === undefined ? {} : { scans: scanBundle }),
+      ...(inventory === undefined ? {} : { inventory }),
+      failure: { code, recordDigests },
+    });
     if (error instanceof EvidencePipelineFailure) {
       throw error;
     }
