@@ -276,10 +276,11 @@ describe("capability composition contract", () => {
     ).toThrow("requires parameter 'enabled'");
   });
 
-  it("allows an intended permissionResource parameter", () => {
+  it("allows intended permissionResource and resourceKey parameters", () => {
     const parameterAsset = asset("core.permission-test", {
       parameters: [
         { key: "permissionResource", type: "string", required: true },
+        { key: "resourceKey", type: "string", required: true },
       ],
     });
 
@@ -287,10 +288,52 @@ describe("capability composition contract", () => {
       resolveSyntheticComposition({
         assets: [parameterAsset],
         selections: [
-          selection(parameterAsset, { permissionResource: "order" }),
+          selection(parameterAsset, {
+            permissionResource: "order",
+            resourceKey: "order",
+          }),
         ],
       }),
     ).not.toThrow();
+  });
+
+  it.each([
+    "secret",
+    "secretValue",
+    "secretvalue",
+    "password",
+    "passwordValue",
+    "passwordvalue",
+    "credential",
+    "credentialValue",
+    "credentialvalue",
+    "command",
+    "commandText",
+    "commandtext",
+    "source",
+    "sourcePath",
+    "sourcepath",
+    "url",
+    "urlTarget",
+    "urltarget",
+    "path",
+    "filePath",
+    "filepath",
+    "apiKey",
+    "apikey",
+    "accessToken",
+    "accesstoken",
+  ])("rejects forbidden semantic parameter key %s", (parameterKey) => {
+    const parameterAsset = asset("core.forbidden-parameter-test", {
+      parameters: [{ key: parameterKey, type: "string", required: true }],
+    });
+
+    expect(() =>
+      resolveSyntheticComposition({
+        assets: [parameterAsset],
+        selections: [selection(parameterAsset, { [parameterKey]: "value" })],
+      }),
+    ).toThrow("is not safe for composition bindings");
   });
 
   it.each(["constructor", "toString", "__proto__"])(

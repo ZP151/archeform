@@ -51,15 +51,14 @@ const sourceDelimiterPattern =
 const commandPattern =
   /^\s*(?:bash|cmd|curl|del|git|invoke-webrequest|node|npm|pnpm|powershell|python|remove-item|rm|sh|sudo|wget|yarn)(?:\.exe)?\s/i;
 const parameterKeyPattern = /^[a-z][a-zA-Z0-9]*$/;
-const forbiddenParameterKeyTokens = new Set([
+const forbiddenParameterKeyFragments = [
   "command",
   "credential",
   "password",
   "path",
   "secret",
-  "source",
   "url",
-]);
+] as const;
 const prototypeReservedParameterKeys = new Set([
   "constructor",
   "hasOwnProperty",
@@ -76,15 +75,15 @@ function compareText(left: string, right: string): number {
 }
 
 function isForbiddenParameterKey(key: string): boolean {
-  const tokens = key
-    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-    .toLowerCase()
-    .split(" ");
-  const compact = tokens.join("");
+  const normalized = key.toLowerCase();
+  const withoutResource = normalized.replaceAll("resource", "");
   return (
-    tokens.some((token) => forbiddenParameterKeyTokens.has(token)) ||
-    compact === "apikey" ||
-    compact === "accesstoken"
+    forbiddenParameterKeyFragments.some((fragment) =>
+      normalized.includes(fragment),
+    ) ||
+    withoutResource.includes("source") ||
+    normalized.includes("apikey") ||
+    normalized.includes("accesstoken")
   );
 }
 
