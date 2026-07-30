@@ -88,17 +88,15 @@ function storeAcquisitionParents(
   readonly requestRef: StoredRecordRef;
   readonly snapshotRef: StoredRecordRef;
 } {
-  const requestRef = store.putRecord(
-    "request",
-    options.request ?? validRequest,
-  );
+  const request = options.request ?? validRequest;
+  const requestRef = store.putRecord("request", request);
   const snapshot: SourceSnapshotV1 = {
     apiVersion: "factory.external-source-snapshot/v1",
     createdAt: "2026-07-31T00:00:01.000Z",
     producerVersion: "0.1.0",
     parentDigests: options.snapshotParentDigests ?? [requestRef.digest],
-    repositoryUrl: validAcquisition.source.canonicalRepositoryUrl,
-    requestedRef: validAcquisition.source.requestedRef,
+    repositoryUrl: request.source.canonicalRepositoryUrl,
+    requestedRef: request.source.requestedRef,
     resolvedCommit: validAcquisition.source.resolvedCommit,
     retrievedAt: "2026-07-31T00:00:01.000Z",
     archiveDigest: validAcquisition.snapshot.archiveDigest,
@@ -112,6 +110,11 @@ function storeAcquisitionParents(
     ...validAcquisition,
     parentDigests: [requestRef.digest, snapshotRef.digest],
     sourceRequestDigest: requestRef.digest,
+    source: {
+      ...validAcquisition.source,
+      canonicalRepositoryUrl: request.source.canonicalRepositoryUrl,
+      requestedRef: request.source.requestedRef,
+    },
     snapshot: {
       ...validAcquisition.snapshot,
       recordDigest: snapshotRef.digest,
@@ -311,6 +314,23 @@ describe("ExternalIntakeStore", () => {
     };
     const { acquisition } = storeAcquisitionParents(store, { request });
 
+    expect(() => store.putRecord("acquisition", acquisition)).toThrow(
+      /commit|request/i,
+    );
+  });
+
+  it("rejects a full-SHA requested ref that differs from the resolved commit without an expected commit", () => {
+    const store = new ExternalIntakeStore(tempRoot());
+    const request: IntakeRequestV1 = {
+      ...validRequest,
+      source: {
+        ...validRequest.source,
+        requestedRef: "d".repeat(40),
+      },
+    };
+    const { acquisition } = storeAcquisitionParents(store, { request });
+
+    expect(request.source).not.toHaveProperty("expectedCommit");
     expect(() => store.putRecord("acquisition", acquisition)).toThrow(
       /commit|request/i,
     );

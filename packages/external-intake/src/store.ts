@@ -295,6 +295,8 @@ export class ExternalIntakeStore {
     }
     if (
       snapshot.resolvedCommit !== acquisition.source.resolvedCommit ||
+      (/^[a-f0-9]{40}$/u.test(request.source.requestedRef) &&
+        request.source.requestedRef !== acquisition.source.resolvedCommit) ||
       (request.source.expectedCommit !== undefined &&
         request.source.expectedCommit !== acquisition.source.resolvedCommit)
     ) {
