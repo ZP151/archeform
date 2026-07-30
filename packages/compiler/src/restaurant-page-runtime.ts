@@ -86,6 +86,54 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+const decimalWirePattern = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+
+export function restaurantDecimalNumber(value: unknown, fieldName: string): number {
+  let decimalValue: number | string = value as number | string;
+  if (isRecord(value)) {
+    const keys = Object.keys(value);
+    if (keys.length !== 2 || value.$type !== "Decimal" || typeof value.value !== "string") {
+      throw new Error("The Restaurant API returned an invalid " + fieldName + ".");
+    }
+    decimalValue = value.value;
+  }
+  if (typeof decimalValue === "string") {
+    const normalized = decimalValue.trim();
+    if (!decimalWirePattern.test(normalized)) {
+      throw new Error("The Restaurant API returned an invalid " + fieldName + ".");
+    }
+    decimalValue = normalized;
+  } else if (typeof decimalValue !== "number") {
+    throw new Error("The Restaurant API returned an invalid " + fieldName + ".");
+  }
+  const numericValue = Number(decimalValue);
+  if (!Number.isFinite(numericValue)) {
+    throw new Error("The Restaurant API returned an invalid " + fieldName + ".");
+  }
+  return numericValue;
+}
+
+export type RestaurantCustomerLineState = {
+  readonly id: string;
+  readonly menuItemId: string;
+  readonly quantity: number;
+  readonly unitPrice: number;
+  readonly lineNote: string;
+};
+
+export function projectRestaurantCustomerLine(value: unknown): RestaurantCustomerLineState {
+  if (!isRecord(value) || typeof value.id !== "string" || typeof value.menuItemId !== "string" || !Number.isInteger(value.quantity)) {
+    throw new Error("The Restaurant API returned an invalid order line.");
+  }
+  return {
+    id: value.id,
+    menuItemId: value.menuItemId,
+    quantity: value.quantity as number,
+    unitPrice: restaurantDecimalNumber(value.unitPrice, "order line unit price"),
+    lineNote: typeof value.lineNote === "string" ? value.lineNote : "",
+  };
+}
+
 function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) return "[" + value.map(canonicalJson).join(",") + "]";
   if (isRecord(value)) return "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + canonicalJson(value[key])).join(",") + "}";
@@ -97,19 +145,94 @@ async function payloadHash(body: Readonly<Record<string, unknown>>): Promise<str
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-function safeOrderState(value: unknown): RestaurantSafeOrderState {
+export function projectRestaurantCustomerOrderState(value: unknown): RestaurantSafeOrderState {
   if (!isRecord(value) || typeof value.id !== "string" || typeof value.status !== "string" || typeof value.paymentStatus !== "string" || !Number.isInteger(value.orderVersion)) {
     throw new Error("The Restaurant API returned an invalid safe order state.");
   }
-  const total = Number(value.total);
-  if (!Number.isFinite(total)) throw new Error("The Restaurant API returned an invalid order total.");
   return {
     id: value.id,
     status: value.status,
     paymentStatus: value.paymentStatus,
     orderVersion: value.orderVersion as number,
-    total,
+    total: restaurantDecimalNumber(value.total, "order total"),
     orderNote: typeof value.orderNote === "string" ? value.orderNote : "",
+  };
+}
+
+export type RestaurantCustomerOrderState = RestaurantSafeOrderState & {
+  readonly fulfilmentType: string;
+  readonly submittedAt: string | null;
+  readonly paidAt: string | null;
+  readonly createdAt: string;
+};
+
+export function projectRestaurantCustomerOrder(value: unknown): RestaurantCustomerOrderState {
+  if (
+    !isRecord(value) ||
+    typeof value.fulfilmentType !== "string" ||
+    (value.submittedAt !== null && typeof value.submittedAt !== "string") ||
+    (value.paidAt !== null && typeof value.paidAt !== "string") ||
+    typeof value.createdAt !== "string"
+  ) {
+    throw new Error("The Restaurant API returned an invalid customer order.");
+  }
+  return {
+    ...projectRestaurantCustomerOrderState(value),
+    fulfilmentType: value.fulfilmentType,
+    submittedAt: value.submittedAt,
+    paidAt: value.paidAt,
+    createdAt: value.createdAt,
+  };
+}
+
+export type RestaurantCustomerReceiptState = RestaurantCustomerOrderState & {
+  readonly lines: readonly (RestaurantCustomerLineState & {
+    readonly menuItemName: string;
+    readonly modifiers: unknown;
+  })[];
+  readonly payments: readonly {
+    readonly id: string;
+    readonly method: string;
+    readonly amount: number;
+    readonly status: string;
+    readonly paidAt: string | null;
+  }[];
+};
+
+export function projectRestaurantCustomerReceipt(value: unknown): RestaurantCustomerReceiptState {
+  if (!isRecord(value) || !Array.isArray(value.lines) || !Array.isArray(value.payments)) {
+    throw new Error("The Restaurant API returned an invalid receipt.");
+  }
+  return {
+    ...projectRestaurantCustomerOrder(value),
+    lines: value.lines.map((candidate) => {
+      if (!isRecord(candidate) || typeof candidate.menuItemName !== "string") {
+        throw new Error("The Restaurant API returned an invalid receipt line.");
+      }
+      return {
+        ...projectRestaurantCustomerLine(candidate),
+        menuItemName: candidate.menuItemName,
+        modifiers: candidate.modifiers,
+      };
+    }),
+    payments: value.payments.map((candidate) => {
+      if (
+        !isRecord(candidate) ||
+        typeof candidate.id !== "string" ||
+        typeof candidate.method !== "string" ||
+        typeof candidate.status !== "string" ||
+        (candidate.paidAt !== null && typeof candidate.paidAt !== "string")
+      ) {
+        throw new Error("The Restaurant API returned an invalid receipt payment.");
+      }
+      return {
+        id: candidate.id,
+        method: candidate.method,
+        amount: restaurantDecimalNumber(candidate.amount, "payment amount"),
+        status: candidate.status,
+        paidAt: candidate.paidAt,
+      };
+    }),
   };
 }
 
@@ -194,7 +317,7 @@ export function createCustomerCommandJournalCoordinator(
 function typedVersionConflict(status: number, payload: unknown): RestaurantSafeOrderState | null {
   if (status !== 409 || !isRecord(payload) || payload.code !== "restaurant.order.version_conflict") return null;
   try {
-    return safeOrderState(payload.currentOrder);
+    return projectRestaurantCustomerOrderState(payload.currentOrder);
   } catch {
     return null;
   }
@@ -209,7 +332,7 @@ export async function reconcileLogicalCommandConflict(
 ): Promise<{ readonly journal: CustomerCommandJournal; readonly order: RestaurantSafeOrderState } | null> {
   const conflict = typedVersionConflict(status, payload);
   if (!conflict) return null;
-  const order = safeOrderState(await readStatus(conflict.id));
+  const order = projectRestaurantCustomerOrderState(await readStatus(conflict.id));
   return { journal: confirmLogicalCommand(journal, command), order };
 }
 
@@ -239,12 +362,19 @@ import { useEffect, useState } from "react";
 import {
   confirmLogicalCommand,
   createCustomerCommandJournalCoordinator,
+  projectRestaurantCustomerLine,
+  projectRestaurantCustomerOrder,
+  projectRestaurantCustomerOrderState,
+  projectRestaurantCustomerReceipt,
   projectCustomerCommandJournal,
   reconcileLogicalCommandConflict,
+  restaurantDecimalNumber,
   restaurantPaymentMethod,
   restaurantPaymentMethods,
   retainLogicalCommand,
   type CustomerCommandJournal,
+  type RestaurantCustomerOrderState,
+  type RestaurantCustomerReceiptState,
   type RestaurantPaymentMethod,
   type RestaurantSafeOrderState,
 } from "./restaurant-customer-command";
@@ -295,17 +425,9 @@ type MenuItem = {
   readonly preparationMinutes: number;
   readonly imageUrl: string;
 };
-type CustomerOrder = OrderState & {
-  readonly fulfilmentType: string;
-  readonly submittedAt: string | null;
-  readonly paidAt: string | null;
-  readonly createdAt: string;
-};
+type CustomerOrder = RestaurantCustomerOrderState;
 type ReceiptModifier = { readonly key: string; readonly label: string; readonly value: string };
-type Receipt = CustomerOrder & {
-  readonly lines: readonly CartLine[];
-  readonly payments: readonly { readonly id: string; readonly method: string; readonly amount: number; readonly status: string; readonly paidAt: string | null }[];
-};
+type Receipt = Omit<RestaurantCustomerReceiptState, "lines"> & { readonly lines: readonly CartLine[] };
 
 const api = {
   resolve: "/api/restaurant/table-sessions/resolve" as const,
@@ -333,19 +455,7 @@ function titleCase(value: string): string {
 }
 
 function orderState(value: unknown): OrderState {
-  if (!isRecord(value) || typeof value.id !== "string" || typeof value.status !== "string" || typeof value.paymentStatus !== "string" || !Number.isInteger(value.orderVersion)) {
-    throw new Error("The Restaurant API returned an invalid order state.");
-  }
-  const total = Number(value.total);
-  if (!Number.isFinite(total)) throw new Error("The Restaurant API returned an invalid order total.");
-  return {
-    id: value.id,
-    status: value.status,
-    paymentStatus: value.paymentStatus,
-    orderVersion: value.orderVersion as number,
-    total,
-    orderNote: typeof value.orderNote === "string" ? value.orderNote : "",
-  };
+  return projectRestaurantCustomerOrderState(value);
 }
 
 function projectedReceiptModifiers(value: unknown): readonly ReceiptModifier[] {
@@ -365,17 +475,11 @@ function projectedReceiptModifiers(value: unknown): readonly ReceiptModifier[] {
 }
 
 function cartLine(value: unknown, menuItemName: string): CartLine {
-  if (!isRecord(value) || typeof value.id !== "string" || typeof value.menuItemId !== "string" || !Number.isInteger(value.quantity) || typeof value.unitPrice !== "number") {
-    throw new Error("The Restaurant API returned an invalid order line.");
-  }
+  const line = projectRestaurantCustomerLine(value);
   return {
-    id: value.id,
-    menuItemId: value.menuItemId,
+    ...line,
     menuItemName,
-    quantity: value.quantity as number,
-    unitPrice: value.unitPrice,
-    lineNote: typeof value.lineNote === "string" ? value.lineNote : "",
-    modifiers: projectedReceiptModifiers(value.modifiers),
+    modifiers: projectedReceiptModifiers(isRecord(value) ? value.modifiers : null),
   };
 }
 
@@ -545,7 +649,7 @@ function MenuPage({ scope, commit, reportError }: { readonly scope: SessionScope
     const quantity = Number(draft.quantity);
     if (!Number.isInteger(quantity) || quantity < 1) throw new Error("Quantity must be a positive integer.");
     const body = { expectedVersion: scope.order.orderVersion, menuItemId: item.id, quantity, lineNote: draft.note, modifiers: [] };
-    const command = await logicalMutation<{ readonly line: unknown; readonly orderVersion: number; readonly total: number }>({
+    const command = await logicalMutation<{ readonly line: unknown; readonly orderVersion: number; readonly total: unknown }>({
       slot: "order:" + scope.order.id + ":line:add:" + item.id,
       path: api.lines(scope.order.id),
       method: "POST",
@@ -554,7 +658,7 @@ function MenuPage({ scope, commit, reportError }: { readonly scope: SessionScope
       onConflict: (order) => commit({ ...scope, order }),
     });
     const line = cartLine(command.outcome.line, item.name);
-    commit({ ...scope, order: { ...scope.order, orderVersion: command.outcome.orderVersion, total: command.outcome.total }, lines: [...scope.lines, line] });
+    commit({ ...scope, order: { ...scope.order, orderVersion: command.outcome.orderVersion, total: restaurantDecimalNumber(command.outcome.total, "order total") }, lines: [...scope.lines, line] });
     await command.confirm();
   };
   return <section className="generated-card"><div className="generated-section-heading"><div><p>Customer menu</p><h2>Menu</h2></div><button type="button" onClick={() => void loadMenu().catch(reportError)}>Refresh</button></div><form onSubmit={(event) => { event.preventDefault(); void loadMenu().catch(reportError); }}><label>Search menu<input value={query} onChange={(event) => setQuery(event.target.value)} /></label><label>Category<select value={category} onChange={(event) => setCategory(event.target.value)}><option value="">All categories</option>{categories.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}</select></label><button type="submit">Search</button></form><ul className="generated-records">{items.map((item) => { const draft = drafts[item.id] ?? { quantity: "1", note: "" }; return <li key={item.id}><div><h3>{item.name}</h3><p>{item.description}</p><p>{item.price.toFixed(2)} · {item.stock} available</p></div><span><label>Quantity<input aria-label="Quantity" inputMode="numeric" value={draft.quantity} onChange={(event) => setDrafts((current) => ({ ...current, [item.id]: { ...draft, quantity: event.target.value } }))} /></label><label>Item note<input aria-label="Item note" value={draft.note} onChange={(event) => setDrafts((current) => ({ ...current, [item.id]: { ...draft, note: event.target.value } }))} /></label><button className="generated-primary" type="button" onClick={() => void add(item).catch(reportError)}>Add {item.name}</button></span></li>; })}</ul></section>;
@@ -568,7 +672,7 @@ function CartPage({ scope, commit, reportError }: { readonly scope: SessionScope
     const quantity = Number(quantities[line.id] ?? line.quantity);
     if (!Number.isInteger(quantity) || quantity < 1) throw new Error("Quantity must be a positive integer.");
     const body = { expectedVersion: scope.order.orderVersion, quantity, lineNote: line.lineNote, modifiers: line.modifiers };
-    const command = await logicalMutation<{ readonly line: unknown; readonly orderVersion: number; readonly total: number }>({
+    const command = await logicalMutation<{ readonly line: unknown; readonly orderVersion: number; readonly total: unknown }>({
       slot: "order:" + scope.order.id + ":line:update:" + line.id,
       path: api.line(scope.order.id, line.id),
       method: "PATCH",
@@ -577,7 +681,7 @@ function CartPage({ scope, commit, reportError }: { readonly scope: SessionScope
       onConflict: (order) => commit({ ...scope, order }),
     });
     const updatedLine = cartLine(command.outcome.line, line.menuItemName);
-    commit({ ...scope, order: { ...scope.order, orderVersion: command.outcome.orderVersion, total: command.outcome.total }, lines: scope.lines.map((candidate) => candidate.id === line.id ? updatedLine : candidate) });
+    commit({ ...scope, order: { ...scope.order, orderVersion: command.outcome.orderVersion, total: restaurantDecimalNumber(command.outcome.total, "order total") }, lines: scope.lines.map((candidate) => candidate.id === line.id ? updatedLine : candidate) });
     await command.confirm();
   };
   const pay = async () => {
@@ -617,10 +721,11 @@ function TrackerPage({ scope, commit, reportError }: { readonly scope: SessionSc
   const refresh = async () => {
     const [confirmed, orders] = await Promise.all([
       customerRequest<unknown>(api.status(scope.order.id), { token: scope.token }),
-      customerRequest<readonly CustomerOrder[]>(api.history, { token: scope.token }),
+      customerRequest<unknown>(api.history, { token: scope.token }),
     ]);
     commit({ ...scope, order: orderState(confirmed) });
-    setHistory(orders);
+    if (!Array.isArray(orders)) throw new Error("The Restaurant API returned invalid order history.");
+    setHistory(orders.map(projectRestaurantCustomerOrder));
   };
   useEffect(() => { void refresh().catch(reportError); }, [scope.order.id]);
   return <section className="generated-card"><div className="generated-section-heading"><div><p>Server-confirmed status</p><h2>Current order</h2></div><button type="button" onClick={() => void refresh().catch(reportError)}>Refresh status</button></div><p>Status: <strong>{titleCase(scope.order.status)}</strong></p><h3>Session order history</h3><ul className="generated-records">{history.map((order) => <li key={order.id}><span>{titleCase(order.status)}</span><span>{order.total.toFixed(2)}</span>{order.paymentStatus === "paid" ? <a href={"/receipt/" + encodeURIComponent(order.id)}>Receipt</a> : null}</li>)}</ul></section>;
@@ -629,7 +734,7 @@ function TrackerPage({ scope, commit, reportError }: { readonly scope: SessionSc
 function ReceiptPage({ scope, orderId, reportError }: { readonly scope: SessionScope; readonly orderId: string; readonly reportError: (reason: unknown) => void }) {
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   useEffect(() => {
-    void customerRequest<Receipt>(api.receipt(orderId), { token: scope.token }).then((value) => setReceipt({ ...value, orderNote: typeof value.orderNote === "string" ? value.orderNote : "", lines: Array.isArray(value.lines) ? value.lines.map((line) => ({ ...line, modifiers: projectedReceiptModifiers(line.modifiers) })) : [] })).catch(reportError);
+    void customerRequest<unknown>(api.receipt(orderId), { token: scope.token }).then((value) => { const projected = projectRestaurantCustomerReceipt(value); setReceipt({ ...projected, lines: projected.lines.map((line) => ({ ...line, modifiers: projectedReceiptModifiers(line.modifiers) })) }); }).catch(reportError);
   }, [orderId]);
   if (!receipt) return <section className="generated-card"><h2>Receipt</h2><p>Loading server-confirmed receipt…</p></section>;
   return <section className="generated-card"><h2>Receipt</h2><p>{titleCase(receipt.paymentStatus)}</p><ul className="generated-records">{receipt.lines.map((line) => <li key={line.id}><div><h3>{line.menuItemName}</h3><p>{line.quantity} × {line.unitPrice.toFixed(2)}</p><p>{line.lineNote}</p>{line.modifiers.map((modifier) => <p key={modifier.key}>{modifier.label}: {modifier.value}</p>)}</div></li>)}</ul><p>{receipt.orderNote}</p><p>Total: {receipt.total.toFixed(2)}</p></section>;

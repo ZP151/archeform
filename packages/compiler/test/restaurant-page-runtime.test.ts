@@ -36,6 +36,39 @@ function generatedFiles(graph: ApplicationGraphV1 = restaurantGraph()) {
 }
 
 type GeneratedCommandRuntime = {
+  readonly restaurantDecimalNumber: (
+    value: unknown,
+    fieldName: string,
+  ) => number;
+  readonly projectRestaurantCustomerLine: (value: unknown) => {
+    readonly id: string;
+    readonly menuItemId: string;
+    readonly quantity: number;
+    readonly unitPrice: number;
+    readonly lineNote: string;
+  };
+  readonly projectRestaurantCustomerOrderState: (value: unknown) => {
+    readonly id: string;
+    readonly status: string;
+    readonly paymentStatus: string;
+    readonly orderVersion: number;
+    readonly total: number;
+    readonly orderNote: string;
+  };
+  readonly projectRestaurantCustomerOrder: (value: unknown) => {
+    readonly id: string;
+    readonly total: number;
+    readonly fulfilmentType: string;
+    readonly createdAt: string;
+  };
+  readonly projectRestaurantCustomerReceipt: (value: unknown) => {
+    readonly total: number;
+    readonly lines: readonly {
+      readonly unitPrice: number;
+      readonly modifiers: unknown;
+    }[];
+    readonly payments: readonly { readonly amount: number }[];
+  };
   readonly createCustomerCommandJournalCoordinator: (
     read: () => readonly unknown[],
     write: (journal: readonly unknown[]) => void,
@@ -103,6 +136,72 @@ describe("generated Restaurant Customer page runtime", () => {
       ) => readonly { key: string; label: string; value: string }[];
     }
   ).projectRestaurantReceiptModifiers;
+
+  it("projects the live line-add Prisma Decimal wire value before cart commit", async () => {
+    const runtime = await generatedCommandRuntime();
+    if (!runtime) return;
+    const liveLineAddPayload = {
+      line: {
+        id: "order-line-1",
+        orderId: "order-1",
+        menuItemId: "margherita-pizza",
+        quantity: 2,
+        unitPrice: "12.50",
+        lineNote: "No basil",
+        modifiers: [],
+        createdAt: "2026-07-30T00:00:00.000Z",
+        updatedAt: "2026-07-30T00:00:00.000Z",
+      },
+      orderVersion: 1,
+      total: 25,
+    } as const;
+
+    expect(
+      runtime.projectRestaurantCustomerLine(liveLineAddPayload.line),
+    ).toEqual({
+      id: "order-line-1",
+      menuItemId: "margherita-pizza",
+      quantity: 2,
+      unitPrice: 12.5,
+      lineNote: "No basil",
+    });
+  });
+
+  it.each([
+    [12.5, 12.5],
+    ["12.50", 12.5],
+    [{ $type: "Decimal", value: "12.50" }, 12.5],
+  ])(
+    "normalizes supported Customer Decimal wire value %j",
+    async (wireValue, expected) => {
+      const runtime = await generatedCommandRuntime();
+      if (!runtime) return;
+
+      expect(runtime.restaurantDecimalNumber(wireValue, "order total")).toBe(
+        expected,
+      );
+    },
+  );
+
+  it.each([
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    "",
+    "   ",
+    "NaN",
+    "Infinity",
+    "0x10",
+    { value: "12.50" },
+    { $type: "Decimal", value: "NaN" },
+    { $type: "Decimal", value: "12.50", executable: "alert(1)" },
+  ])("rejects invalid Customer Decimal wire value %j", async (wireValue) => {
+    const runtime = await generatedCommandRuntime();
+    if (!runtime) return;
+
+    expect(() =>
+      runtime.restaurantDecimalNumber(wireValue, "order total"),
+    ).toThrow("invalid order total");
+  });
 
   it.each([
     ["raw table id prop", { tableId: "raw-table-12" }, undefined],
@@ -213,12 +312,109 @@ describe("generated Restaurant Customer page runtime", () => {
     },
   );
 
-  it("normalizes a Prisma decimal total from the resolved session order", () => {
-    const runtime = generatedFiles()["web/app/page-runtime.tsx"]!;
+  it("normalizes a Prisma JSON Decimal total from a Customer order projection", async () => {
+    const runtime = await generatedCommandRuntime();
+    if (!runtime) return;
 
-    expect(runtime).toContain("const total = Number(value.total);");
-    expect(runtime).toContain("!Number.isFinite(total)");
-    expect(runtime).toContain("total,");
+    expect(
+      runtime.projectRestaurantCustomerOrderState({
+        id: "order-1",
+        status: "paid",
+        paymentStatus: "paid",
+        orderVersion: 3,
+        total: { $type: "Decimal", value: "25.00" },
+        orderNote: "Please serve together",
+      }),
+    ).toEqual({
+      id: "order-1",
+      status: "paid",
+      paymentStatus: "paid",
+      orderVersion: 3,
+      total: 25,
+      orderNote: "Please serve together",
+    });
+  });
+
+  it("normalizes Customer history and receipt Decimal projections", async () => {
+    const runtime = await generatedCommandRuntime();
+    if (!runtime) return;
+    const order = {
+      id: "order-1",
+      status: "paid",
+      paymentStatus: "paid",
+      orderVersion: 3,
+      total: "25.00",
+      orderNote: "Please serve together",
+      fulfilmentType: "dine-in",
+      submittedAt: "2026-07-30T00:01:00.000Z",
+      paidAt: "2026-07-30T00:02:00.000Z",
+      createdAt: "2026-07-30T00:00:00.000Z",
+    } as const;
+
+    expect(runtime.projectRestaurantCustomerOrder(order)).toMatchObject({
+      id: "order-1",
+      total: 25,
+      fulfilmentType: "dine-in",
+    });
+    expect(
+      runtime.projectRestaurantCustomerReceipt({
+        ...order,
+        lines: [
+          {
+            id: "order-line-1",
+            menuItemId: "margherita-pizza",
+            menuItemName: "Margherita pizza",
+            quantity: 2,
+            unitPrice: { $type: "Decimal", value: "12.50" },
+            lineNote: "No basil",
+            modifiers: [],
+          },
+        ],
+        payments: [
+          {
+            id: "payment-1",
+            method: "card",
+            amount: "25.00",
+            status: "succeeded",
+            paidAt: "2026-07-30T00:02:00.000Z",
+          },
+        ],
+      }),
+    ).toMatchObject({
+      total: 25,
+      lines: [{ unitPrice: 12.5 }],
+      payments: [{ amount: 25 }],
+    });
+  });
+
+  it("rejects a nonfinite receipt Decimal before projection", async () => {
+    const runtime = await generatedCommandRuntime();
+    if (!runtime) return;
+
+    expect(() =>
+      runtime.projectRestaurantCustomerReceipt({
+        id: "order-1",
+        status: "paid",
+        paymentStatus: "paid",
+        orderVersion: 3,
+        total: "25.00",
+        orderNote: "",
+        fulfilmentType: "dine-in",
+        submittedAt: null,
+        paidAt: null,
+        createdAt: "2026-07-30T00:00:00.000Z",
+        lines: [],
+        payments: [
+          {
+            id: "payment-1",
+            method: "cash",
+            amount: "Infinity",
+            status: "succeeded",
+            paidAt: null,
+          },
+        ],
+      }),
+    ).toThrow("invalid payment amount");
   });
 
   it("delegates receipt ownership to the token-bound API", () => {
@@ -226,7 +422,7 @@ describe("generated Restaurant Customer page runtime", () => {
 
     expect(runtime).not.toContain("orderId !== scope.order.id");
     expect(runtime).toContain(
-      "customerRequest<Receipt>(api.receipt(orderId), { token: scope.token })",
+      "customerRequest<unknown>(api.receipt(orderId), { token: scope.token })",
     );
   });
 
