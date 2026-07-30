@@ -52,8 +52,11 @@ Round 2/5 without another path amendment. Repair Round 2 re-review then FAILED
 with one P1 lifecycle-bypass finding. Task 4 remains `implementing` in Repair
 Round 3/5 within its existing Candidate/API/CLI/test paths. Repair Round 3
 re-review then FAILED with one P1 exactly-once concurrency finding. Task 4
-remains `implementing` in Repair Round 4/5 within its existing
-Candidate/API/test paths. The system will
+remained `implementing` in Repair Round 4/5 within its existing
+Candidate/API/test paths. Repair Round 4 independent re-review subsequently
+PASSED with no P0/P1/P2, and the PM moved Task 4
+`implementing -> ready_for_qa`. Independent behavioral QA remains required. The
+system will
 ingest the 43 fixed-reference portfolio as metadata, retain the 108 scenarios as
 composition demand signals, and produce only quarantined evidence,
 non-executable Candidate records, and pending-review promotion packets.
@@ -139,6 +142,14 @@ The Controller authorized Repair Round 4/5 within the existing Task 4
 Candidate/API/test paths. Task 4 remains `implementing`; Task 2, the immutable
 store, dependencies, Graph, compiler, and Tasks 5-6 states are unchanged.
 
+Repair Round 4 independent re-review of commit `986319a` PASSED with no
+P0/P1/P2. The prior exactly-once finding is closed: concurrent fresh callers
+produce exactly one Candidate revision and receipt delta, persist only sequence
+2, preserve valid fresh show/verification, and retry without another delta. The
+PM moved Task 4 `implementing -> ready_for_qa`. This is not QA, release review,
+or acceptance; the full repair history, contract, exact paths, and scope remain
+frozen. Tasks 5 and 6 remain `planned`.
+
 Independent Task 2 review FAILED with three P1 findings and one P2. The
 Controller resolved its schema incompatibility by selecting a distinct
 `factory.external-source-acquisition/v1` record. Task 2 entered Fix Round 1/5
@@ -164,7 +175,7 @@ remain frozen.
 | 1. Candidate contracts and immutable persistence | `accepted`     | `integration`       | External Intake Contract         | Original release and bounded amendment accepted and frozen. |
 | 2. Fixed-source provenance and notices           | `accepted`     | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
 | 3. Deterministic scan orchestration              | `accepted`     | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
-| 4. Candidate registry, API, CLI, and isolation   | `implementing` | `integration`       | Candidate Registry               | Repair Round 4/5; exactly-once transition P1 remains.       |
+| 4. Candidate registry, API, CLI, and isolation   | `ready_for_qa` | `integration`       | Candidate Registry               | Repair Round 4 re-review PASS; independent QA required.     |
 | 5. Review-only promotion packets                 | `planned`      | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.           |
 | 6. Bulk acceptance and release evidence          | `planned`      | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.        |
 
@@ -758,7 +769,7 @@ dependency gate but remains unstarted and `planned`; Tasks 5 and 6 also remain
 
 ## Task 4 card: Candidate registry, module API, CLI, and isolation
 
-- **State:** `implementing`
+- **State:** `ready_for_qa`
 - **Specialization:** `integration`
 - **Contract owner:** Candidate Registry
 - **Contract artifact:** accepted Tasks 1-3 contracts and the frozen Commercial
@@ -903,6 +914,26 @@ runtime change is authorized. Task 4 remains `implementing` with its sole
 writer. Tasks 5 and 6 remain `planned`; independent re-review is required before
 any state advance.
 
+### Repair Round 4 independent re-review reconciliation
+
+Independent re-review of repair commit `986319a` PASSED with no P0/P1/P2. The
+reviewer reproduced the concurrent fresh-process race and confirmed exactly one
+Candidate revision delta, exactly one receipt delta, only receipt sequences 1
+and 2, valid `conformance-passed` fresh show and verification, and zero retry
+delta. The stricter separate-consumer race also converged on the same immutable
+revision and receipt. Focused Repair Round 4 and prior corruption coverage
+passed 45/45; Candidate exclusions at Graph, compiler, and Golden boundaries
+remained intact. Scope was exactly the two authorized repair paths, with no Task
+2 store, dependency, Graph, compiler, network, process, source-execution, or
+runtime production change.
+
+The PM reconciled the clean implementation and independent review and moved
+Task 4 `implementing -> ready_for_qa`. Independent behavioral QA is the next
+gate. Task 4 is not reviewed, accepted, promoted, or released; the complete
+repair history, Candidate Registry contract, exact allowed paths, non-goals,
+and acceptance evidence remain frozen. Tasks 5 and 6 remain `planned` and have
+not started.
+
 ### Exact allowed paths
 
 - `packages/external-intake/src/candidates.ts`
@@ -1044,10 +1075,10 @@ any state advance.
   Capabilities, and compiler test paths. The dispatched Task 4 writer has
   exclusive ownership of every frozen path; any overlap stops work.
 
-The active smallest valuable slice is Task 4 implementation under its frozen
-Candidate Registry contract, exact allowed paths, and non-goals. It is
-`implementing` with one exclusive `integration` writer and no other Task 4
-writer. Its bounded test-contract amendment permits only the Intake CLI package
+The active smallest valuable slice is independent behavioral QA for Task 4
+repair commit `986319a` under its frozen Candidate Registry contract, exact
+allowed paths, non-goals, and complete Repair Round 1-4 history. Its bounded
+test-contract amendment permits only the Intake CLI package
 manifest to import `@factory/external-intake`; all other isolation prohibitions
 remain enforced. Repair Round 1/5 is limited to Candidate namespace defense,
 reuse of accepted Task 3 completed-evidence verification, durable opaque
