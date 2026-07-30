@@ -195,6 +195,16 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)(happy-dom@20.11.1)(terser@5.49.0)
 
+  packages/external-intake:
+    dependencies:
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+    devDependencies:
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)(happy-dom@20.11.1)(terser@5.49.0)
+
   packages/graph:
     dependencies:
       zod:

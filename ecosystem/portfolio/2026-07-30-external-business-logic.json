@@ -1,0 +1,1428 @@
+{
+  "apiVersion": "factory.external-portfolio/v1",
+  "researchDate": "2026-07-30",
+  "sources": [
+    {
+      "id": "tastyigniter",
+      "name": "TastyIgniter v4.3.4",
+      "canonicalRepositoryUrl": "https://github.com/tastyigniter/TastyIgniter.git",
+      "fixedRef": "v4.3.4",
+      "licenceEvidenceUrl": "https://github.com/tastyigniter/TastyIgniter/blob/v4.3.4/LICENSE.md",
+      "portfolioClass": "selective-source",
+      "intakeClassification": "source-study",
+      "capabilitySeams": [
+        "F: menu and reservation journeys",
+        "B: availability, order, reservation states",
+        "D: location, table, menu, booking facts"
+      ]
+    },
+    {
+      "id": "ti-ext-cart",
+      "name": "TastyIgniter Cart 287ec45…",
+      "canonicalRepositoryUrl": "https://github.com/tastyigniter/ti-ext-cart.git",
+      "fixedRef": "287ec45dc3f545814c24c5a97f180a97409108fd",
+      "licenceEvidenceUrl": "https://github.com/tastyigniter/ti-ext-cart/blob/287ec45dc3f545814c24c5a97f180a97409108fd/LICENSE.md",
+      "portfolioClass": "selective-source",
+      "intakeClassification": "source-study",
+      "capabilitySeams": [
+        "F: declared option selection",
+        "B: cardinality and availability validation",
+        "D: option/value and immutable price-at-selection facts"
+      ]
+    },
+    {
+      "id": "opensourcepos",
+      "name": "Open Source Point of Sale 3.4.1",
+      "canonicalRepositoryUrl": "https://github.com/opensourcepos/opensourcepos.git",
+      "fixedRef": "3.4.1",
+      "licenceEvidenceUrl": "https://github.com/opensourcepos/opensourcepos/blob/3.4.1/LICENSE",
+      "portfolioClass": "architecture-only",
+      "intakeClassification": null,
+      "capabilitySeams": [
+        "F: cashier/report vocabulary",
+        "B: sale/return state boundaries",
+        "D: tender, receipt, stock-movement, and audit vocabulary"
+      ]
+    },
+    {
+      "id": "kasirku",
+      "name": "Kasirku 8d6273d…",
+      "canonicalRepositoryUrl": "https://github.com/rezadrian01/Kasirku.git",
+      "fixedRef": "8d6273d42206bf8a926475b1faf18d6c93dce84d",
+      "licenceEvidenceUrl": "https://github.com/rezadrian01/Kasirku/blob/8d6273d42206bf8a926475b1faf18d6c93dce84d/LICENSE",
+      "portfolioClass": "architecture-only",
+      "intakeClassification": null,
+      "capabilitySeams": [
+        "F: customer/merchant split",
+        "B: order-status vocabulary",
+        "D: table, receipt, dashboard read-model facts"
+      ]
+    },
+    {
+      "id": "medusa",
+      "name": "Medusa dde167d…",
+      "canonicalRepositoryUrl": "https://github.com/medusajs/medusa.git",
+      "fixedRef": "dde167d0be4c23ed37aa7a3d71721728e31f3e96",
+      "licenceEvidenceUrl": "https://github.com/medusajs/medusa/blob/dde167d0be4c23ed37aa7a3d71721728e31f3e96/LICENSE",
+      "portfolioClass": "provider",
+      "intakeClassification": "provider",
+      "capabilitySeams": [
+        "F: store/admin boundary",
+        "B: provider-side commerce operation mapping",
+        "D: external IDs and provider metadata only"
+      ]
+    },
+    {
+      "id": "saleor",
+      "name": "Saleor 3.23.22",
+      "canonicalRepositoryUrl": "https://github.com/saleor/saleor.git",
+      "fixedRef": "3.23.22",
+      "licenceEvidenceUrl": "https://github.com/saleor/saleor/blob/3.23.22/LICENSE",
+      "portfolioClass": "provider",
+      "intakeClassification": "provider",
+      "capabilitySeams": [
+        "F: customer/merchant separation",
+        "B: external commerce command translation",
+        "D: opaque provider IDs and synchronization cursor only"
+      ]
+    },
+    {
+      "id": "bagisto",
+      "name": "Bagisto v2.4.8",
+      "canonicalRepositoryUrl": "https://github.com/bagisto/bagisto.git",
+      "fixedRef": "v2.4.8",
+      "licenceEvidenceUrl": "https://github.com/bagisto/bagisto/blob/v2.4.8/LICENSE",
+      "portfolioClass": "selective-source",
+      "intakeClassification": "source-study",
+      "capabilitySeams": [
+        "F: catalogue/admin journey patterns",
+        "B: checkout/fulfilment boundaries",
+        "D: product/variant/price/inventory shapes"
+      ]
+    },
+    {
+      "id": "spree",
+      "name": "Spree v5.6.1",
+      "canonicalRepositoryUrl": "https://github.com/spree/spree.git",
+      "fixedRef": "v5.6.1",
+      "licenceEvidenceUrl": "https://github.com/spree/spree/blob/v5.6.1/LICENSE",
+      "portfolioClass": "selective-source",
+      "intakeClassification": "source-study",
+      "capabilitySeams": [
+        "F: operator/customer composition patterns",
+        "B: promotion and fulfilment separation",
+        "D: order adjustment and stock facts"
+      ]
+    },
+    {
+      "id": "vendure",
+      "name": "Vendure v3.7.1",
+      "canonicalRepositoryUrl": "https://github.com/vendure-ecommerce/vendure.git",
+      "fixedRef": "v3.7.1",
+      "licenceEvidenceUrl": "https://github.com/vendure-ecommerce/vendure/blob/v3.7.1/LICENSE.md",
+      "portfolioClass": "excluded",
+      "intakeClassification": null,
+      "capabilitySeams": [
+        "F/B/D: architecture may be read only for plugin and commerce separation"
+      ]
+    },
+    {
+      "id": "espocrm",
+      "name": "EspoCRM 10.0.3",
+      "canonicalRepositoryUrl": "https://github.com/espocrm/espocrm.git",
+      "fixedRef": "10.0.3",
+      "licenceEvidenceUrl": "https://github.com/espocrm/espocrm/blob/10.0.3/LICENSE.txt",
+      "portfolioClass": "excluded",
+      "intakeClassification": null,
+      "capabilitySeams": [
+        "F: sales/case workspaces",
+        "B: lead-to-opportunity/case state language",
+        "D: party, activity, and ownership concepts"
+      ]
+    },
+    {
+      "id": "twenty",
+      "name": "Twenty twenty/v2.25.0",
+      "canonicalRepositoryUrl": "https://github.com/twentyhq/twenty.git",
+      "fixedRef": "twenty/v2.25.0",
+      "licenceEvidenceUrl": "https://github.com/twentyhq/twenty/blob/twenty/v2.25.0/LICENSE",
+      "portfolioClass": "excluded",
+      "intakeClassification": null,
+      "capabilitySeams": [
+        "F: configurable-record UX",
+        "B: activity and ownership patterns",
+        "D: party/entity relation ideas"
+      ]
+    },
+    {
+      "id": "cal-com",
+      "name": "Cal.com v6.2.0",
+      "canonicalRepositoryUrl": "https://github.com/calcom/cal.com.git",
+      "fixedRef": "v6.2.0",
+      "licenceEvidenceUrl": "https://github.com/calcom/cal.com/blob/v6.2.0/LICENSE",
+      "portfolioClass": "excluded",
+      "intakeClassification": null,
+      "capabilitySeams": [
+        "F: booking and reschedule journeys",
+        "B: time-slot/confirmation/cancellation lifecycle",
+        "D: participant, schedule, availability, booking facts"
+      ]
+    },
+    {
+      "id": "easyappointments",
+      "name": "Easy!Appointments v1.5.1",
+      "canonicalRepositoryUrl": "https://github.com/alextselegidis/easyappointments.git",
+      "fixedRef": "v1.5.1",
+      "licenceEvidenceUrl": "https://github.com/alextselegidis/easyappointments/blob/v1.5.1/LICENSE.txt",
+      "portfolioClass": "excluded",
+      "intakeClassification": null,
+      "capabilitySeams": [
+        "F: customer/staff calendar journeys",
+        "B: slot selection and cancellation",
+        "D: service, resource, duration, and booking facts"
+      ]
+    },
+    {
+      "id": "eventyay-tickets",
+      "name": "Eventyay Tickets 25934879…",
+      "canonicalRepositoryUrl": "https://github.com/fossasia/eventyay-tickets.git",
+      "fixedRef": "25934879a2c738c6cbf422d8d1ccfd1b82d2186c",
+      "licenceEvidenceUrl": "https://github.com/fossasia/eventyay-tickets/blob/25934879a2c738c6cbf422d8d1ccfd1b82d2186c/LICENSE",
+      "portfolioClass": "selective-source",
+      "intakeClassification": "source-study",
+      "capabilitySeams": [
+        "F: checkout/check-in surfaces",
+        "B: capacity hold, expiry, issue, cancel, check-in",
+        "D: capacity allocation, ticket, admission, and audit facts"
+      ]
+    },
+    {
+      "id": "pretix",
+      "name": "pretix v2026.6.1",
+      "canonicalRepositoryUrl": "https://github.com/pretix/pretix.git",
+      "fixedRef": "v2026.6.1",
+      "licenceEvidenceUrl": "https://github.com/pretix/pretix/blob/v2026.6.1/LICENSE",
+      "portfolioClass": "excluded",
+      "intakeClassification": null,
+      "capabilitySeams": [
+        "F/B/D: read-only capacity, hold, admission, cancellation, and check-in reference"
+      ]
+    },
+    {
+      "id": "moodle",
+      "name": "Moodle v4.5.3",
+      "canonicalRepositoryUrl": "https://github.com/moodle/moodle.git",
+      "fixedRef": "v4.5.3",
+      "licenceEvidenceUrl": "https://github.com/moodle/moodle/blob/v4.5.3/COPYING.txt",
+      "portfolioClass": "excluded",
+      "intakeClassification": null,
+      "capabilitySeams": [
+        "F: learner/educator surfaces",
+        "B: enrolment/assessment progression",
+        "D: course, enrolment, attempt, result facts"
+      ]
+    },
+    {
+      "id": "edx-platform",
+      "name": "Open edX named-release/palm",
+      "canonicalRepositoryUrl": "https://github.com/openedx/edx-platform.git",
+      "fixedRef": "named-release/palm",
+      "licenceEvidenceUrl": "https://github.com/openedx/edx-platform/blob/named-release/palm/LICENSE.txt",
+      "portfolioClass": "excluded",
+      "intakeClassification": null,
+      "capabilitySeams": [
+        "F: learning journey ideas",
+        "B: course-run and progression states",
+        "D: course/enrolment/grade vocabulary"
+      ]
+    },
+    {
+      "id": "openmrs-core",
+      "name": "OpenMRS Core 2.7.6",
+      "canonicalRepositoryUrl": "https://github.com/openmrs/openmrs-core.git",
+      "fixedRef": "2.7.6",
+      "licenceEvidenceUrl": "https://github.com/openmrs/openmrs-core/blob/2.7.6/LICENSE",
+      "portfolioClass": "architecture-only",
+      "intakeClassification": null,
+      "capabilitySeams": [
+        "F: administrator workspace patterns",
+        "B: record/encounter permission and audit patterns",
+        "D: patient/encounter concepts only"
+      ]
+    },
+    {
+      "id": "openemr",
+      "name": "OpenEMR v8_2_0",
+      "canonicalRepositoryUrl": "https://github.com/openemr/openemr.git",
+      "fixedRef": "v8_2_0",
+      "licenceEvidenceUrl": "https://github.com/openemr/openemr/blob/v8_2_0/LICENSE",
+      "portfolioClass": "excluded",
+      "intakeClassification": null,
+      "capabilitySeams": [
+        "F/B/D: read-only administration, scheduling, billing, and audit boundary reference"
+      ]
+    },
+    {
+      "id": "inventree",
+      "name": "InvenTree 1.4.3",
+      "canonicalRepositoryUrl": "https://github.com/inventree/InvenTree.git",
+      "fixedRef": "1.4.3",
+      "licenceEvidenceUrl": "https://github.com/inventree/InvenTree/blob/1.4.3/LICENSE",
+      "portfolioClass": "selective-source",
+      "intakeClassification": "source-study",
+      "capabilitySeams": [
+        "F: stock/part operator workflows",
+        "B: reserve/release/consume/adjust transitions",
+        "D: immutable movement reasons, thresholds, and traceability"
+      ]
+    },
+    {
+      "id": "openboxes",
+      "name": "OpenBoxes v0.9.8",
+      "canonicalRepositoryUrl": "https://github.com/openboxes/openboxes.git",
+      "fixedRef": "v0.9.8",
+      "licenceEvidenceUrl": "https://github.com/openboxes/openboxes/blob/v0.9.8/LICENSE",
+      "portfolioClass": "architecture-only",
+      "intakeClassification": null,
+      "capabilitySeams": [
+        "F: receiving/dispatching workspace ideas",
+        "B: stock and shipment process boundaries",
+        "D: bin, lot, shipment, movement vocabulary"
+      ]
+    },
+    {
+      "id": "traccar",
+      "name": "Traccar v6.14.5",
+      "canonicalRepositoryUrl": "https://github.com/traccar/traccar.git",
+      "fixedRef": "v6.14.5",
+      "licenceEvidenceUrl": "https://github.com/traccar/traccar/blob/v6.14.5/LICENSE.txt",
+      "portfolioClass": "provider",
+      "intakeClassification": "provider",
+      "capabilitySeams": [
+        "F: fleet/map projection patterns",
+        "B: telemetry ingestion/event translation",
+        "D: provider device/position/event data outside Graph semantics"
+      ]
+    },
+    {
+      "id": "erpnext",
+      "name": "ERPNext v15.118.3",
+      "canonicalRepositoryUrl": "https://github.com/frappe/erpnext.git",
+      "fixedRef": "v15.118.3",
+      "licenceEvidenceUrl": "https://github.com/frappe/erpnext/blob/v15.118.3/LICENSE",
+      "portfolioClass": "excluded",
+      "intakeClassification": null,
+      "capabilitySeams": [
+        "F/B/D: broad read-only vocabulary for work orders, stock, accounting, and HR"
+      ]
+    },
+    {
+      "id": "hrms",
+      "name": "Frappe HRMS v16.15.0",
+      "canonicalRepositoryUrl": "https://github.com/frappe/hrms.git",
+      "fixedRef": "v16.15.0",
+      "licenceEvidenceUrl": "https://github.com/frappe/hrms/blob/v16.15.0/LICENSE",
+      "portfolioClass": "excluded",
+      "intakeClassification": null,
+      "capabilitySeams": [
+        "F: employee/self-service concepts",
+        "B: request/approval lifecycle",
+        "D: employee, leave, attendance, payroll vocabulary"
+      ]
+    },
+    {
+      "id": "orangehrm",
+      "name": "OrangeHRM v5.9",
+      "canonicalRepositoryUrl": "https://github.com/orangehrm/orangehrm.git",
+      "fixedRef": "v5.9",
+      "licenceEvidenceUrl": "https://github.com/orangehrm/orangehrm/blob/v5.9/LICENSE",
+      "portfolioClass": "excluded",
+      "intakeClassification": null,
+      "capabilitySeams": [
+        "F/B/D: read-only HR journeys, approval boundaries, and personnel vocabulary"
+      ]
+    },
+    {
+      "id": "openestate-immo-tool",
+      "name": "OpenEstate ImmoTool v1.5.0",
+      "canonicalRepositoryUrl": "https://github.com/openestate/openestate-immo-tool.git",
+      "fixedRef": "v1.5.0",
+      "licenceEvidenceUrl": "https://github.com/openestate/openestate-immo-tool/blob/v1.5.0/LICENSE",
+      "portfolioClass": "excluded",
+      "intakeClassification": null,
+      "capabilitySeams": [
+        "F: property listing/operator concepts",
+        "B: listing publication/import boundary",
+        "D: property, address, listing, and media references"
+      ]
+    },
+    {
+      "id": "ledgersmb",
+      "name": "LedgerSMB 1.12.0",
+      "canonicalRepositoryUrl": "https://github.com/ledgersmb/LedgerSMB.git",
+      "fixedRef": "1.12.0",
+      "licenceEvidenceUrl": "https://github.com/ledgersmb/LedgerSMB/blob/1.12.0/COPYRIGHT",
+      "portfolioClass": "excluded",
+      "intakeClassification": null,
+      "capabilitySeams": [
+        "F: accountant/invoice workspace concepts",
+        "B: posting/period-close boundaries",
+        "D: journal, account, invoice, payment, and immutable posting facts"
+      ]
+    },
+    {
+      "id": "invoiceninja",
+      "name": "Invoice Ninja v5.12.25",
+      "canonicalRepositoryUrl": "https://github.com/invoiceninja/invoiceninja.git",
+      "fixedRef": "v5.12.25",
+      "licenceEvidenceUrl": "https://github.com/invoiceninja/invoiceninja/blob/v5.12.25/LICENSE",
+      "portfolioClass": "architecture-only",
+      "intakeClassification": null,
+      "capabilitySeams": [
+        "F: customer invoice/quote flows",
+        "B: draft/send/paid/void workflow",
+        "D: client, invoice, line, tax, payment-attempt facts"
+      ]
+    },
+    {
+      "id": "chatwoot",
+      "name": "Chatwoot v4.10.0",
+      "canonicalRepositoryUrl": "https://github.com/chatwoot/chatwoot.git",
+      "fixedRef": "v4.10.0",
+      "licenceEvidenceUrl": "https://github.com/chatwoot/chatwoot/blob/v4.10.0/LICENSE",
+      "portfolioClass": "selective-source",
+      "intakeClassification": "source-study",
+      "capabilitySeams": [
+        "F: agent inbox/case workspace",
+        "B: assignment, status, SLA/notification",
+        "D: conversation, contact, message, assignment facts"
+      ]
+    },
+    {
+      "id": "zammad",
+      "name": "Zammad 6.5.0",
+      "canonicalRepositoryUrl": "https://github.com/zammad/zammad.git",
+      "fixedRef": "6.5.0",
+      "licenceEvidenceUrl": "https://github.com/zammad/zammad/blob/6.5.0/LICENSE",
+      "portfolioClass": "excluded",
+      "intakeClassification": null,
+      "capabilitySeams": ["F/B/D: read-only ticket/SLA/assignment vocabulary"]
+    },
+    {
+      "id": "bookstack",
+      "name": "BookStack v25.02.3",
+      "canonicalRepositoryUrl": "https://github.com/BookStackApp/BookStack.git",
+      "fixedRef": "v25.02.3",
+      "licenceEvidenceUrl": "https://github.com/BookStackApp/BookStack/blob/v25.02.3/LICENSE",
+      "portfolioClass": "selective-source",
+      "intakeClassification": "source-study",
+      "capabilitySeams": [
+        "F: navigation/editor patterns",
+        "B: publication/revision/permission states",
+        "D: article, hierarchy, revision, search projection"
+      ]
+    },
+    {
+      "id": "strapi",
+      "name": "Strapi v5.19.0",
+      "canonicalRepositoryUrl": "https://github.com/strapi/strapi.git",
+      "fixedRef": "v5.19.0",
+      "licenceEvidenceUrl": "https://github.com/strapi/strapi/blob/v5.19.0/LICENSE",
+      "portfolioClass": "selective-source",
+      "intakeClassification": "source-study",
+      "capabilitySeams": [
+        "F: editorial/admin patterns",
+        "B: draft/review/publish adaptation",
+        "D: content entry, media metadata, relation concepts"
+      ]
+    },
+    {
+      "id": "appsmith",
+      "name": "Appsmith v1.76",
+      "canonicalRepositoryUrl": "https://github.com/appsmithorg/appsmith.git",
+      "fixedRef": "v1.76",
+      "licenceEvidenceUrl": "https://github.com/appsmithorg/appsmith/blob/v1.76/LICENSE",
+      "portfolioClass": "selective-source",
+      "intakeClassification": "source-study",
+      "capabilitySeams": [
+        "F: internal operations screen patterns",
+        "B: governed request/action shapes",
+        "D: operational record/read-model concepts"
+      ]
+    },
+    {
+      "id": "baserow",
+      "name": "Baserow 1.31.0",
+      "canonicalRepositoryUrl": "https://github.com/bramw/baserow.git",
+      "fixedRef": "1.31.0",
+      "licenceEvidenceUrl": "https://github.com/bramw/baserow/blob/1.31.0/LICENSE",
+      "portfolioClass": "selective-source",
+      "intakeClassification": "source-study",
+      "capabilitySeams": [
+        "F: table/view collaboration patterns",
+        "B: bounded record workflows",
+        "D: collection, field, view, collaboration vocabulary"
+      ]
+    },
+    {
+      "id": "n8n",
+      "name": "n8n c580585…",
+      "canonicalRepositoryUrl": "https://github.com/n8n-io/n8n.git",
+      "fixedRef": "c580585cf48c62fe71adabfffe3f238ce604e263",
+      "licenceEvidenceUrl": "https://github.com/n8n-io/n8n/blob/c580585cf48c62fe71adabfffe3f238ce604e263/LICENSE.md",
+      "portfolioClass": "excluded",
+      "intakeClassification": null,
+      "capabilitySeams": [
+        "F/B/D: only a warning reference for constrained flow authoring and credentials isolation"
+      ]
+    },
+    {
+      "id": "workbox",
+      "name": "Workbox 8674ff…",
+      "canonicalRepositoryUrl": "https://github.com/GoogleChrome/workbox.git",
+      "fixedRef": "8674ff37178007fb2c5b225d124b224c5055145f",
+      "licenceEvidenceUrl": "https://github.com/GoogleChrome/workbox/blob/8674ff37178007fb2c5b225d124b224c5055145f/LICENSE",
+      "portfolioClass": "direct-dependency",
+      "intakeClassification": "direct-dependency",
+      "capabilitySeams": ["core.offline-projection"]
+    },
+    {
+      "id": "openfga",
+      "name": "OpenFGA v1.15.1",
+      "canonicalRepositoryUrl": "https://github.com/openfga/openfga.git",
+      "fixedRef": "v1.15.1",
+      "licenceEvidenceUrl": "https://github.com/openfga/openfga/blob/v1.15.1/LICENSE",
+      "portfolioClass": "provider",
+      "intakeClassification": "provider",
+      "capabilitySeams": ["AuthorizationProviderV1"]
+    },
+    {
+      "id": "appwrite",
+      "name": "Appwrite 1.9.6",
+      "canonicalRepositoryUrl": "https://github.com/appwrite/appwrite.git",
+      "fixedRef": "1.9.6",
+      "licenceEvidenceUrl": "https://github.com/appwrite/appwrite/blob/1.9.6/LICENSE",
+      "portfolioClass": "provider",
+      "intakeClassification": "provider",
+      "capabilitySeams": ["replaceable provider boundary"]
+    },
+    {
+      "id": "centrifugo",
+      "name": "Centrifugo v6.0.3",
+      "canonicalRepositoryUrl": "https://github.com/centrifugal/centrifugo.git",
+      "fixedRef": "v6.0.3",
+      "licenceEvidenceUrl": "https://github.com/centrifugal/centrifugo/blob/v6.0.3/LICENSE",
+      "portfolioClass": "provider",
+      "intakeClassification": "provider",
+      "capabilitySeams": ["core.event-envelope"]
+    },
+    {
+      "id": "tray",
+      "name": "QZ Tray 2.2.5",
+      "canonicalRepositoryUrl": "https://github.com/qzind/tray.git",
+      "fixedRef": "2.2.5",
+      "licenceEvidenceUrl": "https://github.com/qzind/tray/blob/2.2.5/LICENSE.txt",
+      "portfolioClass": "provider",
+      "intakeClassification": "provider",
+      "capabilitySeams": ["replaceable provider boundary"]
+    },
+    {
+      "id": "sdk-typescript",
+      "name": "Temporal TypeScript SDK v1.21.1",
+      "canonicalRepositoryUrl": "https://github.com/temporalio/sdk-typescript.git",
+      "fixedRef": "v1.21.1",
+      "licenceEvidenceUrl": "https://github.com/temporalio/sdk-typescript/blob/v1.21.1/LICENSE",
+      "portfolioClass": "architecture-only",
+      "intakeClassification": null,
+      "capabilitySeams": [
+        "workflow.deadline",
+        "workflow.escalation",
+        "workflow.compensation"
+      ]
+    },
+    {
+      "id": "node-red",
+      "name": "Node-RED v4.1.2",
+      "canonicalRepositoryUrl": "https://github.com/node-red/node-red.git",
+      "fixedRef": "4.1.2",
+      "licenceEvidenceUrl": "https://github.com/node-red/node-red/blob/4.1.2/LICENSE",
+      "portfolioClass": "architecture-only",
+      "intakeClassification": null,
+      "capabilitySeams": ["independently authored architecture reference"]
+    },
+    {
+      "id": "spec",
+      "name": "CloudEvents ce@v1.0.2",
+      "canonicalRepositoryUrl": "https://github.com/cloudevents/spec.git",
+      "fixedRef": "ce@v1.0.2",
+      "licenceEvidenceUrl": "https://github.com/cloudevents/spec/blob/ce%40v1.0.2/LICENSE",
+      "portfolioClass": "architecture-only",
+      "intakeClassification": null,
+      "capabilitySeams": ["core.event-envelope"]
+    }
+  ],
+  "scenarios": [
+    {
+      "number": 1,
+      "name": "Dine-in QR order",
+      "capabilities": [
+        "context",
+        "catalog",
+        "line-configuration",
+        "cart",
+        "order",
+        "payment-attempt",
+        "table-session",
+        "kitchen-queue"
+      ]
+    },
+    {
+      "number": 2,
+      "name": "Counter-service POS",
+      "capabilities": [
+        "location-context",
+        "catalog",
+        "cart",
+        "order",
+        "payment-attempt",
+        "receipt"
+      ]
+    },
+    {
+      "number": 3,
+      "name": "Takeaway pickup",
+      "capabilities": ["catalog", "cart", "order", "fulfilment", "notification"]
+    },
+    {
+      "number": 4,
+      "name": "Restaurant reservation",
+      "capabilities": [
+        "availability",
+        "reservation",
+        "queue",
+        "location-context"
+      ]
+    },
+    {
+      "number": 5,
+      "name": "Restaurant waitlist",
+      "capabilities": ["availability", "queue", "notification", "deadline"]
+    },
+    {
+      "number": 6,
+      "name": "Kitchen production board",
+      "capabilities": [
+        "order",
+        "workflow.case",
+        "assignment",
+        "kitchen-queue",
+        "event-envelope"
+      ]
+    },
+    {
+      "number": 7,
+      "name": "Catering quote",
+      "capabilities": [
+        "party",
+        "catalog",
+        "price-rule",
+        "accounting.invoice",
+        "workflow.approval"
+      ]
+    },
+    {
+      "number": 8,
+      "name": "Food-truck stock",
+      "capabilities": [
+        "location-context",
+        "catalog",
+        "inventory-ledger",
+        "order",
+        "receipt"
+      ]
+    },
+    {
+      "number": 9,
+      "name": "Retail storefront",
+      "capabilities": [
+        "catalog",
+        "price-rule",
+        "cart",
+        "order",
+        "payment-attempt",
+        "fulfilment"
+      ]
+    },
+    {
+      "number": 10,
+      "name": "B2B reorder portal",
+      "capabilities": [
+        "party",
+        "catalog",
+        "price-rule",
+        "order",
+        "invoice",
+        "approval"
+      ]
+    },
+    {
+      "number": 11,
+      "name": "Marketplace seller console",
+      "capabilities": [
+        "party",
+        "catalog",
+        "order",
+        "fulfilment",
+        "settlement-intent"
+      ]
+    },
+    {
+      "number": 12,
+      "name": "Subscription-box fulfilment",
+      "capabilities": [
+        "catalog",
+        "order",
+        "deadline",
+        "fulfilment",
+        "notification"
+      ]
+    },
+    {
+      "number": 13,
+      "name": "Returns authorization",
+      "capabilities": [
+        "order",
+        "workflow.case",
+        "compensation",
+        "inventory-ledger",
+        "receipt"
+      ]
+    },
+    {
+      "number": 14,
+      "name": "Wholesale price list",
+      "capabilities": ["party", "catalog", "price-rule", "location-context"]
+    },
+    {
+      "number": 15,
+      "name": "Gift-card order",
+      "capabilities": [
+        "catalog",
+        "order",
+        "payment-attempt",
+        "ledger",
+        "receipt"
+      ]
+    },
+    {
+      "number": 16,
+      "name": "Promotion campaign",
+      "capabilities": ["party", "price-rule", "order", "operational-report"]
+    },
+    {
+      "number": 17,
+      "name": "Lead capture CRM",
+      "capabilities": ["party", "workflow.case", "assignment", "notification"]
+    },
+    {
+      "number": 18,
+      "name": "Opportunity pipeline",
+      "capabilities": ["party", "workflow.case", "price-rule", "invoice"]
+    },
+    {
+      "number": 19,
+      "name": "Account success workspace",
+      "capabilities": [
+        "party",
+        "case",
+        "assignment",
+        "deadline",
+        "knowledge.search-projection"
+      ]
+    },
+    {
+      "number": 20,
+      "name": "Contact activity timeline",
+      "capabilities": ["party", "audit", "event-envelope", "operational-report"]
+    },
+    {
+      "number": 21,
+      "name": "Partner onboarding",
+      "capabilities": [
+        "party",
+        "workflow.case",
+        "approval",
+        "content.publication"
+      ]
+    },
+    {
+      "number": 22,
+      "name": "Sales territory review",
+      "capabilities": [
+        "party",
+        "location-context",
+        "assignment",
+        "operational-report"
+      ]
+    },
+    {
+      "number": 23,
+      "name": "Appointment booking",
+      "capabilities": ["availability", "reservation", "party", "notification"]
+    },
+    {
+      "number": 24,
+      "name": "Salon chair booking",
+      "capabilities": [
+        "location-context",
+        "availability",
+        "reservation",
+        "catalog",
+        "payment-attempt"
+      ]
+    },
+    {
+      "number": 25,
+      "name": "Clinic admin appointment",
+      "capabilities": [
+        "party",
+        "availability",
+        "reservation",
+        "role-policy",
+        "audit"
+      ]
+    },
+    {
+      "number": 26,
+      "name": "Equipment rental slot",
+      "capabilities": [
+        "availability",
+        "reservation",
+        "catalog",
+        "deposit-intent",
+        "fulfilment"
+      ]
+    },
+    {
+      "number": 27,
+      "name": "Class registration",
+      "capabilities": [
+        "catalog",
+        "availability",
+        "reservation",
+        "party",
+        "notification"
+      ]
+    },
+    {
+      "number": 28,
+      "name": "No-show recovery",
+      "capabilities": [
+        "reservation",
+        "deadline",
+        "compensation",
+        "notification"
+      ]
+    },
+    {
+      "number": 29,
+      "name": "Conference registration",
+      "capabilities": [
+        "catalog",
+        "capacity",
+        "hold",
+        "order",
+        "payment-attempt"
+      ]
+    },
+    {
+      "number": 30,
+      "name": "Reserved-seat concert",
+      "capabilities": [
+        "capacity",
+        "hold",
+        "ticket.issue",
+        "payment-attempt",
+        "check-in"
+      ]
+    },
+    {
+      "number": 31,
+      "name": "Free community event",
+      "capabilities": ["capacity", "ticket.issue", "check-in", "notification"]
+    },
+    {
+      "number": 32,
+      "name": "Festival credential admin",
+      "capabilities": [
+        "party",
+        "ticket.issue",
+        "role-policy",
+        "check-in",
+        "audit"
+      ]
+    },
+    {
+      "number": 33,
+      "name": "Workshop waitlist",
+      "capabilities": ["capacity", "queue", "ticket.issue", "deadline"]
+    },
+    {
+      "number": 34,
+      "name": "Ticket refund review",
+      "capabilities": [
+        "ticket.issue",
+        "workflow.case",
+        "compensation",
+        "ledger"
+      ]
+    },
+    {
+      "number": 35,
+      "name": "Course catalogue",
+      "capabilities": [
+        "catalog",
+        "content.article",
+        "publication",
+        "search-projection"
+      ]
+    },
+    {
+      "number": 36,
+      "name": "Learner enrolment",
+      "capabilities": ["party", "catalog", "reservation", "workflow.case"]
+    },
+    {
+      "number": 37,
+      "name": "Assessment attempt",
+      "capabilities": ["party", "workflow.case", "deadline", "audit"]
+    },
+    {
+      "number": 38,
+      "name": "Instructor content review",
+      "capabilities": [
+        "content.article",
+        "publication",
+        "approval",
+        "role-policy"
+      ]
+    },
+    {
+      "number": 39,
+      "name": "Certification issuance",
+      "capabilities": ["party", "assessment", "audit", "event-envelope"]
+    },
+    {
+      "number": 40,
+      "name": "Learner support queue",
+      "capabilities": [
+        "party",
+        "support.inbox",
+        "knowledge.search-projection",
+        "SLA"
+      ]
+    },
+    {
+      "number": 41,
+      "name": "Patient-administration intake",
+      "capabilities": ["party", "role-policy", "workflow.case", "audit"]
+    },
+    {
+      "number": 42,
+      "name": "Referral tracking",
+      "capabilities": ["party", "workflow.case", "assignment", "deadline"]
+    },
+    {
+      "number": 43,
+      "name": "Clinic room calendar",
+      "capabilities": [
+        "location-context",
+        "availability",
+        "reservation",
+        "audit"
+      ]
+    },
+    {
+      "number": 44,
+      "name": "Care-plan task admin",
+      "capabilities": ["party", "workflow.case", "assignment", "notification"]
+    },
+    {
+      "number": 45,
+      "name": "Consent-document registry",
+      "capabilities": ["party", "content.article", "publication", "audit"]
+    },
+    {
+      "number": 46,
+      "name": "Medical billing administration",
+      "capabilities": ["party", "invoice", "ledger", "approval"]
+    },
+    {
+      "number": 47,
+      "name": "Parts receiving",
+      "capabilities": ["catalog", "inventory-ledger", "warehouse.bin", "audit"]
+    },
+    {
+      "number": 48,
+      "name": "Warehouse pick-pack-ship",
+      "capabilities": ["order", "inventory-ledger", "fulfilment", "shipment"]
+    },
+    {
+      "number": 49,
+      "name": "Cycle counting",
+      "capabilities": ["inventory-ledger", "workflow.case", "approval", "audit"]
+    },
+    {
+      "number": 50,
+      "name": "Reorder planning",
+      "capabilities": [
+        "catalog",
+        "inventory-ledger",
+        "operational-report",
+        "notification"
+      ]
+    },
+    {
+      "number": 51,
+      "name": "Lot/serial trace admin",
+      "capabilities": ["catalog", "inventory-ledger", "event-envelope", "audit"]
+    },
+    {
+      "number": 52,
+      "name": "Transfer between locations",
+      "capabilities": [
+        "location-context",
+        "inventory-ledger",
+        "shipment",
+        "approval"
+      ]
+    },
+    {
+      "number": 53,
+      "name": "Field-service work order",
+      "capabilities": [
+        "party",
+        "location-context",
+        "workflow.case",
+        "assignment",
+        "deadline"
+      ]
+    },
+    {
+      "number": 54,
+      "name": "Technician scheduling",
+      "capabilities": ["availability", "assignment", "route", "notification"]
+    },
+    {
+      "number": 55,
+      "name": "Parts-to-job reservation",
+      "capabilities": [
+        "work-order",
+        "inventory-ledger",
+        "stock-reservation",
+        "fulfilment"
+      ]
+    },
+    {
+      "number": 56,
+      "name": "Inspection checklist",
+      "capabilities": [
+        "workflow.case",
+        "content.article",
+        "audit",
+        "compensation"
+      ]
+    },
+    {
+      "number": 57,
+      "name": "Maintenance contract visit",
+      "capabilities": ["party", "deadline", "work-order", "invoice"]
+    },
+    {
+      "number": 58,
+      "name": "Dispatch exception desk",
+      "capabilities": ["shipment", "route", "workflow.case", "notification"]
+    },
+    {
+      "number": 59,
+      "name": "Leave request",
+      "capabilities": ["party", "workflow.approval", "deadline", "notification"]
+    },
+    {
+      "number": 60,
+      "name": "Expense approval",
+      "capabilities": ["party", "invoice", "approval", "audit", "ledger"]
+    },
+    {
+      "number": 61,
+      "name": "Recruitment requisition",
+      "capabilities": [
+        "party",
+        "workflow.case",
+        "approval",
+        "content.publication"
+      ]
+    },
+    {
+      "number": 62,
+      "name": "Candidate interview scheduling",
+      "capabilities": ["party", "availability", "reservation", "notification"]
+    },
+    {
+      "number": 63,
+      "name": "Employee onboarding",
+      "capabilities": [
+        "party",
+        "workflow.case",
+        "assignment",
+        "knowledge.search-projection"
+      ]
+    },
+    {
+      "number": 64,
+      "name": "Time-off calendar",
+      "capabilities": ["party", "availability", "reservation", "role-policy"]
+    },
+    {
+      "number": 65,
+      "name": "Property listing management",
+      "capabilities": [
+        "property",
+        "party",
+        "content.media-reference",
+        "publication"
+      ]
+    },
+    {
+      "number": 66,
+      "name": "Rental application review",
+      "capabilities": ["party", "property", "workflow.case", "approval"]
+    },
+    {
+      "number": 67,
+      "name": "Lease renewal workflow",
+      "capabilities": [
+        "party",
+        "property",
+        "deadline",
+        "notification",
+        "invoice"
+      ]
+    },
+    {
+      "number": 68,
+      "name": "Maintenance request",
+      "capabilities": [
+        "property",
+        "workflow.case",
+        "assignment",
+        "field-service.dispatch"
+      ]
+    },
+    {
+      "number": 69,
+      "name": "Viewing appointment",
+      "capabilities": ["property", "availability", "reservation", "party"]
+    },
+    {
+      "number": 70,
+      "name": "Property inspection",
+      "capabilities": [
+        "property",
+        "checklist",
+        "audit",
+        "content.media-reference"
+      ]
+    },
+    {
+      "number": 71,
+      "name": "Delivery route plan",
+      "capabilities": [
+        "shipment",
+        "route",
+        "location-context",
+        "event-envelope"
+      ]
+    },
+    {
+      "number": 72,
+      "name": "Fleet telematics view",
+      "capabilities": [
+        "telemetry-provider",
+        "route",
+        "operational-report",
+        "audit"
+      ]
+    },
+    {
+      "number": 73,
+      "name": "Proof-of-delivery review",
+      "capabilities": ["shipment", "workflow.case", "media-reference", "audit"]
+    },
+    {
+      "number": 74,
+      "name": "Cold-chain exception",
+      "capabilities": [
+        "telemetry-provider",
+        "deadline",
+        "workflow.case",
+        "notification"
+      ]
+    },
+    {
+      "number": 75,
+      "name": "Last-mile dispatch",
+      "capabilities": ["shipment", "assignment", "route", "notification"]
+    },
+    {
+      "number": 76,
+      "name": "Cross-dock operations",
+      "capabilities": [
+        "inventory-ledger",
+        "shipment",
+        "location-context",
+        "event-envelope"
+      ]
+    },
+    {
+      "number": 77,
+      "name": "Customer invoice",
+      "capabilities": ["party", "invoice", "line-configuration", "receipt"]
+    },
+    {
+      "number": 78,
+      "name": "Accounts receivable collection",
+      "capabilities": ["invoice", "ledger", "deadline", "workflow.case"]
+    },
+    {
+      "number": 79,
+      "name": "Vendor bill approval",
+      "capabilities": ["party", "invoice", "approval", "ledger"]
+    },
+    {
+      "number": 80,
+      "name": "Expense reimbursement",
+      "capabilities": ["party", "invoice", "approval", "payment-attempt"]
+    },
+    {
+      "number": 81,
+      "name": "Period-close checklist",
+      "capabilities": [
+        "accounting.period",
+        "workflow.case",
+        "approval",
+        "audit"
+      ]
+    },
+    {
+      "number": 82,
+      "name": "Credit-note request",
+      "capabilities": ["invoice", "compensation", "ledger", "approval"]
+    },
+    {
+      "number": 83,
+      "name": "Customer support inbox",
+      "capabilities": ["party", "support.inbox", "assignment", "SLA"]
+    },
+    {
+      "number": 84,
+      "name": "Escalated support case",
+      "capabilities": [
+        "support.inbox",
+        "workflow.escalation",
+        "deadline",
+        "notification"
+      ]
+    },
+    {
+      "number": 85,
+      "name": "Returns support",
+      "capabilities": [
+        "support.inbox",
+        "order",
+        "compensation",
+        "inventory-ledger"
+      ]
+    },
+    {
+      "number": 86,
+      "name": "Customer self-service portal",
+      "capabilities": [
+        "party",
+        "support.inbox",
+        "knowledge.search-projection",
+        "role-policy"
+      ]
+    },
+    {
+      "number": 87,
+      "name": "Complaint resolution",
+      "capabilities": [
+        "support.inbox",
+        "workflow.case",
+        "audit",
+        "operational-report"
+      ]
+    },
+    {
+      "number": 88,
+      "name": "Service-level dashboard",
+      "capabilities": [
+        "support.inbox",
+        "deadline",
+        "operational-report",
+        "event-envelope"
+      ]
+    },
+    {
+      "number": 89,
+      "name": "Product knowledge base",
+      "capabilities": [
+        "knowledge.article",
+        "publication",
+        "search-projection",
+        "role-policy"
+      ]
+    },
+    {
+      "number": 90,
+      "name": "Internal SOP library",
+      "capabilities": ["content.article", "revision", "approval", "audit"]
+    },
+    {
+      "number": 91,
+      "name": "Help-center article review",
+      "capabilities": ["knowledge.article", "workflow.approval", "publication"]
+    },
+    {
+      "number": 92,
+      "name": "Policy acknowledgement",
+      "capabilities": ["content.article", "party", "audit", "notification"]
+    },
+    {
+      "number": 93,
+      "name": "CMS landing pages",
+      "capabilities": [
+        "content.article",
+        "media-reference",
+        "publication",
+        "PageModel"
+      ]
+    },
+    {
+      "number": 94,
+      "name": "Training playbook",
+      "capabilities": [
+        "knowledge.article",
+        "course",
+        "search-projection",
+        "role-policy"
+      ]
+    },
+    {
+      "number": 95,
+      "name": "IT access request",
+      "capabilities": [
+        "party",
+        "workflow.case",
+        "approval",
+        "authorization-provider"
+      ]
+    },
+    {
+      "number": 96,
+      "name": "Procurement intake",
+      "capabilities": ["party", "catalog", "approval", "invoice"]
+    },
+    {
+      "number": 97,
+      "name": "Facilities work queue",
+      "capabilities": [
+        "location-context",
+        "workflow.case",
+        "assignment",
+        "deadline"
+      ]
+    },
+    {
+      "number": 98,
+      "name": "Asset checkout",
+      "capabilities": ["party", "catalog", "inventory-ledger", "reservation"]
+    },
+    {
+      "number": 99,
+      "name": "Change-management request",
+      "capabilities": ["workflow.case", "approval", "event-envelope", "audit"]
+    },
+    {
+      "number": 100,
+      "name": "Application portfolio register",
+      "capabilities": [
+        "profile-catalog",
+        "capability-evidence",
+        "generated-application-record"
+      ]
+    },
+    {
+      "number": 101,
+      "name": "Vendor onboarding",
+      "capabilities": ["party", "workflow.case", "document", "approval"]
+    },
+    {
+      "number": 102,
+      "name": "Security exception review",
+      "capabilities": ["workflow.case", "deadline", "approval", "audit"]
+    },
+    {
+      "number": 103,
+      "name": "Data-access request",
+      "capabilities": ["party", "authorization-provider", "approval", "audit"]
+    },
+    {
+      "number": 104,
+      "name": "Incident command queue",
+      "capabilities": [
+        "workflow.case",
+        "assignment",
+        "escalation",
+        "event-envelope"
+      ]
+    },
+    {
+      "number": 105,
+      "name": "Executive operating dashboard",
+      "capabilities": ["operational-report", "event-envelope", "role-policy"]
+    },
+    {
+      "number": 106,
+      "name": "Compliance evidence register",
+      "capabilities": [
+        "audit",
+        "content.publication",
+        "approval",
+        "operational-report"
+      ]
+    },
+    {
+      "number": 107,
+      "name": "Customer data correction",
+      "capabilities": [
+        "party",
+        "workflow.case",
+        "approval",
+        "audit",
+        "compensation"
+      ]
+    },
+    {
+      "number": 108,
+      "name": "Multi-location operations console",
+      "capabilities": [
+        "location-context",
+        "inventory-ledger",
+        "workflow.case",
+        "operational-report"
+      ]
+    }
+  ]
+}
