@@ -1,6 +1,7 @@
 # External capability intake design
 
-Status: proposed 2026-07-31.
+Status: accepted 2026-07-31; acquisition-record amendment approved by the
+Controller 2026-07-31.
 
 ## Purpose
 
@@ -24,8 +25,8 @@ Use a two-registry, quarantine-first model:
 
 ```text
 fixed public reference
-  -> immutable source snapshot + provenance evidence
-  -> deterministic scan bundle + module candidates
+  -> immutable source snapshot + truthful acquisition record
+  -> deterministic scan bundle + AST inventory + EvidenceBundle
   -> Candidate registry (not importable, not selectable, not compiled)
   -> human promotion decision + Factory-owned implementation/adaptation
   -> Golden registry (digest-verified, selectable by Draft, compilable only after Publish)
@@ -95,6 +96,7 @@ ecosystem/
     jobs/<job-id>/job.json
     sources/<publisher>/<repository>/<commit-sha>/source.tar.zst
     evidence/<source-digest>/
+      acquisition.json
       provenance.json
       licence.json
       notices.json
@@ -153,6 +155,36 @@ type SourceSnapshotV1 = {
     retrievedAt: string;
     digest: string;
   }[];
+};
+
+type ExternalSourceAcquisitionV1 = {
+  apiVersion: "factory.external-source-acquisition/v1";
+  sourceRequestDigest: string;
+  source: {
+    canonicalRepositoryUrl: string;
+    requestedRef: string;
+    resolvedCommit: string;
+  };
+  snapshot: {
+    recordDigest: string;
+    archiveDigest: string;
+    treeDigest: string;
+    entryCount: number;
+    declaredBytes: number;
+  };
+  licence: {
+    primaryPaths: readonly string[];
+    textDigests: readonly string[];
+  };
+  notices: readonly { path: string; digest: string; required: boolean }[];
+  provenance: readonly {
+    url: string;
+    retrievedAt: string;
+    digest: string;
+  }[];
+  manualStatus: "unreviewed";
+  acquisitionState: "acquired" | "blocked";
+  failureCode?: string;
 };
 
 type EvidenceBundleV1 = {
@@ -220,6 +252,14 @@ type PromotionDecisionV1 = {
 };
 ```
 
+`ExternalSourceAcquisitionV1` is a distinct persistent record. It is never a
+Candidate and never an `EvidenceBundleV1`. Task 2 may assert only fixed-source
+acquisition, snapshot/tree, licence/notice, provenance, the literal
+`manualStatus: "unreviewed"`, and its explicit acquisition state. Its strict
+schema rejects SBOM, scanner, scan-result, and AST identities or fields. Task 3
+consumes the acquisition record with pinned scanner and inventory outputs to
+create the first truthful `EvidenceBundleV1`.
+
 Source bytes and scan reports are content-addressed. A job records only
 references to them. Re-running a request with the same resolved commit,
 archive/tree digests, scanner versions, and ruleset digests returns the same
@@ -264,10 +304,16 @@ partially promotable.
    `COPYING`, `NOTICE`, and declared third-party notice paths. Record byte
    digests and original URLs at the resolved commit. A scanner may suggest an
    SPDX expression, but only a reviewer can approve licence compatibility.
+   Persist `factory.external-source-acquisition/v1` with
+   `manualStatus: "unreviewed"` and an explicit acquisition state. Task 2 emits
+   `{ snapshot, acquisition }`; it does not emit an EvidenceBundle or use a
+   phase marker as an SBOM, scanner, scan result, or AST identity.
 4. **Generate SBOM and scan bundle.** Build an SBOM from lockfiles/manifests
    without installation. Run pinned offline-capable licence, secret, SAST, and
    dependency scanners over snapshot bytes. Record tool/ruleset/report digests
-   and disable scanner network calls after the logged acquisition step.
+   and disable scanner network calls after the logged acquisition step. Task 3
+   combines these outputs with the accepted acquisition record and AST
+   inventory to persist `EvidenceBundleV1`.
 5. **Inventory AST/modules.** Parse allow-listed languages with pinned parsers;
    retain path, symbol, import/export edges, declared dependencies, size,
    notice markers, generated-file indication, and source digest. AST inventory

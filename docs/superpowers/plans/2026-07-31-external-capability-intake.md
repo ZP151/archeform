@@ -60,20 +60,20 @@ canonical JSON, CycloneDX metadata, and deterministic local scanner adapters.
 
 ## Planned file structure
 
-| Area                                                          | Responsibility                                                                           |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `packages/external-intake/src/contracts.ts`                   | Strict v1 request, snapshot, evidence, Candidate, receipt, and promotion-packet schemas. |
-| `packages/external-intake/src/canonical.ts`                   | Canonical JSON and raw-byte SHA-256 primitives.                                          |
-| `packages/external-intake/src/store.ts`                       | Opaque-ID, content-addressed, immutable quarantine persistence.                          |
-| `packages/external-intake/src/portfolio.ts`                   | Validates the 43 source records and 108 scenario demand mappings.                        |
-| `packages/external-intake/src/source-client.ts`               | Allow-listed fixed-ref public-source client contract and GitHub implementation.          |
-| `packages/external-intake/src/snapshot.ts`                    | Snapshot/tree/provenance/licence/notice acquisition and receipts.                        |
-| `packages/external-intake/src/scans.ts`                       | Pinned local scanner interfaces, orchestration, normalization, and failure isolation.    |
-| `packages/external-intake/src/candidates.ts`                  | Candidate artifact emission, append-only status receipts, and query API.                 |
-| `packages/external-intake/src/promotion.ts`                   | Read-only promotion-packet validation and rendering.                                     |
-| `apps/intake-cli/src/main.ts`                                 | Repository-local batch/status/evidence/candidate/promotion commands.                     |
-| `ecosystem/portfolio/2026-07-30-external-business-logic.json` | Machine-readable fixed-reference portfolio and scenario demand map; no source bytes.     |
-| `ecosystem/intake/**`                                         | Ignored runtime quarantine; never imported by product builds.                            |
+| Area                                                          | Responsibility                                                                                        |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `packages/external-intake/src/contracts.ts`                   | Strict v1 request, snapshot, acquisition, evidence, Candidate, receipt, and promotion-packet schemas. |
+| `packages/external-intake/src/canonical.ts`                   | Canonical JSON and raw-byte SHA-256 primitives.                                                       |
+| `packages/external-intake/src/store.ts`                       | Opaque-ID, content-addressed, immutable quarantine persistence.                                       |
+| `packages/external-intake/src/portfolio.ts`                   | Validates the 43 source records and 108 scenario demand mappings.                                     |
+| `packages/external-intake/src/source-client.ts`               | Allow-listed fixed-ref public-source client contract and GitHub implementation.                       |
+| `packages/external-intake/src/snapshot.ts`                    | Snapshot/tree/provenance/licence/notice acquisition and receipts.                                     |
+| `packages/external-intake/src/scans.ts`                       | Pinned local scanner interfaces, orchestration, normalization, and failure isolation.                 |
+| `packages/external-intake/src/candidates.ts`                  | Candidate artifact emission, append-only status receipts, and query API.                              |
+| `packages/external-intake/src/promotion.ts`                   | Read-only promotion-packet validation and rendering.                                                  |
+| `apps/intake-cli/src/main.ts`                                 | Repository-local batch/status/evidence/candidate/promotion commands.                                  |
+| `ecosystem/portfolio/2026-07-30-external-business-logic.json` | Machine-readable fixed-reference portfolio and scenario demand map; no source bytes.                  |
+| `ecosystem/intake/**`                                         | Ignored runtime quarantine; never imported by product builds.                                         |
 
 ## Task 1: Freeze Candidate contracts and immutable persistence
 
@@ -111,6 +111,9 @@ export type Sha256Digest = `sha256:${string}`;
 
 export function parseIntakeRequest(input: unknown): IntakeRequestV1;
 export function parseSourceSnapshot(input: unknown): SourceSnapshotV1;
+export function parseExternalSourceAcquisition(
+  input: unknown,
+): ExternalSourceAcquisitionV1;
 export function parseEvidenceBundle(input: unknown): EvidenceBundleV1;
 export function parseCandidateCapability(input: unknown): CandidateCapabilityV1;
 export function canonicalRecordDigest(input: unknown): Sha256Digest;
@@ -214,6 +217,46 @@ git add .gitignore pnpm-lock.yaml packages/external-intake ecosystem/portfolio/2
 git commit -m "feat: add external intake contracts"
 ```
 
+## Task 1 bounded amendment: Add the truthful acquisition record
+
+**Owner:** `integration`
+
+**Contract owner:** External Intake Contract
+
+The accepted Task 1 release behavior and release code set remain frozen. This
+amendment reopens only the shared persistent-record contract required to
+separate Task 2 acquisition facts from Task 3 scan and AST evidence.
+
+**Exact amendment-owned paths:**
+
+- Modify: `packages/external-intake/src/contracts.ts`
+- Modify: `packages/external-intake/src/index.ts`
+- Modify: `packages/external-intake/test/contracts.test.ts`
+- Modify: `packages/external-intake/test/store.test.ts`
+
+**Produces:**
+
+```ts
+export function parseExternalSourceAcquisition(
+  input: unknown,
+): ExternalSourceAcquisitionV1;
+```
+
+- [ ] Add strict `factory.external-source-acquisition/v1` parsing for source
+      request identity, resolved reference, snapshot/tree digests and bounds,
+      licence, notices, provenance, literal `manualStatus: "unreviewed"`, and
+      explicit `acquisitionState`.
+- [ ] Reject Candidate/Golden identity and every SBOM, scanner, scan-result, or
+      AST identity/field. This record is never `EvidenceBundleV1`.
+- [ ] Prove immutable-store persistence and round trip under a distinct
+      acquisition record kind while preserving all accepted Task 1 behavior.
+- [ ] Run the focused contract/store suites, full External Intake suite,
+      typecheck, and lint on Node 22 before independent review.
+
+Task 2 remains blocked until this bounded amendment is independently reviewed,
+QA/release reconciled, and accepted. A contract or path change stops the
+amendment and requires a recorded repair round.
+
 ## Task 2: Acquire fixed-SHA snapshots, provenance, licences, and notices
 
 **Owner:** `platform`
@@ -233,7 +276,8 @@ git commit -m "feat: add external intake contracts"
 **Interfaces:**
 
 - Consumes: Task 1 `IntakeRequestV1`, record parsers, digest primitives, and
-  immutable store.
+  immutable store, including the accepted
+  `factory.external-source-acquisition/v1` amendment.
 - Produces:
 
 ```ts
@@ -251,8 +295,14 @@ export async function acquireSourceEvidence(
   request: IntakeRequestV1,
   client: FixedSourceClient,
   store: ExternalIntakeStore,
-): Promise<{ snapshot: StoredRecordRef; evidence: StoredRecordRef }>;
+): Promise<{ snapshot: StoredRecordRef; acquisition: StoredRecordRef }>;
 ```
+
+Task 2 persists only `factory.external-source-snapshot/v1` and
+`factory.external-source-acquisition/v1`. It cannot emit
+`factory.external-evidence/v1` or claim SBOM, scanner, scan-result, or AST
+identity. Task 3 consumes `{ snapshot, acquisition }` and creates the truthful
+EvidenceBundle after real pinned scan and inventory outputs exist.
 
 - [ ] **Step 1: Write fixed-reference and path-adversarial tests**
 
@@ -303,13 +353,16 @@ reserved name, prohibited vendor/generated/binary/nested-archive path, or
 configured file/count/byte overflow. Compute a canonical tree digest over
 path/mode/blob-digest records and verify an optional expected commit.
 
-- [ ] **Step 5: Capture licence, notices, provenance, and receipt**
+- [ ] **Step 5: Capture licence, notices, provenance, and acquisition**
 
 Read only discovered allow-listed `LICENSE*`, `COPYING*`, `NOTICE*`, and
 declared notice paths at the resolved commit. Store exact raw-byte digests and
-origin URLs. Leave `manualStatus: "unreviewed"`; a missing/ambiguous primary
-licence, missing required notice, digest drift, or unreadable evidence blocks
-Candidate emission but preserves a redacted failure receipt.
+origin URLs. Persist a strict acquisition record with
+`manualStatus: "unreviewed"` and an explicit acquisition state. A
+missing/ambiguous primary licence, missing required notice, digest drift, or
+unreadable evidence blocks Candidate emission but preserves a redacted failure
+receipt. Do not create an EvidenceBundle or substitute a phase marker for SBOM,
+scanner, scan-result, or AST identity.
 
 - [ ] **Step 6: Verify Task 2**
 
@@ -351,7 +404,8 @@ git commit -m "feat: acquire fixed external source evidence"
 
 **Interfaces:**
 
-- Consumes: Task 1 immutable store/contracts and Task 2 snapshot/evidence refs.
+- Consumes: Task 1 immutable store/contracts and Task 2 snapshot/acquisition
+  refs.
 - Produces:
 
 ```ts
@@ -426,12 +480,12 @@ source body exists.
 
 - [ ] **Step 5: Implement resumable independent jobs**
 
-Persist state receipts for `requested -> resolved -> snapshotted -> evidenced
--> scanned -> inventoried -> candidate-ready` and terminal `blocked/rejected`.
-Resume only when every parent digest/tool version/ruleset digest matches. A
-single source failure never marks sibling items complete or promotable. Re-runs
-with identical inputs reuse immutable refs; any changed input produces a new
-evidence revision.
+Persist state receipts for `requested -> resolved -> snapshotted -> acquired
+-> scanned -> inventoried -> evidenced -> candidate-ready` and terminal
+`blocked/rejected`. Resume only when every parent digest/tool version/ruleset
+digest matches. A single source failure never marks sibling items complete or
+promotable. Re-runs with identical inputs reuse immutable refs; any changed
+input produces a new evidence revision.
 
 - [ ] **Step 6: Verify Task 3**
 
@@ -474,7 +528,8 @@ to the Golden registry or Publish verifier.
 - Create: `packages/external-intake/test/api.test.ts`
 - Create: `packages/external-intake/test/conformance.test.ts`
 - Modify: `packages/external-intake/src/index.ts` to publish the accepted Task 2
-  source-evidence, Task 3 scan/job, and Task 4 Candidate module APIs together.
+  source-acquisition, Task 3 evidence/scan/job, and Task 4 Candidate module APIs
+  together.
 - Create: `apps/intake-cli/package.json`
 - Create: `apps/intake-cli/tsconfig.json`
 - Create: `apps/intake-cli/vitest.config.ts`
@@ -811,9 +866,10 @@ git commit -m "test: accept external Candidate intake"
    Independent release review and fresh verification remain required.
 6. Only after release review and fresh verification pass may the PM mark the
    task `accepted` and unblock its dependents.
-7. Tasks 2 and 3 may run in parallel only after Task 1 is accepted because they
-   consume the same frozen record/store contract and own disjoint paths. No
-   other implementation tasks overlap.
+7. The bounded Task 1 acquisition-record amendment runs alone. Task 2 resumes
+   only after that amendment is accepted, and Task 3 begins only after Task 2's
+   `{ snapshot, acquisition }` output is accepted. No implementation overlaps
+   an open shared-contract change.
 
 ## Plan self-review
 

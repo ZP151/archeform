@@ -33,16 +33,18 @@ recorded repair round. Five failed repair/review rounds require escalation.
 
 Planning is complete for the first quarantine-first bulk Candidate Intake
 slice, and the Controller has accepted the design contract. Task 1 is now
-`accepted`, Task 2 is `implementing`, and Tasks 3 through 6 remain `planned`.
-The system will ingest the
+reopened at `implementing` for a bounded shared-contract amendment; its accepted
+release behavior remains frozen. Task 2 remains `implementing` but is BLOCKED
+on that amendment, and Tasks 3 through 6 remain `planned`. The system will
+ingest the
 43 fixed-reference portfolio as metadata, retain the 108 scenarios as
 composition demand signals, and produce only quarantined evidence,
 non-executable Candidate records, and pending-review promotion packets.
 
-Task 1 independent QA and release review PASSED. The PM reconciled the evidence
-through `ready_for_qa -> reviewed -> accepted`. Its release code set, contract,
-scope, and exact allowed paths are frozen. Task 2 is now dispatched against
-that accepted dependency.
+Task 1 independent QA and release review PASSED. Its release code set and
+accepted behavior remain frozen. The Controller has reopened only its shared
+persistent-record contract to add a truthful acquisition record. Task 2 stops
+until that bounded amendment is accepted.
 
 The Commercial Capability Foundation remains the Golden execution boundary.
 External Intake Task 2 has been dispatched with its existing contract artifact
@@ -50,22 +52,25 @@ and exact allowed paths frozen. Task 3's Task 1 dependency is satisfied, but it
 remains `planned` until a separate PM dispatch. Tasks 4-6 remain blocked on
 their preceding Intake dependencies.
 
-Independent Task 2 review FAILED with three P1 findings and one P2. Task 2
-remains `implementing` in Fix Round 1/5; its original contract, scope, and exact
-allowed paths remain frozen. Tasks 3 through 6 remain `planned`.
+Independent Task 2 review FAILED with three P1 findings and one P2. The
+Controller resolved its schema incompatibility by selecting a distinct
+`factory.external-source-acquisition/v1` record. Task 2 remains `implementing`
+but BLOCKED on the Task 1 contract amendment; its original scope and exact
+paths remain frozen. Tasks 3 through 6 remain `planned`.
 
-| Task                                             | State          | Specialization      | Contract owner                   | Dependency gate                                              |
-| ------------------------------------------------ | -------------- | ------------------- | -------------------------------- | ------------------------------------------------------------ |
-| 1. Candidate contracts and immutable persistence | `accepted`     | `integration`       | External Intake Contract         | QA and release review PASS; release set and contract frozen. |
-| 2. Fixed-source provenance and notices           | `implementing` | `platform`          | External Source Provenance       | Task 1 accepted; Task 2 contract and paths frozen.           |
-| 3. Deterministic scan orchestration              | `planned`      | `platform-security` | External Evidence Pipeline       | Task 1 accepted; may parallel Task 2 on disjoint paths.      |
-| 4. Candidate registry, API, CLI, and isolation   | `planned`      | `integration`       | Candidate Registry               | Tasks 1-3 and Commercial Foundation Task 1 accepted.         |
-| 5. Review-only promotion packets                 | `planned`      | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.            |
-| 6. Bulk acceptance and release evidence          | `planned`      | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.         |
+| Task                                             | State          | Specialization      | Contract owner                   | Dependency gate                                                              |
+| ------------------------------------------------ | -------------- | ------------------- | -------------------------------- | ---------------------------------------------------------------------------- |
+| 1. Candidate contracts and immutable persistence | `implementing` | `integration`       | External Intake Contract         | Accepted release behavior frozen; bounded acquisition-record amendment open. |
+| 2. Fixed-source provenance and notices           | `implementing` | `platform`          | External Source Provenance       | BLOCKED on accepted Task 1 amendment; scope and paths frozen.                |
+| 3. Deterministic scan orchestration              | `planned`      | `platform-security` | External Evidence Pipeline       | Task 1 amendment and Task 2 acquisition must be accepted.                    |
+| 4. Candidate registry, API, CLI, and isolation   | `planned`      | `integration`       | Candidate Registry               | Tasks 1-3 and Commercial Foundation Task 1 accepted.                         |
+| 5. Review-only promotion packets                 | `planned`      | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.                            |
+| 6. Bulk acceptance and release evidence          | `planned`      | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.                         |
 
 ## Task 1 card: Candidate contracts and immutable persistence
 
-- **State:** `accepted`
+- **State:** `implementing` for the bounded contract amendment; accepted release
+  behavior remains frozen.
 - **Specialization:** `integration`
 - **Contract owner:** External Intake Contract
 - **Contract artifact:** design Core records, Candidate/Golden registry table,
@@ -184,8 +189,41 @@ the bounded Task 1 release set. State-transition history is preserved:
 3. `reviewed -> accepted` after release review PASS and final evidence
    reconciliation in this ledger update.
 
-Task 1 is accepted and frozen. Reopening its release set, contract, scope, or
-exact allowed paths requires a new recorded repair state. Tasks 2 through 6
+Task 1 release behavior remains accepted and frozen. Reopening its release set,
+behavior, scope, or original exact allowed paths requires a new recorded repair
+state. The bounded shared-contract amendment below does not reopen or alter the
+accepted release behavior.
+
+### Bounded acquisition-record contract amendment
+
+The Controller selected a distinct persistent
+`factory.external-source-acquisition/v1` record. It is never a Candidate or an
+EvidenceBundle. It records the source request, resolved reference,
+snapshot/tree, licence, notices, provenance, literal
+`manualStatus: "unreviewed"`, and explicit acquisition state. It cannot claim
+SBOM, scanner, scan-result, or AST identities. Task 3 will consume it with real
+pinned scan and inventory outputs to create a truthful EvidenceBundle.
+
+Exact amendment-owned paths:
+
+- `packages/external-intake/src/contracts.ts`
+- `packages/external-intake/src/index.ts`
+- `packages/external-intake/test/contracts.test.ts`
+- `packages/external-intake/test/store.test.ts`
+
+Amendment acceptance requires:
+
+- strict parsing, common provenance fields, literal unreviewed manual status,
+  and explicit acquisition state;
+- rejection of Candidate/Golden/EvidenceBundle identity and every SBOM,
+  scanner, scan-result, or AST identity/field;
+- immutable persistence and round-trip evidence under a distinct acquisition
+  record kind without changing accepted Task 1 behavior;
+- focused contract/store, full External Intake, typecheck, and lint evidence on
+  Node 22, followed by independent review, QA, and release reconciliation.
+
+Any amendment contract or path change stops work and starts a recorded repair
+round. Task 2 is BLOCKED until this amendment is accepted. Tasks 3 through 6
 remain `planned`.
 
 ## Task 2 card: Fixed-source provenance, licences, and notices
@@ -194,13 +232,20 @@ remain `planned`.
 - **Specialization:** `platform`
 - **Contract owner:** External Source Provenance
 - **Contract artifact:** accepted Task 1 records/store plus the design's source
-  acquisition and fail-closed rules.
-- **Dependencies:** Task 1 `accepted`; dependency satisfied.
+  acquisition and fail-closed rules, amended with
+  `factory.external-source-acquisition/v1`.
+- **Dependencies:** accepted Task 1 release behavior plus accepted bounded
+  acquisition-record amendment. The release dependency is satisfied; the
+  amendment dependency is BLOCKED.
 
 The accepted Task 1 records/store, the design's source acquisition and
 fail-closed rules, and the exact allowed paths below are frozen for Task 2.
 Any change returns Task 2 to a recorded repair round and stops dependent
 dispatch.
+
+Task 2 output is `{ snapshot, acquisition }`. It does not emit an
+EvidenceBundle or represent a phase marker as SBOM, scanner, scan-result, or
+AST evidence. Task 3 will create the first truthful EvidenceBundle.
 
 ### Exact allowed paths
 
@@ -248,10 +293,10 @@ allowed paths. Tasks 3 through 6 remain `planned`.
 - **State:** `planned`
 - **Specialization:** `platform-security`
 - **Contract owner:** External Evidence Pipeline
-- **Contract artifact:** accepted Task 1 records/store and code-owned pinned
+- **Contract artifact:** accepted Task 1 records/store including the acquisition
+  record, accepted Task 2 snapshot/acquisition output, and code-owned pinned
   scanner/module-inventory interfaces.
-- **Dependencies:** Task 1 `accepted`; may run alongside Task 2 only while the
-  Task 1 contract is frozen and paths remain disjoint.
+- **Dependencies:** Task 1 bounded amendment and Task 2 `accepted`.
 
 ### Exact allowed paths
 
@@ -398,8 +443,9 @@ allowed paths. Tasks 3 through 6 remain `planned`.
    functional, adversarial, privacy, and cleanup behavior.
 5. PM reconciles review and QA before `reviewed`; release review and fresh
    verification are still mandatory before `accepted`.
-6. Tasks 2 and 3 are the only permitted parallel writers, after Task 1 is
-   accepted, while their exact paths remain disjoint.
+6. The bounded Task 1 acquisition-record amendment runs alone. Task 2 resumes
+   only after it is accepted, and Task 3 begins only after Task 2's
+   `{ snapshot, acquisition }` output is accepted.
 7. Any path from Candidate data to a Graph, Golden registry/lock, Published
    Revision, compiler, generated app, provider runtime, source-copy operation,
    or automatic decision immediately stops all work and triggers controller
@@ -423,8 +469,8 @@ allowed paths. Tasks 3 through 6 remain `planned`.
   Capabilities, and compiler test paths. Task 4 waits for Commercial Foundation
   Task 1 acceptance and exclusive path ownership.
 
-The active smallest valuable slice is Task 2: fixed-source provenance,
-licences, notices, and fail-closed acquisition. Task 1 remains accepted and
-frozen; Task 2 implementation is bounded to its frozen contract and exact
-paths, and Tasks 3 through 6 remain `planned` until explicitly dispatched after
-their recorded dependency gates are met.
+The active smallest valuable slice is the bounded Task 1 acquisition-record
+contract amendment. Task 1's accepted release behavior remains frozen. Task 2
+is BLOCKED while its scope and exact paths remain frozen; Tasks 3 through 6
+remain `planned` until explicitly dispatched after their recorded dependency
+gates are met.
