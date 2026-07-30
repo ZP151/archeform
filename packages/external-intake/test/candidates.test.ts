@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import {
   mkdtempSync,
   mkdirSync,
@@ -8,8 +9,11 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
+import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -61,6 +65,7 @@ function tempStore(): { root: string; store: ExternalIntakeStore } {
 }
 
 class ForgingReceiptStore extends ExternalIntakeStore {
+  fabricateCandidateChain = false;
   forgeConformanceReceipt = false;
   forgeEvidenceJob = false;
   truncateCandidateChain = false;
@@ -69,6 +74,13 @@ class ForgingReceiptStore extends ExternalIntakeStore {
     ...args: Parameters<ExternalIntakeStore["getRecord"]>
   ): ReturnType<ExternalIntakeStore["getRecord"]> {
     const record = super.getRecord(...args);
+    if (
+      this.fabricateCandidateChain &&
+      record.apiVersion === "factory.external-intake-receipt/v1" &&
+      record.code === "candidate-quarantined"
+    ) {
+      return { ...record, jobId: "candidate-fabricated-chain" };
+    }
     if (
       this.forgeConformanceReceipt &&
       record.apiVersion === "factory.external-intake-receipt/v1" &&
@@ -134,6 +146,121 @@ function lifecycleRecordCounts(root: string): {
     candidates: readdirSync(join(root, "records", "candidate")).length,
     receipts: readdirSync(join(root, "records", "receipt")).length,
   };
+}
+
+function candidateReceiptSequences(root: string): readonly number[] {
+  return readdirSync(join(root, "records", "receipt"))
+    .map((entry) =>
+      parseIntakeReceipt(
+        JSON.parse(
+          readFileSync(join(root, "records", "receipt", entry), "utf8"),
+        ) as unknown,
+      ),
+    )
+    .filter(({ code }) =>
+      ["candidate-quarantined", "candidate-conformance-passed"].includes(code),
+    )
+    .map(({ sequence }) => sequence)
+    .sort((left, right) => left - right);
+}
+
+function conformancePassedLookupId(root: string): string {
+  const matches = readdirSync(join(root, "records", "receipt")).filter(
+    (entry) => {
+      const receipt = parseIntakeReceipt(
+        JSON.parse(
+          readFileSync(join(root, "records", "receipt", entry), "utf8"),
+        ) as unknown,
+      );
+      return receipt.code === "candidate-conformance-passed";
+    },
+  );
+  if (matches.length !== 1) {
+    throw new Error("Expected exactly one Candidate conformance receipt.");
+  }
+  return `candidate-${matches[0]!.slice(0, -".json".length)}`;
+}
+
+async function waitForPath(path: string): Promise<void> {
+  const deadline = Date.now() + 20_000;
+  while (!existsSync(path)) {
+    if (Date.now() >= deadline) {
+      throw new Error(`Timed out waiting for child-process barrier '${path}'.`);
+    }
+    await delay(10);
+  }
+}
+
+interface CandidateRaceProcess {
+  readonly child: ReturnType<typeof spawn>;
+  readonly completed: Promise<void>;
+  readonly exited: Promise<void>;
+}
+
+function runCandidateRaceProcess(
+  root: string,
+  lookupId: string,
+  version: string,
+  workerId: string,
+  readyPath: string,
+  releasePath: string,
+  resultPath: string,
+): CandidateRaceProcess {
+  const vitestCli = createRequire(import.meta.url).resolve("vitest/vitest.mjs");
+  const testFile = fileURLToPath(import.meta.url);
+  const child = spawn(
+    process.execPath,
+    [
+      vitestCli,
+      "run",
+      testFile,
+      "--testNamePattern",
+      "executes one child-process Candidate conformance attempt",
+    ],
+    {
+      cwd: dirname(dirname(testFile)),
+      env: {
+        ...process.env,
+        FACTORY_CANDIDATE_RACE_CHILD: workerId,
+        FACTORY_CANDIDATE_RACE_ROOT: root,
+        FACTORY_CANDIDATE_RACE_LOOKUP_ID: lookupId,
+        FACTORY_CANDIDATE_RACE_VERSION: version,
+        FACTORY_CANDIDATE_RACE_READY_PATH: readyPath,
+        FACTORY_CANDIDATE_RACE_RELEASE_PATH: releasePath,
+        FACTORY_CANDIDATE_RACE_RESULT_PATH: resultPath,
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
+  const output: string[] = [];
+  child.stdout.setEncoding("utf8");
+  child.stderr.setEncoding("utf8");
+  child.stdout.on("data", (chunk: string) => output.push(chunk));
+  child.stderr.on("data", (chunk: string) => output.push(chunk));
+  const exited = new Promise<void>((resolve, reject) => {
+    child.once("error", reject);
+    child.once("close", (code) => {
+      if (code === 0) resolve();
+      else {
+        reject(
+          new Error(
+            `Candidate race child '${workerId}' exited ${String(code)}.\n${output.join("")}`,
+          ),
+        );
+      }
+    });
+  });
+  let deadline: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = new Promise<void>((_, reject) => {
+    deadline = setTimeout(
+      () => reject(new Error(`Candidate race child '${workerId}' timed out.`)),
+      20_000,
+    );
+  });
+  const completed = Promise.race([exited, timedOut]).finally(() => {
+    if (deadline !== undefined) clearTimeout(deadline);
+  });
+  return { child, completed, exited };
 }
 
 function safeArtifacts(): CandidateArtifactsV1 {
@@ -903,6 +1030,67 @@ describe("Candidate registry", () => {
     ).resolves.toMatchObject({ valid: false });
   });
 
+  it.each(
+    (["fabricated", "truncated"] as const).flatMap((corruption) =>
+      (
+        ["show", "list", "test", "conformance-bundle", "transition"] as const
+      ).map((path) => [corruption, path] as const),
+    ),
+  )(
+    "fails closed with zero lifecycle mutations for a %s Candidate receipt chain through %s",
+    async (corruption, path) => {
+      const { root, store } = tempStore();
+      const registry = new CandidateRegistry(store);
+      const ref = await registry.create(await acceptedProposal(store));
+      const result = evaluateCandidateConformance(
+        await registry.getConformanceBundle(ref.id, ref.version),
+      );
+      const forged = new ForgingReceiptStore(root);
+      forged.fabricateCandidateChain = corruption === "fabricated";
+      forged.truncateCandidateChain = corruption === "truncated";
+      const before = lifecycleRecordCounts(root);
+
+      if (path === "show") {
+        await expect(
+          createExternalIntakeApi(forged, root).candidateShow(
+            ref.lookupId,
+            ref.version,
+          ),
+        ).rejects.toThrow();
+      } else if (path === "list") {
+        const api = createExternalIntakeApi(forged, root);
+        await expect(
+          api.candidateVerify(ref.lookupId, ref.version),
+        ).rejects.toThrow();
+        expect(api.candidateList({})).toEqual([]);
+      } else if (path === "test") {
+        await expect(
+          createExternalIntakeApi(forged, root).candidateTest(
+            ref.lookupId,
+            ref.version,
+          ),
+        ).rejects.toThrow();
+      } else if (path === "conformance-bundle") {
+        await expect(
+          new CandidateRegistry(forged, root).getConformanceBundle(
+            ref.lookupId,
+            ref.version,
+          ),
+        ).rejects.toThrow();
+      } else {
+        await expect(
+          new CandidateRegistry(forged, root).recordConformancePass(
+            ref.lookupId,
+            ref.version,
+            result,
+          ),
+        ).rejects.toThrow();
+      }
+
+      expect(lifecycleRecordCounts(root)).toEqual(before);
+    },
+  );
+
   it("fails fresh verification when a Candidate artifact is tampered", async () => {
     const { root, store } = tempStore();
     const registry = new CandidateRegistry(store);
@@ -1111,6 +1299,133 @@ describe("Candidate registry", () => {
     ).resolves.toEqual(left);
     expect(lifecycleRecordCounts(root)).toEqual(beforeRetry);
   });
+
+  if (process.env.FACTORY_CANDIDATE_RACE_CHILD !== undefined) {
+    it("executes one child-process Candidate conformance attempt", async () => {
+      const readyPath = process.env.FACTORY_CANDIDATE_RACE_READY_PATH!;
+      const releasePath = process.env.FACTORY_CANDIDATE_RACE_RELEASE_PATH!;
+      const root = process.env.FACTORY_CANDIDATE_RACE_ROOT!;
+      const registry = new CandidateRegistry(
+        new ExternalIntakeStore(root),
+        root,
+      );
+      const lookupId = process.env.FACTORY_CANDIDATE_RACE_LOOKUP_ID!;
+      const version = process.env.FACTORY_CANDIDATE_RACE_VERSION!;
+      const bundle = await registry.getConformanceBundle(lookupId, version);
+      const preparedRef = registry.getRef(lookupId, version);
+      expect(bundle.candidate.status).toBe("quarantined");
+      expect(preparedRef.status).toBe("quarantined");
+      const result = evaluateCandidateConformance(bundle);
+      writeFileSync(
+        readyPath,
+        canonicalJson({
+          candidateDigest: preparedRef.digest,
+          status: preparedRef.status,
+        }),
+      );
+      await waitForPath(releasePath);
+      await registry.recordConformancePass(lookupId, version, result);
+      writeFileSync(
+        process.env.FACTORY_CANDIDATE_RACE_RESULT_PATH!,
+        canonicalJson(result),
+      );
+    }, 30_000);
+  }
+
+  it("converges separate OS process Candidate conformance transitions on one durable sequence-2 transition", async () => {
+    const { root, store } = tempStore();
+    const initial = await new CandidateRegistry(store).create(
+      await acceptedProposal(store),
+    );
+    const before = lifecycleRecordCounts(root);
+    const raceRoot = join(root, "candidate-race");
+    mkdirSync(raceRoot);
+    const releasePath = join(raceRoot, "release");
+    const readyPaths = [
+      join(raceRoot, "left.ready"),
+      join(raceRoot, "right.ready"),
+    ];
+    const resultPaths = [
+      join(raceRoot, "left.result.json"),
+      join(raceRoot, "right.result.json"),
+    ];
+    const workers = ["left", "right"].map((workerId, index) =>
+      runCandidateRaceProcess(
+        root,
+        initial.lookupId,
+        initial.version,
+        workerId,
+        readyPaths[index]!,
+        releasePath,
+        resultPaths[index]!,
+      ),
+    );
+    const completed = Promise.all(workers.map((worker) => worker.completed));
+
+    try {
+      await Promise.race([
+        Promise.all(readyPaths.map(waitForPath)),
+        completed.then(() => {
+          throw new Error("Candidate race children exited before the barrier.");
+        }),
+      ]);
+      writeFileSync(releasePath, "go");
+      await completed;
+    } finally {
+      for (const worker of workers) {
+        if (
+          worker.child.pid !== undefined &&
+          worker.child.exitCode === null &&
+          worker.child.signalCode === null
+        ) {
+          worker.child.kill();
+        }
+      }
+      await Promise.allSettled(workers.map((worker) => worker.exited));
+    }
+
+    const readyStates = readyPaths.map(
+      (path) =>
+        JSON.parse(readFileSync(path, "utf8")) as {
+          readonly candidateDigest: string;
+          readonly status: string;
+        },
+    );
+    expect(readyStates).toEqual([
+      { candidateDigest: initial.digest, status: "quarantined" },
+      { candidateDigest: initial.digest, status: "quarantined" },
+    ]);
+    const [left, right] = resultPaths.map(
+      (path) => JSON.parse(readFileSync(path, "utf8")) as unknown,
+    );
+    expect(right).toEqual(left);
+    expect(lifecycleRecordCounts(root)).toEqual({
+      candidates: before.candidates + 1,
+      receipts: before.receipts + 1,
+    });
+    expect(candidateReceiptSequences(root)).toEqual([1, 2]);
+
+    const freshApi = createExternalIntakeApi(
+      new ExternalIntakeStore(root),
+      root,
+    );
+    const transitionedLookupId = conformancePassedLookupId(root);
+    const shown = await freshApi.candidateShow(
+      transitionedLookupId,
+      initial.version,
+    );
+    expect(shown.status).toBe("conformance-passed");
+    await expect(
+      freshApi.candidateVerify(shown.lookupId, shown.version),
+    ).resolves.toMatchObject({ valid: true, issues: [] });
+
+    const beforeRetry = lifecycleRecordCounts(root);
+    await expect(
+      freshApi.candidateTest(shown.lookupId, shown.version),
+    ).resolves.toEqual(left);
+    expect(lifecycleRecordCounts(root)).toEqual(beforeRetry);
+    expect(candidateReceiptSequences(root)).toEqual([1, 2]);
+  }, 30_000);
 
   it("rehydrates accepted evidence during Candidate create and verify", async () => {
     const { root, store } = tempStore();
