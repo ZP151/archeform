@@ -32,16 +32,16 @@ Restaurant and Ecommerce can compose the same Golden package identities through
 different Graph-symbol bindings and produce different outputs. Its implementation
 and scoped review completed, and independent behavioral QA passed, but broad
 release review found one load-bearing compiler source-of-truth defect. Fix round
-4 addressed it and passed scoped re-review; independent compiler behavior QA now
-owns the next gate.
+4 addressed it, passed scoped re-review, and passed repeated independent QA with
+no P0/P1/P2. Broad release review and fresh verification now own the next gate.
 
-| Task                                                   | State                                   | Evidence-backed status                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| ------------------------------------------------------ | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1. Composition contract and canonical immutable lock   | `accepted`                              | Commits `d2f6517..27a8433`; final independent re-review clean. The accepted contract canonicalizes exact Golden package identities and fails closed on invalid composition input.                                                                                                                                                                                                                                                                                                              |
-| 2. Physical Graph and target contribution verification | `accepted`                              | Commits `33f9f31..0e1cc33`; final independent re-review clean. Physical packages, digests, runtime metadata, namespaces, and contribution collisions are verified fail closed.                                                                                                                                                                                                                                                                                                                 |
-| 3. Publish and compile an immutable composition lock   | `accepted`                              | Baseline commit `a2fac21`; repairs through `e509b6c`. Final task review and release review approved with no P0/P1/P2; independent QA passed with no P0/P1. Fresh verification passed Graph 19/19, Capabilities 108/108, Control Plane 111/111, compiler 169/169, Worker 74/74, all five typechecks, targeted Prettier, and `git diff --check`. The immutable publication, closed binding grammar, raw-before-canonicalization validation, and pre-generation collision contracts are accepted. |
-| 4. Shared-commerce composition with different bindings | `ready_for_qa` (fix round 4 reconciled) | Implementation range `ed87dfd`, `b2a9d45`, `6410b92`, `f054802`, and `1cfae6e`. Fix round 4 made runtime-mode selection derive from the persisted composition lock and added conflicting Graph-lock coverage. Scoped re-review approved with no P0/P1/P2. Independent QA must repeat compiler source-of-truth behavior and relevant full compiler/five-project regression and typecheck evidence; broad release review and fresh verification remain.                                          |
-| 5. Release gate and migrated-dispatch retirement       | `planned`                               | Blocked on accepted Task 4. Node 22 generated-runtime and isolated Compose evidence remains this task's later release gate.                                                                                                                                                                                                                                                                                                                                                                    |
+| Task                                                   | State      | Evidence-backed status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------------------------------------------------------ | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Composition contract and canonical immutable lock   | `accepted` | Commits `d2f6517..27a8433`; final independent re-review clean. The accepted contract canonicalizes exact Golden package identities and fails closed on invalid composition input.                                                                                                                                                                                                                                                                                                                                                                                    |
+| 2. Physical Graph and target contribution verification | `accepted` | Commits `33f9f31..0e1cc33`; final independent re-review clean. Physical packages, digests, runtime metadata, namespaces, and contribution collisions are verified fail closed.                                                                                                                                                                                                                                                                                                                                                                                       |
+| 3. Publish and compile an immutable composition lock   | `accepted` | Baseline commit `a2fac21`; repairs through `e509b6c`. Final task review and release review approved with no P0/P1/P2; independent QA passed with no P0/P1. Fresh verification passed Graph 19/19, Capabilities 108/108, Control Plane 111/111, compiler 169/169, Worker 74/74, all five typechecks, targeted Prettier, and `git diff --check`. The immutable publication, closed binding grammar, raw-before-canonicalization validation, and pre-generation collision contracts are accepted.                                                                       |
+| 4. Shared-commerce composition with different bindings | `reviewed` | Implementation range `ed87dfd`, `b2a9d45`, `6410b92`, `f054802`, and `1cfae6e`. Fix round 4 made runtime-mode selection derive from the persisted composition lock and added conflicting Graph-lock coverage. Scoped re-review and repeated independent QA passed with no P0/P1/P2. Runtime conflict 1/1, combined 2/2, mixed persisted-lock rejection 1/1, full Graph 23/23, Capabilities 112/112, compiler 173/173, Workbench 66/66, Control Plane 115/115, five typechecks, Prettier, and diff checks passed. Broad release review and fresh verification remain. |
+| 5. Release gate and migrated-dispatch retirement       | `planned`  | Blocked on accepted Task 4. Node 22 generated-runtime and isolated Compose evidence remains this task's later release gate.                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 Development, review, QA, release review, and fresh verification for Tasks 1
 through 3 ran on host Node 24. This is valid Task 3 acceptance evidence. It is
@@ -52,9 +52,9 @@ Task 4 implementation, scoped review, and QA ran on host Node 24. This is valid
 task evidence; the engine warning is nonblocking. Node 22 plus isolated Compose
 remain Task 5 gates.
 
-## Active ownership: Task 4 independent QA after fix round 4
+## Active ownership: Task 4 repeated broad release review and fresh verification
 
-- Specialization and active owner: `qa`
+- Specialization and active owner: `release-review / verification`
 - Contract owner: Factory Platform Integration (root controller)
 - Contract status: Tasks 1 through 3 are accepted and frozen. Task 4 may consume
   only those contracts. The Graph-symbol recipe realization and exact path
@@ -73,14 +73,16 @@ remain Task 5 gates.
   repair and code quality with no new P0/P1/P2; broad release review then
   requested changes for the runtime-mode source-of-truth P1. Fix-round-4 scoped
   re-review approved the repair with no P0/P1/P2.
-- QA status: PASS with no P0/P1/P2. Focused Graph 7/7, Capabilities 7/7,
+- Prior QA status: PASS with no P0/P1/P2. Focused Graph 7/7, Capabilities 7/7,
   Workbench 2/2, Control Plane 11/11, and compiler 2/2 passed. Full Graph 23/23,
   Capabilities 112/112, compiler 172/172, Workbench 66/66, and Control Plane
   115/115 passed, along with five typechecks, the all-profile empty-lock probe,
   exact nine-root verification, targeted Prettier, and `git diff --check`.
-  This is prior-round evidence; compiler runtime-mode source-of-truth QA plus
-  relevant full compiler/five-project regressions and typechecks must repeat
-  after fix round 4.
+- Fix-round-4 QA status: PASS with no P0/P1/P2. Runtime conflict 1/1, combined
+  behavior 2/2, and mixed persisted-lock rejection 1/1 passed. Full Graph 23/23,
+  Capabilities 112/112, compiler 173/173, Workbench 66/66, and Control Plane
+  115/115 passed, together with five typechecks, full compiler Prettier, and diff
+  checks.
 - Contract artifact:
   `docs/superpowers/specs/2026-07-30-parameterized-capability-composition-design.md`
 - Task brief and plan slice:
@@ -101,9 +103,10 @@ remain Task 5 gates.
   binding contract.
 - Dependency baseline: Tasks 1 through 3, all `accepted`.
 
-Independent QA owns the next gate. No product edit is authorized during this
-handoff. A reproducible load-bearing defect returns Task 4 to `implementing`
-under a separately recorded repair round.
+Broad release review and fresh verification own the next gate. No product edit
+is authorized during this handoff. A reproducible load-bearing defect returns
+Task 4 to `implementing` under a separately recorded repair round. Task 4 is
+`reviewed`, not `accepted`.
 
 ## Frozen implementation path ownership for Task 4
 
@@ -201,17 +204,18 @@ and `git diff --check` also passed. The Node 24 engine warning and deferred
 duplicated Graph-symbol resolver are nonblocking. Task 5 remains blocked until
 Task 4 reaches `accepted`.
 
-## Independent QA scope after fix round 4
+## Repeated independent QA evidence after fix round 4
 
-- Prove conflicting Graph `integration.assetLocks` cannot change runtime mode
-  selected from persisted `compositionLock.packages`.
-- Prove an invalid persisted-lock state still fails closed without a Graph-lock
-  fallback and without retiring Task 5-reserved dispatch.
-- Run the relevant focused compiler behavior test, full compiler regression,
-  and affected full Graph, Capabilities, Workbench, Control Plane, and compiler
-  regression/typecheck gates.
-- Record exact commands, Node version, test counts, outcomes, and finding
-  severity. Broad release review and fresh verification must repeat after QA.
+- Conflicting Graph `integration.assetLocks` could not change runtime mode
+  selected from persisted `compositionLock.packages`: 1/1 passed.
+- Combined compiler behavior passed 2/2; mixed persisted-lock rejection passed
+  1/1, proving invalid lock state fails closed without a Graph-lock fallback and
+  without retiring Task 5-reserved dispatch.
+- Full Graph 23/23, Capabilities 112/112, compiler 173/173, Workbench 66/66, and
+  Control Plane 115/115 passed. Five typechecks, full compiler Prettier, and diff
+  checks also passed.
+- Independent QA reported no P0/P1/P2. Broad release review and fresh
+  verification must now repeat before acceptance.
 
 Task 5 remains blocked until Task 4 reaches `accepted`.
 
@@ -233,11 +237,11 @@ truth used by the existing mode selection.
 
 The focused regression uses conflicting Graph locks and persisted composition
 lock packages to prove runtime mode is unchanged by Graph locks. Scoped
-re-review approved the repair with no P0/P1/P2. Independent QA must repeat this
+re-review approved the repair with no P0/P1/P2. Independent QA repeated this
 behavior plus the relevant full compiler/five-project regression and typecheck
-evidence. Broad release review and fresh verification remain required. Existing
-Task 4 compiler source/test paths cover the repair; no path expansion is
-authorized.
+evidence with no P0/P1/P2. Broad release review and fresh verification remain
+required. Existing Task 4 compiler source/test paths cover the repair; no path
+expansion is authorized.
 
 ## Frozen Task 4 behavior and acceptance evidence
 
@@ -451,7 +455,7 @@ Task 3 has reconciled all required behavioral and governance evidence:
 
 ## Blocked decisions and risks
 
-- Blocked decisions: none for Task 4 independent QA after fix round 4. Runtime
+- Blocked decisions: none for Task 4 broad release review after fix round 4. Runtime
   mode derives solely from persisted `compositionLock.packages`; a Graph-lock
   fallback is forbidden. The duplicated Graph-symbol resolver is deferred
   nonblocking P2 maintenance and must not expand this repair.
@@ -513,8 +517,7 @@ Task 3 has reconciled all required behavioral and governance evidence:
 
 ## Next smallest valuable slice
 
-Independent QA reproduces the conflicting-Graph-lock and persisted-lock
-source-of-truth behavior, then runs the full compiler and affected five-project
-regression and typecheck gates. If clean, the controller moves Task 4 to
-`reviewed`; broad release review and fresh verification remain required before
-`accepted`. Task 5 remains blocked until Task 4 reaches `accepted`.
+Broad release review repeats the complete Task 4 acceptance audit against fix
+round 4 and the reconciled scoped-review/QA evidence. If clean, fresh
+verification repeats the load-bearing gates before the controller may move Task
+4 to `accepted`. Task 5 remains blocked until Task 4 reaches `accepted`.
