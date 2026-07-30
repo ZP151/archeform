@@ -139,7 +139,7 @@ describe("ApplicationGraphV1", () => {
     expect(validateApplicationGraph(locked)).toEqual([]);
   });
 
-  it("accepts only Draft composition selections with exact Golden identities and typed bindings", () => {
+  it("accepts only Draft composition selections with exact Golden identities and closed bindings", () => {
     const validLock = {
       key: "core.crud",
       version: "1.0.1",
@@ -156,7 +156,7 @@ describe("ApplicationGraphV1", () => {
           {
             lock: validLock,
             bindings: {
-              routeKey: "catalog",
+              routeKey: { graphSymbol: "graph.page.expense-list" },
               enabled: true,
               priority: 1,
               entityKey: { graphSymbol: "graph.domain.expense" },
@@ -214,117 +214,34 @@ describe("ApplicationGraphV1", () => {
   });
 
   it.each([
-    "https://example.invalid/catalog",
-    "admin/secrets",
-    "rm workspace",
-    "${process.env.SECRET}",
-    "value\u0000suffix",
-  ])("rejects unsafe Draft composition string binding %j", (value) => {
-    const selected = structuredClone(expenseGraph) as ApplicationGraphV1 & {
-      integration: ApplicationGraphV1["integration"] & {
-        compositionSelections: unknown[];
-      };
-    };
-    selected.integration.compositionSelections = [
-      {
-        lock: {
-          key: "core.crud",
-          version: "1.0.1",
-          packageRoot: "packages/capabilities/assets/core.crud/1.0.1",
-          manifestDigest:
-            "sha256:ac6197b00e529f519f1b062c9189a368eb9b94be125444a7c2f90cec46200f26",
-          lifecycle: "golden",
-        },
-        bindings: { label: value },
-      },
-    ];
-
-    expect(() => parseApplicationGraph(selected)).toThrow();
-  });
-
-  it.each([
     {
-      boundary: "provider credential signature",
+      boundary: "credential-like material",
       value: `sk-proj-${"x".repeat(32)}`,
     },
     {
-      boundary: "cloud access-key signature",
-      value: `AKIA${"A".repeat(16)}`,
+      boundary: "SQL-looking material",
+      value: "SELECT value FROM records",
     },
-    {
-      boundary: "source-host token signature",
-      value: `ghp_${"x".repeat(36)}`,
-    },
-    {
-      boundary: "workspace bot token signature",
-      value: `xoxb-${"1".repeat(12)}-${"x".repeat(24)}`,
-    },
-    {
-      boundary: "repository access-token signature",
-      value: `glpat-${"x".repeat(24)}`,
-    },
-    {
-      boundary: "cloud API-key signature",
-      value: `AIza${"x".repeat(32)}`,
-    },
-  ])("rejects a $boundary in a Draft binding", ({ value }) => {
+    { boundary: "normal user-facing copy", value: "Reservation request" },
+  ])("rejects direct string $boundary in a Draft binding", ({ value }) => {
     expect(() =>
       parseApplicationGraph(draftGraphWithBindings({ label: value })),
     ).toThrow();
   });
 
-  it.each(["rawPrompt", "rawResponse"])(
-    "rejects Draft binding key semantics for %s material",
-    (key) => {
-      expect(() =>
-        parseApplicationGraph(
-          draftGraphWithBindings({ [key]: "blocked-material" }),
-        ),
-      ).toThrow();
-    },
-  );
+  it("keeps PageModel copy and exact Graph-symbol bindings in their separate valid boundaries", () => {
+    const selected = draftGraphWithBindings({
+      routeKey: { graphSymbol: "graph.page.expense-list" },
+    }) as ApplicationGraphV1;
+    selected.page.navigation[0]!.label = "Make a reservation";
 
-  it("rejects a Draft binding string beyond the ingestion size bound", () => {
-    expect(() =>
-      parseApplicationGraph(draftGraphWithBindings({ label: "x".repeat(257) })),
-    ).toThrow();
+    expect(parseApplicationGraph(selected)).toEqual(selected);
   });
 
-  it.each([
-    { boundary: "container command", value: "docker compose down" },
-    { boundary: "shell control operator", value: "catalog && shutdown" },
-    {
-      boundary: "source declaration",
-      value: "const processValue = process.env.VALUE",
-    },
-    { boundary: "SQL source statement", value: "SELECT value FROM records" },
-    { boundary: "destructive SQL statement", value: "DROP TABLE records" },
-    { boundary: "schema-altering SQL statement", value: "ALTER TABLE records" },
-    {
-      boundary: "runtime environment source reference",
-      value: "process.env.SECRET",
-    },
-    { boundary: "shell builtin command", value: "echo exfiltrate" },
-  ])("rejects a $boundary in a Draft binding", ({ value }) => {
+  it("rejects prototype-reserved Draft composition binding keys", () => {
     expect(() =>
-      parseApplicationGraph(draftGraphWithBindings({ label: value })),
+      parseApplicationGraph(draftGraphWithBindings({ constructor: true })),
     ).toThrow();
-  });
-
-  it("keeps bounded user-facing labels and route keys legitimate", () => {
-    expect(
-      parseApplicationGraph(
-        draftGraphWithBindings({
-          label: "Seasonal specials & chef picks",
-          routeKey: "catalog-v2",
-        }),
-      ),
-    ).toEqual(
-      draftGraphWithBindings({
-        label: "Seasonal specials & chef picks",
-        routeKey: "catalog-v2",
-      }),
-    );
   });
 
   it("rejects simultaneous legacy asset locks and Draft composition selections", () => {

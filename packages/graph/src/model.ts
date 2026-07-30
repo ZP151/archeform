@@ -137,100 +137,24 @@ const flowModelSchema = z.object({
   ),
 });
 
+const prototypeReservedCompositionBindingKeys = new Set([
+  "constructor",
+  "hasOwnProperty",
+  "isPrototypeOf",
+  "propertyIsEnumerable",
+  "prototype",
+  "toLocaleString",
+  "toString",
+  "valueOf",
+]);
 const compositionBindingKey = z
   .string()
   .regex(/^[a-z][a-zA-Z0-9]*$/)
   .refine(
-    (key) =>
-      !/(?:accessToken|apiKey|authToken|command|completion|credential|modelInput|modelOutput|password|path|prompt|response|secret|source|token|url)/i.test(
-        key,
-      ),
-    "Composition binding key is not safe.",
-  );
-const compositionCredentialSignaturePatterns = [
-  /\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/i,
-  /\bgh[pousr]_[a-z0-9]{20,}\b/i,
-  /\bglpat-[a-z0-9_-]{16,}\b/i,
-  /\bAIza[a-z0-9_-]{20,}\b/,
-  /\bsk-(?:proj-)?[a-z0-9_-]{16,}\b/i,
-  /\bsk_(?:live|test)_[a-z0-9]{16,}\b/i,
-  /\bxox[baprs]-[a-z0-9-]{20,}\b/i,
-  /\bbearer\s+[a-z0-9._~+-]{16,}\b/i,
-  /-----BEGIN (?:EC |OPENSSH |RSA )?PRIVATE KEY-----/i,
-  /\beyJ[a-z0-9_-]{10,}\.[a-z0-9_-]{10,}\.[a-z0-9_-]{10,}\b/i,
-] as const;
-const compositionSourceSyntaxPattern =
-  /[`{}\[\];<>]|=>|\$\(|&&|\|{1,2}|\b[a-z_$][a-z0-9_$]*(?:\.[a-z_$][a-z0-9_$]*)*\(/i;
-const compositionRuntimeSourcePattern =
-  /\b(?:deno\.env|import\.meta\.env|os\.environ|process\.env)\b/i;
-const compositionSourceStatementPattern =
-  /^\s*(?:#!|(?:async\s+)?function\s|class\s+[a-z_$]|(?:const|let|var)\s+[a-z_$][a-z0-9_$]*\s*=|export\s|import\s|require\s*\(|select\b.+\bfrom\b|insert\s+into\b|update\b.+\bset\b|delete\s+from\b|(?:alter|create|drop)\s+(?:database|function|index|procedure|schema|table|trigger|view)\b)/i;
-const compositionExecutableCommands = [
-  "ansible",
-  "bash",
-  "bitsadmin",
-  "bun",
-  "certutil",
-  "cmd",
-  "curl",
-  "del",
-  "deno",
-  "docker",
-  "dotnet",
-  "echo",
-  "ftp",
-  "git",
-  "helm",
-  "invoke-webrequest",
-  "java",
-  "kubectl",
-  "make",
-  "net",
-  "node",
-  "npm",
-  "npx",
-  "pnpm",
-  "powershell",
-  "python",
-  "reg",
-  "remove-item",
-  "rm",
-  "sc",
-  "scp",
-  "service",
-  "sh",
-  "ssh",
-  "sudo",
-  "systemctl",
-  "terraform",
-  "tsx",
-  "wget",
-  "yarn",
-] as const;
-const compositionCommandPattern = new RegExp(
-  `^\\s*(?:${compositionExecutableCommands.join("|")})(?:\\.exe)?(?:\\s|$)`,
-  "i",
-);
-const compositionBindingStringSchema = z
-  .string()
-  .max(256)
-  .refine(
-    (value) =>
-      !compositionCredentialSignaturePatterns.some((pattern) =>
-        pattern.test(value),
-      ) &&
-      !/\b[a-z][a-z0-9+.-]*:\S/i.test(value) &&
-      !value.includes("/") &&
-      !value.includes("\\") &&
-      !/[\u0000-\u001f\u007f-\u009f]/.test(value) &&
-      !compositionSourceSyntaxPattern.test(value) &&
-      !compositionRuntimeSourcePattern.test(value) &&
-      !compositionSourceStatementPattern.test(value) &&
-      !compositionCommandPattern.test(value),
-    "Composition string binding is not safe.",
+    (key) => !prototypeReservedCompositionBindingKeys.has(key),
+    "Composition binding key must be prototype-safe.",
   );
 const compositionBindingValueSchema = z.union([
-  compositionBindingStringSchema,
   z.number().finite(),
   z.boolean(),
   z

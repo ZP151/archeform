@@ -112,25 +112,21 @@ describe("capability composition contract", () => {
   it("creates the same lock for bindings inserted in a different key order", () => {
     const parameterAsset = asset("core.binding-order-test", {
       parameters: [
-        { key: "alpha", type: "string", required: true },
-        { key: "beta", type: "string", required: true },
+        { key: "alpha", type: "number", required: true },
+        { key: "beta", type: "boolean", required: true },
       ],
     });
     const first = createCapabilityCompositionLockForAssets(
       {
         graphChecksum: digest("a"),
-        selections: [
-          selection(parameterAsset, { alpha: "first", beta: "second" }),
-        ],
+        selections: [selection(parameterAsset, { alpha: 1, beta: true })],
       },
       [parameterAsset],
     );
     const reordered = createCapabilityCompositionLockForAssets(
       {
         graphChecksum: digest("a"),
-        selections: [
-          selection(parameterAsset, { beta: "second", alpha: "first" }),
-        ],
+        selections: [selection(parameterAsset, { beta: true, alpha: 1 })],
       },
       [parameterAsset],
     );
@@ -189,32 +185,38 @@ describe("capability composition contract", () => {
     expect(JSON.stringify(lock.packages[0]?.lock)).not.toContain("rawPrompt");
   });
 
-  it("rejects an undeclared parameter and an unsafe string parameter", () => {
-    const pathAsset = asset("core.path-test", {
-      parameters: [{ key: "route", type: "string", required: true }],
-    });
-    const unsafeSelection: CapabilitySelectionV1 = {
+  it("rejects an undeclared parameter and a legacy string parameter contract", () => {
+    const legacyStringAsset = {
+      manifest: {
+        ...manifest("core.legacy-string-test"),
+        parameters: [{ key: "label", type: "string", required: true }],
+      },
+    } as unknown as CapabilityAssetV1;
+    const unsafeSelection = {
       lock: lockCapabilityAsset(cartAsset),
       bindings: { rawModelOutput: "anything" },
-    };
-    const pathSelection = selection(pathAsset, { route: "admin/secrets" });
+    } as unknown as CapabilitySelectionV1;
 
     expect(() =>
       resolveCapabilityComposition({ selections: [unsafeSelection] }),
     ).toThrow("does not declare parameter");
     expect(() =>
       resolveSyntheticComposition({
-        assets: [pathAsset],
-        selections: [pathSelection],
+        assets: [legacyStringAsset],
+        selections: [
+          selection(legacyStringAsset, {
+            label: "Make a reservation",
+          } as unknown as CapabilitySelectionV1["bindings"]),
+        ],
       }),
-    ).toThrow("must not contain a path");
+    ).toThrow("does not support parameter type 'string'");
   });
 
-  it("rejects incorrect primitive values, source delimiters, and invalid Graph symbols", () => {
+  it("resolves finite numbers, booleans, and exact Graph symbols", () => {
     const parameterAsset = asset("core.parameter-test", {
       parameters: [
         { key: "enabled", type: "boolean", required: true },
-        { key: "label", type: "string", required: true },
+        { key: "priority", type: "number", required: true },
         { key: "entity", type: "graph-symbol", required: true },
       ],
     });
@@ -224,91 +226,46 @@ describe("capability composition contract", () => {
         assets: [parameterAsset],
         selections: [
           selection(parameterAsset, {
-            enabled: "true",
-            label: "Catalog",
+            enabled: true,
+            priority: 1,
             entity: { graphSymbol: "graph.domain.product" },
           }),
         ],
       }),
-    ).toThrow("must be a boolean");
+    ).not.toThrow();
+  });
+
+  it("rejects direct strings and invalid Graph symbols", () => {
+    const parameterAsset = asset("core.parameter-test", {
+      parameters: [
+        { key: "enabled", type: "boolean", required: true },
+        { key: "entity", type: "graph-symbol", required: true },
+      ],
+    });
+
     expect(() =>
       resolveSyntheticComposition({
         assets: [parameterAsset],
         selections: [
           selection(parameterAsset, {
             enabled: true,
-            label: "${process.env.SECRET}",
-            entity: { graphSymbol: "graph.domain.product" },
-          }),
+            entity: "Make a reservation",
+          } as unknown as CapabilitySelectionV1["bindings"]),
         ],
       }),
-    ).toThrow("must not contain source delimiters");
+    ).toThrow("must be a Graph symbol");
     expect(() =>
       resolveSyntheticComposition({
         assets: [parameterAsset],
         selections: [
           selection(parameterAsset, {
             enabled: true,
-            label: "Catalog",
             entity: { graphSymbol: "domain.product" },
           }),
         ],
       }),
     ).toThrow("must be a Graph symbol");
   });
-
-  it("rejects URL schemes and shell commands", () => {
-    const parameterAsset = asset("core.string-safety-test", {
-      parameters: [{ key: "value", type: "string", required: true }],
-    });
-
-    expect(() =>
-      resolveSyntheticComposition({
-        assets: [parameterAsset],
-        selections: [selection(parameterAsset, { value: "mailto:user" })],
-      }),
-    ).toThrow("must not contain a URL");
-    expect(() =>
-      resolveSyntheticComposition({
-        assets: [parameterAsset],
-        selections: [selection(parameterAsset, { value: "  mailto:user" })],
-      }),
-    ).toThrow("must not contain a URL");
-    expect(() =>
-      resolveSyntheticComposition({
-        assets: [parameterAsset],
-        selections: [selection(parameterAsset, { value: "Open mailto:user" })],
-      }),
-    ).toThrow("must not contain a URL");
-    expect(() =>
-      resolveSyntheticComposition({
-        assets: [parameterAsset],
-        selections: [selection(parameterAsset, { value: "rm workspace" })],
-      }),
-    ).toThrow("must not contain a command");
-    expect(() =>
-      resolveSyntheticComposition({
-        assets: [parameterAsset],
-        selections: [selection(parameterAsset, { value: "Note: vegan" })],
-      }),
-    ).not.toThrow();
-  });
-
-  it.each(["<img src=x onerror=alert(1)>", "process.exit(1)"])(
-    "rejects executable source string %s",
-    (value) => {
-      const parameterAsset = asset("core.executable-source-test", {
-        parameters: [{ key: "value", type: "string", required: true }],
-      });
-
-      expect(() =>
-        resolveSyntheticComposition({
-          assets: [parameterAsset],
-          selections: [selection(parameterAsset, { value })],
-        }),
-      ).toThrow("must not contain source delimiters");
-    },
-  );
 
   it("rejects a missing required parameter", () => {
     const parameterAsset = asset("core.required-test", {
@@ -326,8 +283,8 @@ describe("capability composition contract", () => {
   it("allows intended permissionResource and resourceKey parameters", () => {
     const parameterAsset = asset("core.permission-test", {
       parameters: [
-        { key: "permissionResource", type: "string", required: true },
-        { key: "resourceKey", type: "string", required: true },
+        { key: "permissionResource", type: "graph-symbol", required: true },
+        { key: "resourceKey", type: "graph-symbol", required: true },
       ],
     });
 
@@ -336,58 +293,19 @@ describe("capability composition contract", () => {
         assets: [parameterAsset],
         selections: [
           selection(parameterAsset, {
-            permissionResource: "order",
-            resourceKey: "order",
+            permissionResource: { graphSymbol: "graph.policy.order" },
+            resourceKey: { graphSymbol: "graph.domain.order" },
           }),
         ],
       }),
     ).not.toThrow();
   });
 
-  it.each([
-    "secret",
-    "secretValue",
-    "secretvalue",
-    "password",
-    "passwordValue",
-    "passwordvalue",
-    "credential",
-    "credentialValue",
-    "credentialvalue",
-    "command",
-    "commandText",
-    "commandtext",
-    "source",
-    "sourcePath",
-    "sourcepath",
-    "url",
-    "urlTarget",
-    "urltarget",
-    "path",
-    "filePath",
-    "filepath",
-    "apiKey",
-    "apikey",
-    "accessToken",
-    "accesstoken",
-  ])("rejects forbidden semantic parameter key %s", (parameterKey) => {
-    const parameterAsset = asset("core.forbidden-parameter-test", {
-      parameters: [{ key: parameterKey, type: "string", required: true }],
-    });
-
-    expect(() =>
-      resolveSyntheticComposition({
-        assets: [parameterAsset],
-        selections: [selection(parameterAsset, { [parameterKey]: "value" })],
-      }),
-    ).toThrow("is not safe for composition bindings");
-  });
-
   it.each(["constructor", "toString", "__proto__"])(
     "rejects prototype-reserved parameter key %s",
     (parameterKey) => {
       const parameterAsset = asset("core.prototype-test", {
-        parameters: [{ key: parameterKey, type: "string", required: true }],
+        parameters: [{ key: parameterKey, type: "boolean", required: true }],
       });
 
       expect(() =>

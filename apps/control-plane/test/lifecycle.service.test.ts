@@ -313,24 +313,34 @@ describe("LifecycleService", () => {
     });
   });
 
-  it("rejects credential-shaped binding material before creating the first Draft", async () => {
-    prisma.workspace.upsert.mockResolvedValue(workspace);
-    prisma.applicationGraph.create.mockResolvedValue({
-      ...applicationGraph,
-      draftRevisions: [draftRevision],
-    });
-    const unsafeGraph = structuredClone(selectedDraftGraph);
-    unsafeGraph.integration.compositionSelections[0]!.bindings.routeKey =
-      `sk-proj-${"x".repeat(32)}` as never;
+  it.each([
+    {
+      boundary: "credential-like material",
+      value: `sk-proj-${"x".repeat(32)}`,
+    },
+    { boundary: "SQL-looking material", value: "SELECT value FROM records" },
+    { boundary: "normal user-facing copy", value: "Reservation request" },
+  ])(
+    "rejects direct string $boundary before creating the first Draft",
+    async ({ value }) => {
+      prisma.workspace.upsert.mockResolvedValue(workspace);
+      prisma.applicationGraph.create.mockResolvedValue({
+        ...applicationGraph,
+        draftRevisions: [draftRevision],
+      });
+      const unsafeGraph = structuredClone(selectedDraftGraph);
+      unsafeGraph.integration.compositionSelections[0]!.bindings.routeKey =
+        value as never;
 
-    await expect(
-      service.createLocalApplicationGraph({ graph: unsafeGraph }),
-    ).rejects.toBeInstanceOf(BadRequestException);
-    expect(prisma.workspace.upsert).not.toHaveBeenCalled();
-    expect(prisma.applicationGraph.create).not.toHaveBeenCalled();
-  });
+      await expect(
+        service.createLocalApplicationGraph({ graph: unsafeGraph }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.workspace.upsert).not.toHaveBeenCalled();
+      expect(prisma.applicationGraph.create).not.toHaveBeenCalled();
+    },
+  );
 
-  it("rejects raw-response binding semantics before persisting a proposed Draft", async () => {
+  it("rejects direct string composition copy before persisting a proposed Draft", async () => {
     prisma.draftRevision.findFirst.mockResolvedValue({
       ...draftRevision,
       graph: selectedDraftGraph,
@@ -342,8 +352,8 @@ describe("LifecycleService", () => {
         operations: [
           {
             op: "add",
-            path: "/integration/compositionSelections/0/bindings/rawResponse",
-            value: "blocked-material",
+            path: "/integration/compositionSelections/0/bindings/label",
+            value: "Reservation request",
           },
         ],
       },
@@ -572,31 +582,14 @@ describe("LifecycleService", () => {
   });
 
   it.each([
-    { boundary: "container command", value: "docker compose down" },
     {
-      boundary: "workspace bot token signature",
-      value: `xoxb-${"1".repeat(12)}-${"x".repeat(24)}`,
+      boundary: "credential-like material",
+      value: `sk-proj-${"x".repeat(32)}`,
     },
-    {
-      boundary: "repository access-token signature",
-      value: `glpat-${"x".repeat(24)}`,
-    },
-    {
-      boundary: "cloud API-key signature",
-      value: `AIza${"x".repeat(32)}`,
-    },
-    { boundary: "destructive SQL statement", value: "DROP TABLE records" },
-    {
-      boundary: "schema-altering SQL statement",
-      value: "ALTER TABLE records",
-    },
-    {
-      boundary: "runtime environment source reference",
-      value: "process.env.SECRET",
-    },
-    { boundary: "shell builtin command", value: "echo exfiltrate" },
+    { boundary: "SQL-looking material", value: "SELECT value FROM records" },
+    { boundary: "normal user-facing copy", value: "Reservation request" },
   ])(
-    "rejects a $boundary before appending a Draft revision",
+    "rejects direct string $boundary before appending a Draft revision",
     async ({ value }) => {
       prisma.applicationGraph.findUnique.mockResolvedValue({
         ...applicationGraph,

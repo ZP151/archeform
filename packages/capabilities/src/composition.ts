@@ -7,7 +7,7 @@ import {
 } from "./assets/index.js";
 
 export type CapabilityBindingValueV1 =
-  string | number | boolean | { readonly graphSymbol: string };
+  number | boolean | { readonly graphSymbol: string };
 
 export interface CapabilitySelectionV1 {
   readonly lock: CapabilityAssetLockV1;
@@ -44,21 +44,7 @@ export interface CreateCapabilityCompositionLockInput extends ResolveCapabilityC
 const sha256Pattern = /^sha256:[a-f0-9]{64}$/;
 const graphSymbolPattern =
   /^graph\.(?:page|domain|policy|flow|integration|experience)\.[a-z][a-z0-9-]*$/;
-const urlSchemePattern = /\b[a-z][a-z0-9+.-]*:\S/i;
-const controlCharacterPattern = /[\u0000-\u001f\u007f-\u009f]/;
-const sourceDelimiterPattern =
-  /[`{}\[\];<>]|=>|\$\(|\b[a-z_$][a-z0-9_$]*(?:\.[a-z_$][a-z0-9_$]*)*\(/i;
-const commandPattern =
-  /^\s*(?:bash|cmd|curl|del|git|invoke-webrequest|node|npm|pnpm|powershell|python|remove-item|rm|sh|sudo|wget|yarn)(?:\.exe)?\s/i;
 const parameterKeyPattern = /^[a-z][a-zA-Z0-9]*$/;
-const forbiddenParameterKeyFragments = [
-  "command",
-  "credential",
-  "password",
-  "path",
-  "secret",
-  "url",
-] as const;
 const prototypeReservedParameterKeys = new Set([
   "constructor",
   "hasOwnProperty",
@@ -69,22 +55,10 @@ const prototypeReservedParameterKeys = new Set([
   "toString",
   "valueOf",
 ]);
+const supportedParameterTypes = new Set(["number", "boolean", "graph-symbol"]);
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
-}
-
-function isForbiddenParameterKey(key: string): boolean {
-  const normalized = key.toLowerCase();
-  const withoutResource = normalized.replaceAll("resource", "");
-  return (
-    forbiddenParameterKeyFragments.some((fragment) =>
-      normalized.includes(fragment),
-    ) ||
-    withoutResource.includes("source") ||
-    normalized.includes("apikey") ||
-    normalized.includes("accesstoken")
-  );
 }
 
 function canonicalJson(value: unknown): string {
@@ -226,42 +200,12 @@ function deepFreeze<T>(value: T): T {
   return value;
 }
 
-function assertSafeString(
-  packageKey: string,
-  parameterKey: string,
-  value: string,
-) {
-  const label = `Capability package '${packageKey}' parameter '${parameterKey}'`;
-  if (urlSchemePattern.test(value)) {
-    throw new Error(`${label} must not contain a URL.`);
-  }
-  if (value.includes("/") || value.includes("\\")) {
-    throw new Error(`${label} must not contain a path.`);
-  }
-  if (controlCharacterPattern.test(value)) {
-    throw new Error(`${label} must not contain control characters.`);
-  }
-  if (sourceDelimiterPattern.test(value)) {
-    throw new Error(`${label} must not contain source delimiters.`);
-  }
-  if (commandPattern.test(value)) {
-    throw new Error(`${label} must not contain a command.`);
-  }
-}
-
 function assertBindingValue(
   packageKey: string,
   schema: CapabilityParameterSchemaV1,
   value: CapabilityBindingValueV1,
 ): void {
   const label = `Capability package '${packageKey}' parameter '${schema.key}'`;
-  if (schema.type === "string") {
-    if (typeof value !== "string") {
-      throw new Error(`${label} must be a string.`);
-    }
-    assertSafeString(packageKey, schema.key, value);
-    return;
-  }
   if (schema.type === "number") {
     if (typeof value !== "number" || !Number.isFinite(value)) {
       throw new Error(`${label} must be a finite number.`);
@@ -354,9 +298,9 @@ function validateBindings(
         `Capability package '${manifest.key}' parameter '${schema.key}' must use a safe parameter key.`,
       );
     }
-    if (isForbiddenParameterKey(schema.key)) {
+    if (!supportedParameterTypes.has(schema.type)) {
       throw new Error(
-        `Capability package '${manifest.key}' parameter '${schema.key}' is not safe for composition bindings.`,
+        `Capability package '${manifest.key}' does not support parameter type '${String(schema.type)}'.`,
       );
     }
     schemas.set(schema.key, schema);

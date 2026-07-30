@@ -27,8 +27,7 @@ export type CapabilityOutputSlot =
   | "realtime.event"
   | "docs.section";
 
-export type CapabilityParameterTypeV1 =
-  "string" | "number" | "boolean" | "graph-symbol";
+export type CapabilityParameterTypeV1 = "number" | "boolean" | "graph-symbol";
 
 export interface CapabilityParameterSchemaV1 {
   readonly key: string;
