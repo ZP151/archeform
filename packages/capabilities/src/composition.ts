@@ -419,9 +419,8 @@ export function resolveCapabilityCompositionForAssets(
     }))
     .sort((left, right) => compareText(left.manifest.key, right.manifest.key));
   const packages = matchedSelections.map(({ selection, manifest }) => {
-    const packageSelection = canonicalSelection(selection, manifest);
-    validateBindings(manifest, packageSelection.bindings);
-    return packageSelection;
+    validateBindings(manifest, selection.bindings);
+    return canonicalSelection(selection, manifest);
   });
   const manifests = matchedSelections.map(({ manifest }) => manifest);
   const resolvedDependencyOrder = resolveDependencyOrder(manifests);

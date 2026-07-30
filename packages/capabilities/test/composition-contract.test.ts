@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   cartAsset,
   catalogAsset,
+  crudAssetV1_0_1,
   lockCapabilityAsset,
   type CapabilityAssetManifestV1,
   type CapabilityAssetV1,
@@ -233,6 +234,40 @@ describe("capability composition contract", () => {
         ],
       }),
     ).not.toThrow();
+  });
+
+  it("creates a lock from exact Graph-symbol binding objects", () => {
+    const lock = createCapabilityCompositionLock({
+      graphChecksum: digest("a"),
+      selections: [
+        selection(crudAssetV1_0_1, {
+          entityKey: { graphSymbol: "graph.domain.expense" },
+          routeKey: { graphSymbol: "graph.page.expense" },
+        }),
+      ],
+    });
+
+    expect(lock.packages[0]?.bindings).toEqual({
+      entityKey: { graphSymbol: "graph.domain.expense" },
+      routeKey: { graphSymbol: "graph.page.expense" },
+    });
+  });
+
+  it("rejects Graph-symbol binding objects with extra fields", () => {
+    const runtimeSelection = selection(crudAssetV1_0_1, {
+      entityKey: {
+        graphSymbol: "graph.domain.expense",
+        extra: true,
+      },
+      routeKey: { graphSymbol: "graph.page.expense" },
+    } as unknown as CapabilitySelectionV1["bindings"]);
+
+    expect(() =>
+      createCapabilityCompositionLock({
+        graphChecksum: digest("a"),
+        selections: [runtimeSelection],
+      }),
+    ).toThrow("must be a Graph symbol");
   });
 
   it("rejects direct strings and invalid Graph symbols", () => {
