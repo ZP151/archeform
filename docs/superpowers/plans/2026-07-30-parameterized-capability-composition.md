@@ -455,6 +455,8 @@ git commit -m "feat: compile immutable capability composition locks"
 - Modify: `packages/compiler/test/composition-compilation.test.ts`
 - Modify: `packages/compiler/test/profile-compilation.test.ts`
 - Modify: `packages/compiler/test/compilation-plan.test.ts`
+- Modify: `packages/compiler/test/restaurant-runtime.test.ts`
+- Modify: `packages/compiler/test/restaurant-page-runtime.test.ts`
 - Modify: `apps/workbench/lib/profile-starters.ts`,
   `apps/workbench/lib/profile-starters.test.ts`,
   `apps/workbench/lib/guided-application.ts`, and
