@@ -255,6 +255,18 @@ describe("ApplicationGraphV1", () => {
       boundary: "source-host token signature",
       value: `ghp_${"x".repeat(36)}`,
     },
+    {
+      boundary: "workspace bot token signature",
+      value: `xoxb-${"1".repeat(12)}-${"x".repeat(24)}`,
+    },
+    {
+      boundary: "repository access-token signature",
+      value: `glpat-${"x".repeat(24)}`,
+    },
+    {
+      boundary: "cloud API-key signature",
+      value: `AIza${"x".repeat(32)}`,
+    },
   ])("rejects a $boundary in a Draft binding", ({ value }) => {
     expect(() =>
       parseApplicationGraph(draftGraphWithBindings({ label: value })),
@@ -286,6 +298,13 @@ describe("ApplicationGraphV1", () => {
       value: "const processValue = process.env.VALUE",
     },
     { boundary: "SQL source statement", value: "SELECT value FROM records" },
+    { boundary: "destructive SQL statement", value: "DROP TABLE records" },
+    { boundary: "schema-altering SQL statement", value: "ALTER TABLE records" },
+    {
+      boundary: "runtime environment source reference",
+      value: "process.env.SECRET",
+    },
+    { boundary: "shell builtin command", value: "echo exfiltrate" },
   ])("rejects a $boundary in a Draft binding", ({ value }) => {
     expect(() =>
       parseApplicationGraph(draftGraphWithBindings({ label: value })),

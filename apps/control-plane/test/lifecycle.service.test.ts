@@ -571,20 +571,49 @@ describe("LifecycleService", () => {
     });
   });
 
-  it("rejects a command-shaped composition string before appending a Draft revision", async () => {
-    prisma.applicationGraph.findUnique.mockResolvedValue({
-      ...applicationGraph,
-      workspace,
-    });
-    const unsafeGraph = structuredClone(selectedDraftGraph);
-    unsafeGraph.integration.compositionSelections[0]!.bindings.routeKey =
-      "docker compose down" as never;
+  it.each([
+    { boundary: "container command", value: "docker compose down" },
+    {
+      boundary: "workspace bot token signature",
+      value: `xoxb-${"1".repeat(12)}-${"x".repeat(24)}`,
+    },
+    {
+      boundary: "repository access-token signature",
+      value: `glpat-${"x".repeat(24)}`,
+    },
+    {
+      boundary: "cloud API-key signature",
+      value: `AIza${"x".repeat(32)}`,
+    },
+    { boundary: "destructive SQL statement", value: "DROP TABLE records" },
+    {
+      boundary: "schema-altering SQL statement",
+      value: "ALTER TABLE records",
+    },
+    {
+      boundary: "runtime environment source reference",
+      value: "process.env.SECRET",
+    },
+    { boundary: "shell builtin command", value: "echo exfiltrate" },
+  ])(
+    "rejects a $boundary before appending a Draft revision",
+    async ({ value }) => {
+      prisma.applicationGraph.findUnique.mockResolvedValue({
+        ...applicationGraph,
+        workspace,
+      });
+      const unsafeGraph = structuredClone(selectedDraftGraph);
+      unsafeGraph.integration.compositionSelections[0]!.bindings.routeKey =
+        value as never;
 
-    await expect(
-      service.appendDraftRevision(applicationGraph.id, { graph: unsafeGraph }),
-    ).rejects.toBeInstanceOf(BadRequestException);
-    expect(prisma.draftRevision.create).not.toHaveBeenCalled();
-  });
+      await expect(
+        service.appendDraftRevision(applicationGraph.id, {
+          graph: unsafeGraph,
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.draftRevision.create).not.toHaveBeenCalled();
+    },
+  );
 
   it("reads the latest draft revision", async () => {
     prisma.applicationGraph.findUnique.mockResolvedValue(applicationGraph);
