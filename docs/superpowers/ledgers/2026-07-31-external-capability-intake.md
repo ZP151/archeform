@@ -35,9 +35,8 @@ Planning is complete for the first quarantine-first bulk Candidate Intake
 slice, and the Controller has accepted the design contract. Task 1 is now
 `accepted` with its bounded shared-contract amendment reconciled; its original
 release behavior remains accepted and frozen. Task 2 is `accepted` after Fix
-Round 2/5. Task 3 is `implementing` in Fix Round 3/5 after Fix Round 2 re-review
-found three remaining P1 defects; Tasks 4 through 6 remain `planned`. The system
-will
+Round 2/5. Task 3 is `ready_for_qa` after Fix Round 3/5 independent re-review
+passed with no P0/P1/P2; Tasks 4 through 6 remain `planned`. The system will
 ingest the 43 fixed-reference portfolio as metadata, retain the 108 scenarios as
 composition demand signals, and produce only quarantined evidence,
 non-executable Candidate records, and pending-review promotion packets.
@@ -60,7 +59,8 @@ blocked on their preceding Intake dependencies. Release review then FAILED
 with three P1 findings and one P2, so the PM returned Task 3
 `reviewed -> implementing` for Fix Round 2/5. Fix Round 2 re-review FAILED with
 three remaining P1 findings, so Task 3 continues `implementing` in Fix Round
-3/5.
+3/5. Fix Round 3 independent re-review subsequently PASSED with no P0/P1/P2,
+and the PM moved Task 3 `implementing -> ready_for_qa`.
 
 Independent Task 2 review FAILED with three P1 findings and one P2. The
 Controller resolved its schema incompatibility by selecting a distinct
@@ -86,7 +86,7 @@ remain frozen.
 | ------------------------------------------------ | -------------- | ------------------- | -------------------------------- | ----------------------------------------------------------- |
 | 1. Candidate contracts and immutable persistence | `accepted`     | `integration`       | External Intake Contract         | Original release and bounded amendment accepted and frozen. |
 | 2. Fixed-source provenance and notices           | `accepted`     | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
-| 3. Deterministic scan orchestration              | `implementing` | `platform-security` | External Evidence Pipeline       | Fix Round 2 re-review FAILED P1x3; Round 3/5 active.        |
+| 3. Deterministic scan orchestration              | `ready_for_qa` | `platform-security` | External Evidence Pipeline       | Fix Round 3 re-review PASS; independent QA required.        |
 | 4. Candidate registry, API, CLI, and isolation   | `planned`      | `integration`       | Candidate Registry               | Tasks 1-3 and Commercial Foundation Task 1 accepted.        |
 | 5. Review-only promotion packets                 | `planned`      | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.           |
 | 6. Bulk acceptance and release evidence          | `planned`      | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.        |
@@ -445,7 +445,7 @@ paths. Tasks 4 through 6 remain `planned`.
 
 ## Task 3 card: Deterministic local scans and module inventory
 
-- **State:** `implementing` in Fix Round 3/5
+- **State:** `ready_for_qa`
 - **Specialization:** `platform-security`
 - **Contract owner:** External Evidence Pipeline
 - **Contract artifact:** accepted Task 1 records/store including the acquisition
@@ -578,6 +578,18 @@ Task 3 remains `implementing` in Fix Round 3/5. The frozen External Evidence
 Pipeline contract, task scope, and exact allowed paths remain unchanged. Task 3
 is not accepted. No downstream work has started; Tasks 4 through 6 remain
 `planned`.
+
+Fix Round 3 independent re-review PASSED on repair commit `91016c4` with no
+P0/P1/P2. Reviewer evidence passed 4/4 focused adversarial cases and 66/66 full
+Task 3 tests on Node 22, plus typecheck, lint, and bounded diff checks. This
+closes all three Fix Round 3 findings: inventory-report privacy, CycloneDX 1.6
+component-type validation, and terminal EvidenceBundle receipt binding.
+
+The PM reconciled the repair and moved Task 3
+`implementing -> ready_for_qa`. Independent behavioral QA is still required;
+no QA, release acceptance, or downstream dispatch is implied. The frozen
+contract, task scope, and exact paths remain unchanged. Tasks 4 through 6 remain
+`planned`, and no downstream work has started.
 
 ## Task 4 card: Candidate registry, module API, CLI, and isolation
 
@@ -726,11 +738,9 @@ is not accepted. No downstream work has started; Tasks 4 through 6 remain
   Capabilities, and compiler test paths. Task 4 waits for Commercial Foundation
   Task 1 acceptance and exclusive path ownership.
 
-The active smallest valuable slice is Task 3 Fix Round 3/5 under its frozen
-External Evidence Pipeline contract, task scope, and exact paths: make
-inventory reporting bounded, redacted, and locator-only; enforce the CycloneDX
-1.6 component-type enumeration; and bind the terminal completed-chain receipt
-to the recomputed canonical EvidenceBundle digest before reuse. Task 1's
-original release and bounded amendment and Task 2's accepted code set
-`515e0ba + 3dcb20f + dcaddf4` remain frozen. No downstream work has started;
-Tasks 4 through 6 remain `planned` and retain their recorded dependency gates.
+The active smallest valuable slice is independent behavioral QA for Task 3
+repair commit `91016c4` under its frozen External Evidence Pipeline contract,
+task scope, and exact paths. Task 1's original release and bounded amendment and
+Task 2's accepted code set `515e0ba + 3dcb20f + dcaddf4` remain frozen. No
+downstream work has started; Tasks 4 through 6 remain `planned` and retain their
+recorded dependency gates.
