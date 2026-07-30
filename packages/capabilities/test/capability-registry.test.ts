@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
@@ -60,6 +60,26 @@ const executableContent = "export const capability = '{{entityKey}}';\n";
 
 function testDigest(content: string): string {
   return `sha256:${createHash("sha256").update(content).digest("hex")}`;
+}
+
+function testCanonicalJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(testCanonicalJson).join(",")}]`;
+  }
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(
+        ([key, entry]) => `${JSON.stringify(key)}:${testCanonicalJson(entry)}`,
+      )
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function contributionDigest(contribution: Record<string, unknown>): string {
+  const { digest: _digest, ...unsignedContribution } = contribution;
+  return testDigest(testCanonicalJson(unsignedContribution));
 }
 
 function executableContribution(
@@ -146,6 +166,7 @@ async function writeTestContributionPackage(
         parameters: asset.manifest.parameters,
         graphContributions: asset.manifest.graphContributions,
         executableContributions: asset.manifest.executableContributions,
+        contributes: { effects: asset.manifest.effects },
       },
       null,
       2,
@@ -176,7 +197,7 @@ async function writeTestContributionPackage(
 
 async function withTestContributionPackage(
   asset: CapabilityAssetV1,
-  assertion: (repositoryRoot: string) => void,
+  assertion: (repositoryRoot: string) => void | Promise<void>,
   sources?: Readonly<Record<string, string>>,
   evidence?: { readonly fixture?: boolean; readonly contractTest?: boolean },
 ): Promise<void> {
@@ -188,7 +209,7 @@ async function withTestContributionPackage(
       sources,
       evidence,
     );
-    assertion(repositoryRoot);
+    await assertion(repositoryRoot);
   } finally {
     await rm(repositoryRoot, { recursive: true, force: true });
   }
@@ -596,11 +617,58 @@ describe("capability catalog", () => {
       (repositoryRoot) => {
         expect(() =>
           loadCapabilityAssetContributions(asset, repositoryRoot),
-        ).toThrow("duplicate contribution target");
+        ).toThrow("duplicate package target");
       },
       {
         "templates/web/route.tsx.tpl": executableContent,
         "templates/web/duplicate-route.tsx.tpl": executableContent,
+      },
+    );
+  });
+
+  it("rejects a target shared by a legacy template and executable contribution", async () => {
+    const base = testContributionAsset({
+      executableContributions: [
+        executableContribution({ target: "web/src/app/shared/page.tsx" }),
+      ],
+    });
+    const draftManifest: CapabilityAssetManifestV1 = {
+      ...base.manifest,
+      manifestDigest: "sha256:placeholder",
+      templates: [
+        {
+          id: "legacy-route",
+          source: "templates/web/legacy-route.tsx.tpl",
+          target: "web/src/app/shared/page.tsx",
+          outputSlot: "web.route",
+          digest: testDigest(executableContent),
+        },
+      ],
+    };
+    const asset: CapabilityAssetV1 = {
+      manifest: {
+        ...draftManifest,
+        manifestDigest: capabilityManifestDigest(draftManifest),
+      },
+    };
+
+    await withTestContributionPackage(
+      asset,
+      (repositoryRoot) => {
+        expect(verifyCapabilityAssetPackage(asset, repositoryRoot)).toEqual(
+          expect.arrayContaining([
+            expect.stringContaining(
+              "duplicate package target 'web/src/app/shared/page.tsx'",
+            ),
+          ]),
+        );
+        expect(() =>
+          loadCapabilityAssetContributions(asset, repositoryRoot),
+        ).toThrow("duplicate package target");
+      },
+      {
+        "templates/web/route.tsx.tpl": executableContent,
+        "templates/web/legacy-route.tsx.tpl": executableContent,
       },
     );
   });
@@ -716,6 +784,179 @@ describe("capability catalog", () => {
     );
   });
 
+  it.each([
+    ["apiVersion", { apiVersion: "not.factory/v9" }],
+    ["lifecycle", { lifecycle: "draft" }],
+    [
+      "Graph operation",
+      {
+        executableContributions: [],
+        graphContributions: [
+          (() => {
+            const contribution = {
+              id: "managed-entity",
+              model: "domain",
+              collection: "entities",
+              operation: "replace",
+              parameterRefs: ["entityKey"],
+              digest: "sha256:placeholder",
+            };
+            return {
+              ...contribution,
+              digest: contributionDigest(contribution),
+            };
+          })(),
+        ],
+      },
+    ],
+    [
+      "merge protocol",
+      {
+        executableContributions: [
+          executableContribution({
+            mergeProtocol: "concatenate" as "replace-file",
+          }),
+        ],
+      },
+    ],
+    [
+      "runtime interface version",
+      {
+        executableContributions: [
+          executableContribution({
+            targetRuntimeInterfaceVersion: "https://runtime.invalid/v1",
+          }),
+        ],
+      },
+    ],
+  ] as const)(
+    "rejects a runtime-invalid component %s",
+    async (_case, patch) => {
+      const base = testContributionAsset({});
+      const draftManifest = {
+        ...base.manifest,
+        ...patch,
+        manifestDigest: "sha256:placeholder",
+      } as unknown as CapabilityAssetManifestV1;
+      const asset: CapabilityAssetV1 = {
+        manifest: {
+          ...draftManifest,
+          manifestDigest: capabilityManifestDigest(draftManifest),
+        },
+      };
+
+      await withTestContributionPackage(asset, (repositoryRoot) => {
+        expect(verifyCapabilityAssetPackage(asset, repositoryRoot)).not.toEqual(
+          [],
+        );
+        expect(() =>
+          loadCapabilityAssetContributions(asset, repositoryRoot),
+        ).toThrow("is invalid");
+      });
+    },
+  );
+
+  it("rejects adapter effects that contradict the component manifest", async () => {
+    const asset = testContributionAsset({});
+
+    await withTestContributionPackage(asset, async (repositoryRoot) => {
+      const adapterPath = resolve(
+        repositoryRoot,
+        asset.manifest.packageRoot,
+        "adapter.json",
+      );
+      const adapter = JSON.parse(readFileSync(adapterPath, "utf8")) as Record<
+        string,
+        unknown
+      >;
+      adapter.contributes = { effects: ["different.effect"] };
+      await writeFile(adapterPath, JSON.stringify(adapter, null, 2));
+
+      expect(verifyCapabilityAssetPackage(asset, repositoryRoot)).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining("adapter.json: contributes.effects"),
+        ]),
+      );
+    });
+  });
+
+  it("rejects a package-root junction that resolves outside the repository", async () => {
+    const repositoryRoot = await mkdtemp(
+      join(tmpdir(), "factory-junction-repository-"),
+    );
+    const externalRoot = await mkdtemp(
+      join(tmpdir(), "factory-junction-external-"),
+    );
+    const asset = testContributionAsset({});
+    const linkedPackageRoot = resolve(
+      repositoryRoot,
+      asset.manifest.packageRoot,
+    );
+    const externalPackageRoot = resolve(
+      externalRoot,
+      asset.manifest.packageRoot,
+    );
+
+    try {
+      await writeTestContributionPackage(externalRoot, asset);
+      await mkdir(dirname(linkedPackageRoot), { recursive: true });
+      await symlink(externalPackageRoot, linkedPackageRoot, "junction");
+
+      expect(verifyCapabilityAssetPackage(asset, repositoryRoot)).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining("packageRoot: unsafe physical path"),
+        ]),
+      );
+      expect(() =>
+        loadCapabilityAssetContributions(asset, repositoryRoot),
+      ).toThrow("unsafe physical path");
+    } finally {
+      await rm(repositoryRoot, { recursive: true, force: true });
+      await rm(externalRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a generated target that uses a Windows alternate data stream", async () => {
+    const asset = testContributionAsset({
+      executableContributions: [
+        executableContribution({
+          target: "web/src/app/page.tsx:alternate-stream",
+        }),
+      ],
+    });
+
+    await withTestContributionPackage(asset, (repositoryRoot) => {
+      expect(() =>
+        loadCapabilityAssetContributions(asset, repositoryRoot),
+      ).toThrow("unsafe target path");
+    });
+  });
+
+  it("rejects a verification evidence directory in place of a file", async () => {
+    const asset = testContributionAsset({});
+
+    await withTestContributionPackage(
+      asset,
+      async (repositoryRoot) => {
+        await mkdir(
+          resolve(
+            repositoryRoot,
+            asset.manifest.packageRoot,
+            asset.manifest.verification.fixture,
+          ),
+          { recursive: true },
+        );
+        expect(verifyCapabilityAssetPackage(asset, repositoryRoot)).toEqual(
+          expect.arrayContaining([
+            expect.stringContaining("fixture is not a regular package file"),
+          ]),
+        );
+      },
+      undefined,
+      { fixture: false },
+    );
+  });
+
   it("rejects a changed core audit effect handler template", async () => {
     const repositoryRoot = await mkdtemp(
       join(tmpdir(), "factory-changed-handler-"),
@@ -758,6 +999,7 @@ describe("capability catalog", () => {
             kind: "declarative",
             outputSlots: manifest.outputSlots,
             templates: manifest.templates,
+            contributes: { effects: manifest.effects },
           },
           null,
           2,
@@ -827,6 +1069,7 @@ describe("capability catalog", () => {
             kind: "declarative",
             outputSlots: manifest.outputSlots,
             templates: manifest.templates,
+            contributes: { effects: manifest.effects },
           },
           null,
           2,

@@ -1,6 +1,13 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, resolve, sep } from "node:path";
+import {
+  existsSync,
+  lstatSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+} from "node:fs";
+import { isAbsolute, relative, resolve, sep } from "node:path";
+import { z } from "zod";
 
 import type {
   CapabilityAssetManifestV1,
@@ -64,6 +71,160 @@ const additiveGraphCollections: Readonly<
   integration: ["providers", "capabilities"],
 };
 
+const digestSchema = z.string().regex(/^sha256:[a-f0-9]{64}$/);
+const packageKeySchema = z.string().regex(/^[a-z][a-z0-9.-]*$/);
+const contributionIdSchema = z.string().regex(/^[a-z][a-z0-9.-]*$/);
+const parameterKeySchema = z.string().regex(/^[a-z][a-zA-Z0-9]*$/);
+const outputSlotSchema = z.enum([
+  "api.runtime",
+  "api.command",
+  "api.router",
+  "api.service",
+  "database.schema",
+  "database.migration",
+  "page.block",
+  "policy.rule",
+  "test.fixture",
+  "test.journey",
+  "flow.effect",
+  "flow.handler",
+  "web.customer",
+  "web.merchant",
+  "web.component",
+  "web.route",
+  "web.navigation",
+  "report.read-model",
+  "realtime.event",
+  "docs.section",
+]);
+const templateContributionSchema = z
+  .object({
+    id: contributionIdSchema,
+    source: z.string().min(1),
+    target: z.string().min(1),
+    outputSlot: outputSlotSchema,
+    digest: digestSchema,
+  })
+  .strict();
+const parameterSchema = z
+  .object({
+    key: parameterKeySchema,
+    type: z.enum(["string", "number", "boolean", "graph-symbol"]),
+    required: z.boolean(),
+  })
+  .strict();
+const graphContributionSchema = z
+  .object({
+    id: contributionIdSchema,
+    model: z.enum([
+      "page",
+      "domain",
+      "policy",
+      "flow",
+      "integration",
+      "experience",
+    ]),
+    collection: z.string().min(1),
+    operation: z.enum(["append", "extend"]),
+    parameterRefs: z.array(parameterKeySchema),
+    digest: digestSchema,
+  })
+  .strict();
+const executableContributionSchema = z
+  .object({
+    id: contributionIdSchema,
+    outputSlot: outputSlotSchema,
+    namespace: z.string().min(1),
+    source: z.string().min(1),
+    target: z.string().min(1),
+    parameterRefs: z.array(parameterKeySchema),
+    targetRuntimeInterfaceVersion: z
+      .string()
+      .regex(/^[a-z][a-z0-9.-]*\/v[1-9][0-9]*$/),
+    orderingRequirements: z.array(contributionIdSchema),
+    mergeProtocol: z.enum(["replace-file", "append-fragment"]),
+    digest: digestSchema,
+  })
+  .strict();
+const capabilityManifestSchema = z
+  .object({
+    apiVersion: z.literal("factory.capability/v1"),
+    key: packageKeySchema,
+    version: z.string().regex(/^\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.-]+)?$/),
+    category: z.enum(["core", "commerce", "restaurant"]),
+    name: z.string().min(1),
+    description: z.string().min(1),
+    packageRoot: z.string().min(1),
+    manifestDigest: digestSchema,
+    lifecycle: z.literal("golden"),
+    profiles: z.array(
+      z.enum(["expense-approval", "restaurant-ordering", "simple-ecommerce"]),
+    ),
+    effects: z.array(z.string().min(1)),
+    inputSchema: z.array(
+      z
+        .object({
+          key: z.string().min(1),
+          type: z.string().min(1),
+          required: z.boolean(),
+        })
+        .strict(),
+    ),
+    outputSlots: z.array(outputSlotSchema),
+    templates: z.array(templateContributionSchema),
+    parameters: z.array(parameterSchema).optional(),
+    graphContributions: z.array(graphContributionSchema).optional(),
+    executableContributions: z.array(executableContributionSchema).optional(),
+    requires: z
+      .array(
+        z
+          .object({
+            interfaceKey: z.string().min(1),
+            version: z.string().min(1),
+            multiProvider: z.boolean().optional(),
+          })
+          .strict(),
+      )
+      .optional(),
+    provides: z
+      .array(
+        z
+          .object({
+            interfaceKey: z.string().min(1),
+            version: z.string().min(1),
+          })
+          .strict(),
+      )
+      .optional(),
+    verification: z
+      .object({
+        fixture: z.string().min(1),
+        contractTest: z.string().min(1),
+        status: z.literal("verified"),
+      })
+      .strict(),
+  })
+  .strict();
+const adapterSchema = z
+  .object({
+    apiVersion: z.literal("factory.adapter/v1"),
+    kind: z.literal("declarative"),
+    outputSlots: z.array(outputSlotSchema),
+    templates: z.array(templateContributionSchema),
+    parameters: z.array(parameterSchema).optional(),
+    graphContributions: z.array(graphContributionSchema).optional(),
+    executableContributions: z.array(executableContributionSchema).optional(),
+    contributes: z.object({ effects: z.array(z.string().min(1)) }).strict(),
+    disable: z
+      .object({
+        removeIntegrationCapabilities: z.array(z.string().min(1)),
+        removePolicyActions: z.array(z.string().min(1)).optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
 function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) {
     return `[${value.map(canonicalJson).join(",")}]`;
@@ -82,18 +243,42 @@ function sha256(content: string): string {
 }
 
 function safePackageRelativePath(path: string): boolean {
+  const segments = path.split("/");
   return (
     path.length > 0 &&
     !path.startsWith("/") &&
     !path.includes("\\") &&
-    !path
-      .split("/")
-      .some((segment) => !segment || segment === "." || segment === "..")
+    !segments.some(
+      (segment) =>
+        !segment ||
+        segment === "." ||
+        segment === ".." ||
+        /[:\u0000-\u001f\u007f]/.test(segment) ||
+        /[. ]$/.test(segment) ||
+        /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i.test(segment),
+    )
   );
 }
 
 function insideRoot(root: string, path: string): boolean {
-  return path.startsWith(`${root}${sep}`);
+  const relationship = relative(root, path);
+  return (
+    relationship.length > 0 &&
+    relationship !== ".." &&
+    !relationship.startsWith(`..${sep}`) &&
+    !isAbsolute(relationship)
+  );
+}
+
+function regularFileWithin(root: string, path: string): boolean {
+  try {
+    if (lstatSync(path).isSymbolicLink()) return false;
+    const realRoot = realpathSync(root);
+    const realPath = realpathSync(path);
+    return insideRoot(realRoot, realPath) && statSync(realPath).isFile();
+  } catch {
+    return false;
+  }
 }
 
 function templateTargetPrefixesFor(
@@ -198,6 +383,11 @@ function assertExecutableContribution(
       `Capability executable contribution '${contribution.id}' is missing from its package.`,
     );
   }
+  if (!regularFileWithin(packageRoot, sourcePath)) {
+    throw new Error(
+      `Capability executable contribution '${contribution.id}' source escapes its package or is not a regular file.`,
+    );
+  }
   const content = readFileSync(sourcePath, "utf8");
   if (sha256(content) !== contribution.digest) {
     throw new Error(
@@ -248,6 +438,11 @@ function assertTemplateContribution(
       `Capability template '${template.id}' is missing from its package.`,
     );
   }
+  if (!regularFileWithin(packageRoot, sourcePath)) {
+    throw new Error(
+      `Capability template '${template.id}' source escapes its package or is not a regular file.`,
+    );
+  }
   const content = readFileSync(sourcePath, "utf8");
   if (sha256(content) !== template.digest) {
     throw new Error(
@@ -290,40 +485,90 @@ export function verifyCapabilityAssetPackage(
   asset: CapabilityAssetV1,
   repositoryRoot: string,
 ): string[] {
-  const resolvedRepositoryRoot = resolve(repositoryRoot);
+  let resolvedRepositoryRoot: string;
+  try {
+    resolvedRepositoryRoot = realpathSync(resolve(repositoryRoot));
+    if (!statSync(resolvedRepositoryRoot).isDirectory()) {
+      return ["repositoryRoot: not a directory"];
+    }
+  } catch {
+    return ["repositoryRoot: missing"];
+  }
   if (!safePackageRelativePath(asset.manifest.packageRoot)) {
     return ["packageRoot: unsafe package path"];
   }
-  const packageRoot = resolve(
+  const lexicalPackageRoot = resolve(
     resolvedRepositoryRoot,
     asset.manifest.packageRoot,
   );
-  if (!insideRoot(resolvedRepositoryRoot, packageRoot)) {
+  if (!insideRoot(resolvedRepositoryRoot, lexicalPackageRoot)) {
     return ["packageRoot: escapes repository"];
+  }
+  if (!existsSync(lexicalPackageRoot)) {
+    return ["packageRoot: missing"];
+  }
+  let packageRoot: string;
+  try {
+    if (lstatSync(lexicalPackageRoot).isSymbolicLink()) {
+      return ["packageRoot: unsafe physical path"];
+    }
+    packageRoot = realpathSync(lexicalPackageRoot);
+    if (
+      !insideRoot(resolvedRepositoryRoot, packageRoot) ||
+      !statSync(packageRoot).isDirectory()
+    ) {
+      return ["packageRoot: unsafe physical path"];
+    }
+  } catch {
+    return ["packageRoot: unsafe physical path"];
   }
   const requiredPackageFiles = ["component.json", "adapter.json"];
   const missing = requiredPackageFiles.filter(
     (relativePath) => !existsSync(resolve(packageRoot, relativePath)),
   );
   if (missing.length) return missing;
-
-  const component = JSON.parse(
-    readFileSync(resolve(packageRoot, "component.json"), "utf8"),
-  ) as CapabilityAssetManifestV1;
-  const adapter = JSON.parse(
-    readFileSync(resolve(packageRoot, "adapter.json"), "utf8"),
-  ) as {
-    apiVersion?: string;
-    kind?: string;
-    source?: unknown;
-    outputSlots?: unknown;
-    templates?: unknown;
-    parameters?: unknown;
-    graphContributions?: unknown;
-    executableContributions?: unknown;
-  };
+  const unsafePackageFiles = requiredPackageFiles.filter(
+    (relativePath) =>
+      !regularFileWithin(packageRoot, resolve(packageRoot, relativePath)),
+  );
+  if (unsafePackageFiles.length) {
+    return unsafePackageFiles.map(
+      (relativePath) => `${relativePath}: unsafe physical file`,
+    );
+  }
 
   const invalid: string[] = [];
+  let componentInput: unknown;
+  let adapterInput: unknown;
+  try {
+    componentInput = JSON.parse(
+      readFileSync(resolve(packageRoot, "component.json"), "utf8"),
+    );
+  } catch {
+    invalid.push("component.json: invalid JSON");
+  }
+  try {
+    adapterInput = JSON.parse(
+      readFileSync(resolve(packageRoot, "adapter.json"), "utf8"),
+    );
+  } catch {
+    invalid.push("adapter.json: invalid JSON");
+  }
+  if (
+    adapterInput &&
+    typeof adapterInput === "object" &&
+    "source" in adapterInput
+  ) {
+    invalid.push("adapter.json: external source");
+  }
+  const componentResult = capabilityManifestSchema.safeParse(componentInput);
+  const adapterResult = adapterSchema.safeParse(adapterInput);
+  if (!componentResult.success) invalid.push("component.json: schema");
+  if (!adapterResult.success) invalid.push("adapter.json: schema");
+  if (!componentResult.success || !adapterResult.success) return invalid;
+  const component = componentResult.data as CapabilityAssetManifestV1;
+  const adapter = adapterResult.data;
+
   for (const [evidenceType, relativePath] of [
     ["fixture", asset.manifest.verification.fixture],
     ["contract test", asset.manifest.verification.contractTest],
@@ -337,6 +582,10 @@ export function verifyCapabilityAssetPackage(
       invalid.push(`verification: ${evidenceType} escapes package`);
     } else if (!existsSync(evidencePath)) {
       invalid.push(relativePath);
+    } else if (!regularFileWithin(packageRoot, evidencePath)) {
+      invalid.push(
+        `verification: ${evidenceType} is not a regular package file`,
+      );
     }
   }
   if (canonicalJson(component) !== canonicalJson(asset.manifest)) {
@@ -349,7 +598,6 @@ export function verifyCapabilityAssetPackage(
     invalid.push("adapter.json: apiVersion");
   }
   if (adapter.kind !== "declarative") invalid.push("adapter.json: kind");
-  if ("source" in adapter) invalid.push("adapter.json: external source");
   if (
     canonicalJson(adapter.outputSlots) !==
     canonicalJson(asset.manifest.outputSlots)
@@ -359,6 +607,12 @@ export function verifyCapabilityAssetPackage(
   if (canonicalJson(adapter.templates) !== canonicalJson(component.templates)) {
     invalid.push("adapter.json: templates");
   }
+  if (
+    canonicalJson(adapter.contributes.effects) !==
+    canonicalJson(component.effects)
+  ) {
+    invalid.push("adapter.json: contributes.effects");
+  }
   for (const field of [
     "parameters",
     "graphContributions",
@@ -367,6 +621,16 @@ export function verifyCapabilityAssetPackage(
     if (canonicalJson(adapter[field]) !== canonicalJson(component[field])) {
       invalid.push(`adapter.json: ${field}`);
     }
+  }
+  const packageTargets = new Set<string>();
+  for (const contribution of [
+    ...(component.templates ?? []),
+    ...(component.executableContributions ?? []),
+  ]) {
+    if (packageTargets.has(contribution.target)) {
+      invalid.push(`duplicate package target '${contribution.target}'`);
+    }
+    packageTargets.add(contribution.target);
   }
   const declaredParameters = new Set(
     (component.parameters ?? []).map(({ key }) => key),
@@ -417,7 +681,9 @@ export function loadCapabilityAssetTemplates(
       `Capability package '${asset.manifest.key}' is invalid: ${invalid.join(", ")}`,
     );
   }
-  const packageRoot = resolve(repositoryRoot, asset.manifest.packageRoot);
+  const packageRoot = realpathSync(
+    resolve(repositoryRoot, asset.manifest.packageRoot),
+  );
   const targets = new Set<string>();
   return asset.manifest.templates.map((template) => {
     if (targets.has(template.target)) {
@@ -445,7 +711,9 @@ export function loadCapabilityAssetContributions(
       `Capability package '${asset.manifest.key}' is invalid: ${invalid.join(", ")}`,
     );
   }
-  const packageRoot = resolve(repositoryRoot, asset.manifest.packageRoot);
+  const packageRoot = realpathSync(
+    resolve(repositoryRoot, asset.manifest.packageRoot),
+  );
   const targets = new Set<string>();
   return (asset.manifest.executableContributions ?? []).map((contribution) => {
     if (targets.has(contribution.target)) {
