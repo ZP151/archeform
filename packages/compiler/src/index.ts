@@ -151,6 +151,16 @@ export interface GeneratedApplicationBundle {
   readonly files: readonly GeneratedFile[];
 }
 
+function assertUniqueGeneratedFilePaths(files: readonly GeneratedFile[]): void {
+  const paths = new Set<string>();
+  for (const file of files) {
+    if (paths.has(file.path)) {
+      throw new Error(`Generated output collision at '${file.path}'.`);
+    }
+    paths.add(file.path);
+  }
+}
+
 export interface GenerateApplicationBundleOptions {
   readonly repositoryRoot?: string;
 }
@@ -2830,5 +2840,6 @@ export function generateApplicationBundle(
     },
   ];
 
+  assertUniqueGeneratedFilePaths(files);
   return { rootDirectory, graphHash: plan.graphHash, files };
 }

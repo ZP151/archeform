@@ -519,6 +519,21 @@ describe("LifecycleService", () => {
     });
   });
 
+  it("rejects an unsafe composition string before appending a Draft revision", async () => {
+    prisma.applicationGraph.findUnique.mockResolvedValue({
+      ...applicationGraph,
+      workspace,
+    });
+    const unsafeGraph = structuredClone(selectedDraftGraph);
+    unsafeGraph.integration.compositionSelections[0]!.bindings.routeKey =
+      "https://example.invalid/catalog" as never;
+
+    await expect(
+      service.appendDraftRevision(applicationGraph.id, { graph: unsafeGraph }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.draftRevision.create).not.toHaveBeenCalled();
+  });
+
   it("reads the latest draft revision", async () => {
     prisma.applicationGraph.findUnique.mockResolvedValue(applicationGraph);
     prisma.draftRevision.findFirst.mockResolvedValue(draftRevision);
@@ -636,6 +651,30 @@ describe("LifecycleService", () => {
           ...localApplicationGraph.integration,
           compositionProfile: "expense-approval",
           assetLocks: [coreCrudLock],
+        },
+      },
+      applicationGraph: { ...applicationGraph, workspace },
+    });
+    prisma.publishedRevision.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.publishDraft(applicationGraph.id, {
+        draftRevisionId: draftRevision.id,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.publishedRevision.create).not.toHaveBeenCalled();
+  });
+
+  it("does not let an explicit empty selection list bypass required legacy bindings", async () => {
+    prisma.draftRevision.findFirst.mockResolvedValue({
+      ...draftRevision,
+      graph: {
+        ...localApplicationGraph,
+        integration: {
+          ...localApplicationGraph.integration,
+          compositionProfile: "expense-approval",
+          assetLocks: [coreCrudLock],
+          compositionSelections: [],
         },
       },
       applicationGraph: { ...applicationGraph, workspace },

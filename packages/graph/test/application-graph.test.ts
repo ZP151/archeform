@@ -191,6 +191,53 @@ describe("ApplicationGraphV1", () => {
     ).toThrow();
   });
 
+  it.each([
+    "https://example.invalid/catalog",
+    "admin/secrets",
+    "rm workspace",
+    "${process.env.SECRET}",
+    "value\u0000suffix",
+  ])("rejects unsafe Draft composition string binding %j", (value) => {
+    const selected = structuredClone(expenseGraph) as ApplicationGraphV1 & {
+      integration: ApplicationGraphV1["integration"] & {
+        compositionSelections: unknown[];
+      };
+    };
+    selected.integration.compositionSelections = [
+      {
+        lock: {
+          key: "core.crud",
+          version: "1.0.1",
+          packageRoot: "packages/capabilities/assets/core.crud/1.0.1",
+          manifestDigest:
+            "sha256:ac6197b00e529f519f1b062c9189a368eb9b94be125444a7c2f90cec46200f26",
+          lifecycle: "golden",
+        },
+        bindings: { label: value },
+      },
+    ];
+
+    expect(() => parseApplicationGraph(selected)).toThrow();
+  });
+
+  it("rejects simultaneous legacy asset locks and Draft composition selections", () => {
+    const invalid = structuredClone(expenseGraph);
+    invalid.integration.compositionProfile = "expense-approval";
+    invalid.integration.assetLocks = [
+      {
+        key: "core.crud",
+        version: "1.0.1",
+        packageRoot: "packages/capabilities/assets/core.crud/1.0.1",
+        manifestDigest:
+          "sha256:ac6197b00e529f519f1b062c9189a368eb9b94be125444a7c2f90cec46200f26",
+        lifecycle: "golden",
+      },
+    ];
+    Object.assign(invalid.integration, { compositionSelections: [] });
+
+    expect(() => parseApplicationGraph(invalid)).toThrow();
+  });
+
   it("rejects duplicate capability asset locks", () => {
     const invalid = structuredClone(expenseGraph);
     invalid.integration.compositionProfile = "expense-approval";

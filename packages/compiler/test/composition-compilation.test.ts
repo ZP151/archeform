@@ -280,4 +280,87 @@ describe("immutable composition compilation", () => {
       },
     );
   });
+
+  it("rejects a package contribution that collides with a compiler-owned migration", () => {
+    const auditAsset = getCapabilityAsset("core.audit");
+    const auditLock = {
+      key: auditAsset.manifest.key,
+      version: auditAsset.manifest.version,
+      packageRoot: auditAsset.manifest.packageRoot,
+      manifestDigest: auditAsset.manifest.manifestDigest,
+      lifecycle: auditAsset.manifest.lifecycle,
+    };
+    const collisionLock = createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(graph),
+      selections: [
+        ...compositionLock.packages,
+        { lock: auditLock, bindings: {} },
+      ],
+    });
+    const crudAsset = getCapabilityAsset("core.crud");
+    const crudSchema = capabilityNode
+      .loadCapabilityAssetContributions(crudAsset, repositoryRoot)
+      .find(({ outputSlot }) => outputSlot === "database.schema")!;
+    const migrationContribution = {
+      id: "initial-migration",
+      outputSlot: "database.schema" as const,
+      namespace: "packages/core.audit/database/migrations/",
+      source: crudSchema.source,
+      target: "database/prisma/migrations/0001_initial/migration.sql",
+      parameterRefs: [],
+      targetRuntimeInterfaceVersion: crudSchema.targetRuntimeInterfaceVersion,
+      orderingRequirements: [],
+      mergeProtocol: "replace-file" as const,
+      digest: crudSchema.digest,
+    };
+    const collisionAsset = {
+      ...auditAsset,
+      manifest: {
+        ...auditAsset.manifest,
+        outputSlots: [
+          ...auditAsset.manifest.outputSlots,
+          "database.schema" as const,
+        ],
+        executableContributions: [migrationContribution],
+      },
+    };
+    const resolveAsset = capabilityRegistry.resolveCapabilityAssetLock;
+    const loadContributions = capabilityNode.loadCapabilityAssetContributions;
+    const resolveSpy = vi
+      .spyOn(capabilityRegistry, "resolveCapabilityAssetLock")
+      .mockImplementation((lock) =>
+        lock.key === auditLock.key ? collisionAsset : resolveAsset(lock),
+      );
+    const loadSpy = vi
+      .spyOn(capabilityNode, "loadCapabilityAssetContributions")
+      .mockImplementation((asset, root) =>
+        asset.manifest.key === auditLock.key
+          ? [
+              {
+                assetKey: auditLock.key,
+                assetVersion: auditLock.version,
+                namespace: migrationContribution.namespace,
+                source: migrationContribution.source,
+                target: migrationContribution.target,
+                outputSlot: migrationContribution.outputSlot,
+                digest: migrationContribution.digest,
+                content: "-- package migration\n",
+                targetRuntimeInterfaceVersion:
+                  migrationContribution.targetRuntimeInterfaceVersion,
+              },
+            ]
+          : loadContributions(asset, root),
+      );
+
+    try {
+      expect(() =>
+        generateApplicationBundle({ ...input, compositionLock: collisionLock }),
+      ).toThrow(
+        "Generated output collision at 'database/prisma/migrations/0001_initial/migration.sql'.",
+      );
+    } finally {
+      loadSpy.mockRestore();
+      resolveSpy.mockRestore();
+    }
+  });
 });

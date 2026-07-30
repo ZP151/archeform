@@ -147,8 +147,24 @@ const compositionBindingKey = z
       ),
     "Composition binding key is not safe.",
   );
+const compositionBindingStringSchema = z
+  .string()
+  .refine(
+    (value) =>
+      !/\b[a-z][a-z0-9+.-]*:\S/i.test(value) &&
+      !value.includes("/") &&
+      !value.includes("\\") &&
+      !/[\u0000-\u001f\u007f-\u009f]/.test(value) &&
+      !/[`{}\[\];<>]|=>|\$\(|\b[a-z_$][a-z0-9_$]*(?:\.[a-z_$][a-z0-9_$]*)*\(/i.test(
+        value,
+      ) &&
+      !/^\s*(?:bash|cmd|curl|del|git|invoke-webrequest|node|npm|pnpm|powershell|python|remove-item|rm|sh|sudo|wget|yarn)(?:\.exe)?\s/i.test(
+        value,
+      ),
+    "Composition string binding is not safe.",
+  );
 const compositionBindingValueSchema = z.union([
-  z.string(),
+  compositionBindingStringSchema,
   z.number().finite(),
   z.boolean(),
   z
@@ -176,35 +192,49 @@ const capabilitySelectionSchema = z
   })
   .strict();
 
-const integrationModelSchema = z.object({
-  providers: z.array(
-    z.object({
-      id: identifier,
-      type: identifier,
-      version: z.string().min(1).max(64).optional(),
-    }),
-  ),
-  capabilities: z.array(
-    z.object({
-      key: z.string().min(1).max(160),
-      providerId: identifier,
-      operation: identifier,
-    }),
-  ),
-  compositionProfile: identifier.optional(),
-  assetLocks: z
-    .array(
+const integrationModelSchema = z
+  .object({
+    providers: z.array(
+      z.object({
+        id: identifier,
+        type: identifier,
+        version: z.string().min(1).max(64).optional(),
+      }),
+    ),
+    capabilities: z.array(
       z.object({
         key: z.string().min(1).max(160),
-        version: z.string().regex(/^\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.-]+)?$/),
-        packageRoot: z.string().min(1).max(512),
-        manifestDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/),
-        lifecycle: z.literal("golden"),
+        providerId: identifier,
+        operation: identifier,
       }),
-    )
-    .optional(),
-  compositionSelections: z.array(capabilitySelectionSchema).optional(),
-});
+    ),
+    compositionProfile: identifier.optional(),
+    assetLocks: z
+      .array(
+        z.object({
+          key: z.string().min(1).max(160),
+          version: z.string().regex(/^\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.-]+)?$/),
+          packageRoot: z.string().min(1).max(512),
+          manifestDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/),
+          lifecycle: z.literal("golden"),
+        }),
+      )
+      .optional(),
+    compositionSelections: z.array(capabilitySelectionSchema).optional(),
+  })
+  .superRefine((integration, context) => {
+    if (
+      integration.assetLocks !== undefined &&
+      integration.compositionSelections !== undefined
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "Legacy asset locks and composition selections cannot be combined.",
+        path: ["compositionSelections"],
+      });
+    }
+  });
 
 const experienceModelSchema = z.object({
   theme: z.object({
