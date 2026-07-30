@@ -35,7 +35,9 @@ release review found one load-bearing compiler source-of-truth defect. Fix round
 4 addressed it, passed scoped re-review, and passed repeated independent QA with
 no P0/P1/P2. Repeated broad release review approved with no P0/P1/P2, and fresh
 root verification passed. Task 4 is accepted and frozen. Task 5 now owns the
-bounded release gate and migrated-dispatch retirement and is `implementing`.
+bounded release gate and migrated-dispatch retirement. Implementation commit
+`b616a0c` passed independent task review with no P0/P1/P2; Task 5 is
+`ready_for_qa`.
 
 | Task                                                   | State          | Evidence-backed status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ------------------------------------------------------ | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -43,7 +45,7 @@ bounded release gate and migrated-dispatch retirement and is `implementing`.
 | 2. Physical Graph and target contribution verification | `accepted`     | Commits `33f9f31..0e1cc33`; final independent re-review clean. Physical packages, digests, runtime metadata, namespaces, and contribution collisions are verified fail closed.                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | 3. Publish and compile an immutable composition lock   | `accepted`     | Baseline commit `a2fac21`; repairs through `e509b6c`. Final task review and release review approved with no P0/P1/P2; independent QA passed with no P0/P1. Fresh verification passed Graph 19/19, Capabilities 108/108, Control Plane 111/111, compiler 169/169, Worker 74/74, all five typechecks, targeted Prettier, and `git diff --check`. The immutable publication, closed binding grammar, raw-before-canonicalization validation, and pre-generation collision contracts are accepted.                                                                                                             |
 | 4. Shared-commerce composition with different bindings | `accepted`     | Implementation range `ed87dfd`, `b2a9d45`, `6410b92`, `f054802`, and `1cfae6e`. Scoped re-review, repeated independent QA, and repeated broad release review passed with no P0/P1/P2. Fresh root verification passed Graph 23/23, Capabilities 112/112, Control Plane 115/115, compiler 173/173, Worker 74/74, five TypeScript typechecks, compiler lint, scoped Prettier, `git diff --check`, and a clean worktree. Compiler decisions come only from the verified immutable composition lock; active Workbench uses `composeDefaultCapabilityDraft`; legacy fixtures cannot substitute a published lock. |
-| 5. Release gate and migrated-dispatch retirement       | `implementing` | Tasks 1–4 are accepted and frozen. The integration owner may change only the six paths in the approved Task 5 brief, begin with negative compiler/Worker dispatch evidence, remove only migrated profile/version dispatch, prove deterministic compilation, and run isolated Node 22 Restaurant and Ecommerce Compose lifecycles with exact scoped cleanup.                                                                                                                                                                                                                                                |
+| 5. Release gate and migrated-dispatch retirement       | `ready_for_qa` | Implementation commit `b616a0c`; independent task review found no P0/P1/P2 and approved specification compliance and quality. Review verified lock-derived migrated dispatch, the bounded unmigrated Restaurant branch, Worker composition-lock fail-closed behavior, shared Prisma relation mapping including `tableCode` and `categoryKey`, scoped documentation, and no unsafe raw or cleanup behavior. Independent QA must reproduce deterministic compiler/Worker behavior and both isolated Node 22 Restaurant and Ecommerce Compose lifecycles with exact scoped cleanup.                           |
 
 Development, review, QA, release review, and fresh verification for Tasks 1
 through 3 ran on host Node 24. This is valid Task 3 acceptance evidence. It is
@@ -55,11 +57,11 @@ v24.18.0 while repository engines declare Node 22. This development-environment
 warning is nonblocking for Task 4 acceptance. Node 22 generated-runtime and
 isolated Compose evidence remain Task 5 gates.
 
-## Active ownership: Task 5 release gate and migrated-dispatch retirement
+## Active ownership: Task 5 independent release-gate QA
 
-- Specialization and active owner: `integration`
+- Specialization and active owner: `qa`
 - Contract owner: Factory Platform Integration (root controller)
-- State: `implementing`
+- State: `ready_for_qa`
 - Contract status: Tasks 1 through 4 are accepted and frozen. Task 5 consumes
   fully published immutable composition locks and generic compiler output; it
   does not reopen the Graph, capability, Publish, or compilation-input contract.
@@ -81,39 +83,48 @@ isolated Compose evidence remain Task 5 gates.
 No other production, test, acceptance, plan, specification, or status path is
 authorized. This PM transition changes no product code or contract.
 
-### Bounded implementation contract
+### Implemented scope and independent task review
 
-- Start with negative compiler evidence proving `compositionProfile` cannot
-  select a migrated target contribution, and Worker evidence proving a job with
-  a mismatched persisted composition-lock artifact digest rejects.
-- Remove only `handlerBackedCapabilityPackages` and
+- Implementation commit: `b616a0c`.
+- The implementation started with negative compiler evidence proving
+  `compositionProfile` cannot select a migrated target contribution and Worker
+  evidence proving a job with a mismatched persisted composition-lock artifact
+  digest rejects.
+- The implementation removed only `handlerBackedCapabilityPackages` and
   `resolveGeneratedRuntimeMode` behavior for core and shared-commerce assets
-  proven migrated by accepted Task 4. Keep unmigrated Restaurant runtime modules
-  until their own parameterized assets exist.
-- Compiler behavior must come from the published lock's resolved contributions,
+  proven migrated by accepted Task 4. It kept unmigrated Restaurant runtime
+  modules until their own parameterized assets exist.
+- Compiler behavior now comes from the published lock's resolved contributions,
   never `restaurant-ordering`, `simple-ecommerce`, or an asset-version switch.
-- Record only redacted immutable revision IDs, Graph hashes, composition-lock
-  digests, artifact counts, exact commands, outcomes, and scoped cleanup results.
+- Independent task review approved specification compliance and code quality
+  with no P0/P1/P2. It verified lock-derived migrated dispatch, the bounded
+  unmigrated Restaurant branch, Worker composition-lock fail-closed behavior,
+  shared Prisma relation mapping including `tableCode` and `categoryKey`, scoped
+  documentation, and no unsafe raw or cleanup behavior.
+- Task review explicitly deferred reproducibility of both Node 22 Compose
+  lifecycles to independent QA.
 
-### Acceptance evidence required before Task 5 can leave `implementing`
+### Independent QA requirements before Task 5 can leave `ready_for_qa`
 
-- The focused negative compiler dispatch test and Worker tampered-lock digest
-  test begin RED for the intended reason, then pass after the bounded repair.
-- Focused composition and compilation-plan tests prove deterministic compilation
-  and no migrated profile/version dispatch. The focused Worker executor test
-  proves persisted-lock artifact integrity remains fail closed.
-- One Restaurant and one Ecommerce Published revision each run as an isolated
-  generated application on Node 22 with unique Compose project names and
-  loopback ports. Each must pass its role journey and stopped-preview check.
-- Cleanup evidence proves removal of only each run's exact label-scoped
-  containers, network, volumes, and runtime directory. No other Docker project
-  may be touched.
-- The acceptance record contains the exact redacted, reproducible evidence; task
-  review, independent QA, release review, and fresh verification remain required
-  before `accepted`.
+- Reproduce the focused compiler composition and compilation-plan tests proving
+  deterministic compilation, lock-derived migrated behavior, and no migrated
+  profile/version dispatch.
+- Reproduce the focused Worker executor test proving a job whose persisted
+  composition-lock artifact digest differs rejects fail closed.
+- Run one Restaurant and one Ecommerce Published revision as isolated generated
+  applications on Node 22, using unique Compose project names and loopback ports.
+- Verify each generated application's role journey and stopped-preview state.
+- Verify exact label-scoped removal of each run's containers, network, volumes,
+  and runtime directory. Do not touch any other Docker project.
+- Reconcile the acceptance record using only redacted immutable revision IDs,
+  Graph hashes, composition-lock digests, artifact counts, exact test commands,
+  outcomes, and scoped cleanup results.
+- Report findings by P0/P1/P2 severity. Release review and fresh verification
+  remain required before `accepted`.
 
-Dependencies are Tasks 1 through 4, all `accepted`. The integration owner may
-now implement only this contract and these six paths.
+Dependencies are Tasks 1 through 4, all `accepted`. Independent QA owns the next
+gate and may not edit product code. A reproducible load-bearing defect returns
+Task 5 to `implementing` under a recorded repair round.
 
 ## Frozen implementation path ownership for Task 4
 
@@ -477,7 +488,7 @@ Task 3 has reconciled all required behavioral and governance evidence:
 
 ## Blocked decisions and risks
 
-- Blocked decisions: none for bounded Task 5 implementation. Tasks 1 through 4
+- Blocked decisions: none for independent Task 5 QA. Tasks 1 through 4
   are accepted, and the approved plan and generated brief freeze the permitted
   paths, dispatch-removal boundary, and acceptance evidence.
 - Risk: removing an unmigrated Restaurant runtime module or dispatch branch
@@ -544,8 +555,8 @@ Task 3 has reconciled all required behavioral and governance evidence:
 
 ## Next smallest valuable slice
 
-The integration owner writes the focused failing compiler/Worker negative tests,
-then removes only the migrated dispatch named in the Task 5 brief. After focused
-deterministic compilation and Worker evidence, run the isolated Node 22
-Restaurant and Ecommerce Compose lifecycles and record exact scoped cleanup
-evidence before independent review and QA.
+Independent QA reproduces the deterministic compiler and fail-closed Worker
+evidence, then runs both isolated Node 22 Restaurant and Ecommerce Compose
+lifecycles with unique project names and loopback ports. QA verifies both role
+journeys, stopped-preview states, and exact label-scoped cleanup before the task
+can move to `reviewed`.
