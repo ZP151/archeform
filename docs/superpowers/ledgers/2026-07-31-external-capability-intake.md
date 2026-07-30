@@ -32,35 +32,42 @@ recorded repair round. Five failed repair/review rounds require escalation.
 ## Current milestone
 
 Planning is complete for the first quarantine-first bulk Candidate Intake
-slice. All six tasks are `planned`; no implementation writer is active. The
-system will ingest the 43 fixed-reference portfolio as metadata, retain the 108
-scenarios as composition demand signals, and produce only quarantined evidence,
+slice, and the Controller has accepted the design contract. Task 1 is now
+`implementing`; Tasks 2 through 6 remain `planned`. The system will ingest the
+43 fixed-reference portfolio as metadata, retain the 108 scenarios as
+composition demand signals, and produce only quarantined evidence,
 non-executable Candidate records, and pending-review promotion packets.
 
 The Commercial Capability Foundation remains the Golden execution boundary.
-External Intake Tasks 1-3 own new disjoint paths and may begin only after this
-design is accepted and the PM dispatches them. Tasks 4-6 are additionally
+External Intake Task 1 has been dispatched with its existing contract artifact
+and exact allowed paths frozen. Tasks 2 and 3 remain blocked on Task 1
+acceptance. Tasks 4-6 are additionally
 blocked until Commercial Foundation Task 1 is `accepted` and its Publish-time
 physical verification contract is frozen.
 
-| Task                                             | State     | Specialization      | Contract owner                   | Dependency gate                                         |
-| ------------------------------------------------ | --------- | ------------------- | -------------------------------- | ------------------------------------------------------- |
-| 1. Candidate contracts and immutable persistence | `planned` | `integration`       | External Intake Contract         | Design acceptance and PM dispatch.                      |
-| 2. Fixed-source provenance and notices           | `planned` | `platform`          | External Source Provenance       | Task 1 accepted.                                        |
-| 3. Deterministic scan orchestration              | `planned` | `platform-security` | External Evidence Pipeline       | Task 1 accepted; may parallel Task 2 on disjoint paths. |
-| 4. Candidate registry, API, CLI, and isolation   | `planned` | `integration`       | Candidate Registry               | Tasks 1-3 and Commercial Foundation Task 1 accepted.    |
-| 5. Review-only promotion packets                 | `planned` | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.       |
-| 6. Bulk acceptance and release evidence          | `planned` | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.    |
+| Task                                             | State          | Specialization      | Contract owner                   | Dependency gate                                            |
+| ------------------------------------------------ | -------------- | ------------------- | -------------------------------- | ---------------------------------------------------------- |
+| 1. Candidate contracts and immutable persistence | `implementing` | `integration`       | External Intake Contract         | Controller accepted the design; contract and paths frozen. |
+| 2. Fixed-source provenance and notices           | `planned`      | `platform`          | External Source Provenance       | Task 1 accepted.                                           |
+| 3. Deterministic scan orchestration              | `planned`      | `platform-security` | External Evidence Pipeline       | Task 1 accepted; may parallel Task 2 on disjoint paths.    |
+| 4. Candidate registry, API, CLI, and isolation   | `planned`      | `integration`       | Candidate Registry               | Tasks 1-3 and Commercial Foundation Task 1 accepted.       |
+| 5. Review-only promotion packets                 | `planned`      | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.          |
+| 6. Bulk acceptance and release evidence          | `planned`      | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.       |
 
 ## Task 1 card: Candidate contracts and immutable persistence
 
-- **State:** `planned`
+- **State:** `implementing`
 - **Specialization:** `integration`
 - **Contract owner:** External Intake Contract
 - **Contract artifact:** design Core records, Candidate/Golden registry table,
   storage layout, and the machine-readable 43/108 portfolio projection.
-- **Dependencies:** controller acceptance of the proposed design; no Commercial
+- **Dependencies:** Controller acceptance recorded and satisfied; no Commercial
   Foundation product path dependency.
+
+The accepted design Core records, Candidate/Golden registry table, storage
+layout, machine-readable 43/108 portfolio projection, and the exact allowed
+paths below are frozen for this implementation. Any change returns Task 1 to a
+recorded repair round and stops dependent dispatch.
 
 ### Exact allowed paths
 
@@ -307,8 +314,8 @@ physical verification contract is frozen.
   Capabilities, and compiler test paths. Task 4 waits for Commercial Foundation
   Task 1 acceptance and exclusive path ownership.
 
-The next smallest valuable slice is Task 1: strict Candidate contracts,
+The active smallest valuable slice is Task 1: strict Candidate contracts,
 canonical hashing, immutable quarantine persistence, and a verified
 machine-readable projection of all 43 sources and 108 scenario demand signals.
-No implementation begins until the controller accepts the design and the PM
-marks Task 1 `implementing`.
+Implementation is bounded to the frozen contract and exact allowed paths; Tasks
+2 through 6 remain `planned` until their recorded dependency gates are met.
