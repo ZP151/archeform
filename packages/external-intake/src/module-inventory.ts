@@ -379,6 +379,32 @@ export function validateStoredModuleInventory(
   return input;
 }
 
+export function rehydrateStoredModuleInventory(
+  snapshot: ReadonlySnapshotView,
+  input: StoredModuleInventoryV1,
+  store: ExternalIntakeStore,
+): StoredModuleInventoryV1 {
+  const validated = validateStoredModuleInventory(snapshot, input);
+  try {
+    const rebound = store.putBytes(
+      "evidence",
+      normalizedInventoryBytes(snapshot, validated.modules),
+    );
+    if (
+      rebound.kind !== validated.inventory.kind ||
+      rebound.digest !== validated.inventory.digest
+    ) {
+      throw new Error("Inventory reference differs after rehydration.");
+    }
+  } catch {
+    throw new EvidencePipelineFailure(
+      "receipt-chain-invalid",
+      "Module inventory resume artifact is missing, conflicting, or unverifiable.",
+    );
+  }
+  return validated;
+}
+
 function assertParserIdentity(
   input: Pick<ModuleInventoryAdapterV1, "parser" | "parserVersion">,
 ): void {

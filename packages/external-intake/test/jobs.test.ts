@@ -5,6 +5,7 @@ import {
   readdirSync,
   rmSync,
   statSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -266,6 +267,34 @@ function inventory(
   };
 }
 
+function countedResumeAdapters(job: IntakeJobV1): {
+  readonly scanners: readonly LocalScannerV1[];
+  readonly inventory: ModuleInventoryAdapterV1;
+  readonly calls: { scanners: number; inventory: number };
+} {
+  const calls = { scanners: 0, inventory: 0 };
+  const countedScanners = scanners().map((scanner) => ({
+    ...scanner,
+    async scan(input: ReadonlySnapshotView) {
+      calls.scanners += 1;
+      return scanner.scan(input);
+    },
+  }));
+  const safeInventory = inventory(job);
+  const countedInventory: ModuleInventoryAdapterV1 = {
+    ...safeInventory,
+    async inventory(input) {
+      calls.inventory += 1;
+      return safeInventory.inventory(input);
+    },
+  };
+  return {
+    scanners: countedScanners,
+    inventory: countedInventory,
+    calls,
+  };
+}
+
 function receiptRecords(root: string): unknown[] {
   const records = join(root, "records", "receipt");
   if (!existsSync(records)) {
@@ -296,6 +325,10 @@ function persistedArtifactText(root: string): string {
   visit(join(root, "blobs", "evidence"));
   visit(join(root, "records", "receipt"));
   return texts.join("\n");
+}
+
+function evidenceBlobPath(root: string, digest: Sha256Digest): string {
+  return join(root, "blobs", "evidence", `${digest.slice(7)}.bin`);
 }
 
 afterEach(() => {
@@ -374,6 +407,164 @@ describe("evidence jobs", () => {
     expect(resumed).toEqual(first);
     expect(scanCalls).toBe(4);
     expect(inventoryCalls).toBe(1);
+  });
+
+  it("rehydrates a missing canonical scanner summary before skipping completed adapters", async () => {
+    const { root, store } = tempStore();
+    const job = createJob(store, "missing-scanner-summary-resume");
+    const first = await runEvidencePipeline(
+      job,
+      scanners(),
+      inventory(job),
+      store,
+    );
+    const summary = first.resume.scanCheckpoint!.scans[0]!.summary;
+    const path = evidenceBlobPath(root, summary.digest);
+    rmSync(path);
+    const counted = countedResumeAdapters(job);
+
+    await expect(
+      runEvidencePipeline(
+        { ...job, resume: first.resume },
+        counted.scanners,
+        counted.inventory,
+        store,
+      ),
+    ).resolves.toEqual(first);
+    expect(digestBytes(readFileSync(path))).toBe(summary.digest);
+    expect(counted.calls).toEqual({ scanners: 0, inventory: 0 });
+  });
+
+  it("rejects a conflicting scanner summary before skipping to terminal evidence", async () => {
+    const { root, store } = tempStore();
+    const job = createJob(store, "conflicting-scanner-summary-resume");
+    const first = await runEvidencePipeline(
+      job,
+      scanners(),
+      inventory(job),
+      store,
+    );
+    const summary = first.resume.scanCheckpoint!.scans[0]!.summary;
+    writeFileSync(evidenceBlobPath(root, summary.digest), bytes("conflict"));
+    const counted = countedResumeAdapters(job);
+
+    await expect(
+      runEvidencePipeline(
+        { ...job, resume: first.resume },
+        counted.scanners,
+        counted.inventory,
+        store,
+      ),
+    ).rejects.toMatchObject({ code: "receipt-chain-invalid" });
+    expect(counted.calls).toEqual({ scanners: 0, inventory: 0 });
+  });
+
+  it("rehydrates a missing canonical CycloneDX SBOM before skipping completed adapters", async () => {
+    const { root, store } = tempStore();
+    const job = createJob(store, "missing-sbom-resume");
+    const first = await runEvidencePipeline(
+      job,
+      scanners(),
+      inventory(job),
+      store,
+    );
+    const sbom = first.resume.scanCheckpoint!.sbom!;
+    const path = evidenceBlobPath(root, sbom.rawReport.digest);
+    rmSync(path);
+    const counted = countedResumeAdapters(job);
+
+    await expect(
+      runEvidencePipeline(
+        { ...job, resume: first.resume },
+        counted.scanners,
+        counted.inventory,
+        store,
+      ),
+    ).resolves.toEqual(first);
+    expect(digestBytes(readFileSync(path))).toBe(sbom.digest);
+    expect(counted.calls).toEqual({ scanners: 0, inventory: 0 });
+  });
+
+  it("rejects a conflicting CycloneDX SBOM before skipping to terminal evidence", async () => {
+    const { root, store } = tempStore();
+    const job = createJob(store, "conflicting-sbom-resume");
+    const first = await runEvidencePipeline(
+      job,
+      scanners(),
+      inventory(job),
+      store,
+    );
+    const sbom = first.resume.scanCheckpoint!.sbom!;
+    writeFileSync(
+      evidenceBlobPath(root, sbom.rawReport.digest),
+      bytes("conflict"),
+    );
+    const counted = countedResumeAdapters(job);
+
+    await expect(
+      runEvidencePipeline(
+        { ...job, resume: first.resume },
+        counted.scanners,
+        counted.inventory,
+        store,
+      ),
+    ).rejects.toMatchObject({ code: "receipt-chain-invalid" });
+    expect(counted.calls).toEqual({ scanners: 0, inventory: 0 });
+  });
+
+  it("rehydrates a missing canonical normalized inventory before skipping completed adapters", async () => {
+    const { root, store } = tempStore();
+    const job = createJob(store, "missing-normalized-inventory-resume");
+    const first = await runEvidencePipeline(
+      job,
+      scanners(),
+      inventory(job),
+      store,
+    );
+    const storedInventory = first.resume.inventory!;
+    const path = evidenceBlobPath(root, storedInventory.inventory.digest);
+    rmSync(path);
+    const counted = countedResumeAdapters(job);
+
+    await expect(
+      runEvidencePipeline(
+        { ...job, resume: first.resume },
+        counted.scanners,
+        counted.inventory,
+        store,
+      ),
+    ).resolves.toEqual(first);
+    expect(digestBytes(readFileSync(path))).toBe(
+      storedInventory.inventoryDigest,
+    );
+    expect(counted.calls).toEqual({ scanners: 0, inventory: 0 });
+  });
+
+  it("rejects a conflicting normalized inventory before skipping to terminal evidence", async () => {
+    const { root, store } = tempStore();
+    const job = createJob(store, "conflicting-normalized-inventory-resume");
+    const first = await runEvidencePipeline(
+      job,
+      scanners(),
+      inventory(job),
+      store,
+    );
+    const storedInventory = first.resume.inventory!;
+    writeFileSync(
+      evidenceBlobPath(root, storedInventory.inventory.digest),
+      bytes("conflict"),
+    );
+    const counted = countedResumeAdapters(job);
+
+    await expect(
+      runEvidencePipeline(
+        { ...job, resume: first.resume },
+        counted.scanners,
+        counted.inventory,
+        store,
+      ),
+    ).rejects.toMatchObject({ code: "receipt-chain-invalid" });
+    expect(counted.calls).toEqual({ scanners: 0, inventory: 0 });
   });
 
   it("creates a new evidence revision when immutable parents change", async () => {

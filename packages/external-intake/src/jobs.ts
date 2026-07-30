@@ -8,6 +8,7 @@ import {
 } from "./contracts.js";
 import {
   PINNED_MODULE_INVENTORY_IDENTITY,
+  rehydrateStoredModuleInventory,
   runModuleInventory,
   validateStoredModuleInventory,
   type ModuleInventoryAdapterV1,
@@ -352,6 +353,11 @@ function validateResumePrefix(
         "Module inventory checkpoint is not bound to the receipt prefix.",
       );
     }
+    inventory = rehydrateStoredModuleInventory(
+      job.snapshotView,
+      inventory,
+      store,
+    );
   } else if (inventoriedReceipt !== undefined) {
     throw new EvidencePipelineFailure(
       "receipt-chain-invalid",

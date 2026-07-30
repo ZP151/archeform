@@ -601,14 +601,22 @@ function safeScanSummary(
   };
 }
 
+function safeScanSummaryBytes(
+  snapshot: ReadonlySnapshotView,
+  result: Parameters<typeof safeScanSummary>[1],
+): Uint8Array {
+  return new TextEncoder().encode(
+    canonicalJson(safeScanSummary(snapshot, result)),
+  );
+}
+
 function storeSafeScanSummary(
   store: ExternalIntakeStore,
   snapshot: ReadonlySnapshotView,
   result: NormalizedScanResultV1,
 ): StoredBlobRef {
   validateRedactedReport(result);
-  const summary = safeScanSummary(snapshot, result);
-  const bytes = new TextEncoder().encode(canonicalJson(summary));
+  const bytes = safeScanSummaryBytes(snapshot, result);
   const ref = store.putBytes("evidence", bytes);
   if (ref.digest !== digestBytes(bytes)) {
     throw new EvidencePipelineFailure(
@@ -745,9 +753,7 @@ export function validateScanCheckpoint(
       );
     }
     const scan = unknownScan as unknown as StoredNormalizedScanV1;
-    const expectedDigest = digestBytes(
-      new TextEncoder().encode(canonicalJson(safeScanSummary(snapshot, scan))),
-    );
+    const expectedDigest = digestBytes(safeScanSummaryBytes(snapshot, scan));
     if (expectedDigest !== scan.resultDigest) {
       throw new EvidencePipelineFailure(
         "receipt-chain-invalid",
@@ -851,6 +857,51 @@ export async function runPinnedLocalScans(
     checkpoint === undefined
       ? ({ scans: [] } satisfies ScanCheckpointV1)
       : validateScanCheckpoint(snapshot, checkpoint);
+  for (const scan of resumed.scans) {
+    try {
+      const rebound = store.putBytes(
+        "evidence",
+        safeScanSummaryBytes(snapshot, scan),
+      );
+      if (
+        rebound.kind !== scan.summary.kind ||
+        rebound.digest !== scan.summary.digest
+      ) {
+        throw new Error("Scanner summary reference differs after rehydration.");
+      }
+    } catch {
+      throw new EvidencePipelineFailure(
+        "receipt-chain-invalid",
+        "Scanner resume summary is missing, conflicting, or unverifiable.",
+      );
+    }
+  }
+  if (resumed.sbom !== undefined) {
+    const document = {
+      $schema: CYCLONEDX_SCHEMA,
+      bomFormat: "CycloneDX",
+      specVersion: "1.6",
+      version: resumed.sbom.version,
+      components: resumed.sbom.componentIdentities,
+    };
+    try {
+      const rebound = store.putBytes(
+        "evidence",
+        new TextEncoder().encode(canonicalJson(document)),
+      );
+      if (
+        rebound.kind !== resumed.sbom.rawReport.kind ||
+        rebound.digest !== resumed.sbom.rawReport.digest
+      ) {
+        throw new Error("SBOM reference differs after rehydration.");
+      }
+    } catch {
+      throw new EvidencePipelineFailure(
+        "receipt-chain-invalid",
+        "SBOM resume artifact is missing, conflicting, or unverifiable.",
+      );
+    }
+  }
   const stored: StoredNormalizedScanV1[] = [...resumed.scans];
   let storedSbom: StoredCycloneDxSbomV1 | undefined = resumed.sbom;
   for (const kind of SCAN_KIND_ORDER.slice(stored.length)) {
