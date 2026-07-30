@@ -15,6 +15,15 @@ export const restaurantRuntimeEndpoints = Object.freeze([
   ["GET", "/api/restaurant/orders/history"],
   ["GET", "/api/restaurant/orders/:id/status"],
   ["GET", "/api/restaurant/orders/:id/receipt"],
+  ["GET", "/api/restaurant/merchant/tables"],
+  ["POST", "/api/restaurant/merchant/tables/:id/events/:event"],
+  ["GET", "/api/restaurant/merchant/menu/categories"],
+  ["GET", "/api/restaurant/merchant/menu/items"],
+  ["PATCH", "/api/restaurant/merchant/menu/items/:id/availability"],
+  ["POST", "/api/restaurant/merchant/menu/items/:id/stock-adjustments"],
+  ["GET", "/api/restaurant/merchant/kitchen-tickets"],
+  ["GET", "/api/restaurant/merchant/orders"],
+  ["GET", "/api/restaurant/merchant/orders/:id/receipt"],
   ["POST", "/api/restaurant/orders/:id/lines"],
   ["PATCH", "/api/restaurant/orders/:id/lines/:lineId"],
   ["POST", "/api/restaurant/orders/:id/submit"],
@@ -165,7 +174,7 @@ function renderCommandService(
   transitions: readonly RestaurantOrderTransition[],
   commandEffects: RestaurantCommandEffects,
 ): string {
-  return String.raw`import { createHash } from "node:crypto";
+  return String.raw`import { createHash, randomBytes } from "node:crypto";
 import { Prisma, PrismaClient } from "@prisma/client";
 
 export type RestaurantCommandBody = Record<string, unknown> & {
@@ -244,6 +253,27 @@ export type RestaurantVersionConflictPayload = {
   readonly currentOrder: RestaurantSafeOrderState;
 };
 
+export type RestaurantResourceState =
+  | Readonly<{ resource: "restaurant-table"; id: string; resourceVersion: number; status: string; active: boolean }>
+  | Readonly<{ resource: "menu-item"; id: string; resourceVersion: number; available: boolean; stock: number }>;
+
+export type RestaurantResourceVersionConflictPayload = {
+  readonly code: "restaurant.resource.version_conflict";
+  readonly message: string;
+  readonly currentResource: RestaurantResourceState;
+};
+
+export class RestaurantResourceVersionConflict extends Error {
+  readonly payload: RestaurantResourceVersionConflictPayload;
+
+  constructor(currentResource: RestaurantResourceState) {
+    const message = "Stale " + currentResource.resource + " version. Current version is " + currentResource.resourceVersion + ".";
+    super(message);
+    this.name = "RestaurantResourceVersionConflict";
+    this.payload = { code: "restaurant.resource.version_conflict", message, currentResource };
+  }
+}
+
 export class RestaurantVersionConflict extends Error {
   readonly payload: RestaurantVersionConflictPayload;
 
@@ -256,7 +286,7 @@ export class RestaurantVersionConflict extends Error {
 }
 
 export type RestaurantOutboxEventV1 = {
-  readonly type: "table-session.resolved" | "order.created" | "order.transitioned" | "inventory.changed";
+  readonly type: "order.created" | "order.transitioned" | "inventory.changed";
   readonly orderId?: string;
   readonly locationId: string;
   readonly version: number;
@@ -323,6 +353,14 @@ export function assertSufficientStock(stock: number, requested: number): void {
 export function assertCancellationReason(reason: unknown): asserts reason is string {
   if (typeof reason !== "string" || !reason.trim()) {
     throw new Error("Cancellation reason is required.");
+  }
+  if (reason.trim().length > 500) throw new Error("Cancellation reason must contain at most 500 characters.");
+  if (/[\u0000-\u001f\u007f]/.test(reason.trim())) throw new Error("Cancellation reason contains unsupported control characters.");
+}
+
+export function assertManagerAdjustmentReason(reason: unknown): asserts reason is "stock-count" | "restock" | "spoilage" | "damage" | "correction" {
+  if (!profile.inventoryLedger.adjustmentReasons.includes(reason as never)) {
+    throw new Error("Manager stock adjustment reason is invalid.");
   }
 }
 
@@ -539,6 +577,26 @@ export class RestaurantCommandService {
     throw new RestaurantVersionConflict(await this.authoritativeOrderState(tx, orderId));
   }
 
+  private async tableResourceState(tx: RestaurantTransaction, tableId: string): Promise<Extract<RestaurantResourceState, { resource: "restaurant-table" }>> {
+    const table = await tx.restaurantTable.findUnique({ where: { id: tableId } });
+    if (!table) throw new Error("Restaurant table was not found.");
+    return { resource: "restaurant-table", id: table.id, resourceVersion: table.resourceVersion, status: table.status, active: table.active };
+  }
+
+  private async menuItemResourceState(tx: RestaurantTransaction, itemId: string): Promise<Extract<RestaurantResourceState, { resource: "menu-item" }>> {
+    const item = await tx.menuItem.findUnique({ where: { id: itemId } });
+    if (!item) throw new Error("Menu item was not found.");
+    return { resource: "menu-item", id: item.id, resourceVersion: item.resourceVersion, available: item.available, stock: item.stock };
+  }
+
+  private async throwTableVersionConflict(tx: RestaurantTransaction, tableId: string): Promise<never> {
+    throw new RestaurantResourceVersionConflict(await this.tableResourceState(tx, tableId));
+  }
+
+  private async throwMenuItemVersionConflict(tx: RestaurantTransaction, itemId: string): Promise<never> {
+    throw new RestaurantResourceVersionConflict(await this.menuItemResourceState(tx, itemId));
+  }
+
   private assertActiveSession(session: { status: string; expiresAt: Date }): void {
     if (session.status !== "active" || session.expiresAt <= new Date()) {
       throw new Error("Table session is expired or closed.");
@@ -719,7 +777,7 @@ export class RestaurantCommandService {
         });
       }
       const outcome = jsonOutcome({ session: tableSessionOutcome(session), order });
-      await this.recordEvidence(tx, role, order.id, order.orderVersion, created ? "order.created" : "table-session.resolved", location.id, outcome, restaurantCommandEffects.resolveTableSession);
+      await this.recordEvidence(tx, role, order.id, order.orderVersion, created ? "order.created" : "order.transitioned", location.id, outcome, restaurantCommandEffects.resolveTableSession);
       return outcome;
     });
   }
@@ -792,6 +850,147 @@ export class RestaurantCommandService {
     };
   }
 
+  async listMerchantTables(role: string) {
+    assertRestaurantRole(role, [profile.roles.manager]);
+    const tables = await this.prisma.restaurantTable.findMany({
+      orderBy: [{ number: "asc" }, { id: "asc" }],
+      include: { sessions: { where: { status: "active" }, orderBy: { openedAt: "desc" }, take: 1, select: { id: true } } },
+    });
+    return tables.map((table) => ({ id: table.id, code: table.code, number: table.number, status: table.status, active: table.active, resourceVersion: table.resourceVersion, activeSessionId: table.sessions[0]?.id ?? null }));
+  }
+
+  async transitionMerchantTable(role: string, tableId: string, event: string, idempotencyKey: string | undefined, body: RestaurantCommandBody) {
+    assertRestaurantRole(role, [profile.roles.manager]);
+    if (event !== "open" && event !== "seat" && event !== "close") throw new Error("Invalid table transition.");
+    const scopedTable = await this.prisma.restaurantTable.findUnique({ where: { id: tableId } });
+    if (!scopedTable?.restaurantLocationId) throw new Error("Restaurant table is not associated with a location.");
+    return this.executeCommand("location:" + scopedTable.restaurantLocationId + ":table:" + tableId + ":" + event, idempotencyKey, body, async (tx) => {
+      const table = await tx.restaurantTable.findUnique({ where: { id: tableId } });
+      if (!table) throw new Error("Restaurant table was not found.");
+      if (table.resourceVersion !== body.expectedVersion) await this.throwTableVersionConflict(tx, tableId);
+      let sessionId: string | null = null;
+      if (event === "open") {
+        if (table.status !== "closed") throw new Error("Only a closed table can be opened.");
+      } else if (event === "seat") {
+        if (table.status !== "open") throw new Error("Only an open table can be seated.");
+        const guestCount = requiredNumber(body, "guestCount");
+        if (!Number.isInteger(guestCount) || guestCount < 1 || guestCount > 50) throw new Error("guestCount must be an integer from 1 to 50.");
+        const tokenDigest = hashOpaqueToken(randomBytes(32).toString("hex"));
+        const session = await tx.tableSession.create({ data: { tableCode: table.code, tokenDigest, status: "active", openedAt: new Date(), expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), guestCount } });
+        sessionId = session.id;
+        await tx.capabilityEvent.create({ data: { actor: role, capability: "table-session.create", operation: "create", entity: profile.entities["table-session"], recordId: session.id, outcome: "succeeded" } });
+      } else {
+        await tx.tableSession.updateMany({ where: { tableCode: table.code, status: "active" }, data: { status: "closed" } });
+        await tx.capabilityEvent.create({ data: { actor: role, capability: "table-session.close", operation: "close", entity: profile.entities["table-session"], recordId: tableId, outcome: "succeeded" } });
+      }
+      const status = event === "seat" ? "seated" : event === "open" ? "open" : "closed";
+      const active = event !== "close";
+      const nextVersion = table.resourceVersion + 1;
+      const updated = await tx.restaurantTable.updateMany({ where: { id: tableId, resourceVersion: body.expectedVersion }, data: { status, active, resourceVersion: { increment: 1 } } });
+      if (updated.count !== 1) await this.throwTableVersionConflict(tx, tableId);
+      await tx.auditEvent.create({ data: { actor: role, action: "table." + event, entity: profile.entities["restaurant-table"], recordId: tableId } });
+      const outcome = jsonOutcome({ id: tableId, status, active, resourceVersion: nextVersion, sessionId });
+      return outcome;
+    });
+  }
+
+  async listMerchantMenuCategories(role: string) {
+    assertRestaurantRole(role, [profile.roles.manager]);
+    return this.prisma.menuCategory.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }, { id: "asc" }], select: { id: true, name: true, sortOrder: true, active: true } });
+  }
+
+  async listMerchantMenuItems(role: string) {
+    assertRestaurantRole(role, [profile.roles.manager]);
+    const items = await this.prisma.menuItem.findMany({ orderBy: [{ category: { sortOrder: "asc" } }, { name: "asc" }, { id: "asc" }], select: { id: true, categoryKey: true, name: true, available: true, stock: true, price: true, resourceVersion: true } });
+    return items.map((item) => ({ ...item, price: Number(item.price) }));
+  }
+
+  private async activeLocationId(tx: RestaurantTransaction): Promise<string> {
+    const location = await tx.restaurantLocation.findFirst({ where: { active: true }, orderBy: { id: "asc" }, select: { id: true } });
+    if (!location) throw new Error("Restaurant location is not active.");
+    return location.id;
+  }
+
+  async setMenuItemAvailability(role: string, itemId: string, idempotencyKey: string | undefined, body: RestaurantCommandBody) {
+    assertRestaurantRole(role, [profile.roles.manager]);
+    if (typeof body.available !== "boolean") throw new Error("available must be a boolean.");
+    return this.executeCommand("merchant:menu-item:" + itemId + ":availability", idempotencyKey, body, async (tx) => {
+      const item = await tx.menuItem.findUnique({ where: { id: itemId } });
+      if (!item) throw new Error("Menu item was not found.");
+      if (item.resourceVersion !== body.expectedVersion) await this.throwMenuItemVersionConflict(tx, itemId);
+      const locationId = await this.activeLocationId(tx);
+      const nextVersion = item.resourceVersion + 1;
+      const updated = await tx.menuItem.updateMany({ where: { id: itemId, resourceVersion: body.expectedVersion }, data: { available: body.available as boolean, resourceVersion: { increment: 1 } } });
+      if (updated.count !== 1) await this.throwMenuItemVersionConflict(tx, itemId);
+      await tx.inventoryLedger.create({ data: { menuItemId: itemId, orderId: null, delta: 0, provenance: "manager-adjustment", adjustmentReason: "correction", recordedAt: new Date() } });
+      await tx.capabilityEvent.create({ data: { actor: role, capability: "inventory.adjust", operation: "adjust", entity: profile.inventoryLedger.entity, recordId: itemId, outcome: "succeeded" } });
+      await tx.capabilityEvent.create({ data: { actor: role, capability: "audit.record", operation: "record", entity: profile.inventoryLedger.entity, recordId: itemId, outcome: "succeeded" } });
+      await tx.auditEvent.create({ data: { actor: role, action: "inventory.adjust", entity: profile.inventoryLedger.entity, recordId: itemId } });
+      const outcome = jsonOutcome({ id: item.id, available: body.available, stock: item.stock, resourceVersion: nextVersion });
+      await tx.restaurantOutboxEvent.create({ data: { type: "inventory.changed", aggregateId: null, locationId, version: nextVersion, payload: outcome as Prisma.InputJsonValue } });
+      return outcome;
+    });
+  }
+
+  async adjustMenuItemStock(role: string, itemId: string, idempotencyKey: string | undefined, body: RestaurantCommandBody) {
+    assertRestaurantRole(role, [profile.roles.manager]);
+    const delta = requiredNumber(body, "delta");
+    if (!Number.isInteger(delta) || delta === 0) throw new Error("delta must be a non-zero integer.");
+    assertManagerAdjustmentReason(body.adjustmentReason);
+    const adjustmentReason = body.adjustmentReason;
+    return this.executeCommand("merchant:menu-item:" + itemId + ":stock", idempotencyKey, body, async (tx) => {
+      const locationId = await this.activeLocationId(tx);
+      const current = await tx.menuItem.findUnique({ where: { id: itemId } });
+      if (!current) throw new Error("Menu item was not found.");
+      if (current.resourceVersion !== body.expectedVersion) await this.throwMenuItemVersionConflict(tx, itemId);
+      if (current.stock + delta < 0) throw new Error("Stock adjustment would make inventory negative.");
+      const nextVersion = current.resourceVersion + 1;
+      const updated = await tx.menuItem.updateMany({ where: { id: itemId, resourceVersion: body.expectedVersion, stock: { gte: Math.max(0, -delta) } }, data: { stock: { increment: delta }, resourceVersion: { increment: 1 } } });
+      if (updated.count !== 1) await this.throwMenuItemVersionConflict(tx, itemId);
+      const item = await tx.menuItem.findUnique({ where: { id: itemId } });
+      if (!item) throw new Error("Menu item was not found.");
+      await tx.inventoryLedger.create({ data: { menuItemId: itemId, orderId: null, delta, provenance: "manager-adjustment", adjustmentReason, recordedAt: new Date() } });
+      await tx.capabilityEvent.create({ data: { actor: role, capability: "inventory.adjust", operation: "adjust", entity: profile.inventoryLedger.entity, recordId: itemId, outcome: "succeeded" } });
+      await tx.capabilityEvent.create({ data: { actor: role, capability: "audit.record", operation: "record", entity: profile.inventoryLedger.entity, recordId: itemId, outcome: "succeeded" } });
+      await tx.auditEvent.create({ data: { actor: role, action: "inventory.adjust", entity: profile.inventoryLedger.entity, recordId: itemId } });
+      const outcome = jsonOutcome({ id: item.id, stock: item.stock, resourceVersion: nextVersion, delta, adjustmentReason, auditRecorded: true });
+      await tx.restaurantOutboxEvent.create({ data: { type: "inventory.changed", aggregateId: null, locationId, version: nextVersion, payload: outcome as Prisma.InputJsonValue } });
+      return outcome;
+    });
+  }
+
+  async listKitchenTickets(role: string) {
+    assertRestaurantRole(role, [profile.roles.kitchen, profile.roles.manager]);
+    const tickets = await this.prisma.kitchenTicket.findMany({
+      where: { status: { in: ["paid", "accepted", "preparing", "ready"] } },
+      orderBy: [{ priority: "desc" }, { order: { paidAt: "asc" } }, { tableNumber: "asc" }, { id: "asc" }],
+      include: { order: { select: { paidAt: true, orderVersion: true } } },
+    });
+    return tickets.map((ticket) => ({ id: ticket.id, orderId: ticket.orderId, tableNumber: ticket.tableNumber, priority: ticket.priority, status: ticket.status, paidAt: ticket.order.paidAt, orderVersion: ticket.order.orderVersion }));
+  }
+
+  async listMerchantOrders(role: string) {
+    assertRestaurantRole(role, [profile.roles.cashier, profile.roles.manager]);
+    const orders = await this.prisma.order.findMany({
+      where: { status: { in: ["submitted", "paid", "accepted", "preparing", "ready"] } },
+      orderBy: [{ paidAt: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+      include: { tableSession: { include: { table: { select: { number: true } } } } },
+    });
+    return orders.map((order) => ({ ...customerOrderView(order), tableNumber: order.tableSession.table.number }));
+  }
+
+  async getMerchantReceipt(role: string, orderId: string): Promise<RestaurantReceiptView> {
+    assertRestaurantRole(role, [profile.roles.cashier]);
+    const order = await this.prisma.order.findUnique({ where: { id: orderId } });
+    if (!order) throw new Error("Order not found.");
+    if (order.paymentStatus !== "paid" && order.paymentStatus !== "reversal-requested") throw new Error("Receipt is not available until payment succeeds.");
+    const [lines, payments] = await Promise.all([
+      this.prisma.orderLine.findMany({ where: { orderId }, orderBy: { createdAt: "asc" }, include: { menuItem: { select: { name: true } } } }),
+      this.prisma.paymentAttempt.findMany({ where: { orderId, status: { in: ["succeeded", "reversed"] } }, orderBy: { createdAt: "asc" }, select: { id: true, method: true, amount: true, status: true, paidAt: true } }),
+    ]);
+    return { ...customerOrderView(order), lines: lines.map((line) => ({ id: line.id, menuItemId: line.menuItemId, menuItemName: line.menuItem.name, quantity: line.quantity, unitPrice: Number(line.unitPrice), lineNote: line.lineNote, modifiers: sanitizeReceiptModifiers(line.modifiers) })), payments: payments.map((payment) => ({ ...payment, amount: Number(payment.amount) })) };
+  }
+
   async addLine(role: string, sessionToken: string | undefined, orderId: string, idempotencyKey: string | undefined, body: RestaurantCommandBody) {
     assertRestaurantRole(role, [profile.roles.customer]);
     const scope = await this.commandScope(role, orderId, sessionToken);
@@ -862,7 +1061,7 @@ export class RestaurantCommandService {
       for (const line of lines) {
         const reserved = await tx.menuItem.updateMany({ where: { id: line.menuItemId, available: true, stock: { gte: line.quantity } }, data: { stock: { decrement: line.quantity } } });
         if (reserved.count !== 1) throw new Error("Insufficient stock.");
-        await tx.inventoryLedger.create({ data: { menuItemId: line.menuItemId, orderId, delta: -line.quantity, reason: "reserve", recordedAt: new Date() } });
+        await tx.inventoryLedger.create({ data: { menuItemId: line.menuItemId, orderId, delta: -line.quantity, provenance: "order-reservation", adjustmentReason: null, recordedAt: new Date() } });
       }
       const nextVersion = order.orderVersion + 1;
       const updated = await tx.order.updateMany({ where: { id: orderId, orderVersion: order.orderVersion }, data: { status: "submitted", submittedAt: new Date(), orderNote: orderNote, orderVersion: nextVersion } });
@@ -896,10 +1095,6 @@ export class RestaurantCommandService {
       if (!table) throw new Error("Restaurant table was not found.");
       const nextVersion = order.orderVersion + 1;
       await tx.kitchenTicket.create({ data: { orderId, tableNumber: table.number, priority: order.priority, status: "paid" } });
-      const lines = await tx.orderLine.findMany({ where: { orderId } });
-      for (const line of lines) {
-        await tx.inventoryLedger.create({ data: { menuItemId: line.menuItemId, orderId, delta: 0, reason: "decrement", recordedAt: new Date() } });
-      }
       const updated = await tx.order.updateMany({ where: { id: orderId, orderVersion: order.orderVersion }, data: { status: "paid", paymentStatus: "paid", paidAt: new Date(), orderVersion: nextVersion } });
       if (updated.count !== 1) await this.throwVersionConflict(tx, orderId);
       const outcome = jsonOutcome({ orderId, paymentId: payment.id, status: "paid", orderVersion: nextVersion });
@@ -922,12 +1117,14 @@ export class RestaurantCommandService {
       const order = await this.orderAtVersion(tx, orderId, body.expectedVersion);
       const locationId = await this.assertOrderSession(tx, role, order, undefined);
       if (order.status !== "submitted" && order.status !== "paid") throw new Error("Order is not eligible for cancellation.");
+      let inventoryReleased = false;
       if (order.status === "submitted") {
         const lines = await tx.orderLine.findMany({ where: { orderId } });
         for (const line of lines) {
           await tx.menuItem.update({ where: { id: line.menuItemId }, data: { stock: { increment: line.quantity } } });
-          await tx.inventoryLedger.create({ data: { menuItemId: line.menuItemId, orderId, delta: line.quantity, reason: "release", recordedAt: new Date() } });
+          await tx.inventoryLedger.create({ data: { menuItemId: line.menuItemId, orderId, delta: line.quantity, provenance: "order-release", adjustmentReason: null, recordedAt: new Date() } });
         }
+        inventoryReleased = lines.length > 0;
       } else {
         await tx.paymentAttempt.create({
           data: { orderId, method: "cash", amount: order.total, status: "reversed", idempotencyKey: this.requireIdempotencyKey(idempotencyKey) + ":reversal", paidAt: new Date() },
@@ -939,7 +1136,7 @@ export class RestaurantCommandService {
         data: { status: "cancelled", paymentStatus: order.status === "paid" ? "reversal-requested" : order.paymentStatus, orderNote: order.orderNote + "\nCancellation: " + cancellationReason.trim(), orderVersion: nextVersion },
       });
       if (updated.count !== 1) await this.throwVersionConflict(tx, orderId);
-      const outcome = jsonOutcome({ orderId, status: "cancelled", reason: cancellationReason.trim(), orderVersion: nextVersion });
+      const outcome = jsonOutcome({ orderId, status: "cancelled", reason: cancellationReason.trim(), orderVersion: nextVersion, inventoryReleased, auditRecorded: true });
       await this.recordEvidence(tx, role, orderId, nextVersion, order.status === "submitted" ? "inventory.changed" : "order.transitioned", locationId, outcome, {
         kind: "transition",
         from: order.status,
@@ -1026,7 +1223,7 @@ import { NestFactory } from "@nestjs/core";
 import { PrismaClient } from "@prisma/client";
 import { enforce } from "./policy.js";
 import { PrismaRecordStore } from "./prisma-record-store.js";
-import { RestaurantCommandService, RestaurantVersionConflict, type RestaurantCommandBody, type RestaurantMenuQuery } from "./restaurant/restaurant-command.service.js";
+import { RestaurantCommandService, RestaurantResourceVersionConflict, RestaurantVersionConflict, type RestaurantCommandBody, type RestaurantMenuQuery } from "./restaurant/restaurant-command.service.js";
 
 const prisma = new PrismaClient();
 const authoritativeStore = new PrismaRecordStore(prisma);
@@ -1035,7 +1232,7 @@ const restaurantCommands = new RestaurantCommandService(prisma);
 type RequestHeaders = { headers: Record<string, string | string[] | undefined> };
 
 function roleFrom(request: RequestHeaders): string {
-  // Test-only role simulation. Task 5 replaces merchant role headers with authenticated principals.
+  // Test-only role simulation. This header is not merchant authentication.
   const value = request.headers["x-factory-role"];
   return typeof value === "string" && value ? value : "anonymous";
 }
@@ -1052,7 +1249,7 @@ async function assertAllowed(role: string, resource: string, action: string): Pr
 }
 
 export function rejected(error: unknown): HttpException {
-  if (error instanceof RestaurantVersionConflict) {
+  if (error instanceof RestaurantVersionConflict || error instanceof RestaurantResourceVersionConflict) {
     return new HttpException(error.payload, HttpStatus.CONFLICT);
   }
   const message = error instanceof Error ? error.message : "Request rejected.";
@@ -1094,6 +1291,51 @@ class GeneratedController {
     try { const role = roleFrom(request); await assertAllowed(role, "order", "read"); return await restaurantCommands.getReceipt(role, sessionTokenFrom(request), id); } catch (error) { throw rejected(error); }
   }
 
+  @Get("restaurant/merchant/tables")
+  async merchantTables(@Req() request: RequestHeaders) {
+    try { const role = roleFrom(request); await assertAllowed(role, "restaurant-table", "read"); return await restaurantCommands.listMerchantTables(role); } catch (error) { throw rejected(error); }
+  }
+
+  @Post("restaurant/merchant/tables/:id/events/:event")
+  async merchantTableEvent(@Param("id") id: string, @Param("event") event: string, @Headers("x-factory-idempotency-key") key: string | undefined, @Body() body: RestaurantCommandBody, @Req() request: RequestHeaders) {
+    try { const role = roleFrom(request); await assertAllowed(role, "restaurant-table", "update"); if (event === "seat") await assertAllowed(role, "table-session", "create"); if (event === "close") await assertAllowed(role, "table-session", "update"); return await restaurantCommands.transitionMerchantTable(role, id, event, key, body); } catch (error) { throw rejected(error); }
+  }
+
+  @Get("restaurant/merchant/menu/categories")
+  async merchantMenuCategories(@Req() request: RequestHeaders) {
+    try { const role = roleFrom(request); await assertAllowed(role, "menu-category", "read"); return await restaurantCommands.listMerchantMenuCategories(role); } catch (error) { throw rejected(error); }
+  }
+
+  @Get("restaurant/merchant/menu/items")
+  async merchantMenuItems(@Req() request: RequestHeaders) {
+    try { const role = roleFrom(request); await assertAllowed(role, "menu-item", "read"); return await restaurantCommands.listMerchantMenuItems(role); } catch (error) { throw rejected(error); }
+  }
+
+  @Patch("restaurant/merchant/menu/items/:id/availability")
+  async merchantMenuAvailability(@Param("id") id: string, @Headers("x-factory-idempotency-key") key: string | undefined, @Body() body: RestaurantCommandBody, @Req() request: RequestHeaders) {
+    try { const role = roleFrom(request); await assertAllowed(role, "menu-item", "update"); await assertAllowed(role, "inventory-ledger", "create"); return await restaurantCommands.setMenuItemAvailability(role, id, key, body); } catch (error) { throw rejected(error); }
+  }
+
+  @Post("restaurant/merchant/menu/items/:id/stock-adjustments")
+  async merchantStockAdjustment(@Param("id") id: string, @Headers("x-factory-idempotency-key") key: string | undefined, @Body() body: RestaurantCommandBody, @Req() request: RequestHeaders) {
+    try { const role = roleFrom(request); await assertAllowed(role, "menu-item", "update"); await assertAllowed(role, "inventory-ledger", "create"); return await restaurantCommands.adjustMenuItemStock(role, id, key, body); } catch (error) { throw rejected(error); }
+  }
+
+  @Get("restaurant/merchant/kitchen-tickets")
+  async merchantKitchenTickets(@Req() request: RequestHeaders) {
+    try { const role = roleFrom(request); await assertAllowed(role, "kitchen-ticket", "read"); return await restaurantCommands.listKitchenTickets(role); } catch (error) { throw rejected(error); }
+  }
+
+  @Get("restaurant/merchant/orders")
+  async merchantOrders(@Req() request: RequestHeaders) {
+    try { const role = roleFrom(request); await assertAllowed(role, "order", "read"); return await restaurantCommands.listMerchantOrders(role); } catch (error) { throw rejected(error); }
+  }
+
+  @Get("restaurant/merchant/orders/:id/receipt")
+  async merchantReceipt(@Param("id") id: string, @Req() request: RequestHeaders) {
+    try { const role = roleFrom(request); await assertAllowed(role, "order", "read"); await assertAllowed(role, "payment-attempt", "read"); return await restaurantCommands.getMerchantReceipt(role, id); } catch (error) { throw rejected(error); }
+  }
+
   @Post("restaurant/orders/:id/lines")
   async addLine(@Param("id") id: string, @Headers("x-factory-idempotency-key") key: string | undefined, @Body() body: RestaurantCommandBody, @Req() request: RequestHeaders) {
     try { const role = roleFrom(request); await assertAllowed(role, "order-line", "create"); return await restaurantCommands.addLine(role, sessionTokenFrom(request), id, key, body); } catch (error) { throw rejected(error); }
@@ -1111,7 +1353,7 @@ class GeneratedController {
 
   @Post("restaurant/orders/:id/payments")
   async pay(@Param("id") id: string, @Headers("x-factory-idempotency-key") key: string | undefined, @Body() body: RestaurantCommandBody, @Req() request: RequestHeaders) {
-    try { const role = roleFrom(request); await assertAllowed(role, "order", "update"); return await restaurantCommands.recordPayment(role, sessionTokenFrom(request), id, key, body); } catch (error) { throw rejected(error); }
+    try { const role = roleFrom(request); await assertAllowed(role, "order", "update"); if (role === "cashier") await assertAllowed(role, "payment-attempt", "create"); return await restaurantCommands.recordPayment(role, sessionTokenFrom(request), id, key, body); } catch (error) { throw rejected(error); }
   }
 
   @Post("restaurant/orders/:id/cancel")
@@ -1179,6 +1421,7 @@ model RestaurantTable {
   number Int @unique
   status String
   active Boolean
+  resourceVersion Int @default(0)
   restaurantLocationId String?
   restaurantLocation RestaurantLocation? @relation(fields: [restaurantLocationId], references: [id])
   sessions TableSession[]
@@ -1222,6 +1465,7 @@ model MenuItem {
   price Decimal
   available Boolean
   stock Int
+  resourceVersion Int @default(0)
   preparationMinutes Int
   imageUrl String
   category MenuCategory @relation(fields: [categoryKey], references: [id])
@@ -1304,12 +1548,13 @@ model KitchenTicket {
 model InventoryLedger {
   id String @id @default(cuid())
   menuItemId String
-  orderId String
+  orderId String?
   delta Int
-  reason String
+  provenance String
+  adjustmentReason String?
   recordedAt DateTime
   menuItem MenuItem @relation(fields: [menuItemId], references: [id])
-  order Order @relation(fields: [orderId], references: [id])
+  order Order? @relation(fields: [orderId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([menuItemId, recordedAt])
@@ -1387,7 +1632,7 @@ const restaurantSqlModels = [
   ],
   [
     "RestaurantTable",
-    '"id" TEXT NOT NULL PRIMARY KEY, "code" TEXT NOT NULL UNIQUE, "number" INTEGER NOT NULL UNIQUE, "status" TEXT NOT NULL, "active" BOOLEAN NOT NULL, "restaurantLocationId" TEXT, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL',
+    '"id" TEXT NOT NULL PRIMARY KEY, "code" TEXT NOT NULL UNIQUE, "number" INTEGER NOT NULL UNIQUE, "status" TEXT NOT NULL, "active" BOOLEAN NOT NULL, "resourceVersion" INTEGER NOT NULL DEFAULT 0, "restaurantLocationId" TEXT, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL',
   ],
   [
     "TableSession",
@@ -1399,7 +1644,7 @@ const restaurantSqlModels = [
   ],
   [
     "MenuItem",
-    '"id" TEXT NOT NULL PRIMARY KEY, "categoryKey" TEXT NOT NULL, "name" TEXT NOT NULL, "description" TEXT NOT NULL, "price" DECIMAL NOT NULL, "available" BOOLEAN NOT NULL, "stock" INTEGER NOT NULL, "preparationMinutes" INTEGER NOT NULL, "imageUrl" TEXT NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL',
+    '"id" TEXT NOT NULL PRIMARY KEY, "categoryKey" TEXT NOT NULL, "name" TEXT NOT NULL, "description" TEXT NOT NULL, "price" DECIMAL NOT NULL, "available" BOOLEAN NOT NULL, "stock" INTEGER NOT NULL, "resourceVersion" INTEGER NOT NULL DEFAULT 0, "preparationMinutes" INTEGER NOT NULL, "imageUrl" TEXT NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL',
   ],
   [
     "Order",
@@ -1419,7 +1664,7 @@ const restaurantSqlModels = [
   ],
   [
     "InventoryLedger",
-    '"id" TEXT NOT NULL PRIMARY KEY, "menuItemId" TEXT NOT NULL, "orderId" TEXT NOT NULL, "delta" INTEGER NOT NULL, "reason" TEXT NOT NULL, "recordedAt" TIMESTAMP(3) NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL',
+    '"id" TEXT NOT NULL PRIMARY KEY, "menuItemId" TEXT NOT NULL, "orderId" TEXT, "delta" INTEGER NOT NULL, "provenance" TEXT NOT NULL, "adjustmentReason" TEXT, "recordedAt" TIMESTAMP(3) NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL',
   ],
   [
     "RestaurantCommand",
@@ -1473,6 +1718,7 @@ import { enforce } from "../src/policy.js";
 import { rejected } from "../src/main.js";
 import {
   RestaurantCommandService,
+  RestaurantResourceVersionConflict,
   RestaurantVersionConflict,
   assertCancellationReason,
   assertSessionOwnsOrder,
@@ -1552,6 +1798,7 @@ function createHarness(options: {
     number: 12,
     status: "open",
     active: true,
+    resourceVersion: 0,
     restaurantLocationId: options.locationId === undefined ? "main-location" : options.locationId,
   };
   const location = {
@@ -1585,10 +1832,10 @@ function createHarness(options: {
       { id: "hidden", name: "Hidden", sortOrder: 2, active: false },
     ],
     menuItems: [
-      { id: "menu-1", categoryKey: "mains", name: "Meal", description: "", price: 5, available: true, stock: options.stock ?? 5, preparationMinutes: 5, imageUrl: "/meal.jpg" },
-      { id: "menu-2", categoryKey: "mains", name: "Tomato Soup", description: "", price: 4, available: true, stock: 2, preparationMinutes: 4, imageUrl: "/soup.jpg" },
-      { id: "menu-3", categoryKey: "hidden", name: "Secret", description: "", price: 9, available: true, stock: 1, preparationMinutes: 9, imageUrl: "/secret.jpg" },
-      { id: "menu-4", categoryKey: "mains", name: "Unavailable", description: "", price: 3, available: false, stock: 0, preparationMinutes: 3, imageUrl: "/unavailable.jpg" },
+      { id: "menu-1", categoryKey: "mains", name: "Meal", description: "", price: 5, available: true, stock: options.stock ?? 5, resourceVersion: 0, preparationMinutes: 5, imageUrl: "/meal.jpg" },
+      { id: "menu-2", categoryKey: "mains", name: "Tomato Soup", description: "", price: 4, available: true, stock: 2, resourceVersion: 0, preparationMinutes: 4, imageUrl: "/soup.jpg" },
+      { id: "menu-3", categoryKey: "hidden", name: "Secret", description: "", price: 9, available: true, stock: 1, resourceVersion: 0, preparationMinutes: 9, imageUrl: "/secret.jpg" },
+      { id: "menu-4", categoryKey: "mains", name: "Unavailable", description: "", price: 3, available: false, stock: 0, resourceVersion: 0, preparationMinutes: 3, imageUrl: "/unavailable.jpg" },
     ],
     lines: options.withoutOrder ? [] : [{ id: "line-1", orderId: order.id, menuItemId: "menu-1", quantity: 2, unitPrice: 5, lineNote: "", modifiers: [] }],
     commands: [],
@@ -1599,7 +1846,7 @@ function createHarness(options: {
     capabilities: [],
     outbox: [],
   };
-  const controls = { forceStaleWrite: false, failCapabilityAfter: null as number | null, failOutbox: false, orderLocationId: "main-location" };
+  const controls = { forceStaleWrite: false, forceTableStaleWrite: false, forceMenuStaleWrite: false, failCapabilityAfter: null as number | null, failOutbox: false, orderLocationId: "main-location" };
   let nextId = 1;
   const id = (prefix: string) => prefix + "-" + nextId++;
   const clone = <T>(value: T): T => structuredClone(value);
@@ -1629,12 +1876,33 @@ function createHarness(options: {
     tableSession: {
       findUnique: async ({ where }: Record<string, any>) =>
         where.id === state.session.id || where.tokenDigest === state.session.tokenDigest ? clone(state.session) : null,
+      create: async ({ data }: Record<string, any>) => {
+        Object.assign(state.session, { id: id("session"), ...data });
+        return clone(state.session);
+      },
+      updateMany: async ({ where, data }: Record<string, any>) => {
+        if (state.session.tableCode !== where.tableCode || state.session.status !== where.status) return { count: 0 };
+        applyUpdate(state.session, data);
+        return { count: 1 };
+      },
     },
     restaurantTable: {
-      findUnique: async ({ where }: Record<string, any>) => where.code === state.table.code ? clone(state.table) : null,
+      findUnique: async ({ where }: Record<string, any>) => where.code === state.table.code || where.id === state.table.id ? clone(state.table) : null,
+      findMany: async () => [{ ...clone(state.table), sessions: state.session.status === "active" ? [{ id: state.session.id }] : [] }],
+      updateMany: async ({ where, data }: Record<string, any>) => {
+        if (state.table.id !== where.id || state.table.resourceVersion !== where.resourceVersion) return { count: 0 };
+        if (controls.forceTableStaleWrite) {
+          controls.forceTableStaleWrite = false;
+          state.table.resourceVersion = Number(state.table.resourceVersion) + 1;
+          return { count: 0 };
+        }
+        applyUpdate(state.table, data);
+        return { count: 1 };
+      },
     },
     restaurantLocation: {
       findUnique: async ({ where }: Record<string, any>) => where.id === state.location.id ? clone(state.location) : null,
+      findFirst: async () => state.location.active ? { id: state.location.id } : null,
     },
     menuCategory: {
       findMany: async () => clone(state.categories.filter((category) => category.active).sort((left, right) => Number(left.sortOrder) - Number(right.sortOrder) || String(left.name).localeCompare(String(right.name))).map((category) => ({ id: category.id, name: category.name, sortOrder: category.sortOrder }))),
@@ -1648,6 +1916,9 @@ function createHarness(options: {
         return order?.tableSessionId === where.tableSessionId && controls.orderLocationId === locationId ? clone(order) : null;
       },
       findMany: async ({ where }: Record<string, any>) => {
+        if (where.status?.in) {
+          return clone([state.order, ...state.otherOrders].filter((candidate) => candidate && where.status.in.includes(candidate.status)).map((candidate) => ({ ...candidate, tableSession: { table: { number: state.table.number } } })));
+        }
         const locationId = where.tableSession?.table?.restaurantLocationId;
         if (locationId && controls.orderLocationId !== locationId) return [];
         return clone([state.order, ...state.otherOrders].filter((candidate) => candidate?.tableSessionId === where.tableSessionId));
@@ -1666,6 +1937,7 @@ function createHarness(options: {
         applyUpdate(state.order as unknown as Record<string, unknown>, data);
         return { count: 1 };
       },
+      count: async ({ where }: Record<string, any> = {}) => [state.order, ...state.otherOrders].filter((candidate) => candidate && (!where?.status || candidate.status === where.status)).length,
     },
     orderLine: {
       findMany: async ({ where, include }: Record<string, any>) => clone(state.lines.filter((line) => line.orderId === where.orderId).map((line) => include?.menuItem ? { ...line, menuItem: { name: state.menuItems.find((item) => item.id === line.menuItemId)?.name } } : line)),
@@ -1683,15 +1955,29 @@ function createHarness(options: {
     },
     menuItem: {
       findUnique: async ({ where }: Record<string, any>) => clone(state.menuItems.find((item) => item.id === where.id) ?? null),
-      findMany: async ({ where }: Record<string, any>) => clone(state.menuItems.filter((item) => {
+      findMany: async ({ where, select }: Record<string, any> = {}) => {
+        const matched = !where ? state.menuItems : state.menuItems.filter((item) => {
         const category = state.categories.find((candidate) => candidate.id === item.categoryKey);
         const matchesQuery = !where.name?.contains || String(item.name).toLowerCase().includes(String(where.name.contains).toLowerCase());
-        return item.available === where.available && category?.active === where.category?.active && (!where.categoryKey || item.categoryKey === where.categoryKey) && matchesQuery;
-      })),
+        const matchesAvailable = where.available === undefined || item.available === where.available;
+        const matchesCategory = where.category === undefined || category?.active === where.category.active;
+        const matchesStock = where.stock?.lte === undefined || Number(item.stock) <= Number(where.stock.lte);
+        return matchesAvailable && matchesCategory && matchesStock && (!where.categoryKey || item.categoryKey === where.categoryKey) && matchesQuery;
+        });
+        return clone(select ? matched.map((item) => Object.fromEntries(Object.keys(select).filter((key) => select[key]).map((key) => [key, item[key]]))) : matched);
+      },
       updateMany: async ({ where, data }: Record<string, any>) => {
         const item = state.menuItems.find((candidate) => candidate.id === where.id);
-        if (!item || item.available !== where.available || Number(item.stock) < Number(where.stock?.gte)) return { count: 0 };
-        applyUpdate(item, data.stock ? { stock: data.stock } : data);
+        if (!item) return { count: 0 };
+        if (where.resourceVersion !== undefined && item.resourceVersion !== where.resourceVersion) return { count: 0 };
+        if (where.available !== undefined && item.available !== where.available) return { count: 0 };
+        if (where.stock?.gte !== undefined && Number(item.stock) < Number(where.stock.gte)) return { count: 0 };
+        if (controls.forceMenuStaleWrite) {
+          controls.forceMenuStaleWrite = false;
+          item.resourceVersion = Number(item.resourceVersion) + 1;
+          return { count: 0 };
+        }
+        applyUpdate(item, data);
         return { count: 1 };
       },
       update: async ({ where, data }: Record<string, any>) => {
@@ -1714,6 +2000,7 @@ function createHarness(options: {
         state.payments.push(payment);
         return payment;
       },
+      aggregate: async () => ({ _sum: { amount: state.payments.filter((payment) => payment.status === "succeeded").reduce((sum, payment) => sum + Number(payment.amount), 0) } }),
     },
     kitchenTicket: {
       findUnique: async ({ where }: Record<string, any>) => clone(state.tickets.find((ticket) => ticket.id === where.id) ?? null),
@@ -1726,6 +2013,14 @@ function createHarness(options: {
         const ticket = state.tickets.find((candidate) => candidate.id === where.id)!;
         Object.assign(ticket, data);
         return clone(ticket);
+      },
+      findMany: async ({ where }: Record<string, any>) => {
+        if (where.startedAt) return clone(state.tickets.filter((ticket) => ticket.startedAt && ticket.readyAt));
+        const permitted = state.tickets.filter((ticket) => where.status.in.includes(ticket.status)).map((ticket) => {
+          const order = [state.order, ...state.otherOrders].find((candidate) => candidate?.id === ticket.orderId)!;
+          return { ...ticket, order: { paidAt: order.paidAt, orderVersion: order.orderVersion } };
+        });
+        return clone(permitted.sort((left, right) => Number(right.priority) - Number(left.priority) || left.order.paidAt!.getTime() - right.order.paidAt!.getTime() || Number(left.tableNumber) - Number(right.tableNumber) || String(left.id).localeCompare(String(right.id))));
       },
     },
     auditEvent: { create: async ({ data }: Record<string, any>) => { const row = { id: id("audit"), ...data }; state.audits.push(row); return row; } },
@@ -1833,7 +2128,7 @@ describe("generated Restaurant transaction service", () => {
     expect(harness.state.order).toMatchObject({ status: "cancelled", orderVersion: 1 });
     expect(harness.state.menuItems[0]!.stock).toBe(5);
     expect(harness.state.inventory).toHaveLength(1);
-    expect(harness.state.inventory[0]).toMatchObject({ delta: 2, reason: "release" });
+    expect(harness.state.inventory[0]).toMatchObject({ delta: 2, provenance: "order-release", orderId: "order-1" });
     expect(effectPairs(harness.state)).toEqual(["inventory.release/release", "order.transition/transition", "audit.record/record"]);
     expect(harness.state.outbox).toHaveLength(1);
   });
@@ -2076,6 +2371,157 @@ describe("generated Restaurant transaction service", () => {
     await expect(invalid.service.submitOrder("customer", invalid.token, "order-1", "invalid-note", { expectedVersion: 0, orderNote: "x".repeat(501) })).rejects.toThrow("at most 500 characters");
     expect(invalid.state.order).toMatchObject({ orderNote: "", status: "cart", orderVersion: 0 });
     expect(invalid.state.menuItems[0]!.stock).toBe(5);
+  });
+
+  it("rejects denied Merchant roles before mutation", async () => {
+    const harness = createHarness();
+
+    await expect(enforce("cashier", "inventory-ledger", "create")).resolves.toBe(false);
+    await expect(harness.service.adjustMenuItemStock("cashier", "menu-1", "denied-adjustment", { expectedVersion: 0, delta: 1, adjustmentReason: "restock" })).rejects.toThrow("Denied Restaurant command");
+    expect(harness.state.menuItems[0]).toMatchObject({ stock: 5, resourceVersion: 0 });
+    expect(harness.state.commands).toHaveLength(0);
+    expect(harness.state.inventory).toHaveLength(0);
+    expect(harness.state.outbox).toHaveLength(0);
+  });
+
+  it("rejects stale and concurrent Merchant resource versions with safe state", async () => {
+    const staleTable = createHarness();
+    const tableError = await staleTable.service.transitionMerchantTable("manager", "table-12", "seat", "stale-table", { expectedVersion: 1, guestCount: 2 }).catch((caught: unknown) => caught);
+    expect(tableError).toBeInstanceOf(RestaurantResourceVersionConflict);
+    expect((tableError as RestaurantResourceVersionConflict).payload.currentResource).toEqual({ resource: "restaurant-table", id: "table-12", resourceVersion: 0, status: "open", active: true });
+    expect(rejected(tableError).getStatus()).toBe(409);
+
+    const concurrentMenu = createHarness();
+    concurrentMenu.controls.forceMenuStaleWrite = true;
+    const menuError = await concurrentMenu.service.adjustMenuItemStock("manager", "menu-1", "concurrent-stock", { expectedVersion: 0, delta: 1, adjustmentReason: "restock" }).catch((caught: unknown) => caught);
+    expect(menuError).toBeInstanceOf(RestaurantResourceVersionConflict);
+    expect((menuError as RestaurantResourceVersionConflict).payload.currentResource).toEqual({ resource: "menu-item", id: "menu-1", resourceVersion: 1, available: true, stock: 5 });
+    expect(rejected(menuError).getResponse()).toEqual((menuError as RestaurantResourceVersionConflict).payload);
+    expect(rejected(menuError).getResponse()).not.toHaveProperty("currentResource.categoryKey");
+    expect(concurrentMenu.state.inventory).toHaveLength(0);
+    expect(concurrentMenu.state.capabilities).toHaveLength(0);
+    expect(concurrentMenu.state.outbox).toHaveLength(0);
+  });
+
+  it("keeps successful table transitions out of the publisher outbox", async () => {
+    const harness = createHarness();
+
+    const outcome = await harness.service.transitionMerchantTable("manager", "table-12", "seat", "seat-table", { expectedVersion: 0, guestCount: 2 });
+
+    expect(outcome).toMatchObject({ id: "table-12", status: "seated", active: true, resourceVersion: 1 });
+    expect(harness.state.table).toMatchObject({ status: "seated", active: true, resourceVersion: 1 });
+    expect(effectPairs(harness.state)).toEqual(["table-session.create/create"]);
+    expect(harness.state.audits).toEqual([expect.objectContaining({ action: "table.seat", recordId: "table-12" })]);
+    expect(harness.state.outbox).toHaveLength(0);
+  });
+
+  it("emits only publisher-contract outbox event types", async () => {
+    const table = createHarness();
+    await table.service.transitionMerchantTable("manager", "table-12", "seat", "publisher-table", { expectedVersion: 0, guestCount: 2 });
+
+    const created = createHarness({ withoutOrder: true });
+    await created.service.resolveTableSession("customer", "publisher-created", { expectedVersion: 0, token: created.token });
+
+    const inventory = createHarness();
+    await inventory.service.submitOrder("customer", inventory.token, "order-1", "publisher-inventory", { expectedVersion: 0 });
+
+    const transitioned = createHarness({ status: "submitted" });
+    await transitioned.service.recordPayment("cashier", undefined, "order-1", "publisher-transitioned", { expectedVersion: 0, amount: 10, method: "cash" });
+
+    const types = [table, created, inventory, transitioned].flatMap((harness) => harness.state.outbox.map((row) => String(row.type))).sort();
+    expect(types).toEqual(["inventory.changed", "order.created", "order.transitioned"]);
+  });
+
+  it("replays Merchant mutations without duplicate evidence", async () => {
+    const harness = createHarness();
+    const body = { expectedVersion: 0, delta: 1, adjustmentReason: "restock" } as const;
+    const first = await harness.service.adjustMenuItemStock("manager", "menu-1", "adjust-once", body);
+    const replay = await harness.service.adjustMenuItemStock("manager", "menu-1", "adjust-once", body);
+
+    expect(replay).toEqual(first);
+    expect(first).toMatchObject({ stock: 6, resourceVersion: 1 });
+    expect(harness.state.menuItems[0]).toMatchObject({ stock: 6, resourceVersion: 1 });
+    expect(harness.state.commands).toHaveLength(1);
+    expect(harness.state.inventory).toHaveLength(1);
+    expect(effectPairs(harness.state)).toEqual(["inventory.adjust/adjust", "audit.record/record"]);
+    expect(harness.state.audits).toHaveLength(1);
+    expect(harness.state.outbox).toEqual([expect.objectContaining({ type: "inventory.changed", version: 1 })]);
+  });
+
+  it("sorts permitted kitchen tickets deterministically", async () => {
+    const harness = createHarness({ status: "paid", paymentStatus: "paid" });
+    harness.state.order!.paidAt = new Date("2026-07-30T00:02:00.000Z");
+    harness.state.otherOrders.push(
+      { ...structuredClone(harness.state.order!), id: "order-2", paidAt: new Date("2026-07-30T00:01:00.000Z") },
+      { ...structuredClone(harness.state.order!), id: "order-3", paidAt: new Date("2026-07-30T00:03:00.000Z") },
+      { ...structuredClone(harness.state.order!), id: "order-hidden", status: "served", paidAt: new Date("2026-07-30T00:00:00.000Z") },
+    );
+    harness.state.tickets.push(
+      { id: "low", orderId: "order-1", tableNumber: 3, priority: 1, status: "paid", acceptedAt: null, startedAt: null, readyAt: null },
+      { id: "high-early", orderId: "order-2", tableNumber: 9, priority: 5, status: "accepted", acceptedAt: null, startedAt: null, readyAt: null },
+      { id: "high-late", orderId: "order-3", tableNumber: 1, priority: 5, status: "preparing", acceptedAt: null, startedAt: null, readyAt: null },
+      { id: "served", orderId: "order-hidden", tableNumber: 1, priority: 9, status: "served", acceptedAt: null, startedAt: null, readyAt: null },
+    );
+
+    const tickets = await harness.service.listKitchenTickets("kitchen");
+    expect(tickets.map((ticket) => ticket.id)).toEqual(["high-early", "high-late", "low"]);
+  });
+
+  it("validates cancellation reasons and rolls back cancellation evidence atomically", async () => {
+    const invalid = createHarness({ status: "submitted", stock: 3 });
+    await expect(invalid.service.cancelOrder("manager", "order-1", "invalid-cancel", { expectedVersion: 0, reason: " " })).rejects.toThrow("Cancellation reason is required");
+    expect(invalid.state.order).toMatchObject({ status: "submitted", orderVersion: 0 });
+    expect(invalid.state.inventory).toHaveLength(0);
+
+    const rollback = createHarness({ status: "submitted", stock: 3 });
+    rollback.controls.failOutbox = true;
+    await expect(rollback.service.cancelOrder("manager", "order-1", "rollback-cancel", { expectedVersion: 0, reason: "Guest left" })).rejects.toThrow("Injected outbox persistence failure");
+    expect(rollback.state.order).toMatchObject({ status: "submitted", orderVersion: 0 });
+    expect(rollback.state.menuItems[0]!.stock).toBe(3);
+    expect(rollback.state.commands).toHaveLength(0);
+    expect(rollback.state.inventory).toHaveLength(0);
+    expect(rollback.state.audits).toHaveLength(0);
+    expect(rollback.state.capabilities).toHaveLength(0);
+    expect(rollback.state.outbox).toHaveLength(0);
+
+    const committed = createHarness({ status: "submitted", stock: 3 });
+    const outcome = await committed.service.cancelOrder("manager", "order-1", "commit-cancel", { expectedVersion: 0, reason: "Guest left" });
+    expect(outcome).toMatchObject({ inventoryReleased: true, auditRecorded: true, reason: "Guest left", orderVersion: 1 });
+    expect(committed.state.inventory).toEqual([expect.objectContaining({ provenance: "order-release", delta: 2 })]);
+    expect(effectPairs(committed.state)).toEqual(["inventory.release/release", "order.transition/transition", "audit.record/record"]);
+    expect(committed.state.audits).toHaveLength(1);
+    expect(committed.state.outbox).toHaveLength(1);
+  });
+
+  it("returns a bounded Merchant receipt", async () => {
+    const harness = createHarness({ status: "paid", paymentStatus: "paid" });
+    harness.state.lines[0]!.modifiers = [
+      { key: "size", label: "Size", value: "Large", credential: "remove" },
+      { key: "bad", label: "Bad\u0000label", value: "ignored" },
+    ];
+    harness.state.payments.push({ id: "payment-1", orderId: "order-1", method: "cash", amount: 10, status: "succeeded", paidAt: new Date("2026-07-30T00:05:00.000Z") });
+
+    const receipt = await harness.service.getMerchantReceipt("cashier", "order-1");
+    expect(receipt.lines[0]!.modifiers).toEqual([{ key: "size", label: "Size", value: "Large" }]);
+    expect(receipt.payments).toEqual([expect.objectContaining({ id: "payment-1", amount: 10, status: "succeeded" })]);
+    expect(JSON.stringify(receipt)).not.toContain("credential");
+    await expect(harness.service.getMerchantReceipt("manager", "order-1")).rejects.toThrow("Denied Restaurant command");
+  });
+
+  it("computes persisted Restaurant reports", async () => {
+    const harness = createHarness({ status: "served", paymentStatus: "paid" });
+    harness.state.otherOrders.push({ ...structuredClone(harness.state.order!), id: "cancelled-order", status: "cancelled", paymentStatus: "unpaid" });
+    harness.state.payments.push({ id: "payment-1", orderId: "order-1", method: "cash", amount: 10, status: "succeeded", paidAt: new Date("2026-07-30T00:05:00.000Z") });
+    harness.state.tickets.push(
+      { id: "ticket-a", orderId: "order-1", tableNumber: 12, priority: 0, status: "ready", acceptedAt: null, startedAt: new Date("2026-07-30T00:01:00.000Z"), readyAt: new Date("2026-07-30T00:03:00.000Z") },
+      { id: "ticket-b", orderId: "cancelled-order", tableNumber: 13, priority: 0, status: "ready", acceptedAt: null, startedAt: new Date("2026-07-30T00:01:00.000Z"), readyAt: new Date("2026-07-30T00:05:00.000Z") },
+    );
+
+    await expect(harness.service.reportSummary("manager")).resolves.toEqual({ salesTotal: 10, orderCount: 2, averagePreparationMilliseconds: 180000, cancellationCount: 1 });
+    await expect(harness.service.reportLowStock("manager")).resolves.toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "menu-2", stock: 2 }),
+      expect.objectContaining({ id: "menu-3", stock: 1 }),
+    ]));
   });
 
   it("keeps pure input guards deterministic", () => {

@@ -19,6 +19,10 @@ import {
   renderRestaurantCustomerCommandRuntime,
   renderRestaurantPageRuntime,
 } from "./restaurant-page-runtime.js";
+import {
+  renderRestaurantEventPublisher,
+  renderRestaurantMerchantPageRuntime,
+} from "./restaurant-merchant-runtime.js";
 import { renderRestaurantRuntime } from "./restaurant-runtime.js";
 
 export {
@@ -41,6 +45,10 @@ export {
   restaurantCustomerPageRuntimeApiVersion,
   type RestaurantReceiptModifierProjection,
 } from "./restaurant-page-runtime.js";
+export {
+  renderRestaurantEventPublisher,
+  renderRestaurantMerchantPageRuntime,
+} from "./restaurant-merchant-runtime.js";
 export {
   renderRestaurantRuntime,
   restaurantRuntimeApiVersion,
@@ -798,12 +806,36 @@ function renderPrismaSeed(graph: ApplicationGraphV1): string {
         )
       : undefined;
   const restaurantTableCode = restaurantTableSeed?.values.code;
+  const restaurantMenuItemSeed =
+    graph.integration.compositionProfile === "restaurant-ordering"
+      ? (graph.domain.seedData ?? []).find(
+          (seed) => seed.entity === "menu-item",
+        )
+      : undefined;
+  const restaurantTableId = records.find(
+    (record) => record.delegate === "restaurantTable",
+  )?.id;
+  const restaurantLocationId = records.find(
+    (record) => record.delegate === "restaurantLocation",
+  )?.id;
+  const restaurantMenuItemId = records.find(
+    (record) => record.delegate === "menuItem",
+  )?.id;
+  const restaurantMenuItemPrice = restaurantMenuItemSeed?.values.price;
   if (
     graph.integration.compositionProfile === "restaurant-ordering" &&
-    (typeof restaurantTableCode !== "string" || !restaurantTableCode)
+    (typeof restaurantTableCode !== "string" ||
+      !restaurantTableCode ||
+      typeof restaurantLocationId !== "string" ||
+      !restaurantLocationId ||
+      typeof restaurantTableId !== "string" ||
+      !restaurantTableId ||
+      typeof restaurantMenuItemId !== "string" ||
+      !restaurantMenuItemId ||
+      typeof restaurantMenuItemPrice !== "number")
   ) {
     throw new Error(
-      "Restaurant seed generation requires a restaurant-table code.",
+      "Restaurant seed generation requires table, location, and menu-item fixtures.",
     );
   }
   const restaurantSessionSeed = restaurantTableSeed
@@ -844,9 +876,69 @@ function renderPrismaSeed(graph: ApplicationGraphV1): string {
           '    update: { tokenDigest, status: "active", openedAt, expiresAt, guestCount: 2 },',
           `    create: { id: ${JSON.stringify(restaurantSessionSeed.id)}, tableCode: ${JSON.stringify(restaurantSessionSeed.tableCode)}, tokenDigest, status: "active", openedAt, expiresAt, guestCount: 2 },`,
           "  });",
+          `  await prisma.restaurantTable.update({ where: { id: ${JSON.stringify(restaurantTableId)} }, data: { restaurantLocationId: ${JSON.stringify(restaurantLocationId)} } });`,
+          '  const merchantFixtureOpenedAt = new Date("2026-07-30T00:00:00.000Z");',
+          '  const merchantFixtureExpiresAt = new Date("2099-12-31T23:59:59.000Z");',
+          '  const merchantFixtureSubmittedAt = new Date("2026-07-30T00:01:00.000Z");',
+          "  const merchantFixtureTables = [",
+          `    { id: "merchant-e2e-cashier-table", code: "E2E-CASHIER", number: 98, restaurantLocationId: ${JSON.stringify(restaurantLocationId)} },`,
+          `    { id: "merchant-e2e-cancellation-table", code: "E2E-CANCEL", number: 99, restaurantLocationId: ${JSON.stringify(restaurantLocationId)} },`,
+          "  ] as const;",
+          "  for (const table of merchantFixtureTables) {",
+          "    await prisma.restaurantTable.upsert({",
+          "      where: { id: table.id },",
+          '      update: { code: table.code, number: table.number, status: "open", active: true, resourceVersion: 0, restaurantLocationId: table.restaurantLocationId },',
+          '      create: { ...table, status: "open", active: true, resourceVersion: 0 },',
+          "    });",
+          "  }",
+          "  const merchantFixtureSessions = [",
+          '    { id: "merchant-e2e-cashier-session", tableCode: "E2E-CASHIER", tokenDigest: createHash("sha256").update(demoTableToken + ":merchant-e2e:cashier", "utf8").digest("hex") },',
+          '    { id: "merchant-e2e-cancellation-session", tableCode: "E2E-CANCEL", tokenDigest: createHash("sha256").update(demoTableToken + ":merchant-e2e:cancellation", "utf8").digest("hex") },',
+          "  ] as const;",
+          "  for (const session of merchantFixtureSessions) {",
+          "    await prisma.tableSession.upsert({",
+          "      where: { id: session.id },",
+          '      update: { tokenDigest: session.tokenDigest, status: "active", openedAt: merchantFixtureOpenedAt, expiresAt: merchantFixtureExpiresAt, guestCount: 2 },',
+          '      create: { ...session, status: "active", openedAt: merchantFixtureOpenedAt, expiresAt: merchantFixtureExpiresAt, guestCount: 2 },',
+          "    });",
+          "  }",
+          "  const merchantFixtureOrders = [",
+          `    { id: "merchant-e2e-cashier-order", tableSessionId: "merchant-e2e-cashier-session", priority: 2, total: ${JSON.stringify(restaurantMenuItemPrice)} },`,
+          `    { id: "merchant-e2e-cancellation-order", tableSessionId: "merchant-e2e-cancellation-session", priority: 1, total: ${JSON.stringify(restaurantMenuItemPrice)} },`,
+          "  ] as const;",
+          "  for (const order of merchantFixtureOrders) {",
+          "    await prisma.order.upsert({",
+          "      where: { id: order.id },",
+          '      update: { tableSessionId: order.tableSessionId, status: "submitted", paymentStatus: "unpaid", fulfilmentType: "dine-in", orderNote: "Merchant E2E fixture", priority: order.priority, total: order.total, orderVersion: 0, submittedAt: merchantFixtureSubmittedAt, paidAt: null },',
+          '      create: { ...order, status: "submitted", paymentStatus: "unpaid", fulfilmentType: "dine-in", orderNote: "Merchant E2E fixture", orderVersion: 0, submittedAt: merchantFixtureSubmittedAt, paidAt: null },',
+          "    });",
+          "  }",
+          "  const merchantFixtureLines = [",
+          `    { id: "merchant-e2e-cashier-line", orderId: "merchant-e2e-cashier-order", menuItemId: ${JSON.stringify(restaurantMenuItemId)} },`,
+          `    { id: "merchant-e2e-cancellation-line", orderId: "merchant-e2e-cancellation-order", menuItemId: ${JSON.stringify(restaurantMenuItemId)} },`,
+          "  ] as const;",
+          "  for (const line of merchantFixtureLines) {",
+          "    await prisma.orderLine.upsert({",
+          "      where: { id: line.id },",
+          `      update: { orderId: line.orderId, menuItemId: line.menuItemId, quantity: 1, unitPrice: ${JSON.stringify(restaurantMenuItemPrice)}, lineNote: "", modifiers: [] },`,
+          `      create: { ...line, quantity: 1, unitPrice: ${JSON.stringify(restaurantMenuItemPrice)}, lineNote: "", modifiers: [] },`,
+          "    });",
+          "  }",
+          `  await prisma.menuItem.update({ where: { id: ${JSON.stringify(restaurantMenuItemId)} }, data: { stock: 10, resourceVersion: 0 } });`,
+          "  const merchantFixtureReservations = [",
+          `    { id: "merchant-e2e-cashier-reservation", orderId: "merchant-e2e-cashier-order", menuItemId: ${JSON.stringify(restaurantMenuItemId)} },`,
+          `    { id: "merchant-e2e-cancellation-reservation", orderId: "merchant-e2e-cancellation-order", menuItemId: ${JSON.stringify(restaurantMenuItemId)} },`,
+          "  ] as const;",
+          "  for (const reservation of merchantFixtureReservations) {",
+          "    await prisma.inventoryLedger.upsert({",
+          "      where: { id: reservation.id },",
+          '      update: { orderId: reservation.orderId, menuItemId: reservation.menuItemId, delta: -1, provenance: "order-reservation", adjustmentReason: null, recordedAt: merchantFixtureSubmittedAt },',
+          '      create: { ...reservation, delta: -1, provenance: "order-reservation", adjustmentReason: null, recordedAt: merchantFixtureSubmittedAt },',
+          "    });",
+          "  }",
         ]
       : []),
-    `  return { seeded: records.length${restaurantSessionSeed ? " + 1" : ""} };`,
+    `  return { seeded: records.length${restaurantSessionSeed ? " + 11" : ""} };`,
     "}",
     "",
     "void seed().catch((error: unknown) => { console.error(error); process.exitCode = 1; }).finally(() => prisma.$disconnect());",
@@ -1392,15 +1484,25 @@ function renderWebRootPage(): string {
   ].join("\n");
 }
 
-function renderWebCatchAllPage(): string {
+function renderWebCatchAllPage(restaurant = false): string {
   return [
     'import { GeneratedApplication } from "../page-runtime";',
+    ...(restaurant
+      ? [
+          'import { RestaurantMerchantApplication } from "../restaurant-merchant-runtime";',
+        ]
+      : []),
     "",
     "type RouteProps = { params: Promise<{ path: string[] }> };",
     "",
     "export default async function GeneratedRoutePage({ params }: RouteProps) {",
     "  const { path } = await params;",
     '  const requestedPath = `/${path.map(encodeURIComponent).join("/")}`;',
+    ...(restaurant
+      ? [
+          '  if (requestedPath.startsWith("/merchant/")) return <RestaurantMerchantApplication requestedPath={requestedPath} />;',
+        ]
+      : []),
     "  return <GeneratedApplication requestedPath={requestedPath} />;",
     "}",
     "",
@@ -2252,12 +2354,16 @@ export function generateApplicationBundle(
             path: "web/app/restaurant-customer-command.ts",
             content: renderRestaurantCustomerCommandRuntime(),
           },
+          {
+            path: "web/app/restaurant-merchant-runtime.tsx",
+            content: renderRestaurantMerchantPageRuntime(graph),
+          },
         ]
       : []),
     { path: "web/app/page.tsx", content: renderWebRootPage() },
     {
       path: "web/app/[...path]/page.tsx",
-      content: renderWebCatchAllPage(),
+      content: renderWebCatchAllPage(restaurantRuntime !== null),
     },
     { path: "web/app/favicon.ico/route.ts", content: renderFaviconRoute() },
     {
@@ -2418,6 +2524,10 @@ export function generateApplicationBundle(
     },
     ...(restaurantRuntime
       ? [
+          {
+            path: "api/src/restaurant/restaurant-event-publisher.ts",
+            content: renderRestaurantEventPublisher(),
+          },
           {
             path: "api/test/restaurant-runtime.generated.test.ts",
             content: restaurantRuntime.generatedTests,
