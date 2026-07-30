@@ -162,6 +162,7 @@ git commit -m "feat: add parameterized capability composition contract"
 **Files:**
 - Modify: `packages/capabilities/src/node.ts`
 - Modify: `packages/capabilities/test/capability-registry.test.ts`
+- Modify: `packages/capabilities/src/assets/core/crud-v1-0-1.ts`
 - Modify: `packages/capabilities/assets/core.crud/1.0.1/component.json`
 - Modify: `packages/capabilities/assets/core.crud/1.0.1/adapter.json`
 - Create: `packages/capabilities/assets/core.crud/1.0.1/templates/web/crud-route.tsx.tpl`
@@ -238,6 +239,7 @@ Expected: PASS.
 
 ```bash
 git add packages/capabilities/src/node.ts \
+  packages/capabilities/src/assets/core/crud-v1-0-1.ts \
   packages/capabilities/test/capability-registry.test.ts \
   packages/capabilities/assets/core.crud/1.0.1
 git commit -m "feat: verify multi-target capability contributions"
