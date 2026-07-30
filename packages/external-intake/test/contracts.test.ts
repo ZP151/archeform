@@ -5,6 +5,7 @@ import {
   digestBytes,
   parseCandidateCapability,
   parseEvidenceBundle,
+  parseExternalSourceAcquisition,
   parseIntakeRequest,
   parsePromotionDecision,
   parseSourceSnapshot,
@@ -61,6 +62,39 @@ const validCandidate = {
   ],
   candidateManifestDigest: digest,
   fixtureDigest: otherDigest,
+};
+
+const validAcquisition = {
+  apiVersion: "factory.external-source-acquisition/v1",
+  ...rootProvenance,
+  parentDigests: [digest, otherDigest],
+  sourceRequestDigest: digest,
+  source: {
+    canonicalRepositoryUrl: "https://github.com/example/project.git",
+    requestedRef: "v1.2.3",
+    resolvedCommit: "c".repeat(40),
+  },
+  snapshot: {
+    recordDigest: otherDigest,
+    archiveDigest: digest,
+    treeDigest: otherDigest,
+    entryCount: 2,
+    declaredBytes: 512,
+  },
+  licence: {
+    primaryPaths: ["LICENSE"],
+    textDigests: [digest],
+  },
+  notices: [{ path: "NOTICE", digest: otherDigest, required: true }],
+  provenance: [
+    {
+      url: "https://github.com/example/project/archive/cccccccccccccccccccccccccccccccccccccccc.tar.gz",
+      retrievedAt: "2026-07-31T00:00:00.000Z",
+      digest,
+    },
+  ],
+  manualStatus: "unreviewed",
+  acquisitionState: "acquired",
 };
 
 describe("external intake contracts", () => {
@@ -134,6 +168,9 @@ describe("external intake contracts", () => {
     expect(parseIntakeRequest(request)).toEqual(request);
     expect(parseSourceSnapshot(snapshot)).toEqual(snapshot);
     expect(parseEvidenceBundle(evidence)).toEqual(evidence);
+    expect(parseExternalSourceAcquisition(validAcquisition)).toEqual(
+      validAcquisition,
+    );
     expect(parseCandidateCapability(candidate)).toEqual(candidate);
     expect(parsePromotionDecision(promotion)).toEqual(promotion);
 
@@ -141,7 +178,95 @@ describe("external intake contracts", () => {
       const missing = structuredClone(request) as Record<string, unknown>;
       delete missing[field];
       expect(() => parseIntakeRequest(missing)).toThrow();
+
+      const acquisitionMissing = structuredClone(validAcquisition) as Record<
+        string,
+        unknown
+      >;
+      delete acquisitionMissing[field];
+      expect(() =>
+        parseExternalSourceAcquisition(acquisitionMissing),
+      ).toThrow();
     }
+  });
+
+  it("requires acquisition request and snapshot identities as parent records", () => {
+    expect(parseExternalSourceAcquisition(validAcquisition)).toEqual(
+      validAcquisition,
+    );
+
+    for (const missingParent of [digest, otherDigest]) {
+      expect(() =>
+        parseExternalSourceAcquisition({
+          ...validAcquisition,
+          parentDigests: validAcquisition.parentDigests.filter(
+            (parent) => parent !== missingParent,
+          ),
+        }),
+      ).toThrow(/parent/i);
+    }
+  });
+
+  it("requires literal unreviewed status and an explicit acquisition state", () => {
+    for (const manualStatus of ["approved", "rejected"]) {
+      expect(() =>
+        parseExternalSourceAcquisition({
+          ...validAcquisition,
+          manualStatus,
+        }),
+      ).toThrow();
+    }
+    for (const acquisitionState of [undefined, "pending", "scanned"]) {
+      expect(() =>
+        parseExternalSourceAcquisition({
+          ...validAcquisition,
+          acquisitionState,
+        }),
+      ).toThrow();
+    }
+    expect(
+      parseExternalSourceAcquisition({
+        ...validAcquisition,
+        acquisitionState: "blocked",
+        failureCode: "missing-licence",
+      }),
+    ).toMatchObject({
+      acquisitionState: "blocked",
+      failureCode: "missing-licence",
+      manualStatus: "unreviewed",
+    });
+  });
+
+  it.each([
+    ["Candidate identity", { candidateManifestDigest: digest }],
+    ["Golden identity", { goldenAsset: { key: "commerce.example" } }],
+    ["EvidenceBundle identity", { snapshotDigest: otherDigest }],
+    ["SBOM identity", { sbom: { format: "CycloneDX", digest } }],
+    ["scanner identity", { tool: "fixture-scanner", toolVersion: "1.0.0" }],
+    ["scan-result identity", { rulesetDigest: digest, resultDigest: digest }],
+    ["scan collection", { scans: [] }],
+    ["AST identity", { ast: { parser: "fixture-parser" } }],
+    ["selection identity", { compositionSelections: [] }],
+    ["compilation identity", { outputSlots: [] }],
+  ])("rejects %s fields", (_description, prohibitedFields) => {
+    expect(() =>
+      parseExternalSourceAcquisition({
+        ...validAcquisition,
+        ...prohibitedFields,
+      }),
+    ).toThrow();
+  });
+
+  it("rejects scanner claims nested in acquisition licence evidence", () => {
+    expect(() =>
+      parseExternalSourceAcquisition({
+        ...validAcquisition,
+        licence: {
+          ...validAcquisition.licence,
+          scannerExpression: "MIT",
+        },
+      }),
+    ).toThrow();
   });
 
   it("keeps Candidate records outside the Golden capability contract", () => {

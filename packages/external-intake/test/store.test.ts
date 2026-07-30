@@ -16,6 +16,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   ExternalIntakeStore,
   canonicalRecordDigest,
+  type ExternalSourceAcquisitionV1,
   type IntakeReceiptV1,
 } from "../src/index.js";
 
@@ -32,6 +33,41 @@ const validRequest = {
   classification: "source-study" as const,
   requestedModules: [],
   allowNetworkRetrieval: true as const,
+};
+const digest = `sha256:${"a".repeat(64)}` as const;
+const otherDigest = `sha256:${"b".repeat(64)}` as const;
+const validAcquisition: ExternalSourceAcquisitionV1 = {
+  apiVersion: "factory.external-source-acquisition/v1",
+  createdAt: "2026-07-31T00:00:00.000Z",
+  producerVersion: "0.1.0",
+  parentDigests: [digest, otherDigest],
+  sourceRequestDigest: digest,
+  source: {
+    canonicalRepositoryUrl: "https://github.com/example/project.git",
+    requestedRef: "v1.0.0",
+    resolvedCommit: "c".repeat(40),
+  },
+  snapshot: {
+    recordDigest: otherDigest,
+    archiveDigest: digest,
+    treeDigest: otherDigest,
+    entryCount: 2,
+    declaredBytes: 512,
+  },
+  licence: {
+    primaryPaths: ["LICENSE"],
+    textDigests: [digest],
+  },
+  notices: [{ path: "NOTICE", digest: otherDigest, required: true }],
+  provenance: [
+    {
+      url: "https://github.com/example/project/archive/cccccccccccccccccccccccccccccccccccccccc.tar.gz",
+      retrievedAt: "2026-07-31T00:00:00.000Z",
+      digest,
+    },
+  ],
+  manualStatus: "unreviewed",
+  acquisitionState: "acquired",
 };
 
 function tempRoot(): string {
@@ -65,6 +101,30 @@ afterEach(() => {
 });
 
 describe("ExternalIntakeStore", () => {
+  it("stores acquisition records under a distinct immutable kind", () => {
+    const root = tempRoot();
+    const store = new ExternalIntakeStore(root);
+
+    const ref = store.putRecord("acquisition", validAcquisition);
+
+    expect(ref).toEqual({
+      kind: "acquisition",
+      digest: canonicalRecordDigest(validAcquisition),
+    });
+    expect(store.getRecord(ref)).toEqual(validAcquisition);
+    expect(
+      lstatSync(
+        join(root, "records", "acquisition", `${ref.digest.slice(7)}.json`),
+      ).isFile(),
+    ).toBe(true);
+    expect(() =>
+      store.putRecord("candidate", validAcquisition as never),
+    ).toThrow();
+    expect(() =>
+      store.putRecord("evidence", validAcquisition as never),
+    ).toThrow();
+  });
+
   it("stores canonical records immutably and returns matching writes idempotently", () => {
     const root = tempRoot();
     const store = new ExternalIntakeStore(root);

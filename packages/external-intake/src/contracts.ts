@@ -290,6 +290,84 @@ const noticeSchema = z
     required: z.boolean(),
   })
   .strict();
+
+export const externalSourceAcquisitionSchema = z
+  .object({
+    apiVersion: z.literal("factory.external-source-acquisition/v1"),
+    ...persistentRecordProvenanceShape,
+    sourceRequestDigest: sha256DigestSchema,
+    source: z
+      .object({
+        canonicalRepositoryUrl: canonicalRepositoryUrlSchema,
+        requestedRef: fixedReferenceSchema,
+        resolvedCommit: commitSchema,
+      })
+      .strict(),
+    snapshot: z
+      .object({
+        recordDigest: sha256DigestSchema,
+        archiveDigest: sha256DigestSchema,
+        treeDigest: sha256DigestSchema,
+        entryCount: z.number().int().nonnegative().finite(),
+        declaredBytes: z.number().int().nonnegative().finite(),
+      })
+      .strict(),
+    licence: z
+      .object({
+        primaryPaths: z
+          .array(relativePathSchema)
+          .min(1)
+          .max(10_000)
+          .refine(
+            (paths) => uniqueBy(paths, (path) => path),
+            "Licence paths must be unique.",
+          ),
+        textDigests: z
+          .array(sha256DigestSchema)
+          .min(1)
+          .max(10_000)
+          .refine(
+            (digests) => uniqueBy(digests, (digest) => digest),
+            "Licence digests must be unique.",
+          ),
+      })
+      .strict(),
+    notices: z
+      .array(noticeSchema)
+      .max(10_000)
+      .refine(
+        (notices) => uniqueBy(notices, ({ path }) => path),
+        "Notice paths must be unique.",
+      ),
+    provenance: z
+      .array(originEvidenceSchema)
+      .min(1)
+      .max(256)
+      .refine(
+        (evidence) => uniqueBy(evidence, ({ url }) => url),
+        "Provenance URLs must be unique.",
+      ),
+    manualStatus: z.literal("unreviewed"),
+    acquisitionState: z.enum(["acquired", "blocked"]),
+    failureCode: opaqueIdSchema.optional(),
+  })
+  .strict()
+  .superRefine((acquisition, context) => {
+    for (const parent of [
+      acquisition.sourceRequestDigest,
+      acquisition.snapshot.recordDigest,
+    ]) {
+      if (!acquisition.parentDigests.includes(parent)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "Acquisition parent digests must include request and snapshot records.",
+          path: ["parentDigests"],
+        });
+      }
+    }
+  });
+
 const scanSchema = z
   .object({
     kind: z.enum(["licence", "secret", "sast", "dependency"]),
@@ -543,6 +621,9 @@ export const intakeReceiptSchema = z
 
 export type IntakeRequestV1 = z.infer<typeof intakeRequestSchema>;
 export type SourceSnapshotV1 = z.infer<typeof sourceSnapshotSchema>;
+export type ExternalSourceAcquisitionV1 = z.infer<
+  typeof externalSourceAcquisitionSchema
+>;
 export type EvidenceBundleV1 = z.infer<typeof evidenceBundleSchema>;
 export type CandidateCapabilityV1 = z.infer<typeof candidateCapabilitySchema>;
 export type PromotionDecisionV1 = z.infer<typeof promotionDecisionSchema>;
@@ -552,10 +633,17 @@ export type PersistentRecordProvenanceV1 = z.infer<
 >;
 
 export type IntakeRecordKind =
-  "request" | "snapshot" | "evidence" | "candidate" | "promotion" | "receipt";
+  | "request"
+  | "snapshot"
+  | "acquisition"
+  | "evidence"
+  | "candidate"
+  | "promotion"
+  | "receipt";
 export type IntakeRecordV1 =
   | IntakeRequestV1
   | SourceSnapshotV1
+  | ExternalSourceAcquisitionV1
   | EvidenceBundleV1
   | CandidateCapabilityV1
   | PromotionDecisionV1
@@ -575,6 +663,12 @@ export function parseIntakeRequest(input: unknown): IntakeRequestV1 {
 
 export function parseSourceSnapshot(input: unknown): SourceSnapshotV1 {
   return parseStrict(sourceSnapshotSchema, input);
+}
+
+export function parseExternalSourceAcquisition(
+  input: unknown,
+): ExternalSourceAcquisitionV1 {
+  return parseStrict(externalSourceAcquisitionSchema, input);
 }
 
 export function parseEvidenceBundle(input: unknown): EvidenceBundleV1 {
@@ -604,6 +698,8 @@ export function parseIntakeRecord(
       return parseIntakeRequest(input);
     case "snapshot":
       return parseSourceSnapshot(input);
+    case "acquisition":
+      return parseExternalSourceAcquisition(input);
     case "evidence":
       return parseEvidenceBundle(input);
     case "candidate":

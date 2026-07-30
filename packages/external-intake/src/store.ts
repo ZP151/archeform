@@ -28,6 +28,7 @@ const blobKindSchema = z.enum(["snapshot", "evidence"]);
 const recordKindSchema = z.enum([
   "request",
   "snapshot",
+  "acquisition",
   "evidence",
   "candidate",
   "promotion",
