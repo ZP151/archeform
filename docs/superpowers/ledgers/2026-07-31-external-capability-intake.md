@@ -38,8 +38,8 @@ slice, and the Controller has accepted the design contract. Task 1 is now
 composition demand signals, and produce only quarantined evidence,
 non-executable Candidate records, and pending-review promotion packets.
 
-Independent Task 1 review is BLOCKED with four P1 findings. Task 1 remains
-`implementing` in Fix Round 1/5; its original contract, scope, and exact allowed
+Task 1 Fix Round 1 re-review FAILED with one remaining P1. Task 1 remains
+`implementing` in Fix Round 2/5; its original contract, scope, and exact allowed
 paths remain frozen. No dependent task is dispatched.
 
 The Commercial Capability Foundation remains the Golden execution boundary.
@@ -120,6 +120,19 @@ Review is BLOCKED on these four P1 findings:
 3. Reject ADS and Windows-invalid filesystem characters in safe path segments.
 4. Add a job/sequence receipt index with exclusive-create, idempotent retry,
    conflict, and out-of-order checks.
+
+Repair remains bounded to the original Task 1 contract, scope, and exact
+allowed paths. Tasks 2 through 6 remain `planned`.
+
+### Independent re-review: Fix Round 2/5
+
+Re-review FAILED with one remaining P1: the receipt sequence index is written
+before backing content, and chain extension does not validate that the index
+reference exists, its digest matches, and its job/sequence match.
+
+Required repair: verify and write the receipt record first, then exclusively
+publish the index. Before extending the chain, validate the indexed backing
+record. Add missing and tampered backing-record regressions.
 
 Repair remains bounded to the original Task 1 contract, scope, and exact
 allowed paths. Tasks 2 through 6 remain `planned`.
