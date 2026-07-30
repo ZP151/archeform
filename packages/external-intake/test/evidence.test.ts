@@ -102,6 +102,16 @@ class EvidenceFixtureClient implements FixedSourceClient {
   }
 }
 
+class RejectingResolveClient extends EvidenceFixtureClient {
+  constructor(private readonly rejection: unknown) {
+    super();
+  }
+
+  override async resolve(): Promise<ResolvedSourceReferenceV1> {
+    throw this.rejection;
+  }
+}
+
 function tempStore(): { root: string; store: ExternalIntakeStore } {
   const root = mkdtempSync(join(tmpdir(), "factory-source-evidence-"));
   roots.push(root);
@@ -127,6 +137,43 @@ afterEach(() => {
 });
 
 describe("licence, notice, and provenance acquisition", () => {
+  it.each([
+    { label: "null", rejection: null },
+    { label: "undefined", rejection: undefined },
+  ])(
+    "normalizes a $label rejection and appends a redacted blocked receipt",
+    async ({ rejection }) => {
+      const { root, store } = tempStore();
+
+      await expect(
+        acquireSourceEvidence(
+          request,
+          new RejectingResolveClient(rejection),
+          store,
+        ),
+      ).rejects.toThrow("Source acquisition failed.");
+
+      const indexes = receiptIndexes(root);
+      expect(indexes).toHaveLength(1);
+      const persisted = JSON.parse(
+        readFileSync(
+          join(
+            root,
+            "records",
+            "receipt",
+            `${(indexes[0] as { receiptDigest: string }).receiptDigest.slice(7)}.json`,
+          ),
+          "utf8",
+        ),
+      ) as Record<string, unknown>;
+      expect(persisted).toMatchObject({
+        status: "blocked",
+        code: "source-acquisition-failed",
+      });
+      expect(persisted).not.toHaveProperty("message");
+    },
+  );
+
   it("stores exact licence and notice bytes in a truthful unreviewed acquisition", async () => {
     const { root, store } = tempStore();
     const result = await acquireSourceEvidence(

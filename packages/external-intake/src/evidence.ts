@@ -35,6 +35,17 @@ class AcquisitionFailure extends Error {
   }
 }
 
+function errorMessage(error: unknown, fallback: string): string {
+  if (
+    error instanceof Error &&
+    typeof error.message === "string" &&
+    error.message.length > 0
+  ) {
+    return error.message;
+  }
+  return fallback;
+}
+
 function acquisitionJobId(request: IntakeRequestV1): string {
   return `source-${canonicalRecordDigest(request).slice(7, 31)}`;
 }
@@ -128,8 +139,11 @@ async function readExactEvidence(
     try {
       bytes = await client.fetchEvidence(reference, entry.path);
     } catch (error) {
+      const detail = errorMessage(error, "");
       throw new AcquisitionFailure(
-        `Source evidence is unreadable: ${(error as Error).message}`,
+        detail.length > 0
+          ? `Source evidence is unreadable: ${detail}`
+          : "Source evidence is unreadable.",
         "evidence-unreadable",
       );
     }
@@ -319,7 +333,7 @@ export async function acquireSourceEvidence(
       error instanceof AcquisitionFailure
         ? error
         : new AcquisitionFailure(
-            (error as Error).message || "Source acquisition failed.",
+            errorMessage(error, "Source acquisition failed."),
             "source-acquisition-failed",
           );
     appendReceipt(
