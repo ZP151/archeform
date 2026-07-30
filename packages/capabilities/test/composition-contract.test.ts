@@ -239,6 +239,12 @@ describe("capability composition contract", () => {
         selections: [selection(parameterAsset, { value: "rm workspace" })],
       }),
     ).toThrow("must not contain a command");
+    expect(() =>
+      resolveSyntheticComposition({
+        assets: [parameterAsset],
+        selections: [selection(parameterAsset, { value: "Note: vegan" })],
+      }),
+    ).not.toThrow();
   });
 
   it("rejects a missing required parameter", () => {

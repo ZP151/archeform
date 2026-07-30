@@ -44,7 +44,7 @@ export interface CreateCapabilityCompositionLockInput extends ResolveCapabilityC
 const sha256Pattern = /^sha256:[a-f0-9]{64}$/;
 const graphSymbolPattern =
   /^graph\.(?:page|domain|policy|flow|integration|experience)\.[a-z][a-z0-9-]*$/;
-const urlSchemePattern = /\b[a-z][a-z0-9+.-]*:/i;
+const urlSchemePattern = /\b[a-z][a-z0-9+.-]*:\S/i;
 const controlCharacterPattern = /[\u0000-\u001f\u007f-\u009f]/;
 const sourceDelimiterPattern =
   /[`{}\[\];]|=>|\$\(|<\s*\/?\s*(?:script|style)\b/i;
