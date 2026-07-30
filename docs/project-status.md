@@ -51,7 +51,8 @@ though its direct generated Node 22 application journeys pass.
 ## Product capability gap
 
 The current Restaurant Profile satisfies the initial dine-in MVP, not the full
-commercial point-of-sale scope.
+commercial point-of-sale scope. The requirement-by-requirement evidence is in
+[`audits/restaurant-ordering-requirements-audit.md`](audits/restaurant-ordering-requirements-audit.md).
 
 | Area                | Verified now                                                                             | Not yet a generated capability                                                                  |
 | ------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
