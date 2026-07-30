@@ -56,7 +56,9 @@ remained `implementing` in Repair Round 4/5 within its existing
 Candidate/API/test paths. Repair Round 4 independent re-review subsequently
 PASSED with no P0/P1/P2, and the PM moved Task 4
 `implementing -> ready_for_qa`. Independent behavioral QA remains required. The
-system will
+QA gate then FAILED with two P1 evidence gaps and one P2 formatting defect. The
+PM returned Task 4 `ready_for_qa -> implementing` for Repair Round 5/5, limited
+to test evidence and `pnpm-lock.yaml` formatting. The system will
 ingest the 43 fixed-reference portfolio as metadata, retain the 108 scenarios as
 composition demand signals, and produce only quarantined evidence,
 non-executable Candidate records, and pending-review promotion packets.
@@ -150,6 +152,16 @@ PM moved Task 4 `implementing -> ready_for_qa`. This is not QA, release review,
 or acceptance; the full repair history, contract, exact paths, and scope remain
 frozen. Tasks 5 and 6 remain `planned`.
 
+Independent Task 4 QA FAILED with two P1 evidence gaps and one P2 gate defect:
+the separate-OS-process conformance race existed only as reviewer evidence, not
+a deterministic repository regression; fabricated/truncated receipt corruption
+was not exercised across every public Candidate path; and Task 4's
+`pnpm-lock.yaml` failed Prettier. The PM returned Task 4
+`ready_for_qa -> implementing` for Repair Round 5/5. The repair is test-only
+except mechanical lockfile formatting; no production, Task 2, dependency,
+Graph, compiler, or runtime change is authorized. Tasks 5 and 6 remain
+`planned`.
+
 Independent Task 2 review FAILED with three P1 findings and one P2. The
 Controller resolved its schema incompatibility by selecting a distinct
 `factory.external-source-acquisition/v1` record. Task 2 entered Fix Round 1/5
@@ -175,7 +187,7 @@ remain frozen.
 | 1. Candidate contracts and immutable persistence | `accepted`     | `integration`       | External Intake Contract         | Original release and bounded amendment accepted and frozen. |
 | 2. Fixed-source provenance and notices           | `accepted`     | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
 | 3. Deterministic scan orchestration              | `accepted`     | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
-| 4. Candidate registry, API, CLI, and isolation   | `ready_for_qa` | `integration`       | Candidate Registry               | Repair Round 4 re-review PASS; independent QA required.     |
+| 4. Candidate registry, API, CLI, and isolation   | `implementing` | `integration`       | Candidate Registry               | Repair Round 5/5; QA evidence and formatting repair.        |
 | 5. Review-only promotion packets                 | `planned`      | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.           |
 | 6. Bulk acceptance and release evidence          | `planned`      | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.        |
 
@@ -769,7 +781,7 @@ dependency gate but remains unstarted and `planned`; Tasks 5 and 6 also remain
 
 ## Task 4 card: Candidate registry, module API, CLI, and isolation
 
-- **State:** `ready_for_qa`
+- **State:** `implementing`
 - **Specialization:** `integration`
 - **Contract owner:** Candidate Registry
 - **Contract artifact:** accepted Tasks 1-3 contracts and the frozen Commercial
@@ -934,6 +946,35 @@ repair history, Candidate Registry contract, exact allowed paths, non-goals,
 and acceptance evidence remain frozen. Tasks 5 and 6 remain `planned` and have
 not started.
 
+### Independent QA: Repair Round 5/5
+
+Independent QA FAILED with two P1 evidence gaps and one P2 formatting defect.
+Fresh Node v22.11.0 evidence passed 215/215 focused Task 4 tests, 257/257 full
+External Intake tests, 10/10 CLI tests, 874/874 uncached workspace tests, all 14
+uncached workspace typecheck tasks, impacted builds/typechecks/package lints,
+privacy and isolation checks, third-party/source-study verification, bounded
+diff, and clean-worktree checks. Those green results do not close these QA
+findings:
+
+1. Add a deterministic separate-OS-process Candidate conformance race test;
+   same-process `Promise.all` coverage is insufficient. Assert receipt sequences
+   are exactly 1 and 2, the durable deltas are exactly one Candidate revision
+   and one receipt, fresh show/verification remains valid and
+   `conformance-passed`, and retry adds zero records.
+2. Expand fabricated and truncated receipt-chain corruption coverage to every
+   public show, list, test, conformance-bundle, and transition path. Each path
+   must fail closed with zero Candidate and receipt mutations.
+3. Mechanically format the Task 4-owned `pnpm-lock.yaml`; no dependency content
+   or resolution may change.
+
+Repair Round 5/5 remains within the existing Task 4 test paths plus the already
+allowed `pnpm-lock.yaml`. Child-process execution is permitted only in the test
+harness for the separate-OS-process regression. No production, Task 2, immutable
+store, dependency, Graph, compiler, network, or runtime change is authorized.
+After repair, rerun focused Task 4 and full relevant QA evidence. Task 4 remains
+`implementing`; Tasks 5 and 6 remain `planned` and have not started. Any further
+failed repair/review cycle requires Controller escalation.
+
 ### Exact allowed paths
 
 - `packages/external-intake/src/candidates.ts`
@@ -1075,9 +1116,11 @@ not started.
   Capabilities, and compiler test paths. The dispatched Task 4 writer has
   exclusive ownership of every frozen path; any overlap stops work.
 
-The active smallest valuable slice is independent behavioral QA for Task 4
-repair commit `986319a` under its frozen Candidate Registry contract, exact
-allowed paths, non-goals, and complete Repair Round 1-4 history. Its bounded
+The active smallest valuable slice is Task 4 Repair Round 5/5 under its frozen
+Candidate Registry contract, exact allowed paths, non-goals, and complete
+Repair Round 1-4 history. The repair adds deterministic separate-OS-process and
+fabricated/truncated public-path regression evidence and formats
+`pnpm-lock.yaml`; it does not change production behavior. Its bounded
 test-contract amendment permits only the Intake CLI package
 manifest to import `@factory/external-intake`; all other isolation prohibitions
 remain enforced. Repair Round 1/5 is limited to Candidate namespace defense,
