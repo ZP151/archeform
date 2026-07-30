@@ -95,7 +95,7 @@ describe("external business-logic portfolio", () => {
     }
   });
 
-  it("has no product package manifest dependency on External Intake", () => {
+  it("allows only the repository-local Intake CLI manifest to depend on External Intake", () => {
     const manifests = ["apps", "packages"].flatMap((area) =>
       readdirSync(join(workspaceRoot, area), { withFileTypes: true })
         .filter((entry) => entry.isDirectory())
@@ -112,6 +112,8 @@ describe("external business-logic portfolio", () => {
         return JSON.stringify(parsed).includes("@factory/external-intake");
       });
 
-    expect(importers).toEqual([]);
+    expect(importers).toEqual([
+      join(workspaceRoot, "apps", "intake-cli", "package.json"),
+    ]);
   });
 });

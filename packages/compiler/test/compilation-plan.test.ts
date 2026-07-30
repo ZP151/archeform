@@ -716,6 +716,47 @@ describe("compilation target registry", () => {
     ).toThrow("require matching Golden asset locks");
   });
 
+  it("rejects the Candidate API version before compiler output", () => {
+    expect(() =>
+      generateApplicationBundle({
+        publishedRevisionId: "published-candidate-api-boundary-1",
+        graph: {
+          apiVersion: "factory.candidate-capability/v1",
+          id: "safe-adapter",
+          version: "1.0.0",
+          status: "quarantined",
+        } as never,
+      }),
+    ).toThrow();
+  });
+
+  it.each([
+    ["identity", { key: "candidate.safe-adapter" }],
+    ["path", { packageRoot: "ecosystem/intake/candidates/safe-adapter/1.0.0" }],
+    [
+      "digest",
+      {
+        manifestDigest:
+          "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      },
+    ],
+  ])("rejects Candidate %s before compiler output", (_, part) => {
+    const graph = structuredClone(
+      composeProfileDraft({ profile: "expense-approval" }).graph,
+    ) as unknown as Record<string, unknown>;
+    const integration = graph.integration as {
+      assetLocks: Array<Record<string, unknown>>;
+    };
+    integration.assetLocks[0] = { ...integration.assetLocks[0], ...part };
+
+    expect(() =>
+      generateApplicationBundle({
+        publishedRevisionId: "published-candidate-boundary-1",
+        graph: graph as unknown as ApplicationGraphV1,
+      }),
+    ).toThrow();
+  });
+
   it("compiles declared external capabilities without Golden package locks", () => {
     const graph = {
       ...publishedExpense.graph,

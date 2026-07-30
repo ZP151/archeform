@@ -98,6 +98,16 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)(happy-dom@20.11.1)(terser@5.49.0)
 
+  apps/intake-cli:
+    dependencies:
+      '@factory/external-intake':
+        specifier: workspace:*
+        version: link:../../packages/external-intake
+    devDependencies:
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)(happy-dom@20.11.1)(terser@5.49.0)
+
   apps/workbench:
     dependencies:
       '@factory/adapters':

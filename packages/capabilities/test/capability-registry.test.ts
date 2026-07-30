@@ -19,6 +19,7 @@ import {
   getCapability,
   getProfileComposition,
   profileGraphs,
+  resolveCapabilityAssetLock,
   type CapabilityAssetManifestV1,
   type CapabilityAssetV1,
   type CapabilityExecutableContributionV1,
@@ -1333,6 +1334,47 @@ describe("capability catalog", () => {
       ),
     ).toThrow("does not match a registered Golden asset");
   });
+
+  it.each([
+    {
+      boundary: "API version",
+      input: () => ({
+        apiVersion: "factory.candidate-capability/v1",
+        id: "safe-adapter",
+        version: "1.0.0",
+        status: "quarantined",
+      }),
+    },
+    {
+      boundary: "identity",
+      input: () => ({
+        ...lockCapabilityAsset(getCapabilityAsset("core.audit")),
+        key: "candidate.safe-adapter",
+      }),
+    },
+    {
+      boundary: "path",
+      input: () => ({
+        ...lockCapabilityAsset(getCapabilityAsset("core.audit")),
+        packageRoot: "ecosystem/intake/candidates/safe-adapter/1.0.0",
+      }),
+    },
+    {
+      boundary: "digest",
+      input: () => ({
+        ...lockCapabilityAsset(getCapabilityAsset("core.audit")),
+        manifestDigest:
+          "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      }),
+    },
+  ])(
+    "rejects Candidate $boundary at the Golden registry lock boundary",
+    ({ input }) => {
+      expect(() => resolveCapabilityAssetLock(input() as never)).toThrow(
+        "does not match a registered Golden asset",
+      );
+    },
+  );
 
   it("returns a complete, deterministic capability set for each initial profile", () => {
     expect(

@@ -1,0 +1,21 @@
+{
+  "name": "@factory/intake-cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "factory-intake": "./dist/main.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "prettier --check src test vitest.config.ts"
+  },
+  "dependencies": {
+    "@factory/external-intake": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.8"
+  }
+}

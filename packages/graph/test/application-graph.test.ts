@@ -139,6 +139,48 @@ describe("ApplicationGraphV1", () => {
     expect(validateApplicationGraph(locked)).toEqual([]);
   });
 
+  it.each([
+    ["API version", { apiVersion: "factory.candidate-capability/v1" }],
+    ["identity", { id: "safe-adapter", version: "1.0.0" }],
+    [
+      "path",
+      { candidatePath: "ecosystem/intake/candidates/safe-adapter/1.0.0" },
+    ],
+    [
+      "digest",
+      {
+        candidateDigest:
+          "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      },
+    ],
+  ])(
+    "rejects Candidate %s at the Application Graph boundary",
+    (_, candidatePart) => {
+      const invalid = structuredClone(expenseGraph) as unknown as Record<
+        string,
+        unknown
+      >;
+      invalid.integration = {
+        providers: [],
+        capabilities: [],
+        compositionProfile: "expense-approval",
+        assetLocks: [
+          {
+            key: "candidate.safe-adapter",
+            version: "1.0.0",
+            packageRoot: "ecosystem/intake/candidates/safe-adapter/1.0.0",
+            manifestDigest:
+              "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            lifecycle: "candidate",
+            ...candidatePart,
+          },
+        ],
+      };
+
+      expect(() => parseApplicationGraph(invalid)).toThrow();
+    },
+  );
+
   it("accepts only Draft composition selections with exact Golden identities and closed bindings", () => {
     const validLock = {
       key: "core.crud",

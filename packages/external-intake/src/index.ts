@@ -34,3 +34,12 @@ export {
   type StoredBlobRef,
   type StoredRecordRef,
 } from "./store.js";
+export * from "./source-client.js";
+export * from "./snapshot.js";
+export * from "./evidence.js";
+export * from "./scans.js";
+export * from "./module-inventory.js";
+export * from "./jobs.js";
+export * from "./candidates.js";
+export * from "./conformance.js";
+export * from "./api.js";
