@@ -42,11 +42,11 @@ Requirement / visual edits / AI proposal
 
 Three alternatives were evaluated:
 
-| Approach | Result | Decision |
-| --- | --- | --- |
-| Puck-first page generation, then infer a backend | Fast visual output but loses domain, policy, flow, dependency, and deployment guarantees. | Reject. |
-| Full starter Graph per profile with optional labels | Works for demonstrations but duplicates business logic and creates profile-specific compiler paths. | Retire by migration. |
-| Graph-first packages with Puck as a PageModel adapter | Keeps business semantics, visual freedom, immutable provenance, and independently runnable generation together. | Adopt. |
+| Approach                                              | Result                                                                                                          | Decision             |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | -------------------- |
+| Puck-first page generation, then infer a backend      | Fast visual output but loses domain, policy, flow, dependency, and deployment guarantees.                       | Reject.              |
+| Full starter Graph per profile with optional labels   | Works for demonstrations but duplicates business logic and creates profile-specific compiler paths.             | Retire by migration. |
+| Graph-first packages with Puck as a PageModel adapter | Keeps business semantics, visual freedom, immutable provenance, and independently runnable generation together. | Adopt.               |
 
 ## Composition contract v1
 
@@ -97,6 +97,41 @@ If a future package needs a literal finite choice, it must introduce a new
 declared enum-parameter contract with a manifest-owned allowed-value set and
 validation before every Draft write. It must not reopen arbitrary strings in
 `factory.composition/v1`.
+
+### Graph-symbol recipe realization
+
+The closed binding grammar determines where product-specific names and copy
+belong. A requirement, AI proposal, or visual editor creates the Draft Graph's
+domain entities, pages, routes, roles, fields, labels, and experience tokens.
+Those Graph values may be user-facing text because their respective Graph
+models validate them; they are not capability-selection inputs.
+
+A recipe then selects Golden packages and binds each package only to the
+already-declared semantic objects it needs, for example:
+
+```ts
+{
+  catalogEntity: { graphSymbol: "graph.domain.menu-item" },
+  catalogPage: { graphSymbol: "graph.page.customer-menu" },
+  customerRole: { graphSymbol: "graph.policy.customer" },
+}
+```
+
+The same `commerce.catalog` package can therefore serve an Ecommerce product
+page by binding to `graph.domain.product`, `graph.page.catalog`, and
+`graph.policy.shopper`. Package adapters may derive generated filenames,
+templates, labels, and route implementations from those validated Graph
+objects, but every final target remains slot- and namespace-validated by the
+Composer. A package must not accept an entity key, route path, label, role, or
+other free-form string directly in `factory.composition/v1`.
+
+`composeCapabilityDraft` is the generic composition entry point. It consumes a
+validated base Graph plus declared selections and writes a new Draft with
+composition selections; it must not clone a whole profile Graph. Existing
+profile Graphs remain read-only expected-output fixtures while profile-choice
+adapters construct default base Graphs from their declared recipe data. The
+future Requirement-to-Graph adapter replaces those fixed recipe defaults with
+the same validated Graph construction path.
 
 ### Graph contributions
 

@@ -38,21 +38,21 @@ Vitest, Node 22 generated runtimes.
 
 ## File structure and migration boundary
 
-| Path | Responsibility |
-| --- | --- |
-| `packages/capabilities/src/assets/contract.ts` | The v1 package manifest, closed parameter-value grammar, interface, Graph, and executable contribution contracts. |
-| `packages/capabilities/src/composition.ts` | Canonical parameter encoding, requirements resolution, contribution ordering, immutable lock creation, and fail-closed validation. |
-| `packages/capabilities/src/node.ts` | Physical package verification and safe, digest-verified contribution loading. |
-| `packages/capabilities/src/index.ts` | Browser-safe registry, generic recipe entry points, and migration of profile helpers to the generic resolver. |
-| `packages/graph/src/model.ts` | Schema validation for a Draft's capability selections and bindings, while keeping the Published composition lock outside mutable Graph state. |
-| `apps/control-plane/prisma/schema.prisma` | Immutable composition lock and lock hash on `PublishedRevision`. |
-| `apps/control-plane/prisma/migrations/20260730_add_composition_lock/migration.sql` | Additive database migration for the new immutable fields. |
-| `apps/control-plane/src/lifecycle.service.ts` | Validate Draft selections, create the lock atomically at Publish, and pass it to compilation. |
-| `packages/compiler/src/index.ts` | Generic target-contribution resolver, deterministic lock artifact, and removal of migrated package version/profile dispatch. |
-| `packages/capabilities/assets/core.*` and `packages/capabilities/assets/commerce.*` | First shared package contributions used by both Restaurant and Ecommerce. |
-| `packages/capabilities/test/composition-contract.test.ts` | Composition resolver, canonical lock, collision, dependency, and invalid-binding evidence. |
-| `packages/compiler/test/composition-compilation.test.ts` | Generic compilation proof and same-package/different-binding artifact proof. |
-| `apps/control-plane/test/lifecycle.service.test.ts` | Publish-only lock persistence and immutable compilation input proof. |
+| Path                                                                                | Responsibility                                                                                                                                |
+| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/capabilities/src/assets/contract.ts`                                      | The v1 package manifest, closed parameter-value grammar, interface, Graph, and executable contribution contracts.                             |
+| `packages/capabilities/src/composition.ts`                                          | Canonical parameter encoding, requirements resolution, contribution ordering, immutable lock creation, and fail-closed validation.            |
+| `packages/capabilities/src/node.ts`                                                 | Physical package verification and safe, digest-verified contribution loading.                                                                 |
+| `packages/capabilities/src/index.ts`                                                | Browser-safe registry, generic recipe entry points, and migration of profile helpers to the generic resolver.                                 |
+| `packages/graph/src/model.ts`                                                       | Schema validation for a Draft's capability selections and bindings, while keeping the Published composition lock outside mutable Graph state. |
+| `apps/control-plane/prisma/schema.prisma`                                           | Immutable composition lock and lock hash on `PublishedRevision`.                                                                              |
+| `apps/control-plane/prisma/migrations/20260730_add_composition_lock/migration.sql`  | Additive database migration for the new immutable fields.                                                                                     |
+| `apps/control-plane/src/lifecycle.service.ts`                                       | Validate Draft selections, create the lock atomically at Publish, and pass it to compilation.                                                 |
+| `packages/compiler/src/index.ts`                                                    | Generic target-contribution resolver, deterministic lock artifact, and removal of migrated package version/profile dispatch.                  |
+| `packages/capabilities/assets/core.*` and `packages/capabilities/assets/commerce.*` | First shared package contributions used by both Restaurant and Ecommerce.                                                                     |
+| `packages/capabilities/test/composition-contract.test.ts`                           | Composition resolver, canonical lock, collision, dependency, and invalid-binding evidence.                                                    |
+| `packages/compiler/test/composition-compilation.test.ts`                            | Generic compilation proof and same-package/different-binding artifact proof.                                                                  |
+| `apps/control-plane/test/lifecycle.service.test.ts`                                 | Publish-only lock persistence and immutable compilation input proof.                                                                          |
 
 Current `profileGraphs` remain read-only migration fixtures until Task 4 proves
 the generic recipes. `restaurant-runtime.ts`, `restaurant-page-runtime.ts`, and
@@ -62,6 +62,7 @@ is migrated package-by-package in the later Restaurant-fork-removal slice.
 ### Task 1: Add the composition contract and canonical immutable lock
 
 **Files:**
+
 - Modify: `packages/capabilities/src/assets/contract.ts`
 - Create: `packages/capabilities/src/composition.ts`
 - Modify: `packages/capabilities/src/assets/index.ts`
@@ -69,6 +70,7 @@ is migrated package-by-package in the later Restaurant-fork-removal slice.
 - Create: `packages/capabilities/test/composition-contract.test.ts`
 
 **Interfaces:**
+
 - Consumes: existing `CapabilityAssetManifestV1`, `CapabilityAssetLockV1`, and
   `ApplicationGraphV1`.
 - Produces: `CapabilityParameterSchemaV1`, `CapabilityGraphContributionV1`,
@@ -93,10 +95,12 @@ it("creates the same lock for the same selections in a different input order", (
 });
 
 it("rejects an undeclared parameter and an unsafe string parameter", () => {
-  expect(() => resolveCapabilityComposition({ selections: [unsafeSelection] }))
-    .toThrow("does not declare parameter");
-  expect(() => resolveCapabilityComposition({ selections: [pathSelection] }))
-    .toThrow("must not contain a path");
+  expect(() =>
+    resolveCapabilityComposition({ selections: [unsafeSelection] }),
+  ).toThrow("does not declare parameter");
+  expect(() =>
+    resolveCapabilityComposition({ selections: [pathSelection] }),
+  ).toThrow("must not contain a path");
 });
 ```
 
@@ -110,9 +114,13 @@ Expected: FAIL because `createCapabilityCompositionLock` and
 - [ ] **Step 3: Define the exact v1 manifest types and resolver**
 
 ```ts
-export type CapabilityBindingValueV1 = string | number | boolean | {
-  readonly graphSymbol: string;
-};
+export type CapabilityBindingValueV1 =
+  | string
+  | number
+  | boolean
+  | {
+      readonly graphSymbol: string;
+    };
 
 export interface CapabilitySelectionV1 {
   readonly lock: CapabilityAssetLockV1;
@@ -160,6 +168,7 @@ git commit -m "feat: add parameterized capability composition contract"
 ### Task 2: Verify physical Graph and target contributions fail closed
 
 **Files:**
+
 - Modify: `packages/capabilities/src/node.ts`
 - Modify: `packages/capabilities/test/capability-registry.test.ts`
 - Modify: `packages/capabilities/src/assets/core/crud-v1-0-1.ts`
@@ -169,6 +178,7 @@ git commit -m "feat: add parameterized capability composition contract"
 - Create: `packages/capabilities/assets/core.crud/1.0.1/templates/database/crud-schema.prisma.tpl`
 
 **Interfaces:**
+
 - Consumes: Task 1 manifest contracts.
 - Produces: `loadCapabilityAssetContributions(asset, root)`, returning only
   digest-verified contributions with `assetKey`, `assetVersion`, safe namespace,
@@ -185,8 +195,9 @@ it("loads declared web and database contributions only inside their slots", () =
 });
 
 it("rejects a route contribution that writes into another package namespace", () => {
-  expect(() => loadCapabilityAssetContributions(unsafeAsset, root))
-    .toThrow("outside declared namespace");
+  expect(() => loadCapabilityAssetContributions(unsafeAsset, root)).toThrow(
+    "outside declared namespace",
+  );
 });
 ```
 
@@ -248,6 +259,7 @@ git commit -m "feat: verify multi-target capability contributions"
 ### Task 3: Publish and compile an immutable composition lock
 
 **Files:**
+
 - Modify: `packages/graph/src/model.ts`
 - Modify: `packages/graph/test/application-graph.test.ts`
 - Modify: `packages/capabilities/src/assets/contract.ts`
@@ -272,6 +284,7 @@ git commit -m "feat: verify multi-target capability contributions"
 - Modify: `packages/capabilities/test/restaurant-profile.test.ts`
 
 **Interfaces:**
+
 - Consumes: `CapabilityCompositionLockV1` from Task 1 and contribution loader
   from Task 2.
 - Produces: Draft `integration.compositionSelections`; non-null
@@ -283,23 +296,31 @@ git commit -m "feat: verify multi-target capability contributions"
 
 ```ts
 it("accepts only a Draft selection with a full Golden identity and typed bindings", () => {
-  expect(() => parseApplicationGraph({
-    ...graph,
-    integration: {
-      ...graph.integration,
-      compositionSelections: [{
-        lock: validLock,
-        bindings: { routeKey: "catalog", enabled: true },
-      }],
-    },
-  })).not.toThrow();
-  expect(() => parseApplicationGraph({
-    ...graph,
-    integration: {
-      ...graph.integration,
-      compositionSelections: [{ lock: validLock, bindings: { sourcePath: "x" } }],
-    },
-  })).toThrow();
+  expect(() =>
+    parseApplicationGraph({
+      ...graph,
+      integration: {
+        ...graph.integration,
+        compositionSelections: [
+          {
+            lock: validLock,
+            bindings: { routeKey: "catalog", enabled: true },
+          },
+        ],
+      },
+    }),
+  ).not.toThrow();
+  expect(() =>
+    parseApplicationGraph({
+      ...graph,
+      integration: {
+        ...graph.integration,
+        compositionSelections: [
+          { lock: validLock, bindings: { sourcePath: "x" } },
+        ],
+      },
+    }),
+  ).toThrow();
 });
 
 it("stores a composition lock only when a validated Draft is published", async () => {
@@ -309,8 +330,9 @@ it("stores a composition lock only when a validated Draft is published", async (
 });
 
 it("does not let compilation replace a persisted composition lock", async () => {
-  await expect(service.queueCompilation(published.id, tamperedLock))
-    .rejects.toThrow("composition lock does not match");
+  await expect(
+    service.queueCompilation(published.id, tamperedLock),
+  ).rejects.toThrow("composition lock does not match");
 });
 ```
 
@@ -407,30 +429,51 @@ git commit -m "feat: compile immutable capability composition locks"
 ### Task 4: Prove shared-commerce composition with different bindings
 
 **Files:**
+
 - Modify: `packages/capabilities/src/index.ts`
-- Modify: `packages/capabilities/assets/commerce.catalog/1.0.0/component.json`
-- Modify: `packages/capabilities/assets/commerce.cart/1.0.0/component.json`
-- Modify: `packages/capabilities/assets/commerce.inventory/1.0.1/component.json`
-- Modify: `packages/capabilities/assets/commerce.order/1.0.0/component.json`
-- Modify: `packages/capabilities/assets/commerce.simulated-payment/1.0.1/component.json`
-- Modify: corresponding `adapter.json`, `fixtures`, `tests`, and template
-  digests for every changed physical package.
+- Modify: `packages/capabilities/src/assets/index.ts`
+- Modify: `packages/capabilities/src/assets/core/{audit-v1-0-1,crud-v1-0-1,notification-v1-0-1,workflow-v1-0-1}.ts`
+- Modify: `packages/capabilities/src/assets/commerce/{catalog,cart,inventory-v1-0-1,order,simulated-payment-v1-0-1}.ts`
+- Modify only the exact physical asset roots:
+  `packages/capabilities/assets/core.audit/1.0.1/`,
+  `packages/capabilities/assets/core.crud/1.0.1/`,
+  `packages/capabilities/assets/core.notification/1.0.1/`,
+  `packages/capabilities/assets/core.workflow/1.0.1/`,
+  `packages/capabilities/assets/commerce.catalog/1.0.0/`,
+  `packages/capabilities/assets/commerce.cart/1.0.0/`,
+  `packages/capabilities/assets/commerce.inventory/1.0.1/`,
+  `packages/capabilities/assets/commerce.order/1.0.0/`, and
+  `packages/capabilities/assets/commerce.simulated-payment/1.0.1/`.
 - Modify: `packages/capabilities/test/capability-registry.test.ts`
+- Modify: `packages/capabilities/test/composition-contract.test.ts`
 - Modify: `packages/compiler/test/composition-compilation.test.ts`
+- Modify: `apps/workbench/lib/profile-starters.ts`,
+  `apps/workbench/lib/guided-application.ts`, and their tests only when a
+  profile-choice adapter must switch to the generic resolver.
 
 **Interfaces:**
+
 - Consumes: Tasks 1–3.
-- Produces: `composeCapabilityDraft({ recipe, metadata, bindings })`, where
-  Restaurant and Ecommerce recipes select the same `core.*` and `commerce.*`
-  package key/version/digest list while retaining different route, entity,
-  label, role, and experience bindings.
+- Produces: `composeCapabilityDraft({ graph, selections })`. It consumes an
+  already-valid base Graph and produces a new Draft containing canonical
+  `integration.compositionSelections`. Every selection binding is a finite
+  number, boolean, or exact Graph-symbol object. Restaurant and Ecommerce
+  recipes select the same `core.*` and `commerce.*` package key/version/digest
+  list while binding to different already-declared Domain, Page, Policy, and
+  Flow objects.
 
 - [ ] **Step 1: Write the cross-profile failing proof**
 
 ```ts
 it("locks shared commerce packages at identical versions for Restaurant and Ecommerce", () => {
-  const restaurant = composeCapabilityDraft(restaurantRecipe);
-  const ecommerce = composeCapabilityDraft(ecommerceRecipe);
+  const restaurant = composeCapabilityDraft({
+    graph: restaurantBaseGraph,
+    selections: restaurantSelections,
+  });
+  const ecommerce = composeCapabilityDraft({
+    graph: ecommerceBaseGraph,
+    selections: ecommerceSelections,
+  });
   expect(sharedLocks(restaurant.lock)).toEqual(sharedLocks(ecommerce.lock));
   expect(restaurant.lock.canonicalParameters).not.toEqual(
     ecommerce.lock.canonicalParameters,
@@ -438,8 +481,12 @@ it("locks shared commerce packages at identical versions for Restaurant and Ecom
 });
 
 it("compiles different routes and schemas from the same shared package versions", () => {
-  expect(restaurantBundle.files).toContainEqual(expect.objectContaining({ path: "web/src/app/menu/page.tsx" }));
-  expect(ecommerceBundle.files).toContainEqual(expect.objectContaining({ path: "web/src/app/catalog/page.tsx" }));
+  expect(restaurantBundle.files).toContainEqual(
+    expect.objectContaining({ path: "web/src/app/menu/page.tsx" }),
+  );
+  expect(ecommerceBundle.files).toContainEqual(
+    expect.objectContaining({ path: "web/src/app/catalog/page.tsx" }),
+  );
 });
 ```
 
@@ -448,27 +495,32 @@ it("compiles different routes and schemas from the same shared package versions"
 Run: `pnpm --filter @factory/capabilities test -- --run test/capability-registry.test.ts`
 
 Expected: FAIL because `composeProfileDraft` clones profile-specific whole
-Graphs instead of resolving package-contributed Graph fragments and bindings.
+Graphs and there is no generic resolver that binds packages to already-valid
+Graph symbols.
 
 - [ ] **Step 3: Add shared package parameters and additive contributions**
 
-For the first proof, each shared package declares `entityKey`, `entityLabel`,
-`routeKey`, `routePath`, `roleKey`, and domain-specific field/flow symbols it
-uses. Restaurant binds `menu-item`, `/menu`, `customer`; Ecommerce binds
-`product`, `/catalog`, `shopper`. Catalog provides `commerce.catalog-item/v1`;
-cart requires it and provides `commerce.cart/v1`; order requires the cart;
-inventory and simulated payment require the order event surface. Use additive
-Graph contributions to create entities, routes, permissions, flow effects,
-fixtures, and role journeys. Regenerate every changed manifest and template
-digest from package content; never alter a digest manually.
+For the first proof, each shared package declares only graph-symbol parameters
+for the entity, page, route, role, field, or flow object it consumes. Restaurant
+binds its pre-existing `menu-item`, customer-menu page, customer role, and
+order-flow symbols; Ecommerce binds its pre-existing `product`, catalog page,
+shopper role, and order-flow symbols. It does not pass `menu-item`, `/menu`,
+`customer`, `product`, `/catalog`, or `shopper` as direct component bindings.
+Catalog provides `commerce.catalog-item/v1`; cart requires it and provides
+`commerce.cart/v1`; order requires the cart; inventory and simulated payment
+require the order event surface. Package adapters may add only declared,
+symbol-resolved Graph extensions, fixtures, role journeys, and target slots.
+Regenerate every changed manifest and template digest from package content;
+never alter a digest manually.
 
 - [ ] **Step 4: Route current profile convenience through the generic resolver**
 
-Keep the Workbench’s three profile choices, but make each choice a declared
-recipe that invokes `composeCapabilityDraft`; it must not clone a full Graph.
-Retain `profileGraphs` only as frozen expected-output fixtures until their
-equivalence tests pass. Remove profile membership as a package admission rule;
-use requirement/provide compatibility and recipe eligibility instead.
+Keep the Workbench’s three profile choices, but make each choice construct a
+validated default base Graph and invoke `composeCapabilityDraft`; the generic
+resolver must not clone a full profile Graph. Retain `profileGraphs` only as
+frozen expected-output fixtures until equivalence tests pass. Remove profile
+membership as a package admission rule; use requirement/provide compatibility
+and recipe eligibility instead.
 
 - [ ] **Step 5: Verify identical locks, independent outputs, and commit**
 
@@ -489,6 +541,7 @@ git commit -m "feat: compose shared commerce packages with bindings"
 ### Task 5: Release-gate the composition proof and retire migrated dispatch
 
 **Files:**
+
 - Modify: `packages/compiler/src/index.ts`
 - Modify: `packages/compiler/test/compilation-plan.test.ts`
 - Modify: `apps/compiler-worker/test/compilation-executor.test.ts`
@@ -497,23 +550,28 @@ git commit -m "feat: compose shared commerce packages with bindings"
 - Modify: `docs/project-status.md`
 
 **Interfaces:**
+
 - Consumes: fully published locks and generic compiler outputs from Tasks 1–4.
 - Produces: an immutable evidence record proving that the two profiles use the
-same shared package identities and run as isolated generated applications.
+  same shared package identities and run as isolated generated applications.
 
 - [ ] **Step 1: Write compiler and Worker negative tests for profile dispatch**
 
 ```ts
 it("does not select a migrated target contribution from compositionProfile", () => {
-  expect(() => generateApplicationBundle({
-    publishedRevisionId: "published-1",
-    graph: graphWithUnknownProfile,
-    compositionLock,
-  })).not.toThrow();
+  expect(() =>
+    generateApplicationBundle({
+      publishedRevisionId: "published-1",
+      graph: graphWithUnknownProfile,
+      compositionLock,
+    }),
+  ).not.toThrow();
 });
 
 it("refuses a Worker job whose persisted composition-lock artifact digest differs", async () => {
-  await expect(executor.execute(tamperedJob)).rejects.toThrow("composition lock");
+  await expect(executor.execute(tamperedJob)).rejects.toThrow(
+    "composition lock",
+  );
 });
 ```
 
