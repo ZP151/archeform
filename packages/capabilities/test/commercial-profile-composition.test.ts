@@ -24,6 +24,15 @@ function foundationSelections(
   );
 }
 
+function foundationBinding(
+  profile: ReturnType<typeof composeDefaultCapabilityDraft>,
+  key: (typeof foundationKeys)[number],
+): CapabilitySelectionV1["bindings"] {
+  return foundationSelections(profile).find(
+    (selection) => selection.lock.key === key,
+  )!.bindings;
+}
+
 describe("commercial profile composition", () => {
   it("uses the same Foundation identities with different Restaurant and Ecommerce bindings", () => {
     const restaurant = composeDefaultCapabilityDraft({
@@ -52,6 +61,224 @@ describe("commercial profile composition", () => {
       expect.objectContaining({ key: "product-option-group" }),
     );
   });
+
+  it.each([
+    {
+      key: "core.identity-context" as const,
+      restaurant: {
+        principalEntity: {
+          graphSymbol: "graph.domain.restaurant-principal",
+        },
+        sessionEntity: { graphSymbol: "graph.domain.table-session" },
+        defaultRole: { graphSymbol: "graph.policy.customer" },
+      },
+      ecommerce: {
+        principalEntity: { graphSymbol: "graph.domain.shopper" },
+        sessionEntity: { graphSymbol: "graph.domain.shopper-session" },
+        defaultRole: { graphSymbol: "graph.policy.shopper" },
+      },
+    },
+    {
+      key: "core.location-context" as const,
+      restaurant: {
+        locationEntity: { graphSymbol: "graph.domain.restaurant-table" },
+        contextEntity: { graphSymbol: "graph.domain.table-session" },
+        locationCodeField: { graphSymbol: "graph.domain.code" },
+        customerRole: { graphSymbol: "graph.policy.customer" },
+      },
+      ecommerce: {
+        locationEntity: { graphSymbol: "graph.domain.store" },
+        contextEntity: { graphSymbol: "graph.domain.shopper-session" },
+        locationCodeField: { graphSymbol: "graph.domain.code" },
+        customerRole: { graphSymbol: "graph.policy.shopper" },
+      },
+    },
+    {
+      key: "commerce.line-configuration" as const,
+      restaurant: {
+        catalogEntity: { graphSymbol: "graph.domain.menu-item" },
+        lineEntity: { graphSymbol: "graph.domain.order-line" },
+        optionGroupEntity: {
+          graphSymbol: "graph.domain.menu-option-group",
+        },
+        optionEntity: { graphSymbol: "graph.domain.menu-option" },
+        customerRole: { graphSymbol: "graph.policy.customer" },
+        merchantRole: { graphSymbol: "graph.policy.manager" },
+        catalogPage: { graphSymbol: "graph.page.customer-menu" },
+        merchantPage: { graphSymbol: "graph.page.merchant-menu" },
+      },
+      ecommerce: {
+        catalogEntity: { graphSymbol: "graph.domain.product" },
+        lineEntity: { graphSymbol: "graph.domain.product-line" },
+        optionGroupEntity: {
+          graphSymbol: "graph.domain.product-option-group",
+        },
+        optionEntity: { graphSymbol: "graph.domain.product-option" },
+        customerRole: { graphSymbol: "graph.policy.shopper" },
+        merchantRole: { graphSymbol: "graph.policy.merchant" },
+        catalogPage: { graphSymbol: "graph.page.catalog" },
+        merchantPage: { graphSymbol: "graph.page.merchant-catalog" },
+      },
+    },
+    {
+      key: "commerce.inventory-ledger" as const,
+      restaurant: {
+        catalogEntity: { graphSymbol: "graph.domain.menu-item" },
+        stockField: { graphSymbol: "graph.domain.stock" },
+        movementEntity: { graphSymbol: "graph.domain.inventory-ledger" },
+        orderEntity: { graphSymbol: "graph.domain.order" },
+        locationEntity: {
+          graphSymbol: "graph.domain.restaurant-location",
+        },
+        merchantRole: { graphSymbol: "graph.policy.manager" },
+        auditRole: { graphSymbol: "graph.policy.manager" },
+      },
+      ecommerce: {
+        catalogEntity: { graphSymbol: "graph.domain.product" },
+        stockField: { graphSymbol: "graph.domain.stock" },
+        movementEntity: { graphSymbol: "graph.domain.stock-movement" },
+        orderEntity: { graphSymbol: "graph.domain.order" },
+        locationEntity: { graphSymbol: "graph.domain.store" },
+        merchantRole: { graphSymbol: "graph.policy.merchant" },
+        auditRole: { graphSymbol: "graph.policy.merchant" },
+      },
+    },
+  ])(
+    "binds $key to distinct declared Restaurant and Ecommerce symbols",
+    ({ key, restaurant: expectedRestaurant, ecommerce: expectedEcommerce }) => {
+      const restaurant = composeDefaultCapabilityDraft({
+        profile: "restaurant-ordering",
+      });
+      const ecommerce = composeDefaultCapabilityDraft({
+        profile: "simple-ecommerce",
+      });
+
+      expect(foundationBinding(restaurant, key)).toEqual(expectedRestaurant);
+      expect(foundationBinding(ecommerce, key)).toEqual(expectedEcommerce);
+    },
+  );
+
+  it("keeps representative Restaurant and Ecommerce surfaces and fixtures distinct", () => {
+    const restaurant = composeDefaultCapabilityDraft({
+      profile: "restaurant-ordering",
+    }).graph;
+    const ecommerce = composeDefaultCapabilityDraft({
+      profile: "simple-ecommerce",
+    }).graph;
+
+    expect(restaurant.page.pages).toContainEqual(
+      expect.objectContaining({
+        id: "merchant-menu",
+        title: "Menu management",
+      }),
+    );
+    expect(ecommerce.page.pages).toContainEqual(
+      expect.objectContaining({
+        id: "merchant-catalog",
+        title: "Product management",
+      }),
+    );
+    expect(restaurant.policy.roles).toEqual(
+      expect.arrayContaining(["customer", "manager"]),
+    );
+    expect(ecommerce.policy.roles).toEqual(
+      expect.arrayContaining(["shopper", "merchant"]),
+    );
+    expect(restaurant.domain.entities).toContainEqual(
+      expect.objectContaining({
+        key: "menu-option-group",
+        label: "Menu option group",
+      }),
+    );
+    expect(ecommerce.domain.entities).toContainEqual(
+      expect.objectContaining({
+        key: "product-option-group",
+        label: "Product option group",
+      }),
+    );
+    expect(restaurant.domain.seedData).toContainEqual(
+      expect.objectContaining({
+        entity: "menu-option-group",
+        id: "pizza-size",
+      }),
+    );
+    expect(ecommerce.domain.seedData).toContainEqual(
+      expect.objectContaining({
+        entity: "product-option-group",
+        id: "tote-colour",
+      }),
+    );
+  });
+
+  it.each([
+    {
+      profile: "restaurant-ordering" as const,
+      customerRole: "customer",
+      merchantRole: "manager",
+      optionGroup: "menu-option-group",
+      option: "menu-option",
+      line: "order-line",
+    },
+    {
+      profile: "simple-ecommerce" as const,
+      customerRole: "shopper",
+      merchantRole: "merchant",
+      optionGroup: "product-option-group",
+      option: "product-option",
+      line: "product-line",
+    },
+  ])(
+    "requires configurable-line PolicyModel permissions for $profile",
+    ({ profile, customerRole, merchantRole, optionGroup, option, line }) => {
+      const composition = composeDefaultCapabilityDraft({ profile });
+      const requiredPermissions = [
+        { role: customerRole, resource: optionGroup, actions: ["read"] },
+        { role: customerRole, resource: option, actions: ["read"] },
+        {
+          role: customerRole,
+          resource: line,
+          actions: ["create", "read", "update", "delete"],
+        },
+        {
+          role: merchantRole,
+          resource: optionGroup,
+          actions: ["create", "read", "update"],
+        },
+        {
+          role: merchantRole,
+          resource: option,
+          actions: ["create", "read", "update"],
+        },
+        {
+          role: merchantRole,
+          resource: line,
+          actions: ["read", "audit"],
+        },
+      ];
+
+      for (const permission of requiredPermissions) {
+        expect(composition.graph.policy.permissions).toContainEqual(permission);
+      }
+
+      const graphWithoutCustomerRead = structuredClone(composition.graph);
+      graphWithoutCustomerRead.policy.permissions =
+        graphWithoutCustomerRead.policy.permissions.filter(
+          (permission) =>
+            !(
+              permission.role === customerRole &&
+              permission.resource === optionGroup
+            ),
+        );
+
+      expect(() =>
+        composeCapabilityDraft({
+          graph: graphWithoutCustomerRead,
+          selections:
+            graphWithoutCustomerRead.integration.compositionSelections ?? [],
+        }),
+      ).toThrow(`${customerRole}:${optionGroup}`);
+    },
+  );
 
   it("rejects a Foundation binding that references no declared Graph symbol", () => {
     const profile = composeDefaultCapabilityDraft({

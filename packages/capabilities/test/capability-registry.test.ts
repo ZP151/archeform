@@ -422,6 +422,29 @@ describe("capability catalog", () => {
         catalogEntity: { graphSymbol: "graph.domain.menu-item" },
         stockField: { graphSymbol: "graph.domain.stock" },
       }),
+      selection("commerce.inventory-ledger", {
+        catalogEntity: { graphSymbol: "graph.domain.menu-item" },
+        stockField: { graphSymbol: "graph.domain.stock" },
+        movementEntity: { graphSymbol: "graph.domain.inventory-ledger" },
+        orderEntity: { graphSymbol: "graph.domain.order" },
+        locationEntity: {
+          graphSymbol: "graph.domain.restaurant-location",
+        },
+        merchantRole: { graphSymbol: "graph.policy.manager" },
+        auditRole: { graphSymbol: "graph.policy.manager" },
+      }),
+      selection("commerce.line-configuration", {
+        catalogEntity: { graphSymbol: "graph.domain.menu-item" },
+        lineEntity: { graphSymbol: "graph.domain.order-line" },
+        optionGroupEntity: {
+          graphSymbol: "graph.domain.menu-option-group",
+        },
+        optionEntity: { graphSymbol: "graph.domain.menu-option" },
+        customerRole: { graphSymbol: "graph.policy.customer" },
+        merchantRole: { graphSymbol: "graph.policy.manager" },
+        catalogPage: { graphSymbol: "graph.page.customer-menu" },
+        merchantPage: { graphSymbol: "graph.page.merchant-menu" },
+      }),
       selection("commerce.order", {
         orderEntity: { graphSymbol: "graph.domain.order" },
         orderFlow: { graphSymbol: "graph.flow.restaurant-order" },
@@ -429,6 +452,19 @@ describe("capability catalog", () => {
       selection("commerce.simulated-payment", {
         orderEntity: { graphSymbol: "graph.domain.order" },
         orderFlow: { graphSymbol: "graph.flow.restaurant-order" },
+      }),
+      selection("core.identity-context", {
+        principalEntity: {
+          graphSymbol: "graph.domain.restaurant-principal",
+        },
+        sessionEntity: { graphSymbol: "graph.domain.table-session" },
+        defaultRole: { graphSymbol: "graph.policy.customer" },
+      }),
+      selection("core.location-context", {
+        locationEntity: { graphSymbol: "graph.domain.restaurant-table" },
+        contextEntity: { graphSymbol: "graph.domain.table-session" },
+        locationCodeField: { graphSymbol: "graph.domain.code" },
+        customerRole: { graphSymbol: "graph.policy.customer" },
       }),
     ] as const;
     const ecommerceSelections = [
@@ -460,6 +496,27 @@ describe("capability catalog", () => {
         catalogEntity: { graphSymbol: "graph.domain.product" },
         stockField: { graphSymbol: "graph.domain.stock" },
       }),
+      selection("commerce.inventory-ledger", {
+        catalogEntity: { graphSymbol: "graph.domain.product" },
+        stockField: { graphSymbol: "graph.domain.stock" },
+        movementEntity: { graphSymbol: "graph.domain.stock-movement" },
+        orderEntity: { graphSymbol: "graph.domain.order" },
+        locationEntity: { graphSymbol: "graph.domain.store" },
+        merchantRole: { graphSymbol: "graph.policy.merchant" },
+        auditRole: { graphSymbol: "graph.policy.merchant" },
+      }),
+      selection("commerce.line-configuration", {
+        catalogEntity: { graphSymbol: "graph.domain.product" },
+        lineEntity: { graphSymbol: "graph.domain.product-line" },
+        optionGroupEntity: {
+          graphSymbol: "graph.domain.product-option-group",
+        },
+        optionEntity: { graphSymbol: "graph.domain.product-option" },
+        customerRole: { graphSymbol: "graph.policy.shopper" },
+        merchantRole: { graphSymbol: "graph.policy.merchant" },
+        catalogPage: { graphSymbol: "graph.page.catalog" },
+        merchantPage: { graphSymbol: "graph.page.merchant-catalog" },
+      }),
       selection("commerce.order", {
         orderEntity: { graphSymbol: "graph.domain.order" },
         orderFlow: { graphSymbol: "graph.flow.ecommerce-order" },
@@ -467,6 +524,17 @@ describe("capability catalog", () => {
       selection("commerce.simulated-payment", {
         orderEntity: { graphSymbol: "graph.domain.order" },
         orderFlow: { graphSymbol: "graph.flow.ecommerce-order" },
+      }),
+      selection("core.identity-context", {
+        principalEntity: { graphSymbol: "graph.domain.shopper" },
+        sessionEntity: { graphSymbol: "graph.domain.shopper-session" },
+        defaultRole: { graphSymbol: "graph.policy.shopper" },
+      }),
+      selection("core.location-context", {
+        locationEntity: { graphSymbol: "graph.domain.store" },
+        contextEntity: { graphSymbol: "graph.domain.shopper-session" },
+        locationCodeField: { graphSymbol: "graph.domain.code" },
+        customerRole: { graphSymbol: "graph.policy.shopper" },
       }),
     ] as const;
 
@@ -487,7 +555,7 @@ describe("capability catalog", () => {
       }));
 
     expect(sharedLocks(restaurant)).toEqual(sharedLocks(ecommerce));
-    expect(sharedLocks(restaurant)).toHaveLength(9);
+    expect(sharedLocks(restaurant)).toHaveLength(13);
     expect(getCapabilityAsset("commerce.catalog").manifest.provides).toEqual([
       { interfaceKey: "commerce.catalog-item", version: "v1" },
     ]);
@@ -1558,7 +1626,7 @@ describe("capability catalog", () => {
     expect(graph.integration).not.toHaveProperty("assetLocks");
   });
 
-  it("supplies each declared shared-commerce operation from the selected assets", () => {
+  it("assigns every Foundation operation to its exact selected providers", () => {
     const graph = composeDefaultCapabilityDraft({
       profile: "restaurant-ordering",
     }).graph;
@@ -1566,26 +1634,46 @@ describe("capability catalog", () => {
       ({ lock }) => getCapabilityAsset(lock.key),
     );
 
-    for (const effect of [
-      "catalog.list",
-      "cart.add",
-      "inventory.reserve",
-      "order.create",
-      "payment.simulate",
-    ]) {
-      expect(graph.integration.capabilities.map(({ key }) => key)).toContain(
-        effect,
-      );
+    const expectedProviders = {
+      "audit.record": ["core.audit"],
+      "data.create": ["core.crud"],
+      "data.read": ["core.crud"],
+      "data.update": ["core.crud"],
+      "data.delete": ["core.crud"],
+      "flow.transition": ["core.workflow"],
+      "flow.assign-task": ["core.workflow"],
+      "catalog.list": ["commerce.catalog"],
+      "catalog.read": ["commerce.catalog"],
+      "cart.add": ["commerce.cart"],
+      "cart.remove": ["commerce.cart"],
+      "cart.checkout": ["commerce.cart"],
+      "inventory.reserve": ["commerce.inventory", "commerce.inventory-ledger"],
+      "inventory.release": ["commerce.inventory", "commerce.inventory-ledger"],
+      "inventory.decrement": [
+        "commerce.inventory",
+        "commerce.inventory-ledger",
+      ],
+      "inventory.adjust": ["commerce.inventory-ledger"],
+      "inventory.ledger.read": ["commerce.inventory-ledger"],
+      "line.configuration.validate": ["commerce.line-configuration"],
+      "line.configuration.price": ["commerce.line-configuration"],
+      "line.configuration.availability.manage": ["commerce.line-configuration"],
+      "order.create": ["commerce.order"],
+      "order.transition": ["commerce.order"],
+      "payment.simulate": ["commerce.simulated-payment"],
+      "identity.context.resolve": ["core.identity-context"],
+      "identity.context.validate": ["core.identity-context"],
+      "location.context.resolve": ["core.location-context"],
+      "location.context.validate": ["core.location-context"],
+    } as const;
+
+    for (const [effect, expected] of Object.entries(expectedProviders)) {
       const providers = selectedAssets.filter((asset) =>
         asset.manifest.effects.includes(effect),
       );
-      expect(providers.length, effect).toBeGreaterThanOrEqual(1);
-      if (effect === "inventory.reserve") {
-        expect(providers.map(({ manifest }) => manifest.key).sort()).toEqual([
-          "commerce.inventory",
-          "commerce.inventory-ledger",
-        ]);
-      }
+      expect(providers.map(({ manifest }) => manifest.key).sort()).toEqual(
+        [...expected].sort(),
+      );
     }
   });
 

@@ -200,6 +200,8 @@ const requiredPermissions = [
     resource: "order-line",
     actions: ["create", "read", "update", "delete"],
   },
+  { role: "customer", resource: "menu-option-group", actions: ["read"] },
+  { role: "customer", resource: "menu-option", actions: ["read"] },
   {
     role: "kitchen",
     resource: "kitchen-ticket",
@@ -231,6 +233,21 @@ const requiredPermissions = [
     role: "manager",
     resource: "menu-item",
     actions: ["create", "read", "update"],
+  },
+  {
+    role: "manager",
+    resource: "menu-option-group",
+    actions: ["create", "read", "update"],
+  },
+  {
+    role: "manager",
+    resource: "menu-option",
+    actions: ["create", "read", "update"],
+  },
+  {
+    role: "manager",
+    resource: "order-line",
+    actions: ["read", "audit"],
   },
   { role: "manager", resource: "order", actions: ["read", "audit"] },
   { role: "manager", resource: "order", actions: ["update", "cancel"] },

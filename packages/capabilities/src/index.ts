@@ -268,6 +268,83 @@ function assertCompositionGraphSymbols(
   }
 }
 
+function assertCompositionPolicyPermissions(
+  graph: ApplicationGraphV1,
+  composition: CapabilityCompositionV1,
+): void {
+  const configuredLine = composition.packages.find(
+    ({ lock }) => lock.key === "commerce.line-configuration",
+  );
+  if (!configuredLine) return;
+
+  const boundSymbol = (
+    bindingKey: string,
+    expectedModel: "domain" | "policy",
+  ): string => {
+    const binding = configuredLine.bindings[bindingKey];
+    if (typeof binding !== "object") {
+      throw new Error(
+        `Configurable-line binding '${bindingKey}' must be an exact Graph symbol.`,
+      );
+    }
+    const [, model, symbol] = binding.graphSymbol.split(".");
+    if (model !== expectedModel || !symbol) {
+      throw new Error(
+        `Configurable-line binding '${bindingKey}' must reference graph.${expectedModel}.`,
+      );
+    }
+    return symbol;
+  };
+
+  const customerRole = boundSymbol("customerRole", "policy");
+  const merchantRole = boundSymbol("merchantRole", "policy");
+  const optionGroup = boundSymbol("optionGroupEntity", "domain");
+  const option = boundSymbol("optionEntity", "domain");
+  const line = boundSymbol("lineEntity", "domain");
+  const auditSelected = composition.packages.some(
+    ({ lock }) => lock.key === "core.audit",
+  );
+  const requiredPermissions = [
+    { role: customerRole, resource: optionGroup, actions: ["read"] },
+    { role: customerRole, resource: option, actions: ["read"] },
+    {
+      role: customerRole,
+      resource: line,
+      actions: ["create", "read", "update", "delete"],
+    },
+    {
+      role: merchantRole,
+      resource: optionGroup,
+      actions: ["create", "read", "update"],
+    },
+    {
+      role: merchantRole,
+      resource: option,
+      actions: ["create", "read", "update"],
+    },
+    {
+      role: merchantRole,
+      resource: line,
+      actions: auditSelected ? ["read", "audit"] : ["read"],
+    },
+  ] as const;
+
+  for (const required of requiredPermissions) {
+    const permission = graph.policy.permissions.find(
+      ({ role, resource }) =>
+        role === required.role && resource === required.resource,
+    );
+    if (
+      !permission ||
+      required.actions.some((action) => !permission.actions.includes(action))
+    ) {
+      throw new Error(
+        `Graph permission '${required.role}:${required.resource}' must include actions '${required.actions.join(", ")}' for configurable-line composition.`,
+      );
+    }
+  }
+}
+
 export function composeCapabilityDraft(
   input: CapabilityDraftCompositionInput,
 ): CapabilityDraftCompositionResult {
@@ -276,6 +353,7 @@ export function composeCapabilityDraft(
     selections: input.selections,
   });
   assertCompositionGraphSymbols(graph, composition);
+  assertCompositionPolicyPermissions(graph, composition);
   graph.integration.compositionSelections = composition.packages.map(
     (selection) => structuredClone(selection),
   );
@@ -1342,6 +1420,16 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               actions: ["create", "read", "update", "delete"],
             },
             {
+              role: "customer",
+              resource: "menu-option-group",
+              actions: ["read"],
+            },
+            {
+              role: "customer",
+              resource: "menu-option",
+              actions: ["read"],
+            },
+            {
               role: "kitchen",
               resource: "kitchen-ticket",
               actions: ["read", "update"],
@@ -1372,6 +1460,21 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               role: "manager",
               resource: "menu-item",
               actions: ["create", "read", "update"],
+            },
+            {
+              role: "manager",
+              resource: "menu-option-group",
+              actions: ["create", "read", "update"],
+            },
+            {
+              role: "manager",
+              resource: "menu-option",
+              actions: ["create", "read", "update"],
+            },
+            {
+              role: "manager",
+              resource: "order-line",
+              actions: ["read", "audit"],
             },
             {
               role: "manager",
@@ -1919,6 +2022,11 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
             { role: "shopper", resource: "product", actions: ["read"] },
             {
               role: "shopper",
+              resource: "product-option-group",
+              actions: ["read"],
+            },
+            {
+              role: "shopper",
               resource: "product-line",
               actions: ["create", "read", "update", "delete"],
             },
@@ -1941,6 +2049,11 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               role: "merchant",
               resource: "product-option",
               actions: ["create", "read", "update"],
+            },
+            {
+              role: "merchant",
+              resource: "product-line",
+              actions: ["read", "audit"],
             },
             {
               role: "merchant",
