@@ -57,7 +57,12 @@ type GeneratedRuntime = {
       readonly expectedVersion: number;
       readonly idempotencyKey: string;
     },
-  ): Promise<StoredRecord>;
+  ): Promise<{
+    readonly receiptId: string;
+    readonly replayed: boolean;
+    readonly orderId: string;
+    readonly transition: string;
+  }>;
   capabilityEvents(
     role: string,
   ): Promise<
@@ -107,7 +112,7 @@ async function withGeneratedRuntime<T>(
 }
 
 describe("generic Commerce transaction runtime", () => {
-  it("does not emit a disconnected transaction executor for a 1.0.0 lock", () => {
+  it("does not emit disconnected transaction schema or migration fragments", () => {
     const bundle = generateApplicationBundle(commerceInput());
     const files = Object.fromEntries(
       bundle.files.map((file) => [file.path, file.content]),
@@ -130,6 +135,12 @@ describe("generic Commerce transaction runtime", () => {
     expect(files["api/src/main.ts"]).not.toContain(
       "CommerceTransactionExecutor",
     );
+    expect(files["api/prisma/schema.prisma"]).toContain(
+      "model CommerceTransactionReceipt",
+    );
+    expect(
+      files["database/prisma/migrations/0001_initial/migration.sql"],
+    ).toContain('CREATE TABLE "CommerceTransactionReceipt"');
   });
 
   it("fails closed when a Commerce graph has no locked transaction package", () => {
@@ -153,7 +164,7 @@ describe("generic Commerce transaction runtime", () => {
         }),
       }),
     ).toThrow(
-      "Commerce compilation requires locked Golden commerce.transaction@1.0.0.",
+      "Commerce compilation requires exactly one locked Golden commerce.transaction package.",
     );
   });
 
@@ -171,6 +182,9 @@ describe("generic Commerce transaction runtime", () => {
           expectedVersion: 0,
           idempotencyKey: "submit-everyday-tote-1",
         }),
+      ).resolves.toMatchObject({ transition: "submit", replayed: false });
+      await expect(
+        runtime.read("shopper", "order", order.id),
       ).resolves.toMatchObject({ status: "submitted", version: 1 });
       await expect(
         runtime.read("merchant", "product", "everyday-tote"),
@@ -181,6 +195,9 @@ describe("generic Commerce transaction runtime", () => {
           expectedVersion: 1,
           idempotencyKey: "cancel-everyday-tote-1",
         }),
+      ).resolves.toMatchObject({ transition: "cancel", replayed: false });
+      await expect(
+        runtime.read("merchant", "order", order.id),
       ).resolves.toMatchObject({ status: "cancelled", version: 2 });
       await expect(
         runtime.read("merchant", "product", "everyday-tote"),
@@ -254,6 +271,9 @@ describe("generic Commerce transaction runtime", () => {
             expectedVersion: 0,
             idempotencyKey: `${profile}-submit-1`,
           }),
+        ).resolves.toMatchObject({ transition: "submit", replayed: false });
+        await expect(
+          runtime.read("shopper", orderEntity, order.id),
         ).resolves.toMatchObject({ status: "submitted", version: 1 });
         await expect(
           runtime.read(merchantRole, catalogEntity, catalogRecordId),
@@ -263,6 +283,9 @@ describe("generic Commerce transaction runtime", () => {
             expectedVersion: 1,
             idempotencyKey: `${profile}-cancel-1`,
           }),
+        ).resolves.toMatchObject({ transition: "cancel", replayed: false });
+        await expect(
+          runtime.read(merchantRole, orderEntity, order.id),
         ).resolves.toMatchObject({ status: "cancelled", version: 2 });
         await expect(
           runtime.read(merchantRole, catalogEntity, catalogRecordId),

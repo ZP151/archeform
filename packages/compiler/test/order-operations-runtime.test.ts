@@ -27,6 +27,11 @@ type GeneratedRuntime = {
     entityKey: string,
     input: Record<string, unknown>,
   ): Promise<Record<string, unknown> & { id: string; version?: number }>;
+  read(
+    role: string,
+    entityKey: string,
+    recordId: string,
+  ): Promise<Record<string, unknown> & { id: string; version?: number }>;
   addCartItem(
     role: string,
     orderEntity: string,
@@ -43,7 +48,12 @@ type GeneratedRuntime = {
     recordId: string,
     event: string,
     options?: { expectedVersion?: number; idempotencyKey?: string },
-  ): Promise<Record<string, unknown> & { id: string; version?: number }>;
+  ): Promise<{
+    receiptId: string;
+    replayed: boolean;
+    orderId: string;
+    transition: string;
+  }>;
 };
 
 function ecommerceFiles() {
@@ -122,26 +132,30 @@ describe("Order Operations runtime compilation", () => {
     );
   });
 
-  it("delegates order creation and transitions only to the locked Order handler", () => {
+  it("delegates order creation and transitions only to the locked V2 lifecycle", () => {
     const files = ecommerceFiles();
 
-    expect(files["api/src/capabilities/contract.ts"]).toContain(
-      "export interface OrderHandler",
-    );
-    expect(files["api/src/capabilities/registry.ts"]).toContain(
-      "export function getOrderHandler",
-    );
-    expect(files["api/src/capabilities/commerce.order.ts"]).toContain(
-      "orderHandler: {",
-    );
+    expect(
+      files["api/src/capabilities/commerce-order-create-handler.ts"],
+    ).toContain("commerceOrderCreateHandler");
+    expect(
+      files[
+        "api/src/capabilities/commerce-order-transaction-operation-adapter.ts"
+      ],
+    ).toContain("commerceOrderTransactionOperationAdapter");
+    expect(
+      files["api/src/capabilities/commerce-transaction-executor.ts"],
+    ).toContain("class CommerceTransactionExecutor");
     expect(files["api/src/application-runtime.ts"]).toContain(
-      "getOrderHandler().create({",
+      "commerceOrderCreateHandler.create(",
     );
     expect(files["api/src/application-runtime.ts"]).toContain("version: 0");
     expect(files["api/src/application-runtime.ts"]).toContain(
-      "getOrderHandler().transition({",
+      "commerceOrderTransactionOperationAdapter.createStore",
     );
-    expect(files["api/prisma/schema.prisma"]).toContain("version Int");
+    expect(files["api/prisma/schema.prisma"]).toContain(
+      "model CommerceTransactionReceipt",
+    );
   });
 
   it("executes catalog, cart, and versioned order operations through package handlers", async () => {
@@ -167,7 +181,17 @@ describe("Order Operations runtime compilation", () => {
         "submit",
         { expectedVersion: 0, idempotencyKey: "order-submit-1" },
       );
-      expect(submitted).toMatchObject({ status: "submitted", version: 1 });
+      expect(submitted).toMatchObject({
+        orderId: order.id,
+        transition: "submit",
+        replayed: false,
+      });
+      await expect(
+        runtime.read("shopper", "order", order.id),
+      ).resolves.toMatchObject({
+        status: "submitted",
+        version: 1,
+      });
       const paid = await runtime.transition(
         "shopper",
         "order",
@@ -175,13 +199,25 @@ describe("Order Operations runtime compilation", () => {
         "pay",
         { expectedVersion: 1, idempotencyKey: "order-pay-1" },
       );
-      expect(paid).toMatchObject({ status: "paid", version: 2 });
+      expect(paid).toMatchObject({ transition: "confirm", replayed: false });
+      await expect(
+        runtime.read("shopper", "order", order.id),
+      ).resolves.toMatchObject({
+        status: "paid",
+        version: 2,
+      });
       await expect(
         runtime.transition("merchant", "order", order.id, "fulfil", {
           expectedVersion: 2,
           idempotencyKey: "order-fulfil-1",
         }),
-      ).resolves.toMatchObject({ status: "fulfilled", version: 3 });
+      ).resolves.toMatchObject({ transition: "fulfill", replayed: false });
+      await expect(
+        runtime.read("merchant", "order", order.id),
+      ).resolves.toMatchObject({
+        status: "fulfilled",
+        version: 3,
+      });
     });
   });
 });

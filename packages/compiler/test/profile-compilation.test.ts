@@ -205,7 +205,7 @@ describe("profile compilation", () => {
     ["retail-counter", "retail-item", "counter-sale"],
     ["grocery-pickup", "grocery-item", "pickup-order"],
   ] as const)(
-    "compiles $profile through its locked generic Catalog and Order handlers",
+    "compiles $profile through its locked Generic Catalog and V2 lifecycle",
     (profile, catalogEntity, orderEntity) => {
       const files = Object.fromEntries(
         generateApplicationBundle({
@@ -217,8 +217,22 @@ describe("profile compilation", () => {
       expect(files["api/src/capabilities/commerce.catalog.ts"]).toContain(
         "catalogHandler",
       );
-      expect(files["api/src/capabilities/commerce.order.ts"]).toContain(
-        "orderHandler",
+      expect(
+        files["api/src/capabilities/commerce-order-create-handler.ts"],
+      ).toContain(`value.entityKey !== "${orderEntity}"`);
+      expect(
+        files[
+          "api/src/capabilities/commerce-order-transaction-operation-adapter.ts"
+        ],
+      ).toContain(`entity: "${orderEntity}"`);
+      expect(
+        files["api/src/capabilities/commerce-transaction-executor.ts"],
+      ).toContain(`readonly entity: "${orderEntity}"`);
+      expect(files["api/src/application-runtime.ts"]).toContain(
+        "commerceOrderCreateHandler.create(",
+      );
+      expect(files["api/src/application-runtime.ts"]).toContain(
+        "commerceOrderTransactionOperationAdapter.createStore",
       );
       expect(files["api/src/application-runtime.ts"]).toContain(
         `entityKey === \"${catalogEntity}\"`,

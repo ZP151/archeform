@@ -113,6 +113,11 @@ type GeneratedRuntime = {
     recordId: string,
     event: string,
     options?: { expectedVersion: number; idempotencyKey: string },
+  ): Promise<Record<string, unknown>>;
+  read(
+    role: string,
+    entityKey: string,
+    recordId: string,
   ): Promise<Record<string, unknown> & { id: string; status?: string }>;
   addCartItem(
     role: string,
@@ -695,14 +700,18 @@ describe("compilation target registry", () => {
         }),
         expect.objectContaining({ key: "commerce.catalog", version: "1.2.0" }),
         expect.objectContaining({ key: "commerce.cart", version: "1.0.1" }),
-        expect.objectContaining({ key: "commerce.order", version: "1.2.0" }),
+        expect.objectContaining({ key: "commerce.order", version: "2.0.3" }),
+        expect.objectContaining({
+          key: "commerce.transaction",
+          version: "2.1.0",
+        }),
       ]),
     );
     expect(files["api/src/application-runtime.ts"]).toContain(
       "getRecordHandler().create({",
     );
     expect(files["api/src/application-runtime.ts"]).toContain(
-      "getWorkflowHandler().applyTransition({",
+      "commerceOrderTransactionOperationAdapter.createStore",
     );
     expect(files["api/src/application-runtime.ts"]).toContain(
       "const item = await getCartHandler().add({",
@@ -1067,29 +1076,20 @@ describe("compilation target registry", () => {
             catalogRecordId: catalogSeed.id!,
             quantity: 1,
           });
-          const submitted = await runtime.transition(
-            customer,
-            order.key,
-            record.id,
-            "submit",
-            {
-              expectedVersion: 0,
-              idempotencyKey: "generated-profile-submit-1",
-            },
-          );
-          expect(submitted.status).toBe("submitted");
-          const paid = await runtime.transition(
-            customer,
-            order.key,
-            record.id,
-            "pay",
-            {
-              expectedVersion: 1,
-              idempotencyKey: "generated-profile-pay-2",
-            },
-          );
-
-          expect(paid.status).toBe("paid");
+          await runtime.transition(customer, order.key, record.id, "submit", {
+            expectedVersion: 0,
+            idempotencyKey: "generated-profile-submit-1",
+          });
+          expect(
+            (await runtime.read(customer, order.key, record.id)).status,
+          ).toBe("submitted");
+          await runtime.transition(customer, order.key, record.id, "pay", {
+            expectedVersion: 1,
+            idempotencyKey: "generated-profile-pay-2",
+          });
+          expect(
+            (await runtime.read(customer, order.key, record.id)).status,
+          ).toBe("paid");
           expect(
             (await runtime.list(customer, catalogEntity)).find(
               (candidate) => candidate.id === catalogSeed.id,
