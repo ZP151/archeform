@@ -1,7 +1,8 @@
 # Cross-Profile Transaction Kernel and Capability Acquisition Plan
 
-**Status:** Proposed replacement for the unfinished order-amendment tasks in
-`2026-07-31-composable-commerce-configuration-and-profile-discovery-v1.md`.
+**Status:** Active next implementation slice. Profile readiness and
+quarantined Candidate port planning completed on 2026-08-01; neither changes
+the required generic transaction-kernel prerequisite.
 
 ## Objective
 
@@ -145,12 +146,12 @@ upstream application code to enter generated applications.
 
 ### B3. Use reuse modes deliberately
 
-| Reuse mode | Best use | Examples |
-| --- | --- | --- |
-| Direct pinned dependency | small infrastructure/UI libraries | Puck, React Flow, XState, Prisma, Casbin, OpenTelemetry |
-| Provider adapter | large service with its own runtime/data plane | Keycloak, Appwrite, Meilisearch, Novu, payments, Medusa |
-| Selective source copy | compact, pure, permissively licensed algorithm with stable tests | only exact MIT/Apache/BSD/ISC paths after source study |
-| Reference only | useful product semantics with an incompatible licence or runtime | GPL/AGPL/BSL/commercial systems |
+| Reuse mode               | Best use                                                         | Examples                                                |
+| ------------------------ | ---------------------------------------------------------------- | ------------------------------------------------------- |
+| Direct pinned dependency | small infrastructure/UI libraries                                | Puck, React Flow, XState, Prisma, Casbin, OpenTelemetry |
+| Provider adapter         | large service with its own runtime/data plane                    | Keycloak, Appwrite, Meilisearch, Novu, payments, Medusa |
+| Selective source copy    | compact, pure, permissively licensed algorithm with stable tests | only exact MIT/Apache/BSD/ISC paths after source study  |
+| Reference only           | useful product semantics with an incompatible licence or runtime | GPL/AGPL/BSL/commercial systems                         |
 
 The default for a large vertical repository is a provider or reference, not a
 copy. The default for a small pure algorithm is a pinned dependency or a
@@ -220,12 +221,12 @@ No full application repository is copied into `packages/capabilities`.
 
 ## Immediate implementation order
 
-1. Replace the stale amendment-only steps in the prior commerce plan with this
-   prerequisite kernel.
+1. Completed: replace the stale amendment-only steps with this prerequisite
+   kernel and publish Profile readiness plus Candidate port-plan preparation.
 2. Add failing transaction-kernel tests, then implement A1-A3 through TDD.
 3. Migrate the four commerce recipes and prove isolation in the compiler worker.
 4. Add the amendment package and its four-profile acceptance suite.
-5. Build `PortfolioSourceRecordV1 -> CandidateProposalV1` in external intake,
-   then execute the initial non-promoting source batch.
+5. Use Candidate port plans to select one independently reviewed source or
+   Provider seam only after its dedicated Factory contract is ready.
 6. Record verified status and use the resulting Golden assets to begin the
    next capability wave.

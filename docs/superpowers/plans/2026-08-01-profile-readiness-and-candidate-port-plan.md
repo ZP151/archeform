@@ -65,7 +65,7 @@ export interface ProfileReadinessV1 {
 export function listProfileReadiness(): readonly ProfileReadinessV1[];
 ```
 
-- [ ] **Step 1: Write the failing readiness test**
+- [x] **Step 1: Write the failing readiness test**
 
 ```ts
 it("reports Restaurant order operations as partial without claiming provider features", () => {
@@ -90,7 +90,7 @@ it("reports Restaurant order operations as partial without claiming provider fea
 });
 ```
 
-- [ ] **Step 2: Verify the test fails**
+- [x] **Step 2: Verify the test fails**
 
 Run:
 
@@ -100,7 +100,7 @@ pnpm --filter @factory/capabilities test -- --run profile-readiness
 
 Expected: failure because `listProfileReadiness` is not exported.
 
-- [ ] **Step 3: Implement static, immutable readiness records**
+- [x] **Step 3: Implement static, immutable readiness records**
 
 Implement all five registered Profile recipes. Derive `label` from the Profile
 composition, freeze every record and return only Factory capability keys and
@@ -111,7 +111,7 @@ realtime and delivery as provider-required or planned. Ecommerce, Retail and
 Grocery must not claim Restaurant-only components. Expense Approval must not
 claim commerce operations.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 Run:
 
@@ -144,13 +144,13 @@ git commit -m "feat: expose profile capability readiness"
 `factory.workspace-portfolio-summary/v1` and compact Home cards with available,
 partial, planned and provider-required counts per Profile.
 
-- [ ] **Step 1: Write failing service and client parsing tests**
+- [x] **Step 1: Write failing service and client parsing tests**
 
 Extend the existing Summary service test to require a Restaurant readiness
 record with no URL/source/evidence fields. Extend the client test to reject
 unknown readiness status and to drop unexpected source-shaped fields.
 
-- [ ] **Step 2: Verify the focused tests fail**
+- [x] **Step 2: Verify the focused tests fail**
 
 Run:
 
@@ -161,19 +161,19 @@ pnpm --filter @factory/workbench test -- --run portfolio-summary control-plane-c
 
 Expected: summary has no `readiness` field and client parser lacks validation.
 
-- [ ] **Step 3: Add strict summary/client projections**
+- [x] **Step 3: Add strict summary/client projections**
 
 Add only the values defined in Task 1. The client parser accepts exactly the
 six generated target values and four readiness states; it rejects any source,
 digest, URL, path, prompt, credential, or unknown key through explicit safe
 projection. Keep compilation counts unchanged.
 
-- [ ] **Step 4: Write the failing Home rendering test**
+- [x] **Step 4: Write the failing Home rendering test**
 
 Require the Home to render a `Profile readiness` section containing Restaurant
 and Ecommerce cards, their capability counts, and no repository URLs.
 
-- [ ] **Step 5: Implement concise readiness cards and verify**
+- [x] **Step 5: Implement concise readiness cards and verify**
 
 Render icon-led readiness chips under the existing Profile cards. The UI must
 not render raw capability metadata or descriptive paragraphs. It may show
@@ -190,7 +190,7 @@ pnpm --filter @factory/workbench typecheck
 pnpm --filter @factory/workbench lint
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add apps/control-plane apps/workbench
@@ -237,14 +237,14 @@ export interface CandidatePortPlanV1 {
 }
 ```
 
-- [ ] **Step 1: Write a failing selective-source plan test**
+- [x] **Step 1: Write a failing selective-source plan test**
 
 Use the existing source-study Candidate fixture. Assert deterministic output,
 the selected `(path, symbol, digest)` from the Candidate, expected evidence
 requirements, and no source URL, source content, Graph, credential, prompt,
 or runtime activation field.
 
-- [ ] **Step 2: Verify the test fails**
+- [x] **Step 2: Verify the test fails**
 
 Run:
 
@@ -254,7 +254,7 @@ pnpm --filter @factory/external-intake test -- --run candidate-port-plan
 
 Expected: module does not exist.
 
-- [ ] **Step 3: Implement strict port-plan creation**
+- [x] **Step 3: Implement strict port-plan creation**
 
 Map `source-fragment` to `selective-source-copy`, `dependency` to
 `direct-dependency`, and `provider-adapter` to `provider-adapter`. Reject a
@@ -263,14 +263,14 @@ with no selected module, a module path outside the completed evidence
 inventory, or an unexpected Candidate classification. Construct all required
 evidence requirements in deterministic order.
 
-- [ ] **Step 4: Add and verify failure-path tests**
+- [x] **Step 4: Add and verify failure-path tests**
 
 Require a failure for missing evidence, altered module digest, unsafe source
 classification, duplicated module selection, and any candidate-like input
 containing a credential-shaped value. The implementation must make no store
 write and must not create a package path.
 
-- [ ] **Step 5: Run full package verification and commit**
+- [x] **Step 5: Run full package verification and commit**
 
 ```powershell
 pnpm --filter @factory/external-intake test
@@ -293,13 +293,13 @@ git commit -m "feat: plan quarantined candidate ports"
 the next generated-runtime slice and records readiness/source-port work as
 complete preparation, not business capability completion.
 
-- [ ] **Step 1: Update plan status only after the verification commands pass**
+- [x] **Step 1: Update plan status only after the verification commands pass**
 
 Record the exact completed task names, commit identifiers, command outcomes
 and limitations. Do not claim that a Candidate port plan has copied, installed,
 or promoted external source.
 
-- [ ] **Step 2: Check and commit documentation**
+- [x] **Step 2: Check and commit documentation**
 
 ```powershell
 pnpm exec prettier --check docs/project-status.md docs/superpowers/plans/2026-08-01-cross-profile-transaction-and-capability-acquisition.md docs/superpowers/plans/2026-08-01-profile-readiness-and-candidate-port-plan.md
@@ -307,3 +307,24 @@ git diff --check
 git add docs/project-status.md docs/superpowers/plans
 git commit -m "docs: record portfolio readiness iteration"
 ```
+
+## Execution record — 2026-08-01
+
+- Task 1 shipped in `9de4b74` (`feat: expose profile capability readiness`):
+  five immutable source-free readiness records are derived from registered
+  Profile recipes. `@factory/capabilities` passed 239 tests, typecheck, and
+  lint.
+- Task 2 shipped in `80b5a15` (`feat: show profile readiness on Workbench
+Home`): the Control Plane projects only safe readiness facts; the Workbench
+  rejects unknown readiness states and renders compact counters. Control Plane
+  passed 120 tests and typecheck; Workbench passed 71 tests, typecheck, lint,
+  and production build.
+- Task 3 shipped in `a0a015c` (`feat: plan quarantined candidate ports`): a
+  Candidate can produce a deterministic, source-free port plan only when its
+  identity and selected module match completed safe evidence. The package
+  passed 418 tests, typecheck, and lint.
+
+These completed tasks do not copy, install, activate, promote, or otherwise
+execute upstream source. The next implementation slice is the shared
+`commerce.transaction` generated-runtime kernel described by the cross-profile
+plan.

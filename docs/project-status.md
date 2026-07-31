@@ -2,6 +2,31 @@
 
 Updated: 2026-08-01
 
+## Profile readiness and quarantined Candidate port planning — 2026-08-01
+
+Commits `9de4b74`, `80b5a15`, and `a0a015c` make portfolio maturity visible
+without widening the execution boundary. Every registered Profile now has an
+immutable, source-free readiness record. The Control Plane and Workbench
+project only capability keys, four maturity states, and generated-target
+counts; unknown states are rejected and source-shaped response fields are not
+retained by the client.
+
+External intake can now turn a completed safe Candidate into a deterministic
+Candidate port plan. The plan names a reuse mode, one evidence-matching module
+identity, and the licence, notice, SBOM, scan, conformance, and removal-test
+gates required before a later source-study decision. It cannot copy source,
+write a package, promote a Candidate, mutate an Application Graph, activate a
+Provider, or expose source content, URLs, prompts, or credentials.
+
+Fresh verification: `@factory/capabilities` passed 239 tests plus typecheck
+and lint; `@factory/control-plane` passed 120 tests plus typecheck;
+`@factory/workbench` passed 71 tests plus typecheck, lint, and production
+build; `@factory/external-intake` passed 418 tests plus typecheck and lint.
+This is readiness and supply-chain preparation, not a business-capability
+completion claim. The next execution slice remains the shared
+`commerce.transaction` generated-runtime kernel across Restaurant, Ecommerce,
+Retail Counter, and Grocery Pickup.
+
 ## Strict Restaurant package bindings — 2026-08-01
 
 Commit `3163a68` turns the active Restaurant Ordering package selection into
