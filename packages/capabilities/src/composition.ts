@@ -98,6 +98,11 @@ const fieldConstraintKeys = [
   "fieldRequired",
   "fieldUnique",
 ] as const;
+const nonFieldBindingInputKeys = new Set(["key", "type", "required"]);
+const domainFieldBindingInputKeys = new Set([
+  ...nonFieldBindingInputKeys,
+  ...fieldConstraintKeys,
+]);
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -388,6 +393,28 @@ export function validateCapabilityBindingSchema(
         `Capability package '${manifest.key}' does not support binding input type '${String(schema.type)}'.`,
       );
     }
+    if (schema.type !== "domain.field") {
+      const invalidConstraint = fieldConstraintKeys.find((key) =>
+        Object.hasOwn(schema, key),
+      );
+      if (invalidConstraint) {
+        throw new Error(
+          `Capability package '${manifest.key}' input '${schema.key}' declares '${invalidConstraint}', which is only valid for domain.field inputs.`,
+        );
+      }
+    }
+    const allowedInputKeys =
+      schema.type === "domain.field"
+        ? domainFieldBindingInputKeys
+        : nonFieldBindingInputKeys;
+    const unknownInputKey = Object.keys(schema).find(
+      (key) => !allowedInputKeys.has(key),
+    );
+    if (unknownInputKey) {
+      throw new Error(
+        `Capability package '${manifest.key}' input '${schema.key}' declares unknown key '${unknownInputKey}'.`,
+      );
+    }
     if (typeof schema.required !== "boolean") {
       throw new Error(
         `Capability package '${manifest.key}' input '${schema.key}' required must be a boolean.`,
@@ -415,6 +442,11 @@ export function validateCapabilityBindingSchema(
           `Capability package '${manifest.key}' domain.field '${schema.key}' requires one or more supported fieldTypes.`,
         );
       }
+      if (new Set(schema.fieldTypes).size !== schema.fieldTypes.length) {
+        throw new Error(
+          `Capability package '${manifest.key}' domain.field '${schema.key}' declares duplicate fieldTypes.`,
+        );
+      }
       if (
         schema.fieldRequired !== undefined &&
         typeof schema.fieldRequired !== "boolean"
@@ -429,15 +461,6 @@ export function validateCapabilityBindingSchema(
       ) {
         throw new Error(
           `Capability package '${manifest.key}' domain.field '${schema.key}' fieldUnique must be a boolean.`,
-        );
-      }
-    } else {
-      const invalidConstraint = fieldConstraintKeys.find((key) =>
-        Object.hasOwn(schema, key),
-      );
-      if (invalidConstraint) {
-        throw new Error(
-          `Capability package '${manifest.key}' input '${schema.key}' declares '${invalidConstraint}', which is only valid for domain.field inputs.`,
         );
       }
     }

@@ -247,6 +247,33 @@ describe("typed capability binding contract", () => {
     },
   );
 
+  it.each(["fieldUniqe", "unexpectedConstraint"])(
+    "rejects unknown domain.field input key %s",
+    (unknownKey) => {
+      const manifest = strictManifest(
+        [requiredEntity, { ...requiredField, [unknownKey]: true }],
+        [entityParameter, fieldParameter],
+      );
+
+      expect(() => resolveStrictManifest(manifest, validBindings)).toThrow(
+        "unknown key",
+      );
+    },
+  );
+
+  it("rejects an unknown own key on a non-field input", () => {
+    const manifest = strictManifest(
+      [{ ...requiredEntity, unexpectedConstraint: true }],
+      [entityParameter],
+    );
+
+    expect(() =>
+      resolveStrictManifest(manifest, {
+        catalogEntity: { graphSymbol: "graph.domain.product" },
+      }),
+    ).toThrow("unknown key");
+  });
+
   it("rejects an unsupported strict input type", () => {
     const manifest = strictManifest(
       [{ ...requiredEntity, type: "domain.entities" }],
@@ -277,6 +304,20 @@ describe("typed capability binding contract", () => {
 
     expect(() => resolveStrictManifest(manifest, validBindings)).toThrow(
       "fieldTypes",
+    );
+  });
+
+  it("rejects repeated domain field scalar types", () => {
+    const manifest = strictManifest(
+      [
+        requiredEntity,
+        { ...requiredField, fieldTypes: ["integer", "integer"] },
+      ],
+      [entityParameter, fieldParameter],
+    );
+
+    expect(() => resolveStrictManifest(manifest, validBindings)).toThrow(
+      "duplicate fieldTypes",
     );
   });
 
