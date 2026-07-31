@@ -116,7 +116,9 @@ not acceptance.
   task re-review returned FAIL on exact own-property enforcement. The PM leaves
   Task 2 `implementing` and records repair round 3. Commit
   `00ac760c54f353f6ae242f92a5dd4809791cd633` changes exactly those two paths;
-  independent task re-review, behavioral QA, release review, and fresh
+  independent task re-review passed with no P0/P1/P2 after 29/29 typed-binding
+  and 20/20 composition tests. The PM records
+  `implementing -> ready_for_qa`; behavioral QA, release review, and fresh
   verification remain required.
 - Tasks 3 through 7 remain `planned`; none is dispatched by this transition.
 - No frontend/backend parallel implementation is permitted in this project.
@@ -131,7 +133,7 @@ not acceptance.
 | Task                                           | State          | Specialization | Contract owner                               | Contract status                                 |
 | ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | ----------------------------------------------- |
 | 1. Pure typed Graph symbol index               | `accepted`     | `integration`  | Application Graph Type System                | Release review and fresh verification passed.   |
-| 2. Typed manifest and binding contracts        | `implementing` | `integration`  | Capability Binding Contract                  | Repair round 3 awaits independent re-review.    |
+| 2. Typed manifest and binding contracts        | `ready_for_qa` | `integration`  | Capability Binding Contract                  | Repair round 3 awaits behavioral QA.            |
 | 3. Serialized owner-aware Graph selections     | `planned`      | `integration`  | Application Graph Serialization              | Blocked on accepted Task 2 binding contract.    |
 | 4. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 3 serialized contract. |
 | 5. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-4.                  |
@@ -347,7 +349,7 @@ not acceptance.
 
 ## Task 2: Freeze typed manifest and binding contracts
 
-- **State:** `implementing` (repair round 3)
+- **State:** `ready_for_qa` (repair round 3)
 - **Specialization:** `integration`
 - **Bounded writer:** Typed Manifest Contract Integration
 - **Contract owner:** Capability Binding Contract
@@ -505,13 +507,18 @@ not acceptance.
 - Fresh local Node `v22.11.0` implementation verification passed 49/49 tests
   across `typed-binding-contract.test.ts` and `composition-contract.test.ts`,
   plus Capabilities typecheck and lint. A bounded diff confirms the repair
-  commit changes exactly the two authorized paths. This does not advance Task
-  2 from `implementing`.
-- Independent task re-review must verify repair round 3 and close the P1 before
-  the PM may record `implementing -> ready_for_qa`. Independent behavioral QA
-  must then pass before `ready_for_qa -> reviewed`. Independent release review
-  and fresh verification must pass before any `reviewed -> accepted`
-  transition. This update records no acceptance.
+  commit changes exactly the two authorized paths.
+- Independent repair-round-3 task review returned PASS with no P0/P1/P2. It
+  passed 29/29 `typed-binding-contract.test.ts` tests and 20/20
+  `composition-contract.test.ts` tests, verified own required and optional
+  constraints plus empty-string unknown-key rejection, confirmed the new
+  `Object.prototype` pollution and empty-key regressions, and confirmed the
+  exact two-path diff.
+- The PM reconciles the bounded implementation, fresh verification, and clean
+  task review as `implementing -> ready_for_qa`. Independent behavioral QA must
+  pass before `ready_for_qa -> reviewed`. Independent release review and fresh
+  verification must pass before any `reviewed -> accepted` transition. This
+  update records no acceptance.
 
 ### Blocking non-goals
 
@@ -540,7 +547,7 @@ not acceptance.
 - **Contract artifact:** ADR-0007 DEC-001 through DEC-005 and the design's
   serialized Draft Graph contract.
 - **Dependencies:** Tasks 1 and 2 `accepted`. Task 1 is accepted; Task 2 is
-  `implementing` in repair round 3.
+  `ready_for_qa` in repair round 3.
 - **Produces:** additive `SerializedCompositionBindingV1` support for exact
   owner-aware field objects, structural owner/field validation, deterministic
   Graph-hash coverage, historic hash stability, and browser-safe behavior.
@@ -773,19 +780,20 @@ not acceptance.
 - Runtime atomicity and exactly-once stock execution across intentional
   inventory co-providers remain Commercial Foundation Task 3 scope and are not
   proven by this project.
-- Task 2 repair round 3 remains inside its exact two-path repair scope, but its
-  release-review P1 remains open until independent task review, behavioral QA,
-  release review, and fresh verification pass in sequence. This PM transition
-  authorizes no Graph-path change or Task 3-7 implementation.
+- Task 2 repair round 3 remains inside its exact two-path repair scope and
+  passed independent task review with no P0/P1/P2. Behavioral QA, release
+  review, and fresh verification remain required in sequence. This PM
+  transition authorizes no Graph-path change or Task 3-7 implementation.
 
 ## Next smallest valuable slice
 
-Dispatch independent Task 2 repair task review of
-`00ac760c54f353f6ae242f92a5dd4809791cd633`, including its exact two-path diff,
-own required/optional constraint enforcement, empty-string unknown-key
-rejection, and `Object.prototype` pollution and empty-key regressions. If and
-only if that review closes the P1 may the PM record
-`implementing -> ready_for_qa`; then run independent behavioral QA before any
-move to `reviewed`. Independent release review and fresh verification remain
-required before any acceptance transition. Task 3 remains `planned` behind
-Task 2 and owns only the three ADR-0007 Graph paths. Leave Tasks 3-7 `planned`.
+Dispatch independent behavioral QA for Task 2 repair round 3 at
+`00ac760c54f353f6ae242f92a5dd4809791cd633`. QA must exercise the exact
+two-path diff, own required/optional constraint enforcement, empty-string
+unknown-key rejection, `Object.prototype` pollution and empty-key regressions,
+the full Capabilities suite, typecheck, lint, build, public-package probes, and
+bounded scope checks. Only passing QA may support
+`ready_for_qa -> reviewed`. Independent release review and fresh verification
+remain required before any acceptance transition. Task 3 remains `planned`
+behind Task 2 and owns only the three ADR-0007 Graph paths. Leave Tasks 3-7
+`planned`.
