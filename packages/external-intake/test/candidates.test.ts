@@ -567,6 +567,12 @@ function credentialLikeSentinel(): string {
   ).join("");
 }
 
+function delimiterCredentialSentinel(delimiter: "." | ":" | "@"): string {
+  const sentinel = credentialLikeSentinel();
+  const middle = sentinel.length / 2;
+  return `${sentinel.slice(0, middle)}${delimiter}${sentinel.slice(middle)}`;
+}
+
 afterEach(() => {
   for (const root of roots.splice(0)) {
     rmSync(root, { recursive: true, force: true });
@@ -679,6 +685,56 @@ describe("Candidate registry", () => {
       valid: true,
       issues: [],
     });
+  });
+
+  it("allows canonical high-entropy Factory identifiers and versions in their schema fields", async () => {
+    const { store } = tempStore();
+    const registry = new CandidateRegistry(store);
+    const proposal = await acceptedProposal(store);
+    const id = "safe-adapter-0123456789abcdefghijklmnopqrstuvwxyz";
+    const version = "1.2.3-safe.0123456789abcdefghijklmnopqrstuvwxyz";
+    const proposedFactoryKey = `candidate.${id}`;
+    const artifacts = structuredClone(proposal.artifacts);
+    artifacts.manifest.id = id;
+    artifacts.manifest.version = version;
+    artifacts.manifest.proposedFactoryKey = proposedFactoryKey;
+    artifacts.fixture.id = "safe-fixture-0123456789abcdefghijklmnopqrstuvwxyz";
+    artifacts.adapter.id = id;
+    artifacts.conformancePlan.cases[0]!.id =
+      "accept-safe-fixture-0123456789abcdefghijklmnopqrstuvwxyz";
+    artifacts.conformancePlan.cases[1]!.id =
+      "reject-unknown-field-0123456789abcdefghijklmnopqrstuvwxyz";
+
+    const ref = await registry.create({
+      ...proposal,
+      id,
+      version,
+      proposedFactoryKey,
+      artifacts,
+    });
+
+    expect(ref).toMatchObject({ id, version, status: "quarantined" });
+  });
+
+  it("does not treat a Candidate artifact object property as a canonical array element", async () => {
+    const { root, store } = tempStore();
+    const registry = new CandidateRegistry(store, root);
+    const proposal = await acceptedProposal(store);
+    const sentinel = "accept-safe-fixture-0123456789abcdefghijklmnopqrstuvwxyz";
+    const artifacts = structuredClone(proposal.artifacts);
+    (
+      artifacts.conformancePlan as unknown as {
+        cases: unknown;
+      }
+    ).cases = { "*": { id: sentinel } };
+    const before = quarantineSnapshot(root);
+
+    await expect(registry.create({ ...proposal, artifacts })).rejects.toThrow(
+      /sensitive|credential|entropy/iu,
+    );
+    expect(quarantineSnapshot(root)).toEqual(before);
+    expect(persistedText(root)).not.toContain(sentinel);
+    expect(registry.list({})).toEqual([]);
   });
 
   it.each([
@@ -1340,6 +1396,34 @@ describe("Candidate registry", () => {
     ).rejects.toThrow();
     expect(quarantineSnapshot(root)).toEqual(before);
   });
+
+  it.each(
+    ([".", ":", "@"] as const).flatMap((delimiter) => {
+      const sentinel = delimiterCredentialSentinel(delimiter);
+      return [
+        [delimiter, "bare", sentinel],
+        [delimiter, "Bearer", `Bearer ${sentinel}`],
+      ] as const;
+    }),
+  )(
+    "rejects a high-entropy Candidate credential with one %s delimiter in a %s token before any mutation",
+    async (_, __, sentinel) => {
+      const { root, store } = tempStore();
+      const registry = new CandidateRegistry(store, root);
+      const proposal = await acceptedProposal(store);
+      const artifacts = structuredClone(proposal.artifacts);
+      artifacts.fixture.input.message = sentinel;
+      artifacts.fixture.expectedOutput.message = sentinel;
+      const before = quarantineSnapshot(root);
+
+      await expect(registry.create({ ...proposal, artifacts })).rejects.toThrow(
+        /sensitive|credential|entropy/iu,
+      );
+      expect(quarantineSnapshot(root)).toEqual(before);
+      expect(persistedText(root)).not.toContain(sentinel);
+      expect(registry.list({})).toEqual([]);
+    },
+  );
 
   it.each([
     ["lowercase token", "0123456789abcdefghijklmnopqrstuvwxyz".repeat(2)],

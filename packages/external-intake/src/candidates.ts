@@ -52,6 +52,14 @@ const SENSITIVE_ARTIFACT_IDENTIFIERS = [
   "prompt",
   "response",
 ] as const;
+const SAFE_ARTIFACT_API_VERSIONS = new Set([
+  "factory.candidate-manifest/v1",
+  "factory.candidate-fixture/v1",
+  "factory.candidate-adapter/v1",
+  "factory.candidate-conformance-plan/v1",
+]);
+const ARTIFACT_ARRAY_ELEMENT = Symbol("artifact-array-element");
+type ArtifactPathSegment = string | typeof ARTIFACT_ARRAY_ELEMENT;
 
 function normalizeArtifactIdentifier(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]/gu, "");
@@ -77,6 +85,51 @@ function shannonEntropy(value: string): number {
   return entropy;
 }
 
+function artifactPathEquals(
+  path: readonly ArtifactPathSegment[],
+  ...expected: readonly ArtifactPathSegment[]
+): boolean {
+  return (
+    path.length === expected.length &&
+    path.every((segment, index) => segment === expected[index])
+  );
+}
+
+function isAllowedCanonicalArtifactValue(
+  value: string,
+  path: readonly ArtifactPathSegment[],
+): boolean {
+  if (
+    artifactPathEquals(path, "manifest", "apiVersion") ||
+    artifactPathEquals(path, "fixture", "apiVersion") ||
+    artifactPathEquals(path, "adapter", "apiVersion") ||
+    artifactPathEquals(path, "conformancePlan", "apiVersion")
+  ) {
+    return SAFE_ARTIFACT_API_VERSIONS.has(value);
+  }
+  if (
+    artifactPathEquals(path, "manifest", "id") ||
+    artifactPathEquals(path, "fixture", "id") ||
+    artifactPathEquals(path, "adapter", "id") ||
+    artifactPathEquals(
+      path,
+      "conformancePlan",
+      "cases",
+      ARTIFACT_ARRAY_ELEMENT,
+      "id",
+    )
+  ) {
+    return OPAQUE_ID.test(value);
+  }
+  if (artifactPathEquals(path, "manifest", "version")) {
+    return VERSION.test(value);
+  }
+  if (artifactPathEquals(path, "manifest", "proposedFactoryKey")) {
+    return CANDIDATE_KEY.test(value);
+  }
+  return false;
+}
+
 export function isCredentialLikeCandidateValue(value: string): boolean {
   if (
     /^sha256:[a-f0-9]{64}$/u.test(value) ||
@@ -85,7 +138,7 @@ export function isCredentialLikeCandidateValue(value: string): boolean {
     return true;
   }
   const authorizationToken =
-    /^[A-Za-z][A-Za-z0-9_-]{1,31}\s+([A-Za-z0-9+/_=.-]{32,})$/u.exec(
+    /^[A-Za-z][A-Za-z0-9_-]{1,31}\s+([A-Za-z0-9+/_=.@:-]{32,})$/u.exec(
       value,
     )?.[1];
   if (
@@ -101,7 +154,7 @@ export function isCredentialLikeCandidateValue(value: string): boolean {
     return true;
   }
   if (value.length < 32 || /\s/u.test(value)) return false;
-  const tokenShaped = /^[A-Za-z0-9+/_=-]+$/u.test(value);
+  const tokenShaped = /^[A-Za-z0-9+/_=.@:-]+$/u.test(value);
   return tokenShaped && shannonEntropy(value) >= 3.5;
 }
 
@@ -110,7 +163,8 @@ function assertCandidateArtifactPrivacy(input: unknown): void {
     readonly value: unknown;
     readonly depth: number;
     readonly identifierContext: boolean;
-  }> = [{ value: input, depth: 0, identifierContext: false }];
+    readonly path: readonly ArtifactPathSegment[];
+  }> = [{ value: input, depth: 0, identifierContext: false, path: [] }];
   const seen = new WeakSet<object>();
   let nodes = 0;
   let utf8Bytes = 0;
@@ -132,7 +186,8 @@ function assertCandidateArtifactPrivacy(input: unknown): void {
     if (typeof item.value === "string") {
       account(item.value);
       if (
-        isCredentialLikeCandidateValue(item.value) ||
+        (isCredentialLikeCandidateValue(item.value) &&
+          !isAllowedCanonicalArtifactValue(item.value, item.path)) ||
         (item.identifierContext && isSensitiveArtifactIdentifier(item.value))
       ) {
         throw new Error(
@@ -152,6 +207,7 @@ function assertCandidateArtifactPrivacy(input: unknown): void {
           value,
           depth: item.depth + 1,
           identifierContext: item.identifierContext,
+          path: [...item.path, ARTIFACT_ARRAY_ELEMENT],
         });
       }
       continue;
@@ -171,6 +227,7 @@ function assertCandidateArtifactPrivacy(input: unknown): void {
           item.identifierContext ||
           normalizedKey === "required" ||
           normalizedKey === "projection",
+        path: [...item.path, key],
       });
     }
   }

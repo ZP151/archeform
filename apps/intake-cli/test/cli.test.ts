@@ -76,6 +76,12 @@ function credentialLikeSentinel(): string {
   ).join("");
 }
 
+function delimiterCredentialSentinel(delimiter: "." | ":" | "@"): string {
+  const sentinel = credentialLikeSentinel();
+  const middle = sentinel.length / 2;
+  return `${sentinel.slice(0, middle)}${delimiter}${sentinel.slice(middle)}`;
+}
+
 afterEach(() => {
   for (const root of roots.splice(0)) {
     rmSync(root, { recursive: true, force: true });
@@ -283,6 +289,40 @@ describe("repository-local intake CLI", () => {
     expect(output.stdout.join("\n")).toContain("[redacted]");
   });
 
+  it.each(
+    ([".", ":", "@"] as const).flatMap((delimiter) => {
+      const sentinel = delimiterCredentialSentinel(delimiter);
+      return [
+        [delimiter, "bare", sentinel],
+        [delimiter, "Bearer", `Bearer ${sentinel}`],
+      ] as const;
+    }),
+  )(
+    "redacts a high-entropy Candidate credential with one %s delimiter in a %s token",
+    async (_, __, sentinel) => {
+      const root = tempRoot();
+      const api = {
+        candidateShow() {
+          return {
+            metadata: {
+              levelOne: { levelTwo: { levelThree: { value: sentinel } } },
+            },
+          };
+        },
+      } as unknown as ExternalIntakeApiV1;
+      const output = outputHarness(api, root);
+
+      expect(
+        await runIntakeCli(
+          ["candidate", "show", "safe-adapter@1.0.0"],
+          output.options,
+        ),
+      ).toBe(0);
+      expect(output.stdout.join("\n")).not.toContain(sentinel);
+      expect(output.stdout.join("\n")).toContain("[redacted]");
+    },
+  );
+
   it.each([
     ["Bearer", `Bearer ${credentialLikeSentinel()}`],
     [
@@ -353,17 +393,30 @@ describe("repository-local intake CLI", () => {
 
   it("preserves canonical digests and locators only in exact output contexts", async () => {
     const root = tempRoot();
+    const id = "safe-adapter-0123456789abcdefghijklmnopqrstuvwxyz";
+    const version = "1.2.3-safe.0123456789abcdefghijklmnopqrstuvwxyz";
+    const proposedFactoryKey = `candidate.${id}`;
     const digest = `sha256:${"a1".repeat(32)}`;
     const candidateLookupId = `candidate-${"b2".repeat(32)}`;
     const jobLookupId = `job-${"c3".repeat(32)}`;
     const api = {
       candidateShow() {
         return {
+          id,
+          version,
+          proposedFactoryKey,
           candidateDigest: digest,
           recordDigests: [digest],
           lookupId: candidateLookupId,
           job: { lookupId: jobLookupId },
-          metadata: { digestValue: digest, locatorValue: jobLookupId },
+          metadata: {
+            id,
+            version,
+            apiVersion: "factory.candidate-conformance-plan/v1",
+            proposedFactoryKey,
+            digestValue: digest,
+            locatorValue: jobLookupId,
+          },
         };
       },
     } as unknown as ExternalIntakeApiV1;
@@ -377,13 +430,101 @@ describe("repository-local intake CLI", () => {
     ).toBe(0);
     const rendered = JSON.parse(output.stdout[0]!) as Record<string, unknown>;
     expect(rendered).toMatchObject({
+      id,
+      version,
+      proposedFactoryKey,
       candidateDigest: digest,
-      recordDigests: [digest],
+      recordDigests: ["[redacted]"],
       lookupId: candidateLookupId,
-      job: { lookupId: jobLookupId },
+      job: { lookupId: "[redacted]" },
       metadata: {
+        id: "[redacted]",
+        version: "[redacted]",
+        apiVersion: "[redacted]",
+        proposedFactoryKey: "[redacted]",
         digestValue: "[redacted]",
         locatorValue: "[redacted]",
+      },
+    });
+  });
+
+  it("preserves canonical conformance values only in their exact result paths", async () => {
+    const root = tempRoot();
+    const candidateId = "safe-adapter-0123456789abcdefghijklmnopqrstuvwxyz";
+    const candidateVersion = "1.2.3-safe.0123456789abcdefghijklmnopqrstuvwxyz";
+    const caseId = "accept-safe-fixture-0123456789abcdefghijklmnopqrstuvwxyz";
+    const digest = `sha256:${"d4".repeat(32)}`;
+    const api = {
+      candidateTest() {
+        return {
+          apiVersion: "factory.candidate-conformance-result/v1",
+          candidateId,
+          candidateVersion,
+          candidateDigest: digest,
+          manifestDigest: digest,
+          fixtureDigest: digest,
+          adapterDigest: digest,
+          planDigest: digest,
+          status: "pass",
+          cases: [{ id: caseId, status: "pass", code: "fixture-accepted" }],
+        };
+      },
+    } as unknown as ExternalIntakeApiV1;
+    const output = outputHarness(api, root);
+
+    expect(
+      await runIntakeCli(
+        ["candidate", "test", "safe-adapter@1.0.0"],
+        output.options,
+      ),
+    ).toBe(0);
+    expect(JSON.parse(output.stdout[0]!)).toMatchObject({
+      apiVersion: "factory.candidate-conformance-result/v1",
+      candidateId,
+      candidateVersion,
+      candidateDigest: digest,
+      cases: [{ id: caseId }],
+    });
+  });
+
+  it("does not treat object properties as canonical array elements", async () => {
+    const root = tempRoot();
+    const caseId = "accept-safe-fixture-0123456789abcdefghijklmnopqrstuvwxyz";
+    const digest = `sha256:${"e5".repeat(32)}`;
+    const api = {
+      candidateTest() {
+        return { cases: { metadata: { id: caseId } } };
+      },
+      evidence() {
+        return {
+          scans: {
+            metadata: {
+              rulesetDigest: digest,
+              resultDigest: digest,
+            },
+          },
+        };
+      },
+    } as unknown as ExternalIntakeApiV1;
+    const output = outputHarness(api, root);
+
+    expect(
+      await runIntakeCli(
+        ["candidate", "test", "safe-adapter@1.0.0"],
+        output.options,
+      ),
+    ).toBe(0);
+    expect(await runIntakeCli(["evidence", digest], output.options)).toBe(0);
+
+    expect(JSON.parse(output.stdout[0]!)).toEqual({
+      cases: { metadata: { id: "[redacted]" } },
+    });
+    expect(JSON.parse(output.stdout[1]!)).toEqual({
+      scans: {
+        metadata: {
+          rulesetDigest: "[redacted]",
+          resultDigest: "[redacted]",
+        },
       },
     });
   });

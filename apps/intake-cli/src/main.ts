@@ -14,6 +14,7 @@ import {
 const OPAQUE_ID = /^[a-z][a-z0-9-]{0,127}$/u;
 const VERSION = /^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/u;
 const DIGEST = /^sha256:[a-f0-9]{64}$/u;
+const CANDIDATE_KEY = /^candidate\.[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)*$/u;
 const MAX_REQUEST_BYTES = 1024 * 1024;
 const FORBIDDEN_OPERATION = /(?:promot|approv|waiv|--out)/iu;
 const REDACTED_IDENTIFIERS = [
@@ -35,6 +36,16 @@ const REDACTED_IDENTIFIERS = [
 ] as const;
 
 class CliInputError extends Error {}
+
+type CliOutputContext =
+  | "batch"
+  | "status"
+  | "evidence"
+  | "candidate-show"
+  | "candidate-test"
+  | "candidate-terminal"
+  | "verify-job"
+  | "error";
 
 export interface IntakeCliOptionsV1 {
   readonly api: ExternalIntakeApiV1;
@@ -101,28 +112,130 @@ function isRedactedKey(key: string): boolean {
   );
 }
 
-function isAllowedCanonicalOutput(
-  value: string,
-  key: string | undefined,
+const ARRAY_ELEMENT = Symbol("array-element");
+const OBJECT_PROPERTY = Symbol("object-property");
+type OutputPathSegment = string | typeof ARRAY_ELEMENT;
+type ExpectedOutputPathSegment = OutputPathSegment | typeof OBJECT_PROPERTY;
+
+function outputPathMatches(
+  path: readonly OutputPathSegment[],
+  ...expected: readonly ExpectedOutputPathSegment[]
 ): boolean {
-  if (key === undefined) return false;
-  const normalized = normalizedOutputKey(key);
-  if (
-    (normalized.endsWith("digest") || normalized.endsWith("digests")) &&
-    DIGEST.test(value)
-  ) {
-    return true;
-  }
   return (
-    normalized === "lookupid" && /^(?:candidate|job)-[a-f0-9]{64}$/u.test(value)
+    path.length === expected.length &&
+    path.every(
+      (segment, index) =>
+        (expected[index] === OBJECT_PROPERTY && typeof segment === "string") ||
+        segment === expected[index],
+    )
   );
 }
 
-function redact(input: unknown, key?: string): unknown {
-  if (Array.isArray(input)) return input.map((value) => redact(value, key));
+const CANONICAL_DIGEST_PATHS: Partial<
+  Record<CliOutputContext, readonly (readonly ExpectedOutputPathSegment[])[]>
+> = {
+  batch: [["byId", OBJECT_PROPERTY, "request", "digest"]],
+  status: [["recordDigests", ARRAY_ELEMENT]],
+  evidence: [
+    ["digest"],
+    ["snapshotDigest"],
+    ["sbom", "digest"],
+    ["scans", ARRAY_ELEMENT, "rulesetDigest"],
+    ["scans", ARRAY_ELEMENT, "resultDigest"],
+    ["ast", "inventoryDigest"],
+  ],
+  "candidate-show": [["candidateDigest"], ["evidenceDigest"]],
+  "candidate-test": [
+    ["candidateDigest"],
+    ["manifestDigest"],
+    ["fixtureDigest"],
+    ["adapterDigest"],
+    ["planDigest"],
+  ],
+  "candidate-terminal": [["digest"]],
+};
+
+function isAllowedCanonicalOutput(
+  value: string,
+  context: CliOutputContext,
+  path: readonly OutputPathSegment[],
+): boolean {
+  if (
+    DIGEST.test(value) &&
+    (CANONICAL_DIGEST_PATHS[context] ?? []).some((expected) =>
+      outputPathMatches(path, ...expected),
+    )
+  ) {
+    return true;
+  }
+  if (context === "candidate-show") {
+    return (
+      (outputPathMatches(path, "id") && OPAQUE_ID.test(value)) ||
+      (outputPathMatches(path, "version") && VERSION.test(value)) ||
+      (outputPathMatches(path, "proposedFactoryKey") &&
+        CANDIDATE_KEY.test(value)) ||
+      (outputPathMatches(path, "lookupId") &&
+        /^(?:candidate|job)-[a-f0-9]{64}$/u.test(value))
+    );
+  }
+  if (context === "candidate-test") {
+    return (
+      (outputPathMatches(path, "apiVersion") &&
+        value === "factory.candidate-conformance-result/v1") ||
+      ((outputPathMatches(path, "candidateId") ||
+        outputPathMatches(path, "cases", ARRAY_ELEMENT, "id")) &&
+        OPAQUE_ID.test(value)) ||
+      (outputPathMatches(path, "candidateVersion") && VERSION.test(value))
+    );
+  }
+  if (context === "candidate-terminal") {
+    return (
+      (outputPathMatches(path, "id") && OPAQUE_ID.test(value)) ||
+      (outputPathMatches(path, "version") && VERSION.test(value)) ||
+      (outputPathMatches(path, "lookupId") &&
+        /^(?:candidate|job)-[a-f0-9]{64}$/u.test(value))
+    );
+  }
+  if (context === "batch") {
+    return (
+      path.length === 3 &&
+      path[0] === "byId" &&
+      typeof path[1] === "string" &&
+      path[2] === "lookupId" &&
+      /^(?:candidate|job)-[a-f0-9]{64}$/u.test(value)
+    );
+  }
+  if (context === "status") {
+    return (
+      (outputPathMatches(path, "id") && OPAQUE_ID.test(value)) ||
+      (outputPathMatches(path, "producerVersion") && VERSION.test(value))
+    );
+  }
+  if (context === "verify-job") {
+    return outputPathMatches(path, "id") && OPAQUE_ID.test(value);
+  }
+  if (context === "evidence") {
+    return (
+      (outputPathMatches(path, "apiVersion") &&
+        value === "factory.external-evidence-summary/v1") ||
+      (outputPathMatches(path, "producerVersion") && VERSION.test(value))
+    );
+  }
+  return false;
+}
+
+function redact(
+  input: unknown,
+  context: CliOutputContext,
+  path: readonly OutputPathSegment[] = [],
+): unknown {
+  if (Array.isArray(input))
+    return input.map((value) =>
+      redact(value, context, [...path, ARRAY_ELEMENT]),
+    );
   if (typeof input === "string") {
     return isCredentialLikeCandidateValue(input) &&
-      !isAllowedCanonicalOutput(input, key)
+      !isAllowedCanonicalOutput(input, context, path)
       ? "[redacted]"
       : input;
   }
@@ -134,13 +247,13 @@ function redact(input: unknown, key?: string): unknown {
   for (const [outputKey, value] of Object.entries(input)) {
     output[outputKey] = isRedactedKey(outputKey)
       ? "[redacted]"
-      : redact(value, outputKey);
+      : redact(value, context, [...path, outputKey]);
   }
   return output;
 }
 
-function render(input: unknown): string {
-  return JSON.stringify(redact(input));
+function render(input: unknown, context: CliOutputContext): string {
+  return JSON.stringify(redact(input, context));
 }
 
 export async function runIntakeCli(
@@ -155,16 +268,20 @@ export async function runIntakeCli(
       throw new CliInputError("operation is not available");
     }
     let result: unknown;
+    let outputContext: CliOutputContext;
     if (
       args.length === 4 &&
       args[0] === "batch" &&
       args[1] === "submit" &&
       args[2] === "--file"
     ) {
+      outputContext = "batch";
       result = await options.api.submitBatch(localJson(args[3], options.cwd));
     } else if (args.length === 2 && args[0] === "status") {
+      outputContext = "status";
       result = await options.api.status(opaqueId(args[1]));
     } else if (args.length === 2 && args[0] === "evidence") {
+      outputContext = "evidence";
       if (!DIGEST.test(args[1]!))
         throw new CliInputError("evidence digest required");
       result = await options.api.evidence(args[1]!);
@@ -175,15 +292,19 @@ export async function runIntakeCli(
     ) {
       const identity = candidateIdentity(args[2]);
       if (args[1] === "show") {
+        outputContext = "candidate-show";
         result = await options.api.candidateShow(identity.id, identity.version);
       } else if (args[1] === "test") {
+        outputContext = "candidate-test";
         result = await options.api.candidateTest(identity.id, identity.version);
       } else if (args[1] === "block") {
+        outputContext = "candidate-terminal";
         result = await options.api.candidateBlock(
           identity.id,
           identity.version,
         );
       } else {
+        outputContext = "candidate-terminal";
         result = await options.api.candidateReject(
           identity.id,
           identity.version,
@@ -194,20 +315,24 @@ export async function runIntakeCli(
       args[0] === "verify" &&
       args[1] === "--job"
     ) {
+      outputContext = "verify-job";
       result = await options.api.verifyJob(opaqueId(args[2]));
     } else {
       throw new CliInputError("unknown command");
     }
-    options.stdout(render(result));
+    options.stdout(render(result, outputContext));
     return 0;
   } catch (error) {
     options.stderr(
-      render({
-        error:
-          error instanceof CliInputError
-            ? "invalid-command"
-            : "operation-failed",
-      }),
+      render(
+        {
+          error:
+            error instanceof CliInputError
+              ? "invalid-command"
+              : "operation-failed",
+        },
+        "error",
+      ),
     );
     return error instanceof CliInputError ? 2 : 1;
   }
