@@ -16,6 +16,7 @@ import {
 import {
   createCapabilityCompositionLockForAssets,
   resolveCapabilityCompositionForAssets,
+  type ResolveCapabilityCompositionInput,
 } from "../src/composition.js";
 
 const digest = (character: string): string => `sha256:${character.repeat(64)}`;
@@ -451,6 +452,40 @@ describe("capability composition contract", () => {
         }),
       ).toThrow();
       expect(accessorReads).toBe(0);
+    },
+  );
+
+  it.each([
+    {
+      label: "asset shell",
+      createAlias: (
+        selectedAsset: CapabilityAssetV1,
+        assets: readonly CapabilityAssetV1[],
+      ) => selectedAsset,
+    },
+    {
+      label: "assets array",
+      createAlias: (
+        _selectedAsset: CapabilityAssetV1,
+        assets: readonly CapabilityAssetV1[],
+      ) => assets,
+    },
+  ])(
+    "enforces asset capture when the $label is shared through input",
+    ({ createAlias }) => {
+      const selectedAsset = Object.assign(asset("core.shared-asset-test"), {
+        unexpected: true,
+      }) as CapabilityAssetV1;
+      const assets = [selectedAsset];
+      const selected = selection(selectedAsset);
+      const input = {
+        selections: [selected],
+        ignoredAlias: createAlias(selectedAsset, assets),
+      } as ResolveCapabilityCompositionInput;
+
+      expect(() =>
+        resolveCapabilityCompositionForAssets(input, assets),
+      ).toThrow();
     },
   );
 

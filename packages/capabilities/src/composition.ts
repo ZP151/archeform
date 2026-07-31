@@ -107,6 +107,305 @@ const graphSymbolBindingValueKeys = new Set(["graphSymbol"]);
 const domainFieldBindingValueKeys = new Set(["graphSymbol", "fieldKey"]);
 const strictParameterKeys = new Set(["key", "type", "required"]);
 
+declare const resolutionInputSnapshotBrand: unique symbol;
+declare const manifestSnapshotBrand: unique symbol;
+declare const selectionSnapshotBrand: unique symbol;
+
+type ResolutionInputSnapshotV1<
+  T extends ResolveCapabilityCompositionInput =
+    ResolveCapabilityCompositionInput,
+> = T & {
+  readonly selections: readonly SelectionSnapshotV1[];
+  readonly [resolutionInputSnapshotBrand]: never;
+};
+
+type ManifestSnapshotV1 = CapabilityAssetManifestV1 & {
+  readonly [manifestSnapshotBrand]: never;
+};
+
+type SelectionSnapshotV1 = CapabilitySelectionV1 & {
+  readonly [selectionSnapshotBrand]: never;
+};
+
+interface ResolutionCaptureContextV1 {
+  readonly captured: WeakMap<object, CapturedDataValueV1>;
+  readonly active: WeakSet<object>;
+}
+
+type CaptureKindV1 = "data-record" | "data-array" | "asset" | "asset-array";
+
+interface CapturedDataValueV1 {
+  readonly kind: CaptureKindV1;
+  readonly value: unknown;
+}
+
+interface CapturedResolutionInputV1<
+  T extends ResolveCapabilityCompositionInput,
+> {
+  readonly input: ResolutionInputSnapshotV1<T>;
+  readonly assets: readonly CapabilityAssetV1[];
+}
+
+const resolutionInputCaptureErrorCode =
+  "FACTORY_COMPOSITION_INPUT_CAPTURE_INVALID";
+
+class ResolutionInputCaptureError extends Error {
+  readonly code = resolutionInputCaptureErrorCode;
+  readonly path: string;
+
+  constructor(path: string) {
+    super(`${resolutionInputCaptureErrorCode} at ${path}.`);
+    this.name = "ResolutionInputCaptureError";
+    this.path = path;
+  }
+}
+
+function rejectResolutionInput(path: string): never {
+  throw new ResolutionInputCaptureError(path);
+}
+
+function captureDataValue(
+  value: unknown,
+  path: string,
+  context: ResolutionCaptureContextV1,
+): unknown {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "boolean" ||
+    typeof value === "number"
+  ) {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return captureDataArray(value, path, context);
+  }
+  if (typeof value === "object") {
+    return captureDataRecord(value, path, context);
+  }
+  return rejectResolutionInput(path);
+}
+
+function captureDataRecord(
+  value: unknown,
+  path: string,
+  context: ResolutionCaptureContextV1,
+): Readonly<Record<string, unknown>> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return rejectResolutionInput(path);
+  }
+  if (context.active.has(value)) return rejectResolutionInput(path);
+  const existing = context.captured.get(value);
+  if (existing !== undefined) {
+    if (existing.kind !== "data-record") return rejectResolutionInput(path);
+    return existing.value as Readonly<Record<string, unknown>>;
+  }
+
+  const descriptors = Object.getOwnPropertyDescriptors(value);
+  const prototype = Object.getPrototypeOf(value);
+  const keys = Reflect.ownKeys(descriptors);
+  if (
+    (prototype !== Object.prototype && prototype !== null) ||
+    !keys.every((key) => typeof key === "string")
+  ) {
+    return rejectResolutionInput(path);
+  }
+
+  const captured = Object.create(null) as Record<string, unknown>;
+  context.captured.set(value, { kind: "data-record", value: captured });
+  context.active.add(value);
+  try {
+    for (const key of keys) {
+      if (typeof key !== "string") return rejectResolutionInput(path);
+      const descriptor = descriptors[key];
+      if (
+        !descriptor ||
+        !("value" in descriptor) ||
+        descriptor.enumerable !== true
+      ) {
+        return rejectResolutionInput(path);
+      }
+      captured[key] = captureDataValue(descriptor.value, `${path}.*`, context);
+    }
+    return Object.freeze(captured);
+  } finally {
+    context.active.delete(value);
+  }
+}
+
+function captureDataArray(
+  value: unknown,
+  path: string,
+  context: ResolutionCaptureContextV1,
+): readonly unknown[] {
+  return captureDataArrayEntries(
+    value,
+    path,
+    context,
+    "data-array",
+    (entry, entryPath) => captureDataValue(entry, entryPath, context),
+  );
+}
+
+function captureDataArrayEntries(
+  value: unknown,
+  path: string,
+  context: ResolutionCaptureContextV1,
+  kind: "data-array" | "asset-array",
+  captureEntry: (entry: unknown, path: string) => unknown,
+): readonly unknown[] {
+  if (!Array.isArray(value)) return rejectResolutionInput(path);
+  if (context.active.has(value)) return rejectResolutionInput(path);
+  const existing = context.captured.get(value);
+  if (existing !== undefined) {
+    if (existing.kind !== kind) return rejectResolutionInput(path);
+    return existing.value as readonly unknown[];
+  }
+
+  const descriptors = Object.getOwnPropertyDescriptors(
+    value,
+  ) as unknown as Record<PropertyKey, PropertyDescriptor>;
+  const prototype = Object.getPrototypeOf(value);
+  const keys = Reflect.ownKeys(descriptors);
+  const lengthDescriptor = descriptors["length"];
+  if (
+    prototype !== Array.prototype ||
+    !keys.every((key) => typeof key === "string") ||
+    !lengthDescriptor ||
+    !("value" in lengthDescriptor) ||
+    lengthDescriptor.enumerable !== false ||
+    typeof lengthDescriptor.value !== "number" ||
+    !Number.isInteger(lengthDescriptor.value) ||
+    lengthDescriptor.value < 0 ||
+    keys.length !== lengthDescriptor.value + 1
+  ) {
+    return rejectResolutionInput(path);
+  }
+
+  const captured: unknown[] = [];
+  context.captured.set(value, { kind, value: captured });
+  context.active.add(value);
+  try {
+    for (let index = 0; index < lengthDescriptor.value; index += 1) {
+      const descriptor = descriptors[String(index)];
+      if (
+        !descriptor ||
+        !("value" in descriptor) ||
+        descriptor.enumerable !== true
+      ) {
+        return rejectResolutionInput(path);
+      }
+      captured.push(captureEntry(descriptor.value, `${path}[]`));
+    }
+    return Object.freeze(captured);
+  } finally {
+    context.active.delete(value);
+  }
+}
+
+function captureCapabilityAssetV1(
+  value: unknown,
+  path: string,
+  context: ResolutionCaptureContextV1,
+): CapabilityAssetV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return rejectResolutionInput(path);
+  }
+  if (context.active.has(value)) return rejectResolutionInput(path);
+  const existing = context.captured.get(value);
+  if (existing !== undefined) {
+    if (existing.kind !== "asset") return rejectResolutionInput(path);
+    return existing.value as CapabilityAssetV1;
+  }
+
+  const descriptors = Object.getOwnPropertyDescriptors(value);
+  const prototype = Object.getPrototypeOf(value);
+  const keys = Reflect.ownKeys(descriptors);
+  if (
+    (prototype !== Object.prototype && prototype !== null) ||
+    !keys.every((key) => typeof key === "string") ||
+    !keys.every((key) => key === "manifest" || key === "disable")
+  ) {
+    return rejectResolutionInput(path);
+  }
+  for (const key of keys) {
+    if (typeof key !== "string") return rejectResolutionInput(path);
+    const descriptor = descriptors[key];
+    if (
+      !descriptor ||
+      !("value" in descriptor) ||
+      descriptor.enumerable !== true
+    ) {
+      return rejectResolutionInput(path);
+    }
+  }
+  const manifestDescriptor = descriptors.manifest;
+  if (!manifestDescriptor || !("value" in manifestDescriptor)) {
+    return rejectResolutionInput(path);
+  }
+  const disableDescriptor = descriptors.disable;
+  if (
+    disableDescriptor &&
+    (!("value" in disableDescriptor) ||
+      typeof disableDescriptor.value !== "function")
+  ) {
+    return rejectResolutionInput(path);
+  }
+
+  const captured = Object.create(null) as {
+    manifest: CapabilityAssetManifestV1;
+  };
+  context.captured.set(value, { kind: "asset", value: captured });
+  context.active.add(value);
+  try {
+    captured.manifest = captureDataRecord(
+      manifestDescriptor.value,
+      `${path}.manifest`,
+      context,
+    ) as unknown as ManifestSnapshotV1;
+    return Object.freeze(captured);
+  } finally {
+    context.active.delete(value);
+  }
+}
+
+function captureManifestSnapshotV1(
+  manifest: CapabilityAssetManifestV1,
+): ManifestSnapshotV1 {
+  const context: ResolutionCaptureContextV1 = {
+    captured: new WeakMap(),
+    active: new WeakSet(),
+  };
+  return captureDataRecord(
+    manifest,
+    "manifest",
+    context,
+  ) as unknown as ManifestSnapshotV1;
+}
+
+function captureResolutionInputV1<T extends ResolveCapabilityCompositionInput>(
+  input: T,
+  assets: readonly CapabilityAssetV1[],
+): CapturedResolutionInputV1<T> {
+  const context: ResolutionCaptureContextV1 = {
+    captured: new WeakMap(),
+    active: new WeakSet(),
+  };
+  const capturedInput = captureDataRecord(
+    input,
+    "input",
+    context,
+  ) as unknown as ResolutionInputSnapshotV1<T>;
+  const capturedAssets = captureDataArrayEntries(
+    assets,
+    "assets",
+    context,
+    "asset-array",
+    (asset, path) => captureCapabilityAssetV1(asset, path, context),
+  ) as readonly CapabilityAssetV1[];
+  return Object.freeze({ input: capturedInput, assets: capturedAssets });
+}
+
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return false;
@@ -459,7 +758,7 @@ function strictParameterSchemas(
   return schemas;
 }
 
-export function validateCapabilityBindingSchema(
+function validateCapabilityBindingSchemaSnapshot(
   manifest: CapabilityAssetManifestV1,
 ): ReadonlyMap<string, CapabilityBindingInputV1> {
   if (manifest.bindingContract === undefined) {
@@ -631,11 +930,19 @@ export function validateCapabilityBindingSchema(
   return bindingSchemas;
 }
 
+export function validateCapabilityBindingSchema(
+  manifest: CapabilityAssetManifestV1,
+): ReadonlyMap<string, CapabilityBindingInputV1> {
+  return validateCapabilityBindingSchemaSnapshot(
+    captureManifestSnapshotV1(manifest),
+  );
+}
+
 function validateBindings(
   manifest: CapabilityAssetManifestV1,
   bindings: Readonly<Record<string, CapabilityBindingValueV1>>,
 ): Readonly<Record<string, CapabilityBindingValueV1>> {
-  const bindingSchemas = validateCapabilityBindingSchema(manifest);
+  const bindingSchemas = validateCapabilityBindingSchemaSnapshot(manifest);
   const schemas = strictParameterSchemas(manifest);
   const bindingSnapshot = snapshotOwnDataRecord(bindings);
   if (!bindingSnapshot) {
@@ -745,7 +1052,7 @@ function resolveDependencyOrder(
   return resolved;
 }
 
-export function resolveCapabilityCompositionForAssets(
+function resolveCapabilityCompositionFromSnapshot(
   input: ResolveCapabilityCompositionInput,
   assets: readonly CapabilityAssetV1[],
 ): CapabilityCompositionV1 {
@@ -813,6 +1120,17 @@ export function resolveCapabilityCompositionForAssets(
   });
 }
 
+export function resolveCapabilityCompositionForAssets(
+  input: ResolveCapabilityCompositionInput,
+  assets: readonly CapabilityAssetV1[],
+): CapabilityCompositionV1 {
+  const captured = captureResolutionInputV1(input, assets);
+  return resolveCapabilityCompositionFromSnapshot(
+    captured.input,
+    captured.assets,
+  );
+}
+
 export function resolveCapabilityComposition(
   input: ResolveCapabilityCompositionInput,
 ): CapabilityCompositionV1 {
@@ -823,15 +1141,19 @@ export function createCapabilityCompositionLockForAssets(
   input: CreateCapabilityCompositionLockInput,
   assets: readonly CapabilityAssetV1[],
 ): CapabilityCompositionLockV1 {
-  if (!sha256Pattern.test(input.graphChecksum)) {
+  const captured = captureResolutionInputV1(input, assets);
+  if (!sha256Pattern.test(captured.input.graphChecksum)) {
     throw new Error(
       "Application Graph checksum must be a sha256-prefixed lowercase digest.",
     );
   }
-  const composition = resolveCapabilityCompositionForAssets(input, assets);
+  const composition = resolveCapabilityCompositionFromSnapshot(
+    captured.input,
+    captured.assets,
+  );
   const unsignedLock = {
     apiVersion: "factory.composition/v1" as const,
-    applicationGraphChecksum: input.graphChecksum,
+    applicationGraphChecksum: captured.input.graphChecksum,
     packages: composition.packages,
     resolvedContributionDigests: composition.resolvedContributionDigests,
     providedAndRequiredInterfaces: composition.providedAndRequiredInterfaces,
