@@ -385,14 +385,6 @@ describe("capability catalog", () => {
     );
     ecommerceBaseGraph.metadata.id = "ecommerce-composed-proof";
     ecommerceBaseGraph.metadata.name = "Ecommerce composed proof";
-    ecommerceBaseGraph.policy.roles = ecommerceBaseGraph.policy.roles.map(
-      (role) => (role === "customer" ? "shopper" : role),
-    );
-    ecommerceBaseGraph.policy.permissions =
-      ecommerceBaseGraph.policy.permissions.map((permission) => ({
-        ...permission,
-        role: permission.role === "customer" ? "shopper" : permission.role,
-      }));
 
     const selection = (
       key: string,
@@ -1539,7 +1531,7 @@ describe("capability catalog", () => {
     expect(graph.integration).not.toHaveProperty("compositionProfile");
   });
 
-  it("selects the complete nine-package shared recipe for Restaurant", () => {
+  it("selects the shared commercial Foundation recipe for Restaurant", () => {
     const graph = composeDefaultCapabilityDraft({
       profile: "restaurant-ordering",
     }).graph;
@@ -1552,17 +1544,21 @@ describe("capability catalog", () => {
       "commerce.cart",
       "commerce.catalog",
       "commerce.inventory",
+      "commerce.inventory-ledger",
+      "commerce.line-configuration",
       "commerce.order",
       "commerce.simulated-payment",
       "core.audit",
       "core.crud",
+      "core.identity-context",
+      "core.location-context",
       "core.notification",
       "core.workflow",
     ]);
     expect(graph.integration).not.toHaveProperty("assetLocks");
   });
 
-  it("supplies each declared shared-commerce operation from one selected asset", () => {
+  it("supplies each declared shared-commerce operation from the selected assets", () => {
     const graph = composeDefaultCapabilityDraft({
       profile: "restaurant-ordering",
     }).graph;
@@ -1580,12 +1576,16 @@ describe("capability catalog", () => {
       expect(graph.integration.capabilities.map(({ key }) => key)).toContain(
         effect,
       );
-      expect(
-        selectedAssets.filter((asset) =>
-          asset.manifest.effects.includes(effect),
-        ),
-        effect,
-      ).toHaveLength(1);
+      const providers = selectedAssets.filter((asset) =>
+        asset.manifest.effects.includes(effect),
+      );
+      expect(providers.length, effect).toBeGreaterThanOrEqual(1);
+      if (effect === "inventory.reserve") {
+        expect(providers.map(({ manifest }) => manifest.key).sort()).toEqual([
+          "commerce.inventory",
+          "commerce.inventory-ledger",
+        ]);
+      }
     }
   });
 

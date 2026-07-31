@@ -7,13 +7,17 @@ export type RestaurantProfileValidationIssue = {
 };
 
 export type RestaurantEntityKey =
+  | "restaurant-principal"
   | "restaurant-location"
   | "restaurant-table"
   | "table-session"
   | "menu-category"
   | "menu-item"
+  | "menu-option-group"
+  | "menu-option"
   | "order"
   | "order-line"
+  | "order-line-option"
   | "payment-attempt"
   | "kitchen-ticket"
   | "inventory-ledger";
@@ -75,6 +79,11 @@ type FieldType =
 const requiredEntityFields: Readonly<
   Record<RestaurantEntityKey, Readonly<Record<string, FieldType>>>
 > = {
+  "restaurant-principal": {
+    subjectRef: "string",
+    role: "enum",
+    active: "boolean",
+  },
   "restaurant-location": {
     name: "string",
     currency: "string",
@@ -109,6 +118,20 @@ const requiredEntityFields: Readonly<
     preparationMinutes: "integer",
     imageUrl: "url",
   },
+  "menu-option-group": {
+    menuItemId: "string",
+    name: "string",
+    minimumSelections: "integer",
+    maximumSelections: "integer",
+    required: "boolean",
+    active: "boolean",
+  },
+  "menu-option": {
+    optionGroupId: "string",
+    name: "string",
+    priceDelta: "decimal",
+    available: "boolean",
+  },
   order: {
     tableSessionId: "string",
     status: "enum",
@@ -128,6 +151,11 @@ const requiredEntityFields: Readonly<
     unitPrice: "decimal",
     lineNote: "text",
     modifiers: "json",
+  },
+  "order-line-option": {
+    orderLineId: "string",
+    optionId: "string",
+    priceDelta: "decimal",
   },
   "payment-attempt": {
     orderId: "string",
@@ -290,7 +318,11 @@ const requiredAssetLocks = [
   "commerce.catalog",
   "commerce.cart",
   "commerce.inventory",
+  "commerce.inventory-ledger",
+  "commerce.line-configuration",
   "commerce.order",
+  "core.identity-context",
+  "core.location-context",
   "restaurant.table-session",
   "restaurant.menu",
   "restaurant.ordering",
@@ -312,6 +344,14 @@ const requiredOperations = [
   "inventory.release",
   "inventory.decrement",
   "inventory.adjust",
+  "inventory.ledger.read",
+  "identity.context.resolve",
+  "identity.context.validate",
+  "location.context.resolve",
+  "location.context.validate",
+  "line.configuration.validate",
+  "line.configuration.price",
+  "line.configuration.availability.manage",
   "order.create",
   "order.transition",
   "payment.simulate",
@@ -321,9 +361,13 @@ const requiredRelations = [
   ["restaurant-location", "restaurant-table", "one-to-many"],
   ["table-session", "restaurant-table", "many-to-one"],
   ["menu-item", "menu-category", "many-to-one"],
+  ["menu-option-group", "menu-item", "many-to-one"],
+  ["menu-option", "menu-option-group", "many-to-one"],
   ["order", "table-session", "many-to-one"],
   ["order-line", "order", "many-to-one"],
   ["order-line", "menu-item", "many-to-one"],
+  ["order-line-option", "order-line", "many-to-one"],
+  ["order-line-option", "menu-option", "many-to-one"],
   ["payment-attempt", "order", "many-to-one"],
   ["kitchen-ticket", "order", "one-to-one"],
   ["inventory-ledger", "menu-item", "many-to-one"],

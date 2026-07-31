@@ -305,7 +305,11 @@ const compositionRecipes: Readonly<
       "commerce.catalog",
       "commerce.cart",
       "commerce.inventory",
+      "commerce.inventory-ledger",
+      "commerce.line-configuration",
       "commerce.order",
+      "core.identity-context",
+      "core.location-context",
       "restaurant.table-session",
       "restaurant.menu",
       "restaurant.ordering",
@@ -323,8 +327,12 @@ const compositionRecipes: Readonly<
       "commerce.catalog",
       "commerce.cart",
       "commerce.inventory",
+      "commerce.inventory-ledger",
+      "commerce.line-configuration",
       "commerce.order",
       "commerce.simulated-payment",
+      "core.identity-context",
+      "core.location-context",
     ],
     optionalCapabilities: ["core.audit"],
   },
@@ -342,8 +350,12 @@ const defaultCapabilityRecipes: Readonly<
       "commerce.catalog",
       "commerce.cart",
       "commerce.inventory",
+      "commerce.inventory-ledger",
+      "commerce.line-configuration",
       "commerce.order",
       "commerce.simulated-payment",
+      "core.identity-context",
+      "core.location-context",
     ],
     optionalCapabilities: ["core.notification"],
   },
@@ -438,6 +450,25 @@ const profileCompositionBindings: Readonly<
       catalogEntity: { graphSymbol: "graph.domain.menu-item" },
       stockField: { graphSymbol: "graph.domain.stock" },
     },
+    "commerce.inventory-ledger": {
+      catalogEntity: { graphSymbol: "graph.domain.menu-item" },
+      stockField: { graphSymbol: "graph.domain.stock" },
+      movementEntity: { graphSymbol: "graph.domain.inventory-ledger" },
+      orderEntity: { graphSymbol: "graph.domain.order" },
+      locationEntity: { graphSymbol: "graph.domain.restaurant-location" },
+      merchantRole: { graphSymbol: "graph.policy.manager" },
+      auditRole: { graphSymbol: "graph.policy.manager" },
+    },
+    "commerce.line-configuration": {
+      catalogEntity: { graphSymbol: "graph.domain.menu-item" },
+      lineEntity: { graphSymbol: "graph.domain.order-line" },
+      optionGroupEntity: { graphSymbol: "graph.domain.menu-option-group" },
+      optionEntity: { graphSymbol: "graph.domain.menu-option" },
+      customerRole: { graphSymbol: "graph.policy.customer" },
+      merchantRole: { graphSymbol: "graph.policy.manager" },
+      catalogPage: { graphSymbol: "graph.page.customer-menu" },
+      merchantPage: { graphSymbol: "graph.page.merchant-menu" },
+    },
     "commerce.order": {
       orderEntity: { graphSymbol: "graph.domain.order" },
       orderFlow: { graphSymbol: "graph.flow.restaurant-order" },
@@ -445,6 +476,17 @@ const profileCompositionBindings: Readonly<
     "commerce.simulated-payment": {
       orderEntity: { graphSymbol: "graph.domain.order" },
       orderFlow: { graphSymbol: "graph.flow.restaurant-order" },
+    },
+    "core.identity-context": {
+      principalEntity: { graphSymbol: "graph.domain.restaurant-principal" },
+      sessionEntity: { graphSymbol: "graph.domain.table-session" },
+      defaultRole: { graphSymbol: "graph.policy.customer" },
+    },
+    "core.location-context": {
+      locationEntity: { graphSymbol: "graph.domain.restaurant-table" },
+      contextEntity: { graphSymbol: "graph.domain.table-session" },
+      locationCodeField: { graphSymbol: "graph.domain.code" },
+      customerRole: { graphSymbol: "graph.policy.customer" },
     },
   },
   "simple-ecommerce": {
@@ -476,6 +518,25 @@ const profileCompositionBindings: Readonly<
       catalogEntity: { graphSymbol: "graph.domain.product" },
       stockField: { graphSymbol: "graph.domain.stock" },
     },
+    "commerce.inventory-ledger": {
+      catalogEntity: { graphSymbol: "graph.domain.product" },
+      stockField: { graphSymbol: "graph.domain.stock" },
+      movementEntity: { graphSymbol: "graph.domain.stock-movement" },
+      orderEntity: { graphSymbol: "graph.domain.order" },
+      locationEntity: { graphSymbol: "graph.domain.store" },
+      merchantRole: { graphSymbol: "graph.policy.merchant" },
+      auditRole: { graphSymbol: "graph.policy.merchant" },
+    },
+    "commerce.line-configuration": {
+      catalogEntity: { graphSymbol: "graph.domain.product" },
+      lineEntity: { graphSymbol: "graph.domain.product-line" },
+      optionGroupEntity: { graphSymbol: "graph.domain.product-option-group" },
+      optionEntity: { graphSymbol: "graph.domain.product-option" },
+      customerRole: { graphSymbol: "graph.policy.shopper" },
+      merchantRole: { graphSymbol: "graph.policy.merchant" },
+      catalogPage: { graphSymbol: "graph.page.catalog" },
+      merchantPage: { graphSymbol: "graph.page.merchant-catalog" },
+    },
     "commerce.order": {
       orderEntity: { graphSymbol: "graph.domain.order" },
       orderFlow: { graphSymbol: "graph.flow.ecommerce-order" },
@@ -483,6 +544,17 @@ const profileCompositionBindings: Readonly<
     "commerce.simulated-payment": {
       orderEntity: { graphSymbol: "graph.domain.order" },
       orderFlow: { graphSymbol: "graph.flow.ecommerce-order" },
+    },
+    "core.identity-context": {
+      principalEntity: { graphSymbol: "graph.domain.shopper" },
+      sessionEntity: { graphSymbol: "graph.domain.shopper-session" },
+      defaultRole: { graphSymbol: "graph.policy.shopper" },
+    },
+    "core.location-context": {
+      locationEntity: { graphSymbol: "graph.domain.store" },
+      contextEntity: { graphSymbol: "graph.domain.shopper-session" },
+      locationCodeField: { graphSymbol: "graph.domain.code" },
+      customerRole: { graphSymbol: "graph.policy.shopper" },
     },
   },
 };
@@ -805,6 +877,26 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
         {
           entities: [
             {
+              key: "restaurant-principal",
+              label: "Restaurant guest",
+              fields: [
+                {
+                  key: "subjectRef",
+                  type: "string",
+                  required: true,
+                  unique: true,
+                },
+                {
+                  key: "role",
+                  type: "enum",
+                  required: true,
+                  values: ["customer", "manager"],
+                },
+                { key: "active", type: "boolean", required: true },
+              ],
+              indexes: [{ fields: ["role", "active"] }],
+            },
+            {
               key: "restaurant-location",
               label: "Restaurant location",
               fields: [
@@ -894,6 +986,30 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               ],
             },
             {
+              key: "menu-option-group",
+              label: "Menu option group",
+              fields: [
+                { key: "menuItemId", type: "string", required: true },
+                { key: "name", type: "string", required: true },
+                { key: "minimumSelections", type: "integer", required: true },
+                { key: "maximumSelections", type: "integer", required: true },
+                { key: "required", type: "boolean", required: true },
+                { key: "active", type: "boolean", required: true },
+              ],
+              indexes: [{ fields: ["menuItemId", "active"] }],
+            },
+            {
+              key: "menu-option",
+              label: "Menu option",
+              fields: [
+                { key: "optionGroupId", type: "string", required: true },
+                { key: "name", type: "string", required: true },
+                { key: "priceDelta", type: "decimal", required: true },
+                { key: "available", type: "boolean", required: true },
+              ],
+              indexes: [{ fields: ["optionGroupId", "available"] }],
+            },
+            {
               key: "order",
               label: "Order",
               fields: [
@@ -949,6 +1065,16 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
                 { key: "modifiers", type: "json", required: true },
               ],
               indexes: [{ fields: ["orderId"] }],
+            },
+            {
+              key: "order-line-option",
+              label: "Order line option",
+              fields: [
+                { key: "orderLineId", type: "string", required: true },
+                { key: "optionId", type: "string", required: true },
+                { key: "priceDelta", type: "decimal", required: true },
+              ],
+              indexes: [{ fields: ["orderLineId"] }, { fields: ["optionId"] }],
             },
             {
               key: "payment-attempt",
@@ -1061,6 +1187,18 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               field: "categoryKey",
             },
             {
+              from: "menu-option-group",
+              to: "menu-item",
+              kind: "many-to-one",
+              field: "menuItemId",
+            },
+            {
+              from: "menu-option",
+              to: "menu-option-group",
+              kind: "many-to-one",
+              field: "optionGroupId",
+            },
+            {
               from: "order",
               to: "table-session",
               kind: "many-to-one",
@@ -1077,6 +1215,18 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               to: "menu-item",
               kind: "many-to-one",
               field: "menuItemId",
+            },
+            {
+              from: "order-line-option",
+              to: "order-line",
+              kind: "many-to-one",
+              field: "orderLineId",
+            },
+            {
+              from: "order-line-option",
+              to: "menu-option",
+              kind: "many-to-one",
+              field: "optionId",
             },
             {
               from: "payment-attempt",
@@ -1149,6 +1299,28 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
                 stock: 8,
                 preparationMinutes: 18,
                 imageUrl: "/menu/mushroom-risotto.jpg",
+              },
+            },
+            {
+              entity: "menu-option-group",
+              id: "pizza-size",
+              values: {
+                menuItemId: "margherita-pizza",
+                name: "Size",
+                minimumSelections: 1,
+                maximumSelections: 1,
+                required: true,
+                active: true,
+              },
+            },
+            {
+              entity: "menu-option",
+              id: "pizza-size-large",
+              values: {
+                optionGroupId: "pizza-size",
+                name: "Large",
+                priceDelta: 4,
+                available: true,
               },
             },
           ],
@@ -1402,6 +1574,14 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
           "menu.item.search",
           "menu.item.manage",
           "inventory.adjust",
+          "inventory.ledger.read",
+          "identity.context.resolve",
+          "identity.context.validate",
+          "location.context.resolve",
+          "location.context.validate",
+          "line.configuration.validate",
+          "line.configuration.price",
+          "line.configuration.availability.manage",
           "order.line.add",
           "order.line.update",
           "order.line.remove",
@@ -1456,6 +1636,18 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
                 { id: "order-list", type: "collection", entity: "order" },
               ],
             },
+            {
+              id: "merchant-catalog",
+              route: "/merchant/catalog",
+              title: "Product management",
+              blocks: [
+                {
+                  id: "merchant-product-catalog",
+                  type: "collection",
+                  entity: "product",
+                },
+              ],
+            },
           ],
           navigation: [
             {
@@ -1470,10 +1662,68 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               pageId: "orders",
               icon: "package",
             },
+            {
+              id: "merchant-catalog",
+              label: "Product management",
+              pageId: "merchant-catalog",
+              icon: "boxes",
+            },
           ],
         },
         {
           entities: [
+            {
+              key: "shopper",
+              label: "Shopper",
+              fields: [
+                {
+                  key: "subjectRef",
+                  type: "string",
+                  required: true,
+                  unique: true,
+                },
+                { key: "active", type: "boolean", required: true },
+              ],
+              indexes: [{ fields: ["active"] }],
+            },
+            {
+              key: "shopper-session",
+              label: "Shopping session",
+              fields: [
+                {
+                  key: "subjectRef",
+                  type: "string",
+                  required: true,
+                },
+                { key: "storeCode", type: "string", required: true },
+                {
+                  key: "status",
+                  type: "enum",
+                  required: true,
+                  values: ["active", "expired"],
+                },
+                { key: "expiresAt", type: "datetime", required: true },
+              ],
+              indexes: [
+                { fields: ["subjectRef", "status"] },
+                { fields: ["expiresAt"] },
+              ],
+            },
+            {
+              key: "store",
+              label: "Store",
+              fields: [
+                {
+                  key: "code",
+                  type: "string",
+                  required: true,
+                  unique: true,
+                },
+                { key: "name", type: "string", required: true },
+                { key: "active", type: "boolean", required: true },
+              ],
+              indexes: [{ fields: ["active"] }],
+            },
             {
               key: "product",
               label: "Product",
@@ -1483,6 +1733,30 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
                 { key: "stock", type: "integer", required: true },
               ],
               indexes: [],
+            },
+            {
+              key: "product-option-group",
+              label: "Product option group",
+              fields: [
+                { key: "productId", type: "string", required: true },
+                { key: "name", type: "string", required: true },
+                { key: "minimumSelections", type: "integer", required: true },
+                { key: "maximumSelections", type: "integer", required: true },
+                { key: "required", type: "boolean", required: true },
+                { key: "active", type: "boolean", required: true },
+              ],
+              indexes: [{ fields: ["productId", "active"] }],
+            },
+            {
+              key: "product-option",
+              label: "Product option",
+              fields: [
+                { key: "optionGroupId", type: "string", required: true },
+                { key: "name", type: "string", required: true },
+                { key: "priceDelta", type: "decimal", required: true },
+                { key: "available", type: "boolean", required: true },
+              ],
+              indexes: [{ fields: ["optionGroupId", "available"] }],
             },
             {
               key: "order",
@@ -1497,9 +1771,98 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               ],
               indexes: [{ fields: ["status"] }],
             },
+            {
+              key: "product-line",
+              label: "Product line",
+              fields: [
+                { key: "orderId", type: "string", required: true },
+                { key: "productId", type: "string", required: true },
+                { key: "quantity", type: "integer", required: true },
+                { key: "unitPrice", type: "decimal", required: true },
+                { key: "configuration", type: "json", required: true },
+              ],
+              indexes: [{ fields: ["orderId"] }],
+            },
+            {
+              key: "stock-movement",
+              label: "Stock movement",
+              fields: [
+                { key: "productId", type: "string", required: true },
+                { key: "orderId", type: "string", required: false },
+                { key: "storeCode", type: "string", required: true },
+                { key: "delta", type: "integer", required: true },
+                { key: "reason", type: "string", required: true },
+                {
+                  key: "idempotencyKey",
+                  type: "string",
+                  required: true,
+                  unique: true,
+                },
+                { key: "recordedAt", type: "datetime", required: true },
+              ],
+              indexes: [
+                { fields: ["productId", "recordedAt"] },
+                { fields: ["idempotencyKey"], unique: true },
+              ],
+            },
           ],
-          relations: [{ from: "order", to: "product", kind: "many-to-many" }],
+          relations: [
+            {
+              from: "shopper-session",
+              to: "shopper",
+              kind: "many-to-one",
+              field: "subjectRef",
+            },
+            {
+              from: "shopper-session",
+              to: "store",
+              kind: "many-to-one",
+              field: "storeCode",
+            },
+            { from: "order", to: "product", kind: "many-to-many" },
+            {
+              from: "product-option-group",
+              to: "product",
+              kind: "many-to-one",
+              field: "productId",
+            },
+            {
+              from: "product-option",
+              to: "product-option-group",
+              kind: "many-to-one",
+              field: "optionGroupId",
+            },
+            {
+              from: "product-line",
+              to: "order",
+              kind: "many-to-one",
+              field: "orderId",
+            },
+            {
+              from: "product-line",
+              to: "product",
+              kind: "many-to-one",
+              field: "productId",
+            },
+            {
+              from: "stock-movement",
+              to: "product",
+              kind: "many-to-one",
+              field: "productId",
+            },
+            {
+              from: "stock-movement",
+              to: "store",
+              kind: "many-to-one",
+              field: "storeCode",
+            },
+          ],
           seedData: [
+            {
+              entity: "store",
+              id: "primary-store",
+              values: { code: "WEB", name: "Online store", active: true },
+            },
             {
               entity: "product",
               id: "everyday-tote",
@@ -1510,10 +1873,32 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               id: "studio-lamp",
               values: { name: "Studio lamp", price: 85, stock: 8 },
             },
+            {
+              entity: "product-option-group",
+              id: "tote-colour",
+              values: {
+                productId: "everyday-tote",
+                name: "Colour",
+                minimumSelections: 1,
+                maximumSelections: 1,
+                required: true,
+                active: true,
+              },
+            },
+            {
+              entity: "product-option",
+              id: "tote-colour-slate",
+              values: {
+                optionGroupId: "tote-colour",
+                name: "Slate",
+                priceDelta: 0,
+                available: true,
+              },
+            },
           ],
         },
         {
-          roles: ["customer", "operator"],
+          roles: ["customer", "operator", "shopper", "merchant"],
           permissions: [
             { role: "customer", resource: "product", actions: ["read"] },
             {
@@ -1530,6 +1915,37 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               role: "operator",
               resource: "order",
               actions: ["read", "update"],
+            },
+            { role: "shopper", resource: "product", actions: ["read"] },
+            {
+              role: "shopper",
+              resource: "product-line",
+              actions: ["create", "read", "update", "delete"],
+            },
+            {
+              role: "shopper",
+              resource: "product-option",
+              actions: ["read"],
+            },
+            {
+              role: "merchant",
+              resource: "product",
+              actions: ["create", "read", "update"],
+            },
+            {
+              role: "merchant",
+              resource: "product-option-group",
+              actions: ["create", "read", "update"],
+            },
+            {
+              role: "merchant",
+              resource: "product-option",
+              actions: ["create", "read", "update"],
+            },
+            {
+              role: "merchant",
+              resource: "stock-movement",
+              actions: ["create", "read", "audit"],
             },
           ],
         },
@@ -1576,6 +1992,15 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
           "inventory.reserve",
           "inventory.release",
           "inventory.decrement",
+          "inventory.adjust",
+          "inventory.ledger.read",
+          "identity.context.resolve",
+          "identity.context.validate",
+          "location.context.resolve",
+          "location.context.validate",
+          "line.configuration.validate",
+          "line.configuration.price",
+          "line.configuration.availability.manage",
           "order.create",
           "order.transition",
           "payment.simulate",

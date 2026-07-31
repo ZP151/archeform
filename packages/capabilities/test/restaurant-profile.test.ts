@@ -92,13 +92,17 @@ describe("Restaurant Ordering profile", () => {
     expect(projection).toEqual({
       apiVersion: "factory.restaurant-profile/v1",
       entities: {
+        "restaurant-principal": "restaurant-principal",
         "restaurant-location": "restaurant-location",
         "restaurant-table": "restaurant-table",
         "table-session": "table-session",
         "menu-category": "menu-category",
         "menu-item": "menu-item",
+        "menu-option-group": "menu-option-group",
+        "menu-option": "menu-option",
         order: "order",
         "order-line": "order-line",
+        "order-line-option": "order-line-option",
         "payment-attempt": "payment-attempt",
         "kitchen-ticket": "kitchen-ticket",
         "inventory-ledger": "inventory-ledger",
@@ -553,7 +557,7 @@ describe("Restaurant Ordering profile", () => {
     expect(() => assertRestaurantOrderingProfile(graph)).toThrow("tokenDigest");
   });
 
-  it("requires the six Restaurant assets instead of generic simulated payment", () => {
+  it("requires the Restaurant and commercial Foundation assets instead of generic simulated payment", () => {
     const graph = restaurantGraph();
     expect(graph.integration.assetLocks?.map((lock) => lock.key)).toEqual(
       expect.arrayContaining([
@@ -563,6 +567,10 @@ describe("Restaurant Ordering profile", () => {
         "restaurant.kitchen",
         "restaurant.cashier",
         "restaurant.reporting",
+        "commerce.inventory-ledger",
+        "commerce.line-configuration",
+        "core.identity-context",
+        "core.location-context",
       ]),
     );
     expect(graph.integration.assetLocks).not.toContainEqual(
@@ -574,6 +582,29 @@ describe("Restaurant Ordering profile", () => {
         issue.code.startsWith("restaurant.asset-lock."),
       ),
     ).toEqual([]);
+  });
+
+  it("requires the commercial Foundation entities and locks", () => {
+    const graph = restaurantGraph();
+    graph.domain.entities = graph.domain.entities.filter(
+      (entity) => entity.key !== "menu-option",
+    );
+    graph.integration.assetLocks = graph.integration.assetLocks?.filter(
+      (lock) => lock.key !== "core.location-context",
+    );
+
+    expect(validateRestaurantOrderingProfile(graph)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "restaurant.entity.missing",
+          message: expect.stringContaining("menu-option"),
+        }),
+        expect.objectContaining({
+          code: "restaurant.asset-lock.missing",
+          message: expect.stringContaining("core.location-context"),
+        }),
+      ]),
+    );
   });
 
   it("rejects generic simulated payment when the Restaurant cashier owns payment", () => {
