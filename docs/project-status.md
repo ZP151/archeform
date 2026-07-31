@@ -17,7 +17,7 @@ load-bearing P1 in duplicate navigation/flow identifier handling. Repair commit
 repair-round behavioral QA with no P0/P1/P2. Final release review returned
 RELEASE PASS with no P0/P1/P2, and fresh verification passed.
 
-Task 2, **typed manifest and binding contracts**, is `ready_for_qa` in repair
+Task 2, **typed manifest and binding contracts**, is `reviewed` in repair
 round 3. Its bounded writer is Typed Manifest Contract Integration, its
 contract owner is Capability Binding Contract, and its write boundary is the
 exact four Capabilities paths recorded below. Independent review of implementation commit
@@ -46,13 +46,16 @@ Capabilities paths and adds focused `Object.prototype` pollution and empty-key
 regressions. Fresh implementation verification passed 49/49 focused tests,
 Capabilities typecheck, and Capabilities lint. Independent repair-round-3 task
 review passed with no P0/P1/P2 after 29/29 typed-binding and 20/20 composition
-tests, and confirmed the exact two-path diff. The PM records
-`implementing -> ready_for_qa`; behavioral QA is now the next gate. Release
+tests, and confirmed the exact two-path diff. The PM recorded
+`implementing -> ready_for_qa`. Independent repair-round-3 behavioral QA then
+returned PASS: 49/49 focused tests, 192/192 full Capabilities tests,
+Capabilities typecheck/lint/build, 180/180 Compiler tests, and the adversarial
+compiled probe passed. The PM records `ready_for_qa -> reviewed`. Release
 review and fresh acceptance verification remain required, and Task 2 is not
-accepted. Task 3 remains `planned` behind Task 2; physical assets are now Task
-4 and remain blocked behind Task 3. Tasks 5 and 6 are serialized on the
-preceding accepted task. Task 7 remains `planned` and begins only after Tasks 1
-through 6 are all `accepted`.
+accepted. Owner-aware Graph persistence remains explicitly owned by planned
+Task 3; physical assets are Task 4 and remain blocked behind Task 3. Tasks 5
+and 6 are serialized on the preceding accepted task. Task 7 remains `planned`
+and begins only after Tasks 1 through 6 are all `accepted`.
 
 Commercial Capability Foundation Task 2 remains `implementing` and escalated
 after its five permitted repair rounds. It is blocked on accepted Typed
@@ -248,10 +251,14 @@ Typed Binding Task 2 implementation, repair-review, and QA evidence is:
   passed 29/29 `typed-binding-contract.test.ts` tests and 20/20
   `composition-contract.test.ts` tests, verified the own-property and empty-key
   regressions, and confirmed the exact two-path diff.
-- The PM reconciles the bounded implementation, fresh checks, and clean task
-  review as `implementing -> ready_for_qa`. Independent behavioral QA is now
-  required before any move to `reviewed`; release review and fresh acceptance
-  verification remain required before acceptance. Task 2 is not `accepted`.
+- The PM reconciled the bounded implementation, fresh checks, and clean task
+  review as `implementing -> ready_for_qa`.
+- Independent repair-round-3 behavioral QA returned PASS. It passed 49/49
+  focused tests, 192/192 full Capabilities tests, Capabilities typecheck, lint,
+  and build, 180/180 Compiler tests, and the adversarial compiled probe.
+- The PM reconciles that passing QA evidence as `ready_for_qa -> reviewed`.
+  Independent release review and fresh acceptance verification remain required
+  before acceptance. Task 2 is not `accepted`.
 - P1 2: `fieldKey` can exist in the Capabilities binding type but cannot persist
   through the strict `ApplicationGraphV1` composition-binding schema, which
   accepts only `{ graphSymbol }`.
@@ -392,7 +399,7 @@ On Node `v22.11.0`, it records:
 
 - Typed Binding Task 1 is `accepted` and frozen under its pure Application
   Graph Type System contract. Its deferred parser limitation remains recorded.
-- Typed Binding Task 2 is `ready_for_qa` in repair round 3 under the
+- Typed Binding Task 2 is `reviewed` in repair round 3 under the
   accepted ADR, design, plan, and Task 1 dependency. The implementation owner
   of record remains Typed Manifest Contract Integration and the contract owner
   remains Capability Binding Contract.
@@ -412,8 +419,10 @@ On Node `v22.11.0`, it records:
   `packages/capabilities/test/typed-binding-contract.test.ts`. Fresh local
   verification passed 49/49 focused tests, Capabilities typecheck, and
   Capabilities lint. Independent task review passed with no P0/P1/P2 after
-  29/29 typed-binding and 20/20 composition tests; behavioral QA is the next
-  gate.
+  29/29 typed-binding and 20/20 composition tests. Independent behavioral QA
+  then returned PASS after 49/49 focused tests, 192/192 full Capabilities
+  tests, Capabilities typecheck/lint/build, 180/180 Compiler tests, and the
+  adversarial compiled probe. Release review is the next gate.
 - Repair round 3 may not change physical package roots and registrations,
   profile recipes, public Draft composition, Publish, compiler, Workbench,
   lifecycle, historical bindings, or introduce
@@ -446,11 +455,11 @@ On Node `v22.11.0`, it records:
 - Foundation Tasks 3 and 4 are blocked on accepted Task 2 profile composition
   metadata. Task 2 is back in `implementing` and escalated; neither downstream
   task is dispatched by this update.
-- Typed Binding Task 2 is `ready_for_qa` after repair-round-3 task review passed
-  with no P0/P1/P2. Independent behavioral QA, release review, and fresh
-  verification remain required. Task 3 remains `planned` and blocked on Task 2
-  acceptance. Tasks 4 through 6 cannot overlap or start before the preceding
-  task is `accepted`.
+- Typed Binding Task 2 is `reviewed` after repair-round-3 behavioral QA passed.
+  Independent release review and fresh acceptance verification remain required.
+  Task 3 remains `planned` and blocked on Task 2 acceptance. It, not Task 2,
+  owns owner-aware Graph persistence. Tasks 4 through 6 cannot overlap or start
+  before the preceding task is `accepted`.
 - Physical asset Task 4 is additionally blocked on accepted Task 3 serialized
   Graph round-trip, structural validation, hash, and browser evidence.
 - Typed Binding Task 7 cannot start before Tasks 1 through 6 are all
@@ -494,8 +503,10 @@ On Node `v22.11.0`, it records:
   failed independent task re-review because required and optional constraints
   were not fully own-property-bound and an empty-string own key escaped the
   unknown-key check. Repair round 3 is present inside the exact two-path repair
-  boundary and passed independent task review with no P0/P1/P2. Behavioral QA,
-  release review, and fresh verification still must pass in sequence.
+  boundary and passed independent task review with no P0/P1/P2. Behavioral QA
+  then passed its focused, full Capabilities, compiler-regression, build-gate,
+  and adversarial compiled-probe evidence. Release review and fresh acceptance
+  verification still must pass in sequence.
 - Owner-aware field bindings cannot currently survive the Application Graph
   schema. ADR-0007 assigns the repair to Task 3, but the risk remains until that
   task passes independent review, QA, release review, and fresh verification.
@@ -515,14 +526,13 @@ On Node `v22.11.0`, it records:
 
 ## Next smallest valuable slice
 
-Run independent behavioral QA for Task 2 repair round 3 at
-`00ac760c54f353f6ae242f92a5dd4809791cd633`. QA must exercise the exact
-two-path diff, own required/optional constraint enforcement, empty-string
-unknown-key rejection, `Object.prototype` pollution and empty-key regressions,
-the full Capabilities suite, typecheck, lint, build, public-package probes, and
-bounded scope checks. Only passing QA may support `ready_for_qa -> reviewed`;
-independent release review and fresh verification remain required before any
-acceptance transition. Keep serialized-Graph Task 3 `planned` behind Task 2
-and physical asset Task 4 blocked behind Task 3. Leave Typed Binding Tasks 3
-through 7 `planned`. Keep Commercial Foundation Task 2 `implementing` and
-escalated and Tasks 3 and 4 `planned` and blocked.
+Run independent release review for Task 2 repair round 3 at
+`00ac760c54f353f6ae242f92a5dd4809791cd633` against the reconciled task-review
+and behavioral-QA evidence. Release review must preserve the exact Task 2
+Capabilities boundary and treat owner-aware Graph persistence as remaining
+Task 3 work under ADR-0007, not as Task 2 scope. Only a passing release review
+plus fresh acceptance verification may support `reviewed -> accepted`. Keep
+serialized-Graph Task 3 `planned` behind Task 2 and physical asset Task 4
+blocked behind Task 3. Leave Typed Binding Tasks 3 through 7 `planned`. Keep
+Commercial Foundation Task 2 `implementing` and escalated and Tasks 3 and 4
+`planned` and blocked.
