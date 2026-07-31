@@ -5,7 +5,9 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { capabilityAssets, lockCapabilityAsset } from "../src/assets/index.js";
+import { orderAssetV1_3_2 } from "../src/assets/commerce/order-v1-3-2.js";
 import { createCommerceOrderTransactionOperationAdapter } from "../src/assets/commerce/order-v1-3-0.js";
+import { restaurantOrderingAssetV1_2_2 } from "../src/assets/restaurant/ordering-v1-2-2.js";
 import { createRestaurantOrderingTransactionOperationAdapter } from "../src/assets/restaurant/ordering-v1-2-0.js";
 import { resolveCapabilityAssetLock } from "../src/index.js";
 import {
@@ -20,6 +22,54 @@ const repositoryRoot = resolve(
 );
 
 describe("transaction operation adapter packages", () => {
+  it.each([orderAssetV1_3_2, restaurantOrderingAssetV1_2_2])(
+    "keeps each physical evidence file clean and the declared fixture executable for $manifest.key@$manifest.version",
+    (asset) => {
+      const files = [
+        "adapter.json",
+        "component.json",
+        asset.manifest.verification.fixture,
+        ...asset.manifest.executableContributions!.map(
+          (contribution) => contribution.source,
+        ),
+        asset.manifest.verification.contractTest,
+      ];
+
+      for (const file of files) {
+        expect(
+          readFileSync(
+            resolve(repositoryRoot, asset.manifest.packageRoot, file),
+            "utf8",
+          ).endsWith("\n\n"),
+        ).toBe(false);
+      }
+
+      const fixture = JSON.parse(
+        readFileSync(
+          resolve(
+            repositoryRoot,
+            asset.manifest.packageRoot,
+            asset.manifest.verification.fixture,
+          ),
+          "utf8",
+        ),
+      );
+      const adapter =
+        asset.manifest.key === "commerce.order"
+          ? createCommerceOrderTransactionOperationAdapter()
+          : createRestaurantOrderingTransactionOperationAdapter();
+
+      expect(
+        adapter.prepare(adapter.parseRequest(fixture)).command,
+      ).toMatchObject({
+        aggregate: { entity: "order", id: fixture.orderId },
+        payloadDigest: fixture.payloadDigest,
+      });
+      expect(verifyCapabilityAssetDigest(asset)).toBe(true);
+      expect(verifyCapabilityAssetPackage(asset, repositoryRoot)).toEqual([]);
+    },
+  );
+
   it.each([
     ["commerce.order", "1.3.0"],
     ["restaurant.ordering", "1.2.0"],

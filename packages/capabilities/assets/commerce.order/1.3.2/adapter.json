@@ -1,0 +1,67 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": [
+    "api.runtime",
+    "test.journey"
+  ],
+  "templates": [],
+  "parameters": [
+    {
+      "key": "orderEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "orderFlow",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "customerRole",
+      "type": "graph-symbol",
+      "required": true
+    }
+  ],
+  "executableContributions": [
+    {
+      "id": "commerce-order-transaction-operation-adapter",
+      "outputSlot": "api.runtime",
+      "namespace": "packages/commerce.order/api/runtime/",
+      "source": "templates/api/commerce-order-transaction-operation-adapter.ts.tpl",
+      "target": "api/src/capabilities/commerce-order-transaction-operation-adapter.ts",
+      "parameterRefs": [
+        "orderEntity",
+        "orderFlow",
+        "customerRole"
+      ],
+      "targetRuntimeInterfaceVersion": "factory.transaction-operation-adapter/v1",
+      "orderingRequirements": [],
+      "mergeProtocol": "replace-file",
+      "digest": "sha256:208a82af35ad833768eca7d0f1d5ac9708de59e04eb45b7efff92941efe9f313"
+    },
+    {
+      "id": "commerce-order-transaction-operation-journey",
+      "outputSlot": "test.journey",
+      "namespace": "packages/commerce.order/test/journeys/",
+      "source": "templates/test/commerce-order-transaction-operation.journey.ts.tpl",
+      "target": "api/test/journeys/commerce-order-transaction-operation.journey.ts",
+      "parameterRefs": [
+        "orderEntity",
+        "orderFlow",
+        "customerRole"
+      ],
+      "targetRuntimeInterfaceVersion": "factory.journey/v1",
+      "orderingRequirements": [
+        "commerce-order-transaction-operation-adapter"
+      ],
+      "mergeProtocol": "replace-file",
+      "digest": "sha256:21eeb6bb42a3404c7349c656998820262034a85e6353db526e2aa959baab17ca"
+    }
+  ],
+  "contributes": {
+    "effects": [
+      "order.transaction.prepare"
+    ]
+  }
+}

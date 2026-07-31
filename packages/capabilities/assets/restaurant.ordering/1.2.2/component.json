@@ -1,0 +1,130 @@
+{
+  "apiVersion": "factory.capability/v1",
+  "bindingContract": "factory.capability-binding/v1",
+  "key": "restaurant.ordering",
+  "version": "1.2.2",
+  "category": "restaurant",
+  "name": "Restaurant transaction operation adapter",
+  "description": "Parses declared restaurant table, line, payment, and cancellation facts into a bounded transaction command.",
+  "packageRoot": "packages/capabilities/assets/restaurant.ordering/1.2.2",
+  "lifecycle": "golden",
+  "profiles": [
+    "restaurant-ordering"
+  ],
+  "effects": [
+    "restaurant.order.transaction.prepare"
+  ],
+  "inputSchema": [
+    {
+      "key": "orderEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "orderLineEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "orderFlow",
+      "type": "flow.flow",
+      "required": true
+    },
+    {
+      "key": "tableSessionEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "customerRole",
+      "type": "policy.role",
+      "required": true
+    }
+  ],
+  "outputSlots": [
+    "api.runtime",
+    "test.journey"
+  ],
+  "templates": [],
+  "parameters": [
+    {
+      "key": "orderEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "orderLineEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "orderFlow",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "tableSessionEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "customerRole",
+      "type": "graph-symbol",
+      "required": true
+    }
+  ],
+  "executableContributions": [
+    {
+      "id": "restaurant-ordering-transaction-operation-adapter",
+      "outputSlot": "api.runtime",
+      "namespace": "packages/restaurant.ordering/api/runtime/",
+      "source": "templates/api/restaurant-ordering-transaction-operation-adapter.ts.tpl",
+      "target": "api/src/capabilities/restaurant-ordering-transaction-operation-adapter.ts",
+      "parameterRefs": [
+        "orderEntity",
+        "orderLineEntity",
+        "orderFlow",
+        "tableSessionEntity",
+        "customerRole"
+      ],
+      "targetRuntimeInterfaceVersion": "factory.transaction-operation-adapter/v1",
+      "orderingRequirements": [],
+      "mergeProtocol": "replace-file",
+      "digest": "sha256:5e8edf8b1763e30686ab759ba820d9a2c8ec9b3b41d595536f3686bc1a3eeb58"
+    },
+    {
+      "id": "restaurant-ordering-transaction-operation-journey",
+      "outputSlot": "test.journey",
+      "namespace": "packages/restaurant.ordering/test/journeys/",
+      "source": "templates/test/restaurant-ordering-transaction-operation.journey.ts.tpl",
+      "target": "api/test/journeys/restaurant-ordering-transaction-operation.journey.ts",
+      "parameterRefs": [
+        "orderEntity",
+        "orderLineEntity",
+        "orderFlow",
+        "tableSessionEntity",
+        "customerRole"
+      ],
+      "targetRuntimeInterfaceVersion": "factory.journey/v1",
+      "orderingRequirements": [
+        "restaurant-ordering-transaction-operation-adapter"
+      ],
+      "mergeProtocol": "replace-file",
+      "digest": "sha256:8b8da53faf5ea1fb23d5d9a9bf98dbd3a5725bb31e74117b3a566e4b36b2d00c"
+    }
+  ],
+  "provides": [
+    {
+      "interfaceKey": "factory.transaction-operation-adapter",
+      "version": "v1"
+    }
+  ],
+  "verification": {
+    "fixture": "fixtures/default.json",
+    "fixtureDigest": "sha256:72780ce75e4b3608ad835033ec218723902b99dafae8727f6b3dcc0428ed7b5b",
+    "contractTest": "tests/contract.json",
+    "contractTestDigest": "sha256:66682fb5f4e7ed292de4c40cd5c3d5069b0a7ad365de796a9ef3985d5e211903",
+    "status": "verified"
+  },
+  "manifestDigest": "sha256:075fd15eb4746bf51a6797e18062a059224ee6a99693236c748ba5326f66c42b"
+}
