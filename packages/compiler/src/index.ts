@@ -32,6 +32,11 @@ import {
   renderRestaurantMerchantPageRuntime,
 } from "./restaurant-merchant-runtime.js";
 import { renderRestaurantRuntime } from "./restaurant-runtime.js";
+import {
+  renderCommerceTransactionJourney,
+  renderCommerceTransactionPrisma,
+  renderCommerceTransactionRuntime,
+} from "./commerce-transaction-runtime.js";
 
 export {
   createGeneratedPageRuntimeProjection,
@@ -63,6 +68,11 @@ export {
   restaurantRuntimeEndpoints,
   type RestaurantRuntimeArtifacts,
 } from "./restaurant-runtime.js";
+export {
+  renderCommerceTransactionJourney,
+  renderCommerceTransactionPrisma,
+  renderCommerceTransactionRuntime,
+} from "./commerce-transaction-runtime.js";
 
 export type CompilationTargetKey =
   | "simulator"
@@ -256,6 +266,55 @@ function assertCanonicalCompositionLock(
     throw new Error(
       "Published revision composition lock does not match the Published Graph.",
     );
+  }
+}
+
+function assertLockedCommerceTransaction(input: PublishedGraphInput): void {
+  if (!hasCommerceCapabilities(input.graph)) return;
+  const lock = assertCanonicalCompositionLock(input);
+  const transaction = lock.packages.find(
+    ({ lock: packageLock }) =>
+      packageLock.key === "commerce.transaction" &&
+      packageLock.version === "1.0.0",
+  );
+  if (!transaction)
+    throw new Error(
+      "Commerce compilation requires locked Golden commerce.transaction@1.0.0.",
+    );
+  const asset = resolveCapabilityAssetLock(transaction.lock);
+  if (
+    asset.manifest.lifecycle !== "golden" ||
+    !asset.manifest.runtimeHandlers?.includes("transaction")
+  ) {
+    throw new Error(
+      "Commerce transaction package is not a verified Golden runtime asset.",
+    );
+  }
+  const providers = lock.packages.flatMap(
+    ({ lock: packageLock }) =>
+      resolveCapabilityAssetLock(packageLock).manifest.provides ?? [],
+  );
+  for (const requirement of asset.manifest.requires ?? []) {
+    if (
+      !providers.some(
+        (provider) =>
+          provider.interfaceKey === requirement.interfaceKey &&
+          provider.version === requirement.version,
+      )
+    ) {
+      throw new Error(
+        `Commerce transaction dependency '${requirement.interfaceKey}@${requirement.version}' is not locked.`,
+      );
+    }
+  }
+  for (const packageKey of ["core.audit", "core.workflow"]) {
+    if (
+      !lock.packages.some(
+        ({ lock: packageLock }) => packageLock.key === packageKey,
+      )
+    ) {
+      throw new Error(`Commerce compilation requires locked '${packageKey}'.`);
+    }
   }
 }
 
@@ -2957,6 +3016,7 @@ export function generateApplicationBundle(
     input.compositionLock,
     options.repositoryRoot,
   );
+  assertLockedCommerceTransaction(input);
   const targetContributionPlans = resolveTargetContributionPlans(
     input,
     options,
@@ -2991,6 +3051,10 @@ export function generateApplicationBundle(
     "commerce.order",
     "order",
     "orderEntity",
+  );
+  const commerceTransactionEnabled = input.compositionLock.packages.some(
+    ({ lock }) =>
+      lock.key === "commerce.transaction" && lock.version === "1.0.0",
   );
   const rootDirectory = `${graph.metadata.id}-${input.publishedRevisionId}`;
   const plannedFiles: PlannedGeneratedFile[] = [
@@ -3225,9 +3289,34 @@ export function generateApplicationBundle(
       path: contribution.path,
       render: () => renderTargetContribution(contribution).content,
     })),
+    ...(commerceTransactionEnabled
+      ? [
+          {
+            path: "api/src/commerce-transaction-runtime.ts",
+            render: () => renderCommerceTransactionRuntime(),
+          },
+          {
+            path: "api/prisma/commerce-transaction.prisma",
+            render: () => renderCommerceTransactionPrisma(),
+          },
+          {
+            path: "database/prisma/commerce-transaction.prisma",
+            render: () => renderCommerceTransactionPrisma(),
+          },
+          {
+            path: "tests/commerce-transaction.journey.test.ts",
+            render: () => renderCommerceTransactionJourney(),
+          },
+        ]
+      : []),
     {
       path: "api/src/capabilities/registry.ts",
-      render: () => renderCapabilityRegistry(capabilityTemplates),
+      render: () =>
+        renderCapabilityRegistry(
+          capabilityTemplates.filter((contribution) =>
+            contribution.content.includes("export const capabilityModule"),
+          ),
+        ),
     },
     {
       path: "api/src/application-runtime.ts",

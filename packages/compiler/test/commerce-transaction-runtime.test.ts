@@ -107,6 +107,59 @@ async function withGeneratedRuntime<T>(
 }
 
 describe("generic Commerce transaction runtime", () => {
+  it.each([
+    "restaurant-ordering",
+    "simple-ecommerce",
+    "retail-counter",
+    "grocery-pickup",
+  ] as const)(
+    "emits the locked atomic transaction boundary for %s",
+    (profile) => {
+      const bundle = generateApplicationBundle(commerceInput(profile));
+      const files = Object.fromEntries(
+        bundle.files.map((file) => [file.path, file.content]),
+      );
+
+      expect(files["api/src/commerce-transaction-runtime.ts"]).toContain(
+        "export async function executeCommerceTransaction",
+      );
+      expect(files["api/src/commerce-transaction-runtime.ts"]).toContain(
+        "prisma.$transaction",
+      );
+      expect(files["api/prisma/commerce-transaction.prisma"]).toContain(
+        "@@unique([scope, idempotencyKey])",
+      );
+      expect(files["tests/commerce-transaction.journey.test.ts"]).toContain(
+        "replayed: true",
+      );
+    },
+  );
+
+  it("fails closed when a Commerce graph has no locked transaction package", () => {
+    const graph = structuredClone(
+      composeDefaultCapabilityDraft({
+        profile: "simple-ecommerce",
+      }).graph,
+    );
+    graph.integration.compositionSelections =
+      graph.integration.compositionSelections?.filter(
+        ({ lock }) => lock.key !== "commerce.transaction",
+      );
+
+    expect(() =>
+      generateApplicationBundle({
+        publishedRevisionId: "commerce-without-transaction-lock",
+        graph,
+        compositionLock: createCapabilityCompositionLock({
+          graphChecksum: hashApplicationGraph(graph),
+          selections: graph.integration.compositionSelections ?? [],
+        }),
+      }),
+    ).toThrow(
+      "Commerce compilation requires locked Golden commerce.transaction@1.0.0.",
+    );
+  });
+
   it("reserves stock on submission and compensates it on a merchant cancellation", async () => {
     await withGeneratedRuntime(async (runtime) => {
       const order = await runtime.create("shopper", "order", {});
