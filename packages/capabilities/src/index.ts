@@ -268,6 +268,72 @@ function assertCompositionGraphSymbols(
   }
 }
 
+function assertInventoryLedgerGraphSemantics(
+  graph: ApplicationGraphV1,
+  composition: CapabilityCompositionV1,
+): void {
+  const inventoryLedger = composition.packages.find(
+    ({ lock }) => lock.key === "commerce.inventory-ledger",
+  );
+  if (!inventoryLedger) return;
+
+  const boundDomainEntity = (bindingKey: string): string => {
+    const binding = inventoryLedger.bindings[bindingKey];
+    if (
+      typeof binding !== "object" ||
+      !binding.graphSymbol.startsWith("graph.domain.")
+    ) {
+      throw new Error(
+        `Capability package 'commerce.inventory-ledger' binding '${bindingKey}' must reference graph.domain.`,
+      );
+    }
+    return binding.graphSymbol.slice("graph.domain.".length);
+  };
+
+  const movementEntityKey = boundDomainEntity("movementEntity");
+  const locationEntityKey = boundDomainEntity("locationEntity");
+  const movementEntity = graph.domain.entities.find(
+    ({ key }) => key === movementEntityKey,
+  );
+  const idempotencyField = movementEntity?.fields.find(
+    ({ key }) => key === "idempotencyKey",
+  );
+
+  if (
+    !movementEntity ||
+    !idempotencyField ||
+    idempotencyField.type !== "string" ||
+    idempotencyField.required !== true ||
+    idempotencyField.unique !== true
+  ) {
+    throw new Error(
+      `Capability package 'commerce.inventory-ledger' movement entity '${movementEntityKey}' must declare a required unique string idempotencyKey field.`,
+    );
+  }
+
+  const hasUniqueIdempotencyIndex = movementEntity.indexes.some(
+    ({ fields, unique }) =>
+      unique === true && fields.length === 1 && fields[0] === "idempotencyKey",
+  );
+  if (!hasUniqueIdempotencyIndex) {
+    throw new Error(
+      `Capability package 'commerce.inventory-ledger' movement entity '${movementEntityKey}' must declare a unique single-field idempotencyKey index.`,
+    );
+  }
+
+  const hasLocationRelation = graph.domain.relations.some(
+    ({ from, to, kind }) =>
+      from === movementEntityKey &&
+      to === locationEntityKey &&
+      kind === "many-to-one",
+  );
+  if (!hasLocationRelation) {
+    throw new Error(
+      `Capability package 'commerce.inventory-ledger' movement entity '${movementEntityKey}' must declare a many-to-one relation to location entity '${locationEntityKey}'.`,
+    );
+  }
+}
+
 const allowedEffectProviderOverlaps: Readonly<
   Record<string, readonly string[]>
 > = {
@@ -538,6 +604,7 @@ export function composeCapabilityDraft(
     selections: input.selections,
   });
   assertCompositionGraphSymbols(graph, composition);
+  assertInventoryLedgerGraphSemantics(graph, composition);
   assertCompositionPolicyPermissions(graph, composition);
   graph.integration.compositionSelections = composition.packages.map(
     (selection) => structuredClone(selection),

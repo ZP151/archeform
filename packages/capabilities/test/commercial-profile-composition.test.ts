@@ -511,6 +511,59 @@ describe("commercial profile composition", () => {
     ).toThrow("inventory.adjust");
   });
 
+  it.each([
+    {
+      name: "non-unique idempotency field",
+      mutate: (
+        graph: ReturnType<typeof composeDefaultCapabilityDraft>["graph"],
+      ) => {
+        const ledger = graph.domain.entities.find(
+          ({ key }) => key === "inventory-ledger",
+        )!;
+        ledger.fields.find(({ key }) => key === "idempotencyKey")!.unique =
+          false;
+      },
+    },
+    {
+      name: "missing unique idempotency index",
+      mutate: (
+        graph: ReturnType<typeof composeDefaultCapabilityDraft>["graph"],
+      ) => {
+        const ledger = graph.domain.entities.find(
+          ({ key }) => key === "inventory-ledger",
+        )!;
+        ledger.indexes = ledger.indexes.filter(
+          ({ fields, unique }) =>
+            unique !== true || fields.join(",") !== "idempotencyKey",
+        );
+      },
+    },
+    {
+      name: "missing movement-to-location relation",
+      mutate: (
+        graph: ReturnType<typeof composeDefaultCapabilityDraft>["graph"],
+      ) => {
+        graph.domain.relations = graph.domain.relations.filter(
+          ({ from, to }) =>
+            !(from === "inventory-ledger" && to === "restaurant-location"),
+        );
+      },
+    },
+  ])("rejects the active Restaurant composition with $name", ({ mutate }) => {
+    const composition = composeDefaultCapabilityDraft({
+      profile: "restaurant-ordering",
+    });
+    const graph = structuredClone(composition.graph);
+    mutate(graph);
+
+    expect(() =>
+      composeCapabilityDraft({
+        graph,
+        selections: graph.integration.compositionSelections ?? [],
+      }),
+    ).toThrow("commerce.inventory-ledger");
+  });
+
   it("rejects a Foundation binding that references no declared Graph symbol", () => {
     const profile = composeDefaultCapabilityDraft({
       profile: "simple-ecommerce",
