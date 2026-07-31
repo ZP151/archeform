@@ -268,87 +268,272 @@ function assertCompositionGraphSymbols(
   }
 }
 
-function assertCompositionPolicyPermissions(
+const allowedEffectProviderOverlaps: Readonly<
+  Record<string, readonly string[]>
+> = {
+  "inventory.reserve": ["commerce.inventory", "commerce.inventory-ledger"],
+  "inventory.release": ["commerce.inventory", "commerce.inventory-ledger"],
+  "inventory.decrement": ["commerce.inventory", "commerce.inventory-ledger"],
+};
+
+function assertCapabilityEffectProviderOverlaps(
+  packageKeys: readonly string[],
+): void {
+  const providers = new Map<string, string[]>();
+  for (const packageKey of packageKeys) {
+    const manifest = getCapabilityAsset(packageKey).manifest;
+    for (const effect of manifest.effects) {
+      providers.set(effect, [...(providers.get(effect) ?? []), manifest.key]);
+    }
+  }
+
+  for (const [effect, packageProviders] of providers) {
+    if (packageProviders.length < 2) continue;
+    const actual = [...packageProviders].sort();
+    const allowed = [...(allowedEffectProviderOverlaps[effect] ?? [])].sort();
+    if (
+      actual.length !== allowed.length ||
+      actual.some((provider, index) => provider !== allowed[index])
+    ) {
+      throw new Error(
+        `Capability effect '${effect}' has undeclared providers '${actual.join(", ")}'.`,
+      );
+    }
+  }
+}
+
+function assertFoundationPolicyPermissions(
   graph: ApplicationGraphV1,
   composition: CapabilityCompositionV1,
 ): void {
-  const configuredLine = composition.packages.find(
-    ({ lock }) => lock.key === "commerce.line-configuration",
-  );
-  if (!configuredLine) return;
-
   const boundSymbol = (
+    selectedPackage: CapabilityCompositionV1["packages"][number],
     bindingKey: string,
     expectedModel: "domain" | "policy",
   ): string => {
-    const binding = configuredLine.bindings[bindingKey];
+    const binding = selectedPackage.bindings[bindingKey];
     if (typeof binding !== "object") {
       throw new Error(
-        `Configurable-line binding '${bindingKey}' must be an exact Graph symbol.`,
+        `Capability package '${selectedPackage.lock.key}' binding '${bindingKey}' must be an exact Graph symbol.`,
       );
     }
     const [, model, symbol] = binding.graphSymbol.split(".");
     if (model !== expectedModel || !symbol) {
       throw new Error(
-        `Configurable-line binding '${bindingKey}' must reference graph.${expectedModel}.`,
+        `Capability package '${selectedPackage.lock.key}' binding '${bindingKey}' must reference graph.${expectedModel}.`,
       );
     }
     return symbol;
   };
 
-  const customerRole = boundSymbol("customerRole", "policy");
-  const merchantRole = boundSymbol("merchantRole", "policy");
-  const optionGroup = boundSymbol("optionGroupEntity", "domain");
-  const option = boundSymbol("optionEntity", "domain");
-  const line = boundSymbol("lineEntity", "domain");
   const auditSelected = composition.packages.some(
     ({ lock }) => lock.key === "core.audit",
   );
-  const requiredPermissions = [
-    { role: customerRole, resource: optionGroup, actions: ["read"] },
-    { role: customerRole, resource: option, actions: ["read"] },
-    {
-      role: customerRole,
-      resource: line,
-      actions: ["create", "read", "update", "delete"],
-    },
-    {
-      role: merchantRole,
-      resource: optionGroup,
-      actions: ["create", "read", "update"],
-    },
-    {
-      role: merchantRole,
-      resource: option,
-      actions: ["create", "read", "update"],
-    },
-    {
-      role: merchantRole,
-      resource: line,
-      actions: auditSelected ? ["read", "audit"] : ["read"],
-    },
-  ] as const;
+  const requiredPermissions: {
+    readonly packageKey: string;
+    readonly role: string;
+    readonly resource: string;
+    readonly actions: readonly string[];
+  }[] = [];
+
+  for (const selectedPackage of composition.packages) {
+    if (selectedPackage.lock.key === "core.identity-context") {
+      const role = boundSymbol(selectedPackage, "defaultRole", "policy");
+      requiredPermissions.push(
+        {
+          packageKey: selectedPackage.lock.key,
+          role,
+          resource: boundSymbol(selectedPackage, "principalEntity", "domain"),
+          actions: ["read"],
+        },
+        {
+          packageKey: selectedPackage.lock.key,
+          role,
+          resource: boundSymbol(selectedPackage, "sessionEntity", "domain"),
+          actions: ["create", "read", "update"],
+        },
+      );
+    }
+
+    if (selectedPackage.lock.key === "core.location-context") {
+      const role = boundSymbol(selectedPackage, "customerRole", "policy");
+      requiredPermissions.push(
+        {
+          packageKey: selectedPackage.lock.key,
+          role,
+          resource: boundSymbol(selectedPackage, "locationEntity", "domain"),
+          actions: ["read"],
+        },
+        {
+          packageKey: selectedPackage.lock.key,
+          role,
+          resource: boundSymbol(selectedPackage, "contextEntity", "domain"),
+          actions: ["read"],
+        },
+      );
+    }
+
+    if (selectedPackage.lock.key === "commerce.line-configuration") {
+      const customerRole = boundSymbol(
+        selectedPackage,
+        "customerRole",
+        "policy",
+      );
+      const merchantRole = boundSymbol(
+        selectedPackage,
+        "merchantRole",
+        "policy",
+      );
+      const optionGroup = boundSymbol(
+        selectedPackage,
+        "optionGroupEntity",
+        "domain",
+      );
+      const option = boundSymbol(selectedPackage, "optionEntity", "domain");
+      const line = boundSymbol(selectedPackage, "lineEntity", "domain");
+      requiredPermissions.push(
+        {
+          packageKey: selectedPackage.lock.key,
+          role: customerRole,
+          resource: optionGroup,
+          actions: ["read"],
+        },
+        {
+          packageKey: selectedPackage.lock.key,
+          role: customerRole,
+          resource: option,
+          actions: ["read"],
+        },
+        {
+          packageKey: selectedPackage.lock.key,
+          role: customerRole,
+          resource: line,
+          actions: ["create", "read", "update", "delete"],
+        },
+        {
+          packageKey: selectedPackage.lock.key,
+          role: merchantRole,
+          resource: optionGroup,
+          actions: ["create", "read", "update"],
+        },
+        {
+          packageKey: selectedPackage.lock.key,
+          role: merchantRole,
+          resource: option,
+          actions: ["create", "read", "update"],
+        },
+        {
+          packageKey: selectedPackage.lock.key,
+          role: merchantRole,
+          resource: line,
+          actions: auditSelected ? ["read", "audit"] : ["read"],
+        },
+      );
+    }
+
+    if (selectedPackage.lock.key === "commerce.inventory-ledger") {
+      const merchantRole = boundSymbol(
+        selectedPackage,
+        "merchantRole",
+        "policy",
+      );
+      const auditRole = boundSymbol(selectedPackage, "auditRole", "policy");
+      const movementEntity = boundSymbol(
+        selectedPackage,
+        "movementEntity",
+        "domain",
+      );
+      requiredPermissions.push(
+        {
+          packageKey: selectedPackage.lock.key,
+          role: merchantRole,
+          resource: boundSymbol(selectedPackage, "catalogEntity", "domain"),
+          actions: ["read", "update"],
+        },
+        {
+          packageKey: selectedPackage.lock.key,
+          role: merchantRole,
+          resource: movementEntity,
+          actions: ["create", "read"],
+        },
+        {
+          packageKey: selectedPackage.lock.key,
+          role: merchantRole,
+          resource: boundSymbol(selectedPackage, "orderEntity", "domain"),
+          actions: ["read", "update"],
+        },
+        {
+          packageKey: selectedPackage.lock.key,
+          role: merchantRole,
+          resource: boundSymbol(selectedPackage, "locationEntity", "domain"),
+          actions: ["read"],
+        },
+      );
+      if (auditSelected) {
+        requiredPermissions.push({
+          packageKey: selectedPackage.lock.key,
+          role: auditRole,
+          resource: movementEntity,
+          actions: ["audit"],
+        });
+      }
+    }
+  }
 
   for (const required of requiredPermissions) {
-    const permission = graph.policy.permissions.find(
-      ({ role, resource }) =>
-        role === required.role && resource === required.resource,
+    const grantedActions = new Set(
+      graph.policy.permissions
+        .filter(
+          ({ role, resource }) =>
+            role === required.role && resource === required.resource,
+        )
+        .flatMap(({ actions }) => actions),
     );
-    if (
-      !permission ||
-      required.actions.some((action) => !permission.actions.includes(action))
-    ) {
+    if (required.actions.some((action) => !grantedActions.has(action))) {
       throw new Error(
-        `Graph permission '${required.role}:${required.resource}' must include actions '${required.actions.join(", ")}' for configurable-line composition.`,
+        `Graph permission '${required.role}:${required.resource}' must include actions '${required.actions.join(", ")}' for capability package '${required.packageKey}'.`,
       );
     }
   }
+}
+
+function assertSelectedCapabilityPolicy(
+  graph: ApplicationGraphV1,
+  composition: CapabilityCompositionV1,
+): void {
+  for (const selectedPackage of composition.packages) {
+    const roleBindings = Object.entries(selectedPackage.bindings).filter(
+      ([, value]) =>
+        typeof value === "object" &&
+        value.graphSymbol.startsWith("graph.policy."),
+    );
+    for (const [bindingKey, value] of roleBindings) {
+      if (typeof value !== "object") continue;
+      const role = value.graphSymbol.replace("graph.policy.", "");
+      if (!graph.policy.roles.includes(role)) {
+        throw new Error(
+          `Capability package '${selectedPackage.lock.key}' binding '${bindingKey}' references undeclared role '${role}'.`,
+        );
+      }
+    }
+  }
+  assertFoundationPolicyPermissions(graph, composition);
+}
+
+function assertCompositionPolicyPermissions(
+  graph: ApplicationGraphV1,
+  composition: CapabilityCompositionV1,
+): void {
+  assertSelectedCapabilityPolicy(graph, composition);
 }
 
 export function composeCapabilityDraft(
   input: CapabilityDraftCompositionInput,
 ): CapabilityDraftCompositionResult {
   const graph = structuredClone(assertValidApplicationGraph(input.graph));
+  assertCapabilityEffectProviderOverlaps(
+    input.selections.map(({ lock }) => lock.key),
+  );
   const composition = resolveCapabilityComposition({
     selections: input.selections,
   });
@@ -389,7 +574,6 @@ const compositionRecipes: Readonly<
       "core.identity-context",
       "core.location-context",
       "restaurant.table-session",
-      "restaurant.menu",
       "restaurant.ordering",
       "restaurant.kitchen",
       "restaurant.cashier",
@@ -569,14 +753,14 @@ const profileCompositionBindings: Readonly<
   },
   "simple-ecommerce": {
     "core.audit": {
-      actorRole: { graphSymbol: "graph.policy.customer" },
+      actorRole: { graphSymbol: "graph.policy.merchant" },
     },
     "core.crud": {
       entityKey: { graphSymbol: "graph.domain.product" },
       routeKey: { graphSymbol: "graph.page.catalog" },
     },
     "core.notification": {
-      recipientRole: { graphSymbol: "graph.policy.customer" },
+      recipientRole: { graphSymbol: "graph.policy.shopper" },
     },
     "core.workflow": {
       flowKey: { graphSymbol: "graph.flow.ecommerce-order" },
@@ -584,13 +768,13 @@ const profileCompositionBindings: Readonly<
     "commerce.catalog": {
       catalogEntity: { graphSymbol: "graph.domain.product" },
       catalogPage: { graphSymbol: "graph.page.catalog" },
-      customerRole: { graphSymbol: "graph.policy.customer" },
+      customerRole: { graphSymbol: "graph.policy.shopper" },
     },
     "commerce.cart": {
       catalogEntity: { graphSymbol: "graph.domain.product" },
       orderEntity: { graphSymbol: "graph.domain.order" },
       cartPage: { graphSymbol: "graph.page.checkout" },
-      customerRole: { graphSymbol: "graph.policy.customer" },
+      customerRole: { graphSymbol: "graph.policy.shopper" },
     },
     "commerce.inventory": {
       catalogEntity: { graphSymbol: "graph.domain.product" },
@@ -1213,8 +1397,15 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               key: "inventory-ledger",
               label: "Inventory ledger",
               fields: [
+                { key: "locationId", type: "string", required: true },
                 { key: "menuItemId", type: "string", required: true },
                 { key: "orderId", type: "string", required: false },
+                {
+                  key: "idempotencyKey",
+                  type: "string",
+                  required: true,
+                  unique: true,
+                },
                 { key: "delta", type: "integer", required: true },
                 {
                   key: "provenance",
@@ -1241,8 +1432,10 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
                 { key: "recordedAt", type: "datetime", required: true },
               ],
               indexes: [
+                { fields: ["locationId", "recordedAt"] },
                 { fields: ["menuItemId", "recordedAt"] },
                 { fields: ["orderId"] },
+                { fields: ["idempotencyKey"], unique: true },
               ],
             },
           ],
@@ -1317,6 +1510,12 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               to: "order",
               kind: "one-to-one",
               field: "orderId",
+            },
+            {
+              from: "inventory-ledger",
+              to: "restaurant-location",
+              kind: "many-to-one",
+              field: "locationId",
             },
             {
               from: "inventory-ledger",
@@ -1406,7 +1605,21 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
         {
           roles: ["customer", "kitchen", "cashier", "manager"],
           permissions: [
-            { role: "customer", resource: "table-session", actions: ["read"] },
+            {
+              role: "customer",
+              resource: "restaurant-principal",
+              actions: ["read"],
+            },
+            {
+              role: "customer",
+              resource: "table-session",
+              actions: ["create", "read", "update"],
+            },
+            {
+              role: "customer",
+              resource: "restaurant-table",
+              actions: ["read"],
+            },
             { role: "customer", resource: "menu-category", actions: ["read"] },
             { role: "customer", resource: "menu-item", actions: ["read"] },
             {
@@ -1441,6 +1654,11 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               actions: ["create", "read"],
             },
             { role: "cashier", resource: "order", actions: ["read", "update"] },
+            {
+              role: "manager",
+              resource: "restaurant-location",
+              actions: ["read"],
+            },
             {
               role: "manager",
               resource: "restaurant-table",
@@ -1672,10 +1890,6 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
           "table-session.validate",
           "table-session.close",
           "table-session.expire",
-          "menu.category.list",
-          "menu.item.list",
-          "menu.item.search",
-          "menu.item.manage",
           "inventory.adjust",
           "inventory.ledger.read",
           "identity.context.resolve",
@@ -2001,25 +2215,25 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
           ],
         },
         {
-          roles: ["customer", "operator", "shopper", "merchant"],
+          roles: ["shopper", "merchant"],
           permissions: [
-            { role: "customer", resource: "product", actions: ["read"] },
             {
-              role: "customer",
-              resource: "order",
-              actions: ["create", "read"],
+              role: "shopper",
+              resource: "shopper",
+              actions: ["read"],
             },
             {
-              role: "operator",
-              resource: "product",
+              role: "shopper",
+              resource: "shopper-session",
               actions: ["create", "read", "update"],
             },
-            {
-              role: "operator",
-              resource: "order",
-              actions: ["read", "update"],
-            },
+            { role: "shopper", resource: "store", actions: ["read"] },
             { role: "shopper", resource: "product", actions: ["read"] },
+            {
+              role: "shopper",
+              resource: "order",
+              actions: ["create", "read", "update"],
+            },
             {
               role: "shopper",
               resource: "product-option-group",
@@ -2055,6 +2269,12 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               resource: "product-line",
               actions: ["read", "audit"],
             },
+            { role: "merchant", resource: "store", actions: ["read"] },
+            {
+              role: "merchant",
+              resource: "order",
+              actions: ["read", "update", "audit"],
+            },
             {
               role: "merchant",
               resource: "stock-movement",
@@ -2087,7 +2307,7 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
                   from: "paid",
                   event: "fulfil",
                   to: "fulfilled",
-                  roles: ["operator"],
+                  roles: ["merchant"],
                   effects: [
                     { capability: "audit.record", operation: "record" },
                   ],
@@ -2174,6 +2394,10 @@ export function getProfileComposition(
   const recipe = compositionRecipes[profile];
   if (!recipe) throw new Error(`Unknown Factory profile '${profile}'.`);
   profileStarterFor(profile);
+  assertCapabilityEffectProviderOverlaps([
+    ...recipe.requiredCapabilities,
+    ...recipe.optionalCapabilities,
+  ]);
   return {
     profile,
     requiredCapabilities: recipe.requiredCapabilities.map(getCapability),

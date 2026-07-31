@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   composeCapabilityDraft,
   composeDefaultCapabilityDraft,
+  getCapabilityAsset,
   type CapabilitySelectionV1,
 } from "../src/index.js";
+import { lockCapabilityAsset } from "../src/assets/index.js";
 
 const foundationKeys = [
   "commerce.inventory-ledger",
@@ -210,6 +212,84 @@ describe("commercial profile composition", () => {
     );
   });
 
+  it("uses one shopper journey and one merchant journey throughout Ecommerce", () => {
+    const composition = composeDefaultCapabilityDraft({
+      profile: "simple-ecommerce",
+    });
+    const graph = composition.graph;
+    const roleBindings = (
+      graph.integration.compositionSelections ?? []
+    ).flatMap(({ lock, bindings }) =>
+      Object.entries(bindings)
+        .filter(
+          ([, binding]) =>
+            typeof binding === "object" &&
+            binding.graphSymbol.startsWith("graph.policy."),
+        )
+        .map(([binding, value]) => ({
+          package: lock.key,
+          binding,
+          role:
+            typeof value === "object"
+              ? value.graphSymbol.replace("graph.policy.", "")
+              : value,
+        })),
+    );
+
+    expect(graph.policy.roles).toEqual(["shopper", "merchant"]);
+    expect(roleBindings).not.toContainEqual(
+      expect.objectContaining({ role: "customer" }),
+    );
+    expect(roleBindings).not.toContainEqual(
+      expect.objectContaining({ role: "operator" }),
+    );
+    expect(roleBindings).toEqual(
+      expect.arrayContaining([
+        {
+          package: "commerce.catalog",
+          binding: "customerRole",
+          role: "shopper",
+        },
+        { package: "commerce.cart", binding: "customerRole", role: "shopper" },
+        {
+          package: "core.identity-context",
+          binding: "defaultRole",
+          role: "shopper",
+        },
+        { package: "core.audit", binding: "actorRole", role: "merchant" },
+        {
+          package: "commerce.inventory-ledger",
+          binding: "merchantRole",
+          role: "merchant",
+        },
+        {
+          package: "commerce.inventory-ledger",
+          binding: "auditRole",
+          role: "merchant",
+        },
+      ]),
+    );
+    expect(
+      graph.flow.flows
+        .find(({ id }) => id === "ecommerce-order")
+        ?.transitions.find(({ event }) => event === "fulfil")?.roles,
+    ).toEqual(["merchant"]);
+    expect(graph.policy.permissions).toEqual(
+      expect.arrayContaining([
+        {
+          role: "shopper",
+          resource: "order",
+          actions: ["create", "read", "update"],
+        },
+        {
+          role: "merchant",
+          resource: "order",
+          actions: ["read", "update", "audit"],
+        },
+      ]),
+    );
+  });
+
   it.each([
     {
       profile: "restaurant-ordering" as const,
@@ -279,6 +359,157 @@ describe("commercial profile composition", () => {
       ).toThrow(`${customerRole}:${optionGroup}`);
     },
   );
+
+  it.each([
+    {
+      profile: "restaurant-ordering" as const,
+      package: "core.identity-context",
+      role: "customer",
+      resource: "restaurant-principal",
+      action: "read",
+    },
+    {
+      profile: "restaurant-ordering" as const,
+      package: "core.identity-context",
+      role: "customer",
+      resource: "table-session",
+      action: "create",
+    },
+    {
+      profile: "restaurant-ordering" as const,
+      package: "core.location-context",
+      role: "customer",
+      resource: "restaurant-table",
+      action: "read",
+    },
+    {
+      profile: "restaurant-ordering" as const,
+      package: "commerce.line-configuration",
+      role: "manager",
+      resource: "menu-option",
+      action: "update",
+    },
+    {
+      profile: "restaurant-ordering" as const,
+      package: "commerce.inventory-ledger",
+      role: "manager",
+      resource: "inventory-ledger",
+      action: "create",
+    },
+    {
+      profile: "restaurant-ordering" as const,
+      package: "commerce.inventory-ledger",
+      role: "manager",
+      resource: "restaurant-location",
+      action: "read",
+    },
+    {
+      profile: "restaurant-ordering" as const,
+      package: "commerce.inventory-ledger",
+      role: "manager",
+      resource: "inventory-ledger",
+      action: "audit",
+    },
+    {
+      profile: "simple-ecommerce" as const,
+      package: "core.identity-context",
+      role: "shopper",
+      resource: "shopper",
+      action: "read",
+    },
+    {
+      profile: "simple-ecommerce" as const,
+      package: "core.identity-context",
+      role: "shopper",
+      resource: "shopper-session",
+      action: "create",
+    },
+    {
+      profile: "simple-ecommerce" as const,
+      package: "core.location-context",
+      role: "shopper",
+      resource: "store",
+      action: "read",
+    },
+    {
+      profile: "simple-ecommerce" as const,
+      package: "commerce.line-configuration",
+      role: "merchant",
+      resource: "product-option",
+      action: "update",
+    },
+    {
+      profile: "simple-ecommerce" as const,
+      package: "commerce.inventory-ledger",
+      role: "merchant",
+      resource: "stock-movement",
+      action: "create",
+    },
+    {
+      profile: "simple-ecommerce" as const,
+      package: "commerce.inventory-ledger",
+      role: "merchant",
+      resource: "store",
+      action: "read",
+    },
+    {
+      profile: "simple-ecommerce" as const,
+      package: "commerce.inventory-ledger",
+      role: "merchant",
+      resource: "stock-movement",
+      action: "audit",
+    },
+  ])(
+    "fails closed when $profile removes $package permission $role:$resource:$action",
+    ({ profile, role, resource, action }) => {
+      const composition = composeDefaultCapabilityDraft({ profile });
+      const graph = structuredClone(composition.graph);
+      const matchingPermissions = graph.policy.permissions.filter(
+        (permission) =>
+          permission.role === role && permission.resource === resource,
+      );
+      expect(
+        matchingPermissions.some((permission) =>
+          permission.actions.includes(action),
+        ),
+      ).toBe(true);
+      for (const permission of matchingPermissions) {
+        permission.actions = permission.actions.filter(
+          (candidate) => candidate !== action,
+        );
+      }
+      graph.policy.permissions = graph.policy.permissions.filter(
+        (permission) => permission.actions.length > 0,
+      );
+
+      expect(() =>
+        composeCapabilityDraft({
+          graph,
+          selections: graph.integration.compositionSelections ?? [],
+        }),
+      ).toThrow(`${role}:${resource}`);
+    },
+  );
+
+  it("rejects an undeclared provider overlap before resolving bindings", () => {
+    const composition = composeDefaultCapabilityDraft({
+      profile: "restaurant-ordering",
+    });
+    const selections = [
+      ...(composition.graph.integration.compositionSelections ?? []),
+      {
+        lock: lockCapabilityAsset(getCapabilityAsset("restaurant.menu")),
+        bindings: {},
+      },
+    ];
+
+    expect(() =>
+      composeCapabilityDraft({
+        graph: composition.graph,
+        selections,
+      }),
+    ).toThrow("inventory.adjust");
+  });
 
   it("rejects a Foundation binding that references no declared Graph symbol", () => {
     const profile = composeDefaultCapabilityDraft({

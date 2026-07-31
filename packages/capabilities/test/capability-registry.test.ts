@@ -1684,6 +1684,47 @@ describe("capability catalog", () => {
     }
   });
 
+  it("keeps the complete Restaurant composition within the declared overlap policy", () => {
+    const graph = composeProfileDraft({
+      profile: "restaurant-ordering",
+    }).graph;
+    const selectedAssets = graph.integration.assetLocks!.map((lock) =>
+      getCapabilityAsset(lock.key),
+    );
+    const providersByEffect = new Map<string, string[]>();
+    for (const asset of selectedAssets) {
+      for (const effect of asset.manifest.effects) {
+        providersByEffect.set(effect, [
+          ...(providersByEffect.get(effect) ?? []),
+          asset.manifest.key,
+        ]);
+      }
+    }
+
+    expect(
+      [...providersByEffect.entries()]
+        .filter(([, providers]) => providers.length > 1)
+        .map(([effect, providers]) => [effect, providers.sort()])
+        .sort(([left], [right]) => String(left).localeCompare(String(right))),
+    ).toEqual([
+      [
+        "inventory.decrement",
+        ["commerce.inventory", "commerce.inventory-ledger"],
+      ],
+      [
+        "inventory.release",
+        ["commerce.inventory", "commerce.inventory-ledger"],
+      ],
+      [
+        "inventory.reserve",
+        ["commerce.inventory", "commerce.inventory-ledger"],
+      ],
+    ]);
+    expect(selectedAssets.map(({ manifest }) => manifest.key)).not.toContain(
+      "restaurant.menu",
+    );
+  });
+
   it("enforces recipe eligibility without using manifest profile membership", () => {
     const cartLock = {
       key: "commerce.cart",

@@ -175,8 +175,10 @@ const requiredEntityFields: Readonly<
     readyAt: "datetime",
   },
   "inventory-ledger": {
+    locationId: "string",
     menuItemId: "string",
     orderId: "string",
+    idempotencyKey: "string",
     delta: "integer",
     provenance: "enum",
     adjustmentReason: "enum",
@@ -187,7 +189,13 @@ const requiredEntityFields: Readonly<
 const requiredRoles = ["customer", "kitchen", "cashier", "manager"] as const;
 
 const requiredPermissions = [
-  { role: "customer", resource: "table-session", actions: ["read"] },
+  { role: "customer", resource: "restaurant-principal", actions: ["read"] },
+  {
+    role: "customer",
+    resource: "table-session",
+    actions: ["create", "read", "update"],
+  },
+  { role: "customer", resource: "restaurant-table", actions: ["read"] },
   { role: "customer", resource: "menu-category", actions: ["read"] },
   { role: "customer", resource: "menu-item", actions: ["read"] },
   {
@@ -214,6 +222,11 @@ const requiredPermissions = [
     actions: ["create", "read"],
   },
   { role: "cashier", resource: "order", actions: ["read", "update"] },
+  {
+    role: "manager",
+    resource: "restaurant-location",
+    actions: ["read"],
+  },
   {
     role: "manager",
     resource: "restaurant-table",
@@ -341,7 +354,6 @@ const requiredAssetLocks = [
   "core.identity-context",
   "core.location-context",
   "restaurant.table-session",
-  "restaurant.menu",
   "restaurant.ordering",
   "restaurant.kitchen",
   "restaurant.cashier",
@@ -387,6 +399,7 @@ const requiredRelations = [
   ["order-line-option", "menu-option", "many-to-one"],
   ["payment-attempt", "order", "many-to-one"],
   ["kitchen-ticket", "order", "one-to-one"],
+  ["inventory-ledger", "restaurant-location", "many-to-one"],
   ["inventory-ledger", "menu-item", "many-to-one"],
   ["inventory-ledger", "order", "many-to-one"],
 ] as const;
@@ -872,6 +885,27 @@ function validateInventoryLedgerFields(
   if (entityIndex < 0) return;
 
   const entity = graph.domain.entities[entityIndex]!;
+  const idempotencyFieldIndex = entity.fields.findIndex(
+    (field) => field.key === "idempotencyKey",
+  );
+  const idempotencyField = entity.fields[idempotencyFieldIndex];
+  const hasIdempotencyIndex = entity.indexes.some(
+    (index) =>
+      index.unique === true &&
+      index.fields.length === 1 &&
+      index.fields[0] === "idempotencyKey",
+  );
+  if (
+    idempotencyField &&
+    (idempotencyField.unique !== true || !hasIdempotencyIndex)
+  ) {
+    issue(
+      "restaurant.inventory-ledger.invalid",
+      "Restaurant inventory records require a unique idempotencyKey field and index.",
+      ["domain", "entities", entityIndex, "indexes"],
+    );
+  }
+
   const checks = [
     {
       key: "orderId",
@@ -915,19 +949,33 @@ function validateInventoryLedgerFields(
     }
   }
 
-  const orderRelationIndex = graph.domain.relations.findIndex(
-    (relation) =>
-      relation.from === "inventory-ledger" &&
-      relation.to === "order" &&
-      relation.kind === "many-to-one",
-  );
-  const orderRelation = graph.domain.relations[orderRelationIndex];
-  if (orderRelation && orderRelation.field !== "orderId") {
-    issue(
-      "restaurant.inventory-provenance.invalid",
-      "Restaurant order-derived inventory records require the inventory-ledger.orderId relation.",
-      ["domain", "relations", orderRelationIndex, "field"],
+  const requiredLedgerRelations = [
+    ["restaurant-location", "locationId"],
+    ["menu-item", "menuItemId"],
+    ["order", "orderId"],
+  ] as const;
+  for (const [target, field] of requiredLedgerRelations) {
+    const relationIndex = graph.domain.relations.findIndex(
+      (relation) =>
+        relation.from === "inventory-ledger" &&
+        relation.to === target &&
+        relation.kind === "many-to-one",
     );
+    const relation = graph.domain.relations[relationIndex];
+    if (!relation || relation.field !== field) {
+      issue(
+        target === "order"
+          ? "restaurant.inventory-provenance.invalid"
+          : "restaurant.inventory-ledger.invalid",
+        `Restaurant inventory records require the inventory-ledger.${field} relation to '${target}'.`,
+        [
+          "domain",
+          "relations",
+          relationIndex < 0 ? target : relationIndex,
+          "field",
+        ],
+      );
+    }
   }
 }
 

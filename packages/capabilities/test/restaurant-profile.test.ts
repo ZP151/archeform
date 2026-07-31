@@ -202,6 +202,133 @@ describe("Restaurant Ordering profile", () => {
     });
   });
 
+  it("declares a location-scoped idempotent Restaurant inventory ledger", () => {
+    const graph = restaurantGraph();
+    const ledger = graph.domain.entities.find(
+      ({ key }) => key === "inventory-ledger",
+    )!;
+
+    expect(ledger.fields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "locationId",
+          type: "string",
+          required: true,
+        }),
+        expect.objectContaining({
+          key: "idempotencyKey",
+          type: "string",
+          required: true,
+          unique: true,
+        }),
+      ]),
+    );
+    expect(ledger.indexes).toContainEqual({
+      fields: ["idempotencyKey"],
+      unique: true,
+    });
+    expect(graph.domain.relations).toEqual(
+      expect.arrayContaining([
+        {
+          from: "inventory-ledger",
+          to: "restaurant-location",
+          kind: "many-to-one",
+          field: "locationId",
+        },
+        {
+          from: "inventory-ledger",
+          to: "menu-item",
+          kind: "many-to-one",
+          field: "menuItemId",
+        },
+        {
+          from: "inventory-ledger",
+          to: "order",
+          kind: "many-to-one",
+          field: "orderId",
+        },
+      ]),
+    );
+  });
+
+  it("rejects missing or invalid Restaurant inventory-ledger structure", () => {
+    const cases = [
+      {
+        name: "location field",
+        mutate: (graph: ReturnType<typeof restaurantGraph>) => {
+          const ledger = graph.domain.entities.find(
+            ({ key }) => key === "inventory-ledger",
+          )!;
+          ledger.fields = ledger.fields.filter(
+            ({ key }) => key !== "locationId",
+          );
+        },
+      },
+      {
+        name: "idempotency uniqueness",
+        mutate: (graph: ReturnType<typeof restaurantGraph>) => {
+          const field = restaurantField(
+            graph,
+            "inventory-ledger",
+            "idempotencyKey",
+          );
+          field.unique = false;
+        },
+      },
+      {
+        name: "idempotency unique index",
+        mutate: (graph: ReturnType<typeof restaurantGraph>) => {
+          const ledger = graph.domain.entities.find(
+            ({ key }) => key === "inventory-ledger",
+          )!;
+          ledger.indexes = ledger.indexes.filter(
+            ({ fields }) => fields.join(",") !== "idempotencyKey",
+          );
+        },
+      },
+      {
+        name: "location relation",
+        mutate: (graph: ReturnType<typeof restaurantGraph>) => {
+          graph.domain.relations = graph.domain.relations.filter(
+            ({ from, to }) =>
+              !(from === "inventory-ledger" && to === "restaurant-location"),
+          );
+        },
+      },
+      {
+        name: "item relation field",
+        mutate: (graph: ReturnType<typeof restaurantGraph>) => {
+          graph.domain.relations.find(
+            ({ from, to }) => from === "inventory-ledger" && to === "menu-item",
+          )!.field = "wrongItemId";
+        },
+      },
+      {
+        name: "order relation field",
+        mutate: (graph: ReturnType<typeof restaurantGraph>) => {
+          graph.domain.relations.find(
+            ({ from, to }) => from === "inventory-ledger" && to === "order",
+          )!.field = "wrongOrderId";
+        },
+      },
+    ] as const;
+
+    for (const testCase of cases) {
+      const graph = restaurantGraph();
+      testCase.mutate(graph);
+
+      expect(validateRestaurantOrderingProfile(graph), testCase.name).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: expect.stringMatching(
+              /restaurant\.(field\.missing|inventory-ledger\.invalid|inventory-provenance\.invalid)/,
+            ),
+          }),
+        ]),
+      );
+    }
+  });
+
   it("requires the sole standalone inventory adjustment path to be manager-audited", () => {
     const graph = restaurantGraph();
     const flow = graph.flow.flows.find(
@@ -562,7 +689,6 @@ describe("Restaurant Ordering profile", () => {
     expect(graph.integration.assetLocks?.map((lock) => lock.key)).toEqual(
       expect.arrayContaining([
         "restaurant.table-session",
-        "restaurant.menu",
         "restaurant.ordering",
         "restaurant.kitchen",
         "restaurant.cashier",
@@ -572,6 +698,9 @@ describe("Restaurant Ordering profile", () => {
         "core.identity-context",
         "core.location-context",
       ]),
+    );
+    expect(graph.integration.assetLocks).not.toContainEqual(
+      expect.objectContaining({ key: "restaurant.menu" }),
     );
     expect(graph.integration.assetLocks).not.toContainEqual(
       expect.objectContaining({ key: "commerce.simulated-payment" }),
