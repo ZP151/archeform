@@ -5,16 +5,16 @@ Updated: 2026-07-31
 ## Current milestone
 
 Commercial Capability Foundation Task 2, **Restaurant and Ecommerce profile
-recipes**, is `ready_for_qa` for a second independent re-QA after fix round 4
-of 5, `bf0b16f`, passed scoped re-review with the active-default-composition P1
-addressed and no P0/P1. Its exact release set is
+recipes**, returned `ready_for_qa -> implementing` for the final fix round 5 of
+5 after final release review found one P1 in active generic inventory-ledger
+relationship validation. The reviewed release set remains
 `35aa96e + ed3c2ba + ac43247 + e61e790 + bf0b16f`. Its contract owner remains
 Profile Composition Integration; its dependency, Task 1 capability contracts
 and physical packages, remains `accepted` and frozen. Task 2 remains limited
 to composing Restaurant and Ecommerce Draft recipes from the same four
 accepted Foundation identities with distinct exact Graph-symbol bindings,
-entities, pages, roles, labels, and fixtures. This transition is not acceptance
-and does not unlock Foundation Tasks 3 or 4; both remain `planned`.
+entities, pages, roles, labels, and fixtures. This final repair state is not
+acceptance and does not unlock Foundation Tasks 3 or 4; both remain `planned`.
 
 The Application Graph remains the source of truth. External intake artifacts
 remain quarantined Candidate evidence or pending-review packets; they are not
@@ -84,6 +84,16 @@ within its exact five paths:
   `v22.11.0` verification passed all 155 Capabilities tests, including 28/28
   commercial-profile-composition tests; build, typecheck, and formatting also
   passed.
+- Second independent re-QA then passed 148/148 focused Task 2 tests and 155/155
+  full Capabilities tests. Build, typecheck, formatting, exact five-path diff
+  checks, 56 remove-one-permission cases, the three active ledger mutations,
+  no-ledger composition, and provider-overlap rejection all passed with no
+  P0/P1/P2 demonstrated.
+- Final release review nevertheless returned FAIL with one P1: the active
+  generic validator still accepts inventory-ledger relations with a missing or
+  wrong location source field and accepts missing catalog or order provenance
+  relations. The green re-QA evidence does not justify acceptance while that
+  public-boundary gap remains open.
 
 The complete External Capability Intake project is accepted and frozen. Its
 Task 6 writer record is
@@ -116,8 +126,8 @@ On Node `v22.11.0`, it records:
 
 ## Active work
 
-- A second independent behavioral re-QA is the next gate for Task 2's exact
-  five-commit release set, bounded to the same five paths:
+- One bounded `integration` writer owns the final fix round 5 of 5 within Task
+  2's same exact five paths:
   `packages/capabilities/src/index.ts`,
   `packages/capabilities/src/restaurant/profile.ts`,
   `packages/capabilities/test/restaurant-profile.test.ts`, and
@@ -134,11 +144,21 @@ On Node `v22.11.0`, it records:
   contract, physical asset, package identity, interface, dependency, recipe
   scope, lifecycle or Publish behavior, production behavior, non-goal, or Task
   2 state.
-- Re-QA must exercise all three repaired active-entry-point failures, valid
-  Ecommerce through the same public composition boundary, and compositions
-  without the ledger package. The repair changes no frozen contract, physical
-  asset, package identity, dependency, non-goal, lifecycle behavior, compiler,
-  or Workbench code.
+- The P1 is specific: active generic validation resolves the bound movement and
+  location entities but checks only relation endpoints and `many-to-one`
+  cardinality. The public `composeCapabilityDraft` boundary still accepts:
+  1. deletion of the movement-to-location relation's `field`;
+  2. changing that field from `locationId` to `menuItemId`;
+  3. deletion of the movement-to-catalog relation; or
+  4. deletion of the movement-to-order relation.
+- The bounded Restaurant validator rejects all four mutations.
+- Fix round 5 must make the public validator require package/binding-derived
+  movement-to-location, movement-to-catalog, and movement-to-order relations
+  with explicit valid source fields, and add public-boundary adversarial tests
+  for all four mutations. It must not add profile-name or package-version
+  dispatch. If exact field semantics cannot be derived from the frozen
+  bindings, work must stop for contract review rather than guess or change the
+  contract.
 - No new package identity, Task 1 contract change, compiler, Workbench,
   generated runtime, payment, identity-provider, deployment behavior, profile
   cloning, Graph `assetLocks` fallback, or Restaurant-only package fork is in
@@ -157,8 +177,8 @@ On Node `v22.11.0`, it records:
   evidence. Acceptance grants no promotion, approval, Golden, Graph, compiler,
   generated-runtime, provider, or source-copy authority.
 - Foundation Tasks 3 and 4 are blocked on accepted Task 2 profile composition
-  metadata. A `ready_for_qa` transition does not satisfy that dependency;
-  neither downstream task is dispatched by this update.
+  metadata. Task 2 is back in `implementing`; neither downstream task is
+  dispatched by this update.
 
 ## Risks and limitations
 
@@ -181,8 +201,8 @@ On Node `v22.11.0`, it records:
 
 ## Next slice
 
-Run a second independent behavioral re-QA against Task 2's exact five-commit
-release set and five-path scope, including the package/binding-bounded active
-ledger validator, all three adversarial mutations, valid Ecommerce, and
-no-ledger composition behavior. Reconcile re-QA before any move to `reviewed`.
-Keep Tasks 3 and 4 planned and blocked until Task 2 is accepted.
+Repair the public inventory-ledger relationship-validation P1 within Task 2's
+exact five-path boundary, beginning with focused failing tests for a missing
+location field, wrong location field, missing catalog relation, and missing
+order relation. Require fresh scoped review before returning to
+`ready_for_qa`. Keep Tasks 3 and 4 planned and blocked until Task 2 is accepted.
