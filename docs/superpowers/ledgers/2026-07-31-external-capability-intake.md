@@ -37,7 +37,7 @@ slice, and the Controller has accepted the design contract. Task 1 is now
 release behavior remains accepted and frozen. Task 2 is `accepted` after Fix
 Round 2/5. Task 3 is `accepted` after Fix Round 4/5 independent re-review, QA,
 release review, and fresh final verification all passed with no P0/P1/P2. Task
-4 is now `ready_for_qa` under its frozen Candidate Registry contract, exact
+4 is now `reviewed` under its frozen Candidate Registry contract, exact
 allowed paths, and non-goals. A Controller-approved bounded test-contract
 amendment adds only `packages/external-intake/test/portfolio.test.ts` to permit
 `apps/intake-cli/package.json` as the single `@factory/external-intake`
@@ -103,8 +103,10 @@ Task 4 `implementing` and authorizes a second bounded Round 10/10 convergence
 follow-up inside the existing Candidate implementation/test and ignored-report
 paths only. Final product commit `f93e25a`, evidence commit `9c5d2f1`, and
 independent task review then PASSED with no P0/P1/P2. The PM moved Task 4
-`implementing -> ready_for_qa`; fresh behavioral QA, release review, and root
-verification remain required. The system will ingest the 43 fixed-reference
+`implementing -> ready_for_qa`. Independent behavioral QA then PASSED with no
+P0/P1, and the PM moved Task 4 `ready_for_qa -> reviewed`. Independent release
+review and root final verification remain required. The system will ingest the
+43 fixed-reference
 portfolio as metadata, retain the 108 scenarios as composition demand signals,
 and produce only quarantined evidence, non-executable Candidate records, and
 pending-review promotion packets.
@@ -252,14 +254,14 @@ reconciled Fix Rounds 1 and 2 and moved the amendment
 `implementing -> ready_for_qa`; its contract and exact amendment-owned paths
 remain frozen.
 
-| Task                                             | State          | Specialization      | Contract owner                   | Dependency gate                                             |
-| ------------------------------------------------ | -------------- | ------------------- | -------------------------------- | ----------------------------------------------------------- |
-| 1. Candidate contracts and immutable persistence | `accepted`     | `integration`       | External Intake Contract         | Original release and bounded amendment accepted and frozen. |
-| 2. Fixed-source provenance and notices           | `accepted`     | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
-| 3. Deterministic scan orchestration              | `accepted`     | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
-| 4. Candidate registry, API, CLI, and isolation   | `ready_for_qa` | `integration`       | Candidate Registry               | Round 10 final task review PASS; fresh QA is next.          |
-| 5. Review-only promotion packets                 | `planned`      | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.           |
-| 6. Bulk acceptance and release evidence          | `planned`      | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.        |
+| Task                                             | State      | Specialization      | Contract owner                   | Dependency gate                                             |
+| ------------------------------------------------ | ---------- | ------------------- | -------------------------------- | ----------------------------------------------------------- |
+| 1. Candidate contracts and immutable persistence | `accepted` | `integration`       | External Intake Contract         | Original release and bounded amendment accepted and frozen. |
+| 2. Fixed-source provenance and notices           | `accepted` | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
+| 3. Deterministic scan orchestration              | `accepted` | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
+| 4. Candidate registry, API, CLI, and isolation   | `reviewed` | `integration`       | Candidate Registry               | Round 10 QA PASS; independent release review is next.       |
+| 5. Review-only promotion packets                 | `planned`  | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.           |
+| 6. Bulk acceptance and release evidence          | `planned`  | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.        |
 
 ## Task 1 card: Candidate contracts and immutable persistence
 
@@ -851,7 +853,7 @@ dependency gate but remains unstarted and `planned`; Tasks 5 and 6 also remain
 
 ## Task 4 card: Candidate registry, module API, CLI, and isolation
 
-- **State:** `ready_for_qa`
+- **State:** `reviewed`
 - **Specialization:** `integration`
 - **Contract owner:** Candidate Registry
 - **Contract artifact:** accepted Tasks 1-3 contracts and the frozen Commercial
@@ -1539,6 +1541,40 @@ promotion, or Task 5 authorization. The complete Candidate Registry contract,
 repair history, exact paths, non-goals, and acceptance evidence remain frozen.
 Tasks 5 and 6 remain `planned` and unstarted.
 
+### Independent QA: Repair Round 10/10
+
+Independent behavioral QA of Task 4 Repair Round 10/10 PASSED with no P0/P1 on
+Node v22.11.0. Fresh evidence passed:
+
+- full External Intake 344/344 and Intake CLI 41/41;
+- warm/fresh terminal-state, missing/tampered conformance evidence, and SIGKILL
+  recovery matrix 7/7;
+- Candidate/API/Store 169/169 and dedicated SIGKILL-after-claim recovery 3/3,
+  including conflicting-input no-delta rejection, same-input winner recovery,
+  fresh discovery, and idempotent retry;
+- authorization-token privacy for Candidate 6/6 and CLI 6/6;
+- Graph isolation 27/27, Golden boundary 71/71, Compiler isolation 47/47, and
+  contract/importer boundary 50/50;
+- uncached workspace tests 14/14, corrected uncached workspace typechecks 14/14,
+  and workspace builds 9/9;
+- External Intake and CLI package lint, third-party policy verification, and
+  source-study policy verification; and
+- built package public-surface probe, bounded diff/commit checks, and
+  clean-worktree verification.
+
+Full workspace lint continues to report inherited P2 Prettier debt in unchanged
+Adapters, Compiler Worker, Control Plane, and Workbench files. The affected Task
+4 package lints pass, and the frozen-base diff proves none of those inherited
+files changed. This debt is unchanged, outside Task 4, and non-blocking for the
+Task 4 QA gate.
+
+The PM reconciled independent task review and QA and moved Task 4
+`ready_for_qa -> reviewed`. Independent release review and root final
+verification remain mandatory before `accepted`. This is not acceptance,
+promotion, release, or Task 5 authorization. The complete Candidate Registry
+contract, repair history, exact paths, non-goals, and acceptance evidence remain
+frozen. Tasks 5 and 6 remain `planned` and unstarted.
+
 ### Exact allowed paths
 
 - `packages/external-intake/src/candidates.ts`
@@ -1682,15 +1718,16 @@ Tasks 5 and 6 remain `planned` and unstarted.
 - **Governance risk:** `conformance-passed` could be mistaken for Golden. It has
   no promotion authority, and the first slice creates no Golden asset.
 - **Coordination risk:** Candidate isolation tests touch frozen Graph,
-  Capabilities, and compiler test paths. Task 4 is frozen at `ready_for_qa`;
-  independent behavioral QA is validation-only, and any writer overlap stops
+  Capabilities, and compiler test paths. Task 4 is frozen at `reviewed`;
+  independent release review is validation-only, and any writer overlap stops
   work.
 
-The active smallest valuable slice is independent behavioral QA of Task 4 Repair
-Round 10/10 final commits `f93e25a` and `9c5d2f1` under the frozen Candidate
-Registry contract and complete repair history. QA must reproduce the warm
-exact/stale all-terminal matrix, missing/tampered terminal-evidence failure, and
-deterministic SIGKILL claim recovery with winner-only, no-orphan persistence.
+The active smallest valuable slice is independent release review of Task 4
+Repair Round 10/10 final commits `f93e25a` and `9c5d2f1` under the frozen
+Candidate Registry contract and complete repair history. Release review must
+reconcile the durable current-state, exact/stale lookup, terminal corruption,
+SIGKILL recovery, privacy, isolation, and public-surface evidence before root
+final verification.
 All built-package public-surface isolation, Store/CAS, exact `id@version`,
 append-only terminal lifecycle, winner-only recovery, and multi-process
 no-orphan guarantees remain frozen. Its bounded test-contract amendment
