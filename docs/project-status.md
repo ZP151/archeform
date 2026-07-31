@@ -4,6 +4,18 @@ Updated: 2026-08-01
 
 ## Current milestone
 
+### Parallel delivery track: Live External Source Acquisition
+
+Status: `ready_for_qa`. The current worktree now has a CLI-only fixed-source
+acquisition lane: a strict batch can resolve an exact public GitHub tag or SHA,
+persist immutable quarantine evidence, and project redacted source-study
+metadata. It cannot extract or execute downloaded source, run a scanner, create
+a Candidate, promote a Golden asset, copy source, mutate the Application Graph,
+or become a compiler/runtime input. Deterministic evidence is recorded in
+`docs/acceptance/live-external-source-acquisition.md`; the one guarded public
+smoke terminally blocked and was cleaned up, so it is not live-source success
+evidence. Independent task review and QA remain required.
+
 Typed Capability Binding Validation is the current hardening milestone.
 ADRs 0006, 0007, and 0008 are `Accepted` under Factory controller authority;
 the amended design, implementation plans, and ledger now govern the work.
