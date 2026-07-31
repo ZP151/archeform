@@ -77,7 +77,7 @@ export const currentCapabilityAssets: readonly CapabilityAssetV1[] =
     locationContextAssetV1_0_0,
     catalogAssetV1_2_0,
     cartAssetV1_0_1,
-    lineConfigurationAssetV1_0_0,
+    lineConfigurationAssetV1_1_0,
     inventoryAssetV1_0_1,
     inventoryLedgerAssetV1_0_0,
     orderAssetV1_2_0,
@@ -92,7 +92,7 @@ export const currentCapabilityAssets: readonly CapabilityAssetV1[] =
 
 export const capabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
   ...currentCapabilityAssets,
-  lineConfigurationAssetV1_1_0,
+  lineConfigurationAssetV1_0_0,
   catalogAssetV1_1_0,
   orderAssetV1_1_0,
   catalogAsset,

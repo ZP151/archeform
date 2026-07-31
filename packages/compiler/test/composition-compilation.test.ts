@@ -424,6 +424,12 @@ describe("immutable composition compilation", () => {
     expect(ecommerceFiles["database/prisma/seed.ts"]).toContain(
       "Everyday tote",
     );
+    expect(
+      restaurantFiles["api/src/capabilities/commerce.line-configuration.ts"],
+    ).toContain('catalogEntity: "menu-item"');
+    expect(
+      ecommerceFiles["api/src/capabilities/commerce.line-configuration.ts"],
+    ).toContain('catalogEntity: "product"');
     expect(restaurantFiles["api/test/journey.generated.test.ts"]).not.toEqual(
       ecommerceFiles["api/test/journey.generated.test.ts"],
     );

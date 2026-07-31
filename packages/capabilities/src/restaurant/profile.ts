@@ -121,16 +121,20 @@ const requiredEntityFields: Readonly<
   "menu-option-group": {
     menuItemId: "string",
     name: "string",
+    selectionMode: "enum",
     minimumSelections: "integer",
     maximumSelections: "integer",
     required: "boolean",
     active: "boolean",
+    sortOrder: "integer",
   },
   "menu-option": {
     optionGroupId: "string",
     name: "string",
+    label: "string",
     priceDelta: "decimal",
     available: "boolean",
+    sortOrder: "integer",
   },
   order: {
     tableSessionId: "string",
@@ -155,7 +159,9 @@ const requiredEntityFields: Readonly<
   "order-line-option": {
     orderLineId: "string",
     optionId: "string",
+    label: "string",
     priceDelta: "decimal",
+    quantity: "integer",
   },
   "payment-attempt": {
     orderId: "string",
@@ -206,6 +212,11 @@ const requiredPermissions = [
   {
     role: "customer",
     resource: "order-line",
+    actions: ["create", "read", "update", "delete"],
+  },
+  {
+    role: "customer",
+    resource: "order-line-option",
     actions: ["create", "read", "update", "delete"],
   },
   { role: "customer", resource: "menu-option-group", actions: ["read"] },
@@ -260,6 +271,11 @@ const requiredPermissions = [
   {
     role: "manager",
     resource: "order-line",
+    actions: ["read", "audit"],
+  },
+  {
+    role: "manager",
+    resource: "order-line-option",
     actions: ["read", "audit"],
   },
   { role: "manager", resource: "order", actions: ["read", "audit"] },
@@ -381,6 +397,9 @@ const requiredOperations = [
   "line.configuration.validate",
   "line.configuration.price",
   "line.configuration.availability.manage",
+  "catalog.option-group.manage",
+  "catalog.option.manage",
+  "catalog.option.select",
   "order.create",
   "order.transition",
   "payment.simulate",

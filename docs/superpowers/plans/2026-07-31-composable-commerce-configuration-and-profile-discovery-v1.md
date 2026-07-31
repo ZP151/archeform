@@ -83,7 +83,7 @@ immutable recipe/asset registration.
 `getFactoryProfileDescriptor()`; Home and Guided Creation show every current
 profile from that catalog.
 
-- [ ] **Step 1: Write failing catalog and Workbench tests**
+- [x] **Step 1: Write failing catalog and Workbench tests**
 
 ```ts
 expect(listFactoryProfiles().map(({ profile }) => profile)).toEqual([
@@ -104,7 +104,7 @@ expect(container.textContent).toContain("Retail counter");
 expect(container.textContent).toContain("Grocery pickup");
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run:
 
@@ -116,7 +116,7 @@ pnpm --filter @factory/workbench test -- --run lib/profile-starters.test.ts comp
 Expected: FAIL because the canonical descriptor API does not exist and the
 Workbench hardcodes a three-item `profileStarterOptions` array.
 
-- [ ] **Step 3: Add canonical descriptor API and derive frontend projection**
+- [x] **Step 3: Add canonical descriptor API and derive frontend projection**
 
 Add immutable definitions and validate them at module construction time:
 
@@ -151,7 +151,7 @@ composition rather than calling the profile Golden. Guided Creation uses the
 same projection, so its template selection never lists a frontend-only
 profile.
 
-- [ ] **Step 4: Verify GREEN and commit**
+- [x] **Step 4: Verify GREEN and commit**
 
 Run:
 
@@ -194,7 +194,7 @@ the four current commerce Profile starter Graphs.
 successor asset and a generic commerce semantic validator. The `1.0.0` asset
 and every lock that references it remain unchanged.
 
-- [ ] **Step 1: Write failing package and Graph semantic tests**
+- [x] **Step 1: Write failing package and Graph semantic tests**
 
 ```ts
 expect(
@@ -218,7 +218,7 @@ expect(() => assertCommerceProfile(graphWithInvalidMaximumSelections)).toThrow(
 );
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run:
 
@@ -229,7 +229,7 @@ pnpm --filter @factory/capabilities test -- --run test/line-configuration-v1-1-p
 Expected: FAIL because no generic asset, validation module, or selected
 configuration Graph concepts exist.
 
-- [ ] **Step 3: Implement asset contract and semantic validator**
+- [x] **Step 3: Implement asset contract and semantic validator**
 
 Add a `catalogConfiguration` runtime handler kind and the package's exact
 typed bindings:
@@ -264,7 +264,7 @@ declare `runtimeHandlers: ["catalogConfiguration"]` and output only
 the existing asset verification mechanism; do not write a source file into the
 asset package that is not declared by `component.json`.
 
-- [ ] **Step 4: Verify GREEN and commit**
+- [x] **Step 4: Verify GREEN and commit**
 
 Run:
 
@@ -298,7 +298,7 @@ Retail/Grocery order-operation starter configuration.
 `commerce.line-configuration@1.1.0` lock identity and distinct
 Graph-symbol bindings.
 
-- [ ] **Step 1: Write failing cross-Profile composition tests**
+- [x] **Step 1: Write failing cross-Profile composition tests**
 
 ```ts
 for (const profile of [
@@ -323,7 +323,7 @@ expect(retailConfigurationBindings.catalogEntity).not.toEqual(
 );
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run:
 
@@ -334,7 +334,7 @@ pnpm --filter @factory/capabilities test -- --run test/commercial-profile-compos
 Expected: FAIL because recipes, Graph starters, bindings, relations, and
 capabilities do not select the `1.1.0` successor package.
 
-- [ ] **Step 3: Add declarative Graph facts and bindings**
+- [x] **Step 3: Add declarative Graph facts and bindings**
 
 Extend the existing declarative order-operations starter configuration with
 the profile-specific symbol map for line configuration. Add only typed

@@ -1,6 +1,84 @@
 # Factory Pilot delivery status
 
-Updated: 2026-08-01
+Updated: 2026-07-31
+
+## Current Profile and external-reuse refresh — 2026-07-31
+
+Factory Pilot is a working **Application Graph composition foundation**, not a
+complete catalogue of production business applications yet.
+
+### Verified current capability evidence
+
+- Five Graph-backed Profile starters are registered: Expense Approval,
+  Restaurant Ordering, Simple Ecommerce, Retail Counter, and Grocery Pickup.
+  Their shared commerce recipes retain versioned package locks while using
+  distinct entities, roles, routes, state machines, seed data, and policies.
+- `commerce.line-configuration@1.1.0` is now the current portable commerce
+  package. Restaurant, Ecommerce, Retail Counter, and Grocery Pickup all lock
+  the same package version and bind it only through declared Graph symbols.
+  The package requires a catalog-to-option-group-to-option relation and a
+  line-to-immutable-snapshot relation. It exposes selection mode, cardinality,
+  ordered options, server-side pricing inputs, and snapshot fields without
+  selecting behavior from a Profile name.
+- The Compiler now substitutes declared template parameters exclusively from
+  the immutable Composition Lock. A generated Restaurant configuration module
+  receives `menu-item`; the equivalent Ecommerce module receives `product`.
+  It cannot read mutable draft state or arbitrary Graph paths while rendering.
+- Fresh verification on this worktree passed: `@factory/capabilities` has
+  233 tests plus typecheck/lint/build; `@factory/compiler` has 192 tests plus
+  typecheck/lint; `git diff --check` passed.
+
+### Production completeness: truthful position
+
+The Restaurant Profile has meaningful local proof for table session, catalog,
+cart, order lifecycle, simulated payment, kitchen/cashier flows, inventory,
+audit, generated API/Web/database/test artifacts, and a Merchant console.
+It is **not** a full production restaurant suite. The following capability
+families are still absent or only represented by a narrow simulation:
+
+- real identity, payment, refund, split settlement, tax, loyalty, promotion,
+  membership, receipts/printers, delivery, reservations, waitlists, offline
+  conflict handling, realtime provider delivery, and production observability;
+- cross-profile packages for party/customer, availability, reservation,
+  pricing, fulfilment, shipment, documents, support, reporting, and
+  authorization providers;
+- a source-to-Candidate pipeline that can turn a checked external source
+  study into a Factory-authored package proposal with fixtures, conformance
+  tests, and provenance.
+
+The current generated configuration module proves package parameterisation;
+the next compiler slice must add the generic request/validation handler and
+PageModel blocks that exercise configured-line choices at runtime. Until that
+slice has generated-application journey evidence, it must not be described as
+an independently complete production feature.
+
+### Scale strategy: many scenarios from a small capability kernel
+
+The 122-scenario map and 43 fixed-reference source records are planning and
+intake inputs, not installed applications. Factory should reach 100+ scenarios
+by composing a shared capability kernel, rather than cloning 100 vertical
+repositories. The scalable delivery lanes are:
+
+1. **Direct dependencies** for bounded technical functions (for example
+   editors, charts, QR rendering, cache, or state machines), each pinned with
+   its notice and package update policy.
+2. **Provider adapters** for mature systems whose runtime should remain
+   external (for example a commerce, authorization, print, or realtime
+   provider). Factory retains the Application Graph and provider contract.
+3. **Fixed-reference source studies** for permissively licensed implementations
+   whose small, identified algorithms or domain rules can be re-authored into
+   a Factory package. Automated intake fetches a commit SHA into quarantine,
+   records licence/SBOM/security/module evidence, derives a candidate task,
+   and runs offline fixtures. It never promotes raw repository code into a
+   Graph, Compiler, or generated runtime.
+
+Whole-repository copying is not a scalable shortcut: the selected projects use
+different runtimes and data models, carry transitive licences, and often embed
+assumptions that conflict with Draft → Publish → immutable Compilation. The
+fast path is automated discovery and quarantine plus targeted, attributable
+adapters or re-authored fragments. This removes one-by-one manual discovery
+without allowing an unreviewed upstream repository to become execution
+authority.
 
 ## Current evidence audit — 2026-08-01
 

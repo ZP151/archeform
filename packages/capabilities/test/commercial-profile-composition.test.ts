@@ -7,6 +7,10 @@ import {
   type CapabilitySelectionV1,
 } from "../src/index.js";
 import { lockCapabilityAsset } from "../src/assets/index.js";
+import {
+  assertCommerceLineConfigurationProfile,
+  createCommerceLineConfigurationProfileProjection,
+} from "../src/commerce/profile.js";
 
 const foundationKeys = [
   "commerce.inventory-ledger",
@@ -36,6 +40,32 @@ function foundationBinding(
 }
 
 describe("commercial profile composition", () => {
+  it.each([
+    "restaurant-ordering",
+    "simple-ecommerce",
+    "retail-counter",
+    "grocery-pickup",
+  ] as const)(
+    "locks portable configurable-line semantics for %s",
+    (profile) => {
+      const composition = composeDefaultCapabilityDraft({ profile });
+      const selection =
+        composition.graph.integration.compositionSelections?.find(
+          ({ lock }) => lock.key === "commerce.line-configuration",
+        );
+
+      expect(selection?.lock.version).toBe("1.1.0");
+      expect(() =>
+        assertCommerceLineConfigurationProfile(
+          createCommerceLineConfigurationProfileProjection(
+            composition.graph,
+            selection?.bindings ?? {},
+          ),
+        ),
+      ).not.toThrow();
+    },
+  );
+
   it("uses the same Foundation identities with different Restaurant and Ecommerce bindings", () => {
     const restaurant = composeDefaultCapabilityDraft({
       profile: "restaurant-ordering",

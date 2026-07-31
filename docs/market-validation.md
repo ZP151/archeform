@@ -1,6 +1,29 @@
 # Market and ecosystem validation
 
-Updated: 2026-08-01
+Updated: 2026-07-31
+
+## 2026-07-31 scalable reuse decision
+
+**Decision investigated.** How Factory Pilot can accelerate a portfolio of
+100+ business scenarios with public open-source projects without turning each
+upstream application into an uncontrolled runtime dependency.
+
+| Candidate                                     | Observed public fact                                                                                                                                                                                               | Factory role                                                 | Decision affected                                                                                                                                    |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Medusa](https://github.com/medusajs/medusa)  | The TypeScript commerce project is MIT-licensed and positions its modules for DTC/B2B stores, marketplaces, POS, service businesses, product, cart, order, payment, inventory, fulfilment, pricing, and locations. | Future commerce Provider adapter and source-study reference. | Reuse its modular boundary ideas and provider patterns; do not copy its runtime or make its data model canonical.                                    |
+| [Bagisto](https://github.com/bagisto/bagisto) | The Laravel/Vue commerce framework reports MIT licensing and public B2B, marketplace, multitenant, POS, headless, and mobile extensions.                                                                           | Fixed-reference source-study candidate.                      | Mine individual domain seams only after SHA/license/SBOM/module evidence; its PHP/Laravel runtime cannot be pasted into the NestJS generated target. |
+| [Saleor](https://github.com/saleor/saleor)    | The API-first commerce core is BSD-3-Clause and documents multichannel pricing, inventory, product, and API extension patterns.                                                                                    | Future Provider adapter or architectural reference.          | Keep the Provider contract independent of Medusa and test it against a second commerce model before implementation.                                  |
+
+**Durable decision.** Reuse proceeds through three lanes: pinned direct
+dependencies, external provider adapters, and fixed-reference source studies.
+The intake CLI may bulk-resolve a pre-approved portfolio into redacted
+quarantine evidence, but no whole external repository is copied into a Factory
+runtime. A source-derived implementation must be an explicitly identified,
+licence-compatible fragment with provenance, Factory-owned tests, a declared
+package boundary, and a removal path.
+
+This supports broad coverage without misrepresenting 43 source records or 122
+scenario mappings as already installed production capabilities.
 
 ## Decision under investigation
 

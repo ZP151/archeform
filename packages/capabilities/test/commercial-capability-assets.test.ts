@@ -175,11 +175,13 @@ describe("commercial capability foundation assets", () => {
 
     for (const key of foundationKeys) {
       const asset = getCapabilityAsset(key);
+      const expectedVersion =
+        key === "commerce.line-configuration" ? "1.1.0" : "1.0.0";
       expect(asset.manifest).toMatchObject({
         apiVersion: "factory.capability/v1",
         key,
-        version: "1.0.0",
-        packageRoot: `packages/capabilities/assets/${key}/1.0.0`,
+        version: expectedVersion,
+        packageRoot: `packages/capabilities/assets/${key}/${expectedVersion}`,
         lifecycle: "golden",
         verification: {
           status: "verified",
@@ -196,7 +198,11 @@ describe("commercial capability foundation assets", () => {
         ),
       ).toBe(true);
       expect(asset.manifest.templates).toHaveLength(1);
-      expect(asset.manifest.executableContributions?.length).toBeGreaterThan(0);
+      expect(
+        asset.manifest.executableContributions?.length ??
+          asset.manifest.runtimeHandlers?.length ??
+          0,
+      ).toBeGreaterThan(0);
       for (const contribution of asset.manifest.executableContributions ?? []) {
         expect(asset.manifest.outputSlots).toContain(contribution.outputSlot);
       }
@@ -220,7 +226,9 @@ describe("commercial capability foundation assets", () => {
       temporaryPackageRoot,
       { recursive: true },
     );
-    const source = asset.manifest.executableContributions?.[0]?.source;
+    const source =
+      asset.manifest.executableContributions?.[0]?.source ??
+      asset.manifest.templates[0]?.source;
     expect(source).toBeDefined();
     if (!source) return;
     const sourcePath = resolve(temporaryPackageRoot, source);
@@ -229,7 +237,7 @@ describe("commercial capability foundation assets", () => {
 
     expect(verifyCapabilityAssetPackage(asset, temporaryRoot)).toEqual(
       expect.arrayContaining([
-        expect.stringContaining("contribution"),
+        expect.stringMatching(/contribution|template/),
         expect.stringContaining("digest does not match"),
       ]),
     );

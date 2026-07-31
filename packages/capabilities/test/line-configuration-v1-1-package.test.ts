@@ -48,6 +48,6 @@ describe("Line configuration capability v1.1", () => {
     expect(verifyCapabilityAssetPackage(asset, repositoryRoot)).toEqual([]);
     expect(
       getCapabilityAsset("commerce.line-configuration").manifest.version,
-    ).toBe("1.0.0");
+    ).toBe("1.1.0");
   });
 });

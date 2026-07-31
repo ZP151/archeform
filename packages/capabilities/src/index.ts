@@ -18,6 +18,10 @@ import {
   type CapabilityCompositionV1,
   type CapabilitySelectionV1,
 } from "./composition.js";
+import {
+  assertCommerceLineConfigurationProfile,
+  createCommerceLineConfigurationProfileProjection,
+} from "./commerce/profile.js";
 import { assertRestaurantOrderingProfile } from "./restaurant/profile.js";
 
 export type {
@@ -389,6 +393,24 @@ function assertInventoryLedgerGraphSemantics(
   }
 }
 
+function assertLineConfigurationGraphSemantics(
+  graph: ApplicationGraphV1,
+  composition: CapabilityCompositionV1,
+): void {
+  const lineConfiguration = composition.packages.find(
+    ({ lock }) => lock.key === "commerce.line-configuration",
+  );
+  if (!lineConfiguration || lineConfiguration.lock.version !== "1.1.0") {
+    return;
+  }
+  assertCommerceLineConfigurationProfile(
+    createCommerceLineConfigurationProfileProjection(
+      graph,
+      lineConfiguration.bindings,
+    ),
+  );
+}
+
 const allowedEffectProviderOverlaps: Readonly<
   Record<string, readonly string[]>
 > = {
@@ -658,6 +680,7 @@ function composeCapabilityDraftFromSnapshot(
   );
   assertCompositionGraphSymbols(graph, composition);
   assertInventoryLedgerGraphSemantics(graph, composition);
+  assertLineConfigurationGraphSemantics(graph, composition);
   assertCompositionPolicyPermissions(graph, composition);
   graph.integration.compositionSelections = composition.packages.map(
     (selection) => structuredClone(selection),
@@ -1022,6 +1045,7 @@ const orderOperationsStarterConfigs: readonly OrderOperationsStarterConfig[] =
         product: "retail-item",
         "product-option-group": "retail-item-option-group",
         "product-option": "retail-item-option",
+        "product-line-option": "counter-sale-line-option",
         order: "counter-sale",
         "product-line": "counter-sale-line",
         "stock-movement": "retail-stock-movement",
@@ -1044,6 +1068,7 @@ const orderOperationsStarterConfigs: readonly OrderOperationsStarterConfig[] =
         Product: "Retail item",
         "Product option group": "Retail item option group",
         "Product option": "Retail item option",
+        "Product line option": "Counter sale line option",
         Order: "Counter sale",
         "Product line": "Counter sale line",
         "Stock movement": "Retail stock movement",
@@ -1104,6 +1129,7 @@ const orderOperationsStarterConfigs: readonly OrderOperationsStarterConfig[] =
         product: "grocery-item",
         "product-option-group": "grocery-item-option-group",
         "product-option": "grocery-item-option",
+        "product-line-option": "pickup-order-line-option",
         order: "pickup-order",
         "product-line": "pickup-order-line",
         "stock-movement": "grocery-stock-movement",
@@ -1126,6 +1152,7 @@ const orderOperationsStarterConfigs: readonly OrderOperationsStarterConfig[] =
         Product: "Grocery item",
         "Product option group": "Grocery item option group",
         "Product option": "Grocery item option",
+        "Product line option": "Pickup order line option",
         Order: "Pickup order",
         "Product line": "Pickup order line",
         "Stock movement": "Grocery stock movement",
@@ -1676,10 +1703,17 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               fields: [
                 { key: "menuItemId", type: "string", required: true },
                 { key: "name", type: "string", required: true },
+                {
+                  key: "selectionMode",
+                  type: "enum",
+                  required: true,
+                  values: ["single", "multiple"],
+                },
                 { key: "minimumSelections", type: "integer", required: true },
                 { key: "maximumSelections", type: "integer", required: true },
                 { key: "required", type: "boolean", required: true },
                 { key: "active", type: "boolean", required: true },
+                { key: "sortOrder", type: "integer", required: true },
               ],
               indexes: [{ fields: ["menuItemId", "active"] }],
             },
@@ -1689,8 +1723,10 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               fields: [
                 { key: "optionGroupId", type: "string", required: true },
                 { key: "name", type: "string", required: true },
+                { key: "label", type: "string", required: true },
                 { key: "priceDelta", type: "decimal", required: true },
                 { key: "available", type: "boolean", required: true },
+                { key: "sortOrder", type: "integer", required: true },
               ],
               indexes: [{ fields: ["optionGroupId", "available"] }],
             },
@@ -1757,7 +1793,9 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               fields: [
                 { key: "orderLineId", type: "string", required: true },
                 { key: "optionId", type: "string", required: true },
+                { key: "label", type: "string", required: true },
                 { key: "priceDelta", type: "decimal", required: true },
+                { key: "quantity", type: "integer", required: true },
               ],
               indexes: [{ fields: ["orderLineId"] }, { fields: ["optionId"] }],
             },
@@ -2007,10 +2045,12 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               values: {
                 menuItemId: "margherita-pizza",
                 name: "Size",
+                selectionMode: "single",
                 minimumSelections: 1,
                 maximumSelections: 1,
                 required: true,
                 active: true,
+                sortOrder: 1,
               },
             },
             {
@@ -2019,8 +2059,10 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               values: {
                 optionGroupId: "pizza-size",
                 name: "Large",
+                label: "Large",
                 priceDelta: 4,
                 available: true,
+                sortOrder: 1,
               },
             },
           ],
@@ -2053,6 +2095,11 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
             {
               role: "customer",
               resource: "order-line",
+              actions: ["create", "read", "update", "delete"],
+            },
+            {
+              role: "customer",
+              resource: "order-line-option",
               actions: ["create", "read", "update", "delete"],
             },
             {
@@ -2115,6 +2162,11 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
             {
               role: "manager",
               resource: "order-line",
+              actions: ["read", "audit"],
+            },
+            {
+              role: "manager",
+              resource: "order-line-option",
               actions: ["read", "audit"],
             },
             {
@@ -2322,6 +2374,9 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
           "line.configuration.validate",
           "line.configuration.price",
           "line.configuration.availability.manage",
+          "catalog.option-group.manage",
+          "catalog.option.manage",
+          "catalog.option.select",
           "order.line.add",
           "order.line.update",
           "order.line.remove",
@@ -2480,10 +2535,17 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               fields: [
                 { key: "productId", type: "string", required: true },
                 { key: "name", type: "string", required: true },
+                {
+                  key: "selectionMode",
+                  type: "enum",
+                  required: true,
+                  values: ["single", "multiple"],
+                },
                 { key: "minimumSelections", type: "integer", required: true },
                 { key: "maximumSelections", type: "integer", required: true },
                 { key: "required", type: "boolean", required: true },
                 { key: "active", type: "boolean", required: true },
+                { key: "sortOrder", type: "integer", required: true },
               ],
               indexes: [{ fields: ["productId", "active"] }],
             },
@@ -2493,8 +2555,10 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               fields: [
                 { key: "optionGroupId", type: "string", required: true },
                 { key: "name", type: "string", required: true },
+                { key: "label", type: "string", required: true },
                 { key: "priceDelta", type: "decimal", required: true },
                 { key: "available", type: "boolean", required: true },
+                { key: "sortOrder", type: "integer", required: true },
               ],
               indexes: [{ fields: ["optionGroupId", "available"] }],
             },
@@ -2523,6 +2587,18 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
                 { key: "configuration", type: "json", required: true },
               ],
               indexes: [{ fields: ["orderId"] }],
+            },
+            {
+              key: "product-line-option",
+              label: "Product line option",
+              fields: [
+                { key: "lineId", type: "string", required: true },
+                { key: "optionId", type: "string", required: true },
+                { key: "label", type: "string", required: true },
+                { key: "priceDelta", type: "decimal", required: true },
+                { key: "quantity", type: "integer", required: true },
+              ],
+              indexes: [{ fields: ["lineId"] }, { fields: ["optionId"] }],
             },
             {
               key: "stock-movement",
@@ -2586,6 +2662,18 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               field: "productId",
             },
             {
+              from: "product-line-option",
+              to: "product-line",
+              kind: "many-to-one",
+              field: "lineId",
+            },
+            {
+              from: "product-line-option",
+              to: "product-option",
+              kind: "many-to-one",
+              field: "optionId",
+            },
+            {
               from: "stock-movement",
               to: "product",
               kind: "many-to-one",
@@ -2626,10 +2714,12 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               values: {
                 productId: "everyday-tote",
                 name: "Colour",
+                selectionMode: "single",
                 minimumSelections: 1,
                 maximumSelections: 1,
                 required: true,
                 active: true,
+                sortOrder: 1,
               },
             },
             {
@@ -2638,8 +2728,10 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               values: {
                 optionGroupId: "tote-colour",
                 name: "Slate",
+                label: "Slate",
                 priceDelta: 0,
                 available: true,
+                sortOrder: 1,
               },
             },
           ],
@@ -2676,6 +2768,11 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
             },
             {
               role: "shopper",
+              resource: "product-line-option",
+              actions: ["create", "read", "update", "delete"],
+            },
+            {
+              role: "shopper",
               resource: "product-option",
               actions: ["read"],
             },
@@ -2697,6 +2794,11 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
             {
               role: "merchant",
               resource: "product-line",
+              actions: ["read", "audit"],
+            },
+            {
+              role: "merchant",
+              resource: "product-line-option",
               actions: ["read", "audit"],
             },
             { role: "merchant", resource: "store", actions: ["read"] },
@@ -2764,6 +2866,9 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
           "line.configuration.validate",
           "line.configuration.price",
           "line.configuration.availability.manage",
+          "catalog.option-group.manage",
+          "catalog.option.manage",
+          "catalog.option.select",
           "order.create",
           "order.transition",
           "payment.simulate",

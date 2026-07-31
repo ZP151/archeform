@@ -178,3 +178,122 @@ export function assertCommerceLineConfigurationProfile(
     throw new Error("Order-line snapshot must be related to the option.");
   }
 }
+
+function bindingTarget(
+  bindings: Readonly<Record<string, unknown>>,
+  bindingKey: string,
+  model: "domain" | "page" | "policy",
+): string {
+  const binding = bindings[bindingKey];
+  if (
+    !binding ||
+    typeof binding !== "object" ||
+    Array.isArray(binding) ||
+    !Object.hasOwn(binding, "graphSymbol") ||
+    typeof (binding as Readonly<Record<string, unknown>>).graphSymbol !==
+      "string"
+  ) {
+    throw new Error(
+      `Line configuration binding '${bindingKey}' must be an exact Graph symbol.`,
+    );
+  }
+
+  const graphSymbol = (binding as Readonly<Record<string, unknown>>)
+    .graphSymbol as string;
+  const prefix = `graph.${model}.`;
+  const target = graphSymbol.startsWith(prefix)
+    ? graphSymbol.slice(prefix.length)
+    : "";
+  if (!target) {
+    throw new Error(
+      `Line configuration binding '${bindingKey}' must reference graph.${model}.`,
+    );
+  }
+  return target;
+}
+
+function pageRoute(graph: ApplicationGraphV1, pageId: string): string {
+  const page = graph.page.pages.find(({ id }) => id === pageId);
+  if (!page) {
+    throw new Error(
+      `Line configuration page binding '${pageId}' does not exist in the Graph.`,
+    );
+  }
+  return page.route;
+}
+
+function snapshotEntity(
+  graph: ApplicationGraphV1,
+  lineEntity: string,
+  optionEntity: string,
+): string {
+  const candidates = [
+    ...new Set(
+      graph.domain.relations
+        .filter(({ to }) => to === lineEntity)
+        .map(({ from }) => from)
+        .filter((candidate) =>
+          graph.domain.relations.some(
+            ({ from, to }) => from === candidate && to === optionEntity,
+          ),
+        ),
+    ),
+  ];
+  if (candidates.length !== 1) {
+    throw new Error(
+      "Line configuration requires exactly one order-line option snapshot entity.",
+    );
+  }
+  return candidates[0];
+}
+
+/**
+ * Projects a generic Application Graph into the small semantic surface owned
+ * by the versioned line-configuration package. The package infers its
+ * immutable snapshot entity from declared Graph relations instead of adding a
+ * profile-specific parameter.
+ */
+export function createCommerceLineConfigurationProfileProjection(
+  graph: ApplicationGraphV1,
+  bindings: Readonly<Record<string, unknown>>,
+): CommerceLineConfigurationProfileProjectionV1 {
+  const catalogEntity = bindingTarget(bindings, "catalogEntity", "domain");
+  const lineEntity = bindingTarget(bindings, "lineEntity", "domain");
+  const optionGroupEntity = bindingTarget(
+    bindings,
+    "optionGroupEntity",
+    "domain",
+  );
+  const optionEntity = bindingTarget(bindings, "optionEntity", "domain");
+  const catalogPage = bindingTarget(bindings, "catalogPage", "page");
+  const merchantPage = bindingTarget(bindings, "merchantPage", "page");
+  const customerRole = bindingTarget(bindings, "customerRole", "policy");
+  const merchantRole = bindingTarget(bindings, "merchantRole", "policy");
+  const entityFields = Object.fromEntries(
+    graph.domain.entities.map((entity) => [
+      entity.key,
+      Object.fromEntries(
+        entity.fields.map((field) => [field.key, field.type] as const),
+      ),
+    ]),
+  );
+  const relations: [string, string][] = [];
+  for (const relation of graph.domain.relations) {
+    relations.push([relation.from, relation.to], [relation.to, relation.from]);
+  }
+
+  return {
+    apiVersion: "factory.commerce-line-configuration-profile/v1",
+    catalogEntity,
+    lineEntity,
+    optionGroupEntity,
+    optionEntity,
+    snapshotEntity: snapshotEntity(graph, lineEntity, optionEntity),
+    customerRole,
+    merchantRole,
+    catalogRoute: pageRoute(graph, catalogPage),
+    merchantRoute: pageRoute(graph, merchantPage),
+    entityFields,
+    relations,
+  };
+}

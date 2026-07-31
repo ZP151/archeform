@@ -527,6 +527,7 @@ export function resolveTargetContributions(
 interface ResolvedCapabilityTemplateContribution extends ResolvedCapabilityAssetTemplate {
   readonly effects: readonly string[];
   readonly operations: readonly { capability: string; operation: string }[];
+  readonly bindings: CapabilitySelectionV1["bindings"];
 }
 
 function findFactoryRepositoryRoot(startDirectory: string): string {
@@ -556,6 +557,19 @@ function templateString(value: string): string {
   return JSON.stringify(value).slice(1, -1);
 }
 
+function renderCapabilityBindingValue(value: CapabilityBindingValueV1): string {
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  const graphSymbol = value.graphSymbol;
+  const target = graphSymbol.split(".").at(-1);
+  if (!target) {
+    throw new Error("Capability template binding must target a Graph symbol.");
+  }
+  if ("fieldKey" in value) return templateString(value.fieldKey);
+  return templateString(target);
+}
+
 function renderCapabilityTemplate(
   template: ResolvedCapabilityTemplateContribution,
   graph: ApplicationGraphV1,
@@ -565,6 +579,12 @@ function renderCapabilityTemplate(
     "asset.version": templateString(template.assetVersion),
     "asset.effectsJson": JSON.stringify(template.effects),
     "graph.metadata.id": templateString(graph.metadata.id),
+    ...Object.fromEntries(
+      Object.entries(template.bindings).map(([key, value]) => [
+        key,
+        renderCapabilityBindingValue(value),
+      ]),
+    ),
   };
   return template.content.replace(
     /{{([A-Za-z.]+)}}/g,
@@ -606,19 +626,24 @@ function resolveCapabilityTemplateContributions(
   }
   const root = findFactoryRepositoryRoot(repositoryRoot ?? process.cwd());
   const targets = new Set<string>();
-  const contributions = locks.flatMap((lock) => {
-    const asset = resolveCapabilityAssetLock(lock);
-    return loadCapabilityAssetTemplates(asset, root).map((template) => ({
-      ...template,
-      effects: asset.manifest.effects,
-      operations: factoryCapabilities
-        .filter((capability) => asset.manifest.effects.includes(capability.key))
-        .map((capability) => ({
-          capability: capability.key,
-          operation: capability.operation,
-        })),
-    }));
-  });
+  const contributions = compositionLock.packages.flatMap(
+    ({ lock, bindings }) => {
+      const asset = resolveCapabilityAssetLock(lock);
+      return loadCapabilityAssetTemplates(asset, root).map((template) => ({
+        ...template,
+        bindings,
+        effects: asset.manifest.effects,
+        operations: factoryCapabilities
+          .filter((capability) =>
+            asset.manifest.effects.includes(capability.key),
+          )
+          .map((capability) => ({
+            capability: capability.key,
+            operation: capability.operation,
+          })),
+      }));
+    },
+  );
   for (const contribution of contributions) {
     if (targets.has(contribution.target)) {
       throw new Error(
