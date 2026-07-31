@@ -15,6 +15,27 @@ describe("toPortfolioHomeModel", () => {
           optionalPackages: 1,
         },
       ],
+      readiness: [
+        {
+          apiVersion: "factory.profile-readiness/v1",
+          profile: "restaurant-ordering",
+          label: "Restaurant ordering",
+          generatedTargets: [
+            "simulator",
+            "web",
+            "api",
+            "database",
+            "tests",
+            "docs",
+          ],
+          capabilities: [
+            { key: "commerce.catalog", status: "available" },
+            { key: "commerce.transaction", status: "partial" },
+            { key: "commerce.order-amendment", status: "planned" },
+            { key: "payment.provider", status: "provider-required" },
+          ],
+        },
+      ],
       capabilities: {
         golden: 19,
         lockedVersions: 38,
@@ -37,6 +58,17 @@ describe("toPortfolioHomeModel", () => {
           id: "restaurant-ordering",
           label: "Restaurant ordering",
           detail: "16 required · 1 optional",
+        },
+      ],
+      readiness: [
+        {
+          id: "restaurant-ordering",
+          label: "Restaurant ordering",
+          generatedTargetCount: 6,
+          available: 1,
+          partial: 1,
+          planned: 1,
+          providerRequired: 1,
         },
       ],
       capabilityMetrics: [

@@ -140,6 +140,45 @@ describe("WorkbenchHome", () => {
                 optionalPackages: 1,
               },
             ],
+            readiness: [
+              {
+                apiVersion: "factory.profile-readiness/v1",
+                profile: "restaurant-ordering",
+                label: "Restaurant ordering",
+                generatedTargets: [
+                  "simulator",
+                  "web",
+                  "api",
+                  "database",
+                  "tests",
+                  "docs",
+                ],
+                capabilities: [
+                  { key: "commerce.catalog", status: "available" },
+                  { key: "commerce.transaction", status: "partial" },
+                  { key: "commerce.order-amendment", status: "planned" },
+                  { key: "payment.provider", status: "provider-required" },
+                ],
+              },
+              {
+                apiVersion: "factory.profile-readiness/v1",
+                profile: "simple-ecommerce",
+                label: "Simple ecommerce",
+                generatedTargets: [
+                  "simulator",
+                  "web",
+                  "api",
+                  "database",
+                  "tests",
+                  "docs",
+                ],
+                capabilities: [
+                  { key: "commerce.catalog", status: "available" },
+                  { key: "commerce.transaction", status: "partial" },
+                  { key: "payment.provider", status: "provider-required" },
+                ],
+              },
+            ],
             capabilities: {
               golden: 19,
               lockedVersions: 38,
@@ -165,6 +204,9 @@ describe("WorkbenchHome", () => {
     expect(container.textContent).toContain("Restaurant ordering");
     expect(container.textContent).toContain("Golden");
     expect(container.textContent).toContain("Eligible");
+    expect(container.textContent).toContain("Profile readiness");
+    expect(container.textContent).toContain("Available 1");
+    expect(container.textContent).toContain("Provider 1");
     expect(container.textContent).not.toContain("https://github.com");
   });
 

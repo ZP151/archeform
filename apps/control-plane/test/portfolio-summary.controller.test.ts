@@ -29,6 +29,25 @@ const summary = {
       optionalPackages: 1,
     },
   ],
+  readiness: [
+    {
+      apiVersion: "factory.profile-readiness/v1" as const,
+      profile: "restaurant-ordering",
+      label: "Restaurant ordering",
+      generatedTargets: [
+        "simulator",
+        "web",
+        "api",
+        "database",
+        "tests",
+        "docs",
+      ],
+      capabilities: [
+        { key: "commerce.catalog", status: "available" as const },
+        { key: "commerce.order-amendment", status: "planned" as const },
+      ],
+    },
+  ],
   capabilities: {
     golden: 19,
     lockedVersions: 38,

@@ -47,7 +47,7 @@ describe("profile starters", () => {
   it("composes every active profile from canonical Graph-symbol selections", () => {
     const expectedPackageCounts = {
       "expense-approval": 4,
-      "restaurant-ordering": 13,
+      "restaurant-ordering": 17,
       "simple-ecommerce": 13,
       "retail-counter": 13,
       "grocery-pickup": 13,
@@ -77,8 +77,34 @@ describe("profile starters", () => {
       .compositionSelections!;
     const ecommerce =
       createProfileDraft("simple-ecommerce").integration.compositionSelections!;
-    expect(restaurant.map(({ lock }) => lock)).toEqual(
-      ecommerce.map(({ lock }) => lock),
+    const ecommercePackageKeys = new Set(ecommerce.map(({ lock }) => lock.key));
+    expect(
+      restaurant
+        .filter(({ lock }) => ecommercePackageKeys.has(lock.key))
+        .map(({ lock }) => lock)
+        .sort((left, right) => left.key.localeCompare(right.key)),
+    ).toEqual(
+      ecommerce
+        .filter(({ lock }) =>
+          restaurant.some((item) => item.lock.key === lock.key),
+        )
+        .map(({ lock }) => lock)
+        .sort((left, right) => left.key.localeCompare(right.key)),
+    );
+    expect(restaurant.map(({ lock }) => lock.key)).toEqual(
+      expect.arrayContaining([
+        "restaurant.table-session",
+        "restaurant.ordering",
+        "restaurant.kitchen",
+        "restaurant.cashier",
+        "restaurant.reporting",
+      ]),
+    );
+    expect(restaurant.map(({ lock }) => lock.key)).not.toContain(
+      "commerce.simulated-payment",
+    );
+    expect(ecommerce.map(({ lock }) => lock.key)).toContain(
+      "commerce.simulated-payment",
     );
     expect(restaurant.map(({ bindings }) => bindings)).not.toEqual(
       ecommerce.map(({ bindings }) => bindings),

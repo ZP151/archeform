@@ -3,6 +3,8 @@ import {
   capabilityAssets,
   capabilityCatalog,
   listFactoryProfiles,
+  listProfileReadiness,
+  type ProfileReadinessV1,
 } from "@factory/capabilities";
 import { portfolioPublicSummary } from "@factory/portfolio-public";
 
@@ -19,6 +21,7 @@ export interface ProfilePortfolioSummaryV1 {
 export interface WorkspacePortfolioSummaryV1 {
   readonly apiVersion: "factory.workspace-portfolio-summary/v1";
   readonly profiles: readonly ProfilePortfolioSummaryV1[];
+  readonly readiness: readonly ProfileReadinessV1[];
   readonly capabilities: {
     readonly golden: number;
     readonly lockedVersions: number;
@@ -101,6 +104,7 @@ export class WorkspacePortfolioSummaryService {
         requiredPackages: profile.requiredCapabilities.length,
         optionalPackages: profile.defaultOptionalCapabilities.length,
       })),
+      readiness: listProfileReadiness(),
       capabilities: {
         golden: capabilityCatalog.length,
         lockedVersions: capabilityAssets.length,

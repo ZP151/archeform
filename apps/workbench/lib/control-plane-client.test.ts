@@ -23,6 +23,26 @@ describe("ControlPlaneClient", () => {
               sourceUrl: "https://must-not-survive.example",
             },
           ],
+          readiness: [
+            {
+              apiVersion: "factory.profile-readiness/v1",
+              profile: "restaurant-ordering",
+              label: "Restaurant ordering",
+              generatedTargets: [
+                "simulator",
+                "web",
+                "api",
+                "database",
+                "tests",
+                "docs",
+              ],
+              capabilities: [
+                { key: "commerce.catalog", status: "available" },
+                { key: "identity.member", status: "provider-required" },
+              ],
+              sourceUrl: "https://must-not-survive.example",
+            },
+          ],
           capabilities: {
             golden: 19,
             lockedVersions: 38,
@@ -58,6 +78,25 @@ describe("ControlPlaneClient", () => {
           optionalPackages: 1,
         },
       ],
+      readiness: [
+        {
+          apiVersion: "factory.profile-readiness/v1",
+          profile: "restaurant-ordering",
+          label: "Restaurant ordering",
+          generatedTargets: [
+            "simulator",
+            "web",
+            "api",
+            "database",
+            "tests",
+            "docs",
+          ],
+          capabilities: [
+            { key: "commerce.catalog", status: "available" },
+            { key: "identity.member", status: "provider-required" },
+          ],
+        },
+      ],
       capabilities: {
         golden: 19,
         lockedVersions: 38,
@@ -77,6 +116,61 @@ describe("ControlPlaneClient", () => {
       "http://control-plane.test/workspaces/workspace-1/portfolio-summary",
       expect.objectContaining({ method: "GET" }),
     );
+  });
+
+  it("rejects an unknown Profile readiness state", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          apiVersion: "factory.workspace-portfolio-summary/v1",
+          profiles: [
+            {
+              profile: "restaurant-ordering",
+              label: "Restaurant ordering",
+              category: "commerce",
+              requiredPackages: 16,
+              optionalPackages: 1,
+            },
+          ],
+          readiness: [
+            {
+              apiVersion: "factory.profile-readiness/v1",
+              profile: "restaurant-ordering",
+              label: "Restaurant ordering",
+              generatedTargets: [
+                "simulator",
+                "web",
+                "api",
+                "database",
+                "tests",
+                "docs",
+              ],
+              capabilities: [{ key: "commerce.catalog", status: "unreviewed" }],
+            },
+          ],
+          capabilities: {
+            golden: 19,
+            lockedVersions: 38,
+            candidate: 0,
+            provider: 0,
+          },
+          intake: {
+            portfolioSources: 43,
+            intakeEligible: 19,
+            candidateBlueprints: 19,
+            quarantined: 0,
+            blocked: 0,
+          },
+          compilations: { queued: 0, running: 0, succeeded: 0, failed: 0 },
+        }),
+        { status: 200 },
+      ),
+    );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(
+      client.getWorkspacePortfolioSummary("workspace-1"),
+    ).rejects.toThrow("Control Plane Profile readiness capability is invalid.");
   });
 
   it("projects only safe application summary fields from the local workspace endpoint", async () => {

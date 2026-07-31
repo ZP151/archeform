@@ -8,9 +8,20 @@ export type PortfolioHomeModel = {
     readonly label: string;
     readonly detail: string;
   }[];
+  readonly readiness: readonly ProfileReadinessHomeModel[];
   readonly capabilityMetrics: readonly PortfolioMetric[];
   readonly intakeMetrics: readonly PortfolioMetric[];
   readonly compilationMetrics: readonly PortfolioMetric[];
+};
+
+export type ProfileReadinessHomeModel = {
+  readonly id: string;
+  readonly label: string;
+  readonly generatedTargetCount: number;
+  readonly available: number;
+  readonly partial: number;
+  readonly planned: number;
+  readonly providerRequired: number;
 };
 
 export type PortfolioMetric = {
@@ -28,6 +39,28 @@ export function toPortfolioHomeModel(
       label: profile.label,
       detail: `${profile.requiredPackages} required · ${profile.optionalPackages} optional`,
     })),
+    readiness: summary.readiness.map((profile) => {
+      const counts = {
+        available: 0,
+        partial: 0,
+        planned: 0,
+        providerRequired: 0,
+      };
+      for (const capability of profile.capabilities) {
+        if (capability.status === "available") counts.available += 1;
+        if (capability.status === "partial") counts.partial += 1;
+        if (capability.status === "planned") counts.planned += 1;
+        if (capability.status === "provider-required") {
+          counts.providerRequired += 1;
+        }
+      }
+      return {
+        id: profile.profile,
+        label: profile.label,
+        generatedTargetCount: profile.generatedTargets.length,
+        ...counts,
+      };
+    }),
     capabilityMetrics: [
       { label: "Golden", value: summary.capabilities.golden, tone: "ready" },
       {

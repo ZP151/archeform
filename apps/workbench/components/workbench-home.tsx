@@ -18,6 +18,7 @@ import { profileStarterOptions } from "../lib/profile-starters";
 import {
   toPortfolioHomeModel,
   type PortfolioMetric,
+  type ProfileReadinessHomeModel,
 } from "../lib/portfolio-summary";
 import type { WorkbenchWorkspacePortfolioSummary } from "../lib/control-plane-client";
 
@@ -118,6 +119,78 @@ function PortfolioMetricPanel({
         ))}
       </div>
     </section>
+  );
+}
+
+function ProfileReadinessPanel({
+  readiness,
+}: {
+  readonly readiness: ProfileReadinessHomeModel;
+}) {
+  const metrics = [
+    {
+      label: "Available",
+      value: readiness.available,
+      icon: <CheckCircle2 size={13} aria-hidden="true" />,
+      color: "var(--accent, #0b7a68)",
+    },
+    {
+      label: "Partial",
+      value: readiness.partial,
+      icon: <CircleDot size={13} aria-hidden="true" />,
+      color: "var(--muted, #66706a)",
+    },
+    {
+      label: "Planned",
+      value: readiness.planned,
+      icon: <Clock3 size={13} aria-hidden="true" />,
+      color: "var(--muted, #66706a)",
+    },
+    {
+      label: "Provider",
+      value: readiness.providerRequired,
+      icon: <Layers3 size={13} aria-hidden="true" />,
+      color: "var(--muted, #66706a)",
+    },
+  ];
+  return (
+    <article
+      aria-label={`${readiness.label} readiness`}
+      style={{
+        border: "1px solid var(--line, #d8ddd8)",
+        borderRadius: 12,
+        padding: 14,
+        display: "grid",
+        gap: 12,
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+        <strong>{readiness.label}</strong>
+        <span
+          style={{ color: "var(--muted, #66706a)", fontSize: 12 }}
+          title="Generated targets"
+        >
+          {readiness.generatedTargetCount} targets
+        </span>
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {metrics.map((metric) => (
+          <span
+            key={metric.label}
+            style={{
+              alignItems: "center",
+              color: metric.color,
+              display: "inline-flex",
+              fontSize: 12,
+              gap: 4,
+            }}
+          >
+            {metric.icon}
+            {metric.label} {metric.value}
+          </span>
+        ))}
+      </div>
+    </article>
   );
 }
 
@@ -386,6 +459,38 @@ export function WorkbenchHome({
           })}
         </div>
       </section>
+
+      {portfolio && (
+        <section aria-labelledby="home-profile-readiness" style={sectionStyle}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "baseline",
+              gap: 12,
+            }}
+          >
+            <h2 id="home-profile-readiness" style={{ margin: 0 }}>
+              Profile readiness
+            </h2>
+            <span style={{ color: "var(--muted, #66706a)", fontSize: 13 }}>
+              Package and Provider coverage
+            </span>
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: 12,
+              marginTop: 14,
+            }}
+          >
+            {portfolio.readiness.map((readiness) => (
+              <ProfileReadinessPanel key={readiness.id} readiness={readiness} />
+            ))}
+          </div>
+        </section>
+      )}
 
       <div
         style={{

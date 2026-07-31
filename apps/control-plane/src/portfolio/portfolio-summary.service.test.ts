@@ -32,6 +32,15 @@ describe("WorkspacePortfolioSummaryService", () => {
           requiredPackages: 16,
         }),
       ]),
+      readiness: expect.arrayContaining([
+        expect.objectContaining({
+          profile: "restaurant-ordering",
+          capabilities: expect.arrayContaining([
+            { key: "commerce.catalog", status: "available" },
+            { key: "commerce.order-amendment", status: "planned" },
+          ]),
+        }),
+      ]),
       capabilities: {
         golden: 19,
         lockedVersions: 38,

@@ -127,6 +127,7 @@ export type WorkbenchWorkspacePortfolioSummary = {
     readonly requiredPackages: number;
     readonly optionalPackages: number;
   }[];
+  readonly readiness: readonly WorkbenchProfileReadiness[];
   readonly capabilities: {
     readonly golden: number;
     readonly lockedVersions: number;
@@ -146,6 +147,22 @@ export type WorkbenchWorkspacePortfolioSummary = {
     readonly succeeded: number;
     readonly failed: number;
   };
+};
+
+export type WorkbenchProfileReadinessStatus =
+  "available" | "partial" | "planned" | "provider-required";
+
+export type WorkbenchProfileReadiness = {
+  readonly apiVersion: "factory.profile-readiness/v1";
+  readonly profile: string;
+  readonly label: string;
+  readonly generatedTargets: readonly (
+    "simulator" | "web" | "api" | "database" | "tests" | "docs"
+  )[];
+  readonly capabilities: readonly {
+    readonly key: string;
+    readonly status: WorkbenchProfileReadinessStatus;
+  }[];
 };
 
 export type WorkbenchArtifactContent = {
@@ -312,6 +329,93 @@ function workspacePortfolioSummary(
       ),
     };
   });
+  const readiness = record.readiness;
+  if (!Array.isArray(readiness)) {
+    throw new Error("Control Plane Portfolio readiness is invalid.");
+  }
+  const supportedProfiles = new Set([
+    "expense-approval",
+    "restaurant-ordering",
+    "simple-ecommerce",
+    "retail-counter",
+    "grocery-pickup",
+  ]);
+  const supportedTargets = new Set([
+    "simulator",
+    "web",
+    "api",
+    "database",
+    "tests",
+    "docs",
+  ]);
+  const supportedReadinessStatuses = new Set([
+    "available",
+    "partial",
+    "planned",
+    "provider-required",
+  ]);
+  const capabilityKeyPattern = /^[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)+$/;
+  const readinessRecords = readiness.map((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new Error("Control Plane Profile readiness is invalid.");
+    }
+    const candidate = entry as Record<string, unknown>;
+    if (
+      candidate.apiVersion !== "factory.profile-readiness/v1" ||
+      typeof candidate.profile !== "string" ||
+      !supportedProfiles.has(candidate.profile) ||
+      typeof candidate.label !== "string" ||
+      !Array.isArray(candidate.generatedTargets) ||
+      !Array.isArray(candidate.capabilities)
+    ) {
+      throw new Error("Control Plane Profile readiness is invalid.");
+    }
+    const generatedTargets = candidate.generatedTargets.map((target) => {
+      if (typeof target !== "string" || !supportedTargets.has(target)) {
+        throw new Error("Control Plane Profile readiness target is invalid.");
+      }
+      return target as WorkbenchProfileReadiness["generatedTargets"][number];
+    });
+    if (
+      generatedTargets.length !== supportedTargets.size ||
+      new Set(generatedTargets).size !== supportedTargets.size
+    ) {
+      throw new Error("Control Plane Profile readiness targets are invalid.");
+    }
+    const capabilities = candidate.capabilities.map((capability) => {
+      if (
+        !capability ||
+        typeof capability !== "object" ||
+        Array.isArray(capability)
+      ) {
+        throw new Error(
+          "Control Plane Profile readiness capability is invalid.",
+        );
+      }
+      const item = capability as Record<string, unknown>;
+      if (
+        typeof item.key !== "string" ||
+        !capabilityKeyPattern.test(item.key) ||
+        typeof item.status !== "string" ||
+        !supportedReadinessStatuses.has(item.status)
+      ) {
+        throw new Error(
+          "Control Plane Profile readiness capability is invalid.",
+        );
+      }
+      return {
+        key: item.key,
+        status: item.status as WorkbenchProfileReadinessStatus,
+      };
+    });
+    return {
+      apiVersion: "factory.profile-readiness/v1" as const,
+      profile: candidate.profile,
+      label: candidate.label,
+      generatedTargets,
+      capabilities,
+    };
+  });
   const counts = <T extends readonly string[]>(
     input: unknown,
     fields: T,
@@ -332,6 +436,7 @@ function workspacePortfolioSummary(
   return {
     apiVersion: "factory.workspace-portfolio-summary/v1",
     profiles: profileRecords,
+    readiness: readinessRecords,
     capabilities: counts(
       record.capabilities,
       ["golden", "lockedVersions", "candidate", "provider"] as const,
