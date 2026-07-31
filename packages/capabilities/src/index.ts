@@ -3299,7 +3299,7 @@ export function composeDefaultCapabilityDraft(
       return {
         lock: lockCapabilityAsset(
           key === "commerce.transaction"
-            ? getCapabilityAssetVersion(key, "2.0.0")
+            ? getCapabilityAssetVersion(key, "1.0.0")
             : getCapabilityAsset(key),
         ),
         bindings: structuredClone(bindings),
@@ -3365,8 +3365,10 @@ export function composeProfileDraft(
   }
 
   const selectedAssets = [
-    ...composition.requiredCapabilities.map((capability) =>
-      getCapabilityAsset(capability.key),
+    ...composition.requiredCapabilities.map(({ key }) =>
+      key === "commerce.transaction"
+        ? getCapabilityAssetVersion(key, "1.0.0")
+        : getCapabilityAsset(key),
     ),
     ...composition.defaultOptionalCapabilities
       .filter((capability) => requestedSet.has(capability))

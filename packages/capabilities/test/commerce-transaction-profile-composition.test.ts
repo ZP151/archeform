@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   composeDefaultCapabilityDraft,
+  composeProfileDraft,
   listProfileReadiness,
   resolveCapabilityAssetLock,
 } from "../src/index.js";
 import {
   commerceTransactionAssetV1_0_0,
-  commerceTransactionAssetV2_0_0,
   lockCapabilityAsset,
 } from "../src/assets/index.js";
 
@@ -26,13 +26,30 @@ function transactionSelection(profile: (typeof commerceProfiles)[number]) {
   );
 }
 
+function legacyTransactionLock(profile: (typeof commerceProfiles)[number]) {
+  return composeProfileDraft({ profile }).graph.integration.assetLocks?.find(
+    (lock) => lock.key === "commerce.transaction",
+  );
+}
+
 describe("Commerce transaction profile composition", () => {
   it.each(commerceProfiles)(
-    "locks commerce.transaction@2.0.0 for %s",
+    "%s retains V1 until an operation adapter is locked",
     (profile) => {
-      expect(transactionSelection(profile)?.lock).toEqual(
-        lockCapabilityAsset(commerceTransactionAssetV2_0_0),
-      );
+      expect(transactionSelection(profile)?.lock).toMatchObject({
+        key: "commerce.transaction",
+        version: "1.0.0",
+      });
+    },
+  );
+
+  it.each(commerceProfiles)(
+    "%s legacy Profile recipe retains V1 until an operation adapter is locked",
+    (profile) => {
+      expect(legacyTransactionLock(profile)).toMatchObject({
+        key: "commerce.transaction",
+        version: "1.0.0",
+      });
     },
   );
 
