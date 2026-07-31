@@ -2,11 +2,36 @@
 
 Updated: 2026-08-01
 
+## Strict Restaurant package bindings — 2026-08-01
+
+Commit `3163a68` turns the active Restaurant Ordering package selection into
+five independently versioned, strict `factory.capability-binding/v1` assets:
+table session, ordering, kitchen, cashier, and reporting. Each current
+`1.1.0` package now declares typed Graph inputs, a physical immutable package
+directory, a digest, a fixture, template contributions, and negative binding
+evidence. Historical `1.0.0` locks remain replayable; an invalid binding such
+as a PageModel symbol supplied where a DomainModel entity is required fails
+closed.
+
+Fresh focused and package verification completed before the commit:
+
+- `@factory/capabilities`: 237 tests, build, typecheck, lint;
+- `@factory/compiler`: 200 tests, build, typecheck, lint;
+- `@factory/control-plane`: 120 tests and typecheck;
+- changed files and immutable package directories passed Prettier and
+  `git diff --check`.
+
+The catalogue now has 19 capability families and 38 versioned asset packages.
+This is a component-contract milestone, not yet package-owned target runtime:
+the next required migration moves Restaurant target contributions out of
+compiler Profile switches and then proves common transaction behaviour in both
+Restaurant and Ecommerce.
+
 ## Portfolio intelligence delivery — 2026-08-01
 
 The current worktree adds a read-only Workspace Portfolio Summary to the
 Control Plane and Home. It exposes only safe aggregate state: five Profile
-starters, 19 capability families, 33 versioned asset packages, the 43-source /
+starters, 19 capability families, 38 versioned asset packages, the 43-source /
 108-scenario discovery portfolio, Candidate/Provider counts, and compilation
 health. It deliberately does not expose upstream URLs, fixed references,
 source paths, raw AI material, or credentials.
@@ -36,7 +61,7 @@ platform.
   Simple Ecommerce, Retail Counter, and Grocery Pickup. The latter three reuse
   shared commerce composition locks, but that does not make their business
   operations complete or independently accepted.
-- The catalogue contains 19 capability families and 33 physical, versioned
+- The catalogue contains 19 capability families and 38 physical, versioned
   package directories. Only a smaller subset clearly owns executable runtime
   behaviour: core CRUD/workflow/audit/notification plus selected cart,
   inventory, and simulated-payment contributions. Generic catalogue and order
@@ -79,7 +104,7 @@ production-complete catalogue of one hundred application types.
   Restaurant Ordering, Simple Ecommerce, Retail Counter, and Grocery Pickup.
   Only Restaurant has a specialised transaction-oriented runtime; the other
   commerce Profiles share a smaller generic runtime.
-- The current catalogue has 19 capability families and 33 versioned physical
+- The current catalogue has 19 capability families and 38 versioned physical
   asset packages. Package counts do not prove business completeness. Core
   CRUD/workflow/audit/notification plus selected commerce handlers are
   executable; some catalogue/order concerns remain compiler-owned and several

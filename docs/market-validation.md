@@ -1,6 +1,24 @@
 # Market and ecosystem validation
 
-Updated: 2026-07-31
+Updated: 2026-08-01
+
+## 2026-08-01 integration-ecosystem expansion
+
+**Decision investigated.** Which public TypeScript ecosystems can add broad
+integration coverage without letting third-party workflow or commerce models
+replace the Factory Application Graph.
+
+| Candidate                                                    | Observed public fact                                                                                                                                                                                      | Factory lane                                            | Decision affected                                                                                                                                                                                                                                         |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Activepieces](https://github.com/activepieces/activepieces) | Its Community Edition is MIT-licensed; its repository describes a TypeScript, versioned "piece" framework and publishes integration pieces to npm. Enterprise features use a separate commercial licence. | Connector-provider/source-study candidate.              | Use fixed, Community-Edition path studies to derive Factory-owned integration contracts and local fakes. Do not copy its workflow runtime, enterprise paths, credential model, or permit a piece to mutate a Graph.                                       |
+| [Medusa](https://github.com/medusajs/medusa)                 | Its MIT-licensed TypeScript repository presents separately modular commerce building blocks for B2B, DTC, marketplace, POS, and service business use cases.                                               | Commerce Provider and selective-source-study candidate. | Prioritise neutral transaction, pricing, fulfilment, and marketplace-party contracts. A fixed path may be copied only after source-study, licence notice, fixture, conformance, and removal evidence; the Medusa runtime and schema remain non-canonical. |
+
+**Durable decision.** The high-throughput path is not cloning application
+repositories; it is automated, fixed-reference source intake plus an explicit
+reuse lane. A source can supply a pinned dependency, a Provider adapter, or a
+narrow, attributable Factory-owned port. A licence-compatible repository is
+not blanket permission to import its runtime, migrations, data model, or
+enterprise directories.
 
 ## 2026-08-01 ecosystem classification refresh
 

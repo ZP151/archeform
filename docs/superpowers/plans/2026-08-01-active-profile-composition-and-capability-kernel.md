@@ -37,7 +37,7 @@ its target contributions and removes the corresponding compiler branches.
   source paths may be selectively copied only after an immutable source-study,
   notices, digest, adaptation record, and replacement tests.
 
-## Task 1: restore active Restaurant package composition
+## Task 1: restore active Restaurant package composition — completed (`3ef6afe`)
 
 **Files:**
 
@@ -89,13 +89,14 @@ pnpm --filter @factory/capabilities typecheck
 pnpm --filter @factory/capabilities lint
 ```
 
-## Task 2: type the existing Restaurant packages before migrating targets
+## Task 2: type the Restaurant packages before migrating targets — completed (`3163a68`)
 
 **Files:**
 
-- Modify: the five `packages/capabilities/src/assets/restaurant/*.ts` files
-- Modify: matching immutable package `component.json` / `adapter.json` files
-  under `packages/capabilities/assets/restaurant.*/1.0.0/`
+- Add: five `1.1.0` immutable successor packages while retaining the existing
+  `1.0.0` package versions for historical compilation replay
+- Add: matching typed source assets under
+  `packages/capabilities/src/assets/restaurant/`
 - Modify: `packages/capabilities/src/index.ts` binding maps
 - Add: focused contract and negative tests in
   `packages/capabilities/test/`
@@ -111,9 +112,10 @@ and validated bindings matching its input schema. At minimum:
 | `restaurant.cashier`       | order entity, payment-attempt entity  |
 | `restaurant.reporting`     | order entity, inventory-ledger entity |
 
-The typed contract must reject missing, extra, wrong-model, and stale Graph
-symbol bindings. Regenerate package manifests/digests only with the repository
-tooling so the source asset and immutable package agree.
+The typed contract rejects missing, extra, wrong-model, and stale Graph symbol
+bindings. The completed implementation includes the wrong-model negative
+regression and verifies that the physical package manifest agrees with its
+source asset.
 
 ## Task 3: migrate component target ownership
 
