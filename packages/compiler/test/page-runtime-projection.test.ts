@@ -21,7 +21,7 @@ function blockById(graph: ApplicationGraphV1, id: string) {
 }
 
 function genericCommerceGraph(
-  blockType: "catalog" | "cart" | "checkout",
+  blockType: "catalog" | "cart" | "checkout" | "catalog-configurator",
 ): ApplicationGraphV1 {
   const graph = profileGraph("simple-ecommerce");
   graph.page = {
@@ -34,7 +34,10 @@ function genericCommerceGraph(
           {
             id: `${blockType}-test`,
             type: blockType,
-            entity: blockType === "catalog" ? "product" : "order",
+            entity:
+              blockType === "catalog" || blockType === "catalog-configurator"
+                ? "product"
+                : "order",
           },
         ],
       },
@@ -208,6 +211,12 @@ describe("generated page runtime projection", () => {
         entity: "product",
         props: { title: "Seasonal products" },
       },
+      {
+        id: "product-configurator",
+        type: "catalog-configurator",
+        entity: "product",
+        props: {},
+      },
     ]);
   });
 
@@ -344,6 +353,57 @@ describe("generated page runtime projection", () => {
 
     expect(() => createGeneratedPageRuntimeProjection(graph)).toThrow(
       "Interactive commerce PageModel blocks require Factory capability 'cart.add' with operation 'add'.",
+    );
+  });
+
+  it("projects a catalog configurator without forwarding arbitrary interaction data", () => {
+    const graph = genericCommerceGraph("catalog-configurator");
+    const block = blockById(graph, "catalog-configurator-test");
+    block.props = {
+      title: "Choose options",
+      priceDelta: "must-not-be-emitted",
+      onSubmit: "must-not-be-emitted()",
+    };
+    block.bindings = { provider: "must-not-be-emitted" };
+
+    const projection = createGeneratedPageRuntimeProjection(graph);
+
+    expect(projection.pages[0]?.blocks).toEqual([
+      {
+        id: "catalog-configurator-test",
+        type: "catalog-configurator",
+        entity: "product",
+        props: { title: "Choose options" },
+      },
+    ]);
+    expect(JSON.stringify(projection)).not.toContain("must-not-be-emitted");
+  });
+
+  it("includes a bounded catalog configurator in the ecommerce starter", () => {
+    const graph = profileGraph("simple-ecommerce");
+
+    expect(blockById(graph, "product-configurator")).toMatchObject({
+      type: "catalog-configurator",
+      entity: "product",
+    });
+    expect(
+      createGeneratedPageRuntimeProjection(graph).pages[0]?.blocks,
+    ).toContainEqual({
+      id: "product-configurator",
+      type: "catalog-configurator",
+      entity: "product",
+      props: {},
+    });
+  });
+
+  it("rejects a catalog configurator without the exact Factory option-selection capability", () => {
+    const graph = genericCommerceGraph("catalog-configurator");
+    graph.integration.capabilities = graph.integration.capabilities.filter(
+      (capability) => capability.key !== "catalog.option.select",
+    );
+
+    expect(() => createGeneratedPageRuntimeProjection(graph)).toThrow(
+      /catalog\.option\.select/,
     );
   });
 

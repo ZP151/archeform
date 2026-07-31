@@ -8,6 +8,7 @@ export const generatedPageRuntimeBlockTypes = [
   "form",
   "collection",
   "catalog",
+  "catalog-configurator",
   "cart",
   "queue",
   "checkout",
@@ -82,6 +83,7 @@ const entityBoundBlockTypes = new Set<GeneratedPageRuntimeBlockTypeV1>([
   "form",
   "collection",
   "catalog",
+  "catalog-configurator",
   "cart",
   "queue",
   "checkout",
@@ -163,6 +165,10 @@ const requiredFactoryCapabilityByBlockType: Readonly<
   >
 > = {
   catalog: { key: "cart.add", operation: "add" },
+  "catalog-configurator": {
+    key: "catalog.option.select",
+    operation: "select",
+  },
   checkout: { key: "payment.simulate", operation: "simulate" },
 };
 

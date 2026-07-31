@@ -54,7 +54,7 @@ describe("commercial profile composition", () => {
           ({ lock }) => lock.key === "commerce.line-configuration",
         );
 
-      expect(selection?.lock.version).toBe("1.1.0");
+      expect(selection?.lock.version).toBe("1.1.1");
       expect(() =>
         assertCommerceLineConfigurationProfile(
           createCommerceLineConfigurationProfileProjection(

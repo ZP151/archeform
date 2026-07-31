@@ -289,3 +289,22 @@ coverage. The next bulk-intake batch must first repair the independent-review
 P1 isolation findings in the External Intake pipeline, then capture immutable
 references, notices, SBOM and security evidence before any narrow
 Factory-authored adapter or attributed source import is proposed.
+
+## 2026-08-01 provider and source-intake evidence refresh
+
+**Decision investigated.** Which publicly licensed systems can accelerate
+cross-profile production features without making a third-party data model or
+runtime the source of truth.
+
+| Candidate | Observed public fact | Recommended lane | Boundary decision |
+| --- | --- | --- | --- |
+| [Appwrite](https://github.com/appwrite/appwrite) | The BSD-3-Clause project provides self-hostable authentication, databases, storage, functions, messaging, realtime, and hosting. | Provider source study | A future adapter may implement declared identity, storage, notification, or realtime intent. Appwrite tables, functions, and credentials must not become canonical Graph data. |
+| [Keycloak](https://github.com/keycloak/keycloak) | The project is Apache-2.0 and provides modern application identity and access management. | Identity provider source study | Pin a provider release and compile declared identity intent to an adapter. Do not copy realm configuration or put provider credentials into a Graph. |
+| [Temporal](https://github.com/temporalio/temporal) | The MIT-licensed service provides durable workflow execution, while workflow code is itself a separate deterministic execution model. | Durable-workflow provider source study | Keep Factory FlowModel authoritative. A later adapter may execute a compiled, constrained FlowModel; it must not accept arbitrary generated workflow code. |
+| [Meilisearch](https://github.com/meilisearch/meilisearch) | The repository separates MIT community material from Business Source Licensed enterprise material. | Search provider source study | Intake must be path-scoped to MIT material and record that scope. No enterprise path, search index definition, or API key is admitted into the Graph. |
+| [Novu](https://github.com/novuhq/novu) | The project describes an MIT open core but identifies enterprise directories under a commercial licence. | Notification provider source study | Use only a version-pinned CE/provider boundary after a path-level licence study; never copy enterprise paths or treat provider workflows as canonical notification semantics. |
+
+**Decision effect.** Bulk discovery may queue these records automatically, but
+each record must still become exactly one of: a pinned direct dependency, a
+governed provider adapter, a narrow attributed source study, or an exclusion.
+It must never become a whole-repository runtime import.

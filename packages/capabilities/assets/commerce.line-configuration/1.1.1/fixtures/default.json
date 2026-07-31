@@ -1,0 +1,20 @@
+{
+  "basePrice": "12.00",
+  "optionGroups": [
+    {
+      "selectionMode": "single",
+      "minimumSelections": 1,
+      "maximumSelections": 1,
+      "options": [
+        { "label": "Standard", "available": true, "priceDelta": "0.00" },
+        { "label": "Premium", "available": true, "priceDelta": "2.50" }
+      ]
+    }
+  ],
+  "expectedConfiguredPrice": "14.50",
+  "expectedSnapshot": {
+    "label": "Premium",
+    "priceDelta": "2.50",
+    "quantity": 1
+  }
+}

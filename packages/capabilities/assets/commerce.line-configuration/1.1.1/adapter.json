@@ -1,0 +1,41 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": [
+    "api.runtime",
+    "database.schema",
+    "page.block",
+    "flow.effect",
+    "test.fixture"
+  ],
+  "runtimeHandlers": ["catalogConfiguration"],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/commerce.line-configuration.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:b365a60a733a51ac03fbcca3781717a4e839988a97dadb1c3fee64637cf0a0ef"
+    }
+  ],
+  "parameters": [
+    { "key": "catalogEntity", "type": "graph-symbol", "required": true },
+    { "key": "lineEntity", "type": "graph-symbol", "required": true },
+    { "key": "optionGroupEntity", "type": "graph-symbol", "required": true },
+    { "key": "optionEntity", "type": "graph-symbol", "required": true },
+    { "key": "customerRole", "type": "graph-symbol", "required": true },
+    { "key": "merchantRole", "type": "graph-symbol", "required": true },
+    { "key": "catalogPage", "type": "graph-symbol", "required": true },
+    { "key": "merchantPage", "type": "graph-symbol", "required": true }
+  ],
+  "contributes": {
+    "effects": [
+      "line.configuration.validate",
+      "line.configuration.price",
+      "line.configuration.availability.manage",
+      "catalog.option-group.manage",
+      "catalog.option.manage",
+      "catalog.option.select"
+    ]
+  }
+}

@@ -15,11 +15,11 @@ const repositoryRoot = resolve(
 );
 
 describe("Line configuration capability v1.1", () => {
-  it("publishes one immutable configuration package for every commerce Profile", () => {
+  it("publishes the executable successor while retaining the previous immutable package", () => {
     const asset = capabilityAssets.find(
       (candidate) =>
         candidate.manifest.key === "commerce.line-configuration" &&
-        candidate.manifest.version === "1.1.0",
+        candidate.manifest.version === "1.1.1",
     );
 
     expect(asset).toBeDefined();
@@ -27,7 +27,7 @@ describe("Line configuration capability v1.1", () => {
 
     expect(asset.manifest).toMatchObject({
       key: "commerce.line-configuration",
-      version: "1.1.0",
+      version: "1.1.1",
       lifecycle: "golden",
       profiles: [
         "restaurant-ordering",
@@ -46,8 +46,19 @@ describe("Line configuration capability v1.1", () => {
     });
     expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     expect(verifyCapabilityAssetPackage(asset, repositoryRoot)).toEqual([]);
+    const previousAsset = capabilityAssets.find(
+      (candidate) =>
+        candidate.manifest.key === "commerce.line-configuration" &&
+        candidate.manifest.version === "1.1.0",
+    );
+    expect(previousAsset).toBeDefined();
+    if (!previousAsset) return;
+    expect(verifyCapabilityAssetDigest(previousAsset)).toBe(true);
+    expect(verifyCapabilityAssetPackage(previousAsset, repositoryRoot)).toEqual(
+      [],
+    );
     expect(
       getCapabilityAsset("commerce.line-configuration").manifest.version,
-    ).toBe("1.1.0");
+    ).toBe("1.1.1");
   });
 });

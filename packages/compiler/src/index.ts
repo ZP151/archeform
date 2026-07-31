@@ -690,7 +690,7 @@ function renderCapabilityRegistry(
     ),
   ).sort();
   return [
-    'import type { CapabilityRuntimeModule, CartHandler, CatalogHandler, EffectHandler, OrderHandler, RecordHandler, WorkflowHandler } from "./contract.js";',
+    'import type { CapabilityRuntimeModule, CartHandler, CatalogHandler, EffectHandler, LineConfigurationHandler, OrderHandler, RecordHandler, WorkflowHandler } from "./contract.js";',
     "",
     ...imports,
     ...(imports.length ? [""] : []),
@@ -767,6 +767,13 @@ function renderCapabilityRegistry(
     "  );",
     "}",
     "",
+    "export function getLineConfigurationHandler(): LineConfigurationHandler {",
+    "  return singleHandler(",
+    "    capabilityModules.flatMap((module) => module.lineConfigurationHandler ? [module.lineConfigurationHandler] : []),",
+    '    "line configuration",',
+    "  );",
+    "}",
+    "",
     "export function getOrderHandler(): OrderHandler {",
     "  return singleHandler(",
     "    capabilityModules.flatMap((module) => module.orderHandler ? [module.orderHandler] : []),",
@@ -784,6 +791,7 @@ function renderCapabilityContract(graph: ApplicationGraphV1): string {
     ...(commerce
       ? [
           "export type CapabilityCommerceLineItem = { id: string; actor: string; orderEntity: string; orderRecordId: string; catalogEntity: string; catalogRecordId: string; quantity: number };",
+          "export type CapabilityConfiguredLine = { catalogEntity: string; catalogRecordId: string; quantity: number; priceDelta: number; options: readonly { id: string; label: string; priceDelta: number }[] };",
         ]
       : []),
     "",
@@ -822,6 +830,10 @@ function renderCapabilityContract(graph: ApplicationGraphV1): string {
     "  read(input: { role: string; entityKey: string; recordId: string; store: CapabilityStore; assertAllowed(role: string, entityKey: string, action: string): Promise<void> }): Promise<CapabilityStoredRecord>;",
     "}",
     "",
+    "export interface LineConfigurationHandler {",
+    "  select(input: { role: string; catalogEntity: string; catalogRecordId: string; optionIds: readonly string[]; quantity: number; store: CapabilityStore; assertAllowed(role: string, entityKey: string, action: string): Promise<void> }): Promise<CapabilityConfiguredLine>;",
+    "}",
+    "",
     "export interface OrderHandler {",
     "  create(input: { role: string; entityKey: string; input: Record<string, unknown>; store: CapabilityStore; assertAllowed(role: string, entityKey: string, action: string): Promise<void> }): Promise<CapabilityStoredRecord>;",
     "  transition(input: { role: string; entityKey: string; recordId: string; nextState: string; expectedVersion: number; idempotencyKey: string; store: CapabilityStore; assertAllowed(role: string, entityKey: string, action: string): Promise<void> }): Promise<CapabilityStoredRecord>;",
@@ -838,6 +850,7 @@ function renderCapabilityContract(graph: ApplicationGraphV1): string {
     "  readonly workflowHandler?: WorkflowHandler;",
     "  readonly cartHandler?: CartHandler;",
     "  readonly catalogHandler?: CatalogHandler;",
+    "  readonly lineConfigurationHandler?: LineConfigurationHandler;",
     "  readonly orderHandler?: OrderHandler;",
     "  readonly effectHandler?: EffectHandler;",
     "}",
@@ -1523,12 +1536,16 @@ function renderApplicationRuntime(
   graph: ApplicationGraphV1,
   useResolvedContributions: boolean,
   usePackageCartHandler: boolean,
+  usePackageLineConfigurationHandler: boolean,
   catalogEntityKey: string | undefined,
   orderEntityKey: string | undefined,
 ): string {
   const commerce = hasCommerceCapabilities(graph);
   const capabilityRegistryImports = [
     ...(commerce && usePackageCartHandler ? ["getCartHandler"] : []),
+    ...(commerce && usePackageLineConfigurationHandler
+      ? ["getLineConfigurationHandler"]
+      : []),
     ...(catalogEntityKey ? ["getCatalogHandler"] : []),
     ...(orderEntityKey ? ["getOrderHandler"] : []),
     "getEffectHandler",
@@ -1795,6 +1812,27 @@ function renderApplicationRuntime(
     "    return record;",
     "  }",
     "",
+    ...(commerce && usePackageLineConfigurationHandler
+      ? [
+          "  async configureLine(role: string, input: { catalogEntity: string; catalogRecordId: string; optionIds: readonly string[]; quantity: number }): Promise<{ catalogEntity: string; catalogRecordId: string; quantity: number; priceDelta: number; options: readonly { id: string; label: string; priceDelta: number }[] }> {",
+          "    this.assertCapability('catalog.option.select', 'select');",
+          "    if (!providedEffects.has('catalog.option.select')) throw new Error(\"Unsupported capability effect 'catalog.option.select'.\");",
+          "    const configured = await getLineConfigurationHandler().select({",
+          "      role,",
+          "      catalogEntity: input.catalogEntity,",
+          "      catalogRecordId: input.catalogRecordId,",
+          "      optionIds: input.optionIds,",
+          "      quantity: input.quantity,",
+          "      store: this.store,",
+          "      assertAllowed: (candidateRole, entityKey, action) => this.assertAllowed(candidateRole, entityKey, action),",
+          "    });",
+          "    const at = new Date().toISOString();",
+          "    await this.store.appendCapabilityEvent({ actor: role, capability: 'catalog.option.select', operation: 'select', entity: configured.catalogEntity, recordId: configured.catalogRecordId, outcome: 'completed', at });",
+          "    return configured;",
+          "  }",
+          "",
+        ]
+      : []),
     ...(commerce
       ? [
           "  async addCartItem(role: string, orderEntity: string, orderRecordId: string, input: { catalogEntity: string; catalogRecordId: string; quantity: number }): Promise<CommerceLineItem> {",
@@ -2154,11 +2192,11 @@ function renderPageRuntime(
     'import { useEffect, useState } from "react";',
     "",
     "type JsonRecord = Record<string, unknown>;",
-    "type PageRuntimeBlock = { readonly id: string; readonly type: 'hero' | 'form' | 'collection' | 'catalog' | 'cart' | 'queue' | 'checkout'; readonly entity?: string; readonly props: Readonly<Record<string, string>> };",
+    "type PageRuntimeBlock = { readonly id: string; readonly type: 'hero' | 'form' | 'collection' | 'catalog' | 'catalog-configurator' | 'cart' | 'queue' | 'checkout'; readonly entity?: string; readonly props: Readonly<Record<string, string>> };",
     "type PageRuntimeProjection = { readonly apiVersion: 'factory.generated-page-runtime/v1'; readonly applicationName: string; readonly themeMode: 'light' | 'dark' | 'system'; readonly pages: readonly { readonly id: string; readonly route: string; readonly title: string; readonly blocks: readonly PageRuntimeBlock[] }[]; readonly navigation: readonly { readonly id: string; readonly label: string; readonly route: string }[]; readonly routeFallback: { readonly rootRoute: string | null; readonly unknownRoute: 'not-found' }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null } };",
     "type RuntimeEntity = { readonly key: string; readonly label: string; readonly fields: readonly { readonly key: string; readonly required: boolean }[] };",
     "type RuntimeDefinition = { readonly applicationName: string; readonly themeMode: 'light' | 'dark' | 'system'; readonly entities: readonly RuntimeEntity[]; readonly policy: { readonly roles: readonly string[]; readonly permissions: readonly { readonly role: string; readonly resource: string; readonly actions: readonly string[] }[] }; readonly flow: { readonly flows: readonly { readonly entity: string; readonly transitions: readonly { readonly event: string; readonly roles: readonly string[] }[] }[] }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null } };",
-    "type BlockContext = { readonly role: string; readonly formRouteByEntity: Readonly<Record<string, string>>; readonly cartItems: readonly JsonRecord[]; readonly cartId: string | null; readonly reportError: (reason: unknown) => void; readonly addToCart: (catalogEntity: string, catalogRecordId: string) => Promise<void>; readonly checkoutCart: () => Promise<void> };",
+    "type BlockContext = { readonly role: string; readonly formRouteByEntity: Readonly<Record<string, string>>; readonly cartItems: readonly JsonRecord[]; readonly cartId: string | null; readonly reportError: (reason: unknown) => void; readonly addToCart: (catalogEntity: string, catalogRecordId: string) => Promise<void>; readonly configureLine: (catalogEntity: string, catalogRecordId: string, optionIds: readonly string[]) => Promise<JsonRecord>; readonly checkoutCart: () => Promise<void> };",
     "",
     `const projection: PageRuntimeProjection = ${serializedProjection};`,
     `const definition: RuntimeDefinition = ${serializedDefinition};`,
@@ -2247,6 +2285,17 @@ function renderPageRuntime(
     "  return <section className='generated-card'><div className='generated-section-heading'><div><p>catalog</p><h2>{block.props.title ?? entity.label}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}>Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<ul className='generated-records'>{records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code>{mayAddToCart ? <button className='generated-primary' type='button' onClick={() => void context.addToCart(entity.key, String(record.id)).catch(context.reportError)}>Add to cart</button> : null}</li>)}</ul><CartSummary context={context} /></section>;",
     "}",
     "",
+    "function CatalogConfiguratorBlock({ block, entity, context }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly context: BlockContext }) {",
+    "  const allowed = can(context.role, entity.key, 'read');",
+    "  const { records, error, refresh } = useEntityRecords(entity, context.role, allowed);",
+    "  const [catalogRecordId, setCatalogRecordId] = useState('');",
+    "  const [optionIds, setOptionIds] = useState('');",
+    "  const [configured, setConfigured] = useState<JsonRecord | null>(null);",
+    "  if (!allowed) return <section className='generated-card'><h2>{block.props.title ?? 'Configure options'}</h2><p>Your selected role cannot read this catalog.</p></section>;",
+    "  const submit = async () => { const selected = optionIds.split(',').map((option) => option.trim()).filter(Boolean); setConfigured(await context.configureLine(entity.key, catalogRecordId, selected)); };",
+    "  return <section className='generated-card'><div className='generated-section-heading'><div><p>Server-authoritative selection</p><h2>{block.props.title ?? 'Configure options'}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}>Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<form onSubmit={(event) => { event.preventDefault(); void submit().catch(context.reportError); }}><label>Catalog item<select required value={catalogRecordId} onChange={(event) => setCatalogRecordId(event.target.value)}><option value=''>Choose an item</option>{records.map((record) => <option key={String(record.id)} value={String(record.id)}>{String(record.name ?? record.id)}</option>)}</select></label><label>Option identifiers<input value={optionIds} onChange={(event) => setOptionIds(event.target.value)} placeholder='option-a, option-b' /></label><button className='generated-primary' type='submit'>Validate selection</button></form>{configured ? <pre className='generated-records'>{JSON.stringify(configured, null, 2)}</pre> : null}</section>;",
+    "}",
+    "",
     "function CartSummary({ context }: { readonly context: BlockContext }) {",
     "  if (!definition.commerce.orderEntity) return null;",
     "  return <section className='generated-cart-summary'><h3>Cart</h3><p>{context.cartItems.length} item{context.cartItems.length === 1 ? '' : 's'}</p>{context.cartId && definition.commerce.paymentEvent && canTriggerEvent(context.role, definition.commerce.orderEntity, definition.commerce.paymentEvent) ? <button className='generated-primary' type='button' onClick={() => void context.checkoutCart().catch(context.reportError)}>Checkout cart</button> : null}</section>;",
@@ -2267,6 +2316,7 @@ function renderPageRuntime(
     "  if (block.type === 'form') return <FormBlock block={block} entity={entity} role={context.role} reportError={context.reportError} />;",
     "  if (block.type === 'collection') return <CollectionBlock block={block} entity={entity} context={context} />;",
     "  if (block.type === 'catalog') return <CatalogBlock block={block} entity={entity} context={context} />;",
+    "  if (block.type === 'catalog-configurator') return <CatalogConfiguratorBlock block={block} entity={entity} context={context} />;",
     "  if (block.type === 'cart') return <CartBlock block={block} context={context} />;",
     "  if (block.type === 'queue') return <QueueBlock block={block} entity={entity} context={context} />;",
     "  if (block.type === 'checkout') return <CheckoutBlock block={block} context={context} />;",
@@ -2301,6 +2351,11 @@ function renderPageRuntime(
     "    if (!response.ok) throw new Error(await response.text());",
     "    await refreshCart(activeCartId);",
     "  };",
+    "  const configureLine = async (catalogEntity: string, catalogRecordId: string, optionIds: readonly string[]): Promise<JsonRecord> => {",
+    "    const response = await fetch('/api/commerce/configure-line', { method: 'POST', headers: requestHeaders(role), body: JSON.stringify({ catalogEntity, catalogRecordId, optionIds, quantity: 1 }) });",
+    "    if (!response.ok) throw new Error(await response.text());",
+    "    return await response.json() as JsonRecord;",
+    "  };",
     "  const checkoutCart = async () => {",
     "    const orderEntity = definition.commerce.orderEntity;",
     "    const paymentEvent = definition.commerce.paymentEvent;",
@@ -2313,7 +2368,7 @@ function renderPageRuntime(
     "  const requestedRoute = requestedPath === '/' ? projection.routeFallback.rootRoute ?? '/' : requestedPath;",
     "  const activePage = projection.pages.find((page) => page.route === requestedRoute);",
     "  if (!activePage) return <main className='generated-app' data-theme={definition.themeMode}><section className='generated-card'><p>Not found</p><h1>Declared route unavailable</h1><a href={projection.routeFallback.rootRoute ?? '/'}>Return to the application</a></section></main>;",
-    "  const context: BlockContext = { role, formRouteByEntity, cartItems, cartId, reportError, addToCart, checkoutCart };",
+    "  const context: BlockContext = { role, formRouteByEntity, cartItems, cartId, reportError, addToCart, configureLine, checkoutCart };",
     "  return <main className='generated-app' data-theme={definition.themeMode}><header className='generated-header'><div><p>Published Graph application</p><h1>{definition.applicationName}</h1></div><label>Role<select value={role} onChange={(event) => setRole(event.target.value)}>{definition.policy.roles.map((candidate) => <option key={candidate} value={candidate}>{candidate}</option>)}</select></label></header><nav aria-label='Application routes'>{projection.navigation.map((item) => <a href={item.route} key={item.id}>{item.label}</a>)}</nav>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<section className='generated-page'>{activePage.blocks.map((block) => <BlockRenderer key={block.id} block={block} context={context} />)}</section></main>;",
     "}",
     "",
@@ -2442,7 +2497,10 @@ function renderSimulator(graph: ApplicationGraphV1): string {
 `;
 }
 
-function renderApiMain(graph: ApplicationGraphV1): string {
+function renderApiMain(
+  graph: ApplicationGraphV1,
+  usePackageLineConfigurationHandler: boolean,
+): string {
   const commerce = hasCommerceCapabilities(graph);
   return [
     'import { Body, Controller, Get, HttpException, HttpStatus, Module, Param, Post, Req } from "@nestjs/common";',
@@ -2474,6 +2532,15 @@ function renderApiMain(graph: ApplicationGraphV1): string {
     "",
     ...(commerce
       ? [
+          ...(usePackageLineConfigurationHandler
+            ? [
+                "  @Post('commerce/configure-line')",
+                "  async configureLine(@Body() body: { catalogEntity: string; catalogRecordId: string; optionIds: readonly string[]; quantity: number }, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
+                "    try { return await applicationRuntime.configureLine(roleFrom(request), body); } catch (error) { throw rejected(error); }",
+                "  }",
+                "",
+              ]
+            : []),
           "  @Get('commerce/:entity/:recordId/items')",
           "  async cartItems(@Param('entity') entity: string, @Param('recordId') recordId: string, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
           "    try { return await applicationRuntime.cartItems(roleFrom(request), entity, recordId); } catch (error) { throw rejected(error); }",
@@ -2875,6 +2942,14 @@ export function generateApplicationBundle(
       );
     },
   );
+  const usePackageLineConfigurationHandler =
+    input.compositionLock.packages.some(({ lock }) => {
+      const asset = resolveCapabilityAssetLock(lock);
+      return (
+        asset.manifest.key === "commerce.line-configuration" &&
+        asset.manifest.runtimeHandlers?.includes("catalogConfiguration")
+      );
+    });
   const catalogEntityKey = lockedRuntimeHandlerEntity(
     input.compositionLock,
     "commerce.catalog",
@@ -3096,7 +3171,9 @@ export function generateApplicationBundle(
     },
     {
       path: "api/src/main.ts",
-      render: () => restaurantRuntime()?.main ?? renderApiMain(graph),
+      render: () =>
+        restaurantRuntime()?.main ??
+        renderApiMain(graph, usePackageLineConfigurationHandler),
     },
     ...(restaurantRuntimeEnabled
       ? [
@@ -3130,6 +3207,7 @@ export function generateApplicationBundle(
           graph,
           useResolvedContributions,
           usePackageCartHandler,
+          usePackageLineConfigurationHandler,
           catalogEntityKey,
           orderEntityKey,
         ),

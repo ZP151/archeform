@@ -1,6 +1,48 @@
 # Factory Pilot delivery status
 
-Updated: 2026-07-31
+Updated: 2026-08-01
+
+## Current execution snapshot — 2026-08-01
+
+Factory Pilot has a credible composition foundation, but it is not yet a
+production-complete application platform or a catalogue of one hundred ready
+business products.
+
+- The repository currently contains 19 capability families and 32 physical,
+  versioned package directories. Five Profile starters are available:
+  Expense Approval, Restaurant Ordering, Simple Ecommerce, Retail Counter,
+  and Grocery Pickup. Their published Graphs, package locks, generated targets,
+  and acceptance depth are not interchangeable claims of production readiness.
+- Eight shared packages have executable package contributions today: CRUD,
+  workflow, audit, notification, inventory, simulated payment, cart, and line
+  configuration. Catalog, order, and several Restaurant flows are still at
+  different stages of extraction from compiler-owned behaviour. Several Restaurant flows
+  are still Profile-specific compiler behaviour. The library is therefore
+  useful but uneven; it is not yet an independently replaceable domain kernel.
+- The generic line-configuration slice now has focused green evidence:
+  `commerce.line-configuration@1.1.1` is a new immutable Golden successor;
+  `1.1.0` remains replayable. The generated runtime resolves options only from
+  published records, rejects cross-catalog or unavailable selections, derives
+  labels and price deltas server-side, and exposes a bounded
+  `catalog-configurator` PageModel block. Full Capabilities and Compiler
+  verification passed on 2026-08-01; broader product and generated-application
+  acceptance remain release gates for the platform.
+- The external-intake lane can bulk acquire fixed public references into
+  quarantine and record redacted provenance evidence. It cannot currently
+  create Candidates or promote Golden packages automatically. The next supply
+  chain milestone is a bounded Candidate-proposal generator with licence,
+  SBOM, security, fixture, conformance, and provenance gates.
+
+### Product implication
+
+The shortest path to broad coverage is not one hundred copied vertical
+applications. It is a small, executable cross-profile kernel plus Profile
+recipes and provider adapters. A bulk intake pipeline should automate
+discovery, fixed-SHA acquisition, licence classification, dependency/SBOM
+analysis, fixture generation, and Candidate task creation; it must not allow
+an upstream repository, schema, credential, or arbitrary source tree to become
+an executable Graph or compiler input without Factory-owned contracts and
+tests.
 
 ## Current Profile and external-reuse refresh — 2026-07-31
 

@@ -400,7 +400,10 @@ function assertLineConfigurationGraphSemantics(
   const lineConfiguration = composition.packages.find(
     ({ lock }) => lock.key === "commerce.line-configuration",
   );
-  if (!lineConfiguration || lineConfiguration.lock.version !== "1.1.0") {
+  if (
+    !lineConfiguration ||
+    !["1.1.0", "1.1.1"].includes(lineConfiguration.lock.version)
+  ) {
     return;
   }
   assertCommerceLineConfigurationProfile(
@@ -2413,6 +2416,11 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               title: "Catalog",
               blocks: [
                 { id: "product-catalog", type: "catalog", entity: "product" },
+                {
+                  id: "product-configurator",
+                  type: "catalog-configurator",
+                  entity: "product",
+                },
               ],
             },
             {
