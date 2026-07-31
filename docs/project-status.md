@@ -7,10 +7,12 @@ Updated: 2026-08-01
 Typed Capability Binding Validation is the current hardening milestone.
 ADR-0006 is `Accepted` under Factory controller authority; its approved design,
 implementation plan, and six-task ledger now govern the work. All six tasks are
-`planned`. Task 1, **pure typed Graph symbol index**, has no open dependency and
-may be dispatched immediately under its exact four Graph paths. Tasks 2 through
-5 are serialized on acceptance of the preceding contract task. Task 6 begins
-only after Tasks 1 through 5 are all `accepted`.
+governed by the accepted dependency chain. Task 1, **pure typed Graph symbol
+index**, is `implementing`. Its bounded writer is Typed Graph Index Integration,
+its contract owner is Application Graph Type System, and its write boundary is
+the exact four Graph paths recorded below. Tasks 2 through 5 remain `planned`
+and serialized on acceptance of the preceding contract task. Task 6 remains
+`planned` and begins only after Tasks 1 through 5 are all `accepted`.
 
 Commercial Capability Foundation Task 2 remains `implementing` and escalated
 after its five permitted repair rounds. It is blocked on accepted Typed
@@ -179,10 +181,10 @@ On Node `v22.11.0`, it records:
 
 ## Active work
 
-- Typed Binding Tasks 1 through 6 are `planned` under the accepted ADR, design,
-  plan, and new project ledger.
-- Task 1 may start immediately. Its contract owner is Application Graph Type
-  System, and its exact allowed paths are:
+- Typed Binding Task 1 is `implementing` under the accepted ADR, design, plan,
+  and project ledger. The bounded writer is Typed Graph Index Integration and
+  the contract owner is Application Graph Type System.
+- Task 1's exact allowed paths are:
   `packages/graph/src/model.ts`, `packages/graph/src/index.ts`,
   `packages/graph/src/browser.ts`, and
   `packages/graph/test/application-graph.test.ts`.
@@ -197,9 +199,9 @@ On Node `v22.11.0`, it records:
   repair is authorized; its previous exact five-path implementation boundary
   remains historical release evidence only. It cannot resume acceptance until
   Typed Binding Task 6 is accepted and the PM reconciles the parent ledger.
-- This update creates/synchronizes governance documents only. It modifies no
-  implementation code, source manifest, physical package, shared contract, or
-  existing Commercial Foundation ledger.
+- This PM transition changes only the typed-binding ledger and project status.
+  It modifies no implementation code, source manifest, physical package,
+  shared contract, or existing Commercial Foundation ledger.
 
 ## Blocked decisions
 
@@ -214,9 +216,9 @@ On Node `v22.11.0`, it records:
 - Foundation Tasks 3 and 4 are blocked on accepted Task 2 profile composition
   metadata. Task 2 is back in `implementing` and escalated; neither downstream
   task is dispatched by this update.
-- Typed Binding Task 1 is dispatch-ready but remains `planned` until its bounded
-  writer is assigned. Tasks 2 through 5 cannot overlap or start before the
-  preceding task is `accepted`.
+- Typed Binding Task 1 is active only within its four exact Graph paths. Tasks
+  2 through 5 remain `planned` and cannot overlap or start before the preceding
+  task is `accepted`.
 - Typed Binding Task 6 cannot start before Tasks 1 through 5 are all
   `accepted`. Its acceptance does not automatically accept Commercial
   Foundation Task 2; the PM must reconcile that parent state separately.
@@ -255,9 +257,9 @@ On Node `v22.11.0`, it records:
 
 ## Next slice
 
-Move Typed Binding Task 1 `planned -> implementing` under the accepted
-Application Graph Type System contract and exact four paths. Begin with focused
-failing namespace/ownership tests, keep `@factory/graph`
-capability-manifest-independent, and leave Typed Binding Tasks 2 through 6
-`planned`. Keep Commercial Foundation Task 2 `implementing` and escalated and
-Tasks 3 and 4 `planned` and blocked.
+Implement Typed Binding Task 1 under the accepted Application Graph Type System
+contract and exact four paths. Begin with focused failing namespace/ownership
+tests, keep `@factory/graph` capability-manifest-independent, and prepare its
+bounded implementation and verification evidence for independent task review.
+Leave Typed Binding Tasks 2 through 6 `planned`. Keep Commercial Foundation
+Task 2 `implementing` and escalated and Tasks 3 and 4 `planned` and blocked.

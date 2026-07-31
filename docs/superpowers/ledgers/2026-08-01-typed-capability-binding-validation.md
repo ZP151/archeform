@@ -67,9 +67,10 @@ not acceptance.
   after Task 1 is `accepted`; Task 3 after Task 2; Task 4 after Task 3; and Task
   5 after Task 4.
 - Task 6 starts only after Tasks 1 through 5 are all `accepted`.
-- Task 1 has no open dependency and may be dispatched immediately. It remains
-  `planned` until the PM assigns its bounded writer and records
-  `planned -> implementing`.
+- Task 1 has no open dependency. The PM assigned the bounded writer Typed Graph
+  Index Integration and recorded `planned -> implementing` under the exact
+  four Graph paths below.
+- Tasks 2 through 6 remain `planned`; none is dispatched by this transition.
 - No frontend/backend parallel implementation is permitted in this project.
 - Commercial Capability Foundation Task 2 remains `implementing` and
   escalated. It cannot resume acceptance until this project's Task 6 is
@@ -79,19 +80,20 @@ not acceptance.
 
 ## Project state
 
-| Task                                           | State     | Specialization | Contract owner                               | Contract status                                          |
-| ---------------------------------------------- | --------- | -------------- | -------------------------------------------- | -------------------------------------------------------- |
-| 1. Pure typed Graph symbol index               | `planned` | `integration`  | Application Graph Type System                | ADR/design accepted; dependency-free and dispatch-ready. |
-| 2. Typed manifest and binding contracts        | `planned` | `integration`  | Capability Binding Contract                  | Blocked on accepted Task 1 index contract.               |
-| 3. Safe versioned physical capability assets   | `planned` | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 2 manifest contract.            |
-| 4. Manifest-aware Draft composition validation | `planned` | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-3.                           |
-| 5. Graph-aware Publish and compiler admission  | `planned` | `backend`      | Published Graph and Compiler Admission       | Blocked on accepted Tasks 1-4.                           |
-| 6. Current recipe migration and acceptance     | `planned` | `integration`  | Typed Binding Migration and Release Evidence | Blocked on accepted Tasks 1-5.                           |
+| Task                                           | State          | Specialization | Contract owner                               | Contract status                                                   |
+| ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | ----------------------------------------------------------------- |
+| 1. Pure typed Graph symbol index               | `implementing` | `integration`  | Application Graph Type System                | ADR/design accepted; bounded writer assigned to exact four paths. |
+| 2. Typed manifest and binding contracts        | `planned`      | `integration`  | Capability Binding Contract                  | Blocked on accepted Task 1 index contract.                        |
+| 3. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 2 manifest contract.                     |
+| 4. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-3.                                    |
+| 5. Graph-aware Publish and compiler admission  | `planned`      | `backend`      | Published Graph and Compiler Admission       | Blocked on accepted Tasks 1-4.                                    |
+| 6. Current recipe migration and acceptance     | `planned`      | `integration`  | Typed Binding Migration and Release Evidence | Blocked on accepted Tasks 1-5.                                    |
 
 ## Task 1: Add a pure typed Graph symbol index
 
-- **State:** `planned` and dispatch-ready
+- **State:** `implementing`
 - **Specialization:** `integration`
+- **Bounded writer:** Typed Graph Index Integration
 - **Contract owner:** Application Graph Type System
 - **Contract artifact:** ADR-0006 DEC-003 and the design's Graph typed symbol
   index contract.
@@ -100,6 +102,23 @@ not acceptance.
 - **Produces:** `createGraphSymbolIndex(graph)` and capability-agnostic typed
   reference resolution for entities, fields by entity owner, pages,
   navigation, roles, flows, providers, and experience tokens.
+
+### Dispatch evidence
+
+- The PM verified accepted ADR-0006, the approved design and plan, the current
+  `ApplicationGraphV1`, and no task dependency before recording
+  `planned -> implementing`.
+- Typed Graph Index Integration owns only the four exact paths below. Any
+  additional path or contract change stops the task for PM reconciliation.
+- Implementation begins with focused failing namespace and ownership tests:
+  `pnpm --filter @factory/graph test -- --run test/application-graph.test.ts`.
+  The expected RED is the absence of an owner-aware typed resolver.
+- Before task review, the writer must run
+  `pnpm --filter @factory/graph test -- --run test/application-graph.test.ts test/browser-entry.test.ts`,
+  `pnpm --filter @factory/graph typecheck`, and
+  `pnpm --filter @factory/graph lint`.
+- This transition supplies implementation authority only. It is not Task 1
+  completion, review, QA, release review, or acceptance evidence.
 
 ### Exact allowed paths
 
@@ -347,11 +366,13 @@ not acceptance.
 - Runtime atomicity and exactly-once stock execution across intentional
   inventory co-providers remain Commercial Foundation Task 3 scope and are not
   proven by this project.
-- No code implementation is authorized by this ledger commit itself. Task 1
-  may be dispatched in a separate PM transition under its exact four paths.
+- This PM transition authorizes only Task 1 implementation by Typed Graph Index
+  Integration in its exact four paths. It authorizes no Task 2-6
+  implementation.
 
 ## Next smallest valuable slice
 
-Move Task 1 `planned -> implementing` under the accepted Application Graph Type
-System contract and exact four paths. Begin with failing namespace/ownership
-tests, keep `@factory/graph` capability-agnostic, and leave Tasks 2-6 `planned`.
+Implement Task 1 under the accepted Application Graph Type System contract and
+exact four paths. Begin with focused failing namespace/ownership tests, keep
+`@factory/graph` capability-agnostic, and prepare bounded implementation and
+verification evidence for independent task review. Leave Tasks 2-6 `planned`.
