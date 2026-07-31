@@ -4,11 +4,13 @@ Updated: 2026-07-31
 
 ## Current milestone
 
-External Capability Intake Task 6, **Bulk acceptance and release evidence**, is
-`accepted` after independent release review and fresh root verification at
-`a743652` passed with no P0/P1/P2 and the PM atomically reconciled this status,
-the acceptance record, and the ledger. The complete External Capability Intake
-project is frozen.
+Commercial Capability Foundation Task 2, **Restaurant and Ecommerce profile
+recipes**, is `implementing`. Its contract owner is Profile Composition
+Integration; its dependency, Task 1 capability contracts and physical
+packages, is `accepted` and frozen. Task 2 is limited to composing Restaurant
+and Ecommerce Draft recipes from the same four accepted Foundation identities
+with distinct exact Graph-symbol bindings, entities, pages, roles, labels, and
+fixtures. Foundation Tasks 3 and 4 remain `planned`.
 
 The Application Graph remains the source of truth. External intake artifacts
 remain quarantined Candidate evidence or pending-review packets; they are not
@@ -17,7 +19,14 @@ provider authority, approval, or source-copy execution.
 
 ## Completed evidence
 
-The Task 6 writer record is
+Commercial Capability Foundation Task 1 is accepted and frozen. Its verified
+`1.0.0` identities are `core.identity-context`, `core.location-context`,
+`commerce.line-configuration`, and `commerce.inventory-ledger`; their physical
+package, evidence-digest, verified-lock, and Publish-boundary contracts remain
+unchanged.
+
+The complete External Capability Intake project is accepted and frozen. Its
+Task 6 writer record is
 [`acceptance/external-capability-intake.md`](acceptance/external-capability-intake.md).
 On Node `v22.11.0`, it records:
 
@@ -47,31 +56,21 @@ On Node `v22.11.0`, it records:
 
 ## Active work
 
-- The earlier bounded release repair (`a9867b8`) kept both real child-process
-  races fail-closed with a 20-second outer timeout, then passed independent
-  task review. PM ledger `43913ae` moved Task 6 to `ready_for_qa`.
-- Independent re-QA at `43913ae` confirmed all behavioral and quality evidence
-  above, but the acceptance record and this document still claimed the prior
-  `implementing` state at `a9867b8`. Re-QA therefore failed overall solely with
-  one stale-status P2 and no P0/P1.
-- PM ledger `f1f1a04` returned Task 6 `ready_for_qa -> implementing` for this
-  exact two-document status repair. No test, code, dependency, fixture,
-  network boundary, public surface, authority, or product behavior may change.
-- Documentation repair `409d545` then passed independent task review with no
-  P0/P1/P2. The PM atomically moved Task 6
-  `implementing -> ready_for_qa` across the ledger, acceptance record, and this
-  status. Fresh independent re-QA is now active.
-- Fresh independent re-QA at `6ee338f` passed all concurrent, serial, focused,
-  safety, cleanup, quality, and synchronized-status gates with no P0/P1/P2.
-  The PM atomically moved Task 6 `ready_for_qa -> reviewed` across all three
-  present-tense state authorities.
-- Independent release review and fresh root verification at `a743652` passed
-  with no P0/P1/P2. Concurrent suites passed 392/392, 56/56, 28/28, 123/123,
-  and 180/180; serial Intake CLI passed 56/56; all affected quality and
-  worktree gates passed. The PM atomically moved Task 6
-  `reviewed -> accepted`.
-- No External Capability Intake work remains active. Its exact paths,
-  fixture-only contract, evidence, and limitations are frozen.
+- One bounded `integration` writer owns Task 2's exact four paths:
+  `packages/capabilities/src/index.ts`,
+  `packages/capabilities/src/restaurant/profile.ts`,
+  `packages/capabilities/test/restaurant-profile.test.ts`, and
+  `packages/capabilities/test/commercial-profile-composition.test.ts`.
+- The slice must produce Restaurant and Ecommerce recipes selecting the same
+  four accepted identities with distinct validated Graph symbols and output
+  semantics, canonical nonempty locks, deterministic dependency order, and
+  fail-closed invalid-symbol behavior.
+- No new package identity, Task 1 contract change, compiler, Workbench,
+  generated runtime, payment, identity-provider, deployment behavior, profile
+  cloning, Graph `assetLocks` fallback, or Restaurant-only package fork is in
+  scope.
+- Foundation Tasks 3 and 4 remain `planned` until Task 2 is accepted. External
+  Capability Intake remains accepted and frozen.
 
 ## Blocked decisions
 
@@ -83,6 +82,8 @@ On Node `v22.11.0`, it records:
 - This slice is fixture-only and provides no public-network or live-service
   evidence. Acceptance grants no promotion, approval, Golden, Graph, compiler,
   generated-runtime, provider, or source-copy authority.
+- Foundation Tasks 3 and 4 are blocked on accepted Task 2 profile composition
+  metadata. Neither downstream task is dispatched by this update.
 
 ## Risks and limitations
 
@@ -92,12 +93,14 @@ On Node `v22.11.0`, it records:
   limitation for promotion-packet output anchoring; it is unchanged here.
 - The preflight creates intake requests only. It cannot make a licence decision,
   promote a Candidate, or execute a source copy.
+- Task 2 must not confuse accepted physical Foundation contracts with completed
+  Restaurant or Ecommerce product behavior. Cross-profile bindings and
+  deterministic recipe evidence are the gate.
 
 ## Next slice
 
-The next product slice is Commercial Capability Foundation Task 2: compose
-Restaurant and Ecommerce Graph recipes from the accepted
-`core.identity-context`, `core.location-context`,
-`commerce.line-configuration`, and `commerce.inventory-ledger` identities.
-Keep Foundation Tasks 3 and 4 planned until Task 2 is accepted. This status
-update does not dispatch that separate task.
+Implement Commercial Capability Foundation Task 2 within its exact four paths,
+starting with focused failing tests for absent Foundation bindings and Graph
+contributions. Prove both profiles select the same accepted identities with
+distinct validated symbols and deterministic locks. Keep Tasks 3 and 4 planned
+until Task 2 is accepted.

@@ -40,17 +40,21 @@ contract owner for their physical package and interface boundary. Task 1's
 explicit release set is implementation commit `b2f3b9e` plus repair commit
 `4f320fd`. Independent QA and release review passed, and the PM reconciled the
 evidence through `ready_for_qa -> reviewed -> accepted`. Task 1 is frozen and
-accepted. Tasks 2 through 5 remain `planned`. Tasks 3 and 4 may run in parallel only after
-Task 2 is accepted because they consume the same frozen profile composition
-metadata but write disjoint compiler and Workbench paths.
+accepted. Its acceptance satisfies Task 2's dependency. The PM moved Task 2
+`planned -> implementing` under the frozen Profile Composition Integration
+contract and exact four paths. External Capability Intake remains accepted and
+frozen; this dispatch imports no external content and grants no Candidate or
+provider authority. Tasks 3 through 5 remain `planned`. Tasks 3 and 4 may run
+in parallel only after Task 2 is accepted because they consume the same frozen
+profile composition metadata but write disjoint compiler and Workbench paths.
 
-| Task                                          | State      | Specialization | Contract owner                  | Contract status                                                                                     |
-| --------------------------------------------- | ---------- | -------------- | ------------------------------- | --------------------------------------------------------------------------------------------------- |
-| 1. Capability contracts and physical packages | `accepted` | `integration`  | Factory Capability Registry     | Release set `b2f3b9e` + `4f320fd`; QA and release review PASS, with inherited limitations recorded. |
-| 2. Restaurant and Ecommerce profile recipes   | `planned`  | `integration`  | Profile Composition Integration | Task 1 accepted; ready for bounded PM dispatch.                                                     |
-| 3. Generic commercial generated runtime       | `planned`  | `backend`      | Compiler Runtime                | Blocked on accepted Task 2 Published Graph recipes and immutable locks.                             |
-| 4. Workbench profile composition visibility   | `planned`  | `frontend`     | Workbench Product Surface       | Blocked on accepted Task 2 profile composition metadata.                                            |
-| 5. Cross-profile acceptance and evidence      | `planned`  | `qa`           | Factory Release Evidence        | Blocked on accepted Tasks 1 through 4.                                                              |
+| Task                                          | State          | Specialization | Contract owner                  | Contract status                                                                                     |
+| --------------------------------------------- | -------------- | -------------- | ------------------------------- | --------------------------------------------------------------------------------------------------- |
+| 1. Capability contracts and physical packages | `accepted`     | `integration`  | Factory Capability Registry     | Release set `b2f3b9e` + `4f320fd`; QA and release review PASS, with inherited limitations recorded. |
+| 2. Restaurant and Ecommerce profile recipes   | `implementing` | `integration`  | Profile Composition Integration | Task 1 accepted; bounded recipe-composition implementation active.                                  |
+| 3. Generic commercial generated runtime       | `planned`      | `backend`      | Compiler Runtime                | Blocked on accepted Task 2 Published Graph recipes and immutable locks.                             |
+| 4. Workbench profile composition visibility   | `planned`      | `frontend`     | Workbench Product Surface       | Blocked on accepted Task 2 profile composition metadata.                                            |
+| 5. Cross-profile acceptance and evidence      | `planned`      | `qa`           | Factory Release Evidence        | Blocked on accepted Tasks 1 through 4.                                                              |
 
 ## Task 1: Freeze capability contracts and physical package verification
 
@@ -202,7 +206,7 @@ of them requires a new recorded scope and repair state.
 
 ## Task 2: Compose Foundation Graph recipes for Restaurant and Ecommerce
 
-- **State:** `planned`
+- **State:** `implementing`
 - **Specialization:** `integration`
 - **Contract owner:** Profile Composition Integration
 - **Contract artifact:** accepted Task 1 package identities, interfaces, and
@@ -211,6 +215,14 @@ of them requires a new recorded scope and repair state.
 - **Produces:** Restaurant and Ecommerce Draft recipes that select the same
   four Foundation identities with different exact Graph-symbol bindings,
   entities, pages, roles, labels, and fixtures.
+
+Task 1 is accepted and frozen, so the PM moved Task 2
+`planned -> implementing`. One bounded `integration` writer owns only the exact
+paths below. The Profile Composition Integration contract, accepted Task 1
+identities and interfaces, recipe rules, dependencies, non-goals, and
+acceptance evidence are frozen. Any new path, package identity, interface,
+binding grammar, output slot, compiler/Workbench behavior, or contract change
+stops work for PM and architecture review.
 
 ### Exact allowed paths
 
@@ -387,7 +399,8 @@ of them requires a new recorded scope and repair state.
 
 ## Next smallest valuable slice
 
-Dispatch Task 2 to compose Restaurant and Ecommerce Foundation Graph recipes
-from the accepted Task 1 identities and interfaces. Keep Tasks 3 and 4 planned
-until Task 2 is accepted, and preserve the accepted Task 1 physical package,
-evidence digest, verified-lock, and Publish-boundary contracts unchanged.
+Implement Task 2's Restaurant and Ecommerce Foundation Graph recipes within its
+exact four paths, beginning with focused failing tests. Keep Tasks 3 and 4
+planned until Task 2 is accepted, and preserve the accepted Task 1 physical
+package, evidence digest, verified-lock, and Publish-boundary contracts
+unchanged.
