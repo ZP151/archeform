@@ -20,6 +20,11 @@ import {
   type EvidenceBundleV1,
   type IntakeRequestV1,
 } from "./contracts.js";
+import {
+  createPromotionPacket,
+  type PromotionPacketV1,
+  type PromotionReviewInputV1,
+} from "./promotion.js";
 import { ExternalIntakeStore, type StoredRecordRef } from "./store.js";
 
 const DIGEST = /^sha256:[a-f0-9]{64}$/u;
@@ -105,6 +110,11 @@ export interface ExternalIntakeApiV1 {
   ): Promise<CandidateVerificationResultV1>;
   candidateBlock(id: string, version: string): Promise<StoredCandidateRefV1>;
   candidateReject(id: string, version: string): Promise<StoredCandidateRefV1>;
+  promotionPacket(
+    id: string,
+    version: string,
+    review: PromotionReviewInputV1,
+  ): Promise<PromotionPacketV1>;
   verifyJob(id: string): { readonly id: string; readonly valid: boolean };
 }
 
@@ -289,6 +299,19 @@ export function createExternalIntakeApi(
       version: string,
     ): Promise<StoredCandidateRefV1> {
       return registry.recordRejected(id, version);
+    },
+
+    async promotionPacket(
+      id: string,
+      version: string,
+      review: PromotionReviewInputV1,
+    ): Promise<PromotionPacketV1> {
+      return createPromotionPacket(
+        registry.getRef(id, version),
+        review,
+        registry,
+        store,
+      );
     },
 
     verifyJob(id: string): { readonly id: string; readonly valid: boolean } {

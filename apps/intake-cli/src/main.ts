@@ -1,14 +1,24 @@
 #!/usr/bin/env node
 
-import { lstatSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import {
+  lstatSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  writeFileSync,
+} from "node:fs";
+import { isAbsolute, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import {
   ExternalIntakeStore,
+  canonicalJson,
+  canonicalRecordDigest,
   createExternalIntakeApi,
   isCredentialLikeCandidateValue,
+  verifyPromotionPacket,
   type ExternalIntakeApiV1,
+  type PromotionReviewInputV1,
 } from "@factory/external-intake";
 
 const OPAQUE_ID = /^[a-z][a-z0-9-]{0,127}$/u;
@@ -16,7 +26,6 @@ const VERSION = /^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/u;
 const DIGEST = /^sha256:[a-f0-9]{64}$/u;
 const CANDIDATE_KEY = /^candidate\.[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)*$/u;
 const MAX_REQUEST_BYTES = 1024 * 1024;
-const FORBIDDEN_OPERATION = /(?:promot|approv|waiv|--out)/iu;
 const REDACTED_IDENTIFIERS = [
   "token",
   "auth",
@@ -44,6 +53,7 @@ type CliOutputContext =
   | "candidate-show"
   | "candidate-test"
   | "candidate-terminal"
+  | "promotion-packet"
   | "verify-job"
   | "error";
 
@@ -153,6 +163,7 @@ const CANONICAL_DIGEST_PATHS: Partial<
     ["planDigest"],
   ],
   "candidate-terminal": [["digest"]],
+  "promotion-packet": [["digest"]],
 };
 
 function isAllowedCanonicalOutput(
@@ -194,6 +205,12 @@ function isAllowedCanonicalOutput(
       (outputPathMatches(path, "version") && VERSION.test(value)) ||
       (outputPathMatches(path, "lookupId") &&
         /^(?:candidate|job)-[a-f0-9]{64}$/u.test(value))
+    );
+  }
+  if (context === "promotion-packet") {
+    return (
+      outputPathMatches(path, "path") ||
+      (outputPathMatches(path, "status") && value === "written")
     );
   }
   if (context === "batch") {
@@ -256,15 +273,121 @@ function render(input: unknown, context: CliOutputContext): string {
   return JSON.stringify(redact(input, context));
 }
 
+function safeRelativeSegments(input: string | undefined): readonly string[] {
+  if (
+    input === undefined ||
+    input.length === 0 ||
+    input.includes("\\") ||
+    input.includes("\0") ||
+    isAbsolute(input) ||
+    /^(?:[a-z]+:)?\/\//iu.test(input)
+  ) {
+    throw new CliInputError("safe relative path required");
+  }
+  const segments = input.split("/");
+  if (
+    segments.some(
+      (segment) =>
+        segment.length === 0 ||
+        segment === "." ||
+        segment === ".." ||
+        /[<>:"|?*\u0000-\u001f]/u.test(segment) ||
+        /[. ]$/u.test(segment),
+    )
+  ) {
+    throw new CliInputError("safe relative path required");
+  }
+  return segments;
+}
+
+function resolveUnderRealCwd(cwd: string, segments: readonly string[]): string {
+  const cwdStat = lstatSync(cwd);
+  if (cwdStat.isSymbolicLink() || !cwdStat.isDirectory()) {
+    throw new CliInputError("CLI working directory must be real");
+  }
+  const realCwd = realpathSync.native(cwd);
+  const path = resolve(realCwd, ...segments);
+  const fromRoot = relative(realCwd, path);
+  if (
+    fromRoot === "" ||
+    fromRoot === ".." ||
+    fromRoot.startsWith(`..${sep}`) ||
+    resolve(realCwd, fromRoot) !== path
+  ) {
+    throw new CliInputError("path escaped CLI working directory");
+  }
+  return path;
+}
+
+function assertRealComponents(
+  cwd: string,
+  segments: readonly string[],
+  finalKind: "file" | "directory",
+): string {
+  const path = resolveUnderRealCwd(cwd, segments);
+  const realCwd = realpathSync.native(cwd);
+  for (let index = 0; index < segments.length; index += 1) {
+    const component = resolve(realCwd, ...segments.slice(0, index + 1));
+    let stat: ReturnType<typeof lstatSync>;
+    try {
+      stat = lstatSync(component);
+    } catch {
+      throw new CliInputError("path component is missing");
+    }
+    const final = index === segments.length - 1;
+    if (
+      stat.isSymbolicLink() ||
+      (final && finalKind === "file" && !stat.isFile()) ||
+      ((!final || finalKind === "directory") && !stat.isDirectory())
+    ) {
+      throw new CliInputError("path components must be real");
+    }
+  }
+  return path;
+}
+
+function localPromotionReview(
+  pathInput: string | undefined,
+  cwd: string,
+): unknown {
+  const segments = safeRelativeSegments(pathInput);
+  if (!segments.at(-1)!.toLowerCase().endsWith(".json")) {
+    throw new CliInputError("relative review JSON required");
+  }
+  const path = assertRealComponents(cwd, segments, "file");
+  const stat = lstatSync(path);
+  if (stat.size > MAX_REQUEST_BYTES) {
+    throw new CliInputError("review JSON exceeds one MiB");
+  }
+  try {
+    return JSON.parse(readFileSync(path, "utf8")) as unknown;
+  } catch {
+    throw new CliInputError("review JSON is invalid");
+  }
+}
+
+function promotionOutputPath(
+  pathInput: string | undefined,
+  cwd: string,
+): string {
+  const segments = safeRelativeSegments(pathInput);
+  if (segments.length < 2 || segments.at(-1) !== "promotion-packet.json") {
+    throw new CliInputError("exact promotion packet output path required");
+  }
+  const directorySegments = segments.slice(0, -1);
+  const directory = assertRealComponents(cwd, directorySegments, "directory");
+  if (readdirSync(directory).length !== 0) {
+    throw new CliInputError("promotion review directory must be empty");
+  }
+  return resolveUnderRealCwd(cwd, segments);
+}
+
 export async function runIntakeCli(
   args: readonly string[],
   options: IntakeCliOptionsV1,
 ): Promise<number> {
   try {
-    if (
-      args.length === 0 ||
-      args.some((argument) => FORBIDDEN_OPERATION.test(argument))
-    ) {
+    if (args.length === 0) {
       throw new CliInputError("operation is not available");
     }
     let result: unknown;
@@ -285,6 +408,67 @@ export async function runIntakeCli(
       if (!DIGEST.test(args[1]!))
         throw new CliInputError("evidence digest required");
       result = await options.api.evidence(args[1]!);
+    } else if (
+      args.length === 7 &&
+      args[0] === "promotion" &&
+      args[1] === "packet" &&
+      args[3] === "--review" &&
+      args[5] === "--out"
+    ) {
+      const identity = candidateIdentity(args[2]);
+      const review = localPromotionReview(
+        args[4],
+        options.cwd,
+      ) as PromotionReviewInputV1;
+      const outputPath = promotionOutputPath(args[6], options.cwd);
+      const packet = await options.api.promotionPacket(
+        identity.id,
+        identity.version,
+        review,
+      );
+      const verification = verifyPromotionPacket(packet);
+      if (!verification.valid || verification.digest === undefined) {
+        throw new Error("PromotionPacket failed verification before output.");
+      }
+      const bytes = canonicalJson(packet);
+      const reboundOutputPath = promotionOutputPath(args[6], options.cwd);
+      if (reboundOutputPath !== outputPath) {
+        throw new CliInputError("promotion packet output path changed");
+      }
+      try {
+        writeFileSync(outputPath, bytes, { flag: "wx", mode: 0o600 });
+      } catch (error) {
+        if (
+          error !== null &&
+          typeof error === "object" &&
+          "code" in error &&
+          error.code === "EEXIST"
+        ) {
+          throw new CliInputError("promotion packet output already exists");
+        }
+        throw error;
+      }
+      const stat = lstatSync(outputPath);
+      const reread = readFileSync(outputPath, "utf8");
+      if (stat.isSymbolicLink() || !stat.isFile() || reread !== bytes) {
+        throw new Error(
+          "PromotionPacket output changed after exclusive write.",
+        );
+      }
+      const rebound = verifyPromotionPacket(JSON.parse(reread) as unknown);
+      if (
+        !rebound.valid ||
+        rebound.digest !== verification.digest ||
+        rebound.digest !== canonicalRecordDigest(packet)
+      ) {
+        throw new Error("PromotionPacket output failed re-verification.");
+      }
+      outputContext = "promotion-packet";
+      result = {
+        status: "written",
+        path: args[6],
+        digest: rebound.digest,
+      };
     } else if (
       args.length === 3 &&
       args[0] === "candidate" &&

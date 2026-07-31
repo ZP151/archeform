@@ -43,3 +43,4 @@ export * from "./jobs.js";
 export * from "./candidates.js";
 export * from "./conformance.js";
 export * from "./api.js";
+export * from "./promotion.js";

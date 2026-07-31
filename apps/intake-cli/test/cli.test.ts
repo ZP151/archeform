@@ -1,4 +1,13 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -6,7 +15,10 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   createExternalIntakeApi,
+  canonicalJson,
+  canonicalRecordDigest,
   ExternalIntakeStore,
+  verifyPromotionPacket,
   type ExternalIntakeApiV1,
 } from "@factory/external-intake";
 
@@ -89,6 +101,120 @@ afterEach(() => {
 });
 
 describe("repository-local intake CLI", () => {
+  function validPromotionPacket() {
+    const digest = (character: string) =>
+      `sha256:${character.repeat(64)}` as const;
+    const reviewers = [
+      "intake-maintainer",
+      "licence-reviewer",
+      "security-reviewer",
+      "capability-maintainer",
+      "architecture-owner",
+      "qa-owner",
+      "golden-owner",
+    ].map((role) => ({
+      role,
+      reviewer: `${role}-alice`,
+      status: "assigned-not-reviewed" as const,
+    }));
+    const packet = {
+      apiVersion: "factory.external-capability-promotion-packet/v1" as const,
+      decision: "pending-review" as const,
+      candidate: {
+        id: "safe-adapter",
+        version: "1.0.0",
+        digest: digest("a"),
+        status: "conformance-passed" as const,
+      },
+      source: {
+        repositoryUrl: "https://github.com/example/safe-adapter.git",
+        resolvedCommit: "a".repeat(40),
+        snapshotDigest: digest("b"),
+      },
+      evidenceDigest: digest("c"),
+      conformanceDigest: digest("d"),
+      reviewInputDigest: digest("e"),
+      parentDigests: [
+        digest("a"),
+        digest("b"),
+        digest("c"),
+        digest("d"),
+        digest("e"),
+        digest("f"),
+      ].sort(),
+      licence: {
+        manualStatus: "unreviewed" as const,
+        reviewStatus: "pending-manual-review" as const,
+      },
+      findingDispositions: (
+        ["licence", "secret", "sast", "dependency"] as const
+      ).map((kind, index) => ({
+        kind,
+        resultDigest: digest(String(index + 1)),
+        findings: [],
+      })),
+      sourceCopy: { mode: "none" as const, ranges: [] },
+      notices: {
+        destination: "docs/third-party-notices.md" as const,
+        action: "pending-manual-review" as const,
+      },
+      reviewers,
+      factory: {
+        proposedFactoryKey: "candidate.safe-adapter",
+        version: "1.0.0",
+        packageRoot: "packages/capabilities/assets/safe-adapter/1.0.0",
+        targets: ["api"],
+      },
+      factoryInterface: {
+        proposedFactoryKey: "candidate.safe-adapter",
+        version: "1.0.0",
+        manifestDigest: digest("9"),
+        inputSchema: {
+          type: "object" as const,
+          properties: { message: { type: "string" as const } },
+          required: ["message"],
+          additionalProperties: false as const,
+        },
+        outputSchema: {
+          type: "object" as const,
+          properties: { message: { type: "string" as const } },
+          required: ["message"],
+          additionalProperties: false as const,
+        },
+        effects: ["candidate.project"],
+      },
+      removalPlan: {
+        packageRoot: "packages/capabilities/assets/safe-adapter/1.0.0",
+        replacement: "factory-native-safe-adapter",
+        steps: [
+          "remove-package",
+          "remove-target-bindings",
+          "run-regressions",
+        ] as const,
+      },
+      collision: {
+        inventoryDigest: digest("f"),
+        result: "no-collision-observed-in-inventory" as const,
+        goldenOwnerAction: "pending-manual-review" as const,
+      },
+      prohibitedFields: [
+        "approval",
+        "waiver",
+        "source-copy-execution",
+        "notice-modification",
+        "golden-registration",
+        "graph-input",
+        "asset-lock-input",
+        "composition-lock-input",
+        "compiler-input",
+        "runtime-activation",
+        "provider-activation",
+      ] as const,
+    };
+    expect(verifyPromotionPacket(packet).valid).toBe(true);
+    return packet;
+  }
+
   it("submits only a local regular JSON request file and prints redacted status", async () => {
     const root = tempRoot();
     const requestPath = validRequestFile(root);
@@ -568,5 +694,191 @@ describe("repository-local intake CLI", () => {
         },
       },
     });
+  });
+
+  it("writes and re-verifies only canonical JSON in an empty review directory", async () => {
+    const root = tempRoot();
+    writeFileSync(join(root, "review.json"), "{}");
+    mkdirSync(join(root, "review-output"));
+    const packet = validPromotionPacket();
+    const calls: unknown[] = [];
+    const api = {
+      async promotionPacket(id: string, version: string, review: unknown) {
+        calls.push({ id, version, review });
+        return packet;
+      },
+    } as unknown as ExternalIntakeApiV1;
+    const output = outputHarness(api, root);
+
+    expect(
+      await runIntakeCli(
+        [
+          "promotion",
+          "packet",
+          "safe-adapter@1.0.0",
+          "--review",
+          "review.json",
+          "--out",
+          "review-output/promotion-packet.json",
+        ],
+        output.options,
+      ),
+    ).toBe(0);
+
+    const outputPath = join(root, "review-output", "promotion-packet.json");
+    const bytes = readFileSync(outputPath, "utf8");
+    expect(bytes).toBe(canonicalJson(packet));
+    expect(readdirSync(join(root, "review-output"))).toEqual([
+      "promotion-packet.json",
+    ]);
+    expect(verifyPromotionPacket(JSON.parse(bytes))).toMatchObject({
+      valid: true,
+      digest: canonicalRecordDigest(packet),
+    });
+    expect(calls).toEqual([
+      { id: "safe-adapter", version: "1.0.0", review: {} },
+    ]);
+    expect(output.stdout.join("\n")).toContain(canonicalRecordDigest(packet));
+    expect(output.stderr).toEqual([]);
+  });
+
+  it.each([
+    [
+      "absolute review path",
+      (root: string) => join(root, "review.json"),
+      "review-output/promotion-packet.json",
+    ],
+    [
+      "traversal review path",
+      "../review.json",
+      "review-output/promotion-packet.json",
+    ],
+    [
+      "absolute output path",
+      "review.json",
+      (root: string) => join(root, "review-output", "promotion-packet.json"),
+    ],
+    [
+      "traversal output path",
+      "review.json",
+      "../review-output/promotion-packet.json",
+    ],
+    ["wrong output filename", "review.json", "review-output/packet.json"],
+    [
+      "wrong output extension",
+      "review.json",
+      "review-output/promotion-packet.txt",
+    ],
+  ])("rejects %s", async (_, reviewValue, outputValue) => {
+    const root = tempRoot();
+    writeFileSync(join(root, "review.json"), "{}");
+    mkdirSync(join(root, "review-output"));
+    const api = {
+      async promotionPacket() {
+        return validPromotionPacket();
+      },
+    } as unknown as ExternalIntakeApiV1;
+    const output = outputHarness(api, root);
+    const reviewPath =
+      typeof reviewValue === "function" ? reviewValue(root) : reviewValue;
+    const outputPath =
+      typeof outputValue === "function" ? outputValue(root) : outputValue;
+
+    expect(
+      await runIntakeCli(
+        [
+          "promotion",
+          "packet",
+          "safe-adapter@1.0.0",
+          "--review",
+          reviewPath,
+          "--out",
+          outputPath,
+        ],
+        output.options,
+      ),
+    ).toBe(2);
+    expect(output.stdout).toEqual([]);
+    expect(output.stderr.join("\n")).toContain("invalid-command");
+  });
+
+  it("rejects a symlinked review component and a non-empty output directory", async () => {
+    const root = tempRoot();
+    mkdirSync(join(root, "reviews"));
+    writeFileSync(join(root, "reviews", "review.json"), "{}");
+    symlinkSync(
+      join(root, "reviews"),
+      join(root, "linked-reviews"),
+      "junction",
+    );
+    mkdirSync(join(root, "review-output"));
+    writeFileSync(join(root, "review-output", "keep.txt"), "keep");
+    const api = {
+      async promotionPacket() {
+        return validPromotionPacket();
+      },
+    } as unknown as ExternalIntakeApiV1;
+    const output = outputHarness(api, root);
+
+    expect(
+      await runIntakeCli(
+        [
+          "promotion",
+          "packet",
+          "safe-adapter@1.0.0",
+          "--review",
+          "linked-reviews/review.json",
+          "--out",
+          "review-output/promotion-packet.json",
+        ],
+        output.options,
+      ),
+    ).toBe(2);
+    expect(
+      await runIntakeCli(
+        [
+          "promotion",
+          "packet",
+          "safe-adapter@1.0.0",
+          "--review",
+          "reviews/review.json",
+          "--out",
+          "review-output/promotion-packet.json",
+        ],
+        output.options,
+      ),
+    ).toBe(2);
+    expect(readFileSync(join(root, "review-output", "keep.txt"), "utf8")).toBe(
+      "keep",
+    );
+  });
+
+  it("uses exclusive create and never overwrites a prior packet", async () => {
+    const root = tempRoot();
+    writeFileSync(join(root, "review.json"), "{}");
+    mkdirSync(join(root, "review-output"));
+    const packet = validPromotionPacket();
+    const api = {
+      async promotionPacket() {
+        return packet;
+      },
+    } as unknown as ExternalIntakeApiV1;
+    const output = outputHarness(api, root);
+    const args = [
+      "promotion",
+      "packet",
+      "safe-adapter@1.0.0",
+      "--review",
+      "review.json",
+      "--out",
+      "review-output/promotion-packet.json",
+    ];
+
+    expect(await runIntakeCli(args, output.options)).toBe(0);
+    const outputPath = join(root, "review-output", "promotion-packet.json");
+    const original = readFileSync(outputPath, "utf8");
+    expect(await runIntakeCli(args, output.options)).toBe(2);
+    expect(readFileSync(outputPath, "utf8")).toBe(original);
+    expect(existsSync(outputPath)).toBe(true);
   });
 });
