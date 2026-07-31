@@ -145,8 +145,9 @@ not acceptance.
   and binding validation snapshot `manifest.parameters` independently, so a
   getter can supply different strict parameter schemas between stages. Task 2
   remains `implementing`. Accepted ADR-0008 stops further local repair work in
-  Task 2. Its state cannot advance until Task 2A is independently accepted and
-  the PM reconciles the remaining Task 2 gates.
+  Task 2. Task 2A is now independently accepted, but Task 2 does not advance in
+  this transition; a separate PM reconciliation must determine its remaining
+  gates.
 - Task 2A repair commit `a09d459077f80fa82161df928137b1f2052a75bb`
   remains inside the exact five-path scope formally amended by `76274e3`.
   Independent repair review returned SPEC PASS and QUALITY PASS with no
@@ -168,9 +169,16 @@ not acceptance.
   219/219 Capabilities tests, 180/180 Compiler tests, zero-getter capture-error
   rejection at all eight public boundaries, passing alias, server-lock,
   deep-freeze, digest, and largest-composition single-digest probes at p95
-  2.884 ms. The PM records `ready_for_qa -> reviewed`; release review and fresh
-  acceptance verification are next. Tasks 3 through 7 remain `planned`; none
-  of them is dispatched by this transition.
+  2.884 ms. The PM previously recorded `ready_for_qa -> reviewed`. Final
+  independent release review at governance commit
+  `27c45b54951d00869f7cf6c58cc537c1a9b8ef35` against source commit
+  `40096847c4a4b28c3d02fd33d01805d46da0bded` returned RELEASE PASS with no
+  P0/P1/P2. Fresh Node `v22.11.0` acceptance verification passed 219/219
+  Capabilities tests, 180/180 Compiler tests, and 76/76 focused tests, plus one
+  digest across 1,000 largest-composition resolutions at p95 2.554 ms. The
+  source/governance drift and secret checks were clean. The PM records
+  `reviewed -> accepted` for Task 2A only. Tasks 3 through 7 remain `planned`;
+  none of them is dispatched by this transition.
 - No frontend/backend parallel implementation is permitted in this project.
 - Commercial Capability Foundation Task 2 remains `implementing` and
   escalated. It cannot resume acceptance until this project's Task 7 is
@@ -184,7 +192,7 @@ not acceptance.
 | ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | ----------------------------------------------- |
 | 1. Pure typed Graph symbol index               | `accepted`     | `integration`  | Application Graph Type System                | Release review and fresh verification passed.   |
 | 2. Typed manifest and binding contracts        | `implementing` | `integration`  | Capability Binding Contract                  | Repair round 4 task review failed with one P1.  |
-| 2A. Immutable composition resolution boundary  | `reviewed`     | `integration`  | Capability Composition Resolution Boundary   | Repair round 2 QA passed; release review next.  |
+| 2A. Immutable composition resolution boundary  | `accepted`     | `integration`  | Capability Composition Resolution Boundary   | Release review and fresh verification passed.   |
 | 3. Serialized owner-aware Graph selections     | `planned`      | `integration`  | Application Graph Serialization              | Blocked on accepted Tasks 2 and 2A.             |
 | 4. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 3 serialized contract. |
 | 5. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-4.                  |
@@ -514,8 +522,8 @@ not acceptance.
   review and fresh acceptance verification still remained required; Task 2
   was not `accepted`.
 - At that historical gate, Task 3 remained `planned` pending Task 2 acceptance;
-  the current dependency also requires Task 2A acceptance. No Graph
-  implementation is authorized by this PM transition.
+  its later Task 2A dependency is now accepted, while Task 2 remains
+  `implementing`. No Graph implementation is authorized by this PM transition.
 
 ### Release-review P1 and repair rounds 2-3
 
@@ -642,9 +650,9 @@ not acceptance.
   parameter repair: caller-owned records, arrays, manifests, selections,
   bindings, and field-type arrays cross the same repeated-read boundary.
   Controller-accepted ADR-0008 therefore stops further Task 2 local repair.
-  Task 2 remains `implementing`, but no Task 2 code change, re-review, QA,
-  release review, or acceptance verification resumes until Task 2A is
-  independently accepted and the PM reconciles the remaining Task 2 gates.
+  Task 2A is now independently accepted, but Task 2 remains `implementing`; no
+  Task 2 code change, re-review, QA, release review, or acceptance verification
+  resumes until a separate PM reconciliation determines its remaining gates.
 
 ### Blocking non-goals
 
@@ -667,19 +675,20 @@ not acceptance.
 
 ## Task 2A: Establish an immutable composition resolution boundary
 
-- **State:** `reviewed` (repair round 2)
+- **State:** `accepted` (repair round 2)
 - **Specialization:** `integration`
 - **Bounded writer:** Immutable Composition Resolution Integration
 - **Contract owner:** Capability Composition Resolution Boundary
 - **Contract status:** ADR-0008 is `Accepted`; Controller-authorized repair
-  round 2 remains inside the same five paths and passed independent task review
-  and fresh behavioral QA with no P0/P1/P2. Release review and fresh acceptance
-  verification remain required; Task 2A is not accepted.
+  round 2 remained inside the same five paths and passed independent task
+  review, behavioral QA, final release review, and fresh acceptance
+  verification with no P0/P1/P2. Task 2A is accepted and frozen.
 - **Contract artifact:** ADR-0008 DEC-001 through DEC-005 and
   `docs/superpowers/plans/2026-08-01-immutable-composition-resolution-input.md`.
 - **Dependencies:** Task 1 `accepted` and ADR-0008 `Accepted`. Task 2 remains
-  `implementing`, with local repair stopped pending Task 2A; it is not an
-  implementation dependency for the architecture-owned boundary repair.
+  `implementing`, with local repair and review stopped pending separate PM
+  reconciliation of the accepted Task 2A evidence; it was not an implementation
+  dependency for the architecture-owned boundary repair.
 - **Produces:** one descriptor-validated, Factory-owned, frozen composition
   resolution snapshot consumed by public package verification and
   provider-overlap checks, matching, validation, normalization, dependency
@@ -770,7 +779,7 @@ not acceptance.
 - The PM reconciles the passing behavioral QA and its environment limitation as
   the historical `ready_for_qa -> reviewed` transition. The subsequent release
   failure means this QA cannot support acceptance until repair round 2 passes
-  every gate again; Task 2A is not accepted.
+  every gate again; at that point, Task 2A was not accepted.
 
 ### Release-review failure and repair round 2
 
@@ -825,7 +834,24 @@ not acceptance.
   below ADR-0008's 20 ms ceiling.
 - The PM reconciles the passing repair-round-2 QA as
   `ready_for_qa -> reviewed`. This is not release review or acceptance;
-  independent release review and fresh acceptance verification remain.
+  independent release review and fresh acceptance verification remained at
+  that transition.
+
+### Final release and acceptance evidence
+
+- Final independent release review at governance commit
+  `27c45b54951d00869f7cf6c58cc537c1a9b8ef35` evaluated source commit
+  `40096847c4a4b28c3d02fd33d01805d46da0bded` and returned RELEASE PASS with no
+  P0/P1/P2.
+- Fresh Node `v22.11.0` acceptance verification passed 219/219 Capabilities
+  tests, 180/180 Compiler tests, and 76/76 focused tests.
+- The largest registered composition produced exactly one digest across 1,000
+  resolutions at p95 2.554 ms, below ADR-0008's 20 ms ceiling.
+- Source/governance drift and secret checks were clean. No implementation,
+  governance-contract, or credential material changed during acceptance.
+- The PM reconciles independent task review, behavioral QA, final release
+  review, and fresh verification in order and records
+  `reviewed -> accepted` for Task 2A only.
 
 ### Non-goals
 
@@ -842,10 +868,10 @@ not acceptance.
 - Valid Golden composition bytes and frozen digest vectors remain unchanged;
   the Node `v22.11.0` performance and single-digest budget is measured as
   specified by the accepted plan.
-- Independent task review, behavioral QA, release review, and fresh
-  verification pass in order before `accepted`. The prior task review and QA are
-  historical after the release-review P1. Repair-round-2 task review and fresh
-  behavioral QA have passed; release review and verification remain required.
+- The task review and QA before repair round 2 are historical after the
+  release-review P1. Repair-round-2 task review, behavioral QA, final release
+  review, and fresh acceptance verification passed in order with no P0/P1/P2;
+  Task 2A is `accepted` and frozen.
 
 ## Task 3: Serialize owner-aware composition selections in Application Graph
 
@@ -854,10 +880,10 @@ not acceptance.
 - **Contract owner:** Application Graph Serialization
 - **Contract artifact:** ADR-0007 DEC-001 through DEC-005 and the design's
   serialized Draft Graph contract.
-- **Dependencies:** Tasks 1, 2, and 2A `accepted`. Task 1 is accepted; Task 2
-  remains `implementing` with local repair stopped, and Task 2A is
-  `reviewed`. Graph implementation is blocked until both are independently
-  accepted and reconciled.
+- **Dependencies:** Tasks 1, 2, and 2A `accepted`. Tasks 1 and 2A are accepted;
+  Task 2 remains `implementing` with local repair and review stopped pending
+  separate PM reconciliation. Graph implementation remains blocked until Task
+  2 is independently accepted and reconciled.
 - **Produces:** additive `SerializedCompositionBindingV1` support for exact
   owner-aware field objects, structural owner/field validation, deterministic
   Graph-hash coverage, historic hash stability, and browser-safe behavior.
@@ -1122,17 +1148,22 @@ not acceptance.
   219/219 Capabilities tests, 180/180 Compiler tests, capture-error rejection
   with zero getter invocations at all eight public boundaries, passing alias,
   server-lock, deep-freeze, and digest checks, and one largest-composition
-  digest at p95 2.884 ms. The PM records `ready_for_qa -> reviewed`; release
-  review and fresh acceptance verification remain. This PM transition
-  authorizes no Graph-path change or Graph Task 3-7 implementation.
+  digest at p95 2.884 ms. The PM previously recorded
+  `ready_for_qa -> reviewed`. Final release review at governance commit
+  `27c45b54951d00869f7cf6c58cc537c1a9b8ef35` against source commit
+  `40096847c4a4b28c3d02fd33d01805d46da0bded` then passed with no P0/P1/P2.
+  Fresh Node `v22.11.0` acceptance verification passed 219/219 Capabilities,
+  180/180 Compiler, and 76/76 focused tests, with one digest across 1,000
+  resolutions at p95 2.554 ms and clean source/governance drift and secret
+  checks. The PM records `reviewed -> accepted` for Task 2A. This transition
+  authorizes no Graph-path change, Task 2 state change, Profile acceptance,
+  physical asset promotion, Candidate Intake authority, or Graph Task 3-7
+  implementation.
 
 ## Next smallest valuable slice
 
-Run independent release review against Task 2A commit
-`40096847c4a4b28c3d02fd33d01805d46da0bded` under **Immutable Composition
-Resolution Integration** and the **Capability Composition Resolution
-Boundary**, using the clean task review and fresh repair-round-2 QA evidence.
-Keep Task 2A `reviewed` and Task 2 `implementing`; if release review passes,
-require fresh acceptance verification before any `accepted` transition. Do not
-start Graph Task 3. Keep Graph Tasks 3 through 7 `planned` and blocked until
-Tasks 2 and 2A are accepted.
+Reconcile accepted Task 2A against Task 2's repair-round-4 repeated-read P1 and
+determine the smallest bounded Task 2 re-review or repair gate. Keep Task 2
+`implementing` until that separate reconciliation is complete. Do not start
+Graph Task 3; keep Graph Tasks 3 through 7 `planned` and blocked until their
+serialized dependencies are accepted.
