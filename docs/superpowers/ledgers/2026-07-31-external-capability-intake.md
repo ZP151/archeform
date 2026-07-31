@@ -63,6 +63,9 @@ Documentation repair commit `409d545` then passed independent task review with
 no P0/P1/P2. The PM atomically moved Task 6
 `implementing -> ready_for_qa` across this ledger, the acceptance record, and
 project status; fresh independent re-QA is the next gate.
+Fresh independent re-QA at `6ee338f` then PASSED with no P0/P1/P2, and the PM
+atomically moved Task 6 `ready_for_qa -> reviewed` across all three
+present-tense state authorities. Independent release re-review is next.
 Independent Task 4 review of commit
 `33fd204` then FAILED with four P1 findings and one P2. The Controller authorized
 bounded Repair Round 1/5 and exactly three additional production paths; Task 4
@@ -173,7 +176,9 @@ with one P2 stale present-tense status finding and no P0/P1. The PM returned
 Task 6 `ready_for_qa -> implementing` for a bounded two-document repair.
 Documentation repair `409d545` passed independent review with no P0/P1/P2, and
 the PM atomically moved Task 6 `implementing -> ready_for_qa` across all three
-present-tense state authorities. Fresh independent re-QA is next. The
+present-tense state authorities. Fresh independent re-QA at `6ee338f` then
+PASSED with no P0/P1/P2, and the PM atomically moved Task 6
+`ready_for_qa -> reviewed`. Independent release re-review is next. The
 system will ingest the 43 fixed-reference
 portfolio as metadata, retain the 108 scenarios as composition demand signals,
 and produce only quarantined evidence, non-executable Candidate records, and
@@ -322,14 +327,14 @@ reconciled Fix Rounds 1 and 2 and moved the amendment
 `implementing -> ready_for_qa`; its contract and exact amendment-owned paths
 remain frozen.
 
-| Task                                             | State          | Specialization      | Contract owner                   | Dependency gate                                             |
-| ------------------------------------------------ | -------------- | ------------------- | -------------------------------- | ----------------------------------------------------------- |
-| 1. Candidate contracts and immutable persistence | `accepted`     | `integration`       | External Intake Contract         | Original release and bounded amendment accepted and frozen. |
-| 2. Fixed-source provenance and notices           | `accepted`     | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
-| 3. Deterministic scan orchestration              | `accepted`     | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
-| 4. Candidate registry, API, CLI, and isolation   | `accepted`     | `integration`       | Candidate Registry               | Release review and fresh root verification PASS; frozen.    |
-| 5. Review-only promotion packets                 | `accepted`     | `governance`        | External Capability Promotion    | Release review and fresh final verification PASS; frozen.   |
-| 6. Bulk acceptance and release evidence          | `ready_for_qa` | `qa`                | External Intake Release Evidence | Docs repair review PASS; fresh independent re-QA required.  |
+| Task                                             | State      | Specialization      | Contract owner                   | Dependency gate                                             |
+| ------------------------------------------------ | ---------- | ------------------- | -------------------------------- | ----------------------------------------------------------- |
+| 1. Candidate contracts and immutable persistence | `accepted` | `integration`       | External Intake Contract         | Original release and bounded amendment accepted and frozen. |
+| 2. Fixed-source provenance and notices           | `accepted` | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
+| 3. Deterministic scan orchestration              | `accepted` | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
+| 4. Candidate registry, API, CLI, and isolation   | `accepted` | `integration`       | Candidate Registry               | Release review and fresh root verification PASS; frozen.    |
+| 5. Review-only promotion packets                 | `accepted` | `governance`        | External Capability Promotion    | Release review and fresh final verification PASS; frozen.   |
+| 6. Bulk acceptance and release evidence          | `reviewed` | `qa`                | External Intake Release Evidence | Fresh re-QA PASS; independent release re-review required.   |
 
 ## Task 1 card: Candidate contracts and immutable persistence
 
@@ -2117,7 +2122,7 @@ Graph/compiler/runtime/provider authority, or Task 6 behavior.
 
 ## Task 6 card: Bulk acceptance and release evidence
 
-- **State:** `ready_for_qa`
+- **State:** `reviewed`
 - **Specialization:** `qa`
 - **Contract owner:** External Intake Release Evidence
 - **Contract artifact:** accepted Tasks 1-5 plus
@@ -2131,7 +2136,7 @@ exact paths through implementation and repair. The release-repair amendment
 below adds only `apps/intake-cli/test/cli.test.ts` as a fifth exact path. The
 amended release set, External Intake Release Evidence contract, fixture-only
 evidence boundary, deliverables, five paths, non-goals, and acceptance evidence
-remain frozen for fresh independent re-QA;
+remain frozen for independent release re-review;
 any scope, path, dependency, or contract change stops work for Controller
 review.
 
@@ -2505,6 +2510,34 @@ PASS, release PASS, final verification, acceptance, public/live evidence, or
 new authority. The exact five paths and complete fixture-only contract remain
 frozen.
 
+### Fresh independent re-QA and atomic reviewed transition
+
+Fresh independent re-QA at atomic state commit `6ee338f` PASSED with no
+P0/P1/P2:
+
+- the concurrent full suites passed External Intake 392/392, Intake CLI 56/56,
+  Graph 28/28, Capabilities 123/123, and Compiler 180/180;
+- the serial Intake CLI suite passed 56/56 with both real child-process races;
+- focused release-boundary passed 3/3 and bulk-intake passed 1/1;
+- the 43-source/108-demand preflight, 19 requested/24 blocked split, stable
+  redaction, no Candidate creation, exact cleanup, and fail-closed replacement
+  and junction behavior were verified;
+- all five affected typecheck and lint gates, targeted Prettier,
+  `git diff --check`, exact-scope, and clean-worktree checks passed; and
+- the ledger, acceptance record, and project status were synchronized at
+  `ready_for_qa`.
+
+The PM reconciled the clean re-QA and atomically moved Task 6
+`ready_for_qa -> reviewed` in this ledger,
+`docs/acceptance/external-capability-intake.md`, and
+`docs/project-status.md`. Only present-tense state, next-gate wording, and
+append-only transition chronology changed in the two evidence documents.
+
+Independent release re-review is the next gate; fresh final verification
+remains mandatory afterward. This transition is not release PASS, final
+verification, acceptance, public/live evidence, or new authority. The exact
+five paths and complete fixture-only contract remain frozen.
+
 ## Review sequence and stop conditions
 
 1. PM moves one dependency-ready task to `implementing` and freezes its
@@ -2551,15 +2584,14 @@ frozen.
   closes the current mismatch; future PM transitions must retain that
   synchronization or remove present-tense state from evidence documents.
 
-The active smallest valuable slice is fresh independent Task 6 behavioral re-QA
-at the atomic PM transition. QA must reproduce the concurrent five-suite
-392/392, 56/56, 28/28, 123/123, and 180/180 results; serial Intake CLI 56/56;
-focused release-boundary 3/3 and bulk-intake 1/1; real child-process
-fail-closed behavior and exact cleanup; all affected typecheck/lint,
-Prettier/diff, exact-scope, and clean-worktree gates; and synchronized
-`ready_for_qa` present-tense state in all three documents.
+The active smallest valuable slice is independent Task 6 release re-review of
+the complete governed repair and atomic state set. Release review must inspect
+the actual diffs, call paths, tests, and threat boundaries; reproduce the
+concurrent and serial release gates; verify synchronized `reviewed` state in all
+three documents; and return P0/P1/P2 findings, a release-blocker verdict, and
+residual risks.
 
-QA must preserve the canonical-pending-packet authority rejection,
+Release review must preserve the canonical-pending-packet authority rejection,
 Candidate/Golden/Graph/compiler isolation, public-network prohibition, and the
 accepted Task 5
 deterministic-fixture and single-purpose CLI-process limitations and may add no
@@ -2589,4 +2621,4 @@ Task 1's original release and bounded amendments, Task 2's accepted code set
 `515e0ba + 3dcb20f + dcaddf4`, Task 3's accepted repair commit `8b31d3a`, and
 Task 4's complete accepted Candidate Registry remain frozen. Task 5 is
 `accepted` and frozen under its recorded dependency gate; Task 6 is
-`ready_for_qa` under its amended fixture-only five-path dispatch.
+`reviewed` under its amended fixture-only five-path dispatch.

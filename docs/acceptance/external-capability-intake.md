@@ -2,11 +2,11 @@
 
 Updated: 2026-07-31
 
-Status: Task 6 is `ready_for_qa` after documentation repair `409d545` passed
-independent review and the PM atomically reconciled this record, project status,
-and the ledger. Fresh independent re-QA is the next gate. This transition is
-not QA PASS, release PASS, acceptance, live evidence, or authority to skip
-release review, final verification, or PM acceptance.
+Status: Task 6 is `reviewed` after fresh independent re-QA at `6ee338f` passed
+with no P0/P1/P2 and the PM atomically reconciled this record, project status,
+and the ledger. Independent release re-review is the next gate. This transition
+is not release PASS, acceptance, live evidence, or authority to skip final
+verification or PM acceptance.
 
 ## Scope
 
@@ -176,6 +176,12 @@ P0/P1/P2. The PM atomically moved Task 6
 project status. No historical evidence, count, timing, limitation, or
 prohibition changed in that transition.
 
+Fresh independent re-QA at `6ee338f` then passed with no P0/P1/P2. It
+reproduced every required concurrent, serial, focused, safety, cleanup,
+quality, and synchronized-status gate. The PM atomically moved Task 6
+`ready_for_qa -> reviewed` across the ledger, this acceptance record, and
+project status.
+
 ## Limitations and remaining gates
 
 - Evidence is deterministic and fixture-only. It is not public-source,
@@ -188,5 +194,5 @@ prohibition changed in that transition.
   does not make a licence decision, approve a packet, create a Golden asset, or
   authorize source copying.
 - This slice remains fixture-only and supplies no public-network, acceptance,
-  or live-service evidence. Fresh independent re-QA is next. Release review,
-  final verification, and PM acceptance remain required before `accepted`.
+  or live-service evidence. Independent release re-review is next. Final
+  verification and PM acceptance remain required before `accepted`.

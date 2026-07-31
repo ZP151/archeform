@@ -5,10 +5,10 @@ Updated: 2026-07-31
 ## Current milestone
 
 External Capability Intake Task 6, **Bulk acceptance and release evidence**, is
-in `ready_for_qa` after documentation repair `409d545` passed independent
-review and the PM atomically reconciled this status, the acceptance record, and
-the ledger. Fresh independent re-QA is the next gate. Only the PM changes the
-ledger state.
+in `reviewed` after fresh independent re-QA at `6ee338f` passed with no
+P0/P1/P2 and the PM atomically reconciled this status, the acceptance record,
+and the ledger. Independent release re-review is the next gate. Only the PM
+changes the ledger state.
 
 The Application Graph remains the source of truth. External intake artifacts
 remain quarantined Candidate evidence or pending-review packets; they are not
@@ -61,6 +61,10 @@ On Node `v22.11.0`, it records:
   P0/P1/P2. The PM atomically moved Task 6
   `implementing -> ready_for_qa` across the ledger, acceptance record, and this
   status. Fresh independent re-QA is now active.
+- Fresh independent re-QA at `6ee338f` passed all concurrent, serial, focused,
+  safety, cleanup, quality, and synchronized-status gates with no P0/P1/P2.
+  The PM atomically moved Task 6 `ready_for_qa -> reviewed` across all three
+  present-tense state authorities.
 
 ## Blocked decisions
 
@@ -84,6 +88,5 @@ On Node `v22.11.0`, it records:
 
 ## Next slice
 
-Run fresh independent Task 6 behavioral re-QA against the synchronized
-`ready_for_qa` state. Release review, final verification, and PM acceptance
-remain required afterward.
+Run independent Task 6 release re-review against the synchronized `reviewed`
+state. Fresh final verification and PM acceptance remain required afterward.
