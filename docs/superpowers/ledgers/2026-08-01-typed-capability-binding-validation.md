@@ -72,8 +72,8 @@ not acceptance.
   four Graph paths below.
 - Task 1 implementation commit
   `86d5a00f26d5f331764de0e8bf7694e657cd2514` passed independent task review
-  with no P0/P1/P2. The PM recorded `implementing -> ready_for_qa`; Task 1 is
-  not yet reviewed or accepted.
+  with no P0/P1/P2. Independent behavioral QA also passed with no P0/P1/P2.
+  The PM recorded `ready_for_qa -> reviewed`; Task 1 is not yet accepted.
 - Tasks 2 through 6 remain `planned`; none is dispatched by this transition.
 - No frontend/backend parallel implementation is permitted in this project.
 - Commercial Capability Foundation Task 2 remains `implementing` and
@@ -84,18 +84,18 @@ not acceptance.
 
 ## Project state
 
-| Task                                           | State          | Specialization | Contract owner                               | Contract status                                               |
-| ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | ------------------------------------------------------------- |
-| 1. Pure typed Graph symbol index               | `ready_for_qa` | `integration`  | Application Graph Type System                | Implementation and task review complete; independent QA next. |
-| 2. Typed manifest and binding contracts        | `planned`      | `integration`  | Capability Binding Contract                  | Blocked on accepted Task 1 index contract.                    |
-| 3. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 2 manifest contract.                 |
-| 4. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-3.                                |
-| 5. Graph-aware Publish and compiler admission  | `planned`      | `backend`      | Published Graph and Compiler Admission       | Blocked on accepted Tasks 1-4.                                |
-| 6. Current recipe migration and acceptance     | `planned`      | `integration`  | Typed Binding Migration and Release Evidence | Blocked on accepted Tasks 1-5.                                |
+| Task                                           | State      | Specialization | Contract owner                               | Contract status                                            |
+| ---------------------------------------------- | ---------- | -------------- | -------------------------------------------- | ---------------------------------------------------------- |
+| 1. Pure typed Graph symbol index               | `reviewed` | `integration`  | Application Graph Type System                | Task review and behavioral QA passed; release review next. |
+| 2. Typed manifest and binding contracts        | `planned`  | `integration`  | Capability Binding Contract                  | Blocked on accepted Task 1 index contract.                 |
+| 3. Safe versioned physical capability assets   | `planned`  | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 2 manifest contract.              |
+| 4. Manifest-aware Draft composition validation | `planned`  | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-3.                             |
+| 5. Graph-aware Publish and compiler admission  | `planned`  | `backend`      | Published Graph and Compiler Admission       | Blocked on accepted Tasks 1-4.                             |
+| 6. Current recipe migration and acceptance     | `planned`  | `integration`  | Typed Binding Migration and Release Evidence | Blocked on accepted Tasks 1-5.                             |
 
 ## Task 1: Add a pure typed Graph symbol index
 
-- **State:** `ready_for_qa`
+- **State:** `reviewed`
 - **Specialization:** `integration`
 - **Bounded writer:** Typed Graph Index Integration
 - **Contract owner:** Application Graph Type System
@@ -147,23 +147,35 @@ not acceptance.
   `4617cb23752e17eaa223bdddb1b3f3164472f2a3..86d5a00f26d5f331764de0e8bf7694e657cd2514`
   returned PASS with no P0/P1/P2. The PM therefore records
   `implementing -> ready_for_qa`.
-- This evidence does not constitute behavioral QA, release review, or
-  acceptance.
+- This implementation/task-review evidence alone did not constitute behavioral
+  QA, release review, or acceptance.
 
-### QA scope
+### Behavioral QA evidence
 
-- Independently verify the implementation commit and exact-path boundary.
-- Run the full Graph test suite, Graph typecheck, and Graph lint on Node
-  `v22.11.0`, including the browser-entry regression.
-- Exercise owner-aware field lookup with duplicate field keys across entities,
-  wrong or missing owners, and missing fields.
-- Exercise namespace isolation for entities, pages, navigation entries, roles,
-  flows, providers, and experience tokens, including identifiers that appear
-  in another namespace.
-- Confirm the public browser entry exposes the typed index without a Node
-  builtin and that the index remains capability-manifest-independent.
-- Report P0/P1/P2 findings and evidence limitations. Any load-bearing finding
-  returns Task 1 to `implementing` after PM reconciliation.
+- Independent QA ran on Node `v22.11.0` against implementation commit
+  `86d5a00f26d5f331764de0e8bf7694e657cd2514`.
+- `pnpm --filter @factory/graph test -- --run` passed 30/30 tests.
+  `pnpm --filter @factory/graph typecheck`,
+  `pnpm --filter @factory/graph lint`, and
+  `pnpm --filter @factory/graph build` all passed.
+- A direct public `dist/browser.js` probe passed 17/17 owner-scoped
+  duplicate/wrong/missing-field assertions and 18/18 isolated-namespace
+  assertions. Wrong or missing owners and fields returned `undefined`.
+- Browser/model source and built output contained no Node builtin or
+  `@factory/capabilities` import.
+- The implementation diff
+  `4617cb23752e17eaa223bdddb1b3f3164472f2a3..86d5a00f26d5f331764de0e8bf7694e657cd2514`
+  changed only `packages/graph/src/model.ts` and
+  `packages/graph/test/application-graph.test.ts`. Subsequent commits through
+  PM QA baseline `b4b8abd5813c2f0d50ba056b7c238b4947a70270` changed
+  documentation only, and diff checks were clean.
+- Independent QA returned PASS with no P0/P1/P2. The PM reconciles this as
+  `ready_for_qa -> reviewed`; release review and fresh acceptance verification
+  remain required.
+- Limitation: Task 1 supplies only the pure typed Graph index. Tasks 2 through
+  5 remain required to define typed manifests and safe assets and enforce
+  semantic bindings at Draft, Publish, and compiler admission. Task 1 alone
+  does not close the parent Foundation defect.
 
 ### Non-goals
 
@@ -179,8 +191,9 @@ not acceptance.
 - GREEN proves a field resolves only under its declared entity, independently
   typed names remain separate, duplicate field keys across entities are safe,
   and browser exports remain Node-builtin-free.
-- Graph application and browser-entry tests, typecheck, lint, task review, QA,
-  release review, and fresh verification pass before `accepted`.
+- Graph application and browser-entry tests, typecheck, lint, task review, and
+  behavioral QA now pass. Release review and fresh verification remain
+  required before `accepted`.
 
 ## Task 2: Freeze typed manifest and binding contracts
 
@@ -404,13 +417,13 @@ not acceptance.
 - Runtime atomicity and exactly-once stock execution across intentional
   inventory co-providers remain Commercial Foundation Task 3 scope and are not
   proven by this project.
-- This PM transition authorizes independent QA of Task 1 at the reviewed
-  implementation commit. It authorizes no product-code change and no Task 2-6
-  implementation.
+- This PM transition authorizes independent release review of Task 1 at the
+  reviewed implementation commit and reconciled QA baseline. It authorizes no
+  product-code change and no Task 2-6 implementation.
 
 ## Next smallest valuable slice
 
-Run independent Task 1 behavioral QA against reviewed implementation commit
-`86d5a00f26d5f331764de0e8bf7694e657cd2514` using the bounded QA scope above.
-Keep `@factory/graph` capability-manifest-independent and leave Tasks 2-6
-`planned`.
+Run independent Task 1 release review against implementation commit
+`86d5a00f26d5f331764de0e8bf7694e657cd2514` and the reconciled QA evidence
+above. Keep `@factory/graph` capability-manifest-independent and leave Tasks
+2-6 `planned`.
