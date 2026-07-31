@@ -45,7 +45,9 @@ importer/dependency; the prohibition remains everywhere else. Task 5 is now
 `accepted` under its frozen External Capability Promotion contract and exact
 eight paths. All Task 6 dependencies are accepted, and the PM moved Task 6
 `planned -> implementing` under its existing four exact paths and fixture-only
-evidence boundary. Independent Task 4 review of commit
+evidence boundary. Task 6 repair commit `d8aebb7` subsequently passed
+independent task review with no P0/P1/P2, and the PM moved Task 6
+`implementing -> ready_for_qa`. Independent Task 4 review of commit
 `33fd204` then FAILED with four P1 findings and one P2. The Controller authorized
 bounded Repair Round 1/5 and exactly three additional production paths; Task 4
 remains `implementing` under the amended frozen scope. Repair Round 1 re-review
@@ -136,7 +138,11 @@ ledger commit `f0d58fd` then PASSED with no actionable P0/P1/P2 or release
 blocker, and its fresh Node v22.11.0 verification passed all final gates. The PM
 reconciled the complete evidence and moved Task 5 `reviewed -> accepted`. Task 6
 then moved `planned -> implementing` with one bounded QA/evidence writer, four
-frozen paths, and no public/network probe. The system will ingest the 43 fixed-reference
+frozen paths, and no public/network probe. Initial implementation commit
+`fca7667` and repair commit `d8aebb7` passed final focused and full Node 22
+verification and independent task review with no P0/P1/P2. The PM moved Task 6
+`implementing -> ready_for_qa`; independent behavioral QA is the next gate. The
+system will ingest the 43 fixed-reference
 portfolio as metadata, retain the 108 scenarios as composition demand signals,
 and produce only quarantined evidence, non-executable Candidate records, and
 pending-review promotion packets.
@@ -291,7 +297,7 @@ remain frozen.
 | 3. Deterministic scan orchestration              | `accepted`     | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
 | 4. Candidate registry, API, CLI, and isolation   | `accepted`     | `integration`       | Candidate Registry               | Release review and fresh root verification PASS; frozen.    |
 | 5. Review-only promotion packets                 | `accepted`     | `governance`        | External Capability Promotion    | Release review and fresh final verification PASS; frozen.   |
-| 6. Bulk acceptance and release evidence          | `implementing` | `qa`                | External Intake Release Evidence | Four-path fixture-only dispatch; task review required.      |
+| 6. Bulk acceptance and release evidence          | `ready_for_qa` | `qa`                | External Intake Release Evidence | Repair review PASS; independent behavioral QA required.     |
 
 ## Task 1 card: Candidate contracts and immutable persistence
 
@@ -2079,7 +2085,7 @@ Graph/compiler/runtime/provider authority, or Task 6 behavior.
 
 ## Task 6 card: Bulk acceptance and release evidence
 
-- **State:** `implementing`
+- **State:** `ready_for_qa`
 - **Specialization:** `qa`
 - **Contract owner:** External Intake Release Evidence
 - **Contract artifact:** accepted Tasks 1-5 plus
@@ -2088,11 +2094,12 @@ Graph/compiler/runtime/provider authority, or Task 6 behavior.
   1 `accepted`.
 
 All dependency gates are accepted and frozen. The PM moved Task 6
-`planned -> implementing`. One bounded `qa` writer owns only the four exact
-paths below. The External Intake Release Evidence contract, fixture-only
-evidence boundary, deliverables, paths, non-goals, and acceptance evidence are
-frozen; any scope, path, dependency, or contract change stops work for
-Controller review.
+`planned -> implementing`. One bounded `qa` writer owned only the four exact
+paths below through implementation and repair. The reviewed release set,
+External Intake Release Evidence contract, fixture-only evidence boundary,
+deliverables, paths, non-goals, and acceptance evidence are now frozen for QA;
+any scope, path, dependency, or contract change stops work for Controller
+review.
 
 ### Controller-authorized fixture-only evidence boundary
 
@@ -2167,6 +2174,47 @@ PM rather than changing implementation.
 - Independent task review, QA, release review, and fresh verification reconcile
   with no open load-bearing finding before acceptance.
 
+### Implementation repair and independent task review
+
+Initial implementation commit `fca7667` delivered all four fixture-only paths.
+Independent task review found that the pending-review release-boundary fixture
+did not itself verify canonically, making its downstream authority rejection
+non-load-bearing, and found related workflow-documentation inconsistencies.
+Task 6 remained `implementing` under the same four paths and fixture-only
+contract.
+
+Repair commit `d8aebb7` first recorded RED: the incomplete pending-review input
+verified with `valid: false`. GREEN then proved that one canonical
+pending-review packet verifies before the same unmodified object is rejected at
+Golden, Graph, compiler/runtime, promotion-decision, batch, and Candidate
+creation boundaries without creating Candidate state. Public API enumeration
+and packet prohibitions also prove provider, approval, and copy authority are
+absent. The acceptance record and project status now state the PM workflow
+consistently.
+
+Final Node v22.11.0 implementation evidence passed:
+
+- focused release-boundary tests 3/3;
+- focused bulk-intake tests 1/1;
+- External Intake 392/392;
+- Intake CLI 56/56;
+- Graph 28/28;
+- Capabilities 123/123;
+- Compiler 180/180; and
+- affected typechecks, lints, Prettier, and bounded diff checks.
+
+Independent task re-review repeated the focused 3/3 and 1/1 evidence on Node
+v22.11.0 and PASSED with no P0/P1/P2. It confirmed the P1/P2 were cleared, the
+canonical packet proof is load-bearing, the four-path scope is exact, and the
+fixture-only/public-network prohibition remains intact.
+
+The PM reconciled implementation, repair, final verification, and independent
+task review and moved Task 6 `implementing -> ready_for_qa`. Independent
+behavioral QA is the next gate. This is not QA, release review, acceptance,
+public-source evidence, promotion, approval, Golden registration, Graph or
+compiler authority, or permission to change any implementation path. The four
+paths and fixture-only contract remain frozen.
+
 ## Review sequence and stop conditions
 
 1. PM moves one dependency-ready task to `implementing` and freezes its
@@ -2205,15 +2253,16 @@ PM rather than changing implementation.
   contract, public Store surface, or accepted behavior change returns Task 4
   to a recorded repair round and stops Task 5.
 
-The active smallest valuable slice is Task 6 fixture-only bulk acceptance and
-release evidence under its frozen four paths. The bounded QA/evidence writer
-must deliver the 43/108 preflight batch, Candidate/Golden/Graph/compiler
-release-boundary tests, English acceptance record, and evidence-backed project
-status update. It must preserve the accepted Task 5 deterministic-fixture and
-single-purpose CLI-process limitations and may add no public/network probe,
-decision, approval, waiver, source copy, notice modification, Golden
-registration, Graph/compiler input, provider activation, real provider, or
-external commitment.
+The active smallest valuable slice is independent Task 6 behavioral QA of the
+reviewed `fca7667 + d8aebb7` fixture-only release set and frozen four paths. QA
+must independently reproduce the 43/108 preflight, exact cleanup,
+canonical-pending-packet authority rejection, Candidate/Golden/Graph/compiler
+isolation, public-network prohibition, and English evidence/status truthfulness
+without changing implementation. It must preserve the accepted Task 5
+deterministic-fixture and single-purpose CLI-process limitations and may add no
+public/network probe, decision, approval, waiver, source copy, notice
+modification, Golden registration, Graph/compiler input, provider activation,
+real provider, or external commitment.
 All built-package public-surface isolation, Store/CAS, exact `id@version`,
 append-only terminal lifecycle, winner-only recovery, and multi-process
 no-orphan guarantees remain frozen. Its bounded test-contract amendment
@@ -2237,4 +2286,4 @@ Task 1's original release and bounded amendments, Task 2's accepted code set
 `515e0ba + 3dcb20f + dcaddf4`, Task 3's accepted repair commit `8b31d3a`, and
 Task 4's complete accepted Candidate Registry remain frozen. Task 5 is
 `accepted` and frozen under its recorded dependency gate; Task 6 is
-`implementing` under its fixture-only four-path dispatch.
+`ready_for_qa` under its fixture-only four-path dispatch.
