@@ -36,12 +36,13 @@ describe("transaction operation adapter packages", () => {
       ];
 
       for (const file of files) {
-        expect(
-          readFileSync(
-            resolve(repositoryRoot, asset.manifest.packageRoot, file),
-            "utf8",
-          ).endsWith("\n\n"),
-        ).toBe(false);
+        const content = readFileSync(
+          resolve(repositoryRoot, asset.manifest.packageRoot, file),
+          "utf8",
+        );
+
+        expect(content.endsWith("\n")).toBe(true);
+        expect(content.endsWith("\n\n")).toBe(false);
       }
 
       const fixture = JSON.parse(
