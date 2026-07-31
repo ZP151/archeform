@@ -428,6 +428,14 @@ function captureResolutionInputV1<T extends ResolveCapabilityCompositionInput>(
   return Object.freeze({ input: capturedInput, assets: capturedAssets });
 }
 
+export function captureCapabilityPublicInput<T>(input: T): Readonly<T> {
+  const context: ResolutionCaptureContextV1 = {
+    captured: new WeakMap(),
+    active: new WeakSet(),
+  };
+  return captureDataValue(input, "input", context) as Readonly<T>;
+}
+
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return false;

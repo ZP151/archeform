@@ -13,6 +13,7 @@ import {
   type FactoryProfile,
 } from "./assets/index.js";
 import {
+  captureCapabilityPublicInput,
   captureCapabilityCompositionResolution,
   type CapabilityCompositionV1,
   type CapabilitySelectionV1,
@@ -103,7 +104,7 @@ export function getCapabilityAsset(key: string): CapabilityAssetV1 {
  * recorded. Current profile composition intentionally uses getCapabilityAsset
  * instead, so new Drafts adopt the default package version.
  */
-export function resolveCapabilityAssetLock(
+function resolveCapabilityAssetLockSnapshot(
   lock: CapabilityAssetLockV1,
 ): CapabilityAssetV1 {
   const asset = capabilityAssets.find((candidate) => {
@@ -124,6 +125,12 @@ export function resolveCapabilityAssetLock(
   return asset;
 }
 
+export function resolveCapabilityAssetLock(
+  lock: CapabilityAssetLockV1,
+): CapabilityAssetV1 {
+  return resolveCapabilityAssetLockSnapshot(captureCapabilityPublicInput(lock));
+}
+
 /**
  * The browser-safe Registry boundary: callers may only lock the exact Golden
  * asset/version/digest already shipped by this Factory workspace.
@@ -132,8 +139,9 @@ export function assertGoldenCapabilityAssetLocks(
   locks: readonly CapabilityAssetLockV1[],
   context: GoldenAssetValidationContext,
 ): void {
-  const assets = locks.map(resolveCapabilityAssetLock);
-  assertResolvedGoldenCapabilityAssets(assets, context);
+  const captured = captureCapabilityPublicInput({ locks, context });
+  const assets = captured.locks.map(resolveCapabilityAssetLockSnapshot);
+  assertResolvedGoldenCapabilityAssets(assets, captured.context);
   for (const asset of assets) {
     if (
       currentCapabilityAssets.includes(asset) &&
@@ -632,14 +640,11 @@ function assertCompositionPolicyPermissions(
   assertSelectedCapabilityPolicy(graph, composition);
 }
 
-export function composeCapabilityDraft(
-  input: CapabilityDraftCompositionInput,
+function composeCapabilityDraftFromSnapshot(
+  graphInput: ApplicationGraphV1,
+  composition: CapabilityCompositionV1,
 ): CapabilityDraftCompositionResult {
-  const captured = captureCapabilityCompositionResolution(input);
-  const graph = structuredClone(
-    assertValidApplicationGraph(captured.input.graph),
-  );
-  const composition = captured.resolve();
+  const graph = structuredClone(assertValidApplicationGraph(graphInput));
   assertCapabilityEffectProviderOverlaps(
     composition.packages.map(({ lock }) => lock.key),
   );
@@ -653,6 +658,16 @@ export function composeCapabilityDraft(
     graph: assertValidApplicationGraph(graph),
     composition,
   };
+}
+
+export function composeCapabilityDraft(
+  input: CapabilityDraftCompositionInput,
+): CapabilityDraftCompositionResult {
+  const captured = captureCapabilityCompositionResolution(input);
+  return composeCapabilityDraftFromSnapshot(
+    captured.input.graph,
+    captured.resolve(),
+  );
 }
 
 type ProfileCompositionRecipe = {
@@ -758,13 +773,19 @@ export function assertGoldenCapabilityComposition(
   selections: readonly CapabilitySelectionV1[],
   context: GoldenCompositionValidationContext,
 ): CapabilityCompositionV1 {
-  const { composition } = composeCapabilityDraft({
-    graph: context.graph,
+  const captured = captureCapabilityCompositionResolution({
     selections,
-  });
-  assertResolvedGoldenCapabilityAssets(
-    composition.packages.map(({ lock }) => resolveCapabilityAssetLock(lock)),
     context,
+  });
+  const { composition } = composeCapabilityDraftFromSnapshot(
+    captured.input.context.graph,
+    captured.resolve(),
+  );
+  assertResolvedGoldenCapabilityAssets(
+    composition.packages.map(({ lock }) =>
+      resolveCapabilityAssetLockSnapshot(lock),
+    ),
+    captured.input.context,
   );
   return composition;
 }
@@ -2526,16 +2547,18 @@ export function getProfileComposition(
 export function composeDefaultCapabilityDraft(
   input: ProfileCompositionInput,
 ): ProfileCompositionResult {
-  const recipe = defaultCapabilityRecipes[input.profile];
-  if (!recipe) throw new Error(`Unknown Factory profile '${input.profile}'.`);
+  const capturedInput = captureCapabilityPublicInput(input);
+  const { profile } = capturedInput;
+  const recipe = defaultCapabilityRecipes[profile];
+  if (!recipe) throw new Error(`Unknown Factory profile '${profile}'.`);
   const profileComposition: ProfileComposition = {
-    profile: input.profile,
+    profile,
     requiredCapabilities: recipe.requiredCapabilities.map(getCapability),
     optionalCapabilities: recipe.optionalCapabilities.map(getCapability),
     defaultOptionalCapabilities: [...recipe.optionalCapabilities],
   };
-  const requested = input.optionalCapabilities
-    ? [...input.optionalCapabilities]
+  const requested = capturedInput.optionalCapabilities
+    ? [...capturedInput.optionalCapabilities]
     : [...profileComposition.defaultOptionalCapabilities];
   const requestedSet = new Set(requested);
   if (requestedSet.size !== requested.length) {
@@ -2548,12 +2571,12 @@ export function composeDefaultCapabilityDraft(
       )
     ) {
       throw new Error(
-        `Optional capability '${capability}' is not supported by profile '${input.profile}'.`,
+        `Optional capability '${capability}' is not supported by profile '${profile}'.`,
       );
     }
   }
 
-  const graph = createDefaultProfileBaseGraph(input.profile);
+  const graph = createDefaultProfileBaseGraph(profile);
   for (const capability of profileComposition.defaultOptionalCapabilities) {
     if (requestedSet.has(capability)) continue;
     const asset = getCapabilityAsset(capability);
@@ -2571,13 +2594,13 @@ export function composeDefaultCapabilityDraft(
       .filter((capability) => requestedSet.has(capability))
       .map((capability) => capability),
   ];
-  assertCapabilityRecipeEligibility(selectedCapabilityKeys, input.profile);
+  assertCapabilityRecipeEligibility(selectedCapabilityKeys, profile);
   const selections = selectedCapabilityKeys.map(
     (key): CapabilitySelectionV1 => {
-      const bindings = profileCompositionBindings[input.profile][key];
+      const bindings = profileCompositionBindings[profile][key];
       if (!bindings) {
         throw new Error(
-          `Profile '${input.profile}' does not declare bindings for capability '${key}'.`,
+          `Profile '${profile}' does not declare bindings for capability '${key}'.`,
         );
       }
       return {
@@ -2592,7 +2615,7 @@ export function composeDefaultCapabilityDraft(
     selections,
   });
   return {
-    profile: input.profile,
+    profile,
     graph: validatedGraph,
     optionalCapabilities: profileComposition.defaultOptionalCapabilities.filter(
       (capability) => requestedSet.has(capability),
@@ -2610,9 +2633,11 @@ export function composeDefaultCapabilityDraft(
 export function composeProfileDraft(
   input: ProfileCompositionInput,
 ): ProfileCompositionResult {
-  const composition = getProfileComposition(input.profile);
-  const requested = input.optionalCapabilities
-    ? [...input.optionalCapabilities]
+  const capturedInput = captureCapabilityPublicInput(input);
+  const { profile } = capturedInput;
+  const composition = getProfileComposition(profile);
+  const requested = capturedInput.optionalCapabilities
+    ? [...capturedInput.optionalCapabilities]
     : [...composition.defaultOptionalCapabilities];
   const requestedSet = new Set(requested);
   if (requestedSet.size !== requested.length) {
@@ -2625,12 +2650,12 @@ export function composeProfileDraft(
       )
     ) {
       throw new Error(
-        `Optional capability '${capability}' is not supported by profile '${input.profile}'.`,
+        `Optional capability '${capability}' is not supported by profile '${profile}'.`,
       );
     }
   }
 
-  const graph = structuredClone(profileStarterFor(input.profile).graph);
+  const graph = structuredClone(profileStarterFor(profile).graph);
   for (const capability of composition.defaultOptionalCapabilities) {
     if (requestedSet.has(capability)) continue;
     const asset = getCapabilityAsset(capability);
@@ -2654,28 +2679,28 @@ export function composeProfileDraft(
     selectedAssets.map((asset) => ({
       lock: lockCapabilityAsset(asset),
       bindings: structuredClone(
-        profileCompositionBindings[input.profile][asset.manifest.key] ?? {},
+        profileCompositionBindings[profile][asset.manifest.key] ?? {},
       ),
     })),
     {
-      profile: input.profile,
+      profile,
       capabilityKeys: graph.integration.capabilities.map(
         (capability) => capability.key,
       ),
       graph,
     },
   );
-  graph.integration.compositionProfile = input.profile;
+  graph.integration.compositionProfile = profile;
   graph.integration.assetLocks = admittedComposition.packages.map(
     ({ lock }) => lock,
   );
 
   const validatedGraph = assertValidApplicationGraph(graph);
-  if (input.profile === "restaurant-ordering") {
+  if (profile === "restaurant-ordering") {
     assertRestaurantOrderingProfile(validatedGraph);
   }
   return {
-    profile: input.profile,
+    profile,
     graph: validatedGraph,
     optionalCapabilities: composition.defaultOptionalCapabilities.filter(
       (capability) => requestedSet.has(capability),

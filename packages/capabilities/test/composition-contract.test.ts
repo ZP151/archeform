@@ -12,10 +12,14 @@ import {
   type CapabilityAssetV1,
 } from "../src/assets/index.js";
 import {
+  assertGoldenCapabilityAssetLocks,
+  assertGoldenCapabilityComposition,
   composeCapabilityDraft,
   composeDefaultCapabilityDraft,
+  composeProfileDraft,
   createCapabilityCompositionLock,
   getCapabilityAsset,
+  resolveCapabilityAssetLock,
   resolveCapabilityComposition,
   type CapabilitySelectionV1,
 } from "../src/index.js";
@@ -108,6 +112,120 @@ const catalogSelection: CapabilitySelectionV1 = {
 };
 
 describe("capability composition contract", () => {
+  it("captures a public asset lock before resolving it", () => {
+    let keyReads = 0;
+    const changingLock = {
+      ...lockCapabilityAsset(getCapabilityAsset("core.audit")),
+    };
+    Object.defineProperty(changingLock, "key", {
+      configurable: true,
+      enumerable: true,
+      get: () => {
+        keyReads += 1;
+        Object.defineProperty(changingLock, "key", {
+          enumerable: true,
+          value: "restaurant.menu",
+        });
+        return "core.audit";
+      },
+    });
+
+    expect(() => resolveCapabilityAssetLock(changingLock)).toThrow(
+      "FACTORY_COMPOSITION_INPUT_CAPTURE_INVALID",
+    );
+    expect(keyReads).toBe(0);
+  });
+
+  it("captures Golden lock validation context before observing it", () => {
+    let profileReads = 0;
+    const context = {
+      capabilityKeys: ["audit.record"],
+    } as Parameters<typeof assertGoldenCapabilityAssetLocks>[1];
+    Object.defineProperty(context, "profile", {
+      configurable: true,
+      enumerable: true,
+      get: () => {
+        profileReads += 1;
+        Object.defineProperty(context, "profile", {
+          enumerable: true,
+          value: "simple-ecommerce",
+        });
+        return "restaurant-ordering";
+      },
+    });
+
+    expect(() =>
+      assertGoldenCapabilityAssetLocks(
+        [lockCapabilityAsset(getCapabilityAsset("core.audit"))],
+        context,
+      ),
+    ).toThrow("FACTORY_COMPOSITION_INPUT_CAPTURE_INVALID");
+    expect(profileReads).toBe(0);
+  });
+
+  it("captures Golden composition context before observing it", () => {
+    const draft = composeDefaultCapabilityDraft({
+      profile: "simple-ecommerce",
+    });
+    let graphReads = 0;
+    const context = {
+      profile: "simple-ecommerce",
+      capabilityKeys: draft.graph.integration.capabilities.map(
+        ({ key }) => key,
+      ),
+    } as Parameters<typeof assertGoldenCapabilityComposition>[1];
+    Object.defineProperty(context, "graph", {
+      configurable: true,
+      enumerable: true,
+      get: () => {
+        graphReads += 1;
+        Object.defineProperty(context, "graph", {
+          enumerable: true,
+          value: composeDefaultCapabilityDraft({
+            profile: "restaurant-ordering",
+          }).graph,
+        });
+        return draft.graph;
+      },
+    });
+
+    expect(() =>
+      assertGoldenCapabilityComposition(
+        draft.graph.integration.compositionSelections ?? [],
+        context,
+      ),
+    ).toThrow("FACTORY_COMPOSITION_INPUT_CAPTURE_INVALID");
+    expect(graphReads).toBe(0);
+  });
+
+  it.each([
+    {
+      label: "default profile composition",
+      compose: composeDefaultCapabilityDraft,
+    },
+    { label: "legacy profile composition", compose: composeProfileDraft },
+  ])("captures $label input before observing it", ({ compose }) => {
+    let profileReads = 0;
+    const input = {} as Parameters<typeof compose>[0];
+    Object.defineProperty(input, "profile", {
+      configurable: true,
+      enumerable: true,
+      get: () => {
+        profileReads += 1;
+        Object.defineProperty(input, "profile", {
+          enumerable: true,
+          value: "simple-ecommerce",
+        });
+        return "restaurant-ordering";
+      },
+    });
+
+    expect(() => compose(input)).toThrow(
+      "FACTORY_COMPOSITION_INPUT_CAPTURE_INVALID",
+    );
+    expect(profileReads).toBe(0);
+  });
+
   it("captures a verified lock selection before physical package verification", () => {
     let lockReads = 0;
     const selected = {
