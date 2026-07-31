@@ -657,11 +657,15 @@ not acceptance.
   `implementing`, with local repair stopped pending Task 2A; it is not an
   implementation dependency for the architecture-owned boundary repair.
 - **Produces:** one descriptor-validated, Factory-owned, frozen composition
-  resolution snapshot consumed by matching, validation, normalization,
-  dependency resolution, canonicalization, and lock hashing.
+  resolution snapshot consumed by public package verification and
+  provider-overlap checks, matching, validation, normalization, dependency
+  resolution, canonicalization, and lock hashing, plus deeply immutable
+  compiled schema values.
 
 ### Exact allowed paths
 
+- `packages/capabilities/src/node.ts`
+- `packages/capabilities/src/index.ts`
 - `packages/capabilities/src/composition.ts`
 - `packages/capabilities/test/composition-contract.test.ts`
 - `packages/capabilities/test/typed-binding-contract.test.ts`
@@ -670,7 +674,7 @@ not acceptance.
 
 - Execute the four serialized tasks in
   `docs/superpowers/plans/2026-08-01-immutable-composition-resolution-input.md`
-  under **Immutable Composition Resolution Integration** and the exact three
+  under **Immutable Composition Resolution Integration** and the exact five
   paths above.
 - RED must reproduce accessor, prototype, sparse-array, inherited-hole,
   symbol-key, extra-array-property, custom-prototype, cycle, and repeated-read
@@ -678,6 +682,27 @@ not acceptance.
 - GREEN must capture once through property descriptors, reject exotic input
   before output, preserve valid ordinary-JSON serialized formats and lock
   digests, and ensure composition internals consume only opaque owned snapshots.
+
+### Plan Task 3 review failure and repair round 1
+
+- Plan Tasks 1 through 3 produced commits `b310d8e`, `c9e5ca3`, and
+  `73accc24a68d55308d127717e36cd63130024f3e`. Independent review of the Task 3
+  implementation returned FAIL with two P1s. Task 2A remains `implementing`;
+  no review, QA, release-review, or acceptance state advances.
+- **P1 1 -- public pre-capture reads:**
+  `createVerifiedCapabilityCompositionLock` in
+  `packages/capabilities/src/node.ts` and `composeCapabilityDraft` in
+  `packages/capabilities/src/index.ts` read caller-owned selections or locks
+  before capture. A self-redefining accessor can therefore make a public entry
+  point verify one asset or provider-overlap set and resolve or lock another.
+- **P1 2 -- shallow compiled-schema immutability:** compiled parameter- and
+  binding-schema maps reject map mutation, but their schema value objects remain
+  runtime mutable, so `ValidatedManifestContractV1` is not deeply immutable.
+- Controller-authorized repair round 1 expands only plan Task 3's exact repair
+  scope to the five paths above. Every public entry point must capture before
+  package verification, provider-overlap checks, or any other selection/lock
+  read and reuse the same owned snapshot downstream. Every compiled schema value,
+  including nested records and arrays, must be deeply frozen at runtime.
 
 ### Non-goals
 
@@ -951,19 +976,23 @@ not acceptance.
   one additional P1: separate `manifest.parameters` snapshots can differ
   between schema and binding validation. Independent reproduction expanded the
   finding to the shared resolution-input boundary, and accepted ADR-0008 stops
-  local Task 2 repair. Task 2A is `implementing` inside its exact three-path
-  boundary; this PM transition authorizes no Graph-path change or Task 3-7
-  implementation.
+  local Task 2 repair. Task 2A remains `implementing`. Independent review of
+  plan Task 3 commit `73accc24a68d55308d127717e36cd63130024f3e`
+  then found public pre-capture reads and mutable compiled schema values. Repair
+  round 1 is authorized inside Task 2A's exact five-path boundary; this PM
+  transition authorizes no Graph-path change or Graph Task 3-7 implementation.
 
 ## Next smallest valuable slice
 
-Execute Task 2A plan Task 1 under **Immutable Composition Resolution
-Integration** and the **Capability Composition Resolution Boundary**. Add only
-the focused adversarial RED evidence in
-`packages/capabilities/test/composition-contract.test.ts` and
-`packages/capabilities/test/typed-binding-contract.test.ts`, then record the
-required failing focused command before implementation. The full Task 2A write
-boundary remains those two tests plus
-`packages/capabilities/src/composition.ts`. Keep Task 2 `implementing` with
-local repair and review gates stopped. Keep Graph Task 3 and Tasks 4 through 7
-`planned` and blocked until Tasks 2 and 2A are accepted.
+Execute Task 2A plan Task 3 repair round 1 under **Immutable Composition
+Resolution Integration** and the **Capability Composition Resolution
+Boundary**. Capture before every public package-verification or provider-overlap
+read, reuse that owned snapshot downstream, and make compiled schema values
+deeply immutable. The exact repair boundary is
+`packages/capabilities/src/node.ts`, `packages/capabilities/src/index.ts`,
+`packages/capabilities/src/composition.ts`,
+`packages/capabilities/test/composition-contract.test.ts`, and
+`packages/capabilities/test/typed-binding-contract.test.ts`. Keep Task 2A and
+Task 2 `implementing`, with Task 2 local repair and review gates stopped. Keep
+Graph Task 3 and Tasks 4 through 7 `planned` and blocked until Tasks 2 and 2A are
+accepted.

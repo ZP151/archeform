@@ -52,14 +52,20 @@
 
 **Files:**
 
+- Modify: `packages/capabilities/src/node.ts`
+- Modify: `packages/capabilities/src/index.ts`
 - Modify: `packages/capabilities/src/composition.ts`
 - Test: `packages/capabilities/test/composition-contract.test.ts`
 - Test: `packages/capabilities/test/typed-binding-contract.test.ts`
 
-**Produces:** Snapshot-only matching, strict-contract compilation, binding normalization, canonical selection, and lock hashing.
+**Produces:** Public capture before verification or overlap checks, snapshot-only matching, deeply immutable strict-contract compilation, binding normalization, canonical selection, and lock hashing.
+
+**Repair round 1:** Independent review of implementation commit `73accc24a68d55308d127717e36cd63130024f3e` returned FAIL with two P1s. Task 3 remains `implementing`; repair is limited to the exact five paths above.
 
 - [ ] Introduce private `ResolutionInputSnapshotV1`, `ManifestSnapshotV1`, `SelectionSnapshotV1`, and `ValidatedManifestContractV1` types.
+- [ ] Make `createVerifiedCapabilityCompositionLock` and `composeCapabilityDraft` capture caller-owned selections and locks before any package verification, provider-overlap check, or other read, then reuse that same owned snapshot for every downstream operation. A self-redefining accessor must not let a public entry point verify one asset or overlap set and resolve or lock another.
 - [ ] Refactor internals so a captured manifest contract is compiled once and the same immutable parameter and binding maps are consumed by validation, normalization, canonicalization, dependency resolution, and hashing.
+- [ ] Deep-freeze every compiled parameter- and binding-schema value, including nested arrays and records. Read-only map mutation guards alone do not satisfy runtime immutability.
 - [ ] Remove internal raw reads of `input.selections`, `selection.lock`, `selection.bindings`, `asset.manifest`, `manifest.parameters`, and `fieldTypes` after capture.
 - [ ] Add a coherent-output test and resolve the largest registered composition 100 times, asserting a single digest.
 - [ ] Run focused tests, all Capabilities tests, typecheck, lint, and build on Node 22.11.0.
