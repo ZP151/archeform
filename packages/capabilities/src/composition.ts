@@ -103,6 +103,30 @@ const domainFieldBindingInputKeys = new Set([
   ...nonFieldBindingInputKeys,
   ...fieldConstraintKeys,
 ]);
+const graphSymbolBindingValueKeys = new Set(["graphSymbol"]);
+const domainFieldBindingValueKeys = new Set(["graphSymbol", "fieldKey"]);
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function hasExactOwnKeys(
+  value: unknown,
+  allowedKeys: ReadonlySet<string>,
+  requiredKeys: readonly string[],
+): value is Record<string, unknown> {
+  return (
+    isPlainRecord(value) &&
+    Reflect.ownKeys(value).every(
+      (key) => typeof key === "string" && allowedKeys.has(key),
+    ) &&
+    requiredKeys.every((key) => Object.hasOwn(value, key))
+  );
+}
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -268,13 +292,12 @@ function assertBindingValue(
   }
   if (bindingSchema?.type === "domain.field") {
     if (
-      typeof value !== "object" ||
-      value === null ||
-      Object.keys(value).length !== 2 ||
-      !("graphSymbol" in value) ||
+      !hasExactOwnKeys(value, domainFieldBindingValueKeys, [
+        "graphSymbol",
+        "fieldKey",
+      ]) ||
       typeof value.graphSymbol !== "string" ||
       !domainEntitySymbolPattern.test(value.graphSymbol) ||
-      !("fieldKey" in value) ||
       typeof value.fieldKey !== "string" ||
       !fieldKeyPattern.test(value.fieldKey)
     ) {
@@ -286,19 +309,15 @@ function assertBindingValue(
   }
   if (
     bindingSchema &&
-    typeof value === "object" &&
-    value !== null &&
-    "fieldKey" in value
+    isPlainRecord(value) &&
+    Object.hasOwn(value, "fieldKey")
   ) {
     throw new Error(
       `${label} cannot include fieldKey for a '${bindingSchema.type}' input.`,
     );
   }
   if (
-    typeof value !== "object" ||
-    value === null ||
-    Object.keys(value).length !== 1 ||
-    !("graphSymbol" in value) ||
+    !hasExactOwnKeys(value, graphSymbolBindingValueKeys, ["graphSymbol"]) ||
     typeof value.graphSymbol !== "string" ||
     !graphSymbolPattern.test(value.graphSymbol)
   ) {
@@ -323,10 +342,18 @@ function canonicalSelection(
       bindings[key] = value;
       continue;
     }
-    bindings[key] =
-      "fieldKey" in value
-        ? { graphSymbol: value.graphSymbol, fieldKey: value.fieldKey }
-        : { graphSymbol: value.graphSymbol };
+    if (
+      !isPlainRecord(value) ||
+      typeof value.graphSymbol !== "string" ||
+      !Object.hasOwn(value, "graphSymbol")
+    ) {
+      throw new Error(
+        `Capability package '${manifest.key}' contains an invalid binding value.`,
+      );
+    }
+    bindings[key] = Object.hasOwn(value, "fieldKey")
+      ? { graphSymbol: value.graphSymbol, fieldKey: value.fieldKey as string }
+      : { graphSymbol: value.graphSymbol };
   }
   return {
     lock: {
@@ -374,7 +401,17 @@ export function validateCapabilityBindingSchema(
 
   const bindingSchemas = new Map<string, CapabilityBindingInputV1>();
   for (const untrustedSchema of manifest.inputSchema) {
+    if (!isPlainRecord(untrustedSchema)) {
+      throw new Error(
+        `Capability package '${manifest.key}' input schema must be a plain record.`,
+      );
+    }
     const schema = untrustedSchema as CapabilityBindingInputV1;
+    if (!Object.hasOwn(schema, "key") || !Object.hasOwn(schema, "type")) {
+      throw new Error(
+        `Capability package '${manifest.key}' input schema must declare own key and type values.`,
+      );
+    }
     if (
       !parameterKeyPattern.test(schema.key) ||
       prototypeReservedParameterKeys.has(schema.key)
@@ -407,15 +444,18 @@ export function validateCapabilityBindingSchema(
       schema.type === "domain.field"
         ? domainFieldBindingInputKeys
         : nonFieldBindingInputKeys;
-    const unknownInputKey = Object.keys(schema).find(
-      (key) => !allowedInputKeys.has(key),
+    const unknownInputKey = Reflect.ownKeys(schema).find(
+      (key) => typeof key !== "string" || !allowedInputKeys.has(key),
     );
     if (unknownInputKey) {
       throw new Error(
-        `Capability package '${manifest.key}' input '${schema.key}' declares unknown key '${unknownInputKey}'.`,
+        `Capability package '${manifest.key}' input '${schema.key}' declares unknown key '${String(unknownInputKey)}'.`,
       );
     }
-    if (typeof schema.required !== "boolean") {
+    if (
+      !Object.hasOwn(schema, "required") ||
+      typeof schema.required !== "boolean"
+    ) {
       throw new Error(
         `Capability package '${manifest.key}' input '${schema.key}' required must be a boolean.`,
       );

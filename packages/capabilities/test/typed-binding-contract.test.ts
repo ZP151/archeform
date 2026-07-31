@@ -345,4 +345,38 @@ describe("typed capability binding contract", () => {
 
     expect(() => resolveStrictManifest(manifest, bindings)).toThrow("fieldKey");
   });
+
+  it("rejects a domain field binding that inherits its field key", () => {
+    const manifest = strictManifest(
+      [requiredEntity, requiredField],
+      [entityParameter, fieldParameter],
+    );
+    const inheritedFieldBinding = Object.assign(
+      Object.create({ fieldKey: "stock" }),
+      { graphSymbol: "graph.domain.product", unexpected: true },
+    ) as CapabilityBindingValueV1;
+
+    expect(() =>
+      resolveStrictManifest(manifest, {
+        catalogEntity: { graphSymbol: "graph.domain.product" },
+        stockField: inheritedFieldBinding,
+      }),
+    ).toThrow();
+  });
+
+  it("rejects a domain field schema that inherits its constraints", () => {
+    const inheritedFieldSchema = Object.assign(
+      Object.create({
+        ownerBinding: "catalogEntity",
+        fieldTypes: ["integer"],
+      }),
+      { key: "stockField", type: "domain.field", required: true },
+    );
+    const manifest = strictManifest(
+      [requiredEntity, inheritedFieldSchema],
+      [entityParameter, fieldParameter],
+    );
+
+    expect(() => resolveStrictManifest(manifest, validBindings)).toThrow();
+  });
 });
