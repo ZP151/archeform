@@ -37,7 +37,7 @@ slice, and the Controller has accepted the design contract. Task 1 is now
 release behavior remains accepted and frozen. Task 2 is `accepted` after Fix
 Round 2/5. Task 3 is `accepted` after Fix Round 4/5 independent re-review, QA,
 release review, and fresh final verification all passed with no P0/P1/P2. Task
-4 is now `reviewed` under its frozen Candidate Registry contract, exact
+4 is now `accepted` under its frozen Candidate Registry contract, exact
 allowed paths, and non-goals. A Controller-approved bounded test-contract
 amendment adds only `packages/external-intake/test/portfolio.test.ts` to permit
 `apps/intake-cli/package.json` as the single `@factory/external-intake`
@@ -105,8 +105,10 @@ paths only. Final product commit `f93e25a`, evidence commit `9c5d2f1`, and
 independent task review then PASSED with no P0/P1/P2. The PM moved Task 4
 `implementing -> ready_for_qa`. Independent behavioral QA then PASSED with no
 P0/P1, and the PM moved Task 4 `ready_for_qa -> reviewed`. Independent release
-review and root final verification remain required. The system will ingest the
-43 fixed-reference
+review then PASSED with no P0/P1/P2, and fresh root Node v22.11.0 verification
+also PASSED. The PM moved Task 4 `reviewed -> accepted`; its complete Candidate
+Registry contract, repair history, exact paths, and accepted behavior are
+frozen. The system will ingest the 43 fixed-reference
 portfolio as metadata, retain the 108 scenarios as composition demand signals,
 and produce only quarantined evidence, non-executable Candidate records, and
 pending-review promotion packets.
@@ -259,7 +261,7 @@ remain frozen.
 | 1. Candidate contracts and immutable persistence | `accepted` | `integration`       | External Intake Contract         | Original release and bounded amendment accepted and frozen. |
 | 2. Fixed-source provenance and notices           | `accepted` | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
 | 3. Deterministic scan orchestration              | `accepted` | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
-| 4. Candidate registry, API, CLI, and isolation   | `reviewed` | `integration`       | Candidate Registry               | Round 10 QA PASS; independent release review is next.       |
+| 4. Candidate registry, API, CLI, and isolation   | `accepted` | `integration`       | Candidate Registry               | Release review and fresh root verification PASS; frozen.    |
 | 5. Review-only promotion packets                 | `planned`  | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.           |
 | 6. Bulk acceptance and release evidence          | `planned`  | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.        |
 
@@ -853,7 +855,8 @@ dependency gate but remains unstarted and `planned`; Tasks 5 and 6 also remain
 
 ## Task 4 card: Candidate registry, module API, CLI, and isolation
 
-- **State:** `reviewed`
+- **State:** `accepted`; complete Candidate Registry behavior and repair history
+  are frozen.
 - **Specialization:** `integration`
 - **Contract owner:** Candidate Registry
 - **Contract artifact:** accepted Tasks 1-3 contracts and the frozen Commercial
@@ -1575,6 +1578,64 @@ promotion, release, or Task 5 authorization. The complete Candidate Registry
 contract, repair history, exact paths, non-goals, and acceptance evidence remain
 frozen. Tasks 5 and 6 remain `planned` and unstarted.
 
+### Release review and final verification: Repair Round 10/10
+
+Independent release review PASSED with no P0/P1/P2 for product commit `f93e25a`,
+evidence commit `9c5d2f1`, and reviewed ledger state `d75672f`. The review
+confirmed the exact six-path Round 10 production/test scope, winner-only
+sequence-1 creation and completion, durable current sequence-2 resolution,
+fail-closed warm terminal verification, private Store primitives, privacy,
+Task 3 provenance and rehydration, exact-version handling, stale-locator and
+terminal-corruption rejection, SIGKILL recovery, no-orphan multi-process
+behavior, and Graph/Golden/compiler isolation.
+
+The release review ran these fresh Node v22.11.0 commands:
+
+```text
+pnpm --filter @factory/external-intake exec vitest run test/candidates.test.ts test/api.test.ts test/store.test.ts
+pnpm --filter @factory/external-intake test
+pnpm --filter @factory/intake-cli test
+pnpm --filter @factory/graph exec vitest run test/application-graph.test.ts
+pnpm --filter @factory/capabilities exec vitest run test/capability-registry.test.ts
+pnpm --filter @factory/compiler exec vitest run test/compilation-plan.test.ts
+pnpm --filter @factory/external-intake build
+pnpm --filter @factory/external-intake typecheck
+pnpm --filter @factory/external-intake lint
+pnpm --filter @factory/intake-cli build
+pnpm --filter @factory/intake-cli typecheck
+pnpm --filter @factory/intake-cli lint
+pnpm test -- --force
+pnpm run typecheck --force
+pnpm run build --force
+pnpm verify:third-party
+pnpm verify:source-studies
+git show --check 37345e5 b06e8bb f93e25a
+git diff --check 302a14e..f93e25a
+git status --short
+```
+
+Release results passed Candidate/API/Store 169/169, External Intake 344/344,
+Intake CLI 41/41, Graph 27/27, Golden boundary 71/71, Compiler 47/47, forced
+workspace tests 14/14, typechecks 14/14, and builds 9/9. Affected package lints,
+third-party policy, source-study policy, bounded commit/diff checks, and
+clean-worktree verification passed.
+
+Fresh root verification on Node v22.11.0 independently passed External Intake
+344/344, Intake CLI 41/41, Graph 27/27, Golden boundary 71/71, Compiler 47/47,
+the relevant typechecks and package lints, third-party and source-study policy
+checks, bounded diff checks, and clean-worktree verification.
+
+The inherited repository-root P2 Prettier debt remains documented in unchanged
+Adapters, Compiler Worker, Control Plane, and Workbench files. It is not a Task
+4 regression, was not represented as a green root formatting gate, and does not
+alter the clean Task 4 release verdict.
+
+The PM reconciled independent task review, QA, release review, and fresh root
+verification and moved Task 4 `reviewed -> accepted`. The Candidate Registry
+contract, complete repair history, exact paths, non-goals, and accepted behavior
+are frozen. This is not promotion or Task 5 authorization. Tasks 5 and 6 remain
+`planned` and unstarted.
+
 ### Exact allowed paths
 
 - `packages/external-intake/src/candidates.ts`
@@ -1718,16 +1779,13 @@ frozen. Tasks 5 and 6 remain `planned` and unstarted.
 - **Governance risk:** `conformance-passed` could be mistaken for Golden. It has
   no promotion authority, and the first slice creates no Golden asset.
 - **Coordination risk:** Candidate isolation tests touch frozen Graph,
-  Capabilities, and compiler test paths. Task 4 is frozen at `reviewed`;
-  independent release review is validation-only, and any writer overlap stops
-  work.
+  Capabilities, and compiler test paths. Task 4 is accepted and frozen; any
+  change returns it to a recorded repair round and stops dependent work.
 
-The active smallest valuable slice is independent release review of Task 4
-Repair Round 10/10 final commits `f93e25a` and `9c5d2f1` under the frozen
-Candidate Registry contract and complete repair history. Release review must
-reconcile the durable current-state, exact/stale lookup, terminal corruption,
-SIGKILL recovery, privacy, isolation, and public-surface evidence before root
-final verification.
+No implementation slice beyond Task 4 is currently authorized. Task 5 is now
+dependency-eligible but remains `planned` and unstarted pending explicit
+Controller dispatch. Its frozen review-only promotion-packet contract creates no
+Golden asset or promotion decision.
 All built-package public-surface isolation, Store/CAS, exact `id@version`,
 append-only terminal lifecycle, winner-only recovery, and multi-process
 no-orphan guarantees remain frozen. Its bounded test-contract amendment
