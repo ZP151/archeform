@@ -42,7 +42,7 @@ explicit release set is implementation commit `b2f3b9e` plus repair commit
 evidence through `ready_for_qa -> reviewed -> accepted`. Task 1 is frozen and
 accepted. Its acceptance satisfies Task 2's dependency. The PM moved Task 2
 `planned -> implementing` under the frozen Profile Composition Integration
-contract and exact four paths. External Capability Intake remains accepted and
+contract and exact five paths. External Capability Intake remains accepted and
 frozen; this dispatch imports no external content and grants no Candidate or
 provider authority. Tasks 3 through 5 remain `planned`. Tasks 3 and 4 may run
 in parallel only after Task 2 is accepted because they consume the same frozen
@@ -218,11 +218,24 @@ of them requires a new recorded scope and repair state.
 
 Task 1 is accepted and frozen, so the PM moved Task 2
 `planned -> implementing`. One bounded `integration` writer owns only the exact
-paths below. The Profile Composition Integration contract, accepted Task 1
+five paths below. The Profile Composition Integration contract, accepted Task 1
 identities and interfaces, recipe rules, dependencies, non-goals, and
 acceptance evidence are frozen. Any new path, package identity, interface,
 binding grammar, output slot, compiler/Workbench behavior, or contract change
 stops work for PM and architecture review.
+
+### Controller-authorized test-scope correction
+
+Adding the four accepted Foundation locks necessarily changes the canonical
+Restaurant selection previously asserted as exactly nine locks in
+`packages/capabilities/test/capability-registry.test.ts`. The Controller adds
+only that existing regression file to Task 2 ownership so its canonical lock
+expectation can be updated for the permitted Foundation additions.
+
+This is a test-scope correction only. It changes no shared contract, package
+identity, interface, binding grammar, output slot, dependency, recipe scope,
+production behavior, non-goal, or task state. Task 2 remains `implementing`;
+Tasks 3 and 4 remain `planned`.
 
 ### Exact allowed paths
 
@@ -230,6 +243,8 @@ stops work for PM and architecture review.
 - `packages/capabilities/src/restaurant/profile.ts`
 - `packages/capabilities/test/restaurant-profile.test.ts`
 - `packages/capabilities/test/commercial-profile-composition.test.ts`
+- `packages/capabilities/test/capability-registry.test.ts` (only the canonical
+  Restaurant lock-selection regression correction above)
 
 ### Non-goals
 
@@ -400,7 +415,7 @@ stops work for PM and architecture review.
 ## Next smallest valuable slice
 
 Implement Task 2's Restaurant and Ecommerce Foundation Graph recipes within its
-exact four paths, beginning with focused failing tests. Keep Tasks 3 and 4
+exact five paths, beginning with focused failing tests. Keep Tasks 3 and 4
 planned until Task 2 is accepted, and preserve the accepted Task 1 physical
 package, evidence digest, verified-lock, and Publish-boundary contracts
 unchanged.

@@ -1,6 +1,6 @@
 # 100+ Profile Capability Ecosystem
 
-**Research date:** 2026-08-01  
+**Research date:** 2026-08-01
 **Decision investigated:** How Factory Pilot can support more than 100
 production-relevant application scenarios by reusing mature open-source
 software without surrendering Application Graph authority, bypassing
