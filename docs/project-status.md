@@ -2,6 +2,41 @@
 
 Updated: 2026-08-01
 
+## Capability ecosystem status correction
+
+Factory Pilot currently proves three independently modeled Profile families:
+Expense Approval, Restaurant Ordering, and Simple Ecommerce. A Published
+Application Graph can be compiled into a local bundle with generated Web/API,
+database, policy, flow, test, and documentation outputs. This is a functional
+foundation, not evidence that Factory Pilot already supports one hundred
+production-ready application types.
+
+The repository contains 19 current capability families and historical locked
+versions. The reusable capability boundary is uneven: `core.crud`,
+`core.workflow`, `core.audit`, `core.notification`, `commerce.inventory`,
+`commerce.simulated-payment`, and `commerce.cart@1.0.1` have executable,
+version-locked package contributions. The cart migration now includes a
+manifest-declared runtime handler, template, fixtures, contract tests, and
+historical-lock replay evidence. `commerce.catalog`, `commerce.order`, and
+several Restaurant behaviors still rely on compiler-owned generic or
+profile-specific runtime code; their package records alone are not yet proof
+of independently replaceable implementation.
+
+The 122-scenario research taxonomy is a mapping of Profile recipes, shared
+capability locks, fixtures, and acceptance journeys. The separately executable
+external-source portfolio currently contains 43 source records and 108 demand
+signals; the two planning counts must not be conflated. Neither is an installed
+component catalogue or a production-readiness claim. The next high-leverage
+product milestone is a bulk capability supply chain: curated source portfolio
+-> fixed-reference quarantine -> licence/SBOM/security/module evidence ->
+source study -> Candidate artifact -> offline conformance -> Factory-authored
+Golden package or provider adapter. Until that pipeline is implemented,
+external source intake remains deliberately limited to immutable quarantine
+evidence and cannot create a Candidate, copy source, alter a Graph, or
+influence a compiler/runtime. The local `portfolio acquire` CLI command now
+constructs a strict batch from explicitly selected, intake-eligible portfolio
+IDs; it adds no authority beyond that quarantine boundary.
+
 ## Current milestone
 
 ### Parallel delivery track: Live External Source Acquisition

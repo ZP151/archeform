@@ -23,9 +23,11 @@ import {
   acquireSourceBatch,
   canonicalJson,
   canonicalRecordDigest,
+  createPortfolioIntakeBatch,
   createExternalSourceStudy,
   createExternalIntakeApi,
   isCredentialLikeCandidateValue,
+  loadExternalPortfolio,
   verifyPromotionPacket,
   type AcquisitionBatchResultV1,
   type ExternalIntakeApiV1,
@@ -40,6 +42,7 @@ const DIGEST = /^sha256:[a-f0-9]{64}$/u;
 const CANDIDATE_KEY = /^candidate\.[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)*$/u;
 const MAX_REQUEST_BYTES = 1024 * 1024;
 const PROMOTION_PACKET_LEAF = "promotion-packet.json";
+const PORTFOLIO_PRODUCER_VERSION = "0.1.0";
 const REDACTED_IDENTIFIERS = [
   "token",
   "auth",
@@ -78,6 +81,7 @@ export interface IntakeCliOptionsV1 {
   readonly store?: ExternalIntakeStore;
   readonly sourceClient?: FixedSourceClient;
   readonly cwd: string;
+  readonly now?: () => Date;
   readonly stdout: (line: string) => void;
   readonly stderr: (line: string) => void;
 }
@@ -106,7 +110,7 @@ function candidateIdentity(input: string | undefined): {
   return { id: parts[0]!, version: parts[1]! };
 }
 
-function localJson(pathInput: string | undefined, cwd: string): unknown {
+function localJsonPath(pathInput: string | undefined, cwd: string): string {
   if (
     pathInput === undefined ||
     pathInput.length === 0 ||
@@ -126,7 +130,48 @@ function localJson(pathInput: string | undefined, cwd: string): unknown {
   ) {
     throw new CliInputError("local regular JSON request file required");
   }
-  return JSON.parse(readFileSync(path, "utf8")) as unknown;
+  return path;
+}
+
+function localJson(pathInput: string | undefined, cwd: string): unknown {
+  return JSON.parse(
+    readFileSync(localJsonPath(pathInput, cwd), "utf8"),
+  ) as unknown;
+}
+
+function portfolioSourceIds(input: string | undefined): readonly string[] {
+  if (
+    input === undefined ||
+    input.length === 0 ||
+    input.length > 4_096 ||
+    input.includes("\0")
+  ) {
+    throw new CliInputError("portfolio source IDs required");
+  }
+  const ids = input.split(",");
+  if (
+    ids.length === 0 ||
+    ids.length > 64 ||
+    ids.some((id) => !OPAQUE_ID.test(id)) ||
+    new Set(ids).size !== ids.length
+  ) {
+    throw new CliInputError("portfolio source IDs must be unique opaque IDs");
+  }
+  return ids;
+}
+
+function portfolioProvenance(options: IntakeCliOptionsV1): {
+  readonly createdAt: string;
+  readonly producerVersion: string;
+} {
+  const now = options.now?.() ?? new Date();
+  if (!(now instanceof Date) || !Number.isFinite(now.getTime())) {
+    throw new CliInputError("portfolio clock is invalid");
+  }
+  return {
+    createdAt: now.toISOString(),
+    producerVersion: PORTFOLIO_PRODUCER_VERSION,
+  };
 }
 
 function normalizedOutputKey(value: string): string {
@@ -748,6 +793,25 @@ export async function runIntakeCli(
     ) {
       const acquisition = await acquireSourceBatch(
         localJson(args[3], options.cwd),
+        options.sourceClient ?? new GitHubFixedSourceClient(),
+        sourceStore(options),
+      );
+      outputContext = "acquisition-batch";
+      result = acquisitionOutput(acquisition);
+    } else if (
+      args.length === 6 &&
+      args[0] === "portfolio" &&
+      args[1] === "acquire" &&
+      args[2] === "--file" &&
+      args[4] === "--sources"
+    ) {
+      const batch = createPortfolioIntakeBatch(
+        loadExternalPortfolio(localJsonPath(args[3], options.cwd)),
+        portfolioSourceIds(args[5]),
+        portfolioProvenance(options),
+      );
+      const acquisition = await acquireSourceBatch(
+        batch,
         options.sourceClient ?? new GitHubFixedSourceClient(),
         sourceStore(options),
       );

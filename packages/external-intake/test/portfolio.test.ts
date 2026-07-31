@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
+  createPortfolioIntakeBatch,
   createPortfolioIntakeRequest,
   loadExternalPortfolio,
 } from "../src/index.js";
@@ -93,6 +94,36 @@ describe("external business-logic portfolio", () => {
         createPortfolioIntakeRequest(portfolio, source.id, requestProvenance),
       ).toThrow(/policy-only/i);
     }
+  });
+
+  it("creates one strict batch for selected intake-eligible portfolio sources", () => {
+    const portfolio = loadExternalPortfolio(portfolioPath);
+
+    expect(
+      createPortfolioIntakeBatch(
+        portfolio,
+        ["tastyigniter", "medusa"],
+        requestProvenance,
+      ),
+    ).toEqual({
+      apiVersion: "factory.external-intake-batch/v1",
+      items: [
+        {
+          id: "tastyigniter",
+          request: expect.objectContaining({
+            source: expect.objectContaining({
+              portfolioRecord: "tastyigniter",
+            }),
+          }),
+        },
+        {
+          id: "medusa",
+          request: expect.objectContaining({
+            source: expect.objectContaining({ portfolioRecord: "medusa" }),
+          }),
+        },
+      ],
+    });
   });
 
   it("allows only the repository-local Intake CLI manifest to depend on External Intake", () => {

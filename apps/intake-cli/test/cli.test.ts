@@ -35,6 +35,11 @@ const roots: string[] = [];
 const require = createRequire(import.meta.url);
 const vitestPath = require.resolve("vitest/vitest.mjs");
 const intakeCliRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const workspaceRoot = resolve(intakeCliRoot, "../..");
+const portfolioPath = join(
+  workspaceRoot,
+  "ecosystem/portfolio/2026-07-30-external-business-logic.json",
+);
 
 async function waitForPath(path: string): Promise<void> {
   const deadline = Date.now() + 10_000;
@@ -155,14 +160,19 @@ class SourceFixtureClient implements FixedSourceClient {
   async resolve(
     request: Parameters<FixedSourceClient["resolve"]>[0],
   ): Promise<ResolvedSourceReferenceV1> {
+    const repository = new URL(request.source.canonicalRepositoryUrl);
+    const [owner, name] = repository.pathname
+      .replace(/^\//u, "")
+      .replace(/\.git$/u, "")
+      .split("/");
     return {
       apiVersion: "factory.resolved-source-reference/v1",
       repositoryUrl: request.source.canonicalRepositoryUrl,
       requestedRef: request.source.requestedRef,
       resolvedCommit: this.#commit,
       retrievedAt: "2026-07-31T01:02:03.000Z",
-      archiveUrl: `https://codeload.github.com/example/safe-source/tar.gz/${this.#commit}`,
-      treeUrl: `https://api.github.com/repos/example/safe-source/git/trees/${this.#commit}`,
+      archiveUrl: `https://codeload.github.com/${owner}/${name}/tar.gz/${this.#commit}`,
+      treeUrl: `https://api.github.com/repos/${owner}/${name}/git/trees/${this.#commit}`,
       requiredNoticePaths: [],
     };
   }
@@ -432,6 +442,42 @@ describe("repository-local intake CLI", () => {
     expect(studyOutput).toContain("factory.external-source-study/v1");
     expect(studyOutput).not.toContain("github.com");
     expect(studyOutput).not.toContain("src/index.ts");
+  });
+
+  it("acquires selected portfolio sources through the same quarantined path", async () => {
+    const root = tempRoot();
+    const quarantine = join(root, "quarantine");
+    const store = new ExternalIntakeStore(quarantine);
+    const output = outputHarness(
+      createExternalIntakeApi(store, quarantine),
+      root,
+    );
+
+    expect(
+      await runIntakeCli(
+        [
+          "portfolio",
+          "acquire",
+          "--file",
+          portfolioPath,
+          "--sources",
+          "tastyigniter",
+        ],
+        {
+          ...output.options,
+          store,
+          sourceClient: new SourceFixtureClient(),
+          now: () => new Date("2026-08-01T00:00:00.000Z"),
+        },
+      ),
+    ).toBe(0);
+
+    const rendered = output.stdout.join("\n");
+    expect(rendered).toContain('"id":"tastyigniter"');
+    expect(rendered).toContain('"status":"acquired"');
+    expect(rendered).not.toContain("github.com");
+    expect(rendered).not.toContain("TastyIgniter");
+    expect(existsSync(join(quarantine, "records", "candidate"))).toBe(false);
   });
 
   it("loads status and verifies a prior job in a fresh CLI process", async () => {

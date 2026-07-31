@@ -4,7 +4,9 @@ import { z } from "zod";
 
 import {
   intakeContractPrimitives,
+  parseExternalIntakeBatch,
   parseIntakeRequest,
+  type ExternalIntakeBatchV1,
   type IntakeRequestV1,
   type PersistentRecordProvenanceV1,
 } from "./contracts.js";
@@ -166,5 +168,39 @@ export function createPortfolioIntakeRequest(
     classification: source.intakeClassification,
     requestedModules: [],
     allowNetworkRetrieval: true,
+  });
+}
+
+/**
+ * Produces a strict, explicit batch from the versioned local portfolio. The
+ * caller selects opaque portfolio IDs; policy-only sources cannot be widened
+ * into a retrievable request by this helper.
+ */
+export function createPortfolioIntakeBatch(
+  portfolio: ExternalPortfolioV1,
+  sourceIds: readonly string[],
+  provenance: Pick<
+    PersistentRecordProvenanceV1,
+    "createdAt" | "producerVersion"
+  >,
+): ExternalIntakeBatchV1 {
+  const parsedPortfolio = externalPortfolioSchema.parse(portfolio);
+  if (sourceIds.length === 0 || sourceIds.length > 64) {
+    throw new Error(
+      "Portfolio intake batches require between one and 64 source IDs.",
+    );
+  }
+  const parsedIds = sourceIds.map((sourceId) =>
+    intakeContractPrimitives.opaqueIdSchema.parse(sourceId),
+  );
+  if (new Set(parsedIds).size !== parsedIds.length) {
+    throw new Error("Portfolio intake source IDs must be unique.");
+  }
+  return parseExternalIntakeBatch({
+    apiVersion: "factory.external-intake-batch/v1",
+    items: parsedIds.map((id) => ({
+      id,
+      request: createPortfolioIntakeRequest(parsedPortfolio, id, provenance),
+    })),
   });
 }

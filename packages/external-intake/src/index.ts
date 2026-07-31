@@ -26,6 +26,7 @@ export {
   type SourceSnapshotV1,
 } from "./contracts.js";
 export {
+  createPortfolioIntakeBatch,
   createPortfolioIntakeRequest,
   loadExternalPortfolio,
   type ExternalPortfolioSourceV1,
