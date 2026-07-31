@@ -1,4 +1,5 @@
 import { dirname, resolve } from "node:path";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
@@ -6,7 +7,9 @@ import { describe, expect, it } from "vitest";
 import {
   capabilityAssets,
   createCommerceOrderCreateHandler,
+  createCommerceOrderCreateHandlerV2_0_1,
   createCommerceOrderLifecycleOperationAdapter,
+  createCommerceOrderLifecycleOperationAdapterV2_0_1,
 } from "../src/assets/index.js";
 import {
   loadCapabilityAssetContributions,
@@ -20,6 +23,144 @@ const repositoryRoot = resolve(
 );
 
 describe("generic order lifecycle V2 package", () => {
+  it("registers a verified 2.0.1 lifecycle successor with digest-covered create and transition contributions", () => {
+    const asset = capabilityAssets.find(
+      ({ manifest }) =>
+        manifest.key === "commerce.order" && manifest.version === "2.0.1",
+    );
+
+    expect(asset?.manifest.provides).toEqual(
+      expect.arrayContaining([
+        { interfaceKey: "factory.order-create-handler", version: "v1" },
+        {
+          interfaceKey: "factory.transaction-operation-adapter",
+          version: "v1",
+        },
+      ]),
+    );
+    expect(verifyCapabilityAssetDigest(asset!)).toBe(true);
+    expect(verifyCapabilityAssetPackage(asset!, repositoryRoot)).toEqual([]);
+    expect(
+      loadCapabilityAssetContributions(asset!, repositoryRoot).map(
+        ({ targetRuntimeInterfaceVersion }) => targetRuntimeInterfaceVersion,
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        "factory.order-create-handler/v1",
+        "factory.transaction-operation-adapter/v1",
+      ]),
+    );
+  });
+
+  it("executes the declared create envelope through one bound Authorizer and Store", async () => {
+    const handler = createCommerceOrderCreateHandlerV2_0_1();
+    const calls: string[] = [];
+    const created = await handler.create(
+      { role: "shopper", entityKey: "order", input: { note: "ok" } },
+      {
+        authorizer: {
+          assertCreateAllowed: async (role) => {
+            calls.push(`authorize:${role}`);
+          },
+        },
+        store: {
+          createInitial: async (input) => {
+            calls.push(`create:${input.note}`);
+            return { id: "server-1", status: "cart", version: 0 };
+          },
+        },
+      },
+    );
+
+    expect(calls).toEqual(["authorize:shopper", "create:ok"]);
+    expect(created).toEqual({ id: "server-1", status: "cart", version: 0 });
+    expect(Object.isFrozen(created)).toBe(true);
+  });
+
+  it.each([
+    { role: "shopper", entityKey: "cart", input: {} },
+    { role: "shopper", entityKey: "order", input: { id: "caller-id" } },
+    { role: "shopper", entityKey: "order", input: { status: "draft" } },
+    { role: "shopper", entityKey: "order", input: { version: 0 } },
+    { role: "", entityKey: "order", input: {} },
+  ])(
+    "rejects unsafe creation input before dependencies: %#",
+    async (request) => {
+      const handler = createCommerceOrderCreateHandlerV2_0_1();
+      const calls: string[] = [];
+
+      await expect(
+        handler.create(request, {
+          authorizer: {
+            assertCreateAllowed: async () => {
+              calls.push("authorize");
+            },
+          },
+          store: {
+            createInitial: async () => {
+              calls.push("create");
+              return { id: "server-1", status: "cart", version: 0 };
+            },
+          },
+        }),
+      ).rejects.toThrow();
+
+      expect(calls).toEqual([]);
+    },
+  );
+
+  it("does not persist when authorization is denied", async () => {
+    const handler = createCommerceOrderCreateHandlerV2_0_1();
+    const calls: string[] = [];
+
+    await expect(
+      handler.create(
+        { role: "shopper", entityKey: "order", input: {} },
+        {
+          authorizer: {
+            assertCreateAllowed: async () => {
+              calls.push("authorize");
+              throw new Error("denied");
+            },
+          },
+          store: {
+            createInitial: async () => {
+              calls.push("create");
+              return { id: "server-1", status: "cart", version: 0 };
+            },
+          },
+        },
+      ),
+    ).rejects.toThrow("denied");
+
+    expect(calls).toEqual(["authorize"]);
+  });
+
+  it("parses and prepares the declared 2.0.1 fixture transition", () => {
+    const fixture = JSON.parse(
+      readFileSync(
+        resolve(
+          repositoryRoot,
+          "packages/capabilities/assets/commerce.order/2.0.1/fixtures/default.json",
+        ),
+        "utf8",
+      ),
+    ) as { transition: unknown };
+    const adapter = createCommerceOrderLifecycleOperationAdapterV2_0_1();
+
+    const prepared = adapter.prepare(adapter.parseRequest(fixture.transition));
+
+    expect(prepared.command.aggregate).toEqual({
+      entity: "order",
+      id: "server-1",
+      expectedVersion: 0,
+    });
+    expect(prepared.context).toEqual({
+      orderId: "server-1",
+      transition: "submit",
+    });
+  });
+
   it("registers one Golden lifecycle package with separate create and transition providers", () => {
     const asset = capabilityAssets.find(
       ({ manifest }) =>

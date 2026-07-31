@@ -1,0 +1,217 @@
+import { z } from "zod";
+
+import type { CapabilityAssetV1 } from "../contract.js";
+
+const createRequestSchema = z
+  .object({
+    role: z.string().trim().min(1),
+    entityKey: z.literal("order"),
+    input: z.record(z.string(), z.unknown()),
+  })
+  .strict()
+  .superRefine(({ input }, context) => {
+    for (const key of ["id", "status", "version"] as const) {
+      if (key in input) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Order create input must not declare '${key}'.`,
+          path: ["input", key],
+        });
+      }
+    }
+  });
+
+const transitionRequestSchema = z
+  .object({
+    orderId: z.string().min(1),
+    expectedVersion: z.number().int().nonnegative(),
+    transition: z.enum(["submit", "confirm", "cancel", "fulfill"]),
+    idempotencyKey: z.string().min(1),
+    payloadDigest: z.string().regex(/^sha256:[a-f0-9]+$/),
+  })
+  .strict();
+
+export type CommerceOrderCreateRequestV2_0_1 = z.infer<
+  typeof createRequestSchema
+>;
+export type CommerceOrderCreatedV2_0_1 = Readonly<{
+  readonly id: string;
+  readonly status: string;
+  readonly version: 0;
+}>;
+export type CommerceOrderTransitionRequestV2_0_1 = z.infer<
+  typeof transitionRequestSchema
+>;
+
+export interface CommerceOrderCreateStoreV2_0_1 {
+  createInitial(
+    input: Readonly<Record<string, unknown>>,
+  ): Promise<CommerceOrderCreatedV2_0_1>;
+}
+
+export interface CommerceOrderCreateAuthorizerV2_0_1 {
+  assertCreateAllowed(role: string): Promise<void>;
+}
+
+export function createCommerceOrderCreateHandlerV2_0_1() {
+  return Object.freeze({
+    async create(
+      request: CommerceOrderCreateRequestV2_0_1,
+      dependencies: Readonly<{
+        store: CommerceOrderCreateStoreV2_0_1;
+        authorizer: CommerceOrderCreateAuthorizerV2_0_1;
+      }>,
+    ): Promise<CommerceOrderCreatedV2_0_1> {
+      const parsed = createRequestSchema.parse(request);
+      await dependencies.authorizer.assertCreateAllowed(parsed.role);
+      return Object.freeze(
+        await dependencies.store.createInitial(parsed.input),
+      );
+    },
+  });
+}
+
+export function createCommerceOrderLifecycleOperationAdapterV2_0_1() {
+  return Object.freeze({
+    parseRequest(request: unknown): CommerceOrderTransitionRequestV2_0_1 {
+      return transitionRequestSchema.parse(request);
+    },
+    prepare(request: CommerceOrderTransitionRequestV2_0_1) {
+      return Object.freeze({
+        command: Object.freeze({
+          scope: `order:${request.orderId}`,
+          idempotencyKey: request.idempotencyKey,
+          payloadDigest: request.payloadDigest,
+          aggregate: Object.freeze({
+            entity: "order" as const,
+            id: request.orderId,
+            expectedVersion: request.expectedVersion,
+          }),
+          transition: request.transition,
+        }),
+        context: Object.freeze({
+          orderId: request.orderId,
+          transition: request.transition,
+        }),
+      });
+    },
+    createStore<T>(
+      _context: unknown,
+      dependencies: Readonly<{ operationStore: T }>,
+    ): T {
+      if (!dependencies.operationStore) {
+        throw new Error("Order transaction Store is unavailable.");
+      }
+      return dependencies.operationStore;
+    },
+    present(
+      result: Readonly<{
+        kind: "completed" | "in-progress";
+        receiptId: string;
+        replayed?: boolean;
+      }>,
+      context: Readonly<{ orderId: string; transition: string }>,
+    ) {
+      return Object.freeze({
+        receiptId: result.receiptId,
+        replayed:
+          result.kind === "completed" ? result.replayed === true : false,
+        orderId: context.orderId,
+        transition: context.transition,
+      });
+    },
+  });
+}
+
+export const orderAssetV2_0_1: CapabilityAssetV1 = {
+  manifest: {
+    apiVersion: "factory.capability/v1",
+    bindingContract: "factory.capability-binding/v1",
+    key: "commerce.order",
+    version: "2.0.1",
+    category: "commerce",
+    name: "Generic order lifecycle",
+    description:
+      "Creates authorized persisted orders and prepares bounded order transitions.",
+    packageRoot: "packages/capabilities/assets/commerce.order/2.0.1",
+    manifestDigest:
+      "sha256:fe33711ee9848df599a018a347356abee6cc6eecee6a7607bb1394efdb7d394d",
+    lifecycle: "golden",
+    profiles: ["simple-ecommerce", "retail-counter", "grocery-pickup"],
+    effects: ["order.create", "order.transition"],
+    inputSchema: [
+      { key: "orderEntity", type: "domain.entity", required: true },
+      { key: "orderFlow", type: "flow.flow", required: true },
+      { key: "customerRole", type: "policy.role", required: true },
+    ],
+    outputSlots: ["api.runtime", "test.journey"],
+    runtimeHandlers: ["order"],
+    templates: [],
+    parameters: [
+      { key: "orderEntity", type: "graph-symbol", required: true },
+      { key: "orderFlow", type: "graph-symbol", required: true },
+      { key: "customerRole", type: "graph-symbol", required: true },
+    ],
+    executableContributions: [
+      {
+        id: "commerce-order-create-handler",
+        outputSlot: "api.runtime",
+        namespace: "packages/commerce.order/api/runtime/",
+        source: "templates/api/commerce-order-create-handler.ts.tpl",
+        target: "api/src/capabilities/commerce-order-create-handler.ts",
+        parameterRefs: ["orderEntity", "orderFlow", "customerRole"],
+        targetRuntimeInterfaceVersion: "factory.order-create-handler/v1",
+        orderingRequirements: [],
+        mergeProtocol: "replace-file",
+        digest:
+          "sha256:96eeab9ee43808d562906a4ea914da565ea7a7273ad2780c849696c981ceacaf",
+      },
+      {
+        id: "commerce-order-transaction-operation-adapter",
+        outputSlot: "api.runtime",
+        namespace: "packages/commerce.order/api/runtime/",
+        source:
+          "templates/api/commerce-order-transaction-operation-adapter.ts.tpl",
+        target:
+          "api/src/capabilities/commerce-order-transaction-operation-adapter.ts",
+        parameterRefs: ["orderEntity", "orderFlow", "customerRole"],
+        targetRuntimeInterfaceVersion:
+          "factory.transaction-operation-adapter/v1",
+        orderingRequirements: ["commerce-order-create-handler"],
+        mergeProtocol: "replace-file",
+        digest:
+          "sha256:1b40b8d9bd5d65be7b2299c8f3a8550679daf1da8902fb764b98f8bf22f55474",
+      },
+      {
+        id: "commerce-order-lifecycle-journey",
+        outputSlot: "test.journey",
+        namespace: "packages/commerce.order/test/journeys/",
+        source: "templates/test/commerce-order-lifecycle.journey.ts.tpl",
+        target: "api/test/journeys/commerce-order-lifecycle.journey.ts",
+        parameterRefs: ["orderEntity", "orderFlow", "customerRole"],
+        targetRuntimeInterfaceVersion: "factory.journey/v1",
+        orderingRequirements: [
+          "commerce-order-create-handler",
+          "commerce-order-transaction-operation-adapter",
+        ],
+        mergeProtocol: "replace-file",
+        digest:
+          "sha256:8810b3b315f1134c029d5a589fcecfe162a05755a010cd3f528a65d62e637c57",
+      },
+    ],
+    provides: [
+      { interfaceKey: "commerce.order-event", version: "v1" },
+      { interfaceKey: "factory.order-create-handler", version: "v1" },
+      { interfaceKey: "factory.transaction-operation-adapter", version: "v1" },
+    ],
+    verification: {
+      fixture: "fixtures/default.json",
+      fixtureDigest:
+        "sha256:f6c1a5b1480543121e3b604d8ddb7ca596084da0c8216cf7e0c039e99e5bc1ee",
+      contractTest: "tests/contract.json",
+      contractTestDigest:
+        "sha256:201c4d2105549a518d748fadda558bb07aec6596893a17b2129527aeb8ac86b7",
+      status: "verified",
+    },
+  },
+};
