@@ -5,10 +5,10 @@ Updated: 2026-08-01
 ## Current milestone
 
 Typed Capability Binding Validation is the current hardening milestone.
-ADR-0006 is `Accepted` under Factory controller authority; its approved design,
-implementation plan, and six-task ledger now govern the work. All six tasks are
-governed by the accepted dependency chain. Task 1, **pure typed Graph symbol
-index**, is `accepted` after bounded repair round 1. Original implementation
+ADRs 0006 and 0007 are `Accepted` under Factory controller authority; the
+amended design, implementation plan, and seven-task ledger now govern the work.
+All seven tasks follow the accepted dependency chain. Task 1, **pure typed Graph
+symbol index**, is `accepted` after bounded repair round 1. Original implementation
 commit
 `86d5a00f26d5f331764de0e8bf7694e657cd2514` passed independent Task 1 review
 and behavioral QA with no P0/P1/P2, but release review then found one
@@ -24,14 +24,18 @@ recorded below. Independent review of implementation commit
 `4458bfc7c8ffcaef29dfebb755d8399e12000198` found two P1s, so Task 2 does not
 advance. Repair round 1 commit
 `a7331df0ac6a6f54f82bf61a060607777bc06dc0` stays inside the existing path
-boundary but has not passed independent re-review. A separate Graph persistence
-ownership gap requires an architecture amendment before Task 4. Tasks 3 through
-5 remain `planned` and serialized on acceptance of the preceding task. Task 6
-remains `planned` and begins only after Tasks 1 through 5 are all `accepted`.
+boundary and passed independent repair re-review with no P0/P1/P2. Task 2 stays
+`implementing` until this architecture amendment is finalized and the PM
+records the separate state transition. Accepted ADR-0007 assigns owner-aware
+Draft Graph serialization to new Task 3 without expanding Task 2. Task 3
+remains `planned` behind Task 2; physical assets are now Task 4 and remain
+blocked behind Task 3. Tasks 5 and 6 are serialized on the preceding accepted
+task. Task 7 remains `planned` and begins only after Tasks 1 through 6 are all
+`accepted`.
 
 Commercial Capability Foundation Task 2 remains `implementing` and escalated
 after its five permitted repair rounds. It is blocked on accepted Typed
-Capability Binding Validation Task 6 and later PM reconciliation; it is not
+Capability Binding Validation Task 7 and later PM reconciliation; it is not
 accepted. Commercial Foundation Tasks 3 and 4 remain `planned` and blocked.
 
 The Application Graph remains the source of truth. External intake artifacts
@@ -56,6 +60,20 @@ ADR-0006 fixes the typed-binding architecture under controller authority:
   `commerce.inventory@2.0.0`.
 - No validator may dispatch on Profile name, package version, field name,
   source path, compiler target, or output path.
+
+ADR-0007 fixes serialized owner-aware selection ownership under controller
+authority:
+
+- Draft Graph bindings add the owner-aware
+  `{ graphSymbol: "graph.domain.<entity>", fieldKey }` value without removing
+  existing number, boolean, or historic `{ graphSymbol }` values.
+- Graph parsing and validation prove exact entity/field existence only;
+  Capabilities retains scalar, required, unique, and manifest-kind admission.
+- Historic Draft JSON stays readable without owner inference or hash rewrite.
+  Published Graphs remain selection-free and immutable locks retain bindings
+  and digests.
+- New Task 3 owns only the Graph schema, parser/validator, hashing regressions,
+  browser-entry regressions, and exact three Graph paths recorded in the ledger.
 
 The approved design and plan are recorded at
 `docs/superpowers/specs/2026-08-01-typed-capability-binding-validation-design.md`
@@ -132,8 +150,9 @@ Typed Binding Task 1 implementation, review, and QA evidence is:
 - Fresh Node `v22.11.0` acceptance verification passed 32/32 Graph tests,
   Graph typecheck, lint, build, and the bounded repair diff check. The PM
   records Task 1 `reviewed -> accepted`.
-- Task 1 acceptance is limited to the pure Graph index. Typed manifests, safe
-  assets, and Draft/Publish/compiler enforcement remain Tasks 2 through 5; the
+- Task 1 acceptance is limited to the pure Graph index. Typed manifests,
+  serialized selections, safe assets, and Draft/Publish/compiler enforcement
+  remain Tasks 2 through 6; the
   parent Foundation defect remains open.
 
 Typed Binding Task 2 implementation and failed-review evidence is:
@@ -151,15 +170,21 @@ Typed Binding Task 2 implementation and failed-review evidence is:
 - Repair implementation commit
   `a7331df0ac6a6f54f82bf61a060607777bc06dc0` changes only
   `packages/capabilities/src/composition.ts` and
-  `packages/capabilities/test/typed-binding-contract.test.ts`. It is not yet
-  independent re-review evidence and does not advance Task 2.
+  `packages/capabilities/test/typed-binding-contract.test.ts`.
+- Independent repair re-review of
+  `4458bfc7c8ffcaef29dfebb755d8399e12000198..a7331df0ac6a6f54f82bf61a060607777bc06dc0`
+  returned PASS with no P0/P1/P2. It confirmed exact strict-key allowlists,
+  duplicate-`fieldTypes` rejection, preserved specific non-field rejection, and
+  the exact two-path repair diff.
+- Task 2 remains `implementing` until this amendment is committed and the PM
+  records a separate `implementing -> ready_for_qa` transition.
 - P1 2: `fieldKey` can exist in the Capabilities binding type but cannot persist
   through the strict `ApplicationGraphV1` composition-binding schema, which
-  accepts only `{ graphSymbol }`. No later planned task owns the required Graph
-  schema, browser, parser/serializer, and regression-test paths.
-- The second finding is an architecture/plan ownership gap. No Graph edit is
-  authorized by this update; an accepted ADR/design/plan/ledger amendment is
-  required before Task 4 can start.
+  accepts only `{ graphSymbol }`.
+- Accepted ADR-0007 and the synchronized design/plan/ledger amendment route the
+  second finding to new Task 3. Task 2 remains inside its four Capabilities
+  paths, Task 3 remains `planned` until Task 2 is accepted, and this update
+  authorizes no Graph implementation.
 
 Commercial Capability Foundation Task 1 is accepted and frozen. Its verified
 `1.0.0` identities are `core.identity-context`, `core.location-context`,
@@ -303,19 +328,24 @@ On Node `v22.11.0`, it records:
   `packages/capabilities/test/composition-contract.test.ts`, and
   `packages/capabilities/test/typed-binding-contract.test.ts`.
 - Repair round 1 commit `a7331df0ac6a6f54f82bf61a060607777bc06dc0`
-  is present inside two of the four allowed paths and awaits independent task
-  re-review.
+  is present inside two of the four allowed paths and passed independent task
+  re-review with no P0/P1/P2. The post-amendment PM state transition remains
+  pending.
 - Task 2 may not change physical package roots or registrations, profile
   recipes, public Draft composition, Publish, compiler, Workbench, lifecycle,
   historical bindings, or introduce Profile/package/version/field-name
   dispatch.
-- Typed Binding Tasks 3, 4, and 5 remain serially blocked on acceptance of
-  their preceding tasks. Task 6 remains `planned` until Tasks 1 through 5 are
-  all `accepted`.
+- Typed Binding Task 3 remains `planned` behind Task 2 and owns exactly:
+  `packages/graph/src/model.ts`,
+  `packages/graph/test/application-graph.test.ts`, and
+  `packages/graph/test/browser-entry.test.ts`.
+- Physical assets are now Task 4 and remain blocked until Task 3 is accepted.
+  Tasks 5 and 6 remain serially blocked on their preceding accepted task. Task
+  7 remains `planned` until Tasks 1 through 6 are all `accepted`.
 - Commercial Foundation Task 2 remains `implementing` and escalated. No sixth
   repair is authorized; its previous exact five-path implementation boundary
   remains historical release evidence only. It cannot resume acceptance until
-  Typed Binding Task 6 is accepted and the PM reconciles the parent ledger.
+  Typed Binding Task 7 is accepted and the PM reconciles the parent ledger.
 - This PM transition changes only the typed-binding ledger and project status.
   It modifies no implementation code, source manifest, physical package,
   shared contract, or existing Commercial Foundation ledger.
@@ -334,13 +364,11 @@ On Node `v22.11.0`, it records:
   metadata. Task 2 is back in `implementing` and escalated; neither downstream
   task is dispatched by this update.
 - Typed Binding Task 2 is active only within its four exact Capabilities paths.
-  Tasks 3 through 5 remain `planned` and cannot overlap or start before the
-  preceding task is `accepted`.
-- Task 4 has an additional architecture blocker: no current task owns Graph
-  persistence for `{ graphSymbol, fieldKey }`. An accepted architecture
-  amendment must assign Graph schema/browser/parser/serializer/test ownership
-  before Task 4 starts.
-- Typed Binding Task 6 cannot start before Tasks 1 through 5 are all
+  Task 3 remains `planned` and blocked on Task 2 acceptance. Tasks 4 through 6
+  cannot overlap or start before the preceding task is `accepted`.
+- Physical asset Task 4 is additionally blocked on accepted Task 3 serialized
+  Graph round-trip, structural validation, hash, and browser evidence.
+- Typed Binding Task 7 cannot start before Tasks 1 through 6 are all
   `accepted`. Its acceptance does not automatically accept Commercial
   Foundation Task 2; the PM must reconcile that parent state separately.
 - No sixth Commercial Foundation Task 2 repair is authorized. ADR-0006 governs
@@ -368,18 +396,19 @@ On Node `v22.11.0`, it records:
   name. This is a downstream risk, not authority to start Task 3.
 - The flattened graph-symbol namespace allows an existing field symbol from the
   wrong entity or semantic type to satisfy a Foundation binding. Until Typed
-  Binding Tasks 1 through 6 are accepted, immutable locks can direct location
+  Binding Tasks 1 through 7 are accepted, immutable locks can direct location
   or inventory behavior at unrelated data, including price fields.
 - Task 1 provides the pure typed index but does not define typed manifest
-  requirements, publish safe assets, or enforce binding semantics at Draft,
-  Publish, or compiler admission. Tasks 2 through 5 are still required before
-  the parent defect can be closed.
+  requirements, serialize owner-aware selections, publish safe assets, or
+  enforce binding semantics at Draft, Publish, or compiler admission. Tasks 2
+  through 6 are still required before recipe migration and parent closure.
 - Task 2's strict manifest validator is not fail-closed against unexpected own
   keys or duplicate `fieldTypes`; repair round 1 must close both cases.
 - Owner-aware field bindings cannot currently survive the Application Graph
-  schema. Without an accepted ownership amendment before Task 4, later Draft,
-  Publish, and compiler validation cannot consume the required immutable
-  `{ graphSymbol, fieldKey }` value.
+  schema. ADR-0007 assigns the repair to Task 3, but the risk remains until that
+  task passes independent review, QA, release review, and fresh verification.
+  No downstream Draft, Publish, or compiler gate may assume the serialized
+  `{ graphSymbol, fieldKey }` value exists before then.
 - Repair round 1 rejects duplicate navigation-entry and flow IDs and makes
   `indexBy` fail closed. Independent re-QA, release review, and fresh
   verification passed; Task 1 is accepted.
@@ -394,9 +423,9 @@ On Node `v22.11.0`, it records:
 
 ## Next slice
 
-Run independent Task 2 repair-round re-review of
-`4458bfc7c8ffcaef29dfebb755d8399e12000198..a7331df0ac6a6f54f82bf61a060607777bc06dc0`
-inside the unchanged four-path boundary. Require a separate accepted
-architecture amendment for Graph field-binding persistence before Task 4.
-Leave Typed Binding Tasks 3 through 6 `planned`. Keep Commercial Foundation
-Task 2 `implementing` and escalated and Tasks 3 and 4 `planned` and blocked.
+After this amendment commit, record the narrow Task 2
+`implementing -> ready_for_qa` transition and dispatch independent behavioral
+QA. Keep new serialized-Graph Task 3 `planned` behind Task 2 and physical asset
+Task 4 blocked behind Task 3. Leave Typed Binding Tasks 3 through 7 `planned`.
+Keep Commercial Foundation Task 2 `implementing` and escalated and Tasks 3 and
+4 `planned` and blocked.

@@ -9,7 +9,9 @@ Graph symbol kind, entity owner, and scalar field semantics required by its
 immutable manifest before it can enter a Draft, Published revision, or
 compiler.
 
-**Architecture:** `@factory/graph` exposes a pure typed Graph symbol index.
+**Architecture:** `@factory/graph` exposes a pure typed Graph symbol index and
+serializes owner-aware field selections in Draft Graphs. It validates exact
+owner/field existence without interpreting capability manifests.
 `@factory/capabilities` adds a digest-covered manifest binding contract and
 uses it to validate resolved selections against the index. New safe package
 versions replace only current selections; immutable historic packages stay
@@ -43,8 +45,9 @@ Vitest 2.1.9, Next.js, NestJS, Prisma.
 
 | Area                                            | Responsibility                                                                 |
 | ----------------------------------------------- | ------------------------------------------------------------------------------ |
-| `packages/graph/src/model.ts`                   | Pure typed symbol index and Graph reference parsing.                           |
-| `packages/graph/test/application-graph.test.ts` | Namespace and owner-aware Graph index tests.                                   |
+| `packages/graph/src/model.ts`                   | Pure typed index plus serialized owner-aware selection schema and validation.  |
+| `packages/graph/test/application-graph.test.ts` | Namespace, owner, round-trip, structural-validation, and hash regressions.     |
+| `packages/graph/test/browser-entry.test.ts`     | Browser-safe owner-aware schema, parser, validator, and export regressions.    |
 | `packages/capabilities/src/assets/contract.ts`  | `factory.capability-binding/v1` typed manifest declarations.                   |
 | `packages/capabilities/src/composition.ts`      | Binding-shape and manifest-schema consistency checks.                          |
 | `packages/capabilities/src/index.ts`            | Manifest-aware generic Draft composition validation and current recipes.       |
@@ -193,7 +196,118 @@ git add packages/capabilities/src/assets/contract.ts packages/capabilities/src/c
 git commit -m "feat: define typed capability bindings"
 ```
 
-## Task 3: Publish safe versioned physical capability assets
+## Task 3: Serialize owner-aware composition selections in Application Graph
+
+**Files:**
+
+- Modify: `packages/graph/src/model.ts`
+- Modify: `packages/graph/test/application-graph.test.ts`
+- Modify: `packages/graph/test/browser-entry.test.ts`
+
+**Consumes:** accepted Task 1 typed Graph symbol index, accepted Task 2
+`GraphFieldBindingV1` shape, and ADR-0007's
+`SerializedCompositionBindingV1` contract.
+
+**Produces:** additive Draft Graph serialization for
+`{ graphSymbol: "graph.domain.<entity-key>", fieldKey }`, exact structural
+owner/field validation, deterministic hash coverage, historic hash stability,
+and browser-safe parsing and validation.
+
+- [ ] **Step 1: Write failing serialized-Graph tests**
+
+Extend the existing `expenseGraph` and `draftGraphWithBindings` fixtures with
+focused cases that:
+
+```ts
+it("round-trips an owner-aware field binding through the Application Graph", () => {
+  const selected = draftGraphWithBindings({
+    amountField: {
+      graphSymbol: "graph.domain.expense",
+      fieldKey: "amount",
+    },
+  });
+
+  expect(parseApplicationGraph(selected)).toEqual(selected);
+});
+
+it("includes fieldKey in the Application Graph hash", () => {
+  const amount = draftGraphWithBindings({
+    valueField: { graphSymbol: "graph.domain.expense", fieldKey: "amount" },
+  });
+  const status = draftGraphWithBindings({
+    valueField: { graphSymbol: "graph.domain.expense", fieldKey: "status" },
+  });
+
+  expect(hashApplicationGraph(amount)).not.toBe(hashApplicationGraph(status));
+});
+```
+
+Add table-driven rejection evidence for a field object using
+`graph.page.expense-list`, a missing `graph.domain.missing` owner, and an
+existing owner with a missing field. The page case must return a schema issue;
+the missing owner must return
+`integration.composition_binding.symbol_missing`; the wrong-owner/missing-field
+cases must return `integration.composition_binding.field_missing` at the exact
+binding `fieldKey` path. Add two entities with the same field key and prove the
+serialized owner selects only its own field. Freeze a pre-change historic
+`draftGraphWithBindings({ entityKey: { graphSymbol: "graph.domain.expense" } })`
+fixture and assert its digest remains
+`sha256:2d5d1c7c63f819806f39dc99a124d84fb9112f66386f7e39c060e449e6db4648`.
+In `browser-entry.test.ts`, import `SerializedCompositionBindingV1`,
+`parseApplicationGraph`, and `validateApplicationGraph` from `../src/browser.js`
+and run the same owner-aware round-trip and structural rejection through the
+browser-safe entry.
+
+- [ ] **Step 2: Observe RED**
+
+Run:
+
+```text
+pnpm --filter @factory/graph test -- --run test/application-graph.test.ts test/browser-entry.test.ts
+```
+
+Expected: FAIL because the strict composition-binding object rejects
+`fieldKey`, no structural owner/field issue exists, and the browser entry has
+no owner-aware serialized type behavior to exercise.
+
+- [ ] **Step 3: Implement the additive serialized contract**
+
+Export `SerializedCompositionBindingV1` from `model.ts` and extend the existing
+closed binding-value schema with a strict object containing a
+`graph.domain.<entity-key>` symbol and `fieldKey`. Preserve number, boolean, and
+historic strict `{ graphSymbol }` values exactly. During semantic validation,
+use `createGraphSymbolIndex(graph)` to resolve the entity and then its field;
+never scan a global field collection or infer an owner. The Graph layer checks
+only structural existence. Capabilities retains scalar, required, unique, and
+manifest input-kind validation. Canonical Graph hashing must naturally include
+`fieldKey` without changing the hash of historic JSON.
+
+- [ ] **Step 4: Verify Graph serialization and browser behavior**
+
+Run:
+
+```text
+pnpm --filter @factory/graph test -- --run test/application-graph.test.ts test/browser-entry.test.ts
+pnpm --filter @factory/graph test -- --run
+pnpm --filter @factory/graph typecheck
+pnpm --filter @factory/graph lint
+pnpm --filter @factory/graph build
+```
+
+Acceptance requires owner-aware round-trip; wrong-model, missing-owner,
+wrong-owner, and missing-field rejection; duplicate field-key safety by owner;
+`fieldKey`-sensitive hashes; frozen historic hash preservation; and browser-safe
+exports with no Node-only import in `model.ts`, `browser.ts`, or built
+`dist/browser.js`.
+
+- [ ] **Step 5: Commit**
+
+```text
+git add packages/graph/src/model.ts packages/graph/test/application-graph.test.ts packages/graph/test/browser-entry.test.ts
+git commit -m "feat: serialize owner-aware graph bindings"
+```
+
+## Task 4: Publish safe versioned physical capability assets
 
 **Files:**
 
@@ -208,7 +322,8 @@ git commit -m "feat: define typed capability bindings"
 - Modify: `packages/capabilities/test/capability-registry.test.ts`
 - Modify: `packages/capabilities/test/commercial-capability-assets.test.ts`
 
-**Consumes:** Task 2 typed manifest contract.
+**Consumes:** Task 2 typed manifest contract and accepted Task 3 serialized
+owner-aware Graph contract.
 
 **Produces:** Verified safe versions while preserving every existing physical
 package root and digest.
@@ -272,7 +387,7 @@ git add packages/capabilities/src/assets packages/capabilities/assets packages/c
 git commit -m "feat: publish typed commercial capability assets"
 ```
 
-## Task 4: Enforce manifest-aware binding validation at public Draft composition
+## Task 5: Enforce manifest-aware binding validation at public Draft composition
 
 **Files:**
 
@@ -281,7 +396,7 @@ git commit -m "feat: publish typed commercial capability assets"
 - Modify: `packages/capabilities/test/composition-contract.test.ts`
 - Create: `packages/capabilities/test/typed-binding-composition.test.ts`
 
-**Consumes:** Tasks 1-3.
+**Consumes:** Tasks 1-4.
 
 **Produces:** One generic validator used by public `composeCapabilityDraft`.
 
@@ -341,7 +456,7 @@ git add packages/capabilities/src/index.ts packages/capabilities/test
 git commit -m "feat: validate typed bindings at draft composition"
 ```
 
-## Task 5: Gate Publish and compiler admission with the immutable Graph
+## Task 6: Gate Publish and compiler admission with the immutable Graph
 
 **Files:**
 
@@ -352,7 +467,8 @@ git commit -m "feat: validate typed bindings at draft composition"
 - Modify: `packages/compiler/test/composition-compilation.test.ts`
 - Create: `packages/compiler/test/typed-binding-compilation.test.ts`
 
-**Consumes:** Task 4 generic validation and Task 3 safe assets.
+**Consumes:** Task 5 generic validation, Task 4 safe assets, and Task 3
+serialized Graph selections.
 
 **Produces:** Graph-aware Publish and compiler gates that fail before storage or
 artifact output.
@@ -412,7 +528,7 @@ git add packages/capabilities/src/node.ts apps/control-plane packages/compiler
 git commit -m "feat: gate publish and compiler on typed bindings"
 ```
 
-## Task 6: Migrate current recipes and resume Commercial Foundation acceptance
+## Task 7: Migrate current recipes and resume Commercial Foundation acceptance
 
 **Files:**
 
@@ -425,7 +541,7 @@ git commit -m "feat: gate publish and compiler on typed bindings"
 - Modify: `docs/audits/restaurant-ordering-requirements-audit.md`
 - Modify: `docs/project-status.md`
 
-**Consumes:** Tasks 1-5.
+**Consumes:** Tasks 1-6.
 
 **Produces:** Restaurant and Ecommerce current recipes selecting safe locks,
 plus evidence that reopens and completes Commercial Foundation Task 2 gates.
@@ -490,12 +606,13 @@ git commit -m "test: accept typed capability bindings"
 
 ## Plan self-review
 
-- **Coverage:** Tasks 1-2 add generic type semantics. Task 3 makes them
-  immutable Golden assets. Tasks 4-5 enforce them at Draft, Publish, and
-  compiler boundaries. Task 6 migrates Profiles and records acceptance
+- **Coverage:** Tasks 1-2 add generic type semantics. Task 3 makes owner-aware
+  selections persistable in the Draft Graph. Task 4 makes the manifest
+  contracts immutable Golden assets. Tasks 5-6 enforce them at Draft, Publish,
+  and compiler boundaries. Task 7 migrates Profiles and records acceptance
   evidence.
-- **Dependencies:** Tasks 1-5 are serialized shared-contract work. Task 6
-  begins only after Task 5 acceptance. No existing Commercial Foundation task
-  resumes until Task 6 passes independent QA and release review.
+- **Dependencies:** Tasks 1-6 are serialized shared-contract work. Task 7
+  begins only after Task 6 acceptance. No existing Commercial Foundation task
+  resumes until Task 7 passes independent QA and release review.
 - **Scope:** No restaurant-only application behaviour, external Provider,
   source import, payments, deployment, or UI redesign is smuggled in.

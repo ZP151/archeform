@@ -3,7 +3,8 @@
 Updated: 2026-08-01
 
 ADR:
-`docs/adr/adr-0006-typed-capability-binding-validation.md`
+`docs/adr/adr-0006-typed-capability-binding-validation.md` and
+`docs/adr/adr-0007-serialized-owner-aware-composition-selections.md`
 
 Design contract:
 `docs/superpowers/specs/2026-08-01-typed-capability-binding-validation-design.md`
@@ -34,6 +35,14 @@ architecture decisions for this hardening project:
 - No validator may dispatch on Profile name, package version, field name,
   source path, compiler target, or output path.
 
+ADR-0007 is also `Accepted`. It assigns an additive owner-aware Draft Graph
+selection contract to a new serialized-Graph task between the Capability
+Binding Contract and physical asset publication. Graph validation owns exact
+entity/field existence only; Capabilities retains manifest semantics. Historic
+`{ graphSymbol }` Draft JSON remains readable without inference or rewrite,
+Published Graphs remain selection-free, and immutable locks retain bindings and
+digests.
+
 This ledger and the synchronized project status are governance documents only.
 They change no product code, source manifest, physical package, shared contract,
 Published revision, immutable lock, compiler artifact, or lifecycle behavior.
@@ -63,10 +72,10 @@ not acceptance.
 
 ## Sequencing
 
-- Tasks 1 through 5 are serialized shared-contract work. Task 2 starts only
-  after Task 1 is `accepted`; Task 3 after Task 2; Task 4 after Task 3; and Task
-  5 after Task 4.
-- Task 6 starts only after Tasks 1 through 5 are all `accepted`.
+- Tasks 1 through 6 are serialized shared-contract work. Task 2 starts only
+  after Task 1 is `accepted`; Task 3 after Task 2; Task 4 after Task 3; Task 5
+  after Task 4; and Task 6 after Task 5.
+- Task 7 starts only after Tasks 1 through 6 are all `accepted`.
 - Task 1 has no open dependency. The PM assigned the bounded writer Typed Graph
   Index Integration and recorded `planned -> implementing` under the exact
   four Graph paths below.
@@ -87,29 +96,32 @@ not acceptance.
 - Task 2 implementation commit
   `4458bfc7c8ffcaef29dfebb755d8399e12000198` remained inside those paths, but
   independent task review found two P1s. Task 2 remains `implementing`; repair
-  round 1 is authorized only for the in-path strict-validator defect. The
-  separate Graph persistence/ownership gap requires an architecture amendment
-  before Task 4. Repair commit
+  round 1 is authorized only for the in-path strict-validator defect. Accepted
+  ADR-0007 assigns the separate Graph persistence finding to new Task 3; it
+  does not expand Task 2. Repair commit
   `a7331df0ac6a6f54f82bf61a060607777bc06dc0` is present inside the exact
-  boundary but has not passed independent re-review, so state does not advance.
-- Tasks 3 through 6 remain `planned`; none is dispatched by this transition.
+  boundary and passed independent repair re-review with no P0/P1/P2. Task 2
+  remains `implementing` until this architecture amendment is finalized and the
+  PM performs a separate state transition.
+- Tasks 3 through 7 remain `planned`; none is dispatched by this transition.
 - No frontend/backend parallel implementation is permitted in this project.
 - Commercial Capability Foundation Task 2 remains `implementing` and
-  escalated. It cannot resume acceptance until this project's Task 6 is
+  escalated. It cannot resume acceptance until this project's Task 7 is
   accepted and its evidence is reconciled.
 - Commercial Capability Foundation Tasks 3 and 4 remain `planned` and blocked
   on accepted Commercial Foundation Task 2.
 
 ## Project state
 
-| Task                                           | State          | Specialization | Contract owner                               | Contract status                                             |
-| ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | ----------------------------------------------------------- |
-| 1. Pure typed Graph symbol index               | `accepted`     | `integration`  | Application Graph Type System                | Release review and fresh verification passed.               |
-| 2. Typed manifest and binding contracts        | `implementing` | `integration`  | Capability Binding Contract                  | Two review P1s open; repair round 1 and amendment required. |
-| 3. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 2 manifest contract.               |
-| 4. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-3 and architecture amendment.   |
-| 5. Graph-aware Publish and compiler admission  | `planned`      | `backend`      | Published Graph and Compiler Admission       | Blocked on accepted Tasks 1-4.                              |
-| 6. Current recipe migration and acceptance     | `planned`      | `integration`  | Typed Binding Migration and Release Evidence | Blocked on accepted Tasks 1-5.                              |
+| Task                                           | State          | Specialization | Contract owner                               | Contract status                                 |
+| ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | ----------------------------------------------- |
+| 1. Pure typed Graph symbol index               | `accepted`     | `integration`  | Application Graph Type System                | Release review and fresh verification passed.   |
+| 2. Typed manifest and binding contracts        | `implementing` | `integration`  | Capability Binding Contract                  | Re-review passed; transition follows amendment. |
+| 3. Serialized owner-aware Graph selections     | `planned`      | `integration`  | Application Graph Serialization              | Blocked on accepted Task 2 binding contract.    |
+| 4. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 3 serialized contract. |
+| 5. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-4.                  |
+| 6. Graph-aware Publish and compiler admission  | `planned`      | `backend`      | Published Graph and Compiler Admission       | Blocked on accepted Tasks 1-5.                  |
+| 7. Current recipe migration and acceptance     | `planned`      | `integration`  | Typed Binding Migration and Release Evidence | Blocked on accepted Tasks 1-6.                  |
 
 ## Task 1: Add a pure typed Graph symbol index
 
@@ -191,9 +203,10 @@ not acceptance.
   `ready_for_qa -> reviewed`; release review and fresh acceptance verification
   remain required.
 - Limitation: Task 1 supplies only the pure typed Graph index. Tasks 2 through
-  5 remain required to define typed manifests and safe assets and enforce
-  semantic bindings at Draft, Publish, and compiler admission. Task 1 alone
-  does not close the parent Foundation defect.
+  6 remain required to define typed manifests, serialize owner-aware
+  selections, publish safe assets, and enforce semantic bindings at Draft,
+  Publish, and compiler admission. Task 1 alone does not close the parent
+  Foundation defect.
 
 ### Release finding and repair round 1
 
@@ -293,10 +306,10 @@ not acceptance.
   within Task 1's bounded contract.
 - The PM records `reviewed -> accepted`. Task 1 is frozen unless a new verified
   finding or contract change returns it through PM reconciliation.
-- Acceptance is limited to the pure typed Graph index. Tasks 2 through 5 remain
-  required to define typed manifests and safe assets and enforce semantic
-  bindings at Draft, Publish, and compiler admission. Task 1 acceptance does
-  not close the parent Foundation defect.
+- Acceptance is limited to the pure typed Graph index. Tasks 2 through 6 remain
+  required to define typed manifests, serialize owner-aware selections, publish
+  safe assets, and enforce semantic bindings at Draft, Publish, and compiler
+  admission. Task 1 acceptance does not close the parent Foundation defect.
 
 ### Non-goals
 
@@ -386,22 +399,27 @@ not acceptance.
   `a7331df0ac6a6f54f82bf61a060607777bc06dc0`
   (`fix: close typed binding schemas`) is a direct child of the reviewed
   implementation and changes only `packages/capabilities/src/composition.ts`
-  and `packages/capabilities/test/typed-binding-contract.test.ts`. It remains
-  unreviewed evidence and does not advance Task 2 from `implementing`.
+  and `packages/capabilities/test/typed-binding-contract.test.ts`.
+- Independent repair re-review of
+  `4458bfc7c8ffcaef29dfebb755d8399e12000198..a7331df0ac6a6f54f82bf61a060607777bc06dc0`
+  returned PASS with no P0/P1/P2. It confirmed exact allowlists for field and
+  non-field inputs, duplicate-`fieldTypes` rejection, preserved rejection of
+  field constraints on non-field inputs, and the exact two-path repair diff.
+- Task 2 remains `implementing` while this ADR-0007 amendment is finalized. The
+  re-review does not itself change task state; the PM must record a separate
+  `implementing -> ready_for_qa` transition before behavioral QA.
 - **P1 2 -- Graph persistence has no owner:** Task 2 can create a binding value
   with `fieldKey`, but the strict `ApplicationGraphV1` composition-binding
   schema accepts only `{ graphSymbol }`. A field binding therefore cannot
   survive Graph parse/serialization as the owner-aware object required by the
   accepted design.
-- No current Task 2-6 exact-path boundary owns the required Application Graph
-  schema, browser entry, parser/serializer, and regression-test changes. This
-  is a plan/contract ownership gap, not authority to edit Graph code under Task 2.
-- Before Task 4 can start, an architecture amendment must reconcile ADR/design,
-  implementation plan, and project ledger ownership for the Graph field-binding
-  shape and its browser/parser/serialization evidence. Until that amendment is
-  accepted, Task 4 has an explicit architecture blocker.
-- This PM update changes no contract and authorizes no Graph-path
-  implementation.
+- Accepted ADR-0007 and the synchronized design/plan amendment reconcile that
+  ownership gap by inserting Task 3 for the Graph schema, parser/validator,
+  hashing regressions, browser-entry regressions, and exact three-path evidence.
+- Task 2 remains inside its four Capabilities paths and `implementing` repair
+  round 1 pending the separate post-amendment PM transition. Task 3 remains
+  `planned` until Task 2 is `accepted`; no Graph implementation is authorized
+  by this PM amendment.
 
 ### Blocking non-goals
 
@@ -422,14 +440,68 @@ not acceptance.
 - Contract tests, Capabilities typecheck, task review, QA, release review, and
   fresh verification pass before `accepted`.
 
-## Task 3: Publish safe versioned physical capability assets
+## Task 3: Serialize owner-aware composition selections in Application Graph
+
+- **State:** `planned`
+- **Specialization:** `integration`
+- **Contract owner:** Application Graph Serialization
+- **Contract artifact:** ADR-0007 DEC-001 through DEC-005 and the design's
+  serialized Draft Graph contract.
+- **Dependencies:** Tasks 1 and 2 `accepted`. Task 1 is accepted; Task 2 is
+  still `implementing` repair round 1.
+- **Produces:** additive `SerializedCompositionBindingV1` support for exact
+  owner-aware field objects, structural owner/field validation, deterministic
+  Graph-hash coverage, historic hash stability, and browser-safe behavior.
+
+### Exact allowed paths
+
+- `packages/graph/src/model.ts`
+- `packages/graph/test/application-graph.test.ts`
+- `packages/graph/test/browser-entry.test.ts`
+
+### Required RED and implementation boundary
+
+- Begin with
+  `pnpm --filter @factory/graph test -- --run test/application-graph.test.ts test/browser-entry.test.ts`.
+- Expected RED: the strict composition binding rejects `fieldKey`, semantic
+  validation cannot prove the exact owner/field pair, and the browser entry has
+  no owner-aware serialized behavior to exercise.
+- GREEN adds the strict owner-aware field object alongside existing number,
+  boolean, and historic `{ graphSymbol }` values. Structural validation resolves
+  the exact domain entity and its exact field through Task 1's typed index; it
+  never scans all fields or interprets manifest scalar, required, unique, or
+  input-kind semantics.
+
+### Non-goals
+
+- No physical capability asset, registration, Profile recipe, public Draft
+  composition admission, Publish, Compiler, Workbench, provider, deployment, or
+  historic-record rewrite.
+- No owner inference, global field scan, unsafe historic-selection admission,
+  Published Graph selection retention, or lock-only overload.
+- No change outside the exact three Graph paths.
+
+### Acceptance evidence
+
+- Focused RED/GREEN proves owner-aware Graph round-trip; wrong-model,
+  missing-owner, wrong-owner, and missing-field rejection; and duplicate
+  field-key safety by owner.
+- Hash regressions prove changing only `fieldKey` changes the Graph hash and a
+  frozen historic `{ graphSymbol }` fixture keeps its pre-amendment digest.
+- Browser-entry tests prove the serialized type, parser, and validator remain
+  browser-safe with no Node-only import.
+- Focused and full Graph tests, typecheck, lint, build, bounded diff checks,
+  independent task review, QA, release review, and fresh verification pass
+  before `accepted`.
+
+## Task 4: Publish safe versioned physical capability assets
 
 - **State:** `planned`
 - **Specialization:** `integration`
 - **Contract owner:** Golden Capability Asset Registry
 - **Contract artifact:** ADR-0006 DEC-005 and the design's new Golden version
   table.
-- **Dependencies:** Tasks 1 and 2 `accepted`.
+- **Dependencies:** Tasks 1 through 3 `accepted`.
 - **Produces:** verified `core.location-context@1.0.1`,
   `commerce.inventory-ledger@1.0.1`, and `commerce.inventory@2.0.0` physical
   packages while every existing version remains byte-for-byte unchanged.
@@ -466,14 +538,14 @@ not acceptance.
 - Registry/assets tests, Capabilities typecheck/lint, task review, QA, release
   review, and fresh physical verification pass before `accepted`.
 
-## Task 4: Enforce typed validation at public Draft composition
+## Task 5: Enforce typed validation at public Draft composition
 
 - **State:** `planned`
 - **Specialization:** `integration`
 - **Contract owner:** Draft Composition Admission
 - **Contract artifact:** ADR-0006 DEC-004 for Draft admission and the design's
   generic manifest-aware validation contract.
-- **Dependencies:** Tasks 1, 2, and 3 `accepted`.
+- **Dependencies:** Tasks 1 through 4 `accepted`.
 - **Produces:** one generic validator used by public
   `composeCapabilityDraft`, with current safe selections available for later
   migration.
@@ -505,14 +577,14 @@ not acceptance.
   task review, QA, release review, and fresh verification pass before
   `accepted`.
 
-## Task 5: Gate Publish and compiler admission with the immutable Graph
+## Task 6: Gate Publish and compiler admission with the immutable Graph
 
 - **State:** `planned`
 - **Specialization:** `backend`
 - **Contract owner:** Published Graph and Compiler Admission
 - **Contract artifact:** ADR-0006 DEC-004 for verified Publish and compiler
   admission.
-- **Dependencies:** Tasks 1 through 4 `accepted`.
+- **Dependencies:** Tasks 1 through 5 `accepted`.
 - **Produces:** Graph-aware verified-lock and compiler gates that validate the
   exact immutable Graph and selected safe locks before persistence or output
   creation.
@@ -544,14 +616,14 @@ not acceptance.
 - Lifecycle/compiler tests, affected typechecks/lint, task review, QA, release
   review, and fresh no-output verification pass before `accepted`.
 
-## Task 6: Migrate current recipes and resume Foundation acceptance
+## Task 7: Migrate current recipes and resume Foundation acceptance
 
 - **State:** `planned`
 - **Specialization:** `integration`
 - **Contract owner:** Typed Binding Migration and Release Evidence
-- **Contract artifact:** accepted Tasks 1-5 plus the plan's current-recipe
+- **Contract artifact:** accepted Tasks 1-6 plus the plan's current-recipe
   migration and acceptance contract.
-- **Dependencies:** Tasks 1 through 5 all `accepted`.
+- **Dependencies:** Tasks 1 through 6 all `accepted`.
 - **Produces:** current Restaurant and Ecommerce recipes selecting verified
   safe typed versions, owner-aware field objects, and evidence required to
   resume Commercial Capability Foundation Task 2 acceptance gates.
@@ -571,10 +643,10 @@ not acceptance.
 
 - No rewrite of historical packages, locks, Published revisions, or generated
   artifacts.
-- No Task 1-5 contract repair, compiler runtime exactly-once implementation,
+- No Task 1-6 contract repair, compiler runtime exactly-once implementation,
   Workbench redesign, new Profile, external provider, payment, deployment, or
   source import.
-- No claim that Task 6 acceptance automatically accepts Commercial Foundation
+- No claim that Task 7 acceptance automatically accepts Commercial Foundation
   Task 2; the PM must reconcile that parent ledger separately.
 
 ### Acceptance evidence
@@ -588,18 +660,17 @@ not acceptance.
 - Independent task review, QA, release review, acceptance documentation, audit
   reconciliation, and fresh verification pass before `accepted`.
 - Commercial Foundation Task 2 acceptance remains blocked until the PM
-  separately reconciles Task 6 evidence. Runtime exactly-once execution remains
+  separately reconciles Task 7 evidence. Runtime exactly-once execution remains
   later Commercial Foundation Task 3 scope.
 
 ## Cross-task stop conditions and risks
 
 - Any ADR/design contract, task dependency, or exact-path change stops the
   affected task and all downstream tasks for PM/architecture reconciliation.
-- The missing Graph owner-aware field-binding persistence path is such a
-  contract/ownership gap. Task 4 cannot start until an accepted architecture
-  amendment assigns its Graph schema, browser, parser/serializer, and test
-  ownership. Task 2 repair round 1 may not absorb those paths.
-- Tasks 1-5 remain serialized. Task 6 cannot start early, even if a downstream
+- ADR-0007 resolves the Graph persistence ownership gap through Task 3. That
+  task remains blocked on Task 2 acceptance, and Task 2 repair round 1 may not
+  absorb the three Graph paths.
+- Tasks 1-6 remain serialized. Task 7 cannot start early, even if a downstream
   test can be made green independently.
 - Historic package roots, evidence, digests, Published revisions, and locks are
   immutable. Migration always creates a new Draft revision and selects new
@@ -612,12 +683,11 @@ not acceptance.
   proven by this project.
 - This PM transition authorizes only Task 2 repair round 1 by Typed Manifest
   Contract Integration in its existing exact four paths. It authorizes no
-  Graph-path change and no Task 3-6 implementation.
+  Graph-path change and no Task 3-7 implementation.
 
 ## Next smallest valuable slice
 
-Run independent Task 2 repair-round re-review of
-`4458bfc7c8ffcaef29dfebb755d8399e12000198..a7331df0ac6a6f54f82bf61a060607777bc06dc0`
-inside the unchanged four-path boundary. Separately require an accepted
-architecture amendment for Graph field-binding persistence before Task 4.
-Leave Tasks 3-6 `planned`.
+After this ADR-0007 amendment is committed, record a fresh narrow Task 2
+`implementing -> ready_for_qa` transition from the passing repair re-review,
+then dispatch independent behavioral QA. Task 3 remains `planned` behind Task 2
+and owns only the three ADR-0007 Graph paths. Leave Tasks 3-7 `planned`.

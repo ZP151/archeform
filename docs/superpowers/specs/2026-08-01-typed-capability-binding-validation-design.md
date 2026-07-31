@@ -2,10 +2,11 @@
 
 ## Status
 
-Approved by the Factory controller for the dedicated hardening slice. This
-design supersedes the existence-only binding check for new Draft, Publish, and
-Compiler admission. It does not alter historical Graphs, locks, or accepted
-`1.0.0` Golden package bytes.
+Approved by the Factory controller for the dedicated hardening slice under
+ADR-0006 and amended by accepted ADR-0007. This design supersedes the
+existence-only binding check for new Draft, Publish, and Compiler admission. It
+does not alter historical Graphs, locks, or accepted `1.0.0` Golden package
+bytes.
 
 ## Problem
 
@@ -67,6 +68,33 @@ The Graph typed symbol index contains separate maps for entities, fields by
 entity, pages, navigation, roles, flows, providers, and experience tokens. It
 does not merge independently typed identifiers into a shared set.
 
+### Serialized Draft Graph contract
+
+Draft `ApplicationGraphV1.integration.compositionSelections` uses this additive
+serialized value contract:
+
+```ts
+type SerializedCompositionBindingV1 =
+  | number
+  | boolean
+  | { graphSymbol: string }
+  | {
+      graphSymbol: `graph.domain.${string}`;
+      fieldKey: string;
+    };
+```
+
+The Graph schema and semantic validator accept an owner-aware field object only
+for a domain entity symbol and prove that the exact entity and its exact field
+exist. They do not interpret manifest scalar, required, unique, or input-kind
+requirements; those remain Capabilities admission responsibilities.
+
+Historic `{ graphSymbol }` Draft JSON remains readable and retains its existing
+hash. Reading it never infers an owner, scans globally for a field, or promotes
+it into a field binding for new admission. Published Graphs remain free of
+composition selections; immutable locks retain the bindings and digests needed
+by the later Publish and compiler gates.
+
 ## New Golden versions
 
 Existing Golden artifacts remain immutable historical evidence. New Drafts use
@@ -88,7 +116,8 @@ verified before a current recipe can select them.
 
 The same manifest-aware validator runs at three points:
 
-1. `composeCapabilityDraft` before a Draft can retain composition selections.
+1. `composeCapabilityDraft` before a Draft can retain owner-aware serialized
+   composition selections.
 2. Verified Publish lock creation before a Published revision or immutable lock
    is persisted.
 3. Compiler admission before any generated output directory or artifact is
@@ -123,6 +152,14 @@ rewritten.
   another entity declares the same key.
 - Missing/unknown `ownerBinding`, duplicate schema key, incompatible field type,
   or parameter/schema mismatch rejects deterministically.
+- An owner-aware field object round-trips through Draft Graph parse and
+  serialization; wrong-model, wrong-owner, and missing-field objects reject.
+- Duplicate field keys remain safe because structural lookup is scoped to the
+  serialized owner entity.
+- Changing only `fieldKey` changes the Application Graph hash, while historic
+  `{ graphSymbol }` Graph hashes remain unchanged.
+- The owner-aware schema, parser, validator, and typed exports remain available
+  from the browser-safe Graph entry without Node-only dependencies.
 - Every changed physical manifest changes its digest and fails verification if
   its physical evidence is stale or tampered.
 - There is no Profile/package/version/field-name branch in the validator.
@@ -130,7 +167,10 @@ rewritten.
 
 ## Scope
 
-This slice changes type safety and package version selection only. It adds no
-new domain Profile, external Provider, UI surface, payment integration,
-deployment target, or arbitrary source import. Runtime exactly-once stock
-execution remains the later commercial compiler slice.
+This slice changes type safety, serialized Draft selection safety, and package
+version selection only. The serialized-Graph task owns only the Graph schema,
+parser/validator, hashing regressions, browser-entry regressions, and their
+tests; it adds no physical capability asset, Profile recipe, Publish gate,
+compiler gate, UI surface, external Provider, payment integration, deployment
+target, or arbitrary source import. Runtime exactly-once stock execution
+remains the later commercial compiler slice.
