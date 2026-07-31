@@ -271,6 +271,117 @@ function runCandidateRaceProcess(
   return { child, completed, exited };
 }
 
+function serializeCandidateProposal(proposal: CandidateProposalV1): unknown {
+  return {
+    ...proposal,
+    evidenceJob: {
+      ...proposal.evidenceJob,
+      snapshotView: {
+        ...proposal.evidenceJob.snapshotView,
+        files: proposal.evidenceJob.snapshotView.files.map((file) => ({
+          ...file,
+          contentBase64: Buffer.from(file.content).toString("base64"),
+          content: undefined,
+        })),
+      },
+    },
+  };
+}
+
+function deserializeCandidateProposal(input: unknown): CandidateProposalV1 {
+  const proposal = input as CandidateProposalV1 & {
+    evidenceJob: CandidateProposalV1["evidenceJob"] & {
+      snapshotView: CandidateProposalV1["evidenceJob"]["snapshotView"] & {
+        files: readonly (Omit<
+          CandidateProposalV1["evidenceJob"]["snapshotView"]["files"][number],
+          "content"
+        > & {
+          readonly contentBase64: string;
+        })[];
+      };
+    };
+  };
+  return {
+    ...proposal,
+    evidenceJob: {
+      ...proposal.evidenceJob,
+      snapshotView: {
+        ...proposal.evidenceJob.snapshotView,
+        files: proposal.evidenceJob.snapshotView.files.map(
+          ({ contentBase64, ...file }) => ({
+            ...file,
+            content: new Uint8Array(Buffer.from(contentBase64, "base64")),
+          }),
+        ),
+      },
+    },
+  };
+}
+
+function runCandidateCreateRaceProcess(
+  root: string,
+  workerId: string,
+  proposalPath: string,
+  readyPath: string,
+  releasePath: string,
+  resultPath: string,
+): CandidateRaceProcess {
+  const vitestCli = createRequire(import.meta.url).resolve("vitest/vitest.mjs");
+  const testFile = fileURLToPath(import.meta.url);
+  const child = spawn(
+    process.execPath,
+    [
+      vitestCli,
+      "run",
+      testFile,
+      "--testNamePattern",
+      "executes one child-process Candidate creation attempt",
+    ],
+    {
+      cwd: dirname(dirname(testFile)),
+      env: {
+        ...process.env,
+        FACTORY_CANDIDATE_CREATE_RACE_CHILD: workerId,
+        FACTORY_CANDIDATE_CREATE_RACE_ROOT: root,
+        FACTORY_CANDIDATE_CREATE_RACE_PROPOSAL_PATH: proposalPath,
+        FACTORY_CANDIDATE_CREATE_RACE_READY_PATH: readyPath,
+        FACTORY_CANDIDATE_CREATE_RACE_RELEASE_PATH: releasePath,
+        FACTORY_CANDIDATE_CREATE_RACE_RESULT_PATH: resultPath,
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
+  const output: string[] = [];
+  child.stdout.setEncoding("utf8");
+  child.stderr.setEncoding("utf8");
+  child.stdout.on("data", (chunk: string) => output.push(chunk));
+  child.stderr.on("data", (chunk: string) => output.push(chunk));
+  const exited = new Promise<void>((resolve, reject) => {
+    child.once("error", reject);
+    child.once("close", (code) => {
+      if (code === 0) resolve();
+      else
+        reject(
+          new Error(
+            `Candidate create child '${workerId}' exited ${String(code)}.\n${output.join("")}`,
+          ),
+        );
+    });
+  });
+  let deadline: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = new Promise<void>((_, reject) => {
+    deadline = setTimeout(
+      () =>
+        reject(new Error(`Candidate create child '${workerId}' timed out.`)),
+      20_000,
+    );
+  });
+  const completed = Promise.race([exited, timedOut]).finally(() => {
+    if (deadline !== undefined) clearTimeout(deadline);
+  });
+  return { child, completed, exited };
+}
+
 function safeArtifacts(): CandidateArtifactsV1 {
   return {
     manifest: {
@@ -734,7 +845,7 @@ describe("Candidate registry", () => {
     );
     expect(quarantineSnapshot(root)).toEqual(before);
     expect(persistedText(root)).not.toContain(sentinel);
-    expect(registry.list({})).toEqual([]);
+    await expect(registry.list({})).resolves.toEqual([]);
   });
 
   it.each([
@@ -944,7 +1055,7 @@ describe("Candidate registry", () => {
     await expect(
       registry.create(mutate(proposal) as CandidateProposalV1),
     ).rejects.toThrow();
-    expect(registry.list({})).toEqual([]);
+    await expect(registry.list({})).resolves.toEqual([]);
   });
 
   it("records conformance-passed only through a validated immutable result", async () => {
@@ -1367,7 +1478,7 @@ describe("Candidate registry", () => {
       );
       expect(quarantineSnapshot(root)).toEqual(before);
       expect(persistedText(root)).not.toContain(key);
-      expect(registry.list({})).toEqual([]);
+      await expect(registry.list({})).resolves.toEqual([]);
       await expect(
         registry.getConformanceBundle(proposal.id, proposal.version),
       ).rejects.toThrow();
@@ -1390,7 +1501,7 @@ describe("Candidate registry", () => {
     );
     expect(quarantineSnapshot(root)).toEqual(before);
     expect(persistedText(root)).not.toContain(sentinel);
-    expect(registry.list({})).toEqual([]);
+    await expect(registry.list({})).resolves.toEqual([]);
     await expect(
       registry.getConformanceBundle(proposal.id, proposal.version),
     ).rejects.toThrow();
@@ -1421,7 +1532,7 @@ describe("Candidate registry", () => {
       );
       expect(quarantineSnapshot(root)).toEqual(before);
       expect(persistedText(root)).not.toContain(sentinel);
-      expect(registry.list({})).toEqual([]);
+      await expect(registry.list({})).resolves.toEqual([]);
     },
   );
 
@@ -1455,7 +1566,7 @@ describe("Candidate registry", () => {
       expect(quarantineSnapshot(root)).toEqual(before);
       expect(persistedText(root)).not.toContain(sentinel);
       expect(persistedText(root)).not.toContain(token);
-      expect(registry.list({})).toEqual([]);
+      await expect(registry.list({})).resolves.toEqual([]);
     },
   );
 
@@ -1527,6 +1638,100 @@ describe("Candidate registry", () => {
       version: "1.0.0",
       status: "quarantined",
     });
+  });
+
+  it("lists every durable indexed Candidate before any fresh-process show", async () => {
+    const { root, store } = tempStore();
+    const registry = new CandidateRegistry(store);
+    const initial = await registry.create(await acceptedProposal(store));
+    const terminal = await registry.recordBlocked(initial.id, initial.version);
+    const fresh = new CandidateRegistry(new ExternalIntakeStore(root), root);
+
+    await expect(fresh.list({})).resolves.toEqual([
+      {
+        id: terminal.id,
+        version: terminal.version,
+        status: "blocked",
+        lookupId: terminal.lookupId,
+        proposedFactoryKey: "candidate.safe-adapter",
+        candidateDigest: terminal.digest,
+        evidenceDigest: expect.stringMatching(/^sha256:[a-f0-9]{64}$/u),
+      },
+    ]);
+  });
+
+  it("resolves a stale sequence-1 locator to the latest indexed terminal Candidate", async () => {
+    const { root, store } = tempStore();
+    const registry = new CandidateRegistry(store);
+    const initial = await registry.create(await acceptedProposal(store));
+    const terminal = await registry.recordRejected(initial.id, initial.version);
+    const freshApi = createExternalIntakeApi(
+      new ExternalIntakeStore(root),
+      root,
+    );
+
+    await expect(
+      freshApi.candidateShow(initial.lookupId, initial.version),
+    ).resolves.toMatchObject({
+      id: terminal.id,
+      version: terminal.version,
+      status: "rejected",
+      lookupId: terminal.lookupId,
+      candidateDigest: terminal.digest,
+    });
+  });
+
+  it("rejects an exact identity locator rebound to another Candidate job", async () => {
+    const { root, store } = tempStore();
+    const firstProposal = await acceptedProposal(store);
+    const registry = new CandidateRegistry(store);
+    await registry.create(firstProposal);
+    const secondProposal: CandidateProposalV1 = {
+      ...structuredClone(firstProposal),
+      id: "other-adapter",
+      proposedFactoryKey: "candidate.other-adapter",
+      artifacts: {
+        ...structuredClone(firstProposal.artifacts),
+        manifest: {
+          ...structuredClone(firstProposal.artifacts.manifest),
+          id: "other-adapter",
+          proposedFactoryKey: "candidate.other-adapter",
+        },
+        adapter: {
+          ...structuredClone(firstProposal.artifacts.adapter),
+          id: "other-adapter",
+        },
+      },
+    };
+    await registry.create(secondProposal);
+    const locatorPath = (id: string): string =>
+      join(
+        root,
+        "candidates",
+        `${digestBytes(bytes(`${id}@1.0.0`)).slice("sha256:".length)}.json`,
+      );
+    const firstLocatorPath = locatorPath(firstProposal.id);
+    const secondLocator = JSON.parse(
+      readFileSync(locatorPath(secondProposal.id), "utf8"),
+    ) as {
+      readonly jobId: string;
+      readonly creationReceiptDigest: string;
+    };
+    const firstLocator = JSON.parse(
+      readFileSync(firstLocatorPath, "utf8"),
+    ) as Record<string, unknown>;
+    writeFileSync(
+      firstLocatorPath,
+      canonicalJson({
+        ...firstLocator,
+        jobId: secondLocator.jobId,
+        creationReceiptDigest: secondLocator.creationReceiptDigest,
+      }),
+    );
+
+    await expect(
+      new CandidateRegistry(new ExternalIntakeStore(root), root).list({}),
+    ).rejects.toThrow(/locator|identity/iu);
   });
 
   it("rejects a receipt-addressed Candidate with mixed evidence executions", async () => {
@@ -1703,7 +1908,7 @@ describe("Candidate registry", () => {
         await expect(
           api.candidateVerify(ref.lookupId, ref.version),
         ).rejects.toThrow();
-        expect(api.candidateList({})).toEqual([]);
+        await expect(api.candidateList({})).rejects.toThrow();
       } else if (path === "test") {
         await expect(
           createExternalIntakeApi(forged, root).candidateTest(
@@ -1819,7 +2024,9 @@ describe("Candidate registry", () => {
       await expect(
         freshApi.candidateTest(ref.lookupId, ref.version),
       ).rejects.toThrow("Candidate verification");
-      expect(freshApi.candidateList({})).toEqual([]);
+      await expect(freshApi.candidateList({})).rejects.toThrow(
+        "Strict Candidate verification",
+      );
       expect(lifecycleRecordCounts(root)).toEqual(before);
 
       const freshRegistry = new CandidateRegistry(
@@ -1867,7 +2074,9 @@ describe("Candidate registry", () => {
       await expect(
         freshApi.candidateTest(passed.lookupId, passed.version),
       ).rejects.toThrow("Candidate verification");
-      expect(freshApi.candidateList({})).toEqual([]);
+      await expect(freshApi.candidateList({})).rejects.toThrow(
+        "Strict Candidate verification",
+      );
       expect(lifecycleRecordCounts(root)).toEqual(before);
     },
   );
@@ -1887,7 +2096,7 @@ describe("Candidate registry", () => {
     ).resolves.toMatchObject({ status: "pass" });
     const shown = await freshApi.candidateShow(ref.lookupId, ref.version);
     expect(shown.status).toBe("conformance-passed");
-    expect(freshApi.candidateList({})).toEqual([shown]);
+    await expect(freshApi.candidateList({})).resolves.toEqual([shown]);
     expect(lifecycleRecordCounts(root)).toEqual({
       candidates: before.candidates + 1,
       receipts: before.receipts + 1,
@@ -1972,6 +2181,180 @@ describe("Candidate registry", () => {
       );
     }, 30_000);
   }
+
+  if (process.env.FACTORY_CANDIDATE_CREATE_RACE_CHILD !== undefined) {
+    it("executes one child-process Candidate creation attempt", async () => {
+      const proposal = deserializeCandidateProposal(
+        JSON.parse(
+          readFileSync(
+            process.env.FACTORY_CANDIDATE_CREATE_RACE_PROPOSAL_PATH!,
+            "utf8",
+          ),
+        ) as unknown,
+      );
+      writeFileSync(
+        process.env.FACTORY_CANDIDATE_CREATE_RACE_READY_PATH!,
+        "ready",
+      );
+      await waitForPath(
+        process.env.FACTORY_CANDIDATE_CREATE_RACE_RELEASE_PATH!,
+      );
+      let result: unknown;
+      try {
+        const ref = await new CandidateRegistry(
+          new ExternalIntakeStore(
+            process.env.FACTORY_CANDIDATE_CREATE_RACE_ROOT!,
+          ),
+        ).create(proposal);
+        result = { outcome: "committed", ref };
+      } catch (error) {
+        result = {
+          outcome: "conflict",
+          message: error instanceof Error ? error.message : "unknown",
+        };
+      }
+      writeFileSync(
+        process.env.FACTORY_CANDIDATE_CREATE_RACE_RESULT_PATH!,
+        canonicalJson(result),
+      );
+    }, 30_000);
+  }
+
+  it("atomically chooses one separate-process Candidate creation winner without loser orphans", async () => {
+    const { root, store } = tempStore();
+    const winnerInput = await acceptedProposal(store);
+    const conflictingInput: CandidateProposalV1 = {
+      ...structuredClone(winnerInput),
+      proposedFactoryKey: "candidate.conflicting-adapter",
+      artifacts: {
+        ...structuredClone(winnerInput.artifacts),
+        manifest: {
+          ...structuredClone(winnerInput.artifacts.manifest),
+          proposedFactoryKey: "candidate.conflicting-adapter",
+        },
+      },
+    };
+    const proposals = [winnerInput, conflictingInput] as const;
+    const before = {
+      candidates: 0,
+      receipts: readdirSync(join(root, "records", "receipt")).length,
+    };
+    const evidenceDirectory = join(root, "blobs", "evidence");
+    const evidenceBefore = new Set(readdirSync(evidenceDirectory));
+    const snapshotDirectory = join(root, "blobs", "snapshot");
+    const snapshotsBefore = new Set(
+      existsSync(snapshotDirectory) ? readdirSync(snapshotDirectory) : [],
+    );
+    const expectedNewArtifactDigests = new Set(
+      Object.values(winnerInput.artifacts)
+        .map((artifact) => digestBytes(bytes(canonicalJson(artifact))))
+        .filter(
+          (digest) =>
+            !evidenceBefore.has(`${digest.slice("sha256:".length)}.bin`),
+        ),
+    );
+    const sourceBlobMissing = winnerInput.evidenceJob.snapshotView.files.filter(
+      ({ digest }) => !existsSync(blobPath(root, "snapshot", digest)),
+    ).length;
+    const expectedWinnerBlobDelta = 1 + expectedNewArtifactDigests.size;
+    const raceRoot = join(root, "candidate-create-race");
+    mkdirSync(raceRoot);
+    const releasePath = join(raceRoot, "release");
+    const proposalPaths = proposals.map((_, index) =>
+      join(raceRoot, `${index}.proposal.json`),
+    );
+    const readyPaths = proposals.map((_, index) =>
+      join(raceRoot, `${index}.ready`),
+    );
+    const resultPaths = proposals.map((_, index) =>
+      join(raceRoot, `${index}.result.json`),
+    );
+    proposals.forEach((proposal, index) => {
+      writeFileSync(
+        proposalPaths[index]!,
+        JSON.stringify(serializeCandidateProposal(proposal)),
+      );
+    });
+    const workers = proposals.map((_, index) =>
+      runCandidateCreateRaceProcess(
+        root,
+        String(index),
+        proposalPaths[index]!,
+        readyPaths[index]!,
+        releasePath,
+        resultPaths[index]!,
+      ),
+    );
+    const completed = Promise.all(workers.map((worker) => worker.completed));
+    try {
+      await Promise.race([
+        Promise.all(readyPaths.map(waitForPath)),
+        completed.then(() => {
+          throw new Error(
+            "Candidate creation children exited before the barrier.",
+          );
+        }),
+      ]);
+      writeFileSync(releasePath, "go");
+      await completed;
+    } finally {
+      for (const worker of workers) {
+        if (
+          worker.child.pid !== undefined &&
+          worker.child.exitCode === null &&
+          worker.child.signalCode === null
+        ) {
+          worker.child.kill();
+        }
+      }
+      await Promise.allSettled(workers.map((worker) => worker.exited));
+    }
+    const results = resultPaths.map(
+      (path) =>
+        JSON.parse(readFileSync(path, "utf8")) as {
+          readonly outcome: "committed" | "conflict";
+          readonly ref?: StoredCandidateRefV1;
+        },
+    );
+    expect(results.map(({ outcome }) => outcome).sort()).toEqual([
+      "committed",
+      "conflict",
+    ]);
+    const winnerIndex = results.findIndex(
+      ({ outcome }) => outcome === "committed",
+    );
+    const winner = results[winnerIndex]!.ref!;
+    const fresh = new CandidateRegistry(new ExternalIntakeStore(root), root);
+    await expect(fresh.list({})).resolves.toEqual([
+      expect.objectContaining({
+        id: winner.id,
+        version: winner.version,
+        status: "quarantined",
+        lookupId: winner.lookupId,
+        candidateDigest: winner.digest,
+      }),
+    ]);
+    await expect(
+      new CandidateRegistry(new ExternalIntakeStore(root)).create(
+        structuredClone(proposals[winnerIndex]!),
+      ),
+    ).resolves.toEqual(winner);
+    await expect(
+      new CandidateRegistry(new ExternalIntakeStore(root)).create(
+        structuredClone(proposals[1 - winnerIndex]!),
+      ),
+    ).rejects.toThrow(/Candidate creation claim conflict/iu);
+    expect(lifecycleRecordCounts(root)).toEqual({
+      candidates: before.candidates + 1,
+      receipts: before.receipts + 1,
+    });
+    expect(readdirSync(evidenceDirectory).length - evidenceBefore.size).toBe(
+      expectedWinnerBlobDelta,
+    );
+    expect(readdirSync(snapshotDirectory).length - snapshotsBefore.size).toBe(
+      sourceBlobMissing,
+    );
+  }, 30_000);
 
   it("converges separate OS process Candidate conformance transitions on one durable sequence-2 transition", async () => {
     const { root, store } = tempStore();
@@ -2111,6 +2494,6 @@ describe("Candidate registry", () => {
           },
         },
       }),
-    ).rejects.toThrow("Receipt sequence conflict");
+    ).rejects.toThrow(/Candidate creation claim conflict/iu);
   });
 });

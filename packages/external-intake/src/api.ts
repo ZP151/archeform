@@ -92,7 +92,9 @@ export interface ExternalIntakeApiV1 {
   evidence(digest: string): ExternalEvidenceSummaryV1;
   candidateCreate(input: CandidateProposalV1): Promise<StoredCandidateRefV1>;
   candidateShow(id: string, version: string): Promise<CandidateSummaryV1>;
-  candidateList(filter: CandidateQueryV1): readonly CandidateSummaryV1[];
+  candidateList(
+    filter: CandidateQueryV1,
+  ): Promise<readonly CandidateSummaryV1[]>;
   candidateTest(
     id: string,
     version: string,
@@ -249,7 +251,9 @@ export function createExternalIntakeApi(
       };
     },
 
-    candidateList(filter: CandidateQueryV1): readonly CandidateSummaryV1[] {
+    async candidateList(
+      filter: CandidateQueryV1,
+    ): Promise<readonly CandidateSummaryV1[]> {
       return registry.list(filter);
     },
 

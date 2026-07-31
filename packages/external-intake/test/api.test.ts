@@ -42,6 +42,14 @@ afterEach(() => {
 });
 
 describe("External Intake module API", () => {
+  it("exposes Candidate listing as an asynchronous verified boundary", async () => {
+    const { root, store } = tempStore();
+    const api = createExternalIntakeApi(store, root);
+
+    expect(api.candidateList({})).toBeInstanceOf(Promise);
+    await expect(api.candidateList({})).resolves.toEqual([]);
+  });
+
   it("submits local batch data as independent immutable request items", () => {
     const { root, store } = tempStore();
     const api = createExternalIntakeApi(store, root);

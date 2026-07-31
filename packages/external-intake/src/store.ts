@@ -64,6 +64,46 @@ const receiptIndexSchema = z
 
 type ReceiptIndexV1 = z.infer<typeof receiptIndexSchema>;
 
+const candidateCreationClaimInputSchema = z
+  .object({
+    id: intakeContractPrimitives.opaqueIdSchema,
+    version: intakeContractPrimitives.versionSchema,
+    jobId: intakeContractPrimitives.opaqueIdSchema,
+    candidateDigest: intakeContractPrimitives.sha256DigestSchema,
+    receiptDigest: intakeContractPrimitives.sha256DigestSchema,
+    blobs: z
+      .array(
+        z
+          .object({
+            kind: blobKindSchema,
+            digest: intakeContractPrimitives.sha256DigestSchema,
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(100_000)
+      .refine(
+        (blobs) =>
+          new Set(blobs.map(({ kind, digest }) => `${kind}:${digest}`)).size ===
+          blobs.length,
+      ),
+  })
+  .strict();
+const candidateCreationClaimSchema = candidateCreationClaimInputSchema
+  .extend({
+    apiVersion: z.literal("factory.candidate-creation-claim/v1"),
+  })
+  .strict();
+const candidateReceiptLocatorSchema = z
+  .object({
+    apiVersion: z.literal("factory.candidate-receipt-locator/v1"),
+    id: intakeContractPrimitives.opaqueIdSchema,
+    version: intakeContractPrimitives.versionSchema,
+    jobId: intakeContractPrimitives.opaqueIdSchema,
+    creationReceiptDigest: intakeContractPrimitives.sha256DigestSchema,
+  })
+  .strict();
+
 const candidateTransitionClaimSchema = z
   .object({
     apiVersion: z.literal("factory.candidate-transition-claim/v1"),
@@ -87,6 +127,10 @@ export type StoredBlobRef = {
   readonly digest: Sha256Digest;
 };
 
+export type CandidateCreationClaimV1 = z.infer<
+  typeof candidateCreationClaimInputSchema
+>;
+
 export interface CandidateTransitionCommitV1 {
   readonly jobId: string;
   readonly expectedCreationReceipt: StoredRecordRef;
@@ -105,6 +149,14 @@ export interface CandidateTransitionCommitResultV1 {
 const candidateTransitionCommitters = new WeakMap<
   ExternalIntakeStore,
   (input: CandidateTransitionCommitV1) => CandidateTransitionCommitResultV1
+>();
+const candidateCreationClaimers = new WeakMap<
+  ExternalIntakeStore,
+  (input: CandidateCreationClaimV1) => void
+>();
+const candidateCreationCompleters = new WeakMap<
+  ExternalIntakeStore,
+  (input: CandidateCreationClaimV1) => void
 >();
 
 function buffersEqual(left: Uint8Array, right: Uint8Array): boolean {
@@ -129,6 +181,12 @@ export class ExternalIntakeStore {
       );
     }
     this.#root = realpathSync.native(root);
+    candidateCreationClaimers.set(this, (input) =>
+      this.#claimCandidateCreation(input),
+    );
+    candidateCreationCompleters.set(this, (input) =>
+      this.#completeCandidateCreation(input),
+    );
     candidateTransitionCommitters.set(this, (input) =>
       this.#commitCandidateTransition(input),
     );
@@ -287,6 +345,105 @@ export class ExternalIntakeStore {
       `Receipt sequence conflict for ${parsedJobId}#${parsed.sequence}.`,
     );
     return recordRef;
+  }
+
+  #claimCandidateCreation(input: CandidateCreationClaimV1): void {
+    const parsed = candidateCreationClaimInputSchema.parse(input);
+    const identity = `${parsed.id}@${parsed.version}`;
+    const expectedJobId = `candidate-${digestBytes(
+      new TextEncoder().encode(identity),
+    ).slice(7, 39)}`;
+    if (parsed.jobId !== expectedJobId) {
+      throw new Error(
+        "Candidate creation claim does not match its exact identity.",
+      );
+    }
+    const claim = candidateCreationClaimSchema.parse({
+      apiVersion: "factory.candidate-creation-claim/v1",
+      ...parsed,
+      blobs: [...parsed.blobs].sort((left, right) =>
+        `${left.kind}:${left.digest}`.localeCompare(
+          `${right.kind}:${right.digest}`,
+        ),
+      ),
+    });
+    const bytes = new TextEncoder().encode(canonicalJson(claim));
+    this.#writeExclusiveVerified(
+      this.#managedPath(["jobs", parsed.jobId, "receipts", "1.claim.json"]),
+      bytes,
+      digestBytes(bytes),
+      true,
+      `Candidate creation claim conflict for ${identity}.`,
+    );
+  }
+
+  #completeCandidateCreation(input: CandidateCreationClaimV1): void {
+    const parsed = candidateCreationClaimInputSchema.parse(input);
+    this.#claimCandidateCreation(parsed);
+    const candidateRef: StoredRecordRef = {
+      kind: "candidate",
+      digest: parsed.candidateDigest,
+    };
+    const receiptRef: StoredRecordRef = {
+      kind: "receipt",
+      digest: parsed.receiptDigest,
+    };
+    const candidate = parseCandidateCapability(this.getRecord(candidateRef));
+    const receipt = parseIntakeReceipt(this.getRecord(receiptRef));
+    const indexed = this.#readReceiptIndex(parsed.jobId, 1);
+    for (const blob of parsed.blobs) {
+      let bytes: Uint8Array;
+      try {
+        bytes = this.#readRegularFile(
+          this.#managedPath([
+            "blobs",
+            blob.kind,
+            `${blob.digest.slice("sha256:".length)}.bin`,
+          ]),
+        );
+      } catch {
+        throw new Error("Candidate creation claimed blob is absent.");
+      }
+      if (digestBytes(bytes) !== blob.digest) {
+        throw new Error("Candidate creation claimed blob is invalid.");
+      }
+    }
+    if (
+      candidate.id !== parsed.id ||
+      candidate.version !== parsed.version ||
+      candidate.status !== "quarantined" ||
+      receipt.jobId !== parsed.jobId ||
+      receipt.sequence !== 1 ||
+      receipt.status !== "candidate-ready" ||
+      receipt.code !== "candidate-quarantined" ||
+      canonicalJson(receipt.parentDigests) !==
+        canonicalJson([parsed.candidateDigest]) ||
+      receipt.recordDigests[0] !== parsed.candidateDigest ||
+      indexed?.receiptDigest !== parsed.receiptDigest
+    ) {
+      throw new Error("Candidate creation completion is invalid.");
+    }
+    const locator = candidateReceiptLocatorSchema.parse({
+      apiVersion: "factory.candidate-receipt-locator/v1",
+      id: parsed.id,
+      version: parsed.version,
+      jobId: parsed.jobId,
+      creationReceiptDigest: parsed.receiptDigest,
+    });
+    const locatorBytes = new TextEncoder().encode(canonicalJson(locator));
+    const identityDigest = digestBytes(
+      new TextEncoder().encode(`${parsed.id}@${parsed.version}`),
+    );
+    this.#writeExclusiveVerified(
+      this.#managedPath([
+        "candidates",
+        `${identityDigest.slice("sha256:".length)}.json`,
+      ]),
+      locatorBytes,
+      digestBytes(locatorBytes),
+      true,
+      `Candidate locator conflict for ${parsed.id}@${parsed.version}.`,
+    );
   }
 
   #commitCandidateTransition(
@@ -712,6 +869,32 @@ export class ExternalIntakeStore {
       }
     }
   }
+}
+
+export function claimCandidateCreation(
+  store: ExternalIntakeStore,
+  input: CandidateCreationClaimV1,
+): void {
+  const claim = candidateCreationClaimers.get(store);
+  if (claim === undefined) {
+    throw new TypeError(
+      "Candidate creation claims require an External Intake store instance.",
+    );
+  }
+  claim(input);
+}
+
+export function completeCandidateCreation(
+  store: ExternalIntakeStore,
+  input: CandidateCreationClaimV1,
+): void {
+  const complete = candidateCreationCompleters.get(store);
+  if (complete === undefined) {
+    throw new TypeError(
+      "Candidate creation completion requires an External Intake store instance.",
+    );
+  }
+  complete(input);
 }
 
 export function commitCandidateTransition(

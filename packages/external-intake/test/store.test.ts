@@ -31,7 +31,12 @@ import {
   type SourceSnapshotV1,
   type StoredRecordRef,
 } from "../src/index.js";
-import { commitCandidateTransition } from "../src/store.js";
+import {
+  claimCandidateCreation,
+  completeCandidateCreation,
+  commitCandidateTransition,
+  type CandidateCreationClaimV1,
+} from "../src/store.js";
 
 const roots: string[] = [];
 const validRequest = {
@@ -775,6 +780,170 @@ describe("ExternalIntakeStore", () => {
     );
   });
 
+  it("atomically claims one sequence-1 Candidate creation before loser persistence", () => {
+    const root = tempRoot();
+    const store = new ExternalIntakeStore(root);
+    const jobId = `candidate-${digestBytes(
+      new TextEncoder().encode("safe-adapter@1.0.0"),
+    ).slice(7, 39)}`;
+    const winner: CandidateCreationClaimV1 = {
+      id: "safe-adapter",
+      version: "1.0.0",
+      jobId,
+      candidateDigest: digest,
+      receiptDigest: otherDigest,
+      blobs: [
+        { kind: "snapshot", digest },
+        { kind: "evidence", digest: otherDigest },
+      ],
+    };
+    const loser: CandidateCreationClaimV1 = {
+      ...winner,
+      candidateDigest: otherDigest,
+      receiptDigest: digest,
+      blobs: [{ kind: "evidence", digest: otherDigest }],
+    };
+
+    expect(() => claimCandidateCreation(store, winner)).not.toThrow();
+    expect(() =>
+      claimCandidateCreation(store, structuredClone(winner)),
+    ).not.toThrow();
+    expect(() => claimCandidateCreation(store, loser)).toThrow(
+      /creation|claim|conflict/iu,
+    );
+    expect(existsSync(join(root, "records", "candidate"))).toBe(false);
+    expect(existsSync(join(root, "records", "receipt"))).toBe(false);
+    expect(existsSync(join(root, "blobs", "evidence"))).toBe(false);
+  });
+
+  it("recovers only the durable claimed Candidate winner after a pre-persistence crash", () => {
+    const root = tempRoot();
+    const identity = "safe-adapter@1.0.0";
+    const jobId = `candidate-${digestBytes(
+      new TextEncoder().encode(identity),
+    ).slice(7, 39)}`;
+    const evidenceBytes = new TextEncoder().encode("candidate-state");
+    const evidenceDigest = digestBytes(evidenceBytes);
+    const candidate: CandidateCapabilityV1 = {
+      apiVersion: "factory.candidate-capability/v1",
+      createdAt: "2026-07-31T00:00:00.000Z",
+      producerVersion: "0.1.0",
+      parentDigests: [digest, otherDigest, evidenceDigest],
+      id: "safe-adapter",
+      version: "1.0.0",
+      status: "quarantined",
+      sourceSnapshotDigest: digest,
+      evidenceDigest: otherDigest,
+      proposedFactoryKey: "candidate.safe-adapter",
+      proposedClassification: "provider-adapter",
+      selectedModules: [],
+      allowedOutputs: ["manifest", "fixture", "adapter", "conformance-plan"],
+      prohibited: [
+        "capability-selection",
+        "golden-registration",
+        "graph-mutation",
+        "compilation",
+      ],
+      candidateManifestDigest: digest,
+      fixtureDigest: otherDigest,
+    };
+    const candidateDigest = canonicalRecordDigest(candidate);
+    const receipt: IntakeReceiptV1 = {
+      apiVersion: "factory.external-intake-receipt/v1",
+      createdAt: candidate.createdAt,
+      producerVersion: candidate.producerVersion,
+      parentDigests: [candidateDigest],
+      jobId,
+      sequence: 1,
+      status: "candidate-ready",
+      code: "candidate-quarantined",
+      recordDigests: [candidateDigest, evidenceDigest],
+    };
+    const winner: CandidateCreationClaimV1 = {
+      id: candidate.id,
+      version: candidate.version,
+      jobId,
+      candidateDigest,
+      receiptDigest: canonicalRecordDigest(receipt),
+      blobs: [{ kind: "evidence", digest: evidenceDigest }],
+    };
+    const loserCandidate = {
+      ...candidate,
+      proposedFactoryKey: "candidate.conflicting-adapter",
+    };
+    const loserCandidateDigest = canonicalRecordDigest(loserCandidate);
+    const loserReceipt = {
+      ...receipt,
+      parentDigests: [loserCandidateDigest],
+      recordDigests: [loserCandidateDigest, evidenceDigest],
+    };
+    const loser: CandidateCreationClaimV1 = {
+      ...winner,
+      candidateDigest: loserCandidateDigest,
+      receiptDigest: canonicalRecordDigest(loserReceipt),
+    };
+
+    claimCandidateCreation(new ExternalIntakeStore(root), winner);
+    expect(() =>
+      claimCandidateCreation(new ExternalIntakeStore(root), loser),
+    ).toThrow(/creation claim conflict/iu);
+    expect(() =>
+      completeCandidateCreation(new ExternalIntakeStore(root), loser),
+    ).toThrow(/creation claim conflict/iu);
+
+    const recovered = new ExternalIntakeStore(root);
+    claimCandidateCreation(recovered, structuredClone(winner));
+    expect(recovered.putRecord("candidate", candidate).digest).toBe(
+      candidateDigest,
+    );
+    expect(recovered.appendReceipt(jobId, receipt).digest).toBe(
+      winner.receiptDigest,
+    );
+    expect(() =>
+      completeCandidateCreation(recovered, structuredClone(winner)),
+    ).toThrow(/blob|creation completion/iu);
+    expect(
+      existsSync(
+        join(
+          root,
+          "candidates",
+          `${digestBytes(new TextEncoder().encode(identity)).slice(7)}.json`,
+        ),
+      ),
+    ).toBe(false);
+    expect(recovered.putBytes("evidence", evidenceBytes).digest).toBe(
+      evidenceDigest,
+    );
+    expect(() =>
+      completeCandidateCreation(recovered, structuredClone(winner)),
+    ).not.toThrow();
+    expect(
+      existsSync(
+        join(
+          root,
+          "candidates",
+          `${digestBytes(new TextEncoder().encode(identity)).slice(7)}.json`,
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      existsSync(
+        recordPath(root, {
+          kind: "candidate",
+          digest: loserCandidateDigest,
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      existsSync(
+        recordPath(root, {
+          kind: "receipt",
+          digest: canonicalRecordDigest(loserReceipt),
+        }),
+      ),
+    ).toBe(false);
+  });
+
   it("reserves terminal Candidate records and sequence-2 Candidate receipts for the atomic transition primitive", () => {
     const root = tempRoot();
     const store = new ExternalIntakeStore(root);
@@ -815,7 +984,11 @@ describe("ExternalIntakeStore", () => {
       record: IntakeReceiptV1,
     ) => StoredRecordRef;
 
+    expect("claimCandidateCreation" in publicExternalIntake).toBe(false);
+    expect("completeCandidateCreation" in publicExternalIntake).toBe(false);
     expect("commitCandidateTransition" in publicExternalIntake).toBe(false);
+    expect("claimCandidateCreation" in store).toBe(false);
+    expect("completeCandidateCreation" in store).toBe(false);
     expect("commitCandidateTransition" in store).toBe(false);
     expect(() => store.putRecord("candidate", blocked.terminal)).toThrow(
       /atomic|transition|quarantined/iu,
