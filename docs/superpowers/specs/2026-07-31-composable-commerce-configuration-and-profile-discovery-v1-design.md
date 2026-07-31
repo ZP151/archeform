@@ -14,8 +14,9 @@ The release has two coupled outcomes:
    authoritative Profile catalog, inspect its locked capabilities, and see its
    lifecycle/readiness without a duplicated frontend list.
 2. Restaurant Ordering, Simple Ecommerce, Retail Counter, and Grocery Pickup
-   can compose two new generic, versioned capability packages:
-   `commerce.catalog-configuration` and `commerce.order-amendment`.
+   can compose one evolved generic package version,
+   `commerce.line-configuration@1.1.0`, and one new package,
+   `commerce.order-amendment@1.0.0`.
 
 The release deliberately does not try to finish every restaurant feature. It
 provides reusable components for configurable products, price decisions, and
@@ -42,10 +43,13 @@ string itself.
 
 Restaurant Ordering proves a local, generated user and merchant workflow for
 table session, menu browsing, cart, simulated payment, kitchen fulfilment,
-cashier activity, inventory adjustment, audit, and a limited dashboard. It
-does not define reusable option groups, price rules, post-submission order
-amendments, reservations, waitlists, delivery, real payments, membership,
-promotions, realtime transport, or offline command replay.
+cashier activity, inventory adjustment, audit, a limited dashboard, and the
+existing `commerce.line-configuration@1.0.0` asset. That asset is currently
+locked by the commerce recipes but its manifest only advertises Restaurant and
+Ecommerce, and it lacks the cross-profile snapshot semantics and compiled
+runtime contract required by this release. It does not provide post-submission
+order amendments, reservations, waitlists, delivery, real payments,
+membership, promotions, realtime transport, or offline command replay.
 
 ## Product boundary
 
@@ -57,9 +61,9 @@ promotions, realtime transport, or offline command replay.
 - A profile catalog Home view that shows every descriptor, its category,
   description, capability-package count, optional capability choices, locked
   package maturity, and direct create action.
-- `commerce.catalog-configuration@1.0.0`, a physical Golden capability package
-  for item option groups, options, bounded selection constraints, availability,
-  and declared price adjustments.
+- `commerce.line-configuration@1.1.0`, an immutable successor to the existing
+  Golden `1.0.0` package, for item option groups, options, bounded selection
+  constraints, availability, price snapshots, and declared price adjustments.
 - `commerce.order-amendment@1.0.0`, a physical Golden capability package for
   versioned merchant order modifications after submission and before an
   irreversible fulfilment boundary.
@@ -118,16 +122,18 @@ must both consume that projection. The UI calculates package maturity from
 each selected composition lock and labels it `Verified capability packages`,
 not `Golden Profile`.
 
-## Generic catalog configuration capability
+## Generic line-configuration capability
 
-`commerce.catalog-configuration@1.0.0` is a package with a normal physical
-asset layout, digest, manifest, adapter declaration, templates, fixtures, and
-package-local contract tests.
+`commerce.line-configuration@1.0.0` remains immutable. The release creates
+`commerce.line-configuration@1.1.0` as its next physical asset version with a
+new digest, manifest, adapter declaration, templates, fixtures, and
+package-local contract tests. It does not mutate or replace an existing
+Published Composition Lock.
 
 It binds the following Graph symbols:
 
 ```ts
-type CatalogConfigurationBindingsV1 = {
+type LineConfigurationBindingsV1 = {
   readonly catalogEntity: GraphEntityBinding;
   readonly optionGroupEntity: GraphEntityBinding;
   readonly optionEntity: GraphEntityBinding;
@@ -211,7 +217,7 @@ would leave inventory/audit/outbox records inconsistent.
 ## Package composition and compiler rule
 
 The four commerce Profiles select the exact same current versions of
-`commerce.catalog-configuration` and `commerce.order-amendment`. Their
+`commerce.line-configuration@1.1.0` and `commerce.order-amendment@1.0.0`. Their
 bindings differ only in Graph symbols. Compiler selection is keyed exclusively
 by the immutable Composition Lock and validated bindings, never by a Profile
 label, entity literal, route name, source path, or generated-output path.
@@ -250,14 +256,15 @@ direct runtime adoption:
 - Medusa (MIT) and Saleor (BSD-3-Clause) are paired source-study inputs for
   neutral provider boundaries, not generated-app dependencies.
 
-Before the first live bulk source study, fix the independently identified
-External Intake P1 defects: a malformed/sensitive item must not abort
-unrelated batch items, and a source-study projection must runtime-validate and
-reject undeclared fields. The repair does not promote a Candidate, copy source,
-or add a package. After it passes, a batch can produce fixed-SHA, licence,
-notice, SBOM, scanning, module-inventory, and quarantined Candidate evidence.
-Only an exact-path source study with attribution, tests, removal path, and an
-independently authored Factory adapter may lead to a source-fragment proposal.
+Fresh External Intake verification confirms its former P1 boundaries are
+already repaired: a malformed or sensitive item is blocked independently
+inside a batch, and a source-study projection runtime-validates and rejects
+undeclared fields. The verified boundary does not promote a Candidate, copy
+source, or add a package. A fixed-reference batch can therefore produce
+fixed-SHA, licence, notice, SBOM, scanning, module-inventory, and quarantined
+Candidate evidence. Only an exact-path source study with attribution, tests,
+removal path, and an independently authored Factory adapter may lead to a
+source-fragment proposal.
 
 ## Error handling and safety
 
@@ -299,9 +306,10 @@ independently authored Factory adapter may lead to a source-fragment proposal.
    partial writes.
 6. Worker evidence proves each Published commerce Graph produces isolated
    artifacts and cleanup only removes the corresponding Compose project.
-7. External Intake focused tests prove malformed/sensitive sibling items do
-   not abort valid batch intake, and source-study projection inputs reject
-   undeclared/sensitive/executable/product-bound fields.
+7. External Intake regression verification continues to prove malformed or
+   sensitive sibling items do not abort valid batch intake, and source-study
+   projection inputs reject undeclared, sensitive, executable, and
+   product-bound fields.
 8. No credentials, raw AI prompts/responses, external source bytes, or
    provider secrets appear in Graph state, generated files, artifacts, logs,
    test fixtures, screenshots, or reports.
@@ -312,16 +320,17 @@ independently authored Factory adapter may lead to a source-fragment proposal.
    export, and refactor Workbench Home/Guided Creation to consume it.
 2. Add failing capability package and semantic-validation tests for configured
    catalog entities, option selections, and price snapshots.
-3. Create and register the physical `commerce.catalog-configuration@1.0.0`
-   package, then apply validated bindings to all four commerce Profile graphs.
+3. Create and register the immutable `commerce.line-configuration@1.1.0`
+   successor package, then apply validated bindings to all four commerce
+   Profile graphs.
 4. Add failing package/compiler/runtime tests for the amendment transaction
    contract, then create and register
    `commerce.order-amendment@1.0.0` with typed bindings and profile Graph
    declarations.
 5. Compile the two package contributions and generated customer/merchant
    projections from immutable locks; add Node and Worker isolation evidence.
-6. Repair the two External Intake P1 boundaries with focused adversarial
-   regression tests, preserving quarantine and non-promotion rules.
+6. Run a fixed-reference bulk intake against the first selected sources and
+   retain only quarantined evidence; preserve the existing non-promotion rule.
 7. Run full relevant package, Workbench, compiler, Worker, intake, browser,
    generated-app, typecheck, lint, build, and `git diff --check` verification;
    update acceptance, status, notices, and source-study records truthfully.
