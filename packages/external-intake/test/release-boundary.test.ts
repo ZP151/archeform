@@ -288,6 +288,7 @@ describe("External Intake release boundary", () => {
         "candidateTest",
         "candidateVerify",
         "evidence",
+        "portfolioCandidateCreate",
         "promotionPacket",
         "status",
         "submitBatch",

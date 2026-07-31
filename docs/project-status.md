@@ -30,10 +30,10 @@ platform.
 - The external-source portfolio records 43 fixed sources and 108 demand
   mappings. It is a discovery and intake input, not an installed capability
   catalogue. The current pipeline creates immutable quarantine evidence and
-  source-study projections, and now deterministically derives a declarative
-  Candidate proposal for an allowlisted TypeScript Provider source. It does
-  not yet expose Portfolio-to-Candidate persistence through its API or create
-  Factory capability packages.
+  source-study projections, and now deterministically derives and persists a
+  declarative Candidate proposal for an allowlisted TypeScript Provider source
+  through the repository-local quarantine API. It does not create Factory
+  capability packages.
 
 ### Supply-chain release gate
 

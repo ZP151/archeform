@@ -14,6 +14,10 @@ import {
   type CandidateConformanceResultV1,
 } from "./conformance.js";
 import {
+  createPortfolioCandidateProposal,
+  type PortfolioCandidateProposalInputV1,
+} from "./portfolio-candidate-proposal.js";
+import {
   parseEvidenceBundle,
   parseExternalIntakeBatch,
   parseIntakeReceipt,
@@ -65,10 +69,18 @@ export interface ExternalEvidenceSummaryV1 {
   readonly ast: EvidenceBundleV1["ast"];
 }
 
+export type PortfolioCandidateCreateInputV1 = Omit<
+  PortfolioCandidateProposalInputV1,
+  "store"
+>;
+
 export interface ExternalIntakeApiV1 {
   submitBatch(input: unknown): ExternalIntakeBatchResultV1;
   status(id: string): ExternalIntakeStatusV1;
   evidence(digest: string): ExternalEvidenceSummaryV1;
+  portfolioCandidateCreate(
+    input: PortfolioCandidateCreateInputV1,
+  ): Promise<StoredCandidateRefV1>;
   candidateCreate(input: CandidateProposalV1): Promise<StoredCandidateRefV1>;
   candidateShow(id: string, version: string): Promise<CandidateSummaryV1>;
   candidateList(
@@ -206,6 +218,17 @@ export function createExternalIntakeApi(
         scans: evidence.scans,
         ast: evidence.ast,
       };
+    },
+
+    async portfolioCandidateCreate(
+      input: PortfolioCandidateCreateInputV1,
+    ): Promise<StoredCandidateRefV1> {
+      return registry.create(
+        createPortfolioCandidateProposal({
+          ...input,
+          store,
+        }),
+      );
     },
 
     async candidateCreate(

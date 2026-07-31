@@ -180,7 +180,9 @@ git commit -m "feat: derive candidates from portfolio evidence"
 - Modify: packages/external-intake/test/portfolio-candidate-proposal.test.ts
 
 **Interfaces:**
-- Consumes: CandidateProposalV1 from createPortfolioCandidateProposal.
+- Consumes: PortfolioCandidateProposalInputV1 without a caller-supplied Store;
+  the repository-local API injects its own ExternalIntakeStore before
+  construction.
 - Produces: portfolioCandidateCreate(input): Promise<StoredCandidateRefV1>.
 - Invariant: the returned status is quarantined and no Golden asset, Graph, compiler, or Provider registry changes.
 
@@ -210,8 +212,9 @@ portfolioCandidateCreate(
 ): Promise<StoredCandidateRefV1>;
 ~~~
 
-The implementation calls createPortfolioCandidateProposal and the existing
-CandidateRegistryV1.create. It accepts no caller-supplied Candidate artifact.
+The implementation injects its own Store, then calls
+createPortfolioCandidateProposal and the existing CandidateRegistryV1.create.
+It accepts no caller-supplied Candidate artifact or Store.
 
 - [ ] **Step 4: Add non-promotion and privacy tests**
 
