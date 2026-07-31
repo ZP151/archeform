@@ -114,6 +114,32 @@ describe("typed capability binding contract", () => {
     expect(composition.packages[0]?.bindings).toEqual(validBindings);
   });
 
+  it("rejects an accessor-backed fieldTypes element without invoking it", () => {
+    let fieldTypeReads = 0;
+    const fieldTypes: unknown[] = [];
+    Object.defineProperty(fieldTypes, "0", {
+      enumerable: true,
+      get: () => {
+        fieldTypeReads += 1;
+        return "integer";
+      },
+    });
+    fieldTypes.length = 1;
+    const manifest = strictManifest(
+      [
+        requiredEntity,
+        {
+          ...requiredField,
+          fieldTypes: fieldTypes as readonly "integer"[],
+        },
+      ],
+      [entityParameter, fieldParameter],
+    );
+
+    expect(() => resolveStrictManifest(manifest, validBindings)).toThrow();
+    expect(fieldTypeReads).toBe(0);
+  });
+
   it.each([
     {
       label: "ownerBinding",

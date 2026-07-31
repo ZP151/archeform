@@ -245,6 +245,215 @@ describe("capability composition contract", () => {
     ).not.toThrow();
   });
 
+  it("rejects an accessor-backed parameters declaration without invoking it", () => {
+    let parameterReads = 0;
+    const parameterAsset = asset("core.parameter-reread-test", {
+      bindingContract: "factory.capability-binding/v1",
+      inputSchema: [{ key: "entity", type: "domain.entity", required: true }],
+    } as unknown as Partial<CapabilityAssetManifestV1>);
+    Object.defineProperty(parameterAsset.manifest, "parameters", {
+      enumerable: true,
+      get: () => {
+        parameterReads += 1;
+        return parameterReads === 1
+          ? [{ key: "entity", type: "graph-symbol", required: true }]
+          : [{ key: "entity", type: "number", required: false }];
+      },
+    });
+
+    expect(() =>
+      resolveSyntheticComposition({
+        assets: [parameterAsset],
+        selections: [selection(parameterAsset, { entity: 7 })],
+      }),
+    ).toThrow();
+    expect(parameterReads).toBe(0);
+  });
+
+  it("rejects an accessor-backed parameter-array element without invoking it", () => {
+    let parameterReads = 0;
+    const parameters: unknown[] = [];
+    Object.defineProperty(parameters, "0", {
+      enumerable: true,
+      get: () => {
+        parameterReads += 1;
+        return { key: "entity", type: "graph-symbol", required: true };
+      },
+    });
+    parameters.length = 1;
+    const parameterAsset = asset("core.parameter-array-accessor-test", {
+      parameters: parameters as CapabilityAssetManifestV1["parameters"],
+    });
+
+    expect(() =>
+      resolveSyntheticComposition({
+        assets: [parameterAsset],
+        selections: [
+          selection(parameterAsset, {
+            entity: { graphSymbol: "graph.domain.product" },
+          }),
+        ],
+      }),
+    ).toThrow();
+    expect(parameterReads).toBe(0);
+  });
+
+  it.each([
+    {
+      label: "an inherited parameter-array index",
+      parameters: () => {
+        const inherited: unknown[] = [];
+        Object.setPrototypeOf(inherited, [
+          { key: "entity", type: "graph-symbol", required: true },
+        ]);
+        inherited.length = 1;
+        return inherited;
+      },
+    },
+    {
+      label: "a sparse parameter array",
+      parameters: () => new Array(1),
+    },
+    {
+      label: "an extra own parameter-array property",
+      parameters: () => {
+        const values = [
+          { key: "entity", type: "graph-symbol", required: true },
+        ];
+        Object.assign(values, { unexpected: true });
+        return values;
+      },
+    },
+    {
+      label: "a symbol-keyed parameter array",
+      parameters: () => {
+        const values = [
+          { key: "entity", type: "graph-symbol", required: true },
+        ];
+        Object.defineProperty(values, Symbol("unexpected"), { value: true });
+        return values;
+      },
+    },
+    {
+      label: "a parameter array with a custom prototype",
+      parameters: () => {
+        const values = [
+          { key: "entity", type: "graph-symbol", required: true },
+        ];
+        Object.setPrototypeOf(values, Object.create(Array.prototype));
+        return values;
+      },
+    },
+    {
+      label: "a cyclic parameter array",
+      parameters: () => {
+        const values: unknown[] = [
+          { key: "entity", type: "graph-symbol", required: true },
+        ];
+        values.push(values);
+        return values;
+      },
+    },
+  ])("rejects $label", ({ parameters }) => {
+    const parameterAsset = asset("core.noncanonical-parameter-array-test", {
+      parameters: parameters() as CapabilityAssetManifestV1["parameters"],
+    });
+
+    expect(() =>
+      resolveSyntheticComposition({
+        assets: [parameterAsset],
+        selections: [
+          selection(parameterAsset, {
+            entity: { graphSymbol: "graph.domain.product" },
+          }),
+        ],
+      }),
+    ).toThrow();
+  });
+
+  it.each([
+    {
+      label: "selection",
+      key: "core.selection-accessor-test",
+      createSelection: (onRead: () => void) =>
+        Object.defineProperties(
+          {
+            bindings: {
+              entity: { graphSymbol: "graph.domain.product" },
+            },
+          },
+          {
+            lock: {
+              enumerable: true,
+              get: () => {
+                onRead();
+                return lockCapabilityAsset(
+                  asset("core.selection-accessor-test"),
+                );
+              },
+            },
+          },
+        ) as CapabilitySelectionV1,
+    },
+    {
+      label: "lock",
+      key: "core.lock-accessor-test",
+      createSelection: (onRead: () => void) => {
+        const accessorLock = Object.defineProperty(
+          lockCapabilityAsset(asset("core.lock-accessor-test")),
+          "key",
+          {
+            enumerable: true,
+            get: () => {
+              onRead();
+              return "core.lock-accessor-test";
+            },
+          },
+        );
+        return {
+          lock: accessorLock,
+          bindings: { entity: { graphSymbol: "graph.domain.product" } },
+        } as CapabilitySelectionV1;
+      },
+    },
+    {
+      label: "bindings",
+      key: "core.bindings-accessor-test",
+      createSelection: (onRead: () => void) =>
+        Object.defineProperties(
+          { lock: lockCapabilityAsset(asset("core.bindings-accessor-test")) },
+          {
+            bindings: {
+              enumerable: true,
+              get: () => {
+                onRead();
+                return { entity: { graphSymbol: "graph.domain.product" } };
+              },
+            },
+          },
+        ) as CapabilitySelectionV1,
+    },
+  ])(
+    "rejects a $label accessor without invoking it",
+    ({ key, createSelection }) => {
+      let accessorReads = 0;
+      const selected = createSelection(() => {
+        accessorReads += 1;
+      });
+      const selectedAsset = asset(key, {
+        parameters: [{ key: "entity", type: "graph-symbol", required: true }],
+      });
+
+      expect(() =>
+        resolveSyntheticComposition({
+          assets: [selectedAsset],
+          selections: [selected],
+        }),
+      ).toThrow();
+      expect(accessorReads).toBe(0);
+    },
+  );
+
   it("creates a lock from exact Graph-symbol binding objects", () => {
     const lock = createCapabilityCompositionLock({
       graphChecksum: digest("a"),
