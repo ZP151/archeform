@@ -22,6 +22,7 @@ import {
   assertCommerceLineConfigurationProfile,
   createCommerceLineConfigurationProfileProjection,
 } from "./commerce/profile.js";
+import { createProfileReadiness } from "./profile-readiness.js";
 import { assertRestaurantOrderingProfile } from "./restaurant/profile.js";
 
 export type {
@@ -41,6 +42,12 @@ export {
   createCapabilityCompositionLock,
   resolveCapabilityComposition,
 } from "./composition.js";
+export type {
+  ProfileCapabilityReadinessV1,
+  ProfileGeneratedTargetV1,
+  ProfileReadinessCapabilityV1,
+  ProfileReadinessV1,
+} from "./profile-readiness.js";
 export type {
   CapabilityBindingValueV1,
   CapabilityCompositionLockV1,
@@ -3175,6 +3182,29 @@ export function getFactoryProfileDescriptor(
   );
   if (!descriptor) throw new Error(`Unknown Factory profile '${profile}'.`);
   return descriptor;
+}
+
+let profileReadinessCache:
+  readonly import("./profile-readiness.js").ProfileReadinessV1[] | undefined;
+
+/**
+ * Returns immutable source-free readiness facts derived from the current
+ * registered Profile recipes. This does not represent an installed Provider
+ * or authorize unregistered package selection.
+ */
+export function listProfileReadiness(): readonly import("./profile-readiness.js").ProfileReadinessV1[] {
+  if (profileReadinessCache) return profileReadinessCache;
+  profileReadinessCache = createProfileReadiness(
+    listFactoryProfiles().map((profile) => ({
+      profile: profile.profile,
+      label: profile.label,
+      availableCapabilities: [
+        ...profile.requiredCapabilities,
+        ...profile.defaultOptionalCapabilities,
+      ],
+    })),
+  );
+  return profileReadinessCache;
 }
 
 /** Creates a default base Graph and routes the profile recipe through the
