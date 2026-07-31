@@ -43,7 +43,7 @@ amendment adds only `packages/external-intake/test/portfolio.test.ts` to permit
 `apps/intake-cli/package.json` as the single `@factory/external-intake`
 importer/dependency; the prohibition remains everywhere else. Task 5 is now
 `implementing` under its frozen External Capability Promotion contract and
-exact six paths; Task 6 remains `planned`. Independent Task 4 review of commit
+exact eight paths; Task 6 remains `planned`. Independent Task 4 review of commit
 `33fd204` then FAILED with four P1 findings and one P2. The Controller authorized
 bounded Repair Round 1/5 and exactly three additional production paths; Task 4
 remains `implementing` under the amended frozen scope. Repair Round 1 re-review
@@ -113,8 +113,13 @@ frozen. Task 4 acceptance and Commercial Capability Foundation Task 1
 acceptance satisfy Task 5's dependency gate. The PM moved Task 5
 `planned -> implementing` under its frozen review-only promotion-packet card;
 the Controller subsequently accepted the Tech Lead's additive asynchronous
-review-input contract clarification without changing Task 5's state or exact
-six paths. Task 6 remains `planned`. The system will ingest the 43 fixed-reference
+review-input contract clarification. Independent review of Task 5 implementation
+commit `37b4a05` did not clear the implementation gate. The Controller accepted
+one bounded remediation amendment that adds only the internal Store reader and
+its focused test path to the original six paths. Task 5 remains `implementing`
+with exactly eight paths; fresh task review, QA, release review, and final
+verification remain required. Task 6 remains `planned`. The system will ingest
+the 43 fixed-reference
 portfolio as metadata, retain the 108 scenarios as composition demand signals,
 and produce only quarantined evidence, non-executable Candidate records, and
 pending-review promotion packets.
@@ -268,7 +273,7 @@ remain frozen.
 | 2. Fixed-source provenance and notices           | `accepted`     | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
 | 3. Deterministic scan orchestration              | `accepted`     | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
 | 4. Candidate registry, API, CLI, and isolation   | `accepted`     | `integration`       | Candidate Registry               | Release review and fresh root verification PASS; frozen.    |
-| 5. Review-only promotion packets                 | `implementing` | `governance`        | External Capability Promotion    | Async review-input clarification; same frozen six paths.    |
+| 5. Review-only promotion packets                 | `implementing` | `governance`        | External Capability Promotion    | Bounded remediation amendment; frozen eight paths.          |
 | 6. Bulk acceptance and release evidence          | `planned`      | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.        |
 
 ## Task 1 card: Candidate contracts and immutable persistence
@@ -1698,7 +1703,7 @@ Both dependencies are accepted and frozen: External Intake Task 4 was accepted
 after independent task review, QA, release review, and fresh root verification;
 Commercial Capability Foundation Task 1 remains accepted with release set
 `b2f3b9e + 4f320fd`. The PM moved Task 5 `planned -> implementing`. One bounded
-`governance` writer exclusively owns the six exact paths below. The External
+`governance` writer exclusively owns the eight exact paths below. The External
 Capability Promotion contract, interfaces, paths, non-goals, and acceptance
 evidence are frozen; any scope, path, or contract change stops work for
 Controller review.
@@ -1706,7 +1711,7 @@ Controller review.
 ### Controller-accepted asynchronous review-input clarification
 
 The Controller accepts the Tech Lead clarification below. Task 5 remains
-`implementing`; the same governance writer and six exact code/test paths remain
+`implementing`; the same governance writer and eight exact code/test paths remain
 frozen. This clarification supersedes only the plan's synchronous
 three-argument packet-creation signature with the additive asynchronous
 review-input contract:
@@ -1808,12 +1813,71 @@ paths, symlinks, non-empty output, and overwrite attempts. No approval, waiver,
 source copy, notice modification, Golden registration, Graph/compiler/runtime
 linkage, provider activation, or Task 6 behavior is authorized.
 
+### Controller-accepted Task 5 remediation amendment
+
+Independent review of implementation commit `37b4a05` did not clear the Task 5
+implementation gate. The Controller permits one bounded amendment inside the
+same `implementing` state. It adds only
+`packages/external-intake/src/store.ts` and
+`packages/external-intake/test/store.test.ts` to the original six paths. It
+adds no dependency, public package export, evidence/raw-report reader, Golden,
+Graph, compiler, capability, approval, source-copy execution, or Task 6
+behavior.
+
+The Store addition is the package-internal, package-root-unexported
+`readVerifiedCandidateSnapshotBlob(store, digest)`, usable only by promotion.
+It has one fixed Candidate snapshot domain. It opens one descriptor, verifies
+with `fstat` that the same descriptor is a regular bounded file, reads from
+that descriptor, verifies the requested digest against those exact bytes, and
+returns a copy. It must not reopen by pathname or expose an evidence or raw
+report reader.
+
+Promotion review text is exact and path-aware. Literal `approved` is permitted
+only at `licence.manualStatus`; that status must exactly equal the immutable
+verified evidence. Literal `rejected` blocks packet creation. Source-copy mode
+`proposed-copy` requires the immutable licence status to be `approved`, but the
+packet decision remains exactly `pending-review`.
+
+For `proposed-copy`, every `selectedModules` entry with
+`purpose: "proposed-copy"` must be covered exactly once. Candidate
+dependency/provider modules are not copy selections and must not be copied.
+The trusted snapshot blob is fatal UTF-8 with no NUL bytes. Line ranges use LF
+semantics, have bounded endpoints, and each range carries and verifies its own
+digest. The packet records only range counts and digests; source bytes and text
+never enter the packet.
+
+The Candidate manifest remains a distinct immutable object. The packet adds a
+separate `factoryProposal` only: its key cannot use the `candidate.*`
+namespace, its review state remains pending, and it binds the Candidate
+manifest digest, identity, classification, and exact operations. Those
+operations must map every Candidate effect exactly once. The proposal does not
+grant a capability or approval and must not import or create a Golden asset,
+Graph input, compiler input, or runtime/provider activation.
+
+The CLI anchors the validated output directory to the process current working
+directory and checks the output directory's device and inode identity. Every
+fixed-leaf write and reread uses one exclusive-create `wx+` descriptor with
+`fsync` and read-back digest verification. It fails closed when identity is
+unavailable, does not reopen the output pathname, and cleans up only the
+run-owned leaf. A real Windows child-process junction/rename race must be
+exercised; an in-process mock is not sufficient.
+
+Original RED evidence for commit `37b4a05` was not retained and must not be
+reconstructed or implied. The remediation report must say this explicitly and
+may claim only new RED and GREEN commands actually executed during the
+remediation. Reports remain sanitized operational evidence: no credentials,
+raw prompts/responses, source bytes/text, or raw scanner reports.
+
 ### Exact allowed paths
 
 - `packages/external-intake/src/promotion.ts`
 - `packages/external-intake/src/api.ts`
 - `packages/external-intake/src/index.ts`
+- `packages/external-intake/src/store.ts` (only the package-internal,
+  package-root-unexported Candidate snapshot blob reader above)
 - `packages/external-intake/test/promotion.test.ts`
+- `packages/external-intake/test/store.test.ts` (only focused reader and
+  package-root isolation regressions)
 - `apps/intake-cli/src/main.ts`
 - `apps/intake-cli/test/cli.test.ts`
 
@@ -1824,20 +1888,44 @@ linkage, provider activation, or Task 6 behavior is authorized.
 
 ### Acceptance evidence
 
-- Complete parent digests, manual licence status, finding dispositions, exact
-  source-copy ranges, notices destination, reviewers, Factory interface,
-  removal path, and collision checks are required.
-- Only `conformance-passed` yields a pending packet; incomplete/excluded/
-  colliding input fails. CLI renders with exclusive create and has no approval
-  or promotion operation.
-- Focused RED/GREEN evidence must run
-  `pnpm --filter @factory/external-intake test -- --run test/promotion.test.ts`
-  and `pnpm --filter @factory/intake-cli test -- --run test/cli.test.ts`.
-- Final bounded verification must run Promotion and Candidate tests together,
-  the Intake CLI suite, and External Intake and Intake CLI typechecks. It must
-  prove the packet is canonical and re-verifiable, only a complete
-  `conformance-passed` Candidate can produce `decision: "pending-review"`, and
-  no command can accept, approve, waive, register, copy, or modify notices.
+- **Snapshot trust:** focused Store tests prove same-descriptor regular-file,
+  size-bound, byte-digest, returned-copy, path-replacement, and package-root
+  non-export behavior. No evidence or raw-report reader exists.
+- **Licence and review text:** exact-path tests prove immutable licence binding,
+  `approved` only at `licence.manualStatus`, `rejected` blocking,
+  `proposed-copy` requiring approved licence, and an unchanged
+  `decision: "pending-review"`.
+- **Exact source-copy proof:** tests cover mode `none`, every
+  `selectedModules` entry with `purpose: "proposed-copy"` exactly once,
+  dependency/provider modules excluded from copy selection,
+  missing/duplicate/extra coverage, fatal UTF-8, NUL rejection, LF line-count
+  boundaries, bounded range endpoints, per-range digest mismatch, and packet
+  absence of source bytes/text.
+- **Candidate/proposal separation:** tests prove the Candidate manifest remains
+  present and digest-bound while distinct `factoryProposal` rejects
+  `candidate.*`, remains pending, binds identity/classification, and maps every
+  Candidate effect exactly once. Package-root and import-boundary checks prove
+  no capability grant, approval, Golden, Graph, compiler, runtime, or provider
+  linkage.
+- **CLI filesystem safety:** tests cover absolute/traversal/symlink and
+  non-empty output rejection, unavailable identity, directory identity change,
+  one-descriptor exclusive create/fsync/reread/digest verification, no pathname
+  reopen, exact run-owned-leaf cleanup, overwrite rejection, and a real Windows
+  child-process junction/rename race.
+- **Focused remediation RED/GREEN:** newly added behavior must first fail and
+  then pass under
+  `pnpm --filter @factory/external-intake test -- --run test/promotion.test.ts test/store.test.ts`
+  and
+  `pnpm --filter @factory/intake-cli test -- --run test/cli.test.ts`. The report
+  must disclose that the original RED evidence was not retained and record only
+  remediation commands actually executed.
+- **Final bounded verification:** run Promotion, Candidate, and Store tests
+  together, the complete External Intake and Intake CLI suites, their
+  typechecks, package-root/import-boundary checks, and the Windows race. It must
+  prove the packet is canonical and re-verifiable, only a complete verified
+  `conformance-passed` Candidate can produce a pending packet, and no command
+  can accept, approve, waive, register, execute a copy, expose source text, or
+  modify notices.
 - Independent task review, behavioral QA, release review, and fresh final
   verification remain required before `accepted`.
 
@@ -1908,13 +1996,13 @@ linkage, provider activation, or Task 6 behavior is authorized.
   remain demand metadata and cannot create Candidates or Drafts.
 - **Governance risk:** `conformance-passed` could be mistaken for Golden. It has
   no promotion authority, and the first slice creates no Golden asset.
-- **Coordination risk:** Task 5 touches accepted Task 4 API/index and CLI paths.
-  One governance writer exclusively owns the frozen six-path slice; any
-  Candidate contract or accepted behavior change returns Task 4 to a recorded
-  repair round and stops Task 5.
+- **Coordination risk:** Task 5 touches accepted Task 4 API/index, Store, and
+  CLI paths. One governance writer exclusively owns the frozen eight-path
+  slice; any Candidate contract, public Store surface, or accepted behavior
+  change returns Task 4 to a recorded repair round and stops Task 5.
 
 The active smallest valuable slice is Task 5 review-only promotion-packet
-implementation under the frozen External Capability Promotion contract and six
+remediation under the frozen External Capability Promotion contract and eight
 exact paths. It may consume only an immutable verified `conformance-passed`
 Candidate, freshly rehydrated Task 3 parents, and a strict local
 `PromotionReviewInputV1`, and may produce only a canonical inventory-scoped
@@ -1937,7 +2025,9 @@ verified recovery before any API, CLI, lifecycle, or conformance consumption or
 transition, plus the two-process adversarial proof. Repair Round 4/5 now requires
 durable compare-and-set against the verified quarantined creation revision,
 deterministic sequence-2 persistence, concurrent convergence or clean rejection,
-and exactly-once two-process evidence. The frozen Task 2 store is unchanged.
+and exactly-once two-process evidence. Accepted Task 2 and Task 4 Store behavior
+remains frozen; Task 5 may add only the internal, root-unexported snapshot reader
+recorded in its bounded amendment.
 Task 1's original release and bounded amendments, Task 2's accepted code set
 `515e0ba + 3dcb20f + dcaddf4`, Task 3's accepted repair commit `8b31d3a`, and
 Task 4's complete accepted Candidate Registry remain frozen. Task 5 is
