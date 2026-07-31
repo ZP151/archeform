@@ -2,6 +2,7 @@ import { dirname, resolve } from "node:path";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -22,7 +23,129 @@ const repositoryRoot = resolve(
   "../../..",
 );
 
+function renderTemplate(template: string): string {
+  return template
+    .replaceAll("{{orderEntity}}", "order")
+    .replaceAll("{{orderFlow}}", "submit")
+    .replaceAll("{{customerRole}}", "shopper");
+}
+
+async function importRenderedTemplate<T>(template: string): Promise<T> {
+  const javascript = ts.transpileModule(renderTemplate(template), {
+    compilerOptions: {
+      module: ts.ModuleKind.ES2022,
+      target: ts.ScriptTarget.ES2022,
+    },
+  }).outputText;
+  return (await import(
+    `data:text/javascript;base64,${Buffer.from(javascript).toString("base64")}`
+  )) as T;
+}
+
 describe("generic order lifecycle V2 package", () => {
+  it("executes rendered 2.0.2 templates with the canonical closed request boundaries", async () => {
+    const asset = capabilityAssets.find(
+      ({ manifest }) =>
+        manifest.key === "commerce.order" && manifest.version === "2.0.2",
+    );
+    expect(asset).toBeDefined();
+    if (!asset) return;
+
+    const contributions = loadCapabilityAssetContributions(
+      asset,
+      repositoryRoot,
+    );
+    const createTemplate = contributions.find(
+      ({ targetRuntimeInterfaceVersion }) =>
+        targetRuntimeInterfaceVersion === "factory.order-create-handler/v1",
+    );
+    const transitionTemplate = contributions.find(
+      ({ targetRuntimeInterfaceVersion }) =>
+        targetRuntimeInterfaceVersion ===
+        "factory.transaction-operation-adapter/v1",
+    );
+    expect(createTemplate).toBeDefined();
+    expect(transitionTemplate).toBeDefined();
+    if (!createTemplate || !transitionTemplate) return;
+
+    const { commerceOrderCreateHandler } = await importRenderedTemplate<{
+      readonly commerceOrderCreateHandler: {
+        create(
+          request: unknown,
+          dependencies: Readonly<{
+            store: {
+              createInitial(
+                input: Readonly<Record<string, unknown>>,
+              ): Promise<unknown>;
+            };
+            authorizer: { assertCreateAllowed(role: string): Promise<void> };
+          }>,
+        ): Promise<unknown>;
+      };
+    }>(createTemplate.content);
+    const { commerceOrderTransactionOperationAdapter } =
+      await importRenderedTemplate<{
+        readonly commerceOrderTransactionOperationAdapter: {
+          parseRequest(request: unknown): unknown;
+        };
+      }>(transitionTemplate.content);
+
+    const calls: string[] = [];
+    const dependencies = {
+      authorizer: {
+        assertCreateAllowed: async () => void calls.push("authorize"),
+      },
+      store: {
+        createInitial: async () => {
+          calls.push("create");
+          return { id: "server-1", status: "cart", version: 0 };
+        },
+      },
+    };
+
+    await expect(
+      commerceOrderCreateHandler.create(
+        { role: "shopper", entityKey: "order", input: {}, unexpected: true },
+        dependencies,
+      ),
+    ).rejects.toThrow();
+    await expect(
+      commerceOrderCreateHandler.create(
+        { role: "shopper", entityKey: "order", input: { id: "caller-id" } },
+        dependencies,
+      ),
+    ).rejects.toThrow();
+    expect(calls).toEqual([]);
+
+    await expect(
+      commerceOrderCreateHandler.create(
+        { role: "shopper", entityKey: "order", input: { note: "ok" } },
+        dependencies,
+      ),
+    ).resolves.toEqual({ id: "server-1", status: "cart", version: 0 });
+    expect(calls).toEqual(["authorize", "create"]);
+
+    expect(() =>
+      commerceOrderTransactionOperationAdapter.parseRequest({
+        orderId: "server-1",
+        expectedVersion: 0,
+        transition: "submit",
+        idempotencyKey: "submit-1",
+        payloadDigest: "not-a-sha",
+      }),
+    ).toThrow();
+    expect(() =>
+      commerceOrderTransactionOperationAdapter.parseRequest({
+        orderId: "server-1",
+        expectedVersion: 0,
+        transition: "submit",
+        idempotencyKey: "submit-1",
+        payloadDigest: `sha256:${"a".repeat(64)}`,
+        unexpected: true,
+      }),
+    ).toThrow();
+  });
+
   it("registers a verified 2.0.1 lifecycle successor with digest-covered create and transition contributions", () => {
     const asset = capabilityAssets.find(
       ({ manifest }) =>

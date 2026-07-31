@@ -1,0 +1,77 @@
+{
+  "apiVersion": "factory.capability/v1",
+  "bindingContract": "factory.capability-binding/v1",
+  "key": "commerce.order",
+  "version": "2.0.2",
+  "category": "commerce",
+  "name": "Generic order lifecycle",
+  "description": "Creates authorized persisted orders and prepares bounded order transitions.",
+  "packageRoot": "packages/capabilities/assets/commerce.order/2.0.2",
+  "manifestDigest": "sha256:57dad2321a647302e013f3ac8bc12c7df66dcd3e7f75d566440a03ec1e08c8cd",
+  "lifecycle": "golden",
+  "profiles": ["simple-ecommerce", "retail-counter", "grocery-pickup"],
+  "effects": ["order.create", "order.transition"],
+  "inputSchema": [
+    { "key": "orderEntity", "type": "domain.entity", "required": true },
+    { "key": "orderFlow", "type": "flow.flow", "required": true },
+    { "key": "customerRole", "type": "policy.role", "required": true }
+  ],
+  "outputSlots": ["api.runtime", "test.journey"],
+  "runtimeHandlers": ["order"],
+  "templates": [],
+  "parameters": [
+    { "key": "orderEntity", "type": "graph-symbol", "required": true },
+    { "key": "orderFlow", "type": "graph-symbol", "required": true },
+    { "key": "customerRole", "type": "graph-symbol", "required": true }
+  ],
+  "executableContributions": [
+    {
+      "id": "commerce-order-create-handler",
+      "outputSlot": "api.runtime",
+      "namespace": "packages/commerce.order/api/runtime/",
+      "source": "templates/api/commerce-order-create-handler.ts.tpl",
+      "target": "api/src/capabilities/commerce-order-create-handler.ts",
+      "parameterRefs": ["orderEntity", "orderFlow", "customerRole"],
+      "targetRuntimeInterfaceVersion": "factory.order-create-handler/v1",
+      "orderingRequirements": [],
+      "mergeProtocol": "replace-file",
+      "digest": "sha256:616a161e958f58e8b14bc4c8829e3963c6fc462e2ea20fdbd0cff16d136e5cf6"
+    },
+    {
+      "id": "commerce-order-transaction-operation-adapter",
+      "outputSlot": "api.runtime",
+      "namespace": "packages/commerce.order/api/runtime/",
+      "source": "templates/api/commerce-order-transaction-operation-adapter.ts.tpl",
+      "target": "api/src/capabilities/commerce-order-transaction-operation-adapter.ts",
+      "parameterRefs": ["orderEntity", "orderFlow", "customerRole"],
+      "targetRuntimeInterfaceVersion": "factory.transaction-operation-adapter/v1",
+      "orderingRequirements": ["commerce-order-create-handler"],
+      "mergeProtocol": "replace-file",
+      "digest": "sha256:c4ba3b2dd8e893ec860cedc3757532cbd4380e2f208326257e4c2368b8d3ce6e"
+    },
+    {
+      "id": "commerce-order-lifecycle-journey",
+      "outputSlot": "test.journey",
+      "namespace": "packages/commerce.order/test/journeys/",
+      "source": "templates/test/commerce-order-lifecycle.journey.ts.tpl",
+      "target": "api/test/journeys/commerce-order-lifecycle.journey.ts",
+      "parameterRefs": ["orderEntity", "orderFlow", "customerRole"],
+      "targetRuntimeInterfaceVersion": "factory.journey/v1",
+      "orderingRequirements": ["commerce-order-create-handler", "commerce-order-transaction-operation-adapter"],
+      "mergeProtocol": "replace-file",
+      "digest": "sha256:8d9bf8fbb11ca1401abd7be1e880db3d4364c79c46a0e125b92676bc4588e872"
+    }
+  ],
+  "provides": [
+    { "interfaceKey": "commerce.order-event", "version": "v1" },
+    { "interfaceKey": "factory.order-create-handler", "version": "v1" },
+    { "interfaceKey": "factory.transaction-operation-adapter", "version": "v1" }
+  ],
+  "verification": {
+    "fixture": "fixtures/default.json",
+    "fixtureDigest": "sha256:f6c1a5b1480543121e3b604d8ddb7ca596084da0c8216cf7e0c039e99e5bc1ee",
+    "contractTest": "tests/contract.json",
+    "contractTestDigest": "sha256:9bc46ed97110f0467223cc46930031b759a7529f26ff65814133d83820eed59d",
+    "status": "verified"
+  }
+}
