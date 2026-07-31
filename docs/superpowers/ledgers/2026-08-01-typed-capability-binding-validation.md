@@ -84,6 +84,14 @@ not acceptance.
 - Task 2's Task 1 dependency is now `accepted`. The PM assigned Typed Manifest
   Contract Integration as its bounded writer and recorded
   `planned -> implementing` under the exact four Capabilities paths below.
+- Task 2 implementation commit
+  `4458bfc7c8ffcaef29dfebb755d8399e12000198` remained inside those paths, but
+  independent task review found two P1s. Task 2 remains `implementing`; repair
+  round 1 is authorized only for the in-path strict-validator defect. The
+  separate Graph persistence/ownership gap requires an architecture amendment
+  before Task 4. Repair commit
+  `a7331df0ac6a6f54f82bf61a060607777bc06dc0` is present inside the exact
+  boundary but has not passed independent re-review, so state does not advance.
 - Tasks 3 through 6 remain `planned`; none is dispatched by this transition.
 - No frontend/backend parallel implementation is permitted in this project.
 - Commercial Capability Foundation Task 2 remains `implementing` and
@@ -94,14 +102,14 @@ not acceptance.
 
 ## Project state
 
-| Task                                           | State          | Specialization | Contract owner                               | Contract status                                          |
-| ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | -------------------------------------------------------- |
-| 1. Pure typed Graph symbol index               | `accepted`     | `integration`  | Application Graph Type System                | Release review and fresh verification passed.            |
-| 2. Typed manifest and binding contracts        | `implementing` | `integration`  | Capability Binding Contract                  | Task 1 accepted; bounded writer assigned to exact paths. |
-| 3. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 2 manifest contract.            |
-| 4. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-3.                           |
-| 5. Graph-aware Publish and compiler admission  | `planned`      | `backend`      | Published Graph and Compiler Admission       | Blocked on accepted Tasks 1-4.                           |
-| 6. Current recipe migration and acceptance     | `planned`      | `integration`  | Typed Binding Migration and Release Evidence | Blocked on accepted Tasks 1-5.                           |
+| Task                                           | State          | Specialization | Contract owner                               | Contract status                                             |
+| ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | ----------------------------------------------------------- |
+| 1. Pure typed Graph symbol index               | `accepted`     | `integration`  | Application Graph Type System                | Release review and fresh verification passed.               |
+| 2. Typed manifest and binding contracts        | `implementing` | `integration`  | Capability Binding Contract                  | Two review P1s open; repair round 1 and amendment required. |
+| 3. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 2 manifest contract.               |
+| 4. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-3 and architecture amendment.   |
+| 5. Graph-aware Publish and compiler admission  | `planned`      | `backend`      | Published Graph and Compiler Admission       | Blocked on accepted Tasks 1-4.                              |
+| 6. Current recipe migration and acceptance     | `planned`      | `integration`  | Typed Binding Migration and Release Evidence | Blocked on accepted Tasks 1-5.                              |
 
 ## Task 1: Add a pure typed Graph symbol index
 
@@ -311,7 +319,7 @@ not acceptance.
 
 ## Task 2: Freeze typed manifest and binding contracts
 
-- **State:** `implementing`
+- **State:** `implementing` (repair round 1)
 - **Specialization:** `integration`
 - **Bounded writer:** Typed Manifest Contract Integration
 - **Contract owner:** Capability Binding Contract
@@ -348,6 +356,52 @@ not acceptance.
 - `packages/capabilities/src/composition.ts`
 - `packages/capabilities/test/composition-contract.test.ts`
 - `packages/capabilities/test/typed-binding-contract.test.ts`
+
+### Implementation review findings and repair round 1
+
+- Reviewed implementation commit
+  `4458bfc7c8ffcaef29dfebb755d8399e12000198`
+  (`feat: define typed capability bindings`) is a direct child of Task 2
+  dispatch `bf77d90a5e2e7627ad806b7851462935b2add7e0` and changes exactly the
+  four Task 2 paths above.
+- Independent review of
+  `bf77d90a5e2e7627ad806b7851462935b2add7e0..4458bfc7c8ffcaef29dfebb755d8399e12000198`
+  found two P1s. Task 2 remains `implementing`; no prior green test or
+  implementation evidence advances its state.
+- **P1 1 -- strict schema is not exact:** the manifest validator validates
+  required values but does not enforce exact own-key allowlists for field and
+  non-field input declarations, and it accepts duplicate entries in
+  `fieldTypes`.
+- Repair round 1 remains assigned to **Typed Manifest Contract Integration**
+  under the unchanged **Capability Binding Contract** and exact four paths.
+  Begin with focused failing tests proving unexpected own keys reject for each
+  strict input shape and repeated scalar entries in `fieldTypes` reject.
+- GREEN must enforce the exact allowed own keys for a non-field input
+  (`key`, `type`, `required`) and for a field input (`key`, `type`, `required`,
+  `ownerBinding`, `fieldTypes`, optional `fieldRequired`, optional
+  `fieldUnique`), while preserving every previously required strict-contract
+  rejection. Re-run the focused contract suites, Capabilities typecheck/lint,
+  bounded diff checks, and independent task re-review.
+- Repair implementation commit
+  `a7331df0ac6a6f54f82bf61a060607777bc06dc0`
+  (`fix: close typed binding schemas`) is a direct child of the reviewed
+  implementation and changes only `packages/capabilities/src/composition.ts`
+  and `packages/capabilities/test/typed-binding-contract.test.ts`. It remains
+  unreviewed evidence and does not advance Task 2 from `implementing`.
+- **P1 2 -- Graph persistence has no owner:** Task 2 can create a binding value
+  with `fieldKey`, but the strict `ApplicationGraphV1` composition-binding
+  schema accepts only `{ graphSymbol }`. A field binding therefore cannot
+  survive Graph parse/serialization as the owner-aware object required by the
+  accepted design.
+- No current Task 2-6 exact-path boundary owns the required Application Graph
+  schema, browser entry, parser/serializer, and regression-test changes. This
+  is a plan/contract ownership gap, not authority to edit Graph code under Task 2.
+- Before Task 4 can start, an architecture amendment must reconcile ADR/design,
+  implementation plan, and project ledger ownership for the Graph field-binding
+  shape and its browser/parser/serialization evidence. Until that amendment is
+  accepted, Task 4 has an explicit architecture blocker.
+- This PM update changes no contract and authorizes no Graph-path
+  implementation.
 
 ### Blocking non-goals
 
@@ -541,6 +595,10 @@ not acceptance.
 
 - Any ADR/design contract, task dependency, or exact-path change stops the
   affected task and all downstream tasks for PM/architecture reconciliation.
+- The missing Graph owner-aware field-binding persistence path is such a
+  contract/ownership gap. Task 4 cannot start until an accepted architecture
+  amendment assigns its Graph schema, browser, parser/serializer, and test
+  ownership. Task 2 repair round 1 may not absorb those paths.
 - Tasks 1-5 remain serialized. Task 6 cannot start early, even if a downstream
   test can be made green independently.
 - Historic package roots, evidence, digests, Published revisions, and locks are
@@ -552,14 +610,14 @@ not acceptance.
 - Runtime atomicity and exactly-once stock execution across intentional
   inventory co-providers remain Commercial Foundation Task 3 scope and are not
   proven by this project.
-- This PM transition authorizes only Task 2 implementation by Typed Manifest
-  Contract Integration in its exact four paths. It authorizes no Task 3-6
-  implementation.
+- This PM transition authorizes only Task 2 repair round 1 by Typed Manifest
+  Contract Integration in its existing exact four paths. It authorizes no
+  Graph-path change and no Task 3-6 implementation.
 
 ## Next smallest valuable slice
 
-Implement Task 2 under the accepted Task 1 index and unchanged Capability
-Binding Contract. Begin with focused failing strict-contract tests, keep all
-physical assets, recipes, Draft/Publish/compiler entry points, and historical
-bindings out of scope, and prepare bounded verification for independent task
-review. Leave Tasks 3-6 `planned`.
+Run independent Task 2 repair-round re-review of
+`4458bfc7c8ffcaef29dfebb755d8399e12000198..a7331df0ac6a6f54f82bf61a060607777bc06dc0`
+inside the unchanged four-path boundary. Separately require an accepted
+architecture amendment for Graph field-binding persistence before Task 4.
+Leave Tasks 3-6 `planned`.

@@ -20,9 +20,14 @@ RELEASE PASS with no P0/P1/P2, and fresh verification passed.
 Task 2, **typed manifest and binding contracts**, is `implementing`. Its bounded
 writer is Typed Manifest Contract Integration, its contract owner is Capability
 Binding Contract, and its write boundary is the exact four Capabilities paths
-recorded below. Tasks 3 through 5 remain `planned` and serialized on acceptance
-of the preceding task. Task 6 remains `planned` and begins only after Tasks 1
-through 5 are all `accepted`.
+recorded below. Independent review of implementation commit
+`4458bfc7c8ffcaef29dfebb755d8399e12000198` found two P1s, so Task 2 does not
+advance. Repair round 1 commit
+`a7331df0ac6a6f54f82bf61a060607777bc06dc0` stays inside the existing path
+boundary but has not passed independent re-review. A separate Graph persistence
+ownership gap requires an architecture amendment before Task 4. Tasks 3 through
+5 remain `planned` and serialized on acceptance of the preceding task. Task 6
+remains `planned` and begins only after Tasks 1 through 5 are all `accepted`.
 
 Commercial Capability Foundation Task 2 remains `implementing` and escalated
 after its five permitted repair rounds. It is blocked on accepted Typed
@@ -130,6 +135,31 @@ Typed Binding Task 1 implementation, review, and QA evidence is:
 - Task 1 acceptance is limited to the pure Graph index. Typed manifests, safe
   assets, and Draft/Publish/compiler enforcement remain Tasks 2 through 5; the
   parent Foundation defect remains open.
+
+Typed Binding Task 2 implementation and failed-review evidence is:
+
+- Implementation commit `4458bfc7c8ffcaef29dfebb755d8399e12000198`
+  (`feat: define typed capability bindings`) is a direct child of dispatch
+  `bf77d90a5e2e7627ad806b7851462935b2add7e0` and changes exactly the four
+  authorized Task 2 paths.
+- Independent review of
+  `bf77d90a5e2e7627ad806b7851462935b2add7e0..4458bfc7c8ffcaef29dfebb755d8399e12000198`
+  found two P1s; Task 2 remains `implementing`.
+- P1 1: strict field and non-field manifest declarations do not have exact
+  own-key allowlists, and duplicate `fieldTypes` entries are accepted. Repair
+  round 1 stays inside the existing Task 2 paths and writer ownership.
+- Repair implementation commit
+  `a7331df0ac6a6f54f82bf61a060607777bc06dc0` changes only
+  `packages/capabilities/src/composition.ts` and
+  `packages/capabilities/test/typed-binding-contract.test.ts`. It is not yet
+  independent re-review evidence and does not advance Task 2.
+- P1 2: `fieldKey` can exist in the Capabilities binding type but cannot persist
+  through the strict `ApplicationGraphV1` composition-binding schema, which
+  accepts only `{ graphSymbol }`. No later planned task owns the required Graph
+  schema, browser, parser/serializer, and regression-test paths.
+- The second finding is an architecture/plan ownership gap. No Graph edit is
+  authorized by this update; an accepted ADR/design/plan/ledger amendment is
+  required before Task 4 can start.
 
 Commercial Capability Foundation Task 1 is accepted and frozen. Its verified
 `1.0.0` identities are `core.identity-context`, `core.location-context`,
@@ -263,18 +293,18 @@ On Node `v22.11.0`, it records:
 
 - Typed Binding Task 1 is `accepted` and frozen under its pure Application
   Graph Type System contract. Its deferred parser limitation remains recorded.
-- Typed Binding Task 2 is `implementing` under the accepted ADR, design, plan,
-  and Task 1 dependency. The bounded writer is Typed Manifest Contract
-  Integration and the contract owner is Capability Binding Contract.
+- Typed Binding Task 2 remains `implementing` in repair round 1 under the
+  accepted ADR, design, plan, and Task 1 dependency. The bounded writer remains
+  Typed Manifest Contract Integration and the contract owner remains Capability
+  Binding Contract.
 - Task 2's exact allowed paths are:
   `packages/capabilities/src/assets/contract.ts`,
   `packages/capabilities/src/composition.ts`,
   `packages/capabilities/test/composition-contract.test.ts`, and
   `packages/capabilities/test/typed-binding-contract.test.ts`.
-- Task 2 must begin with
-  `pnpm --filter @factory/capabilities test -- --run test/typed-binding-contract.test.ts test/composition-contract.test.ts`.
-  Expected RED is the absent strict typed contract/test and current free-form
-  manifest input/binding shape.
+- Repair round 1 commit `a7331df0ac6a6f54f82bf61a060607777bc06dc0`
+  is present inside two of the four allowed paths and awaits independent task
+  re-review.
 - Task 2 may not change physical package roots or registrations, profile
   recipes, public Draft composition, Publish, compiler, Workbench, lifecycle,
   historical bindings, or introduce Profile/package/version/field-name
@@ -306,6 +336,10 @@ On Node `v22.11.0`, it records:
 - Typed Binding Task 2 is active only within its four exact Capabilities paths.
   Tasks 3 through 5 remain `planned` and cannot overlap or start before the
   preceding task is `accepted`.
+- Task 4 has an additional architecture blocker: no current task owns Graph
+  persistence for `{ graphSymbol, fieldKey }`. An accepted architecture
+  amendment must assign Graph schema/browser/parser/serializer/test ownership
+  before Task 4 starts.
 - Typed Binding Task 6 cannot start before Tasks 1 through 5 are all
   `accepted`. Its acceptance does not automatically accept Commercial
   Foundation Task 2; the PM must reconcile that parent state separately.
@@ -340,6 +374,12 @@ On Node `v22.11.0`, it records:
   requirements, publish safe assets, or enforce binding semantics at Draft,
   Publish, or compiler admission. Tasks 2 through 5 are still required before
   the parent defect can be closed.
+- Task 2's strict manifest validator is not fail-closed against unexpected own
+  keys or duplicate `fieldTypes`; repair round 1 must close both cases.
+- Owner-aware field bindings cannot currently survive the Application Graph
+  schema. Without an accepted ownership amendment before Task 4, later Draft,
+  Publish, and compiler validation cannot consume the required immutable
+  `{ graphSymbol, fieldKey }` value.
 - Repair round 1 rejects duplicate navigation-entry and flow IDs and makes
   `indexBy` fail closed. Independent re-QA, release review, and fresh
   verification passed; Task 1 is accepted.
@@ -354,9 +394,9 @@ On Node `v22.11.0`, it records:
 
 ## Next slice
 
-Implement Typed Binding Task 2 under the accepted Task 1 dependency and exact
-four-path boundary. Begin with focused failing strict-contract tests, add only
-the typed manifest/binding contract, and prepare bounded verification for
-independent task review. Leave Typed Binding Tasks 3 through 6 `planned`. Keep
-Commercial Foundation Task 2 `implementing` and escalated and Tasks 3 and 4
-`planned` and blocked.
+Run independent Task 2 repair-round re-review of
+`4458bfc7c8ffcaef29dfebb755d8399e12000198..a7331df0ac6a6f54f82bf61a060607777bc06dc0`
+inside the unchanged four-path boundary. Require a separate accepted
+architecture amendment for Graph field-binding persistence before Task 4.
+Leave Typed Binding Tasks 3 through 6 `planned`. Keep Commercial Foundation
+Task 2 `implementing` and escalated and Tasks 3 and 4 `planned` and blocked.
