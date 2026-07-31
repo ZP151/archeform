@@ -375,6 +375,33 @@ describe("typed capability binding contract", () => {
     ).toThrow();
   });
 
+  it("rejects a domain field binding that exposes values through accessors", () => {
+    const manifest = strictManifest(
+      [requiredEntity, requiredField],
+      [entityParameter, fieldParameter],
+    );
+    const accessorBinding = Object.defineProperties(
+      {},
+      {
+        graphSymbol: {
+          enumerable: true,
+          get: () => "graph.domain.product",
+        },
+        fieldKey: {
+          enumerable: true,
+          get: () => "stock",
+        },
+      },
+    ) as CapabilityBindingValueV1;
+
+    expect(() =>
+      resolveStrictManifest(manifest, {
+        catalogEntity: { graphSymbol: "graph.domain.product" },
+        stockField: accessorBinding,
+      }),
+    ).toThrow();
+  });
+
   it("rejects a domain field schema that inherits its constraints", () => {
     const inheritedFieldSchema = Object.assign(
       Object.create({
@@ -416,5 +443,36 @@ describe("typed capability binding contract", () => {
       delete (Object.prototype as Record<string, unknown>).ownerBinding;
       delete (Object.prototype as Record<string, unknown>).fieldTypes;
     }
+  });
+
+  it("rejects a strict parameter that inherits its declaration", () => {
+    const inheritedParameter = Object.create({
+      key: "catalogEntity",
+      type: "graph-symbol",
+      required: true,
+    });
+    const manifest = strictManifest(
+      [requiredEntity, requiredField],
+      [inheritedParameter, fieldParameter],
+    );
+
+    expect(() => resolveStrictManifest(manifest, validBindings)).toThrow();
+  });
+
+  it("rejects a strict parameter that exposes its declaration through accessors", () => {
+    const accessorParameter = Object.defineProperties(
+      {},
+      {
+        key: { enumerable: true, get: () => "catalogEntity" },
+        type: { enumerable: true, get: () => "graph-symbol" },
+        required: { enumerable: true, get: () => true },
+      },
+    );
+    const manifest = strictManifest(
+      [requiredEntity, requiredField],
+      [accessorParameter, fieldParameter],
+    );
+
+    expect(() => resolveStrictManifest(manifest, validBindings)).toThrow();
   });
 });

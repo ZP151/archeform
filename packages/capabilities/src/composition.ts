@@ -105,6 +105,7 @@ const domainFieldBindingInputKeys = new Set([
 ]);
 const graphSymbolBindingValueKeys = new Set(["graphSymbol"]);
 const domainFieldBindingValueKeys = new Set(["graphSymbol", "fieldKey"]);
+const strictParameterKeys = new Set(["key", "type", "required"]);
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -114,18 +115,43 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return prototype === Object.prototype || prototype === null;
 }
 
-function hasExactOwnKeys(
+function snapshotOwnDataRecord(
+  value: unknown,
+): Record<string, unknown> | undefined {
+  if (!isPlainRecord(value)) return undefined;
+  const keys = Reflect.ownKeys(value);
+  if (!keys.every((key) => typeof key === "string")) return undefined;
+  const descriptors = Object.getOwnPropertyDescriptors(value);
+  const snapshot = Object.create(null) as Record<string, unknown>;
+  for (const key of keys) {
+    if (typeof key !== "string") return undefined;
+    const descriptor = descriptors[key];
+    if (
+      !descriptor ||
+      !("value" in descriptor) ||
+      descriptor.enumerable !== true
+    ) {
+      return undefined;
+    }
+    snapshot[key] = descriptor.value;
+  }
+  return snapshot;
+}
+
+function snapshotExactDataRecord(
   value: unknown,
   allowedKeys: ReadonlySet<string>,
   requiredKeys: readonly string[],
-): value is Record<string, unknown> {
-  return (
-    isPlainRecord(value) &&
-    Reflect.ownKeys(value).every(
-      (key) => typeof key === "string" && allowedKeys.has(key),
-    ) &&
-    requiredKeys.every((key) => Object.hasOwn(value, key))
-  );
+): Record<string, unknown> | undefined {
+  const snapshot = snapshotOwnDataRecord(value);
+  if (
+    !snapshot ||
+    !Object.keys(snapshot).every((key) => allowedKeys.has(key)) ||
+    !requiredKeys.every((key) => Object.hasOwn(snapshot, key))
+  ) {
+    return undefined;
+  }
+  return snapshot;
 }
 
 function compareText(left: string, right: string): number {
@@ -271,89 +297,82 @@ function deepFreeze<T>(value: T): T {
   return value;
 }
 
-function assertBindingValue(
+function normalizeBindingValue(
   packageKey: string,
   schema: CapabilityParameterSchemaV1,
   value: CapabilityBindingValueV1,
   bindingSchema?: CapabilityBindingInputV1,
-): void {
+): CapabilityBindingValueV1 {
   const label = `Capability package '${packageKey}' parameter '${schema.key}'`;
   if (schema.type === "number") {
     if (typeof value !== "number" || !Number.isFinite(value)) {
       throw new Error(`${label} must be a finite number.`);
     }
-    return;
+    return value;
   }
   if (schema.type === "boolean") {
     if (typeof value !== "boolean") {
       throw new Error(`${label} must be a boolean.`);
     }
-    return;
+    return value;
   }
   if (bindingSchema?.type === "domain.field") {
+    const snapshot = snapshotExactDataRecord(
+      value,
+      domainFieldBindingValueKeys,
+      ["graphSymbol", "fieldKey"],
+    );
     if (
-      !hasExactOwnKeys(value, domainFieldBindingValueKeys, [
-        "graphSymbol",
-        "fieldKey",
-      ]) ||
-      typeof value.graphSymbol !== "string" ||
-      !domainEntitySymbolPattern.test(value.graphSymbol) ||
-      typeof value.fieldKey !== "string" ||
-      !fieldKeyPattern.test(value.fieldKey)
+      !snapshot ||
+      typeof snapshot.graphSymbol !== "string" ||
+      !domainEntitySymbolPattern.test(snapshot.graphSymbol) ||
+      typeof snapshot.fieldKey !== "string" ||
+      !fieldKeyPattern.test(snapshot.fieldKey)
     ) {
       throw new Error(
         `${label} must include an owning domain graphSymbol and fieldKey.`,
       );
     }
-    return;
+    return {
+      graphSymbol: snapshot.graphSymbol,
+      fieldKey: snapshot.fieldKey,
+    };
   }
+  const snapshot = snapshotExactDataRecord(value, graphSymbolBindingValueKeys, [
+    "graphSymbol",
+  ]);
   if (
-    bindingSchema &&
-    isPlainRecord(value) &&
-    Object.hasOwn(value, "fieldKey")
+    !snapshot ||
+    typeof snapshot.graphSymbol !== "string" ||
+    !graphSymbolPattern.test(snapshot.graphSymbol)
   ) {
-    throw new Error(
-      `${label} cannot include fieldKey for a '${bindingSchema.type}' input.`,
-    );
-  }
-  if (
-    !hasExactOwnKeys(value, graphSymbolBindingValueKeys, ["graphSymbol"]) ||
-    typeof value.graphSymbol !== "string" ||
-    !graphSymbolPattern.test(value.graphSymbol)
-  ) {
+    if (
+      bindingSchema &&
+      isPlainRecord(value) &&
+      Object.hasOwn(value, "fieldKey")
+    ) {
+      throw new Error(
+        `${label} cannot include fieldKey for a '${bindingSchema.type}' input.`,
+      );
+    }
     throw new Error(
       `${label} must be a Graph symbol in graph.<model>.<id> form.`,
     );
   }
+  return { graphSymbol: snapshot.graphSymbol };
 }
 
 function canonicalSelection(
-  selection: CapabilitySelectionV1,
   manifest: CapabilityAssetManifestV1,
+  bindings: Readonly<Record<string, CapabilityBindingValueV1>>,
 ): CapabilitySelectionV1 {
-  const bindings = Object.create(null) as Record<
+  const canonicalBindings = Object.create(null) as Record<
     string,
     CapabilityBindingValueV1
   >;
-  for (const key of Object.keys(selection.bindings).sort()) {
-    const value = selection.bindings[key];
-    if (value === undefined) continue;
-    if (typeof value !== "object") {
-      bindings[key] = value;
-      continue;
-    }
-    if (
-      !isPlainRecord(value) ||
-      typeof value.graphSymbol !== "string" ||
-      !Object.hasOwn(value, "graphSymbol")
-    ) {
-      throw new Error(
-        `Capability package '${manifest.key}' contains an invalid binding value.`,
-      );
-    }
-    bindings[key] = Object.hasOwn(value, "fieldKey")
-      ? { graphSymbol: value.graphSymbol, fieldKey: value.fieldKey as string }
-      : { graphSymbol: value.graphSymbol };
+  for (const key of Object.keys(bindings).sort()) {
+    const value = bindings[key];
+    if (value !== undefined) canonicalBindings[key] = value;
   }
   return {
     lock: {
@@ -363,7 +382,7 @@ function canonicalSelection(
       manifestDigest: manifest.manifestDigest,
       lifecycle: manifest.lifecycle,
     },
-    bindings,
+    bindings: canonicalBindings,
   };
 }
 
@@ -387,6 +406,59 @@ function matchingManifest(
   return matched.manifest;
 }
 
+function strictParameterSchemas(
+  manifest: CapabilityAssetManifestV1,
+): ReadonlyMap<string, CapabilityParameterSchemaV1> {
+  const parameters = manifest.parameters ?? [];
+  if (!Array.isArray(parameters)) {
+    throw new Error(
+      `Capability package '${manifest.key}' strict parameters must be an array.`,
+    );
+  }
+  const schemas = new Map<string, CapabilityParameterSchemaV1>();
+  for (const untrustedParameter of parameters) {
+    const snapshot = snapshotExactDataRecord(
+      untrustedParameter,
+      strictParameterKeys,
+      ["key", "type", "required"],
+    );
+    if (
+      !snapshot ||
+      typeof snapshot.key !== "string" ||
+      !parameterKeyPattern.test(snapshot.key) ||
+      prototypeReservedParameterKeys.has(snapshot.key)
+    ) {
+      throw new Error(
+        `Capability package '${manifest.key}' parameter must use a safe parameter key and be a plain strict data record.`,
+      );
+    }
+    if (typeof snapshot.required !== "boolean") {
+      throw new Error(
+        `Capability package '${manifest.key}' parameter '${snapshot.key}' required must be a boolean.`,
+      );
+    }
+    if (
+      typeof snapshot.type !== "string" ||
+      !supportedParameterTypes.has(snapshot.type)
+    ) {
+      throw new Error(
+        `Capability package '${manifest.key}' does not support parameter type '${String(snapshot.type)}'.`,
+      );
+    }
+    if (schemas.has(snapshot.key)) {
+      throw new Error(
+        `Capability package '${manifest.key}' declares duplicate parameter '${snapshot.key}'.`,
+      );
+    }
+    schemas.set(snapshot.key, {
+      key: snapshot.key,
+      type: snapshot.type as CapabilityParameterSchemaV1["type"],
+      required: snapshot.required,
+    });
+  }
+  return schemas;
+}
+
 export function validateCapabilityBindingSchema(
   manifest: CapabilityAssetManifestV1,
 ): ReadonlyMap<string, CapabilityBindingInputV1> {
@@ -401,12 +473,15 @@ export function validateCapabilityBindingSchema(
 
   const bindingSchemas = new Map<string, CapabilityBindingInputV1>();
   for (const untrustedSchema of manifest.inputSchema) {
-    if (!isPlainRecord(untrustedSchema)) {
+    const snapshot = snapshotOwnDataRecord(untrustedSchema);
+    if (!snapshot) {
       throw new Error(
-        `Capability package '${manifest.key}' input schema must be a plain record.`,
+        `Capability package '${manifest.key}' input schema must be a plain data record.`,
       );
     }
-    const schema = untrustedSchema as CapabilityBindingInputV1;
+    // This boundary is intentionally after snapshotOwnDataRecord: all following
+    // checks operate on a plain, own-data snapshot rather than caller-owned data.
+    const schema = snapshot as unknown as CapabilityBindingInputV1;
     if (!Object.hasOwn(schema, "key") || !Object.hasOwn(schema, "type")) {
       throw new Error(
         `Capability package '${manifest.key}' input schema must declare own key and type values.`,
@@ -444,8 +519,8 @@ export function validateCapabilityBindingSchema(
       schema.type === "domain.field"
         ? domainFieldBindingInputKeys
         : nonFieldBindingInputKeys;
-    const unknownInputKey = Reflect.ownKeys(schema).find(
-      (key) => typeof key !== "string" || !allowedInputKeys.has(key),
+    const unknownInputKey = Object.keys(schema).find(
+      (key) => !allowedInputKeys.has(key),
     );
     if (unknownInputKey !== undefined) {
       throw new Error(
@@ -525,12 +600,8 @@ export function validateCapabilityBindingSchema(
     }
   }
 
-  const parameters = manifest.parameters ?? [];
-  const parameterSchemas = new Map(
-    parameters.map((parameter) => [parameter.key, parameter] as const),
-  );
+  const parameterSchemas = strictParameterSchemas(manifest);
   if (
-    parameterSchemas.size !== parameters.length ||
     parameterSchemas.size !== bindingSchemas.size ||
     [...parameterSchemas.keys()].some((key) => !bindingSchemas.has(key))
   ) {
@@ -563,53 +634,41 @@ export function validateCapabilityBindingSchema(
 function validateBindings(
   manifest: CapabilityAssetManifestV1,
   bindings: Readonly<Record<string, CapabilityBindingValueV1>>,
-): void {
+): Readonly<Record<string, CapabilityBindingValueV1>> {
   const bindingSchemas = validateCapabilityBindingSchema(manifest);
-  const parameters = manifest.parameters ?? [];
-  const schemas = new Map<string, CapabilityParameterSchemaV1>();
-  for (const schema of parameters) {
-    if (schemas.has(schema.key)) {
-      throw new Error(
-        `Capability package '${manifest.key}' declares duplicate parameter '${schema.key}'.`,
-      );
-    }
-    if (
-      !parameterKeyPattern.test(schema.key) ||
-      prototypeReservedParameterKeys.has(schema.key)
-    ) {
-      throw new Error(
-        `Capability package '${manifest.key}' parameter '${schema.key}' must use a safe parameter key.`,
-      );
-    }
-    if (!supportedParameterTypes.has(schema.type)) {
-      throw new Error(
-        `Capability package '${manifest.key}' does not support parameter type '${String(schema.type)}'.`,
-      );
-    }
-    schemas.set(schema.key, schema);
+  const schemas = strictParameterSchemas(manifest);
+  const bindingSnapshot = snapshotOwnDataRecord(bindings);
+  if (!bindingSnapshot) {
+    throw new Error(
+      `Capability package '${manifest.key}' bindings must be a plain data record.`,
+    );
   }
-
-  for (const [key, value] of Object.entries(bindings)) {
+  const normalizedBindings = Object.create(null) as Record<
+    string,
+    CapabilityBindingValueV1
+  >;
+  for (const [key, value] of Object.entries(bindingSnapshot)) {
     const schema = schemas.get(key);
     if (!schema) {
       throw new Error(
         `Capability package '${manifest.key}' does not declare parameter '${key}'.`,
       );
     }
-    assertBindingValue(
+    normalizedBindings[key] = normalizeBindingValue(
       manifest.key,
       schema,
-      value,
+      value as CapabilityBindingValueV1,
       bindingSchemas.get(schema.key),
     );
   }
-  for (const schema of parameters) {
-    if (schema.required && !Object.hasOwn(bindings, schema.key)) {
+  for (const schema of schemas.values()) {
+    if (schema.required && !Object.hasOwn(bindingSnapshot, schema.key)) {
       throw new Error(
         `Capability package '${manifest.key}' requires parameter '${schema.key}'.`,
       );
     }
   }
+  return normalizedBindings;
 }
 
 function interfaceIdentity(interfaceKey: string, version: string): string {
@@ -707,8 +766,8 @@ export function resolveCapabilityCompositionForAssets(
     }))
     .sort((left, right) => compareText(left.manifest.key, right.manifest.key));
   const packages = matchedSelections.map(({ selection, manifest }) => {
-    validateBindings(manifest, selection.bindings);
-    return canonicalSelection(selection, manifest);
+    const bindings = validateBindings(manifest, selection.bindings);
+    return canonicalSelection(manifest, bindings);
   });
   const manifests = matchedSelections.map(({ manifest }) => manifest);
   const resolvedDependencyOrder = resolveDependencyOrder(manifests);
