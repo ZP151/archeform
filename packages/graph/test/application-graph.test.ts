@@ -183,6 +183,39 @@ describe("ApplicationGraphV1", () => {
     expect(index.provider("accent")).toBeUndefined();
   });
 
+  it("rejects duplicate navigation ids before typed indexing can select one", () => {
+    const graph = structuredClone(expenseGraph);
+    graph.page.navigation.push({
+      id: "expenses",
+      label: "Duplicate expenses",
+      pageId: "expense-list",
+    });
+
+    expect(validateApplicationGraph(graph)).toContainEqual(
+      expect.objectContaining({ code: "page.navigation.id.duplicate" }),
+    );
+    expect(() => parseApplicationGraph(graph)).toThrow(GraphSemanticError);
+    expect(() => createGraphSymbolIndex(graph)).toThrow(GraphSemanticError);
+  });
+
+  it("rejects duplicate flow ids before typed indexing can select one", () => {
+    const graph = structuredClone(expenseGraph);
+    graph.flow.flows.push({
+      id: "expense-approval",
+      entity: "expense",
+      initialState: "draft",
+      states: ["draft"],
+      events: [],
+      transitions: [],
+    });
+
+    expect(validateApplicationGraph(graph)).toContainEqual(
+      expect.objectContaining({ code: "flow.id.duplicate" }),
+    );
+    expect(() => parseApplicationGraph(graph)).toThrow(GraphSemanticError);
+    expect(() => createGraphSymbolIndex(graph)).toThrow(GraphSemanticError);
+  });
+
   it("parses a graph that can represent the expense profile", () => {
     expect(parseApplicationGraph(expenseGraph)).toEqual(expenseGraph);
     expect(validateApplicationGraph(expenseGraph)).toEqual([]);

@@ -292,8 +292,23 @@ export type GraphSymbolIndexV1 = {
 function indexBy<T>(
   values: readonly T[],
   key: (value: T) => string,
+  namespace: string,
 ): ReadonlyMap<string, T> {
-  return new Map(values.map((value) => [key(value), value]));
+  const index = new Map<string, T>();
+  for (const value of values) {
+    const identifier = key(value);
+    if (index.has(identifier)) {
+      throw new GraphSemanticError([
+        {
+          code: "graph_symbol.duplicate",
+          message: `Graph symbol '${identifier}' is duplicated in the '${namespace}' namespace.`,
+          path: [],
+        },
+      ]);
+    }
+    index.set(identifier, value);
+  }
+  return index;
 }
 
 /**
@@ -304,18 +319,30 @@ function indexBy<T>(
 export function createGraphSymbolIndex(
   graph: ApplicationGraphV1,
 ): GraphSymbolIndexV1 {
-  const entities = indexBy(graph.domain.entities, ({ key }) => key);
+  const entities = indexBy(
+    graph.domain.entities,
+    ({ key }) => key,
+    "domain.entity",
+  );
   const fieldsByEntity = new Map(
     graph.domain.entities.map((entity) => [
       entity.key,
-      indexBy(entity.fields, ({ key }) => key),
+      indexBy(entity.fields, ({ key }) => key, "domain.field"),
     ]),
   );
-  const pages = indexBy(graph.page.pages, ({ id }) => id);
-  const navigationEntries = indexBy(graph.page.navigation, ({ id }) => id);
-  const roles = new Map(graph.policy.roles.map((role) => [role, role]));
-  const flows = indexBy(graph.flow.flows, ({ id }) => id);
-  const providers = indexBy(graph.integration.providers, ({ id }) => id);
+  const pages = indexBy(graph.page.pages, ({ id }) => id, "page.page");
+  const navigationEntries = indexBy(
+    graph.page.navigation,
+    ({ id }) => id,
+    "page.navigation",
+  );
+  const roles = indexBy(graph.policy.roles, (role) => role, "policy.role");
+  const flows = indexBy(graph.flow.flows, ({ id }) => id, "flow.flow");
+  const providers = indexBy(
+    graph.integration.providers,
+    ({ id }) => id,
+    "integration.provider",
+  );
   const experienceTokens = new Map(
     Object.entries(graph.experience.theme.tokens),
   );
@@ -380,10 +407,32 @@ function candidateCapabilityIssues(
   );
 }
 
+function ambiguousTypedSymbolIssues(
+  graph: ApplicationGraphV1,
+): GraphValidationIssue[] {
+  return [
+    ...duplicateValues(graph.page.navigation.map(({ id }) => id)).map(
+      (duplicate) => ({
+        code: "page.navigation.id.duplicate",
+        message: `Navigation id '${duplicate}' is duplicated.`,
+        path: ["page", "navigation"] as const,
+      }),
+    ),
+    ...duplicateValues(graph.flow.flows.map(({ id }) => id)).map(
+      (duplicate) => ({
+        code: "flow.id.duplicate",
+        message: `Flow id '${duplicate}' is duplicated.`,
+        path: ["flow", "flows"] as const,
+      }),
+    ),
+  ];
+}
+
 export function parseApplicationGraph(input: unknown): ApplicationGraphV1 {
   const graph = applicationGraphSchema.parse(input);
   const parsingIssues = [
     ...candidateCapabilityIssues(graph),
+    ...ambiguousTypedSymbolIssues(graph),
     ...compositionGraphSymbolIssues(graph),
   ];
   if (parsingIssues.length > 0) {
@@ -482,6 +531,7 @@ export function validateApplicationGraph(
     path: readonly (string | number)[],
   ) => issues.push({ code, message, path });
   issues.push(...candidateCapabilityIssues(graph));
+  issues.push(...ambiguousTypedSymbolIssues(graph));
 
   const pageIds = new Set(graph.page.pages.map((page) => page.id));
   for (const duplicate of duplicateValues(
