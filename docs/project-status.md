@@ -68,20 +68,21 @@ FAIL with one new P1: `manifest.parameters` is snapshotted separately during
 schema validation and binding validation, so a getter can supply different
 parameter schemas at those two stages. Task 2 remains `implementing` and is not
 accepted. Controller-accepted ADR-0008 stops further local Task 2 repair and
-its remaining review gates. New Task 2A, **immutable composition resolution
-  boundary**, advances `planned -> implementing`. Its bounded writer is
-  **Immutable Composition Resolution Integration**, its contract owner is
-  **Capability Composition Resolution Boundary**. Plan Tasks 1 through 3
-  produced commits `b310d8e`, `c9e5ca3`, and
-  `73accc24a68d55308d127717e36cd63130024f3e`, but independent review of Task 3
-  returned FAIL with two P1s: public lock-verification and draft-composition
-  wrappers read caller-owned selections before capture, and compiled schema
-  value objects remain runtime mutable. Task 2A stays `implementing` in repair
-  round 1, with the exact five-path scope recorded below. This is repair
-  authority only, not QA, release review, or acceptance. Owner-aware Graph
-  persistence remains explicitly owned by planned Graph Task 3, which is
-  blocked on accepted Tasks 2 and 2A. Physical assets remain Task 4; Tasks 4
-  through 7 remain serially blocked.
+its remaining review gates. Task 2A, **immutable composition resolution
+boundary**, is now `ready_for_qa`. Its bounded writer is **Immutable
+Composition Resolution Integration**, and its contract owner is **Capability
+Composition Resolution Boundary**. Plan Tasks 1 through 3 produced commits
+`b310d8e`, `c9e5ca3`, and
+`73accc24a68d55308d127717e36cd63130024f3e`; independent review of plan Task 3
+then returned FAIL with two P1s. Governance commit `76274e3` formally amended
+the repair boundary to five exact Capabilities paths. Repair commit
+`a09d459077f80fa82161df928137b1f2052a75bb` stayed inside those paths, and
+independent repair review returned SPEC PASS and QUALITY PASS with no
+P0/P1/P2. The PM records `implementing -> ready_for_qa`; independent behavioral
+QA is next. This is not release review or acceptance. Owner-aware Graph
+persistence remains explicitly owned by planned Graph Task 3, which is blocked
+on accepted Tasks 2 and 2A. Physical assets remain Task 4; Tasks 4 through 7
+remain serially blocked.
 
 Commercial Capability Foundation Task 2 remains `implementing` and escalated
 after its five permitted repair rounds. It is blocked on accepted Typed
@@ -136,9 +137,13 @@ authority:
   cycles fail closed.
 - Existing valid `factory.capability/v1`, `factory.capability-binding/v1`, and
   `factory.composition/v1` bytes and lock digests remain unchanged.
-- Task 2A remains `implementing`. Commits `b310d8e`, `c9e5ca3`, and `73accc2`
-  are implementation evidence only; independent review of plan Task 3 failed,
-  so no QA, release review, or acceptance is asserted.
+- Commits `b310d8e`, `c9e5ca3`, and `73accc2` are historical implementation
+  evidence. Governance amendment `76274e3` authorized the exact five-path
+  repair, and repair commit `a09d459077f80fa82161df928137b1f2052a75bb`
+  stayed within it. Independent repair review returned SPEC PASS and QUALITY
+  PASS with no P0/P1/P2, so the PM records Task 2A
+  `implementing -> ready_for_qa`. Behavioral QA, release review, and acceptance
+  remain outstanding.
 
 The approved design and plan are recorded at
 `docs/superpowers/specs/2026-08-01-typed-capability-binding-validation-design.md`
@@ -517,7 +522,7 @@ On Node `v22.11.0`, it records:
   lifecycle, historical bindings, or introduce
   Profile/package/version/field-name dispatch.
 - Typed Binding Task 2A, **immutable composition resolution boundary**, is
-  `implementing` under the **Capability Composition Resolution Boundary**
+  `ready_for_qa` under the **Capability Composition Resolution Boundary**
   contract owner and accepted ADR-0008. Its bounded writer is **Immutable
   Composition Resolution Integration**. Its exact allowed paths are:
   `packages/capabilities/src/node.ts`,
@@ -535,8 +540,13 @@ On Node `v22.11.0`, it records:
 - Controller-authorized repair round 1 requires capture before every public
   package-verification, provider-overlap, or other selection/lock read, reuse of
   that same owned snapshot downstream, and deep runtime immutability for every
-  compiled schema value, including nested records and arrays. Task 2A remains
-  `implementing`; no task state advances.
+  compiled schema value, including nested records and arrays. Governance commit
+  `76274e304e1d09f58b847bcfd4c80e3db1072e28` formally amended the scope to
+  those exact five paths.
+- Repair commit `a09d459077f80fa82161df928137b1f2052a75bb` changes exactly the
+  five authorized paths. Independent repair review returned SPEC PASS and
+  QUALITY PASS with no P0/P1/P2 and no remaining task-review finding. The PM
+  records `implementing -> ready_for_qa`; independent behavioral QA is next.
 - Typed Binding Task 3 remains `planned` behind accepted Tasks 2 and 2A and
   owns exactly:
   `packages/graph/src/model.ts`,
@@ -572,9 +582,9 @@ On Node `v22.11.0`, it records:
   `b85dbda063fe6fa6db3b712f5891b013285e0356` is implementation evidence only;
   independent task review failed on the separate `manifest.parameters`
   snapshot gap. Accepted ADR-0008 supersedes further local repair with Task 2A,
-  now `implementing` in plan Task 3 repair round 1 after independent review
-  found two P1s in public pre-capture reads and compiled-schema immutability. No
-  Task 2 code repair or review gate is authorized while Task 2A is pending.
+  now `ready_for_qa` after amended repair commit `a09d459` passed independent
+  SPEC and QUALITY review with no P0/P1/P2. Behavioral QA is pending. No Task 2
+  code repair or review gate is authorized while Task 2A is pending.
   Graph Task 3 remains `planned` and blocked on Tasks 2 and 2A acceptance.
   It, not either Capabilities task, owns owner-aware Graph persistence. Tasks 4
   through 6 cannot overlap or start before the preceding task is `accepted`.
@@ -638,11 +648,13 @@ On Node `v22.11.0`, it records:
   Task 2A is accepted and PM reconciliation determines the remaining Task 2
   gates.
 - Task 2A plan Task 3 commit
-  `73accc24a68d55308d127717e36cd63130024f3e` does not yet close that boundary.
-  Public verification and provider-overlap wrappers read caller-owned
-  selections before capture, and compiled schema values remain mutable even
-  though their maps reject mutation. Repair round 1 must close both P1s inside
-  the exact five-path scope before task review can pass.
+  `73accc24a68d55308d127717e36cd63130024f3e` left public pre-capture reads and
+  runtime-mutable compiled schema values. Governance amendment `76274e3`
+  formalized the five-path repair, and repair commit
+  `a09d459077f80fa82161df928137b1f2052a75bb` passed independent SPEC and
+  QUALITY review with no P0/P1/P2. This closes the task-review findings only;
+  behavioral QA, release review, and fresh acceptance verification remain
+  required.
 - Owner-aware field bindings cannot currently survive the Application Graph
   schema. ADR-0007 assigns the repair to Task 3, but the risk remains until that
   task passes independent review, QA, release review, and fresh verification.
@@ -662,17 +674,12 @@ On Node `v22.11.0`, it records:
 
 ## Next smallest valuable slice
 
-Execute Task 2A plan Task 3 repair round 1 under **Immutable Composition
-Resolution Integration** and the **Capability Composition Resolution
-Boundary**. Capture caller-owned selections and locks before every public
-package-verification or provider-overlap check, reuse the same owned snapshot
-downstream, and deeply freeze every compiled schema value. The exact repair
-boundary is `packages/capabilities/src/node.ts`,
-`packages/capabilities/src/index.ts`,
-`packages/capabilities/src/composition.ts`,
-`packages/capabilities/test/composition-contract.test.ts`, and
-`packages/capabilities/test/typed-binding-contract.test.ts`. Keep Task 2A and
-Task 2 `implementing`, and stop Task 2 local repair and every remaining review
-gate until Task 2A is independently accepted and reconciled. Keep Typed Binding
-Graph Tasks 3 through 7 `planned` and blocked, Commercial Foundation Task 2
-`implementing` and escalated, and its Tasks 3 and 4 `planned` and blocked.
+Run independent behavioral QA for Task 2A repair commit
+`a09d459077f80fa82161df928137b1f2052a75bb` under the **Capability Composition
+Resolution Boundary**. Verify the amended public pre-capture and deep
+compiled-schema immutability behavior, ADR-0008 adversarial rejection, valid
+digest compatibility, and the exact five-path scope. Keep Task 2A
+`ready_for_qa` and Task 2 `implementing` until QA evidence is reconciled; do not
+start release review or Graph Task 3. Keep Typed Binding Graph Tasks 3 through
+7 `planned` and blocked, Commercial Foundation Task 2 `implementing` and
+escalated, and its Tasks 3 and 4 `planned` and blocked.
