@@ -57,9 +57,11 @@ Restaurant and Ecommerce.
 The current worktree adds a read-only Workspace Portfolio Summary to the
 Control Plane and Home. It exposes only safe aggregate state: five Profile
 starters, 19 capability families, 38 versioned asset packages, the 43-source /
-108-scenario discovery portfolio, Candidate/Provider counts, and compilation
-health. It deliberately does not expose upstream URLs, fixed references,
-source paths, raw AI material, or credentials.
+108 source-to-scenario mapping discovery portfolio, Candidate/Provider counts,
+and compilation health. The separate 122-recipe planning taxonomy is broader
+than the immutable source portfolio and is not surfaced as installed product
+coverage. The summary deliberately does not expose upstream URLs, fixed
+references, source paths, raw AI material, or credentials.
 
 Fresh package evidence for this worktree: `@factory/portfolio-public` passed
 1 test plus typecheck/build; `@factory/external-intake` passed 411 tests;
@@ -134,16 +136,15 @@ production-complete catalogue of one hundred application types.
   CRUD/workflow/audit/notification plus selected commerce handlers are
   executable; some catalogue/order concerns remain compiler-owned and several
   restaurant behaviours remain Profile-specific.
-- The completed transaction slice introduces
-  `commerce.inventory@1.1.0`. Simple Ecommerce, Retail Counter, and Grocery
-  Pickup now prove a common `cart -> submitted -> paid` lifecycle where submit
-  reserves stock and a privileged cancellation compensates it. This is useful
-  generated-runtime evidence, but it is not a complete generic transaction
-  kernel: the generic Prisma path still lacks a database transaction,
-  idempotent command receipt, ledger write, and outbox.
-- The reusable-source portfolio maps 122 business scenarios to a smaller
-  cross-profile kernel, and carries 43 fixed-source records for external
-  intake. It is discovery evidence, not 122 installed products. The
+- The completed inventory slice introduces `commerce.inventory@1.1.0`.
+  Simple Ecommerce, Retail Counter, and Grocery Pickup now prove a common
+  `cart -> submitted -> paid` lifecycle where submit reserves stock and a
+  privileged cancellation compensates it. The generic Prisma path still lacks
+  a database transaction, idempotent command receipt, ledger write, and outbox
+  spanning the order and inventory changes.
+- The broader planning taxonomy contains 122 Profile recipes, while the
+  immutable source portfolio contains 43 fixed-source records and 108
+  source-to-scenario mappings. Neither is installed product coverage. The
   quarantine pipeline can acquire fixed references, isolate a prohibited batch
   sibling, capture redacted evidence, and create a strict source-study
   projection. It now derives all 19 eligible Portfolio sources into

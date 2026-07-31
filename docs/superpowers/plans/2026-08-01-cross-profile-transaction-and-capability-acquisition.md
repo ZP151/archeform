@@ -73,6 +73,20 @@ Create a versioned contract for a generated command that includes:
 The contract must reject a replay key with a different payload and prove that a
 failed command persists no order, inventory, audit, or outbox change.
 
+### A1 review finding — 2026-08-01
+
+A proposed isolated command-receipt increment was rejected before commit. It
+would have written the receipt after order and inventory effects, allowing two
+concurrent Prisma commands to observe no receipt and reserve stock twice. Its
+in-memory receipt also retained a mutable order reference instead of the
+original outcome snapshot. No part of that increment is present in the product.
+
+A1 remains unimplemented. The replacement must create/validate a command row,
+perform an optimistic version-conditional order update, apply inventory,
+ledger, audit, capability and outbox writes, then complete an immutable receipt
+inside one Prisma transaction. Its acceptance suite must include concurrent
+replay and later-state replay regressions, as well as failed-command rollback.
+
 ### A2. Promote reusable inventory semantics
 
 Create immutable successors for the generic inventory/ledger assets whose
