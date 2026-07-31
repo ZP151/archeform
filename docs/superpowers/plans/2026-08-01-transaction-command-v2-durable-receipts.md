@@ -24,7 +24,10 @@
 - `docs/adr/adr-0013-transaction-command-v2-and-durable-receipt-lease.md` — accepted successor contract.
 - `packages/capabilities/assets/commerce.transaction/2.2.0/**` — Transaction V2 package, schema, migration, executor, fixture, and evidence.
 - `packages/capabilities/assets/commerce.order/2.1.0/**` — Generic order V2 adapter/create/journey successor package.
-- `packages/capabilities/src/index.ts` — asset discovery, fixture registration, immutable lock resolution, and new Generic Draft selections.
+- `packages/capabilities/src/assets/commerce/transaction-v2-2-0.ts` and `packages/capabilities/src/assets/commerce/order-v2-1-0.ts` — typed, immutable asset projections for successor package manifests.
+- `packages/capabilities/src/assets/index.ts` — canonical package discovery used by composition and verified publication.
+- `packages/capabilities/src/composition.ts` and `packages/capabilities/src/node.ts` — exact interface compatibility and verified-lock publication for successor selections.
+- `packages/capabilities/src/index.ts` — fixture registration and new Generic Draft selections.
 - `packages/capabilities/test/capability-registry.test.ts` — package physical/digest/interface/selection verification.
 - `packages/compiler/src/index.ts` — successor contribution resolution, generated runtime, Prisma store, journey projection, active schema/migration merge, and generated validation command.
 - `packages/compiler/test/generic-order-lifecycle-v2.test.ts` — focused generated-runtime and emitted-artifact regression evidence.
@@ -43,6 +46,11 @@
 - Create: `packages/capabilities/assets/commerce.order/2.1.0/adapter.json`
 - Create: `packages/capabilities/assets/commerce.order/2.1.0/fixtures/default.json`
 - Create: `packages/capabilities/assets/commerce.order/2.1.0/tests/contract.json`
+- Create: `packages/capabilities/src/assets/commerce/transaction-v2-2-0.ts`
+- Create: `packages/capabilities/src/assets/commerce/order-v2-1-0.ts`
+- Modify: `packages/capabilities/src/assets/index.ts`
+- Modify: `packages/capabilities/src/composition.ts`
+- Modify: `packages/capabilities/src/node.ts`
 - Modify: `packages/capabilities/src/index.ts`
 - Modify: `packages/capabilities/test/capability-registry.test.ts`
 
@@ -101,9 +109,12 @@ type TransactionCommandV2 = Readonly<{
 
 Set `commerce.transaction@2.2.0` to require
 `factory.transaction-operation-adapter/v2`; set `commerce.order@2.1.0` to
-provide it. Copy no old asset bytes in place: create new manifests and new
+provide it. Create their typed asset projections and register them through the
+canonical `capabilityAssets` registry consumed by composition and verified
+publication. Copy no old asset bytes in place: create new manifests and new
 digest-covered source paths. Move only new Generic Draft recipes to both
-successors and reject all mixed V1/V2 lifecycle lock sets.
+successors and reject all mixed V1/V2 lifecycle lock sets in both local
+composition and verified Control Plane lock publication.
 
 - [ ] **Step 4: Run focused tests and package validation**
 
