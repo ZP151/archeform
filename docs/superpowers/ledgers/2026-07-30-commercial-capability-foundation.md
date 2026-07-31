@@ -228,14 +228,42 @@ stops work for PM and architecture review.
 
 Adding the four accepted Foundation locks necessarily changes the canonical
 Restaurant selection previously asserted as exactly nine locks in
-`packages/capabilities/test/capability-registry.test.ts`. The Controller adds
-only that existing regression file to Task 2 ownership so its canonical lock
-expectation can be updated for the permitted Foundation additions.
+`packages/capabilities/test/capability-registry.test.ts`. The Controller's
+amended authority for that existing regression file is limited to:
 
-This is a test-scope correction only. It changes no shared contract, package
-identity, interface, binding grammar, output slot, dependency, recipe scope,
-production behavior, non-goal, or task state. Task 2 remains `implementing`;
-Tasks 3 and 4 remain `planned`.
+1. updating the canonical Restaurant expected selection for Task 2's four
+   accepted Foundation locks;
+2. updating Simple Ecommerce's canonical expected input only for those same
+   four Foundation locks; and
+3. correcting provider-uniqueness regressions so every non-overlapping effect
+   asserts exactly one provider, while every intentionally overlapping
+   inventory effect asserts the exact two-package provider set
+   `{commerce.inventory, commerce.inventory-ledger}`.
+
+This is a test-scope correction only. It changes no shared contract, physical
+asset, package identity, interface, binding grammar, output slot, dependency,
+recipe scope, lifecycle or Publish behavior, production behavior, non-goal, or
+task state. It does not approve a production fix. Task 2 remains
+`implementing`; Tasks 3 and 4 remain `planned`.
+
+### Independent task review: FAIL
+
+Independent task review of implementation commit `35aa96e` returned FAIL with
+two P1 findings and one P2 finding:
+
+1. P1: configurable-line Graph contributions are missing required PolicyModel
+   permissions.
+2. P1: the implementation exceeded the prior fifth-path test authority and
+   weakened the provider invariant to at-least-one.
+3. P2: the cross-profile composition proof does not assert the required output
+   differences for all four Foundation bindings and representative Graph
+   contributions.
+
+The amended fifth-path authority above corrects only the test-scope boundary
+for the second finding. It does not approve commit `35aa96e`, authorize a
+production repair, or close any review finding. Task 2 remains `implementing`
+and requires repaired focused tests, fresh independent task review, QA,
+release review, and verification before acceptance.
 
 ### Exact allowed paths
 
@@ -244,7 +272,8 @@ Tasks 3 and 4 remain `planned`.
 - `packages/capabilities/test/restaurant-profile.test.ts`
 - `packages/capabilities/test/commercial-profile-composition.test.ts`
 - `packages/capabilities/test/capability-registry.test.ts` (only the canonical
-  Restaurant lock-selection regression correction above)
+  Restaurant and Simple Ecommerce expected-input corrections for the four
+  Foundation locks and exact provider-uniqueness regressions above)
 
 ### Non-goals
 
@@ -414,8 +443,9 @@ Tasks 3 and 4 remain `planned`.
 
 ## Next smallest valuable slice
 
-Implement Task 2's Restaurant and Ecommerce Foundation Graph recipes within its
-exact five paths, beginning with focused failing tests. Keep Tasks 3 and 4
-planned until Task 2 is accepted, and preserve the accepted Task 1 physical
-package, evidence digest, verified-lock, and Publish-boundary contracts
-unchanged.
+Repair Task 2's independent-review findings within its exact five paths,
+beginning with focused failing permission, cross-profile, and exact
+provider-uniqueness tests. The production repair requires fresh independent
+review. Keep Tasks 3 and 4 planned until Task 2 is accepted, and preserve the
+accepted Task 1 physical package, evidence digest, verified-lock, and
+Publish-boundary contracts unchanged.

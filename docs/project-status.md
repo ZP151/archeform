@@ -61,12 +61,24 @@ On Node `v22.11.0`, it records:
   `packages/capabilities/src/restaurant/profile.ts`,
   `packages/capabilities/test/restaurant-profile.test.ts`, and
   `packages/capabilities/test/commercial-profile-composition.test.ts`, plus
-  `packages/capabilities/test/capability-registry.test.ts` only for the
-  canonical Restaurant lock-selection regression correction.
-- The fifth path is a test-scope correction only: the permitted four Foundation
-  locks invalidate the prior exact nine-lock assertion. It changes no shared
-  contract, package identity, interface, dependency, recipe scope, production
-  behavior, non-goal, or Task 2 state.
+  `packages/capabilities/test/capability-registry.test.ts` only for canonical
+  Restaurant and Simple Ecommerce expected-input corrections for Task 2's four
+  Foundation locks and the exact provider-uniqueness regressions below.
+- Independent task review of implementation commit `35aa96e` is FAIL with two
+  P1 findings and one P2 finding. The P1 findings are missing configurable-line
+  PolicyModel permissions and an unauthorized, weakened provider-uniqueness
+  regression. The P2 finding is under-specified cross-profile proof. The
+  production fix is not approved, the commit is not accepted, and Task 2
+  remains `implementing`.
+- The fifth-path amendment is a test-scope correction only. It may update
+  Simple Ecommerce's canonical expected input only for Task 2's four accepted
+  Foundation locks. Provider-uniqueness regressions must assert exactly one
+  provider for every non-overlapping effect and, for each intentionally
+  overlapping inventory effect, the exact provider set
+  `{commerce.inventory, commerce.inventory-ledger}`. It changes no shared
+  contract, physical asset, package identity, interface, dependency, recipe
+  scope, lifecycle or Publish behavior, production behavior, non-goal, or Task
+  2 state.
 - The slice must produce Restaurant and Ecommerce recipes selecting the same
   four accepted identities with distinct validated Graph symbols and output
   semantics, canonical nonempty locks, deterministic dependency order, and
@@ -105,8 +117,9 @@ On Node `v22.11.0`, it records:
 
 ## Next slice
 
-Implement Commercial Capability Foundation Task 2 within its exact five paths,
-starting with focused failing tests for absent Foundation bindings and Graph
-contributions. Prove both profiles select the same accepted identities with
-distinct validated symbols and deterministic locks. Keep Tasks 3 and 4 planned
-until Task 2 is accepted.
+Repair Commercial Capability Foundation Task 2's independent-review findings
+within its exact five paths, beginning with focused failing permission,
+cross-profile, and exact provider-uniqueness regressions. Prove both profiles
+select the same accepted identities with distinct validated symbols and
+deterministic locks. The production repair requires fresh review; keep Tasks 3
+and 4 planned until Task 2 is accepted.
