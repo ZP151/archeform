@@ -53,6 +53,8 @@ Task 6 `ready_for_qa -> reviewed`. Independent release review then FAILED with
 two P2 findings and no P0/P1. The Controller authorized a bounded test-and-docs
 repair that adds only `apps/intake-cli/test/cli.test.ts` as Task 6's fifth
 allowed path, and the PM returned Task 6 `reviewed -> implementing`.
+Repair commits `4924ec0` and `dc6ca19` then passed independent task review with
+no P0/P1/P2, and the PM moved Task 6 `implementing -> ready_for_qa`.
 Independent Task 4 review of commit
 `33fd204` then FAILED with four P1 findings and one P2. The Controller authorized
 bounded Repair Round 1/5 and exactly three additional production paths; Task 4
@@ -154,7 +156,11 @@ final verification were the next gates. Independent release review then
 reproduced the concurrent five-suite timeout and found the acceptance record
 and project status stale at `ready_for_qa`. It FAILED with two P2 findings and
 no P0/P1. The Controller authorized the bounded fifth-path repair, and the PM
-moved Task 6 `reviewed -> implementing`. The
+moved Task 6 `reviewed -> implementing`. Repair commits `4924ec0` and
+`dc6ca19` passed the required concurrent and serial gates and independent task
+review with no P0/P1/P2. The PM moved Task 6
+`implementing -> ready_for_qa`; fresh independent behavioral QA is the next
+gate. The
 system will ingest the 43 fixed-reference
 portfolio as metadata, retain the 108 scenarios as composition demand signals,
 and produce only quarantined evidence, non-executable Candidate records, and
@@ -310,7 +316,7 @@ remain frozen.
 | 3. Deterministic scan orchestration              | `accepted`     | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
 | 4. Candidate registry, API, CLI, and isolation   | `accepted`     | `integration`       | Candidate Registry               | Release review and fresh root verification PASS; frozen.    |
 | 5. Review-only promotion packets                 | `accepted`     | `governance`        | External Capability Promotion    | Release review and fresh final verification PASS; frozen.   |
-| 6. Bulk acceptance and release evidence          | `implementing` | `qa`                | External Intake Release Evidence | Release P2 repair authorized in one test and two docs.      |
+| 6. Bulk acceptance and release evidence          | `ready_for_qa` | `qa`                | External Intake Release Evidence | Repair review PASS; independent behavioral re-QA required.  |
 
 ## Task 1 card: Candidate contracts and immutable persistence
 
@@ -2098,7 +2104,7 @@ Graph/compiler/runtime/provider authority, or Task 6 behavior.
 
 ## Task 6 card: Bulk acceptance and release evidence
 
-- **State:** `implementing`
+- **State:** `ready_for_qa`
 - **Specialization:** `qa`
 - **Contract owner:** External Intake Release Evidence
 - **Contract artifact:** accepted Tasks 1-5 plus
@@ -2112,7 +2118,7 @@ exact paths through implementation and repair. The release-repair amendment
 below adds only `apps/intake-cli/test/cli.test.ts` as a fifth exact path. The
 amended release set, External Intake Release Evidence contract, fixture-only
 evidence boundary, deliverables, five paths, non-goals, and acceptance evidence
-are now frozen for repair;
+are now frozen for independent QA;
 any scope, path, dependency, or contract change stops work for Controller
 review.
 
@@ -2335,6 +2341,64 @@ After implementation, independent task review, behavioral re-QA, independent
 release re-review, and fresh final verification remain required through the
 ledger workflow before `accepted`.
 
+### Release repair implementation and independent task review
+
+The bounded repair set is non-contiguous commit `4924ec0` plus documentation
+correction `dc6ca19`. Intervening research commit `bc40886` is unrelated to
+Task 6 and is excluded from its release scope and evidence.
+
+Commit `4924ec0` changed exactly the three authorized repair paths:
+
+- `apps/intake-cli/test/cli.test.ts`;
+- `docs/acceptance/external-capability-intake.md`; and
+- `docs/project-status.md`.
+
+It retained both directory-replacement and junction tests as real child
+processes that execute and fail closed. Each race now has an explicit bounded
+20-second outer timeout: the existing internal wait remains bounded at ten
+seconds, with ten seconds of concurrent scheduling margin. No production code,
+dependency, mock, skip, error-path weakening, or product behavior changed.
+
+The release-repair RED reproduced on Node v22.11.0 with all five complete suites
+running concurrently. External Intake passed 392/392, Graph 28/28,
+Capabilities 123/123, and Compiler 180/180; Intake CLI failed 55/56 when the
+real directory-replacement child process hit the five-second default at
+5,061 ms. The real junction race passed.
+
+GREEN repeated the same concurrent five-suite gate on Node v22.11.0 and passed:
+
+- External Intake 392/392;
+- Intake CLI 56/56;
+- Graph 28/28;
+- Capabilities 123/123; and
+- Compiler 180/180.
+
+The directory-replacement race completed in 6,141 ms under concurrent load. A
+separate serial Intake CLI run passed 56/56, including both real child-process
+fail-closed races.
+
+Commit `dc6ca19` changed only
+`docs/acceptance/external-capability-intake.md`. It corrected the QA transition
+attribution: independent re-QA passed after document repair `0b558fc`, PM ledger
+commit `77b4062` moved Task 6 `ready_for_qa -> reviewed`, and release review
+against `77b4062` subsequently failed with two P2 findings and no P0/P1. The
+acceptance record and project status preserve the fixture-only boundary,
+release-repair history, remaining independent gates, and no acceptance or live
+evidence claim.
+
+Independent task review of the complete `4924ec0 + dc6ca19` repair set PASSED
+with no P0/P1/P2. It confirmed exact scope, bounded timeout rationale, real
+child-process behavior, truthful transition attribution, Prettier and diff
+checks, and no production, dependency, public-network, authority, or acceptance
+change.
+
+The PM reconciled the repair and independent task review and moved Task 6
+`implementing -> ready_for_qa`. Under the ledger-only PM transition, the
+acceptance record and project status remain unchanged and accurately preserve
+the repair-stage evidence; this ledger is the current state authority.
+Independent behavioral re-QA is the next gate. The amended exact five paths,
+fixture-only/no-network boundary, dependencies, and non-goals remain frozen.
+
 ## Review sequence and stop conditions
 
 1. PM moves one dependency-ready task to `implementing` and freezes its
@@ -2374,19 +2438,34 @@ ledger workflow before `accepted`.
   to a recorded repair round and stops Task 5.
 - **Release-evidence stability risk:** the real child-process directory race
   can exceed Vitest's five-second default only under the required concurrent
-  five-suite load. The bounded repair must preserve and execute the real
-  fail-closed races while fixing only their timeout or resource-group
-  scheduling.
+  five-suite load. The bounded repair passed its writer and task-review gates;
+  independent QA must still reproduce the concurrent and serial behavior.
 
-The active smallest valuable slice is the bounded Task 6 release repair under
-the amended five-path fixture-only contract. One writer may change only
-`apps/intake-cli/test/cli.test.ts`,
-`docs/acceptance/external-capability-intake.md`, and
-`docs/project-status.md` to make the real child-process races reliable under
-the five-suite concurrent Node v22.11.0 gate and to make the documentation
-truthful. The repair must preserve the 43/108 preflight, exact cleanup,
-canonical-pending-packet authority rejection, Candidate/Golden/Graph/compiler
-isolation, public-network prohibition, and the accepted Task 5
+The active smallest valuable slice is independent Task 6 behavioral re-QA of
+the reviewed `4924ec0 + dc6ca19` repair under the amended five-path
+fixture-only contract. QA must use Node v22.11.0 and provide:
+
+- one fresh run of External Intake, Intake CLI, Graph, Capabilities, and
+  Compiler concurrently, passing 392/392, 56/56, 28/28, 123/123, and 180/180
+  without timeout;
+- a separate serial Intake CLI run passing 56/56, including both real
+  child-process directory-replacement and junction fail-closed races;
+- focused release-boundary 3/3 and bulk-intake 1/1 results, including the
+  43-source/108-demand preflight, stable redaction, no scenario Candidate,
+  per-source isolation/resume, and exact run-owned cleanup;
+- inspection proving the 20-second bound retains the ten-second internal wait,
+  both race tests still run as real child processes, and neither replacement
+  target receives a promotion packet;
+- exact `4924ec0 + dc6ca19` three-path scope, with unrelated `bc40886`
+  excluded, plus Intake CLI typecheck/lint, targeted Prettier,
+  `git show --check`, `git diff --check`, and clean-worktree evidence; and
+- acceptance-record and project-status inspection confirming truthful
+  repair-stage history, fixture-only/no-network limits, remaining gates, and no
+  release-pass, acceptance, live-evidence, or new-authority claim.
+
+QA must preserve the canonical-pending-packet authority rejection,
+Candidate/Golden/Graph/compiler isolation, public-network prohibition, and the
+accepted Task 5
 deterministic-fixture and single-purpose CLI-process limitations and may add no
 public/network probe, decision, approval, waiver, source copy, notice
 modification, Golden registration, Graph/compiler input, provider activation,
@@ -2414,4 +2493,4 @@ Task 1's original release and bounded amendments, Task 2's accepted code set
 `515e0ba + 3dcb20f + dcaddf4`, Task 3's accepted repair commit `8b31d3a`, and
 Task 4's complete accepted Candidate Registry remain frozen. Task 5 is
 `accepted` and frozen under its recorded dependency gate; Task 6 is
-`implementing` under its amended fixture-only five-path dispatch.
+`ready_for_qa` under its amended fixture-only five-path dispatch.
