@@ -1,0 +1,6 @@
+{
+  "aggregateEntity": "graph.domain.order",
+  "transactionFlow": "graph.flow.order-transaction",
+  "actorRole": "graph.policy.customer",
+  "operationAdapter": "factory.transaction-operation-adapter/v1"
+}

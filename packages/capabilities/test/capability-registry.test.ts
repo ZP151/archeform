@@ -731,7 +731,7 @@ describe("capability catalog", () => {
   });
 
   it("verifies every registered capability manifest against its declared digest", () => {
-    expect(capabilityAssets).toHaveLength(40);
+    expect(capabilityAssets).toHaveLength(41);
     for (const asset of capabilityAssets) {
       expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     }
@@ -772,7 +772,8 @@ describe("capability catalog", () => {
       }
       if (
         asset.manifest.key === "commerce.transaction" &&
-        asset.manifest.version === "2.0.0"
+        (asset.manifest.version === "2.0.0" ||
+          asset.manifest.version === "2.1.0")
       ) {
         expect(templates).toEqual([]);
         continue;

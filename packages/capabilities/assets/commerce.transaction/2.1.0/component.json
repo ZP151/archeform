@@ -1,0 +1,90 @@
+{
+  "apiVersion": "factory.capability/v1",
+  "bindingContract": "factory.capability-binding/v1",
+  "key": "commerce.transaction",
+  "version": "2.1.0",
+  "category": "commerce",
+  "name": "Commerce transaction executor with operation adapter",
+  "description": "Executes idempotent, version-checked commerce commands through a lock-governed atomic boundary and exactly one typed operation adapter.",
+  "packageRoot": "packages/capabilities/assets/commerce.transaction/2.1.0",
+  "manifestDigest": "sha256:7ca669503257fc4378b039126001201b781e8b6a9ce51184a63620fbe3181309",
+  "lifecycle": "golden",
+  "profiles": ["restaurant-ordering", "simple-ecommerce", "retail-counter", "grocery-pickup"],
+  "effects": ["commerce.transaction.execute"],
+  "inputSchema": [
+    { "key": "aggregateEntity", "type": "domain.entity", "required": true },
+    { "key": "transactionFlow", "type": "flow.flow", "required": true },
+    { "key": "actorRole", "type": "policy.role", "required": true }
+  ],
+  "outputSlots": ["api.runtime", "database.schema", "database.migration", "test.journey"],
+  "runtimeHandlers": ["transaction"],
+  "templates": [],
+  "parameters": [
+    { "key": "aggregateEntity", "type": "graph-symbol", "required": true },
+    { "key": "transactionFlow", "type": "graph-symbol", "required": true },
+    { "key": "actorRole", "type": "graph-symbol", "required": true }
+  ],
+  "executableContributions": [
+    {
+      "id": "commerce-transaction-executor",
+      "outputSlot": "api.runtime",
+      "namespace": "packages/commerce.transaction/api/runtime/",
+      "source": "templates/api/commerce-transaction-executor.ts.tpl",
+      "target": "api/src/capabilities/commerce-transaction-executor.ts",
+      "parameterRefs": ["aggregateEntity", "transactionFlow", "actorRole"],
+      "targetRuntimeInterfaceVersion": "factory.transaction-executor/v1",
+      "orderingRequirements": [],
+      "mergeProtocol": "replace-file",
+      "digest": "sha256:6fee5ae6c304d2e6b665f8c990fdf80de4a22a60350a7079603264724454ecb5"
+    },
+    {
+      "id": "commerce-transaction-schema",
+      "outputSlot": "database.schema",
+      "namespace": "packages/commerce.transaction/database/schema/",
+      "source": "templates/database/commerce-transaction.prisma.tpl",
+      "target": "database/prisma/fragments/commerce-transaction.prisma",
+      "parameterRefs": ["aggregateEntity", "transactionFlow", "actorRole"],
+      "targetRuntimeInterfaceVersion": "factory.prisma-schema/v1",
+      "orderingRequirements": ["commerce-transaction-executor"],
+      "mergeProtocol": "append-fragment",
+      "digest": "sha256:572b47cd18dad9271e1291a8f7136ce9cea1ea4fd848c7703bb805cc4d222afb"
+    },
+    {
+      "id": "commerce-transaction-migration",
+      "outputSlot": "database.migration",
+      "namespace": "packages/commerce.transaction/database/migrations/",
+      "source": "templates/database/commerce-transaction.sql.tpl",
+      "target": "database/prisma/migrations/commerce-transaction.sql",
+      "parameterRefs": ["aggregateEntity", "transactionFlow", "actorRole"],
+      "targetRuntimeInterfaceVersion": "factory.prisma-migration/v1",
+      "orderingRequirements": ["commerce-transaction-schema"],
+      "mergeProtocol": "append-fragment",
+      "digest": "sha256:67596570db6b51c602f66b46077c4c7933f608d0bb868b6cea854f33e6c482e9"
+    },
+    {
+      "id": "commerce-transaction-journey",
+      "outputSlot": "test.journey",
+      "namespace": "packages/commerce.transaction/test/journeys/",
+      "source": "templates/test/commerce-transaction.journey.ts.tpl",
+      "target": "api/test/journeys/commerce-transaction.journey.ts",
+      "parameterRefs": ["aggregateEntity", "transactionFlow", "actorRole"],
+      "targetRuntimeInterfaceVersion": "factory.journey/v1",
+      "orderingRequirements": ["commerce-transaction-executor"],
+      "mergeProtocol": "replace-file",
+      "digest": "sha256:1f3dafa0483911be7b5d0280f08907eb64c76664c770a5fca82edd9555d51c8a"
+    }
+  ],
+  "requires": [
+    { "interfaceKey": "commerce.stock-movement", "version": "v1" },
+    { "interfaceKey": "commerce.order-event", "version": "v1" },
+    { "interfaceKey": "factory.transaction-operation-adapter", "version": "v1" }
+  ],
+  "provides": [{ "interfaceKey": "commerce.transaction", "version": "v1" }],
+  "verification": {
+    "fixture": "fixtures/default.json",
+    "fixtureDigest": "sha256:150e46e0d2e0df646a09d3b4fcce42a7d50626f35aae681b0b4255478031a07c",
+    "contractTest": "tests/contract.json",
+    "contractTestDigest": "sha256:dc5ebda1f2e87b7c1ce0d59dde8931c784c538d598a0f4eba6e0cf3b1dd19215",
+    "status": "verified"
+  }
+}

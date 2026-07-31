@@ -1,0 +1,11 @@
+{
+  "contract": "factory.transaction-executor/v1",
+  "requiredProvider": "factory.transaction-operation-adapter/v1",
+  "requiredContributions": [
+    "commerce-transaction-executor",
+    "commerce-transaction-schema",
+    "commerce-transaction-migration",
+    "commerce-transaction-journey"
+  ],
+  "semantics": ["typed-operation-adapter", "single-provider"]
+}
