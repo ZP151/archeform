@@ -39,6 +39,7 @@ export {
 export * from "./source-client.js";
 export * from "./snapshot.js";
 export * from "./evidence.js";
+export * from "./source-study.js";
 export * from "./scans.js";
 export * from "./module-inventory.js";
 export * from "./jobs.js";
