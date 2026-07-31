@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { canonicalRecordDigest } from "../src/canonical.js";
 import type {
   ExternalSourceAcquisitionV1,
   IntakeRequestV1,
@@ -130,6 +131,25 @@ function receiptIndexes(root: string): unknown[] {
   );
 }
 
+function persistedKinds(root: string, domain: "records" | "blobs"): string[] {
+  const directory = join(root, domain);
+  return existsSync(directory)
+    ? readdirSync(directory, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+        .sort()
+    : [];
+}
+
+function persistedFiles(root: string): string[] {
+  const visit = (directory: string): string[] =>
+    readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+      const path = join(directory, entry.name);
+      return entry.isDirectory() ? visit(path) : entry.isFile() ? [path] : [];
+    });
+  return visit(root);
+}
+
 afterEach(() => {
   for (const root of roots.splice(0)) {
     rmSync(root, { recursive: true, force: true });
@@ -167,6 +187,46 @@ describe("licence, notice, and provenance acquisition", () => {
     });
     expect(existsSync(join(root, "records", "candidate"))).toBe(false);
     expect(existsSync(join(root, "records", "promotion"))).toBe(false);
+  });
+
+  it("isolates an unsafe request while acquiring a valid sibling and writes only quarantine evidence", async () => {
+    const { root, store } = tempStore();
+
+    const result = await acquireSourceBatch(
+      {
+        apiVersion: "factory.external-intake-batch/v1",
+        items: [
+          { id: "safe-source", request },
+          {
+            id: "unsafe-source",
+            request: { ...request, rawPrompt: "must-not-be-persisted" },
+          },
+        ],
+      },
+      new EvidenceFixtureClient(),
+      store,
+    );
+
+    expect(result.byId["safe-source"]?.status).toBe("acquired");
+    expect(result.byId["unsafe-source"]).toEqual({
+      status: "blocked",
+      failureCode: "invalid-intake-request",
+    });
+    expect(persistedKinds(root, "records")).toEqual([
+      "acquisition",
+      "receipt",
+      "request",
+      "snapshot",
+    ]);
+    expect(persistedKinds(root, "blobs")).toEqual(["evidence", "snapshot"]);
+    expect(
+      persistedFiles(root).some((path) =>
+        readFileSync(path, "utf8").includes("must-not-be-persisted"),
+      ),
+    ).toBe(false);
+    expect(readdirSync(join(root, "records", "request"))).toEqual([
+      `${canonicalRecordDigest(request).slice("sha256:".length)}.json`,
+    ]);
   });
 
   it.each([

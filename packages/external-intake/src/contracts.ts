@@ -12,7 +12,7 @@ const sensitiveKeyFragments = [
   "command",
 ] as const;
 
-function assertNoSensitiveKeys(
+export function assertNoSensitiveIntakeKeys(
   input: unknown,
   ancestors = new WeakSet<object>(),
 ): void {
@@ -31,7 +31,7 @@ function assertNoSensitiveKeys(
       ) {
         throw new TypeError(`Sensitive intake field is prohibited: ${key}.`);
       }
-      assertNoSensitiveKeys(value, ancestors);
+      assertNoSensitiveIntakeKeys(value, ancestors);
     }
   } finally {
     ancestors.delete(input);
@@ -285,10 +285,11 @@ export const sourceSnapshotSchema = z
   })
   .strict()
   .superRefine((snapshot, context) => {
-    if (snapshot.parentDigests.length === 0) {
+    if (snapshot.parentDigests.length !== 1) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Source snapshots require a parent Intake request digest.",
+        message:
+          "Source snapshots require exactly one parent Intake request digest.",
         path: ["parentDigests"],
       });
     }
@@ -675,7 +676,7 @@ function parseStrict<TSchema extends z.ZodTypeAny>(
   schema: TSchema,
   input: unknown,
 ): z.output<TSchema> {
-  assertNoSensitiveKeys(input);
+  assertNoSensitiveIntakeKeys(input);
   return schema.parse(input) as z.output<TSchema>;
 }
 
@@ -686,7 +687,10 @@ export function parseIntakeRequest(input: unknown): IntakeRequestV1 {
 export function parseExternalIntakeBatch(
   input: unknown,
 ): ExternalIntakeBatchV1 {
-  return parseStrict(externalIntakeBatchSchema, input);
+  // The batch envelope must be strict, but each request remains opaque here so
+  // acquisition can terminally block an unsafe sibling without aborting a safe
+  // fixed-source request in the same batch.
+  return externalIntakeBatchSchema.parse(input);
 }
 
 export function parseSourceSnapshot(input: unknown): SourceSnapshotV1 {

@@ -763,9 +763,12 @@ export class ExternalIntakeStore {
         "Acquisition archive or tree digest does not match its snapshot parent.",
       );
     }
-    if (!snapshot.parentDigests.includes(acquisition.sourceRequestDigest)) {
+    if (
+      snapshot.parentDigests.length !== 1 ||
+      snapshot.parentDigests[0] !== acquisition.sourceRequestDigest
+    ) {
       throw new Error(
-        "Acquisition snapshot parent is not linked to its request parent.",
+        "Acquisition snapshot must declare exactly its request parent.",
       );
     }
   }

@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { canonicalRecordDigest } from "../src/canonical.js";
-import type { IntakeRequestV1 } from "../src/contracts.js";
+import type { IntakeRequestV1, SourceSnapshotV1 } from "../src/contracts.js";
 import { acquireSourceEvidence } from "../src/evidence.js";
 import { createExternalSourceStudy } from "../src/source-study.js";
 import type {
@@ -53,8 +53,10 @@ function bytes(name: string): Uint8Array {
 }
 
 class EvidenceFixtureClient implements FixedSourceClient {
+  constructor(private readonly resolved = reference) {}
+
   async resolve(): Promise<ResolvedSourceReferenceV1> {
-    return reference;
+    return this.resolved;
   }
 
   async fetchArchive(): Promise<Uint8Array> {
@@ -121,7 +123,7 @@ describe("ExternalSourceStudy", () => {
     expect(JSON.stringify(study)).not.toContain("src/index.ts");
   });
 
-  it("rejects references that are not the acquisition parents", async () => {
+  it("rejects source-study references with invalid record kinds", async () => {
     const store = tempStore();
     const acquired = await acquireSourceEvidence(
       request,
@@ -138,6 +140,116 @@ describe("ExternalSourceStudy", () => {
         },
         store,
       ),
+    ).toThrow();
+  });
+
+  it("rejects a type-correct acquisition from another fixed source", async () => {
+    const store = tempStore();
+    const acquired = await acquireSourceEvidence(
+      request,
+      new EvidenceFixtureClient(),
+      store,
+    );
+    const otherCommit = "b".repeat(40);
+    const otherRequest: IntakeRequestV1 = {
+      ...request,
+      source: {
+        canonicalRepositoryUrl: "https://github.com/example/other-project.git",
+        requestedRef: "v2.0.0",
+        expectedCommit: otherCommit,
+      },
+    };
+    const other = await acquireSourceEvidence(
+      otherRequest,
+      new EvidenceFixtureClient({
+        ...reference,
+        repositoryUrl: otherRequest.source.canonicalRepositoryUrl,
+        requestedRef: otherRequest.source.requestedRef,
+        resolvedCommit: otherCommit,
+        archiveUrl: `https://codeload.github.com/example/other-project/tar.gz/${otherCommit}`,
+        treeUrl: `https://api.github.com/repos/example/other-project/git/trees/${otherCommit}`,
+      }),
+      store,
+    );
+
+    expect(() =>
+      createExternalSourceStudy(
+        {
+          request: {
+            kind: "request",
+            digest: canonicalRecordDigest(request),
+          },
+          snapshot: acquired.snapshot,
+          acquisition: other.acquisition,
+        },
+        store,
+      ),
+    ).toThrow(/relationship/i);
+  });
+
+  it("rejects a snapshot with an undeclared additional source-study parent", async () => {
+    const store = tempStore();
+    const acquired = await acquireSourceEvidence(
+      request,
+      new EvidenceFixtureClient(),
+      store,
+    );
+    const persistedSnapshot = store.getRecord(
+      acquired.snapshot,
+    ) as SourceSnapshotV1;
+    const storeWithAmbiguousSnapshot = {
+      getRecord(ref: Parameters<ExternalIntakeStore["getRecord"]>[0]) {
+        return ref.kind === "snapshot"
+          ? {
+              ...persistedSnapshot,
+              parentDigests: [
+                canonicalRecordDigest(request),
+                `sha256:${"f".repeat(64)}`,
+              ],
+            }
+          : store.getRecord(ref);
+      },
+    } as unknown as ExternalIntakeStore;
+
+    expect(() =>
+      createExternalSourceStudy(
+        {
+          request: {
+            kind: "request",
+            digest: canonicalRecordDigest(request),
+          },
+          snapshot: acquired.snapshot,
+          acquisition: acquired.acquisition,
+        },
+        storeWithAmbiguousSnapshot,
+      ),
     ).toThrow(/parent/i);
   });
+
+  it.each(["sourceText", "command", "credential"])(
+    "rejects forbidden source-study input field %s at runtime",
+    async (forbiddenField) => {
+      const store = tempStore();
+      const acquired = await acquireSourceEvidence(
+        request,
+        new EvidenceFixtureClient(),
+        store,
+      );
+
+      expect(() =>
+        createExternalSourceStudy(
+          {
+            request: {
+              kind: "request",
+              digest: canonicalRecordDigest(request),
+            },
+            snapshot: acquired.snapshot,
+            acquisition: acquired.acquisition,
+            [forbiddenField]: "must-not-be-accepted",
+          } as unknown as Parameters<typeof createExternalSourceStudy>[0],
+          store,
+        ),
+      ).toThrow();
+    },
+  );
 });

@@ -37,13 +37,22 @@ pnpm --filter @factory/external-intake test -- --run test/source-study.test.ts
 
 pnpm --filter @factory/intake-cli test -- --run test/cli.test.ts --testNamePattern "acquires a fixed source"
 # RED: batch acquire/source-study command returned invalid-command
+
+pnpm --filter @factory/external-intake test -- --run test/evidence.test.ts
+# RED: an unsafe request field aborted the whole batch before a safe sibling acquired
+
+pnpm --filter @factory/external-intake test -- --run test/source-study.test.ts
+# RED: source-study construction accepted forbidden runtime fields
+
+pnpm --filter @factory/external-intake test -- --run test/source-study.test.ts
+# RED: a snapshot with an extra parent was accepted as source-study provenance
 ```
 
 The GREEN verification then passed:
 
 ```text
 pnpm --filter @factory/external-intake test
-# 15 files, 395 tests passed
+# 15 files, 401 tests passed
 
 pnpm --filter @factory/intake-cli test
 # 2 files, 57 tests passed
@@ -66,19 +75,22 @@ dependency-build order through `^build`.
 
 - A batch processes items independently. A fixed-commit mismatch blocks only
   the failing sibling; the valid sibling receives immutable snapshot and
-  acquisition records.
-- Batch input is shared with the existing strict intake wire contract. Duplicate
-  IDs, sensitive keys, invalid request records, branches, noncanonical URLs,
-  and unpinned retrieval are rejected before an acquisition can receive product
-  authority.
+  acquisition records. A blocked request's sentinel payload is absent from all
+  persisted quarantine bytes.
+- The batch envelope and item IDs are strict. Each request is then privacy- and
+  schema-validated independently, so duplicate IDs and malformed envelopes fail
+  closed while a sensitive field, branch, noncanonical URL, or unpinned request
+  can block only that item before it receives product authority.
 - The CLI emits only opaque item IDs, terminal status, aggregate counts, stable
   failure codes, and canonical record digests. Its source-study output contains
   only fixed API version, acquisition/snapshot digests, classification, licence
   and notice counts, requested-module count, and status.
 - Candidate, promotion, Graph, lock, compiler, generated-runtime, provider,
-  and Workbench records are not created by either command.
+  and Workbench records are not created by either command. Package manifests,
+  runtime source/templates, and a generated application bundle retain no
+  external-intake dependency or relative intake import.
 - Source-study construction proves request/snapshot/acquisition parent binding
-  and rejects mismatched parents. The returned object has no repository URL,
+  and rejects mismatched or additional parents. The returned object has no repository URL,
   requested ref, resolved commit, source path, licence text, source text,
   command, executable path, Candidate, Golden, Graph, or provider field.
 

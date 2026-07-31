@@ -6,8 +6,15 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { generateApplicationBundle } from "../../compiler/src/index.js";
-import { parseApplicationGraph } from "../../graph/src/index.js";
-import { resolveCapabilityAssetLock } from "../../capabilities/src/index.js";
+import {
+  hashApplicationGraph,
+  parseApplicationGraph,
+} from "../../graph/src/index.js";
+import {
+  composeDefaultCapabilityDraft,
+  createCapabilityCompositionLock,
+  resolveCapabilityAssetLock,
+} from "../../capabilities/src/index.js";
 
 import {
   ExternalIntakeStore,
@@ -21,6 +28,14 @@ import {
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const workspaceRoot = resolve(packageRoot, "../..");
 const digest = `sha256:${"a".repeat(64)}`;
+
+function sourceFiles(root: string): string[] {
+  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(root, entry.name);
+    if (entry.isDirectory()) return sourceFiles(path);
+    return /\.(?:[cm]?[jt]sx?|json)$/u.test(entry.name) ? [path] : [];
+  });
+}
 
 function candidateArtifact(): unknown {
   return {
@@ -283,7 +298,7 @@ describe("External Intake release boundary", () => {
     }
   });
 
-  it("preserves package-root and importer isolation outside the repository-local CLI", () => {
+  it("permits external-intake dependencies only in quarantine tooling, never Graph, Golden, provider, compiler, runtime, Control Plane, or Worker packages", () => {
     const manifests = ["apps", "packages"].flatMap((area) =>
       readdirSync(join(workspaceRoot, area), { withFileTypes: true })
         .filter((entry) => entry.isDirectory())
@@ -297,8 +312,60 @@ describe("External Intake release boundary", () => {
       join(workspaceRoot, "apps", "intake-cli", "package.json"),
       join(workspaceRoot, "packages", "external-intake", "package.json"),
     ]);
+    for (const importer of [
+      join(workspaceRoot, "apps", "control-plane", "package.json"),
+      join(workspaceRoot, "apps", "compiler-worker", "package.json"),
+      join(workspaceRoot, "apps", "workbench", "package.json"),
+      join(workspaceRoot, "packages", "capabilities", "package.json"),
+      join(workspaceRoot, "packages", "compiler", "package.json"),
+      join(workspaceRoot, "packages", "graph", "package.json"),
+    ]) {
+      const manifest = JSON.parse(readFileSync(importer, "utf8")) as {
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+      };
+      expect(
+        manifest.dependencies?.["@factory/external-intake"],
+      ).toBeUndefined();
+      expect(
+        manifest.devDependencies?.["@factory/external-intake"],
+      ).toBeUndefined();
+    }
     expect(
       readdirSync(join(workspaceRoot, "packages", "capabilities", "assets")),
     ).not.toContain("candidate");
+
+    const prohibitedRuntimeRoots = [
+      join(workspaceRoot, "apps", "control-plane", "src"),
+      join(workspaceRoot, "apps", "compiler-worker", "src"),
+      join(workspaceRoot, "apps", "workbench", "app"),
+      join(workspaceRoot, "apps", "workbench", "components"),
+      join(workspaceRoot, "apps", "workbench", "lib"),
+      join(workspaceRoot, "packages", "capabilities", "src"),
+      join(workspaceRoot, "packages", "capabilities", "assets"),
+      join(workspaceRoot, "packages", "compiler", "src"),
+      join(workspaceRoot, "packages", "graph", "src"),
+    ];
+    for (const source of prohibitedRuntimeRoots.flatMap(sourceFiles)) {
+      expect(readFileSync(source, "utf8")).not.toMatch(
+        /(?:@factory\/external-intake|external-intake(?:[/\\]|["'`]))/u,
+      );
+    }
+
+    const composed = composeDefaultCapabilityDraft({
+      profile: "expense-approval",
+    });
+    const generated = generateApplicationBundle({
+      publishedRevisionId: "published-release-boundary-1",
+      graph: composed.graph,
+      compositionLock: createCapabilityCompositionLock({
+        graphChecksum: hashApplicationGraph(composed.graph),
+        selections: composed.graph.integration.compositionSelections ?? [],
+      }),
+    });
+    for (const file of generated.files) {
+      expect(file.content).not.toContain("@factory/external-intake");
+      expect(file.content).not.toMatch(/external-intake(?:[/\\]|["'`])/u);
+    }
   });
 });

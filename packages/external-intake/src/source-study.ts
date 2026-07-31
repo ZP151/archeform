@@ -1,4 +1,8 @@
+import { z } from "zod";
+
 import {
+  assertNoSensitiveIntakeKeys,
+  intakeContractPrimitives,
   parseExternalSourceAcquisition,
   parseIntakeRequest,
   parseSourceSnapshot,
@@ -25,6 +29,32 @@ export interface ExternalSourceStudyParentsV1 {
   readonly request: StoredRecordRef;
   readonly snapshot: StoredRecordRef;
   readonly acquisition: StoredRecordRef;
+}
+
+const sourceStudyRecordRefSchema = z
+  .object({
+    kind: z.enum(["request", "snapshot", "acquisition"]),
+    digest: intakeContractPrimitives.sha256DigestSchema,
+  })
+  .strict();
+
+const sourceStudyParentsSchema = z
+  .object({
+    request: sourceStudyRecordRefSchema.extend({ kind: z.literal("request") }),
+    snapshot: sourceStudyRecordRefSchema.extend({
+      kind: z.literal("snapshot"),
+    }),
+    acquisition: sourceStudyRecordRefSchema.extend({
+      kind: z.literal("acquisition"),
+    }),
+  })
+  .strict();
+
+function parseExternalSourceStudyParents(
+  input: unknown,
+): ExternalSourceStudyParentsV1 {
+  assertNoSensitiveIntakeKeys(input);
+  return sourceStudyParentsSchema.parse(input);
 }
 
 function readParent(
@@ -65,28 +95,30 @@ function hasExactParents(
 }
 
 export function createExternalSourceStudy(
-  input: ExternalSourceStudyParentsV1,
+  input: unknown,
   store: ExternalIntakeStore,
 ): ExternalSourceStudyV1 {
+  const parents = parseExternalSourceStudyParents(input);
   const request = readParent(
     store,
-    input.request,
+    parents.request,
     "request",
   ) as IntakeRequestV1;
   const snapshot = readParent(
     store,
-    input.snapshot,
+    parents.snapshot,
     "snapshot",
   ) as SourceSnapshotV1;
   const acquisition = readParent(
     store,
-    input.acquisition,
+    parents.acquisition,
     "acquisition",
   ) as ExternalSourceAcquisitionV1;
 
   if (
-    !hasExactParents(acquisition, input.request, input.snapshot) ||
-    !snapshot.parentDigests.includes(input.request.digest) ||
+    !hasExactParents(acquisition, parents.request, parents.snapshot) ||
+    snapshot.parentDigests.length !== 1 ||
+    snapshot.parentDigests[0] !== parents.request.digest ||
     acquisition.acquisitionState !== "acquired" ||
     acquisition.manualStatus !== "unreviewed"
   ) {
@@ -95,8 +127,8 @@ export function createExternalSourceStudy(
 
   return {
     apiVersion: "factory.external-source-study/v1",
-    acquisitionDigest: input.acquisition.digest,
-    snapshotDigest: input.snapshot.digest,
+    acquisitionDigest: parents.acquisition.digest,
+    snapshotDigest: parents.snapshot.digest,
     classification: request.classification,
     licence: {
       primaryPathCount: acquisition.licence.primaryPaths.length,
