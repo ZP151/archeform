@@ -212,6 +212,51 @@ describe("commercial profile composition", () => {
     );
   });
 
+  it.each([
+    {
+      profile: "restaurant-ordering" as const,
+      movement: "inventory-ledger",
+      provenance: [
+        ["restaurant-location", "locationId"],
+        ["menu-item", "menuItemId"],
+        ["order", "orderId"],
+      ] as const,
+    },
+    {
+      profile: "simple-ecommerce" as const,
+      movement: "stock-movement",
+      provenance: [
+        ["store", "storeCode"],
+        ["product", "productId"],
+        ["order", "orderId"],
+      ] as const,
+    },
+  ])(
+    "declares distinct source fields for each $profile inventory-ledger provenance relation",
+    ({ profile, movement, provenance }) => {
+      const graph = composeDefaultCapabilityDraft({ profile }).graph;
+      const movementEntity = graph.domain.entities.find(
+        ({ key }) => key === movement,
+      )!;
+
+      for (const [target, field] of provenance) {
+        expect(graph.domain.relations).toContainEqual({
+          from: movement,
+          to: target,
+          kind: "many-to-one",
+          field,
+        });
+        expect(movementEntity.fields).toContainEqual(
+          expect.objectContaining({
+            key: field,
+            type: "string",
+          }),
+        );
+      }
+      expect(new Set(provenance.map(([, field]) => field)).size).toBe(3);
+    },
+  );
+
   it("uses one shopper journey and one merchant journey throughout Ecommerce", () => {
     const composition = composeDefaultCapabilityDraft({
       profile: "simple-ecommerce",
@@ -549,6 +594,51 @@ describe("commercial profile composition", () => {
         );
       },
     },
+    {
+      name: "missing movement-to-location relation field",
+      mutate: (
+        graph: ReturnType<typeof composeDefaultCapabilityDraft>["graph"],
+      ) => {
+        const relation = graph.domain.relations.find(
+          ({ from, to }) =>
+            from === "inventory-ledger" && to === "restaurant-location",
+        )!;
+        delete relation.field;
+      },
+    },
+    {
+      name: "movement-to-location relation using the catalog field",
+      mutate: (
+        graph: ReturnType<typeof composeDefaultCapabilityDraft>["graph"],
+      ) => {
+        const relation = graph.domain.relations.find(
+          ({ from, to }) =>
+            from === "inventory-ledger" && to === "restaurant-location",
+        )!;
+        relation.field = "menuItemId";
+      },
+    },
+    {
+      name: "missing movement-to-catalog relation",
+      mutate: (
+        graph: ReturnType<typeof composeDefaultCapabilityDraft>["graph"],
+      ) => {
+        graph.domain.relations = graph.domain.relations.filter(
+          ({ from, to }) =>
+            !(from === "inventory-ledger" && to === "menu-item"),
+        );
+      },
+    },
+    {
+      name: "missing movement-to-order relation",
+      mutate: (
+        graph: ReturnType<typeof composeDefaultCapabilityDraft>["graph"],
+      ) => {
+        graph.domain.relations = graph.domain.relations.filter(
+          ({ from, to }) => !(from === "inventory-ledger" && to === "order"),
+        );
+      },
+    },
   ])("rejects the active Restaurant composition with $name", ({ mutate }) => {
     const composition = composeDefaultCapabilityDraft({
       profile: "restaurant-ordering",
@@ -562,6 +652,26 @@ describe("commercial profile composition", () => {
         selections: graph.integration.compositionSelections ?? [],
       }),
     ).toThrow("commerce.inventory-ledger");
+  });
+
+  it("does not impose inventory-ledger provenance when the package is not selected", () => {
+    const profile = composeDefaultCapabilityDraft({
+      profile: "restaurant-ordering",
+    });
+    const selections = (
+      profile.graph.integration.compositionSelections ?? []
+    ).filter(({ lock }) => lock.key !== "commerce.inventory-ledger");
+
+    const result = composeCapabilityDraft({
+      graph: profile.graph,
+      selections,
+    });
+
+    expect(
+      result.composition.packages.some(
+        ({ lock }) => lock.key === "commerce.inventory-ledger",
+      ),
+    ).toBe(false);
   });
 
   it("rejects a Foundation binding that references no declared Graph symbol", () => {

@@ -291,6 +291,8 @@ function assertInventoryLedgerGraphSemantics(
   };
 
   const movementEntityKey = boundDomainEntity("movementEntity");
+  const catalogEntityKey = boundDomainEntity("catalogEntity");
+  const orderEntityKey = boundDomainEntity("orderEntity");
   const locationEntityKey = boundDomainEntity("locationEntity");
   const movementEntity = graph.domain.entities.find(
     ({ key }) => key === movementEntityKey,
@@ -321,16 +323,53 @@ function assertInventoryLedgerGraphSemantics(
     );
   }
 
-  const hasLocationRelation = graph.domain.relations.some(
-    ({ from, to, kind }) =>
-      from === movementEntityKey &&
-      to === locationEntityKey &&
-      kind === "many-to-one",
-  );
-  if (!hasLocationRelation) {
-    throw new Error(
-      `Capability package 'commerce.inventory-ledger' movement entity '${movementEntityKey}' must declare a many-to-one relation to location entity '${locationEntityKey}'.`,
+  const provenanceTargets = [
+    {
+      bindingKey: "locationEntity",
+      entityKey: locationEntityKey,
+      required: true,
+    },
+    {
+      bindingKey: "catalogEntity",
+      entityKey: catalogEntityKey,
+      required: true,
+    },
+    {
+      bindingKey: "orderEntity",
+      entityKey: orderEntityKey,
+      required: false,
+    },
+  ] as const;
+  const provenanceFields = new Map<string, string>();
+  for (const target of provenanceTargets) {
+    const relations = graph.domain.relations.filter(
+      ({ from, to, kind }) =>
+        from === movementEntityKey &&
+        to === target.entityKey &&
+        kind === "many-to-one",
     );
+    const relation = relations.length === 1 ? relations[0] : undefined;
+    const relationField = relation?.field;
+    const field = movementEntity.fields.find(
+      ({ key }) => key === relationField,
+    );
+    if (
+      !relationField ||
+      !field ||
+      field.type !== "string" ||
+      (target.required && field.required !== true)
+    ) {
+      throw new Error(
+        `Capability package 'commerce.inventory-ledger' movement entity '${movementEntityKey}' must declare one many-to-one relation to bound ${target.bindingKey} '${target.entityKey}' using ${target.required ? "a required " : ""}declared string source field.`,
+      );
+    }
+    const existingTarget = provenanceFields.get(relationField);
+    if (existingTarget) {
+      throw new Error(
+        `Capability package 'commerce.inventory-ledger' movement entity '${movementEntityKey}' cannot reuse source field '${relationField}' for bound ${existingTarget} and ${target.bindingKey}.`,
+      );
+    }
+    provenanceFields.set(relationField, target.bindingKey);
   }
 }
 
@@ -2239,6 +2278,12 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               to: "store",
               kind: "many-to-one",
               field: "storeCode",
+            },
+            {
+              from: "stock-movement",
+              to: "order",
+              kind: "many-to-one",
+              field: "orderId",
             },
           ],
           seedData: [
