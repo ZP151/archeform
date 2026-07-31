@@ -64,7 +64,7 @@ production-complete catalogue of one hundred application types.
   CRUD/workflow/audit/notification plus selected commerce handlers are
   executable; some catalogue/order concerns remain compiler-owned and several
   restaurant behaviours remain Profile-specific.
-- The active uncommitted transaction slice introduces
+- The completed transaction slice introduces
   `commerce.inventory@1.1.0`. Simple Ecommerce, Retail Counter, and Grocery
   Pickup now prove a common `cart -> submitted -> paid` lifecycle where submit
   reserves stock and a privileged cancellation compensates it. This is useful
@@ -76,8 +76,9 @@ production-complete catalogue of one hundred application types.
   intake. It is discovery evidence, not 122 installed products. The
   quarantine pipeline can acquire fixed references, isolate a prohibited batch
   sibling, capture redacted evidence, and create a strict source-study
-  projection. It does not yet transform a Portfolio source record into a
-  Candidate proposal automatically.
+  projection. It now derives an allowlisted Portfolio source record into a
+  quarantined, non-promoting Candidate proposal; it does not create a Golden
+  package or activate an external runtime.
 
 ### Decision: scale reuse without importing upstream authority
 
@@ -100,13 +101,17 @@ source of truth. The high-leverage next sequence is to complete the generic
 transaction kernel, repair the intake isolation boundaries, then automate
 allowlisted fixed-reference acquisition into non-promoting Candidate proposals.
 
-## Current execution snapshot — 2026-08-01
+## Historical execution snapshot — 2026-08-01
+
+The latest capability and supply-chain audit above is authoritative. The
+following retained execution notes describe earlier increments and may use
+superseded counts or in-progress wording.
 
 Factory Pilot has a credible composition foundation, but it is not yet a
 production-complete application platform or a catalogue of one hundred ready
 business products.
 
-- The repository currently contains 19 capability families and 32 physical,
+- The repository currently contains 19 capability families and 33 physical,
   versioned package directories. Five Profile starters are available:
   Expense Approval, Restaurant Ordering, Simple Ecommerce, Retail Counter,
   and Grocery Pickup. Their published Graphs, package locks, generated targets,
@@ -126,8 +131,9 @@ business products.
   verification passed on 2026-08-01; broader product and generated-application
   acceptance remain release gates for the platform.
 - The external-intake lane can bulk acquire fixed public references into
-  quarantine and record redacted provenance evidence. It cannot currently
-  create Candidates or promote Golden packages automatically. The next supply
+  quarantine and record redacted provenance evidence. It can derive an
+  allowlisted quarantined Candidate but cannot promote Golden packages
+  automatically. The next supply
   chain milestone is a bounded Candidate-proposal generator with licence,
   SBOM, security, fixture, conformance, and provenance gates.
 
