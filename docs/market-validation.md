@@ -208,3 +208,31 @@ projection contracts, using Uppy and BullMQ/Valkey as bounded implementations.
 Then compile catalog, cart, order, inventory, reservation and workflow
 subgraphs; Restaurant Ordering, Ecommerce and later approvals become
 independent acceptance recipes rather than bespoke application codebases.
+
+## 2026-08-01 scale-out discovery: high-leverage reusable assets
+
+**Decision investigated.** Which additional public assets could shorten the
+path from three accepted Profiles to a broad catalogue of production-relevant
+recipes without importing another product's schema, lifecycle, or deployment
+authority.
+
+| Candidate                                                                   | Observed fact                                                                                                                           | Proposed Factory lane                                                          | Boundary decision                                                                                                                                |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [Atomic CRM](https://github.com/marmelab/atomic-crm)                        | The repository is MIT-licensed, TypeScript-first, and publishes its reusable CRM blocks as a shadcn Registry.                           | Fixed-reference source study for CRM list/detail/activity blocks.              | Do not import its Supabase model or application shell. A source study must name exact presentation files before any narrow source reuse.         |
+| [react-admin](https://github.com/marmelab/react-admin)                      | The React admin framework is MIT-licensed and targets REST/GraphQL data applications.                                                   | Reference plus possible pinned direct-dependency study.                        | Factory keeps PageModel and generated API contracts; do not let resource configuration become DomainModel input.                                 |
+| [refine](https://github.com/refinedev/refine)                               | The TypeScript React meta-framework is MIT-licensed and provides headless enterprise-app integrations.                                  | Reference plus selective source/dependency study.                              | Evaluate hooks and data-provider seams, not the framework's application lifecycle or generated project ownership.                                |
+| [react-grid-layout](https://github.com/react-grid-layout/react-grid-layout) | The responsive draggable/resizable React grid is MIT-licensed.                                                                          | Direct-dependency candidate for a bounded `experience.free-layout/v1` adapter. | Dragging produces validated PageModel layout diffs; it cannot create routes, components, domain fields, or arbitrary styles.                     |
+| [InvenTree](https://github.com/Inventree/InvenTree)                         | The inventory-management application is MIT-licensed and presents stock-control, part-tracking, REST API, and security-policy evidence. | Fixed-reference source study for inventory/procurement semantics.              | Do not copy its Django models or migrations. Extract only independently specified stock/traceability behaviours into Factory Graph capabilities. |
+| [Autumn](https://github.com/useautumn/autumn)                               | The pricing/billing platform is Apache-2.0 and largely TypeScript.                                                                      | Later provider/source-study candidate for subscription entitlements.           | Never accept its payment or billing state as Factory truth; real money movement remains out of v1 and requires a dedicated provider decision.    |
+| [Frappe CRM](https://github.com/frappe/crm)                                 | The CRM repository declares AGPL-3.0.                                                                                                   | Explicit no-copy reference.                                                    | Its lead/deal/activity vocabulary may inform independent requirements, but no code, assets, or runtime may enter Factory.                        |
+
+### Decision effect
+
+These findings add high-leverage candidate families for CRM, configurable
+operations UI, dashboard layout, inventory/procurement, and future
+entitlements. They do **not** add dependencies, source copies, provider
+activation, or new Profile claims. Before any candidate reaches the external
+portfolio it needs a fixed release or commit, exact licence/notice evidence,
+an intended Factory interface, a removal path, and an isolated fixture. This
+keeps bulk discovery fast while ensuring a hundred scenario labels never turn
+into a hundred unmaintainable forks.

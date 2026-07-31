@@ -37,6 +37,15 @@ influence a compiler/runtime. The local `portfolio acquire` CLI command now
 constructs a strict batch from explicitly selected, intake-eligible portfolio
 IDs; it adds no authority beyond that quarantine boundary.
 
+The source-acquisition CLI now has an optional local read-token transport for
+GitHub metadata. `FACTORY_GITHUB_READ_TOKEN` is consumed only from the process
+environment and is scoped to `api.github.com`; archive and all other requests
+have authorization removed. Its focused tests prove token host confinement and
+non-echoing invalid configuration. Intake CLI verification currently passes
+61 tests, typecheck, lint, build, and `git diff --check`. No live external
+source has been claimed acquired by this change: materialization, scanning,
+Candidate creation, conformance, and Golden promotion remain separate gates.
+
 ## Current milestone
 
 ### Parallel delivery track: Live External Source Acquisition

@@ -383,6 +383,26 @@ describe("repository-local intake CLI", () => {
     expect(output.stderr).toEqual([]);
   });
 
+  it("accepts the package-script argument separator before a valid command", async () => {
+    const root = tempRoot();
+    const requestPath = validRequestFile(root);
+    const quarantine = join(root, "quarantine");
+    const output = outputHarness(
+      createExternalIntakeApi(new ExternalIntakeStore(quarantine), quarantine),
+      root,
+    );
+
+    expect(
+      await runIntakeCli(
+        ["--", "batch", "submit", "--file", requestPath],
+        output.options,
+      ),
+    ).toBe(0);
+
+    expect(output.stdout.join("\n")).toContain('"status":"requested"');
+    expect(output.stderr).toEqual([]);
+  });
+
   it("acquires a fixed source through an injected client without exposing its origin", async () => {
     const root = tempRoot();
     const requestPath = validRequestFile(root);

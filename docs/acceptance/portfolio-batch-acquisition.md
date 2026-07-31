@@ -26,12 +26,28 @@ Example command form:
 factory-intake portfolio acquire --file ecosystem/portfolio/2026-07-30-external-business-logic.json --sources tastyigniter,medusa
 ```
 
+For the local root launcher, use:
+
+```text
+pnpm intake -- portfolio acquire --file ecosystem/portfolio/2026-07-30-external-business-logic.json --sources tastyigniter,medusa
+```
+
 Only one to sixty-four comma-separated opaque IDs are accepted. Each ID must
 exist in the local portfolio and have a non-null intake classification.
 Architecture-only and excluded records fail before network retrieval. The
 terminal output contains item IDs, terminal status, and canonical evidence
 digests only; it does not reveal repository URLs, source bytes, licence text,
 commands, prompts, responses, or credentials.
+
+When GitHub unauthenticated metadata limits block a permitted acquisition, an
+operator may set `FACTORY_GITHUB_READ_TOKEN` in the untracked local `.env` and
+launch the compiled CLI through `pnpm intake -- <command>`. Node loads `.env`
+when it is present into the process environment; the CLI itself neither reads
+nor persists that file. It attaches the token only to
+`https://api.github.com` metadata requests. It strips authorization
+from archive and every non-API destination. The token is never printed,
+persisted, included in a Graph, included in quarantine evidence, or sent to
+`codeload.github.com`.
 
 ## TDD evidence
 
@@ -60,7 +76,7 @@ pnpm --filter @factory/external-intake lint
 pnpm --filter @factory/external-intake build
 
 pnpm --filter @factory/intake-cli test
-# 2 files, 58 tests passed
+# 3 files, 61 tests passed
 pnpm --filter @factory/intake-cli typecheck
 pnpm --filter @factory/intake-cli lint
 pnpm --filter @factory/intake-cli build

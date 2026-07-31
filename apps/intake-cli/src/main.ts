@@ -19,7 +19,6 @@ import { pathToFileURL } from "node:url";
 
 import {
   ExternalIntakeStore,
-  GitHubFixedSourceClient,
   acquireSourceBatch,
   canonicalJson,
   canonicalRecordDigest,
@@ -35,6 +34,8 @@ import {
   type PromotionReviewInputV1,
   type Sha256Digest,
 } from "@factory/external-intake";
+
+import { createEnvironmentGitHubSourceClient } from "./github-source-client.js";
 
 const OPAQUE_ID = /^[a-z][a-z0-9-]{0,127}$/u;
 const VERSION = /^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/u;
@@ -374,6 +375,12 @@ function sourceStore(options: IntakeCliOptionsV1): ExternalIntakeStore {
     throw new CliInputError("local Intake quarantine store required");
   }
   return options.store;
+}
+
+function acquisitionSourceClient(
+  options: IntakeCliOptionsV1,
+): FixedSourceClient {
+  return options.sourceClient ?? createEnvironmentGitHubSourceClient();
 }
 
 function acquisitionOutput(
@@ -772,6 +779,7 @@ export async function runIntakeCli(
   options: IntakeCliOptionsV1,
 ): Promise<number> {
   try {
+    if (args[0] === "--") args = args.slice(1);
     if (args.length === 0) {
       throw new CliInputError("operation is not available");
     }
@@ -793,7 +801,7 @@ export async function runIntakeCli(
     ) {
       const acquisition = await acquireSourceBatch(
         localJson(args[3], options.cwd),
-        options.sourceClient ?? new GitHubFixedSourceClient(),
+        acquisitionSourceClient(options),
         sourceStore(options),
       );
       outputContext = "acquisition-batch";
@@ -812,7 +820,7 @@ export async function runIntakeCli(
       );
       const acquisition = await acquireSourceBatch(
         batch,
-        options.sourceClient ?? new GitHubFixedSourceClient(),
+        acquisitionSourceClient(options),
         sourceStore(options),
       );
       outputContext = "acquisition-batch";

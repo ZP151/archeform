@@ -18,7 +18,8 @@
     "verify:third-party": "node scripts/verify-third-party-notices.mjs",
     "verify:source-studies": "node scripts/verify-source-studies.mjs",
     "compose:up": "docker compose --env-file .env -f infra/docker-compose.yml up --build",
-    "compose:down": "docker compose --env-file .env -f infra/docker-compose.yml down -v"
+    "compose:down": "docker compose --env-file .env -f infra/docker-compose.yml down -v",
+    "intake": "node --env-file-if-exists=.env apps/intake-cli/dist/main.js"
   },
   "devDependencies": {
     "@playwright/test": "1.51.1",
