@@ -37,7 +37,7 @@ slice, and the Controller has accepted the design contract. Task 1 is now
 release behavior remains accepted and frozen. Task 2 is `accepted` after Fix
 Round 2/5. Task 3 is `accepted` after Fix Round 4/5 independent re-review, QA,
 release review, and fresh final verification all passed with no P0/P1/P2. Task
-4 is now `implementing` under its frozen Candidate Registry contract, exact
+4 is now `ready_for_qa` under its frozen Candidate Registry contract, exact
 allowed paths, and non-goals, with one exclusive `integration` writer and no
 other Task 4 writer. A Controller-approved bounded test-contract amendment adds
 only `packages/external-intake/test/portfolio.test.ts` to permit
@@ -72,10 +72,13 @@ P1 mixed-terminal process race, and the Controller authorized the exact
 the Task 4 card. Repair Round 6/6 implementation commit `3f4b58c` then passed
 its bounded checks, but root review found a P1 public-store boundary leak and a
 P2 test-import defect. The Controller authorized Repair Round 7/7 to make the
-terminal CAS internal-only without changing its atomic semantics. The system
-will ingest the 43 fixed-reference portfolio as metadata, retain the 108
-scenarios as composition demand signals, and produce only quarantined evidence,
-non-executable Candidate records, and pending-review promotion packets.
+terminal CAS internal-only without changing its atomic semantics. Repair Round
+7 implementation commit `3112e26` and root review then passed with no
+P0/P1/P2, and the PM moved Task 4 `implementing -> ready_for_qa`. Independent
+behavioral QA is the next gate. The system will ingest the 43 fixed-reference
+portfolio as metadata, retain the 108 scenarios as composition demand signals,
+and produce only quarantined evidence, non-executable Candidate records, and
+pending-review promotion packets.
 
 Task 1 independent QA and release review PASSED. Its release code set and
 accepted behavior remain frozen. The Controller has reopened only its shared
@@ -225,7 +228,7 @@ remain frozen.
 | 1. Candidate contracts and immutable persistence | `accepted`     | `integration`       | External Intake Contract         | Original release and bounded amendment accepted and frozen. |
 | 2. Fixed-source provenance and notices           | `accepted`     | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
 | 3. Deterministic scan orchestration              | `accepted`     | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
-| 4. Candidate registry, API, CLI, and isolation   | `implementing` | `integration`       | Candidate Registry               | Controller-escalated Repair Round 6/6 strict convergence.   |
+| 4. Candidate registry, API, CLI, and isolation   | `ready_for_qa` | `integration`       | Candidate Registry               | Repair Round 7/7 root review PASS; behavioral QA next.      |
 | 5. Review-only promotion packets                 | `planned`      | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.           |
 | 6. Bulk acceptance and release evidence          | `planned`      | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.        |
 
@@ -819,7 +822,7 @@ dependency gate but remains unstarted and `planned`; Tasks 5 and 6 also remain
 
 ## Task 4 card: Candidate registry, module API, CLI, and isolation
 
-- **State:** `implementing`
+- **State:** `ready_for_qa`
 - **Specialization:** `integration`
 - **Contract owner:** Candidate Registry
 - **Contract artifact:** accepted Tasks 1-3 contracts and the frozen Commercial
@@ -1150,6 +1153,37 @@ and race guarantees remain mandatory. Task 4 remains `implementing`; Tasks 5
 and 6 remain `planned`. Fresh independent task review, QA, release review, and
 final verification are required before acceptance.
 
+### Repair Round 7 independent review reconciliation
+
+Repair Round 7/7 implementation commit `3112e26` changed only
+`packages/external-intake/src/candidates.ts`,
+`packages/external-intake/src/store.ts`, and
+`packages/external-intake/test/store.test.ts`. The terminal CAS is now an
+internal module-level primitive imported directly by `CandidateRegistry`; the
+public `ExternalIntakeStore` instance and package root expose no terminal
+transition operation. Independent root review PASSED with no P0/P1/P2.
+
+Fresh Node v22.11.0 evidence passed:
+
+- Store 34/34, including the three-process mixed-terminal race;
+- jobs 30/30 and full External Intake 317/317;
+- Intake CLI 27/27;
+- External Intake and CLI typecheck, lint, and package build;
+- forced workspace tests 14/14 and typecheck 14/14;
+- `git diff --check bdfc8c3 3112e26` and clean-worktree verification.
+
+The built package public-surface probe returned
+`{"modulePrimitive":false,"storeOperation":false}`, proving neither the
+module-level CAS nor a Store instance operation is exported through
+`@factory/external-intake`.
+
+The PM reconciled the bounded implementation and clean independent review and
+moved Task 4 `implementing -> ready_for_qa`. Independent behavioral QA is the
+next gate. This is not QA, release review, acceptance, promotion, or Task 5
+authorization. The complete Candidate Registry contract, all repair history,
+exact paths, non-goals, and acceptance evidence remain frozen. Tasks 5 and 6
+remain `planned` and unstarted.
+
 ### Exact allowed paths
 
 - `packages/external-intake/src/candidates.ts`
@@ -1294,15 +1328,13 @@ final verification are required before acceptance.
   Capabilities, and compiler test paths. The dispatched Task 4 writer has
   exclusive ownership of every frozen path; any overlap stops work.
 
-The active smallest valuable slice is Controller-escalated Task 4 Repair Round
-7/7 under its frozen Candidate Registry contract and complete Repair Round 1-6
-history. It is limited to removing the terminal CAS from the public
-`ExternalIntakeStore`/package-root surface, retaining it as an internal
-CandidateRegistry-only primitive, proving the package-root isolation boundary,
-and correcting the existing test import placement. Round 6/6's recursive
-sensitive-data rejection, exact `id@version` locator binding, validated
-append-only lifecycle operations, and atomic terminal guarantees remain frozen.
-Its bounded test-contract amendment permits only the Intake CLI package
+The active smallest valuable slice is independent behavioral QA of Task 4
+Repair Round 7/7 commit `3112e26` under the frozen Candidate Registry contract
+and complete repair history. QA must reproduce the built-package public-surface
+isolation, Store/jobs/Candidate/CLI behavior, sensitive-data rejection, exact
+`id@version` binding, append-only terminal lifecycle, winner-only recovery, and
+multi-process no-orphan guarantees. Its bounded test-contract amendment permits
+only the Intake CLI package
 manifest to import `@factory/external-intake`; all other isolation prohibitions
 remain enforced. Repair Round 1/5 is limited to Candidate namespace defense,
 reuse of accepted Task 3 completed-evidence verification, durable opaque
