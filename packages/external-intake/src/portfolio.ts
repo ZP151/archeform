@@ -132,17 +132,37 @@ export interface PortfolioCandidateBlueprintV1 {
     "reference" | "proposed-copy" | "adapter-contract";
 }
 
-const portfolioCandidateBlueprints: Readonly<
-  Record<string, PortfolioCandidateBlueprintV1>
-> = {
-  medusa: {
-    id: "medusa-provider",
-    version: "0.1.0",
-    proposedFactoryKey: "candidate.commerce.medusa-provider",
+const candidateBlueprintByIntakeClassification = {
+  "direct-dependency": {
+    suffix: "dependency",
+    keySegment: "dependency",
+    proposedClassification: "dependency",
+    selectedModulePurpose: "reference",
+  },
+  "source-study": {
+    suffix: "source-study",
+    keySegment: "source",
+    proposedClassification: "source-fragment",
+    selectedModulePurpose: "proposed-copy",
+  },
+  provider: {
+    suffix: "provider",
+    keySegment: "provider",
     proposedClassification: "provider-adapter",
     selectedModulePurpose: "adapter-contract",
   },
-};
+} as const satisfies Readonly<
+  Record<
+    NonNullable<ExternalPortfolioSourceV1["intakeClassification"]>,
+    Omit<
+      PortfolioCandidateBlueprintV1,
+      "id" | "version" | "proposedFactoryKey"
+    > & {
+      readonly suffix: string;
+      readonly keySegment: string;
+    }
+  >
+>;
 
 export function getExternalPortfolioSource(
   portfolio: ExternalPortfolioV1,
@@ -163,13 +183,18 @@ export function getExternalPortfolioSource(
 export function getPortfolioCandidateBlueprint(
   source: ExternalPortfolioSourceV1,
 ): PortfolioCandidateBlueprintV1 {
-  const blueprint = portfolioCandidateBlueprints[source.id];
-  if (blueprint === undefined) {
-    throw new Error(
-      `External portfolio source ${source.id} has no Factory Candidate blueprint.`,
-    );
+  const classification = source.intakeClassification;
+  if (classification === null) {
+    throw new Error(`External portfolio source ${source.id} is policy-only.`);
   }
-  return blueprint;
+  const blueprint = candidateBlueprintByIntakeClassification[classification];
+  return {
+    id: `${source.id}-${blueprint.suffix}`,
+    version: "0.1.0",
+    proposedFactoryKey: `candidate.${blueprint.keySegment}.${source.id}`,
+    proposedClassification: blueprint.proposedClassification,
+    selectedModulePurpose: blueprint.selectedModulePurpose,
+  };
 }
 
 export function loadExternalPortfolio(path: string): ExternalPortfolioV1 {

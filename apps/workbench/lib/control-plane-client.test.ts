@@ -33,6 +33,7 @@ describe("ControlPlaneClient", () => {
           intake: {
             portfolioSources: 43,
             intakeEligible: 19,
+            candidateBlueprints: 19,
             quarantined: 0,
             blocked: 0,
             sourcePath: "must-not-survive",
@@ -66,6 +67,7 @@ describe("ControlPlaneClient", () => {
       intake: {
         portfolioSources: 43,
         intakeEligible: 19,
+        candidateBlueprints: 19,
         quarantined: 0,
         blocked: 0,
       },

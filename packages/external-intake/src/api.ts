@@ -46,6 +46,22 @@ export interface ExternalIntakeBatchResultV1 {
   readonly byId: Readonly<Record<string, ExternalIntakeBatchItemResultV1>>;
 }
 
+export interface PortfolioCandidateBatchItemInputV1 {
+  readonly id: string;
+  readonly candidate: PortfolioCandidateCreateInputV1;
+}
+
+export interface PortfolioCandidateBatchItemResultV1 {
+  readonly sourceId: string;
+  readonly status: "quarantined" | "blocked";
+  readonly candidate?: StoredCandidateRefV1;
+  readonly failureCode?: "candidate-create-rejected";
+}
+
+export interface PortfolioCandidateBatchCreateResultV1 {
+  readonly byId: Readonly<Record<string, PortfolioCandidateBatchItemResultV1>>;
+}
+
 export interface ExternalIntakeStatusV1 {
   readonly id: string;
   readonly status: "requested" | "blocked";
@@ -74,6 +90,56 @@ export type PortfolioCandidateCreateInputV1 = Omit<
   "store"
 >;
 
+function parsePortfolioCandidateBatch(
+  input: unknown,
+): readonly PortfolioCandidateBatchItemInputV1[] {
+  if (
+    input === null ||
+    typeof input !== "object" ||
+    Array.isArray(input) ||
+    Object.keys(input).length !== 1 ||
+    !("items" in input) ||
+    !Array.isArray(input.items) ||
+    input.items.length === 0 ||
+    input.items.length > 64
+  ) {
+    throw new TypeError("Portfolio Candidate batch requires strict input.");
+  }
+
+  const items = input.items.map((value) => {
+    if (
+      value === null ||
+      typeof value !== "object" ||
+      Array.isArray(value) ||
+      Object.keys(value).length !== 2 ||
+      !("id" in value) ||
+      !("candidate" in value) ||
+      typeof value.id !== "string" ||
+      value.candidate === null ||
+      typeof value.candidate !== "object" ||
+      Array.isArray(value.candidate) ||
+      !("sourceId" in value.candidate) ||
+      typeof value.candidate.sourceId !== "string"
+    ) {
+      throw new TypeError("Portfolio Candidate batch requires strict input.");
+    }
+    try {
+      opaqueIdSchema.parse(value.id);
+      opaqueIdSchema.parse(value.candidate.sourceId);
+    } catch {
+      throw new TypeError("Portfolio Candidate batch requires strict input.");
+    }
+    return {
+      id: value.id,
+      candidate: value.candidate as PortfolioCandidateCreateInputV1,
+    };
+  });
+  if (new Set(items.map(({ id }) => id)).size !== items.length) {
+    throw new TypeError("Portfolio Candidate batch item IDs must be unique.");
+  }
+  return items;
+}
+
 export interface ExternalIntakeApiV1 {
   submitBatch(input: unknown): ExternalIntakeBatchResultV1;
   status(id: string): ExternalIntakeStatusV1;
@@ -81,6 +147,9 @@ export interface ExternalIntakeApiV1 {
   portfolioCandidateCreate(
     input: PortfolioCandidateCreateInputV1,
   ): Promise<StoredCandidateRefV1>;
+  portfolioCandidateCreateBatch(
+    input: unknown,
+  ): Promise<PortfolioCandidateBatchCreateResultV1>;
   candidateCreate(input: CandidateProposalV1): Promise<StoredCandidateRefV1>;
   candidateShow(id: string, version: string): Promise<CandidateSummaryV1>;
   candidateList(
@@ -114,6 +183,15 @@ export function createExternalIntakeApi(
 ): ExternalIntakeApiV1 {
   const registry = new CandidateRegistry(store, verificationRoot);
   const statuses = new Map<string, ExternalIntakeStatusV1>();
+  const createPortfolioCandidate = async (
+    input: PortfolioCandidateCreateInputV1,
+  ): Promise<StoredCandidateRefV1> =>
+    registry.create(
+      createPortfolioCandidateProposal({
+        ...input,
+        store,
+      }),
+    );
 
   return {
     submitBatch(input: unknown): ExternalIntakeBatchResultV1 {
@@ -223,12 +301,35 @@ export function createExternalIntakeApi(
     async portfolioCandidateCreate(
       input: PortfolioCandidateCreateInputV1,
     ): Promise<StoredCandidateRefV1> {
-      return registry.create(
-        createPortfolioCandidateProposal({
-          ...input,
-          store,
-        }),
-      );
+      return createPortfolioCandidate(input);
+    },
+
+    async portfolioCandidateCreateBatch(
+      input: unknown,
+    ): Promise<PortfolioCandidateBatchCreateResultV1> {
+      const items = parsePortfolioCandidateBatch(input);
+      const byId: Record<string, PortfolioCandidateBatchItemResultV1> =
+        Object.create(null) as Record<
+          string,
+          PortfolioCandidateBatchItemResultV1
+        >;
+      for (const item of items) {
+        const sourceId = item.candidate.sourceId;
+        try {
+          byId[item.id] = {
+            sourceId,
+            status: "quarantined",
+            candidate: await createPortfolioCandidate(item.candidate),
+          };
+        } catch {
+          byId[item.id] = {
+            sourceId,
+            status: "blocked",
+            failureCode: "candidate-create-rejected",
+          };
+        }
+      }
+      return { byId };
     },
 
     async candidateCreate(

@@ -289,12 +289,16 @@ describe("External Intake release boundary", () => {
         "candidateVerify",
         "evidence",
         "portfolioCandidateCreate",
+        "portfolioCandidateCreateBatch",
         "promotionPacket",
         "status",
         "submitBatch",
         "verifyJob",
       ]);
       expect(() => api.submitBatch(packet)).toThrow("strict batch input");
+      await expect(api.portfolioCandidateCreateBatch(packet)).rejects.toThrow(
+        "strict input",
+      );
       await expect(api.candidateCreate(packet as never)).rejects.toThrow(
         "Candidate identity and version must be opaque",
       );

@@ -7,6 +7,7 @@ describe("portfolioPublicSummary", () => {
     expect(portfolioPublicSummary).toEqual({
       apiVersion: "factory.portfolio-public-summary/v1",
       scenarioCount: 108,
+      candidateBlueprints: 19,
       sourceCounts: {
         total: 43,
         intakeEligible: 19,

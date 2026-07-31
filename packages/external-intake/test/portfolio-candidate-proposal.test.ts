@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   canonicalRecordDigest,
   createPortfolioCandidateProposal,
+  getPortfolioCandidateBlueprint,
   loadExternalPortfolio,
 } from "../src/index.js";
 import type {
@@ -27,7 +28,7 @@ interface CandidateInputFixture extends PortfolioCandidateProposalInputV1 {
   readonly store: ExternalIntakeStore;
 }
 
-function candidateInput(): CandidateInputFixture {
+function candidateInput(sourceId = "medusa"): CandidateInputFixture {
   const portfolio = loadExternalPortfolio(
     fileURLToPath(
       new URL(
@@ -36,7 +37,10 @@ function candidateInput(): CandidateInputFixture {
       ),
     ),
   );
-  const source = portfolio.sources.find(({ id }) => id === "medusa")!;
+  const source = portfolio.sources.find(({ id }) => id === sourceId)!;
+  if (source.intakeClassification === null) {
+    throw new Error("Candidate fixture requires an intake-eligible source.");
+  }
   const request: IntakeRequestV1 = {
     apiVersion: "factory.external-intake-request/v1",
     createdAt,
@@ -47,7 +51,7 @@ function candidateInput(): CandidateInputFixture {
       requestedRef: source.fixedRef,
       portfolioRecord: source.id,
     },
-    classification: "provider",
+    classification: source.intakeClassification,
     requestedModules: [],
     allowNetworkRetrieval: true,
   };
@@ -63,7 +67,7 @@ function candidateInput(): CandidateInputFixture {
   const sourceDigest = digest("c");
   const evidenceJob: IntakeJobV1 = {
     apiVersion: "factory.external-evidence-job/v1",
-    id: "medusa-source",
+    id: `${source.id}-source`,
     createdAt,
     producerVersion: "1.0.0",
     snapshot,
@@ -84,7 +88,7 @@ function candidateInput(): CandidateInputFixture {
 
   return {
     portfolio,
-    sourceId: "medusa",
+    sourceId: source.id,
     createdAt,
     producerVersion: "1.0.0",
     request: requestRef,
@@ -128,6 +132,182 @@ function candidateInput(): CandidateInputFixture {
 }
 
 describe("Portfolio Candidate proposal", () => {
+  it("derives a deterministic non-promoting blueprint for every intake-eligible source", () => {
+    const portfolio = loadExternalPortfolio(
+      fileURLToPath(
+        new URL(
+          "../../../ecosystem/portfolio/2026-07-30-external-business-logic.json",
+          import.meta.url,
+        ),
+      ),
+    );
+    const expected = [
+      [
+        "tastyigniter",
+        "tastyigniter-source-study",
+        "candidate.source.tastyigniter",
+        "source-fragment",
+        "proposed-copy",
+      ],
+      [
+        "ti-ext-cart",
+        "ti-ext-cart-source-study",
+        "candidate.source.ti-ext-cart",
+        "source-fragment",
+        "proposed-copy",
+      ],
+      [
+        "medusa",
+        "medusa-provider",
+        "candidate.provider.medusa",
+        "provider-adapter",
+        "adapter-contract",
+      ],
+      [
+        "saleor",
+        "saleor-provider",
+        "candidate.provider.saleor",
+        "provider-adapter",
+        "adapter-contract",
+      ],
+      [
+        "bagisto",
+        "bagisto-source-study",
+        "candidate.source.bagisto",
+        "source-fragment",
+        "proposed-copy",
+      ],
+      [
+        "spree",
+        "spree-source-study",
+        "candidate.source.spree",
+        "source-fragment",
+        "proposed-copy",
+      ],
+      [
+        "eventyay-tickets",
+        "eventyay-tickets-source-study",
+        "candidate.source.eventyay-tickets",
+        "source-fragment",
+        "proposed-copy",
+      ],
+      [
+        "inventree",
+        "inventree-source-study",
+        "candidate.source.inventree",
+        "source-fragment",
+        "proposed-copy",
+      ],
+      [
+        "traccar",
+        "traccar-provider",
+        "candidate.provider.traccar",
+        "provider-adapter",
+        "adapter-contract",
+      ],
+      [
+        "chatwoot",
+        "chatwoot-source-study",
+        "candidate.source.chatwoot",
+        "source-fragment",
+        "proposed-copy",
+      ],
+      [
+        "bookstack",
+        "bookstack-source-study",
+        "candidate.source.bookstack",
+        "source-fragment",
+        "proposed-copy",
+      ],
+      [
+        "strapi",
+        "strapi-source-study",
+        "candidate.source.strapi",
+        "source-fragment",
+        "proposed-copy",
+      ],
+      [
+        "appsmith",
+        "appsmith-source-study",
+        "candidate.source.appsmith",
+        "source-fragment",
+        "proposed-copy",
+      ],
+      [
+        "baserow",
+        "baserow-source-study",
+        "candidate.source.baserow",
+        "source-fragment",
+        "proposed-copy",
+      ],
+      [
+        "workbox",
+        "workbox-dependency",
+        "candidate.dependency.workbox",
+        "dependency",
+        "reference",
+      ],
+      [
+        "openfga",
+        "openfga-provider",
+        "candidate.provider.openfga",
+        "provider-adapter",
+        "adapter-contract",
+      ],
+      [
+        "appwrite",
+        "appwrite-provider",
+        "candidate.provider.appwrite",
+        "provider-adapter",
+        "adapter-contract",
+      ],
+      [
+        "centrifugo",
+        "centrifugo-provider",
+        "candidate.provider.centrifugo",
+        "provider-adapter",
+        "adapter-contract",
+      ],
+      [
+        "tray",
+        "tray-provider",
+        "candidate.provider.tray",
+        "provider-adapter",
+        "adapter-contract",
+      ],
+    ] as const;
+
+    expect(
+      portfolio.sources
+        .filter((source) => source.intakeClassification !== null)
+        .map((source) => {
+          const blueprint = getPortfolioCandidateBlueprint(source);
+          const proposal = createPortfolioCandidateProposal(
+            candidateInput(source.id),
+          );
+          return [
+            source.id,
+            blueprint.id,
+            blueprint.proposedFactoryKey,
+            blueprint.proposedClassification,
+            blueprint.selectedModulePurpose,
+            proposal.id,
+            proposal.proposedFactoryKey,
+          ];
+        }),
+    ).toEqual(
+      expected.map(([sourceId, id, key, classification, purpose]) => [
+        sourceId,
+        id,
+        key,
+        classification,
+        purpose,
+        id,
+        key,
+      ]),
+    );
+  });
+
   it("rejects a policy-only Portfolio source before accepting evidence input", () => {
     const portfolio = loadExternalPortfolio(
       fileURLToPath(
@@ -155,7 +335,7 @@ describe("Portfolio Candidate proposal", () => {
       apiVersion: "factory.candidate-proposal/v1",
       id: "medusa-provider",
       version: "0.1.0",
-      proposedFactoryKey: "candidate.commerce.medusa-provider",
+      proposedFactoryKey: "candidate.provider.medusa",
       proposedClassification: "provider-adapter",
     });
     expect(proposal.artifacts.adapter.effects).toEqual([

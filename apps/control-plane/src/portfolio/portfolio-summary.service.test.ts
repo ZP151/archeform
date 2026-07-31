@@ -41,6 +41,7 @@ describe("WorkspacePortfolioSummaryService", () => {
       intake: {
         portfolioSources: 43,
         intakeEligible: 19,
+        candidateBlueprints: 19,
         quarantined: 0,
         blocked: 0,
       },

@@ -25,6 +25,9 @@ describe("public Portfolio summary boundary", () => {
     expect(portfolioPublicSummary).toEqual({
       apiVersion: "factory.portfolio-public-summary/v1",
       scenarioCount: portfolio.scenarios.length,
+      candidateBlueprints: portfolio.sources.filter(
+        ({ intakeClassification }) => intakeClassification !== null,
+      ).length,
       sourceCounts: {
         total: portfolio.sources.length,
         intakeEligible: portfolio.sources.filter(

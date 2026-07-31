@@ -309,7 +309,45 @@ describe("External Intake module API", () => {
     await expect(api.candidateList({ status: "quarantined" })).resolves.toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          proposedFactoryKey: "candidate.commerce.medusa-provider",
+          proposedFactoryKey: "candidate.provider.medusa",
+        }),
+      ]),
+    );
+  });
+
+  it("quarantines an eligible source when a policy-only sibling is rejected", async () => {
+    const { root, store } = tempStore();
+    const api = createExternalIntakeApi(store, root);
+    const valid = await createCompletedMedusaInput(store);
+
+    const result = await api.portfolioCandidateCreateBatch({
+      items: [
+        { id: "medusa-candidate", candidate: valid },
+        {
+          id: "policy-only-source",
+          candidate: { ...valid, sourceId: "opensourcepos" },
+        },
+      ],
+    });
+
+    expect(result.byId["medusa-candidate"]).toMatchObject({
+      sourceId: "medusa",
+      status: "quarantined",
+      candidate: {
+        kind: "candidate",
+        id: "medusa-provider",
+        status: "quarantined",
+      },
+    });
+    expect(result.byId["policy-only-source"]).toEqual({
+      sourceId: "opensourcepos",
+      status: "blocked",
+      failureCode: "candidate-create-rejected",
+    });
+    await expect(api.candidateList({ status: "quarantined" })).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          proposedFactoryKey: "candidate.provider.medusa",
         }),
       ]),
     );

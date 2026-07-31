@@ -1,6 +1,12 @@
 export interface PortfolioPublicSummaryV1 {
   readonly apiVersion: "factory.portfolio-public-summary/v1";
   readonly scenarioCount: number;
+  /**
+   * Deterministic, non-promoting Candidate proposal lanes derived from
+   * intake-eligible Portfolio records. This is intentionally distinct from
+   * quarantined or Golden Candidate counts.
+   */
+  readonly candidateBlueprints: number;
   readonly sourceCounts: {
     readonly total: number;
     readonly intakeEligible: number;
@@ -18,6 +24,7 @@ export interface PortfolioPublicSummaryV1 {
 export const portfolioPublicSummary: PortfolioPublicSummaryV1 = Object.freeze({
   apiVersion: "factory.portfolio-public-summary/v1",
   scenarioCount: 108,
+  candidateBlueprints: 19,
   sourceCounts: Object.freeze({
     total: 43,
     intakeEligible: 19,

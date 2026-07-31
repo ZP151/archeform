@@ -136,6 +136,7 @@ export type WorkbenchWorkspacePortfolioSummary = {
   readonly intake: {
     readonly portfolioSources: number;
     readonly intakeEligible: number;
+    readonly candidateBlueprints: number;
     readonly quarantined: number;
     readonly blocked: number;
   };
@@ -338,7 +339,13 @@ function workspacePortfolioSummary(
     ),
     intake: counts(
       record.intake,
-      ["portfolioSources", "intakeEligible", "quarantined", "blocked"] as const,
+      [
+        "portfolioSources",
+        "intakeEligible",
+        "candidateBlueprints",
+        "quarantined",
+        "blocked",
+      ] as const,
       "intake",
     ),
     compilations: counts(

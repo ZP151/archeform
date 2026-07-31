@@ -24,6 +24,7 @@ describe("toPortfolioHomeModel", () => {
       intake: {
         portfolioSources: 43,
         intakeEligible: 19,
+        candidateBlueprints: 19,
         quarantined: 0,
         blocked: 0,
       },
@@ -47,6 +48,7 @@ describe("toPortfolioHomeModel", () => {
       intakeMetrics: [
         { label: "Sources", value: 43, tone: "neutral" },
         { label: "Eligible", value: 19, tone: "ready" },
+        { label: "Candidate lanes", value: 19, tone: "ready" },
         { label: "Quarantined", value: 0, tone: "neutral" },
         { label: "Blocked", value: 0, tone: "neutral" },
       ],

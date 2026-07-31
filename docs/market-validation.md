@@ -23,6 +23,36 @@ fixed source into a non-promoting Candidate proposal after evidence gates; it
 must not bulk-copy a vertical repository into the compiler or generated
 runtime.
 
+**Implementation update.** Factory now derives the Candidate identity,
+classification, and safe module-purpose from every intake-eligible Portfolio
+record (`direct-dependency`, `source-study`, or `provider`) and creates batch
+proposals with item-level failure isolation. This is a discovery-and-evidence
+automation mechanism, not an automatic source-copy or Golden-promotion
+mechanism: source-fragment proposals still require licence approval, fixture
+evidence, and Factory-owned conformance before they can become a package.
+
+## 2026-08-01 reusable implementation expansion
+
+**Decision investigated.** Which additional public projects can widen the
+reusable Profile portfolio without making a vertical application or its data
+model authoritative.
+
+| Candidate                                                                                                                                                                | Observed public fact                                                                                                                       | Factory lane                                           | Decision affected                                                                                                                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Builder.io](https://github.com/BuilderIO/builder)                                                                                                                       | MIT-licensed visual-development SDKs support host-owned components and code export.                                                        | Page authoring/source-study reference.                 | Compare Puck and Builder-style component registries, but retain Factory PageModel as the stored representation.                                                                   |
+| [Payload](https://github.com/payloadcms/payload)                                                                                                                         | MIT-licensed TypeScript/Next.js application framework with plugin ecosystem and admin-panel patterns.                                      | Source-study reference for content/admin capabilities. | A future content Profile may reuse only precise, studied seams; its runtime and collections cannot become Graph truth.                                                            |
+| [OpenWorkflow](https://github.com/openworkflowdev/openworkflow)                                                                                                          | Apache-2.0 TypeScript framework for durable, resumable workflows.                                                                          | Future flow-runtime Provider candidate.                | Keep Factory FlowModel and compiled XState flow authoritative; define a neutral durable-flow Provider contract before activation.                                                 |
+| [Bagisto](https://github.com/bagisto/bagisto), [Mercur](https://github.com/mercurjs/mercur), and [Spree](https://github.com/spree/spree)                                 | Their repositories report MIT, MIT, and BSD-3-Clause licences and cover B2B, marketplace, catalogue, cart, order, and fulfilment concerns. | Fixed-source studies and provider-comparison inputs.   | Expand commerce coverage through neutral pricing, marketplace-party, quote, fulfilment, and provider contracts rather than importing Laravel, Medusa-dependent, or Ruby runtimes. |
+| [Vendure](https://github.com/vendure-ecommerce/vendure), [Fleetbase](https://github.com/fleetbase/fleetbase), and [Smartstore](https://github.com/smartstore/Smartstore) | Their public repositories describe GPLv3 or AGPLv3 community/core terms.                                                                   | Reference only.                                        | Do not copy, embed, or run their code in Factory Pilot without a separate licensing decision.                                                                                     |
+
+**Durable decision.** The next product increment should grow an executable,
+cross-Profile business kernel (identity/party, price and promotion,
+availability/reservation, fulfilment/delivery, operational events, and
+notification) while the Candidate pipeline turns the existing 19 eligible
+sources into reproducible research and implementation tasks. This produces
+many Profile combinations without pretending that source studies are already
+installed capabilities.
+
 ## 2026-07-31 scalable reuse decision
 
 **Decision investigated.** How Factory Pilot can accelerate a portfolio of

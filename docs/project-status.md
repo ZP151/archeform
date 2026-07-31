@@ -12,12 +12,15 @@ health. It deliberately does not expose upstream URLs, fixed references,
 source paths, raw AI material, or credentials.
 
 Fresh package evidence for this worktree: `@factory/portfolio-public` passed
-1 test plus typecheck/build; `@factory/external-intake` passed 409 tests;
+1 test plus typecheck/build; `@factory/external-intake` passed 411 tests;
 `@factory/control-plane` passed 120 tests plus typecheck/build; and
 `@factory/workbench` passed 70 tests plus typecheck and a production Next.js
 build. This is truthful portfolio visibility, not capability promotion: the
-portfolio still has one explicit Candidate blueprint (Medusa Provider), zero
-installed Candidates, and zero installed external Providers.
+portfolio now derives one deterministic, non-promoting Candidate blueprint for
+each of its 19 intake-eligible source records. Source-fragment Candidates
+remain blocked until their evidence carries an approved licence decision; zero
+Candidates are installed as Golden capabilities and zero external Providers
+are active.
 
 ## Latest capability and supply-chain audit — 2026-08-01
 
@@ -47,9 +50,9 @@ platform.
 - The external-source portfolio records 43 fixed sources and 108 demand
   mappings. It is a discovery and intake input, not an installed capability
   catalogue. The current pipeline creates immutable quarantine evidence and
-  source-study projections, and now deterministically derives and persists a
-  declarative Candidate proposal for an allowlisted TypeScript Provider source
-  through the repository-local quarantine API. It does not create Factory
+  source-study projections, deterministically derives a declarative Candidate
+  proposal for each of its 19 intake-eligible sources, and isolates batch-item
+  failure without promoting any Candidate. It does not create Factory
   capability packages.
 
 ### Supply-chain release gate
@@ -93,8 +96,8 @@ production-complete catalogue of one hundred application types.
   intake. It is discovery evidence, not 122 installed products. The
   quarantine pipeline can acquire fixed references, isolate a prohibited batch
   sibling, capture redacted evidence, and create a strict source-study
-  projection. It now derives an allowlisted Portfolio source record into a
-  quarantined, non-promoting Candidate proposal; it does not create a Golden
+  projection. It now derives all 19 eligible Portfolio sources into
+  quarantined, non-promoting Candidate proposals; it does not create a Golden
   package or activate an external runtime.
 
 ### Decision: scale reuse without importing upstream authority

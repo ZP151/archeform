@@ -28,6 +28,7 @@ export interface WorkspacePortfolioSummaryV1 {
   readonly intake: {
     readonly portfolioSources: number;
     readonly intakeEligible: number;
+    readonly candidateBlueprints: number;
     readonly quarantined: number;
     readonly blocked: number;
   };
@@ -109,6 +110,7 @@ export class WorkspacePortfolioSummaryService {
       intake: {
         portfolioSources: portfolioPublicSummary.sourceCounts.total,
         intakeEligible: portfolioPublicSummary.sourceCounts.intakeEligible,
+        candidateBlueprints: portfolioPublicSummary.candidateBlueprints,
         quarantined: 0,
         blocked: 0,
       },

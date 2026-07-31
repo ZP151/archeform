@@ -58,6 +58,11 @@ export function toPortfolioHomeModel(
         tone: "ready",
       },
       {
+        label: "Candidate lanes",
+        value: summary.intake.candidateBlueprints,
+        tone: "ready",
+      },
+      {
         label: "Quarantined",
         value: summary.intake.quarantined,
         tone: "neutral",
