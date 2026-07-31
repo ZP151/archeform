@@ -9,6 +9,7 @@ import {
   type CapabilityAssetV1,
 } from "../src/assets/index.js";
 import {
+  composeDefaultCapabilityDraft,
   createCapabilityCompositionLock,
   resolveCapabilityComposition,
   type CapabilitySelectionV1,
@@ -97,6 +98,90 @@ const catalogSelection: CapabilitySelectionV1 = {
 };
 
 describe("capability composition contract", () => {
+  it("creates one coherent lock from each owned strict contract", () => {
+    const typedAsset = asset("core.coherent-contract-test", {
+      bindingContract: "factory.capability-binding/v1",
+      inputSchema: [{ key: "entity", type: "domain.entity", required: true }],
+      parameters: [{ key: "entity", type: "graph-symbol", required: true }],
+    } as unknown as Partial<CapabilityAssetManifestV1>);
+    const originalGetOwnPropertyDescriptors = Object.getOwnPropertyDescriptors;
+    const compiledParameters = new WeakSet<object>();
+    Object.getOwnPropertyDescriptors = ((value: object) => {
+      const descriptors = originalGetOwnPropertyDescriptors(value);
+      const keyDescriptor = descriptors.key;
+      const typeDescriptor = descriptors.type;
+      const isOwnedParameter =
+        Object.getPrototypeOf(value) === null &&
+        Object.isFrozen(value) &&
+        keyDescriptor &&
+        "value" in keyDescriptor &&
+        keyDescriptor.value === "entity" &&
+        typeDescriptor &&
+        "value" in typeDescriptor &&
+        typeDescriptor.value === "graph-symbol";
+      if (!isOwnedParameter) return descriptors;
+      if (!compiledParameters.has(value)) {
+        compiledParameters.add(value);
+        return descriptors;
+      }
+      return {
+        ...descriptors,
+        type: { ...typeDescriptor, value: "number" },
+      };
+    }) as typeof Object.getOwnPropertyDescriptors;
+
+    try {
+      const createLock = () =>
+        createCapabilityCompositionLockForAssets(
+          {
+            graphChecksum: digest("a"),
+            selections: [
+              selection(typedAsset, {
+                entity: { graphSymbol: "graph.domain.product" },
+              }),
+            ],
+          },
+          [typedAsset],
+        );
+      const first = createLock();
+      const second = createLock();
+
+      expect(first.packages).toEqual([
+        {
+          lock: lockCapabilityAsset(typedAsset),
+          bindings: {
+            entity: { graphSymbol: "graph.domain.product" },
+          },
+        },
+      ]);
+      expect(first.lockDigest).toBe(second.lockDigest);
+      expect(first.lockDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
+    } finally {
+      Object.getOwnPropertyDescriptors = originalGetOwnPropertyDescriptors;
+    }
+  });
+
+  it("keeps one digest across 100 resolutions of the largest default composition", () => {
+    const largestSelections =
+      composeDefaultCapabilityDraft({ profile: "restaurant-ordering" }).graph
+        .integration.compositionSelections ?? [];
+
+    expect(largestSelections).toHaveLength(13);
+    const digests = new Set(
+      Array.from(
+        { length: 100 },
+        () =>
+          createCapabilityCompositionLock({
+            graphChecksum: digest("a"),
+            selections: largestSelections,
+          }).lockDigest,
+      ),
+    );
+
+    expect(digests.size).toBe(1);
+    expect([...digests][0]).toMatch(/^sha256:[a-f0-9]{64}$/);
+  });
+
   it("creates the same lock for the same selections in a different input order", () => {
     const lock = createCapabilityCompositionLock({
       graphChecksum: digest("a"),

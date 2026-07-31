@@ -8,6 +8,7 @@ import {
 import {
   resolveCapabilityCompositionForAssets,
   type CapabilityBindingValueV1,
+  validateCapabilityBindingSchema,
 } from "../src/composition.js";
 
 const digest = (character: string): string => `sha256:${character.repeat(64)}`;
@@ -89,6 +90,17 @@ const validBindings = {
 } as unknown as Readonly<Record<string, CapabilityBindingValueV1>>;
 
 describe("typed capability binding contract", () => {
+  it("exposes a runtime-immutable compiled binding schema map", () => {
+    const schemas = validateCapabilityBindingSchema(
+      strictManifest([requiredEntity], [entityParameter]),
+    );
+
+    expect(() =>
+      (schemas as Map<string, unknown>).set("unexpected", requiredEntity),
+    ).toThrow();
+    expect([...schemas.keys()]).toEqual(["catalogEntity"]);
+  });
+
   it("rejects an unsupported binding contract version", () => {
     const manifest = {
       ...strictManifest([requiredEntity], [entityParameter]),

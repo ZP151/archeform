@@ -127,6 +127,16 @@ type SelectionSnapshotV1 = CapabilitySelectionV1 & {
   readonly [selectionSnapshotBrand]: never;
 };
 
+interface ValidatedManifestContractV1 {
+  readonly manifest: ManifestSnapshotV1;
+  readonly parameterSchemas: ReadonlyMap<string, CapabilityParameterSchemaV1>;
+  readonly bindingSchemas: ReadonlyMap<string, CapabilityBindingInputV1>;
+}
+
+interface CapabilityAssetSnapshotV1 {
+  readonly manifest: ManifestSnapshotV1;
+}
+
 interface ResolutionCaptureContextV1 {
   readonly captured: WeakMap<object, CapturedDataValueV1>;
   readonly active: WeakSet<object>;
@@ -143,7 +153,7 @@ interface CapturedResolutionInputV1<
   T extends ResolveCapabilityCompositionInput,
 > {
   readonly input: ResolutionInputSnapshotV1<T>;
-  readonly assets: readonly CapabilityAssetV1[];
+  readonly assets: readonly CapabilityAssetSnapshotV1[];
 }
 
 const resolutionInputCaptureErrorCode =
@@ -307,7 +317,7 @@ function captureCapabilityAssetV1(
   value: unknown,
   path: string,
   context: ResolutionCaptureContextV1,
-): CapabilityAssetV1 {
+): CapabilityAssetSnapshotV1 {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return rejectResolutionInput(path);
   }
@@ -315,7 +325,7 @@ function captureCapabilityAssetV1(
   const existing = context.captured.get(value);
   if (existing !== undefined) {
     if (existing.kind !== "asset") return rejectResolutionInput(path);
-    return existing.value as CapabilityAssetV1;
+    return existing.value as CapabilityAssetSnapshotV1;
   }
 
   const descriptors = Object.getOwnPropertyDescriptors(value);
@@ -353,7 +363,7 @@ function captureCapabilityAssetV1(
   }
 
   const captured = Object.create(null) as {
-    manifest: CapabilityAssetManifestV1;
+    manifest: ManifestSnapshotV1;
   };
   context.captured.set(value, { kind: "asset", value: captured });
   context.active.add(value);
@@ -402,7 +412,7 @@ function captureResolutionInputV1<T extends ResolveCapabilityCompositionInput>(
     context,
     "asset-array",
     (asset, path) => captureCapabilityAssetV1(asset, path, context),
-  ) as readonly CapabilityAssetV1[];
+  ) as readonly CapabilityAssetSnapshotV1[];
   return Object.freeze({ input: capturedInput, assets: capturedAssets });
 }
 
@@ -451,6 +461,44 @@ function snapshotExactDataRecord(
     return undefined;
   }
   return snapshot;
+}
+
+function immutableReadonlyMap<K, V>(
+  source: ReadonlyMap<K, V>,
+): ReadonlyMap<K, V> {
+  let ownedMap: ReadonlyMap<K, V>;
+  ownedMap = Object.freeze({
+    get size() {
+      return source.size;
+    },
+    get(key: K) {
+      return source.get(key);
+    },
+    has(key: K) {
+      return source.has(key);
+    },
+    entries() {
+      return source.entries();
+    },
+    keys() {
+      return source.keys();
+    },
+    values() {
+      return source.values();
+    },
+    forEach(
+      callback: (value: V, key: K, map: ReadonlyMap<K, V>) => void,
+      thisArg?: unknown,
+    ) {
+      source.forEach((value, key) =>
+        callback.call(thisArg, value, key, ownedMap),
+      );
+    },
+    [Symbol.iterator]() {
+      return source[Symbol.iterator]();
+    },
+  });
+  return ownedMap;
 }
 
 function compareText(left: string, right: string): number {
@@ -662,9 +710,10 @@ function normalizeBindingValue(
 }
 
 function canonicalSelection(
-  manifest: CapabilityAssetManifestV1,
+  contract: ValidatedManifestContractV1,
   bindings: Readonly<Record<string, CapabilityBindingValueV1>>,
 ): CapabilitySelectionV1 {
+  const { manifest } = contract;
   const canonicalBindings = Object.create(null) as Record<
     string,
     CapabilityBindingValueV1
@@ -687,8 +736,8 @@ function canonicalSelection(
 
 function matchingManifest(
   lock: CapabilityAssetLockV1,
-  assets: readonly CapabilityAssetV1[],
-): CapabilityAssetManifestV1 {
+  assets: readonly CapabilityAssetSnapshotV1[],
+): ManifestSnapshotV1 {
   const matched = assets.find(
     ({ manifest }) =>
       manifest.key === lock.key &&
@@ -706,7 +755,7 @@ function matchingManifest(
 }
 
 function strictParameterSchemas(
-  manifest: CapabilityAssetManifestV1,
+  manifest: ManifestSnapshotV1,
 ): ReadonlyMap<string, CapabilityParameterSchemaV1> {
   const parameters = manifest.parameters ?? [];
   if (!Array.isArray(parameters)) {
@@ -749,20 +798,23 @@ function strictParameterSchemas(
         `Capability package '${manifest.key}' declares duplicate parameter '${snapshot.key}'.`,
       );
     }
-    schemas.set(snapshot.key, {
-      key: snapshot.key,
-      type: snapshot.type as CapabilityParameterSchemaV1["type"],
-      required: snapshot.required,
-    });
+    schemas.set(
+      snapshot.key,
+      Object.freeze({
+        key: snapshot.key,
+        type: snapshot.type as CapabilityParameterSchemaV1["type"],
+        required: snapshot.required,
+      }),
+    );
   }
-  return schemas;
+  return immutableReadonlyMap(schemas);
 }
 
 function validateCapabilityBindingSchemaSnapshot(
-  manifest: CapabilityAssetManifestV1,
+  manifest: ManifestSnapshotV1,
 ): ReadonlyMap<string, CapabilityBindingInputV1> {
   if (manifest.bindingContract === undefined) {
-    return new Map();
+    return immutableReadonlyMap(new Map());
   }
   if (manifest.bindingContract !== "factory.capability-binding/v1") {
     throw new Error(
@@ -899,7 +951,15 @@ function validateCapabilityBindingSchemaSnapshot(
     }
   }
 
-  const parameterSchemas = strictParameterSchemas(manifest);
+  return immutableReadonlyMap(bindingSchemas);
+}
+
+function validateStrictContractAlignment(
+  manifest: ManifestSnapshotV1,
+  parameterSchemas: ReadonlyMap<string, CapabilityParameterSchemaV1>,
+  bindingSchemas: ReadonlyMap<string, CapabilityBindingInputV1>,
+): void {
+  if (manifest.bindingContract === undefined) return;
   if (
     parameterSchemas.size !== bindingSchemas.size ||
     [...parameterSchemas.keys()].some((key) => !bindingSchemas.has(key))
@@ -926,36 +986,38 @@ function validateCapabilityBindingSchemaSnapshot(
       );
     }
   }
+}
 
-  return bindingSchemas;
+function compileValidatedManifestContract(
+  manifest: ManifestSnapshotV1,
+): ValidatedManifestContractV1 {
+  const bindingSchemas = validateCapabilityBindingSchemaSnapshot(manifest);
+  const parameterSchemas = strictParameterSchemas(manifest);
+  validateStrictContractAlignment(manifest, parameterSchemas, bindingSchemas);
+  return Object.freeze({ manifest, parameterSchemas, bindingSchemas });
 }
 
 export function validateCapabilityBindingSchema(
   manifest: CapabilityAssetManifestV1,
 ): ReadonlyMap<string, CapabilityBindingInputV1> {
-  return validateCapabilityBindingSchemaSnapshot(
-    captureManifestSnapshotV1(manifest),
-  );
+  const snapshot = captureManifestSnapshotV1(manifest);
+  if (snapshot.bindingContract === undefined) {
+    return immutableReadonlyMap(new Map());
+  }
+  return compileValidatedManifestContract(snapshot).bindingSchemas;
 }
 
 function validateBindings(
-  manifest: CapabilityAssetManifestV1,
+  contract: ValidatedManifestContractV1,
   bindings: Readonly<Record<string, CapabilityBindingValueV1>>,
 ): Readonly<Record<string, CapabilityBindingValueV1>> {
-  const bindingSchemas = validateCapabilityBindingSchemaSnapshot(manifest);
-  const schemas = strictParameterSchemas(manifest);
-  const bindingSnapshot = snapshotOwnDataRecord(bindings);
-  if (!bindingSnapshot) {
-    throw new Error(
-      `Capability package '${manifest.key}' bindings must be a plain data record.`,
-    );
-  }
+  const { manifest, bindingSchemas, parameterSchemas } = contract;
   const normalizedBindings = Object.create(null) as Record<
     string,
     CapabilityBindingValueV1
   >;
-  for (const [key, value] of Object.entries(bindingSnapshot)) {
-    const schema = schemas.get(key);
+  for (const [key, value] of Object.entries(bindings)) {
+    const schema = parameterSchemas.get(key);
     if (!schema) {
       throw new Error(
         `Capability package '${manifest.key}' does not declare parameter '${key}'.`,
@@ -968,8 +1030,8 @@ function validateBindings(
       bindingSchemas.get(schema.key),
     );
   }
-  for (const schema of schemas.values()) {
-    if (schema.required && !Object.hasOwn(bindingSnapshot, schema.key)) {
+  for (const schema of parameterSchemas.values()) {
+    if (schema.required && !Object.hasOwn(bindings, schema.key)) {
       throw new Error(
         `Capability package '${manifest.key}' requires parameter '${schema.key}'.`,
       );
@@ -983,10 +1045,10 @@ function interfaceIdentity(interfaceKey: string, version: string): string {
 }
 
 function resolveDependencyOrder(
-  manifests: readonly CapabilityAssetManifestV1[],
+  contracts: readonly ValidatedManifestContractV1[],
 ): readonly string[] {
   const providers = new Map<string, Set<string>>();
-  for (const manifest of manifests) {
+  for (const { manifest } of contracts) {
     for (const provided of manifest.provides ?? []) {
       const identity = interfaceIdentity(
         provided.interfaceKey,
@@ -999,12 +1061,12 @@ function resolveDependencyOrder(
   }
 
   const dependencies = new Map<string, Set<string>>(
-    manifests.map((manifest) => [manifest.key, new Set<string>()]),
+    contracts.map(({ manifest }) => [manifest.key, new Set<string>()]),
   );
   const dependants = new Map<string, Set<string>>(
-    manifests.map((manifest) => [manifest.key, new Set<string>()]),
+    contracts.map(({ manifest }) => [manifest.key, new Set<string>()]),
   );
-  for (const manifest of manifests) {
+  for (const { manifest } of contracts) {
     for (const requirement of manifest.requires ?? []) {
       const identity = interfaceIdentity(
         requirement.interfaceKey,
@@ -1028,8 +1090,8 @@ function resolveDependencyOrder(
     }
   }
 
-  const ready = manifests
-    .map(({ key }) => key)
+  const ready = contracts
+    .map(({ manifest }) => manifest.key)
     .filter((key) => dependencies.get(key)?.size === 0)
     .sort();
   const resolved: string[] = [];
@@ -1046,15 +1108,15 @@ function resolveDependencyOrder(
       }
     }
   }
-  if (resolved.length !== manifests.length) {
+  if (resolved.length !== contracts.length) {
     throw new Error("Capability composition contains a dependency cycle.");
   }
   return resolved;
 }
 
 function resolveCapabilityCompositionFromSnapshot(
-  input: ResolveCapabilityCompositionInput,
-  assets: readonly CapabilityAssetV1[],
+  input: ResolutionInputSnapshotV1,
+  assets: readonly CapabilityAssetSnapshotV1[],
 ): CapabilityCompositionV1 {
   const seenPackageKeys = new Set<string>();
   for (const selection of input.selections) {
@@ -1069,20 +1131,24 @@ function resolveCapabilityCompositionFromSnapshot(
   const matchedSelections = input.selections
     .map((selection) => ({
       selection,
-      manifest: matchingManifest(selection.lock, assets),
+      contract: compileValidatedManifestContract(
+        matchingManifest(selection.lock, assets),
+      ),
     }))
-    .sort((left, right) => compareText(left.manifest.key, right.manifest.key));
-  const packages = matchedSelections.map(({ selection, manifest }) => {
-    const bindings = validateBindings(manifest, selection.bindings);
-    return canonicalSelection(manifest, bindings);
+    .sort((left, right) =>
+      compareText(left.contract.manifest.key, right.contract.manifest.key),
+    );
+  const packages = matchedSelections.map(({ selection, contract }) => {
+    const bindings = validateBindings(contract, selection.bindings);
+    return canonicalSelection(contract, bindings);
   });
-  const manifests = matchedSelections.map(({ manifest }) => manifest);
-  const resolvedDependencyOrder = resolveDependencyOrder(manifests);
+  const contracts = matchedSelections.map(({ contract }) => contract);
+  const resolvedDependencyOrder = resolveDependencyOrder(contracts);
 
   const contributionDigests = new Set<string>();
   const interfaces = new Set<string>();
   const runtimeInterfaces = new Set<string>();
-  for (const manifest of manifests) {
+  for (const { manifest } of contracts) {
     for (const contribution of [
       ...(manifest.graphContributions ?? []),
       ...(manifest.executableContributions ?? []),
