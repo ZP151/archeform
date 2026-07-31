@@ -162,9 +162,15 @@ not acceptance.
   authorized paths. Independent repair-round-2 review returned SPEC PASS and
   QUALITY PASS with no P0/P1/P2 after auditing all eight exported structured
   composition/lock boundaries and their self-redefining accessor and alias
-  probes. The PM records `implementing -> ready_for_qa`; fresh repair-round-2
-  behavioral QA is the next gate. Tasks 3 through 7 remain `planned`; none of
-  them is dispatched by this transition.
+  probes. The PM previously recorded `implementing -> ready_for_qa`. Fresh
+  repair-round-2 behavioral QA against
+  `40096847c4a4b28c3d02fd33d01805d46da0bded` returned PASS with no P0/P1/P2:
+  219/219 Capabilities tests, 180/180 Compiler tests, zero-getter capture-error
+  rejection at all eight public boundaries, passing alias, server-lock,
+  deep-freeze, digest, and largest-composition single-digest probes at p95
+  2.884 ms. The PM records `ready_for_qa -> reviewed`; release review and fresh
+  acceptance verification are next. Tasks 3 through 7 remain `planned`; none
+  of them is dispatched by this transition.
 - No frontend/backend parallel implementation is permitted in this project.
 - Commercial Capability Foundation Task 2 remains `implementing` and
   escalated. It cannot resume acceptance until this project's Task 7 is
@@ -178,7 +184,7 @@ not acceptance.
 | ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | ----------------------------------------------- |
 | 1. Pure typed Graph symbol index               | `accepted`     | `integration`  | Application Graph Type System                | Release review and fresh verification passed.   |
 | 2. Typed manifest and binding contracts        | `implementing` | `integration`  | Capability Binding Contract                  | Repair round 4 task review failed with one P1.  |
-| 2A. Immutable composition resolution boundary  | `ready_for_qa` | `integration`  | Capability Composition Resolution Boundary   | Repair round 2 review passed; fresh QA is next. |
+| 2A. Immutable composition resolution boundary  | `reviewed`     | `integration`  | Capability Composition Resolution Boundary   | Repair round 2 QA passed; release review next.  |
 | 3. Serialized owner-aware Graph selections     | `planned`      | `integration`  | Application Graph Serialization              | Blocked on accepted Tasks 2 and 2A.             |
 | 4. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 3 serialized contract. |
 | 5. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-4.                  |
@@ -661,14 +667,14 @@ not acceptance.
 
 ## Task 2A: Establish an immutable composition resolution boundary
 
-- **State:** `ready_for_qa` (repair round 2)
+- **State:** `reviewed` (repair round 2)
 - **Specialization:** `integration`
 - **Bounded writer:** Immutable Composition Resolution Integration
 - **Contract owner:** Capability Composition Resolution Boundary
 - **Contract status:** ADR-0008 is `Accepted`; Controller-authorized repair
   round 2 remains inside the same five paths and passed independent task review
-  with no P0/P1/P2. Fresh repair-round-2 behavioral QA, release review, and
-  acceptance verification remain required; Task 2A is not accepted.
+  and fresh behavioral QA with no P0/P1/P2. Release review and fresh acceptance
+  verification remain required; Task 2A is not accepted.
 - **Contract artifact:** ADR-0008 DEC-001 through DEC-005 and
   `docs/superpowers/plans/2026-08-01-immutable-composition-resolution-input.md`.
 - **Dependencies:** Task 1 `accepted` and ADR-0008 `Accepted`. Task 2 remains
@@ -802,8 +808,24 @@ not acceptance.
 - The PM reconciles the bounded implementation and independent review as
   `implementing -> ready_for_qa`. The earlier QA against `a09d459` remains
   historical and cannot advance this repair. Fresh repair-round-2 behavioral QA
-  against `40096847c4a4b28c3d02fd33d01805d46da0bded` is the next gate, followed
-  by release review and fresh acceptance verification.
+  against `40096847c4a4b28c3d02fd33d01805d46da0bded` was the next gate at that
+  transition.
+
+### Repair-round-2 behavioral QA evidence
+
+- Fresh independent behavioral QA ran against
+  `40096847c4a4b28c3d02fd33d01805d46da0bded` and returned PASS with no
+  P0/P1/P2.
+- The full Capabilities suite passed 219/219 tests, and the full Compiler suite
+  passed 180/180 tests.
+- Every one of the eight exported structured composition/lock boundaries
+  rejected with the capture error and observed zero getter invocations. Alias,
+  server-lock, deep-freeze, and digest checks also passed.
+- The largest registered composition produced one digest with p95 2.884 ms,
+  below ADR-0008's 20 ms ceiling.
+- The PM reconciles the passing repair-round-2 QA as
+  `ready_for_qa -> reviewed`. This is not release review or acceptance;
+  independent release review and fresh acceptance verification remain.
 
 ### Non-goals
 
@@ -822,8 +844,8 @@ not acceptance.
   specified by the accepted plan.
 - Independent task review, behavioral QA, release review, and fresh
   verification pass in order before `accepted`. The prior task review and QA are
-  historical after the release-review P1. Repair-round-2 task review has passed;
-  fresh behavioral QA, release review, and verification remain required.
+  historical after the release-review P1. Repair-round-2 task review and fresh
+  behavioral QA have passed; release review and verification remain required.
 
 ## Task 3: Serialize owner-aware composition selections in Application Graph
 
@@ -834,7 +856,7 @@ not acceptance.
   serialized Draft Graph contract.
 - **Dependencies:** Tasks 1, 2, and 2A `accepted`. Task 1 is accepted; Task 2
   remains `implementing` with local repair stopped, and Task 2A is
-  `ready_for_qa`. Graph implementation is blocked until both are independently
+  `reviewed`. Graph implementation is blocked until both are independently
   accepted and reconciled.
 - **Produces:** additive `SerializedCompositionBindingV1` support for exact
   owner-aware field objects, structural owner/field validation, deterministic
@@ -1095,20 +1117,22 @@ not acceptance.
   `40096847c4a4b28c3d02fd33d01805d46da0bded` then stayed inside the unchanged
   five-path boundary and passed independent task review with SPEC PASS, QUALITY
   PASS, and no P0/P1/P2 after an audit of all eight exported structured
-  composition/lock boundaries and self-redefining accessor/alias probes. Task
-  2A is `ready_for_qa`; fresh repair-round-2 behavioral QA is required next.
-  This PM transition authorizes no Graph-path change or Graph Task 3-7
-  implementation.
+  composition/lock boundaries and self-redefining accessor/alias probes. Fresh
+  repair-round-2 behavioral QA against that commit passed with no P0/P1/P2:
+  219/219 Capabilities tests, 180/180 Compiler tests, capture-error rejection
+  with zero getter invocations at all eight public boundaries, passing alias,
+  server-lock, deep-freeze, and digest checks, and one largest-composition
+  digest at p95 2.884 ms. The PM records `ready_for_qa -> reviewed`; release
+  review and fresh acceptance verification remain. This PM transition
+  authorizes no Graph-path change or Graph Task 3-7 implementation.
 
 ## Next smallest valuable slice
 
-Run fresh repair-round-2 behavioral QA against Task 2A commit
+Run independent release review against Task 2A commit
 `40096847c4a4b28c3d02fd33d01805d46da0bded` under **Immutable Composition
 Resolution Integration** and the **Capability Composition Resolution
-Boundary**. Reproduce the focused public-boundary accessor and alias probes,
-the full Capabilities and Compiler regression gates, exact digest compatibility,
-and the Node `v22.11.0` performance/single-digest budget. Keep Task 2A
-`ready_for_qa` and Task 2 `implementing`; after fresh QA, require PM
-reconciliation, independent release review, and fresh acceptance verification.
-Do not start Graph Task 3. Keep Graph Tasks 3 through 7 `planned` and blocked
-until Tasks 2 and 2A are accepted.
+Boundary**, using the clean task review and fresh repair-round-2 QA evidence.
+Keep Task 2A `reviewed` and Task 2 `implementing`; if release review passes,
+require fresh acceptance verification before any `accepted` transition. Do not
+start Graph Task 3. Keep Graph Tasks 3 through 7 `planned` and blocked until
+Tasks 2 and 2A are accepted.
