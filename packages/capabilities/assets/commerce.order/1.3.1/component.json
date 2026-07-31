@@ -1,0 +1,113 @@
+{
+  "apiVersion": "factory.capability/v1",
+  "bindingContract": "factory.capability-binding/v1",
+  "key": "commerce.order",
+  "version": "1.3.1",
+  "category": "commerce",
+  "name": "Order transaction operation adapter",
+  "description": "Parses declared order transition facts and prepares a bounded transaction command.",
+  "packageRoot": "packages/capabilities/assets/commerce.order/1.3.1",
+  "lifecycle": "golden",
+  "profiles": [
+    "restaurant-ordering",
+    "simple-ecommerce",
+    "retail-counter",
+    "grocery-pickup"
+  ],
+  "effects": [
+    "order.transaction.prepare"
+  ],
+  "inputSchema": [
+    {
+      "key": "orderEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "orderFlow",
+      "type": "flow.flow",
+      "required": true
+    },
+    {
+      "key": "customerRole",
+      "type": "policy.role",
+      "required": true
+    }
+  ],
+  "outputSlots": [
+    "api.runtime",
+    "test.journey"
+  ],
+  "templates": [],
+  "parameters": [
+    {
+      "key": "orderEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "orderFlow",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "customerRole",
+      "type": "graph-symbol",
+      "required": true
+    }
+  ],
+  "executableContributions": [
+    {
+      "id": "commerce-order-transaction-operation-adapter",
+      "outputSlot": "api.runtime",
+      "namespace": "packages/commerce.order/api/runtime/",
+      "source": "templates/api/commerce-order-transaction-operation-adapter.ts.tpl",
+      "target": "api/src/capabilities/commerce-order-transaction-operation-adapter.ts",
+      "parameterRefs": [
+        "orderEntity",
+        "orderFlow",
+        "customerRole"
+      ],
+      "targetRuntimeInterfaceVersion": "factory.transaction-operation-adapter/v1",
+      "orderingRequirements": [],
+      "mergeProtocol": "replace-file",
+      "digest": "sha256:f7b08bc1b10e3434016305032bcf61eb360995eb51c4e6b0ff8d5c4b58825fcf"
+    },
+    {
+      "id": "commerce-order-transaction-operation-journey",
+      "outputSlot": "test.journey",
+      "namespace": "packages/commerce.order/test/journeys/",
+      "source": "templates/test/commerce-order-transaction-operation.journey.ts.tpl",
+      "target": "api/test/journeys/commerce-order-transaction-operation.journey.ts",
+      "parameterRefs": [
+        "orderEntity",
+        "orderFlow",
+        "customerRole"
+      ],
+      "targetRuntimeInterfaceVersion": "factory.journey/v1",
+      "orderingRequirements": [
+        "commerce-order-transaction-operation-adapter"
+      ],
+      "mergeProtocol": "replace-file",
+      "digest": "sha256:a0e04094ac09a1da73b6095d2208036071e00d5d53a70ba924a19ce536928112"
+    }
+  ],
+  "provides": [
+    {
+      "interfaceKey": "commerce.order-event",
+      "version": "v1"
+    },
+    {
+      "interfaceKey": "factory.transaction-operation-adapter",
+      "version": "v1"
+    }
+  ],
+  "verification": {
+    "fixture": "fixtures/default.json",
+    "fixtureDigest": "sha256:deeca2bd51386b6c498ee2f598210c6b95e75de7fc157fac6a8dc3add85d44f5",
+    "contractTest": "tests/contract.json",
+    "contractTestDigest": "sha256:432decf6c06564ceceb809af0eb08ab282d867ced151749382bd373a4d55280a",
+    "status": "verified"
+  },
+  "manifestDigest": "sha256:a793e4dec183ebe772248677ceaa5cd42ed049b23344da1519461487efb08e2f"
+}

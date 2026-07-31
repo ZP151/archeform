@@ -1,0 +1,22 @@
+{
+  "orderId": "restaurant-order-1",
+  "expectedVersion": 0,
+  "transition": "submit",
+  "idempotencyKey": "restaurant-submit-1",
+  "payloadDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "tableSession": {
+    "id": "session-1",
+    "tableId": "table-1"
+  },
+  "lines": [
+    {
+      "menuItemId": "ramen",
+      "quantity": 1
+    }
+  ],
+  "paymentEvidence": {
+    "kind": "simulated",
+    "reference": "payment-1"
+  }
+}
+

@@ -1,4 +1,5 @@
 import { dirname, resolve } from "node:path";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
@@ -19,6 +20,78 @@ const repositoryRoot = resolve(
 );
 
 describe("transaction operation adapter packages", () => {
+  it.each([
+    ["commerce.order", "1.3.0"],
+    ["restaurant.ordering", "1.2.0"],
+  ] as const)(
+    "rejects the invalid historical fixture declared by %s@%s",
+    (key, version) => {
+      const asset = capabilityAssets.find(
+        ({ manifest }) => manifest.key === key && manifest.version === version,
+      );
+      expect(asset).toBeDefined();
+      if (!asset) return;
+
+      const fixture = JSON.parse(
+        readFileSync(
+          resolve(
+            repositoryRoot,
+            asset.manifest.packageRoot,
+            asset.manifest.verification.fixture,
+          ),
+          "utf8",
+        ),
+      );
+      const adapter =
+        key === "commerce.order"
+          ? createCommerceOrderTransactionOperationAdapter()
+          : createRestaurantOrderingTransactionOperationAdapter();
+
+      expect(() => adapter.parseRequest(fixture)).toThrow(/payloadDigest/);
+    },
+  );
+
+  it.each([
+    ["commerce.order", "1.3.1"],
+    ["restaurant.ordering", "1.2.1"],
+  ] as const)(
+    "executes the digest-covered declared fixture for %s@%s",
+    (key, version) => {
+      const asset = capabilityAssets.find(
+        ({ manifest }) => manifest.key === key && manifest.version === version,
+      );
+      expect(asset).toBeDefined();
+      if (!asset) return;
+
+      const fixture = JSON.parse(
+        readFileSync(
+          resolve(
+            repositoryRoot,
+            asset.manifest.packageRoot,
+            asset.manifest.verification.fixture,
+          ),
+          "utf8",
+        ),
+      );
+      const adapter =
+        key === "commerce.order"
+          ? createCommerceOrderTransactionOperationAdapter()
+          : createRestaurantOrderingTransactionOperationAdapter();
+
+      expect(
+        adapter.prepare(adapter.parseRequest(fixture)).command,
+      ).toMatchObject({
+        aggregate: { entity: "order", id: fixture.orderId },
+        payloadDigest: fixture.payloadDigest,
+      });
+      expect(verifyCapabilityAssetDigest(asset)).toBe(true);
+      expect(verifyCapabilityAssetPackage(asset, repositoryRoot)).toEqual([]);
+      expect(
+        resolveCapabilityAssetLock(lockCapabilityAsset(asset)).manifest,
+      ).toMatchObject({ key, version });
+    },
+  );
+
   it("generic order adapter prepares a bounded order command", () => {
     const adapter = createCommerceOrderTransactionOperationAdapter();
     const prepared = adapter.prepare(

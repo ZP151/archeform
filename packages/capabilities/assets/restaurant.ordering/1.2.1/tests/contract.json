@@ -1,0 +1,5 @@
+{
+  "contract": "factory.transaction-operation-adapter/v1",
+  "semantics": ["typed-table-session", "typed-lines", "typed-payment-evidence", "typed-cancellation-reason", "store-inside-transaction"]
+}
+
