@@ -665,7 +665,7 @@ function renderCapabilityRegistry(
     ),
   ).sort();
   return [
-    'import type { CapabilityRuntimeModule, EffectHandler, RecordHandler, WorkflowHandler } from "./contract.js";',
+    'import type { CapabilityRuntimeModule, CartHandler, EffectHandler, RecordHandler, WorkflowHandler } from "./contract.js";',
     "",
     ...imports,
     ...(imports.length ? [""] : []),
@@ -728,6 +728,13 @@ function renderCapabilityRegistry(
     "  );",
     "}",
     "",
+    "export function getCartHandler(): CartHandler {",
+    "  return singleHandler(",
+    "    capabilityModules.flatMap((module) => module.cartHandler ? [module.cartHandler] : []),",
+    '    "cart",',
+    "  );",
+    "}",
+    "",
   ].join("\n");
 }
 
@@ -737,7 +744,7 @@ function renderCapabilityContract(graph: ApplicationGraphV1): string {
     "export type CapabilityStoredRecord = Record<string, unknown> & { id: string; status?: string };",
     ...(commerce
       ? [
-          "export type CapabilityCommerceLineItem = { catalogEntity: string; catalogRecordId: string; quantity: number };",
+          "export type CapabilityCommerceLineItem = { id: string; actor: string; orderEntity: string; orderRecordId: string; catalogEntity: string; catalogRecordId: string; quantity: number };",
         ]
       : []),
     "",
@@ -751,6 +758,7 @@ function renderCapabilityContract(graph: ApplicationGraphV1): string {
     ...(commerce
       ? [
           "  listCartItems(orderEntity: string, orderRecordId: string): Promise<readonly CapabilityCommerceLineItem[]>;",
+          "  addCartItem(input: Omit<CapabilityCommerceLineItem, 'id'>): Promise<CapabilityCommerceLineItem>;",
           "  decrementInventory(entityKey: string, recordId: string, quantity: number): Promise<CapabilityStoredRecord>;",
         ]
       : []),
@@ -765,6 +773,11 @@ function renderCapabilityContract(graph: ApplicationGraphV1): string {
     "  applyTransition(input: { store: CapabilityStore; entityKey: string; recordId: string; nextState: string }): Promise<CapabilityStoredRecord>;",
     "}",
     "",
+    "export interface CartHandler {",
+    "  add(input: { role: string; orderEntity: string; orderRecordId: string; catalogEntity: string; catalogRecordId: string; quantity: number; store: CapabilityStore; assertAllowed(role: string, entityKey: string, action: string): Promise<void> }): Promise<CapabilityCommerceLineItem>;",
+    "  list(input: { role: string; orderEntity: string; orderRecordId: string; store: CapabilityStore; assertAllowed(role: string, entityKey: string, action: string): Promise<void> }): Promise<readonly CapabilityCommerceLineItem[]>;",
+    "}",
+    "",
     "export type EffectHandler = (input: { role: string; entityKey: string; recordId: string; operation: string; store: CapabilityStore; now: string }) => Promise<void>;",
     "",
     "export interface CapabilityRuntimeModule {",
@@ -774,6 +787,7 @@ function renderCapabilityContract(graph: ApplicationGraphV1): string {
     "  readonly effects: readonly string[];",
     "  readonly recordHandler?: RecordHandler;",
     "  readonly workflowHandler?: WorkflowHandler;",
+    "  readonly cartHandler?: CartHandler;",
     "  readonly effectHandler?: EffectHandler;",
     "}",
     "",
@@ -1423,11 +1437,14 @@ function runtimeDefinition(graph: ApplicationGraphV1) {
 function renderApplicationRuntime(
   graph: ApplicationGraphV1,
   useResolvedContributions: boolean,
+  usePackageCartHandler: boolean,
 ): string {
   const commerce = hasCommerceCapabilities(graph);
   return [
     useResolvedContributions
-      ? 'import { getEffectHandler, getRecordHandler, getWorkflowHandler, providedEffects } from "./capabilities/registry.js";'
+      ? commerce && usePackageCartHandler
+        ? 'import { getCartHandler, getEffectHandler, getRecordHandler, getWorkflowHandler, providedEffects } from "./capabilities/registry.js";'
+        : 'import { getEffectHandler, getRecordHandler, getWorkflowHandler, providedEffects } from "./capabilities/registry.js";'
       : 'import { providedEffects } from "./capabilities/registry.js";',
     'import { enforce } from "./policy.js";',
     "",
@@ -1641,15 +1658,30 @@ function renderApplicationRuntime(
           "    this.entity(input.catalogEntity);",
           "    this.assertCapability('cart.add', 'add');",
           "    if (!providedEffects.has('cart.add')) throw new Error('Unsupported capability effect \\'cart.add\\'.');",
-          "    await this.assertAllowed(role, orderEntity, 'create');",
-          "    await this.assertAllowed(role, input.catalogEntity, 'read');",
-          "    const order = await this.store.find(orderEntity, orderRecordId);",
-          "    if (!order) throw new Error(`Cart '${orderRecordId}' was not found.`);",
-          "    if (order.status !== 'cart') throw new Error(`Order '${orderRecordId}' is not an active cart.`);",
-          "    const catalogRecord = await this.store.find(input.catalogEntity, input.catalogRecordId);",
-          "    if (!catalogRecord) throw new Error(`Catalog record '${input.catalogRecordId}' was not found.`);",
-          "    if (!Number.isInteger(input.quantity) || input.quantity < 1) throw new Error('Cart quantity must be a positive integer.');",
-          "    const item = await this.store.addCartItem({ actor: role, orderEntity, orderRecordId, ...input });",
+          ...(usePackageCartHandler
+            ? [
+                "    const item = await getCartHandler().add({",
+                "      role,",
+                "      orderEntity,",
+                "      orderRecordId,",
+                "      catalogEntity: input.catalogEntity,",
+                "      catalogRecordId: input.catalogRecordId,",
+                "      quantity: input.quantity,",
+                "      store: this.store,",
+                "      assertAllowed: (candidateRole, entityKey, action) => this.assertAllowed(candidateRole, entityKey, action),",
+                "    });",
+              ]
+            : [
+                "    await this.assertAllowed(role, orderEntity, 'create');",
+                "    await this.assertAllowed(role, input.catalogEntity, 'read');",
+                "    const order = await this.store.find(orderEntity, orderRecordId);",
+                "    if (!order) throw new Error(`Cart '${orderRecordId}' was not found.`);",
+                "    if (order.status !== 'cart') throw new Error(`Order '${orderRecordId}' is not an active cart.`);",
+                "    const catalogRecord = await this.store.find(input.catalogEntity, input.catalogRecordId);",
+                "    if (!catalogRecord) throw new Error(`Catalog record '${input.catalogRecordId}' was not found.`);",
+                "    if (!Number.isInteger(input.quantity) || input.quantity < 1) throw new Error('Cart quantity must be a positive integer.');",
+                "    const item = await this.store.addCartItem({ actor: role, orderEntity, orderRecordId, ...input });",
+              ]),
           "    const at = new Date().toISOString();",
           "    await this.store.appendAudit({ actor: role, action: 'cart.add', entity: orderEntity, recordId: orderRecordId, at });",
           "    await this.store.appendCapabilityEvent({ actor: role, capability: 'cart.add', operation: 'add', entity: orderEntity, recordId: orderRecordId, outcome: 'completed', at });",
@@ -1658,8 +1690,20 @@ function renderApplicationRuntime(
           "",
           "  async cartItems(role: string, orderEntity: string, orderRecordId: string): Promise<readonly CommerceLineItem[]> {",
           "    this.entity(orderEntity);",
-          "    await this.assertAllowed(role, orderEntity, 'read');",
-          "    return this.store.listCartItems(orderEntity, orderRecordId);",
+          ...(usePackageCartHandler
+            ? [
+                "    return getCartHandler().list({",
+                "      role,",
+                "      orderEntity,",
+                "      orderRecordId,",
+                "      store: this.store,",
+                "      assertAllowed: (candidateRole, entityKey, action) => this.assertAllowed(candidateRole, entityKey, action),",
+                "    });",
+              ]
+            : [
+                "    await this.assertAllowed(role, orderEntity, 'read');",
+                "    return this.store.listCartItems(orderEntity, orderRecordId);",
+              ]),
           "  }",
           "",
         ]
@@ -2633,6 +2677,15 @@ export function generateApplicationBundle(
   );
   const useResolvedContributions =
     input.compositionLock.resolvedContributionDigests.length > 0;
+  const usePackageCartHandler = input.compositionLock.packages.some(
+    ({ lock }) => {
+      const asset = resolveCapabilityAssetLock(lock);
+      return (
+        asset.manifest.key === "commerce.cart" &&
+        asset.manifest.runtimeHandlers?.includes("cart")
+      );
+    },
+  );
   const rootDirectory = `${graph.metadata.id}-${input.publishedRevisionId}`;
   const plannedFiles: PlannedGeneratedFile[] = [
     {
@@ -2872,7 +2925,11 @@ export function generateApplicationBundle(
       path: "api/src/application-runtime.ts",
       render: () =>
         restaurantRuntime()?.applicationRuntimeContract ??
-        renderApplicationRuntime(graph, useResolvedContributions),
+        renderApplicationRuntime(
+          graph,
+          useResolvedContributions,
+          usePackageCartHandler,
+        ),
     },
     {
       path: "api/src/prisma-record-store.ts",

@@ -143,12 +143,9 @@ export function assertGoldenCapabilityAssetLocks(
   const assets = captured.locks.map(resolveCapabilityAssetLockSnapshot);
   assertResolvedGoldenCapabilityAssets(assets, captured.context);
   for (const asset of assets) {
-    if (
-      currentCapabilityAssets.includes(asset) &&
-      (asset.manifest.requires?.length ?? 0) > 0
-    ) {
+    if ((asset.manifest.requires?.length ?? 0) > 0) {
       throw new Error(
-        `Current capability package '${asset.manifest.key}' requires canonical composition selections for dependency/provider admission.`,
+        `Capability package '${asset.manifest.key}' requires canonical composition selections for dependency/provider admission.`,
       );
     }
   }

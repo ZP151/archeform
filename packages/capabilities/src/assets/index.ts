@@ -13,6 +13,7 @@ import { identityContextAssetV1_0_0 } from "./core/identity-context-v1-0-0.js";
 import { locationContextAssetV1_0_0 } from "./core/location-context-v1-0-0.js";
 import { catalogAsset } from "./commerce/catalog.js";
 import { cartAsset } from "./commerce/cart.js";
+import { cartAssetV1_0_1 } from "./commerce/cart-v1-0-1.js";
 import { inventoryLedgerAssetV1_0_0 } from "./commerce/inventory-ledger-v1-0-0.js";
 import { inventoryAsset } from "./commerce/inventory.js";
 import { inventoryAssetV1_0_1 } from "./commerce/inventory-v1-0-1.js";
@@ -31,6 +32,7 @@ export {
   auditAsset,
   auditAssetV1_0_1,
   cartAsset,
+  cartAssetV1_0_1,
   catalogAsset,
   crudAsset,
   crudAssetV1_0_1,
@@ -64,7 +66,7 @@ export const currentCapabilityAssets: readonly CapabilityAssetV1[] =
     identityContextAssetV1_0_0,
     locationContextAssetV1_0_0,
     catalogAsset,
-    cartAsset,
+    cartAssetV1_0_1,
     lineConfigurationAssetV1_0_0,
     inventoryAssetV1_0_1,
     inventoryLedgerAssetV1_0_0,
@@ -84,6 +86,7 @@ export const capabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
   crudAsset,
   notificationAsset,
   workflowAsset,
+  cartAsset,
   inventoryAsset,
   simulatedPaymentAsset,
 ]);

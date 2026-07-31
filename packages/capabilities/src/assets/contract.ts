@@ -27,6 +27,9 @@ export type CapabilityOutputSlot =
   | "realtime.event"
   | "docs.section";
 
+export type CapabilityRuntimeHandlerKindV1 =
+  "record" | "workflow" | "cart" | "effect";
+
 export type CapabilityParameterTypeV1 = "number" | "boolean" | "graph-symbol";
 
 export interface CapabilityParameterSchemaV1 {
@@ -157,6 +160,7 @@ export interface CapabilityAssetManifestV1 {
   readonly effects: readonly string[];
   readonly inputSchema: readonly CapabilityManifestInputV1[];
   readonly outputSlots: readonly CapabilityOutputSlot[];
+  readonly runtimeHandlers?: readonly CapabilityRuntimeHandlerKindV1[];
   readonly templates: readonly CapabilityTemplateContributionV1[];
   readonly parameters?: readonly CapabilityParameterSchemaV1[];
   readonly graphContributions?: readonly CapabilityGraphContributionV1[];

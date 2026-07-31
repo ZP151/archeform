@@ -1,0 +1,27 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": [
+    "api.runtime",
+    "database.schema",
+    "page.block",
+    "test.fixture"
+  ],
+  "runtimeHandlers": ["cart"],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/commerce.cart.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:58995ba83eb0fb80c87394d165574a97b14c554d0f418a129bd68f76bd8c1ea4"
+    }
+  ],
+  "parameters": [
+    { "key": "catalogEntity", "type": "graph-symbol", "required": true },
+    { "key": "orderEntity", "type": "graph-symbol", "required": true },
+    { "key": "cartPage", "type": "graph-symbol", "required": true },
+    { "key": "customerRole", "type": "graph-symbol", "required": true }
+  ],
+  "contributes": { "effects": ["cart.add", "cart.remove", "cart.checkout"] }
+}

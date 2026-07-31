@@ -180,6 +180,23 @@ describe("profile compilation", () => {
     },
   );
 
+  it("delegates shared cart commands to the locked Commerce cart package", () => {
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "commerce-cart-package-acceptance-1",
+        graph: composeProfileDraft({ profile: "simple-ecommerce" }).graph,
+      }).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(files["api/src/capabilities/commerce.cart.ts"]).toContain(
+      "cartHandler",
+    );
+    expect(files["api/src/application-runtime.ts"]).toContain("getCartHandler");
+    expect(files["api/src/application-runtime.ts"]).not.toContain(
+      "const item = await this.store.addCartItem",
+    );
+  });
+
   it("selects the authoritative Restaurant command runtime only for the Restaurant Profile", () => {
     const restaurantFiles = Object.fromEntries(
       generateApplicationBundle({

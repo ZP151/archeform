@@ -123,6 +123,11 @@ type GeneratedRuntime = {
       quantity: number;
     },
   ): Promise<unknown>;
+  cartItems(
+    role: string,
+    orderEntity: string,
+    orderRecordId: string,
+  ): Promise<readonly { id: string }[]>;
   list(
     role: string,
     entityKey: string,
@@ -215,6 +220,15 @@ const historicalExecutableLocks = [
     lifecycle: "golden" as const,
   },
 ] as const;
+
+const historicalCartLock = {
+  key: "commerce.cart",
+  version: "1.0.0",
+  packageRoot: "packages/capabilities/assets/commerce.cart/1.0.0",
+  manifestDigest:
+    "sha256:38cf669fe2b0f3bbff51c10980fe3c50cfd9dd7349688576a677c7c12398cd0f",
+  lifecycle: "golden" as const,
+};
 
 describe("compilation target registry", () => {
   it("defines the complete initial target set", () => {
@@ -601,6 +615,60 @@ describe("compilation target registry", () => {
     );
   });
 
+  it("replays a historical cart lock beside current executable packages", async () => {
+    const draft = composeDefaultCapabilityDraft({
+      profile: "simple-ecommerce",
+    }).graph;
+    const selections = draft.integration.compositionSelections!.map(
+      (selection) =>
+        selection.lock.key === "commerce.cart"
+          ? { ...selection, lock: historicalCartLock }
+          : selection,
+    );
+    const graph = structuredClone(draft);
+    delete graph.integration.compositionSelections;
+    graph.integration.assetLocks = selections.map(({ lock }) => lock);
+    graph.integration.compositionProfile = "simple-ecommerce";
+    const compositionLock = createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(graph),
+      selections,
+    });
+    const order = graph.domain.entities.find(
+      (entity) => entity.key === "order",
+    )!;
+    const catalogEntity = graph.domain.relations.find(
+      (relation) => relation.from === order.key,
+    )!.to;
+    const catalogSeed = graph.domain.seedData!.find(
+      (seed) => seed.entity === catalogEntity,
+    )!;
+    const customer = graph.policy.permissions.find(
+      (permission) =>
+        permission.resource === order.key &&
+        permission.actions.includes("create"),
+    )!.role;
+
+    await withGeneratedRuntime(
+      {
+        publishedRevisionId: "historical-cart-replay-1",
+        graph,
+        compositionLock,
+      },
+      async (runtime) => {
+        const cart = await runtime.create(customer, order.key, {});
+        await runtime.addCartItem(customer, order.key, cart.id, {
+          catalogEntity,
+          catalogRecordId: catalogSeed.id!,
+          quantity: 1,
+        });
+
+        await expect(
+          runtime.cartItems(customer, order.key, cart.id),
+        ).resolves.toHaveLength(1);
+      },
+    );
+  });
+
   it("keeps current handler runtime alongside unchanged metadata packages", () => {
     const graph = composeProfileDraft({ profile: "simple-ecommerce" }).graph;
     const files = Object.fromEntries(
@@ -623,7 +691,7 @@ describe("compilation target registry", () => {
           version: "1.0.1",
         }),
         expect.objectContaining({ key: "commerce.catalog", version: "1.0.0" }),
-        expect.objectContaining({ key: "commerce.cart", version: "1.0.0" }),
+        expect.objectContaining({ key: "commerce.cart", version: "1.0.1" }),
         expect.objectContaining({ key: "commerce.order", version: "1.0.0" }),
       ]),
     );
@@ -632,6 +700,9 @@ describe("compilation target registry", () => {
     );
     expect(files["api/src/application-runtime.ts"]).toContain(
       "const workflowHandler = getWorkflowHandler();",
+    );
+    expect(files["api/src/application-runtime.ts"]).toContain(
+      "const item = await getCartHandler().add({",
     );
   });
 

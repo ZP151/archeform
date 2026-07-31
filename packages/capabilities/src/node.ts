@@ -104,6 +104,7 @@ const outputSlotSchema = z.enum([
   "realtime.event",
   "docs.section",
 ]);
+const runtimeHandlerSchema = z.enum(["record", "workflow", "cart", "effect"]);
 const templateContributionSchema = z
   .object({
     id: contributionIdSchema,
@@ -178,6 +179,7 @@ const capabilityManifestSchema = z
         .strict(),
     ),
     outputSlots: z.array(outputSlotSchema),
+    runtimeHandlers: z.array(runtimeHandlerSchema).optional(),
     templates: z.array(templateContributionSchema),
     parameters: z.array(parameterSchema).optional(),
     graphContributions: z.array(graphContributionSchema).optional(),
@@ -219,6 +221,7 @@ const adapterSchema = z
     apiVersion: z.literal("factory.adapter/v1"),
     kind: z.literal("declarative"),
     outputSlots: z.array(outputSlotSchema),
+    runtimeHandlers: z.array(runtimeHandlerSchema).optional(),
     templates: z.array(templateContributionSchema),
     parameters: z.array(parameterSchema).optional(),
     graphContributions: z.array(graphContributionSchema).optional(),
@@ -666,6 +669,7 @@ export function verifyCapabilityAssetPackage(
   }
   for (const field of [
     "parameters",
+    "runtimeHandlers",
     "graphContributions",
     "executableContributions",
   ] as const) {
