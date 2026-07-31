@@ -1,0 +1,53 @@
+import type { CapabilityAssetV1 } from "../contract.js";
+
+export const restaurantReportingAssetV1_1_0: CapabilityAssetV1 = {
+  manifest: {
+    apiVersion: "factory.capability/v1",
+    key: "restaurant.reporting",
+    version: "1.1.0",
+    category: "restaurant",
+    name: "Restaurant reporting",
+    description:
+      "Projects operational restaurant summaries and low-stock items.",
+    packageRoot: "packages/capabilities/assets/restaurant.reporting/1.1.0",
+    manifestDigest:
+      "sha256:400fb6c041e1f2f4191c779be37af2144ba7c8d8be5675dc16191d676fa7d221",
+    lifecycle: "golden",
+    bindingContract: "factory.capability-binding/v1",
+    profiles: ["restaurant-ordering"],
+    effects: ["report.restaurant.summary", "report.restaurant.low-stock"],
+    inputSchema: [
+      { key: "orderEntity", type: "domain.entity", required: true },
+      { key: "inventoryEntity", type: "domain.entity", required: true },
+      { key: "analyticsPage", type: "page.page", required: true },
+      { key: "merchantRole", type: "policy.role", required: true },
+    ],
+    outputSlots: [
+      "api.runtime",
+      "report.read-model",
+      "web.merchant",
+      "test.fixture",
+    ],
+    templates: [
+      {
+        id: "api-capability-module",
+        source: "templates/api/capability-module.ts.tpl",
+        target: "api/src/capabilities/restaurant.reporting.ts",
+        outputSlot: "api.runtime",
+        digest:
+          "sha256:f0d92517f5052d0791b9ba33f1be83d404ff8fac15d5b6612bb1da57bdf1215e",
+      },
+    ],
+    parameters: [
+      { key: "orderEntity", type: "graph-symbol", required: true },
+      { key: "inventoryEntity", type: "graph-symbol", required: true },
+      { key: "analyticsPage", type: "graph-symbol", required: true },
+      { key: "merchantRole", type: "graph-symbol", required: true },
+    ],
+    verification: {
+      fixture: "fixtures/default.json",
+      contractTest: "tests/contract.json",
+      status: "verified",
+    },
+  },
+};

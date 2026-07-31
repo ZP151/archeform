@@ -173,6 +173,7 @@ const capabilityManifestSchema = z
     packageRoot: z.string().min(1),
     manifestDigest: digestSchema,
     lifecycle: z.literal("golden"),
+    bindingContract: z.literal("factory.capability-binding/v1").optional(),
     profiles: z.array(
       z.enum([
         "expense-approval",

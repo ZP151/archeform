@@ -657,7 +657,7 @@ describe("capability catalog", () => {
       expect(asset?.manifest).toMatchObject({
         apiVersion: "factory.capability/v1",
         key,
-        version: "1.0.0",
+        version: key === "restaurant.menu" ? "1.0.0" : "1.1.0",
         category: "restaurant",
         lifecycle: "golden",
         profiles: ["restaurant-ordering"],
@@ -730,7 +730,7 @@ describe("capability catalog", () => {
   });
 
   it("verifies every registered capability manifest against its declared digest", () => {
-    expect(capabilityAssets).toHaveLength(33);
+    expect(capabilityAssets).toHaveLength(38);
     for (const asset of capabilityAssets) {
       expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     }

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   assertRestaurantOrderingProfile,
+  composeCapabilityDraft,
   composeDefaultCapabilityDraft,
   composeProfileDraft,
   createCapabilityCompositionLock,
@@ -120,6 +121,102 @@ describe("Restaurant Ordering profile", () => {
         "cashier-console",
         "restaurant-dashboard",
       ]),
+    );
+  });
+
+  it("locks strict v1.1 Restaurant package bindings for the active starter", () => {
+    const selections = composeDefaultCapabilityDraft({
+      profile: "restaurant-ordering",
+    }).graph.integration.compositionSelections;
+    const restaurantSelections = selections
+      ?.filter(({ lock }) => lock.key.startsWith("restaurant."))
+      .map(({ lock, bindings }) => ({
+        key: lock.key,
+        version: lock.version,
+        bindings,
+      }));
+
+    expect(restaurantSelections).toHaveLength(5);
+    expect(restaurantSelections).toEqual(
+      expect.arrayContaining([
+        {
+          key: "restaurant.table-session",
+          version: "1.1.0",
+          bindings: {
+            tableEntity: { graphSymbol: "graph.domain.restaurant-table" },
+            sessionEntity: { graphSymbol: "graph.domain.table-session" },
+            entryPage: { graphSymbol: "graph.page.table-entry" },
+            customerRole: { graphSymbol: "graph.policy.customer" },
+          },
+        },
+        {
+          key: "restaurant.ordering",
+          version: "1.1.0",
+          bindings: {
+            orderEntity: { graphSymbol: "graph.domain.order" },
+            orderLineEntity: { graphSymbol: "graph.domain.order-line" },
+            orderFlow: { graphSymbol: "graph.flow.restaurant-order" },
+            menuPage: { graphSymbol: "graph.page.customer-menu" },
+            cartPage: { graphSymbol: "graph.page.customer-cart" },
+            customerRole: { graphSymbol: "graph.policy.customer" },
+          },
+        },
+        {
+          key: "restaurant.kitchen",
+          version: "1.1.0",
+          bindings: {
+            ticketEntity: { graphSymbol: "graph.domain.kitchen-ticket" },
+            orderEntity: { graphSymbol: "graph.domain.order" },
+            kitchenPage: { graphSymbol: "graph.page.merchant-kitchen" },
+            merchantRole: { graphSymbol: "graph.policy.kitchen" },
+          },
+        },
+        {
+          key: "restaurant.cashier",
+          version: "1.1.0",
+          bindings: {
+            orderEntity: { graphSymbol: "graph.domain.order" },
+            paymentEntity: { graphSymbol: "graph.domain.payment-attempt" },
+            orderFlow: { graphSymbol: "graph.flow.restaurant-order" },
+            cashierPage: { graphSymbol: "graph.page.merchant-cashier" },
+            merchantRole: { graphSymbol: "graph.policy.cashier" },
+          },
+        },
+        {
+          key: "restaurant.reporting",
+          version: "1.1.0",
+          bindings: {
+            orderEntity: { graphSymbol: "graph.domain.order" },
+            inventoryEntity: { graphSymbol: "graph.domain.inventory-ledger" },
+            analyticsPage: { graphSymbol: "graph.page.merchant-analytics" },
+            merchantRole: { graphSymbol: "graph.policy.manager" },
+          },
+        },
+      ]),
+    );
+  });
+
+  it("rejects a strict Restaurant binding with the wrong Graph model", () => {
+    const activeDraft = composeDefaultCapabilityDraft({
+      profile: "restaurant-ordering",
+    });
+    const graph = structuredClone(activeDraft.graph);
+    delete graph.integration.compositionSelections;
+    const selections = activeDraft.graph.integration.compositionSelections!.map(
+      (selection) =>
+        selection.lock.key === "restaurant.table-session"
+          ? {
+              ...selection,
+              bindings: {
+                ...selection.bindings,
+                tableEntity: { graphSymbol: "graph.page.table-entry" },
+              },
+            }
+          : selection,
+    );
+
+    expect(() => composeCapabilityDraft({ graph, selections })).toThrow(
+      "must reference graph.domain",
     );
   });
 

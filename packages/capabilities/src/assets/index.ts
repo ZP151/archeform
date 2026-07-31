@@ -29,11 +29,16 @@ import { orderAssetV1_2_0 } from "./commerce/order-v1-2-0.js";
 import { simulatedPaymentAsset } from "./commerce/simulated-payment.js";
 import { simulatedPaymentAssetV1_0_1 } from "./commerce/simulated-payment-v1-0-1.js";
 import { restaurantTableSessionAsset } from "./restaurant/table-session.js";
+import { restaurantTableSessionAssetV1_1_0 } from "./restaurant/table-session-v1-1-0.js";
 import { restaurantMenuAsset } from "./restaurant/menu.js";
 import { restaurantOrderingAsset } from "./restaurant/ordering.js";
+import { restaurantOrderingAssetV1_1_0 } from "./restaurant/ordering-v1-1-0.js";
 import { restaurantKitchenAsset } from "./restaurant/kitchen.js";
+import { restaurantKitchenAssetV1_1_0 } from "./restaurant/kitchen-v1-1-0.js";
 import { restaurantCashierAsset } from "./restaurant/cashier.js";
+import { restaurantCashierAssetV1_1_0 } from "./restaurant/cashier-v1-1-0.js";
 import { restaurantReportingAsset } from "./restaurant/reporting.js";
+import { restaurantReportingAssetV1_1_0 } from "./restaurant/reporting-v1-1-0.js";
 
 export {
   auditAsset,
@@ -60,11 +65,16 @@ export {
   orderAssetV1_1_0,
   orderAssetV1_2_0,
   restaurantCashierAsset,
+  restaurantCashierAssetV1_1_0,
   restaurantKitchenAsset,
+  restaurantKitchenAssetV1_1_0,
   restaurantMenuAsset,
   restaurantOrderingAsset,
+  restaurantOrderingAssetV1_1_0,
   restaurantReportingAsset,
+  restaurantReportingAssetV1_1_0,
   restaurantTableSessionAsset,
+  restaurantTableSessionAssetV1_1_0,
   simulatedPaymentAsset,
   simulatedPaymentAssetV1_0_1,
   workflowAsset,
@@ -86,12 +96,12 @@ export const currentCapabilityAssets: readonly CapabilityAssetV1[] =
     inventoryLedgerAssetV1_0_0,
     orderAssetV1_2_0,
     simulatedPaymentAssetV1_0_1,
-    restaurantTableSessionAsset,
+    restaurantTableSessionAssetV1_1_0,
     restaurantMenuAsset,
-    restaurantOrderingAsset,
-    restaurantKitchenAsset,
-    restaurantCashierAsset,
-    restaurantReportingAsset,
+    restaurantOrderingAssetV1_1_0,
+    restaurantKitchenAssetV1_1_0,
+    restaurantCashierAssetV1_1_0,
+    restaurantReportingAssetV1_1_0,
   ]);
 
 export const capabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
@@ -110,4 +120,9 @@ export const capabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
   inventoryAssetV1_0_1,
   simulatedPaymentAsset,
   orderAsset,
+  restaurantTableSessionAsset,
+  restaurantOrderingAsset,
+  restaurantKitchenAsset,
+  restaurantCashierAsset,
+  restaurantReportingAsset,
 ]);

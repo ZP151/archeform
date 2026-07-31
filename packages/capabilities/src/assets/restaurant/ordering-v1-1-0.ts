@@ -1,0 +1,67 @@
+import type { CapabilityAssetV1 } from "../contract.js";
+
+export const restaurantOrderingAssetV1_1_0: CapabilityAssetV1 = {
+  manifest: {
+    apiVersion: "factory.capability/v1",
+    key: "restaurant.ordering",
+    version: "1.1.0",
+    category: "restaurant",
+    name: "Restaurant ordering",
+    description:
+      "Maintains order lines, submission, cancellation, and session history.",
+    packageRoot: "packages/capabilities/assets/restaurant.ordering/1.1.0",
+    manifestDigest:
+      "sha256:9f6af7bff7e06ac630a80ae781955c13145666f38492632a04eabe092dd8cf30",
+    lifecycle: "golden",
+    bindingContract: "factory.capability-binding/v1",
+    profiles: ["restaurant-ordering"],
+    effects: [
+      "order.line.add",
+      "order.line.update",
+      "order.line.remove",
+      "order.submit",
+      "order.cancel",
+      "order.history",
+    ],
+    inputSchema: [
+      { key: "orderEntity", type: "domain.entity", required: true },
+      { key: "orderLineEntity", type: "domain.entity", required: true },
+      { key: "orderFlow", type: "flow.flow", required: true },
+      { key: "menuPage", type: "page.page", required: true },
+      { key: "cartPage", type: "page.page", required: true },
+      { key: "customerRole", type: "policy.role", required: true },
+    ],
+    outputSlots: [
+      "api.runtime",
+      "api.command",
+      "database.schema",
+      "flow.effect",
+      "web.customer",
+      "realtime.event",
+      "test.fixture",
+    ],
+    templates: [
+      {
+        id: "api-capability-module",
+        source: "templates/api/capability-module.ts.tpl",
+        target: "api/src/capabilities/restaurant.ordering.ts",
+        outputSlot: "api.runtime",
+        digest:
+          "sha256:f0d92517f5052d0791b9ba33f1be83d404ff8fac15d5b6612bb1da57bdf1215e",
+      },
+    ],
+    parameters: [
+      { key: "orderEntity", type: "graph-symbol", required: true },
+      { key: "orderLineEntity", type: "graph-symbol", required: true },
+      { key: "orderFlow", type: "graph-symbol", required: true },
+      { key: "menuPage", type: "graph-symbol", required: true },
+      { key: "cartPage", type: "graph-symbol", required: true },
+      { key: "customerRole", type: "graph-symbol", required: true },
+    ],
+    verification: {
+      fixture: "fixtures/default.json",
+      contractTest: "tests/contract.json",
+      status: "verified",
+    },
+  },
+};

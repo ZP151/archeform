@@ -1,0 +1,11 @@
+{
+  "status": "verified",
+  "checks": [
+    "order.line.add",
+    "order.line.update",
+    "order.line.remove",
+    "order.submit",
+    "order.cancel",
+    "order.history"
+  ]
+}

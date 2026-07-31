@@ -1,0 +1,61 @@
+import type { CapabilityAssetV1 } from "../contract.js";
+
+export const restaurantTableSessionAssetV1_1_0: CapabilityAssetV1 = {
+  manifest: {
+    apiVersion: "factory.capability/v1",
+    key: "restaurant.table-session",
+    version: "1.1.0",
+    category: "restaurant",
+    name: "Restaurant table session",
+    description:
+      "Creates, validates, closes, and expires table-session boundaries.",
+    packageRoot: "packages/capabilities/assets/restaurant.table-session/1.1.0",
+    manifestDigest:
+      "sha256:9dff8a3a0348e30d19d2f2e62ce4dabab82885e2db80053791a6b6d30d3fdbf2",
+    lifecycle: "golden",
+    bindingContract: "factory.capability-binding/v1",
+    profiles: ["restaurant-ordering"],
+    effects: [
+      "table-session.create",
+      "table-session.validate",
+      "table-session.close",
+      "table-session.expire",
+    ],
+    inputSchema: [
+      { key: "tableEntity", type: "domain.entity", required: true },
+      { key: "sessionEntity", type: "domain.entity", required: true },
+      { key: "entryPage", type: "page.page", required: true },
+      { key: "customerRole", type: "policy.role", required: true },
+    ],
+    outputSlots: [
+      "api.runtime",
+      "api.command",
+      "database.schema",
+      "flow.effect",
+      "web.customer",
+      "web.merchant",
+      "test.fixture",
+    ],
+    templates: [
+      {
+        id: "api-capability-module",
+        source: "templates/api/capability-module.ts.tpl",
+        target: "api/src/capabilities/restaurant.table-session.ts",
+        outputSlot: "api.runtime",
+        digest:
+          "sha256:f0d92517f5052d0791b9ba33f1be83d404ff8fac15d5b6612bb1da57bdf1215e",
+      },
+    ],
+    parameters: [
+      { key: "tableEntity", type: "graph-symbol", required: true },
+      { key: "sessionEntity", type: "graph-symbol", required: true },
+      { key: "entryPage", type: "graph-symbol", required: true },
+      { key: "customerRole", type: "graph-symbol", required: true },
+    ],
+    verification: {
+      fixture: "fixtures/default.json",
+      contractTest: "tests/contract.json",
+      status: "verified",
+    },
+  },
+};

@@ -273,8 +273,27 @@ function assertCompositionGraphSymbols(
   graph: ApplicationGraphV1,
   composition: CapabilityCompositionV1,
 ): void {
+  const graphModelForBindingInput: Readonly<
+    Record<string, string | undefined>
+  > = {
+    "domain.entity": "domain",
+    "domain.field": "domain",
+    "page.page": "page",
+    "page.navigation": "page",
+    "policy.role": "policy",
+    "flow.flow": "flow",
+    "integration.provider": "integration",
+    "experience.token": "experience",
+  };
   const symbols = graphSymbolIds(graph);
   for (const selectedPackage of composition.packages) {
+    const manifest = resolveCapabilityAssetLock(selectedPackage.lock).manifest;
+    const expectedModels = new Map(
+      manifest.inputSchema.map(({ key, type }) => [
+        key,
+        graphModelForBindingInput[type],
+      ]),
+    );
     for (const [bindingKey, bindingValue] of Object.entries(
       selectedPackage.bindings,
     )) {
@@ -283,6 +302,12 @@ function assertCompositionGraphSymbols(
       if (!model || !id || !symbols[model]?.has(id)) {
         throw new Error(
           `Graph symbol '${bindingValue.graphSymbol}' does not exist in the base Graph for capability package '${selectedPackage.lock.key}' binding '${bindingKey}'.`,
+        );
+      }
+      const expectedModel = expectedModels.get(bindingKey);
+      if (expectedModel !== undefined && model !== expectedModel) {
+        throw new Error(
+          `Capability package '${selectedPackage.lock.key}' binding '${bindingKey}' must reference graph.${expectedModel}.`,
         );
       }
     }
@@ -938,15 +963,39 @@ const baseProfileCompositionBindings: Readonly<
       locationCodeField: { graphSymbol: "graph.domain.code" },
       customerRole: { graphSymbol: "graph.policy.customer" },
     },
-    // These verified v1 packages predate strict binding contracts. Explicit
-    // empty maps let the active Composer lock the real package identities
-    // without inventing undeclared parameters. They are replaced by typed
-    // bindings in the follow-up package-contract migration.
-    "restaurant.table-session": {},
-    "restaurant.ordering": {},
-    "restaurant.kitchen": {},
-    "restaurant.cashier": {},
-    "restaurant.reporting": {},
+    "restaurant.table-session": {
+      tableEntity: { graphSymbol: "graph.domain.restaurant-table" },
+      sessionEntity: { graphSymbol: "graph.domain.table-session" },
+      entryPage: { graphSymbol: "graph.page.table-entry" },
+      customerRole: { graphSymbol: "graph.policy.customer" },
+    },
+    "restaurant.ordering": {
+      orderEntity: { graphSymbol: "graph.domain.order" },
+      orderLineEntity: { graphSymbol: "graph.domain.order-line" },
+      orderFlow: { graphSymbol: "graph.flow.restaurant-order" },
+      menuPage: { graphSymbol: "graph.page.customer-menu" },
+      cartPage: { graphSymbol: "graph.page.customer-cart" },
+      customerRole: { graphSymbol: "graph.policy.customer" },
+    },
+    "restaurant.kitchen": {
+      ticketEntity: { graphSymbol: "graph.domain.kitchen-ticket" },
+      orderEntity: { graphSymbol: "graph.domain.order" },
+      kitchenPage: { graphSymbol: "graph.page.merchant-kitchen" },
+      merchantRole: { graphSymbol: "graph.policy.kitchen" },
+    },
+    "restaurant.cashier": {
+      orderEntity: { graphSymbol: "graph.domain.order" },
+      paymentEntity: { graphSymbol: "graph.domain.payment-attempt" },
+      orderFlow: { graphSymbol: "graph.flow.restaurant-order" },
+      cashierPage: { graphSymbol: "graph.page.merchant-cashier" },
+      merchantRole: { graphSymbol: "graph.policy.cashier" },
+    },
+    "restaurant.reporting": {
+      orderEntity: { graphSymbol: "graph.domain.order" },
+      inventoryEntity: { graphSymbol: "graph.domain.inventory-ledger" },
+      analyticsPage: { graphSymbol: "graph.page.merchant-analytics" },
+      merchantRole: { graphSymbol: "graph.policy.manager" },
+    },
   },
   "simple-ecommerce": {
     "core.audit": {

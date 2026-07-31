@@ -1,0 +1,9 @@
+{
+  "status": "verified",
+  "checks": [
+    "kitchen.ticket.create",
+    "kitchen.ticket.accept",
+    "kitchen.ticket.prepare",
+    "kitchen.ticket.ready"
+  ]
+}

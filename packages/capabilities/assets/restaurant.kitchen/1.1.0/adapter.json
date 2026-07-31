@@ -1,0 +1,36 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": [
+    "api.runtime",
+    "api.command",
+    "database.schema",
+    "flow.effect",
+    "web.merchant",
+    "realtime.event",
+    "test.fixture"
+  ],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/restaurant.kitchen.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:f0d92517f5052d0791b9ba33f1be83d404ff8fac15d5b6612bb1da57bdf1215e"
+    }
+  ],
+  "parameters": [
+    { "key": "ticketEntity", "type": "graph-symbol", "required": true },
+    { "key": "orderEntity", "type": "graph-symbol", "required": true },
+    { "key": "kitchenPage", "type": "graph-symbol", "required": true },
+    { "key": "merchantRole", "type": "graph-symbol", "required": true }
+  ],
+  "contributes": {
+    "effects": [
+      "kitchen.ticket.create",
+      "kitchen.ticket.accept",
+      "kitchen.ticket.prepare",
+      "kitchen.ticket.ready"
+    ]
+  }
+}

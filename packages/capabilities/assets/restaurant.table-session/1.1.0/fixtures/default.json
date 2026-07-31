@@ -1,0 +1,4 @@
+{
+  "table": { "code": "T-01", "number": 1, "status": "seated" },
+  "session": { "status": "active", "guestCount": 2 }
+}
