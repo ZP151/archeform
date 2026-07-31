@@ -84,3 +84,42 @@ business semantics.
 3. **Vertical examples:** Schema.org, iCalendar, and EPCIS are interoperability
    references, not internal models. Cal.com, pretix, and Open Food Facts are
    not admissible code, runtime, or data shortcuts under the current policy.
+
+## 2026-08-01 composable Profile portfolio evidence
+
+**Decision investigated.** Whether public ecosystems can accelerate a path to
+100+ composable, production-relevant Profile recipes without external products,
+source trees, provider records, or Candidate records becoming Factory's source
+of truth.
+
+### Durable observed facts
+
+1. The reviewed fixed-reference portfolio contains 43 public references across
+   restaurant/POS, commerce, CRM, appointments, ticketing, learning, healthcare
+   administration, inventory/warehouse, fleet/logistics, HR, property,
+   accounting, support/knowledge/CMS, and platform services. Its exclusive
+   classifications are 1 direct-dependency, 7 provider, 11 bounded-source,
+   8 pattern-only, and 16 excluded. The 108 scenario mappings are explicitly
+   demand metadata, not Candidates or Profile implementations. [Portfolio
+   record](../ecosystem/portfolio/2026-07-30-external-business-logic.json)
+2. The accepted External Intake design permits automated fixed-ref acquisition,
+   hashing, notice capture, offline scanning, module inventory, quarantined
+   Candidate evidence, and isolated Factory-owned conformance only. It forbids
+   automated licence approval, finding waiver, source copying, dependency
+   installation, provider activation, Graph mutation, Golden registration, or
+   compilation linkage. [Design](superpowers/specs/2026-07-31-external-capability-intake-design.md)
+3. Candidate records use `factory.candidate-capability/v1`, have no Graph or
+   compiler visibility, and remain quarantined even when conformance passes.
+   Only an independently authored, reviewed Golden asset can later be selected
+   by a Draft and compile after Publish. [Design](superpowers/specs/2026-07-31-external-capability-intake-design.md)
+
+### Factory inference and decision effect
+
+The portfolio should be used to validate a small, permission-aware capability
+kernel and compose typed recipes, not to recreate or import vertical
+applications. Treat a recipe count as coverage planning only: production
+readiness still requires Factory-owned semantics, Published-Revision
+compilation, permission/failure/audit evidence, relevant security or regulatory
+review, and (where used) exact ecosystem promotion evidence and a removal path.
+The detailed source map and 30-day recipe staging are in
+[the portfolio memo](research/2026-08-01-profile-ecosystem-portfolio.md).
