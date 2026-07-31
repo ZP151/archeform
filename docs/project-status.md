@@ -5,14 +5,15 @@ Updated: 2026-07-31
 ## Current milestone
 
 Commercial Capability Foundation Task 2, **Restaurant and Ecommerce profile
-recipes**, is `ready_for_qa`. Its exact release set is implementation
-`35aa96e` plus repair commits `ed3c2ba` and `ac43247`. Its contract owner is
-Profile Composition Integration; its dependency, Task 1 capability contracts
-and physical packages, is `accepted` and frozen. Task 2 remains limited to
-composing Restaurant and Ecommerce Draft recipes from the same four accepted
-Foundation identities with distinct exact Graph-symbol bindings, entities,
-pages, roles, labels, and fixtures. This transition is not acceptance and does
-not unlock Foundation Tasks 3 or 4; both remain `planned`.
+recipes**, returned `ready_for_qa -> implementing` for fix round 3 of 5 after
+release review found four P1 semantic defects in the exact release set
+`35aa96e + ed3c2ba + ac43247`. Its contract owner remains Profile Composition
+Integration; its dependency, Task 1 capability contracts and physical
+packages, remains `accepted` and frozen. Task 2 remains limited to composing
+Restaurant and Ecommerce Draft recipes from the same four accepted Foundation
+identities with distinct exact Graph-symbol bindings, entities, pages, roles,
+labels, and fixtures. This repair state is not acceptance and does not unlock
+Foundation Tasks 3 or 4; both remain `planned`.
 
 The Application Graph remains the source of truth. External intake artifacts
 remain quarantined Candidate evidence or pending-review packets; they are not
@@ -42,6 +43,10 @@ within its exact five paths:
   `capability-registry`, `restaurant-profile`, and
   `commercial-profile-composition`; Capabilities typecheck and formatting also
   passed.
+- Subsequent release review found four P1 semantic defects not covered by that
+  scoped evidence. The earlier task-review and verification results remain
+  historical evidence only; they do not support QA or acceptance while these
+  findings are open.
 
 The complete External Capability Intake project is accepted and frozen. Its
 Task 6 writer record is
@@ -74,8 +79,8 @@ On Node `v22.11.0`, it records:
 
 ## Active work
 
-- Independent behavioral QA is the next gate for Task 2's exact release set
-  `35aa96e + ed3c2ba + ac43247`, bounded to these five paths:
+- One bounded `integration` writer owns fix round 3 of 5 within Task 2's same
+  exact five paths:
   `packages/capabilities/src/index.ts`,
   `packages/capabilities/src/restaurant/profile.ts`,
   `packages/capabilities/test/restaurant-profile.test.ts`, and
@@ -92,10 +97,26 @@ On Node `v22.11.0`, it records:
   contract, physical asset, package identity, interface, dependency, recipe
   scope, lifecycle or Publish behavior, production behavior, non-goal, or Task
   2 state.
-- Task 2 now awaits QA of the same four accepted identities, distinct validated
-  Graph symbols and output semantics, canonical nonempty locks, deterministic
-  dependency order, PolicyModel permissions, exact provider ownership, and
-  fail-closed invalid-symbol behavior.
+- Release review requires fix round 3 to close these four P1 categories:
+  1. Simple Ecommerce mixes `customer`/`shopper` and `operator`/`merchant`
+     authorization, so one customer or merchant principal cannot complete its
+     coherent end-to-end journey.
+  2. Composition validates PolicyModel requirements only for
+     `commerce.line-configuration`; missing authorization for identity,
+     location, and inventory-ledger bindings does not fail closed.
+  3. Restaurant binds `commerce.inventory-ledger` to a movement entity without
+     the required location reference, unique idempotency key/index, and
+     location relation needed by the accepted package contract.
+  4. The full Restaurant composition has an undeclared fourth overlapping
+     provider effect: both `restaurant.menu` and
+     `commerce.inventory-ledger` provide `inventory.adjust`, while the reduced
+     default-recipe provider regression does not exercise that path.
+- The repair must keep canonical Ecommerce roles coherent across bindings,
+  transitions, and permissions; validate authorization requirements for all
+  four Foundation packages; make the Restaurant movement binding satisfy the
+  accepted contract; and enforce provider-overlap policy on the full profile
+  composition. These are semantic corrections under the frozen contract, not
+  authority to change it.
 - No new package identity, Task 1 contract change, compiler, Workbench,
   generated runtime, payment, identity-provider, deployment behavior, profile
   cloning, Graph `assetLocks` fallback, or Restaurant-only package fork is in
@@ -114,8 +135,8 @@ On Node `v22.11.0`, it records:
   evidence. Acceptance grants no promotion, approval, Golden, Graph, compiler,
   generated-runtime, provider, or source-copy authority.
 - Foundation Tasks 3 and 4 are blocked on accepted Task 2 profile composition
-  metadata. A `ready_for_qa` transition does not satisfy that dependency;
-  neither downstream task is dispatched by this update.
+  metadata. Task 2 is back in `implementing`; neither downstream task is
+  dispatched by this update.
 
 ## Risks and limitations
 
@@ -130,16 +151,18 @@ On Node `v22.11.0`, it records:
   deterministic recipe evidence are the gate.
 - Task 2 intentionally records `commerce.inventory` and
   `commerce.inventory-ledger` as co-providers of `inventory.reserve`,
-  `inventory.release`, and `inventory.decrement`. Before future Task 3
-  implementation, its compiler/runtime slice must define and prove
-  lock-derived inventory resolution that cannot double-execute a stock
-  movement or select behavior by profile name. This is a downstream risk, not
-  authority to start Task 3.
+  `inventory.release`, and `inventory.decrement`, but release review found an
+  undeclared fourth overlap on `inventory.adjust` in the full Restaurant
+  composition. Fix round 3 must reject or remove that undeclared overlap.
+  Before future Task 3 implementation, its compiler/runtime slice must still
+  define and prove lock-derived inventory resolution that cannot double-execute
+  a stock movement or select behavior by profile name. This is a downstream
+  risk, not authority to start Task 3.
 
 ## Next slice
 
-Run independent behavioral QA against Task 2's exact release set and five-path
-scope, including permission, cross-profile, exact-provider, deterministic-lock,
-and fail-closed regressions. Reconcile QA before any move to `reviewed`. Keep
-Tasks 3 and 4 planned until Task 2 is accepted, and carry the inventory
-co-provider resolution risk into the future Task 3 gate.
+Repair Task 2's four release-review P1 categories within the exact five-path
+boundary, beginning with focused failing role-journey, remove-one-permission,
+movement-entity, and full-profile overlap tests. Require fresh scoped review
+before returning to `ready_for_qa`. Keep Tasks 3 and 4 planned and blocked until
+Task 2 is accepted.
