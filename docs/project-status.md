@@ -8,15 +8,17 @@ Typed Capability Binding Validation is the current hardening milestone.
 ADR-0006 is `Accepted` under Factory controller authority; its approved design,
 implementation plan, and six-task ledger now govern the work. All six tasks are
 governed by the accepted dependency chain. Task 1, **pure typed Graph symbol
-index**, returned to `implementing` for bounded repair round 1. Implementation
+index**, is `ready_for_qa` after bounded repair round 1. Original implementation
 commit
 `86d5a00f26d5f331764de0e8bf7694e657cd2514` passed independent Task 1 review
 and behavioral QA with no P0/P1/P2, but release review then found one
-load-bearing P1 in duplicate navigation/flow identifier handling. The same
-bounded writer, Typed Graph Index Integration, retains the unchanged Application
-Graph Type System contract and exact four Graph paths. Tasks 2 through 5 remain
-`planned` and serialized on acceptance of the preceding contract task. Task 6
-remains `planned` and begins only after Tasks 1 through 5 are all `accepted`.
+load-bearing P1 in duplicate navigation/flow identifier handling. Repair commit
+`784ebb0b3f30d3dad4cb7cc6ac7b4f1efc42fa50` passed independent re-review with
+no P0/P1/P2. The same bounded writer, Typed Graph Index Integration, retains the
+unchanged Application Graph Type System contract and exact four Graph paths.
+Tasks 2 through 5 remain `planned` and serialized on acceptance of the
+preceding contract task. Task 6 remains `planned` and begins only after Tasks 1
+through 5 are all `accepted`.
 
 Commercial Capability Foundation Task 2 remains `implementing` and escalated
 after its five permitted repair rounds. It is blocked on accepted Typed
@@ -88,6 +90,18 @@ Typed Binding Task 1 implementation, review, and QA evidence is:
 - The PM returned Task 1 `reviewed -> implementing` and authorized bounded
   repair round 1. Earlier task-review and QA evidence remains historical but
   cannot support acceptance while this finding is open.
+- Repair commit `784ebb0b3f30d3dad4cb7cc6ac7b4f1efc42fa50`
+  makes generic indexing fail closed on duplicate keys and adds semantic
+  duplicate navigation-entry-ID and flow-ID issues. The repair changes only
+  `packages/graph/src/model.ts` and
+  `packages/graph/test/application-graph.test.ts`.
+- Fresh Node `v22.11.0` verification passed 32/32 focused application/browser
+  tests and 32/32 full Graph tests, plus Graph typecheck, lint, build, and
+  repair diff checks.
+- Independent re-review of
+  `7a0ee76e620d92032c07c7272d2b637e6835a8cc..784ebb0b3f30d3dad4cb7cc6ac7b4f1efc42fa50`
+  returned PASS with no P0/P1/P2. The PM reconciled this as sufficient only for
+  `implementing -> ready_for_qa`.
 
 Commercial Capability Foundation Task 1 is accepted and frozen. Its verified
 `1.0.0` identities are `core.identity-context`, `core.location-context`,
@@ -219,17 +233,18 @@ On Node `v22.11.0`, it records:
 
 ## Active work
 
-- Typed Binding Task 1 is `implementing` repair round 1 under the accepted ADR,
-  design, plan, and project ledger. The bounded writer remains Typed Graph Index
-  Integration and the contract owner remains Application Graph Type System.
+- Typed Binding Task 1 is `ready_for_qa` after repair round 1 under the accepted
+  ADR, design, plan, and project ledger. The bounded writer remains Typed Graph
+  Index Integration and the contract owner remains Application Graph Type
+  System.
 - Task 1's exact allowed paths are:
   `packages/graph/src/model.ts`, `packages/graph/src/index.ts`,
   `packages/graph/src/browser.ts`, and
   `packages/graph/test/application-graph.test.ts`.
-- Repair round 1 must begin with focused failing tests for duplicate
-  navigation-entry IDs and duplicate flow IDs, then make semantic validation
-  and indexing fail closed without changing Graph serialization or importing a
-  capability contract.
+- Independent repair-round QA must prove duplicate navigation-entry and flow
+  IDs fail closed through public validation, parsing, and indexing; re-run
+  owner-aware and isolated-namespace probes; run full Graph tests, typecheck,
+  lint, and build; and confirm browser/import isolation.
 - Typed Binding Task 2 remains `planned` until Task 1 is `accepted`; Tasks 3,
   4, and 5 remain serially blocked on acceptance of their preceding tasks.
   Task 6 remains `planned` until Tasks 1 through 5 are all `accepted`.
@@ -254,11 +269,10 @@ On Node `v22.11.0`, it records:
 - Foundation Tasks 3 and 4 are blocked on accepted Task 2 profile composition
   metadata. Task 2 is back in `implementing` and escalated; neither downstream
   task is dispatched by this update.
-- Typed Binding Task 1 release review is blocked by the verified duplicate-ID
-  P1. Repair round 1 is authorized only within the existing four Graph paths
-  and must pass independent task re-review before returning to QA. Tasks 2
-  through 5 remain `planned` and cannot overlap or start before the preceding
-  task is `accepted`.
+- Typed Binding Task 1 awaits independent repair-round QA against commit
+  `784ebb0b3f30d3dad4cb7cc6ac7b4f1efc42fa50`. Tasks 2 through 5 remain
+  `planned` and cannot overlap or start before the preceding task is
+  `accepted`.
 - Typed Binding Task 6 cannot start before Tasks 1 through 5 are all
   `accepted`. Its acceptance does not automatically accept Commercial
   Foundation Task 2; the PM must reconcile that parent state separately.
@@ -293,9 +307,10 @@ On Node `v22.11.0`, it records:
   requirements, publish safe assets, or enforce binding semantics at Draft,
   Publish, or compiler admission. Tasks 2 through 5 are still required before
   the parent defect can be closed.
-- Duplicate navigation-entry or flow IDs currently pass semantic validation,
-  and `indexBy` silently retains the last declaration. Until repair round 1 is
-  verified, those typed namespaces are ambiguous and Task 1 cannot be accepted.
+- Repair round 1 rejects duplicate navigation-entry and flow IDs and makes
+  `indexBy` fail closed, but independent re-QA and release review have not yet
+  reconciled the former P1. Task 1 cannot be accepted on implementation and
+  re-review evidence alone.
 - New safe versions must be created and digest-verified; accepted historical
   package roots and locks cannot be edited in place. Current recipes must
   migrate through a new Draft revision.
@@ -304,9 +319,9 @@ On Node `v22.11.0`, it records:
 
 ## Next slice
 
-Implement Typed Binding Task 1 repair round 1 under the unchanged four-path
-boundary. Begin with focused RED tests for duplicate navigation-entry and flow
-IDs, make semantic validation and indexing fail closed, and prepare bounded
-verification for independent task re-review. Leave Typed Binding Tasks 2
-through 6 `planned`. Keep Commercial Foundation Task 2 `implementing` and
-escalated and Tasks 3 and 4 `planned` and blocked.
+Run independent repair-round QA for Typed Binding Task 1 against commit
+`784ebb0b3f30d3dad4cb7cc6ac7b4f1efc42fa50`. Verify public duplicate-ID
+fail-closed behavior, owner/namespace regressions, full Graph gates, and browser
+isolation. Leave Typed Binding Tasks 2 through 6 `planned`. Keep Commercial
+Foundation Task 2 `implementing` and escalated and Tasks 3 and 4 `planned` and
+blocked.

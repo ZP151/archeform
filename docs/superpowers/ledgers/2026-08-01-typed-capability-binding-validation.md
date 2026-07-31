@@ -75,7 +75,10 @@ not acceptance.
   with no P0/P1/P2. Independent behavioral QA also passed with no P0/P1/P2.
   Release review then found one load-bearing P1 in duplicate identifier
   handling. The PM recorded `reviewed -> implementing` and authorized repair
-  round 1 by the same bounded writer; Task 1 is not accepted.
+  round 1 by the same bounded writer. Repair commit
+  `784ebb0b3f30d3dad4cb7cc6ac7b4f1efc42fa50` passed independent re-review
+  with no P0/P1/P2. The PM recorded `implementing -> ready_for_qa`; Task 1 is
+  not accepted.
 - Tasks 2 through 6 remain `planned`; none is dispatched by this transition.
 - No frontend/backend parallel implementation is permitted in this project.
 - Commercial Capability Foundation Task 2 remains `implementing` and
@@ -86,18 +89,18 @@ not acceptance.
 
 ## Project state
 
-| Task                                           | State          | Specialization | Contract owner                               | Contract status                                     |
-| ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | --------------------------------------------------- |
-| 1. Pure typed Graph symbol index               | `implementing` | `integration`  | Application Graph Type System                | Release P1 open; bounded repair round 1 authorized. |
-| 2. Typed manifest and binding contracts        | `planned`      | `integration`  | Capability Binding Contract                  | Blocked on accepted Task 1 index contract.          |
-| 3. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 2 manifest contract.       |
-| 4. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-3.                      |
-| 5. Graph-aware Publish and compiler admission  | `planned`      | `backend`      | Published Graph and Compiler Admission       | Blocked on accepted Tasks 1-4.                      |
-| 6. Current recipe migration and acceptance     | `planned`      | `integration`  | Typed Binding Migration and Release Evidence | Blocked on accepted Tasks 1-5.                      |
+| Task                                           | State          | Specialization | Contract owner                               | Contract status                                              |
+| ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | ------------------------------------------------------------ |
+| 1. Pure typed Graph symbol index               | `ready_for_qa` | `integration`  | Application Graph Type System                | Repair round 1 and independent re-review passed; re-QA next. |
+| 2. Typed manifest and binding contracts        | `planned`      | `integration`  | Capability Binding Contract                  | Blocked on accepted Task 1 index contract.                   |
+| 3. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 2 manifest contract.                |
+| 4. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-3.                               |
+| 5. Graph-aware Publish and compiler admission  | `planned`      | `backend`      | Published Graph and Compiler Admission       | Blocked on accepted Tasks 1-4.                               |
+| 6. Current recipe migration and acceptance     | `planned`      | `integration`  | Typed Binding Migration and Release Evidence | Blocked on accepted Tasks 1-5.                               |
 
 ## Task 1: Add a pure typed Graph symbol index
 
-- **State:** `implementing` (repair round 1)
+- **State:** `ready_for_qa` (repair round 1)
 - **Specialization:** `integration`
 - **Bounded writer:** Typed Graph Index Integration
 - **Contract owner:** Application Graph Type System
@@ -210,6 +213,47 @@ not acceptance.
 - Repair round 1 requires independent task re-review before the PM can return
   Task 1 to `ready_for_qa`.
 
+### Repair implementation and re-review evidence
+
+- Repair commit `784ebb0b3f30d3dad4cb7cc6ac7b4f1efc42fa50`
+  (`fix: reject ambiguous graph symbols`) is a direct child of repair
+  authorization `7a0ee76e620d92032c07c7272d2b637e6835a8cc`.
+- The repair changes only `packages/graph/src/model.ts` and
+  `packages/graph/test/application-graph.test.ts`, both inside the unchanged
+  four-path Task 1 boundary.
+- `indexBy` now throws `GraphSemanticError` on a duplicate key instead of
+  retaining the last declaration. Semantic parse and validation now report
+  duplicate navigation-entry IDs and duplicate flow IDs.
+- Focused regressions prove `validateApplicationGraph`,
+  `parseApplicationGraph`, and `createGraphSymbolIndex` all fail closed for
+  each affected identifier class.
+- Fresh Node `v22.11.0` verification passed 32/32 focused application/browser
+  tests and 32/32 full Graph tests. Graph typecheck, lint, build, and repair
+  diff checks passed.
+- Independent re-review of
+  `7a0ee76e620d92032c07c7272d2b637e6835a8cc..784ebb0b3f30d3dad4cb7cc6ac7b4f1efc42fa50`
+  returned PASS with no P0/P1/P2. The PM records
+  `implementing -> ready_for_qa`.
+- This evidence is not repair-round behavioral QA, release review, or
+  acceptance.
+
+### Repair-round QA scope
+
+- Run independent QA against repair commit
+  `784ebb0b3f30d3dad4cb7cc6ac7b4f1efc42fa50` and verify the exact-path diff.
+- On Node `v22.11.0`, run the full Graph tests, typecheck, lint, and build,
+  including the browser-entry regression.
+- Through the public built browser entry, prove duplicate navigation-entry and
+  flow IDs fail closed at validation, parsing, and indexing; neither declaration
+  may resolve by order.
+- Re-run owner-scoped duplicate/wrong/missing-field assertions and isolated
+  namespace assertions to ensure the generic `indexBy` hardening preserves
+  valid typed lookup behavior.
+- Confirm browser/model source and built output remain free of Node builtins and
+  `@factory/capabilities` imports.
+- Report P0/P1/P2 findings and evidence limitations. Any load-bearing finding
+  returns Task 1 to `implementing` after PM reconciliation.
+
 ### Non-goals
 
 - No capability-manifest import or validation in `@factory/graph`.
@@ -225,9 +269,9 @@ not acceptance.
   typed names remain separate, duplicate field keys across entities are safe,
   and browser exports remain Node-builtin-free.
 - The original Graph verification, task review, and behavioral QA passed, but
-  release review exposed the open duplicate-identifier P1. Repair, independent
-  re-review, re-QA, release review, and fresh verification are required before
-  `accepted`.
+  release review exposed the duplicate-identifier P1. Repair round 1 and
+  independent re-review now pass; re-QA, release review, and fresh verification
+  are required before `accepted`.
 
 ## Task 2: Freeze typed manifest and binding contracts
 
@@ -451,14 +495,12 @@ not acceptance.
 - Runtime atomicity and exactly-once stock execution across intentional
   inventory co-providers remain Commercial Foundation Task 3 scope and are not
   proven by this project.
-- This PM transition authorizes only Task 1 repair round 1 by Typed Graph Index
-  Integration in the existing exact four paths. It authorizes no Task 2-6
-  implementation.
+- This PM transition authorizes only independent repair-round QA of Task 1 at
+  commit `784ebb0b3f30d3dad4cb7cc6ac7b4f1efc42fa50`. It authorizes no
+  product-code change and no Task 2-6 implementation.
 
 ## Next smallest valuable slice
 
-Implement Task 1 repair round 1 under the unchanged Application Graph Type
-System contract and exact four paths. Begin with focused RED tests for duplicate
-navigation-entry and flow IDs, make semantic validation and indexing fail
-closed, and prepare bounded verification for independent task re-review. Keep
+Run independent Task 1 repair-round QA against commit
+`784ebb0b3f30d3dad4cb7cc6ac7b4f1efc42fa50` using the scope above. Keep
 `@factory/graph` capability-manifest-independent and leave Tasks 2-6 `planned`.
