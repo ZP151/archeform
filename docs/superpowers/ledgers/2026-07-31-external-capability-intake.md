@@ -117,9 +117,13 @@ review-input contract clarification. Independent review of Task 5 implementation
 commit `37b4a05` did not clear the implementation gate. The Controller accepted
 one bounded remediation amendment that adds only the internal Store reader and
 its focused test path to the original six paths. Task 5 remains `implementing`
-with exactly eight paths; fresh task review, QA, release review, and final
-verification remain required. Task 6 remains `planned`. The system will ingest
-the 43 fixed-reference
+with exactly eight paths. Independent review of remediation commit `d2f20b5`
+then found one P1: proposed-copy coverage used only a source path even though
+Candidate module identity is the `(path, symbol)` pair. The Controller
+authorized the bounded composite-identity clarification recorded in the Task 5
+card, with no path, dependency, or state change. Fresh task review, QA, release
+review, and final verification remain required. Task 6 remains `planned`. The
+system will ingest the 43 fixed-reference
 portfolio as metadata, retain the 108 scenarios as composition demand signals,
 and produce only quarantined evidence, non-executable Candidate records, and
 pending-review promotion packets.
@@ -1868,6 +1872,34 @@ may claim only new RED and GREEN commands actually executed during the
 remediation. Reports remain sanitized operational evidence: no credentials,
 raw prompts/responses, source bytes/text, or raw scanner reports.
 
+### Controller-accepted proposed-copy module identity clarification
+
+Independent review of remediation commit `d2f20b5` found one P1: exact
+proposed-copy coverage was keyed only by source path, while Candidate module
+identity is the `(path, symbol)` pair. Task 5 remains `implementing`. The
+Controller authorizes this bounded clarification inside the same eight paths
+and dependency set.
+
+Review proposed-copy range groups and packet module evidence add optional
+`symbol`, using the same permitted symbol grammar as the Candidate manifest.
+The exact coverage identity is `${path}\0${symbol ?? ""}`. There must be
+exactly one range group for every Candidate `selectedModules` entry whose
+purpose is `proposed-copy`.
+
+The same source path may occur more than once only when the symbols differ.
+A duplicate `(path, symbol)`, a missing identity, or substitution of one
+symbol's range group for another fails closed. Source snapshot digest, fatal
+UTF-8, NUL rejection, LF line-count, bounded endpoint, and per-range digest
+checks remain required independently for every group. Packet module evidence
+contains only the exact path, optional symbol, range count, and range digests;
+it never contains source bytes or text.
+
+Focused tests must prove same-path/different-symbol proposed-copy groups
+succeed and that missing, duplicate, and cross-symbol-substitution groups fail.
+No new path, dependency, public export, approval, source-copy execution,
+Golden/Graph/compiler linkage, provider activation, or Task 6 behavior is
+authorized.
+
 ### Exact allowed paths
 
 - `packages/external-intake/src/promotion.ts`
@@ -1897,10 +1929,13 @@ raw prompts/responses, source bytes/text, or raw scanner reports.
   `decision: "pending-review"`.
 - **Exact source-copy proof:** tests cover mode `none`, every
   `selectedModules` entry with `purpose: "proposed-copy"` exactly once,
-  dependency/provider modules excluded from copy selection,
-  missing/duplicate/extra coverage, fatal UTF-8, NUL rejection, LF line-count
-  boundaries, bounded range endpoints, per-range digest mismatch, and packet
-  absence of source bytes/text.
+  keyed by `${path}\0${symbol ?? ""}` with the Candidate symbol grammar.
+  Same-path/different-symbol groups succeed; same-pair duplicates, missing
+  identities, extra coverage, and cross-symbol substitution fail.
+  Dependency/provider modules remain excluded from copy selection. Fatal
+  UTF-8, NUL rejection, LF line-count boundaries, bounded range endpoints,
+  per-range digest mismatch, and packet absence of source bytes/text remain
+  required for each group.
 - **Candidate/proposal separation:** tests prove the Candidate manifest remains
   present and digest-bound while distinct `factoryProposal` rejects
   `candidate.*`, remains pending, binds identity/classification, and maps every
