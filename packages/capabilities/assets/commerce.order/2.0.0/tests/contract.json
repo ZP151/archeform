@@ -1,0 +1,12 @@
+{
+  "contracts": [
+    "factory.order-create-handler/v1",
+    "factory.transaction-operation-adapter/v1"
+  ],
+  "semantics": [
+    "validated-initial-draft",
+    "typed-order-transition",
+    "bounded-context",
+    "store-inside-transaction"
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "orderId": "order-1",
+  "expectedVersion": 0,
+  "transition": "submit",
+  "idempotencyKey": "submit-1",
+  "payloadDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}
