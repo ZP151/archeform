@@ -40,6 +40,12 @@ export {
   type PortfolioCandidateProposalInputV1,
 } from "./portfolio-candidate-proposal.js";
 export {
+  createCandidatePortPlan,
+  type CandidatePortPlanV1,
+  type CandidatePortReuseModeV1,
+  type CreateCandidatePortPlanInputV1,
+} from "./candidate-port-plan.js";
+export {
   ExternalIntakeStore,
   type StoredBlobRef,
   type StoredRecordRef,
