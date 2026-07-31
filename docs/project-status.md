@@ -5,10 +5,10 @@ Updated: 2026-07-31
 ## Current milestone
 
 External Capability Intake Task 6, **Bulk acceptance and release evidence**, is
-in `implementing` under the Controller-authorized release repair at PM ledger
-commit `a9867b8`. Historical independent behavioral QA moved the slice from
-`ready_for_qa` to `reviewed`; the subsequent release review failed with two P2
-findings and no P0/P1 finding. Only the PM changes the ledger state.
+in `implementing` for the bounded documentation-status repair at PM ledger
+commit `f1f1a04`. Independent re-QA at `43913ae` passed all behavioral and
+quality gates but failed overall solely on one stale present-tense status P2,
+with no P0/P1. Only the PM changes the ledger state.
 
 The Application Graph remains the source of truth. External intake artifacts
 remain quarantined Candidate evidence or pending-review packets; they are not
@@ -29,30 +29,34 @@ On Node `v22.11.0`, it records:
   Graph, and compiler entry points; reject Golden/Graph/compiler/generated/
   runtime/provider/approval/copy-execution fields; and preserve package-root
   importer isolation.
-- Historical complete suites: External Intake 392/392, Intake CLI 56/56, Graph
-  28/28, Capabilities 123/123, and Compiler 180/180.
-- Relevant typechecks and Prettier-based lint checks for External Intake, Intake
-  CLI, Graph, Capabilities, and Compiler.
+- Independent re-QA after document repair `0b558fc` passed; PM ledger
+  `77b4062` moved Task 6 `ready_for_qa -> reviewed`. Release review against
+  `77b4062` then found two P2/no-P0/P1: the concurrent real
+  directory-replacement race exceeded Vitest's 5-second default, and the prior
+  documents were stale at `ready_for_qa`.
+- Controller repair authorization `a9867b8` led to implementation commits
+  `4924ec0 + dc6ca19`, which passed independent task review with no P0/P1/P2.
+  PM ledger `43913ae` then moved Task 6 `implementing -> ready_for_qa`.
+- Fresh re-QA at `43913ae` concurrently passed External Intake 392/392, Intake
+  CLI 56/56, Graph 28/28, Capabilities 123/123, and Compiler 180/180. The
+  directory and junction races completed in 6,361 ms and 3,688 ms.
+- A serial Intake CLI run passed 56/56 with those races at 1,941 ms and 1,858
+  ms; focused release-boundary and bulk-intake tests passed 3/3 and 1/1. All
+  five affected typecheck/lint gates, targeted Prettier, `git diff --check`,
+  and clean-worktree verification passed.
 
 ## Active work
 
-- The release repair addresses the P2 directory-replacement child-process test:
-  its internal fail-closed wait is bounded at 10 seconds while the prior
-  default 5-second Vitest outer timeout failed during the required concurrent
-  five-suite run. The repair gives both real child-process race cases a bounded
-  20-second outer timeout, retaining a 10-second scheduling margin without
-  skipping, mocking, or weakening either error path.
-- The release review also found this status document stale at `ready_for_qa`.
-  This record now preserves the historical `ready_for_qa -> reviewed` QA PASS,
-  the P2/no-P0-P1 release-review failure, and the active `implementing` repair
-  state.
-- The mandatory repair evidence is a fresh concurrent Node 22 five-suite run,
-  a serial Intake CLI 56/56 run including both races, targeted quality gates,
-  and independent re-QA/release review afterward.
-- The fresh concurrent Node `v22.11.0` run passed External Intake 392/392,
-  Intake CLI 56/56, Graph 28/28, Capabilities 123/123, and Compiler 180/180.
-  The directory race took 6,141 ms without timing out; a separate serial Intake
-  CLI run also passed 56/56 including both races.
+- The earlier bounded release repair (`a9867b8`) kept both real child-process
+  races fail-closed with a 20-second outer timeout, then passed independent
+  task review. PM ledger `43913ae` moved Task 6 to `ready_for_qa`.
+- Independent re-QA at `43913ae` confirmed all behavioral and quality evidence
+  above, but the acceptance record and this document still claimed the prior
+  `implementing` state at `a9867b8`. Re-QA therefore failed overall solely with
+  one stale-status P2 and no P0/P1.
+- PM ledger `f1f1a04` returned Task 6 `ready_for_qa -> implementing` for this
+  exact two-document status repair. No test, code, dependency, fixture,
+  network boundary, public surface, authority, or product behavior may change.
 
 ## Blocked decisions
 
@@ -61,9 +65,9 @@ On Node `v22.11.0`, it records:
 - The Task 6 fixture-only clarification excludes the plan's former public-source
   smoke probe. No public network, repository resolution/download, vendor
   contact, credentials, or external commitment is authorized by this slice.
-- This repair is fixture-only and provides no acceptance or live-service
-  evidence. Fresh independent behavioral QA, release review, final
-  verification, and PM acceptance remain required before acceptance.
+- This repair is fixture-only and provides no public-network, acceptance, or
+  live-service evidence. It grants no promotion, approval, Golden, Graph,
+  compiler, generated-runtime, provider, or source-copy authority.
 
 ## Risks and limitations
 
@@ -76,6 +80,6 @@ On Node `v22.11.0`, it records:
 
 ## Next slice
 
-Complete the bounded repair verification, then run independent Task 6
-behavioral re-QA, release review, and fresh final verification required by the
-External Capability Intake ledger before PM acceptance.
+Run independent review of this two-document repair. If clean, the PM may return
+Task 6 to `ready_for_qa`; fresh independent behavioral re-QA is required next,
+then the later release review, final verification, and PM acceptance gates.

@@ -2,13 +2,13 @@
 
 Updated: 2026-07-31
 
-Status: Task 6 is `implementing` under the Controller-authorized release repair
-at PM ledger commit `a9867b8`. Independent re-QA after document repair
-`0b558fc` passed; PM ledger commit `77b4062` reconciled that evidence and moved
-the slice from `ready_for_qa` to `reviewed`. Release review against `77b4062`
-then found two P2 defects and no P0/P1 defect. This repair is not acceptance: a
-fresh independent QA, release review, final verification, and PM acceptance
-remain required before `accepted`.
+Status: Task 6 is `implementing` for the bounded documentation-status repair at
+PM ledger commit `f1f1a04`. The latest independent re-QA passed every
+behavioral and quality gate but failed overall solely because the prior two
+documents stated stale present-tense status; that is one P2 and no P0/P1. This
+repair is not acceptance, live evidence, or authority to skip independent
+review, fresh re-QA, later release review, final verification, or PM
+acceptance.
 
 ## Scope
 
@@ -117,7 +117,7 @@ pnpm exec prettier --check packages/external-intake apps/intake-cli ecosystem/po
 git diff --check
 ```
 
-## Historical QA and active release repair
+## Truthful chronology and active documentation repair
 
 Independent re-QA after document repair `0b558fc` passed. PM ledger commit
 `77b4062` reconciled that evidence and moved Task 6 from `ready_for_qa` to
@@ -146,6 +146,32 @@ Capabilities 123/123, and Compiler 180/180 all passed. The directory race
 completed in 6,141 ms, demonstrating the needed margin under concurrency. A
 separate serial Intake CLI run also passed 56/56, including both real races.
 
+The Controller authorized that bounded repair at `a9867b8`. Implementation
+commits `4924ec0` and `dc6ca19` retained the real fail-closed child-process
+races, corrected the historical transition attribution, and passed independent
+task review with no P0/P1/P2. PM ledger commit `43913ae` then moved Task 6
+`implementing -> ready_for_qa`.
+
+Independent re-QA at `43913ae` passed every behavioral and quality gate:
+
+- Concurrent Node `v22.11.0` suites passed External Intake 392/392, Intake CLI
+  56/56, Graph 28/28, Capabilities 123/123, and Compiler 180/180. The real
+  directory-replacement race completed in 6,361 ms and the real junction race
+  in 3,688 ms.
+- A separate serial Intake CLI run passed 56/56; the directory-replacement and
+  junction races completed in 1,941 ms and 1,858 ms respectively.
+- Focused release-boundary and bulk-intake tests passed 3/3 and 1/1. All five
+  affected typecheck and lint gates, targeted Prettier, `git diff --check`, and
+  clean-worktree verification passed.
+
+That re-QA found no behavioral defect, P0, or P1, but failed overall with one
+P2: this record and project status still stated the prior `implementing` state
+at `a9867b8` instead of the then-current `ready_for_qa` state at `43913ae`.
+Those were present-tense claims, not historical evidence. PM ledger `f1f1a04`
+therefore returned Task 6 `ready_for_qa -> implementing` for this exact
+two-document repair. No code, test, dependency, fixture, network boundary,
+public surface, authority, or product behavior is authorized to change.
+
 ## Limitations and remaining gates
 
 - Evidence is deterministic and fixture-only. It is not public-source,
@@ -157,6 +183,8 @@ separate serial Intake CLI run also passed 56/56, including both real races.
 - Preflight proves intake request isolation and resume-stable CLI output. It
   does not make a licence decision, approve a packet, create a Golden asset, or
   authorize source copying.
-- This repair remains fixture-only and supplies no acceptance or live-service
-  evidence. Fresh independent behavioral QA, release review, final
-  verification, and PM acceptance remain required before `accepted`.
+- This repair remains fixture-only and supplies no public-network, acceptance,
+  or live-service evidence. Independent review of this documentation repair is
+  next; only then may the PM return the slice to `ready_for_qa`, followed by
+  fresh independent re-QA. Release review, final verification, and PM
+  acceptance remain required before `accepted`.
