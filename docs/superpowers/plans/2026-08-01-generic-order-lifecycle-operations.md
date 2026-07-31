@@ -8,6 +8,15 @@
 
 **Tech Stack:** TypeScript, Zod, Vitest, pnpm, generated NestJS APIs, Prisma.
 
+> **Version correction — 2026-08-01:** Task 1 originally named
+> `commerce.order@2.0.1`. That immutable package remains historical evidence,
+> but it is not selectable because rendered-template parity required two
+> successors. All future-selection, compiler, readiness, and verification
+> references to `2.0.1` in Tasks 2–4 mean the accepted
+> `commerce.order@2.0.3` package. `2.0.3` is the first selectable Generic
+> lifecycle package for this plan; it preserves the bounded create contract
+> and proves rendered transition parity.
+
 ## Global Constraints
 
 - Preserve every existing package root, digest, and historical lock. Do not modify commerce.order versions 1.2.0, 1.3.0, 1.3.1, 1.3.2, or 2.0.0.
