@@ -1642,6 +1642,7 @@ describe("capability catalog", () => {
       "data.delete": ["core.crud"],
       "flow.transition": ["core.workflow"],
       "flow.assign-task": ["core.workflow"],
+      "notification.send": ["core.notification"],
       "catalog.list": ["commerce.catalog"],
       "catalog.read": ["commerce.catalog"],
       "cart.add": ["commerce.cart"],
@@ -1666,6 +1667,12 @@ describe("capability catalog", () => {
       "location.context.resolve": ["core.location-context"],
       "location.context.validate": ["core.location-context"],
     } as const;
+
+    expect(Object.keys(expectedProviders).sort()).toEqual(
+      [
+        ...new Set(selectedAssets.flatMap(({ manifest }) => manifest.effects)),
+      ].sort(),
+    );
 
     for (const [effect, expected] of Object.entries(expectedProviders)) {
       const providers = selectedAssets.filter((asset) =>
