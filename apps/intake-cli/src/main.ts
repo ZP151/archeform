@@ -19,13 +19,19 @@ import { pathToFileURL } from "node:url";
 
 import {
   ExternalIntakeStore,
+  GitHubFixedSourceClient,
+  acquireSourceBatch,
   canonicalJson,
   canonicalRecordDigest,
+  createExternalSourceStudy,
   createExternalIntakeApi,
   isCredentialLikeCandidateValue,
   verifyPromotionPacket,
+  type AcquisitionBatchResultV1,
   type ExternalIntakeApiV1,
+  type FixedSourceClient,
   type PromotionReviewInputV1,
+  type Sha256Digest,
 } from "@factory/external-intake";
 
 const OPAQUE_ID = /^[a-z][a-z0-9-]{0,127}$/u;
@@ -56,6 +62,8 @@ class CliInputError extends Error {}
 
 type CliOutputContext =
   | "batch"
+  | "acquisition-batch"
+  | "source-study"
   | "status"
   | "evidence"
   | "candidate-show"
@@ -67,6 +75,8 @@ type CliOutputContext =
 
 export interface IntakeCliOptionsV1 {
   readonly api: ExternalIntakeApiV1;
+  readonly store?: ExternalIntakeStore;
+  readonly sourceClient?: FixedSourceClient;
   readonly cwd: string;
   readonly stdout: (line: string) => void;
   readonly stderr: (line: string) => void;
@@ -172,6 +182,11 @@ const CANONICAL_DIGEST_PATHS: Partial<
   ],
   "candidate-terminal": [["digest"]],
   "promotion-packet": [["digest"]],
+  "acquisition-batch": [
+    ["byId", OBJECT_PROPERTY, "snapshotDigest"],
+    ["byId", OBJECT_PROPERTY, "acquisitionDigest"],
+  ],
+  "source-study": [["acquisitionDigest"], ["snapshotDigest"]],
 };
 
 function isAllowedCanonicalOutput(
@@ -195,6 +210,34 @@ function isAllowedCanonicalOutput(
         CANDIDATE_KEY.test(value)) ||
       (outputPathMatches(path, "lookupId") &&
         /^(?:candidate|job)-[a-f0-9]{64}$/u.test(value))
+    );
+  }
+  if (context === "source-study") {
+    return (
+      (outputPathMatches(path, "apiVersion") &&
+        value === "factory.external-source-study/v1") ||
+      (outputPathMatches(path, "classification") &&
+        ["direct-dependency", "source-study", "provider"].includes(value)) ||
+      (outputPathMatches(path, "status") && value === "acquired-unreviewed")
+    );
+  }
+  if (context === "acquisition-batch") {
+    return (
+      (path.length === 3 &&
+        path[0] === "byId" &&
+        typeof path[1] === "string" &&
+        path[2] === "id" &&
+        OPAQUE_ID.test(value)) ||
+      (path.length === 3 &&
+        path[0] === "byId" &&
+        typeof path[1] === "string" &&
+        path[2] === "status" &&
+        ["acquired", "blocked"].includes(value)) ||
+      (path.length === 3 &&
+        path[0] === "byId" &&
+        typeof path[1] === "string" &&
+        path[2] === "failureCode" &&
+        /^[a-z][a-z0-9-]{0,127}$/u.test(value))
     );
   }
   if (context === "candidate-test") {
@@ -279,6 +322,53 @@ function redact(
 
 function render(input: unknown, context: CliOutputContext): string {
   return JSON.stringify(redact(input, context));
+}
+
+function sourceStore(options: IntakeCliOptionsV1): ExternalIntakeStore {
+  if (options.store === undefined) {
+    throw new CliInputError("local Intake quarantine store required");
+  }
+  return options.store;
+}
+
+function acquisitionOutput(
+  result: AcquisitionBatchResultV1,
+): Record<string, unknown> {
+  const byId: Record<string, unknown> = Object.create(null) as Record<
+    string,
+    unknown
+  >;
+  let acquiredCount = 0;
+  for (const [id, item] of Object.entries(result.byId)) {
+    if (item.status === "acquired") {
+      acquiredCount += 1;
+      byId[id] = {
+        id,
+        status: item.status,
+        snapshotDigest: item.snapshot.digest,
+        acquisitionDigest: item.acquisition.digest,
+      };
+    } else {
+      byId[id] = {
+        id,
+        status: item.status,
+        failureCode: item.failureCode,
+      };
+    }
+  }
+  return {
+    itemCount: Object.keys(byId).length,
+    acquiredCount,
+    blockedCount: Object.keys(byId).length - acquiredCount,
+    byId,
+  };
+}
+
+function digest(input: string | undefined): Sha256Digest {
+  if (input === undefined || !DIGEST.test(input)) {
+    throw new CliInputError("sha256 digest required");
+  }
+  return input as Sha256Digest;
 }
 
 function safeRelativeSegments(input: string | undefined): readonly string[] {
@@ -650,6 +740,35 @@ export async function runIntakeCli(
     ) {
       outputContext = "batch";
       result = await options.api.submitBatch(localJson(args[3], options.cwd));
+    } else if (
+      args.length === 4 &&
+      args[0] === "batch" &&
+      args[1] === "acquire" &&
+      args[2] === "--file"
+    ) {
+      const acquisition = await acquireSourceBatch(
+        localJson(args[3], options.cwd),
+        options.sourceClient ?? new GitHubFixedSourceClient(),
+        sourceStore(options),
+      );
+      outputContext = "acquisition-batch";
+      result = acquisitionOutput(acquisition);
+    } else if (
+      args.length === 7 &&
+      args[0] === "source-study" &&
+      args[1] === "--request" &&
+      args[3] === "--snapshot" &&
+      args[5] === "--acquisition"
+    ) {
+      outputContext = "source-study";
+      result = createExternalSourceStudy(
+        {
+          request: { kind: "request", digest: digest(args[2]) },
+          snapshot: { kind: "snapshot", digest: digest(args[4]) },
+          acquisition: { kind: "acquisition", digest: digest(args[6]) },
+        },
+        sourceStore(options),
+      );
     } else if (args.length === 2 && args[0] === "status") {
       outputContext = "status";
       result = await options.api.status(opaqueId(args[1]));
@@ -746,12 +865,11 @@ export async function runIntakeCli(
 
 async function main(): Promise<void> {
   const quarantineRoot = resolve(process.cwd(), "ecosystem", "intake");
-  const api = createExternalIntakeApi(
-    new ExternalIntakeStore(quarantineRoot),
-    quarantineRoot,
-  );
+  const store = new ExternalIntakeStore(quarantineRoot);
+  const api = createExternalIntakeApi(store, quarantineRoot);
   process.exitCode = await runIntakeCli(process.argv.slice(2), {
     api,
+    store,
     cwd: process.cwd(),
     stdout: (line) => process.stdout.write(`${line}\n`),
     stderr: (line) => process.stderr.write(`${line}\n`),

@@ -23,6 +23,9 @@ import {
   canonicalRecordDigest,
   ExternalIntakeStore,
   verifyPromotionPacket,
+  type FixedSourceClient,
+  type ResolvedSourceReferenceV1,
+  type SourceTreeEntryV1,
   type ExternalIntakeApiV1,
 } from "@factory/external-intake";
 
@@ -140,6 +143,46 @@ function outputHarness(api: ExternalIntakeApiV1, cwd: string) {
       stderr: (line: string) => stderr.push(line),
     },
   };
+}
+
+class SourceFixtureClient implements FixedSourceClient {
+  readonly #commit = "a".repeat(40);
+  readonly #fixtures = resolve(
+    intakeCliRoot,
+    "../../packages/external-intake/test/fixtures/public-source",
+  );
+
+  async resolve(
+    request: Parameters<FixedSourceClient["resolve"]>[0],
+  ): Promise<ResolvedSourceReferenceV1> {
+    return {
+      apiVersion: "factory.resolved-source-reference/v1",
+      repositoryUrl: request.source.canonicalRepositoryUrl,
+      requestedRef: request.source.requestedRef,
+      resolvedCommit: this.#commit,
+      retrievedAt: "2026-07-31T01:02:03.000Z",
+      archiveUrl: `https://codeload.github.com/example/safe-source/tar.gz/${this.#commit}`,
+      treeUrl: `https://api.github.com/repos/example/safe-source/git/trees/${this.#commit}`,
+      requiredNoticePaths: [],
+    };
+  }
+
+  async fetchArchive(): Promise<Uint8Array> {
+    return readFileSync(join(this.#fixtures, "archive.fixture"));
+  }
+
+  async fetchTree(): Promise<SourceTreeEntryV1[]> {
+    return JSON.parse(
+      readFileSync(join(this.#fixtures, "tree.json"), "utf8"),
+    ) as SourceTreeEntryV1[];
+  }
+
+  async fetchEvidence(
+    _reference: ResolvedSourceReferenceV1,
+    path: string,
+  ): Promise<Uint8Array> {
+    return readFileSync(join(this.#fixtures, path));
+  }
 }
 
 function credentialLikeSentinel(): string {
@@ -328,6 +371,67 @@ describe("repository-local intake CLI", () => {
     expect(rendered).not.toMatch(/sourceBody|raw|secret-match/iu);
     expect(readFileSync(requestPath, "utf8")).toBe(original);
     expect(output.stderr).toEqual([]);
+  });
+
+  it("acquires a fixed source through an injected client without exposing its origin", async () => {
+    const root = tempRoot();
+    const requestPath = validRequestFile(root);
+    const quarantine = join(root, "quarantine");
+    const store = new ExternalIntakeStore(quarantine);
+    const output = outputHarness(
+      createExternalIntakeApi(store, quarantine),
+      root,
+    );
+    const liveOptions = {
+      ...output.options,
+      store,
+      sourceClient: new SourceFixtureClient(),
+    };
+
+    expect(
+      await runIntakeCli(
+        ["batch", "acquire", "--file", requestPath],
+        liveOptions,
+      ),
+    ).toBe(0);
+
+    const rendered = output.stdout.join("\n");
+    expect(rendered).toContain('"status":"acquired"');
+    expect(rendered).toContain('"id":"safe-source"');
+    expect(rendered).toMatch(/"snapshotDigest":"sha256:[a-f0-9]{64}"/u);
+    expect(rendered).not.toContain("github.com");
+    expect(rendered).not.toContain("v1.0.0");
+    expect(existsSync(join(quarantine, "records", "candidate"))).toBe(false);
+
+    const acquisition = JSON.parse(output.stdout[0]!) as {
+      byId: Record<
+        string,
+        { readonly snapshotDigest: string; readonly acquisitionDigest: string }
+      >;
+    };
+    const storedRequest = canonicalRecordDigest(
+      JSON.parse(readFileSync(requestPath, "utf8")).items[0].request,
+    );
+
+    expect(
+      await runIntakeCli(
+        [
+          "source-study",
+          "--request",
+          storedRequest,
+          "--snapshot",
+          acquisition.byId["safe-source"]!.snapshotDigest,
+          "--acquisition",
+          acquisition.byId["safe-source"]!.acquisitionDigest,
+        ],
+        liveOptions,
+      ),
+    ).toBe(0);
+
+    const studyOutput = output.stdout[1]!;
+    expect(studyOutput).toContain("factory.external-source-study/v1");
+    expect(studyOutput).not.toContain("github.com");
+    expect(studyOutput).not.toContain("src/index.ts");
   });
 
   it("loads status and verifies a prior job in a fresh CLI process", async () => {
