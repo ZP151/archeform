@@ -40,8 +40,14 @@ interface PromotionFixture {
 interface PromotionFixtureOptions {
   readonly manualStatus?: "unreviewed" | "approved" | "rejected";
   readonly proposedCopy?: boolean;
+  readonly proposedCopySymbols?: readonly string[];
   readonly sourceBytes?: Uint8Array;
 }
+
+type PromotionCopyRange = Extract<
+  PromotionReviewInputV1["sourceCopy"],
+  { readonly mode: "proposed-copy" }
+>["ranges"][number] & { symbol?: string };
 
 function tempStore(): ExternalIntakeStore {
   const root = mkdtempSync(join(tmpdir(), "factory-promotion-test-"));
@@ -268,6 +274,7 @@ function promotionFixture(
     "evidence",
     encoder.encode('{"status":"pass"}'),
   ).digest;
+  const proposedCopySymbols = options.proposedCopySymbols ?? ["safe"];
   const candidateRecord = parseCandidateCapability({
     apiVersion: "factory.candidate-capability/v1",
     createdAt,
@@ -290,14 +297,21 @@ function promotionFixture(
     proposedClassification: options.proposedCopy
       ? "source-fragment"
       : "provider-adapter",
-    selectedModules: [
-      {
-        path: "src/index.ts",
-        symbol: "safe",
-        digest: sourceDigest,
-        purpose: options.proposedCopy ? "proposed-copy" : "adapter-contract",
-      },
-    ],
+    selectedModules: options.proposedCopy
+      ? proposedCopySymbols.map((symbol) => ({
+          path: "src/index.ts",
+          symbol,
+          digest: sourceDigest,
+          purpose: "proposed-copy" as const,
+        }))
+      : [
+          {
+            path: "src/index.ts",
+            symbol: "safe",
+            digest: sourceDigest,
+            purpose: "adapter-contract",
+          },
+        ],
     allowedOutputs: ["manifest", "fixture", "adapter", "conformance-plan"],
     prohibited: [
       "capability-selection",
@@ -387,20 +401,19 @@ function promotionFixture(
     sourceCopy: options.proposedCopy
       ? {
           mode: "proposed-copy",
-          ranges: [
-            {
-              path: "src/index.ts",
-              sourceDigest,
-              lineRanges: [
-                {
-                  start: 1,
-                  end: 1,
-                  digest: sourceDigest,
-                },
-              ],
-              purpose: "adapter",
-            },
-          ],
+          ranges: proposedCopySymbols.map((symbol) => ({
+            path: "src/index.ts",
+            symbol,
+            sourceDigest,
+            lineRanges: [
+              {
+                start: 1,
+                end: 1,
+                digest: sourceDigest,
+              },
+            ],
+            purpose: "adapter",
+          })),
         }
       : { mode: "none", ranges: [] },
     notices: {
@@ -666,6 +679,7 @@ describe("review-only PromotionPacket", () => {
       modules: [
         {
           path: "src/index.ts",
+          symbol: "safe",
           sourceDigest: fixture.candidateRecord.selectedModules[0]!.digest,
           sourceLineCount: 1,
           rangeCount: 1,
@@ -702,6 +716,93 @@ describe("review-only PromotionPacket", () => {
       modules: [{ sourceLineCount: 2, rangeDigests: [sourceDigest] }],
     });
   });
+
+  it("covers same-path proposed-copy modules independently by symbol", async () => {
+    const fixture = promotionFixture({
+      manualStatus: "approved",
+      proposedCopy: true,
+      proposedCopySymbols: ["safe", "alternate"],
+    });
+    const firstModule = fixture.candidateRecord.selectedModules[0]!;
+    const firstRange = fixture.review.sourceCopy
+      .ranges[0] as PromotionCopyRange;
+
+    const packet = await createPromotionPacket(
+      fixture.candidate,
+      fixture.review,
+      fixture.registry,
+      fixture.store,
+    );
+
+    expect(packet.sourceCopy).toEqual({
+      mode: "proposed-copy",
+      modules: [
+        {
+          path: "src/index.ts",
+          symbol: "safe",
+          sourceDigest: firstModule.digest,
+          sourceLineCount: 1,
+          rangeCount: 1,
+          rangeDigests: [firstRange.lineRanges[0]!.digest],
+        },
+        {
+          path: "src/index.ts",
+          symbol: "alternate",
+          sourceDigest: firstModule.digest,
+          sourceLineCount: 1,
+          rangeCount: 1,
+          rangeDigests: [firstRange.lineRanges[0]!.digest],
+        },
+      ],
+    });
+  });
+
+  it.each<[string, (fixture: PromotionFixture) => void, readonly string[]]>([
+    [
+      "missing pair",
+      (fixture: PromotionFixture) => {
+        fixture.review.sourceCopy.ranges.pop();
+      },
+      ["safe", "alternate"],
+    ],
+    [
+      "duplicate pair",
+      (fixture: PromotionFixture) => {
+        const firstRange = fixture.review.sourceCopy
+          .ranges[0] as PromotionCopyRange;
+        firstRange.symbol = "safe";
+        fixture.review.sourceCopy.ranges.push(structuredClone(firstRange));
+      },
+      ["safe"],
+    ],
+    [
+      "cross-symbol substitution",
+      (fixture: PromotionFixture) => {
+        (fixture.review.sourceCopy.ranges[1] as PromotionCopyRange).symbol =
+          "substituted";
+      },
+      ["safe", "alternate"],
+    ],
+  ])(
+    "rejects proposed-copy module identity with %s",
+    async (_, mutate, proposedCopySymbols) => {
+      const fixture = promotionFixture({
+        manualStatus: "approved",
+        proposedCopy: true,
+        proposedCopySymbols,
+      });
+      mutate(fixture);
+
+      await expect(
+        createPromotionPacket(
+          fixture.candidate,
+          fixture.review,
+          fixture.registry,
+          fixture.store,
+        ),
+      ).rejects.toThrow();
+    },
+  );
 
   it.each([
     [

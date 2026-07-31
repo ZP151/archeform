@@ -57,6 +57,11 @@ const safePathSchema = z
     "Promotion paths must be safe relative POSIX paths.",
   );
 const targetSchema = z.string().regex(/^[a-z][a-z0-9-]{0,63}$/u);
+const symbolSchema = z
+  .string()
+  .min(1)
+  .max(256)
+  .regex(/^[A-Za-z_$][A-Za-z0-9_$.-]*$/u);
 const candidateClassificationSchema = z.enum([
   "dependency",
   "source-fragment",
@@ -108,6 +113,7 @@ const findingGroupSchema = z
 const copyRangeSchema = z
   .object({
     path: safePathSchema,
+    symbol: symbolSchema.optional(),
     sourceDigest: digestSchema,
     lineRanges: z
       .array(
@@ -203,6 +209,7 @@ const packetSourceCopySchema = z.discriminatedUnion("mode", [
           z
             .object({
               path: safePathSchema,
+              symbol: symbolSchema.optional(),
               sourceDigest: digestSchema,
               sourceLineCount: z.number().int().positive().max(1_000_000),
               rangeCount: z.number().int().positive().max(256),
@@ -715,8 +722,15 @@ function verifyCopyRanges(
       "Proposed-copy review requires approved immutable licence evidence.",
     );
   }
+  const moduleIdentity = ({
+    path,
+    symbol,
+  }: {
+    readonly path: string;
+    readonly symbol?: string;
+  }): string => `${path}\0${symbol ?? ""}`;
   const selected = new Map(
-    proposedModules.map((module) => [module.path, module]),
+    proposedModules.map((module) => [moduleIdentity(module), module]),
   );
   const seen = new Set<string>();
   const modules: Array<
@@ -726,19 +740,20 @@ function verifyCopyRanges(
     >["modules"][number]
   > = [];
   for (const range of review.sourceCopy.ranges) {
-    const module = selected.get(range.path);
+    const identity = moduleIdentity(range);
+    const module = selected.get(identity);
     if (
       module === undefined ||
       module.purpose !== "proposed-copy" ||
       module.digest !== range.sourceDigest ||
-      seen.has(range.path) ||
+      seen.has(identity) ||
       /(?:^|\/)(?:ui|migrations?|seed|data|tests?|runtime)(?:\/|$)/iu.test(
         range.path,
       )
     ) {
       throw new Error("Promotion source-copy range is not exact and safe.");
     }
-    seen.add(range.path);
+    seen.add(identity);
     const bytes = readVerifiedCandidateSnapshotBlob(store, module.digest);
     let text: string;
     try {
@@ -764,6 +779,7 @@ function verifyCopyRanges(
     }
     modules.push({
       path: range.path,
+      ...(range.symbol === undefined ? {} : { symbol: range.symbol }),
       sourceDigest: range.sourceDigest,
       sourceLineCount: lines.length,
       rangeCount: range.lineRanges.length,
