@@ -116,10 +116,55 @@ describe("WorkbenchHome", () => {
     expect(container.textContent).toContain("Simple ecommerce");
     expect(container.textContent).toContain("Retail counter");
     expect(container.textContent).toContain("Grocery pickup");
-    expect(
-      container.querySelector('[title="Verified capability packages"]'),
-    ).not.toBeNull();
+    expect(container.querySelector('[title="Profile starter"]')).not.toBeNull();
     expect(container.querySelector('[title="Golden Profile"]')).toBeNull();
+  });
+
+  it("shows safe capability, intake, and compilation intelligence", () => {
+    act(() => {
+      root.render(
+        <WorkbenchHome
+          applications={[]}
+          loading={false}
+          onCompile={vi.fn()}
+          onCreate={vi.fn()}
+          onOpen={vi.fn()}
+          portfolioSummary={{
+            apiVersion: "factory.workspace-portfolio-summary/v1",
+            profiles: [
+              {
+                profile: "restaurant-ordering",
+                label: "Restaurant ordering",
+                category: "commerce",
+                requiredPackages: 16,
+                optionalPackages: 1,
+              },
+            ],
+            capabilities: {
+              golden: 19,
+              lockedVersions: 33,
+              candidate: 0,
+              provider: 0,
+            },
+            intake: {
+              portfolioSources: 43,
+              intakeEligible: 19,
+              quarantined: 0,
+              blocked: 0,
+            },
+            compilations: { queued: 0, running: 1, succeeded: 3, failed: 1 },
+          }}
+        />,
+      );
+    });
+
+    expect(container.textContent).toContain("Capability coverage");
+    expect(container.textContent).toContain("Source intake");
+    expect(container.textContent).toContain("Compilation health");
+    expect(container.textContent).toContain("Restaurant ordering");
+    expect(container.textContent).toContain("Golden");
+    expect(container.textContent).toContain("Eligible");
+    expect(container.textContent).not.toContain("https://github.com");
   });
 
   it("opens Restaurant from Home and keeps compilation disabled until publish", () => {

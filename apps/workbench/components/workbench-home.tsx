@@ -15,10 +15,17 @@ import {
 
 import type { WorkbenchApplicationSummary } from "../lib/control-plane-client";
 import { profileStarterOptions } from "../lib/profile-starters";
+import {
+  toPortfolioHomeModel,
+  type PortfolioMetric,
+} from "../lib/portfolio-summary";
+import type { WorkbenchWorkspacePortfolioSummary } from "../lib/control-plane-client";
 
 type Props = {
   readonly applications: readonly WorkbenchApplicationSummary[];
   readonly loading: boolean;
+  readonly portfolioLoading?: boolean;
+  readonly portfolioSummary?: WorkbenchWorkspacePortfolioSummary | null;
   readonly compilingKey?: string | null;
   readonly onCreate: () => void;
   readonly onOpen: (applicationKey: string) => void;
@@ -64,6 +71,55 @@ const sectionStyle = {
   background: "var(--panel, #fff)",
   padding: 18,
 } as const;
+
+function PortfolioMetricPanel({
+  title,
+  metrics,
+}: {
+  readonly title: string;
+  readonly metrics: readonly PortfolioMetric[];
+}) {
+  return (
+    <section
+      aria-label={title}
+      style={{
+        border: "1px solid var(--line, #d8ddd8)",
+        borderRadius: 12,
+        padding: 14,
+        display: "grid",
+        gap: 12,
+      }}
+    >
+      <h3 style={{ margin: 0, fontSize: "0.95rem" }}>{title}</h3>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          gap: 10,
+        }}
+      >
+        {metrics.map((metric) => (
+          <div key={metric.label} style={{ display: "grid", gap: 2 }}>
+            <span
+              style={{
+                color:
+                  metric.tone === "attention"
+                    ? "#a33f36"
+                    : metric.tone === "ready"
+                      ? "var(--accent, #0b7a68)"
+                      : "var(--muted, #66706a)",
+                fontSize: 12,
+              }}
+            >
+              {metric.label}
+            </span>
+            <strong style={{ fontSize: "1.15rem" }}>{metric.value}</strong>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 function ApplicationCard({
   application,
@@ -144,6 +200,8 @@ function ApplicationCard({
 export function WorkbenchHome({
   applications,
   loading,
+  portfolioLoading = false,
+  portfolioSummary = null,
   compilingKey = null,
   onCreate,
   onOpen,
@@ -154,6 +212,9 @@ export function WorkbenchHome({
       activityTime(right).localeCompare(activityTime(left)),
     )
     .slice(0, 5);
+  const portfolio = portfolioSummary
+    ? toPortfolioHomeModel(portfolioSummary)
+    : null;
   const knownProfiles = new Set(
     profileStarterOptions.map((profile) => profile.profile),
   );
@@ -215,6 +276,62 @@ export function WorkbenchHome({
         </button>
       </section>
 
+      <section aria-label="Portfolio intelligence" style={sectionStyle}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            gap: 12,
+          }}
+        >
+          <div>
+            <h2 style={{ margin: 0 }}>Portfolio intelligence</h2>
+            <p style={{ margin: "4px 0 0", color: "var(--muted, #66706a)" }}>
+              Current reusable assets and safe intake state.
+            </p>
+          </div>
+          <span
+            aria-label={
+              portfolio
+                ? "Portfolio summary ready"
+                : "Portfolio summary unavailable"
+            }
+          >
+            <CircleDot size={16} aria-hidden="true" />
+          </span>
+        </div>
+        {portfolio ? (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+              gap: 12,
+              marginTop: 14,
+            }}
+          >
+            <PortfolioMetricPanel
+              metrics={portfolio.capabilityMetrics}
+              title="Capability coverage"
+            />
+            <PortfolioMetricPanel
+              metrics={portfolio.intakeMetrics}
+              title="Source intake"
+            />
+            <PortfolioMetricPanel
+              metrics={portfolio.compilationMetrics}
+              title="Compilation health"
+            />
+          </div>
+        ) : (
+          <p role="status" style={{ marginBottom: 0 }}>
+            {portfolioLoading
+              ? "Loading portfolio intelligence…"
+              : "Portfolio intelligence unavailable."}
+          </p>
+        )}
+      </section>
+
       <section aria-labelledby="home-profiles" style={sectionStyle}>
         <h2 id="home-profiles" style={{ marginTop: 0 }}>
           Profiles
@@ -228,10 +345,6 @@ export function WorkbenchHome({
         >
           {profileStarterOptions.map((profile) => {
             const composition = getProfileComposition(profile.profile);
-            const capabilities = [
-              ...composition.requiredCapabilities,
-              ...composition.optionalCapabilities,
-            ];
             const projectCount = applications.filter(
               (application) =>
                 application.compositionProfile === profile.profile,
@@ -255,20 +368,19 @@ export function WorkbenchHome({
                   <h3 style={{ margin: 0, fontSize: "1rem" }}>
                     {profile.label}
                   </h3>
-                  <span title="Verified capability packages">
-                    <CheckCircle2 size={16} aria-hidden="true" /> Verified
+                  <span title="Profile starter">
+                    <CheckCircle2 size={16} aria-hidden="true" /> Starter
                   </span>
                 </div>
                 <p style={{ color: "var(--muted, #66706a)" }}>
                   {profile.description}
                 </p>
                 <p style={{ fontSize: 13 }}>
-                  <Layers3 size={14} aria-hidden="true" /> {capabilities.length}{" "}
-                  capabilities · {projectCount} applications
+                  <Layers3 size={14} aria-hidden="true" />{" "}
+                  {composition.requiredCapabilities.length} required ·{" "}
+                  {composition.defaultOptionalCapabilities.length} optional ·{" "}
+                  {projectCount} applications
                 </p>
-                <small>
-                  {capabilities.map((item) => item.name).join(" · ")}
-                </small>
               </article>
             );
           })}

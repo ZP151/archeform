@@ -60,6 +60,9 @@ importers:
       '@factory/graph':
         specifier: workspace:*
         version: link:../../packages/graph
+      '@factory/portfolio-public':
+        specifier: workspace:*
+        version: link:../../packages/portfolio-public
       '@nestjs/common':
         specifier: ^10.4.15
         version: 10.4.22(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -210,6 +213,9 @@ importers:
 
   packages/external-intake:
     dependencies:
+      '@factory/portfolio-public':
+        specifier: workspace:*
+        version: link:../portfolio-public
       zod:
         specifier: ^3.24.1
         version: 3.25.76
@@ -223,6 +229,12 @@ importers:
       zod:
         specifier: ^3.24.1
         version: 3.25.76
+    devDependencies:
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)(happy-dom@20.11.1)(terser@5.49.0)
+
+  packages/portfolio-public:
     devDependencies:
       vitest:
         specifier: ^2.1.8

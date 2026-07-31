@@ -8,6 +8,75 @@ import {
 import { workbenchGraph } from "./workbench-graph";
 
 describe("ControlPlaneClient", () => {
+  it("reads only safe Workspace Portfolio summary fields", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          apiVersion: "factory.workspace-portfolio-summary/v1",
+          profiles: [
+            {
+              profile: "restaurant-ordering",
+              label: "Restaurant ordering",
+              category: "commerce",
+              requiredPackages: 16,
+              optionalPackages: 1,
+              sourceUrl: "https://must-not-survive.example",
+            },
+          ],
+          capabilities: {
+            golden: 19,
+            lockedVersions: 33,
+            candidate: 0,
+            provider: 0,
+            artifact: "must-not-survive",
+          },
+          intake: {
+            portfolioSources: 43,
+            intakeEligible: 19,
+            quarantined: 0,
+            blocked: 0,
+            sourcePath: "must-not-survive",
+          },
+          compilations: { queued: 0, running: 1, succeeded: 3, failed: 0 },
+        }),
+        { status: 200 },
+      ),
+    );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(
+      client.getWorkspacePortfolioSummary("workspace-1"),
+    ).resolves.toEqual({
+      apiVersion: "factory.workspace-portfolio-summary/v1",
+      profiles: [
+        {
+          profile: "restaurant-ordering",
+          label: "Restaurant ordering",
+          category: "commerce",
+          requiredPackages: 16,
+          optionalPackages: 1,
+        },
+      ],
+      capabilities: {
+        golden: 19,
+        lockedVersions: 33,
+        candidate: 0,
+        provider: 0,
+      },
+      intake: {
+        portfolioSources: 43,
+        intakeEligible: 19,
+        quarantined: 0,
+        blocked: 0,
+      },
+      compilations: { queued: 0, running: 1, succeeded: 3, failed: 0 },
+    });
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/workspaces/workspace-1/portfolio-summary",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
   it("projects only safe application summary fields from the local workspace endpoint", async () => {
     const fetcher = vi.fn().mockResolvedValue(
       new Response(

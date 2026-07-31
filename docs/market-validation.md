@@ -2,6 +2,27 @@
 
 Updated: 2026-07-31
 
+## 2026-08-01 ecosystem classification refresh
+
+**Decision investigated.** Which mature public projects can accelerate broad
+Profile coverage while preserving Factory's Application Graph, generated
+runtime, and licensing boundaries.
+
+| Candidate                                                                                                                                     | Observed public fact                                                                                                                                              | Factory lane                                                                                                         | Decision affected                                                                                                                                    |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Cal.diy](https://github.com/calcom/cal.com)                                                                                                  | The community scheduling project reports MIT licensing, but also describes itself as a self-hosted community edition intended for personal or non-production use. | Fixed-reference study for appointment, availability, and scheduling semantics; never an embedded scheduling runtime. | A Factory `scheduling` capability needs its own Graph contract, fixtures, and production acceptance evidence.                                        |
+| [Chatwoot](https://github.com/chatwoot/chatwoot)                                                                                              | The public repository reports MIT licensing for the non-enterprise source and identifies an `enterprise/` exception.                                              | Path-scoped support-inbox source study or later Provider.                                                            | Intake must exclude enterprise paths and retain notice/provenance before any narrow attributed source port.                                          |
+| [Directus](https://github.com/directus/directus)                                                                                              | The repository reports Business Source License 1.1 with an additional use grant.                                                                                  | Reference only.                                                                                                      | Do not copy, embed, or make its schema/runtime a Factory dependency.                                                                                 |
+| [n8n](https://github.com/n8n-io/n8n)                                                                                                          | Its published Sustainable Use License places use and redistribution limits on the source-available project.                                                       | Reference only.                                                                                                      | Use its workflow-product patterns only; Factory cannot vendor or expose its runtime as a product capability without a dedicated commercial decision. |
+| [Puck](https://github.com/puckeditor/puck), [xyflow](https://github.com/xyflow/xyflow), and [Apache Casbin](https://github.com/apache/casbin) | Their upstream repositories report MIT, MIT, and Apache-2.0 licences respectively.                                                                                | Version-pinned technical dependencies.                                                                               | They can accelerate authoring/presentation/policy enforcement, but cannot substitute for PageModel, FlowModel, or PolicyModel as Graph truth.        |
+
+**Durable decision.** Scale comes from batch automation across four explicit
+lanes: pinned dependencies, Provider adapters, narrow source studies, and
+reference-only records. The external intake service may turn any allowlisted
+fixed source into a non-promoting Candidate proposal after evidence gates; it
+must not bulk-copy a vertical repository into the compiler or generated
+runtime.
+
 ## 2026-07-31 scalable reuse decision
 
 **Decision investigated.** How Factory Pilot can accelerate a portfolio of

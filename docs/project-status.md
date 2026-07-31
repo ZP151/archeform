@@ -2,6 +2,23 @@
 
 Updated: 2026-08-01
 
+## Portfolio intelligence delivery — 2026-08-01
+
+The current worktree adds a read-only Workspace Portfolio Summary to the
+Control Plane and Home. It exposes only safe aggregate state: five Profile
+starters, 19 capability families, 33 versioned asset packages, the 43-source /
+108-scenario discovery portfolio, Candidate/Provider counts, and compilation
+health. It deliberately does not expose upstream URLs, fixed references,
+source paths, raw AI material, or credentials.
+
+Fresh package evidence for this worktree: `@factory/portfolio-public` passed
+1 test plus typecheck/build; `@factory/external-intake` passed 409 tests;
+`@factory/control-plane` passed 120 tests plus typecheck/build; and
+`@factory/workbench` passed 70 tests plus typecheck and a production Next.js
+build. This is truthful portfolio visibility, not capability promotion: the
+portfolio still has one explicit Candidate blueprint (Medusa Provider), zero
+installed Candidates, and zero installed external Providers.
+
 ## Latest capability and supply-chain audit — 2026-08-01
 
 Factory Pilot has a working composition and compilation foundation, but its

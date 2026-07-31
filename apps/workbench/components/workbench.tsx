@@ -55,6 +55,7 @@ import {
   type WorkbenchPublishedRevision,
   type WorkbenchPreviewRun,
   type WorkbenchRevisionTimeline,
+  type WorkbenchWorkspacePortfolioSummary,
 } from "../lib/control-plane-client";
 import {
   createGuidedApplicationDraft,
@@ -161,11 +162,15 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
     readonly WorkbenchApplicationSummary[]
   >([]);
   const [applicationsLoading, setApplicationsLoading] = useState(true);
+  const [portfolioSummary, setPortfolioSummary] =
+    useState<WorkbenchWorkspacePortfolioSummary | null>(null);
+  const [portfolioLoading, setPortfolioLoading] = useState(true);
   const [compilingApplicationKey, setCompilingApplicationKey] = useState<
     string | null
   >(null);
   const bootstrapRequest = useRef(0);
   const applicationsRequest = useRef(0);
+  const portfolioRequest = useRef(0);
   const controlPlane = useMemo(
     () => new ControlPlaneClient(controlPlaneUrl),
     [controlPlaneUrl],
@@ -197,6 +202,19 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
       if (request === applicationsRequest.current) {
         setApplicationsLoading(false);
       }
+    }
+  }, [controlPlane]);
+
+  const refreshPortfolio = useCallback(async (): Promise<void> => {
+    const request = ++portfolioRequest.current;
+    setPortfolioLoading(true);
+    try {
+      const next = await controlPlane.getWorkspacePortfolioSummary("local");
+      if (request === portfolioRequest.current) setPortfolioSummary(next);
+    } catch {
+      if (request === portfolioRequest.current) setPortfolioSummary(null);
+    } finally {
+      if (request === portfolioRequest.current) setPortfolioLoading(false);
     }
   }, [controlPlane]);
 
@@ -266,12 +284,18 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   useEffect(() => {
     void bootstrapGraph(initialGraph)
       .catch(() => undefined)
-      .finally(() => void refreshApplications());
-  }, [bootstrapGraph, initialGraph, refreshApplications]);
+      .finally(() => {
+        void refreshApplications();
+        void refreshPortfolio();
+      });
+  }, [bootstrapGraph, initialGraph, refreshApplications, refreshPortfolio]);
 
   useEffect(() => {
-    if (state.activeSurface === "home") void refreshApplications();
-  }, [refreshApplications, state.activeSurface]);
+    if (state.activeSurface === "home") {
+      void refreshApplications();
+      void refreshPortfolio();
+    }
+  }, [refreshApplications, refreshPortfolio, state.activeSurface]);
 
   useEffect(() => {
     if (!compilation || !isPendingCompilation(compilation.result.status))
@@ -845,6 +869,8 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
                   applications={applications}
                   compilingKey={compilingApplicationKey}
                   loading={applicationsLoading}
+                  portfolioLoading={portfolioLoading}
+                  portfolioSummary={portfolioSummary}
                   onCompile={compileApplication}
                   onCreate={() => setGuidedCreationOpen(true)}
                   onOpen={openApplication}

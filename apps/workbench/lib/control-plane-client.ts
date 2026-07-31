@@ -118,6 +118,35 @@ export type WorkbenchApplicationSummary = {
   };
 };
 
+export type WorkbenchWorkspacePortfolioSummary = {
+  readonly apiVersion: "factory.workspace-portfolio-summary/v1";
+  readonly profiles: readonly {
+    readonly profile: string;
+    readonly label: string;
+    readonly category: "approval" | "commerce";
+    readonly requiredPackages: number;
+    readonly optionalPackages: number;
+  }[];
+  readonly capabilities: {
+    readonly golden: number;
+    readonly lockedVersions: number;
+    readonly candidate: number;
+    readonly provider: number;
+  };
+  readonly intake: {
+    readonly portfolioSources: number;
+    readonly intakeEligible: number;
+    readonly quarantined: number;
+    readonly blocked: number;
+  };
+  readonly compilations: {
+    readonly queued: number;
+    readonly running: number;
+    readonly succeeded: number;
+    readonly failed: number;
+  };
+};
+
 export type WorkbenchArtifactContent = {
   readonly path: string;
   readonly digest: string;
@@ -234,6 +263,92 @@ function applicationSummary(
   };
 }
 
+function nonNegativeCount(value: unknown, label: string): number {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+    throw new Error(`Control Plane Portfolio summary has invalid ${label}.`);
+  }
+  return value;
+}
+
+function workspacePortfolioSummary(
+  value: unknown,
+): WorkbenchWorkspacePortfolioSummary {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Control Plane Portfolio summary is invalid.");
+  }
+  const record = value as Record<string, unknown>;
+  if (record.apiVersion !== "factory.workspace-portfolio-summary/v1") {
+    throw new Error("Control Plane Portfolio summary version is unsupported.");
+  }
+  const profiles = record.profiles;
+  if (!Array.isArray(profiles)) {
+    throw new Error("Control Plane Portfolio summary profiles are invalid.");
+  }
+  const profileRecords = profiles.map((profile) => {
+    if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
+      throw new Error("Control Plane Portfolio profile is invalid.");
+    }
+    const entry = profile as Record<string, unknown>;
+    const category = entry.category;
+    if (
+      typeof entry.profile !== "string" ||
+      typeof entry.label !== "string" ||
+      (category !== "approval" && category !== "commerce")
+    ) {
+      throw new Error("Control Plane Portfolio profile is invalid.");
+    }
+    return {
+      profile: entry.profile,
+      label: entry.label,
+      category: category as "approval" | "commerce",
+      requiredPackages: nonNegativeCount(
+        entry.requiredPackages,
+        "profile requiredPackages",
+      ),
+      optionalPackages: nonNegativeCount(
+        entry.optionalPackages,
+        "profile optionalPackages",
+      ),
+    };
+  });
+  const counts = <T extends readonly string[]>(
+    input: unknown,
+    fields: T,
+    label: string,
+  ): Record<T[number], number> => {
+    if (!input || typeof input !== "object" || Array.isArray(input)) {
+      throw new Error(`Control Plane Portfolio ${label} is invalid.`);
+    }
+    const record = input as Record<string, unknown>;
+    return Object.fromEntries(
+      fields.map((field) => [
+        field,
+        nonNegativeCount(record[field], `${label}.${field}`),
+      ]),
+    ) as Record<T[number], number>;
+  };
+
+  return {
+    apiVersion: "factory.workspace-portfolio-summary/v1",
+    profiles: profileRecords,
+    capabilities: counts(
+      record.capabilities,
+      ["golden", "lockedVersions", "candidate", "provider"] as const,
+      "capabilities",
+    ),
+    intake: counts(
+      record.intake,
+      ["portfolioSources", "intakeEligible", "quarantined", "blocked"] as const,
+      "intake",
+    ),
+    compilations: counts(
+      record.compilations,
+      ["queued", "running", "succeeded", "failed"] as const,
+      "compilations",
+    ),
+  };
+}
+
 export class ControlPlaneClient {
   private readonly baseUrl: string;
 
@@ -283,6 +398,16 @@ export class ControlPlaneClient {
       { method: "GET" },
     );
     return records.map(applicationSummary);
+  }
+
+  async getWorkspacePortfolioSummary(
+    workspaceId: string,
+  ): Promise<WorkbenchWorkspacePortfolioSummary> {
+    const summary = await this.request<unknown>(
+      `/workspaces/${encodeURIComponent(workspaceId)}/portfolio-summary`,
+      { method: "GET" },
+    );
+    return workspacePortfolioSummary(summary);
   }
 
   async openLocalApplication(

@@ -1,5 +1,5 @@
 {
-  "name": "@factory/external-intake",
+  "name": "@factory/portfolio-public",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -15,11 +15,7 @@
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "prettier --check src test vitest.config.ts"
-  },
-  "dependencies": {
-    "@factory/portfolio-public": "workspace:*",
-    "zod": "^3.24.1"
+    "lint": "prettier --check src test"
   },
   "devDependencies": {
     "vitest": "^2.1.8"
