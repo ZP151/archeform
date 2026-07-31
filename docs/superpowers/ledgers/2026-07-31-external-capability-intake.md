@@ -112,7 +112,9 @@ Registry contract, repair history, exact paths, and accepted behavior are
 frozen. Task 4 acceptance and Commercial Capability Foundation Task 1
 acceptance satisfy Task 5's dependency gate. The PM moved Task 5
 `planned -> implementing` under its frozen review-only promotion-packet card;
-Task 6 remains `planned`. The system will ingest the 43 fixed-reference
+the Controller subsequently accepted the Tech Lead's additive asynchronous
+review-input contract clarification without changing Task 5's state or exact
+six paths. Task 6 remains `planned`. The system will ingest the 43 fixed-reference
 portfolio as metadata, retain the 108 scenarios as composition demand signals,
 and produce only quarantined evidence, non-executable Candidate records, and
 pending-review promotion packets.
@@ -266,7 +268,7 @@ remain frozen.
 | 2. Fixed-source provenance and notices           | `accepted`     | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
 | 3. Deterministic scan orchestration              | `accepted`     | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
 | 4. Candidate registry, API, CLI, and isolation   | `accepted`     | `integration`       | Candidate Registry               | Release review and fresh root verification PASS; frozen.    |
-| 5. Review-only promotion packets                 | `implementing` | `governance`        | External Capability Promotion    | Dependencies accepted; frozen six-path dispatch.            |
+| 5. Review-only promotion packets                 | `implementing` | `governance`        | External Capability Promotion    | Async review-input clarification; same frozen six paths.    |
 | 6. Bulk acceptance and release evidence          | `planned`      | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.        |
 
 ## Task 1 card: Candidate contracts and immutable persistence
@@ -1701,6 +1703,111 @@ Capability Promotion contract, interfaces, paths, non-goals, and acceptance
 evidence are frozen; any scope, path, or contract change stops work for
 Controller review.
 
+### Controller-accepted asynchronous review-input clarification
+
+The Controller accepts the Tech Lead clarification below. Task 5 remains
+`implementing`; the same governance writer and six exact code/test paths remain
+frozen. This clarification supersedes only the plan's synchronous
+three-argument packet-creation signature with the additive asynchronous
+review-input contract:
+
+```ts
+export function createPromotionPacket(
+  candidate: StoredCandidateRefV1,
+  review: PromotionReviewInputV1,
+  registry: CandidateRegistryV1,
+  store: ExternalIntakeStore,
+): Promise<PromotionPacketV1>;
+```
+
+`verifyPromotionPacket(packet: unknown)` remains the canonical packet verifier
+and returns the canonical packet digest in its verification result. A packet
+does not contain a self digest.
+
+Before packet construction, the implementation must freshly await
+`registry.verify(candidate)` and require the exact current Candidate revision to
+be verified and `conformance-passed`. It must then rehydrate and strictly verify
+the complete accepted Task 3 parent chain from immutable Store records and
+blobs. Cached Candidate or caller-supplied parent claims cannot replace either
+verification. `@factory/external-intake` must not import Capabilities, Graph,
+Compiler, or their lock/runtime surfaces.
+
+`PromotionReviewInputV1` is strict size-bounded local JSON with no unknown
+fields. It must:
+
+- bind the exact Candidate identity/digest and every verified snapshot,
+  evidence, conformance, and source parent digest;
+- include the exact declarative `CandidateManifestV1` whose digest equals the
+  Candidate manifest digest, plus the proposed Factory key, version,
+  `packageRoot`, and targets;
+- bind the evidence's manual licence status exactly and carry only
+  `pending-manual-review` for the review state;
+- contain exactly one finding-disposition group for each of the four verified
+  licence, secret, SAST, and dependency scans. Each group must reproduce every
+  normalized finding from its verified scan exactly, with one
+  `pending-manual-review` disposition per finding; literal `[]` is required and
+  allowed when that scan has no findings;
+- rebuild each canonical scan summary against the actual snapshot/tree,
+  tool/version, ruleset, status, and scanner expression and require its digest
+  to equal the immutable verified scan digest;
+- declare the exact source-copy mode and ranges. Literal mode `none` with no
+  ranges is allowed and must use an empty range list; any proposed range must be
+  exact and snapshot-bound but grants no permission to copy;
+- carry the contract-fixed notices destination with pending action;
+- assign a named reviewer to every required role with status
+  `assigned-not-reviewed`;
+- include the proposed Factory interface and replacement/removal plan; and
+- include a canonical-hashed collision inventory bound to the proposed key,
+  version, package root, and targets.
+
+Finding or scan groups with duplicates, missing or extra normalized findings,
+digest drift, high/critical/secret findings, or waiver, approved, accepted, or
+resolved language fail closed. Review input also rejects Graph data, asset or
+composition locks, compiler input, source bodies, URLs, executable code,
+credentials, prompts/responses, and capability packages.
+
+`PromotionPacketV1` is canonical review evidence only and must contain:
+
+- literal `decision: "pending-review"`;
+- the Candidate id, version, record digest, source identity/digest, evidence
+  digest, and `conformance-passed` status;
+- `reviewInputDigest`;
+- a sorted exact `parentDigests` set containing the Candidate record, snapshot,
+  evidence, conformance, review-input, and collision-inventory digests;
+- the required reviewer roles and named `assigned-not-reviewed` assignments;
+- collision result wording exactly
+  `no-collision-observed-in-inventory`, together with a pending Golden-owner
+  action; and
+- a fixed code-owned `prohibitedFields` list covering approval, waiver,
+  source-copy execution, notice modification, Golden registration, Graph/lock
+  or compiler input, and runtime/provider activation. Caller input cannot alter
+  this list.
+
+Collision claims are inventory-scoped only. Neither the packet nor CLI may claim
+global, repository-wide, Golden-registry-wide, or future collision freedom.
+
+The exact CLI grammar is:
+
+```text
+factory intake promotion packet <candidate>@<version> --review <relative-review.json> --out <relative-empty-review-dir>/promotion-packet.json
+```
+
+The CLI accepts only a relative local review JSON file and the exact relative
+output filename under an empty review directory. It must reject absolute paths,
+traversal, wrong filenames or extensions, oversized or schema-invalid review
+input, symlinks at every component, a missing/non-empty output directory, and
+any existing output. It writes with exclusive create, re-reads the exact bytes,
+and re-verifies the canonical packet before reporting success.
+
+Negative evidence must cover every fail-closed rule above, including stale or
+non-`conformance-passed` Candidates, parent/manifest/scan/collision digest
+mismatch, incomplete or duplicate scan findings/dispositions, prohibited
+severity or decision language, invalid copy modes/ranges, reviewer/notice/
+interface/removal omissions, collision hits, forbidden review fields, unsafe
+paths, symlinks, non-empty output, and overwrite attempts. No approval, waiver,
+source copy, notice modification, Golden registration, Graph/compiler/runtime
+linkage, provider activation, or Task 6 behavior is authorized.
+
 ### Exact allowed paths
 
 - `packages/external-intake/src/promotion.ts`
@@ -1809,7 +1916,8 @@ Controller review.
 The active smallest valuable slice is Task 5 review-only promotion-packet
 implementation under the frozen External Capability Promotion contract and six
 exact paths. It may consume only an immutable verified `conformance-passed`
-Candidate and parent evidence references, and may produce only a canonical
+Candidate, freshly rehydrated Task 3 parents, and a strict local
+`PromotionReviewInputV1`, and may produce only a canonical inventory-scoped
 `pending-review` packet. It creates no decision, approval, waiver, source copy,
 notice modification, Golden registration, Graph/compiler input, provider
 activation, or Task 6 behavior.
