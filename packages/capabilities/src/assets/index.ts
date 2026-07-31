@@ -29,6 +29,7 @@ import { orderAssetV1_2_0 } from "./commerce/order-v1-2-0.js";
 import { simulatedPaymentAsset } from "./commerce/simulated-payment.js";
 import { simulatedPaymentAssetV1_0_1 } from "./commerce/simulated-payment-v1-0-1.js";
 import { commerceTransactionAssetV1_0_0 } from "./commerce/transaction-v1-0-0.js";
+import { commerceTransactionAssetV2_0_0 } from "./commerce/transaction-v2-0-0.js";
 import { restaurantTableSessionAsset } from "./restaurant/table-session.js";
 import { restaurantTableSessionAssetV1_1_0 } from "./restaurant/table-session-v1-1-0.js";
 import { restaurantMenuAsset } from "./restaurant/menu.js";
@@ -79,6 +80,7 @@ export {
   simulatedPaymentAsset,
   simulatedPaymentAssetV1_0_1,
   commerceTransactionAssetV1_0_0,
+  commerceTransactionAssetV2_0_0,
   workflowAsset,
   workflowAssetV1_0_1,
 };
@@ -109,6 +111,7 @@ export const currentCapabilityAssets: readonly CapabilityAssetV1[] =
 
 export const capabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
   ...currentCapabilityAssets,
+  commerceTransactionAssetV2_0_0,
   lineConfigurationAssetV1_0_0,
   lineConfigurationAssetV1_1_0,
   catalogAssetV1_1_0,

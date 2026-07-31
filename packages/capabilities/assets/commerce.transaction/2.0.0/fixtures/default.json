@@ -1,0 +1,11 @@
+{
+  "aggregateEntity": "graph.domain.order",
+  "transactionFlow": "graph.flow.order-transaction",
+  "actorRole": "graph.policy.customer",
+  "command": {
+    "scope": "order:demo",
+    "idempotencyKey": "submit-001",
+    "payloadDigest": "sha256:demo",
+    "expectedVersion": 0
+  }
+}

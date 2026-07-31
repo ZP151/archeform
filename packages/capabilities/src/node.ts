@@ -48,6 +48,7 @@ export interface ResolvedCapabilityAssetContribution {
 }
 
 const targetPrefixes = {
+  "api.runtime": ["api/src/capabilities/"],
   "web.component": ["web/src/components/"],
   "web.route": ["web/src/app/"],
   "web.navigation": ["web/src/navigation/"],

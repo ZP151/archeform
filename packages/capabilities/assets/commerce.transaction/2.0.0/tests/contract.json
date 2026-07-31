@@ -1,0 +1,14 @@
+{
+  "contract": "factory.transaction-executor/v1",
+  "requiredContributions": [
+    "commerce-transaction-executor",
+    "commerce-transaction-schema",
+    "commerce-transaction-migration",
+    "commerce-transaction-journey"
+  ],
+  "semantics": [
+    "idempotent-replay",
+    "payload-mismatch-rejection",
+    "atomic-aggregate-movement-audit-outbox"
+  ]
+}

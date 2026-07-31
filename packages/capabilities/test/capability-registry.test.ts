@@ -731,7 +731,7 @@ describe("capability catalog", () => {
   });
 
   it("verifies every registered capability manifest against its declared digest", () => {
-    expect(capabilityAssets).toHaveLength(39);
+    expect(capabilityAssets).toHaveLength(40);
     for (const asset of capabilityAssets) {
       expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     }
@@ -756,7 +756,10 @@ describe("capability catalog", () => {
 
     for (const asset of capabilityAssets) {
       const templates = loadCapabilityAssetTemplates(asset, repositoryRoot);
-      if (asset.manifest.key === "commerce.transaction") {
+      if (
+        asset.manifest.key === "commerce.transaction" &&
+        asset.manifest.version === "1.0.0"
+      ) {
         expect(templates.map(({ target }) => target)).toEqual([
           "api/src/capabilities/commerce-transaction-runtime.ts",
           "database/prisma/fragments/commerce-transaction.prisma",
@@ -765,6 +768,13 @@ describe("capability catalog", () => {
           expect(template.assetKey).toBe("commerce.transaction");
           expect(template.digest).toMatch(/^sha256:[a-f0-9]{64}$/);
         }
+        continue;
+      }
+      if (
+        asset.manifest.key === "commerce.transaction" &&
+        asset.manifest.version === "2.0.0"
+      ) {
+        expect(templates).toEqual([]);
         continue;
       }
 
@@ -859,13 +869,35 @@ describe("capability catalog", () => {
     });
   });
 
-  it("does not authorize executable contributions through a legacy template slot", async () => {
+  it("authorizes executable API runtime contributions only inside the approved prefix", async () => {
     const asset = testContributionAsset({
       executableContributions: [
         executableContribution({
           outputSlot: "api.runtime",
           namespace: "packages/test.contribution/api/runtime/",
           target: "api/src/capabilities/test.contribution.ts",
+        }),
+      ],
+      outputSlots: ["api.runtime"],
+    });
+
+    await withTestContributionPackage(asset, (repositoryRoot) => {
+      expect(loadCapabilityAssetContributions(asset, repositoryRoot)).toEqual([
+        expect.objectContaining({
+          outputSlot: "api.runtime",
+          target: "api/src/capabilities/test.contribution.ts",
+        }),
+      ]);
+    });
+  });
+
+  it("rejects an API runtime contribution outside the approved prefix", async () => {
+    const asset = testContributionAsset({
+      executableContributions: [
+        executableContribution({
+          outputSlot: "api.runtime",
+          namespace: "packages/test.contribution/api/runtime/",
+          target: "api/src/services/test.contribution.ts",
         }),
       ],
       outputSlots: ["api.runtime"],
