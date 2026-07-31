@@ -55,6 +55,10 @@ repair that adds only `apps/intake-cli/test/cli.test.ts` as Task 6's fifth
 allowed path, and the PM returned Task 6 `reviewed -> implementing`.
 Repair commits `4924ec0` and `dc6ca19` then passed independent task review with
 no P0/P1/P2, and the PM moved Task 6 `implementing -> ready_for_qa`.
+Independent re-QA at ledger commit `43913ae` passed every behavioral and
+quality gate but FAILED with one P2 because the acceptance record and project
+status still stated the prior `implementing` state at `a9867b8`. The PM returned
+Task 6 `ready_for_qa -> implementing` for a bounded two-document status repair.
 Independent Task 4 review of commit
 `33fd204` then FAILED with four P1 findings and one P2. The Controller authorized
 bounded Repair Round 1/5 and exactly three additional production paths; Task 4
@@ -160,7 +164,9 @@ moved Task 6 `reviewed -> implementing`. Repair commits `4924ec0` and
 `dc6ca19` passed the required concurrent and serial gates and independent task
 review with no P0/P1/P2. The PM moved Task 6
 `implementing -> ready_for_qa`; fresh independent behavioral QA is the next
-gate. The
+gate. Independent re-QA passed every behavioral and quality gate but FAILED
+with one P2 stale present-tense status finding and no P0/P1. The PM returned
+Task 6 `ready_for_qa -> implementing` for a bounded two-document repair. The
 system will ingest the 43 fixed-reference
 portfolio as metadata, retain the 108 scenarios as composition demand signals,
 and produce only quarantined evidence, non-executable Candidate records, and
@@ -316,7 +322,7 @@ remain frozen.
 | 3. Deterministic scan orchestration              | `accepted`     | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
 | 4. Candidate registry, API, CLI, and isolation   | `accepted`     | `integration`       | Candidate Registry               | Release review and fresh root verification PASS; frozen.    |
 | 5. Review-only promotion packets                 | `accepted`     | `governance`        | External Capability Promotion    | Release review and fresh final verification PASS; frozen.   |
-| 6. Bulk acceptance and release evidence          | `ready_for_qa` | `qa`                | External Intake Release Evidence | Repair review PASS; independent behavioral re-QA required.  |
+| 6. Bulk acceptance and release evidence          | `implementing` | `qa`                | External Intake Release Evidence | Re-QA behavior PASS; two-document status repair required.   |
 
 ## Task 1 card: Candidate contracts and immutable persistence
 
@@ -2104,7 +2110,7 @@ Graph/compiler/runtime/provider authority, or Task 6 behavior.
 
 ## Task 6 card: Bulk acceptance and release evidence
 
-- **State:** `ready_for_qa`
+- **State:** `implementing`
 - **Specialization:** `qa`
 - **Contract owner:** External Intake Release Evidence
 - **Contract artifact:** accepted Tasks 1-5 plus
@@ -2118,7 +2124,7 @@ exact paths through implementation and repair. The release-repair amendment
 below adds only `apps/intake-cli/test/cli.test.ts` as a fifth exact path. The
 amended release set, External Intake Release Evidence contract, fixture-only
 evidence boundary, deliverables, five paths, non-goals, and acceptance evidence
-are now frozen for independent QA;
+remain frozen during the bounded documentation-status repair;
 any scope, path, dependency, or contract change stops work for Controller
 review.
 
@@ -2399,6 +2405,69 @@ the repair-stage evidence; this ledger is the current state authority.
 Independent behavioral re-QA is the next gate. The amended exact five paths,
 fixture-only/no-network boundary, dependencies, and non-goals remain frozen.
 
+### Independent re-QA failure and bounded documentation repair
+
+Independent re-QA at ledger commit `43913ae` passed all fresh Node v22.11.0
+behavioral and quality evidence:
+
+- the five complete suites ran concurrently and passed External Intake
+  392/392, Intake CLI 56/56, Graph 28/28, Capabilities 123/123, and Compiler
+  180/180;
+- under concurrent load the real directory-replacement race completed in
+  6,361 ms and the real junction race in 3,688 ms;
+- the separate serial Intake CLI suite passed 56/56, with the same races
+  completing in 1,941 ms and 1,858 ms;
+- focused release-boundary tests passed 3/3 and focused bulk-intake passed 1/1;
+  and
+- all five affected typecheck and lint gates, targeted Prettier,
+  `git diff --check`, and clean-worktree verification passed.
+
+QA found no behavioral defect, P0, or P1. It nevertheless FAILED with one P2:
+the present-tense status at
+`docs/acceptance/external-capability-intake.md:5` and
+`docs/project-status.md:8` still said Task 6 was `implementing` at PM ledger
+commit `a9867b8`, while current ledger commit `43913ae` had moved it to
+`ready_for_qa`. Those statements are current-status claims, not merely
+historical repair evidence.
+
+The PM therefore moved Task 6 `ready_for_qa -> implementing` and authorizes one
+bounded documentation-status repair. The writer may change only:
+
+- `docs/acceptance/external-capability-intake.md`; and
+- `docs/project-status.md`.
+
+Both paths already belong to the exact five-path Task 6 contract. This
+authorization adds no path and changes no contract, test, code, dependency,
+fixture, network boundary, public surface, authority, or product behavior. The
+writer must not edit the ledger or any code/test file.
+
+Both documents must state, in present tense, that Task 6 is `implementing` for
+this bounded documentation-status repair at the PM ledger commit that
+authorizes it. Their chronology must distinguish:
+
+1. Controller repair authorization at `a9867b8`;
+2. implementation commits `4924ec0 + dc6ca19` and clean independent task
+   review;
+3. PM ledger commit `43913ae` moving Task 6
+   `implementing -> ready_for_qa`;
+4. independent re-QA at `43913ae` passing every behavioral and quality gate
+   above but failing overall with one stale-status P2 and no P0/P1; and
+5. this PM transition returning Task 6 `ready_for_qa -> implementing` pending
+   the two-document repair.
+
+The acceptance record must retain the exact concurrent and serial counts and
+race timings, fixture-only/no-network limitations, and the prohibition on
+acceptance or live evidence. Project status must place the documentation repair
+under active work and make the next slice: independent review of the docs
+repair, PM transition back to `ready_for_qa` if clean, then fresh independent
+re-QA. Neither document may claim QA PASS overall, release PASS, acceptance,
+live/public evidence, promotion, approval, Golden/Graph/compiler/runtime
+authority, or permission to skip any remaining gate.
+
+After the writer commits the two-document repair, independent task review is
+required before the PM may move Task 6 back to `ready_for_qa`. Fresh independent
+re-QA remains required afterward.
+
 ## Review sequence and stop conditions
 
 1. PM moves one dependency-ready task to `implementing` and freezes its
@@ -2439,31 +2508,22 @@ fixture-only/no-network boundary, dependencies, and non-goals remain frozen.
 - **Release-evidence stability risk:** the real child-process directory race
   can exceed Vitest's five-second default only under the required concurrent
   five-suite load. The bounded repair passed its writer and task-review gates;
-  independent QA must still reproduce the concurrent and serial behavior.
+  independent QA reproduced the concurrent and serial behavior.
+- **Status-authority risk:** evidence documents can become stale immediately
+  after a ledger-only PM transition. The bounded repair must state the current
+  `implementing` repair state and preserve the complete chronology without
+  claiming overall QA PASS.
 
-The active smallest valuable slice is independent Task 6 behavioral re-QA of
-the reviewed `4924ec0 + dc6ca19` repair under the amended five-path
-fixture-only contract. QA must use Node v22.11.0 and provide:
+The active smallest valuable slice is the bounded Task 6 documentation-status
+repair. One writer may change only
+`docs/acceptance/external-capability-intake.md` and `docs/project-status.md` to
+state the current `implementing` repair state, record the exact chronology and
+fresh re-QA evidence above, and preserve all remaining gates and prohibitions.
+Independent task review must then verify exact two-path scope, current-state
+wording, chronology, targeted Prettier, `git diff --check`, and no acceptance or
+live-evidence claim before the PM may return Task 6 to `ready_for_qa`.
 
-- one fresh run of External Intake, Intake CLI, Graph, Capabilities, and
-  Compiler concurrently, passing 392/392, 56/56, 28/28, 123/123, and 180/180
-  without timeout;
-- a separate serial Intake CLI run passing 56/56, including both real
-  child-process directory-replacement and junction fail-closed races;
-- focused release-boundary 3/3 and bulk-intake 1/1 results, including the
-  43-source/108-demand preflight, stable redaction, no scenario Candidate,
-  per-source isolation/resume, and exact run-owned cleanup;
-- inspection proving the 20-second bound retains the ten-second internal wait,
-  both race tests still run as real child processes, and neither replacement
-  target receives a promotion packet;
-- exact `4924ec0 + dc6ca19` three-path scope, with unrelated `bc40886`
-  excluded, plus Intake CLI typecheck/lint, targeted Prettier,
-  `git show --check`, `git diff --check`, and clean-worktree evidence; and
-- acceptance-record and project-status inspection confirming truthful
-  repair-stage history, fixture-only/no-network limits, remaining gates, and no
-  release-pass, acceptance, live-evidence, or new-authority claim.
-
-QA must preserve the canonical-pending-packet authority rejection,
+The repair must preserve the canonical-pending-packet authority rejection,
 Candidate/Golden/Graph/compiler isolation, public-network prohibition, and the
 accepted Task 5
 deterministic-fixture and single-purpose CLI-process limitations and may add no
@@ -2493,4 +2553,4 @@ Task 1's original release and bounded amendments, Task 2's accepted code set
 `515e0ba + 3dcb20f + dcaddf4`, Task 3's accepted repair commit `8b31d3a`, and
 Task 4's complete accepted Candidate Registry remain frozen. Task 5 is
 `accepted` and frozen under its recorded dependency gate; Task 6 is
-`ready_for_qa` under its amended fixture-only five-path dispatch.
+`implementing` under its amended fixture-only five-path dispatch.
