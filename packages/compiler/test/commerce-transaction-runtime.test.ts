@@ -107,33 +107,30 @@ async function withGeneratedRuntime<T>(
 }
 
 describe("generic Commerce transaction runtime", () => {
-  it.each([
-    "restaurant-ordering",
-    "simple-ecommerce",
-    "retail-counter",
-    "grocery-pickup",
-  ] as const)(
-    "emits the locked atomic transaction boundary for %s",
-    (profile) => {
-      const bundle = generateApplicationBundle(commerceInput(profile));
-      const files = Object.fromEntries(
-        bundle.files.map((file) => [file.path, file.content]),
-      );
+  it("does not emit a disconnected transaction executor for a 1.0.0 lock", () => {
+    const bundle = generateApplicationBundle(commerceInput());
+    const files = Object.fromEntries(
+      bundle.files.map((file) => [file.path, file.content]),
+    );
 
-      expect(files["api/src/commerce-transaction-runtime.ts"]).toContain(
-        "export async function executeCommerceTransaction",
-      );
-      expect(files["api/src/commerce-transaction-runtime.ts"]).toContain(
-        "prisma.$transaction",
-      );
-      expect(files["api/prisma/commerce-transaction.prisma"]).toContain(
-        "@@unique([scope, idempotencyKey])",
-      );
-      expect(files["tests/commerce-transaction.journey.test.ts"]).toContain(
-        "replayed: true",
-      );
-    },
-  );
+    expect(files).not.toHaveProperty("api/src/commerce-transaction-runtime.ts");
+    expect(files).not.toHaveProperty("api/prisma/commerce-transaction.prisma");
+    expect(files).not.toHaveProperty(
+      "database/prisma/commerce-transaction.prisma",
+    );
+    expect(files).not.toHaveProperty(
+      "tests/commerce-transaction.journey.test.ts",
+    );
+    expect(files).not.toHaveProperty(
+      "api/src/capabilities/commerce-transaction-runtime.ts",
+    );
+    expect(files).not.toHaveProperty(
+      "database/prisma/fragments/commerce-transaction.prisma",
+    );
+    expect(files["api/src/main.ts"]).not.toContain(
+      "CommerceTransactionExecutor",
+    );
+  });
 
   it("fails closed when a Commerce graph has no locked transaction package", () => {
     const graph = structuredClone(

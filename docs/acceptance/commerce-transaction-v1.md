@@ -1,36 +1,30 @@
-# Commerce Transaction v1 Acceptance
+# Commerce Transaction v1 Rejected Implementation Record
 
-## Accepted scope
+`commerce.transaction@1.0.0` remains a Golden immutable package and historical
+Published locks remain replayable. The compiler retains those locks for
+validation and historical generic/Restaurant behaviour, but suppresses the two
+V1 declared target contributions because they are disconnected from generated
+controllers and the active Prisma schema. V1 does not declare the executable
+adapter required to make a commerce transition atomic.
 
-`commerce.transaction@1.0.0` is a Golden, immutable package selected through
-the published composition lock. For Restaurant Ordering, Simple Ecommerce,
-Retail Counter, and Grocery Pickup, the compiler emits the same public
-transaction boundary, Prisma schema fragment, and journey fixture.
+The former compiler output emitted a runtime, Prisma fragments, and a journey
+fixture that no generated controller or active schema consumed. That output is
+removed: a `1.0.0` lock does not authorize or claim an atomic transaction
+boundary.
 
-The generated boundary requires a scope-local idempotency key and expected
-aggregate version. A repeated completed command with an equal payload replays
-the immutable receipt outcome; a changed payload with the same key is rejected.
-The Prisma adapter wraps receipt lookup/creation, conditional aggregate update,
-inventory movement, audit event, outbox event, and completed outcome in one
-`prisma.$transaction` callback. The in-memory adapter is fixture-only.
+ADR-0009 defines the required replacement: a new immutable
+`commerce.transaction@2.0.0` package must provide the
+`factory.transaction-executor/v1` adapter, with its verified contributions
+joined to both generated runtime paths and active Prisma schema and migration.
 
-## Verification commands
+## Current status
 
-```sh
-pnpm --filter @factory/capabilities test -- commerce-transaction-package.test.ts
-pnpm --filter @factory/capabilities test -- commerce-transaction-profile-composition.test.ts
-pnpm --filter @factory/compiler test -- commerce-transaction-runtime.test.ts
-pnpm --filter @factory/compiler test -- compilation-plan.test.ts
-```
+`commerce.transaction` remains partial. No Commerce profile has accepted
+atomic-transaction evidence in this record.
 
 ## Explicit exclusions
 
-Payments are simulated only. This capability accepts no payment credentials and
-does not move money. Identity providers, payment providers, delivery,
-reservations, printers, search, notifications, loyalty, realtime operation,
-cloud deployment, and production observability are not accepted by this slice.
-
-This is not production-complete until deployment and provider acceptance have
-independently passed. A published immutable Graph and verified Golden locks are
-mandatory; mutable Drafts and candidate packages cannot compile transaction
-output.
+Payments are simulated only. This record accepts no payment credentials,
+identity provider, delivery, reservation, printer, search, notification,
+loyalty, realtime operation, cloud deployment, production observability, or
+atomic transaction runtime.

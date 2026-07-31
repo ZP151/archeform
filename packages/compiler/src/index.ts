@@ -32,11 +32,6 @@ import {
   renderRestaurantMerchantPageRuntime,
 } from "./restaurant-merchant-runtime.js";
 import { renderRestaurantRuntime } from "./restaurant-runtime.js";
-import {
-  renderCommerceTransactionJourney,
-  renderCommerceTransactionPrisma,
-  renderCommerceTransactionRuntime,
-} from "./commerce-transaction-runtime.js";
 
 export {
   createGeneratedPageRuntimeProjection,
@@ -68,11 +63,6 @@ export {
   restaurantRuntimeEndpoints,
   type RestaurantRuntimeArtifacts,
 } from "./restaurant-runtime.js";
-export {
-  renderCommerceTransactionJourney,
-  renderCommerceTransactionPrisma,
-  renderCommerceTransactionRuntime,
-} from "./commerce-transaction-runtime.js";
 
 export type CompilationTargetKey =
   | "simulator"
@@ -689,19 +679,31 @@ function resolveCapabilityTemplateContributions(
   const contributions = compositionLock.packages.flatMap(
     ({ lock, bindings }) => {
       const asset = resolveCapabilityAssetLock(lock);
-      return loadCapabilityAssetTemplates(asset, root).map((template) => ({
-        ...template,
-        bindings,
-        effects: asset.manifest.effects,
-        operations: factoryCapabilities
-          .filter((capability) =>
-            asset.manifest.effects.includes(capability.key),
-          )
-          .map((capability) => ({
-            capability: capability.key,
-            operation: capability.operation,
-          })),
-      }));
+      return loadCapabilityAssetTemplates(asset, root)
+        .filter(
+          (template) =>
+            !(
+              asset.manifest.key === "commerce.transaction" &&
+              asset.manifest.version === "1.0.0" &&
+              (template.target ===
+                "api/src/capabilities/commerce-transaction-runtime.ts" ||
+                template.target ===
+                  "database/prisma/fragments/commerce-transaction.prisma")
+            ),
+        )
+        .map((template) => ({
+          ...template,
+          bindings,
+          effects: asset.manifest.effects,
+          operations: factoryCapabilities
+            .filter((capability) =>
+              asset.manifest.effects.includes(capability.key),
+            )
+            .map((capability) => ({
+              capability: capability.key,
+              operation: capability.operation,
+            })),
+        }));
     },
   );
   for (const contribution of contributions) {
@@ -3052,10 +3054,6 @@ export function generateApplicationBundle(
     "order",
     "orderEntity",
   );
-  const commerceTransactionEnabled = input.compositionLock.packages.some(
-    ({ lock }) =>
-      lock.key === "commerce.transaction" && lock.version === "1.0.0",
-  );
   const rootDirectory = `${graph.metadata.id}-${input.publishedRevisionId}`;
   const plannedFiles: PlannedGeneratedFile[] = [
     {
@@ -3289,26 +3287,6 @@ export function generateApplicationBundle(
       path: contribution.path,
       render: () => renderTargetContribution(contribution).content,
     })),
-    ...(commerceTransactionEnabled
-      ? [
-          {
-            path: "api/src/commerce-transaction-runtime.ts",
-            render: () => renderCommerceTransactionRuntime(),
-          },
-          {
-            path: "api/prisma/commerce-transaction.prisma",
-            render: () => renderCommerceTransactionPrisma(),
-          },
-          {
-            path: "database/prisma/commerce-transaction.prisma",
-            render: () => renderCommerceTransactionPrisma(),
-          },
-          {
-            path: "tests/commerce-transaction.journey.test.ts",
-            render: () => renderCommerceTransactionJourney(),
-          },
-        ]
-      : []),
     {
       path: "api/src/capabilities/registry.ts",
       render: () =>
