@@ -49,17 +49,19 @@ release review found four P1 semantic defects, so the PM returned Task 2
 `ready_for_qa -> implementing` for fix round 3 of 5. Repair `e61e790` stayed
 inside the exact five paths and passed independent scoped re-review with all
 four findings addressed and no P0/P1, so the PM moved Task 2
-`implementing -> ready_for_qa` for re-QA. External Capability Intake remains
-accepted and frozen; this transition imports no external content and grants no
-Candidate or provider authority. Tasks 3 through 5 remain `planned`. Tasks 3
-and 4 may run in parallel only after Task 2 is accepted because they consume
-the same frozen profile composition metadata but write disjoint compiler and
-Workbench paths.
+`implementing -> ready_for_qa` for re-QA. Re-QA then found one P1 in the active
+default composition path, so the PM returned Task 2
+`ready_for_qa -> implementing` for fix round 4 of 5. External Capability Intake
+remains accepted and frozen; this repair state imports no external content and
+grants no Candidate or provider authority. Tasks 3 through 5 remain `planned`.
+Tasks 3 and 4 may run in parallel only after Task 2 is accepted because they
+consume the same frozen profile composition metadata but write disjoint
+compiler and Workbench paths.
 
 | Task                                          | State          | Specialization | Contract owner                  | Contract status                                                                                     |
 | --------------------------------------------- | -------------- | -------------- | ------------------------------- | --------------------------------------------------------------------------------------------------- |
 | 1. Capability contracts and physical packages | `accepted`     | `integration`  | Factory Capability Registry     | Release set `b2f3b9e` + `4f320fd`; QA and release review PASS, with inherited limitations recorded. |
-| 2. Restaurant and Ecommerce profile recipes   | `ready_for_qa` | `integration`  | Profile Composition Integration | Release set through `e61e790`; scoped re-review PASS with no P0/P1, independent re-QA pending.      |
+| 2. Restaurant and Ecommerce profile recipes   | `implementing` | `integration`  | Profile Composition Integration | Fix round 4/5; re-QA FAIL with one active-default-composition P1.                                   |
 | 3. Generic commercial generated runtime       | `planned`      | `backend`      | Compiler Runtime                | Blocked on accepted Task 2 Published Graph recipes and immutable locks.                             |
 | 4. Workbench profile composition visibility   | `planned`      | `frontend`     | Workbench Product Surface       | Blocked on accepted Task 2 profile composition metadata.                                            |
 | 5. Cross-profile acceptance and evidence      | `planned`      | `qa`           | Factory Release Evidence        | Blocked on accepted Tasks 1 through 4.                                                              |
@@ -214,7 +216,7 @@ of them requires a new recorded scope and repair state.
 
 ## Task 2: Compose Foundation Graph recipes for Restaurant and Ecommerce
 
-- **State:** `ready_for_qa`
+- **State:** `implementing`
 - **Specialization:** `integration`
 - **Contract owner:** Profile Composition Integration
 - **Contract artifact:** accepted Task 1 package identities, interfaces, and
@@ -235,9 +237,11 @@ scoped re-review now support `implementing -> ready_for_qa` for re-QA. The exact
 release set is `35aa96e + ed3c2ba + ac43247 + e61e790`. The Profile Composition
 Integration contract, accepted Task 1 identities and interfaces, recipe rules,
 dependencies, non-goals, acceptance evidence, and exact five-path boundary
-remain frozen. Any new path, package identity, interface, binding grammar,
-output slot, compiler/Workbench behavior, or contract change stops work for PM
-and architecture review.
+remain frozen. Re-QA then found one P1 in the active default composition path,
+so the PM moved Task 2 `ready_for_qa -> implementing` for fix round 4 of 5. Any
+new path, package identity, interface, binding grammar, output slot,
+compiler/Workbench behavior, or contract change stops work for PM and
+architecture review.
 
 ### Controller-authorized test-scope correction
 
@@ -378,8 +382,41 @@ These are repairs against the frozen Profile Composition Integration and
 accepted Task 1 contracts. They add no path, package identity, interface,
 binding grammar, output slot, dependency, compiler/Workbench behavior,
 lifecycle behavior, or non-goal. The PM moved Task 2
-`implementing -> ready_for_qa` for independent re-QA. Task 2 is not accepted,
-and Tasks 3 and 4 remain `planned` and blocked.
+`implementing -> ready_for_qa` for independent re-QA. The later re-QA finding
+below supersedes that gate transition.
+
+### Fix round 4 of 5: active default composition P1
+
+Fresh independent re-QA on Node `v22.11.0` passed 145/145 focused Task 2 tests,
+152/152 full Capabilities tests, build, typecheck, formatting, bounded diff
+checks, and direct executable checks for the four fix-round-3 categories.
+Re-QA nevertheless returned FAIL with one P1 and no demonstrated P0 or
+additional P2.
+
+The active Workbench starter calls
+`composeDefaultCapabilityDraft -> composeCapabilityDraft`. Generic composition
+performs Graph, Foundation authorization, and provider-overlap validation, but
+does not invoke the bounded Restaurant semantic validation used by the
+separate, explicitly legacy `composeProfileDraft` path. Direct compiled-package
+checks proved that the public generic composition entry point accepts a default
+Restaurant Graph after each of these mutations:
+
+1. `idempotencyKey.unique = false`;
+2. removal of the unique `idempotencyKey` index; and
+3. removal of the inventory-ledger-to-location relation.
+
+`validateRestaurantOrderingProfile` correctly rejects each mutation.
+Therefore the active composition boundary is not fail-closed for the accepted
+Restaurant location/idempotency/index/relation semantics, and the green suites
+do not justify progression.
+
+Fix round 4 must enforce the same bounded Restaurant semantic validation in the
+active default composition path and add focused public-entry-point regressions
+for all three mutations. It must not revive the legacy path. The exact five
+paths, Profile Composition Integration contract, Task 1 contracts,
+dependencies, non-goals, and compiler/Workbench/lifecycle boundaries remain
+unchanged. The PM moved Task 2 `ready_for_qa -> implementing`; Task 2 is not
+accepted, and Tasks 3 and 4 remain `planned` and blocked.
 
 ### Non-goals
 
@@ -557,9 +594,10 @@ and Tasks 3 and 4 remain `planned` and blocked.
 
 ## Next smallest valuable slice
 
-Run independent behavioral re-QA against Task 2's exact four-commit release set
-and five-path scope, including coherent role journeys, all-Foundation
-authorization, Restaurant location/idempotency structure, and full-profile
-overlap rejection. Reconcile re-QA before any move to `reviewed`. Keep Tasks 3
-and 4 planned and blocked, and preserve the accepted Task 1 physical package,
-evidence digest, verified-lock, and Publish-boundary contracts unchanged.
+Repair the active default Restaurant composition P1 within Task 2's exact
+five-path scope, beginning with focused failing public-entry-point tests for a
+non-unique idempotency field, missing unique index, and missing
+ledger-to-location relation. Require fresh scoped review before any return to
+`ready_for_qa`. Keep Tasks 3 and 4 planned and blocked, and preserve the
+accepted Task 1 physical package, evidence digest, verified-lock, and
+Publish-boundary contracts unchanged.

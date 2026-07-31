@@ -5,16 +5,16 @@ Updated: 2026-07-31
 ## Current milestone
 
 Commercial Capability Foundation Task 2, **Restaurant and Ecommerce profile
-recipes**, is `ready_for_qa` for independent re-QA after fix round 3 of 5,
-`e61e790`, passed scoped re-review with all four release-review P1 findings
-addressed and no P0/P1. Its exact release set is
-`35aa96e + ed3c2ba + ac43247 + e61e790`. Its contract owner remains Profile
-Composition Integration; its dependency, Task 1 capability contracts and
-physical packages, remains `accepted` and frozen. Task 2 remains limited to
-composing Restaurant and Ecommerce Draft recipes from the same four accepted
-Foundation identities with distinct exact Graph-symbol bindings, entities,
-pages, roles, labels, and fixtures. This transition is not acceptance and does
-not unlock Foundation Tasks 3 or 4; both remain `planned`.
+recipes**, returned `ready_for_qa -> implementing` for fix round 4 of 5 after
+independent re-QA found one P1 in the active default composition path. The
+reviewed release set remains `35aa96e + ed3c2ba + ac43247 + e61e790`. Its
+contract owner remains Profile Composition Integration; its dependency, Task 1
+capability contracts and physical packages, remains `accepted` and frozen.
+Task 2 remains limited to composing Restaurant and Ecommerce Draft recipes
+from the same four accepted Foundation identities with distinct exact
+Graph-symbol bindings, entities, pages, roles, labels, and fixtures. This
+repair state is not acceptance and does not unlock Foundation Tasks 3 or 4;
+both remain `planned`.
 
 The Application Graph remains the source of truth. External intake artifacts
 remain quarantined Candidate evidence or pending-review packets; they are not
@@ -64,6 +64,11 @@ within its exact five paths:
   addressed and no P0/P1. Fresh Node `v22.11.0` verification passed 126/126
   focused tests across the three Task 2 suites; Capabilities typecheck and
   formatting also passed.
+- Independent re-QA of the four-commit set passed 145/145 focused Task 2 tests
+  and 152/152 full Capabilities tests. Build, typecheck, formatting, bounded
+  diff checks, and direct checks of the four fix-round-3 categories passed.
+  Re-QA nevertheless returned FAIL with one P1: those green suites do not prove
+  Restaurant semantic rejection on the active default composition path.
 
 The complete External Capability Intake project is accepted and frozen. Its
 Task 6 writer record is
@@ -96,8 +101,8 @@ On Node `v22.11.0`, it records:
 
 ## Active work
 
-- Independent behavioral re-QA is the next gate for Task 2's exact release set,
-  bounded to the same five paths:
+- One bounded `integration` writer owns fix round 4 of 5 within Task 2's same
+  exact five paths:
   `packages/capabilities/src/index.ts`,
   `packages/capabilities/src/restaurant/profile.ts`,
   `packages/capabilities/test/restaurant-profile.test.ts`, and
@@ -114,11 +119,20 @@ On Node `v22.11.0`, it records:
   contract, physical asset, package identity, interface, dependency, recipe
   scope, lifecycle or Publish behavior, production behavior, non-goal, or Task
   2 state.
-- Re-QA must exercise the repaired coherent role journeys, table-driven
-  remove-one-permission failures, Restaurant movement-entity structure, and
-  full-profile overlap allowlist and rejection behavior. The repair changes no
-  frozen contract, physical asset, package identity, dependency, non-goal,
-  lifecycle behavior, compiler, or Workbench surface.
+- The P1 is specific: active Workbench composition uses
+  `composeDefaultCapabilityDraft -> composeCapabilityDraft`, but that generic
+  path does not invoke the bounded Restaurant semantic validation used by the
+  separate legacy `composeProfileDraft` path. It accepts a default Restaurant
+  Graph after any of these mutations even though
+  `validateRestaurantOrderingProfile` rejects them:
+  1. set `idempotencyKey.unique` to `false`;
+  2. remove the unique `idempotencyKey` index; or
+  3. remove the inventory-ledger-to-location relation.
+- Fix round 4 must make the active default Restaurant composition path enforce
+  the same bounded semantic validation and add regressions for all three
+  mutations through the public active entry point. It must not revive the
+  legacy path or change the frozen contract, exact path boundary, lifecycle,
+  compiler, or Workbench code.
 - No new package identity, Task 1 contract change, compiler, Workbench,
   generated runtime, payment, identity-provider, deployment behavior, profile
   cloning, Graph `assetLocks` fallback, or Restaurant-only package fork is in
@@ -137,8 +151,8 @@ On Node `v22.11.0`, it records:
   evidence. Acceptance grants no promotion, approval, Golden, Graph, compiler,
   generated-runtime, provider, or source-copy authority.
 - Foundation Tasks 3 and 4 are blocked on accepted Task 2 profile composition
-  metadata. A `ready_for_qa` transition does not satisfy that dependency;
-  neither downstream task is dispatched by this update.
+  metadata. Task 2 is back in `implementing`; neither downstream task is
+  dispatched by this update.
 
 ## Risks and limitations
 
@@ -161,8 +175,8 @@ On Node `v22.11.0`, it records:
 
 ## Next slice
 
-Run independent behavioral re-QA against Task 2's exact four-commit release set
-and five-path scope, including coherent role journeys, all-Foundation
-authorization, Restaurant location/idempotency structure, and full-profile
-overlap rejection. Reconcile re-QA before any move to `reviewed`. Keep Tasks 3
-and 4 planned and blocked until Task 2 is accepted.
+Repair the active default Restaurant composition P1 within Task 2's exact
+five-path boundary, beginning with focused failing regressions for a non-unique
+idempotency field, missing unique index, and missing ledger-to-location
+relation. Require fresh scoped review before returning to `ready_for_qa`. Keep
+Tasks 3 and 4 planned and blocked until Task 2 is accepted.
