@@ -112,6 +112,7 @@ type GeneratedRuntime = {
     entityKey: string,
     recordId: string,
     event: string,
+    options?: { expectedVersion: number; idempotencyKey: string },
   ): Promise<Record<string, unknown> & { id: string; status?: string }>;
   addCartItem(
     role: string,
@@ -690,16 +691,16 @@ describe("compilation target registry", () => {
           key: "commerce.simulated-payment",
           version: "1.0.1",
         }),
-        expect.objectContaining({ key: "commerce.catalog", version: "1.0.0" }),
+        expect.objectContaining({ key: "commerce.catalog", version: "1.1.0" }),
         expect.objectContaining({ key: "commerce.cart", version: "1.0.1" }),
-        expect.objectContaining({ key: "commerce.order", version: "1.0.0" }),
+        expect.objectContaining({ key: "commerce.order", version: "1.1.0" }),
       ]),
     );
     expect(files["api/src/application-runtime.ts"]).toContain(
       "getRecordHandler().create({",
     );
     expect(files["api/src/application-runtime.ts"]).toContain(
-      "const workflowHandler = getWorkflowHandler();",
+      "getWorkflowHandler().applyTransition({",
     );
     expect(files["api/src/application-runtime.ts"]).toContain(
       "const item = await getCartHandler().add({",
@@ -992,7 +993,10 @@ describe("compilation target registry", () => {
           await runtime.capabilityEvents(auditRole);
 
         await expect(
-          runtime.transition(customer, order.key, record.id, "pay"),
+          runtime.transition(customer, order.key, record.id, "pay", {
+            expectedVersion: 0,
+            idempotencyKey: "external-provider-preflight-pay-1",
+          }),
         ).rejects.toThrow(
           "External provider capability 'email.send' requires an activated adapter for provider 'mail'.",
         );
@@ -1059,6 +1063,10 @@ describe("compilation target registry", () => {
             order.key,
             record.id,
             "pay",
+            {
+              expectedVersion: 0,
+              idempotencyKey: "generated-profile-pay-1",
+            },
           );
 
           expect(paid.status).toBe("paid");

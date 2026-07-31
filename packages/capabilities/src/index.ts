@@ -2210,6 +2210,7 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
                   required: true,
                   values: ["cart", "paid", "fulfilled"],
                 },
+                { key: "version", type: "integer", required: true },
               ],
               indexes: [{ fields: ["status"] }],
             },

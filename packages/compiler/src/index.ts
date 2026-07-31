@@ -665,7 +665,7 @@ function renderCapabilityRegistry(
     ),
   ).sort();
   return [
-    'import type { CapabilityRuntimeModule, CartHandler, EffectHandler, RecordHandler, WorkflowHandler } from "./contract.js";',
+    'import type { CapabilityRuntimeModule, CartHandler, CatalogHandler, EffectHandler, OrderHandler, RecordHandler, WorkflowHandler } from "./contract.js";',
     "",
     ...imports,
     ...(imports.length ? [""] : []),
@@ -735,13 +735,27 @@ function renderCapabilityRegistry(
     "  );",
     "}",
     "",
+    "export function getCatalogHandler(): CatalogHandler {",
+    "  return singleHandler(",
+    "    capabilityModules.flatMap((module) => module.catalogHandler ? [module.catalogHandler] : []),",
+    '    "catalog",',
+    "  );",
+    "}",
+    "",
+    "export function getOrderHandler(): OrderHandler {",
+    "  return singleHandler(",
+    "    capabilityModules.flatMap((module) => module.orderHandler ? [module.orderHandler] : []),",
+    '    "order",',
+    "  );",
+    "}",
+    "",
   ].join("\n");
 }
 
 function renderCapabilityContract(graph: ApplicationGraphV1): string {
   const commerce = hasCommerceCapabilities(graph);
   return [
-    "export type CapabilityStoredRecord = Record<string, unknown> & { id: string; status?: string };",
+    "export type CapabilityStoredRecord = Record<string, unknown> & { id: string; status?: string; version?: number };",
     ...(commerce
       ? [
           "export type CapabilityCommerceLineItem = { id: string; actor: string; orderEntity: string; orderRecordId: string; catalogEntity: string; catalogRecordId: string; quantity: number };",
@@ -778,6 +792,16 @@ function renderCapabilityContract(graph: ApplicationGraphV1): string {
     "  list(input: { role: string; orderEntity: string; orderRecordId: string; store: CapabilityStore; assertAllowed(role: string, entityKey: string, action: string): Promise<void> }): Promise<readonly CapabilityCommerceLineItem[]>;",
     "}",
     "",
+    "export interface CatalogHandler {",
+    "  list(input: { role: string; entityKey: string; store: CapabilityStore; assertAllowed(role: string, entityKey: string, action: string): Promise<void> }): Promise<readonly CapabilityStoredRecord[]>;",
+    "  read(input: { role: string; entityKey: string; recordId: string; store: CapabilityStore; assertAllowed(role: string, entityKey: string, action: string): Promise<void> }): Promise<CapabilityStoredRecord>;",
+    "}",
+    "",
+    "export interface OrderHandler {",
+    "  create(input: { role: string; entityKey: string; input: Record<string, unknown>; store: CapabilityStore; assertAllowed(role: string, entityKey: string, action: string): Promise<void> }): Promise<CapabilityStoredRecord>;",
+    "  transition(input: { role: string; entityKey: string; recordId: string; nextState: string; expectedVersion: number; idempotencyKey: string; store: CapabilityStore; assertAllowed(role: string, entityKey: string, action: string): Promise<void> }): Promise<CapabilityStoredRecord>;",
+    "}",
+    "",
     "export type EffectHandler = (input: { role: string; entityKey: string; recordId: string; operation: string; store: CapabilityStore; now: string }) => Promise<void>;",
     "",
     "export interface CapabilityRuntimeModule {",
@@ -788,6 +812,8 @@ function renderCapabilityContract(graph: ApplicationGraphV1): string {
     "  readonly recordHandler?: RecordHandler;",
     "  readonly workflowHandler?: WorkflowHandler;",
     "  readonly cartHandler?: CartHandler;",
+    "  readonly catalogHandler?: CatalogHandler;",
+    "  readonly orderHandler?: OrderHandler;",
     "  readonly effectHandler?: EffectHandler;",
     "}",
     "",
@@ -1434,21 +1460,64 @@ function runtimeDefinition(graph: ApplicationGraphV1) {
   };
 }
 
+function lockedRuntimeHandlerEntity(
+  compositionLock: CapabilityCompositionLockV1,
+  assetKey: string,
+  handler: "catalog" | "order",
+  bindingKey: string,
+): string | undefined {
+  const selection = compositionLock.packages.find(
+    ({ lock }) => lock.key === assetKey,
+  );
+  if (!selection) return undefined;
+
+  const asset = resolveCapabilityAssetLock(selection.lock);
+  if (!asset.manifest.runtimeHandlers?.includes(handler)) return undefined;
+
+  const binding = selection.bindings[bindingKey];
+  if (
+    !binding ||
+    typeof binding !== "object" ||
+    !("graphSymbol" in binding) ||
+    typeof binding.graphSymbol !== "string"
+  ) {
+    throw new Error(
+      `Locked ${assetKey} handler requires a '${bindingKey}' Graph binding.`,
+    );
+  }
+  const match = /^graph\.domain\.([a-z][a-z0-9-]*)$/.exec(binding.graphSymbol);
+  if (!match) {
+    throw new Error(
+      `Locked ${assetKey} handler binding '${bindingKey}' must target a domain entity.`,
+    );
+  }
+  return match[1];
+}
+
 function renderApplicationRuntime(
   graph: ApplicationGraphV1,
   useResolvedContributions: boolean,
   usePackageCartHandler: boolean,
+  catalogEntityKey: string | undefined,
+  orderEntityKey: string | undefined,
 ): string {
   const commerce = hasCommerceCapabilities(graph);
+  const capabilityRegistryImports = [
+    ...(commerce && usePackageCartHandler ? ["getCartHandler"] : []),
+    ...(catalogEntityKey ? ["getCatalogHandler"] : []),
+    ...(orderEntityKey ? ["getOrderHandler"] : []),
+    "getEffectHandler",
+    "getRecordHandler",
+    "getWorkflowHandler",
+    "providedEffects",
+  ];
   return [
     useResolvedContributions
-      ? commerce && usePackageCartHandler
-        ? 'import { getCartHandler, getEffectHandler, getRecordHandler, getWorkflowHandler, providedEffects } from "./capabilities/registry.js";'
-        : 'import { getEffectHandler, getRecordHandler, getWorkflowHandler, providedEffects } from "./capabilities/registry.js";'
+      ? `import { ${capabilityRegistryImports.join(", ")} } from "./capabilities/registry.js";`
       : 'import { providedEffects } from "./capabilities/registry.js";',
     'import { enforce } from "./policy.js";',
     "",
-    "export type StoredRecord = Record<string, unknown> & { id: string; status?: string };",
+    "export type StoredRecord = Record<string, unknown> & { id: string; status?: string; version?: number };",
     "export type AuditEvent = { actor: string; action: string; entity: string; recordId: string; at: string };",
     "export type CapabilityEvent = { actor: string; capability: string; operation: string; entity: string; recordId: string; outcome: 'completed'; at: string };",
     ...(commerce
@@ -1617,9 +1686,42 @@ function renderApplicationRuntime(
     "  async list(role: string, entityKey: string): Promise<readonly StoredRecord[]> {",
     "    this.entity(entityKey);",
     "    await this.assertAllowed(role, entityKey, 'read');",
+    ...(catalogEntityKey
+      ? [
+          `    if (entityKey === ${JSON.stringify(catalogEntityKey)}) {`,
+          "      return getCatalogHandler().list({",
+          "        role,",
+          "        entityKey,",
+          "        store: this.store,",
+          "        assertAllowed: (candidateRole, resource, action) => this.assertAllowed(candidateRole, resource, action),",
+          "      });",
+          "    }",
+        ]
+      : []),
     useResolvedContributions
       ? "    return getRecordHandler().list({ store: this.store, entityKey });"
       : "    return this.store.list(entityKey);",
+    "  }",
+    "",
+    "  async read(role: string, entityKey: string, recordId: string): Promise<StoredRecord> {",
+    "    this.entity(entityKey);",
+    "    await this.assertAllowed(role, entityKey, 'read');",
+    ...(catalogEntityKey
+      ? [
+          `    if (entityKey === ${JSON.stringify(catalogEntityKey)}) {`,
+          "      return getCatalogHandler().read({",
+          "        role,",
+          "        entityKey,",
+          "        recordId,",
+          "        store: this.store,",
+          "        assertAllowed: (candidateRole, resource, action) => this.assertAllowed(candidateRole, resource, action),",
+          "      });",
+          "    }",
+        ]
+      : []),
+    "    const record = await this.store.find(entityKey, recordId);",
+    "    if (!record) throw new Error(`Record '${recordId}' was not found.`);",
+    "    return record;",
     "  }",
     "",
     "  async create(role: string, entityKey: string, input: Record<string, unknown>): Promise<StoredRecord> {",
@@ -1631,22 +1733,39 @@ function renderApplicationRuntime(
     "    const flow = this.flow(entityKey);",
     "    for (const field of entity.fields) {",
     "      const supplied = input[field.key];",
-    "      const suppliedByFlow = field.key === 'status' && !!flow;",
-    "      if (field.required && supplied === undefined && !suppliedByFlow) {",
+    "      const suppliedByRuntime =",
+    `        (field.key === 'status' && !!flow) || (field.key === 'version' && entityKey === ${JSON.stringify(orderEntityKey)});`,
+    "      if (field.required && supplied === undefined && !suppliedByRuntime) {",
     "        throw new Error(`Required field '${field.key}' is missing.`);",
     "      }",
     "    }",
-    ...(useResolvedContributions
+    ...(useResolvedContributions && orderEntityKey
       ? [
-          "    const record = await getRecordHandler().create({",
-          "      store: this.store,",
-          "      entityKey,",
-          "      input: { ...input, ...(flow ? { status: flow.initialState } : {}) },",
-          "    });",
+          `    const record = entityKey === ${JSON.stringify(orderEntityKey)}`,
+          "      ? await getOrderHandler().create({",
+          "          role,",
+          "          entityKey,",
+          "          input: { ...input, ...(flow ? { status: flow.initialState } : {}), version: 0 },",
+          "          store: this.store,",
+          "          assertAllowed: (candidateRole, resource, action) => this.assertAllowed(candidateRole, resource, action),",
+          "        })",
+          "      : await getRecordHandler().create({",
+          "          store: this.store,",
+          "          entityKey,",
+          "          input: { ...input, ...(flow ? { status: flow.initialState } : {}) },",
+          "        });",
         ]
-      : [
-          "    const record = await this.store.create(entityKey, { ...input, ...(flow ? { status: flow.initialState } : {}) });",
-        ]),
+      : useResolvedContributions
+        ? [
+            "    const record = await getRecordHandler().create({",
+            "      store: this.store,",
+            "      entityKey,",
+            "      input: { ...input, ...(flow ? { status: flow.initialState } : {}) },",
+            "    });",
+          ]
+        : [
+            "    const record = await this.store.create(entityKey, { ...input, ...(flow ? { status: flow.initialState } : {}) });",
+          ]),
     "    await this.store.appendAudit({ actor: role, action: 'create', entity: entityKey, recordId: record.id, at: new Date().toISOString() });",
     "    return record;",
     "  }",
@@ -1708,7 +1827,7 @@ function renderApplicationRuntime(
           "",
         ]
       : []),
-    "  async transition(role: string, entityKey: string, recordId: string, event: string): Promise<StoredRecord> {",
+    "  async transition(role: string, entityKey: string, recordId: string, event: string, options: { expectedVersion?: number; idempotencyKey?: string } = {}): Promise<StoredRecord> {",
     "    this.entity(entityKey);",
     "    const flow = this.flow(entityKey);",
     "    if (!flow) throw new Error(`Entity '${entityKey}' has no declared flow.`);",
@@ -1721,21 +1840,49 @@ function renderApplicationRuntime(
     "    }",
     "    if (transition.roles?.length) await this.assertTransitionAllowed(role, entityKey, event);",
     "    else await this.assertAllowed(role, entityKey, 'read');",
-    ...(useResolvedContributions
+    ...(orderEntityKey
       ? [
-          "    const workflowHandler = getWorkflowHandler();",
-          "    await this.executeEffects(role, entityKey, recordId, transition.effects);",
-          "    const updated = await workflowHandler.applyTransition({",
-          "      store: this.store,",
-          "      entityKey,",
-          "      recordId,",
-          "      nextState: transition.to,",
-          "    });",
+          `    if (entityKey === ${JSON.stringify(orderEntityKey)} && (!Number.isInteger(options.expectedVersion) || (options.expectedVersion ?? -1) < 0 || typeof options.idempotencyKey !== 'string' || !options.idempotencyKey.trim())) {`,
+          "      throw new Error('Order transitions require an expected version and idempotency key.');",
+          "    }",
         ]
-      : [
+      : []),
+    ...(useResolvedContributions && orderEntityKey
+      ? [
           "    await this.executeEffects(role, entityKey, recordId, transition.effects);",
-          "    const updated = await this.store.update(entityKey, recordId, { status: transition.to });",
-        ]),
+          `    const updated = entityKey === ${JSON.stringify(orderEntityKey)}`,
+          "      ? await getOrderHandler().transition({",
+          "          role,",
+          "          entityKey,",
+          "          recordId,",
+          "          nextState: transition.to,",
+          "          expectedVersion: options.expectedVersion!,",
+          "          idempotencyKey: options.idempotencyKey!,",
+          "          store: this.store,",
+          "          assertAllowed: (candidateRole, resource, action) => this.assertAllowed(candidateRole, resource, action),",
+          "        })",
+          "      : await getWorkflowHandler().applyTransition({",
+          "          store: this.store,",
+          "          entityKey,",
+          "          recordId,",
+          "          nextState: transition.to,",
+          "        });",
+        ]
+      : useResolvedContributions
+        ? [
+            "    const workflowHandler = getWorkflowHandler();",
+            "    await this.executeEffects(role, entityKey, recordId, transition.effects);",
+            "    const updated = await workflowHandler.applyTransition({",
+            "      store: this.store,",
+            "      entityKey,",
+            "      recordId,",
+            "      nextState: transition.to,",
+            "    });",
+          ]
+        : [
+            "    await this.executeEffects(role, entityKey, recordId, transition.effects);",
+            "    const updated = await this.store.update(entityKey, recordId, { status: transition.to });",
+          ]),
     "    await this.store.appendAudit({ actor: role, action: event, entity: entityKey, recordId, at: new Date().toISOString() });",
     "    return updated;",
     "  }",
@@ -2319,14 +2466,19 @@ function renderApiMain(graph: ApplicationGraphV1): string {
     "    try { return await applicationRuntime.list(roleFrom(request), entity); } catch (error) { throw rejected(error); }",
     "  }",
     "",
+    "  @Get(':entity/:recordId')",
+    "  async read(@Param('entity') entity: string, @Param('recordId') recordId: string, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
+    "    try { return await applicationRuntime.read(roleFrom(request), entity, recordId); } catch (error) { throw rejected(error); }",
+    "  }",
+    "",
     "  @Post(':entity')",
     "  async create(@Param('entity') entity: string, @Body() body: Record<string, unknown>, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
     "    try { return await applicationRuntime.create(roleFrom(request), entity, body); } catch (error) { throw rejected(error); }",
     "  }",
     "",
     "  @Post(':entity/:recordId/events/:event')",
-    "  async transition(@Param('entity') entity: string, @Param('recordId') recordId: string, @Param('event') event: string, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
-    "    try { return await applicationRuntime.transition(roleFrom(request), entity, recordId, event); } catch (error) { throw rejected(error); }",
+    "  async transition(@Param('entity') entity: string, @Param('recordId') recordId: string, @Param('event') event: string, @Body() body: { expectedVersion: number; idempotencyKey: string }, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
+    "    try { return await applicationRuntime.transition(roleFrom(request), entity, recordId, event, body); } catch (error) { throw rejected(error); }",
     "  }",
     "}",
     "",
@@ -2433,6 +2585,13 @@ function renderJourneyTest(graph: ApplicationGraphV1): string {
           effect.capability === "inventory.decrement",
       ),
     );
+  const versionedOrderJourney =
+    entity.key === "order" &&
+    graph.integration.capabilities.some(
+      (capability) =>
+        capability.key === "order.transition" &&
+        capability.operation === "transition",
+    );
   const capabilityEventPairs = [
     ...(cartJourney ? [{ capability: "cart.add", operation: "add" }] : []),
     ...capabilityEffects.flatMap((effect) =>
@@ -2457,8 +2616,8 @@ function renderJourneyTest(graph: ApplicationGraphV1): string {
           `    await applicationRuntime.addCartItem(${JSON.stringify(createPermission.role)}, ${JSON.stringify(entity.key)}, record.id, ${JSON.stringify({ catalogEntity, catalogRecordId: catalogSeed!.id ?? `seed-${catalogSeed!.entity}-1`, quantity: 1 })});`,
         ]
       : []),
-    ...transitions.flatMap((transition) => [
-      `    await applicationRuntime.transition(${JSON.stringify(transition.roles?.[0] ?? createPermission.role)}, ${JSON.stringify(entity.key)}, record.id, ${JSON.stringify(transition.event)});`,
+    ...transitions.flatMap((transition, index) => [
+      `    await applicationRuntime.transition(${JSON.stringify(transition.roles?.[0] ?? createPermission.role)}, ${JSON.stringify(entity.key)}, record.id, ${JSON.stringify(transition.event)}${versionedOrderJourney ? `, { expectedVersion: ${index}, idempotencyKey: ${JSON.stringify(`generated-${transition.event}-${index + 1}`)} }` : ""});`,
       `    expect(record.status).toBe(${JSON.stringify(transition.to)});`,
     ]),
     ...(auditRole
@@ -2685,6 +2844,18 @@ export function generateApplicationBundle(
         asset.manifest.runtimeHandlers?.includes("cart")
       );
     },
+  );
+  const catalogEntityKey = lockedRuntimeHandlerEntity(
+    input.compositionLock,
+    "commerce.catalog",
+    "catalog",
+    "catalogEntity",
+  );
+  const orderEntityKey = lockedRuntimeHandlerEntity(
+    input.compositionLock,
+    "commerce.order",
+    "order",
+    "orderEntity",
   );
   const rootDirectory = `${graph.metadata.id}-${input.publishedRevisionId}`;
   const plannedFiles: PlannedGeneratedFile[] = [
@@ -2929,6 +3100,8 @@ export function generateApplicationBundle(
           graph,
           useResolvedContributions,
           usePackageCartHandler,
+          catalogEntityKey,
+          orderEntityKey,
         ),
     },
     {

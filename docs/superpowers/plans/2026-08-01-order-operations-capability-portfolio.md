@@ -149,6 +149,7 @@ git commit -m "feat: add executable catalog and order packages"
 - Modify: `packages/compiler/src/index.ts`
 - Create: `packages/compiler/test/order-operations-runtime.test.ts`
 - Modify: `packages/compiler/test/profile-compilation.test.ts`
+- Modify: `packages/compiler/test/compilation-plan.test.ts`
 
 **Consumes:** Task 1 v1.1 locks and templates.
 
@@ -157,7 +158,7 @@ git commit -m "feat: add executable catalog and order packages"
 Generic catalog and order paths must not select behaviour from
 `compositionProfile`.
 
-- [ ] **Step 1: Write failing runtime tests**
+- [x] **Step 1: Write failing runtime tests**
 
 ```ts
 it("delegates catalog list and read to the locked Catalog handler", () => {
@@ -179,14 +180,14 @@ it("delegates create and transition to the locked Order handler", () => {
 });
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run: `pnpm --filter @factory/compiler test -- --run test/order-operations-runtime.test.ts`
 
 Expected: FAIL because the generated `CapabilityRuntimeModule` has no catalog
 or order handler and generic runtime paths still own the operations.
 
-- [ ] **Step 3: Add bounded generated handler interfaces and resolvers**
+- [x] **Step 3: Add bounded generated handler interfaces and resolvers**
 
 In `renderCapabilityContract`, define handler input/output types that carry
 only role, Graph-bound entity/flow keys, record data, expected version,
@@ -195,7 +196,7 @@ that require exactly one locked module implementing each handler. Wire generic
 catalog reads and order creation/transitions through those resolvers. Reject a
 missing handler before mutating state.
 
-- [ ] **Step 4: Preserve the Restaurant extension boundary**
+- [x] **Step 4: Preserve the Restaurant extension boundary**
 
 Keep the Restaurant table-session, kitchen, cashier, receipt, and merchant
 specialisation in their existing extension modules. Replace only generic
@@ -203,7 +204,7 @@ catalog/order operations. Add a regression assertion that changing
 `graph.integration.compositionProfile` cannot choose catalog/order handler
 code when the same v1.1 locks are supplied.
 
-- [ ] **Step 5: Verify GREEN and commit**
+- [x] **Step 5: Verify GREEN and commit**
 
 Run:
 
@@ -219,6 +220,17 @@ Commit:
 git add packages/compiler
 git commit -m "feat: compile package-owned catalog and order handlers"
 ```
+
+Verified before this plan update:
+
+```text
+pnpm --filter @factory/compiler test                 # 185 passed
+pnpm --filter @factory/capabilities test             # 221 passed
+```
+
+`compilation-plan.test.ts` also records the intended current versions and the
+required order transition command inputs. It therefore cannot silently revert
+the versioned order-command boundary while retaining a passing profile journey.
 
 ## Task 3: Add Retail Counter and Grocery Pickup as Composition Recipes
 
