@@ -8,17 +8,17 @@ Typed Capability Binding Validation is the current hardening milestone.
 ADR-0006 is `Accepted` under Factory controller authority; its approved design,
 implementation plan, and six-task ledger now govern the work. All six tasks are
 governed by the accepted dependency chain. Task 1, **pure typed Graph symbol
-index**, is `ready_for_qa` after bounded repair round 1. Original implementation
+index**, is `reviewed` after bounded repair round 1. Original implementation
 commit
 `86d5a00f26d5f331764de0e8bf7694e657cd2514` passed independent Task 1 review
 and behavioral QA with no P0/P1/P2, but release review then found one
 load-bearing P1 in duplicate navigation/flow identifier handling. Repair commit
-`784ebb0b3f30d3dad4cb7cc6ac7b4f1efc42fa50` passed independent re-review with
-no P0/P1/P2. The same bounded writer, Typed Graph Index Integration, retains the
-unchanged Application Graph Type System contract and exact four Graph paths.
-Tasks 2 through 5 remain `planned` and serialized on acceptance of the
-preceding contract task. Task 6 remains `planned` and begins only after Tasks 1
-through 5 are all `accepted`.
+`784ebb0b3f30d3dad4cb7cc6ac7b4f1efc42fa50` passed independent re-review and
+repair-round behavioral QA with no P0/P1/P2. The same bounded writer, Typed
+Graph Index Integration, retains the unchanged Application Graph Type System
+contract and exact four Graph paths. Tasks 2 through 5 remain `planned` and
+serialized on acceptance of the preceding contract task. Task 6 remains
+`planned` and begins only after Tasks 1 through 5 are all `accepted`.
 
 Commercial Capability Foundation Task 2 remains `implementing` and escalated
 after its five permitted repair rounds. It is blocked on accepted Typed
@@ -102,6 +102,20 @@ Typed Binding Task 1 implementation, review, and QA evidence is:
   `7a0ee76e620d92032c07c7272d2b637e6835a8cc..784ebb0b3f30d3dad4cb7cc6ac7b4f1efc42fa50`
   returned PASS with no P0/P1/P2. The PM reconciled this as sufficient only for
   `implementing -> ready_for_qa`.
+- Independent repair-round re-QA on Node `v22.11.0` passed 32/32 Graph tests,
+  Graph typecheck, lint, build, and repair diff checks.
+- Public built-browser probes proved validation, parsing, and indexing reject
+  duplicate navigation-entry and flow IDs. Owner-scoped field and isolated
+  namespace probes passed, and browser/model source plus built output contained
+  no Node builtin or `@factory/capabilities` import.
+- Re-QA confirmed the repair scope remained exactly
+  `packages/graph/src/model.ts` and
+  `packages/graph/test/application-graph.test.ts` and returned PASS with no
+  P0/P1/P2. The PM reconciled this as `ready_for_qa -> reviewed`.
+- Deferred limitation: `parseApplicationGraph` still accepts a duplicate
+  domain field, while validation, `assertValidApplicationGraph`, and typed
+  indexing reject it. Repair round 1 was bounded to the missing navigation/flow
+  parse rejection and did not change this pre-existing parser behavior.
 
 Commercial Capability Foundation Task 1 is accepted and frozen. Its verified
 `1.0.0` identities are `core.identity-context`, `core.location-context`,
@@ -233,7 +247,7 @@ On Node `v22.11.0`, it records:
 
 ## Active work
 
-- Typed Binding Task 1 is `ready_for_qa` after repair round 1 under the accepted
+- Typed Binding Task 1 is `reviewed` after repair round 1 under the accepted
   ADR, design, plan, and project ledger. The bounded writer remains Typed Graph
   Index Integration and the contract owner remains Application Graph Type
   System.
@@ -241,10 +255,8 @@ On Node `v22.11.0`, it records:
   `packages/graph/src/model.ts`, `packages/graph/src/index.ts`,
   `packages/graph/src/browser.ts`, and
   `packages/graph/test/application-graph.test.ts`.
-- Independent repair-round QA must prove duplicate navigation-entry and flow
-  IDs fail closed through public validation, parsing, and indexing; re-run
-  owner-aware and isolated-namespace probes; run full Graph tests, typecheck,
-  lint, and build; and confirm browser/import isolation.
+- Independent repair-round re-QA passed with no P0/P1/P2. Task 1 now awaits
+  independent release review and fresh acceptance verification.
 - Typed Binding Task 2 remains `planned` until Task 1 is `accepted`; Tasks 3,
   4, and 5 remain serially blocked on acceptance of their preceding tasks.
   Task 6 remains `planned` until Tasks 1 through 5 are all `accepted`.
@@ -269,7 +281,8 @@ On Node `v22.11.0`, it records:
 - Foundation Tasks 3 and 4 are blocked on accepted Task 2 profile composition
   metadata. Task 2 is back in `implementing` and escalated; neither downstream
   task is dispatched by this update.
-- Typed Binding Task 1 awaits independent repair-round QA against commit
+- Typed Binding Task 1 awaits independent release review and fresh acceptance
+  verification against repair commit
   `784ebb0b3f30d3dad4cb7cc6ac7b4f1efc42fa50`. Tasks 2 through 5 remain
   `planned` and cannot overlap or start before the preceding task is
   `accepted`.
@@ -308,9 +321,11 @@ On Node `v22.11.0`, it records:
   Publish, or compiler admission. Tasks 2 through 5 are still required before
   the parent defect can be closed.
 - Repair round 1 rejects duplicate navigation-entry and flow IDs and makes
-  `indexBy` fail closed, but independent re-QA and release review have not yet
-  reconciled the former P1. Task 1 cannot be accepted on implementation and
-  re-review evidence alone.
+  `indexBy` fail closed, and independent re-QA passed. Release review and fresh
+  acceptance verification remain outstanding.
+- `parseApplicationGraph` still accepts a duplicate domain field even though
+  validation, assertion, and typed indexing reject it. This is a documented
+  deferred limitation outside the bounded navigation/flow repair.
 - New safe versions must be created and digest-verified; accepted historical
   package roots and locks cannot be edited in place. Current recipes must
   migrate through a new Draft revision.
@@ -319,9 +334,9 @@ On Node `v22.11.0`, it records:
 
 ## Next slice
 
-Run independent repair-round QA for Typed Binding Task 1 against commit
-`784ebb0b3f30d3dad4cb7cc6ac7b4f1efc42fa50`. Verify public duplicate-ID
-fail-closed behavior, owner/namespace regressions, full Graph gates, and browser
-isolation. Leave Typed Binding Tasks 2 through 6 `planned`. Keep Commercial
-Foundation Task 2 `implementing` and escalated and Tasks 3 and 4 `planned` and
-blocked.
+Run independent release review for Typed Binding Task 1 against repair commit
+`784ebb0b3f30d3dad4cb7cc6ac7b4f1efc42fa50` and its reconciled re-QA
+evidence. Require fresh verification before acceptance and preserve the
+documented duplicate-domain-field parser limitation. Leave Typed Binding Tasks
+2 through 6 `planned`. Keep Commercial Foundation Task 2 `implementing` and
+escalated and Tasks 3 and 4 `planned` and blocked.
