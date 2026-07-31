@@ -257,6 +257,90 @@ export type FlowModel = ApplicationGraphV1["flow"];
 export type IntegrationModel = ApplicationGraphV1["integration"];
 export type ExperienceModel = ApplicationGraphV1["experience"];
 
+type DomainEntityV1 = DomainModel["entities"][number];
+type DomainFieldV1 = DomainEntityV1["fields"][number];
+type PageV1 = PageModel["pages"][number];
+type NavigationEntryV1 = PageModel["navigation"][number];
+type FlowV1 = FlowModel["flows"][number];
+type IntegrationProviderV1 = IntegrationModel["providers"][number];
+
+export type GraphSymbolIndexV1 = {
+  readonly entities: ReadonlyMap<string, DomainEntityV1>;
+  readonly fieldsByEntity: ReadonlyMap<
+    string,
+    ReadonlyMap<string, DomainFieldV1>
+  >;
+  readonly pages: ReadonlyMap<string, PageV1>;
+  readonly navigationEntries: ReadonlyMap<string, NavigationEntryV1>;
+  readonly roles: ReadonlyMap<string, string>;
+  readonly flows: ReadonlyMap<string, FlowV1>;
+  readonly providers: ReadonlyMap<string, IntegrationProviderV1>;
+  readonly experienceTokens: ReadonlyMap<string, string>;
+  readonly entity: (key: string) => DomainEntityV1 | undefined;
+  readonly field: (
+    entityKey: string,
+    fieldKey: string,
+  ) => DomainFieldV1 | undefined;
+  readonly page: (id: string) => PageV1 | undefined;
+  readonly navigation: (id: string) => NavigationEntryV1 | undefined;
+  readonly role: (key: string) => string | undefined;
+  readonly flow: (id: string) => FlowV1 | undefined;
+  readonly provider: (id: string) => IntegrationProviderV1 | undefined;
+  readonly experienceToken: (key: string) => string | undefined;
+};
+
+function indexBy<T>(
+  values: readonly T[],
+  key: (value: T) => string,
+): ReadonlyMap<string, T> {
+  return new Map(values.map((value) => [key(value), value]));
+}
+
+/**
+ * Builds capability-agnostic, independently typed lookup namespaces for one
+ * Application Graph. Domain fields are reachable only through their owning
+ * entity.
+ */
+export function createGraphSymbolIndex(
+  graph: ApplicationGraphV1,
+): GraphSymbolIndexV1 {
+  const entities = indexBy(graph.domain.entities, ({ key }) => key);
+  const fieldsByEntity = new Map(
+    graph.domain.entities.map((entity) => [
+      entity.key,
+      indexBy(entity.fields, ({ key }) => key),
+    ]),
+  );
+  const pages = indexBy(graph.page.pages, ({ id }) => id);
+  const navigationEntries = indexBy(graph.page.navigation, ({ id }) => id);
+  const roles = new Map(graph.policy.roles.map((role) => [role, role]));
+  const flows = indexBy(graph.flow.flows, ({ id }) => id);
+  const providers = indexBy(graph.integration.providers, ({ id }) => id);
+  const experienceTokens = new Map(
+    Object.entries(graph.experience.theme.tokens),
+  );
+
+  return {
+    entities,
+    fieldsByEntity,
+    pages,
+    navigationEntries,
+    roles,
+    flows,
+    providers,
+    experienceTokens,
+    entity: (key) => entities.get(key),
+    field: (entityKey, fieldKey) =>
+      fieldsByEntity.get(entityKey)?.get(fieldKey),
+    page: (id) => pages.get(id),
+    navigation: (id) => navigationEntries.get(id),
+    role: (key) => roles.get(key),
+    flow: (id) => flows.get(id),
+    provider: (id) => providers.get(id),
+    experienceToken: (key) => experienceTokens.get(key),
+  };
+}
+
 export function parsePageModel(input: unknown): PageModel {
   return pageModelSchema.parse(input);
 }

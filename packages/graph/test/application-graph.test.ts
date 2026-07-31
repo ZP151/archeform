@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   applyGraphDiffToDraft,
+  createGraphSymbolIndex,
   createDraftRevision,
   createPublishedGraphExchange,
   GraphDiffError,
@@ -116,6 +117,72 @@ function draftGraphWithBindings(bindings: Record<string, unknown>): unknown {
 }
 
 describe("ApplicationGraphV1", () => {
+  it("resolves duplicate field keys only under their declared entity owner", () => {
+    const graph = structuredClone(expenseGraph);
+    graph.domain.entities.push(
+      {
+        key: "product",
+        label: "Product",
+        fields: [
+          { key: "code", type: "string", required: true, unique: true },
+          { key: "stock", type: "integer", required: true },
+        ],
+        indexes: [{ fields: ["code"], unique: true }],
+      },
+      {
+        key: "store",
+        label: "Store",
+        fields: [{ key: "code", type: "string", required: true, unique: true }],
+        indexes: [{ fields: ["code"], unique: true }],
+      },
+    );
+
+    const index = createGraphSymbolIndex(graph);
+
+    expect(index.field("product", "stock")).toMatchObject({
+      type: "integer",
+      required: true,
+    });
+    expect(index.field("store", "stock")).toBeUndefined();
+    expect(index.field("product", "code")).toMatchObject({ type: "string" });
+    expect(index.field("store", "code")).toMatchObject({ type: "string" });
+    expect(index.fieldsByEntity.get("product")?.get("stock")).toBe(
+      index.field("product", "stock"),
+    );
+  });
+
+  it("keeps every Graph symbol kind in its own namespace", () => {
+    const graph = structuredClone(expenseGraph);
+    graph.page.pages.push({
+      id: "expenses",
+      route: "/expense-overview",
+      title: "Expense overview",
+      blocks: [],
+    });
+    graph.integration.providers.push({
+      id: "mail-provider",
+      type: "email",
+      version: "1.0.0",
+    });
+
+    const index = createGraphSymbolIndex(graph);
+
+    expect(index.page("expenses")).toMatchObject({
+      route: "/expense-overview",
+    });
+    expect(index.navigation("expenses")).toMatchObject({
+      pageId: "expense-list",
+    });
+    expect(index.entity("expense")).toMatchObject({ label: "Expense" });
+    expect(index.role("employee")).toBe("employee");
+    expect(index.flow("expense-approval")).toMatchObject({ entity: "expense" });
+    expect(index.provider("mail-provider")).toMatchObject({ type: "email" });
+    expect(index.experienceToken("accent")).toBe("#0f766e");
+    expect(index.page("employee")).toBeUndefined();
+    expect(index.navigation("expense")).toBeUndefined();
+    expect(index.provider("accent")).toBeUndefined();
+  });
+
   it("parses a graph that can represent the expense profile", () => {
     expect(parseApplicationGraph(expenseGraph)).toEqual(expenseGraph);
     expect(validateApplicationGraph(expenseGraph)).toEqual([]);
