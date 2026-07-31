@@ -46,17 +46,20 @@ contract and exact five paths. After implementation `35aa96e`, two bounded
 repair rounds `ed3c2ba + ac43247`, clean scoped task review, and fresh focused
 verification, the PM moved Task 2 `implementing -> ready_for_qa`. Subsequent
 release review found four P1 semantic defects, so the PM returned Task 2
-`ready_for_qa -> implementing` for fix round 3 of 5. External Capability Intake
-remains accepted and frozen; this repair state imports no external content and
-grants no Candidate or provider authority. Tasks 3 through 5 remain `planned`.
-Tasks 3 and 4 may run in parallel only after Task 2 is accepted because they
-consume the same frozen profile composition metadata but write disjoint
-compiler and Workbench paths.
+`ready_for_qa -> implementing` for fix round 3 of 5. Repair `e61e790` stayed
+inside the exact five paths and passed independent scoped re-review with all
+four findings addressed and no P0/P1, so the PM moved Task 2
+`implementing -> ready_for_qa` for re-QA. External Capability Intake remains
+accepted and frozen; this transition imports no external content and grants no
+Candidate or provider authority. Tasks 3 through 5 remain `planned`. Tasks 3
+and 4 may run in parallel only after Task 2 is accepted because they consume
+the same frozen profile composition metadata but write disjoint compiler and
+Workbench paths.
 
 | Task                                          | State          | Specialization | Contract owner                  | Contract status                                                                                     |
 | --------------------------------------------- | -------------- | -------------- | ------------------------------- | --------------------------------------------------------------------------------------------------- |
 | 1. Capability contracts and physical packages | `accepted`     | `integration`  | Factory Capability Registry     | Release set `b2f3b9e` + `4f320fd`; QA and release review PASS, with inherited limitations recorded. |
-| 2. Restaurant and Ecommerce profile recipes   | `implementing` | `integration`  | Profile Composition Integration | Fix round 3/5; release review FAIL with four open P1 semantic defects.                              |
+| 2. Restaurant and Ecommerce profile recipes   | `ready_for_qa` | `integration`  | Profile Composition Integration | Release set through `e61e790`; scoped re-review PASS with no P0/P1, independent re-QA pending.      |
 | 3. Generic commercial generated runtime       | `planned`      | `backend`      | Compiler Runtime                | Blocked on accepted Task 2 Published Graph recipes and immutable locks.                             |
 | 4. Workbench profile composition visibility   | `planned`      | `frontend`     | Workbench Product Surface       | Blocked on accepted Task 2 profile composition metadata.                                            |
 | 5. Cross-profile acceptance and evidence      | `planned`      | `qa`           | Factory Release Evidence        | Blocked on accepted Tasks 1 through 4.                                                              |
@@ -211,7 +214,7 @@ of them requires a new recorded scope and repair state.
 
 ## Task 2: Compose Foundation Graph recipes for Restaurant and Ecommerce
 
-- **State:** `implementing`
+- **State:** `ready_for_qa`
 - **Specialization:** `integration`
 - **Contract owner:** Profile Composition Integration
 - **Contract artifact:** accepted Task 1 package identities, interfaces, and
@@ -227,7 +230,9 @@ exact five paths below. The resulting release set is implementation `35aa96e`
 plus repair commits `ed3c2ba` and `ac43247`. Clean scoped task review and fresh
 focused verification supported `implementing -> ready_for_qa`, but subsequent
 release review found four P1 semantic defects. The PM returned Task 2
-`ready_for_qa -> implementing` for fix round 3 of 5. The Profile Composition
+`ready_for_qa -> implementing` for fix round 3 of 5. Repair `e61e790` and its
+scoped re-review now support `implementing -> ready_for_qa` for re-QA. The exact
+release set is `35aa96e + ed3c2ba + ac43247 + e61e790`. The Profile Composition
 Integration contract, accepted Task 1 identities and interfaces, recipe rules,
 dependencies, non-goals, acceptance evidence, and exact five-path boundary
 remain frozen. Any new path, package identity, interface, binding grammar,
@@ -308,7 +313,7 @@ until the bounded fix rounds and fresh re-review below.
 The PM moved Task 2 `implementing -> ready_for_qa`. This was not acceptance,
 and the later release-review findings below supersede that gate transition.
 
-### Fix round 3 of 5: release-review P1 findings
+### Fix round 3 of 5: closed release-review P1 findings
 
 Release review of the exact Task 2 release set returned FAIL with four P1
 semantic defects:
@@ -333,7 +338,7 @@ semantic defects:
    default recipe and does not enforce overlap policy on
    `composeProfileDraft`/`getProfileComposition`.
 
-Fix round 3 remains inside the exact five paths above and must:
+Fix round 3 remained inside the exact five paths above and required:
 
 - use canonical Ecommerce customer and merchant roles consistently across
   every selected binding, order-flow transition, and permission, with coherent
@@ -348,12 +353,33 @@ Fix round 3 remains inside the exact five paths above and must:
   and `inventory.decrement` co-provider sets, and cover the full Restaurant
   composition entry points.
 
+Repair commit `e61e790` closed the requirements with this evidence:
+
+- Ecommerce bindings, permissions, and fulfillment use one coherent `shopper`
+  journey and one coherent `merchant` journey.
+- Permission requirements are derived and enforced for all four Foundation
+  packages in both profiles; remove-one-permission cases fail closed.
+- Restaurant stock movements require location scope, a unique idempotency
+  key/index, and item, order, and location relations; adversarial structural
+  mutations reject.
+- Centralized production composition validation admits only the declared
+  `inventory.reserve`, `inventory.release`, and `inventory.decrement`
+  co-provider sets. Every other overlap, including the former
+  `inventory.adjust` overlap, fails closed through the full profile composition
+  entry points.
+- Independent scoped re-review found all four original P1s addressed, no new
+  P0/P1, and the exact five-path boundary preserved.
+- Fresh Node `v22.11.0` verification passed 126/126 tests across
+  `capability-registry.test.ts`, `restaurant-profile.test.ts`, and
+  `commercial-profile-composition.test.ts`. Capabilities typecheck and
+  formatting passed.
+
 These are repairs against the frozen Profile Composition Integration and
-accepted Task 1 contracts. They authorize no new path, package identity,
-interface, binding grammar, output slot, dependency, compiler/Workbench
-behavior, lifecycle behavior, or non-goal. The PM moved Task 2
-`ready_for_qa -> implementing`; Task 2 is not accepted, and Tasks 3 and 4 remain
-`planned` and blocked.
+accepted Task 1 contracts. They add no path, package identity, interface,
+binding grammar, output slot, dependency, compiler/Workbench behavior,
+lifecycle behavior, or non-goal. The PM moved Task 2
+`implementing -> ready_for_qa` for independent re-QA. Task 2 is not accepted,
+and Tasks 3 and 4 remain `planned` and blocked.
 
 ### Non-goals
 
@@ -513,13 +539,12 @@ behavior, lifecycle behavior, or non-goal. The PM moved Task 2
   Tasks 3 and 4. The PM must record the repair scope before work resumes.
 - Task 2 intentionally preserves exact co-provider ownership by
   `commerce.inventory` and `commerce.inventory-ledger` for
-  `inventory.reserve`, `inventory.release`, and `inventory.decrement`, but
-  release review found an undeclared fourth overlap on `inventory.adjust`
-  between `restaurant.menu` and `commerce.inventory-ledger`. Fix round 3 must
-  reject or remove the undeclared overlap. Before Task 3 implementation can be
-  dispatched, its compiler/runtime contract must retain lock-derived resolution
-  and prove that one logical stock movement cannot be executed twice.
-  Profile-name or package-version dispatch remains forbidden.
+  `inventory.reserve`, `inventory.release`, and `inventory.decrement`. Fix round
+  3 now rejects the formerly undeclared `inventory.adjust` overlap. Before Task
+  3 implementation can be dispatched, its compiler/runtime contract must retain
+  lock-derived resolution and prove that one logical stock movement cannot be
+  executed twice for any intentional overlap. Profile-name or package-version
+  dispatch remains forbidden.
 - A compiler decision based on profile name, Graph asset lock, package version
   switch, literal composition text, or mutable Draft state is a release blocker.
 - TypeScript registration and physical package content can diverge if digests
@@ -532,9 +557,9 @@ behavior, lifecycle behavior, or non-goal. The PM moved Task 2
 
 ## Next smallest valuable slice
 
-Repair Task 2's four release-review P1 categories within its exact five-path
-scope, beginning with focused failing role-journey, remove-one-permission,
-movement-entity, and full-profile provider-overlap tests. Require fresh scoped
-review before any return to `ready_for_qa`. Keep Tasks 3 and 4 planned and
-blocked, and preserve the accepted Task 1 physical package, evidence digest,
-verified-lock, and Publish-boundary contracts unchanged.
+Run independent behavioral re-QA against Task 2's exact four-commit release set
+and five-path scope, including coherent role journeys, all-Foundation
+authorization, Restaurant location/idempotency structure, and full-profile
+overlap rejection. Reconcile re-QA before any move to `reviewed`. Keep Tasks 3
+and 4 planned and blocked, and preserve the accepted Task 1 physical package,
+evidence digest, verified-lock, and Publish-boundary contracts unchanged.
