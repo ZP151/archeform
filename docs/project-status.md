@@ -1,127 +1,67 @@
 # Factory Pilot delivery status
 
-Updated: 2026-07-30
+Updated: 2026-07-31
 
 ## Current milestone
 
-Factory Pilot has a TypeScript Application Graph platform with mutable Drafts,
-immutable Published revisions, deterministic compilation, a Workbench Home,
-and three composed starter profiles. Restaurant Ordering is release-accepted
-as an isolated generated application. Parameterized Capability Composition has
-now reached its Task 5 implementation gate: Restaurant Ordering and Simple
-Ecommerce use the same nine shared package identities with different canonical
-bindings and independently runnable generated output. Independent task review,
-QA, release review, and fresh root verification remain before ledger acceptance.
+External Capability Intake Task 6, **Bulk acceptance and release evidence**, is
+in `implementing`. The bounded writer has added fixture-only acceptance
+regressions and a sanitized evidence record. Task 6 has not entered
+`ready_for_qa`; only the PM may reconcile the writer commit and change its
+ledger state.
 
-The active design and task-level migration plan are
-[`superpowers/specs/2026-07-30-parameterized-capability-composition-design.md`](superpowers/specs/2026-07-30-parameterized-capability-composition-design.md)
-and
-[`superpowers/plans/2026-07-30-parameterized-capability-composition.md`](superpowers/plans/2026-07-30-parameterized-capability-composition.md).
-The public-source candidate map is
-[`research/2026-07-30-profile-capability-source-study.md`](research/2026-07-30-profile-capability-source-study.md).
+The Application Graph remains the source of truth. External intake artifacts
+remain quarantined Candidate evidence or pending-review packets; they are not
+Golden capabilities, Graph input, compiler input, generated runtime authority,
+provider authority, approval, or source-copy execution.
 
-## Current evidence
+## Completed evidence
 
-Parameterized Capability Composition Task 5 evidence is documented in
-[`acceptance/parameterized-capability-composition.md`](acceptance/parameterized-capability-composition.md):
+The Task 6 writer record is
+[`acceptance/external-capability-intake.md`](acceptance/external-capability-intake.md).
+On Node `v22.11.0`, it records:
 
-- Migrated core/shared-commerce handler selection no longer uses a package-key
-  allowlist, `compositionProfile`, Graph asset locks, or an asset-version switch;
-  it uses the immutable lock's resolved contribution list.
-- Focused deterministic compiler verification passed 54/54 and Worker
-  composition-lock integrity verification passed 3/3.
-- Separate Restaurant and Ecommerce bundles each produced 58 artifacts, ran
-  API and Web on Node v22.23.1 over loopback-only ports, returned healthy
-  responses, passed their generated role journey 1/1, reached stopped state,
-  and cleaned only their exact labeled Docker resources.
-- The runtime gate exposed and closed relation-field drift in both generic
-  Prisma schema and migration artifacts: declared foreign-key scalars and
-  natural-key targets are now reused consistently, with unresolved targets
-  rejected before output.
+- A fixture-only CLI preflight of exactly 43 portfolio sources and 108 demand
+  signals: 19 independent requested results, 24 independent policy-only
+  blocks, stable redacted repeat output, no Candidate creation, and exact
+  run-owned cleanup.
+- Release-boundary regressions that reject Candidate artifacts at Golden,
+  Graph, and compiler entry points; reject Golden/Graph/compiler/generated/
+  runtime/provider/approval/copy-execution fields; and preserve package-root
+  importer isolation.
+- Complete relevant suites: External Intake 392/392, Intake CLI 56/56, Graph
+  28/28, Capabilities 123/123, and Compiler 180/180.
+- Relevant typechecks and Prettier-based lint checks for External Intake, Intake
+  CLI, Graph, Capabilities, and Compiler.
 
-`pnpm test` passed on this branch on 2026-07-30: 11 Turbo tasks and 490 tests
-across Graph (12), capabilities (66), adapters (20), compiler (161),
-compiler-worker (69), Control Plane (97), and Workbench (65). This is
-development evidence on host Node 24.18.0; it does not replace the Node 22
-generated-runtime release gate.
+## Active work
 
-Restaurant Ordering evidence is documented in
-[`acceptance/restaurant-ordering-mvp.md`](acceptance/restaurant-ordering-mvp.md):
+- Task 6 remains `implementing` until the PM reconciles the bounded writer
+  commit and independent task review.
+- Task 6 formatting and diff checks are recorded in the writer evidence; task
+  review and subsequent independent gates remain pending.
 
-- A Published Restaurant Graph compiles deterministically to 65 artifacts.
-- An isolated Node 22 generated stack passed its Customer and Merchant
-  Playwright journeys (2/2): opaque table entry, menu search, line and
-  whole-order notes, submit, full simulated payment, status/history/receipt;
-  table lifecycle, menu availability and stock, kitchen transitions, cashier
-  capture, cancellation/audit/inventory, and operational reporting.
-- Generated Customer Decimal values are normalized and rejected before cart
-  state commits; malformed line or total data cannot partially update the cart.
-- The local Factory Compose definition forwards the optional Restaurant demo
-  bootstrap value only to the Worker. Generic preview configuration remains
-  independent of that input; Restaurant preview remains fail-closed when it is
-  absent.
-- The current-source Workbench lifecycle has been independently accepted. It
-  created a Restaurant Draft, published it, compiled 65 immutable artifacts,
-  started a generated Node 22 preview, completed Customer and Merchant
-  journeys, stopped the preview, and removed only the run-owned generated
-  containers, network, volumes, and Worker runtime directory. The reproducible,
-  redacted run identity, digests, images, ports, command shapes, and cleanup
-  evidence are in the acceptance record.
-- Preview Web readiness now tolerates the proven short post-Compose startup
-  race, but caps all sanitized readiness retries at 30 seconds (and at the
-  broader operation timeout when shorter). Worker regression coverage is 73/73
-  for the focused package suite, including transient recovery, permanent
-  failure, cancellation, and exact-project cleanup.
+## Blocked decisions
 
-## Accepted release gate
+- No Candidate has been approved, promoted, registered as Golden, linked to a
+  Graph, provided runtime authority, or copied into Factory-owned code.
+- The Task 6 fixture-only clarification excludes the plan's former public-source
+  smoke probe. No public network, repository resolution/download, vendor
+  contact, credentials, or external commitment is authorized by this slice.
+- PM reconciliation, independent behavioral QA, release review, and fresh final
+  verification remain required before acceptance.
 
-The full `Workbench → Publish → Control Plane → Worker preview → generated
-Restaurant → Stop → scoped cleanup` sequence is accepted. No user-owned Docker
-resource was stopped or removed during validation. The reviewed acceptance
-record is [`acceptance/restaurant-ordering-mvp.md`](acceptance/restaurant-ordering-mvp.md).
+## Risks and limitations
 
-## Product capability gap
+- Fixture evidence proves deterministic local behavior only; it does not prove
+  availability or behavior of a live source, scanner, provider, or vendor.
+- The repository-local CLI retains the accepted single-purpose `process.chdir`
+  limitation for promotion-packet output anchoring; it is unchanged here.
+- The preflight creates intake requests only. It cannot make a licence decision,
+  promote a Candidate, or execute a source copy.
 
-The current Restaurant Profile satisfies the initial dine-in MVP, not the full
-commercial point-of-sale scope. The requirement-by-requirement evidence is in
-[`audits/restaurant-ordering-requirements-audit.md`](audits/restaurant-ordering-requirements-audit.md).
+## Next slice
 
-| Area                | Verified now                                                                             | Not yet a generated capability                                                                  |
-| ------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Customer entry      | Opaque table-session link and session-bound orders                                       | Customer login, saved stores, manual-table verification, location selection                     |
-| Menu and cart       | Categories, search, quantities, item and order notes                                     | Dish media, configurable specifications/modifiers in the Customer UI, promotions                |
-| Checkout            | Submit, full simulated `cash` or `card` payment, receipt                                 | Real payment providers, split/partial payment, member balance, suspended credit                 |
-| Customer lifecycle  | Status, session history, receipt                                                         | Reviews, images, repeat order, membership, points, coupons, delivery, pickup                    |
-| Merchant operations | Tables, menu availability, stock, kitchen queue, cashier, cancellation, audit, dashboard | Merge/move tables, order amendment, printing, promotions, member operations, data import/export |
-| Platform proof      | Draft, Publish, deterministic compile, Workbench-driven Node 22 generated-app proof      | Parameterized asset composition, generic target contributions, and Puck PageModel round trips   |
-
-## Recommended next slices
-
-1. Design and freeze **Parameterized Capability Composition v1**: typed
-   package parameters; additive Graph contributions; executable target
-   contributions; typed requirements/provides; canonical immutable composition
-   locks; and safe collision/merge rules.
-2. Convert the shared core and commerce assets so Restaurant Ordering and
-   Simple Ecommerce select identical package versions with different validated
-   parameter bindings. Remove compiler-owned handler/version selection for
-   those assets.
-3. Make Puck a validated PageModel adapter: Factory owns route, component,
-   interaction, and design-token semantics; Puck edits only approved visual
-   component data. Add a role-aware browser simulator from the same Graph.
-4. Move Restaurant-specific behavior into parameterized assets and remove the
-   Restaurant compiler fork. New feature breadth then arrives as reusable
-   capability packages, not manual Profile-only implementation.
-5. Conduct fixed-version source studies for high-value candidate ecosystems
-   before adopting any dependency or implementation pattern. External projects
-   remain governed dependencies, provider contracts, or reference-only sources.
-
-## Constraints
-
-- Factory Application Graph remains the source of truth. Editors, AI,
-  generated code, and providers are adapters.
-- Credentials and raw model input/output never enter Git, reports, generated
-  artifacts, state, logs, or screenshots.
-- External source may not be copied without a fixed-version source-study,
-  compatible license, notices, tests, and Factory-owned adapter boundary.
-- Docker Node 22 is the release environment. Host Node 24 is useful only for
-  development checks and emits the expected engine warning.
+Complete Task 6 task review and PM reconciliation, then run the independent
+behavioral QA, release review, and fresh final verification required by the
+External Capability Intake ledger.
