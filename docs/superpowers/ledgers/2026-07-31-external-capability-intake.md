@@ -42,9 +42,9 @@ allowed paths, and non-goals. A Controller-approved bounded test-contract
 amendment adds only `packages/external-intake/test/portfolio.test.ts` to permit
 `apps/intake-cli/package.json` as the single `@factory/external-intake`
 importer/dependency; the prohibition remains everywhere else. Task 5 is now
-`ready_for_qa` under its frozen External Capability Promotion contract and
-exact eight paths; independent behavioral QA is the next gate. Task 6 remains
-`planned`. Independent Task 4 review of commit
+`reviewed` under its frozen External Capability Promotion contract and exact
+eight paths; independent release review and fresh final verification are the
+remaining gates. Task 6 remains `planned`. Independent Task 4 review of commit
 `33fd204` then FAILED with four P1 findings and one P2. The Controller authorized
 bounded Repair Round 1/5 and exactly three additional production paths; Task 4
 remains `implementing` under the amended frozen scope. Repair Round 1 re-review
@@ -127,8 +127,11 @@ closed the finding. Final External Intake 389/389 and Intake CLI 55/55 tests,
 affected typechecks and lints, and diff checks passed. Independent task review
 PASSED with no P0/P1/P2. The PM reconciled the repair evidence and moved Task 5
 `implementing -> ready_for_qa`; behavioral QA, release review, and fresh final
-verification remain required. Task 6 remains `planned`. The system will ingest
-the 43 fixed-reference
+verification remained required. Independent behavioral QA at ledger commit
+`4c14294` then PASSED on Node v22.11.0 with no P0/P1/P2 or release blocker. The
+PM reconciled QA and moved Task 5 `ready_for_qa -> reviewed`; release review and
+fresh final verification remain required. Task 6 remains `planned`. The system
+will ingest the 43 fixed-reference
 portfolio as metadata, retain the 108 scenarios as composition demand signals,
 and produce only quarantined evidence, non-executable Candidate records, and
 pending-review promotion packets.
@@ -282,7 +285,7 @@ remain frozen.
 | 2. Fixed-source provenance and notices           | `accepted`     | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
 | 3. Deterministic scan orchestration              | `accepted`     | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
 | 4. Candidate registry, API, CLI, and isolation   | `accepted`     | `integration`       | Candidate Registry               | Release review and fresh root verification PASS; frozen.    |
-| 5. Review-only promotion packets                 | `ready_for_qa` | `governance`        | External Capability Promotion    | Repair review PASS; independent behavioral QA required.     |
+| 5. Review-only promotion packets                 | `reviewed`     | `governance`        | External Capability Promotion    | QA PASS; release/final gates remain.                        |
 | 6. Bulk acceptance and release evidence          | `planned`      | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.        |
 
 ## Task 1 card: Candidate contracts and immutable persistence
@@ -1701,7 +1704,7 @@ are frozen. This is not promotion or Task 5 authorization. Tasks 5 and 6 remain
 
 ## Task 5 card: Review-only promotion packets
 
-- **State:** `ready_for_qa`
+- **State:** `reviewed`
 - **Specialization:** `governance`
 - **Contract owner:** External Capability Promotion
 - **Contract artifact:** accepted Candidate Registry and design promotion gates.
@@ -1715,7 +1718,7 @@ Commercial Capability Foundation Task 1 remains accepted with release set
 `governance` writer exclusively owned the eight exact paths below through
 implementation and repair. The reviewed release set, External Capability
 Promotion contract, interfaces, paths, non-goals, and acceptance evidence are
-now frozen for QA; any scope, path, or contract change stops work for
+now frozen for release review; any scope, path, or contract change stops work for
 Controller review.
 
 ### Controller-accepted asynchronous review-input clarification
@@ -1934,6 +1937,47 @@ source-copy authorization, Golden registration, or Task 6 authorization. The
 contract and exact eight paths remain frozen; any repair returns Task 5 to
 `implementing` through the recorded workflow.
 
+### Independent behavioral QA
+
+Independent Task 5 behavioral QA at ledger commit `4c14294` PASSED on Node
+v22.11.0 with no P0/P1/P2 and no release blocker.
+
+Fresh QA evidence passed:
+
+- External Intake 389/389 across 13 files;
+- Intake CLI 55/55, including real child-process directory replacement and
+  rename/junction races;
+- focused promotion/snapshot boundaries 11/11;
+- focused CLI safety/race boundaries 8/8;
+- forbidden review-field and proposed-copy failures 20/20;
+- package-root snapshot-reader isolation 1/1;
+- External Intake and Intake CLI typechecks and Prettier lint gates; and
+- `git diff --check` for `d2f20b5`, `b970294`, and `4c14294`, with the worktree
+  remaining clean.
+
+QA verified canonical re-verifiable pending-review packets, verified
+`conformance-passed` Candidate gating, exact `(path, symbol)` proposed-copy
+coverage, UTF-8/NUL/LF/endpoint/range-digest rejection, immutable licence
+approval/rejection behavior, snapshot-reader defensive isolation, no
+Golden/Graph/compiler/runtime/provider authority, and fail-closed CLI path,
+identity, overwrite, cleanup, and race behavior.
+
+Scope reconciliation found that `d2f20b5` touches six authorized
+implementation paths and `b970294` touches the other two authorized paths. The
+intervening `7496b6a` is the Controller-authorized ledger-only clarification.
+No unauthorized implementation path changed.
+
+Residual limitations are explicit and non-blocking for this bounded gate:
+
+- QA used local deterministic fixtures only and did not run a root-wide build
+  or test; and
+- `process.chdir` assumes the specified single-purpose CLI process.
+
+The PM reconciled the clean QA result and moved Task 5
+`ready_for_qa -> reviewed`. This is not release review, final verification,
+acceptance, approval, source-copy authorization, Golden registration, or Task
+6 authorization. The contract and exact eight paths remain frozen.
+
 ### Exact allowed paths
 
 - `packages/external-intake/src/promotion.ts`
@@ -2070,15 +2114,17 @@ contract and exact eight paths remain frozen; any repair returns Task 5 to
   contract, public Store surface, or accepted behavior change returns Task 4
   to a recorded repair round and stops Task 5.
 
-The active smallest valuable slice is independent Task 5 behavioral QA against
-the reviewed `d2f20b5 + b970294` release set and frozen eight paths. QA must
-reproduce the functional, adversarial, privacy, Windows race, and cleanup
-behavior without changing implementation. The slice may consume only an
-immutable verified `conformance-passed` Candidate, freshly rehydrated Task 3
-parents, and a strict local `PromotionReviewInputV1`, and may produce only a
-canonical inventory-scoped `pending-review` packet. It creates no decision,
-approval, waiver, source copy, notice modification, Golden registration,
-Graph/compiler input, provider activation, or Task 6 behavior.
+The active smallest valuable slice is independent Task 5 release review and
+fresh final verification of the reviewed `d2f20b5 + b970294` release set and
+frozen eight paths. It must reconcile the task-review and QA evidence, preserve
+the explicit deterministic-fixture and single-purpose CLI-process limitations,
+and run the remaining release-scope verification without changing
+implementation. The slice may consume only an immutable verified
+`conformance-passed` Candidate, freshly rehydrated Task 3 parents, and a strict
+local `PromotionReviewInputV1`, and may produce only a canonical
+inventory-scoped `pending-review` packet. It creates no decision, approval,
+waiver, source copy, notice modification, Golden registration, Graph/compiler
+input, provider activation, or Task 6 behavior.
 All built-package public-surface isolation, Store/CAS, exact `id@version`,
 append-only terminal lifecycle, winner-only recovery, and multi-process
 no-orphan guarantees remain frozen. Its bounded test-contract amendment
@@ -2101,4 +2147,4 @@ recorded in its bounded amendment.
 Task 1's original release and bounded amendments, Task 2's accepted code set
 `515e0ba + 3dcb20f + dcaddf4`, Task 3's accepted repair commit `8b31d3a`, and
 Task 4's complete accepted Candidate Registry remain frozen. Task 5 is
-`ready_for_qa` under its recorded dependency gate; Task 6 remains `planned`.
+`reviewed` under its recorded dependency gate; Task 6 remains `planned`.
