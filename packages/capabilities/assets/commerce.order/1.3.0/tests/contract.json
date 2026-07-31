@@ -1,0 +1,4 @@
+{
+  "contract": "factory.transaction-operation-adapter/v1",
+  "semantics": ["typed-order-transition", "bounded-context", "store-inside-transaction"]
+}

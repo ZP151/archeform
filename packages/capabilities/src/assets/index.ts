@@ -26,6 +26,10 @@ import { lineConfigurationAssetV1_1_1 } from "./commerce/line-configuration-v1-1
 import { orderAsset } from "./commerce/order.js";
 import { orderAssetV1_1_0 } from "./commerce/order-v1-1-0.js";
 import { orderAssetV1_2_0 } from "./commerce/order-v1-2-0.js";
+import {
+  orderAssetV1_3_0,
+  createCommerceOrderTransactionOperationAdapter,
+} from "./commerce/order-v1-3-0.js";
 import { simulatedPaymentAsset } from "./commerce/simulated-payment.js";
 import { simulatedPaymentAssetV1_0_1 } from "./commerce/simulated-payment-v1-0-1.js";
 import { commerceTransactionAssetV1_0_0 } from "./commerce/transaction-v1-0-0.js";
@@ -36,6 +40,10 @@ import { restaurantTableSessionAssetV1_1_0 } from "./restaurant/table-session-v1
 import { restaurantMenuAsset } from "./restaurant/menu.js";
 import { restaurantOrderingAsset } from "./restaurant/ordering.js";
 import { restaurantOrderingAssetV1_1_0 } from "./restaurant/ordering-v1-1-0.js";
+import {
+  restaurantOrderingAssetV1_2_0,
+  createRestaurantOrderingTransactionOperationAdapter,
+} from "./restaurant/ordering-v1-2-0.js";
 import { restaurantKitchenAsset } from "./restaurant/kitchen.js";
 import { restaurantKitchenAssetV1_1_0 } from "./restaurant/kitchen-v1-1-0.js";
 import { restaurantCashierAsset } from "./restaurant/cashier.js";
@@ -67,6 +75,8 @@ export {
   orderAsset,
   orderAssetV1_1_0,
   orderAssetV1_2_0,
+  orderAssetV1_3_0,
+  createCommerceOrderTransactionOperationAdapter,
   restaurantCashierAsset,
   restaurantCashierAssetV1_1_0,
   restaurantKitchenAsset,
@@ -74,6 +84,8 @@ export {
   restaurantMenuAsset,
   restaurantOrderingAsset,
   restaurantOrderingAssetV1_1_0,
+  restaurantOrderingAssetV1_2_0,
+  createRestaurantOrderingTransactionOperationAdapter,
   restaurantReportingAsset,
   restaurantReportingAssetV1_1_0,
   restaurantTableSessionAsset,
@@ -115,6 +127,8 @@ export const capabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
   ...currentCapabilityAssets,
   commerceTransactionAssetV2_0_0,
   commerceTransactionAssetV2_1_0,
+  orderAssetV1_3_0,
+  restaurantOrderingAssetV1_2_0,
   lineConfigurationAssetV1_0_0,
   lineConfigurationAssetV1_1_0,
   catalogAssetV1_1_0,
