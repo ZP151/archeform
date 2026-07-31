@@ -1,6 +1,6 @@
 # Market and ecosystem validation
 
-Updated: 2026-07-30
+Updated: 2026-08-01
 
 ## Decision under investigation
 
@@ -45,6 +45,17 @@ adapters around those semantics. They are not alternative sources of truth.
 Before a candidate is implemented, record its exact published version, notice
 requirements, adapter boundary, removal path, fixture strategy, and acceptance
 tests in the corresponding source-study and capability design.
+
+## 2026-08-01 scale-out source evidence
+
+| Need                       | Source                                              | Observed fact                                                                                                     | Allowed Factory role               | Decision affected                                                                                                                                                                                           |
+| -------------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Inventory and traceability | [InvenTree](https://github.com/inventree/InvenTree) | The MIT-licensed project is an inventory-management system with stock-control and part-tracking concerns.         | Fixed-reference source study only. | Inform independently authored `inventory.ledger`, stock-reservation, movement-reason, and traceability contracts; do not reuse its Django runtime, migrations, UI, or source without a source-study record. |
+| Support operations         | [Chatwoot](https://github.com/chatwoot/chatwoot)    | The MIT-licensed project exposes omnichannel customer-support, assignment, collaboration, and reporting concerns. | Fixed-reference source study only. | Inform a bounded `support.inbox` capability distinct from CRM. A future package requires PII boundaries, assignment/SLA fixtures, audit evidence, and an exact source-study before any attributed port.     |
+
+These sources widen the reusable capability map; they do not make either
+project an installed dependency, a provider, a Candidate, a Golden package, or
+an authority over the Application Graph.
 
 ## 2026-07-30 profile and governed-adapter diligence
 

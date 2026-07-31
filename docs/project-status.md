@@ -2,6 +2,49 @@
 
 Updated: 2026-08-01
 
+## Current evidence audit — 2026-08-01
+
+The repository is a credible **composition foundation**, not yet a complete
+library of production application profiles. The following facts were checked
+against the current worktree:
+
+- `pnpm test` completed successfully with 14 Turbo tasks. The command reused
+  verified local cache entries; its package evidence reports 32 Graph, 66
+  Workbench, 116 Control Plane, 74 Worker, 182 Compiler, 219 Capabilities,
+  402 External Intake, 61 Intake CLI, and 20 Adapter tests.
+- `packages/capabilities/assets` contains 19 named capability families across
+  26 versioned package directories. Restaurant Ordering and Simple Ecommerce
+  resolve 13 locked package versions each. Package count is not equivalent to
+  executable coverage: `core.crud`, `core.workflow`, `core.audit`,
+  `core.notification`, `commerce.inventory`,
+  `commerce.simulated-payment`, and `commerce.cart@1.0.1` have package-local
+  executable contributions; catalog, order, and several Restaurant behaviours
+  remain compiler-owned.
+- The fixed-reference portfolio contains 43 source records and 108 scenario
+  demand mappings: 1 direct dependency, 7 provider candidates, 11 selective
+  source-study candidates, 8 architecture-only references, and 16 exclusions.
+  These are research and intake inputs, never installed capabilities or
+  production readiness evidence.
+- A guarded live acquisition attempt for TastyIgniter, its Cart extension, and
+  InvenTree was blocked by public GitHub metadata `403` responses. The command
+  created only ignored, redacted quarantine receipts and acquired no source
+  content, Candidate, Golden package, provider, Graph, or generated runtime.
+  A local environment-only GitHub read token is required before retrying live
+  metadata acquisition; it must not be inspected, logged, persisted, or
+  committed.
+
+The immediate product priority is two coupled tracks: (1) extract
+compiler-owned generic catalogue/order behaviour behind physical capability
+packages, then prove it across at least Restaurant and Ecommerce; (2) use the
+existing intake pipeline to turn a small number of fixed, permissively
+licensed source studies into narrow, Factory-authored Candidate proposals with
+fixtures and conformance evidence. Factory must not bulk-clone vertical
+repositories or treat any external schema/runtime as Application Graph truth.
+The detailed 122-recipe portfolio and source classifications are in
+[`research/2026-08-01-100-profile-capability-ecosystem.md`](research/2026-08-01-100-profile-capability-ecosystem.md);
+the Restaurant gap audit is in
+[`audits/restaurant-ordering-requirements-audit.md`](audits/restaurant-ordering-requirements-audit.md).
+
 ## Capability ecosystem status correction
 
 Factory Pilot currently proves three independently modeled Profile families:
