@@ -5,10 +5,10 @@ Updated: 2026-07-31
 ## Current milestone
 
 External Capability Intake Task 6, **Bulk acceptance and release evidence**, is
-in `implementing` for the bounded documentation-status repair at PM ledger
-commit `f1f1a04`. Independent re-QA at `43913ae` passed all behavioral and
-quality gates but failed overall solely on one stale present-tense status P2,
-with no P0/P1. Only the PM changes the ledger state.
+in `ready_for_qa` after documentation repair `409d545` passed independent
+review and the PM atomically reconciled this status, the acceptance record, and
+the ledger. Fresh independent re-QA is the next gate. Only the PM changes the
+ledger state.
 
 The Application Graph remains the source of truth. External intake artifacts
 remain quarantined Candidate evidence or pending-review packets; they are not
@@ -57,6 +57,10 @@ On Node `v22.11.0`, it records:
 - PM ledger `f1f1a04` returned Task 6 `ready_for_qa -> implementing` for this
   exact two-document status repair. No test, code, dependency, fixture,
   network boundary, public surface, authority, or product behavior may change.
+- Documentation repair `409d545` then passed independent task review with no
+  P0/P1/P2. The PM atomically moved Task 6
+  `implementing -> ready_for_qa` across the ledger, acceptance record, and this
+  status. Fresh independent re-QA is now active.
 
 ## Blocked decisions
 
@@ -65,7 +69,7 @@ On Node `v22.11.0`, it records:
 - The Task 6 fixture-only clarification excludes the plan's former public-source
   smoke probe. No public network, repository resolution/download, vendor
   contact, credentials, or external commitment is authorized by this slice.
-- This repair is fixture-only and provides no public-network, acceptance, or
+- This slice is fixture-only and provides no public-network, acceptance, or
   live-service evidence. It grants no promotion, approval, Golden, Graph,
   compiler, generated-runtime, provider, or source-copy authority.
 
@@ -80,6 +84,6 @@ On Node `v22.11.0`, it records:
 
 ## Next slice
 
-Run independent review of this two-document repair. If clean, the PM may return
-Task 6 to `ready_for_qa`; fresh independent behavioral re-QA is required next,
-then the later release review, final verification, and PM acceptance gates.
+Run fresh independent Task 6 behavioral re-QA against the synchronized
+`ready_for_qa` state. Release review, final verification, and PM acceptance
+remain required afterward.

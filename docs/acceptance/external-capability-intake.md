@@ -2,13 +2,11 @@
 
 Updated: 2026-07-31
 
-Status: Task 6 is `implementing` for the bounded documentation-status repair at
-PM ledger commit `f1f1a04`. The latest independent re-QA passed every
-behavioral and quality gate but failed overall solely because the prior two
-documents stated stale present-tense status; that is one P2 and no P0/P1. This
-repair is not acceptance, live evidence, or authority to skip independent
-review, fresh re-QA, later release review, final verification, or PM
-acceptance.
+Status: Task 6 is `ready_for_qa` after documentation repair `409d545` passed
+independent review and the PM atomically reconciled this record, project status,
+and the ledger. Fresh independent re-QA is the next gate. This transition is
+not QA PASS, release PASS, acceptance, live evidence, or authority to skip
+release review, final verification, or PM acceptance.
 
 ## Scope
 
@@ -172,6 +170,12 @@ therefore returned Task 6 `ready_for_qa -> implementing` for this exact
 two-document repair. No code, test, dependency, fixture, network boundary,
 public surface, authority, or product behavior is authorized to change.
 
+Documentation repair `409d545` then passed independent task review with no
+P0/P1/P2. The PM atomically moved Task 6
+`implementing -> ready_for_qa` across the ledger, this acceptance record, and
+project status. No historical evidence, count, timing, limitation, or
+prohibition changed in that transition.
+
 ## Limitations and remaining gates
 
 - Evidence is deterministic and fixture-only. It is not public-source,
@@ -183,8 +187,6 @@ public surface, authority, or product behavior is authorized to change.
 - Preflight proves intake request isolation and resume-stable CLI output. It
   does not make a licence decision, approve a packet, create a Golden asset, or
   authorize source copying.
-- This repair remains fixture-only and supplies no public-network, acceptance,
-  or live-service evidence. Independent review of this documentation repair is
-  next; only then may the PM return the slice to `ready_for_qa`, followed by
-  fresh independent re-QA. Release review, final verification, and PM
-  acceptance remain required before `accepted`.
+- This slice remains fixture-only and supplies no public-network, acceptance,
+  or live-service evidence. Fresh independent re-QA is next. Release review,
+  final verification, and PM acceptance remain required before `accepted`.
