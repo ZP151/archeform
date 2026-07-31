@@ -94,8 +94,11 @@ registry state, and conflicting fresh Candidate creation could leave loser
 records and blobs outside the indexed winner. After Controller escalation, the
 Controller authorized one bounded exception Repair Round 10/10. The PM returned
 Task 4 `reviewed -> implementing`; fresh task review, QA, release review, and
-root verification are all required again. The system will ingest the
-43 fixed-reference
+root verification are all required again. Repair Round 10/10 implementation
+commit `37345e5` then FAILED independent review with three P1 findings. The
+Controller keeps Task 4 `implementing` and authorizes a bounded convergence
+follow-up within the same Round 10/10 scope. The system will ingest the 43
+fixed-reference
 portfolio as metadata, retain the 108 scenarios as composition demand signals,
 and produce only quarantined evidence, non-executable Candidate records, and
 pending-review promotion packets.
@@ -248,7 +251,7 @@ remain frozen.
 | 1. Candidate contracts and immutable persistence | `accepted`     | `integration`       | External Intake Contract         | Original release and bounded amendment accepted and frozen. |
 | 2. Fixed-source provenance and notices           | `accepted`     | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
 | 3. Deterministic scan orchestration              | `accepted`     | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
-| 4. Candidate registry, API, CLI, and isolation   | `implementing` | `integration`       | Candidate Registry               | Release review FAIL; Controller-authorized Repair 10/10.    |
+| 4. Candidate registry, API, CLI, and isolation   | `implementing` | `integration`       | Candidate Registry               | Round 10 review FAIL; bounded convergence follow-up.        |
 | 5. Review-only promotion packets                 | `planned`      | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.           |
 | 6. Bulk acceptance and release evidence          | `planned`      | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.        |
 
@@ -1401,6 +1404,52 @@ verification are all mandatory again before `accepted`. This is not acceptance,
 promotion, release, or Task 5 authorization. Tasks 5 and 6 remain `planned` and
 unstarted.
 
+### Repair Round 10 independent review convergence
+
+Independent review of Repair Round 10/10 implementation commit `37345e5` FAILED
+with three P1 findings:
+
+1. Warm `show`, `verify`, and `get` paths could trust a process-local Candidate
+   cache without reconciling it against the durable current indexed receipt, so
+   one registry could report a stale status after another registry persisted the
+   terminal winner.
+2. The repository did not contain a deterministic OS-process crash-after-claim
+   regression proving same-input recovery, conflicting-input rejection, zero
+   loser Candidate/receipt/blob orphans, and fresh discovery of only the claimed
+   winner.
+3. The ignored Task 4 implementer report did not contain the required sanitized
+   Round 10 handoff evidence.
+
+The Controller keeps Task 4 `implementing` and authorizes one bounded convergence
+follow-up inside Repair Round 10/10. This is not a new round, path amendment, or
+contract expansion. The same bounded writer must:
+
+1. Within the already authorized Candidate/API production and test paths,
+   reconcile every warm-cache `show`, `verify`, and `get` against the durable
+   current indexed receipt before returning. Add a two-registry regression in
+   which one registry persists each current terminal outcome and the other
+   registry must report that current status rather than its cached sequence-1
+   state.
+2. Within the already authorized Candidate/API/internal Store production and
+   test paths, add a deterministic OS-process crash immediately after the
+   sequence-1 creation claim. Prove fresh same-input recovery, clean
+   conflicting-input rejection, zero loser Candidate/receipt/blob orphans, and
+   fresh list-before-show discovery of only the claimed winner.
+3. Update only the ignored operational evidence file
+   `.superpowers/sdd/2026-07-31-external-capability-intake/task-4-report.md` with
+   the exact Round 10 paths, focused RED/GREEN evidence, Node v22 commands and
+   summarized results, built public-surface and bounded-diff checks, the residual
+   same-filesystem atomicity risk, and a declaration that it contains no
+   credential, raw prompt/response, raw source, raw scanner output, or sensitive
+   finding payload.
+
+All work remains inside the existing Round 10/10 authorized paths and ignored
+evidence exception. No Graph, Golden registry, compiler, runtime, dependency,
+network, public-surface, terminal lifecycle, privacy, provenance, isolation,
+conformance, or Task 5 change is authorized. Fresh independent task review,
+behavioral QA, release review, and root final verification remain mandatory.
+Task 4 remains `implementing`; Tasks 5 and 6 remain `planned` and unstarted.
+
 ### Exact allowed paths
 
 - `packages/external-intake/src/candidates.ts`
@@ -1549,11 +1598,11 @@ unstarted.
   stops work.
 
 The active smallest valuable slice is Controller-authorized Task 4 Repair Round
-10/10 under the frozen Candidate Registry contract and complete repair history.
-It is limited to durable current-receipt discovery and verified asynchronous
-fresh listing, stale sequence-1 locator handling, and the internal atomic
-sequence-1 Candidate creation claim/CAS with winner-only recovery and zero loser
-orphans.
+10/10 convergence follow-up under the frozen Candidate Registry contract and
+complete repair history. It is limited to warm-cache reconciliation against the
+durable current receipt, deterministic crash-after-claim recovery and
+conflict/no-orphan proof, and a sanitized ignored implementation report with the
+required Node 22, public-surface, diff, and residual-risk evidence.
 All built-package public-surface isolation, Store/CAS, exact `id@version`,
 append-only terminal lifecycle, winner-only recovery, and multi-process
 no-orphan guarantees remain frozen. Its bounded test-contract amendment
