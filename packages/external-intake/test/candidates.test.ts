@@ -1425,6 +1425,40 @@ describe("Candidate registry", () => {
     },
   );
 
+  it.each(
+    ([".", ":", "@"] as const).flatMap((delimiter) => {
+      const token = delimiterCredentialSentinel(delimiter);
+      return [
+        [delimiter, "without a scheme", token, `authorization: ${token}`],
+        [
+          delimiter,
+          "with a Bearer scheme",
+          token,
+          `aUtHoRiZaTiOn: Bearer ${token}`,
+        ],
+      ] as const;
+    }),
+  )(
+    "rejects a high-entropy Candidate credential with one %s delimiter behind a case-insensitive Authorization prefix %s before any mutation",
+    async (_, __, token, sentinel) => {
+      const { root, store } = tempStore();
+      const registry = new CandidateRegistry(store, root);
+      const proposal = await acceptedProposal(store);
+      const artifacts = structuredClone(proposal.artifacts);
+      artifacts.fixture.input.message = sentinel;
+      artifacts.fixture.expectedOutput.message = sentinel;
+      const before = quarantineSnapshot(root);
+
+      await expect(registry.create({ ...proposal, artifacts })).rejects.toThrow(
+        /sensitive|credential|entropy/iu,
+      );
+      expect(quarantineSnapshot(root)).toEqual(before);
+      expect(persistedText(root)).not.toContain(sentinel);
+      expect(persistedText(root)).not.toContain(token);
+      expect(registry.list({})).toEqual([]);
+    },
+  );
+
   it.each([
     ["lowercase token", "0123456789abcdefghijklmnopqrstuvwxyz".repeat(2)],
     ["canonical digest", `sha256:${"a1".repeat(32)}`],

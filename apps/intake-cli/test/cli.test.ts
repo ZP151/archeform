@@ -323,6 +323,47 @@ describe("repository-local intake CLI", () => {
     },
   );
 
+  it.each(
+    ([".", ":", "@"] as const).flatMap((delimiter) => {
+      const token = delimiterCredentialSentinel(delimiter);
+      return [
+        [delimiter, "without a scheme", token, `authorization: ${token}`],
+        [
+          delimiter,
+          "with a Bearer scheme",
+          token,
+          `aUtHoRiZaTiOn: Bearer ${token}`,
+        ],
+      ] as const;
+    }),
+  )(
+    "redacts a high-entropy Candidate credential with one %s delimiter behind a case-insensitive Authorization prefix %s",
+    async (_, __, token, sentinel) => {
+      const root = tempRoot();
+      const api = {
+        candidateShow() {
+          return {
+            metadata: {
+              levelOne: { levelTwo: { levelThree: { value: sentinel } } },
+            },
+          };
+        },
+      } as unknown as ExternalIntakeApiV1;
+      const output = outputHarness(api, root);
+
+      expect(
+        await runIntakeCli(
+          ["candidate", "show", "safe-adapter@1.0.0"],
+          output.options,
+        ),
+      ).toBe(0);
+      const rendered = output.stdout.join("\n");
+      expect(rendered).not.toContain(sentinel);
+      expect(rendered).not.toContain(token);
+      expect(rendered).toContain("[redacted]");
+    },
+  );
+
   it.each([
     ["Bearer", `Bearer ${credentialLikeSentinel()}`],
     [

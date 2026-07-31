@@ -138,7 +138,7 @@ export function isCredentialLikeCandidateValue(value: string): boolean {
     return true;
   }
   const authorizationToken =
-    /^[A-Za-z][A-Za-z0-9_-]{1,31}\s+([A-Za-z0-9+/_=.@:-]{32,})$/u.exec(
+    /^(?:authorization:\s+)?(?:[A-Za-z][A-Za-z0-9_-]{1,31}\s+)?([A-Za-z0-9+/_=.@:-]{32,})$/iu.exec(
       value,
     )?.[1];
   if (
