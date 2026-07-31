@@ -97,8 +97,11 @@ Task 4 `reviewed -> implementing`; fresh task review, QA, release review, and
 root verification are all required again. Repair Round 10/10 implementation
 commit `37345e5` then FAILED independent review with three P1 findings. The
 Controller keeps Task 4 `implementing` and authorizes a bounded convergence
-follow-up within the same Round 10/10 scope. The system will ingest the 43
-fixed-reference
+follow-up within the same Round 10/10 scope. Convergence commit `b06e8bb` then
+FAILED independent review with two P1 findings and one P2. The Controller keeps
+Task 4 `implementing` and authorizes a second bounded Round 10/10 convergence
+follow-up inside the existing Candidate implementation/test and ignored-report
+paths only. The system will ingest the 43 fixed-reference
 portfolio as metadata, retain the 108 scenarios as composition demand signals,
 and produce only quarantined evidence, non-executable Candidate records, and
 pending-review promotion packets.
@@ -251,7 +254,7 @@ remain frozen.
 | 1. Candidate contracts and immutable persistence | `accepted`     | `integration`       | External Intake Contract         | Original release and bounded amendment accepted and frozen. |
 | 2. Fixed-source provenance and notices           | `accepted`     | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
 | 3. Deterministic scan orchestration              | `accepted`     | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
-| 4. Candidate registry, API, CLI, and isolation   | `implementing` | `integration`       | Candidate Registry               | Round 10 review FAIL; bounded convergence follow-up.        |
+| 4. Candidate registry, API, CLI, and isolation   | `implementing` | `integration`       | Candidate Registry               | Round 10 re-review FAIL; second bounded convergence.        |
 | 5. Review-only promotion packets                 | `planned`      | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.           |
 | 6. Bulk acceptance and release evidence          | `planned`      | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.        |
 
@@ -1450,6 +1453,47 @@ conformance, or Task 5 change is authorized. Fresh independent task review,
 behavioral QA, release review, and root final verification remain mandatory.
 Task 4 remains `implementing`; Tasks 5 and 6 remain `planned` and unstarted.
 
+### Repair Round 10 second independent review convergence
+
+Independent review of Round 10/10 convergence commit `b06e8bb` FAILED with two
+P1 findings and one P2:
+
+1. A recovered terminal Candidate entry could inherit `verified=true` from its
+   previously verified quarantined entry even when the terminal conformance
+   evidence was missing or tampered. A warm synchronous `get` could therefore
+   return the terminal entry before full terminal verification.
+2. The warm cross-registry terminal regressions did not cover every terminal
+   outcome through both exact `id@version` and stale sequence-1 `lookupId`
+   addressing across `show`, `verify`, and `get`.
+3. The sanitized ignored Task 4 report retained stale contract and commit
+   metadata.
+
+The Controller keeps Task 4 `implementing` and authorizes a second bounded
+convergence follow-up inside Repair Round 10/10. This is not a new round, state
+advance, path amendment, or contract expansion. The same bounded writer must:
+
+1. Modify only `packages/external-intake/src/candidates.ts` so a recovered
+   terminal entry can never inherit `verified=true` from the quarantined
+   revision. Warm synchronous `get` must fail closed until the current terminal
+   revision has completed full verification, or use an equivalent mechanism
+   that proves the same current terminal evidence before returning.
+2. Modify only `packages/external-intake/test/candidates.test.ts` to add
+   cross-registry missing and tampered conformance-terminal evidence
+   regressions. The warm all-terminal matrix must cover `conformance-passed`,
+   `blocked`, and `rejected` through both exact `id@version` and stale
+   sequence-1 `lookupId` addressing for `show`, `verify`, and `get`.
+3. Update only the ignored operational evidence file
+   `.superpowers/sdd/2026-07-31-external-capability-intake/task-4-report.md` so
+   its sanitized metadata identifies the current Round 10 contract base and
+   final bounded convergence commit rather than stale prior-round metadata.
+
+No API, Store, Graph, Golden registry, compiler, runtime, dependency, network,
+public-surface, terminal-transition, privacy, provenance, isolation,
+conformance-contract, or Task 5 change is authorized. Fresh independent task
+review, behavioral QA, release review, and root final verification remain
+mandatory. Task 4 remains `implementing`; Tasks 5 and 6 remain `planned` and
+unstarted.
+
 ### Exact allowed paths
 
 - `packages/external-intake/src/candidates.ts`
@@ -1593,16 +1637,15 @@ Task 4 remains `implementing`; Tasks 5 and 6 remain `planned` and unstarted.
 - **Governance risk:** `conformance-passed` could be mistaken for Golden. It has
   no promotion authority, and the first slice creates no Golden asset.
 - **Coordination risk:** Candidate isolation tests touch frozen Graph,
-  Capabilities, and compiler test paths. One bounded Task 4 writer exclusively
-  owns the Repair Round 10/10 Candidate/API/internal Store paths; any overlap
-  stops work.
+  Capabilities, and compiler test paths. One bounded Task 4 writer now
+  exclusively owns only the second-convergence Candidate implementation/test
+  paths and ignored report; any overlap stops work.
 
 The active smallest valuable slice is Controller-authorized Task 4 Repair Round
-10/10 convergence follow-up under the frozen Candidate Registry contract and
-complete repair history. It is limited to warm-cache reconciliation against the
-durable current receipt, deterministic crash-after-claim recovery and
-conflict/no-orphan proof, and a sanitized ignored implementation report with the
-required Node 22, public-surface, diff, and residual-risk evidence.
+10/10 second convergence follow-up under the frozen Candidate Registry contract
+and complete repair history. It is limited to fail-closed current-terminal
+verification, the cross-registry all-terminal exact/stale lookup matrix, and
+current sanitized contract/commit metadata in the ignored implementation report.
 All built-package public-surface isolation, Store/CAS, exact `id@version`,
 append-only terminal lifecycle, winner-only recovery, and multi-process
 no-orphan guarantees remain frozen. Its bounded test-contract amendment
