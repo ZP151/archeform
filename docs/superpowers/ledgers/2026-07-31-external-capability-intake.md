@@ -80,7 +80,11 @@ behavioral QA then PASSED with no P0/P1/P2, and the PM moved Task 4
 verification then found one P1 privacy gap: delimiter-bearing opaque
 high-entropy tokens could bypass Candidate and CLI detection. The Controller
 authorized Repair Round 8/8, and the PM returned Task 4
-`reviewed -> implementing`. The system will ingest the 43 fixed-reference
+`reviewed -> implementing`. Repair Round 8/8 product commit `f8bb51f` passed its
+bounded tests, but root review found one remaining P1 privacy shape: an optional
+case-insensitive `Authorization:` prefix could bypass the token detector. The
+Controller authorized narrow Repair Round 9/9; Task 4 remains `implementing`.
+The system will ingest the 43 fixed-reference
 portfolio as metadata, retain the 108 scenarios as composition demand signals,
 and produce only quarantined evidence, non-executable Candidate records, and
 pending-review promotion packets.
@@ -233,7 +237,7 @@ remain frozen.
 | 1. Candidate contracts and immutable persistence | `accepted`     | `integration`       | External Intake Contract         | Original release and bounded amendment accepted and frozen. |
 | 2. Fixed-source provenance and notices           | `accepted`     | `platform`          | External Source Provenance       | Re-QA and release review PASS; accepted and frozen.         |
 | 3. Deterministic scan orchestration              | `accepted`     | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
-| 4. Candidate registry, API, CLI, and isolation   | `implementing` | `integration`       | Candidate Registry               | Controller-authorized Repair Round 8/8 privacy convergence. |
+| 4. Candidate registry, API, CLI, and isolation   | `implementing` | `integration`       | Candidate Registry               | Controller-authorized Repair Round 9/9 privacy completion.  |
 | 5. Review-only promotion packets                 | `planned`      | `governance`        | External Capability Promotion    | Task 4 and Commercial Foundation Task 1 accepted.           |
 | 6. Bulk acceptance and release evidence          | `planned`      | `qa`                | External Intake Release Evidence | Tasks 1-5 and Commercial Foundation Task 1 accepted.        |
 
@@ -1245,6 +1249,35 @@ guarantees remain mandatory. Task 4 remains `implementing`; Tasks 5 and 6
 remain `planned`. Fresh task review, QA, release review, and final verification
 are required before acceptance.
 
+### Root privacy completion: Repair Round 9/9
+
+Root review of Repair Round 8/8 commit `f8bb51f` FAILED with one P1 privacy
+finding. The delimiter-aware detector rejected bare and scheme-prefixed
+high-entropy tokens, but an optional case-insensitive `Authorization:` label
+could allow the same bounded value class to cross Candidate persistence or
+built CLI output boundaries.
+
+The Controller authorizes Repair Round 9/9 under these exact constraints:
+
+1. In the existing Candidate and CLI detector paths, recognize an optional
+   case-insensitive `Authorization:` prefix followed by an optional auth scheme
+   and a credential-like high-entropy token.
+2. Reject before Candidate mutation or persistence, and redact from built CLI
+   output, both `Authorization: <token>` and
+   `Authorization: Bearer <token>` shapes containing `.`, `:`, or `@`
+   delimiter variants.
+3. Retain the exact command-aware and typed-path canonical allow-lists from
+   Repair Round 8/8. The new prefix handling must not broaden safe-value
+   exceptions or weaken any existing recursive, structured-credential,
+   traversal-bound, or delimiter regression.
+
+Repair Round 9/9 may modify only the existing Candidate/CLI detector and test
+paths. No Task 2/store, Graph, compiler, dependency, network, process, runtime,
+public-surface, lifecycle, CAS, version, provenance, recovery, isolation, or
+race behavior may change. Task 4 remains `implementing`; Tasks 5 and 6 remain
+`planned`. Fresh task review, QA, release review, and final verification are
+required before acceptance.
+
 ### Exact allowed paths
 
 - `packages/external-intake/src/candidates.ts`
@@ -1390,9 +1423,10 @@ are required before acceptance.
   exclusive ownership of every frozen path; any overlap stops work.
 
 The active smallest valuable slice is Controller-authorized Task 4 Repair Round
-8/8 under the frozen Candidate Registry contract and complete repair history.
-It is limited to delimiter-bearing high-entropy Candidate rejection, zero
-mutation/persistence proof, CLI redaction, and strict safe-value allow-listing.
+9/9 under the frozen Candidate Registry contract and complete repair history.
+It is limited to optional case-insensitive `Authorization:` prefix recognition,
+Candidate pre-mutation rejection, built CLI redaction, and preservation of the
+strict safe-value allow-lists.
 All built-package public-surface isolation, Store/CAS, exact `id@version`,
 append-only terminal lifecycle, winner-only recovery, and multi-process
 no-orphan guarantees remain frozen. Its bounded test-contract amendment
