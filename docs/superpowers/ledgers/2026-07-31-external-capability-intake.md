@@ -69,9 +69,12 @@ convergence Repair Round 6/6. The PM returned Task 4
 verification will all be required again. Implementation review then exposed a
 P1 mixed-terminal process race, and the Controller authorized the exact
 `store.ts`/`store.test.ts` atomic terminal sequence-2 CAS amendment recorded in
-the Task 4 card. The system will
-ingest the 43 fixed-reference portfolio as metadata, retain the 108 scenarios as
-composition demand signals, and produce only quarantined evidence,
+the Task 4 card. Repair Round 6/6 implementation commit `3f4b58c` then passed
+its bounded checks, but root review found a P1 public-store boundary leak and a
+P2 test-import defect. The Controller authorized Repair Round 7/7 to make the
+terminal CAS internal-only without changing its atomic semantics. The system
+will ingest the 43 fixed-reference portfolio as metadata, retain the 108
+scenarios as composition demand signals, and produce only quarantined evidence,
 non-executable Candidate records, and pending-review promotion packets.
 
 Task 1 independent QA and release review PASSED. Its release code set and
@@ -1114,6 +1117,39 @@ Task 4 remains `implementing`; Tasks 5 and 6 remain `planned`. Independent task
 review, QA, release review, and fresh final verification are all required again
 before acceptance.
 
+### Root review escalation: Repair Round 7/7
+
+Root review of Repair Round 6/6 commit `3f4b58c` FAILED with one P1 and one P2.
+The atomic terminal sequence-2 CAS was exposed on the public
+`ExternalIntakeStore` instance/package-root surface, allowing a public store
+consumer to construct terminal Candidate and receipt records outside the
+Candidate Registry lifecycle. The store regression also left its
+`node:child_process` import outside the top import block.
+
+The Controller authorizes Repair Round 7/7 under these exact constraints:
+
+1. Remove the atomic Candidate terminal CAS from the public
+   `ExternalIntakeStore` instance and package-root API. Provide it solely as an
+   internal module-level primitive in `packages/external-intake/src/store.ts`,
+   imported directly by `CandidateRegistry` from the source module. It must not
+   be re-exported from `packages/external-intake/src/index.ts`.
+2. Preserve all Repair Round 6/6 atomic sequence-2, winner-only recovery,
+   idempotent retry, conflict rejection, and no-orphan guarantees. This repair
+   changes accessibility only, not the terminal transition semantics.
+3. Add a package-root regression proving no operation available from
+   `@factory/external-intake` or its public `ExternalIntakeStore` can construct
+   or persist a terminal Candidate/receipt transition. Update the existing CAS
+   tests to import the internal primitive directly, and move the stranded
+   `node:child_process` import into the top import block.
+
+Repair Round 7/7 may modify only the already authorized Task 4 Candidate,
+store, test, and root-index paths. It may add no dependency and may not alter
+any other Store API, Graph, compiler, network, process, or runtime behavior. All
+previous lifecycle, privacy, exact-version, isolation, provenance, recovery,
+and race guarantees remain mandatory. Task 4 remains `implementing`; Tasks 5
+and 6 remain `planned`. Fresh independent task review, QA, release review, and
+final verification are required before acceptance.
+
 ### Exact allowed paths
 
 - `packages/external-intake/src/candidates.ts`
@@ -1259,11 +1295,14 @@ before acceptance.
   exclusive ownership of every frozen path; any overlap stops work.
 
 The active smallest valuable slice is Controller-escalated Task 4 Repair Round
-6/6 under its frozen Candidate Registry contract, existing Candidate/API/CLI/test
-paths, non-goals, and complete Repair Round 1-5 history. It is limited to
-recursive sensitive-data rejection, exact `id@version` locator binding, and
-validated append-only `blocked`/`rejected` lifecycle operations. Its bounded
-test-contract amendment permits only the Intake CLI package
+7/7 under its frozen Candidate Registry contract and complete Repair Round 1-6
+history. It is limited to removing the terminal CAS from the public
+`ExternalIntakeStore`/package-root surface, retaining it as an internal
+CandidateRegistry-only primitive, proving the package-root isolation boundary,
+and correcting the existing test import placement. Round 6/6's recursive
+sensitive-data rejection, exact `id@version` locator binding, validated
+append-only lifecycle operations, and atomic terminal guarantees remain frozen.
+Its bounded test-contract amendment permits only the Intake CLI package
 manifest to import `@factory/external-intake`; all other isolation prohibitions
 remain enforced. Repair Round 1/5 is limited to Candidate namespace defense,
 reuse of accepted Task 3 completed-evidence verification, durable opaque
