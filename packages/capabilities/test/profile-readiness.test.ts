@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { listProfileReadiness } from "../src/index.js";
+import { createProfileReadiness } from "../src/profile-readiness.js";
 
 describe("Profile readiness", () => {
   it("reports Restaurant order operations as partial without claiming provider features", () => {
@@ -55,6 +56,23 @@ describe("Profile readiness", () => {
       expect.arrayContaining([
         expect.objectContaining({ key: "restaurant.kitchen" }),
       ]),
+    );
+  });
+
+  it("rejects an unrelated available capability overridden by a profile gap", () => {
+    expect(() =>
+      createProfileReadiness([
+        {
+          profile: "restaurant-ordering",
+          label: "Restaurant ordering",
+          availableCapabilities: [
+            "commerce.transaction",
+            "commerce.order-amendment",
+          ],
+        },
+      ]),
+    ).toThrow(
+      "Profile readiness duplicates capability 'commerce.order-amendment' for 'restaurant-ordering'.",
     );
   });
 });

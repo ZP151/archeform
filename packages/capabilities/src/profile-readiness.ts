@@ -83,7 +83,15 @@ export function createProfileReadiness(
         capabilityStatus.set(key, "available");
       }
       for (const capability of additionalReadiness[source.profile]) {
-        if (capabilityStatus.has(capability.key)) {
+        const currentStatus = capabilityStatus.get(capability.key);
+        if (
+          currentStatus !== undefined &&
+          !(
+            capability.key === "commerce.transaction" &&
+            currentStatus === "available" &&
+            capability.status === "partial"
+          )
+        ) {
           throw new Error(
             `Profile readiness duplicates capability '${capability.key}' for '${source.profile}'.`,
           );

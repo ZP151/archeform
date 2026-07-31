@@ -684,13 +684,17 @@ describe("commercial profile composition", () => {
     ).toThrow("commerce.inventory-ledger");
   });
 
-  it("does not impose inventory-ledger provenance when the package is not selected", () => {
+  it("does not impose inventory-ledger or dependent transaction behavior when their packages are not selected", () => {
     const profile = composeDefaultCapabilityDraft({
       profile: "restaurant-ordering",
     });
     const selections = (
       profile.graph.integration.compositionSelections ?? []
-    ).filter(({ lock }) => lock.key !== "commerce.inventory-ledger");
+    ).filter(
+      ({ lock }) =>
+        lock.key !== "commerce.inventory-ledger" &&
+        lock.key !== "commerce.transaction",
+    );
 
     const result = composeCapabilityDraft({
       graph: profile.graph,
@@ -700,6 +704,11 @@ describe("commercial profile composition", () => {
     expect(
       result.composition.packages.some(
         ({ lock }) => lock.key === "commerce.inventory-ledger",
+      ),
+    ).toBe(false);
+    expect(
+      result.composition.packages.some(
+        ({ lock }) => lock.key === "commerce.transaction",
       ),
     ).toBe(false);
   });

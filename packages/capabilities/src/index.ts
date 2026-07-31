@@ -760,6 +760,7 @@ const compositionRecipes: Readonly<
       "commerce.inventory-ledger",
       "commerce.line-configuration",
       "commerce.order",
+      "commerce.transaction",
       "core.identity-context",
       "core.location-context",
       "restaurant.table-session",
@@ -781,6 +782,7 @@ const compositionRecipes: Readonly<
       "commerce.inventory-ledger",
       "commerce.line-configuration",
       "commerce.order",
+      "commerce.transaction",
       "commerce.simulated-payment",
       "core.identity-context",
       "core.location-context",
@@ -798,6 +800,7 @@ const compositionRecipes: Readonly<
       "commerce.inventory-ledger",
       "commerce.line-configuration",
       "commerce.order",
+      "commerce.transaction",
       "commerce.simulated-payment",
       "core.identity-context",
       "core.location-context",
@@ -815,6 +818,7 @@ const compositionRecipes: Readonly<
       "commerce.inventory-ledger",
       "commerce.line-configuration",
       "commerce.order",
+      "commerce.transaction",
       "commerce.simulated-payment",
       "core.identity-context",
       "core.location-context",
@@ -955,6 +959,11 @@ const baseProfileCompositionBindings: Readonly<
       orderEntity: { graphSymbol: "graph.domain.order" },
       orderFlow: { graphSymbol: "graph.flow.restaurant-order" },
     },
+    "commerce.transaction": {
+      aggregateEntity: { graphSymbol: "graph.domain.order" },
+      transactionFlow: { graphSymbol: "graph.flow.restaurant-order" },
+      actorRole: { graphSymbol: "graph.policy.customer" },
+    },
     "commerce.simulated-payment": {
       orderEntity: { graphSymbol: "graph.domain.order" },
       orderFlow: { graphSymbol: "graph.flow.restaurant-order" },
@@ -1055,6 +1064,11 @@ const baseProfileCompositionBindings: Readonly<
     "commerce.order": {
       orderEntity: { graphSymbol: "graph.domain.order" },
       orderFlow: { graphSymbol: "graph.flow.ecommerce-order" },
+    },
+    "commerce.transaction": {
+      aggregateEntity: { graphSymbol: "graph.domain.order" },
+      transactionFlow: { graphSymbol: "graph.flow.ecommerce-order" },
+      actorRole: { graphSymbol: "graph.policy.shopper" },
     },
     "commerce.simulated-payment": {
       orderEntity: { graphSymbol: "graph.domain.order" },
