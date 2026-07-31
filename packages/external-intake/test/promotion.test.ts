@@ -37,6 +37,12 @@ interface PromotionFixture {
   readonly review: PromotionReviewInputV1;
 }
 
+interface PromotionFixtureOptions {
+  readonly manualStatus?: "unreviewed" | "approved" | "rejected";
+  readonly proposedCopy?: boolean;
+  readonly sourceBytes?: Uint8Array;
+}
+
 function tempStore(): ExternalIntakeStore {
   const root = mkdtempSync(join(tmpdir(), "factory-promotion-test-"));
   roots.push(root);
@@ -98,7 +104,9 @@ function manifest(): CandidateManifestV1 {
   };
 }
 
-function promotionFixture(): PromotionFixture {
+function promotionFixture(
+  options: PromotionFixtureOptions = {},
+): PromotionFixture {
   const store = tempStore();
   const request = parseIntakeRequest({
     apiVersion: "factory.external-intake-request/v1",
@@ -115,8 +123,10 @@ function promotionFixture(): PromotionFixture {
     allowNetworkRetrieval: true,
   });
   const requestRef = store.putRecord("request", request);
-  const sourceBytes = encoder.encode("export const safe = true;");
+  const sourceBytes =
+    options.sourceBytes ?? encoder.encode("export const safe = true;");
   const sourceDigest = digestBytes(sourceBytes);
+  expect(store.putBytes("snapshot", sourceBytes).digest).toBe(sourceDigest);
   const treeDigest = digestText("safe-tree");
   const snapshot = parseSourceSnapshot({
     apiVersion: "factory.external-source-snapshot/v1",
@@ -226,7 +236,7 @@ function promotionFixture(): PromotionFixture {
       primaryPaths: ["LICENSE"],
       textDigests: [licenceDigest],
       scannerExpression: "MIT",
-      manualStatus: "unreviewed",
+      manualStatus: options.manualStatus ?? "unreviewed",
     },
     notices: [{ path: "NOTICE", digest: noticeDigest, required: true }],
     sbom: { format: "CycloneDX", digest: sbomDigest, components: 0 },
@@ -277,13 +287,15 @@ function promotionFixture(): PromotionFixture {
     sourceSnapshotDigest: snapshotRef.digest,
     evidenceDigest: evidenceRef.digest,
     proposedFactoryKey: "candidate.safe-adapter",
-    proposedClassification: "provider-adapter",
+    proposedClassification: options.proposedCopy
+      ? "source-fragment"
+      : "provider-adapter",
     selectedModules: [
       {
         path: "src/index.ts",
         symbol: "safe",
         digest: sourceDigest,
-        purpose: "adapter-contract",
+        purpose: options.proposedCopy ? "proposed-copy" : "adapter-contract",
       },
     ],
     allowedOutputs: ["manifest", "fixture", "adapter", "conformance-plan"],
@@ -314,9 +326,10 @@ function promotionFixture(): PromotionFixture {
         : { valid: false, issues: ["stale Candidate"] };
     },
   } as unknown as CandidateRegistryV1;
+  const factoryKey = "integration.safe-adapter";
   const collisionDocument = {
     apiVersion: "factory.external-collision-inventory/v1" as const,
-    proposedFactoryKey: candidateRecord.proposedFactoryKey,
+    proposedFactoryKey: factoryKey,
     version: candidateRecord.version,
     packageRoot: "packages/capabilities/assets/safe-adapter/1.0.0",
     targets: ["api"],
@@ -337,14 +350,33 @@ function promotionFixture(): PromotionFixture {
       conformanceDigest,
     },
     manifest: candidateManifest,
-    factory: {
-      proposedFactoryKey: candidateRecord.proposedFactoryKey,
+    factoryProposal: {
+      apiVersion: "factory.external-factory-interface-proposal/v1",
+      reviewStatus: "pending-manual-review",
+      key: factoryKey,
       version: candidateRecord.version,
       packageRoot: collisionDocument.packageRoot,
       targets: ["api"],
+      candidate: {
+        id: candidate.id,
+        version: candidate.version,
+        digest: candidate.digest,
+        classification: candidateRecord.proposedClassification,
+        manifestDigest,
+      },
+      operations: [
+        {
+          candidateEffect: "candidate.project",
+          factoryOperation: "safe-adapter.project",
+        },
+      ],
+      interface: {
+        inputSchema: candidateManifest.inputSchema,
+        outputSchema: candidateManifest.outputSchema,
+      },
     },
     licence: {
-      manualStatus: "unreviewed",
+      manualStatus: options.manualStatus ?? "unreviewed",
       reviewStatus: "pending-manual-review",
     },
     findingDispositions: scans.map(({ kind, resultDigest }) => ({
@@ -352,7 +384,25 @@ function promotionFixture(): PromotionFixture {
       resultDigest,
       findings: [],
     })),
-    sourceCopy: { mode: "none", ranges: [] },
+    sourceCopy: options.proposedCopy
+      ? {
+          mode: "proposed-copy",
+          ranges: [
+            {
+              path: "src/index.ts",
+              sourceDigest,
+              lineRanges: [
+                {
+                  start: 1,
+                  end: 1,
+                  digest: sourceDigest,
+                },
+              ],
+              purpose: "adapter",
+            },
+          ],
+        }
+      : { mode: "none", ranges: [] },
     notices: {
       destination: "docs/third-party-notices.md",
       action: "pending-manual-review",
@@ -370,14 +420,6 @@ function promotionFixture(): PromotionFixture {
       reviewer: `${role}-alice`,
       status: "assigned-not-reviewed" as const,
     })),
-    factoryInterface: {
-      proposedFactoryKey: candidateRecord.proposedFactoryKey,
-      version: candidateRecord.version,
-      manifestDigest,
-      inputSchema: candidateManifest.inputSchema,
-      outputSchema: candidateManifest.outputSchema,
-      effects: candidateManifest.effects,
-    },
     removalPlan: {
       packageRoot: collisionDocument.packageRoot,
       replacement: "factory-native-safe-adapter",
@@ -416,6 +458,10 @@ describe("review-only PromotionPacket", () => {
       digest: fixture.candidate.digest,
       status: "conformance-passed",
     });
+    expect(packet.candidateManifest).toEqual(fixture.review.manifest);
+    expect(packet.factoryProposal).toEqual(fixture.review.factoryProposal);
+    expect(packet.factoryProposal.key).not.toMatch(/^candidate\./u);
+    expect(packet.sourceCopy).toEqual({ mode: "none", modules: [] });
     expect(packet.collision).toEqual({
       inventoryDigest: fixture.review.collisionInventory.digest,
       result: "no-collision-observed-in-inventory",
@@ -492,7 +538,13 @@ describe("review-only PromotionPacket", () => {
             {
               path: "src/index.ts",
               sourceDigest: fixture.candidateRecord.selectedModules[0]!.digest,
-              lineRanges: [{ start: 1, end: 1 }],
+              lineRanges: [
+                {
+                  start: 1,
+                  end: 1,
+                  digest: fixture.candidateRecord.selectedModules[0]!.digest,
+                },
+              ],
               purpose: "adapter",
             },
           ],
@@ -509,9 +561,9 @@ describe("review-only PromotionPacket", () => {
       "collision hit",
       (fixture: PromotionFixture) => {
         fixture.review.collisionInventory.inventory.entries.push({
-          proposedFactoryKey: fixture.review.factory.proposedFactoryKey,
-          version: fixture.review.factory.version,
-          packageRoot: fixture.review.factory.packageRoot,
+          proposedFactoryKey: fixture.review.factoryProposal.key,
+          version: fixture.review.factoryProposal.version,
+          packageRoot: fixture.review.factoryProposal.packageRoot,
           targets: ["api"],
         });
         fixture.review.collisionInventory.digest = canonicalRecordDigest(
@@ -551,6 +603,221 @@ describe("review-only PromotionPacket", () => {
       createPromotionPacket(
         fixture.candidate,
         review as PromotionReviewInputV1,
+        fixture.registry,
+        fixture.store,
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("allows approved only at the exact immutable licence status path", async () => {
+    const fixture = promotionFixture({ manualStatus: "approved" });
+
+    const packet = await createPromotionPacket(
+      fixture.candidate,
+      fixture.review,
+      fixture.registry,
+      fixture.store,
+    );
+    expect(packet.licence).toEqual({
+      manualStatus: "approved",
+      reviewStatus: "pending-manual-review",
+    });
+
+    fixture.review.reviewers[0]!.reviewer = "approved-reviewer";
+    await expect(
+      createPromotionPacket(
+        fixture.candidate,
+        fixture.review,
+        fixture.registry,
+        fixture.store,
+      ),
+    ).rejects.toThrow(/decision|review|approved/iu);
+  });
+
+  it("blocks rejected licence evidence", async () => {
+    const fixture = promotionFixture({ manualStatus: "rejected" });
+
+    await expect(
+      createPromotionPacket(
+        fixture.candidate,
+        fixture.review,
+        fixture.registry,
+        fixture.store,
+      ),
+    ).rejects.toThrow(/licence|rejected/iu);
+  });
+
+  it("verifies every proposed-copy module and emits only range counts and digests", async () => {
+    const fixture = promotionFixture({
+      manualStatus: "approved",
+      proposedCopy: true,
+    });
+
+    const packet = await createPromotionPacket(
+      fixture.candidate,
+      fixture.review,
+      fixture.registry,
+      fixture.store,
+    );
+
+    expect(packet.decision).toBe("pending-review");
+    expect(packet.sourceCopy).toEqual({
+      mode: "proposed-copy",
+      modules: [
+        {
+          path: "src/index.ts",
+          sourceDigest: fixture.candidateRecord.selectedModules[0]!.digest,
+          sourceLineCount: 1,
+          rangeCount: 1,
+          rangeDigests: [
+            fixture.review.sourceCopy.ranges[0]!.lineRanges[0]!.digest,
+          ],
+        },
+      ],
+    });
+    expect(canonicalJson(packet)).not.toContain("export const");
+    expect(packet.prohibitedFields).toContain("source-copy-execution");
+  });
+
+  it("counts LF-terminated source lines without inventing a trailing empty line", async () => {
+    const fixture = promotionFixture({
+      manualStatus: "approved",
+      proposedCopy: true,
+      sourceBytes: encoder.encode("first line\nsecond line\n"),
+    });
+    const sourceDigest = fixture.candidateRecord.selectedModules[0]!.digest;
+    fixture.review.sourceCopy.ranges[0]!.lineRanges = [
+      { start: 1, end: 2, digest: sourceDigest },
+    ];
+
+    const packet = await createPromotionPacket(
+      fixture.candidate,
+      fixture.review,
+      fixture.registry,
+      fixture.store,
+    );
+
+    expect(packet.sourceCopy).toMatchObject({
+      mode: "proposed-copy",
+      modules: [{ sourceLineCount: 2, rangeDigests: [sourceDigest] }],
+    });
+  });
+
+  it.each([
+    [
+      "unapproved licence",
+      (fixture: PromotionFixture) => {
+        fixture.review.licence.manualStatus = "unreviewed";
+      },
+    ],
+    [
+      "missing coverage",
+      (fixture: PromotionFixture) => {
+        fixture.review.sourceCopy.ranges = [];
+      },
+    ],
+    [
+      "duplicate coverage",
+      (fixture: PromotionFixture) => {
+        fixture.review.sourceCopy.ranges.push(
+          structuredClone(fixture.review.sourceCopy.ranges[0]!),
+        );
+      },
+    ],
+    [
+      "extra coverage",
+      (fixture: PromotionFixture) => {
+        fixture.review.sourceCopy.ranges.push({
+          ...structuredClone(fixture.review.sourceCopy.ranges[0]!),
+          path: "src/extra.ts",
+        });
+      },
+    ],
+    [
+      "range digest drift",
+      (fixture: PromotionFixture) => {
+        fixture.review.sourceCopy.ranges[0]!.lineRanges[0]!.digest =
+          digestText("drifted-range");
+      },
+    ],
+    [
+      "line endpoint overflow",
+      (fixture: PromotionFixture) => {
+        fixture.review.sourceCopy.ranges[0]!.lineRanges[0]!.end = 2;
+      },
+    ],
+  ])("rejects proposed-copy %s", async (_, mutate) => {
+    const fixture = promotionFixture({
+      manualStatus: "approved",
+      proposedCopy: true,
+    });
+    mutate(fixture);
+
+    await expect(
+      createPromotionPacket(
+        fixture.candidate,
+        fixture.review,
+        fixture.registry,
+        fixture.store,
+      ),
+    ).rejects.toThrow();
+  });
+
+  it.each([
+    ["fatal UTF-8", new Uint8Array([0xff, 0xfe])],
+    ["NUL source", new Uint8Array([0x61, 0x00, 0x62])],
+  ])("rejects proposed-copy %s", async (_, sourceBytes) => {
+    const fixture = promotionFixture({
+      manualStatus: "approved",
+      proposedCopy: true,
+      sourceBytes,
+    });
+
+    await expect(
+      createPromotionPacket(
+        fixture.candidate,
+        fixture.review,
+        fixture.registry,
+        fixture.store,
+      ),
+    ).rejects.toThrow(/UTF|NUL|source/iu);
+  });
+
+  it.each([
+    [
+      "Candidate namespace",
+      (fixture: PromotionFixture) => {
+        fixture.review.factoryProposal.key = "candidate.safe-adapter";
+      },
+    ],
+    [
+      "classification drift",
+      (fixture: PromotionFixture) => {
+        fixture.review.factoryProposal.candidate.classification = "dependency";
+      },
+    ],
+    [
+      "missing operation",
+      (fixture: PromotionFixture) => {
+        fixture.review.factoryProposal.operations = [];
+      },
+    ],
+    [
+      "duplicate operation",
+      (fixture: PromotionFixture) => {
+        fixture.review.factoryProposal.operations.push(
+          structuredClone(fixture.review.factoryProposal.operations[0]!),
+        );
+      },
+    ],
+  ])("rejects Factory proposal %s", async (_, mutate) => {
+    const fixture = promotionFixture();
+    mutate(fixture);
+
+    await expect(
+      createPromotionPacket(
+        fixture.candidate,
+        fixture.review,
         fixture.registry,
         fixture.store,
       ),

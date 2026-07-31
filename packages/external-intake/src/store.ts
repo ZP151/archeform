@@ -1,7 +1,11 @@
 import {
+  closeSync,
+  fstatSync,
   lstatSync,
   mkdirSync,
+  openSync,
   readFileSync,
+  readSync,
   realpathSync,
   writeFileSync,
 } from "node:fs";
@@ -27,6 +31,7 @@ import {
   type IntakeRecordKind,
   type IntakeRecordV1,
 } from "./contracts.js";
+import { DEFAULT_SNAPSHOT_LIMITS } from "./snapshot.js";
 
 const blobKindSchema = z.enum(["snapshot", "evidence"]);
 const recordKindSchema = z.enum([
@@ -158,6 +163,10 @@ const candidateCreationCompleters = new WeakMap<
   ExternalIntakeStore,
   (input: CandidateCreationClaimV1) => void
 >();
+const candidateSnapshotBlobReaders = new WeakMap<
+  ExternalIntakeStore,
+  (digest: Sha256Digest) => Uint8Array
+>();
 
 function buffersEqual(left: Uint8Array, right: Uint8Array): boolean {
   if (left.byteLength !== right.byteLength) {
@@ -189,6 +198,9 @@ export class ExternalIntakeStore {
     );
     candidateTransitionCommitters.set(this, (input) =>
       this.#commitCandidateTransition(input),
+    );
+    candidateSnapshotBlobReaders.set(this, (digest) =>
+      this.#readVerifiedCandidateSnapshotBlob(digest),
     );
   }
 
@@ -835,6 +847,81 @@ export class ExternalIntakeStore {
     return readFileSync(path);
   }
 
+  #readVerifiedCandidateSnapshotBlob(digest: Sha256Digest): Uint8Array {
+    if (!/^sha256:[a-f0-9]{64}$/u.test(digest)) {
+      throw new TypeError("Candidate snapshot digest is invalid.");
+    }
+    const snapshotDirectory = resolve(this.#root, "blobs", "snapshot");
+    for (const directory of [resolve(this.#root, "blobs"), snapshotDirectory]) {
+      const stat = lstatSync(directory);
+      if (stat.isSymbolicLink() || !stat.isDirectory()) {
+        throw new Error(
+          "Candidate snapshot parent must be a real managed directory.",
+        );
+      }
+    }
+    const path = resolve(
+      snapshotDirectory,
+      `${digest.slice("sha256:".length)}.bin`,
+    );
+    const fromRoot = relative(snapshotDirectory, path);
+    if (
+      fromRoot === "" ||
+      fromRoot === ".." ||
+      fromRoot.startsWith(`..${sep}`) ||
+      resolve(snapshotDirectory, fromRoot) !== path
+    ) {
+      throw new Error("Candidate snapshot path escaped its fixed domain.");
+    }
+
+    const descriptor = openSync(path, "r");
+    try {
+      const before = fstatSync(descriptor);
+      if (
+        !before.isFile() ||
+        !Number.isSafeInteger(before.size) ||
+        before.size < 0 ||
+        before.size > DEFAULT_SNAPSHOT_LIMITS.maxFileBytes
+      ) {
+        throw new Error("Candidate snapshot must be a bounded regular file.");
+      }
+      const bytes = Buffer.alloc(before.size);
+      let offset = 0;
+      while (offset < bytes.byteLength) {
+        const count = readSync(
+          descriptor,
+          bytes,
+          offset,
+          bytes.byteLength - offset,
+          null,
+        );
+        if (count === 0) {
+          throw new Error("Candidate snapshot ended before its verified size.");
+        }
+        offset += count;
+      }
+      const extra = Buffer.alloc(1);
+      if (readSync(descriptor, extra, 0, 1, null) !== 0) {
+        throw new Error("Candidate snapshot grew during verified reading.");
+      }
+      const after = fstatSync(descriptor);
+      if (
+        !after.isFile() ||
+        after.size !== before.size ||
+        after.dev !== before.dev ||
+        after.ino !== before.ino ||
+        digestBytes(bytes) !== digest
+      ) {
+        throw new Error(
+          "Candidate snapshot descriptor or byte digest changed.",
+        );
+      }
+      return new Uint8Array(bytes);
+    } finally {
+      closeSync(descriptor);
+    }
+  }
+
   #writeExclusiveVerified(
     path: string,
     bytes: Uint8Array,
@@ -908,4 +995,17 @@ export function commitCandidateTransition(
     );
   }
   return commit(input);
+}
+
+export function readVerifiedCandidateSnapshotBlob(
+  store: ExternalIntakeStore,
+  digest: Sha256Digest,
+): Uint8Array {
+  const read = candidateSnapshotBlobReaders.get(store);
+  if (read === undefined) {
+    throw new TypeError(
+      "Candidate snapshot reads require an External Intake store instance.",
+    );
+  }
+  return read(digest);
 }

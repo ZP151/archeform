@@ -6,6 +6,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -35,6 +36,7 @@ import {
   claimCandidateCreation,
   completeCandidateCreation,
   commitCandidateTransition,
+  readVerifiedCandidateSnapshotBlob,
   type CandidateCreationClaimV1,
 } from "../src/store.js";
 
@@ -376,6 +378,64 @@ describe("ExternalIntakeStore", () => {
       );
     }, 30_000);
   }
+
+  it("reads only a bounded digest-verified Candidate snapshot blob and returns a defensive copy", () => {
+    const store = new ExternalIntakeStore(tempRoot());
+    const bytes = new TextEncoder().encode("candidate snapshot");
+    const ref = store.putBytes("snapshot", bytes);
+
+    const first = readVerifiedCandidateSnapshotBlob(store, ref.digest);
+    first[0] = 0;
+    const second = readVerifiedCandidateSnapshotBlob(store, ref.digest);
+
+    expect(second).toEqual(bytes);
+    expect(first).not.toEqual(second);
+  });
+
+  it("does not read an evidence blob through the Candidate snapshot reader", () => {
+    const store = new ExternalIntakeStore(tempRoot());
+    const evidence = store.putBytes(
+      "evidence",
+      new TextEncoder().encode("evidence only"),
+    );
+
+    expect(() =>
+      readVerifiedCandidateSnapshotBlob(store, evidence.digest),
+    ).toThrow();
+  });
+
+  it("rejects oversized, special, tampered, and path-replaced snapshot blobs", () => {
+    const root = tempRoot();
+    const store = new ExternalIntakeStore(root);
+    const original = new TextEncoder().encode("original snapshot");
+    const ref = store.putBytes("snapshot", original);
+    const path = join(root, "blobs", "snapshot", `${ref.digest.slice(7)}.bin`);
+    const backup = join(root, "blobs", "snapshot", "original.bin");
+    renameSync(path, backup);
+    writeFileSync(path, "replacement snapshot");
+
+    expect(() => readVerifiedCandidateSnapshotBlob(store, ref.digest)).toThrow(
+      /digest|snapshot/iu,
+    );
+
+    rmSync(path);
+    mkdirSync(path);
+    expect(() => readVerifiedCandidateSnapshotBlob(store, ref.digest)).toThrow(
+      /regular|snapshot/iu,
+    );
+
+    rmSync(path, { recursive: true });
+    writeFileSync(path, Buffer.alloc(10 * 1024 * 1024 + 1));
+    expect(() => readVerifiedCandidateSnapshotBlob(store, ref.digest)).toThrow(
+      /bound|size|snapshot/iu,
+    );
+  });
+
+  it("keeps the Candidate snapshot reader unavailable from the package root", () => {
+    expect("readVerifiedCandidateSnapshotBlob" in publicExternalIntake).toBe(
+      false,
+    );
+  });
 
   it("stores acquisition records under a distinct immutable kind", () => {
     const root = tempRoot();

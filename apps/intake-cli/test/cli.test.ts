@@ -1,15 +1,19 @@
+import { spawn } from "node:child_process";
+import { createRequire, syncBuiltinESMExports } from "node:module";
 import {
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -25,6 +29,62 @@ import {
 import { runIntakeCli } from "../src/main.js";
 
 const roots: string[] = [];
+const require = createRequire(import.meta.url);
+const vitestPath = require.resolve("vitest/vitest.mjs");
+const intakeCliRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
+async function waitForPath(path: string): Promise<void> {
+  const deadline = Date.now() + 10_000;
+  while (!existsSync(path)) {
+    if (Date.now() >= deadline) {
+      throw new Error(`Timed out waiting for ${path}.`);
+    }
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 10));
+  }
+}
+
+function raceChild(
+  title: string,
+  root: string,
+  mode: "directory-replacement" | "junction-replacement",
+) {
+  const child = spawn(
+    process.execPath,
+    [vitestPath, "run", "test/cli.test.ts", "--testNamePattern", title],
+    {
+      cwd: intakeCliRoot,
+      env: {
+        ...process.env,
+        FACTORY_PROMOTION_RACE_CHILD: mode,
+        FACTORY_PROMOTION_RACE_ROOT: root,
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+    },
+  );
+  let output = "";
+  child.stdout.setEncoding("utf8");
+  child.stderr.setEncoding("utf8");
+  child.stdout.on("data", (chunk: string) => {
+    output += chunk;
+  });
+  child.stderr.on("data", (chunk: string) => {
+    output += chunk;
+  });
+  return {
+    child,
+    output: () => output,
+  };
+}
+
+async function childExit(
+  child: ReturnType<typeof raceChild>,
+): Promise<number | null> {
+  return await new Promise((resolvePromise, rejectPromise) => {
+    child.child.once("error", rejectPromise);
+    child.child.once("exit", resolvePromise);
+  });
+}
 
 function tempRoot(): string {
   const root = mkdtempSync(join(tmpdir(), "factory-intake-cli-test-"));
@@ -117,6 +177,25 @@ describe("repository-local intake CLI", () => {
       reviewer: `${role}-alice`,
       status: "assigned-not-reviewed" as const,
     }));
+    const candidateManifest = {
+      apiVersion: "factory.candidate-manifest/v1" as const,
+      id: "safe-adapter",
+      version: "1.0.0",
+      proposedFactoryKey: "candidate.safe-adapter",
+      inputSchema: {
+        type: "object" as const,
+        properties: { message: { type: "string" as const } },
+        required: ["message"],
+        additionalProperties: false as const,
+      },
+      outputSchema: {
+        type: "object" as const,
+        properties: { message: { type: "string" as const } },
+        required: ["message"],
+        additionalProperties: false as const,
+      },
+      effects: ["candidate.project"],
+    };
     const packet = {
       apiVersion: "factory.external-capability-promotion-packet/v1" as const,
       decision: "pending-review" as const,
@@ -125,6 +204,32 @@ describe("repository-local intake CLI", () => {
         version: "1.0.0",
         digest: digest("a"),
         status: "conformance-passed" as const,
+      },
+      candidateManifest,
+      factoryProposal: {
+        apiVersion: "factory.external-factory-interface-proposal/v1" as const,
+        reviewStatus: "pending-manual-review" as const,
+        key: "integration.safe-adapter",
+        version: "1.0.0",
+        packageRoot: "packages/capabilities/assets/safe-adapter/1.0.0",
+        targets: ["api"],
+        candidate: {
+          id: "safe-adapter",
+          version: "1.0.0",
+          digest: digest("a"),
+          classification: "provider-adapter" as const,
+          manifestDigest: canonicalRecordDigest(candidateManifest),
+        },
+        operations: [
+          {
+            candidateEffect: "candidate.project",
+            factoryOperation: "safe-adapter.project",
+          },
+        ],
+        interface: {
+          inputSchema: candidateManifest.inputSchema,
+          outputSchema: candidateManifest.outputSchema,
+        },
       },
       source: {
         repositoryUrl: "https://github.com/example/safe-adapter.git",
@@ -153,36 +258,12 @@ describe("repository-local intake CLI", () => {
         resultDigest: digest(String(index + 1)),
         findings: [],
       })),
-      sourceCopy: { mode: "none" as const, ranges: [] },
+      sourceCopy: { mode: "none" as const, modules: [] },
       notices: {
         destination: "docs/third-party-notices.md" as const,
         action: "pending-manual-review" as const,
       },
       reviewers,
-      factory: {
-        proposedFactoryKey: "candidate.safe-adapter",
-        version: "1.0.0",
-        packageRoot: "packages/capabilities/assets/safe-adapter/1.0.0",
-        targets: ["api"],
-      },
-      factoryInterface: {
-        proposedFactoryKey: "candidate.safe-adapter",
-        version: "1.0.0",
-        manifestDigest: digest("9"),
-        inputSchema: {
-          type: "object" as const,
-          properties: { message: { type: "string" as const } },
-          required: ["message"],
-          additionalProperties: false as const,
-        },
-        outputSchema: {
-          type: "object" as const,
-          properties: { message: { type: "string" as const } },
-          required: ["message"],
-          additionalProperties: false as const,
-        },
-        effects: ["candidate.project"],
-      },
       removalPlan: {
         packageRoot: "packages/capabilities/assets/safe-adapter/1.0.0",
         replacement: "factory-native-safe-adapter",
@@ -880,5 +961,261 @@ describe("repository-local intake CLI", () => {
     expect(await runIntakeCli(args, output.options)).toBe(2);
     expect(readFileSync(outputPath, "utf8")).toBe(original);
     expect(existsSync(outputPath)).toBe(true);
+  });
+
+  it("fails closed before packet creation when directory identity is unavailable", async () => {
+    const root = tempRoot();
+    const outputDirectory = join(root, "review-output");
+    writeFileSync(join(root, "review.json"), "{}");
+    mkdirSync(outputDirectory);
+    let called = false;
+    const api = {
+      async promotionPacket() {
+        called = true;
+        return validPromotionPacket();
+      },
+    } as unknown as ExternalIntakeApiV1;
+    const output = outputHarness(api, root);
+    const mutableFs = require("node:fs") as Record<string, unknown>;
+    const originalLstat = mutableFs.lstatSync;
+    mutableFs.lstatSync = (...args: unknown[]) => {
+      const stat = Reflect.apply(
+        originalLstat as (...values: unknown[]) => object,
+        mutableFs,
+        args,
+      );
+      if (resolve(String(args[0])) !== resolve(outputDirectory)) {
+        return stat;
+      }
+      return new Proxy(stat, {
+        get(target, property, receiver) {
+          if (property === "ino") {
+            return typeof Reflect.get(target, property, receiver) === "bigint"
+              ? 0n
+              : 0;
+          }
+          return Reflect.get(target, property, receiver);
+        },
+      });
+    };
+    syncBuiltinESMExports();
+    try {
+      expect(
+        await runIntakeCli(
+          [
+            "promotion",
+            "packet",
+            "safe-adapter@1.0.0",
+            "--review",
+            "review.json",
+            "--out",
+            "review-output/promotion-packet.json",
+          ],
+          output.options,
+        ),
+      ).toBe(2);
+    } finally {
+      mutableFs.lstatSync = originalLstat;
+      syncBuiltinESMExports();
+    }
+    expect(called).toBe(false);
+    expect(readdirSync(outputDirectory)).toEqual([]);
+  });
+
+  it("rereads the packet descriptor without reopening the output pathname", async () => {
+    const root = tempRoot();
+    const outputPath = join(root, "review-output", "promotion-packet.json");
+    writeFileSync(join(root, "review.json"), "{}");
+    mkdirSync(join(root, "review-output"));
+    const packet = validPromotionPacket();
+    const api = {
+      async promotionPacket() {
+        return packet;
+      },
+    } as unknown as ExternalIntakeApiV1;
+    const output = outputHarness(api, root);
+    const mutableFs = require("node:fs") as Record<string, unknown>;
+    const originalReadFile = mutableFs.readFileSync;
+    mutableFs.readFileSync = (...args: unknown[]) => {
+      if (resolve(String(args[0])) === resolve(outputPath)) {
+        throw new Error("output pathname was reopened");
+      }
+      return Reflect.apply(
+        originalReadFile as (...values: unknown[]) => unknown,
+        mutableFs,
+        args,
+      );
+    };
+    syncBuiltinESMExports();
+    try {
+      expect(
+        await runIntakeCli(
+          [
+            "promotion",
+            "packet",
+            "safe-adapter@1.0.0",
+            "--review",
+            "review.json",
+            "--out",
+            "review-output/promotion-packet.json",
+          ],
+          output.options,
+        ),
+      ).toBe(0);
+    } finally {
+      mutableFs.readFileSync = originalReadFile;
+      syncBuiltinESMExports();
+    }
+    expect(readFileSync(outputPath, "utf8")).toBe(canonicalJson(packet));
+  });
+
+  it("removes only its owned leaf when descriptor verification fails", async () => {
+    const root = tempRoot();
+    const outputDirectory = join(root, "review-output");
+    writeFileSync(join(root, "review.json"), "{}");
+    mkdirSync(outputDirectory);
+    const api = {
+      async promotionPacket() {
+        return validPromotionPacket();
+      },
+    } as unknown as ExternalIntakeApiV1;
+    const output = outputHarness(api, root);
+    const mutableFs = require("node:fs") as Record<string, unknown>;
+    const originalFsync = mutableFs.fsyncSync;
+    mutableFs.fsyncSync = () => {
+      throw new Error("injected descriptor verification failure");
+    };
+    syncBuiltinESMExports();
+    try {
+      expect(
+        await runIntakeCli(
+          [
+            "promotion",
+            "packet",
+            "safe-adapter@1.0.0",
+            "--review",
+            "review.json",
+            "--out",
+            "review-output/promotion-packet.json",
+          ],
+          output.options,
+        ),
+      ).toBe(1);
+    } finally {
+      mutableFs.fsyncSync = originalFsync;
+      syncBuiltinESMExports();
+    }
+    expect(readdirSync(outputDirectory)).toEqual([]);
+  });
+
+  it("fails closed when a child process observes output directory replacement", async () => {
+    const title =
+      "fails closed when a child process observes output directory replacement";
+    const childMode = process.env.FACTORY_PROMOTION_RACE_CHILD;
+    const childRoot = process.env.FACTORY_PROMOTION_RACE_ROOT;
+    if (childMode === "directory-replacement" && childRoot !== undefined) {
+      const ready = join(childRoot, "ready");
+      const release = join(childRoot, "release");
+      const api = {
+        async promotionPacket() {
+          writeFileSync(ready, "ready", { flag: "wx" });
+          await waitForPath(release);
+          return validPromotionPacket();
+        },
+      } as unknown as ExternalIntakeApiV1;
+      const output = outputHarness(api, childRoot);
+
+      expect(
+        await runIntakeCli(
+          [
+            "promotion",
+            "packet",
+            "safe-adapter@1.0.0",
+            "--review",
+            "review.json",
+            "--out",
+            "review-output/promotion-packet.json",
+          ],
+          output.options,
+        ),
+      ).not.toBe(0);
+      return;
+    }
+
+    const root = tempRoot();
+    writeFileSync(join(root, "review.json"), "{}");
+    mkdirSync(join(root, "review-output"));
+    const child = raceChild(title, root, "directory-replacement");
+    await waitForPath(join(root, "ready"));
+    renameSync(join(root, "review-output"), join(root, "moved-output"));
+    mkdirSync(join(root, "review-output"));
+    writeFileSync(join(root, "release"), "release");
+
+    expect({
+      code: await childExit(child),
+      output: child.output(),
+    }).toMatchObject({ code: 0 });
+    expect(
+      existsSync(join(root, "review-output", "promotion-packet.json")),
+    ).toBe(false);
+    expect(
+      existsSync(join(root, "moved-output", "promotion-packet.json")),
+    ).toBe(false);
+  });
+
+  it("fails closed during a real child-process rename and junction race", async () => {
+    const title =
+      "fails closed during a real child-process rename and junction race";
+    const childMode = process.env.FACTORY_PROMOTION_RACE_CHILD;
+    const childRoot = process.env.FACTORY_PROMOTION_RACE_ROOT;
+    if (childMode === "junction-replacement" && childRoot !== undefined) {
+      const ready = join(childRoot, "ready");
+      const release = join(childRoot, "release");
+      const api = {
+        async promotionPacket() {
+          writeFileSync(ready, "ready", { flag: "wx" });
+          await waitForPath(release);
+          return validPromotionPacket();
+        },
+      } as unknown as ExternalIntakeApiV1;
+      const output = outputHarness(api, childRoot);
+
+      expect(
+        await runIntakeCli(
+          [
+            "promotion",
+            "packet",
+            "safe-adapter@1.0.0",
+            "--review",
+            "review.json",
+            "--out",
+            "review-output/promotion-packet.json",
+          ],
+          output.options,
+        ),
+      ).not.toBe(0);
+      return;
+    }
+
+    const root = tempRoot();
+    writeFileSync(join(root, "review.json"), "{}");
+    mkdirSync(join(root, "review-output"));
+    mkdirSync(join(root, "outside"));
+    const child = raceChild(title, root, "junction-replacement");
+    await waitForPath(join(root, "ready"));
+    renameSync(join(root, "review-output"), join(root, "moved-output"));
+    symlinkSync(join(root, "outside"), join(root, "review-output"), "junction");
+    writeFileSync(join(root, "release"), "release");
+
+    expect({
+      code: await childExit(child),
+      output: child.output(),
+    }).toMatchObject({ code: 0 });
+    expect(existsSync(join(root, "outside", "promotion-packet.json"))).toBe(
+      false,
+    );
+    expect(
+      existsSync(join(root, "moved-output", "promotion-packet.json")),
+    ).toBe(false);
   });
 });

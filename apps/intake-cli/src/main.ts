@@ -1,11 +1,18 @@
 #!/usr/bin/env node
 
 import {
+  closeSync,
+  fstatSync,
+  fsyncSync,
   lstatSync,
+  openSync,
   readFileSync,
+  readSync,
   readdirSync,
   realpathSync,
-  writeFileSync,
+  statSync,
+  unlinkSync,
+  writeSync,
 } from "node:fs";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -26,6 +33,7 @@ const VERSION = /^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/u;
 const DIGEST = /^sha256:[a-f0-9]{64}$/u;
 const CANDIDATE_KEY = /^candidate\.[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)*$/u;
 const MAX_REQUEST_BYTES = 1024 * 1024;
+const PROMOTION_PACKET_LEAF = "promotion-packet.json";
 const REDACTED_IDENTIFIERS = [
   "token",
   "auth",
@@ -369,17 +377,259 @@ function localPromotionReview(
 function promotionOutputPath(
   pathInput: string | undefined,
   cwd: string,
-): string {
+): PromotionOutputAnchor {
   const segments = safeRelativeSegments(pathInput);
-  if (segments.length < 2 || segments.at(-1) !== "promotion-packet.json") {
+  if (segments.length < 2 || segments.at(-1) !== PROMOTION_PACKET_LEAF) {
     throw new CliInputError("exact promotion packet output path required");
   }
   const directorySegments = segments.slice(0, -1);
   const directory = assertRealComponents(cwd, directorySegments, "directory");
+  const realCwd = realpathSync.native(cwd);
+  const realDirectory = realpathSync.native(directory);
   if (readdirSync(directory).length !== 0) {
     throw new CliInputError("promotion review directory must be empty");
   }
-  return resolveUnderRealCwd(cwd, segments);
+  return {
+    requestCwd: anchoredDirectoryIdentity(realCwd),
+    processCwd: anchoredDirectoryIdentity(realpathSync.native(process.cwd())),
+    directory: anchoredDirectoryIdentity(realDirectory),
+  };
+}
+
+interface AnchoredDirectoryIdentity {
+  readonly path: string;
+  readonly dev: bigint;
+  readonly ino: bigint;
+}
+
+interface PromotionOutputAnchor {
+  readonly requestCwd: AnchoredDirectoryIdentity;
+  readonly processCwd: AnchoredDirectoryIdentity;
+  readonly directory: AnchoredDirectoryIdentity;
+}
+
+interface OwnedOutputIdentity {
+  readonly dev: bigint;
+  readonly ino: bigint;
+}
+
+function anchoredDirectoryIdentity(path: string): AnchoredDirectoryIdentity {
+  const stat = lstatSync(path, { bigint: true });
+  if (
+    stat.isSymbolicLink() ||
+    !stat.isDirectory() ||
+    stat.dev < 0n ||
+    stat.ino <= 0n
+  ) {
+    throw new CliInputError(
+      "promotion output directory identity is unavailable",
+    );
+  }
+  return { path, dev: stat.dev, ino: stat.ino };
+}
+
+function assertDirectoryIdentity(expected: AnchoredDirectoryIdentity): void {
+  const actual = anchoredDirectoryIdentity(expected.path);
+  if (actual.dev !== expected.dev || actual.ino !== expected.ino) {
+    throw new CliInputError("promotion output directory identity changed");
+  }
+  if (realpathSync.native(expected.path) !== expected.path) {
+    throw new CliInputError("promotion output directory identity changed");
+  }
+}
+
+function assertPromotionOutputAnchor(
+  anchor: PromotionOutputAnchor,
+  expectedEntries: readonly string[],
+): void {
+  assertDirectoryIdentity(anchor.requestCwd);
+  assertDirectoryIdentity(anchor.processCwd);
+  assertDirectoryIdentity(anchor.directory);
+  const entries = readdirSync(anchor.directory.path).sort();
+  if (
+    entries.length !== expectedEntries.length ||
+    entries.some((entry, index) => entry !== expectedEntries[index])
+  ) {
+    throw new CliInputError("promotion review directory contents changed");
+  }
+}
+
+function assertCurrentPromotionDirectory(
+  anchor: PromotionOutputAnchor,
+  expectedEntries: readonly string[],
+): void {
+  const stat = statSync(".", { bigint: true });
+  if (
+    !stat.isDirectory() ||
+    stat.dev !== anchor.directory.dev ||
+    stat.ino !== anchor.directory.ino
+  ) {
+    throw new CliInputError("promotion output directory identity changed");
+  }
+  const entries = readdirSync(".").sort();
+  if (
+    entries.length !== expectedEntries.length ||
+    entries.some((entry, index) => entry !== expectedEntries[index])
+  ) {
+    throw new CliInputError("promotion review directory contents changed");
+  }
+}
+
+function sameOwnedOutput(
+  actual: {
+    readonly dev: bigint;
+    readonly ino: bigint;
+    isFile(): boolean;
+    isSymbolicLink(): boolean;
+  },
+  expected: OwnedOutputIdentity,
+): boolean {
+  return (
+    !actual.isSymbolicLink() &&
+    actual.isFile() &&
+    actual.dev === expected.dev &&
+    actual.ino === expected.ino
+  );
+}
+
+function cleanupOwnedPromotionOutput(
+  anchor: PromotionOutputAnchor,
+  owned: OwnedOutputIdentity,
+): void {
+  try {
+    assertCurrentPromotionDirectory(anchor, [PROMOTION_PACKET_LEAF]);
+    const stat = lstatSync(PROMOTION_PACKET_LEAF, { bigint: true });
+    if (sameOwnedOutput(stat, owned)) {
+      unlinkSync(PROMOTION_PACKET_LEAF);
+    }
+  } catch {
+    // Cleanup is intentionally best-effort and never follows a changed path.
+  }
+}
+
+function writeVerifiedPromotionPacket(
+  anchor: PromotionOutputAnchor,
+  packet: unknown,
+  expectedDigest: string,
+): string {
+  const bytes = canonicalJson(packet);
+  const encoded = Buffer.from(bytes, "utf8");
+  let descriptor: number | undefined;
+  let owned: OwnedOutputIdentity | undefined;
+  let succeeded = false;
+  let changedDirectory = false;
+  try {
+    assertPromotionOutputAnchor(anchor, []);
+    process.chdir(anchor.directory.path);
+    changedDirectory = true;
+    assertCurrentPromotionDirectory(anchor, []);
+    try {
+      descriptor = openSync(PROMOTION_PACKET_LEAF, "wx+", 0o600);
+    } catch (error) {
+      if (
+        error !== null &&
+        typeof error === "object" &&
+        "code" in error &&
+        error.code === "EEXIST"
+      ) {
+        throw new CliInputError("promotion packet output already exists");
+      }
+      throw error;
+    }
+    const opened = fstatSync(descriptor, { bigint: true });
+    if (
+      !opened.isFile() ||
+      opened.dev < 0n ||
+      opened.ino <= 0n ||
+      opened.size !== 0n
+    ) {
+      throw new Error("PromotionPacket output descriptor is invalid.");
+    }
+    owned = { dev: opened.dev, ino: opened.ino };
+    let written = 0;
+    while (written < encoded.byteLength) {
+      const count = writeSync(
+        descriptor,
+        encoded,
+        written,
+        encoded.byteLength - written,
+        written,
+      );
+      if (count <= 0) {
+        throw new Error("PromotionPacket output write was incomplete.");
+      }
+      written += count;
+    }
+    fsyncSync(descriptor);
+    const afterWrite = fstatSync(descriptor, { bigint: true });
+    if (
+      afterWrite.dev !== owned.dev ||
+      afterWrite.ino !== owned.ino ||
+      afterWrite.size !== BigInt(encoded.byteLength)
+    ) {
+      throw new Error("PromotionPacket output changed after write.");
+    }
+    assertCurrentPromotionDirectory(anchor, [PROMOTION_PACKET_LEAF]);
+    const reread = Buffer.alloc(encoded.byteLength);
+    let read = 0;
+    while (read < reread.byteLength) {
+      const count = readSync(
+        descriptor,
+        reread,
+        read,
+        reread.byteLength - read,
+        read,
+      );
+      if (count <= 0) {
+        throw new Error("PromotionPacket output reread was incomplete.");
+      }
+      read += count;
+    }
+    if (
+      readSync(descriptor, Buffer.alloc(1), 0, 1, reread.byteLength) !== 0 ||
+      !reread.equals(encoded)
+    ) {
+      throw new Error("PromotionPacket output changed after exclusive write.");
+    }
+    const rebound = verifyPromotionPacket(
+      JSON.parse(reread.toString("utf8")) as unknown,
+    );
+    if (
+      !rebound.valid ||
+      rebound.digest !== expectedDigest ||
+      rebound.digest !== canonicalRecordDigest(packet)
+    ) {
+      throw new Error("PromotionPacket output failed re-verification.");
+    }
+    const afterRead = fstatSync(descriptor, { bigint: true });
+    if (
+      afterRead.dev !== owned.dev ||
+      afterRead.ino !== owned.ino ||
+      afterRead.size !== BigInt(encoded.byteLength)
+    ) {
+      throw new Error("PromotionPacket output changed after re-verification.");
+    }
+    assertCurrentPromotionDirectory(anchor, [PROMOTION_PACKET_LEAF]);
+    succeeded = true;
+    return rebound.digest;
+  } finally {
+    if (descriptor !== undefined) {
+      closeSync(descriptor);
+    }
+    if (!succeeded && owned !== undefined) {
+      cleanupOwnedPromotionOutput(anchor, owned);
+    }
+    if (changedDirectory) {
+      process.chdir(anchor.processCwd.path);
+      const restored = statSync(".", { bigint: true });
+      if (
+        restored.dev !== anchor.processCwd.dev ||
+        restored.ino !== anchor.processCwd.ino
+      ) {
+        throw new Error("CLI working directory restoration failed.");
+      }
+    }
+  }
 }
 
 export async function runIntakeCli(
@@ -420,7 +670,7 @@ export async function runIntakeCli(
         args[4],
         options.cwd,
       ) as PromotionReviewInputV1;
-      const outputPath = promotionOutputPath(args[6], options.cwd);
+      const outputAnchor = promotionOutputPath(args[6], options.cwd);
       const packet = await options.api.promotionPacket(
         identity.id,
         identity.version,
@@ -430,44 +680,16 @@ export async function runIntakeCli(
       if (!verification.valid || verification.digest === undefined) {
         throw new Error("PromotionPacket failed verification before output.");
       }
-      const bytes = canonicalJson(packet);
-      const reboundOutputPath = promotionOutputPath(args[6], options.cwd);
-      if (reboundOutputPath !== outputPath) {
-        throw new CliInputError("promotion packet output path changed");
-      }
-      try {
-        writeFileSync(outputPath, bytes, { flag: "wx", mode: 0o600 });
-      } catch (error) {
-        if (
-          error !== null &&
-          typeof error === "object" &&
-          "code" in error &&
-          error.code === "EEXIST"
-        ) {
-          throw new CliInputError("promotion packet output already exists");
-        }
-        throw error;
-      }
-      const stat = lstatSync(outputPath);
-      const reread = readFileSync(outputPath, "utf8");
-      if (stat.isSymbolicLink() || !stat.isFile() || reread !== bytes) {
-        throw new Error(
-          "PromotionPacket output changed after exclusive write.",
-        );
-      }
-      const rebound = verifyPromotionPacket(JSON.parse(reread) as unknown);
-      if (
-        !rebound.valid ||
-        rebound.digest !== verification.digest ||
-        rebound.digest !== canonicalRecordDigest(packet)
-      ) {
-        throw new Error("PromotionPacket output failed re-verification.");
-      }
+      const reboundDigest = writeVerifiedPromotionPacket(
+        outputAnchor,
+        packet,
+        verification.digest,
+      );
       outputContext = "promotion-packet";
       result = {
         status: "written",
         path: args[6],
-        digest: rebound.digest,
+        digest: reboundDigest,
       };
     } else if (
       args.length === 3 &&
