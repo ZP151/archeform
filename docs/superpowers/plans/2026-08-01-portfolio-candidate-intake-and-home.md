@@ -4,7 +4,7 @@
 
 **Goal:** Turn verified external Portfolio evidence into a non-promoting Candidate proposal and expose safe Profile, capability, source-intake, and compilation summaries on Workbench Home.
 
-**Architecture:** @factory/external-intake owns deterministic Candidate-proposal construction from exact Portfolio metadata and completed evidence. The NestJS Control Plane exposes a read-only aggregate summary. Workbench Home renders that typed summary beside existing applications. No raw source content, Candidate artifact, credential, AI payload, Provider configuration, or mutable Graph is returned to the browser.
+**Architecture:** @factory/external-intake owns deterministic Candidate-proposal construction from exact Portfolio metadata and completed evidence. A new @factory/portfolio-public package publishes only fixed safe counts and labels; External Intake verifies it against the internal Portfolio. The NestJS Control Plane consumes that public package, never @factory/external-intake, to expose a read-only aggregate summary. Workbench Home renders that typed summary beside existing applications. No raw source content, Candidate artifact, credential, AI payload, Provider configuration, or mutable Graph is returned to the browser.
 
 **Tech Stack:** TypeScript, Zod, Vitest, NestJS, Prisma, Next.js, React, Lucide, pnpm/Turborepo.
 
@@ -26,6 +26,10 @@
 - packages/external-intake/src/index.ts: public export boundary.
 - packages/external-intake/src/api.ts: repository-local Candidate proposal creation operation.
 - packages/external-intake/test/portfolio-candidate-proposal.test.ts: determinism, privacy, and rejection coverage.
+- packages/portfolio-public/src/index.ts: source-free Portfolio summary public API.
+- packages/portfolio-public/src/summary.ts: fixed counts and safe class labels only.
+- packages/portfolio-public/test/summary.test.ts: no-source, no-URL, and exact-count contract.
+- packages/external-intake/test/portfolio-public-summary.test.ts: verifies public counts against the full intake-only Portfolio.
 - apps/control-plane/src/portfolio/portfolio-summary.service.ts: browser-safe summary derivation.
 - apps/control-plane/src/portfolio/portfolio-summary.controller.ts: read-only Workspace endpoint.
 - apps/control-plane/src/portfolio/portfolio.module.ts: NestJS module boundary.
@@ -226,9 +230,15 @@ git add packages/external-intake/src/api.ts packages/external-intake/test/api.te
 git commit -m "feat: create quarantined portfolio candidates"
 ~~~
 
-## Task 3: Add a browser-safe Workspace portfolio summary
+## Task 3: Create a source-free Portfolio public projection and Workspace summary
 
 **Files:**
+- Create: packages/portfolio-public/package.json
+- Create: packages/portfolio-public/tsconfig.json
+- Create: packages/portfolio-public/src/index.ts
+- Create: packages/portfolio-public/src/summary.ts
+- Create: packages/portfolio-public/test/summary.test.ts
+- Create: packages/external-intake/test/portfolio-public-summary.test.ts
 - Create: apps/control-plane/src/portfolio/portfolio-summary.service.ts
 - Create: apps/control-plane/src/portfolio/portfolio-summary.controller.ts
 - Create: apps/control-plane/src/portfolio/portfolio.module.ts
@@ -237,9 +247,9 @@ git commit -m "feat: create quarantined portfolio candidates"
 - Test: apps/control-plane/test/portfolio-summary.controller.test.ts
 
 **Interfaces:**
-- Consumes: local Profile descriptors, Golden asset metadata, Portfolio metadata, Candidate summaries, and compilation records.
+- Consumes: local Profile descriptors, Golden asset metadata, source-free Portfolio counts, Candidate summaries, and compilation records.
 - Produces: WorkspacePortfolioSummaryV1 through GET /workspaces/:workspaceId/portfolio-summary.
-- Invariant: response contains counts, labels, statuses, and timestamps only.
+- Invariant: @factory/portfolio-public has no dependency on @factory/external-intake and response contains counts, labels, statuses, and timestamps only.
 
 - [ ] **Step 1: Write failing service tests**
 
@@ -255,13 +265,58 @@ expect(summary).toEqual({
 });
 ~~~
 
+Write public-package tests before implementation:
+
+~~~ts
+expect(portfolioPublicSummary).toEqual({
+  apiVersion: "factory.portfolio-public-summary/v1",
+  sourceCounts: {
+    total: 43,
+    intakeEligible: 19,
+    directDependency: 1,
+    selectiveSource: 11,
+    provider: 7,
+    policyOnly: 24,
+  },
+  scenarioCount: 108,
+});
+expect(JSON.stringify(portfolioPublicSummary)).not.toMatch(
+  /https?:\/\/|\.git|sha256:|token|secret|password/iu,
+);
+~~~
+
 - [ ] **Step 2: Run the focused service tests and verify failure**
 
 Run: pnpm --filter @factory/control-plane exec vitest run src/portfolio/portfolio-summary.service.test.ts
 
-Expected: FAIL because WorkspacePortfolioSummaryService is absent.
+Expected: FAIL because the public projection and
+WorkspacePortfolioSummaryService are absent.
 
-- [ ] **Step 3: Define the DTO and aggregation service**
+- [ ] **Step 3: Define the source-free public package and DTO**
+
+~~~ts
+export interface PortfolioPublicSummaryV1 {
+  readonly apiVersion: "factory.portfolio-public-summary/v1";
+  readonly scenarioCount: number;
+  readonly sourceCounts: {
+    readonly total: number;
+    readonly intakeEligible: number;
+    readonly directDependency: number;
+    readonly selectiveSource: number;
+    readonly provider: number;
+    readonly policyOnly: number;
+  };
+}
+
+export const portfolioPublicSummary: PortfolioPublicSummaryV1;
+~~~
+
+The public package contains no source record, URL, fixed reference, evidence
+digest, source path, Candidate artifact, or import from External Intake. Add an
+External Intake test that loads the full Portfolio and proves its classified
+counts equal the public projection.
+
+- [ ] **Step 4: Define the Workspace DTO and aggregation service**
 
 ~~~ts
 export interface WorkspacePortfolioSummaryV1 {
@@ -278,10 +333,11 @@ export class WorkspacePortfolioSummaryService {
 ~~~
 
 Read application and compilation counts through Prisma. Read profile and Golden
-asset metadata through Factory packages. Represent unavailable Candidate counts
-as a numeric zero, not a fabricated Candidate record.
+asset metadata through Factory packages, and import only
+@factory/portfolio-public for source statistics. Represent unavailable Candidate
+counts as a numeric zero, not a fabricated Candidate record.
 
-- [ ] **Step 4: Add the read-only controller and privacy boundary**
+- [ ] **Step 5: Add the read-only controller and privacy boundary**
 
 ~~~ts
 @Get("workspaces/:workspaceId/portfolio-summary")
@@ -290,10 +346,11 @@ getPortfolioSummary(@Param("workspaceId") workspaceId: string) {
 }
 ~~~
 
-Return 404 for an unknown workspace. Do not provide source URLs, source paths,
+Return 404 for an unknown workspace. Do not import @factory/external-intake or
+read quarantine storage. Do not provide source URLs, source paths,
 Candidate IDs, evidence digests, artifact bodies, raw errors, or query filters.
 
-- [ ] **Step 5: Add controller privacy and lifecycle tests**
+- [ ] **Step 6: Add controller privacy and lifecycle tests**
 
 ~~~ts
 expect(JSON.stringify(response.body)).not.toMatch(
@@ -303,19 +360,20 @@ expect(response.status).toBe(200);
 ~~~
 
 Use published and failed compilation fixtures. Assert no Draft, Published
-Revision, Compilation, or Candidate record is created.
+Revision, Compilation, or Candidate record is created. Assert the Control Plane
+package manifest does not contain @factory/external-intake.
 
-- [ ] **Step 6: Run Control Plane verification**
+- [ ] **Step 7: Run package and Control Plane verification**
 
-Run: pnpm --filter @factory/control-plane test; pnpm --filter @factory/control-plane typecheck; pnpm --filter @factory/control-plane lint; pnpm --filter @factory/control-plane build
+Run: pnpm --filter @factory/portfolio-public test; pnpm --filter @factory/portfolio-public typecheck; pnpm --filter @factory/external-intake test; pnpm --filter @factory/control-plane test; pnpm --filter @factory/control-plane typecheck; pnpm --filter @factory/control-plane lint; pnpm --filter @factory/control-plane build
 
 Expected: all commands pass.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ~~~bash
-git add apps/control-plane/src/portfolio apps/control-plane/src/app.module.ts apps/control-plane/test/portfolio-summary.controller.test.ts
-git commit -m "feat: expose workspace portfolio summary"
+git add packages/portfolio-public packages/external-intake/test/portfolio-public-summary.test.ts apps/control-plane/src/portfolio apps/control-plane/src/app.module.ts apps/control-plane/test/portfolio-summary.controller.test.ts
+git commit -m "feat: expose safe workspace portfolio summary"
 ~~~
 
 ## Task 4: Render Portfolio Intelligence on Workbench Home

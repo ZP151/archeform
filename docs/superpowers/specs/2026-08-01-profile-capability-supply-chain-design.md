@@ -106,12 +106,17 @@ Portfolio Candidate Intake and Workspace Portfolio Intelligence will add:
 - explicit Factory-authored source-to-candidate blueprints;
 - rejection of policy-only, unverified, mismatched, source-byte-bearing, or
   arbitrary-effect proposal inputs;
-- a Control Plane read-only portfolio summary endpoint; and
+- a source-free public Portfolio statistics projection consumed by a Control
+  Plane read-only summary endpoint; and
 - Workbench Home panels for Profile, capability, source-intake, and compilation
   summaries.
 
 It does not copy upstream source, create a Golden package, invoke an upstream
-runtime, create Provider configuration, or change a Published Graph.
+runtime, create Provider configuration, or change a Published Graph. The
+Control Plane and Workbench must not import @factory/external-intake. They
+consume only a separately published, source-free projection with numeric
+Portfolio counts and fixed safe labels. The External Intake package verifies
+that projection against its full internal Portfolio metadata.
 
 ## Acceptance criteria
 
