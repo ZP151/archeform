@@ -25,7 +25,7 @@ describe("ControlPlaneClient", () => {
           ],
           capabilities: {
             golden: 19,
-            lockedVersions: 33,
+            lockedVersions: 38,
             candidate: 0,
             provider: 0,
             artifact: "must-not-survive",
@@ -60,7 +60,7 @@ describe("ControlPlaneClient", () => {
       ],
       capabilities: {
         golden: 19,
-        lockedVersions: 33,
+        lockedVersions: 38,
         candidate: 0,
         provider: 0,
       },
