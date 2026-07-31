@@ -66,6 +66,9 @@ project status; fresh independent re-QA is the next gate.
 Fresh independent re-QA at `6ee338f` then PASSED with no P0/P1/P2, and the PM
 atomically moved Task 6 `ready_for_qa -> reviewed` across all three
 present-tense state authorities. Independent release re-review is next.
+Independent release review and fresh root verification at `a743652` then PASSED
+with no P0/P1/P2. The PM atomically moved Task 6 `reviewed -> accepted`; the
+complete External Capability Intake project is accepted and frozen.
 Independent Task 4 review of commit
 `33fd204` then FAILED with four P1 findings and one P2. The Controller authorized
 bounded Repair Round 1/5 and exactly three additional production paths; Task 4
@@ -178,7 +181,9 @@ Documentation repair `409d545` passed independent review with no P0/P1/P2, and
 the PM atomically moved Task 6 `implementing -> ready_for_qa` across all three
 present-tense state authorities. Fresh independent re-QA at `6ee338f` then
 PASSED with no P0/P1/P2, and the PM atomically moved Task 6
-`ready_for_qa -> reviewed`. Independent release re-review is next. The
+`ready_for_qa -> reviewed`. Independent release review and fresh root
+verification at `a743652` then PASSED with no P0/P1/P2. The PM atomically moved
+Task 6 `reviewed -> accepted`; the intake project is frozen. The
 system will ingest the 43 fixed-reference
 portfolio as metadata, retain the 108 scenarios as composition demand signals,
 and produce only quarantined evidence, non-executable Candidate records, and
@@ -334,7 +339,7 @@ remain frozen.
 | 3. Deterministic scan orchestration              | `accepted` | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
 | 4. Candidate registry, API, CLI, and isolation   | `accepted` | `integration`       | Candidate Registry               | Release review and fresh root verification PASS; frozen.    |
 | 5. Review-only promotion packets                 | `accepted` | `governance`        | External Capability Promotion    | Release review and fresh final verification PASS; frozen.   |
-| 6. Bulk acceptance and release evidence          | `reviewed` | `qa`                | External Intake Release Evidence | Fresh re-QA PASS; independent release re-review required.   |
+| 6. Bulk acceptance and release evidence          | `accepted` | `qa`                | External Intake Release Evidence | Release review and fresh final verification PASS; frozen.   |
 
 ## Task 1 card: Candidate contracts and immutable persistence
 
@@ -2122,7 +2127,7 @@ Graph/compiler/runtime/provider authority, or Task 6 behavior.
 
 ## Task 6 card: Bulk acceptance and release evidence
 
-- **State:** `reviewed`
+- **State:** `accepted`
 - **Specialization:** `qa`
 - **Contract owner:** External Intake Release Evidence
 - **Contract artifact:** accepted Tasks 1-5 plus
@@ -2136,7 +2141,7 @@ exact paths through implementation and repair. The release-repair amendment
 below adds only `apps/intake-cli/test/cli.test.ts` as a fifth exact path. The
 amended release set, External Intake Release Evidence contract, fixture-only
 evidence boundary, deliverables, five paths, non-goals, and acceptance evidence
-remain frozen for independent release re-review;
+are accepted and frozen;
 any scope, path, dependency, or contract change stops work for Controller
 review.
 
@@ -2538,6 +2543,39 @@ remains mandatory afterward. This transition is not release PASS, final
 verification, acceptance, public/live evidence, or new authority. The exact
 five paths and complete fixture-only contract remain frozen.
 
+### Independent release review, final verification, and acceptance
+
+Independent release review at `a743652` PASSED with no P0/P1/P2. It inspected
+the complete Task 6 chronology and governed release set, excluded unrelated
+`bc40886`, verified the real child-process race boundaries, 43/108 portfolio
+evidence, 19 requested/24 blocked split, redaction, no Candidate creation,
+exact cleanup, canonical pending-packet rejection, and absence of Golden,
+Graph, compiler, runtime, provider, approval, or copy authority.
+
+Fresh root Node v22.11.0 verification then passed:
+
+- concurrent External Intake 392/392, Intake CLI 56/56, Graph 28/28,
+  Capabilities 123/123, and Compiler 180/180;
+- concurrent directory-replacement and junction races in 5,303 ms and
+  3,539 ms;
+- serial Intake CLI 56/56, with the same races in 2,089 ms and 2,052 ms;
+- all five affected typecheck and lint gates;
+- targeted Prettier, `git show --check`, `git diff --check`, and exact-scope
+  checks; and
+- clean-worktree verification.
+
+The PM reconciled implementation, independent task review, behavioral QA,
+independent release review, and fresh final verification and atomically moved
+Task 6 `reviewed -> accepted` in this ledger,
+`docs/acceptance/external-capability-intake.md`, and
+`docs/project-status.md`.
+
+The exact five paths, fixture-only/no-network boundary, chronology, evidence,
+limitations, and accepted behavior are frozen. Acceptance is not public-source
+or live-service evidence and grants no promotion, approval, Golden, Graph,
+compiler, runtime, provider, source-copy, dependency, or external authority.
+The External Capability Intake project has no remaining active task.
+
 ## Review sequence and stop conditions
 
 1. PM moves one dependency-ready task to `implementing` and freezes its
@@ -2584,20 +2622,20 @@ five paths and complete fixture-only contract remain frozen.
   closes the current mismatch; future PM transitions must retain that
   synchronization or remove present-tense state from evidence documents.
 
-The active smallest valuable slice is independent Task 6 release re-review of
-the complete governed repair and atomic state set. Release review must inspect
-the actual diffs, call paths, tests, and threat boundaries; reproduce the
-concurrent and serial release gates; verify synchronized `reviewed` state in all
-three documents; and return P0/P1/P2 findings, a release-blocker verdict, and
-residual risks.
-
-Release review must preserve the canonical-pending-packet authority rejection,
+External Capability Intake is accepted and has no active follow-up task.
+Acceptance preserves the canonical-pending-packet authority rejection,
 Candidate/Golden/Graph/compiler isolation, public-network prohibition, and the
-accepted Task 5
-deterministic-fixture and single-purpose CLI-process limitations and may add no
-public/network probe, decision, approval, waiver, source copy, notice
-modification, Golden registration, Graph/compiler input, provider activation,
-real provider, or external commitment.
+accepted Task 5 deterministic-fixture and single-purpose CLI-process
+limitations.
+
+The next smallest valuable product slice is Commercial Capability Foundation
+Task 2: compose Restaurant and Ecommerce Foundation Graph recipes from the four
+accepted `1.0.0` identities `core.identity-context`,
+`core.location-context`, `commerce.line-configuration`, and
+`commerce.inventory-ledger`. Keep Foundation Tasks 3 and 4 planned until Task 2
+is accepted, and preserve the accepted physical-package, evidence-digest,
+verified-lock, and Publish-boundary contracts unchanged. This Task 6 acceptance
+does not itself dispatch that separate ledger task.
 All built-package public-surface isolation, Store/CAS, exact `id@version`,
 append-only terminal lifecycle, winner-only recovery, and multi-process
 no-orphan guarantees remain frozen. Its bounded test-contract amendment
@@ -2621,4 +2659,4 @@ Task 1's original release and bounded amendments, Task 2's accepted code set
 `515e0ba + 3dcb20f + dcaddf4`, Task 3's accepted repair commit `8b31d3a`, and
 Task 4's complete accepted Candidate Registry remain frozen. Task 5 is
 `accepted` and frozen under its recorded dependency gate; Task 6 is
-`reviewed` under its amended fixture-only five-path dispatch.
+`accepted` and frozen under its amended fixture-only five-path dispatch.

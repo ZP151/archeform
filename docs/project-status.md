@@ -5,10 +5,10 @@ Updated: 2026-07-31
 ## Current milestone
 
 External Capability Intake Task 6, **Bulk acceptance and release evidence**, is
-in `reviewed` after fresh independent re-QA at `6ee338f` passed with no
-P0/P1/P2 and the PM atomically reconciled this status, the acceptance record,
-and the ledger. Independent release re-review is the next gate. Only the PM
-changes the ledger state.
+`accepted` after independent release review and fresh root verification at
+`a743652` passed with no P0/P1/P2 and the PM atomically reconciled this status,
+the acceptance record, and the ledger. The complete External Capability Intake
+project is frozen.
 
 The Application Graph remains the source of truth. External intake artifacts
 remain quarantined Candidate evidence or pending-review packets; they are not
@@ -65,6 +65,13 @@ On Node `v22.11.0`, it records:
   safety, cleanup, quality, and synchronized-status gates with no P0/P1/P2.
   The PM atomically moved Task 6 `ready_for_qa -> reviewed` across all three
   present-tense state authorities.
+- Independent release review and fresh root verification at `a743652` passed
+  with no P0/P1/P2. Concurrent suites passed 392/392, 56/56, 28/28, 123/123,
+  and 180/180; serial Intake CLI passed 56/56; all affected quality and
+  worktree gates passed. The PM atomically moved Task 6
+  `reviewed -> accepted`.
+- No External Capability Intake work remains active. Its exact paths,
+  fixture-only contract, evidence, and limitations are frozen.
 
 ## Blocked decisions
 
@@ -73,9 +80,9 @@ On Node `v22.11.0`, it records:
 - The Task 6 fixture-only clarification excludes the plan's former public-source
   smoke probe. No public network, repository resolution/download, vendor
   contact, credentials, or external commitment is authorized by this slice.
-- This slice is fixture-only and provides no public-network, acceptance, or
-  live-service evidence. It grants no promotion, approval, Golden, Graph,
-  compiler, generated-runtime, provider, or source-copy authority.
+- This slice is fixture-only and provides no public-network or live-service
+  evidence. Acceptance grants no promotion, approval, Golden, Graph, compiler,
+  generated-runtime, provider, or source-copy authority.
 
 ## Risks and limitations
 
@@ -88,5 +95,9 @@ On Node `v22.11.0`, it records:
 
 ## Next slice
 
-Run independent Task 6 release re-review against the synchronized `reviewed`
-state. Fresh final verification and PM acceptance remain required afterward.
+The next product slice is Commercial Capability Foundation Task 2: compose
+Restaurant and Ecommerce Graph recipes from the accepted
+`core.identity-context`, `core.location-context`,
+`commerce.line-configuration`, and `commerce.inventory-ledger` identities.
+Keep Foundation Tasks 3 and 4 planned until Task 2 is accepted. This status
+update does not dispatch that separate task.

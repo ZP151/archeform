@@ -2,11 +2,11 @@
 
 Updated: 2026-07-31
 
-Status: Task 6 is `reviewed` after fresh independent re-QA at `6ee338f` passed
-with no P0/P1/P2 and the PM atomically reconciled this record, project status,
-and the ledger. Independent release re-review is the next gate. This transition
-is not release PASS, acceptance, live evidence, or authority to skip final
-verification or PM acceptance.
+Status: Task 6 is `accepted` after independent release review and fresh root
+verification at `a743652` passed with no P0/P1/P2 and the PM atomically
+reconciled this record, project status, and the ledger. Acceptance remains
+fixture-only; it is not public-network or live-service evidence and grants no
+new authority.
 
 ## Scope
 
@@ -182,6 +182,14 @@ quality, and synchronized-status gate. The PM atomically moved Task 6
 `ready_for_qa -> reviewed` across the ledger, this acceptance record, and
 project status.
 
+Independent release review and fresh root verification at `a743652` then passed
+with no P0/P1/P2. The fresh concurrent suites passed 392/392, 56/56, 28/28,
+123/123, and 180/180; the concurrent races completed in 5,303 ms and 3,539 ms.
+Serial Intake CLI passed 56/56 with races at 2,089 ms and 2,052 ms. All five
+typecheck/lint gates, targeted Prettier, commit/diff checks, and clean-worktree
+verification passed. The PM atomically moved Task 6 `reviewed -> accepted`
+across all three state documents.
+
 ## Limitations and remaining gates
 
 - Evidence is deterministic and fixture-only. It is not public-source,
@@ -193,6 +201,7 @@ project status.
 - Preflight proves intake request isolation and resume-stable CLI output. It
   does not make a licence decision, approve a packet, create a Golden asset, or
   authorize source copying.
-- This slice remains fixture-only and supplies no public-network, acceptance,
-  or live-service evidence. Independent release re-review is next. Final
-  verification and PM acceptance remain required before `accepted`.
+- This slice remains fixture-only and supplies no public-network or
+  live-service evidence. Its accepted evidence and exact five-path contract are
+  frozen; acceptance grants no promotion, approval, Golden, Graph, compiler,
+  runtime, provider, dependency, or source-copy authority.
