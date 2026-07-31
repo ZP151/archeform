@@ -6,11 +6,12 @@ Ledger state: `implementing`
 
 Specialization: `integration`
 
-Contract owner: External Capability Intake
+Contract owner: Candidate Registry
 
-Contract status: frozen for Repair Round 8/8 under ledger commit `1848f08`
+Contract status: frozen for Repair Round 10/10 second convergence under ledger
+commit `f14ccda`
 
-Last reconciled product commit: `f8bb51f`
+Last reconciled product commit: `f93e25a`
 
 ## Scope delivered
 
@@ -960,10 +961,17 @@ or `accepted`, and it does not authorize Task 5.
 Contract bases:
 
 - `302a14e` (`docs: authorize external intake repair round 10`);
-- `63c5ff3` (`docs: bound external intake round 10 convergence`).
+- `63c5ff3` (`docs: bound external intake round 10 convergence`);
+- `f14ccda` (`docs: bound second round 10 convergence`).
 
 Initial bounded product commit: `37345e5`
 (`fix: make candidate creation durable`).
+
+First convergence commit: `b06e8bb`
+(`fix: reconcile durable candidate state`).
+
+Final bounded product convergence commit: `f93e25a`
+(`fix: verify reconciled candidate terminals`).
 
 ### Exact Round 10 paths
 
@@ -994,6 +1002,11 @@ Task 6 path changed.
   sequence-1 entry with the durable current receipt before returning. Separate
   registry writers were verified for `blocked`, `rejected`, and
   `conformance-passed`.
+- A reconciled terminal entry always begins unverified. It cannot inherit
+  `verified=true` from the quarantined revision, so synchronous get fails
+  closed until the exact current terminal revision completes full verification.
+  Missing or tampered conformance-result bytes therefore remain inaccessible
+  through both exact identity and stale sequence-1 addressing.
 - The claim and completion functions remain internal to the source module.
   They are absent from the package-root exports and
   `ExternalIntakeStore.prototype`.
@@ -1026,6 +1039,19 @@ Every command used Node `v22.11.0` by prepending
 - Combined focused GREEN:
   `pnpm exec vitest run test/candidates.test.ts --testNamePattern "reconciles warm show|recovers only the claimed winner"`
   exited 0 with 4/4 focused tests passed.
+- Second-convergence RED:
+  `pnpm exec vitest run test/candidates.test.ts --testNamePattern "keeps warm exact and stale access closed"`
+  exited 1 with 2/2 focused failures. Warm synchronous get returned the
+  recovered `conformance-passed` revision after its result bytes were missing
+  or tampered.
+- Second-convergence GREEN: the same command exited 0 with 2/2 focused tests
+  passed after terminal verified-state inheritance was removed.
+- Final exact/stale matrix GREEN:
+  `pnpm exec vitest run test/candidates.test.ts --testNamePattern "reconciles warm show|keeps warm exact and stale access closed"`
+  exited 0 with 5/5 focused tests passed. Each of `blocked`, `rejected`, and
+  `conformance-passed` exercised show, verify, and get through exact
+  `id@version` and the stale sequence-1 locator. Get rejected before full
+  verification and returned the terminal revision only after verification.
 
 ### Fresh Node 22 verification
 
@@ -1034,10 +1060,10 @@ Every command used Node `v22.11.0` by prepending
    - `v22.11.0`.
 2. `pnpm --filter @factory/external-intake exec vitest run test/candidates.test.ts test/api.test.ts test/store.test.ts`
    - exit 0;
-   - 167/167 tests passed across 3 files.
+   - 169/169 tests passed across 3 files.
 3. `pnpm --filter @factory/external-intake test`
    - exit 0;
-   - 342/342 tests passed across 12 files.
+   - 344/344 tests passed across 12 files.
 4. External Intake `build`, `typecheck`, and `lint`
    - all exit 0;
    - lint reported all matched files formatted.
@@ -1057,14 +1083,16 @@ Every command used Node `v22.11.0` by prepending
    - exit 0;
    - `{"rootClaimCandidateCreation":false,"rootCompleteCandidateCreation":false,"storeClaimCandidateCreation":false,"storeCompleteCandidateCreation":false}`.
 10. Bounded formatting and exact-path checks
-    - `git show --check 37345e5` and the final staged
+    - `git show --check 37345e5 b06e8bb f93e25a` and the final staged
       `git diff --check` exited 0;
     - the exact Round 10 set is the seven paths listed above.
 
 ### Acceptance status and residual risk
 
-The Round 10 convergence requirements have direct regression evidence. The
-exclusive claim depends on same-filesystem atomic exclusive-create semantics.
+The Round 10 second-convergence requirements have direct regression evidence.
+The current contract base is `f14ccda`, and the final bounded product
+convergence commit is `f93e25a`. The exclusive claim depends on same-filesystem
+atomic exclusive-create semantics.
 Processes sharing that filesystem converge as tested, but a future distributed
 or non-conforming filesystem would require a governed transactional boundary.
 A crash after the claim intentionally leaves the immutable claim so the same
