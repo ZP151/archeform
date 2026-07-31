@@ -2,9 +2,12 @@
 
 Updated: 2026-07-31
 
-Status: Task 6 is `ready_for_qa` at PM ledger commit `29e581d`. Independent
-behavioral QA is the next gate; release review, fresh final verification, and
-PM acceptance remain required before `accepted`.
+Status: Task 6 is `implementing` under the Controller-authorized release repair
+at PM ledger commit `a9867b8`. Historical independent behavioral QA moved the
+slice from `ready_for_qa` to `reviewed`; release review then found two P2
+defects and no P0/P1 defect. This repair is not acceptance: a fresh independent
+QA, release review, final verification, and PM acceptance remain required
+before `accepted`.
 
 ## Scope
 
@@ -78,7 +81,8 @@ approval, and source-copy execution.
 
 ## Complete executed verification
 
-All following commands exited 0 on Node `v22.11.0`:
+The following are historical writer and task-review results on Node
+`v22.11.0`; they do not replace the active release-repair verification:
 
 ```text
 pnpm --filter @factory/external-intake test
@@ -112,6 +116,34 @@ pnpm exec prettier --check packages/external-intake apps/intake-cli ecosystem/po
 git diff --check
 ```
 
+## Historical QA and active release repair
+
+Independent behavioral QA documented at `0b558fc` passed and moved Task 6 from
+`ready_for_qa` to `reviewed`. The subsequent release review at ledger commit
+`77b4062` failed the slice with two P2 findings and no P0/P1 finding:
+
+- The directory-replacement race uses a real child process whose fail-closed
+  path allows up to 10 seconds for a signal. Vitest's default 5-second outer
+  timeout made the mandated concurrent five-suite run unreliable.
+- The status documentation incorrectly remained at `ready_for_qa` after the
+  QA transition to `reviewed`.
+
+The release-repair RED was reproduced on Node `v22.11.0` by running the five
+full suites concurrently: External Intake passed 392/392, Graph passed 28/28,
+Capabilities passed 123/123, and Compiler passed 180/180. Intake CLI failed
+55/56 because the real directory-replacement child-process test timed out at
+5,061 ms; the real junction-race test passed. The repair keeps both races as
+real child processes and applies a bounded 20-second outer timeout, a documented
+10-second scheduling margin beyond their internal fail-closed wait. No
+production behavior, dependency, mock, skip, or error-path weakening is in
+scope.
+
+The corresponding GREEN reran the same five full suites concurrently on Node
+`v22.11.0`: External Intake 392/392, Intake CLI 56/56, Graph 28/28,
+Capabilities 123/123, and Compiler 180/180 all passed. The directory race
+completed in 6,141 ms, demonstrating the needed margin under concurrency. A
+separate serial Intake CLI run also passed 56/56, including both real races.
+
 ## Limitations and remaining gates
 
 - Evidence is deterministic and fixture-only. It is not public-source,
@@ -123,5 +155,6 @@ git diff --check
 - Preflight proves intake request isolation and resume-stable CLI output. It
   does not make a licence decision, approve a packet, create a Golden asset, or
   authorize source copying.
-- Independent behavioral QA, release review, fresh final verification, and PM
-  acceptance remain required before `accepted`.
+- This repair remains fixture-only and supplies no acceptance or live-service
+  evidence. Fresh independent behavioral QA, release review, final
+  verification, and PM acceptance remain required before `accepted`.

@@ -43,6 +43,10 @@ async function waitForPath(path: string): Promise<void> {
   }
 }
 
+// The child fails closed after its bounded 10-second wait. Retain an additional
+// 10-second scheduling margin when the required full suites run concurrently.
+const RACE_TEST_TIMEOUT_MS = 20_000;
+
 function raceChild(
   title: string,
   root: string,
@@ -1108,114 +1112,126 @@ describe("repository-local intake CLI", () => {
     expect(readdirSync(outputDirectory)).toEqual([]);
   });
 
-  it("fails closed when a child process observes output directory replacement", async () => {
-    const title =
-      "fails closed when a child process observes output directory replacement";
-    const childMode = process.env.FACTORY_PROMOTION_RACE_CHILD;
-    const childRoot = process.env.FACTORY_PROMOTION_RACE_ROOT;
-    if (childMode === "directory-replacement" && childRoot !== undefined) {
-      const ready = join(childRoot, "ready");
-      const release = join(childRoot, "release");
-      const api = {
-        async promotionPacket() {
-          writeFileSync(ready, "ready", { flag: "wx" });
-          await waitForPath(release);
-          return validPromotionPacket();
-        },
-      } as unknown as ExternalIntakeApiV1;
-      const output = outputHarness(api, childRoot);
+  it(
+    "fails closed when a child process observes output directory replacement",
+    async () => {
+      const title =
+        "fails closed when a child process observes output directory replacement";
+      const childMode = process.env.FACTORY_PROMOTION_RACE_CHILD;
+      const childRoot = process.env.FACTORY_PROMOTION_RACE_ROOT;
+      if (childMode === "directory-replacement" && childRoot !== undefined) {
+        const ready = join(childRoot, "ready");
+        const release = join(childRoot, "release");
+        const api = {
+          async promotionPacket() {
+            writeFileSync(ready, "ready", { flag: "wx" });
+            await waitForPath(release);
+            return validPromotionPacket();
+          },
+        } as unknown as ExternalIntakeApiV1;
+        const output = outputHarness(api, childRoot);
 
+        expect(
+          await runIntakeCli(
+            [
+              "promotion",
+              "packet",
+              "safe-adapter@1.0.0",
+              "--review",
+              "review.json",
+              "--out",
+              "review-output/promotion-packet.json",
+            ],
+            output.options,
+          ),
+        ).not.toBe(0);
+        return;
+      }
+
+      const root = tempRoot();
+      writeFileSync(join(root, "review.json"), "{}");
+      mkdirSync(join(root, "review-output"));
+      const child = raceChild(title, root, "directory-replacement");
+      await waitForPath(join(root, "ready"));
+      renameSync(join(root, "review-output"), join(root, "moved-output"));
+      mkdirSync(join(root, "review-output"));
+      writeFileSync(join(root, "release"), "release");
+
+      expect({
+        code: await childExit(child),
+        output: child.output(),
+      }).toMatchObject({ code: 0 });
       expect(
-        await runIntakeCli(
-          [
-            "promotion",
-            "packet",
-            "safe-adapter@1.0.0",
-            "--review",
-            "review.json",
-            "--out",
-            "review-output/promotion-packet.json",
-          ],
-          output.options,
-        ),
-      ).not.toBe(0);
-      return;
-    }
-
-    const root = tempRoot();
-    writeFileSync(join(root, "review.json"), "{}");
-    mkdirSync(join(root, "review-output"));
-    const child = raceChild(title, root, "directory-replacement");
-    await waitForPath(join(root, "ready"));
-    renameSync(join(root, "review-output"), join(root, "moved-output"));
-    mkdirSync(join(root, "review-output"));
-    writeFileSync(join(root, "release"), "release");
-
-    expect({
-      code: await childExit(child),
-      output: child.output(),
-    }).toMatchObject({ code: 0 });
-    expect(
-      existsSync(join(root, "review-output", "promotion-packet.json")),
-    ).toBe(false);
-    expect(
-      existsSync(join(root, "moved-output", "promotion-packet.json")),
-    ).toBe(false);
-  });
-
-  it("fails closed during a real child-process rename and junction race", async () => {
-    const title =
-      "fails closed during a real child-process rename and junction race";
-    const childMode = process.env.FACTORY_PROMOTION_RACE_CHILD;
-    const childRoot = process.env.FACTORY_PROMOTION_RACE_ROOT;
-    if (childMode === "junction-replacement" && childRoot !== undefined) {
-      const ready = join(childRoot, "ready");
-      const release = join(childRoot, "release");
-      const api = {
-        async promotionPacket() {
-          writeFileSync(ready, "ready", { flag: "wx" });
-          await waitForPath(release);
-          return validPromotionPacket();
-        },
-      } as unknown as ExternalIntakeApiV1;
-      const output = outputHarness(api, childRoot);
-
+        existsSync(join(root, "review-output", "promotion-packet.json")),
+      ).toBe(false);
       expect(
-        await runIntakeCli(
-          [
-            "promotion",
-            "packet",
-            "safe-adapter@1.0.0",
-            "--review",
-            "review.json",
-            "--out",
-            "review-output/promotion-packet.json",
-          ],
-          output.options,
-        ),
-      ).not.toBe(0);
-      return;
-    }
+        existsSync(join(root, "moved-output", "promotion-packet.json")),
+      ).toBe(false);
+    },
+    RACE_TEST_TIMEOUT_MS,
+  );
 
-    const root = tempRoot();
-    writeFileSync(join(root, "review.json"), "{}");
-    mkdirSync(join(root, "review-output"));
-    mkdirSync(join(root, "outside"));
-    const child = raceChild(title, root, "junction-replacement");
-    await waitForPath(join(root, "ready"));
-    renameSync(join(root, "review-output"), join(root, "moved-output"));
-    symlinkSync(join(root, "outside"), join(root, "review-output"), "junction");
-    writeFileSync(join(root, "release"), "release");
+  it(
+    "fails closed during a real child-process rename and junction race",
+    async () => {
+      const title =
+        "fails closed during a real child-process rename and junction race";
+      const childMode = process.env.FACTORY_PROMOTION_RACE_CHILD;
+      const childRoot = process.env.FACTORY_PROMOTION_RACE_ROOT;
+      if (childMode === "junction-replacement" && childRoot !== undefined) {
+        const ready = join(childRoot, "ready");
+        const release = join(childRoot, "release");
+        const api = {
+          async promotionPacket() {
+            writeFileSync(ready, "ready", { flag: "wx" });
+            await waitForPath(release);
+            return validPromotionPacket();
+          },
+        } as unknown as ExternalIntakeApiV1;
+        const output = outputHarness(api, childRoot);
 
-    expect({
-      code: await childExit(child),
-      output: child.output(),
-    }).toMatchObject({ code: 0 });
-    expect(existsSync(join(root, "outside", "promotion-packet.json"))).toBe(
-      false,
-    );
-    expect(
-      existsSync(join(root, "moved-output", "promotion-packet.json")),
-    ).toBe(false);
-  });
+        expect(
+          await runIntakeCli(
+            [
+              "promotion",
+              "packet",
+              "safe-adapter@1.0.0",
+              "--review",
+              "review.json",
+              "--out",
+              "review-output/promotion-packet.json",
+            ],
+            output.options,
+          ),
+        ).not.toBe(0);
+        return;
+      }
+
+      const root = tempRoot();
+      writeFileSync(join(root, "review.json"), "{}");
+      mkdirSync(join(root, "review-output"));
+      mkdirSync(join(root, "outside"));
+      const child = raceChild(title, root, "junction-replacement");
+      await waitForPath(join(root, "ready"));
+      renameSync(join(root, "review-output"), join(root, "moved-output"));
+      symlinkSync(
+        join(root, "outside"),
+        join(root, "review-output"),
+        "junction",
+      );
+      writeFileSync(join(root, "release"), "release");
+
+      expect({
+        code: await childExit(child),
+        output: child.output(),
+      }).toMatchObject({ code: 0 });
+      expect(existsSync(join(root, "outside", "promotion-packet.json"))).toBe(
+        false,
+      );
+      expect(
+        existsSync(join(root, "moved-output", "promotion-packet.json")),
+      ).toBe(false);
+    },
+    RACE_TEST_TIMEOUT_MS,
+  );
 });
