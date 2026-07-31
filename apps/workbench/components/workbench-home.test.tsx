@@ -98,6 +98,30 @@ describe("WorkbenchHome", () => {
     vi.unstubAllGlobals();
   });
 
+  it("renders every registered Profile as a creation-ready Home card", () => {
+    act(() => {
+      root.render(
+        <WorkbenchHome
+          applications={[]}
+          loading={false}
+          onCompile={vi.fn()}
+          onCreate={vi.fn()}
+          onOpen={vi.fn()}
+        />,
+      );
+    });
+
+    expect(container.textContent).toContain("Expense approval");
+    expect(container.textContent).toContain("Restaurant ordering");
+    expect(container.textContent).toContain("Simple ecommerce");
+    expect(container.textContent).toContain("Retail counter");
+    expect(container.textContent).toContain("Grocery pickup");
+    expect(
+      container.querySelector('[title="Verified capability packages"]'),
+    ).not.toBeNull();
+    expect(container.querySelector('[title="Golden Profile"]')).toBeNull();
+  });
+
   it("opens Restaurant from Home and keeps compilation disabled until publish", () => {
     const onOpen = vi.fn();
     const onCompile = vi.fn();

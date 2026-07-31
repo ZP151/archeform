@@ -12,15 +12,21 @@ describe("profile starters", () => {
       "expense-approval",
       "restaurant-ordering",
       "simple-ecommerce",
+      "retail-counter",
+      "grocery-pickup",
     ]);
 
     const expense = createProfileDraft("expense-approval");
     const restaurant = createProfileDraft("restaurant-ordering");
     const ecommerce = createProfileDraft("simple-ecommerce");
+    const retail = createProfileDraft("retail-counter");
+    const grocery = createProfileDraft("grocery-pickup");
 
     expect(expense.metadata.name).toBe("Expense approval");
     expect(restaurant.metadata.name).toBe("Restaurant ordering");
     expect(ecommerce.metadata.name).toBe("Simple ecommerce");
+    expect(retail.metadata.name).toBe("Retail counter");
+    expect(grocery.metadata.name).toBe("Grocery pickup");
     expect(expense.metadata.id).not.toBe(restaurant.metadata.id);
     expect(restaurant.integration.capabilities).toEqual(
       expect.arrayContaining([
@@ -43,6 +49,8 @@ describe("profile starters", () => {
       "expense-approval": 4,
       "restaurant-ordering": 13,
       "simple-ecommerce": 13,
+      "retail-counter": 13,
+      "grocery-pickup": 13,
     } as const;
 
     for (const { profile } of profileStarterOptions) {

@@ -190,6 +190,17 @@ export interface ProfileGraphStarter {
 
 export type OptionalCapabilityKey = "core.audit" | "core.notification";
 
+export interface FactoryProfileDescriptorV1 {
+  readonly apiVersion: "factory.profile-descriptor/v1";
+  readonly profile: FactoryProfile;
+  readonly label: string;
+  readonly description: string;
+  readonly category: "approval" | "commerce";
+  readonly scenarioTags: readonly string[];
+  readonly requiredCapabilities: readonly string[];
+  readonly defaultOptionalCapabilities: readonly OptionalCapabilityKey[];
+}
+
 export interface ProfileComposition {
   readonly profile: FactoryProfile;
   readonly requiredCapabilities: readonly CapabilityDefinition[];
@@ -2872,6 +2883,85 @@ export function getProfileComposition(
     optionalCapabilities: recipe.optionalCapabilities.map(getCapability),
     defaultOptionalCapabilities: [...recipe.optionalCapabilities],
   };
+}
+
+const profileDescriptorMetadata: Readonly<
+  Record<
+    FactoryProfile,
+    Omit<
+      FactoryProfileDescriptorV1,
+      | "apiVersion"
+      | "profile"
+      | "requiredCapabilities"
+      | "defaultOptionalCapabilities"
+    >
+  >
+> = {
+  "expense-approval": {
+    label: "Expense approval",
+    description: "Employee submission, manager decision, and finance audit.",
+    category: "approval",
+    scenarioTags: ["approval", "expenses", "audit"],
+  },
+  "restaurant-ordering": {
+    label: "Restaurant ordering",
+    description:
+      "Table service, menu ordering, kitchen fulfilment, and cashier activity.",
+    category: "commerce",
+    scenarioTags: ["restaurant", "ordering", "kitchen"],
+  },
+  "simple-ecommerce": {
+    label: "Simple ecommerce",
+    description: "Catalog, checkout, inventory update, and order lifecycle.",
+    category: "commerce",
+    scenarioTags: ["ecommerce", "catalog", "checkout"],
+  },
+  "retail-counter": {
+    label: "Retail counter",
+    description: "Counter sales, inventory movement, and simulated checkout.",
+    category: "commerce",
+    scenarioTags: ["retail", "point-of-sale", "inventory"],
+  },
+  "grocery-pickup": {
+    label: "Grocery pickup",
+    description:
+      "Grocery ordering, fulfilment preparation, and pickup handoff.",
+    category: "commerce",
+    scenarioTags: ["grocery", "pickup", "fulfilment"],
+  },
+};
+
+const profileCatalogOrder: readonly FactoryProfile[] = [
+  "expense-approval",
+  "restaurant-ordering",
+  "simple-ecommerce",
+  "retail-counter",
+  "grocery-pickup",
+];
+
+export function listFactoryProfiles(): readonly FactoryProfileDescriptorV1[] {
+  return profileCatalogOrder.map((profile) => {
+    const composition = getProfileComposition(profile);
+    return Object.freeze({
+      apiVersion: "factory.profile-descriptor/v1" as const,
+      profile,
+      ...profileDescriptorMetadata[profile],
+      requiredCapabilities: composition.requiredCapabilities.map(
+        ({ key }) => key,
+      ),
+      defaultOptionalCapabilities: [...composition.defaultOptionalCapabilities],
+    });
+  });
+}
+
+export function getFactoryProfileDescriptor(
+  profile: FactoryProfile,
+): FactoryProfileDescriptorV1 {
+  const descriptor = listFactoryProfiles().find(
+    (candidate) => candidate.profile === profile,
+  );
+  if (!descriptor) throw new Error(`Unknown Factory profile '${profile}'.`);
+  return descriptor;
 }
 
 /** Creates a default base Graph and routes the profile recipe through the

@@ -199,7 +199,7 @@ export function WorkbenchHome({
             <span /> Application portfolio
           </p>
           <h2 style={{ margin: "4px 0 6px", fontSize: "1.45rem" }}>
-            Build from a verified Profile
+            Build from verified capability packages
           </h2>
           <p style={{ margin: 0, color: "var(--muted, #66706a)" }}>
             Open a Draft, publish an immutable revision, then compile it.
@@ -255,8 +255,8 @@ export function WorkbenchHome({
                   <h3 style={{ margin: 0, fontSize: "1rem" }}>
                     {profile.label}
                   </h3>
-                  <span title="Golden Profile">
-                    <CheckCircle2 size={16} aria-hidden="true" /> Golden
+                  <span title="Verified capability packages">
+                    <CheckCircle2 size={16} aria-hidden="true" /> Verified
                   </span>
                 </div>
                 <p style={{ color: "var(--muted, #66706a)" }}>
@@ -289,7 +289,7 @@ export function WorkbenchHome({
           {loading ? (
             <p role="status">Loading local applications…</p>
           ) : applications.length === 0 ? (
-            <p>No applications yet. Start from a Golden Profile.</p>
+            <p>No applications yet. Start from a verified Profile.</p>
           ) : (
             <div style={{ display: "grid", gap: 16 }}>
               {applicationGroups.map((group) => (
