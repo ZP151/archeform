@@ -3251,7 +3251,7 @@ const genericCommerceLifecycleVersionsByProfile: Readonly<
  * Returns the explicit Generic Commerce lifecycle selection for a profile.
  * Profiles absent from this allowlist must select their own package versions.
  */
-export function resolveGenericCommerceLifecycleVersions(
+function resolveGenericCommerceLifecycleVersions(
   profile: string,
 ): GenericCommerceLifecycleVersionsV1 | undefined {
   return genericCommerceLifecycleVersionsByProfile[profile];
