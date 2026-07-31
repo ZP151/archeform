@@ -18,6 +18,12 @@ const commerceProfiles = [
   "grocery-pickup",
 ] as const;
 
+const genericCommerceProfiles = [
+  "simple-ecommerce",
+  "retail-counter",
+  "grocery-pickup",
+] as const;
+
 function transactionSelection(profile: (typeof commerceProfiles)[number]) {
   return composeDefaultCapabilityDraft({
     profile,
@@ -26,32 +32,66 @@ function transactionSelection(profile: (typeof commerceProfiles)[number]) {
   );
 }
 
-function legacyTransactionLock(profile: (typeof commerceProfiles)[number]) {
+function legacyCapabilityLock(
+  profile: (typeof commerceProfiles)[number],
+  key: "commerce.order" | "commerce.transaction",
+) {
   return composeProfileDraft({ profile }).graph.integration.assetLocks?.find(
-    (lock) => lock.key === "commerce.transaction",
+    (lock) => lock.key === key,
   );
 }
 
 describe("Commerce transaction profile composition", () => {
-  it.each(commerceProfiles)(
-    "%s retains V1 until an operation adapter is locked",
+  it.each(genericCommerceProfiles)(
+    "%s selects the generic order lifecycle and transaction adapter locks",
     (profile) => {
-      expect(transactionSelection(profile)?.lock).toMatchObject({
+      const locks = composeDefaultCapabilityDraft({
+        profile,
+      }).graph.integration.compositionSelections?.map(({ lock }) => lock);
+
+      expect(locks).toContainEqual(
+        expect.objectContaining({ key: "commerce.order", version: "2.0.3" }),
+      );
+      expect(locks).toContainEqual(
+        expect.objectContaining({
+          key: "commerce.transaction",
+          version: "2.1.0",
+        }),
+      );
+      expect(locks).not.toContainEqual(
+        expect.objectContaining({ key: "commerce.order", version: "1.3.2" }),
+      );
+    },
+  );
+
+  it.each(genericCommerceProfiles)(
+    "%s legacy Profile recipe selects the generic order lifecycle and transaction adapter locks",
+    (profile) => {
+      expect(legacyCapabilityLock(profile, "commerce.order")).toMatchObject({
+        key: "commerce.order",
+        version: "2.0.3",
+      });
+      expect(
+        legacyCapabilityLock(profile, "commerce.transaction"),
+      ).toMatchObject({
         key: "commerce.transaction",
-        version: "1.0.0",
+        version: "2.1.0",
       });
     },
   );
 
-  it.each(commerceProfiles)(
-    "%s legacy Profile recipe retains V1 until an operation adapter is locked",
-    (profile) => {
-      expect(legacyTransactionLock(profile)).toMatchObject({
-        key: "commerce.transaction",
-        version: "1.0.0",
-      });
-    },
-  );
+  it("keeps Restaurant Ordering on its historical V1 commerce locks", () => {
+    expect(transactionSelection("restaurant-ordering")?.lock).toMatchObject({
+      key: "commerce.transaction",
+      version: "1.0.0",
+    });
+    expect(
+      legacyCapabilityLock("restaurant-ordering", "commerce.transaction"),
+    ).toMatchObject({ key: "commerce.transaction", version: "1.0.0" });
+    expect(
+      legacyCapabilityLock("restaurant-ordering", "commerce.order"),
+    ).toMatchObject({ key: "commerce.order", version: "1.2.0" });
+  });
 
   it("resolves a saved V1 transaction lock without upgrading it", () => {
     const historicalLock = lockCapabilityAsset(commerceTransactionAssetV1_0_0);

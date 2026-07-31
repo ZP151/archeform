@@ -1076,6 +1076,7 @@ const baseProfileCompositionBindings: Readonly<
     "commerce.order": {
       orderEntity: { graphSymbol: "graph.domain.order" },
       orderFlow: { graphSymbol: "graph.flow.ecommerce-order" },
+      customerRole: { graphSymbol: "graph.policy.shopper" },
     },
     "commerce.transaction": {
       aggregateEntity: { graphSymbol: "graph.domain.order" },
@@ -3233,6 +3234,19 @@ export function listProfileReadiness(): readonly import("./profile-readiness.js"
   return profileReadinessCache;
 }
 
+function getProfileCapabilityAsset(
+  profile: FactoryProfile,
+  key: string,
+): CapabilityAssetV1 {
+  if (profile !== "restaurant-ordering" && key === "commerce.order") {
+    return getCapabilityAssetVersion(key, "2.0.3");
+  }
+  if (profile !== "restaurant-ordering" && key === "commerce.transaction") {
+    return getCapabilityAssetVersion(key, "2.1.0");
+  }
+  return getCapabilityAsset(key);
+}
+
 /** Creates a default base Graph and routes the profile recipe through the
  * generic composition boundary. Control Plane repeats Graph validation before
  * persistence as an independent server-side boundary.
@@ -3297,11 +3311,7 @@ export function composeDefaultCapabilityDraft(
         );
       }
       return {
-        lock: lockCapabilityAsset(
-          key === "commerce.transaction"
-            ? getCapabilityAssetVersion(key, "1.0.0")
-            : getCapabilityAsset(key),
-        ),
+        lock: lockCapabilityAsset(getProfileCapabilityAsset(profile, key)),
         bindings: structuredClone(bindings),
       };
     },
@@ -3366,9 +3376,7 @@ export function composeProfileDraft(
 
   const selectedAssets = [
     ...composition.requiredCapabilities.map(({ key }) =>
-      key === "commerce.transaction"
-        ? getCapabilityAssetVersion(key, "1.0.0")
-        : getCapabilityAsset(key),
+      getProfileCapabilityAsset(profile, key),
     ),
     ...composition.defaultOptionalCapabilities
       .filter((capability) => requestedSet.has(capability))

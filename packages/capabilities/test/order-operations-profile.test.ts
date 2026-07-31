@@ -30,7 +30,11 @@ describe("Order Operations composition profiles", () => {
             key: "commerce.catalog",
             version: "1.2.0",
           }),
-          expect.objectContaining({ key: "commerce.order", version: "1.2.0" }),
+          expect.objectContaining({ key: "commerce.order", version: "2.0.3" }),
+          expect.objectContaining({
+            key: "commerce.transaction",
+            version: "2.1.0",
+          }),
         ]),
       );
       expect(candidate.graph.domain.entities).toEqual(
