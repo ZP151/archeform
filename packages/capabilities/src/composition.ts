@@ -447,7 +447,7 @@ export function validateCapabilityBindingSchema(
     const unknownInputKey = Reflect.ownKeys(schema).find(
       (key) => typeof key !== "string" || !allowedInputKeys.has(key),
     );
-    if (unknownInputKey) {
+    if (unknownInputKey !== undefined) {
       throw new Error(
         `Capability package '${manifest.key}' input '${schema.key}' declares unknown key '${String(unknownInputKey)}'.`,
       );
@@ -463,6 +463,7 @@ export function validateCapabilityBindingSchema(
 
     if (schema.type === "domain.field") {
       if (
+        !Object.hasOwn(schema, "ownerBinding") ||
         typeof schema.ownerBinding !== "string" ||
         !parameterKeyPattern.test(schema.ownerBinding) ||
         prototypeReservedParameterKeys.has(schema.ownerBinding)
@@ -472,6 +473,7 @@ export function validateCapabilityBindingSchema(
         );
       }
       if (
+        !Object.hasOwn(schema, "fieldTypes") ||
         !Array.isArray(schema.fieldTypes) ||
         schema.fieldTypes.length === 0 ||
         schema.fieldTypes.some(
@@ -488,7 +490,7 @@ export function validateCapabilityBindingSchema(
         );
       }
       if (
-        schema.fieldRequired !== undefined &&
+        Object.hasOwn(schema, "fieldRequired") &&
         typeof schema.fieldRequired !== "boolean"
       ) {
         throw new Error(
@@ -496,7 +498,7 @@ export function validateCapabilityBindingSchema(
         );
       }
       if (
-        schema.fieldUnique !== undefined &&
+        Object.hasOwn(schema, "fieldUnique") &&
         typeof schema.fieldUnique !== "boolean"
       ) {
         throw new Error(

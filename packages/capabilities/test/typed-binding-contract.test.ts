@@ -274,6 +274,17 @@ describe("typed capability binding contract", () => {
     ).toThrow("unknown key");
   });
 
+  it("rejects an empty-string unknown own key on a field input", () => {
+    const manifest = strictManifest(
+      [requiredEntity, { ...requiredField, "": true }],
+      [entityParameter, fieldParameter],
+    );
+
+    expect(() => resolveStrictManifest(manifest, validBindings)).toThrow(
+      "unknown key",
+    );
+  });
+
   it("rejects an unsupported strict input type", () => {
     const manifest = strictManifest(
       [{ ...requiredEntity, type: "domain.entities" }],
@@ -378,5 +389,32 @@ describe("typed capability binding contract", () => {
     );
 
     expect(() => resolveStrictManifest(manifest, validBindings)).toThrow();
+  });
+
+  it("rejects a domain field schema supplied by Object.prototype pollution", () => {
+    Object.defineProperties(Object.prototype, {
+      ownerBinding: {
+        configurable: true,
+        value: "catalogEntity",
+      },
+      fieldTypes: {
+        configurable: true,
+        value: ["integer"],
+      },
+    });
+    try {
+      const manifest = strictManifest(
+        [
+          requiredEntity,
+          { key: "stockField", type: "domain.field", required: true },
+        ],
+        [entityParameter, fieldParameter],
+      );
+
+      expect(() => resolveStrictManifest(manifest, validBindings)).toThrow();
+    } finally {
+      delete (Object.prototype as Record<string, unknown>).ownerBinding;
+      delete (Object.prototype as Record<string, unknown>).fieldTypes;
+    }
   });
 });
