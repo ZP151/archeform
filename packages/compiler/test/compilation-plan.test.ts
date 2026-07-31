@@ -549,10 +549,12 @@ describe("compilation target registry", () => {
 
     for (const lock of historicalExecutableLocks) {
       const path = `api/src/capabilities/${lock.key}.ts`;
+      const currentVersion =
+        lock.key === "commerce.inventory" ? "1.1.0" : "1.0.1";
       expect(currentGraph.integration.assetLocks).toContainEqual(
-        expect.objectContaining({ key: lock.key, version: "1.0.1" }),
+        expect.objectContaining({ key: lock.key, version: currentVersion }),
       );
-      expect(currentFiles[path]).toContain('version: "1.0.1"');
+      expect(currentFiles[path]).toContain(`version: "${currentVersion}"`);
       expect(historicalFiles[path]).toContain('version: "1.0.0"');
       expect(historicalFiles[path]).toContain("} as const;");
       expect(historicalTemplateLock.templates).toEqual(
@@ -685,7 +687,7 @@ describe("compilation target registry", () => {
         expect.objectContaining({ key: "core.workflow", version: "1.0.1" }),
         expect.objectContaining({
           key: "commerce.inventory",
-          version: "1.0.1",
+          version: "1.1.0",
         }),
         expect.objectContaining({
           key: "commerce.simulated-payment",
@@ -986,6 +988,10 @@ describe("compilation target registry", () => {
           catalogRecordId: catalogSeed.id!,
           quantity: 1,
         });
+        await runtime.transition(customer, order.key, record.id, "submit", {
+          expectedVersion: 0,
+          idempotencyKey: "external-provider-preflight-submit-1",
+        });
         const stockBefore = (await runtime.list(customer, catalogEntity)).find(
           (candidate) => candidate.id === catalogSeed.id,
         )!.stock;
@@ -994,7 +1000,7 @@ describe("compilation target registry", () => {
 
         await expect(
           runtime.transition(customer, order.key, record.id, "pay", {
-            expectedVersion: 0,
+            expectedVersion: 1,
             idempotencyKey: "external-provider-preflight-pay-1",
           }),
         ).rejects.toThrow(
@@ -1010,7 +1016,7 @@ describe("compilation target registry", () => {
           capabilityEventsBefore,
         );
         expect((await runtime.list(customer, order.key))[0]?.status).toBe(
-          "cart",
+          "submitted",
         );
       },
     );
@@ -1046,6 +1052,9 @@ describe("compilation target registry", () => {
       const journey = files["api/test/journey.generated.test.ts"]!;
 
       expect(journey.indexOf("applicationRuntime.addCartItem")).toBeLessThan(
+        journey.indexOf('record.id, "submit"'),
+      );
+      expect(journey.indexOf('record.id, "submit"')).toBeLessThan(
         journey.indexOf('record.id, "pay"'),
       );
 
@@ -1058,14 +1067,25 @@ describe("compilation target registry", () => {
             catalogRecordId: catalogSeed.id!,
             quantity: 1,
           });
+          const submitted = await runtime.transition(
+            customer,
+            order.key,
+            record.id,
+            "submit",
+            {
+              expectedVersion: 0,
+              idempotencyKey: "generated-profile-submit-1",
+            },
+          );
+          expect(submitted.status).toBe("submitted");
           const paid = await runtime.transition(
             customer,
             order.key,
             record.id,
             "pay",
             {
-              expectedVersion: 0,
-              idempotencyKey: "generated-profile-pay-1",
+              expectedVersion: 1,
+              idempotencyKey: "generated-profile-pay-2",
             },
           );
 
@@ -1083,6 +1103,8 @@ describe("compilation target registry", () => {
               ]),
             ).toEqual([
               ["cart.add", "add"],
+              ["inventory.reserve", "reserve"],
+              ["audit.record", "record"],
               ["payment.simulate", "simulate"],
               ["payment.simulate", "simulate"],
               ["inventory.decrement", "decrement"],

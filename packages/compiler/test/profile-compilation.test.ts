@@ -156,7 +156,7 @@ describe("profile compilation", () => {
   });
 
   it.each(["simple-ecommerce"] as const)(
-    "generates a payment journey with package-owned Commerce effects for $profile",
+    "generates a reservation-first payment journey with package-owned Commerce effects for $profile",
     (profile) => {
       const files = Object.fromEntries(
         generateApplicationBundle({
@@ -166,7 +166,10 @@ describe("profile compilation", () => {
       );
 
       expect(files["api/test/journey.generated.test.ts"]).toContain(
-        'applicationRuntime.transition("shopper", "order", record.id, "pay", { expectedVersion: 0, idempotencyKey: "generated-pay-1" })',
+        'applicationRuntime.transition("shopper", "order", record.id, "submit", { expectedVersion: 0, idempotencyKey: "generated-submit-1" })',
+      );
+      expect(files["api/test/journey.generated.test.ts"]).toContain(
+        'applicationRuntime.transition("shopper", "order", record.id, "pay", { expectedVersion: 1, idempotencyKey: "generated-pay-2" })',
       );
       expect(
         files["api/src/capabilities/commerce.simulated-payment.ts"],

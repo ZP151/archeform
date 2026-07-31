@@ -296,15 +296,35 @@ Factory-authored adapter or attributed source import is proposed.
 cross-profile production features without making a third-party data model or
 runtime the source of truth.
 
-| Candidate | Observed public fact | Recommended lane | Boundary decision |
-| --- | --- | --- | --- |
-| [Appwrite](https://github.com/appwrite/appwrite) | The BSD-3-Clause project provides self-hostable authentication, databases, storage, functions, messaging, realtime, and hosting. | Provider source study | A future adapter may implement declared identity, storage, notification, or realtime intent. Appwrite tables, functions, and credentials must not become canonical Graph data. |
-| [Keycloak](https://github.com/keycloak/keycloak) | The project is Apache-2.0 and provides modern application identity and access management. | Identity provider source study | Pin a provider release and compile declared identity intent to an adapter. Do not copy realm configuration or put provider credentials into a Graph. |
-| [Temporal](https://github.com/temporalio/temporal) | The MIT-licensed service provides durable workflow execution, while workflow code is itself a separate deterministic execution model. | Durable-workflow provider source study | Keep Factory FlowModel authoritative. A later adapter may execute a compiled, constrained FlowModel; it must not accept arbitrary generated workflow code. |
-| [Meilisearch](https://github.com/meilisearch/meilisearch) | The repository separates MIT community material from Business Source Licensed enterprise material. | Search provider source study | Intake must be path-scoped to MIT material and record that scope. No enterprise path, search index definition, or API key is admitted into the Graph. |
-| [Novu](https://github.com/novuhq/novu) | The project describes an MIT open core but identifies enterprise directories under a commercial licence. | Notification provider source study | Use only a version-pinned CE/provider boundary after a path-level licence study; never copy enterprise paths or treat provider workflows as canonical notification semantics. |
+| Candidate                                                 | Observed public fact                                                                                                                  | Recommended lane                       | Boundary decision                                                                                                                                                              |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [Appwrite](https://github.com/appwrite/appwrite)          | The BSD-3-Clause project provides self-hostable authentication, databases, storage, functions, messaging, realtime, and hosting.      | Provider source study                  | A future adapter may implement declared identity, storage, notification, or realtime intent. Appwrite tables, functions, and credentials must not become canonical Graph data. |
+| [Keycloak](https://github.com/keycloak/keycloak)          | The project is Apache-2.0 and provides modern application identity and access management.                                             | Identity provider source study         | Pin a provider release and compile declared identity intent to an adapter. Do not copy realm configuration or put provider credentials into a Graph.                           |
+| [Temporal](https://github.com/temporalio/temporal)        | The MIT-licensed service provides durable workflow execution, while workflow code is itself a separate deterministic execution model. | Durable-workflow provider source study | Keep Factory FlowModel authoritative. A later adapter may execute a compiled, constrained FlowModel; it must not accept arbitrary generated workflow code.                     |
+| [Meilisearch](https://github.com/meilisearch/meilisearch) | The repository separates MIT community material from Business Source Licensed enterprise material.                                    | Search provider source study           | Intake must be path-scoped to MIT material and record that scope. No enterprise path, search index definition, or API key is admitted into the Graph.                          |
+| [Novu](https://github.com/novuhq/novu)                    | The project describes an MIT open core but identifies enterprise directories under a commercial licence.                              | Notification provider source study     | Use only a version-pinned CE/provider boundary after a path-level licence study; never copy enterprise paths or treat provider workflows as canonical notification semantics.  |
 
 **Decision effect.** Bulk discovery may queue these records automatically, but
 each record must still become exactly one of: a pinned direct dependency, a
 governed provider adapter, a narrow attributed source study, or an exclusion.
 It must never become a whole-repository runtime import.
+
+## 2026-08-01 source reuse refresh
+
+**Decision investigated.** Which mature upstream projects should accelerate
+Factory Profile breadth without taking ownership of the Application Graph or
+the generated application runtime.
+
+| Candidate                                        | Verified public evidence                                                                                                                            | Reuse decision                                                                                                                                                                                     |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Medusa](https://github.com/medusajs/medusa)     | MIT-licensed TypeScript commerce platform that presents modular commerce building blocks for DTC, B2B, marketplace, POS, and service scenarios.     | Maintain as a pinned source-study and future `commerce.provider/v1` comparison. Its modules inform neutral capability seams; do not copy its data model or make it a generated runtime dependency. |
+| [Appwrite](https://github.com/appwrite/appwrite) | BSD-3-Clause platform covering authentication, data, storage, functions, messaging, realtime, and hosting.                                          | Treat as a bounded backend-provider study. A future adapter may implement an approved interface, but Appwrite resources and credentials cannot become Graph input.                                 |
+| [Keycloak](https://github.com/keycloak/keycloak) | Apache-2.0 identity and access-management server with federation, strong authentication, user management, and authorization features.               | Prioritise an OIDC session provider contract and fixture provider; do not copy realm configuration or administrator credentials into Factory artefacts.                                            |
+| [Novu](https://github.com/novuhq/novu)           | Notification infrastructure for inbox, email, SMS, push, and chat; its public repository identifies MIT core alongside commercial enterprise paths. | Keep it in a path-scoped provider study. Any future use must exclude enterprise directories and retain a notification-intent contract owned by Factory.                                            |
+
+**Local intake verification.** The current intake tests prove that a batch can
+acquire a valid sibling while rejecting an unsafe one, and that source-study
+input is strict and sensitive-field checked. The missing scale mechanism is
+not another manual certification pass: it is a non-promoting transformation
+from an allowlisted Portfolio record and completed evidence into a constrained
+Candidate proposal with declarative artifacts and conformance fixtures.

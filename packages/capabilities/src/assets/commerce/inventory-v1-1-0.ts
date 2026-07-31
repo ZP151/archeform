@@ -1,0 +1,54 @@
+import type { CapabilityAssetV1 } from "../contract.js";
+
+export const inventoryAssetV1_1_0: CapabilityAssetV1 = {
+  manifest: {
+    apiVersion: "factory.capability/v1",
+    key: "commerce.inventory",
+    version: "1.1.0",
+    category: "commerce",
+    name: "Inventory reservation",
+    description:
+      "Reserves available stock on a declared order transition and compensates it on cancellation.",
+    packageRoot: "packages/capabilities/assets/commerce.inventory/1.1.0",
+    manifestDigest:
+      "sha256:346bbdcecd9f69aef32b82bbfcc93db1bf256ce799fc290738f9d0e86ecc0860",
+    lifecycle: "golden",
+    profiles: [
+      "restaurant-ordering",
+      "simple-ecommerce",
+      "retail-counter",
+      "grocery-pickup",
+    ],
+    effects: ["inventory.reserve", "inventory.release", "inventory.decrement"],
+    inputSchema: [
+      { key: "catalogEntity", type: "domain.entity", required: true },
+      { key: "stockField", type: "domain.field", required: true },
+    ],
+    outputSlots: [
+      "api.runtime",
+      "database.schema",
+      "flow.effect",
+      "test.fixture",
+    ],
+    templates: [
+      {
+        id: "api-capability-module",
+        source: "templates/api/capability-module.ts.tpl",
+        target: "api/src/capabilities/commerce.inventory.ts",
+        outputSlot: "api.runtime",
+        digest:
+          "sha256:341ca8db70bb51a758c7b24641dc8faba475b56f04a7c30e3e2a194c2c0fdf97",
+      },
+    ],
+    parameters: [
+      { key: "catalogEntity", type: "graph-symbol", required: true },
+      { key: "stockField", type: "graph-symbol", required: true },
+    ],
+    requires: [{ interfaceKey: "commerce.order-event", version: "v1" }],
+    verification: {
+      fixture: "fixtures/default.json",
+      contractTest: "tests/contract.json",
+      status: "verified",
+    },
+  },
+};

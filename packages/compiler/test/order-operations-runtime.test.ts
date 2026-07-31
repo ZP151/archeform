@@ -151,7 +151,7 @@ describe("Order Operations runtime compilation", () => {
       expect(order.version).toBe(0);
       const unguardedOrder = await runtime.create("shopper", "order", {});
       await expect(
-        runtime.transition("shopper", "order", unguardedOrder.id, "pay"),
+        runtime.transition("shopper", "order", unguardedOrder.id, "submit"),
       ).rejects.toThrow(
         "Order transitions require an expected version and idempotency key.",
       );
@@ -160,20 +160,28 @@ describe("Order Operations runtime compilation", () => {
         catalogRecordId: "everyday-tote",
         quantity: 1,
       });
+      const submitted = await runtime.transition(
+        "shopper",
+        "order",
+        order.id,
+        "submit",
+        { expectedVersion: 0, idempotencyKey: "order-submit-1" },
+      );
+      expect(submitted).toMatchObject({ status: "submitted", version: 1 });
       const paid = await runtime.transition(
         "shopper",
         "order",
         order.id,
         "pay",
-        { expectedVersion: 0, idempotencyKey: "order-pay-1" },
+        { expectedVersion: 1, idempotencyKey: "order-pay-1" },
       );
-      expect(paid).toMatchObject({ status: "paid", version: 1 });
+      expect(paid).toMatchObject({ status: "paid", version: 2 });
       await expect(
         runtime.transition("merchant", "order", order.id, "fulfil", {
-          expectedVersion: 1,
+          expectedVersion: 2,
           idempotencyKey: "order-fulfil-1",
         }),
-      ).resolves.toMatchObject({ status: "fulfilled", version: 2 });
+      ).resolves.toMatchObject({ status: "fulfilled", version: 3 });
     });
   });
 });

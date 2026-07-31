@@ -710,7 +710,9 @@ describe("capability catalog", () => {
 
   it("preserves every base executable package lock while defaults select current versions", () => {
     for (const lock of historicalExecutableLocks) {
-      expect(getCapabilityAsset(lock.key).manifest.version).toBe("1.0.1");
+      expect(getCapabilityAsset(lock.key).manifest.version).toBe(
+        lock.key === "commerce.inventory" ? "1.1.0" : "1.0.1",
+      );
     }
     expect(() =>
       assertGoldenCapabilityAssetLocks(historicalExecutableLocks, {
@@ -728,7 +730,7 @@ describe("capability catalog", () => {
   });
 
   it("verifies every registered capability manifest against its declared digest", () => {
-    expect(capabilityAssets).toHaveLength(32);
+    expect(capabilityAssets).toHaveLength(33);
     for (const asset of capabilityAssets) {
       expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     }

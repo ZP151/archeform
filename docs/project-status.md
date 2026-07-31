@@ -2,6 +2,56 @@
 
 Updated: 2026-08-01
 
+## Current product and reuse assessment — 2026-08-01
+
+Factory Pilot is a working Application Graph composition foundation, not yet a
+production-complete catalogue of one hundred application types.
+
+- Five Profile starters compile from Published Graphs today: Expense Approval,
+  Restaurant Ordering, Simple Ecommerce, Retail Counter, and Grocery Pickup.
+  Only Restaurant has a specialised transaction-oriented runtime; the other
+  commerce Profiles share a smaller generic runtime.
+- The current catalogue has 19 capability families and 33 versioned physical
+  asset packages. Package counts do not prove business completeness. Core
+  CRUD/workflow/audit/notification plus selected commerce handlers are
+  executable; some catalogue/order concerns remain compiler-owned and several
+  restaurant behaviours remain Profile-specific.
+- The active uncommitted transaction slice introduces
+  `commerce.inventory@1.1.0`. Simple Ecommerce, Retail Counter, and Grocery
+  Pickup now prove a common `cart -> submitted -> paid` lifecycle where submit
+  reserves stock and a privileged cancellation compensates it. This is useful
+  generated-runtime evidence, but it is not a complete generic transaction
+  kernel: the generic Prisma path still lacks a database transaction,
+  idempotent command receipt, ledger write, and outbox.
+- The reusable-source portfolio maps 122 business scenarios to a smaller
+  cross-profile kernel, and carries 43 fixed-source records for external
+  intake. It is discovery evidence, not 122 installed products. The
+  quarantine pipeline can acquire fixed references, isolate a prohibited batch
+  sibling, capture redacted evidence, and create a strict source-study
+  projection. It does not yet transform a Portfolio source record into a
+  Candidate proposal automatically.
+
+### Decision: scale reuse without importing upstream authority
+
+The supported high-throughput reuse routes are:
+
+1. **Pinned dependency:** import a small published technical library with its
+   licence notice and update policy.
+2. **Provider adapter:** connect a mature external runtime through a typed,
+   replaceable Factory contract while Factory retains the Application Graph.
+3. **Selective source copy:** copy only an identified, permissively licensed,
+   compact source path after an immutable source study, copy ledger, notice,
+   fixture, conformance and removal test.
+4. **Reference only:** learn domain vocabulary from copyleft,
+   source-available, commercial, or architecture-incompatible projects.
+
+Bulk cloning full vertical repositories is not an acceptable fourth route. It
+would import unknown transitive licences, assumptions, credentials and data
+models into the compiler, while making upstream code the de facto business
+source of truth. The high-leverage next sequence is to complete the generic
+transaction kernel, repair the intake isolation boundaries, then automate
+allowlisted fixed-reference acquisition into non-promoting Candidate proposals.
+
 ## Current execution snapshot — 2026-08-01
 
 Factory Pilot has a credible composition foundation, but it is not yet a

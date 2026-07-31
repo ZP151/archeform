@@ -1095,11 +1095,21 @@ const orderOperationsStarterConfigs: readonly OrderOperationsStarterConfig[] =
         id: "counter-sale-flow",
         entity: "counter-sale",
         initialState: "cart",
-        states: ["cart", "paid", "receipt-issued"],
-        events: ["pay", "issue-receipt"],
+        states: ["cart", "submitted", "paid", "receipt-issued", "cancelled"],
+        events: ["submit", "pay", "issue-receipt", "cancel"],
         transitions: [
           {
             from: "cart",
+            event: "submit",
+            to: "submitted",
+            roles: ["shopper"],
+            effects: [
+              { capability: "inventory.reserve", operation: "reserve" },
+              { capability: "audit.record", operation: "record" },
+            ],
+          },
+          {
+            from: "submitted",
             event: "pay",
             to: "paid",
             effects: [
@@ -1108,6 +1118,16 @@ const orderOperationsStarterConfigs: readonly OrderOperationsStarterConfig[] =
                 capability: "inventory.decrement",
                 operation: "decrement",
               },
+            ],
+          },
+          {
+            from: "submitted",
+            event: "cancel",
+            to: "cancelled",
+            roles: ["cashier"],
+            effects: [
+              { capability: "inventory.release", operation: "release" },
+              { capability: "audit.record", operation: "record" },
             ],
           },
           {
@@ -1177,11 +1197,29 @@ const orderOperationsStarterConfigs: readonly OrderOperationsStarterConfig[] =
         id: "pickup-order-flow",
         entity: "pickup-order",
         initialState: "cart",
-        states: ["cart", "paid", "picking", "pickup-ready", "handed-off"],
-        events: ["pay", "pick", "ready", "handoff"],
+        states: [
+          "cart",
+          "submitted",
+          "paid",
+          "picking",
+          "pickup-ready",
+          "handed-off",
+          "cancelled",
+        ],
+        events: ["submit", "pay", "pick", "ready", "handoff", "cancel"],
         transitions: [
           {
             from: "cart",
+            event: "submit",
+            to: "submitted",
+            roles: ["shopper"],
+            effects: [
+              { capability: "inventory.reserve", operation: "reserve" },
+              { capability: "audit.record", operation: "record" },
+            ],
+          },
+          {
+            from: "submitted",
             event: "pay",
             to: "paid",
             effects: [
@@ -1190,6 +1228,16 @@ const orderOperationsStarterConfigs: readonly OrderOperationsStarterConfig[] =
                 capability: "inventory.decrement",
                 operation: "decrement",
               },
+            ],
+          },
+          {
+            from: "submitted",
+            event: "cancel",
+            to: "cancelled",
+            roles: ["fulfilment"],
+            effects: [
+              { capability: "inventory.release", operation: "release" },
+              { capability: "audit.record", operation: "record" },
             ],
           },
           {
@@ -2578,7 +2626,13 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
                   key: "status",
                   type: "enum",
                   required: true,
-                  values: ["cart", "paid", "fulfilled"],
+                  values: [
+                    "cart",
+                    "submitted",
+                    "paid",
+                    "fulfilled",
+                    "cancelled",
+                  ],
                 },
                 { key: "version", type: "integer", required: true },
               ],
@@ -2828,11 +2882,24 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               id: "ecommerce-order",
               entity: "order",
               initialState: "cart",
-              states: ["cart", "paid", "fulfilled"],
-              events: ["pay", "fulfil"],
+              states: ["cart", "submitted", "paid", "fulfilled", "cancelled"],
+              events: ["submit", "pay", "fulfil", "cancel"],
               transitions: [
                 {
                   from: "cart",
+                  event: "submit",
+                  to: "submitted",
+                  roles: ["shopper"],
+                  effects: [
+                    {
+                      capability: "inventory.reserve",
+                      operation: "reserve",
+                    },
+                    { capability: "audit.record", operation: "record" },
+                  ],
+                },
+                {
+                  from: "submitted",
                   event: "pay",
                   to: "paid",
                   effects: [
@@ -2841,6 +2908,19 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
                       capability: "inventory.decrement",
                       operation: "decrement",
                     },
+                  ],
+                },
+                {
+                  from: "submitted",
+                  event: "cancel",
+                  to: "cancelled",
+                  roles: ["merchant"],
+                  effects: [
+                    {
+                      capability: "inventory.release",
+                      operation: "release",
+                    },
+                    { capability: "audit.record", operation: "record" },
                   ],
                 },
                 {
