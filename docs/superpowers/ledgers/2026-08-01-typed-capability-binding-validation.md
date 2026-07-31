@@ -70,6 +70,10 @@ not acceptance.
 - Task 1 has no open dependency. The PM assigned the bounded writer Typed Graph
   Index Integration and recorded `planned -> implementing` under the exact
   four Graph paths below.
+- Task 1 implementation commit
+  `86d5a00f26d5f331764de0e8bf7694e657cd2514` passed independent task review
+  with no P0/P1/P2. The PM recorded `implementing -> ready_for_qa`; Task 1 is
+  not yet reviewed or accepted.
 - Tasks 2 through 6 remain `planned`; none is dispatched by this transition.
 - No frontend/backend parallel implementation is permitted in this project.
 - Commercial Capability Foundation Task 2 remains `implementing` and
@@ -80,18 +84,18 @@ not acceptance.
 
 ## Project state
 
-| Task                                           | State          | Specialization | Contract owner                               | Contract status                                                   |
-| ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | ----------------------------------------------------------------- |
-| 1. Pure typed Graph symbol index               | `implementing` | `integration`  | Application Graph Type System                | ADR/design accepted; bounded writer assigned to exact four paths. |
-| 2. Typed manifest and binding contracts        | `planned`      | `integration`  | Capability Binding Contract                  | Blocked on accepted Task 1 index contract.                        |
-| 3. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 2 manifest contract.                     |
-| 4. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-3.                                    |
-| 5. Graph-aware Publish and compiler admission  | `planned`      | `backend`      | Published Graph and Compiler Admission       | Blocked on accepted Tasks 1-4.                                    |
-| 6. Current recipe migration and acceptance     | `planned`      | `integration`  | Typed Binding Migration and Release Evidence | Blocked on accepted Tasks 1-5.                                    |
+| Task                                           | State          | Specialization | Contract owner                               | Contract status                                               |
+| ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | ------------------------------------------------------------- |
+| 1. Pure typed Graph symbol index               | `ready_for_qa` | `integration`  | Application Graph Type System                | Implementation and task review complete; independent QA next. |
+| 2. Typed manifest and binding contracts        | `planned`      | `integration`  | Capability Binding Contract                  | Blocked on accepted Task 1 index contract.                    |
+| 3. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 2 manifest contract.                 |
+| 4. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-3.                                |
+| 5. Graph-aware Publish and compiler admission  | `planned`      | `backend`      | Published Graph and Compiler Admission       | Blocked on accepted Tasks 1-4.                                |
+| 6. Current recipe migration and acceptance     | `planned`      | `integration`  | Typed Binding Migration and Release Evidence | Blocked on accepted Tasks 1-5.                                |
 
 ## Task 1: Add a pure typed Graph symbol index
 
-- **State:** `implementing`
+- **State:** `ready_for_qa`
 - **Specialization:** `integration`
 - **Bounded writer:** Typed Graph Index Integration
 - **Contract owner:** Application Graph Type System
@@ -126,6 +130,40 @@ not acceptance.
 - `packages/graph/src/index.ts`
 - `packages/graph/src/browser.ts`
 - `packages/graph/test/application-graph.test.ts`
+
+### Implementation and task-review evidence
+
+- Reviewed implementation commit:
+  `86d5a00f26d5f331764de0e8bf7694e657cd2514`
+  (`feat: index typed graph symbols`).
+- The implementation changes only `packages/graph/src/model.ts` and
+  `packages/graph/test/application-graph.test.ts`, both inside the exact
+  four-path boundary. It changes no Graph serialization/schema contract,
+  capability package, Publish, compiler, lifecycle, or Workbench path.
+- Fresh verification on Node `v22.11.0` passed 30/30 tests in
+  `test/application-graph.test.ts` and `test/browser-entry.test.ts`, plus
+  Graph typecheck and lint.
+- Independent Task 1 review of
+  `4617cb23752e17eaa223bdddb1b3f3164472f2a3..86d5a00f26d5f331764de0e8bf7694e657cd2514`
+  returned PASS with no P0/P1/P2. The PM therefore records
+  `implementing -> ready_for_qa`.
+- This evidence does not constitute behavioral QA, release review, or
+  acceptance.
+
+### QA scope
+
+- Independently verify the implementation commit and exact-path boundary.
+- Run the full Graph test suite, Graph typecheck, and Graph lint on Node
+  `v22.11.0`, including the browser-entry regression.
+- Exercise owner-aware field lookup with duplicate field keys across entities,
+  wrong or missing owners, and missing fields.
+- Exercise namespace isolation for entities, pages, navigation entries, roles,
+  flows, providers, and experience tokens, including identifiers that appear
+  in another namespace.
+- Confirm the public browser entry exposes the typed index without a Node
+  builtin and that the index remains capability-manifest-independent.
+- Report P0/P1/P2 findings and evidence limitations. Any load-bearing finding
+  returns Task 1 to `implementing` after PM reconciliation.
 
 ### Non-goals
 
@@ -366,13 +404,13 @@ not acceptance.
 - Runtime atomicity and exactly-once stock execution across intentional
   inventory co-providers remain Commercial Foundation Task 3 scope and are not
   proven by this project.
-- This PM transition authorizes only Task 1 implementation by Typed Graph Index
-  Integration in its exact four paths. It authorizes no Task 2-6
+- This PM transition authorizes independent QA of Task 1 at the reviewed
+  implementation commit. It authorizes no product-code change and no Task 2-6
   implementation.
 
 ## Next smallest valuable slice
 
-Implement Task 1 under the accepted Application Graph Type System contract and
-exact four paths. Begin with focused failing namespace/ownership tests, keep
-`@factory/graph` capability-agnostic, and prepare bounded implementation and
-verification evidence for independent task review. Leave Tasks 2-6 `planned`.
+Run independent Task 1 behavioral QA against reviewed implementation commit
+`86d5a00f26d5f331764de0e8bf7694e657cd2514` using the bounded QA scope above.
+Keep `@factory/graph` capability-manifest-independent and leave Tasks 2-6
+`planned`.

@@ -8,8 +8,10 @@ Typed Capability Binding Validation is the current hardening milestone.
 ADR-0006 is `Accepted` under Factory controller authority; its approved design,
 implementation plan, and six-task ledger now govern the work. All six tasks are
 governed by the accepted dependency chain. Task 1, **pure typed Graph symbol
-index**, is `implementing`. Its bounded writer is Typed Graph Index Integration,
-its contract owner is Application Graph Type System, and its write boundary is
+index**, is `ready_for_qa`. Implementation commit
+`86d5a00f26d5f331764de0e8bf7694e657cd2514` passed independent Task 1 review
+with no P0/P1/P2. Its bounded writer is Typed Graph Index Integration, its
+contract owner is Application Graph Type System, and its write boundary remains
 the exact four Graph paths recorded below. Tasks 2 through 5 remain `planned`
 and serialized on acceptance of the preceding contract task. Task 6 remains
 `planned` and begins only after Tasks 1 through 5 are all `accepted`.
@@ -50,6 +52,24 @@ The governed task state is recorded in
 `docs/superpowers/ledgers/2026-08-01-typed-capability-binding-validation.md`.
 This status/ledger synchronization changes no product code, source manifest,
 physical package, shared contract, or existing Commercial Foundation ledger.
+
+Typed Binding Task 1 implementation and review evidence is:
+
+- Reviewed code commit:
+  `86d5a00f26d5f331764de0e8bf7694e657cd2514`
+  (`feat: index typed graph symbols`).
+- The implementation changes only `packages/graph/src/model.ts` and
+  `packages/graph/test/application-graph.test.ts`, inside the exact four-path
+  boundary.
+- Fresh Node `v22.11.0` verification passed 30/30 focused application-Graph and
+  browser-entry tests, Graph typecheck, Graph lint, and implementation diff
+  checks.
+- Independent Task 1 review of
+  `4617cb23752e17eaa223bdddb1b3f3164472f2a3..86d5a00f26d5f331764de0e8bf7694e657cd2514`
+  returned PASS with no P0/P1/P2.
+- The PM reconciled this evidence as sufficient only for
+  `implementing -> ready_for_qa`; it is not behavioral QA, release review, or
+  acceptance.
 
 Commercial Capability Foundation Task 1 is accepted and frozen. Its verified
 `1.0.0` identities are `core.identity-context`, `core.location-context`,
@@ -181,17 +201,17 @@ On Node `v22.11.0`, it records:
 
 ## Active work
 
-- Typed Binding Task 1 is `implementing` under the accepted ADR, design, plan,
+- Typed Binding Task 1 is `ready_for_qa` under the accepted ADR, design, plan,
   and project ledger. The bounded writer is Typed Graph Index Integration and
   the contract owner is Application Graph Type System.
 - Task 1's exact allowed paths are:
   `packages/graph/src/model.ts`, `packages/graph/src/index.ts`,
   `packages/graph/src/browser.ts`, and
   `packages/graph/test/application-graph.test.ts`.
-- Task 1 must begin with failing namespace/ownership tests and produce a pure,
-  capability-agnostic typed index. It may not change Graph serialization,
-  capability manifests, profile recipes, package versions, Publish, compiler,
-  lifecycle, or Workbench behavior.
+- Independent QA must run the full Graph test suite, typecheck, and lint on Node
+  `v22.11.0`; exercise duplicate field keys across owners, wrong/missing owner
+  and field lookups, and isolation of every typed namespace; and confirm the
+  browser entry remains Node-builtin-free and capability-manifest-independent.
 - Typed Binding Task 2 remains `planned` until Task 1 is `accepted`; Tasks 3,
   4, and 5 remain serially blocked on acceptance of their preceding tasks.
   Task 6 remains `planned` until Tasks 1 through 5 are all `accepted`.
@@ -216,9 +236,10 @@ On Node `v22.11.0`, it records:
 - Foundation Tasks 3 and 4 are blocked on accepted Task 2 profile composition
   metadata. Task 2 is back in `implementing` and escalated; neither downstream
   task is dispatched by this update.
-- Typed Binding Task 1 is active only within its four exact Graph paths. Tasks
-  2 through 5 remain `planned` and cannot overlap or start before the preceding
-  task is `accepted`.
+- Typed Binding Task 1 awaits independent behavioral QA against reviewed
+  implementation commit `86d5a00f26d5f331764de0e8bf7694e657cd2514`.
+  Tasks 2 through 5 remain `planned` and cannot overlap or start before the
+  preceding task is `accepted`.
 - Typed Binding Task 6 cannot start before Tasks 1 through 5 are all
   `accepted`. Its acceptance does not automatically accept Commercial
   Foundation Task 2; the PM must reconcile that parent state separately.
@@ -257,9 +278,9 @@ On Node `v22.11.0`, it records:
 
 ## Next slice
 
-Implement Typed Binding Task 1 under the accepted Application Graph Type System
-contract and exact four paths. Begin with focused failing namespace/ownership
-tests, keep `@factory/graph` capability-manifest-independent, and prepare its
-bounded implementation and verification evidence for independent task review.
-Leave Typed Binding Tasks 2 through 6 `planned`. Keep Commercial Foundation
-Task 2 `implementing` and escalated and Tasks 3 and 4 `planned` and blocked.
+Run independent behavioral QA for Typed Binding Task 1 against reviewed
+implementation commit `86d5a00f26d5f331764de0e8bf7694e657cd2514`.
+Verify owner-aware fields, every isolated typed namespace, the public browser
+entry, full Graph tests, typecheck, and lint on Node `v22.11.0`. Leave Typed
+Binding Tasks 2 through 6 `planned`. Keep Commercial Foundation Task 2
+`implementing` and escalated and Tasks 3 and 4 `planned` and blocked.
