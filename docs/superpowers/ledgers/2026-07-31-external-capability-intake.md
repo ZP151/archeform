@@ -43,8 +43,9 @@ amendment adds only `packages/external-intake/test/portfolio.test.ts` to permit
 `apps/intake-cli/package.json` as the single `@factory/external-intake`
 importer/dependency; the prohibition remains everywhere else. Task 5 is now
 `accepted` under its frozen External Capability Promotion contract and exact
-eight paths. Task 6 remains `planned` and is now dependency-ready for bounded
-PM dispatch. Independent Task 4 review of commit
+eight paths. All Task 6 dependencies are accepted, and the PM moved Task 6
+`planned -> implementing` under its existing four exact paths and fixture-only
+evidence boundary. Independent Task 4 review of commit
 `33fd204` then FAILED with four P1 findings and one P2. The Controller authorized
 bounded Repair Round 1/5 and exactly three additional production paths; Task 4
 remains `implementing` under the amended frozen scope. Repair Round 1 re-review
@@ -134,7 +135,8 @@ fresh final verification remained required. Independent release review at
 ledger commit `f0d58fd` then PASSED with no actionable P0/P1/P2 or release
 blocker, and its fresh Node v22.11.0 verification passed all final gates. The PM
 reconciled the complete evidence and moved Task 5 `reviewed -> accepted`. Task 6
-remains `planned` and is dependency-ready. The system will ingest the 43 fixed-reference
+then moved `planned -> implementing` with one bounded QA/evidence writer, four
+frozen paths, and no public/network probe. The system will ingest the 43 fixed-reference
 portfolio as metadata, retain the 108 scenarios as composition demand signals,
 and produce only quarantined evidence, non-executable Candidate records, and
 pending-review promotion packets.
@@ -289,7 +291,7 @@ remain frozen.
 | 3. Deterministic scan orchestration              | `accepted`     | `platform-security` | External Evidence Pipeline       | Fix Round 4 release and final verification PASS; frozen.    |
 | 4. Candidate registry, API, CLI, and isolation   | `accepted`     | `integration`       | Candidate Registry               | Release review and fresh root verification PASS; frozen.    |
 | 5. Review-only promotion packets                 | `accepted`     | `governance`        | External Capability Promotion    | Release review and fresh final verification PASS; frozen.   |
-| 6. Bulk acceptance and release evidence          | `planned`      | `qa`                | External Intake Release Evidence | Dependencies accepted; bounded PM dispatch required.        |
+| 6. Bulk acceptance and release evidence          | `implementing` | `qa`                | External Intake Release Evidence | Four-path fixture-only dispatch; task review required.      |
 
 ## Task 1 card: Candidate contracts and immutable persistence
 
@@ -2077,13 +2079,60 @@ Graph/compiler/runtime/provider authority, or Task 6 behavior.
 
 ## Task 6 card: Bulk acceptance and release evidence
 
-- **State:** `planned`
+- **State:** `implementing`
 - **Specialization:** `qa`
 - **Contract owner:** External Intake Release Evidence
 - **Contract artifact:** accepted Tasks 1-5 plus
   `docs/acceptance/external-capability-intake.md`.
 - **Dependencies:** Tasks 1-5 `accepted`; Commercial Capability Foundation Task
   1 `accepted`.
+
+All dependency gates are accepted and frozen. The PM moved Task 6
+`planned -> implementing`. One bounded `qa` writer owns only the four exact
+paths below. The External Intake Release Evidence contract, fixture-only
+evidence boundary, deliverables, paths, non-goals, and acceptance evidence are
+frozen; any scope, path, dependency, or contract change stops work for
+Controller review.
+
+### Controller-authorized fixture-only evidence boundary
+
+Task 6 uses deterministic local fixtures only. The plan's guarded public-source
+smoke-probe step is superseded for this dispatch. Do not access a public
+network, resolve or download a repository, contact a vendor, install an
+external dependency, use a credential, or report raw source or scanner output.
+Network availability or unavailability is outside this slice and is not an
+acceptance result.
+
+Fixtures must cover safe input and every recorded fail-closed class without
+representing any fixture as a live source, provider, dependency, or public
+probe. Evidence may contain only sanitized identifiers, class/count/status,
+tool/version, and canonical digest facts already permitted by the accepted
+contracts.
+
+### Four required deliverables
+
+1. `apps/intake-cli/test/bulk-intake.test.ts` proves fixture-only mixed-batch
+   behavior, preflights exactly 43 source records and 108 scenario demand
+   signals, creates no scenario Candidate, preserves per-source
+   isolation/resume and stable redacted results, and cleans only exact
+   run-owned quarantine.
+2. `packages/external-intake/test/release-boundary.test.ts` proves Candidate
+   records and pending-review packets cannot become Golden assets, Graph or
+   compiler inputs, generated/runtime/provider authority, or an approval/copy
+   operation. It must retain the accepted package-root/import isolation
+   boundaries.
+3. `docs/acceptance/external-capability-intake.md` is the English,
+   reproducible, sanitized acceptance record. It distinguishes fixture
+   evidence from implementation, task review, QA, release review, and final
+   acceptance and records exact commands, counts, cleanup postconditions,
+   limitations, and residual risks.
+4. `docs/project-status.md` updates the current milestone, completed evidence,
+   active work, blocked decisions, risks, and next smallest valuable slice
+   without claiming Task 6 acceptance before all independent gates pass.
+
+No production repair is authorized. If a focused failing test exposes a
+product defect or requires any fifth path, stop and return the finding to the
+PM rather than changing implementation.
 
 ### Exact allowed paths
 
@@ -2097,15 +2146,24 @@ Graph/compiler/runtime/provider authority, or Task 6 behavior.
 - No implementation repair, promotion, Golden asset, source copy, dependency,
   real provider, private source, credential, raw finding/source, external
   commitment, cloud deployment, or unrelated resource cleanup.
+- No public/network smoke probe, repository resolution/download, vendor
+  contact, external account, or representation of a deterministic fixture as
+  live evidence.
 
 ### Acceptance evidence
 
 - Mixed deterministic batch covers safe and every fail-closed class, preserves
   per-source isolation/resume, preflights 43 sources and 108 demand signals,
   creates no scenario Candidate, and cleans only exact run-owned quarantine.
-- At most two no-credential public fixed-reference smoke probes record only
-  identity/SHA/count/status/version/digests; unavailability is not a fixture
-  pass. Candidate remains invisible to Graph/Golden/compiler.
+- Fixture-only release-boundary evidence proves Candidate and pending-review
+  artifacts remain invisible and non-authoritative to Golden, Graph, compiler,
+  generated runtime, and providers. No public probe is run or implied.
+- Focused RED/GREEN evidence runs
+  `pnpm --filter @factory/intake-cli test -- --run test/bulk-intake.test.ts`
+  and
+  `pnpm --filter @factory/external-intake test -- --run test/release-boundary.test.ts`.
+  Final evidence also runs the complete affected suites, isolation regressions,
+  typechecks, lint/format checks, and `git diff --check`.
 - Independent task review, QA, release review, and fresh verification reconcile
   with no open load-bearing finding before acceptance.
 
@@ -2147,12 +2205,12 @@ Graph/compiler/runtime/provider authority, or Task 6 behavior.
   contract, public Store surface, or accepted behavior change returns Task 4
   to a recorded repair round and stops Task 5.
 
-The next smallest valuable slice is bounded PM dispatch of planned Task 6:
-bulk acceptance and release evidence under its existing four exact paths.
-Tasks 1 through 5 and Commercial Capability Foundation Task 1 are accepted, so
-its dependency gate is satisfied. Task 6 has not started and may not skip
-`planned -> implementing`. It must preserve the accepted Task 5
-deterministic-fixture and single-purpose CLI-process limitations and may add no
+The active smallest valuable slice is Task 6 fixture-only bulk acceptance and
+release evidence under its frozen four paths. The bounded QA/evidence writer
+must deliver the 43/108 preflight batch, Candidate/Golden/Graph/compiler
+release-boundary tests, English acceptance record, and evidence-backed project
+status update. It must preserve the accepted Task 5 deterministic-fixture and
+single-purpose CLI-process limitations and may add no public/network probe,
 decision, approval, waiver, source copy, notice modification, Golden
 registration, Graph/compiler input, provider activation, real provider, or
 external commitment.
@@ -2178,5 +2236,5 @@ recorded in its bounded amendment.
 Task 1's original release and bounded amendments, Task 2's accepted code set
 `515e0ba + 3dcb20f + dcaddf4`, Task 3's accepted repair commit `8b31d3a`, and
 Task 4's complete accepted Candidate Registry remain frozen. Task 5 is
-`accepted` and frozen under its recorded dependency gate; Task 6 remains
-`planned` and dependency-ready.
+`accepted` and frozen under its recorded dependency gate; Task 6 is
+`implementing` under its fixture-only four-path dispatch.
