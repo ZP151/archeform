@@ -106,7 +106,15 @@ not acceptance.
   `implementing -> ready_for_qa`. Independent behavioral QA then passed 45/45
   focused typed contract tests, 188/188 full Capabilities tests, Capabilities
   typecheck/lint/build, bounded scope checks, and strict public probes. The PM
-  records `ready_for_qa -> reviewed`.
+  previously recorded `ready_for_qa -> reviewed`. Independent release review
+  then found one P1: prototype-backed schema or binding data could influence
+  canonical binding-lock semantics despite the strict own-key contract. The PM
+  records `reviewed -> implementing` for repair round 2. Repair commit
+  `565c64c5e79799261f8dc72c7e0da298fef4742d` changes only
+  `packages/capabilities/src/composition.ts` and
+  `packages/capabilities/test/typed-binding-contract.test.ts`. Independent
+  task re-review, behavioral QA, release review, and fresh verification remain
+  required.
 - Tasks 3 through 7 remain `planned`; none is dispatched by this transition.
 - No frontend/backend parallel implementation is permitted in this project.
 - Commercial Capability Foundation Task 2 remains `implementing` and
@@ -117,15 +125,15 @@ not acceptance.
 
 ## Project state
 
-| Task                                           | State      | Specialization | Contract owner                               | Contract status                                 |
-| ---------------------------------------------- | ---------- | -------------- | -------------------------------------------- | ----------------------------------------------- |
-| 1. Pure typed Graph symbol index               | `accepted` | `integration`  | Application Graph Type System                | Release review and fresh verification passed.   |
-| 2. Typed manifest and binding contracts        | `reviewed` | `integration`  | Capability Binding Contract                  | Behavioral QA passed; release review pending.   |
-| 3. Serialized owner-aware Graph selections     | `planned`  | `integration`  | Application Graph Serialization              | Blocked on accepted Task 2 binding contract.    |
-| 4. Safe versioned physical capability assets   | `planned`  | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 3 serialized contract. |
-| 5. Manifest-aware Draft composition validation | `planned`  | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-4.                  |
-| 6. Graph-aware Publish and compiler admission  | `planned`  | `backend`      | Published Graph and Compiler Admission       | Blocked on accepted Tasks 1-5.                  |
-| 7. Current recipe migration and acceptance     | `planned`  | `integration`  | Typed Binding Migration and Release Evidence | Blocked on accepted Tasks 1-6.                  |
+| Task                                           | State          | Specialization | Contract owner                               | Contract status                                 |
+| ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | ----------------------------------------------- |
+| 1. Pure typed Graph symbol index               | `accepted`     | `integration`  | Application Graph Type System                | Release review and fresh verification passed.   |
+| 2. Typed manifest and binding contracts        | `implementing` | `integration`  | Capability Binding Contract                  | Release P1 repair awaits independent re-review. |
+| 3. Serialized owner-aware Graph selections     | `planned`      | `integration`  | Application Graph Serialization              | Blocked on accepted Task 2 binding contract.    |
+| 4. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 3 serialized contract. |
+| 5. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-4.                  |
+| 6. Graph-aware Publish and compiler admission  | `planned`      | `backend`      | Published Graph and Compiler Admission       | Blocked on accepted Tasks 1-5.                  |
+| 7. Current recipe migration and acceptance     | `planned`      | `integration`  | Typed Binding Migration and Release Evidence | Blocked on accepted Tasks 1-6.                  |
 
 ## Task 1: Add a pure typed Graph symbol index
 
@@ -336,7 +344,7 @@ not acceptance.
 
 ## Task 2: Freeze typed manifest and binding contracts
 
-- **State:** `reviewed` (repair round 1)
+- **State:** `implementing` (repair round 2)
 - **Specialization:** `integration`
 - **Bounded writer:** Typed Manifest Contract Integration
 - **Contract owner:** Capability Binding Contract
@@ -446,10 +454,39 @@ not acceptance.
   ADR-0007. QA did not expand Task 2 into Graph schema, parser, validator,
   hashing, or browser-entry paths.
 - The PM reconciles the passing behavioral evidence and limitation as
-  `ready_for_qa -> reviewed`. Independent release review and fresh acceptance
-  verification remain required; Task 2 is not `accepted`.
+  `ready_for_qa -> reviewed` at that historical gate. Independent release
+  review and fresh acceptance verification still remained required; Task 2
+  was not `accepted`.
 - Task 3 remains `planned` until Task 2 is `accepted`; no Graph implementation
   is authorized by this PM transition.
+
+### Release-review P1 and repair round 2
+
+- Independent release review returned FAIL with one P1. Strict validation and
+  canonical selection could read inherited schema constraints or an inherited
+  binding `fieldKey`, allowing prototype-backed data to influence the canonical
+  binding value persisted in a lock despite the strict own-key contract.
+- The repair-round-1 task-review and QA results remain historical evidence but
+  cannot support acceptance while this P1 is open. The PM records
+  `reviewed -> implementing` and leaves Tasks 3 through 7 `planned`.
+- Repair round 2 remains assigned to **Typed Manifest Contract Integration**
+  under the unchanged **Capability Binding Contract** and exact four-path Task
+  2 boundary. The repair scope is limited to:
+  `packages/capabilities/src/composition.ts` and
+  `packages/capabilities/test/typed-binding-contract.test.ts`.
+- Repair implementation commit
+  `565c64c5e79799261f8dc72c7e0da298fef4742d`
+  (`fix: reject prototype-backed capability bindings`) adds plain-record and
+  exact-own-key enforcement plus focused regressions for inherited field-binding
+  and schema values. It changes only the two repair paths above.
+- Fresh local Node `v22.11.0` focused verification passed 47/47 tests across
+  `typed-binding-contract.test.ts` and `composition-contract.test.ts`. This is
+  implementation evidence only; it does not reconcile any gate or task state.
+- Independent task re-review must verify the exact repair diff and close the P1
+  before the PM may record `implementing -> ready_for_qa`. Independent
+  behavioral QA must then pass before `ready_for_qa -> reviewed`. Independent
+  release review and fresh verification must pass before any
+  `reviewed -> accepted` transition. This update records no acceptance.
 
 ### Blocking non-goals
 
@@ -478,7 +515,7 @@ not acceptance.
 - **Contract artifact:** ADR-0007 DEC-001 through DEC-005 and the design's
   serialized Draft Graph contract.
 - **Dependencies:** Tasks 1 and 2 `accepted`. Task 1 is accepted; Task 2 is
-  `reviewed` in repair round 1.
+  `implementing` in repair round 2.
 - **Produces:** additive `SerializedCompositionBindingV1` support for exact
   owner-aware field objects, structural owner/field validation, deterministic
   Graph-hash coverage, historic hash stability, and browser-safe behavior.
@@ -711,15 +748,18 @@ not acceptance.
 - Runtime atomicity and exactly-once stock execution across intentional
   inventory co-providers remain Commercial Foundation Task 3 scope and are not
   proven by this project.
-- This PM transition records passing independent behavioral QA for Task 2 and
-  authorizes only its independent release review. It authorizes no
-  implementation change, Graph-path change, or Task 3-7 implementation.
+- Task 2 repair round 2 remains inside its exact two-path repair scope, but its
+  release-review P1 remains open until independent task review, behavioral QA,
+  release review, and fresh verification pass in sequence. This PM transition
+  authorizes no Graph-path change or Task 3-7 implementation.
 
 ## Next smallest valuable slice
 
-Dispatch independent Task 2 release review against
-`4458bfc7c8ffcaef29dfebb755d8399e12000198..a7331df0ac6a6f54f82bf61a060607777bc06dc0`
-and the reconciled QA evidence. If release review passes without a load-bearing
-finding, run fresh Task 2 acceptance verification before any PM acceptance
+Dispatch independent Task 2 repair task review of
+`565c64c5e79799261f8dc72c7e0da298fef4742d`, including its exact two-path diff
+and prototype-backed binding-lock regressions. If and only if that review
+closes the P1 may the PM record `implementing -> ready_for_qa`; then run
+independent behavioral QA before any move to `reviewed`. Independent release
+review and fresh verification remain required before any acceptance
 transition. Task 3 remains `planned` behind Task 2 and owns only the three
 ADR-0007 Graph paths. Leave Tasks 3-7 `planned`.

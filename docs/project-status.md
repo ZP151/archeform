@@ -17,7 +17,8 @@ load-bearing P1 in duplicate navigation/flow identifier handling. Repair commit
 repair-round behavioral QA with no P0/P1/P2. Final release review returned
 RELEASE PASS with no P0/P1/P2, and fresh verification passed.
 
-Task 2, **typed manifest and binding contracts**, is `reviewed`. Its bounded
+Task 2, **typed manifest and binding contracts**, is `implementing` in repair
+round 2. Its bounded
 writer is Typed Manifest Contract Integration, its contract owner is Capability
 Binding Contract, and its write boundary is the exact four Capabilities paths
 recorded below. Independent review of implementation commit
@@ -30,12 +31,19 @@ inside its exact four-path boundary. After architecture amendment commit
 assigns owner-aware Draft Graph serialization to new Task 3 without expanding
 Task 2. Independent behavioral QA passed 45/45 focused typed contract tests,
 188/188 full Capabilities tests, typecheck, lint, build, bounded scope checks,
-and strict public probes. The PM records `ready_for_qa -> reviewed`; release
-review and fresh acceptance verification remain pending. Task 3 remains
-`planned` behind Task 2; physical assets are now Task 4 and remain blocked
-behind Task 3. Tasks 5 and 6 are serialized on the preceding accepted task.
-Task 7 remains `planned` and begins only after Tasks 1 through 6 are all
-`accepted`.
+and strict public probes. The PM previously recorded
+`ready_for_qa -> reviewed`. Independent release review then found one P1:
+prototype-backed schema or binding data could influence canonical binding-lock
+semantics despite the strict own-key contract. The PM records
+`reviewed -> implementing`. Repair commit
+`565c64c5e79799261f8dc72c7e0da298fef4742d` changes only
+`packages/capabilities/src/composition.ts` and
+`packages/capabilities/test/typed-binding-contract.test.ts`; independent task
+re-review, behavioral QA, release review, and fresh verification remain
+required. Task 3 remains `planned` behind Task 2; physical assets are now Task
+4 and remain blocked behind Task 3. Tasks 5 and 6 are serialized on the
+preceding accepted task. Task 7 remains `planned` and begins only after Tasks 1
+through 6 are all `accepted`.
 
 Commercial Capability Foundation Task 2 remains `implementing` and escalated
 after its five permitted repair rounds. It is blocked on accepted Typed
@@ -191,8 +199,26 @@ Typed Binding Task 2 implementation, repair-review, and QA evidence is:
   Strict public-package probes and bounded scope checks also passed.
 - QA confirmed the implementation stayed inside Task 2's exact four
   Capabilities paths and the repair stayed inside its exact two-path subset.
-  The PM records `ready_for_qa -> reviewed`; release review and fresh acceptance
-  verification remain pending.
+  The PM previously recorded `ready_for_qa -> reviewed`.
+- Independent release review then returned FAIL with one P1. Strict validation
+  and canonical selection could read inherited schema constraints or an
+  inherited binding `fieldKey`, allowing prototype-backed data to influence
+  the canonical binding value persisted in a lock. The prior task-review and
+  QA evidence remains historical and cannot support acceptance while this
+  finding is open. The PM records `reviewed -> implementing` for repair round 2.
+- Repair implementation commit
+  `565c64c5e79799261f8dc72c7e0da298fef4742d`
+  (`fix: reject prototype-backed capability bindings`) changes only
+  `packages/capabilities/src/composition.ts` and
+  `packages/capabilities/test/typed-binding-contract.test.ts`. It adds
+  plain-record/exact-own-key enforcement and focused regressions for inherited
+  field-binding and schema values.
+- Fresh local Node `v22.11.0` focused verification passed 47/47 tests across
+  `typed-binding-contract.test.ts` and `composition-contract.test.ts`. This is
+  implementation evidence only. Independent task re-review must close the P1
+  before `implementing -> ready_for_qa`; independent behavioral QA must pass
+  before `ready_for_qa -> reviewed`; independent release review and fresh
+  verification must pass before any acceptance transition.
 - P1 2: `fieldKey` can exist in the Capabilities binding type but cannot persist
   through the strict `ApplicationGraphV1` composition-binding schema, which
   accepts only `{ graphSymbol }`.
@@ -333,7 +359,7 @@ On Node `v22.11.0`, it records:
 
 - Typed Binding Task 1 is `accepted` and frozen under its pure Application
   Graph Type System contract. Its deferred parser limitation remains recorded.
-- Typed Binding Task 2 is `reviewed` in repair round 1 under the
+- Typed Binding Task 2 is `implementing` in repair round 2 under the
   accepted ADR, design, plan, and Task 1 dependency. The implementation owner
   of record remains Typed Manifest Contract Integration and the contract owner
   remains Capability Binding Contract.
@@ -343,14 +369,16 @@ On Node `v22.11.0`, it records:
   `packages/capabilities/test/composition-contract.test.ts`, and
   `packages/capabilities/test/typed-binding-contract.test.ts`.
 - Repair round 1 commit `a7331df0ac6a6f54f82bf61a060607777bc06dc0`
-  is present inside two of the four allowed paths and passed independent task
-  re-review with no P0/P1/P2. Architecture amendment commit `36317bf` is the
-  reconciled governance baseline. Independent behavioral QA passed 45/45
-  focused tests, 188/188 full Capabilities tests, typecheck, lint, build,
-  bounded scope checks, and strict public probes.
-- Task 2 release review may not change implementation, physical package roots
-  and registrations, profile recipes, public Draft composition, Publish,
-  compiler, Workbench, lifecycle, historical bindings, or introduce
+  and its task-review/QA evidence remain historical after release review found
+  the prototype-backed binding-lock P1.
+- Repair round 2 commit `565c64c5e79799261f8dc72c7e0da298fef4742d`
+  is present only in `packages/capabilities/src/composition.ts` and
+  `packages/capabilities/test/typed-binding-contract.test.ts`, within the four
+  allowed Task 2 paths. Fresh local focused verification passed 47/47 tests;
+  independent task re-review is the next gate.
+- Repair round 2 may not change physical package roots and registrations,
+  profile recipes, public Draft composition, Publish, compiler, Workbench,
+  lifecycle, historical bindings, or introduce
   Profile/package/version/field-name dispatch.
 - Typed Binding Task 3 remains `planned` behind Task 2 and owns exactly:
   `packages/graph/src/model.ts`,
@@ -380,11 +408,11 @@ On Node `v22.11.0`, it records:
 - Foundation Tasks 3 and 4 are blocked on accepted Task 2 profile composition
   metadata. Task 2 is back in `implementing` and escalated; neither downstream
   task is dispatched by this update.
-- Typed Binding Task 2 is `reviewed`; independent release review and fresh
-  acceptance verification remain pending against its four exact Capabilities
-  paths and immutable repair commit. Task 3 remains `planned` and blocked on
-  Task 2 acceptance. Tasks 4 through 6 cannot overlap or start before the
-  preceding task is `accepted`.
+- Typed Binding Task 2 is `implementing` after release review found the
+  prototype-backed binding-lock P1. Independent repair task review, behavioral
+  QA, release review, and fresh verification remain required. Task 3 remains
+  `planned` and blocked on Task 2 acceptance. Tasks 4 through 6 cannot overlap
+  or start before the preceding task is `accepted`.
 - Physical asset Task 4 is additionally blocked on accepted Task 3 serialized
   Graph round-trip, structural validation, hash, and browser evidence.
 - Typed Binding Task 7 cannot start before Tasks 1 through 6 are all
@@ -422,9 +450,11 @@ On Node `v22.11.0`, it records:
   enforce binding semantics at Draft, Publish, or compiler admission. Tasks 2
   through 6 are still required before recipe migration and parent closure.
 - Task 2 repair round 1 closes the unexpected-own-key and duplicate-`fieldTypes`
-  defects in implementation and task re-review. Independent behavioral QA
-  passed; release review and fresh verification remain required before
-  acceptance.
+  defects in implementation and task re-review, but its independent behavioral
+  QA is now historical evidence after release review found that prototype-backed
+  schema or binding values could influence lock canonicalization. Repair round
+  2 is present but remains unreviewed; the P1 stays open until independent task
+  review, QA, release review, and fresh verification pass in sequence.
 - Owner-aware field bindings cannot currently survive the Application Graph
   schema. ADR-0007 assigns the repair to Task 3, but the risk remains until that
   task passes independent review, QA, release review, and fresh verification.
@@ -444,11 +474,13 @@ On Node `v22.11.0`, it records:
 
 ## Next slice
 
-Run independent Task 2 release review against
-`4458bfc7c8ffcaef29dfebb755d8399e12000198..a7331df0ac6a6f54f82bf61a060607777bc06dc0`
-and reconciled QA evidence. If release review passes without a load-bearing
-finding, run fresh Task 2 acceptance verification before any PM acceptance
-transition. Keep new serialized-Graph Task 3 `planned` behind Task 2 and
-physical asset Task 4 blocked behind Task 3. Leave Typed Binding Tasks 3 through
-7 `planned`. Keep Commercial Foundation Task 2 `implementing` and escalated and
+Run independent Task 2 repair task review of
+`565c64c5e79799261f8dc72c7e0da298fef4742d`, including its exact two-path diff
+and prototype-backed binding-lock regressions. If and only if that review
+closes the P1 may the PM move Task 2 to `ready_for_qa`; then run independent
+behavioral QA before any move to `reviewed`. Independent release review and
+fresh verification remain required before any acceptance transition. Keep new
+serialized-Graph Task 3 `planned` behind Task 2 and physical asset Task 4
+blocked behind Task 3. Leave Typed Binding Tasks 3 through 7 `planned`. Keep
+Commercial Foundation Task 2 `implementing` and escalated and
 Tasks 3 and 4 `planned` and blocked.
