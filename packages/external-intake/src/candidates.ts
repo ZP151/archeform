@@ -2022,22 +2022,10 @@ export class CandidateRegistry implements CandidateRegistryV1 {
     if (entry.receipts.at(-1)?.digest === currentReceipt.digest) {
       return entry;
     }
-    const trustedCreationDigest = entry.history[0]?.digest;
-    const trustedVerificationStateDigest = entry.verificationStateRef.digest;
-    const wasVerified = entry.verified;
-    const loaded = this.#loadReceiptAddressedEntry(
+    return this.#loadReceiptAddressedEntry(
       candidateLookupId(currentReceipt.digest as Sha256Digest),
       entry.version,
     );
-    if (
-      wasVerified &&
-      loaded.history[0]?.digest === trustedCreationDigest &&
-      loaded.verificationStateRef.digest === trustedVerificationStateDigest &&
-      loaded.jobId === entry.jobId
-    ) {
-      loaded.verified = true;
-    }
-    return loaded;
   }
 
   #loadReceiptAddressedEntry(id: string, version: string): CandidateEntry {

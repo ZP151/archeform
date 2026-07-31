@@ -1768,14 +1768,27 @@ describe("Candidate registry", () => {
     async (status) => {
       const { root, store } = tempStore();
       const proposal = await acceptedProposal(store);
-      const warmApi = createExternalIntakeApi(store, root);
-      const initial = await warmApi.candidateCreate(proposal);
-      const warmRegistry = new CandidateRegistry(
+      const exactApi = createExternalIntakeApi(store, root);
+      const initial = await exactApi.candidateCreate(proposal);
+      const staleApi = createExternalIntakeApi(
         new ExternalIntakeStore(root),
         root,
       );
-      await warmRegistry.create(structuredClone(proposal));
-      expect(warmRegistry.get(initial.id, initial.version).status).toBe(
+      await staleApi.candidateShow(initial.id, initial.version);
+      const exactRegistry = new CandidateRegistry(
+        new ExternalIntakeStore(root),
+        root,
+      );
+      const staleRegistry = new CandidateRegistry(
+        new ExternalIntakeStore(root),
+        root,
+      );
+      await exactRegistry.create(structuredClone(proposal));
+      await staleRegistry.create(structuredClone(proposal));
+      expect(exactRegistry.get(initial.id, initial.version).status).toBe(
+        "quarantined",
+      );
+      expect(staleRegistry.get(initial.lookupId, initial.version).status).toBe(
         "quarantined",
       );
       const writer = new CandidateRegistry(new ExternalIntakeStore(root), root);
@@ -1795,28 +1808,93 @@ describe("Candidate registry", () => {
                 ),
               );
 
-      await expect(
-        warmApi.candidateShow(initial.id, initial.version),
-      ).resolves.toMatchObject({
-        status,
-        lookupId: terminal.lookupId,
-        candidateDigest: terminal.digest,
-      });
-      await expect(
-        warmApi.candidateVerify(initial.id, initial.version),
-      ).resolves.toMatchObject({
-        valid: true,
-        candidate: { status },
-      });
-      expect(warmRegistry.get(initial.id, initial.version)).toMatchObject({
-        status,
-      });
-      await expect(
-        warmRegistry.verifyIdentity(initial.id, initial.version),
-      ).resolves.toMatchObject({
-        valid: true,
-        candidate: { status },
-      });
+      for (const { id, api, registry } of [
+        { id: initial.id, api: exactApi, registry: exactRegistry },
+        {
+          id: initial.lookupId,
+          api: staleApi,
+          registry: staleRegistry,
+        },
+      ]) {
+        expect(() => registry.get(id, initial.version)).toThrow(
+          "Strict Candidate verification",
+        );
+        await expect(
+          api.candidateShow(id, initial.version),
+        ).resolves.toMatchObject({
+          status,
+          lookupId: terminal.lookupId,
+          candidateDigest: terminal.digest,
+        });
+        await expect(
+          api.candidateVerify(id, initial.version),
+        ).resolves.toMatchObject({
+          valid: true,
+          candidate: { status },
+        });
+        await expect(
+          registry.verifyIdentity(id, initial.version),
+        ).resolves.toMatchObject({
+          valid: true,
+          candidate: { status },
+        });
+        expect(registry.get(id, initial.version)).toMatchObject({
+          status,
+        });
+      }
+    },
+  );
+
+  it.each(["missing", "tampered"] as const)(
+    "keeps warm exact and stale access closed when another registry's conformance result is %s",
+    async (failure) => {
+      const { root, store } = tempStore();
+      const proposal = await acceptedProposal(store);
+      const warmRegistry = new CandidateRegistry(store, root);
+      const initial = await warmRegistry.create(proposal);
+      const warmApi = createExternalIntakeApi(
+        new ExternalIntakeStore(root),
+        root,
+      );
+      await warmApi.candidateShow(initial.id, initial.version);
+      expect(warmRegistry.get(initial.id, initial.version).status).toBe(
+        "quarantined",
+      );
+      const writer = new CandidateRegistry(new ExternalIntakeStore(root), root);
+      const passed = await writer.recordConformancePass(
+        initial.id,
+        initial.version,
+        evaluateCandidateConformance(
+          await writer.getConformanceBundle(initial.id, initial.version),
+        ),
+      );
+      const resultDigest = writer.get(
+        passed.id,
+        passed.version,
+      ).conformanceResultDigest!;
+      const resultPath = blobPath(root, "evidence", resultDigest);
+      if (failure === "missing") rmSync(resultPath, { force: true });
+      else writeFileSync(resultPath, "tampered-conformance-result");
+
+      for (const id of [initial.id, initial.lookupId]) {
+        expect(() => warmRegistry.get(id, initial.version)).toThrow(
+          "Strict Candidate verification",
+        );
+        await expect(
+          warmApi.candidateShow(id, initial.version),
+        ).rejects.toThrow("Strict Candidate verification");
+        await expect(
+          warmApi.candidateVerify(id, initial.version),
+        ).resolves.toMatchObject({
+          valid: false,
+          issues: expect.arrayContaining([
+            "Candidate conformance result is absent, conflicting, or digest-invalid.",
+          ]),
+        });
+        expect(() => warmRegistry.get(id, initial.version)).toThrow(
+          "Strict Candidate verification",
+        );
+      }
     },
   );
 
