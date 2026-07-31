@@ -61,6 +61,11 @@ export interface GeneratedPageRuntimeCommerceV1 {
   readonly paymentEvent: string | null;
 }
 
+export interface GeneratedPageRuntimeBindingsV1 {
+  /** Resolved only from the immutable composition lock by the compiler. */
+  readonly orderEntity?: string;
+}
+
 export interface GeneratedPageRuntimeProjectionV1 {
   readonly apiVersion: typeof generatedPageRuntimeApiVersion;
   readonly applicationName: string;
@@ -231,6 +236,7 @@ function assertCanonicalLocalRoute(route: string): void {
 function resolveCommerceRuntime(
   graph: ApplicationGraphV1,
   factoryCapabilities: readonly ApplicationGraphV1["integration"]["capabilities"][number][],
+  bindings: GeneratedPageRuntimeBindingsV1,
 ): GeneratedPageRuntimeCommerceV1 {
   const commerceBlocks = graph.page.pages.flatMap((page) =>
     page.blocks.filter(
@@ -267,16 +273,26 @@ function resolveCommerceRuntime(
     );
   }
 
-  if (!graph.domain.entities.some((entity) => entity.key === "order")) {
+  const orderEntity =
+    bindings.orderEntity ??
+    (graph.domain.entities.some((entity) => entity.key === "order")
+      ? "order"
+      : undefined);
+  if (
+    !orderEntity ||
+    !graph.domain.entities.some((entity) => entity.key === orderEntity)
+  ) {
     throw new Error(
-      "Interactive commerce PageModel blocks require declared DomainModel entity 'order'.",
+      "Interactive commerce PageModel blocks require a declared locked order entity.",
     );
   }
 
-  const orderFlow = graph.flow.flows.find((flow) => flow.entity === "order");
+  const orderFlow = graph.flow.flows.find(
+    (flow) => flow.entity === orderEntity,
+  );
   if (!orderFlow) {
     throw new Error(
-      "Interactive commerce PageModel blocks require a FlowModel for entity 'order'.",
+      `Interactive commerce PageModel blocks require a FlowModel for entity '${orderEntity}'.`,
     );
   }
 
@@ -289,12 +305,12 @@ function resolveCommerceRuntime(
   );
   if (!paymentTransition) {
     throw new Error(
-      "Interactive commerce PageModel blocks require an 'order' FlowModel transition with Factory effect 'payment.simulate' and operation 'simulate'.",
+      `Interactive commerce PageModel blocks require an '${orderEntity}' FlowModel transition with Factory effect 'payment.simulate' and operation 'simulate'.`,
     );
   }
 
   return {
-    orderEntity: "order",
+    orderEntity,
     paymentEvent: paymentTransition?.event ?? null,
   };
 }
@@ -304,6 +320,7 @@ function projectBlock(
   entityKeys: ReadonlySet<string>,
   factoryCapabilities: readonly ApplicationGraphV1["integration"]["capabilities"][number][],
   compositionProfile: string | undefined,
+  orderEntity: string | null,
 ): GeneratedPageRuntimeBlockV1 {
   if (!isGeneratedPageRuntimeBlockType(block.type)) {
     throw new Error(`Unsupported PageModel block '${block.type}'.`);
@@ -345,9 +362,16 @@ function projectBlock(
   const entity = entityBoundBlockTypes.has(block.type)
     ? requireBoundEntity(block, entityKeys)
     : undefined;
-  if (entity && orderEntityBlockTypes.has(block.type) && entity !== "order") {
+  const expectedOrderEntity =
+    orderEntity ??
+    (compositionProfile === "restaurant-ordering" ? "order" : undefined);
+  if (
+    entity &&
+    orderEntityBlockTypes.has(block.type) &&
+    (!expectedOrderEntity || entity !== expectedOrderEntity)
+  ) {
     throw new Error(
-      `PageModel block '${block.type}' requires the 'order' entity.`,
+      `PageModel block '${block.type}' requires the '${expectedOrderEntity ?? "order"}' entity.`,
     );
   }
 
@@ -366,12 +390,13 @@ function projectBlock(
  */
 export function createGeneratedPageRuntimeProjection(
   graph: ApplicationGraphV1,
+  bindings: GeneratedPageRuntimeBindingsV1 = {},
 ): GeneratedPageRuntimeProjectionV1 {
   const entityKeys = new Set(graph.domain.entities.map((entity) => entity.key));
   const factoryCapabilities = graph.integration.capabilities.filter(
     (capability) => capability.providerId === "factory",
   );
-  const commerce = resolveCommerceRuntime(graph, factoryCapabilities);
+  const commerce = resolveCommerceRuntime(graph, factoryCapabilities, bindings);
   const pages = graph.page.pages.map((page) => {
     assertCanonicalLocalRoute(page.route);
     return {
@@ -384,6 +409,7 @@ export function createGeneratedPageRuntimeProjection(
           entityKeys,
           factoryCapabilities,
           graph.integration.compositionProfile,
+          commerce.orderEntity,
         ),
       ),
     };

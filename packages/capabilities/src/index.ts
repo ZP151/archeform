@@ -1180,21 +1180,30 @@ const orderOperationsStarterConfigs: readonly OrderOperationsStarterConfig[] =
 function remapOrderOperationsValue<T>(
   value: T,
   replacements: Readonly<Record<string, string>>,
+  fieldName?: string,
 ): T {
   if (Array.isArray(value)) {
     return value.map((entry) =>
-      remapOrderOperationsValue(entry, replacements),
+      remapOrderOperationsValue(entry, replacements, fieldName),
     ) as T;
   }
   if (value && typeof value === "object") {
     return Object.fromEntries(
       Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
         replacements[key] ?? key,
-        remapOrderOperationsValue(entry, replacements),
+        remapOrderOperationsValue(entry, replacements, key),
       ]),
     ) as T;
   }
   if (typeof value !== "string") return value;
+  if (
+    fieldName &&
+    ["apiVersion", "capability", "icon", "kind", "operation", "type"].includes(
+      fieldName,
+    )
+  ) {
+    return value as T;
+  }
   if (!value.startsWith("graph.")) {
     return (replacements[value] ?? value) as T;
   }

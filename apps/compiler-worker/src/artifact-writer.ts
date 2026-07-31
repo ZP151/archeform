@@ -18,12 +18,28 @@ export interface MaterializedBundle {
 
 function isInside(parent: string, candidate: string): boolean {
   const fromParent = relative(parent, candidate);
-  return fromParent !== "" && !fromParent.startsWith(`..${sep}`) && fromParent !== ".." && !isAbsolute(fromParent);
+  return (
+    fromParent !== "" &&
+    !fromParent.startsWith(`..${sep}`) &&
+    fromParent !== ".." &&
+    !isAbsolute(fromParent)
+  );
 }
 
-function safeBundleRoot(outputDirectory: string, rootDirectory: string): string {
-  if (!rootDirectory || rootDirectory.includes("/") || rootDirectory.includes("\\") || rootDirectory === "." || rootDirectory === "..") {
-    throw new Error("Generated application root must be a single directory name.");
+function safeBundleRoot(
+  outputDirectory: string,
+  rootDirectory: string,
+): string {
+  if (
+    !rootDirectory ||
+    rootDirectory.includes("/") ||
+    rootDirectory.includes("\\") ||
+    rootDirectory === "." ||
+    rootDirectory === ".."
+  ) {
+    throw new Error(
+      "Generated application root must be a single directory name.",
+    );
   }
   return resolve(outputDirectory, rootDirectory);
 }
@@ -43,7 +59,9 @@ export async function materializeGeneratedBundle(
   for (const file of bundle.files) {
     const destination = resolve(directory, file.path);
     if (!isInside(directory, destination)) {
-      throw new Error(`Generated file '${file.path}' is outside the isolated application directory.`);
+      throw new Error(
+        `Generated file '${file.path}' is outside the isolated application directory.`,
+      );
     }
     await mkdir(resolve(destination, ".."), { recursive: true });
     await writeFile(destination, file.content, "utf8");

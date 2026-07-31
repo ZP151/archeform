@@ -2083,8 +2083,13 @@ function renderFaviconRoute(): string {
   ].join("\n");
 }
 
-function renderPageRuntime(graph: ApplicationGraphV1): string {
-  const projection = createGeneratedPageRuntimeProjection(graph);
+function renderPageRuntime(
+  graph: ApplicationGraphV1,
+  orderEntityKey: string | undefined,
+): string {
+  const projection = createGeneratedPageRuntimeProjection(graph, {
+    ...(orderEntityKey ? { orderEntity: orderEntityKey } : {}),
+  });
   const runtimeDefinition = {
     applicationName: graph.metadata.name,
     themeMode: graph.experience.theme.mode,
@@ -2969,7 +2974,7 @@ export function generateApplicationBundle(
       render: () =>
         restaurantRuntimeEnabled
           ? renderRestaurantPageRuntime(graph)
-          : renderPageRuntime(graph),
+          : renderPageRuntime(graph, orderEntityKey),
     },
     ...(restaurantRuntimeEnabled
       ? [

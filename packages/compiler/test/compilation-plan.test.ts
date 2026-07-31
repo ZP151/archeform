@@ -691,9 +691,9 @@ describe("compilation target registry", () => {
           key: "commerce.simulated-payment",
           version: "1.0.1",
         }),
-        expect.objectContaining({ key: "commerce.catalog", version: "1.1.0" }),
+        expect.objectContaining({ key: "commerce.catalog", version: "1.2.0" }),
         expect.objectContaining({ key: "commerce.cart", version: "1.0.1" }),
-        expect.objectContaining({ key: "commerce.order", version: "1.1.0" }),
+        expect.objectContaining({ key: "commerce.order", version: "1.2.0" }),
       ]),
     );
     expect(files["api/src/application-runtime.ts"]).toContain(
@@ -1491,7 +1491,7 @@ describe("compilation target registry", () => {
         );
       },
       message:
-        "Interactive commerce PageModel blocks require declared DomainModel entity 'order'.",
+        "Interactive commerce PageModel blocks require a declared locked order entity.",
     },
     {
       name: "does not declare an order FlowModel",

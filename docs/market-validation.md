@@ -247,3 +247,22 @@ portfolio it needs a fixed release or commit, exact licence/notice evidence,
 an intended Factory interface, a removal path, and an isolated fixture. This
 keeps bulk discovery fast while ensuring a hundred scenario labels never turn
 into a hundred unmaintainable forks.
+
+## 2026-08-01 current source lanes for order, restaurant, and operations
+
+**Decision investigated.** Which permissively licensed public projects can
+accelerate the next reusable capability families without importing an entire
+vertical application's data model, runtime, or deployment lifecycle.
+
+| Candidate                                                    | Observed public fact                                                                                                                             | Intended Factory use                                                                                                                | Explicit boundary                                                                                                                                |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [TastyIgniter](https://github.com/tastyigniter/TastyIgniter) | The repository describes restaurant ordering, table reservation, and restaurant management and publishes an MIT licence.                         | Fixed-reference source study for `scheduling.reservation`, `capacity.queue`, menu availability, and restaurant fulfilment fixtures. | Do not copy Laravel models, migrations, UI, extensions, or runtime before an exact-path source study and Factory conformance tests.              |
+| [Medusa](https://github.com/medusajs/medusa)                 | The project is MIT-licensed and presents a modular commerce ecosystem with modules and plugins.                                                  | Provider-pattern and source-study reference for later catalogue, order, fulfilment, and merchant integration contracts.             | It remains a later provider, never the source of Factory commerce semantics or a v1 runtime dependency.                                          |
+| [Saleor](https://github.com/saleor/saleor)                   | Saleor Core identifies itself as a BSD-3-Clause headless commerce API; its organisation also publishes dashboard and app-extension repositories. | Source-study reference for GraphQL-commerce boundaries and extension lifecycle patterns.                                            | Study exact permissively licensed paths only; do not import its GraphQL schema, dashboard, payment app state, or service runtime as Graph truth. |
+| [Appsmith](https://github.com/appsmithorg/appsmith)          | Appsmith is Apache-2.0 and describes a platform for internal tools, dashboards, APIs, and databases.                                             | Pattern/reference source for a future internal-operations Profile family.                                                           | Do not embed its low-code runtime or datasource configuration. Factory keeps its own Graph, policy, compilation, and credential boundaries.      |
+
+**Decision.** These projects extend discovery coverage, not executable
+coverage. The next bulk-intake batch must first repair the independent-review
+P1 isolation findings in the External Intake pipeline, then capture immutable
+references, notices, SBOM and security evidence before any narrow
+Factory-authored adapter or attributed source import is proposed.

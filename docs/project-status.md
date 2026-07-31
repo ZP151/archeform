@@ -8,18 +8,31 @@ The repository is a credible **composition foundation**, not yet a complete
 library of production application profiles. The following facts were checked
 against the current worktree:
 
+- The current worktree expands the reusable Order Operations slice from three
+  starter Profiles to five: Expense Approval, Restaurant Ordering, Simple
+  Ecommerce, Retail Counter, and Grocery Pickup. Retail Counter and Grocery
+  Pickup compile from the same current Catalog/Cart/Order capability-lock set
+  as Ecommerce, with distinct Graph entities, roles, routes, seed data, and
+  fulfilment transitions. This is current-worktree evidence pending its
+  dedicated commit; it is not a claim that five production Profiles are
+  accepted.
+- Fresh targeted verification passed: the Compiler has 192 tests, the
+  Compiler Worker has 76 tests, both packages typecheck and lint, both build
+  targets required by the slice pass, and `git diff --check` is clean. The
+  Worker tests materialise isolated Retail Counter and Grocery Pickup outputs
+  and assert that no Restaurant command runtime artifact is emitted.
 - `pnpm test` completed successfully with 14 Turbo tasks. The command reused
   verified local cache entries; its package evidence reports 32 Graph, 66
   Workbench, 116 Control Plane, 74 Worker, 182 Compiler, 219 Capabilities,
   402 External Intake, 61 Intake CLI, and 20 Adapter tests.
 - `packages/capabilities/assets` contains 19 named capability families across
-  26 versioned package directories. Restaurant Ordering and Simple Ecommerce
-  resolve 13 locked package versions each. Package count is not equivalent to
+  30 versioned package directories. Package count is not equivalent to
   executable coverage: `core.crud`, `core.workflow`, `core.audit`,
   `core.notification`, `commerce.inventory`,
-  `commerce.simulated-payment`, and `commerce.cart@1.0.1` have package-local
-  executable contributions; catalog, order, and several Restaurant behaviours
-  remain compiler-owned.
+  `commerce.simulated-payment`, `commerce.cart@1.0.1`,
+  `commerce.catalog@1.2.0`, and `commerce.order@1.2.0` have package-local
+  executable contributions. Several Restaurant behaviours intentionally
+  remain profile-specific extensions.
 - The fixed-reference portfolio contains 43 source records and 108 scenario
   demand mappings: 1 direct dependency, 7 provider candidates, 11 selective
   source-study candidates, 8 architecture-only references, and 16 exclusions.

@@ -18,6 +18,7 @@
     "ioredis": "^5.4.2"
   },
   "devDependencies": {
+    "@factory/capabilities": "workspace:*",
     "tsx": "^4.19.2",
     "vitest": "^2.1.8"
   }

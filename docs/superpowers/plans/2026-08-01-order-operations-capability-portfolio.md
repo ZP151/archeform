@@ -338,14 +338,14 @@ immutable replay.
 **Consumes:** Tasks 1-3.
 
 **Produces:** Deterministic generated bundles and Worker lifecycle evidence
-for all three Order Operations profiles. Restaurant extensions appear only in
-Restaurant artifacts; generic package-owned Catalog/Order handlers appear in
-all three.
+for the three generic Order Operations profiles. Restaurant extensions appear
+only in Restaurant artifacts; the generic package-owned Catalog/Order handlers
+appear in Ecommerce, Retail Counter, and Grocery Pickup artifacts.
 
-- [ ] **Step 1: Write failing compilation and Worker tests**
+- [x] **Step 1: Write failing compilation and Worker tests**
 
 ```ts
-it.each(["restaurant-ordering", "retail-counter", "grocery-pickup"] as const)(
+it.each(["simple-ecommerce", "retail-counter", "grocery-pickup"] as const)(
   "emits locked generic handlers for %s",
   (profile) => {
     const files = filesFor(profile);
@@ -367,7 +367,7 @@ it("runs a Published Grocery Pickup compilation without Restaurant files", async
 });
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run:
 
@@ -376,17 +376,18 @@ pnpm --filter @factory/compiler test -- --run test/profile-compilation.test.ts t
 pnpm --filter @factory/compiler-worker test -- --run test/order-operations-lifecycle.test.ts
 ```
 
-Expected: FAIL because only Restaurant/Ecommerce have recognized profile
-starters and catalog/order are not package-owned runtime handlers.
+Expected: FAIL because Retail Counter and Grocery Pickup were not recognized
+as valid PageModel/locked-handler compilations, and generic PageModel commerce
+projection assumed the literal `order` DomainModel entity.
 
-- [ ] **Step 3: Add only compiler/Worker admission wiring required by the tests**
+- [x] **Step 3: Add only compiler/Worker admission wiring required by the tests**
 
 Ensure `buildCompilationPlan` and `generateApplicationBundle` use the
 Published Graph plus immutable lock, never a mutable Draft. Add no runtime
 provider, source-intake import, Restaurant fallback, or unbounded generated
 route. Use deterministic bundle IDs and existing label-scoped cleanup.
 
-- [ ] **Step 4: Verify GREEN and commit**
+- [x] **Step 4: Verify GREEN and commit**
 
 Run:
 
@@ -405,6 +406,30 @@ Commit:
 git add packages/compiler apps/compiler-worker
 git commit -m "test: prove reusable order operations compilation"
 ```
+
+Verified before this plan update:
+
+```text
+pnpm --filter @factory/capabilities test             # 223 passed
+pnpm --filter @factory/capabilities typecheck        # passed
+pnpm --filter @factory/capabilities lint             # passed
+pnpm --filter @factory/capabilities build            # passed
+pnpm --filter @factory/compiler test                 # 192 passed
+pnpm --filter @factory/compiler typecheck            # passed
+pnpm --filter @factory/compiler lint                 # passed
+pnpm --filter @factory/compiler build                # passed
+pnpm --filter @factory/compiler-worker test          # 76 passed
+pnpm --filter @factory/compiler-worker typecheck     # passed
+pnpm --filter @factory/compiler-worker lint          # passed
+git diff --check                                     # passed
+```
+
+The generic PageModel projection now receives its order entity exclusively
+from the immutable Composition Lock resolved by the compiler. It does not
+infer an entity from a Profile name. The Restaurant runtime remains a separate
+accepted extension boundary, so its transaction, table-session, kitchen, and
+merchant artifacts are neither selected nor emitted for the three generic
+Order Operations recipes.
 
 ## Task 5: Record Acceptance and Start the Next Capability Family
 

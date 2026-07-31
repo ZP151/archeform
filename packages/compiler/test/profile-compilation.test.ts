@@ -197,6 +197,38 @@ describe("profile compilation", () => {
     );
   });
 
+  it.each([
+    ["simple-ecommerce", "product", "order"],
+    ["retail-counter", "retail-item", "counter-sale"],
+    ["grocery-pickup", "grocery-item", "pickup-order"],
+  ] as const)(
+    "compiles $profile through its locked generic Catalog and Order handlers",
+    (profile, catalogEntity, orderEntity) => {
+      const files = Object.fromEntries(
+        generateApplicationBundle({
+          publishedRevisionId: `${profile}-generic-order-handlers-1`,
+          graph: composeProfileDraft({ profile }).graph,
+        }).files.map((file) => [file.path, file.content]),
+      );
+
+      expect(files["api/src/capabilities/commerce.catalog.ts"]).toContain(
+        "catalogHandler",
+      );
+      expect(files["api/src/capabilities/commerce.order.ts"]).toContain(
+        "orderHandler",
+      );
+      expect(files["api/src/application-runtime.ts"]).toContain(
+        `entityKey === \"${catalogEntity}\"`,
+      );
+      expect(files["api/src/application-runtime.ts"]).toContain(
+        `entityKey === \"${orderEntity}\"`,
+      );
+      expect(
+        files["api/src/restaurant/restaurant-command.service.ts"],
+      ).toBeUndefined();
+    },
+  );
+
   it("selects the authoritative Restaurant command runtime only for the Restaurant Profile", () => {
     const restaurantFiles = Object.fromEntries(
       generateApplicationBundle({
@@ -227,6 +259,8 @@ describe("profile compilation", () => {
     "expense-approval",
     "restaurant-ordering",
     "simple-ecommerce",
+    "retail-counter",
+    "grocery-pickup",
   ] as const)(
     "compiles $profile as an independent published application",
     (profile) => {
@@ -261,6 +295,16 @@ describe("profile compilation", () => {
     {
       profile: "simple-ecommerce" as const,
       routes: ["/", "/checkout", "/orders"],
+      blockTypes: ["catalog", "checkout", "collection"],
+    },
+    {
+      profile: "retail-counter" as const,
+      routes: ["/counter", "/counter/checkout", "/counter/sales"],
+      blockTypes: ["catalog", "checkout", "collection"],
+    },
+    {
+      profile: "grocery-pickup" as const,
+      routes: ["/groceries", "/pickup/checkout", "/pickup/orders"],
       blockTypes: ["catalog", "checkout", "collection"],
     },
   ])(
