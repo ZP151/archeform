@@ -95,14 +95,15 @@ not acceptance.
   `planned -> implementing` under the exact four Capabilities paths below.
 - Task 2 implementation commit
   `4458bfc7c8ffcaef29dfebb755d8399e12000198` remained inside those paths, but
-  independent task review found two P1s. Task 2 remains `implementing`; repair
-  round 1 is authorized only for the in-path strict-validator defect. Accepted
+  independent task review found two P1s. Task 2 remained `implementing` at that
+  review point; repair round 1 was authorized only for the in-path
+  strict-validator defect. Accepted
   ADR-0007 assigns the separate Graph persistence finding to new Task 3; it
   does not expand Task 2. Repair commit
   `a7331df0ac6a6f54f82bf61a060607777bc06dc0` is present inside the exact
-  boundary and passed independent repair re-review with no P0/P1/P2. Task 2
-  remains `implementing` until this architecture amendment is finalized and the
-  PM performs a separate state transition.
+  boundary and passed independent repair re-review with no P0/P1/P2. After
+  architecture amendment commit `36317bf`, the PM records
+  `implementing -> ready_for_qa`.
 - Tasks 3 through 7 remain `planned`; none is dispatched by this transition.
 - No frontend/backend parallel implementation is permitted in this project.
 - Commercial Capability Foundation Task 2 remains `implementing` and
@@ -116,7 +117,7 @@ not acceptance.
 | Task                                           | State          | Specialization | Contract owner                               | Contract status                                 |
 | ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | ----------------------------------------------- |
 | 1. Pure typed Graph symbol index               | `accepted`     | `integration`  | Application Graph Type System                | Release review and fresh verification passed.   |
-| 2. Typed manifest and binding contracts        | `implementing` | `integration`  | Capability Binding Contract                  | Re-review passed; transition follows amendment. |
+| 2. Typed manifest and binding contracts        | `ready_for_qa` | `integration`  | Capability Binding Contract                  | Re-review passed; behavioral QA pending.        |
 | 3. Serialized owner-aware Graph selections     | `planned`      | `integration`  | Application Graph Serialization              | Blocked on accepted Task 2 binding contract.    |
 | 4. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 3 serialized contract. |
 | 5. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-4.                  |
@@ -332,7 +333,7 @@ not acceptance.
 
 ## Task 2: Freeze typed manifest and binding contracts
 
-- **State:** `implementing` (repair round 1)
+- **State:** `ready_for_qa` (repair round 1)
 - **Specialization:** `integration`
 - **Bounded writer:** Typed Manifest Contract Integration
 - **Contract owner:** Capability Binding Contract
@@ -379,8 +380,8 @@ not acceptance.
   four Task 2 paths above.
 - Independent review of
   `bf77d90a5e2e7627ad806b7851462935b2add7e0..4458bfc7c8ffcaef29dfebb755d8399e12000198`
-  found two P1s. Task 2 remains `implementing`; no prior green test or
-  implementation evidence advances its state.
+  found two P1s. Task 2 remained `implementing` at that review point; no prior
+  green test or implementation evidence advanced its state.
 - **P1 1 -- strict schema is not exact:** the manifest validator validates
   required values but does not enforce exact own-key allowlists for field and
   non-field input declarations, and it accepts duplicate entries in
@@ -400,14 +401,19 @@ not acceptance.
   (`fix: close typed binding schemas`) is a direct child of the reviewed
   implementation and changes only `packages/capabilities/src/composition.ts`
   and `packages/capabilities/test/typed-binding-contract.test.ts`.
+- Repair verification passed 45/45 focused contract tests and 188/188 full
+  Capabilities tests, plus Capabilities typecheck, lint, build, and bounded diff
+  checks.
 - Independent repair re-review of
   `4458bfc7c8ffcaef29dfebb755d8399e12000198..a7331df0ac6a6f54f82bf61a060607777bc06dc0`
   returned PASS with no P0/P1/P2. It confirmed exact allowlists for field and
   non-field inputs, duplicate-`fieldTypes` rejection, preserved rejection of
   field constraints on non-field inputs, and the exact two-path repair diff.
-- Task 2 remains `implementing` while this ADR-0007 amendment is finalized. The
-  re-review does not itself change task state; the PM must record a separate
-  `implementing -> ready_for_qa` transition before behavioral QA.
+- Architecture amendment commit `36317bf` finalized the Task 3 ownership split.
+  The PM reconciles the clean implementation, focused verification, bounded
+  diff, and passing independent re-review as
+  `implementing -> ready_for_qa`. This is not behavioral QA, release review, or
+  acceptance.
 - **P1 2 -- Graph persistence has no owner:** Task 2 can create a binding value
   with `fieldKey`, but the strict `ApplicationGraphV1` composition-binding
   schema accepts only `{ graphSymbol }`. A field binding therefore cannot
@@ -416,10 +422,9 @@ not acceptance.
 - Accepted ADR-0007 and the synchronized design/plan amendment reconcile that
   ownership gap by inserting Task 3 for the Graph schema, parser/validator,
   hashing regressions, browser-entry regressions, and exact three-path evidence.
-- Task 2 remains inside its four Capabilities paths and `implementing` repair
-  round 1 pending the separate post-amendment PM transition. Task 3 remains
-  `planned` until Task 2 is `accepted`; no Graph implementation is authorized
-  by this PM amendment.
+- Task 2 remains inside its four Capabilities paths and is `ready_for_qa` in
+  repair round 1. Task 3 remains `planned` until Task 2 is `accepted`; no Graph
+  implementation is authorized by this PM transition.
 
 ### Blocking non-goals
 
@@ -448,7 +453,7 @@ not acceptance.
 - **Contract artifact:** ADR-0007 DEC-001 through DEC-005 and the design's
   serialized Draft Graph contract.
 - **Dependencies:** Tasks 1 and 2 `accepted`. Task 1 is accepted; Task 2 is
-  still `implementing` repair round 1.
+  `ready_for_qa` in repair round 1.
 - **Produces:** additive `SerializedCompositionBindingV1` support for exact
   owner-aware field objects, structural owner/field validation, deterministic
   Graph-hash coverage, historic hash stability, and browser-safe behavior.
@@ -681,13 +686,15 @@ not acceptance.
 - Runtime atomicity and exactly-once stock execution across intentional
   inventory co-providers remain Commercial Foundation Task 3 scope and are not
   proven by this project.
-- This PM transition authorizes only Task 2 repair round 1 by Typed Manifest
-  Contract Integration in its existing exact four paths. It authorizes no
-  Graph-path change and no Task 3-7 implementation.
+- This PM transition authorizes independent behavioral QA of Task 2 against its
+  exact four Capabilities paths and immutable repair commit. It authorizes no
+  implementation change, Graph-path change, or Task 3-7 implementation.
 
 ## Next smallest valuable slice
 
-After this ADR-0007 amendment is committed, record a fresh narrow Task 2
-`implementing -> ready_for_qa` transition from the passing repair re-review,
-then dispatch independent behavioral QA. Task 3 remains `planned` behind Task 2
-and owns only the three ADR-0007 Graph paths. Leave Tasks 3-7 `planned`.
+Dispatch independent Task 2 behavioral QA against
+`4458bfc7c8ffcaef29dfebb755d8399e12000198..a7331df0ac6a6f54f82bf61a060607777bc06dc0`
+and architecture baseline `36317bf`. Re-run focused/full Capabilities tests,
+typecheck, lint, build, strict-key and duplicate-`fieldTypes` adversarial probes,
+and bounded diff checks. Task 3 remains `planned` behind Task 2 and owns only
+the three ADR-0007 Graph paths. Leave Tasks 3-7 `planned`.
