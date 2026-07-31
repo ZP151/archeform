@@ -5,11 +5,12 @@ Updated: 2026-08-01
 ## Current milestone
 
 Typed Capability Binding Validation is the current hardening milestone.
-ADRs 0006 and 0007 are `Accepted` under Factory controller authority; the
-amended design, implementation plan, and seven-task ledger now govern the work.
-All seven tasks follow the accepted dependency chain. Task 1, **pure typed Graph
-symbol index**, is `accepted` after bounded repair round 1. Original implementation
-commit
+ADRs 0006, 0007, and 0008 are `Accepted` under Factory controller authority;
+the amended design, implementation plans, and ledger now govern the work.
+ADR-0008 was accepted after independent reproduction showed the repair-round-4
+P1 is a shared resolution-input ownership failure rather than a bounded local
+parameter defect. Task 1, **pure typed Graph symbol index**, is `accepted` after
+bounded repair round 1. Original implementation commit
 `86d5a00f26d5f331764de0e8bf7694e657cd2514` passed independent Task 1 review
 and behavioral QA with no P0/P1/P2, but release review then found one
 load-bearing P1 in duplicate navigation/flow identifier handling. Repair commit
@@ -65,13 +66,14 @@ and 180/180 Compiler tests plus Compiler typecheck and lint. This remains
 implementation evidence only. Independent task review of the repair returned
 FAIL with one new P1: `manifest.parameters` is snapshotted separately during
 schema validation and binding validation, so a getter can supply different
-parameter schemas at those two stages. Task 2 remains `implementing`; bounded
-repair rework, independent re-review, behavioral QA, release review, and fresh
-acceptance verification are pending, and Task 2 is not accepted. Owner-aware
-Graph persistence remains explicitly owned by planned
-Task 3; physical assets are Task 4 and remain blocked behind Task 3. Tasks 5
-and 6 are serialized on the preceding accepted task. Task 7 remains `planned`
-and begins only after Tasks 1 through 6 are all `accepted`.
+parameter schemas at those two stages. Task 2 remains `implementing` and is not
+accepted. Controller-accepted ADR-0008 stops further local Task 2 repair and
+its remaining review gates. New Task 2A, **immutable composition resolution
+boundary**, is `planned`, its contract owner is **Capability Composition
+Resolution Boundary**, and no implementation is dispatched by this status
+update. Owner-aware Graph persistence remains explicitly owned by planned Task
+3, which is blocked on accepted Tasks 2 and 2A. Physical assets remain Task 4;
+Tasks 4 through 7 remain serially blocked.
 
 Commercial Capability Foundation Task 2 remains `implementing` and escalated
 after its five permitted repair rounds. It is blocked on accepted Typed
@@ -115,10 +117,27 @@ authority:
 - New Task 3 owns only the Graph schema, parser/validator, hashing regressions,
   browser-entry regressions, and exact three Graph paths recorded in the ledger.
 
+ADR-0008 fixes the composition-resolution ownership boundary under controller
+authority:
+
+- Public composition and lock creation capture one descriptor-validated,
+  Factory-owned snapshot before any matching, validation, normalization,
+  resolution, canonicalization, or hashing.
+- Records and arrays must be ordinary own-data structures; accessors, symbols,
+  sparse or inherited indices, extra array properties, custom prototypes, and
+  cycles fail closed.
+- Existing valid `factory.capability/v1`, `factory.capability-binding/v1`, and
+  `factory.composition/v1` bytes and lock digests remain unchanged.
+- This accepted architecture contract is planning evidence only. Task 2A is
+  `planned`; no implementation, review, QA, release review, test result, or
+  acceptance is asserted by this update.
+
 The approved design and plan are recorded at
 `docs/superpowers/specs/2026-08-01-typed-capability-binding-validation-design.md`
 and
-`docs/superpowers/plans/2026-08-01-typed-capability-binding-validation.md`.
+`docs/superpowers/plans/2026-08-01-typed-capability-binding-validation.md`, with
+the Task 2A boundary plan at
+`docs/superpowers/plans/2026-08-01-immutable-composition-resolution-input.md`.
 The governed task state is recorded in
 `docs/superpowers/ledgers/2026-08-01-typed-capability-binding-validation.md`.
 This status/ledger synchronization changes no product code, source manifest,
@@ -301,17 +320,18 @@ Typed Binding Task 2 implementation, repair-review, and QA evidence is:
   return different strict parameter schemas between the two stages.
 - The original two release P1 repairs and engineer checks remain historical
   implementation evidence, but `b85dbda063fe6fa6db3b712f5891b013285e0356`
-  cannot advance to QA. Task 2 remains `implementing`. The same bounded writer
-  must repair the coherent-parameter-snapshot gap inside the same two paths,
-  then obtain independent task re-review before behavioral QA, release review,
-  or fresh acceptance verification. Task 2 is not `accepted`.
+  cannot advance to QA. Independent reproduction showed the remaining witness
+  belongs to the shared immutable resolution-input boundary. Task 2 remains
+  `implementing`, but accepted ADR-0008 stops further local Task 2 repair and
+  review gates until planned Task 2A is independently accepted and reconciled.
+  Task 2 is not `accepted`.
 - P1 2: `fieldKey` can exist in the Capabilities binding type but cannot persist
   through the strict `ApplicationGraphV1` composition-binding schema, which
   accepts only `{ graphSymbol }`.
 - Accepted ADR-0007 and the synchronized design/plan/ledger amendment route the
   second finding to new Task 3. Task 2 remains inside its four Capabilities
-  paths, Task 3 remains `planned` until Task 2 is accepted, and this update
-  authorizes no Graph implementation.
+  paths, Task 3 remains `planned` until Tasks 2 and 2A are accepted, and this
+  update authorizes no Graph implementation.
 
 Commercial Capability Foundation Task 1 is accepted and frozen. Its verified
 `1.0.0` identities are `core.identity-context`, `core.location-context`,
@@ -479,20 +499,29 @@ On Node `v22.11.0`, it records:
   Independent task review then returned FAIL: separate reads of
   `manifest.parameters` in schema validation and binding validation allow a
   getter to supply different strict parameter schemas between stages. Repair
-  round 4 remains `implementing`; bounded rework and independent re-review are
-  required before behavioral QA, release review, or fresh acceptance
-  verification.
+  round 4 remains `implementing`, but independent reproduction and accepted
+  ADR-0008 stop further local Task 2 repair. Task 2 review, QA, release review,
+  and acceptance verification do not resume before Task 2A is accepted and PM
+  reconciliation occurs.
 - Repair round 4 may not change physical package roots and registrations,
   profile recipes, public Draft composition, Publish, compiler, Workbench,
   lifecycle, historical bindings, or introduce
   Profile/package/version/field-name dispatch.
-- Typed Binding Task 3 remains `planned` behind Task 2 and owns exactly:
+- Typed Binding Task 2A, **immutable composition resolution boundary**, is
+  `planned` under the **Capability Composition Resolution Boundary** contract
+  owner and accepted ADR-0008. Its bounded writer is unassigned, and this
+  update dispatches no implementation. Its exact allowed paths are:
+  `packages/capabilities/src/composition.ts`,
+  `packages/capabilities/test/composition-contract.test.ts`, and
+  `packages/capabilities/test/typed-binding-contract.test.ts`.
+- Typed Binding Task 3 remains `planned` behind accepted Tasks 2 and 2A and
+  owns exactly:
   `packages/graph/src/model.ts`,
   `packages/graph/test/application-graph.test.ts`, and
   `packages/graph/test/browser-entry.test.ts`.
-- Physical assets are now Task 4 and remain blocked until Task 3 is accepted.
-  Tasks 5 and 6 remain serially blocked on their preceding accepted task. Task
-  7 remains `planned` until Tasks 1 through 6 are all `accepted`.
+- Physical assets remain Task 4 and blocked until Task 3 is accepted. Tasks 5
+  and 6 remain serially blocked on their preceding accepted task. Task 7
+  remains `planned` until Tasks 1, 2, 2A, and 3 through 6 are all `accepted`.
 - Commercial Foundation Task 2 remains `implementing` and escalated. No sixth
   repair is authorized; its previous exact five-path implementation boundary
   remains historical release evidence only. It cannot resume acceptance until
@@ -519,14 +548,14 @@ On Node `v22.11.0`, it records:
   prototype-supplied strict parameters. Commit
   `b85dbda063fe6fa6db3b712f5891b013285e0356` is implementation evidence only;
   independent task review failed on the separate `manifest.parameters`
-  snapshot gap. Bounded repair rework and independent re-review are required
-  before behavioral QA, release review, or fresh acceptance verification.
-  Task 3 remains `planned` and blocked on Task 2 acceptance. It, not Task 2,
-  owns owner-aware Graph persistence. Tasks 4 through 6 cannot overlap or
-  start before the preceding task is `accepted`.
+  snapshot gap. Accepted ADR-0008 supersedes further local repair with planned
+  Task 2A; no Task 2 code repair or review gate is authorized while Task 2A is
+  pending. Task 3 remains `planned` and blocked on Tasks 2 and 2A acceptance.
+  It, not either Capabilities task, owns owner-aware Graph persistence. Tasks 4
+  through 6 cannot overlap or start before the preceding task is `accepted`.
 - Physical asset Task 4 is additionally blocked on accepted Task 3 serialized
   Graph round-trip, structural validation, hash, and browser evidence.
-- Typed Binding Task 7 cannot start before Tasks 1 through 6 are all
+- Typed Binding Task 7 cannot start before Tasks 1, 2, 2A, and 3 through 6 are all
   `accepted`. Its acceptance does not automatically accept Commercial
   Foundation Task 2; the PM must reconcile that parent state separately.
 - No sixth Commercial Foundation Task 2 repair is authorized. ADR-0006 governs
@@ -554,8 +583,9 @@ On Node `v22.11.0`, it records:
   name. This is a downstream risk, not authority to start Task 3.
 - The flattened graph-symbol namespace allows an existing field symbol from the
   wrong entity or semantic type to satisfy a Foundation binding. Until Typed
-  Binding Tasks 1 through 7 are accepted, immutable locks can direct location
-  or inventory behavior at unrelated data, including price fields.
+  Binding Tasks 1, 2, 2A, and 3 through 7 are accepted, immutable locks can
+  direct location or inventory behavior at unrelated data, including price
+  fields.
 - Task 1 provides the pure typed index but does not define typed manifest
   requirements, serialize owner-aware selections, publish safe assets, or
   enforce binding semantics at Draft, Publish, or compiler admission. Tasks 2
@@ -577,9 +607,10 @@ On Node `v22.11.0`, it records:
   package checks, but independent task review found a remaining time-of-check/
   time-of-use gap because `manifest.parameters` is fetched and snapshotted
   separately by schema validation and binding validation. A getter can return
-  different parameter schemas between those stages. Bounded rework and
-  independent re-review must pass before behavioral QA, release review, and
-  fresh acceptance verification proceed in sequence.
+  different parameter schemas between those stages. Independent reproduction
+  expanded the risk to all caller-owned composition inputs. ADR-0008 assigns
+  that boundary to planned Task 2A; local Task 2 repair is stopped until Task
+  2A is accepted and PM reconciliation determines the remaining Task 2 gates.
 - Owner-aware field bindings cannot currently survive the Application Graph
   schema. ADR-0007 assigns the repair to Task 3, but the risk remains until that
   task passes independent review, QA, release review, and fresh verification.
@@ -599,19 +630,12 @@ On Node `v22.11.0`, it records:
 
 ## Next smallest valuable slice
 
-Return Task 2 repair round 4 to **Typed Manifest Contract Integration** under
-the unchanged **Capability Binding Contract** and exact two-path repair subset:
-`packages/capabilities/src/composition.ts` and
-`packages/capabilities/test/typed-binding-contract.test.ts`. Begin with a
-focused regression where a getter-backed `manifest.parameters` supplies
-different schemas on successive reads. GREEN must create one coherent strict
-parameter snapshot per composition resolution and reuse it across schema and
-binding validation, while preserving the repairs for accessor-backed bindings
-and inherited/accessor-backed parameter declarations. Then dispatch
-independent task re-review against
-`b85dbda063fe6fa6db3b712f5891b013285e0356`; a clean re-review may support only
-`implementing -> ready_for_qa`. Behavioral QA, release review, and fresh
-acceptance verification must follow in sequence. Treat owner-aware Graph
-persistence as remaining Task 3 work under ADR-0007, not Task 2 scope. Keep
-Typed Binding Tasks 3 through 7 `planned`, Commercial Foundation Task 2
-`implementing` and escalated, and its Tasks 3 and 4 `planned` and blocked.
+Prepare the bounded PM dispatch for planned Task 2A under accepted ADR-0008 and
+the **Capability Composition Resolution Boundary**. The first implementation
+slice is the immutable-boundary plan's focused adversarial RED evidence across
+the exact three allowed Capabilities paths; no code work is authorized by this
+status update. Keep Task 2 `implementing` but stop local repair and every
+remaining review gate until Task 2A is independently accepted and reconciled.
+Keep Typed Binding Tasks 3 through 7 `planned` and blocked, Commercial
+Foundation Task 2 `implementing` and escalated, and its Tasks 3 and 4 `planned`
+and blocked.
