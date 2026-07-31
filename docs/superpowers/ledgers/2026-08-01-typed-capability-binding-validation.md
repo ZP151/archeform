@@ -103,7 +103,10 @@ not acceptance.
   `a7331df0ac6a6f54f82bf61a060607777bc06dc0` is present inside the exact
   boundary and passed independent repair re-review with no P0/P1/P2. After
   architecture amendment commit `36317bf`, the PM records
-  `implementing -> ready_for_qa`.
+  `implementing -> ready_for_qa`. Independent behavioral QA then passed 45/45
+  focused typed contract tests, 188/188 full Capabilities tests, Capabilities
+  typecheck/lint/build, bounded scope checks, and strict public probes. The PM
+  records `ready_for_qa -> reviewed`.
 - Tasks 3 through 7 remain `planned`; none is dispatched by this transition.
 - No frontend/backend parallel implementation is permitted in this project.
 - Commercial Capability Foundation Task 2 remains `implementing` and
@@ -114,15 +117,15 @@ not acceptance.
 
 ## Project state
 
-| Task                                           | State          | Specialization | Contract owner                               | Contract status                                 |
-| ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | ----------------------------------------------- |
-| 1. Pure typed Graph symbol index               | `accepted`     | `integration`  | Application Graph Type System                | Release review and fresh verification passed.   |
-| 2. Typed manifest and binding contracts        | `ready_for_qa` | `integration`  | Capability Binding Contract                  | Re-review passed; behavioral QA pending.        |
-| 3. Serialized owner-aware Graph selections     | `planned`      | `integration`  | Application Graph Serialization              | Blocked on accepted Task 2 binding contract.    |
-| 4. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 3 serialized contract. |
-| 5. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-4.                  |
-| 6. Graph-aware Publish and compiler admission  | `planned`      | `backend`      | Published Graph and Compiler Admission       | Blocked on accepted Tasks 1-5.                  |
-| 7. Current recipe migration and acceptance     | `planned`      | `integration`  | Typed Binding Migration and Release Evidence | Blocked on accepted Tasks 1-6.                  |
+| Task                                           | State      | Specialization | Contract owner                               | Contract status                                 |
+| ---------------------------------------------- | ---------- | -------------- | -------------------------------------------- | ----------------------------------------------- |
+| 1. Pure typed Graph symbol index               | `accepted` | `integration`  | Application Graph Type System                | Release review and fresh verification passed.   |
+| 2. Typed manifest and binding contracts        | `reviewed` | `integration`  | Capability Binding Contract                  | Behavioral QA passed; release review pending.   |
+| 3. Serialized owner-aware Graph selections     | `planned`  | `integration`  | Application Graph Serialization              | Blocked on accepted Task 2 binding contract.    |
+| 4. Safe versioned physical capability assets   | `planned`  | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 3 serialized contract. |
+| 5. Manifest-aware Draft composition validation | `planned`  | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-4.                  |
+| 6. Graph-aware Publish and compiler admission  | `planned`  | `backend`      | Published Graph and Compiler Admission       | Blocked on accepted Tasks 1-5.                  |
+| 7. Current recipe migration and acceptance     | `planned`  | `integration`  | Typed Binding Migration and Release Evidence | Blocked on accepted Tasks 1-6.                  |
 
 ## Task 1: Add a pure typed Graph symbol index
 
@@ -333,7 +336,7 @@ not acceptance.
 
 ## Task 2: Freeze typed manifest and binding contracts
 
-- **State:** `ready_for_qa` (repair round 1)
+- **State:** `reviewed` (repair round 1)
 - **Specialization:** `integration`
 - **Bounded writer:** Typed Manifest Contract Integration
 - **Contract owner:** Capability Binding Contract
@@ -422,9 +425,31 @@ not acceptance.
 - Accepted ADR-0007 and the synchronized design/plan amendment reconcile that
   ownership gap by inserting Task 3 for the Graph schema, parser/validator,
   hashing regressions, browser-entry regressions, and exact three-path evidence.
-- Task 2 remains inside its four Capabilities paths and is `ready_for_qa` in
-  repair round 1. Task 3 remains `planned` until Task 2 is `accepted`; no Graph
-  implementation is authorized by this PM transition.
+- At the implementation-review gate, Task 2 remained inside its four
+  Capabilities paths and advanced to `ready_for_qa` in repair round 1. Task 3
+  remained `planned`; no Graph implementation was authorized by that PM
+  transition.
+
+### Behavioral QA evidence
+
+- Independent behavioral QA exercised
+  `4458bfc7c8ffcaef29dfebb755d8399e12000198..a7331df0ac6a6f54f82bf61a060607777bc06dc0`
+  under accepted ADR-0007 and architecture baseline `36317bf`.
+- The focused typed contract suites passed 45/45 tests, and the full
+  Capabilities suite passed 188/188 tests. Capabilities typecheck, lint, and
+  build also passed.
+- Strict public-package probes passed. Bounded scope checks confirmed the
+  implementation remained inside Task 2's exact four Capabilities paths; the
+  repair remained limited to `packages/capabilities/src/composition.ts` and
+  `packages/capabilities/test/typed-binding-contract.test.ts`.
+- Owner-aware Graph persistence is explicitly deferred to Task 3 under
+  ADR-0007. QA did not expand Task 2 into Graph schema, parser, validator,
+  hashing, or browser-entry paths.
+- The PM reconciles the passing behavioral evidence and limitation as
+  `ready_for_qa -> reviewed`. Independent release review and fresh acceptance
+  verification remain required; Task 2 is not `accepted`.
+- Task 3 remains `planned` until Task 2 is `accepted`; no Graph implementation
+  is authorized by this PM transition.
 
 ### Blocking non-goals
 
@@ -453,7 +478,7 @@ not acceptance.
 - **Contract artifact:** ADR-0007 DEC-001 through DEC-005 and the design's
   serialized Draft Graph contract.
 - **Dependencies:** Tasks 1 and 2 `accepted`. Task 1 is accepted; Task 2 is
-  `ready_for_qa` in repair round 1.
+  `reviewed` in repair round 1.
 - **Produces:** additive `SerializedCompositionBindingV1` support for exact
   owner-aware field objects, structural owner/field validation, deterministic
   Graph-hash coverage, historic hash stability, and browser-safe behavior.
@@ -686,15 +711,15 @@ not acceptance.
 - Runtime atomicity and exactly-once stock execution across intentional
   inventory co-providers remain Commercial Foundation Task 3 scope and are not
   proven by this project.
-- This PM transition authorizes independent behavioral QA of Task 2 against its
-  exact four Capabilities paths and immutable repair commit. It authorizes no
+- This PM transition records passing independent behavioral QA for Task 2 and
+  authorizes only its independent release review. It authorizes no
   implementation change, Graph-path change, or Task 3-7 implementation.
 
 ## Next smallest valuable slice
 
-Dispatch independent Task 2 behavioral QA against
+Dispatch independent Task 2 release review against
 `4458bfc7c8ffcaef29dfebb755d8399e12000198..a7331df0ac6a6f54f82bf61a060607777bc06dc0`
-and architecture baseline `36317bf`. Re-run focused/full Capabilities tests,
-typecheck, lint, build, strict-key and duplicate-`fieldTypes` adversarial probes,
-and bounded diff checks. Task 3 remains `planned` behind Task 2 and owns only
-the three ADR-0007 Graph paths. Leave Tasks 3-7 `planned`.
+and the reconciled QA evidence. If release review passes without a load-bearing
+finding, run fresh Task 2 acceptance verification before any PM acceptance
+transition. Task 3 remains `planned` behind Task 2 and owns only the three
+ADR-0007 Graph paths. Leave Tasks 3-7 `planned`.
