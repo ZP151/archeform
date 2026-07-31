@@ -1,0 +1,26 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": [
+    "api.runtime",
+    "database.schema",
+    "page.block",
+    "test.fixture"
+  ],
+  "runtimeHandlers": ["catalog"],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/commerce.catalog.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:9fd58d04a48d9493e9d1cd02c4bd6b105009452ef11983588ea4fee086035058"
+    }
+  ],
+  "parameters": [
+    { "key": "catalogEntity", "type": "graph-symbol", "required": true },
+    { "key": "catalogPage", "type": "graph-symbol", "required": true },
+    { "key": "customerRole", "type": "graph-symbol", "required": true }
+  ],
+  "contributes": { "effects": ["catalog.list", "catalog.read"] }
+}

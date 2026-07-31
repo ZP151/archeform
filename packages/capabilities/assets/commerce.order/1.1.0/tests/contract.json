@@ -1,0 +1,9 @@
+{
+  "status": "verified",
+  "checks": [
+    "role-bound-create",
+    "expected-version",
+    "idempotency",
+    "missing-order"
+  ]
+}

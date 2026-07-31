@@ -77,10 +77,12 @@ immutable physical-asset verifier.
 **Produces:** Golden `commerce.catalog@1.1.0` and
 `commerce.order@1.1.0` assets. The catalog package declares a `catalog`
 handler for bounded list/read access; the order package declares an `order`
-handler for create/transition access. Both admit `restaurant-ordering`,
-`simple-ecommerce`, `retail-counter`, and `grocery-pickup` recipes.
+handler for create/transition access. These immutable v1.1 assets admit
+`restaurant-ordering` and `simple-ecommerce`. Task 3 publishes new immutable
+versions when it adds Retail Counter and Grocery Pickup eligibility; it never
+rewrites the v1.1 manifests after release.
 
-- [ ] **Step 1: Write failing physical-package tests**
+- [x] **Step 1: Write failing physical-package tests**
 
 ```ts
 it("resolves executable Catalog and Order v1.1 packages", () => {
@@ -101,14 +103,14 @@ it("rejects modified Catalog v1.1 fixture bytes before lock creation", () => {
 });
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run: `pnpm --filter @factory/capabilities test -- --run test/order-operations-package.test.ts`
 
 Expected: FAIL because neither `catalog-v1-1-0` nor `order-v1-1-0` is
 registered and the handler kinds do not exist.
 
-- [ ] **Step 3: Add versioned manifests and declarative templates**
+- [x] **Step 3: Add versioned manifests and declarative templates**
 
 Extend `CapabilityRuntimeHandlerKindV1` with exactly `"catalog"` and
 `"order"`. Use version `1.1.0`, a new package root, SHA-256 manifest/template
@@ -118,12 +120,12 @@ digests, fixture and contract-test digests, and only declared output slots.
 with an expected version and idempotency key. Templates must contain no profile
 name, SQL, URL, external provider field, secret, or arbitrary source input.
 
-- [ ] **Step 4: Register v1.1 as current without rewriting history**
+- [x] **Step 4: Register v1.1 as current without rewriting history**
 
 Keep v1.0 assets in `capabilityAssets` for historical lock replay. Put v1.1
 versions in `currentCapabilityAssets`; all new default recipes must select v1.1.
 
-- [ ] **Step 5: Verify GREEN and commit**
+- [x] **Step 5: Verify GREEN and commit**
 
 Run:
 
@@ -227,7 +229,7 @@ git commit -m "feat: compile package-owned catalog and order handlers"
 - Create: `packages/capabilities/test/order-operations-profile.test.ts`
 - Modify: `packages/capabilities/test/commercial-profile-composition.test.ts`
 
-**Consumes:** Task 1 current v1.1 package identities.
+**Consumes:** Task 1 v1.1 handler interfaces and package identities.
 
 **Produces:** `retail-counter` and `grocery-pickup` Profile recipes with the
 same generic Order Operations package lock sequence as simple ecommerce, but
@@ -273,8 +275,10 @@ capability bindings; do not add compiler dispatch by profile key.
 
 Retail Counter uses shopper/cashier roles and a counter collection/receipt
 flow. Grocery Pickup uses shopper/fulfilment roles and a pickup-ready/handoff
-flow. Both use `commerce.catalog@1.1.0`, `commerce.cart@1.0.1`,
-`commerce.order@1.1.0`, `commerce.inventory@1.0.1`,
+flow. Publish `commerce.catalog@1.2.0` and `commerce.order@1.2.0` with the
+same handler interface and new Profile eligibility before either recipe locks
+them. Both use those new immutable package versions with
+`commerce.cart@1.0.1`, `commerce.inventory@1.0.1`,
 `commerce.inventory-ledger@1.0.0`,
 `commerce.line-configuration@1.0.0`,
 `commerce.simulated-payment@1.0.1`, `core.identity-context@1.0.0`, and

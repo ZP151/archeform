@@ -1,0 +1,26 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": [
+    "api.runtime",
+    "database.schema",
+    "page.block",
+    "flow.effect",
+    "test.fixture"
+  ],
+  "runtimeHandlers": ["order"],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/commerce.order.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:3223f8e96981fd8677524bad5fcadbe0165dedf0de4a9ad17a129fc2842fb2f1"
+    }
+  ],
+  "parameters": [
+    { "key": "orderEntity", "type": "graph-symbol", "required": true },
+    { "key": "orderFlow", "type": "graph-symbol", "required": true }
+  ],
+  "contributes": { "effects": ["order.create", "order.transition"] }
+}

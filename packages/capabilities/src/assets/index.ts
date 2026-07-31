@@ -12,6 +12,7 @@ import { workflowAssetV1_0_1 } from "./core/workflow-v1-0-1.js";
 import { identityContextAssetV1_0_0 } from "./core/identity-context-v1-0-0.js";
 import { locationContextAssetV1_0_0 } from "./core/location-context-v1-0-0.js";
 import { catalogAsset } from "./commerce/catalog.js";
+import { catalogAssetV1_1_0 } from "./commerce/catalog-v1-1-0.js";
 import { cartAsset } from "./commerce/cart.js";
 import { cartAssetV1_0_1 } from "./commerce/cart-v1-0-1.js";
 import { inventoryLedgerAssetV1_0_0 } from "./commerce/inventory-ledger-v1-0-0.js";
@@ -19,6 +20,7 @@ import { inventoryAsset } from "./commerce/inventory.js";
 import { inventoryAssetV1_0_1 } from "./commerce/inventory-v1-0-1.js";
 import { lineConfigurationAssetV1_0_0 } from "./commerce/line-configuration-v1-0-0.js";
 import { orderAsset } from "./commerce/order.js";
+import { orderAssetV1_1_0 } from "./commerce/order-v1-1-0.js";
 import { simulatedPaymentAsset } from "./commerce/simulated-payment.js";
 import { simulatedPaymentAssetV1_0_1 } from "./commerce/simulated-payment-v1-0-1.js";
 import { restaurantTableSessionAsset } from "./restaurant/table-session.js";
@@ -34,6 +36,7 @@ export {
   cartAsset,
   cartAssetV1_0_1,
   catalogAsset,
+  catalogAssetV1_1_0,
   crudAsset,
   crudAssetV1_0_1,
   inventoryAsset,
@@ -45,6 +48,7 @@ export {
   notificationAsset,
   notificationAssetV1_0_1,
   orderAsset,
+  orderAssetV1_1_0,
   restaurantCashierAsset,
   restaurantKitchenAsset,
   restaurantMenuAsset,
@@ -65,12 +69,12 @@ export const currentCapabilityAssets: readonly CapabilityAssetV1[] =
     workflowAssetV1_0_1,
     identityContextAssetV1_0_0,
     locationContextAssetV1_0_0,
-    catalogAsset,
+    catalogAssetV1_1_0,
     cartAssetV1_0_1,
     lineConfigurationAssetV1_0_0,
     inventoryAssetV1_0_1,
     inventoryLedgerAssetV1_0_0,
-    orderAsset,
+    orderAssetV1_1_0,
     simulatedPaymentAssetV1_0_1,
     restaurantTableSessionAsset,
     restaurantMenuAsset,
@@ -82,6 +86,7 @@ export const currentCapabilityAssets: readonly CapabilityAssetV1[] =
 
 export const capabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
   ...currentCapabilityAssets,
+  catalogAsset,
   auditAsset,
   crudAsset,
   notificationAsset,
@@ -89,4 +94,5 @@ export const capabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
   cartAsset,
   inventoryAsset,
   simulatedPaymentAsset,
+  orderAsset,
 ]);

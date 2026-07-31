@@ -1,0 +1,45 @@
+{
+  "apiVersion": "factory.capability/v1",
+  "key": "commerce.catalog",
+  "version": "1.1.0",
+  "category": "commerce",
+  "name": "Catalog",
+  "description": "Lists and reads declared purchasable catalog records.",
+  "packageRoot": "packages/capabilities/assets/commerce.catalog/1.1.0",
+  "manifestDigest": "sha256:598fdfcf51ff1459dcf73538680c1fd1f4c31f6a00118ea883a32faffa679b91",
+  "lifecycle": "golden",
+  "profiles": ["restaurant-ordering", "simple-ecommerce"],
+  "effects": ["catalog.list", "catalog.read"],
+  "inputSchema": [
+    { "key": "catalogEntity", "type": "domain.entity", "required": true }
+  ],
+  "outputSlots": [
+    "api.runtime",
+    "database.schema",
+    "page.block",
+    "test.fixture"
+  ],
+  "runtimeHandlers": ["catalog"],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/commerce.catalog.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:9fd58d04a48d9493e9d1cd02c4bd6b105009452ef11983588ea4fee086035058"
+    }
+  ],
+  "parameters": [
+    { "key": "catalogEntity", "type": "graph-symbol", "required": true },
+    { "key": "catalogPage", "type": "graph-symbol", "required": true },
+    { "key": "customerRole", "type": "graph-symbol", "required": true }
+  ],
+  "provides": [{ "interfaceKey": "commerce.catalog-item", "version": "v1" }],
+  "verification": {
+    "fixture": "fixtures/default.json",
+    "fixtureDigest": "sha256:efa900139bdfdb892cf04d1a55eb9b47b0f2b1653eaa3b78655a939964d6a1e2",
+    "contractTest": "tests/contract.json",
+    "contractTestDigest": "sha256:e5f2218889d101590173edc35bee32f7f697ad2c87c042a511f5a56cffc2bff9",
+    "status": "verified"
+  }
+}

@@ -104,7 +104,14 @@ const outputSlotSchema = z.enum([
   "realtime.event",
   "docs.section",
 ]);
-const runtimeHandlerSchema = z.enum(["record", "workflow", "cart", "effect"]);
+const runtimeHandlerSchema = z.enum([
+  "record",
+  "workflow",
+  "cart",
+  "catalog",
+  "order",
+  "effect",
+]);
 const templateContributionSchema = z
   .object({
     id: contributionIdSchema,

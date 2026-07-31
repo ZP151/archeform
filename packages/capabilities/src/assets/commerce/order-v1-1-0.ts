@@ -1,0 +1,54 @@
+import type { CapabilityAssetV1 } from "../contract.js";
+
+export const orderAssetV1_1_0: CapabilityAssetV1 = {
+  manifest: {
+    apiVersion: "factory.capability/v1",
+    key: "commerce.order",
+    version: "1.1.0",
+    category: "commerce",
+    name: "Order lifecycle",
+    description: "Creates orders and applies declared order state transitions.",
+    packageRoot: "packages/capabilities/assets/commerce.order/1.1.0",
+    manifestDigest:
+      "sha256:a0ecb915e5b147e64b2565b6a6e8795827177b5575487741c205ff74e372c7ef",
+    lifecycle: "golden",
+    profiles: ["restaurant-ordering", "simple-ecommerce"],
+    effects: ["order.create", "order.transition"],
+    inputSchema: [
+      { key: "orderEntity", type: "domain.entity", required: true },
+    ],
+    outputSlots: [
+      "api.runtime",
+      "database.schema",
+      "page.block",
+      "flow.effect",
+      "test.fixture",
+    ],
+    runtimeHandlers: ["order"],
+    templates: [
+      {
+        id: "api-capability-module",
+        source: "templates/api/capability-module.ts.tpl",
+        target: "api/src/capabilities/commerce.order.ts",
+        outputSlot: "api.runtime",
+        digest:
+          "sha256:3223f8e96981fd8677524bad5fcadbe0165dedf0de4a9ad17a129fc2842fb2f1",
+      },
+    ],
+    parameters: [
+      { key: "orderEntity", type: "graph-symbol", required: true },
+      { key: "orderFlow", type: "graph-symbol", required: true },
+    ],
+    requires: [{ interfaceKey: "commerce.cart", version: "v1" }],
+    provides: [{ interfaceKey: "commerce.order-event", version: "v1" }],
+    verification: {
+      fixture: "fixtures/default.json",
+      fixtureDigest:
+        "sha256:30b991eacc460e246e0e8162bcf0d9067ec27a6871da96541351b82597621f1a",
+      contractTest: "tests/contract.json",
+      contractTestDigest:
+        "sha256:ba4918dad55420aadea9e44d3a6a74c778c15cedb808110d60d18364f3913954",
+      status: "verified",
+    },
+  },
+};

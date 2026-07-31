@@ -28,7 +28,7 @@ export type CapabilityOutputSlot =
   | "docs.section";
 
 export type CapabilityRuntimeHandlerKindV1 =
-  "record" | "workflow" | "cart" | "effect";
+  "record" | "workflow" | "cart" | "catalog" | "order" | "effect";
 
 export type CapabilityParameterTypeV1 = "number" | "boolean" | "graph-symbol";
 
