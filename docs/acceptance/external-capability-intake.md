@@ -3,11 +3,12 @@
 Updated: 2026-07-31
 
 Status: Task 6 is `implementing` under the Controller-authorized release repair
-at PM ledger commit `a9867b8`. Historical independent behavioral QA moved the
-slice from `ready_for_qa` to `reviewed`; release review then found two P2
-defects and no P0/P1 defect. This repair is not acceptance: a fresh independent
-QA, release review, final verification, and PM acceptance remain required
-before `accepted`.
+at PM ledger commit `a9867b8`. Independent re-QA after document repair
+`0b558fc` passed; PM ledger commit `77b4062` reconciled that evidence and moved
+the slice from `ready_for_qa` to `reviewed`. Release review against `77b4062`
+then found two P2 defects and no P0/P1 defect. This repair is not acceptance: a
+fresh independent QA, release review, final verification, and PM acceptance
+remain required before `accepted`.
 
 ## Scope
 
@@ -118,9 +119,10 @@ git diff --check
 
 ## Historical QA and active release repair
 
-Independent behavioral QA documented at `0b558fc` passed and moved Task 6 from
-`ready_for_qa` to `reviewed`. The subsequent release review at ledger commit
-`77b4062` failed the slice with two P2 findings and no P0/P1 finding:
+Independent re-QA after document repair `0b558fc` passed. PM ledger commit
+`77b4062` reconciled that evidence and moved Task 6 from `ready_for_qa` to
+`reviewed`. The subsequent release review against `77b4062` failed the slice
+with two P2 findings and no P0/P1 finding:
 
 - The directory-replacement race uses a real child process whose fail-closed
   path allows up to 10 seconds for a signal. Vitest's default 5-second outer
