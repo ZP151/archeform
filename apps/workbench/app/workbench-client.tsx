@@ -9,5 +9,7 @@ type Props = {
 };
 
 export function WorkbenchClient({ initialGraph, controlPlaneUrl }: Props) {
-  return <Workbench initialGraph={initialGraph} controlPlaneUrl={controlPlaneUrl} />;
+  return (
+    <Workbench initialGraph={initialGraph} controlPlaneUrl={controlPlaneUrl} />
+  );
 }

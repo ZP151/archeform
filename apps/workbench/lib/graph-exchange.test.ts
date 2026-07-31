@@ -15,7 +15,9 @@ describe("Graph exchange file helpers", () => {
     expect(graphExchangeFilename(exchange)).toBe(
       "ops-workspace.published-r4.factory-graph.json",
     );
-    expect(parseGraphExchangeText(serializeGraphExchange(exchange))).toEqual(exchange);
+    expect(parseGraphExchangeText(serializeGraphExchange(exchange))).toEqual(
+      exchange,
+    );
   });
 
   it("rejects JSON that is not a verified Published Graph exchange", () => {

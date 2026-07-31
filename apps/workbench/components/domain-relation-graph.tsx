@@ -30,7 +30,10 @@ export function DomainRelationGraph({ diagram }: Props) {
   }, [ownedDiagram, setEdges, setNodes]);
 
   return (
-    <section className="domain-relation-graph" aria-label="Domain relation graph">
+    <section
+      className="domain-relation-graph"
+      aria-label="Domain relation graph"
+    >
       <div className="domain-relation-heading">
         <span>Relation graph</span>
         <small>Read-only projection of the current Draft</small>

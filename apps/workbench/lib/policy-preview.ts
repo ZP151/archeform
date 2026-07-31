@@ -17,14 +17,16 @@ const casbinModel = [
   "e = some(where (p.eft == allow))",
   "",
   "[matchers]",
-  "m = r.sub == p.sub && (r.obj == p.obj || p.obj == \"*\") && r.act == p.act",
+  'm = r.sub == p.sub && (r.obj == p.obj || p.obj == "*") && r.act == p.act',
 ].join("\n");
 
 /**
  * Mirrors the Factory compiler's Casbin projection without making the
  * Workbench a policy runtime. Enforcement remains in a generated Nest API.
  */
-export function compileCasbinPolicyPreview(policy: PolicyModel): CasbinPolicyPreview {
+export function compileCasbinPolicyPreview(
+  policy: PolicyModel,
+): CasbinPolicyPreview {
   const rows = policy.permissions
     .flatMap((permission) =>
       permission.actions.map(
