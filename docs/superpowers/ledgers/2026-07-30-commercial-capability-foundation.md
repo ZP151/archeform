@@ -42,16 +42,19 @@ explicit release set is implementation commit `b2f3b9e` plus repair commit
 evidence through `ready_for_qa -> reviewed -> accepted`. Task 1 is frozen and
 accepted. Its acceptance satisfies Task 2's dependency. The PM moved Task 2
 `planned -> implementing` under the frozen Profile Composition Integration
-contract and exact five paths. External Capability Intake remains accepted and
-frozen; this dispatch imports no external content and grants no Candidate or
-provider authority. Tasks 3 through 5 remain `planned`. Tasks 3 and 4 may run
-in parallel only after Task 2 is accepted because they consume the same frozen
-profile composition metadata but write disjoint compiler and Workbench paths.
+contract and exact five paths. After implementation `35aa96e`, two bounded
+repair rounds `ed3c2ba + ac43247`, clean scoped task review, and fresh focused
+verification, the PM moved Task 2 `implementing -> ready_for_qa`. External
+Capability Intake remains accepted and frozen; this transition imports no
+external content and grants no Candidate or provider authority. Tasks 3 through
+5 remain `planned`. Tasks 3 and 4 may run in parallel only after Task 2 is
+accepted because they consume the same frozen profile composition metadata but
+write disjoint compiler and Workbench paths.
 
 | Task                                          | State          | Specialization | Contract owner                  | Contract status                                                                                     |
 | --------------------------------------------- | -------------- | -------------- | ------------------------------- | --------------------------------------------------------------------------------------------------- |
 | 1. Capability contracts and physical packages | `accepted`     | `integration`  | Factory Capability Registry     | Release set `b2f3b9e` + `4f320fd`; QA and release review PASS, with inherited limitations recorded. |
-| 2. Restaurant and Ecommerce profile recipes   | `implementing` | `integration`  | Profile Composition Integration | Task 1 accepted; bounded recipe-composition implementation active.                                  |
+| 2. Restaurant and Ecommerce profile recipes   | `ready_for_qa` | `integration`  | Profile Composition Integration | Release set `35aa96e` + `ed3c2ba` + `ac43247`; task review PASS, independent QA pending.            |
 | 3. Generic commercial generated runtime       | `planned`      | `backend`      | Compiler Runtime                | Blocked on accepted Task 2 Published Graph recipes and immutable locks.                             |
 | 4. Workbench profile composition visibility   | `planned`      | `frontend`     | Workbench Product Surface       | Blocked on accepted Task 2 profile composition metadata.                                            |
 | 5. Cross-profile acceptance and evidence      | `planned`      | `qa`           | Factory Release Evidence        | Blocked on accepted Tasks 1 through 4.                                                              |
@@ -206,7 +209,7 @@ of them requires a new recorded scope and repair state.
 
 ## Task 2: Compose Foundation Graph recipes for Restaurant and Ecommerce
 
-- **State:** `implementing`
+- **State:** `ready_for_qa`
 - **Specialization:** `integration`
 - **Contract owner:** Profile Composition Integration
 - **Contract artifact:** accepted Task 1 package identities, interfaces, and
@@ -216,13 +219,16 @@ of them requires a new recorded scope and repair state.
   four Foundation identities with different exact Graph-symbol bindings,
   entities, pages, roles, labels, and fixtures.
 
-Task 1 is accepted and frozen, so the PM moved Task 2
-`planned -> implementing`. One bounded `integration` writer owns only the exact
-five paths below. The Profile Composition Integration contract, accepted Task 1
-identities and interfaces, recipe rules, dependencies, non-goals, and
-acceptance evidence are frozen. Any new path, package identity, interface,
-binding grammar, output slot, compiler/Workbench behavior, or contract change
-stops work for PM and architecture review.
+Task 1 is accepted and frozen, so the PM first moved Task 2
+`planned -> implementing`. One bounded `integration` writer owned only the
+exact five paths below. The resulting release set is implementation `35aa96e`
+plus repair commits `ed3c2ba` and `ac43247`. Clean scoped task review and fresh
+focused verification now support `implementing -> ready_for_qa`. The Profile
+Composition Integration contract, accepted Task 1 identities and interfaces,
+recipe rules, dependencies, non-goals, and acceptance evidence remain frozen.
+Any new path, package identity, interface, binding grammar, output slot,
+compiler/Workbench behavior, or contract change stops work for PM and
+architecture review.
 
 ### Controller-authorized test-scope correction
 
@@ -244,9 +250,11 @@ This is a test-scope correction only. It changes no shared contract, physical
 asset, package identity, interface, binding grammar, output slot, dependency,
 recipe scope, lifecycle or Publish behavior, production behavior, non-goal, or
 task state. It does not approve a production fix. Task 2 remains
-`implementing`; Tasks 3 and 4 remain `planned`.
+`implementing` at the time of this amendment; Tasks 3 and 4 remain `planned`.
+The later state transition is supported only by the bounded repair and review
+evidence recorded below.
 
-### Independent task review: FAIL
+### Initial independent task review: FAIL
 
 Independent task review of implementation commit `35aa96e` returned FAIL with
 two P1 findings and one P2 finding:
@@ -259,11 +267,10 @@ two P1 findings and one P2 finding:
    differences for all four Foundation bindings and representative Graph
    contributions.
 
-The amended fifth-path authority above corrects only the test-scope boundary
-for the second finding. It does not approve commit `35aa96e`, authorize a
-production repair, or close any review finding. Task 2 remains `implementing`
-and requires repaired focused tests, fresh independent task review, QA,
-release review, and verification before acceptance.
+The amended fifth-path authority above corrected only the test-scope boundary
+for the second finding. It did not approve commit `35aa96e`, authorize a
+contract change, or close any review finding. Task 2 remained `implementing`
+until the bounded fix rounds and fresh re-review below.
 
 ### Exact allowed paths
 
@@ -274,6 +281,30 @@ release review, and verification before acceptance.
 - `packages/capabilities/test/capability-registry.test.ts` (only the canonical
   Restaurant and Simple Ecommerce expected-input corrections for the four
   Foundation locks and exact provider-uniqueness regressions above)
+
+### Fix rounds and `ready_for_qa` evidence
+
+- Exact release set: implementation `35aa96e`, fix round 1 `ed3c2ba`, and fix
+  round 2 `ac43247`. All changes remain inside the exact five paths above.
+- Fix round 1 added the missing configurable-line PolicyModel permissions,
+  exact-one ownership for non-overlapping effects, exact co-provider sets for
+  intentional inventory overlaps, and complete binding and representative
+  Graph-output assertions for both profiles.
+- Scoped re-review of fix round 1 found one remaining P1: notification-provider
+  ownership was omitted from the expected effect set.
+- Fix round 2 added exact `core.notification` ownership and asserted that the
+  expected effects equal the complete union declared by the selected assets.
+- Final scoped task re-review returned PASS with all documented findings
+  addressed and no P0/P1.
+- Fresh Node `v22.11.0` verification passed 107/107 tests across
+  `capability-registry.test.ts`, `restaurant-profile.test.ts`, and
+  `commercial-profile-composition.test.ts`. Capabilities typecheck and
+  formatting passed.
+
+The PM moved Task 2 `implementing -> ready_for_qa`. This is not acceptance:
+independent behavioral QA, later release review, and fresh verification remain
+required. Tasks 3 and 4 stay `planned`; neither is dispatched or unlocked by
+this transition.
 
 ### Non-goals
 
@@ -431,6 +462,13 @@ release review, and verification before acceptance.
   physical-verification change immediately stops Tasks 2 through 5.
 - A Task 2 profile composition metadata or binding change immediately stops
   Tasks 3 and 4. The PM must record the repair scope before work resumes.
+- Task 2 intentionally preserves exact co-provider ownership by
+  `commerce.inventory` and `commerce.inventory-ledger` for
+  `inventory.reserve`, `inventory.release`, and `inventory.decrement`. Before
+  Task 3 implementation can be dispatched, its compiler/runtime contract must
+  retain lock-derived resolution and prove that one logical stock movement
+  cannot be executed twice. Profile-name or package-version dispatch remains
+  forbidden.
 - A compiler decision based on profile name, Graph asset lock, package version
   switch, literal composition text, or mutable Draft state is a release blocker.
 - TypeScript registration and physical package content can diverge if digests
@@ -443,9 +481,10 @@ release review, and verification before acceptance.
 
 ## Next smallest valuable slice
 
-Repair Task 2's independent-review findings within its exact five paths,
-beginning with focused failing permission, cross-profile, and exact
-provider-uniqueness tests. The production repair requires fresh independent
-review. Keep Tasks 3 and 4 planned until Task 2 is accepted, and preserve the
+Run independent behavioral QA against Task 2's exact three-commit release set
+and five-path scope, including permission, cross-profile, exact-provider,
+deterministic-lock, and fail-closed regressions. Reconcile QA before any move
+to `reviewed`. Keep Tasks 3 and 4 planned until Task 2 is accepted, preserve the
 accepted Task 1 physical package, evidence digest, verified-lock, and
-Publish-boundary contracts unchanged.
+Publish-boundary contracts, and carry the inventory co-provider resolution risk
+into the future Task 3 dispatch gate.

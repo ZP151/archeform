@@ -5,12 +5,14 @@ Updated: 2026-07-31
 ## Current milestone
 
 Commercial Capability Foundation Task 2, **Restaurant and Ecommerce profile
-recipes**, is `implementing`. Its contract owner is Profile Composition
-Integration; its dependency, Task 1 capability contracts and physical
-packages, is `accepted` and frozen. Task 2 is limited to composing Restaurant
-and Ecommerce Draft recipes from the same four accepted Foundation identities
-with distinct exact Graph-symbol bindings, entities, pages, roles, labels, and
-fixtures. Foundation Tasks 3 and 4 remain `planned`.
+recipes**, is `ready_for_qa`. Its exact release set is implementation
+`35aa96e` plus repair commits `ed3c2ba` and `ac43247`. Its contract owner is
+Profile Composition Integration; its dependency, Task 1 capability contracts
+and physical packages, is `accepted` and frozen. Task 2 remains limited to
+composing Restaurant and Ecommerce Draft recipes from the same four accepted
+Foundation identities with distinct exact Graph-symbol bindings, entities,
+pages, roles, labels, and fixtures. This transition is not acceptance and does
+not unlock Foundation Tasks 3 or 4; both remain `planned`.
 
 The Application Graph remains the source of truth. External intake artifacts
 remain quarantined Candidate evidence or pending-review packets; they are not
@@ -24,6 +26,22 @@ Commercial Capability Foundation Task 1 is accepted and frozen. Its verified
 `commerce.line-configuration`, and `commerce.inventory-ledger`; their physical
 package, evidence-digest, verified-lock, and Publish-boundary contracts remain
 unchanged.
+
+Commercial Capability Foundation Task 2 completed two bounded fix rounds
+within its exact five paths:
+
+- Initial implementation `35aa96e` composed the two profile recipes. Fix round
+  1, `ed3c2ba`, added configurable-line PolicyModel permissions, exact provider
+  ownership, and complete cross-profile output assertions.
+- The first scoped re-review found one remaining P1 in notification-provider
+  coverage. Fix round 2, `ac43247`, added that ownership and an exact
+  expected-effect-union assertion.
+- Scoped re-review of `35aa96e + ed3c2ba + ac43247` returned PASS with all
+  findings addressed and no P0/P1.
+- Fresh Node `v22.11.0` verification passed 107/107 focused tests across
+  `capability-registry`, `restaurant-profile`, and
+  `commercial-profile-composition`; Capabilities typecheck and formatting also
+  passed.
 
 The complete External Capability Intake project is accepted and frozen. Its
 Task 6 writer record is
@@ -56,7 +74,8 @@ On Node `v22.11.0`, it records:
 
 ## Active work
 
-- One bounded `integration` writer owns Task 2's exact five paths:
+- Independent behavioral QA is the next gate for Task 2's exact release set
+  `35aa96e + ed3c2ba + ac43247`, bounded to these five paths:
   `packages/capabilities/src/index.ts`,
   `packages/capabilities/src/restaurant/profile.ts`,
   `packages/capabilities/test/restaurant-profile.test.ts`, and
@@ -64,13 +83,7 @@ On Node `v22.11.0`, it records:
   `packages/capabilities/test/capability-registry.test.ts` only for canonical
   Restaurant and Simple Ecommerce expected-input corrections for Task 2's four
   Foundation locks and the exact provider-uniqueness regressions below.
-- Independent task review of implementation commit `35aa96e` is FAIL with two
-  P1 findings and one P2 finding. The P1 findings are missing configurable-line
-  PolicyModel permissions and an unauthorized, weakened provider-uniqueness
-  regression. The P2 finding is under-specified cross-profile proof. The
-  production fix is not approved, the commit is not accepted, and Task 2
-  remains `implementing`.
-- The fifth-path amendment is a test-scope correction only. It may update
+- The fifth-path amendment remains a test-scope correction only. It permits
   Simple Ecommerce's canonical expected input only for Task 2's four accepted
   Foundation locks. Provider-uniqueness regressions must assert exactly one
   provider for every non-overlapping effect and, for each intentionally
@@ -79,9 +92,9 @@ On Node `v22.11.0`, it records:
   contract, physical asset, package identity, interface, dependency, recipe
   scope, lifecycle or Publish behavior, production behavior, non-goal, or Task
   2 state.
-- The slice must produce Restaurant and Ecommerce recipes selecting the same
-  four accepted identities with distinct validated Graph symbols and output
-  semantics, canonical nonempty locks, deterministic dependency order, and
+- Task 2 now awaits QA of the same four accepted identities, distinct validated
+  Graph symbols and output semantics, canonical nonempty locks, deterministic
+  dependency order, PolicyModel permissions, exact provider ownership, and
   fail-closed invalid-symbol behavior.
 - No new package identity, Task 1 contract change, compiler, Workbench,
   generated runtime, payment, identity-provider, deployment behavior, profile
@@ -101,7 +114,8 @@ On Node `v22.11.0`, it records:
   evidence. Acceptance grants no promotion, approval, Golden, Graph, compiler,
   generated-runtime, provider, or source-copy authority.
 - Foundation Tasks 3 and 4 are blocked on accepted Task 2 profile composition
-  metadata. Neither downstream task is dispatched by this update.
+  metadata. A `ready_for_qa` transition does not satisfy that dependency;
+  neither downstream task is dispatched by this update.
 
 ## Risks and limitations
 
@@ -114,12 +128,18 @@ On Node `v22.11.0`, it records:
 - Task 2 must not confuse accepted physical Foundation contracts with completed
   Restaurant or Ecommerce product behavior. Cross-profile bindings and
   deterministic recipe evidence are the gate.
+- Task 2 intentionally records `commerce.inventory` and
+  `commerce.inventory-ledger` as co-providers of `inventory.reserve`,
+  `inventory.release`, and `inventory.decrement`. Before future Task 3
+  implementation, its compiler/runtime slice must define and prove
+  lock-derived inventory resolution that cannot double-execute a stock
+  movement or select behavior by profile name. This is a downstream risk, not
+  authority to start Task 3.
 
 ## Next slice
 
-Repair Commercial Capability Foundation Task 2's independent-review findings
-within its exact five paths, beginning with focused failing permission,
-cross-profile, and exact provider-uniqueness regressions. Prove both profiles
-select the same accepted identities with distinct validated symbols and
-deterministic locks. The production repair requires fresh review; keep Tasks 3
-and 4 planned until Task 2 is accepted.
+Run independent behavioral QA against Task 2's exact release set and five-path
+scope, including permission, cross-profile, exact-provider, deterministic-lock,
+and fail-closed regressions. Reconcile QA before any move to `reviewed`. Keep
+Tasks 3 and 4 planned until Task 2 is accepted, and carry the inventory
+co-provider resolution risk into the future Task 3 gate.
