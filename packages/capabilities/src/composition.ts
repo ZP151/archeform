@@ -3,11 +3,22 @@ import {
   type CapabilityAssetLockV1,
   type CapabilityAssetManifestV1,
   type CapabilityAssetV1,
+  type CapabilityBindingFieldTypeV1,
+  type CapabilityBindingInputTypeV1,
+  type CapabilityBindingInputV1,
   type CapabilityParameterSchemaV1,
 } from "./assets/index.js";
 
+export interface GraphSymbolBindingV1 {
+  readonly graphSymbol: string;
+}
+
+export interface GraphFieldBindingV1 extends GraphSymbolBindingV1 {
+  readonly fieldKey: string;
+}
+
 export type CapabilityBindingValueV1 =
-  number | boolean | { readonly graphSymbol: string };
+  number | boolean | GraphSymbolBindingV1 | GraphFieldBindingV1;
 
 export interface CapabilitySelectionV1 {
   readonly lock: CapabilityAssetLockV1;
@@ -44,6 +55,8 @@ export interface CreateCapabilityCompositionLockInput extends ResolveCapabilityC
 const sha256Pattern = /^sha256:[a-f0-9]{64}$/;
 const graphSymbolPattern =
   /^graph\.(?:page|domain|policy|flow|integration|experience)\.[a-z][a-z0-9-]*$/;
+const domainEntitySymbolPattern = /^graph\.domain\.[a-z][a-z0-9-]*$/;
+const fieldKeyPattern = /^[a-z][a-zA-Z0-9_]*$/;
 const parameterKeyPattern = /^[a-z][a-zA-Z0-9]*$/;
 const prototypeReservedParameterKeys = new Set([
   "constructor",
@@ -56,6 +69,35 @@ const prototypeReservedParameterKeys = new Set([
   "valueOf",
 ]);
 const supportedParameterTypes = new Set(["number", "boolean", "graph-symbol"]);
+const supportedBindingInputTypes = new Set<CapabilityBindingInputTypeV1>([
+  "domain.entity",
+  "domain.field",
+  "page.page",
+  "page.navigation",
+  "policy.role",
+  "flow.flow",
+  "integration.provider",
+  "experience.token",
+]);
+const supportedBindingFieldTypes = new Set<CapabilityBindingFieldTypeV1>([
+  "string",
+  "text",
+  "integer",
+  "decimal",
+  "boolean",
+  "date",
+  "datetime",
+  "enum",
+  "json",
+  "url",
+  "email",
+]);
+const fieldConstraintKeys = [
+  "ownerBinding",
+  "fieldTypes",
+  "fieldRequired",
+  "fieldUnique",
+] as const;
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -204,6 +246,7 @@ function assertBindingValue(
   packageKey: string,
   schema: CapabilityParameterSchemaV1,
   value: CapabilityBindingValueV1,
+  bindingSchema?: CapabilityBindingInputV1,
 ): void {
   const label = `Capability package '${packageKey}' parameter '${schema.key}'`;
   if (schema.type === "number") {
@@ -217,6 +260,34 @@ function assertBindingValue(
       throw new Error(`${label} must be a boolean.`);
     }
     return;
+  }
+  if (bindingSchema?.type === "domain.field") {
+    if (
+      typeof value !== "object" ||
+      value === null ||
+      Object.keys(value).length !== 2 ||
+      !("graphSymbol" in value) ||
+      typeof value.graphSymbol !== "string" ||
+      !domainEntitySymbolPattern.test(value.graphSymbol) ||
+      !("fieldKey" in value) ||
+      typeof value.fieldKey !== "string" ||
+      !fieldKeyPattern.test(value.fieldKey)
+    ) {
+      throw new Error(
+        `${label} must include an owning domain graphSymbol and fieldKey.`,
+      );
+    }
+    return;
+  }
+  if (
+    bindingSchema &&
+    typeof value === "object" &&
+    value !== null &&
+    "fieldKey" in value
+  ) {
+    throw new Error(
+      `${label} cannot include fieldKey for a '${bindingSchema.type}' input.`,
+    );
   }
   if (
     typeof value !== "object" ||
@@ -243,8 +314,14 @@ function canonicalSelection(
   for (const key of Object.keys(selection.bindings).sort()) {
     const value = selection.bindings[key];
     if (value === undefined) continue;
+    if (typeof value !== "object") {
+      bindings[key] = value;
+      continue;
+    }
     bindings[key] =
-      typeof value === "object" ? { graphSymbol: value.graphSymbol } : value;
+      "fieldKey" in value
+        ? { graphSymbol: value.graphSymbol, fieldKey: value.fieldKey }
+        : { graphSymbol: value.graphSymbol };
   }
   return {
     lock: {
@@ -278,10 +355,151 @@ function matchingManifest(
   return matched.manifest;
 }
 
+export function validateCapabilityBindingSchema(
+  manifest: CapabilityAssetManifestV1,
+): ReadonlyMap<string, CapabilityBindingInputV1> {
+  if (manifest.bindingContract === undefined) {
+    return new Map();
+  }
+  if (manifest.bindingContract !== "factory.capability-binding/v1") {
+    throw new Error(
+      `Capability package '${manifest.key}' declares an unsupported binding contract '${String(manifest.bindingContract)}'.`,
+    );
+  }
+
+  const bindingSchemas = new Map<string, CapabilityBindingInputV1>();
+  for (const untrustedSchema of manifest.inputSchema) {
+    const schema = untrustedSchema as CapabilityBindingInputV1;
+    if (
+      !parameterKeyPattern.test(schema.key) ||
+      prototypeReservedParameterKeys.has(schema.key)
+    ) {
+      throw new Error(
+        `Capability package '${manifest.key}' input schema '${schema.key}' must use a safe parameter key.`,
+      );
+    }
+    if (bindingSchemas.has(schema.key)) {
+      throw new Error(
+        `Capability package '${manifest.key}' declares duplicate input schema '${schema.key}'.`,
+      );
+    }
+    if (!supportedBindingInputTypes.has(schema.type)) {
+      throw new Error(
+        `Capability package '${manifest.key}' does not support binding input type '${String(schema.type)}'.`,
+      );
+    }
+    if (typeof schema.required !== "boolean") {
+      throw new Error(
+        `Capability package '${manifest.key}' input '${schema.key}' required must be a boolean.`,
+      );
+    }
+
+    if (schema.type === "domain.field") {
+      if (
+        typeof schema.ownerBinding !== "string" ||
+        !parameterKeyPattern.test(schema.ownerBinding) ||
+        prototypeReservedParameterKeys.has(schema.ownerBinding)
+      ) {
+        throw new Error(
+          `Capability package '${manifest.key}' domain.field '${schema.key}' requires a safe ownerBinding.`,
+        );
+      }
+      if (
+        !Array.isArray(schema.fieldTypes) ||
+        schema.fieldTypes.length === 0 ||
+        schema.fieldTypes.some(
+          (fieldType) => !supportedBindingFieldTypes.has(fieldType),
+        )
+      ) {
+        throw new Error(
+          `Capability package '${manifest.key}' domain.field '${schema.key}' requires one or more supported fieldTypes.`,
+        );
+      }
+      if (
+        schema.fieldRequired !== undefined &&
+        typeof schema.fieldRequired !== "boolean"
+      ) {
+        throw new Error(
+          `Capability package '${manifest.key}' domain.field '${schema.key}' fieldRequired must be a boolean.`,
+        );
+      }
+      if (
+        schema.fieldUnique !== undefined &&
+        typeof schema.fieldUnique !== "boolean"
+      ) {
+        throw new Error(
+          `Capability package '${manifest.key}' domain.field '${schema.key}' fieldUnique must be a boolean.`,
+        );
+      }
+    } else {
+      const invalidConstraint = fieldConstraintKeys.find((key) =>
+        Object.hasOwn(schema, key),
+      );
+      if (invalidConstraint) {
+        throw new Error(
+          `Capability package '${manifest.key}' input '${schema.key}' declares '${invalidConstraint}', which is only valid for domain.field inputs.`,
+        );
+      }
+    }
+
+    bindingSchemas.set(schema.key, schema);
+  }
+
+  for (const schema of bindingSchemas.values()) {
+    if (schema.type !== "domain.field") continue;
+    const owner = bindingSchemas.get(schema.ownerBinding);
+    if (!owner) {
+      throw new Error(
+        `Capability package '${manifest.key}' domain.field '${schema.key}' references unknown ownerBinding '${schema.ownerBinding}'.`,
+      );
+    }
+    if (owner.type !== "domain.entity" || owner.required !== true) {
+      throw new Error(
+        `Capability package '${manifest.key}' domain.field '${schema.key}' ownerBinding '${schema.ownerBinding}' must reference a required domain.entity input.`,
+      );
+    }
+  }
+
+  const parameters = manifest.parameters ?? [];
+  const parameterSchemas = new Map(
+    parameters.map((parameter) => [parameter.key, parameter] as const),
+  );
+  if (
+    parameterSchemas.size !== parameters.length ||
+    parameterSchemas.size !== bindingSchemas.size ||
+    [...parameterSchemas.keys()].some((key) => !bindingSchemas.has(key))
+  ) {
+    throw new Error(
+      `Capability package '${manifest.key}' strict parameters and inputSchema must have identical keys.`,
+    );
+  }
+  for (const [key, bindingSchema] of bindingSchemas) {
+    const parameter = parameterSchemas.get(key);
+    if (!parameter) {
+      throw new Error(
+        `Capability package '${manifest.key}' strict parameters and inputSchema must have identical keys.`,
+      );
+    }
+    if (parameter.required !== bindingSchema.required) {
+      throw new Error(
+        `Capability package '${manifest.key}' parameter '${key}' required flag must match inputSchema.`,
+      );
+    }
+    if (parameter.type !== "graph-symbol") {
+      throw new Error(
+        `Capability package '${manifest.key}' typed binding parameter '${key}' must use graph-symbol.`,
+      );
+    }
+  }
+
+  return bindingSchemas;
+}
+
 function validateBindings(
   manifest: CapabilityAssetManifestV1,
   bindings: Readonly<Record<string, CapabilityBindingValueV1>>,
 ): void {
+  const bindingSchemas = validateCapabilityBindingSchema(manifest);
   const parameters = manifest.parameters ?? [];
   const schemas = new Map<string, CapabilityParameterSchemaV1>();
   for (const schema of parameters) {
@@ -313,7 +531,12 @@ function validateBindings(
         `Capability package '${manifest.key}' does not declare parameter '${key}'.`,
       );
     }
-    assertBindingValue(manifest.key, schema, value);
+    assertBindingValue(
+      manifest.key,
+      schema,
+      value,
+      bindingSchemas.get(schema.key),
+    );
   }
   for (const schema of parameters) {
     if (schema.required && !Object.hasOwn(bindings, schema.key)) {

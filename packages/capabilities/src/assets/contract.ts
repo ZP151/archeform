@@ -35,6 +35,67 @@ export interface CapabilityParameterSchemaV1 {
   readonly required: boolean;
 }
 
+export type CapabilityBindingContractV1 = "factory.capability-binding/v1";
+
+export type CapabilityBindingInputTypeV1 =
+  | "domain.entity"
+  | "domain.field"
+  | "page.page"
+  | "page.navigation"
+  | "policy.role"
+  | "flow.flow"
+  | "integration.provider"
+  | "experience.token";
+
+export type CapabilityBindingFieldTypeV1 =
+  ApplicationGraphV1["domain"]["entities"][number]["fields"][number]["type"];
+
+interface CapabilityBindingInputBaseV1 {
+  readonly key: string;
+  readonly required: boolean;
+}
+
+export interface CapabilityDomainFieldBindingInputV1 extends CapabilityBindingInputBaseV1 {
+  readonly type: "domain.field";
+  readonly ownerBinding: string;
+  readonly fieldTypes: readonly CapabilityBindingFieldTypeV1[];
+  readonly fieldRequired?: boolean;
+  readonly fieldUnique?: boolean;
+}
+
+export interface CapabilityNonFieldBindingInputV1 extends CapabilityBindingInputBaseV1 {
+  readonly type: Exclude<CapabilityBindingInputTypeV1, "domain.field">;
+  readonly ownerBinding?: never;
+  readonly fieldTypes?: never;
+  readonly fieldRequired?: never;
+  readonly fieldUnique?: never;
+}
+
+export type CapabilityBindingInputV1 =
+  CapabilityDomainFieldBindingInputV1 | CapabilityNonFieldBindingInputV1;
+
+export type LegacyCapabilityInputTypeV1 =
+  | "currency.code"
+  | "domain.entities"
+  | "domain.entity"
+  | "domain.field"
+  | "duration"
+  | "flow.model"
+  | "http.header"
+  | "integer"
+  | "message.template"
+  | "page.page"
+  | "policy.role";
+
+export interface LegacyCapabilityInputV1 {
+  readonly key: string;
+  readonly type: LegacyCapabilityInputTypeV1;
+  readonly required: boolean;
+}
+
+export type CapabilityManifestInputV1 =
+  LegacyCapabilityInputV1 | CapabilityBindingInputV1;
+
 export type CapabilityGraphModelV1 = Exclude<
   keyof ApplicationGraphV1,
   "apiVersion" | "metadata"
@@ -83,6 +144,7 @@ export interface CapabilityTemplateContributionV1 {
 
 export interface CapabilityAssetManifestV1 {
   readonly apiVersion: "factory.capability/v1";
+  readonly bindingContract?: CapabilityBindingContractV1;
   readonly key: string;
   readonly version: string;
   readonly category: CapabilityCategory;
@@ -93,11 +155,7 @@ export interface CapabilityAssetManifestV1 {
   readonly lifecycle: "golden";
   readonly profiles: readonly FactoryProfile[];
   readonly effects: readonly string[];
-  readonly inputSchema: readonly {
-    readonly key: string;
-    readonly type: string;
-    readonly required: boolean;
-  }[];
+  readonly inputSchema: readonly CapabilityManifestInputV1[];
   readonly outputSlots: readonly CapabilityOutputSlot[];
   readonly templates: readonly CapabilityTemplateContributionV1[];
   readonly parameters?: readonly CapabilityParameterSchemaV1[];

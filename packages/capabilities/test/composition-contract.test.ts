@@ -262,6 +262,43 @@ describe("capability composition contract", () => {
     });
   });
 
+  it("keeps an owner-aware field key in a strict composition lock", () => {
+    const typedAsset = asset("core.typed-field-lock-test", {
+      bindingContract: "factory.capability-binding/v1",
+      inputSchema: [
+        { key: "entity", type: "domain.entity", required: true },
+        {
+          key: "field",
+          type: "domain.field",
+          required: true,
+          ownerBinding: "entity",
+          fieldTypes: ["integer"],
+        },
+      ],
+      parameters: [
+        { key: "entity", type: "graph-symbol", required: true },
+        { key: "field", type: "graph-symbol", required: true },
+      ],
+    } as unknown as Partial<CapabilityAssetManifestV1>);
+    const bindings = {
+      entity: { graphSymbol: "graph.domain.product" },
+      field: {
+        graphSymbol: "graph.domain.product",
+        fieldKey: "stock",
+      },
+    } as unknown as CapabilitySelectionV1["bindings"];
+
+    const lock = createCapabilityCompositionLockForAssets(
+      {
+        graphChecksum: digest("a"),
+        selections: [selection(typedAsset, bindings)],
+      },
+      [typedAsset],
+    );
+
+    expect(lock.packages[0]?.bindings).toEqual(bindings);
+  });
+
   it("rejects Graph-symbol binding objects with extra fields", () => {
     const runtimeSelection = selection(crudAssetV1_0_1, {
       entityKey: {
