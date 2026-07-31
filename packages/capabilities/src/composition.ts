@@ -52,6 +52,18 @@ export interface CreateCapabilityCompositionLockInput extends ResolveCapabilityC
   readonly graphChecksum: string;
 }
 
+export interface CapturedCapabilityCompositionResolutionV1<
+  T extends ResolveCapabilityCompositionInput,
+> {
+  readonly input: Readonly<T>;
+  readonly resolve: () => CapabilityCompositionV1;
+}
+
+export interface CapturedCapabilityCompositionLockV1 {
+  readonly input: Readonly<CreateCapabilityCompositionLockInput>;
+  readonly createLock: () => CapabilityCompositionLockV1;
+}
+
 const sha256Pattern = /^sha256:[a-f0-9]{64}$/;
 const graphSymbolPattern =
   /^graph\.(?:page|domain|policy|flow|integration|experience)\.[a-z][a-z0-9-]*$/;
@@ -800,7 +812,7 @@ function strictParameterSchemas(
     }
     schemas.set(
       snapshot.key,
-      Object.freeze({
+      deepFreeze({
         key: snapshot.key,
         type: snapshot.type as CapabilityParameterSchemaV1["type"],
         required: snapshot.required,
@@ -832,7 +844,7 @@ function validateCapabilityBindingSchemaSnapshot(
     }
     // This boundary is intentionally after snapshotOwnDataRecord: all following
     // checks operate on a plain, own-data snapshot rather than caller-owned data.
-    const schema = snapshot as unknown as CapabilityBindingInputV1;
+    const schema = deepFreeze(snapshot) as unknown as CapabilityBindingInputV1;
     if (!Object.hasOwn(schema, "key") || !Object.hasOwn(schema, "type")) {
       throw new Error(
         `Capability package '${manifest.key}' input schema must declare own key and type values.`,
@@ -1197,29 +1209,36 @@ export function resolveCapabilityCompositionForAssets(
   );
 }
 
+export function captureCapabilityCompositionResolution<
+  T extends ResolveCapabilityCompositionInput,
+>(input: T): CapturedCapabilityCompositionResolutionV1<T> {
+  const captured = captureResolutionInputV1(input, capabilityAssets);
+  return Object.freeze({
+    input: captured.input,
+    resolve: () =>
+      resolveCapabilityCompositionFromSnapshot(captured.input, captured.assets),
+  });
+}
+
 export function resolveCapabilityComposition(
   input: ResolveCapabilityCompositionInput,
 ): CapabilityCompositionV1 {
-  return resolveCapabilityCompositionForAssets(input, capabilityAssets);
+  return captureCapabilityCompositionResolution(input).resolve();
 }
 
-export function createCapabilityCompositionLockForAssets(
-  input: CreateCapabilityCompositionLockInput,
-  assets: readonly CapabilityAssetV1[],
+function createCapabilityCompositionLockFromSnapshot(
+  input: ResolutionInputSnapshotV1<CreateCapabilityCompositionLockInput>,
+  assets: readonly CapabilityAssetSnapshotV1[],
 ): CapabilityCompositionLockV1 {
-  const captured = captureResolutionInputV1(input, assets);
-  if (!sha256Pattern.test(captured.input.graphChecksum)) {
+  if (!sha256Pattern.test(input.graphChecksum)) {
     throw new Error(
       "Application Graph checksum must be a sha256-prefixed lowercase digest.",
     );
   }
-  const composition = resolveCapabilityCompositionFromSnapshot(
-    captured.input,
-    captured.assets,
-  );
+  const composition = resolveCapabilityCompositionFromSnapshot(input, assets);
   const unsignedLock = {
     apiVersion: "factory.composition/v1" as const,
-    applicationGraphChecksum: captured.input.graphChecksum,
+    applicationGraphChecksum: input.graphChecksum,
     packages: composition.packages,
     resolvedContributionDigests: composition.resolvedContributionDigests,
     providedAndRequiredInterfaces: composition.providedAndRequiredInterfaces,
@@ -1232,8 +1251,33 @@ export function createCapabilityCompositionLockForAssets(
   });
 }
 
+export function createCapabilityCompositionLockForAssets(
+  input: CreateCapabilityCompositionLockInput,
+  assets: readonly CapabilityAssetV1[],
+): CapabilityCompositionLockV1 {
+  const captured = captureResolutionInputV1(input, assets);
+  return createCapabilityCompositionLockFromSnapshot(
+    captured.input,
+    captured.assets,
+  );
+}
+
+export function captureCapabilityCompositionLock(
+  input: CreateCapabilityCompositionLockInput,
+): CapturedCapabilityCompositionLockV1 {
+  const captured = captureResolutionInputV1(input, capabilityAssets);
+  return Object.freeze({
+    input: captured.input,
+    createLock: () =>
+      createCapabilityCompositionLockFromSnapshot(
+        captured.input,
+        captured.assets,
+      ),
+  });
+}
+
 export function createCapabilityCompositionLock(
   input: CreateCapabilityCompositionLockInput,
 ): CapabilityCompositionLockV1 {
-  return createCapabilityCompositionLockForAssets(input, capabilityAssets);
+  return captureCapabilityCompositionLock(input).createLock();
 }

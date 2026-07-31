@@ -90,15 +90,28 @@ const validBindings = {
 } as unknown as Readonly<Record<string, CapabilityBindingValueV1>>;
 
 describe("typed capability binding contract", () => {
-  it("exposes a runtime-immutable compiled binding schema map", () => {
+  it("exposes deeply runtime-immutable compiled binding schemas", () => {
     const schemas = validateCapabilityBindingSchema(
-      strictManifest([requiredEntity], [entityParameter]),
+      strictManifest(
+        [requiredEntity, requiredField],
+        [entityParameter, fieldParameter],
+      ),
     );
+    const fieldSchema = schemas.get("stockField")!;
 
     expect(() =>
       (schemas as Map<string, unknown>).set("unexpected", requiredEntity),
     ).toThrow();
-    expect([...schemas.keys()]).toEqual(["catalogEntity"]);
+    expect(() => {
+      (fieldSchema as unknown as { ownerBinding: string }).ownerBinding =
+        "unexpected";
+    }).toThrow();
+    expect(() =>
+      (fieldSchema as unknown as { fieldTypes: string[] }).fieldTypes.push(
+        "string",
+      ),
+    ).toThrow();
+    expect(fieldSchema).toEqual(requiredField);
   });
 
   it("rejects an unsupported binding contract version", () => {

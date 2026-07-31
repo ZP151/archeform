@@ -1,3 +1,6 @@
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -9,8 +12,10 @@ import {
   type CapabilityAssetV1,
 } from "../src/assets/index.js";
 import {
+  composeCapabilityDraft,
   composeDefaultCapabilityDraft,
   createCapabilityCompositionLock,
+  getCapabilityAsset,
   resolveCapabilityComposition,
   type CapabilitySelectionV1,
 } from "../src/index.js";
@@ -19,8 +24,13 @@ import {
   resolveCapabilityCompositionForAssets,
   type ResolveCapabilityCompositionInput,
 } from "../src/composition.js";
+import { createVerifiedCapabilityCompositionLock } from "../src/node.js";
 
 const digest = (character: string): string => `sha256:${character.repeat(64)}`;
+const repositoryRoot = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../..",
+);
 
 function manifest(
   key: string,
@@ -98,6 +108,66 @@ const catalogSelection: CapabilitySelectionV1 = {
 };
 
 describe("capability composition contract", () => {
+  it("captures a verified lock selection before physical package verification", () => {
+    let lockReads = 0;
+    const selected = {
+      bindings: {
+        actorRole: { graphSymbol: "graph.policy.customer" },
+      },
+    } as unknown as CapabilitySelectionV1;
+    Object.defineProperty(selected, "lock", {
+      configurable: true,
+      enumerable: true,
+      get: () => {
+        lockReads += 1;
+        Object.defineProperty(selected, "lock", {
+          enumerable: true,
+          value: lockCapabilityAsset(getCapabilityAsset("core.audit")),
+        });
+        return lockCapabilityAsset(getCapabilityAsset("restaurant.menu"));
+      },
+    });
+
+    expect(() =>
+      createVerifiedCapabilityCompositionLock(
+        { graphChecksum: digest("a"), selections: [selected] },
+        repositoryRoot,
+      ),
+    ).toThrow("FACTORY_COMPOSITION_INPUT_CAPTURE_INVALID");
+    expect(lockReads).toBe(0);
+  });
+
+  it("captures draft selections before checking provider overlaps", () => {
+    const draft = composeDefaultCapabilityDraft({
+      profile: "restaurant-ordering",
+    });
+    let lockReads = 0;
+    const selected = { bindings: {} } as unknown as CapabilitySelectionV1;
+    Object.defineProperty(selected, "lock", {
+      configurable: true,
+      enumerable: true,
+      get: () => {
+        lockReads += 1;
+        Object.defineProperty(selected, "lock", {
+          enumerable: true,
+          value: lockCapabilityAsset(getCapabilityAsset("restaurant.menu")),
+        });
+        return lockCapabilityAsset(getCapabilityAsset("restaurant.reporting"));
+      },
+    });
+
+    expect(() =>
+      composeCapabilityDraft({
+        graph: draft.graph,
+        selections: [
+          ...(draft.graph.integration.compositionSelections ?? []),
+          selected,
+        ],
+      }),
+    ).toThrow("FACTORY_COMPOSITION_INPUT_CAPTURE_INVALID");
+    expect(lockReads).toBe(0);
+  });
+
   it("creates one coherent lock from each owned strict contract", () => {
     const typedAsset = asset("core.coherent-contract-test", {
       bindingContract: "factory.capability-binding/v1",

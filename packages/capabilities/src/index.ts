@@ -13,7 +13,7 @@ import {
   type FactoryProfile,
 } from "./assets/index.js";
 import {
-  resolveCapabilityComposition,
+  captureCapabilityCompositionResolution,
   type CapabilityCompositionV1,
   type CapabilitySelectionV1,
 } from "./composition.js";
@@ -635,13 +635,14 @@ function assertCompositionPolicyPermissions(
 export function composeCapabilityDraft(
   input: CapabilityDraftCompositionInput,
 ): CapabilityDraftCompositionResult {
-  const graph = structuredClone(assertValidApplicationGraph(input.graph));
-  assertCapabilityEffectProviderOverlaps(
-    input.selections.map(({ lock }) => lock.key),
+  const captured = captureCapabilityCompositionResolution(input);
+  const graph = structuredClone(
+    assertValidApplicationGraph(captured.input.graph),
   );
-  const composition = resolveCapabilityComposition({
-    selections: input.selections,
-  });
+  const composition = captured.resolve();
+  assertCapabilityEffectProviderOverlaps(
+    composition.packages.map(({ lock }) => lock.key),
+  );
   assertCompositionGraphSymbols(graph, composition);
   assertInventoryLedgerGraphSemantics(graph, composition);
   assertCompositionPolicyPermissions(graph, composition);

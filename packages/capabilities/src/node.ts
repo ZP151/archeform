@@ -19,7 +19,7 @@ import type {
   CapabilityTemplateContributionV1,
 } from "./assets/index.js";
 import {
-  createCapabilityCompositionLock,
+  captureCapabilityCompositionLock,
   type CapabilityCompositionLockV1,
   type CreateCapabilityCompositionLockInput,
 } from "./composition.js";
@@ -790,7 +790,8 @@ export function createVerifiedCapabilityCompositionLock(
   input: CreateCapabilityCompositionLockInput,
   repositoryRoot: string,
 ): CapabilityCompositionLockV1 {
-  for (const selection of input.selections) {
+  const captured = captureCapabilityCompositionLock(input);
+  for (const selection of captured.input.selections) {
     const asset = resolveCapabilityAssetLock(selection.lock);
     const invalid = verifyCapabilityAssetPackage(asset, repositoryRoot);
     if (invalid.length > 0) {
@@ -799,5 +800,5 @@ export function createVerifiedCapabilityCompositionLock(
       );
     }
   }
-  return createCapabilityCompositionLock(input);
+  return captured.createLock();
 }
