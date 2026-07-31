@@ -2,9 +2,9 @@
 
 Updated: 2026-07-31
 
-Status: Task 6 remains `implementing`. Task review and PM reconciliation may
-move it to `ready_for_qa`; independent behavioral QA, release review, and
-fresh final verification remain required before `accepted`.
+Status: Task 6 is `ready_for_qa` at PM ledger commit `29e581d`. Independent
+behavioral QA is the next gate; release review, fresh final verification, and
+PM acceptance remain required before `accepted`.
 
 ## Scope
 
@@ -123,6 +123,5 @@ git diff --check
 - Preflight proves intake request isolation and resume-stable CLI output. It
   does not make a licence decision, approve a packet, create a Golden asset, or
   authorize source copying.
-- Task review and PM reconciliation remain required before a
-  `ready_for_qa` transition. Independent behavioral QA, release review, and
-  fresh final verification remain required before `accepted`.
+- Independent behavioral QA, release review, fresh final verification, and PM
+  acceptance remain required before `accepted`.
