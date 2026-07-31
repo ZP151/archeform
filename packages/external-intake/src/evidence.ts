@@ -1,7 +1,9 @@
 import { canonicalRecordDigest, digestBytes } from "./canonical.js";
 import {
+  parseExternalIntakeBatch,
   parseExternalSourceAcquisition,
   parseIntakeRequest,
+  type ExternalIntakeBatchV1,
   type ExternalSourceAcquisitionV1,
   type IntakeReceiptV1,
   type IntakeRequestV1,
@@ -33,6 +35,18 @@ class AcquisitionFailure extends Error {
   ) {
     super(message);
   }
+}
+
+export type AcquisitionBatchItemResultV1 =
+  | {
+      readonly status: "acquired";
+      readonly snapshot: StoredRecordRef;
+      readonly acquisition: StoredRecordRef;
+    }
+  | { readonly status: "blocked"; readonly failureCode: string };
+
+export interface AcquisitionBatchResultV1 {
+  readonly byId: Readonly<Record<string, AcquisitionBatchItemResultV1>>;
 }
 
 function errorMessage(error: unknown, fallback: string): string {
@@ -346,4 +360,40 @@ export async function acquireSourceEvidence(
     );
     throw failure;
   }
+}
+
+function acquisitionFailureCode(error: unknown): string {
+  if (error instanceof AcquisitionFailure) {
+    return error.code;
+  }
+  return "source-acquisition-failed";
+}
+
+export async function acquireSourceBatch(
+  input: unknown,
+  client: FixedSourceClient,
+  store: ExternalIntakeStore,
+): Promise<AcquisitionBatchResultV1> {
+  const batch: ExternalIntakeBatchV1 = parseExternalIntakeBatch(input);
+  const byId: Record<string, AcquisitionBatchItemResultV1> = Object.create(
+    null,
+  ) as Record<string, AcquisitionBatchItemResultV1>;
+
+  for (const item of batch.items) {
+    try {
+      const request = parseIntakeRequest(item.request);
+      const result = await acquireSourceEvidence(request, client, store);
+      byId[item.id] = { status: "acquired", ...result };
+    } catch (error) {
+      byId[item.id] = {
+        status: "blocked",
+        failureCode:
+          error instanceof AcquisitionFailure
+            ? acquisitionFailureCode(error)
+            : "invalid-intake-request",
+      };
+    }
+  }
+
+  return { byId };
 }

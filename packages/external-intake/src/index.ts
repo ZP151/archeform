@@ -7,6 +7,7 @@ export {
 export {
   parseCandidateCapability,
   parseEvidenceBundle,
+  parseExternalIntakeBatch,
   parseExternalSourceAcquisition,
   parseIntakeReceipt,
   parseIntakeRequest,
@@ -14,6 +15,7 @@ export {
   parseSourceSnapshot,
   type CandidateCapabilityV1,
   type EvidenceBundleV1,
+  type ExternalIntakeBatchV1,
   type ExternalSourceAcquisitionV1,
   type IntakeReceiptV1,
   type IntakeRecordKind,

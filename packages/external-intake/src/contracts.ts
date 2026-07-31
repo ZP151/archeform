@@ -221,6 +221,27 @@ export const intakeRequestSchema = z
     "Intake requests cannot declare parent records.",
   );
 
+export const externalIntakeBatchSchema = z
+  .object({
+    apiVersion: z.literal("factory.external-intake-batch/v1"),
+    items: z
+      .array(
+        z
+          .object({
+            id: opaqueIdSchema,
+            request: z.unknown(),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(1_000)
+      .refine(
+        (items) => new Set(items.map(({ id }) => id)).size === items.length,
+        "External Intake batch item IDs must be unique.",
+      ),
+  })
+  .strict();
+
 const originEvidenceSchema = z
   .object({
     url: canonicalHttpsUrlSchema,
@@ -620,6 +641,7 @@ export const intakeReceiptSchema = z
   .strict();
 
 export type IntakeRequestV1 = z.infer<typeof intakeRequestSchema>;
+export type ExternalIntakeBatchV1 = z.infer<typeof externalIntakeBatchSchema>;
 export type SourceSnapshotV1 = z.infer<typeof sourceSnapshotSchema>;
 export type ExternalSourceAcquisitionV1 = z.infer<
   typeof externalSourceAcquisitionSchema
@@ -659,6 +681,12 @@ function parseStrict<TSchema extends z.ZodTypeAny>(
 
 export function parseIntakeRequest(input: unknown): IntakeRequestV1 {
   return parseStrict(intakeRequestSchema, input);
+}
+
+export function parseExternalIntakeBatch(
+  input: unknown,
+): ExternalIntakeBatchV1 {
+  return parseStrict(externalIntakeBatchSchema, input);
 }
 
 export function parseSourceSnapshot(input: unknown): SourceSnapshotV1 {

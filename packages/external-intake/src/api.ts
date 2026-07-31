@@ -15,9 +15,11 @@ import {
 } from "./conformance.js";
 import {
   parseEvidenceBundle,
+  parseExternalIntakeBatch,
   parseIntakeReceipt,
   parseIntakeRequest,
   type EvidenceBundleV1,
+  type ExternalIntakeBatchV1,
   type IntakeRequestV1,
 } from "./contracts.js";
 import {
@@ -29,34 +31,6 @@ import { ExternalIntakeStore, type StoredRecordRef } from "./store.js";
 
 const DIGEST = /^sha256:[a-f0-9]{64}$/u;
 const opaqueIdSchema = z.string().regex(/^[a-z][a-z0-9-]{0,127}$/u);
-const batchSchema = z
-  .object({
-    apiVersion: z.literal("factory.external-intake-batch/v1"),
-    items: z
-      .array(
-        z
-          .object({
-            id: opaqueIdSchema,
-            request: z.unknown(),
-          })
-          .strict(),
-      )
-      .min(1)
-      .max(1_000)
-      .refine(
-        (items) => new Set(items.map(({ id }) => id)).size === items.length,
-      ),
-  })
-  .strict();
-
-export interface ExternalIntakeBatchV1 {
-  readonly apiVersion: "factory.external-intake-batch/v1";
-  readonly items: readonly {
-    readonly id: string;
-    readonly request: unknown;
-  }[];
-}
-
 export interface ExternalIntakeBatchItemResultV1 {
   readonly status: "requested" | "blocked";
   readonly request?: StoredRecordRef;
@@ -131,9 +105,9 @@ export function createExternalIntakeApi(
 
   return {
     submitBatch(input: unknown): ExternalIntakeBatchResultV1 {
-      let batch: z.infer<typeof batchSchema>;
+      let batch: ExternalIntakeBatchV1;
       try {
-        batch = batchSchema.parse(input);
+        batch = parseExternalIntakeBatch(input);
       } catch {
         throw new TypeError("External Intake requires strict batch input.");
       }

@@ -15,7 +15,7 @@ import type {
   ExternalSourceAcquisitionV1,
   IntakeRequestV1,
 } from "../src/contracts.js";
-import { acquireSourceEvidence } from "../src/evidence.js";
+import { acquireSourceBatch, acquireSourceEvidence } from "../src/evidence.js";
 import type {
   FixedSourceClient,
   ResolvedSourceReferenceV1,
@@ -137,6 +137,38 @@ afterEach(() => {
 });
 
 describe("licence, notice, and provenance acquisition", () => {
+  it("acquires an independent fixed source while blocking a sibling commit mismatch", async () => {
+    const { root, store } = tempStore();
+    const result = await acquireSourceBatch(
+      {
+        apiVersion: "factory.external-intake-batch/v1",
+        items: [
+          { id: "safe-source", request },
+          {
+            id: "bad-source",
+            request: {
+              ...request,
+              source: {
+                ...request.source,
+                expectedCommit: "b".repeat(40),
+              },
+            },
+          },
+        ],
+      },
+      new EvidenceFixtureClient(),
+      store,
+    );
+
+    expect(result.byId["safe-source"]?.status).toBe("acquired");
+    expect(result.byId["bad-source"]).toEqual({
+      status: "blocked",
+      failureCode: "resolved-commit-mismatch",
+    });
+    expect(existsSync(join(root, "records", "candidate"))).toBe(false);
+    expect(existsSync(join(root, "records", "promotion"))).toBe(false);
+  });
+
   it.each([
     { label: "null", rejection: null },
     { label: "undefined", rejection: undefined },
