@@ -55,7 +55,11 @@ import {
   type ScanKindV1,
 } from "../src/scans.js";
 import { canonicalTreeDigest } from "../src/snapshot.js";
-import { ExternalIntakeStore } from "../src/store.js";
+import {
+  claimCandidateCreation,
+  ExternalIntakeStore,
+  type CandidateCreationClaimV1,
+} from "../src/store.js";
 
 const roots: string[] = [];
 const createdAt = "2026-07-31T05:00:00.000Z";
@@ -153,6 +157,26 @@ function lifecycleRecordCounts(root: string): {
   return {
     candidates: readdirSync(join(root, "records", "candidate")).length,
     receipts: readdirSync(join(root, "records", "receipt")).length,
+  };
+}
+
+function candidateOwnedPersistenceCounts(root: string): {
+  readonly candidates: number;
+  readonly receipts: number;
+  readonly evidenceBlobs: number;
+  readonly snapshotBlobs: number;
+  readonly locators: number;
+} {
+  const count = (...segments: readonly string[]): number => {
+    const path = join(root, ...segments);
+    return existsSync(path) ? readdirSync(path).length : 0;
+  };
+  return {
+    candidates: count("records", "candidate"),
+    receipts: count("records", "receipt"),
+    evidenceBlobs: count("blobs", "evidence"),
+    snapshotBlobs: count("blobs", "snapshot"),
+    locators: count("candidates"),
   };
 }
 
@@ -373,6 +397,64 @@ function runCandidateCreateRaceProcess(
     deadline = setTimeout(
       () =>
         reject(new Error(`Candidate create child '${workerId}' timed out.`)),
+      20_000,
+    );
+  });
+  const completed = Promise.race([exited, timedOut]).finally(() => {
+    if (deadline !== undefined) clearTimeout(deadline);
+  });
+  return { child, completed, exited };
+}
+
+function runCandidateClaimCrashProcess(
+  root: string,
+  claimPath: string,
+  claimedPath: string,
+): CandidateRaceProcess {
+  const vitestCli = createRequire(import.meta.url).resolve("vitest/vitest.mjs");
+  const testFile = fileURLToPath(import.meta.url);
+  const child = spawn(
+    process.execPath,
+    [
+      vitestCli,
+      "run",
+      testFile,
+      "--testNamePattern",
+      "crashes one child process immediately after the Candidate creation claim",
+    ],
+    {
+      cwd: dirname(dirname(testFile)),
+      env: {
+        ...process.env,
+        FACTORY_CANDIDATE_CLAIM_CRASH_CHILD: "1",
+        FACTORY_CANDIDATE_CLAIM_CRASH_ROOT: root,
+        FACTORY_CANDIDATE_CLAIM_CRASH_INPUT_PATH: claimPath,
+        FACTORY_CANDIDATE_CLAIM_CRASHED_PATH: claimedPath,
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
+  const output: string[] = [];
+  child.stdout.setEncoding("utf8");
+  child.stderr.setEncoding("utf8");
+  child.stdout.on("data", (chunk: string) => output.push(chunk));
+  child.stderr.on("data", (chunk: string) => output.push(chunk));
+  const exited = new Promise<void>((resolve, reject) => {
+    child.once("error", reject);
+    child.once("close", (code, signal) => {
+      if (code === 1 || signal === "SIGKILL") resolve();
+      else
+        reject(
+          new Error(
+            `Candidate claim crash child exited ${String(code)} with signal ${String(signal)} instead of being killed.\n${output.join("")}`,
+          ),
+        );
+    });
+  });
+  let deadline: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = new Promise<void>((_, reject) => {
+    deadline = setTimeout(
+      () => reject(new Error("Candidate claim crash child timed out.")),
       20_000,
     );
   });
@@ -1681,6 +1763,63 @@ describe("Candidate registry", () => {
     });
   });
 
+  it.each(["blocked", "rejected", "conformance-passed"] as const)(
+    "reconciles warm show, verify, and get with another registry's indexed %s outcome",
+    async (status) => {
+      const { root, store } = tempStore();
+      const proposal = await acceptedProposal(store);
+      const warmApi = createExternalIntakeApi(store, root);
+      const initial = await warmApi.candidateCreate(proposal);
+      const warmRegistry = new CandidateRegistry(
+        new ExternalIntakeStore(root),
+        root,
+      );
+      await warmRegistry.create(structuredClone(proposal));
+      expect(warmRegistry.get(initial.id, initial.version).status).toBe(
+        "quarantined",
+      );
+      const writer = new CandidateRegistry(new ExternalIntakeStore(root), root);
+      const terminal =
+        status === "blocked"
+          ? await writer.recordBlocked(initial.id, initial.version)
+          : status === "rejected"
+            ? await writer.recordRejected(initial.id, initial.version)
+            : await writer.recordConformancePass(
+                initial.id,
+                initial.version,
+                evaluateCandidateConformance(
+                  await writer.getConformanceBundle(
+                    initial.id,
+                    initial.version,
+                  ),
+                ),
+              );
+
+      await expect(
+        warmApi.candidateShow(initial.id, initial.version),
+      ).resolves.toMatchObject({
+        status,
+        lookupId: terminal.lookupId,
+        candidateDigest: terminal.digest,
+      });
+      await expect(
+        warmApi.candidateVerify(initial.id, initial.version),
+      ).resolves.toMatchObject({
+        valid: true,
+        candidate: { status },
+      });
+      expect(warmRegistry.get(initial.id, initial.version)).toMatchObject({
+        status,
+      });
+      await expect(
+        warmRegistry.verifyIdentity(initial.id, initial.version),
+      ).resolves.toMatchObject({
+        valid: true,
+        candidate: { status },
+      });
+    },
+  );
+
   it("rejects an exact identity locator rebound to another Candidate job", async () => {
     const { root, store } = tempStore();
     const firstProposal = await acceptedProposal(store);
@@ -2219,6 +2358,188 @@ describe("Candidate registry", () => {
       );
     }, 30_000);
   }
+
+  if (process.env.FACTORY_CANDIDATE_CLAIM_CRASH_CHILD !== undefined) {
+    it("crashes one child process immediately after the Candidate creation claim", () => {
+      const claim = JSON.parse(
+        readFileSync(
+          process.env.FACTORY_CANDIDATE_CLAIM_CRASH_INPUT_PATH!,
+          "utf8",
+        ),
+      ) as CandidateCreationClaimV1;
+      claimCandidateCreation(
+        new ExternalIntakeStore(
+          process.env.FACTORY_CANDIDATE_CLAIM_CRASH_ROOT!,
+        ),
+        claim,
+      );
+      writeFileSync(
+        process.env.FACTORY_CANDIDATE_CLAIM_CRASHED_PATH!,
+        "claimed",
+      );
+      process.kill(process.pid, "SIGKILL");
+    });
+  }
+
+  it("recovers only the claimed winner in a fresh process after an OS crash immediately after claim", async () => {
+    const { root, store } = tempStore();
+    const proposal = await acceptedProposal(store);
+    const { root: oracleRoot, store: oracleStore } = tempStore();
+    const oracleProposal = await acceptedProposal(oracleStore);
+    expect(serializeCandidateProposal(oracleProposal)).toEqual(
+      serializeCandidateProposal(proposal),
+    );
+    await new CandidateRegistry(oracleStore).create(oracleProposal);
+    const identity = `${proposal.id}@${proposal.version}`;
+    const jobId = `candidate-${digestBytes(bytes(identity)).slice(7, 39)}`;
+    const persistedClaim = JSON.parse(
+      readFileSync(
+        join(oracleRoot, "jobs", jobId, "receipts", "1.claim.json"),
+        "utf8",
+      ),
+    ) as CandidateCreationClaimV1 & { readonly apiVersion: string };
+    const { apiVersion: _, ...claim } = persistedClaim;
+    const conflictingProposal: CandidateProposalV1 = {
+      ...structuredClone(proposal),
+      proposedFactoryKey: "candidate.conflicting-adapter",
+      artifacts: {
+        ...structuredClone(proposal.artifacts),
+        manifest: {
+          ...structuredClone(proposal.artifacts.manifest),
+          proposedFactoryKey: "candidate.conflicting-adapter",
+        },
+      },
+    };
+    const before = candidateOwnedPersistenceCounts(root);
+    const evidenceBefore = new Set(
+      readdirSync(join(root, "blobs", "evidence")),
+    );
+    const snapshotDirectory = join(root, "blobs", "snapshot");
+    const snapshotsBefore = new Set(
+      existsSync(snapshotDirectory) ? readdirSync(snapshotDirectory) : [],
+    );
+    const expectedNewArtifactDigests = new Set(
+      Object.values(proposal.artifacts)
+        .map((artifact) => digestBytes(bytes(canonicalJson(artifact))))
+        .filter(
+          (digest) =>
+            !evidenceBefore.has(`${digest.slice("sha256:".length)}.bin`),
+        ),
+    );
+    const expectedWinnerEvidenceDelta = 1 + expectedNewArtifactDigests.size;
+    const expectedWinnerSnapshotDelta =
+      proposal.evidenceJob.snapshotView.files.filter(
+        ({ digest }) => !existsSync(blobPath(root, "snapshot", digest)),
+      ).length;
+    const harnessRoot = mkdtempSync(
+      join(tmpdir(), "factory-candidate-claim-crash-"),
+    );
+    roots.push(harnessRoot);
+    const claimPath = join(harnessRoot, "claim.json");
+    const crashedPath = join(harnessRoot, "claimed");
+    writeFileSync(claimPath, canonicalJson(claim));
+
+    const crashWorker = runCandidateClaimCrashProcess(
+      root,
+      claimPath,
+      crashedPath,
+    );
+    await crashWorker.completed;
+    expect(existsSync(crashedPath)).toBe(true);
+    expect(candidateOwnedPersistenceCounts(root)).toEqual(before);
+
+    const runCreate = async (
+      name: string,
+      input: CandidateProposalV1,
+    ): Promise<{
+      readonly outcome: "committed" | "conflict";
+      readonly ref?: StoredCandidateRefV1;
+    }> => {
+      const proposalPath = join(harnessRoot, `${name}.proposal.json`);
+      const readyPath = join(harnessRoot, `${name}.ready`);
+      const releasePath = join(harnessRoot, `${name}.release`);
+      const resultPath = join(harnessRoot, `${name}.result.json`);
+      writeFileSync(
+        proposalPath,
+        JSON.stringify(serializeCandidateProposal(input)),
+      );
+      const worker = runCandidateCreateRaceProcess(
+        root,
+        name,
+        proposalPath,
+        readyPath,
+        releasePath,
+        resultPath,
+      );
+      try {
+        await Promise.race([
+          waitForPath(readyPath),
+          worker.completed.then(() => {
+            throw new Error(
+              `Candidate create child '${name}' exited before release.`,
+            );
+          }),
+        ]);
+        writeFileSync(releasePath, "go");
+        await worker.completed;
+      } finally {
+        if (
+          worker.child.pid !== undefined &&
+          worker.child.exitCode === null &&
+          worker.child.signalCode === null
+        ) {
+          worker.child.kill();
+        }
+        await Promise.allSettled([worker.exited]);
+      }
+      return JSON.parse(readFileSync(resultPath, "utf8")) as {
+        readonly outcome: "committed" | "conflict";
+        readonly ref?: StoredCandidateRefV1;
+      };
+    };
+
+    await expect(
+      runCreate("conflict-after-crash", conflictingProposal),
+    ).resolves.toMatchObject({ outcome: "conflict" });
+    expect(candidateOwnedPersistenceCounts(root)).toEqual(before);
+
+    const recovered = await runCreate("winner-after-crash", proposal);
+    expect(recovered).toMatchObject({ outcome: "committed" });
+    const winner = recovered.ref!;
+    const afterWinner = candidateOwnedPersistenceCounts(root);
+    expect(afterWinner).toEqual({
+      candidates: before.candidates + 1,
+      receipts: before.receipts + 1,
+      evidenceBlobs: before.evidenceBlobs + expectedWinnerEvidenceDelta,
+      snapshotBlobs: before.snapshotBlobs + expectedWinnerSnapshotDelta,
+      locators: before.locators + 1,
+    });
+    const freshApi = createExternalIntakeApi(
+      new ExternalIntakeStore(root),
+      root,
+    );
+    await expect(freshApi.candidateList({})).resolves.toEqual([
+      expect.objectContaining({
+        id: winner.id,
+        version: winner.version,
+        status: "quarantined",
+        lookupId: winner.lookupId,
+        candidateDigest: winner.digest,
+      }),
+    ]);
+    await expect(
+      freshApi.candidateShow(winner.id, winner.version),
+    ).resolves.toMatchObject({
+      status: "quarantined",
+      lookupId: winner.lookupId,
+      candidateDigest: winner.digest,
+    });
+
+    await expect(
+      runCreate("winner-idempotent-retry", structuredClone(proposal)),
+    ).resolves.toEqual({ outcome: "committed", ref: winner });
+    expect(candidateOwnedPersistenceCounts(root)).toEqual(afterWinner);
+  }, 30_000);
 
   it("atomically chooses one separate-process Candidate creation winner without loser orphans", async () => {
     const { root, store } = tempStore();

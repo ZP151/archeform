@@ -1969,7 +1969,7 @@ export class CandidateRegistry implements CandidateRegistryV1 {
 
   #entry(id: string, version: string, allowUnverified = false): CandidateEntry {
     const key = this.#key(id, version);
-    const entry =
+    let entry =
       this.#entries.get(key) ??
       [...this.#entries.values()].find(
         (candidate) =>
@@ -1977,6 +1977,7 @@ export class CandidateRegistry implements CandidateRegistryV1 {
           candidate.history.some(({ lookupId }) => lookupId === id),
       );
     if (entry !== undefined) {
+      entry = this.#reconcileEntry(entry);
       if (!allowUnverified && !entry.verified) {
         throw new Error(
           "Strict Candidate verification is required before access.",
@@ -2005,6 +2006,36 @@ export class CandidateRegistry implements CandidateRegistryV1 {
       throw new Error(
         "Strict Candidate verification is required before access.",
       );
+    }
+    return loaded;
+  }
+
+  #reconcileEntry(entry: CandidateEntry): CandidateEntry {
+    if (this.#reader === undefined) return entry;
+    const currentReceipt = this.#reader.readCurrentReceipt(
+      entry.id,
+      entry.version,
+    );
+    if (currentReceipt === undefined) {
+      throw new Error("Candidate durable current receipt locator is absent.");
+    }
+    if (entry.receipts.at(-1)?.digest === currentReceipt.digest) {
+      return entry;
+    }
+    const trustedCreationDigest = entry.history[0]?.digest;
+    const trustedVerificationStateDigest = entry.verificationStateRef.digest;
+    const wasVerified = entry.verified;
+    const loaded = this.#loadReceiptAddressedEntry(
+      candidateLookupId(currentReceipt.digest as Sha256Digest),
+      entry.version,
+    );
+    if (
+      wasVerified &&
+      loaded.history[0]?.digest === trustedCreationDigest &&
+      loaded.verificationStateRef.digest === trustedVerificationStateDigest &&
+      loaded.jobId === entry.jobId
+    ) {
+      loaded.verified = true;
     }
     return loaded;
   }
