@@ -1,6 +1,7 @@
 # Order Operations Capability Portfolio Design
 
-Status: proposed for controller review on 2026-08-01.
+Status: accepted for initial portfolio planning by the Factory controller on
+2026-08-01.
 
 ## Purpose
 
@@ -48,19 +49,19 @@ Customer application + Merchant application + API + DB + tests + docs
 
 The first reusable portfolio contains these capability families:
 
-| Family | Graph responsibility | Initial use | Reused by |
-| --- | --- | --- | --- |
-| Identity and context | principal, authenticated session, customer/member, location, table/session | customer scope, merchant access | every Profile |
-| Catalog and configuration | categories, sellable items, availability, option groups, price lists | menu and modifiers | retail, rental, wholesale |
-| Cart and order | quote/cart, lines, notes, version, idempotent lifecycle | customer cart and merchant amendments | all order-driven products |
-| Inventory | stock location, reservation, movement, provenance, adjustments | availability and depletion | retail, pharmacy, MRO, warehouse |
-| Payment and settlement | intent, attempt, provider outcome, refund/reversal, settlement state | simulated payment first | deposits, retail, services, events |
-| Fulfilment | channel, fulfilment unit, ticket, priority, handoff status | kitchen display and service | pickup, delivery, dispatch, repairs |
-| Print and device jobs | immutable print request, station, device capability, delivery receipt | browser receipt then print adapter | POS, warehouse, labels, tickets |
-| Promotion and loyalty | eligibility, rule, redemption, points ledger, member price | deferred package family | hospitality, retail, fitness, events |
-| Capacity operations | hold, booking, waitlist, check-in, queue position | deferred package family | reservation, wellness, health, venues |
-| Reporting | declared metric input, read model, aggregation window, export request | sales and stock views | every operational Profile |
-| Realtime and durable jobs | declared domain event, outbox, job, retry, delivery channel | KDS/queue notifications | every asynchronous Profile |
+| Family                    | Graph responsibility                                                       | Initial use                           | Reused by                             |
+| ------------------------- | -------------------------------------------------------------------------- | ------------------------------------- | ------------------------------------- |
+| Identity and context      | principal, authenticated session, customer/member, location, table/session | customer scope, merchant access       | every Profile                         |
+| Catalog and configuration | categories, sellable items, availability, option groups, price lists       | menu and modifiers                    | retail, rental, wholesale             |
+| Cart and order            | quote/cart, lines, notes, version, idempotent lifecycle                    | customer cart and merchant amendments | all order-driven products             |
+| Inventory                 | stock location, reservation, movement, provenance, adjustments             | availability and depletion            | retail, pharmacy, MRO, warehouse      |
+| Payment and settlement    | intent, attempt, provider outcome, refund/reversal, settlement state       | simulated payment first               | deposits, retail, services, events    |
+| Fulfilment                | channel, fulfilment unit, ticket, priority, handoff status                 | kitchen display and service           | pickup, delivery, dispatch, repairs   |
+| Print and device jobs     | immutable print request, station, device capability, delivery receipt      | browser receipt then print adapter    | POS, warehouse, labels, tickets       |
+| Promotion and loyalty     | eligibility, rule, redemption, points ledger, member price                 | deferred package family               | hospitality, retail, fitness, events  |
+| Capacity operations       | hold, booking, waitlist, check-in, queue position                          | deferred package family               | reservation, wellness, health, venues |
+| Reporting                 | declared metric input, read model, aggregation window, export request      | sales and stock views                 | every operational Profile             |
+| Realtime and durable jobs | declared domain event, outbox, job, retry, delivery channel                | KDS/queue notifications               | every asynchronous Profile            |
 
 Each family is expressed as Factory-owned package contracts. A package has a
 versioned manifest, exact digest, declared Graph inputs and outputs, static
@@ -142,14 +143,14 @@ transport cannot mutate the order directly.
 
 External sources are acceleration inputs, never implicit runtime authority.
 
-| Candidate | Intended Factory use | Class |
-| --- | --- | --- |
-| BullMQ, Socket.IO, OpenFeature, FullCalendar, Radix, TanStack Table, MapLibre | pinned runtime/UI dependency behind a Factory adapter | direct dependency candidate |
-| FloCafe | offline/POS/KDS/print state and recovery source study | source study |
-| Medusa, Saleor, Sylius, Bagisto | commerce, pricing, promotion, inventory and return boundaries | source study |
-| TastyIgniter | menu modifiers, scheduled pickup/delivery and reservation concepts | source study |
-| InvenTree, Apache OFBiz | traceable stock, supplier and order domain seams | source study |
-| Stripe, Adyen, OpenTable, Voucherify, Talon.One, Onfleet, OSRM/Valhalla/GraphHopper | payment, reservation, promotion, delivery/routing contracts | provider adapter candidate |
+| Candidate                                                                           | Intended Factory use                                               | Class                       |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------ | --------------------------- |
+| BullMQ, Socket.IO, OpenFeature, FullCalendar, Radix, TanStack Table, MapLibre       | pinned runtime/UI dependency behind a Factory adapter              | direct dependency candidate |
+| FloCafe                                                                             | offline/POS/KDS/print state and recovery source study              | source study                |
+| Medusa, Saleor, Sylius, Bagisto                                                     | commerce, pricing, promotion, inventory and return boundaries      | source study                |
+| TastyIgniter                                                                        | menu modifiers, scheduled pickup/delivery and reservation concepts | source study                |
+| InvenTree, Apache OFBiz                                                             | traceable stock, supplier and order domain seams                   | source study                |
+| Stripe, Adyen, OpenTable, Voucherify, Talon.One, Onfleet, OSRM/Valhalla/GraphHopper | payment, reservation, promotion, delivery/routing contracts        | provider adapter candidate  |
 
 Vendure, ERPNext, Plausible, Unleash, Easy!Appointments, Open Source POS, any
 enterprise-only path, and any unlicensed or custom-restriction path remain
