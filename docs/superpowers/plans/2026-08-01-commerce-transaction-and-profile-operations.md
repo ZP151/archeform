@@ -162,17 +162,17 @@ git add packages/capabilities
 git commit -m "feat: add Golden commerce transaction package"
 ```
 
-### Task 2: Bind the transaction asset into all Commerce recipes and readiness
+### Task 2: Bind the transaction asset into all Commerce recipes without overstating readiness
 
 **Files:**
-- Modify: `packages/capabilities/src/commerce/profile.ts`
+- Modify: `packages/capabilities/src/index.ts`
 - Modify: `packages/capabilities/src/profile-readiness.ts`
-- Test: `packages/capabilities/test/commerce-profile.test.ts`
+- Create: `packages/capabilities/test/commerce-transaction-profile-composition.test.ts`
 - Test: `packages/capabilities/test/profile-readiness.test.ts`
 
 **Consumes:** `commerceTransactionAssetV1_0_0` and its mandatory dependency interfaces.
 
-**Produces:** The four Commerce profile draft recipes select the exact current transaction lock; readiness reports `available` only after the profile has a valid composition and all v1 generated target claims, otherwise reports `partial` with a named missing target.
+**Produces:** The four Commerce profile draft recipes select the exact current transaction lock and valid Graph-symbol bindings. The existing source-free readiness projection remains `partial` until Task 3 produces immutable compilation evidence; package selection alone is not runtime acceptance.
 
 - [ ] **Step 1: Write failing recipe and readiness tests**
 
@@ -189,9 +189,24 @@ it.each(["restaurant-ordering", "simple-ecommerce", "retail-counter", "grocery-p
   },
 );
 
-it("does not label a transaction as available when a required compiled target is absent", () => {
-  expect(createProfileReadiness([{ profile: "simple-ecommerce", label: "Simple Ecommerce", availableCapabilities: ["commerce.transaction"] }])[0]?.capabilities)
-    .toContainEqual({ key: "commerce.transaction", status: "partial" });
+it.each(["restaurant-ordering", "simple-ecommerce", "retail-counter", "grocery-pickup"] as const)(
+  "%s keeps commerce.transaction partial before immutable compiler evidence exists",
+  (profile) => {
+    expect(listProfileReadiness().find((entry) => entry.profile === profile)?.capabilities)
+      .toContainEqual({ key: "commerce.transaction", status: "partial" });
+  },
+);
+
+it("binds the ecommerce transaction only through declared Graph symbols", () => {
+  const { graph } = composeDefaultCapabilityDraft({ profile: "simple-ecommerce" });
+  const selection = graph.integration.compositionSelections?.find(
+    ({ lock }) => lock.key === "commerce.transaction",
+  );
+  expect(selection?.bindings).toEqual({
+    aggregateEntity: { graphSymbol: "graph.domain.order" },
+    transactionFlow: { graphSymbol: "graph.flow.ecommerce-order" },
+    actorRole: { graphSymbol: "graph.policy.shopper" },
+  });
 });
 ```
 
@@ -199,21 +214,21 @@ it("does not label a transaction as available when a required compiled target is
 
 Run: `pnpm --filter @factory/capabilities test -- commerce-profile.test.ts profile-readiness.test.ts`
 
-Expected: FAIL because the recipes do not select the package and readiness has no evidence rule.
+Expected: FAIL because the recipes do not select the package. The readiness assertions document that a selected package must not be promoted merely by recipe membership.
 
-- [ ] **Step 3: Add canonical selections and evidence-aware readiness**
+- [ ] **Step 3: Add canonical selections without changing evidence semantics**
 
-Use normal composition selection creation and the package's declared bindings. Add a small, pure readiness input type that includes `compiledTargets` and `verifiedPackageKeys`; keep the existing source-free API projection compatible by making the default source omit transaction availability until compiler evidence is supplied.
+Add `commerce.transaction` to the required capability recipe for Restaurant Ordering and Simple Ecommerce. Bind it only through the declared Graph symbols: Restaurant uses `order`, `restaurant-order`, and `customer`; Ecommerce uses `order`, `ecommerce-order`, and `shopper`. Reuse the existing deterministic order-operation remapping for Retail Counter and Grocery Pickup. Do not change readiness to `available`; Task 3 is the first producer of the required immutable compilation evidence.
 
 - [ ] **Step 4: Run focused tests to verify pass**
 
 Run: `pnpm --filter @factory/capabilities test -- commerce-profile.test.ts profile-readiness.test.ts`
 
-Expected: PASS; every Commerce starter locks the same package version, and a missing target cannot be presented as ready.
+Expected: PASS; every Commerce starter locks the same package version and a selected package is still truthfully shown as partial before runtime evidence exists.
 
 - [ ] **Step 5: Run broader profile evidence**
 
-Run: `pnpm --filter @factory/capabilities test -- commercial-profile-composition.test.ts restaurant-profile.test.ts`
+Run: `pnpm --filter @factory/capabilities test -- commerce-transaction-profile-composition.test.ts commerce-profile.test.ts restaurant-profile.test.ts`
 
 Expected: PASS with a deterministic resolved dependency order.
 
