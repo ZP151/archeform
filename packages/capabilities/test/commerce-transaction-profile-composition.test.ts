@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   composeDefaultCapabilityDraft,
   composeProfileDraft,
+  resolveGenericCommerceLifecycleVersions,
   listProfileReadiness,
   resolveCapabilityAssetLock,
 } from "../src/index.js";
@@ -42,6 +43,15 @@ function legacyCapabilityLock(
 }
 
 describe("Commerce transaction profile composition", () => {
+  it("does not grant Generic Commerce V2 locks to an unsupported future profile", () => {
+    expect(
+      resolveGenericCommerceLifecycleVersions("future-marketplace"),
+    ).toBeUndefined();
+    expect(
+      resolveGenericCommerceLifecycleVersions("restaurant-ordering"),
+    ).toBeUndefined();
+  });
+
   it.each(genericCommerceProfiles)(
     "%s selects the generic order lifecycle and transaction adapter locks",
     (profile) => {

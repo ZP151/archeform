@@ -3234,15 +3234,40 @@ export function listProfileReadiness(): readonly import("./profile-readiness.js"
   return profileReadinessCache;
 }
 
+interface GenericCommerceLifecycleVersionsV1 {
+  readonly order: string;
+  readonly transaction: string;
+}
+
+const genericCommerceLifecycleVersionsByProfile: Readonly<
+  Record<string, GenericCommerceLifecycleVersionsV1>
+> = Object.freeze({
+  "simple-ecommerce": Object.freeze({ order: "2.0.3", transaction: "2.1.0" }),
+  "retail-counter": Object.freeze({ order: "2.0.3", transaction: "2.1.0" }),
+  "grocery-pickup": Object.freeze({ order: "2.0.3", transaction: "2.1.0" }),
+});
+
+/**
+ * Returns the explicit Generic Commerce lifecycle selection for a profile.
+ * Profiles absent from this allowlist must select their own package versions.
+ */
+export function resolveGenericCommerceLifecycleVersions(
+  profile: string,
+): GenericCommerceLifecycleVersionsV1 | undefined {
+  return genericCommerceLifecycleVersionsByProfile[profile];
+}
+
 function getProfileCapabilityAsset(
   profile: FactoryProfile,
   key: string,
 ): CapabilityAssetV1 {
-  if (profile !== "restaurant-ordering" && key === "commerce.order") {
-    return getCapabilityAssetVersion(key, "2.0.3");
+  const genericCommerceVersions =
+    resolveGenericCommerceLifecycleVersions(profile);
+  if (genericCommerceVersions && key === "commerce.order") {
+    return getCapabilityAssetVersion(key, genericCommerceVersions.order);
   }
-  if (profile !== "restaurant-ordering" && key === "commerce.transaction") {
-    return getCapabilityAssetVersion(key, "2.1.0");
+  if (genericCommerceVersions && key === "commerce.transaction") {
+    return getCapabilityAssetVersion(key, genericCommerceVersions.transaction);
   }
   return getCapabilityAsset(key);
 }
