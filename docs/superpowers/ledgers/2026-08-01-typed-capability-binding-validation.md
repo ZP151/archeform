@@ -73,7 +73,9 @@ not acceptance.
 - Task 1 implementation commit
   `86d5a00f26d5f331764de0e8bf7694e657cd2514` passed independent task review
   with no P0/P1/P2. Independent behavioral QA also passed with no P0/P1/P2.
-  The PM recorded `ready_for_qa -> reviewed`; Task 1 is not yet accepted.
+  Release review then found one load-bearing P1 in duplicate identifier
+  handling. The PM recorded `reviewed -> implementing` and authorized repair
+  round 1 by the same bounded writer; Task 1 is not accepted.
 - Tasks 2 through 6 remain `planned`; none is dispatched by this transition.
 - No frontend/backend parallel implementation is permitted in this project.
 - Commercial Capability Foundation Task 2 remains `implementing` and
@@ -84,18 +86,18 @@ not acceptance.
 
 ## Project state
 
-| Task                                           | State      | Specialization | Contract owner                               | Contract status                                            |
-| ---------------------------------------------- | ---------- | -------------- | -------------------------------------------- | ---------------------------------------------------------- |
-| 1. Pure typed Graph symbol index               | `reviewed` | `integration`  | Application Graph Type System                | Task review and behavioral QA passed; release review next. |
-| 2. Typed manifest and binding contracts        | `planned`  | `integration`  | Capability Binding Contract                  | Blocked on accepted Task 1 index contract.                 |
-| 3. Safe versioned physical capability assets   | `planned`  | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 2 manifest contract.              |
-| 4. Manifest-aware Draft composition validation | `planned`  | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-3.                             |
-| 5. Graph-aware Publish and compiler admission  | `planned`  | `backend`      | Published Graph and Compiler Admission       | Blocked on accepted Tasks 1-4.                             |
-| 6. Current recipe migration and acceptance     | `planned`  | `integration`  | Typed Binding Migration and Release Evidence | Blocked on accepted Tasks 1-5.                             |
+| Task                                           | State          | Specialization | Contract owner                               | Contract status                                     |
+| ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | --------------------------------------------------- |
+| 1. Pure typed Graph symbol index               | `implementing` | `integration`  | Application Graph Type System                | Release P1 open; bounded repair round 1 authorized. |
+| 2. Typed manifest and binding contracts        | `planned`      | `integration`  | Capability Binding Contract                  | Blocked on accepted Task 1 index contract.          |
+| 3. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 2 manifest contract.       |
+| 4. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-3.                      |
+| 5. Graph-aware Publish and compiler admission  | `planned`      | `backend`      | Published Graph and Compiler Admission       | Blocked on accepted Tasks 1-4.                      |
+| 6. Current recipe migration and acceptance     | `planned`      | `integration`  | Typed Binding Migration and Release Evidence | Blocked on accepted Tasks 1-5.                      |
 
 ## Task 1: Add a pure typed Graph symbol index
 
-- **State:** `reviewed`
+- **State:** `implementing` (repair round 1)
 - **Specialization:** `integration`
 - **Bounded writer:** Typed Graph Index Integration
 - **Contract owner:** Application Graph Type System
@@ -177,6 +179,37 @@ not acceptance.
   semantic bindings at Draft, Publish, and compiler admission. Task 1 alone
   does not close the parent Foundation defect.
 
+### Release finding and repair round 1
+
+- Release review of implementation commit
+  `86d5a00f26d5f331764de0e8bf7694e657cd2514` and its reconciled evidence found
+  one verified P1. The generic `indexBy` constructs a `Map` from keyed values,
+  so a duplicate key silently uses the last declaration.
+- Application Graph semantic validation rejects several duplicate identifier
+  classes but does not reject duplicate navigation-entry IDs or duplicate flow
+  IDs. Those invalid Graphs can therefore reach the index and resolve to the
+  last declaration instead of failing closed.
+- This is load-bearing for typed bindings because navigation and flow are
+  independent typed namespaces. An ambiguous immutable Graph symbol cannot be
+  allowed to resolve by declaration order.
+- The prior task-review and QA results remain historical evidence, but they do
+  not support acceptance while this P1 is open. The PM records
+  `reviewed -> implementing`.
+- Repair round 1 remains assigned to **Typed Graph Index Integration** under
+  the unchanged **Application Graph Type System** contract and exact four paths.
+  No new path, contract, serialization format, capability dependency, or
+  downstream task is authorized.
+- Begin with focused failing tests proving duplicate navigation-entry IDs and
+  duplicate flow IDs are rejected and cannot be silently overwritten by the
+  typed index:
+  `pnpm --filter @factory/graph test -- --run test/application-graph.test.ts`.
+- GREEN must add fail-closed duplicate handling for both identifier classes
+  while preserving owner-aware fields, all isolated namespaces, and valid
+  Graph behavior. Before re-review, run the focused application/browser tests,
+  full Graph tests, Graph typecheck, lint, build, and bounded diff checks.
+- Repair round 1 requires independent task re-review before the PM can return
+  Task 1 to `ready_for_qa`.
+
 ### Non-goals
 
 - No capability-manifest import or validation in `@factory/graph`.
@@ -191,9 +224,10 @@ not acceptance.
 - GREEN proves a field resolves only under its declared entity, independently
   typed names remain separate, duplicate field keys across entities are safe,
   and browser exports remain Node-builtin-free.
-- Graph application and browser-entry tests, typecheck, lint, task review, and
-  behavioral QA now pass. Release review and fresh verification remain
-  required before `accepted`.
+- The original Graph verification, task review, and behavioral QA passed, but
+  release review exposed the open duplicate-identifier P1. Repair, independent
+  re-review, re-QA, release review, and fresh verification are required before
+  `accepted`.
 
 ## Task 2: Freeze typed manifest and binding contracts
 
@@ -417,13 +451,14 @@ not acceptance.
 - Runtime atomicity and exactly-once stock execution across intentional
   inventory co-providers remain Commercial Foundation Task 3 scope and are not
   proven by this project.
-- This PM transition authorizes independent release review of Task 1 at the
-  reviewed implementation commit and reconciled QA baseline. It authorizes no
-  product-code change and no Task 2-6 implementation.
+- This PM transition authorizes only Task 1 repair round 1 by Typed Graph Index
+  Integration in the existing exact four paths. It authorizes no Task 2-6
+  implementation.
 
 ## Next smallest valuable slice
 
-Run independent Task 1 release review against implementation commit
-`86d5a00f26d5f331764de0e8bf7694e657cd2514` and the reconciled QA evidence
-above. Keep `@factory/graph` capability-manifest-independent and leave Tasks
-2-6 `planned`.
+Implement Task 1 repair round 1 under the unchanged Application Graph Type
+System contract and exact four paths. Begin with focused RED tests for duplicate
+navigation-entry and flow IDs, make semantic validation and indexing fail
+closed, and prepare bounded verification for independent task re-review. Keep
+`@factory/graph` capability-manifest-independent and leave Tasks 2-6 `planned`.
