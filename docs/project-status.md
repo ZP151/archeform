@@ -1,20 +1,21 @@
 # Factory Pilot delivery status
 
-Updated: 2026-07-31
+Updated: 2026-08-01
 
 ## Current milestone
 
-Commercial Capability Foundation Task 2, **Restaurant and Ecommerce profile
-recipes**, returned `ready_for_qa -> implementing` and is escalated after final
-release review found one load-bearing P1 in typed Foundation binding
-validation. The five permitted repair rounds are exhausted; no sixth Task 2
-patch is authorized. The reviewed release set remains
-`35aa96e + ed3c2ba + ac43247 + e61e790 + bf0b16f + 6433940`. Its contract owner
-remains Profile Composition Integration; its dependency, Task 1 capability
-contracts and physical packages, remains `accepted` and frozen. Task 2 is not
-accepted. A dedicated typed-binding-validation hardening slice requires
-separate contract/scope governance before implementation. Foundation Tasks 3
-and 4 remain `planned` and blocked.
+Typed Capability Binding Validation is the current hardening milestone.
+ADR-0006 is `Accepted` under Factory controller authority; its approved design,
+implementation plan, and six-task ledger now govern the work. All six tasks are
+`planned`. Task 1, **pure typed Graph symbol index**, has no open dependency and
+may be dispatched immediately under its exact four Graph paths. Tasks 2 through
+5 are serialized on acceptance of the preceding contract task. Task 6 begins
+only after Tasks 1 through 5 are all `accepted`.
+
+Commercial Capability Foundation Task 2 remains `implementing` and escalated
+after its five permitted repair rounds. It is blocked on accepted Typed
+Capability Binding Validation Task 6 and later PM reconciliation; it is not
+accepted. Commercial Foundation Tasks 3 and 4 remain `planned` and blocked.
 
 The Application Graph remains the source of truth. External intake artifacts
 remain quarantined Candidate evidence or pending-review packets; they are not
@@ -22,6 +23,31 @@ Golden capabilities, Graph input, compiler input, generated runtime authority,
 provider authority, approval, or source-copy execution.
 
 ## Completed evidence
+
+ADR-0006 fixes the typed-binding architecture under controller authority:
+
+- `factory.capability-binding/v1` is manifest-owned and interpreted by generic
+  composition validation.
+- The Graph owns a capability-agnostic typed index with separate symbol
+  namespaces and fields resolved only under their entity owner.
+- Draft composition, verified Publish lock creation, and compiler admission
+  validate the exact Graph and selected locks.
+- Historical Golden bytes, digests, Published revisions, and locks remain
+  immutable. New current recipes migrate to verified
+  `core.location-context@1.0.1`,
+  `commerce.inventory-ledger@1.0.1`, and
+  `commerce.inventory@2.0.0`.
+- No validator may dispatch on Profile name, package version, field name,
+  source path, compiler target, or output path.
+
+The approved design and plan are recorded at
+`docs/superpowers/specs/2026-08-01-typed-capability-binding-validation-design.md`
+and
+`docs/superpowers/plans/2026-08-01-typed-capability-binding-validation.md`.
+The governed task state is recorded in
+`docs/superpowers/ledgers/2026-08-01-typed-capability-binding-validation.md`.
+This status/ledger synchronization changes no product code, source manifest,
+physical package, shared contract, or existing Commercial Foundation ledger.
 
 Commercial Capability Foundation Task 1 is accepted and frozen. Its verified
 `1.0.0` identities are `core.identity-context`, `core.location-context`,
@@ -153,48 +179,27 @@ On Node `v22.11.0`, it records:
 
 ## Active work
 
-- Task 2 is `implementing` and escalated, but no writer or sixth repair is
-  authorized. Its existing implementation release remains bounded to these
-  exact five paths:
-  `packages/capabilities/src/index.ts`,
-  `packages/capabilities/src/restaurant/profile.ts`,
-  `packages/capabilities/test/restaurant-profile.test.ts`, and
-  `packages/capabilities/test/commercial-profile-composition.test.ts`, plus
-  `packages/capabilities/test/capability-registry.test.ts` only for canonical
-  Restaurant and Simple Ecommerce expected-input corrections for Task 2's four
-  Foundation locks and the exact provider-uniqueness regressions below.
-- The fifth-path amendment remains a test-scope correction only. It permits
-  Simple Ecommerce's canonical expected input only for Task 2's four accepted
-  Foundation locks. Provider-uniqueness regressions must assert exactly one
-  provider for every non-overlapping effect and, for each intentionally
-  overlapping inventory effect, the exact provider set
-  `{commerce.inventory, commerce.inventory-ledger}`. It changes no shared
-  contract, physical asset, package identity, interface, dependency, recipe
-  scope, lifecycle or Publish behavior, production behavior, non-goal, or Task
-  2 state.
-- The P1 is specific: `graphSymbolIds()` flattens domain entities and every
-  field key into one untyped namespace, while
-  `assertCompositionGraphSymbols()` verifies only that a submitted identifier
-  exists somewhere. Public `composeCapabilityDraft` therefore cannot prove a
-  field belongs to the bound entity or has the required semantic type.
-- The dedicated hardening slice must validate each binding against the selected
-  manifest's typed `inputSchema`, distinguish entity/page/role/field
-  namespaces, require `locationCodeField` to resolve to an appropriate declared
-  string field on the bound location/context contract, and require `stockField`
-  to resolve to the appropriate numeric inventory field on the bound catalog
-  entity. Public-entry adversarial tests must cover cross-entity and wrong-type
-  substitutions.
-- This status update changes no product code, shared contract, exact path
-  boundary, package identity, interface, lifecycle behavior, compiler, or
-  Workbench surface. It does not authorize the hardening implementation. The
-  contract owner and architecture reviewer must first freeze a dedicated
-  contract artifact, exact paths, and acceptance evidence.
-- No new package identity, Task 1 contract change, compiler, Workbench,
-  generated runtime, payment, identity-provider, deployment behavior, profile
-  cloning, Graph `assetLocks` fallback, or Restaurant-only package fork is in
-  scope.
-- Foundation Tasks 3 and 4 remain `planned` until Task 2 is accepted. External
-  Capability Intake remains accepted and frozen.
+- Typed Binding Tasks 1 through 6 are `planned` under the accepted ADR, design,
+  plan, and new project ledger.
+- Task 1 may start immediately. Its contract owner is Application Graph Type
+  System, and its exact allowed paths are:
+  `packages/graph/src/model.ts`, `packages/graph/src/index.ts`,
+  `packages/graph/src/browser.ts`, and
+  `packages/graph/test/application-graph.test.ts`.
+- Task 1 must begin with failing namespace/ownership tests and produce a pure,
+  capability-agnostic typed index. It may not change Graph serialization,
+  capability manifests, profile recipes, package versions, Publish, compiler,
+  lifecycle, or Workbench behavior.
+- Typed Binding Task 2 remains `planned` until Task 1 is `accepted`; Tasks 3,
+  4, and 5 remain serially blocked on acceptance of their preceding tasks.
+  Task 6 remains `planned` until Tasks 1 through 5 are all `accepted`.
+- Commercial Foundation Task 2 remains `implementing` and escalated. No sixth
+  repair is authorized; its previous exact five-path implementation boundary
+  remains historical release evidence only. It cannot resume acceptance until
+  Typed Binding Task 6 is accepted and the PM reconciles the parent ledger.
+- This update creates/synchronizes governance documents only. It modifies no
+  implementation code, source manifest, physical package, shared contract, or
+  existing Commercial Foundation ledger.
 
 ## Blocked decisions
 
@@ -209,9 +214,16 @@ On Node `v22.11.0`, it records:
 - Foundation Tasks 3 and 4 are blocked on accepted Task 2 profile composition
   metadata. Task 2 is back in `implementing` and escalated; neither downstream
   task is dispatched by this update.
-- No sixth Task 2 repair is authorized. The typed-binding-validation hardening
-  work may begin only under a separately recorded and reviewed slice; any
-  shared contract change must be explicit before implementation.
+- Typed Binding Task 1 is dispatch-ready but remains `planned` until its bounded
+  writer is assigned. Tasks 2 through 5 cannot overlap or start before the
+  preceding task is `accepted`.
+- Typed Binding Task 6 cannot start before Tasks 1 through 5 are all
+  `accepted`. Its acceptance does not automatically accept Commercial
+  Foundation Task 2; the PM must reconcile that parent state separately.
+- No sixth Commercial Foundation Task 2 repair is authorized. ADR-0006 governs
+  the dedicated hardening project; any change to its accepted contract,
+  dependency chain, or exact task paths stops downstream work for PM and
+  architecture review.
 
 ## Risks and limitations
 
@@ -232,15 +244,20 @@ On Node `v22.11.0`, it records:
   any of the three intentional stock movements or select behavior by profile
   name. This is a downstream risk, not authority to start Task 3.
 - The flattened graph-symbol namespace allows an existing field symbol from the
-  wrong entity or semantic type to satisfy a Foundation binding. Until the
-  dedicated hardening slice establishes typed ownership and field-kind
-  validation, immutable locks can direct location or inventory behavior at
-  unrelated data, including price fields.
+  wrong entity or semantic type to satisfy a Foundation binding. Until Typed
+  Binding Tasks 1 through 6 are accepted, immutable locks can direct location
+  or inventory behavior at unrelated data, including price fields.
+- New safe versions must be created and digest-verified; accepted historical
+  package roots and locks cannot be edited in place. Current recipes must
+  migrate through a new Draft revision.
+- Publish and compiler admission must become Graph-aware without restoring an
+  unsafe lock-only overload or allowing compiler output before validation.
 
 ## Next slice
 
-Govern a dedicated typed-binding-validation hardening slice before any code
-change: freeze the typed namespace, field ownership/type rules, exact write
-paths, public-boundary adversarial acceptance evidence, and contract-review
-result. Do not dispatch a sixth Task 2 repair. Keep Task 2 `implementing` and
-escalated, and keep Tasks 3 and 4 planned and blocked.
+Move Typed Binding Task 1 `planned -> implementing` under the accepted
+Application Graph Type System contract and exact four paths. Begin with focused
+failing namespace/ownership tests, keep `@factory/graph`
+capability-manifest-independent, and leave Typed Binding Tasks 2 through 6
+`planned`. Keep Commercial Foundation Task 2 `implementing` and escalated and
+Tasks 3 and 4 `planned` and blocked.
