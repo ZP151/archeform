@@ -109,6 +109,7 @@ const runtimeHandlerSchema = z.enum([
   "workflow",
   "cart",
   "catalog",
+  "catalogConfiguration",
   "order",
   "effect",
 ]);
