@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -130,7 +130,8 @@ describe("external business-logic portfolio", () => {
     const manifests = ["apps", "packages"].flatMap((area) =>
       readdirSync(join(workspaceRoot, area), { withFileTypes: true })
         .filter((entry) => entry.isDirectory())
-        .map((entry) => join(workspaceRoot, area, entry.name, "package.json")),
+        .map((entry) => join(workspaceRoot, area, entry.name, "package.json"))
+        .filter((manifest) => existsSync(manifest)),
     );
 
     const importers = manifests

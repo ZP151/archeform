@@ -1,4 +1,10 @@
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -302,7 +308,8 @@ describe("External Intake release boundary", () => {
     const manifests = ["apps", "packages"].flatMap((area) =>
       readdirSync(join(workspaceRoot, area), { withFileTypes: true })
         .filter((entry) => entry.isDirectory())
-        .map((entry) => join(workspaceRoot, area, entry.name, "package.json")),
+        .map((entry) => join(workspaceRoot, area, entry.name, "package.json"))
+        .filter((manifest) => existsSync(manifest)),
     );
     const importers = manifests.filter((manifest) =>
       readFileSync(manifest, "utf8").includes("@factory/external-intake"),

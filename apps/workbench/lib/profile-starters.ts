@@ -32,5 +32,9 @@ export function createProfileDraft(
   profile: FactoryProfile,
   optionalCapabilities?: readonly string[],
 ): ApplicationGraphV1 {
-  return composeDefaultCapabilityDraft({ profile, optionalCapabilities }).graph;
+  return composeDefaultCapabilityDraft(
+    optionalCapabilities === undefined
+      ? { profile }
+      : { profile, optionalCapabilities },
+  ).graph;
 }
