@@ -122,6 +122,56 @@ const externalPortfolioSchema = z
 export type ExternalPortfolioV1 = z.infer<typeof externalPortfolioSchema>;
 export type ExternalPortfolioSourceV1 = z.infer<typeof portfolioSourceSchema>;
 
+export interface PortfolioCandidateBlueprintV1 {
+  readonly id: string;
+  readonly version: string;
+  readonly proposedFactoryKey: string;
+  readonly proposedClassification:
+    "dependency" | "source-fragment" | "provider-adapter";
+  readonly selectedModulePurpose:
+    "reference" | "proposed-copy" | "adapter-contract";
+}
+
+const portfolioCandidateBlueprints: Readonly<
+  Record<string, PortfolioCandidateBlueprintV1>
+> = {
+  medusa: {
+    id: "medusa-provider",
+    version: "0.1.0",
+    proposedFactoryKey: "candidate.commerce.medusa-provider",
+    proposedClassification: "provider-adapter",
+    selectedModulePurpose: "adapter-contract",
+  },
+};
+
+export function getExternalPortfolioSource(
+  portfolio: ExternalPortfolioV1,
+  sourceId: string,
+): ExternalPortfolioSourceV1 {
+  const parsedPortfolio = externalPortfolioSchema.parse(portfolio);
+  const parsedSourceId =
+    intakeContractPrimitives.opaqueIdSchema.parse(sourceId);
+  const source = parsedPortfolio.sources.find(
+    ({ id }) => id === parsedSourceId,
+  );
+  if (source === undefined) {
+    throw new Error(`Unknown external portfolio source: ${parsedSourceId}.`);
+  }
+  return source;
+}
+
+export function getPortfolioCandidateBlueprint(
+  source: ExternalPortfolioSourceV1,
+): PortfolioCandidateBlueprintV1 {
+  const blueprint = portfolioCandidateBlueprints[source.id];
+  if (blueprint === undefined) {
+    throw new Error(
+      `External portfolio source ${source.id} has no Factory Candidate blueprint.`,
+    );
+  }
+  return blueprint;
+}
+
 export function loadExternalPortfolio(path: string): ExternalPortfolioV1 {
   const bytes = readFileSync(path);
   if (bytes.byteLength > 2_000_000) {
@@ -141,19 +191,9 @@ export function createPortfolioIntakeRequest(
     "createdAt" | "producerVersion"
   >,
 ): IntakeRequestV1 {
-  const parsedPortfolio = externalPortfolioSchema.parse(portfolio);
-  const parsedSourceId =
-    intakeContractPrimitives.opaqueIdSchema.parse(sourceId);
-  const source = parsedPortfolio.sources.find(
-    ({ id }) => id === parsedSourceId,
-  );
-  if (source === undefined) {
-    throw new Error(`Unknown external portfolio source: ${parsedSourceId}.`);
-  }
+  const source = getExternalPortfolioSource(portfolio, sourceId);
   if (source.intakeClassification === null) {
-    throw new Error(
-      `External portfolio source ${parsedSourceId} is policy-only.`,
-    );
+    throw new Error(`External portfolio source ${source.id} is policy-only.`);
   }
   return parseIntakeRequest({
     apiVersion: "factory.external-intake-request/v1",

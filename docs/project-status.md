@@ -2,6 +2,54 @@
 
 Updated: 2026-08-01
 
+## Latest capability and supply-chain audit — 2026-08-01
+
+Factory Pilot has a working composition and compilation foundation, but its
+current capability catalogue is not yet a broad production-application
+platform.
+
+- `pnpm test` completed successfully for all 14 workspace tasks on this
+  worktree. The current task run reused local Turbo test cache entries, so this
+  is regression evidence for the checked revisions rather than a new
+  end-to-end release acceptance.
+- Five Profile starters are available: Expense Approval, Restaurant Ordering,
+  Simple Ecommerce, Retail Counter, and Grocery Pickup. The latter three reuse
+  shared commerce composition locks, but that does not make their business
+  operations complete or independently accepted.
+- The catalogue contains 19 capability families and 33 physical, versioned
+  package directories. Only a smaller subset clearly owns executable runtime
+  behaviour: core CRUD/workflow/audit/notification plus selected cart,
+  inventory, and simulated-payment contributions. Generic catalogue and order
+  behaviour, and several Restaurant behaviours, still have compiler-owned or
+  Profile-specific implementations.
+- The Restaurant Profile has accepted local evidence for its bounded
+  table-to-order lifecycle, simulated payment, inventory effects, kitchen and
+  cashier flows, audit, and generated artifacts. Identity, membership,
+  promotion, real payment, settlement, delivery, reservations, realtime,
+  offline operation, and production observability remain absent or partial.
+- The external-source portfolio records 43 fixed sources and 108 demand
+  mappings. It is a discovery and intake input, not an installed capability
+  catalogue. The current pipeline creates immutable quarantine evidence and
+  source-study projections, and now deterministically derives a declarative
+  Candidate proposal for an allowlisted TypeScript Provider source. It does
+  not yet expose Portfolio-to-Candidate persistence through its API or create
+  Factory capability packages.
+
+### Supply-chain release gate
+
+An earlier independent review reported two P1 isolation gaps in external
+intake. Both are already addressed by ancestor commit `aba30f5`: batch parsing
+keeps each opaque request inside the item-level validation boundary, and
+source-study input is parsed with a strict runtime schema plus sensitive-key
+rejection. The focused regression tests are present and the full workspace
+test run passes. Automatic Portfolio-to-Candidate creation can therefore begin
+from the existing release boundary. The intended scale path remains: fixed
+source portfolio -> quarantine -> licence/SBOM/security evidence -> strict
+source study -> non-promoting Candidate proposal -> Factory-owned package or
+provider adapter. Whole-repository copying remains outside the supported path
+because it bypasses licence scope, provenance, compatibility, and Application
+Graph authority controls.
+
 ## Current product and reuse assessment — 2026-08-01
 
 Factory Pilot is a working Application Graph composition foundation, not yet a

@@ -28,10 +28,17 @@ export {
 export {
   createPortfolioIntakeBatch,
   createPortfolioIntakeRequest,
+  getExternalPortfolioSource,
+  getPortfolioCandidateBlueprint,
   loadExternalPortfolio,
+  type PortfolioCandidateBlueprintV1,
   type ExternalPortfolioSourceV1,
   type ExternalPortfolioV1,
 } from "./portfolio.js";
+export {
+  createPortfolioCandidateProposal,
+  type PortfolioCandidateProposalInputV1,
+} from "./portfolio-candidate-proposal.js";
 export {
   ExternalIntakeStore,
   type StoredBlobRef,

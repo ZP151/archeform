@@ -52,7 +52,9 @@
 - Test: packages/external-intake/test/portfolio-candidate-proposal.test.ts
 
 **Interfaces:**
-- Consumes: ExternalPortfolioV1, IntakeJobV1, CompletedEvidenceRefV1, StoredRecordRef, and CandidateProposalV1.
+- Consumes: ExternalPortfolioV1, IntakeJobV1, CompletedEvidenceRefV1, an
+  exact Intake request reference, ExternalIntakeStore, StoredRecordRef, and
+  CandidateProposalV1.
 - Produces: createPortfolioCandidateProposal(input: PortfolioCandidateProposalInputV1): CandidateProposalV1.
 - Invariant: identity and artifacts are a pure function of canonical source metadata plus exact evidence references.
 
@@ -61,9 +63,9 @@
 ~~~ts
 const proposal = createPortfolioCandidateProposal({
   portfolio,
-  sourceId: "tastyigniter",
+  sourceId: "medusa",
   createdAt: "2026-08-01T00:00:00.000Z",
-  producerVersion: "portfolio-candidate/v1",
+  producerVersion: "1.0.0",
   snapshot,
   acquisition,
   evidenceJob,
@@ -72,8 +74,8 @@ const proposal = createPortfolioCandidateProposal({
 
 expect(proposal).toMatchObject({
   apiVersion: "factory.candidate-proposal/v1",
-  proposedFactoryKey: "candidate.restaurant.tastyigniter",
-  proposedClassification: "source-fragment",
+  proposedFactoryKey: "candidate.commerce.medusa-provider",
+  proposedClassification: "provider-adapter",
 });
 expect(proposal.artifacts.adapter.effects).toEqual([
   "candidate.observe",
@@ -96,6 +98,8 @@ export interface PortfolioCandidateProposalInputV1 {
   readonly sourceId: string;
   readonly createdAt: string;
   readonly producerVersion: string;
+  readonly request: StoredRecordRef;
+  readonly store: ExternalIntakeStore;
   readonly snapshot: StoredRecordRef;
   readonly acquisition: StoredRecordRef;
   readonly evidenceJob: IntakeJobV1;
@@ -108,10 +112,13 @@ export function createPortfolioCandidateProposal(
 ~~~
 
 Resolve exactly one Portfolio source; reject architecture-only and excluded
-sources; require the evidence job's Portfolio record, snapshot, and acquisition
-references to agree with it. Derive the candidate key from an allowlisted,
-Factory-authored source blueprint in portfolio.ts. Do not derive a key, schema,
-effect, file path, URL, or executable text from an upstream snapshot.
+sources; require the persisted Intake request's Portfolio record, repository,
+fixed reference, and classification, plus the evidence job's snapshot and
+acquisition references, to agree with it. CandidateRegistryV1 remains the
+only final verifier of completed evidence before storage. Derive the candidate
+key from an allowlisted, Factory-authored source blueprint in portfolio.ts. Do
+not derive a key, schema, effect, file path, URL, or executable text from an
+upstream snapshot.
 
 - [ ] **Step 4: Produce bounded declarative artifacts**
 
@@ -184,7 +191,7 @@ const ref = await api.portfolioCandidateCreate(input);
 expect(ref.status).toBe("quarantined");
 await expect(api.candidateList({ status: "quarantined" })).resolves.toEqual(
   expect.arrayContaining([
-    expect.objectContaining({ proposedFactoryKey: "candidate.restaurant.tastyigniter" }),
+    expect.objectContaining({ proposedFactoryKey: "candidate.commerce.medusa-provider" }),
   ]),
 );
 ~~~
@@ -210,7 +217,7 @@ CandidateRegistryV1.create. It accepts no caller-supplied Candidate artifact.
 
 ~~~ts
 expect(await api.candidateVerify(ref)).toMatchObject({ valid: true });
-expect(() => getCapabilityAsset("candidate.restaurant.tastyigniter")).toThrow();
+expect(() => getCapabilityAsset("candidate.commerce.medusa-provider")).toThrow();
 expect(serializedCandidate).not.toContain("raw-source");
 ~~~
 
@@ -467,7 +474,7 @@ git commit -m "feat: show portfolio intelligence on home"
 ~~~ts
 expect(forbiddenRuntimeImports).toEqual([]);
 expect(portfolioCandidateResult.status).toBe("quarantined");
-expect(goldenRegistryKeys).not.toContain("candidate.restaurant.tastyigniter");
+expect(goldenRegistryKeys).not.toContain("candidate.commerce.medusa-provider");
 ~~~
 
 - [ ] **Step 2: Run focused cross-package verification**

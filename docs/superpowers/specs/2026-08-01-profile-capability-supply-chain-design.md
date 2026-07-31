@@ -138,6 +138,9 @@ that projection against its full internal Portfolio metadata.
 
 1. TastyIgniter: Restaurant menu, reservation, multi-location, pickup, and
    delivery vocabulary; an MIT source-study candidate, not a runtime import.
+   It remains source-study-only until a separately validated PHP inventory
+   adapter exists. The first TypeScript Candidate-proof uses Medusa as a
+   provider-adapter candidate, never as a runtime import.
 2. Medusa and Saleor: independent commerce comparisons used to define a neutral
    Provider contract.
 3. Keycloak, NATS, Gotenberg, Workbox, and OpenTelemetry: Provider or pinned
