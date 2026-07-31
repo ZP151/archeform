@@ -4,6 +4,7 @@ import { isDeepStrictEqual } from "node:util";
 
 import {
   createCapabilityCompositionLock,
+  hasRestaurantOrderingComposition,
   resolveCapabilityAssetLock,
   type CapabilityBindingValueV1,
   type CapabilityCompositionLockV1,
@@ -1247,25 +1248,24 @@ function renderInitialMigration(graph: ApplicationGraphV1): string {
   ].join("\n\n");
 }
 
-function renderPrismaSeed(graph: ApplicationGraphV1): string {
+function renderPrismaSeed(
+  graph: ApplicationGraphV1,
+  hasRestaurantRuntime: boolean,
+): string {
   const records = (graph.domain.seedData ?? []).map((seed, index) => ({
     delegate: toCamelCase(seed.entity),
     id: seed.id ?? `seed-${seed.entity}-${index + 1}`,
     values: seed.values,
   }));
-  const restaurantTableSeed =
-    graph.integration.compositionProfile === "restaurant-ordering"
-      ? (graph.domain.seedData ?? []).find(
-          (seed) => seed.entity === "restaurant-table",
-        )
-      : undefined;
+  const restaurantTableSeed = hasRestaurantRuntime
+    ? (graph.domain.seedData ?? []).find(
+        (seed) => seed.entity === "restaurant-table",
+      )
+    : undefined;
   const restaurantTableCode = restaurantTableSeed?.values.code;
-  const restaurantMenuItemSeed =
-    graph.integration.compositionProfile === "restaurant-ordering"
-      ? (graph.domain.seedData ?? []).find(
-          (seed) => seed.entity === "menu-item",
-        )
-      : undefined;
+  const restaurantMenuItemSeed = hasRestaurantRuntime
+    ? (graph.domain.seedData ?? []).find((seed) => seed.entity === "menu-item")
+    : undefined;
   const restaurantTableId = records.find(
     (record) => record.delegate === "restaurantTable",
   )?.id;
@@ -1277,7 +1277,7 @@ function renderPrismaSeed(graph: ApplicationGraphV1): string {
   )?.id;
   const restaurantMenuItemPrice = restaurantMenuItemSeed?.values.price;
   if (
-    graph.integration.compositionProfile === "restaurant-ordering" &&
+    hasRestaurantRuntime &&
     (typeof restaurantTableCode !== "string" ||
       !restaurantTableCode ||
       typeof restaurantLocationId !== "string" ||
@@ -1988,12 +1988,12 @@ function renderApplicationRuntime(
   ].join("\n");
 }
 
-function renderPrismaRecordStore(graph: ApplicationGraphV1): string {
+function renderPrismaRecordStore(
+  graph: ApplicationGraphV1,
+  hasRestaurantRuntime: boolean,
+): string {
   const commerce = hasCommerceCapabilities(graph);
-  const capabilityOutcome =
-    graph.integration.compositionProfile === "restaurant-ordering"
-      ? "succeeded"
-      : "completed";
+  const capabilityOutcome = hasRestaurantRuntime ? "succeeded" : "completed";
   const delegates = Object.fromEntries(
     graph.domain.entities.map((entity) => [
       entity.key,
@@ -2935,13 +2935,21 @@ export function generateApplicationBundle(
 ): GeneratedApplicationBundle {
   const plan = buildCompilationPlan(input);
   const graph = assertValidApplicationGraph(input.graph);
+  // A Published Graph deliberately does not retain mutable Draft selections.
+  // The Compiler materializes a private lock view for Profile-specific
+  // renderers from the separately validated immutable composition lock. It
+  // never writes this view back into the Published Graph or uses it for hashes.
+  const rendererGraph = structuredClone(graph);
+  rendererGraph.integration.assetLocks = input.compositionLock.packages.map(
+    ({ lock }) => structuredClone(lock),
+  );
   const restaurantRuntimeEnabled =
-    graph.integration.compositionProfile === "restaurant-ordering";
+    hasRestaurantOrderingComposition(rendererGraph);
   let renderedRestaurantRuntime:
     ReturnType<typeof renderRestaurantRuntime> | undefined;
   const restaurantRuntime = () => {
     if (!restaurantRuntimeEnabled) return null;
-    renderedRestaurantRuntime ??= renderRestaurantRuntime(graph);
+    renderedRestaurantRuntime ??= renderRestaurantRuntime(rendererGraph);
     return renderedRestaurantRuntime;
   };
   const capabilityTemplates = resolveCapabilityTemplateContributions(
@@ -3095,7 +3103,7 @@ export function generateApplicationBundle(
       path: "web/app/page-runtime.tsx",
       render: () =>
         restaurantRuntimeEnabled
-          ? renderRestaurantPageRuntime(graph)
+          ? renderRestaurantPageRuntime(rendererGraph)
           : renderPageRuntime(graph, orderEntityKey),
     },
     ...(restaurantRuntimeEnabled
@@ -3106,7 +3114,7 @@ export function generateApplicationBundle(
           },
           {
             path: "web/app/restaurant-merchant-runtime.tsx",
-            render: () => renderRestaurantMerchantPageRuntime(graph),
+            render: () => renderRestaurantMerchantPageRuntime(rendererGraph),
           },
         ]
       : []),
@@ -3236,7 +3244,7 @@ export function generateApplicationBundle(
     },
     {
       path: "api/src/prisma-record-store.ts",
-      render: () => renderPrismaRecordStore(graph),
+      render: () => renderPrismaRecordStore(graph, restaurantRuntimeEnabled),
     },
     {
       path: "api/src/policy.ts",
@@ -3279,7 +3287,7 @@ export function generateApplicationBundle(
     },
     {
       path: "database/prisma/seed.ts",
-      render: () => renderPrismaSeed(graph),
+      render: () => renderPrismaSeed(graph, restaurantRuntimeEnabled),
     },
     {
       path: "database/Dockerfile",

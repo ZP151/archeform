@@ -162,7 +162,7 @@ describe("generated page runtime projection", () => {
     blockById(graph, "product-catalog").type = "menu-browser";
 
     expect(() => createGeneratedPageRuntimeProjection(graph)).toThrow(
-      "Restaurant PageModel block 'menu-browser' requires compositionProfile 'restaurant-ordering'.",
+      "Restaurant PageModel block 'menu-browser' requires the complete locked Restaurant package set.",
     );
   });
 

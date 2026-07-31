@@ -1601,7 +1601,7 @@ describe("capability catalog", () => {
     expect(graph.integration).not.toHaveProperty("compositionProfile");
   });
 
-  it("selects the shared commercial Foundation recipe for Restaurant", () => {
+  it("selects the shared commercial Foundation and Restaurant-owned packages", () => {
     const graph = composeDefaultCapabilityDraft({
       profile: "restaurant-ordering",
     }).graph;
@@ -1617,18 +1617,22 @@ describe("capability catalog", () => {
       "commerce.inventory-ledger",
       "commerce.line-configuration",
       "commerce.order",
-      "commerce.simulated-payment",
       "core.audit",
       "core.crud",
       "core.identity-context",
       "core.location-context",
       "core.notification",
       "core.workflow",
+      "restaurant.cashier",
+      "restaurant.kitchen",
+      "restaurant.ordering",
+      "restaurant.reporting",
+      "restaurant.table-session",
     ]);
     expect(graph.integration).not.toHaveProperty("assetLocks");
   });
 
-  it("assigns every Foundation operation to its exact selected providers", () => {
+  it("assigns every selected Restaurant operation to its exact provider", () => {
     const graph = composeDefaultCapabilityDraft({
       profile: "restaurant-ordering",
     }).graph;
@@ -1666,7 +1670,26 @@ describe("capability catalog", () => {
       "catalog.option.select": ["commerce.line-configuration"],
       "order.create": ["commerce.order"],
       "order.transition": ["commerce.order"],
-      "payment.simulate": ["commerce.simulated-payment"],
+      "table-session.create": ["restaurant.table-session"],
+      "table-session.validate": ["restaurant.table-session"],
+      "table-session.close": ["restaurant.table-session"],
+      "table-session.expire": ["restaurant.table-session"],
+      "order.line.add": ["restaurant.ordering"],
+      "order.line.update": ["restaurant.ordering"],
+      "order.line.remove": ["restaurant.ordering"],
+      "order.submit": ["restaurant.ordering"],
+      "order.cancel": ["restaurant.ordering"],
+      "order.history": ["restaurant.ordering"],
+      "kitchen.ticket.create": ["restaurant.kitchen"],
+      "kitchen.ticket.accept": ["restaurant.kitchen"],
+      "kitchen.ticket.prepare": ["restaurant.kitchen"],
+      "kitchen.ticket.ready": ["restaurant.kitchen"],
+      "payment.simulate": ["restaurant.cashier"],
+      "payment.reversal.request": ["restaurant.cashier"],
+      "order.serve": ["restaurant.cashier"],
+      "receipt.render": ["restaurant.cashier"],
+      "report.restaurant.summary": ["restaurant.reporting"],
+      "report.restaurant.low-stock": ["restaurant.reporting"],
       "identity.context.resolve": ["core.identity-context"],
       "identity.context.validate": ["core.identity-context"],
       "location.context.resolve": ["core.location-context"],

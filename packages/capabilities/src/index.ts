@@ -52,6 +52,7 @@ export type {
 
 export {
   assertRestaurantOrderingProfile,
+  hasRestaurantOrderingComposition,
   validateRestaurantOrderingProfile,
 } from "./restaurant/profile.js";
 export type {
@@ -794,23 +795,7 @@ const defaultCapabilityRecipes: Readonly<
   Record<FactoryProfile, ProfileCompositionRecipe>
 > = {
   "expense-approval": compositionRecipes["expense-approval"],
-  "restaurant-ordering": {
-    requiredCapabilities: [
-      "core.audit",
-      "core.crud",
-      "core.workflow",
-      "commerce.catalog",
-      "commerce.cart",
-      "commerce.inventory",
-      "commerce.inventory-ledger",
-      "commerce.line-configuration",
-      "commerce.order",
-      "commerce.simulated-payment",
-      "core.identity-context",
-      "core.location-context",
-    ],
-    optionalCapabilities: ["core.notification"],
-  },
+  "restaurant-ordering": compositionRecipes["restaurant-ordering"],
   "simple-ecommerce": compositionRecipes["simple-ecommerce"],
   "retail-counter": compositionRecipes["retail-counter"],
   "grocery-pickup": compositionRecipes["grocery-pickup"],
@@ -953,6 +938,15 @@ const baseProfileCompositionBindings: Readonly<
       locationCodeField: { graphSymbol: "graph.domain.code" },
       customerRole: { graphSymbol: "graph.policy.customer" },
     },
+    // These verified v1 packages predate strict binding contracts. Explicit
+    // empty maps let the active Composer lock the real package identities
+    // without inventing undeclared parameters. They are replaced by typed
+    // bindings in the follow-up package-contract migration.
+    "restaurant.table-session": {},
+    "restaurant.ordering": {},
+    "restaurant.kitchen": {},
+    "restaurant.cashier": {},
+    "restaurant.reporting": {},
   },
   "simple-ecommerce": {
     "core.audit": {
@@ -3034,30 +3028,7 @@ function profileStarterFor(profile: FactoryProfile): ProfileGraphStarter {
 function createDefaultProfileBaseGraph(
   profile: FactoryProfile,
 ): ApplicationGraphV1 {
-  const graph = structuredClone(profileStarterFor(profile).graph);
-  if (profile !== "restaurant-ordering") return graph;
-
-  const genericBlockTypes: Readonly<Record<string, string>> = {
-    "restaurant-entry": "form",
-    "menu-browser": "catalog",
-    "order-cart": "cart",
-    "payment-checkout": "checkout",
-    "order-tracker": "collection",
-    receipt: "collection",
-    "table-board": "collection",
-    "menu-manager": "collection",
-    "kitchen-board": "collection",
-    "cashier-console": "collection",
-    "restaurant-dashboard": "hero",
-  };
-  graph.page.pages = graph.page.pages.map((page) => ({
-    ...page,
-    blocks: page.blocks.map((block) => ({
-      ...block,
-      type: genericBlockTypes[block.type] ?? block.type,
-    })),
-  }));
-  return graph;
+  return structuredClone(profileStarterFor(profile).graph);
 }
 
 export function getProfileComposition(

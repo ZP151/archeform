@@ -540,6 +540,30 @@ const requiredTableSessionTransitions = [
   ["active", "expire", "closed", [], []],
 ] as const;
 
+const requiredRestaurantPackageKeys = [
+  "restaurant.table-session",
+  "restaurant.ordering",
+  "restaurant.kitchen",
+  "restaurant.cashier",
+  "restaurant.reporting",
+] as const;
+
+/**
+ * Identifies a Restaurant runtime from its selected Golden packages. A
+ * profile label is not sufficient compiler authority.
+ */
+export function hasRestaurantOrderingComposition(
+  graph: ApplicationGraphV1,
+): boolean {
+  const selectedKeys = new Set([
+    ...(graph.integration.assetLocks ?? []).map(({ key }) => key),
+    ...(graph.integration.compositionSelections ?? []).map(
+      ({ lock }) => lock.key,
+    ),
+  ]);
+  return requiredRestaurantPackageKeys.every((key) => selectedKeys.has(key));
+}
+
 const requiredInventoryLedgerStates = ["recorded"] as const;
 const requiredInventoryLedgerEvents = ["record-manager-adjustment"] as const;
 const requiredInventoryLedgerTransitions = [
@@ -578,11 +602,11 @@ export function validateRestaurantOrderingProfile(
     path: readonly (string | number)[],
   ) => issues.push({ code, message, path });
 
-  if (graph.integration.compositionProfile !== "restaurant-ordering") {
+  if (!hasRestaurantOrderingComposition(graph)) {
     issue(
       "restaurant.profile.invalid",
-      "Restaurant Ordering requires compositionProfile 'restaurant-ordering'.",
-      ["integration", "compositionProfile"],
+      "Restaurant Ordering requires the complete locked Restaurant package set.",
+      ["integration", "compositionSelections"],
     );
   }
 
@@ -717,9 +741,12 @@ export function validateRestaurantOrderingProfile(
     }
   }
 
-  const assetLocks = new Set(
-    (graph.integration.assetLocks ?? []).map((lock) => lock.key),
-  );
+  const assetLocks = new Set([
+    ...(graph.integration.assetLocks ?? []).map((lock) => lock.key),
+    ...(graph.integration.compositionSelections ?? []).map(
+      ({ lock }) => lock.key,
+    ),
+  ]);
   for (const assetKey of requiredAssetLocks) {
     if (!assetLocks.has(assetKey)) {
       issue(

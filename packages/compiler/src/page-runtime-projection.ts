@@ -1,3 +1,4 @@
+import { hasRestaurantOrderingComposition } from "@factory/capabilities";
 import type { ApplicationGraphV1 } from "@factory/graph";
 
 export const generatedPageRuntimeApiVersion =
@@ -325,18 +326,15 @@ function projectBlock(
   block: PageBlock,
   entityKeys: ReadonlySet<string>,
   factoryCapabilities: readonly ApplicationGraphV1["integration"]["capabilities"][number][],
-  compositionProfile: string | undefined,
+  hasRestaurantRuntime: boolean,
   orderEntity: string | null,
 ): GeneratedPageRuntimeBlockV1 {
   if (!isGeneratedPageRuntimeBlockType(block.type)) {
     throw new Error(`Unsupported PageModel block '${block.type}'.`);
   }
-  if (
-    restaurantStructuralBlockTypes.has(block.type) &&
-    compositionProfile !== "restaurant-ordering"
-  ) {
+  if (restaurantStructuralBlockTypes.has(block.type) && !hasRestaurantRuntime) {
     throw new Error(
-      `Restaurant PageModel block '${block.type}' requires compositionProfile 'restaurant-ordering'.`,
+      `Restaurant PageModel block '${block.type}' requires the complete locked Restaurant package set.`,
     );
   }
   if (restaurantCustomerBlockTypes.has(block.type)) {
@@ -369,8 +367,7 @@ function projectBlock(
     ? requireBoundEntity(block, entityKeys)
     : undefined;
   const expectedOrderEntity =
-    orderEntity ??
-    (compositionProfile === "restaurant-ordering" ? "order" : undefined);
+    orderEntity ?? (hasRestaurantRuntime ? "order" : undefined);
   if (
     entity &&
     orderEntityBlockTypes.has(block.type) &&
@@ -402,6 +399,7 @@ export function createGeneratedPageRuntimeProjection(
   const factoryCapabilities = graph.integration.capabilities.filter(
     (capability) => capability.providerId === "factory",
   );
+  const hasRestaurantRuntime = hasRestaurantOrderingComposition(graph);
   const commerce = resolveCommerceRuntime(graph, factoryCapabilities, bindings);
   const pages = graph.page.pages.map((page) => {
     assertCanonicalLocalRoute(page.route);
@@ -414,7 +412,7 @@ export function createGeneratedPageRuntimeProjection(
           block,
           entityKeys,
           factoryCapabilities,
-          graph.integration.compositionProfile,
+          hasRestaurantRuntime,
           commerce.orderEntity,
         ),
       ),

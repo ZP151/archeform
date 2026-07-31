@@ -24,21 +24,23 @@ function persistedRestaurantLock(graph: PublishedGraphInput["graph"]) {
       selection,
     ]),
   );
-  const selections = (graph.integration.assetLocks ?? []).map(
-    (lock): CapabilitySelectionV1 => {
-      const canonical = canonicalSelections.get(
-        `${lock.key}@${lock.version}:${lock.manifestDigest}`,
+  const locks =
+    graph.integration.assetLocks ??
+    graph.integration.compositionSelections?.map(({ lock }) => lock) ??
+    [];
+  const selections = locks.map((lock): CapabilitySelectionV1 => {
+    const canonical = canonicalSelections.get(
+      `${lock.key}@${lock.version}:${lock.manifestDigest}`,
+    );
+    if (canonical) return canonical;
+    const manifest = resolveCapabilityAssetLock(lock).manifest;
+    if ((manifest.parameters ?? []).some(({ required }) => required)) {
+      throw new Error(
+        `Fixture package '${manifest.key}@${manifest.version}' requires canonical bindings.`,
       );
-      if (canonical) return canonical;
-      const manifest = resolveCapabilityAssetLock(lock).manifest;
-      if ((manifest.parameters ?? []).some(({ required }) => required)) {
-        throw new Error(
-          `Fixture package '${manifest.key}@${manifest.version}' requires canonical bindings.`,
-        );
-      }
-      return { lock, bindings: {} };
-    },
-  );
+    }
+    return { lock, bindings: {} };
+  });
   if (!selections.length) {
     throw new Error("Restaurant fixture requires a nonempty lock.");
   }
@@ -86,6 +88,66 @@ const restaurantTransition = (
     )!;
 
 describe("Restaurant Ordering profile", () => {
+  it("composes the active Restaurant starter from its Restaurant-owned packages", () => {
+    const activeDraft = composeDefaultCapabilityDraft({
+      profile: "restaurant-ordering",
+    });
+    const selectedKeys =
+      activeDraft.graph.integration.compositionSelections?.map(
+        ({ lock }) => lock.key,
+      ) ?? [];
+    const blockTypes = activeDraft.graph.page.pages.flatMap((page) =>
+      page.blocks.map((block) => block.type),
+    );
+
+    expect(selectedKeys).toEqual(
+      expect.arrayContaining([
+        "restaurant.table-session",
+        "restaurant.ordering",
+        "restaurant.kitchen",
+        "restaurant.cashier",
+        "restaurant.reporting",
+      ]),
+    );
+    expect(selectedKeys).not.toContain("commerce.simulated-payment");
+    expect(blockTypes).toEqual(
+      expect.arrayContaining([
+        "restaurant-entry",
+        "menu-browser",
+        "order-cart",
+        "payment-checkout",
+        "kitchen-board",
+        "cashier-console",
+        "restaurant-dashboard",
+      ]),
+    );
+  });
+
+  it("compiles the active Restaurant starter with its locked package outputs", () => {
+    const activeDraft = composeDefaultCapabilityDraft({
+      profile: "restaurant-ordering",
+    });
+    const files = new Set(
+      generateApplicationBundle({
+        publishedRevisionId: "published-active-restaurant-starter-1",
+        graph: activeDraft.graph,
+      }).files.map((file) => file.path),
+    );
+
+    for (const packageKey of [
+      "restaurant.table-session",
+      "restaurant.ordering",
+      "restaurant.kitchen",
+      "restaurant.cashier",
+      "restaurant.reporting",
+    ]) {
+      expect(files).toContain(`api/src/capabilities/${packageKey}.ts`);
+    }
+    expect(files).not.toContain(
+      "api/src/capabilities/commerce.simulated-payment.ts",
+    );
+  });
+
   it("accepts the complete starter and returns a bounded projection", () => {
     const projection = assertRestaurantOrderingProfile(restaurantGraph());
 

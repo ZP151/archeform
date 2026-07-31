@@ -372,7 +372,9 @@ describe("immutable composition compilation", () => {
       delete publishedGraph.integration.compositionSelections;
 
       expect(draft.integration).not.toHaveProperty("assetLocks");
-      expect(selections).toHaveLength(13);
+      expect(selections).toHaveLength(
+        profile === "restaurant-ordering" ? 17 : 13,
+      );
       expect(publishedGraph.integration).not.toHaveProperty(
         "compositionSelections",
       );
@@ -389,8 +391,19 @@ describe("immutable composition compilation", () => {
     const ecommerceInput = publishedProfile("simple-ecommerce");
 
     expect(
-      restaurantInput.compositionLock.packages.map(({ lock }) => lock),
-    ).toEqual(ecommerceInput.compositionLock.packages.map(({ lock }) => lock));
+      restaurantInput.compositionLock.packages.map(({ lock }) => lock.key),
+    ).toEqual(
+      expect.arrayContaining([
+        "restaurant.table-session",
+        "restaurant.ordering",
+        "restaurant.kitchen",
+        "restaurant.cashier",
+        "restaurant.reporting",
+      ]),
+    );
+    expect(
+      ecommerceInput.compositionLock.packages.map(({ lock }) => lock.key),
+    ).toContain("commerce.simulated-payment");
     expect(
       restaurantInput.compositionLock.packages.map(({ bindings }) => bindings),
     ).not.toEqual(

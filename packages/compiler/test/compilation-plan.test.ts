@@ -1173,7 +1173,7 @@ describe("compilation target registry", () => {
     );
   });
 
-  it("does not duplicate declared relation scalar fields within Restaurant models", () => {
+  it("does not duplicate relation scalar fields within emitted Restaurant command models", () => {
     const draft = composeDefaultCapabilityDraft({
       profile: "restaurant-ordering",
     }).graph;
@@ -1209,7 +1209,7 @@ describe("compilation target registry", () => {
         "orderId",
         ["OrderLine", "PaymentAttempt", "KitchenTicket", "InventoryLedger"],
       ],
-      ["menuItemId", ["MenuOptionGroup", "OrderLine", "InventoryLedger"]],
+      ["menuItemId", ["OrderLine", "InventoryLedger"]],
     ] as const) {
       for (const modelName of modelNames) {
         expect(
@@ -1221,10 +1221,10 @@ describe("compilation target registry", () => {
       }
     }
     expect(schema).toContain(
-      'restaurantTable RestaurantTable @relation("TableSessionToRestaurantTable", fields: [tableCode], references: [code])',
+      "table RestaurantTable @relation(fields: [tableCode], references: [code])",
     );
     expect(schema).toContain(
-      'menuCategory MenuCategory @relation("MenuItemToMenuCategory", fields: [categoryKey], references: [id])',
+      "category MenuCategory @relation(fields: [categoryKey], references: [id])",
     );
     expect(schema).not.toContain("restaurantTableId");
     expect(schema).not.toContain("menuCategoryId");
