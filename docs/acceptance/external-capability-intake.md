@@ -2,9 +2,9 @@
 
 Updated: 2026-07-31
 
-Status: Task 6 remains `implementing`. This is deterministic writer evidence,
-not independent task review, behavioral QA, release review, final verification,
-or acceptance.
+Status: Task 6 remains `implementing`. Task review and PM reconciliation may
+move it to `ready_for_qa`; independent behavioral QA, release review, and
+fresh final verification remain required before `accepted`.
 
 ## Scope
 
@@ -43,6 +43,15 @@ The first release-boundary GREEN attempt exposed an over-constrained test
 assertion: invalid promotion packets correctly returned `valid: false` plus
 sanitized validation issues. The assertion was narrowed to the contractual
 boolean; no production behavior changed.
+
+Task review then required a structurally valid canonical
+`decision: "pending-review"` packet as the release-boundary input. The focused
+test first ran RED with an incomplete packet (`valid: false`), then ran GREEN
+after a local canonical fixture was supplied (`3/3` focused release-boundary
+tests). That same verified packet was rejected without mutation by Golden lock,
+Graph, compiler/generated-runtime, promotion-decision, batch, and Candidate
+creation entry points. Its fixed prohibitions include provider activation,
+approval, and source-copy execution.
 
 ## Demonstrated postconditions
 
@@ -114,5 +123,6 @@ git diff --check
 - Preflight proves intake request isolation and resume-stable CLI output. It
   does not make a licence decision, approve a packet, create a Golden asset, or
   authorize source copying.
-- Independent Task 6 review, behavioral QA, release review, fresh final
-  verification, and PM reconciliation remain required before any state change.
+- Task review and PM reconciliation remain required before a
+  `ready_for_qa` transition. Independent behavioral QA, release review, and
+  fresh final verification remain required before `accepted`.

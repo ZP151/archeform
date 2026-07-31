@@ -11,8 +11,10 @@ import { resolveCapabilityAssetLock } from "../../capabilities/src/index.js";
 
 import {
   ExternalIntakeStore,
+  canonicalRecordDigest,
   createExternalIntakeApi,
   parseCandidateCapability,
+  parsePromotionDecision,
   verifyPromotionPacket,
 } from "../src/index.js";
 
@@ -51,6 +53,134 @@ function candidateArtifact(): unknown {
     candidateManifestDigest: digest,
     fixtureDigest: digest,
     adapterDigest: digest,
+  };
+}
+
+function validPendingReviewPacket() {
+  const packetDigest = (character: string) =>
+    `sha256:${character.repeat(64)}` as const;
+  const candidateManifest = {
+    apiVersion: "factory.candidate-manifest/v1" as const,
+    id: "fixture-candidate",
+    version: "1.0.0",
+    proposedFactoryKey: "candidate.fixture",
+    inputSchema: {
+      type: "object" as const,
+      properties: { message: { type: "string" as const } },
+      required: ["message"],
+      additionalProperties: false as const,
+    },
+    outputSchema: {
+      type: "object" as const,
+      properties: { message: { type: "string" as const } },
+      required: ["message"],
+      additionalProperties: false as const,
+    },
+    effects: ["candidate.project"],
+  };
+  return {
+    apiVersion: "factory.external-capability-promotion-packet/v1" as const,
+    decision: "pending-review" as const,
+    candidate: {
+      id: "fixture-candidate",
+      version: "1.0.0",
+      digest: packetDigest("a"),
+      status: "conformance-passed" as const,
+    },
+    candidateManifest,
+    factoryProposal: {
+      apiVersion: "factory.external-factory-interface-proposal/v1" as const,
+      reviewStatus: "pending-manual-review" as const,
+      key: "integration.fixture",
+      version: "1.0.0",
+      packageRoot: "packages/capabilities/assets/fixture/1.0.0",
+      targets: ["api"],
+      candidate: {
+        id: "fixture-candidate",
+        version: "1.0.0",
+        digest: packetDigest("a"),
+        classification: "provider-adapter" as const,
+        manifestDigest: canonicalRecordDigest(candidateManifest),
+      },
+      operations: [
+        {
+          candidateEffect: "candidate.project",
+          factoryOperation: "fixture.project",
+        },
+      ],
+      interface: {
+        inputSchema: candidateManifest.inputSchema,
+        outputSchema: candidateManifest.outputSchema,
+      },
+    },
+    source: {
+      repositoryUrl: "https://github.com/example/fixture.git",
+      resolvedCommit: "a".repeat(40),
+      snapshotDigest: packetDigest("b"),
+    },
+    evidenceDigest: packetDigest("c"),
+    conformanceDigest: packetDigest("d"),
+    reviewInputDigest: packetDigest("e"),
+    parentDigests: [
+      packetDigest("a"),
+      packetDigest("b"),
+      packetDigest("c"),
+      packetDigest("d"),
+      packetDigest("e"),
+      packetDigest("f"),
+    ].sort(),
+    licence: {
+      manualStatus: "unreviewed" as const,
+      reviewStatus: "pending-manual-review" as const,
+    },
+    findingDispositions: (
+      ["licence", "secret", "sast", "dependency"] as const
+    ).map((kind, index) => ({
+      kind,
+      resultDigest: packetDigest(String(index + 1)),
+      findings: [],
+    })),
+    sourceCopy: { mode: "none" as const, modules: [] },
+    notices: {
+      destination: "docs/third-party-notices.md",
+      action: "pending-manual-review" as const,
+    },
+    reviewers: [
+      "intake-maintainer",
+      "licence-reviewer",
+      "security-reviewer",
+      "capability-maintainer",
+      "architecture-owner",
+      "qa-owner",
+      "golden-owner",
+    ].map((role) => ({
+      role,
+      reviewer: `${role}-alice`,
+      status: "assigned-not-reviewed" as const,
+    })),
+    removalPlan: {
+      packageRoot: "packages/capabilities/assets/fixture/1.0.0",
+      replacement: "factory-native-fixture",
+      steps: ["remove-package", "remove-target-bindings", "run-regressions"],
+    },
+    collision: {
+      inventoryDigest: packetDigest("f"),
+      result: "no-collision-observed-in-inventory" as const,
+      goldenOwnerAction: "pending-manual-review" as const,
+    },
+    prohibitedFields: [
+      "approval",
+      "waiver",
+      "source-copy-execution",
+      "notice-modification",
+      "golden-registration",
+      "graph-input",
+      "asset-lock-input",
+      "composition-lock-input",
+      "compiler-input",
+      "runtime-activation",
+      "provider-activation",
+    ] as const,
   };
 }
 
@@ -99,6 +229,35 @@ describe("External Intake release boundary", () => {
     const api = createExternalIntakeApi(new ExternalIntakeStore(root), root);
 
     try {
+      const packet = validPendingReviewPacket();
+      const before = JSON.stringify(packet);
+      expect(verifyPromotionPacket(packet).valid).toBe(true);
+      expect(packet.decision).toBe("pending-review");
+      expect(packet.sourceCopy).toEqual({ mode: "none", modules: [] });
+      expect(packet.prohibitedFields).toEqual([
+        "approval",
+        "waiver",
+        "source-copy-execution",
+        "notice-modification",
+        "golden-registration",
+        "graph-input",
+        "asset-lock-input",
+        "composition-lock-input",
+        "compiler-input",
+        "runtime-activation",
+        "provider-activation",
+      ]);
+      expect(() => resolveCapabilityAssetLock(packet as never)).toThrow();
+      expect(() => parseApplicationGraph(packet)).toThrow();
+      expect(() =>
+        generateApplicationBundle({
+          publishedRevisionId: "published-pending-review-packet-1",
+          graph: packet as never,
+        }),
+      ).toThrow();
+      expect(() => parsePromotionDecision(packet)).toThrow();
+      expect(JSON.stringify(packet)).toBe(before);
+
       expect(Object.keys(api).sort()).toEqual([
         "candidateBlock",
         "candidateCreate",
@@ -113,27 +272,12 @@ describe("External Intake release boundary", () => {
         "submitBatch",
         "verifyJob",
       ]);
-      expect(
-        verifyPromotionPacket({
-          apiVersion: "factory.external-capability-promotion-packet/v1",
-          decision: "approved",
-        }).valid,
-      ).toBe(false);
-      expect(() =>
-        api.submitBatch({
-          apiVersion: "factory.external-intake-batch/v1",
-          items: [],
-          approval: "grant",
-        }),
-      ).toThrow("strict batch input");
-      expect(() =>
-        api.submitBatch({
-          apiVersion: "factory.external-intake-batch/v1",
-          items: [],
-          copyExecution: "run",
-        }),
-      ).toThrow("strict batch input");
+      expect(() => api.submitBatch(packet)).toThrow("strict batch input");
+      await expect(api.candidateCreate(packet as never)).rejects.toThrow(
+        "Candidate identity and version must be opaque",
+      );
       await expect(api.candidateList({})).resolves.toEqual([]);
+      expect(JSON.stringify(packet)).toBe(before);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
