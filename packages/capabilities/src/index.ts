@@ -111,6 +111,18 @@ export function getCapabilityAsset(key: string): CapabilityAssetV1 {
   return asset;
 }
 
+function getCapabilityAssetVersion(
+  key: string,
+  version: string,
+): CapabilityAssetV1 {
+  const asset = capabilityAssets.find(
+    (candidate) =>
+      candidate.manifest.key === key && candidate.manifest.version === version,
+  );
+  if (!asset) throw new Error(`Unknown Factory capability: ${key}@${version}`);
+  return asset;
+}
+
 /**
  * Resolves a Published Graph lock to the exact Golden package identity it
  * recorded. Current profile composition intentionally uses getCapabilityAsset
@@ -3285,7 +3297,11 @@ export function composeDefaultCapabilityDraft(
         );
       }
       return {
-        lock: lockCapabilityAsset(getCapabilityAsset(key)),
+        lock: lockCapabilityAsset(
+          key === "commerce.transaction"
+            ? getCapabilityAssetVersion(key, "2.0.0")
+            : getCapabilityAsset(key),
+        ),
         bindings: structuredClone(bindings),
       };
     },

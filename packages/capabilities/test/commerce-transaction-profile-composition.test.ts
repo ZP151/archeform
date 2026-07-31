@@ -2,10 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   composeDefaultCapabilityDraft,
-  getCapabilityAsset,
   listProfileReadiness,
+  resolveCapabilityAssetLock,
 } from "../src/index.js";
-import { lockCapabilityAsset } from "../src/assets/index.js";
+import {
+  commerceTransactionAssetV1_0_0,
+  commerceTransactionAssetV2_0_0,
+  lockCapabilityAsset,
+} from "../src/assets/index.js";
 
 const commerceProfiles = [
   "restaurant-ordering",
@@ -24,13 +28,21 @@ function transactionSelection(profile: (typeof commerceProfiles)[number]) {
 
 describe("Commerce transaction profile composition", () => {
   it.each(commerceProfiles)(
-    "locks commerce.transaction@1.0.0 for %s",
+    "locks commerce.transaction@2.0.0 for %s",
     (profile) => {
       expect(transactionSelection(profile)?.lock).toEqual(
-        lockCapabilityAsset(getCapabilityAsset("commerce.transaction")),
+        lockCapabilityAsset(commerceTransactionAssetV2_0_0),
       );
     },
   );
+
+  it("resolves a saved V1 transaction lock without upgrading it", () => {
+    const historicalLock = lockCapabilityAsset(commerceTransactionAssetV1_0_0);
+
+    expect(resolveCapabilityAssetLock(historicalLock)).toBe(
+      commerceTransactionAssetV1_0_0,
+    );
+  });
 
   it("binds the transaction to declared Restaurant symbols", () => {
     expect(transactionSelection("restaurant-ordering")?.bindings).toEqual({
