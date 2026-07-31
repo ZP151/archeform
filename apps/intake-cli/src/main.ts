@@ -7,6 +7,7 @@ import { pathToFileURL } from "node:url";
 import {
   ExternalIntakeStore,
   createExternalIntakeApi,
+  isCredentialLikeCandidateValue,
   type ExternalIntakeApiV1,
 } from "@factory/external-intake";
 
@@ -15,8 +16,23 @@ const VERSION = /^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/u;
 const DIGEST = /^sha256:[a-f0-9]{64}$/u;
 const MAX_REQUEST_BYTES = 1024 * 1024;
 const FORBIDDEN_OPERATION = /(?:promot|approv|waiv|--out)/iu;
-const REDACTED_KEY =
-  /(?:credential|password|raw|finding|sourcebody|sourcetext|prompt|response|command|executable)/iu;
+const REDACTED_IDENTIFIERS = [
+  "token",
+  "auth",
+  "apikey",
+  "clientsecret",
+  "privatekey",
+  "password",
+  "credential",
+  "prompt",
+  "response",
+  "raw",
+  "finding",
+  "sourcebody",
+  "sourcetext",
+  "command",
+  "executable",
+] as const;
 
 class CliInputError extends Error {}
 
@@ -74,15 +90,51 @@ function localJson(pathInput: string | undefined, cwd: string): unknown {
   return JSON.parse(readFileSync(path, "utf8")) as unknown;
 }
 
-function redact(input: unknown): unknown {
-  if (Array.isArray(input)) return input.map(redact);
+function normalizedOutputKey(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/gu, "");
+}
+
+function isRedactedKey(key: string): boolean {
+  const normalized = normalizedOutputKey(key);
+  return REDACTED_IDENTIFIERS.some((identifier) =>
+    normalized.includes(identifier),
+  );
+}
+
+function isAllowedCanonicalOutput(
+  value: string,
+  key: string | undefined,
+): boolean {
+  if (key === undefined) return false;
+  const normalized = normalizedOutputKey(key);
+  if (
+    (normalized.endsWith("digest") || normalized.endsWith("digests")) &&
+    DIGEST.test(value)
+  ) {
+    return true;
+  }
+  return (
+    normalized === "lookupid" && /^(?:candidate|job)-[a-f0-9]{64}$/u.test(value)
+  );
+}
+
+function redact(input: unknown, key?: string): unknown {
+  if (Array.isArray(input)) return input.map((value) => redact(value, key));
+  if (typeof input === "string") {
+    return isCredentialLikeCandidateValue(input) &&
+      !isAllowedCanonicalOutput(input, key)
+      ? "[redacted]"
+      : input;
+  }
   if (input === null || typeof input !== "object") return input;
   const output: Record<string, unknown> = Object.create(null) as Record<
     string,
     unknown
   >;
-  for (const [key, value] of Object.entries(input)) {
-    output[key] = REDACTED_KEY.test(key) ? "[redacted]" : redact(value);
+  for (const [outputKey, value] of Object.entries(input)) {
+    output[outputKey] = isRedactedKey(outputKey)
+      ? "[redacted]"
+      : redact(value, outputKey);
   }
   return output;
 }
@@ -119,13 +171,24 @@ export async function runIntakeCli(
     } else if (
       args.length === 3 &&
       args[0] === "candidate" &&
-      ["show", "test"].includes(args[1]!)
+      ["show", "test", "block", "reject"].includes(args[1]!)
     ) {
       const identity = candidateIdentity(args[2]);
-      result =
-        args[1] === "show"
-          ? await options.api.candidateShow(identity.id, identity.version)
-          : await options.api.candidateTest(identity.id, identity.version);
+      if (args[1] === "show") {
+        result = await options.api.candidateShow(identity.id, identity.version);
+      } else if (args[1] === "test") {
+        result = await options.api.candidateTest(identity.id, identity.version);
+      } else if (args[1] === "block") {
+        result = await options.api.candidateBlock(
+          identity.id,
+          identity.version,
+        );
+      } else {
+        result = await options.api.candidateReject(
+          identity.id,
+          identity.version,
+        );
+      }
     } else if (
       args.length === 3 &&
       args[0] === "verify" &&

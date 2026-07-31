@@ -66,6 +66,16 @@ function outputHarness(api: ExternalIntakeApiV1, cwd: string) {
   };
 }
 
+function credentialLikeSentinel(): string {
+  return Array.from(
+    { length: 16 },
+    (_, index) =>
+      `${String.fromCharCode(65 + (index % 26))}${String.fromCharCode(
+        97 + ((index * 7) % 26),
+      )}${index % 10}`,
+  ).join("");
+}
+
 afterEach(() => {
   for (const root of roots.splice(0)) {
     rmSync(root, { recursive: true, force: true });
@@ -190,4 +200,191 @@ describe("repository-local intake CLI", () => {
       );
     },
   );
+
+  it.each([
+    "token",
+    "auth",
+    "apiKey",
+    "clientSecret",
+    "privateKey",
+    "password",
+    "credential",
+    "prompt",
+    "response",
+  ])("redacts Candidate output key family %s", async (key) => {
+    const root = tempRoot();
+    const sentinel = credentialLikeSentinel();
+    const api = {
+      candidateShow() {
+        return {
+          id: "safe-adapter",
+          version: "1.0.0",
+          [key]: sentinel,
+        };
+      },
+    } as unknown as ExternalIntakeApiV1;
+    const output = outputHarness(api, root);
+
+    expect(
+      await runIntakeCli(
+        ["candidate", "show", "safe-adapter@1.0.0"],
+        output.options,
+      ),
+    ).toBe(0);
+    expect(output.stdout.join("\n")).not.toContain(sentinel);
+    expect(output.stdout.join("\n")).toContain("[redacted]");
+  });
+
+  it("redacts a generic credential-like high-entropy Candidate output value", async () => {
+    const root = tempRoot();
+    const sentinel = credentialLikeSentinel();
+    const api = {
+      candidateShow() {
+        return {
+          id: "safe-adapter",
+          version: "1.0.0",
+          metadata: { value: sentinel },
+        };
+      },
+    } as unknown as ExternalIntakeApiV1;
+    const output = outputHarness(api, root);
+
+    expect(
+      await runIntakeCli(
+        ["candidate", "show", "safe-adapter@1.0.0"],
+        output.options,
+      ),
+    ).toBe(0);
+    expect(output.stdout.join("\n")).not.toContain(sentinel);
+    expect(output.stdout.join("\n")).toContain("[redacted]");
+  });
+
+  it("redacts a high-entropy lowercase alphanumeric Candidate output value", async () => {
+    const root = tempRoot();
+    const sentinel = "0123456789abcdefghijklmnopqrstuvwxyz".repeat(2);
+    const api = {
+      candidateShow() {
+        return {
+          metadata: {
+            levelOne: { levelTwo: { levelThree: { value: sentinel } } },
+          },
+        };
+      },
+    } as unknown as ExternalIntakeApiV1;
+    const output = outputHarness(api, root);
+
+    expect(
+      await runIntakeCli(
+        ["candidate", "show", "safe-adapter@1.0.0"],
+        output.options,
+      ),
+    ).toBe(0);
+    expect(output.stdout.join("\n")).not.toContain(sentinel);
+    expect(output.stdout.join("\n")).toContain("[redacted]");
+  });
+
+  it.each([
+    ["Bearer", `Bearer ${credentialLikeSentinel()}`],
+    [
+      "Basic",
+      `Basic ${Buffer.from(credentialLikeSentinel()).toString("base64")}`,
+    ],
+    [
+      "JWT",
+      "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzYWZlLWFkYXB0ZXIifQ.c2lnbmF0dXJlLXNlbnRpbmVs",
+    ],
+  ])("redacts a structured %s Candidate credential", async (_, sentinel) => {
+    const root = tempRoot();
+    const api = {
+      candidateShow() {
+        return {
+          metadata: {
+            levelOne: { levelTwo: { levelThree: { value: sentinel } } },
+          },
+        };
+      },
+    } as unknown as ExternalIntakeApiV1;
+    const output = outputHarness(api, root);
+
+    expect(
+      await runIntakeCli(
+        ["candidate", "show", "safe-adapter@1.0.0"],
+        output.options,
+      ),
+    ).toBe(0);
+    expect(output.stdout.join("\n")).not.toContain(sentinel);
+    expect(output.stdout.join("\n")).toContain("[redacted]");
+  });
+
+  it.each(["block", "reject"] as const)(
+    "dispatches Candidate %s only through its dedicated API operation",
+    async (operation) => {
+      const root = tempRoot();
+      const calls: string[] = [];
+      const api = {
+        ...(createExternalIntakeApi(
+          new ExternalIntakeStore(root),
+          root,
+        ) as ExternalIntakeApiV1),
+        candidateBlock: async (id: string, version: string) => {
+          calls.push(`block:${id}@${version}`);
+          return { status: "blocked" };
+        },
+        candidateReject: async (id: string, version: string) => {
+          calls.push(`reject:${id}@${version}`);
+          return { status: "rejected" };
+        },
+      } as ExternalIntakeApiV1 & {
+        candidateBlock(id: string, version: string): Promise<unknown>;
+        candidateReject(id: string, version: string): Promise<unknown>;
+      };
+      const output = outputHarness(api, root);
+
+      expect(
+        await runIntakeCli(
+          ["candidate", operation, "safe-adapter@1.0.0"],
+          output.options,
+        ),
+      ).toBe(0);
+      expect(calls).toEqual([`${operation}:safe-adapter@1.0.0`]);
+      expect(output.stderr).toEqual([]);
+    },
+  );
+
+  it("preserves canonical digests and locators only in exact output contexts", async () => {
+    const root = tempRoot();
+    const digest = `sha256:${"a1".repeat(32)}`;
+    const candidateLookupId = `candidate-${"b2".repeat(32)}`;
+    const jobLookupId = `job-${"c3".repeat(32)}`;
+    const api = {
+      candidateShow() {
+        return {
+          candidateDigest: digest,
+          recordDigests: [digest],
+          lookupId: candidateLookupId,
+          job: { lookupId: jobLookupId },
+          metadata: { digestValue: digest, locatorValue: jobLookupId },
+        };
+      },
+    } as unknown as ExternalIntakeApiV1;
+    const output = outputHarness(api, root);
+
+    expect(
+      await runIntakeCli(
+        ["candidate", "show", "safe-adapter@1.0.0"],
+        output.options,
+      ),
+    ).toBe(0);
+    const rendered = JSON.parse(output.stdout[0]!) as Record<string, unknown>;
+    expect(rendered).toMatchObject({
+      candidateDigest: digest,
+      recordDigests: [digest],
+      lookupId: candidateLookupId,
+      job: { lookupId: jobLookupId },
+      metadata: {
+        digestValue: "[redacted]",
+        locatorValue: "[redacted]",
+      },
+    });
+  });
 });

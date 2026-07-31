@@ -3,19 +3,25 @@ import {
   lstatSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
+import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
   ExternalIntakeStore,
   canonicalRecordDigest,
+  digestBytes,
+  type CandidateCapabilityV1,
   type ExternalSourceAcquisitionV1,
   type IntakeReceiptV1,
   type IntakeRequestV1,
@@ -147,6 +153,191 @@ function receiptAt(
   };
 }
 
+interface AtomicCandidateTransitionStore extends ExternalIntakeStore {
+  commitCandidateTransition(input: {
+    readonly jobId: string;
+    readonly expectedCreationReceipt: StoredRecordRef;
+    readonly expectedCandidate: StoredRecordRef;
+    readonly candidate: CandidateCapabilityV1;
+    readonly receipt: IntakeReceiptV1;
+    readonly evidenceBytes?: Uint8Array;
+  }): {
+    readonly candidate: StoredRecordRef;
+    readonly receipt: StoredRecordRef;
+  };
+}
+
+function candidateTransitionFixture(store: ExternalIntakeStore) {
+  const candidate: CandidateCapabilityV1 = {
+    apiVersion: "factory.candidate-capability/v1",
+    createdAt: "2026-07-31T00:00:00.000Z",
+    producerVersion: "0.1.0",
+    parentDigests: [digest, otherDigest],
+    id: "safe-adapter",
+    version: "1.0.0",
+    status: "quarantined",
+    sourceSnapshotDigest: digest,
+    evidenceDigest: otherDigest,
+    proposedFactoryKey: "candidate.safe-adapter",
+    proposedClassification: "provider-adapter",
+    selectedModules: [],
+    allowedOutputs: ["manifest", "fixture", "adapter", "conformance-plan"],
+    prohibited: [
+      "capability-selection",
+      "golden-registration",
+      "graph-mutation",
+      "compilation",
+    ],
+    candidateManifestDigest: digest,
+    fixtureDigest: otherDigest,
+  };
+  const candidateRef = store.putRecord("candidate", candidate);
+  const jobId = "candidate-safe-adapter";
+  const creationReceipt = store.appendReceipt(jobId, {
+    apiVersion: "factory.external-intake-receipt/v1",
+    createdAt: candidate.createdAt,
+    producerVersion: candidate.producerVersion,
+    parentDigests: [candidateRef.digest],
+    jobId,
+    sequence: 1,
+    status: "candidate-ready",
+    code: "candidate-quarantined",
+    recordDigests: [candidateRef.digest, otherDigest],
+  });
+  const transition = (status: "blocked" | "rejected") => {
+    const terminal: CandidateCapabilityV1 = {
+      ...candidate,
+      parentDigests: [...candidate.parentDigests, candidateRef.digest],
+      status,
+    };
+    const terminalDigest = canonicalRecordDigest(terminal);
+    const receipt: IntakeReceiptV1 = {
+      apiVersion: "factory.external-intake-receipt/v1",
+      createdAt: candidate.createdAt,
+      producerVersion: candidate.producerVersion,
+      parentDigests: [creationReceipt.digest, terminalDigest],
+      jobId,
+      sequence: 2,
+      status,
+      code: `candidate-${status}`,
+      recordDigests: [terminalDigest, otherDigest],
+    };
+    return { terminal, receipt };
+  };
+  const conformanceTransition = () => {
+    const evidenceBytes = new TextEncoder().encode("validated-conformance");
+    const evidenceDigest = digestBytes(evidenceBytes);
+    const terminal: CandidateCapabilityV1 = {
+      ...candidate,
+      parentDigests: [
+        ...candidate.parentDigests,
+        candidateRef.digest,
+        evidenceDigest,
+      ],
+      status: "conformance-passed",
+      conformanceResultDigest: evidenceDigest,
+    };
+    const terminalDigest = canonicalRecordDigest(terminal);
+    const receipt: IntakeReceiptV1 = {
+      apiVersion: "factory.external-intake-receipt/v1",
+      createdAt: candidate.createdAt,
+      producerVersion: candidate.producerVersion,
+      parentDigests: [creationReceipt.digest, terminalDigest],
+      jobId,
+      sequence: 2,
+      status: "candidate-ready",
+      code: "candidate-conformance-passed",
+      recordDigests: [terminalDigest, evidenceDigest, otherDigest],
+    };
+    return { terminal, receipt, evidenceBytes, evidenceDigest };
+  };
+  return {
+    jobId,
+    candidateRef,
+    creationReceipt,
+    transition,
+    conformanceTransition,
+  };
+}
+
+async function waitForStoreRacePath(path: string): Promise<void> {
+  const deadline = Date.now() + 20_000;
+  while (!existsSync(path)) {
+    if (Date.now() >= deadline) {
+      throw new Error(`Timed out waiting for store race barrier '${path}'.`);
+    }
+    await delay(10);
+  }
+}
+
+function runStoreRaceProcess(
+  root: string,
+  workerId: string,
+  mode: "cas" | "append",
+  inputPath: string,
+  readyPath: string,
+  releasePath: string,
+  resultPath: string,
+) {
+  const vitestCli = createRequire(import.meta.url).resolve("vitest/vitest.mjs");
+  const testFile = fileURLToPath(import.meta.url);
+  const child = spawn(
+    process.execPath,
+    [
+      vitestCli,
+      "run",
+      testFile,
+      "--testNamePattern",
+      "executes one child-process atomic Candidate terminal attempt",
+    ],
+    {
+      cwd: dirname(dirname(testFile)),
+      env: {
+        ...process.env,
+        FACTORY_STORE_RACE_CHILD: workerId,
+        FACTORY_STORE_RACE_MODE: mode,
+        FACTORY_STORE_RACE_ROOT: root,
+        FACTORY_STORE_RACE_INPUT_PATH: inputPath,
+        FACTORY_STORE_RACE_READY_PATH: readyPath,
+        FACTORY_STORE_RACE_RELEASE_PATH: releasePath,
+        FACTORY_STORE_RACE_RESULT_PATH: resultPath,
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
+  const output: string[] = [];
+  child.stdout.setEncoding("utf8");
+  child.stderr.setEncoding("utf8");
+  child.stdout.on("data", (chunk: string) => output.push(chunk));
+  child.stderr.on("data", (chunk: string) => output.push(chunk));
+  const exited = new Promise<void>((resolve, reject) => {
+    child.once("error", reject);
+    child.once("close", (code) => {
+      if (code === 0) resolve();
+      else
+        reject(
+          new Error(
+            `Store race child '${workerId}' exited ${String(code)}.\n${output.join("")}`,
+          ),
+        );
+    });
+  });
+  let deadline: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = new Promise<void>((_, reject) => {
+    deadline = setTimeout(
+      () => reject(new Error(`Store race child '${workerId}' timed out.`)),
+      20_000,
+    );
+  });
+  return {
+    child,
+    exited,
+    completed: Promise.race([exited, timedOut]).finally(() => {
+      if (deadline !== undefined) clearTimeout(deadline);
+    }),
+  };
+}
+
 afterEach(() => {
   for (const root of roots.splice(0)) {
     rmSync(root, { recursive: true, force: true });
@@ -154,6 +345,45 @@ afterEach(() => {
 });
 
 describe("ExternalIntakeStore", () => {
+  if (process.env.FACTORY_STORE_RACE_CHILD !== undefined) {
+    it("executes one child-process atomic Candidate terminal attempt", async () => {
+      const input = JSON.parse(
+        readFileSync(process.env.FACTORY_STORE_RACE_INPUT_PATH!, "utf8"),
+      ) as Parameters<
+        AtomicCandidateTransitionStore["commitCandidateTransition"]
+      >[0];
+      writeFileSync(process.env.FACTORY_STORE_RACE_READY_PATH!, "ready");
+      await waitForStoreRacePath(process.env.FACTORY_STORE_RACE_RELEASE_PATH!);
+      const store = new ExternalIntakeStore(
+        process.env.FACTORY_STORE_RACE_ROOT!,
+      ) as AtomicCandidateTransitionStore;
+      let result: unknown;
+      try {
+        const committed =
+          process.env.FACTORY_STORE_RACE_MODE === "append"
+            ? {
+                candidate: input.expectedCandidate,
+                receipt: store.appendReceipt(input.jobId, input.receipt),
+              }
+            : store.commitCandidateTransition(input);
+        result = {
+          outcome: "committed",
+          candidateDigest: committed.candidate.digest,
+          receiptDigest: committed.receipt.digest,
+        };
+      } catch (error) {
+        result = {
+          outcome: "conflict",
+          message: error instanceof Error ? error.message : "unknown",
+        };
+      }
+      writeFileSync(
+        process.env.FACTORY_STORE_RACE_RESULT_PATH!,
+        JSON.stringify(result),
+      );
+    }, 30_000);
+  }
+
   it("stores acquisition records under a distinct immutable kind", () => {
     const root = tempRoot();
     const store = new ExternalIntakeStore(root);
@@ -474,6 +704,301 @@ describe("ExternalIntakeStore", () => {
     expect(store.getRecord(first)).toEqual(receipt);
   });
 
+  it("atomically commits one Candidate terminal transition, retries it idempotently, and rejects a conflict without orphans", () => {
+    const root = tempRoot();
+    const store = new ExternalIntakeStore(
+      root,
+    ) as AtomicCandidateTransitionStore;
+    const fixture = candidateTransitionFixture(store);
+    const blocked = fixture.transition("blocked");
+    const rejected = fixture.transition("rejected");
+    const conformance = fixture.conformanceTransition();
+
+    const first = store.commitCandidateTransition({
+      jobId: fixture.jobId,
+      expectedCreationReceipt: fixture.creationReceipt,
+      expectedCandidate: fixture.candidateRef,
+      candidate: blocked.terminal,
+      receipt: blocked.receipt,
+    });
+    const retry = store.commitCandidateTransition({
+      jobId: fixture.jobId,
+      expectedCreationReceipt: fixture.creationReceipt,
+      expectedCandidate: fixture.candidateRef,
+      candidate: structuredClone(blocked.terminal),
+      receipt: structuredClone(blocked.receipt),
+    });
+
+    expect(retry).toEqual(first);
+    expect(store.getRecord(first.candidate)).toEqual(blocked.terminal);
+    expect(store.getRecord(first.receipt)).toEqual(blocked.receipt);
+    const before = {
+      candidates: readFileSync(recordPath(root, first.candidate), "utf8"),
+      receipts: readFileSync(recordPath(root, first.receipt), "utf8"),
+    };
+    expect(() =>
+      store.commitCandidateTransition({
+        jobId: fixture.jobId,
+        expectedCreationReceipt: fixture.creationReceipt,
+        expectedCandidate: fixture.candidateRef,
+        candidate: rejected.terminal,
+        receipt: rejected.receipt,
+      }),
+    ).toThrow(/terminal|sequence|conflict/iu);
+    expect(
+      existsSync(
+        recordPath(root, {
+          kind: "candidate",
+          digest: canonicalRecordDigest(rejected.terminal),
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      existsSync(
+        recordPath(root, {
+          kind: "receipt",
+          digest: canonicalRecordDigest(rejected.receipt),
+        }),
+      ),
+    ).toBe(false);
+    expect(() =>
+      store.commitCandidateTransition({
+        jobId: fixture.jobId,
+        expectedCreationReceipt: fixture.creationReceipt,
+        expectedCandidate: fixture.candidateRef,
+        candidate: conformance.terminal,
+        receipt: conformance.receipt,
+        evidenceBytes: conformance.evidenceBytes,
+      }),
+    ).toThrow(/terminal|sequence|conflict/iu);
+    expect(
+      existsSync(
+        join(
+          root,
+          "blobs",
+          "evidence",
+          `${conformance.evidenceDigest.slice(7)}.bin`,
+        ),
+      ),
+    ).toBe(false);
+    expect(readFileSync(recordPath(root, first.candidate), "utf8")).toBe(
+      before.candidates,
+    );
+    expect(readFileSync(recordPath(root, first.receipt), "utf8")).toBe(
+      before.receipts,
+    );
+  });
+
+  it("reserves terminal Candidate records and sequence-2 Candidate receipts for the atomic transition primitive", () => {
+    const root = tempRoot();
+    const store = new ExternalIntakeStore(root);
+    const fixture = candidateTransitionFixture(store);
+    const blocked = fixture.transition("blocked");
+
+    expect(() => store.putRecord("candidate", blocked.terminal)).toThrow(
+      /atomic|transition|quarantined/iu,
+    );
+    expect(() => store.appendReceipt(fixture.jobId, blocked.receipt)).toThrow(
+      /atomic|transition|candidate/iu,
+    );
+    expect(
+      existsSync(
+        recordPath(root, {
+          kind: "candidate",
+          digest: canonicalRecordDigest(blocked.terminal),
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      existsSync(
+        recordPath(root, {
+          kind: "receipt",
+          digest: canonicalRecordDigest(blocked.receipt),
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it.each(["blocked", "rejected", "conformance-passed"] as const)(
+    "rejects generic sequence-3 append after Candidate %s without receipt or index mutation",
+    (status) => {
+      const root = tempRoot();
+      const store = new ExternalIntakeStore(
+        root,
+      ) as AtomicCandidateTransitionStore;
+      const fixture = candidateTransitionFixture(store);
+      const transition =
+        status === "conformance-passed"
+          ? fixture.conformanceTransition()
+          : fixture.transition(status);
+      const committed = store.commitCandidateTransition({
+        jobId: fixture.jobId,
+        expectedCreationReceipt: fixture.creationReceipt,
+        expectedCandidate: fixture.candidateRef,
+        candidate: transition.terminal,
+        receipt: transition.receipt,
+        ...("evidenceBytes" in transition
+          ? { evidenceBytes: transition.evidenceBytes }
+          : {}),
+      });
+      const before = readdirSync(join(root, "records", "receipt")).sort();
+      const sequenceThree: IntakeReceiptV1 = {
+        apiVersion: "factory.external-intake-receipt/v1",
+        createdAt: transition.receipt.createdAt,
+        producerVersion: transition.receipt.producerVersion,
+        parentDigests: [committed.receipt.digest],
+        jobId: fixture.jobId,
+        sequence: 3,
+        status: "rejected",
+        code: "candidate-rejected-again",
+        recordDigests: [committed.candidate.digest],
+      };
+
+      expect(() => store.appendReceipt(fixture.jobId, sequenceThree)).toThrow(
+        /atomic|candidate|transition/iu,
+      );
+      expect(readdirSync(join(root, "records", "receipt")).sort()).toEqual(
+        before,
+      );
+      expect(
+        existsSync(join(root, "jobs", fixture.jobId, "receipts", "3.json")),
+      ).toBe(false);
+    },
+  );
+
+  it("atomically chooses one mixed-process Candidate terminal winner and fences appendReceipt without loser orphans", async () => {
+    const root = tempRoot();
+    const store = new ExternalIntakeStore(root);
+    const fixture = candidateTransitionFixture(store);
+    const raceRoot = join(root, "store-race");
+    mkdirSync(raceRoot);
+    const releasePath = join(raceRoot, "release");
+    const statuses = ["blocked", "rejected"] as const;
+    const inputPaths = statuses.map((status) =>
+      join(raceRoot, `${status}.json`),
+    );
+    const workerIds = ["blocked", "rejected", "append-bypass"] as const;
+    const readyPaths = workerIds.map((workerId) =>
+      join(raceRoot, `${workerId}.ready`),
+    );
+    const resultPaths = workerIds.map((workerId) =>
+      join(raceRoot, `${workerId}.result.json`),
+    );
+    const transitions = statuses.map((status) => fixture.transition(status));
+    for (const [index, transition] of transitions.entries()) {
+      writeFileSync(
+        inputPaths[index]!,
+        JSON.stringify({
+          jobId: fixture.jobId,
+          expectedCreationReceipt: fixture.creationReceipt,
+          expectedCandidate: fixture.candidateRef,
+          candidate: transition.terminal,
+          receipt: transition.receipt,
+        }),
+      );
+    }
+    const workers = [
+      runStoreRaceProcess(
+        root,
+        "blocked",
+        "cas",
+        inputPaths[0]!,
+        readyPaths[0]!,
+        releasePath,
+        resultPaths[0]!,
+      ),
+      runStoreRaceProcess(
+        root,
+        "rejected",
+        "cas",
+        inputPaths[1]!,
+        readyPaths[1]!,
+        releasePath,
+        resultPaths[1]!,
+      ),
+      runStoreRaceProcess(
+        root,
+        "append-bypass",
+        "append",
+        inputPaths[0]!,
+        readyPaths[2]!,
+        releasePath,
+        resultPaths[2]!,
+      ),
+    ];
+    const completed = Promise.all(workers.map((worker) => worker.completed));
+    try {
+      await Promise.race([
+        Promise.all(readyPaths.map(waitForStoreRacePath)),
+        completed.then(() => {
+          throw new Error("Store race children exited before the barrier.");
+        }),
+      ]);
+      writeFileSync(releasePath, "go");
+      await completed;
+    } finally {
+      for (const worker of workers) {
+        if (
+          worker.child.pid !== undefined &&
+          worker.child.exitCode === null &&
+          worker.child.signalCode === null
+        ) {
+          worker.child.kill();
+        }
+      }
+      await Promise.allSettled(workers.map((worker) => worker.exited));
+    }
+    const results = resultPaths.map(
+      (path) =>
+        JSON.parse(readFileSync(path, "utf8")) as {
+          readonly outcome: "committed" | "conflict";
+          readonly candidateDigest?: string;
+          readonly receiptDigest?: string;
+        },
+    );
+    expect(results.map(({ outcome }) => outcome).sort()).toEqual([
+      "committed",
+      "conflict",
+      "conflict",
+    ]);
+    const winner = results.find(({ outcome }) => outcome === "committed")!;
+    expect(readdirSync(join(root, "records", "candidate"))).toHaveLength(2);
+    expect(readdirSync(join(root, "records", "receipt"))).toHaveLength(2);
+    expect(
+      transitions.filter(
+        ({ terminal }) =>
+          canonicalRecordDigest(terminal) === winner.candidateDigest,
+      ),
+    ).toHaveLength(1);
+    const loser = transitions.find(
+      ({ terminal }) =>
+        canonicalRecordDigest(terminal) !== winner.candidateDigest,
+    )!;
+    expect(
+      existsSync(
+        recordPath(root, {
+          kind: "candidate",
+          digest: canonicalRecordDigest(loser.terminal),
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      existsSync(
+        recordPath(root, {
+          kind: "receipt",
+          digest: canonicalRecordDigest(loser.receipt),
+        }),
+      ),
+    ).toBe(false);
+    const index = JSON.parse(
+      readFileSync(
+        join(root, "jobs", fixture.jobId, "receipts", "2.json"),
+        "utf8",
+      ),
+    ) as { readonly receiptDigest: string };
+    expect(index.receiptDigest).toBe(winner.receiptDigest);
+  }, 30_000);
+
   it("does not publish a receipt index when backing verification fails", () => {
     const root = tempRoot();
     const store = new ExternalIntakeStore(root);
@@ -562,3 +1087,4 @@ describe("ExternalIntakeStore", () => {
     );
   });
 });
+import { spawn } from "node:child_process";

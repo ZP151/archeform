@@ -17,10 +17,12 @@ import {
 } from "./canonical.js";
 import {
   intakeContractPrimitives,
+  parseCandidateCapability,
   parseExternalSourceAcquisition,
   parseIntakeReceipt,
   parseIntakeRecord,
   type ExternalSourceAcquisitionV1,
+  type CandidateCapabilityV1,
   type IntakeReceiptV1,
   type IntakeRecordKind,
   type IntakeRecordV1,
@@ -62,11 +64,43 @@ const receiptIndexSchema = z
 
 type ReceiptIndexV1 = z.infer<typeof receiptIndexSchema>;
 
+const candidateTransitionClaimSchema = z
+  .object({
+    apiVersion: z.literal("factory.candidate-transition-claim/v1"),
+    jobId: intakeContractPrimitives.opaqueIdSchema,
+    sequence: z.literal(2),
+    creationReceiptDigest: intakeContractPrimitives.sha256DigestSchema,
+    expectedCandidateDigest: intakeContractPrimitives.sha256DigestSchema,
+    candidateDigest: intakeContractPrimitives.sha256DigestSchema,
+    receiptDigest: intakeContractPrimitives.sha256DigestSchema,
+    evidenceDigest: intakeContractPrimitives.sha256DigestSchema.optional(),
+  })
+  .strict();
+
+type CandidateTransitionClaimV1 = z.infer<
+  typeof candidateTransitionClaimSchema
+>;
+
 export type StoredRecordRef = z.infer<typeof storedRecordRefSchema>;
 export type StoredBlobRef = {
   readonly kind: "snapshot" | "evidence";
   readonly digest: Sha256Digest;
 };
+
+export interface CandidateTransitionCommitV1 {
+  readonly jobId: string;
+  readonly expectedCreationReceipt: StoredRecordRef;
+  readonly expectedCandidate: StoredRecordRef;
+  readonly candidate: CandidateCapabilityV1;
+  readonly receipt: IntakeReceiptV1;
+  readonly evidenceBytes?: Uint8Array;
+}
+
+export interface CandidateTransitionCommitResultV1 {
+  readonly candidate: StoredRecordRef;
+  readonly receipt: StoredRecordRef;
+  readonly evidence?: StoredBlobRef;
+}
 
 function buffersEqual(left: Uint8Array, right: Uint8Array): boolean {
   if (left.byteLength !== right.byteLength) {
@@ -100,6 +134,15 @@ export class ExternalIntakeStore {
     if (parsedKind === "acquisition") {
       const parsed = parseExternalSourceAcquisition(record);
       this.#validateAcquisitionParents(parsed);
+      return this.#putRecord(parsedKind, parsed);
+    }
+    if (parsedKind === "candidate") {
+      const parsed = parseCandidateCapability(record);
+      if (parsed.status !== "quarantined") {
+        throw new Error(
+          "Terminal Candidate records require the atomic transition primitive.",
+        );
+      }
       return this.#putRecord(parsedKind, parsed);
     }
     const parsed = parseIntakeRecord(parsedKind, record);
@@ -150,6 +193,29 @@ export class ExternalIntakeStore {
     const parsed = parseIntakeReceipt(receipt);
     if (parsed.jobId !== parsedJobId) {
       throw new Error("Receipt job ID does not match the append target.");
+    }
+    if (parsed.sequence > 1) {
+      const creationIndex = this.#readReceiptIndex(parsedJobId, 1);
+      if (creationIndex !== null) {
+        let creationReceipt: IntakeReceiptV1;
+        try {
+          creationReceipt = parseIntakeReceipt(
+            this.getRecord({
+              kind: "receipt",
+              digest: creationIndex.receiptDigest,
+            }),
+          );
+        } catch {
+          throw new Error(
+            `Indexed backing receipt ${parsedJobId}#1 is missing or invalid.`,
+          );
+        }
+        if (creationReceipt.code === "candidate-quarantined") {
+          throw new Error(
+            "Candidate lifecycle receipts require the atomic transition primitive.",
+          );
+        }
+      }
     }
     if (parsed.sequence > 1) {
       const previous = this.#readReceiptIndex(parsedJobId, parsed.sequence - 1);
@@ -213,6 +279,214 @@ export class ExternalIntakeStore {
       `Receipt sequence conflict for ${parsedJobId}#${parsed.sequence}.`,
     );
     return recordRef;
+  }
+
+  commitCandidateTransition(
+    input: CandidateTransitionCommitV1,
+  ): CandidateTransitionCommitResultV1 {
+    const jobId = intakeContractPrimitives.opaqueIdSchema.parse(input.jobId);
+    const expectedCreationReceipt = storedRecordRefSchema.parse(
+      input.expectedCreationReceipt,
+    );
+    const expectedCandidate = storedRecordRefSchema.parse(
+      input.expectedCandidate,
+    );
+    if (
+      expectedCreationReceipt.kind !== "receipt" ||
+      expectedCandidate.kind !== "candidate"
+    ) {
+      throw new TypeError(
+        "Candidate transition expected references use invalid kinds.",
+      );
+    }
+    const creationIndex = this.#readReceiptIndex(jobId, 1);
+    if (
+      creationIndex === null ||
+      creationIndex.receiptDigest !== expectedCreationReceipt.digest
+    ) {
+      throw new Error(
+        "Candidate transition does not match the indexed creation receipt.",
+      );
+    }
+    const creationReceipt = parseIntakeReceipt(
+      this.getRecord(expectedCreationReceipt),
+    );
+    const creationCandidate = parseCandidateCapability(
+      this.getRecord(expectedCandidate),
+    );
+    const verificationStateDigest = creationReceipt.recordDigests[1];
+    if (
+      creationReceipt.jobId !== jobId ||
+      creationReceipt.sequence !== 1 ||
+      creationReceipt.status !== "candidate-ready" ||
+      creationReceipt.code !== "candidate-quarantined" ||
+      creationReceipt.parentDigests.length !== 1 ||
+      creationReceipt.parentDigests[0] !== expectedCandidate.digest ||
+      creationReceipt.recordDigests[0] !== expectedCandidate.digest ||
+      verificationStateDigest === undefined ||
+      creationCandidate.status !== "quarantined" ||
+      canonicalRecordDigest(creationCandidate) !== expectedCandidate.digest
+    ) {
+      throw new Error("Candidate transition creation state is invalid.");
+    }
+    const candidate = parseCandidateCapability(input.candidate);
+    const receipt = parseIntakeReceipt(input.receipt);
+    const candidateRef: StoredRecordRef = {
+      kind: "candidate",
+      digest: canonicalRecordDigest(candidate),
+    };
+    const receiptRef: StoredRecordRef = {
+      kind: "receipt",
+      digest: canonicalRecordDigest(receipt),
+    };
+    const evidence =
+      input.evidenceBytes === undefined
+        ? undefined
+        : {
+            kind: "evidence" as const,
+            digest: digestBytes(input.evidenceBytes),
+          };
+    const expectedStatus = candidate.status;
+    const terminalStatus =
+      expectedStatus === "blocked" || expectedStatus === "rejected";
+    const conformanceStatus = expectedStatus === "conformance-passed";
+    const expectedParents = terminalStatus
+      ? [...creationCandidate.parentDigests, expectedCandidate.digest]
+      : conformanceStatus && candidate.conformanceResultDigest !== undefined
+        ? [
+            ...creationCandidate.parentDigests,
+            expectedCandidate.digest,
+            candidate.conformanceResultDigest,
+          ]
+        : [];
+    const expectedCandidateRecord = parseCandidateCapability({
+      ...creationCandidate,
+      parentDigests: [...new Set(expectedParents)],
+      status: expectedStatus,
+      ...(conformanceStatus
+        ? { conformanceResultDigest: candidate.conformanceResultDigest }
+        : {}),
+    });
+    const expectedReceiptStatus = terminalStatus
+      ? expectedStatus
+      : "candidate-ready";
+    const expectedReceiptCode = terminalStatus
+      ? `candidate-${expectedStatus}`
+      : "candidate-conformance-passed";
+    const expectedRecordDigests = conformanceStatus
+      ? [
+          candidateRef.digest,
+          candidate.conformanceResultDigest,
+          verificationStateDigest,
+        ]
+      : [candidateRef.digest, verificationStateDigest];
+    if (
+      (!terminalStatus && !conformanceStatus) ||
+      canonicalJson(candidate) !== canonicalJson(expectedCandidateRecord) ||
+      receipt.jobId !== jobId ||
+      receipt.sequence !== 2 ||
+      receipt.createdAt !== creationCandidate.createdAt ||
+      receipt.producerVersion !== creationCandidate.producerVersion ||
+      receipt.status !== expectedReceiptStatus ||
+      receipt.code !== expectedReceiptCode ||
+      canonicalJson(receipt.parentDigests) !==
+        canonicalJson([expectedCreationReceipt.digest, candidateRef.digest]) ||
+      canonicalJson(receipt.recordDigests) !==
+        canonicalJson(expectedRecordDigests) ||
+      (conformanceStatus &&
+        (evidence === undefined ||
+          evidence.digest !== candidate.conformanceResultDigest)) ||
+      (terminalStatus && evidence !== undefined)
+    ) {
+      throw new Error("Candidate transition binding is invalid.");
+    }
+    const existingIndex = this.#readReceiptIndex(jobId, 2);
+    if (existingIndex !== null) {
+      if (existingIndex.receiptDigest !== receiptRef.digest) {
+        throw new Error(`Candidate terminal sequence conflict for ${jobId}.`);
+      }
+      this.#verifyCandidateTransitionRecords(
+        candidateRef,
+        receiptRef,
+        evidence,
+      );
+      return {
+        candidate: candidateRef,
+        receipt: receiptRef,
+        ...(evidence === undefined ? {} : { evidence }),
+      };
+    }
+    const claim: CandidateTransitionClaimV1 = {
+      apiVersion: "factory.candidate-transition-claim/v1",
+      jobId,
+      sequence: 2,
+      creationReceiptDigest: expectedCreationReceipt.digest,
+      expectedCandidateDigest: expectedCandidate.digest,
+      candidateDigest: candidateRef.digest,
+      receiptDigest: receiptRef.digest,
+      ...(evidence === undefined ? {} : { evidenceDigest: evidence.digest }),
+    };
+    const claimBytes = new TextEncoder().encode(canonicalJson(claim));
+    this.#writeExclusiveVerified(
+      this.#managedPath(["jobs", jobId, "receipts", "2.claim.json"]),
+      claimBytes,
+      digestBytes(claimBytes),
+      true,
+      `Candidate terminal sequence conflict for ${jobId}.`,
+    );
+    const storedEvidence =
+      input.evidenceBytes === undefined
+        ? undefined
+        : this.putBytes("evidence", input.evidenceBytes);
+    const storedCandidate = this.#putRecord("candidate", candidate);
+    const storedReceipt = this.#putRecord("receipt", receipt);
+    const index: ReceiptIndexV1 = {
+      apiVersion: "factory.external-intake-receipt-index/v1",
+      createdAt: receipt.createdAt,
+      producerVersion: receipt.producerVersion,
+      parentDigests: [storedReceipt.digest],
+      jobId,
+      sequence: 2,
+      receiptDigest: storedReceipt.digest,
+    };
+    const indexBytes = new TextEncoder().encode(canonicalJson(index));
+    this.#writeExclusiveVerified(
+      this.#managedPath(["jobs", jobId, "receipts", "2.json"]),
+      indexBytes,
+      digestBytes(indexBytes),
+      true,
+      `Candidate terminal sequence conflict for ${jobId}.`,
+    );
+    this.#verifyCandidateTransitionRecords(
+      storedCandidate,
+      storedReceipt,
+      storedEvidence,
+    );
+    return {
+      candidate: storedCandidate,
+      receipt: storedReceipt,
+      ...(storedEvidence === undefined ? {} : { evidence: storedEvidence }),
+    };
+  }
+
+  #verifyCandidateTransitionRecords(
+    candidate: StoredRecordRef,
+    receipt: StoredRecordRef,
+    evidence: StoredBlobRef | undefined,
+  ): void {
+    parseCandidateCapability(this.getRecord(candidate));
+    parseIntakeReceipt(this.getRecord(receipt));
+    if (evidence !== undefined) {
+      const path = this.#managedPath([
+        "blobs",
+        "evidence",
+        `${evidence.digest.slice("sha256:".length)}.bin`,
+      ]);
+      const bytes = this.#readRegularFile(path);
+      if (digestBytes(bytes) !== evidence.digest) {
+        throw new Error("Candidate transition evidence is invalid.");
+      }
+    }
   }
 
   #readReceiptIndex(jobId: string, sequence: number): ReceiptIndexV1 | null {

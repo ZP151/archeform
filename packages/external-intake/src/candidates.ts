@@ -34,6 +34,143 @@ const SAFE_PATH =
 const SAFE_FIXTURE_TEXT = /^[A-Za-z0-9 _.,:@/-]{0,128}$/u;
 const SENSITIVE_VALUE =
   /(?:https?:\/\/|sk-[A-Za-z0-9]|ghp_[A-Za-z0-9]|AKIA[A-Z0-9]|private[ -]?key|password|secret|\b(?:eval|require|import|export|function|class|process|fetch)\b|[{};`]|\r|\n)/iu;
+const MAX_ARTIFACT_DEPTH = 16;
+const MAX_ARTIFACT_NODES = 4_096;
+const MAX_ARTIFACT_UTF8_BYTES = 256 * 1_024;
+const SENSITIVE_ARTIFACT_IDENTIFIERS = [
+  "token",
+  "auth",
+  "apikey",
+  "clientsecret",
+  "privatekey",
+  "password",
+  "credential",
+  "prompt",
+  "response",
+] as const;
+
+function normalizeArtifactIdentifier(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/gu, "");
+}
+
+function isSensitiveArtifactIdentifier(value: string): boolean {
+  const normalized = normalizeArtifactIdentifier(value);
+  return SENSITIVE_ARTIFACT_IDENTIFIERS.some((identifier) =>
+    normalized.includes(identifier),
+  );
+}
+
+function shannonEntropy(value: string): number {
+  const counts = new Map<string, number>();
+  for (const character of value) {
+    counts.set(character, (counts.get(character) ?? 0) + 1);
+  }
+  let entropy = 0;
+  for (const count of counts.values()) {
+    const probability = count / value.length;
+    entropy -= probability * Math.log2(probability);
+  }
+  return entropy;
+}
+
+export function isCredentialLikeCandidateValue(value: string): boolean {
+  if (
+    /^sha256:[a-f0-9]{64}$/u.test(value) ||
+    /^(?:candidate|job)-[a-f0-9]{64}$/u.test(value)
+  ) {
+    return true;
+  }
+  const authorizationToken =
+    /^[A-Za-z][A-Za-z0-9_-]{1,31}\s+([A-Za-z0-9+/_=.-]{32,})$/u.exec(
+      value,
+    )?.[1];
+  if (
+    authorizationToken !== undefined &&
+    shannonEntropy(authorizationToken) >= 3.5
+  ) {
+    return true;
+  }
+  if (
+    value.length >= 32 &&
+    /^[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}$/u.test(value)
+  ) {
+    return true;
+  }
+  if (value.length < 32 || /\s/u.test(value)) return false;
+  const tokenShaped = /^[A-Za-z0-9+/_=-]+$/u.test(value);
+  return tokenShaped && shannonEntropy(value) >= 3.5;
+}
+
+function assertCandidateArtifactPrivacy(input: unknown): void {
+  const stack: Array<{
+    readonly value: unknown;
+    readonly depth: number;
+    readonly identifierContext: boolean;
+  }> = [{ value: input, depth: 0, identifierContext: false }];
+  const seen = new WeakSet<object>();
+  let nodes = 0;
+  let utf8Bytes = 0;
+  const account = (value: string): void => {
+    if (value.length > MAX_ARTIFACT_UTF8_BYTES - utf8Bytes) {
+      throw new Error("Candidate artifacts exceed privacy inspection bounds.");
+    }
+    utf8Bytes += encoder.encode(value).byteLength;
+    if (utf8Bytes > MAX_ARTIFACT_UTF8_BYTES) {
+      throw new Error("Candidate artifacts exceed privacy inspection bounds.");
+    }
+  };
+  while (stack.length > 0) {
+    const item = stack.pop()!;
+    nodes += 1;
+    if (nodes > MAX_ARTIFACT_NODES || item.depth > MAX_ARTIFACT_DEPTH) {
+      throw new Error("Candidate artifacts exceed privacy inspection bounds.");
+    }
+    if (typeof item.value === "string") {
+      account(item.value);
+      if (
+        isCredentialLikeCandidateValue(item.value) ||
+        (item.identifierContext && isSensitiveArtifactIdentifier(item.value))
+      ) {
+        throw new Error(
+          "Candidate artifacts contain sensitive or credential-like data.",
+        );
+      }
+      continue;
+    }
+    if (item.value === null || typeof item.value !== "object") continue;
+    if (seen.has(item.value)) {
+      throw new Error("Candidate artifacts exceed privacy inspection bounds.");
+    }
+    seen.add(item.value);
+    if (Array.isArray(item.value)) {
+      for (const value of item.value) {
+        stack.push({
+          value,
+          depth: item.depth + 1,
+          identifierContext: item.identifierContext,
+        });
+      }
+      continue;
+    }
+    for (const [key, value] of Object.entries(item.value)) {
+      account(key);
+      if (isSensitiveArtifactIdentifier(key)) {
+        throw new Error(
+          "Candidate artifacts contain sensitive or credential-like data.",
+        );
+      }
+      const normalizedKey = normalizeArtifactIdentifier(key);
+      stack.push({
+        value,
+        depth: item.depth + 1,
+        identifierContext:
+          item.identifierContext ||
+          normalizedKey === "required" ||
+          normalizedKey === "projection",
+      });
+    }
+  }
+}
 const CANDIDATE_SAFE_EFFECTS = new Set([
   "candidate.observe",
   "candidate.project",
@@ -266,6 +403,8 @@ export interface CandidateRegistryV1 {
     version: string,
     result: unknown,
   ): Promise<StoredCandidateRefV1>;
+  recordBlocked(id: string, version: string): Promise<StoredCandidateRefV1>;
+  recordRejected(id: string, version: string): Promise<StoredCandidateRefV1>;
   verify(ref: StoredCandidateRefV1): Promise<CandidateVerificationResultV1>;
   verifyIdentity(
     id: string,
@@ -367,6 +506,82 @@ class CandidateBlobReader {
       throw new Error("Candidate verification blob digest is invalid.");
     }
     return bytes;
+  }
+
+  readReceipt(jobId: string, sequence: number): StoredRecordRef | undefined {
+    if (
+      !OPAQUE_ID.test(jobId) ||
+      !Number.isSafeInteger(sequence) ||
+      sequence < 1
+    ) {
+      throw new TypeError("Candidate receipt index identity is invalid.");
+    }
+    const path = resolve(
+      this.#root,
+      "jobs",
+      jobId,
+      "receipts",
+      `${sequence}.json`,
+    );
+    const fromRoot = relative(this.#root, path);
+    if (
+      fromRoot === "" ||
+      fromRoot === ".." ||
+      fromRoot.startsWith(`..${sep}`) ||
+      resolve(this.#root, fromRoot) !== path
+    ) {
+      throw new Error("Candidate receipt index escaped quarantine.");
+    }
+    for (const directory of [
+      resolve(this.#root, "jobs"),
+      resolve(this.#root, "jobs", jobId),
+      resolve(this.#root, "jobs", jobId, "receipts"),
+    ]) {
+      const directoryStat = lstatSync(directory);
+      if (directoryStat.isSymbolicLink() || !directoryStat.isDirectory()) {
+        throw new Error(
+          "Candidate receipt index parent is not a real directory.",
+        );
+      }
+    }
+    let decoded: string;
+    try {
+      const stat = lstatSync(path);
+      if (stat.isSymbolicLink() || !stat.isFile()) {
+        throw new Error("Candidate receipt index is not a regular file.");
+      }
+      decoded = readFileSync(path, "utf8");
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+      throw error;
+    }
+    const index = JSON.parse(decoded) as unknown;
+    assertExactKeys(index, [
+      "apiVersion",
+      "createdAt",
+      "producerVersion",
+      "parentDigests",
+      "jobId",
+      "sequence",
+      "receiptDigest",
+    ]);
+    if (
+      index.apiVersion !== "factory.external-intake-receipt-index/v1" ||
+      index.jobId !== jobId ||
+      index.sequence !== sequence ||
+      typeof index.receiptDigest !== "string" ||
+      !/^sha256:[a-f0-9]{64}$/u.test(index.receiptDigest) ||
+      !Array.isArray(index.parentDigests) ||
+      index.parentDigests.length !== 1 ||
+      index.parentDigests[0] !== index.receiptDigest ||
+      canonicalJson(index) !== decoded
+    ) {
+      throw new Error("Candidate receipt index is invalid.");
+    }
+    return {
+      kind: "receipt",
+      digest: index.receiptDigest as Sha256Digest,
+    };
   }
 }
 
@@ -671,6 +886,7 @@ function parseArtifacts(
   input: unknown,
   proposal: Pick<CandidateProposalV1, "id" | "version" | "proposedFactoryKey">,
 ): CandidateArtifactsV1 {
+  assertCandidateArtifactPrivacy(input);
   let artifacts: CandidateArtifactsV1;
   try {
     artifacts = artifactsSchema.parse(input);
@@ -1042,12 +1258,29 @@ export class CandidateRegistry implements CandidateRegistryV1 {
         "Candidate conformance pass must match the current Candidate and artifacts.",
       );
     }
+    const indexedTerminal = this.#reader?.readReceipt(entry.jobId, 2);
+    if (
+      indexedTerminal !== undefined &&
+      !entry.receipts.some(({ digest }) => digest === indexedTerminal.digest)
+    ) {
+      const indexedReceipt = parseIntakeReceipt(
+        this.store.getRecord(indexedTerminal),
+      );
+      if (indexedReceipt.code !== "candidate-conformance-passed") {
+        throw new Error("Candidate conformance lifecycle is append-only.");
+      }
+      const recovered = this.#loadReceiptAddressedEntry(
+        candidateLookupId(indexedTerminal.digest as Sha256Digest),
+        version,
+      );
+      const recoveredVerification = await this.verify(recovered.latest);
+      if (!recoveredVerification.valid) {
+        throw new Error("Candidate durable conformance retry is invalid.");
+      }
+      return recovered.latest;
+    }
     const resultBytes = artifactBytes(expected);
     const resultDigest = digestBytes(resultBytes);
-    const persisted = this.store.putBytes("evidence", resultBytes);
-    if (persisted.digest !== resultDigest) {
-      throw new Error("Candidate conformance result persistence drifted.");
-    }
     const next = parseCandidateCapability({
       ...creation,
       parentDigests: unique([
@@ -1066,32 +1299,39 @@ export class CandidateRegistry implements CandidateRegistryV1 {
         "Candidate conformance retry conflicts with the durable transition.",
       );
     }
-    const stored = this.store.putRecord("candidate", next);
+    const nextDigest = canonicalRecordDigest(next);
     const receiptRecord: IntakeReceiptV1 = {
       apiVersion: "factory.external-intake-receipt/v1",
       createdAt: creation.createdAt,
       producerVersion: creation.producerVersion,
-      parentDigests: [creationReceiptRef.digest, stored.digest],
+      parentDigests: [creationReceiptRef.digest, nextDigest],
       jobId: creationReceipt.jobId,
       sequence: 2,
       status: "candidate-ready",
       code: "candidate-conformance-passed",
       recordDigests: [
-        stored.digest,
+        nextDigest,
         resultDigest,
         entry.verificationStateRef.digest,
       ],
     };
     const parsedReceipt = parseIntakeReceipt(receiptRecord);
-    const receipt = this.store.appendReceipt(
-      creationReceipt.jobId,
-      parsedReceipt,
-    );
+    const committed = this.store.commitCandidateTransition({
+      jobId: creationReceipt.jobId,
+      expectedCreationReceipt: creationReceiptRef,
+      expectedCandidate: exactRef(creationRef),
+      candidate: next,
+      receipt: parsedReceipt,
+      evidenceBytes: resultBytes,
+    });
+    const stored = committed.candidate;
+    const receipt = committed.receipt;
     const persistedCandidate = parseCandidateCapability(
       this.store.getRecord(exactRef(stored)),
     );
     const persistedReceipt = parseIntakeReceipt(this.store.getRecord(receipt));
     if (
+      committed.evidence?.digest !== resultDigest ||
       canonicalJson(persistedCandidate) !== canonicalJson(next) ||
       canonicalJson(persistedReceipt) !== canonicalJson(parsedReceipt)
     ) {
@@ -1114,6 +1354,122 @@ export class CandidateRegistry implements CandidateRegistryV1 {
     if (!entry.receipts.some(({ digest }) => digest === receipt.digest)) {
       entry.receipts.push(receipt);
     }
+    return nextRef;
+  }
+
+  async recordBlocked(
+    id: string,
+    version: string,
+  ): Promise<StoredCandidateRefV1> {
+    return this.#recordTerminal(id, version, "blocked");
+  }
+
+  async recordRejected(
+    id: string,
+    version: string,
+  ): Promise<StoredCandidateRefV1> {
+    return this.#recordTerminal(id, version, "rejected");
+  }
+
+  async #recordTerminal(
+    id: string,
+    version: string,
+    status: "blocked" | "rejected",
+  ): Promise<StoredCandidateRefV1> {
+    const verification = await this.verifyIdentity(id, version);
+    if (!verification.valid || verification.candidate === undefined) {
+      throw new Error(
+        "Strict Candidate verification must pass before a lifecycle transition.",
+      );
+    }
+    const entry = this.#entry(id, version);
+    const current = verification.candidate;
+    if (current.status !== "quarantined") {
+      throw new Error("Candidate terminal lifecycle is append-only.");
+    }
+    const indexedTerminal = this.#reader?.readReceipt(entry.jobId, 2);
+    if (
+      indexedTerminal !== undefined &&
+      !entry.receipts.some(({ digest }) => digest === indexedTerminal.digest)
+    ) {
+      throw new Error("Candidate terminal lifecycle is append-only.");
+    }
+    const creationRef = entry.history[0];
+    const creationReceiptRef = entry.receipts[0];
+    if (creationRef === undefined || creationReceiptRef === undefined) {
+      throw new Error("Candidate creation compare-and-set state is absent.");
+    }
+    const creation = parseCandidateCapability(
+      this.store.getRecord(exactRef(creationRef)),
+    );
+    const creationReceipt = parseIntakeReceipt(
+      this.store.getRecord(creationReceiptRef),
+    );
+    if (
+      creation.status !== "quarantined" ||
+      canonicalJson(current) !== canonicalJson(creation) ||
+      entry.latest.digest !== creationRef.digest ||
+      canonicalRecordDigest(creation) !== creationRef.digest ||
+      creationReceipt.status !== "candidate-ready" ||
+      creationReceipt.code !== "candidate-quarantined" ||
+      creationReceipt.sequence !== 1 ||
+      creationReceipt.parentDigests.length !== 1 ||
+      creationReceipt.parentDigests[0] !== creationRef.digest ||
+      creationReceipt.recordDigests[0] !== creationRef.digest ||
+      candidateLookupId(creationReceiptRef.digest as Sha256Digest) !==
+        creationRef.lookupId
+    ) {
+      throw new Error("Candidate creation compare-and-set state is invalid.");
+    }
+    const next = parseCandidateCapability({
+      ...creation,
+      parentDigests: unique([...creation.parentDigests, creationRef.digest]),
+      status,
+    });
+    const nextDigest = canonicalRecordDigest(next);
+    const receiptRecord = parseIntakeReceipt({
+      apiVersion: "factory.external-intake-receipt/v1",
+      createdAt: creation.createdAt,
+      producerVersion: creation.producerVersion,
+      parentDigests: [creationReceiptRef.digest, nextDigest],
+      jobId: creationReceipt.jobId,
+      sequence: 2,
+      status,
+      code: `candidate-${status}`,
+      recordDigests: [nextDigest, entry.verificationStateRef.digest],
+    });
+    const committed = this.store.commitCandidateTransition({
+      jobId: creationReceipt.jobId,
+      expectedCreationReceipt: creationReceiptRef,
+      expectedCandidate: exactRef(creationRef),
+      candidate: next,
+      receipt: receiptRecord,
+    });
+    const stored = committed.candidate;
+    const receipt = committed.receipt;
+    const persistedCandidate = parseCandidateCapability(
+      this.store.getRecord(exactRef(stored)),
+    );
+    const persistedReceipt = parseIntakeReceipt(this.store.getRecord(receipt));
+    if (
+      canonicalJson(persistedCandidate) !== canonicalJson(next) ||
+      canonicalJson(persistedReceipt) !== canonicalJson(receiptRecord)
+    ) {
+      throw new Error(
+        "Candidate terminal compare-and-set persistence drifted.",
+      );
+    }
+    const nextRef: StoredCandidateRefV1 = {
+      ...stored,
+      kind: "candidate",
+      id: next.id,
+      version: next.version,
+      status: next.status,
+      lookupId: candidateLookupId(receipt.digest as Sha256Digest),
+    };
+    entry.latest = nextRef;
+    entry.history.push(nextRef);
+    entry.receipts.push(receipt);
     return nextRef;
   }
 
@@ -1259,6 +1615,52 @@ export class CandidateRegistry implements CandidateRegistryV1 {
         } catch {
           issues.push("Candidate conformance receipt is invalid.");
         }
+      } else if (
+        candidate.status === "blocked" ||
+        candidate.status === "rejected"
+      ) {
+        try {
+          const priorCandidateRef = entry.history.at(-2);
+          const receiptRef = entry.receipts.at(-1);
+          const priorReceiptRef = entry.receipts.at(-2);
+          if (
+            priorCandidateRef === undefined ||
+            receiptRef === undefined ||
+            priorReceiptRef === undefined
+          ) {
+            throw new Error("Candidate terminal receipt chain is absent.");
+          }
+          const priorCandidate = parseCandidateCapability(
+            this.store.getRecord(exactRef(priorCandidateRef)),
+          );
+          const expected = parseCandidateCapability({
+            ...priorCandidate,
+            parentDigests: unique([
+              ...priorCandidate.parentDigests,
+              priorCandidateRef.digest,
+            ]),
+            status: candidate.status,
+          });
+          const receipt = parseIntakeReceipt(this.store.getRecord(receiptRef));
+          if (
+            priorCandidate.status !== "quarantined" ||
+            canonicalJson(candidate) !== canonicalJson(expected) ||
+            receipt.jobId !== entry.jobId ||
+            receipt.sequence !== 2 ||
+            receipt.status !== candidate.status ||
+            receipt.code !== `candidate-${candidate.status}` ||
+            canonicalJson(receipt.parentDigests) !==
+              canonicalJson([priorReceiptRef.digest, ref.digest]) ||
+            canonicalJson(receipt.recordDigests) !==
+              canonicalJson([ref.digest, entry.verificationStateRef.digest]) ||
+            candidateLookupId(receiptRef.digest as Sha256Digest) !==
+              ref.lookupId
+          ) {
+            throw new Error("Candidate terminal receipt binding drifted.");
+          }
+        } catch {
+          issues.push("Candidate terminal receipt is invalid.");
+        }
       }
     } catch {
       issues.push("Candidate record is absent, malformed, or digest-invalid.");
@@ -1305,9 +1707,10 @@ export class CandidateRegistry implements CandidateRegistryV1 {
     if (creation.status !== "quarantined") {
       throw new Error("Candidate creation revision is invalid.");
     }
+    const artifacts = parseArtifacts(entry.artifacts, creation);
     return {
       candidate: creation,
-      artifacts: structuredClone(entry.artifacts),
+      artifacts: structuredClone(artifacts),
     };
   }
 
@@ -1322,8 +1725,10 @@ export class CandidateRegistry implements CandidateRegistryV1 {
     const key = this.#key(id, version);
     const entry =
       this.#entries.get(key) ??
-      [...this.#entries.values()].find((candidate) =>
-        candidate.history.some(({ lookupId }) => lookupId === id),
+      [...this.#entries.values()].find(
+        (candidate) =>
+          candidate.version === version &&
+          candidate.history.some(({ lookupId }) => lookupId === id),
       );
     if (entry !== undefined) {
       if (!allowUnverified && !entry.verified) {
@@ -1357,13 +1762,26 @@ export class CandidateRegistry implements CandidateRegistryV1 {
     };
     const terminal = parseIntakeReceipt(this.store.getRecord(terminalRef));
     if (
-      terminal.status !== "candidate-ready" ||
-      !["candidate-quarantined", "candidate-conformance-passed"].includes(
-        terminal.code,
+      !(
+        (terminal.status === "candidate-ready" &&
+          ["candidate-quarantined", "candidate-conformance-passed"].includes(
+            terminal.code,
+          )) ||
+        (terminal.status === "blocked" &&
+          terminal.code === "candidate-blocked") ||
+        (terminal.status === "rejected" &&
+          terminal.code === "candidate-rejected")
       ) ||
       terminal.recordDigests.length < 2
     ) {
       throw new Error("Candidate receipt-addressed reference is invalid.");
+    }
+    const indexedReceipt = this.#reader.readReceipt(
+      terminal.jobId,
+      terminal.sequence,
+    );
+    if (indexedReceipt?.digest !== terminalRef.digest) {
+      throw new Error("Candidate receipt is not the indexed lifecycle winner.");
     }
     const current = parseCandidateCapability(
       this.store.getRecord({
@@ -1377,7 +1795,7 @@ export class CandidateRegistry implements CandidateRegistryV1 {
     let creationRef = terminalRef;
     let creation = terminal;
     const receipts: StoredRecordRef[] = [terminalRef];
-    if (terminal.code === "candidate-conformance-passed") {
+    if (terminal.code !== "candidate-quarantined") {
       const previousDigest = terminal.parentDigests.find((digest) => {
         try {
           const previous = parseIntakeReceipt(
@@ -1389,7 +1807,7 @@ export class CandidateRegistry implements CandidateRegistryV1 {
         }
       });
       if (previousDigest === undefined) {
-        throw new Error("Candidate conformance receipt has no prior receipt.");
+        throw new Error("Candidate terminal receipt has no prior receipt.");
       }
       creationRef = { kind: "receipt", digest: previousDigest };
       creation = parseIntakeReceipt(this.store.getRecord(creationRef));
@@ -1503,7 +1921,7 @@ export class CandidateRegistry implements CandidateRegistryV1 {
       ) {
         throw new Error("Candidate quarantined revision is inconsistent.");
       }
-    } else {
+    } else if (terminal.code === "candidate-conformance-passed") {
       const resultDigest = current.conformanceResultDigest;
       if (resultDigest === undefined) {
         throw new Error("Candidate conformance result reference is absent.");
@@ -1533,6 +1951,29 @@ export class CandidateRegistry implements CandidateRegistryV1 {
         canonicalJson(current) !== canonicalJson(expectedCurrent)
       ) {
         throw new Error("Candidate conformance receipt is inconsistent.");
+      }
+    } else {
+      const expectedStatus =
+        terminal.code === "candidate-blocked" ? "blocked" : "rejected";
+      const expectedCurrent = parseCandidateCapability({
+        ...creationCandidate,
+        parentDigests: unique([
+          ...creationCandidate.parentDigests,
+          creationCandidateDigest,
+        ]),
+        status: expectedStatus,
+      });
+      if (
+        terminal.jobId !== creation.jobId ||
+        terminal.sequence !== 2 ||
+        terminal.status !== expectedStatus ||
+        canonicalJson(terminal.parentDigests) !==
+          canonicalJson([creationRef.digest, terminal.recordDigests[0]]) ||
+        canonicalJson(terminal.recordDigests) !==
+          canonicalJson([terminal.recordDigests[0], verificationStateDigest]) ||
+        canonicalJson(current) !== canonicalJson(expectedCurrent)
+      ) {
+        throw new Error("Candidate terminal receipt is inconsistent.");
       }
     }
     const latest: StoredCandidateRefV1 = {

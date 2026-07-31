@@ -101,6 +101,8 @@ export interface ExternalIntakeApiV1 {
     id: string,
     version: string,
   ): Promise<CandidateVerificationResultV1>;
+  candidateBlock(id: string, version: string): Promise<StoredCandidateRefV1>;
+  candidateReject(id: string, version: string): Promise<StoredCandidateRefV1>;
   verifyJob(id: string): { readonly id: string; readonly valid: boolean };
 }
 
@@ -269,6 +271,20 @@ export function createExternalIntakeApi(
       version: string,
     ): Promise<CandidateVerificationResultV1> {
       return registry.verifyIdentity(id, version);
+    },
+
+    async candidateBlock(
+      id: string,
+      version: string,
+    ): Promise<StoredCandidateRefV1> {
+      return registry.recordBlocked(id, version);
+    },
+
+    async candidateReject(
+      id: string,
+      version: string,
+    ): Promise<StoredCandidateRefV1> {
+      return registry.recordRejected(id, version);
     },
 
     verifyJob(id: string): { readonly id: string; readonly valid: boolean } {

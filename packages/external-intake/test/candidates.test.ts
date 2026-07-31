@@ -18,11 +18,16 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createExternalIntakeApi } from "../src/api.js";
-import { canonicalJson, digestBytes } from "../src/canonical.js";
+import {
+  canonicalJson,
+  canonicalRecordDigest,
+  digestBytes,
+} from "../src/canonical.js";
 import {
   CandidateRegistry,
   type CandidateArtifactsV1,
   type CandidateProposalV1,
+  type StoredCandidateRefV1,
 } from "../src/candidates.js";
 import { evaluateCandidateConformance } from "../src/conformance.js";
 import type {
@@ -30,7 +35,10 @@ import type {
   IntakeRequestV1,
   SourceSnapshotV1,
 } from "../src/contracts.js";
-import { parseIntakeReceipt } from "../src/contracts.js";
+import {
+  parseCandidateCapability,
+  parseIntakeReceipt,
+} from "../src/contracts.js";
 import {
   runEvidencePipeline,
   verifyCompletedEvidence,
@@ -534,6 +542,31 @@ function persistedText(root: string): string {
   return output.join("\n");
 }
 
+function quarantineSnapshot(root: string): readonly string[] {
+  const output: string[] = [];
+  const visit = (path: string): void => {
+    if (!statSync(path).isDirectory()) {
+      output.push(
+        `${path.slice(root.length)}\0${readFileSync(path).toString("base64")}`,
+      );
+      return;
+    }
+    for (const entry of readdirSync(path).sort()) visit(join(path, entry));
+  };
+  visit(root);
+  return output;
+}
+
+function credentialLikeSentinel(): string {
+  return Array.from(
+    { length: 16 },
+    (_, index) =>
+      `${String.fromCharCode(65 + (index % 26))}${String.fromCharCode(
+        97 + ((index * 7) % 26),
+      )}${index % 10}`,
+  ).join("");
+}
+
 afterEach(() => {
   for (const root of roots.splice(0)) {
     rmSync(root, { recursive: true, force: true });
@@ -650,6 +683,144 @@ describe("Candidate registry", () => {
 
   it.each([
     [
+      "show",
+      (api: ReturnType<typeof createExternalIntakeApi>, id: string) =>
+        api.candidateShow(id, "9.9.9"),
+    ],
+    [
+      "verify",
+      (api: ReturnType<typeof createExternalIntakeApi>, id: string) =>
+        api.candidateVerify(id, "9.9.9"),
+    ],
+    [
+      "test",
+      (api: ReturnType<typeof createExternalIntakeApi>, id: string) =>
+        api.candidateTest(id, "9.9.9"),
+    ],
+    [
+      "block",
+      (api: ReturnType<typeof createExternalIntakeApi>, id: string) =>
+        api.candidateBlock(id, "9.9.9"),
+    ],
+    [
+      "reject",
+      (api: ReturnType<typeof createExternalIntakeApi>, id: string) =>
+        api.candidateReject(id, "9.9.9"),
+    ],
+  ])(
+    "rejects warm Candidate %s for the wrong requested version without mutation",
+    async (_, operation) => {
+      const { root, store } = tempStore();
+      const api = createExternalIntakeApi(store, root);
+      const ref = await api.candidateCreate(await acceptedProposal(store));
+      const before = lifecycleRecordCounts(root);
+
+      await expect(operation(api, ref.lookupId)).rejects.toThrow();
+      expect(lifecycleRecordCounts(root)).toEqual(before);
+    },
+  );
+
+  it.each([
+    ["Bearer", `Bearer ${credentialLikeSentinel()}`],
+    [
+      "Basic",
+      `Basic ${Buffer.from(credentialLikeSentinel()).toString("base64")}`,
+    ],
+    [
+      "JWT",
+      "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzYWZlLWFkYXB0ZXIifQ.c2lnbmF0dXJlLXNlbnRpbmVs",
+    ],
+  ])(
+    "recursively rejects a deeply nested structured %s credential before persistence",
+    async (_, sentinel) => {
+      const { root, store } = tempStore();
+      const registry = new CandidateRegistry(store, root);
+      const proposal = await acceptedProposal(store);
+      const artifacts = structuredClone(
+        proposal.artifacts,
+      ) as unknown as Record<string, unknown>;
+      artifacts.metadata = {
+        levelOne: { levelTwo: { levelThree: { value: sentinel } } },
+      };
+      const before = quarantineSnapshot(root);
+
+      await expect(
+        registry.create({ ...proposal, artifacts } as CandidateProposalV1),
+      ).rejects.toThrow(/sensitive|credential/iu);
+      expect(quarantineSnapshot(root)).toEqual(before);
+      expect(persistedText(root)).not.toContain(sentinel);
+    },
+  );
+
+  it.each([
+    [
+      "show",
+      (api: ReturnType<typeof createExternalIntakeApi>, id: string) =>
+        api.candidateShow(id, "9.9.9"),
+    ],
+    [
+      "verify",
+      (api: ReturnType<typeof createExternalIntakeApi>, id: string) =>
+        api.candidateVerify(id, "9.9.9"),
+    ],
+    [
+      "test",
+      (api: ReturnType<typeof createExternalIntakeApi>, id: string) =>
+        api.candidateTest(id, "9.9.9"),
+    ],
+    [
+      "block",
+      (api: ReturnType<typeof createExternalIntakeApi>, id: string) =>
+        api.candidateBlock(id, "9.9.9"),
+    ],
+    [
+      "reject",
+      (api: ReturnType<typeof createExternalIntakeApi>, id: string) =>
+        api.candidateReject(id, "9.9.9"),
+    ],
+  ])(
+    "rejects fresh Candidate %s for the wrong requested version without mutation",
+    async (_, operation) => {
+      const { root, store } = tempStore();
+      const ref = await new CandidateRegistry(store).create(
+        await acceptedProposal(store),
+      );
+      const api = createExternalIntakeApi(new ExternalIntakeStore(root), root);
+      const before = lifecycleRecordCounts(root);
+
+      await expect(operation(api, ref.lookupId)).rejects.toThrow();
+      expect(lifecycleRecordCounts(root)).toEqual(before);
+    },
+  );
+
+  it.each(["warm", "fresh"] as const)(
+    "rejects %s Candidate conformance bundle and transition for the wrong requested version without mutation",
+    async (mode) => {
+      const { root, store } = tempStore();
+      const creator = new CandidateRegistry(store);
+      const ref = await creator.create(await acceptedProposal(store));
+      const result = evaluateCandidateConformance(
+        await creator.getConformanceBundle(ref.lookupId, ref.version),
+      );
+      const registry =
+        mode === "warm"
+          ? creator
+          : new CandidateRegistry(new ExternalIntakeStore(root), root);
+      const before = lifecycleRecordCounts(root);
+
+      await expect(
+        registry.getConformanceBundle(ref.lookupId, "9.9.9"),
+      ).rejects.toThrow();
+      expect(lifecycleRecordCounts(root)).toEqual(before);
+      await expect(
+        registry.recordConformancePass(ref.lookupId, "9.9.9", result),
+      ).rejects.toThrow();
+      expect(lifecycleRecordCounts(root)).toEqual(before);
+    },
+  );
+
+  it.each([
+    [
       "snapshot",
       (proposal: CandidateProposalV1) => ({
         ...proposal,
@@ -759,6 +930,266 @@ describe("Candidate registry", () => {
     ).toBeUndefined();
   });
 
+  it.each(["blocked", "rejected"] as const)(
+    "records %s as one immutable Candidate revision with an exactly bound durable receipt",
+    async (status) => {
+      const { root, store } = tempStore();
+      const registry = new CandidateRegistry(store);
+      const initial = await registry.create(await acceptedProposal(store));
+      const creationReceiptRef = {
+        kind: "receipt" as const,
+        digest:
+          `sha256:${initial.lookupId.slice("candidate-".length)}` as const,
+      };
+      const creationReceipt = parseIntakeReceipt(
+        store.getRecord(creationReceiptRef),
+      );
+      const before = lifecycleRecordCounts(root);
+      const terminalRegistry = registry as CandidateRegistry & {
+        recordBlocked(id: string, version: string): Promise<typeof initial>;
+        recordRejected(id: string, version: string): Promise<typeof initial>;
+      };
+
+      const terminal = await (status === "blocked"
+        ? terminalRegistry.recordBlocked(initial.lookupId, initial.version)
+        : terminalRegistry.recordRejected(initial.lookupId, initial.version));
+
+      expect(terminal.status).toBe(status);
+      expect(lifecycleRecordCounts(root)).toEqual({
+        candidates: before.candidates + 1,
+        receipts: before.receipts + 1,
+      });
+      const terminalReceipt = parseIntakeReceipt(
+        store.getRecord({
+          kind: "receipt",
+          digest: `sha256:${terminal.lookupId.slice("candidate-".length)}`,
+        }),
+      );
+      expect(terminalReceipt).toMatchObject({
+        sequence: 2,
+        status,
+        code: `candidate-${status}`,
+        parentDigests: [creationReceiptRef.digest, terminal.digest],
+        recordDigests: [terminal.digest, creationReceipt.recordDigests[1]],
+      });
+      await expect(registry.verify(terminal)).resolves.toMatchObject({
+        valid: true,
+        issues: [],
+        candidate: { status },
+      });
+      const freshApi = createExternalIntakeApi(
+        new ExternalIntakeStore(root),
+        root,
+      );
+      await expect(
+        freshApi.candidateShow(terminal.lookupId, terminal.version),
+      ).resolves.toMatchObject({ status, candidateDigest: terminal.digest });
+      await expect(
+        freshApi.candidateVerify(terminal.lookupId, terminal.version),
+      ).resolves.toMatchObject({ valid: true, issues: [] });
+    },
+  );
+
+  it("rejects a receipt-addressed terminal revision that is not the indexed sequence-2 winner", async () => {
+    const { root, store } = tempStore();
+    const registry = new CandidateRegistry(store);
+    const initial = await registry.create(await acceptedProposal(store));
+    await registry.recordBlocked(initial.id, initial.version);
+    const creation = parseCandidateCapability(
+      store.getRecord({ kind: "candidate", digest: initial.digest }),
+    );
+    const creationReceiptRef = {
+      kind: "receipt" as const,
+      digest: `sha256:${initial.lookupId.slice("candidate-".length)}` as const,
+    };
+    const creationReceipt = parseIntakeReceipt(
+      store.getRecord(creationReceiptRef),
+    );
+    const orphan = parseCandidateCapability({
+      ...creation,
+      parentDigests: [...creation.parentDigests, initial.digest],
+      status: "rejected",
+    });
+    const orphanDigest = canonicalRecordDigest(orphan);
+    const orphanReceipt = parseIntakeReceipt({
+      apiVersion: "factory.external-intake-receipt/v1",
+      createdAt: creation.createdAt,
+      producerVersion: creation.producerVersion,
+      parentDigests: [creationReceiptRef.digest, orphanDigest],
+      jobId: creationReceipt.jobId,
+      sequence: 2,
+      status: "rejected",
+      code: "candidate-rejected",
+      recordDigests: [orphanDigest, creationReceipt.recordDigests[1]],
+    });
+    const orphanReceiptDigest = canonicalRecordDigest(orphanReceipt);
+    writeFileSync(
+      join(root, "records", "candidate", `${orphanDigest.slice(7)}.json`),
+      canonicalJson(orphan),
+    );
+    writeFileSync(
+      join(root, "records", "receipt", `${orphanReceiptDigest.slice(7)}.json`),
+      canonicalJson(orphanReceipt),
+    );
+    const fresh = createExternalIntakeApi(new ExternalIntakeStore(root), root);
+
+    await expect(
+      fresh.candidateShow(
+        `candidate-${orphanReceiptDigest.slice("sha256:".length)}`,
+        initial.version,
+      ),
+    ).rejects.toThrow(/indexed lifecycle winner/iu);
+  });
+
+  it.each(["blocked", "rejected"] as const)(
+    "rejects duplicate and cross-terminal transitions after %s without mutation",
+    async (status) => {
+      const { root, store } = tempStore();
+      const registry = new CandidateRegistry(store);
+      const initial = await registry.create(await acceptedProposal(store));
+      const result = evaluateCandidateConformance(
+        await registry.getConformanceBundle(initial.id, initial.version),
+      );
+      const terminalRegistry = registry as CandidateRegistry & {
+        recordBlocked(id: string, version: string): Promise<typeof initial>;
+        recordRejected(id: string, version: string): Promise<typeof initial>;
+      };
+      const transition =
+        status === "blocked"
+          ? terminalRegistry.recordBlocked.bind(terminalRegistry)
+          : terminalRegistry.recordRejected.bind(terminalRegistry);
+      const crossTransition =
+        status === "blocked"
+          ? terminalRegistry.recordRejected.bind(terminalRegistry)
+          : terminalRegistry.recordBlocked.bind(terminalRegistry);
+      const terminal = await transition(initial.lookupId, initial.version);
+      const before = lifecycleRecordCounts(root);
+
+      await expect(
+        transition(terminal.lookupId, terminal.version),
+      ).rejects.toThrow(/append-only|quarantined/iu);
+      await expect(
+        crossTransition(terminal.lookupId, terminal.version),
+      ).rejects.toThrow(/append-only|quarantined/iu);
+      await expect(
+        registry.recordConformancePass(
+          terminal.lookupId,
+          terminal.version,
+          result,
+        ),
+      ).rejects.toThrow(/append-only/iu);
+      expect(lifecycleRecordCounts(root)).toEqual(before);
+    },
+  );
+
+  it.each(["blocked", "rejected"] as const)(
+    "rejects stale creation-locator lifecycle bypasses after %s without mutation",
+    async (status) => {
+      const { root, store } = tempStore();
+      const creator = new CandidateRegistry(store);
+      const initial = await creator.create(await acceptedProposal(store));
+      const result = evaluateCandidateConformance(
+        await creator.getConformanceBundle(initial.id, initial.version),
+      );
+      const terminal =
+        status === "blocked"
+          ? await creator.recordBlocked(initial.id, initial.version)
+          : await creator.recordRejected(initial.id, initial.version);
+      expect(terminal.status).toBe(status);
+      const stale = new CandidateRegistry(new ExternalIntakeStore(root), root);
+      const before = lifecycleRecordCounts(root);
+
+      await expect(
+        stale.recordBlocked(initial.lookupId, initial.version),
+      ).rejects.toThrow(/append-only|sequence|conflict/iu);
+      await expect(
+        stale.recordRejected(initial.lookupId, initial.version),
+      ).rejects.toThrow(/append-only|sequence|conflict/iu);
+      await expect(
+        stale.recordConformancePass(initial.lookupId, initial.version, result),
+      ).rejects.toThrow(/append-only|sequence|conflict/iu);
+      expect(lifecycleRecordCounts(root)).toEqual(before);
+    },
+  );
+
+  it("rejects stale creation-locator terminal operations after conformance without mutation", async () => {
+    const { root, store } = tempStore();
+    const creator = new CandidateRegistry(store);
+    const initial = await creator.create(await acceptedProposal(store));
+    const result = evaluateCandidateConformance(
+      await creator.getConformanceBundle(initial.id, initial.version),
+    );
+    await creator.recordConformancePass(initial.id, initial.version, result);
+    const stale = new CandidateRegistry(new ExternalIntakeStore(root), root);
+    const before = lifecycleRecordCounts(root);
+
+    await expect(
+      stale.recordBlocked(initial.lookupId, initial.version),
+    ).rejects.toThrow(/append-only|sequence|conflict/iu);
+    await expect(
+      stale.recordRejected(initial.lookupId, initial.version),
+    ).rejects.toThrow(/append-only|sequence|conflict/iu);
+    expect(lifecycleRecordCounts(root)).toEqual(before);
+  });
+
+  it("keeps conformance-passed exclusive from blocked and rejected terminal operations", async () => {
+    const { root, store } = tempStore();
+    const registry = new CandidateRegistry(store);
+    const initial = await registry.create(await acceptedProposal(store));
+    const result = evaluateCandidateConformance(
+      await registry.getConformanceBundle(initial.id, initial.version),
+    );
+    const passed = await registry.recordConformancePass(
+      initial.id,
+      initial.version,
+      result,
+    );
+    const before = lifecycleRecordCounts(root);
+    const terminalRegistry = registry as CandidateRegistry & {
+      recordBlocked(id: string, version: string): Promise<typeof initial>;
+      recordRejected(id: string, version: string): Promise<typeof initial>;
+    };
+
+    await expect(
+      terminalRegistry.recordBlocked(passed.lookupId, passed.version),
+    ).rejects.toThrow(/append-only|quarantined/iu);
+    await expect(
+      terminalRegistry.recordRejected(passed.lookupId, passed.version),
+    ).rejects.toThrow(/append-only|quarantined/iu);
+    expect(lifecycleRecordCounts(root)).toEqual(before);
+  });
+
+  it.each(["block", "reject"] as const)(
+    "exposes the validated Candidate %s operation through the repository-local API",
+    async (operation) => {
+      const { root, store } = tempStore();
+      const api = createExternalIntakeApi(store, root) as ReturnType<
+        typeof createExternalIntakeApi
+      > & {
+        candidateBlock(
+          id: string,
+          version: string,
+        ): Promise<StoredCandidateRefV1>;
+        candidateReject(
+          id: string,
+          version: string,
+        ): Promise<StoredCandidateRefV1>;
+      };
+      const initial = await api.candidateCreate(await acceptedProposal(store));
+
+      const terminal = await (operation === "block"
+        ? api.candidateBlock(initial.lookupId, initial.version)
+        : api.candidateReject(initial.lookupId, initial.version));
+
+      expect(terminal.status).toBe(
+        operation === "block" ? "blocked" : "rejected",
+      );
+      await expect(
+        api.candidateShow(terminal.lookupId, terminal.version),
+      ).resolves.toMatchObject({ status: terminal.status });
+    },
+  );
+
   it("fails closed when a conformance receipt is not bound to its result", async () => {
     const root = mkdtempSync(join(tmpdir(), "factory-candidate-test-"));
     roots.push(root);
@@ -849,6 +1280,98 @@ describe("Candidate registry", () => {
     ).rejects.toThrow("safe declarative data");
     expect(persistedText(root)).not.toContain(sentinel);
   });
+
+  it.each([
+    "token",
+    "auth",
+    "apiKey",
+    "clientSecret",
+    "privateKey",
+    "password",
+    "credential",
+    "prompt",
+    "response",
+  ])(
+    "rejects nested sensitive Candidate artifact key family %s before every persistence or conformance boundary",
+    async (family) => {
+      const { root, store } = tempStore();
+      const registry = new CandidateRegistry(store, root);
+      const proposal = await acceptedProposal(store);
+      const artifacts = structuredClone(proposal.artifacts);
+      const key = `${family}Value`;
+      artifacts.manifest.inputSchema.properties[key] = { type: "string" };
+      artifacts.manifest.inputSchema.required.push(key);
+      artifacts.fixture.input[key] = "inert";
+      artifacts.fixture.expectedOutput[key] = "inert";
+      artifacts.adapter.projection[key] = key;
+      const before = quarantineSnapshot(root);
+
+      await expect(registry.create({ ...proposal, artifacts })).rejects.toThrow(
+        /sensitive|credential/iu,
+      );
+      expect(quarantineSnapshot(root)).toEqual(before);
+      expect(persistedText(root)).not.toContain(key);
+      expect(registry.list({})).toEqual([]);
+      await expect(
+        registry.getConformanceBundle(proposal.id, proposal.version),
+      ).rejects.toThrow();
+      expect(quarantineSnapshot(root)).toEqual(before);
+    },
+  );
+
+  it("rejects a credential-like high-entropy artifact value before every persistence or conformance boundary", async () => {
+    const { root, store } = tempStore();
+    const registry = new CandidateRegistry(store, root);
+    const proposal = await acceptedProposal(store);
+    const artifacts = structuredClone(proposal.artifacts);
+    const sentinel = credentialLikeSentinel();
+    artifacts.fixture.input.message = sentinel;
+    artifacts.fixture.expectedOutput.message = sentinel;
+    const before = quarantineSnapshot(root);
+
+    await expect(registry.create({ ...proposal, artifacts })).rejects.toThrow(
+      /sensitive|credential|entropy/iu,
+    );
+    expect(quarantineSnapshot(root)).toEqual(before);
+    expect(persistedText(root)).not.toContain(sentinel);
+    expect(registry.list({})).toEqual([]);
+    await expect(
+      registry.getConformanceBundle(proposal.id, proposal.version),
+    ).rejects.toThrow();
+    expect(quarantineSnapshot(root)).toEqual(before);
+  });
+
+  it.each([
+    ["lowercase token", "0123456789abcdefghijklmnopqrstuvwxyz".repeat(2)],
+    ["canonical digest", `sha256:${"a1".repeat(32)}`],
+    ["receipt locator", `candidate-${"b2".repeat(32)}`],
+    ["Bearer credential", `Bearer ${credentialLikeSentinel()}`],
+    [
+      "Basic credential",
+      `Basic ${Buffer.from(credentialLikeSentinel()).toString("base64")}`,
+    ],
+    [
+      "JWT credential",
+      "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzYWZlLWFkYXB0ZXIifQ.c2lnbmF0dXJlLXNlbnRpbmVs",
+    ],
+  ])(
+    "rejects a generic %s artifact value without a schema-authorized context",
+    async (_, sentinel) => {
+      const { root, store } = tempStore();
+      const registry = new CandidateRegistry(store, root);
+      const proposal = await acceptedProposal(store);
+      const artifacts = structuredClone(proposal.artifacts);
+      artifacts.fixture.input.message = sentinel;
+      artifacts.fixture.expectedOutput.message = sentinel;
+      const before = quarantineSnapshot(root);
+
+      await expect(registry.create({ ...proposal, artifacts })).rejects.toThrow(
+        /sensitive|credential/iu,
+      );
+      expect(quarantineSnapshot(root)).toEqual(before);
+      expect(persistedText(root)).not.toContain(sentinel);
+    },
+  );
 
   it("fails closed when an immutable Candidate artifact is tampered", async () => {
     const { root, store } = tempStore();
