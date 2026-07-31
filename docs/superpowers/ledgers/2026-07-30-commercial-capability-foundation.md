@@ -57,17 +57,20 @@ addressed and no P0/P1, so the PM moved Task 2
 `implementing -> ready_for_qa` for a second re-QA. Second re-QA passed, but
 final release review found one P1 in active generic inventory-ledger
 relationship validation. The PM returned Task 2
-`ready_for_qa -> implementing` for the final fix round 5 of 5. External
-Capability Intake remains accepted and frozen; this repair state imports no
-external content and grants no Candidate or provider authority. Tasks 3 through
-5 remain `planned`. Tasks 3 and 4 may run in parallel only after Task 2 is
-accepted because they consume the same frozen profile composition metadata but
-write disjoint compiler and Workbench paths.
+`ready_for_qa -> implementing` for the final fix round 5 of 5. Repair `6433940`
+stayed inside the exact five paths and passed final scoped re-review with the P1
+addressed and no P0/P1, so the PM moved Task 2
+`implementing -> ready_for_qa` for final QA. External Capability Intake remains
+accepted and frozen; this transition imports no external content and grants no
+Candidate or provider authority. Tasks 3 through 5 remain `planned`. Tasks 3
+and 4 may run in parallel only after Task 2 is accepted because they consume
+the same frozen profile composition metadata but write disjoint compiler and
+Workbench paths.
 
 | Task                                          | State          | Specialization | Contract owner                  | Contract status                                                                                     |
 | --------------------------------------------- | -------------- | -------------- | ------------------------------- | --------------------------------------------------------------------------------------------------- |
 | 1. Capability contracts and physical packages | `accepted`     | `integration`  | Factory Capability Registry     | Release set `b2f3b9e` + `4f320fd`; QA and release review PASS, with inherited limitations recorded. |
-| 2. Restaurant and Ecommerce profile recipes   | `implementing` | `integration`  | Profile Composition Integration | Final fix round 5/5; release review FAIL with one generic relationship-validation P1.               |
+| 2. Restaurant and Ecommerce profile recipes   | `ready_for_qa` | `integration`  | Profile Composition Integration | Release set through `6433940`; final scoped re-review PASS with no P0/P1, final QA pending.         |
 | 3. Generic commercial generated runtime       | `planned`      | `backend`      | Compiler Runtime                | Blocked on accepted Task 2 Published Graph recipes and immutable locks.                             |
 | 4. Workbench profile composition visibility   | `planned`      | `frontend`     | Workbench Product Surface       | Blocked on accepted Task 2 profile composition metadata.                                            |
 | 5. Cross-profile acceptance and evidence      | `planned`      | `qa`           | Factory Release Evidence        | Blocked on accepted Tasks 1 through 4.                                                              |
@@ -222,7 +225,7 @@ of them requires a new recorded scope and repair state.
 
 ## Task 2: Compose Foundation Graph recipes for Restaurant and Ecommerce
 
-- **State:** `implementing`
+- **State:** `ready_for_qa`
 - **Specialization:** `integration`
 - **Contract owner:** Profile Composition Integration
 - **Contract artifact:** accepted Task 1 package identities, interfaces, and
@@ -250,7 +253,10 @@ Repair `bf0b16f` and its scoped re-review now support
 `35aa96e + ed3c2ba + ac43247 + e61e790 + bf0b16f`. Second re-QA passed, but
 final release review found one P1 in active generic inventory-ledger
 relationship validation. The PM moved Task 2
-`ready_for_qa -> implementing` for the final fix round 5 of 5. Any new path,
+`ready_for_qa -> implementing` for the final fix round 5 of 5. Repair `6433940`
+and its final scoped re-review now support `implementing -> ready_for_qa` for
+final QA. The exact release set is
+`35aa96e + ed3c2ba + ac43247 + e61e790 + bf0b16f + 6433940`. Any new path,
 package identity, interface, binding grammar, output slot, compiler/Workbench
 behavior, or contract change stops work for PM and architecture review.
 
@@ -451,7 +457,7 @@ remain unchanged. The PM moved Task 2 `implementing -> ready_for_qa` for a
 second independent re-QA. The later final release-review finding below
 supersedes that gate transition.
 
-### Fix round 5 of 5: generic relationship-validation P1
+### Fix round 5 of 5: closed generic relationship-validation P1
 
 Second independent re-QA on Node `v22.11.0` passed 148/148 focused Task 2 tests,
 155/155 full Capabilities tests, build, typecheck, formatting, working-tree and
@@ -477,20 +483,38 @@ the active boundary would allow a Published composition to claim the Golden
 inventory ledger while associating movements with the wrong location or
 omitting catalog/order provenance.
 
-Fix round 5 must require package/binding-derived movement-to-location,
-movement-to-catalog, and movement-to-order relations with explicit valid source
-fields in the public generic validator. It must add active public-boundary
-adversarial regressions for all four mutations and must not add profile-name or
-package-version dispatch. If the exact source-field semantics cannot be derived
-from the frozen bindings, implementation must stop for contract review instead
-of guessing or changing the contract.
+Repair commit `6433940` closed the requirement with this evidence:
+
+- The public validator exits when `commerce.inventory-ledger` is absent and
+  otherwise derives movement, location, catalog, and order targets from that
+  selected package's exact bindings.
+- It requires exactly one `many-to-one` relation to each bound provenance
+  target, an explicit declared string source field for every relation, required
+  location/catalog source fields, and distinct source fields. Missing or
+  duplicate relations and reused fields fail closed.
+- Simple Ecommerce now declares the bound stock-movement-to-order relation via
+  `orderId`, so both profiles have positive provenance coverage through the
+  public active boundary.
+- Public-boundary adversarial tests reject missing, wrong, and reused relation
+  fields and missing catalog or order relations. No-ledger generic composition
+  remains valid.
+- No profile-name, package-version, or provenance-field-name dispatch was
+  introduced. No Task 1 asset, contract, interface, or package root changed.
+- Independent final scoped re-review approved specification compliance and code
+  quality with no P0/P1. The repair changed only
+  `packages/capabilities/src/index.ts` and
+  `packages/capabilities/test/commercial-profile-composition.test.ts`, both
+  inside the exact five-path boundary.
+- Focused RED produced the expected failures before repair. Fresh Node
+  `v22.11.0` GREEN passed 35/35 commercial-profile-composition tests and all
+  162 Capabilities tests. Build, typecheck, formatting, and diff checks passed.
 
 The exact five paths, Profile Composition Integration contract, Task 1
 contracts, dependencies, non-goals, and compiler/Workbench/lifecycle boundaries
-remain frozen. The PM moved Task 2 `ready_for_qa -> implementing`; Task 2 is not
-accepted, and Tasks 3 and 4 remain `planned` and blocked. This is fix round 5 of
-5; any further failed repair or material scope/contract change requires
-escalation rather than an assumed sixth round.
+remain frozen. The PM moved Task 2 `implementing -> ready_for_qa` for final QA.
+Task 2 is not accepted, and Tasks 3 and 4 remain `planned` and blocked. Because
+this was fix round 5 of 5, any new P0/P1 or material scope/contract change
+requires escalation rather than an assumed sixth round.
 
 ### Non-goals
 
@@ -668,10 +692,9 @@ escalation rather than an assumed sixth round.
 
 ## Next smallest valuable slice
 
-Repair the public inventory-ledger relationship-validation P1 within Task 2's
-exact five-path scope, beginning with focused failing active-boundary tests for
-a missing location field, wrong location field, missing catalog relation, and
-missing order relation. Require fresh scoped review before any return to
-`ready_for_qa`. Keep Tasks 3 and 4 planned and blocked, and preserve the
-accepted Task 1 physical package, evidence digest, verified-lock, and
-Publish-boundary contracts unchanged.
+Run final independent behavioral QA against Task 2's exact six-commit release
+set and five-path scope, including package/binding-derived inventory provenance
+and all positive, adversarial, and no-ledger public-boundary cases. Reconcile
+final QA before any move to `reviewed`. Keep Tasks 3 and 4 planned and blocked,
+and preserve the accepted Task 1 physical package, evidence digest,
+verified-lock, and Publish-boundary contracts unchanged.
