@@ -69,7 +69,7 @@ schema validation and binding validation, so a getter can supply different
 parameter schemas at those two stages. Task 2 remains `implementing` and is not
 accepted. Controller-accepted ADR-0008 stops further local Task 2 repair and
 its remaining review gates. Task 2A, **immutable composition resolution
-boundary**, is now `ready_for_qa`. Its bounded writer is **Immutable
+boundary**, is now `reviewed`. Its bounded writer is **Immutable
 Composition Resolution Integration**, and its contract owner is **Capability
 Composition Resolution Boundary**. Plan Tasks 1 through 3 produced commits
 `b310d8e`, `c9e5ca3`, and
@@ -78,8 +78,14 @@ then returned FAIL with two P1s. Governance commit `76274e3` formally amended
 the repair boundary to five exact Capabilities paths. Repair commit
 `a09d459077f80fa82161df928137b1f2052a75bb` stayed inside those paths, and
 independent repair review returned SPEC PASS and QUALITY PASS with no
-P0/P1/P2. The PM records `implementing -> ready_for_qa`; independent behavioral
-QA is next. This is not release review or acceptance. Owner-aware Graph
+P0/P1/P2. Independent behavioral QA at `a09d459` then passed with no P0/P1/P2:
+Capabilities passed 214/214 with its package checks, Compiler passed 180/180
+with its package checks, every public accessor probe observed zero getter
+invocations and rejected with the capture error, the frozen digest remained
+exact, and the largest 13-selection composition produced one digest across
+1,000 resolutions at p95 2.708 ms. Scope and diff checks were clean. The PM
+records `ready_for_qa -> reviewed`; independent release review and fresh
+acceptance verification are next. This is not acceptance. Owner-aware Graph
 persistence remains explicitly owned by planned Graph Task 3, which is blocked
 on accepted Tasks 2 and 2A. Physical assets remain Task 4; Tasks 4 through 7
 remain serially blocked.
@@ -141,9 +147,12 @@ authority:
   evidence. Governance amendment `76274e3` authorized the exact five-path
   repair, and repair commit `a09d459077f80fa82161df928137b1f2052a75bb`
   stayed within it. Independent repair review returned SPEC PASS and QUALITY
-  PASS with no P0/P1/P2, so the PM records Task 2A
-  `implementing -> ready_for_qa`. Behavioral QA, release review, and acceptance
-  remain outstanding.
+  PASS with no P0/P1/P2. Independent behavioral QA then passed with no
+  P0/P1/P2 after 214/214 Capabilities tests, 180/180 Compiler tests, zero-getter
+  public capture probes, exact digest compatibility, and a single digest across
+  1,000 resolutions of the 13-selection composition at p95 2.708 ms. The PM
+  records Task 2A `ready_for_qa -> reviewed`. Release review and fresh
+  acceptance verification remain outstanding.
 
 The approved design and plan are recorded at
 `docs/superpowers/specs/2026-08-01-typed-capability-binding-validation-design.md`
@@ -336,8 +345,7 @@ Typed Binding Task 2 implementation, repair-review, and QA evidence is:
   cannot advance to QA. Independent reproduction showed the remaining witness
   belongs to the shared immutable resolution-input boundary. Task 2 remains
   `implementing`, but accepted ADR-0008 stops further local Task 2 repair and
-  review gates until implementing Task 2A is independently accepted and
-  reconciled.
+  review gates until Task 2A is independently accepted and reconciled.
   Task 2 is not `accepted`.
 - P1 2: `fieldKey` can exist in the Capabilities binding type but cannot persist
   through the strict `ApplicationGraphV1` composition-binding schema, which
@@ -522,7 +530,7 @@ On Node `v22.11.0`, it records:
   lifecycle, historical bindings, or introduce
   Profile/package/version/field-name dispatch.
 - Typed Binding Task 2A, **immutable composition resolution boundary**, is
-  `ready_for_qa` under the **Capability Composition Resolution Boundary**
+  `reviewed` under the **Capability Composition Resolution Boundary**
   contract owner and accepted ADR-0008. Its bounded writer is **Immutable
   Composition Resolution Integration**. Its exact allowed paths are:
   `packages/capabilities/src/node.ts`,
@@ -546,7 +554,20 @@ On Node `v22.11.0`, it records:
 - Repair commit `a09d459077f80fa82161df928137b1f2052a75bb` changes exactly the
   five authorized paths. Independent repair review returned SPEC PASS and
   QUALITY PASS with no P0/P1/P2 and no remaining task-review finding. The PM
-  records `implementing -> ready_for_qa`; independent behavioral QA is next.
+  records `implementing -> ready_for_qa` at that task-review gate.
+- Independent behavioral QA against `a09d459` returned PASS with no P0/P1/P2.
+  Capabilities passed 214/214 with its package checks, and Compiler passed
+  180/180 with its package checks. All public accessor probes observed zero
+  getter invocations and rejected with the capture error; the valid frozen
+  digest remained exact. The largest registered 13-selection composition
+  resolved 1,000 times with exactly one digest and p95 2.708 ms, below the 20 ms
+  ceiling. The exact five-path scope and diff checks were clean.
+- Host default Node PATH is unusable because the configured NVM symlink is
+  absent. Node v22.11.0 was available and every QA command used a process-local
+  PATH to that binary; QA made no machine or persistent environment change.
+- The PM reconciles QA and its environment limitation as
+  `ready_for_qa -> reviewed`. Independent release review and fresh acceptance
+  verification are next; Task 2A is not accepted.
 - Typed Binding Task 3 remains `planned` behind accepted Tasks 2 and 2A and
   owns exactly:
   `packages/graph/src/model.ts`,
@@ -582,9 +603,10 @@ On Node `v22.11.0`, it records:
   `b85dbda063fe6fa6db3b712f5891b013285e0356` is implementation evidence only;
   independent task review failed on the separate `manifest.parameters`
   snapshot gap. Accepted ADR-0008 supersedes further local repair with Task 2A,
-  now `ready_for_qa` after amended repair commit `a09d459` passed independent
-  SPEC and QUALITY review with no P0/P1/P2. Behavioral QA is pending. No Task 2
-  code repair or review gate is authorized while Task 2A is pending.
+  now `reviewed` after amended repair commit `a09d459` passed independent SPEC
+  and QUALITY review and behavioral QA with no P0/P1/P2. Release review and
+  fresh acceptance verification are pending. No Task 2 code repair or review
+  gate is authorized while Task 2A is pending.
   Graph Task 3 remains `planned` and blocked on Tasks 2 and 2A acceptance.
   It, not either Capabilities task, owns owner-aware Graph persistence. Tasks 4
   through 6 cannot overlap or start before the preceding task is `accepted`.
@@ -644,7 +666,7 @@ On Node `v22.11.0`, it records:
   separately by schema validation and binding validation. A getter can return
   different parameter schemas between those stages. Independent reproduction
   expanded the risk to all caller-owned composition inputs. ADR-0008 assigns
-  that boundary to implementing Task 2A; local Task 2 repair is stopped until
+  that boundary to Task 2A; local Task 2 repair is stopped until
   Task 2A is accepted and PM reconciliation determines the remaining Task 2
   gates.
 - Task 2A plan Task 3 commit
@@ -652,9 +674,11 @@ On Node `v22.11.0`, it records:
   runtime-mutable compiled schema values. Governance amendment `76274e3`
   formalized the five-path repair, and repair commit
   `a09d459077f80fa82161df928137b1f2052a75bb` passed independent SPEC and
-  QUALITY review with no P0/P1/P2. This closes the task-review findings only;
-  behavioral QA, release review, and fresh acceptance verification remain
-  required.
+  QUALITY review with no P0/P1/P2. Independent behavioral QA also passed with
+  no P0/P1/P2, 214/214 Capabilities tests, 180/180 Compiler tests, zero-getter
+  capture rejection, exact digest compatibility, and one digest across the
+  1,000-run performance probe at p95 2.708 ms. Task 2A is `reviewed`; release
+  review and fresh acceptance verification remain required.
 - Owner-aware field bindings cannot currently survive the Application Graph
   schema. ADR-0007 assigns the repair to Task 3, but the risk remains until that
   task passes independent review, QA, release review, and fresh verification.
@@ -674,12 +698,14 @@ On Node `v22.11.0`, it records:
 
 ## Next smallest valuable slice
 
-Run independent behavioral QA for Task 2A repair commit
+Run independent release review for Task 2A repair commit
 `a09d459077f80fa82161df928137b1f2052a75bb` under the **Capability Composition
-Resolution Boundary**. Verify the amended public pre-capture and deep
-compiled-schema immutability behavior, ADR-0008 adversarial rejection, valid
-digest compatibility, and the exact five-path scope. Keep Task 2A
-`ready_for_qa` and Task 2 `implementing` until QA evidence is reconciled; do not
-start release review or Graph Task 3. Keep Typed Binding Graph Tasks 3 through
-7 `planned` and blocked, Commercial Foundation Task 2 `implementing` and
-escalated, and its Tasks 3 and 4 `planned` and blocked.
+Resolution Boundary**, then run fresh acceptance verification if release review
+passes with no load-bearing finding. Reconcile the amended public pre-capture
+and deep compiled-schema immutability behavior, ADR-0008 adversarial rejection,
+valid digest compatibility, the 13-selection performance result, the exact
+five-path scope, and the documented process-local Node PATH limitation. Keep
+Task 2A `reviewed` and Task 2 `implementing` until both remaining gates pass; do
+not start Graph Task 3. Keep Typed Binding Graph Tasks 3 through 7 `planned` and
+blocked, Commercial Foundation Task 2 `implementing` and escalated, and its
+Tasks 3 and 4 `planned` and blocked.

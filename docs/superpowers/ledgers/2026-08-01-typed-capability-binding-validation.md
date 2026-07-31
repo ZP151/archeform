@@ -150,9 +150,10 @@ not acceptance.
 - Task 2A repair commit `a09d459077f80fa82161df928137b1f2052a75bb`
   remains inside the exact five-path scope formally amended by `76274e3`.
   Independent repair review returned SPEC PASS and QUALITY PASS with no
-  P0/P1/P2. The PM records `implementing -> ready_for_qa`; independent
-  behavioral QA is next. Tasks 3 through 7 remain `planned`; none of them is
-  dispatched by this transition.
+  P0/P1/P2. Independent behavioral QA then passed with no P0/P1/P2. The PM
+  records `ready_for_qa -> reviewed`; independent release review and fresh
+  acceptance verification are next. Tasks 3 through 7 remain `planned`; none
+  of them is dispatched by this transition.
 - No frontend/backend parallel implementation is permitted in this project.
 - Commercial Capability Foundation Task 2 remains `implementing` and
   escalated. It cannot resume acceptance until this project's Task 7 is
@@ -166,7 +167,7 @@ not acceptance.
 | ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | ----------------------------------------------- |
 | 1. Pure typed Graph symbol index               | `accepted`     | `integration`  | Application Graph Type System                | Release review and fresh verification passed.   |
 | 2. Typed manifest and binding contracts        | `implementing` | `integration`  | Capability Binding Contract                  | Repair round 4 task review failed with one P1.  |
-| 2A. Immutable composition resolution boundary  | `ready_for_qa` | `integration`  | Capability Composition Resolution Boundary   | Repair review passed; behavioral QA is next.    |
+| 2A. Immutable composition resolution boundary  | `reviewed`     | `integration`  | Capability Composition Resolution Boundary   | Behavioral QA passed; release review is next.   |
 | 3. Serialized owner-aware Graph selections     | `planned`      | `integration`  | Application Graph Serialization              | Blocked on accepted Tasks 2 and 2A.             |
 | 4. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 3 serialized contract. |
 | 5. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-4.                  |
@@ -649,13 +650,13 @@ not acceptance.
 
 ## Task 2A: Establish an immutable composition resolution boundary
 
-- **State:** `ready_for_qa` (repair round 1)
+- **State:** `reviewed` (repair round 1)
 - **Specialization:** `integration`
 - **Bounded writer:** Immutable Composition Resolution Integration
 - **Contract owner:** Capability Composition Resolution Boundary
 - **Contract status:** ADR-0008 is `Accepted`; the amended bounded repair passed
-  independent task review and is ready for behavioral QA, but is not reviewed
-  or accepted.
+  independent task review and behavioral QA, but has not passed independent
+  release review or fresh acceptance verification and is not accepted.
 - **Contract artifact:** ADR-0008 DEC-001 through DEC-005 and
   `docs/superpowers/plans/2026-08-01-immutable-composition-resolution-input.md`.
 - **Dependencies:** Task 1 `accepted` and ADR-0008 `Accepted`. Task 2 remains
@@ -726,8 +727,32 @@ not acceptance.
   pre-capture or deep compiled-schema immutability repair.
 - The PM reconciles the bounded repair and clean independent review as
   `implementing -> ready_for_qa`. This is not behavioral QA, release review,
-  fresh acceptance verification, or acceptance. Independent behavioral QA is
-  the next gate.
+  fresh acceptance verification, or acceptance. Independent behavioral QA was
+  the next gate at that transition.
+
+### Behavioral QA evidence
+
+- Independent behavioral QA ran against repair commit
+  `a09d459077f80fa82161df928137b1f2052a75bb` on Node `v22.11.0` and returned
+  PASS with no P0/P1/P2.
+- The full Capabilities suite passed 214/214 tests and the full Compiler suite
+  passed 180/180 tests. The associated package checks passed.
+- All public accessor probes observed zero getter invocations and rejected with
+  the capture error, proving package verification, provider-overlap checks,
+  composition resolution, and lock creation do not consume caller-owned
+  accessor values before capture.
+- The valid frozen digest remained exact. The largest registered 13-selection
+  composition resolved 1,000 times with exactly one digest and p95 2.708 ms,
+  below ADR-0008's 20 ms ceiling.
+- Scope and diff checks confirmed the repair remained inside the exact five
+  authorized Capabilities paths, and `git diff --check` was clean.
+- Host default Node PATH is unusable because the configured NVM symlink is
+  absent. Node v22.11.0 was available and every QA command used a process-local
+  PATH to that binary; QA made no machine or persistent environment change.
+- The PM reconciles the passing behavioral QA and its environment limitation as
+  `ready_for_qa -> reviewed`. Independent release review and fresh acceptance
+  verification remain required before `reviewed -> accepted`; Task 2A is not
+  accepted.
 
 ### Non-goals
 
@@ -745,9 +770,8 @@ not acceptance.
   the Node `v22.11.0` performance and single-digest budget is measured as
   specified by the accepted plan.
 - Independent task review, behavioral QA, release review, and fresh
-  verification pass in order before `accepted`. This dispatch supplies
-  implementation authority only; it is not review, QA, release review, or
-  acceptance evidence.
+  verification pass in order before `accepted`. Task review and behavioral QA
+  now pass; independent release review and fresh verification remain required.
 
 ## Task 3: Serialize owner-aware composition selections in Application Graph
 
@@ -758,7 +782,7 @@ not acceptance.
   serialized Draft Graph contract.
 - **Dependencies:** Tasks 1, 2, and 2A `accepted`. Task 1 is accepted; Task 2
   remains `implementing` with local repair stopped, and Task 2A is
-  `ready_for_qa`. Graph implementation is blocked until both are independently
+  `reviewed`. Graph implementation is blocked until both are independently
   accepted and reconciled.
 - **Produces:** additive `SerializedCompositionBindingV1` support for exact
   owner-aware field objects, structural owner/field validation, deterministic
@@ -1006,17 +1030,22 @@ not acceptance.
   reads and mutable compiled schema values. Repair commit
   `a09d459077f80fa82161df928137b1f2052a75bb` stayed inside the exact five-path
   boundary amended by `76274e3` and passed independent repair review with SPEC
-  PASS, QUALITY PASS, and no P0/P1/P2. Task 2A is `ready_for_qa`; behavioral QA
-  is next. This PM transition authorizes no Graph-path change or Graph Task 3-7
-  implementation.
+  PASS, QUALITY PASS, and no P0/P1/P2. Independent behavioral QA then passed
+  with no P0/P1/P2, including 214/214 Capabilities tests, 180/180 Compiler
+  tests, zero-getter public capture probes, exact digest compatibility, and the
+  1,000-run single-digest performance budget. Task 2A is `reviewed`; release
+  review and fresh acceptance verification are next. This PM transition
+  authorizes no Graph-path change or Graph Task 3-7 implementation.
 
 ## Next smallest valuable slice
 
-Run independent behavioral QA for Task 2A repair commit
+Run independent release review for Task 2A repair commit
 `a09d459077f80fa82161df928137b1f2052a75bb` under the **Capability Composition
-Resolution Boundary**. Exercise the amended public pre-capture and deep
-compiled-schema immutability behavior, the ADR-0008 adversarial boundary, valid
-digest compatibility, and the exact five-path scope. Keep Task 2A
-`ready_for_qa` and Task 2 `implementing` until QA evidence is reconciled; do not
-start release review or Graph Task 3. Keep Graph Tasks 3 through 7 `planned` and
-blocked until Tasks 2 and 2A are accepted.
+Resolution Boundary**, then run fresh acceptance verification if release review
+passes with no load-bearing finding. Reconcile the amended public pre-capture
+and deep compiled-schema immutability behavior, ADR-0008 adversarial rejection,
+valid digest compatibility, the 13-selection performance result, the exact
+five-path scope, and the documented process-local Node PATH limitation. Keep
+Task 2A `reviewed` and Task 2 `implementing` until both remaining gates pass; do
+not start Graph Task 3. Keep Graph Tasks 3 through 7 `planned` and blocked until
+Tasks 2 and 2A are accepted.
