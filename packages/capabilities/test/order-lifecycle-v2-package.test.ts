@@ -43,10 +43,10 @@ async function importRenderedTemplate<T>(template: string): Promise<T> {
 }
 
 describe("generic order lifecycle V2 package", () => {
-  it("executes rendered 2.0.2 templates with the canonical closed request boundaries", async () => {
+  it("executes rendered 2.0.3 templates with the canonical closed request boundaries", async () => {
     const asset = capabilityAssets.find(
       ({ manifest }) =>
-        manifest.key === "commerce.order" && manifest.version === "2.0.2",
+        manifest.key === "commerce.order" && manifest.version === "2.0.3",
     );
     expect(asset).toBeDefined();
     if (!asset) return;
@@ -87,6 +87,13 @@ describe("generic order lifecycle V2 package", () => {
       await importRenderedTemplate<{
         readonly commerceOrderTransactionOperationAdapter: {
           parseRequest(request: unknown): unknown;
+          prepare(request: unknown): {
+            readonly command: Readonly<{ readonly transition: string }>;
+            readonly context: Readonly<{
+              readonly orderId: string;
+              readonly transition: string;
+            }>;
+          };
         };
       }>(transitionTemplate.content);
 
@@ -144,6 +151,21 @@ describe("generic order lifecycle V2 package", () => {
         unexpected: true,
       }),
     ).toThrow();
+
+    const cancelled = commerceOrderTransactionOperationAdapter.prepare(
+      commerceOrderTransactionOperationAdapter.parseRequest({
+        orderId: "server-1",
+        expectedVersion: 0,
+        transition: "cancel",
+        idempotencyKey: "cancel-1",
+        payloadDigest: `sha256:${"b".repeat(64)}`,
+      }),
+    );
+    expect(cancelled.command.transition).toBe("cancel");
+    expect(cancelled.context).toEqual({
+      orderId: "server-1",
+      transition: "cancel",
+    });
   });
 
   it("registers a verified 2.0.1 lifecycle successor with digest-covered create and transition contributions", () => {

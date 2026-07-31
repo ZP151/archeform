@@ -1,0 +1,99 @@
+import type { CapabilityAssetV1 } from "../contract.js";
+
+export {
+  createCommerceOrderCreateHandlerV2_0_2 as createCommerceOrderCreateHandlerV2_0_3,
+  createCommerceOrderLifecycleOperationAdapterV2_0_2 as createCommerceOrderLifecycleOperationAdapterV2_0_3,
+} from "./order-v2-0-2.js";
+
+export const orderAssetV2_0_3: CapabilityAssetV1 = {
+  manifest: {
+    apiVersion: "factory.capability/v1",
+    bindingContract: "factory.capability-binding/v1",
+    key: "commerce.order",
+    version: "2.0.3",
+    category: "commerce",
+    name: "Generic order lifecycle",
+    description:
+      "Creates authorized persisted orders and prepares bounded order transitions.",
+    packageRoot: "packages/capabilities/assets/commerce.order/2.0.3",
+    manifestDigest:
+      "sha256:482e02c50c1acae7091d838a5c2b05dd7e109681f40f3ca25b09dcb553151884",
+    lifecycle: "golden",
+    profiles: ["simple-ecommerce", "retail-counter", "grocery-pickup"],
+    effects: ["order.create", "order.transition"],
+    inputSchema: [
+      { key: "orderEntity", type: "domain.entity", required: true },
+      { key: "orderFlow", type: "flow.flow", required: true },
+      { key: "customerRole", type: "policy.role", required: true },
+    ],
+    outputSlots: ["api.runtime", "test.journey"],
+    runtimeHandlers: ["order"],
+    templates: [],
+    parameters: [
+      { key: "orderEntity", type: "graph-symbol", required: true },
+      { key: "orderFlow", type: "graph-symbol", required: true },
+      { key: "customerRole", type: "graph-symbol", required: true },
+    ],
+    executableContributions: [
+      {
+        id: "commerce-order-create-handler",
+        outputSlot: "api.runtime",
+        namespace: "packages/commerce.order/api/runtime/",
+        source: "templates/api/commerce-order-create-handler.ts.tpl",
+        target: "api/src/capabilities/commerce-order-create-handler.ts",
+        parameterRefs: ["orderEntity", "orderFlow", "customerRole"],
+        targetRuntimeInterfaceVersion: "factory.order-create-handler/v1",
+        orderingRequirements: [],
+        mergeProtocol: "replace-file",
+        digest:
+          "sha256:429775d1927b9da95e09faa588a12dbf77160d6eed7f2829bb12eab6bdc294a5",
+      },
+      {
+        id: "commerce-order-transaction-operation-adapter",
+        outputSlot: "api.runtime",
+        namespace: "packages/commerce.order/api/runtime/",
+        source:
+          "templates/api/commerce-order-transaction-operation-adapter.ts.tpl",
+        target:
+          "api/src/capabilities/commerce-order-transaction-operation-adapter.ts",
+        parameterRefs: ["orderEntity", "orderFlow", "customerRole"],
+        targetRuntimeInterfaceVersion:
+          "factory.transaction-operation-adapter/v1",
+        orderingRequirements: ["commerce-order-create-handler"],
+        mergeProtocol: "replace-file",
+        digest:
+          "sha256:3de72eaa178054f964b635ed066e50d1c11f3a8afeefcf95539c08c19bb4473e",
+      },
+      {
+        id: "commerce-order-lifecycle-journey",
+        outputSlot: "test.journey",
+        namespace: "packages/commerce.order/test/journeys/",
+        source: "templates/test/commerce-order-lifecycle.journey.ts.tpl",
+        target: "api/test/journeys/commerce-order-lifecycle.journey.ts",
+        parameterRefs: ["orderEntity", "orderFlow", "customerRole"],
+        targetRuntimeInterfaceVersion: "factory.journey/v1",
+        orderingRequirements: [
+          "commerce-order-create-handler",
+          "commerce-order-transaction-operation-adapter",
+        ],
+        mergeProtocol: "replace-file",
+        digest:
+          "sha256:2a830d4151a5ae1a2de88ce8bfc8798f989af58d40f50683b30fe23634500482",
+      },
+    ],
+    provides: [
+      { interfaceKey: "commerce.order-event", version: "v1" },
+      { interfaceKey: "factory.order-create-handler", version: "v1" },
+      { interfaceKey: "factory.transaction-operation-adapter", version: "v1" },
+    ],
+    verification: {
+      fixture: "fixtures/default.json",
+      fixtureDigest:
+        "sha256:4df5276b7ea21b60f2e098add6f7e38ef276f58ade947d30702440ef5200f9f0",
+      contractTest: "tests/contract.json",
+      contractTestDigest:
+        "sha256:c76f8772cbcf64cdce7111dd8f4c6cff886989de3f98781a0dc2dd73b60ec47b",
+      status: "verified",
+    },
+  },
+};

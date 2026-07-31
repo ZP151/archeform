@@ -1,0 +1,13 @@
+{
+  "create": {
+    "request": { "role": "shopper", "entityKey": "order", "input": { "note": "ok" } },
+    "expectedPersistedRecord": { "id": "server-1", "status": "draft", "version": 0 }
+  },
+  "transition": {
+    "orderId": "server-1",
+    "expectedVersion": 0,
+    "transition": "submit",
+    "idempotencyKey": "submit-1",
+    "payloadDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+}
