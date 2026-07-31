@@ -60,17 +60,20 @@ relationship validation. The PM returned Task 2
 `ready_for_qa -> implementing` for the final fix round 5 of 5. Repair `6433940`
 stayed inside the exact five paths and passed final scoped re-review with the P1
 addressed and no P0/P1, so the PM moved Task 2
-`implementing -> ready_for_qa` for final QA. External Capability Intake remains
-accepted and frozen; this transition imports no external content and grants no
-Candidate or provider authority. Tasks 3 through 5 remain `planned`. Tasks 3
-and 4 may run in parallel only after Task 2 is accepted because they consume
-the same frozen profile composition metadata but write disjoint compiler and
-Workbench paths.
+`implementing -> ready_for_qa` for final QA. Final QA passed, but final release
+review found one load-bearing P1 in typed Foundation field binding validation.
+The PM returned Task 2 `ready_for_qa -> implementing` and escalated it after all
+five permitted repair rounds. No sixth Task 2 patch is authorized. External
+Capability Intake remains accepted and frozen; this status transition imports
+no external content and grants no Candidate or provider authority. Tasks 3
+through 5 remain `planned`. Tasks 3 and 4 may run in parallel only after Task 2
+is accepted because they consume the same frozen profile composition metadata
+but write disjoint compiler and Workbench paths.
 
 | Task                                          | State          | Specialization | Contract owner                  | Contract status                                                                                     |
 | --------------------------------------------- | -------------- | -------------- | ------------------------------- | --------------------------------------------------------------------------------------------------- |
 | 1. Capability contracts and physical packages | `accepted`     | `integration`  | Factory Capability Registry     | Release set `b2f3b9e` + `4f320fd`; QA and release review PASS, with inherited limitations recorded. |
-| 2. Restaurant and Ecommerce profile recipes   | `ready_for_qa` | `integration`  | Profile Composition Integration | Release set through `6433940`; final scoped re-review PASS with no P0/P1, final QA pending.         |
+| 2. Restaurant and Ecommerce profile recipes   | `implementing` | `integration`  | Profile Composition Integration | Escalated after round 5/5; typed-binding-validation P1 open, no sixth patch authorized.             |
 | 3. Generic commercial generated runtime       | `planned`      | `backend`      | Compiler Runtime                | Blocked on accepted Task 2 Published Graph recipes and immutable locks.                             |
 | 4. Workbench profile composition visibility   | `planned`      | `frontend`     | Workbench Product Surface       | Blocked on accepted Task 2 profile composition metadata.                                            |
 | 5. Cross-profile acceptance and evidence      | `planned`      | `qa`           | Factory Release Evidence        | Blocked on accepted Tasks 1 through 4.                                                              |
@@ -225,7 +228,7 @@ of them requires a new recorded scope and repair state.
 
 ## Task 2: Compose Foundation Graph recipes for Restaurant and Ecommerce
 
-- **State:** `ready_for_qa`
+- **State:** `implementing` (escalated)
 - **Specialization:** `integration`
 - **Contract owner:** Profile Composition Integration
 - **Contract artifact:** accepted Task 1 package identities, interfaces, and
@@ -258,7 +261,10 @@ and its final scoped re-review now support `implementing -> ready_for_qa` for
 final QA. The exact release set is
 `35aa96e + ed3c2ba + ac43247 + e61e790 + bf0b16f + 6433940`. Any new path,
 package identity, interface, binding grammar, output slot, compiler/Workbench
-behavior, or contract change stops work for PM and architecture review.
+behavior, or contract change stops work for PM and architecture review. Final
+QA passed, but final release review found one load-bearing typed-binding P1. The
+PM returned Task 2 `ready_for_qa -> implementing` and escalated it. No sixth
+Task 2 repair or hardening implementation is authorized by this update.
 
 ### Controller-authorized test-scope correction
 
@@ -516,6 +522,57 @@ Task 2 is not accepted, and Tasks 3 and 4 remain `planned` and blocked. Because
 this was fix round 5 of 5, any new P0/P1 or material scope/contract change
 requires escalation rather than an assumed sixth round.
 
+### Post-round-5 escalation: typed binding validation P1
+
+Final independent QA on Node `v22.11.0` passed 155/155 focused Task 2 tests,
+162/162 full Capabilities tests, build, typecheck, formatting, working-tree and
+exact five-path diff checks, and direct public-boundary exercises. QA found no
+P0/P1/P2. Final release review nevertheless returned FAIL with one
+load-bearing P1 not covered by that evidence.
+
+`graphSymbolIds()` flattens every domain entity and field key into one
+identifier namespace. `assertCompositionGraphSymbols()` checks only whether a
+submitted identifier exists somewhere in that flattened set before public
+`composeCapabilityDraft` accepts the selection. It does not prove that a field
+belongs to the bound entity or has the type required by the selected
+manifest's `inputSchema`.
+
+Fresh compiled-package probes demonstrated both invalid selections are
+accepted:
+
+1. `core.location-context.locationCodeField = graph.domain.price`; and
+2. `commerce.inventory-ledger.stockField = graph.domain.price`.
+
+The first can make location resolution read a price field. The second can make
+inventory behavior target monetary data instead of stock. An immutable
+composition lock can therefore preserve a semantically wrong field binding and
+expose generated behavior to incorrect resolution or data corruption. Existing
+adversarial coverage rejects only a nonexistent symbol, not a real symbol from
+the wrong entity or semantic type.
+
+The PM returned Task 2 `ready_for_qa -> implementing` and records it as
+escalated. All five permitted repair rounds are exhausted; no sixth Task 2
+patch is authorized. A dedicated typed-binding-validation hardening slice must
+receive its own frozen contract artifact, contract/architecture review, exact
+write paths, dependencies, non-goals, and acceptance evidence before any
+implementation dispatch. At minimum, that slice must:
+
+- validate bindings against each selected manifest's typed `inputSchema`;
+- distinguish entity, page, role, and field namespaces;
+- require `locationCodeField` to be an appropriate declared string field on the
+  bound location/context contract;
+- require `stockField` to be the appropriate numeric inventory field on the
+  bound catalog entity; and
+- reject cross-entity and wrong-type field substitutions through public
+  composition entry-point tests.
+
+This status update changes only `docs/project-status.md` and this ledger. It
+changes no production code, test, shared contract, package identity, interface,
+binding grammar, output slot, lifecycle behavior, compiler, Workbench surface,
+dependency, or non-goal. Task 2 is not accepted; Tasks 3 and 4 remain `planned`
+and blocked. Any dedicated hardening implementation or shared contract change
+requires separate explicit authorization.
+
 ### Non-goals
 
 - No new package identity or Task 1 contract change.
@@ -672,6 +729,10 @@ requires escalation rather than an assumed sixth round.
   physical-verification change immediately stops Tasks 2 through 5.
 - A Task 2 profile composition metadata or binding change immediately stops
   Tasks 3 and 4. The PM must record the repair scope before work resumes.
+- The flattened Graph-symbol namespace does not prove binding kind, field
+  ownership, or field type. Until a separately governed typed-binding hardening
+  slice closes that P1, Task 2 cannot be accepted and Tasks 3 and 4 cannot
+  start.
 - Task 2 intentionally preserves exact co-provider ownership by
   `commerce.inventory` and `commerce.inventory-ledger` for
   `inventory.reserve`, `inventory.release`, and `inventory.decrement`. Fix round
@@ -692,9 +753,10 @@ requires escalation rather than an assumed sixth round.
 
 ## Next smallest valuable slice
 
-Run final independent behavioral QA against Task 2's exact six-commit release
-set and five-path scope, including package/binding-derived inventory provenance
-and all positive, adversarial, and no-ledger public-boundary cases. Reconcile
-final QA before any move to `reviewed`. Keep Tasks 3 and 4 planned and blocked,
-and preserve the accepted Task 1 physical package, evidence digest,
-verified-lock, and Publish-boundary contracts unchanged.
+Govern a dedicated typed-binding-validation hardening slice before any code
+change: freeze its typed namespace, field ownership/type rules, exact write
+paths, public-boundary adversarial acceptance evidence, and contract-review
+result. Do not dispatch a sixth Task 2 repair. Keep Task 2 `implementing` and
+escalated, keep Tasks 3 and 4 planned and blocked, and preserve the accepted
+Task 1 physical package, evidence digest, verified-lock, and Publish-boundary
+contracts unchanged.

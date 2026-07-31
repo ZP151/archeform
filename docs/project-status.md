@@ -5,17 +5,16 @@ Updated: 2026-07-31
 ## Current milestone
 
 Commercial Capability Foundation Task 2, **Restaurant and Ecommerce profile
-recipes**, is `ready_for_qa` for final independent QA after fix round 5 of 5,
-`6433940`, passed final scoped re-review with the generic
-relationship-validation P1 addressed and no P0/P1. Its exact release set is
-`35aa96e + ed3c2ba + ac43247 + e61e790 + bf0b16f + 6433940`. Its contract
-owner remains Profile Composition Integration; its dependency, Task 1
-capability contracts and physical packages, remains `accepted` and frozen.
-Task 2 remains limited to composing Restaurant and Ecommerce Draft recipes
-from the same four accepted Foundation identities with distinct exact
-Graph-symbol bindings, entities, pages, roles, labels, and fixtures. This
-transition is not acceptance and does not unlock Foundation Tasks 3 or 4; both
-remain `planned`.
+recipes**, returned `ready_for_qa -> implementing` and is escalated after final
+release review found one load-bearing P1 in typed Foundation binding
+validation. The five permitted repair rounds are exhausted; no sixth Task 2
+patch is authorized. The reviewed release set remains
+`35aa96e + ed3c2ba + ac43247 + e61e790 + bf0b16f + 6433940`. Its contract owner
+remains Profile Composition Integration; its dependency, Task 1 capability
+contracts and physical packages, remains `accepted` and frozen. Task 2 is not
+accepted. A dedicated typed-binding-validation hardening slice requires
+separate contract/scope governance before implementation. Foundation Tasks 3
+and 4 remain `planned` and blocked.
 
 The Application Graph remains the source of truth. External intake artifacts
 remain quarantined Candidate evidence or pending-review packets; they are not
@@ -111,6 +110,17 @@ within its exact five paths:
   intact. Fresh Node `v22.11.0` verification passed all 162 Capabilities tests,
   including 35/35 commercial-profile-composition tests; build, typecheck,
   formatting, and repair diff checks also passed.
+- Final independent QA then passed 155/155 focused Task 2 tests and 162/162 full
+  Capabilities tests. Build, typecheck, formatting, exact five-path diff checks,
+  56 permission removals, inventory provenance mutations, no-ledger
+  composition, and exact provider-overlap checks all passed with no P0/P1/P2
+  demonstrated.
+- Final release review nevertheless returned FAIL with one P1. Direct
+  public-package probes proved that composition accepts both
+  `core.location-context.locationCodeField = graph.domain.price` and
+  `commerce.inventory-ledger.stockField = graph.domain.price`. The final QA
+  evidence remains historical but cannot support acceptance because it did not
+  exercise wrong-entity or wrong-type field substitutions.
 
 The complete External Capability Intake project is accepted and frozen. Its
 Task 6 writer record is
@@ -143,8 +153,9 @@ On Node `v22.11.0`, it records:
 
 ## Active work
 
-- Final independent behavioral QA is the next gate for Task 2's exact
-  six-commit release set, bounded to the same five paths:
+- Task 2 is `implementing` and escalated, but no writer or sixth repair is
+  authorized. Its existing implementation release remains bounded to these
+  exact five paths:
   `packages/capabilities/src/index.ts`,
   `packages/capabilities/src/restaurant/profile.ts`,
   `packages/capabilities/test/restaurant-profile.test.ts`, and
@@ -161,12 +172,23 @@ On Node `v22.11.0`, it records:
   contract, physical asset, package identity, interface, dependency, recipe
   scope, lifecycle or Publish behavior, production behavior, non-goal, or Task
   2 state.
-- Final QA must exercise positive Restaurant and Ecommerce provenance, exactly
-  one relation per bound target, missing/wrong/reused source fields, missing
-  location/catalog/order relations, and no-ledger composition through the
-  public active boundary. It must verify the validator remains
-  package/binding-derived with no profile-name, package-version, or
-  provenance-field-name dispatch.
+- The P1 is specific: `graphSymbolIds()` flattens domain entities and every
+  field key into one untyped namespace, while
+  `assertCompositionGraphSymbols()` verifies only that a submitted identifier
+  exists somewhere. Public `composeCapabilityDraft` therefore cannot prove a
+  field belongs to the bound entity or has the required semantic type.
+- The dedicated hardening slice must validate each binding against the selected
+  manifest's typed `inputSchema`, distinguish entity/page/role/field
+  namespaces, require `locationCodeField` to resolve to an appropriate declared
+  string field on the bound location/context contract, and require `stockField`
+  to resolve to the appropriate numeric inventory field on the bound catalog
+  entity. Public-entry adversarial tests must cover cross-entity and wrong-type
+  substitutions.
+- This status update changes no product code, shared contract, exact path
+  boundary, package identity, interface, lifecycle behavior, compiler, or
+  Workbench surface. It does not authorize the hardening implementation. The
+  contract owner and architecture reviewer must first freeze a dedicated
+  contract artifact, exact paths, and acceptance evidence.
 - No new package identity, Task 1 contract change, compiler, Workbench,
   generated runtime, payment, identity-provider, deployment behavior, profile
   cloning, Graph `assetLocks` fallback, or Restaurant-only package fork is in
@@ -185,8 +207,11 @@ On Node `v22.11.0`, it records:
   evidence. Acceptance grants no promotion, approval, Golden, Graph, compiler,
   generated-runtime, provider, or source-copy authority.
 - Foundation Tasks 3 and 4 are blocked on accepted Task 2 profile composition
-  metadata. A `ready_for_qa` transition does not satisfy that dependency;
-  neither downstream task is dispatched by this update.
+  metadata. Task 2 is back in `implementing` and escalated; neither downstream
+  task is dispatched by this update.
+- No sixth Task 2 repair is authorized. The typed-binding-validation hardening
+  work may begin only under a separately recorded and reviewed slice; any
+  shared contract change must be explicit before implementation.
 
 ## Risks and limitations
 
@@ -206,11 +231,16 @@ On Node `v22.11.0`, it records:
   define and prove lock-derived runtime resolution that cannot double-execute
   any of the three intentional stock movements or select behavior by profile
   name. This is a downstream risk, not authority to start Task 3.
+- The flattened graph-symbol namespace allows an existing field symbol from the
+  wrong entity or semantic type to satisfy a Foundation binding. Until the
+  dedicated hardening slice establishes typed ownership and field-kind
+  validation, immutable locks can direct location or inventory behavior at
+  unrelated data, including price fields.
 
 ## Next slice
 
-Run final independent behavioral QA against Task 2's exact six-commit release
-set and five-path scope, including package/binding-derived inventory provenance
-and all positive, adversarial, and no-ledger public-boundary cases. Reconcile
-final QA before any move to `reviewed`. Keep Tasks 3 and 4 planned and blocked
-until Task 2 is accepted.
+Govern a dedicated typed-binding-validation hardening slice before any code
+change: freeze the typed namespace, field ownership/type rules, exact write
+paths, public-boundary adversarial acceptance evidence, and contract-review
+result. Do not dispatch a sixth Task 2 repair. Keep Task 2 `implementing` and
+escalated, and keep Tasks 3 and 4 planned and blocked.
