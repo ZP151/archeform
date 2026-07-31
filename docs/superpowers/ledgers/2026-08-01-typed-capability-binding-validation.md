@@ -112,9 +112,12 @@ not acceptance.
   records `reviewed -> implementing` for repair round 2. Repair commit
   `565c64c5e79799261f8dc72c7e0da298fef4742d` changes only
   `packages/capabilities/src/composition.ts` and
-  `packages/capabilities/test/typed-binding-contract.test.ts`. Independent
-  task re-review, behavioral QA, release review, and fresh verification remain
-  required.
+  `packages/capabilities/test/typed-binding-contract.test.ts`, but independent
+  task re-review returned FAIL on exact own-property enforcement. The PM leaves
+  Task 2 `implementing` and records repair round 3. Commit
+  `00ac760c54f353f6ae242f92a5dd4809791cd633` changes exactly those two paths;
+  independent task re-review, behavioral QA, release review, and fresh
+  verification remain required.
 - Tasks 3 through 7 remain `planned`; none is dispatched by this transition.
 - No frontend/backend parallel implementation is permitted in this project.
 - Commercial Capability Foundation Task 2 remains `implementing` and
@@ -128,7 +131,7 @@ not acceptance.
 | Task                                           | State          | Specialization | Contract owner                               | Contract status                                 |
 | ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | ----------------------------------------------- |
 | 1. Pure typed Graph symbol index               | `accepted`     | `integration`  | Application Graph Type System                | Release review and fresh verification passed.   |
-| 2. Typed manifest and binding contracts        | `implementing` | `integration`  | Capability Binding Contract                  | Release P1 repair awaits independent re-review. |
+| 2. Typed manifest and binding contracts        | `implementing` | `integration`  | Capability Binding Contract                  | Repair round 3 awaits independent re-review.    |
 | 3. Serialized owner-aware Graph selections     | `planned`      | `integration`  | Application Graph Serialization              | Blocked on accepted Task 2 binding contract.    |
 | 4. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 3 serialized contract. |
 | 5. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-4.                  |
@@ -344,7 +347,7 @@ not acceptance.
 
 ## Task 2: Freeze typed manifest and binding contracts
 
-- **State:** `implementing` (repair round 2)
+- **State:** `implementing` (repair round 3)
 - **Specialization:** `integration`
 - **Bounded writer:** Typed Manifest Contract Integration
 - **Contract owner:** Capability Binding Contract
@@ -460,7 +463,7 @@ not acceptance.
 - Task 3 remains `planned` until Task 2 is `accepted`; no Graph implementation
   is authorized by this PM transition.
 
-### Release-review P1 and repair round 2
+### Release-review P1 and repair rounds 2-3
 
 - Independent release review returned FAIL with one P1. Strict validation and
   canonical selection could read inherited schema constraints or an inherited
@@ -481,12 +484,34 @@ not acceptance.
   and schema values. It changes only the two repair paths above.
 - Fresh local Node `v22.11.0` focused verification passed 47/47 tests across
   `typed-binding-contract.test.ts` and `composition-contract.test.ts`. This is
-  implementation evidence only; it does not reconcile any gate or task state.
-- Independent task re-review must verify the exact repair diff and close the P1
-  before the PM may record `implementing -> ready_for_qa`. Independent
-  behavioral QA must then pass before `ready_for_qa -> reviewed`. Independent
-  release review and fresh verification must pass before any
-  `reviewed -> accepted` transition. This update records no acceptance.
+  repair-round-2 implementation evidence only; it does not reconcile any gate
+  or task state.
+- Independent task re-review of repair round 2 returned FAIL. Required
+  `ownerBinding` and `fieldTypes` could still be satisfied by inherited values;
+  optional `fieldRequired` and `fieldUnique` constraints were not governed
+  solely by own-property presence; and the truthy unknown-key check allowed an
+  empty-string own key.
+- Repair round 3 remains assigned to **Typed Manifest Contract Integration**
+  under the unchanged **Capability Binding Contract**. It owns only
+  `packages/capabilities/src/composition.ts` and
+  `packages/capabilities/test/typed-binding-contract.test.ts`, the exact same
+  two-path repair subset. No path, dependency, contract, or non-goal changes.
+- Repair implementation commit
+  `00ac760c54f353f6ae242f92a5dd4809791cd633`
+  (`fix: require own strict binding constraints`) requires own
+  `ownerBinding`/`fieldTypes`, interprets optional field constraints only when
+  they are own properties, and rejects an empty-string unknown own key. New
+  focused regressions cover `Object.prototype` pollution and the empty key.
+- Fresh local Node `v22.11.0` implementation verification passed 49/49 tests
+  across `typed-binding-contract.test.ts` and `composition-contract.test.ts`,
+  plus Capabilities typecheck and lint. A bounded diff confirms the repair
+  commit changes exactly the two authorized paths. This does not advance Task
+  2 from `implementing`.
+- Independent task re-review must verify repair round 3 and close the P1 before
+  the PM may record `implementing -> ready_for_qa`. Independent behavioral QA
+  must then pass before `ready_for_qa -> reviewed`. Independent release review
+  and fresh verification must pass before any `reviewed -> accepted`
+  transition. This update records no acceptance.
 
 ### Blocking non-goals
 
@@ -515,7 +540,7 @@ not acceptance.
 - **Contract artifact:** ADR-0007 DEC-001 through DEC-005 and the design's
   serialized Draft Graph contract.
 - **Dependencies:** Tasks 1 and 2 `accepted`. Task 1 is accepted; Task 2 is
-  `implementing` in repair round 2.
+  `implementing` in repair round 3.
 - **Produces:** additive `SerializedCompositionBindingV1` support for exact
   owner-aware field objects, structural owner/field validation, deterministic
   Graph-hash coverage, historic hash stability, and browser-safe behavior.
@@ -748,7 +773,7 @@ not acceptance.
 - Runtime atomicity and exactly-once stock execution across intentional
   inventory co-providers remain Commercial Foundation Task 3 scope and are not
   proven by this project.
-- Task 2 repair round 2 remains inside its exact two-path repair scope, but its
+- Task 2 repair round 3 remains inside its exact two-path repair scope, but its
   release-review P1 remains open until independent task review, behavioral QA,
   release review, and fresh verification pass in sequence. This PM transition
   authorizes no Graph-path change or Task 3-7 implementation.
@@ -756,10 +781,11 @@ not acceptance.
 ## Next smallest valuable slice
 
 Dispatch independent Task 2 repair task review of
-`565c64c5e79799261f8dc72c7e0da298fef4742d`, including its exact two-path diff
-and prototype-backed binding-lock regressions. If and only if that review
-closes the P1 may the PM record `implementing -> ready_for_qa`; then run
-independent behavioral QA before any move to `reviewed`. Independent release
-review and fresh verification remain required before any acceptance
-transition. Task 3 remains `planned` behind Task 2 and owns only the three
-ADR-0007 Graph paths. Leave Tasks 3-7 `planned`.
+`00ac760c54f353f6ae242f92a5dd4809791cd633`, including its exact two-path diff,
+own required/optional constraint enforcement, empty-string unknown-key
+rejection, and `Object.prototype` pollution and empty-key regressions. If and
+only if that review closes the P1 may the PM record
+`implementing -> ready_for_qa`; then run independent behavioral QA before any
+move to `reviewed`. Independent release review and fresh verification remain
+required before any acceptance transition. Task 3 remains `planned` behind
+Task 2 and owns only the three ADR-0007 Graph paths. Leave Tasks 3-7 `planned`.
