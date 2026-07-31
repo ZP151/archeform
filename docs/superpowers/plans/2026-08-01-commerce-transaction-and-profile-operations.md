@@ -27,6 +27,7 @@
 | Path | Responsibility |
 | --- | --- |
 | `packages/capabilities/src/assets/contract.ts` | Extends the permitted runtime-handler vocabulary for the transaction package. |
+| `packages/capabilities/src/node.ts` | Validates the frozen `transaction` runtime handler while retaining the existing safe template target allowlists. |
 | `packages/capabilities/src/assets/commerce/transaction-v1-0-0.ts` | Canonical TypeScript manifest for `commerce.transaction@1.0.0`. |
 | `packages/capabilities/assets/commerce.transaction/1.0.0/*` | Immutable package manifest, declarative adapter, fixture, template contributions, and contract evidence. |
 | `packages/capabilities/src/assets/index.ts` | Registers the new current Golden asset and preserves older assets as explicit historical versions only. |
@@ -87,12 +88,19 @@ export interface CommerceTransactionExecutorV1 {
 - Create: `packages/capabilities/assets/commerce.transaction/1.0.0/templates/api/commerce-transaction-runtime.ts.tpl`
 - Create: `packages/capabilities/assets/commerce.transaction/1.0.0/templates/database/commerce-transaction.prisma.tpl`
 - Modify: `packages/capabilities/src/assets/contract.ts`
+- Modify: `packages/capabilities/src/node.ts`
 - Modify: `packages/capabilities/src/assets/index.ts`
 - Test: `packages/capabilities/test/commerce-transaction-package.test.ts`
+- Test: `packages/capabilities/test/capability-registry.test.ts`
 
 **Consumes:** Existing Golden `commerce.inventory-ledger@1.0.0`, `core.audit@1.0.1`, and `core.workflow@1.0.1` manifest interfaces.
 
 **Produces:** `commerceTransactionAssetV1_0_0: CapabilityAssetV1`, selected only through `createCapabilityCompositionLock`, with fixed package root `packages/capabilities/assets/commerce.transaction/1.0.0` and a lockable `commerce.transaction@v1` provider identity.
+
+The existing registry test may update only its current-Golden asset key list,
+asset count, and template-count assertion so the new two-template package is
+verified by its actual declared targets. It may not loosen package digest,
+adapter, lifecycle, or physical-file checks.
 
 - [ ] **Step 1: Write the failing asset test**
 
@@ -114,8 +122,8 @@ it("registers the Golden transaction package with all verified assets", () => {
   });
   expect(asset?.manifest.templates.map(({ target }) => target)).toEqual(
     expect.arrayContaining([
-      "api/src/commerce-transaction-runtime.ts",
-      "api/prisma/commerce-transaction.prisma",
+      "api/src/capabilities/commerce-transaction-runtime.ts",
+      "database/prisma/fragments/commerce-transaction.prisma",
     ]),
   );
 });
@@ -129,7 +137,7 @@ Expected: FAIL because `commerce.transaction@1.0.0` is not registered.
 
 - [ ] **Step 3: Create the immutable package files and TypeScript manifest**
 
-Use the existing `commerce.inventory-ledger` package layout exactly. The manifest must include package root, content digests, strict graph-symbol binding inputs, required interfaces, output slots, fixture, contract test, and lifecycle `golden`. Add `"transaction"` to `CapabilityRuntimeHandlerKindV1`; do not introduce a handler that accepts arbitrary source or paths.
+Use the existing `commerce.inventory-ledger` package layout exactly. The manifest must include package root, content digests, strict graph-symbol binding inputs, required interfaces, output slots, fixture, contract test, and lifecycle `golden`. Add `"transaction"` to both `CapabilityRuntimeHandlerKindV1` and the matching `runtimeHandlerSchema` in `node.ts`. Keep the existing safe target allowlists unchanged: use `api/src/capabilities/commerce-transaction-runtime.ts` for `api.runtime` and `database/prisma/fragments/commerce-transaction.prisma` for `database.schema`; do not introduce a handler that accepts arbitrary source or paths.
 
 - [ ] **Step 4: Register only the current Golden version**
 
