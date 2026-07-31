@@ -123,3 +123,88 @@ compilation, permission/failure/audit evidence, relevant security or regulatory
 review, and (where used) exact ecosystem promotion evidence and a removal path.
 The detailed source map and 30-day recipe staging are in
 [the portfolio memo](research/2026-08-01-profile-ecosystem-portfolio.md).
+
+## 2026-08-01 reusable asset fast lane
+
+**Decision investigated.** Determine how Factory can rapidly cover more than
+100 production-relevant Profile scenarios by reusing open-source assets and
+services without reducing the Application Graph to an unmaintained collection
+of forked vertical applications.
+
+### Observed facts (public sources)
+
+| Asset                                                                                                                                                                          | Licence / official source | Reuse lane                               | Factory boundary                                                                              | Portfolio leverage                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| [Puck](https://github.com/puckeditor/puck)                                                                                                                                     | MIT                       | Pinned dependency plus PageModel adapter | Puck emits validated PageModel diffs only.                                                    | All multi-page products                       |
+| [Radix Primitives](https://github.com/radix-ui/primitives)                                                                                                                     | MIT                       | Pinned dependency                        | Factory design-token wrappers, never raw arbitrary props in Graph.                            | All generated web products                    |
+| [React Hook Form](https://github.com/react-hook-form/react-hook-form) and [Zod](https://github.com/colinhacks/zod)                                                             | MIT                       | Pinned dependencies                      | DomainModel generates fields and validation; no user-provided executable refinements.         | Requests, approvals, commerce, CRM            |
+| [TanStack Query](https://github.com/TanStack/query) and [TanStack Table](https://github.com/TanStack/table)                                                                    | MIT                       | Pinned dependencies                      | Generated query/list clients; authorization remains server-side.                              | Operational and merchant products             |
+| [Uppy](https://github.com/transloadit/uppy)                                                                                                                                    | MIT                       | Pinned dependency                        | UI upload only; storage, scanning, retention and ACL stay provider-owned.                     | Claims, documents, support, commerce          |
+| [FullCalendar](https://github.com/fullcalendar/fullcalendar) core                                                                                                              | MIT core                  | Pinned dependency study                  | Premium packages remain excluded.                                                             | Reservations, scheduling, field service       |
+| [xyflow](https://github.com/xyflow/xyflow) and [XState](https://github.com/statelyai/xstate)                                                                                   | MIT                       | Pinned editor/compiler dependencies      | Presentation coordinates are non-semantic; FlowModel compiles closed state machines.          | Workflow-heavy Profiles                       |
+| [Prisma](https://github.com/prisma/prisma) and [node-casbin](https://github.com/apache/casbin-node-casbin)                                                                     | Apache-2.0                | Pinned compiler dependencies             | Published DomainModel and PolicyModel are the only compiler inputs.                           | Every protected data application              |
+| [BullMQ](https://github.com/taskforcesh/bullmq) and [Valkey](https://github.com/valkey-io/valkey)                                                                              | MIT / BSD-3-Clause        | Pinned dependency plus governed provider | Durable database/outbox state remains authoritative.                                          | Imports, notification, jobs, scheduled work   |
+| [OpenTelemetry JavaScript](https://github.com/open-telemetry/opentelemetry-js)                                                                                                 | Apache-2.0                | Pinned dependency                        | Factory controls redaction, sampling and event schema.                                        | Observability across all Profiles             |
+| [Keycloak](https://github.com/keycloak/keycloak) and [Gotenberg](https://github.com/gotenberg/gotenberg)                                                                       | Apache-2.0 / MIT          | Governed provider adapters               | Pin container digests; Graph holds declared intent, never provider administrator credentials. | Enterprise identity and document outputs      |
+| [Meilisearch Community Edition](https://github.com/meilisearch/meilisearch), [OpenFGA](https://github.com/openfga/openfga), [Temporal](https://github.com/temporalio/temporal) | MIT CE / Apache-2.0 / MIT | Later governed provider adapters         | Each needs a dedicated contract, fixture provider and conformance suite before activation.    | Search, relationship auth, long-running flows |
+
+The official [Backstage Software Templates documentation](https://backstage.io/docs/features/software-templates/)
+confirms the useful scaffolding pattern: parameterized skeletons, bounded
+actions, task evidence and dry runs. Factory will learn from this pattern but
+will retain its own Graph and Published-Revision compilation contract.
+
+### Decision
+
+Factory scales through a **four-lane automated supply chain**, not manual
+rewrites of one vertical application at a time:
+
+1. **Direct dependency lane:** package-manager dependencies with locked
+   version/integrity, notices, SBOM, vulnerability/secret scan, wrapper and
+   fixture tests.
+2. **Provider lane:** a fixed OCI image or service API is isolated behind a
+   versioned adapter, fixture provider and removal test. Providers never own
+   Graph semantics or credentials.
+3. **Source-study lane:** a fixed commit is analysed for reusable patterns or
+   exact small utilities. It cannot affect runtime until an exact-file licence
+   record, attribution, adapter, tests and replacement test exist.
+4. **Reference-only lane:** commercial-tree, reciprocal, source-available or
+   architecture-only repositories guide Factory-owned implementation but are
+   neither copied nor embedded.
+
+Candidate discovery, SHA pinning, licence/SBOM collection, scanning, package
+inventory and fixture conformance can be automated in bulk. The resulting
+Candidate record remains non-runnable until its generic contract and conformance
+evidence pass. This replaces one-by-one hand-authored capability certification
+with a repeatable intake gate while retaining deterministic production output.
+
+### Source-copy exception
+
+Copying a whole upstream product is not an admissible fast lane: it brings an
+independent schema, migrations, authentication model, runtime assumptions,
+dependency graph and security-upgrade obligation. It produces multiple forks
+rather than reusable Graph capabilities. A narrow source import may be used
+only after recording an immutable commit, exact source paths and licence
+obligations; excluding enterprise/premium/generated/schema/migration/runtime
+code; and adding Factory-owned adapter, attribution, SBOM, focused tests and a
+removal test. This satisfies the repository rule that no external source is
+copied without an explicit source-study record.
+
+Projects such as [Vendure](https://github.com/vendure-ecommerce/vendure),
+[ERPNext](https://github.com/frappe/erpnext),
+[ToolJet](https://github.com/ToolJet/ToolJet),
+[Cal.com](https://github.com/calcom/cal.com),
+[Directus](https://github.com/directus/directus), and
+[n8n](https://github.com/n8n-io/n8n) remain excluded from default copy/embed
+lanes because their published terms include GPL, AGPL, BSL or source-available
+conditions unsuitable for this default platform policy.
+
+### Next adoption sequence
+
+After Typed Capability Binding Validation is accepted, first create the
+`generated-ui` asset foundation: Factory wrappers for Radix, Puck, React Hook
+Form/Zod and TanStack Query/Table with Storybook/Playwright fixtures. Next add
+cross-Profile attachment, notification intent, durable command and search
+projection contracts, using Uppy and BullMQ/Valkey as bounded implementations.
+Then compile catalog, cart, order, inventory, reservation and workflow
+subgraphs; Restaurant Ordering, Ecommerce and later approvals become
+independent acceptance recipes rather than bespoke application codebases.
