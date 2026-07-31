@@ -1,0 +1,10 @@
+{
+  "status": "verified",
+  "checks": [
+    "scope-local-idempotent-replay",
+    "changed-payload-rejection",
+    "expected-version-conflict",
+    "atomic-aggregate-inventory-audit-outbox-write",
+    "immutable-completed-result"
+  ]
+}

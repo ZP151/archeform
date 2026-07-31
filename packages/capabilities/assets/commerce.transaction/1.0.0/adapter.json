@@ -1,0 +1,39 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": [
+    "api.runtime",
+    "api.command",
+    "database.schema",
+    "database.migration",
+    "test.fixture",
+    "test.journey",
+    "flow.handler",
+    "docs.section"
+  ],
+  "runtimeHandlers": ["transaction"],
+  "templates": [
+    {
+      "id": "commerce-transaction-runtime",
+      "source": "templates/api/commerce-transaction-runtime.ts.tpl",
+      "target": "api/src/capabilities/commerce-transaction-runtime.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:d668d06257c5a6cc618dee0b05ec13c229226aa9b58c79834e6dceb077a6f659"
+    },
+    {
+      "id": "commerce-transaction-schema",
+      "source": "templates/database/commerce-transaction.prisma.tpl",
+      "target": "database/prisma/fragments/commerce-transaction.prisma",
+      "outputSlot": "database.schema",
+      "digest": "sha256:412fa31408499c51bd80b8ede81ec8995dd610a40368df2f6e3d3b09d8def213"
+    }
+  ],
+  "parameters": [
+    { "key": "aggregateEntity", "type": "graph-symbol", "required": true },
+    { "key": "transactionFlow", "type": "graph-symbol", "required": true },
+    { "key": "actorRole", "type": "graph-symbol", "required": true }
+  ],
+  "contributes": {
+    "effects": ["commerce.transaction.execute"]
+  }
+}

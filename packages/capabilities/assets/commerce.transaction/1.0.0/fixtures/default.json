@@ -1,0 +1,26 @@
+{
+  "command": {
+    "scope": "store:demo",
+    "aggregate": {
+      "entityKey": "order",
+      "recordId": "order-1",
+      "expectedVersion": 0
+    },
+    "idempotencyKey": "submit-order-1",
+    "payload": { "nextStatus": "submitted" },
+    "effects": ["reserve-stock", "append-audit", "append-outbox"]
+  },
+  "outcome": {
+    "receiptId": "receipt-submit-order-1",
+    "replayed": false,
+    "aggregate": {
+      "entityKey": "order",
+      "recordId": "order-1",
+      "status": "submitted",
+      "version": 1
+    },
+    "inventoryMovementIds": ["movement-submit-order-1"],
+    "auditEventId": "audit-submit-order-1",
+    "outboxEventId": "outbox-submit-order-1"
+  }
+}

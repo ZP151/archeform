@@ -638,6 +638,7 @@ describe("capability catalog", () => {
       "commerce.inventory-ledger",
       "commerce.order",
       "commerce.simulated-payment",
+      "commerce.transaction",
       "restaurant.table-session",
       "restaurant.menu",
       "restaurant.ordering",
@@ -730,7 +731,7 @@ describe("capability catalog", () => {
   });
 
   it("verifies every registered capability manifest against its declared digest", () => {
-    expect(capabilityAssets).toHaveLength(38);
+    expect(capabilityAssets).toHaveLength(39);
     for (const asset of capabilityAssets) {
       expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     }
@@ -747,7 +748,7 @@ describe("capability catalog", () => {
     }
   });
 
-  it("resolves exactly one digest-verified package-local API template for every Golden asset", () => {
+  it("resolves each digest-verified template only at its declared safe package target", () => {
     const repositoryRoot = resolve(
       dirname(fileURLToPath(import.meta.url)),
       "../../..",
@@ -755,6 +756,18 @@ describe("capability catalog", () => {
 
     for (const asset of capabilityAssets) {
       const templates = loadCapabilityAssetTemplates(asset, repositoryRoot);
+      if (asset.manifest.key === "commerce.transaction") {
+        expect(templates.map(({ target }) => target)).toEqual([
+          "api/src/capabilities/commerce-transaction-runtime.ts",
+          "database/prisma/fragments/commerce-transaction.prisma",
+        ]);
+        for (const template of templates) {
+          expect(template.assetKey).toBe("commerce.transaction");
+          expect(template.digest).toMatch(/^sha256:[a-f0-9]{64}$/);
+        }
+        continue;
+      }
+
       expect(templates).toHaveLength(1);
       expect(templates[0]).toMatchObject({
         assetKey: asset.manifest.key,

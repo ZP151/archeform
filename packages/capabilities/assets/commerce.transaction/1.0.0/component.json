@@ -1,0 +1,70 @@
+{
+  "apiVersion": "factory.capability/v1",
+  "bindingContract": "factory.capability-binding/v1",
+  "key": "commerce.transaction",
+  "version": "1.0.0",
+  "category": "commerce",
+  "name": "Commerce transaction",
+  "description": "Executes idempotent, version-checked commerce commands through one atomic boundary.",
+  "packageRoot": "packages/capabilities/assets/commerce.transaction/1.0.0",
+  "manifestDigest": "sha256:4a62a9d7d2953f4397386cc375ec0109c3d666b075ac02eba6dde827389e5b7a",
+  "lifecycle": "golden",
+  "profiles": [
+    "restaurant-ordering",
+    "simple-ecommerce",
+    "retail-counter",
+    "grocery-pickup"
+  ],
+  "effects": ["commerce.transaction.execute"],
+  "inputSchema": [
+    { "key": "aggregateEntity", "type": "domain.entity", "required": true },
+    { "key": "transactionFlow", "type": "flow.flow", "required": true },
+    { "key": "actorRole", "type": "policy.role", "required": true }
+  ],
+  "outputSlots": [
+    "api.runtime",
+    "api.command",
+    "database.schema",
+    "database.migration",
+    "test.fixture",
+    "test.journey",
+    "flow.handler",
+    "docs.section"
+  ],
+  "runtimeHandlers": ["transaction"],
+  "templates": [
+    {
+      "id": "commerce-transaction-runtime",
+      "source": "templates/api/commerce-transaction-runtime.ts.tpl",
+      "target": "api/src/capabilities/commerce-transaction-runtime.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:d668d06257c5a6cc618dee0b05ec13c229226aa9b58c79834e6dceb077a6f659"
+    },
+    {
+      "id": "commerce-transaction-schema",
+      "source": "templates/database/commerce-transaction.prisma.tpl",
+      "target": "database/prisma/fragments/commerce-transaction.prisma",
+      "outputSlot": "database.schema",
+      "digest": "sha256:412fa31408499c51bd80b8ede81ec8995dd610a40368df2f6e3d3b09d8def213"
+    }
+  ],
+  "parameters": [
+    { "key": "aggregateEntity", "type": "graph-symbol", "required": true },
+    { "key": "transactionFlow", "type": "graph-symbol", "required": true },
+    { "key": "actorRole", "type": "graph-symbol", "required": true }
+  ],
+  "requires": [
+    { "interfaceKey": "commerce.stock-movement", "version": "v1" },
+    { "interfaceKey": "commerce.order-event", "version": "v1" }
+  ],
+  "provides": [
+    { "interfaceKey": "commerce.transaction", "version": "v1" }
+  ],
+  "verification": {
+    "fixture": "fixtures/default.json",
+    "fixtureDigest": "sha256:f35880f72cd8e54c34e62de4e550a43c66a2b1c2bcc384090739eb3f241e5c3d",
+    "contractTest": "tests/contract.json",
+    "contractTestDigest": "sha256:680c2426a8912117a67af70a2bc7cbe837f4d953266ec5ff2d0e6109e0e0abaf",
+    "status": "verified"
+  }
+}

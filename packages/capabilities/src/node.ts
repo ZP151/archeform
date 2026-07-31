@@ -111,6 +111,7 @@ const runtimeHandlerSchema = z.enum([
   "catalog",
   "catalogConfiguration",
   "order",
+  "transaction",
   "effect",
 ]);
 const templateContributionSchema = z
