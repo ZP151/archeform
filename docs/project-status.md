@@ -62,9 +62,13 @@ binding snapshot for validation and canonicalization. It changes only the
 same two authorized Capabilities repair paths. Fresh engineer verification
 passed 195/195 Capabilities tests plus Capabilities typecheck, lint, and build,
 and 180/180 Compiler tests plus Compiler typecheck and lint. This remains
-implementation evidence only: independent task review, behavioral QA, release
-review, and fresh acceptance verification are pending, and Task 2 is not
-accepted. Owner-aware Graph persistence remains explicitly owned by planned
+implementation evidence only. Independent task review of the repair returned
+FAIL with one new P1: `manifest.parameters` is snapshotted separately during
+schema validation and binding validation, so a getter can supply different
+parameter schemas at those two stages. Task 2 remains `implementing`; bounded
+repair rework, independent re-review, behavioral QA, release review, and fresh
+acceptance verification are pending, and Task 2 is not accepted. Owner-aware
+Graph persistence remains explicitly owned by planned
 Task 3; physical assets are Task 4 and remain blocked behind Task 3. Tasks 5
 and 6 are serialized on the preceding accepted task. Task 7 remains `planned`
 and begins only after Tasks 1 through 6 are all `accepted`.
@@ -290,9 +294,17 @@ Typed Binding Task 2 implementation, repair-review, and QA evidence is:
   Capabilities typecheck, lint, and build. Compiler regression verification
   passed 180/180 tests plus Compiler typecheck and lint. The bounded diff is
   exactly the same two-path repair subset above.
-- This is repair implementation evidence only. Independent task review,
-  behavioral QA, release review, and fresh acceptance verification remain
-  required in sequence. Task 2 remains `implementing` and is not `accepted`.
+- This is repair implementation evidence only. Independent task review of
+  `b85dbda063fe6fa6db3b712f5891b013285e0356` returned FAIL with one new P1:
+  `validateCapabilityBindingSchema` and `validateBindings` independently read
+  and snapshot `manifest.parameters`, allowing a getter-backed manifest to
+  return different strict parameter schemas between the two stages.
+- The original two release P1 repairs and engineer checks remain historical
+  implementation evidence, but `b85dbda063fe6fa6db3b712f5891b013285e0356`
+  cannot advance to QA. Task 2 remains `implementing`. The same bounded writer
+  must repair the coherent-parameter-snapshot gap inside the same two paths,
+  then obtain independent task re-review before behavioral QA, release review,
+  or fresh acceptance verification. Task 2 is not `accepted`.
 - P1 2: `fieldKey` can exist in the Capabilities binding type but cannot persist
   through the strict `ApplicationGraphV1` composition-binding schema, which
   accepts only `{ graphSymbol }`.
@@ -464,8 +476,12 @@ On Node `v22.11.0`, it records:
   binding values shared by validation and canonical selection. Fresh engineer
   verification passed 195/195 Capabilities tests, Capabilities typecheck,
   lint, and build, plus 180/180 Compiler tests and Compiler typecheck/lint.
-  Independent task review is the next gate; behavioral QA, release review, and
-  fresh acceptance verification have not yet run for this repair.
+  Independent task review then returned FAIL: separate reads of
+  `manifest.parameters` in schema validation and binding validation allow a
+  getter to supply different strict parameter schemas between stages. Repair
+  round 4 remains `implementing`; bounded rework and independent re-review are
+  required before behavioral QA, release review, or fresh acceptance
+  verification.
 - Repair round 4 may not change physical package roots and registrations,
   profile recipes, public Draft composition, Publish, compiler, Workbench,
   lifecycle, historical bindings, or introduce
@@ -502,10 +518,12 @@ On Node `v22.11.0`, it records:
   release review found two P1s in accessor-backed binding canonicalization and
   prototype-supplied strict parameters. Commit
   `b85dbda063fe6fa6db3b712f5891b013285e0356` is implementation evidence only;
-  independent task review, behavioral QA, release review, and fresh acceptance
-  verification remain required. Task 3 remains `planned` and blocked on Task 2
-  acceptance. It, not Task 2, owns owner-aware Graph persistence. Tasks 4
-  through 6 cannot overlap or start before the preceding task is `accepted`.
+  independent task review failed on the separate `manifest.parameters`
+  snapshot gap. Bounded repair rework and independent re-review are required
+  before behavioral QA, release review, or fresh acceptance verification.
+  Task 3 remains `planned` and blocked on Task 2 acceptance. It, not Task 2,
+  owns owner-aware Graph persistence. Tasks 4 through 6 cannot overlap or
+  start before the preceding task is `accepted`.
 - Physical asset Task 4 is additionally blocked on accepted Task 3 serialized
   Graph round-trip, structural validation, hash, and browser evidence.
 - Typed Binding Task 7 cannot start before Tasks 1 through 6 are all
@@ -556,8 +574,12 @@ On Node `v22.11.0`, it records:
   canonicalization and that strict parameters could inherit their declaration.
   Repair round 4 commit `b85dbda063fe6fa6db3b712f5891b013285e0356`
   snapshots exact own-enumerable strict input data and passed fresh engineer
-  package checks. Independent task review, behavioral QA, release review, and
-  fresh acceptance verification still must pass in sequence.
+  package checks, but independent task review found a remaining time-of-check/
+  time-of-use gap because `manifest.parameters` is fetched and snapshotted
+  separately by schema validation and binding validation. A getter can return
+  different parameter schemas between those stages. Bounded rework and
+  independent re-review must pass before behavioral QA, release review, and
+  fresh acceptance verification proceed in sequence.
 - Owner-aware field bindings cannot currently survive the Application Graph
   schema. ADR-0007 assigns the repair to Task 3, but the risk remains until that
   task passes independent review, QA, release review, and fresh verification.
@@ -577,17 +599,19 @@ On Node `v22.11.0`, it records:
 
 ## Next smallest valuable slice
 
-Dispatch independent task review of Task 2 repair round 4 commit
-`b85dbda063fe6fa6db3b712f5891b013285e0356` against parent
-`c58aad64a7f12d35487fb713c2a35e15cd64e3c0`: verify both release P1s are
-closed, the canonical lock uses the same
-immutable own-enumerable binding snapshot that passed validation, strict
-parameters reject inherited/accessor-backed declarations, and the diff remains
-exactly `packages/capabilities/src/composition.ts` plus
-`packages/capabilities/test/typed-binding-contract.test.ts`. A clean task
-review may support only `implementing -> ready_for_qa`; independent behavioral
-QA, release review, and fresh acceptance verification must then follow in
-sequence. Treat owner-aware Graph persistence as remaining Task 3 work under
-ADR-0007, not Task 2 scope. Keep Typed Binding Tasks 3 through 7 `planned`,
-Commercial Foundation Task 2 `implementing` and escalated, and its Tasks 3 and
-4 `planned` and blocked.
+Return Task 2 repair round 4 to **Typed Manifest Contract Integration** under
+the unchanged **Capability Binding Contract** and exact two-path repair subset:
+`packages/capabilities/src/composition.ts` and
+`packages/capabilities/test/typed-binding-contract.test.ts`. Begin with a
+focused regression where a getter-backed `manifest.parameters` supplies
+different schemas on successive reads. GREEN must create one coherent strict
+parameter snapshot per composition resolution and reuse it across schema and
+binding validation, while preserving the repairs for accessor-backed bindings
+and inherited/accessor-backed parameter declarations. Then dispatch
+independent task re-review against
+`b85dbda063fe6fa6db3b712f5891b013285e0356`; a clean re-review may support only
+`implementing -> ready_for_qa`. Behavioral QA, release review, and fresh
+acceptance verification must follow in sequence. Treat owner-aware Graph
+persistence as remaining Task 3 work under ADR-0007, not Task 2 scope. Keep
+Typed Binding Tasks 3 through 7 `planned`, Commercial Foundation Task 2
+`implementing` and escalated, and its Tasks 3 and 4 `planned` and blocked.

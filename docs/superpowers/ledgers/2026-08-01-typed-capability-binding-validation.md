@@ -129,8 +129,12 @@ not acceptance.
   round 4. Repair commit `b85dbda063fe6fa6db3b712f5891b013285e0356`
   changes exactly the same two paths, snapshots immutable own-enumerable data
   for validation and canonicalization, and has fresh engineer verification.
-  Independent task review, behavioral QA, release review, and fresh acceptance
-  verification remain required.
+  Independent task review then returned FAIL with one new P1: schema validation
+  and binding validation snapshot `manifest.parameters` independently, so a
+  getter can supply different strict parameter schemas between stages. Task 2
+  remains `implementing`; bounded repair rework and independent re-review are
+  required before behavioral QA, release review, or fresh acceptance
+  verification.
 - Tasks 3 through 7 remain `planned`; none is dispatched by this transition.
 - No frontend/backend parallel implementation is permitted in this project.
 - Commercial Capability Foundation Task 2 remains `implementing` and
@@ -144,7 +148,7 @@ not acceptance.
 | Task                                           | State          | Specialization | Contract owner                               | Contract status                                 |
 | ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | ----------------------------------------------- |
 | 1. Pure typed Graph symbol index               | `accepted`     | `integration`  | Application Graph Type System                | Release review and fresh verification passed.   |
-| 2. Typed manifest and binding contracts        | `implementing` | `integration`  | Capability Binding Contract                  | Repair round 4 awaits independent task review.  |
+| 2. Typed manifest and binding contracts        | `implementing` | `integration`  | Capability Binding Contract                  | Repair round 4 task review failed with one P1.  |
 | 3. Serialized owner-aware Graph selections     | `planned`      | `integration`  | Application Graph Serialization              | Blocked on accepted Task 2 binding contract.    |
 | 4. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 3 serialized contract. |
 | 5. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-4.                  |
@@ -586,11 +590,26 @@ not acceptance.
 - Fresh engineer verification passed 195/195 Capabilities tests plus
   Capabilities typecheck, lint, and build. Compiler regression verification
   passed 180/180 tests plus Compiler typecheck and lint.
-- This is implementation evidence only. Independent task review is the next
-  handoff and must verify both P1s and the exact two-path diff. A clean review
-  may support only `implementing -> ready_for_qa`; independent behavioral QA,
-  release review, and fresh acceptance verification must still pass in
-  sequence. Task 2 is not `accepted`.
+- This is implementation evidence only. Independent task review of
+  `b85dbda063fe6fa6db3b712f5891b013285e0356` returned FAIL with one new P1.
+  `validateCapabilityBindingSchema` snapshots `manifest.parameters`, then
+  `validateBindings` fetches and snapshots it again. A getter-backed manifest
+  can therefore supply different strict parameter schemas between contract
+  validation and binding validation.
+- The original two release P1 repairs and fresh engineer checks remain
+  historical implementation evidence, but the repair cannot advance to QA.
+  Task 2 remains `implementing` under the same writer, contract, and exact
+  two-path repair subset. No owner, path, dependency, contract artifact, or
+  non-goal changes.
+- The next handoff returns repair round 4 to **Typed Manifest Contract
+  Integration**. Add a focused successive-getter regression and make one
+  coherent strict parameter snapshot serve schema and binding validation for a
+  composition resolution. After fresh focused/full verification, dispatch
+  independent task re-review against
+  `b85dbda063fe6fa6db3b712f5891b013285e0356`. A clean re-review may support
+  only `implementing -> ready_for_qa`; behavioral QA, release review, and fresh
+  acceptance verification must still pass in sequence. Task 2 is not
+  `accepted`.
 
 ### Blocking non-goals
 
@@ -619,8 +638,9 @@ not acceptance.
 - **Contract artifact:** ADR-0007 DEC-001 through DEC-005 and the design's
   serialized Draft Graph contract.
 - **Dependencies:** Tasks 1 and 2 `accepted`. Task 1 is accepted; Task 2 is
-  `implementing` in repair round 4 and still awaits independent task review,
-  behavioral QA, release review, and fresh acceptance verification.
+  `implementing` in repair round 4 after task review failed on the coherent
+  `manifest.parameters` snapshot. Bounded rework, independent re-review,
+  behavioral QA, release review, and fresh acceptance verification remain.
 - **Produces:** additive `SerializedCompositionBindingV1` support for exact
   owner-aware field objects, structural owner/field validation, deterministic
   Graph-hash coverage, historic hash stability, and browser-safe behavior.
@@ -858,24 +878,27 @@ not acceptance.
   accessor-backed binding canonicalization and prototype-supplied strict
   parameters. Repair round 4 commit
   `b85dbda063fe6fa6db3b712f5891b013285e0356` remains inside the same two
-  paths and has fresh engineer verification only. Independent task review,
-  behavioral QA, release review, and fresh acceptance verification remain
-  required in sequence. This PM transition authorizes no Graph-path change or
-  Task 3-7 implementation.
+  paths and has fresh engineer verification, but independent task review found
+  one additional P1: separate `manifest.parameters` snapshots can differ
+  between schema and binding validation. Bounded rework and independent
+  re-review are required before behavioral QA, release review, and fresh
+  acceptance verification proceed in sequence. This PM transition authorizes
+  no Graph-path change or Task 3-7 implementation.
 
 ## Next smallest valuable slice
 
-Dispatch independent task review of Task 2 repair round 4 commit
-`b85dbda063fe6fa6db3b712f5891b013285e0356` against parent
-`c58aad64a7f12d35487fb713c2a35e15cd64e3c0`. Review must verify that
-accessor-backed bindings cannot change between validation and canonical
-selection, strict parameters reject inherited/accessor-backed
-`key`/`type`/`required`, and the diff stays exactly within
+Return Task 2 repair round 4 to **Typed Manifest Contract Integration** under
+the unchanged **Capability Binding Contract** and exact two-path repair subset:
 `packages/capabilities/src/composition.ts` and
-`packages/capabilities/test/typed-binding-contract.test.ts`. A clean task
-review may support only `implementing -> ready_for_qa`. Independent behavioral
-QA, release review, and fresh acceptance verification must then pass in
-sequence. Preserve Task 2's exact Capabilities boundary and recognize
-owner-aware Graph persistence as remaining Task 3 work under ADR-0007. Task 3
-remains `planned` behind Task 2 and owns only the three ADR-0007 Graph paths.
-Leave Tasks 3 through 7 `planned`.
+`packages/capabilities/test/typed-binding-contract.test.ts`. Begin with a
+focused regression where getter-backed `manifest.parameters` returns different
+schemas on successive reads. GREEN must use one coherent strict parameter
+snapshot across schema and binding validation while preserving the original
+two release P1 repairs. Run fresh focused/full Capabilities and Compiler
+regression checks, then dispatch independent task re-review against
+`b85dbda063fe6fa6db3b712f5891b013285e0356`. A clean re-review may support only
+`implementing -> ready_for_qa`; behavioral QA, release review, and fresh
+acceptance verification must then pass in sequence. Preserve Task 2's exact
+Capabilities boundary and recognize owner-aware Graph persistence as remaining
+Task 3 work under ADR-0007. Task 3 remains `planned` behind Task 2 and owns only
+the three ADR-0007 Graph paths. Leave Tasks 3 through 7 `planned`.
