@@ -21,7 +21,11 @@ import {
   type CompletedEvidenceRefV1,
   type IntakeJobV1,
 } from "./jobs.js";
-import { ExternalIntakeStore, type StoredRecordRef } from "./store.js";
+import {
+  commitCandidateTransition,
+  ExternalIntakeStore,
+  type StoredRecordRef,
+} from "./store.js";
 
 const encoder = new TextEncoder();
 const OPAQUE_ID = /^[a-z][a-z0-9-]{0,127}$/u;
@@ -1316,7 +1320,7 @@ export class CandidateRegistry implements CandidateRegistryV1 {
       ],
     };
     const parsedReceipt = parseIntakeReceipt(receiptRecord);
-    const committed = this.store.commitCandidateTransition({
+    const committed = commitCandidateTransition(this.store, {
       jobId: creationReceipt.jobId,
       expectedCreationReceipt: creationReceiptRef,
       expectedCandidate: exactRef(creationRef),
@@ -1438,7 +1442,7 @@ export class CandidateRegistry implements CandidateRegistryV1 {
       code: `candidate-${status}`,
       recordDigests: [nextDigest, entry.verificationStateRef.digest],
     });
-    const committed = this.store.commitCandidateTransition({
+    const committed = commitCandidateTransition(this.store, {
       jobId: creationReceipt.jobId,
       expectedCreationReceipt: creationReceiptRef,
       expectedCandidate: exactRef(creationRef),

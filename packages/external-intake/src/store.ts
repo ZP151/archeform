@@ -102,6 +102,11 @@ export interface CandidateTransitionCommitResultV1 {
   readonly evidence?: StoredBlobRef;
 }
 
+const candidateTransitionCommitters = new WeakMap<
+  ExternalIntakeStore,
+  (input: CandidateTransitionCommitV1) => CandidateTransitionCommitResultV1
+>();
+
 function buffersEqual(left: Uint8Array, right: Uint8Array): boolean {
   if (left.byteLength !== right.byteLength) {
     return false;
@@ -124,6 +129,9 @@ export class ExternalIntakeStore {
       );
     }
     this.#root = realpathSync.native(root);
+    candidateTransitionCommitters.set(this, (input) =>
+      this.#commitCandidateTransition(input),
+    );
   }
 
   putRecord(
@@ -281,7 +289,7 @@ export class ExternalIntakeStore {
     return recordRef;
   }
 
-  commitCandidateTransition(
+  #commitCandidateTransition(
     input: CandidateTransitionCommitV1,
   ): CandidateTransitionCommitResultV1 {
     const jobId = intakeContractPrimitives.opaqueIdSchema.parse(input.jobId);
@@ -704,4 +712,17 @@ export class ExternalIntakeStore {
       }
     }
   }
+}
+
+export function commitCandidateTransition(
+  store: ExternalIntakeStore,
+  input: CandidateTransitionCommitV1,
+): CandidateTransitionCommitResultV1 {
+  const commit = candidateTransitionCommitters.get(store);
+  if (commit === undefined) {
+    throw new TypeError(
+      "Candidate transitions require an External Intake store instance.",
+    );
+  }
+  return commit(input);
 }

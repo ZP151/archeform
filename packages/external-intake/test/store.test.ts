@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import {
   existsSync,
   lstatSync,
@@ -17,6 +18,8 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import * as publicExternalIntake from "../src/index.js";
+
 import {
   ExternalIntakeStore,
   canonicalRecordDigest,
@@ -28,6 +31,7 @@ import {
   type SourceSnapshotV1,
   type StoredRecordRef,
 } from "../src/index.js";
+import { commitCandidateTransition } from "../src/store.js";
 
 const roots: string[] = [];
 const validRequest = {
@@ -150,20 +154,6 @@ function receiptAt(
     status: sequence === 1 ? "requested" : "resolved",
     code,
     recordDigests: [],
-  };
-}
-
-interface AtomicCandidateTransitionStore extends ExternalIntakeStore {
-  commitCandidateTransition(input: {
-    readonly jobId: string;
-    readonly expectedCreationReceipt: StoredRecordRef;
-    readonly expectedCandidate: StoredRecordRef;
-    readonly candidate: CandidateCapabilityV1;
-    readonly receipt: IntakeReceiptV1;
-    readonly evidenceBytes?: Uint8Array;
-  }): {
-    readonly candidate: StoredRecordRef;
-    readonly receipt: StoredRecordRef;
   };
 }
 
@@ -349,14 +339,12 @@ describe("ExternalIntakeStore", () => {
     it("executes one child-process atomic Candidate terminal attempt", async () => {
       const input = JSON.parse(
         readFileSync(process.env.FACTORY_STORE_RACE_INPUT_PATH!, "utf8"),
-      ) as Parameters<
-        AtomicCandidateTransitionStore["commitCandidateTransition"]
-      >[0];
+      ) as Parameters<typeof commitCandidateTransition>[1];
       writeFileSync(process.env.FACTORY_STORE_RACE_READY_PATH!, "ready");
       await waitForStoreRacePath(process.env.FACTORY_STORE_RACE_RELEASE_PATH!);
       const store = new ExternalIntakeStore(
         process.env.FACTORY_STORE_RACE_ROOT!,
-      ) as AtomicCandidateTransitionStore;
+      );
       let result: unknown;
       try {
         const committed =
@@ -365,7 +353,7 @@ describe("ExternalIntakeStore", () => {
                 candidate: input.expectedCandidate,
                 receipt: store.appendReceipt(input.jobId, input.receipt),
               }
-            : store.commitCandidateTransition(input);
+            : commitCandidateTransition(store, input);
         result = {
           outcome: "committed",
           candidateDigest: committed.candidate.digest,
@@ -706,22 +694,20 @@ describe("ExternalIntakeStore", () => {
 
   it("atomically commits one Candidate terminal transition, retries it idempotently, and rejects a conflict without orphans", () => {
     const root = tempRoot();
-    const store = new ExternalIntakeStore(
-      root,
-    ) as AtomicCandidateTransitionStore;
+    const store = new ExternalIntakeStore(root);
     const fixture = candidateTransitionFixture(store);
     const blocked = fixture.transition("blocked");
     const rejected = fixture.transition("rejected");
     const conformance = fixture.conformanceTransition();
 
-    const first = store.commitCandidateTransition({
+    const first = commitCandidateTransition(store, {
       jobId: fixture.jobId,
       expectedCreationReceipt: fixture.creationReceipt,
       expectedCandidate: fixture.candidateRef,
       candidate: blocked.terminal,
       receipt: blocked.receipt,
     });
-    const retry = store.commitCandidateTransition({
+    const retry = commitCandidateTransition(store, {
       jobId: fixture.jobId,
       expectedCreationReceipt: fixture.creationReceipt,
       expectedCandidate: fixture.candidateRef,
@@ -737,7 +723,7 @@ describe("ExternalIntakeStore", () => {
       receipts: readFileSync(recordPath(root, first.receipt), "utf8"),
     };
     expect(() =>
-      store.commitCandidateTransition({
+      commitCandidateTransition(store, {
         jobId: fixture.jobId,
         expectedCreationReceipt: fixture.creationReceipt,
         expectedCandidate: fixture.candidateRef,
@@ -762,7 +748,7 @@ describe("ExternalIntakeStore", () => {
       ),
     ).toBe(false);
     expect(() =>
-      store.commitCandidateTransition({
+      commitCandidateTransition(store, {
         jobId: fixture.jobId,
         expectedCreationReceipt: fixture.creationReceipt,
         expectedCandidate: fixture.candidateRef,
@@ -819,19 +805,57 @@ describe("ExternalIntakeStore", () => {
     ).toBe(false);
   });
 
+  it("keeps terminal Candidate persistence unavailable from the package-root Store surface", () => {
+    const root = tempRoot();
+    const store = new publicExternalIntake.ExternalIntakeStore(root);
+    const fixture = candidateTransitionFixture(store);
+    const blocked = fixture.transition("blocked");
+    const runtimePutRecord = store.putRecord.bind(store) as unknown as (
+      kind: string,
+      record: IntakeReceiptV1,
+    ) => StoredRecordRef;
+
+    expect("commitCandidateTransition" in publicExternalIntake).toBe(false);
+    expect("commitCandidateTransition" in store).toBe(false);
+    expect(() => store.putRecord("candidate", blocked.terminal)).toThrow(
+      /atomic|transition|quarantined/iu,
+    );
+    expect(() => store.appendReceipt(fixture.jobId, blocked.receipt)).toThrow(
+      /atomic|transition|candidate/iu,
+    );
+    expect(() => runtimePutRecord("receipt", blocked.receipt)).toThrow();
+    expect(
+      existsSync(
+        recordPath(root, {
+          kind: "candidate",
+          digest: canonicalRecordDigest(blocked.terminal),
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      existsSync(
+        recordPath(root, {
+          kind: "receipt",
+          digest: canonicalRecordDigest(blocked.receipt),
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      existsSync(join(root, "jobs", fixture.jobId, "receipts", "2.json")),
+    ).toBe(false);
+  });
+
   it.each(["blocked", "rejected", "conformance-passed"] as const)(
     "rejects generic sequence-3 append after Candidate %s without receipt or index mutation",
     (status) => {
       const root = tempRoot();
-      const store = new ExternalIntakeStore(
-        root,
-      ) as AtomicCandidateTransitionStore;
+      const store = new ExternalIntakeStore(root);
       const fixture = candidateTransitionFixture(store);
       const transition =
         status === "conformance-passed"
           ? fixture.conformanceTransition()
           : fixture.transition(status);
-      const committed = store.commitCandidateTransition({
+      const committed = commitCandidateTransition(store, {
         jobId: fixture.jobId,
         expectedCreationReceipt: fixture.creationReceipt,
         expectedCandidate: fixture.candidateRef,
@@ -1087,4 +1111,3 @@ describe("ExternalIntakeStore", () => {
     );
   });
 });
-import { spawn } from "node:child_process";
