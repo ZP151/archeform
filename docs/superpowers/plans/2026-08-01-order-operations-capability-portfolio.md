@@ -247,7 +247,7 @@ the versioned order-command boundary while retaining a passing profile journey.
 same generic Order Operations package lock sequence as simple ecommerce, but
 distinct valid Graph entities, roles, routes, fulfilment flow, and seed data.
 
-- [ ] **Step 1: Write failing profile-composition tests**
+- [x] **Step 1: Write failing profile-composition tests**
 
 ```ts
 it.each(["retail-counter", "grocery-pickup"] as const)(
@@ -269,14 +269,14 @@ it("keeps Restaurant-only table and kitchen entities out of non-Restaurant recip
 });
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run: `pnpm --filter @factory/capabilities test -- --run test/order-operations-profile.test.ts`
 
 Expected: FAIL because `FactoryProfile`, recipe registrations, and starters do
 not yet include Retail Counter or Grocery Pickup.
 
-- [ ] **Step 3: Add declarative starter data and bindings**
+- [x] **Step 3: Add declarative starter data and bindings**
 
 Extend `FactoryProfile` with the two new profile keys. In
 `packages/capabilities/src/index.ts`, introduce a declarative
@@ -297,7 +297,7 @@ them. Both use those new immutable package versions with
 `core.location-context@1.0.0`, plus the existing core packages required by
 the Ecommerce recipe.
 
-- [ ] **Step 4: Verify GREEN and commit**
+- [x] **Step 4: Verify GREEN and commit**
 
 Run:
 
@@ -313,6 +313,19 @@ Commit:
 git add packages/capabilities
 git commit -m "feat: add retail and grocery composition recipes"
 ```
+
+Verified before this plan update:
+
+```text
+pnpm --filter @factory/capabilities build
+pnpm --filter @factory/capabilities test             # 223 passed
+pnpm --filter @factory/capabilities typecheck
+```
+
+The `commerce.catalog@1.2.0` and `commerce.order@1.2.0` packages add only
+verified Profile eligibility; their templates, fixtures, and contract evidence
+remain byte-identical to v1.1. Historical v1.1 locks remain registered for
+immutable replay.
 
 ## Task 4: Prove Generated Target Isolation and Reuse
 

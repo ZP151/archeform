@@ -728,7 +728,7 @@ describe("capability catalog", () => {
   });
 
   it("verifies every registered capability manifest against its declared digest", () => {
-    expect(capabilityAssets).toHaveLength(28);
+    expect(capabilityAssets).toHaveLength(30);
     for (const asset of capabilityAssets) {
       expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     }
@@ -1847,11 +1847,13 @@ describe("capability catalog", () => {
     ).toThrow("Unknown Factory profile 'not-a-profile'.");
   });
 
-  it("ships independently valid Graph starters for the three acceptance profiles", () => {
+  it("ships independently valid Graph starters for the accepted profiles", () => {
     expect(profileGraphs.map(({ profile }) => profile)).toEqual([
       "expense-approval",
       "restaurant-ordering",
       "simple-ecommerce",
+      "retail-counter",
+      "grocery-pickup",
     ]);
     for (const profile of profileGraphs) {
       expect(validateApplicationGraph(profile.graph)).toEqual([]);

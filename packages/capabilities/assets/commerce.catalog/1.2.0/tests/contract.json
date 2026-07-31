@@ -1,0 +1,4 @@
+{
+  "status": "verified",
+  "checks": ["role-bound-list", "role-bound-read", "missing-record"]
+}

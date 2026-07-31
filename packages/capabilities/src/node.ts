@@ -173,7 +173,13 @@ const capabilityManifestSchema = z
     manifestDigest: digestSchema,
     lifecycle: z.literal("golden"),
     profiles: z.array(
-      z.enum(["expense-approval", "restaurant-ordering", "simple-ecommerce"]),
+      z.enum([
+        "expense-approval",
+        "restaurant-ordering",
+        "simple-ecommerce",
+        "retail-counter",
+        "grocery-pickup",
+      ]),
     ),
     effects: z.array(z.string().min(1)),
     inputSchema: z.array(

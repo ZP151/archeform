@@ -1,7 +1,11 @@
 import type { ApplicationGraphV1 } from "@factory/graph/browser";
 
 export type FactoryProfile =
-  "expense-approval" | "restaurant-ordering" | "simple-ecommerce";
+  | "expense-approval"
+  | "restaurant-ordering"
+  | "simple-ecommerce"
+  | "retail-counter"
+  | "grocery-pickup";
 
 export type CapabilityCategory = "core" | "commerce" | "restaurant";
 

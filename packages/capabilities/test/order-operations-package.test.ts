@@ -27,18 +27,20 @@ describe("Order Operations capability packages", () => {
       target: "api/src/capabilities/commerce.order.ts",
     },
   ] as const)(
-    "publishes executable $key v1.1 with an isolated $handler handler",
+    "publishes executable $key v1.2 with an isolated $handler handler",
     ({ key, handler, target }) => {
       const asset = getCapabilityAsset(key);
 
       expect(asset.manifest).toMatchObject({
         key,
-        version: "1.1.0",
+        version: "1.2.0",
         lifecycle: "golden",
         runtimeHandlers: [handler],
         profiles: expect.arrayContaining([
           "restaurant-ordering",
           "simple-ecommerce",
+          "retail-counter",
+          "grocery-pickup",
         ]),
         verification: {
           status: "verified",

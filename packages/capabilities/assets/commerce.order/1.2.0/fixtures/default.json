@@ -1,0 +1,5 @@
+{
+  "orderEntity": "order",
+  "operations": ["create", "transition"],
+  "requires": ["expected-version", "idempotency-key"]
+}

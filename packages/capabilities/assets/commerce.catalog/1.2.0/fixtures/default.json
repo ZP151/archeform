@@ -1,0 +1,4 @@
+{
+  "catalogEntity": "catalog-item",
+  "operations": ["list", "read"]
+}

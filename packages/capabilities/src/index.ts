@@ -717,6 +717,40 @@ const compositionRecipes: Readonly<
     ],
     optionalCapabilities: ["core.audit"],
   },
+  "retail-counter": {
+    requiredCapabilities: [
+      "core.crud",
+      "core.notification",
+      "core.workflow",
+      "commerce.catalog",
+      "commerce.cart",
+      "commerce.inventory",
+      "commerce.inventory-ledger",
+      "commerce.line-configuration",
+      "commerce.order",
+      "commerce.simulated-payment",
+      "core.identity-context",
+      "core.location-context",
+    ],
+    optionalCapabilities: ["core.audit"],
+  },
+  "grocery-pickup": {
+    requiredCapabilities: [
+      "core.crud",
+      "core.notification",
+      "core.workflow",
+      "commerce.catalog",
+      "commerce.cart",
+      "commerce.inventory",
+      "commerce.inventory-ledger",
+      "commerce.line-configuration",
+      "commerce.order",
+      "commerce.simulated-payment",
+      "core.identity-context",
+      "core.location-context",
+    ],
+    optionalCapabilities: ["core.audit"],
+  },
 };
 
 const defaultCapabilityRecipes: Readonly<
@@ -741,6 +775,8 @@ const defaultCapabilityRecipes: Readonly<
     optionalCapabilities: ["core.notification"],
   },
   "simple-ecommerce": compositionRecipes["simple-ecommerce"],
+  "retail-counter": compositionRecipes["retail-counter"],
+  "grocery-pickup": compositionRecipes["grocery-pickup"],
 };
 
 function assertCapabilityRecipeEligibility(
@@ -787,9 +823,14 @@ export function assertGoldenCapabilityComposition(
   return composition;
 }
 
-const profileCompositionBindings: Readonly<
+type BaseFactoryProfile = Exclude<
+  FactoryProfile,
+  "retail-counter" | "grocery-pickup"
+>;
+
+const baseProfileCompositionBindings: Readonly<
   Record<
-    FactoryProfile,
+    BaseFactoryProfile,
     Readonly<Record<string, CapabilitySelectionV1["bindings"]>>
   >
 > = {
@@ -945,6 +986,243 @@ const profileCompositionBindings: Readonly<
     },
   },
 };
+
+type OrderOperationsProfile = "retail-counter" | "grocery-pickup";
+
+type OrderOperationsStarterConfig = {
+  readonly profile: OrderOperationsProfile;
+  readonly name: string;
+  readonly orderEntity: string;
+  readonly replacements: Readonly<Record<string, string>>;
+  readonly flow: ApplicationGraphV1["flow"]["flows"][number];
+};
+
+const orderOperationsStarterConfigs: readonly OrderOperationsStarterConfig[] =
+  Object.freeze<OrderOperationsStarterConfig[]>([
+    {
+      profile: "retail-counter",
+      name: "Retail counter",
+      orderEntity: "counter-sale",
+      replacements: {
+        "simple-ecommerce": "retail-counter",
+        "Simple ecommerce": "Retail counter",
+        "shopper-session": "counter-session",
+        store: "retail-location",
+        product: "retail-item",
+        "product-option-group": "retail-item-option-group",
+        "product-option": "retail-item-option",
+        order: "counter-sale",
+        "product-line": "counter-sale-line",
+        "stock-movement": "retail-stock-movement",
+        "ecommerce-order": "counter-sale-flow",
+        merchant: "cashier",
+        catalog: "counter-catalog",
+        checkout: "counter-checkout",
+        orders: "counter-sales",
+        "merchant-catalog": "cashier-catalog",
+        "/": "/counter",
+        "/checkout": "/counter/checkout",
+        "/orders": "/counter/sales",
+        "/merchant/catalog": "/cashier/catalog",
+        productId: "retailItemId",
+        optionGroupId: "retailItemOptionGroupId",
+        orderId: "counterSaleId",
+        storeCode: "locationCode",
+        "Shopping session": "Counter session",
+        Store: "Retail location",
+        Product: "Retail item",
+        "Product option group": "Retail item option group",
+        "Product option": "Retail item option",
+        Order: "Counter sale",
+        "Product line": "Counter sale line",
+        "Stock movement": "Retail stock movement",
+        Catalog: "Counter catalog",
+        Checkout: "Take payment",
+        Orders: "Counter sales",
+        "Product management": "Cashier catalog",
+        "Online store": "Main counter",
+        "Everyday tote": "Reusable cup",
+        "Studio lamp": "Wireless charger",
+        "everyday-tote": "counter-item-cup",
+        "studio-lamp": "counter-item-charger",
+        "tote-colour": "cup-size",
+        "tote-colour-slate": "cup-size-regular",
+        Colour: "Size",
+        Slate: "Regular",
+        fulfilled: "receipt-issued",
+        fulfil: "issue-receipt",
+      },
+      flow: {
+        id: "counter-sale-flow",
+        entity: "counter-sale",
+        initialState: "cart",
+        states: ["cart", "paid", "receipt-issued"],
+        events: ["pay", "issue-receipt"],
+        transitions: [
+          {
+            from: "cart",
+            event: "pay",
+            to: "paid",
+            effects: [
+              { capability: "payment.simulate", operation: "simulate" },
+              {
+                capability: "inventory.decrement",
+                operation: "decrement",
+              },
+            ],
+          },
+          {
+            from: "paid",
+            event: "issue-receipt",
+            to: "receipt-issued",
+            roles: ["cashier"],
+            effects: [{ capability: "audit.record", operation: "record" }],
+          },
+        ],
+      },
+    },
+    {
+      profile: "grocery-pickup",
+      name: "Grocery pickup",
+      orderEntity: "pickup-order",
+      replacements: {
+        "simple-ecommerce": "grocery-pickup",
+        "Simple ecommerce": "Grocery pickup",
+        "shopper-session": "pickup-session",
+        store: "pickup-location",
+        product: "grocery-item",
+        "product-option-group": "grocery-item-option-group",
+        "product-option": "grocery-item-option",
+        order: "pickup-order",
+        "product-line": "pickup-order-line",
+        "stock-movement": "grocery-stock-movement",
+        "ecommerce-order": "pickup-order-flow",
+        merchant: "fulfilment",
+        catalog: "grocery-catalog",
+        checkout: "pickup-checkout",
+        orders: "pickup-orders",
+        "merchant-catalog": "fulfilment-catalog",
+        "/": "/groceries",
+        "/checkout": "/pickup/checkout",
+        "/orders": "/pickup/orders",
+        "/merchant/catalog": "/fulfilment/catalog",
+        productId: "groceryItemId",
+        optionGroupId: "groceryItemOptionGroupId",
+        orderId: "pickupOrderId",
+        storeCode: "locationCode",
+        "Shopping session": "Pickup session",
+        Store: "Pickup location",
+        Product: "Grocery item",
+        "Product option group": "Grocery item option group",
+        "Product option": "Grocery item option",
+        Order: "Pickup order",
+        "Product line": "Pickup order line",
+        "Stock movement": "Grocery stock movement",
+        Catalog: "Grocery catalog",
+        Checkout: "Pickup checkout",
+        Orders: "Pickup orders",
+        "Product management": "Fulfilment catalog",
+        "Online store": "Neighbourhood pickup hub",
+        "Everyday tote": "Fuji apples",
+        "Studio lamp": "Farmhouse eggs",
+        "everyday-tote": "grocery-item-apples",
+        "studio-lamp": "grocery-item-eggs",
+        "tote-colour": "apple-weight",
+        "tote-colour-slate": "apple-weight-1kg",
+        Colour: "Weight",
+        Slate: "1 kg",
+      },
+      flow: {
+        id: "pickup-order-flow",
+        entity: "pickup-order",
+        initialState: "cart",
+        states: ["cart", "paid", "picking", "pickup-ready", "handed-off"],
+        events: ["pay", "pick", "ready", "handoff"],
+        transitions: [
+          {
+            from: "cart",
+            event: "pay",
+            to: "paid",
+            effects: [
+              { capability: "payment.simulate", operation: "simulate" },
+              {
+                capability: "inventory.decrement",
+                operation: "decrement",
+              },
+            ],
+          },
+          {
+            from: "paid",
+            event: "pick",
+            to: "picking",
+            roles: ["fulfilment"],
+            effects: [{ capability: "audit.record", operation: "record" }],
+          },
+          {
+            from: "picking",
+            event: "ready",
+            to: "pickup-ready",
+            roles: ["fulfilment"],
+            effects: [{ capability: "audit.record", operation: "record" }],
+          },
+          {
+            from: "pickup-ready",
+            event: "handoff",
+            to: "handed-off",
+            roles: ["fulfilment"],
+            effects: [{ capability: "audit.record", operation: "record" }],
+          },
+        ],
+      },
+    },
+  ]);
+
+function remapOrderOperationsValue<T>(
+  value: T,
+  replacements: Readonly<Record<string, string>>,
+): T {
+  if (Array.isArray(value)) {
+    return value.map((entry) =>
+      remapOrderOperationsValue(entry, replacements),
+    ) as T;
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+        replacements[key] ?? key,
+        remapOrderOperationsValue(entry, replacements),
+      ]),
+    ) as T;
+  }
+  if (typeof value !== "string") return value;
+  if (!value.startsWith("graph.")) {
+    return (replacements[value] ?? value) as T;
+  }
+  const segments = value.split(".");
+  const terminal = segments.at(-1);
+  if (!terminal || !replacements[terminal]) return value as T;
+  return [...segments.slice(0, -1), replacements[terminal]].join(".") as T;
+}
+
+function orderOperationsBindings(
+  config: OrderOperationsStarterConfig,
+): Readonly<Record<string, CapabilitySelectionV1["bindings"]>> {
+  return remapOrderOperationsValue(
+    baseProfileCompositionBindings["simple-ecommerce"],
+    config.replacements,
+  );
+}
+
+const profileCompositionBindings: Readonly<
+  Record<
+    FactoryProfile,
+    Readonly<Record<string, CapabilitySelectionV1["bindings"]>>
+  >
+> = Object.freeze({
+  ...baseProfileCompositionBindings,
+  "retail-counter": orderOperationsBindings(orderOperationsStarterConfigs[0]),
+  "grocery-pickup": orderOperationsBindings(orderOperationsStarterConfigs[1]),
+});
 
 const factoryCapabilities = (keys: readonly string[]) =>
   keys.map((key) => ({
@@ -2477,14 +2755,63 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
   ],
 );
 
+function orderOperationsProfileStarter(
+  config: OrderOperationsStarterConfig,
+): ProfileGraphStarter {
+  const ecommerceStarter = profileBaseGraphTemplates.find(
+    ({ profile }) => profile === "simple-ecommerce",
+  );
+  if (!ecommerceStarter) {
+    throw new Error(
+      "The Simple Ecommerce starter is required for order profiles.",
+    );
+  }
+  const remapped = remapOrderOperationsValue(
+    ecommerceStarter.graph,
+    config.replacements,
+  );
+  return {
+    profile: config.profile,
+    graph: {
+      ...remapped,
+      metadata: {
+        id: config.profile,
+        workspaceId: "local-workspace",
+        name: config.name,
+      },
+      domain: {
+        ...remapped.domain,
+        entities: remapped.domain.entities.map((entity) =>
+          entity.key !== config.orderEntity
+            ? entity
+            : {
+                ...entity,
+                fields: entity.fields.map((field) =>
+                  field.key === "status"
+                    ? { ...field, values: [...config.flow.states] }
+                    : field,
+                ),
+              },
+        ),
+      },
+      flow: { flows: [config.flow] },
+    },
+  };
+}
+
+const profileGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze([
+  ...profileBaseGraphTemplates,
+  ...orderOperationsStarterConfigs.map(orderOperationsProfileStarter),
+]);
+
 export const profileGraphs: readonly ProfileGraphStarter[] = Object.freeze(
-  profileBaseGraphTemplates.map(({ profile, graph }) =>
+  profileGraphTemplates.map(({ profile, graph }) =>
     Object.freeze({ profile, graph: structuredClone(graph) }),
   ),
 );
 
 function profileStarterFor(profile: FactoryProfile): ProfileGraphStarter {
-  const starter = profileBaseGraphTemplates.find(
+  const starter = profileGraphTemplates.find(
     (candidate) => candidate.profile === profile,
   );
   if (!starter) throw new Error(`Unknown Factory profile '${profile}'.`);
