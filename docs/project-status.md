@@ -69,11 +69,14 @@ schema validation and binding validation, so a getter can supply different
 parameter schemas at those two stages. Task 2 remains `implementing` and is not
 accepted. Controller-accepted ADR-0008 stops further local Task 2 repair and
 its remaining review gates. New Task 2A, **immutable composition resolution
-boundary**, is `planned`, its contract owner is **Capability Composition
-Resolution Boundary**, and no implementation is dispatched by this status
-update. Owner-aware Graph persistence remains explicitly owned by planned Task
-3, which is blocked on accepted Tasks 2 and 2A. Physical assets remain Task 4;
-Tasks 4 through 7 remain serially blocked.
+boundary**, advances `planned -> implementing`. Its bounded writer is
+**Immutable Composition Resolution Integration**, its contract owner is
+**Capability Composition Resolution Boundary**, and its write boundary is the
+exact three Capabilities paths recorded below. This transition is implementation
+authority only, not review, QA, release review, or acceptance. Owner-aware Graph
+persistence remains explicitly owned by planned Task 3, which is blocked on
+accepted Tasks 2 and 2A. Physical assets remain Task 4; Tasks 4 through 7 remain
+serially blocked.
 
 Commercial Capability Foundation Task 2 remains `implementing` and escalated
 after its five permitted repair rounds. It is blocked on accepted Typed
@@ -128,9 +131,9 @@ authority:
   cycles fail closed.
 - Existing valid `factory.capability/v1`, `factory.capability-binding/v1`, and
   `factory.composition/v1` bytes and lock digests remain unchanged.
-- This accepted architecture contract is planning evidence only. Task 2A is
-  `planned`; no implementation, review, QA, release review, test result, or
-  acceptance is asserted by this update.
+- This accepted architecture contract is governance evidence only. Task 2A is
+  now `implementing`; no review, QA, release review, test result, or acceptance
+  is asserted by this dispatch update.
 
 The approved design and plan are recorded at
 `docs/superpowers/specs/2026-08-01-typed-capability-binding-validation-design.md`
@@ -323,7 +326,8 @@ Typed Binding Task 2 implementation, repair-review, and QA evidence is:
   cannot advance to QA. Independent reproduction showed the remaining witness
   belongs to the shared immutable resolution-input boundary. Task 2 remains
   `implementing`, but accepted ADR-0008 stops further local Task 2 repair and
-  review gates until planned Task 2A is independently accepted and reconciled.
+  review gates until implementing Task 2A is independently accepted and
+  reconciled.
   Task 2 is not `accepted`.
 - P1 2: `fieldKey` can exist in the Capabilities binding type but cannot persist
   through the strict `ApplicationGraphV1` composition-binding schema, which
@@ -508,9 +512,9 @@ On Node `v22.11.0`, it records:
   lifecycle, historical bindings, or introduce
   Profile/package/version/field-name dispatch.
 - Typed Binding Task 2A, **immutable composition resolution boundary**, is
-  `planned` under the **Capability Composition Resolution Boundary** contract
-  owner and accepted ADR-0008. Its bounded writer is unassigned, and this
-  update dispatches no implementation. Its exact allowed paths are:
+  `implementing` under the **Capability Composition Resolution Boundary**
+  contract owner and accepted ADR-0008. Its bounded writer is **Immutable
+  Composition Resolution Integration**. Its exact allowed paths are:
   `packages/capabilities/src/composition.ts`,
   `packages/capabilities/test/composition-contract.test.ts`, and
   `packages/capabilities/test/typed-binding-contract.test.ts`.
@@ -548,9 +552,10 @@ On Node `v22.11.0`, it records:
   prototype-supplied strict parameters. Commit
   `b85dbda063fe6fa6db3b712f5891b013285e0356` is implementation evidence only;
   independent task review failed on the separate `manifest.parameters`
-  snapshot gap. Accepted ADR-0008 supersedes further local repair with planned
-  Task 2A; no Task 2 code repair or review gate is authorized while Task 2A is
-  pending. Task 3 remains `planned` and blocked on Tasks 2 and 2A acceptance.
+  snapshot gap. Accepted ADR-0008 supersedes further local repair with Task 2A,
+  now `implementing`; no Task 2 code repair or review gate is authorized while
+  Task 2A is pending. Task 3 remains `planned` and blocked on Tasks 2 and 2A
+  acceptance.
   It, not either Capabilities task, owns owner-aware Graph persistence. Tasks 4
   through 6 cannot overlap or start before the preceding task is `accepted`.
 - Physical asset Task 4 is additionally blocked on accepted Task 3 serialized
@@ -609,8 +614,9 @@ On Node `v22.11.0`, it records:
   separately by schema validation and binding validation. A getter can return
   different parameter schemas between those stages. Independent reproduction
   expanded the risk to all caller-owned composition inputs. ADR-0008 assigns
-  that boundary to planned Task 2A; local Task 2 repair is stopped until Task
-  2A is accepted and PM reconciliation determines the remaining Task 2 gates.
+  that boundary to implementing Task 2A; local Task 2 repair is stopped until
+  Task 2A is accepted and PM reconciliation determines the remaining Task 2
+  gates.
 - Owner-aware field bindings cannot currently survive the Application Graph
   schema. ADR-0007 assigns the repair to Task 3, but the risk remains until that
   task passes independent review, QA, release review, and fresh verification.
@@ -630,12 +636,15 @@ On Node `v22.11.0`, it records:
 
 ## Next smallest valuable slice
 
-Prepare the bounded PM dispatch for planned Task 2A under accepted ADR-0008 and
-the **Capability Composition Resolution Boundary**. The first implementation
-slice is the immutable-boundary plan's focused adversarial RED evidence across
-the exact three allowed Capabilities paths; no code work is authorized by this
-status update. Keep Task 2 `implementing` but stop local repair and every
-remaining review gate until Task 2A is independently accepted and reconciled.
-Keep Typed Binding Tasks 3 through 7 `planned` and blocked, Commercial
-Foundation Task 2 `implementing` and escalated, and its Tasks 3 and 4 `planned`
-and blocked.
+Execute Task 2A plan Task 1 under **Immutable Composition Resolution
+Integration** and the **Capability Composition Resolution Boundary**. Add only
+the focused adversarial RED evidence in
+`packages/capabilities/test/composition-contract.test.ts` and
+`packages/capabilities/test/typed-binding-contract.test.ts`, then record the
+required failing focused command before implementation. The full Task 2A write
+boundary remains those two tests plus
+`packages/capabilities/src/composition.ts`. Keep Task 2 `implementing` but stop
+local repair and every remaining review gate until Task 2A is independently
+accepted and reconciled. Keep Typed Binding Tasks 3 through 7 `planned` and
+blocked, Commercial Foundation Task 2 `implementing` and escalated, and its
+Tasks 3 and 4 `planned` and blocked.

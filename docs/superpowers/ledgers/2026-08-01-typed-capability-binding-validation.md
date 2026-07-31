@@ -147,8 +147,8 @@ not acceptance.
   remains `implementing`. Accepted ADR-0008 stops further local repair work in
   Task 2. Its state cannot advance until Task 2A is independently accepted and
   the PM reconciles the remaining Task 2 gates.
-- Task 2A and Tasks 3 through 7 remain `planned`; none is dispatched by this
-  transition.
+- Task 2A advances `planned -> implementing` under one bounded writer. Tasks 3
+  through 7 remain `planned`; none of them is dispatched by this transition.
 - No frontend/backend parallel implementation is permitted in this project.
 - Commercial Capability Foundation Task 2 remains `implementing` and
   escalated. It cannot resume acceptance until this project's Task 7 is
@@ -162,7 +162,7 @@ not acceptance.
 | ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | ----------------------------------------------- |
 | 1. Pure typed Graph symbol index               | `accepted`     | `integration`  | Application Graph Type System                | Release review and fresh verification passed.   |
 | 2. Typed manifest and binding contracts        | `implementing` | `integration`  | Capability Binding Contract                  | Repair round 4 task review failed with one P1.  |
-| 2A. Immutable composition resolution boundary  | `planned`      | `integration`  | Capability Composition Resolution Boundary   | Accepted ADR-0008; implementation not dispatched. |
+| 2A. Immutable composition resolution boundary  | `implementing` | `integration`  | Capability Composition Resolution Boundary   | Accepted ADR-0008; bounded implementation dispatched. |
 | 3. Serialized owner-aware Graph selections     | `planned`      | `integration`  | Application Graph Serialization              | Blocked on accepted Tasks 2 and 2A.             |
 | 4. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 3 serialized contract. |
 | 5. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-4.                  |
@@ -645,13 +645,12 @@ not acceptance.
 
 ## Task 2A: Establish an immutable composition resolution boundary
 
-- **State:** `planned`
+- **State:** `implementing`
 - **Specialization:** `integration`
-- **Bounded writer:** Unassigned; no implementation is dispatched by this
-  transition.
+- **Bounded writer:** Immutable Composition Resolution Integration
 - **Contract owner:** Capability Composition Resolution Boundary
-- **Contract status:** ADR-0008 is `Accepted`; Task 2A is not implemented,
-  reviewed, or accepted.
+- **Contract status:** ADR-0008 is `Accepted`; Task 2A is dispatched for bounded
+  implementation but is not ready for QA, reviewed, or accepted.
 - **Contract artifact:** ADR-0008 DEC-001 through DEC-005 and
   `docs/superpowers/plans/2026-08-01-immutable-composition-resolution-input.md`.
 - **Dependencies:** Task 1 `accepted` and ADR-0008 `Accepted`. Task 2 remains
@@ -670,8 +669,9 @@ not acceptance.
 ### Required RED and implementation boundary
 
 - Execute the four serialized tasks in
-  `docs/superpowers/plans/2026-08-01-immutable-composition-resolution-input.md`;
-  no implementation task is authorized by this ledger update.
+  `docs/superpowers/plans/2026-08-01-immutable-composition-resolution-input.md`
+  under **Immutable Composition Resolution Integration** and the exact three
+  paths above.
 - RED must reproduce accessor, prototype, sparse-array, inherited-hole,
   symbol-key, extra-array-property, custom-prototype, cycle, and repeated-read
   witnesses before GREEN.
@@ -695,8 +695,9 @@ not acceptance.
   the Node `v22.11.0` performance and single-digest budget is measured as
   specified by the accepted plan.
 - Independent task review, behavioral QA, release review, and fresh
-  verification pass in order before `accepted`. No evidence has been produced
-  or accepted by this planning transition.
+  verification pass in order before `accepted`. This dispatch supplies
+  implementation authority only; it is not review, QA, release review, or
+  acceptance evidence.
 
 ## Task 3: Serialize owner-aware composition selections in Application Graph
 
@@ -706,8 +707,8 @@ not acceptance.
 - **Contract artifact:** ADR-0007 DEC-001 through DEC-005 and the design's
   serialized Draft Graph contract.
 - **Dependencies:** Tasks 1, 2, and 2A `accepted`. Task 1 is accepted; Task 2
-  remains `implementing` with local repair stopped, and Task 2A remains
-  `planned`. Graph implementation is blocked until both are independently
+  remains `implementing` with local repair stopped, and Task 2A is
+  `implementing`. Graph implementation is blocked until both are independently
   accepted and reconciled.
 - **Produces:** additive `SerializedCompositionBindingV1` support for exact
   owner-aware field objects, structural owner/field validation, deterministic
@@ -950,17 +951,19 @@ not acceptance.
   one additional P1: separate `manifest.parameters` snapshots can differ
   between schema and binding validation. Independent reproduction expanded the
   finding to the shared resolution-input boundary, and accepted ADR-0008 stops
-  local Task 2 repair. Task 2A is `planned`; this PM transition authorizes no
-  Task 2A implementation, Graph-path change, or Task 3-7 implementation.
+  local Task 2 repair. Task 2A is `implementing` inside its exact three-path
+  boundary; this PM transition authorizes no Graph-path change or Task 3-7
+  implementation.
 
 ## Next smallest valuable slice
 
-Prepare the bounded PM dispatch for planned Task 2A under accepted ADR-0008,
-the **Capability Composition Resolution Boundary**, and the exact three paths
-recorded above. The first implementation slice is the plan's adversarial RED
-evidence; no code work is authorized by this planning transition. Keep Task 2
-`implementing` but stop its local repair, review, QA, release review, and
-acceptance sequence until Task 2A is independently accepted and reconciled.
-Keep Graph Task 3 and Tasks 4 through 7 `planned` and blocked. Task 3 continues
-to own only the three ADR-0007 Graph paths and cannot begin until Tasks 2 and 2A
-are both accepted.
+Execute Task 2A plan Task 1 under **Immutable Composition Resolution
+Integration** and the **Capability Composition Resolution Boundary**. Add only
+the focused adversarial RED evidence in
+`packages/capabilities/test/composition-contract.test.ts` and
+`packages/capabilities/test/typed-binding-contract.test.ts`, then record the
+required failing focused command before implementation. The full Task 2A write
+boundary remains those two tests plus
+`packages/capabilities/src/composition.ts`. Keep Task 2 `implementing` with
+local repair and review gates stopped. Keep Graph Task 3 and Tasks 4 through 7
+`planned` and blocked until Tasks 2 and 2A are accepted.
