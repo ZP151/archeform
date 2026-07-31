@@ -166,7 +166,7 @@ describe("profile compilation", () => {
       );
 
       expect(files["api/test/journey.generated.test.ts"]).toContain(
-        'applicationRuntime.transition("customer", "order", record.id, "pay")',
+        'applicationRuntime.transition("shopper", "order", record.id, "pay")',
       );
       expect(
         files["api/src/capabilities/commerce.simulated-payment.ts"],

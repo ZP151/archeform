@@ -871,16 +871,13 @@ describe("compilation target registry", () => {
         permission.resource === order.key &&
         permission.actions.includes("create"),
     )!.role;
-    const auditRole = "operator";
+    const auditRole = composed.policy.permissions.find(
+      (permission) =>
+        permission.resource === order.key &&
+        permission.actions.includes("audit"),
+    )!.role;
     const graph = {
       ...composed,
-      policy: {
-        ...composed.policy,
-        permissions: [
-          ...composed.policy.permissions,
-          { role: auditRole, resource: order.key, actions: ["audit"] },
-        ],
-      },
       integration: {
         ...composed.integration,
         providers: [{ id: "mail", type: "email", version: "1.0.0" }],
@@ -1075,7 +1072,7 @@ describe("compilation target registry", () => {
     );
   });
 
-  it("does not duplicate declared relation scalar fields in generic database artifacts", () => {
+  it("does not duplicate declared relation scalar fields within Restaurant models", () => {
     const draft = composeDefaultCapabilityDraft({
       profile: "restaurant-ordering",
     }).graph;
@@ -1099,17 +1096,28 @@ describe("compilation target registry", () => {
 
     expect(schema).toBeDefined();
     expect(migration).toBeDefined();
-    for (const [field, count] of [
-      ["tableSessionId", 1],
-      ["orderId", 4],
-      ["menuItemId", 2],
+    const schemaModel = (name: string) =>
+      schema?.match(new RegExp(`model ${name} \\{[\\s\\S]*?^\\}`, "m"))?.[0];
+    const migrationTable = (name: string) =>
+      migration?.match(
+        new RegExp(`CREATE TABLE "${name}" \\([\\s\\S]*?^\\);`, "m"),
+      )?.[0];
+    for (const [field, modelNames] of [
+      ["tableSessionId", ["Order"]],
+      [
+        "orderId",
+        ["OrderLine", "PaymentAttempt", "KitchenTicket", "InventoryLedger"],
+      ],
+      ["menuItemId", ["MenuOptionGroup", "OrderLine", "InventoryLedger"]],
     ] as const) {
-      expect(
-        schema?.match(new RegExp(`^  ${field} String`, "gm")),
-      ).toHaveLength(count);
-      expect(migration?.match(new RegExp(`^  "${field}" `, "gm"))).toHaveLength(
-        count,
-      );
+      for (const modelName of modelNames) {
+        expect(
+          schemaModel(modelName)?.match(new RegExp(`^  ${field} String`, "gm")),
+        ).toHaveLength(1);
+        expect(
+          migrationTable(modelName)?.match(new RegExp(`^  "${field}" `, "gm")),
+        ).toHaveLength(1);
+      }
     }
     expect(schema).toContain(
       'restaurantTable RestaurantTable @relation("TableSessionToRestaurantTable", fields: [tableCode], references: [code])',

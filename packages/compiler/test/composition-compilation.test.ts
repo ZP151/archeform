@@ -372,7 +372,7 @@ describe("immutable composition compilation", () => {
       delete publishedGraph.integration.compositionSelections;
 
       expect(draft.integration).not.toHaveProperty("assetLocks");
-      expect(selections).toHaveLength(9);
+      expect(selections).toHaveLength(13);
       expect(publishedGraph.integration).not.toHaveProperty(
         "compositionSelections",
       );
