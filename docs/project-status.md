@@ -5,16 +5,16 @@ Updated: 2026-07-31
 ## Current milestone
 
 Commercial Capability Foundation Task 2, **Restaurant and Ecommerce profile
-recipes**, returned `ready_for_qa -> implementing` for fix round 4 of 5 after
-independent re-QA found one P1 in the active default composition path. The
-reviewed release set remains `35aa96e + ed3c2ba + ac43247 + e61e790`. Its
-contract owner remains Profile Composition Integration; its dependency, Task 1
-capability contracts and physical packages, remains `accepted` and frozen.
-Task 2 remains limited to composing Restaurant and Ecommerce Draft recipes
-from the same four accepted Foundation identities with distinct exact
-Graph-symbol bindings, entities, pages, roles, labels, and fixtures. This
-repair state is not acceptance and does not unlock Foundation Tasks 3 or 4;
-both remain `planned`.
+recipes**, is `ready_for_qa` for a second independent re-QA after fix round 4
+of 5, `bf0b16f`, passed scoped re-review with the active-default-composition P1
+addressed and no P0/P1. Its exact release set is
+`35aa96e + ed3c2ba + ac43247 + e61e790 + bf0b16f`. Its contract owner remains
+Profile Composition Integration; its dependency, Task 1 capability contracts
+and physical packages, remains `accepted` and frozen. Task 2 remains limited
+to composing Restaurant and Ecommerce Draft recipes from the same four
+accepted Foundation identities with distinct exact Graph-symbol bindings,
+entities, pages, roles, labels, and fixtures. This transition is not acceptance
+and does not unlock Foundation Tasks 3 or 4; both remain `planned`.
 
 The Application Graph remains the source of truth. External intake artifacts
 remain quarantined Candidate evidence or pending-review packets; they are not
@@ -69,6 +69,21 @@ within its exact five paths:
   diff checks, and direct checks of the four fix-round-3 categories passed.
   Re-QA nevertheless returned FAIL with one P1: those green suites do not prove
   Restaurant semantic rejection on the active default composition path.
+- Fix round 4, `bf0b16f`, stayed inside two of the same exact five paths and
+  closed that P1:
+  - public `composeCapabilityDraft` now applies package- and binding-derived
+    inventory-ledger semantic validation after composition resolution and
+    symbol validation;
+  - the validator is bounded by selection of `commerce.inventory-ledger`,
+    derives movement and location entities from its bindings, and contains no
+    profile-name or package-version dispatch; and
+  - active `composeDefaultCapabilityDraft -> composeCapabilityDraft`
+    regressions reject a non-unique idempotency key, a missing unique
+    idempotency index, and a missing movement-to-location relation.
+- Independent scoped re-review approved the repair with no P0/P1. Fresh Node
+  `v22.11.0` verification passed all 155 Capabilities tests, including 28/28
+  commercial-profile-composition tests; build, typecheck, and formatting also
+  passed.
 
 The complete External Capability Intake project is accepted and frozen. Its
 Task 6 writer record is
@@ -101,8 +116,8 @@ On Node `v22.11.0`, it records:
 
 ## Active work
 
-- One bounded `integration` writer owns fix round 4 of 5 within Task 2's same
-  exact five paths:
+- A second independent behavioral re-QA is the next gate for Task 2's exact
+  five-commit release set, bounded to the same five paths:
   `packages/capabilities/src/index.ts`,
   `packages/capabilities/src/restaurant/profile.ts`,
   `packages/capabilities/test/restaurant-profile.test.ts`, and
@@ -119,20 +134,11 @@ On Node `v22.11.0`, it records:
   contract, physical asset, package identity, interface, dependency, recipe
   scope, lifecycle or Publish behavior, production behavior, non-goal, or Task
   2 state.
-- The P1 is specific: active Workbench composition uses
-  `composeDefaultCapabilityDraft -> composeCapabilityDraft`, but that generic
-  path does not invoke the bounded Restaurant semantic validation used by the
-  separate legacy `composeProfileDraft` path. It accepts a default Restaurant
-  Graph after any of these mutations even though
-  `validateRestaurantOrderingProfile` rejects them:
-  1. set `idempotencyKey.unique` to `false`;
-  2. remove the unique `idempotencyKey` index; or
-  3. remove the inventory-ledger-to-location relation.
-- Fix round 4 must make the active default Restaurant composition path enforce
-  the same bounded semantic validation and add regressions for all three
-  mutations through the public active entry point. It must not revive the
-  legacy path or change the frozen contract, exact path boundary, lifecycle,
-  compiler, or Workbench code.
+- Re-QA must exercise all three repaired active-entry-point failures, valid
+  Ecommerce through the same public composition boundary, and compositions
+  without the ledger package. The repair changes no frozen contract, physical
+  asset, package identity, dependency, non-goal, lifecycle behavior, compiler,
+  or Workbench code.
 - No new package identity, Task 1 contract change, compiler, Workbench,
   generated runtime, payment, identity-provider, deployment behavior, profile
   cloning, Graph `assetLocks` fallback, or Restaurant-only package fork is in
@@ -151,8 +157,8 @@ On Node `v22.11.0`, it records:
   evidence. Acceptance grants no promotion, approval, Golden, Graph, compiler,
   generated-runtime, provider, or source-copy authority.
 - Foundation Tasks 3 and 4 are blocked on accepted Task 2 profile composition
-  metadata. Task 2 is back in `implementing`; neither downstream task is
-  dispatched by this update.
+  metadata. A `ready_for_qa` transition does not satisfy that dependency;
+  neither downstream task is dispatched by this update.
 
 ## Risks and limitations
 
@@ -175,8 +181,8 @@ On Node `v22.11.0`, it records:
 
 ## Next slice
 
-Repair the active default Restaurant composition P1 within Task 2's exact
-five-path boundary, beginning with focused failing regressions for a non-unique
-idempotency field, missing unique index, and missing ledger-to-location
-relation. Require fresh scoped review before returning to `ready_for_qa`. Keep
-Tasks 3 and 4 planned and blocked until Task 2 is accepted.
+Run a second independent behavioral re-QA against Task 2's exact five-commit
+release set and five-path scope, including the package/binding-bounded active
+ledger validator, all three adversarial mutations, valid Ecommerce, and
+no-ledger composition behavior. Reconcile re-QA before any move to `reviewed`.
+Keep Tasks 3 and 4 planned and blocked until Task 2 is accepted.
