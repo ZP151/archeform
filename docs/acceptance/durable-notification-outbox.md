@@ -3,7 +3,7 @@
 Date: 2026-08-01
 
 Status: Task 4 deterministic cross-profile evidence complete; Task 5 release
-gates remain pending.
+gate is blocked by a compiler regression failure recorded below.
 
 ## Accepted boundary
 
@@ -92,3 +92,25 @@ for each generated preview. Task 5 must confirm that no generated Compose
 resources remain and may run the guarded real OpenAI Graph-Diff only through an
 environment-only credential. Credentials and raw prompts/responses must not be
 persisted or reported.
+
+## Task 5 release-gate attempt (blocked)
+
+```text
+pnpm --filter @factory/capabilities test
+Exit 0: 20 test files and 277 tests passed.
+
+pnpm --filter @factory/compiler test
+Exit 1: 13 test files: 12 passed, 1 failed; 228 tests passed, 4 failed.
+```
+
+All four failures are in `packages/compiler/test/compilation-plan.test.ts` and
+demonstrate stale assertions/fixtures after the profile notification changes:
+two capability-event assertions omit now-declared `notification.send` effects,
+one test appends that already-declared effect and asserts the previous generated
+sequence, and the historical `1.0.1` fixture retains a `template` binding that
+the older package correctly rejects. No production behavior change was made by
+release QA.
+
+The compiler gate is therefore red. Repository-wide, Compose/generated-profile,
+cleanup, and real-model gates were not run; no credential was read. Release
+evidence has not been committed or pushed.

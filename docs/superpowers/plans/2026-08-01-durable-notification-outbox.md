@@ -205,6 +205,7 @@ delivered` with two attempts. Configure three failures and assert terminal
 - Modify: `packages/capabilities/test/capability-registry.test.ts`
 - Modify: `packages/compiler/test/notification-outbox-runtime.test.ts`
 - Modify: `packages/compiler/test/profile-compilation.test.ts`
+- Modify: `packages/compiler/test/compilation-plan.test.ts`
 - Modify: `docs/project-status.md`
 - Create: `docs/acceptance/durable-notification-outbox.md`
 
@@ -237,6 +238,9 @@ runtime evidence.
   Do not alter a historical composition lock. Record the two-profile
   acceptance commands, generated behavior, and cleanup requirements in the
   acceptance document; update project status with the exact delivery slice.
+  Update affected full-suite expectations and historical fixtures so existing
+  packages do not retain a binding that their selected immutable version does
+  not declare.
 
 - [ ] **Step 4: Run the focused cross-profile tests to verify they pass**
 
