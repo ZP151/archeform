@@ -8,11 +8,11 @@ Specialization: `integration`
 
 Contract owner: PM/controller
 
-Contract status: ADR-0013 through ADR-0016 accepted; Task 3 accepted; Task 4
-amendments 1 and 2 recorded in the task brief and plan.
+Contract status: ADR-0013 through ADR-0017 accepted; Task 3 accepted; Task 4
+amendments 1 through 4 recorded in the task brief and plan.
 
-Implementation commit: `67ed906` (`test: prove generic transactions against
-postgres`).
+Implementation commits: `67ed906` (`test: prove generic transactions against
+postgres`) and `400c789` (`test: persist generic lifecycle acceptance`).
 
 ## Outcome
 
@@ -24,30 +24,75 @@ activated on the successor locks and proved publishable/compilable. Existing
 Published Graphs, saved historical locks, Restaurant, and revoked successor
 assets were not changed.
 
-The live suite starts a uniquely named Compose project for each case, starts
-only the generated PostgreSQL service, applies the generated migration, builds
-the generated API, and executes the generated runtime with two independent
-Prisma clients where concurrency is required. Every case executes Compose
-teardown with volumes in a `finally` path and asserts zero project-labelled
-containers, volumes, and networks before returning.
+The live suite starts a uniquely named Compose project for each case with two
+isolated services: one PostgreSQL database for the real Control Plane lifecycle
+schema and one for the generated application. It creates and persists a Draft
+through `LifecycleService`, publishes it, reloads the PublishedRevision through
+`createCompilation`, and compiles only the capturing queue's immutable job.
+Every case independently attempts Compose teardown, a zero-resource audit, and
+temporary-directory removal; one failure is rethrown and multiple failures are
+preserved in an `AggregateError`.
 
 ## Changed product paths
 
 - `docs/project-status.md`
+- `apps/control-plane/src/lifecycle.service.ts`
+- `apps/control-plane/test/lifecycle.service.test.ts`
 - `packages/capabilities/src/index.ts`
 - `packages/capabilities/test/capability-registry.test.ts`
 - `packages/capabilities/test/commerce-transaction-profile-composition.test.ts`
 - `packages/capabilities/test/order-operations-profile.test.ts`
 - `packages/compiler/test/commerce-transaction-runtime.test.ts`
+- `packages/compiler/src/index.ts`
+- `packages/compiler/test/composition-compilation.test.ts`
 - `packages/compiler/test/compilation-plan.test.ts`
 - `packages/compiler/test/generated-generic-order-lifecycle-v2-postgres.test.ts`
 - `packages/compiler/test/generic-order-lifecycle-v2.test.ts`
 - `packages/compiler/test/order-operations-runtime.test.ts`
 - `packages/compiler/test/profile-compilation.test.ts`
 
-The controller-owned plan modification was deliberately excluded from the
-implementation commit. No compiler production source, capability manifest,
-package version, generated output, dependency manifest, or lockfile changed.
+The controller-owned task brief, ledger, plan, and ADR modifications are
+deliberately excluded from the repair commit. The two narrowly amended
+production paths only replace prototype-sensitive equality with complete JSON
+structure equality. No lock hashing, package selection, capability manifest,
+package version, generated output, dependency manifest, Prisma schema, or
+lockfile changed.
+
+### Persisted lifecycle repair RED and GREEN
+
+The ADR-0017 harness first failed at the real lifecycle boundary because JSON
+persistence normalizes each null-prototype `bindings` record into an ordinary
+JSON object. The stored digest and every own JSON field matched, but
+prototype-sensitive `isDeepStrictEqual` rejected the reloaded lock in both the
+Control Plane and Compiler.
+
+- Control Plane RED: one focused test rejected a JSON-round-tripped non-empty
+  selected lock with the existing 409 composition-lock conflict.
+- Control Plane GREEN: 70/70 `LifecycleService` tests passed. A new extra-JSON
+  tamper regression still rejects the lock before queueing.
+- Compiler RED: one focused composition test rejected the same genuine
+  persisted JSON representation.
+- Compiler GREEN: 14/14 composition tests passed. Wrong digests, changed Graph
+  content, and extra lock JSON still fail closed.
+- Real persisted GREEN: the queue-captured PublishedRevision input compiled and
+  the complete live matrix passed 15/15.
+
+Both verifiers now JSON-normalize the persisted and independently recreated
+canonical locks before deep structural comparison. Digest derivation and all
+Draft, Publish, selection, and compilation behavior remain unchanged.
+
+### Offline and cleanup repair RED and GREEN
+
+Focused RED tests demonstrated missing Compose `pull_policy`, absent cached
+image preflight, absent `--pull never`, and cleanup short-circuiting. The GREEN
+harness now:
+
+- inspects the exact `postgres:16-alpine` image before creating a temporary
+  directory;
+- declares `pull_policy: never` on both services and passes `--pull never` to
+  every Compose startup; and
+- always attempts teardown, resource audit, and temporary-directory removal,
+  preserving operation and cleanup failures together.
 
 ## Test-driven evidence
 
@@ -59,12 +104,14 @@ materialised generated copy: the aggregate CAS predicate was reduced to the
 record id. The focused two-client case then observed two fulfilled commands,
 aggregate version 2, stock 18, four audit/outbox effects, and two completed
 receipts instead of one winner. The mutation was removed; no package or
-compiler source was changed.
+compiler source was changed for that concurrency proof.
 
 - RED command:
   `pnpm --filter @factory/compiler test -- generated-generic-order-lifecycle-v2-postgres.test.ts`
 - GREEN command: the same focused command.
-- GREEN result: 10/10 live PostgreSQL tests passed with no skipped case.
+- GREEN result after ADR-0017 repair: 15/15 tests passed with no skipped case,
+  including 10/10 live PostgreSQL behavior cases and five lifecycle/offline/
+  cleanup contract tests.
 
 The final live cases prove:
 
@@ -119,11 +166,11 @@ tests remain unchanged.
 ## Fresh final verification
 
 - `pnpm --filter @factory/compiler test -- generated-generic-order-lifecycle-v2-postgres.test.ts generic-order-lifecycle-v2.test.ts`:
-  exit 0; 43/43 tests passed across two files, including 10/10 live cases.
+  exit 0; 48/48 tests passed across two files, including 10/10 live cases.
 - `pnpm --filter @factory/capabilities test`:
   exit 0; 307/307 tests passed across 18 files.
 - `pnpm --filter @factory/compiler test`:
-  exit 0; 245/245 tests passed across 12 files, including all live cases.
+  exit 0; 252/252 tests passed across 12 files, including all live cases.
 - `pnpm --filter @factory/capabilities typecheck`: exit 0.
 - `pnpm --filter @factory/compiler typecheck`: exit 0.
 - `pnpm --filter @factory/capabilities lint`: exit 0.
@@ -131,6 +178,14 @@ tests remain unchanged.
 - `git diff --check`: exit 0.
 - Explicit post-suite prefix audit: zero `factory-live-*` containers, volumes,
   and networks remained.
+
+Additional non-required Control Plane checks were attempted and kept separate
+from Task 4 gates. Control Plane typecheck cannot resolve the pre-existing
+unbuilt `@factory/portfolio-public` package imported by
+`apps/control-plane/src/portfolio/portfolio-summary.service.ts`. Control Plane
+lint reports pre-existing formatting in
+`apps/control-plane/src/graph-proposal.provider.ts` and
+`apps/control-plane/src/main.ts`. Those unrelated paths were not modified.
 
 No connection string, allocated port, request body, credential, Docker log,
 raw model prompt, or raw model response is recorded in this evidence.
@@ -142,10 +197,12 @@ raw model prompt, or raw model response is recorded in this evidence.
 - Three exact Profile vocabularies without aliases: satisfied.
 - Replay, in-progress, mismatch, takeover, stale-owner, and rollback semantics:
   satisfied.
-- Per-case finally teardown and zero-resource assertion: satisfied.
+- Cached-image-only, no-pull Compose startup: satisfied.
+- Independent teardown, zero-resource audit, temp removal, and error
+  preservation: satisfied.
 - Successor default activation only after live GREEN: satisfied.
-- Newly composed Draft publish/compile evidence for all three Profiles:
-  satisfied.
+- Newly composed Draft persisted Publish/reload/queue-captured compilation
+  evidence for all three Profiles: satisfied.
 - Existing Published/saved historical locks, Restaurant, and revoked assets
   unchanged: satisfied.
 - Required package tests, typechecks, lints, and diff check: satisfied.
@@ -157,5 +214,5 @@ raw model prompt, or raw model response is recorded in this evidence.
   CI hosts still require a functioning Docker/Compose installation and the
   same dependency availability; the test intentionally performs no network
   acquisition.
-- This report hands Task 4 to independent task review only. It does not mark
-  the task reviewed, QA-accepted, released, or deployed.
+- This repair hands Task 4 to fresh independent task re-review only. It does
+  not mark the task reviewed, QA-accepted, released, or deployed.

@@ -31,16 +31,20 @@ clients. The live suite proves completed replay without duplicated effects,
 active-claim `in-progress`, changed-digest rejection, one-winner aggregate CAS,
 expired takeover, stale-owner rejection, full business rollback with a
 retryable receipt, and each Profile's exact Published Flow vocabulary. Every
-generated Compose project removes its containers, volume, and network after
-the case.
+case uses the exact cached PostgreSQL image with all Compose pulls forbidden.
+Its unique project isolates one Control Plane lifecycle database and one
+generated-application database, then independently attempts teardown,
+zero-resource audit, and temporary-directory removal.
 
 Newly composed Simple Ecommerce, Retail Counter, and Grocery Pickup Drafts now
-select exactly `commerce.transaction@2.2.1` and `commerce.order@2.1.2`; their
-fresh composition locks publish and compile. Existing Published Graphs and
-saved historical locks are not upgraded, revoked 2.2.0/2.1.0/2.1.1 assets
+select exactly `commerce.transaction@2.2.1` and `commerce.order@2.1.2`. Live
+acceptance persists each Draft through the real `LifecycleService`, publishes
+and reloads the immutable PublishedRevision, captures its compilation queue
+job, and compiles only that captured Graph and lock. Existing Published Graphs
+and saved historical locks are not upgraded, revoked 2.2.0/2.1.0/2.1.1 assets
 remain unchanged, and Restaurant keeps its independent transaction path. The
-acceptance used only the locally available generated PostgreSQL target and no
-external provider, payment, credential, source acquisition, or network access.
+acceptance used only locally cached PostgreSQL and no external provider,
+payment, credential, source acquisition, or network access.
 
 ## Profile readiness and quarantined Candidate port planning — 2026-08-01
 
