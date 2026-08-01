@@ -1,6 +1,36 @@
 # Factory Pilot delivery status
 
-Updated: 2026-08-01
+Updated: 2026-08-02
+
+## Approved implementation target — 2026-08-02
+
+The forward implementation target is a **Graph-first verified application
+factory**, not a Graph-to-code generator or a collection of frameworks. The
+immutable Published Graph remains the sole compilation input; generated source,
+editors, AI, compiler targets, and providers remain adapters. The authoritative
+roadmap is [`roadmap.md`](roadmap.md).
+
+P0 is to modularise compilation through `CompilerTargetPluginV1`
+(`supports -> plan -> render -> validate`) and migrate docs, policy, and
+database targets only after comparison with current compiler output digests. In
+parallel, generated applications gain an isolated verification loop covering
+boot, migrations, health, APIs, role journeys, authorization denial,
+idempotency, cleanup, safe diagnosis, and a new reviewable Draft Diff. Neither
+the verifier nor diagnosis may patch generated source; Published Graphs and
+Compilations remain immutable.
+
+P1 is staged AI composition (`RequirementSpec -> CompositionPlan -> constrained
+Graph Diff`), cross-profile capabilities, and Workbench expansion through
+Factory-owned wrappers and the capability registry. P2 is managed deployment,
+observability, fleet upgrades, and rollbacks; P3 is additional framework
+adapters. Prospective Testcontainers for Node, fast-check, and ts-morph use,
+and source-study-only references, remain subject to the existing licence,
+provenance, notice, and security gates.
+
+Retail Counter and Grocery Pickup are independently accepted as local generated
+prototypes through the shared `commerce.order-operations@1.1.0` lock, including
+Preview stop and cleanup. This is not production readiness and does not alter
+the historical evidence below.
 
 ## Durable notification outbox across Expense and Ecommerce — 2026-08-01
 
@@ -54,7 +84,7 @@ foundation is materially stronger than a label-only template catalogue:
   Ecommerce, Retail Counter, and Grocery Pickup. The catalogue currently has
   twenty capability families and forty-three physical versioned asset
   packages. Counts are inventory, not a claim of full business completeness.
-- Current isolated Docker browser journeys passed for three generated
+- Before this acceptance slice, isolated Docker browser journeys passed for three generated
   applications: specialised Restaurant Ordering (table session, menu ordering,
   simulated payment, kitchen, cashier, audit, and cleanup), generic Expense
   Approval (publish, compile, role-aware operation, stop, and cleanup), and
@@ -64,10 +94,14 @@ foundation is materially stronger than a label-only template catalogue:
   options, location-scoped inventory idempotency keys, and their migration
   schema. A generic capability-contract regression was also repaired so
   generated non-commerce APIs declare every emitted handler type.
-- Retail Counter and Grocery Pickup still require fresh isolated
-  generated-runtime journeys before they can be accepted independently. The
-  platform lacks production identity, real payments, durable provider delivery,
-  observability, fleet upgrades, and managed deployment.
+- Retail Counter and Grocery Pickup now have independent isolated
+  generated-application acceptance: both followed Draft, Publish, immutable
+  Compilation, role operation, Preview stop, and exact cleanup. Retail Counter
+  ended at `receipt-issued`; Grocery Pickup progressed through `paid`,
+  `picking`, `pickup-ready`, and `handed-off`. The platform still lacks
+  production identity, real payments, durable provider delivery,
+  observability, fleet upgrades, and managed deployment. See
+  `docs/acceptance/retail-grocery-order-operations.md`.
 
 ### Candidate Foundry acceleration
 
@@ -95,12 +129,11 @@ passed 208 tests, typecheck, Prettier lint, and build.
 
 ### Next smallest delivery slice
 
-Use the Candidate Foundry batch output to select one permissively licensed,
-narrow money/pricing dependency or source-port candidate. It must receive a
-source study, notice/SBOM/security evidence, a Factory-owned contract, fixture,
-conformance test, and removal test before it becomes a reusable asset. The
-resulting asset must serve at least two Profile Graphs, followed by isolated
-Retail Counter or Grocery Pickup acceptance evidence.
+The next candidate capability slice is `commerce.cart` execution as a reusable,
+package-owned handler. It must preserve Graph-owned selection and immutable
+Published-Graph compilation, receive focused contract and generated-runtime
+evidence, and serve more than one suitable Profile Graph. This is not a claim
+that the capability portfolio is complete.
 
 ## Persistent shared order operations — 2026-08-01
 
@@ -119,11 +152,12 @@ Map: recreating it around the same Store rejects a duplicate idempotency key.
 Restaurant remains a separate specialised runtime. It already persists
 `RestaurantCommand`, `PaymentAttempt`, receipt, inventory, audit, and outbox
 records in a Prisma transaction; the generic receipt contribution is consumed
-by the Ecommerce, Retail Counter, and Grocery Pickup runtime path. The two
-paths now have fresh isolated Restaurant and Ecommerce generated-application
-browser journey evidence. Retail Counter and Grocery Pickup still require their
-own generated-application evidence before the portfolio capability can be
-accepted across all four Profiles.
+by the Ecommerce, Retail Counter, and Grocery Pickup runtime path. All four
+paths now have fresh isolated generated-application browser journey evidence:
+Restaurant, Ecommerce, Retail Counter, and Grocery Pickup. The latter two are
+accepted local generated prototypes through the shared lock; this does not make
+the portfolio production-complete. See
+`docs/acceptance/retail-grocery-order-operations.md`.
 
 Fresh focused evidence:
 

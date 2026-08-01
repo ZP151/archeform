@@ -1,103 +1,158 @@
 # Factory Pilot roadmap
 
-## Foundation
+## Product direction
 
-- Establish the TypeScript monorepo and local Docker Compose services.
-- Define `ApplicationGraphV1`, validation, drafts, publishing, and immutable
-  compilation records.
+Factory Pilot is a **Graph-first verified application factory**. The
+`ApplicationGraphV1` is the durable business source of truth; Workbench
+editors, AI, compiler targets, generated applications, Git exchange, and
+runtime providers are constrained adapters around it. Factory Pilot is not a
+Graph-to-code generator and is not a collection of frameworks.
 
-## Graph Studio
+The lifecycle remains: mutable Draft -> validated immutable Published Graph ->
+immutable Compilation -> independently verified generated application. A
+diagnosis can create a new Draft Diff for review, but it can never patch a
+Published Graph, Compilation, or generated source directly.
 
-- Add Page, Domain, Flow, Policy, AI, Code, and revision-timeline workspaces.
-- Prove Puck and React Flow round trips without making either library the source
-  of truth.
+## P0 — deterministic compiler and generated-application verification
 
-## Guided application creation
+### Plugin compiler migration
 
-- Let a business user choose an accepted application outcome, name it, set its
-  experience mode, review its bounded Graph shape, and create a new mutable
-  Draft without editing Graph JSON.
-- Use a left-side three-step creation drawer; it must never publish, compile,
-  invoke a model, or bypass the Control Plane Graph validation boundary.
-- Continue from the new Draft in Page, Domain, Flow, Policy, AI, and Code
-  Studio before the user explicitly publishes it.
-- Add constrained capability composition before Draft creation. Profile recipes
-  expose only verified optional capabilities and deterministically remove their
-  declared Graph projections when the user turns them off.
+Modularise the compiler behind `CompilerTargetPluginV1`:
 
-## Compiler and capabilities
+```text
+supports -> plan -> render -> validate
+```
 
-- Compile published Graphs into the simulator, generated Web/API/database,
-  policy, flow handlers, tests, and docs.
-- Compile the published PageModel into the Factory-owned
-  `factory.generated-page-runtime/v1` document and responsive standalone Web
-  routes. The accepted v1 blocks are `hero`, `form`, `collection`, `catalog`,
-  `cart`, `queue`, and `checkout`; generated Web packages contain no Puck or
-  other editor runtime dependency. Any `catalog`, `cart`, or `checkout` page
-  requires a declared DomainModel `order` entity, an `order` FlowModel payment
-  transition, and exact Factory `cart.add`/`add` plus
-  `payment.simulate`/`simulate` contracts. PageModel routes cannot claim
-  `/api`, `/_next`, or `/favicon.ico` generated-Next paths.
-- Provide CRUD, audit, notification, workflow, catalog, cart, order, inventory,
-  and simulated-payment capabilities.
-- Accepted: a succeeded immutable Compilation can run as a locally isolated
-  generated preview, opened in a separate browser tab and removed with
-  ID-scoped runtime cleanup. The focused employee-create, submit, and manager-
-  approve journey proves the generated application boundary. Drafts,
-  Workbench, and editor state are never preview runtimes; unrelated Workbench
-  timing coverage remains outside this acceptance.
+Each plugin consumes only the immutable Published Graph and explicit compiler
+context. Begin with low-risk `docs`, `policy`, and `database` targets. For each
+migration, compare the new output digests with the current compiler before the
+plugin becomes authoritative; any unexpected difference blocks migration until
+explained and accepted. Preserve deterministic compilation records and the
+existing target contracts throughout the transition.
 
-## Independent profiles
+Move Restaurant-specific behavior into declared capability contributions,
+bindings, and target plugins. No compiler, runtime, or generated-app branch may
+select semantics by profile name.
 
-- Expense Approval: submit, approve/reject, and audit.
-- Restaurant Ordering customer acceptance: enter through a verified table
-  session, browse and search the menu, add quantities, modifiers, and notes,
-  submit and simulate full payment, then track status and view a receipt and
-  session order history.
-- Restaurant Ordering merchant acceptance: manage tables, sessions, menu, and
-  stock; operate deterministic kitchen and cashier surfaces; cancel eligible
-  orders with inventory and audit evidence; and inspect the operational
-  dashboard.
-- Restaurant Profile validation enforces its complete Graph semantics and all
-  current core, commerce, and Restaurant Golden asset locks; no placeholder
-  locks are admitted.
-- Inventory ledger provenance is explicit and closed: order reservations and
-  releases require an order reference, while the only order-free record is a
-  manager adjustment with a bounded reason, the locked `inventory.adjust`
-  operation, and append-only audit evidence. Fake or reused orders are not a
-  valid adjustment workaround.
-- Simple Ecommerce: catalog, checkout, inventory update, payment simulation,
-  and order lifecycle.
+### Verification loop
 
-## Ecosystem
+Every generated-application acceptance path must run:
 
-Factory Pilot adopts external open-source projects through explicit roles, not
-as competing sources of business truth. The adoption register is maintained in
-[`ecosystem/open-source-adoption.md`](ecosystem/open-source-adoption.md).
+```text
+compile -> isolated boot -> migration -> health -> API -> role journeys
+-> authorization denial -> idempotency -> cleanup -> safe diagnosis -> Draft Diff
+```
 
-### Direct dependencies
+The verifier must use isolated resources, prove cleanup, and retain only the
+minimum safe evidence needed for reproducibility. It must check successful and
+denied role journeys, migrations, health, API behavior, idempotency, and
+resource cleanup. Safe diagnosis identifies Graph-, capability-, binding-, or
+target-level causes and proposes a constrained new Draft Diff; it must not
+modify generated source, runtime state, Published Graphs, or Compilations.
 
-- Puck supplies the Page Studio canvas.
-- React Flow supplies Flow, relation, dependency, and lineage canvases.
-- XState executes compiled FlowModel state machines.
-- Prisma supplies generated PostgreSQL schemas, migrations, and typed access.
-- node-casbin supplies generated policy enforcement.
+P0 acceptance gates:
 
-### Controlled future adapters
+- `CompilerTargetPluginV1` lifecycle contracts and focused tests exist.
+- Docs, policy, and database plugins have digest-comparison evidence against
+  the current compiler, including an explicit disposition for each difference.
+- At least one generated application completes the full isolated verification
+  loop, including denial, idempotency, cleanup, and a reviewable Draft Diff.
+- Published Graphs and completed Compilations remain immutable under verifier
+  and diagnosis tests.
 
-- Blockly and bpmn-js may become authoring adapters once their output is
-  constrained to the Factory FlowModel.
-- Appwrite, Medusa, and OpenFGA are runtime providers behind versioned
-  contracts; none is a v1 runtime dependency.
+## P1 — governed composition, AI, and Workbench expansion
 
-### Study-only references
+### Staged AI composition
 
-- Amplication is studied for generator, plugin, and Git-sync patterns under a
-  source-study record. Its `ee/` tree is excluded.
-- Vendure is a read-only commerce architecture reference. Its GPLv3 code is
-  never copied or embedded unless Factory Pilot is deliberately relicensed.
+Replace one-shot AI Graph Diffs with a staged, reviewable flow:
 
-Every new dependency, snapshot, or copied source fragment must pass the
-license, provenance, security, and adapter-boundary gates before it reaches a
-Factory package. Graph-first Git export/import, provider contracts, and
-third-party notices precede optional provider runtime integration.
+```text
+RequirementSpec -> CompositionPlan -> constrained Graph Diff
+```
+
+`RequirementSpec` records the outcome, clarified questions, constraints, and
+acceptance scenarios. `CompositionPlan` selects compatible capability versions,
+declares bindings and target implications, exposes risks, and explains why the
+proposal fits the Graph. Only a validated plan may produce a constrained Graph
+Diff against a mutable Draft. Raw prompts, raw responses, and credentials are
+never persisted.
+
+### Capability-led reuse
+
+Prioritise cross-profile capabilities over profile-specific templates or new
+frameworks: identity/session, files/media, search, scheduling, reporting, and
+notification providers. Profile recipes compose versioned capabilities and
+bindings; they do not grant profile-name conditionals or hidden runtime
+authority.
+
+Workbench component expansion proceeds only through Factory-owned wrappers and
+the capability registry. Puck, XYFlow, shadcn, and TanStack remain replaceable
+adapters and presentation tooling, never Graph authority or persisted business
+semantics.
+
+P1 acceptance gates:
+
+- A staged proposal records questions, chosen capability versions, bindings,
+  risks, acceptance scenarios, and explanation before any Graph Diff is
+  offered.
+- The system rejects a Graph Diff without an accepted CompositionPlan or one
+  that would alter a Published Graph.
+- A reusable capability serves at least two Profile Graphs with versioned
+  locks, binding validation, and generated-application evidence.
+- New Workbench components prove their Factory wrapper and capability-registry
+  boundary; third-party editor data is not persisted as Graph truth.
+
+## P2 and P3
+
+- **P2:** managed deployment, observability, fleet upgrades, and rollbacks,
+  all tied to immutable Compilation and verification evidence.
+- **P3:** additional frontend and backend frameworks, admitted only as
+  Graph-first compiler/runtime adapters after the P0/P1 boundaries are proven.
+
+## Dependency-aware sequence
+
+1. Stabilise immutable Graph, capability-lock, and compiler admission
+   boundaries already under active verification.
+2. Define and test `CompilerTargetPluginV1`; migrate docs, policy, then
+   database with output-digest comparison to the current compiler.
+3. Establish the isolated verifier and its safe-diagnosis-to-Draft-Diff
+   contract against the migrated targets.
+4. Deliver the staged AI `RequirementSpec` and `CompositionPlan` boundary,
+   then permit constrained Draft Diffs.
+5. Expand cross-profile capabilities and Factory-owned Workbench wrappers with
+   verified generated-application journeys.
+6. Add managed delivery and fleet operations, then consider additional
+   framework adapters.
+
+## Ecosystem and source-study rules
+
+Prospective direct dependencies for this strategy are **Testcontainers for
+Node**, **fast-check**, and **ts-morph**. They are not installed or approved by
+this roadmap; each requires a pinned published release, licence notice, and the
+existing dependency/provenance/security gates before adoption. Dagger and
+OpenTelemetry are later candidates for managed verification and observability.
+
+Amplication, Backstage Scaffolder, bolt.diy, Dyad, and OpenHands are
+source-study-only architecture references. Factory Pilot must not imply that
+their code, packages, templates, or runtime designs are installed, copied, or
+approved. Any source reuse continues to require an exact immutable source-study
+record, licence compatibility decision, third-party notices, security evidence,
+focused boundary tests, and a removal path.
+
+## Non-goals
+
+- Generated source is not an editable source of truth and is never
+  reverse-parsed into a Graph.
+- Published Graphs and Compilations are never mutable repair targets.
+- A profile template, framework, editor, AI provider, or runtime provider does
+  not define Factory business semantics.
+- P2/P3 work does not bypass P0 verification gates.
+- Source-study references do not authorise copying code or installing
+  dependencies.
+
+## Current evidence boundary
+
+Existing completed acceptance evidence remains historical and is recorded in
+`docs/project-status.md`. Retail Counter and Grocery Pickup acceptance,
+including the current preview-stop fix, are active under verification and are
+not claimed as passed by this roadmap.
