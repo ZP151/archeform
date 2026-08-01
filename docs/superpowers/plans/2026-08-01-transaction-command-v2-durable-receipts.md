@@ -320,7 +320,7 @@ git commit -m "fix: reissue postgres-safe transaction package"
 
 **Interfaces:**
 
-- Consumes: `TransactionCommandV2`, exact selected `orderEntity` and `orderFlow` bindings.
+- Consumes: `TransactionCommandV2`, exact selected `orderEntity` and `orderFlow` bindings, and the PostgreSQL-safe direct pair `commerce.transaction@2.2.1` / `commerce.order@2.1.0` from ADR-0014.
 - Produces: a generated create payload with no server-owned values, correctly bound transition options, and a clean generated-project typecheck/test command.
 
 - [ ] **Step 1: Write failing emitted-artifact tests**
