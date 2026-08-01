@@ -1,0 +1,6 @@
+{
+  "event": "notification.send",
+  "recipient": "customer",
+  "transport": "deterministic-local",
+  "failuresBeforeSuccess": 0
+}

@@ -712,6 +712,66 @@ describe("capability catalog", () => {
     );
   });
 
+  it("selects the durable notification outbox package and its declared boundary", () => {
+    const asset = getCapabilityAsset("core.notification");
+
+    expect(asset.manifest).toMatchObject({
+      key: "core.notification",
+      version: "1.1.0",
+      packageRoot: "packages/capabilities/assets/core.notification/1.1.0",
+      provides: [{ interfaceKey: "notification.outbox", version: "v1" }],
+    });
+    expect(asset.manifest.outputSlots).toEqual([
+      "api.runtime",
+      "api.persistence",
+      "api.worker",
+      "test.fixture",
+      "flow.effect",
+    ]);
+  });
+
+  it("keeps the historical notification 1.0.1 lock replayable", () => {
+    const lock = {
+      key: "core.notification",
+      version: "1.0.1",
+      packageRoot: "packages/capabilities/assets/core.notification/1.0.1",
+      manifestDigest:
+        "sha256:3df4c1c47c26f0d9ab5c7c770721079b83a1d1b8655052e3030455b45c4d2f4e",
+      lifecycle: "golden" as const,
+    };
+
+    expect(resolveCapabilityAssetLock(lock).manifest).toMatchObject(lock);
+  });
+
+  it("rejects api.worker when the adapter omits that declared output slot", async () => {
+    const asset = testContributionAsset({
+      outputSlots: [
+        "web.route",
+        "api.worker",
+      ] as unknown as CapabilityAssetManifestV1["outputSlots"],
+    });
+
+    await withTestContributionPackage(asset, async (repositoryRoot) => {
+      const adapterPath = resolve(
+        repositoryRoot,
+        asset.manifest.packageRoot,
+        "adapter.json",
+      );
+      const adapter = JSON.parse(readFileSync(adapterPath, "utf8")) as Record<
+        string,
+        unknown
+      >;
+      await writeFile(
+        adapterPath,
+        JSON.stringify({ ...adapter, outputSlots: ["web.route"] }, null, 2),
+      );
+
+      expect(verifyCapabilityAssetPackage(asset, repositoryRoot)).toEqual(
+        expect.arrayContaining(["adapter.json: outputSlots"]),
+      );
+    });
+  });
+
   it("preserves every base executable package lock while defaults select current versions", () => {
     for (const lock of historicalExecutableLocks) {
       expect(getCapabilityAsset(lock.key).manifest.version).toBe(
@@ -719,7 +779,9 @@ describe("capability catalog", () => {
           ? "1.1.1"
           : lock.key === "core.audit"
             ? "1.0.2"
-            : "1.0.1",
+            : lock.key === "core.notification"
+              ? "1.1.0"
+              : "1.0.1",
       );
     }
     expect(() =>
@@ -738,7 +800,7 @@ describe("capability catalog", () => {
   });
 
   it("verifies every registered capability manifest against its declared digest", () => {
-    expect(capabilityAssets).toHaveLength(48);
+    expect(capabilityAssets).toHaveLength(49);
     for (const asset of capabilityAssets) {
       expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     }

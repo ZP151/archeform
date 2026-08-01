@@ -1,0 +1,4 @@
+{
+  "status": "verified",
+  "checks": ["enqueue-outbox", "dedupe", "bounded-retry", "remove-effect"]
+}

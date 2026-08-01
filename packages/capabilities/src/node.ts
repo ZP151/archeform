@@ -84,6 +84,8 @@ const contributionIdSchema = z.string().regex(/^[a-z][a-z0-9.-]*$/);
 const parameterKeySchema = z.string().regex(/^[a-z][a-zA-Z0-9]*$/);
 const outputSlotSchema = z.enum([
   "api.runtime",
+  "api.persistence",
+  "api.worker",
   "api.command",
   "api.router",
   "api.service",

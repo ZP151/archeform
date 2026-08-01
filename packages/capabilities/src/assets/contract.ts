@@ -11,6 +11,8 @@ export type CapabilityCategory = "core" | "commerce" | "restaurant";
 
 export type CapabilityOutputSlot =
   | "api.runtime"
+  | "api.persistence"
+  | "api.worker"
   | "api.command"
   | "api.router"
   | "api.service"
