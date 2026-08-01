@@ -11,6 +11,7 @@ export type PortfolioHomeModel = {
   readonly readiness: readonly ProfileReadinessHomeModel[];
   readonly capabilityMetrics: readonly PortfolioMetric[];
   readonly intakeMetrics: readonly PortfolioMetric[];
+  readonly supply: WorkbenchWorkspacePortfolioSummary["supply"]["families"];
   readonly compilationMetrics: readonly PortfolioMetric[];
 };
 
@@ -106,6 +107,10 @@ export function toPortfolioHomeModel(
         tone: "neutral",
       },
     ],
+    supply: summary.supply.families.map((family) => ({
+      ...family,
+      profiles: [...family.profiles],
+    })),
     compilationMetrics: [
       {
         label: "Queued",

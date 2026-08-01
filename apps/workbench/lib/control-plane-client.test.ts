@@ -7,6 +7,25 @@ import {
 } from "./control-plane-client";
 import { workbenchGraph } from "./workbench-graph";
 
+const capabilitySupplySummary = {
+  apiVersion: "factory.capability-supply-summary/v1" as const,
+  families: [
+    {
+      key: "commerce-transaction" as const,
+      profiles: [
+        "restaurant-ordering",
+        "simple-ecommerce",
+        "retail-counter",
+        "grocery-pickup",
+      ],
+      discovery: 4,
+      quarantined: 0,
+      blocked: 0,
+      action: "integrate" as const,
+    },
+  ],
+};
+
 describe("ControlPlaneClient", () => {
   it("reads only safe Workspace Portfolio summary fields", async () => {
     const fetcher = vi.fn().mockResolvedValue(
@@ -58,6 +77,7 @@ describe("ControlPlaneClient", () => {
             blocked: 0,
             sourcePath: "must-not-survive",
           },
+          supply: capabilitySupplySummary,
           compilations: { queued: 0, running: 1, succeeded: 3, failed: 0 },
         }),
         { status: 200 },
@@ -110,6 +130,7 @@ describe("ControlPlaneClient", () => {
         quarantined: 0,
         blocked: 0,
       },
+      supply: capabilitySupplySummary,
       compilations: { queued: 0, running: 1, succeeded: 3, failed: 0 },
     });
     expect(fetcher).toHaveBeenCalledWith(
@@ -161,6 +182,7 @@ describe("ControlPlaneClient", () => {
             quarantined: 0,
             blocked: 0,
           },
+          supply: capabilitySupplySummary,
           compilations: { queued: 0, running: 0, succeeded: 0, failed: 0 },
         }),
         { status: 200 },

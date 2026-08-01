@@ -192,6 +192,24 @@ describe("WorkbenchHome", () => {
               quarantined: 0,
               blocked: 0,
             },
+            supply: {
+              apiVersion: "factory.capability-supply-summary/v1",
+              families: [
+                {
+                  key: "commerce-transaction",
+                  profiles: [
+                    "restaurant-ordering",
+                    "simple-ecommerce",
+                    "retail-counter",
+                    "grocery-pickup",
+                  ],
+                  discovery: 4,
+                  quarantined: 0,
+                  blocked: 0,
+                  action: "integrate",
+                },
+              ],
+            },
             compilations: { queued: 0, running: 1, succeeded: 3, failed: 1 },
           }}
         />,
@@ -205,6 +223,8 @@ describe("WorkbenchHome", () => {
     expect(container.textContent).toContain("Golden");
     expect(container.textContent).toContain("Eligible");
     expect(container.textContent).toContain("Profile readiness");
+    expect(container.textContent).toContain("Capability supply");
+    expect(container.textContent).toContain("commerce-transaction");
     expect(container.textContent).toContain("Available 1");
     expect(container.textContent).toContain("Provider 1");
     expect(container.textContent).not.toContain("https://github.com");

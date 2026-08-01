@@ -141,12 +141,50 @@ export type WorkbenchWorkspacePortfolioSummary = {
     readonly quarantined: number;
     readonly blocked: number;
   };
+  readonly supply: WorkbenchCapabilitySupplySummary;
   readonly compilations: {
     readonly queued: number;
     readonly running: number;
     readonly succeeded: number;
     readonly failed: number;
   };
+};
+
+export type WorkbenchCapabilitySupplySummary = {
+  readonly apiVersion: "factory.capability-supply-summary/v1";
+  readonly families: readonly {
+    readonly key:
+      | "identity"
+      | "catalog"
+      | "commerce-transaction"
+      | "inventory"
+      | "availability"
+      | "queue"
+      | "payment"
+      | "fulfillment"
+      | "notification"
+      | "document"
+      | "search"
+      | "analytics"
+      | "integration";
+    readonly profiles: readonly (
+      | "expense-approval"
+      | "restaurant-ordering"
+      | "simple-ecommerce"
+      | "retail-counter"
+      | "grocery-pickup"
+    )[];
+    readonly discovery: number;
+    readonly quarantined: number;
+    readonly blocked: number;
+    readonly action:
+      | "discover"
+      | "qualify"
+      | "integrate"
+      | "provider-review"
+      | "design"
+      | "defer";
+  }[];
 };
 
 export type WorkbenchProfileReadinessStatus =
@@ -286,6 +324,103 @@ function nonNegativeCount(value: unknown, label: string): number {
     throw new Error(`Control Plane Portfolio summary has invalid ${label}.`);
   }
   return value;
+}
+
+function capabilitySupply(value: unknown): WorkbenchCapabilitySupplySummary {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Control Plane Capability supply is invalid.");
+  }
+  const record = value as Record<string, unknown>;
+  if (
+    record.apiVersion !== "factory.capability-supply-summary/v1" ||
+    !Array.isArray(record.families) ||
+    Object.keys(record).some(
+      (key) => key !== "apiVersion" && key !== "families",
+    )
+  ) {
+    throw new Error("Control Plane Capability supply is invalid.");
+  }
+  const keys = new Set<
+    WorkbenchCapabilitySupplySummary["families"][number]["key"]
+  >([
+    "identity",
+    "catalog",
+    "commerce-transaction",
+    "inventory",
+    "availability",
+    "queue",
+    "payment",
+    "fulfillment",
+    "notification",
+    "document",
+    "search",
+    "analytics",
+    "integration",
+  ]);
+  const profiles = new Set([
+    "expense-approval",
+    "restaurant-ordering",
+    "simple-ecommerce",
+    "retail-counter",
+    "grocery-pickup",
+  ]);
+  const actions = new Set([
+    "discover",
+    "qualify",
+    "integrate",
+    "provider-review",
+    "design",
+    "defer",
+  ]);
+  const families = record.families.map((value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new Error("Control Plane Capability supply is invalid.");
+    }
+    const item = value as Record<string, unknown>;
+    if (
+      Object.keys(item).some(
+        (key) =>
+          ![
+            "key",
+            "profiles",
+            "discovery",
+            "quarantined",
+            "blocked",
+            "action",
+          ].includes(key),
+      ) ||
+      typeof item.key !== "string" ||
+      !keys.has(
+        item.key as WorkbenchCapabilitySupplySummary["families"][number]["key"],
+      ) ||
+      !Array.isArray(item.profiles) ||
+      item.profiles.some(
+        (profile) => typeof profile !== "string" || !profiles.has(profile),
+      ) ||
+      new Set(item.profiles).size !== item.profiles.length ||
+      typeof item.action !== "string" ||
+      !actions.has(item.action)
+    ) {
+      throw new Error("Control Plane Capability supply is invalid.");
+    }
+    return {
+      key: item.key as WorkbenchCapabilitySupplySummary["families"][number]["key"],
+      profiles:
+        item.profiles as WorkbenchCapabilitySupplySummary["families"][number]["profiles"],
+      discovery: nonNegativeCount(item.discovery, "supply.discovery"),
+      quarantined: nonNegativeCount(item.quarantined, "supply.quarantined"),
+      blocked: nonNegativeCount(item.blocked, "supply.blocked"),
+      action:
+        item.action as WorkbenchCapabilitySupplySummary["families"][number]["action"],
+    };
+  });
+  if (new Set(families.map((family) => family.key)).size !== families.length) {
+    throw new Error("Control Plane Capability supply is invalid.");
+  }
+  return {
+    apiVersion: "factory.capability-supply-summary/v1",
+    families,
+  };
 }
 
 function workspacePortfolioSummary(
@@ -453,6 +588,7 @@ function workspacePortfolioSummary(
       ] as const,
       "intake",
     ),
+    supply: capabilitySupply(record.supply),
     compilations: counts(
       record.compilations,
       ["queued", "running", "succeeded", "failed"] as const,

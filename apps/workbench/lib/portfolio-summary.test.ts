@@ -49,6 +49,24 @@ describe("toPortfolioHomeModel", () => {
         quarantined: 0,
         blocked: 0,
       },
+      supply: {
+        apiVersion: "factory.capability-supply-summary/v1",
+        families: [
+          {
+            key: "commerce-transaction",
+            profiles: [
+              "restaurant-ordering",
+              "simple-ecommerce",
+              "retail-counter",
+              "grocery-pickup",
+            ],
+            discovery: 4,
+            quarantined: 0,
+            blocked: 0,
+            action: "integrate",
+          },
+        ],
+      },
       compilations: { queued: 1, running: 0, succeeded: 4, failed: 1 },
     });
 
@@ -83,6 +101,21 @@ describe("toPortfolioHomeModel", () => {
         { label: "Candidate lanes", value: 19, tone: "ready" },
         { label: "Quarantined", value: 0, tone: "neutral" },
         { label: "Blocked", value: 0, tone: "neutral" },
+      ],
+      supply: [
+        {
+          key: "commerce-transaction",
+          profiles: [
+            "restaurant-ordering",
+            "simple-ecommerce",
+            "retail-counter",
+            "grocery-pickup",
+          ],
+          discovery: 4,
+          quarantined: 0,
+          blocked: 0,
+          action: "integrate",
+        },
       ],
       compilationMetrics: [
         { label: "Queued", value: 1, tone: "neutral" },

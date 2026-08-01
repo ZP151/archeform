@@ -194,6 +194,58 @@ function ProfileReadinessPanel({
   );
 }
 
+function CapabilitySupplyPanel({
+  supply,
+}: {
+  readonly supply: ReturnType<typeof toPortfolioHomeModel>["supply"];
+}) {
+  return (
+    <section aria-labelledby="home-capability-supply" style={sectionStyle}>
+      <div
+        style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
+      >
+        <h2 id="home-capability-supply" style={{ margin: 0 }}>
+          Capability supply
+        </h2>
+        <span style={{ color: "var(--muted, #66706a)", fontSize: 13 }}>
+          Read-only queue
+        </span>
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+          gap: 10,
+          marginTop: 14,
+        }}
+      >
+        {supply.map((family) => (
+          <article
+            aria-label={`${family.key} supply`}
+            key={family.key}
+            style={{
+              border: "1px solid var(--line, #d8ddd8)",
+              borderRadius: 10,
+              padding: 12,
+            }}
+          >
+            <strong>{family.key}</strong>
+            <div
+              style={{
+                color: "var(--muted, #66706a)",
+                fontSize: 12,
+                marginTop: 5,
+              }}
+            >
+              {family.action} · {family.discovery} discovered
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function ApplicationCard({
   application,
   compiling,
@@ -459,6 +511,8 @@ export function WorkbenchHome({
           })}
         </div>
       </section>
+
+      {portfolio && <CapabilitySupplyPanel supply={portfolio.supply} />}
 
       {portfolio && (
         <section aria-labelledby="home-profile-readiness" style={sectionStyle}>
