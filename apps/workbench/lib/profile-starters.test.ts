@@ -47,10 +47,10 @@ describe("profile starters", () => {
   it("composes every active profile from canonical Graph-symbol selections", () => {
     const expectedPackageCounts = {
       "expense-approval": 4,
-      "restaurant-ordering": 17,
-      "simple-ecommerce": 13,
-      "retail-counter": 13,
-      "grocery-pickup": 13,
+      "restaurant-ordering": 18,
+      "simple-ecommerce": 14,
+      "retail-counter": 14,
+      "grocery-pickup": 14,
     } as const;
 
     for (const { profile } of profileStarterOptions) {
@@ -78,15 +78,24 @@ describe("profile starters", () => {
     const ecommerce =
       createProfileDraft("simple-ecommerce").integration.compositionSelections!;
     const ecommercePackageKeys = new Set(ecommerce.map(({ lock }) => lock.key));
+    const profileSpecificLifecyclePackageKeys = new Set([
+      "commerce.order",
+      "commerce.transaction",
+    ]);
     expect(
       restaurant
-        .filter(({ lock }) => ecommercePackageKeys.has(lock.key))
+        .filter(
+          ({ lock }) =>
+            ecommercePackageKeys.has(lock.key) &&
+            !profileSpecificLifecyclePackageKeys.has(lock.key),
+        )
         .map(({ lock }) => lock)
         .sort((left, right) => left.key.localeCompare(right.key)),
     ).toEqual(
       ecommerce
         .filter(({ lock }) =>
-          restaurant.some((item) => item.lock.key === lock.key),
+          restaurant.some((item) => item.lock.key === lock.key) &&
+          !profileSpecificLifecyclePackageKeys.has(lock.key),
         )
         .map(({ lock }) => lock)
         .sort((left, right) => left.key.localeCompare(right.key)),
