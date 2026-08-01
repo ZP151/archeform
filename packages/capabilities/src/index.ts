@@ -246,6 +246,7 @@ export interface FactoryProfileDescriptorV1 {
   readonly category: "approval" | "commerce";
   readonly scenarioTags: readonly string[];
   readonly requiredCapabilities: readonly string[];
+  readonly eligibleOptionalCapabilities: readonly OptionalCapabilityKey[];
   readonly defaultOptionalCapabilities: readonly OptionalCapabilityKey[];
 }
 
@@ -253,6 +254,7 @@ export interface ProfileComposition {
   readonly profile: FactoryProfile;
   readonly requiredCapabilities: readonly CapabilityDefinition[];
   readonly optionalCapabilities: readonly CapabilityDefinition[];
+  readonly eligibleOptionalCapabilities: readonly OptionalCapabilityKey[];
   readonly defaultOptionalCapabilities: readonly OptionalCapabilityKey[];
 }
 
@@ -3357,7 +3359,10 @@ export function getProfileComposition(
     profile,
     requiredCapabilities: recipe.requiredCapabilities.map(getCapability),
     optionalCapabilities: recipe.optionalCapabilities.map(getCapability),
-    defaultOptionalCapabilities: [...recipe.optionalCapabilities],
+    eligibleOptionalCapabilities: [...recipe.optionalCapabilities],
+    defaultOptionalCapabilities: [
+      ...(defaultCapabilityRecipes[profile]?.optionalCapabilities ?? []),
+    ],
   };
 }
 
@@ -3425,6 +3430,9 @@ export function listFactoryProfiles(): readonly FactoryProfileDescriptorV1[] {
       requiredCapabilities: composition.requiredCapabilities.map(
         ({ key }) => key,
       ),
+      eligibleOptionalCapabilities: [
+        ...composition.eligibleOptionalCapabilities,
+      ],
       defaultOptionalCapabilities: [...composition.defaultOptionalCapabilities],
     });
   });

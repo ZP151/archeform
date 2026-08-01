@@ -681,8 +681,8 @@ void main();
 function renderNotificationOutboxDrainDocumentation(): string {
   return `# Local notification outbox drain
 
-Run \`pnpm notification:drain\` from this directory to process due notification
-outbox entries once. The command uses the generated Prisma store and the local
+Run \`docker compose exec api pnpm notification:drain\` from the generated
+application root to process due notification outbox entries once. The command uses the generated Prisma store and the local
 fixture transport only; it accepts no recipient, message, provider, URL, or
 credential input. It prints a count-only summary and exits.
 `;

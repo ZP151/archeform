@@ -88,7 +88,7 @@ export function transitionGuidedCreation(
       }
       const available = getProfileComposition(
         state.input.profile,
-      ).defaultOptionalCapabilities;
+      ).eligibleOptionalCapabilities;
       if (!available.includes(action.capability)) {
         return {
           ...state,
