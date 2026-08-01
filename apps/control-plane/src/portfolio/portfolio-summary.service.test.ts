@@ -41,6 +41,13 @@ describe("WorkspacePortfolioSummaryService", () => {
           ]),
         }),
       ]),
+      coverage: expect.arrayContaining([
+        expect.objectContaining({
+          key: "commerce.order-operations",
+          status: "planned",
+          profiles: expect.arrayContaining(["restaurant-ordering"]),
+        }),
+      ]),
       capabilities: {
         golden: 19,
         lockedVersions: 38,

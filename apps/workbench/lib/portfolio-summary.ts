@@ -9,6 +9,7 @@ export type PortfolioHomeModel = {
     readonly detail: string;
   }[];
   readonly readiness: readonly ProfileReadinessHomeModel[];
+  readonly coverage: readonly ProfileCoverageHomeModel[];
   readonly capabilityMetrics: readonly PortfolioMetric[];
   readonly intakeMetrics: readonly PortfolioMetric[];
   readonly supply: WorkbenchWorkspacePortfolioSummary["supply"]["families"];
@@ -23,6 +24,14 @@ export type ProfileReadinessHomeModel = {
   readonly partial: number;
   readonly planned: number;
   readonly providerRequired: number;
+};
+
+export type ProfileCoverageHomeModel = {
+  readonly id: string;
+  readonly label: string;
+  readonly status: WorkbenchWorkspacePortfolioSummary["coverage"][number]["status"];
+  readonly packageCount: number;
+  readonly profileCount: number;
 };
 
 export type PortfolioMetric = {
@@ -62,6 +71,13 @@ export function toPortfolioHomeModel(
         ...counts,
       };
     }),
+    coverage: summary.coverage.map((coverage) => ({
+      id: coverage.key,
+      label: coverage.label,
+      status: coverage.status,
+      packageCount: coverage.packageKeys.length,
+      profileCount: coverage.profiles.length,
+    })),
     capabilityMetrics: [
       { label: "Golden", value: summary.capabilities.golden, tone: "ready" },
       {

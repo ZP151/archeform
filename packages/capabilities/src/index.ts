@@ -49,6 +49,11 @@ export type {
   ProfileReadinessV1,
 } from "./profile-readiness.js";
 export type {
+  ProfileCoverageItemV1,
+  ProfileCoverageStatusV1,
+} from "./profile-coverage.js";
+export { listProfileCoverage } from "./profile-coverage.js";
+export type {
   CapabilityBindingValueV1,
   CapabilityCompositionLockV1,
   CapabilityCompositionV1,

@@ -26,6 +26,22 @@ const capabilitySupplySummary = {
   ],
 };
 
+const profileCoverage = [
+  {
+    apiVersion: "factory.profile-coverage/v1" as const,
+    key: "commerce.order-operations",
+    label: "Order operations",
+    status: "planned" as const,
+    packageKeys: ["commerce.order", "commerce.inventory", "core.audit"],
+    profiles: [
+      "restaurant-ordering",
+      "simple-ecommerce",
+      "retail-counter",
+      "grocery-pickup",
+    ],
+  },
+];
+
 describe("ControlPlaneClient", () => {
   it("reads only safe Workspace Portfolio summary fields", async () => {
     const fetcher = vi.fn().mockResolvedValue(
@@ -59,6 +75,12 @@ describe("ControlPlaneClient", () => {
                 { key: "commerce.catalog", status: "available" },
                 { key: "identity.member", status: "provider-required" },
               ],
+              sourceUrl: "https://must-not-survive.example",
+            },
+          ],
+          coverage: [
+            {
+              ...profileCoverage[0],
               sourceUrl: "https://must-not-survive.example",
             },
           ],
@@ -117,6 +139,7 @@ describe("ControlPlaneClient", () => {
           ],
         },
       ],
+      coverage: profileCoverage,
       capabilities: {
         golden: 19,
         lockedVersions: 38,
@@ -169,6 +192,7 @@ describe("ControlPlaneClient", () => {
               capabilities: [{ key: "commerce.catalog", status: "unreviewed" }],
             },
           ],
+          coverage: profileCoverage,
           capabilities: {
             golden: 19,
             lockedVersions: 38,

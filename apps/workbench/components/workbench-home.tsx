@@ -18,6 +18,7 @@ import { profileStarterOptions } from "../lib/profile-starters";
 import {
   toPortfolioHomeModel,
   type PortfolioMetric,
+  type ProfileCoverageHomeModel,
   type ProfileReadinessHomeModel,
 } from "../lib/portfolio-summary";
 import type { WorkbenchWorkspacePortfolioSummary } from "../lib/control-plane-client";
@@ -238,6 +239,71 @@ function CapabilitySupplyPanel({
               }}
             >
               {family.action} · {family.discovery} discovered
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ProfileCoveragePanel({
+  coverage,
+}: {
+  readonly coverage: readonly ProfileCoverageHomeModel[];
+}) {
+  return (
+    <section aria-labelledby="home-profile-coverage" style={sectionStyle}>
+      <div
+        style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
+      >
+        <h2 id="home-profile-coverage" style={{ margin: 0 }}>
+          Profile coverage
+        </h2>
+        <span style={{ color: "var(--muted, #66706a)", fontSize: 13 }}>
+          Reusable foundation
+        </span>
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+          gap: 10,
+          marginTop: 14,
+        }}
+      >
+        {coverage.map((item) => (
+          <article
+            aria-label={`${item.label} coverage`}
+            key={item.id}
+            style={{
+              border: "1px solid var(--line, #d8ddd8)",
+              borderRadius: 10,
+              padding: 12,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 8,
+              }}
+            >
+              <strong>{item.label}</strong>
+              <span style={{ color: "var(--muted, #66706a)", fontSize: 12 }}>
+                {item.status === "provider-required"
+                  ? "Provider"
+                  : item.status[0].toUpperCase() + item.status.slice(1)}
+              </span>
+            </div>
+            <div
+              style={{
+                color: "var(--muted, #66706a)",
+                fontSize: 12,
+                marginTop: 5,
+              }}
+            >
+              {item.packageCount} packages · {item.profileCount} profiles
             </div>
           </article>
         ))}
@@ -513,6 +579,8 @@ export function WorkbenchHome({
       </section>
 
       {portfolio && <CapabilitySupplyPanel supply={portfolio.supply} />}
+
+      {portfolio && <ProfileCoveragePanel coverage={portfolio.coverage} />}
 
       {portfolio && (
         <section aria-labelledby="home-profile-readiness" style={sectionStyle}>

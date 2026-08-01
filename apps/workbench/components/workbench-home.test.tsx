@@ -179,6 +179,25 @@ describe("WorkbenchHome", () => {
                 ],
               },
             ],
+            coverage: [
+              {
+                apiVersion: "factory.profile-coverage/v1",
+                key: "commerce.order-operations",
+                label: "Order operations",
+                status: "planned",
+                packageKeys: [
+                  "commerce.order",
+                  "commerce.inventory",
+                  "core.audit",
+                ],
+                profiles: [
+                  "restaurant-ordering",
+                  "simple-ecommerce",
+                  "retail-counter",
+                  "grocery-pickup",
+                ],
+              },
+            ],
             capabilities: {
               golden: 19,
               lockedVersions: 38,
@@ -223,6 +242,9 @@ describe("WorkbenchHome", () => {
     expect(container.textContent).toContain("Golden");
     expect(container.textContent).toContain("Eligible");
     expect(container.textContent).toContain("Profile readiness");
+    expect(container.textContent).toContain("Profile coverage");
+    expect(container.textContent).toContain("Order operations");
+    expect(container.textContent).toContain("Planned");
     expect(container.textContent).toContain("Capability supply");
     expect(container.textContent).toContain("commerce-transaction");
     expect(container.textContent).toContain("Available 1");

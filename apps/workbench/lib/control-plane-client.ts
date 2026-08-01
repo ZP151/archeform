@@ -128,6 +128,7 @@ export type WorkbenchWorkspacePortfolioSummary = {
     readonly optionalPackages: number;
   }[];
   readonly readiness: readonly WorkbenchProfileReadiness[];
+  readonly coverage: readonly WorkbenchProfileCoverage[];
   readonly capabilities: {
     readonly golden: number;
     readonly lockedVersions: number;
@@ -201,6 +202,24 @@ export type WorkbenchProfileReadiness = {
     readonly key: string;
     readonly status: WorkbenchProfileReadinessStatus;
   }[];
+};
+
+export type WorkbenchProfileCoverageStatus =
+  "available" | "partial" | "planned" | "provider-required";
+
+export type WorkbenchProfileCoverage = {
+  readonly apiVersion: "factory.profile-coverage/v1";
+  readonly key: string;
+  readonly label: string;
+  readonly status: WorkbenchProfileCoverageStatus;
+  readonly packageKeys: readonly string[];
+  readonly profiles: readonly (
+    | "expense-approval"
+    | "restaurant-ordering"
+    | "simple-ecommerce"
+    | "retail-counter"
+    | "grocery-pickup"
+  )[];
 };
 
 export type WorkbenchArtifactContent = {
@@ -551,6 +570,65 @@ function workspacePortfolioSummary(
       capabilities,
     };
   });
+  const coverage = record.coverage;
+  if (!Array.isArray(coverage)) {
+    throw new Error("Control Plane Profile coverage is invalid.");
+  }
+  const coverageRecords = coverage.map((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new Error("Control Plane Profile coverage is invalid.");
+    }
+    const candidate = entry as Record<string, unknown>;
+    if (
+      candidate.apiVersion !== "factory.profile-coverage/v1" ||
+      typeof candidate.key !== "string" ||
+      !capabilityKeyPattern.test(candidate.key) ||
+      typeof candidate.label !== "string" ||
+      candidate.label.trim().length === 0 ||
+      typeof candidate.status !== "string" ||
+      !supportedReadinessStatuses.has(candidate.status) ||
+      !Array.isArray(candidate.packageKeys) ||
+      !Array.isArray(candidate.profiles)
+    ) {
+      throw new Error("Control Plane Profile coverage is invalid.");
+    }
+    const packageKeys = candidate.packageKeys.map((packageKey) => {
+      if (
+        typeof packageKey !== "string" ||
+        !capabilityKeyPattern.test(packageKey)
+      ) {
+        throw new Error("Control Plane Profile coverage package is invalid.");
+      }
+      return packageKey;
+    });
+    const profiles = candidate.profiles.map((profile) => {
+      if (typeof profile !== "string" || !supportedProfiles.has(profile)) {
+        throw new Error("Control Plane Profile coverage profile is invalid.");
+      }
+      return profile as WorkbenchProfileCoverage["profiles"][number];
+    });
+    if (
+      new Set(packageKeys).size !== packageKeys.length ||
+      profiles.length === 0 ||
+      new Set(profiles).size !== profiles.length
+    ) {
+      throw new Error("Control Plane Profile coverage is invalid.");
+    }
+    return {
+      apiVersion: "factory.profile-coverage/v1" as const,
+      key: candidate.key,
+      label: candidate.label,
+      status: candidate.status as WorkbenchProfileCoverageStatus,
+      packageKeys,
+      profiles,
+    };
+  });
+  if (
+    new Set(coverageRecords.map((coverage) => coverage.key)).size !==
+    coverageRecords.length
+  ) {
+    throw new Error("Control Plane Profile coverage is invalid.");
+  }
   const counts = <T extends readonly string[]>(
     input: unknown,
     fields: T,
@@ -572,6 +650,7 @@ function workspacePortfolioSummary(
     apiVersion: "factory.workspace-portfolio-summary/v1",
     profiles: profileRecords,
     readiness: readinessRecords,
+    coverage: coverageRecords,
     capabilities: counts(
       record.capabilities,
       ["golden", "lockedVersions", "candidate", "provider"] as const,

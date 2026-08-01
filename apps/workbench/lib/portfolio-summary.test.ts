@@ -36,6 +36,21 @@ describe("toPortfolioHomeModel", () => {
           ],
         },
       ],
+      coverage: [
+        {
+          apiVersion: "factory.profile-coverage/v1",
+          key: "commerce.order-operations",
+          label: "Order operations",
+          status: "planned",
+          packageKeys: ["commerce.order", "commerce.inventory", "core.audit"],
+          profiles: [
+            "restaurant-ordering",
+            "simple-ecommerce",
+            "retail-counter",
+            "grocery-pickup",
+          ],
+        },
+      ],
       capabilities: {
         golden: 19,
         lockedVersions: 38,
@@ -87,6 +102,15 @@ describe("toPortfolioHomeModel", () => {
           partial: 1,
           planned: 1,
           providerRequired: 1,
+        },
+      ],
+      coverage: [
+        {
+          id: "commerce.order-operations",
+          label: "Order operations",
+          status: "planned",
+          packageCount: 3,
+          profileCount: 4,
         },
       ],
       capabilityMetrics: [
