@@ -61,6 +61,12 @@ type GeneratedRuntime = {
   }>;
 };
 
+type GeneratedRuntimeModule = {
+  readonly applicationRuntime: GeneratedRuntime;
+  readonly ApplicationRuntime: new (store?: unknown) => GeneratedRuntime;
+  readonly InMemoryRecordStore: new () => unknown;
+};
+
 function ecommerceFiles() {
   const graph = composeDefaultCapabilityDraft({
     profile: "simple-ecommerce",
@@ -94,8 +100,34 @@ function ecommerceInput() {
   };
 }
 
+function restaurantFiles() {
+  const graph = composeDefaultCapabilityDraft({
+    profile: "restaurant-ordering",
+  }).graph;
+  const compositionLock = createCapabilityCompositionLock({
+    graphChecksum: hashApplicationGraph(graph),
+    selections: graph.integration.compositionSelections ?? [],
+  });
+
+  return Object.fromEntries(
+    generateApplicationBundle({
+      publishedRevisionId: "restaurant-generated-api-contract-1",
+      graph,
+      compositionLock,
+    }).files.map((file) => [file.path, file.content]),
+  );
+}
+
 async function withGeneratedRuntime<T>(
   run: (runtime: GeneratedRuntime) => Promise<T>,
+): Promise<T> {
+  return withGeneratedRuntimeModule(async (module) =>
+    run(module.applicationRuntime),
+  );
+}
+
+async function withGeneratedRuntimeModule<T>(
+  run: (module: GeneratedRuntimeModule) => Promise<T>,
 ): Promise<T> {
   await mkdir(compilerTestDirectory, { recursive: true });
   const directory = await mkdtemp(join(compilerTestDirectory, "runtime-"));
@@ -112,14 +144,52 @@ async function withGeneratedRuntime<T>(
     );
     const module = (await import(
       pathToFileURL(resolve(directory, "api/src/application-runtime.ts")).href
-    )) as { applicationRuntime: GeneratedRuntime };
-    return await run(module.applicationRuntime);
+    )) as GeneratedRuntimeModule;
+    return await run(module);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
 }
 
 describe("Order Operations runtime compilation", () => {
+  it("emits type-safe mutable capability work lists and aligns specialised receipt contracts", () => {
+    const ecommerce = ecommerceFiles();
+    const restaurant = restaurantFiles();
+
+    expect(ecommerce["api/src/capabilities/commerce.inventory.ts"]).toContain(
+      "const applied: CapabilityCommerceLineItem[] = [];",
+    );
+    expect(
+      ecommerce["api/src/capabilities/commerce.line-configuration.ts"],
+    ).toContain(
+      "const configured: { id: string; label: string; priceDelta: number }[] = [];",
+    );
+    expect(restaurant["api/src/prisma-record-store.ts"]).not.toContain(
+      "OrderOperationReceipt",
+    );
+    expect(restaurant["database/prisma/schema.prisma"]).toContain(
+      "model OrderLine",
+    );
+    expect(restaurant["database/prisma/schema.prisma"]).toContain(
+      "model MenuOptionGroup",
+    );
+    expect(restaurant["database/prisma/schema.prisma"]).toContain(
+      "model MenuOption",
+    );
+    expect(restaurant["database/prisma/schema.prisma"]).toContain(
+      "model OrderLineOption",
+    );
+    expect(restaurant["database/prisma/schema.prisma"]).toContain(
+      "locationId String",
+    );
+    expect(restaurant["database/prisma/schema.prisma"]).toContain(
+      "idempotencyKey String",
+    );
+    expect(
+      restaurant["database/prisma/migrations/0001_initial/migration.sql"],
+    ).toContain('CREATE TABLE "MenuOptionGroup"');
+  });
+
   it("emits the locked shared order-operations handler for a commerce Profile", () => {
     const files = ecommerceFiles();
 
@@ -203,6 +273,70 @@ describe("Order Operations runtime compilation", () => {
         plan: { auditAction: "order.refunded", paymentDelta: "refund-partial" },
       });
     });
+  });
+
+  it("compiles a persistent receipt contract instead of storing order operations in a runtime Map", () => {
+    const files = ecommerceFiles();
+
+    expect(files["api/prisma/schema.prisma"]).toContain(
+      "model OrderOperationReceipt",
+    );
+    expect(files["api/src/application-runtime.ts"]).toContain(
+      "getOrderOperationReceipt",
+    );
+    expect(files["api/src/application-runtime.ts"]).not.toContain(
+      "orderOperationReceipts = new Map",
+    );
+    expect(files["api/src/prisma-record-store.ts"]).toContain("upsert");
+  });
+
+  it("maps persistent receipt columns back into the runtime payment contract", () => {
+    const files = ecommerceFiles();
+
+    expect(files["api/src/prisma-record-store.ts"]).toContain(
+      "payment: { due: entry.due, captured: entry.captured, refunded: entry.refunded }",
+    );
+  });
+
+  it("retains a processed operation receipt when an application runtime is recreated", async () => {
+    await withGeneratedRuntimeModule(
+      async ({ ApplicationRuntime, InMemoryRecordStore }) => {
+        const store = new InMemoryRecordStore();
+        const firstRuntime = new ApplicationRuntime(store);
+        const order = await firstRuntime.create("shopper", "order", {});
+        await firstRuntime.addCartItem("shopper", "order", order.id, {
+          catalogEntity: "product",
+          catalogRecordId: "everyday-tote",
+          quantity: 1,
+        });
+        await firstRuntime.transition("shopper", "order", order.id, "submit", {
+          expectedVersion: 0,
+          idempotencyKey: "persistent-submit-1",
+        });
+        await firstRuntime.transition("shopper", "order", order.id, "pay", {
+          expectedVersion: 1,
+          idempotencyKey: "persistent-pay-1",
+        });
+        await firstRuntime.applyOrderOperation("merchant", "order", order.id, {
+          command: "refund",
+          expectedVersion: 2,
+          idempotencyKey: "persistent-refund-1",
+          amount: "4.00",
+          reason: "Customer request",
+        });
+
+        const restartedRuntime = new ApplicationRuntime(store);
+        await expect(
+          restartedRuntime.applyOrderOperation("merchant", "order", order.id, {
+            command: "refund",
+            expectedVersion: 3,
+            idempotencyKey: "persistent-refund-1",
+            amount: "4.00",
+            reason: "Duplicate request",
+          }),
+        ).rejects.toThrow("Commerce order command was already processed.");
+      },
+    );
   });
 
   it("executes catalog, cart, and versioned order operations through package handlers", async () => {

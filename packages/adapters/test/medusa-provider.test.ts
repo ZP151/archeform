@@ -7,13 +7,23 @@ const publishedGraph = {
   publishedRevisionId: "published-commerce-1",
   graph: {
     apiVersion: "factory.application-graph/v1" as const,
-    metadata: { id: "simple-ecommerce", workspaceId: "local-workspace", name: "Simple ecommerce" },
+    metadata: {
+      id: "simple-ecommerce",
+      workspaceId: "local-workspace",
+      name: "Simple ecommerce",
+    },
     page: { pages: [], navigation: [] },
-    domain: { entities: [{ key: "product", label: "Product", fields: [], indexes: [] }], relations: [] },
+    domain: {
+      entities: [{ key: "product", label: "Product", fields: [], indexes: [] }],
+      relations: [],
+    },
     policy: { roles: ["customer"], permissions: [] },
     flow: { flows: [] },
     integration: { providers: [], capabilities: [] },
-    experience: { theme: { mode: "light" as const, tokens: {} }, locales: ["en"] },
+    experience: {
+      theme: { mode: "light" as const, tokens: {} },
+      locales: ["en"],
+    },
   },
 };
 

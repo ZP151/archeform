@@ -30,7 +30,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
-function parseFragment(kind: AuthoringFragmentKind, input: unknown): AuthoringFragment {
+function parseFragment(
+  kind: AuthoringFragmentKind,
+  input: unknown,
+): AuthoringFragment {
   return kind === "page" ? parsePageModel(input) : parseFlowModel(input);
 }
 
@@ -58,7 +61,12 @@ export function createAuthoringAdapter(
     },
     importGraph(document) {
       if (!isRecord(document)) unsupportedDocument();
-      const allowedKeys = new Set(["apiVersion", "adapter", "fragment", "graph"]);
+      const allowedKeys = new Set([
+        "apiVersion",
+        "adapter",
+        "fragment",
+        "graph",
+      ]);
       if (Object.keys(document).some((key) => !allowedKeys.has(key))) {
         unsupportedDocument();
       }

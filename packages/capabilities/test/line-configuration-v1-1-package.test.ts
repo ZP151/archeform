@@ -19,7 +19,7 @@ describe("Line configuration capability v1.1", () => {
     const asset = capabilityAssets.find(
       (candidate) =>
         candidate.manifest.key === "commerce.line-configuration" &&
-        candidate.manifest.version === "1.1.1",
+        candidate.manifest.version === "1.1.2",
     );
 
     expect(asset).toBeDefined();
@@ -27,7 +27,7 @@ describe("Line configuration capability v1.1", () => {
 
     expect(asset.manifest).toMatchObject({
       key: "commerce.line-configuration",
-      version: "1.1.1",
+      version: "1.1.2",
       lifecycle: "golden",
       profiles: [
         "restaurant-ordering",
@@ -49,7 +49,7 @@ describe("Line configuration capability v1.1", () => {
     const previousAsset = capabilityAssets.find(
       (candidate) =>
         candidate.manifest.key === "commerce.line-configuration" &&
-        candidate.manifest.version === "1.1.0",
+        candidate.manifest.version === "1.1.1",
     );
     expect(previousAsset).toBeDefined();
     if (!previousAsset) return;
@@ -59,6 +59,6 @@ describe("Line configuration capability v1.1", () => {
     );
     expect(
       getCapabilityAsset("commerce.line-configuration").manifest.version,
-    ).toBe("1.1.1");
+    ).toBe("1.1.2");
   });
 });

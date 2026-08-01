@@ -20,10 +20,13 @@ describe("Order Operations capability packages", () => {
 
     expect(asset.manifest).toMatchObject({
       key: "commerce.order-operations",
-      version: "1.0.1",
+      version: "1.1.0",
       lifecycle: "golden",
       runtimeHandlers: ["orderOperations"],
-      provides: [{ interfaceKey: "commerce.order-operations", version: "v1" }],
+      provides: expect.arrayContaining([
+        { interfaceKey: "commerce.order-operations", version: "v1" },
+        { interfaceKey: "commerce.order-operation-receipt", version: "v1" },
+      ]),
       requires: expect.arrayContaining([
         { interfaceKey: "commerce.order-event", version: "v1" },
         { interfaceKey: "commerce.stock-movement", version: "v1" },
@@ -35,6 +38,18 @@ describe("Order Operations capability packages", () => {
         outputSlot: "api.runtime",
       }),
     ]);
+    expect(asset.manifest.executableContributions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "order-operation-receipt-schema",
+          outputSlot: "database.schema",
+        }),
+        expect.objectContaining({
+          id: "order-operation-receipt-migration",
+          outputSlot: "database.migration",
+        }),
+      ]),
+    );
     expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     expect(verifyCapabilityAssetPackage(asset, repositoryRoot)).toEqual([]);
   });

@@ -19,14 +19,28 @@ const graph: ApplicationGraphV1 = {
   apiVersion: "factory.application-graph/v1",
   metadata: { id: "expense", workspaceId: "local", name: "Expense approval" },
   page: {
-    pages: [{ id: "expenses", route: "/expenses", title: "Expenses", blocks: [] }],
+    pages: [
+      { id: "expenses", route: "/expenses", title: "Expenses", blocks: [] },
+    ],
     navigation: [{ id: "expenses", label: "Expenses", pageId: "expenses" }],
   },
   domain: {
-    entities: [{ key: "expense", label: "Expense", fields: [{ key: "amount", type: "decimal", required: true }], indexes: [] }],
+    entities: [
+      {
+        key: "expense",
+        label: "Expense",
+        fields: [{ key: "amount", type: "decimal", required: true }],
+        indexes: [],
+      },
+    ],
     relations: [],
   },
-  policy: { roles: ["employee"], permissions: [{ role: "employee", resource: "expense", actions: ["create", "read"] }] },
+  policy: {
+    roles: ["employee"],
+    permissions: [
+      { role: "employee", resource: "expense", actions: ["create", "read"] },
+    ],
+  },
   flow: { flows: [] },
   integration: { providers: [], capabilities: [] },
   experience: { theme: { mode: "light", tokens: {} }, locales: ["en"] },
@@ -35,7 +49,13 @@ const graph: ApplicationGraphV1 = {
 const addReceiptField: GraphDiffV1 = {
   apiVersion: "factory.graph-diff/v1",
   baseGraphHash: hashApplicationGraph(graph),
-  operations: [{ op: "add", path: "/domain/entities/0/fields/-", value: { key: "receiptUrl", type: "url", required: false } }],
+  operations: [
+    {
+      op: "add",
+      path: "/domain/entities/0/fields/-",
+      value: { key: "receiptUrl", type: "url", required: false },
+    },
+  ],
 };
 
 const serializedAddReceiptField = {
@@ -44,27 +64,51 @@ const serializedAddReceiptField = {
   operations: addReceiptField.operations.map((operation) => ({
     op: operation.op,
     path: operation.path,
-    valueJson: operation.op === "remove" ? null : JSON.stringify(operation.value),
+    valueJson:
+      operation.op === "remove" ? null : JSON.stringify(operation.value),
   })),
 };
 
 describe("AI Graph proposal adapter", () => {
   it("reduces provider transport failures to safe diagnostic categories", () => {
-    expect(classifyOpenAITransportFailure({ status: 400 })).toBe("provider_request_rejected");
-    expect(classifyOpenAITransportFailure({ status: 401 })).toBe("provider_authentication_failed");
-    expect(classifyOpenAITransportFailure({ status: 404 })).toBe("model_unavailable");
-    expect(classifyOpenAITransportFailure({ status: 429 })).toBe("provider_rate_limited");
-    expect(classifyOpenAITransportFailure(new Error("sensitive provider message"))).toBe("provider_request_failed");
+    expect(classifyOpenAITransportFailure({ status: 400 })).toBe(
+      "provider_request_rejected",
+    );
+    expect(classifyOpenAITransportFailure({ status: 401 })).toBe(
+      "provider_authentication_failed",
+    );
+    expect(classifyOpenAITransportFailure({ status: 404 })).toBe(
+      "model_unavailable",
+    );
+    expect(classifyOpenAITransportFailure({ status: 429 })).toBe(
+      "provider_rate_limited",
+    );
+    expect(
+      classifyOpenAITransportFailure(new Error("sensitive provider message")),
+    ).toBe("provider_request_failed");
   });
 
   it("returns a fixture proposal that has already been validated against the in-memory Draft", async () => {
     const provider = new FixtureGraphProposalProvider({
       diff: addReceiptField,
-      impact: { summary: "Adds a receipt URL.", affectedModels: ["domain"], risks: [] },
-      testSuggestions: [{ id: "receipt-optional", title: "Creates an expense without a receipt", type: "journey" }],
+      impact: {
+        summary: "Adds a receipt URL.",
+        affectedModels: ["domain"],
+        risks: [],
+      },
+      testSuggestions: [
+        {
+          id: "receipt-optional",
+          title: "Creates an expense without a receipt",
+          type: "journey",
+        },
+      ],
     });
 
-    const proposal = await provider.propose({ graph, brief: "Capture receipt URLs when available." });
+    const proposal = await provider.propose({
+      graph,
+      brief: "Capture receipt URLs when available.",
+    });
 
     expect(proposal.diff).toEqual(addReceiptField);
     expect(proposal.impact.affectedModels).toEqual(["domain"]);
@@ -74,14 +118,19 @@ describe("AI Graph proposal adapter", () => {
 
   it("reads the OpenAI key only when a proposal is requested and requests strict non-persistent JSON", async () => {
     let environmentReads = 0;
-    let receivedRequest: Parameters<OpenAIResponseTransport["create"]>[0] | undefined;
+    let receivedRequest:
+      Parameters<OpenAIResponseTransport["create"]>[0] | undefined;
     const transport: OpenAIResponseTransport = {
       async create(request) {
         receivedRequest = request;
         return {
           outputText: JSON.stringify({
             diff: serializedAddReceiptField,
-            impact: { summary: "Adds a receipt URL.", affectedModels: ["domain"], risks: [] },
+            impact: {
+              summary: "Adds a receipt URL.",
+              affectedModels: ["domain"],
+              risks: [],
+            },
             testSuggestions: [],
           }),
         };
@@ -104,11 +153,25 @@ describe("AI Graph proposal adapter", () => {
     expect(receivedRequest?.input).toContain("Add optional receipts.");
     expect(receivedRequest?.instructions).toContain("RFC 6901 JSON Pointer");
     expect(receivedRequest?.instructions).toContain("If adding a domain field");
-    const diffSchema = (receivedRequest?.jsonSchema.properties as Record<string, unknown>).diff as Record<string, unknown>;
-    const operationSchema = ((diffSchema.properties as Record<string, unknown>).operations as Record<string, unknown>).items as Record<string, unknown>;
-    expect(diffSchema.required).toEqual(["apiVersion", "baseGraphHash", "operations"]);
+    const diffSchema = (
+      receivedRequest?.jsonSchema.properties as Record<string, unknown>
+    ).diff as Record<string, unknown>;
+    const operationSchema = (
+      (diffSchema.properties as Record<string, unknown>).operations as Record<
+        string,
+        unknown
+      >
+    ).items as Record<string, unknown>;
+    expect(diffSchema.required).toEqual([
+      "apiVersion",
+      "baseGraphHash",
+      "operations",
+    ]);
     expect(operationSchema.required).toEqual(["op", "path", "valueJson"]);
-    expect((diffSchema.properties as Record<string, Record<string, unknown>>).apiVersion).toMatchObject({
+    expect(
+      (diffSchema.properties as Record<string, Record<string, unknown>>)
+        .apiVersion,
+    ).toMatchObject({
       type: "string",
       const: "factory.graph-diff/v1",
     });
@@ -118,22 +181,36 @@ describe("AI Graph proposal adapter", () => {
     const provider = new FixtureGraphProposalProvider({
       diff: {
         apiVersion: "factory.graph-diff/v1",
-        operations: [{ op: "replace", path: "/metadata/workspaceId", value: "other" }],
+        operations: [
+          { op: "replace", path: "/metadata/workspaceId", value: "other" },
+        ],
       },
-      impact: { summary: "Invalid.", affectedModels: ["metadata"], risks: ["scope"] },
+      impact: {
+        summary: "Invalid.",
+        affectedModels: ["metadata"],
+        risks: ["scope"],
+      },
       testSuggestions: [],
     });
 
-    await expect(provider.propose({ graph, brief: "Do not move this workspace." })).rejects.toBeInstanceOf(GraphProposalError);
+    await expect(
+      provider.propose({ graph, brief: "Do not move this workspace." }),
+    ).rejects.toBeInstanceOf(GraphProposalError);
   });
 
   it("classifies a transport rejection without exposing provider data", async () => {
     const provider = new OpenAIGraphProposalProvider({
-      transport: { async create() { throw new Error("provider-specific detail must stay private"); } },
+      transport: {
+        async create() {
+          throw new Error("provider-specific detail must stay private");
+        },
+      },
       readEnvironment: () => "test-key",
     });
 
-    await expect(provider.propose({ graph, brief: "Add a field." })).rejects.toMatchObject({
+    await expect(
+      provider.propose({ graph, brief: "Add a field." }),
+    ).rejects.toMatchObject({
       code: "provider_request_failed",
       message: "OpenAI Graph proposal request failed.",
     });
@@ -141,10 +218,16 @@ describe("AI Graph proposal adapter", () => {
 
   it("fails closed when the environment-only API key is unavailable", async () => {
     const provider = new OpenAIGraphProposalProvider({
-      transport: { async create() { throw new Error("Transport must not be called."); } },
+      transport: {
+        async create() {
+          throw new Error("Transport must not be called.");
+        },
+      },
       readEnvironment: () => undefined,
     });
 
-    await expect(provider.propose({ graph, brief: "Any proposal." })).rejects.toThrow("OPENAI_API_KEY");
+    await expect(
+      provider.propose({ graph, brief: "Any proposal." }),
+    ).rejects.toThrow("OPENAI_API_KEY");
   });
 });

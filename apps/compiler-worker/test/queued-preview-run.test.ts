@@ -162,7 +162,7 @@ describe("queued preview run", () => {
         reporter,
         runtime,
       ),
-    ).rejects.toThrow("Preview run failed.");
+    ).rejects.toThrow(/Preview start failed during dispatch/);
     expect(runtime.start).not.toHaveBeenCalled();
     expect(runtime.stop).not.toHaveBeenCalled();
   });
@@ -184,7 +184,7 @@ describe("queued preview run", () => {
           reporter,
           runtime,
         ),
-      ).rejects.toThrow("Preview run failed.");
+      ).rejects.toThrow(/Preview start failed during dispatch/);
       expect(runtime.start).not.toHaveBeenCalled();
       expect(runtime.stop).not.toHaveBeenCalled();
     },
@@ -204,7 +204,7 @@ describe("queued preview run", () => {
         reporter,
         runtime,
       ),
-    ).rejects.toThrow("Preview run failed.");
+    ).rejects.toThrow(/Preview start failed during runtime-start/);
     expect(reporter.failed).toHaveBeenCalledWith("preview-1", {
       diagnostic: "preview_start_failed",
     });
@@ -224,7 +224,7 @@ describe("queued preview run", () => {
         reporter,
         runtime,
       ),
-    ).rejects.toThrow("Preview run failed.");
+    ).rejects.toThrow(/Preview start failed during runtime-start/);
     expect(reporter.failed).toHaveBeenCalledWith("preview-1", {
       diagnostic: "preview_health_check_failed",
     });
@@ -264,7 +264,7 @@ describe("queued preview run", () => {
         reporter,
         runtime,
       ),
-    ).rejects.toThrow("Preview run failed.");
+    ).rejects.toThrow(/Preview start failed during runtime-start/);
     expect(reporter.failed).toHaveBeenCalledWith("preview-1", {
       diagnostic: "preview_start_timeout",
     });

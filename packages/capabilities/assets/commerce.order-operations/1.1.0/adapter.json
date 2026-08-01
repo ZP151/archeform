@@ -1,0 +1,66 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": [
+    "api.runtime",
+    "database.schema",
+    "database.migration",
+    "flow.effect",
+    "test.fixture"
+  ],
+  "runtimeHandlers": ["orderOperations"],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/commerce.order-operations.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:d42a71db31fbd306b95940483cbd4b8081e66f2aba6c44da6f0f8c23d0956129"
+    }
+  ],
+  "executableContributions": [
+    {
+      "id": "order-operation-receipt-schema",
+      "outputSlot": "database.schema",
+      "namespace": "packages/commerce.order-operations/persistence",
+      "source": "contributions/database/order-operation-receipt.prisma",
+      "target": "database/prisma/fragments/order-operation-receipt.prisma",
+      "parameterRefs": [],
+      "targetRuntimeInterfaceVersion": "factory.prisma-schema/v1",
+      "orderingRequirements": [],
+      "mergeProtocol": "append-fragment",
+      "digest": "sha256:7f3e2f2a7c156f6793c7afaf7a503bc163e81e91afd2f4a8650e12b5b74d9e8a"
+    },
+    {
+      "id": "order-operation-receipt-migration",
+      "outputSlot": "database.migration",
+      "namespace": "packages/commerce.order-operations/persistence",
+      "source": "contributions/database/order-operation-receipt.sql",
+      "target": "database/prisma/migrations/0001_initial/fragments/order-operation-receipt.sql",
+      "parameterRefs": [],
+      "targetRuntimeInterfaceVersion": "factory.prisma-migration/v1",
+      "orderingRequirements": ["order-operation-receipt-schema"],
+      "mergeProtocol": "append-fragment",
+      "digest": "sha256:381071b2075279576a7db683c8fe7c6d37f0ef160caeafb83f5685a99720d300"
+    }
+  ],
+  "parameters": [
+    { "key": "orderEntity", "type": "graph-symbol", "required": true },
+    { "key": "orderFlow", "type": "graph-symbol", "required": true },
+    { "key": "auditEntity", "type": "graph-symbol", "required": true },
+    { "key": "inventoryEntity", "type": "graph-symbol", "required": true },
+    { "key": "customerRole", "type": "graph-symbol", "required": true },
+    { "key": "merchantRole", "type": "graph-symbol", "required": true }
+  ],
+  "contributes": {
+    "effects": [
+      "order.hold",
+      "order.release-hold",
+      "order.amend",
+      "order.operation.cancel",
+      "order.payment.record",
+      "order.payment.capture",
+      "order.refund"
+    ]
+  }
+}

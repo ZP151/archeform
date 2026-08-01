@@ -16,18 +16,22 @@ describe("browser adapter entry", () => {
 
     expect(
       flowModelToReactFlow({
-        flows: [{
-          id: "request-flow",
-          entity: "request",
-          initialState: "draft",
-          states: ["draft", "submitted"],
-          events: ["submit"],
-          transitions: [{ from: "draft", event: "submit", to: "submitted" }],
-        }],
+        flows: [
+          {
+            id: "request-flow",
+            entity: "request",
+            initialState: "draft",
+            states: ["draft", "submitted"],
+            events: ["submit"],
+            transitions: [{ from: "draft", event: "submit", to: "submitted" }],
+          },
+        ],
       }).edges,
     ).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ data: expect.objectContaining({ event: "submit" }) }),
+        expect.objectContaining({
+          data: expect.objectContaining({ event: "submit" }),
+        }),
       ]),
     );
   });

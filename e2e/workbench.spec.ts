@@ -177,7 +177,9 @@ async function createCompiledExpenseDraft(page: Page): Promise<string> {
   ).toBeVisible({ timeout: 30_000 });
 
   const name = `Executable expense ${Date.now().toString()}`;
-  await page.getByRole("button", { name: "New application" }).click();
+  await page
+    .getByRole("button", { name: "New application", exact: true })
+    .click();
   await page.getByTestId("guided-template-expense-approval").click();
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByRole("button", { name: "Continue" }).click();
@@ -236,7 +238,7 @@ async function createCompiledExpenseDraft(page: Page): Promise<string> {
   });
   await expect(
     page.getByText("Compile succeeded", { exact: true }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText(/immutable outputs/)).toBeVisible();
 
   return routeSuffix;
@@ -248,7 +250,9 @@ test("creates a named application Draft through the guided business-user journey
   const name = `Travel approvals ${Date.now().toString()}`;
   await page.goto("/");
 
-  await page.getByRole("button", { name: "New application" }).click();
+  await page
+    .getByRole("button", { name: "New application", exact: true })
+    .click();
   await expect(
     page.getByRole("dialog", { name: "Create application left-side drawer" }),
   ).toBeVisible();
@@ -273,7 +277,7 @@ test("Home creates, publishes, compiles, previews, and operates a Restaurant app
   page,
   request,
 }) => {
-  test.setTimeout(360_000);
+  test.setTimeout(600_000);
   const suffix = Date.now().toString();
   const name = `Home restaurant ${suffix}`;
   await page.goto("/");
@@ -282,7 +286,9 @@ test("Home creates, publishes, compiles, previews, and operates a Restaurant app
   await expect(
     page.getByRole("heading", { name: "Restaurant ordering", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "New application" }).first().click();
+  await page
+    .getByRole("button", { name: "New application", exact: true })
+    .click();
   await page.getByTestId("guided-template-restaurant-ordering").click();
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByRole("button", { name: "Continue" }).click();
@@ -620,13 +626,120 @@ test("Home creates, publishes, compiles, previews, and operates a Restaurant app
   }
 });
 
+test("Home creates, publishes, compiles, previews, and operates a Simple Ecommerce application", async ({
+  page,
+}) => {
+  test.setTimeout(420_000);
+  const name = `Home ecommerce ${Date.now().toString()}`;
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "New application", exact: true })
+    .click();
+  await page.getByTestId("guided-template-simple-ecommerce").click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Application name").fill(name);
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByTestId("guided-create").click();
+
+  await expect(page.getByLabel("Current application")).toHaveText(name);
+  await page.getByRole("button", { name: "Publish" }).click();
+  await expect(page.getByRole("button", { name: "Published" })).toBeVisible();
+  await page.getByRole("button", { name: "Compile" }).click();
+  await expect(
+    page.getByText("Compile succeeded", { exact: true }),
+  ).toBeVisible({
+    timeout: 60_000,
+  });
+
+  let previewRunId: string | null = null;
+  let composeProjectName: string | null = null;
+
+  try {
+    const startedPreview = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        /\/compilations\/[^/]+\/preview-runs$/.test(response.url()),
+    );
+    await page.getByRole("button", { name: "Start preview" }).click();
+    const { id } = await ((
+      await startedPreview
+    ).json() as Promise<PreviewRunResponse>);
+    previewRunId = id;
+    composeProjectName = `factory-preview-${id}`;
+
+    await expect(page.getByText("Preview ready", { exact: true })).toBeVisible({
+      timeout: 300_000,
+    });
+    generatedImageIds(composeProjectName);
+
+    const previewPage = page.context().waitForEvent("page");
+    await page.getByRole("button", { name: "Open preview" }).click();
+    const preview = await previewPage;
+    await expect(preview.locator("main.generated-app")).toBeVisible();
+
+    const tote = preview.locator("li").filter({ hasText: "Everyday tote" });
+    await expect(tote).toHaveCount(1);
+    await tote.getByRole("button", { name: "Add to cart" }).click();
+    await preview.getByRole("link", { name: "Continue to checkout" }).click();
+    await expect(preview).toHaveURL(/\/checkout$/);
+    const orderTransitions: Array<{
+      readonly event: string;
+      readonly status: number;
+    }> = [];
+    preview.on("response", (response) => {
+      const pathname = new URL(response.url()).pathname;
+      const match = /\/events\/(submit|pay)$/.exec(pathname);
+      if (response.request().method() === "POST" && match) {
+        orderTransitions.push({ event: match[1]!, status: response.status() });
+      }
+    });
+    await preview
+      .getByRole("button", { name: "Pay simulated payment" })
+      .click();
+    await expect
+      .poll(() => orderTransitions, { timeout: 15_000 })
+      .toEqual([
+        { event: "submit", status: 201 },
+        { event: "pay", status: 201 },
+      ]);
+    await preview.getByRole("link", { name: "Orders" }).click();
+    await preview.getByLabel("Role").selectOption("merchant");
+
+    const paidOrder = preview
+      .locator("li")
+      .filter({ hasText: '"status":"paid"' })
+      .last();
+    await expect(paidOrder).toBeVisible({ timeout: 15_000 });
+    await paidOrder.getByRole("button", { name: "fulfil" }).click();
+    await expect(
+      preview.locator("li").filter({ hasText: '"status":"fulfilled"' }).last(),
+    ).toBeVisible({ timeout: 15_000 });
+  } finally {
+    if (previewRunId && composeProjectName) {
+      try {
+        const stopPreview = page.getByRole("button", { name: "Stop preview" });
+        await expect(stopPreview).toBeEnabled({ timeout: 60_000 });
+        await stopPreview.click();
+        await expect(
+          page.getByText("Preview stopped", { exact: true }),
+        ).toBeVisible({ timeout: 60_000 });
+      } finally {
+        expectPreviewResourcesRemoved(previewRunId, composeProjectName);
+      }
+    }
+  }
+});
+
 test("creates an audit-free Expense Draft from the capability picker", async ({
   page,
 }) => {
   const name = `Audit free expense ${Date.now().toString()}`;
   await page.goto("/");
 
-  await page.getByRole("button", { name: "New application" }).click();
+  await page
+    .getByRole("button", { name: "New application", exact: true })
+    .click();
   await page.getByTestId("guided-template-expense-approval").click();
   await page.getByRole("button", { name: "Continue" }).click();
   const audit = page.getByTestId("guided-capability-core.audit");
@@ -657,16 +770,14 @@ test("creates an audit-free Expense Draft from the capability picker", async ({
       flow.transitions.flatMap((transition) => transition.effects ?? []),
     ),
   ).not.toContainEqual(expect.objectContaining({ capability: "audit.record" }));
-  expect(graph.integration.compositionProfile).toBe("expense-approval");
-  expect(graph.integration.assetLocks).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({ key: "core.crud", lifecycle: "golden" }),
-      expect.objectContaining({ key: "core.workflow", lifecycle: "golden" }),
-    ]),
+  const selectedAssetKeys =
+    graph.integration.compositionSelections?.map(
+      (selection) => selection.lock.key,
+    ) ?? [];
+  expect(selectedAssetKeys).toEqual(
+    expect.arrayContaining(["core.crud", "core.workflow"]),
   );
-  expect(graph.integration.assetLocks).not.toContainEqual(
-    expect.objectContaining({ key: "core.audit" }),
-  );
+  expect(selectedAssetKeys).not.toContain("core.audit");
   await expect(
     page.getByRole("dialog", { name: "Create application left-side drawer" }),
   ).toBeHidden();

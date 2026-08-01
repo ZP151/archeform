@@ -1,0 +1,117 @@
+import type { CapabilityAssetV1 } from "../contract.js";
+
+const orderOperationReceiptSchemaContribution = {
+  id: "order-operation-receipt-schema",
+  outputSlot: "database.schema" as const,
+  namespace: "packages/commerce.order-operations/persistence",
+  source: "contributions/database/order-operation-receipt.prisma",
+  target: "database/prisma/fragments/order-operation-receipt.prisma",
+  parameterRefs: [],
+  targetRuntimeInterfaceVersion: "factory.prisma-schema/v1",
+  orderingRequirements: [],
+  mergeProtocol: "append-fragment" as const,
+  digest:
+    "sha256:7f3e2f2a7c156f6793c7afaf7a503bc163e81e91afd2f4a8650e12b5b74d9e8a",
+};
+
+const orderOperationReceiptMigrationContribution = {
+  id: "order-operation-receipt-migration",
+  outputSlot: "database.migration" as const,
+  namespace: "packages/commerce.order-operations/persistence",
+  source: "contributions/database/order-operation-receipt.sql",
+  target:
+    "database/prisma/migrations/0001_initial/fragments/order-operation-receipt.sql",
+  parameterRefs: [],
+  targetRuntimeInterfaceVersion: "factory.prisma-migration/v1",
+  orderingRequirements: ["order-operation-receipt-schema"],
+  mergeProtocol: "append-fragment" as const,
+  digest:
+    "sha256:381071b2075279576a7db683c8fe7c6d37f0ef160caeafb83f5685a99720d300",
+};
+
+export const orderOperationsAssetV1_1_0: CapabilityAssetV1 = {
+  manifest: {
+    apiVersion: "factory.capability/v1",
+    bindingContract: "factory.capability-binding/v1",
+    key: "commerce.order-operations",
+    version: "1.1.0",
+    category: "commerce",
+    name: "Persistent order operations",
+    description:
+      "Applies locked order operations with a persistent payment and idempotency receipt.",
+    packageRoot: "packages/capabilities/assets/commerce.order-operations/1.1.0",
+    manifestDigest:
+      "sha256:652fe4c0e6695a92b2622c934af56b8175374bdecdb3bac3834d90a2c00b3a71",
+    lifecycle: "golden",
+    profiles: [
+      "restaurant-ordering",
+      "simple-ecommerce",
+      "retail-counter",
+      "grocery-pickup",
+    ],
+    effects: [
+      "order.hold",
+      "order.release-hold",
+      "order.amend",
+      "order.operation.cancel",
+      "order.payment.record",
+      "order.payment.capture",
+      "order.refund",
+    ],
+    inputSchema: [
+      { key: "orderEntity", type: "domain.entity", required: true },
+      { key: "orderFlow", type: "flow.flow", required: true },
+      { key: "auditEntity", type: "domain.entity", required: true },
+      { key: "inventoryEntity", type: "domain.entity", required: true },
+      { key: "customerRole", type: "policy.role", required: true },
+      { key: "merchantRole", type: "policy.role", required: true },
+    ],
+    outputSlots: [
+      "api.runtime",
+      "database.schema",
+      "database.migration",
+      "flow.effect",
+      "test.fixture",
+    ],
+    runtimeHandlers: ["orderOperations"],
+    templates: [
+      {
+        id: "api-capability-module",
+        source: "templates/api/capability-module.ts.tpl",
+        target: "api/src/capabilities/commerce.order-operations.ts",
+        outputSlot: "api.runtime",
+        digest:
+          "sha256:d42a71db31fbd306b95940483cbd4b8081e66f2aba6c44da6f0f8c23d0956129",
+      },
+    ],
+    executableContributions: [
+      orderOperationReceiptSchemaContribution,
+      orderOperationReceiptMigrationContribution,
+    ],
+    parameters: [
+      { key: "orderEntity", type: "graph-symbol", required: true },
+      { key: "orderFlow", type: "graph-symbol", required: true },
+      { key: "auditEntity", type: "graph-symbol", required: true },
+      { key: "inventoryEntity", type: "graph-symbol", required: true },
+      { key: "customerRole", type: "graph-symbol", required: true },
+      { key: "merchantRole", type: "graph-symbol", required: true },
+    ],
+    requires: [
+      { interfaceKey: "commerce.order-event", version: "v1" },
+      { interfaceKey: "commerce.stock-movement", version: "v1" },
+    ],
+    provides: [
+      { interfaceKey: "commerce.order-operations", version: "v1" },
+      { interfaceKey: "commerce.order-operation-receipt", version: "v1" },
+    ],
+    verification: {
+      fixture: "fixtures/default.json",
+      fixtureDigest:
+        "sha256:35d7e54ff29cfa3fdf902c6bfa0618d5c861a9d6e0a2abdb51387d8585b1f5a4",
+      contractTest: "tests/contract.json",
+      contractTestDigest:
+        "sha256:11cf0672fde864eee65383abf2319b780405b3bc5145ce885d4a71b5e8a93a8d",
+      status: "verified",
+    },
+  },
+};

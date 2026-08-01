@@ -1,0 +1,4 @@
+{
+  "status": "verified",
+  "checks": ["reserve", "release", "decrement", "insufficient-stock"]
+}

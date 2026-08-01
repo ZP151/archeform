@@ -29,7 +29,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function parsePublishedGraph(input: unknown): PublishedGraphInput {
-  if (!isRecord(input) || typeof input.publishedRevisionId !== "string" || input.publishedRevisionId.trim().length === 0) {
+  if (
+    !isRecord(input) ||
+    typeof input.publishedRevisionId !== "string" ||
+    input.publishedRevisionId.trim().length === 0
+  ) {
     throw new Error("Published revision required.");
   }
   return {
@@ -61,10 +65,13 @@ export function createFixtureRuntimeProvider(
     },
     async teardown(result) {
       if (result.providerKey !== key || result.providerVersion !== version) {
-        throw new Error("Provider compilation result does not belong to this provider.");
+        throw new Error(
+          "Provider compilation result does not belong to this provider.",
+        );
       }
     },
   };
 }
 
-export const fixtureNativeProvider = createFixtureRuntimeProvider("fixture-native");
+export const fixtureNativeProvider =
+  createFixtureRuntimeProvider("fixture-native");

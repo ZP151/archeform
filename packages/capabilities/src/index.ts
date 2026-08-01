@@ -452,7 +452,7 @@ function assertLineConfigurationGraphSemantics(
   );
   if (
     !lineConfiguration ||
-    !["1.1.0", "1.1.1"].includes(lineConfiguration.lock.version)
+    !["1.1.0", "1.1.1", "1.1.2"].includes(lineConfiguration.lock.version)
   ) {
     return;
   }

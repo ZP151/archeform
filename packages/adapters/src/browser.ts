@@ -12,7 +12,9 @@ export interface PuckPageDocument {
   readonly pageModel: PageModel;
 }
 
-export function pageModelToPuckDocument(pageModel: PageModel): PuckPageDocument {
+export function pageModelToPuckDocument(
+  pageModel: PageModel,
+): PuckPageDocument {
   return {
     adapter: "puck",
     version: 1,
@@ -64,27 +66,33 @@ export interface DomainReactFlowDiagram {
  * Produces a visual relation map from declared DomainModel semantics. Entity
  * positions are presentation-only; relationships remain owned by the Graph.
  */
-export function domainModelToReactFlow(domain: DomainModel): DomainReactFlowDiagram {
-  const nodes: Node<FactoryDomainNodeData>[] = domain.entities.map((entity, index) => ({
-    id: `domain:${entity.key}`,
-    type: "default",
-    position: { x: (index % 3) * 260, y: Math.floor(index / 3) * 196 },
-    data: {
-      entityKey: entity.key,
-      label: entity.label,
-      fieldKeys: entity.fields.map((field) => field.key),
-      indexes: entity.indexes.length,
-    },
-  }));
-  const edges: Edge<FactoryDomainEdgeData>[] = domain.relations.map((relation, index) => ({
-    id: `domain:${relation.from}:${relation.kind}:${relation.to}:${index}`,
-    source: `domain:${relation.from}`,
-    target: `domain:${relation.to}`,
-    label: relation.kind,
-    type: "smoothstep",
-    animated: false,
-    data: { kind: relation.kind },
-  }));
+export function domainModelToReactFlow(
+  domain: DomainModel,
+): DomainReactFlowDiagram {
+  const nodes: Node<FactoryDomainNodeData>[] = domain.entities.map(
+    (entity, index) => ({
+      id: `domain:${entity.key}`,
+      type: "default",
+      position: { x: (index % 3) * 260, y: Math.floor(index / 3) * 196 },
+      data: {
+        entityKey: entity.key,
+        label: entity.label,
+        fieldKeys: entity.fields.map((field) => field.key),
+        indexes: entity.indexes.length,
+      },
+    }),
+  );
+  const edges: Edge<FactoryDomainEdgeData>[] = domain.relations.map(
+    (relation, index) => ({
+      id: `domain:${relation.from}:${relation.kind}:${relation.to}:${index}`,
+      source: `domain:${relation.from}`,
+      target: `domain:${relation.to}`,
+      label: relation.kind,
+      type: "smoothstep",
+      animated: false,
+      data: { kind: relation.kind },
+    }),
+  );
   return { nodes, edges };
 }
 
@@ -114,7 +122,11 @@ export function flowModelToReactFlow(flowModel: FlowModel): ReactFlowDiagram {
         label: transition.event,
         type: "smoothstep",
         animated: false,
-        data: { flowId: flow.id, event: transition.event, roles: transition.roles ?? [] },
+        data: {
+          flowId: flow.id,
+          event: transition.event,
+          roles: transition.roles ?? [],
+        },
       });
     });
   });

@@ -1,0 +1,12 @@
+model OrderOperationReceipt {
+  id String @id @default(cuid())
+  orderEntity String
+  orderRecordId String
+  due String
+  captured String
+  refunded String
+  processedIdempotencyKeys String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([orderEntity, orderRecordId])
+}

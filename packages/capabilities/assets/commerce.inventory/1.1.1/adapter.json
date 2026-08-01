@@ -1,0 +1,26 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": [
+    "api.runtime",
+    "database.schema",
+    "flow.effect",
+    "test.fixture"
+  ],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/commerce.inventory.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:f5e0f48adac22ecc5c3016bf28fa15a5803b62594bd4f564d4f56bb46a52eb16"
+    }
+  ],
+  "parameters": [
+    { "key": "catalogEntity", "type": "graph-symbol", "required": true },
+    { "key": "stockField", "type": "graph-symbol", "required": true }
+  ],
+  "contributes": {
+    "effects": ["inventory.reserve", "inventory.release", "inventory.decrement"]
+  }
+}

@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { runIntakeCli, type IntakeCliOptionsV1 } from "../src/main.js";
+import { GitHubDiscoveryRateLimitError } from "../src/github-discovery-client.js";
 
 function discoveryFixture(root: string): string {
   const path = join(root, "discovery.json");
@@ -80,5 +81,34 @@ describe("Candidate Foundry discovery CLI", () => {
       }),
     ).resolves.toBe(2);
     expect(harness.stderr.join("\n")).toContain("invalid-command");
+  });
+
+  it("renders an aggregate resumable summary for a bounded all-family discovery run", async () => {
+    const root = mkdtempSync(join(tmpdir(), "factory-discovery-cli-"));
+    const harness = options(root);
+    const calls: string[] = [];
+
+    await expect(
+      runIntakeCli(["discovery", "github", "--all"], {
+        ...harness.options,
+        discoveryClient: {
+          discover: async (family) => {
+            calls.push(family);
+            throw new GitHubDiscoveryRateLimitError(75);
+          },
+        },
+      }),
+    ).resolves.toBe(0);
+
+    const output = harness.stdout.join("\n");
+    expect(output).toContain(
+      '"apiVersion":"factory.discovery-batch-summary/v1"',
+    );
+    expect(output).toContain('"status":"rate-limited"');
+    expect(output).toContain('"retryAfterSeconds":75');
+    expect(output).not.toMatch(
+      /github\.com|canonicalIdentifier|token|sourceText|sensitive/i,
+    );
+    expect(calls).toEqual(["identity"]);
   });
 });

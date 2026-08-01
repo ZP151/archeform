@@ -20,14 +20,17 @@ import { inventoryLedgerAssetV1_0_0 } from "./commerce/inventory-ledger-v1-0-0.j
 import { inventoryAsset } from "./commerce/inventory.js";
 import { inventoryAssetV1_0_1 } from "./commerce/inventory-v1-0-1.js";
 import { inventoryAssetV1_1_0 } from "./commerce/inventory-v1-1-0.js";
+import { inventoryAssetV1_1_1 } from "./commerce/inventory-v1-1-1.js";
 import { lineConfigurationAssetV1_0_0 } from "./commerce/line-configuration-v1-0-0.js";
 import { lineConfigurationAssetV1_1_0 } from "./commerce/line-configuration-v1-1-0.js";
 import { lineConfigurationAssetV1_1_1 } from "./commerce/line-configuration-v1-1-1.js";
+import { lineConfigurationAssetV1_1_2 } from "./commerce/line-configuration-v1-1-2.js";
 import { orderAsset } from "./commerce/order.js";
 import { orderAssetV1_1_0 } from "./commerce/order-v1-1-0.js";
 import { orderAssetV1_2_0 } from "./commerce/order-v1-2-0.js";
 import { orderOperationsAssetV1_0_0 } from "./commerce/order-operations-v1-0-0.js";
 import { orderOperationsAssetV1_0_1 } from "./commerce/order-operations-v1-0-1.js";
+import { orderOperationsAssetV1_1_0 } from "./commerce/order-operations-v1-1-0.js";
 import { simulatedPaymentAsset } from "./commerce/simulated-payment.js";
 import { simulatedPaymentAssetV1_0_1 } from "./commerce/simulated-payment-v1-0-1.js";
 import { restaurantTableSessionAsset } from "./restaurant/table-session.js";
@@ -55,11 +58,13 @@ export {
   inventoryAsset,
   inventoryAssetV1_0_1,
   inventoryAssetV1_1_0,
+  inventoryAssetV1_1_1,
   inventoryLedgerAssetV1_0_0,
   identityContextAssetV1_0_0,
   lineConfigurationAssetV1_0_0,
   lineConfigurationAssetV1_1_0,
   lineConfigurationAssetV1_1_1,
+  lineConfigurationAssetV1_1_2,
   locationContextAssetV1_0_0,
   notificationAsset,
   notificationAssetV1_0_1,
@@ -68,6 +73,7 @@ export {
   orderAssetV1_2_0,
   orderOperationsAssetV1_0_0,
   orderOperationsAssetV1_0_1,
+  orderOperationsAssetV1_1_0,
   restaurantCashierAsset,
   restaurantCashierAssetV1_1_0,
   restaurantKitchenAsset,
@@ -95,11 +101,11 @@ export const currentCapabilityAssets: readonly CapabilityAssetV1[] =
     locationContextAssetV1_0_0,
     catalogAssetV1_2_0,
     cartAssetV1_0_1,
-    lineConfigurationAssetV1_1_1,
-    inventoryAssetV1_1_0,
+    lineConfigurationAssetV1_1_2,
+    inventoryAssetV1_1_1,
     inventoryLedgerAssetV1_0_0,
     orderAssetV1_2_0,
-    orderOperationsAssetV1_0_1,
+    orderOperationsAssetV1_1_0,
     simulatedPaymentAssetV1_0_1,
     restaurantTableSessionAssetV1_1_0,
     restaurantMenuAsset,
@@ -111,9 +117,11 @@ export const currentCapabilityAssets: readonly CapabilityAssetV1[] =
 
 export const capabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
   ...currentCapabilityAssets,
+  orderOperationsAssetV1_0_1,
   orderOperationsAssetV1_0_0,
   lineConfigurationAssetV1_0_0,
   lineConfigurationAssetV1_1_0,
+  lineConfigurationAssetV1_1_1,
   catalogAssetV1_1_0,
   orderAssetV1_1_0,
   catalogAsset,
@@ -124,6 +132,7 @@ export const capabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
   cartAsset,
   inventoryAsset,
   inventoryAssetV1_0_1,
+  inventoryAssetV1_1_0,
   simulatedPaymentAsset,
   orderAsset,
   restaurantTableSessionAsset,

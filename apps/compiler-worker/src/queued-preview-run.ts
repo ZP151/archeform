@@ -104,6 +104,7 @@ export async function executeQueuedPreviewRun(
   if (job.action === "stop" && queuedStart) {
     queuedStart.stopRequested = true;
   }
+  let phase = "dispatch";
   try {
     const dispatch = await dispatchClient.get(job.action, job.previewRunId);
     if (
@@ -118,10 +119,10 @@ export async function executeQueuedPreviewRun(
         return;
       }
       if (queuedStart) queuedStart.runtimeEntered = true;
-      await reporter.ready(
-        job.previewRunId,
-        await previewRuntime.start(artifactRoot, dispatch),
-      );
+      phase = "runtime-start";
+      const evidence = await previewRuntime.start(artifactRoot, dispatch);
+      phase = "ready-evidence";
+      await reporter.ready(job.previewRunId, evidence);
       return;
     }
     if (queuedStart && !queuedStart.runtimeEntered) {
@@ -132,7 +133,9 @@ export async function executeQueuedPreviewRun(
       skippedPreviewStarts.delete(job.previewRunId);
       return;
     }
+    phase = "runtime-stop";
     await previewRuntime.stop(artifactRoot, dispatch);
+    phase = "stopped-evidence";
     await reporter.stopped(job.previewRunId);
   } catch (error) {
     if (
@@ -153,7 +156,9 @@ export async function executeQueuedPreviewRun(
           ? "preview_start_failed"
           : "preview_stop_failed";
     await reporter.failed(job.previewRunId, { diagnostic });
-    throw new Error("Preview run failed.");
+    throw new Error(
+      `Preview ${job.action} failed during ${phase} (${diagnostic}).`,
+    );
   } finally {
     if (job.action === "start" && queuedStart) {
       queuedStart.settle();

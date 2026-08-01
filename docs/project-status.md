@@ -2,33 +2,99 @@
 
 Updated: 2026-08-01
 
-## Shared order-operations runtime — 2026-08-01
+## Current iteration — generated-product evidence and scalable reuse
 
-`commerce.order-operations@1.0.1` is now a new immutable Golden package. The
-prior `1.0.0` directory and digest remain unchanged. New Drafts for Restaurant
-Ordering, Simple Ecommerce, Retail Counter, and Grocery Pickup select `1.0.1`;
-existing locks can still resolve the historical package identity.
+Factory Pilot remains an Application Graph composition platform, not yet a
+production-complete catalogue of one hundred applications. The current
+foundation is materially stronger than a label-only template catalogue:
 
-The generic generated commerce runtime now resolves the order-operations
-planner only from its immutable composition lock. It validates the command
-against the package contract, delegates the versioned state change to the
-locked order handler, and writes the package-defined audit event. The focused
-generated Ecommerce runtime regression proves a manager partial-refund
-transition from `paid` with a version increment and the expected audit action.
+- Five starter Profiles exist: Expense Approval, Restaurant Ordering, Simple
+  Ecommerce, Retail Counter, and Grocery Pickup. The catalogue currently has
+  twenty capability families and forty-three physical versioned asset
+  packages. Counts are inventory, not a claim of full business completeness.
+- Current isolated Docker browser journeys passed for three generated
+  applications: specialised Restaurant Ordering (table session, menu ordering,
+  simulated payment, kitchen, cashier, audit, and cleanup), generic Expense
+  Approval (publish, compile, role-aware operation, stop, and cleanup), and
+  Simple Ecommerce (catalog, session-persisted cart, declared Checkout page,
+  submit, pay, merchant fulfilment, and cleanup).
+- The current Restaurant compiler output now persists option groups, line
+  options, location-scoped inventory idempotency keys, and their migration
+  schema. A generic capability-contract regression was also repaired so
+  generated non-commerce APIs declare every emitted handler type.
+- Retail Counter and Grocery Pickup still require fresh isolated
+  generated-runtime journeys before they can be accepted independently. The
+  platform lacks production identity, real payments, durable provider delivery,
+  observability, fleet upgrades, and managed deployment.
+
+### Candidate Foundry acceleration
+
+The local Intake CLI now supports a bounded all-family GitHub metadata pass.
+It executes only Factory-owned fixed queries sequentially, resolves default
+branches before a record becomes eligible, and returns a source-free
+continuation checkpoint on a GitHub rate limit. It does not download source,
+create a Candidate, install a dependency, promote a Golden asset, or modify a
+Graph or generated application.
+
+A guarded live metadata pass completed the identity, catalog, and
+commerce-transaction families before GitHub requested a pause. It evaluated
+sixty metadata records: thirty-four passed the fixed-reference and declared
+license preflight for later quarantine study, and twenty-six were blocked by
+the license gate. No source content or Candidate was persisted. Fresh
+verification for this change: `@factory/intake-cli` 67 tests, typecheck,
+Prettier lint, and build all passed.
+
+The compiler's current-profile regression gate is also green after replacing
+a stale hard-coded current-asset version assertion with the compiler boundary
+it is intended to verify: the selected immutable Graph lock must be emitted
+unchanged, while the historical lock remains replayable. Fresh verification:
+the focused compilation-plan suite passed 49 tests; `@factory/compiler`
+passed 208 tests, typecheck, Prettier lint, and build.
+
+### Next smallest delivery slice
+
+Use the Candidate Foundry batch output to select one permissively licensed,
+narrow money/pricing dependency or source-port candidate. It must receive a
+source study, notice/SBOM/security evidence, a Factory-owned contract, fixture,
+conformance test, and removal test before it becomes a reusable asset. The
+resulting asset must serve at least two Profile Graphs, followed by isolated
+Retail Counter or Grocery Pickup acceptance evidence.
+
+## Persistent shared order operations — 2026-08-01
+
+`commerce.order-operations@1.1.0` is an immutable Golden package that owns a
+versioned payment/idempotency receipt persistence contribution. The historical
+`1.0.0` and `1.0.1` identities and digests remain resolvable. New Drafts for
+Restaurant Ordering, Simple Ecommerce, Retail Counter, and Grocery Pickup lock
+`1.1.0`.
+
+For the generic commerce compiler path, the package now emits an
+`OrderOperationReceipt` Prisma model and migration, a Store transaction
+boundary, and a Prisma `upsert` implementation that round-trips the package
+payment contract. The generated runtime no longer owns a process-local receipt
+Map: recreating it around the same Store rejects a duplicate idempotency key.
+
+Restaurant remains a separate specialised runtime. It already persists
+`RestaurantCommand`, `PaymentAttempt`, receipt, inventory, audit, and outbox
+records in a Prisma transaction; the generic receipt contribution is consumed
+by the Ecommerce, Retail Counter, and Grocery Pickup runtime path. The two
+paths now have fresh isolated Restaurant and Ecommerce generated-application
+browser journey evidence. Retail Counter and Grocery Pickup still require their
+own generated-application evidence before the portfolio capability can be
+accepted across all four Profiles.
 
 Fresh focused evidence:
 
 - `@factory/capabilities`: 81 package, lock, and composition tests passed;
-- `@factory/compiler`: 89 order, commerce, Restaurant, and composition tests
-  passed; and
-- `@factory/compiler-worker`: 38 compilation and preview tests passed.
+- `@factory/compiler`: 8 persistent order-operations compiler regressions and
+  84 Restaurant, transaction, and composition regressions passed; and
+- `@factory/compiler-worker`: 4 published-artifact materialisation regressions
+  passed for Restaurant, Ecommerce, Retail Counter, and Grocery Pickup, after
+  rebuilding the compiler package consumed by the Worker.
 
-This is not acceptance of the `commerce.order-operations` Profile capability.
-The generated generic runtime currently retains payment-receipt and
-idempotency receipt state in its process runtime. The next required slice is
-to make that state a package-declared, transactionally persistent generated
-database asset, then run both Restaurant and Ecommerce against new isolated
-Compose projects. The existing Factory containers do not constitute generated
+This is not production acceptance. A generated app must still prove the
+PostgreSQL migration, runtime transaction, and role journeys in an isolated
+Compose project. Existing Factory containers do not constitute generated
 application acceptance evidence.
 
 ## Candidate Foundry discovery implementation — 2026-08-01
@@ -157,7 +223,7 @@ Fresh focused and package verification completed before the commit:
 - changed files and immutable package directories passed Prettier and
   `git diff --check`.
 
-The catalogue now has 19 capability families and 38 versioned asset packages.
+The catalogue now has 20 capability families and 43 versioned asset packages.
 This is a component-contract milestone, not yet package-owned target runtime:
 the next required migration moves Restaurant target contributions out of
 compiler Profile switches and then proves common transaction behaviour in both
@@ -167,7 +233,7 @@ Restaurant and Ecommerce.
 
 The current worktree adds a read-only Workspace Portfolio Summary to the
 Control Plane and Home. It exposes only safe aggregate state: five Profile
-starters, 19 capability families, 38 versioned asset packages, the 43-source /
+starters, 20 capability families, 43 versioned asset packages, the 43-source /
 108 source-to-scenario mapping discovery portfolio, Candidate/Provider counts,
 and compilation health. The separate 122-recipe planning taxonomy is broader
 than the immutable source portfolio and is not surfaced as installed product
@@ -199,7 +265,7 @@ platform.
   Simple Ecommerce, Retail Counter, and Grocery Pickup. The latter three reuse
   shared commerce composition locks, but that does not make their business
   operations complete or independently accepted.
-- The catalogue contains 19 capability families and 38 physical, versioned
+- The catalogue contains 20 capability families and 43 physical, versioned
   package directories. Only a smaller subset clearly owns executable runtime
   behaviour: core CRUD/workflow/audit/notification plus selected cart,
   inventory, and simulated-payment contributions. Generic catalogue and order
@@ -242,7 +308,7 @@ production-complete catalogue of one hundred application types.
   Restaurant Ordering, Simple Ecommerce, Retail Counter, and Grocery Pickup.
   Only Restaurant has a specialised transaction-oriented runtime; the other
   commerce Profiles share a smaller generic runtime.
-- The current catalogue has 19 capability families and 38 versioned physical
+- The current catalogue has 20 capability families and 43 versioned physical
   asset packages. Package counts do not prove business completeness. Core
   CRUD/workflow/audit/notification plus selected commerce handlers are
   executable; some catalogue/order concerns remain compiler-owned and several

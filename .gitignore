@@ -19,3 +19,5 @@ test-results/
 *.log
 *.tsbuildinfo
 .superpowers/
+.playwright-cli/
+packages/compiler/.generated-line-configuration-runtime/

@@ -1,0 +1,12 @@
+{
+  "status": "verified",
+  "checks": [
+    "expected-version",
+    "persistent-idempotency",
+    "persistent-payment-receipt",
+    "role-bound-command",
+    "partial-payment-limit",
+    "cancel-refund-audit",
+    "inventory-compensation"
+  ]
+}

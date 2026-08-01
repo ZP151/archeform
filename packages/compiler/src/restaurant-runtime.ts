@@ -922,7 +922,7 @@ export class RestaurantCommandService {
       const nextVersion = item.resourceVersion + 1;
       const updated = await tx.menuItem.updateMany({ where: { id: itemId, resourceVersion: body.expectedVersion }, data: { available: body.available as boolean, resourceVersion: { increment: 1 } } });
       if (updated.count !== 1) await this.throwMenuItemVersionConflict(tx, itemId);
-      await tx.inventoryLedger.create({ data: { menuItemId: itemId, orderId: null, delta: 0, provenance: "manager-adjustment", adjustmentReason: "correction", recordedAt: new Date() } });
+      await tx.inventoryLedger.create({ data: { locationId, menuItemId: itemId, orderId: null, idempotencyKey: this.requireIdempotencyKey(idempotencyKey), delta: 0, provenance: "manager-adjustment", adjustmentReason: "correction", recordedAt: new Date() } });
       await tx.capabilityEvent.create({ data: { actor: role, capability: "inventory.adjust", operation: "adjust", entity: profile.inventoryLedger.entity, recordId: itemId, outcome: "succeeded" } });
       await tx.capabilityEvent.create({ data: { actor: role, capability: "audit.record", operation: "record", entity: profile.inventoryLedger.entity, recordId: itemId, outcome: "succeeded" } });
       await tx.auditEvent.create({ data: { actor: role, action: "inventory.adjust", entity: profile.inventoryLedger.entity, recordId: itemId } });
@@ -949,7 +949,7 @@ export class RestaurantCommandService {
       if (updated.count !== 1) await this.throwMenuItemVersionConflict(tx, itemId);
       const item = await tx.menuItem.findUnique({ where: { id: itemId } });
       if (!item) throw new Error("Menu item was not found.");
-      await tx.inventoryLedger.create({ data: { menuItemId: itemId, orderId: null, delta, provenance: "manager-adjustment", adjustmentReason, recordedAt: new Date() } });
+      await tx.inventoryLedger.create({ data: { locationId, menuItemId: itemId, orderId: null, idempotencyKey: this.requireIdempotencyKey(idempotencyKey), delta, provenance: "manager-adjustment", adjustmentReason, recordedAt: new Date() } });
       await tx.capabilityEvent.create({ data: { actor: role, capability: "inventory.adjust", operation: "adjust", entity: profile.inventoryLedger.entity, recordId: itemId, outcome: "succeeded" } });
       await tx.capabilityEvent.create({ data: { actor: role, capability: "audit.record", operation: "record", entity: profile.inventoryLedger.entity, recordId: itemId, outcome: "succeeded" } });
       await tx.auditEvent.create({ data: { actor: role, action: "inventory.adjust", entity: profile.inventoryLedger.entity, recordId: itemId } });
@@ -1061,7 +1061,7 @@ export class RestaurantCommandService {
       for (const line of lines) {
         const reserved = await tx.menuItem.updateMany({ where: { id: line.menuItemId, available: true, stock: { gte: line.quantity } }, data: { stock: { decrement: line.quantity } } });
         if (reserved.count !== 1) throw new Error("Insufficient stock.");
-        await tx.inventoryLedger.create({ data: { menuItemId: line.menuItemId, orderId, delta: -line.quantity, provenance: "order-reservation", adjustmentReason: null, recordedAt: new Date() } });
+        await tx.inventoryLedger.create({ data: { locationId, menuItemId: line.menuItemId, orderId, idempotencyKey: this.requireIdempotencyKey(idempotencyKey) + ":reservation:" + line.id, delta: -line.quantity, provenance: "order-reservation", adjustmentReason: null, recordedAt: new Date() } });
       }
       const nextVersion = order.orderVersion + 1;
       const updated = await tx.order.updateMany({ where: { id: orderId, orderVersion: order.orderVersion }, data: { status: "submitted", submittedAt: new Date(), orderNote: orderNote, orderVersion: nextVersion } });
@@ -1122,7 +1122,7 @@ export class RestaurantCommandService {
         const lines = await tx.orderLine.findMany({ where: { orderId } });
         for (const line of lines) {
           await tx.menuItem.update({ where: { id: line.menuItemId }, data: { stock: { increment: line.quantity } } });
-          await tx.inventoryLedger.create({ data: { menuItemId: line.menuItemId, orderId, delta: line.quantity, provenance: "order-release", adjustmentReason: null, recordedAt: new Date() } });
+          await tx.inventoryLedger.create({ data: { locationId, menuItemId: line.menuItemId, orderId, idempotencyKey: this.requireIdempotencyKey(idempotencyKey) + ":release:" + line.id, delta: line.quantity, provenance: "order-release", adjustmentReason: null, recordedAt: new Date() } });
         }
         inventoryReleased = lines.length > 0;
       } else {
@@ -1411,6 +1411,7 @@ model RestaurantLocation {
   currency String
   active Boolean
   tables RestaurantTable[]
+  inventoryEntries InventoryLedger[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -1470,11 +1471,44 @@ model MenuItem {
   imageUrl String
   category MenuCategory @relation(fields: [categoryKey], references: [id])
   lines OrderLine[]
+  optionGroups MenuOptionGroup[]
   inventoryEntries InventoryLedger[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([categoryKey, available])
   @@index([stock])
+}
+
+model MenuOptionGroup {
+  id String @id @default(cuid())
+  menuItemId String
+  name String
+  selectionMode String
+  minimumSelections Int
+  maximumSelections Int
+  required Boolean
+  active Boolean
+  sortOrder Int
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id])
+  options MenuOption[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([menuItemId, active, sortOrder])
+}
+
+model MenuOption {
+  id String @id @default(cuid())
+  optionGroupId String
+  name String
+  label String
+  priceDelta Decimal
+  available Boolean
+  sortOrder Int
+  optionGroup MenuOptionGroup @relation(fields: [optionGroupId], references: [id])
+  lineOptions OrderLineOption[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([optionGroupId, available, sortOrder])
 }
 
 model Order {
@@ -1510,9 +1544,25 @@ model OrderLine {
   modifiers Json
   order Order @relation(fields: [orderId], references: [id])
   menuItem MenuItem @relation(fields: [menuItemId], references: [id])
+  options OrderLineOption[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([orderId])
+}
+
+model OrderLineOption {
+  id String @id @default(cuid())
+  orderLineId String
+  optionId String
+  label String
+  priceDelta Decimal
+  quantity Int
+  orderLine OrderLine @relation(fields: [orderLineId], references: [id])
+  option MenuOption @relation(fields: [optionId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([orderLineId, optionId])
+  @@index([optionId])
 }
 
 model PaymentAttempt {
@@ -1547,18 +1597,22 @@ model KitchenTicket {
 
 model InventoryLedger {
   id String @id @default(cuid())
+  locationId String
   menuItemId String
   orderId String?
+  idempotencyKey String
   delta Int
   provenance String
   adjustmentReason String?
   recordedAt DateTime
+  restaurantLocation RestaurantLocation @relation(fields: [locationId], references: [id])
   menuItem MenuItem @relation(fields: [menuItemId], references: [id])
   order Order? @relation(fields: [orderId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([menuItemId, recordedAt])
   @@index([orderId])
+  @@unique([locationId, idempotencyKey])
 }
 
 model RestaurantCommand {
@@ -1647,12 +1701,24 @@ const restaurantSqlModels = [
     '"id" TEXT NOT NULL PRIMARY KEY, "categoryKey" TEXT NOT NULL, "name" TEXT NOT NULL, "description" TEXT NOT NULL, "price" DECIMAL NOT NULL, "available" BOOLEAN NOT NULL, "stock" INTEGER NOT NULL, "resourceVersion" INTEGER NOT NULL DEFAULT 0, "preparationMinutes" INTEGER NOT NULL, "imageUrl" TEXT NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL',
   ],
   [
+    "MenuOptionGroup",
+    '"id" TEXT NOT NULL PRIMARY KEY, "menuItemId" TEXT NOT NULL, "name" TEXT NOT NULL, "selectionMode" TEXT NOT NULL, "minimumSelections" INTEGER NOT NULL, "maximumSelections" INTEGER NOT NULL, "required" BOOLEAN NOT NULL, "active" BOOLEAN NOT NULL, "sortOrder" INTEGER NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL',
+  ],
+  [
+    "MenuOption",
+    '"id" TEXT NOT NULL PRIMARY KEY, "optionGroupId" TEXT NOT NULL, "name" TEXT NOT NULL, "label" TEXT NOT NULL, "priceDelta" DECIMAL NOT NULL, "available" BOOLEAN NOT NULL, "sortOrder" INTEGER NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL',
+  ],
+  [
     "Order",
     '"id" TEXT NOT NULL PRIMARY KEY, "tableSessionId" TEXT NOT NULL, "status" TEXT NOT NULL, "paymentStatus" TEXT NOT NULL, "fulfilmentType" TEXT NOT NULL, "orderNote" TEXT NOT NULL, "priority" INTEGER NOT NULL, "total" DECIMAL NOT NULL, "orderVersion" INTEGER NOT NULL, "submittedAt" TIMESTAMP(3), "paidAt" TIMESTAMP(3), "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL',
   ],
   [
     "OrderLine",
     '"id" TEXT NOT NULL PRIMARY KEY, "orderId" TEXT NOT NULL, "menuItemId" TEXT NOT NULL, "quantity" INTEGER NOT NULL, "unitPrice" DECIMAL NOT NULL, "lineNote" TEXT NOT NULL, "modifiers" JSONB NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL',
+  ],
+  [
+    "OrderLineOption",
+    '"id" TEXT NOT NULL PRIMARY KEY, "orderLineId" TEXT NOT NULL, "optionId" TEXT NOT NULL, "label" TEXT NOT NULL, "priceDelta" DECIMAL NOT NULL, "quantity" INTEGER NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL',
   ],
   [
     "PaymentAttempt",
@@ -1664,7 +1730,7 @@ const restaurantSqlModels = [
   ],
   [
     "InventoryLedger",
-    '"id" TEXT NOT NULL PRIMARY KEY, "menuItemId" TEXT NOT NULL, "orderId" TEXT, "delta" INTEGER NOT NULL, "provenance" TEXT NOT NULL, "adjustmentReason" TEXT, "recordedAt" TIMESTAMP(3) NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL',
+    '"id" TEXT NOT NULL PRIMARY KEY, "locationId" TEXT NOT NULL, "menuItemId" TEXT NOT NULL, "orderId" TEXT, "idempotencyKey" TEXT NOT NULL, "delta" INTEGER NOT NULL, "provenance" TEXT NOT NULL, "adjustmentReason" TEXT, "recordedAt" TIMESTAMP(3) NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL',
   ],
   [
     "RestaurantCommand",
@@ -1696,18 +1762,25 @@ function renderInitialMigration(): string {
   const indexesAndConstraints = String.raw`
 CREATE UNIQUE INDEX "RestaurantCommand_scope_idempotencyKey_key" ON "RestaurantCommand" ("scope", "idempotencyKey");
 CREATE UNIQUE INDEX "PaymentAttempt_orderId_idempotencyKey_key" ON "PaymentAttempt" ("orderId", "idempotencyKey");
+CREATE UNIQUE INDEX "OrderLineOption_orderLineId_optionId_key" ON "OrderLineOption" ("orderLineId", "optionId");
+CREATE UNIQUE INDEX "InventoryLedger_locationId_idempotencyKey_key" ON "InventoryLedger" ("locationId", "idempotencyKey");
 CREATE INDEX "RestaurantOutboxEvent_aggregateId_version_idx" ON "RestaurantOutboxEvent" ("aggregateId", "version");
 CREATE INDEX "InventoryLedger_orderId_idx" ON "InventoryLedger" ("orderId");
 ALTER TABLE "RestaurantTable" ADD CONSTRAINT "RestaurantTable_location_fkey" FOREIGN KEY ("restaurantLocationId") REFERENCES "RestaurantLocation" ("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "TableSession" ADD CONSTRAINT "TableSession_tableCode_fkey" FOREIGN KEY ("tableCode") REFERENCES "RestaurantTable" ("code") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "MenuItem" ADD CONSTRAINT "MenuItem_categoryKey_fkey" FOREIGN KEY ("categoryKey") REFERENCES "MenuCategory" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "MenuOptionGroup" ADD CONSTRAINT "MenuOptionGroup_menuItemId_fkey" FOREIGN KEY ("menuItemId") REFERENCES "MenuItem" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "MenuOption" ADD CONSTRAINT "MenuOption_optionGroupId_fkey" FOREIGN KEY ("optionGroupId") REFERENCES "MenuOptionGroup" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "Order" ADD CONSTRAINT "Order_tableSessionId_fkey" FOREIGN KEY ("tableSessionId") REFERENCES "TableSession" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "OrderLine" ADD CONSTRAINT "OrderLine_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "OrderLine" ADD CONSTRAINT "OrderLine_menuItemId_fkey" FOREIGN KEY ("menuItemId") REFERENCES "MenuItem" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "OrderLineOption" ADD CONSTRAINT "OrderLineOption_orderLineId_fkey" FOREIGN KEY ("orderLineId") REFERENCES "OrderLine" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "OrderLineOption" ADD CONSTRAINT "OrderLineOption_optionId_fkey" FOREIGN KEY ("optionId") REFERENCES "MenuOption" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "PaymentAttempt" ADD CONSTRAINT "PaymentAttempt_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "KitchenTicket" ADD CONSTRAINT "KitchenTicket_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "InventoryLedger" ADD CONSTRAINT "InventoryLedger_menuItemId_fkey" FOREIGN KEY ("menuItemId") REFERENCES "MenuItem" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "InventoryLedger" ADD CONSTRAINT "InventoryLedger_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "InventoryLedger" ADD CONSTRAINT "InventoryLedger_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "RestaurantLocation" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 `;
   return tables.join("\n\n") + "\n" + indexesAndConstraints;
 }

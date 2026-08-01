@@ -16,29 +16,37 @@ describe("Graph editor adapters", () => {
           id: "home",
           route: "/",
           title: "Home",
-          blocks: [{ id: "welcome", type: "hero", props: { heading: "Hello" } }],
+          blocks: [
+            { id: "welcome", type: "hero", props: { heading: "Hello" } },
+          ],
         },
       ],
       navigation: [{ id: "home", label: "Home", pageId: "home" }],
     };
 
-    expect(puckDocumentToPageModel(pageModelToPuckDocument(page))).toEqual(page);
-    expect(() => assertValidApplicationGraph(pageModelToPuckDocument(page))).toThrow();
+    expect(puckDocumentToPageModel(pageModelToPuckDocument(page))).toEqual(
+      page,
+    );
+    expect(() =>
+      assertValidApplicationGraph(pageModelToPuckDocument(page)),
+    ).toThrow();
   });
 
   it("exposes declared FlowModel transitions as read-only React Flow nodes and edges", () => {
     const flow = {
-      flows: [{
-        id: "expense-review",
-        entity: "expense",
-        initialState: "draft",
-        states: ["draft", "submitted", "approved"],
-        events: ["submit", "approve"],
-        transitions: [
-          { from: "draft", event: "submit", to: "submitted" },
-          { from: "submitted", event: "approve", to: "approved" },
-        ],
-      }],
+      flows: [
+        {
+          id: "expense-review",
+          entity: "expense",
+          initialState: "draft",
+          states: ["draft", "submitted", "approved"],
+          events: ["submit", "approve"],
+          transitions: [
+            { from: "draft", event: "submit", to: "submitted" },
+            { from: "submitted", event: "approve", to: "approved" },
+          ],
+        },
+      ],
     };
 
     const diagram = flowModelToReactFlow(flow);
@@ -47,22 +55,42 @@ describe("Graph editor adapters", () => {
       "expense-review:submitted",
       "expense-review:approved",
     ]);
-    expect(diagram.edges.map((edge) => edge.label)).toEqual(["submit", "approve"]);
-    expect(diagram.edges).toEqual(expect.arrayContaining([
-      expect.objectContaining({ data: expect.objectContaining({ event: "submit" }) }),
-    ]));
+    expect(diagram.edges.map((edge) => edge.label)).toEqual([
+      "submit",
+      "approve",
+    ]);
+    expect(diagram.edges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          data: expect.objectContaining({ event: "submit" }),
+        }),
+      ]),
+    );
   });
 
   it("projects declared DomainModel relations without making React Flow coordinates semantic", () => {
     const diagram = domainModelToReactFlow({
       entities: [
-        { key: "order", label: "Order", fields: [{ key: "status", type: "string", required: true }], indexes: [] },
-        { key: "lineItem", label: "Line item", fields: [{ key: "quantity", type: "integer", required: true }], indexes: [] },
+        {
+          key: "order",
+          label: "Order",
+          fields: [{ key: "status", type: "string", required: true }],
+          indexes: [],
+        },
+        {
+          key: "lineItem",
+          label: "Line item",
+          fields: [{ key: "quantity", type: "integer", required: true }],
+          indexes: [],
+        },
       ],
       relations: [{ from: "order", to: "lineItem", kind: "one-to-many" }],
     });
 
-    expect(diagram.nodes.map((node) => node.data.entityKey)).toEqual(["order", "lineItem"]);
+    expect(diagram.nodes.map((node) => node.data.entityKey)).toEqual([
+      "order",
+      "lineItem",
+    ]);
     expect(diagram.edges).toEqual([
       expect.objectContaining({
         source: "domain:order",

@@ -12,7 +12,19 @@ import {
 
 const impactSchema = z.object({
   summary: z.string().min(1).max(2_000),
-  affectedModels: z.array(z.enum(["metadata", "page", "domain", "policy", "flow", "integration", "experience"])).max(7),
+  affectedModels: z
+    .array(
+      z.enum([
+        "metadata",
+        "page",
+        "domain",
+        "policy",
+        "flow",
+        "integration",
+        "experience",
+      ]),
+    )
+    .max(7),
   risks: z.array(z.string().min(1).max(500)).max(20),
 });
 
@@ -37,7 +49,10 @@ const structuredOperationSchema = z.object({
 const structuredProposalPayloadSchema = z.object({
   diff: z.object({
     apiVersion: z.literal("factory.graph-diff/v1"),
-    baseGraphHash: z.string().regex(/^sha256:[a-f0-9]{64}$/).nullable(),
+    baseGraphHash: z
+      .string()
+      .regex(/^sha256:[a-f0-9]{64}$/)
+      .nullable(),
     operations: z.array(structuredOperationSchema).min(1).max(100),
   }),
   impact: impactSchema,
@@ -81,10 +96,13 @@ export class GraphProposalError extends Error {
  * Keeps transport diagnostics useful without leaking provider error messages,
  * request bodies, model output, or credentials into application state.
  */
-export function classifyOpenAITransportFailure(error: unknown): GraphProposalErrorCode {
-  const status = typeof error === "object" && error !== null && "status" in error
-    ? (error as { status?: unknown }).status
-    : undefined;
+export function classifyOpenAITransportFailure(
+  error: unknown,
+): GraphProposalErrorCode {
+  const status =
+    typeof error === "object" && error !== null && "status" in error
+      ? (error as { status?: unknown }).status
+      : undefined;
   if (status === 400) return "provider_request_rejected";
   if (status === 401) return "provider_authentication_failed";
   if (status === 403) return "provider_access_denied";
@@ -140,10 +158,7 @@ const graphProposalJsonSchema: Record<string, unknown> = {
               op: { type: "string", enum: ["add", "replace", "remove"] },
               path: { type: "string", pattern: "^/" },
               valueJson: {
-                anyOf: [
-                  { type: "string" },
-                  { type: "null" },
-                ],
+                anyOf: [{ type: "string" }, { type: "null" }],
               },
             },
           },
@@ -158,7 +173,18 @@ const graphProposalJsonSchema: Record<string, unknown> = {
         summary: { type: "string" },
         affectedModels: {
           type: "array",
-          items: { type: "string", enum: ["metadata", "page", "domain", "policy", "flow", "integration", "experience"] },
+          items: {
+            type: "string",
+            enum: [
+              "metadata",
+              "page",
+              "domain",
+              "policy",
+              "flow",
+              "integration",
+              "experience",
+            ],
+          },
         },
         risks: { type: "array", items: { type: "string" } },
       },
@@ -172,7 +198,10 @@ const graphProposalJsonSchema: Record<string, unknown> = {
         properties: {
           id: { type: "string" },
           title: { type: "string" },
-          type: { type: "string", enum: ["unit", "api", "flow", "journey", "smoke"] },
+          type: {
+            type: "string",
+            enum: ["unit", "api", "flow", "journey", "smoke"],
+          },
         },
       },
     },
@@ -193,7 +222,9 @@ const proposalInstructions = [
 ].join(" ");
 
 class OpenAIResponsesApiTransport implements OpenAIResponseTransport {
-  public async create(request: OpenAITransportRequest): Promise<{ outputText: string }> {
+  public async create(
+    request: OpenAITransportRequest,
+  ): Promise<{ outputText: string }> {
     // The API key exists only in this invocation's stack frame. The OpenAI SDK and
     // this adapter are configured not to persist the response remotely or locally.
     const client = new OpenAI({ apiKey: request.apiKey });
@@ -235,13 +266,18 @@ export class OpenAIGraphProposalProvider implements GraphProposalProvider {
   public constructor(options: OpenAIGraphProposalProviderOptions = {}) {
     this.model = options.model ?? "gpt-5";
     this.transport = options.transport ?? new OpenAIResponsesApiTransport();
-    this.readEnvironment = options.readEnvironment ?? (() => process.env.OPENAI_API_KEY);
+    this.readEnvironment =
+      options.readEnvironment ?? (() => process.env.OPENAI_API_KEY);
   }
 
   public async propose(request: GraphProposalRequest): Promise<GraphProposal> {
     const graph = parseApplicationGraph(request.graph);
     const apiKey = this.readEnvironment();
-    if (!apiKey) throw new GraphProposalError("OPENAI_API_KEY must be set in the local process environment.", "configuration_missing");
+    if (!apiKey)
+      throw new GraphProposalError(
+        "OPENAI_API_KEY must be set in the local process environment.",
+        "configuration_missing",
+      );
 
     let outputText: string;
     try {
@@ -258,7 +294,10 @@ export class OpenAIGraphProposalProvider implements GraphProposalProvider {
     } catch (error) {
       // Do not surface a provider response: upstream errors can include request
       // context, which is intentionally not an application artifact.
-      throw new GraphProposalError("OpenAI Graph proposal request failed.", classifyOpenAITransportFailure(error));
+      throw new GraphProposalError(
+        "OpenAI Graph proposal request failed.",
+        classifyOpenAITransportFailure(error),
+      );
     }
 
     return validateProposal(graph, outputText);
@@ -275,17 +314,27 @@ export class FixtureGraphProposalProvider implements GraphProposalProvider {
   }
 }
 
-function validateProposal(graph: ApplicationGraphV1, candidate: unknown): GraphProposal {
+function validateProposal(
+  graph: ApplicationGraphV1,
+  candidate: unknown,
+): GraphProposal {
   try {
-    const proposal = typeof candidate === "string"
-      ? parseStructuredProposal(JSON.parse(candidate))
-      : proposalPayloadSchema.parse(candidate);
+    const proposal =
+      typeof candidate === "string"
+        ? parseStructuredProposal(JSON.parse(candidate))
+        : proposalPayloadSchema.parse(candidate);
     // This performs base-hash, path boundary, schema, and cross-model semantic
     // validation without retaining the resulting Draft or any model text.
-    applyGraphDiffToDraft(createDraftRevision(graph, "proposal-validation"), proposal.diff);
+    applyGraphDiffToDraft(
+      createDraftRevision(graph, "proposal-validation"),
+      proposal.diff,
+    );
     return proposal;
   } catch {
-    throw new GraphProposalError("AI proposal failed Factory Application Graph validation.", "proposal_invalid");
+    throw new GraphProposalError(
+      "AI proposal failed Factory Application Graph validation.",
+      "proposal_invalid",
+    );
   }
 }
 
@@ -294,12 +343,18 @@ function parseStructuredProposal(candidate: unknown): GraphProposal {
   const operations = structured.diff.operations.map((operation) => {
     if (operation.op === "remove") {
       if (operation.valueJson !== null) {
-        throw new GraphProposalError("AI proposal failed Factory Application Graph validation.", "proposal_invalid");
+        throw new GraphProposalError(
+          "AI proposal failed Factory Application Graph validation.",
+          "proposal_invalid",
+        );
       }
       return { op: operation.op, path: operation.path };
     }
     if (operation.valueJson === null) {
-      throw new GraphProposalError("AI proposal failed Factory Application Graph validation.", "proposal_invalid");
+      throw new GraphProposalError(
+        "AI proposal failed Factory Application Graph validation.",
+        "proposal_invalid",
+      );
     }
     return {
       op: operation.op,
@@ -311,7 +366,9 @@ function parseStructuredProposal(candidate: unknown): GraphProposal {
   return proposalPayloadSchema.parse({
     diff: {
       apiVersion: structured.diff.apiVersion,
-      ...(structured.diff.baseGraphHash ? { baseGraphHash: structured.diff.baseGraphHash } : {}),
+      ...(structured.diff.baseGraphHash
+        ? { baseGraphHash: structured.diff.baseGraphHash }
+        : {}),
       operations,
     },
     impact: structured.impact,

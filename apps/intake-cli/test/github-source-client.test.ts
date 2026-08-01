@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { createEnvironmentGitHubDiscoveryClient } from "../src/github-discovery-client.js";
+import {
+  createEnvironmentGitHubDiscoveryClient,
+  discoverGitHubFamilies,
+  GitHubDiscoveryRateLimitError,
+} from "../src/github-discovery-client.js";
 import { createGitHubReadTokenFetch } from "../src/github-source-client.js";
 
 describe("createGitHubReadTokenFetch", () => {
@@ -102,5 +106,75 @@ describe("createEnvironmentGitHubDiscoveryClient", () => {
       }),
     ]);
     expect(JSON.stringify(records)).not.toContain("read-token-for-test-only");
+  });
+
+  it("returns a resumable, bounded checkpoint when a later family is rate limited", async () => {
+    const calls: string[] = [];
+    const client = {
+      discover: async (family: "identity" | "catalog" | "inventory") => {
+        calls.push(family);
+        if (family === "catalog") {
+          throw new GitHubDiscoveryRateLimitError(60);
+        }
+        return [];
+      },
+    };
+
+    const result = await discoverGitHubFamilies(
+      ["identity", "catalog", "inventory"],
+      client,
+    );
+
+    expect(result).toEqual({
+      apiVersion: "factory.github-discovery-batch/v1",
+      status: "rate-limited",
+      records: [],
+      completedFamilies: ["identity"],
+      pendingFamilies: ["catalog", "inventory"],
+      checkpoint: {
+        apiVersion: "factory.github-discovery-checkpoint/v1",
+        completedFamilies: ["identity"],
+      },
+      retryAfterSeconds: 60,
+    });
+    expect(calls).toEqual(["identity", "catalog"]);
+
+    const resumed = await discoverGitHubFamilies(
+      ["identity", "catalog", "inventory"],
+      {
+        discover: async (family) => {
+          calls.push(`resume:${family}`);
+          return [];
+        },
+      },
+      result.checkpoint,
+    );
+    expect(resumed.status).toBe("complete");
+    expect(resumed.completedFamilies).toEqual([
+      "identity",
+      "catalog",
+      "inventory",
+    ]);
+    expect(calls).toEqual([
+      "identity",
+      "catalog",
+      "resume:catalog",
+      "resume:inventory",
+    ]);
+  });
+
+  it("classifies an API rate-limit response without exposing the response body", async () => {
+    const client = createEnvironmentGitHubDiscoveryClient(
+      {},
+      async () =>
+        new Response("sensitive upstream diagnostic", {
+          status: 429,
+          headers: { "retry-after": "90" },
+        }),
+    );
+
+    await expect(client.discover("catalog")).rejects.toEqual(
+      new GitHubDiscoveryRateLimitError(90),
+    );
   });
 });

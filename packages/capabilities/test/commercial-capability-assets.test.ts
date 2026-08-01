@@ -176,7 +176,7 @@ describe("commercial capability foundation assets", () => {
     for (const key of foundationKeys) {
       const asset = getCapabilityAsset(key);
       const expectedVersion =
-        key === "commerce.line-configuration" ? "1.1.1" : "1.0.0";
+        key === "commerce.line-configuration" ? "1.1.2" : "1.0.0";
       expect(asset.manifest).toMatchObject({
         apiVersion: "factory.capability/v1",
         key,

@@ -1234,6 +1234,41 @@ describe("LifecycleService", () => {
     });
   });
 
+  it("queues a persisted JSON composition lock after its null-prototype bindings round trip", async () => {
+    const persistedLock = JSON.parse(
+      JSON.stringify(selectedCompositionLock),
+    ) as typeof selectedCompositionLock;
+    prisma.publishedRevision.findUnique.mockResolvedValue({
+      id: "published-json-lock",
+      graph: selectedPublishedGraph,
+      graphHash: hashApplicationGraph(selectedPublishedGraph),
+      compositionLock: persistedLock,
+      compositionLockHash: persistedLock.lockDigest,
+    });
+    prisma.compilation.count.mockResolvedValue(0);
+    prisma.compilation.create.mockResolvedValue({
+      id: "compilation-json-lock",
+    });
+    queue.enqueue.mockResolvedValue(undefined);
+
+    await expect(
+      service.createCompilation({
+        publishedRevisionId: "published-json-lock",
+        target: "application-bundle",
+        compilerVersion: "0.1.0",
+      }),
+    ).resolves.toEqual({ id: "compilation-json-lock" });
+
+    expect(queue.enqueue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        compilationId: "compilation-json-lock",
+        compositionLock: expect.objectContaining({
+          lockDigest: selectedCompositionLock.lockDigest,
+        }),
+      }),
+    );
+  });
+
   it("rejects compilation of a historical Published revision without a composition lock", async () => {
     prisma.publishedRevision.findUnique.mockResolvedValue({
       id: "published-legacy",

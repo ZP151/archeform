@@ -14,6 +14,7 @@ import { generateApplicationBundle } from "../src/index.js";
 
 const compilerTestDirectory = resolve(
   dirname(fileURLToPath(import.meta.url)),
+  "..",
   ".generated-line-configuration-runtime",
 );
 

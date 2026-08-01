@@ -9,6 +9,35 @@ import { createGitHubReadTokenFetch } from "./github-source-client.js";
 const GITHUB_API_ORIGIN = "https://api.github.com";
 const MAX_RESULTS = 20;
 
+/**
+ * Deliberately carries only a bounded retry hint. It never includes GitHub's
+ * response body, URL, query, or token.
+ */
+export class GitHubDiscoveryRateLimitError extends Error {
+  readonly retryAfterSeconds?: number;
+
+  constructor(retryAfterSeconds?: number) {
+    super("GitHub discovery rate limit reached.");
+    this.name = "GitHubDiscoveryRateLimitError";
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
+
+export interface GitHubDiscoveryCheckpointV1 {
+  readonly apiVersion: "factory.github-discovery-checkpoint/v1";
+  readonly completedFamilies: readonly CapabilityFamilyKey[];
+}
+
+export interface GitHubDiscoveryBatchResultV1 {
+  readonly apiVersion: "factory.github-discovery-batch/v1";
+  readonly status: "complete" | "rate-limited";
+  readonly records: readonly DiscoveryRecordInputV1[];
+  readonly completedFamilies: readonly CapabilityFamilyKey[];
+  readonly pendingFamilies: readonly CapabilityFamilyKey[];
+  readonly checkpoint: GitHubDiscoveryCheckpointV1;
+  readonly retryAfterSeconds?: number;
+}
+
 const queryByFamily: Readonly<Record<CapabilityFamilyKey, string>> = {
   identity: "topic:authentication archived:false",
   catalog: "topic:catalog archived:false",
@@ -46,6 +75,123 @@ interface GitHubSearchItem {
 
 function isCapabilityFamilyKey(value: string): value is CapabilityFamilyKey {
   return (capabilityFamilyKeys as readonly string[]).includes(value);
+}
+
+function parseRetryAfterSeconds(response: Response): number | undefined {
+  const value = response.headers.get("retry-after");
+  if (value === null || !/^\d{1,5}$/u.test(value)) return undefined;
+  const seconds = Number(value);
+  return Number.isSafeInteger(seconds) && seconds >= 0 ? seconds : undefined;
+}
+
+function rateLimitError(
+  response: Response,
+): GitHubDiscoveryRateLimitError | undefined {
+  if (
+    response.status !== 429 &&
+    !(
+      response.status === 403 &&
+      response.headers.get("x-ratelimit-remaining") === "0"
+    )
+  ) {
+    return undefined;
+  }
+  return new GitHubDiscoveryRateLimitError(parseRetryAfterSeconds(response));
+}
+
+function checkpointFor(
+  completedFamilies: readonly CapabilityFamilyKey[],
+): GitHubDiscoveryCheckpointV1 {
+  return Object.freeze({
+    apiVersion: "factory.github-discovery-checkpoint/v1",
+    completedFamilies: Object.freeze([...completedFamilies]),
+  });
+}
+
+function validateBatchFamilies(
+  families: readonly CapabilityFamilyKey[],
+): readonly CapabilityFamilyKey[] {
+  if (families.length === 0 || families.length > capabilityFamilyKeys.length) {
+    throw new TypeError("GitHub discovery families are invalid.");
+  }
+  const unique = new Set<CapabilityFamilyKey>();
+  for (const family of families) {
+    if (!isCapabilityFamilyKey(family) || unique.has(family)) {
+      throw new TypeError("GitHub discovery families are invalid.");
+    }
+    unique.add(family);
+  }
+  return Object.freeze([...families]);
+}
+
+function resumedFamilyCount(
+  families: readonly CapabilityFamilyKey[],
+  checkpoint: GitHubDiscoveryCheckpointV1 | undefined,
+): number {
+  if (checkpoint === undefined) return 0;
+  if (
+    checkpoint.apiVersion !== "factory.github-discovery-checkpoint/v1" ||
+    !Array.isArray(checkpoint.completedFamilies) ||
+    checkpoint.completedFamilies.length > families.length
+  ) {
+    throw new TypeError("GitHub discovery checkpoint is invalid.");
+  }
+  for (const [index, family] of checkpoint.completedFamilies.entries()) {
+    if (families[index] !== family) {
+      throw new TypeError(
+        "GitHub discovery checkpoint does not match the batch.",
+      );
+    }
+  }
+  return checkpoint.completedFamilies.length;
+}
+
+/**
+ * Runs Factory-owned family queries sequentially. A rate limit returns a
+ * source-free continuation checkpoint so a scheduler can resume from the
+ * first unscanned family without replaying the already completed prefix.
+ */
+export async function discoverGitHubFamilies(
+  inputFamilies: readonly CapabilityFamilyKey[],
+  client: GitHubDiscoveryClientV1,
+  checkpoint?: GitHubDiscoveryCheckpointV1,
+): Promise<GitHubDiscoveryBatchResultV1> {
+  const families = validateBatchFamilies(inputFamilies);
+  const completed = [
+    ...families.slice(0, resumedFamilyCount(families, checkpoint)),
+  ];
+  const records: DiscoveryRecordInputV1[] = [];
+
+  for (const family of families.slice(completed.length)) {
+    try {
+      records.push(...(await client.discover(family)));
+      completed.push(family);
+    } catch (error) {
+      if (error instanceof GitHubDiscoveryRateLimitError) {
+        return Object.freeze({
+          apiVersion: "factory.github-discovery-batch/v1",
+          status: "rate-limited",
+          records: Object.freeze([...records]),
+          completedFamilies: Object.freeze([...completed]),
+          pendingFamilies: Object.freeze([...families.slice(completed.length)]),
+          checkpoint: checkpointFor(completed),
+          ...(error.retryAfterSeconds === undefined
+            ? {}
+            : { retryAfterSeconds: error.retryAfterSeconds }),
+        });
+      }
+      throw error;
+    }
+  }
+
+  return Object.freeze({
+    apiVersion: "factory.github-discovery-batch/v1",
+    status: "complete",
+    records: Object.freeze([...records]),
+    completedFamilies: Object.freeze([...completed]),
+    pendingFamilies: Object.freeze([]),
+    checkpoint: checkpointFor(completed),
+  });
 }
 
 function safeId(value: string): string | undefined {
@@ -117,7 +263,11 @@ async function resolveDefaultBranchCommit(
       redirect: "error",
     },
   );
-  if (!response.ok) return undefined;
+  if (!response.ok) {
+    const rateLimit = rateLimitError(response);
+    if (rateLimit !== undefined) throw rateLimit;
+    return undefined;
+  }
   const payload = (await response.json()) as { sha?: unknown };
   return typeof payload.sha === "string" && /^[a-f0-9]{40}$/u.test(payload.sha)
     ? payload.sha
@@ -147,6 +297,8 @@ export function createEnvironmentGitHubDiscoveryClient(
         },
       );
       if (!response.ok) {
+        const rateLimit = rateLimitError(response);
+        if (rateLimit !== undefined) throw rateLimit;
         throw new Error("GitHub discovery metadata request failed.");
       }
       const discoveredAt = canonicalTimestamp(now());
@@ -159,8 +311,9 @@ export function createEnvironmentGitHubDiscoveryClient(
         seen.add(identifier);
         return true;
       });
-      return await Promise.all(
-        items.map(async (item) => ({
+      const records: DiscoveryRecordInputV1[] = [];
+      for (const item of items) {
+        records.push({
           apiVersion: "factory.discovery-record-input/v1" as const,
           id: safeId(item.full_name)!,
           discoveredAt,
@@ -176,8 +329,9 @@ export function createEnvironmentGitHubDiscoveryClient(
           familyHints: [family],
           profileHints: [],
           reuseMode: "selective-source-copy" as const,
-        })),
-      );
+        });
+      }
+      return Object.freeze(records);
     },
   };
 }

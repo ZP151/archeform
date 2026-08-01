@@ -8,13 +8,23 @@ const publishedGraph = {
   publishedRevisionId: "published-expense-1",
   graph: {
     apiVersion: "factory.application-graph/v1" as const,
-    metadata: { id: "expense-approval", workspaceId: "local-workspace", name: "Expense approval" },
+    metadata: {
+      id: "expense-approval",
+      workspaceId: "local-workspace",
+      name: "Expense approval",
+    },
     page: { pages: [], navigation: [] },
-    domain: { entities: [{ key: "expense", label: "Expense", fields: [], indexes: [] }], relations: [] },
+    domain: {
+      entities: [{ key: "expense", label: "Expense", fields: [], indexes: [] }],
+      relations: [],
+    },
     policy: { roles: ["employee"], permissions: [] },
     flow: { flows: [] },
     integration: { providers: [], capabilities: [] },
-    experience: { theme: { mode: "light" as const, tokens: {} }, locales: ["en"] },
+    experience: {
+      theme: { mode: "light" as const, tokens: {} },
+      locales: ["en"],
+    },
   },
 };
 

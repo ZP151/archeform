@@ -42,6 +42,7 @@ import {
 import { createEnvironmentGitHubSourceClient } from "./github-source-client.js";
 import {
   createEnvironmentGitHubDiscoveryClient,
+  discoverGitHubFamilies,
   type GitHubDiscoveryClientV1,
 } from "./github-discovery-client.js";
 
@@ -229,6 +230,25 @@ function discoveryOutput(records: readonly DiscoveryRecordInputV1[]) {
   };
 }
 
+function discoveryBatchOutput(input: {
+  readonly status: "complete" | "rate-limited";
+  readonly records: readonly DiscoveryRecordInputV1[];
+  readonly completedFamilies: readonly CapabilityFamilyKey[];
+  readonly pendingFamilies: readonly CapabilityFamilyKey[];
+  readonly retryAfterSeconds?: number;
+}) {
+  return {
+    apiVersion: "factory.discovery-batch-summary/v1",
+    status: input.status,
+    completedFamilies: input.completedFamilies,
+    pendingFamilies: input.pendingFamilies,
+    ...(input.retryAfterSeconds === undefined
+      ? {}
+      : { retryAfterSeconds: input.retryAfterSeconds }),
+    summary: discoveryOutput(input.records),
+  };
+}
+
 function normalizedOutputKey(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]/gu, "");
 }
@@ -385,7 +405,10 @@ function isAllowedCanonicalOutput(
   if (context === "discovery") {
     return (
       (outputPathMatches(path, "apiVersion") &&
-        value === "factory.discovery-summary/v1") ||
+        [
+          "factory.discovery-summary/v1",
+          "factory.discovery-batch-summary/v1",
+        ].includes(value)) ||
       (path.length === 2 &&
         path[0] === "gateCategories" &&
         [
@@ -882,6 +905,18 @@ export async function runIntakeCli(
       const discoveryClient =
         options.discoveryClient ?? createEnvironmentGitHubDiscoveryClient();
       result = discoveryOutput(await discoveryClient.discover(family));
+    } else if (
+      args.length === 3 &&
+      args[0] === "discovery" &&
+      args[1] === "github" &&
+      args[2] === "--all"
+    ) {
+      outputContext = "discovery";
+      const discoveryClient =
+        options.discoveryClient ?? createEnvironmentGitHubDiscoveryClient();
+      result = discoveryBatchOutput(
+        await discoverGitHubFamilies(capabilityFamilyKeys, discoveryClient),
+      );
     } else if (
       args.length === 4 &&
       args[0] === "batch" &&

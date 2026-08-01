@@ -71,4 +71,69 @@ describe("Order Operations published compilation", () => {
       }
     },
   );
+
+  it.each([
+    ["simple-ecommerce", "generic"],
+    ["restaurant-ordering", "restaurant"],
+  ] as const)(
+    "materializes the Published %s Graph with its persistent %s order-operation path",
+    async (profile, runtimeKind) => {
+      const artifactRoot = await mkdtemp(join(tmpdir(), "factory-orders-"));
+      const reporter = { complete: vi.fn().mockResolvedValue(undefined) };
+      const published = publishedOrderOperationsInput(profile);
+      try {
+        const result = await executeQueuedCompilation(
+          artifactRoot,
+          {
+            compilationId: `${profile}-persistent-compilation-1`,
+            publishedRevisionId: `${profile}-persistent-published-1`,
+            target: "application-bundle",
+            compilerVersion: "0.1.0",
+            ...published,
+          },
+          reporter,
+        );
+        const schema = await readFile(
+          join(artifactRoot, result.rootDirectory, "api/prisma/schema.prisma"),
+          "utf8",
+        );
+
+        if (runtimeKind === "generic") {
+          await expect(
+            readFile(
+              join(
+                artifactRoot,
+                result.rootDirectory,
+                "api/src/application-runtime.ts",
+              ),
+              "utf8",
+            ),
+          ).resolves.toContain("getOrderOperationReceipt");
+          expect(schema).toContain("model OrderOperationReceipt");
+        } else {
+          expect(schema).toContain("model RestaurantCommand");
+          expect(schema).toContain("model PaymentAttempt");
+          await expect(
+            readFile(
+              join(
+                artifactRoot,
+                result.rootDirectory,
+                "api/src/restaurant/restaurant-command.service.ts",
+              ),
+              "utf8",
+            ),
+          ).resolves.toContain("prisma.$transaction");
+        }
+
+        expect(reporter.complete).toHaveBeenCalledWith(
+          expect.objectContaining({
+            compilationId: `${profile}-persistent-compilation-1`,
+            rootDirectory: result.rootDirectory,
+          }),
+        );
+      } finally {
+        await rm(artifactRoot, { recursive: true, force: true });
+      }
+    },
+  );
 });

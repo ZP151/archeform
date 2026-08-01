@@ -454,6 +454,13 @@ function createPublishedCompositionLock(
   }
 }
 
+function hasEqualJsonStructure(left: unknown, right: unknown): boolean {
+  return isDeepStrictEqual(
+    JSON.parse(JSON.stringify(left)),
+    JSON.parse(JSON.stringify(right)),
+  );
+}
+
 function verifiedPublishedCompositionLock(
   input: unknown,
   storedHash: string | null,
@@ -474,7 +481,7 @@ function verifiedPublishedCompositionLock(
     });
     if (
       storedHash !== canonical.lockDigest ||
-      !isDeepStrictEqual(input, canonical)
+      !hasEqualJsonStructure(input, canonical)
     ) {
       throw new Error("lock mismatch");
     }

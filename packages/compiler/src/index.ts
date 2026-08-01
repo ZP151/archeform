@@ -234,6 +234,13 @@ const artifactBlueprint: Readonly<
   ],
 };
 
+function hasEqualJsonStructure(left: unknown, right: unknown): boolean {
+  return isDeepStrictEqual(
+    JSON.parse(JSON.stringify(left)),
+    JSON.parse(JSON.stringify(right)),
+  );
+}
+
 function assertCanonicalCompositionLock(
   input: PublishedGraphInput,
 ): CapabilityCompositionLockV1 {
@@ -248,7 +255,7 @@ function assertCanonicalCompositionLock(
       graphChecksum: graphHash,
       selections: input.compositionLock.packages,
     });
-    if (!isDeepStrictEqual(input.compositionLock, canonical)) {
+    if (!hasEqualJsonStructure(input.compositionLock, canonical)) {
       throw new Error("mismatch");
     }
     return canonical;
@@ -514,6 +521,52 @@ function renderTargetContribution(
       loadedContribution,
     ),
   };
+}
+
+interface OrderOperationsPersistenceContribution {
+  readonly schema: string;
+  readonly migration: string;
+}
+
+function resolveOrderOperationsPersistenceContribution(
+  input: PublishedGraphInput,
+  contributions: readonly ResolvedTargetContribution[],
+): OrderOperationsPersistenceContribution | undefined {
+  const selection = input.compositionLock.packages.find(
+    ({ lock }) => lock.key === "commerce.order-operations",
+  );
+  if (!selection) return undefined;
+
+  const asset = resolveCapabilityAssetLock(selection.lock);
+  const declaresReceipt = asset.manifest.provides?.some(
+    (provided) =>
+      provided.interfaceKey === "commerce.order-operation-receipt" &&
+      provided.version === "v1",
+  );
+  if (!declaresReceipt) return undefined;
+
+  const owned = contributions.filter(
+    (contribution) => contribution.packageKey === asset.manifest.key,
+  );
+  const schema = owned.find(
+    (contribution) =>
+      contribution.contributionId === "order-operation-receipt-schema" &&
+      contribution.outputSlot === "database.schema",
+  );
+  const migration = owned.find(
+    (contribution) =>
+      contribution.contributionId === "order-operation-receipt-migration" &&
+      contribution.outputSlot === "database.migration",
+  );
+  if (!schema || !migration) {
+    throw new Error(
+      "Locked commerce.order-operations receipt provider is missing a schema or migration contribution.",
+    );
+  }
+  return Object.freeze({
+    schema: schema.content,
+    migration: migration.content,
+  });
 }
 
 export function resolveTargetContributions(
@@ -796,12 +849,8 @@ function renderCapabilityContract(graph: ApplicationGraphV1): string {
   const commerce = hasCommerceCapabilities(graph);
   return [
     "export type CapabilityStoredRecord = Record<string, unknown> & { id: string; status?: string; version?: number };",
-    ...(commerce
-      ? [
-          "export type CapabilityCommerceLineItem = { id: string; actor: string; orderEntity: string; orderRecordId: string; catalogEntity: string; catalogRecordId: string; quantity: number };",
-          "export type CapabilityConfiguredLine = { catalogEntity: string; catalogRecordId: string; quantity: number; priceDelta: number; options: readonly { id: string; label: string; priceDelta: number }[] };",
-        ]
-      : []),
+    "export type CapabilityCommerceLineItem = { id: string; actor: string; orderEntity: string; orderRecordId: string; catalogEntity: string; catalogRecordId: string; quantity: number };",
+    "export type CapabilityConfiguredLine = { catalogEntity: string; catalogRecordId: string; quantity: number; priceDelta: number; options: readonly { id: string; label: string; priceDelta: number }[] };",
     "",
     "export interface CapabilityStore {",
     "  list(entityKey: string): Promise<readonly CapabilityStoredRecord[]>;",
@@ -1033,7 +1082,11 @@ function resolveRelationForeignKey(
   };
 }
 
-function renderPrismaSchema(graph: ApplicationGraphV1): string {
+function renderPrismaSchema(
+  graph: ApplicationGraphV1,
+  orderOperationReceiptSchema?: string,
+  includeGenericCommerceLineItems = true,
+): string {
   const relationFields = (entityKey: string): readonly string[] =>
     graph.domain.relations.flatMap((relation) => {
       const relationName = `${toPascalCase(relation.from)}To${toPascalCase(relation.to)}`;
@@ -1137,7 +1190,7 @@ function renderPrismaSchema(graph: ApplicationGraphV1): string {
     "  @@index([entity, recordId])",
     "  @@index([capability, operation])",
     "}",
-    ...(hasCommerceCapabilities(graph)
+    ...(includeGenericCommerceLineItems && hasCommerceCapabilities(graph)
       ? [
           "",
           "model CommerceLineItem {",
@@ -1153,6 +1206,9 @@ function renderPrismaSchema(graph: ApplicationGraphV1): string {
           "  @@index([catalogEntity, catalogRecordId])",
           "}",
         ]
+      : []),
+    ...(orderOperationReceiptSchema
+      ? ["", orderOperationReceiptSchema.trimEnd()]
       : []),
     "",
   ].join("\n");
@@ -1204,7 +1260,11 @@ function relationColumnDefinitions(
   });
 }
 
-function renderInitialMigration(graph: ApplicationGraphV1): string {
+function renderInitialMigration(
+  graph: ApplicationGraphV1,
+  orderOperationReceiptMigration?: string,
+  includeGenericCommerceLineItems = true,
+): string {
   const createTables = graph.domain.entities.map((entity) => {
     const columns = [
       '"id" TEXT NOT NULL PRIMARY KEY',
@@ -1250,12 +1310,15 @@ function renderInitialMigration(graph: ApplicationGraphV1): string {
     'CREATE TABLE "CapabilityEvent" (\n  "id" TEXT NOT NULL PRIMARY KEY,\n  "actor" TEXT NOT NULL,\n  "capability" TEXT NOT NULL,\n  "operation" TEXT NOT NULL,\n  "entity" TEXT NOT NULL,\n  "recordId" TEXT NOT NULL,\n  "outcome" TEXT NOT NULL,\n  "at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP\n);',
     'CREATE INDEX "CapabilityEvent_entity_recordId_idx" ON "CapabilityEvent" ("entity", "recordId");',
     'CREATE INDEX "CapabilityEvent_capability_operation_idx" ON "CapabilityEvent" ("capability", "operation");',
-    ...(hasCommerceCapabilities(graph)
+    ...(includeGenericCommerceLineItems && hasCommerceCapabilities(graph)
       ? [
           'CREATE TABLE "CommerceLineItem" (\n  "id" TEXT NOT NULL PRIMARY KEY,\n  "actor" TEXT NOT NULL,\n  "orderEntity" TEXT NOT NULL,\n  "orderRecordId" TEXT NOT NULL,\n  "catalogEntity" TEXT NOT NULL,\n  "catalogRecordId" TEXT NOT NULL,\n  "quantity" INTEGER NOT NULL,\n  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP\n);',
           'CREATE INDEX "CommerceLineItem_orderEntity_orderRecordId_idx" ON "CommerceLineItem" ("orderEntity", "orderRecordId");',
           'CREATE INDEX "CommerceLineItem_catalogEntity_catalogRecordId_idx" ON "CommerceLineItem" ("catalogEntity", "catalogRecordId");',
         ]
+      : []),
+    ...(orderOperationReceiptMigration
+      ? [orderOperationReceiptMigration.trimEnd()]
       : []),
     ...indexes,
     ...relationTables,
@@ -1396,13 +1459,13 @@ function renderPrismaSeed(
           "  }",
           `  await prisma.menuItem.update({ where: { id: ${JSON.stringify(restaurantMenuItemId)} }, data: { stock: 10, resourceVersion: 0 } });`,
           "  const merchantFixtureReservations = [",
-          `    { id: "merchant-e2e-cashier-reservation", orderId: "merchant-e2e-cashier-order", menuItemId: ${JSON.stringify(restaurantMenuItemId)} },`,
-          `    { id: "merchant-e2e-cancellation-reservation", orderId: "merchant-e2e-cancellation-order", menuItemId: ${JSON.stringify(restaurantMenuItemId)} },`,
+          `    { id: "merchant-e2e-cashier-reservation", locationId: ${JSON.stringify(restaurantLocationId)}, orderId: "merchant-e2e-cashier-order", menuItemId: ${JSON.stringify(restaurantMenuItemId)}, idempotencyKey: "merchant-e2e-cashier-reservation" },`,
+          `    { id: "merchant-e2e-cancellation-reservation", locationId: ${JSON.stringify(restaurantLocationId)}, orderId: "merchant-e2e-cancellation-order", menuItemId: ${JSON.stringify(restaurantMenuItemId)}, idempotencyKey: "merchant-e2e-cancellation-reservation" },`,
           "  ] as const;",
           "  for (const reservation of merchantFixtureReservations) {",
           "    await prisma.inventoryLedger.upsert({",
           "      where: { id: reservation.id },",
-          '      update: { orderId: reservation.orderId, menuItemId: reservation.menuItemId, delta: -1, provenance: "order-reservation", adjustmentReason: null, recordedAt: merchantFixtureSubmittedAt },',
+          '      update: { locationId: reservation.locationId, orderId: reservation.orderId, menuItemId: reservation.menuItemId, idempotencyKey: reservation.idempotencyKey, delta: -1, provenance: "order-reservation", adjustmentReason: null, recordedAt: merchantFixtureSubmittedAt },',
           '      create: { ...reservation, delta: -1, provenance: "order-reservation", adjustmentReason: null, recordedAt: merchantFixtureSubmittedAt },',
           "    });",
           "  }",
@@ -1552,15 +1615,34 @@ function lockedRuntimeHandlerEntity(
 function renderOrderOperationsRuntime(
   orderEntityKey: string,
   catalogEntityKey: string | undefined,
+  persistentOrderOperationReceipts: boolean,
 ): string {
   if (!catalogEntityKey) {
     throw new Error(
       "Locked commerce.order-operations requires a locked Catalog handler.",
     );
   }
-  return String.raw`  private readonly orderOperationReceipts = new Map<string, { payment: { due: string; captured: string; refunded: string }; keys: string[] }>();
-
-  private decimalToMinorUnits(value: unknown): bigint {
+  const receiptField = persistentOrderOperationReceipts
+    ? ""
+    : "  private readonly orderOperationReceipts = new Map<string, { payment: { due: string; captured: string; refunded: string }; keys: string[] }>();\n\n";
+  const receiptLookup = persistentOrderOperationReceipts
+    ? `const receipt = await store.getOrderOperationReceipt(${JSON.stringify(orderEntityKey)}, record.id);`
+    : "const receipt = this.orderOperationReceipts.get(record.id);";
+  const receiptKeys = persistentOrderOperationReceipts
+    ? "receipt?.processedIdempotencyKeys ?? []"
+    : "receipt?.keys ?? []";
+  const persistReceipt = persistentOrderOperationReceipts
+    ? `await store.saveOrderOperationReceipt({
+        orderEntity: entityKey,
+        orderRecordId: recordId,
+        payment: this.paymentAfterOperation(state, command, plan),
+        processedIdempotencyKeys: [...state.processedIdempotencyKeys, input.idempotencyKey],
+      });`
+    : `this.orderOperationReceipts.set(recordId, {
+        payment: this.paymentAfterOperation(state, command, plan),
+        keys: [...state.processedIdempotencyKeys, input.idempotencyKey],
+      });`;
+  return String.raw`${receiptField}  private decimalToMinorUnits(value: unknown): bigint {
     const decimal = typeof value === "number" && Number.isFinite(value) ? value.toFixed(2) : value;
     if (typeof decimal !== "string" || !/^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/.test(decimal)) {
       throw new Error("Order operation amount is invalid.");
@@ -1573,21 +1655,21 @@ function renderOrderOperationsRuntime(
     return (value / 100n).toString() + "." + (value % 100n).toString().padStart(2, "0");
   }
 
-  private async orderOperationDue(orderRecordId: string): Promise<string> {
-    const items = await this.store.listCartItems(${JSON.stringify(orderEntityKey)}, orderRecordId);
+  private async orderOperationDue(store: RecordStore, orderRecordId: string): Promise<string> {
+    const items = await store.listCartItems(${JSON.stringify(orderEntityKey)}, orderRecordId);
     if (items.length === 0) throw new Error("Order operations require at least one cart item.");
     let total = 0n;
     for (const item of items) {
-      const catalogRecord = await this.store.find(${JSON.stringify(catalogEntityKey)}, item.catalogRecordId);
+      const catalogRecord = await store.find(${JSON.stringify(catalogEntityKey)}, item.catalogRecordId);
       if (!catalogRecord) throw new Error("Order operation catalog record was not found.");
       total += this.decimalToMinorUnits(catalogRecord.price) * BigInt(item.quantity);
     }
     return this.minorUnitsToDecimal(total);
   }
 
-  private async orderOperationState(record: StoredRecord): Promise<import("./capabilities/contract.js").CommerceOrderOperationState> {
-    const receipt = this.orderOperationReceipts.get(record.id);
-    const due = receipt?.payment.due ?? await this.orderOperationDue(record.id);
+  private async orderOperationState(store: RecordStore, record: StoredRecord): Promise<import("./capabilities/contract.js").CommerceOrderOperationState> {
+    ${receiptLookup}
+    const due = receipt?.payment.due ?? await this.orderOperationDue(store, record.id);
     const captured = receipt?.payment.captured ?? (record.status === "paid" || record.status === "fulfilled" ? due : "0.00");
     const refunded = receipt?.payment.refunded ?? "0.00";
     if (typeof record.status !== "string" || !Number.isSafeInteger(record.version) || (record.version as number) < 0) {
@@ -1598,7 +1680,7 @@ function renderOrderOperationsRuntime(
       version: record.version as number,
       status: record.status as import("./capabilities/contract.js").CommerceOrderOperationStatus,
       payment: { due, captured, refunded },
-      processedIdempotencyKeys: receipt?.keys ?? [],
+      processedIdempotencyKeys: ${receiptKeys},
     };
   }
 
@@ -1638,35 +1720,34 @@ function renderOrderOperationsRuntime(
       throw new Error("Locked order operations cannot target this entity.");
     }
     this.entity(entityKey);
-    const record = await this.store.find(entityKey, recordId);
-    if (!record) throw new Error("Order operation record was not found.");
-    const state = await this.orderOperationState(record);
-    const command: import("./capabilities/contract.js").CommerceOrderOperationCommand = {
-      ...input,
-      orderId: recordId,
-      actorRole: role,
-    };
-    const plan = getOrderOperationsHandler().plan(state, command);
-    const flow = this.flow(entityKey);
-    if (!flow?.states.includes(plan.nextState)) {
-      throw new Error("Locked order operation cannot produce an undeclared Flow state.");
-    }
-    const updated = await getOrderHandler().transition({
-      role,
-      entityKey,
-      recordId,
-      nextState: plan.nextState,
-      expectedVersion: input.expectedVersion,
-      idempotencyKey: input.idempotencyKey,
-      store: this.store,
-      assertAllowed: (candidateRole, resource, action) => this.assertAllowed(candidateRole, resource, action),
+    return this.store.inTransaction(async (store) => {
+      const record = await store.find(entityKey, recordId);
+      if (!record) throw new Error("Order operation record was not found.");
+      const state = await this.orderOperationState(store, record);
+      const command: import("./capabilities/contract.js").CommerceOrderOperationCommand = {
+        ...input,
+        orderId: recordId,
+        actorRole: role,
+      };
+      const plan = getOrderOperationsHandler().plan(state, command);
+      const flow = this.flow(entityKey);
+      if (!flow?.states.includes(plan.nextState)) {
+        throw new Error("Locked order operation cannot produce an undeclared Flow state.");
+      }
+      const updated = await getOrderHandler().transition({
+        role,
+        entityKey,
+        recordId,
+        nextState: plan.nextState,
+        expectedVersion: input.expectedVersion,
+        idempotencyKey: input.idempotencyKey,
+        store,
+        assertAllowed: (candidateRole, resource, action) => this.assertAllowed(candidateRole, resource, action),
+      });
+      ${persistReceipt}
+      await store.appendAudit({ actor: role, action: plan.auditAction, entity: entityKey, recordId, at: new Date().toISOString() });
+      return { record: updated, plan };
     });
-    this.orderOperationReceipts.set(recordId, {
-      payment: this.paymentAfterOperation(state, command, plan),
-      keys: [...state.processedIdempotencyKeys, input.idempotencyKey],
-    });
-    await this.store.appendAudit({ actor: role, action: plan.auditAction, entity: entityKey, recordId, at: new Date().toISOString() });
-    return { record: updated, plan };
   }
 `;
 }
@@ -1679,6 +1760,7 @@ function renderApplicationRuntime(
   catalogEntityKey: string | undefined,
   orderEntityKey: string | undefined,
   orderOperationsEntityKey: string | undefined,
+  persistentOrderOperationReceipts: boolean,
 ): string {
   const commerce = hasCommerceCapabilities(graph);
   const capabilityRegistryImports = [
@@ -1708,6 +1790,11 @@ function renderApplicationRuntime(
           "export type CommerceLineItem = { id: string; actor: string; orderEntity: string; orderRecordId: string; catalogEntity: string; catalogRecordId: string; quantity: number };",
         ]
       : []),
+    ...(persistentOrderOperationReceipts
+      ? [
+          "export type OrderOperationReceipt = { orderEntity: string; orderRecordId: string; payment: { due: string; captured: string; refunded: string }; processedIdempotencyKeys: readonly string[] };",
+        ]
+      : []),
     "export interface RecordStore {",
     "  list(entityKey: string): Promise<readonly StoredRecord[]>;",
     "  find(entityKey: string, recordId: string): Promise<StoredRecord | undefined>;",
@@ -1717,6 +1804,13 @@ function renderApplicationRuntime(
     "  listAudit(): Promise<readonly AuditEvent[]>;",
     "  appendCapabilityEvent(event: CapabilityEvent): Promise<void>;",
     "  listCapabilityEvents(): Promise<readonly CapabilityEvent[]>;",
+    "  inTransaction<T>(operation: (store: RecordStore) => Promise<T>): Promise<T>;",
+    ...(persistentOrderOperationReceipts
+      ? [
+          "  getOrderOperationReceipt(orderEntity: string, orderRecordId: string): Promise<OrderOperationReceipt | undefined>;",
+          "  saveOrderOperationReceipt(receipt: OrderOperationReceipt): Promise<void>;",
+        ]
+      : []),
     ...(commerce
       ? [
           "  addCartItem(input: Omit<CommerceLineItem, 'id'>): Promise<CommerceLineItem>;",
@@ -1731,6 +1825,11 @@ function renderApplicationRuntime(
     "  private readonly records = new Map<string, Map<string, StoredRecord>>();",
     "  private readonly auditEvents: AuditEvent[] = [];",
     "  private readonly capabilityEvents: CapabilityEvent[] = [];",
+    ...(persistentOrderOperationReceipts
+      ? [
+          "  private readonly orderOperationReceiptStore = new Map<string, OrderOperationReceipt>();",
+        ]
+      : []),
     ...(commerce
       ? ["  private readonly cartItems: CommerceLineItem[] = [];"]
       : []),
@@ -1769,6 +1868,17 @@ function renderApplicationRuntime(
     "  async listAudit(): Promise<readonly AuditEvent[]> { return [...this.auditEvents]; }",
     "  async appendCapabilityEvent(event: CapabilityEvent): Promise<void> { this.capabilityEvents.push(event); }",
     "  async listCapabilityEvents(): Promise<readonly CapabilityEvent[]> { return [...this.capabilityEvents]; }",
+    "  async inTransaction<T>(operation: (store: RecordStore) => Promise<T>): Promise<T> { return operation(this); }",
+    ...(persistentOrderOperationReceipts
+      ? [
+          "  async getOrderOperationReceipt(orderEntity: string, orderRecordId: string): Promise<OrderOperationReceipt | undefined> {",
+          "    return this.orderOperationReceiptStore.get(`${orderEntity}:${orderRecordId}`);",
+          "  }",
+          "  async saveOrderOperationReceipt(receipt: OrderOperationReceipt): Promise<void> {",
+          "    this.orderOperationReceiptStore.set(`${receipt.orderEntity}:${receipt.orderRecordId}`, { ...receipt, payment: { ...receipt.payment }, processedIdempotencyKeys: [...receipt.processedIdempotencyKeys] });",
+          "  }",
+        ]
+      : []),
     ...(commerce
       ? [
           "  async addCartItem(input: Omit<CommerceLineItem, 'id'>): Promise<CommerceLineItem> {",
@@ -1838,6 +1948,7 @@ function renderApplicationRuntime(
           renderOrderOperationsRuntime(
             orderOperationsEntityKey,
             catalogEntityKey,
+            persistentOrderOperationReceipts,
           ),
         ]
       : []),
@@ -2139,6 +2250,7 @@ function renderApplicationRuntime(
 function renderPrismaRecordStore(
   graph: ApplicationGraphV1,
   hasRestaurantRuntime: boolean,
+  persistentOrderOperationReceipts: boolean,
 ): string {
   const commerce = hasCommerceCapabilities(graph);
   const capabilityOutcome = hasRestaurantRuntime ? "succeeded" : "completed";
@@ -2150,7 +2262,7 @@ function renderPrismaRecordStore(
   );
   return [
     'import { PrismaClient } from "@prisma/client";',
-    `import type { AuditEvent, CapabilityEvent,${commerce ? " CommerceLineItem," : ""} RecordStore, StoredRecord } from "./application-runtime.js";`,
+    `import type { AuditEvent, CapabilityEvent,${commerce ? " CommerceLineItem," : ""}${persistentOrderOperationReceipts ? " OrderOperationReceipt," : ""} RecordStore, StoredRecord } from "./application-runtime.js";`,
     "",
     "type CrudDelegate = {",
     "  findMany(): Promise<unknown[]>;",
@@ -2166,6 +2278,15 @@ function renderPrismaRecordStore(
     "  create(input: { data: Record<string, unknown> }): Promise<unknown>;",
     "  findMany(input: { orderBy: { at: 'asc' } }): Promise<unknown[]>;",
     "};",
+    "type TransactionExecutor = { $transaction<T>(operation: (client: PrismaClient) => Promise<T>): Promise<T> };",
+    ...(persistentOrderOperationReceipts
+      ? [
+          "type OrderOperationReceiptDelegate = {",
+          "  findUnique(input: { where: { orderEntity_orderRecordId: { orderEntity: string; orderRecordId: string } } }): Promise<unknown | null>;",
+          "  upsert(input: { where: { orderEntity_orderRecordId: { orderEntity: string; orderRecordId: string } }; update: Record<string, unknown>; create: Record<string, unknown> }): Promise<unknown>;",
+          "};",
+        ]
+      : []),
     ...(commerce
       ? [
           "type CommerceLineDelegate = {",
@@ -2195,6 +2316,13 @@ function renderPrismaRecordStore(
     "  private capabilityDelegate(): CapabilityDelegate {",
     "    return (this.prisma as unknown as { capabilityEvent: CapabilityDelegate }).capabilityEvent;",
     "  }",
+    ...(persistentOrderOperationReceipts
+      ? [
+          "  private orderOperationReceiptDelegate(): OrderOperationReceiptDelegate {",
+          "    return (this.prisma as unknown as { orderOperationReceipt: OrderOperationReceiptDelegate }).orderOperationReceipt;",
+          "  }",
+        ]
+      : []),
     ...(commerce
       ? [
           "",
@@ -2242,6 +2370,27 @@ function renderPrismaRecordStore(
     `      return { ...event, at: event.at.toISOString(), outcome: '${capabilityOutcome}' as const };`,
     "    });",
     "  }",
+    "  async inTransaction<T>(operation: (store: RecordStore) => Promise<T>): Promise<T> {",
+    "    return (this.prisma as unknown as TransactionExecutor).$transaction(async (client) => operation(new PrismaRecordStore(client)));",
+    "  }",
+    ...(persistentOrderOperationReceipts
+      ? [
+          "  async getOrderOperationReceipt(orderEntity: string, orderRecordId: string): Promise<OrderOperationReceipt | undefined> {",
+          "    const receipt = await this.orderOperationReceiptDelegate().findUnique({ where: { orderEntity_orderRecordId: { orderEntity, orderRecordId } } });",
+          "    if (!receipt) return undefined;",
+          "    const entry = receipt as { orderEntity: string; orderRecordId: string; due: string; captured: string; refunded: string; processedIdempotencyKeys: string[] };",
+          "    return { orderEntity: entry.orderEntity, orderRecordId: entry.orderRecordId, payment: { due: entry.due, captured: entry.captured, refunded: entry.refunded }, processedIdempotencyKeys: entry.processedIdempotencyKeys };",
+          "  }",
+          "  async saveOrderOperationReceipt(receipt: OrderOperationReceipt): Promise<void> {",
+          "    const data = { due: receipt.payment.due, captured: receipt.payment.captured, refunded: receipt.payment.refunded, processedIdempotencyKeys: [...receipt.processedIdempotencyKeys] };",
+          "    await this.orderOperationReceiptDelegate().upsert({",
+          "      where: { orderEntity_orderRecordId: { orderEntity: receipt.orderEntity, orderRecordId: receipt.orderRecordId } },",
+          "      update: data,",
+          "      create: { orderEntity: receipt.orderEntity, orderRecordId: receipt.orderRecordId, ...data },",
+          "    });",
+          "  }",
+        ]
+      : []),
     ...(commerce
       ? [
           "",
@@ -2339,7 +2488,9 @@ function renderPageRuntime(
       flows: graph.flow.flows.map((flow) => ({
         entity: flow.entity,
         transitions: flow.transitions.map((transition) => ({
+          from: transition.from,
           event: transition.event,
+          to: transition.to,
           roles: transition.roles ?? [],
         })),
       })),
@@ -2365,8 +2516,8 @@ function renderPageRuntime(
     "type PageRuntimeBlock = { readonly id: string; readonly type: 'hero' | 'form' | 'collection' | 'catalog' | 'catalog-configurator' | 'cart' | 'queue' | 'checkout'; readonly entity?: string; readonly props: Readonly<Record<string, string>> };",
     "type PageRuntimeProjection = { readonly apiVersion: 'factory.generated-page-runtime/v1'; readonly applicationName: string; readonly themeMode: 'light' | 'dark' | 'system'; readonly pages: readonly { readonly id: string; readonly route: string; readonly title: string; readonly blocks: readonly PageRuntimeBlock[] }[]; readonly navigation: readonly { readonly id: string; readonly label: string; readonly route: string }[]; readonly routeFallback: { readonly rootRoute: string | null; readonly unknownRoute: 'not-found' }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null } };",
     "type RuntimeEntity = { readonly key: string; readonly label: string; readonly fields: readonly { readonly key: string; readonly required: boolean }[] };",
-    "type RuntimeDefinition = { readonly applicationName: string; readonly themeMode: 'light' | 'dark' | 'system'; readonly entities: readonly RuntimeEntity[]; readonly policy: { readonly roles: readonly string[]; readonly permissions: readonly { readonly role: string; readonly resource: string; readonly actions: readonly string[] }[] }; readonly flow: { readonly flows: readonly { readonly entity: string; readonly transitions: readonly { readonly event: string; readonly roles: readonly string[] }[] }[] }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null } };",
-    "type BlockContext = { readonly role: string; readonly formRouteByEntity: Readonly<Record<string, string>>; readonly cartItems: readonly JsonRecord[]; readonly cartId: string | null; readonly reportError: (reason: unknown) => void; readonly addToCart: (catalogEntity: string, catalogRecordId: string) => Promise<void>; readonly configureLine: (catalogEntity: string, catalogRecordId: string, optionIds: readonly string[]) => Promise<JsonRecord>; readonly checkoutCart: () => Promise<void> };",
+    "type RuntimeDefinition = { readonly applicationName: string; readonly themeMode: 'light' | 'dark' | 'system'; readonly entities: readonly RuntimeEntity[]; readonly policy: { readonly roles: readonly string[]; readonly permissions: readonly { readonly role: string; readonly resource: string; readonly actions: readonly string[] }[] }; readonly flow: { readonly flows: readonly { readonly entity: string; readonly transitions: readonly { readonly from: string; readonly event: string; readonly to: string; readonly roles: readonly string[] }[] }[] }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null } };",
+    "type BlockContext = { readonly role: string; readonly formRouteByEntity: Readonly<Record<string, string>>; readonly checkoutRoute: string | null; readonly cartItems: readonly JsonRecord[]; readonly cartId: string | null; readonly reportError: (reason: unknown) => void; readonly addToCart: (catalogEntity: string, catalogRecordId: string) => Promise<void>; readonly configureLine: (catalogEntity: string, catalogRecordId: string, optionIds: readonly string[]) => Promise<JsonRecord>; readonly checkoutCart: () => Promise<void> };",
     "",
     `const projection: PageRuntimeProjection = ${serializedProjection};`,
     `const definition: RuntimeDefinition = ${serializedDefinition};`,
@@ -2390,6 +2541,14 @@ function renderPageRuntime(
     "",
     "function errorMessage(reason: unknown): string {",
     "  return reason instanceof Error ? reason.message : 'The request could not be completed.';",
+    "}",
+    "",
+    "function transitionBody(entityKey: string, record: JsonRecord, event: string): string {",
+    "  if (entityKey !== definition.commerce.orderEntity) return '{}';",
+    "  const version = Number(record.version);",
+    "  const recordId = String(record.id ?? '');",
+    "  if (!Number.isSafeInteger(version) || version < 0 || !recordId) throw new Error('The order version is invalid.');",
+    "  return JSON.stringify({ expectedVersion: version, idempotencyKey: `generated-web-${recordId}-${event}-${version}` });",
     "}",
     "",
     "function useEntityRecords(entity: RuntimeEntity, role: string, allowed: boolean) {",
@@ -2430,13 +2589,14 @@ function renderPageRuntime(
     "  const allowed = can(role, entity.key, 'read');",
     "  const { records, error, refresh } = useEntityRecords(entity, role, allowed);",
     "  const events = definition.flow.flows.find((flow) => flow.entity === entity.key)?.transitions.map((transition) => transition.event) ?? [];",
-    "  const transition = async (recordId: string, event: string) => {",
-    "    const response = await fetch(\`/api/${entity.key}/${recordId}/events/${event}\`, { method: 'POST', headers: requestHeaders(role) });",
+    "  const transition = async (record: JsonRecord, event: string) => {",
+    "    const recordId = String(record.id);",
+    "    const response = await fetch(\`/api/${entity.key}/${recordId}/events/${event}\`, { method: 'POST', headers: requestHeaders(role), body: transitionBody(entity.key, record, event) });",
     "    if (!response.ok) throw new Error(await response.text());",
     "    await refresh();",
     "  };",
     "  if (!allowed) return <section className='generated-card'><h2>{block.props.title ?? entity.label}</h2><p>Your selected role cannot read these records.</p></section>;",
-    "  return <section className='generated-card'><div className='generated-section-heading'><div><p>{block.type}</p><h2>{block.props.title ?? entity.label}</h2></div><div>{formRoute ? <a href={formRoute}>New {entity.label.toLowerCase()}</a> : null}<button type='button' onClick={() => void refresh().catch(reportError)}>Refresh</button></div></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<ul className='generated-records'>{records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code><span>{events.filter((event) => canTriggerEvent(role, entity.key, event)).map((event) => <button key={event} type='button' onClick={() => void transition(String(record.id), event).catch(reportError)}>{event}</button>)}</span></li>)}</ul></section>;",
+    "  return <section className='generated-card'><div className='generated-section-heading'><div><p>{block.type}</p><h2>{block.props.title ?? entity.label}</h2></div><div>{formRoute ? <a href={formRoute}>New {entity.label.toLowerCase()}</a> : null}<button type='button' onClick={() => void refresh().catch(reportError)}>Refresh</button></div></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<ul className='generated-records'>{records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code><span>{events.filter((event) => canTriggerEvent(role, entity.key, event)).map((event) => <button key={event} type='button' onClick={() => void transition(record, event).catch(reportError)}>{event}</button>)}</span></li>)}</ul></section>;",
     "}",
     "",
     "function CollectionBlock({ block, entity, context }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly context: BlockContext }) {",
@@ -2466,9 +2626,11 @@ function renderPageRuntime(
     "  return <section className='generated-card'><div className='generated-section-heading'><div><p>Server-authoritative selection</p><h2>{block.props.title ?? 'Configure options'}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}>Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<form onSubmit={(event) => { event.preventDefault(); void submit().catch(context.reportError); }}><label>Catalog item<select required value={catalogRecordId} onChange={(event) => setCatalogRecordId(event.target.value)}><option value=''>Choose an item</option>{records.map((record) => <option key={String(record.id)} value={String(record.id)}>{String(record.name ?? record.id)}</option>)}</select></label><label>Option identifiers<input value={optionIds} onChange={(event) => setOptionIds(event.target.value)} placeholder='option-a, option-b' /></label><button className='generated-primary' type='submit'>Validate selection</button></form>{configured ? <pre className='generated-records'>{JSON.stringify(configured, null, 2)}</pre> : null}</section>;",
     "}",
     "",
-    "function CartSummary({ context }: { readonly context: BlockContext }) {",
+    "function CartSummary({ context, checkout = false }: { readonly context: BlockContext; readonly checkout?: boolean }) {",
     "  if (!definition.commerce.orderEntity) return null;",
-    "  return <section className='generated-cart-summary'><h3>Cart</h3><p>{context.cartItems.length} item{context.cartItems.length === 1 ? '' : 's'}</p>{context.cartId && definition.commerce.paymentEvent && canTriggerEvent(context.role, definition.commerce.orderEntity, definition.commerce.paymentEvent) ? <button className='generated-primary' type='button' onClick={() => void context.checkoutCart().catch(context.reportError)}>Checkout cart</button> : null}</section>;",
+    "  const mayPay = context.cartId && definition.commerce.paymentEvent && canTriggerEvent(context.role, definition.commerce.orderEntity, definition.commerce.paymentEvent);",
+    "  const control = !mayPay ? null : checkout || !context.checkoutRoute ? <button className='generated-primary' type='button' onClick={() => void context.checkoutCart().catch(context.reportError)}>Pay simulated payment</button> : <a className='generated-primary' href={context.checkoutRoute}>Continue to checkout</a>;",
+    "  return <section className='generated-cart-summary'><h3>Cart</h3><p>{context.cartItems.length} item{context.cartItems.length === 1 ? '' : 's'}</p>{control}</section>;",
     "}",
     "",
     "function CartBlock({ block, context }: { readonly block: PageRuntimeBlock; readonly context: BlockContext }) {",
@@ -2476,7 +2638,7 @@ function renderPageRuntime(
     "}",
     "",
     "function CheckoutBlock({ block, context }: { readonly block: PageRuntimeBlock; readonly context: BlockContext }) {",
-    "  return <section className='generated-card'><h2>{block.props.title ?? 'Checkout'}</h2><p>Payment can only run through the declared checkout flow.</p><CartSummary context={context} /></section>;",
+    "  return <section className='generated-card'><h2>{block.props.title ?? 'Checkout'}</h2><p>Payment can only run through the declared checkout flow.</p><CartSummary context={context} checkout /></section>;",
     "}",
     "",
     "function BlockRenderer({ block, context }: { readonly block: PageRuntimeBlock; readonly context: BlockContext }) {",
@@ -2500,12 +2662,19 @@ function renderPageRuntime(
     "  const [cartItems, setCartItems] = useState<readonly JsonRecord[]>([]);",
     "  const reportError = (reason: unknown) => setError(errorMessage(reason));",
     "  const formRouteByEntity = Object.fromEntries(projection.pages.flatMap((page) => page.blocks.filter((block) => block.type === 'form' && block.entity).map((block) => [block.entity as string, page.route])));",
+    "  const checkoutRoute = projection.pages.find((page) => page.blocks.some((block) => block.type === 'checkout'))?.route ?? null;",
     "  const refreshCart = async (activeCartId: string) => {",
     "    if (!definition.commerce.orderEntity) return;",
     "    const response = await fetch(\`/api/commerce/${definition.commerce.orderEntity}/${activeCartId}/items\`, { headers: requestHeaders(role) });",
     "    if (!response.ok) throw new Error(await response.text());",
     "    setCartItems(await response.json() as readonly JsonRecord[]);",
     "  };",
+    "  useEffect(() => {",
+    "    const storedCartId = window.sessionStorage.getItem('factory.generated.cart-id');",
+    "    if (!storedCartId || !definition.commerce.orderEntity) return;",
+    "    setCartId(storedCartId);",
+    "    void fetch(`/api/commerce/${definition.commerce.orderEntity}/${storedCartId}/items`, { headers: requestHeaders(role) }).then(async (response) => { if (!response.ok) throw new Error(await response.text()); setCartItems(await response.json() as readonly JsonRecord[]); }).catch(reportError);",
+    "  }, [role]);",
     "  const addToCart = async (catalogEntity: string, catalogRecordId: string) => {",
     "    const orderEntity = definition.commerce.orderEntity;",
     "    if (!orderEntity || !can(role, orderEntity, 'create')) throw new Error('Your selected role cannot create a cart.');",
@@ -2516,6 +2685,7 @@ function renderPageRuntime(
     "      const cart = await created.json() as JsonRecord;",
     "      activeCartId = String(cart.id);",
     "      setCartId(activeCartId);",
+    "      window.sessionStorage.setItem('factory.generated.cart-id', activeCartId);",
     "    }",
     "    const response = await fetch(\`/api/commerce/${orderEntity}/${activeCartId}/items\`, { method: 'POST', headers: requestHeaders(role), body: JSON.stringify({ catalogEntity, catalogRecordId, quantity: 1 }) });",
     "    if (!response.ok) throw new Error(await response.text());",
@@ -2530,15 +2700,23 @@ function renderPageRuntime(
     "    const orderEntity = definition.commerce.orderEntity;",
     "    const paymentEvent = definition.commerce.paymentEvent;",
     "    if (!orderEntity || !paymentEvent || !cartId || !canTriggerEvent(role, orderEntity, paymentEvent)) throw new Error('Checkout is not available for your selected role.');",
-    "    const response = await fetch(\`/api/${orderEntity}/${cartId}/events/${paymentEvent}\`, { method: 'POST', headers: requestHeaders(role) });",
-    "    if (!response.ok) throw new Error(await response.text());",
+    "    const orders = await fetch(\`/api/${orderEntity}\`, { headers: requestHeaders(role) });",
+    "    if (!orders.ok) throw new Error(await orders.text());",
+    "    let order = (await orders.json() as readonly JsonRecord[]).find((candidate) => String(candidate.id) === cartId);",
+    "    if (!order) throw new Error('The checkout cart no longer exists.');",
+    "    const transitions = definition.flow.flows.find((flow) => flow.entity === orderEntity)?.transitions ?? [];",
+    "    const trigger = async (event: string) => { const response = await fetch(\`/api/${orderEntity}/${cartId}/events/${event}\`, { method: 'POST', headers: requestHeaders(role), body: transitionBody(orderEntity, order!, event) }); if (!response.ok) throw new Error(await response.text()); order = await response.json() as JsonRecord; };",
+    "    if (order.status === 'cart') { const submit = transitions.find((transition) => transition.from === 'cart' && transition.to === 'submitted'); if (!submit || !canTriggerEvent(role, orderEntity, submit.event)) throw new Error('The declared order flow cannot submit this cart.'); await trigger(submit.event); }",
+    "    if (order.status === 'submitted') await trigger(paymentEvent);",
+    "    if (order.status !== 'paid') throw new Error('The declared order flow did not reach a paid state.');",
     "    setCartId(null);",
     "    setCartItems([]);",
+    "    window.sessionStorage.removeItem('factory.generated.cart-id');",
     "  };",
     "  const requestedRoute = requestedPath === '/' ? projection.routeFallback.rootRoute ?? '/' : requestedPath;",
     "  const activePage = projection.pages.find((page) => page.route === requestedRoute);",
     "  if (!activePage) return <main className='generated-app' data-theme={definition.themeMode}><section className='generated-card'><p>Not found</p><h1>Declared route unavailable</h1><a href={projection.routeFallback.rootRoute ?? '/'}>Return to the application</a></section></main>;",
-    "  const context: BlockContext = { role, formRouteByEntity, cartItems, cartId, reportError, addToCart, configureLine, checkoutCart };",
+    "  const context: BlockContext = { role, formRouteByEntity, checkoutRoute, cartItems, cartId, reportError, addToCart, configureLine, checkoutCart };",
     "  return <main className='generated-app' data-theme={definition.themeMode}><header className='generated-header'><div><p>Published Graph application</p><h1>{definition.applicationName}</h1></div><label>Role<select value={role} onChange={(event) => setRole(event.target.value)}>{definition.policy.roles.map((candidate) => <option key={candidate} value={candidate}>{candidate}</option>)}</select></label></header><nav aria-label='Application routes'>{projection.navigation.map((item) => <a href={item.route} key={item.id}>{item.label}</a>)}</nav>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<section className='generated-page'>{activePage.blocks.map((block) => <BlockRenderer key={block.id} block={block} context={context} />)}</section></main>;",
     "}",
     "",
@@ -3109,6 +3287,16 @@ export function generateApplicationBundle(
     input,
     options,
   );
+  const renderedTargetContributions = targetContributionPlans.map(
+    renderTargetContribution,
+  );
+  const orderOperationsPersistence =
+    resolveOrderOperationsPersistenceContribution(
+      input,
+      renderedTargetContributions,
+    );
+  const useGenericOrderOperationsPersistence =
+    !restaurantRuntimeEnabled && orderOperationsPersistence !== undefined;
   const useResolvedContributions =
     input.compositionLock.resolvedContributionDigests.length > 0;
   const usePackageCartHandler = input.compositionLock.packages.some(
@@ -3375,9 +3563,9 @@ export function generateApplicationBundle(
       path: template.target,
       render: () => renderCapabilityTemplate(template, graph),
     })),
-    ...targetContributionPlans.map((contribution) => ({
+    ...renderedTargetContributions.map((contribution) => ({
       path: contribution.path,
-      render: () => renderTargetContribution(contribution).content,
+      render: () => contribution.content,
     })),
     {
       path: "api/src/capabilities/registry.ts",
@@ -3395,11 +3583,17 @@ export function generateApplicationBundle(
           catalogEntityKey,
           orderEntityKey,
           orderOperationsEntityKey,
+          useGenericOrderOperationsPersistence,
         ),
     },
     {
       path: "api/src/prisma-record-store.ts",
-      render: () => renderPrismaRecordStore(graph, restaurantRuntimeEnabled),
+      render: () =>
+        renderPrismaRecordStore(
+          graph,
+          restaurantRuntimeEnabled,
+          useGenericOrderOperationsPersistence,
+        ),
     },
     {
       path: "api/src/policy.ts",
@@ -3408,17 +3602,38 @@ export function generateApplicationBundle(
     {
       path: "api/prisma/schema.prisma",
       render: () =>
-        restaurantRuntime()?.prismaSchema ?? renderPrismaSchema(graph),
+        restaurantRuntime()?.prismaSchema ??
+        renderPrismaSchema(
+          graph,
+          useGenericOrderOperationsPersistence
+            ? orderOperationsPersistence?.schema
+            : undefined,
+          useGenericOrderOperationsPersistence,
+        ),
     },
     {
       path: "database/prisma/schema.prisma",
       render: () =>
-        restaurantRuntime()?.prismaSchema ?? renderPrismaSchema(graph),
+        restaurantRuntime()?.prismaSchema ??
+        renderPrismaSchema(
+          graph,
+          useGenericOrderOperationsPersistence
+            ? orderOperationsPersistence?.schema
+            : undefined,
+          useGenericOrderOperationsPersistence,
+        ),
     },
     {
       path: "database/prisma/migrations/0001_initial/migration.sql",
       render: () =>
-        restaurantRuntime()?.initialMigration ?? renderInitialMigration(graph),
+        restaurantRuntime()?.initialMigration ??
+        renderInitialMigration(
+          graph,
+          useGenericOrderOperationsPersistence
+            ? orderOperationsPersistence?.migration
+            : undefined,
+          useGenericOrderOperationsPersistence,
+        ),
     },
     {
       path: "database/package.json",

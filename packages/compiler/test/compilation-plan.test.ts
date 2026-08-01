@@ -341,6 +341,22 @@ describe("compilation target registry", () => {
     expect(generateApplicationBundle(publishedExpense)).toEqual(bundle);
   });
 
+  it("declares every handler type emitted by a non-commerce capability contract", () => {
+    const files = Object.fromEntries(
+      generateApplicationBundle(publishedExpense).files.map((file) => [
+        file.path,
+        file.content,
+      ]),
+    );
+
+    expect(files["api/src/capabilities/contract.ts"]).toContain(
+      "export type CapabilityCommerceLineItem",
+    );
+    expect(files["api/src/capabilities/contract.ts"]).toContain(
+      "export type CapabilityConfiguredLine",
+    );
+  });
+
   it("plans one deterministic Restaurant bundle with transaction and projection artifacts", () => {
     const graph = composeProfileDraft({ profile: "restaurant-ordering" }).graph;
     const bundle = generateApplicationBundle({
@@ -549,12 +565,15 @@ describe("compilation target registry", () => {
 
     for (const lock of historicalExecutableLocks) {
       const path = `api/src/capabilities/${lock.key}.ts`;
-      const currentVersion =
-        lock.key === "commerce.inventory" ? "1.1.0" : "1.0.1";
-      expect(currentGraph.integration.assetLocks).toContainEqual(
-        expect.objectContaining({ key: lock.key, version: currentVersion }),
+      const currentLock = currentGraph.integration.assetLocks?.find(
+        (candidate) => candidate.key === lock.key,
       );
-      expect(currentFiles[path]).toContain(`version: "${currentVersion}"`);
+
+      expect(currentLock).toBeDefined();
+      expect(currentLock?.version).not.toBe(lock.version);
+      expect(currentFiles[path]).toContain(
+        `version: "${currentLock?.version}"`,
+      );
       expect(historicalFiles[path]).toContain('version: "1.0.0"');
       expect(historicalFiles[path]).toContain("} as const;");
       expect(historicalTemplateLock.templates).toEqual(
@@ -687,7 +706,6 @@ describe("compilation target registry", () => {
         expect.objectContaining({ key: "core.workflow", version: "1.0.1" }),
         expect.objectContaining({
           key: "commerce.inventory",
-          version: "1.1.0",
         }),
         expect.objectContaining({
           key: "commerce.simulated-payment",
@@ -1425,6 +1443,14 @@ describe("compilation target registry", () => {
     expect(runtime).toContain("QueueBlock");
     expect(runtime).toContain("CheckoutBlock");
     expect(runtime).toContain("formRouteByEntity");
+    expect(runtime).toContain("checkoutRoute");
+    expect(runtime).toContain("Continue to checkout");
+    expect(runtime).toContain("Pay simulated payment");
+    expect(runtime).toContain("factory.generated.cart-id");
+    expect(runtime).toContain("transitionBody");
+    expect(runtime).toContain(
+      "The declared order flow cannot submit this cart.",
+    );
     expect(runtime).toContain(
       "routeFallback: { readonly rootRoute: string | null; readonly unknownRoute: 'not-found' }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null }",
     );
@@ -2127,6 +2153,9 @@ describe("compilation target registry", () => {
       "commerce/:entity/:recordId/items",
     );
     expect(files["web/app/page-runtime.tsx"]).toContain("addToCart");
-    expect(files["web/app/page-runtime.tsx"]).toContain("Checkout cart");
+    expect(files["web/app/page-runtime.tsx"]).toContain("Continue to checkout");
+    expect(files["web/app/page-runtime.tsx"]).toContain(
+      "Pay simulated payment",
+    );
   });
 });

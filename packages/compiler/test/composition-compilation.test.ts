@@ -17,6 +17,7 @@ import { hashApplicationGraph, type ApplicationGraphV1 } from "@factory/graph";
 import * as restaurantRuntimeRenderer from "../src/restaurant-runtime.js";
 
 import {
+  buildCompilationPlan,
   generateApplicationBundle,
   resolveTargetContributions,
   type PublishedGraphInput,
@@ -126,6 +127,19 @@ describe("immutable composition compilation", () => {
         { repositoryRoot: resolve(tmpdir(), "missing-factory-repository") },
       ),
     ).toEqual([]);
+  });
+
+  it("accepts a composition lock after JSON queue serialization", () => {
+    const persistedLock = JSON.parse(
+      JSON.stringify(compositionLock),
+    ) as typeof compositionLock;
+
+    expect(
+      buildCompilationPlan({ ...input, compositionLock: persistedLock }),
+    ).toMatchObject({
+      graphHash: hashApplicationGraph(graph),
+      publishedRevisionId: input.publishedRevisionId,
+    });
   });
 
   it("never substitutes Graph asset locks for an empty persisted composition lock", () => {

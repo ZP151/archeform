@@ -1,0 +1,21 @@
+{
+  "order": {
+    "status": "submitted",
+    "version": 2,
+    "payment": { "due": "24.00", "captured": "0.00", "refunded": "0.00" }
+  },
+  "receipt": {
+    "orderEntity": "order",
+    "orderRecordId": "order-1",
+    "processedIdempotencyKeys": ["payment-1"]
+  },
+  "commands": [
+    "hold",
+    "release-hold",
+    "amend",
+    "cancel",
+    "record-partial-payment",
+    "capture-payment",
+    "refund"
+  ]
+}
