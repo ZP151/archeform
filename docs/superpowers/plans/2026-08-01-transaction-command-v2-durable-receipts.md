@@ -231,6 +231,81 @@ git add packages/capabilities packages/compiler
 git commit -m "feat: execute generic transactions with durable leases"
 ```
 
+## Task 2.5: Reissue the PostgreSQL-safe Transaction V2 package
+
+**Files:**
+
+- Create: `packages/capabilities/assets/commerce.transaction/2.2.1/**`
+- Create: `packages/capabilities/src/assets/commerce/transaction-v2-2-1.ts`
+- Modify: `packages/capabilities/src/assets/index.ts`
+- Modify: `packages/capabilities/src/composition.ts`
+- Modify: `packages/capabilities/src/node.ts`
+- Modify: `packages/capabilities/test/capability-registry.test.ts`
+- Modify: `packages/compiler/test/generic-order-lifecycle-v2.test.ts`
+- Modify: `docs/project-status.md`
+
+**Interfaces:**
+
+- Consumes: Task 2 package pair and ADR-0014.
+- Produces: an immutable, direct-composable `commerce.transaction@2.2.1`
+  successor paired with `commerce.order@2.1.0`; a fail-closed revocation rule
+  for the physical 2.2.0 package; and package-level PostgreSQL name validation.
+
+- [ ] **Step 1: Write failing revocation and PostgreSQL-name tests**
+
+```ts
+expect(() =>
+  createCapabilityCompositionLock({
+    graphChecksum,
+    selections: directV2Selections({ transactionVersion: "2.2.0" }),
+  }),
+).toThrow("commerce.transaction@2.2.0 is revoked: PostgreSQL index identifier exceeds 63 bytes");
+
+expect(resolveCapabilityAssetLock(transactionV2_2_1Lock).manifest.version).toBe(
+  "2.2.1",
+);
+expect(postgresIndexNames(emittedSchema)).toSatisfyAll((name) =>
+  Buffer.byteLength(name, "ascii") <= 63,
+);
+```
+
+- [ ] **Step 2: Run the focused package/compiler tests and verify RED**
+
+Run: `pnpm --filter @factory/capabilities test -- capability-registry.test.ts && pnpm --filter @factory/compiler test -- generic-order-lifecycle-v2.test.ts`
+
+Expected: FAIL because 2.2.1 is absent, 2.2.0 remains selectable, and no
+package-level PostgreSQL identifier validation exists.
+
+- [ ] **Step 3: Publish the immutable successor and revoke selection of 2.2.0**
+
+Copy only Factory-owned 2.2.0 package source into a new 2.2.1 root, replace
+the receipt aggregate index map name in both schema and SQL with the same
+explicit ASCII identifier no longer than 63 bytes, and refresh all
+manifest/contribution/projection digests. Register 2.2.1 as the direct V2
+transaction asset. Retain 2.2.0 physical bytes for audit but make local
+composition and verified lock publication reject it before it can compile.
+Direct V2 tests select 2.2.1 with `commerce.order@2.1.0`; default recipes and
+historical assets remain unchanged.
+
+- [ ] **Step 4: Verify static schema/migration parity and safe PostgreSQL names**
+
+Validate every explicit `map:` identifier emitted by the V2 schema and SQL:
+schema/migration names match, are ASCII, and are at most 63 bytes. The exact
+successor’s source, component, adapter, and typed projection digests must all
+agree. Do not move this check into a compiler rewrite.
+
+- [ ] **Step 5: Run focused tests and commit**
+
+Run: `pnpm --filter @factory/capabilities test -- capability-registry.test.ts && pnpm --filter @factory/compiler test -- generic-order-lifecycle-v2.test.ts && pnpm --filter @factory/capabilities typecheck && pnpm --filter @factory/compiler typecheck && pnpm --filter @factory/capabilities lint && pnpm --filter @factory/compiler lint && git diff --check`
+
+Expected: PASS. Record the P1012 root cause and corrected successor/revocation
+in factual project status. Commit:
+
+```bash
+git add packages/capabilities packages/compiler docs/project-status.md
+git commit -m "fix: reissue postgres-safe transaction package"
+```
+
 ## Task 3: Derive generated journeys from locks and validate emitted projects
 
 **Files:**
