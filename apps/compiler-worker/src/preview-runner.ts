@@ -61,6 +61,13 @@ const defaultOperationOptions: PreviewOperationOptions = {
 };
 const previewHealthRetryDelayMs = 250;
 const maximumPreviewHealthWaitMs = 30_000;
+const previewDirectoryRemovalRetryCount = 3;
+const previewDirectoryRemovalRetryDelayMs = 25;
+const transientPreviewDirectoryRemovalCodes = new Set([
+  "EBUSY",
+  "ENOTEMPTY",
+  "EPERM",
+]);
 
 function previewHealthWaitMs(options: PreviewOperationOptions): number {
   return Math.min(
@@ -178,6 +185,40 @@ export function createDockerComposeRunner(
       });
     });
   };
+}
+
+function isTransientPreviewDirectoryRemovalError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    transientPreviewDirectoryRemovalCodes.has(
+      (error as NodeJS.ErrnoException).code ?? "",
+    )
+  );
+}
+
+function waitForPreviewDirectoryRemovalRetry(delayMs: number): Promise<void> {
+  return new Promise((resolvePromise) => {
+    setTimeout(resolvePromise, delayMs);
+  });
+}
+
+async function removePreviewDirectory(directory: string): Promise<void> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await rm(directory, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      if (
+        !isTransientPreviewDirectoryRemovalError(error) ||
+        attempt === previewDirectoryRemovalRetryCount
+      ) {
+        throw error;
+      }
+      await waitForPreviewDirectoryRemovalRetry(
+        previewDirectoryRemovalRetryDelayMs * 2 ** attempt,
+      );
+    }
+  }
 }
 
 export const runDockerCompose = createDockerComposeRunner(spawn);
@@ -689,7 +730,7 @@ export async function stopPreviewRun(
       options.operationTimeoutMs,
       "preview_stop_failed",
     );
-    await rm(directory, { recursive: true, force: true });
+    await removePreviewDirectory(directory);
   } catch {
     throw new PreviewRunFailure("preview_stop_failed");
   }

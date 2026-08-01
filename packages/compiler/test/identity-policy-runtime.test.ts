@@ -29,6 +29,28 @@ function publishedExpenseFiles(): Readonly<Record<string, string>> {
 }
 
 describe("identity policy runtime compilation", () => {
+  it.each(["retail-counter", "grocery-pickup"] as const)(
+    "emits single-argument role resolution for an identity-less %s composition",
+    (profile) => {
+      const draft = composeDefaultCapabilityDraft({ profile }).graph;
+      const selections = draft.integration.compositionSelections!;
+      const graph = structuredClone(draft);
+      delete graph.integration.compositionSelections;
+      const files = Object.fromEntries(
+        generateApplicationBundle({
+          publishedRevisionId: `identity-less-${profile}-1`,
+          graph,
+          compositionLock: createCapabilityCompositionLock({
+            graphChecksum: hashApplicationGraph(graph),
+            selections,
+          }),
+        }).files.map((file) => [file.path, file.content]),
+      );
+
+      expect(files["api/src/main.ts"]).not.toMatch(/roleFrom\(request,/);
+    },
+  );
+
   it("emits a session-bound deny-by-default API guard for a locked identity package", () => {
     const files = publishedExpenseFiles();
 
@@ -38,6 +60,12 @@ describe("identity policy runtime compilation", () => {
     expect(files["api/src/main.ts"]).toContain("x-factory-fixture-session");
     expect(files["api/src/main.ts"]).toContain("resolveFixturePrincipal");
     expect(files["api/src/main.ts"]).toContain("authorizeDeclaredAction");
+    expect(files["api/src/main.ts"]).toContain(
+      "roleFrom(request, entity, 'read')",
+    );
+    expect(files["api/src/main.ts"]).toContain(
+      "roleFrom(request, entity, 'create')",
+    );
     expect(files["api/src/main.ts"]).toContain(
       "roleFrom(request, entity, event)",
     );

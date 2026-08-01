@@ -3522,6 +3522,10 @@ function renderApiMain(
   identityPolicy: IdentityPolicyRuntimeContribution | undefined,
 ): string {
   const commerce = hasCommerceCapabilities(graph);
+  const roleForEntityAction = (action: string): string =>
+    identityPolicy
+      ? `roleFrom(request, entity, ${action})`
+      : "roleFrom(request)";
   const identityGuard = identityPolicy
     ? [
         'import { authorizeDeclaredAction, resolveFixturePrincipal, type LocalPrincipalContext } from "./capabilities/core.identity-policy.js";',
@@ -3640,22 +3644,22 @@ function renderApiMain(
     "",
     "  @Get(':entity')",
     "  async list(@Param('entity') entity: string, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
-    "    try { return await applicationRuntime.list(roleFrom(request, entity, 'read'), entity); } catch (error) { throw rejected(error); }",
+    `    try { return await applicationRuntime.list(${roleForEntityAction("'read'")}, entity); } catch (error) { throw rejected(error); }`,
     "  }",
     "",
     "  @Get(':entity/:recordId')",
     "  async read(@Param('entity') entity: string, @Param('recordId') recordId: string, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
-    "    try { return await applicationRuntime.read(roleFrom(request, entity, 'read'), entity, recordId); } catch (error) { throw rejected(error); }",
+    `    try { return await applicationRuntime.read(${roleForEntityAction("'read'")}, entity, recordId); } catch (error) { throw rejected(error); }`,
     "  }",
     "",
     "  @Post(':entity')",
     "  async create(@Param('entity') entity: string, @Body() body: Record<string, unknown>, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
-    "    try { return await applicationRuntime.create(roleFrom(request, entity, 'create'), entity, body); } catch (error) { throw rejected(error); }",
+    `    try { return await applicationRuntime.create(${roleForEntityAction("'create'")}, entity, body); } catch (error) { throw rejected(error); }`,
     "  }",
     "",
     "  @Post(':entity/:recordId/events/:event')",
     "  async transition(@Param('entity') entity: string, @Param('recordId') recordId: string, @Param('event') event: string, @Body() body: { expectedVersion: number; idempotencyKey: string }, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
-    "    try { return await applicationRuntime.transition(roleFrom(request, entity, event), entity, recordId, event, body); } catch (error) { throw rejected(error); }",
+    `    try { return await applicationRuntime.transition(${roleForEntityAction("event")}, entity, recordId, event, body); } catch (error) { throw rejected(error); }`,
     "  }",
     "}",
     "",

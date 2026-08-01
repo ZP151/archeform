@@ -22,6 +22,35 @@ import {
 } from "../src/preview-runner.js";
 import * as previewRunnerModule from "../src/preview-runner.js";
 
+const previewRemovalFailure = vi.hoisted(() => ({
+  directory: "",
+  failuresRemaining: 0,
+  persist: false,
+  code: "EPERM",
+  attempts: 0,
+}));
+
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs/promises")>();
+  return {
+    ...actual,
+    rm: async (...args: Parameters<typeof actual.rm>) => {
+      if (
+        String(args[0]) === previewRemovalFailure.directory &&
+        (previewRemovalFailure.persist ||
+          previewRemovalFailure.failuresRemaining > 0)
+      ) {
+        previewRemovalFailure.attempts += 1;
+        previewRemovalFailure.failuresRemaining -= 1;
+        const error = new Error("Preview directory is still in use.");
+        (error as NodeJS.ErrnoException).code = previewRemovalFailure.code;
+        throw error;
+      }
+      return actual.rm(...args);
+    },
+  };
+});
+
 const compose = Buffer.from("services:\n  web:\n    image: example\n", "utf8");
 const application = Buffer.from("export const value = 1;\n", "utf8");
 
@@ -848,6 +877,119 @@ describe("preview runner", () => {
       );
       await expect(readFile(join(preview, "src", "app.ts"))).rejects.toThrow();
     } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("completes stop when Windows releases the preview directory after Compose cleanup", async () => {
+    const { root } = await sourceFixture();
+    const preview = join(root, ".preview-runs", "preview-1");
+    const commands: Parameters<PreviewProcessRunner>[0][] = [];
+    const processRunner: PreviewProcessRunner = async (command) => {
+      commands.push(command);
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "web")
+        return "127.0.0.1:49101\n";
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "api")
+        return "127.0.0.1:49102\n";
+    };
+
+    try {
+      await startPreviewRun(root, request(registeredArtifacts), processRunner);
+      previewRemovalFailure.directory = preview;
+      previewRemovalFailure.failuresRemaining = 1;
+
+      await expect(
+        stopPreviewRun(root, request(registeredArtifacts), processRunner),
+      ).resolves.toBeUndefined();
+
+      expect(
+        commands.filter((command) => command.args.includes("down")),
+      ).toHaveLength(1);
+      await expect(
+        readFile(join(preview, "docker-compose.yml")),
+      ).rejects.toThrow();
+    } finally {
+      previewRemovalFailure.directory = "";
+      previewRemovalFailure.failuresRemaining = 0;
+      previewRemovalFailure.persist = false;
+      previewRemovalFailure.code = "EPERM";
+      previewRemovalFailure.attempts = 0;
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("fails closed when the preview directory remains locked after Compose cleanup", async () => {
+    const { root } = await sourceFixture();
+    const preview = join(root, ".preview-runs", "preview-1");
+    const commands: Parameters<PreviewProcessRunner>[0][] = [];
+    const processRunner: PreviewProcessRunner = async (command) => {
+      commands.push(command);
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "web")
+        return "127.0.0.1:49101\n";
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "api")
+        return "127.0.0.1:49102\n";
+    };
+
+    try {
+      await startPreviewRun(root, request(registeredArtifacts), processRunner);
+      previewRemovalFailure.directory = preview;
+      previewRemovalFailure.persist = true;
+
+      await expect(
+        stopPreviewRun(root, request(registeredArtifacts), processRunner),
+      ).rejects.toMatchObject({ code: "preview_stop_failed" });
+
+      expect(
+        commands.filter((command) => command.args.includes("down")),
+      ).toHaveLength(1);
+      await expect(
+        readFile(join(preview, "docker-compose.yml")),
+      ).resolves.toEqual(compose);
+    } finally {
+      previewRemovalFailure.directory = "";
+      previewRemovalFailure.failuresRemaining = 0;
+      previewRemovalFailure.persist = false;
+      previewRemovalFailure.code = "EPERM";
+      previewRemovalFailure.attempts = 0;
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("fails closed without retrying a non-transient preview directory removal error", async () => {
+    const { root } = await sourceFixture();
+    const preview = join(root, ".preview-runs", "preview-1");
+    const commands: Parameters<PreviewProcessRunner>[0][] = [];
+    const processRunner: PreviewProcessRunner = async (command) => {
+      commands.push(command);
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "web")
+        return "127.0.0.1:49101\n";
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "api")
+        return "127.0.0.1:49102\n";
+    };
+
+    try {
+      await startPreviewRun(root, request(registeredArtifacts), processRunner);
+      previewRemovalFailure.directory = preview;
+      previewRemovalFailure.persist = true;
+      previewRemovalFailure.code = "EACCES";
+
+      await expect(
+        stopPreviewRun(root, request(registeredArtifacts), processRunner),
+      ).rejects.toMatchObject({ code: "preview_stop_failed" });
+
+      expect(previewRemovalFailure.attempts).toBe(1);
+      expect(
+        commands.filter((command) => command.args.includes("down")),
+      ).toHaveLength(1);
+      await expect(
+        readFile(join(preview, "docker-compose.yml")),
+      ).resolves.toEqual(compose);
+    } finally {
+      previewRemovalFailure.directory = "";
+      previewRemovalFailure.failuresRemaining = 0;
+      previewRemovalFailure.persist = false;
+      previewRemovalFailure.code = "EPERM";
+      previewRemovalFailure.attempts = 0;
       await rm(root, { recursive: true, force: true });
     }
   });
