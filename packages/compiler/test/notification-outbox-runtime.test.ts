@@ -145,9 +145,13 @@ function publishedExpenseWithNotification(
         manifest.version === notificationVersion,
     );
     if (!historical) throw new Error("Historical notification asset missing.");
+    const historicalLock = lockFromAsset(historical);
+    graph.integration.assetLocks = graph.integration.assetLocks?.map((lock) =>
+      lock.key === "core.notification" ? historicalLock : lock,
+    );
     selections = selections.map((selection) =>
       selection.lock.key === "core.notification"
-        ? { ...selection, lock: lockFromAsset(historical) }
+        ? { ...selection, lock: historicalLock }
         : selection,
     );
   }
@@ -534,26 +538,37 @@ describe("generated durable notification outbox runtime", () => {
   });
 
   it("replays a historical 1.1.0 notification lock with a null template", async () => {
-    await withGeneratedModule(
-      publishedExpenseWithNotification(undefined, "1.1.0"),
-      async (module) => {
-        const store = new module.InMemoryRecordStore();
-        const runtime = new module.ApplicationRuntime(store);
-        const expense = await runtime.create("employee", "expense", {
-          amount: "42.00",
-          description: "Team lunch",
-        });
-
-        await runtime.transition("employee", "expense", expense.id, "submit");
-
-        const pending = await store.claimDueNotifications(
-          "9999-12-31T23:59:59.999Z",
-          10,
-        );
-        expect(pending).toHaveLength(1);
-        expect(pending[0]?.template).toBeNull();
-      },
+    const published = publishedExpenseWithNotification(undefined, "1.1.0");
+    const graphLock = published.graph.integration.assetLocks?.find(
+      ({ key }) => key === "core.notification",
     );
+    const compositionLock = published.compositionLock.packages.find(
+      ({ lock }) => lock.key === "core.notification",
+    )?.lock;
+
+    expect(graphLock).toMatchObject({
+      key: "core.notification",
+      version: "1.1.0",
+    });
+    expect(compositionLock).toEqual(graphLock);
+
+    await withGeneratedModule(published, async (module) => {
+      const store = new module.InMemoryRecordStore();
+      const runtime = new module.ApplicationRuntime(store);
+      const expense = await runtime.create("employee", "expense", {
+        amount: "42.00",
+        description: "Team lunch",
+      });
+
+      await runtime.transition("employee", "expense", expense.id, "submit");
+
+      const pending = await store.claimDueNotifications(
+        "9999-12-31T23:59:59.999Z",
+        10,
+      );
+      expect(pending).toHaveLength(1);
+      expect(pending[0]?.template).toBeNull();
+    });
   });
 
   it("rolls back both a domain mutation and notification enqueue when a transaction fails", async () => {
