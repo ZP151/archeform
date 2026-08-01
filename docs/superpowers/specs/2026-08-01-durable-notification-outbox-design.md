@@ -177,6 +177,28 @@ verifies its manifest digests. Rollback is a new Draft that selects the
 previously approved lock; no published revision, package directory, or
 generated artifact is overwritten.
 
+## Release-review remediation
+
+The initial acceptance record was reopened by independent release review. A
+generated `NotificationOutboxWorker` class is insufficient: every generated
+application with `notification.outbox/v1` must expose an explicit local,
+documented one-shot drain command or a Compose worker service that constructs
+the Prisma-backed store and uses the deterministic fixture transport. The
+command must not accept a recipient, body, URL, provider, credential, or raw
+message input.
+
+Restaurant Ordering cannot silently suppress a selected durable notification
+lock. A published Restaurant Graph that selects an asset providing
+`notification.outbox/v1` must either receive a complete generated outbox
+implementation or fail compilation with a safe compatibility error. New
+Restaurant recipes may select a compatible non-outbox asset; immutable
+`1.1.1` remains unchanged.
+
+Rollback proof must exercise the generated runtime transaction path with an
+injected failure after notification enqueue. It must prove that both the
+domain mutation and the outbox write are absent after rollback for the
+Prisma-backed generated application, in addition to in-memory coverage.
+
 ## Rejected alternatives
 
 - **Add a provider SDK now:** it creates a credential, outage, and provider

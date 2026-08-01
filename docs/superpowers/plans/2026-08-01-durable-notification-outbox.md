@@ -354,6 +354,93 @@ remains replayable with a null template.
   pnpm --filter @factory/compiler lint
   ```
 
+### Task 7: Remediate release-review runtime and profile findings
+
+**Release-review gate:** This task supersedes the prior Task 5 acceptance
+claim until a fresh QA and independent release review pass. The immutable
+`1.1.1` package must not be edited.
+
+**Files:**
+
+- Modify: `packages/compiler/src/index.ts`
+- Modify: `packages/compiler/test/compilation-plan.test.ts`
+- Modify: `packages/compiler/test/notification-outbox-runtime.test.ts`
+- Modify: `packages/compiler/test/profile-compilation.test.ts`
+- Modify: `packages/capabilities/src/index.ts`
+- Modify: `packages/capabilities/test/capability-registry.test.ts`
+- Create: `packages/capabilities/assets/core.notification/1.1.2/**`
+- Create: `packages/capabilities/src/assets/core/notification-v1-1-2.ts`
+- Modify: `packages/capabilities/src/assets/index.ts`
+- Modify: `packages/capabilities/src/node.ts`
+- Modify: `docs/superpowers/specs/2026-08-01-durable-notification-outbox-design.md`
+
+**Produces:** a generated application with a documented, executable local
+notification-drain command; no silent Restaurant outbox suppression; and
+rollback evidence through the generated Prisma-backed application runtime.
+
+- [ ] **Step 1: Establish focused RED tests**
+
+  Add tests showing that a `1.1.1` bundle emits a runnable one-shot drain
+  command (or an equivalent explicit Compose worker service) that uses only a
+  local fixture transport. Add a generated-runtime transaction test that
+  injects a post-enqueue failure and proves neither the domain mutation nor
+  outbox row commits. Add profile tests that a Restaurant composition cannot
+  silently compile a lock advertising `notification.outbox/v1`.
+
+- [ ] **Step 2: Implement a minimal, deterministic remediation**
+
+  Generate a one-shot local CLI or Compose worker which constructs the Prisma
+  store and bounded fixture transport, drains due work, and exits with a safe
+  summary. It may not read credentials or contact a network. Preserve the
+  existing generated transaction boundary and prove rollback against the
+  Prisma-backed runtime. Create immutable `core.notification@1.1.2` only if a
+  corrected eligibility declaration is required; never modify `1.1.1`.
+  Restaurant must either have complete outbox generation or fail closed for a
+  durable notification lock. New Restaurant drafts may select a compatible
+  non-outbox notification asset.
+
+- [ ] **Step 3: Verify generated local behavior**
+
+  Compile an Expense published Graph, start its isolated PostgreSQL runtime,
+  create a pending notification via a role-aware transition, invoke the
+  generated drain command, and assert the row becomes delivered. Prove an
+  injected transition failure leaves no domain or outbox row. Confirm a
+  Restaurant `1.1.1` durable lock is rejected rather than silently omitted.
+
+- [ ] **Step 4: Commit remediation**
+
+  ```bash
+  git add packages/capabilities packages/compiler docs/superpowers/specs
+  git commit -m "fix: complete notification outbox runtime contract"
+  ```
+
+### Task 8: Re-run QA and release review
+
+**Files:**
+
+- Modify: `docs/acceptance/durable-notification-outbox.md`
+
+**Produces:** a correction record that preserves the earlier false-positive
+QA history, records the independent release findings, and contains only safe
+fresh verification evidence.
+
+- [ ] **Step 1: Run all release gates**
+
+  Re-run the package, root, generated Compose, cleanup, and guarded real-model
+  checks from Task 5. The generated notification drain must be included in
+  role-aware profile evidence.
+
+- [ ] **Step 2: Run an independent release review**
+
+  A reviewer must verify the generated drain command, Restaurant fail-closed
+  behavior, and actual transactional rollback before acceptance is restored.
+
+- [ ] **Step 3: Append correction evidence and push**
+
+  Append the reopened status and fresh result; never alter historic evidence
+  or persist credentials, raw prompts, or raw responses. Commit and push only
+  after the independent reviewer returns no blocking finding.
+
   Expected: every command exits zero.
 
 - [ ] **Step 2: Run repository gates and generated-output checks**
