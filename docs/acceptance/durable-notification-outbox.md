@@ -320,11 +320,15 @@ post-enqueue rollback boundary.
 The committed `pnpm verify:generated-notification-outbox` verifier now creates
 an isolated generated Expense application and Compose project. It exercises the
 real generated `ApplicationRuntime.transition` through a transaction-scoped
-`PrismaRecordStore` decorator that fails only after delegated enqueue. It then
+`PrismaRecordStore` decorator that delegates notification enqueue and the
+subsequent domain update, then throws an exact post-update sentinel. The
+verifier requires that exact sentinel and records both milestones before it
 asserts the durable outcomes at the database boundary:
 
 ```text
 pendingBeforeDrain: 1
+enqueueCompleted: true
+domainUpdateCompleted: true
 rollbackStatus: draft
 rollbackOutbox: 0
 delivered: 1
@@ -345,7 +349,10 @@ pnpm --filter @factory/compiler test -- notification-outbox-runtime.test.ts
 Exit 0: 18 tests passed.
 
 pnpm verify:generated-notification-outbox
-Exit 0: pendingBeforeDrain 1, delivered 1, rollbackOutbox 0, safeFailure true.
+Builds @factory/graph, @factory/capabilities, and @factory/compiler from the
+current checkout before executing the verifier. Exit 0: pendingBeforeDrain 1,
+enqueueCompleted true, domainUpdateCompleted true, delivered 1,
+rollbackOutbox 0, safeFailure true.
 
 pnpm test                                    Exit 0: 16 Turbo tasks.
 pnpm typecheck                               Exit 0: 16 Turbo tasks.

@@ -17,15 +17,37 @@ import {
 } from "./application-runtime.js";
 import { PrismaRecordStore } from "./prisma-record-store.js";
 
-class FailAfterEnqueueStore extends PrismaRecordStore {
+class FailAfterDomainUpdateStore extends PrismaRecordStore {
+  constructor(
+    prisma: PrismaClient,
+    private readonly milestones: {
+      enqueueCompleted: boolean;
+      domainUpdateCompleted: boolean;
+    },
+  ) {
+    super(prisma);
+  }
+
   async inTransaction<T>(operation: (store: RecordStore) => Promise<T>): Promise<T> {
     return super.inTransaction(async (store) => {
+      const milestones = this.milestones;
       const failingStore = new Proxy(store, {
         get(target, property, receiver) {
           if (property === "enqueueNotification") {
             return async (...args: Parameters<RecordStore["enqueueNotification"]>) => {
-              await target.enqueueNotification(...args);
-              throw new Error("outbox-proof-failure");
+              const entry = await target.enqueueNotification(...args);
+              milestones.enqueueCompleted = true;
+              return entry;
+            };
+          }
+          if (property === "update") {
+            return async (...args: Parameters<RecordStore["update"]>) => {
+              const updated = await target.update(...args);
+              if (milestones.enqueueCompleted) {
+                milestones.domainUpdateCompleted = true;
+                throw new Error("outbox-proof-sentinel");
+              }
+              return updated;
             };
           }
           const value = Reflect.get(target, property, receiver);
@@ -59,15 +81,29 @@ async function main(): Promise<void> {
       amount: "10.00",
       description: "Rollback proof",
     });
-    const failingRuntime = new ApplicationRuntime(new FailAfterEnqueueStore(prisma));
-    await failingRuntime
-      .transition("employee", "expense", rollbackCandidate.id, "submit")
-      .then(
-        () => {
-          throw new Error("outbox proof transition unexpectedly succeeded");
-        },
-        () => undefined,
+    const milestones = { enqueueCompleted: false, domainUpdateCompleted: false };
+    const failingRuntime = new ApplicationRuntime(
+      new FailAfterDomainUpdateStore(prisma, milestones),
+    );
+    let transitionFailure: unknown;
+    try {
+      await failingRuntime.transition(
+        "employee",
+        "expense",
+        rollbackCandidate.id,
+        "submit",
       );
+    } catch (error) {
+      transitionFailure = error;
+    }
+    if (
+      !(transitionFailure instanceof Error) ||
+      transitionFailure.message !== "outbox-proof-sentinel" ||
+      !milestones.enqueueCompleted ||
+      !milestones.domainUpdateCompleted
+    ) {
+      throw new Error("Generated rollback proof did not reach its post-update sentinel.");
+    }
 
     const rollbackRecord = await prisma.expense.findUnique({
       where: { id: rollbackCandidate.id },
@@ -85,6 +121,8 @@ async function main(): Promise<void> {
     console.log(
       JSON.stringify({
         pendingBeforeDrain,
+        enqueueCompleted: milestones.enqueueCompleted,
+        domainUpdateCompleted: milestones.domainUpdateCompleted,
         rollbackStatus: rollbackRecord.status,
         rollbackOutbox,
       }),
@@ -225,6 +263,8 @@ async function main() {
     );
     if (
       runtimeProof.pendingBeforeDrain !== 1 ||
+      runtimeProof.enqueueCompleted !== true ||
+      runtimeProof.domainUpdateCompleted !== true ||
       runtimeProof.rollbackStatus !== "draft" ||
       runtimeProof.rollbackOutbox !== 0
     ) {
@@ -285,6 +325,8 @@ async function main() {
       JSON.stringify({
         pendingBeforeDrain: 1,
         delivered: 1,
+        enqueueCompleted: true,
+        domainUpdateCompleted: true,
         rollbackOutbox: 0,
         safeFailure: true,
       }),
