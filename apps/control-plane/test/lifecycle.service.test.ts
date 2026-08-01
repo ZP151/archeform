@@ -1234,6 +1234,39 @@ describe("LifecycleService", () => {
     });
   });
 
+  it("queues a non-empty composition lock after persisted JSON reload", async () => {
+    const reloadedCompositionLock = JSON.parse(
+      JSON.stringify(selectedCompositionLock),
+    );
+    prisma.publishedRevision.findUnique.mockResolvedValue({
+      id: "published-selected",
+      graph: selectedPublishedGraph,
+      graphHash: hashApplicationGraph(selectedPublishedGraph),
+      compositionLock: reloadedCompositionLock,
+      compositionLockHash: selectedCompositionLock.lockDigest,
+    });
+    prisma.compilation.count.mockResolvedValue(0);
+    prisma.compilation.create.mockResolvedValue({ id: "compilation-selected" });
+    queue.enqueue.mockResolvedValue(undefined);
+
+    await expect(
+      service.createCompilation({
+        publishedRevisionId: "published-selected",
+        target: "application-bundle",
+        compilerVersion: "0.1.0",
+      }),
+    ).resolves.toEqual({ id: "compilation-selected" });
+
+    expect(queue.enqueue).toHaveBeenCalledWith({
+      compilationId: "compilation-selected",
+      publishedRevisionId: "published-selected",
+      target: "application-bundle",
+      compilerVersion: "0.1.0",
+      graph: selectedPublishedGraph,
+      compositionLock: selectedCompositionLock,
+    });
+  });
+
   it("rejects compilation of a historical Published revision without a composition lock", async () => {
     prisma.publishedRevision.findUnique.mockResolvedValue({
       id: "published-legacy",
@@ -1269,6 +1302,31 @@ describe("LifecycleService", () => {
     await expect(
       service.createCompilation({
         publishedRevisionId: "published-1",
+        target: "application-bundle",
+        compilerVersion: "0.1.0",
+      }),
+    ).rejects.toThrow("composition lock does not match");
+    expect(queue.enqueue).not.toHaveBeenCalled();
+  });
+
+  it("rejects extra persisted JSON content even when the stored digest is unchanged", async () => {
+    const reloadedCompositionLock = JSON.parse(
+      JSON.stringify(selectedCompositionLock),
+    ) as Record<string, unknown>;
+    prisma.publishedRevision.findUnique.mockResolvedValue({
+      id: "published-extra-lock-content",
+      graph: selectedPublishedGraph,
+      graphHash: hashApplicationGraph(selectedPublishedGraph),
+      compositionLock: {
+        ...reloadedCompositionLock,
+        unexpectedEvidence: "tampered",
+      },
+      compositionLockHash: selectedCompositionLock.lockDigest,
+    });
+
+    await expect(
+      service.createCompilation({
+        publishedRevisionId: "published-extra-lock-content",
         target: "application-bundle",
         compilerVersion: "0.1.0",
       }),

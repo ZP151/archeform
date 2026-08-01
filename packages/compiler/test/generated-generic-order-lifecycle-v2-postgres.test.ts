@@ -11,18 +11,13 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { randomUUID } from "node:crypto";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import {
-  capabilityAssets,
-  composeDefaultCapabilityDraft,
-  createCapabilityCompositionLock,
-} from "@factory/capabilities";
-import { hashApplicationGraph } from "@factory/graph";
+import { composeDefaultCapabilityDraft } from "@factory/capabilities";
 
 import { generateApplicationBundle } from "../src/index.js";
 
@@ -33,6 +28,7 @@ const repositoryRoot = resolve(
 );
 
 type CommerceProfile = "simple-ecommerce" | "retail-counter" | "grocery-pickup";
+const postgresImage = "postgres:16-alpine";
 
 const profileCases = [
   {
@@ -77,45 +73,6 @@ const profileCases = [
     finalState: "handed-off",
   },
 ] as const;
-
-function assetLock(asset: (typeof capabilityAssets)[number]) {
-  const { key, version, packageRoot, manifestDigest, lifecycle } =
-    asset.manifest;
-  return { key, version, packageRoot, manifestDigest, lifecycle };
-}
-
-function compileDirectV2(profile: CommerceProfile) {
-  const graph = structuredClone(
-    composeDefaultCapabilityDraft({ profile }).graph,
-  );
-  const successorOrder = capabilityAssets.find(
-    ({ manifest }) =>
-      manifest.key === "commerce.order" && manifest.version === "2.1.2",
-  )!;
-  const successorTransaction = capabilityAssets.find(
-    ({ manifest }) =>
-      manifest.key === "commerce.transaction" && manifest.version === "2.2.1",
-  )!;
-  graph.integration.compositionSelections =
-    graph.integration.compositionSelections!.map((selection) => {
-      if (selection.lock.key === "commerce.order") {
-        return { ...selection, lock: assetLock(successorOrder) };
-      }
-      if (selection.lock.key === "commerce.transaction") {
-        return { ...selection, lock: assetLock(successorTransaction) };
-      }
-      return selection;
-    });
-  const compositionLock = createCapabilityCompositionLock({
-    graphChecksum: hashApplicationGraph(graph),
-    selections: graph.integration.compositionSelections ?? [],
-  });
-  return generateApplicationBundle({
-    publishedRevisionId: `live-postgres-${profile}`,
-    graph,
-    compositionLock,
-  });
-}
 
 async function linkGeneratedRuntimeDependencies(directory: string) {
   const dependencyRoots = {
@@ -164,6 +121,16 @@ async function runDocker(
   return `${result.stdout}${result.stderr}`;
 }
 
+async function assertCachedPostgresImage(
+  inspect: (args: readonly string[]) => Promise<string> = runDocker,
+): Promise<void> {
+  try {
+    await inspect(["image", "inspect", postgresImage]);
+  } catch {
+    throw new Error("Required cached PostgreSQL image is unavailable.");
+  }
+}
+
 async function runDockerWithInput(
   args: readonly string[],
   input: string,
@@ -206,6 +173,196 @@ async function composeArtifacts(projectName: string) {
   };
 }
 
+function lifecycleComposeSource(): string {
+  return [
+    "services:",
+    "  lifecycle-postgres:",
+    `    image: ${postgresImage}`,
+    "    pull_policy: never",
+    "    environment:",
+    "      POSTGRES_USER: lifecycle",
+    "      POSTGRES_PASSWORD: lifecycle",
+    "      POSTGRES_DB: lifecycle",
+    "    healthcheck:",
+    '      test: ["CMD-SHELL", "pg_isready -U lifecycle -d lifecycle"]',
+    "      interval: 1s",
+    "      timeout: 3s",
+    "      retries: 30",
+    "    ports:",
+    '      - "127.0.0.1::5432"',
+    "",
+  ].join("\n");
+}
+
+function liveComposeSource(): string {
+  return [
+    lifecycleComposeSource().trimEnd(),
+    "  generated-postgres:",
+    "    extends:",
+    "      file: ./docker-compose.yml",
+    "      service: postgres",
+    "    pull_policy: never",
+    "    ports:",
+    '      - "127.0.0.1::5432"',
+    "",
+  ].join("\n");
+}
+
+function composeUpArgs(
+  composeArgs: readonly string[],
+  service: string,
+): string[] {
+  return [...composeArgs, "up", "--pull", "never", "-d", "--wait", service];
+}
+
+type CleanupEvidence = Awaited<ReturnType<typeof composeArtifacts>>;
+
+async function finalizeLiveEnvironment(
+  initialErrors: readonly unknown[],
+  stages: Readonly<{
+    down: () => Promise<void>;
+    audit: () => Promise<CleanupEvidence>;
+    remove: () => Promise<void>;
+  }>,
+): Promise<CleanupEvidence> {
+  const errors = [...initialErrors];
+  let cleanup: CleanupEvidence | undefined;
+  try {
+    await stages.down();
+  } catch (error) {
+    errors.push(error);
+  }
+  try {
+    cleanup = await stages.audit();
+    if (
+      cleanup.containers !== 0 ||
+      cleanup.volumes !== 0 ||
+      cleanup.networks !== 0
+    ) {
+      errors.push(new Error("Compose cleanup audit found leaked resources."));
+    }
+  } catch (error) {
+    errors.push(error);
+  }
+  try {
+    await stages.remove();
+  } catch (error) {
+    errors.push(error);
+  }
+  if (errors.length === 1) throw errors[0];
+  if (errors.length > 1) {
+    throw new AggregateError(errors, "Live environment cleanup failed.");
+  }
+  if (!cleanup) throw new Error("Compose cleanup audit produced no evidence.");
+  return cleanup;
+}
+
+async function publishedBundle(
+  profile: CommerceProfile,
+  lifecycleDatabaseUrl: string,
+  directory: string,
+) {
+  const runnerPath = resolve(directory, "lifecycle-publish-runner.mts");
+  const lifecycleUrl = pathToFileURL(
+    resolve(repositoryRoot, "apps/control-plane/src/lifecycle.service.ts"),
+  ).href;
+  const prismaUrl = pathToFileURL(
+    resolve(repositoryRoot, "apps/control-plane/src/prisma.service.ts"),
+  ).href;
+  const capabilitiesUrl = pathToFileURL(
+    resolve(repositoryRoot, "packages/capabilities/src/index.ts"),
+  ).href;
+  await writeFile(
+    runnerPath,
+    `
+import { LifecycleService } from ${JSON.stringify(lifecycleUrl)};
+import { PrismaService } from ${JSON.stringify(prismaUrl)};
+import { composeDefaultCapabilityDraft } from ${JSON.stringify(capabilitiesUrl)};
+
+const capturedJobs = [];
+const queue = { async enqueue(job) { capturedJobs.push(structuredClone(job)); } };
+const unavailableProposalProvider = {
+  async propose() { throw new Error("Graph proposal is unavailable in lifecycle acceptance."); },
+};
+const unavailablePreviewQueue = {
+  async enqueue() { throw new Error("Preview is unavailable in lifecycle acceptance."); },
+};
+const prisma = new PrismaService();
+await prisma.$connect();
+try {
+  const draftGraph = structuredClone(
+    composeDefaultCapabilityDraft({ profile: ${JSON.stringify(profile)} }).graph,
+  );
+  const lifecycle = new LifecycleService(
+    prisma,
+    queue,
+    unavailableProposalProvider,
+    unavailablePreviewQueue,
+  );
+  const aggregate = await lifecycle.createLocalApplicationGraph({ graph: draftGraph });
+  const draft = aggregate.draftRevisions[0];
+  if (!draft) throw new Error("Persisted Draft revision was not created.");
+  const published = await lifecycle.publishDraft(aggregate.id, {
+    draftRevisionId: draft.id,
+  });
+  await lifecycle.createCompilation({
+    publishedRevisionId: published.id,
+    target: "application-bundle",
+    compilerVersion: "0.1.0",
+  });
+  if (capturedJobs.length !== 1) {
+    throw new Error("Lifecycle compilation queue did not capture one job.");
+  }
+  const captured = capturedJobs[0];
+  process.stdout.write(JSON.stringify({
+    captured,
+    publication: {
+      draftPersisted: true,
+      publishedPersisted: published.id === captured.publishedRevisionId,
+      selectionsRemoved: captured.graph.integration.compositionSelections === undefined,
+      lockReloaded:
+        captured.compositionLock.applicationGraphChecksum === published.graphHash &&
+        captured.compositionLock.lockDigest === published.compositionLockHash,
+    },
+  }));
+} finally {
+  await prisma.$disconnect();
+}
+`,
+    "utf8",
+  );
+  const tsxExecutable = resolve(
+    repositoryRoot,
+    `apps/control-plane/node_modules/.bin/tsx${process.platform === "win32" ? ".CMD" : ""}`,
+  );
+  let child;
+  try {
+    child = await execFileAsync(tsxExecutable, [runnerPath], {
+      cwd: resolve(repositoryRoot, "apps/control-plane"),
+      env: { ...process.env, DATABASE_URL: lifecycleDatabaseUrl },
+      maxBuffer: 10 * 1024 * 1024,
+      shell: process.platform === "win32",
+      timeout: 120_000,
+      windowsHide: true,
+    });
+  } catch (error) {
+    throw new Error("Lifecycle Publish runner failed.", { cause: error });
+  }
+  const evidence = JSON.parse(child.stdout) as {
+    captured: Parameters<typeof generateApplicationBundle>[0];
+    publication: {
+      draftPersisted: boolean;
+      publishedPersisted: boolean;
+      selectionsRemoved: boolean;
+      lockReloaded: boolean;
+    };
+  };
+  return {
+    bundle: generateApplicationBundle(evidence.captured),
+    publication: evidence.publication,
+  };
+}
+
 async function withLiveGeneratedPostgres<T>(
   profile: CommerceProfile,
   runnerSource: string,
@@ -214,18 +371,89 @@ async function withLiveGeneratedPostgres<T>(
   Readonly<{
     result: T;
     cleanup: Awaited<ReturnType<typeof composeArtifacts>>;
+    publication: Readonly<{
+      draftPersisted: boolean;
+      publishedPersisted: boolean;
+      selectionsRemoved: boolean;
+      lockReloaded: boolean;
+    }>;
   }>
 > {
+  await assertCachedPostgresImage();
   const directory = await mkdtemp(
     resolve(tmpdir(), `factory-${profile}-live-postgres-`),
   );
   const projectName = `factory-live-${process.pid}-${randomUUID().slice(0, 8)}`;
   const composeFile = resolve(directory, "docker-compose.yml");
+  const lifecycleFile = resolve(directory, "docker-compose.lifecycle.yml");
   const overrideFile = resolve(directory, "docker-compose.live.yml");
-  const bundle = compileDirectV2(profile);
   let result: T | undefined;
+  let publication:
+    Awaited<ReturnType<typeof publishedBundle>>["publication"] | undefined;
   let operationError: unknown;
   try {
+    await writeFile(lifecycleFile, lifecycleComposeSource(), "utf8");
+    const lifecycleComposeArgs = [
+      "compose",
+      "-p",
+      projectName,
+      "-f",
+      lifecycleFile,
+    ] as const;
+    await runDocker(composeUpArgs(lifecycleComposeArgs, "lifecycle-postgres"), {
+      cwd: directory,
+    });
+    const lifecycleEndpoint = (
+      await runDocker(
+        [...lifecycleComposeArgs, "port", "lifecycle-postgres", "5432"],
+        { cwd: directory },
+      )
+    ).trim();
+    const lifecyclePort = lifecycleEndpoint.match(/:(\d+)$/u)?.[1];
+    if (!lifecyclePort) {
+      throw new Error("Lifecycle PostgreSQL endpoint was not allocated.");
+    }
+    const lifecycleDatabaseUrl = `postgresql://lifecycle:lifecycle@127.0.0.1:${lifecyclePort}/lifecycle`;
+    const prismaExecutable = resolve(
+      repositoryRoot,
+      `apps/control-plane/node_modules/.bin/prisma${process.platform === "win32" ? ".CMD" : ""}`,
+    );
+    try {
+      await execFileAsync(
+        prismaExecutable,
+        [
+          "db",
+          "push",
+          "--skip-generate",
+          "--schema",
+          resolve(repositoryRoot, "apps/control-plane/prisma/schema.prisma"),
+        ],
+        {
+          cwd: resolve(repositoryRoot, "apps/control-plane"),
+          env: {
+            ...process.env,
+            CHECKPOINT_DISABLE: "1",
+            DATABASE_URL: lifecycleDatabaseUrl,
+            PRISMA_HIDE_UPDATE_MESSAGE: "1",
+          },
+          maxBuffer: 10 * 1024 * 1024,
+          shell: process.platform === "win32",
+          timeout: 120_000,
+          windowsHide: true,
+        },
+      );
+    } catch (error) {
+      throw new Error("Lifecycle schema could not be materialised.", {
+        cause: error,
+      });
+    }
+    const published = await publishedBundle(
+      profile,
+      lifecycleDatabaseUrl,
+      directory,
+    );
+    publication = published.publication;
+    const bundle = published.bundle;
     for (const file of bundle.files) {
       const path = resolve(directory, file.path);
       await mkdir(dirname(path), { recursive: true });
@@ -235,27 +463,15 @@ async function withLiveGeneratedPostgres<T>(
         "utf8",
       );
     }
-    await writeFile(
-      overrideFile,
-      [
-        "services:",
-        "  postgres:",
-        "    ports:",
-        '      - "127.0.0.1::5432"',
-        "",
-      ].join("\n"),
-      "utf8",
-    );
+    await writeFile(overrideFile, liveComposeSource(), "utf8");
     const composeArgs = [
       "compose",
       "-p",
       projectName,
       "-f",
-      composeFile,
-      "-f",
       overrideFile,
     ] as const;
-    await runDocker([...composeArgs, "up", "-d", "--wait", "postgres"], {
+    await runDocker(composeUpArgs(composeArgs, "generated-postgres"), {
       cwd: directory,
     });
     const migration = await readFile(
@@ -270,7 +486,7 @@ async function withLiveGeneratedPostgres<T>(
         ...composeArgs,
         "exec",
         "-T",
-        "postgres",
+        "generated-postgres",
         "psql",
         "-U",
         "generated",
@@ -283,7 +499,7 @@ async function withLiveGeneratedPostgres<T>(
       directory,
     );
     const endpoint = (
-      await runDocker([...composeArgs, "port", "postgres", "5432"], {
+      await runDocker([...composeArgs, "port", "generated-postgres", "5432"], {
         cwd: directory,
       })
     ).trim();
@@ -293,10 +509,6 @@ async function withLiveGeneratedPostgres<T>(
     const databaseUrl = `postgresql://generated:generated@127.0.0.1:${port}/generated`;
 
     await linkGeneratedRuntimeDependencies(directory);
-    const prismaExecutable = resolve(
-      repositoryRoot,
-      `apps/control-plane/node_modules/.bin/prisma${process.platform === "win32" ? ".CMD" : ""}`,
-    );
     try {
       await execFileAsync(
         prismaExecutable,
@@ -366,33 +578,41 @@ async function withLiveGeneratedPostgres<T>(
     }
   } catch (error) {
     operationError = error;
-  } finally {
-    const composeArgs = [
-      "compose",
-      "-p",
-      projectName,
-      "-f",
-      composeFile,
-      "-f",
-      overrideFile,
-    ];
-    await runDocker(
-      [
-        ...composeArgs,
-        "down",
-        "--volumes",
-        "--remove-orphans",
-        "--timeout",
-        "0",
-      ],
-      { cwd: directory },
-    ).catch(() => undefined);
   }
-  const cleanup = await composeArtifacts(projectName);
-  await rm(directory, { recursive: true, force: true, maxRetries: 5 });
-  expect(cleanup).toEqual({ containers: 0, volumes: 0, networks: 0 });
-  if (operationError !== undefined) throw operationError;
-  return { result: result as T, cleanup };
+  const cleanupComposeArgs = [
+    "compose",
+    "-p",
+    projectName,
+    "-f",
+    lifecycleFile,
+  ];
+  const cleanup = await finalizeLiveEnvironment(
+    operationError === undefined ? [] : [operationError],
+    {
+      async down() {
+        await runDocker(
+          [
+            ...cleanupComposeArgs,
+            "down",
+            "--volumes",
+            "--remove-orphans",
+            "--timeout",
+            "0",
+          ],
+          { cwd: directory },
+        );
+      },
+      async audit() {
+        return composeArtifacts(projectName);
+      },
+      async remove() {
+        await rm(directory, { recursive: true, force: true, maxRetries: 5 });
+      },
+    },
+  );
+  if (!publication)
+    throw new Error("Lifecycle publication evidence is absent.");
+  return { result: result as T, cleanup, publication };
 }
 
 function competingTransitionRunner(
@@ -919,6 +1139,84 @@ try {
 }
 
 describe("generated Generic order lifecycle V2 against live PostgreSQL", () => {
+  it("pins both PostgreSQL services to cached images", () => {
+    expect(lifecycleComposeSource()).toContain("    pull_policy: never");
+    expect(liveComposeSource().match(/    pull_policy: never/gu)).toHaveLength(
+      2,
+    );
+  });
+
+  it("fails closed when the pinned PostgreSQL image is not cached", async () => {
+    const inspect = vi.fn().mockRejectedValue(new Error("missing image"));
+
+    await expect(assertCachedPostgresImage(inspect)).rejects.toThrow(
+      "Required cached PostgreSQL image is unavailable.",
+    );
+    expect(inspect).toHaveBeenCalledWith(["image", "inspect", postgresImage]);
+  });
+
+  it("forbids Compose pulls for every PostgreSQL startup", () => {
+    expect(composeUpArgs(["compose", "-p", "isolated"], "postgres")).toEqual([
+      "compose",
+      "-p",
+      "isolated",
+      "up",
+      "--pull",
+      "never",
+      "-d",
+      "--wait",
+      "postgres",
+    ]);
+  });
+
+  it("attempts every cleanup stage and preserves all failures", async () => {
+    const calls: string[] = [];
+    const failures = [
+      new Error("operation failed"),
+      new Error("down failed"),
+      new Error("audit failed"),
+      new Error("remove failed"),
+    ];
+    let caught: unknown;
+
+    try {
+      await finalizeLiveEnvironment([failures[0]], {
+        async down() {
+          calls.push("down");
+          throw failures[1];
+        },
+        async audit() {
+          calls.push("audit");
+          throw failures[2];
+        },
+        async remove() {
+          calls.push("remove");
+          throw failures[3];
+        },
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(calls).toEqual(["down", "audit", "remove"]);
+    expect(caught).toBeInstanceOf(AggregateError);
+    expect((caught as AggregateError).errors).toEqual(failures);
+  });
+
+  it("publishes and reloads the immutable compiler input through the real lifecycle service", async () => {
+    const harnessSource = await readFile(
+      fileURLToPath(import.meta.url),
+      "utf8",
+    );
+
+    expect(harnessSource).toContain("new LifecycleService(");
+    expect(harnessSource).toContain("await lifecycle.publishDraft(");
+    expect(harnessSource).toContain("await lifecycle.createCompilation(");
+    expect(harnessSource).not.toContain(
+      ["function", "compileDirectV2("].join(" "),
+    );
+  });
+
   it.each(profileCases)(
     "$profile executes its declared Flow vocabulary without aliases",
     async (profile) => {
@@ -940,6 +1238,12 @@ describe("generated Generic order lifecycle V2 against live PostgreSQL", () => {
           version: events.length,
         },
         receiptCount: events.length,
+      });
+      expect(evidence.publication).toEqual({
+        draftPersisted: true,
+        publishedPersisted: true,
+        selectionsRemoved: true,
+        lockReloaded: true,
       });
       expect(evidence.cleanup).toEqual({
         containers: 0,

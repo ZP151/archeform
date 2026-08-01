@@ -228,6 +228,22 @@ describe("immutable composition compilation", () => {
     );
   });
 
+  it("accepts a non-empty composition lock after persisted JSON reload", () => {
+    const reloadedCompositionLock = JSON.parse(
+      JSON.stringify(compositionLock),
+    ) as typeof compositionLock;
+
+    expect(
+      resolveTargetContributions({
+        ...input,
+        compositionLock: reloadedCompositionLock,
+      }).map(({ path }) => path),
+    ).toEqual([
+      "database/prisma/fragments/item.prisma",
+      "web/src/app/catalog/page.tsx",
+    ]);
+  });
+
   it("compiles different routes and schemas from the same shared package version", () => {
     const application = (input: {
       readonly id: string;
@@ -457,6 +473,22 @@ describe("immutable composition compilation", () => {
           lockDigest:
             "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         },
+      }),
+    ).toThrow("composition lock");
+  });
+
+  it("rejects extra persisted JSON content before rendering", () => {
+    const reloadedCompositionLock = JSON.parse(
+      JSON.stringify(compositionLock),
+    ) as typeof compositionLock;
+
+    expect(() =>
+      resolveTargetContributions({
+        ...input,
+        compositionLock: {
+          ...reloadedCompositionLock,
+          unexpectedEvidence: "tampered",
+        } as typeof compositionLock,
       }),
     ).toThrow("composition lock");
   });

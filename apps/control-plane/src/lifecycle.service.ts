@@ -472,9 +472,11 @@ function verifiedPublishedCompositionLock(
       graphChecksum: graphHash,
       selections: packages as readonly CapabilitySelectionV1[],
     });
+    const persistedJson = jsonValue(input, "compositionLock");
+    const canonicalJson = jsonValue(canonical, "compositionLock");
     if (
       storedHash !== canonical.lockDigest ||
-      !isDeepStrictEqual(input, canonical)
+      !isDeepStrictEqual(persistedJson, canonicalJson)
     ) {
       throw new Error("lock mismatch");
     }

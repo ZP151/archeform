@@ -270,7 +270,9 @@ function assertCanonicalCompositionLock(
       graphChecksum: graphHash,
       selections: input.compositionLock.packages,
     });
-    if (!isDeepStrictEqual(input.compositionLock, canonical)) {
+    const persistedJson = JSON.parse(JSON.stringify(input.compositionLock));
+    const canonicalJson = JSON.parse(JSON.stringify(canonical));
+    if (!isDeepStrictEqual(persistedJson, canonicalJson)) {
       throw new Error("mismatch");
     }
     return canonical;
