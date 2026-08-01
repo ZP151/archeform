@@ -490,16 +490,292 @@ function assertTemplateContribution(
   };
 }
 
-function prismaExplicitIndexNames(content: string): readonly string[] {
-  return [
-    ...content.matchAll(/@@index\s*\([^)]*?\bmap\s*:\s*"([^"]+)"[^)]*\)/g),
-  ].map(([, name]) => name!);
+interface ExplicitIndexNameScan {
+  readonly names: readonly string[];
+  readonly invalid: boolean;
 }
 
-function sqlExplicitIndexNames(content: string): readonly string[] {
-  return [
-    ...content.matchAll(/\bCREATE\s+(?:UNIQUE\s+)?INDEX\s+"([^"]+)"/gi),
-  ].map(([, name]) => name!);
+function balancedPrismaArgumentsEnd(
+  content: string,
+  openIndex: number,
+): number | undefined {
+  const delimiters: string[] = [];
+  let quote: '"' | "'" | undefined;
+  let escaped = false;
+  for (let index = openIndex; index < content.length; index += 1) {
+    const character = content[index]!;
+    if (quote) {
+      if (escaped) {
+        escaped = false;
+      } else if (character === "\\") {
+        escaped = true;
+      } else if (character === quote) {
+        quote = undefined;
+      }
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+    } else if (character === "(" || character === "[" || character === "{") {
+      delimiters.push(character);
+    } else if (character === ")" || character === "]" || character === "}") {
+      const expectedOpen =
+        character === ")" ? "(" : character === "]" ? "[" : "{";
+      if (delimiters.pop() !== expectedOpen) return undefined;
+      if (delimiters.length === 0) return index;
+    }
+  }
+  return undefined;
+}
+
+function prismaExplicitMapName(argumentsContent: string): {
+  readonly name?: string;
+  readonly invalid: boolean;
+} {
+  const delimiters: string[] = [];
+  let cursor = 0;
+  let name: string | undefined;
+  while (cursor < argumentsContent.length) {
+    const character = argumentsContent[cursor]!;
+    if (character === '"' || character === "'") {
+      const quote = character;
+      cursor += 1;
+      let escaped = false;
+      let closed = false;
+      while (cursor < argumentsContent.length) {
+        const quotedCharacter = argumentsContent[cursor]!;
+        cursor += 1;
+        if (escaped) {
+          escaped = false;
+        } else if (quotedCharacter === "\\") {
+          escaped = true;
+        } else if (quotedCharacter === quote) {
+          closed = true;
+          break;
+        }
+      }
+      if (!closed) return { invalid: true };
+      continue;
+    }
+    if (character === "(" || character === "[" || character === "{") {
+      delimiters.push(character);
+      cursor += 1;
+      continue;
+    }
+    if (character === ")" || character === "]" || character === "}") {
+      const expectedOpen =
+        character === ")" ? "(" : character === "]" ? "[" : "{";
+      if (delimiters.pop() !== expectedOpen) return { invalid: true };
+      cursor += 1;
+      continue;
+    }
+    if (delimiters.length > 0 || !/[A-Za-z_]/.test(character)) {
+      cursor += 1;
+      continue;
+    }
+    const wordStart = cursor;
+    while (/[A-Za-z0-9_]/.test(argumentsContent[cursor] ?? "")) cursor += 1;
+    if (argumentsContent.slice(wordStart, cursor) !== "map") continue;
+    while (/\s/.test(argumentsContent[cursor] ?? "")) cursor += 1;
+    if (argumentsContent[cursor] !== ":") return { invalid: true };
+    cursor += 1;
+    while (/\s/.test(argumentsContent[cursor] ?? "")) cursor += 1;
+    if (argumentsContent[cursor] !== '"') return { invalid: true };
+    const literalStart = cursor;
+    cursor += 1;
+    let escaped = false;
+    let closed = false;
+    while (cursor < argumentsContent.length) {
+      const literalCharacter = argumentsContent[cursor]!;
+      cursor += 1;
+      if (escaped) {
+        escaped = false;
+      } else if (literalCharacter === "\\") {
+        escaped = true;
+      } else if (literalCharacter === '"') {
+        closed = true;
+        break;
+      }
+    }
+    if (!closed || name !== undefined) return { invalid: true };
+    try {
+      name = JSON.parse(argumentsContent.slice(literalStart, cursor)) as string;
+    } catch {
+      return { invalid: true };
+    }
+  }
+  return delimiters.length === 0 ? { name, invalid: false } : { invalid: true };
+}
+
+function prismaExplicitIndexNames(content: string): ExplicitIndexNameScan {
+  const names: string[] = [];
+  let invalid = false;
+  let cursor = 0;
+  while (cursor < content.length) {
+    const declarationIndex = content.indexOf("@@index", cursor);
+    if (declarationIndex === -1) break;
+    cursor = declarationIndex + "@@index".length;
+    if (/\w/.test(content[cursor] ?? "")) continue;
+    while (/\s/.test(content[cursor] ?? "")) cursor += 1;
+    if (content[cursor] !== "(") {
+      invalid = true;
+      continue;
+    }
+    const closeIndex = balancedPrismaArgumentsEnd(content, cursor);
+    if (closeIndex === undefined) {
+      invalid = true;
+      break;
+    }
+    const argumentsContent = content.slice(cursor + 1, closeIndex);
+    const mapScan = prismaExplicitMapName(argumentsContent);
+    if (mapScan.invalid) {
+      invalid = true;
+    } else if (mapScan.name !== undefined) {
+      names.push(mapScan.name);
+    }
+    cursor = closeIndex + 1;
+  }
+  return { names, invalid };
+}
+
+interface SqlToken {
+  readonly kind: "word" | "quoted-identifier" | "symbol";
+  readonly value: string;
+}
+
+function sqlCodePoint(content: string, index: number): string {
+  const codePoint = content.codePointAt(index);
+  return codePoint === undefined ? "" : String.fromCodePoint(codePoint);
+}
+
+function sqlTokens(content: string): {
+  readonly tokens: readonly SqlToken[];
+  readonly invalid: boolean;
+} {
+  const tokens: SqlToken[] = [];
+  let invalid = false;
+  let cursor = 0;
+  while (cursor < content.length) {
+    const character = sqlCodePoint(content, cursor);
+    if (/\s/u.test(character)) {
+      cursor += character.length;
+      continue;
+    }
+    if (content.startsWith("--", cursor)) {
+      const newline = content.indexOf("\n", cursor + 2);
+      cursor = newline === -1 ? content.length : newline + 1;
+      continue;
+    }
+    if (content.startsWith("/*", cursor)) {
+      const close = content.indexOf("*/", cursor + 2);
+      if (close === -1) invalid = true;
+      cursor = close === -1 ? content.length : close + 2;
+      continue;
+    }
+    const dollarQuote = content
+      .slice(cursor)
+      .match(/^\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$/)?.[0];
+    if (dollarQuote) {
+      const close = content.indexOf(dollarQuote, cursor + dollarQuote.length);
+      if (close === -1) invalid = true;
+      cursor = close === -1 ? content.length : close + dollarQuote.length;
+      continue;
+    }
+    if (character === "'") {
+      let closed = false;
+      cursor += 1;
+      while (cursor < content.length) {
+        if (content[cursor] !== "'") {
+          cursor += sqlCodePoint(content, cursor).length;
+        } else if (content[cursor + 1] === "'") {
+          cursor += 2;
+        } else {
+          cursor += 1;
+          closed = true;
+          break;
+        }
+      }
+      if (!closed) invalid = true;
+      continue;
+    }
+    if (character === '"') {
+      let value = "";
+      let closed = false;
+      cursor += 1;
+      while (cursor < content.length) {
+        if (content[cursor] !== '"') {
+          const identifierCharacter = sqlCodePoint(content, cursor);
+          value += identifierCharacter;
+          cursor += identifierCharacter.length;
+        } else if (content[cursor + 1] === '"') {
+          value += '"';
+          cursor += 2;
+        } else {
+          cursor += 1;
+          closed = true;
+          break;
+        }
+      }
+      if (!closed) invalid = true;
+      tokens.push({ kind: "quoted-identifier", value });
+      continue;
+    }
+    if (/[\p{L}\p{Nl}_]/u.test(character)) {
+      let value = character;
+      cursor += character.length;
+      while (cursor < content.length) {
+        const identifierCharacter = sqlCodePoint(content, cursor);
+        if (!/[\p{L}\p{Nl}\p{Nd}\p{Mn}\p{Mc}_$]/u.test(identifierCharacter)) {
+          break;
+        }
+        value += identifierCharacter;
+        cursor += identifierCharacter.length;
+      }
+      tokens.push({ kind: "word", value });
+      continue;
+    }
+    tokens.push({ kind: "symbol", value: character });
+    cursor += character.length;
+  }
+  return { tokens, invalid };
+}
+
+function sqlExplicitIndexNames(content: string): ExplicitIndexNameScan {
+  const tokenScan = sqlTokens(content);
+  const { tokens } = tokenScan;
+  const names: string[] = [];
+  let invalid = tokenScan.invalid;
+  const keyword = (token: SqlToken | undefined, value: string): boolean =>
+    token?.kind === "word" && token.value.toLowerCase() === value;
+  for (let cursor = 0; cursor < tokens.length; cursor += 1) {
+    if (!keyword(tokens[cursor], "create")) continue;
+    let next = cursor + 1;
+    if (keyword(tokens[next], "unique")) next += 1;
+    if (!keyword(tokens[next], "index")) continue;
+    next += 1;
+    if (keyword(tokens[next], "concurrently")) next += 1;
+    if (keyword(tokens[next], "if")) {
+      if (
+        !keyword(tokens[next + 1], "not") ||
+        !keyword(tokens[next + 2], "exists")
+      ) {
+        invalid = true;
+        continue;
+      }
+      next += 3;
+    }
+    const name = tokens[next];
+    if (!name || (name.kind !== "word" && name.kind !== "quoted-identifier")) {
+      invalid = true;
+      continue;
+    }
+    if (name.value.length === 0) {
+      invalid = true;
+      continue;
+    }
+    names.push(name.kind === "word" ? name.value.toLowerCase() : name.value);
+  }
+  return { names, invalid };
 }
 
 function validateTransactionV2PostgresIndexNames(
@@ -529,15 +805,21 @@ function validateTransactionV2PostgresIndexNames(
     return [];
   }
 
-  const schemaNames = resolvedDatabaseContributions
+  const schemaScans = resolvedDatabaseContributions
     .filter(({ outputSlot }) => outputSlot === "database.schema")
-    .flatMap(({ content }) => prismaExplicitIndexNames(content))
-    .sort();
-  const migrationNames = resolvedDatabaseContributions
+    .map(({ content }) => prismaExplicitIndexNames(content));
+  const migrationScans = resolvedDatabaseContributions
     .filter(({ outputSlot }) => outputSlot === "database.migration")
-    .flatMap(({ content }) => sqlExplicitIndexNames(content))
-    .sort();
+    .map(({ content }) => sqlExplicitIndexNames(content));
+  const schemaNames = schemaScans.flatMap(({ names }) => names).sort();
+  const migrationNames = migrationScans.flatMap(({ names }) => names).sort();
   const invalid: string[] = [];
+  if (schemaScans.some((scan) => scan.invalid)) {
+    invalid.push("Prisma index declaration could not be parsed");
+  }
+  if (migrationScans.some((scan) => scan.invalid)) {
+    invalid.push("SQL index declaration could not be parsed");
+  }
   if (canonicalJson(schemaNames) !== canonicalJson(migrationNames)) {
     invalid.push("PostgreSQL index names differ between schema and migration");
   }

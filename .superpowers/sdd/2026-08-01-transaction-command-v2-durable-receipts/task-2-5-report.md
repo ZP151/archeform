@@ -23,12 +23,12 @@ Prisma schema and SQL migration:
 CommerceTransactionReceipt_aggregateType_aggregateId_aggregateVersion_idx
 ```
 
-Direct ASCII and UTF-8 measurement is **73 bytes**. The brief and ADR describe
-it as 70 bytes, but the exact checked-in identifier measures 73; either value
-exceeds PostgreSQL's 63-byte maximum. The 2.2.0 package remains byte-for-byte
-unchanged and resolvable for diagnostic audit replay, while its exact lock now
-fails before local composition, verified publication, or compiler contribution
-resolution with:
+Direct ASCII and UTF-8 measurement is **73 bytes**. The earlier Task 3
+diagnostic and Task 2.5 brief describe it as 70 bytes; ADR-0014 now records the
+exact 73-byte measurement. Either value exceeds PostgreSQL's 63-byte maximum.
+The 2.2.0 package remains byte-for-byte unchanged and resolvable for diagnostic
+audit replay, while its exact lock now fails before local composition, verified
+publication, or compiler contribution resolution with:
 
 ```text
 commerce.transaction@2.2.0 is revoked: PostgreSQL index identifier exceeds 63 bytes
@@ -42,11 +42,13 @@ uses this identical explicit name in schema and SQL:
 ctx_receipt_aggregate_v_idx
 ```
 
-It is ASCII and **27 bytes**. Package verification extracts every explicit V2
-Prisma `@@index(..., map: "...")` and SQL `CREATE INDEX` name, requires equal
-sorted name sets, rejects non-ASCII names, and rejects names over 63 UTF-8
-bytes. The compiler retains its schema/migration parity check with the new
-package-owned identifier; it performs no name rewrite or truncation.
+It is ASCII and **27 bytes**. Package verification scans balanced V2 Prisma
+`@@index(..., map: "...")` declarations and lexical SQL `CREATE INDEX`
+declarations with valid optional clauses and quoted or unquoted identifiers.
+It fails closed on malformed declarations, requires equal sorted name sets,
+rejects non-ASCII names, and rejects names over 63 UTF-8 bytes. The compiler
+retains its schema/migration parity check with the new package-owned identifier;
+it performs no name rewrite or truncation.
 
 ## Exact changed paths
 
@@ -149,6 +151,24 @@ git diff --check
 
 PASS: exit 0 with no whitespace errors.
 
+## Fix round 1 evidence
+
+Task review found that the original regex extraction could skip a Prisma index
+with nested field arguments and SQL index declarations using optional clauses
+or unquoted identifiers. Three focused regressions covered hidden schema/SQL
+drift, a hidden non-ASCII identifier, and a hidden 64-byte identifier.
+
+```text
+pnpm --filter @factory/capabilities test -- capability-registry.test.ts -t "rejects hidden PostgreSQL index violations"
+```
+
+Observed RED: 3 failed, 79 skipped. Every verifier result was an empty error
+list. After balanced Prisma scanning and lexical, fail-closed SQL scanning,
+the same focused command passed 3/3 tests, with 79 skipped. Fresh full
+verification then passed 82/82 Capabilities tests and 15/15 Compiler tests;
+both package typechecks and lint commands passed, and `git diff --check`
+reported no whitespace errors.
+
 ## Digest and physical-package parity
 
 Successor declared digests, matched by component, adapter, typed projection,
@@ -213,9 +233,10 @@ The immutable 2.2.0 SHA-256 baseline remains:
 - Task 4 also retains default Generic Draft activation after all acceptance
   evidence. The 2.2.1 successor is direct-composable but is not active or
   accepted here.
-- The 70-byte wording in ADR-0014/task briefing should be reconciled with the
-  measured 73-byte identifier in a future governance-only correction; it does
-  not change the defect, fix, or 63-byte acceptance boundary.
+- The earlier Task 3 diagnostic and Task 2.5 brief retain 70-byte wording;
+  ADR-0014, this report, and project status record the exact measured 73 bytes.
+  The historical wording does not change the defect, fix, or 63-byte
+  acceptance boundary.
 
 No model call, credential, raw prompt/response, network access, dependency
 installation, release, deployment, purchase, or external mutation occurred.

@@ -4,11 +4,11 @@ Updated: 2026-08-01
 
 ## PostgreSQL-safe Transaction V2 successor — 2026-08-01
 
-Generated-project validation found that `commerce.transaction@2.2.0` emits an
-explicit receipt-aggregate index identifier longer than PostgreSQL's 63-byte
-limit, causing Prisma P1012 before client generation. The physical 2.2.0
-package remains immutable for diagnostic replay, but its exact lock is revoked
-from local composition, verified publication, and compiler admission.
+Generated-project validation found that `commerce.transaction@2.2.0` emits a
+73-byte explicit receipt-aggregate index identifier, exceeding PostgreSQL's
+63-byte limit and causing Prisma P1012 before client generation. The physical
+2.2.0 package remains immutable for diagnostic replay, but its exact lock is
+revoked from local composition, verified publication, and compiler admission.
 
 Factory now registers the immutable `commerce.transaction@2.2.1` successor.
 Its Prisma schema and SQL migration share the 27-byte ASCII identifier

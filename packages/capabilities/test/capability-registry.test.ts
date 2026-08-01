@@ -2190,6 +2190,53 @@ describe("capability catalog", () => {
     );
   });
 
+  it.each([
+    {
+      name: "drift uses nested Prisma fields and optional SQL clauses",
+      schemaName: "transaction_schema_idx",
+      migrationName: "transaction_migration_idx",
+      sqlIndex: (indexName: string) =>
+        `CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS ${indexName} ON "Receipt" ("id");\n`,
+      expected: "PostgreSQL index names differ between schema and migration",
+    },
+    {
+      name: "a non-ASCII name uses nested Prisma fields and SQL IF NOT EXISTS",
+      schemaName: "transaction_réceipt_idx",
+      migrationName: "transaction_réceipt_idx",
+      sqlIndex: (indexName: string) =>
+        `CREATE INDEX IF NOT EXISTS "${indexName}" ON "Receipt" ("id");\n`,
+      expected: "PostgreSQL index identifier must be ASCII",
+    },
+    {
+      name: "a 64-byte name uses nested Prisma fields and an unquoted SQL identifier",
+      schemaName: "x".repeat(64),
+      migrationName: "x".repeat(64),
+      sqlIndex: (indexName: string) =>
+        `CREATE INDEX ${indexName} ON "Receipt" ("id");\n`,
+      expected: "PostgreSQL index identifier exceeds 63 bytes",
+    },
+  ])(
+    "rejects hidden PostgreSQL index violations when $name",
+    async (testCase) => {
+      const schemaContent = `model Receipt {\n  id String @id\n  @@index([id(sort: Desc)], map: "${testCase.schemaName}")\n}\n`;
+      const migrationContent = testCase.sqlIndex(testCase.migrationName);
+      const asset = postgresV2ConformanceAsset(schemaContent, migrationContent);
+
+      await withTestContributionPackage(
+        asset,
+        (repositoryRoot) => {
+          expect(verifyCapabilityAssetPackage(asset, repositoryRoot)).toContain(
+            testCase.expected,
+          );
+        },
+        {
+          "templates/database/transaction.prisma.tpl": schemaContent,
+          "templates/database/transaction.sql.tpl": migrationContent,
+        },
+      );
+    },
+  );
+
   it("registers exact Transaction V2 lifecycle packages without activating Generic Commerce drafts", () => {
     const genericProfiles = [
       "simple-ecommerce",
