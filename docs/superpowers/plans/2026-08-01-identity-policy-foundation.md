@@ -34,45 +34,72 @@ PostgreSQL, Playwright, Docker Compose.
 
 ## File structure
 
-| Path | Responsibility |
-| --- | --- |
-| `packages/capabilities/src/identity/policy.ts` | Factory-owned principal, session, tenant, and authorization decision semantics. |
-| `packages/capabilities/test/identity-policy.test.ts` | Pure deny-by-default, expiry, tenant, and declared-action evidence. |
-| `packages/capabilities/src/assets/core/identity-policy-v1-0-0.ts` | Typed catalogue manifest for the new asset. |
-| `packages/capabilities/assets/core.identity-policy/1.0.0/` | Immutable physical package with adapter/template/fixture/test evidence. |
-| `packages/capabilities/src/assets/index.ts` | Registers the new asset version. |
-| `packages/capabilities/src/index.ts` | Adds Expense/Ecommerce bindings and composition selections. |
-| `packages/compiler/src/index.ts` | Emits local fixture sessions, generated authorization guard, and policy contribution. |
-| `packages/compiler/test/identity-policy-runtime.test.ts` | Validates generated policy guard and lock failure modes. |
-| `e2e/generated-expense.spec.ts` | Proves employee/manager/finance decisions in an isolated generated app. |
-| `e2e/generated-ecommerce.spec.ts` | Proves shopper/merchant decisions in an isolated generated app. |
+| Path                                                              | Responsibility                                                                        |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `packages/capabilities/src/identity/policy.ts`                    | Factory-owned principal, session, tenant, and authorization decision semantics.       |
+| `packages/capabilities/test/identity-policy.test.ts`              | Pure deny-by-default, expiry, tenant, and declared-action evidence.                   |
+| `packages/capabilities/src/assets/core/identity-policy-v1-0-0.ts` | Typed catalogue manifest for the new asset.                                           |
+| `packages/capabilities/assets/core.identity-policy/1.0.0/`        | Immutable physical package with adapter/template/fixture/test evidence.               |
+| `packages/capabilities/src/assets/index.ts`                       | Registers the new asset version.                                                      |
+| `packages/capabilities/src/index.ts`                              | Adds Expense/Ecommerce bindings and composition selections.                           |
+| `packages/compiler/src/index.ts`                                  | Emits local fixture sessions, generated authorization guard, and policy contribution. |
+| `packages/compiler/test/identity-policy-runtime.test.ts`          | Validates generated policy guard and lock failure modes.                              |
+| `e2e/generated-expense.spec.ts`                                   | Proves employee/manager/finance decisions in an isolated generated app.               |
+| `e2e/generated-ecommerce.spec.ts`                                 | Proves shopper/merchant decisions in an isolated generated app.                       |
 
 ### Task 1: Establish Factory identity and decision primitives
 
 **Files:**
+
 - Create: `packages/capabilities/src/identity/policy.ts`
 - Create: `packages/capabilities/test/identity-policy.test.ts`
 - Modify: `packages/capabilities/src/index.ts`
 
 **Interfaces:**
+
 - `PrincipalContextV1` has `principalId`, `sessionId`, optional `tenantId`,
   `roles`, and `expiresAt`.
 - `AuthorizationDecisionInputV1` has `principal`, `resource`, `action`, and
   optional `tenantId`.
 - `decideAuthorization(input, declaredRules)` returns either `{ allowed: true }`
   or `{ allowed: false; reason: "missing-session" | "expired-session" |
-  "tenant-mismatch" | "undeclared-action" | "deny" }`.
+"tenant-mismatch" | "undeclared-action" | "deny" }`.
 
 - [ ] **Step 1: Write the failing decision tests**
 
 ```ts
 it("allows only a declared role/resource/action within the same tenant", () => {
-  expect(decideAuthorization({ principal: fixture("manager", "tenant-a"), resource: "expense", action: "approve", tenantId: "tenant-a" }, rules)).toEqual({ allowed: true });
+  expect(
+    decideAuthorization(
+      {
+        principal: fixture("manager", "tenant-a"),
+        resource: "expense",
+        action: "approve",
+        tenantId: "tenant-a",
+      },
+      rules,
+    ),
+  ).toEqual({ allowed: true });
 });
 
 it("denies expiry, cross-tenant access, and unknown action", () => {
-  expect(decideAuthorization({ principal: expiredFixture(), resource: "order", action: "read" }, rules)).toMatchObject({ allowed: false, reason: "expired-session" });
-  expect(decideAuthorization({ principal: fixture("merchant", "tenant-a"), resource: "order", action: "refund", tenantId: "tenant-b" }, rules)).toMatchObject({ allowed: false, reason: "tenant-mismatch" });
+  expect(
+    decideAuthorization(
+      { principal: expiredFixture(), resource: "order", action: "read" },
+      rules,
+    ),
+  ).toMatchObject({ allowed: false, reason: "expired-session" });
+  expect(
+    decideAuthorization(
+      {
+        principal: fixture("merchant", "tenant-a"),
+        resource: "order",
+        action: "refund",
+        tenantId: "tenant-b",
+      },
+      rules,
+    ),
+  ).toMatchObject({ allowed: false, reason: "tenant-mismatch" });
 });
 ```
 
@@ -90,9 +117,13 @@ export function decideAuthorization(
   rules: readonly DeclaredPermissionV1[],
 ): AuthorizationDecisionV1 {
   if (!input.principal) return deny("missing-session");
-  if (Date.parse(input.principal.expiresAt) <= Date.now()) return deny("expired-session");
-  if (input.tenantId && input.principal.tenantId !== input.tenantId) return deny("tenant-mismatch");
-  return rules.some((rule) => matches(rule, input)) ? { allowed: true } : deny("deny");
+  if (Date.parse(input.principal.expiresAt) <= Date.now())
+    return deny("expired-session");
+  if (input.tenantId && input.principal.tenantId !== input.tenantId)
+    return deny("tenant-mismatch");
+  return rules.some((rule) => matches(rule, input))
+    ? { allowed: true }
+    : deny("deny");
 }
 ```
 
@@ -115,6 +146,7 @@ git commit -m "feat: add local identity policy primitives"
 ### Task 2: Release the physical Identity capability package
 
 **Files:**
+
 - Create: `packages/capabilities/src/assets/core/identity-policy-v1-0-0.ts`
 - Create: `packages/capabilities/assets/core.identity-policy/1.0.0/component.json`
 - Create: `packages/capabilities/assets/core.identity-policy/1.0.0/adapter.json`
@@ -125,6 +157,7 @@ git commit -m "feat: add local identity policy primitives"
 - Modify: `packages/capabilities/test/capability-registry.test.ts`
 
 **Interfaces:**
+
 - Provides `identity.principal-context/v1` and `authorization.decision/v1`.
 - Requires `policy.resource-action/v1` and `audit.event/v1`.
 - Declares output slots `api.runtime`, `api.service`, `policy.guard`,
@@ -136,7 +169,10 @@ git commit -m "feat: add local identity policy primitives"
 it("verifies the immutable identity-policy package", () => {
   const asset = findCapabilityAsset("core.identity-policy", "1.0.0");
   expect(verifyCapabilityAssetPackage(asset, repositoryRoot)).toEqual([]);
-  expect(asset.manifest.provides).toContainEqual({ interfaceKey: "authorization.decision", version: "v1" });
+  expect(asset.manifest.provides).toContainEqual({
+    interfaceKey: "authorization.decision",
+    version: "v1",
+  });
 });
 ```
 
@@ -170,11 +206,13 @@ git commit -m "feat: add locked identity policy capability package"
 ### Task 3: Compose Identity into Expense and Ecommerce
 
 **Files:**
+
 - Modify: `packages/capabilities/src/index.ts`
 - Create: `packages/capabilities/test/identity-policy-profile.test.ts`
 - Modify: `packages/capabilities/test/commercial-profile-composition.test.ts`
 
 **Interfaces:**
+
 - Expense binds employee, manager, finance, expense, approval, principal, and
   session graph symbols.
 - Ecommerce binds shopper, merchant, order, principal, and session symbols.
@@ -185,10 +223,18 @@ git commit -m "feat: add locked identity policy capability package"
 
 ```ts
 it("locks identity-policy for Expense and Ecommerce with distinct role matrices", () => {
-  const expense = composeDefaultCapabilityDraft({ profile: "expense-approval" }).graph;
-  const ecommerce = composeDefaultCapabilityDraft({ profile: "simple-ecommerce" }).graph;
-  expect(lockedPackage(expense, "core.identity-policy")).toMatchObject({ version: "1.0.0" });
-  expect(bindingsFor(expense, "core.identity-policy")).not.toEqual(bindingsFor(ecommerce, "core.identity-policy"));
+  const expense = composeDefaultCapabilityDraft({
+    profile: "expense-approval",
+  }).graph;
+  const ecommerce = composeDefaultCapabilityDraft({
+    profile: "simple-ecommerce",
+  }).graph;
+  expect(lockedPackage(expense, "core.identity-policy")).toMatchObject({
+    version: "1.0.0",
+  });
+  expect(bindingsFor(expense, "core.identity-policy")).not.toEqual(
+    bindingsFor(ecommerce, "core.identity-policy"),
+  );
 });
 ```
 
@@ -220,11 +266,13 @@ git commit -m "feat: compose identity policy across profiles"
 ### Task 4: Compile local session and authorization enforcement
 
 **Files:**
+
 - Modify: `packages/compiler/src/index.ts`
 - Create: `packages/compiler/test/identity-policy-runtime.test.ts`
 - Modify: `packages/compiler/test/composition-compilation.test.ts`
 
 **Interfaces:**
+
 - `resolveIdentityPolicyContribution(input)` validates the exact locked asset.
 - Generated API exports `resolvePrincipalContext` and `authorizeDeclaredAction`.
 - Generated guard accepts an opaque local fixture-session ID only in local
@@ -235,12 +283,18 @@ git commit -m "feat: compose identity policy across profiles"
 ```ts
 it("emits a deny-by-default identity guard from the locked package", () => {
   const files = filesForPublishedExpense();
-  expect(files["api/src/capabilities/core.identity-policy.ts"]).toContain("authorizeDeclaredAction");
-  expect(files["api/src/capabilities/core.identity-policy.ts"]).toContain("tenant-mismatch");
+  expect(files["api/src/capabilities/core.identity-policy.ts"]).toContain(
+    "authorizeDeclaredAction",
+  );
+  expect(files["api/src/capabilities/core.identity-policy.ts"]).toContain(
+    "tenant-mismatch",
+  );
 });
 
 it("rejects a lock with an undeclared policy target", () => {
-  expect(() => generateApplicationBundle(tamperedIdentityLock)).toThrow("contribution");
+  expect(() => generateApplicationBundle(tamperedIdentityLock)).toThrow(
+    "contribution",
+  );
 });
 ```
 
@@ -274,11 +328,13 @@ git commit -m "feat: compile local identity policy enforcement"
 ### Task 5: Prove isolated Expense and Ecommerce authorization journeys
 
 **Files:**
+
 - Create: `e2e/generated-expense.spec.ts`
 - Modify: `e2e/generated-ecommerce.spec.ts`
 - Modify: `apps/compiler-worker/test/queued-preview-run.test.ts`
 
 **Interfaces:**
+
 - Expense journey uses fixture employee, manager, and finance sessions.
 - Ecommerce journey uses fixture shopper and merchant sessions.
 - Every mutating generated API request resolves a local fixture session and
@@ -287,10 +343,16 @@ git commit -m "feat: compile local identity policy enforcement"
 - [ ] **Step 1: Write failing role journey assertions**
 
 ```ts
-await expect(api.approveExpense(employeeSession, expenseId)).rejects.toThrow("deny");
-await expect(api.approveExpense(managerSession, expenseId)).resolves.toMatchObject({ status: "approved" });
+await expect(api.approveExpense(employeeSession, expenseId)).rejects.toThrow(
+  "deny",
+);
+await expect(
+  api.approveExpense(managerSession, expenseId),
+).resolves.toMatchObject({ status: "approved" });
 await expect(api.fulfillOrder(shopperSession, orderId)).rejects.toThrow("deny");
-await expect(api.fulfillOrder(merchantSession, orderId)).resolves.toMatchObject({ status: "fulfilled" });
+await expect(api.fulfillOrder(merchantSession, orderId)).resolves.toMatchObject(
+  { status: "fulfilled" },
+);
 ```
 
 - [ ] **Step 2: Run the failing generated-app journeys**
@@ -321,6 +383,7 @@ git commit -m "test: prove generated identity policy journeys"
 ### Task 6: Surface the locked family state and record acceptance
 
 **Files:**
+
 - Modify: `apps/control-plane/src/portfolio/portfolio-summary.service.ts`
 - Modify: `apps/control-plane/src/portfolio/portfolio-summary.service.test.ts`
 - Modify: `apps/workbench/components/workbench-home.tsx`
@@ -328,28 +391,32 @@ git commit -m "test: prove generated identity policy journeys"
 - Create: `docs/acceptance/identity-policy-cross-profile.md`
 - Modify: `docs/project-status.md`
 
-- [ ] **Step 1: Write failing Home/Control Plane projection tests**
+- [x] **Step 1: Write failing Home/Control Plane projection tests**
 
 ```ts
 expect(summary.capabilityFamilies).toContainEqual(
-  expect.objectContaining({ key: "core.identity-policy", status: "golden", profileCount: 2 }),
+  expect.objectContaining({
+    key: "core.identity-policy",
+    status: "golden",
+    profileCount: 2,
+  }),
 );
 expect(screen.getByText("Identity and policy")).toBeVisible();
 ```
 
-- [ ] **Step 2: Run the failing projection tests**
+- [x] **Step 2: Run the failing projection tests**
 
 Run: `pnpm --filter @factory/control-plane test -- portfolio/portfolio-summary.service.test.ts && pnpm --filter @factory/workbench test -- components/workbench-home.test.tsx`
 
 Expected: FAIL because the new family is not projected.
 
-- [ ] **Step 3: Implement source-free readiness projection**
+- [x] **Step 3: Implement source-free readiness projection**
 
 Add only package key, lifecycle, version, affected Profile count, validation
 state, and generated-target state. Do not return external URLs, source-study
 body, fixture-session identifiers, policy source, credentials, or raw prompts.
 
-- [ ] **Step 4: Run full release gates and guarded AI acceptance**
+- [x] **Step 4: Run full release gates and guarded AI acceptance**
 
 Run: `pnpm test && pnpm typecheck && pnpm lint && pnpm build && pnpm verify:third-party && pnpm verify:source-studies && git diff --check`
 

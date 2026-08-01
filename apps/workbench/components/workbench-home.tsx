@@ -18,6 +18,7 @@ import { profileStarterOptions } from "../lib/profile-starters";
 import {
   toPortfolioHomeModel,
   type PortfolioMetric,
+  type CapabilityFamilyHomeModel,
   type ProfileCoverageHomeModel,
   type ProfileReadinessHomeModel,
 } from "../lib/portfolio-summary";
@@ -239,6 +240,60 @@ function CapabilitySupplyPanel({
               }}
             >
               {family.action} · {family.discovery} discovered
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CapabilityFamilyPanel({
+  families,
+}: {
+  readonly families: readonly CapabilityFamilyHomeModel[];
+}) {
+  if (families.length === 0) return null;
+  return (
+    <section aria-labelledby="home-capability-families" style={sectionStyle}>
+      <div
+        style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
+      >
+        <h2 id="home-capability-families" style={{ margin: 0 }}>
+          Verified capability packages
+        </h2>
+        <span style={{ color: "var(--muted, #66706a)", fontSize: 13 }}>
+          Read-only status
+        </span>
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+          gap: 10,
+          marginTop: 14,
+        }}
+      >
+        {families.map((family) => (
+          <article
+            aria-label={`${family.label} package`}
+            key={family.id}
+            style={{
+              border: "1px solid var(--line, #d8ddd8)",
+              borderRadius: 10,
+              padding: 12,
+            }}
+          >
+            <strong>{family.label}</strong>
+            <div
+              style={{
+                color: "var(--muted, #66706a)",
+                fontSize: 12,
+                marginTop: 5,
+              }}
+            >
+              v{family.version} · {family.profileCount} profiles ·{" "}
+              {family.validation} · {family.generatedTargetState}
             </div>
           </article>
         ))}
@@ -579,6 +634,10 @@ export function WorkbenchHome({
       </section>
 
       {portfolio && <CapabilitySupplyPanel supply={portfolio.supply} />}
+
+      {portfolio && (
+        <CapabilityFamilyPanel families={portfolio.capabilityFamilies} />
+      )}
 
       {portfolio && <ProfileCoveragePanel coverage={portfolio.coverage} />}
 

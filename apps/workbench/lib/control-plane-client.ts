@@ -135,6 +135,14 @@ export type WorkbenchWorkspacePortfolioSummary = {
     readonly candidate: number;
     readonly provider: number;
   };
+  readonly capabilityFamilies: readonly {
+    readonly key: string;
+    readonly lifecycle: "golden";
+    readonly version: string;
+    readonly profileCount: number;
+    readonly validation: "verified";
+    readonly generatedTargetState: "ready";
+  }[];
   readonly intake: {
     readonly portfolioSources: number;
     readonly intakeEligible: number;
@@ -656,6 +664,38 @@ function workspacePortfolioSummary(
       ]),
     ) as Record<T[number], number>;
   };
+  const capabilityFamilies = record.capabilityFamilies;
+  if (!Array.isArray(capabilityFamilies)) {
+    throw new Error("Control Plane Capability families are invalid.");
+  }
+  const capabilityFamilyRecords = capabilityFamilies.map((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new Error("Control Plane Capability family is invalid.");
+    }
+    const family = entry as Record<string, unknown>;
+    if (
+      typeof family.key !== "string" ||
+      !capabilityKeyPattern.test(family.key) ||
+      family.lifecycle !== "golden" ||
+      typeof family.version !== "string" ||
+      family.version.trim().length === 0 ||
+      family.validation !== "verified" ||
+      family.generatedTargetState !== "ready"
+    ) {
+      throw new Error("Control Plane Capability family is invalid.");
+    }
+    return {
+      key: family.key,
+      lifecycle: "golden" as const,
+      version: family.version,
+      profileCount: nonNegativeCount(
+        family.profileCount,
+        "capability family profileCount",
+      ),
+      validation: "verified" as const,
+      generatedTargetState: "ready" as const,
+    };
+  });
 
   return {
     apiVersion: "factory.workspace-portfolio-summary/v1",
@@ -667,6 +707,7 @@ function workspacePortfolioSummary(
       ["golden", "lockedVersions", "candidate", "provider"] as const,
       "capabilities",
     ),
+    capabilityFamilies: capabilityFamilyRecords,
     intake: counts(
       record.intake,
       [

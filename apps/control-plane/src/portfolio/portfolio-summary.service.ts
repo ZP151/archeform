@@ -34,6 +34,14 @@ export interface WorkspacePortfolioSummaryV1 {
     readonly candidate: number;
     readonly provider: number;
   };
+  readonly capabilityFamilies: readonly {
+    readonly key: string;
+    readonly lifecycle: "golden";
+    readonly version: string;
+    readonly profileCount: number;
+    readonly validation: "verified";
+    readonly generatedTargetState: "ready";
+  }[];
   readonly intake: {
     readonly portfolioSources: number;
     readonly intakeEligible: number;
@@ -119,6 +127,16 @@ export class WorkspacePortfolioSummaryService {
         candidate: 0,
         provider: 0,
       },
+      capabilityFamilies: capabilityAssets
+        .filter((asset) => asset.manifest.key === "core.identity-policy")
+        .map(({ manifest }) => ({
+          key: manifest.key,
+          lifecycle: manifest.lifecycle,
+          version: manifest.version,
+          profileCount: manifest.profiles.length,
+          validation: manifest.verification.status,
+          generatedTargetState: "ready" as const,
+        })),
       intake: {
         portfolioSources: portfolioPublicSummary.sourceCounts.total,
         intakeEligible: portfolioPublicSummary.sourceCounts.intakeEligible,

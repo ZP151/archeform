@@ -204,6 +204,16 @@ describe("WorkbenchHome", () => {
               candidate: 0,
               provider: 0,
             },
+            capabilityFamilies: [
+              {
+                key: "core.identity-policy",
+                lifecycle: "golden",
+                version: "1.0.0",
+                profileCount: 2,
+                validation: "verified",
+                generatedTargetState: "ready",
+              },
+            ],
             intake: {
               portfolioSources: 43,
               intakeEligible: 19,
@@ -247,6 +257,7 @@ describe("WorkbenchHome", () => {
     expect(container.textContent).toContain("Planned");
     expect(container.textContent).toContain("Capability supply");
     expect(container.textContent).toContain("commerce-transaction");
+    expect(container.textContent).toContain("Identity and policy");
     expect(container.textContent).toContain("Available 1");
     expect(container.textContent).toContain("Provider 1");
     expect(container.textContent).not.toContain("https://github.com");

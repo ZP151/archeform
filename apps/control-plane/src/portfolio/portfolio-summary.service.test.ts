@@ -54,6 +54,16 @@ describe("WorkspacePortfolioSummaryService", () => {
         candidate: 0,
         provider: 0,
       },
+      capabilityFamilies: expect.arrayContaining([
+        expect.objectContaining({
+          key: "core.identity-policy",
+          lifecycle: "golden",
+          version: "1.0.0",
+          profileCount: 2,
+          validation: "verified",
+          generatedTargetState: "ready",
+        }),
+      ]),
       intake: {
         portfolioSources: 43,
         intakeEligible: 19,

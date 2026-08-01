@@ -2,6 +2,28 @@
 
 Updated: 2026-08-01
 
+## Identity and policy cross-profile foundation — 2026-08-01
+
+`core.identity-policy@1.0.0` is a locked Golden package for Expense Approval
+and Simple Ecommerce. Generated local APIs now resolve an opaque local fixture
+principal and evaluate the exact declared event action before a protected
+mutation changes application state. A browser journey proved employee submit
+and manager approval while rejecting employee approval; it also proved shopper
+checkout and merchant fulfilment while rejecting shopper fulfilment. Both
+isolated generated previews were stopped and their resources cleaned up.
+
+The Workbench portfolio now exposes a source-free readiness projection for the
+locked family: package key, version, Golden lifecycle, Profile count,
+verification state, and generated-target state. It deliberately omits package
+source, policy source, fixture-session identifiers, provider metadata,
+credentials, and AI request or response data. This remains local-prototype
+identity only; provider-backed identity and fine-grained authorization are
+separate delivery slices. See
+`docs/acceptance/identity-policy-cross-profile.md` for the exact boundary and
+the completed guarded real-model check: one accepted Graph Diff was applied to
+an Expense Draft, then published and compiled successfully without retaining
+its prompt, response, or credential.
+
 ## Current iteration — generated-product evidence and scalable reuse
 
 Factory Pilot remains an Application Graph composition platform, not yet a

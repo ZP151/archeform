@@ -57,6 +57,16 @@ describe("toPortfolioHomeModel", () => {
         candidate: 0,
         provider: 0,
       },
+      capabilityFamilies: [
+        {
+          key: "core.identity-policy",
+          lifecycle: "golden",
+          version: "1.0.0",
+          profileCount: 2,
+          validation: "verified",
+          generatedTargetState: "ready",
+        },
+      ],
       intake: {
         portfolioSources: 43,
         intakeEligible: 19,
@@ -111,6 +121,16 @@ describe("toPortfolioHomeModel", () => {
           status: "partial",
           packageCount: 3,
           profileCount: 4,
+        },
+      ],
+      capabilityFamilies: [
+        {
+          id: "core.identity-policy",
+          label: "Identity and policy",
+          version: "1.0.0",
+          profileCount: 2,
+          validation: "verified",
+          generatedTargetState: "ready",
         },
       ],
       capabilityMetrics: [

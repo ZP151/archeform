@@ -10,10 +10,20 @@ export type PortfolioHomeModel = {
   }[];
   readonly readiness: readonly ProfileReadinessHomeModel[];
   readonly coverage: readonly ProfileCoverageHomeModel[];
+  readonly capabilityFamilies: readonly CapabilityFamilyHomeModel[];
   readonly capabilityMetrics: readonly PortfolioMetric[];
   readonly intakeMetrics: readonly PortfolioMetric[];
   readonly supply: WorkbenchWorkspacePortfolioSummary["supply"]["families"];
   readonly compilationMetrics: readonly PortfolioMetric[];
+};
+
+export type CapabilityFamilyHomeModel = {
+  readonly id: string;
+  readonly label: string;
+  readonly version: string;
+  readonly profileCount: number;
+  readonly validation: "verified";
+  readonly generatedTargetState: "ready";
 };
 
 export type ProfileReadinessHomeModel = {
@@ -39,6 +49,11 @@ export type PortfolioMetric = {
   readonly value: number;
   readonly tone: PortfolioMetricTone;
 };
+
+function capabilityFamilyLabel(key: string): string {
+  if (key === "core.identity-policy") return "Identity and policy";
+  return key;
+}
 
 export function toPortfolioHomeModel(
   summary: WorkbenchWorkspacePortfolioSummary,
@@ -77,6 +92,14 @@ export function toPortfolioHomeModel(
       status: coverage.status,
       packageCount: coverage.packageKeys.length,
       profileCount: coverage.profiles.length,
+    })),
+    capabilityFamilies: summary.capabilityFamilies.map((family) => ({
+      id: family.key,
+      label: capabilityFamilyLabel(family.key),
+      version: family.version,
+      profileCount: family.profileCount,
+      validation: family.validation,
+      generatedTargetState: family.generatedTargetState,
     })),
     capabilityMetrics: [
       { label: "Golden", value: summary.capabilities.golden, tone: "ready" },

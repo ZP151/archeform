@@ -86,6 +86,17 @@ describe("ControlPlaneClient", () => {
             provider: 0,
             artifact: "must-not-survive",
           },
+          capabilityFamilies: [
+            {
+              key: "core.identity-policy",
+              lifecycle: "golden",
+              version: "1.0.0",
+              profileCount: 2,
+              validation: "verified",
+              generatedTargetState: "ready",
+              sourcePath: "must-not-survive",
+            },
+          ],
           intake: {
             portfolioSources: 43,
             intakeEligible: 19,
@@ -141,6 +152,16 @@ describe("ControlPlaneClient", () => {
         candidate: 0,
         provider: 0,
       },
+      capabilityFamilies: [
+        {
+          key: "core.identity-policy",
+          lifecycle: "golden",
+          version: "1.0.0",
+          profileCount: 2,
+          validation: "verified",
+          generatedTargetState: "ready",
+        },
+      ],
       intake: {
         portfolioSources: 43,
         intakeEligible: 19,
