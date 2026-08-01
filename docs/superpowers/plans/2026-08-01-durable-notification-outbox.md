@@ -210,7 +210,7 @@ delivered` with two attempts. Configure three failures and assert terminal
 
 **Consumes:** The new current asset and compiler-generated runtime/worker.
 
-**Produces:** Profile locks with the same `1.1.0` package digest, validated
+**Produces:** Profile locks with the same `1.1.1` package digest, validated
 profile-specific role/template bindings, and deterministic cross-profile
 runtime evidence.
 
@@ -233,7 +233,7 @@ runtime evidence.
 - [ ] **Step 3: Update profile recipes and acceptance evidence**
 
   Update only the mutable profile recipe selections so new Drafts select
-  `1.1.0` and declare profile-local valid recipient role/template parameters.
+  `1.1.1` and declare profile-local valid recipient role/template parameters.
   Do not alter a historical composition lock. Record the two-profile
   acceptance commands, generated behavior, and cleanup requirements in the
   acceptance document; update project status with the exact delivery slice.
@@ -250,6 +250,74 @@ runtime evidence.
   ```bash
   git add packages/capabilities packages/compiler/test docs
   git commit -m "test: prove notification outbox across profiles"
+  ```
+
+### Task 6: Correct template bindings through a new immutable package version
+
+**Must complete before Task 4 resumes.**
+
+**Files:**
+
+- Create: `packages/capabilities/assets/core.notification/1.1.1/**`
+- Create: `packages/capabilities/src/assets/core/notification-v1-1-1.ts`
+- Modify: `packages/capabilities/src/assets/contract.ts`
+- Modify: `packages/capabilities/src/assets/index.ts`
+- Modify: `packages/capabilities/src/node.ts`
+- Modify: `packages/capabilities/src/composition.ts`
+- Modify: `packages/capabilities/test/capability-registry.test.ts`
+- Modify: `packages/capabilities/test/composition-contract.test.ts`
+- Modify: `packages/compiler/src/index.ts`
+- Modify: `packages/compiler/test/compilation-plan.test.ts`
+- Modify: `packages/compiler/test/notification-outbox-runtime.test.ts`
+
+**Consumes:** Immutable `core.notification@1.1.0`, the frozen outbox contract,
+and the existing strict composition resolver.
+
+**Produces:** A new Golden `core.notification@1.1.1` asset whose optional
+`template` parameter is a closed declared enum. The resolver accepts only
+`expense.approval-outcome` or `ecommerce.order-outcome`; the compiler carries a
+validated template into the generated outbox. Historical `1.1.0` behavior
+remains replayable with a null template.
+
+- [ ] **Step 1: Write failing contract and compiler tests**
+
+  Assert that a composition using `1.1.1` accepts each declared template enum,
+  rejects an undeclared string, and rejects a string bound to a non-enum
+  parameter. Assert that an outbox generated from an accepted `1.1.1` lock
+  contains the exact locked template, while a replayed `1.1.0` lock still
+  contains `null`.
+
+- [ ] **Step 2: Run focused tests to verify they fail**
+
+  Run:
+
+  ```bash
+  pnpm --filter @factory/capabilities test -- capability-registry.test.ts composition-contract.test.ts
+  pnpm --filter @factory/compiler test -- compilation-plan.test.ts notification-outbox-runtime.test.ts
+  ```
+
+  Expected: failure because string enum bindings are not part of the strict
+  composition contract and no `1.1.1` asset exists.
+
+- [ ] **Step 3: Implement the versioned correction**
+
+  Add a strict `enum` parameter form with an exact `values` allowlist; do not
+  add a general free-form string binding. Create physical `1.1.1` package
+  assets, a new immutable digest, and register it as the current notification
+  asset. Extend the compiler to use the already validated enum binding. It
+  must still generate `null` for any verified historical `1.1.0` lock.
+
+- [ ] **Step 4: Run focused tests to verify they pass**
+
+  Re-run the focused commands from Step 2. Expected: PASS for positive and
+  negative binding validation, new generated template propagation, and
+  historical replay.
+
+- [ ] **Step 5: Commit the immutable correction**
+
+  ```bash
+  git add packages/capabilities packages/compiler
+  git commit -m "feat: version notification template bindings"
   ```
 
 ### Task 5: Run release gates and publish evidence

@@ -25,6 +25,29 @@ version and those declared inputs; it cannot provide an address, URL, secret,
 provider selector, executable callback, arbitrary template content, or output
 path.
 
+## Contract correction: immutable template bindings
+
+The initial `1.1.0` package recorded the optional template in its descriptive
+input schema but did not expose it through the strict composition parameter
+contract. It is therefore immutable but cannot safely prove profile-specific
+template bindings. It remains Golden and replayable for every existing lock.
+
+`core.notification@1.1.1` is the new current package. It preserves every
+`1.1.0` output slot and outbox behavior, and adds exactly one optional
+composition parameter:
+
+```text
+template: enum (optional)
+allowed values: expense.approval-outcome, ecommerce.order-outcome
+```
+
+The enum is a package-declared identifier, not a message body or a free-form
+string. The composition resolver rejects an unknown template before it creates
+a lock. The compiler copies only the validated locked identifier into the
+generated outbox. New Expense and Ecommerce Drafts must select the same
+`1.1.1` digest; historic `1.1.0` locks remain unchanged and compile with a
+`null` template.
+
 ## Non-goals
 
 - Email, SMS, push, Slack, webhook, or external provider delivery.
@@ -113,11 +136,12 @@ attempts without changing the Graph or the package.
 
 ## Profile bindings and proof
 
-Expense Approval uses the package to notify the employee after an approval or
-rejection transition. Simple Ecommerce uses the same exact package digest to
-notify the shopper after a payment or fulfilment transition. The generated
-applications differ only through declared entities, roles, transitions, and
-template bindings.
+Expense Approval uses the `expense.approval-outcome` package template to notify
+the employee after an approval or rejection transition. Simple Ecommerce uses
+the `ecommerce.order-outcome` package template to notify the shopper after a
+payment or fulfilment transition. The generated applications use the same exact
+`1.1.1` package digest and differ only through declared entities, roles,
+transitions, and validated template bindings.
 
 Acceptance tests must prove:
 
@@ -139,11 +163,12 @@ credentials are not persisted or reported.
 
 ## Compatibility and rollback
 
-`core.notification@1.0.1` remains immutable and replayable. New guided
-recipes can select `1.1.0` only after the composition resolver recognizes its
-declared output slots and its manifest digests verify. Rollback is a new Draft
-that selects the previously approved lock; no published revision, package
-directory, or generated artifact is overwritten.
+`core.notification@1.0.1` and `1.1.0` remain immutable and replayable. New
+guided recipes can select `1.1.1` only after the composition resolver
+recognizes its declared output slots, validates its declared template enum, and
+verifies its manifest digests. Rollback is a new Draft that selects the
+previously approved lock; no published revision, package directory, or
+generated artifact is overwritten.
 
 ## Rejected alternatives
 
