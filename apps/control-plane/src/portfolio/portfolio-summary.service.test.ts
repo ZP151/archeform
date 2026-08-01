@@ -54,6 +54,12 @@ describe("WorkspacePortfolioSummaryService", () => {
         quarantined: 0,
         blocked: 0,
       },
+      supply: expect.objectContaining({
+        apiVersion: "factory.capability-supply-summary/v1",
+        families: expect.arrayContaining([
+          expect.objectContaining({ key: "commerce-transaction" }),
+        ]),
+      }),
       compilations: {
         queued: 1,
         running: 0,

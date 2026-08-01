@@ -6,7 +6,10 @@ import {
   listProfileReadiness,
   type ProfileReadinessV1,
 } from "@factory/capabilities";
-import { portfolioPublicSummary } from "@factory/portfolio-public";
+import {
+  portfolioPublicSummary,
+  type CapabilitySupplySummaryV1,
+} from "@factory/portfolio-public";
 
 import { PrismaService } from "../prisma.service.js";
 
@@ -35,6 +38,7 @@ export interface WorkspacePortfolioSummaryV1 {
     readonly quarantined: number;
     readonly blocked: number;
   };
+  readonly supply: CapabilitySupplySummaryV1;
   readonly compilations: {
     readonly queued: number;
     readonly running: number;
@@ -118,6 +122,7 @@ export class WorkspacePortfolioSummaryService {
         quarantined: 0,
         blocked: 0,
       },
+      supply: portfolioPublicSummary.supply,
       compilations: compilationCounts,
     };
   }
