@@ -2558,6 +2558,7 @@ function renderApplicationRuntime(
             ", template: " +
             JSON.stringify(notificationOutbox.template) +
             ", entity: entityKey, recordId, availableAt: at });",
+          "        if (process.env.FACTORY_TEST_FAIL_AFTER_NOTIFICATION_ENQUEUE === '1') throw new Error('factory-test-post-enqueue-failure');",
           "      }",
         ]
       : []),
