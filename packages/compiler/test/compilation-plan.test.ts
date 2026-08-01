@@ -620,6 +620,8 @@ describe("compilation target registry", () => {
         ).toEqual([
           ["audit.record", "record"],
           ["audit.record", "record"],
+          ["notification.send", "send"],
+          ["notification.send", "send"],
         ]);
       },
     );
@@ -1105,6 +1107,8 @@ describe("compilation target registry", () => {
               ["payment.simulate", "simulate"],
               ["payment.simulate", "simulate"],
               ["inventory.decrement", "decrement"],
+              ["notification.send", "send"],
+              ["notification.send", "send"],
             ]);
           }
         },
@@ -1948,27 +1952,7 @@ describe("compilation target registry", () => {
   });
 
   it("expects notification delivery and generic evidence in an Expense journey", () => {
-    const composed = composeProfileDraft({ profile: "expense-approval" }).graph;
-    const graph = {
-      ...composed,
-      flow: {
-        ...composed.flow,
-        flows: composed.flow.flows.map((flow) => ({
-          ...flow,
-          transitions: flow.transitions.map((transition) =>
-            transition.event === "submit"
-              ? {
-                  ...transition,
-                  effects: [
-                    ...(transition.effects ?? []),
-                    { capability: "notification.send", operation: "send" },
-                  ],
-                }
-              : transition,
-          ),
-        })),
-      },
-    };
+    const graph = composeProfileDraft({ profile: "expense-approval" }).graph;
     const files = Object.fromEntries(
       generateApplicationBundle({
         publishedRevisionId: "published-expense-notification-journey-1",
@@ -1977,7 +1961,7 @@ describe("compilation target registry", () => {
     );
 
     expect(files["api/test/journey.generated.test.ts"]).toContain(
-      '[["audit.record","record"],["notification.send","send"],["notification.send","send"],["audit.record","record"]]',
+      '[["audit.record","record"],["audit.record","record"],["notification.send","send"],["notification.send","send"]]',
     );
   });
 
@@ -2057,11 +2041,16 @@ describe("compilation target registry", () => {
         .integration.compositionSelections ?? [];
     const compositionLock = createCapabilityCompositionLock({
       graphChecksum: hashApplicationGraph(graph),
-      selections: selections.map((selection) =>
-        selection.lock.key === "core.notification"
-          ? { ...selection, lock: historicalLock }
-          : selection,
-      ),
+      selections: selections.map((selection) => {
+        if (selection.lock.key !== "core.notification") return selection;
+        const { template: _currentTemplate, ...historicalBindings } =
+          selection.bindings;
+        return {
+          ...selection,
+          lock: historicalLock,
+          bindings: historicalBindings,
+        };
+      }),
     });
     const files = Object.fromEntries(
       generateApplicationBundle({
