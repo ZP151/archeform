@@ -1,0 +1,61 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": ["api.runtime", "api.service", "policy.rule", "test.fixture", "web.navigation"],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/core.identity-policy.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:d5b5d1b478b29095b97804d69f62b7a2fae1ad6b3aa20b215e8e4ecff5762566"
+    }
+  ],
+  "executableContributions": [
+    {
+      "id": "local-fixture-service",
+      "outputSlot": "api.service",
+      "namespace": "packages/core.identity-policy/api/services",
+      "source": "contributions/api/identity-policy-local.service.ts.tpl",
+      "target": "api/src/services/identity-policy-local.service.ts",
+      "parameterRefs": ["principalEntity", "sessionEntity", "defaultRole"],
+      "targetRuntimeInterfaceVersion": "factory.api-service/v1",
+      "orderingRequirements": [],
+      "mergeProtocol": "replace-file",
+      "digest": "sha256:be8d5b70bc8764671f7298d0ef31d74ba3d49f0be31870e715ebe74181c89afd"
+    },
+    {
+      "id": "deny-by-default-policy",
+      "outputSlot": "policy.rule",
+      "namespace": "packages/core.identity-policy/policy",
+      "source": "contributions/policy/deny-by-default.conf",
+      "target": "api/policy/fragments/identity-policy.conf",
+      "parameterRefs": [],
+      "targetRuntimeInterfaceVersion": "factory.policy-rule/v1",
+      "orderingRequirements": [],
+      "mergeProtocol": "replace-file",
+      "digest": "sha256:e540e98476f8e7f35470f55c1d2fa6cc14cf82d163ade6f52c4881c53361cfa6"
+    },
+    {
+      "id": "local-fixture-sessions",
+      "outputSlot": "test.fixture",
+      "namespace": "packages/core.identity-policy/test",
+      "source": "fixtures/default.json",
+      "target": "api/test/fixtures/identity-policy.json",
+      "parameterRefs": [],
+      "targetRuntimeInterfaceVersion": "factory.test-fixture/v1",
+      "orderingRequirements": [],
+      "mergeProtocol": "replace-file",
+      "digest": "sha256:6c61ba129df9ab99afa28a6ef49d43678277a991176d9b7ea77b8529d96126be"
+    }
+  ],
+  "parameters": [
+    { "key": "principalEntity", "type": "graph-symbol", "required": true },
+    { "key": "sessionEntity", "type": "graph-symbol", "required": true },
+    { "key": "defaultRole", "type": "graph-symbol", "required": true },
+    { "key": "authenticatedRole", "type": "graph-symbol", "required": true }
+  ],
+  "contributes": {
+    "effects": ["identity.context.resolve", "authorization.decision"]
+  }
+}

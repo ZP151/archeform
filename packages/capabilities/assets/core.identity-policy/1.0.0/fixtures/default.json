@@ -1,0 +1,12 @@
+{
+  "mode": "local-fixture",
+  "sessions": [
+    {
+      "principalId": "employee-1",
+      "sessionId": "fixture-session-employee",
+      "tenantId": "tenant-local",
+      "roles": ["employee"],
+      "expiresAt": "2099-01-01T00:00:00.000Z"
+    }
+  ]
+}

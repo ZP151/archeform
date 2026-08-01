@@ -10,6 +10,7 @@ import { notificationAssetV1_0_1 } from "./core/notification-v1-0-1.js";
 import { workflowAsset } from "./core/workflow.js";
 import { workflowAssetV1_0_1 } from "./core/workflow-v1-0-1.js";
 import { identityContextAssetV1_0_0 } from "./core/identity-context-v1-0-0.js";
+import { identityPolicyAssetV1_0_0 } from "./core/identity-policy-v1-0-0.js";
 import { locationContextAssetV1_0_0 } from "./core/location-context-v1-0-0.js";
 import { catalogAsset } from "./commerce/catalog.js";
 import { catalogAssetV1_1_0 } from "./commerce/catalog-v1-1-0.js";
@@ -63,6 +64,7 @@ export {
   inventoryAssetV1_1_1,
   inventoryLedgerAssetV1_0_0,
   identityContextAssetV1_0_0,
+  identityPolicyAssetV1_0_0,
   lineConfigurationAssetV1_0_0,
   lineConfigurationAssetV1_1_0,
   lineConfigurationAssetV1_1_1,
@@ -102,6 +104,7 @@ export const currentCapabilityAssets: readonly CapabilityAssetV1[] =
     notificationAssetV1_0_1,
     workflowAssetV1_0_1,
     identityContextAssetV1_0_0,
+    identityPolicyAssetV1_0_0,
     locationContextAssetV1_0_0,
     catalogAssetV1_2_0,
     cartAssetV1_0_1,

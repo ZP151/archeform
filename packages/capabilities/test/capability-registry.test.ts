@@ -630,6 +630,7 @@ describe("capability catalog", () => {
       "core.notification",
       "core.workflow",
       "core.identity-context",
+      "core.identity-policy",
       "core.location-context",
       "commerce.catalog",
       "commerce.cart",
@@ -732,7 +733,7 @@ describe("capability catalog", () => {
   });
 
   it("verifies every registered capability manifest against its declared digest", () => {
-    expect(capabilityAssets).toHaveLength(45);
+    expect(capabilityAssets).toHaveLength(46);
     for (const asset of capabilityAssets) {
       expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     }
@@ -1448,6 +1449,7 @@ describe("capability catalog", () => {
       "core.crud",
       "core.notification",
       "core.workflow",
+      "core.identity-policy",
     ]);
     expect(
       capabilitiesForProfile("restaurant-ordering").map(({ key }) => key),

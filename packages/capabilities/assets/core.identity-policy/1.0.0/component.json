@@ -1,0 +1,89 @@
+{
+  "apiVersion": "factory.capability/v1",
+  "bindingContract": "factory.capability-binding/v1",
+  "key": "core.identity-policy",
+  "version": "1.0.0",
+  "category": "core",
+  "name": "Identity and policy",
+  "description": "Resolves local fixture principals and evaluates declared authorization decisions without provider credentials.",
+  "packageRoot": "packages/capabilities/assets/core.identity-policy/1.0.0",
+  "manifestDigest": "sha256:a216444b219f00431820a0df8e2bc3b604296430beb8fa6549f1b40c92025d82",
+  "lifecycle": "golden",
+  "profiles": ["expense-approval", "simple-ecommerce"],
+  "effects": ["identity.context.resolve", "authorization.decision"],
+  "inputSchema": [
+    { "key": "principalEntity", "type": "domain.entity", "required": true },
+    { "key": "sessionEntity", "type": "domain.entity", "required": true },
+    { "key": "defaultRole", "type": "policy.role", "required": true },
+    { "key": "authenticatedRole", "type": "policy.role", "required": true }
+  ],
+  "outputSlots": ["api.runtime", "api.service", "policy.rule", "test.fixture", "web.navigation"],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/core.identity-policy.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:d5b5d1b478b29095b97804d69f62b7a2fae1ad6b3aa20b215e8e4ecff5762566"
+    }
+  ],
+  "executableContributions": [
+    {
+      "id": "local-fixture-service",
+      "outputSlot": "api.service",
+      "namespace": "packages/core.identity-policy/api/services",
+      "source": "contributions/api/identity-policy-local.service.ts.tpl",
+      "target": "api/src/services/identity-policy-local.service.ts",
+      "parameterRefs": ["principalEntity", "sessionEntity", "defaultRole"],
+      "targetRuntimeInterfaceVersion": "factory.api-service/v1",
+      "orderingRequirements": [],
+      "mergeProtocol": "replace-file",
+      "digest": "sha256:be8d5b70bc8764671f7298d0ef31d74ba3d49f0be31870e715ebe74181c89afd"
+    },
+    {
+      "id": "deny-by-default-policy",
+      "outputSlot": "policy.rule",
+      "namespace": "packages/core.identity-policy/policy",
+      "source": "contributions/policy/deny-by-default.conf",
+      "target": "api/policy/fragments/identity-policy.conf",
+      "parameterRefs": [],
+      "targetRuntimeInterfaceVersion": "factory.policy-rule/v1",
+      "orderingRequirements": [],
+      "mergeProtocol": "replace-file",
+      "digest": "sha256:e540e98476f8e7f35470f55c1d2fa6cc14cf82d163ade6f52c4881c53361cfa6"
+    },
+    {
+      "id": "local-fixture-sessions",
+      "outputSlot": "test.fixture",
+      "namespace": "packages/core.identity-policy/test",
+      "source": "fixtures/default.json",
+      "target": "api/test/fixtures/identity-policy.json",
+      "parameterRefs": [],
+      "targetRuntimeInterfaceVersion": "factory.test-fixture/v1",
+      "orderingRequirements": [],
+      "mergeProtocol": "replace-file",
+      "digest": "sha256:6c61ba129df9ab99afa28a6ef49d43678277a991176d9b7ea77b8529d96126be"
+    }
+  ],
+  "parameters": [
+    { "key": "principalEntity", "type": "graph-symbol", "required": true },
+    { "key": "sessionEntity", "type": "graph-symbol", "required": true },
+    { "key": "defaultRole", "type": "graph-symbol", "required": true },
+    { "key": "authenticatedRole", "type": "graph-symbol", "required": true }
+  ],
+  "requires": [
+    { "interfaceKey": "policy.resource-action", "version": "v1" },
+    { "interfaceKey": "audit.event", "version": "v1" }
+  ],
+  "provides": [
+    { "interfaceKey": "identity.principal-context", "version": "v1" },
+    { "interfaceKey": "authorization.decision", "version": "v1" }
+  ],
+  "verification": {
+    "fixture": "fixtures/default.json",
+    "fixtureDigest": "sha256:6c61ba129df9ab99afa28a6ef49d43678277a991176d9b7ea77b8529d96126be",
+    "contractTest": "tests/contract.json",
+    "contractTestDigest": "sha256:6578b78b5b616050ca4e8cd7282d86d66df6a943f93ae0267c773fa4719b1176",
+    "status": "verified"
+  }
+}

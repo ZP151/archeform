@@ -1,0 +1,10 @@
+{
+  "status": "verified",
+  "checks": [
+    "opaque-local-fixture-session",
+    "deny-by-default-decision",
+    "expired-session-rejected",
+    "tenant-mismatch-rejected",
+    "undeclared-action-rejected"
+  ]
+}

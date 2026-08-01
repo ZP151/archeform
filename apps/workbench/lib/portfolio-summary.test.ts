@@ -52,8 +52,8 @@ describe("toPortfolioHomeModel", () => {
         },
       ],
       capabilities: {
-        golden: 21,
-        lockedVersions: 45,
+        golden: 22,
+        lockedVersions: 46,
         candidate: 0,
         provider: 0,
       },
@@ -114,8 +114,8 @@ describe("toPortfolioHomeModel", () => {
         },
       ],
       capabilityMetrics: [
-        { label: "Golden", value: 21, tone: "ready" },
-        { label: "Versions", value: 45, tone: "neutral" },
+        { label: "Golden", value: 22, tone: "ready" },
+        { label: "Versions", value: 46, tone: "neutral" },
         { label: "Candidates", value: 0, tone: "neutral" },
         { label: "Providers", value: 0, tone: "neutral" },
       ],

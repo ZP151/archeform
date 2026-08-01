@@ -199,7 +199,7 @@ describe("WorkbenchHome", () => {
               },
             ],
             capabilities: {
-              golden: 21,
+              golden: 22,
               lockedVersions: 44,
               candidate: 0,
               provider: 0,
