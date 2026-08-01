@@ -65,6 +65,17 @@ export type {
   CommerceOrderStateV1,
   CommerceOrderStatusV1,
 } from "./commerce/order-operations.js";
+export { allocateRefund, quotePrice } from "./commerce/money-pricing.js";
+export type {
+  MoneyAmountV1,
+  PriceLineInputV1,
+  PricePromotionV1,
+  PriceQuoteInputV1,
+  PriceQuoteLineV1,
+  PriceQuoteV1,
+  RefundAllocationInputV1,
+  RefundAllocationV1,
+} from "./commerce/money-pricing.js";
 export type {
   CapabilityBindingValueV1,
   CapabilityCompositionLockV1,
