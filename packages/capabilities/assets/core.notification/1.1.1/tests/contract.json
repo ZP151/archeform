@@ -1,0 +1,12 @@
+{
+  "status": "verified",
+  "checks": [
+    "enqueue-outbox",
+    "dedupe",
+    "bounded-retry",
+    "closed-template-enum",
+    "propagate-template-identifier",
+    "historical-template-null",
+    "remove-effect"
+  ]
+}

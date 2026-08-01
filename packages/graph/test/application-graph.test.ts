@@ -341,7 +341,7 @@ describe("ApplicationGraphV1", () => {
         integration: {
           ...selected.integration,
           compositionSelections: [
-            { lock: validLock, bindings: { sourcePath: "x" } },
+            { lock: validLock, bindings: { sourcePath: "../x" } },
           ],
         },
       }),
@@ -416,9 +416,29 @@ describe("ApplicationGraphV1", () => {
       value: "SELECT value FROM records",
     },
     { boundary: "normal user-facing copy", value: "Reservation request" },
+    { boundary: "URL material", value: "https://example.com/deliver" },
+    { boundary: "path material", value: "../templates/message.txt" },
   ])("rejects direct string $boundary in a Draft binding", ({ value }) => {
     expect(() =>
       parseApplicationGraph(draftGraphWithBindings({ label: value })),
+    ).toThrow();
+  });
+
+  it("accepts identifier-shaped Draft binding literals without accepting executable objects", () => {
+    const selected = draftGraphWithBindings({
+      template: "expense.approval-outcome",
+    });
+
+    expect(parseApplicationGraph(selected)).toEqual(selected);
+    expect(() =>
+      parseApplicationGraph(
+        draftGraphWithBindings({
+          template: {
+            kind: "executable",
+            source: "return process.env.SECRET",
+          },
+        }),
+      ),
     ).toThrow();
   });
 

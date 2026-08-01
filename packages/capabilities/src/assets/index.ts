@@ -9,6 +9,7 @@ import { crudAssetV1_0_1 } from "./core/crud-v1-0-1.js";
 import { notificationAsset } from "./core/notification.js";
 import { notificationAssetV1_0_1 } from "./core/notification-v1-0-1.js";
 import { notificationAssetV1_1_0 } from "./core/notification-v1-1-0.js";
+import { notificationAssetV1_1_1 } from "./core/notification-v1-1-1.js";
 import { workflowAsset } from "./core/workflow.js";
 import { workflowAssetV1_0_1 } from "./core/workflow-v1-0-1.js";
 import { identityContextAssetV1_0_0 } from "./core/identity-context-v1-0-0.js";
@@ -79,6 +80,7 @@ export {
   notificationAsset,
   notificationAssetV1_0_1,
   notificationAssetV1_1_0,
+  notificationAssetV1_1_1,
   orderAsset,
   orderAssetV1_1_0,
   orderAssetV1_2_0,
@@ -107,7 +109,7 @@ export const currentCapabilityAssets: readonly CapabilityAssetV1[] =
   Object.freeze([
     auditAssetV1_0_2,
     crudAssetV1_0_1,
-    notificationAssetV1_1_0,
+    notificationAssetV1_1_1,
     workflowAssetV1_0_1,
     identityContextAssetV1_0_0,
     identityPolicyAssetV1_0_0,
@@ -141,6 +143,7 @@ export const capabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
   lineConfigurationAssetV1_1_1,
   catalogAssetV1_1_0,
   orderAssetV1_1_0,
+  notificationAssetV1_1_0,
   notificationAssetV1_0_1,
   catalogAsset,
   auditAsset,

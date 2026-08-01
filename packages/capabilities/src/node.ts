@@ -126,13 +126,28 @@ const templateContributionSchema = z
     digest: digestSchema,
   })
   .strict();
-const parameterSchema = z
+const scalarParameterSchema = z
   .object({
     key: parameterKeySchema,
-    type: z.enum(["string", "number", "boolean", "graph-symbol"]),
+    type: z.enum(["number", "boolean", "graph-symbol"]),
     required: z.boolean(),
   })
   .strict();
+const enumParameterSchema = z
+  .object({
+    key: parameterKeySchema,
+    type: z.literal("enum"),
+    required: z.boolean(),
+    values: z
+      .array(z.string().regex(/^[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)+$/))
+      .min(1)
+      .refine((values) => new Set(values).size === values.length),
+  })
+  .strict();
+const parameterSchema = z.discriminatedUnion("type", [
+  scalarParameterSchema,
+  enumParameterSchema,
+]);
 const typedDomainFieldInputSchema = z
   .object({
     key: parameterKeySchema,

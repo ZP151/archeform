@@ -3,6 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
+  capabilityAssets,
   composeDefaultCapabilityDraft,
   composeProfileDraft,
   createCapabilityCompositionLock,
@@ -115,7 +116,10 @@ type GeneratedModule = {
 
 const testDirectory = dirname(fileURLToPath(import.meta.url));
 
-function publishedExpenseWithNotification(): PublishedGraphInput {
+function publishedExpenseWithNotification(
+  template?: string,
+  notificationVersion?: "1.1.0",
+): PublishedGraphInput {
   const graph = composeProfileDraft({ profile: "expense-approval" }).graph;
   graph.flow.flows = graph.flow.flows.map((flow) => ({
     ...flow,
@@ -131,9 +135,32 @@ function publishedExpenseWithNotification(): PublishedGraphInput {
         : transition,
     ),
   }));
-  const selections =
+  let selections =
     composeDefaultCapabilityDraft({ profile: "expense-approval" }).graph
       .integration.compositionSelections ?? [];
+  if (notificationVersion) {
+    const historical = capabilityAssets.find(
+      ({ manifest }) =>
+        manifest.key === "core.notification" &&
+        manifest.version === notificationVersion,
+    );
+    if (!historical) throw new Error("Historical notification asset missing.");
+    selections = selections.map((selection) =>
+      selection.lock.key === "core.notification"
+        ? { ...selection, lock: lockFromAsset(historical) }
+        : selection,
+    );
+  }
+  if (template !== undefined) {
+    selections = selections.map((selection) =>
+      selection.lock.key === "core.notification"
+        ? {
+            ...selection,
+            bindings: { ...selection.bindings, template },
+          }
+        : selection,
+    );
+  }
   return {
     publishedRevisionId: "published-expense-notification-runtime-1",
     graph,
@@ -142,6 +169,12 @@ function publishedExpenseWithNotification(): PublishedGraphInput {
       selections,
     }),
   };
+}
+
+function lockFromAsset(asset: (typeof capabilityAssets)[number]) {
+  const { key, version, packageRoot, manifestDigest, lifecycle } =
+    asset.manifest;
+  return { key, version, packageRoot, manifestDigest, lifecycle };
 }
 
 async function withGeneratedModule<T>(
@@ -473,6 +506,52 @@ describe("generated durable notification outbox runtime", () => {
         expect(pending[0]).not.toHaveProperty("recipient");
         expect(pending[0]).not.toHaveProperty("provider");
         expect(pending[0]).not.toHaveProperty("url");
+      },
+    );
+  });
+
+  it("carries a validated 1.1.1 template identifier into the generated outbox", async () => {
+    await withGeneratedModule(
+      publishedExpenseWithNotification("expense.approval-outcome"),
+      async (module) => {
+        const store = new module.InMemoryRecordStore();
+        const runtime = new module.ApplicationRuntime(store);
+        const expense = await runtime.create("employee", "expense", {
+          amount: "42.00",
+          description: "Team lunch",
+        });
+
+        await runtime.transition("employee", "expense", expense.id, "submit");
+
+        const pending = await store.claimDueNotifications(
+          "9999-12-31T23:59:59.999Z",
+          10,
+        );
+        expect(pending).toHaveLength(1);
+        expect(pending[0]?.template).toBe("expense.approval-outcome");
+      },
+    );
+  });
+
+  it("replays a historical 1.1.0 notification lock with a null template", async () => {
+    await withGeneratedModule(
+      publishedExpenseWithNotification(undefined, "1.1.0"),
+      async (module) => {
+        const store = new module.InMemoryRecordStore();
+        const runtime = new module.ApplicationRuntime(store);
+        const expense = await runtime.create("employee", "expense", {
+          amount: "42.00",
+          description: "Team lunch",
+        });
+
+        await runtime.transition("employee", "expense", expense.id, "submit");
+
+        const pending = await store.claimDueNotifications(
+          "9999-12-31T23:59:59.999Z",
+          10,
+        );
+        expect(pending).toHaveLength(1);
+        expect(pending[0]?.template).toBeNull();
       },
     );
   });

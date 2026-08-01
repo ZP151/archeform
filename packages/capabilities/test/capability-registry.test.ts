@@ -717,9 +717,22 @@ describe("capability catalog", () => {
 
     expect(asset.manifest).toMatchObject({
       key: "core.notification",
-      version: "1.1.0",
-      packageRoot: "packages/capabilities/assets/core.notification/1.1.0",
+      version: "1.1.1",
+      packageRoot: "packages/capabilities/assets/core.notification/1.1.1",
       provides: [{ interfaceKey: "notification.outbox", version: "v1" }],
+    });
+    expect(asset.manifest.parameters).toEqual([
+      { key: "recipientRole", type: "graph-symbol", required: true },
+      {
+        key: "template",
+        type: "enum",
+        required: false,
+        values: ["expense.approval-outcome", "ecommerce.order-outcome"],
+      },
+    ]);
+    expect(asset.manifest.verification).toMatchObject({
+      fixtureDigest: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
+      contractTestDigest: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
     });
     expect(asset.manifest.outputSlots).toEqual([
       "api.runtime",
@@ -728,6 +741,19 @@ describe("capability catalog", () => {
       "test.fixture",
       "flow.effect",
     ]);
+  });
+
+  it("keeps the historical notification 1.1.0 lock replayable", () => {
+    const lock = {
+      key: "core.notification",
+      version: "1.1.0",
+      packageRoot: "packages/capabilities/assets/core.notification/1.1.0",
+      manifestDigest:
+        "sha256:f566919daf40cd6a8a69f72c5d15d3395b8fd3f02e44259bf8c4178e8b766287",
+      lifecycle: "golden" as const,
+    };
+
+    expect(resolveCapabilityAssetLock(lock).manifest).toMatchObject(lock);
   });
 
   it("keeps the historical notification 1.0.1 lock replayable", () => {
@@ -780,7 +806,7 @@ describe("capability catalog", () => {
           : lock.key === "core.audit"
             ? "1.0.2"
             : lock.key === "core.notification"
-              ? "1.1.0"
+              ? "1.1.1"
               : "1.0.1",
       );
     }
@@ -800,7 +826,7 @@ describe("capability catalog", () => {
   });
 
   it("verifies every registered capability manifest against its declared digest", () => {
-    expect(capabilityAssets).toHaveLength(49);
+    expect(capabilityAssets).toHaveLength(50);
     for (const asset of capabilityAssets) {
       expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     }

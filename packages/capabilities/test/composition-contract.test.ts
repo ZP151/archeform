@@ -496,6 +496,60 @@ describe("capability composition contract", () => {
     ).toThrow("does not support parameter type 'string'");
   });
 
+  it.each(["expense.approval-outcome", "ecommerce.order-outcome"])(
+    "accepts declared notification template enum value %s",
+    (template) => {
+      const notification = getCapabilityAsset("core.notification");
+
+      const composition = resolveCapabilityComposition({
+        selections: [
+          selection(notification, {
+            recipientRole: { graphSymbol: "graph.policy.employee" },
+            template,
+          }),
+        ],
+      });
+
+      expect(composition.packages[0]?.bindings.template).toBe(template);
+    },
+  );
+
+  it("rejects an undeclared notification template enum value", () => {
+    const notification = getCapabilityAsset("core.notification");
+
+    expect(() =>
+      resolveCapabilityComposition({
+        selections: [
+          selection(notification, {
+            recipientRole: { graphSymbol: "graph.policy.employee" },
+            template: "expense.arbitrary-message",
+          }),
+        ],
+      }),
+    ).toThrow(
+      "must be one of: expense.approval-outcome, ecommerce.order-outcome",
+    );
+  });
+
+  it("rejects a direct string bound to a non-enum parameter", () => {
+    const graphSymbolAsset = asset("core.non-enum-string-test", {
+      parameters: [
+        { key: "recipientRole", type: "graph-symbol", required: true },
+      ],
+    });
+
+    expect(() =>
+      resolveSyntheticComposition({
+        assets: [graphSymbolAsset],
+        selections: [
+          selection(graphSymbolAsset, {
+            recipientRole: "employee",
+          }),
+        ],
+      }),
+    ).toThrow("must be a Graph symbol");
+  });
+
   it("resolves finite numbers, booleans, and exact Graph symbols", () => {
     const parameterAsset = asset("core.parameter-test", {
       parameters: [

@@ -662,7 +662,7 @@ function resolveNotificationOutboxRuntimeContribution(
       provided.version === "v1",
   );
   if (
-    asset.manifest.version !== "1.1.0" ||
+    !["1.1.0", "1.1.1"].includes(asset.manifest.version) ||
     asset.manifest.verification.status !== "verified" ||
     !providesOutbox
   ) {
@@ -687,10 +687,28 @@ function resolveNotificationOutboxRuntimeContribution(
       "Locked notification outbox recipientRole must target a declared policy role.",
     );
   }
+  const templateBinding = selection.bindings.template;
+  if (
+    asset.manifest.version === "1.1.1" &&
+    templateBinding !== undefined &&
+    typeof templateBinding !== "string"
+  ) {
+    throw new Error(
+      "Locked notification outbox template must be a declared enum identifier.",
+    );
+  }
+  let template: string | null = null;
+  if (asset.manifest.version === "1.1.1") {
+    if (templateBinding === undefined) {
+      template = null;
+    } else if (typeof templateBinding === "string") {
+      template = templateBinding;
+    }
+  }
   return Object.freeze({
     applicationId: input.graph.metadata.id,
     recipientRole,
-    template: null,
+    template,
   });
 }
 
@@ -927,6 +945,9 @@ function templateString(value: string): string {
 }
 
 function renderCapabilityBindingValue(value: CapabilityBindingValueV1): string {
+  if (typeof value === "string") {
+    return templateString(value);
+  }
   if (typeof value === "number" || typeof value === "boolean") {
     return String(value);
   }

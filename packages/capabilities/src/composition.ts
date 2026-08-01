@@ -18,7 +18,7 @@ export interface GraphFieldBindingV1 extends GraphSymbolBindingV1 {
 }
 
 export type CapabilityBindingValueV1 =
-  number | boolean | GraphSymbolBindingV1 | GraphFieldBindingV1;
+  string | number | boolean | GraphSymbolBindingV1 | GraphFieldBindingV1;
 
 export interface CapabilitySelectionV1 {
   readonly lock: CapabilityAssetLockV1;
@@ -70,6 +70,7 @@ const graphSymbolPattern =
 const domainEntitySymbolPattern = /^graph\.domain\.[a-z][a-z0-9-]*$/;
 const fieldKeyPattern = /^[a-z][a-zA-Z0-9_]*$/;
 const parameterKeyPattern = /^[a-z][a-zA-Z0-9]*$/;
+const enumValuePattern = /^[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)+$/;
 const prototypeReservedParameterKeys = new Set([
   "constructor",
   "hasOwnProperty",
@@ -80,7 +81,12 @@ const prototypeReservedParameterKeys = new Set([
   "toString",
   "valueOf",
 ]);
-const supportedParameterTypes = new Set(["number", "boolean", "graph-symbol"]);
+const supportedParameterTypes = new Set([
+  "number",
+  "boolean",
+  "graph-symbol",
+  "enum",
+]);
 const supportedBindingInputTypes = new Set<CapabilityBindingInputTypeV1>([
   "domain.entity",
   "domain.field",
@@ -118,6 +124,7 @@ const domainFieldBindingInputKeys = new Set([
 const graphSymbolBindingValueKeys = new Set(["graphSymbol"]);
 const domainFieldBindingValueKeys = new Set(["graphSymbol", "fieldKey"]);
 const strictParameterKeys = new Set(["key", "type", "required"]);
+const strictEnumParameterKeys = new Set(["key", "type", "required", "values"]);
 
 declare const resolutionInputSnapshotBrand: unique symbol;
 declare const manifestSnapshotBrand: unique symbol;
@@ -683,6 +690,12 @@ function normalizeBindingValue(
     }
     return value;
   }
+  if (schema.type === "enum") {
+    if (typeof value !== "string" || !schema.values.includes(value)) {
+      throw new Error(`${label} must be one of: ${schema.values.join(", ")}.`);
+    }
+    return value;
+  }
   if (bindingSchema?.type === "domain.field") {
     const snapshot = snapshotExactDataRecord(
       value,
@@ -785,13 +798,16 @@ function strictParameterSchemas(
   }
   const schemas = new Map<string, CapabilityParameterSchemaV1>();
   for (const untrustedParameter of parameters) {
-    const snapshot = snapshotExactDataRecord(
-      untrustedParameter,
-      strictParameterKeys,
-      ["key", "type", "required"],
-    );
+    const snapshot = snapshotOwnDataRecord(untrustedParameter);
+    const isEnum = snapshot?.type === "enum";
+    const allowedKeys = isEnum ? strictEnumParameterKeys : strictParameterKeys;
+    const requiredKeys = isEnum
+      ? ["key", "type", "required", "values"]
+      : ["key", "type", "required"];
     if (
       !snapshot ||
+      !Object.keys(snapshot).every((key) => allowedKeys.has(key)) ||
+      !requiredKeys.every((key) => Object.hasOwn(snapshot, key)) ||
       typeof snapshot.key !== "string" ||
       !parameterKeyPattern.test(snapshot.key) ||
       prototypeReservedParameterKeys.has(snapshot.key)
@@ -818,11 +834,51 @@ function strictParameterSchemas(
         `Capability package '${manifest.key}' declares duplicate parameter '${snapshot.key}'.`,
       );
     }
+    if (snapshot.type === "enum") {
+      const values: string[] = [];
+      if (!Array.isArray(snapshot.values) || snapshot.values.length === 0) {
+        throw new Error(
+          `Capability package '${manifest.key}' enum parameter '${snapshot.key}' must declare one or more safe identifier values.`,
+        );
+      }
+      for (const value of snapshot.values) {
+        if (typeof value !== "string" || !enumValuePattern.test(value)) {
+          throw new Error(
+            `Capability package '${manifest.key}' enum parameter '${snapshot.key}' must declare one or more safe identifier values.`,
+          );
+        }
+        values.push(value);
+      }
+      if (new Set(values).size !== values.length) {
+        throw new Error(
+          `Capability package '${manifest.key}' enum parameter '${snapshot.key}' declares duplicate values.`,
+        );
+      }
+      schemas.set(
+        snapshot.key,
+        deepFreeze({
+          key: snapshot.key,
+          type: "enum",
+          required: snapshot.required,
+          values,
+        }),
+      );
+      continue;
+    }
+    if (
+      snapshot.type !== "number" &&
+      snapshot.type !== "boolean" &&
+      snapshot.type !== "graph-symbol"
+    ) {
+      throw new Error(
+        `Capability package '${manifest.key}' does not support parameter type '${String(snapshot.type)}'.`,
+      );
+    }
     schemas.set(
       snapshot.key,
       deepFreeze({
         key: snapshot.key,
-        type: snapshot.type as CapabilityParameterSchemaV1["type"],
+        type: snapshot.type,
         required: snapshot.required,
       }),
     );

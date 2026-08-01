@@ -44,13 +44,26 @@ export type CapabilityRuntimeHandlerKindV1 =
   | "orderOperations"
   | "effect";
 
-export type CapabilityParameterTypeV1 = "number" | "boolean" | "graph-symbol";
+export type CapabilityParameterTypeV1 =
+  "number" | "boolean" | "graph-symbol" | "enum";
 
-export interface CapabilityParameterSchemaV1 {
+interface CapabilityParameterSchemaBaseV1 {
   readonly key: string;
-  readonly type: CapabilityParameterTypeV1;
   readonly required: boolean;
 }
+
+export interface CapabilityScalarParameterSchemaV1 extends CapabilityParameterSchemaBaseV1 {
+  readonly type: Exclude<CapabilityParameterTypeV1, "enum">;
+  readonly values?: never;
+}
+
+export interface CapabilityEnumParameterSchemaV1 extends CapabilityParameterSchemaBaseV1 {
+  readonly type: "enum";
+  readonly values: readonly string[];
+}
+
+export type CapabilityParameterSchemaV1 =
+  CapabilityScalarParameterSchemaV1 | CapabilityEnumParameterSchemaV1;
 
 export type CapabilityBindingContractV1 = "factory.capability-binding/v1";
 

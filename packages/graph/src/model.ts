@@ -155,6 +155,11 @@ const compositionBindingKey = z
     "Composition binding key must be prototype-safe.",
   );
 const compositionBindingValueSchema = z.union([
+  z
+    .string()
+    .min(1)
+    .max(160)
+    .regex(/^[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)+$/),
   z.number().finite(),
   z.boolean(),
   z

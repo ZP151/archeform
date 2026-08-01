@@ -1,0 +1,31 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": [
+    "api.runtime",
+    "api.persistence",
+    "api.worker",
+    "test.fixture",
+    "flow.effect"
+  ],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/core.notification.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:b9a745255d242339486fff29d6f7abd3f751e36df3e348f896956a31c6b53266"
+    }
+  ],
+  "parameters": [
+    { "key": "recipientRole", "type": "graph-symbol", "required": true },
+    {
+      "key": "template",
+      "type": "enum",
+      "required": false,
+      "values": ["expense.approval-outcome", "ecommerce.order-outcome"]
+    }
+  ],
+  "contributes": { "effects": ["notification.send"] },
+  "disable": { "removeIntegrationCapabilities": ["notification.send"] }
+}
