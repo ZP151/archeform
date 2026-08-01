@@ -1997,6 +1997,49 @@ describe("capability catalog", () => {
       resolveCapabilityAssetLock(lockCapabilityAsset(successorTransaction))
         .manifest.version,
     ).toBe("2.2.0");
+    const repositoryRoot = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "../../..",
+    );
+    expect(
+      loadCapabilityAssetContributions(successorOrder, repositoryRoot).map(
+        ({ source, target, outputSlot, digest }) => ({
+          source,
+          target,
+          outputSlot,
+          digest,
+        }),
+      ),
+    ).toEqual(
+      successorOrder.manifest.executableContributions?.map(
+        ({ source, target, outputSlot, digest }) => ({
+          source,
+          target,
+          outputSlot,
+          digest,
+        }),
+      ),
+    );
+    expect(
+      loadCapabilityAssetContributions(
+        successorTransaction,
+        repositoryRoot,
+      ).map(({ source, target, outputSlot, digest }) => ({
+        source,
+        target,
+        outputSlot,
+        digest,
+      })),
+    ).toEqual(
+      successorTransaction.manifest.executableContributions?.map(
+        ({ source, target, outputSlot, digest }) => ({
+          source,
+          target,
+          outputSlot,
+          digest,
+        }),
+      ),
+    );
     const successorSelections = defaultSelections.map((selection) => {
       if (selection.lock.key === "commerce.order") {
         return { ...selection, lock: lockCapabilityAsset(successorOrder) };

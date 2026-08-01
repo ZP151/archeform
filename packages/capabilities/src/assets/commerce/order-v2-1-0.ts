@@ -12,7 +12,7 @@ export const orderAssetV2_1_0: CapabilityAssetV1 = {
       "Creates authorized persisted orders and adapts bounded order events to the exact Transaction Command V2 contract.",
     packageRoot: "packages/capabilities/assets/commerce.order/2.1.0",
     manifestDigest:
-      "sha256:28397085ca76f1c78d18307ed647322e4422a2a4e3992b5b6427ad9b59f6a0d9",
+      "sha256:0f51cb26629fc2ba159a49aa2e73c47b2ed26591a31f644a189583cea6f5c8fc",
     lifecycle: "golden",
     profiles: ["simple-ecommerce", "retail-counter", "grocery-pickup"],
     effects: ["order.create", "order.transition"],
@@ -29,7 +29,53 @@ export const orderAssetV2_1_0: CapabilityAssetV1 = {
       { key: "orderFlow", type: "graph-symbol", required: true },
       { key: "customerRole", type: "graph-symbol", required: true },
     ],
-    executableContributions: [],
+    executableContributions: [
+      {
+        id: "commerce-order-create-handler",
+        outputSlot: "api.runtime",
+        namespace: "packages/commerce.order/api/runtime/",
+        source: "templates/api/commerce-order-create-handler.ts.tpl",
+        target: "api/src/capabilities/commerce-order-create-handler.ts",
+        parameterRefs: ["orderEntity", "orderFlow", "customerRole"],
+        targetRuntimeInterfaceVersion: "factory.order-create-handler/v1",
+        orderingRequirements: [],
+        mergeProtocol: "replace-file",
+        digest:
+          "sha256:14f8d5f58ef89945dbb32d80035e1c673bdea57225710f0fa5d2059a142eab1b",
+      },
+      {
+        id: "commerce-order-transaction-operation-adapter",
+        outputSlot: "api.runtime",
+        namespace: "packages/commerce.order/api/runtime/",
+        source:
+          "templates/api/commerce-order-transaction-operation-adapter.ts.tpl",
+        target:
+          "api/src/capabilities/commerce-order-transaction-operation-adapter.ts",
+        parameterRefs: ["orderEntity", "orderFlow", "customerRole"],
+        targetRuntimeInterfaceVersion:
+          "factory.transaction-operation-adapter/v2",
+        orderingRequirements: ["commerce-order-create-handler"],
+        mergeProtocol: "replace-file",
+        digest:
+          "sha256:dc16cfad117abe351361ea05ae0fbac87bddf62d3f13c4da965a5a9727ec9b32",
+      },
+      {
+        id: "commerce-order-lifecycle-journey",
+        outputSlot: "test.journey",
+        namespace: "packages/commerce.order/test/journeys/",
+        source: "templates/test/commerce-order-lifecycle.journey.ts.tpl",
+        target: "api/test/journeys/commerce-order-lifecycle.journey.ts",
+        parameterRefs: ["orderEntity", "orderFlow", "customerRole"],
+        targetRuntimeInterfaceVersion: "factory.journey/v1",
+        orderingRequirements: [
+          "commerce-order-create-handler",
+          "commerce-order-transaction-operation-adapter",
+        ],
+        mergeProtocol: "replace-file",
+        digest:
+          "sha256:91400ed48f14d74e0f6671c41ab144fc53d083ea7f4c347af9cb13c8813583f5",
+      },
+    ],
     provides: [
       { interfaceKey: "commerce.order-event", version: "v1" },
       { interfaceKey: "factory.order-create-handler", version: "v1" },

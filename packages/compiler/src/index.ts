@@ -259,7 +259,8 @@ function assertCanonicalCompositionLock(
   }
 }
 
-type CommerceTransactionCompilationMode = "legacy-v1" | "generic-v2";
+type CommerceTransactionCompilationMode =
+  "legacy-v1" | "generic-v1" | "generic-v2";
 
 function assertLockedCommerceTransaction(
   input: PublishedGraphInput,
@@ -278,8 +279,10 @@ function assertLockedCommerceTransaction(
     transaction.lock.version === "1.0.0"
       ? "legacy-v1"
       : transaction.lock.version === "2.1.0"
-        ? "generic-v2"
-        : undefined;
+        ? "generic-v1"
+        : transaction.lock.version === "2.2.0"
+          ? "generic-v2"
+          : undefined;
   if (!mode) {
     throw new Error(
       `Commerce compilation does not support locked commerce.transaction@${transaction.lock.version}.`,
@@ -320,13 +323,17 @@ function assertLockedCommerceTransaction(
       throw new Error(`Commerce compilation requires locked '${packageKey}'.`);
     }
   }
-  if (mode === "generic-v2") {
+  if (mode === "generic-v1" || mode === "generic-v2") {
     const orders = lock.packages.filter(
       ({ lock: packageLock }) => packageLock.key === "commerce.order",
     );
-    if (orders.length !== 1 || orders[0]!.lock.version !== "2.0.3") {
+    const requiredOrderVersion = mode === "generic-v2" ? "2.1.0" : "2.0.3";
+    if (
+      orders.length !== 1 ||
+      orders[0]!.lock.version !== requiredOrderVersion
+    ) {
       throw new Error(
-        "Generic Commerce transaction compilation requires exactly one locked Golden commerce.order@2.0.3 package.",
+        `Generic Commerce transaction compilation requires exactly one locked Golden commerce.order@${requiredOrderVersion} package.`,
       );
     }
   }
@@ -603,16 +610,27 @@ function resolveGenericOrderLifecycleContributions(
   plans: readonly PlannedTargetContribution[],
   mode: CommerceTransactionCompilationMode | undefined,
 ): GenericOrderLifecycleContributions | undefined {
-  if (mode !== "generic-v2") return undefined;
+  if (mode !== "generic-v1" && mode !== "generic-v2") return undefined;
   const lock = assertCanonicalCompositionLock(input);
+  const orderVersion = mode === "generic-v2" ? "2.1.0" : "2.0.3";
+  const transactionVersion = mode === "generic-v2" ? "2.2.0" : "2.1.0";
+  const operationAdapterVersion =
+    mode === "generic-v2"
+      ? "factory.transaction-operation-adapter/v2"
+      : "factory.transaction-operation-adapter/v1";
+  const executorVersion =
+    mode === "generic-v2"
+      ? "factory.transaction-executor/v2"
+      : "factory.transaction-executor/v1";
   const orderSelection = lock.packages.find(
     ({ lock: packageLock }) =>
-      packageLock.key === "commerce.order" && packageLock.version === "2.0.3",
+      packageLock.key === "commerce.order" &&
+      packageLock.version === orderVersion,
   );
   const transactionSelection = lock.packages.find(
     ({ lock: packageLock }) =>
       packageLock.key === "commerce.transaction" &&
-      packageLock.version === "2.1.0",
+      packageLock.version === transactionVersion,
   );
   if (!orderSelection || !transactionSelection) {
     throw new Error("Generic Commerce lifecycle lock pair is incomplete.");
@@ -660,35 +678,35 @@ function resolveGenericOrderLifecycleContributions(
   return {
     create: exactlyOne(
       "commerce.order",
-      "2.0.3",
+      orderVersion,
       "commerce-order-create-handler",
       "factory.order-create-handler/v1",
       "api/src/capabilities/commerce-order-create-handler.ts",
     ),
     operationAdapter: exactlyOne(
       "commerce.order",
-      "2.0.3",
+      orderVersion,
       "commerce-order-transaction-operation-adapter",
-      "factory.transaction-operation-adapter/v1",
+      operationAdapterVersion,
       "api/src/capabilities/commerce-order-transaction-operation-adapter.ts",
     ),
     executor: exactlyOne(
       "commerce.transaction",
-      "2.1.0",
+      transactionVersion,
       "commerce-transaction-executor",
-      "factory.transaction-executor/v1",
+      executorVersion,
       "api/src/capabilities/commerce-transaction-executor.ts",
     ),
     schema: exactlyOne(
       "commerce.transaction",
-      "2.1.0",
+      transactionVersion,
       "commerce-transaction-schema",
       "factory.prisma-schema/v1",
       "database/prisma/fragments/commerce-transaction.prisma",
     ),
     migration: exactlyOne(
       "commerce.transaction",
-      "2.1.0",
+      transactionVersion,
       "commerce-transaction-migration",
       "factory.prisma-migration/v1",
       "database/prisma/migrations/commerce-transaction.sql",
@@ -1729,6 +1747,7 @@ function renderApplicationRuntime(
   graph: ApplicationGraphV1,
   useResolvedContributions: boolean,
   useGenericOrderLifecycleV2: boolean,
+  useDurableReceiptLease: boolean,
   usePackageCartHandler: boolean,
   usePackageLineConfigurationHandler: boolean,
   catalogEntityKey: string | undefined,
@@ -1752,10 +1771,12 @@ function renderApplicationRuntime(
   return [
     ...(useGenericOrderLifecycleV2
       ? [
-          'import { createHash } from "node:crypto";',
+          `import { createHash${useDurableReceiptLease ? ", randomUUID" : ""} } from "node:crypto";`,
           'import { commerceOrderCreateHandler } from "./capabilities/commerce-order-create-handler.js";',
           'import { commerceOrderTransactionOperationAdapter } from "./capabilities/commerce-order-transaction-operation-adapter.js";',
-          'import { CommerceTransactionExecutor, type CommerceTransactionClaimV1, type CommerceTransactionOutcomeV1, type CommerceTransactionStoreV1 } from "./capabilities/commerce-transaction-executor.js";',
+          useDurableReceiptLease
+            ? 'import { CommerceTransactionExecutor, type ReceiptClaimV2, type TransactionOutcomeV2, type TransactionStoreV2 } from "./capabilities/commerce-transaction-executor.js";'
+            : 'import { CommerceTransactionExecutor, type CommerceTransactionClaimV1, type CommerceTransactionOutcomeV1, type CommerceTransactionStoreV1 } from "./capabilities/commerce-transaction-executor.js";',
           "",
         ]
       : []),
@@ -1770,9 +1791,15 @@ function renderApplicationRuntime(
     ...(useGenericOrderLifecycleV2
       ? [
           "export type OrderTransitionReceipt = Readonly<{ receiptId: string; replayed: boolean; orderId: string; transition: string }>;",
-          "type TransactionReceiptState = { receiptId: string; payloadDigest: string; status: 'pending' | 'completed'; outcome?: CommerceTransactionOutcomeV1 };",
-          "export type TransactionReceiptClaim = CommerceTransactionClaimV1;",
-          "export type TransactionOutcome = CommerceTransactionOutcomeV1;",
+          useDurableReceiptLease
+            ? "type TransactionReceiptState = { receiptId: string; payloadDigest: string; state: 'claimed' | 'completed' | 'retryable'; leaseExpiresAt: number; leaseEpoch: number; leaseToken: string; outcome?: TransactionOutcomeV2 };"
+            : "type TransactionReceiptState = { receiptId: string; payloadDigest: string; status: 'pending' | 'completed'; outcome?: CommerceTransactionOutcomeV1 };",
+          useDurableReceiptLease
+            ? "export type TransactionReceiptClaim = ReceiptClaimV2;"
+            : "export type TransactionReceiptClaim = CommerceTransactionClaimV1;",
+          useDurableReceiptLease
+            ? "export type TransactionOutcome = TransactionOutcomeV2;"
+            : "export type TransactionOutcome = CommerceTransactionOutcomeV1;",
         ]
       : []),
     ...(commerce
@@ -1784,8 +1811,18 @@ function renderApplicationRuntime(
     ...(useGenericOrderLifecycleV2
       ? [
           "  transaction<T>(operation: () => Promise<T>): Promise<T>;",
-          "  claimTransactionReceipt(input: { scope: string; idempotencyKey: string; payloadDigest: string }): Promise<TransactionReceiptClaim>;",
-          "  completeTransactionReceipt(input: { receiptId: string; outcome: TransactionOutcome }): Promise<void>;",
+          useDurableReceiptLease
+            ? "  claimTransactionReceipt(input: { scope: string; idempotencyKey: string; payloadDigest: string; leaseDurationMs?: number }): Promise<TransactionReceiptClaim>;"
+            : "  claimTransactionReceipt(input: { scope: string; idempotencyKey: string; payloadDigest: string }): Promise<TransactionReceiptClaim>;",
+          useDurableReceiptLease
+            ? "  markTransactionReceiptRetryable(input: { receiptId: string; leaseToken: string; leaseEpoch: number }): Promise<void>;"
+            : "",
+          useDurableReceiptLease
+            ? "  completeTransactionReceipt(input: { receiptId: string; leaseToken: string; leaseEpoch: number; outcome: TransactionOutcome }): Promise<void>;"
+            : "  completeTransactionReceipt(input: { receiptId: string; outcome: TransactionOutcome }): Promise<void>;",
+          useDurableReceiptLease
+            ? "  applyExpectedAggregateVersion(input: { entity: string; id: string; expectedVersion: number; expectedStatus: string; nextStatus: string }): Promise<boolean>;"
+            : "",
         ]
       : []),
     "  list(entityKey: string): Promise<readonly StoredRecord[]>;",
@@ -1851,24 +1888,69 @@ function renderApplicationRuntime(
           "    }",
           "  }",
           "",
-          "  async claimTransactionReceipt({ scope, idempotencyKey, payloadDigest }: { scope: string; idempotencyKey: string; payloadDigest: string }): Promise<TransactionReceiptClaim> {",
-          "    const key = `${scope}\u0000${idempotencyKey}`;",
-          "    const existing = this.transactionReceipts.get(key);",
-          "    if (existing) {",
-          "      if (existing.payloadDigest !== payloadDigest) return { kind: 'payload-mismatch', receiptId: existing.receiptId };",
-          "      if (existing.status === 'completed') return { kind: 'completed', receiptId: existing.receiptId, outcome: existing.outcome! };",
-          "      return { kind: 'in-progress', receiptId: existing.receiptId };",
-          "    }",
-          "    const receiptId = `receipt-${this.transactionReceipts.size + 1}`;",
-          "    this.transactionReceipts.set(key, { receiptId, payloadDigest, status: 'pending' });",
-          "    return { kind: 'claimed', receiptId };",
-          "  }",
-          "  async completeTransactionReceipt({ receiptId, outcome }: { receiptId: string; outcome: TransactionOutcome }): Promise<void> {",
-          "    const receipt = [...this.transactionReceipts.values()].find((candidate) => candidate.receiptId === receiptId);",
-          "    if (!receipt) throw new Error(`Transaction receipt '${receiptId}' was not claimed.`);",
-          "    receipt.status = 'completed';",
-          "    receipt.outcome = outcome;",
-          "  }",
+          ...(useDurableReceiptLease
+            ? [
+                "  async claimTransactionReceipt({ scope, idempotencyKey, payloadDigest, leaseDurationMs = 30_000 }: { scope: string; idempotencyKey: string; payloadDigest: string; leaseDurationMs?: number }): Promise<TransactionReceiptClaim> {",
+                "    const key = `${scope}\u0000${idempotencyKey}`;",
+                "    const now = Date.now();",
+                "    const existing = this.transactionReceipts.get(key);",
+                "    if (existing) {",
+                "      if (existing.payloadDigest !== payloadDigest) return { kind: 'payload-mismatch', receiptId: existing.receiptId };",
+                "      if (existing.state === 'completed') return { kind: 'completed', receiptId: existing.receiptId, outcome: existing.outcome! };",
+                "      if (existing.state === 'claimed' && existing.leaseExpiresAt > now) return { kind: 'in-progress', receiptId: existing.receiptId, retryAfterMs: existing.leaseExpiresAt - now };",
+                "      existing.state = 'claimed';",
+                "      existing.leaseToken = randomUUID();",
+                "      existing.leaseEpoch += 1;",
+                "      existing.leaseExpiresAt = now + Math.max(1, leaseDurationMs);",
+                "      return { kind: 'claimed', receiptId: existing.receiptId, leaseToken: existing.leaseToken, leaseEpoch: existing.leaseEpoch };",
+                "    }",
+                "    const receiptId = `receipt-${this.transactionReceipts.size + 1}`;",
+                "    const receipt: TransactionReceiptState = { receiptId, payloadDigest, state: 'claimed', leaseExpiresAt: now + Math.max(1, leaseDurationMs), leaseEpoch: 1, leaseToken: randomUUID() };",
+                "    this.transactionReceipts.set(key, receipt);",
+                "    return { kind: 'claimed', receiptId, leaseToken: receipt.leaseToken, leaseEpoch: receipt.leaseEpoch };",
+                "  }",
+                "  private ownedTransactionReceipt({ receiptId, leaseToken, leaseEpoch }: { receiptId: string; leaseToken: string; leaseEpoch: number }): TransactionReceiptState {",
+                "    const receipt = [...this.transactionReceipts.values()].find((candidate) => candidate.receiptId === receiptId);",
+                "    if (!receipt || receipt.state !== 'claimed' || receipt.leaseToken !== leaseToken || receipt.leaseEpoch !== leaseEpoch) throw new Error(`Transaction receipt '${receiptId}' lease ownership changed.`);",
+                "    return receipt;",
+                "  }",
+                "  async markTransactionReceiptRetryable(input: { receiptId: string; leaseToken: string; leaseEpoch: number }): Promise<void> {",
+                "    const receipt = this.ownedTransactionReceipt(input);",
+                "    receipt.state = 'retryable';",
+                "    receipt.leaseExpiresAt = 0;",
+                "  }",
+                "  async completeTransactionReceipt(input: { receiptId: string; leaseToken: string; leaseEpoch: number; outcome: TransactionOutcome }): Promise<void> {",
+                "    const receipt = this.ownedTransactionReceipt(input);",
+                "    receipt.state = 'completed';",
+                "    receipt.outcome = input.outcome;",
+                "  }",
+                "  async applyExpectedAggregateVersion({ entity, id, expectedVersion, expectedStatus, nextStatus }: { entity: string; id: string; expectedVersion: number; expectedStatus: string; nextStatus: string }): Promise<boolean> {",
+                "    const aggregate = await this.find(entity, id);",
+                "    if (!aggregate || aggregate.version !== expectedVersion || aggregate.status !== expectedStatus) return false;",
+                "    await this.update(entity, id, { status: nextStatus, version: expectedVersion + 1 });",
+                "    return true;",
+                "  }",
+              ]
+            : [
+                "  async claimTransactionReceipt({ scope, idempotencyKey, payloadDigest }: { scope: string; idempotencyKey: string; payloadDigest: string }): Promise<TransactionReceiptClaim> {",
+                "    const key = `${scope}\u0000${idempotencyKey}`;",
+                "    const existing = this.transactionReceipts.get(key);",
+                "    if (existing) {",
+                "      if (existing.payloadDigest !== payloadDigest) return { kind: 'payload-mismatch', receiptId: existing.receiptId };",
+                "      if (existing.status === 'completed') return { kind: 'completed', receiptId: existing.receiptId, outcome: existing.outcome! };",
+                "      return { kind: 'in-progress', receiptId: existing.receiptId };",
+                "    }",
+                "    const receiptId = `receipt-${this.transactionReceipts.size + 1}`;",
+                "    this.transactionReceipts.set(key, { receiptId, payloadDigest, status: 'pending' });",
+                "    return { kind: 'claimed', receiptId };",
+                "  }",
+                "  async completeTransactionReceipt({ receiptId, outcome }: { receiptId: string; outcome: TransactionOutcome }): Promise<void> {",
+                "    const receipt = [...this.transactionReceipts.values()].find((candidate) => candidate.receiptId === receiptId);",
+                "    if (!receipt) throw new Error(`Transaction receipt '${receiptId}' was not claimed.`);",
+                "    receipt.status = 'completed';",
+                "    receipt.outcome = outcome;",
+                "  }",
+              ]),
           "",
         ]
       : []),
@@ -2242,47 +2324,85 @@ function renderApplicationRuntime(
         ]
       : []),
     ...(useGenericOrderLifecycleV2 && orderEntityKey
-      ? [
-          `    if (entityKey === ${JSON.stringify(orderEntityKey)}) {`,
-          "      const transactionEvent = event === 'pay' ? 'confirm' : event === 'fulfil' ? 'fulfill' : event;",
-          "      const payloadDigest = `sha256:${createHash('sha256').update(JSON.stringify({ entityKey, recordId, event, expectedVersion: options.expectedVersion })).digest('hex')}`;",
-          "      const parsed = commerceOrderTransactionOperationAdapter.parseRequest({ orderId: recordId, expectedVersion: options.expectedVersion, transition: transactionEvent, idempotencyKey: options.idempotencyKey, payloadDigest });",
-          "      const prepared = commerceOrderTransactionOperationAdapter.prepare(parsed);",
-          "      const effects = this.declaredFactoryEffects(transition.effects);",
-          "      const transactionStore: CommerceTransactionStoreV1 = {",
-          "        transaction: <T>(operation: () => Promise<T>): Promise<T> => this.store.transaction(operation),",
-          "        claimReceipt: (input): Promise<CommerceTransactionClaimV1> => this.store.claimTransactionReceipt(input),",
-          "        applyExpectedAggregateVersion: async ({ entity, id, expectedVersion }) => {",
-          "          const aggregate = await this.store.find(entity, id);",
-          "          if (!aggregate || aggregate.version !== expectedVersion || aggregate.status !== transition.from) return false;",
-          "          await this.store.update(entity, id, { status: transition.to, version: expectedVersion + 1 });",
-          "          return true;",
-          "        },",
-          "        appendInventoryMovement: async () => this.executeTransactionEffects(role, entityKey, recordId, effects, 'inventory'),",
-          "        appendAuditRecord: async () => {",
-          "          await this.executeTransactionEffects(role, entityKey, recordId, effects, 'audit');",
-          "          await this.store.appendAudit({ actor: role, action: event, entity: entityKey, recordId, at: new Date().toISOString() });",
-          "        },",
-          "        appendOutboxEvent: async () => {",
-          "          await this.executeTransactionEffects(role, entityKey, recordId, effects, 'outbox');",
-          "          await this.appendTransactionOutbox(role, entityKey, recordId, effects);",
-          "        },",
-          "        completeReceipt: (input) => this.store.completeTransactionReceipt(input),",
-          "      };",
-          "      const dependencies = { transactionExecutor: new CommerceTransactionExecutor(transactionStore), operationStore: transactionStore };",
-          "      const operationStore = commerceOrderTransactionOperationAdapter.createStore(prepared.context, dependencies);",
-          "      const executor = new CommerceTransactionExecutor(operationStore);",
-          "      const result = await executor.execute(prepared.command);",
-          "      return commerceOrderTransactionOperationAdapter.present(result, prepared.context);",
-          "    }",
-          "    await this.executeEffects(role, entityKey, recordId, transition.effects);",
-          "    const updated = await getWorkflowHandler().applyTransition({",
-          "      store: this.store,",
-          "      entityKey,",
-          "      recordId,",
-          "      nextState: transition.to,",
-          "    });",
-        ]
+      ? useDurableReceiptLease
+        ? [
+            `    if (entityKey === ${JSON.stringify(orderEntityKey)}) {`,
+            "      const transactionEvent = event === 'pay' ? 'confirm' : event === 'fulfil' ? 'fulfill' : event;",
+            "      const payloadDigest = `sha256:${createHash('sha256').update(JSON.stringify({ entityKey, recordId, event, expectedVersion: options.expectedVersion, expectedState: transition.from })).digest('hex')}`;",
+            "      const parsed = commerceOrderTransactionOperationAdapter.parseRequest({ orderId: recordId, expectedVersion: options.expectedVersion, expectedState: transition.from, event: transactionEvent, idempotencyKey: options.idempotencyKey, payloadDigest });",
+            "      const prepared = commerceOrderTransactionOperationAdapter.prepare(parsed);",
+            "      const effects = this.declaredFactoryEffects(transition.effects);",
+            "      const transactionStore: TransactionStoreV2 = {",
+            "        transaction: <T>(operation: () => Promise<T>): Promise<T> => this.store.transaction(operation),",
+            "        claimReceipt: (input): Promise<ReceiptClaimV2> => this.store.claimTransactionReceipt(input),",
+            "        markReceiptRetryable: (input) => this.store.markTransactionReceiptRetryable(input),",
+            "        applyExpectedAggregateVersion: ({ entity, id, expectedVersion, expectedState }) => this.store.applyExpectedAggregateVersion({ entity, id, expectedVersion, expectedStatus: expectedState, nextStatus: transition.to }),",
+            "        appendInventoryMovement: async () => this.executeTransactionEffects(role, entityKey, recordId, effects, 'inventory'),",
+            "        appendAuditRecord: async () => {",
+            "          await this.executeTransactionEffects(role, entityKey, recordId, effects, 'audit');",
+            "          await this.store.appendAudit({ actor: role, action: event, entity: entityKey, recordId, at: new Date().toISOString() });",
+            "        },",
+            "        appendOutboxEvent: async () => {",
+            "          await this.executeTransactionEffects(role, entityKey, recordId, effects, 'outbox');",
+            "          await this.appendTransactionOutbox(role, entityKey, recordId, effects);",
+            "        },",
+            "        completeReceipt: (input) => this.store.completeTransactionReceipt(input),",
+            "      };",
+            "      const dependencies = { transactionExecutor: new CommerceTransactionExecutor(transactionStore), operationStore: transactionStore };",
+            "      const operationStore = commerceOrderTransactionOperationAdapter.createStore(prepared.context, dependencies);",
+            "      const executor = new CommerceTransactionExecutor(operationStore);",
+            "      const result = await executor.execute(prepared.command);",
+            "      return commerceOrderTransactionOperationAdapter.present(result, prepared.context);",
+            "    }",
+            "    await this.executeEffects(role, entityKey, recordId, transition.effects);",
+            "    const updated = await getWorkflowHandler().applyTransition({",
+            "      store: this.store,",
+            "      entityKey,",
+            "      recordId,",
+            "      nextState: transition.to,",
+            "    });",
+          ]
+        : [
+            `    if (entityKey === ${JSON.stringify(orderEntityKey)}) {`,
+            "      const transactionEvent = event === 'pay' ? 'confirm' : event === 'fulfil' ? 'fulfill' : event;",
+            "      const payloadDigest = `sha256:${createHash('sha256').update(JSON.stringify({ entityKey, recordId, event, expectedVersion: options.expectedVersion })).digest('hex')}`;",
+            "      const parsed = commerceOrderTransactionOperationAdapter.parseRequest({ orderId: recordId, expectedVersion: options.expectedVersion, transition: transactionEvent, idempotencyKey: options.idempotencyKey, payloadDigest });",
+            "      const prepared = commerceOrderTransactionOperationAdapter.prepare(parsed);",
+            "      const effects = this.declaredFactoryEffects(transition.effects);",
+            "      const transactionStore: CommerceTransactionStoreV1 = {",
+            "        transaction: <T>(operation: () => Promise<T>): Promise<T> => this.store.transaction(operation),",
+            "        claimReceipt: (input): Promise<CommerceTransactionClaimV1> => this.store.claimTransactionReceipt(input),",
+            "        applyExpectedAggregateVersion: async ({ entity, id, expectedVersion }) => {",
+            "          const aggregate = await this.store.find(entity, id);",
+            "          if (!aggregate || aggregate.version !== expectedVersion || aggregate.status !== transition.from) return false;",
+            "          await this.store.update(entity, id, { status: transition.to, version: expectedVersion + 1 });",
+            "          return true;",
+            "        },",
+            "        appendInventoryMovement: async () => this.executeTransactionEffects(role, entityKey, recordId, effects, 'inventory'),",
+            "        appendAuditRecord: async () => {",
+            "          await this.executeTransactionEffects(role, entityKey, recordId, effects, 'audit');",
+            "          await this.store.appendAudit({ actor: role, action: event, entity: entityKey, recordId, at: new Date().toISOString() });",
+            "        },",
+            "        appendOutboxEvent: async () => {",
+            "          await this.executeTransactionEffects(role, entityKey, recordId, effects, 'outbox');",
+            "          await this.appendTransactionOutbox(role, entityKey, recordId, effects);",
+            "        },",
+            "        completeReceipt: (input) => this.store.completeTransactionReceipt(input),",
+            "      };",
+            "      const dependencies = { transactionExecutor: new CommerceTransactionExecutor(transactionStore), operationStore: transactionStore };",
+            "      const operationStore = commerceOrderTransactionOperationAdapter.createStore(prepared.context, dependencies);",
+            "      const executor = new CommerceTransactionExecutor(operationStore);",
+            "      const result = await executor.execute(prepared.command);",
+            "      return commerceOrderTransactionOperationAdapter.present(result, prepared.context);",
+            "    }",
+            "    await this.executeEffects(role, entityKey, recordId, transition.effects);",
+            "    const updated = await getWorkflowHandler().applyTransition({",
+            "      store: this.store,",
+            "      entityKey,",
+            "      recordId,",
+            "      nextState: transition.to,",
+            "    });",
+          ]
       : useResolvedContributions && orderEntityKey
         ? [
             `    if (entityKey === ${JSON.stringify(orderEntityKey)}) {`,
@@ -2358,6 +2478,7 @@ function renderPrismaRecordStore(
   graph: ApplicationGraphV1,
   hasRestaurantRuntime: boolean,
   useGenericOrderLifecycleV2: boolean,
+  useDurableReceiptLease: boolean,
 ): string {
   const commerce = hasCommerceCapabilities(graph);
   const capabilityOutcome = hasRestaurantRuntime ? "succeeded" : "completed";
@@ -2382,6 +2503,11 @@ function renderPrismaRecordStore(
     "  findUnique(input: { where: { id: string } }): Promise<unknown | null>;",
     "  create(input: { data: Record<string, unknown> }): Promise<unknown>;",
     "  update(input: { where: { id: string }; data: Record<string, unknown> }): Promise<unknown>;",
+    ...(useDurableReceiptLease
+      ? [
+          "  updateMany(input: { where: Record<string, unknown>; data: Record<string, unknown> }): Promise<{ count: number }>;",
+        ]
+      : []),
     "};",
     "type AuditDelegate = {",
     "  create(input: { data: Record<string, unknown> }): Promise<unknown>;",
@@ -2400,13 +2526,22 @@ function renderPrismaRecordStore(
         ]
       : []),
     ...(useGenericOrderLifecycleV2
-      ? [
-          "type TransactionReceiptRow = { id: string; payloadDigest: string; outcomeJson: unknown; completedAt: Date | null };",
-          "type TransactionReceiptDelegate = {",
-          "  upsert(input: { where: { scope_idempotencyKey: { scope: string; idempotencyKey: string } }; create: Record<string, unknown>; update: Record<string, never> }): Promise<TransactionReceiptRow>;",
-          "  update(input: { where: { id: string }; data: Record<string, unknown> }): Promise<TransactionReceiptRow>;",
-          "};",
-        ]
+      ? useDurableReceiptLease
+        ? [
+            "type TransactionReceiptRow = { id: string; payloadDigest: string; state: 'claimed' | 'completed' | 'retryable'; leaseExpiresAt: Date | null; leaseEpoch: number; leaseToken: string | null; terminalOutcome: unknown };",
+            "type TransactionReceiptDelegate = {",
+            "  upsert(input: Record<string, unknown>): Promise<TransactionReceiptRow>;",
+            "  findUnique(input: Record<string, unknown>): Promise<TransactionReceiptRow | null>;",
+            "  updateMany(input: Record<string, unknown>): Promise<{ count: number }>;",
+            "};",
+          ]
+        : [
+            "type TransactionReceiptRow = { id: string; payloadDigest: string; outcomeJson: unknown; completedAt: Date | null };",
+            "type TransactionReceiptDelegate = {",
+            "  upsert(input: { where: { scope_idempotencyKey: { scope: string; idempotencyKey: string } }; create: Record<string, unknown>; update: Record<string, never> }): Promise<TransactionReceiptRow>;",
+            "  update(input: { where: { id: string }; data: Record<string, unknown> }): Promise<TransactionReceiptRow>;",
+            "};",
+          ]
       : []),
     `const delegates: Readonly<Record<string, string>> = ${JSON.stringify(delegates, null, 2)};`,
     "",
@@ -2430,26 +2565,64 @@ function renderPrismaRecordStore(
           "    );",
           "  }",
           "",
-          "  private transactionReceiptDelegate(): TransactionReceiptDelegate {",
-          "    return (this.client() as unknown as { commerceTransactionReceipt: TransactionReceiptDelegate }).commerceTransactionReceipt;",
-          "  }",
-          "",
-          "  async claimTransactionReceipt({ scope, idempotencyKey, payloadDigest }: { scope: string; idempotencyKey: string; payloadDigest: string }): Promise<TransactionReceiptClaim> {",
-          "    const receiptId = randomUUID();",
-          "    const receipt = await this.transactionReceiptDelegate().upsert({",
-          "      where: { scope_idempotencyKey: { scope, idempotencyKey } },",
-          "      create: { id: receiptId, scope, idempotencyKey, payloadDigest, aggregateType: '', aggregateId: '', aggregateVersion: 0, outcomeJson: {} },",
-          "      update: {},",
-          "    });",
-          "    if (receipt.id === receiptId) return { kind: 'claimed', receiptId };",
-          "    if (receipt.payloadDigest !== payloadDigest) return { kind: 'payload-mismatch', receiptId: receipt.id };",
-          "    if (!receipt.completedAt) return { kind: 'in-progress', receiptId: receipt.id };",
-          "    return { kind: 'completed', receiptId: receipt.id, outcome: receipt.outcomeJson as TransactionOutcome };",
-          "  }",
-          "",
-          "  async completeTransactionReceipt({ receiptId, outcome }: { receiptId: string; outcome: TransactionOutcome }): Promise<void> {",
-          "    await this.transactionReceiptDelegate().update({ where: { id: receiptId }, data: { aggregateType: outcome.aggregateEntity, aggregateId: outcome.aggregateId, aggregateVersion: outcome.aggregateVersion, outcomeJson: outcome, completedAt: new Date() } });",
-          "  }",
+          ...(useDurableReceiptLease
+            ? [
+                "  private transactionReceiptDelegate(root = false): TransactionReceiptDelegate {",
+                "    const client = root ? this.prisma : this.client();",
+                "    return (client as unknown as { commerceTransactionReceipt: TransactionReceiptDelegate }).commerceTransactionReceipt;",
+                "  }",
+                "",
+                "  async claimTransactionReceipt({ scope, idempotencyKey, payloadDigest, leaseDurationMs = 30_000 }: { scope: string; idempotencyKey: string; payloadDigest: string; leaseDurationMs?: number }): Promise<TransactionReceiptClaim> {",
+                "    const receiptId = randomUUID();",
+                "    const leaseToken = randomUUID();",
+                "    const now = new Date();",
+                "    const leaseExpiresAt = new Date(now.getTime() + Math.max(1, leaseDurationMs));",
+                "    const delegate = this.transactionReceiptDelegate(true);",
+                "    const receipt = await delegate.upsert({ where: { scope_idempotencyKey: { scope, idempotencyKey } }, create: { id: receiptId, scope, idempotencyKey, payloadDigest, state: 'claimed', leaseExpiresAt, leaseEpoch: 1, leaseToken }, update: {} });",
+                "    if (receipt.id === receiptId) return { kind: 'claimed', receiptId, leaseToken, leaseEpoch: 1 };",
+                "    if (receipt.payloadDigest !== payloadDigest) return { kind: 'payload-mismatch', receiptId: receipt.id };",
+                "    if (receipt.state === 'completed') return { kind: 'completed', receiptId: receipt.id, outcome: receipt.terminalOutcome as TransactionOutcome };",
+                "    if (receipt.state === 'claimed' && receipt.leaseExpiresAt && receipt.leaseExpiresAt > now) return { kind: 'in-progress', receiptId: receipt.id, retryAfterMs: receipt.leaseExpiresAt.getTime() - now.getTime() };",
+                "    const reclaimed = await delegate.updateMany({ where: { id: receipt.id, payloadDigest, leaseEpoch: receipt.leaseEpoch, OR: [{ state: 'retryable' }, { state: 'claimed', leaseExpiresAt: { lte: now } }] }, data: { state: 'claimed', leaseToken, leaseExpiresAt, leaseEpoch: { increment: 1 } } });",
+                "    if (reclaimed.count === 1) return { kind: 'claimed', receiptId: receipt.id, leaseToken, leaseEpoch: receipt.leaseEpoch + 1 };",
+                "    const current = await delegate.findUnique({ where: { id: receipt.id } });",
+                "    if (!current || current.payloadDigest !== payloadDigest) return { kind: 'payload-mismatch', receiptId: receipt.id };",
+                "    if (current.state === 'completed') return { kind: 'completed', receiptId: current.id, outcome: current.terminalOutcome as TransactionOutcome };",
+                "    return { kind: 'in-progress', receiptId: current.id, retryAfterMs: Math.max(0, (current.leaseExpiresAt?.getTime() ?? now.getTime()) - now.getTime()) };",
+                "  }",
+                "",
+                "  async markTransactionReceiptRetryable({ receiptId, leaseToken, leaseEpoch }: { receiptId: string; leaseToken: string; leaseEpoch: number }): Promise<void> {",
+                "    const released = await this.transactionReceiptDelegate(true).updateMany({ where: { id: receiptId, state: 'claimed', leaseToken, leaseEpoch }, data: { state: 'retryable', leaseExpiresAt: null } });",
+                "    if (released.count !== 1) throw new Error(`Transaction receipt '${receiptId}' lease ownership changed.`);",
+                "  }",
+                "",
+                "  async completeTransactionReceipt({ receiptId, leaseToken, leaseEpoch, outcome }: { receiptId: string; leaseToken: string; leaseEpoch: number; outcome: TransactionOutcome }): Promise<void> {",
+                "    const completed = await this.transactionReceiptDelegate().updateMany({ where: { id: receiptId, state: 'claimed', leaseToken, leaseEpoch }, data: { state: 'completed', aggregateType: outcome.aggregateEntity, aggregateId: outcome.aggregateId, aggregateVersion: outcome.aggregateVersion, terminalOutcome: outcome, completedAt: new Date(), leaseExpiresAt: null } });",
+                "    if (completed.count !== 1) throw new Error(`Transaction receipt '${receiptId}' lease ownership changed.`);",
+                "  }",
+              ]
+            : [
+                "  private transactionReceiptDelegate(): TransactionReceiptDelegate {",
+                "    return (this.client() as unknown as { commerceTransactionReceipt: TransactionReceiptDelegate }).commerceTransactionReceipt;",
+                "  }",
+                "",
+                "  async claimTransactionReceipt({ scope, idempotencyKey, payloadDigest }: { scope: string; idempotencyKey: string; payloadDigest: string }): Promise<TransactionReceiptClaim> {",
+                "    const receiptId = randomUUID();",
+                "    const receipt = await this.transactionReceiptDelegate().upsert({",
+                "      where: { scope_idempotencyKey: { scope, idempotencyKey } },",
+                "      create: { id: receiptId, scope, idempotencyKey, payloadDigest, aggregateType: '', aggregateId: '', aggregateVersion: 0, outcomeJson: {} },",
+                "      update: {},",
+                "    });",
+                "    if (receipt.id === receiptId) return { kind: 'claimed', receiptId };",
+                "    if (receipt.payloadDigest !== payloadDigest) return { kind: 'payload-mismatch', receiptId: receipt.id };",
+                "    if (!receipt.completedAt) return { kind: 'in-progress', receiptId: receipt.id };",
+                "    return { kind: 'completed', receiptId: receipt.id, outcome: receipt.outcomeJson as TransactionOutcome };",
+                "  }",
+                "",
+                "  async completeTransactionReceipt({ receiptId, outcome }: { receiptId: string; outcome: TransactionOutcome }): Promise<void> {",
+                "    await this.transactionReceiptDelegate().update({ where: { id: receiptId }, data: { aggregateType: outcome.aggregateEntity, aggregateId: outcome.aggregateId, aggregateVersion: outcome.aggregateVersion, outcomeJson: outcome, completedAt: new Date() } });",
+                "  }",
+              ]),
         ]
       : []),
     "",
@@ -2492,6 +2665,15 @@ function renderPrismaRecordStore(
     "  async update(entityKey: string, recordId: string, input: Record<string, unknown>): Promise<StoredRecord> {",
     "    return asStoredRecord(await this.delegate(entityKey).update({ where: { id: recordId }, data: input }));",
     "  }",
+    ...(useDurableReceiptLease
+      ? [
+          "",
+          "  async applyExpectedAggregateVersion({ entity, id, expectedVersion, expectedStatus, nextStatus }: { entity: string; id: string; expectedVersion: number; expectedStatus: string; nextStatus: string }): Promise<boolean> {",
+          "    const result = await this.delegate(entity).updateMany({ where: { id, version: expectedVersion, status: expectedStatus }, data: { status: nextStatus, version: { increment: 1 } } });",
+          "    return result.count === 1;",
+          "  }",
+        ]
+      : []),
     "",
     "  async appendAudit(event: AuditEvent): Promise<void> {",
     "    await this.auditDelegate().create({ data: { ...event, at: new Date(event.at) } });",
@@ -3344,6 +3526,25 @@ function renderCapabilityTemplateLock(
   );
 }
 
+const durableReceiptIndexNames = [
+  "CommerceTransactionReceipt_state_leaseExpiresAt_idx",
+  "CommerceTransactionReceipt_aggregateType_aggregateId_aggregateVersion_idx",
+  "CommerceAggregateVersion_entity_aggregateId_version_idx",
+] as const;
+
+function assertDurableReceiptSchemaMigrationParity(
+  schema: string,
+  migration: string,
+): void {
+  for (const indexName of durableReceiptIndexNames) {
+    if (!schema.includes(indexName) || !migration.includes(indexName)) {
+      throw new Error(
+        `Transaction V2 schema/migration parity is missing index '${indexName}'.`,
+      );
+    }
+  }
+}
+
 /**
  * Renders deterministic source files for one isolated generated application.
  * This function is pure: the Worker owns filesystem writes, Compose identity,
@@ -3675,6 +3876,7 @@ export function generateApplicationBundle(
           graph,
           useResolvedContributions,
           genericOrderLifecycle !== undefined,
+          commerceTransactionMode === "generic-v2",
           usePackageCartHandler,
           usePackageLineConfigurationHandler,
           catalogEntityKey,
@@ -3688,6 +3890,7 @@ export function generateApplicationBundle(
           graph,
           restaurantRuntimeEnabled,
           genericOrderLifecycle !== undefined,
+          commerceTransactionMode === "generic-v2",
         ),
     },
     {
@@ -3835,5 +4038,20 @@ export function generateApplicationBundle(
     path,
     content: render(),
   }));
+  if (commerceTransactionMode === "generic-v2") {
+    const schema = files.find(
+      ({ path }) => path === "database/prisma/schema.prisma",
+    )?.content;
+    const migration = files.find(
+      ({ path }) =>
+        path === "database/prisma/migrations/0001_initial/migration.sql",
+    )?.content;
+    if (!schema || !migration) {
+      throw new Error(
+        "Transaction V2 schema and migration must be emitted together.",
+      );
+    }
+    assertDurableReceiptSchemaMigrationParity(schema, migration);
+  }
   return { rootDirectory, graphHash: plan.graphHash, files };
 }

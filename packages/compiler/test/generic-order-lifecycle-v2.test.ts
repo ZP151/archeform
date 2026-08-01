@@ -2,9 +2,10 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 
 import {
+  capabilityAssets,
   composeDefaultCapabilityDraft,
   createCapabilityCompositionLock,
 } from "@factory/capabilities";
@@ -30,11 +31,38 @@ type StoredOrder = Readonly<{
 }>;
 
 type TransitionReceipt = Readonly<{
+  kind: "completed" | "in-progress";
   receiptId: string;
   replayed: boolean;
   orderId: string;
   transition: string;
+  retryAfterMs?: number;
 }>;
+
+type TransactionOutcome = Readonly<{
+  aggregateEntity: string;
+  aggregateId: string;
+  aggregateVersion: number;
+  actorRole: string;
+  payloadDigest: string;
+  event: string;
+  flowId: string;
+}>;
+
+type ReceiptClaim =
+  | Readonly<{
+      kind: "claimed";
+      receiptId: string;
+      leaseToken: string;
+      leaseEpoch: number;
+    }>
+  | Readonly<{
+      kind: "completed";
+      receiptId: string;
+      outcome: TransactionOutcome;
+    }>
+  | Readonly<{ kind: "in-progress"; receiptId: string; retryAfterMs: number }>
+  | Readonly<{ kind: "payload-mismatch"; receiptId: string }>;
 
 type GeneratedRuntime = {
   create(
@@ -72,6 +100,38 @@ type GeneratedStore = {
     recordId: string,
     input: Record<string, unknown>,
   ): Promise<Record<string, unknown>>;
+  applyExpectedAggregateVersion(
+    input: Readonly<{
+      entity: string;
+      id: string;
+      expectedVersion: number;
+      expectedStatus: string;
+      nextStatus: string;
+    }>,
+  ): Promise<boolean>;
+  claimTransactionReceipt(
+    input: Readonly<{
+      scope: string;
+      idempotencyKey: string;
+      payloadDigest: string;
+      leaseDurationMs?: number;
+    }>,
+  ): Promise<ReceiptClaim>;
+  completeTransactionReceipt(
+    input: Readonly<{
+      receiptId: string;
+      leaseToken: string;
+      leaseEpoch: number;
+      outcome: TransactionOutcome;
+    }>,
+  ): Promise<void>;
+  markTransactionReceiptRetryable(
+    input: Readonly<{
+      receiptId: string;
+      leaseToken: string;
+      leaseEpoch: number;
+    }>,
+  ): Promise<void>;
   appendCapabilityEvent(event: {
     capability: string;
     [key: string]: unknown;
@@ -82,7 +142,21 @@ type GeneratedModule = {
   readonly applicationRuntime: GeneratedRuntime;
   readonly ApplicationRuntime: new (store?: GeneratedStore) => GeneratedRuntime;
   readonly InMemoryRecordStore: new () => GeneratedStore;
+  readonly PrismaRecordStore: new (prisma: unknown) => GeneratedStore;
+  readonly commerceOrderTransactionOperationAdapter: {
+    parseRequest(input: unknown): unknown;
+    prepare(request: unknown): Readonly<{
+      command: Readonly<Record<string, unknown>>;
+      context: unknown;
+    }>;
+  };
 };
+
+function assetLock(asset: (typeof capabilityAssets)[number]) {
+  const { key, version, packageRoot, manifestDigest, lifecycle } =
+    asset.manifest;
+  return { key, version, packageRoot, manifestDigest, lifecycle };
+}
 
 const profileCases = [
   {
@@ -119,7 +193,30 @@ const profileCases = [
 }>[];
 
 function compile(profile: CommerceProfile) {
-  const graph = composeDefaultCapabilityDraft({ profile }).graph;
+  const graph = structuredClone(
+    composeDefaultCapabilityDraft({ profile }).graph,
+  );
+  const successorOrder = capabilityAssets.find(
+    ({ manifest }) =>
+      manifest.key === "commerce.order" && manifest.version === "2.1.0",
+  )!;
+  const successorTransaction = capabilityAssets.find(
+    ({ manifest }) =>
+      manifest.key === "commerce.transaction" && manifest.version === "2.2.0",
+  )!;
+  graph.integration.compositionSelections =
+    graph.integration.compositionSelections!.map((selection) => {
+      if (selection.lock.key === "commerce.order") {
+        return { ...selection, lock: assetLock(successorOrder) };
+      }
+      if (selection.lock.key === "commerce.transaction") {
+        return {
+          ...selection,
+          lock: assetLock(successorTransaction),
+        };
+      }
+      return selection;
+    });
   const compositionLock = createCapabilityCompositionLock({
     graphChecksum: hashApplicationGraph(graph),
     selections: graph.integration.compositionSelections ?? [],
@@ -157,10 +254,25 @@ async function withGeneratedModule<T>(
           await writeFile(path, file.content, "utf8");
         }),
     );
-    const module = (await import(
+    const runtimeModule = await import(
       pathToFileURL(resolve(directory, "api/src/application-runtime.ts")).href
-    )) as GeneratedModule;
-    return await run(module);
+    );
+    const adapterModule = await import(
+      pathToFileURL(
+        resolve(
+          directory,
+          "api/src/capabilities/commerce-order-transaction-operation-adapter.ts",
+        ),
+      ).href
+    );
+    const prismaModule = await import(
+      pathToFileURL(resolve(directory, "api/src/prisma-record-store.ts")).href
+    );
+    return await run({
+      ...runtimeModule,
+      ...adapterModule,
+      ...prismaModule,
+    } as GeneratedModule);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
@@ -206,6 +318,7 @@ describe("Generic order lifecycle V2 compilation", () => {
         );
 
         expect(receipt).toMatchObject({
+          kind: "completed",
           receiptId: expect.any(String),
           replayed: false,
           orderId: order.id,
@@ -239,15 +352,29 @@ describe("Generic order lifecycle V2 compilation", () => {
         "submit",
         options,
       );
-      await expect(
-        runtime.transition("shopper", "order", order.id, "submit", options),
-      ).resolves.toEqual({ ...first, replayed: true });
-      await expect(
-        runtime.transition("shopper", "order", order.id, "submit", {
+      const replayedTransition = runtime.transition(
+        "shopper",
+        "order",
+        order.id,
+        "submit",
+        options,
+      );
+      await expect(replayedTransition).resolves.toMatchObject({
+        replayed: true,
+      });
+      const changedPayloadTransition = runtime.transition(
+        "shopper",
+        "order",
+        order.id,
+        "submit",
+        {
           ...options,
           expectedVersion: 1,
-        }),
-      ).rejects.toThrow("idempotency payload mismatch");
+        },
+      );
+      await expect(changedPayloadTransition).rejects.toThrow(
+        "idempotency payload mismatch",
+      );
     });
   });
 
@@ -275,7 +402,7 @@ describe("Generic order lifecycle V2 compilation", () => {
     });
   });
 
-  it("returns the claimed receipt for a duplicate that is still pending", async () => {
+  it("returns in-progress for a duplicate while the first owner holds the lease", async () => {
     await withGeneratedModule(
       "simple-ecommerce",
       async ({ ApplicationRuntime, InMemoryRecordStore }) => {
@@ -291,18 +418,19 @@ describe("Generic order lifecycle V2 compilation", () => {
         class BlockingStore extends BaseStore {
           private blockOnce = true;
 
-          override async update(
-            entityKey: string,
-            recordId: string,
-            input: Record<string, unknown>,
-          ): Promise<Record<string, unknown>> {
-            const updated = await super.update(entityKey, recordId, input);
-            if (this.blockOnce && input.status === "submitted") {
+          override async applyExpectedAggregateVersion(input: {
+            entity: string;
+            id: string;
+            expectedVersion: number;
+            expectedStatus: string;
+            nextStatus: string;
+          }): Promise<boolean> {
+            if (this.blockOnce && input.nextStatus === "submitted") {
               this.blockOnce = false;
               aggregateEntered();
               await aggregateRelease;
             }
-            return updated;
+            return super.applyExpectedAggregateVersion(input);
           }
         }
 
@@ -325,20 +453,168 @@ describe("Generic order lifecycle V2 compilation", () => {
           options,
         );
         await aggregateBlocked;
-        const pending = await runtime.transition(
+        const secondTransition = runtime.transition(
           "shopper",
           "order",
           order.id,
           "submit",
           options,
         );
+        await expect(secondTransition).resolves.toMatchObject({
+          kind: "in-progress",
+          retryAfterMs: expect.any(Number),
+        });
         releaseAggregate();
         const completed = await first;
 
-        expect(pending).toEqual({ ...completed, replayed: false });
+        expect(completed).toMatchObject({ kind: "completed", replayed: false });
         await expect(
           runtime.read("shopper", "order", order.id),
         ).resolves.toMatchObject({ status: "submitted", version: 1 });
+      },
+    );
+  });
+
+  it("rotates an expired lease and rejects completion by the stale owner", async () => {
+    await withGeneratedModule(
+      "simple-ecommerce",
+      async ({ InMemoryRecordStore }) => {
+        const store = new InMemoryRecordStore();
+        const input = {
+          scope: "order:expired-1",
+          idempotencyKey: "expired-submit-1",
+          payloadDigest: `sha256:${"a".repeat(64)}`,
+          leaseDurationMs: 1,
+        } as const;
+        const first = await store.claimTransactionReceipt(input);
+        expect(first).toMatchObject({
+          kind: "claimed",
+          leaseEpoch: 1,
+          leaseToken: expect.any(String),
+        });
+        if (first.kind !== "claimed") throw new Error("expected first claim");
+
+        await new Promise((resolveDelay) => setTimeout(resolveDelay, 5));
+        const takeover = await store.claimTransactionReceipt(input);
+        expect(takeover).toMatchObject({
+          kind: "claimed",
+          leaseEpoch: 2,
+          leaseToken: expect.not.stringMatching(first.leaseToken),
+        });
+        if (takeover.kind !== "claimed") throw new Error("expected takeover");
+
+        const outcome: TransactionOutcome = {
+          aggregateEntity: "order",
+          aggregateId: "expired-1",
+          aggregateVersion: 1,
+          actorRole: "shopper",
+          payloadDigest: input.payloadDigest,
+          event: "submit",
+          flowId: "ecommerce-order",
+        };
+        const staleOwner = {
+          completeReceipt: () =>
+            store.completeTransactionReceipt({
+              receiptId: first.receiptId,
+              leaseToken: first.leaseToken,
+              leaseEpoch: first.leaseEpoch,
+              outcome,
+            }),
+        };
+        await expect(staleOwner.completeReceipt()).rejects.toThrow(
+          "lease ownership",
+        );
+        await store.completeTransactionReceipt({
+          receiptId: takeover.receiptId,
+          leaseToken: takeover.leaseToken,
+          leaseEpoch: takeover.leaseEpoch,
+          outcome,
+        });
+        await expect(
+          store.claimTransactionReceipt(input),
+        ).resolves.toMatchObject({ kind: "completed", outcome });
+      },
+    );
+  });
+
+  it("keeps flow identity separate from the order event at the package adapter boundary", async () => {
+    await withGeneratedModule(
+      "simple-ecommerce",
+      async ({ commerceOrderTransactionOperationAdapter }) => {
+        const prepared = commerceOrderTransactionOperationAdapter.prepare(
+          commerceOrderTransactionOperationAdapter.parseRequest({
+            orderId: "order-1",
+            expectedVersion: 0,
+            expectedState: "cart",
+            event: "submit",
+            idempotencyKey: "submit-command-shape-1",
+            payloadDigest: `sha256:${"b".repeat(64)}`,
+          }),
+        );
+
+        expect(Object.keys(prepared.command).sort()).toEqual([
+          "aggregate",
+          "event",
+          "flowId",
+          "idempotency",
+        ]);
+        expect(prepared.command).toMatchObject({
+          flowId: "ecommerce-order",
+          event: "submit",
+          aggregate: {
+            entity: "order",
+            id: "order-1",
+            expectedVersion: 0,
+            expectedState: "cart",
+          },
+          idempotency: {
+            scope: "order:order-1",
+            key: "submit-command-shape-1",
+          },
+        });
+      },
+    );
+  });
+
+  it("uses one Prisma updateMany CAS constrained by id, version, and status", async () => {
+    await withGeneratedModule(
+      "simple-ecommerce",
+      async ({ PrismaRecordStore }) => {
+        const calls: unknown[] = [];
+        const updateMany = vi.fn(async (input: unknown) => {
+          calls.push(input);
+          return { count: 1 };
+        });
+        const store = new PrismaRecordStore({
+          order: { updateMany },
+        });
+
+        await expect(
+          store.applyExpectedAggregateVersion({
+            entity: "order",
+            id: "order-1",
+            expectedVersion: 3,
+            expectedStatus: "cart",
+            nextStatus: "submitted",
+          }),
+        ).resolves.toBe(true);
+        expect(calls).toEqual([
+          {
+            where: { id: "order-1", version: 3, status: "cart" },
+            data: { status: "submitted", version: { increment: 1 } },
+          },
+        ]);
+
+        updateMany.mockResolvedValueOnce({ count: 0 });
+        await expect(
+          store.applyExpectedAggregateVersion({
+            entity: "order",
+            id: "order-1",
+            expectedVersion: 3,
+            expectedStatus: "cart",
+            nextStatus: "submitted",
+          }),
+        ).resolves.toBe(false);
       },
     );
   });
@@ -400,7 +676,7 @@ describe("Generic order lifecycle V2 compilation", () => {
   });
 
   it.each(profileCases)(
-    "$profile activates the locked V2.1 schema, migration, and TypeScript imports",
+    "$profile activates the direct-composable Transaction Command V2 schema, migration, and TypeScript imports",
     ({ profile }) => {
       const files = Object.fromEntries(
         compile(profile).files.map((file) => [file.path, file.content]),
@@ -424,6 +700,17 @@ describe("Generic order lifecycle V2 compilation", () => {
       expect(
         files["database/prisma/migrations/0001_initial/migration.sql"],
       ).toContain('CREATE TABLE "CommerceTransactionReceipt"');
+      for (const indexName of [
+        "CommerceTransactionReceipt_state_leaseExpiresAt_idx",
+        "CommerceTransactionReceipt_aggregateType_aggregateId_aggregateVersion_idx",
+        "CommerceAggregateVersion_entity_aggregateId_version_idx",
+      ]) {
+        expect(files["database/prisma/schema.prisma"]).toContain(indexName);
+        expect(
+          files["database/prisma/migrations/0001_initial/migration.sql"],
+        ).toContain(indexName);
+      }
+      expect(files["api/src/prisma-record-store.ts"]).toContain("updateMany");
       expect(files).not.toHaveProperty(
         "database/prisma/fragments/commerce-transaction.prisma",
       );
