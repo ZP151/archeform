@@ -1,0 +1,10 @@
+{
+  "status": "verified",
+  "checks": [
+    "integer-minor-units",
+    "catalog-authoritative-price",
+    "immutable-price-snapshot",
+    "deterministic-allocation",
+    "refund-capture-bound"
+  ]
+}

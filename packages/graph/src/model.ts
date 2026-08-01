@@ -164,8 +164,21 @@ const compositionBindingValueSchema = z.union([
         .regex(
           /^graph\.(?:page|domain|policy|flow|integration|experience)\.[a-z][a-z0-9-]*$/,
         ),
+      fieldKey: fieldKey.optional(),
     })
-    .strict(),
+    .strict()
+    .superRefine((binding, context) => {
+      if (
+        binding.fieldKey !== undefined &&
+        !binding.graphSymbol.startsWith("graph.domain.")
+      ) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "A composition field binding must target a domain entity.",
+          path: ["fieldKey"],
+        });
+      }
+    }),
 ]);
 const capabilitySelectionSchema = z
   .object({
@@ -488,7 +501,29 @@ function compositionGraphSymbolIssues(
       )) {
         if (typeof bindingValue !== "object") continue;
         const [, model, id] = bindingValue.graphSymbol.split(".");
-        if (model && id && symbolIds[model]?.has(id)) continue;
+        if (model && id && symbolIds[model]?.has(id)) {
+          if (
+            model === "domain" &&
+            bindingValue.fieldKey !== undefined &&
+            !graph.domain.entities
+              .find((entity) => entity.key === id)
+              ?.fields.some((field) => field.key === bindingValue.fieldKey)
+          ) {
+            issues.push({
+              code: "integration.composition_binding.field_missing",
+              message: `Field '${bindingValue.fieldKey}' does not exist on domain entity '${id}'.`,
+              path: [
+                "integration",
+                "compositionSelections",
+                selectionIndex,
+                "bindings",
+                bindingKey,
+                "fieldKey",
+              ],
+            });
+          }
+          continue;
+        }
         issues.push({
           code: "integration.composition_binding.symbol_missing",
           message: `Graph symbol '${bindingValue.graphSymbol}' does not exist in the Application Graph.`,

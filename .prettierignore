@@ -1,0 +1,4 @@
+packages/compiler/.generated-money-pricing-runtime/
+packages/compiler/test/.generated-commerce-transaction-runtime/
+packages/compiler/test/.generated-runtime/
+packages/compiler/test/generated-runtime-*/

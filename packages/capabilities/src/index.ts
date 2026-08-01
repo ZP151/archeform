@@ -989,6 +989,10 @@ const baseProfileCompositionBindings: Readonly<
       orderEntity: { graphSymbol: "graph.domain.order" },
       orderLineEntity: { graphSymbol: "graph.domain.order-line" },
       catalogEntity: { graphSymbol: "graph.domain.menu-item" },
+      priceField: {
+        graphSymbol: "graph.domain.menu-item",
+        fieldKey: "price",
+      },
       customerRole: { graphSymbol: "graph.policy.customer" },
       merchantRole: { graphSymbol: "graph.policy.manager" },
     },
@@ -1105,6 +1109,10 @@ const baseProfileCompositionBindings: Readonly<
       orderEntity: { graphSymbol: "graph.domain.order" },
       orderLineEntity: { graphSymbol: "graph.domain.product-line" },
       catalogEntity: { graphSymbol: "graph.domain.product" },
+      priceField: {
+        graphSymbol: "graph.domain.product",
+        fieldKey: "price",
+      },
       customerRole: { graphSymbol: "graph.policy.shopper" },
       merchantRole: { graphSymbol: "graph.policy.merchant" },
     },

@@ -44,7 +44,7 @@ describe("Order Operations composition profiles", () => {
         "commerce.money-pricing@1.0.0",
       );
       expect(orderOperationsLockKeys(ecommerce)).toContain(
-        "commerce.money-pricing@1.0.0",
+        "commerce.money-pricing@1.1.0",
       );
       expect(candidate.assetLocks).toEqual(
         expect.arrayContaining([

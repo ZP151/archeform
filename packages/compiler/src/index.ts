@@ -528,6 +528,11 @@ interface OrderOperationsPersistenceContribution {
   readonly migration: string;
 }
 
+interface MoneyPricingPersistenceContribution {
+  readonly schema: string;
+  readonly migration: string;
+}
+
 function resolveOrderOperationsPersistenceContribution(
   input: PublishedGraphInput,
   contributions: readonly ResolvedTargetContribution[],
@@ -561,6 +566,47 @@ function resolveOrderOperationsPersistenceContribution(
   if (!schema || !migration) {
     throw new Error(
       "Locked commerce.order-operations receipt provider is missing a schema or migration contribution.",
+    );
+  }
+  return Object.freeze({
+    schema: schema.content,
+    migration: migration.content,
+  });
+}
+
+function resolveMoneyPricingPersistenceContribution(
+  input: PublishedGraphInput,
+  contributions: readonly ResolvedTargetContribution[],
+): MoneyPricingPersistenceContribution | undefined {
+  const selection = input.compositionLock.packages.find(
+    ({ lock }) => lock.key === "commerce.money-pricing",
+  );
+  if (!selection) return undefined;
+
+  const asset = resolveCapabilityAssetLock(selection.lock);
+  const declaresSnapshot = asset.manifest.provides?.some(
+    (provided) =>
+      provided.interfaceKey === "commerce.price-snapshot" &&
+      provided.version === "v1",
+  );
+  if (!declaresSnapshot) return undefined;
+
+  const owned = contributions.filter(
+    (contribution) => contribution.packageKey === asset.manifest.key,
+  );
+  const schema = owned.find(
+    (contribution) =>
+      contribution.contributionId === "money-pricing-schema" &&
+      contribution.outputSlot === "database.schema",
+  );
+  const migration = owned.find(
+    (contribution) =>
+      contribution.contributionId === "money-pricing-migration" &&
+      contribution.outputSlot === "database.migration",
+  );
+  if (!schema || !migration) {
+    throw new Error(
+      "Locked commerce.money-pricing provider is missing a schema or migration contribution.",
     );
   }
   return Object.freeze({
@@ -744,7 +790,7 @@ function renderCapabilityRegistry(
     ),
   ).sort();
   return [
-    'import type { CapabilityRuntimeModule, CartHandler, CatalogHandler, EffectHandler, LineConfigurationHandler, OrderHandler, OrderOperationsHandler, RecordHandler, WorkflowHandler } from "./contract.js";',
+    'import type { CapabilityRuntimeModule, CartHandler, CatalogHandler, EffectHandler, LineConfigurationHandler, MoneyPricingHandler, OrderHandler, OrderOperationsHandler, RecordHandler, WorkflowHandler } from "./contract.js";',
     "",
     ...imports,
     ...(imports.length ? [""] : []),
@@ -828,6 +874,13 @@ function renderCapabilityRegistry(
     "  );",
     "}",
     "",
+    "export function getMoneyPricingHandler(): MoneyPricingHandler {",
+    "  return singleHandler(",
+    "    capabilityModules.flatMap((module) => module.moneyPricingHandler ? [module.moneyPricingHandler] : []),",
+    '    "money pricing",',
+    "  );",
+    "}",
+    "",
     "export function getOrderHandler(): OrderHandler {",
     "  return singleHandler(",
     "    capabilityModules.flatMap((module) => module.orderHandler ? [module.orderHandler] : []),",
@@ -905,6 +958,10 @@ function renderCapabilityContract(graph: ApplicationGraphV1): string {
     "export interface CommerceOrderOperationPlan { readonly nextState: CommerceOrderOperationStatus; readonly incrementVersion: true; readonly paymentDelta: 'none' | 'capture-partial' | 'capture-final' | 'refund-partial' | 'refund-full'; readonly inventoryEffect: 'reserve' | 'release' | 'none'; readonly auditAction: string; }",
     "export interface OrderOperationsHandler { plan(inputState: CommerceOrderOperationState, inputCommand: CommerceOrderOperationCommand): CommerceOrderOperationPlan; }",
     "",
+    "export interface MoneyPricingQuoteLine { readonly catalogRecordId: string; readonly quantity: number; readonly unitMinor: string; readonly totalMinor: string; }",
+    "export interface MoneyPricingQuote { readonly currency: string; readonly subtotalMinor: string; readonly discountMinor: string; readonly taxMinor: string; readonly totalMinor: string; readonly lines: readonly MoneyPricingQuoteLine[]; }",
+    "export interface MoneyPricingHandler { quote(input: { role: string; catalogEntity: string; lines: readonly { catalogRecordId: string; quantity: number }[]; store: CapabilityStore; assertAllowed(role: string, entityKey: string, action: string): Promise<void> }): Promise<MoneyPricingQuote>; }",
+    "",
     "export type EffectHandler = (input: { role: string; entityKey: string; recordId: string; operation: string; store: CapabilityStore; now: string }) => Promise<void>;",
     "",
     "export interface CapabilityRuntimeModule {",
@@ -917,6 +974,7 @@ function renderCapabilityContract(graph: ApplicationGraphV1): string {
     "  readonly cartHandler?: CartHandler;",
     "  readonly catalogHandler?: CatalogHandler;",
     "  readonly lineConfigurationHandler?: LineConfigurationHandler;",
+    "  readonly moneyPricingHandler?: MoneyPricingHandler;",
     "  readonly orderHandler?: OrderHandler;",
     "  readonly orderOperationsHandler?: OrderOperationsHandler;",
     "  readonly effectHandler?: EffectHandler;",
@@ -1086,6 +1144,7 @@ function renderPrismaSchema(
   graph: ApplicationGraphV1,
   orderOperationReceiptSchema?: string,
   includeGenericCommerceLineItems = true,
+  additionalSchemaFragments: readonly string[] = [],
 ): string {
   const relationFields = (entityKey: string): readonly string[] =>
     graph.domain.relations.flatMap((relation) => {
@@ -1210,6 +1269,10 @@ function renderPrismaSchema(
     ...(orderOperationReceiptSchema
       ? ["", orderOperationReceiptSchema.trimEnd()]
       : []),
+    ...additionalSchemaFragments.flatMap((fragment) => [
+      "",
+      fragment.trimEnd(),
+    ]),
     "",
   ].join("\n");
 }
@@ -1264,6 +1327,7 @@ function renderInitialMigration(
   graph: ApplicationGraphV1,
   orderOperationReceiptMigration?: string,
   includeGenericCommerceLineItems = true,
+  additionalMigrationFragments: readonly string[] = [],
 ): string {
   const createTables = graph.domain.entities.map((entity) => {
     const columns = [
@@ -1320,6 +1384,7 @@ function renderInitialMigration(
     ...(orderOperationReceiptMigration
       ? [orderOperationReceiptMigration.trimEnd()]
       : []),
+    ...additionalMigrationFragments.map((fragment) => fragment.trimEnd()),
     ...indexes,
     ...relationTables,
     ...relationConstraints,
@@ -1757,6 +1822,7 @@ function renderApplicationRuntime(
   useResolvedContributions: boolean,
   usePackageCartHandler: boolean,
   usePackageLineConfigurationHandler: boolean,
+  usePackageMoneyPricingHandler: boolean,
   catalogEntityKey: string | undefined,
   orderEntityKey: string | undefined,
   orderOperationsEntityKey: string | undefined,
@@ -1767,6 +1833,9 @@ function renderApplicationRuntime(
     ...(commerce && usePackageCartHandler ? ["getCartHandler"] : []),
     ...(commerce && usePackageLineConfigurationHandler
       ? ["getLineConfigurationHandler"]
+      : []),
+    ...(commerce && usePackageMoneyPricingHandler
+      ? ["getMoneyPricingHandler"]
       : []),
     ...(catalogEntityKey ? ["getCatalogHandler"] : []),
     ...(orderEntityKey ? ["getOrderHandler"] : []),
@@ -2095,6 +2164,24 @@ function renderApplicationRuntime(
           "    const at = new Date().toISOString();",
           "    await this.store.appendCapabilityEvent({ actor: role, capability: 'catalog.option.select', operation: 'select', entity: configured.catalogEntity, recordId: configured.catalogRecordId, outcome: 'completed', at });",
           "    return configured;",
+          "  }",
+          "",
+        ]
+      : []),
+    ...(commerce && usePackageMoneyPricingHandler
+      ? [
+          '  async quotePrice(role: string, input: { catalogEntity: string; lines: readonly { catalogRecordId: string; quantity: number }[] }): Promise<import("./capabilities/contract.js").MoneyPricingQuote> {',
+          "    if (!providedEffects.has('pricing.quote')) throw new Error(\"Unsupported capability effect 'pricing.quote'.\");",
+          "    const quote = await getMoneyPricingHandler().quote({",
+          "      role,",
+          "      catalogEntity: input.catalogEntity,",
+          "      lines: input.lines,",
+          "      store: this.store,",
+          "      assertAllowed: (candidateRole, entityKey, action) => this.assertAllowed(candidateRole, entityKey, action),",
+          "    });",
+          "    const at = new Date().toISOString();",
+          "    await this.store.appendCapabilityEvent({ actor: role, capability: 'pricing.quote', operation: 'quote', entity: input.catalogEntity, recordId: quote.lines.map((line) => line.catalogRecordId).join(','), outcome: 'completed', at });",
+          "    return quote;",
           "  }",
           "",
         ]
@@ -2848,6 +2935,7 @@ function renderSimulator(graph: ApplicationGraphV1): string {
 function renderApiMain(
   graph: ApplicationGraphV1,
   usePackageLineConfigurationHandler: boolean,
+  usePackageMoneyPricingHandler: boolean,
 ): string {
   const commerce = hasCommerceCapabilities(graph);
   return [
@@ -2885,6 +2973,15 @@ function renderApiMain(
                 "  @Post('commerce/configure-line')",
                 "  async configureLine(@Body() body: { catalogEntity: string; catalogRecordId: string; optionIds: readonly string[]; quantity: number }, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
                 "    try { return await applicationRuntime.configureLine(roleFrom(request), body); } catch (error) { throw rejected(error); }",
+                "  }",
+                "",
+              ]
+            : []),
+          ...(usePackageMoneyPricingHandler
+            ? [
+                "  @Post('commerce/quote-price')",
+                "  async quotePrice(@Body() body: { catalogEntity: string; lines: readonly { catalogRecordId: string; quantity: number }[] }, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
+                "    try { return await applicationRuntime.quotePrice(roleFrom(request), body); } catch (error) { throw rejected(error); }",
                 "  }",
                 "",
               ]
@@ -3295,8 +3392,14 @@ export function generateApplicationBundle(
       input,
       renderedTargetContributions,
     );
+  const moneyPricingPersistence = resolveMoneyPricingPersistenceContribution(
+    input,
+    renderedTargetContributions,
+  );
   const useGenericOrderOperationsPersistence =
     !restaurantRuntimeEnabled && orderOperationsPersistence !== undefined;
+  const useGenericMoneyPricingPersistence =
+    !restaurantRuntimeEnabled && moneyPricingPersistence !== undefined;
   const useResolvedContributions =
     input.compositionLock.resolvedContributionDigests.length > 0;
   const usePackageCartHandler = input.compositionLock.packages.some(
@@ -3316,6 +3419,12 @@ export function generateApplicationBundle(
         asset.manifest.runtimeHandlers?.includes("catalogConfiguration")
       );
     });
+  const usePackageMoneyPricingHandler = input.compositionLock.packages.some(
+    ({ lock }) => {
+      const asset = resolveCapabilityAssetLock(lock);
+      return asset.manifest.key === "commerce.money-pricing";
+    },
+  );
   const catalogEntityKey = lockedRuntimeHandlerEntity(
     input.compositionLock,
     "commerce.catalog",
@@ -3545,7 +3654,11 @@ export function generateApplicationBundle(
       path: "api/src/main.ts",
       render: () =>
         restaurantRuntime()?.main ??
-        renderApiMain(graph, usePackageLineConfigurationHandler),
+        renderApiMain(
+          graph,
+          usePackageLineConfigurationHandler,
+          usePackageMoneyPricingHandler,
+        ),
     },
     ...(restaurantRuntimeEnabled
       ? [
@@ -3580,6 +3693,7 @@ export function generateApplicationBundle(
           useResolvedContributions,
           usePackageCartHandler,
           usePackageLineConfigurationHandler,
+          usePackageMoneyPricingHandler,
           catalogEntityKey,
           orderEntityKey,
           orderOperationsEntityKey,
@@ -3609,6 +3723,9 @@ export function generateApplicationBundle(
             ? orderOperationsPersistence?.schema
             : undefined,
           useGenericOrderOperationsPersistence,
+          useGenericMoneyPricingPersistence
+            ? [moneyPricingPersistence!.schema]
+            : [],
         ),
     },
     {
@@ -3621,6 +3738,9 @@ export function generateApplicationBundle(
             ? orderOperationsPersistence?.schema
             : undefined,
           useGenericOrderOperationsPersistence,
+          useGenericMoneyPricingPersistence
+            ? [moneyPricingPersistence!.schema]
+            : [],
         ),
     },
     {
@@ -3633,6 +3753,9 @@ export function generateApplicationBundle(
             ? orderOperationsPersistence?.migration
             : undefined,
           useGenericOrderOperationsPersistence,
+          useGenericMoneyPricingPersistence
+            ? [moneyPricingPersistence!.migration]
+            : [],
         ),
     },
     {

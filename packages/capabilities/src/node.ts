@@ -110,6 +110,7 @@ const runtimeHandlerSchema = z.enum([
   "cart",
   "catalog",
   "catalogConfiguration",
+  "moneyPricing",
   "order",
   "orderOperations",
   "effect",
@@ -130,6 +131,43 @@ const parameterSchema = z
     required: z.boolean(),
   })
   .strict();
+const typedDomainFieldInputSchema = z
+  .object({
+    key: parameterKeySchema,
+    type: z.literal("domain.field"),
+    ownerBinding: parameterKeySchema,
+    fieldTypes: z
+      .array(
+        z.enum([
+          "string",
+          "text",
+          "integer",
+          "decimal",
+          "boolean",
+          "date",
+          "datetime",
+          "enum",
+          "json",
+          "url",
+          "email",
+        ]),
+      )
+      .min(1),
+    fieldRequired: z.boolean().optional(),
+    fieldUnique: z.boolean().optional(),
+    required: z.boolean(),
+  })
+  .strict();
+const capabilityInputSchema = z.union([
+  typedDomainFieldInputSchema,
+  z
+    .object({
+      key: parameterKeySchema,
+      type: z.string().min(1),
+      required: z.boolean(),
+    })
+    .strict(),
+]);
 const graphContributionSchema = z
   .object({
     id: contributionIdSchema,
@@ -185,15 +223,7 @@ const capabilityManifestSchema = z
       ]),
     ),
     effects: z.array(z.string().min(1)),
-    inputSchema: z.array(
-      z
-        .object({
-          key: z.string().min(1),
-          type: z.string().min(1),
-          required: z.boolean(),
-        })
-        .strict(),
-    ),
+    inputSchema: z.array(capabilityInputSchema),
     outputSlots: z.array(outputSlotSchema),
     runtimeHandlers: z.array(runtimeHandlerSchema).optional(),
     templates: z.array(templateContributionSchema),

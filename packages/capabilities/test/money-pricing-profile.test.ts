@@ -19,7 +19,7 @@ describe("Money pricing profile composition", () => {
     expect(restaurant.lock).toEqual(ecommerce.lock);
     expect(restaurant.lock).toMatchObject({
       key: "commerce.money-pricing",
-      version: "1.0.0",
+      version: "1.1.0",
       lifecycle: "golden",
     });
   });
@@ -29,6 +29,10 @@ describe("Money pricing profile composition", () => {
       orderEntity: { graphSymbol: "graph.domain.order" },
       orderLineEntity: { graphSymbol: "graph.domain.order-line" },
       catalogEntity: { graphSymbol: "graph.domain.menu-item" },
+      priceField: {
+        graphSymbol: "graph.domain.menu-item",
+        fieldKey: "price",
+      },
       customerRole: { graphSymbol: "graph.policy.customer" },
       merchantRole: { graphSymbol: "graph.policy.manager" },
     });
@@ -36,6 +40,10 @@ describe("Money pricing profile composition", () => {
       orderEntity: { graphSymbol: "graph.domain.order" },
       orderLineEntity: { graphSymbol: "graph.domain.product-line" },
       catalogEntity: { graphSymbol: "graph.domain.product" },
+      priceField: {
+        graphSymbol: "graph.domain.product",
+        fieldKey: "price",
+      },
       customerRole: { graphSymbol: "graph.policy.shopper" },
       merchantRole: { graphSymbol: "graph.policy.merchant" },
     });

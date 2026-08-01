@@ -81,7 +81,7 @@ describe("ControlPlaneClient", () => {
           coverage: profileCoverage,
           capabilities: {
             golden: 21,
-            lockedVersions: 44,
+            lockedVersions: 45,
             candidate: 0,
             provider: 0,
             artifact: "must-not-survive",
@@ -137,7 +137,7 @@ describe("ControlPlaneClient", () => {
       coverage: profileCoverage,
       capabilities: {
         golden: 21,
-        lockedVersions: 44,
+        lockedVersions: 45,
         candidate: 0,
         provider: 0,
       },
@@ -190,7 +190,7 @@ describe("ControlPlaneClient", () => {
           coverage: profileCoverage,
           capabilities: {
             golden: 21,
-            lockedVersions: 44,
+            lockedVersions: 45,
             candidate: 0,
             provider: 0,
           },

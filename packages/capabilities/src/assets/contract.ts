@@ -37,6 +37,7 @@ export type CapabilityRuntimeHandlerKindV1 =
   | "cart"
   | "catalog"
   | "catalogConfiguration"
+  | "moneyPricing"
   | "order"
   | "orderOperations"
   | "effect";

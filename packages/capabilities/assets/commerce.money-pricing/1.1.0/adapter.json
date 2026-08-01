@@ -1,0 +1,52 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": ["api.runtime", "database.schema", "database.migration", "flow.effect", "test.fixture"],
+  "runtimeHandlers": ["moneyPricing"],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/commerce.money-pricing.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:e9596ff692c0ad86869995edb6d2719641f9642bcb06b61644eae0611eb98710"
+    }
+  ],
+  "executableContributions": [
+    {
+      "id": "money-pricing-schema",
+      "outputSlot": "database.schema",
+      "namespace": "packages/commerce.money-pricing/persistence",
+      "source": "contributions/database/price-snapshot.prisma",
+      "target": "database/prisma/fragments/price-snapshot.prisma",
+      "parameterRefs": ["orderEntity", "orderLineEntity"],
+      "targetRuntimeInterfaceVersion": "factory.prisma-schema/v1",
+      "orderingRequirements": [],
+      "mergeProtocol": "append-fragment",
+      "digest": "sha256:180b0a8c1dd710fcab658a1a491c678cf896ee89cadefb500b78f133e05e38f3"
+    },
+    {
+      "id": "money-pricing-migration",
+      "outputSlot": "database.migration",
+      "namespace": "packages/commerce.money-pricing/persistence",
+      "source": "contributions/database/price-snapshot.sql",
+      "target": "database/prisma/migrations/0001_initial/fragments/price-snapshot.sql",
+      "parameterRefs": ["orderEntity", "orderLineEntity"],
+      "targetRuntimeInterfaceVersion": "factory.prisma-migration/v1",
+      "orderingRequirements": ["money-pricing-schema"],
+      "mergeProtocol": "append-fragment",
+      "digest": "sha256:68b11c3faab6fa79df30b539a73585bf61ee434824d06896d99bb566738cecaa"
+    }
+  ],
+  "parameters": [
+    { "key": "orderEntity", "type": "graph-symbol", "required": true },
+    { "key": "orderLineEntity", "type": "graph-symbol", "required": true },
+    { "key": "catalogEntity", "type": "graph-symbol", "required": true },
+    { "key": "priceField", "type": "graph-symbol", "required": true },
+    { "key": "customerRole", "type": "graph-symbol", "required": true },
+    { "key": "merchantRole", "type": "graph-symbol", "required": true }
+  ],
+  "contributes": {
+    "effects": ["pricing.quote", "pricing.snapshot", "payment.refund.allocate"]
+  }
+}

@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { getCapabilityAsset } from "../src/index.js";
+import { capabilityAssets, getCapabilityAsset } from "../src/index.js";
 import {
   verifyCapabilityAssetDigest,
   verifyCapabilityAssetPackage,
@@ -20,7 +20,7 @@ describe("Money pricing capability package", () => {
 
     expect(asset.manifest).toMatchObject({
       key: "commerce.money-pricing",
-      version: "1.0.0",
+      version: "1.1.0",
       lifecycle: "golden",
       profiles: ["restaurant-ordering", "simple-ecommerce"],
       provides: expect.arrayContaining([
@@ -50,5 +50,17 @@ describe("Money pricing capability package", () => {
     );
     expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     expect(verifyCapabilityAssetPackage(asset, repositoryRoot)).toEqual([]);
+    const previous = capabilityAssets.find(
+      (candidate) =>
+        candidate.manifest.key === "commerce.money-pricing" &&
+        candidate.manifest.version === "1.0.0",
+    );
+    expect(previous).toBeDefined();
+    if (previous) {
+      expect(verifyCapabilityAssetDigest(previous)).toBe(true);
+      expect(verifyCapabilityAssetPackage(previous, repositoryRoot)).toEqual(
+        [],
+      );
+    }
   });
 });

@@ -324,6 +324,10 @@ describe("ApplicationGraphV1", () => {
               enabled: true,
               priority: 1,
               entityKey: { graphSymbol: "graph.domain.expense" },
+              amountField: {
+                graphSymbol: "graph.domain.expense",
+                fieldKey: "amount",
+              },
             },
           },
         ],
@@ -375,6 +379,31 @@ describe("ApplicationGraphV1", () => {
         },
       }),
     ).toThrow();
+    expect(
+      validateApplicationGraph({
+        ...selected,
+        integration: {
+          ...selected.integration,
+          compositionSelections: [
+            {
+              lock: validLock,
+              bindings: {
+                amountField: {
+                  graphSymbol: "graph.domain.expense",
+                  fieldKey: "missing",
+                },
+              },
+            },
+          ],
+        },
+      }),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "integration.composition_binding.field_missing",
+        }),
+      ]),
+    );
   });
 
   it.each([
