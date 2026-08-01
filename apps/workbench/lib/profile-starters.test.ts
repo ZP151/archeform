@@ -47,7 +47,7 @@ describe("profile starters", () => {
   it("composes every active profile from canonical Graph-symbol selections", () => {
     const expectedPackageCounts = {
       "expense-approval": 6,
-      "restaurant-ordering": 19,
+      "restaurant-ordering": 18,
       "simple-ecommerce": 16,
       "retail-counter": 14,
       "grocery-pickup": 14,
@@ -102,6 +102,9 @@ describe("profile starters", () => {
     );
     expect(restaurant.map(({ lock }) => lock.key)).not.toContain(
       "commerce.simulated-payment",
+    );
+    expect(restaurant.map(({ lock }) => lock.key)).not.toContain(
+      "core.notification",
     );
     expect(ecommerce.map(({ lock }) => lock.key)).toContain(
       "commerce.simulated-payment",

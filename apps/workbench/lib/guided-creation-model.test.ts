@@ -40,7 +40,7 @@ describe("guided creation state", () => {
     });
   });
 
-  it("resets optional selections to the selected profile defaults", () => {
+  it("defaults Restaurant without notification while retaining the eligible toggle", () => {
     const opened = transitionGuidedCreation(initialGuidedCreationState, {
       type: "open",
     });
@@ -58,10 +58,17 @@ describe("guided creation state", () => {
     });
 
     expect(withoutNotification.input.optionalCapabilities).toEqual([]);
-    expect(restaurant.input.optionalCapabilities).toEqual([
+    expect(restaurant.input.optionalCapabilities).toEqual([]);
+    expect(restaurant.error).toBeNull();
+
+    const withNotification = transitionGuidedCreation(restaurant, {
+      type: "toggle-optional-capability",
+      capability: "core.notification",
+    });
+
+    expect(withNotification.input.optionalCapabilities).toEqual([
       "core.notification",
     ]);
-    expect(restaurant.error).toBeNull();
   });
 
   it("retains selections while a draft creation attempt is pending or fails", () => {

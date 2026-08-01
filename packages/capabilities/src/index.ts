@@ -3481,21 +3481,21 @@ export function composeDefaultCapabilityDraft(
 ): ProfileCompositionResult {
   const capturedInput = captureCapabilityPublicInput(input);
   const { profile } = capturedInput;
-  const recipe = defaultCapabilityRecipes[profile];
-  if (!recipe) throw new Error(`Unknown Factory profile '${profile}'.`);
+  const defaultRecipe = defaultCapabilityRecipes[profile];
+  if (!defaultRecipe) throw new Error(`Unknown Factory profile '${profile}'.`);
+  const eligibility = getProfileComposition(profile);
   const profileComposition: ProfileComposition = {
     profile,
-    requiredCapabilities: recipe.requiredCapabilities.map(getCapability),
-    optionalCapabilities: recipe.optionalCapabilities.map(getCapability),
-    eligibleOptionalCapabilities: getProfileComposition(profile)
-      .eligibleOptionalCapabilities,
-    defaultOptionalCapabilities: [...recipe.optionalCapabilities],
+    requiredCapabilities: defaultRecipe.requiredCapabilities.map(getCapability),
+    optionalCapabilities: eligibility.optionalCapabilities,
+    eligibleOptionalCapabilities: [...eligibility.eligibleOptionalCapabilities],
+    defaultOptionalCapabilities: [...eligibility.defaultOptionalCapabilities],
   };
   const requested = capturedInput.optionalCapabilities
     ? [...capturedInput.optionalCapabilities]
     : [...profileComposition.defaultOptionalCapabilities];
   const eligibleOptionalCapabilities =
-    getProfileComposition(profile).defaultOptionalCapabilities;
+    profileComposition.eligibleOptionalCapabilities;
   const requestedSet = new Set(requested);
   if (requestedSet.size !== requested.length) {
     throw new Error("Optional capability selections must be unique.");
@@ -3570,16 +3570,14 @@ export function composeProfileDraft(
   const composition = getProfileComposition(profile);
   const requested = capturedInput.optionalCapabilities
     ? [...capturedInput.optionalCapabilities]
-    : profile === "restaurant-ordering"
-      ? []
-      : [...composition.defaultOptionalCapabilities];
+    : [...composition.defaultOptionalCapabilities];
   const requestedSet = new Set(requested);
   if (requestedSet.size !== requested.length) {
     throw new Error("Optional capability selections must be unique.");
   }
   for (const capability of requested) {
     if (
-      !composition.defaultOptionalCapabilities.includes(
+      !composition.eligibleOptionalCapabilities.includes(
         capability as OptionalCapabilityKey,
       )
     ) {
@@ -3590,7 +3588,7 @@ export function composeProfileDraft(
   }
 
   const graph = structuredClone(profileStarterFor(profile).graph);
-  for (const capability of composition.defaultOptionalCapabilities) {
+  for (const capability of composition.eligibleOptionalCapabilities) {
     if (requestedSet.has(capability)) continue;
     const asset = getCapabilityAsset(capability);
     if (!asset.disable) {
@@ -3605,9 +3603,7 @@ export function composeProfileDraft(
     ...composition.requiredCapabilities.map((capability) =>
       getCapabilityAsset(capability.key),
     ),
-    ...composition.defaultOptionalCapabilities
-      .filter((capability) => requestedSet.has(capability))
-      .map(getCapabilityAsset),
+    ...requested.map(getCapabilityAsset),
   ];
   const admittedComposition = assertGoldenCapabilityComposition(
     selectedAssets.map((asset) => ({
@@ -3636,9 +3632,7 @@ export function composeProfileDraft(
   return {
     profile,
     graph: validatedGraph,
-    optionalCapabilities: composition.defaultOptionalCapabilities.filter(
-      (capability) => requestedSet.has(capability),
-    ),
+    optionalCapabilities: requested as OptionalCapabilityKey[],
     enabledEffects: validatedGraph.integration.capabilities.map(
       (capability) => capability.key,
     ),
