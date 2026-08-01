@@ -1,6 +1,6 @@
 # Capability ecosystem source study
 
-**Research date:** 2026-08-01  
+**Research date:** 2026-08-01
 **Decision:** build coverage for 100+ eventual business scenarios by adding
 small technical dependencies, Factory-owned capability packages, and replaceable
 provider adapters without making an upstream product, schema, workflow runtime,
