@@ -48,6 +48,13 @@ generated outbox. New Expense and Ecommerce Drafts must select the same
 `1.1.1` digest; historic `1.1.0` locks remain unchanged and compile with a
 `null` template.
 
+`ApplicationGraphV1` may persist only a safe identifier-shaped literal in a
+composition binding. It must reject whitespace, URLs, paths, source text, and
+arbitrary object data. The Graph schema intentionally cannot know a
+package-specific enum allowlist; `@factory/capabilities` remains the mandatory
+semantic validator that matches the identifier against the selected immutable
+package before a composition lock or compilation can exist.
+
 ## Non-goals
 
 - Email, SMS, push, Slack, webhook, or external provider delivery.

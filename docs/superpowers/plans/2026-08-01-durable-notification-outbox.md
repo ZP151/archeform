@@ -266,6 +266,8 @@ runtime evidence.
 - Modify: `packages/capabilities/src/composition.ts`
 - Modify: `packages/capabilities/test/capability-registry.test.ts`
 - Modify: `packages/capabilities/test/composition-contract.test.ts`
+- Modify: `packages/graph/src/model.ts`
+- Modify: `packages/graph/test/application-graph.test.ts`
 - Modify: `packages/compiler/src/index.ts`
 - Modify: `packages/compiler/test/compilation-plan.test.ts`
 - Modify: `packages/compiler/test/notification-outbox-runtime.test.ts`
@@ -285,7 +287,9 @@ remains replayable with a null template.
   rejects an undeclared string, and rejects a string bound to a non-enum
   parameter. Assert that an outbox generated from an accepted `1.1.1` lock
   contains the exact locked template, while a replayed `1.1.0` lock still
-  contains `null`.
+  contains `null`. Add Graph schema coverage accepting only a safe
+  identifier-shaped literal binding and rejecting text, URLs, paths, and
+  executable/object-shaped values.
 
 - [ ] **Step 2: Run focused tests to verify they fail**
 
@@ -302,10 +306,13 @@ remains replayable with a null template.
 - [ ] **Step 3: Implement the versioned correction**
 
   Add a strict `enum` parameter form with an exact `values` allowlist; do not
-  add a general free-form string binding. Create physical `1.1.1` package
-  assets, a new immutable digest, and register it as the current notification
-  asset. Extend the compiler to use the already validated enum binding. It
-  must still generate `null` for any verified historical `1.1.0` lock.
+  add a general free-form string binding. Extend the Graph binding scalar only
+  with a safe identifier-shaped literal; package composition validation must
+  still reject every identifier not declared by the selected enum parameter.
+  Create physical `1.1.1` package assets, a new immutable digest, and register
+  it as the current notification asset. Extend the compiler to use the already
+  validated enum binding. It must still generate `null` for any verified
+  historical `1.1.0` lock.
 
 - [ ] **Step 4: Run focused tests to verify they pass**
 
