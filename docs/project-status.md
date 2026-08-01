@@ -2,6 +2,36 @@
 
 Updated: 2026-08-01
 
+## Candidate Foundry source-expansion research — 2026-08-01
+
+Two public-source research records now define a scalable intake path for the
+next capability expansion. The recommended shape is a Discovery Index feeding
+the existing immutable quarantine pipeline, rather than manually creating one
+capability package for every business scenario or copying complete upstream
+applications into generated products.
+
+- `docs/research/2026-08-01-oss-capability-intake-mechanisms.md` records the
+  batch discovery, fixed-reference, SBOM, licence, vulnerability, provenance,
+  AST-inventory, Candidate-artifact, and promotion path. It identifies four
+  narrow reuse modes: pinned dependency, template adapter, Provider adapter,
+  selective source port, and reference-only.
+- `docs/research/2026-08-01-permissive-profile-component-intake.md` records
+  fifteen additional direct-dependency or Provider candidates and a ranked
+  ten-item Foundry batch spanning money, identity, media, interchange, search,
+  inbound communication, barcode/scan, and release-control seams.
+
+No researched source has been installed, copied, activated as a Provider, or
+promoted to Golden. The existing `external-intake` package can batch fixed
+source requests, preserve quarantine evidence, and emit non-promoting
+Candidate proposals. The next product slice is Discovery Index and triage
+automation, followed by Factory-owned candidate package scaffolds for
+allowlisted, evidence-complete source modules.
+
+Fresh root regression confirmation: `pnpm test` exited successfully for all
+sixteen workspace tasks. Turbo replayed prior task results from its local cache,
+so this confirms no known regression in the checked worktree but is not a new
+generated-application release acceptance.
+
 ## Profile readiness and quarantined Candidate port planning — 2026-08-01
 
 Commits `9de4b74`, `80b5a15`, and `a0a015c` make portfolio maturity visible

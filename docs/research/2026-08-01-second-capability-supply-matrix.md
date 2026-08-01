@@ -1,0 +1,170 @@
+# Second capability-supply matrix
+
+**Research date:** 2026-08-01
+**Decision investigated:** which additional public projects can expand the
+Factory Application Graph capability roadmap across more than one hundred
+Profiles without making an upstream runtime, data model, workflow format, or
+source tree authoritative.
+
+## Scope, method, and non-overlap
+
+This public-source desk-research memo is a **second**, non-overlapping intake
+wave. It was checked against the 43 records in
+`ecosystem/portfolio/2026-07-30-external-business-logic.json` and the twenty
+records in
+`docs/research/2026-08-01-capability-supply-expansion-source-matrix.md`.
+Therefore it does not repeat existing candidates such as rrule, pdf-lib, Ajv,
+Uppy, Cerbos, GraphHopper, OpenProject, Snipe-IT, Keycloak, Gotenberg,
+Meilisearch, or the existing commerce/CRM/HR portfolio systems.
+
+Facts below are observations from official repositories and documentation on
+the research date. Classification, target interface, and priority are Factory
+recommendations, not upstream claims or approval to install/copy anything.
+
+### Classification policy
+
+| Classification | Permitted next action | Prohibited boundary |
+| --- | --- | --- |
+| **direct-dependency** | Pin a published package and use it behind a Factory-owned compiler/runtime wrapper. | Its object model, configuration, and client-side state must not become the Application Graph or policy authority. |
+| **provider-adapter** | Create a Factory-owned adapter to a separately deployed service with local fakes. | The provider must not own Graph facts, credentials, tenant policy, or business lifecycle decisions. |
+| **selective-source-study** | Examine a fixed, named source scope after a source-study record. | No files may be copied merely because the project is permissively licensed; no whole-repository import. |
+| **reference-only** | Record vocabulary, UX, or domain test ideas at a fixed tag/SHA. | No code, runtime, image, package, or linking may be used. |
+
+## Candidate matrix
+
+| # | Source, licence evidence, and observed fact | Classification | Factory capability family and Profile clusters | Boundary Factory retains | Required fixed reference and evidence | Confidence |
+| ---: | --- | --- | --- | --- | --- | --- |
+| 1 | [date-fns](https://github.com/date-fns/date-fns) is a TypeScript date utility library; its README states that v4 provides first-class time-zone support and its [licence](https://github.com/date-fns/date-fns/blob/main/LICENSE.md) is MIT. | direct-dependency | `time.calendar-math/v1`; booking, rota, leave, restaurant reservation, delivery-slot, education, field-service. | Canonical instants, time-zone selection, availability, conflicts, holds, and cancellation policy remain Graph semantics. | Exact npm version/integrity; DST, locale, interval, and invalid-time fixtures. | High |
+| 2 | [FullCalendar](https://github.com/fullcalendar/fullcalendar) is a JavaScript drag-and-drop calendar with React, Angular, and Vue connectors; its [licence](https://github.com/fullcalendar/fullcalendar/blob/main/LICENSE) is MIT for the Standard packages. | direct-dependency | `experience.calendar-projection/v1`; appointments, shifts, reservations, dispatch, course timetables, project milestones. | Calendar events are a read/write projection of declared records and flows, never an alternative scheduler or authority. | Exact package family/integrities; role-filtering, keyboard, timezone, recurrence, and rejected-drop fixtures; exclude premium scheduler paths. | High |
+| 3 | [cron-parser](https://github.com/harrisiirak/cron-parser) parses cron expressions and documents time-zone/date options; its [licence](https://github.com/harrisiirak/cron-parser/blob/master/LICENSE) is MIT. | direct-dependency | `time.scheduled-trigger/v1`; reminders, imports, report delivery, follow-up, reorder checks, SLA timers. | Graph defines allowed schedules, retry, idempotency, ownership, and audit. A cron string cannot schedule arbitrary code or external URLs. | Exact npm version/integrity; timezone, leap, bounds, duplicate-fire, and disable/enable fixtures. | Medium |
+| 4 | [SheetJS Community Edition](https://github.com/SheetJS/sheetjs) describes spreadsheet extraction and generation; the repository states CE is Apache-2.0 and points to its [licence](https://github.com/SheetJS/sheetjs/blob/master/LICENSE). | direct-dependency | `document.spreadsheet-interchange/v1`; bulk catalog, inventory, CRM, HR, finance-admin, roster, and reporting Profiles. | Factory owns import schema mapping, validation, authorization, error rows, and immutable import evidence. | Exact package/build digest plus SBOM; formula, macro, size, encoding, header, malicious workbook, and round-trip fixtures. | High |
+| 5 | [ExcelJS](https://github.com/exceljs/exceljs) reads, manipulates, and writes XLSX/JSON workbooks; its README says contributions are under the [MIT licence](https://github.com/exceljs/exceljs/blob/master/LICENSE). | direct-dependency | `document.xlsx-export/v1`; invoices, operations exports, finance reports, workforce rosters, inventory counts. | Factory-controlled report schema and templates remain canonical; no formula execution or arbitrary external links in generated outputs. | Exact npm version/integrity; deterministic workbook, formula-disabled, large-export, and accessibility fixtures. | Medium |
+| 6 | [Papa Parse](https://github.com/mholt/PapaParse) is a browser/Node CSV parser with worker and streaming modes; its [licence](https://github.com/mholt/PapaParse/blob/master/LICENSE) is MIT. | direct-dependency | `document.csv-import/v1`; customer/contact, menu/catalog, stock, timesheet, case, and asset import/export. | Factory validates each row against a published Graph schema and controls command batching/rollback. | Exact npm version/integrity; delimiter, quoted-field, encoding, CSV-injection, partial-failure, and quota fixtures. | High |
+| 7 | [docx](https://github.com/dolanmiu/docx) generates and modifies DOCX in JavaScript/TypeScript for Node and browsers; its [licence](https://github.com/dolanmiu/docx/blob/master/LICENSE) is MIT. | direct-dependency | `document.docx-assembly/v1`; contracts, certificates, inspection packs, offers, HR letters, SOP exports. | Only Factory-approved templates and immutable data projections may be rendered; document templates cannot become workflow/program execution. | Exact npm version/integrity; golden-byte/semantic fixtures, font/asset notice inventory, and hostile-value escaping tests. | High |
+| 8 | [Mammoth](https://github.com/mwilliamson/mammoth.js) converts DOCX to HTML and supports style maps; its [licence](https://github.com/mwilliamson/mammoth.js/blob/master/LICENSE) is BSD-2-Clause. | direct-dependency | `document.docx-ingest/v1`; knowledge, policy, onboarding, compliance, and support-content Profiles. | Imported content is untrusted; Factory owns sanitisation, attachment handling, canonical rich-content AST, revision, and publication policy. | Exact npm version/integrity; sanitisation, oversized file, unsupported content, malformed XML, and attribution fixtures. | Medium |
+| 9 | [Tesseract.js](https://github.com/naptha/tesseract.js) is a JavaScript OCR wrapper around Tesseract with browser and Node support; its [licence](https://github.com/naptha/tesseract.js/blob/master/LICENSE.md) is Apache-2.0. | direct-dependency | `document.ocr-extraction/v1`; receipt/expense, delivery proof, inspection, asset, intake, and claims Profiles. | OCR text is a suggestion requiring confidence/provenance and human/flow validation; it cannot directly mutate a business record. | Exact package/worker/model language-data digests; PII redaction, confidence, bad-image, resource-cap, and no-auto-post fixtures. | Medium |
+| 10 | [Ory Kratos](https://github.com/ory/kratos) is a headless cloud-native identity system offering passkeys, social sign-in, OIDC, MFA, recovery, and verification; its [licence](https://github.com/ory/kratos/blob/master/LICENSE) is Apache-2.0. | provider-adapter | `identity.self-service-session/v1`; customer portal, patient/admin intake, B2B operations, student, citizen, and marketplace Profiles. | Factory retains role/resource policy, business-profile schema, lifecycle facts, and deployment-secret references. | Pin image digest, release/SHA, API/SDK version; local fake; session expiry, recovery, OIDC callback, tenant, outage, and audit fixtures. | High |
+| 11 | [SeaweedFS](https://github.com/seaweedfs/seaweedfs) is an Apache-licensed distributed system for object storage, file systems, and Iceberg tables; its [licence](https://github.com/seaweedfs/seaweedfs/blob/master/LICENSE) is Apache-2.0. | provider-adapter | `storage.object-provider/v1`; evidence attachments, documents, media catalog, inspections, support, and content Profiles. | Factory owns object metadata, access policy, retention, malware status, deletion requests, and signed-intent issuance. | Pin image/SHA plus S3 API version; local fake; prefix isolation, expired intent, scan-pending, retention, and deletion fixtures. | High |
+| 12 | [tusd](https://github.com/tus/tusd) is the official Go reference server for the tus resumable-upload protocol; its [licence](https://github.com/tus/tusd/blob/main/LICENSE.txt) is MIT. | provider-adapter | `storage.resumable-upload/v1`; large evidence, media, design asset, document, and field-report attachments. | Factory issues bounded upload intent and controls final attachment promotion; the upload server never grants record access. | Pin image/SHA and tus protocol version; local fake; resume, expired token, content-type/size, quarantine, and orphan-cleanup fixtures. | High |
+| 13 | [json-rules-engine](https://github.com/CacheControl/json-rules-engine) evaluates JSON rules without `eval`, supports nested conditions and serialisation, and is [ISC-licensed](https://github.com/CacheControl/json-rules-engine/blob/master/LICENSE). | direct-dependency | `rules.declarative-decision/v1`; eligibility, discount, routing, approval guard, leave, intake, and notification-selection Profiles. | Factory owns a closed rule AST, approved fact allowlist, result explanations, versioning, and execution budget. | Exact npm version/integrity; no async/custom fact, no remote path, bounded depth, explainability, and deterministic-result fixtures. | High |
+| 14 | [bpmn.io](https://github.com/bpmn-io/bpmn-js) provides a browser BPMN 2.0 renderer/modeler; its [licence](https://github.com/bpmn-io/bpmn-js/blob/develop/LICENSE) is MIT. | direct-dependency | `experience.flow-diagram-projection/v1`; approvals, case management, onboarding, restaurant fulfilment, order, and service Profiles. | It is an editor/diagram adapter only. Factory FlowModel and permitted XState effects remain canonical; arbitrary BPMN scripts/extension elements are rejected. | Exact package/integrity; FlowModel round-trip, unsupported-node, layout-only, and no-script fixtures. | Medium |
+| 15 | [Drools](https://github.com/kiegroup/drools) is an Apache-2.0 Java rules and decision management project with rule engine and DMN material; its [licence](https://github.com/kiegroup/drools/blob/main/LICENSE) is Apache-2.0. | provider-adapter | `rules.decision-service/v1`; high-volume eligibility, pricing, compliance, assignment, and claims Profiles. | Publish a Factory-owned decision request/response contract only; DRL/DMN files, Java functions, and provider data model are never Graph truth. | Pin server/SHA and client/API version; local fake; timeout, deny/default, explanation, data-minimisation, and rule-revision fixtures. | Medium |
+| 16 | [Gotify](https://github.com/gotify/server) is a self-hostable REST/WebSocket notification server with user/client/application management; its [licence](https://github.com/gotify/server/blob/master/LICENSE) is MIT. | provider-adapter | `notification.push-dispatch/v1`; order updates, staff alerts, approvals, incidents, delivery, and reminders. | Factory keeps recipient consent, template/version, delivery intent, retry/idempotency, and audit. Provider application tokens stay in deployment secrets. | Pin image/SHA and HTTP API; local fake; consent, retry, rate-limit, provider-failure, and no-PII-in-title fixtures. | High |
+| 17 | [OSRM](https://github.com/Project-OSRM/osrm-backend) is a routing engine exposing HTTP services for nearest, route, table, match, trip, and tile queries; its [licence](https://github.com/Project-OSRM/osrm-backend/blob/master/LICENSE.TXT) is BSD-2-Clause. | provider-adapter | `geo.route-provider/v1`; delivery, dispatch, technician, pickup, fleet, and property-viewing Profiles. | Stops, delivery commitment, service window, consent, and proof of delivery remain Factory records. A route is a derived proposal. | Pin image/SHA, API version, and OSM extract/attribution; local fake; no-route, timeout, privacy-redaction, and recomputation fixtures. | High |
+| 18 | [Valhalla](https://github.com/valhalla/valhalla) is an OpenStreetMap routing engine with multi-modal/time-based routing and runtime costing; its [licence](https://github.com/valhalla/valhalla/blob/master/LICENSE.md) is MIT. | provider-adapter | `geo.multi-modal-route-provider/v1`; accessibility-aware delivery, field service, transport, appointment, and travel planning Profiles. | Factory retains business constraints, scheduling commitments, human overrides, and location-consent policy. | Pin image/SHA, map-data snapshot/attribution, and adapter API; local fake; mode, no-route, stale-input, and provider-outage fixtures. | Medium |
+| 19 | [Turf](https://github.com/Turfjs/turf) is a modular JavaScript geospatial analysis library; its [licence](https://github.com/Turfjs/turf/blob/master/LICENSE) is MIT. | direct-dependency | `geo.geometry-calculation/v1`; service area, delivery zone, property, field inspection, asset, and location-based eligibility Profiles. | Factory validates coordinate precision, CRS expectations, consent/redaction, and user-visible policy; geometry output is not an authorization decision on its own. | Exact package/integrity; polygon edge, anti-meridian, precision, hostile geometry, and deterministic fixtures. | High |
+| 20 | [H3](https://github.com/uber/h3) is a hexagonal hierarchical geospatial-indexing system with bindings; its [licence](https://github.com/uber/h3/blob/master/LICENSE) is Apache-2.0. | direct-dependency | `geo.coverage-index/v1`; delivery coverage, service territory, fleet, field operations, and aggregate location analytics. | Factory owns business-area membership, privacy resolution, geocoding boundary, and retention; an H3 cell must not become a raw location identifier. | Pin core/binding versions and integrity; resolution, boundary, privacy, and no-cross-tenant aggregation fixtures. | Medium |
+| 21 | [NetBox](https://github.com/netbox-community/netbox) models and documents network infrastructure with APIs and extensions; its [licence](https://github.com/netbox-community/netbox/blob/main/LICENSE.txt) is Apache-2.0. | selective-source-study | `asset.technical-registry/v1`, `custody.configuration-item/v1`; IT asset, facilities, equipment, service-management, and network operations Profiles. | Study vocabulary and API contract patterns only. Do not copy Django models, migrations, plugin system, UI, or take its source-of-truth model into Factory. | Pin release/SHA, licence, and exact docs/API paths; record a source-study ledger before any scoped port. | High |
+| 22 | [Ralph](https://github.com/allegro/ralph) is an Apache-2.0 CMDB/asset-management system for data-center and back-office hardware. | selective-source-study | `asset.custody-lifecycle/v1`; device checkout, equipment register, facilities, IT service, retail fixture, and laboratory Profiles. | Study asset lifecycle, custody, and audit vocabulary only; no Django runtime/schema, migrations, UI, or integration code may be copied. | Pin release/SHA, [licence](https://github.com/allegro/ralph/blob/master/LICENSE), and exact named source paths before study. | High |
+| 23 | [Umami](https://github.com/umami-software/umami) is a privacy-focused analytics platform with Docker/PostgreSQL deployment documentation; its [licence](https://github.com/umami-software/umami/blob/master/LICENSE) is MIT. | provider-adapter | `analytics.product-event-provider/v1`; all generated web Profiles, conversion, adoption, checkout, booking, and support journeys. | Factory owns consent, event schema, redaction, retention, and aggregate definition. Upstream dashboard/schema cannot become Graph semantics. | Pin image/SHA plus collector API; local fake; consent-off, tenant isolation, deletion, blocked-provider, and aggregate-only fixtures. | High |
+| 24 | [ClickHouse](https://github.com/ClickHouse/ClickHouse) is an Apache-2.0 real-time analytics database; its repository describes a column-oriented DBMS and publishes [licence](https://github.com/ClickHouse/ClickHouse/blob/master/LICENSE). | provider-adapter | `analytics.event-store-provider/v1`; high-volume operational reporting, order, delivery, inventory, IoT, and fleet Profiles. | Factory defines event contracts and derived aggregates; no raw operational PII/credentials or ad-hoc user SQL enters Graphs. | Pin image/SHA and driver; local fake; schema version, retention, tenant filter, backfill, and outage fixtures. | Medium |
+| 25 | [Cube Core](https://github.com/cube-js/cube) is a headless semantic layer exposing metrics/dimensions through SQL, REST, and GraphQL; its README states the backend is [Apache-2.0](https://github.com/cube-js/cube/blob/master/LICENSE) and client MIT. | provider-adapter | `analytics.semantic-query-provider/v1`; governed dashboards across finance, restaurant, ecommerce, workforce, support, and operations Profiles. | Published Factory analytics definitions remain canonical. Cube models, caches, and API credentials are a provider projection. | Pin image/SHA and API; local fake; metric version, tenant/row filtering, cache invalidation, deletion, and unavailable-provider fixtures. | High |
+| 26 | [Apache Airflow](https://github.com/apache/airflow) is an ASF workflow automation/scheduling platform; its official project descriptor identifies [Apache-2.0](https://github.com/apache/airflow/blob/main/LICENSE) and the project documents DAG monitoring. | provider-adapter | `jobs.external-data-pipeline/v1`; imports, reconciliation, long-running reports, analytics refresh, and integration synchronization Profiles. | Factory FlowModel owns business workflow. Airflow receives only a bounded published job projection; Python DAG source is never user/AI-generated Graph content. | Pin official release/image/SHA and API; local fake; retry, cancellation, idempotency, published-only, and secret-isolation fixtures. | Medium |
+| 27 | [Focalboard](https://github.com/mattermost-community/focalboard) is a self-hosted project-management board alternative; the repository says it is **not maintained** and publishes a [licence file](https://github.com/mattermost-community/focalboard/blob/main/LICENSE.txt). | reference-only | `work.item-board/v1`, `work.kanban-view/v1`; project, case, incident, facilities, onboarding, and service-management Profiles. | Maintenance status excludes dependency/provider use. Record only public feature vocabulary and independent journey ideas. | Pin final tag/SHA and licence/NOTICE inventory for comparison only. | High |
+| 28 | [SuiteCRM](https://github.com/SuiteCRM/SuiteCRM) describes an enterprise CRM application and states it is [AGPLv3](https://github.com/SuiteCRM/SuiteCRM/blob/develop/LICENSE.txt). | reference-only | `crm.account-contact-deal/v1`, `support.case/v1`; sales, service, recruiting, property, procurement, and partner Profiles. | **AGPL exclusion:** no code, container, package, source fragment, or linked runtime. Factory must independently author canonical CRM records and policies. | Pin public tag/SHA and licence for feature-vocabulary comparison only. | High |
+| 29 | [Mautic](https://github.com/mautic/mautic) is open-source marketing automation; its official knowledge base identifies its [GPLv3 licence](https://kb.mautic.org/article/what-is-mautic.html). | reference-only | `marketing.campaign-segment/v1`; restaurant promotions, ecommerce lifecycle, membership, events, and lead-nurture Profiles. | **GPL exclusion:** no code, image, package, or runtime. Factory independently owns consent, audience, delivery, and campaign rules. | Pin public tag/SHA and licence for feature/test vocabulary only. | High |
+| 30 | [Documenso](https://github.com/documenso/documenso) is a TypeScript/Next.js document-signing application; the repository declares [AGPL-3.0](https://github.com/documenso/documenso/blob/main/LICENSE). | reference-only | `document.signature-envelope/v1`; contracts, HR offers, procurement, consent, property, and onboarding Profiles. | **AGPL exclusion:** no source, package, image, embedded UI, signing model, or runtime. Any signature provider requires a separate provider ADR. | Pin public tag/SHA and licence for semantics/test vocabulary only. | High |
+| 31 | [ZITADEL](https://github.com/zitadel/zitadel) provides OIDC, SAML, MFA, passkeys, SCIM, and multi-tenancy features; the repository currently identifies [AGPL-3.0](https://github.com/zitadel/zitadel/blob/main/LICENSE) with path-specific exceptions. | reference-only | `identity.enterprise-federation/v1`; B2B portal, workforce, marketplace, healthcare administration, and citizen-service Profiles. | **Mixed/AGPL exclusion:** no runtime or source import without a later directory-specific decision; maintain neutral OIDC provider contract. | Pin public tag/SHA plus `LICENSING.md`; comparison only. | High |
+| 32 | [ntfy](https://github.com/binwiederhier/ntfy) is an HTTP pub/sub notification service; its repository declares both [Apache-2.0 and GPLv2](https://github.com/binwiederhier/ntfy/blob/main/LICENSE). | reference-only | `notification.topic-push/v1`; operations, delivery, approvals, incident, and field service Profiles. | **Mixed licence exclusion:** no image/package/runtime until a path- and distribution-specific legal decision. Retain only transport vocabulary. | Pin public tag/SHA and both licence files for comparison only. | High |
+| 33 | [UVDesk Core Framework](https://github.com/uvdesk/core-framework) supplies helpdesk foundations including email templates and support-staff management; its [licence](https://github.com/uvdesk/core-framework/blob/master/LICENSE) is OSL-3.0. | reference-only | `support.ticket-case/v1`; customer support, incident, internal helpdesk, property maintenance, and clinical administration Profiles. | **OSL exclusion by current policy:** no framework/package/code. Factory independently owns case state, SLA, tenant policy, and audit. | Pin public tag/SHA and licence for vocabulary only. | Medium |
+| 34 | [Staffjoy Suite](https://github.com/Staffjoy/suite) describes workforce scheduling, time-off, compliance, and clock-in; its README calls out separate commercial Highcharts licence obligations. | reference-only | `workforce.shift-attendance/v1`; hospitality, retail, field service, clinic, warehouse, and education Profiles. | No source/runtime reuse: third-party chart licensing and the vertical runtime prevent safe direct adoption. Use only for independently authored scenario vocabulary. | Pin public tag/SHA, root licence, and third-party licence inventory before any comparison. | Medium |
+
+## Observed coverage and decision implications
+
+**Observed fact:** the permissively licensed candidates in this wave cover
+time calculation/display, document interchange/assembly/extraction, identity,
+object storage/upload, rules, geospatial computation/routing, assets, product
+analytics, analytical storage/semantic query, and external data jobs. The
+CRM/helpdesk/e-signature/workforce verticals found in the same search are
+largely reciprocal/copyleft, mixed, unmaintained, or contain commercial
+dependencies.
+
+**Inference:** Factory can increase scenario coverage rapidly by turning the
+first group into narrow Graph capability wrappers and provider adapters, while
+using the second group only to derive independent semantics and journey tests.
+The correct scale unit is a tested capability interface, not a copied vertical
+application.
+
+**Product decision affected:** prioritise capability kernels below before
+adding profiles; keep support/CRM/e-signature/workforce as independently
+implemented capability recipes until a compatible provider is selected.
+
+## Ranked initial 12-item intake queue
+
+This ranking optimises broad reuse, clear boundary, and low risk of importing
+an upstream business model. It is an intake order, not Golden approval.
+
+| Priority | Candidate | First Factory interface or use | Why it is ahead of the queue |
+| ---: | --- | --- | --- |
+| 1 | date-fns | `time.calendar-math/v1` | Nearly every business Profile needs correct interval/time-zone calculations. |
+| 2 | SheetJS CE | `document.spreadsheet-interchange/v1` | Bulk import/export removes a repeated operational gap across many Profiles. |
+| 3 | Papa Parse | `document.csv-import/v1` | Small, bounded complement to spreadsheet interchange with strong import safety tests. |
+| 4 | json-rules-engine | `rules.declarative-decision/v1` | Enables controlled eligibility/routing/discount decisions without executable code. |
+| 5 | Ory Kratos | `identity.self-service-session/v1` | Establishes a production-ready external identity boundary without changing PolicyModel authority. |
+| 6 | Gotify | `notification.push-dispatch/v1` | A compact, self-hostable notification provider for many operational Profiles. |
+| 7 | tusd | `storage.resumable-upload/v1` | Makes large evidence/media attachments reliable while preserving storage/security policy. |
+| 8 | SeaweedFS | `storage.object-provider/v1` | Supplies a replaceable object-storage target for attachments and generated artifacts. |
+| 9 | FullCalendar | `experience.calendar-projection/v1` | Makes scheduling and service/waitlist Profiles usable after time semantics are fixed. |
+| 10 | docx | `document.docx-assembly/v1` | Adds controlled high-value outbound documents without importing a document platform. |
+| 11 | Turf | `geo.geometry-calculation/v1` | Shared delivery/service-zone/property calculation without adopting an external geo data model. |
+| 12 | Cube Core | `analytics.semantic-query-provider/v1` | Provides a governed analytics seam after stable event/aggregate contracts exist. |
+
+## Automating Source -> Quarantine -> Candidate Package Foundry
+
+Automation should eliminate repetitive evidence work, **not** auto-promote
+untrusted code. A source may enter the candidate workflow only if all of the
+following machine-verifiable conditions are true:
+
+1. **Allowlisted official source:** canonical repository/package URL matches a
+   reviewed allowlist; source type and reuse classification are explicit.
+2. **Immutable input:** a release/tag/commit and package/image digest are
+   resolved; the Foundry rejects floating branches, `latest`, mutable releases,
+   and missing licence files.
+3. **Licence gate:** SPDX expression/path inventory is compatible with the
+   classification. GPL, AGPL, SSPL, BSL, source-available, unknown, and mixed
+   scopes default to `reference-only`; a permissive project with mixed paths
+   requires an exact allowed directory list.
+4. **Quarantine evidence:** generate SBOM, dependency graph, notices,
+   maintainer/release/security-policy metadata, secret scan, SAST, vulnerability
+   scan, and reproducible build result. Any critical unresolved finding blocks
+   candidate materialisation.
+5. **Declared Factory boundary:** a candidate descriptor states the target
+   capability key, Graph projection input/output schema, data classification,
+   credential isolation, timeout/retry/idempotency behavior, and removal path.
+   It cannot name arbitrary filesystem paths, URLs, or executable callbacks.
+6. **Generated safe scaffold:** Foundry may create a **Factory-owned**
+   candidate wrapper/provider adapter, notice file, fixture harness, and
+   conformance-test skeleton. It must not copy arbitrary business code or
+   automatically add a dependency to a compiler target.
+7. **Offline conformance:** candidate tests must use a local fake or fixture
+   and prove Published-Revision-only input, tenant separation, redaction,
+   error/retry behavior, no Graph writes, and removal/disable behavior.
+8. **Human promotion remains explicit:** only a source-study record (for
+   copied scope), exact notices, resolved findings, capability owner decision,
+   and independent review can promote a Candidate to a Factory-authored Golden
+   capability. Automation records evidence expiry and blocks new locks if a
+   digest, licence, or conformance result changes.
+
+### Foundry implementation order
+
+1. Build the descriptor/evidence schema and allowlist importer.
+2. Automate immutable acquisition, licence/SBOM/security evidence, and expiry
+   state transitions into a non-runnable Candidate registry.
+3. Generate only direct-dependency/provider adapter scaffolds with fixtures;
+   do not implement business semantics from the external source automatically.
+4. Add per-interface conformance suites and a Golden-promotion gate.
+5. Add selective-source-study copy ledgers only after the generic pipeline is
+   proven; broad repository cloning remains permanently disallowed.
+
+## Residual risks
+
+- A permissive licence is not a security, maintenance, or semantic-compatibility
+  guarantee. Exact source-tree evidence matters more than a repository badge.
+- Several high-value vertical systems are deliberately reference-only because
+  their licences, commercial dependencies, or maintenance state do not satisfy
+  Factory's reuse rules.
+- Provider candidates add deployment, credential, privacy, data-residency, and
+  operational work; an adapter must stay optional and fail closed.
+- A profile count is not delivery evidence. Each new Profile still needs a
+  published Graph, simulator, generated Web/API/database bundle, and role
+  journey verification.
