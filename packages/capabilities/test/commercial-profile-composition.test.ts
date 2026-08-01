@@ -343,12 +343,12 @@ describe("commercial profile composition", () => {
         {
           role: "shopper",
           resource: "order",
-          actions: ["create", "read", "update"],
+          actions: ["create", "read", "update", "submit", "pay"],
         },
         {
           role: "merchant",
           resource: "order",
-          actions: ["read", "update", "audit"],
+          actions: ["read", "update", "audit", "fulfil", "cancel"],
         },
       ]),
     );

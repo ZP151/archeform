@@ -1655,7 +1655,7 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
             {
               role: "employee",
               resource: "expense",
-              actions: ["create", "read"],
+              actions: ["create", "read", "submit"],
             },
             {
               role: "employee",
@@ -1712,6 +1712,7 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
                   from: "draft",
                   event: "submit",
                   to: "submitted",
+                  roles: ["employee"],
                   effects: [
                     { capability: "audit.record", operation: "record" },
                   ],
@@ -3094,7 +3095,7 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
             {
               role: "shopper",
               resource: "order",
-              actions: ["create", "read", "update"],
+              actions: ["create", "read", "update", "submit", "pay"],
             },
             {
               role: "shopper",
@@ -3151,7 +3152,7 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
             {
               role: "merchant",
               resource: "order",
-              actions: ["read", "update", "audit"],
+              actions: ["read", "update", "audit", "fulfil", "cancel"],
             },
             {
               role: "merchant",
@@ -3186,6 +3187,7 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
                   from: "submitted",
                   event: "pay",
                   to: "paid",
+                  roles: ["shopper"],
                   effects: [
                     { capability: "payment.simulate", operation: "simulate" },
                     {

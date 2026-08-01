@@ -83,4 +83,29 @@ describe("identity policy profile composition", () => {
       field: "subjectRef",
     });
   });
+
+  it("declares every protected Expense and Ecommerce flow event as an identity action", () => {
+    const actionsFor = (
+      profile: Parameters<typeof composeDefaultCapabilityDraft>[0]["profile"],
+      role: string,
+      resource: string,
+    ) =>
+      composeDefaultCapabilityDraft({ profile }).graph.policy.permissions.find(
+        (permission) =>
+          permission.role === role && permission.resource === resource,
+      )?.actions;
+
+    expect(actionsFor("expense-approval", "employee", "expense")).toEqual(
+      expect.arrayContaining(["submit"]),
+    );
+    expect(actionsFor("expense-approval", "manager", "expense")).toEqual(
+      expect.arrayContaining(["approve", "reject"]),
+    );
+    expect(actionsFor("simple-ecommerce", "shopper", "order")).toEqual(
+      expect.arrayContaining(["submit", "pay"]),
+    );
+    expect(actionsFor("simple-ecommerce", "merchant", "order")).toEqual(
+      expect.arrayContaining(["fulfil", "cancel"]),
+    );
+  });
 });

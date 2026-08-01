@@ -3188,7 +3188,7 @@ function renderApiMain(
     "",
     "  @Post(':entity/:recordId/events/:event')",
     "  async transition(@Param('entity') entity: string, @Param('recordId') recordId: string, @Param('event') event: string, @Body() body: { expectedVersion: number; idempotencyKey: string }, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
-    "    try { return await applicationRuntime.transition(roleFrom(request, entity, 'read'), entity, recordId, event, body); } catch (error) { throw rejected(error); }",
+    "    try { return await applicationRuntime.transition(roleFrom(request, entity, event), entity, recordId, event, body); } catch (error) { throw rejected(error); }",
     "  }",
     "}",
     "",
@@ -3366,7 +3366,10 @@ function relationshipCardinality(
   }
 }
 
-function renderApiReference(graph: ApplicationGraphV1): string {
+function renderApiReference(
+  graph: ApplicationGraphV1,
+  usesFixtureSessions: boolean,
+): string {
   const endpoints = [
     ["GET", "/api/health", "Return generated application health."],
     [
@@ -3422,7 +3425,10 @@ function renderApiReference(graph: ApplicationGraphV1): string {
         )
         .join("\n")
     : "- No flows declared.";
-  return `# API reference\n\nThis API is compiled from the immutable Published Graph for **${graph.metadata.name}**. Every request is role-scoped through the \`x-factory-role\` header.\n\n## Endpoints\n\n| Method | Path | Contract |\n| --- | --- | --- |\n${endpoints.map(([method, path, description]) => `| ${method} | \`${path}\` | ${description} |`).join("\n")}\n\n## Domain endpoints\n\n${entities}\n\n## Declared flow events\n\n${flows}\n`;
+  const identityBoundary = usesFixtureSessions
+    ? "Every request is bound to an opaque local fixture session during local compilation; the server resolves the principal and checks the declared resource/action before performing work."
+    : "Every request is role-scoped through the `x-factory-role` header.";
+  return `# API reference\n\nThis API is compiled from the immutable Published Graph for **${graph.metadata.name}**. ${identityBoundary}\n\n## Endpoints\n\n| Method | Path | Contract |\n| --- | --- | --- |\n${endpoints.map(([method, path, description]) => `| ${method} | \`${path}\` | ${description} |`).join("\n")}\n\n## Domain endpoints\n\n${entities}\n\n## Declared flow events\n\n${flows}\n`;
 }
 
 function renderEntityRelationshipDiagram(graph: ApplicationGraphV1): string {
@@ -4006,7 +4012,8 @@ export function generateApplicationBundle(
     {
       path: "docs/api-reference.md",
       render: () =>
-        restaurantRuntime()?.apiReference ?? renderApiReference(graph),
+        restaurantRuntime()?.apiReference ??
+        renderApiReference(graph, Boolean(identityPolicy)),
     },
     {
       path: "docs/entity-relationship.md",

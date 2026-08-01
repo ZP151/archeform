@@ -7,7 +7,7 @@ test.skip(
   "Set FACTORY_GENERATED_EXPENSE_E2E_URL for an isolated generated-app journey.",
 );
 
-test("runs the generated expense employee and manager journey", async ({
+test("enforces identity policy through the generated expense employee and manager journey", async ({
   page,
 }) => {
   const expensesUrl = new URL(generatedApplicationUrl!);
@@ -37,12 +37,52 @@ test("runs the generated expense employee and manager journey", async ({
   await expect(draftExpense).toBeVisible({ timeout: 10_000 });
   await draftExpense.getByRole("button", { name: "submit" }).click();
 
-  await page.getByLabel("Role").selectOption("manager");
   const submittedExpense = page
     .locator("li")
     .filter({ hasText: '"status":"submitted"' })
     .last();
   await expect(submittedExpense).toBeVisible({ timeout: 10_000 });
+  const submittedRecord = JSON.parse(
+    (await submittedExpense.locator("code").textContent()) ?? "{}",
+  ) as { readonly id?: string; readonly status?: string };
+  expect(submittedRecord).toMatchObject({
+    id: expect.any(String),
+    status: "submitted",
+  });
+
+  const deniedApproval = await page.request.post(
+    new URL(
+      `/api/expense/${encodeURIComponent(submittedRecord.id!)}/events/approve`,
+      generatedApplicationUrl!,
+    ).toString(),
+    {
+      headers: {
+        "x-factory-fixture-session": "fixture-session-employee",
+      },
+      data: {},
+    },
+  );
+  expect(deniedApproval.status()).toBe(403);
+  await expect(deniedApproval.text()).resolves.toContain(
+    "Identity policy denied",
+  );
+
+  const managerRecords = await page.request.get(
+    new URL("/api/expense", generatedApplicationUrl!).toString(),
+    {
+      headers: {
+        "x-factory-fixture-session": "fixture-session-manager",
+      },
+    },
+  );
+  expect(managerRecords.ok()).toBeTruthy();
+  await expect(managerRecords.json()).resolves.toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ id: submittedRecord.id, status: "submitted" }),
+    ]),
+  );
+
+  await page.getByLabel("Role").selectOption("manager");
   await submittedExpense.getByRole("button", { name: "approve" }).click();
   await expect(
     page.locator("li").filter({ hasText: '"status":"approved"' }).last(),

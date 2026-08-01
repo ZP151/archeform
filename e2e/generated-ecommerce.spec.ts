@@ -7,7 +7,7 @@ test.skip(
   "Set FACTORY_GENERATED_E2E_URL for an isolated generated-app journey.",
 );
 
-test("runs the generated ecommerce customer and operator journey", async ({
+test("enforces identity policy through the generated ecommerce customer and operator journey", async ({
   page,
 }) => {
   await page.goto(generatedApplicationUrl!);
@@ -32,9 +32,34 @@ test("runs the generated ecommerce customer and operator journey", async ({
 
   await page.getByRole("link", { name: "Orders" }).click();
   await expect(page).toHaveURL(/\/orders$/);
-  await page.getByLabel("Role").selectOption("merchant");
   const paidOrder = page.locator("li").filter({ hasText: '"status":"paid"' });
   await expect(paidOrder.last()).toBeVisible({ timeout: 10_000 });
+  const paidRecord = JSON.parse(
+    (await paidOrder.last().locator("code").textContent()) ?? "{}",
+  ) as { readonly id?: string; readonly status?: string };
+  expect(paidRecord).toMatchObject({
+    id: expect.any(String),
+    status: "paid",
+  });
+
+  const deniedFulfilment = await page.request.post(
+    new URL(
+      `/api/order/${encodeURIComponent(paidRecord.id!)}/events/fulfil`,
+      generatedApplicationUrl!,
+    ).toString(),
+    {
+      headers: {
+        "x-factory-fixture-session": "fixture-session-shopper",
+      },
+      data: {},
+    },
+  );
+  expect(deniedFulfilment.status()).toBe(403);
+  await expect(deniedFulfilment.text()).resolves.toContain(
+    "Identity policy denied",
+  );
+
+  await page.getByLabel("Role").selectOption("merchant");
   await paidOrder.last().getByRole("button", { name: "fulfil" }).click();
   await expect(
     page.locator("li").filter({ hasText: '"status":"fulfilled"' }).last(),

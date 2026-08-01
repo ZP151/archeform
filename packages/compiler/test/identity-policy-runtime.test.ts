@@ -38,6 +38,13 @@ describe("identity policy runtime compilation", () => {
     expect(files["api/src/main.ts"]).toContain("x-factory-fixture-session");
     expect(files["api/src/main.ts"]).toContain("resolveFixturePrincipal");
     expect(files["api/src/main.ts"]).toContain("authorizeDeclaredAction");
+    expect(files["api/src/main.ts"]).toContain(
+      "roleFrom(request, entity, event)",
+    );
     expect(files["api/src/main.ts"]).not.toContain("x-factory-role");
+    expect(files["docs/api-reference.md"]).toContain(
+      "checks the declared resource/action before performing work",
+    );
+    expect(files["docs/api-reference.md"]).not.toContain("x-factory-role");
   });
 });
