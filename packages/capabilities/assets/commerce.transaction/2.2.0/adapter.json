@@ -1,0 +1,14 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": ["api.runtime", "database.schema", "database.migration", "test.journey"],
+  "runtimeHandlers": ["transaction"],
+  "templates": [],
+  "parameters": [
+    { "key": "aggregateEntity", "type": "graph-symbol", "required": true },
+    { "key": "transactionFlow", "type": "graph-symbol", "required": true },
+    { "key": "actorRole", "type": "graph-symbol", "required": true }
+  ],
+  "executableContributions": [],
+  "contributes": { "effects": ["commerce.transaction.execute"] }
+}

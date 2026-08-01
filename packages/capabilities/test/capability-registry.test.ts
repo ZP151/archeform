@@ -15,6 +15,7 @@ import {
   composeCapabilityDraft,
   composeDefaultCapabilityDraft,
   composeProfileDraft,
+  createCapabilityCompositionLock,
   getCapabilityAsset,
   getCapability,
   getProfileComposition,
@@ -30,6 +31,7 @@ import {
 import { lockCapabilityAsset } from "../src/assets/index.js";
 import {
   capabilityManifestDigest,
+  createVerifiedCapabilityCompositionLock,
   verifyCapabilityAssetDigest,
   verifyCapabilityAssetPackage,
   loadCapabilityAssetTemplates,
@@ -731,7 +733,7 @@ describe("capability catalog", () => {
   });
 
   it("verifies every registered capability manifest against its declared digest", () => {
-    expect(capabilityAssets).toHaveLength(51);
+    expect(capabilityAssets).toHaveLength(53);
     for (const asset of capabilityAssets) {
       expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     }
@@ -771,7 +773,7 @@ describe("capability catalog", () => {
         continue;
       }
       if (
-        (asset.manifest.executableContributions?.length ?? 0) > 0 &&
+        asset.manifest.executableContributions !== undefined &&
         asset.manifest.templates.length === 0
       ) {
         expect(templates).toEqual([]);
@@ -1860,9 +1862,19 @@ describe("capability catalog", () => {
       "commerce.order",
       "commerce.simulated-payment",
     ]);
-    const commerceSelections = activeSelections.filter(({ lock }) =>
-      commerceKeys.has(lock.key),
+    const historicalOrderLock = lockCapabilityAsset(
+      capabilityAssets.find(
+        ({ manifest }) =>
+          manifest.key === "commerce.order" && manifest.version === "2.0.3",
+      )!,
     );
+    const commerceSelections = activeSelections
+      .filter(({ lock }) => commerceKeys.has(lock.key))
+      .map((selection) =>
+        selection.lock.key === "commerce.order"
+          ? { ...selection, lock: historicalOrderLock }
+          : selection,
+      );
     const context = {
       profile: "simple-ecommerce",
       capabilityKeys: [
@@ -1893,6 +1905,124 @@ describe("capability catalog", () => {
       "commerce.inventory",
       "commerce.simulated-payment",
     ]);
+  });
+
+  it("selects only compatible Transaction V2 lifecycle packages for new Generic Commerce drafts", () => {
+    const genericProfiles = [
+      "simple-ecommerce",
+      "retail-counter",
+      "grocery-pickup",
+    ] as const;
+
+    for (const profile of genericProfiles) {
+      const draft = composeDefaultCapabilityDraft({ profile });
+      expect(draft.assetLocks).toContainEqual(
+        expect.objectContaining({
+          key: "commerce.transaction",
+          version: "2.2.0",
+        }),
+      );
+      expect(draft.assetLocks).toContainEqual(
+        expect.objectContaining({ key: "commerce.order", version: "2.1.0" }),
+      );
+    }
+    const restaurantLocks = composeDefaultCapabilityDraft({
+      profile: "restaurant-ordering",
+    }).assetLocks;
+    expect(restaurantLocks).not.toContainEqual(
+      expect.objectContaining({
+        key: "commerce.transaction",
+        version: "2.2.0",
+      }),
+    );
+    expect(restaurantLocks).not.toContainEqual(
+      expect.objectContaining({ key: "commerce.order", version: "2.1.0" }),
+    );
+
+    const providedV2Interfaces = capabilityAssets.flatMap(({ manifest }) =>
+      (manifest.provides ?? [])
+        .filter(({ version }) => version === "v2")
+        .map(({ interfaceKey }) => interfaceKey),
+    );
+    expect(
+      providedV2Interfaces.filter(
+        (interfaceKey) => interfaceKey === "factory.transaction-executor",
+      ),
+    ).toHaveLength(1);
+    expect(
+      providedV2Interfaces.filter(
+        (interfaceKey) =>
+          interfaceKey === "factory.transaction-operation-adapter",
+      ),
+    ).toHaveLength(1);
+
+    const selections = composeDefaultCapabilityDraft({
+      profile: "simple-ecommerce",
+    }).graph.integration.compositionSelections!;
+    const graphChecksum = `sha256:${"a".repeat(64)}`;
+    const lock = createCapabilityCompositionLock({
+      graphChecksum,
+      selections,
+    });
+    expect(lock.packages).toContainEqual(
+      expect.objectContaining({
+        lock: expect.objectContaining({
+          key: "commerce.transaction",
+          version: "2.2.0",
+        }),
+      }),
+    );
+    expect(lock.packages).toContainEqual(
+      expect.objectContaining({
+        lock: expect.objectContaining({
+          key: "commerce.order",
+          version: "2.1.0",
+        }),
+      }),
+    );
+    expect(() =>
+      createVerifiedCapabilityCompositionLock(
+        { graphChecksum, selections },
+        resolve(dirname(fileURLToPath(import.meta.url)), "../../.."),
+      ),
+    ).not.toThrow();
+
+    const historicalOrder = capabilityAssets.find(
+      ({ manifest }) =>
+        manifest.key === "commerce.order" && manifest.version === "2.0.3",
+    )!;
+    const historicalTransaction = capabilityAssets.find(
+      ({ manifest }) =>
+        manifest.key === "commerce.transaction" && manifest.version === "2.1.0",
+    )!;
+    const expectedError =
+      "Generic order lifecycle requires one compatible Transaction V2 executor and operation adapter";
+
+    for (const mixedSelections of [
+      selections.map((selection) =>
+        selection.lock.key === "commerce.order"
+          ? { ...selection, lock: lockCapabilityAsset(historicalOrder) }
+          : selection,
+      ),
+      selections.map((selection) =>
+        selection.lock.key === "commerce.transaction"
+          ? { ...selection, lock: lockCapabilityAsset(historicalTransaction) }
+          : selection,
+      ),
+    ]) {
+      expect(() =>
+        createCapabilityCompositionLock({
+          graphChecksum,
+          selections: mixedSelections,
+        }),
+      ).toThrow(expectedError);
+      expect(() =>
+        createVerifiedCapabilityCompositionLock(
+          { graphChecksum, selections: mixedSelections },
+          resolve(dirname(fileURLToPath(import.meta.url)), "../../.."),
+        ),
+      ).toThrow(expectedError);
+    }
   });
 
   it("marks catalog-supported audit and notification capabilities as locked recipe requirements", () => {

@@ -52,11 +52,14 @@ import {
   createCommerceOrderLifecycleOperationAdapterV2_0_3,
   orderAssetV2_0_3,
 } from "./commerce/order-v2-0-3.js";
+import { orderAssetV2_1_0 } from "./commerce/order-v2-1-0.js";
 import { simulatedPaymentAsset } from "./commerce/simulated-payment.js";
 import { simulatedPaymentAssetV1_0_1 } from "./commerce/simulated-payment-v1-0-1.js";
 import { commerceTransactionAssetV1_0_0 } from "./commerce/transaction-v1-0-0.js";
 import { commerceTransactionAssetV2_0_0 } from "./commerce/transaction-v2-0-0.js";
 import { commerceTransactionAssetV2_1_0 } from "./commerce/transaction-v2-1-0.js";
+import { commerceTransactionAssetV2_2_0 } from "./commerce/transaction-v2-2-0.js";
+export type { TransactionCommandV2 } from "./commerce/transaction-v2-2-0.js";
 import { restaurantTableSessionAsset } from "./restaurant/table-session.js";
 import { restaurantTableSessionAssetV1_1_0 } from "./restaurant/table-session-v1-1-0.js";
 import { restaurantMenuAsset } from "./restaurant/menu.js";
@@ -106,6 +109,7 @@ export {
   orderAssetV2_0_1,
   orderAssetV2_0_2,
   orderAssetV2_0_3,
+  orderAssetV2_1_0,
   createCommerceOrderCreateHandler,
   createCommerceOrderCreateHandlerV2_0_1,
   createCommerceOrderCreateHandlerV2_0_2,
@@ -135,6 +139,7 @@ export {
   commerceTransactionAssetV1_0_0,
   commerceTransactionAssetV2_0_0,
   commerceTransactionAssetV2_1_0,
+  commerceTransactionAssetV2_2_0,
   workflowAsset,
   workflowAssetV1_0_1,
 };
@@ -167,6 +172,7 @@ export const capabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
   ...currentCapabilityAssets,
   commerceTransactionAssetV2_0_0,
   commerceTransactionAssetV2_1_0,
+  commerceTransactionAssetV2_2_0,
   orderAssetV1_3_0,
   orderAssetV1_3_1,
   orderAssetV1_3_2,
@@ -174,6 +180,7 @@ export const capabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
   orderAssetV2_0_1,
   orderAssetV2_0_2,
   orderAssetV2_0_3,
+  orderAssetV2_1_0,
   restaurantOrderingAssetV1_2_0,
   restaurantOrderingAssetV1_2_1,
   restaurantOrderingAssetV1_2_2,

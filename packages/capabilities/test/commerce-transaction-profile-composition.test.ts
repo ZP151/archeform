@@ -8,7 +8,9 @@ import {
 } from "../src/index.js";
 import {
   commerceTransactionAssetV1_0_0,
+  commerceTransactionAssetV2_1_0,
   lockCapabilityAsset,
+  orderAssetV2_0_3,
 } from "../src/assets/index.js";
 
 const commerceProfiles = [
@@ -61,12 +63,12 @@ describe("Commerce transaction profile composition", () => {
       }).graph.integration.compositionSelections?.map(({ lock }) => lock);
 
       expect(locks).toContainEqual(
-        expect.objectContaining({ key: "commerce.order", version: "2.0.3" }),
+        expect.objectContaining({ key: "commerce.order", version: "2.1.0" }),
       );
       expect(locks).toContainEqual(
         expect.objectContaining({
           key: "commerce.transaction",
-          version: "2.1.0",
+          version: "2.2.0",
         }),
       );
       expect(locks).not.toContainEqual(
@@ -76,17 +78,17 @@ describe("Commerce transaction profile composition", () => {
   );
 
   it.each(genericCommerceProfiles)(
-    "%s legacy Profile recipe selects the generic order lifecycle and transaction adapter locks",
+    "%s legacy Profile entry point selects the successor order lifecycle and transaction adapter locks",
     (profile) => {
       expect(legacyCapabilityLock(profile, "commerce.order")).toMatchObject({
         key: "commerce.order",
-        version: "2.0.3",
+        version: "2.1.0",
       });
       expect(
         legacyCapabilityLock(profile, "commerce.transaction"),
       ).toMatchObject({
         key: "commerce.transaction",
-        version: "2.1.0",
+        version: "2.2.0",
       });
     },
   );
@@ -110,6 +112,17 @@ describe("Commerce transaction profile composition", () => {
     expect(resolveCapabilityAssetLock(historicalLock)).toBe(
       commerceTransactionAssetV1_0_0,
     );
+  });
+
+  it("resolves saved Generic Commerce lifecycle locks without upgrading them", () => {
+    for (const historicalAsset of [
+      orderAssetV2_0_3,
+      commerceTransactionAssetV2_1_0,
+    ]) {
+      expect(
+        resolveCapabilityAssetLock(lockCapabilityAsset(historicalAsset)),
+      ).toBe(historicalAsset);
+    }
   });
 
   it("binds the transaction to declared Restaurant symbols", () => {

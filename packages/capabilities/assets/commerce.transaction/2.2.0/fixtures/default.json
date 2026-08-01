@@ -1,0 +1,20 @@
+{
+  "aggregateEntity": "graph.domain.order",
+  "transactionFlow": "graph.flow.ecommerce-order",
+  "actorRole": "graph.policy.shopper",
+  "command": {
+    "flowId": "ecommerce-order",
+    "event": "submit",
+    "aggregate": {
+      "entity": "order",
+      "id": "server-1",
+      "expectedVersion": 0,
+      "expectedState": "draft"
+    },
+    "idempotency": {
+      "scope": "order-transition",
+      "key": "submit-1",
+      "payloadDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": ["api.runtime", "test.journey"],
+  "runtimeHandlers": ["order"],
+  "templates": [],
+  "parameters": [
+    { "key": "orderEntity", "type": "graph-symbol", "required": true },
+    { "key": "orderFlow", "type": "graph-symbol", "required": true },
+    { "key": "customerRole", "type": "graph-symbol", "required": true }
+  ],
+  "executableContributions": [],
+  "contributes": { "effects": ["order.create", "order.transition"] }
+}

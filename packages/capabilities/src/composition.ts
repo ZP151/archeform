@@ -1134,6 +1134,71 @@ function resolveDependencyOrder(
   return resolved;
 }
 
+const genericTransactionV2CompatibilityError =
+  "Generic order lifecycle requires one compatible Transaction V2 executor and operation adapter";
+
+function manifestProvides(
+  manifest: CapabilityAssetManifestV1,
+  interfaceKey: string,
+  version: string,
+): boolean {
+  return (manifest.provides ?? []).some(
+    (provided) =>
+      provided.interfaceKey === interfaceKey && provided.version === version,
+  );
+}
+
+function manifestRequires(
+  manifest: CapabilityAssetManifestV1,
+  interfaceKey: string,
+  version: string,
+): boolean {
+  return (manifest.requires ?? []).some(
+    (requirement) =>
+      requirement.interfaceKey === interfaceKey &&
+      requirement.version === version,
+  );
+}
+
+function assertCompatibleGenericTransactionV2Lifecycle(
+  manifests: readonly CapabilityAssetManifestV1[],
+): void {
+  const transaction = manifests.find(
+    ({ key }) => key === "commerce.transaction",
+  );
+  const order = manifests.find(({ key }) => key === "commerce.order");
+  const successorSelected =
+    transaction?.version === "2.2.0" || order?.version === "2.1.0";
+  if (!successorSelected) return;
+
+  const executorProviders = manifests.filter((manifest) =>
+    manifestProvides(manifest, "factory.transaction-executor", "v2"),
+  );
+  const operationAdapterProviders = manifests.filter((manifest) =>
+    manifestProvides(manifest, "factory.transaction-operation-adapter", "v2"),
+  );
+  const compatibleTransaction =
+    transaction?.version === "2.2.0" &&
+    manifestProvides(transaction, "factory.transaction-executor", "v2") &&
+    manifestRequires(
+      transaction,
+      "factory.transaction-operation-adapter",
+      "v2",
+    );
+  const compatibleOrder =
+    order?.version === "2.1.0" &&
+    manifestProvides(order, "factory.transaction-operation-adapter", "v2");
+
+  if (
+    !compatibleTransaction ||
+    !compatibleOrder ||
+    executorProviders.length !== 1 ||
+    operationAdapterProviders.length !== 1
+  ) {
+    throw new Error(genericTransactionV2CompatibilityError);
+  }
+}
+
 function resolveCapabilityCompositionFromSnapshot(
   input: ResolutionInputSnapshotV1,
   assets: readonly CapabilityAssetSnapshotV1[],
@@ -1163,6 +1228,9 @@ function resolveCapabilityCompositionFromSnapshot(
     return canonicalSelection(contract, bindings);
   });
   const contracts = matchedSelections.map(({ contract }) => contract);
+  assertCompatibleGenericTransactionV2Lifecycle(
+    contracts.map(({ manifest }) => manifest),
+  );
   const resolvedDependencyOrder = resolveDependencyOrder(contracts);
 
   const contributionDigests = new Set<string>();
