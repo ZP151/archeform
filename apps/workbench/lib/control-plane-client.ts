@@ -580,6 +580,17 @@ function workspacePortfolioSummary(
     }
     const candidate = entry as Record<string, unknown>;
     if (
+      Object.keys(candidate).some(
+        (key) =>
+          ![
+            "apiVersion",
+            "key",
+            "label",
+            "status",
+            "packageKeys",
+            "profiles",
+          ].includes(key),
+      ) ||
       candidate.apiVersion !== "factory.profile-coverage/v1" ||
       typeof candidate.key !== "string" ||
       !capabilityKeyPattern.test(candidate.key) ||

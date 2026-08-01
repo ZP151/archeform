@@ -78,12 +78,7 @@ describe("ControlPlaneClient", () => {
               sourceUrl: "https://must-not-survive.example",
             },
           ],
-          coverage: [
-            {
-              ...profileCoverage[0],
-              sourceUrl: "https://must-not-survive.example",
-            },
-          ],
+          coverage: profileCoverage,
           capabilities: {
             golden: 19,
             lockedVersions: 38,
@@ -217,6 +212,48 @@ describe("ControlPlaneClient", () => {
     await expect(
       client.getWorkspacePortfolioSummary("workspace-1"),
     ).rejects.toThrow("Control Plane Profile readiness capability is invalid.");
+  });
+
+  it("rejects source-shaped Profile coverage fields", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          apiVersion: "factory.workspace-portfolio-summary/v1",
+          profiles: [],
+          readiness: [],
+          coverage: [
+            {
+              ...profileCoverage[0],
+              sourceUrl: "https://must-not-survive.example",
+            },
+          ],
+          capabilities: {
+            golden: 0,
+            lockedVersions: 0,
+            candidate: 0,
+            provider: 0,
+          },
+          intake: {
+            portfolioSources: 0,
+            intakeEligible: 0,
+            candidateBlueprints: 0,
+            quarantined: 0,
+            blocked: 0,
+          },
+          supply: {
+            apiVersion: "factory.capability-supply-summary/v1",
+            families: [],
+          },
+          compilations: { queued: 0, running: 0, succeeded: 0, failed: 0 },
+        }),
+        { status: 200 },
+      ),
+    );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(
+      client.getWorkspacePortfolioSummary("workspace-1"),
+    ).rejects.toThrow("Control Plane Profile coverage is invalid.");
   });
 
   it("projects only safe application summary fields from the local workspace endpoint", async () => {
