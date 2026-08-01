@@ -2,7 +2,7 @@
 
 Updated: 2026-08-01
 
-## Strict-Type-safe Bound-Flow Order V2 successor — 2026-08-01
+## Generic Transaction V2 live PostgreSQL acceptance — 2026-08-01
 
 Generated-project validation found that immutable `commerce.order@2.1.0`
 hard-codes four transaction events and rejects declared Retail Counter and
@@ -24,11 +24,23 @@ own strict TypeScript command without a suppression, compiler rewrite, relaxed
 TypeScript setting, Profile condition, event alias, or event-list fallback.
 
 The only direct-composable V2 pair is `commerce.transaction@2.2.1` with
-`commerce.order@2.1.2`. Historical and default Generic Draft locks remain
-`commerce.transaction@2.1.0` and `commerce.order@2.0.3`, and Restaurant is
-unchanged. This pair is not active or accepted; it remains pending Task 3
-generated-project validation and Task 4 live PostgreSQL acceptance before any
-default Draft activation.
+`commerce.order@2.1.2`. Generated Simple Ecommerce, Retail Counter, and Grocery
+Pickup bundles now pass their own strict typecheck, build, and journey commands
+and have passed isolated live PostgreSQL acceptance with two independent
+clients. The live suite proves completed replay without duplicated effects,
+active-claim `in-progress`, changed-digest rejection, one-winner aggregate CAS,
+expired takeover, stale-owner rejection, full business rollback with a
+retryable receipt, and each Profile's exact Published Flow vocabulary. Every
+generated Compose project removes its containers, volume, and network after
+the case.
+
+Newly composed Simple Ecommerce, Retail Counter, and Grocery Pickup Drafts now
+select exactly `commerce.transaction@2.2.1` and `commerce.order@2.1.2`; their
+fresh composition locks publish and compile. Existing Published Graphs and
+saved historical locks are not upgraded, revoked 2.2.0/2.1.0/2.1.1 assets
+remain unchanged, and Restaurant keeps its independent transaction path. The
+acceptance used only the locally available generated PostgreSQL target and no
+external provider, payment, credential, source acquisition, or network access.
 
 ## Profile readiness and quarantined Candidate port planning — 2026-08-01
 

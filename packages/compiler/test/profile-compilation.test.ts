@@ -201,12 +201,12 @@ describe("profile compilation", () => {
   });
 
   it.each([
-    ["simple-ecommerce", "product", "order"],
-    ["retail-counter", "retail-item", "counter-sale"],
-    ["grocery-pickup", "grocery-item", "pickup-order"],
+    ["simple-ecommerce", "product", "order", "ecommerce-order"],
+    ["retail-counter", "retail-item", "counter-sale", "counter-sale-flow"],
+    ["grocery-pickup", "grocery-item", "pickup-order", "pickup-order-flow"],
   ] as const)(
     "compiles $profile through its locked Generic Catalog and V2 lifecycle",
-    (profile, catalogEntity, orderEntity) => {
+    (profile, catalogEntity, orderEntity, orderFlow) => {
       const files = Object.fromEntries(
         generateApplicationBundle({
           publishedRevisionId: `${profile}-generic-order-handlers-1`,
@@ -225,9 +225,15 @@ describe("profile compilation", () => {
           "api/src/capabilities/commerce-order-transaction-operation-adapter.ts"
         ],
       ).toContain(`entity: "${orderEntity}"`);
-      expect(
-        files["api/src/capabilities/commerce-transaction-executor.ts"],
-      ).toContain(`readonly entity: "${orderEntity}"`);
+      const transactionExecutor =
+        files["api/src/capabilities/commerce-transaction-executor.ts"];
+      expect(transactionExecutor).toContain(
+        "execute(command: TransactionCommandV2)",
+      );
+      expect(transactionExecutor).toContain(
+        `command.flowId !== "${orderFlow}"`,
+      );
+      expect(transactionExecutor).not.toContain(profile);
       expect(files["api/src/application-runtime.ts"]).toContain(
         "commerceOrderCreateHandler.create(",
       );

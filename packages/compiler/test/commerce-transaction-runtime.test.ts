@@ -164,7 +164,7 @@ describe("generic Commerce transaction runtime", () => {
         }),
       }),
     ).toThrow(
-      "Commerce compilation requires exactly one locked Golden commerce.transaction package.",
+      "Generic order lifecycle requires one compatible Transaction V2 executor and operation adapter",
     );
   });
 

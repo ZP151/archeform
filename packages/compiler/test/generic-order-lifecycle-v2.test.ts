@@ -698,6 +698,38 @@ async function withGeneratedModule<T>(
 
 describe("Generic order lifecycle V2 compilation", () => {
   it.each(profileCases)(
+    "$profile newly composed Draft publishes and compiles with the accepted successor pair",
+    ({ profile }) => {
+      const graph = composeDefaultCapabilityDraft({ profile }).graph;
+      const selectedVersions = Object.fromEntries(
+        (graph.integration.compositionSelections ?? [])
+          .filter(({ lock }) =>
+            ["commerce.order", "commerce.transaction"].includes(lock.key),
+          )
+          .map(({ lock }) => [lock.key, lock.version]),
+      );
+      expect(selectedVersions).toEqual({
+        "commerce.order": "2.1.2",
+        "commerce.transaction": "2.2.1",
+      });
+      const compositionLock = createCapabilityCompositionLock({
+        graphChecksum: hashApplicationGraph(graph),
+        selections: graph.integration.compositionSelections ?? [],
+      });
+
+      const bundle = generateApplicationBundle({
+        publishedRevisionId: `new-default-${profile}`,
+        graph,
+        compositionLock,
+      });
+
+      expect(bundle.files).toContainEqual(
+        expect.objectContaining({ path: "api/src/application-runtime.ts" }),
+      );
+    },
+  );
+
+  it.each(profileCases)(
     "$profile emits a bound-entity and bound-Flow generated journey",
     ({ profile, role, orderEntity, orderFlow }) => {
       const files = Object.fromEntries(

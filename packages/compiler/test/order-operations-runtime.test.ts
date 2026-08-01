@@ -138,11 +138,15 @@ describe("Order Operations runtime compilation", () => {
     expect(
       files["api/src/capabilities/commerce-order-create-handler.ts"],
     ).toContain("commerceOrderCreateHandler");
-    expect(
+    const operationAdapter =
       files[
         "api/src/capabilities/commerce-order-transaction-operation-adapter.ts"
-      ],
-    ).toContain("commerceOrderTransactionOperationAdapter");
+      ];
+    expect(operationAdapter).toContain(
+      "createCommerceOrderTransactionOperationAdapter",
+    );
+    expect(operationAdapter).toContain('entity: "order"');
+    expect(operationAdapter).toContain('flowId: "ecommerce-order"');
     expect(
       files["api/src/capabilities/commerce-transaction-executor.ts"],
     ).toContain("class CommerceTransactionExecutor");
@@ -199,7 +203,7 @@ describe("Order Operations runtime compilation", () => {
         "pay",
         { expectedVersion: 1, idempotencyKey: "order-pay-1" },
       );
-      expect(paid).toMatchObject({ transition: "confirm", replayed: false });
+      expect(paid).toMatchObject({ transition: "pay", replayed: false });
       await expect(
         runtime.read("shopper", "order", order.id),
       ).resolves.toMatchObject({
@@ -211,7 +215,7 @@ describe("Order Operations runtime compilation", () => {
           expectedVersion: 2,
           idempotencyKey: "order-fulfil-1",
         }),
-      ).resolves.toMatchObject({ transition: "fulfill", replayed: false });
+      ).resolves.toMatchObject({ transition: "fulfil", replayed: false });
       await expect(
         runtime.read("merchant", "order", order.id),
       ).resolves.toMatchObject({

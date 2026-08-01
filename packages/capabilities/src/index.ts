@@ -3243,9 +3243,9 @@ interface GenericCommerceLifecycleVersionsV1 {
 const genericCommerceLifecycleVersionsByProfile: Readonly<
   Record<string, GenericCommerceLifecycleVersionsV1>
 > = Object.freeze({
-  "simple-ecommerce": Object.freeze({ order: "2.0.3", transaction: "2.1.0" }),
-  "retail-counter": Object.freeze({ order: "2.0.3", transaction: "2.1.0" }),
-  "grocery-pickup": Object.freeze({ order: "2.0.3", transaction: "2.1.0" }),
+  "simple-ecommerce": Object.freeze({ order: "2.1.2", transaction: "2.2.1" }),
+  "retail-counter": Object.freeze({ order: "2.1.2", transaction: "2.2.1" }),
+  "grocery-pickup": Object.freeze({ order: "2.1.2", transaction: "2.2.1" }),
 });
 
 /**

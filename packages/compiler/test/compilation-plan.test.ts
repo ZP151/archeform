@@ -89,10 +89,6 @@ const publishedExpense = withCompositionLock({
   },
 });
 
-const simpleEcommerceAssetLocks = composeProfileDraft({
-  profile: "simple-ecommerce",
-}).assetLocks;
-
 function profileGraph(
   profile: "expense-approval" | "restaurant-ordering" | "simple-ecommerce",
 ): ApplicationGraphV1 {
@@ -700,10 +696,10 @@ describe("compilation target registry", () => {
         }),
         expect.objectContaining({ key: "commerce.catalog", version: "1.2.0" }),
         expect.objectContaining({ key: "commerce.cart", version: "1.0.1" }),
-        expect.objectContaining({ key: "commerce.order", version: "2.0.3" }),
+        expect.objectContaining({ key: "commerce.order", version: "2.1.2" }),
         expect.objectContaining({
           key: "commerce.transaction",
-          version: "2.1.0",
+          version: "2.2.1",
         }),
       ]),
     );
@@ -1513,7 +1509,7 @@ describe("compilation target registry", () => {
         );
       },
       message:
-        "Interactive commerce PageModel blocks require a declared locked order entity.",
+        "Bound order Flow 'ecommerce-order' must resolve to exactly one Published Flow.",
     },
     {
       name: "does not declare an order FlowModel",
@@ -1523,7 +1519,7 @@ describe("compilation target registry", () => {
         );
       },
       message:
-        "Interactive commerce PageModel blocks require a FlowModel for entity 'order'.",
+        "Bound order Flow 'ecommerce-order' must resolve to exactly one Published Flow.",
     },
   ])(
     "rejects a catalog-only commerce PageModel that $name before returning files",
@@ -1980,53 +1976,7 @@ describe("compilation target registry", () => {
     const files = Object.fromEntries(
       generateApplicationBundle({
         publishedRevisionId: "published-payment-effects-1",
-        graph: {
-          ...publishedExpense.graph,
-          integration: {
-            providers: [],
-            compositionProfile: "simple-ecommerce",
-            assetLocks: simpleEcommerceAssetLocks,
-            capabilities: [
-              {
-                key: "payment.simulate",
-                providerId: "factory",
-                operation: "simulate",
-              },
-            ],
-          },
-          policy: {
-            roles: ["customer", "finance"],
-            permissions: [
-              {
-                role: "customer",
-                resource: "expense",
-                actions: ["create", "read"],
-              },
-              { role: "finance", resource: "expense", actions: ["audit"] },
-            ],
-          },
-          flow: {
-            flows: [
-              {
-                id: "expense-payment",
-                entity: "expense",
-                initialState: "draft",
-                states: ["draft", "paid"],
-                events: ["pay"],
-                transitions: [
-                  {
-                    from: "draft",
-                    event: "pay",
-                    to: "paid",
-                    effects: [
-                      { capability: "payment.simulate", operation: "simulate" },
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-        },
+        graph: profileGraph("simple-ecommerce"),
       }).files.map((file) => [file.path, file.content]),
     );
 
@@ -2091,22 +2041,7 @@ describe("compilation target registry", () => {
     const files = Object.fromEntries(
       generateApplicationBundle({
         publishedRevisionId: "published-commerce-runtime-1",
-        graph: {
-          ...publishedExpense.graph,
-          integration: {
-            providers: [],
-            compositionProfile: "simple-ecommerce",
-            assetLocks: simpleEcommerceAssetLocks,
-            capabilities: [
-              { key: "cart.add", providerId: "factory", operation: "add" },
-              {
-                key: "inventory.decrement",
-                providerId: "factory",
-                operation: "decrement",
-              },
-            ],
-          },
-        },
+        graph: profileGraph("simple-ecommerce"),
       }).files.map((file) => [file.path, file.content]),
     );
 

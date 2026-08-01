@@ -2147,7 +2147,7 @@ describe("capability catalog", () => {
     ).toThrow(expectedError);
   });
 
-  it("resolves and directly composes the bound-Flow V2 successor pair without changing defaults", () => {
+  it("resolves and directly composes the bound-Flow V2 successor pair as Generic defaults", () => {
     const successorTransaction = capabilityAssets.find(
       ({ manifest }) =>
         manifest.key === "commerce.transaction" && manifest.version === "2.2.1",
@@ -2214,11 +2214,11 @@ describe("capability catalog", () => {
       expect(locks).toContainEqual(
         expect.objectContaining({
           key: "commerce.transaction",
-          version: "2.1.0",
+          version: "2.2.1",
         }),
       );
       expect(locks).toContainEqual(
-        expect.objectContaining({ key: "commerce.order", version: "2.0.3" }),
+        expect.objectContaining({ key: "commerce.order", version: "2.1.2" }),
       );
     }
     const restaurantLocks = composeDefaultCapabilityDraft({
@@ -2409,7 +2409,7 @@ describe("capability catalog", () => {
     );
   });
 
-  it("registers exact Transaction V2 lifecycle packages without activating Generic Commerce drafts", () => {
+  it("registers and activates the exact Transaction V2 lifecycle packages for Generic Commerce drafts", () => {
     const genericProfiles = [
       "simple-ecommerce",
       "retail-counter",
@@ -2421,11 +2421,11 @@ describe("capability catalog", () => {
       expect(draft.assetLocks).toContainEqual(
         expect.objectContaining({
           key: "commerce.transaction",
-          version: "2.1.0",
+          version: "2.2.1",
         }),
       );
       expect(draft.assetLocks).toContainEqual(
-        expect.objectContaining({ key: "commerce.order", version: "2.0.3" }),
+        expect.objectContaining({ key: "commerce.order", version: "2.1.2" }),
       );
     }
     const restaurantLocks = composeDefaultCapabilityDraft({
@@ -2485,7 +2485,7 @@ describe("capability catalog", () => {
       expect.objectContaining({
         lock: expect.objectContaining({
           key: "commerce.transaction",
-          version: "2.1.0",
+          version: "2.2.1",
         }),
       }),
     );
@@ -2493,7 +2493,7 @@ describe("capability catalog", () => {
       expect.objectContaining({
         lock: expect.objectContaining({
           key: "commerce.order",
-          version: "2.0.3",
+          version: "2.1.2",
         }),
       }),
     );
