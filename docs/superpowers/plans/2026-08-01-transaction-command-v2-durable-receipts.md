@@ -309,6 +309,83 @@ git add packages/capabilities packages/compiler docs/project-status.md
 git commit -m "fix: reissue postgres-safe transaction package"
 ```
 
+## Task 2.75: Reissue the bound-Flow Order V2 package
+
+**Files:**
+
+- Create: `packages/capabilities/assets/commerce.order/2.1.1/**`
+- Create: `packages/capabilities/src/assets/commerce/order-v2-1-1.ts`
+- Modify: `packages/capabilities/src/assets/index.ts`
+- Modify: `packages/capabilities/src/composition.ts`
+- Modify: `packages/capabilities/src/node.ts`
+- Modify: `packages/capabilities/test/capability-registry.test.ts`
+- Modify: `packages/compiler/src/index.ts`
+- Modify: `packages/compiler/test/generic-order-lifecycle-v2.test.ts`
+- Modify: `docs/project-status.md`
+
+**Interfaces:**
+
+- Consumes: ADR-0015, the exact 2.2.1 transaction successor, and the selected
+  `orderFlow` Graph binding.
+- Produces: `commerce.order@2.1.1`, whose package-owned adapter validates API
+  events against a frozen compile-time projection of the exact Published Flow.
+
+- [ ] **Step 1: Write failing successor and event-boundary tests**
+
+```ts
+expect(() => compose(directV2({ orderVersion: "2.1.0" }))).toThrow(
+  "commerce.order@2.1.0 is revoked: fixed event vocabulary excludes bound Flow events",
+);
+expect(compose(directV2({ orderVersion: "2.1.1" }))).toMatchObject({
+  packages: expect.arrayContaining([
+    expect.objectContaining({ lock: expect.objectContaining({ version: "2.1.1" }) }),
+  ]),
+});
+expect(generatedRuntime).toContain(
+  'createCommerceOrderTransactionOperationAdapter(["submit", "pay", "issue-receipt", "cancel"])',
+);
+expect(generatedRuntime).toContain(
+  'createCommerceOrderTransactionOperationAdapter(["submit", "pay", "pick", "ready", "handoff", "cancel"])',
+);
+expect(generatedRuntime).not.toContain("event === 'pay' ? 'confirm'");
+```
+
+- [ ] **Step 2: Run focused package/compiler tests and verify RED**
+
+Run: `pnpm --filter @factory/capabilities test -- capability-registry.test.ts && pnpm --filter @factory/compiler test -- generic-order-lifecycle-v2.test.ts`
+
+Expected: FAIL because order 2.1.1 is absent, old order V2 remains selectable,
+and emitted runtime imports a fixed static adapter or Profile-name alias.
+
+- [ ] **Step 3: Publish 2.1.1 and revoke 2.1.0 selection**
+
+Preserve 2.1.0 bytes for audit. Create the complete Factory-owned 2.1.1
+successor package with refreshed component/adapter/projection/contribution
+digests. Its adapter factory accepts a non-empty, unique event list and freezes
+it; parsed API event input must be a member. It must not accept a caller
+allowlist, Profile name, arbitrary Graph, URL, or package identity.
+
+- [ ] **Step 4: Bind the generated adapter to the exact Published Flow**
+
+Resolve the 2.1.1 lock's `orderFlow` Graph symbol to exactly one declared Flow
+and pass its ordered declared event list to the generated adapter factory.
+Fail compilation if the bound Flow is absent, has no events, or does not target
+the bound order entity. Remove central `pay`/`fulfil` name translation. The
+transition still validates the Flow's state, role, and effects before the
+package prepares a command.
+
+- [ ] **Step 5: Run focused gates and commit**
+
+Run: `pnpm --filter @factory/capabilities test -- capability-registry.test.ts && pnpm --filter @factory/compiler test -- generic-order-lifecycle-v2.test.ts && pnpm --filter @factory/capabilities typecheck && pnpm --filter @factory/compiler typecheck && pnpm --filter @factory/capabilities lint && pnpm --filter @factory/compiler lint && git diff --check`
+
+Expected: PASS. Record revocation and direct-composable-but-pending status in
+project status. Commit:
+
+```bash
+git add packages/capabilities packages/compiler docs/project-status.md
+git commit -m "fix: bind order events to published flows"
+```
+
 ## Task 3: Derive generated journeys from locks and validate emitted projects
 
 **Files:**
