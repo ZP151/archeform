@@ -240,6 +240,14 @@ function assertCanonicalCompositionLock(
   if (!input.compositionLock) {
     throw new Error("Published revision has no composition lock.");
   }
+  if (
+    input.compositionLock.packages.some(
+      ({ lock }) =>
+        lock.key === "commerce.transaction" && lock.version === "2.2.0",
+    )
+  ) {
+    throw new Error(revokedTransactionV2Error);
+  }
   const graphHash = hashApplicationGraph(
     assertValidApplicationGraph(input.graph),
   );
@@ -262,6 +270,9 @@ function assertCanonicalCompositionLock(
 type CommerceTransactionCompilationMode =
   "legacy-v1" | "generic-v1" | "generic-v2";
 
+const revokedTransactionV2Error =
+  "commerce.transaction@2.2.0 is revoked: PostgreSQL index identifier exceeds 63 bytes";
+
 function assertLockedCommerceTransaction(
   input: PublishedGraphInput,
 ): CommerceTransactionCompilationMode | undefined {
@@ -280,7 +291,7 @@ function assertLockedCommerceTransaction(
       ? "legacy-v1"
       : transaction.lock.version === "2.1.0"
         ? "generic-v1"
-        : transaction.lock.version === "2.2.0"
+        : transaction.lock.version === "2.2.1"
           ? "generic-v2"
           : undefined;
   if (!mode) {
@@ -613,7 +624,7 @@ function resolveGenericOrderLifecycleContributions(
   if (mode !== "generic-v1" && mode !== "generic-v2") return undefined;
   const lock = assertCanonicalCompositionLock(input);
   const orderVersion = mode === "generic-v2" ? "2.1.0" : "2.0.3";
-  const transactionVersion = mode === "generic-v2" ? "2.2.0" : "2.1.0";
+  const transactionVersion = mode === "generic-v2" ? "2.2.1" : "2.1.0";
   const operationAdapterVersion =
     mode === "generic-v2"
       ? "factory.transaction-operation-adapter/v2"
@@ -3532,7 +3543,7 @@ function renderCapabilityTemplateLock(
 
 const durableReceiptIndexNames = [
   "CommerceTransactionReceipt_state_leaseExpiresAt_idx",
-  "CommerceTransactionReceipt_aggregateType_aggregateId_aggregateVersion_idx",
+  "ctx_receipt_aggregate_v_idx",
   "CommerceAggregateVersion_entity_aggregateId_version_idx",
 ] as const;
 

@@ -1,0 +1,129 @@
+import type { CapabilityAssetV1 } from "../contract.js";
+
+export type TransactionCommandV2 = Readonly<{
+  flowId: string;
+  event: string;
+  aggregate: Readonly<{
+    entity: string;
+    id: string;
+    expectedVersion: number;
+    expectedState: string;
+  }>;
+  idempotency: Readonly<{
+    scope: string;
+    key: string;
+    payloadDigest: string;
+  }>;
+}>;
+
+export const commerceTransactionAssetV2_2_1: CapabilityAssetV1 = {
+  manifest: {
+    apiVersion: "factory.capability/v1",
+    bindingContract: "factory.capability-binding/v1",
+    key: "commerce.transaction",
+    version: "2.2.1",
+    category: "commerce",
+    name: "Commerce Transaction Command V2 executor",
+    description:
+      "Executes lock-bound commerce commands with distinct Flow and event identities through exactly one Transaction V2 operation adapter.",
+    packageRoot: "packages/capabilities/assets/commerce.transaction/2.2.1",
+    manifestDigest:
+      "sha256:b7067d65ff4b7b5f5d4d42b48022aac8a96cd90a56079f0a205cad04db665b66",
+    lifecycle: "golden",
+    profiles: ["simple-ecommerce", "retail-counter", "grocery-pickup"],
+    effects: ["commerce.transaction.execute"],
+    inputSchema: [
+      { key: "aggregateEntity", type: "domain.entity", required: true },
+      { key: "transactionFlow", type: "flow.flow", required: true },
+      { key: "actorRole", type: "policy.role", required: true },
+    ],
+    outputSlots: [
+      "api.runtime",
+      "database.schema",
+      "database.migration",
+      "test.journey",
+    ],
+    runtimeHandlers: ["transaction"],
+    templates: [],
+    parameters: [
+      { key: "aggregateEntity", type: "graph-symbol", required: true },
+      { key: "transactionFlow", type: "graph-symbol", required: true },
+      { key: "actorRole", type: "graph-symbol", required: true },
+    ],
+    executableContributions: [
+      {
+        id: "commerce-transaction-executor",
+        outputSlot: "api.runtime",
+        namespace: "packages/commerce.transaction/api/runtime/",
+        source: "templates/api/commerce-transaction-executor.ts.tpl",
+        target: "api/src/capabilities/commerce-transaction-executor.ts",
+        parameterRefs: ["aggregateEntity", "transactionFlow", "actorRole"],
+        targetRuntimeInterfaceVersion: "factory.transaction-executor/v2",
+        orderingRequirements: [],
+        mergeProtocol: "replace-file",
+        digest:
+          "sha256:9e7f4146ebc1045810ee7acc20e82024493df4553a19f5f1556e515868d8dfef",
+      },
+      {
+        id: "commerce-transaction-schema",
+        outputSlot: "database.schema",
+        namespace: "packages/commerce.transaction/database/schema/",
+        source: "templates/database/commerce-transaction.prisma.tpl",
+        target: "database/prisma/fragments/commerce-transaction.prisma",
+        parameterRefs: ["aggregateEntity", "transactionFlow", "actorRole"],
+        targetRuntimeInterfaceVersion: "factory.prisma-schema/v1",
+        orderingRequirements: ["commerce-transaction-executor"],
+        mergeProtocol: "append-fragment",
+        digest:
+          "sha256:0b438c33a96405914b692c3cc2d4ffb3b34f4883568fc377bd9d9f1021f83e5f",
+      },
+      {
+        id: "commerce-transaction-migration",
+        outputSlot: "database.migration",
+        namespace: "packages/commerce.transaction/database/migrations/",
+        source: "templates/database/commerce-transaction.sql.tpl",
+        target: "database/prisma/migrations/commerce-transaction.sql",
+        parameterRefs: ["aggregateEntity", "transactionFlow", "actorRole"],
+        targetRuntimeInterfaceVersion: "factory.prisma-migration/v1",
+        orderingRequirements: ["commerce-transaction-schema"],
+        mergeProtocol: "append-fragment",
+        digest:
+          "sha256:06b77f0e9cdb890062335a86232dd7460eb359c6dccb9534516ee72ebcfbe6f5",
+      },
+      {
+        id: "commerce-transaction-journey",
+        outputSlot: "test.journey",
+        namespace: "packages/commerce.transaction/test/journeys/",
+        source: "templates/test/commerce-transaction.journey.ts.tpl",
+        target: "api/test/journeys/commerce-transaction.journey.ts",
+        parameterRefs: ["aggregateEntity", "transactionFlow", "actorRole"],
+        targetRuntimeInterfaceVersion: "factory.journey/v1",
+        orderingRequirements: ["commerce-transaction-executor"],
+        mergeProtocol: "replace-file",
+        digest:
+          "sha256:ec16b2f1bf7ab3a889b948137608b2db8f71d650968cb9a03efbcdda0c935d5c",
+      },
+    ],
+    requires: [
+      { interfaceKey: "commerce.stock-movement", version: "v1" },
+      { interfaceKey: "commerce.order-event", version: "v1" },
+      {
+        interfaceKey: "factory.transaction-operation-adapter",
+        version: "v2",
+      },
+    ],
+    provides: [
+      { interfaceKey: "commerce.transaction", version: "v2" },
+      { interfaceKey: "factory.transaction-executor", version: "v2" },
+    ],
+    verification: {
+      fixture: "fixtures/default.json",
+      fixtureDigest:
+        "sha256:8518b5427ba2844f12aff73a8a9f201d84fd524670087b530881a832c7382cef",
+      contractTest: "tests/contract.json",
+      contractTestDigest:
+        "sha256:3341948c4b06f011ee45d125cb0efb5003753505da0676c42c6c51564d048be0",
+      status: "verified",
+    },
+  },
+};

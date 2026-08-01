@@ -1,0 +1,12 @@
+{
+  "contract": "factory.transaction-executor/v2",
+  "requiredProvider": "factory.transaction-operation-adapter/v2",
+  "commandFields": ["flowId", "event", "aggregate", "idempotency"],
+  "aggregateFields": ["entity", "id", "expectedVersion", "expectedState"],
+  "idempotencyFields": ["scope", "key", "payloadDigest"],
+  "semantics": [
+    "distinct-flow-and-event",
+    "exact-lock-bound-executor",
+    "single-operation-adapter-provider"
+  ]
+}

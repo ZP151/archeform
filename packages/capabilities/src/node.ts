@@ -19,6 +19,7 @@ import type {
   CapabilityTemplateContributionV1,
 } from "./assets/index.js";
 import {
+  assertCapabilityAssetSelectable,
   captureCapabilityCompositionLock,
   type CapabilityCompositionLockV1,
   type CreateCapabilityCompositionLockInput,
@@ -489,6 +490,67 @@ function assertTemplateContribution(
   };
 }
 
+function prismaExplicitIndexNames(content: string): readonly string[] {
+  return [
+    ...content.matchAll(/@@index\s*\([^)]*?\bmap\s*:\s*"([^"]+)"[^)]*\)/g),
+  ].map(([, name]) => name!);
+}
+
+function sqlExplicitIndexNames(content: string): readonly string[] {
+  return [
+    ...content.matchAll(/\bCREATE\s+(?:UNIQUE\s+)?INDEX\s+"([^"]+)"/gi),
+  ].map(([, name]) => name!);
+}
+
+function validateTransactionV2PostgresIndexNames(
+  manifest: CapabilityAssetManifestV1,
+  resolvedContributions: readonly ResolvedCapabilityAssetContribution[],
+): readonly string[] {
+  const transactionV2 = (manifest.provides ?? []).some(
+    ({ interfaceKey, version }) =>
+      interfaceKey === "factory.transaction-executor" && version === "v2",
+  );
+  if (!transactionV2) return [];
+
+  const declaredDatabaseContributions = (
+    manifest.executableContributions ?? []
+  ).filter(
+    ({ outputSlot }) =>
+      outputSlot === "database.schema" || outputSlot === "database.migration",
+  );
+  const resolvedDatabaseContributions = resolvedContributions.filter(
+    ({ outputSlot }) =>
+      outputSlot === "database.schema" || outputSlot === "database.migration",
+  );
+  if (
+    declaredDatabaseContributions.length !==
+    resolvedDatabaseContributions.length
+  ) {
+    return [];
+  }
+
+  const schemaNames = resolvedDatabaseContributions
+    .filter(({ outputSlot }) => outputSlot === "database.schema")
+    .flatMap(({ content }) => prismaExplicitIndexNames(content))
+    .sort();
+  const migrationNames = resolvedDatabaseContributions
+    .filter(({ outputSlot }) => outputSlot === "database.migration")
+    .flatMap(({ content }) => sqlExplicitIndexNames(content))
+    .sort();
+  const invalid: string[] = [];
+  if (canonicalJson(schemaNames) !== canonicalJson(migrationNames)) {
+    invalid.push("PostgreSQL index names differ between schema and migration");
+  }
+  const names = new Set([...schemaNames, ...migrationNames]);
+  if ([...names].some((name) => !/^[\x00-\x7f]+$/.test(name))) {
+    invalid.push("PostgreSQL index identifier must be ASCII");
+  }
+  if ([...names].some((name) => Buffer.byteLength(name, "utf8") > 63)) {
+    invalid.push("PostgreSQL index identifier exceeds 63 bytes");
+  }
+  return invalid;
+}
+
 export function capabilityManifestPayload(
   manifest: CapabilityAssetManifestV1,
 ): string {
@@ -707,6 +769,8 @@ export function verifyCapabilityAssetPackage(
   const declaredParameters = new Set(
     (component.parameters ?? []).map(({ key }) => key),
   );
+  const resolvedExecutableContributions: ResolvedCapabilityAssetContribution[] =
+    [];
   for (const contribution of component.graphContributions ?? []) {
     try {
       assertGraphContribution(contribution, declaredParameters);
@@ -720,7 +784,9 @@ export function verifyCapabilityAssetPackage(
   }
   for (const contribution of component.executableContributions ?? []) {
     try {
-      assertExecutableContribution(contribution, component, packageRoot);
+      resolvedExecutableContributions.push(
+        assertExecutableContribution(contribution, component, packageRoot),
+      );
     } catch (error) {
       invalid.push(
         error instanceof Error
@@ -729,6 +795,12 @@ export function verifyCapabilityAssetPackage(
       );
     }
   }
+  invalid.push(
+    ...validateTransactionV2PostgresIndexNames(
+      component,
+      resolvedExecutableContributions,
+    ),
+  );
   for (const template of component.templates ?? []) {
     try {
       assertTemplateContribution(template, packageRoot);
@@ -814,6 +886,7 @@ export function createVerifiedCapabilityCompositionLock(
   const captured = captureCapabilityCompositionLock(input);
   for (const selection of captured.input.selections) {
     const asset = resolveCapabilityAssetLock(selection.lock);
+    assertCapabilityAssetSelectable(asset.manifest);
     const invalid = verifyCapabilityAssetPackage(asset, repositoryRoot);
     if (invalid.length > 0) {
       throw new Error(

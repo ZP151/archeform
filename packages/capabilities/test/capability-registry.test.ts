@@ -64,6 +64,13 @@ const loadCapabilityAssetContributions =
   ).loadCapabilityAssetContributions ??
   (loadCapabilityAssetTemplates as unknown as ContributionLoader);
 
+function isRevokedTransactionV2(asset: CapabilityAssetV1): boolean {
+  return (
+    asset.manifest.key === "commerce.transaction" &&
+    asset.manifest.version === "2.2.0"
+  );
+}
+
 const executableContent = "export const capability = '{{entityKey}}';\n";
 
 function testDigest(content: string): string {
@@ -105,6 +112,66 @@ function executableContribution(
     mergeProtocol: "replace-file",
     digest: testDigest(executableContent),
     ...overrides,
+  };
+}
+
+function postgresV2ConformanceAsset(
+  schemaContent: string,
+  migrationContent: string,
+): CapabilityAssetV1 {
+  const registered = capabilityAssets.find(
+    ({ manifest }) =>
+      manifest.key === "commerce.transaction" && manifest.version === "2.2.0",
+  )!.manifest;
+  const executableContributions = [
+    executableContribution({
+      id: "transaction-schema",
+      outputSlot: "database.schema",
+      namespace: "packages/test.transaction-v2/database/schema/",
+      source: "templates/database/transaction.prisma.tpl",
+      target: "database/prisma/fragments/transaction.prisma",
+      parameterRefs: [],
+      targetRuntimeInterfaceVersion: "factory.prisma-schema/v1",
+      digest: testDigest(schemaContent),
+    }),
+    executableContribution({
+      id: "transaction-migration",
+      outputSlot: "database.migration",
+      namespace: "packages/test.transaction-v2/database/migrations/",
+      source: "templates/database/transaction.sql.tpl",
+      target: "database/prisma/migrations/transaction.sql",
+      parameterRefs: [],
+      targetRuntimeInterfaceVersion: "factory.prisma-migration/v1",
+      orderingRequirements: ["transaction-schema"],
+      digest: testDigest(migrationContent),
+    }),
+  ] as const;
+  const draftManifest: CapabilityAssetManifestV1 = {
+    ...registered,
+    key: "test.transaction-v2",
+    version: "1.0.0",
+    packageRoot: "packages/capabilities/assets/test.transaction-v2/1.0.0",
+    manifestDigest: "sha256:placeholder",
+    effects: [],
+    inputSchema: [],
+    outputSlots: ["database.schema", "database.migration"],
+    runtimeHandlers: [],
+    templates: [],
+    parameters: [],
+    executableContributions,
+    requires: [],
+    provides: [{ interfaceKey: "factory.transaction-executor", version: "v2" }],
+    verification: {
+      fixture: "fixtures/default.json",
+      contractTest: "tests/contract.json",
+      status: "verified",
+    },
+  };
+  return {
+    manifest: {
+      ...draftManifest,
+      manifestDigest: capabilityManifestDigest(draftManifest),
+    },
   };
 }
 
@@ -170,6 +237,7 @@ async function writeTestContributionPackage(
         apiVersion: "factory.adapter/v1",
         kind: "declarative",
         outputSlots: asset.manifest.outputSlots,
+        runtimeHandlers: asset.manifest.runtimeHandlers,
         templates: asset.manifest.templates,
         parameters: asset.manifest.parameters,
         graphContributions: asset.manifest.graphContributions,
@@ -733,20 +801,27 @@ describe("capability catalog", () => {
   });
 
   it("verifies every registered capability manifest against its declared digest", () => {
-    expect(capabilityAssets).toHaveLength(53);
+    expect(capabilityAssets).toHaveLength(54);
     for (const asset of capabilityAssets) {
       expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     }
   });
 
-  it("ships each Golden asset as a self-contained package with adapter and evidence", () => {
+  it("ships each selectable Golden asset as a conformant package and retains revoked audit evidence", () => {
     const repositoryRoot = resolve(
       dirname(fileURLToPath(import.meta.url)),
       "../../..",
     );
 
     for (const asset of capabilityAssets) {
-      expect(verifyCapabilityAssetPackage(asset, repositoryRoot)).toEqual([]);
+      const invalid = verifyCapabilityAssetPackage(asset, repositoryRoot);
+      if (isRevokedTransactionV2(asset)) {
+        expect(invalid).toEqual([
+          "PostgreSQL index identifier exceeds 63 bytes",
+        ]);
+      } else {
+        expect(invalid).toEqual([]);
+      }
     }
   });
 
@@ -757,6 +832,12 @@ describe("capability catalog", () => {
     );
 
     for (const asset of capabilityAssets) {
+      if (isRevokedTransactionV2(asset)) {
+        expect(() =>
+          loadCapabilityAssetTemplates(asset, repositoryRoot),
+        ).toThrow("PostgreSQL index identifier exceeds 63 bytes");
+        continue;
+      }
       const templates = loadCapabilityAssetTemplates(asset, repositoryRoot);
       if (
         asset.manifest.key === "commerce.transaction" &&
@@ -1907,6 +1988,208 @@ describe("capability catalog", () => {
     ]);
   });
 
+  it("rejects the exact revoked Transaction V2 package before local composition or verified publication", () => {
+    const defaultSelections = composeDefaultCapabilityDraft({
+      profile: "simple-ecommerce",
+    }).graph.integration.compositionSelections!;
+    const revokedTransaction = capabilityAssets.find(
+      ({ manifest }) =>
+        manifest.key === "commerce.transaction" && manifest.version === "2.2.0",
+    )!;
+    const revokedSelections = defaultSelections.map((selection) =>
+      selection.lock.key === "commerce.transaction"
+        ? { ...selection, lock: lockCapabilityAsset(revokedTransaction) }
+        : selection.lock.key === "commerce.order"
+          ? {
+              ...selection,
+              lock: lockCapabilityAsset(
+                capabilityAssets.find(
+                  ({ manifest }) =>
+                    manifest.key === "commerce.order" &&
+                    manifest.version === "2.1.0",
+                )!,
+              ),
+            }
+          : selection,
+    );
+    const input = {
+      graphChecksum: `sha256:${"a".repeat(64)}`,
+      selections: revokedSelections,
+    } as const;
+    const expectedError =
+      "commerce.transaction@2.2.0 is revoked: PostgreSQL index identifier exceeds 63 bytes";
+
+    expect(
+      resolveCapabilityAssetLock(lockCapabilityAsset(revokedTransaction))
+        .manifest.version,
+    ).toBe("2.2.0");
+    expect(() => createCapabilityCompositionLock(input)).toThrow(expectedError);
+    expect(() =>
+      createVerifiedCapabilityCompositionLock(
+        input,
+        resolve(dirname(fileURLToPath(import.meta.url)), "../../.."),
+      ),
+    ).toThrow(expectedError);
+  });
+
+  it("resolves and directly composes the PostgreSQL-safe Transaction V2 successor without changing defaults", () => {
+    const successorTransaction = capabilityAssets.find(
+      ({ manifest }) =>
+        manifest.key === "commerce.transaction" && manifest.version === "2.2.1",
+    );
+    expect(successorTransaction).toBeDefined();
+    if (!successorTransaction) return;
+
+    expect(
+      resolveCapabilityAssetLock(lockCapabilityAsset(successorTransaction))
+        .manifest.version,
+    ).toBe("2.2.1");
+
+    const draft = composeDefaultCapabilityDraft({
+      profile: "simple-ecommerce",
+    });
+    const successorOrder = capabilityAssets.find(
+      ({ manifest }) =>
+        manifest.key === "commerce.order" && manifest.version === "2.1.0",
+    )!;
+    const directSelections = draft.graph.integration.compositionSelections!.map(
+      (selection) => {
+        if (selection.lock.key === "commerce.order") {
+          return { ...selection, lock: lockCapabilityAsset(successorOrder) };
+        }
+        if (selection.lock.key === "commerce.transaction") {
+          return {
+            ...selection,
+            lock: lockCapabilityAsset(successorTransaction),
+          };
+        }
+        return selection;
+      },
+    );
+    expect(
+      createCapabilityCompositionLock({
+        graphChecksum: `sha256:${"a".repeat(64)}`,
+        selections: directSelections,
+      }).packages,
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          lock: expect.objectContaining({
+            key: "commerce.transaction",
+            version: "2.2.1",
+          }),
+        }),
+        expect.objectContaining({
+          lock: expect.objectContaining({
+            key: "commerce.order",
+            version: "2.1.0",
+          }),
+        }),
+      ]),
+    );
+
+    for (const profile of [
+      "simple-ecommerce",
+      "retail-counter",
+      "grocery-pickup",
+    ] as const) {
+      const locks = composeDefaultCapabilityDraft({ profile }).assetLocks;
+      expect(locks).toContainEqual(
+        expect.objectContaining({
+          key: "commerce.transaction",
+          version: "2.1.0",
+        }),
+      );
+      expect(locks).toContainEqual(
+        expect.objectContaining({ key: "commerce.order", version: "2.0.3" }),
+      );
+    }
+    const restaurantLocks = composeDefaultCapabilityDraft({
+      profile: "restaurant-ordering",
+    }).assetLocks;
+    expect(restaurantLocks).not.toContainEqual(
+      expect.objectContaining({
+        key: "commerce.transaction",
+        version: "2.2.1",
+      }),
+    );
+    expect(restaurantLocks).not.toContainEqual(
+      expect.objectContaining({ key: "commerce.order", version: "2.1.0" }),
+    );
+
+    const repositoryRoot = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      "../../..",
+    );
+    expect(
+      verifyCapabilityAssetPackage(successorTransaction, repositoryRoot),
+    ).toEqual([]);
+    const contributions = loadCapabilityAssetContributions(
+      successorTransaction,
+      repositoryRoot,
+    );
+    const schema = contributions.find(
+      ({ outputSlot }) => outputSlot === "database.schema",
+    )!.content;
+    const migration = contributions.find(
+      ({ outputSlot }) => outputSlot === "database.migration",
+    )!.content;
+    const schemaNames = [
+      ...schema.matchAll(/@@index\s*\([^)]*?\bmap\s*:\s*"([^"]+)"[^)]*\)/g),
+    ]
+      .map(([, name]) => name!)
+      .sort();
+    const migrationNames = [
+      ...migration.matchAll(/\bCREATE\s+(?:UNIQUE\s+)?INDEX\s+"([^"]+)"/gi),
+    ]
+      .map(([, name]) => name!)
+      .sort();
+    expect(schemaNames).toEqual(migrationNames);
+    expect(schemaNames).toContain("ctx_receipt_aggregate_v_idx");
+    for (const name of schemaNames) {
+      expect(name).toMatch(/^[\x00-\x7f]+$/);
+      expect(Buffer.byteLength(name, "utf8")).toBeLessThanOrEqual(63);
+    }
+  });
+
+  it.each([
+    {
+      name: "schema and migration names differ",
+      schemaName: "transaction_schema_idx",
+      migrationName: "transaction_migration_idx",
+      expected: "PostgreSQL index names differ between schema and migration",
+    },
+    {
+      name: "identifier is not ASCII",
+      schemaName: "transaction_réceipt_idx",
+      migrationName: "transaction_réceipt_idx",
+      expected: "PostgreSQL index identifier must be ASCII",
+    },
+    {
+      name: "identifier exceeds 63 bytes",
+      schemaName: "x".repeat(64),
+      migrationName: "x".repeat(64),
+      expected: "PostgreSQL index identifier exceeds 63 bytes",
+    },
+  ])("rejects a Transaction V2 package when $name", async (testCase) => {
+    const schemaContent = `model Receipt {\n  id String @id\n  @@index([id], map: "${testCase.schemaName}")\n}\n`;
+    const migrationContent = `CREATE INDEX "${testCase.migrationName}" ON "Receipt" ("id");\n`;
+    const asset = postgresV2ConformanceAsset(schemaContent, migrationContent);
+
+    await withTestContributionPackage(
+      asset,
+      (repositoryRoot) => {
+        expect(verifyCapabilityAssetPackage(asset, repositoryRoot)).toContain(
+          testCase.expected,
+        );
+      },
+      {
+        "templates/database/transaction.prisma.tpl": schemaContent,
+        "templates/database/transaction.sql.tpl": migrationContent,
+      },
+    );
+  });
+
   it("registers exact Transaction V2 lifecycle packages without activating Generic Commerce drafts", () => {
     const genericProfiles = [
       "simple-ecommerce",
@@ -1932,25 +2215,42 @@ describe("capability catalog", () => {
     expect(restaurantLocks).not.toContainEqual(
       expect.objectContaining({
         key: "commerce.transaction",
-        version: "2.2.0",
+        version: "2.2.1",
       }),
     );
     expect(restaurantLocks).not.toContainEqual(
       expect.objectContaining({ key: "commerce.order", version: "2.1.0" }),
     );
 
-    const providedV2Interfaces = capabilityAssets.flatMap(({ manifest }) =>
-      (manifest.provides ?? [])
-        .filter(({ version }) => version === "v2")
-        .map(({ interfaceKey }) => interfaceKey),
-    );
+    const transactionV2AssetVersions = capabilityAssets
+      .filter(({ manifest }) =>
+        (manifest.provides ?? []).some(
+          ({ interfaceKey, version }) =>
+            interfaceKey === "factory.transaction-executor" && version === "v2",
+        ),
+      )
+      .map(({ manifest }) => manifest.version);
+    expect(transactionV2AssetVersions).toEqual(["2.2.0", "2.2.1"]);
+    const selectableV2Interfaces = capabilityAssets
+      .filter(
+        ({ manifest }) =>
+          !(
+            manifest.key === "commerce.transaction" &&
+            manifest.version === "2.2.0"
+          ),
+      )
+      .flatMap(({ manifest }) =>
+        (manifest.provides ?? [])
+          .filter(({ version }) => version === "v2")
+          .map(({ interfaceKey }) => interfaceKey),
+      );
     expect(
-      providedV2Interfaces.filter(
+      selectableV2Interfaces.filter(
         (interfaceKey) => interfaceKey === "factory.transaction-executor",
       ),
     ).toHaveLength(1);
     expect(
-      providedV2Interfaces.filter(
+      selectableV2Interfaces.filter(
         (interfaceKey) =>
           interfaceKey === "factory.transaction-operation-adapter",
       ),
@@ -1987,7 +2287,7 @@ describe("capability catalog", () => {
     )!;
     const successorTransaction = capabilityAssets.find(
       ({ manifest }) =>
-        manifest.key === "commerce.transaction" && manifest.version === "2.2.0",
+        manifest.key === "commerce.transaction" && manifest.version === "2.2.1",
     )!;
     expect(
       resolveCapabilityAssetLock(lockCapabilityAsset(successorOrder)).manifest
@@ -1996,7 +2296,7 @@ describe("capability catalog", () => {
     expect(
       resolveCapabilityAssetLock(lockCapabilityAsset(successorTransaction))
         .manifest.version,
-    ).toBe("2.2.0");
+    ).toBe("2.2.1");
     const repositoryRoot = resolve(
       dirname(fileURLToPath(import.meta.url)),
       "../../..",
@@ -2060,7 +2360,7 @@ describe("capability catalog", () => {
       expect.objectContaining({
         lock: expect.objectContaining({
           key: "commerce.transaction",
-          version: "2.2.0",
+          version: "2.2.1",
         }),
       }),
     );

@@ -59,6 +59,7 @@ import { commerceTransactionAssetV1_0_0 } from "./commerce/transaction-v1-0-0.js
 import { commerceTransactionAssetV2_0_0 } from "./commerce/transaction-v2-0-0.js";
 import { commerceTransactionAssetV2_1_0 } from "./commerce/transaction-v2-1-0.js";
 import { commerceTransactionAssetV2_2_0 } from "./commerce/transaction-v2-2-0.js";
+import { commerceTransactionAssetV2_2_1 } from "./commerce/transaction-v2-2-1.js";
 export type { TransactionCommandV2 } from "./commerce/transaction-v2-2-0.js";
 import { restaurantTableSessionAsset } from "./restaurant/table-session.js";
 import { restaurantTableSessionAssetV1_1_0 } from "./restaurant/table-session-v1-1-0.js";
@@ -140,6 +141,7 @@ export {
   commerceTransactionAssetV2_0_0,
   commerceTransactionAssetV2_1_0,
   commerceTransactionAssetV2_2_0,
+  commerceTransactionAssetV2_2_1,
   workflowAsset,
   workflowAssetV1_0_1,
 };
@@ -173,6 +175,7 @@ export const capabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
   commerceTransactionAssetV2_0_0,
   commerceTransactionAssetV2_1_0,
   commerceTransactionAssetV2_2_0,
+  commerceTransactionAssetV2_2_1,
   orderAssetV1_3_0,
   orderAssetV1_3_1,
   orderAssetV1_3_2,

@@ -184,7 +184,7 @@ const profileCases = [
   catalogRecordId: string;
 }>[];
 
-function compile(profile: CommerceProfile) {
+function directV2Input(profile: CommerceProfile) {
   const graph = structuredClone(
     composeDefaultCapabilityDraft({ profile }).graph,
   );
@@ -194,7 +194,7 @@ function compile(profile: CommerceProfile) {
   )!;
   const successorTransaction = capabilityAssets.find(
     ({ manifest }) =>
-      manifest.key === "commerce.transaction" && manifest.version === "2.2.0",
+      manifest.key === "commerce.transaction" && manifest.version === "2.2.1",
   )!;
   graph.integration.compositionSelections =
     graph.integration.compositionSelections!.map((selection) => {
@@ -213,6 +213,11 @@ function compile(profile: CommerceProfile) {
     graphChecksum: hashApplicationGraph(graph),
     selections: graph.integration.compositionSelections ?? [],
   });
+  return { graph, compositionLock };
+}
+
+function compile(profile: CommerceProfile) {
+  const { graph, compositionLock } = directV2Input(profile);
   return generateApplicationBundle({
     publishedRevisionId: `generic-order-lifecycle-v2-${profile}`,
     graph,
@@ -354,6 +359,32 @@ async function withGeneratedModule<T>(
 }
 
 describe("Generic order lifecycle V2 compilation", () => {
+  it("rejects the revoked Transaction V2 lock before contribution resolution", () => {
+    const { graph, compositionLock } = directV2Input("simple-ecommerce");
+    const revokedTransaction = capabilityAssets.find(
+      ({ manifest }) =>
+        manifest.key === "commerce.transaction" && manifest.version === "2.2.0",
+    )!;
+    const revokedLock = {
+      ...compositionLock,
+      packages: compositionLock.packages.map((selection) =>
+        selection.lock.key === "commerce.transaction"
+          ? { ...selection, lock: assetLock(revokedTransaction) }
+          : selection,
+      ),
+    };
+
+    expect(() =>
+      generateApplicationBundle({
+        publishedRevisionId: "revoked-transaction-v2",
+        graph,
+        compositionLock: revokedLock,
+      }),
+    ).toThrow(
+      "commerce.transaction@2.2.0 is revoked: PostgreSQL index identifier exceeds 63 bytes",
+    );
+  });
+
   it("publishes a discriminated transition receipt with a required retry delay", () => {
     expect(typecheckGeneratedReceiptContract("simple-ecommerce")).toBe("");
   });
@@ -781,7 +812,7 @@ describe("Generic order lifecycle V2 compilation", () => {
       ).toContain('CREATE TABLE "CommerceTransactionReceipt"');
       for (const indexName of [
         "CommerceTransactionReceipt_state_leaseExpiresAt_idx",
-        "CommerceTransactionReceipt_aggregateType_aggregateId_aggregateVersion_idx",
+        "ctx_receipt_aggregate_v_idx",
         "CommerceAggregateVersion_entity_aggregateId_version_idx",
       ]) {
         expect(files["database/prisma/schema.prisma"]).toContain(indexName);

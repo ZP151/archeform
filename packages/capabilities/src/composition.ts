@@ -754,6 +754,17 @@ function canonicalSelection(
   };
 }
 
+const revokedTransactionV2Error =
+  "commerce.transaction@2.2.0 is revoked: PostgreSQL index identifier exceeds 63 bytes";
+
+export function assertCapabilityAssetSelectable(
+  asset: Pick<CapabilityAssetManifestV1, "key" | "version">,
+): void {
+  if (asset.key === "commerce.transaction" && asset.version === "2.2.0") {
+    throw new Error(revokedTransactionV2Error);
+  }
+}
+
 function matchingManifest(
   lock: CapabilityAssetLockV1,
   assets: readonly CapabilityAssetSnapshotV1[],
@@ -771,6 +782,7 @@ function matchingManifest(
       `Capability asset lock '${lock.key}' does not match a registered Golden asset.`,
     );
   }
+  assertCapabilityAssetSelectable(matched.manifest);
   return matched.manifest;
 }
 
@@ -1168,7 +1180,7 @@ function assertCompatibleGenericTransactionV2Lifecycle(
   );
   const order = manifests.find(({ key }) => key === "commerce.order");
   const successorSelected =
-    transaction?.version === "2.2.0" || order?.version === "2.1.0";
+    transaction?.version === "2.2.1" || order?.version === "2.1.0";
   if (!successorSelected) return;
 
   const executorProviders = manifests.filter((manifest) =>
@@ -1178,7 +1190,7 @@ function assertCompatibleGenericTransactionV2Lifecycle(
     manifestProvides(manifest, "factory.transaction-operation-adapter", "v2"),
   );
   const compatibleTransaction =
-    transaction?.version === "2.2.0" &&
+    transaction?.version === "2.2.1" &&
     manifestProvides(transaction, "factory.transaction-executor", "v2") &&
     manifestRequires(
       transaction,

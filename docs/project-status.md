@@ -2,6 +2,27 @@
 
 Updated: 2026-08-01
 
+## PostgreSQL-safe Transaction V2 successor — 2026-08-01
+
+Generated-project validation found that `commerce.transaction@2.2.0` emits an
+explicit receipt-aggregate index identifier longer than PostgreSQL's 63-byte
+limit, causing Prisma P1012 before client generation. The physical 2.2.0
+package remains immutable for diagnostic replay, but its exact lock is revoked
+from local composition, verified publication, and compiler admission.
+
+Factory now registers the immutable `commerce.transaction@2.2.1` successor.
+Its Prisma schema and SQL migration share the 27-byte ASCII identifier
+`ctx_receipt_aggregate_v_idx`, and package conformance rejects V2 index-name
+drift, non-ASCII identifiers, or identifiers longer than 63 bytes. The new
+transaction package remains direct-composable only with
+`commerce.order@2.1.0`; historical and default Generic Draft locks remain
+`commerce.transaction@2.1.0` and `commerce.order@2.0.3`, and Restaurant is
+unchanged.
+
+This successor is not active or accepted. It remains pending Task 3 validation
+of generated projects and Task 4 live PostgreSQL acceptance before any default
+Draft activation.
+
 ## Profile readiness and quarantined Candidate port planning — 2026-08-01
 
 Commits `9de4b74`, `80b5a15`, and `a0a015c` make portfolio maturity visible
