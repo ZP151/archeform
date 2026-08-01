@@ -2,7 +2,7 @@
 
 Updated: 2026-08-01
 
-## Bound-Flow Order V2 successor — 2026-08-01
+## Strict-Type-safe Bound-Flow Order V2 successor — 2026-08-01
 
 Generated-project validation found that immutable `commerce.order@2.1.0`
 hard-codes four transaction events and rejects declared Retail Counter and
@@ -10,15 +10,21 @@ Grocery Pickup Flow events. The physical package remains unchanged for audit
 replay, but its exact lock is revoked from local composition, verified
 publication, and compiler admission.
 
-Factory now registers the immutable `commerce.order@2.1.1` successor. Its
-package-owned operation-adapter factory freezes the ordered event names from
-the exact Published `orderFlow` binding and rejects undeclared API events. The
-compiler rejects a bound Flow with the wrong entity, no events, or duplicate
-events, and it preserves original event names without Profile conditions,
-central translation, or event-list fallback.
+Immutable `commerce.order@2.1.1` introduced the exact Published `orderFlow`
+event projection, but generated strict TypeScript reports TS7006 for its frozen
+factory's untyped `createStore` and `present` parameters. Its bytes remain
+unchanged for audit replay and its exact lock is now revoked from local
+composition, verified publication, and compiler admission.
+
+Factory now registers immutable `commerce.order@2.1.2`. It preserves the same
+non-empty, unique, bounded Published Flow event projection and undeclared-event
+rejection while constructing an explicitly typed Transaction Command V2
+adapter before freezing it. The emitted adapter passes its generated package's
+own strict TypeScript command without a suppression, compiler rewrite, relaxed
+TypeScript setting, Profile condition, event alias, or event-list fallback.
 
 The only direct-composable V2 pair is `commerce.transaction@2.2.1` with
-`commerce.order@2.1.1`. Historical and default Generic Draft locks remain
+`commerce.order@2.1.2`. Historical and default Generic Draft locks remain
 `commerce.transaction@2.1.0` and `commerce.order@2.0.3`, and Restaurant is
 unchanged. This pair is not active or accepted; it remains pending Task 3
 generated-project validation and Task 4 live PostgreSQL acceptance before any

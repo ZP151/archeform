@@ -1,4 +1,5 @@
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
 import { dirname, join, normalize, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -196,7 +197,7 @@ function directV2Input(profile: CommerceProfile) {
   );
   const successorOrder = capabilityAssets.find(
     ({ manifest }) =>
-      manifest.key === "commerce.order" && manifest.version === "2.1.1",
+      manifest.key === "commerce.order" && manifest.version === "2.1.2",
   )!;
   const successorTransaction = capabilityAssets.find(
     ({ manifest }) =>
@@ -314,6 +315,132 @@ function typecheckGeneratedReceiptContract(profile: CommerceProfile): string {
   });
 }
 
+function typecheckGeneratedOrderAdapter(profile: CommerceProfile): string {
+  const generatedRoot = resolve(
+    generatedDirectory,
+    `${profile}-order-adapter-typecheck`,
+  );
+  const includedPaths = new Set([
+    "api/src/capabilities/commerce-order-transaction-operation-adapter.ts",
+    "api/src/capabilities/commerce-transaction-executor.ts",
+  ]);
+  const virtualSources = new Map<string, string>(
+    compile(profile)
+      .files.filter((file) => includedPaths.has(file.path))
+      .map((file) => [
+        normalize(resolve(generatedRoot, file.path)),
+        file.content,
+      ]),
+  );
+  const adapterPath = normalize(
+    resolve(
+      generatedRoot,
+      "api/src/capabilities/commerce-order-transaction-operation-adapter.ts",
+    ),
+  );
+  const options: ts.CompilerOptions = {
+    module: ts.ModuleKind.NodeNext,
+    moduleResolution: ts.ModuleResolutionKind.NodeNext,
+    noEmit: true,
+    strict: true,
+    target: ts.ScriptTarget.ES2022,
+  };
+  const host = ts.createCompilerHost(options);
+  const baseFileExists = host.fileExists.bind(host);
+  const baseGetSourceFile = host.getSourceFile.bind(host);
+  const baseReadFile = host.readFile.bind(host);
+  host.fileExists = (fileName) =>
+    virtualSources.has(normalize(fileName)) || baseFileExists(fileName);
+  host.readFile = (fileName) =>
+    virtualSources.get(normalize(fileName)) ?? baseReadFile(fileName);
+  host.getSourceFile = (fileName, languageVersion, onError, shouldCreate) => {
+    const source = virtualSources.get(normalize(fileName));
+    return source === undefined
+      ? baseGetSourceFile(fileName, languageVersion, onError, shouldCreate)
+      : ts.createSourceFile(fileName, source, languageVersion, true);
+  };
+  host.resolveModuleNames = (moduleNames, containingFile) =>
+    moduleNames.map((moduleName) => {
+      if (moduleName.startsWith("./") && moduleName.endsWith(".js")) {
+        const virtualModule = normalize(
+          resolve(dirname(containingFile), moduleName.replace(/\.js$/, ".ts")),
+        );
+        if (virtualSources.has(virtualModule)) {
+          return {
+            extension: ts.Extension.Ts,
+            resolvedFileName: virtualModule,
+          };
+        }
+      }
+      return ts.resolveModuleName(moduleName, containingFile, options, host)
+        .resolvedModule;
+    });
+
+  const diagnostics = ts
+    .getPreEmitDiagnostics(
+      ts.createProgram({ rootNames: [adapterPath], options, host }),
+    )
+    .filter(
+      (diagnostic) =>
+        diagnostic.file !== undefined &&
+        virtualSources.has(normalize(diagnostic.file.fileName)),
+    );
+  return ts.formatDiagnosticsWithColorAndContext(diagnostics, {
+    getCanonicalFileName: (fileName) => fileName,
+    getCurrentDirectory: () => process.cwd(),
+    getNewLine: () => "\n",
+  });
+}
+
+async function runGeneratedOrderAdapterTypecheck(
+  profile: CommerceProfile,
+): Promise<Readonly<{ exitCode: number | null; output: string }>> {
+  await mkdir(generatedDirectory, { recursive: true });
+  const directory = await mkdtemp(
+    join(generatedDirectory, `${profile}-order-adapter-command-`),
+  );
+  try {
+    const includedPaths = new Set([
+      "api/package.json",
+      "api/tsconfig.json",
+      "api/src/capabilities/commerce-order-transaction-operation-adapter.ts",
+      "api/src/capabilities/commerce-transaction-executor.ts",
+    ]);
+    await Promise.all(
+      compile(profile)
+        .files.filter((file) => includedPaths.has(file.path))
+        .map(async (file) => {
+          const path = resolve(directory, file.path);
+          await mkdir(dirname(path), { recursive: true });
+          await writeFile(path, file.content, "utf8");
+        }),
+    );
+    const command = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+    return await new Promise((resolveResult, rejectResult) => {
+      const child = spawn(command, ["typecheck"], {
+        cwd: resolve(directory, "api"),
+        env: {
+          ...process.env,
+          CI: "1",
+          PNPM_DISABLE_SELF_UPDATE_CHECK: "1",
+        },
+        shell: process.platform === "win32",
+      });
+      let output = "";
+      child.stdout.on("data", (chunk: Buffer) => {
+        output += chunk.toString("utf8");
+      });
+      child.stderr.on("data", (chunk: Buffer) => {
+        output += chunk.toString("utf8");
+      });
+      child.on("error", rejectResult);
+      child.on("close", (exitCode) => resolveResult({ exitCode, output }));
+    });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+}
+
 async function withGeneratedRuntime<T>(
   profile: CommerceProfile,
   run: (runtime: GeneratedRuntime) => Promise<T>,
@@ -399,6 +526,32 @@ describe("Generic order lifecycle V2 compilation", () => {
     );
   });
 
+  it("rejects the strict-TypeScript-unsafe Order V2 lock before contribution resolution", () => {
+    const { graph, compositionLock } = directV2Input("simple-ecommerce");
+    const revokedOrder = capabilityAssets.find(
+      ({ manifest }) =>
+        manifest.key === "commerce.order" && manifest.version === "2.1.1",
+    )!;
+    const revokedLock = {
+      ...compositionLock,
+      packages: compositionLock.packages.map((selection) =>
+        selection.lock.key === "commerce.order"
+          ? { ...selection, lock: assetLock(revokedOrder) }
+          : selection,
+      ),
+    };
+
+    expect(() =>
+      generateApplicationBundle({
+        publishedRevisionId: "strict-typescript-unsafe-order-v2",
+        graph,
+        compositionLock: revokedLock,
+      }),
+    ).toThrow(
+      "commerce.order@2.1.1 is revoked: generated strict TypeScript reports implicit any",
+    );
+  });
+
   it("rejects the revoked Transaction V2 lock before contribution resolution", () => {
     const { graph, compositionLock } = directV2Input("simple-ecommerce");
     const revokedTransaction = capabilityAssets.find(
@@ -427,6 +580,16 @@ describe("Generic order lifecycle V2 compilation", () => {
 
   it("publishes a discriminated transition receipt with a required retry delay", () => {
     expect(typecheckGeneratedReceiptContract("simple-ecommerce")).toBe("");
+  });
+
+  it("emits an order adapter that passes its generated API strict TypeScript boundary", () => {
+    expect(typecheckGeneratedOrderAdapter("simple-ecommerce")).toBe("");
+  });
+
+  it("passes the generated adapter package's own strict TypeScript command", async () => {
+    const result = await runGeneratedOrderAdapterTypecheck("simple-ecommerce");
+
+    expect(result.exitCode, result.output).toBe(0);
   });
 
   it.each(profileCases)(

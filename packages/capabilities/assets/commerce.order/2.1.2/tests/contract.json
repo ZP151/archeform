@@ -1,0 +1,15 @@
+{
+  "contracts": [
+    "factory.order-create-handler/v1",
+    "factory.transaction-operation-adapter/v2"
+  ],
+  "commandFields": ["flowId", "event", "aggregate", "idempotency"],
+  "semantics": [
+    "validated-create-envelope",
+    "authorization-before-persistence",
+    "store-produced-initial-record",
+    "exact-lock-bound-event-adapter-factory",
+    "strict-typesafe-frozen-adapter",
+    "bounded-context"
+  ]
+}

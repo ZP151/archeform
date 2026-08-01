@@ -74,7 +74,7 @@ function isRevokedTransactionV2(asset: CapabilityAssetV1): boolean {
 function isRevokedOrderV2(asset: CapabilityAssetV1): boolean {
   return (
     asset.manifest.key === "commerce.order" &&
-    asset.manifest.version === "2.1.0"
+    (asset.manifest.version === "2.1.0" || asset.manifest.version === "2.1.1")
   );
 }
 
@@ -808,7 +808,7 @@ describe("capability catalog", () => {
   });
 
   it("verifies every registered capability manifest against its declared digest", () => {
-    expect(capabilityAssets).toHaveLength(55);
+    expect(capabilityAssets).toHaveLength(56);
     for (const asset of capabilityAssets) {
       expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     }
@@ -2013,7 +2013,7 @@ describe("capability catalog", () => {
                 capabilityAssets.find(
                   ({ manifest }) =>
                     manifest.key === "commerce.order" &&
-                    manifest.version === "2.1.1",
+                    manifest.version === "2.1.2",
                 )!,
               ),
             }
@@ -2083,6 +2083,70 @@ describe("capability catalog", () => {
     ).toThrow(expectedError);
   });
 
+  it("rejects the strict-TypeScript-unsafe Order V2 package before local composition or verified publication", () => {
+    const defaultSelections = composeDefaultCapabilityDraft({
+      profile: "simple-ecommerce",
+    }).graph.integration.compositionSelections!;
+    const revokedOrder = capabilityAssets.find(
+      ({ manifest }) =>
+        manifest.key === "commerce.order" && manifest.version === "2.1.1",
+    )!;
+    const successorTransaction = capabilityAssets.find(
+      ({ manifest }) =>
+        manifest.key === "commerce.transaction" && manifest.version === "2.2.1",
+    )!;
+    const revokedSelections = defaultSelections.map((selection) => {
+      if (selection.lock.key === "commerce.order") {
+        return { ...selection, lock: lockCapabilityAsset(revokedOrder) };
+      }
+      if (selection.lock.key === "commerce.transaction") {
+        return {
+          ...selection,
+          lock: lockCapabilityAsset(successorTransaction),
+        };
+      }
+      return selection;
+    });
+    const input = {
+      graphChecksum: `sha256:${"a".repeat(64)}`,
+      selections: revokedSelections,
+    } as const;
+    const expectedError =
+      "commerce.order@2.1.1 is revoked: generated strict TypeScript reports implicit any";
+
+    expect(
+      resolveCapabilityAssetLock(lockCapabilityAsset(revokedOrder)).manifest
+        .version,
+    ).toBe("2.1.1");
+    expect(() => createCapabilityCompositionLock(input)).toThrow(expectedError);
+    expect(() =>
+      createVerifiedCapabilityCompositionLock(
+        input,
+        resolve(dirname(fileURLToPath(import.meta.url)), "../../.."),
+      ),
+    ).toThrow(expectedError);
+    const staleRevokedInput = {
+      ...input,
+      selections: input.selections.map((selection) =>
+        selection.lock.key === "commerce.order"
+          ? {
+              ...selection,
+              lock: {
+                ...selection.lock,
+                manifestDigest: `sha256:${"f".repeat(64)}`,
+              },
+            }
+          : selection,
+      ),
+    };
+    expect(() =>
+      createVerifiedCapabilityCompositionLock(
+        staleRevokedInput,
+        resolve(dirname(fileURLToPath(import.meta.url)), "../../.."),
+      ),
+    ).toThrow(expectedError);
+  });
+
   it("resolves and directly composes the bound-Flow V2 successor pair without changing defaults", () => {
     const successorTransaction = capabilityAssets.find(
       ({ manifest }) =>
@@ -2101,8 +2165,10 @@ describe("capability catalog", () => {
     });
     const successorOrder = capabilityAssets.find(
       ({ manifest }) =>
-        manifest.key === "commerce.order" && manifest.version === "2.1.1",
-    )!;
+        manifest.key === "commerce.order" && manifest.version === "2.1.2",
+    );
+    expect(successorOrder).toBeDefined();
+    if (!successorOrder) return;
     const directSelections = draft.graph.integration.compositionSelections!.map(
       (selection) => {
         if (selection.lock.key === "commerce.order") {
@@ -2133,7 +2199,7 @@ describe("capability catalog", () => {
         expect.objectContaining({
           lock: expect.objectContaining({
             key: "commerce.order",
-            version: "2.1.1",
+            version: "2.1.2",
           }),
         }),
       ]),
@@ -2165,7 +2231,7 @@ describe("capability catalog", () => {
       }),
     );
     expect(restaurantLocks).not.toContainEqual(
-      expect.objectContaining({ key: "commerce.order", version: "2.1.1" }),
+      expect.objectContaining({ key: "commerce.order", version: "2.1.2" }),
     );
 
     const repositoryRoot = resolve(
@@ -2434,8 +2500,10 @@ describe("capability catalog", () => {
 
     const successorOrder = capabilityAssets.find(
       ({ manifest }) =>
-        manifest.key === "commerce.order" && manifest.version === "2.1.1",
-    )!;
+        manifest.key === "commerce.order" && manifest.version === "2.1.2",
+    );
+    expect(successorOrder).toBeDefined();
+    if (!successorOrder) return;
     const successorTransaction = capabilityAssets.find(
       ({ manifest }) =>
         manifest.key === "commerce.transaction" && manifest.version === "2.2.1",
@@ -2443,7 +2511,7 @@ describe("capability catalog", () => {
     expect(
       resolveCapabilityAssetLock(lockCapabilityAsset(successorOrder)).manifest
         .version,
-    ).toBe("2.1.1");
+    ).toBe("2.1.2");
     expect(
       resolveCapabilityAssetLock(lockCapabilityAsset(successorTransaction))
         .manifest.version,
@@ -2519,7 +2587,7 @@ describe("capability catalog", () => {
       expect.objectContaining({
         lock: expect.objectContaining({
           key: "commerce.order",
-          version: "2.1.1",
+          version: "2.1.2",
         }),
       }),
     );

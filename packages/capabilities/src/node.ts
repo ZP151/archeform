@@ -1176,8 +1176,8 @@ export function createVerifiedCapabilityCompositionLock(
 ): CapabilityCompositionLockV1 {
   const captured = captureCapabilityCompositionLock(input);
   for (const selection of captured.input.selections) {
+    assertCapabilityAssetSelectable(selection.lock);
     const asset = resolveCapabilityAssetLock(selection.lock);
-    assertCapabilityAssetSelectable(asset.manifest);
     const invalid = verifyCapabilityAssetPackage(asset, repositoryRoot);
     if (invalid.length > 0) {
       throw new Error(

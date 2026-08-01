@@ -255,6 +255,13 @@ function assertCanonicalCompositionLock(
   ) {
     throw new Error(revokedOrderV2Error);
   }
+  if (
+    input.compositionLock.packages.some(
+      ({ lock }) => lock.key === "commerce.order" && lock.version === "2.1.1",
+    )
+  ) {
+    throw new Error(revokedOrderV2StrictTypeError);
+  }
   const graphHash = hashApplicationGraph(
     assertValidApplicationGraph(input.graph),
   );
@@ -281,6 +288,8 @@ const revokedTransactionV2Error =
   "commerce.transaction@2.2.0 is revoked: PostgreSQL index identifier exceeds 63 bytes";
 const revokedOrderV2Error =
   "commerce.order@2.1.0 is revoked: fixed event vocabulary excludes bound Flow events";
+const revokedOrderV2StrictTypeError =
+  "commerce.order@2.1.1 is revoked: generated strict TypeScript reports implicit any";
 
 function assertLockedCommerceTransaction(
   input: PublishedGraphInput,
@@ -347,7 +356,7 @@ function assertLockedCommerceTransaction(
     const orders = lock.packages.filter(
       ({ lock: packageLock }) => packageLock.key === "commerce.order",
     );
-    const requiredOrderVersion = mode === "generic-v2" ? "2.1.1" : "2.0.3";
+    const requiredOrderVersion = mode === "generic-v2" ? "2.1.2" : "2.0.3";
     if (
       orders.length !== 1 ||
       orders[0]!.lock.version !== requiredOrderVersion
@@ -633,7 +642,7 @@ function resolveGenericOrderLifecycleContributions(
 ): GenericOrderLifecycleContributions | undefined {
   if (mode !== "generic-v1" && mode !== "generic-v2") return undefined;
   const lock = assertCanonicalCompositionLock(input);
-  const orderVersion = mode === "generic-v2" ? "2.1.1" : "2.0.3";
+  const orderVersion = mode === "generic-v2" ? "2.1.2" : "2.0.3";
   const transactionVersion = mode === "generic-v2" ? "2.2.1" : "2.1.0";
   const operationAdapterVersion =
     mode === "generic-v2"
@@ -3872,6 +3881,7 @@ export function generateApplicationBundle(
               build: "tsc -p tsconfig.json",
               start: "node dist/main.js",
               test: "vitest run",
+              typecheck: "tsc -p tsconfig.json --noEmit",
             },
             dependencies: {
               "@prisma/client": "^6.19.0",
