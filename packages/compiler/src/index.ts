@@ -647,6 +647,47 @@ export class NotificationOutboxWorker {
 `;
 }
 
+function renderNotificationOutboxDrain(): string {
+  return `import { PrismaClient } from "@prisma/client";
+import { PrismaRecordStore } from "./prisma-record-store.js";
+import { FixtureNotificationTransport, NotificationOutboxWorker } from "./notification-outbox-worker.js";
+
+async function main(): Promise<void> {
+  const prisma = new PrismaClient();
+  try {
+    const transport = new FixtureNotificationTransport();
+    const worker = new NotificationOutboxWorker(
+      new PrismaRecordStore(prisma),
+      transport,
+    );
+    const processed = await worker.drain(new Date().toISOString());
+    const summary = processed.reduce(
+      (counts, entry) => ({
+        ...counts,
+        [entry.status]: counts[entry.status] + 1,
+      }),
+      { delivered: 0, pending: 0, failed: 0 },
+    );
+    console.log(JSON.stringify({ processed: processed.length, ...summary }));
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+void main();
+`;
+}
+
+function renderNotificationOutboxDrainDocumentation(): string {
+  return `# Local notification outbox drain
+
+Run \`pnpm notification:drain\` from this directory to process due notification
+outbox entries once. The command uses the generated Prisma store and the local
+fixture transport only; it accepts no recipient, message, provider, URL, or
+credential input. It prints a count-only summary and exits.
+`;
+}
+
 function resolveNotificationOutboxRuntimeContribution(
   input: PublishedGraphInput,
 ): NotificationOutboxRuntimeContribution | undefined {
@@ -4001,9 +4042,13 @@ export function generateApplicationBundle(
     !restaurantRuntimeEnabled && orderOperationsPersistence !== undefined;
   const useGenericMoneyPricingPersistence =
     !restaurantRuntimeEnabled && moneyPricingPersistence !== undefined;
-  const notificationOutbox = restaurantRuntimeEnabled
-    ? undefined
-    : resolveNotificationOutboxRuntimeContribution(input);
+  const notificationOutbox =
+    resolveNotificationOutboxRuntimeContribution(input);
+  if (restaurantRuntimeEnabled && notificationOutbox) {
+    throw new Error(
+      "Restaurant Ordering does not support notification.outbox/v1; remove the durable notification lock before compilation.",
+    );
+  }
   const additionalPrismaSchemaFragments = [
     ...(useGenericMoneyPricingPersistence
       ? [moneyPricingPersistence!.schema]
@@ -4215,6 +4260,12 @@ export function generateApplicationBundle(
               build: "tsc -p tsconfig.json",
               start: "node dist/main.js",
               test: "vitest run",
+              ...(notificationOutbox
+                ? {
+                    "notification:drain":
+                      "tsx src/notification-outbox-drain.ts",
+                  }
+                : {}),
             },
             dependencies: {
               "@prisma/client": "^6.19.0",
@@ -4334,6 +4385,14 @@ export function generateApplicationBundle(
           {
             path: "api/src/notification-outbox-worker.ts",
             render: () => renderNotificationOutboxWorker(),
+          },
+          {
+            path: "api/src/notification-outbox-drain.ts",
+            render: () => renderNotificationOutboxDrain(),
+          },
+          {
+            path: "api/README.md",
+            render: () => renderNotificationOutboxDrainDocumentation(),
           },
         ]
       : []),

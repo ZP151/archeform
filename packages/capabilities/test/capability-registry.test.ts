@@ -1659,6 +1659,22 @@ describe("capability catalog", () => {
     expect(validateApplicationGraph(composition.graph)).toEqual([]);
   });
 
+  it("starts new Restaurant drafts without a durable notification lock", () => {
+    const composition = composeDefaultCapabilityDraft({
+      profile: "restaurant-ordering",
+    });
+
+    expect(composition.optionalCapabilities).toEqual([]);
+    expect(composition.assetLocks).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "core.notification",
+          version: "1.1.1",
+        }),
+      ]),
+    );
+  });
+
   it("composes a notification-free Expense Graph without notification effects", () => {
     const composition = composeProfileDraft({
       profile: "expense-approval",
@@ -1708,8 +1724,9 @@ describe("capability catalog", () => {
 
     expect(composition.profile).toBe("restaurant-ordering");
     expect(composition.enabledEffects).toEqual(
-      expect.arrayContaining(["audit.record", "notification.send"]),
+      expect.arrayContaining(["audit.record"]),
     );
+    expect(composition.enabledEffects).not.toContain("notification.send");
   });
 
   it("persists selected Golden identities as canonical composition selections", () => {
@@ -1771,7 +1788,6 @@ describe("capability catalog", () => {
       "core.crud",
       "core.identity-context",
       "core.location-context",
-      "core.notification",
       "core.workflow",
       "restaurant.cashier",
       "restaurant.kitchen",
@@ -1798,7 +1814,6 @@ describe("capability catalog", () => {
       "data.delete": ["core.crud"],
       "flow.transition": ["core.workflow"],
       "flow.assign-task": ["core.workflow"],
-      "notification.send": ["core.notification"],
       "catalog.list": ["commerce.catalog"],
       "catalog.read": ["commerce.catalog"],
       "cart.add": ["commerce.cart"],

@@ -922,7 +922,10 @@ const defaultCapabilityRecipes: Readonly<
   Record<FactoryProfile, ProfileCompositionRecipe>
 > = {
   "expense-approval": compositionRecipes["expense-approval"],
-  "restaurant-ordering": compositionRecipes["restaurant-ordering"],
+  "restaurant-ordering": {
+    ...compositionRecipes["restaurant-ordering"],
+    optionalCapabilities: [],
+  },
   "simple-ecommerce": compositionRecipes["simple-ecommerce"],
   "retail-counter": compositionRecipes["retail-counter"],
   "grocery-pickup": compositionRecipes["grocery-pickup"],
@@ -3558,7 +3561,9 @@ export function composeProfileDraft(
   const composition = getProfileComposition(profile);
   const requested = capturedInput.optionalCapabilities
     ? [...capturedInput.optionalCapabilities]
-    : [...composition.defaultOptionalCapabilities];
+    : profile === "restaurant-ordering"
+      ? []
+      : [...composition.defaultOptionalCapabilities];
   const requestedSet = new Set(requested);
   if (requestedSet.size !== requested.length) {
     throw new Error("Optional capability selections must be unique.");

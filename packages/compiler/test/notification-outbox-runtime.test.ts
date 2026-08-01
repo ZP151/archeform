@@ -208,6 +208,33 @@ function publishedProfileWithNotification(
   };
 }
 
+function publishedRestaurantWithNotification(): PublishedGraphInput {
+  const graph = composeProfileDraft({
+    profile: "restaurant-ordering",
+    optionalCapabilities: ["core.notification"],
+  }).graph;
+  const selections = [
+    ...(composeDefaultCapabilityDraft({ profile: "restaurant-ordering" }).graph
+      .integration.compositionSelections ?? []),
+    {
+      lock: graph.integration.assetLocks!.find(
+        ({ key }) => key === "core.notification",
+      )!,
+      bindings: {
+        recipientRole: { graphSymbol: "graph.policy.customer" },
+      },
+    },
+  ];
+  return {
+    publishedRevisionId: "published-restaurant-notification-runtime-1",
+    graph,
+    compositionLock: createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(graph),
+      selections,
+    }),
+  };
+}
+
 function lockFromAsset(asset: (typeof capabilityAssets)[number]) {
   const { key, version, packageRoot, manifestDigest, lifecycle } =
     asset.manifest;
@@ -351,6 +378,88 @@ function createGeneratedStores(
   ];
 }
 
+function createTransactionalPrismaFixture() {
+  type State = {
+    records: Map<string, Record<string, unknown> & { id: string }>;
+    notifications: Map<string, PrismaNotificationOutboxRow>;
+  };
+  let state: State = { records: new Map(), notifications: new Map() };
+
+  const cloneState = (source: State): State => structuredClone(source);
+  const clientFor = (active: State) => {
+    const expense = {
+      async findMany() {
+        return [...active.records.values()];
+      },
+      async findUnique({ where }: { where: { id: string } }) {
+        return active.records.get(where.id) ?? null;
+      },
+      async create({ data }: { data: Record<string, unknown> }) {
+        const id = `expense-${active.records.size + 1}`;
+        const record = { id, ...data };
+        active.records.set(id, record);
+        return record;
+      },
+      async update({
+        where,
+        data,
+      }: {
+        where: { id: string };
+        data: Record<string, unknown>;
+      }) {
+        const record = active.records.get(where.id);
+        if (!record) throw new Error(`Record '${where.id}' was not found.`);
+        Object.assign(record, data);
+        return record;
+      },
+    };
+    const notificationOutbox = {
+      async findUnique({ where }: { where: { id: string } }) {
+        return active.notifications.get(where.id) ?? null;
+      },
+      async upsert({
+        where,
+        create,
+      }: {
+        where: { dedupeKey: string };
+        create: NotificationOutboxInput & { availableAt: Date };
+      }) {
+        const existing = [...active.notifications.values()].find(
+          (entry) => entry.dedupeKey === where.dedupeKey,
+        );
+        if (existing) return existing;
+        const entry = {
+          id: `notification-${active.notifications.size + 1}`,
+          ...create,
+          status: "pending" as const,
+          attempts: 0,
+          deliveredAt: null,
+          lastError: null,
+        };
+        active.notifications.set(entry.id, entry);
+        return entry;
+      },
+      async findMany() {
+        return [...active.notifications.values()];
+      },
+      async updateMany() {
+        return { count: 0 };
+      },
+    };
+    return { expense, notificationOutbox };
+  };
+  const prisma = {
+    ...clientFor(state),
+    async $transaction<T>(operation: (client: unknown) => Promise<T>) {
+      const transactionState = cloneState(state);
+      const result = await operation(clientFor(transactionState));
+      state = transactionState;
+      return result;
+    },
+  };
+  return { prisma, getState: () => cloneState(state) };
+}
+
 const notificationInput: NotificationOutboxInput = {
   dedupeKey: "notification-transition-proof",
   actor: "employee",
@@ -362,6 +471,33 @@ const notificationInput: NotificationOutboxInput = {
 };
 
 describe("generated durable notification outbox runtime", () => {
+  it("emits a documented one-shot local fixture drain command", () => {
+    const files = Object.fromEntries(
+      generateApplicationBundle(publishedExpenseWithNotification()).files.map(
+        (file) => [file.path, file.content],
+      ),
+    );
+
+    expect(JSON.parse(files["api/package.json"] ?? "{}").scripts).toMatchObject(
+      {
+        "notification:drain": "tsx src/notification-outbox-drain.ts",
+      },
+    );
+    expect(files["api/src/notification-outbox-drain.ts"]).toContain(
+      "new PrismaRecordStore(prisma)",
+    );
+    expect(files["api/src/notification-outbox-drain.ts"]).toContain(
+      "new FixtureNotificationTransport()",
+    );
+    expect(files["api/README.md"]).toContain("pnpm notification:drain");
+  });
+
+  it("rejects a Restaurant durable notification lock instead of omitting its outbox", () => {
+    expect(() =>
+      generateApplicationBundle(publishedRestaurantWithNotification()),
+    ).toThrow("Restaurant Ordering does not support notification.outbox/v1");
+  });
+
   it.each([
     {
       profile: "expense-approval" as const,
@@ -723,6 +859,40 @@ describe("generated durable notification outbox runtime", () => {
         expect(
           await store.claimDueNotifications("9999-12-31T23:59:59.999Z", 10),
         ).toEqual([]);
+      },
+    );
+  });
+
+  it("rolls back generated Prisma domain and outbox writes after post-enqueue failure", async () => {
+    await withGeneratedModule(
+      publishedExpenseWithNotification(),
+      async (module) => {
+        const fixture = createTransactionalPrismaFixture();
+        const store = new module.PrismaRecordStore(fixture.prisma);
+        const expense = await store.create("expense", {
+          amount: "9.00",
+          description: "Taxi",
+          status: "draft",
+        });
+
+        await expect(
+          store.inTransaction(async (transaction) => {
+            await transaction.update("expense", expense.id, {
+              status: "submitted",
+            });
+            await transaction.enqueueNotification({
+              ...notificationInput,
+              dedupeKey: "prisma-post-enqueue-rollback-proof",
+              recordId: expense.id,
+            });
+            throw new Error("post-enqueue failure");
+          }),
+        ).rejects.toThrow("post-enqueue failure");
+
+        expect(fixture.getState().records.get(expense.id)).toMatchObject({
+          status: "draft",
+        });
+        expect(fixture.getState().notifications).toHaveLength(0);
       },
     );
   });

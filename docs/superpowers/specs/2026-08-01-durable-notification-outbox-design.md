@@ -187,6 +187,12 @@ the Prisma-backed store and uses the deterministic fixture transport. The
 command must not accept a recipient, body, URL, provider, credential, or raw
 message input.
 
+The generated API package exposes this contract as `pnpm notification:drain`.
+It creates the generated Prisma store and fixture transport, drains due work
+once, prints only count-based delivery state, and exits. Restaurant Ordering
+fails compilation when an immutable lock advertises `notification.outbox/v1`
+until it has a complete outbox runtime; it must never silently omit the lock.
+
 Restaurant Ordering cannot silently suppress a selected durable notification
 lock. A published Restaurant Graph that selects an asset providing
 `notification.outbox/v1` must either receive a complete generated outbox
