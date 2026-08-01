@@ -228,7 +228,7 @@ runtime evidence.
 
   Run: `pnpm --filter @factory/capabilities test -- capability-registry.test.ts && pnpm --filter @factory/compiler test -- notification-outbox-runtime.test.ts profile-compilation.test.ts`
 
-  Expected: failure because recipes do not select or validate `1.1.0` bindings.
+  Expected: failure because recipes do not select or validate `1.1.1` bindings.
 
 - [ ] **Step 3: Update profile recipes and acceptance evidence**
 
