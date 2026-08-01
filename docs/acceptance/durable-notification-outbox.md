@@ -2,9 +2,11 @@
 
 Date: 2026-08-01
 
-Status: accepted after fresh Task 5 package, repository, isolated-runtime, and
-guarded-model verification. Earlier blocked attempts are retained below as
-release-gate history.
+Status: reopened and superseded by Task 8 re-QA after independent release
+review identified material gaps in the earlier Task 5 acceptance. Historical
+Task 5 evidence is retained below unchanged; this record must not be treated as
+final acceptance unless the Task 8 correction evidence and an independent
+release-review approval are both recorded.
 
 ## Accepted boundary
 
@@ -209,3 +211,100 @@ raw Graph Diff, or model response is retained here.
 Residual scope: notification delivery remains the local deterministic fixture
 transport; no external notification provider, credential, or network delivery
 was enabled.
+
+## Task 8 correction re-QA (2026-08-02)
+
+Status: deterministic re-QA evidence is complete, but final acceptance remains
+pending independent release-review approval. This section supersedes the Task 5
+acceptance conclusion above; it does not alter the historic facts recorded in
+earlier sections.
+
+The PM ledger recorded the Task 7 remediation as `ready_for_qa` before this
+work started. The implementation handoff stated that Workbench Restaurant
+defaults omit notification, explicit durable Restaurant selection fails closed,
+and the generated drain must execute from the API Compose service.
+
+Fresh deterministic gates:
+
+```text
+pnpm --filter @factory/capabilities test     Exit 0: 20 files, 279 tests.
+pnpm --filter @factory/compiler test         Exit 0: 13 files, 235 tests.
+pnpm --filter @factory/workbench test        Exit 0: 17 files, 73 tests.
+pnpm test                                    Exit 0: 16 Turbo tasks.
+pnpm typecheck                               Exit 0: 16 Turbo tasks.
+pnpm lint                                    Exit 0: 10 Turbo tasks.
+pnpm build                                   Exit 0: 10 Turbo tasks.
+pnpm verify:third-party                      Exit 0: 5 notices verified.
+pnpm verify:source-studies                   Exit 0: 2 studies verified.
+git diff --check                             Exit 0.
+```
+
+Focused error-path and state-transition evidence:
+
+```text
+pnpm --filter @factory/compiler test -- notification-outbox-runtime.test.ts \
+  -t "rolls back generated Prisma domain and outbox writes after post-enqueue failure"
+Exit 0: 1 passed, 17 skipped.
+
+pnpm --filter @factory/workbench test -- \
+  lib/guided-creation-model.test.ts lib/profile-starters.test.ts
+Exit 0: 2 files, 6 tests passed.
+
+pnpm --filter @factory/compiler test -- notification-outbox-runtime.test.ts \
+  -t "rejects a Restaurant durable notification lock instead of omitting its outbox"
+Exit 0: 1 passed, 17 skipped.
+```
+
+The first focused compiler result exercises the external test-only transaction
+decorator: it throws after enqueue through the generated Prisma runtime and
+proves that neither domain mutation nor outbox write commits. The Workbench
+result covers the default notification-free Restaurant path and retained
+eligible toggle; the compiler result verifies explicit durable selection is
+rejected rather than silently suppressed.
+
+Two independently generated, uniquely named Compose applications exercised
+the API, PostgreSQL store, and documented drain command. Their generated
+revision identifiers and file counts were `task8-expense-1785600304188` (62)
+and `task8-ecommerce-1785600735126` (78). The exact command used inside each
+generated application root was:
+
+```text
+docker compose exec -T api pnpm notification:drain
+```
+
+The Expense transition produced one PostgreSQL outbox row in
+`pending|employee|expense.approval-outcome`; the command reported
+`processed: 1, delivered: 1, pending: 0, failed: 0`; and the same row became
+`delivered|employee|expense.approval-outcome`. The Ecommerce payment transition
+produced `pending|shopper|ecommerce.order-outcome`; its drain reported the same
+count-based summary; and the row became
+`delivered|shopper|ecommerce.order-outcome`.
+
+Each project ran `docker compose down --volumes --remove-orphans`. Label-scoped
+checks then found zero containers, networks, and volumes, and both temporary
+generated application directories were removed. The isolated guarded-model
+Control Plane project was also removed with zero labeled containers, networks,
+and volumes.
+
+During the Expense observation, an initial ad-hoc PostgreSQL query used an
+invalid empty quoted identifier and then a nonexistent `NotificationOutbox`
+timestamp column. Systematic debugging established that the generated outbox
+has no creation timestamp and that the shell query, not the application,
+caused the observation failure. A column-discovery query and a field-separated
+read (`status`, `recipientRole`, `template`) reproduced the expected pending
+state before the subsequent successful drain. No product defect was found.
+
+One and only one guarded OpenAI Graph-Diff request was made after deterministic
+and Compose evidence completed. The Control Plane read the credential only from
+the local `.env` launch environment. It returned HTTP 201 and created mutable
+Expense application `cmsakji980002pg4tcwyb54ur`, Draft
+`cmsakjzka0005pg4t25k2w0x3`, revision `2`, with one affected model and one test
+suggestion. No credential, brief, prompt, raw diff, or raw model response is
+retained here.
+
+Coverage note: the live journeys verify one successful pending-to-delivered
+delivery for each required profile. Existing deterministic compiler coverage
+continues to cover deduplication, transient retry, terminal failure,
+idempotency, and rejected client-controlled delivery input. Independent release
+review remains the release-blocking gate; no Task 8 final acceptance claim is
+made by this record.
