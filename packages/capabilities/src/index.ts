@@ -3374,6 +3374,7 @@ const profileDescriptorMetadata: Readonly<
       | "apiVersion"
       | "profile"
       | "requiredCapabilities"
+      | "eligibleOptionalCapabilities"
       | "defaultOptionalCapabilities"
     >
   >
@@ -3486,6 +3487,8 @@ export function composeDefaultCapabilityDraft(
     profile,
     requiredCapabilities: recipe.requiredCapabilities.map(getCapability),
     optionalCapabilities: recipe.optionalCapabilities.map(getCapability),
+    eligibleOptionalCapabilities: getProfileComposition(profile)
+      .eligibleOptionalCapabilities,
     defaultOptionalCapabilities: [...recipe.optionalCapabilities],
   };
   const requested = capturedInput.optionalCapabilities
