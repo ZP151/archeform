@@ -2419,10 +2419,10 @@ function renderApplicationRuntime(
       ? useDurableReceiptLease
         ? [
             `    if (entityKey === ${JSON.stringify(orderEntityKey)}) {`,
+            "      const effects = this.declaredFactoryEffects(transition.effects);",
             "      const payloadDigest = `sha256:${createHash('sha256').update(JSON.stringify({ entityKey, recordId, event, expectedVersion: options.expectedVersion, expectedState: transition.from })).digest('hex')}`;",
             "      const parsed = commerceOrderTransactionOperationAdapter.parseRequest({ orderId: recordId, expectedVersion: options.expectedVersion, expectedState: transition.from, event, idempotencyKey: options.idempotencyKey, payloadDigest });",
             "      const prepared = commerceOrderTransactionOperationAdapter.prepare(parsed);",
-            "      const effects = this.declaredFactoryEffects(transition.effects);",
             "      const transactionStore: TransactionStoreV2 = {",
             "        transaction: <T>(operation: () => Promise<T>): Promise<T> => this.store.transaction(operation),",
             "        claimReceipt: (input): Promise<ReceiptClaimV2> => this.store.claimTransactionReceipt(input),",

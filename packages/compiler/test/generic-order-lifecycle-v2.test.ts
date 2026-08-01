@@ -326,18 +326,26 @@ async function withGeneratedRuntime<T>(
 async function withGeneratedModule<T>(
   profile: CommerceProfile,
   run: (module: GeneratedModule) => Promise<T>,
+  options: Readonly<{
+    bundle?: ReturnType<typeof compile>;
+    transformSource?: (path: string, content: string) => string;
+  }> = {},
 ): Promise<T> {
   await mkdir(generatedDirectory, { recursive: true });
   const directory = await mkdtemp(join(generatedDirectory, `${profile}-`));
   try {
-    const bundle = compile(profile);
+    const bundle = options.bundle ?? compile(profile);
     await Promise.all(
       bundle.files
         .filter((file) => file.path.startsWith("api/src/"))
         .map(async (file) => {
           const path = resolve(directory, file.path);
           await mkdir(dirname(path), { recursive: true });
-          await writeFile(path, file.content, "utf8");
+          await writeFile(
+            path,
+            options.transformSource?.(file.path, file.content) ?? file.content,
+            "utf8",
+          );
         }),
     );
     const runtimeModule = await import(
@@ -723,6 +731,87 @@ describe("Generic order lifecycle V2 compilation", () => {
         });
       },
     );
+  });
+
+  it("validates bound Flow effects before invoking the package adapter", async () => {
+    const { graph } = directV2Input("simple-ecommerce");
+    graph.integration.providers = [
+      ...graph.integration.providers,
+      { id: "mail", type: "email", version: "1.0.0" },
+    ];
+    graph.integration.capabilities = [
+      ...graph.integration.capabilities,
+      { key: "email.send", providerId: "mail", operation: "send" },
+    ];
+    graph.flow.flows = graph.flow.flows.map((flow) =>
+      flow.id === "ecommerce-order"
+        ? {
+            ...flow,
+            transitions: flow.transitions.map((transition) =>
+              transition.event === "submit"
+                ? {
+                    ...transition,
+                    effects: [{ capability: "email.send", operation: "send" }],
+                  }
+                : transition,
+            ),
+          }
+        : flow,
+    );
+    const compositionLock = createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(graph),
+      selections: graph.integration.compositionSelections ?? [],
+    });
+    const bundle = generateApplicationBundle({
+      publishedRevisionId: "flow-effects-before-order-adapter",
+      graph,
+      compositionLock,
+    });
+    await withGeneratedModule(
+      "simple-ecommerce",
+      async ({ applicationRuntime }) => {
+        const order = await applicationRuntime.create("shopper", "order", {});
+
+        await expect(
+          applicationRuntime.transition(
+            "shopper",
+            "order",
+            order.id,
+            "submit",
+            {
+              expectedVersion: 0,
+              idempotencyKey: "flow-effects-before-order-adapter-1",
+            },
+          ),
+        ).rejects.toThrow(
+          "External provider capability 'email.send' requires an activated adapter for provider 'mail'.",
+        );
+      },
+      {
+        bundle,
+        transformSource: (path, content) =>
+          path ===
+          "api/src/capabilities/commerce-order-transaction-operation-adapter.ts"
+            ? content.replace(
+                "    parseRequest(input: unknown): CommerceOrderTransactionRequestV2 {",
+                '    parseRequest(input: unknown): CommerceOrderTransactionRequestV2 {\n      throw new Error("package adapter invoked before Flow effect validation");',
+              )
+            : content,
+      },
+    );
+
+    const runtimeSource = bundle.files.find(
+      ({ path }) => path === "api/src/application-runtime.ts",
+    )!.content;
+    const effectValidationOffset = runtimeSource.indexOf(
+      "const effects = this.declaredFactoryEffects(transition.effects);",
+    );
+    const adapterInvocationOffset = runtimeSource.indexOf(
+      "commerceOrderTransactionOperationAdapter.parseRequest",
+    );
+
+    expect(effectValidationOffset).toBeGreaterThan(-1);
+    expect(adapterInvocationOffset).toBeGreaterThan(effectValidationOffset);
   });
 
   it("rejects invalid factory event lists and caller-provided API allowlists", async () => {

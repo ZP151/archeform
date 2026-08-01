@@ -213,6 +213,65 @@ metadata, the adapter factory and journey use, and the contract evidence.
 - Project status remains factual and does not claim activation/acceptance:
   PASS.
 
+## Fix round 1 evidence: Flow effects precede the package adapter
+
+Independent task review found that generated V2 runtime called the package
+adapter before `declaredFactoryEffects`, reversing the required Flow/package
+authority boundary. A focused generated-runtime regression adds an external
+`email.send` effect to the bound submit transition and instruments the emitted
+package adapter to throw if reached. It also verifies the emitted statement
+order.
+
+```text
+pnpm --filter @factory/compiler test -- generic-order-lifecycle-v2.test.ts -t "validates bound Flow effects before invoking the package adapter"
+```
+
+Observed RED: 1 failed, 20 skipped, exit 1. The runtime expected
+`External provider capability 'email.send' requires an activated adapter for
+provider 'mail'.` but received `package adapter invoked before Flow effect
+validation`. The initial emitted-order assertion also measured adapter offset
+35311 before effect-validation offset 35612.
+
+The minimal production repair moved
+`this.declaredFactoryEffects(transition.effects)` before payload creation,
+adapter parsing, and adapter preparation in the generated V2 order branch.
+State and role resolution were already performed before that branch.
+
+```text
+pnpm --filter @factory/compiler test -- generic-order-lifecycle-v2.test.ts -t "validates bound Flow effects before invoking the package adapter"
+```
+
+Focused GREEN: 1 passed, 20 skipped, exit 0. The real Flow provider error is
+now raised without invoking the instrumented package adapter, and the emitted
+effect-validation statement precedes `parseRequest`.
+
+```text
+pnpm --filter @factory/compiler test -- generic-order-lifecycle-v2.test.ts
+```
+
+PASS: 21/21 tests, exit 0.
+
+```text
+pnpm --filter @factory/compiler typecheck
+```
+
+PASS: TypeScript exited 0.
+
+```text
+pnpm --filter @factory/compiler lint
+```
+
+PASS: Prettier reported all matched files formatted, exit 0. The first lint
+attempt identified only the new test file; `pnpm exec prettier --write
+test/generic-order-lifecycle-v2.test.ts` formatted that scoped file before the
+fresh passing run.
+
+```text
+git diff --check
+```
+
+PASS: exit 0 with no whitespace errors.
+
 ## Residual Task 3 and Task 4 risks
 
 - Task 3 must rerun generated-project validation for Simple Ecommerce, Retail
