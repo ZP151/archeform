@@ -616,13 +616,6 @@ export class NotificationOutboxWorker {
     for (const entry of claimed) {
       try {
         await this.transport.deliver(entry);
-        await this.store.markNotificationDelivered(entry.id, now);
-        processed.push({
-          ...entry,
-          status: "delivered",
-          deliveredAt: now,
-          lastError: null,
-        });
       } catch {
         const attempts = entry.attempts + 1;
         const status = attempts >= 3 ? "failed" : "pending";
@@ -638,7 +631,15 @@ export class NotificationOutboxWorker {
             availableAt,
           ),
         );
+        continue;
       }
+      await this.store.markNotificationDelivered(entry.id, now);
+      processed.push({
+        ...entry,
+        status: "delivered",
+        deliveredAt: now,
+        lastError: null,
+      });
     }
     return processed;
   }

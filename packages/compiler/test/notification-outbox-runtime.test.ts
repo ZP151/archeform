@@ -396,6 +396,50 @@ describe("generated durable notification outbox runtime", () => {
     );
   });
 
+  it("propagates acknowledgement failure without recording a transport retry", async () => {
+    await withGeneratedModule(
+      publishedExpenseWithNotification(),
+      async (module) => {
+        const store = new module.InMemoryRecordStore();
+        const acknowledgementFailureStore: GeneratedStore = {
+          create: store.create.bind(store),
+          find: store.find.bind(store),
+          update: store.update.bind(store),
+          enqueueNotification: store.enqueueNotification.bind(store),
+          claimDueNotifications: store.claimDueNotifications.bind(store),
+          async markNotificationDelivered() {
+            throw new Error("acknowledgement-unavailable");
+          },
+          recordNotificationFailure:
+            store.recordNotificationFailure.bind(store),
+          inTransaction: store.inTransaction.bind(store),
+        };
+        const Transport = module.FixtureNotificationTransport!;
+        const Worker = module.NotificationOutboxWorker!;
+        const transport = new Transport();
+        const worker = new Worker(acknowledgementFailureStore, transport);
+        const input = {
+          ...notificationInput,
+          dedupeKey: "acknowledgement-failure-proof",
+        };
+        await store.enqueueNotification(input);
+
+        await expect(worker.drain("2026-08-01T00:00:00.000Z")).rejects.toThrow(
+          "acknowledgement-unavailable",
+        );
+
+        expect(transport.deliveryAttempts).toBe(1);
+        expect(transport.delivered).toHaveLength(1);
+        expect(await store.enqueueNotification(input)).toMatchObject({
+          status: "pending",
+          attempts: 0,
+          lastError: null,
+        });
+      },
+      true,
+    );
+  });
+
   it("enqueues one locked recipient intent without accepting client message content", async () => {
     await withGeneratedModule(
       publishedExpenseWithNotification(),
