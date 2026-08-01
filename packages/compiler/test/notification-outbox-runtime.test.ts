@@ -30,6 +30,19 @@ type NotificationOutboxEntry = {
   lastError: string | null;
 };
 
+type NotificationOutboxInput = Omit<
+  NotificationOutboxEntry,
+  "id" | "status" | "attempts" | "deliveredAt" | "lastError"
+>;
+
+type PrismaNotificationOutboxRow = Omit<
+  NotificationOutboxEntry,
+  "availableAt" | "deliveredAt"
+> & {
+  availableAt: Date;
+  deliveredAt: Date | null;
+};
+
 type GeneratedStore = {
   create(
     entityKey: string,
@@ -45,10 +58,7 @@ type GeneratedStore = {
     input: Record<string, unknown>,
   ): Promise<Record<string, unknown> & { id: string }>;
   enqueueNotification(
-    input: Omit<
-      NotificationOutboxEntry,
-      "id" | "status" | "attempts" | "deliveredAt" | "lastError"
-    >,
+    input: NotificationOutboxInput,
   ): Promise<NotificationOutboxEntry>;
   claimDueNotifications(
     now: string,
@@ -58,6 +68,7 @@ type GeneratedStore = {
   recordNotificationFailure(
     id: string,
     error: string,
+    status: "pending" | "failed",
     availableAt: string,
   ): Promise<NotificationOutboxEntry>;
   inTransaction<T>(
@@ -82,6 +93,7 @@ type GeneratedRuntime = {
 type GeneratedModule = {
   ApplicationRuntime: new (store: GeneratedStore) => GeneratedRuntime;
   InMemoryRecordStore: new () => GeneratedStore;
+  PrismaRecordStore: new (prisma: unknown) => GeneratedStore;
 };
 
 const testDirectory = dirname(fileURLToPath(import.meta.url));
@@ -131,15 +143,127 @@ async function withGeneratedModule<T>(
           await writeFile(path, file.content, "utf8");
         }),
     );
-    return await run(
-      (await import(
-        pathToFileURL(resolve(directory, "api/src/application-runtime.ts")).href
-      )) as GeneratedModule,
+    const runtime = await import(
+      pathToFileURL(resolve(directory, "api/src/application-runtime.ts")).href
     );
+    const prisma = await import(
+      pathToFileURL(resolve(directory, "api/src/prisma-record-store.ts")).href
+    );
+    return await run({
+      ...runtime,
+      ...prisma,
+    } as GeneratedModule);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
 }
+
+function createGeneratedStores(
+  module: GeneratedModule,
+): readonly (readonly [string, GeneratedStore])[] {
+  const rows = new Map<string, PrismaNotificationOutboxRow>();
+  const notificationOutbox = {
+    async findUnique({ where }: { where: { id: string } }) {
+      return rows.get(where.id) ?? null;
+    },
+    async findMany({
+      where,
+      take,
+    }: {
+      where: { status: string; availableAt: { lte: Date } };
+      take: number;
+    }) {
+      return [...rows.values()]
+        .filter(
+          (entry) =>
+            entry.status === where.status &&
+            entry.availableAt <= where.availableAt.lte,
+        )
+        .slice(0, take);
+    },
+    async upsert({
+      where,
+      create,
+    }: {
+      where: { dedupeKey: string };
+      create: NotificationOutboxInput & { availableAt: Date };
+    }) {
+      const existing = [...rows.values()].find(
+        (entry) => entry.dedupeKey === where.dedupeKey,
+      );
+      if (existing) return existing;
+      const entry = {
+        id: `notification-${rows.size + 1}`,
+        ...create,
+        status: "pending" as const,
+        attempts: 0,
+        deliveredAt: null,
+        lastError: null,
+      };
+      rows.set(entry.id, entry);
+      return entry;
+    },
+    async updateMany({
+      where,
+      data,
+    }: {
+      where: {
+        id: string;
+        status?: string;
+        attempts?: number;
+        availableAt?: { lte: Date };
+      };
+      data: Partial<
+        Omit<
+          NotificationOutboxEntry,
+          "availableAt" | "deliveredAt" | "attempts"
+        >
+      > & {
+        availableAt?: Date;
+        deliveredAt?: Date;
+        attempts?: number | { increment: number };
+      };
+    }) {
+      const entry = rows.get(where.id);
+      if (
+        !entry ||
+        (where.status !== undefined && entry.status !== where.status) ||
+        (where.attempts !== undefined && entry.attempts !== where.attempts) ||
+        (where.availableAt !== undefined &&
+          entry.availableAt > where.availableAt.lte)
+      ) {
+        return { count: 0 };
+      }
+      const { attempts, ...values } = data;
+      Object.assign(entry, values);
+      if (typeof attempts === "number") entry.attempts = attempts;
+      if (typeof attempts === "object") {
+        entry.attempts += attempts.increment;
+      }
+      return { count: 1 };
+    },
+  };
+  const prisma = {
+    notificationOutbox,
+    async $transaction<T>(operation: (client: unknown) => Promise<T>) {
+      return operation(prisma);
+    },
+  };
+  return [
+    ["in-memory", new module.InMemoryRecordStore()],
+    ["Prisma", new module.PrismaRecordStore(prisma)],
+  ];
+}
+
+const notificationInput: NotificationOutboxInput = {
+  dedupeKey: "notification-transition-proof",
+  actor: "employee",
+  recipientRole: "employee",
+  template: null,
+  entity: "expense",
+  recordId: "expense-1",
+  availableAt: "2026-08-01T00:00:00.000Z",
+};
 
 describe("generated durable notification outbox runtime", () => {
   it("enqueues one locked recipient intent without accepting client message content", async () => {
@@ -239,6 +363,81 @@ describe("generated durable notification outbox runtime", () => {
         ]);
 
         expect(claims.flat()).toHaveLength(1);
+      },
+    );
+  });
+
+  it("lets the worker choose retryable or terminal failure state", async () => {
+    await withGeneratedModule(
+      publishedExpenseWithNotification(),
+      async (module) => {
+        for (const [storeName, store] of createGeneratedStores(module)) {
+          const entry = await store.enqueueNotification(notificationInput);
+
+          const retryable = await store.recordNotificationFailure(
+            entry.id,
+            "fixture-unavailable",
+            "pending",
+            "2026-08-01T00:01:00.000Z",
+          );
+          expect(retryable, storeName).toMatchObject({
+            status: "pending",
+            attempts: 1,
+            availableAt: "2026-08-01T00:01:00.000Z",
+            lastError: "fixture-unavailable",
+          });
+
+          const terminal = await store.recordNotificationFailure(
+            entry.id,
+            "fixture-rejected",
+            "failed",
+            "2026-08-01T00:02:00.000Z",
+          );
+          expect(terminal, storeName).toMatchObject({
+            status: "failed",
+            attempts: 2,
+            availableAt: "2026-08-01T00:02:00.000Z",
+            lastError: "fixture-rejected",
+          });
+        }
+      },
+    );
+  });
+
+  it("does not deliver a terminal failed entry", async () => {
+    await withGeneratedModule(
+      publishedExpenseWithNotification(),
+      async (module) => {
+        for (const [storeName, store] of createGeneratedStores(module)) {
+          const entry = await store.enqueueNotification({
+            ...notificationInput,
+            dedupeKey: `terminal-delivery-proof-${storeName}`,
+          });
+          await store.recordNotificationFailure(
+            entry.id,
+            "fixture-rejected",
+            "failed",
+            "2026-08-01T00:01:00.000Z",
+          );
+
+          await store.markNotificationDelivered(
+            entry.id,
+            "2026-08-01T00:02:00.000Z",
+          );
+
+          expect(
+            await store.enqueueNotification({
+              ...notificationInput,
+              dedupeKey: `terminal-delivery-proof-${storeName}`,
+            }),
+            storeName,
+          ).toMatchObject({
+            status: "failed",
+            attempts: 1,
+            deliveredAt: null,
+            lastError: "fixture-rejected",
+          });
+        }
       },
     );
   });
