@@ -103,6 +103,27 @@ function canonicalTimestamp(now: Date): string {
   return now.toISOString();
 }
 
+async function resolveDefaultBranchCommit(
+  fetch: SourceFetch,
+  item: GitHubSearchItem,
+): Promise<string | undefined> {
+  const response = await fetch(
+    `${GITHUB_API_ORIGIN}/repos/${item.full_name
+      .split("/")
+      .map((segment) => encodeURIComponent(segment))
+      .join("/")}/commits/${encodeURIComponent(item.default_branch)}`,
+    {
+      headers: { accept: "application/vnd.github+json" },
+      redirect: "error",
+    },
+  );
+  if (!response.ok) return undefined;
+  const payload = (await response.json()) as { sha?: unknown };
+  return typeof payload.sha === "string" && /^[a-f0-9]{40}$/u.test(payload.sha)
+    ? payload.sha
+    : undefined;
+}
+
 export function createEnvironmentGitHubDiscoveryClient(
   environment: Readonly<Record<string, string | undefined>> = process.env,
   sourceFetch: SourceFetch = globalThis.fetch,
@@ -130,29 +151,33 @@ export function createEnvironmentGitHubDiscoveryClient(
       }
       const discoveredAt = canonicalTimestamp(now());
       const seen = new Set<string>();
-      return parseSearchItems(await response.json()).flatMap((item) => {
+      const items = parseSearchItems(await response.json()).filter((item) => {
         const identifier = `github:${item.full_name}`;
-        const id = safeId(item.full_name);
-        if (id === undefined || seen.has(identifier)) return [];
+        if (safeId(item.full_name) === undefined || seen.has(identifier)) {
+          return false;
+        }
         seen.add(identifier);
-        return [
-          {
-            apiVersion: "factory.discovery-record-input/v1",
-            id,
-            discoveredAt,
-            sourceKind: "repository",
-            sourceHost: "github",
-            immutableReference: {
-              canonicalIdentifier: identifier,
-              resolvedVersionOrCommit: item.default_branch,
-            },
-            declaredLicense: item.license?.spdx_id ?? null,
-            familyHints: [family],
-            profileHints: [],
-            reuseMode: "selective-source-copy",
-          },
-        ] satisfies readonly DiscoveryRecordInputV1[];
+        return true;
       });
+      return await Promise.all(
+        items.map(async (item) => ({
+          apiVersion: "factory.discovery-record-input/v1" as const,
+          id: safeId(item.full_name)!,
+          discoveredAt,
+          sourceKind: "repository" as const,
+          sourceHost: "github" as const,
+          immutableReference: {
+            canonicalIdentifier: `github:${item.full_name}`,
+            resolvedVersionOrCommit:
+              (await resolveDefaultBranchCommit(fetch, item)) ??
+              item.default_branch,
+          },
+          declaredLicense: item.license?.spdx_id ?? null,
+          familyHints: [family],
+          profileHints: [],
+          reuseMode: "selective-source-copy" as const,
+        })),
+      );
     },
   };
 }

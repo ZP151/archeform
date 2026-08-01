@@ -57,28 +57,36 @@ describe("createEnvironmentGitHubDiscoveryClient", () => {
       { FACTORY_GITHUB_READ_TOKEN: "read-token-for-test-only" },
       async (input, init) => {
         requests.push({ url: String(input), init });
-        return new Response(
-          JSON.stringify({
-            items: [
-              {
-                name: "catalog",
-                full_name: "factory/catalog",
-                owner: { login: "factory" },
-                default_branch: "main",
-                license: { spdx_id: "MIT" },
-              },
-            ],
-          }),
-          { status: 200 },
-        );
+        if (new URL(String(input)).pathname === "/search/repositories") {
+          return new Response(
+            JSON.stringify({
+              items: [
+                {
+                  name: "catalog",
+                  full_name: "factory/catalog",
+                  owner: { login: "factory" },
+                  default_branch: "main",
+                  license: { spdx_id: "MIT" },
+                },
+              ],
+            }),
+            { status: 200 },
+          );
+        }
+        return new Response(JSON.stringify({ sha: "a".repeat(40) }), {
+          status: 200,
+        });
       },
       () => new Date("2026-08-01T00:00:00.000Z"),
     );
 
     const records = await client.discover("catalog");
 
-    expect(requests).toHaveLength(1);
+    expect(requests).toHaveLength(2);
     expect(new URL(requests[0]!.url).origin).toBe("https://api.github.com");
+    expect(new URL(requests[1]!.url).pathname).toBe(
+      "/repos/factory/catalog/commits/main",
+    );
     expect(requests[0]!.init?.redirect).toBe("error");
     expect(new Headers(requests[0]!.init?.headers).get("authorization")).toBe(
       "Bearer read-token-for-test-only",
@@ -88,6 +96,9 @@ describe("createEnvironmentGitHubDiscoveryClient", () => {
         id: "github-factory-catalog",
         sourceHost: "github",
         familyHints: ["catalog"],
+        immutableReference: expect.objectContaining({
+          resolvedVersionOrCommit: "a".repeat(40),
+        }),
       }),
     ]);
     expect(JSON.stringify(records)).not.toContain("read-token-for-test-only");
