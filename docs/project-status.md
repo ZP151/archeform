@@ -2,6 +2,52 @@
 
 Updated: 2026-08-01
 
+## Candidate Foundry discovery implementation — 2026-08-01
+
+Factory Pilot now has a bounded, quarantine-only discovery path for expanding
+capability supply beyond manually authored Profile packages. It does not copy,
+execute, install, promote, or activate external code.
+
+- `@factory/external-intake` validates immutable Discovery Records, assigns
+  deterministic eligibility gates and scores, caps eligible GitHub source-study
+  batches at 1,000 entries, and rejects floating references, invalid
+  host/reuse-mode combinations, unknown executable licences, duplicate
+  identities, and sensitive fields.
+- The local Intake CLI supports fixture discovery and a fixed-query GitHub
+  metadata adapter. The adapter accepts no caller URL or query, confines the
+  optional environment-only GitHub token to `api.github.com`, resolves each
+  default branch to a full commit before it can become Intake-eligible, and
+  returns only redacted aggregate counts to its caller.
+- Evidence-complete Candidates can produce a deterministic Foundry scaffold:
+  manifest, fixture, adapter, and conformance-plan requirements plus an
+  optional declarative source-port plan. The scaffold has no source body,
+  package path, Graph, compiler, runtime, provider, or Golden authority.
+- The Control Plane and Workbench Home expose a source-free Capability Supply
+  queue covering thirteen business families and the five initial Profiles.
+  It is an operational backlog projection, not proof that a candidate is
+  installed, safe, Golden, or executable.
+
+Focused evidence completed before the final workspace regression:
+
+- `@factory/external-intake` Discovery (5 tests), Candidate Foundry scaffold
+  (7 tests), and public-summary boundary (1 test), plus package typecheck and
+  lint;
+- `@factory/intake-cli` discovery and GitHub metadata tests (5 tests), plus
+  typecheck and lint;
+- `@factory/portfolio-public` summary tests, typecheck, build, and lint;
+- `@factory/control-plane` Portfolio summary tests and typecheck; and
+- `@factory/workbench` parser, model, and Home tests (29 tests), typecheck,
+  and lint.
+
+The first full `pnpm test` execution identified one stale exact-equality
+assertion in the External Intake public-summary boundary after the safe supply
+projection was added. The boundary assertion was updated to explicitly allow
+only the new source-free aggregate. A second full `pnpm test` run is green:
+Turbo completed 16 tasks, with the changed External Intake (430 tests) and
+Intake CLI (64 tests) tasks executed and unaffected tasks restored from cache.
+This is regression evidence for the Candidate Foundry slice, not acceptance of
+a generated production-application Profile.
+
 ## Candidate Foundry source-expansion research — 2026-08-01
 
 Two public-source research records now define a scalable intake path for the

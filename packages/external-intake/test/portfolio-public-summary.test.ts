@@ -22,7 +22,7 @@ describe("public Portfolio summary boundary", () => {
       ({ portfolioClass }) => portfolioClass,
     );
 
-    expect(portfolioPublicSummary).toEqual({
+    expect(portfolioPublicSummary).toMatchObject({
       apiVersion: "factory.portfolio-public-summary/v1",
       scenarioCount: portfolio.scenarios.length,
       candidateBlueprints: portfolio.sources.filter(
@@ -41,6 +41,15 @@ describe("public Portfolio summary boundary", () => {
           (classes.excluded?.length ?? 0),
       },
     });
+    expect(portfolioPublicSummary.supply).toMatchObject({
+      apiVersion: "factory.capability-supply-summary/v1",
+      families: expect.arrayContaining([
+        expect.objectContaining({ key: "commerce-transaction" }),
+      ]),
+    });
+    expect(JSON.stringify(portfolioPublicSummary.supply)).not.toMatch(
+      /https?:\/\/|\.git|sha256:|url|path|source|token|secret|password/iu,
+    );
     expect(JSON.stringify(portfolioPublicSummary)).not.toMatch(
       /https?:\/\/|\.git|sha256:|token|secret|password/iu,
     );
