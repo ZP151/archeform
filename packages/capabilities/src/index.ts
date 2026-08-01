@@ -76,6 +76,14 @@ export type {
   RefundAllocationInputV1,
   RefundAllocationV1,
 } from "./commerce/money-pricing.js";
+export { decideAuthorization } from "./identity/policy.js";
+export type {
+  AuthorizationDecisionInputV1,
+  AuthorizationDecisionV1,
+  AuthorizationDenialReasonV1,
+  DeclaredPermissionV1,
+  PrincipalContextV1,
+} from "./identity/policy.js";
 export type {
   CapabilityBindingValueV1,
   CapabilityCompositionLockV1,
