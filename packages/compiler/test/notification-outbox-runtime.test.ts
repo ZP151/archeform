@@ -490,6 +490,9 @@ describe("generated durable notification outbox runtime", () => {
       "new FixtureNotificationTransport()",
     );
     expect(files["api/README.md"]).toContain("pnpm notification:drain");
+    expect(files["README.md"]).toContain(
+      "docker compose exec api pnpm notification:drain",
+    );
   });
 
   it("rejects a Restaurant durable notification lock instead of omitting its outbox", () => {

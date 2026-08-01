@@ -1675,6 +1675,15 @@ describe("capability catalog", () => {
     );
   });
 
+  it("allows an explicit Restaurant notification selection for compiler admission", () => {
+    expect(() =>
+      composeDefaultCapabilityDraft({
+        profile: "restaurant-ordering",
+        optionalCapabilities: ["core.notification"],
+      }),
+    ).not.toThrow();
+  });
+
   it("composes a notification-free Expense Graph without notification effects", () => {
     const composition = composeProfileDraft({
       profile: "expense-approval",

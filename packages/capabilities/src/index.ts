@@ -3483,13 +3483,15 @@ export function composeDefaultCapabilityDraft(
   const requested = capturedInput.optionalCapabilities
     ? [...capturedInput.optionalCapabilities]
     : [...profileComposition.defaultOptionalCapabilities];
+  const eligibleOptionalCapabilities =
+    getProfileComposition(profile).defaultOptionalCapabilities;
   const requestedSet = new Set(requested);
   if (requestedSet.size !== requested.length) {
     throw new Error("Optional capability selections must be unique.");
   }
   for (const capability of requested) {
     if (
-      !profileComposition.defaultOptionalCapabilities.includes(
+      !eligibleOptionalCapabilities.includes(
         capability as OptionalCapabilityKey,
       )
     ) {
@@ -3500,7 +3502,7 @@ export function composeDefaultCapabilityDraft(
   }
 
   const graph = createDefaultProfileBaseGraph(profile);
-  for (const capability of profileComposition.defaultOptionalCapabilities) {
+  for (const capability of eligibleOptionalCapabilities) {
     if (requestedSet.has(capability)) continue;
     const asset = getCapabilityAsset(capability);
     if (!asset.disable) {
@@ -3513,9 +3515,7 @@ export function composeDefaultCapabilityDraft(
 
   const selectedCapabilityKeys = [
     ...profileComposition.requiredCapabilities.map(({ key }) => key),
-    ...profileComposition.defaultOptionalCapabilities
-      .filter((capability) => requestedSet.has(capability))
-      .map((capability) => capability),
+    ...requested,
   ];
   assertCapabilityRecipeEligibility(selectedCapabilityKeys, profile);
   const selections = selectedCapabilityKeys.map(
@@ -3540,9 +3540,7 @@ export function composeDefaultCapabilityDraft(
   return {
     profile,
     graph: validatedGraph,
-    optionalCapabilities: profileComposition.defaultOptionalCapabilities.filter(
-      (capability) => requestedSet.has(capability),
-    ),
+    optionalCapabilities: requested as OptionalCapabilityKey[],
     enabledEffects: validatedGraph.integration.capabilities.map(
       (capability) => capability.key,
     ),
