@@ -48,6 +48,12 @@ Intake CLI (64 tests) tasks executed and unaffected tasks restored from cache.
 This is regression evidence for the Candidate Foundry slice, not acceptance of
 a generated production-application Profile.
 
+A manual live GitHub metadata check for the `commerce-transaction` family
+returned 20 records: 9 eligible for further quarantine intake and 11 blocked
+by the declared-license gate. The command emitted aggregate counts only; it
+did not persist a Candidate, fetch an archive, copy source, install a package,
+or change a Graph, Generated Application, or Golden asset.
+
 ## Candidate Foundry source-expansion research — 2026-08-01
 
 Two public-source research records now define a scalable intake path for the
