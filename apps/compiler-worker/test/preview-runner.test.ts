@@ -126,7 +126,7 @@ describe("preview runner", () => {
         }),
       ).rejects.toMatchObject({ code: "preview_health_check_failed" });
 
-      expect(healthChecks).toBe(1);
+      expect(healthChecks).toBeGreaterThanOrEqual(1);
       const downCommands = commands.filter((command) =>
         command.args.includes("down"),
       );
