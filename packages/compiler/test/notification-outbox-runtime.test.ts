@@ -90,10 +90,27 @@ type GeneratedRuntime = {
   ): Promise<Record<string, unknown> & { id: string }>;
 };
 
+type GeneratedFixtureTransport = {
+  readonly deliveryAttempts: number;
+  readonly delivered: readonly NotificationOutboxEntry[];
+};
+
 type GeneratedModule = {
   ApplicationRuntime: new (store: GeneratedStore) => GeneratedRuntime;
   InMemoryRecordStore: new () => GeneratedStore;
   PrismaRecordStore: new (prisma: unknown) => GeneratedStore;
+  FixtureNotificationTransport?: new (
+    failuresBeforeSuccess?: number,
+  ) => GeneratedFixtureTransport;
+  NotificationOutboxWorker?: new (
+    store: GeneratedStore,
+    transport: GeneratedFixtureTransport,
+  ) => {
+    drain(
+      now: string,
+      limit?: number,
+    ): Promise<readonly NotificationOutboxEntry[]>;
+  };
 };
 
 const testDirectory = dirname(fileURLToPath(import.meta.url));
@@ -130,6 +147,7 @@ function publishedExpenseWithNotification(): PublishedGraphInput {
 async function withGeneratedModule<T>(
   input: PublishedGraphInput,
   run: (module: GeneratedModule) => Promise<T>,
+  includeWorker = false,
 ): Promise<T> {
   const directory = await mkdtemp(join(testDirectory, "notification-runtime-"));
   try {
@@ -149,9 +167,17 @@ async function withGeneratedModule<T>(
     const prisma = await import(
       pathToFileURL(resolve(directory, "api/src/prisma-record-store.ts")).href
     );
+    const worker = includeWorker
+      ? await import(
+          pathToFileURL(
+            resolve(directory, "api/src/notification-outbox-worker.ts"),
+          ).href
+        )
+      : {};
     return await run({
       ...runtime,
       ...prisma,
+      ...worker,
     } as GeneratedModule);
   } finally {
     await rm(directory, { recursive: true, force: true });
@@ -266,6 +292,110 @@ const notificationInput: NotificationOutboxInput = {
 };
 
 describe("generated durable notification outbox runtime", () => {
+  it("retries one fixture failure at a deterministic time and then delivers", async () => {
+    await withGeneratedModule(
+      publishedExpenseWithNotification(),
+      async (module) => {
+        for (const [storeName, store] of createGeneratedStores(module)) {
+          const Transport = module.FixtureNotificationTransport!;
+          const Worker = module.NotificationOutboxWorker!;
+          const transport = new Transport(1);
+          const worker = new Worker(store, transport);
+          const pending = await store.enqueueNotification({
+            ...notificationInput,
+            dedupeKey: `transient-worker-proof-${storeName}`,
+          });
+          expect(pending.status, storeName).toBe("pending");
+
+          const firstDrain = await worker.drain("2026-08-01T00:00:00.000Z");
+          expect(firstDrain, storeName).toEqual([
+            expect.objectContaining({
+              status: "pending",
+              attempts: 1,
+              availableAt: "2026-08-01T00:01:00.000Z",
+              lastError: "fixture-delivery-failed",
+            }),
+          ]);
+
+          const secondDrain = await worker.drain("2026-08-01T00:01:00.000Z");
+          expect(secondDrain, storeName).toEqual([
+            expect.objectContaining({
+              status: "delivered",
+              attempts: 1,
+              deliveredAt: "2026-08-01T00:01:00.000Z",
+              lastError: null,
+            }),
+          ]);
+          expect(transport.deliveryAttempts, storeName).toBe(2);
+          expect(transport.delivered, storeName).toHaveLength(1);
+        }
+      },
+      true,
+    );
+  });
+
+  it("stops after three fixture failures and records terminal failure", async () => {
+    await withGeneratedModule(
+      publishedExpenseWithNotification(),
+      async (module) => {
+        for (const [storeName, store] of createGeneratedStores(module)) {
+          const Transport = module.FixtureNotificationTransport!;
+          const Worker = module.NotificationOutboxWorker!;
+          const transport = new Transport(3);
+          const worker = new Worker(store, transport);
+          await store.enqueueNotification({
+            ...notificationInput,
+            dedupeKey: `terminal-worker-proof-${storeName}`,
+          });
+
+          await worker.drain("2026-08-01T00:00:00.000Z");
+          await worker.drain("2026-08-01T00:01:00.000Z");
+          const thirdDrain = await worker.drain("2026-08-01T00:03:00.000Z");
+          const fourthDrain = await worker.drain("9999-12-31T23:59:59.999Z");
+
+          expect(thirdDrain, storeName).toEqual([
+            expect.objectContaining({
+              status: "failed",
+              attempts: 3,
+              availableAt: "2026-08-01T00:03:00.000Z",
+              deliveredAt: null,
+              lastError: "fixture-delivery-failed",
+            }),
+          ]);
+          expect(fourthDrain, storeName).toEqual([]);
+          expect(transport.deliveryAttempts, storeName).toBe(3);
+          expect(transport.delivered, storeName).toEqual([]);
+        }
+      },
+      true,
+    );
+  });
+
+  it("does not hand an already delivered entry to the transport again", async () => {
+    await withGeneratedModule(
+      publishedExpenseWithNotification(),
+      async (module) => {
+        for (const [storeName, store] of createGeneratedStores(module)) {
+          const Transport = module.FixtureNotificationTransport!;
+          const Worker = module.NotificationOutboxWorker!;
+          const transport = new Transport();
+          const worker = new Worker(store, transport);
+          await store.enqueueNotification({
+            ...notificationInput,
+            dedupeKey: `idempotent-worker-proof-${storeName}`,
+          });
+
+          await worker.drain("2026-08-01T00:00:00.000Z");
+          await worker.drain("2026-08-01T00:00:00.000Z");
+
+          expect(transport.deliveryAttempts, storeName).toBe(1);
+          expect(transport.delivered, storeName).toHaveLength(1);
+        }
+      },
+      true,
+    );
+  });
+
   it("enqueues one locked recipient intent without accepting client message content", async () => {
     await withGeneratedModule(
       publishedExpenseWithNotification(),

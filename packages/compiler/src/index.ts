@@ -571,6 +571,81 @@ const notificationOutboxMigration = `CREATE TABLE "NotificationOutbox" (
 );
 CREATE INDEX "NotificationOutbox_status_availableAt_idx" ON "NotificationOutbox" ("status", "availableAt");`;
 
+function renderNotificationOutboxWorker(): string {
+  return `import type { NotificationOutboxEntry, RecordStore } from "./application-runtime.js";
+
+export interface NotificationTransport {
+  deliver(entry: NotificationOutboxEntry): Promise<void>;
+}
+
+export class FixtureNotificationTransport implements NotificationTransport {
+  private remainingFailures: number;
+  private readonly deliveredEntries: NotificationOutboxEntry[] = [];
+  deliveryAttempts = 0;
+
+  constructor(failuresBeforeSuccess = 0) {
+    this.remainingFailures = failuresBeforeSuccess;
+  }
+
+  get delivered(): readonly NotificationOutboxEntry[] {
+    return this.deliveredEntries.map((entry) => ({ ...entry }));
+  }
+
+  async deliver(entry: NotificationOutboxEntry): Promise<void> {
+    this.deliveryAttempts += 1;
+    if (this.remainingFailures > 0) {
+      this.remainingFailures -= 1;
+      throw new Error("fixture-delivery-failed");
+    }
+    this.deliveredEntries.push({ ...entry });
+  }
+}
+
+export class NotificationOutboxWorker {
+  constructor(
+    private readonly store: RecordStore,
+    private readonly transport: NotificationTransport,
+  ) {}
+
+  async drain(
+    now: string,
+    limit = 10,
+  ): Promise<readonly NotificationOutboxEntry[]> {
+    const claimed = await this.store.claimDueNotifications(now, limit);
+    const processed: NotificationOutboxEntry[] = [];
+    for (const entry of claimed) {
+      try {
+        await this.transport.deliver(entry);
+        await this.store.markNotificationDelivered(entry.id, now);
+        processed.push({
+          ...entry,
+          status: "delivered",
+          deliveredAt: now,
+          lastError: null,
+        });
+      } catch {
+        const attempts = entry.attempts + 1;
+        const status = attempts >= 3 ? "failed" : "pending";
+        const availableAt =
+          status === "failed"
+            ? now
+            : new Date(new Date(now).getTime() + attempts * 60_000).toISOString();
+        processed.push(
+          await this.store.recordNotificationFailure(
+            entry.id,
+            "fixture-delivery-failed",
+            status,
+            availableAt,
+          ),
+        );
+      }
+    }
+    return processed;
+  }
+}
+`;
+}
+
 function resolveNotificationOutboxRuntimeContribution(
   input: PublishedGraphInput,
 ): NotificationOutboxRuntimeContribution | undefined {
@@ -4232,6 +4307,14 @@ export function generateApplicationBundle(
           notificationOutbox !== undefined,
         ),
     },
+    ...(notificationOutbox
+      ? [
+          {
+            path: "api/src/notification-outbox-worker.ts",
+            render: () => renderNotificationOutboxWorker(),
+          },
+        ]
+      : []),
     {
       path: "api/src/policy.ts",
       render: () => renderPolicyModule(graph),

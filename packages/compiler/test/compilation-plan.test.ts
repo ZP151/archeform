@@ -2018,6 +2018,22 @@ describe("compilation target registry", () => {
     expect(files["api/src/prisma-record-store.ts"]).toContain(
       "recordNotificationFailure",
     );
+    expect(files).toHaveProperty("api/src/notification-outbox-worker.ts");
+    expect(files["api/src/notification-outbox-worker.ts"]).toContain(
+      "class FixtureNotificationTransport",
+    );
+    expect(files["api/src/notification-outbox-worker.ts"]).toContain(
+      "class NotificationOutboxWorker",
+    );
+    expect(files["api/src/notification-outbox-worker.ts"]).not.toMatch(
+      /fetch\(|process\.env|@Controller/,
+    );
+    expect(files["api/src/main.ts"]).not.toContain(
+      "notification-outbox-worker",
+    );
+    expect(files["api/src/main.ts"]).not.toMatch(
+      /@(Post|Put|Patch)\([^)]*notification/i,
+    );
   });
 
   it("keeps the historical notification package free of outbox persistence and worker source", () => {
