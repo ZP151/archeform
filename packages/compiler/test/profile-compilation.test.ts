@@ -114,18 +114,18 @@ describe("profile compilation", () => {
     );
   });
 
-  it("compiles an audit-free Expense Graph deterministically", () => {
+  it("compiles an audit-backed Expense Graph deterministically", () => {
     const graph = composeProfileDraft({
       profile: "expense-approval",
       optionalCapabilities: ["core.notification"],
     }).graph;
 
     const first = generateApplicationBundle({
-      publishedRevisionId: "expense-audit-free-published-1",
+      publishedRevisionId: "expense-audit-backed-published-1",
       graph,
     });
     const second = generateApplicationBundle({
-      publishedRevisionId: "expense-audit-free-published-1",
+      publishedRevisionId: "expense-audit-backed-published-1",
       graph,
     });
 
@@ -133,8 +133,8 @@ describe("profile compilation", () => {
     expect(
       first.files.find((file) => file.path === "api/policy/policy.csv")
         ?.content,
-    ).not.toContain(", audit");
-    expect(first.files.map((file) => file.path)).not.toContain(
+    ).toContain("p, finance, expense, audit");
+    expect(first.files.map((file) => file.path)).toContain(
       "api/src/capabilities/core.audit.ts",
     );
   });

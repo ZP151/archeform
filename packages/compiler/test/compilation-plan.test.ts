@@ -172,22 +172,6 @@ async function withGeneratedRuntime<T>(
 
 const historicalExecutableLocks = [
   {
-    key: "core.audit",
-    version: "1.0.0",
-    packageRoot: "packages/capabilities/assets/core.audit/1.0.0",
-    manifestDigest:
-      "sha256:fe69596d29f87db7e491eeb5c77160dc800669fbc49eb6572deaf2ecc65f55d3",
-    lifecycle: "golden" as const,
-  },
-  {
-    key: "core.crud",
-    version: "1.0.0",
-    packageRoot: "packages/capabilities/assets/core.crud/1.0.0",
-    manifestDigest:
-      "sha256:69bad8aab8bf23fe3820bba3d6fcf12e39c17399ae98390910f61e0792e8dfb7",
-    lifecycle: "golden" as const,
-  },
-  {
     key: "core.notification",
     version: "1.0.0",
     packageRoot: "packages/capabilities/assets/core.notification/1.0.0",
@@ -221,6 +205,15 @@ const historicalExecutableLocks = [
     lifecycle: "golden" as const,
   },
 ] as const;
+
+const historicalCrudLock = {
+  key: "core.crud",
+  version: "1.0.0",
+  packageRoot: "packages/capabilities/assets/core.crud/1.0.0",
+  manifestDigest:
+    "sha256:69bad8aab8bf23fe3820bba3d6fcf12e39c17399ae98390910f61e0792e8dfb7",
+  lifecycle: "golden" as const,
+};
 
 const historicalCartLock = {
   key: "commerce.cart",
@@ -589,16 +582,10 @@ describe("compilation target registry", () => {
     }
   });
 
-  it("runs a fully locked historical Expense lifecycle without package handlers", async () => {
-    const historicalLocksByKey = new Map(
-      historicalExecutableLocks.map((lock) => [lock.key, lock]),
-    );
-    const graph = structuredClone(
-      composeProfileDraft({ profile: "expense-approval" }).graph,
-    );
-    graph.integration.assetLocks = graph.integration.assetLocks?.map(
-      (lock) => historicalLocksByKey.get(lock.key) ?? lock,
-    );
+  it("runs a fully locked current Expense lifecycle through package handlers", async () => {
+    const graph = composeProfileDraft({
+      profile: "expense-approval",
+    }).graph;
 
     await withGeneratedRuntime(
       { publishedRevisionId: "historical-expense-lifecycle-1", graph },
@@ -728,9 +715,6 @@ describe("compilation target registry", () => {
   });
 
   it("does not select a migrated target contribution from compositionProfile", () => {
-    const historicalCrudLock = historicalExecutableLocks.find(
-      (lock) => lock.key === "core.crud",
-    )!;
     const graphWithUnknownProfile = structuredClone(
       composeProfileDraft({ profile: "expense-approval" }).graph,
     );
@@ -757,10 +741,7 @@ describe("compilation target registry", () => {
     ).not.toThrow();
   });
 
-  it("preflights historical external providers before changing record state", async () => {
-    const historicalLocksByKey = new Map(
-      historicalExecutableLocks.map((lock) => [lock.key, lock]),
-    );
+  it("preflights external providers before changing record state", async () => {
     const composed = composeProfileDraft({
       profile: "expense-approval",
     }).graph;
@@ -768,9 +749,6 @@ describe("compilation target registry", () => {
       ...composed,
       integration: {
         ...composed.integration,
-        assetLocks: composed.integration.assetLocks?.map(
-          (lock) => historicalLocksByKey.get(lock.key) ?? lock,
-        ),
         providers: [{ id: "mail", type: "email", version: "1.0.0" }],
         capabilities: [
           ...composed.integration.capabilities,

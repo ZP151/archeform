@@ -46,9 +46,9 @@ describe("profile starters", () => {
 
   it("composes every active profile from canonical Graph-symbol selections", () => {
     const expectedPackageCounts = {
-      "expense-approval": 4,
+      "expense-approval": 6,
       "restaurant-ordering": 19,
-      "simple-ecommerce": 15,
+      "simple-ecommerce": 16,
       "retail-counter": 14,
       "grocery-pickup": 14,
     } as const;

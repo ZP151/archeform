@@ -15,7 +15,6 @@ import {
 const foundationKeys = [
   "commerce.inventory-ledger",
   "commerce.line-configuration",
-  "core.identity-context",
   "core.location-context",
 ] as const;
 
@@ -66,7 +65,7 @@ describe("commercial profile composition", () => {
     },
   );
 
-  it("uses the same Foundation identities with different Restaurant and Ecommerce bindings", () => {
+  it("uses the same shared non-identity foundations with distinct profile bindings", () => {
     const restaurant = composeDefaultCapabilityDraft({
       profile: "restaurant-ordering",
     });
@@ -95,21 +94,6 @@ describe("commercial profile composition", () => {
   });
 
   it.each([
-    {
-      key: "core.identity-context" as const,
-      restaurant: {
-        principalEntity: {
-          graphSymbol: "graph.domain.restaurant-principal",
-        },
-        sessionEntity: { graphSymbol: "graph.domain.table-session" },
-        defaultRole: { graphSymbol: "graph.policy.customer" },
-      },
-      ecommerce: {
-        principalEntity: { graphSymbol: "graph.domain.shopper" },
-        sessionEntity: { graphSymbol: "graph.domain.shopper-session" },
-        defaultRole: { graphSymbol: "graph.policy.shopper" },
-      },
-    },
     {
       key: "core.location-context" as const,
       restaurant: {
@@ -327,9 +311,14 @@ describe("commercial profile composition", () => {
         },
         { package: "commerce.cart", binding: "customerRole", role: "shopper" },
         {
-          package: "core.identity-context",
+          package: "core.identity-policy",
           binding: "defaultRole",
           role: "shopper",
+        },
+        {
+          package: "core.identity-policy",
+          binding: "authenticatedRole",
+          role: "merchant",
         },
         { package: "core.audit", binding: "actorRole", role: "merchant" },
         {
@@ -487,14 +476,14 @@ describe("commercial profile composition", () => {
     },
     {
       profile: "simple-ecommerce" as const,
-      package: "core.identity-context",
+      package: "core.identity-policy",
       role: "shopper",
       resource: "shopper",
       action: "read",
     },
     {
       profile: "simple-ecommerce" as const,
-      package: "core.identity-context",
+      package: "core.identity-policy",
       role: "shopper",
       resource: "shopper-session",
       action: "create",

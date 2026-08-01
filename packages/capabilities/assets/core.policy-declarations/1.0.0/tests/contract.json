@@ -1,0 +1,4 @@
+{
+  "status": "verified",
+  "checks": ["declared-provider", "published-graph-only", "deny-by-default"]
+}

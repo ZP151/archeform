@@ -25,17 +25,17 @@ describe("guided application composition", () => {
     });
     expect(graph.experience.theme.mode).toBe("dark");
     expect(graph.integration).not.toHaveProperty("assetLocks");
-    expect(graph.integration.compositionSelections).toHaveLength(4);
+    expect(graph.integration.compositionSelections).toHaveLength(6);
     expect(() => assertValidApplicationGraph(graph)).not.toThrow();
     expect(guidedProfileSummary(graph)).toEqual({
       pages: 2,
-      entities: 1,
+      entities: 3,
       roles: 3,
       flows: 1,
     });
   });
 
-  it("applies only selected optional capabilities before a Draft is persisted", () => {
+  it("retains required audit and identity capabilities while applying selected options", () => {
     const graph = createGuidedApplicationDraft(
       {
         profile: "expense-approval",
@@ -46,17 +46,11 @@ describe("guided application composition", () => {
       "test-42a",
     );
 
-    expect(graph.integration.capabilities).not.toContainEqual(
+    expect(graph.integration.capabilities).toContainEqual(
       expect.objectContaining({ key: "audit.record" }),
     );
-    expect(
-      graph.flow.flows.flatMap((flow) => flow.transitions),
-    ).not.toContainEqual(
-      expect.objectContaining({
-        effects: expect.arrayContaining([
-          expect.objectContaining({ capability: "audit.record" }),
-        ]),
-      }),
+    expect(graph.integration.capabilities).toContainEqual(
+      expect.objectContaining({ key: "notification.send" }),
     );
     expect(() => assertValidApplicationGraph(graph)).not.toThrow();
   });

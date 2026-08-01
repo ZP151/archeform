@@ -35,7 +35,7 @@ describe("guided creation state", () => {
         profile: "expense-approval",
         name: "Travel approvals",
         theme: "light",
-        optionalCapabilities: ["core.audit", "core.notification"],
+        optionalCapabilities: ["core.notification"],
       },
     });
   });
@@ -48,18 +48,16 @@ describe("guided creation state", () => {
       type: "select-profile",
       profile: "expense-approval",
     });
-    const withoutAudit = transitionGuidedCreation(expense, {
+    const withoutNotification = transitionGuidedCreation(expense, {
       type: "toggle-optional-capability",
-      capability: "core.audit",
+      capability: "core.notification",
     });
-    const restaurant = transitionGuidedCreation(withoutAudit, {
+    const restaurant = transitionGuidedCreation(withoutNotification, {
       type: "select-profile",
       profile: "restaurant-ordering",
     });
 
-    expect(withoutAudit.input.optionalCapabilities).toEqual([
-      "core.notification",
-    ]);
+    expect(withoutNotification.input.optionalCapabilities).toEqual([]);
     expect(restaurant.input.optionalCapabilities).toEqual([
       "core.notification",
     ]);
@@ -72,7 +70,7 @@ describe("guided creation state", () => {
       stage: "review" as const,
       input: {
         profile: "simple-ecommerce" as const,
-        optionalCapabilities: ["core.audit" as const],
+        optionalCapabilities: [],
         name: "Storefront",
         theme: "dark" as const,
       },

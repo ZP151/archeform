@@ -3,6 +3,7 @@ export * from "./contract.js";
 import type { CapabilityAssetV1 } from "./contract.js";
 import { auditAsset } from "./core/audit.js";
 import { auditAssetV1_0_1 } from "./core/audit-v1-0-1.js";
+import { auditAssetV1_0_2 } from "./core/audit-v1-0-2.js";
 import { crudAsset } from "./core/crud.js";
 import { crudAssetV1_0_1 } from "./core/crud-v1-0-1.js";
 import { notificationAsset } from "./core/notification.js";
@@ -11,6 +12,7 @@ import { workflowAsset } from "./core/workflow.js";
 import { workflowAssetV1_0_1 } from "./core/workflow-v1-0-1.js";
 import { identityContextAssetV1_0_0 } from "./core/identity-context-v1-0-0.js";
 import { identityPolicyAssetV1_0_0 } from "./core/identity-policy-v1-0-0.js";
+import { policyDeclarationsAssetV1_0_0 } from "./core/policy-declarations-v1-0-0.js";
 import { locationContextAssetV1_0_0 } from "./core/location-context-v1-0-0.js";
 import { catalogAsset } from "./commerce/catalog.js";
 import { catalogAssetV1_1_0 } from "./commerce/catalog-v1-1-0.js";
@@ -51,6 +53,7 @@ import { restaurantReportingAssetV1_1_0 } from "./restaurant/reporting-v1-1-0.js
 export {
   auditAsset,
   auditAssetV1_0_1,
+  auditAssetV1_0_2,
   cartAsset,
   cartAssetV1_0_1,
   catalogAsset,
@@ -80,6 +83,7 @@ export {
   orderOperationsAssetV1_0_0,
   orderOperationsAssetV1_0_1,
   orderOperationsAssetV1_1_0,
+  policyDeclarationsAssetV1_0_0,
   restaurantCashierAsset,
   restaurantCashierAssetV1_1_0,
   restaurantKitchenAsset,
@@ -99,12 +103,13 @@ export {
 
 export const currentCapabilityAssets: readonly CapabilityAssetV1[] =
   Object.freeze([
-    auditAssetV1_0_1,
+    auditAssetV1_0_2,
     crudAssetV1_0_1,
     notificationAssetV1_0_1,
     workflowAssetV1_0_1,
     identityContextAssetV1_0_0,
     identityPolicyAssetV1_0_0,
+    policyDeclarationsAssetV1_0_0,
     locationContextAssetV1_0_0,
     catalogAssetV1_2_0,
     cartAssetV1_0_1,
@@ -125,6 +130,7 @@ export const currentCapabilityAssets: readonly CapabilityAssetV1[] =
 
 export const capabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
   ...currentCapabilityAssets,
+  auditAssetV1_0_1,
   moneyPricingAssetV1_0_0,
   orderOperationsAssetV1_0_1,
   orderOperationsAssetV1_0_0,

@@ -1,0 +1,47 @@
+{
+  "apiVersion": "factory.capability/v1",
+  "bindingContract": "factory.capability-binding/v1",
+  "key": "core.policy-declarations",
+  "version": "1.0.0",
+  "category": "core",
+  "name": "Policy declarations",
+  "description": "Provides the validated Published Graph resource/action policy contract for dependent capability packages.",
+  "packageRoot": "packages/capabilities/assets/core.policy-declarations/1.0.0",
+  "manifestDigest": "sha256:56e6ead5aaa6e9f5fe9cf7c608b6b51b16064964cf95cd123bdc3e0725642c54",
+  "lifecycle": "golden",
+  "profiles": ["expense-approval", "simple-ecommerce"],
+  "effects": [],
+  "inputSchema": [],
+  "outputSlots": ["api.runtime", "policy.rule", "test.fixture"],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/core.policy-declarations.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:9cc31f3fbeb511c29129ada86bca009fd9a5414e6809902475c64cc6acfef0e9"
+    }
+  ],
+  "executableContributions": [
+    {
+      "id": "resource-action-contract",
+      "outputSlot": "policy.rule",
+      "namespace": "packages/core.policy-declarations/policy",
+      "source": "contributions/policy/resource-action.conf",
+      "target": "api/policy/fragments/resource-action.conf",
+      "parameterRefs": [],
+      "targetRuntimeInterfaceVersion": "factory.policy-rule/v1",
+      "orderingRequirements": [],
+      "mergeProtocol": "replace-file",
+      "digest": "sha256:05c687edf087fa7d2c91b4f1e2cebb2fd0d8c543234017ee735bc28f7cd67bae"
+    }
+  ],
+  "provides": [{ "interfaceKey": "policy.resource-action", "version": "v1" }],
+  "verification": {
+    "fixture": "fixtures/default.json",
+    "fixtureDigest": "sha256:c8aab600ba976a92a0281d1a1458867f5d21af5046a85b1a38f713ef35e319d5",
+    "contractTest": "tests/contract.json",
+    "contractTestDigest": "sha256:d6cf25a56c4b66f4bf74fb2df76c13a8c6637f1e8b55b2f824e97a52325f9755",
+    "status": "verified"
+  }
+}

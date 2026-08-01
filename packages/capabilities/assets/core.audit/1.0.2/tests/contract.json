@@ -1,0 +1,1 @@
+{ "status": "verified", "checks": ["append-event", "remove-audit-policy", "provide-audit-event"] }

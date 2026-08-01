@@ -1,0 +1,29 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": ["api.runtime", "policy.rule", "test.fixture"],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/core.policy-declarations.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:9cc31f3fbeb511c29129ada86bca009fd9a5414e6809902475c64cc6acfef0e9"
+    }
+  ],
+  "executableContributions": [
+    {
+      "id": "resource-action-contract",
+      "outputSlot": "policy.rule",
+      "namespace": "packages/core.policy-declarations/policy",
+      "source": "contributions/policy/resource-action.conf",
+      "target": "api/policy/fragments/resource-action.conf",
+      "parameterRefs": [],
+      "targetRuntimeInterfaceVersion": "factory.policy-rule/v1",
+      "orderingRequirements": [],
+      "mergeProtocol": "replace-file",
+      "digest": "sha256:05c687edf087fa7d2c91b4f1e2cebb2fd0d8c543234017ee735bc28f7cd67bae"
+    }
+  ],
+  "contributes": { "effects": [] }
+}

@@ -12,7 +12,13 @@ describe("Factory Profile catalog", () => {
       expect.objectContaining({
         profile: "expense-approval",
         category: "approval",
-        requiredCapabilities: ["core.crud", "core.workflow"],
+        requiredCapabilities: [
+          "core.audit",
+          "core.crud",
+          "core.workflow",
+          "core.policy-declarations",
+          "core.identity-policy",
+        ],
       }),
       expect.objectContaining({
         profile: "restaurant-ordering",

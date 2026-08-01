@@ -1,0 +1,5 @@
+{
+  "resources": ["graph-policy-resource"],
+  "actions": ["graph-policy-action"],
+  "source": "published-graph"
+}

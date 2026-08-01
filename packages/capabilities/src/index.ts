@@ -570,6 +570,51 @@ function assertFoundationPolicyPermissions(
       );
     }
 
+    if (selectedPackage.lock.key === "core.identity-policy") {
+      const defaultRole = boundSymbol(selectedPackage, "defaultRole", "policy");
+      const authenticatedRole = boundSymbol(
+        selectedPackage,
+        "authenticatedRole",
+        "policy",
+      );
+      const principalEntity = boundSymbol(
+        selectedPackage,
+        "principalEntity",
+        "domain",
+      );
+      const sessionEntity = boundSymbol(
+        selectedPackage,
+        "sessionEntity",
+        "domain",
+      );
+      requiredPermissions.push(
+        {
+          packageKey: selectedPackage.lock.key,
+          role: defaultRole,
+          resource: principalEntity,
+          actions: ["read"],
+        },
+        {
+          packageKey: selectedPackage.lock.key,
+          role: defaultRole,
+          resource: sessionEntity,
+          actions: ["create", "read", "update"],
+        },
+        {
+          packageKey: selectedPackage.lock.key,
+          role: authenticatedRole,
+          resource: principalEntity,
+          actions: ["read"],
+        },
+        {
+          packageKey: selectedPackage.lock.key,
+          role: authenticatedRole,
+          resource: sessionEntity,
+          actions: ["read"],
+        },
+      );
+    }
+
     if (selectedPackage.lock.key === "core.location-context") {
       const role = boundSymbol(selectedPackage, "customerRole", "policy");
       requiredPermissions.push(
@@ -782,8 +827,14 @@ const compositionRecipes: Readonly<
   Record<FactoryProfile, ProfileCompositionRecipe>
 > = {
   "expense-approval": {
-    requiredCapabilities: ["core.crud", "core.workflow"],
-    optionalCapabilities: ["core.audit", "core.notification"],
+    requiredCapabilities: [
+      "core.audit",
+      "core.crud",
+      "core.workflow",
+      "core.policy-declarations",
+      "core.identity-policy",
+    ],
+    optionalCapabilities: ["core.notification"],
   },
   "restaurant-ordering": {
     requiredCapabilities: [
@@ -810,6 +861,7 @@ const compositionRecipes: Readonly<
   },
   "simple-ecommerce": {
     requiredCapabilities: [
+      "core.audit",
       "core.crud",
       "core.notification",
       "core.workflow",
@@ -822,10 +874,11 @@ const compositionRecipes: Readonly<
       "commerce.order",
       "commerce.order-operations",
       "commerce.simulated-payment",
-      "core.identity-context",
+      "core.policy-declarations",
+      "core.identity-policy",
       "core.location-context",
     ],
-    optionalCapabilities: ["core.audit"],
+    optionalCapabilities: [],
   },
   "retail-counter": {
     requiredCapabilities: [
@@ -943,6 +996,13 @@ const baseProfileCompositionBindings: Readonly<
     },
     "core.workflow": {
       flowKey: { graphSymbol: "graph.flow.expense-review" },
+    },
+    "core.policy-declarations": {},
+    "core.identity-policy": {
+      principalEntity: { graphSymbol: "graph.domain.expense-principal" },
+      sessionEntity: { graphSymbol: "graph.domain.expense-session" },
+      defaultRole: { graphSymbol: "graph.policy.employee" },
+      authenticatedRole: { graphSymbol: "graph.policy.manager" },
     },
   },
   "restaurant-ordering": {
@@ -1140,10 +1200,12 @@ const baseProfileCompositionBindings: Readonly<
       orderEntity: { graphSymbol: "graph.domain.order" },
       orderFlow: { graphSymbol: "graph.flow.ecommerce-order" },
     },
-    "core.identity-context": {
+    "core.policy-declarations": {},
+    "core.identity-policy": {
       principalEntity: { graphSymbol: "graph.domain.shopper" },
       sessionEntity: { graphSymbol: "graph.domain.shopper-session" },
       defaultRole: { graphSymbol: "graph.policy.shopper" },
+      authenticatedRole: { graphSymbol: "graph.policy.merchant" },
     },
     "core.location-context": {
       locationEntity: { graphSymbol: "graph.domain.store" },
@@ -1435,10 +1497,22 @@ function remapOrderOperationsValue<T>(
 function orderOperationsBindings(
   config: OrderOperationsStarterConfig,
 ): Readonly<Record<string, CapabilitySelectionV1["bindings"]>> {
-  return remapOrderOperationsValue(
+  const bindings = remapOrderOperationsValue(
     baseProfileCompositionBindings["simple-ecommerce"],
     config.replacements,
   );
+  return {
+    ...bindings,
+    "core.identity-context": {
+      principalEntity: { graphSymbol: "graph.domain.shopper" },
+      sessionEntity: {
+        graphSymbol: `graph.domain.${
+          config.replacements["shopper-session"] ?? "shopper-session"
+        }`,
+      },
+      defaultRole: { graphSymbol: "graph.policy.shopper" },
+    },
+  };
 }
 
 const profileCompositionBindings: Readonly<
@@ -1533,8 +1607,47 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               ],
               indexes: [{ fields: ["status"] }],
             },
+            {
+              key: "expense-principal",
+              label: "Expense principal",
+              fields: [
+                {
+                  key: "subjectRef",
+                  type: "string",
+                  required: true,
+                  unique: true,
+                },
+                { key: "active", type: "boolean", required: true },
+              ],
+              indexes: [{ fields: ["active"] }],
+            },
+            {
+              key: "expense-session",
+              label: "Expense session",
+              fields: [
+                { key: "subjectRef", type: "string", required: true },
+                {
+                  key: "status",
+                  type: "enum",
+                  required: true,
+                  values: ["active", "expired"],
+                },
+                { key: "expiresAt", type: "datetime", required: true },
+              ],
+              indexes: [
+                { fields: ["subjectRef", "status"] },
+                { fields: ["expiresAt"] },
+              ],
+            },
           ],
-          relations: [],
+          relations: [
+            {
+              from: "expense-session",
+              to: "expense-principal",
+              kind: "many-to-one",
+              field: "subjectRef",
+            },
+          ],
         },
         {
           roles: ["employee", "manager", "finance"],
@@ -1545,14 +1658,44 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               actions: ["create", "read"],
             },
             {
+              role: "employee",
+              resource: "expense-principal",
+              actions: ["read"],
+            },
+            {
+              role: "employee",
+              resource: "expense-session",
+              actions: ["create", "read", "update"],
+            },
+            {
               role: "manager",
               resource: "expense",
               actions: ["read", "approve", "reject"],
             },
             {
+              role: "manager",
+              resource: "expense-principal",
+              actions: ["read"],
+            },
+            {
+              role: "manager",
+              resource: "expense-session",
+              actions: ["read"],
+            },
+            {
               role: "finance",
               resource: "expense",
               actions: ["read", "audit"],
+            },
+            {
+              role: "finance",
+              resource: "expense-principal",
+              actions: ["read"],
+            },
+            {
+              role: "finance",
+              resource: "expense-session",
+              actions: ["read"],
             },
           ],
         },
@@ -1595,7 +1738,12 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
             },
           ],
         },
-        ["audit.record", "notification.send"],
+        [
+          "audit.record",
+          "notification.send",
+          "identity.context.resolve",
+          "authorization.decision",
+        ],
       ),
     },
     {
@@ -2973,6 +3121,12 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               resource: "product",
               actions: ["create", "read", "update"],
             },
+            { role: "merchant", resource: "shopper", actions: ["read"] },
+            {
+              role: "merchant",
+              resource: "shopper-session",
+              actions: ["read"],
+            },
             {
               role: "merchant",
               resource: "product-option-group",
@@ -3078,7 +3232,7 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
           "inventory.adjust",
           "inventory.ledger.read",
           "identity.context.resolve",
-          "identity.context.validate",
+          "authorization.decision",
           "location.context.resolve",
           "location.context.validate",
           "line.configuration.validate",
@@ -3138,6 +3292,18 @@ function orderOperationsProfileStarter(
         ),
       },
       flow: { flows: [config.flow] },
+      integration: {
+        ...remapped.integration,
+        capabilities: remapped.integration.capabilities.map((capability) =>
+          capability.key === "authorization.decision"
+            ? {
+                key: "identity.context.validate",
+                providerId: "factory",
+                operation: "validate",
+              }
+            : capability,
+        ),
+      },
     },
   };
 }

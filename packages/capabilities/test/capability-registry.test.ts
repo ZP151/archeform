@@ -631,6 +631,7 @@ describe("capability catalog", () => {
       "core.workflow",
       "core.identity-context",
       "core.identity-policy",
+      "core.policy-declarations",
       "core.location-context",
       "commerce.catalog",
       "commerce.cart",
@@ -701,9 +702,9 @@ describe("capability catalog", () => {
     expect(asset.manifest).toMatchObject({
       apiVersion: "factory.capability/v1",
       key: "core.audit",
-      version: "1.0.1",
+      version: "1.0.2",
       lifecycle: "golden",
-      packageRoot: "packages/capabilities/assets/core.audit/1.0.1",
+      packageRoot: "packages/capabilities/assets/core.audit/1.0.2",
     });
     expect(asset.manifest.manifestDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
     expect(asset.manifest.outputSlots).toEqual(
@@ -714,7 +715,11 @@ describe("capability catalog", () => {
   it("preserves every base executable package lock while defaults select current versions", () => {
     for (const lock of historicalExecutableLocks) {
       expect(getCapabilityAsset(lock.key).manifest.version).toBe(
-        lock.key === "commerce.inventory" ? "1.1.1" : "1.0.1",
+        lock.key === "commerce.inventory"
+          ? "1.1.1"
+          : lock.key === "core.audit"
+            ? "1.0.2"
+            : "1.0.1",
       );
     }
     expect(() =>
@@ -733,7 +738,7 @@ describe("capability catalog", () => {
   });
 
   it("verifies every registered capability manifest against its declared digest", () => {
-    expect(capabilityAssets).toHaveLength(46);
+    expect(capabilityAssets).toHaveLength(48);
     for (const asset of capabilityAssets) {
       expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     }
@@ -1450,6 +1455,7 @@ describe("capability catalog", () => {
       "core.notification",
       "core.workflow",
       "core.identity-policy",
+      "core.policy-declarations",
     ]);
     expect(
       capabilitiesForProfile("restaurant-ordering").map(({ key }) => key),
@@ -1465,27 +1471,24 @@ describe("capability catalog", () => {
     );
   });
 
-  it("composes an audit-free Expense Graph without dangling effects or audit policy", () => {
+  it("requires an audit provider for the identity-protected Expense Graph", () => {
     const composition = composeProfileDraft({
       profile: "expense-approval",
       optionalCapabilities: ["core.notification"],
     });
 
     expect(composition.optionalCapabilities).toEqual(["core.notification"]);
-    expect(composition.graph.integration.capabilities).not.toContainEqual(
+    expect(composition.graph.integration.capabilities).toContainEqual(
       expect.objectContaining({ key: "audit.record" }),
     );
     expect(
       composition.graph.flow.flows.flatMap((flow) => flow.transitions),
-    ).not.toContainEqual(
+    ).toContainEqual(
       expect.objectContaining({
         effects: expect.arrayContaining([
           expect.objectContaining({ capability: "audit.record" }),
         ]),
       }),
-    );
-    expect(composition.graph.policy.permissions).not.toContainEqual(
-      expect.objectContaining({ actions: expect.arrayContaining(["audit"]) }),
     );
     expect(validateApplicationGraph(composition.graph)).toEqual([]);
   });
@@ -1515,7 +1518,7 @@ describe("capability catalog", () => {
   it("composes a notification-free Expense Graph without notification effects", () => {
     const composition = composeProfileDraft({
       profile: "expense-approval",
-      optionalCapabilities: ["core.audit"],
+      optionalCapabilities: [],
     });
 
     expect(composition.graph.integration.capabilities).not.toContainEqual(
@@ -1533,17 +1536,14 @@ describe("capability catalog", () => {
     expect(validateApplicationGraph(composition.graph)).toEqual([]);
   });
 
-  it("composes an audit-free Ecommerce Graph without audit effects or permissions", () => {
+  it("requires an audit provider for the identity-protected Ecommerce Graph", () => {
     const composition = composeProfileDraft({
       profile: "simple-ecommerce",
       optionalCapabilities: [],
     });
 
-    expect(composition.graph.integration.capabilities).not.toContainEqual(
+    expect(composition.graph.integration.capabilities).toContainEqual(
       expect.objectContaining({ key: "audit.record" }),
-    );
-    expect(composition.graph.policy.permissions).not.toContainEqual(
-      expect.objectContaining({ actions: expect.arrayContaining(["audit"]) }),
     );
     expect(validateApplicationGraph(composition.graph)).toEqual([]);
   });
@@ -1552,7 +1552,7 @@ describe("capability catalog", () => {
     expect(() =>
       composeProfileDraft({
         profile: "expense-approval",
-        optionalCapabilities: ["core.audit", "core.audit"],
+        optionalCapabilities: ["core.notification", "core.notification"],
       }),
     ).toThrow("Optional capability selections must be unique.");
   });
@@ -1571,7 +1571,7 @@ describe("capability catalog", () => {
   it("persists selected Golden identities as canonical composition selections", () => {
     const graph = composeDefaultCapabilityDraft({
       profile: "expense-approval",
-      optionalCapabilities: ["core.audit"],
+      optionalCapabilities: [],
     }).graph;
 
     expect(graph.integration.compositionSelections).toEqual(
