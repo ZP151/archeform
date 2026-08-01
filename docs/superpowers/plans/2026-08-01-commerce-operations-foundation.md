@@ -51,7 +51,6 @@ Casbin, existing capability package/asset contracts, Candidate Foundry.
 | `packages/compiler/src/index.ts` | Resolves the package-owned handler and emits generated runtime contributions. |
 | `packages/compiler/src/restaurant-runtime.ts` | Adapts Restaurant table/kitchen experience to the neutral operation events only. |
 | `packages/compiler/test/order-operations-runtime.test.ts` | Tests generated API/database/web contract for shared operations. |
-| `packages/portfolio-public/src/summary.ts` | Publishes only aggregate Profile coverage status. |
 | `apps/control-plane/src/portfolio/portfolio-summary.service.ts` | Returns coverage with the existing safe workspace summary. |
 | `apps/workbench/lib/control-plane-client.ts` | Strictly parses coverage and rejects source-shaped fields. |
 | `apps/workbench/lib/portfolio-summary.ts` | Maps coverage to Home view data. |
@@ -116,8 +115,6 @@ declared effects.
 - Create: `packages/capabilities/src/profile-coverage.ts`
 - Create: `packages/capabilities/test/profile-coverage.test.ts`
 - Modify: `packages/capabilities/src/index.ts`
-- Modify: `packages/portfolio-public/src/summary.ts`
-- Modify: `packages/portfolio-public/test/summary.test.ts`
 - Modify: `apps/control-plane/src/portfolio/portfolio-summary.service.ts`
 - Modify: `apps/control-plane/src/portfolio/portfolio-summary.service.test.ts`
 - Modify: `apps/workbench/lib/control-plane-client.ts`
@@ -128,11 +125,13 @@ declared effects.
 - Modify: `apps/workbench/components/workbench-home.test.tsx`
 
 **Consumes:** existing registered Profile IDs, `listProfileReadiness()`, the
-safe portfolio summary, and the current Workbench portfolio parser.
+Control Plane's capability dependency, and the current Workbench portfolio
+parser.
 
 **Produces:** a `factory.profile-coverage/v1` projection containing only
 Factory capability keys, labels, status, affected Profile IDs, and registered
-package keys.
+package keys. `@factory/portfolio-public` deliberately remains independent of
+`@factory/capabilities`; the Control Plane is the projection boundary.
 
 - [ ] **Step 1: Write failing capability coverage tests**
 
@@ -201,14 +200,14 @@ identity, notification, reservation/queue, fulfilment, membership/promotion,
 and analytics gaps. Assert no duplicate key, Profile, or package key and no
 unknown Profile ID.
 
-- [ ] **Step 4: Add coverage to the portfolio public, Control Plane, and Workbench contracts**
+- [ ] **Step 4: Add coverage to the Control Plane and Workbench contracts**
 
-Extend `PortfolioPublicSummaryV1` and `WorkspacePortfolioSummaryV1` with a
-strict `coverage` property. The Workbench parser must require the exact API
-version, finite count-free values, registered profile IDs, known status values,
-and no unknown object keys. The Home panel must use the heading `Profile
-coverage`, group items by status, show affected Profiles and package count, and
-include no action that installs candidates or exposes source origin.
+Extend only `WorkspacePortfolioSummaryV1` with a strict `coverage` property
+created from `listProfileCoverage()`. The Workbench parser must require the
+exact API version, finite count-free values, registered profile IDs, known
+status values, and no unknown object keys. The Home panel must use the heading
+`Profile coverage`, group items by status, show affected Profiles and package
+count, and include no action that installs candidates or exposes source origin.
 
 - [ ] **Step 5: Verify GREEN**
 
@@ -216,7 +215,6 @@ Run:
 
 ```bash
 pnpm --filter @factory/capabilities test -- test/profile-coverage.test.ts
-pnpm --filter @factory/portfolio-public test -- test/summary.test.ts
 pnpm --filter @factory/control-plane test -- test/portfolio-summary.service.test.ts
 pnpm --filter @factory/workbench test -- lib/control-plane-client.test.ts lib/portfolio-summary.test.ts components/workbench-home.test.tsx
 ```
@@ -226,7 +224,7 @@ Expected: every projection is source-free and Home renders the coverage panel.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add packages/capabilities/src/profile-coverage.ts packages/capabilities/test/profile-coverage.test.ts packages/capabilities/src/index.ts packages/portfolio-public apps/control-plane/src/portfolio apps/workbench/lib/control-plane-client.ts apps/workbench/lib/control-plane-client.test.ts apps/workbench/lib/portfolio-summary.ts apps/workbench/lib/portfolio-summary.test.ts apps/workbench/components/workbench-home.tsx apps/workbench/components/workbench-home.test.tsx
+git add packages/capabilities/src/profile-coverage.ts packages/capabilities/test/profile-coverage.test.ts packages/capabilities/src/index.ts apps/control-plane/src/portfolio apps/workbench/lib/control-plane-client.ts apps/workbench/lib/control-plane-client.test.ts apps/workbench/lib/portfolio-summary.ts apps/workbench/lib/portfolio-summary.test.ts apps/workbench/components/workbench-home.tsx apps/workbench/components/workbench-home.test.tsx
 git commit -m "feat(workbench): show reusable profile coverage"
 ```
 
@@ -376,10 +374,13 @@ digest, and contract digest must agree. Require bindings for `orderEntity`,
 `merchantRole`. It provides `commerce.order-operations/v1` and requires
 `commerce.order/v1`, `commerce.inventory/v1`, and `core.audit/v1`.
 
-The API template accepts validated command DTOs only, delegates all decision
-logic to the pure planner, stores idempotency receipts atomically, records the
-declared audit action, and invokes the declared inventory/payment compensation
-adapter. It cannot import Restaurant renderer files.
+The API template contains a rendered Factory-owned operation planner with the
+same exported semantic cases as Task 2; generated applications cannot import
+the Factory workspace. Add a conformance fixture that executes the generated
+planner against the Task 2 table of literal commands. The handler accepts
+validated command DTOs only, stores idempotency receipts atomically, records
+the declared audit action, and invokes the declared inventory/payment
+compensation adapter. It cannot import Restaurant renderer files.
 
 - [ ] **Step 4: Select it through profile composition bindings**
 
@@ -595,8 +596,12 @@ catalogue.
 
 - [ ] **Step 3: Add only fixed family/query mapping and durable evidence**
 
-Map new queries internally to existing capability-family keys; do not accept a
-caller query, URL, repository name, package name, path, command, or version.
+Define a closed `CommerceOperationsDiscoveryBatchKeyV1` union with
+`order-operations`, `fulfillment`, `reservation-queue`,
+`membership-promotion`, and `operations-analytics`; map each internal batch
+key to one existing capability-family key and one Factory-owned query. Do not
+accept a caller query, URL, repository name, package name, path, command, or
+version.
 Record observed upstream licence and architecture facts in
 `docs/market-validation.md`, classify each as dependency, provider,
 path-scoped source study, or reference-only, and do not install/copy/promote a
