@@ -136,7 +136,7 @@ describe("WorkbenchHome", () => {
                 profile: "restaurant-ordering",
                 label: "Restaurant ordering",
                 category: "commerce",
-                requiredPackages: 16,
+                requiredPackages: 17,
                 optionalPackages: 1,
               },
             ],
@@ -156,7 +156,7 @@ describe("WorkbenchHome", () => {
                 capabilities: [
                   { key: "commerce.catalog", status: "available" },
                   { key: "commerce.transaction", status: "partial" },
-                  { key: "commerce.order-amendment", status: "planned" },
+                  { key: "commerce.order-amendment", status: "partial" },
                   { key: "payment.provider", status: "provider-required" },
                 ],
               },
@@ -184,7 +184,7 @@ describe("WorkbenchHome", () => {
                 apiVersion: "factory.profile-coverage/v1",
                 key: "commerce.order-operations",
                 label: "Order operations",
-                status: "planned",
+                status: "partial",
                 packageKeys: [
                   "commerce.order",
                   "commerce.inventory",
@@ -199,8 +199,8 @@ describe("WorkbenchHome", () => {
               },
             ],
             capabilities: {
-              golden: 19,
-              lockedVersions: 38,
+              golden: 20,
+              lockedVersions: 39,
               candidate: 0,
               provider: 0,
             },

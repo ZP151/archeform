@@ -29,7 +29,7 @@ describe("WorkspacePortfolioSummaryService", () => {
       profiles: expect.arrayContaining([
         expect.objectContaining({
           profile: "restaurant-ordering",
-          requiredPackages: 16,
+          requiredPackages: 17,
         }),
       ]),
       readiness: expect.arrayContaining([
@@ -37,20 +37,20 @@ describe("WorkspacePortfolioSummaryService", () => {
           profile: "restaurant-ordering",
           capabilities: expect.arrayContaining([
             { key: "commerce.catalog", status: "available" },
-            { key: "commerce.order-amendment", status: "planned" },
+            { key: "commerce.order-amendment", status: "partial" },
           ]),
         }),
       ]),
       coverage: expect.arrayContaining([
         expect.objectContaining({
           key: "commerce.order-operations",
-          status: "planned",
+          status: "partial",
           profiles: expect.arrayContaining(["restaurant-ordering"]),
         }),
       ]),
       capabilities: {
-        golden: 19,
-        lockedVersions: 38,
+        golden: 20,
+        lockedVersions: 39,
         candidate: 0,
         provider: 0,
       },

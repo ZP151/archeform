@@ -690,7 +690,11 @@ describe("commercial profile composition", () => {
     });
     const selections = (
       profile.graph.integration.compositionSelections ?? []
-    ).filter(({ lock }) => lock.key !== "commerce.inventory-ledger");
+    ).filter(
+      ({ lock }) =>
+        lock.key !== "commerce.inventory-ledger" &&
+        lock.key !== "commerce.order-operations",
+    );
 
     const result = composeCapabilityDraft({
       graph: profile.graph,
@@ -700,6 +704,11 @@ describe("commercial profile composition", () => {
     expect(
       result.composition.packages.some(
         ({ lock }) => lock.key === "commerce.inventory-ledger",
+      ),
+    ).toBe(false);
+    expect(
+      result.composition.packages.some(
+        ({ lock }) => lock.key === "commerce.order-operations",
       ),
     ).toBe(false);
   });

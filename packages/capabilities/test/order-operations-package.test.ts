@@ -15,6 +15,30 @@ const repositoryRoot = resolve(
 );
 
 describe("Order Operations capability packages", () => {
+  it("publishes a locked order-operations package with a dedicated handler", () => {
+    const asset = getCapabilityAsset("commerce.order-operations");
+
+    expect(asset.manifest).toMatchObject({
+      key: "commerce.order-operations",
+      version: "1.0.0",
+      lifecycle: "golden",
+      runtimeHandlers: ["orderOperations"],
+      provides: [{ interfaceKey: "commerce.order-operations", version: "v1" }],
+      requires: expect.arrayContaining([
+        { interfaceKey: "commerce.order-event", version: "v1" },
+        { interfaceKey: "commerce.stock-movement", version: "v1" },
+      ]),
+    });
+    expect(asset.manifest.templates).toEqual([
+      expect.objectContaining({
+        target: "api/src/capabilities/commerce.order-operations.ts",
+        outputSlot: "api.runtime",
+      }),
+    ]);
+    expect(verifyCapabilityAssetDigest(asset)).toBe(true);
+    expect(verifyCapabilityAssetPackage(asset, repositoryRoot)).toEqual([]);
+  });
+
   it.each([
     {
       key: "commerce.catalog",

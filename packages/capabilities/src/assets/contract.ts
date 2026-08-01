@@ -38,6 +38,7 @@ export type CapabilityRuntimeHandlerKindV1 =
   | "catalog"
   | "catalogConfiguration"
   | "order"
+  | "orderOperations"
   | "effect";
 
 export type CapabilityParameterTypeV1 = "number" | "boolean" | "graph-symbol";

@@ -637,6 +637,7 @@ describe("capability catalog", () => {
       "commerce.inventory",
       "commerce.inventory-ledger",
       "commerce.order",
+      "commerce.order-operations",
       "commerce.simulated-payment",
       "restaurant.table-session",
       "restaurant.menu",
@@ -730,7 +731,7 @@ describe("capability catalog", () => {
   });
 
   it("verifies every registered capability manifest against its declared digest", () => {
-    expect(capabilityAssets).toHaveLength(38);
+    expect(capabilityAssets).toHaveLength(39);
     for (const asset of capabilityAssets) {
       expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     }
@@ -1617,6 +1618,7 @@ describe("capability catalog", () => {
       "commerce.inventory-ledger",
       "commerce.line-configuration",
       "commerce.order",
+      "commerce.order-operations",
       "core.audit",
       "core.crud",
       "core.identity-context",
@@ -1670,6 +1672,13 @@ describe("capability catalog", () => {
       "catalog.option.select": ["commerce.line-configuration"],
       "order.create": ["commerce.order"],
       "order.transition": ["commerce.order"],
+      "order.hold": ["commerce.order-operations"],
+      "order.release-hold": ["commerce.order-operations"],
+      "order.amend": ["commerce.order-operations"],
+      "order.operation.cancel": ["commerce.order-operations"],
+      "order.payment.record": ["commerce.order-operations"],
+      "order.payment.capture": ["commerce.order-operations"],
+      "order.refund": ["commerce.order-operations"],
       "table-session.create": ["restaurant.table-session"],
       "table-session.validate": ["restaurant.table-session"],
       "table-session.close": ["restaurant.table-session"],

@@ -1,0 +1,39 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": [
+    "api.runtime",
+    "database.schema",
+    "flow.effect",
+    "test.fixture"
+  ],
+  "runtimeHandlers": ["orderOperations"],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/commerce.order-operations.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:dc348365a646d2298ce558ea66b5903561225324cc00bf14d74687a3cdf1ffeb"
+    }
+  ],
+  "parameters": [
+    { "key": "orderEntity", "type": "graph-symbol", "required": true },
+    { "key": "orderFlow", "type": "graph-symbol", "required": true },
+    { "key": "auditEntity", "type": "graph-symbol", "required": true },
+    { "key": "inventoryEntity", "type": "graph-symbol", "required": true },
+    { "key": "customerRole", "type": "graph-symbol", "required": true },
+    { "key": "merchantRole", "type": "graph-symbol", "required": true }
+  ],
+  "contributes": {
+    "effects": [
+      "order.hold",
+      "order.release-hold",
+      "order.amend",
+      "order.operation.cancel",
+      "order.payment.record",
+      "order.payment.capture",
+      "order.refund"
+    ]
+  }
+}

@@ -373,7 +373,7 @@ describe("immutable composition compilation", () => {
 
       expect(draft.integration).not.toHaveProperty("assetLocks");
       expect(selections).toHaveLength(
-        profile === "restaurant-ordering" ? 17 : 13,
+        profile === "restaurant-ordering" ? 18 : 14,
       );
       expect(publishedGraph.integration).not.toHaveProperty(
         "compositionSelections",
