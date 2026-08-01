@@ -386,6 +386,83 @@ git add packages/capabilities packages/compiler docs/project-status.md
 git commit -m "fix: bind order events to published flows"
 ```
 
+## Task 2.76: Reissue the strict-Type-safe bound-Flow Order V2 package
+
+**Files:**
+
+- Create: `packages/capabilities/assets/commerce.order/2.1.2/**`
+- Create: `packages/capabilities/src/assets/commerce/order-v2-1-2.ts`
+- Modify: `packages/capabilities/src/assets/index.ts`
+- Modify: `packages/capabilities/src/composition.ts`
+- Modify: `packages/capabilities/src/node.ts`
+- Modify: `packages/capabilities/test/capability-registry.test.ts`
+- Modify: `packages/compiler/src/index.ts`
+- Modify: `packages/compiler/test/generic-order-lifecycle-v2.test.ts`
+- Modify: `docs/project-status.md`
+
+**Interfaces:**
+
+- Consumes: ADR-0015, ADR-0016, and the exact
+  `commerce.transaction@2.2.1` executor.
+- Produces: an immutable `commerce.order@2.1.2` successor whose frozen
+  adapter is strict-TypeScript-safe while retaining the exact Published Flow
+  event projection introduced by 2.1.1.
+
+- [x] **Step 1: Write failing successor and generated-TypeScript tests**
+
+```ts
+expect(() => compose(directV2({ orderVersion: "2.1.1" }))).toThrow(
+  "commerce.order@2.1.1 is revoked: generated strict TypeScript reports implicit any",
+);
+expect(compose(directV2({ orderVersion: "2.1.2" }))).toMatchObject({
+  packages: expect.arrayContaining([
+    expect.objectContaining({ lock: expect.objectContaining({ version: "2.1.2" }) }),
+  ]),
+});
+expect(generatedOrderAdapter).toContain(
+  "createStore(_context: CommerceOrderTransactionContextV2, dependencies: TransactionDependenciesV2)",
+);
+```
+
+The generated API's own `pnpm typecheck` must fail against the 2.1.1 template
+with TS7006 before the successor exists and pass against 2.1.2 after the fix.
+
+- [x] **Step 2: Run focused tests and verify RED**
+
+Run: `pnpm --filter @factory/capabilities test -- capability-registry.test.ts && pnpm --filter @factory/compiler test -- generic-order-lifecycle-v2.test.ts`
+
+Expected: FAIL because order 2.1.2 is absent, 2.1.1 remains selectable, and
+the current frozen adapter has untyped factory-method parameters.
+
+- [x] **Step 3: Publish 2.1.2 and revoke 2.1.1 selection**
+
+Preserve 2.1.1 bytes for audit. Create the complete Factory-owned 2.1.2
+package root with refreshed component, adapter, contribution, typed-projection,
+fixture, test, and evidence digests. Construct the adapter in a typed variable
+before applying `Object.freeze`; explicitly type the `createStore` and
+`present` parameters using the exact template types. Do not use `any`, a type
+suppression, a compiler rewrite, relaxed TypeScript settings, a Profile branch,
+or an event alias.
+
+- [x] **Step 4: Enforce the exact 2.2.1/2.1.2 direct pair**
+
+Register the successor through canonical package discovery, require it in
+direct V2 composition and verified publication, and reject 2.1.1 before any
+template contribution resolves. Keep historical/default locks unchanged.
+
+- [x] **Step 5: Run focused gates and commit**
+
+Run: `pnpm --filter @factory/capabilities test -- capability-registry.test.ts && pnpm --filter @factory/compiler test -- generic-order-lifecycle-v2.test.ts && pnpm --filter @factory/capabilities typecheck && pnpm --filter @factory/compiler typecheck && pnpm --filter @factory/capabilities lint && pnpm --filter @factory/compiler lint && git diff --check`
+
+Expected: PASS, including a clean generated-project strict TypeScript run.
+Record only the safe root cause, successor, revocation, and exact pair in
+project status. Commit:
+
+```bash
+git add packages/capabilities packages/compiler docs/project-status.md docs/adr
+git commit -m "fix: reissue strict typesafe order adapter"
+```
+
 ## Task 3: Derive generated journeys from locks and validate emitted projects
 
 **Files:**
@@ -397,7 +474,7 @@ git commit -m "fix: bind order events to published flows"
 
 **Interfaces:**
 
-- Consumes: `TransactionCommandV2`, exact selected `orderEntity` and `orderFlow` bindings, and the PostgreSQL-safe direct pair `commerce.transaction@2.2.1` / `commerce.order@2.1.0` from ADR-0014.
+- Consumes: `TransactionCommandV2`, exact selected `orderEntity` and `orderFlow` bindings, and the PostgreSQL-safe, strict-Type-safe direct pair `commerce.transaction@2.2.1` / `commerce.order@2.1.2` from ADR-0014 and ADR-0016.
 - Produces: a generated create payload with no server-owned values, correctly bound transition options, and a clean generated-project typecheck/test command.
 
 - [ ] **Step 1: Write failing emitted-artifact tests**
