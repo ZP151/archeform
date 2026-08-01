@@ -22,11 +22,15 @@ import {
   acquireSourceBatch,
   canonicalJson,
   canonicalRecordDigest,
+  capabilityFamilyKeys,
   createPortfolioIntakeBatch,
   createExternalSourceStudy,
   createExternalIntakeApi,
   isCredentialLikeCandidateValue,
   loadExternalPortfolio,
+  triageDiscoveryRecords,
+  type CapabilityFamilyKey,
+  type DiscoveryRecordInputV1,
   verifyPromotionPacket,
   type AcquisitionBatchResultV1,
   type ExternalIntakeApiV1,
@@ -36,6 +40,10 @@ import {
 } from "@factory/external-intake";
 
 import { createEnvironmentGitHubSourceClient } from "./github-source-client.js";
+import {
+  createEnvironmentGitHubDiscoveryClient,
+  type GitHubDiscoveryClientV1,
+} from "./github-discovery-client.js";
 
 const OPAQUE_ID = /^[a-z][a-z0-9-]{0,127}$/u;
 const VERSION = /^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/u;
@@ -75,12 +83,14 @@ type CliOutputContext =
   | "candidate-terminal"
   | "promotion-packet"
   | "verify-job"
+  | "discovery"
   | "error";
 
 export interface IntakeCliOptionsV1 {
   readonly api: ExternalIntakeApiV1;
   readonly store?: ExternalIntakeStore;
   readonly sourceClient?: FixedSourceClient;
+  readonly discoveryClient?: GitHubDiscoveryClientV1;
   readonly cwd: string;
   readonly now?: () => Date;
   readonly stdout: (line: string) => void;
@@ -172,6 +182,50 @@ function portfolioProvenance(options: IntakeCliOptionsV1): {
   return {
     createdAt: now.toISOString(),
     producerVersion: PORTFOLIO_PRODUCER_VERSION,
+  };
+}
+
+function discoveryFamily(value: string | undefined): CapabilityFamilyKey {
+  if (
+    value === undefined ||
+    !(capabilityFamilyKeys as readonly string[]).includes(value)
+  ) {
+    throw new CliInputError("registered discovery family required");
+  }
+  return value as CapabilityFamilyKey;
+}
+
+function discoveryFixture(input: unknown): readonly DiscoveryRecordInputV1[] {
+  if (!Array.isArray(input) || input.length === 0 || input.length > 1_000) {
+    throw new CliInputError("discovery fixture records required");
+  }
+  return input as readonly DiscoveryRecordInputV1[];
+}
+
+function discoveryOutput(records: readonly DiscoveryRecordInputV1[]) {
+  const triage = triageDiscoveryRecords(records);
+  const counts = {
+    eligible: 0,
+    blocked: 0,
+    referenceOnly: 0,
+    gateCategories: Object.fromEntries(
+      ["floating-reference", "missing-integrity", "license", "host-mode"].map(
+        (category) => [category, 0],
+      ),
+    ) as Record<string, number>,
+  };
+  for (const record of triage.records) {
+    if (record.triage.status === "eligible") counts.eligible += 1;
+    if (record.triage.status === "blocked") counts.blocked += 1;
+    if (record.triage.status === "reference-only") counts.referenceOnly += 1;
+    for (const category of record.triage.gateCategories) {
+      counts.gateCategories[category] += 1;
+    }
+  }
+  return {
+    apiVersion: "factory.discovery-summary/v1",
+    total: triage.records.length,
+    ...counts,
   };
 }
 
@@ -327,6 +381,20 @@ function isAllowedCanonicalOutput(
   }
   if (context === "verify-job") {
     return outputPathMatches(path, "id") && OPAQUE_ID.test(value);
+  }
+  if (context === "discovery") {
+    return (
+      (outputPathMatches(path, "apiVersion") &&
+        value === "factory.discovery-summary/v1") ||
+      (path.length === 2 &&
+        path[0] === "gateCategories" &&
+        [
+          "floating-reference",
+          "missing-integrity",
+          "license",
+          "host-mode",
+        ].includes(value))
+    );
   }
   if (context === "evidence") {
     return (
@@ -793,6 +861,27 @@ export async function runIntakeCli(
     ) {
       outputContext = "batch";
       result = await options.api.submitBatch(localJson(args[3], options.cwd));
+    } else if (
+      args.length === 4 &&
+      args[0] === "discovery" &&
+      args[1] === "fixture" &&
+      args[2] === "--file"
+    ) {
+      outputContext = "discovery";
+      result = discoveryOutput(
+        discoveryFixture(localJson(args[3], options.cwd)),
+      );
+    } else if (
+      args.length === 4 &&
+      args[0] === "discovery" &&
+      args[1] === "github" &&
+      args[2] === "--family"
+    ) {
+      outputContext = "discovery";
+      const family = discoveryFamily(args[3]);
+      const discoveryClient =
+        options.discoveryClient ?? createEnvironmentGitHubDiscoveryClient();
+      result = discoveryOutput(await discoveryClient.discover(family));
     } else if (
       args.length === 4 &&
       args[0] === "batch" &&

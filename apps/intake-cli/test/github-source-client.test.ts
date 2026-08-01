@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { createEnvironmentGitHubDiscoveryClient } from "../src/github-discovery-client.js";
 import { createGitHubReadTokenFetch } from "../src/github-source-client.js";
 
 describe("createGitHubReadTokenFetch", () => {
@@ -43,5 +44,52 @@ describe("createGitHubReadTokenFetch", () => {
       "GitHub read token is invalid.",
     );
     expect(() => createGitHubReadTokenFetch(secret)).not.toThrow(secret);
+  });
+});
+
+describe("createEnvironmentGitHubDiscoveryClient", () => {
+  it("uses a fixed family query and returns only quarantine metadata", async () => {
+    const requests: Array<{
+      readonly url: string;
+      readonly init?: RequestInit;
+    }> = [];
+    const client = createEnvironmentGitHubDiscoveryClient(
+      { FACTORY_GITHUB_READ_TOKEN: "read-token-for-test-only" },
+      async (input, init) => {
+        requests.push({ url: String(input), init });
+        return new Response(
+          JSON.stringify({
+            items: [
+              {
+                name: "catalog",
+                full_name: "factory/catalog",
+                owner: { login: "factory" },
+                default_branch: "main",
+                license: { spdx_id: "MIT" },
+              },
+            ],
+          }),
+          { status: 200 },
+        );
+      },
+      () => new Date("2026-08-01T00:00:00.000Z"),
+    );
+
+    const records = await client.discover("catalog");
+
+    expect(requests).toHaveLength(1);
+    expect(new URL(requests[0]!.url).origin).toBe("https://api.github.com");
+    expect(requests[0]!.init?.redirect).toBe("error");
+    expect(new Headers(requests[0]!.init?.headers).get("authorization")).toBe(
+      "Bearer read-token-for-test-only",
+    );
+    expect(records).toEqual([
+      expect.objectContaining({
+        id: "github-factory-catalog",
+        sourceHost: "github",
+        familyHints: ["catalog"],
+      }),
+    ]);
+    expect(JSON.stringify(records)).not.toContain("read-token-for-test-only");
   });
 });

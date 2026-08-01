@@ -205,7 +205,10 @@ function gateCategories(
   if (!isFixedReference(input.immutableReference.resolvedVersionOrCommit)) {
     gates.push("floating-reference");
   }
-  if (input.immutableReference.integrity === undefined)
+  if (
+    input.sourceKind === "package" &&
+    input.immutableReference.integrity === undefined
+  )
     gates.push("missing-integrity");
   if (!allowedLicense(input.declaredLicense)) gates.push("license");
   if (
