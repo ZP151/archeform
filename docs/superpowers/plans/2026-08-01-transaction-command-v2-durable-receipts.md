@@ -241,6 +241,7 @@ git commit -m "feat: execute generic transactions with durable leases"
 - Modify: `packages/capabilities/src/composition.ts`
 - Modify: `packages/capabilities/src/node.ts`
 - Modify: `packages/capabilities/test/capability-registry.test.ts`
+- Modify: `packages/compiler/src/index.ts`
 - Modify: `packages/compiler/test/generic-order-lifecycle-v2.test.ts`
 - Modify: `docs/project-status.md`
 
@@ -292,7 +293,9 @@ historical assets remain unchanged.
 Validate every explicit `map:` identifier emitted by the V2 schema and SQL:
 schema/migration names match, are ASCII, and are at most 63 bytes. The exact
 successor’s source, component, adapter, and typed projection digests must all
-agree. Do not move this check into a compiler rewrite.
+agree. Update the compiler's exact V2 selection constants to accept 2.2.1 and
+to reject the revoked 2.2.0 before contribution resolution; do not move the
+schema check into a compiler rewrite.
 
 - [ ] **Step 5: Run focused tests and commit**
 

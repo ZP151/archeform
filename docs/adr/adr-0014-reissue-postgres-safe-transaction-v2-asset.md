@@ -20,7 +20,7 @@ superseded_by: ""
 command for Simple Ecommerce, Retail Counter, and Grocery Pickup. All three
 failed deterministically with Prisma P1012 because
 `CommerceTransactionReceipt_aggregateType_aggregateId_aggregateVersion_idx`
-is 70 bytes, exceeding PostgreSQL's 63-byte identifier limit.
+is 73 bytes, exceeding PostgreSQL's 63-byte identifier limit.
 
 **CTX-002**: The invalid name is emitted by the Golden
 `commerce.transaction@2.2.0` package's schema and migration contributions.
