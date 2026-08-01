@@ -3909,7 +3909,7 @@ export function generateApplicationBundle(
               start: "node dist/main.js",
               test: "vitest run",
               typecheck:
-                "prisma generate --schema prisma/schema.prisma && tsc -p tsconfig.json --noEmit",
+                "prisma generate --schema prisma/schema.prisma && tsc -p tsconfig.typecheck.json",
             },
             dependencies: {
               "@prisma/client": "^6.19.0",
@@ -3943,9 +3943,26 @@ export function generateApplicationBundle(
               module: "NodeNext",
               moduleResolution: "NodeNext",
               outDir: "dist",
+              rootDir: "src",
               strict: true,
               experimentalDecorators: true,
               emitDecoratorMetadata: true,
+            },
+            include: ["src/**/*.ts"],
+          },
+          null,
+          2,
+        ) + "\n",
+    },
+    {
+      path: "api/tsconfig.typecheck.json",
+      render: () =>
+        JSON.stringify(
+          {
+            extends: "./tsconfig.json",
+            compilerOptions: {
+              noEmit: true,
+              rootDir: ".",
             },
             include: ["src/**/*.ts", "test/**/*.ts"],
           },

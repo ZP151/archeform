@@ -1,8 +1,10 @@
 import { execFile, spawn } from "node:child_process";
 import {
+  access,
   cp,
   mkdtemp,
   mkdir,
+  readFile,
   realpath,
   rm,
   symlink,
@@ -422,6 +424,7 @@ async function runGeneratedOrderAdapterTypecheck(
     const includedPaths = new Set([
       "api/package.json",
       "api/tsconfig.json",
+      "api/tsconfig.typecheck.json",
       "api/prisma/schema.prisma",
       "api/src/capabilities/commerce-order-transaction-operation-adapter.ts",
       "api/src/capabilities/commerce-transaction-executor.ts",
@@ -519,6 +522,12 @@ async function linkLocalDependencyTopology(
 async function runGeneratedProjectCommands(profile: CommerceProfile): Promise<
   Readonly<{
     directory: string;
+    buildOutput: string;
+    startArtifact: string;
+    dockerArtifact: string;
+    startArtifactExists: boolean;
+    dockerArtifactExists: boolean;
+    invalidTestTypecheckOutput: string;
     typecheckOutput: string;
     testOutput: string;
   }>
@@ -555,7 +564,7 @@ async function runGeneratedProjectCommands(profile: CommerceProfile): Promise<
       npm_config_offline: "true",
       npm_config_update_notifier: "false",
     };
-    const execute = async (command: "typecheck" | "test") => {
+    const execute = async (command: "build" | "typecheck" | "test") => {
       try {
         const result = await execFileAsync(executable, [command], {
           cwd: directory,
@@ -577,10 +586,47 @@ async function runGeneratedProjectCommands(profile: CommerceProfile): Promise<
         );
       }
     };
+    const packageJson = JSON.parse(
+      await readFile(resolve(directory, "package.json"), "utf8"),
+    ) as { scripts: { start: string } };
+    const dockerfile = await readFile(resolve(directory, "Dockerfile"), "utf8");
+    const startArtifact =
+      packageJson.scripts.start.match(/^node (.+)$/)?.[1] ?? "";
+    const dockerArtifact =
+      dockerfile.match(/CMD \["node", "([^"]+)"\]/)?.[1] ?? "";
+    const artifactExists = async (artifact: string): Promise<boolean> => {
+      try {
+        await access(resolve(directory, artifact));
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    const typecheckOutput = await execute("typecheck");
+    const buildOutput = await execute("build");
+    const testOutput = await execute("test");
+    const journeyPath = resolve(directory, "test/journey.generated.test.ts");
+    await writeFile(
+      journeyPath,
+      `${await readFile(journeyPath, "utf8")}\nconst generatedTypecheckMustCoverTests: string = 1;\n`,
+      "utf8",
+    );
+    let invalidTestTypecheckOutput = "";
+    try {
+      await execute("typecheck");
+    } catch (error) {
+      invalidTestTypecheckOutput = (error as Error).message;
+    }
     return {
       directory: relative(tmpdir(), directory),
-      typecheckOutput: await execute("typecheck"),
-      testOutput: await execute("test"),
+      buildOutput,
+      startArtifact,
+      dockerArtifact,
+      startArtifactExists: await artifactExists(startArtifact),
+      dockerArtifactExists: await artifactExists(dockerArtifact),
+      invalidTestTypecheckOutput,
+      typecheckOutput,
+      testOutput,
     };
   } finally {
     await rm(directory, {
@@ -676,7 +722,7 @@ describe("Generic order lifecycle V2 compilation", () => {
   );
 
   it.each(profileCases)(
-    "$profile generated API passes Prisma generation, strict typecheck, and its own tests",
+    "$profile generated API builds its start artifact, passes strict typecheck, and runs its own tests",
     async ({ profile }) => {
       const result = await runGeneratedProjectCommands(profile);
 
@@ -686,7 +732,16 @@ describe("Generic order lifecycle V2 compilation", () => {
       expect(result.typecheckOutput).toContain("Generated Prisma Client");
       expect(result.typecheckOutput).not.toContain("P1012");
       expect(result.typecheckOutput).not.toContain("error TS");
+      expect(result.buildOutput).toContain("> tsc -p tsconfig.json");
+      expect(result.startArtifact).toBe("dist/main.js");
+      expect(result.dockerArtifact).toBe(result.startArtifact);
+      expect(result.startArtifactExists).toBe(true);
+      expect(result.dockerArtifactExists).toBe(true);
       expect(result.testOutput).toContain("Test Files");
+      expect(result.invalidTestTypecheckOutput).toContain(
+        "test/journey.generated.test.ts",
+      );
+      expect(result.invalidTestTypecheckOutput).toContain("error TS2322");
     },
     120_000,
   );
