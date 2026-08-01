@@ -61,6 +61,11 @@ export {
   type DiscoveryTriageResultV1,
 } from "./discovery.js";
 export {
+  createCandidateFoundryScaffold,
+  type CandidateFoundryScaffoldV1,
+  type CreateCandidateFoundryScaffoldInputV1,
+} from "./discovery-scaffold.js";
+export {
   ExternalIntakeStore,
   type StoredBlobRef,
   type StoredRecordRef,
