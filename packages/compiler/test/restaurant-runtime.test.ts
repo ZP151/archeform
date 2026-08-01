@@ -327,8 +327,8 @@ describe("Restaurant transaction runtime compilation", () => {
       files["api/test/restaurant-runtime.generated.test.ts"]!;
 
     expect(service).toContain("restaurantTransitionEffects");
-    expect(service).toContain('capability: "notification.send"');
-    expect(service).toContain('operation: "send"');
+    expect(service).not.toContain('capability: "notification.send"');
+    expect(service).not.toContain('operation: "send"');
     expect(service).not.toContain(
       'capability: "order.transition", operation: action',
     );
