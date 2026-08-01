@@ -533,6 +533,91 @@ interface MoneyPricingPersistenceContribution {
   readonly migration: string;
 }
 
+interface NotificationOutboxRuntimeContribution {
+  readonly applicationId: string;
+  readonly recipientRole: string;
+  readonly template: string | null;
+}
+
+const notificationOutboxPrismaSchema = `model NotificationOutbox {
+  id String @id @default(cuid())
+  dedupeKey String @unique
+  actor String
+  recipientRole String
+  template String?
+  entity String
+  recordId String
+  status String @default("pending")
+  attempts Int @default(0)
+  availableAt DateTime
+  deliveredAt DateTime?
+  lastError String?
+  @@index([status, availableAt])
+}`;
+
+const notificationOutboxMigration = `CREATE TABLE "NotificationOutbox" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "dedupeKey" TEXT NOT NULL UNIQUE,
+  "actor" TEXT NOT NULL,
+  "recipientRole" TEXT NOT NULL,
+  "template" TEXT,
+  "entity" TEXT NOT NULL,
+  "recordId" TEXT NOT NULL,
+  "status" TEXT NOT NULL DEFAULT 'pending',
+  "attempts" INTEGER NOT NULL DEFAULT 0,
+  "availableAt" TIMESTAMP(3) NOT NULL,
+  "deliveredAt" TIMESTAMP(3),
+  "lastError" TEXT
+);
+CREATE INDEX "NotificationOutbox_status_availableAt_idx" ON "NotificationOutbox" ("status", "availableAt");`;
+
+function resolveNotificationOutboxRuntimeContribution(
+  input: PublishedGraphInput,
+): NotificationOutboxRuntimeContribution | undefined {
+  const selection = input.compositionLock.packages.find(
+    ({ lock }) => lock.key === "core.notification",
+  );
+  if (!selection) return undefined;
+
+  const asset = resolveCapabilityAssetLock(selection.lock);
+  const providesOutbox = asset.manifest.provides?.some(
+    (provided) =>
+      provided.interfaceKey === "notification.outbox" &&
+      provided.version === "v1",
+  );
+  if (
+    asset.manifest.version !== "1.1.0" ||
+    asset.manifest.verification.status !== "verified" ||
+    !providesOutbox
+  ) {
+    return undefined;
+  }
+  const recipientBinding = selection.bindings.recipientRole;
+  if (
+    !recipientBinding ||
+    typeof recipientBinding !== "object" ||
+    !("graphSymbol" in recipientBinding) ||
+    typeof recipientBinding.graphSymbol !== "string"
+  ) {
+    throw new Error(
+      "Locked notification outbox requires a recipientRole Graph binding.",
+    );
+  }
+  const recipientRole = /^graph\.policy\.([a-z][a-z0-9-]*)$/.exec(
+    recipientBinding.graphSymbol,
+  )?.[1];
+  if (!recipientRole) {
+    throw new Error(
+      "Locked notification outbox recipientRole must target a declared policy role.",
+    );
+  }
+  return Object.freeze({
+    applicationId: input.graph.metadata.id,
+    recipientRole,
+    template: null,
+  });
+}
+
 function resolveOrderOperationsPersistenceContribution(
   input: PublishedGraphInput,
   contributions: readonly ResolvedTargetContribution[],
@@ -1935,6 +2020,7 @@ function renderApplicationRuntime(
   orderEntityKey: string | undefined,
   orderOperationsEntityKey: string | undefined,
   persistentOrderOperationReceipts: boolean,
+  notificationOutbox: NotificationOutboxRuntimeContribution | undefined,
 ): string {
   const commerce = hasCommerceCapabilities(graph);
   const capabilityRegistryImports = [
@@ -1962,6 +2048,12 @@ function renderApplicationRuntime(
     "export type StoredRecord = Record<string, unknown> & { id: string; status?: string; version?: number };",
     "export type AuditEvent = { actor: string; action: string; entity: string; recordId: string; at: string };",
     "export type CapabilityEvent = { actor: string; capability: string; operation: string; entity: string; recordId: string; outcome: 'completed'; at: string };",
+    ...(notificationOutbox
+      ? [
+          "export type NotificationOutboxEntry = { id: string; dedupeKey: string; actor: string; recipientRole: string; template: string | null; entity: string; recordId: string; status: 'pending' | 'delivered' | 'failed'; attempts: number; availableAt: string; deliveredAt: string | null; lastError: string | null };",
+          "export type NotificationOutboxInput = Omit<NotificationOutboxEntry, 'id' | 'status' | 'attempts' | 'deliveredAt' | 'lastError'>;",
+        ]
+      : []),
     ...(commerce
       ? [
           "export type CommerceLineItem = { id: string; actor: string; orderEntity: string; orderRecordId: string; catalogEntity: string; catalogRecordId: string; quantity: number };",
@@ -1982,6 +2074,14 @@ function renderApplicationRuntime(
     "  appendCapabilityEvent(event: CapabilityEvent): Promise<void>;",
     "  listCapabilityEvents(): Promise<readonly CapabilityEvent[]>;",
     "  inTransaction<T>(operation: (store: RecordStore) => Promise<T>): Promise<T>;",
+    ...(notificationOutbox
+      ? [
+          "  enqueueNotification(input: NotificationOutboxInput): Promise<NotificationOutboxEntry>;",
+          "  claimDueNotifications(now: string, limit: number): Promise<readonly NotificationOutboxEntry[]>;",
+          "  markNotificationDelivered(id: string, deliveredAt: string): Promise<void>;",
+          "  recordNotificationFailure(id: string, error: string, availableAt: string): Promise<NotificationOutboxEntry>;",
+        ]
+      : []),
     ...(persistentOrderOperationReceipts
       ? [
           "  getOrderOperationReceipt(orderEntity: string, orderRecordId: string): Promise<OrderOperationReceipt | undefined>;",
@@ -2002,6 +2102,13 @@ function renderApplicationRuntime(
     "  private readonly records = new Map<string, Map<string, StoredRecord>>();",
     "  private readonly auditEvents: AuditEvent[] = [];",
     "  private readonly capabilityEvents: CapabilityEvent[] = [];",
+    ...(notificationOutbox
+      ? [
+          "  private readonly notificationOutbox = new Map<string, NotificationOutboxEntry>();",
+          "  private readonly notificationOutboxByDedupeKey = new Map<string, string>();",
+          "  private transactionTail: Promise<void> = Promise.resolve();",
+        ]
+      : []),
     ...(persistentOrderOperationReceipts
       ? [
           "  private readonly orderOperationReceiptStore = new Map<string, OrderOperationReceipt>();",
@@ -2011,12 +2118,45 @@ function renderApplicationRuntime(
       ? ["  private readonly cartItems: CommerceLineItem[] = [];"]
       : []),
     "",
-    "  constructor() {",
+    notificationOutbox
+      ? "  constructor(private readonly bypassMutationCoordinator = false) {"
+      : "  constructor() {",
     "    for (const seed of definition.seedData) {",
     "      this.collection(seed.entity).set(seed.id, { id: seed.id, ...seed.values });",
     "    }",
     "  }",
     "",
+    ...(notificationOutbox
+      ? [
+          "  private async coordinateMutation<T>(operation: () => T | Promise<T>): Promise<T> {",
+          "    if (this.bypassMutationCoordinator) return operation();",
+          "    let release!: () => void;",
+          "    const previous = this.transactionTail;",
+          "    this.transactionTail = new Promise<void>((resolve) => { release = resolve; });",
+          "    await previous;",
+          "    try { return await operation(); } finally { release(); }",
+          "  }",
+          "",
+          "  private replaceState(source: InMemoryRecordStore): void {",
+          "    this.records.clear(); for (const [entity, records] of source.records) this.records.set(entity, new Map([...records].map(([id, record]) => [id, structuredClone(record)])));",
+          "    this.auditEvents.splice(0, this.auditEvents.length, ...source.auditEvents.map((event) => ({ ...event })));",
+          "    this.capabilityEvents.splice(0, this.capabilityEvents.length, ...source.capabilityEvents.map((event) => ({ ...event })));",
+          "    this.notificationOutbox.clear(); for (const [id, entry] of source.notificationOutbox) this.notificationOutbox.set(id, { ...entry });",
+          "    this.notificationOutboxByDedupeKey.clear(); for (const [key, id] of source.notificationOutboxByDedupeKey) this.notificationOutboxByDedupeKey.set(key, id);",
+          ...(persistentOrderOperationReceipts
+            ? [
+                "    this.orderOperationReceiptStore.clear(); for (const [key, receipt] of source.orderOperationReceiptStore) this.orderOperationReceiptStore.set(key, { ...receipt, payment: { ...receipt.payment }, processedIdempotencyKeys: [...receipt.processedIdempotencyKeys] });",
+              ]
+            : []),
+          ...(commerce
+            ? [
+                "    this.cartItems.splice(0, this.cartItems.length, ...source.cartItems.map((item) => ({ ...item })));",
+              ]
+            : []),
+          "  }",
+          "",
+        ]
+      : []),
     "  private collection(entityKey: string): Map<string, StoredRecord> {",
     "    let collection = this.records.get(entityKey);",
     "    if (!collection) {",
@@ -2028,51 +2168,158 @@ function renderApplicationRuntime(
     "",
     "  async list(entityKey: string): Promise<readonly StoredRecord[]> { return [...this.collection(entityKey).values()]; }",
     "  async find(entityKey: string, recordId: string): Promise<StoredRecord | undefined> { return this.collection(entityKey).get(recordId); }",
-    "  async create(entityKey: string, input: Record<string, unknown>): Promise<StoredRecord> {",
-    "    const collection = this.collection(entityKey);",
-    "    const record: StoredRecord = { id: `${entityKey}-${collection.size + 1}`, ...input };",
-    "    collection.set(record.id, record);",
-    "    return record;",
-    "  }",
-    "  async update(entityKey: string, recordId: string, input: Record<string, unknown>): Promise<StoredRecord> {",
-    "    const record = await this.find(entityKey, recordId);",
-    "    if (!record) throw new Error(`Record '${recordId}' was not found.`);",
-    "    Object.assign(record, input);",
-    "    this.collection(entityKey).set(recordId, record);",
-    "    return record;",
-    "  }",
-    "  async appendAudit(event: AuditEvent): Promise<void> { this.auditEvents.push(event); }",
+    ...(notificationOutbox
+      ? [
+          "  async create(entityKey: string, input: Record<string, unknown>): Promise<StoredRecord> {",
+          "    return this.coordinateMutation(() => {",
+          "      const collection = this.collection(entityKey);",
+          "      const record: StoredRecord = { id: `${entityKey}-${collection.size + 1}`, ...input };",
+          "      collection.set(record.id, record);",
+          "      return record;",
+          "    });",
+          "  }",
+          "  async update(entityKey: string, recordId: string, input: Record<string, unknown>): Promise<StoredRecord> {",
+          "    return this.coordinateMutation(() => {",
+          "      const record = this.collection(entityKey).get(recordId);",
+          "      if (!record) throw new Error(`Record '${recordId}' was not found.`);",
+          "      Object.assign(record, input);",
+          "      this.collection(entityKey).set(recordId, record);",
+          "      return record;",
+          "    });",
+          "  }",
+          "  async appendAudit(event: AuditEvent): Promise<void> { await this.coordinateMutation(() => { this.auditEvents.push(event); }); }",
+        ]
+      : [
+          "  async create(entityKey: string, input: Record<string, unknown>): Promise<StoredRecord> {",
+          "    const collection = this.collection(entityKey);",
+          "    const record: StoredRecord = { id: `${entityKey}-${collection.size + 1}`, ...input };",
+          "    collection.set(record.id, record);",
+          "    return record;",
+          "  }",
+          "  async update(entityKey: string, recordId: string, input: Record<string, unknown>): Promise<StoredRecord> {",
+          "    const record = await this.find(entityKey, recordId);",
+          "    if (!record) throw new Error(`Record '${recordId}' was not found.`);",
+          "    Object.assign(record, input);",
+          "    this.collection(entityKey).set(recordId, record);",
+          "    return record;",
+          "  }",
+          "  async appendAudit(event: AuditEvent): Promise<void> { this.auditEvents.push(event); }",
+        ]),
     "  async listAudit(): Promise<readonly AuditEvent[]> { return [...this.auditEvents]; }",
-    "  async appendCapabilityEvent(event: CapabilityEvent): Promise<void> { this.capabilityEvents.push(event); }",
+    notificationOutbox
+      ? "  async appendCapabilityEvent(event: CapabilityEvent): Promise<void> { await this.coordinateMutation(() => { this.capabilityEvents.push(event); }); }"
+      : "  async appendCapabilityEvent(event: CapabilityEvent): Promise<void> { this.capabilityEvents.push(event); }",
     "  async listCapabilityEvents(): Promise<readonly CapabilityEvent[]> { return [...this.capabilityEvents]; }",
-    "  async inTransaction<T>(operation: (store: RecordStore) => Promise<T>): Promise<T> { return operation(this); }",
+    ...(notificationOutbox
+      ? [
+          "  async inTransaction<T>(operation: (store: RecordStore) => Promise<T>): Promise<T> {",
+          "    if (this.bypassMutationCoordinator) return operation(this);",
+          "    return this.coordinateMutation(async () => {",
+          "      const transaction = new InMemoryRecordStore(true);",
+          "      transaction.replaceState(this);",
+          "      const result = await operation(transaction);",
+          "      this.replaceState(transaction);",
+          "      return result;",
+          "    });",
+          "  }",
+          "  async enqueueNotification(input: NotificationOutboxInput): Promise<NotificationOutboxEntry> {",
+          "    return this.coordinateMutation(() => {",
+          "      const existingId = this.notificationOutboxByDedupeKey.get(input.dedupeKey);",
+          "      if (existingId) return { ...this.notificationOutbox.get(existingId)! };",
+          "      const entry: NotificationOutboxEntry = { id: `notification-${this.notificationOutbox.size + 1}`, ...input, status: 'pending', attempts: 0, deliveredAt: null, lastError: null };",
+          "      this.notificationOutbox.set(entry.id, entry);",
+          "      this.notificationOutboxByDedupeKey.set(entry.dedupeKey, entry.id);",
+          "      return { ...entry };",
+          "    });",
+          "  }",
+          "  async claimDueNotifications(now: string, limit: number): Promise<readonly NotificationOutboxEntry[]> {",
+          "    if (!Number.isSafeInteger(limit) || limit < 1) return [];",
+          "    return this.coordinateMutation(() => {",
+          "      const claimUntil = new Date(new Date(now).getTime() + 300_000).toISOString();",
+          "      return [...this.notificationOutbox.values()].filter((entry) => entry.status === 'pending' && entry.availableAt <= now).sort((left, right) => left.availableAt.localeCompare(right.availableAt) || left.id.localeCompare(right.id)).slice(0, limit).map((entry) => { const claimed = { ...entry, availableAt: claimUntil }; this.notificationOutbox.set(entry.id, claimed); return { ...claimed }; });",
+          "    });",
+          "  }",
+          "  async markNotificationDelivered(id: string, deliveredAt: string): Promise<void> {",
+          "    await this.coordinateMutation(() => {",
+          "      const entry = this.notificationOutbox.get(id);",
+          "      if (!entry) throw new Error(`Notification outbox entry '${id}' was not found.`);",
+          "      if (entry.status === 'delivered') return;",
+          "      this.notificationOutbox.set(id, { ...entry, status: 'delivered', deliveredAt, lastError: null });",
+          "    });",
+          "  }",
+          "  async recordNotificationFailure(id: string, error: string, availableAt: string): Promise<NotificationOutboxEntry> {",
+          "    return this.coordinateMutation(() => {",
+          "      const entry = this.notificationOutbox.get(id);",
+          "      if (!entry) throw new Error(`Notification outbox entry '${id}' was not found.`);",
+          "      if (entry.status !== 'pending') return { ...entry };",
+          "      const attempts = entry.attempts + 1;",
+          "      const updated: NotificationOutboxEntry = { ...entry, attempts, status: attempts >= 3 ? 'failed' : 'pending', availableAt, lastError: error.slice(0, 500) };",
+          "      this.notificationOutbox.set(id, updated);",
+          "      return { ...updated };",
+          "    });",
+          "  }",
+        ]
+      : [
+          "  async inTransaction<T>(operation: (store: RecordStore) => Promise<T>): Promise<T> { return operation(this); }",
+        ]),
     ...(persistentOrderOperationReceipts
       ? [
           "  async getOrderOperationReceipt(orderEntity: string, orderRecordId: string): Promise<OrderOperationReceipt | undefined> {",
           "    return this.orderOperationReceiptStore.get(`${orderEntity}:${orderRecordId}`);",
           "  }",
           "  async saveOrderOperationReceipt(receipt: OrderOperationReceipt): Promise<void> {",
-          "    this.orderOperationReceiptStore.set(`${receipt.orderEntity}:${receipt.orderRecordId}`, { ...receipt, payment: { ...receipt.payment }, processedIdempotencyKeys: [...receipt.processedIdempotencyKeys] });",
+          ...(notificationOutbox
+            ? [
+                "    await this.coordinateMutation(() => { this.orderOperationReceiptStore.set(`${receipt.orderEntity}:${receipt.orderRecordId}`, { ...receipt, payment: { ...receipt.payment }, processedIdempotencyKeys: [...receipt.processedIdempotencyKeys] }); });",
+              ]
+            : [
+                "    this.orderOperationReceiptStore.set(`${receipt.orderEntity}:${receipt.orderRecordId}`, { ...receipt, payment: { ...receipt.payment }, processedIdempotencyKeys: [...receipt.processedIdempotencyKeys] });",
+              ]),
           "  }",
         ]
       : []),
     ...(commerce
       ? [
           "  async addCartItem(input: Omit<CommerceLineItem, 'id'>): Promise<CommerceLineItem> {",
-          "    const item = { id: `line-${this.cartItems.length + 1}`, ...input };",
-          "    this.cartItems.push(item);",
-          "    return item;",
+          ...(notificationOutbox
+            ? [
+                "    return this.coordinateMutation(() => {",
+                "      const item = { id: `line-${this.cartItems.length + 1}`, ...input };",
+                "      this.cartItems.push(item);",
+                "      return item;",
+                "    });",
+              ]
+            : [
+                "    const item = { id: `line-${this.cartItems.length + 1}`, ...input };",
+                "    this.cartItems.push(item);",
+                "    return item;",
+              ]),
           "  }",
           "  async listCartItems(orderEntity: string, orderRecordId: string): Promise<readonly CommerceLineItem[]> {",
           "    return this.cartItems.filter((item) => item.orderEntity === orderEntity && item.orderRecordId === orderRecordId);",
           "  }",
           "  async adjustInventory(entityKey: string, recordId: string, fieldKey: string, delta: number): Promise<StoredRecord> {",
-          "    const record = await this.find(entityKey, recordId);",
-          "    if (!record || typeof record[fieldKey] !== 'number') throw new Error(`Catalog record '${recordId}' has no numeric '${fieldKey}' field.`);",
-          "    if (!Number.isInteger(delta)) throw new Error('Inventory adjustment must be an integer.');",
-          "    const next = (record[fieldKey] as number) + delta;",
-          "    if (next < 0) throw new Error(`Catalog record '${recordId}' has insufficient stock.`);",
-          "    return this.update(entityKey, recordId, { [fieldKey]: next });",
+          ...(notificationOutbox
+            ? [
+                "    return this.coordinateMutation(() => {",
+                "      const record = this.collection(entityKey).get(recordId);",
+                "      if (!record || typeof record[fieldKey] !== 'number') throw new Error(`Catalog record '${recordId}' has no numeric '${fieldKey}' field.`);",
+                "      if (!Number.isInteger(delta)) throw new Error('Inventory adjustment must be an integer.');",
+                "      const next = (record[fieldKey] as number) + delta;",
+                "      if (next < 0) throw new Error(`Catalog record '${recordId}' has insufficient stock.`);",
+                "      Object.assign(record, { [fieldKey]: next });",
+                "      this.collection(entityKey).set(recordId, record);",
+                "      return record;",
+                "    });",
+              ]
+            : [
+                "    const record = await this.find(entityKey, recordId);",
+                "    if (!record || typeof record[fieldKey] !== 'number') throw new Error(`Catalog record '${recordId}' has no numeric '${fieldKey}' field.`);",
+                "    if (!Number.isInteger(delta)) throw new Error('Inventory adjustment must be an integer.');",
+                "    const next = (record[fieldKey] as number) + delta;",
+                "    if (next < 0) throw new Error(`Catalog record '${recordId}' has insufficient stock.`);",
+                "    return this.update(entityKey, recordId, { [fieldKey]: next });",
+              ]),
           "  }",
           "  async decrementInventory(entityKey: string, recordId: string, quantity: number): Promise<StoredRecord> {",
           "    return this.adjustInventory(entityKey, recordId, 'stock', -quantity);",
@@ -2137,7 +2384,7 @@ function renderApplicationRuntime(
     "    return capability;",
     "  }",
     "",
-    "  private async executeEffects(role: string, entityKey: string, recordId: string, effects: readonly { capability: string; operation: string }[] | undefined): Promise<void> {",
+    "  private async executeEffects(role: string, entityKey: string, recordId: string, effects: readonly { capability: string; operation: string }[] | undefined, store: RecordStore): Promise<void> {",
     "    const declaredEffects = (effects ?? []).map((effect) => ({ effect, capability: this.assertCapability(effect.capability, effect.operation) }));",
     "    for (const { effect, capability } of declaredEffects) {",
     "      if (capability.providerId !== 'factory') throw new Error(`External provider capability '${effect.capability}' requires an activated adapter for provider '${capability.providerId}'.`);",
@@ -2147,24 +2394,36 @@ function renderApplicationRuntime(
     ...(useResolvedContributions
       ? [
           "      const handler = getEffectHandler(effect.capability, effect.operation);",
-          "      await handler({ role, entityKey, recordId, operation: effect.operation, store: this.store, now: at });",
+          "      await handler({ role, entityKey, recordId, operation: effect.operation, store, now: at });",
         ]
       : [
           "      if (!providedEffects.has(effect.capability)) throw new Error(`Unsupported capability effect '${effect.capability}.${effect.operation}'.`);",
           "      if (effect.capability === 'audit.record') {",
-          "        await this.store.appendAudit({ actor: role, action: effect.operation, entity: entityKey, recordId, at });",
+          "        await store.appendAudit({ actor: role, action: effect.operation, entity: entityKey, recordId, at });",
           "      }",
           ...(commerce
             ? [
                 "      if (effect.capability === 'inventory.decrement') {",
-                "        const items = await this.store.listCartItems(entityKey, recordId);",
+                "        const items = await store.listCartItems(entityKey, recordId);",
                 "        if (items.length === 0) throw new Error(`Cannot decrement inventory for an empty cart '${recordId}'.`);",
-                "        for (const item of items) await this.store.decrementInventory(item.catalogEntity, item.catalogRecordId, item.quantity);",
+                "        for (const item of items) await store.decrementInventory(item.catalogEntity, item.catalogRecordId, item.quantity);",
                 "      }",
               ]
             : []),
         ]),
-    "      await this.store.appendCapabilityEvent({ actor: role, capability: effect.capability, operation: effect.operation, entity: entityKey, recordId, outcome: 'completed', at });",
+    ...(notificationOutbox
+      ? [
+          "      if (effect.capability === 'notification.send') {",
+          `        const dedupeKey = JSON.stringify([${JSON.stringify(notificationOutbox.applicationId)}, effect.operation, entityKey, recordId, ${JSON.stringify(notificationOutbox.recipientRole)}, ${JSON.stringify(notificationOutbox.template)}]);`,
+          "        await store.enqueueNotification({ dedupeKey, actor: role, recipientRole: " +
+            JSON.stringify(notificationOutbox.recipientRole) +
+            ", template: " +
+            JSON.stringify(notificationOutbox.template) +
+            ", entity: entityKey, recordId, availableAt: at });",
+          "      }",
+        ]
+      : []),
+    "      await store.appendCapabilityEvent({ actor: role, capability: effect.capability, operation: effect.operation, entity: entityKey, recordId, outcome: 'completed', at });",
     "    }",
     "  }",
     "",
@@ -2355,7 +2614,10 @@ function renderApplicationRuntime(
     "    this.entity(entityKey);",
     "    const flow = this.flow(entityKey);",
     "    if (!flow) throw new Error(`Entity '${entityKey}' has no declared flow.`);",
-    "    const record = await this.store.find(entityKey, recordId);",
+    notificationOutbox
+      ? "    return this.store.inTransaction(async (store) => {"
+      : "    const store = this.store;",
+    "    const record = await store.find(entityKey, recordId);",
     "    if (!record) throw new Error(`Record '${recordId}' was not found.`);",
     "    const transition = flow.transitions.find((candidate) => candidate.from === record.status && candidate.event === event);",
     "    if (!transition) throw new Error(`Event '${event}' is not valid from '${record.status}'.`);",
@@ -2382,21 +2644,21 @@ function renderApplicationRuntime(
           "        nextState: transition.to,",
           "        expectedVersion: options.expectedVersion!,",
           "        idempotencyKey: options.idempotencyKey!,",
-          "        store: this.store,",
+          "        store,",
           "        assertAllowed: (candidateRole, resource, action) => this.assertAllowed(candidateRole, resource, action),",
           "      });",
           "      try {",
-          "        await this.executeEffects(role, entityKey, recordId, transition.effects);",
+          "        await this.executeEffects(role, entityKey, recordId, transition.effects, store);",
           "      } catch (error) {",
-          "        await this.store.update(entityKey, recordId, previous);",
+          "        await store.update(entityKey, recordId, previous);",
           "        throw error;",
           "      }",
-          "      await this.store.appendAudit({ actor: role, action: event, entity: entityKey, recordId, at: new Date().toISOString() });",
+          "      await store.appendAudit({ actor: role, action: event, entity: entityKey, recordId, at: new Date().toISOString() });",
           "      return updated;",
           "    }",
-          "    await this.executeEffects(role, entityKey, recordId, transition.effects);",
+          "    await this.executeEffects(role, entityKey, recordId, transition.effects, store);",
           "    const updated = await getWorkflowHandler().applyTransition({",
-          "      store: this.store,",
+          "      store,",
           "      entityKey,",
           "      recordId,",
           "      nextState: transition.to,",
@@ -2405,20 +2667,21 @@ function renderApplicationRuntime(
       : useResolvedContributions
         ? [
             "    const workflowHandler = getWorkflowHandler();",
-            "    await this.executeEffects(role, entityKey, recordId, transition.effects);",
+            "    await this.executeEffects(role, entityKey, recordId, transition.effects, store);",
             "    const updated = await workflowHandler.applyTransition({",
-            "      store: this.store,",
+            "      store,",
             "      entityKey,",
             "      recordId,",
             "      nextState: transition.to,",
             "    });",
           ]
         : [
-            "    await this.executeEffects(role, entityKey, recordId, transition.effects);",
-            "    const updated = await this.store.update(entityKey, recordId, { status: transition.to });",
+            "    await this.executeEffects(role, entityKey, recordId, transition.effects, store);",
+            "    const updated = await store.update(entityKey, recordId, { status: transition.to });",
           ]),
-    "    await this.store.appendAudit({ actor: role, action: event, entity: entityKey, recordId, at: new Date().toISOString() });",
+    "    await store.appendAudit({ actor: role, action: event, entity: entityKey, recordId, at: new Date().toISOString() });",
     "    return updated;",
+    ...(notificationOutbox ? ["    });"] : []),
     "  }",
     "",
     "  async auditLog(role: string): Promise<readonly AuditEvent[]> {",
@@ -2446,6 +2709,7 @@ function renderPrismaRecordStore(
   graph: ApplicationGraphV1,
   hasRestaurantRuntime: boolean,
   persistentOrderOperationReceipts: boolean,
+  notificationOutbox: boolean,
 ): string {
   const commerce = hasCommerceCapabilities(graph);
   const capabilityOutcome = hasRestaurantRuntime ? "succeeded" : "completed";
@@ -2457,7 +2721,7 @@ function renderPrismaRecordStore(
   );
   return [
     'import { PrismaClient } from "@prisma/client";',
-    `import type { AuditEvent, CapabilityEvent,${commerce ? " CommerceLineItem," : ""}${persistentOrderOperationReceipts ? " OrderOperationReceipt," : ""} RecordStore, StoredRecord } from "./application-runtime.js";`,
+    `import type { AuditEvent, CapabilityEvent,${commerce ? " CommerceLineItem," : ""}${notificationOutbox ? " NotificationOutboxEntry, NotificationOutboxInput," : ""}${persistentOrderOperationReceipts ? " OrderOperationReceipt," : ""} RecordStore, StoredRecord } from "./application-runtime.js";`,
     "",
     "type CrudDelegate = {",
     "  findMany(): Promise<unknown[]>;",
@@ -2474,6 +2738,17 @@ function renderPrismaRecordStore(
     "  findMany(input: { orderBy: { at: 'asc' } }): Promise<unknown[]>;",
     "};",
     "type TransactionExecutor = { $transaction<T>(operation: (client: PrismaClient) => Promise<T>): Promise<T> };",
+    ...(notificationOutbox
+      ? [
+          "type NotificationOutboxDelegate = {",
+          "  upsert(input: { where: { dedupeKey: string }; update: Record<string, never>; create: Record<string, unknown> }): Promise<unknown>;",
+          "  findMany(input: { where: { status: 'pending'; availableAt: { lte: Date } }; orderBy: readonly [{ availableAt: 'asc' }, { id: 'asc' }]; take: number }): Promise<unknown[]>;",
+          "  findUnique(input: { where: { id: string } }): Promise<unknown | null>;",
+          "  update(input: { where: { id: string }; data: Record<string, unknown> }): Promise<unknown>;",
+          "  updateMany(input: { where: Record<string, unknown>; data: Record<string, unknown> }): Promise<{ count: number }>;",
+          "};",
+        ]
+      : []),
     ...(persistentOrderOperationReceipts
       ? [
           "type OrderOperationReceiptDelegate = {",
@@ -2493,6 +2768,14 @@ function renderPrismaRecordStore(
     `const delegates: Readonly<Record<string, string>> = ${JSON.stringify(delegates, null, 2)};`,
     "",
     "function asStoredRecord(value: unknown): StoredRecord { return value as StoredRecord; }",
+    ...(notificationOutbox
+      ? [
+          "function asNotificationOutboxEntry(value: unknown): NotificationOutboxEntry {",
+          "  const entry = value as Omit<NotificationOutboxEntry, 'availableAt' | 'deliveredAt'> & { availableAt: Date; deliveredAt: Date | null };",
+          "  return { ...entry, availableAt: entry.availableAt.toISOString(), deliveredAt: entry.deliveredAt?.toISOString() ?? null };",
+          "}",
+        ]
+      : []),
     "",
     "export class PrismaRecordStore implements RecordStore {",
     "  constructor(private readonly prisma: PrismaClient) {}",
@@ -2511,6 +2794,13 @@ function renderPrismaRecordStore(
     "  private capabilityDelegate(): CapabilityDelegate {",
     "    return (this.prisma as unknown as { capabilityEvent: CapabilityDelegate }).capabilityEvent;",
     "  }",
+    ...(notificationOutbox
+      ? [
+          "  private notificationOutboxDelegate(): NotificationOutboxDelegate {",
+          "    return (this.prisma as unknown as { notificationOutbox: NotificationOutboxDelegate }).notificationOutbox;",
+          "  }",
+        ]
+      : []),
     ...(persistentOrderOperationReceipts
       ? [
           "  private orderOperationReceiptDelegate(): OrderOperationReceiptDelegate {",
@@ -2568,6 +2858,45 @@ function renderPrismaRecordStore(
     "  async inTransaction<T>(operation: (store: RecordStore) => Promise<T>): Promise<T> {",
     "    return (this.prisma as unknown as TransactionExecutor).$transaction(async (client) => operation(new PrismaRecordStore(client)));",
     "  }",
+    ...(notificationOutbox
+      ? [
+          "  async enqueueNotification(input: NotificationOutboxInput): Promise<NotificationOutboxEntry> {",
+          "    return asNotificationOutboxEntry(await this.notificationOutboxDelegate().upsert({",
+          "      where: { dedupeKey: input.dedupeKey },",
+          "      update: {},",
+          "      create: { ...input, availableAt: new Date(input.availableAt) },",
+          "    }));",
+          "  }",
+          "  async claimDueNotifications(now: string, limit: number): Promise<readonly NotificationOutboxEntry[]> {",
+          "    if (!Number.isSafeInteger(limit) || limit < 1) return [];",
+          "    const dueAt = new Date(now);",
+          "    const claimUntil = new Date(dueAt.getTime() + 300_000);",
+          "    const due = (await this.notificationOutboxDelegate().findMany({ where: { status: 'pending', availableAt: { lte: dueAt } }, orderBy: [{ availableAt: 'asc' }, { id: 'asc' }], take: limit })).map(asNotificationOutboxEntry);",
+          "    const claimed: NotificationOutboxEntry[] = [];",
+          "    for (const entry of due) {",
+          "      const result = await this.notificationOutboxDelegate().updateMany({ where: { id: entry.id, status: 'pending', availableAt: { lte: dueAt } }, data: { availableAt: claimUntil } });",
+          "      if (result.count === 1) claimed.push({ ...entry, availableAt: claimUntil.toISOString() });",
+          "    }",
+          "    return claimed;",
+          "  }",
+          "  async markNotificationDelivered(id: string, deliveredAt: string): Promise<void> {",
+          "    const result = await this.notificationOutboxDelegate().updateMany({ where: { id, status: 'pending' }, data: { status: 'delivered', deliveredAt: new Date(deliveredAt), lastError: null } });",
+          "    if (result.count === 1) return;",
+          "    const value = await this.notificationOutboxDelegate().findUnique({ where: { id } });",
+          "    if (!value) throw new Error(`Notification outbox entry '${id}' was not found.`);",
+          "  }",
+          "  async recordNotificationFailure(id: string, error: string, availableAt: string): Promise<NotificationOutboxEntry> {",
+          "    for (let expectedAttempts = 0; expectedAttempts < 3; expectedAttempts += 1) {",
+          "      const attempts = expectedAttempts + 1;",
+          "      const result = await this.notificationOutboxDelegate().updateMany({ where: { id, status: 'pending', attempts: expectedAttempts }, data: { attempts, status: attempts >= 3 ? 'failed' : 'pending', availableAt: new Date(availableAt), lastError: error.slice(0, 500) } });",
+          "      if (result.count === 1) return asNotificationOutboxEntry((await this.notificationOutboxDelegate().findUnique({ where: { id } }))!);",
+          "    }",
+          "    const value = await this.notificationOutboxDelegate().findUnique({ where: { id } });",
+          "    if (!value) throw new Error(`Notification outbox entry '${id}' was not found.`);",
+          "    return asNotificationOutboxEntry(value);",
+          "  }",
+        ]
+      : []),
     ...(persistentOrderOperationReceipts
       ? [
           "  async getOrderOperationReceipt(orderEntity: string, orderRecordId: string): Promise<OrderOperationReceipt | undefined> {",
@@ -3578,6 +3907,21 @@ export function generateApplicationBundle(
     !restaurantRuntimeEnabled && orderOperationsPersistence !== undefined;
   const useGenericMoneyPricingPersistence =
     !restaurantRuntimeEnabled && moneyPricingPersistence !== undefined;
+  const notificationOutbox = restaurantRuntimeEnabled
+    ? undefined
+    : resolveNotificationOutboxRuntimeContribution(input);
+  const additionalPrismaSchemaFragments = [
+    ...(useGenericMoneyPricingPersistence
+      ? [moneyPricingPersistence!.schema]
+      : []),
+    ...(notificationOutbox ? [notificationOutboxPrismaSchema] : []),
+  ];
+  const additionalMigrationFragments = [
+    ...(useGenericMoneyPricingPersistence
+      ? [moneyPricingPersistence!.migration]
+      : []),
+    ...(notificationOutbox ? [notificationOutboxMigration] : []),
+  ];
   const useResolvedContributions =
     input.compositionLock.resolvedContributionDigests.length > 0;
   const usePackageCartHandler = input.compositionLock.packages.some(
@@ -3878,6 +4222,7 @@ export function generateApplicationBundle(
           orderEntityKey,
           orderOperationsEntityKey,
           useGenericOrderOperationsPersistence,
+          notificationOutbox,
         ),
     },
     {
@@ -3887,6 +4232,7 @@ export function generateApplicationBundle(
           graph,
           restaurantRuntimeEnabled,
           useGenericOrderOperationsPersistence,
+          notificationOutbox !== undefined,
         ),
     },
     {
@@ -3903,9 +4249,7 @@ export function generateApplicationBundle(
             ? orderOperationsPersistence?.schema
             : undefined,
           useGenericOrderOperationsPersistence,
-          useGenericMoneyPricingPersistence
-            ? [moneyPricingPersistence!.schema]
-            : [],
+          additionalPrismaSchemaFragments,
         ),
     },
     {
@@ -3918,9 +4262,7 @@ export function generateApplicationBundle(
             ? orderOperationsPersistence?.schema
             : undefined,
           useGenericOrderOperationsPersistence,
-          useGenericMoneyPricingPersistence
-            ? [moneyPricingPersistence!.schema]
-            : [],
+          additionalPrismaSchemaFragments,
         ),
     },
     {
@@ -3933,9 +4275,7 @@ export function generateApplicationBundle(
             ? orderOperationsPersistence?.migration
             : undefined,
           useGenericOrderOperationsPersistence,
-          useGenericMoneyPricingPersistence
-            ? [moneyPricingPersistence!.migration]
-            : [],
+          additionalMigrationFragments,
         ),
     },
     {

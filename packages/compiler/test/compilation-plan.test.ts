@@ -7,6 +7,7 @@ import {
   composeDefaultCapabilityDraft,
   composeProfileDraft,
   createCapabilityCompositionLock,
+  capabilityAssets,
   type CapabilitySelectionV1,
   type FactoryProfile,
 } from "@factory/capabilities";
@@ -1978,6 +1979,92 @@ describe("compilation target registry", () => {
     expect(files["api/test/journey.generated.test.ts"]).toContain(
       '[["audit.record","record"],["notification.send","send"],["notification.send","send"],["audit.record","record"]]',
     );
+  });
+
+  it("emits durable notification outbox persistence only for the verified v1 provider", () => {
+    const graph = composeProfileDraft({ profile: "expense-approval" }).graph;
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "published-expense-notification-outbox-1",
+        graph,
+      }).files.map((file) => [file.path, file.content]),
+    );
+
+    for (const schemaPath of [
+      "api/prisma/schema.prisma",
+      "database/prisma/schema.prisma",
+    ]) {
+      expect(files[schemaPath]).toContain("model NotificationOutbox");
+      expect(files[schemaPath]).toContain("dedupeKey String @unique");
+      expect(files[schemaPath]).toContain("availableAt DateTime");
+      expect(files[schemaPath]).toContain("deliveredAt DateTime?");
+      expect(files[schemaPath]).toContain("lastError String?");
+    }
+    expect(
+      files["database/prisma/migrations/0001_initial/migration.sql"],
+    ).toContain('CREATE TABLE "NotificationOutbox"');
+    expect(files["api/src/application-runtime.ts"]).toContain(
+      "export type NotificationOutboxEntry",
+    );
+    expect(files["api/src/application-runtime.ts"]).toContain(
+      "enqueueNotification",
+    );
+    expect(files["api/src/application-runtime.ts"]).toContain(
+      "claimDueNotifications",
+    );
+    expect(files["api/src/prisma-record-store.ts"]).toContain(
+      "markNotificationDelivered",
+    );
+    expect(files["api/src/prisma-record-store.ts"]).toContain(
+      "recordNotificationFailure",
+    );
+  });
+
+  it("keeps the historical notification package free of outbox persistence and worker source", () => {
+    const graph = composeProfileDraft({ profile: "expense-approval" }).graph;
+    const historical = capabilityAssets.find(
+      ({ manifest }) =>
+        manifest.key === "core.notification" && manifest.version === "1.0.1",
+    )!;
+    const historicalLock = {
+      key: historical.manifest.key,
+      version: historical.manifest.version,
+      packageRoot: historical.manifest.packageRoot,
+      manifestDigest: historical.manifest.manifestDigest,
+      lifecycle: historical.manifest.lifecycle,
+    };
+    graph.integration.assetLocks = graph.integration.assetLocks?.map((lock) =>
+      lock.key === "core.notification" ? historicalLock : lock,
+    );
+    const selections =
+      composeDefaultCapabilityDraft({ profile: "expense-approval" }).graph
+        .integration.compositionSelections ?? [];
+    const compositionLock = createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(graph),
+      selections: selections.map((selection) =>
+        selection.lock.key === "core.notification"
+          ? { ...selection, lock: historicalLock }
+          : selection,
+      ),
+    });
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "published-expense-notification-historical-1",
+        graph,
+        compositionLock,
+      }).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(files["api/prisma/schema.prisma"]).not.toContain(
+      "model NotificationOutbox",
+    );
+    expect(files["database/prisma/schema.prisma"]).not.toContain(
+      "model NotificationOutbox",
+    );
+    expect(files["api/src/application-runtime.ts"]).not.toContain(
+      "NotificationOutboxEntry",
+    );
+    expect(files).not.toHaveProperty("api/src/notification-outbox-worker.ts");
   });
 
   it("executes declared capability effects as durable evidence and fails closed for unknown effects", () => {
