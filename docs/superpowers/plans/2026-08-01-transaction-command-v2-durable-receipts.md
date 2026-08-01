@@ -29,6 +29,7 @@
 - `packages/capabilities/src/composition.ts` and `packages/capabilities/src/node.ts` — exact interface compatibility and verified-lock publication for successor selections.
 - `packages/capabilities/src/index.ts` — fixture registration and new Generic Draft selections.
 - `packages/capabilities/test/capability-registry.test.ts` — package physical/digest/interface/selection verification.
+- `packages/capabilities/test/commerce-transaction-profile-composition.test.ts` and `packages/capabilities/test/order-operations-profile.test.ts` — Generic Profile lock-version regressions.
 - `packages/compiler/src/index.ts` — successor contribution resolution, generated runtime, Prisma store, journey projection, active schema/migration merge, and generated validation command.
 - `packages/compiler/test/generic-order-lifecycle-v2.test.ts` — focused generated-runtime and emitted-artifact regression evidence.
 - `packages/compiler/test/generated-generic-order-lifecycle-v2-postgres.test.ts` — isolated generated Compose PostgreSQL acceptance evidence.
@@ -53,6 +54,8 @@
 - Modify: `packages/capabilities/src/node.ts`
 - Modify: `packages/capabilities/src/index.ts`
 - Modify: `packages/capabilities/test/capability-registry.test.ts`
+- Modify: `packages/capabilities/test/commerce-transaction-profile-composition.test.ts`
+- Modify: `packages/capabilities/test/order-operations-profile.test.ts`
 
 **Interfaces:**
 
@@ -121,6 +124,9 @@ composition and verified Control Plane lock publication.
 Run: `pnpm --filter @factory/capabilities test -- capability-registry.test.ts && pnpm --filter @factory/capabilities typecheck && pnpm --filter @factory/capabilities lint`
 
 Expected: PASS, including unchanged historical package digest assertions.
+Update version assertions in the two Generic Profile composition tests to
+assert the successor locks while retaining their separate historical lock
+replay cases.
 
 - [ ] **Step 5: Commit**
 
