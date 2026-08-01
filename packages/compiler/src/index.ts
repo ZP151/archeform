@@ -1773,7 +1773,9 @@ function renderApplicationRuntime(
       ? [
           `import { createHash${useDurableReceiptLease ? ", randomUUID" : ""} } from "node:crypto";`,
           'import { commerceOrderCreateHandler } from "./capabilities/commerce-order-create-handler.js";',
-          'import { commerceOrderTransactionOperationAdapter } from "./capabilities/commerce-order-transaction-operation-adapter.js";',
+          useDurableReceiptLease
+            ? 'import { commerceOrderTransactionOperationAdapter, type OrderTransitionReceipt as PackageOrderTransitionReceipt } from "./capabilities/commerce-order-transaction-operation-adapter.js";'
+            : 'import { commerceOrderTransactionOperationAdapter } from "./capabilities/commerce-order-transaction-operation-adapter.js";',
           useDurableReceiptLease
             ? 'import { CommerceTransactionExecutor, type ReceiptClaimV2, type TransactionOutcomeV2, type TransactionStoreV2 } from "./capabilities/commerce-transaction-executor.js";'
             : 'import { CommerceTransactionExecutor, type CommerceTransactionClaimV1, type CommerceTransactionOutcomeV1, type CommerceTransactionStoreV1 } from "./capabilities/commerce-transaction-executor.js";',
@@ -1790,7 +1792,9 @@ function renderApplicationRuntime(
     "export type CapabilityEvent = { actor: string; capability: string; operation: string; entity: string; recordId: string; outcome: 'completed'; at: string };",
     ...(useGenericOrderLifecycleV2
       ? [
-          "export type OrderTransitionReceipt = Readonly<{ receiptId: string; replayed: boolean; orderId: string; transition: string }>;",
+          useDurableReceiptLease
+            ? "export type OrderTransitionReceipt = PackageOrderTransitionReceipt;"
+            : "export type OrderTransitionReceipt = Readonly<{ receiptId: string; replayed: boolean; orderId: string; transition: string }>;",
           useDurableReceiptLease
             ? "type TransactionReceiptState = { receiptId: string; payloadDigest: string; state: 'claimed' | 'completed' | 'retryable'; leaseExpiresAt: number; leaseEpoch: number; leaseToken: string; outcome?: TransactionOutcomeV2 };"
             : "type TransactionReceiptState = { receiptId: string; payloadDigest: string; status: 'pending' | 'completed'; outcome?: CommerceTransactionOutcomeV1 };",

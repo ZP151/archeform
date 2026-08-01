@@ -32,7 +32,7 @@
       "targetRuntimeInterfaceVersion": "factory.transaction-operation-adapter/v2",
       "orderingRequirements": ["commerce-order-create-handler"],
       "mergeProtocol": "replace-file",
-      "digest": "sha256:dc16cfad117abe351361ea05ae0fbac87bddf62d3f13c4da965a5a9727ec9b32"
+      "digest": "sha256:b522e47a9b38866bb9339b5205050bd80c07b3e65838fd7df21aa1e7a101953d"
     },
     {
       "id": "commerce-order-lifecycle-journey",

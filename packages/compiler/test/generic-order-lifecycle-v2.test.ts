@@ -1,7 +1,8 @@
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, normalize, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import ts from "typescript";
 import { afterAll, describe, expect, it, vi } from "vitest";
 
 import {
@@ -28,15 +29,6 @@ type StoredOrder = Readonly<{
   id: string;
   status: string;
   version: number;
-}>;
-
-type TransitionReceipt = Readonly<{
-  kind: "completed" | "in-progress";
-  receiptId: string;
-  replayed: boolean;
-  orderId: string;
-  transition: string;
-  retryAfterMs?: number;
 }>;
 
 type TransactionOutcome = Readonly<{
@@ -87,7 +79,7 @@ type GeneratedRuntime = {
     recordId: string,
     event: string,
     options: Readonly<{ expectedVersion: number; idempotencyKey: string }>,
-  ): Promise<TransitionReceipt>;
+  ): Promise<unknown>;
   auditLog(role: string): Promise<readonly unknown[]>;
   capabilityEvents(role: string): Promise<readonly unknown[]>;
 };
@@ -228,6 +220,89 @@ function compile(profile: CommerceProfile) {
   });
 }
 
+function typecheckGeneratedReceiptContract(profile: CommerceProfile): string {
+  const generatedRoot = resolve(generatedDirectory, `${profile}-type-contract`);
+  const virtualSources = new Map<string, string>(
+    compile(profile)
+      .files.filter((file) => file.path.startsWith("api/src/"))
+      .map((file) => [
+        normalize(resolve(generatedRoot, file.path)),
+        file.content,
+      ]),
+  );
+  const consumerPath = normalize(
+    resolve(generatedRoot, "api/src/order-transition-receipt-consumer.ts"),
+  );
+  virtualSources.set(
+    consumerPath,
+    [
+      'import type { OrderTransitionReceipt } from "./application-runtime.js";',
+      "declare const receipt: OrderTransitionReceipt;",
+      "type Assert<T extends true> = T;",
+      "type InProgressReceipt = Extract<OrderTransitionReceipt, { kind: 'in-progress' }>;",
+      "type CompletedReceipt = Extract<OrderTransitionReceipt, { kind: 'completed' }>;",
+      "type RequiredRetryDelay = Assert<InProgressReceipt extends { retryAfterMs: number } ? true : false>;",
+      "type NoCompletedRetryDelay = Assert<'retryAfterMs' extends keyof CompletedReceipt ? false : true>;",
+      "export const retryAfterMs: number = receipt.kind === 'in-progress' ? receipt.retryAfterMs : 0;",
+      "export const inProgress: InProgressReceipt = { kind: 'in-progress', receiptId: 'receipt-1', replayed: false, orderId: 'order-1', transition: 'submit', retryAfterMs: 25 };",
+    ].join("\n"),
+  );
+
+  const options: ts.CompilerOptions = {
+    module: ts.ModuleKind.NodeNext,
+    moduleResolution: ts.ModuleResolutionKind.NodeNext,
+    noEmit: true,
+    skipLibCheck: true,
+    strict: true,
+    target: ts.ScriptTarget.ES2022,
+  };
+  const host = ts.createCompilerHost(options);
+  const baseFileExists = host.fileExists.bind(host);
+  const baseGetSourceFile = host.getSourceFile.bind(host);
+  const baseReadFile = host.readFile.bind(host);
+  host.fileExists = (fileName) =>
+    virtualSources.has(normalize(fileName)) || baseFileExists(fileName);
+  host.readFile = (fileName) =>
+    virtualSources.get(normalize(fileName)) ?? baseReadFile(fileName);
+  host.getSourceFile = (fileName, languageVersion, onError, shouldCreate) => {
+    const source = virtualSources.get(normalize(fileName));
+    return source === undefined
+      ? baseGetSourceFile(fileName, languageVersion, onError, shouldCreate)
+      : ts.createSourceFile(fileName, source, languageVersion, true);
+  };
+  host.resolveModuleNames = (moduleNames, containingFile) =>
+    moduleNames.map((moduleName) => {
+      if (moduleName.startsWith("./") && moduleName.endsWith(".js")) {
+        const virtualModule = normalize(
+          resolve(dirname(containingFile), moduleName.replace(/\.js$/, ".ts")),
+        );
+        if (virtualSources.has(virtualModule)) {
+          return {
+            extension: ts.Extension.Ts,
+            resolvedFileName: virtualModule,
+          };
+        }
+      }
+      return ts.resolveModuleName(moduleName, containingFile, options, host)
+        .resolvedModule;
+    });
+
+  const diagnostics = ts
+    .getPreEmitDiagnostics(
+      ts.createProgram({ rootNames: [consumerPath], options, host }),
+    )
+    .filter(
+      (diagnostic) =>
+        diagnostic.file !== undefined &&
+        normalize(diagnostic.file.fileName) === consumerPath,
+    );
+  return ts.formatDiagnosticsWithColorAndContext(diagnostics, {
+    getCanonicalFileName: (fileName) => fileName,
+    getCurrentDirectory: () => process.cwd(),
+    getNewLine: () => "\n",
+  });
+}
+
 async function withGeneratedRuntime<T>(
   profile: CommerceProfile,
   run: (runtime: GeneratedRuntime) => Promise<T>,
@@ -279,6 +354,10 @@ async function withGeneratedModule<T>(
 }
 
 describe("Generic order lifecycle V2 compilation", () => {
+  it("publishes a discriminated transition receipt with a required retry delay", () => {
+    expect(typecheckGeneratedReceiptContract("simple-ecommerce")).toBe("");
+  });
+
   it.each(profileCases)(
     "$profile creates and transitions through the exact locked V2 lifecycle",
     async ({

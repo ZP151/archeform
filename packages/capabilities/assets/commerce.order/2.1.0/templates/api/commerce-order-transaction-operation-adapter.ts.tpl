@@ -24,6 +24,23 @@ export type CommerceOrderOperationStoreDependenciesV2 =
     readonly operationStore: TransactionStoreV2;
   };
 
+export type OrderTransitionReceipt =
+  | Readonly<{
+      kind: "completed";
+      receiptId: string;
+      replayed: boolean;
+      orderId: string;
+      transition: string;
+    }>
+  | Readonly<{
+      kind: "in-progress";
+      receiptId: string;
+      replayed: false;
+      orderId: string;
+      transition: string;
+      retryAfterMs: number;
+    }>;
+
 function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("Order transition must be an object.");
@@ -54,14 +71,7 @@ function requiredString(value: Record<string, unknown>, key: string): string {
 export const commerceOrderTransactionOperationAdapter: TransactionOperationAdapterV2<
   CommerceOrderTransactionRequestV2,
   CommerceOrderTransactionContextV2,
-  Readonly<{
-    kind: "completed" | "in-progress";
-    receiptId: string;
-    replayed: boolean;
-    orderId: string;
-    transition: string;
-    retryAfterMs?: number;
-  }>
+  OrderTransitionReceipt
 > = {
   parseRequest(input) {
     const value = record(input);
@@ -114,15 +124,22 @@ export const commerceOrderTransactionOperationAdapter: TransactionOperationAdapt
     return candidate.operationStore;
   },
   present(result: TransactionResultV2, context) {
+    if (result.kind === "in-progress") {
+      return Object.freeze({
+        kind: "in-progress",
+        receiptId: result.receiptId,
+        replayed: false,
+        orderId: context.orderId,
+        transition: context.event,
+        retryAfterMs: result.retryAfterMs,
+      });
+    }
     return Object.freeze({
-      kind: result.kind,
+      kind: "completed",
       receiptId: result.receiptId,
-      replayed: result.kind === "completed" ? result.replayed : false,
+      replayed: result.replayed,
       orderId: context.orderId,
       transition: context.event,
-      ...(result.kind === "in-progress"
-        ? { retryAfterMs: result.retryAfterMs }
-        : {}),
     });
   },
 };

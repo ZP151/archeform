@@ -12,7 +12,7 @@ export const orderAssetV2_1_0: CapabilityAssetV1 = {
       "Creates authorized persisted orders and adapts bounded order events to the exact Transaction Command V2 contract.",
     packageRoot: "packages/capabilities/assets/commerce.order/2.1.0",
     manifestDigest:
-      "sha256:0f51cb26629fc2ba159a49aa2e73c47b2ed26591a31f644a189583cea6f5c8fc",
+      "sha256:f4eb93a5d11961333c9665c7c3ba614101679bff9366360628dd2b3840b35a97",
     lifecycle: "golden",
     profiles: ["simple-ecommerce", "retail-counter", "grocery-pickup"],
     effects: ["order.create", "order.transition"],
@@ -57,7 +57,7 @@ export const orderAssetV2_1_0: CapabilityAssetV1 = {
         orderingRequirements: ["commerce-order-create-handler"],
         mergeProtocol: "replace-file",
         digest:
-          "sha256:dc16cfad117abe351361ea05ae0fbac87bddf62d3f13c4da965a5a9727ec9b32",
+          "sha256:b522e47a9b38866bb9339b5205050bd80c07b3e65838fd7df21aa1e7a101953d",
       },
       {
         id: "commerce-order-lifecycle-journey",
