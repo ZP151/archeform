@@ -691,7 +691,7 @@ function renderCapabilityRegistry(
     ),
   ).sort();
   return [
-    'import type { CapabilityRuntimeModule, CartHandler, CatalogHandler, EffectHandler, LineConfigurationHandler, OrderHandler, RecordHandler, WorkflowHandler } from "./contract.js";',
+    'import type { CapabilityRuntimeModule, CartHandler, CatalogHandler, EffectHandler, LineConfigurationHandler, OrderHandler, OrderOperationsHandler, RecordHandler, WorkflowHandler } from "./contract.js";',
     "",
     ...imports,
     ...(imports.length ? [""] : []),
@@ -782,6 +782,13 @@ function renderCapabilityRegistry(
     "  );",
     "}",
     "",
+    "export function getOrderOperationsHandler(): OrderOperationsHandler {",
+    "  return singleHandler(",
+    "    capabilityModules.flatMap((module) => module.orderOperationsHandler ? [module.orderOperationsHandler] : []),",
+    '    "order operations",',
+    "  );",
+    "}",
+    "",
   ].join("\n");
 }
 
@@ -841,6 +848,14 @@ function renderCapabilityContract(graph: ApplicationGraphV1): string {
     "  transition(input: { role: string; entityKey: string; recordId: string; nextState: string; expectedVersion: number; idempotencyKey: string; store: CapabilityStore; assertAllowed(role: string, entityKey: string, action: string): Promise<void> }): Promise<CapabilityStoredRecord>;",
     "}",
     "",
+    "export type CommerceOrderOperationCommandName = 'hold' | 'release-hold' | 'amend' | 'cancel' | 'record-partial-payment' | 'capture-payment' | 'refund';",
+    "export type CommerceOrderOperationStatus = 'cart' | 'submitted' | 'held' | 'payment-pending' | 'paid' | 'fulfilled' | 'cancelled';",
+    "export interface CommerceOrderPaymentState { readonly due: string; readonly captured: string; readonly refunded: string; }",
+    "export interface CommerceOrderOperationState { readonly orderId: string; readonly version: number; readonly status: CommerceOrderOperationStatus; readonly payment: CommerceOrderPaymentState; readonly processedIdempotencyKeys: readonly string[]; }",
+    "export interface CommerceOrderOperationCommand { readonly command: CommerceOrderOperationCommandName; readonly orderId: string; readonly expectedVersion: number; readonly idempotencyKey: string; readonly actorRole: string; readonly reason?: string; readonly amount?: string; }",
+    "export interface CommerceOrderOperationPlan { readonly nextState: CommerceOrderOperationStatus; readonly incrementVersion: true; readonly paymentDelta: 'none' | 'capture-partial' | 'capture-final' | 'refund-partial' | 'refund-full'; readonly inventoryEffect: 'reserve' | 'release' | 'none'; readonly auditAction: string; }",
+    "export interface OrderOperationsHandler { plan(inputState: CommerceOrderOperationState, inputCommand: CommerceOrderOperationCommand): CommerceOrderOperationPlan; }",
+    "",
     "export type EffectHandler = (input: { role: string; entityKey: string; recordId: string; operation: string; store: CapabilityStore; now: string }) => Promise<void>;",
     "",
     "export interface CapabilityRuntimeModule {",
@@ -854,6 +869,7 @@ function renderCapabilityContract(graph: ApplicationGraphV1): string {
     "  readonly catalogHandler?: CatalogHandler;",
     "  readonly lineConfigurationHandler?: LineConfigurationHandler;",
     "  readonly orderHandler?: OrderHandler;",
+    "  readonly orderOperationsHandler?: OrderOperationsHandler;",
     "  readonly effectHandler?: EffectHandler;",
     "}",
     "",
@@ -1502,7 +1518,7 @@ function runtimeDefinition(graph: ApplicationGraphV1) {
 function lockedRuntimeHandlerEntity(
   compositionLock: CapabilityCompositionLockV1,
   assetKey: string,
-  handler: "catalog" | "order",
+  handler: "catalog" | "order" | "orderOperations",
   bindingKey: string,
 ): string | undefined {
   const selection = compositionLock.packages.find(
@@ -1533,6 +1549,128 @@ function lockedRuntimeHandlerEntity(
   return match[1];
 }
 
+function renderOrderOperationsRuntime(
+  orderEntityKey: string,
+  catalogEntityKey: string | undefined,
+): string {
+  if (!catalogEntityKey) {
+    throw new Error(
+      "Locked commerce.order-operations requires a locked Catalog handler.",
+    );
+  }
+  return String.raw`  private readonly orderOperationReceipts = new Map<string, { payment: { due: string; captured: string; refunded: string }; keys: string[] }>();
+
+  private decimalToMinorUnits(value: unknown): bigint {
+    const decimal = typeof value === "number" && Number.isFinite(value) ? value.toFixed(2) : value;
+    if (typeof decimal !== "string" || !/^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/.test(decimal)) {
+      throw new Error("Order operation amount is invalid.");
+    }
+    const [whole, fraction = ""] = decimal.split(".");
+    return BigInt(whole) * 100n + BigInt(fraction.padEnd(2, "0"));
+  }
+
+  private minorUnitsToDecimal(value: bigint): string {
+    return (value / 100n).toString() + "." + (value % 100n).toString().padStart(2, "0");
+  }
+
+  private async orderOperationDue(orderRecordId: string): Promise<string> {
+    const items = await this.store.listCartItems(${JSON.stringify(orderEntityKey)}, orderRecordId);
+    if (items.length === 0) throw new Error("Order operations require at least one cart item.");
+    let total = 0n;
+    for (const item of items) {
+      const catalogRecord = await this.store.find(${JSON.stringify(catalogEntityKey)}, item.catalogRecordId);
+      if (!catalogRecord) throw new Error("Order operation catalog record was not found.");
+      total += this.decimalToMinorUnits(catalogRecord.price) * BigInt(item.quantity);
+    }
+    return this.minorUnitsToDecimal(total);
+  }
+
+  private async orderOperationState(record: StoredRecord): Promise<import("./capabilities/contract.js").CommerceOrderOperationState> {
+    const receipt = this.orderOperationReceipts.get(record.id);
+    const due = receipt?.payment.due ?? await this.orderOperationDue(record.id);
+    const captured = receipt?.payment.captured ?? (record.status === "paid" || record.status === "fulfilled" ? due : "0.00");
+    const refunded = receipt?.payment.refunded ?? "0.00";
+    if (typeof record.status !== "string" || !Number.isSafeInteger(record.version) || (record.version as number) < 0) {
+      throw new Error("Order operation record is invalid.");
+    }
+    return {
+      orderId: record.id,
+      version: record.version as number,
+      status: record.status as import("./capabilities/contract.js").CommerceOrderOperationStatus,
+      payment: { due, captured, refunded },
+      processedIdempotencyKeys: receipt?.keys ?? [],
+    };
+  }
+
+  private paymentAfterOperation(
+    state: import("./capabilities/contract.js").CommerceOrderOperationState,
+    command: import("./capabilities/contract.js").CommerceOrderOperationCommand,
+    plan: import("./capabilities/contract.js").CommerceOrderOperationPlan,
+  ): { due: string; captured: string; refunded: string } {
+    const due = this.decimalToMinorUnits(state.payment.due);
+    let captured = this.decimalToMinorUnits(state.payment.captured);
+    let refunded = this.decimalToMinorUnits(state.payment.refunded);
+    const amount = command.amount ? this.decimalToMinorUnits(command.amount) : 0n;
+    if (plan.paymentDelta === "capture-partial") captured += amount;
+    if (plan.paymentDelta === "capture-final") captured = due;
+    if (plan.paymentDelta === "refund-partial") refunded += amount;
+    if (plan.paymentDelta === "refund-full") refunded = captured;
+    return {
+      due: this.minorUnitsToDecimal(due),
+      captured: this.minorUnitsToDecimal(captured),
+      refunded: this.minorUnitsToDecimal(refunded),
+    };
+  }
+
+  async applyOrderOperation(
+    role: string,
+    entityKey: string,
+    recordId: string,
+    input: {
+      command: import("./capabilities/contract.js").CommerceOrderOperationCommandName;
+      expectedVersion: number;
+      idempotencyKey: string;
+      reason?: string;
+      amount?: string;
+    },
+  ): Promise<{ record: StoredRecord; plan: import("./capabilities/contract.js").CommerceOrderOperationPlan }> {
+    if (entityKey !== ${JSON.stringify(orderEntityKey)}) {
+      throw new Error("Locked order operations cannot target this entity.");
+    }
+    this.entity(entityKey);
+    const record = await this.store.find(entityKey, recordId);
+    if (!record) throw new Error("Order operation record was not found.");
+    const state = await this.orderOperationState(record);
+    const command: import("./capabilities/contract.js").CommerceOrderOperationCommand = {
+      ...input,
+      orderId: recordId,
+      actorRole: role,
+    };
+    const plan = getOrderOperationsHandler().plan(state, command);
+    const flow = this.flow(entityKey);
+    if (!flow?.states.includes(plan.nextState)) {
+      throw new Error("Locked order operation cannot produce an undeclared Flow state.");
+    }
+    const updated = await getOrderHandler().transition({
+      role,
+      entityKey,
+      recordId,
+      nextState: plan.nextState,
+      expectedVersion: input.expectedVersion,
+      idempotencyKey: input.idempotencyKey,
+      store: this.store,
+      assertAllowed: (candidateRole, resource, action) => this.assertAllowed(candidateRole, resource, action),
+    });
+    this.orderOperationReceipts.set(recordId, {
+      payment: this.paymentAfterOperation(state, command, plan),
+      keys: [...state.processedIdempotencyKeys, input.idempotencyKey],
+    });
+    await this.store.appendAudit({ actor: role, action: plan.auditAction, entity: entityKey, recordId, at: new Date().toISOString() });
+    return { record: updated, plan };
+  }
+`;
+}
+
 function renderApplicationRuntime(
   graph: ApplicationGraphV1,
   useResolvedContributions: boolean,
@@ -1540,6 +1678,7 @@ function renderApplicationRuntime(
   usePackageLineConfigurationHandler: boolean,
   catalogEntityKey: string | undefined,
   orderEntityKey: string | undefined,
+  orderOperationsEntityKey: string | undefined,
 ): string {
   const commerce = hasCommerceCapabilities(graph);
   const capabilityRegistryImports = [
@@ -1549,6 +1688,7 @@ function renderApplicationRuntime(
       : []),
     ...(catalogEntityKey ? ["getCatalogHandler"] : []),
     ...(orderEntityKey ? ["getOrderHandler"] : []),
+    ...(orderOperationsEntityKey ? ["getOrderOperationsHandler"] : []),
     "getEffectHandler",
     "getRecordHandler",
     "getWorkflowHandler",
@@ -1693,6 +1833,14 @@ function renderApplicationRuntime(
     "    await this.assertAllowed(role, entityKey, 'update');",
     "  }",
     "",
+    ...(orderOperationsEntityKey
+      ? [
+          renderOrderOperationsRuntime(
+            orderOperationsEntityKey,
+            catalogEntityKey,
+          ),
+        ]
+      : []),
     "  private assertCapability(capabilityKey: string, operation: string): { key: string; providerId: string; operation: string } {",
     "    const capability = definition.capabilities.find((candidate) => candidate.key === capabilityKey && candidate.operation === operation);",
     "    if (!capability) {",
@@ -2992,6 +3140,12 @@ export function generateApplicationBundle(
     "order",
     "orderEntity",
   );
+  const orderOperationsEntityKey = lockedRuntimeHandlerEntity(
+    input.compositionLock,
+    "commerce.order-operations",
+    "orderOperations",
+    "orderEntity",
+  );
   const rootDirectory = `${graph.metadata.id}-${input.publishedRevisionId}`;
   const plannedFiles: PlannedGeneratedFile[] = [
     {
@@ -3240,6 +3394,7 @@ export function generateApplicationBundle(
           usePackageLineConfigurationHandler,
           catalogEntityKey,
           orderEntityKey,
+          orderOperationsEntityKey,
         ),
     },
     {

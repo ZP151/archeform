@@ -20,7 +20,7 @@ describe("Order Operations capability packages", () => {
 
     expect(asset.manifest).toMatchObject({
       key: "commerce.order-operations",
-      version: "1.0.0",
+      version: "1.0.1",
       lifecycle: "golden",
       runtimeHandlers: ["orderOperations"],
       provides: [{ interfaceKey: "commerce.order-operations", version: "v1" }],

@@ -1,0 +1,80 @@
+import type { CapabilityAssetV1 } from "../contract.js";
+
+export const orderOperationsAssetV1_0_1: CapabilityAssetV1 = {
+  manifest: {
+    apiVersion: "factory.capability/v1",
+    bindingContract: "factory.capability-binding/v1",
+    key: "commerce.order-operations",
+    version: "1.0.1",
+    category: "commerce",
+    name: "Order operations",
+    description:
+      "Applies locked order holds, amendments, payment, cancellation, and refund decisions.",
+    packageRoot: "packages/capabilities/assets/commerce.order-operations/1.0.1",
+    manifestDigest:
+      "sha256:db32051bfe4f2c8b482bed4965694c157da4c30a65ff3066113c045522869848",
+    lifecycle: "golden",
+    profiles: [
+      "restaurant-ordering",
+      "simple-ecommerce",
+      "retail-counter",
+      "grocery-pickup",
+    ],
+    effects: [
+      "order.hold",
+      "order.release-hold",
+      "order.amend",
+      "order.operation.cancel",
+      "order.payment.record",
+      "order.payment.capture",
+      "order.refund",
+    ],
+    inputSchema: [
+      { key: "orderEntity", type: "domain.entity", required: true },
+      { key: "orderFlow", type: "flow.flow", required: true },
+      { key: "auditEntity", type: "domain.entity", required: true },
+      { key: "inventoryEntity", type: "domain.entity", required: true },
+      { key: "customerRole", type: "policy.role", required: true },
+      { key: "merchantRole", type: "policy.role", required: true },
+    ],
+    outputSlots: [
+      "api.runtime",
+      "database.schema",
+      "flow.effect",
+      "test.fixture",
+    ],
+    runtimeHandlers: ["orderOperations"],
+    templates: [
+      {
+        id: "api-capability-module",
+        source: "templates/api/capability-module.ts.tpl",
+        target: "api/src/capabilities/commerce.order-operations.ts",
+        outputSlot: "api.runtime",
+        digest:
+          "sha256:56287a6d689ea22a81356862d247f6860285cfa1a31b8e526ca631ed2a36f7e7",
+      },
+    ],
+    parameters: [
+      { key: "orderEntity", type: "graph-symbol", required: true },
+      { key: "orderFlow", type: "graph-symbol", required: true },
+      { key: "auditEntity", type: "graph-symbol", required: true },
+      { key: "inventoryEntity", type: "graph-symbol", required: true },
+      { key: "customerRole", type: "graph-symbol", required: true },
+      { key: "merchantRole", type: "graph-symbol", required: true },
+    ],
+    requires: [
+      { interfaceKey: "commerce.order-event", version: "v1" },
+      { interfaceKey: "commerce.stock-movement", version: "v1" },
+    ],
+    provides: [{ interfaceKey: "commerce.order-operations", version: "v1" }],
+    verification: {
+      fixture: "fixtures/default.json",
+      fixtureDigest:
+        "sha256:357e0cbf10dd08ba2b4a426d1ac6a548cf1436d3d804e043b0debdf0e1c5f2ad",
+      contractTest: "tests/contract.json",
+      contractTestDigest:
+        "sha256:09e273e845299287a20cefc4249cb87cd4d3f0622ee6a555aa060f26387db3dc",
+      status: "verified",
+    },
+  },
+};

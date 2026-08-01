@@ -22,7 +22,7 @@ describe("Order Operations composition profiles", () => {
         expect.arrayContaining([
           expect.objectContaining({
             key: "commerce.order-operations",
-            version: "1.0.0",
+            version: "1.0.1",
           }),
         ]),
       );

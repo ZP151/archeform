@@ -27,6 +27,7 @@ import { orderAsset } from "./commerce/order.js";
 import { orderAssetV1_1_0 } from "./commerce/order-v1-1-0.js";
 import { orderAssetV1_2_0 } from "./commerce/order-v1-2-0.js";
 import { orderOperationsAssetV1_0_0 } from "./commerce/order-operations-v1-0-0.js";
+import { orderOperationsAssetV1_0_1 } from "./commerce/order-operations-v1-0-1.js";
 import { simulatedPaymentAsset } from "./commerce/simulated-payment.js";
 import { simulatedPaymentAssetV1_0_1 } from "./commerce/simulated-payment-v1-0-1.js";
 import { restaurantTableSessionAsset } from "./restaurant/table-session.js";
@@ -66,6 +67,7 @@ export {
   orderAssetV1_1_0,
   orderAssetV1_2_0,
   orderOperationsAssetV1_0_0,
+  orderOperationsAssetV1_0_1,
   restaurantCashierAsset,
   restaurantCashierAssetV1_1_0,
   restaurantKitchenAsset,
@@ -97,7 +99,7 @@ export const currentCapabilityAssets: readonly CapabilityAssetV1[] =
     inventoryAssetV1_1_0,
     inventoryLedgerAssetV1_0_0,
     orderAssetV1_2_0,
-    orderOperationsAssetV1_0_0,
+    orderOperationsAssetV1_0_1,
     simulatedPaymentAssetV1_0_1,
     restaurantTableSessionAssetV1_1_0,
     restaurantMenuAsset,
@@ -109,6 +111,7 @@ export const currentCapabilityAssets: readonly CapabilityAssetV1[] =
 
 export const capabilityAssets: readonly CapabilityAssetV1[] = Object.freeze([
   ...currentCapabilityAssets,
+  orderOperationsAssetV1_0_0,
   lineConfigurationAssetV1_0_0,
   lineConfigurationAssetV1_1_0,
   catalogAssetV1_1_0,

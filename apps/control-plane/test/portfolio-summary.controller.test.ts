@@ -50,7 +50,7 @@ const summary = {
   ],
   capabilities: {
     golden: 20,
-    lockedVersions: 39,
+    lockedVersions: 40,
     candidate: 0,
     provider: 0,
   },

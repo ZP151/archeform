@@ -44,6 +44,21 @@ type GeneratedRuntime = {
     event: string,
     options?: { expectedVersion?: number; idempotencyKey?: string },
   ): Promise<Record<string, unknown> & { id: string; version?: number }>;
+  applyOrderOperation(
+    role: string,
+    entityKey: string,
+    recordId: string,
+    input: {
+      command: "refund";
+      expectedVersion: number;
+      idempotencyKey: string;
+      amount: string;
+      reason: string;
+    },
+  ): Promise<{
+    record: Record<string, unknown> & { id: string; version?: number };
+    plan: { auditAction: string; paymentDelta: string };
+  }>;
 };
 
 function ecommerceFiles() {
@@ -105,6 +120,20 @@ async function withGeneratedRuntime<T>(
 }
 
 describe("Order Operations runtime compilation", () => {
+  it("emits the locked shared order-operations handler for a commerce Profile", () => {
+    const files = ecommerceFiles();
+
+    expect(files["api/src/capabilities/contract.ts"]).toContain(
+      "export interface OrderOperationsHandler",
+    );
+    expect(files["api/src/capabilities/registry.ts"]).toContain(
+      "export function getOrderOperationsHandler",
+    );
+    expect(
+      files["api/src/capabilities/commerce.order-operations.ts"],
+    ).toContain("planCommerceOrderOperation");
+  });
+
   it("delegates catalog reads only to the locked Catalog handler", () => {
     const files = ecommerceFiles();
 
@@ -142,6 +171,38 @@ describe("Order Operations runtime compilation", () => {
       "getOrderHandler().transition({",
     );
     expect(files["api/prisma/schema.prisma"]).toContain("version Int");
+  });
+
+  it("applies a refund through the locked order-operations handler", async () => {
+    await withGeneratedRuntime(async (runtime) => {
+      const order = await runtime.create("shopper", "order", {});
+      await runtime.addCartItem("shopper", "order", order.id, {
+        catalogEntity: "product",
+        catalogRecordId: "everyday-tote",
+        quantity: 1,
+      });
+      await runtime.transition("shopper", "order", order.id, "submit", {
+        expectedVersion: 0,
+        idempotencyKey: "order-submit-refund-1",
+      });
+      await runtime.transition("shopper", "order", order.id, "pay", {
+        expectedVersion: 1,
+        idempotencyKey: "order-pay-refund-1",
+      });
+
+      await expect(
+        runtime.applyOrderOperation("merchant", "order", order.id, {
+          command: "refund",
+          expectedVersion: 2,
+          idempotencyKey: "order-refund-1",
+          amount: "4.00",
+          reason: "Customer request",
+        }),
+      ).resolves.toMatchObject({
+        record: { status: "paid", version: 3 },
+        plan: { auditAction: "order.refunded", paymentDelta: "refund-partial" },
+      });
+    });
   });
 
   it("executes catalog, cart, and versioned order operations through package handlers", async () => {
