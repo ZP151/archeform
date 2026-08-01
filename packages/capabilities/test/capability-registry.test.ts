@@ -1907,7 +1907,7 @@ describe("capability catalog", () => {
     ]);
   });
 
-  it("selects only compatible Transaction V2 lifecycle packages for new Generic Commerce drafts", () => {
+  it("registers exact Transaction V2 lifecycle packages without activating Generic Commerce drafts", () => {
     const genericProfiles = [
       "simple-ecommerce",
       "retail-counter",
@@ -1919,11 +1919,11 @@ describe("capability catalog", () => {
       expect(draft.assetLocks).toContainEqual(
         expect.objectContaining({
           key: "commerce.transaction",
-          version: "2.2.0",
+          version: "2.1.0",
         }),
       );
       expect(draft.assetLocks).toContainEqual(
-        expect.objectContaining({ key: "commerce.order", version: "2.1.0" }),
+        expect.objectContaining({ key: "commerce.order", version: "2.0.3" }),
       );
     }
     const restaurantLocks = composeDefaultCapabilityDraft({
@@ -1956,13 +1956,62 @@ describe("capability catalog", () => {
       ),
     ).toHaveLength(1);
 
-    const selections = composeDefaultCapabilityDraft({
+    const defaultSelections = composeDefaultCapabilityDraft({
       profile: "simple-ecommerce",
     }).graph.integration.compositionSelections!;
     const graphChecksum = `sha256:${"a".repeat(64)}`;
+    const defaultLock = createCapabilityCompositionLock({
+      graphChecksum,
+      selections: defaultSelections,
+    });
+    expect(defaultLock.packages).toContainEqual(
+      expect.objectContaining({
+        lock: expect.objectContaining({
+          key: "commerce.transaction",
+          version: "2.1.0",
+        }),
+      }),
+    );
+    expect(defaultLock.packages).toContainEqual(
+      expect.objectContaining({
+        lock: expect.objectContaining({
+          key: "commerce.order",
+          version: "2.0.3",
+        }),
+      }),
+    );
+
+    const successorOrder = capabilityAssets.find(
+      ({ manifest }) =>
+        manifest.key === "commerce.order" && manifest.version === "2.1.0",
+    )!;
+    const successorTransaction = capabilityAssets.find(
+      ({ manifest }) =>
+        manifest.key === "commerce.transaction" && manifest.version === "2.2.0",
+    )!;
+    expect(
+      resolveCapabilityAssetLock(lockCapabilityAsset(successorOrder)).manifest
+        .version,
+    ).toBe("2.1.0");
+    expect(
+      resolveCapabilityAssetLock(lockCapabilityAsset(successorTransaction))
+        .manifest.version,
+    ).toBe("2.2.0");
+    const successorSelections = defaultSelections.map((selection) => {
+      if (selection.lock.key === "commerce.order") {
+        return { ...selection, lock: lockCapabilityAsset(successorOrder) };
+      }
+      if (selection.lock.key === "commerce.transaction") {
+        return {
+          ...selection,
+          lock: lockCapabilityAsset(successorTransaction),
+        };
+      }
+      return selection;
+    });
     const lock = createCapabilityCompositionLock({
       graphChecksum,
-      selections,
+      selections: successorSelections,
     });
     expect(lock.packages).toContainEqual(
       expect.objectContaining({
@@ -1982,7 +2031,7 @@ describe("capability catalog", () => {
     );
     expect(() =>
       createVerifiedCapabilityCompositionLock(
-        { graphChecksum, selections },
+        { graphChecksum, selections: successorSelections },
         resolve(dirname(fileURLToPath(import.meta.url)), "../../.."),
       ),
     ).not.toThrow();
@@ -1999,12 +2048,12 @@ describe("capability catalog", () => {
       "Generic order lifecycle requires one compatible Transaction V2 executor and operation adapter";
 
     for (const mixedSelections of [
-      selections.map((selection) =>
+      successorSelections.map((selection) =>
         selection.lock.key === "commerce.order"
           ? { ...selection, lock: lockCapabilityAsset(historicalOrder) }
           : selection,
       ),
-      selections.map((selection) =>
+      successorSelections.map((selection) =>
         selection.lock.key === "commerce.transaction"
           ? { ...selection, lock: lockCapabilityAsset(historicalTransaction) }
           : selection,

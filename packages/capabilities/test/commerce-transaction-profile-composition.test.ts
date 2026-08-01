@@ -63,12 +63,12 @@ describe("Commerce transaction profile composition", () => {
       }).graph.integration.compositionSelections?.map(({ lock }) => lock);
 
       expect(locks).toContainEqual(
-        expect.objectContaining({ key: "commerce.order", version: "2.1.0" }),
+        expect.objectContaining({ key: "commerce.order", version: "2.0.3" }),
       );
       expect(locks).toContainEqual(
         expect.objectContaining({
           key: "commerce.transaction",
-          version: "2.2.0",
+          version: "2.1.0",
         }),
       );
       expect(locks).not.toContainEqual(
@@ -78,17 +78,17 @@ describe("Commerce transaction profile composition", () => {
   );
 
   it.each(genericCommerceProfiles)(
-    "%s legacy Profile entry point selects the successor order lifecycle and transaction adapter locks",
+    "%s legacy Profile entry point retains the historical order lifecycle and transaction adapter locks",
     (profile) => {
       expect(legacyCapabilityLock(profile, "commerce.order")).toMatchObject({
         key: "commerce.order",
-        version: "2.1.0",
+        version: "2.0.3",
       });
       expect(
         legacyCapabilityLock(profile, "commerce.transaction"),
       ).toMatchObject({
         key: "commerce.transaction",
-        version: "2.2.0",
+        version: "2.1.0",
       });
     },
   );
