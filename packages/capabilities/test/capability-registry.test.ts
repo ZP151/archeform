@@ -634,6 +634,7 @@ describe("capability catalog", () => {
       "commerce.catalog",
       "commerce.cart",
       "commerce.line-configuration",
+      "commerce.money-pricing",
       "commerce.inventory",
       "commerce.inventory-ledger",
       "commerce.order",
@@ -731,7 +732,7 @@ describe("capability catalog", () => {
   });
 
   it("verifies every registered capability manifest against its declared digest", () => {
-    expect(capabilityAssets).toHaveLength(43);
+    expect(capabilityAssets).toHaveLength(44);
     for (const asset of capabilityAssets) {
       expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     }

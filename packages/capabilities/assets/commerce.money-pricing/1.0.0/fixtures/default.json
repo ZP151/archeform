@@ -1,0 +1,14 @@
+{
+  "currency": "USD",
+  "catalog": [{ "id": "tea", "unitMinor": "199" }],
+  "order": {
+    "id": "order-1",
+    "lines": [{ "catalogId": "tea", "quantity": 3 }]
+  },
+  "quote": {
+    "subtotalMinor": "597",
+    "discountMinor": "60",
+    "taxMinor": "46",
+    "totalMinor": "583"
+  }
+}

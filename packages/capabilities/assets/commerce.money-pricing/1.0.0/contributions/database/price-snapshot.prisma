@@ -1,0 +1,25 @@
+model PriceSnapshot {
+  id String @id @default(cuid())
+  orderEntity String
+  orderRecordId String
+  currency String
+  subtotalMinor String
+  discountMinor String
+  taxMinor String
+  totalMinor String
+  createdAt DateTime @default(now())
+  allocations PriceAllocation[]
+  @@unique([orderEntity, orderRecordId])
+}
+
+model PriceAllocation {
+  id String @id @default(cuid())
+  snapshotId String
+  lineRecordId String
+  subtotalMinor String
+  discountMinor String
+  taxMinor String
+  totalMinor String
+  snapshot PriceSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  @@unique([snapshotId, lineRecordId])
+}
