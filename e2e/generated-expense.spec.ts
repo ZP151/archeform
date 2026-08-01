@@ -15,7 +15,7 @@ test("enforces identity policy through the generated expense employee and manage
   await page.goto(expensesUrl.toString());
   await expect(page).toHaveURL(/\/expenses$/);
   await expect(
-    page.getByRole("heading", { name: "Expense approval" }),
+    page.getByRole("heading", { level: 1, name: /expense/i }),
   ).toBeVisible();
 
   await page.getByRole("link", { name: "New expense" }).click();

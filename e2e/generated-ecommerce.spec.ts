@@ -11,9 +11,7 @@ test("enforces identity policy through the generated ecommerce customer and oper
   page,
 }) => {
   await page.goto(generatedApplicationUrl!);
-  await expect(
-    page.getByRole("heading", { name: "Simple ecommerce" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: /ecommerce/i })).toBeVisible();
 
   const tote = page.locator("li").filter({ hasText: "Everyday tote" });
   await expect(tote).toHaveCount(1);
@@ -28,7 +26,15 @@ test("enforces identity policy through the generated ecommerce customer and oper
   await page.goto(checkoutUrl.toString());
   await expect(page).toHaveURL(/\/checkout$/);
   await expect(page.getByRole("heading", { name: "Checkout" })).toBeVisible();
+  const paymentCompleted = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      /\/api\/order\/[^/]+\/events\/pay$/.test(
+        new URL(response.url()).pathname,
+      ),
+  );
   await page.getByRole("button", { name: "Pay simulated payment" }).click();
+  expect((await paymentCompleted).ok()).toBeTruthy();
 
   await page.getByRole("link", { name: "Orders" }).click();
   await expect(page).toHaveURL(/\/orders$/);
