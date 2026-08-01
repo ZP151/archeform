@@ -693,7 +693,8 @@ describe("commercial profile composition", () => {
     ).filter(
       ({ lock }) =>
         lock.key !== "commerce.inventory-ledger" &&
-        lock.key !== "commerce.order-operations",
+        lock.key !== "commerce.order-operations" &&
+        lock.key !== "commerce.money-pricing",
     );
 
     const result = composeCapabilityDraft({
@@ -709,6 +710,11 @@ describe("commercial profile composition", () => {
     expect(
       result.composition.packages.some(
         ({ lock }) => lock.key === "commerce.order-operations",
+      ),
+    ).toBe(false);
+    expect(
+      result.composition.packages.some(
+        ({ lock }) => lock.key === "commerce.money-pricing",
       ),
     ).toBe(false);
   });

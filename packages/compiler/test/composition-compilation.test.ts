@@ -387,7 +387,7 @@ describe("immutable composition compilation", () => {
 
       expect(draft.integration).not.toHaveProperty("assetLocks");
       expect(selections).toHaveLength(
-        profile === "restaurant-ordering" ? 18 : 14,
+        profile === "restaurant-ordering" ? 19 : 15,
       );
       expect(publishedGraph.integration).not.toHaveProperty(
         "compositionSelections",
@@ -418,6 +418,12 @@ describe("immutable composition compilation", () => {
     expect(
       ecommerceInput.compositionLock.packages.map(({ lock }) => lock.key),
     ).toContain("commerce.simulated-payment");
+    expect(
+      restaurantInput.compositionLock.packages.map(({ lock }) => lock.key),
+    ).toContain("commerce.money-pricing");
+    expect(
+      ecommerceInput.compositionLock.packages.map(({ lock }) => lock.key),
+    ).toContain("commerce.money-pricing");
     expect(
       restaurantInput.compositionLock.packages.map(({ bindings }) => bindings),
     ).not.toEqual(

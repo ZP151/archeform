@@ -787,6 +787,7 @@ const compositionRecipes: Readonly<
       "commerce.inventory",
       "commerce.inventory-ledger",
       "commerce.line-configuration",
+      "commerce.money-pricing",
       "commerce.order",
       "commerce.order-operations",
       "core.identity-context",
@@ -809,6 +810,7 @@ const compositionRecipes: Readonly<
       "commerce.inventory",
       "commerce.inventory-ledger",
       "commerce.line-configuration",
+      "commerce.money-pricing",
       "commerce.order",
       "commerce.order-operations",
       "commerce.simulated-payment",
@@ -983,6 +985,13 @@ const baseProfileCompositionBindings: Readonly<
       catalogPage: { graphSymbol: "graph.page.customer-menu" },
       merchantPage: { graphSymbol: "graph.page.merchant-menu" },
     },
+    "commerce.money-pricing": {
+      orderEntity: { graphSymbol: "graph.domain.order" },
+      orderLineEntity: { graphSymbol: "graph.domain.order-line" },
+      catalogEntity: { graphSymbol: "graph.domain.menu-item" },
+      customerRole: { graphSymbol: "graph.policy.customer" },
+      merchantRole: { graphSymbol: "graph.policy.manager" },
+    },
     "commerce.order": {
       orderEntity: { graphSymbol: "graph.domain.order" },
       orderFlow: { graphSymbol: "graph.flow.restaurant-order" },
@@ -1091,6 +1100,13 @@ const baseProfileCompositionBindings: Readonly<
       merchantRole: { graphSymbol: "graph.policy.merchant" },
       catalogPage: { graphSymbol: "graph.page.catalog" },
       merchantPage: { graphSymbol: "graph.page.merchant-catalog" },
+    },
+    "commerce.money-pricing": {
+      orderEntity: { graphSymbol: "graph.domain.order" },
+      orderLineEntity: { graphSymbol: "graph.domain.product-line" },
+      catalogEntity: { graphSymbol: "graph.domain.product" },
+      customerRole: { graphSymbol: "graph.policy.shopper" },
+      merchantRole: { graphSymbol: "graph.policy.merchant" },
     },
     "commerce.order": {
       orderEntity: { graphSymbol: "graph.domain.order" },

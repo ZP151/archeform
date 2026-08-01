@@ -11,7 +11,7 @@ describe("toPortfolioHomeModel", () => {
           profile: "restaurant-ordering",
           label: "Restaurant ordering",
           category: "commerce",
-          requiredPackages: 17,
+          requiredPackages: 18,
           optionalPackages: 1,
         },
       ],
@@ -52,8 +52,8 @@ describe("toPortfolioHomeModel", () => {
         },
       ],
       capabilities: {
-        golden: 20,
-        lockedVersions: 40,
+        golden: 21,
+        lockedVersions: 44,
         candidate: 0,
         provider: 0,
       },
@@ -90,7 +90,7 @@ describe("toPortfolioHomeModel", () => {
         {
           id: "restaurant-ordering",
           label: "Restaurant ordering",
-          detail: "17 required · 1 optional",
+          detail: "18 required · 1 optional",
         },
       ],
       readiness: [
@@ -114,8 +114,8 @@ describe("toPortfolioHomeModel", () => {
         },
       ],
       capabilityMetrics: [
-        { label: "Golden", value: 20, tone: "ready" },
-        { label: "Versions", value: 40, tone: "neutral" },
+        { label: "Golden", value: 21, tone: "ready" },
+        { label: "Versions", value: 44, tone: "neutral" },
         { label: "Candidates", value: 0, tone: "neutral" },
         { label: "Providers", value: 0, tone: "neutral" },
       ],
