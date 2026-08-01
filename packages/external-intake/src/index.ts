@@ -46,6 +46,21 @@ export {
   type CreateCandidatePortPlanInputV1,
 } from "./candidate-port-plan.js";
 export {
+  capabilityFamilyKeys,
+  createDiscoveryIntakeBatch,
+  createDiscoveryRecord,
+  parseDiscoveryRecord,
+  triageDiscoveryRecords,
+  type CapabilityFamilyKey,
+  type DiscoveryGateCategoryV1,
+  type DiscoveryProfileHintV1,
+  type DiscoveryRecordInputV1,
+  type DiscoveryRecordV1,
+  type DiscoveryReuseModeV1,
+  type DiscoveryStatusV1,
+  type DiscoveryTriageResultV1,
+} from "./discovery.js";
+export {
   ExternalIntakeStore,
   type StoredBlobRef,
   type StoredRecordRef,
