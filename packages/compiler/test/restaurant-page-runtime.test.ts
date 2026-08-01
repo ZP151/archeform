@@ -420,15 +420,16 @@ describe("generated Restaurant Customer page runtime", () => {
   });
 
   it.each(["expense-approval", "simple-ecommerce"] as const)(
-    "keeps the generic %s proxy contract unchanged",
+    "routes the generic %s proxy through its fixture session",
     (profile) => {
       const graph = composeProfileDraft({ profile }).graph;
       const files = generatedFiles(graph);
       const proxy = files["web/app/api/[...path]/route.ts"]!;
 
       expect(proxy).toContain(
-        "headers: { 'content-type': request.headers.get('content-type') ?? 'application/json', 'x-factory-role': request.headers.get('x-factory-role') ?? 'anonymous' },",
+        "headers: { 'content-type': request.headers.get('content-type') ?? 'application/json', 'x-factory-fixture-session': request.headers.get('x-factory-fixture-session') ?? '' },",
       );
+      expect(proxy).not.toContain("x-factory-role");
       expect(proxy).not.toContain("x-factory-table-session-token");
       expect(proxy).not.toContain("x-factory-idempotency-key");
       expect(proxy).not.toContain("export const PATCH = proxy;");

@@ -624,6 +624,114 @@ export function resolveTargetContributions(
   );
 }
 
+interface IdentityPolicyRuntimeContribution {
+  readonly fixtureSessions: readonly {
+    readonly principalId: string;
+    readonly sessionId: string;
+    readonly tenantId: string;
+    readonly roles: readonly string[];
+    readonly expiresAt: string;
+  }[];
+}
+
+function resolveIdentityPolicyRuntimeContribution(
+  input: PublishedGraphInput,
+  contributions: readonly ResolvedTargetContribution[],
+): IdentityPolicyRuntimeContribution | undefined {
+  const selection = input.compositionLock.packages.find(
+    ({ lock }) => lock.key === "core.identity-policy",
+  );
+  if (!selection) return undefined;
+
+  const asset = resolveCapabilityAssetLock(selection.lock);
+  const providesAuthorization = asset.manifest.provides?.some(
+    (provided) =>
+      provided.interfaceKey === "authorization.decision" &&
+      provided.version === "v1",
+  );
+  if (!providesAuthorization) {
+    throw new Error(
+      "Locked identity policy package does not provide authorization.decision@v1.",
+    );
+  }
+  for (const binding of [
+    "principalEntity",
+    "sessionEntity",
+    "defaultRole",
+    "authenticatedRole",
+  ]) {
+    if (!selection.bindings[binding]) {
+      throw new Error(
+        `Locked identity policy package is missing '${binding}' binding.`,
+      );
+    }
+  }
+
+  const owned = contributions.filter(
+    (contribution) => contribution.packageKey === asset.manifest.key,
+  );
+  const service = owned.find(
+    (contribution) =>
+      contribution.contributionId === "local-fixture-service" &&
+      contribution.outputSlot === "api.service",
+  );
+  const policy = owned.find(
+    (contribution) =>
+      contribution.contributionId === "deny-by-default-policy" &&
+      contribution.outputSlot === "policy.rule",
+  );
+  const fixture = owned.find(
+    (contribution) =>
+      contribution.contributionId === "local-fixture-sessions" &&
+      contribution.outputSlot === "test.fixture",
+  );
+  if (!service || !policy || !fixture) {
+    throw new Error(
+      "Locked identity policy package is missing a required local contribution.",
+    );
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(fixture.content);
+  } catch {
+    throw new Error("Locked identity policy fixture is not valid JSON.");
+  }
+  if (
+    !parsed ||
+    typeof parsed !== "object" ||
+    (parsed as { mode?: unknown }).mode !== "local-fixture" ||
+    !Array.isArray((parsed as { sessions?: unknown }).sessions)
+  ) {
+    throw new Error("Locked identity policy fixture has an invalid shape.");
+  }
+  const template = (parsed as { sessions: readonly unknown[] }).sessions.find(
+    (session): session is { tenantId: string; expiresAt: string } =>
+      !!session &&
+      typeof session === "object" &&
+      typeof (session as { tenantId?: unknown }).tenantId === "string" &&
+      typeof (session as { expiresAt?: unknown }).expiresAt === "string" &&
+      Number.isFinite(Date.parse((session as { expiresAt: string }).expiresAt)),
+  );
+  if (!template) {
+    throw new Error("Locked identity policy fixture has no valid session.");
+  }
+
+  return Object.freeze({
+    fixtureSessions: Object.freeze(
+      input.graph.policy.roles.map((role) =>
+        Object.freeze({
+          principalId: `fixture-principal-${role}`,
+          sessionId: `fixture-session-${role}`,
+          tenantId: template.tenantId,
+          roles: Object.freeze([role]),
+          expiresAt: template.expiresAt,
+        }),
+      ),
+    ),
+  });
+}
+
 interface ResolvedCapabilityTemplateContribution extends ResolvedCapabilityAssetTemplate {
   readonly effects: readonly string[];
   readonly operations: readonly { capability: string; operation: string }[];
@@ -2555,6 +2663,7 @@ function renderFaviconRoute(): string {
 function renderPageRuntime(
   graph: ApplicationGraphV1,
   orderEntityKey: string | undefined,
+  useFixtureSessions: boolean,
 ): string {
   const projection = createGeneratedPageRuntimeProjection(graph, {
     ...(orderEntityKey ? { orderEntity: orderEntityKey } : {}),
@@ -2619,7 +2728,9 @@ function renderPageRuntime(
     "}",
     "",
     "function requestHeaders(role: string): HeadersInit {",
-    "  return { 'content-type': 'application/json', 'x-factory-role': role };",
+    useFixtureSessions
+      ? "  return { 'content-type': 'application/json', 'x-factory-fixture-session': `fixture-session-${role}` };"
+      : "  return { 'content-type': 'application/json', 'x-factory-role': role };",
     "}",
     "",
     "function entityFor(key: string | undefined): RuntimeEntity | undefined {",
@@ -2810,7 +2921,10 @@ function renderPageRuntime(
   ].join("\n");
 }
 
-function renderWebProxyRoute(restaurant: boolean): string {
+function renderWebProxyRoute(
+  restaurant: boolean,
+  useFixtureSessions: boolean,
+): string {
   return [
     'export const dynamic = "force-dynamic";',
     "",
@@ -2834,7 +2948,9 @@ function renderWebProxyRoute(restaurant: boolean): string {
     "    method: request.method,",
     restaurant
       ? "    headers: forwardedHeaders,"
-      : "    headers: { 'content-type': request.headers.get('content-type') ?? 'application/json', 'x-factory-role': request.headers.get('x-factory-role') ?? 'anonymous' },",
+      : useFixtureSessions
+        ? "    headers: { 'content-type': request.headers.get('content-type') ?? 'application/json', 'x-factory-fixture-session': request.headers.get('x-factory-fixture-session') ?? '' },"
+        : "    headers: { 'content-type': request.headers.get('content-type') ?? 'application/json', 'x-factory-role': request.headers.get('x-factory-role') ?? 'anonymous' },",
     "    body: ['GET', 'HEAD'].includes(request.method) ? undefined : await request.text(),",
     "  });",
     "  return new Response(await response.text(), { status: response.status, headers: { 'content-type': response.headers.get('content-type') ?? 'application/json' } });",
@@ -2936,22 +3052,74 @@ function renderApiMain(
   graph: ApplicationGraphV1,
   usePackageLineConfigurationHandler: boolean,
   usePackageMoneyPricingHandler: boolean,
+  identityPolicy: IdentityPolicyRuntimeContribution | undefined,
 ): string {
   const commerce = hasCommerceCapabilities(graph);
+  const identityGuard = identityPolicy
+    ? [
+        'import { authorizeDeclaredAction, resolveFixturePrincipal, type LocalPrincipalContext } from "./capabilities/core.identity-policy.js";',
+      ]
+    : [];
+  const roleResolver = identityPolicy
+    ? [
+        `const localFixtureSessions: readonly LocalPrincipalContext[] = ${JSON.stringify(identityPolicy.fixtureSessions, null, 2)};`,
+        `const localPolicyRules = ${JSON.stringify(
+          graph.policy.permissions.flatMap((permission) =>
+            permission.actions.map((action) => ({
+              role: permission.role,
+              resource: permission.resource,
+              action,
+            })),
+          ),
+          null,
+          2,
+        )} as const;`,
+        'const localFixtureNow = "2026-01-01T00:00:00.000Z";',
+        "",
+        "function headerValue(request: { headers: Record<string, string | string[] | undefined> }, name: string): string | undefined {",
+        "  const value = request.headers[name];",
+        "  return typeof value === 'string' && value ? value : undefined;",
+        "}",
+        "",
+        "export function resolvePrincipalContext(request: { headers: Record<string, string | string[] | undefined> }): LocalPrincipalContext {",
+        "  const sessionId = headerValue(request, 'x-factory-fixture-session');",
+        "  const principal = resolveFixturePrincipal(localFixtureSessions.find((candidate) => candidate.sessionId === sessionId), localFixtureNow);",
+        "  if (!principal) throw new Error('Identity policy denied: missing-session.');",
+        "  return principal;",
+        "}",
+        "",
+        "function roleFrom(request: { headers: Record<string, string | string[] | undefined> }, resource?: string, action?: string): string {",
+        "  const principal = resolvePrincipalContext(request);",
+        "  if (resource && action) {",
+        "    const decision = authorizeDeclaredAction({ principal, resource, action, rules: localPolicyRules, now: localFixtureNow });",
+        "    if (!decision.allowed) throw new Error(`Identity policy denied: ${decision.reason}.`);",
+        "    const role = principal.roles.find((candidate) => localPolicyRules.some((rule) => rule.role === candidate && rule.resource === resource && rule.action === action));",
+        "    if (!role) throw new Error('Identity policy denied: deny.');",
+        "    return role;",
+        "  }",
+        "  const role = principal.roles[0];",
+        "  if (!role) throw new Error('Identity policy denied: deny.');",
+        "  return role;",
+        "}",
+      ]
+    : [
+        "function roleFrom(request: { headers: Record<string, string | string[] | undefined> }): string {",
+        "  const value = request.headers['x-factory-role'];",
+        "  return typeof value === 'string' && value ? value : 'anonymous';",
+        "}",
+      ];
   return [
     'import { Body, Controller, Get, HttpException, HttpStatus, Module, Param, Post, Req } from "@nestjs/common";',
     'import { NestFactory } from "@nestjs/core";',
     'import { PrismaClient } from "@prisma/client";',
     'import { ApplicationRuntime } from "./application-runtime.js";',
     'import { PrismaRecordStore } from "./prisma-record-store.js";',
+    ...identityGuard,
     "",
     "const prisma = new PrismaClient();",
     "const applicationRuntime = new ApplicationRuntime(new PrismaRecordStore(prisma));",
     "",
-    "function roleFrom(request: { headers: Record<string, string | string[] | undefined> }): string {",
-    "  const value = request.headers['x-factory-role'];",
-    "  return typeof value === 'string' && value ? value : 'anonymous';",
-    "}",
+    ...roleResolver,
     "",
     "function rejected(error: unknown): HttpException {",
     "  return new HttpException(error instanceof Error ? error.message : 'Request rejected.', HttpStatus.FORBIDDEN);",
@@ -3005,22 +3173,22 @@ function renderApiMain(
     "",
     "  @Get(':entity')",
     "  async list(@Param('entity') entity: string, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
-    "    try { return await applicationRuntime.list(roleFrom(request), entity); } catch (error) { throw rejected(error); }",
+    "    try { return await applicationRuntime.list(roleFrom(request, entity, 'read'), entity); } catch (error) { throw rejected(error); }",
     "  }",
     "",
     "  @Get(':entity/:recordId')",
     "  async read(@Param('entity') entity: string, @Param('recordId') recordId: string, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
-    "    try { return await applicationRuntime.read(roleFrom(request), entity, recordId); } catch (error) { throw rejected(error); }",
+    "    try { return await applicationRuntime.read(roleFrom(request, entity, 'read'), entity, recordId); } catch (error) { throw rejected(error); }",
     "  }",
     "",
     "  @Post(':entity')",
     "  async create(@Param('entity') entity: string, @Body() body: Record<string, unknown>, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
-    "    try { return await applicationRuntime.create(roleFrom(request), entity, body); } catch (error) { throw rejected(error); }",
+    "    try { return await applicationRuntime.create(roleFrom(request, entity, 'create'), entity, body); } catch (error) { throw rejected(error); }",
     "  }",
     "",
     "  @Post(':entity/:recordId/events/:event')",
     "  async transition(@Param('entity') entity: string, @Param('recordId') recordId: string, @Param('event') event: string, @Body() body: { expectedVersion: number; idempotencyKey: string }, @Req() request: { headers: Record<string, string | string[] | undefined> }) {",
-    "    try { return await applicationRuntime.transition(roleFrom(request), entity, recordId, event, body); } catch (error) { throw rejected(error); }",
+    "    try { return await applicationRuntime.transition(roleFrom(request, entity, 'read'), entity, recordId, event, body); } catch (error) { throw rejected(error); }",
     "  }",
     "}",
     "",
@@ -3387,6 +3555,10 @@ export function generateApplicationBundle(
   const renderedTargetContributions = targetContributionPlans.map(
     renderTargetContribution,
   );
+  const identityPolicy = resolveIdentityPolicyRuntimeContribution(
+    input,
+    renderedTargetContributions,
+  );
   const orderOperationsPersistence =
     resolveOrderOperationsPersistenceContribution(
       input,
@@ -3555,7 +3727,7 @@ export function generateApplicationBundle(
       render: () =>
         restaurantRuntimeEnabled
           ? renderRestaurantPageRuntime(rendererGraph)
-          : renderPageRuntime(graph, orderEntityKey),
+          : renderPageRuntime(graph, orderEntityKey, !!identityPolicy),
     },
     ...(restaurantRuntimeEnabled
       ? [
@@ -3580,7 +3752,8 @@ export function generateApplicationBundle(
     },
     {
       path: "web/app/api/[...path]/route.ts",
-      render: () => renderWebProxyRoute(restaurantRuntimeEnabled),
+      render: () =>
+        renderWebProxyRoute(restaurantRuntimeEnabled, !!identityPolicy),
     },
     {
       path: "web/app/globals.css",
@@ -3658,6 +3831,7 @@ export function generateApplicationBundle(
           graph,
           usePackageLineConfigurationHandler,
           usePackageMoneyPricingHandler,
+          identityPolicy,
         ),
     },
     ...(restaurantRuntimeEnabled
