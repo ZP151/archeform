@@ -366,3 +366,15 @@ git diff --check                             Exit 0.
 No real-model request was made during this remediation. Independent release
 review remains required before the durable notification outbox slice can be
 accepted.
+
+## Final independent release review (2026-08-02)
+
+Status: accepted for this capability slice. The independent review of
+`8a9a602..b6a6fc5` found no remaining P0, P1, or P2 issue. It verified that the
+committed verifier requires the exact post-update sentinel, both transaction
+milestones, and the generated PostgreSQL rollback outcome. It also verified
+that the root command rebuilds its Graph, capability, and compiler inputs from
+the current checkout before starting the generated Compose application.
+
+This acceptance does not expand notification delivery beyond its local fixture
+transport or authorize an external provider.
