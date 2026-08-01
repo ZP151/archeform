@@ -535,12 +535,30 @@ git commit -m "test: validate generated generic commerce projects"
 - Create: `packages/compiler/test/generated-generic-order-lifecycle-v2-postgres.test.ts`
 - Modify: `packages/compiler/test/generic-order-lifecycle-v2.test.ts`
 - Modify: `packages/compiler/package.json` only if an isolated live-test script is required.
+- Modify: `packages/capabilities/src/index.ts` only for successor default-lock activation.
+- Modify: `packages/capabilities/test/capability-registry.test.ts` only to
+  update the two default-lock assertions after the live suite is green; retain
+  historical-lock and revoked-package assertions unchanged.
+- Modify: `packages/capabilities/test/commerce-transaction-profile-composition.test.ts`
+  and `packages/capabilities/test/order-operations-profile.test.ts` only for
+  successor default-lock activation evidence.
+- Modify: `packages/compiler/test/order-operations-runtime.test.ts`,
+  `packages/compiler/test/commerce-transaction-runtime.test.ts`, and
+  `packages/compiler/test/profile-compilation.test.ts` only to replace stale
+  V1/default output and event-alias assertions with the accepted direct V2
+  pair's bound-Flow behavior.
+- Modify: `packages/compiler/test/compilation-plan.test.ts` only to update
+  fresh-Draft default-lock assertions, preserve fail-closed V2 binding
+  preflight expectations, and make synthetic commerce fixtures valid against
+  the current bound Published Flow. Do not weaken historical-replay coverage.
 - Modify: `docs/project-status.md`
 
 **Interfaces:**
 
 - Consumes: generated Generic Compose bundles and V2 Prisma receipt/aggregate schema.
 - Produces: reproducible live PostgreSQL evidence for the command ownership and failure semantics defined by ADR-0013.
+- Governed by: ADR-0017 for actual Draft -> Publish -> immutable Compilation
+  persistence, cached-image-only Compose startup, and failure-safe cleanup.
 
 - [ ] **Step 1: Write the live test harness and a failing two-client case**
 
@@ -558,9 +576,13 @@ expect(await readAggregate()).toMatchObject({
 });
 ```
 
-Use a unique Compose project name and ports for each test run. Start only the
-generated database/API needed by the test and tear it down with volumes in a
-`finally` block.
+Use a unique Compose project for each test run. Under ADR-0017, start only two
+empty temporary PostgreSQL services: `lifecycle-postgres` for the Control Plane
+Draft/Publish/Compilation schema and `generated-postgres` for the materialised
+generated application. Never connect to the existing Factory Control Plane
+database. The compiler may consume only the capturing queue's reloaded
+PublishedRevision graph and persisted composition lock. Tear down both services
+and volumes in failure-safe cleanup.
 
 - [ ] **Step 2: Run the live test and verify RED before the complete implementation**
 
@@ -595,7 +617,7 @@ or credentials.
 - [ ] **Step 6: Activate successors only after all live evidence passes**
 
 Update the three uncompiled Generic Draft recipe locks to
-`commerce.transaction@2.2.0` and `commerce.order@2.1.0`. Add a regression
+`commerce.transaction@2.2.1` and `commerce.order@2.1.2`. Add a regression
 that compiles each newly composed Draft into a Published Graph bundle before
 the recipe can be enabled. Historical locks and Restaurant remain unchanged.
 
