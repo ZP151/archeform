@@ -2,6 +2,35 @@
 
 Updated: 2026-08-01
 
+## Shared order-operations runtime — 2026-08-01
+
+`commerce.order-operations@1.0.1` is now a new immutable Golden package. The
+prior `1.0.0` directory and digest remain unchanged. New Drafts for Restaurant
+Ordering, Simple Ecommerce, Retail Counter, and Grocery Pickup select `1.0.1`;
+existing locks can still resolve the historical package identity.
+
+The generic generated commerce runtime now resolves the order-operations
+planner only from its immutable composition lock. It validates the command
+against the package contract, delegates the versioned state change to the
+locked order handler, and writes the package-defined audit event. The focused
+generated Ecommerce runtime regression proves a manager partial-refund
+transition from `paid` with a version increment and the expected audit action.
+
+Fresh focused evidence:
+
+- `@factory/capabilities`: 81 package, lock, and composition tests passed;
+- `@factory/compiler`: 89 order, commerce, Restaurant, and composition tests
+  passed; and
+- `@factory/compiler-worker`: 38 compilation and preview tests passed.
+
+This is not acceptance of the `commerce.order-operations` Profile capability.
+The generated generic runtime currently retains payment-receipt and
+idempotency receipt state in its process runtime. The next required slice is
+to make that state a package-declared, transactionally persistent generated
+database asset, then run both Restaurant and Ecommerce against new isolated
+Compose projects. The existing Factory containers do not constitute generated
+application acceptance evidence.
+
 ## Candidate Foundry discovery implementation — 2026-08-01
 
 Factory Pilot now has a bounded, quarantine-only discovery path for expanding
