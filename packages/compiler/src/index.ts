@@ -418,6 +418,9 @@ interface PlannedTargetContribution extends Omit<
 }
 
 interface GenericOrderLifecycleContributions {
+  readonly mode: "generic-v1" | "generic-v2";
+  readonly orderEntityKey: string;
+  readonly orderFlowKey: string;
   readonly create: PlannedTargetContribution;
   readonly operationAdapter: PlannedTargetContribution;
   readonly executor: PlannedTargetContribution;
@@ -711,6 +714,9 @@ function resolveGenericOrderLifecycleContributions(
   };
 
   return {
+    mode,
+    orderEntityKey: renderedBindingValue(orderEntity),
+    orderFlowKey: renderedBindingValue(orderFlow),
     create: exactlyOne(
       "commerce.order",
       orderVersion,
@@ -1092,7 +1098,7 @@ function renderCapabilityContract(graph: ApplicationGraphV1): string {
     ...(commerce
       ? [
           "export type CapabilityCommerceLineItem = { id: string; actor: string; orderEntity: string; orderRecordId: string; catalogEntity: string; catalogRecordId: string; quantity: number };",
-          "export type CapabilityConfiguredLine = { catalogEntity: string; catalogRecordId: string; quantity: number; priceDelta: number; options: readonly { id: string; label: string; priceDelta: number }[] };",
+          "export type CapabilityConfiguredLine = { catalogEntity: string; catalogRecordId: string; quantity: number; priceDelta: number; options: { id: string; label: string; priceDelta: number }[] };",
         ]
       : []),
     "",
@@ -1105,7 +1111,7 @@ function renderCapabilityContract(graph: ApplicationGraphV1): string {
     "  appendCapabilityEvent(event: { actor: string; capability: string; operation: string; entity: string; recordId: string; outcome: 'completed'; at: string }): Promise<void>;",
     ...(commerce
       ? [
-          "  listCartItems(orderEntity: string, orderRecordId: string): Promise<readonly CapabilityCommerceLineItem[]>;",
+          "  listCartItems(orderEntity: string, orderRecordId: string): Promise<CapabilityCommerceLineItem[]>;",
           "  addCartItem(input: Omit<CapabilityCommerceLineItem, 'id'>): Promise<CapabilityCommerceLineItem>;",
           "  adjustInventory(entityKey: string, recordId: string, fieldKey: string, delta: number): Promise<CapabilityStoredRecord>;",
           "  decrementInventory(entityKey: string, recordId: string, quantity: number): Promise<CapabilityStoredRecord>;",
@@ -1937,7 +1943,7 @@ function renderApplicationRuntime(
     ...(commerce
       ? [
           "  addCartItem(input: Omit<CommerceLineItem, 'id'>): Promise<CommerceLineItem>;",
-          "  listCartItems(orderEntity: string, orderRecordId: string): Promise<readonly CommerceLineItem[]>;",
+          "  listCartItems(orderEntity: string, orderRecordId: string): Promise<CommerceLineItem[]>;",
           "  adjustInventory(entityKey: string, recordId: string, fieldKey: string, delta: number): Promise<StoredRecord>;",
           "  decrementInventory(entityKey: string, recordId: string, quantity: number): Promise<StoredRecord>;",
         ]
@@ -2090,7 +2096,7 @@ function renderApplicationRuntime(
           "    this.cartItems.push(item);",
           "    return item;",
           "  }",
-          "  async listCartItems(orderEntity: string, orderRecordId: string): Promise<readonly CommerceLineItem[]> {",
+          "  async listCartItems(orderEntity: string, orderRecordId: string): Promise<CommerceLineItem[]> {",
           "    return this.cartItems.filter((item) => item.orderEntity === orderEntity && item.orderRecordId === orderRecordId);",
           "  }",
           "  async adjustInventory(entityKey: string, recordId: string, fieldKey: string, delta: number): Promise<StoredRecord> {",
@@ -2803,7 +2809,7 @@ function renderPrismaRecordStore(
           "    return asStoredRecord(await this.commerceLineDelegate().create({ data: input })) as CommerceLineItem;",
           "  }",
           "",
-          "  async listCartItems(orderEntity: string, orderRecordId: string): Promise<readonly CommerceLineItem[]> {",
+          "  async listCartItems(orderEntity: string, orderRecordId: string): Promise<CommerceLineItem[]> {",
           "    return (await this.commerceLineDelegate().findMany({ where: { orderEntity, orderRecordId }, orderBy: { createdAt: 'asc' } })) as CommerceLineItem[];",
           "  }",
           "",
@@ -3332,8 +3338,16 @@ function defaultJourneyValue(
   return `sample-${field.key}`;
 }
 
-function renderJourneyTest(graph: ApplicationGraphV1): string {
-  const flow = graph.flow.flows[0];
+function renderJourneyTest(
+  graph: ApplicationGraphV1,
+  genericOrderLifecycle?: GenericOrderLifecycleContributions,
+): string {
+  const flow =
+    genericOrderLifecycle?.mode === "generic-v2"
+      ? graph.flow.flows.find(
+          (candidate) => candidate.id === genericOrderLifecycle.orderFlowKey,
+        )
+      : graph.flow.flows[0];
   const entity =
     flow &&
     graph.domain.entities.find((candidate) => candidate.key === flow.entity);
@@ -3356,9 +3370,27 @@ function renderJourneyTest(graph: ApplicationGraphV1): string {
       "",
     ].join("\n");
   }
+  const boundV2OrderJourney =
+    genericOrderLifecycle?.mode === "generic-v2" &&
+    entity.key === genericOrderLifecycle.orderEntityKey &&
+    flow.id === genericOrderLifecycle.orderFlowKey;
+  const versionedOrderJourney =
+    boundV2OrderJourney ||
+    (genericOrderLifecycle?.mode !== "generic-v2" &&
+      entity.key === "order" &&
+      graph.integration.capabilities.some(
+        (capability) =>
+          capability.key === "order.transition" &&
+          capability.operation === "transition",
+      ));
+  const serverOwnedCreateFields = new Set(["id", "status", "version"]);
   const payload = Object.fromEntries(
     entity.fields
-      .filter((field) => field.required)
+      .filter(
+        (field) =>
+          field.required &&
+          (!boundV2OrderJourney || !serverOwnedCreateFields.has(field.key)),
+      )
       .map((field) => [
         field.key,
         defaultJourneyValue(field, flow.initialState),
@@ -3406,13 +3438,6 @@ function renderJourneyTest(graph: ApplicationGraphV1): string {
           effect.capability === "inventory.decrement",
       ),
     );
-  const versionedOrderJourney =
-    entity.key === "order" &&
-    graph.integration.capabilities.some(
-      (capability) =>
-        capability.key === "order.transition" &&
-        capability.operation === "transition",
-    );
   const capabilityEventPairs = [
     ...(cartJourney ? [{ capability: "cart.add", operation: "add" }] : []),
     ...capabilityEffects.flatMap((effect) =>
@@ -3439,7 +3464,9 @@ function renderJourneyTest(graph: ApplicationGraphV1): string {
       : []),
     ...transitions.flatMap((transition, index) => [
       `    await applicationRuntime.transition(${JSON.stringify(transition.roles?.[0] ?? createPermission.role)}, ${JSON.stringify(entity.key)}, record.id, ${JSON.stringify(transition.event)}${versionedOrderJourney ? `, { expectedVersion: ${index}, idempotencyKey: ${JSON.stringify(`generated-${transition.event}-${index + 1}`)} }` : ""});`,
-      `    expect(record.status).toBe(${JSON.stringify(transition.to)});`,
+      boundV2OrderJourney
+        ? `    expect((await applicationRuntime.read(${JSON.stringify(createPermission.role)}, ${JSON.stringify(entity.key)}, record.id)).status).toBe(${JSON.stringify(transition.to)});`
+        : `    expect(record.status).toBe(${JSON.stringify(transition.to)});`,
     ]),
     ...(auditRole
       ? [
@@ -3881,7 +3908,8 @@ export function generateApplicationBundle(
               build: "tsc -p tsconfig.json",
               start: "node dist/main.js",
               test: "vitest run",
-              typecheck: "tsc -p tsconfig.json --noEmit",
+              typecheck:
+                "prisma generate --schema prisma/schema.prisma && tsc -p tsconfig.json --noEmit",
             },
             dependencies: {
               "@prisma/client": "^6.19.0",
@@ -3919,7 +3947,7 @@ export function generateApplicationBundle(
               experimentalDecorators: true,
               emitDecoratorMetadata: true,
             },
-            include: ["src/**/*.ts"],
+            include: ["src/**/*.ts", "test/**/*.ts"],
           },
           null,
           2,
@@ -4079,7 +4107,8 @@ export function generateApplicationBundle(
     {
       path: "api/test/journey.generated.test.ts",
       render: () =>
-        restaurantRuntime()?.generatedTests ?? renderJourneyTest(graph),
+        restaurantRuntime()?.generatedTests ??
+        renderJourneyTest(graph, genericOrderLifecycle),
     },
     ...(restaurantRuntimeEnabled
       ? [

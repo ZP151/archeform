@@ -1,7 +1,17 @@
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
-import { spawn } from "node:child_process";
-import { dirname, join, normalize, resolve } from "node:path";
+import { execFile, spawn } from "node:child_process";
+import {
+  cp,
+  mkdtemp,
+  mkdir,
+  realpath,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join, normalize, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { promisify } from "node:util";
 
 import ts from "typescript";
 import { afterAll, describe, expect, it, vi } from "vitest";
@@ -19,6 +29,11 @@ const generatedDirectory = resolve(
   dirname(fileURLToPath(import.meta.url)),
   ".generated-generic-order-lifecycle-v2",
 );
+const repositoryRoot = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../..",
+);
+const execFileAsync = promisify(execFile);
 
 afterAll(async () => {
   await rm(generatedDirectory, { recursive: true, force: true });
@@ -158,6 +173,7 @@ const profileCases = [
     profile: "simple-ecommerce",
     role: "shopper",
     orderEntity: "order",
+    orderFlow: "ecommerce-order",
     initialState: "cart",
     declaredEvents: ["submit", "pay", "fulfil", "cancel"],
     catalogEntity: "product",
@@ -167,6 +183,7 @@ const profileCases = [
     profile: "retail-counter",
     role: "shopper",
     orderEntity: "counter-sale",
+    orderFlow: "counter-sale-flow",
     initialState: "cart",
     declaredEvents: ["submit", "pay", "issue-receipt", "cancel"],
     catalogEntity: "retail-item",
@@ -176,6 +193,7 @@ const profileCases = [
     profile: "grocery-pickup",
     role: "shopper",
     orderEntity: "pickup-order",
+    orderFlow: "pickup-order-flow",
     initialState: "cart",
     declaredEvents: ["submit", "pay", "pick", "ready", "handoff", "cancel"],
     catalogEntity: "grocery-item",
@@ -185,6 +203,7 @@ const profileCases = [
   profile: CommerceProfile;
   role: string;
   orderEntity: string;
+  orderFlow: string;
   initialState: string;
   declaredEvents: readonly string[];
   catalogEntity: string;
@@ -403,6 +422,7 @@ async function runGeneratedOrderAdapterTypecheck(
     const includedPaths = new Set([
       "api/package.json",
       "api/tsconfig.json",
+      "api/prisma/schema.prisma",
       "api/src/capabilities/commerce-order-transaction-operation-adapter.ts",
       "api/src/capabilities/commerce-transaction-executor.ts",
     ]);
@@ -415,14 +435,25 @@ async function runGeneratedOrderAdapterTypecheck(
           await writeFile(path, file.content, "utf8");
         }),
     );
+    await linkLocalDependencyTopology(resolve(directory, "api"));
     const command = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
     return await new Promise((resolveResult, rejectResult) => {
       const child = spawn(command, ["typecheck"], {
         cwd: resolve(directory, "api"),
         env: {
           ...process.env,
+          CHECKPOINT_DISABLE: "1",
           CI: "1",
+          PATH: [
+            resolve(repositoryRoot, "node_modules/.bin"),
+            resolve(repositoryRoot, "packages/compiler/node_modules/.bin"),
+            resolve(repositoryRoot, "apps/control-plane/node_modules/.bin"),
+            process.env.PATH ?? "",
+          ].join(process.platform === "win32" ? ";" : ":"),
           PNPM_DISABLE_SELF_UPDATE_CHECK: "1",
+          PRISMA_HIDE_UPDATE_MESSAGE: "1",
+          npm_config_offline: "true",
+          npm_config_update_notifier: "false",
         },
         shell: process.platform === "win32",
       });
@@ -437,7 +468,127 @@ async function runGeneratedOrderAdapterTypecheck(
       child.on("close", (exitCode) => resolveResult({ exitCode, output }));
     });
   } finally {
-    await rm(directory, { recursive: true, force: true });
+    await rm(directory, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 100,
+    });
+  }
+}
+
+async function linkLocalDependencyTopology(
+  projectDirectory: string,
+): Promise<void> {
+  const dependencyRoots = {
+    "@nestjs/common": "apps/control-plane/node_modules/@nestjs/common",
+    "@nestjs/core": "apps/control-plane/node_modules/@nestjs/core",
+    "@nestjs/platform-express":
+      "apps/control-plane/node_modules/@nestjs/platform-express",
+    "@types/node": "node_modules/@types/node",
+    casbin: "packages/compiler/node_modules/casbin",
+    prisma: "apps/control-plane/node_modules/prisma",
+    "reflect-metadata": "apps/control-plane/node_modules/reflect-metadata",
+    rxjs: "apps/control-plane/node_modules/rxjs",
+    typescript: "node_modules/typescript",
+    vitest: "packages/compiler/node_modules/vitest",
+    xstate: "packages/compiler/node_modules/xstate",
+  } as const;
+  const nodeModules = resolve(projectDirectory, "node_modules");
+  await mkdir(nodeModules, { recursive: true });
+  await Promise.all(
+    Object.entries(dependencyRoots).map(async ([dependency, sourcePath]) => {
+      const target = resolve(nodeModules, ...dependency.split("/"));
+      await mkdir(dirname(target), { recursive: true });
+      await symlink(
+        await realpath(resolve(repositoryRoot, sourcePath)),
+        target,
+        "junction",
+      );
+    }),
+  );
+  await cp(
+    await realpath(
+      resolve(repositoryRoot, "apps/control-plane/node_modules/@prisma/client"),
+    ),
+    resolve(nodeModules, "@prisma/client"),
+    { recursive: true, dereference: true },
+  );
+}
+
+async function runGeneratedProjectCommands(profile: CommerceProfile): Promise<
+  Readonly<{
+    directory: string;
+    typecheckOutput: string;
+    testOutput: string;
+  }>
+> {
+  const directory = await mkdtemp(
+    join(tmpdir(), `factory-${profile}-generated-api-`),
+  );
+  try {
+    const bundle = compile(profile);
+    await Promise.all(
+      bundle.files
+        .filter((file) => file.path.startsWith("api/"))
+        .map(async (file) => {
+          const path = resolve(directory, file.path.slice("api/".length));
+          await mkdir(dirname(path), { recursive: true });
+          await writeFile(path, file.content, "utf8");
+        }),
+    );
+    await linkLocalDependencyTopology(directory);
+    const executable = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+    const pathEntries = [
+      resolve(repositoryRoot, "node_modules/.bin"),
+      resolve(repositoryRoot, "packages/compiler/node_modules/.bin"),
+      resolve(repositoryRoot, "apps/control-plane/node_modules/.bin"),
+      process.env.PATH ?? "",
+    ];
+    const environment = {
+      ...process.env,
+      CHECKPOINT_DISABLE: "1",
+      CI: "1",
+      PATH: pathEntries.join(process.platform === "win32" ? ";" : ":"),
+      PNPM_DISABLE_SELF_UPDATE_CHECK: "1",
+      PRISMA_HIDE_UPDATE_MESSAGE: "1",
+      npm_config_offline: "true",
+      npm_config_update_notifier: "false",
+    };
+    const execute = async (command: "typecheck" | "test") => {
+      try {
+        const result = await execFileAsync(executable, [command], {
+          cwd: directory,
+          env: environment,
+          maxBuffer: 10 * 1024 * 1024,
+          shell: process.platform === "win32",
+          timeout: 120_000,
+          windowsHide: true,
+        });
+        return `${result.stdout}${result.stderr}`;
+      } catch (error) {
+        const failure = error as Error & {
+          stdout?: string;
+          stderr?: string;
+        };
+        throw new Error(
+          `${profile} generated API ${command} failed:\n${failure.stdout ?? ""}${failure.stderr ?? ""}`,
+          { cause: error },
+        );
+      }
+    };
+    return {
+      directory: relative(tmpdir(), directory),
+      typecheckOutput: await execute("typecheck"),
+      testOutput: await execute("test"),
+    };
+  } finally {
+    await rm(directory, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 100,
+    });
   }
 }
 
@@ -500,6 +651,46 @@ async function withGeneratedModule<T>(
 }
 
 describe("Generic order lifecycle V2 compilation", () => {
+  it.each(profileCases)(
+    "$profile emits a bound-entity and bound-Flow generated journey",
+    ({ profile, role, orderEntity, orderFlow }) => {
+      const files = Object.fromEntries(
+        compile(profile).files.map((file) => [file.path, file.content]),
+      );
+      const journey = files["api/test/journey.generated.test.ts"]!;
+
+      expect(journey).toContain(
+        `applicationRuntime.create(${JSON.stringify(role)}, ${JSON.stringify(orderEntity)}`,
+      );
+      expect(journey).not.toContain('"id"');
+      expect(journey).not.toContain('"status"');
+      expect(journey).not.toContain('"version"');
+      expect(journey).toContain("expectedVersion: 0");
+      expect(journey).toContain('idempotencyKey: "generated-submit-1"');
+      expect(
+        files[
+          "api/src/capabilities/commerce-order-transaction-operation-adapter.ts"
+        ],
+      ).toContain(`flowId: ${JSON.stringify(orderFlow)}`);
+    },
+  );
+
+  it.each(profileCases)(
+    "$profile generated API passes Prisma generation, strict typecheck, and its own tests",
+    async ({ profile }) => {
+      const result = await runGeneratedProjectCommands(profile);
+
+      expect(result.directory).toMatch(
+        new RegExp(`^factory-${profile}-generated-api-`),
+      );
+      expect(result.typecheckOutput).toContain("Generated Prisma Client");
+      expect(result.typecheckOutput).not.toContain("P1012");
+      expect(result.typecheckOutput).not.toContain("error TS");
+      expect(result.testOutput).toContain("Test Files");
+    },
+    120_000,
+  );
+
   it("rejects the revoked Order V2 lock before contribution resolution", () => {
     const { graph, compositionLock } = directV2Input("simple-ecommerce");
     const revokedOrder = capabilityAssets.find(
@@ -590,7 +781,7 @@ describe("Generic order lifecycle V2 compilation", () => {
     const result = await runGeneratedOrderAdapterTypecheck("simple-ecommerce");
 
     expect(result.exitCode, result.output).toBe(0);
-  });
+  }, 30_000);
 
   it.each(profileCases)(
     "$profile creates and transitions through the exact locked V2 lifecycle",
