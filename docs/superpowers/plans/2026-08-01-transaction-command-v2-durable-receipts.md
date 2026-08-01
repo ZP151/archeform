@@ -145,13 +145,25 @@ git commit -m "feat: publish transaction v2 package contracts"
 - Create: `packages/capabilities/assets/commerce.order/2.1.0/templates/api/commerce-order-create-handler.ts.tpl`
 - Create: `packages/capabilities/assets/commerce.order/2.1.0/templates/api/commerce-order-transaction-operation-adapter.ts.tpl`
 - Create: `packages/capabilities/assets/commerce.order/2.1.0/templates/test/commerce-order-lifecycle.journey.ts.tpl`
+- Modify: `packages/capabilities/assets/commerce.transaction/2.2.0/component.json`
+- Modify: `packages/capabilities/assets/commerce.transaction/2.2.0/adapter.json`
+- Modify: `packages/capabilities/assets/commerce.order/2.1.0/component.json`
+- Modify: `packages/capabilities/assets/commerce.order/2.1.0/adapter.json`
+- Modify: `packages/capabilities/src/assets/commerce/transaction-v2-2-0.ts`
+- Modify: `packages/capabilities/src/assets/commerce/order-v2-1-0.ts`
 - Modify: `packages/compiler/src/index.ts`
 - Modify: `packages/compiler/test/generic-order-lifecycle-v2.test.ts`
+- Modify: `packages/capabilities/test/capability-registry.test.ts`
 
 **Interfaces:**
 
 - Consumes: the exact V2 package locks from Task 1.
 - Produces: `claimReceipt`, `markReceiptRetryable`, `completeReceipt`, and `applyExpectedAggregateVersion` operations whose ownership and mutation guarantees are explicit.
+
+The implementation must add every new template to the owning package manifest
+and declarative adapter with a digest-covered declared output slot, then refresh
+the typed asset projection and physical-package digest assertions. It may not
+add an undeclared compiler-only fallback or mutate historical package bytes.
 
 - [ ] **Step 1: Write failing generated-runtime tests**
 
