@@ -1,0 +1,21 @@
+{
+  "create": {
+    "request": { "role": "shopper", "entityKey": "order", "input": { "note": "ok" } },
+    "expectedPersistedRecord": { "id": "server-1", "status": "draft", "version": 0 }
+  },
+  "transition": {
+    "flowId": "ecommerce-order",
+    "event": "submit",
+    "aggregate": {
+      "entity": "order",
+      "id": "server-1",
+      "expectedVersion": 0,
+      "expectedState": "draft"
+    },
+    "idempotency": {
+      "scope": "order-transition",
+      "key": "submit-1",
+      "payloadDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  }
+}

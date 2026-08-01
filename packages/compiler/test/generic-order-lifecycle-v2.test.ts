@@ -135,7 +135,9 @@ type GeneratedModule = {
   readonly ApplicationRuntime: new (store?: GeneratedStore) => GeneratedRuntime;
   readonly InMemoryRecordStore: new () => GeneratedStore;
   readonly PrismaRecordStore: new (prisma: unknown) => GeneratedStore;
-  readonly commerceOrderTransactionOperationAdapter: {
+  readonly createCommerceOrderTransactionOperationAdapter: (
+    declaredEvents: readonly string[],
+  ) => {
     parseRequest(input: unknown): unknown;
     prepare(request: unknown): Readonly<{
       command: Readonly<Record<string, unknown>>;
@@ -156,6 +158,7 @@ const profileCases = [
     role: "shopper",
     orderEntity: "order",
     initialState: "cart",
+    declaredEvents: ["submit", "pay", "fulfil", "cancel"],
     catalogEntity: "product",
     catalogRecordId: "everyday-tote",
   },
@@ -164,6 +167,7 @@ const profileCases = [
     role: "shopper",
     orderEntity: "counter-sale",
     initialState: "cart",
+    declaredEvents: ["submit", "pay", "issue-receipt", "cancel"],
     catalogEntity: "retail-item",
     catalogRecordId: "counter-item-cup",
   },
@@ -172,6 +176,7 @@ const profileCases = [
     role: "shopper",
     orderEntity: "pickup-order",
     initialState: "cart",
+    declaredEvents: ["submit", "pay", "pick", "ready", "handoff", "cancel"],
     catalogEntity: "grocery-item",
     catalogRecordId: "grocery-item-apples",
   },
@@ -180,6 +185,7 @@ const profileCases = [
   role: string;
   orderEntity: string;
   initialState: string;
+  declaredEvents: readonly string[];
   catalogEntity: string;
   catalogRecordId: string;
 }>[];
@@ -190,7 +196,7 @@ function directV2Input(profile: CommerceProfile) {
   );
   const successorOrder = capabilityAssets.find(
     ({ manifest }) =>
-      manifest.key === "commerce.order" && manifest.version === "2.1.0",
+      manifest.key === "commerce.order" && manifest.version === "2.1.1",
   )!;
   const successorTransaction = capabilityAssets.find(
     ({ manifest }) =>
@@ -359,6 +365,32 @@ async function withGeneratedModule<T>(
 }
 
 describe("Generic order lifecycle V2 compilation", () => {
+  it("rejects the revoked Order V2 lock before contribution resolution", () => {
+    const { graph, compositionLock } = directV2Input("simple-ecommerce");
+    const revokedOrder = capabilityAssets.find(
+      ({ manifest }) =>
+        manifest.key === "commerce.order" && manifest.version === "2.1.0",
+    )!;
+    const revokedLock = {
+      ...compositionLock,
+      packages: compositionLock.packages.map((selection) =>
+        selection.lock.key === "commerce.order"
+          ? { ...selection, lock: assetLock(revokedOrder) }
+          : selection,
+      ),
+    };
+
+    expect(() =>
+      generateApplicationBundle({
+        publishedRevisionId: "revoked-order-v2",
+        graph,
+        compositionLock: revokedLock,
+      }),
+    ).toThrow(
+      "commerce.order@2.1.0 is revoked: fixed event vocabulary excludes bound Flow events",
+    );
+  });
+
   it("rejects the revoked Transaction V2 lock before contribution resolution", () => {
     const { graph, compositionLock } = directV2Input("simple-ecommerce");
     const revokedTransaction = capabilityAssets.find(
@@ -650,7 +682,14 @@ describe("Generic order lifecycle V2 compilation", () => {
   it("keeps flow identity separate from the order event at the package adapter boundary", async () => {
     await withGeneratedModule(
       "simple-ecommerce",
-      async ({ commerceOrderTransactionOperationAdapter }) => {
+      async ({ createCommerceOrderTransactionOperationAdapter }) => {
+        const commerceOrderTransactionOperationAdapter =
+          createCommerceOrderTransactionOperationAdapter([
+            "submit",
+            "pay",
+            "fulfil",
+            "cancel",
+          ]);
         const prepared = commerceOrderTransactionOperationAdapter.prepare(
           commerceOrderTransactionOperationAdapter.parseRequest({
             orderId: "order-1",
@@ -684,6 +723,96 @@ describe("Generic order lifecycle V2 compilation", () => {
         });
       },
     );
+  });
+
+  it("rejects invalid factory event lists and caller-provided API allowlists", async () => {
+    await withGeneratedModule(
+      "simple-ecommerce",
+      async ({ createCommerceOrderTransactionOperationAdapter }) => {
+        for (const declaredEvents of [
+          [],
+          ["submit", "submit"],
+          ["submit", 1],
+          Array.from({ length: 129 }, (_, index) => `event-${index}`),
+        ] as unknown as readonly string[][]) {
+          expect(() =>
+            createCommerceOrderTransactionOperationAdapter(declaredEvents),
+          ).toThrow("Order Flow event list");
+        }
+
+        const originalEvents = ["submit"];
+        const adapter =
+          createCommerceOrderTransactionOperationAdapter(originalEvents);
+        originalEvents.push("caller-added");
+        const request = {
+          orderId: "order-1",
+          expectedVersion: 0,
+          expectedState: "cart",
+          idempotencyKey: "bound-event-1",
+          payloadDigest: `sha256:${"c".repeat(64)}`,
+        } as const;
+        expect(() =>
+          adapter.parseRequest({
+            ...request,
+            event: "caller-added",
+          }),
+        ).toThrow("Order transition is not declared.");
+        expect(() =>
+          adapter.parseRequest({
+            ...request,
+            event: "submit",
+            allowedEvents: ["caller-added"],
+          }),
+        ).toThrow("Order transition contains undeclared fields.");
+      },
+    );
+  });
+
+  it.each([
+    {
+      name: "targets a different entity",
+      mutate: (graph: ReturnType<typeof directV2Input>["graph"]) => {
+        graph.flow.flows.find(({ id }) => id === "ecommerce-order")!.entity =
+          "product";
+      },
+      expected: "must target bound order entity",
+    },
+    {
+      name: "declares no events",
+      mutate: (graph: ReturnType<typeof directV2Input>["graph"]) => {
+        const flow = graph.flow.flows.find(
+          ({ id }) => id === "ecommerce-order",
+        )!;
+        flow.events = [];
+        flow.transitions = [];
+      },
+      expected: "must declare at least one event",
+    },
+    {
+      name: "declares a duplicate event",
+      mutate: (graph: ReturnType<typeof directV2Input>["graph"]) => {
+        const flow = graph.flow.flows.find(
+          ({ id }) => id === "ecommerce-order",
+        )!;
+        flow.events = [...flow.events, "submit"];
+      },
+      expected: "must declare unique events",
+    },
+  ])("rejects a bound order Flow that $name", ({ mutate, expected }) => {
+    const { graph, compositionLock } = directV2Input("simple-ecommerce");
+    mutate(graph);
+    const reboundLock = createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(graph),
+      selections: compositionLock.packages,
+    });
+
+    expect(() =>
+      generateApplicationBundle({
+        publishedRevisionId: "invalid-bound-order-flow",
+        graph,
+        compositionLock: reboundLock,
+      }),
+    ).toThrow(expected);
   });
 
   it("uses one Prisma updateMany CAS constrained by id, version, and status", async () => {
@@ -787,7 +916,7 @@ describe("Generic order lifecycle V2 compilation", () => {
 
   it.each(profileCases)(
     "$profile activates the direct-composable Transaction Command V2 schema, migration, and TypeScript imports",
-    ({ profile }) => {
+    ({ profile, declaredEvents }) => {
       const files = Object.fromEntries(
         compile(profile).files.map((file) => [file.path, file.content]),
       );
@@ -797,6 +926,15 @@ describe("Generic order lifecycle V2 compilation", () => {
       );
       expect(files["api/src/application-runtime.ts"]).toContain(
         'from "./capabilities/commerce-order-transaction-operation-adapter.js"',
+      );
+      expect(files["api/src/application-runtime.ts"]).toContain(
+        `createCommerceOrderTransactionOperationAdapter(${JSON.stringify(declaredEvents)})`,
+      );
+      expect(files["api/src/application-runtime.ts"]).not.toContain(
+        "event === 'pay' ? 'confirm'",
+      );
+      expect(files["api/src/application-runtime.ts"]).not.toContain(
+        "event === 'fulfil' ? 'fulfill'",
       );
       expect(files["api/src/application-runtime.ts"]).toContain(
         'from "./capabilities/commerce-transaction-executor.js"',

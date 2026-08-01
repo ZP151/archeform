@@ -248,6 +248,13 @@ function assertCanonicalCompositionLock(
   ) {
     throw new Error(revokedTransactionV2Error);
   }
+  if (
+    input.compositionLock.packages.some(
+      ({ lock }) => lock.key === "commerce.order" && lock.version === "2.1.0",
+    )
+  ) {
+    throw new Error(revokedOrderV2Error);
+  }
   const graphHash = hashApplicationGraph(
     assertValidApplicationGraph(input.graph),
   );
@@ -272,6 +279,8 @@ type CommerceTransactionCompilationMode =
 
 const revokedTransactionV2Error =
   "commerce.transaction@2.2.0 is revoked: PostgreSQL index identifier exceeds 63 bytes";
+const revokedOrderV2Error =
+  "commerce.order@2.1.0 is revoked: fixed event vocabulary excludes bound Flow events";
 
 function assertLockedCommerceTransaction(
   input: PublishedGraphInput,
@@ -338,7 +347,7 @@ function assertLockedCommerceTransaction(
     const orders = lock.packages.filter(
       ({ lock: packageLock }) => packageLock.key === "commerce.order",
     );
-    const requiredOrderVersion = mode === "generic-v2" ? "2.1.0" : "2.0.3";
+    const requiredOrderVersion = mode === "generic-v2" ? "2.1.1" : "2.0.3";
     if (
       orders.length !== 1 ||
       orders[0]!.lock.version !== requiredOrderVersion
@@ -405,6 +414,7 @@ interface GenericOrderLifecycleContributions {
   readonly executor: PlannedTargetContribution;
   readonly schema: PlannedTargetContribution;
   readonly migration: PlannedTargetContribution;
+  readonly orderFlowEvents?: readonly string[];
 }
 
 function renderedBindingValue(value: CapabilityBindingValueV1): string {
@@ -623,7 +633,7 @@ function resolveGenericOrderLifecycleContributions(
 ): GenericOrderLifecycleContributions | undefined {
   if (mode !== "generic-v1" && mode !== "generic-v2") return undefined;
   const lock = assertCanonicalCompositionLock(input);
-  const orderVersion = mode === "generic-v2" ? "2.1.0" : "2.0.3";
+  const orderVersion = mode === "generic-v2" ? "2.1.1" : "2.0.3";
   const transactionVersion = mode === "generic-v2" ? "2.2.1" : "2.1.0";
   const operationAdapterVersion =
     mode === "generic-v2"
@@ -662,6 +672,11 @@ function resolveGenericOrderLifecycleContributions(
       "Generic Commerce lifecycle create and transaction bindings must target the same entity, flow, and actor role.",
     );
   }
+
+  const orderFlowEvents =
+    mode === "generic-v2"
+      ? resolveBoundOrderFlowEvents(input.graph, orderEntity, orderFlow)
+      : undefined;
 
   const exactlyOne = (
     packageKey: string,
@@ -722,7 +737,62 @@ function resolveGenericOrderLifecycleContributions(
       "factory.prisma-migration/v1",
       "database/prisma/migrations/commerce-transaction.sql",
     ),
+    orderFlowEvents,
   };
+}
+
+function boundGraphSymbolId(
+  value: CapabilityBindingValueV1 | undefined,
+  prefix: "graph.domain." | "graph.flow.",
+  binding: "orderEntity" | "orderFlow",
+): string {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    !value.graphSymbol.startsWith(prefix) ||
+    value.graphSymbol.length === prefix.length
+  ) {
+    throw new Error(
+      `Bound-Flow Order V2 requires an exact '${binding}' Graph symbol.`,
+    );
+  }
+  return value.graphSymbol.slice(prefix.length);
+}
+
+function resolveBoundOrderFlowEvents(
+  graph: ApplicationGraphV1,
+  orderEntity: CapabilityBindingValueV1 | undefined,
+  orderFlow: CapabilityBindingValueV1 | undefined,
+): readonly string[] {
+  const orderEntityKey = boundGraphSymbolId(
+    orderEntity,
+    "graph.domain.",
+    "orderEntity",
+  );
+  const orderFlowId = boundGraphSymbolId(orderFlow, "graph.flow.", "orderFlow");
+  const matches = graph.flow.flows.filter(({ id }) => id === orderFlowId);
+  if (matches.length !== 1) {
+    throw new Error(
+      `Bound order Flow '${orderFlowId}' must resolve to exactly one Published Flow.`,
+    );
+  }
+  const flow = matches[0]!;
+  if (flow.entity !== orderEntityKey) {
+    throw new Error(
+      `Bound order Flow '${orderFlowId}' must target bound order entity '${orderEntityKey}'.`,
+    );
+  }
+  if (flow.events.length === 0) {
+    throw new Error(
+      `Bound order Flow '${orderFlowId}' must declare at least one event.`,
+    );
+  }
+  if (new Set(flow.events).size !== flow.events.length) {
+    throw new Error(
+      `Bound order Flow '${orderFlowId}' must declare unique events.`,
+    );
+  }
+  return Object.freeze([...flow.events]);
 }
 
 export function resolveTargetContributions(
@@ -1763,6 +1833,7 @@ function renderApplicationRuntime(
   usePackageLineConfigurationHandler: boolean,
   catalogEntityKey: string | undefined,
   orderEntityKey: string | undefined,
+  orderFlowEvents: readonly string[] | undefined,
 ): string {
   const commerce = hasCommerceCapabilities(graph);
   const capabilityRegistryImports = [
@@ -1785,12 +1856,18 @@ function renderApplicationRuntime(
           `import { createHash${useDurableReceiptLease ? ", randomUUID" : ""} } from "node:crypto";`,
           'import { commerceOrderCreateHandler } from "./capabilities/commerce-order-create-handler.js";',
           useDurableReceiptLease
-            ? 'import { commerceOrderTransactionOperationAdapter, type OrderTransitionReceipt as PackageOrderTransitionReceipt } from "./capabilities/commerce-order-transaction-operation-adapter.js";'
+            ? 'import { createCommerceOrderTransactionOperationAdapter, type OrderTransitionReceipt as PackageOrderTransitionReceipt } from "./capabilities/commerce-order-transaction-operation-adapter.js";'
             : 'import { commerceOrderTransactionOperationAdapter } from "./capabilities/commerce-order-transaction-operation-adapter.js";',
           useDurableReceiptLease
             ? 'import { CommerceTransactionExecutor, type ReceiptClaimV2, type TransactionOutcomeV2, type TransactionStoreV2 } from "./capabilities/commerce-transaction-executor.js";'
             : 'import { CommerceTransactionExecutor, type CommerceTransactionClaimV1, type CommerceTransactionOutcomeV1, type CommerceTransactionStoreV1 } from "./capabilities/commerce-transaction-executor.js";',
           "",
+          ...(useDurableReceiptLease
+            ? [
+                `const commerceOrderTransactionOperationAdapter = createCommerceOrderTransactionOperationAdapter(${JSON.stringify(orderFlowEvents)});`,
+                "",
+              ]
+            : []),
         ]
       : []),
     useResolvedContributions
@@ -2342,9 +2419,8 @@ function renderApplicationRuntime(
       ? useDurableReceiptLease
         ? [
             `    if (entityKey === ${JSON.stringify(orderEntityKey)}) {`,
-            "      const transactionEvent = event === 'pay' ? 'confirm' : event === 'fulfil' ? 'fulfill' : event;",
             "      const payloadDigest = `sha256:${createHash('sha256').update(JSON.stringify({ entityKey, recordId, event, expectedVersion: options.expectedVersion, expectedState: transition.from })).digest('hex')}`;",
-            "      const parsed = commerceOrderTransactionOperationAdapter.parseRequest({ orderId: recordId, expectedVersion: options.expectedVersion, expectedState: transition.from, event: transactionEvent, idempotencyKey: options.idempotencyKey, payloadDigest });",
+            "      const parsed = commerceOrderTransactionOperationAdapter.parseRequest({ orderId: recordId, expectedVersion: options.expectedVersion, expectedState: transition.from, event, idempotencyKey: options.idempotencyKey, payloadDigest });",
             "      const prepared = commerceOrderTransactionOperationAdapter.prepare(parsed);",
             "      const effects = this.declaredFactoryEffects(transition.effects);",
             "      const transactionStore: TransactionStoreV2 = {",
@@ -3896,6 +3972,7 @@ export function generateApplicationBundle(
           usePackageLineConfigurationHandler,
           catalogEntityKey,
           orderEntityKey,
+          genericOrderLifecycle?.orderFlowEvents,
         ),
     },
     {

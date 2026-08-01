@@ -756,12 +756,17 @@ function canonicalSelection(
 
 const revokedTransactionV2Error =
   "commerce.transaction@2.2.0 is revoked: PostgreSQL index identifier exceeds 63 bytes";
+const revokedOrderV2Error =
+  "commerce.order@2.1.0 is revoked: fixed event vocabulary excludes bound Flow events";
 
 export function assertCapabilityAssetSelectable(
   asset: Pick<CapabilityAssetManifestV1, "key" | "version">,
 ): void {
   if (asset.key === "commerce.transaction" && asset.version === "2.2.0") {
     throw new Error(revokedTransactionV2Error);
+  }
+  if (asset.key === "commerce.order" && asset.version === "2.1.0") {
+    throw new Error(revokedOrderV2Error);
   }
 }
 
@@ -1180,7 +1185,7 @@ function assertCompatibleGenericTransactionV2Lifecycle(
   );
   const order = manifests.find(({ key }) => key === "commerce.order");
   const successorSelected =
-    transaction?.version === "2.2.1" || order?.version === "2.1.0";
+    transaction?.version === "2.2.1" || order?.version === "2.1.1";
   if (!successorSelected) return;
 
   const executorProviders = manifests.filter((manifest) =>
@@ -1198,7 +1203,7 @@ function assertCompatibleGenericTransactionV2Lifecycle(
       "v2",
     );
   const compatibleOrder =
-    order?.version === "2.1.0" &&
+    order?.version === "2.1.1" &&
     manifestProvides(order, "factory.transaction-operation-adapter", "v2");
 
   if (

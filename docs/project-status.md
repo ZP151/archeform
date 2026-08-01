@@ -2,26 +2,27 @@
 
 Updated: 2026-08-01
 
-## PostgreSQL-safe Transaction V2 successor — 2026-08-01
+## Bound-Flow Order V2 successor — 2026-08-01
 
-Generated-project validation found that `commerce.transaction@2.2.0` emits a
-73-byte explicit receipt-aggregate index identifier, exceeding PostgreSQL's
-63-byte limit and causing Prisma P1012 before client generation. The physical
-2.2.0 package remains immutable for diagnostic replay, but its exact lock is
-revoked from local composition, verified publication, and compiler admission.
+Generated-project validation found that immutable `commerce.order@2.1.0`
+hard-codes four transaction events and rejects declared Retail Counter and
+Grocery Pickup Flow events. The physical package remains unchanged for audit
+replay, but its exact lock is revoked from local composition, verified
+publication, and compiler admission.
 
-Factory now registers the immutable `commerce.transaction@2.2.1` successor.
-Its Prisma schema and SQL migration share the 27-byte ASCII identifier
-`ctx_receipt_aggregate_v_idx`, and package conformance rejects V2 index-name
-drift, non-ASCII identifiers, or identifiers longer than 63 bytes. The new
-transaction package remains direct-composable only with
-`commerce.order@2.1.0`; historical and default Generic Draft locks remain
+Factory now registers the immutable `commerce.order@2.1.1` successor. Its
+package-owned operation-adapter factory freezes the ordered event names from
+the exact Published `orderFlow` binding and rejects undeclared API events. The
+compiler rejects a bound Flow with the wrong entity, no events, or duplicate
+events, and it preserves original event names without Profile conditions,
+central translation, or event-list fallback.
+
+The only direct-composable V2 pair is `commerce.transaction@2.2.1` with
+`commerce.order@2.1.1`. Historical and default Generic Draft locks remain
 `commerce.transaction@2.1.0` and `commerce.order@2.0.3`, and Restaurant is
-unchanged.
-
-This successor is not active or accepted. It remains pending Task 3 validation
-of generated projects and Task 4 live PostgreSQL acceptance before any default
-Draft activation.
+unchanged. This pair is not active or accepted; it remains pending Task 3
+generated-project validation and Task 4 live PostgreSQL acceptance before any
+default Draft activation.
 
 ## Profile readiness and quarantined Candidate port planning — 2026-08-01
 
