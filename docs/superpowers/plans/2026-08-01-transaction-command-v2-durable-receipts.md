@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Preserve Draft -> Publish -> immutable Compilation; only uncompiled Generic Draft recipes may select successor locks.
+- Preserve Draft -> Publish -> immutable Compilation. Generic Draft recipes may select successor locks only after Task 4's generated-project and live PostgreSQL acceptance evidence passes.
 - Do not mutate `commerce.transaction@2.1.0`, `commerce.order@2.0.3`, or existing Published locks.
 - The package boundary must not branch on Profile name, external URL, mutable draft, arbitrary package identity, raw AI material, or credentials.
 - Generated source must pass its own strict TypeScript and Vitest gates, not only the Factory compiler test suite.
@@ -27,7 +27,7 @@
 - `packages/capabilities/src/assets/commerce/transaction-v2-2-0.ts` and `packages/capabilities/src/assets/commerce/order-v2-1-0.ts` — typed, immutable asset projections for successor package manifests.
 - `packages/capabilities/src/assets/index.ts` — canonical package discovery used by composition and verified publication.
 - `packages/capabilities/src/composition.ts` and `packages/capabilities/src/node.ts` — exact interface compatibility and verified-lock publication for successor selections.
-- `packages/capabilities/src/index.ts` — fixture registration and new Generic Draft selections.
+- `packages/capabilities/src/index.ts` — fixture registration; Generic Draft successor selection is deferred until Task 4 acceptance.
 - `packages/capabilities/test/capability-registry.test.ts` — package physical/digest/interface/selection verification.
 - `packages/capabilities/test/commerce-transaction-profile-composition.test.ts` and `packages/capabilities/test/order-operations-profile.test.ts` — Generic Profile lock-version regressions.
 - `packages/compiler/src/index.ts` — successor contribution resolution, generated runtime, Prisma store, journey projection, active schema/migration merge, and generated validation command.
@@ -60,22 +60,21 @@
 **Interfaces:**
 
 - Consumes: ADR-0013 and existing `factory.capability-binding/v1` manifest rules.
-- Produces: one `factory.transaction-executor/v2`, one `factory.transaction-operation-adapter/v2`, and exact successor locks for Generic Commerce recipes.
+- Produces: one `factory.transaction-executor/v2`, one `factory.transaction-operation-adapter/v2`, and exact direct composition locks for compiler integration tests. Existing Generic Draft recipes remain on the verified historical pair until Task 4 acceptance.
 
 - [ ] **Step 1: Write failing successor-contract tests**
 
 ```ts
-expect(lock.packages).toContainEqual(
+expect(resolveCapabilityAssetLock(transactionV2Lock).manifest.version).toBe(
+  "2.2.0",
+);
+expect(resolveCapabilityAssetLock(orderV2Lock).manifest.version).toBe("2.1.0");
+expect(defaultGenericRecipeLock.packages).toContainEqual(
   expect.objectContaining({
     lock: expect.objectContaining({
       key: "commerce.transaction",
-      version: "2.2.0",
+      version: "2.1.0",
     }),
-  }),
-);
-expect(lock.packages).toContainEqual(
-  expect.objectContaining({
-    lock: expect.objectContaining({ key: "commerce.order", version: "2.1.0" }),
   }),
 );
 expect(() =>
@@ -115,18 +114,18 @@ Set `commerce.transaction@2.2.0` to require
 provide it. Create their typed asset projections and register them through the
 canonical `capabilityAssets` registry consumed by composition and verified
 publication. Copy no old asset bytes in place: create new manifests and new
-digest-covered source paths. Move only new Generic Draft recipes to both
-successors and reject all mixed V1/V2 lifecycle lock sets in both local
-composition and verified Control Plane lock publication.
+digest-covered source paths. Do not move Generic Draft recipes to either
+successor during this task. Reject all mixed V1/V2 lifecycle lock sets in both
+local composition and verified Control Plane lock publication.
 
 - [ ] **Step 4: Run focused tests and package validation**
 
 Run: `pnpm --filter @factory/capabilities test -- capability-registry.test.ts && pnpm --filter @factory/capabilities typecheck && pnpm --filter @factory/capabilities lint`
 
 Expected: PASS, including unchanged historical package digest assertions.
-Update version assertions in the two Generic Profile composition tests to
-assert the successor locks while retaining their separate historical lock
-replay cases.
+Retain existing Generic Profile version assertions and historical replay
+checks. Add direct-composition successor assertions without changing Draft
+recipe defaults.
 
 - [ ] **Step 5: Commit**
 
@@ -349,6 +348,13 @@ Document commands, generated profile names, pass/fail behavior, and cleanup
 proof. Do not record connection strings, ports, raw request payloads, prompts,
 or credentials.
 
+- [ ] **Step 6: Activate successors only after all live evidence passes**
+
+Update the three uncompiled Generic Draft recipe locks to
+`commerce.transaction@2.2.0` and `commerce.order@2.1.0`. Add a regression
+that compiles each newly composed Draft into a Published Graph bundle before
+the recipe can be enabled. Historical locks and Restaurant remain unchanged.
+
 ```bash
 git add packages/compiler packages/capabilities docs/project-status.md
 git commit -m "test: prove generic transactions against postgres"
@@ -398,3 +404,5 @@ git commit -m "docs: record transaction v2 acceptance evidence"
 - ADR-0013 decisions map to Tasks 1 through 4: immutable successors, V2 command separation, durable lease, CAS, schema/migration parity, binding-owned journey projection, generated typecheck, and live PostgreSQL evidence.
 - The plan does not authorize external source copying, Provider activation, Golden promotion of external Candidates, Restaurant runtime substitution, mutable Draft compilation, or secrets in evidence.
 - Task 5 prevents a passing compiler unit suite from being misrepresented as generated-application acceptance.
+- Task 1 deliberately registers but does not activate successor package locks;
+  Task 4 owns activation after the required generated and live evidence.
