@@ -674,7 +674,10 @@ async function main(): Promise<void> {
   }
 }
 
-void main();
+void main().catch(() => {
+  console.error(JSON.stringify({ status: "failed" }));
+  process.exitCode = 1;
+});
 `;
 }
 

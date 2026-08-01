@@ -308,3 +308,54 @@ continues to cover deduplication, transient retry, terminal failure,
 idempotency, and rejected client-controlled delivery input. Independent release
 review remains the release-blocking gate; no Task 8 final acceptance claim is
 made by this record.
+
+## Release-review remediation evidence (2026-08-02)
+
+Status: ready for a new independent release review. This section corrects one
+scope statement in the Task 8 section: the earlier focused compiler test used a
+transactional Prisma fixture. It did not run `ApplicationRuntime.transition`
+against a generated PostgreSQL schema, so it is not the final evidence for the
+post-enqueue rollback boundary.
+
+The committed `pnpm verify:generated-notification-outbox` verifier now creates
+an isolated generated Expense application and Compose project. It exercises the
+real generated `ApplicationRuntime.transition` through a transaction-scoped
+`PrismaRecordStore` decorator that fails only after delegated enqueue. It then
+asserts the durable outcomes at the database boundary:
+
+```text
+pendingBeforeDrain: 1
+rollbackStatus: draft
+rollbackOutbox: 0
+delivered: 1
+safeFailure: true
+```
+
+The same verifier runs the documented generated drain command, verifies its
+count-only pending-to-delivered result, and invokes it once with a deliberately
+unusable database setting. The error path exits nonzero and emits only the
+fixed safe status `{"status":"failed"}`. It emits no connection, provider,
+recipient, prompt, or credential diagnostic. The verifier always removes its
+temporary directory and exact Compose project with volumes and orphans.
+
+Fresh release gates after this remediation:
+
+```text
+pnpm --filter @factory/compiler test -- notification-outbox-runtime.test.ts
+Exit 0: 18 tests passed.
+
+pnpm verify:generated-notification-outbox
+Exit 0: pendingBeforeDrain 1, delivered 1, rollbackOutbox 0, safeFailure true.
+
+pnpm test                                    Exit 0: 16 Turbo tasks.
+pnpm typecheck                               Exit 0: 16 Turbo tasks.
+pnpm lint                                    Exit 0: 10 Turbo tasks.
+pnpm build                                   Exit 0: 10 Turbo tasks.
+pnpm verify:third-party                      Exit 0: 5 notices verified.
+pnpm verify:source-studies                   Exit 0: 2 studies verified.
+git diff --check                             Exit 0.
+```
+
+No real-model request was made during this remediation. Independent release
+review remains required before the durable notification outbox slice can be
+accepted.
