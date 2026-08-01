@@ -743,6 +743,62 @@ describe("capability catalog", () => {
     ]);
   });
 
+  it("locks Expense and Ecommerce to one notification package with profile-local bindings", () => {
+    const expense = composeDefaultCapabilityDraft({
+      profile: "expense-approval",
+    });
+    const ecommerce = composeDefaultCapabilityDraft({
+      profile: "simple-ecommerce",
+    });
+    const notificationSelection = (
+      result: typeof expense,
+    ): CapabilitySelectionV1 => {
+      const selection = result.graph.integration.compositionSelections?.find(
+        ({ lock }) => lock.key === "core.notification",
+      );
+      if (!selection) throw new Error("Notification selection missing.");
+      return selection;
+    };
+    const expenseNotification = notificationSelection(expense);
+    const ecommerceNotification = notificationSelection(ecommerce);
+
+    expect(expenseNotification.lock).toEqual(ecommerceNotification.lock);
+    expect(expenseNotification.lock).toMatchObject({
+      key: "core.notification",
+      version: "1.1.1",
+      manifestDigest: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
+    });
+    expect(expenseNotification.bindings).toEqual({
+      recipientRole: { graphSymbol: "graph.policy.employee" },
+      template: "expense.approval-outcome",
+    });
+    expect(ecommerceNotification.bindings).toEqual({
+      recipientRole: { graphSymbol: "graph.policy.shopper" },
+      template: "ecommerce.order-outcome",
+    });
+  });
+
+  it("rejects a notification recipe that omits recipientRole", () => {
+    const graph = structuredClone(
+      profileGraphs.find(({ profile }) => profile === "expense-approval")!
+        .graph,
+    );
+
+    expect(() =>
+      composeCapabilityDraft({
+        graph,
+        selections: [
+          {
+            lock: lockCapabilityAsset(getCapabilityAsset("core.notification")),
+            bindings: { template: "expense.approval-outcome" },
+          },
+        ],
+      }),
+    ).toThrow(
+      "Capability package 'core.notification' requires parameter 'recipientRole'.",
+    );
+  });
+
   it("keeps the historical notification 1.1.0 lock replayable", () => {
     const lock = {
       key: "core.notification",

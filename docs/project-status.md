@@ -2,6 +2,26 @@
 
 Updated: 2026-08-01
 
+## Durable notification outbox across Expense and Ecommerce — 2026-08-01
+
+New Expense Approval and Simple Ecommerce Drafts now select the same immutable
+`core.notification@1.1.1` package and digest. Their validated recipe bindings
+remain profile-local: Expense targets `employee` with
+`expense.approval-outcome`, while Ecommerce targets `shopper` with
+`ecommerce.order-outcome`. Expense approval/rejection and Ecommerce payment
+outcomes now write notification intents through the generated transactional
+runtime.
+
+Focused generated-runtime evidence materialized both profile bundles, executed
+the Expense approval and Ecommerce payment journeys, drained each deterministic
+local worker, and observed one delivered entry with the locked profile role and
+template. The same suite keeps historical `core.notification@1.1.0` replay at
+`template: null`, exercises retry and terminal failure behavior, and rejects a
+recipe missing `recipientRole`. Temporary generated source directories are
+removed by the test harness. Isolated Compose previews, resource cleanup, full
+repository gates, and the guarded real-model check remain the separate final
+release-evidence task; no external notification provider is enabled.
+
 ## Identity and policy cross-profile foundation — 2026-08-01
 
 `core.identity-policy@1.0.0` is a locked Golden package for Expense Approval

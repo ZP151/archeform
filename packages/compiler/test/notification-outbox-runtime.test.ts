@@ -88,7 +88,18 @@ type GeneratedRuntime = {
     entityKey: string,
     recordId: string,
     event: string,
+    options?: { expectedVersion?: number; idempotencyKey?: string },
   ): Promise<Record<string, unknown> & { id: string }>;
+  addCartItem(
+    role: string,
+    orderEntity: string,
+    orderRecordId: string,
+    input: {
+      catalogEntity: string;
+      catalogRecordId: string;
+      quantity: number;
+    },
+  ): Promise<Record<string, unknown>>;
 };
 
 type GeneratedFixtureTransport = {
@@ -149,11 +160,16 @@ function publishedExpenseWithNotification(
     graph.integration.assetLocks = graph.integration.assetLocks?.map((lock) =>
       lock.key === "core.notification" ? historicalLock : lock,
     );
-    selections = selections.map((selection) =>
-      selection.lock.key === "core.notification"
-        ? { ...selection, lock: historicalLock }
-        : selection,
-    );
+    selections = selections.map((selection) => {
+      if (selection.lock.key !== "core.notification") return selection;
+      const { template: _currentTemplate, ...historicalBindings } =
+        selection.bindings;
+      return {
+        ...selection,
+        lock: historicalLock,
+        bindings: historicalBindings,
+      };
+    });
   }
   if (template !== undefined) {
     selections = selections.map((selection) =>
@@ -167,6 +183,23 @@ function publishedExpenseWithNotification(
   }
   return {
     publishedRevisionId: "published-expense-notification-runtime-1",
+    graph,
+    compositionLock: createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(graph),
+      selections,
+    }),
+  };
+}
+
+function publishedProfileWithNotification(
+  profile: "expense-approval" | "simple-ecommerce",
+): PublishedGraphInput {
+  const graph = composeProfileDraft({ profile }).graph;
+  const selections =
+    composeDefaultCapabilityDraft({ profile }).graph.integration
+      .compositionSelections ?? [];
+  return {
+    publishedRevisionId: `published-${profile}-notification-journey-1`,
     graph,
     compositionLock: createCapabilityCompositionLock({
       graphChecksum: hashApplicationGraph(graph),
@@ -329,6 +362,90 @@ const notificationInput: NotificationOutboxInput = {
 };
 
 describe("generated durable notification outbox runtime", () => {
+  it.each([
+    {
+      profile: "expense-approval" as const,
+      recipientRole: "employee",
+      template: "expense.approval-outcome",
+      entity: "expense",
+      actor: "manager",
+    },
+    {
+      profile: "simple-ecommerce" as const,
+      recipientRole: "shopper",
+      template: "ecommerce.order-outcome",
+      entity: "order",
+      actor: "shopper",
+    },
+  ])(
+    "drains the generated $profile worker with its locked role and template",
+    async ({ profile, recipientRole, template, entity, actor }) => {
+      await withGeneratedModule(
+        publishedProfileWithNotification(profile),
+        async (module) => {
+          const store = new module.InMemoryRecordStore();
+          const runtime = new module.ApplicationRuntime(store);
+          let record: Record<string, unknown> & { id: string };
+
+          if (profile === "expense-approval") {
+            record = await runtime.create("employee", "expense", {
+              amount: "42.00",
+              description: "Team lunch",
+            });
+            await runtime.transition(
+              "employee",
+              "expense",
+              record.id,
+              "submit",
+            );
+            await runtime.transition(
+              "manager",
+              "expense",
+              record.id,
+              "approve",
+            );
+          } else {
+            record = await runtime.create("shopper", "order", {});
+            await runtime.addCartItem("shopper", "order", record.id, {
+              catalogEntity: "product",
+              catalogRecordId: "everyday-tote",
+              quantity: 1,
+            });
+            await runtime.transition("shopper", "order", record.id, "submit", {
+              expectedVersion: 0,
+              idempotencyKey: "profile-notification-submit-1",
+            });
+            await runtime.transition("shopper", "order", record.id, "pay", {
+              expectedVersion: 1,
+              idempotencyKey: "profile-notification-pay-2",
+            });
+          }
+
+          const Transport = module.FixtureNotificationTransport!;
+          const Worker = module.NotificationOutboxWorker!;
+          const transport = new Transport();
+          const worker = new Worker(store, transport);
+          const drained = await worker.drain("9999-12-31T23:59:59.999Z");
+
+          expect(drained).toEqual([
+            expect.objectContaining({
+              actor,
+              recipientRole,
+              template,
+              entity,
+              recordId: record.id,
+              status: "delivered",
+            }),
+          ]);
+          expect(transport.delivered).toEqual([
+            expect.objectContaining({ recipientRole, template }),
+          ]);
+        },
+        true,
+      );
+    },
+  );
+
   it("retries one fixture failure at a deterministic time and then delivers", async () => {
     await withGeneratedModule(
       publishedExpenseWithNotification(),
@@ -498,7 +615,7 @@ describe("generated durable notification outbox runtime", () => {
         expect(pending[0]).toMatchObject({
           actor: "employee",
           recipientRole: "employee",
-          template: null,
+          template: "expense.approval-outcome",
           entity: "expense",
           recordId: expense.id,
           status: "pending",

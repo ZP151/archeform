@@ -993,6 +993,7 @@ const baseProfileCompositionBindings: Readonly<
     },
     "core.notification": {
       recipientRole: { graphSymbol: "graph.policy.employee" },
+      template: "expense.approval-outcome",
     },
     "core.workflow": {
       flowKey: { graphSymbol: "graph.flow.expense-review" },
@@ -1135,6 +1136,7 @@ const baseProfileCompositionBindings: Readonly<
     },
     "core.notification": {
       recipientRole: { graphSymbol: "graph.policy.shopper" },
+      template: "ecommerce.order-outcome",
     },
     "core.workflow": {
       flowKey: { graphSymbol: "graph.flow.ecommerce-order" },
@@ -1724,6 +1726,7 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
                   roles: ["manager"],
                   effects: [
                     { capability: "audit.record", operation: "record" },
+                    { capability: "notification.send", operation: "send" },
                   ],
                 },
                 {
@@ -1733,6 +1736,7 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
                   roles: ["manager"],
                   effects: [
                     { capability: "audit.record", operation: "record" },
+                    { capability: "notification.send", operation: "send" },
                   ],
                 },
               ],
@@ -3194,6 +3198,7 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
                       capability: "inventory.decrement",
                       operation: "decrement",
                     },
+                    { capability: "notification.send", operation: "send" },
                   ],
                 },
                 {

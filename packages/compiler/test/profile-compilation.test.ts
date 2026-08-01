@@ -155,6 +155,29 @@ describe("profile compilation", () => {
     );
   });
 
+  it.each([
+    ["expense-approval", '"event": "approve"'],
+    ["simple-ecommerce", '"event": "pay"'],
+  ] as const)(
+    "compiles the $profile notification outcome journey with a local worker",
+    (profile, outcomeEvent) => {
+      const files = Object.fromEntries(
+        generateApplicationBundle({
+          publishedRevisionId: `${profile}-notification-outcome-1`,
+          graph: composeProfileDraft({ profile }).graph,
+        }).files.map((file) => [file.path, file.content]),
+      );
+
+      expect(files["api/src/flows/definitions.ts"]).toContain(outcomeEvent);
+      expect(files["api/src/flows/definitions.ts"]).toContain(
+        '"capability": "notification.send"',
+      );
+      expect(files["api/src/notification-outbox-worker.ts"]).toContain(
+        "export class NotificationOutboxWorker",
+      );
+    },
+  );
+
   it.each(["simple-ecommerce"] as const)(
     "generates a reservation-first payment journey with package-owned Commerce effects for $profile",
     (profile) => {
