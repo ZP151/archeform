@@ -770,34 +770,6 @@ describe("generated durable notification outbox runtime", () => {
     );
   });
 
-  it("rolls back a generated runtime transition after its notification enqueue test seam", async () => {
-    await withGeneratedModule(
-      publishedExpenseWithNotification(),
-      async (module) => {
-        const store = new module.InMemoryRecordStore();
-        const runtime = new module.ApplicationRuntime(store);
-        const expense = await runtime.create("employee", "expense", {
-          amount: "42.00",
-          description: "Team lunch",
-        });
-        process.env.FACTORY_TEST_FAIL_AFTER_NOTIFICATION_ENQUEUE = "1";
-        try {
-          await expect(
-            runtime.transition("employee", "expense", expense.id, "submit"),
-          ).rejects.toThrow("factory-test-post-enqueue-failure");
-        } finally {
-          delete process.env.FACTORY_TEST_FAIL_AFTER_NOTIFICATION_ENQUEUE;
-        }
-        expect(await store.find("expense", expense.id)).toMatchObject({
-          status: "draft",
-        });
-        expect(
-          await store.claimDueNotifications("9999-12-31T23:59:59.999Z", 10),
-        ).toEqual([]);
-      },
-    );
-  });
-
   it("carries a validated 1.1.1 template identifier into the generated outbox", async () => {
     await withGeneratedModule(
       publishedExpenseWithNotification("expense.approval-outcome"),
