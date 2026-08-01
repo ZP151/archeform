@@ -764,6 +764,15 @@ function sqlExplicitIndexNames(content: string): ExplicitIndexNameScan {
       }
       next += 3;
     }
+    if (
+      keyword(tokens[next], "u") &&
+      tokens[next + 1]?.kind === "symbol" &&
+      tokens[next + 1]?.value === "&" &&
+      tokens[next + 2]?.kind === "quoted-identifier"
+    ) {
+      invalid = true;
+      continue;
+    }
     const name = tokens[next];
     if (!name || (name.kind !== "word" && name.kind !== "quoted-identifier")) {
       invalid = true;

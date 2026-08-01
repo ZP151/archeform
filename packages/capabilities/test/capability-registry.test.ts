@@ -2237,6 +2237,61 @@ describe("capability catalog", () => {
     },
   );
 
+  it.each([
+    {
+      name: "an effective identifier drifts from the Prisma map",
+      sqlName: 'U&"transaction_migration_idx"',
+    },
+    {
+      name: "an escape decodes to a non-ASCII identifier",
+      sqlName: 'U&"transaction_r\\00E9ceipt_idx"',
+    },
+    {
+      name: "the effective identifier is 64 bytes",
+      sqlName: `U&"${"x".repeat(64)}"`,
+    },
+  ])(
+    "rejects an unsupported Unicode-delimited SQL index when $name",
+    async (testCase) => {
+      const schemaContent =
+        'model Receipt {\n  id String @id\n  @@index([id], map: "u")\n}\n';
+      const migrationContent = `CREATE INDEX ${testCase.sqlName} ON "Receipt" ("id");\n`;
+      const asset = postgresV2ConformanceAsset(schemaContent, migrationContent);
+
+      await withTestContributionPackage(
+        asset,
+        (repositoryRoot) => {
+          expect(verifyCapabilityAssetPackage(asset, repositoryRoot)).toContain(
+            "SQL index declaration could not be parsed",
+          );
+        },
+        {
+          "templates/database/transaction.prisma.tpl": schemaContent,
+          "templates/database/transaction.sql.tpl": migrationContent,
+        },
+      );
+    },
+  );
+
+  it("continues to accept a standard quoted SQL index identifier", async () => {
+    const schemaContent =
+      'model Receipt {\n  id String @id\n  @@index([id], map: "transaction_idx")\n}\n';
+    const migrationContent =
+      'CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS "transaction_idx" ON "Receipt" ("id");\n';
+    const asset = postgresV2ConformanceAsset(schemaContent, migrationContent);
+
+    await withTestContributionPackage(
+      asset,
+      (repositoryRoot) => {
+        expect(verifyCapabilityAssetPackage(asset, repositoryRoot)).toEqual([]);
+      },
+      {
+        "templates/database/transaction.prisma.tpl": schemaContent,
+        "templates/database/transaction.sql.tpl": migrationContent,
+      },
+    );
+  });
+
   it("registers exact Transaction V2 lifecycle packages without activating Generic Commerce drafts", () => {
     const genericProfiles = [
       "simple-ecommerce",

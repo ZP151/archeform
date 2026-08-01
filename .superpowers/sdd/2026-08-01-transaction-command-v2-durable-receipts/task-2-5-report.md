@@ -169,6 +169,29 @@ verification then passed 82/82 Capabilities tests and 15/15 Compiler tests;
 both package typechecks and lint commands passed, and `git diff --check`
 reported no whitespace errors.
 
+## Fix round 2 evidence
+
+Task re-review found that PostgreSQL's Unicode-delimited identifier form
+`U&"..."` tokenized as the word `U`, the symbol `&`, and a quoted identifier.
+The SQL scanner consumed only `U`, normalized it to `u`, and could therefore
+falsely match a Prisma map named `u` without validating the effective SQL
+identifier. Three focused regressions cover an effective-name drift, a Unicode
+escape that decodes to non-ASCII, and a 64-byte effective identifier. A fourth
+case preserves standard quoted SQL acceptance with optional clauses.
+
+```text
+pnpm --filter @factory/capabilities test -- capability-registry.test.ts -t "Unicode-delimited SQL index|standard quoted SQL"
+```
+
+Observed RED: all three `U&` cases failed because verification returned an
+empty error list; the standard SQL case passed, with 82 unrelated tests
+skipped. The minimal repair detects `U`, `&`, and a quoted identifier at the
+`CREATE INDEX` name position and rejects the declaration as unsupported and
+unparseable without attempting an incomplete escape decoder. The same command
+then passed 4/4 focused cases, with 82 skipped. Fresh full verification passed
+86/86 Capabilities tests and 15/15 Compiler tests; both package typechecks and
+lint commands passed, and `git diff --check` reported no whitespace errors.
+
 ## Digest and physical-package parity
 
 Successor declared digests, matched by component, adapter, typed projection,
