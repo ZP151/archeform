@@ -40,7 +40,7 @@ const additionalReadiness: Readonly<
   "expense-approval": [],
   "restaurant-ordering": [
     { key: "commerce.transaction", status: "partial" },
-    { key: "commerce.order-amendment", status: "planned" },
+    { key: "commerce.order-amendment", status: "partial" },
     { key: "identity.member", status: "provider-required" },
     { key: "payment.provider", status: "provider-required" },
     { key: "restaurant.printing", status: "provider-required" },
@@ -49,19 +49,19 @@ const additionalReadiness: Readonly<
   ],
   "simple-ecommerce": [
     { key: "commerce.transaction", status: "partial" },
-    { key: "commerce.order-amendment", status: "planned" },
+    { key: "commerce.order-amendment", status: "partial" },
     { key: "identity.member", status: "provider-required" },
     { key: "payment.provider", status: "provider-required" },
   ],
   "retail-counter": [
     { key: "commerce.transaction", status: "partial" },
-    { key: "commerce.order-amendment", status: "planned" },
+    { key: "commerce.order-amendment", status: "partial" },
     { key: "payment.provider", status: "provider-required" },
     { key: "retail.receipt-printing", status: "provider-required" },
   ],
   "grocery-pickup": [
     { key: "commerce.transaction", status: "partial" },
-    { key: "commerce.order-amendment", status: "planned" },
+    { key: "commerce.order-amendment", status: "partial" },
     { key: "payment.provider", status: "provider-required" },
     { key: "fulfilment.route", status: "planned" },
   ],

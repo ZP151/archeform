@@ -47,7 +47,7 @@ const profileCoverageDefinitions = Object.freeze([
   {
     key: "commerce.order-operations",
     label: "Order operations",
-    status: "planned",
+    status: "partial",
     packageKeys: ["commerce.order", "commerce.inventory", "core.audit"],
     profiles: commerceProfiles,
   },

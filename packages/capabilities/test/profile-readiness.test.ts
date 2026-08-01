@@ -15,7 +15,7 @@ describe("Profile readiness", () => {
         { key: "restaurant.table-session", status: "available" },
         { key: "restaurant.kitchen", status: "available" },
         { key: "commerce.transaction", status: "partial" },
-        { key: "commerce.order-amendment", status: "planned" },
+        { key: "commerce.order-amendment", status: "partial" },
         { key: "identity.member", status: "provider-required" },
         { key: "payment.provider", status: "provider-required" },
       ]),

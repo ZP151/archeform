@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { listProfileCoverage } from "../src/index.js";
 
 describe("Profile coverage", () => {
-  it("maps shared order operations to the four commerce Profiles without calling it available", () => {
+  it("maps shared order operations to the four commerce Profiles as partial", () => {
     const orderOperations = listProfileCoverage().find(
       ({ key }) => key === "commerce.order-operations",
     );
@@ -12,7 +12,7 @@ describe("Profile coverage", () => {
       apiVersion: "factory.profile-coverage/v1",
       key: "commerce.order-operations",
       label: "Order operations",
-      status: "planned",
+      status: "partial",
       packageKeys: ["commerce.order", "commerce.inventory", "core.audit"],
       profiles: [
         "restaurant-ordering",

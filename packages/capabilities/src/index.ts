@@ -53,6 +53,18 @@ export type {
   ProfileCoverageStatusV1,
 } from "./profile-coverage.js";
 export { listProfileCoverage } from "./profile-coverage.js";
+export {
+  parseCommerceOrderCommand,
+  planCommerceOrderOperation,
+} from "./commerce/order-operations.js";
+export type {
+  CommerceOrderCommandNameV1,
+  CommerceOrderCommandV1,
+  CommerceOrderOperationPlanV1,
+  CommerceOrderPaymentStateV1,
+  CommerceOrderStateV1,
+  CommerceOrderStatusV1,
+} from "./commerce/order-operations.js";
 export type {
   CapabilityBindingValueV1,
   CapabilityCompositionLockV1,
