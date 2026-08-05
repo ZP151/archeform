@@ -500,6 +500,64 @@ that contains it.
 - **Next task:** Stage 4 (database target parity migration):
   `refactor(compiler): migrate database target`.
 
+### Stage 4: Database target parity migration (2026-08-06)
+
+- **Owned task and paths:**
+  - created `packages/compiler/src/targets/database/target.ts` (667 lines):
+    `DatabasePlanV1` (immutable graph + explicit context: package-owned
+    contribution fragments, generic order-operations persistence flag and
+    fragments, Restaurant artifacts), the nine legacy renderers moved
+    verbatim (`pluralize`, `prismaType`, `resolveRelationForeignKey`,
+    `renderPrismaSchema`, `postgresType`, `quoteSqlIdentifier`,
+    `relationColumnDefinitions`, `renderInitialMigration`,
+    `renderPrismaSeed`), private `toPascalCase`/`toCamelCase`/
+    `hasCommerceCapabilities` copies (the facade keeps its own for other
+    renderers; parity pins the bytes), and fail-closed validation
+    (missing/unexpected/malformed: schema must contain `generator client`,
+    migration must contain `CREATE TABLE`, seed must reference `prisma`);
+  - created `packages/compiler/test/database-target-parity.test.ts` (frozen
+    legacy digest vectors for all five Profiles x four database paths +
+    repeated-render determinism + seven fail-closed validation cases);
+  - `packages/compiler/src/index.ts`: registered the database plugin on the
+    facade-owned registry, delegated the four database files
+    (`database/prisma/schema.prisma`, `api/prisma/schema.prisma`,
+    `database/prisma/migrations/0001_initial/migration.sql`,
+    `database/prisma/seed.ts`) through
+    `compilerTargetRegistry.run("prisma-postgres", ...)`, and removed the
+    nine centralized renderer/helper functions (572 lines). The database
+    package.json/Dockerfile/.dockerignore and the record-store runtime stay
+    facade-owned.
+- **RED:** the parity test could not import the plugin before it existed.
+- **GREEN and parity evidence (Node v22.11.0):**
+  - legacy digests captured from `generateApplicationBundle` on the
+    pre-migration tree (stash-isolated clean tree) and frozen (five Profiles
+    x four database paths, 20 SHA-256 vectors; the schema digest is identical
+    for both schema paths; the Restaurant profile carries the specialized
+    runtime schema/migration/seed, the generic commerce profiles carry the
+    package-owned order-operations fragments);
+  - plugin render through the facade registry reproduces every frozen digest
+    exactly: 13/13 focused (5 profiles + determinism + 7 fail-closed
+    validation cases);
+  - full `@factory/compiler` suite: 329/329 serial (19 files) — includes the
+    generated-runtime suites (money-pricing, order-operations,
+    notification-outbox, identity-policy, restaurant) as regression evidence;
+  - `@factory/compiler-worker` regression: 81/81;
+  - Compiler typecheck, build, Prettier lint, and `git diff --check` clean;
+    facade diff +10/-572.
+- **Digest parity disposition:** all 20 file/byte/digest vectors match with
+  no unexplained difference; no intentional output change; no migration bytes
+  changed, so no migration smoke run was required (the design's condition).
+- **Review findings and repairs:** pending task review.
+- **Remote reachability:** the iteration commit is pushed to
+  `origin/feat/compiler-target-plugin-kernel` (observed via
+  `git branch -r --contains`).
+- **Residual risk:** the database target owns private naming/predicate
+  copies shared with the facade; the parity gate pins the output bytes.
+  `renderPrismaRecordStore` (api/src/prisma-record-store.ts) remains
+  facade-owned by design (runtime code, not a database target file).
+- **Next task:** task review, PM, QA, release-review, PM acceptance gates at
+  the remote-reachable commit, then final acceptance (Stage 5).
+
 ## Residual risks and stop conditions
 
 - Any stop condition declared by the Skill (unexplained output drift, public
