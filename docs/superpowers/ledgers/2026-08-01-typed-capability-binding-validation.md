@@ -191,7 +191,7 @@ not acceptance.
 | Task                                           | State          | Specialization | Contract owner                               | Contract status                                 |
 | ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | ----------------------------------------------- |
 | 1. Pure typed Graph symbol index               | `accepted`     | `integration`  | Application Graph Type System                | Release review and fresh verification passed.   |
-| 2. Typed manifest and binding contracts        | `implementing` | `integration`  | Capability Binding Contract                  | P1 closed by accepted Task 2A boundary; remaining gates in progress. |
+| 2. Typed manifest and binding contracts        | `ready_for_qa` | `integration`  | Capability Binding Contract                  | Independent task review passed at 0dbe0cf with no open P0/P1/P2; awaiting fresh independent behavioral QA. |
 | 2A. Immutable composition resolution boundary  | `accepted`     | `integration`  | Capability Composition Resolution Boundary   | Release review and fresh verification passed.   |
 | 3. Serialized owner-aware Graph selections     | `planned`      | `integration`  | Application Graph Serialization              | Blocked on accepted Tasks 2 and 2A.             |
 | 4. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 3 serialized contract. |
@@ -206,13 +206,22 @@ reconciliation of Task 2's repair-round-4 repeated-read P1 was completed with
 fresh focused evidence on the `feat/compiler-target-plugin-kernel` feature
 branch of the current repository tree.
 
+**Target-Commit:** `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec`, the
+remote-reachable tip of `feat/compiler-target-plugin-kernel` (pushed to
+origin, clean worktree). The reconciliation was originally recorded at commit
+`fa57d52` (`docs: reconcile typed binding task 2`); repair commit
+`0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` (`test: cover strict binding
+validation branches`) then added two P2 regression tests to
+`packages/capabilities/test/typed-binding-contract.test.ts` only (+25 lines)
+and became the new branch tip. Every remaining Task 2 gate cites `0dbe0cf`.
+
 **Decision:** the accepted Task 2A immutable composition resolution boundary
 closes Task 2's repair-round-4 P1. No further bounded local Task 2 repair is
 required. Task 2 resumes its declared review, QA, release review, and PM
 state transitions at the current tree and will only become `accepted` after
 every remaining gate passes in order.
 
-**Fresh evidence (Node `v22.11.0`):**
+**Reconciliation evidence at the original tip `fa57d52` (Node `v22.11.0`):**
 
 - `pnpm --filter @factory/capabilities test -- --run test/typed-binding-contract.test.ts test/composition-contract.test.ts`
   passed 80/80 focused tests (34 typed-binding-contract, 46
@@ -237,12 +246,37 @@ every remaining gate passes in order.
 - `git status` and `git diff --check` were clean before the reconciliation
   record.
 
+**Fresh independent task review at Target-Commit
+`0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` (Node `v22.11.0`):**
+
+- Independent task review (read-only reviewer, fresh context) of the
+  remote-reachable Target-Commit returned `TASK_REVIEW_PASS` with SPEC PASS,
+  QUALITY PASS, and no P0/P1/P2 findings; the two P2s from the regression
+  repair are closed.
+- The repair at `0dbe0cf` added two P2 regression tests to
+  `packages/capabilities/test/typed-binding-contract.test.ts` only (+25
+  lines). The reviewer confirmed both are RED-sensitive: each fails against
+  the pre-repair code and passes only with the strict binding-validation
+  branches covered. The focused suites therefore grew from the
+  reconciliation's 80/80 (34 typed-binding-contract, 46 composition-contract)
+  to 83/83 (37 typed-binding-contract, 46 composition-contract), and the full
+  Capabilities suite from 279/279 to 282/282 (20 files).
+- The reviewer's governance note is recorded: every remaining Task 2 gate
+  cites `0dbe0cf`, because the repair commit moved the branch tip from
+  `fa57d52`.
+
+**Transition recorded:** independent task review at
+`0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` reports no open P0/P1 (the P2s are
+closed), satisfying the ledger state machine's `implementing -> ready_for_qa`
+condition. The PM records **Task 2 `implementing -> ready_for_qa`** citing
+that Target-Commit. This is not behavioral QA, release review, or acceptance.
+
 **Remaining Task 2 gates (in order, each against the same remote-reachable
-`Target-Commit`):** fresh independent task review; PM `implementing ->
-ready_for_qa`; fresh independent behavioral QA; PM `ready_for_qa ->
-reviewed`; fresh independent release review; PM `reviewed -> accepted`.
-Only the PM context records those transitions. This reconciliation changes
-no product code, contract, ADR, or task path.
+Target-Commit `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec`):** fresh independent
+behavioral QA; PM `ready_for_qa -> reviewed`; fresh independent release
+review; PM `reviewed -> accepted`. Only the PM context records those
+transitions. This reconciliation changes no product code, contract, ADR, or
+task path.
 
 ## Task 1: Add a pure typed Graph symbol index
 
@@ -453,7 +487,8 @@ no product code, contract, ADR, or task path.
 
 ## Task 2: Freeze typed manifest and binding contracts
 
-- **State:** `implementing` (repair round 4)
+- **State:** `ready_for_qa` (reconciled with accepted Task 2A; independent task
+  review passed at `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec`)
 - **Specialization:** `integration`
 - **Bounded writer:** Typed Manifest Contract Integration
 - **Contract owner:** Capability Binding Contract
@@ -1208,11 +1243,14 @@ no product code, contract, ADR, or task path.
 ## Next smallest valuable slice
 
 Task 2's repair-round-4 repeated-read P1 is closed by the accepted Task 2A
-boundary (see the 2026-08-06 reconciliation section above). The next smallest
-slice is the ordered Task 2 gate sequence: fresh independent task review, PM
-`implementing -> ready_for_qa`, fresh independent behavioral QA, PM
+boundary, and independent task review passed at the remote-reachable
+Target-Commit `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` with SPEC PASS,
+QUALITY PASS, and no open P0/P1/P2 (see the 2026-08-06 reconciliation section
+above). The PM records Task 2 `implementing -> ready_for_qa`. The next
+smallest slice is fresh independent behavioral QA against `0dbe0cf`, then PM
 `ready_for_qa -> reviewed`, fresh independent release review, PM
-`reviewed -> accepted`. Keep Task 2 `implementing` until those gates complete.
-Do not start Graph Task 3; keep Graph Tasks 3 through 7 `planned` and blocked
-until their serialized dependencies are accepted. The compiler-target-plugin
-kernel may start only after Task 2 returns to `accepted`.
+`reviewed -> accepted`. Keep Task 2 at `ready_for_qa` until those gates
+complete. Do not start Graph Task 3; keep Graph Tasks 3 through 7 `planned`
+and blocked until their serialized dependencies are accepted. The
+compiler-target-plugin kernel may start only after Task 2 returns to
+`accepted`.
