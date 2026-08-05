@@ -37,6 +37,22 @@ function requirePlainDataDescriptor(
   return descriptor;
 }
 
+function requireDensePlainDataArray(value: unknown[], path: string): void {
+  const expectedKeys = new Set(
+    Array.from({ length: value.length }, (_, index) => String(index)),
+  );
+  const ownKeys = Reflect.ownKeys(value);
+  if (
+    ownKeys.length !== expectedKeys.size + 1 ||
+    !ownKeys.every((key) => {
+      if (typeof key !== "string") return false;
+      return key === "length" || expectedKeys.has(key);
+    })
+  ) {
+    throw new Error(`Compiler target plan '${path}' must be plain data.`);
+  }
+}
+
 export function assertSerializablePlan(plan: unknown): void {
   const active = new WeakSet<object>();
   const visit = (value: unknown, path: string): void => {
@@ -68,6 +84,7 @@ export function assertSerializablePlan(plan: unknown): void {
       );
     }
     if (Array.isArray(value)) {
+      requireDensePlainDataArray(value, path);
       for (let index = 0; index < value.length; index += 1) {
         const descriptor = requirePlainDataDescriptor(
           value,
@@ -75,19 +92,6 @@ export function assertSerializablePlan(plan: unknown): void {
           `${path}[${index}]`,
         );
         visit(descriptor.value, `${path}[${index}]`);
-      }
-      const expectedKeys = new Set(
-        Array.from({ length: value.length }, (_, index) => String(index)),
-      );
-      const ownKeys = Reflect.ownKeys(value);
-      if (
-        ownKeys.length !== expectedKeys.size + 1 ||
-        !ownKeys.every((key) => {
-          if (typeof key !== "string") return false;
-          return key === "length" || expectedKeys.has(key);
-        })
-      ) {
-        throw new Error(`Compiler target plan '${path}' must be plain data.`);
       }
     } else {
       for (const key of Reflect.ownKeys(value)) {
