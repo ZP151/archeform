@@ -227,12 +227,26 @@ lint, and `git diff --check` clean. The migration adds
 parity test (15 frozen vectors), facade delegation of the three policy files
 via the facade-owned registry with `renderCasbinPolicy`/`renderPolicyModule`
 removed, and `runtimeDefinition`/`lockedRuntimeHandlerEntity` restored
-byte-identically after a deletion overrun. The next gate is fresh
-independent behavioral QA at `5140815`, then PM `ready_for_qa -> reviewed`,
-then release review, then PM `reviewed -> accepted`, then Stage 4 (database
-target parity). Typed Binding Graph Tasks 3-7 remain `planned` and blocked,
-and Commercial Foundation Task 2 remains escalated. `commerce.cart@1.0.1`
-already has a package-owned
+byte-identically after a deletion overrun. Independent behavioral QA then
+passed at `5140815` (QA_PASS, no P0/P1/P2; read-only QA context, Node
+`v22.11.0`, product code byte-identical at HEAD `25ef916`): parity 13/13 (5
+profiles x 3 frozen legacy SHA-256 vectors + determinism + 7 fail-closed
+cases), byte-level probe confirmed `generateApplicationBundle` policy files
+byte-identical to the registry-run plugin output (15/15 bundle == plugin ==
+frozen digest MATCH across all five profiles) plus two-render bundle
+determinism, full Compiler suite 316/316 serial (18 files), worker 81/81,
+compilation-plan facade suite 51/51, restaurant-runtime 20/20 (asserts
+`api/policy/policy.csv` content), typecheck/lint/build pass; the three
+malformed adversarial cases each assert `malformed.policy-file` at their own
+path and missing/undeclared classes pass; `runtimeDefinition` and
+`lockedRuntimeHandlerEntity` byte-identical to commit `4b5c6ab`; migration
+range `3fae494..5140815` = index.ts + policy target + parity test + two
+governance docs, no dependency changes, `git diff --check` clean, worktree
+clean. The PM records Stage 3 `ready_for_qa -> reviewed` citing `5140815`.
+The next gate is fresh independent release review at `5140815`, then PM
+`reviewed -> accepted`, then Stage 4 (database target parity). Typed Binding
+Graph Tasks 3-7 remain `planned` and blocked, and Commercial Foundation Task
+2 remains escalated. `commerce.cart@1.0.1` already has a package-owned
 handler and is not the next unimplemented slice.
 
 ## Persistent shared order operations — 2026-08-01
@@ -1760,7 +1774,24 @@ parity test (15 frozen vectors), and facade delegation of the three policy
 files via the facade-owned registry with `renderCasbinPolicy` and
 `renderPolicyModule` removed; `runtimeDefinition` and
 `lockedRuntimeHandlerEntity` were restored byte-identically after a
-deletion overrun (recorded in the ledger). The next smallest slice is fresh
-independent behavioral QA at `5140815`, then PM `ready_for_qa -> reviewed`,
-then release review, then PM `reviewed -> accepted`, after which the
-database target parity migration proceeds serially.
+deletion overrun (recorded in the ledger). Independent behavioral QA then
+passed at `5140815` (QA_PASS, no P0/P1/P2; independent read-only QA context,
+Node `v22.11.0`, product code byte-identical to `5140815` at HEAD
+`25ef916`): parity 13/13 focused (5 profiles x 3 frozen legacy SHA-256
+vectors + determinism + 7 fail-closed validation cases); byte-level probe
+confirmed `generateApplicationBundle` policy files byte-identical to the
+registry-run plugin output (15/15 bundle == plugin == frozen digest MATCH
+across all five profiles) plus two-render bundle determinism; full Compiler
+suite 316/316 serial (18 files); worker 81/81; compilation-plan facade suite
+51/51; restaurant-runtime 20/20 (asserts `api/policy/policy.csv` content);
+typecheck, lint, and build pass; the three malformed adversarial cases
+("without matchers", "without a trailing newline", "without an enforcer")
+each assert `malformed.policy-file` at their own path, and
+missing/undeclared classes pass; `runtimeDefinition` and
+`lockedRuntimeHandlerEntity` are byte-identical to commit `4b5c6ab`;
+migration range `3fae494..5140815` = index.ts + policy target + parity test
++ two governance docs, no dependency changes, `git diff --check` clean,
+worktree clean. The PM records Stage 3 `ready_for_qa -> reviewed` citing
+`5140815`. The next smallest slice is fresh independent release review at
+`5140815`, then PM `reviewed -> accepted`, after which the database target
+parity migration proceeds serially.

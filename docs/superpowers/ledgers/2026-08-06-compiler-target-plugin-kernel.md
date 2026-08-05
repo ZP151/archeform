@@ -378,11 +378,13 @@ that contains it.
 
 ### Stage 3: Policy target parity migration (2026-08-06)
 
-- **Iteration state:** `ready_for_qa` — independent task review passed at
-  Target-Commit `514081580ffdc172ef40935b73f7c2276739e35d` (TASK_REVIEW_PASS,
-  SPEC PASS, QUALITY PASS, no P0/P1/P2); the next gate is fresh independent
-  behavioral QA at `5140815`, then PM `ready_for_qa -> reviewed`, then
-  release review, then PM `reviewed -> accepted`.
+- **Iteration state:** `ready_for_qa -> reviewed` — independent behavioral QA
+  passed at Target-Commit `514081580ffdc172ef40935b73f7c2276739e35d` with no
+  P0/P1/P2, and the PM records the Stage 3 `ready_for_qa -> reviewed`
+  transition citing `5140815`. Independent task review at `5140815`
+  previously returned TASK_REVIEW_PASS with SPEC PASS, QUALITY PASS, and no
+  P0/P1/P2. The next gate is fresh independent release review at `5140815`,
+  then PM `reviewed -> accepted`.
 - **Owned task and paths:**
   - created `packages/compiler/src/targets/policy/target.ts`
     (`PolicyPlanV1`, `policyTargetPlugin` with key `casbin-policy`,
@@ -435,6 +437,27 @@ that contains it.
   parity + validation tests 13/13 (5 profiles x 3 frozen SHA-256 vectors +
   determinism + 7 fail-closed cases); full compiler suite 316/316 serial (18
   files); typecheck, Prettier lint, and `git diff --check` clean.
+- **Independent behavioral QA at `5140815`:** QA returned PASS with no
+  P0/P1/P2 (independent read-only QA context, Node `v22.11.0`; product code
+  byte-identical to `5140815` at HEAD `25ef916`).
+  - parity: 13/13 focused (5 profiles x 3 frozen legacy SHA-256 vectors +
+    determinism + 7 fail-closed validation cases); a byte-level probe
+    confirmed `generateApplicationBundle` policy files are byte-identical to
+    the registry-run plugin output (15/15 bundle == plugin == frozen digest
+    MATCH across all five profiles) plus two-render bundle determinism;
+  - full `@factory/compiler` suite: 316/316 serial (18 files);
+    compiler-worker 81/81; compilation-plan facade suite 51/51;
+    restaurant-runtime 20/20 (asserts `api/policy/policy.csv` content);
+    typecheck, lint, and build pass;
+  - adversarial filters: the three malformed cases ("without matchers",
+    "without a trailing newline", "without an enforcer") each assert
+    `malformed.policy-file` at their own path; missing/undeclared classes
+    pass;
+  - scope: `runtimeDefinition` and `lockedRuntimeHandlerEntity` are
+    byte-identical to commit `4b5c6ab`; the migration range
+    `3fae494..5140815` = `index.ts` + `targets/policy/target.ts` + the
+    parity test + the two governance docs; no dependency changes;
+    `git diff --check` clean; worktree clean.
 - **Remote reachability:** `514081580ffdc172ef40935b73f7c2276739e35d` is the
   branch tip of `origin/feat/compiler-target-plugin-kernel`; `2ccc553` and
   `4b5c6ab` are also reachable from it (observed via
@@ -447,10 +470,10 @@ that contains it.
   `514081580ffdc172ef40935b73f7c2276739e35d`):**
   - independent task review: TASK_REVIEW_PASS (SPEC PASS, QUALITY PASS, no
     P0/P1/P2) at the clean tree exactly at `5140815`;
-  - PM: iteration state `ready_for_qa`.
-- **Next task:** fresh independent behavioral QA at `5140815`, then PM
-  `ready_for_qa -> reviewed`, then independent release review at `5140815`,
-  then PM `reviewed -> accepted`, then Stage 4 (database target parity).
+  - independent behavioral QA: QA_PASS, no P0/P1/P2 at `5140815`;
+  - PM: `ready_for_qa -> reviewed` recorded at `5140815`.
+- **Next task:** fresh independent release review at `5140815`, then PM
+  `reviewed -> accepted`, then Stage 4 (database target parity).
 
 ## Residual risks and stop conditions
 
