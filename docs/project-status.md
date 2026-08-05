@@ -243,8 +243,22 @@ path and missing/undeclared classes pass; `runtimeDefinition` and
 range `3fae494..5140815` = index.ts + policy target + parity test + two
 governance docs, no dependency changes, `git diff --check` clean, worktree
 clean. The PM records Stage 3 `ready_for_qa -> reviewed` citing `5140815`.
-The next gate is fresh independent release review at `5140815`, then PM
-`reviewed -> accepted`, then Stage 4 (database target parity). Typed Binding
+Independent release review at `5140815` then returned RELEASE PASS with no
+P0/P1/P2: lifecycle unchanged; facade public surface 20/20 exports
+byte-identical; the three policy files byte-identical (parity); the policy
+module's distinct internal model (`p.obj == "*"`) preserved; no profile-name
+branching; `runtimeDefinition`/`lockedRuntimeHandlerEntity` byte-identical
+to `4b5c6ab`; no credentials, raw material, or URLs in the migration range;
+no dependency changes; tests recorded across the QA and release contexts
+(policy parity 13/13, full compiler serial 316/316, worker 81/81,
+compilation-plan 51/51, restaurant-runtime 20/20, typecheck/lint/build
+clean); `5140815` remote-reachable, linear history, no force-push/amend,
+worktree clean. The PM records Stage 3 `reviewed -> accepted` citing
+`5140815`. Stage 3 acceptance covers the policy target migration (plugin
+with key `casbin-policy`, 15 frozen digest vectors across all five Profiles,
+facade delegation, centralized renderers removed); the next iteration is
+Stage 4 (database target parity migration: Prisma schema x2, initial
+migration, seed, and package-owned database contributions). Typed Binding
 Graph Tasks 3-7 remain `planned` and blocked, and Commercial Foundation Task
 2 remains escalated. `commerce.cart@1.0.1` already has a package-owned
 handler and is not the next unimplemented slice.
@@ -1792,6 +1806,23 @@ missing/undeclared classes pass; `runtimeDefinition` and
 migration range `3fae494..5140815` = index.ts + policy target + parity test
 + two governance docs, no dependency changes, `git diff --check` clean,
 worktree clean. The PM records Stage 3 `ready_for_qa -> reviewed` citing
-`5140815`. The next smallest slice is fresh independent release review at
-`5140815`, then PM `reviewed -> accepted`, after which the database target
-parity migration proceeds serially.
+`5140815`. Independent release review at `5140815` then returned RELEASE
+PASS with no P0/P1/P2 (independent read-only context, Node `v22.11.0`):
+lifecycle unchanged; facade public surface 20/20 exports byte-identical;
+the three policy files byte-identical (parity); the policy module's distinct
+internal model (`p.obj == "*"`) preserved; no profile-name branching;
+`runtimeDefinition` and `lockedRuntimeHandlerEntity` byte-identical to
+`4b5c6ab`; no credentials, raw material, or URLs in the migration range
+(`3fae494..5140815` = index.ts + policy target + parity test + two
+governance docs); no dependency changes; tests recorded across the QA and
+release contexts (policy parity 13/13, full compiler serial 316/316, worker
+81/81, compilation-plan 51/51, restaurant-runtime 20/20, typecheck/lint/
+build clean); `5140815` remote-reachable, linear history with no
+force-push/amend, worktree clean, all gate records cite `5140815`. The PM
+records Stage 3 `reviewed -> accepted` citing `5140815`. Stage 3 acceptance
+covers the policy target migration (plugin with key `casbin-policy`, 15
+frozen digest vectors across all five Profiles, facade delegation,
+centralized renderers removed). The next smallest slice is Stage 4 (database
+target parity migration): `refactor(compiler): migrate database target`
+(Prisma schema x2, initial migration, seed, and package-owned database
+contributions), which proceeds serially.

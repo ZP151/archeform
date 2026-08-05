@@ -378,13 +378,12 @@ that contains it.
 
 ### Stage 3: Policy target parity migration (2026-08-06)
 
-- **Iteration state:** `ready_for_qa -> reviewed` — independent behavioral QA
+- **Iteration state:** `reviewed -> accepted` — independent release review
   passed at Target-Commit `514081580ffdc172ef40935b73f7c2276739e35d` with no
-  P0/P1/P2, and the PM records the Stage 3 `ready_for_qa -> reviewed`
-  transition citing `5140815`. Independent task review at `5140815`
-  previously returned TASK_REVIEW_PASS with SPEC PASS, QUALITY PASS, and no
-  P0/P1/P2. The next gate is fresh independent release review at `5140815`,
-  then PM `reviewed -> accepted`.
+  P0/P1/P2, and the PM records the Stage 3 `reviewed -> accepted` transition
+  citing `5140815`, marking the Stage 3 iteration accepted. Independent task
+  review (TASK_REVIEW_PASS) and behavioral QA (QA_PASS) at `5140815` were
+  recorded before it. The next iteration is Stage 4 (database target parity).
 - **Owned task and paths:**
   - created `packages/compiler/src/targets/policy/target.ts`
     (`PolicyPlanV1`, `policyTargetPlugin` with key `casbin-policy`,
@@ -458,6 +457,24 @@ that contains it.
     `3fae494..5140815` = `index.ts` + `targets/policy/target.ts` + the
     parity test + the two governance docs; no dependency changes;
     `git diff --check` clean; worktree clean.
+- **Independent release review at `5140815`:** RELEASE PASS with no P0/P1/P2
+  (independent read-only context, Node `v22.11.0`).
+  - lifecycle unchanged; the facade public surface is 20/20 exports
+    byte-identical; the three policy files are byte-identical (parity); the
+    policy module's distinct internal model (`p.obj == "*"`) is preserved;
+    no profile-name branching; `runtimeDefinition` and
+    `lockedRuntimeHandlerEntity` are byte-identical to `4b5c6ab`;
+  - provenance and secrets: no credentials, raw material, or URLs in the
+    migration range (`3fae494..5140815` = `index.ts` +
+    `targets/policy/target.ts` + the parity test + the two governance docs);
+    no dependency changes;
+  - tests (recorded across the QA and release contexts): policy parity
+    13/13; full compiler serial 316/316 (18 files); worker 81/81;
+    compilation-plan 51/51; restaurant-runtime 20/20; typecheck/lint/build
+    clean;
+  - git: `5140815` remote-reachable from
+    `origin/feat/compiler-target-plugin-kernel`; linear history, no
+    force-push/amend; worktree clean; all gate records cite `5140815`.
 - **Remote reachability:** `514081580ffdc172ef40935b73f7c2276739e35d` is the
   branch tip of `origin/feat/compiler-target-plugin-kernel`; `2ccc553` and
   `4b5c6ab` are also reachable from it (observed via
@@ -471,9 +488,17 @@ that contains it.
   - independent task review: TASK_REVIEW_PASS (SPEC PASS, QUALITY PASS, no
     P0/P1/P2) at the clean tree exactly at `5140815`;
   - independent behavioral QA: QA_PASS, no P0/P1/P2 at `5140815`;
-  - PM: `ready_for_qa -> reviewed` recorded at `5140815`.
-- **Next task:** fresh independent release review at `5140815`, then PM
-  `reviewed -> accepted`, then Stage 4 (database target parity).
+  - PM: `ready_for_qa -> reviewed` recorded at `5140815`;
+  - independent release review: RELEASE PASS, no P0/P1/P2 at `5140815`;
+  - PM: `reviewed -> accepted` recorded at `5140815` — Stage 3 iteration
+    accepted.
+- **Acceptance scope:** Stage 3 acceptance covers the policy target migration
+  (plugin with key `casbin-policy`, 15 frozen digest vectors across all five
+  Profiles, facade delegation, centralized renderers removed). The next
+  iteration is Stage 4 (database target parity migration: Prisma schema x2,
+  initial migration, seed, and package-owned database contributions).
+- **Next task:** Stage 4 (database target parity migration):
+  `refactor(compiler): migrate database target`.
 
 ## Residual risks and stop conditions
 
