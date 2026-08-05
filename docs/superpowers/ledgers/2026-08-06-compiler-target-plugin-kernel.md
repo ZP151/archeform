@@ -378,6 +378,11 @@ that contains it.
 
 ### Stage 3: Policy target parity migration (2026-08-06)
 
+- **Iteration state:** `ready_for_qa` — independent task review passed at
+  Target-Commit `514081580ffdc172ef40935b73f7c2276739e35d` (TASK_REVIEW_PASS,
+  SPEC PASS, QUALITY PASS, no P0/P1/P2); the next gate is fresh independent
+  behavioral QA at `5140815`, then PM `ready_for_qa -> reviewed`, then
+  release review, then PM `reviewed -> accepted`.
 - **Owned task and paths:**
   - created `packages/compiler/src/targets/policy/target.ts`
     (`PolicyPlanV1`, `policyTargetPlugin` with key `casbin-policy`,
@@ -407,22 +412,45 @@ that contains it.
     PolicyModel);
   - plugin render through the facade registry reproduces every frozen digest
     exactly: 11/11 focused (5 profiles + determinism + 5 fail-closed
-    validation cases);
-  - full `@factory/compiler` suite: 314/314 serial (18 files);
+    validation cases) at `2ccc553`, then 13/13 (5 profiles x 3 frozen
+    SHA-256 vectors + determinism + 7 fail-closed cases) at `5140815`;
+  - full `@factory/compiler` suite: 314/314 serial (18 files) at `2ccc553`,
+    then 316/316 serial (18 files) at `5140815`;
   - `@factory/compiler-worker` regression: 81/81;
   - Compiler typecheck, build, Prettier lint, and `git diff --check` clean.
 - **Digest parity disposition:** all 15 file/byte/digest vectors match with
   no unexplained difference; no intentional output change.
-- **Review findings and repairs:** pending task review.
-- **Remote reachability:** the iteration commit is pushed to
-  `origin/feat/compiler-target-plugin-kernel` (observed via
+- **Review findings and repairs:** initial independent task review of
+  `2ccc553` (`refactor: migrate policy target`) found one P2: two
+  malformed-validation branches were untested (policy.csv trailing newline;
+  policy.ts `newEnforcer`). Repair commit `5140815` (`test: cover policy
+  malformed validation branches`) is bounded to
+  `packages/compiler/test/policy-target-parity.test.ts` (+20/-3) and made
+  the malformed test table-driven with three cases, each asserting the
+  malformed policy-file issue at its own path. Re-review confirmed all three
+  branches fire.
+- **Final independent task review at `5140815`:** TASK_REVIEW_PASS with SPEC
+  PASS, QUALITY PASS, and no P0/P1/P2 at the clean tree exactly at the
+  remote-reachable branch tip `5140815`. Fresh evidence at `5140815`: policy
+  parity + validation tests 13/13 (5 profiles x 3 frozen SHA-256 vectors +
+  determinism + 7 fail-closed cases); full compiler suite 316/316 serial (18
+  files); typecheck, Prettier lint, and `git diff --check` clean.
+- **Remote reachability:** `514081580ffdc172ef40935b73f7c2276739e35d` is the
+  branch tip of `origin/feat/compiler-target-plugin-kernel`; `2ccc553` and
+  `4b5c6ab` are also reachable from it (observed via
   `git branch -r --contains`).
 - **Residual risk:** the policy module's internal model string differs from
   `model.conf` (the module's matcher allows `p.obj == "*"`); both are pinned
   by the parity vectors. The deletion/restoration incident above left the
   facade byte-correct (full suite + typecheck prove it).
-- **Next task:** task review, PM, QA, release-review, PM acceptance gates at
-  the remote-reachable commit, then Stage 4 (database target parity).
+- **Gates completed (cite Target-Commit
+  `514081580ffdc172ef40935b73f7c2276739e35d`):**
+  - independent task review: TASK_REVIEW_PASS (SPEC PASS, QUALITY PASS, no
+    P0/P1/P2) at the clean tree exactly at `5140815`;
+  - PM: iteration state `ready_for_qa`.
+- **Next task:** fresh independent behavioral QA at `5140815`, then PM
+  `ready_for_qa -> reviewed`, then independent release review at `5140815`,
+  then PM `reviewed -> accepted`, then Stage 4 (database target parity).
 
 ## Residual risks and stop conditions
 

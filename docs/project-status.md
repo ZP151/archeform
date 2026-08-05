@@ -209,11 +209,30 @@ suite 51/51, identity-policy-runtime 3/3, typecheck/lint/build clean);
 `3fae494` remote-reachable, linear history, worktree clean. The PM records
 Stage 2 `reviewed -> accepted` citing `3fae494`. Stage 2 acceptance covers
 the documentation target migration (plugin, frozen-digest parity across all
-five Profiles, facade delegation, centralized renderers removed); the next
-iteration is Stage 3 (policy target parity migration: Casbin
-`model.conf`/`policy.csv` and the generated policy module). Typed Binding
-Graph Tasks 3-7 remain `planned` and blocked, and Commercial Foundation Task
-2 remains escalated. `commerce.cart@1.0.1` already has a package-owned
+five Profiles, facade delegation, centralized renderers removed). Stage 3
+(policy target parity migration) is implemented at Target-Commit
+`514081580ffdc172ef40935b73f7c2276739e35d` and its iteration state is
+`ready_for_qa`: independent task review returned TASK_REVIEW_PASS (SPEC
+PASS, QUALITY PASS, no P0/P1/P2), after repair `5140815` (bounded to
+`packages/compiler/test/policy-target-parity.test.ts`, +20/-3) closed the
+P2 from the initial `2ccc553` review (two malformed-validation branches
+untested — policy.csv trailing newline, policy.ts `newEnforcer` — now a
+table-driven malformed test with three cases, each asserting the issue at
+its own path). Fresh evidence at `5140815`: policy parity + validation
+13/13 (5 profiles x 3 frozen SHA-256 vectors + determinism + 7 fail-closed
+cases), full Compiler suite 316/316 serial (18 files), typecheck, Prettier
+lint, and `git diff --check` clean. The migration adds
+`packages/compiler/src/targets/policy/target.ts` (`PolicyPlanV1`, key
+`casbin-policy`, distinct module model with `p.obj == "*"` preserved), the
+parity test (15 frozen vectors), facade delegation of the three policy files
+via the facade-owned registry with `renderCasbinPolicy`/`renderPolicyModule`
+removed, and `runtimeDefinition`/`lockedRuntimeHandlerEntity` restored
+byte-identically after a deletion overrun. The next gate is fresh
+independent behavioral QA at `5140815`, then PM `ready_for_qa -> reviewed`,
+then release review, then PM `reviewed -> accepted`, then Stage 4 (database
+target parity). Typed Binding Graph Tasks 3-7 remain `planned` and blocked,
+and Commercial Foundation Task 2 remains escalated. `commerce.cart@1.0.1`
+already has a package-owned
 handler and is not the next unimplemented slice.
 
 ## Persistent shared order operations — 2026-08-01
@@ -1721,7 +1740,27 @@ clean); `3fae494` remote-reachable, linear history with no amend/force-push,
 worktree clean. The PM records Stage 2 `reviewed -> accepted` citing
 `3fae494`. Stage 2 acceptance covers the documentation target migration
 (plugin, frozen-digest parity across all five Profiles, facade delegation,
-centralized renderers removed). The next smallest slice is Stage 3 (policy
-target parity migration): `refactor(compiler): migrate policy target`
-(Casbin `model.conf`/`policy.csv` and the generated policy module), after
-which the database parity migration proceeds serially.
+centralized renderers removed). Stage 3 (policy target parity migration) is
+implemented at Target-Commit `514081580ffdc172ef40935b73f7c2276739e35d` and
+its iteration state is `ready_for_qa`: independent task review returned
+TASK_REVIEW_PASS (SPEC PASS, QUALITY PASS, no P0/P1/P2) at the clean tree
+exactly at `5140815`, after repair commit `5140815` (bounded to
+`packages/compiler/test/policy-target-parity.test.ts`, +20/-3) closed the
+P2 from the initial `2ccc553` review — two malformed-validation branches
+untested (policy.csv trailing newline; policy.ts `newEnforcer`) — by making
+the malformed test table-driven with three cases, each asserting the
+malformed policy-file issue at its own path; re-review confirmed all three
+branches fire. Fresh evidence at `5140815`: policy parity + validation
+13/13 (5 profiles x 3 frozen SHA-256 vectors + determinism + 7 fail-closed
+cases), full Compiler suite 316/316 serial (18 files), typecheck, Prettier
+lint, and `git diff --check` clean. The migration adds
+`packages/compiler/src/targets/policy/target.ts` (`PolicyPlanV1`, key
+`casbin-policy`, distinct module model with `p.obj == "*"` preserved), the
+parity test (15 frozen vectors), and facade delegation of the three policy
+files via the facade-owned registry with `renderCasbinPolicy` and
+`renderPolicyModule` removed; `runtimeDefinition` and
+`lockedRuntimeHandlerEntity` were restored byte-identically after a
+deletion overrun (recorded in the ledger). The next smallest slice is fresh
+independent behavioral QA at `5140815`, then PM `ready_for_qa -> reviewed`,
+then release review, then PM `reviewed -> accepted`, after which the
+database target parity migration proceeds serially.
