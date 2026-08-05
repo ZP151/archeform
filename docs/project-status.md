@@ -159,10 +159,22 @@ array, extra-own-key, array-rooted-cycle, bigint, duplicate-path,
 nondeterminism, and traversal probes all fail closed; the two informational
 edges are closed; the deep-nesting recursion edge remains informational
 only). The PM records Stage 1 `ready_for_qa -> reviewed` citing `249fc85`.
-The next gate is fresh independent release review at `249fc85`, then PM
-`reviewed -> accepted`, after which the documentation target migration
-proceeds with exact parity. `commerce.cart@1.0.1` already has a package-owned
-handler and is not the next unimplemented slice.
+Independent release review at `249fc85` then returned RELEASE PASS with no
+P0/P1/P2: the kernel is purely additive with the Draft -> Publish ->
+immutable Compilation lifecycle, Published Graph immutability, and
+capability-lock contracts untouched; the facade preserves all 38 prior
+exports plus 12 kernel symbols; no dependency changes; no profile-name
+branching; hardening-range provenance matches the ledger deviation record;
+no credentials, raw prompts, or URLs; fresh re-runs at byte-identical HEAD
+passed focused 55/55, facade compilation-plan 51/51, full compiler serial
+292/292, and typecheck and Prettier; `249fc85` is remote-reachable and the
+worktree is clean. The PM records Stage 1 `reviewed -> accepted` citing
+`249fc85`. Stage 1 acceptance covers the plugin kernel (contract, registry,
+generated-file rules, facade re-exports) with the serializability hardening
+sequence; the next iteration is Stage 2 (documentation target parity
+migration). Typed Binding Graph Tasks 3-7 remain `planned` and blocked, and
+Commercial Foundation Task 2 remains escalated. `commerce.cart@1.0.1` already
+has a package-owned handler and is not the next unimplemented slice.
 
 ## Persistent shared order operations — 2026-08-01
 
@@ -1600,7 +1612,23 @@ key, array-rooted-cycle, shared non-cyclic acceptance, bigint, duplicate-
 path, nondeterminism, traversal-class, and validation-failure probes all
 pass with precise messages; the two previously-recorded informational edges
 are closed at the hardened tree, and the deep-nesting recursion edge remains
-informational only. The PM records Stage 1 `ready_for_qa -> reviewed`
-citing `249fc85`. The next smallest slice is fresh independent release review
-at `249fc85`, then PM `reviewed -> accepted`, after which the
-documentation/policy/database parity migrations proceed serially.
+informational only. Independent release review at `249fc85` then returned
+RELEASE PASS with no P0/P1/P2 (independent read-only context, Node
+`v22.11.0`): the kernel is purely additive with the Draft -> Publish ->
+immutable Compilation lifecycle, Published Graph immutability, and
+capability-lock contracts untouched; the facade preserves all 38 prior
+exports plus 12 kernel symbols; no dependency changes; no profile-name
+branching; the hardening-range provenance matches the ledger deviation
+record (linear history, no amend/force-push); no credentials, raw prompts or
+responses, or URLs in the reviewed range; fresh re-runs at byte-identical
+HEAD passed focused 55/55, facade compilation-plan 51/51, full compiler
+serial 292/292, and typecheck and Prettier; `249fc85` is remote-reachable
+from `origin/feat/compiler-target-plugin-kernel` and the worktree is clean.
+The PM records Stage 1 `reviewed -> accepted` citing `249fc85`. Stage 1
+acceptance covers the plugin kernel (contract, registry, generated-file
+rules, facade re-exports) with the serializability hardening sequence; the
+next iteration is Stage 2 (documentation target parity migration). Typed
+Binding Graph Tasks 3-7 remain `planned` and blocked, and Commercial
+Foundation Task 2 remains escalated. The next smallest slice is Stage 2:
+`refactor(compiler): migrate documentation target`, after which the
+policy/database parity migrations proceed serially.

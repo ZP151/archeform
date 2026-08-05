@@ -68,12 +68,12 @@ that contains it.
 
 ### Stage 1: Plugin kernel (2026-08-06)
 
-- **Iteration state:** `ready_for_qa -> reviewed` — independent behavioral QA
+- **Iteration state:** `reviewed -> accepted` — independent release review
   passed at Target-Commit `249fc8590f29152cc09456e8733e7a8a64d58fd9` with no
-  P0/P1/P2, and the PM records the Stage 1 `ready_for_qa -> reviewed`
-  transition citing `249fc85`. Final independent task review at `249fc85`
-  previously returned TASK_REVIEW_PASS with SPEC PASS, QUALITY PASS, and no
-  P0/P1/P2. The earlier `197270e`-based gate records (task review PASS, PM
+  P0/P1/P2, and the PM records the Stage 1 `reviewed -> accepted` transition
+  citing `249fc85`, marking the Stage 1 iteration accepted. Task review
+  (TASK_REVIEW_PASS) and behavioral QA (QA_PASS) at `249fc85` were recorded
+  before it. The earlier `197270e`-based gate records (task review PASS, PM
   `ready_for_qa` at c788e21, QA_PASS) are historical: the QA pass surfaced
   two informational serializability edges (symbol-keyed plan properties;
   accessor/toJSON paths slipping past the JSON round-trip promise), the
@@ -197,6 +197,27 @@ that contains it.
     `packages/compiler/src/core/target-registry.ts`,
     `packages/compiler/test/target-plugin.test.ts`, and the two governance
     docs; no dependency changes; `git diff --check` clean; worktree clean.
+- **Independent release review at `249fc85`:** RELEASE PASS with no P0/P1/P2
+  (independent read-only context, Node `v22.11.0`).
+  - lifecycle: the kernel is purely additive; the Draft -> Publish ->
+    immutable Compilation lifecycle, Published Graph immutability, and
+    capability-lock contracts are untouched; the facade preserves all 38
+    prior exports plus 12 kernel symbols; no dependency changes; no
+    profile-name branching;
+  - provenance: the hardening range `197270e..249fc85` is
+    `target-registry.ts` + `target-plugin.test.ts` + the two governance
+    docs; the ledger deviation record matches the observed history
+    (`8921103`/`ab6186d` pushed-failing, corrected at `d024f74`, no
+    amend/force-push, linear history);
+  - secrets: no credentials, raw prompts or responses, or URLs in the
+    reviewed range;
+  - tests (fresh re-runs at HEAD with byte-identical product code): focused
+    55/55, facade compilation-plan 51/51, full compiler serial 292/292,
+    typecheck and Prettier clean;
+  - git: `249fc85` remote-reachable from
+    `origin/feat/compiler-target-plugin-kernel`; worktree clean; all three
+    gates (task review, QA, release review) plus the
+    `ready_for_qa -> reviewed` transition cite `249fc85`.
 - **Remote reachability:** `249fc85` is the branch tip of
   `origin/feat/compiler-target-plugin-kernel`; `5a692fe`, `197270e`,
   `bc09019`, `8921103`, `ab6186d`, `d024f74`, and `40e941b` are also
@@ -210,12 +231,21 @@ that contains it.
   - independent task review: TASK_REVIEW_PASS (SPEC PASS, QUALITY PASS, no
     P0/P1/P2) at the clean tree exactly at `249fc85`;
   - independent behavioral QA: QA_PASS, no P0/P1/P2 at `249fc85`;
-  - PM: `ready_for_qa -> reviewed` recorded at `249fc85`.
+  - PM: `ready_for_qa -> reviewed` recorded at `249fc85`;
+  - independent release review: RELEASE PASS, no P0/P1/P2 at `249fc85`;
+  - PM: `reviewed -> accepted` recorded at `249fc85` — Stage 1 iteration
+    accepted.
   The gate re-opened at the new tip after the hardening sequence; the earlier
   `197270e`-based records (task review PASS, PM `ready_for_qa` at c788e21,
   QA_PASS) remain historical.
-- **Next task:** fresh independent release review at `249fc85`, then PM
-  `reviewed -> accepted`, then Stage 2 (documentation target parity).
+- **Acceptance scope:** Stage 1 acceptance covers the plugin kernel
+  (contract, registry, generated-file rules, facade re-exports) with the
+  serializability hardening sequence. The next iteration is Stage 2
+  (documentation target parity migration). Typed Binding Graph Tasks 3-7
+  remain `planned` and blocked; Commercial Foundation Task 2 remains
+  escalated.
+- **Next task:** Stage 2 (documentation target parity migration):
+  `refactor(compiler): migrate documentation target`.
 
 ## Residual risks and stop conditions
 
