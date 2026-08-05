@@ -32,6 +32,14 @@ import {
   renderRestaurantMerchantPageRuntime,
 } from "./restaurant-merchant-runtime.js";
 import { renderRestaurantRuntime } from "./restaurant-runtime.js";
+import {
+  assertSafeGeneratedFileSet,
+  type GeneratedFile,
+} from "./core/generated-files.js";
+import {
+  compilationTargets,
+  type CompilationTargetKey,
+} from "./core/target-plugin.js";
 
 export {
   createGeneratedPageRuntimeProjection,
@@ -64,63 +72,29 @@ export {
   type RestaurantRuntimeArtifacts,
 } from "./restaurant-runtime.js";
 
-export type CompilationTargetKey =
-  | "simulator"
-  | "next-web"
-  | "nest-api"
-  | "prisma-postgres"
-  | "casbin-policy"
-  | "xstate-flow"
-  | "test-suite"
-  | "documentation";
-
-export interface CompilationTarget {
-  readonly key: CompilationTargetKey;
-  readonly label: string;
-  readonly description: string;
-}
-export const compilationTargets: readonly CompilationTarget[] = Object.freeze([
-  {
-    key: "simulator",
-    label: "Role simulator",
-    description: "Browser-only seed scenario simulator.",
-  },
-  {
-    key: "next-web",
-    label: "Next.js web",
-    description: "Standalone customer and operator web application.",
-  },
-  {
-    key: "nest-api",
-    label: "NestJS API",
-    description: "Standalone REST API and flow handlers.",
-  },
-  {
-    key: "prisma-postgres",
-    label: "Prisma PostgreSQL",
-    description: "Schema, migrations, and seed data.",
-  },
-  {
-    key: "casbin-policy",
-    label: "Casbin policy",
-    description: "Compiled authorization policy and guards.",
-  },
-  {
-    key: "xstate-flow",
-    label: "XState flows",
-    description: "Compiled declared state machines.",
-  },
-  {
-    key: "test-suite",
-    label: "Journey tests",
-    description: "Role, API, flow, and smoke tests.",
-  },
-  {
-    key: "documentation",
-    label: "Documentation",
-    description: "API reference, ERD, and permission matrix.",
-  },
-]);
+// Compiler target plugin kernel (public facade re-exports).
+export {
+  compilationTargets,
+  type CompilationContextV1,
+  type CompilationTarget,
+  type CompilationTargetKey,
+  type CompilerTargetPluginV1,
+  type PublishedCompilationInput,
+  type TargetValidationIssue,
+  type TargetValidationResult,
+} from "./core/target-plugin.js";
+export {
+  assertSafeGeneratedFilePath,
+  assertSafeGeneratedFileSet,
+  sameGeneratedFileSet,
+  sha256Digest,
+  type GeneratedFile,
+} from "./core/generated-files.js";
+export {
+  assertSerializablePlan,
+  CompilerTargetRegistryV1,
+  createCompilerTargetRegistryV1,
+} from "./core/target-registry.js";
 
 export interface PublishedGraphInput {
   readonly publishedRevisionId: string;
@@ -140,11 +114,6 @@ export interface CompilationPlan {
   readonly artifacts: readonly CompilationArtifactPlan[];
 }
 
-export interface GeneratedFile {
-  readonly path: string;
-  readonly content: string;
-}
-
 export interface GeneratedApplicationBundle {
   readonly rootDirectory: string;
   readonly graphHash: string;
@@ -154,18 +123,6 @@ export interface GeneratedApplicationBundle {
 interface PlannedGeneratedFile {
   readonly path: string;
   readonly render: () => string;
-}
-
-function assertUniqueGeneratedFilePaths(
-  files: readonly Pick<GeneratedFile, "path">[],
-): void {
-  const paths = new Set<string>();
-  for (const file of files) {
-    if (paths.has(file.path)) {
-      throw new Error(`Generated output collision at '${file.path}'.`);
-    }
-    paths.add(file.path);
-  }
 }
 
 export interface GenerateApplicationBundleOptions {
@@ -4556,7 +4513,7 @@ export function generateApplicationBundle(
     },
   ];
 
-  assertUniqueGeneratedFilePaths(plannedFiles);
+  assertSafeGeneratedFileSet(plannedFiles);
   const files = plannedFiles.map(({ path, render }) => ({
     path,
     content: render(),

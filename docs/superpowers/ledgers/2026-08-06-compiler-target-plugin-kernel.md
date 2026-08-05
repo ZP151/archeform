@@ -65,14 +65,50 @@ that contains it.
 - **Next task:** complete Task 2 release review and PM `reviewed -> accepted`,
   then Stage 1 (plugin kernel).
 
-### Stage 1: Plugin kernel
+### Stage 1: Plugin kernel (2026-08-06)
 
-- **Owned task and paths:** create
-  `packages/compiler/src/core/target-plugin.ts`,
-  `packages/compiler/src/core/target-registry.ts`,
-  `packages/compiler/src/core/generated-files.ts`, and their focused tests;
-  keep `packages/compiler/src/index.ts` a thin facade. Not started.
-- **Next task:** implement Stage 1 after Stage 0 closes.
+- **Owned task and paths:**
+  - created `packages/compiler/src/core/target-plugin.ts` (versioned
+    `CompilerTargetPluginV1<TPlan>` contract, `PublishedCompilationInput`,
+    `CompilationContextV1`, `CompilationTargetKey`/`CompilationTarget`/
+    `compilationTargets` moved from the facade, `TargetValidationResult`);
+  - created `packages/compiler/src/core/generated-files.ts` (`GeneratedFile`,
+    `sha256Digest`, `assertSafeGeneratedFilePath`,
+    `assertSafeGeneratedFileSet`, `sameGeneratedFileSet`);
+  - created `packages/compiler/src/core/target-registry.ts`
+    (`CompilerTargetRegistryV1`, `createCompilerTargetRegistryV1`,
+    `assertSerializablePlan`);
+  - `packages/compiler/src/index.ts` remains a thin facade: the moved types
+    and the kernel are re-exported, the internal duplicate-path check was
+    replaced by the stricter `assertSafeGeneratedFileSet` (path safety +
+    collisions), and no target ownership migrated yet.
+  - tests: `test/target-plugin.test.ts`, `test/target-registry.test.ts`,
+    `test/generated-files.test.ts`.
+- **RED:** the kernel did not exist; the focused contract/registry/file-rule
+  suites failed with missing exports.
+- **GREEN and regression evidence (Node v22.11.0):**
+  - kernel focused suites: 44/44 (12 target-plugin + 15 target-registry +
+    17 generated-files);
+  - full `@factory/compiler` suite: 281/281 serial
+    (`--no-file-parallelism`, 16 files);
+  - `@factory/compiler-worker` regression: 81/81;
+  - Compiler typecheck, Prettier lint, and build pass; `git diff --check`
+    clean.
+- **Environment note:** a full parallel compiler run flakily times out ~5s in
+  the materialize-and-execute runtime suites. Reproduced identically on the
+  pre-change tree (stash test at b77f71b: same 9 failures), so it is
+  pre-existing machine/timing flakiness, not an iteration regression. The
+  serial run is the deterministic green evidence for this iteration.
+- **Review findings and repairs:** pending task review.
+- **Remote reachability:** this iteration's commit is pushed to
+  `origin/feat/compiler-target-plugin-kernel` (observed via
+  `git branch -r --contains`).
+- **Residual risk:** the facade now applies path-safety rejection to all
+  planned files (all current paths are static and safe; the stricter check is
+  the fail-closed design intent). Target plugins for docs/policy/database do
+  not exist yet; the context type is finalized when the first target lands.
+- **Next task:** fresh task review, PM, QA, release-review gates at the
+  remote-reachable commit, then Stage 2 (documentation target parity).
 
 ## Residual risks and stop conditions
 
