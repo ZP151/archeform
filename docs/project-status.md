@@ -194,12 +194,27 @@ restaurant-ordering, digests equal the frozen vectors), full Compiler suite
 51/51, identity-policy-runtime 3/3, typecheck/lint/build pass; scope
 `git show 3fae494` = 3 files and `git diff 249fc85..3fae494` = 5 files, no
 dependency changes, `git diff --check` clean, worktree clean. The PM records
-Stage 2 `ready_for_qa -> reviewed` citing `3fae494`. The next gate is fresh
-independent release review at `3fae494`, then PM `reviewed -> accepted`,
-then Stage 3 (policy target parity). Typed Binding Graph Tasks 3-7 remain
-`planned` and blocked, and Commercial Foundation Task 2 remains escalated.
-`commerce.cart@1.0.1` already has a package-owned handler and is not the
-next unimplemented slice.
+Stage 2 `ready_for_qa -> reviewed` citing `3fae494`. Independent release
+review at `3fae494` then returned RELEASE PASS with no P0/P1/P2: lifecycle
+untouched (Draft -> validated Published Graph -> immutable Compilation);
+facade export surface preserved exactly (only `buildCompilationInput`
+added); capability-lock contracts and contribution pipelines remain
+facade-owned; no profile-name branching (the target branches only on
+capability-key prefixes and composition-derived context); all 20 frozen
+SHA-256 vectors reproduce exactly; `target.ts` is 261 lines with every
+function under 60; no credentials, raw material, or URLs in the migration
+range; no dependency changes; tests recorded across the QA and release
+contexts (parity 11/11, full compiler serial 303/303, worker 81/81, facade
+suite 51/51, identity-policy-runtime 3/3, typecheck/lint/build clean);
+`3fae494` remote-reachable, linear history, worktree clean. The PM records
+Stage 2 `reviewed -> accepted` citing `3fae494`. Stage 2 acceptance covers
+the documentation target migration (plugin, frozen-digest parity across all
+five Profiles, facade delegation, centralized renderers removed); the next
+iteration is Stage 3 (policy target parity migration: Casbin
+`model.conf`/`policy.csv` and the generated policy module). Typed Binding
+Graph Tasks 3-7 remain `planned` and blocked, and Commercial Foundation Task
+2 remains escalated. `commerce.cart@1.0.1` already has a package-owned
+handler and is not the next unimplemented slice.
 
 ## Persistent shared order operations — 2026-08-01
 
@@ -1688,7 +1703,25 @@ parity test, two governance docs), no dependency changes, `git diff --check`
 clean, worktree clean. Informational edges (Restaurant eager context render
 plus lazy facade re-render, both pure and byte-identical; test-local fixture
 helper duplication) remain covered by the ledger residual risk. The PM
-records Stage 2 `ready_for_qa -> reviewed` citing `3fae494`. The next
-smallest slice is fresh independent release review at `3fae494`, then PM
-`reviewed -> accepted`, after which the policy/database parity migrations
-proceed serially.
+records Stage 2 `ready_for_qa -> reviewed` citing `3fae494`. Independent
+release review at `3fae494` then returned RELEASE PASS with no P0/P1/P2
+(independent read-only context, Node `v22.11.0`): lifecycle untouched
+(Draft -> validated Published Graph -> immutable Compilation); facade export
+surface preserved exactly (only `buildCompilationInput` added);
+capability-lock contracts and contribution pipelines remain facade-owned; no
+profile-name branching (the target branches only on capability-key prefixes
+and composition-derived context); all 20 frozen SHA-256 vectors (5 profiles
+x 4 docs files) reproduce exactly; `target.ts` is 261 lines with every
+function under 60; no credentials, raw material, or URLs in the migration
+range (`249fc85..3fae494` = index.ts + documentation target + parity test +
+two governance docs); no dependency changes; tests recorded across the QA
+and release contexts (parity 11/11, full compiler serial 303/303, worker
+81/81, facade suite 51/51, identity-policy-runtime 3/3, typecheck/lint/build
+clean); `3fae494` remote-reachable, linear history with no amend/force-push,
+worktree clean. The PM records Stage 2 `reviewed -> accepted` citing
+`3fae494`. Stage 2 acceptance covers the documentation target migration
+(plugin, frozen-digest parity across all five Profiles, facade delegation,
+centralized renderers removed). The next smallest slice is Stage 3 (policy
+target parity migration): `refactor(compiler): migrate policy target`
+(Casbin `model.conf`/`policy.csv` and the generated policy module), after
+which the database parity migration proceeds serially.

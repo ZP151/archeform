@@ -249,13 +249,12 @@ that contains it.
 
 ### Stage 2: Documentation target parity migration (2026-08-06)
 
-- **Iteration state:** `ready_for_qa -> reviewed` — independent behavioral QA
+- **Iteration state:** `reviewed -> accepted` — independent release review
   passed at Target-Commit `3fae49480d5e481fd5ed0916f0a44e5ebcc9c9c5` with no
-  P0/P1/P2, and the PM records the Stage 2 `ready_for_qa -> reviewed`
-  transition citing `3fae494`. Independent task review at `3fae494`
-  previously returned TASK_REVIEW_PASS with SPEC PASS, QUALITY PASS, and no
-  P0/P1/P2. The next gate is fresh independent release review at `3fae494`,
-  then PM `reviewed -> accepted`.
+  P0/P1/P2, and the PM records the Stage 2 `reviewed -> accepted` transition
+  citing `3fae494`, marking the Stage 2 iteration accepted. Independent task
+  review (TASK_REVIEW_PASS) and behavioral QA (QA_PASS) at `3fae494` were
+  recorded before it. The next iteration is Stage 3 (policy target parity).
 - **Owned task and paths:**
   - created `packages/compiler/src/targets/documentation/target.ts`
     (`DocumentationPlanV1`, `documentationTargetPlugin`, private
@@ -328,6 +327,27 @@ that contains it.
     runtime eager context render plus lazy facade re-render (pure,
     byte-identical); test-local fixture helper duplication between the
     parity test and the compilation-plan test.
+- **Independent release review at `3fae494`:** RELEASE PASS with no P0/P1/P2
+  (independent read-only context, Node `v22.11.0`).
+  - lifecycle untouched (Draft -> validated Published Graph -> immutable
+    Compilation); the facade export surface is preserved exactly (only
+    `buildCompilationInput` added); capability-lock contracts and
+    contribution pipelines remain facade-owned; no profile-name branching
+    (the target branches only on capability-key prefixes and
+    composition-derived context);
+  - parity: all 20 frozen SHA-256 vectors (5 profiles x 4 docs files)
+    reproduce exactly; `target.ts` is 261 lines with every function under
+    the 60-line guidance;
+  - provenance and secrets: no credentials, raw material, or URLs in the
+    migration range (`249fc85..3fae494` = `index.ts` +
+    `targets/documentation/target.ts` + the parity test + the two governance
+    docs); no dependency changes;
+  - tests (recorded across the QA and release contexts): parity 11/11, full
+    compiler serial 303/303, worker 81/81, facade suite 51/51,
+    identity-policy-runtime 3/3, typecheck/lint/build clean;
+  - git: `3fae494` remote-reachable from
+    `origin/feat/compiler-target-plugin-kernel`; linear history, no
+    amend/force-push; worktree clean; all gate records cite `3fae494`.
 - **Remote reachability:** `3fae49480d5e481fd5ed0916f0a44e5ebcc9c9c5` is the
   branch tip of `origin/feat/compiler-target-plugin-kernel`; `3f57542` and
   `0ff7fa3` are also reachable from it (observed via
@@ -344,9 +364,17 @@ that contains it.
   - independent task review: TASK_REVIEW_PASS (SPEC PASS, QUALITY PASS, no
     P0/P1/P2) at the clean tree exactly at `3fae494`;
   - independent behavioral QA: QA_PASS, no P0/P1/P2 at `3fae494`;
-  - PM: `ready_for_qa -> reviewed` recorded at `3fae494`.
-- **Next task:** fresh independent release review at `3fae494`, then PM
-  `reviewed -> accepted`, then Stage 3 (policy target parity).
+  - PM: `ready_for_qa -> reviewed` recorded at `3fae494`;
+  - independent release review: RELEASE PASS, no P0/P1/P2 at `3fae494`;
+  - PM: `reviewed -> accepted` recorded at `3fae494` — Stage 2 iteration
+    accepted.
+- **Acceptance scope:** Stage 2 acceptance covers the documentation target
+  migration (plugin, frozen-digest parity across all five Profiles, facade
+  delegation, centralized renderers removed). The next iteration is Stage 3
+  (policy target parity migration: Casbin `model.conf`/`policy.csv` and the
+  generated policy module).
+- **Next task:** Stage 3 (policy target parity migration):
+  `refactor(compiler): migrate policy target`.
 
 ## Residual risks and stop conditions
 
