@@ -277,13 +277,30 @@ paths), and facade delegation of the four database files via the
 facade-owned registry with the nine centralized renderers removed (facade
 diff +10/-572); the database package.json/Dockerfile/.dockerignore and
 `renderPrismaRecordStore` remain facade-owned. No migration bytes changed
-(exact parity), so no migration smoke was required per the design. The next
-gate is fresh independent behavioral QA at `76933ca`, then PM
-`ready_for_qa -> reviewed`, then release review, then PM `reviewed ->
-accepted` (final goal acceptance). Typed Binding Graph Tasks 3-7 remain
-`planned` and blocked, and Commercial Foundation Task 2 remains escalated.
-`commerce.cart@1.0.1` already has a package-owned handler and is not the
-next unimplemented slice.
+(exact parity), so no migration smoke was required per the design. Independent behavioral QA then passed at
+`76933ca` (QA_PASS, no P0/P1/P2; read-only QA context, Node `v22.11.0`,
+product code byte-identical at HEAD `b6429a2`): parity 13/13 (5 profiles x 4
+frozen legacy SHA-256 vectors + determinism + 7 fail-closed cases), byte-level
+spot check confirmed `generateApplicationBundle` database files
+byte-identical to registry-run plugin output for restaurant-ordering and
+simple-ecommerce (30/30 PASS, triple agreement frozen == plugin == bundle),
+bundle deterministic across two renders, full Compiler suite 329/329 serial
+(19 files), worker 81/81, compilation-plan 51/51,
+order-operations-runtime 9/9, money-pricing-runtime 4/4,
+restaurant-runtime 20/20, typecheck/lint/build pass; the three malformed
+adversarial cases ("without" matcher) each assert `malformed.database-file`
+at their own paths and missing/undeclared/validation-failure classes pass;
+`76933ca` ledger-only (+5/-1), migration range `5140815..76933ca` = index.ts
+(+10/-572) + database target (+707) + parity test + two governance docs,
+nine moved renderers + three private copies byte-identical to `2e2753a`
+(12/12 verified), no dependency changes, `git diff --check` clean, worktree
+clean. The PM records Stage 4 `ready_for_qa -> reviewed` citing `76933ca`.
+The next gate is fresh independent release review at `76933ca`, then PM
+`reviewed -> accepted` (final goal acceptance), then Stage 5 final
+acceptance (full repository gates, roadmap update, GOAL_COMPLETE). Typed
+Binding Graph Tasks 3-7 remain `planned` and blocked, and Commercial
+Foundation Task 2 remains escalated. `commerce.cart@1.0.1` already has a
+package-owned handler and is not the next unimplemented slice.
 
 ## Persistent shared order operations — 2026-08-01
 
@@ -1867,7 +1884,25 @@ four database files via the facade-owned registry with the nine centralized
 renderers removed (facade diff +10/-572); the database
 package.json/Dockerfile/.dockerignore and `renderPrismaRecordStore` remain
 facade-owned. No migration bytes changed (exact parity), so no migration
-smoke was required per the design. The next smallest slice is fresh
-independent behavioral QA at `76933ca`, then PM `ready_for_qa -> reviewed`,
-then independent release review at `76933ca`, then PM `reviewed -> accepted`
-(final goal acceptance).
+smoke was required per the design. Independent behavioral QA then passed at
+`76933ca` (QA_PASS, no P0/P1/P2; independent read-only QA context, Node
+`v22.11.0`, product code byte-identical to `76933ca` at HEAD `b6429a2`):
+parity 13/13 focused (5 profiles x 4 frozen legacy SHA-256 vectors +
+determinism + 7 fail-closed validation cases); byte-level spot check
+confirmed `generateApplicationBundle` database files byte-identical to the
+registry-run plugin output for restaurant-ordering and simple-ecommerce
+(30/30 PASS, triple agreement frozen == plugin == bundle); bundle
+deterministic across two renders; full Compiler suite 329/329 serial (19
+files); worker 81/81; compilation-plan 51/51; order-operations-runtime 9/9;
+money-pricing-runtime 4/4; restaurant-runtime 20/20; typecheck, lint, and
+build pass; all three malformed adversarial cases ("without" matcher) assert
+`malformed.database-file` at their own paths, and
+missing/undeclared/validation-failure classes pass; `76933ca` is ledger-only
+(+5/-1); migration range `5140815..76933ca` = index.ts (+10/-572) +
+database target (+707) + parity test + two governance docs; the nine moved
+renderers plus three private copies byte-identical to commit `2e2753a`
+(12/12 verified); no dependency changes; `git diff --check` clean; worktree
+clean. The PM records Stage 4 `ready_for_qa -> reviewed` citing `76933ca`.
+The next smallest slice is fresh independent release review at `76933ca`,
+then PM `reviewed -> accepted` (final goal acceptance), then Stage 5 final
+acceptance: full repository gates, roadmap update, GOAL_COMPLETE.

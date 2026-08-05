@@ -502,11 +502,13 @@ that contains it.
 
 ### Stage 4: Database target parity migration (2026-08-06)
 
-- **Iteration state:** `ready_for_qa` — independent task review passed at
-  Target-Commit `76933ca7b7295a6ce053d1bfdc3dfa605aa8487f` (TASK_REVIEW_PASS,
-  SPEC PASS, QUALITY PASS, no P0/P1/P2); the next gate is fresh independent
-  behavioral QA at `76933ca`, then PM `ready_for_qa -> reviewed`, then
-  release review, then PM `reviewed -> accepted`.
+- **Iteration state:** `ready_for_qa -> reviewed` — independent behavioral QA
+  passed at Target-Commit `76933ca7b7295a6ce053d1bfdc3dfa605aa8487f` with no
+  P0/P1/P2, and the PM records the Stage 4 `ready_for_qa -> reviewed`
+  transition citing `76933ca`. Independent task review at `76933ca`
+  previously returned TASK_REVIEW_PASS with SPEC PASS, QUALITY PASS, and no
+  P0/P1/P2. The next gate is fresh independent release review at `76933ca`,
+  then PM `reviewed -> accepted` (final goal acceptance).
 - **Owned task and paths:**
   - created `packages/compiler/src/targets/database/target.ts` (707 lines;
     the design's file-size guidance is a maintainability signal — the
@@ -570,6 +572,28 @@ that contains it.
   validation tests 13/13; full compiler suite 329/329 serial (19 files);
   typecheck, Prettier lint, and `git diff --check` clean. No migration bytes
   changed (exact parity), so no migration smoke was required per the design.
+- **Independent behavioral QA at `76933ca`:** QA returned PASS with no
+  P0/P1/P2 (independent read-only QA context, Node `v22.11.0`; product code
+  byte-identical to `76933ca` at HEAD `b6429a2`).
+  - parity: 13/13 focused (5 profiles x 4 frozen legacy SHA-256 vectors +
+    determinism + 7 fail-closed validation cases); a byte-level spot check
+    confirmed `generateApplicationBundle` database files are byte-identical
+    to the registry-run plugin output for restaurant-ordering and
+    simple-ecommerce (30/30 PASS, triple agreement frozen == plugin ==
+    bundle); the bundle is deterministic across two renders;
+  - full `@factory/compiler` suite: 329/329 serial (19 files);
+    compiler-worker 81/81; compilation-plan 51/51; order-operations-runtime
+    9/9; money-pricing-runtime 4/4; restaurant-runtime 20/20; typecheck,
+    lint, and build pass;
+  - adversarial filters: all three malformed cases ("without" matcher) each
+    assert `malformed.database-file` at their own paths;
+    missing/undeclared/validation-failure classes pass;
+  - scope: `76933ca` is ledger-only (+5/-1); the migration range
+    `5140815..76933ca` = `index.ts` (+10/-572) +
+    `targets/database/target.ts` (+707) + the parity test + the two
+    governance docs; the nine moved renderers plus three private copies are
+    byte-identical to commit `2e2753a` (12/12 verified); no dependency
+    changes; `git diff --check` clean; worktree clean.
 - **Remote reachability:** `76933ca7b7295a6ce053d1bfdc3dfa605aa8487f` is the
   branch tip of `origin/feat/compiler-target-plugin-kernel`; `35fa51d` and
   `2e2753a` are also reachable from it (observed via
@@ -582,10 +606,11 @@ that contains it.
   `76933ca7b7295a6ce053d1bfdc3dfa605aa8487f`):**
   - independent task review: TASK_REVIEW_PASS (SPEC PASS, QUALITY PASS, no
     P0/P1/P2) at the clean tree exactly at `76933ca`;
-  - PM: iteration state `ready_for_qa`.
-- **Next task:** fresh independent behavioral QA at `76933ca`, then PM
-  `ready_for_qa -> reviewed`, then independent release review at `76933ca`,
-  then PM `reviewed -> accepted` (final goal acceptance).
+  - independent behavioral QA: QA_PASS, no P0/P1/P2 at `76933ca`;
+  - PM: `ready_for_qa -> reviewed` recorded at `76933ca`.
+- **Next task:** fresh independent release review at `76933ca`, then PM
+  `reviewed -> accepted` (final goal acceptance), then Stage 5 final
+  acceptance: full repository gates, roadmap update, GOAL_COMPLETE.
 
 ## Residual risks and stop conditions
 
