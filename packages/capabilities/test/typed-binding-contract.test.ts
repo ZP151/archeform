@@ -358,6 +358,31 @@ describe("typed capability binding contract", () => {
     ).toThrow("required must be a boolean");
   });
 
+  it.each(["fieldRequired", "fieldUnique"])(
+    "rejects a non-boolean own %s constraint on a domain.field input",
+    (constraint) => {
+      const manifest = strictManifest(
+        [requiredEntity, { ...requiredField, [constraint]: "yes" }],
+        [entityParameter, fieldParameter],
+      );
+
+      expect(() => resolveStrictManifest(manifest, validBindings)).toThrow(
+        `${constraint} must be a boolean`,
+      );
+    },
+  );
+
+  it("rejects a strict parameter that is not a graph-symbol type", () => {
+    const manifest = strictManifest(
+      [requiredEntity],
+      [{ ...entityParameter, type: "number" }],
+    );
+
+    expect(() => resolveStrictManifest(manifest)).toThrow(
+      "must use graph-symbol",
+    );
+  });
+
   it("rejects an unsupported domain field scalar type", () => {
     const manifest = strictManifest(
       [requiredEntity, { ...requiredField, fieldTypes: ["money"] }],
