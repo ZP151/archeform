@@ -17,9 +17,10 @@ Draft → Publish → immutable Compilation
 Simulator + Web + API + Database + Tests + Docs
 ```
 
-The first independent profiles are Expense Approval, Restaurant Ordering, and
-Simple Ecommerce. They share platform capabilities but each owns its Graph,
-compiled artifacts, and acceptance evidence.
+The independently exercised starter profiles are Expense Approval, Restaurant
+Ordering, Simple Ecommerce, Retail Counter, and Grocery Pickup. They share
+platform capabilities but each owns its Graph, compiled artifacts, and
+acceptance evidence.
 
 ## Local development
 
@@ -39,3 +40,13 @@ local Compose resources.
 
 See [the platform architecture](docs/architecture/application-graph-platform.md)
 and [the delivery roadmap](docs/roadmap.md).
+
+## Claude Code execution goal
+
+Claude Code loads the repository rules from `CLAUDE.md`. After the founder
+approves the Goal design, invoke `/factory-p0-compiler` to run the bounded
+compiler-plugin goal. The Skill creates and maintains its detailed plan and
+ledger, records evidence, commits and pushes each green iteration, and stops
+rather than changing a shared Graph or lifecycle contract. A feature branch or
+isolated worktree is recommended, but the Skill does not hard-code a branch,
+remote, or project-specific Git command.

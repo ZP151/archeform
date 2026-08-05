@@ -153,6 +153,8 @@ focused boundary tests, and a removal path.
 ## Current evidence boundary
 
 Existing completed acceptance evidence remains historical and is recorded in
-`docs/project-status.md`. Retail Counter and Grocery Pickup acceptance,
-including the current preview-stop fix, are active under verification and are
-not claimed as passed by this roadmap.
+`docs/project-status.md`. Retail Counter and Grocery Pickup are accepted local
+generated prototypes, including Preview stop and exact cleanup. They are not
+production-readiness evidence. The next bounded goal first reconciles the
+active typed-binding contract dependency, then delivers the compiler plugin
+kernel and documentation, policy, and database parity gates.

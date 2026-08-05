@@ -1,6 +1,6 @@
 # Factory Pilot delivery status
 
-Updated: 2026-08-02
+Updated: 2026-08-06
 
 ## Approved implementation target — 2026-08-02
 
@@ -31,6 +31,14 @@ Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including
 Preview stop and cleanup. This is not production readiness and does not alter
 the historical evidence below.
+
+The next bounded execution goal is the P0 Compiler Target Plugin Kernel. Its
+first gate reconciles Typed Capability Binding Task 2 with accepted Task 2A;
+plugin implementation cannot begin while that compiler-admission dependency is
+unexplained. After reconciliation, the goal introduces
+`CompilerTargetPluginV1` and serially migrates documentation, policy, and
+database targets through exact file/byte/digest parity. See
+`docs/superpowers/specs/2026-08-06-compiler-target-plugin-kernel-goal-design.md`.
 
 ## Durable notification outbox across Expense and Ecommerce — 2026-08-01
 
@@ -81,9 +89,9 @@ production-complete catalogue of one hundred applications. The current
 foundation is materially stronger than a label-only template catalogue:
 
 - Five starter Profiles exist: Expense Approval, Restaurant Ordering, Simple
-  Ecommerce, Retail Counter, and Grocery Pickup. The catalogue currently has
-  twenty capability families and forty-three physical versioned asset
-  packages. Counts are inventory, not a claim of full business completeness.
+  Ecommerce, Retail Counter, and Grocery Pickup. The checked catalogue contains
+  twenty-three capability package keys and fifty physical version directories.
+  Counts are inventory, not a claim of full business completeness.
 - Before this acceptance slice, isolated Docker browser journeys passed for three generated
   applications: specialised Restaurant Ordering (table session, menu ordering,
   simulated payment, kitchen, cashier, audit, and cleanup), generic Expense
@@ -129,11 +137,11 @@ passed 208 tests, typecheck, Prettier lint, and build.
 
 ### Next smallest delivery slice
 
-The next candidate capability slice is `commerce.cart` execution as a reusable,
-package-owned handler. It must preserve Graph-owned selection and immutable
-Published-Graph compilation, receive focused contract and generated-runtime
-evidence, and serve more than one suitable Profile Graph. This is not a claim
-that the capability portfolio is complete.
+Reconcile Typed Capability Binding Task 2 against accepted Task 2A using fresh
+focused evidence and its existing state machine. When that compiler-admission
+dependency is accepted, implement the `CompilerTargetPluginV1` kernel and
+migrate the documentation target with exact parity. `commerce.cart@1.0.1`
+already has a package-owned handler and is not the next unimplemented slice.
 
 ## Persistent shared order operations — 2026-08-01
 

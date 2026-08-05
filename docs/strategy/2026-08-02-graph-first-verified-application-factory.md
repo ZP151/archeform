@@ -94,6 +94,8 @@ focused boundary tests, and a removal path.
 
 ## Current constraint
 
-Retail Counter and Grocery Pickup acceptance and the preview-stop fix are
-active under verification. They are not acceptance evidence until their
-isolated generated-application journeys and cleanup gates pass.
+Retail Counter and Grocery Pickup have passed their isolated local generated-
+application journeys, Preview stop, and cleanup gates. The active constraint is
+the unresolved Typed Capability Binding Task 2 reconciliation with accepted
+Task 2A. Compiler target extraction must not bypass that compiler-admission
+dependency.
