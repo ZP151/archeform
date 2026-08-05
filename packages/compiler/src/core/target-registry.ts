@@ -76,7 +76,14 @@ export function assertSerializablePlan(plan: unknown): void {
         );
         visit(descriptor.value, `${path}[${index}]`);
       }
-      if (Reflect.ownKeys(value).length !== value.length) {
+      if (
+        Reflect.ownKeys(value).some(
+          (key) =>
+            typeof key !== "string" ||
+            !/^(0|[1-9]\d*)$/.test(key) ||
+            Number(key) >= value.length,
+        )
+      ) {
         throw new Error(`Compiler target plan '${path}' must be plain data.`);
       }
     } else {
