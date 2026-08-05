@@ -43,6 +43,7 @@ import {
   type PublishedCompilationInput,
 } from "./core/target-plugin.js";
 import { documentationTargetPlugin } from "./targets/documentation/target.js";
+import { policyTargetPlugin } from "./targets/policy/target.js";
 
 /**
  * The facade-owned deterministic target registry. Migrated targets register
@@ -51,6 +52,7 @@ import { documentationTargetPlugin } from "./targets/documentation/target.js";
  */
 const compilerTargetRegistry = createCompilerTargetRegistryV1();
 compilerTargetRegistry.register(documentationTargetPlugin);
+compilerTargetRegistry.register(policyTargetPlugin);
 
 export {
   createGeneratedPageRuntimeProjection,
@@ -1846,15 +1848,6 @@ function renderPrismaSeed(
   ].join("\n");
 }
 
-function renderCasbinPolicy(graph: ApplicationGraphV1): string {
-  const lines = graph.policy.permissions.flatMap((permission) =>
-    permission.actions.map(
-      (action) => `p, ${permission.role}, ${permission.resource}, ${action}`,
-    ),
-  );
-  return `${lines.join("\n")}\n`;
-}
-
 function renderFlowDefinitions(graph: ApplicationGraphV1): string {
   const flows = graph.flow.flows.map((flow) => ({
     id: flow.id,
@@ -1890,59 +1883,6 @@ function renderFlowMachines(): string {
     ");",
     "",
   ].join("\n");
-}
-
-function renderPolicyModule(graph: ApplicationGraphV1): string {
-  const model = [
-    "[request_definition]",
-    "r = sub, obj, act",
-    "",
-    "[policy_definition]",
-    "p = sub, obj, act",
-    "",
-    "[policy_effect]",
-    "e = some(where (p.eft == allow))",
-    "",
-    "[matchers]",
-    'm = r.sub == p.sub && (r.obj == p.obj || p.obj == "*") && r.act == p.act',
-  ].join("\n");
-  return [
-    'import { newEnforcer, newModelFromString, StringAdapter } from "casbin";',
-    "",
-    `const model = ${JSON.stringify(model)};`,
-    `const policy = ${JSON.stringify(renderCasbinPolicy(graph))};`,
-    "let enforcerPromise: ReturnType<typeof newEnforcer> | undefined;",
-    "",
-    "async function enforcer() {",
-    "  enforcerPromise ??= newEnforcer(newModelFromString(model), new StringAdapter(policy));",
-    "  return enforcerPromise;",
-    "}",
-    "",
-    "export async function enforce(role: string, resource: string, action: string): Promise<boolean> {",
-    "  return (await enforcer()).enforce(role, resource, action);",
-    "}",
-    "",
-  ].join("\n");
-}
-
-function runtimeDefinition(graph: ApplicationGraphV1) {
-  return {
-    entities: graph.domain.entities.map((entity) => ({
-      key: entity.key,
-      fields: entity.fields.map((field) => ({
-        key: field.key,
-        required: field.required,
-      })),
-    })),
-    permissions: graph.policy.permissions,
-    capabilities: graph.integration.capabilities,
-    seedData: (graph.domain.seedData ?? []).map((seed, index) => ({
-      entity: seed.entity,
-      id: seed.id ?? `seed-${seed.entity}-${index + 1}`,
-      values: seed.values,
-    })),
-    flows: graph.flow.flows,
-  };
 }
 
 function lockedRuntimeHandlerEntity(
@@ -2117,6 +2057,26 @@ function renderOrderOperationsRuntime(
     });
   }
 `;
+}
+
+function runtimeDefinition(graph: ApplicationGraphV1) {
+  return {
+    entities: graph.domain.entities.map((entity) => ({
+      key: entity.key,
+      fields: entity.fields.map((field) => ({
+        key: field.key,
+        required: field.required,
+      })),
+    })),
+    permissions: graph.policy.permissions,
+    capabilities: graph.integration.capabilities,
+    seedData: (graph.domain.seedData ?? []).map((seed, index) => ({
+      entity: seed.entity,
+      id: seed.id ?? `seed-${seed.entity}-${index + 1}`,
+      values: seed.values,
+    })),
+    flows: graph.flow.flows,
+  };
 }
 
 function renderApplicationRuntime(
@@ -3987,6 +3947,10 @@ export function generateApplicationBundle(
     "documentation",
     compilationInput,
   );
+  const renderedPolicyFiles = compilerTargetRegistry.run(
+    "casbin-policy",
+    compilationInput,
+  );
   const useResolvedContributions =
     input.compositionLock.resolvedContributionDigests.length > 0;
   const usePackageCartHandler = input.compositionLock.packages.some(
@@ -4322,10 +4286,10 @@ export function generateApplicationBundle(
           },
         ]
       : []),
-    {
-      path: "api/src/policy.ts",
-      render: () => renderPolicyModule(graph),
-    },
+    ...renderedPolicyFiles.map((file) => ({
+      path: file.path,
+      render: () => file.content,
+    })),
     {
       path: "api/prisma/schema.prisma",
       render: () =>
@@ -4397,15 +4361,6 @@ export function generateApplicationBundle(
     {
       path: "database/.dockerignore",
       render: () => "node_modules\n.env\n",
-    },
-    {
-      path: "api/policy/model.conf",
-      render: () =>
-        "[request_definition]\nr = sub, obj, act\n\n[policy_definition]\np = sub, obj, act\n\n[policy_effect]\ne = some(where (p.eft == allow))\n\n[matchers]\nm = r.sub == p.sub && r.obj == p.obj && r.act == p.act\n",
-    },
-    {
-      path: "api/policy/policy.csv",
-      render: () => renderCasbinPolicy(graph),
     },
     {
       path: "api/src/flows/definitions.ts",

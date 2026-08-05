@@ -376,6 +376,54 @@ that contains it.
 - **Next task:** Stage 3 (policy target parity migration):
   `refactor(compiler): migrate policy target`.
 
+### Stage 3: Policy target parity migration (2026-08-06)
+
+- **Owned task and paths:**
+  - created `packages/compiler/src/targets/policy/target.ts`
+    (`PolicyPlanV1`, `policyTargetPlugin` with key `casbin-policy`,
+    plan/render/validate split: policy rows projection, static `model.conf`,
+    and the policy module's distinct internal model; fail-closed validation
+    on missing/unexpected/malformed files);
+  - created `packages/compiler/test/policy-target-parity.test.ts` (frozen
+    legacy digest vectors for all five Profiles x three policy files +
+    repeated-render determinism + five fail-closed validation cases);
+  - `packages/compiler/src/index.ts`: registered the policy plugin on the
+    facade-owned registry, delegated the three policy files
+    (`api/policy/model.conf`, `api/policy/policy.csv`,
+    `api/src/policy.ts`) through
+    `compilerTargetRegistry.run("casbin-policy", ...)`, and removed the
+    centralized `renderCasbinPolicy` and `renderPolicyModule` renderers.
+    Implementation note: a line-range deletion overran into
+    `runtimeDefinition` and `lockedRuntimeHandlerEntity`; both were restored
+    byte-identically from the committed tree (verified by typecheck and the
+    full suite; `runtimeDefinition` was re-inserted after
+    `renderOrderOperationsRuntime` — a pure function, position-independent).
+- **RED:** the parity test could not import the plugin before it existed.
+- **GREEN and parity evidence (Node v22.11.0):**
+  - legacy digests captured from `generateApplicationBundle` on the
+    pre-migration tree and frozen (five Profiles x three policy paths, 15
+    SHA-256 vectors; `model.conf` is static and identical across Profiles,
+    `policy.csv` and `api/src/policy.ts` derive from each Profile's
+    PolicyModel);
+  - plugin render through the facade registry reproduces every frozen digest
+    exactly: 11/11 focused (5 profiles + determinism + 5 fail-closed
+    validation cases);
+  - full `@factory/compiler` suite: 314/314 serial (18 files);
+  - `@factory/compiler-worker` regression: 81/81;
+  - Compiler typecheck, build, Prettier lint, and `git diff --check` clean.
+- **Digest parity disposition:** all 15 file/byte/digest vectors match with
+  no unexplained difference; no intentional output change.
+- **Review findings and repairs:** pending task review.
+- **Remote reachability:** the iteration commit is pushed to
+  `origin/feat/compiler-target-plugin-kernel` (observed via
+  `git branch -r --contains`).
+- **Residual risk:** the policy module's internal model string differs from
+  `model.conf` (the module's matcher allows `p.obj == "*"`); both are pinned
+  by the parity vectors. The deletion/restoration incident above left the
+  facade byte-correct (full suite + typecheck prove it).
+- **Next task:** task review, PM, QA, release-review, PM acceptance gates at
+  the remote-reachable commit, then Stage 4 (database target parity).
+
 ## Residual risks and stop conditions
 
 - Any stop condition declared by the Skill (unexplained output drift, public
