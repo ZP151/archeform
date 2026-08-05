@@ -68,17 +68,19 @@ that contains it.
 
 ### Stage 1: Plugin kernel (2026-08-06)
 
-- **Iteration state:** `ready_for_qa` re-recorded at Target-Commit
-  `249fc8590f29152cc09456e8733e7a8a64d58fd9` — final independent task review
-  returned TASK_REVIEW_PASS with SPEC PASS, QUALITY PASS, and no P0/P1/P2 at
-  the clean tree exactly at `249fc85`. The earlier `197270e`-based gate
-  records (task review PASS, PM `ready_for_qa` at c788e21, QA_PASS) are
-  historical: the QA pass surfaced two informational serializability edges
-  (symbol-keyed plan properties; accessor/toJSON paths slipping past the JSON
-  round-trip promise), the kernel was hardened through the commit sequence
-  below, and every gate restarted against the final green tip. Gate state is
-  maintained at the tip by the PM transitions; this section records the
-  implementation evidence and the governance deviation transparently.
+- **Iteration state:** `ready_for_qa -> reviewed` — independent behavioral QA
+  passed at Target-Commit `249fc8590f29152cc09456e8733e7a8a64d58fd9` with no
+  P0/P1/P2, and the PM records the Stage 1 `ready_for_qa -> reviewed`
+  transition citing `249fc85`. Final independent task review at `249fc85`
+  previously returned TASK_REVIEW_PASS with SPEC PASS, QUALITY PASS, and no
+  P0/P1/P2. The earlier `197270e`-based gate records (task review PASS, PM
+  `ready_for_qa` at c788e21, QA_PASS) are historical: the QA pass surfaced
+  two informational serializability edges (symbol-keyed plan properties;
+  accessor/toJSON paths slipping past the JSON round-trip promise), the
+  kernel was hardened through the commit sequence below, and every gate
+  restarted against the final green tip. Gate state is maintained at the tip
+  by the PM transitions; this section records the implementation evidence
+  and the governance deviation transparently.
 - **Owned task and paths:**
   - created `packages/compiler/src/core/target-plugin.ts` (versioned
     `CompilerTargetPluginV1<TPlan>` contract, `PublishedCompilationInput`,
@@ -172,6 +174,29 @@ that contains it.
   kernel suites 55/55 (23 target-plugin + 15 target-registry + 17
   generated-files); full compiler suite 292/292 serial (16 files);
   typecheck, Prettier lint, and `git diff --check` clean; worktree clean.
+- **Independent behavioral QA at `249fc85`:** QA returned PASS with no
+  P0/P1/P2 (independent read-only QA context, Node `v22.11.0`; product code
+  byte-identical to `249fc85` at HEAD `8f95018`).
+  - focused kernel suites: 55/55 (23 target-plugin + 15 target-registry +
+    17 generated-files);
+  - full `@factory/compiler` suite: 292/292 serial (16 files);
+  - Compiler typecheck, Prettier lint, and build all pass; compiler-worker
+    81/81 plus typecheck; compilation-plan facade suite 51/51;
+  - adversarial probes all pass with precise messages: symbol-keyed (records
+    and arrays), accessor-backed (records and array indices, zero getter
+    invocations), non-enumerable, `toJSON` (enumerable, non-enumerable,
+    inherited), sparse arrays, array extra own keys, array-rooted cycles,
+    shared non-cyclic acceptance, bigint, duplicate paths, nondeterminism,
+    traversal classes, and validation-failure details;
+  - the two previously-recorded informational edges (symbol-keyed plan
+    properties; accessor/`toJSON` paths) are CLOSED at the hardened tree; the
+    deep-nesting recursion edge remains informational only (the validator
+    accepts depth 4999, above `JSON.stringify`'s ~1000 limit, fails closed
+    beyond, and is unreachable by typed plans);
+  - scope: the hardening range `197270e..249fc85` touches only
+    `packages/compiler/src/core/target-registry.ts`,
+    `packages/compiler/test/target-plugin.test.ts`, and the two governance
+    docs; no dependency changes; `git diff --check` clean; worktree clean.
 - **Remote reachability:** `249fc85` is the branch tip of
   `origin/feat/compiler-target-plugin-kernel`; `5a692fe`, `197270e`,
   `bc09019`, `8921103`, `ab6186d`, `d024f74`, and `40e941b` are also
@@ -184,13 +209,13 @@ that contains it.
   `249fc8590f29152cc09456e8733e7a8a64d58fd9`):**
   - independent task review: TASK_REVIEW_PASS (SPEC PASS, QUALITY PASS, no
     P0/P1/P2) at the clean tree exactly at `249fc85`;
-  - PM: iteration state `ready_for_qa` re-recorded at `249fc85`.
+  - independent behavioral QA: QA_PASS, no P0/P1/P2 at `249fc85`;
+  - PM: `ready_for_qa -> reviewed` recorded at `249fc85`.
   The gate re-opened at the new tip after the hardening sequence; the earlier
   `197270e`-based records (task review PASS, PM `ready_for_qa` at c788e21,
   QA_PASS) remain historical.
-- **Next task:** fresh independent behavioral QA at `249fc85`, then PM
-  `ready_for_qa -> reviewed`, then independent release review at `249fc85`,
-  then PM `reviewed -> accepted`, then Stage 2 (documentation target parity).
+- **Next task:** fresh independent release review at `249fc85`, then PM
+  `reviewed -> accepted`, then Stage 2 (documentation target parity).
 
 ## Residual risks and stop conditions
 

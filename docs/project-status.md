@@ -150,12 +150,19 @@ QUALITY PASS, no P0/P1/P2), after the serializability hardening sequence
 recorded governance deviation of the two pushed-failing intermediate commits,
 `d024f74` dense plain-data requirement, `40e941b`
 `requireDensePlainDataArray` extraction) and the `249fc85` remediation
-record; no history was rewritten. Its iteration state is `ready_for_qa` at
-`249fc85`; the next gate is fresh independent behavioral QA against
-`249fc85`, then PM `reviewed`, release review, and PM acceptance, after which
-the documentation target migration proceeds with exact parity.
-`commerce.cart@1.0.1` already has a package-owned handler and is not the next
-unimplemented slice.
+record; no history was rewritten. Independent behavioral QA then passed at
+`249fc85` (QA_PASS, no P0/P1/P2: focused kernel suites 55/55, full Compiler
+suite 292/292 serial, Compiler typecheck/lint/build, compiler-worker 81/81
+plus typecheck, compilation-plan facade suite 51/51; adversarial symbol-keyed,
+accessor-backed (zero getter invocations), non-enumerable, `toJSON`, sparse-
+array, extra-own-key, array-rooted-cycle, bigint, duplicate-path,
+nondeterminism, and traversal probes all fail closed; the two informational
+edges are closed; the deep-nesting recursion edge remains informational
+only). The PM records Stage 1 `ready_for_qa -> reviewed` citing `249fc85`.
+The next gate is fresh independent release review at `249fc85`, then PM
+`reviewed -> accepted`, after which the documentation target migration
+proceeds with exact parity. `commerce.cart@1.0.1` already has a package-owned
+handler and is not the next unimplemented slice.
 
 ## Persistent shared order operations — 2026-08-01
 
@@ -1579,9 +1586,21 @@ plain-data arrays, `40e941b` extracted `requireDensePlainDataArray`
 the tip: focused kernel suites 55/55 (23 target-plugin + 15 target-registry
 + 17 generated-files), full Compiler suite 292/292 serial (16 files),
 Compiler typecheck, Prettier lint, and `git diff --check` clean, worktree
-clean, all 38 prior facade exports preserved plus 12 kernel symbols. The PM
-re-records iteration state `ready_for_qa` at `249fc85`. The next smallest
-slice is fresh independent behavioral QA at `249fc85`, then PM
-`ready_for_qa -> reviewed`, then independent release review at `249fc85`,
-then PM `reviewed -> accepted`, after which the documentation/policy/database
-parity migrations proceed serially.
+clean, all 38 prior facade exports preserved plus 12 kernel symbols.
+Independent behavioral QA then passed at `249fc85` (QA_PASS, no P0/P1/P2;
+independent read-only QA context, Node `v22.11.0`, product code
+byte-identical to `249fc85` at HEAD `8f95018`): focused kernel suites 55/55
+(23 target-plugin + 15 target-registry + 17 generated-files), full Compiler
+suite 292/292 serial (16 files), Compiler typecheck/lint/build,
+compiler-worker 81/81 plus typecheck, and compilation-plan facade suite
+51/51; adversarial symbol-keyed (records and arrays), accessor-backed
+(records and array indices, zero getter invocations), non-enumerable,
+`toJSON` (enumerable, non-enumerable, inherited), sparse-array, extra-own-
+key, array-rooted-cycle, shared non-cyclic acceptance, bigint, duplicate-
+path, nondeterminism, traversal-class, and validation-failure probes all
+pass with precise messages; the two previously-recorded informational edges
+are closed at the hardened tree, and the deep-nesting recursion edge remains
+informational only. The PM records Stage 1 `ready_for_qa -> reviewed`
+citing `249fc85`. The next smallest slice is fresh independent release review
+at `249fc85`, then PM `reviewed -> accepted`, after which the
+documentation/policy/database parity migrations proceed serially.
