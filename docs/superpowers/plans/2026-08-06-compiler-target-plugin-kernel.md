@@ -102,11 +102,11 @@ interface CompilerTargetPluginV1<TPlan> {
 }
 ```
 
-  Supporting types refine the design's shape: `PublishedCompilationInput` is
-  the facade's canonicalized immutable input view; plans are serializable
-  plain-data records; `TargetValidationResult` is `{ ok: true }` or
-  `{ ok: false, issues: readonly TargetValidationIssue[] }` with
-  `{ target, path, code, message }`.
+Supporting types refine the design's shape: `PublishedCompilationInput` is
+the facade's canonicalized immutable input view; plans are serializable
+plain-data records; `TargetValidationResult` is `{ ok: true }` or
+`{ ok: false, issues: readonly TargetValidationIssue[] }` with
+`{ target, path, code, message }`.
 
 - `packages/compiler/src/core/generated-files.ts` — `GeneratedFile`
   (`{ path, content }`), path normalization and traversal rejection, duplicate
@@ -175,7 +175,7 @@ the target does not add new contribution semantics.
 4. Remove the centralized renderer functions from `index.ts` only after
    parity passes; keep the facade thin.
 5. Run focused tests, full compiler suite, typecheck, lint, format, `git diff
-   --check`; record per-Profile path/bytes/SHA-256 parity in the ledger.
+--check`; record per-Profile path/bytes/SHA-256 parity in the ledger.
 6. **Commit:** `refactor(compiler): migrate documentation target`.
 
 **Gates:** task review, PM, QA, release review, PM acceptance at the
@@ -256,18 +256,18 @@ pushed commit, or push a known-failing iteration.
 
 ## Acceptance mapping
 
-| Design criterion | Plan coverage |
-| --- | --- |
-| Typed Binding Task 2 reconciled through its gates | Stage 0 |
-| `CompilerTargetPluginV1` and Registry with focused positive and fail-closed tests | Stage 1 |
-| Docs, policy, database are independent registered targets | Stages 2-4 |
-| Five-Profile file/byte/digest parity with no unexplained difference | Stages 2-4 parity steps |
-| Facade no longer owns those renderers | Stages 2-4 delegation steps |
-| No profile-name branch, no mutable input | Global constraints |
-| Required gates pass | Every stage gate list |
-| Ledger, roadmap, status, acceptance evidence agree | Stage 5 |
-| Fresh independent gate contexts complete every transition | Stage 5 |
-| Clean worktree, all commits pushed | Stage 5 |
+| Design criterion                                                                  | Plan coverage               |
+| --------------------------------------------------------------------------------- | --------------------------- |
+| Typed Binding Task 2 reconciled through its gates                                 | Stage 0                     |
+| `CompilerTargetPluginV1` and Registry with focused positive and fail-closed tests | Stage 1                     |
+| Docs, policy, database are independent registered targets                         | Stages 2-4                  |
+| Five-Profile file/byte/digest parity with no unexplained difference               | Stages 2-4 parity steps     |
+| Facade no longer owns those renderers                                             | Stages 2-4 delegation steps |
+| No profile-name branch, no mutable input                                          | Global constraints          |
+| Required gates pass                                                               | Every stage gate list       |
+| Ledger, roadmap, status, acceptance evidence agree                                | Stage 5                     |
+| Fresh independent gate contexts complete every transition                         | Stage 5                     |
+| Clean worktree, all commits pushed                                                | Stage 5                     |
 
 ## Non-goals
 

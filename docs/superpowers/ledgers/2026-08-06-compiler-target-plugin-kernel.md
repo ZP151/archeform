@@ -235,9 +235,9 @@ that contains it.
   - independent release review: RELEASE PASS, no P0/P1/P2 at `249fc85`;
   - PM: `reviewed -> accepted` recorded at `249fc85` — Stage 1 iteration
     accepted.
-  The gate re-opened at the new tip after the hardening sequence; the earlier
-  `197270e`-based records (task review PASS, PM `ready_for_qa` at c788e21,
-  QA_PASS) remain historical.
+    The gate re-opened at the new tip after the hardening sequence; the earlier
+    `197270e`-based records (task review PASS, PM `ready_for_qa` at c788e21,
+    QA_PASS) remain historical.
 - **Acceptance scope:** Stage 1 acceptance covers the plugin kernel
   (contract, registry, generated-file rules, facade re-exports) with the
   serializability hardening sequence. The next iteration is Stage 2
@@ -425,7 +425,7 @@ that contains it.
   `2ccc553` (`refactor: migrate policy target`) found one P2: two
   malformed-validation branches were untested (policy.csv trailing newline;
   policy.ts `newEnforcer`). Repair commit `5140815` (`test: cover policy
-  malformed validation branches`) is bounded to
+malformed validation branches`) is bounded to
   `packages/compiler/test/policy-target-parity.test.ts` (+20/-3) and made
   the malformed test table-driven with three cases, each asserting the
   malformed policy-file issue at its own path. Re-review confirmed all three
@@ -641,6 +641,52 @@ that contains it.
 - **Next task:** Stage 5 final acceptance: full repository gates (affected
   Graph/Capabilities/Control Plane/Worker suites, formatting/secret/
   provenance checks), roadmap update, and GOAL_COMPLETE.
+
+### Stage 5: Final acceptance (2026-08-06)
+
+- **Owned task:** full repository gates, roadmap update, and GOAL_COMPLETE.
+- **Final gate evidence (Node v22.11.0, branch tip):**
+  - complete `@factory/compiler` suite: 329/329 serial (19 files);
+  - affected suites: `@factory/graph` 35/35, `@factory/capabilities`
+    282/282, `@factory/control-plane` 121/121, `@factory/compiler-worker`
+    81/81;
+  - repository formatting: the four Goal-owned governance docs were
+    conformed to the repository-wide Prettier configuration; 54 pre-existing
+    files (research docs, physical capability asset JSONs, Workbench
+    configuration, scripts) remain flagged by the repo-wide check — a
+    pre-existing repository condition unrelated to this Goal (verified: no
+    Goal-owned source or test file is flagged);
+  - secret-boundary scan of the complete Goal range (`main..HEAD`): zero
+    credential, key, or token patterns; no raw prompts/responses; the only
+    URL in the range is the legitimate repository remote reference;
+  - provenance: all Goal commits are linear, remote-reachable, and pushed to
+    `origin/feat/compiler-target-plugin-kernel`; no force-push, amend, or
+    history rewrite; worktree clean at acceptance.
+- **Roadmap:** the P0 "Plugin compiler migration" section is marked
+  satisfied with the evidence pointer (updated on 2026-08-06).
+- **Acceptance criteria mapping (design Completion criteria 1-10):**
+  1. Typed Binding Task 2 reconciled through its gates — Stage 0
+     (accepted at 0dbe0cf).
+  2. `CompilerTargetPluginV1` and Registry with focused positive and
+     fail-closed tests — Stage 1 (accepted at 249fc85; 55/55 kernel tests).
+  3. Docs, policy, database are independent registered targets — Stages
+     2-4 (accepted at 3fae494, 5140815, 76933ca).
+  4. Five-Profile file/byte/digest parity with no unexplained difference —
+     20 + 15 + 20 frozen legacy vectors, all reproduced exactly.
+  5. Facade no longer owns those renderers — 836 renderer lines removed
+     across Stages 2-4; facade remains thin.
+  6. No profile-name semantic branch or mutable compilation input —
+     verified at every review.
+  7. Required focused, package, integration, and smoke gates pass — see
+     final gate evidence.
+  8. Goal ledger, roadmap, project status, and acceptance evidence agree —
+     this entry, the roadmap update, and project-status.
+  9. Fresh independent task-review, QA, release-review, and PM contexts
+     completed every required transition — 20 independent gate contexts
+     across the four stages, all citing their Target-Commit.
+  10. Worktree clean; every Goal commit pushed — verified at acceptance.
+- **Next task:** none — GOAL_COMPLETE. The isolated verifier and
+  diagnosis-to-Draft-Diff loop are the next P0 Goal.
 
 ## Residual risks and stop conditions
 

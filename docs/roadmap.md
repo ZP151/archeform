@@ -17,22 +17,34 @@ Published Graph, Compilation, or generated source directly.
 
 ### Plugin compiler migration
 
-Modularise the compiler behind `CompilerTargetPluginV1`:
+**Satisfied on 2026-08-06** by the P0 Compiler Target Plugin Kernel Goal
+(`docs/superpowers/ledgers/2026-08-06-compiler-target-plugin-kernel.md`).
+The compiler is now modularised behind `CompilerTargetPluginV1`:
 
 ```text
 supports -> plan -> render -> validate
 ```
 
-Each plugin consumes only the immutable Published Graph and explicit compiler
-context. Begin with low-risk `docs`, `policy`, and `database` targets. For each
-migration, compare the new output digests with the current compiler before the
-plugin becomes authoritative; any unexpected difference blocks migration until
-explained and accepted. Preserve deterministic compilation records and the
-existing target contracts throughout the transition.
-
-Move Restaurant-specific behavior into declared capability contributions,
-bindings, and target plugins. No compiler, runtime, or generated-app branch may
-select semantics by profile name.
+- `packages/compiler/src/core/` owns the versioned contract
+  (`CompilerTargetPluginV1`, `PublishedCompilationInput`,
+  `CompilationContextV1`, `TargetValidationResult`), deterministic admission
+  and ordering (`CompilerTargetRegistryV1`), and generated-file path,
+  collision, and digest rules.
+- Documentation, policy (Casbin), and database (Prisma schema x2, initial
+  migration, seed) are independent registered targets under
+  `packages/compiler/src/targets/`, each with frozen file/byte/SHA-256 parity
+  evidence across all five Profiles (20 + 15 + 20 frozen legacy digest
+  vectors; no unexplained difference). The facade
+  (`packages/compiler/src/index.ts`) no longer owns those renderers and
+  remains a thin public facade with an unchanged export surface.
+- Each plugin consumes only the immutable Published Graph, the validated
+  capability composition lock, and the explicit compiler context. Package-
+  owned database/policy contributions and Restaurant artifacts flow through
+  the explicit context; no compiler, runtime, or generated-app branch selects
+  semantics by profile name.
+- `packages/compiler/src/index.ts` shrank from 4565 to ~3600 lines through
+  responsibility-based extraction; no generic utils/helpers modules were
+  introduced.
 
 ### Verification loop
 

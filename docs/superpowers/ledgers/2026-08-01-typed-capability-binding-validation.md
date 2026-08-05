@@ -200,16 +200,16 @@ not acceptance.
 
 ## Project state
 
-| Task                                           | State          | Specialization | Contract owner                               | Contract status                                 |
-| ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | ----------------------------------------------- |
-| 1. Pure typed Graph symbol index               | `accepted`     | `integration`  | Application Graph Type System                | Release review and fresh verification passed.   |
-| 2. Typed manifest and binding contracts        | `accepted`     | `integration`  | Capability Binding Contract                  | Release review and fresh verification passed at 0dbe0cf with no P0/P1/P2. |
-| 2A. Immutable composition resolution boundary  | `accepted`     | `integration`  | Capability Composition Resolution Boundary   | Release review and fresh verification passed.   |
-| 3. Serialized owner-aware Graph selections     | `planned`      | `integration`  | Application Graph Serialization              | Remains `planned` and blocked; Graph tasks do not start on Task 2 acceptance. |
-| 4. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 3 serialized contract. |
-| 5. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-4.                  |
-| 6. Graph-aware Publish and compiler admission  | `planned`      | `backend`      | Published Graph and Compiler Admission       | Blocked on accepted Tasks 1-5.                  |
-| 7. Current recipe migration and acceptance     | `planned`      | `integration`  | Typed Binding Migration and Release Evidence | Blocked on accepted Tasks 1, 2, 2A, and 3-6.    |
+| Task                                           | State      | Specialization | Contract owner                               | Contract status                                                               |
+| ---------------------------------------------- | ---------- | -------------- | -------------------------------------------- | ----------------------------------------------------------------------------- |
+| 1. Pure typed Graph symbol index               | `accepted` | `integration`  | Application Graph Type System                | Release review and fresh verification passed.                                 |
+| 2. Typed manifest and binding contracts        | `accepted` | `integration`  | Capability Binding Contract                  | Release review and fresh verification passed at 0dbe0cf with no P0/P1/P2.     |
+| 2A. Immutable composition resolution boundary  | `accepted` | `integration`  | Capability Composition Resolution Boundary   | Release review and fresh verification passed.                                 |
+| 3. Serialized owner-aware Graph selections     | `planned`  | `integration`  | Application Graph Serialization              | Remains `planned` and blocked; Graph tasks do not start on Task 2 acceptance. |
+| 4. Safe versioned physical capability assets   | `planned`  | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 3 serialized contract.                               |
+| 5. Manifest-aware Draft composition validation | `planned`  | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-4.                                                |
+| 6. Graph-aware Publish and compiler admission  | `planned`  | `backend`      | Published Graph and Compiler Admission       | Blocked on accepted Tasks 1-5.                                                |
+| 7. Current recipe migration and acceptance     | `planned`  | `integration`  | Typed Binding Migration and Release Evidence | Blocked on accepted Tasks 1, 2, 2A, and 3-6.                                  |
 
 ## Task 2 reconciliation with accepted Task 2A — 2026-08-06
 
@@ -294,11 +294,11 @@ that Target-Commit. This was not behavioral QA, release review, or acceptance.
   (20 files) and the Compiler suite passed 237/237 (13 files).
 - Capabilities typecheck, lint (Prettier), and build all pass.
 - Adversarial name-filtered probes all pass: `accessor-backed parameters
-  declaration` (zero-getter counter asserted), `accessor-backed fieldTypes
-  element`, `strict parameter that exposes its declaration through
-  accessors`, `non-boolean own` (2/2), and `not a graph-symbol type` (1/1).
+declaration` (zero-getter counter asserted), `accessor-backed fieldTypes
+element`, `strict parameter that exposes its declaration through
+accessors`, `non-boolean own` (2/2), and `not a graph-symbol type` (1/1).
 - Determinism: `keeps one digest across 100 resolutions of the largest
-  default composition` (18 selections, single sha256 digest) passed.
+default composition` (18 selections, single sha256 digest) passed.
 - Scope: `git show 0dbe0cf --stat` is exactly
   `packages/capabilities/test/typed-binding-contract.test.ts` +25 lines;
   `git diff 0dbe0cf HEAD --stat` is governance docs only; `git diff --check`

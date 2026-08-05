@@ -1438,7 +1438,7 @@ On Node `v22.11.0`, it records:
   PASS, and no P0/P1/P2, re-running the focused suites at 83/83 (37
   typed-binding-contract, 46 composition-contract) and the full Capabilities
   suite at 282/282 (20 files). The PM records Task 2 `implementing ->
-  ready_for_qa`. Independent behavioral QA against `0dbe0cf` then returned
+ready_for_qa`. Independent behavioral QA against `0dbe0cf` then returned
   PASS with no P0/P1/P2 (read-only QA context, Node `v22.11.0`, product code
   byte-identical to `0dbe0cf` at HEAD `f530306`): focused suites 83/83,
   full Capabilities 282/282 (20 files) and Compiler 237/237 (13 files),
@@ -1448,7 +1448,7 @@ On Node `v22.11.0`, it records:
   composition (18 selections). Scope checks confirmed the same
   `typed-binding-contract.test.ts` +25-line diff at `0dbe0cf` and a
   governance-docs-only diff to HEAD. The PM records Task 2 `ready_for_qa ->
-  reviewed`. Fresh independent release review at the remote-reachable
+reviewed`. Fresh independent release review at the remote-reachable
   Target-Commit `0dbe0cf` then returned RELEASE PASS with no P0/P1/P2:
   `0dbe0cf` changed only
   `packages/capabilities/test/typed-binding-contract.test.ts` (+25 lines),
@@ -1740,210 +1740,211 @@ plain-data arrays, `40e941b` extracted `requireDensePlainDataArray`
 (`assertSerializablePlan` now 53 lines, under the 60-line guidance), and
 `249fc85` recorded the repair sequence and the deviation. Fresh evidence at
 the tip: focused kernel suites 55/55 (23 target-plugin + 15 target-registry
-+ 17 generated-files), full Compiler suite 292/292 serial (16 files),
-Compiler typecheck, Prettier lint, and `git diff --check` clean, worktree
-clean, all 38 prior facade exports preserved plus 12 kernel symbols.
-Independent behavioral QA then passed at `249fc85` (QA_PASS, no P0/P1/P2;
-independent read-only QA context, Node `v22.11.0`, product code
-byte-identical to `249fc85` at HEAD `8f95018`): focused kernel suites 55/55
-(23 target-plugin + 15 target-registry + 17 generated-files), full Compiler
-suite 292/292 serial (16 files), Compiler typecheck/lint/build,
-compiler-worker 81/81 plus typecheck, and compilation-plan facade suite
-51/51; adversarial symbol-keyed (records and arrays), accessor-backed
-(records and array indices, zero getter invocations), non-enumerable,
-`toJSON` (enumerable, non-enumerable, inherited), sparse-array, extra-own-
-key, array-rooted-cycle, shared non-cyclic acceptance, bigint, duplicate-
-path, nondeterminism, traversal-class, and validation-failure probes all
-pass with precise messages; the two previously-recorded informational edges
-are closed at the hardened tree, and the deep-nesting recursion edge remains
-informational only. Independent release review at `249fc85` then returned
-RELEASE PASS with no P0/P1/P2 (independent read-only context, Node
-`v22.11.0`): the kernel is purely additive with the Draft -> Publish ->
-immutable Compilation lifecycle, Published Graph immutability, and
-capability-lock contracts untouched; the facade preserves all 38 prior
-exports plus 12 kernel symbols; no dependency changes; no profile-name
-branching; the hardening-range provenance matches the ledger deviation
-record (linear history, no amend/force-push); no credentials, raw prompts or
-responses, or URLs in the reviewed range; fresh re-runs at byte-identical
-HEAD passed focused 55/55, facade compilation-plan 51/51, full compiler
-serial 292/292, and typecheck and Prettier; `249fc85` is remote-reachable
-from `origin/feat/compiler-target-plugin-kernel` and the worktree is clean.
-The PM records Stage 1 `reviewed -> accepted` citing `249fc85`. Stage 1
-acceptance covers the plugin kernel (contract, registry, generated-file
-rules, facade re-exports) with the serializability hardening sequence.
-Stage 2 (documentation target parity migration) is implemented at
-Target-Commit `3fae49480d5e481fd5ed0916f0a44e5ebcc9c9c5` and its iteration
-state is `ready_for_qa`: independent task review returned TASK_REVIEW_PASS
-(SPEC PASS, QUALITY PASS, no P0/P1/P2) at the clean tree exactly at
-`3fae494`, after the two P2s from the initial `3f57542` review were closed —
-`buildDocumentationPlan` split into
-`projectDocumentationEndpoints`/`projectDocumentationEntitySections`/
-`projectDocumentationRelationRows` (behavior-neutral, 20/20 frozen digests
-still reproduced), and the fixture-session profile narrative corrected to
-Expense Approval and Simple Ecommerce (retail-counter and grocery-pickup use
-`x-factory-role`; Restaurant uses the runtime override). Fresh evidence at
-`3fae494`: documentation parity + validation tests 11/11 (5 profiles x 4
-frozen SHA-256 vectors + determinism + 5 fail-closed cases), full Compiler
-suite 303/303 serial (17 files), typecheck, Prettier lint, and
-`git diff --check` clean. The migration adds
-`packages/compiler/src/targets/documentation/target.ts`
-(`CompilerTargetPluginV1<DocumentationPlanV1>`), the frozen-digest parity
-test, facade delegation of the four docs files through the facade-owned
-registry with the six centralized renderers removed (134 lines), and the
-exported `buildCompilationInput` resolver. Typed Binding Graph Tasks 3-7
-remain `planned` and blocked, and Commercial Foundation Task 2 remains
-escalated. Independent behavioral QA then passed at `3fae494` (QA_PASS, no
-P0/P1/P2; independent read-only QA context, Node `v22.11.0`, product code
-byte-identical to `3fae494` at HEAD `423ab9e`): parity 11/11 focused (5
-profiles x 4 frozen legacy SHA-256 vectors + determinism + 5 fail-closed
-validation cases), byte-level probe confirmed `generateApplicationBundle`
-docs output byte-identical to the registry-run plugin output (8/8 files
-across simple-ecommerce and restaurant-ordering, digests equal the frozen
-vectors), full Compiler suite 303/303 serial (17 files), worker 81/81,
-compilation-plan facade suite 51/51, identity-policy-runtime 3/3, and
-typecheck/lint/build pass; scope `git show 3fae494` = 3 files and
-`git diff 249fc85..3fae494` = 5 files (index.ts, documentation target,
-parity test, two governance docs), no dependency changes, `git diff --check`
-clean, worktree clean. Informational edges (Restaurant eager context render
-plus lazy facade re-render, both pure and byte-identical; test-local fixture
-helper duplication) remain covered by the ledger residual risk. The PM
-records Stage 2 `ready_for_qa -> reviewed` citing `3fae494`. Independent
-release review at `3fae494` then returned RELEASE PASS with no P0/P1/P2
-(independent read-only context, Node `v22.11.0`): lifecycle untouched
-(Draft -> validated Published Graph -> immutable Compilation); facade export
-surface preserved exactly (only `buildCompilationInput` added);
-capability-lock contracts and contribution pipelines remain facade-owned; no
-profile-name branching (the target branches only on capability-key prefixes
-and composition-derived context); all 20 frozen SHA-256 vectors (5 profiles
-x 4 docs files) reproduce exactly; `target.ts` is 261 lines with every
-function under 60; no credentials, raw material, or URLs in the migration
-range (`249fc85..3fae494` = index.ts + documentation target + parity test +
-two governance docs); no dependency changes; tests recorded across the QA
-and release contexts (parity 11/11, full compiler serial 303/303, worker
-81/81, facade suite 51/51, identity-policy-runtime 3/3, typecheck/lint/build
-clean); `3fae494` remote-reachable, linear history with no amend/force-push,
-worktree clean. The PM records Stage 2 `reviewed -> accepted` citing
-`3fae494`. Stage 2 acceptance covers the documentation target migration
-(plugin, frozen-digest parity across all five Profiles, facade delegation,
-centralized renderers removed). Stage 3 (policy target parity migration) is
-implemented at Target-Commit `514081580ffdc172ef40935b73f7c2276739e35d` and
-its iteration state is `ready_for_qa`: independent task review returned
-TASK_REVIEW_PASS (SPEC PASS, QUALITY PASS, no P0/P1/P2) at the clean tree
-exactly at `5140815`, after repair commit `5140815` (bounded to
-`packages/compiler/test/policy-target-parity.test.ts`, +20/-3) closed the
-P2 from the initial `2ccc553` review — two malformed-validation branches
-untested (policy.csv trailing newline; policy.ts `newEnforcer`) — by making
-the malformed test table-driven with three cases, each asserting the
-malformed policy-file issue at its own path; re-review confirmed all three
-branches fire. Fresh evidence at `5140815`: policy parity + validation
-13/13 (5 profiles x 3 frozen SHA-256 vectors + determinism + 7 fail-closed
-cases), full Compiler suite 316/316 serial (18 files), typecheck, Prettier
-lint, and `git diff --check` clean. The migration adds
-`packages/compiler/src/targets/policy/target.ts` (`PolicyPlanV1`, key
-`casbin-policy`, distinct module model with `p.obj == "*"` preserved), the
-parity test (15 frozen vectors), and facade delegation of the three policy
-files via the facade-owned registry with `renderCasbinPolicy` and
-`renderPolicyModule` removed; `runtimeDefinition` and
-`lockedRuntimeHandlerEntity` were restored byte-identically after a
-deletion overrun (recorded in the ledger). Independent behavioral QA then
-passed at `5140815` (QA_PASS, no P0/P1/P2; independent read-only QA context,
-Node `v22.11.0`, product code byte-identical to `5140815` at HEAD
-`25ef916`): parity 13/13 focused (5 profiles x 3 frozen legacy SHA-256
-vectors + determinism + 7 fail-closed validation cases); byte-level probe
-confirmed `generateApplicationBundle` policy files byte-identical to the
-registry-run plugin output (15/15 bundle == plugin == frozen digest MATCH
-across all five profiles) plus two-render bundle determinism; full Compiler
-suite 316/316 serial (18 files); worker 81/81; compilation-plan facade suite
-51/51; restaurant-runtime 20/20 (asserts `api/policy/policy.csv` content);
-typecheck, lint, and build pass; the three malformed adversarial cases
-("without matchers", "without a trailing newline", "without an enforcer")
-each assert `malformed.policy-file` at their own path, and
-missing/undeclared classes pass; `runtimeDefinition` and
-`lockedRuntimeHandlerEntity` are byte-identical to commit `4b5c6ab`;
-migration range `3fae494..5140815` = index.ts + policy target + parity test
-+ two governance docs, no dependency changes, `git diff --check` clean,
-worktree clean. The PM records Stage 3 `ready_for_qa -> reviewed` citing
-`5140815`. Independent release review at `5140815` then returned RELEASE
-PASS with no P0/P1/P2 (independent read-only context, Node `v22.11.0`):
-lifecycle unchanged; facade public surface 20/20 exports byte-identical;
-the three policy files byte-identical (parity); the policy module's distinct
-internal model (`p.obj == "*"`) preserved; no profile-name branching;
-`runtimeDefinition` and `lockedRuntimeHandlerEntity` byte-identical to
-`4b5c6ab`; no credentials, raw material, or URLs in the migration range
-(`3fae494..5140815` = index.ts + policy target + parity test + two
-governance docs); no dependency changes; tests recorded across the QA and
-release contexts (policy parity 13/13, full compiler serial 316/316, worker
-81/81, compilation-plan 51/51, restaurant-runtime 20/20, typecheck/lint/
-build clean); `5140815` remote-reachable, linear history with no
-force-push/amend, worktree clean, all gate records cite `5140815`. The PM
-records Stage 3 `reviewed -> accepted` citing `5140815`. Stage 3 acceptance
-covers the policy target migration (plugin with key `casbin-policy`, 15
-frozen digest vectors across all five Profiles, facade delegation,
-centralized renderers removed). Stage 4 (database target parity migration)
-is implemented at Target-Commit `76933ca7b7295a6ce053d1bfdc3dfa605aa8487f`
-and its iteration state is `ready_for_qa`: independent task review returned
-TASK_REVIEW_PASS (SPEC PASS, QUALITY PASS, no P0/P1/P2) at the clean tree
-exactly at `76933ca`, after the one P2 from the initial `35fa51d` review
-(ledger line-count inaccuracy, 667 vs actual 707) was corrected at
-`76933ca` (ledger-only, +5/-1), which also records the responsibility-based
-file-size exception (renderers moved verbatim; the parity gate justifies
-the cohesive exception, matching the design's "preserve cohesive logic"
-clause). Fresh evidence at `76933ca`: database parity + validation 13/13;
-full Compiler suite 329/329 serial (19 files); typecheck, Prettier lint,
-and `git diff --check` clean; code tree byte-identical to `35fa51d`
-(reviewed fully). The migration adds
-`packages/compiler/src/targets/database/target.ts` (707 lines,
-`DatabasePlanV1`, the nine legacy renderers moved byte-identically —
-verified by diff against `2e2753a` — private
-`toPascalCase`/`toCamelCase`/`hasCommerceCapabilities` copies, and
-fail-closed validation on missing/unexpected/malformed), the parity test
-(20 frozen vectors, 5 profiles x 4 paths), and facade delegation of the
-four database files via the facade-owned registry with the nine centralized
-renderers removed (facade diff +10/-572); the database
-package.json/Dockerfile/.dockerignore and `renderPrismaRecordStore` remain
-facade-owned. No migration bytes changed (exact parity), so no migration
-smoke was required per the design. Independent behavioral QA then passed at
-`76933ca` (QA_PASS, no P0/P1/P2; independent read-only QA context, Node
-`v22.11.0`, product code byte-identical to `76933ca` at HEAD `b6429a2`):
-parity 13/13 focused (5 profiles x 4 frozen legacy SHA-256 vectors +
-determinism + 7 fail-closed validation cases); byte-level spot check
-confirmed `generateApplicationBundle` database files byte-identical to the
-registry-run plugin output for restaurant-ordering and simple-ecommerce
-(30/30 PASS, triple agreement frozen == plugin == bundle); bundle
-deterministic across two renders; full Compiler suite 329/329 serial (19
-files); worker 81/81; compilation-plan 51/51; order-operations-runtime 9/9;
-money-pricing-runtime 4/4; restaurant-runtime 20/20; typecheck, lint, and
-build pass; all three malformed adversarial cases ("without" matcher) assert
-`malformed.database-file` at their own paths, and
-missing/undeclared/validation-failure classes pass; `76933ca` is ledger-only
-(+5/-1); migration range `5140815..76933ca` = index.ts (+10/-572) +
-database target (+707) + parity test + two governance docs; the nine moved
-renderers plus three private copies byte-identical to commit `2e2753a`
-(12/12 verified); no dependency changes; `git diff --check` clean; worktree
-clean. The PM records Stage 4 `ready_for_qa -> reviewed` citing `76933ca`.
-Independent release review at `76933ca` then returned RELEASE PASS with no
-P0/P1/P2 (independent read-only context, Node `v22.11.0`): lifecycle
-untouched; facade export surface byte-identical (13/13 named exports vs
-`2e2753a`); `renderPrismaRecordStore` and the database
-package.json/Dockerfile/.dockerignore remain facade-owned; the delegation
-replaces exactly the four legacy database file entries; no profile-name
-branching (zero profile string references in `target.ts`; Restaurant
-artifacts and package-owned fragments enter via the explicit plan context);
-verbatim-move proof — every one of the 404 unique removed lines appears
-verbatim in the target additions; the migration range `5140815..76933ca` is
-exactly 5 files with no credentials, URLs (except the legitimate repo
-remote reference), or raw material; digest vectors are evidence values
-only; fresh re-runs at byte-identical product code passed parity 13/13,
-full compiler serial 329/329 (19 files), worker 81/81, and
-typecheck/lint/`git diff --check`; `76933ca` remote-reachable, linear
-history, worktree clean, gate records consistent (task review PASS, QA
-PASS, `ready_for_qa -> reviewed` all citing `76933ca`). The PM records
-Stage 4 `reviewed -> accepted` citing `76933ca`. Stage 4 acceptance covers
-the database target migration (plugin with key `prisma-postgres`, 20 frozen
-digest vectors across all five Profiles, package-owned contribution
-fragments preserved, facade delegation, nine centralized renderers
-removed); this completes all three target migrations (documentation,
-policy, database). The next smallest slice is Stage 5 final acceptance:
-full repository gates (affected Graph/Capabilities/Control Plane/Worker
-suites, formatting/secret/provenance checks), roadmap update, and
-GOAL_COMPLETE.
+
+- 17 generated-files), full Compiler suite 292/292 serial (16 files),
+  Compiler typecheck, Prettier lint, and `git diff --check` clean, worktree
+  clean, all 38 prior facade exports preserved plus 12 kernel symbols.
+  Independent behavioral QA then passed at `249fc85` (QA_PASS, no P0/P1/P2;
+  independent read-only QA context, Node `v22.11.0`, product code
+  byte-identical to `249fc85` at HEAD `8f95018`): focused kernel suites 55/55
+  (23 target-plugin + 15 target-registry + 17 generated-files), full Compiler
+  suite 292/292 serial (16 files), Compiler typecheck/lint/build,
+  compiler-worker 81/81 plus typecheck, and compilation-plan facade suite
+  51/51; adversarial symbol-keyed (records and arrays), accessor-backed
+  (records and array indices, zero getter invocations), non-enumerable,
+  `toJSON` (enumerable, non-enumerable, inherited), sparse-array, extra-own-
+  key, array-rooted-cycle, shared non-cyclic acceptance, bigint, duplicate-
+  path, nondeterminism, traversal-class, and validation-failure probes all
+  pass with precise messages; the two previously-recorded informational edges
+  are closed at the hardened tree, and the deep-nesting recursion edge remains
+  informational only. Independent release review at `249fc85` then returned
+  RELEASE PASS with no P0/P1/P2 (independent read-only context, Node
+  `v22.11.0`): the kernel is purely additive with the Draft -> Publish ->
+  immutable Compilation lifecycle, Published Graph immutability, and
+  capability-lock contracts untouched; the facade preserves all 38 prior
+  exports plus 12 kernel symbols; no dependency changes; no profile-name
+  branching; the hardening-range provenance matches the ledger deviation
+  record (linear history, no amend/force-push); no credentials, raw prompts or
+  responses, or URLs in the reviewed range; fresh re-runs at byte-identical
+  HEAD passed focused 55/55, facade compilation-plan 51/51, full compiler
+  serial 292/292, and typecheck and Prettier; `249fc85` is remote-reachable
+  from `origin/feat/compiler-target-plugin-kernel` and the worktree is clean.
+  The PM records Stage 1 `reviewed -> accepted` citing `249fc85`. Stage 1
+  acceptance covers the plugin kernel (contract, registry, generated-file
+  rules, facade re-exports) with the serializability hardening sequence.
+  Stage 2 (documentation target parity migration) is implemented at
+  Target-Commit `3fae49480d5e481fd5ed0916f0a44e5ebcc9c9c5` and its iteration
+  state is `ready_for_qa`: independent task review returned TASK_REVIEW_PASS
+  (SPEC PASS, QUALITY PASS, no P0/P1/P2) at the clean tree exactly at
+  `3fae494`, after the two P2s from the initial `3f57542` review were closed —
+  `buildDocumentationPlan` split into
+  `projectDocumentationEndpoints`/`projectDocumentationEntitySections`/
+  `projectDocumentationRelationRows` (behavior-neutral, 20/20 frozen digests
+  still reproduced), and the fixture-session profile narrative corrected to
+  Expense Approval and Simple Ecommerce (retail-counter and grocery-pickup use
+  `x-factory-role`; Restaurant uses the runtime override). Fresh evidence at
+  `3fae494`: documentation parity + validation tests 11/11 (5 profiles x 4
+  frozen SHA-256 vectors + determinism + 5 fail-closed cases), full Compiler
+  suite 303/303 serial (17 files), typecheck, Prettier lint, and
+  `git diff --check` clean. The migration adds
+  `packages/compiler/src/targets/documentation/target.ts`
+  (`CompilerTargetPluginV1<DocumentationPlanV1>`), the frozen-digest parity
+  test, facade delegation of the four docs files through the facade-owned
+  registry with the six centralized renderers removed (134 lines), and the
+  exported `buildCompilationInput` resolver. Typed Binding Graph Tasks 3-7
+  remain `planned` and blocked, and Commercial Foundation Task 2 remains
+  escalated. Independent behavioral QA then passed at `3fae494` (QA_PASS, no
+  P0/P1/P2; independent read-only QA context, Node `v22.11.0`, product code
+  byte-identical to `3fae494` at HEAD `423ab9e`): parity 11/11 focused (5
+  profiles x 4 frozen legacy SHA-256 vectors + determinism + 5 fail-closed
+  validation cases), byte-level probe confirmed `generateApplicationBundle`
+  docs output byte-identical to the registry-run plugin output (8/8 files
+  across simple-ecommerce and restaurant-ordering, digests equal the frozen
+  vectors), full Compiler suite 303/303 serial (17 files), worker 81/81,
+  compilation-plan facade suite 51/51, identity-policy-runtime 3/3, and
+  typecheck/lint/build pass; scope `git show 3fae494` = 3 files and
+  `git diff 249fc85..3fae494` = 5 files (index.ts, documentation target,
+  parity test, two governance docs), no dependency changes, `git diff --check`
+  clean, worktree clean. Informational edges (Restaurant eager context render
+  plus lazy facade re-render, both pure and byte-identical; test-local fixture
+  helper duplication) remain covered by the ledger residual risk. The PM
+  records Stage 2 `ready_for_qa -> reviewed` citing `3fae494`. Independent
+  release review at `3fae494` then returned RELEASE PASS with no P0/P1/P2
+  (independent read-only context, Node `v22.11.0`): lifecycle untouched
+  (Draft -> validated Published Graph -> immutable Compilation); facade export
+  surface preserved exactly (only `buildCompilationInput` added);
+  capability-lock contracts and contribution pipelines remain facade-owned; no
+  profile-name branching (the target branches only on capability-key prefixes
+  and composition-derived context); all 20 frozen SHA-256 vectors (5 profiles
+  x 4 docs files) reproduce exactly; `target.ts` is 261 lines with every
+  function under 60; no credentials, raw material, or URLs in the migration
+  range (`249fc85..3fae494` = index.ts + documentation target + parity test +
+  two governance docs); no dependency changes; tests recorded across the QA
+  and release contexts (parity 11/11, full compiler serial 303/303, worker
+  81/81, facade suite 51/51, identity-policy-runtime 3/3, typecheck/lint/build
+  clean); `3fae494` remote-reachable, linear history with no amend/force-push,
+  worktree clean. The PM records Stage 2 `reviewed -> accepted` citing
+  `3fae494`. Stage 2 acceptance covers the documentation target migration
+  (plugin, frozen-digest parity across all five Profiles, facade delegation,
+  centralized renderers removed). Stage 3 (policy target parity migration) is
+  implemented at Target-Commit `514081580ffdc172ef40935b73f7c2276739e35d` and
+  its iteration state is `ready_for_qa`: independent task review returned
+  TASK_REVIEW_PASS (SPEC PASS, QUALITY PASS, no P0/P1/P2) at the clean tree
+  exactly at `5140815`, after repair commit `5140815` (bounded to
+  `packages/compiler/test/policy-target-parity.test.ts`, +20/-3) closed the
+  P2 from the initial `2ccc553` review — two malformed-validation branches
+  untested (policy.csv trailing newline; policy.ts `newEnforcer`) — by making
+  the malformed test table-driven with three cases, each asserting the
+  malformed policy-file issue at its own path; re-review confirmed all three
+  branches fire. Fresh evidence at `5140815`: policy parity + validation
+  13/13 (5 profiles x 3 frozen SHA-256 vectors + determinism + 7 fail-closed
+  cases), full Compiler suite 316/316 serial (18 files), typecheck, Prettier
+  lint, and `git diff --check` clean. The migration adds
+  `packages/compiler/src/targets/policy/target.ts` (`PolicyPlanV1`, key
+  `casbin-policy`, distinct module model with `p.obj == "*"` preserved), the
+  parity test (15 frozen vectors), and facade delegation of the three policy
+  files via the facade-owned registry with `renderCasbinPolicy` and
+  `renderPolicyModule` removed; `runtimeDefinition` and
+  `lockedRuntimeHandlerEntity` were restored byte-identically after a
+  deletion overrun (recorded in the ledger). Independent behavioral QA then
+  passed at `5140815` (QA_PASS, no P0/P1/P2; independent read-only QA context,
+  Node `v22.11.0`, product code byte-identical to `5140815` at HEAD
+  `25ef916`): parity 13/13 focused (5 profiles x 3 frozen legacy SHA-256
+  vectors + determinism + 7 fail-closed validation cases); byte-level probe
+  confirmed `generateApplicationBundle` policy files byte-identical to the
+  registry-run plugin output (15/15 bundle == plugin == frozen digest MATCH
+  across all five profiles) plus two-render bundle determinism; full Compiler
+  suite 316/316 serial (18 files); worker 81/81; compilation-plan facade suite
+  51/51; restaurant-runtime 20/20 (asserts `api/policy/policy.csv` content);
+  typecheck, lint, and build pass; the three malformed adversarial cases
+  ("without matchers", "without a trailing newline", "without an enforcer")
+  each assert `malformed.policy-file` at their own path, and
+  missing/undeclared classes pass; `runtimeDefinition` and
+  `lockedRuntimeHandlerEntity` are byte-identical to commit `4b5c6ab`;
+  migration range `3fae494..5140815` = index.ts + policy target + parity test
+- two governance docs, no dependency changes, `git diff --check` clean,
+  worktree clean. The PM records Stage 3 `ready_for_qa -> reviewed` citing
+  `5140815`. Independent release review at `5140815` then returned RELEASE
+  PASS with no P0/P1/P2 (independent read-only context, Node `v22.11.0`):
+  lifecycle unchanged; facade public surface 20/20 exports byte-identical;
+  the three policy files byte-identical (parity); the policy module's distinct
+  internal model (`p.obj == "*"`) preserved; no profile-name branching;
+  `runtimeDefinition` and `lockedRuntimeHandlerEntity` byte-identical to
+  `4b5c6ab`; no credentials, raw material, or URLs in the migration range
+  (`3fae494..5140815` = index.ts + policy target + parity test + two
+  governance docs); no dependency changes; tests recorded across the QA and
+  release contexts (policy parity 13/13, full compiler serial 316/316, worker
+  81/81, compilation-plan 51/51, restaurant-runtime 20/20, typecheck/lint/
+  build clean); `5140815` remote-reachable, linear history with no
+  force-push/amend, worktree clean, all gate records cite `5140815`. The PM
+  records Stage 3 `reviewed -> accepted` citing `5140815`. Stage 3 acceptance
+  covers the policy target migration (plugin with key `casbin-policy`, 15
+  frozen digest vectors across all five Profiles, facade delegation,
+  centralized renderers removed). Stage 4 (database target parity migration)
+  is implemented at Target-Commit `76933ca7b7295a6ce053d1bfdc3dfa605aa8487f`
+  and its iteration state is `ready_for_qa`: independent task review returned
+  TASK_REVIEW_PASS (SPEC PASS, QUALITY PASS, no P0/P1/P2) at the clean tree
+  exactly at `76933ca`, after the one P2 from the initial `35fa51d` review
+  (ledger line-count inaccuracy, 667 vs actual 707) was corrected at
+  `76933ca` (ledger-only, +5/-1), which also records the responsibility-based
+  file-size exception (renderers moved verbatim; the parity gate justifies
+  the cohesive exception, matching the design's "preserve cohesive logic"
+  clause). Fresh evidence at `76933ca`: database parity + validation 13/13;
+  full Compiler suite 329/329 serial (19 files); typecheck, Prettier lint,
+  and `git diff --check` clean; code tree byte-identical to `35fa51d`
+  (reviewed fully). The migration adds
+  `packages/compiler/src/targets/database/target.ts` (707 lines,
+  `DatabasePlanV1`, the nine legacy renderers moved byte-identically —
+  verified by diff against `2e2753a` — private
+  `toPascalCase`/`toCamelCase`/`hasCommerceCapabilities` copies, and
+  fail-closed validation on missing/unexpected/malformed), the parity test
+  (20 frozen vectors, 5 profiles x 4 paths), and facade delegation of the
+  four database files via the facade-owned registry with the nine centralized
+  renderers removed (facade diff +10/-572); the database
+  package.json/Dockerfile/.dockerignore and `renderPrismaRecordStore` remain
+  facade-owned. No migration bytes changed (exact parity), so no migration
+  smoke was required per the design. Independent behavioral QA then passed at
+  `76933ca` (QA_PASS, no P0/P1/P2; independent read-only QA context, Node
+  `v22.11.0`, product code byte-identical to `76933ca` at HEAD `b6429a2`):
+  parity 13/13 focused (5 profiles x 4 frozen legacy SHA-256 vectors +
+  determinism + 7 fail-closed validation cases); byte-level spot check
+  confirmed `generateApplicationBundle` database files byte-identical to the
+  registry-run plugin output for restaurant-ordering and simple-ecommerce
+  (30/30 PASS, triple agreement frozen == plugin == bundle); bundle
+  deterministic across two renders; full Compiler suite 329/329 serial (19
+  files); worker 81/81; compilation-plan 51/51; order-operations-runtime 9/9;
+  money-pricing-runtime 4/4; restaurant-runtime 20/20; typecheck, lint, and
+  build pass; all three malformed adversarial cases ("without" matcher) assert
+  `malformed.database-file` at their own paths, and
+  missing/undeclared/validation-failure classes pass; `76933ca` is ledger-only
+  (+5/-1); migration range `5140815..76933ca` = index.ts (+10/-572) +
+  database target (+707) + parity test + two governance docs; the nine moved
+  renderers plus three private copies byte-identical to commit `2e2753a`
+  (12/12 verified); no dependency changes; `git diff --check` clean; worktree
+  clean. The PM records Stage 4 `ready_for_qa -> reviewed` citing `76933ca`.
+  Independent release review at `76933ca` then returned RELEASE PASS with no
+  P0/P1/P2 (independent read-only context, Node `v22.11.0`): lifecycle
+  untouched; facade export surface byte-identical (13/13 named exports vs
+  `2e2753a`); `renderPrismaRecordStore` and the database
+  package.json/Dockerfile/.dockerignore remain facade-owned; the delegation
+  replaces exactly the four legacy database file entries; no profile-name
+  branching (zero profile string references in `target.ts`; Restaurant
+  artifacts and package-owned fragments enter via the explicit plan context);
+  verbatim-move proof — every one of the 404 unique removed lines appears
+  verbatim in the target additions; the migration range `5140815..76933ca` is
+  exactly 5 files with no credentials, URLs (except the legitimate repo
+  remote reference), or raw material; digest vectors are evidence values
+  only; fresh re-runs at byte-identical product code passed parity 13/13,
+  full compiler serial 329/329 (19 files), worker 81/81, and
+  typecheck/lint/`git diff --check`; `76933ca` remote-reachable, linear
+  history, worktree clean, gate records consistent (task review PASS, QA
+  PASS, `ready_for_qa -> reviewed` all citing `76933ca`). The PM records
+  Stage 4 `reviewed -> accepted` citing `76933ca`. Stage 4 acceptance covers
+  the database target migration (plugin with key `prisma-postgres`, 20 frozen
+  digest vectors across all five Profiles, package-owned contribution
+  fragments preserved, facade delegation, nine centralized renderers
+  removed); this completes all three target migrations (documentation,
+  policy, database). The next smallest slice is Stage 5 final acceptance:
+  full repository gates (affected Graph/Capabilities/Control Plane/Worker
+  suites, formatting/secret/provenance checks), roadmap update, and
+  GOAL_COMPLETE.
