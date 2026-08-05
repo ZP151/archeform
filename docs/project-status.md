@@ -295,12 +295,30 @@ at their own paths and missing/undeclared/validation-failure classes pass;
 nine moved renderers + three private copies byte-identical to `2e2753a`
 (12/12 verified), no dependency changes, `git diff --check` clean, worktree
 clean. The PM records Stage 4 `ready_for_qa -> reviewed` citing `76933ca`.
-The next gate is fresh independent release review at `76933ca`, then PM
-`reviewed -> accepted` (final goal acceptance), then Stage 5 final
-acceptance (full repository gates, roadmap update, GOAL_COMPLETE). Typed
-Binding Graph Tasks 3-7 remain `planned` and blocked, and Commercial
-Foundation Task 2 remains escalated. `commerce.cart@1.0.1` already has a
-package-owned handler and is not the next unimplemented slice.
+Independent release review at `76933ca` then returned RELEASE PASS with no
+P0/P1/P2: lifecycle untouched; facade export surface byte-identical (13/13
+named exports vs `2e2753a`); `renderPrismaRecordStore` and the database
+package.json/Dockerfile/.dockerignore remain facade-owned; the delegation
+replaces exactly the four legacy database file entries; no profile-name
+branching (zero profile string references in `target.ts`; Restaurant
+artifacts and package-owned fragments enter via the explicit plan context);
+verbatim-move proof (all 404 unique removed lines appear verbatim in the
+target additions); no credentials, URLs, or raw material in the 5-file
+migration range; digest vectors are evidence values only; fresh re-runs
+passed parity 13/13, full compiler serial 329/329, worker 81/81,
+typecheck/lint/`git diff --check` clean; `76933ca` remote-reachable, linear
+history, worktree clean, gate records consistent. The PM records Stage 4
+`reviewed -> accepted` citing `76933ca`. Stage 4 acceptance covers the
+database target migration (plugin with key `prisma-postgres`, 20 frozen
+digest vectors across all five Profiles, package-owned contribution
+fragments preserved, facade delegation, nine centralized renderers removed);
+this completes all three target migrations (documentation, policy,
+database). The next gate is Stage 5 final acceptance: full repository gates
+(affected Graph/Capabilities/Control Plane/Worker suites, formatting/
+secret/provenance checks), roadmap update, and GOAL_COMPLETE. Typed Binding
+Graph Tasks 3-7 remain `planned` and blocked, and Commercial Foundation Task
+2 remains escalated. `commerce.cart@1.0.1` already has a package-owned
+handler and is not the next unimplemented slice.
 
 ## Persistent shared order operations — 2026-08-01
 
@@ -1903,6 +1921,29 @@ database target (+707) + parity test + two governance docs; the nine moved
 renderers plus three private copies byte-identical to commit `2e2753a`
 (12/12 verified); no dependency changes; `git diff --check` clean; worktree
 clean. The PM records Stage 4 `ready_for_qa -> reviewed` citing `76933ca`.
-The next smallest slice is fresh independent release review at `76933ca`,
-then PM `reviewed -> accepted` (final goal acceptance), then Stage 5 final
-acceptance: full repository gates, roadmap update, GOAL_COMPLETE.
+Independent release review at `76933ca` then returned RELEASE PASS with no
+P0/P1/P2 (independent read-only context, Node `v22.11.0`): lifecycle
+untouched; facade export surface byte-identical (13/13 named exports vs
+`2e2753a`); `renderPrismaRecordStore` and the database
+package.json/Dockerfile/.dockerignore remain facade-owned; the delegation
+replaces exactly the four legacy database file entries; no profile-name
+branching (zero profile string references in `target.ts`; Restaurant
+artifacts and package-owned fragments enter via the explicit plan context);
+verbatim-move proof — every one of the 404 unique removed lines appears
+verbatim in the target additions; the migration range `5140815..76933ca` is
+exactly 5 files with no credentials, URLs (except the legitimate repo
+remote reference), or raw material; digest vectors are evidence values
+only; fresh re-runs at byte-identical product code passed parity 13/13,
+full compiler serial 329/329 (19 files), worker 81/81, and
+typecheck/lint/`git diff --check`; `76933ca` remote-reachable, linear
+history, worktree clean, gate records consistent (task review PASS, QA
+PASS, `ready_for_qa -> reviewed` all citing `76933ca`). The PM records
+Stage 4 `reviewed -> accepted` citing `76933ca`. Stage 4 acceptance covers
+the database target migration (plugin with key `prisma-postgres`, 20 frozen
+digest vectors across all five Profiles, package-owned contribution
+fragments preserved, facade delegation, nine centralized renderers
+removed); this completes all three target migrations (documentation,
+policy, database). The next smallest slice is Stage 5 final acceptance:
+full repository gates (affected Graph/Capabilities/Control Plane/Worker
+suites, formatting/secret/provenance checks), roadmap update, and
+GOAL_COMPLETE.

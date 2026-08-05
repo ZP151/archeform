@@ -502,13 +502,13 @@ that contains it.
 
 ### Stage 4: Database target parity migration (2026-08-06)
 
-- **Iteration state:** `ready_for_qa -> reviewed` — independent behavioral QA
+- **Iteration state:** `reviewed -> accepted` — independent release review
   passed at Target-Commit `76933ca7b7295a6ce053d1bfdc3dfa605aa8487f` with no
-  P0/P1/P2, and the PM records the Stage 4 `ready_for_qa -> reviewed`
-  transition citing `76933ca`. Independent task review at `76933ca`
-  previously returned TASK_REVIEW_PASS with SPEC PASS, QUALITY PASS, and no
-  P0/P1/P2. The next gate is fresh independent release review at `76933ca`,
-  then PM `reviewed -> accepted` (final goal acceptance).
+  P0/P1/P2, and the PM records the Stage 4 `reviewed -> accepted` transition
+  citing `76933ca`, marking the Stage 4 iteration accepted — the final
+  target migration of this Goal. Independent task review (TASK_REVIEW_PASS)
+  and behavioral QA (QA_PASS) at `76933ca` were recorded before it. The next
+  gate is Stage 5 final acceptance.
 - **Owned task and paths:**
   - created `packages/compiler/src/targets/database/target.ts` (707 lines;
     the design's file-size guidance is a maintainability signal — the
@@ -594,6 +594,27 @@ that contains it.
     governance docs; the nine moved renderers plus three private copies are
     byte-identical to commit `2e2753a` (12/12 verified); no dependency
     changes; `git diff --check` clean; worktree clean.
+- **Independent release review at `76933ca`:** RELEASE PASS with no P0/P1/P2
+  (independent read-only context, Node `v22.11.0`).
+  - lifecycle untouched; the facade export surface is byte-identical (13/13
+    named exports vs `2e2753a`); `renderPrismaRecordStore` and the database
+    package.json/Dockerfile/.dockerignore remain facade-owned; the
+    delegation replaces exactly the four legacy database file entries; no
+    profile-name branching (zero profile string references in `target.ts`;
+    Restaurant artifacts and package-owned fragments enter via the explicit
+    plan context); verbatim-move proof: every one of the 404 unique removed
+    lines appears verbatim in the target additions;
+  - provenance and secrets: the migration range `5140815..76933ca` is
+    exactly 5 files; no credentials, URLs (except the legitimate repo
+    remote reference), or raw material; digest vectors are evidence values
+    only;
+  - tests (fresh re-runs, byte-identical product code): parity 13/13, full
+    compiler serial 329/329 (19 files), worker 81/81, typecheck/lint/
+    `git diff --check` clean;
+  - git: `76933ca` remote-reachable from
+    `origin/feat/compiler-target-plugin-kernel`; linear history; worktree
+    clean; gate records consistent (task review PASS, QA PASS,
+    `ready_for_qa -> reviewed` all citing `76933ca`).
 - **Remote reachability:** `76933ca7b7295a6ce053d1bfdc3dfa605aa8487f` is the
   branch tip of `origin/feat/compiler-target-plugin-kernel`; `35fa51d` and
   `2e2753a` are also reachable from it (observed via
@@ -607,10 +628,19 @@ that contains it.
   - independent task review: TASK_REVIEW_PASS (SPEC PASS, QUALITY PASS, no
     P0/P1/P2) at the clean tree exactly at `76933ca`;
   - independent behavioral QA: QA_PASS, no P0/P1/P2 at `76933ca`;
-  - PM: `ready_for_qa -> reviewed` recorded at `76933ca`.
-- **Next task:** fresh independent release review at `76933ca`, then PM
-  `reviewed -> accepted` (final goal acceptance), then Stage 5 final
-  acceptance: full repository gates, roadmap update, GOAL_COMPLETE.
+  - PM: `ready_for_qa -> reviewed` recorded at `76933ca`;
+  - independent release review: RELEASE PASS, no P0/P1/P2 at `76933ca`;
+  - PM: `reviewed -> accepted` recorded at `76933ca` — Stage 4 iteration
+    accepted; this completes all three target migrations (documentation,
+    policy, database).
+- **Acceptance scope:** Stage 4 acceptance covers the database target
+  migration (plugin with key `prisma-postgres`, 20 frozen digest vectors
+  across all five Profiles, package-owned contribution fragments preserved,
+  facade delegation, nine centralized renderers removed). All three target
+  migrations (documentation, policy, database) are now accepted.
+- **Next task:** Stage 5 final acceptance: full repository gates (affected
+  Graph/Capabilities/Control Plane/Worker suites, formatting/secret/
+  provenance checks), roadmap update, and GOAL_COMPLETE.
 
 ## Residual risks and stop conditions
 
