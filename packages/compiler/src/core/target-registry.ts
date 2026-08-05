@@ -76,18 +76,24 @@ export function assertSerializablePlan(plan: unknown): void {
         );
         visit(descriptor.value, `${path}[${index}]`);
       }
+      const expectedKeys = new Set(
+        Array.from({ length: value.length }, (_, index) => String(index)),
+      );
+      const ownKeys = Reflect.ownKeys(value);
       if (
-        Reflect.ownKeys(value).some(
-          (key) =>
-            typeof key !== "string" ||
-            !/^(0|[1-9]\d*)$/.test(key) ||
-            Number(key) >= value.length,
-        )
+        ownKeys.length !== expectedKeys.size + 1 ||
+        !ownKeys.every((key) => {
+          if (typeof key !== "string") return false;
+          return key === "length" || expectedKeys.has(key);
+        })
       ) {
         throw new Error(`Compiler target plan '${path}' must be plain data.`);
       }
     } else {
       for (const key of Reflect.ownKeys(value)) {
+        if (typeof key !== "string") {
+          throw new Error(`Compiler target plan '${path}' must be plain data.`);
+        }
         const descriptor = requirePlainDataDescriptor(value, key, path);
         visit(descriptor.value, `${path}.${key}`);
       }
