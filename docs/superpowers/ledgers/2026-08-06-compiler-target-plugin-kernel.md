@@ -249,11 +249,13 @@ that contains it.
 
 ### Stage 2: Documentation target parity migration (2026-08-06)
 
-- **Iteration state:** `ready_for_qa` — independent task review passed at
-  Target-Commit `3fae49480d5e481fd5ed0916f0a44e5ebcc9c9c5` (TASK_REVIEW_PASS,
-  SPEC PASS, QUALITY PASS, no P0/P1/P2); the next gate is fresh independent
-  behavioral QA at `3fae494`, then PM `ready_for_qa -> reviewed`, then
-  release review, then PM `reviewed -> accepted`.
+- **Iteration state:** `ready_for_qa -> reviewed` — independent behavioral QA
+  passed at Target-Commit `3fae49480d5e481fd5ed0916f0a44e5ebcc9c9c5` with no
+  P0/P1/P2, and the PM records the Stage 2 `ready_for_qa -> reviewed`
+  transition citing `3fae494`. Independent task review at `3fae494`
+  previously returned TASK_REVIEW_PASS with SPEC PASS, QUALITY PASS, and no
+  P0/P1/P2. The next gate is fresh independent release review at `3fae494`,
+  then PM `reviewed -> accepted`.
 - **Owned task and paths:**
   - created `packages/compiler/src/targets/documentation/target.ts`
     (`DocumentationPlanV1`, `documentationTargetPlugin`, private
@@ -307,6 +309,25 @@ that contains it.
   SHA-256 vectors + determinism + 5 fail-closed cases); full compiler suite
   303/303 serial (17 files); typecheck, Prettier lint, and `git diff --check`
   clean.
+- **Independent behavioral QA at `3fae494`:** QA returned PASS with no
+  P0/P1/P2 (independent read-only QA context, Node `v22.11.0`; product code
+  byte-identical to `3fae494` at HEAD `423ab9e`).
+  - parity: 11/11 focused (5 profiles x 4 frozen legacy SHA-256 vectors +
+    determinism + 5 fail-closed validation cases); a byte-level probe
+    confirmed `generateApplicationBundle` docs output is byte-identical to
+    the registry-run plugin output (8/8 files across simple-ecommerce and
+    restaurant-ordering; digests equal the frozen vectors);
+  - full `@factory/compiler` suite: 303/303 serial (17 files);
+    compiler-worker 81/81; compilation-plan facade suite 51/51;
+    identity-policy-runtime 3/3; typecheck, lint, and build pass;
+  - scope: `git show 3fae494` = 3 files; `git diff 249fc85..3fae494` = 5
+    files (`index.ts`, `targets/documentation/target.ts`, the parity test,
+    and the two governance docs); no dependency changes; `git diff --check`
+    clean; worktree clean;
+  - informational (already covered by the ledger residual risk): Restaurant
+    runtime eager context render plus lazy facade re-render (pure,
+    byte-identical); test-local fixture helper duplication between the
+    parity test and the compilation-plan test.
 - **Remote reachability:** `3fae49480d5e481fd5ed0916f0a44e5ebcc9c9c5` is the
   branch tip of `origin/feat/compiler-target-plugin-kernel`; `3f57542` and
   `0ff7fa3` are also reachable from it (observed via
@@ -322,10 +343,10 @@ that contains it.
   `3fae49480d5e481fd5ed0916f0a44e5ebcc9c9c5`):**
   - independent task review: TASK_REVIEW_PASS (SPEC PASS, QUALITY PASS, no
     P0/P1/P2) at the clean tree exactly at `3fae494`;
-  - PM: iteration state `ready_for_qa`.
-- **Next task:** fresh independent behavioral QA at `3fae494`, then PM
-  `ready_for_qa -> reviewed`, then independent release review at `3fae494`,
-  then PM `reviewed -> accepted`, then Stage 3 (policy target parity).
+  - independent behavioral QA: QA_PASS, no P0/P1/P2 at `3fae494`;
+  - PM: `ready_for_qa -> reviewed` recorded at `3fae494`.
+- **Next task:** fresh independent release review at `3fae494`, then PM
+  `reviewed -> accepted`, then Stage 3 (policy target parity).
 
 ## Residual risks and stop conditions
 

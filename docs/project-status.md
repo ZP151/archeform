@@ -183,12 +183,23 @@ corrected to Expense Approval and Simple Ecommerce). Fresh evidence:
 documentation parity + validation tests 11/11 (5 profiles x 4 frozen
 SHA-256 vectors + determinism + 5 fail-closed cases), full Compiler suite
 303/303 serial (17 files), typecheck, Prettier lint, and `git diff --check`
-clean. The next gate is fresh independent behavioral QA at `3fae494`, then
-PM `ready_for_qa -> reviewed`, then release review, then PM `reviewed ->
-accepted`, then Stage 3 (policy target parity). Typed Binding Graph Tasks 3-7
-remain `planned` and blocked, and Commercial Foundation Task 2 remains
-escalated. `commerce.cart@1.0.1` already has a package-owned handler and is
-not the next unimplemented slice.
+clean. Independent behavioral QA then passed at `3fae494` (QA_PASS, no
+P0/P1/P2; read-only QA context, Node `v22.11.0`, product code byte-identical
+at HEAD `423ab9e`): parity 11/11 (5 profiles x 4 frozen legacy SHA-256
+vectors + determinism + 5 fail-closed validation cases), a byte-level probe
+confirmed `generateApplicationBundle` docs output byte-identical to the
+registry-run plugin output (8/8 files across simple-ecommerce and
+restaurant-ordering, digests equal the frozen vectors), full Compiler suite
+303/303 serial (17 files), worker 81/81, compilation-plan facade suite
+51/51, identity-policy-runtime 3/3, typecheck/lint/build pass; scope
+`git show 3fae494` = 3 files and `git diff 249fc85..3fae494` = 5 files, no
+dependency changes, `git diff --check` clean, worktree clean. The PM records
+Stage 2 `ready_for_qa -> reviewed` citing `3fae494`. The next gate is fresh
+independent release review at `3fae494`, then PM `reviewed -> accepted`,
+then Stage 3 (policy target parity). Typed Binding Graph Tasks 3-7 remain
+`planned` and blocked, and Commercial Foundation Task 2 remains escalated.
+`commerce.cart@1.0.1` already has a package-owned handler and is not the
+next unimplemented slice.
 
 ## Persistent shared order operations — 2026-08-01
 
@@ -1662,7 +1673,22 @@ test, facade delegation of the four docs files through the facade-owned
 registry with the six centralized renderers removed (134 lines), and the
 exported `buildCompilationInput` resolver. Typed Binding Graph Tasks 3-7
 remain `planned` and blocked, and Commercial Foundation Task 2 remains
-escalated. The next smallest slice is fresh independent behavioral QA at
-`3fae494`, then PM `ready_for_qa -> reviewed`, then release review, then PM
+escalated. Independent behavioral QA then passed at `3fae494` (QA_PASS, no
+P0/P1/P2; independent read-only QA context, Node `v22.11.0`, product code
+byte-identical to `3fae494` at HEAD `423ab9e`): parity 11/11 focused (5
+profiles x 4 frozen legacy SHA-256 vectors + determinism + 5 fail-closed
+validation cases), byte-level probe confirmed `generateApplicationBundle`
+docs output byte-identical to the registry-run plugin output (8/8 files
+across simple-ecommerce and restaurant-ordering, digests equal the frozen
+vectors), full Compiler suite 303/303 serial (17 files), worker 81/81,
+compilation-plan facade suite 51/51, identity-policy-runtime 3/3, and
+typecheck/lint/build pass; scope `git show 3fae494` = 3 files and
+`git diff 249fc85..3fae494` = 5 files (index.ts, documentation target,
+parity test, two governance docs), no dependency changes, `git diff --check`
+clean, worktree clean. Informational edges (Restaurant eager context render
+plus lazy facade re-render, both pure and byte-identical; test-local fixture
+helper duplication) remain covered by the ledger residual risk. The PM
+records Stage 2 `ready_for_qa -> reviewed` citing `3fae494`. The next
+smallest slice is fresh independent release review at `3fae494`, then PM
 `reviewed -> accepted`, after which the policy/database parity migrations
 proceed serially.
