@@ -1204,11 +1204,12 @@ On Node `v22.11.0`, it records:
 
 - Typed Binding Task 1 is `accepted` and frozen under its pure Application
   Graph Type System contract. Its deferred parser limitation remains recorded.
-- Typed Binding Task 2 is `ready_for_qa` under the accepted ADR, design,
-  plan, and Task 1 dependency after the 2026-08-06 reconciliation review pass
-  at Target-Commit `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec`. The
-  implementation owner of record remains Typed Manifest Contract Integration
-  and the contract owner remains Capability Binding Contract.
+- Typed Binding Task 2 is `reviewed` under the accepted ADR, design, plan,
+  and Task 1 dependency after the 2026-08-06 reconciliation review and
+  behavioral QA passes at Target-Commit
+  `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec`. The implementation owner of
+  record remains Typed Manifest Contract Integration and the contract owner
+  remains Capability Binding Contract.
 - Task 2's exact allowed paths are:
   `packages/capabilities/src/assets/contract.ts`,
   `packages/capabilities/src/composition.ts`,
@@ -1258,9 +1259,19 @@ On Node `v22.11.0`, it records:
   PASS, and no P0/P1/P2, re-running the focused suites at 83/83 (37
   typed-binding-contract, 46 composition-contract) and the full Capabilities
   suite at 282/282 (20 files). The PM records Task 2 `implementing ->
-  ready_for_qa`. Task 2 resumes its declared QA, release review, and PM
-  transitions without further local repair; the next gate is fresh independent
-  behavioral QA against `0dbe0cf`, and Task 2 is not yet `accepted`.
+  ready_for_qa`. Independent behavioral QA against `0dbe0cf` then returned
+  PASS with no P0/P1/P2 (read-only QA context, Node `v22.11.0`, product code
+  byte-identical to `0dbe0cf` at HEAD `f530306`): focused suites 83/83,
+  full Capabilities 282/282 (20 files) and Compiler 237/237 (13 files),
+  Capabilities typecheck/lint/build, adversarial name-filtered probes
+  including the zero-getter counter assertion, and the single-digest
+  determinism probe across 100 resolutions of the largest default
+  composition (18 selections). Scope checks confirmed the same
+  `typed-binding-contract.test.ts` +25-line diff at `0dbe0cf` and a
+  governance-docs-only diff to HEAD. The PM records Task 2 `ready_for_qa ->
+  reviewed`. Task 2 resumes its declared release review and PM transitions
+  without further local repair; the next gate is fresh independent release
+  review against `0dbe0cf`, and Task 2 is not yet `accepted`.
 - Repair round 4 may not change physical package roots and registrations,
   profile recipes, public Draft composition, Publish, compiler, Workbench,
   lifecycle, historical bindings, or introduce
@@ -1340,7 +1351,8 @@ On Node `v22.11.0`, it records:
   1,000-resolution probe retained one digest at p95 2.554 ms, with no
   source/governance drift or secrets. The PM records `reviewed -> accepted`.
 - Typed Binding Task 3 remains `planned`. Its Task 2A dependency is accepted,
-  but Task 2 remains `implementing`, so Task 3 stays blocked. It owns exactly:
+  but Task 2 remains `reviewed` pending acceptance, so Task 3 stays blocked.
+  It owns exactly:
   `packages/graph/src/model.ts`,
   `packages/graph/test/application-graph.test.ts`, and
   `packages/graph/test/browser-entry.test.ts`.
@@ -1501,14 +1513,13 @@ On Node `v22.11.0`, it records:
 ## Next smallest valuable slice
 
 Task 2's repeated-read P1 is closed by the accepted Task 2A boundary, and
-independent task review passed at the remote-reachable Target-Commit
-`0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` with no open P0/P1/P2. The PM
-records Task 2 `implementing -> ready_for_qa`. The next smallest slice is
-fresh independent behavioral QA against `0dbe0cf`, then PM `ready_for_qa ->
-reviewed`, independent release review, PM `reviewed -> accepted`. Keep Task 2
-`ready_for_qa` until those gates complete. Do not start Graph Task 3; keep
-Typed Binding Graph Tasks 3 through 7 `planned` and blocked, Commercial
-Foundation Task 2 `implementing` and escalated, and its Tasks 3 and 4
-`planned` and blocked. After Task 2 acceptance, the compiler-target-plugin
-kernel and the documentation/policy/database parity migrations proceed on the
-`feat/compiler-target-plugin-kernel` branch.
+independent task review and behavioral QA both passed at the remote-reachable
+Target-Commit `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` with no P0/P1/P2.
+The PM records Task 2 `ready_for_qa -> reviewed`. The next smallest slice is
+fresh independent release review against `0dbe0cf`, then PM `reviewed ->
+accepted`. Keep Task 2 `reviewed` until those gates complete. Do not start
+Graph Task 3; keep Typed Binding Graph Tasks 3 through 7 `planned` and
+blocked, Commercial Foundation Task 2 `implementing` and escalated, and its
+Tasks 3 and 4 `planned` and blocked. After Task 2 acceptance, the
+compiler-target-plugin kernel and the documentation/policy/database parity
+migrations proceed on the `feat/compiler-target-plugin-kernel` branch.

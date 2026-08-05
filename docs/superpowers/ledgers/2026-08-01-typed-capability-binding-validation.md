@@ -191,7 +191,7 @@ not acceptance.
 | Task                                           | State          | Specialization | Contract owner                               | Contract status                                 |
 | ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | ----------------------------------------------- |
 | 1. Pure typed Graph symbol index               | `accepted`     | `integration`  | Application Graph Type System                | Release review and fresh verification passed.   |
-| 2. Typed manifest and binding contracts        | `ready_for_qa` | `integration`  | Capability Binding Contract                  | Independent task review passed at 0dbe0cf with no open P0/P1/P2; awaiting fresh independent behavioral QA. |
+| 2. Typed manifest and binding contracts        | `reviewed`     | `integration`  | Capability Binding Contract                  | Independent task review and behavioral QA passed at 0dbe0cf with no P0/P1/P2; awaiting fresh independent release review. |
 | 2A. Immutable composition resolution boundary  | `accepted`     | `integration`  | Capability Composition Resolution Boundary   | Release review and fresh verification passed.   |
 | 3. Serialized owner-aware Graph selections     | `planned`      | `integration`  | Application Graph Serialization              | Blocked on accepted Tasks 2 and 2A.             |
 | 4. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 3 serialized contract. |
@@ -269,12 +269,39 @@ every remaining gate passes in order.
 `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` reports no open P0/P1 (the P2s are
 closed), satisfying the ledger state machine's `implementing -> ready_for_qa`
 condition. The PM records **Task 2 `implementing -> ready_for_qa`** citing
-that Target-Commit. This is not behavioral QA, release review, or acceptance.
+that Target-Commit. This was not behavioral QA, release review, or acceptance.
+
+**Independent behavioral QA at Target-Commit
+`0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` (Node `v22.11.0`):**
+
+- Independent behavioral QA (read-only QA context, clean worktree; product
+  code byte-identical to `0dbe0cf` at HEAD `f530306`) returned PASS with no
+  P0/P1/P2.
+- The focused suites passed 83/83 (37 typed-binding-contract, 46
+  composition-contract); the full Capabilities suite passed 282/282
+  (20 files) and the Compiler suite passed 237/237 (13 files).
+- Capabilities typecheck, lint (Prettier), and build all pass.
+- Adversarial name-filtered probes all pass: `accessor-backed parameters
+  declaration` (zero-getter counter asserted), `accessor-backed fieldTypes
+  element`, `strict parameter that exposes its declaration through
+  accessors`, `non-boolean own` (2/2), and `not a graph-symbol type` (1/1).
+- Determinism: `keeps one digest across 100 resolutions of the largest
+  default composition` (18 selections, single sha256 digest) passed.
+- Scope: `git show 0dbe0cf --stat` is exactly
+  `packages/capabilities/test/typed-binding-contract.test.ts` +25 lines;
+  `git diff 0dbe0cf HEAD --stat` is governance docs only; `git diff --check`
+  is clean. Target-Commit verified reachable from
+  `origin/feat/compiler-target-plugin-kernel`.
+
+**Transition recorded:** independent behavioral QA at
+`0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` passed with no P0/P1/P2,
+satisfying the ledger state machine's `ready_for_qa -> reviewed` condition.
+The PM records **Task 2 `ready_for_qa -> reviewed`** citing that
+Target-Commit. This is not release review or acceptance.
 
 **Remaining Task 2 gates (in order, each against the same remote-reachable
 Target-Commit `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec`):** fresh independent
-behavioral QA; PM `ready_for_qa -> reviewed`; fresh independent release
-review; PM `reviewed -> accepted`. Only the PM context records those
+release review; PM `reviewed -> accepted`. Only the PM context records those
 transitions. This reconciliation changes no product code, contract, ADR, or
 task path.
 
@@ -487,8 +514,9 @@ task path.
 
 ## Task 2: Freeze typed manifest and binding contracts
 
-- **State:** `ready_for_qa` (reconciled with accepted Task 2A; independent task
-  review passed at `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec`)
+- **State:** `reviewed` (reconciled with accepted Task 2A; independent task
+  review and behavioral QA passed at
+  `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec`)
 - **Specialization:** `integration`
 - **Bounded writer:** Typed Manifest Contract Integration
 - **Contract owner:** Capability Binding Contract
@@ -1243,14 +1271,12 @@ task path.
 ## Next smallest valuable slice
 
 Task 2's repair-round-4 repeated-read P1 is closed by the accepted Task 2A
-boundary, and independent task review passed at the remote-reachable
-Target-Commit `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` with SPEC PASS,
-QUALITY PASS, and no open P0/P1/P2 (see the 2026-08-06 reconciliation section
-above). The PM records Task 2 `implementing -> ready_for_qa`. The next
-smallest slice is fresh independent behavioral QA against `0dbe0cf`, then PM
-`ready_for_qa -> reviewed`, fresh independent release review, PM
-`reviewed -> accepted`. Keep Task 2 at `ready_for_qa` until those gates
-complete. Do not start Graph Task 3; keep Graph Tasks 3 through 7 `planned`
-and blocked until their serialized dependencies are accepted. The
-compiler-target-plugin kernel may start only after Task 2 returns to
-`accepted`.
+boundary, and independent task review and behavioral QA both passed at the
+remote-reachable Target-Commit `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec`
+with no P0/P1/P2 (see the 2026-08-06 reconciliation section above). The PM
+records Task 2 `ready_for_qa -> reviewed`. The next smallest slice is fresh
+independent release review against `0dbe0cf`, then PM
+`reviewed -> accepted`. Keep Task 2 at `reviewed` until those gates complete.
+Do not start Graph Task 3; keep Graph Tasks 3 through 7 `planned` and blocked
+until their serialized dependencies are accepted. The compiler-target-plugin
+kernel may start only after Task 2 returns to `accepted`.
