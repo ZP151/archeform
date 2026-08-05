@@ -34,7 +34,9 @@ const profiles: readonly FactoryProfile[] = [
  * Frozen legacy documentation digests captured from generateApplicationBundle
  * on the pre-migration tree (2026-08-06). The plugin must reproduce these
  * exact bytes for every Profile; an intentional change requires a separately
- * documented decision, not a silent refactor drift.
+ * documented decision, not a silent refactor drift. The vectors include the
+ * Restaurant api-reference override and the identity-policy fixture-session
+ * boundary for Expense Approval and Simple Ecommerce.
  */
 const LEGACY_DIGESTS: Readonly<
   Record<FactoryProfile, Readonly<Record<string, string>>>

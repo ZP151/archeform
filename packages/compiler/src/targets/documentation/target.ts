@@ -61,11 +61,10 @@ function hasCommerceCapabilities(graph: ApplicationGraphV1): boolean {
   );
 }
 
-function buildDocumentationPlan(
-  input: PublishedCompilationInput,
-): DocumentationPlanV1 {
-  const graph = input.graph;
-  const endpoints: readonly (readonly [string, string, string])[] = [
+function projectDocumentationEndpoints(
+  graph: ApplicationGraphV1,
+): readonly (readonly [string, string, string])[] {
+  return [
     ["GET", "/api/health", "Return generated application health."],
     [
       "GET",
@@ -107,14 +106,47 @@ function buildDocumentationPlan(
         ] satisfies readonly (readonly [string, string, string])[])
       : []),
   ];
+}
 
+function projectDocumentationEntitySections(
+  graph: ApplicationGraphV1,
+): readonly string[] {
+  return graph.domain.entities.map((entity) => {
+    const fields = entity.fields.length
+      ? entity.fields
+          .map(
+            (field) =>
+              `- \`${field.key}\`: ${field.type}${field.required ? " (required)" : ""}${field.unique ? ", unique" : ""}`,
+          )
+          .join("\n")
+      : "- No fields declared.";
+    const indexes = entity.indexes.length
+      ? `\n\nIndexes: ${entity.indexes.map((index) => `\`${index.fields.join(", ")}\`${index.unique ? " (unique)" : ""}`).join("; ")}`
+      : "";
+    return `### ${entity.label} (\`${entity.key}\`)\n\n${fields}${indexes}`;
+  });
+}
+
+function projectDocumentationRelationRows(
+  graph: ApplicationGraphV1,
+): readonly string[] {
+  return graph.domain.relations.map((relation) => {
+    const [from, to] = relationshipCardinality(relation.kind);
+    return `- \`${relation.from}\` ${from} → ${to} \`${relation.to}\`${relation.field ? ` via \`${relation.field}\`` : ""}`;
+  });
+}
+
+function buildDocumentationPlan(
+  input: PublishedCompilationInput,
+): DocumentationPlanV1 {
+  const graph = input.graph;
   const base: DocumentationPlanV1 = {
     apiVersion: "factory.compiler-target/v1",
     title: graph.metadata.name,
     identityBoundary: input.context.identityPolicyEnabled
       ? "Every request is bound to an opaque local fixture session during local compilation; the server resolves the principal and checks the declared resource/action before performing work."
       : "Every request is role-scoped through the `x-factory-role` header.",
-    endpoints,
+    endpoints: projectDocumentationEndpoints(graph),
     entityRows: graph.domain.entities.map(
       (entity) => `- \`${entity.key}\` — ${entity.label}`,
     ),
@@ -122,24 +154,8 @@ function buildDocumentationPlan(
       (flow) =>
         `- \`${flow.id}\` on \`${flow.entity}\`: ${flow.events.map((event) => `\`${event}\``).join(", ") || "no events"}`,
     ),
-    entitySections: graph.domain.entities.map((entity) => {
-      const fields = entity.fields.length
-        ? entity.fields
-            .map(
-              (field) =>
-                `- \`${field.key}\`: ${field.type}${field.required ? " (required)" : ""}${field.unique ? ", unique" : ""}`,
-            )
-            .join("\n")
-        : "- No fields declared.";
-      const indexes = entity.indexes.length
-        ? `\n\nIndexes: ${entity.indexes.map((index) => `\`${index.fields.join(", ")}\`${index.unique ? " (unique)" : ""}`).join("; ")}`
-        : "";
-      return `### ${entity.label} (\`${entity.key}\`)\n\n${fields}${indexes}`;
-    }),
-    relationRows: graph.domain.relations.map((relation) => {
-      const [from, to] = relationshipCardinality(relation.kind);
-      return `- \`${relation.from}\` ${from} → ${to} \`${relation.to}\`${relation.field ? ` via \`${relation.field}\`` : ""}`;
-    }),
+    entitySections: projectDocumentationEntitySections(graph),
+    relationRows: projectDocumentationRelationRows(graph),
     permissionRows: graph.policy.permissions.map(
       (permission) =>
         `| ${markdownCell(permission.role)} | ${markdownCell(permission.resource)} | ${permission.actions.map(markdownCell).join(", ")} |`,

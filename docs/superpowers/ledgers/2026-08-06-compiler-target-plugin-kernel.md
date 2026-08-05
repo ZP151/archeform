@@ -273,7 +273,7 @@ that contains it.
     pre-migration tree and frozen into the parity test (five Profiles x four
     docs paths, 20 SHA-256 vectors, including the Restaurant
     `api-reference` override and the identity-policy fixture-session
-    boundary for Retail Counter and Grocery Pickup);
+    boundary for Expense Approval and Simple Ecommerce);
   - plugin render through the facade registry reproduces every frozen digest
     exactly: 6/6 parity tests (5 profiles + determinism), plus 5/5
     fail-closed validation tests = 11/11 focused;
