@@ -503,7 +503,11 @@ that contains it.
 ### Stage 4: Database target parity migration (2026-08-06)
 
 - **Owned task and paths:**
-  - created `packages/compiler/src/targets/database/target.ts` (667 lines):
+  - created `packages/compiler/src/targets/database/target.ts` (707 lines;
+    the design's file-size guidance is a maintainability signal — the
+    renderers were moved verbatim to preserve byte parity, and the parity
+    gate justifies the cohesive exception, matching the design's "preserve
+    cohesive logic" clause):
     `DatabasePlanV1` (immutable graph + explicit context: package-owned
     contribution fragments, generic order-operations persistence flag and
     fragments, Restaurant artifacts), the nine legacy renderers moved
