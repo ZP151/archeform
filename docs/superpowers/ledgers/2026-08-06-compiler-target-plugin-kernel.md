@@ -68,14 +68,17 @@ that contains it.
 
 ### Stage 1: Plugin kernel (2026-08-06)
 
-- **Iteration state:** task review passed at `197270e` (TASK_REVIEW_PASS);
-  QA passed at `197270e` (QA_PASS). The QA pass surfaced two informational
-  serializability edges (symbol-keyed plan properties; accessor/toJSON paths
-  slipping past the JSON round-trip promise). The kernel was then hardened
-  through the commit sequence below; every gate restarted against the final
-  green tip. Gate state is maintained at the tip by the PM transitions; this
-  section records the implementation evidence and the governance deviation
-  transparently.
+- **Iteration state:** `ready_for_qa` re-recorded at Target-Commit
+  `249fc8590f29152cc09456e8733e7a8a64d58fd9` — final independent task review
+  returned TASK_REVIEW_PASS with SPEC PASS, QUALITY PASS, and no P0/P1/P2 at
+  the clean tree exactly at `249fc85`. The earlier `197270e`-based gate
+  records (task review PASS, PM `ready_for_qa` at c788e21, QA_PASS) are
+  historical: the QA pass surfaced two informational serializability edges
+  (symbol-keyed plan properties; accessor/toJSON paths slipping past the JSON
+  round-trip promise), the kernel was hardened through the commit sequence
+  below, and every gate restarted against the final green tip. Gate state is
+  maintained at the tip by the PM transitions; this section records the
+  implementation evidence and the governance deviation transparently.
 - **Owned task and paths:**
   - created `packages/compiler/src/core/target-plugin.ts` (versioned
     `CompilerTargetPluginV1<TPlan>` contract, `PublishedCompilationInput`,
@@ -97,13 +100,15 @@ that contains it.
   suites failed with missing exports.
 - **GREEN and regression evidence (Node v22.11.0):**
   - kernel focused suites: 47/47 (15 target-plugin + 15 target-registry +
-    17 generated-files) at `197270e`;
+    17 generated-files) at `197270e`, then 55/55 (23 target-plugin + 15
+    target-registry + 17 generated-files) at the `249fc85` tip;
   - full `@factory/compiler` suite: 284/284 serial
-    (`--no-file-parallelism`, 16 files), recorded at `197270e`;
+    (`--no-file-parallelism`, 16 files) at `197270e`, then 292/292 serial
+    (16 files) at the `249fc85` tip;
   - `@factory/compiler-worker` regression: 81/81 (recorded at the `5a692fe`
     tree; unchanged by the repair);
-  - Compiler typecheck and Prettier lint pass at the clean tree;
-    `git diff --check` clean;
+  - Compiler typecheck, Prettier lint, and `git diff --check` clean; worktree
+    clean at the tip;
   - facade export surface: all 38 prior exports preserved; 12 kernel symbols
     added.
 - **Environment note:** a full parallel compiler run flakily times out ~5s in
@@ -156,28 +161,36 @@ that contains it.
     typecheck, lint, and `git diff --check` clean.
 - **Task review at `d024f74`:** TASK_REVIEW_REPAIR_REQUIRED with two P2s —
   (1) `assertSerializablePlan` at 65 lines exceeded the 60-line guidance
-  (remediated by `40e941b`); (2) the ledger and project status had not yet
-  recorded the `bc09019`-to-`d024f74` repair sequence and the pushed-failing
-  intermediate commits (remediated by this entry). Final re-review pending at
-  the `40e941b` tip.
-- **Remote reachability:** `5a692fe`, `197270e`, `bc09019`, `8921103`,
-  `ab6186d`, `d024f74`, and `40e941b` are reachable from
-  `origin/feat/compiler-target-plugin-kernel` (observed via
-  `git branch -r --contains`).
+  (remediated by `40e941b`: the `requireDensePlainDataArray` extraction keeps
+  `assertSerializablePlan` at 53 lines, under the 60-line guidance);
+  (2) the ledger and project status had not yet recorded the
+  `bc09019`-to-`d024f74` repair sequence and the pushed-failing intermediate
+  commits (remediated by `249fc85`).
+- **Final independent task review at `249fc85`:** TASK_REVIEW_PASS with SPEC
+  PASS, QUALITY PASS, and no P0/P1/P2 at the clean tree exactly at the
+  remote-reachable branch tip `249fc85`. Fresh evidence at the tip: focused
+  kernel suites 55/55 (23 target-plugin + 15 target-registry + 17
+  generated-files); full compiler suite 292/292 serial (16 files);
+  typecheck, Prettier lint, and `git diff --check` clean; worktree clean.
+- **Remote reachability:** `249fc85` is the branch tip of
+  `origin/feat/compiler-target-plugin-kernel`; `5a692fe`, `197270e`,
+  `bc09019`, `8921103`, `ab6186d`, `d024f74`, and `40e941b` are also
+  reachable from it (observed via `git branch -r --contains`).
 - **Residual risk:** the facade now applies path-safety rejection to all
   planned files (all current paths are static and safe; the stricter check is
   the fail-closed design intent). Target plugins for docs/policy/database do
   not exist yet; the context type is finalized when the first target lands.
-- **Gates completed (Task 2 gate records cite
-  `197270e973cd10b3879662d863b31b2418032a7b`):**
+- **Gates completed (final gate records cite Target-Commit
+  `249fc8590f29152cc09456e8733e7a8a64d58fd9`):**
   - independent task review: TASK_REVIEW_PASS (SPEC PASS, QUALITY PASS, no
-    P0/P1/P2) at the clean tree exactly at `197270e`;
-  - PM: iteration state `ready_for_qa` (recorded at c788e21);
-  - independent behavioral QA: QA_PASS, no P0/P1/P2 at `197270e`.
-- **Next task:** final task re-review at the `40e941b` tip, then PM
-  `ready_for_qa` (re-recorded at the tip), fresh behavioral QA at the tip,
-  PM `ready_for_qa -> reviewed`, independent release review, PM
-  `reviewed -> accepted`, then Stage 2 (documentation target parity).
+    P0/P1/P2) at the clean tree exactly at `249fc85`;
+  - PM: iteration state `ready_for_qa` re-recorded at `249fc85`.
+  The gate re-opened at the new tip after the hardening sequence; the earlier
+  `197270e`-based records (task review PASS, PM `ready_for_qa` at c788e21,
+  QA_PASS) remain historical.
+- **Next task:** fresh independent behavioral QA at `249fc85`, then PM
+  `ready_for_qa -> reviewed`, then independent release review at `249fc85`,
+  then PM `reviewed -> accepted`, then Stage 2 (documentation target parity).
 
 ## Residual risks and stop conditions
 

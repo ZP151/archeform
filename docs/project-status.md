@@ -142,14 +142,20 @@ Typed Capability Binding Task 2 is reconciled against accepted Task 2A and is
 independent task review, behavioral QA, release review, and fresh verification
 passed with no P0/P1/P2. That compiler-admission dependency is accepted.
 Stage 1 of the compiler-target-plugin-kernel Goal — the `CompilerTargetPluginV1`
-kernel (`feat(compiler): add target plugin kernel`) — is implemented at
-`197270e973cd10b3879662d863b31b2418032a7b` and passed independent task review
-(TASK_REVIEW_PASS, SPEC PASS, QUALITY PASS, no P0/P1/P2 after the bounded
-`assertSerializablePlan` repair). Its iteration state is `ready_for_qa`; the
-next gate is fresh independent behavioral QA against `197270e`, then PM
-`reviewed`, release review, and PM acceptance, after which the documentation
-target migration proceeds with exact parity. `commerce.cart@1.0.1`
-already has a package-owned handler and is not the next unimplemented slice.
+kernel (`feat(compiler): add target plugin kernel`) — is implemented and its
+final independent task review passed at the remote-reachable branch tip
+`249fc8590f29152cc09456e8733e7a8a64d58fd9` (TASK_REVIEW_PASS, SPEC PASS,
+QUALITY PASS, no P0/P1/P2), after the serializability hardening sequence
+(`bc09019` descriptor checks, `8921103`/`ab6186d` dense-array fixes with the
+recorded governance deviation of the two pushed-failing intermediate commits,
+`d024f74` dense plain-data requirement, `40e941b`
+`requireDensePlainDataArray` extraction) and the `249fc85` remediation
+record; no history was rewritten. Its iteration state is `ready_for_qa` at
+`249fc85`; the next gate is fresh independent behavioral QA against
+`249fc85`, then PM `reviewed`, release review, and PM acceptance, after which
+the documentation target migration proceeds with exact parity.
+`commerce.cart@1.0.1` already has a package-owned handler and is not the next
+unimplemented slice.
 
 ## Persistent shared order operations — 2026-08-01
 
@@ -1558,19 +1564,24 @@ manifest and binding contracts; Typed Binding Graph Tasks 3 through 7 remain
 and escalated, and its Tasks 3 and 4 remain `planned` and blocked. Task 2
 acceptance unblocked Stage 1 of the compiler-target-plugin-kernel Goal
 (`feat(compiler): add target plugin kernel`) but does not accept that Goal.
-Stage 1 is implemented at `197270e973cd10b3879662d863b31b2418032a7b` and its
-iteration state is `ready_for_qa`: independent task review returned
-TASK_REVIEW_PASS (SPEC PASS, QUALITY PASS, no P0/P1/P2) at the clean tree
-exactly at `197270e`, after repair commit `197270e` (bounded to
-`packages/compiler/src/core/target-registry.ts` and
-`packages/compiler/test/target-plugin.test.ts`, +62/-67) closed the three
-`assertSerializablePlan` P2s found in the initial `5a692fe` review. Focused
-kernel suites pass 47/47 (15 target-plugin + 15 target-registry + 17
-generated-files), the full Compiler suite passes 284/284 serial (16 files),
-the Worker regression passes 81/81, Compiler typecheck and Prettier lint pass
-at the clean tree, `git diff --check` is clean, all 38 prior facade exports
-are preserved plus 12 kernel symbols, and `197270e` is the remote-reachable
-branch tip of `origin/feat/compiler-target-plugin-kernel`. The next smallest
-slice is fresh independent behavioral QA against `197270e`, then PM
-`ready_for_qa -> reviewed`, then release review, then PM acceptance, after
-which the documentation/policy/database parity migrations proceed serially.
+Stage 1's final independent task review passed at the remote-reachable branch
+tip `249fc8590f29152cc09456e8733e7a8a64d58fd9` (TASK_REVIEW_PASS, SPEC PASS,
+QUALITY PASS, no P0/P1/P2, clean tree). The kernel was hardened after the
+earlier `197270e`-based gate records (repair `197270e` closed the three
+`assertSerializablePlan` P2s from the `5a692fe` review; QA then surfaced two
+informational serializability edges): `bc09019` enforced descriptor-level
+checks, `8921103`/`ab6186d` fixed dense-array rejection with a recorded
+governance deviation (both were pushed while still failing the same two
+focused tests; no history was rewritten), `d024f74` required dense
+plain-data arrays, `40e941b` extracted `requireDensePlainDataArray`
+(`assertSerializablePlan` now 53 lines, under the 60-line guidance), and
+`249fc85` recorded the repair sequence and the deviation. Fresh evidence at
+the tip: focused kernel suites 55/55 (23 target-plugin + 15 target-registry
++ 17 generated-files), full Compiler suite 292/292 serial (16 files),
+Compiler typecheck, Prettier lint, and `git diff --check` clean, worktree
+clean, all 38 prior facade exports preserved plus 12 kernel symbols. The PM
+re-records iteration state `ready_for_qa` at `249fc85`. The next smallest
+slice is fresh independent behavioral QA at `249fc85`, then PM
+`ready_for_qa -> reviewed`, then independent release review at `249fc85`,
+then PM `reviewed -> accepted`, after which the documentation/policy/database
+parity migrations proceed serially.
