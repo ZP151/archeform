@@ -36,10 +36,21 @@ import {
   assertSafeGeneratedFileSet,
   type GeneratedFile,
 } from "./core/generated-files.js";
+import { createCompilerTargetRegistryV1 } from "./core/target-registry.js";
 import {
   compilationTargets,
   type CompilationTargetKey,
+  type PublishedCompilationInput,
 } from "./core/target-plugin.js";
+import { documentationTargetPlugin } from "./targets/documentation/target.js";
+
+/**
+ * The facade-owned deterministic target registry. Migrated targets register
+ * here at module scope; `generateApplicationBundle` delegates their file sets
+ * through `supports -> plan -> render -> validate`.
+ */
+const compilerTargetRegistry = createCompilerTargetRegistryV1();
+compilerTargetRegistry.register(documentationTargetPlugin);
 
 export {
   createGeneratedPageRuntimeProjection,
@@ -3775,136 +3786,6 @@ function renderJourneyTest(graph: ApplicationGraphV1): string {
   ].join("\n");
 }
 
-function markdownCell(value: string): string {
-  return value.replaceAll("|", "\\|").replaceAll("\n", " ");
-}
-
-function relationshipCardinality(
-  kind: ApplicationGraphV1["domain"]["relations"][number]["kind"],
-): readonly [string, string] {
-  switch (kind) {
-    case "one-to-one":
-      return ["1", "1"];
-    case "one-to-many":
-      return ["1", "*"];
-    case "many-to-one":
-      return ["*", "1"];
-    case "many-to-many":
-      return ["*", "*"];
-  }
-}
-
-function renderApiReference(
-  graph: ApplicationGraphV1,
-  usesFixtureSessions: boolean,
-): string {
-  const endpoints = [
-    ["GET", "/api/health", "Return generated application health."],
-    [
-      "GET",
-      "/api/:entity",
-      "List a declared DomainModel entity for the caller role.",
-    ],
-    [
-      "POST",
-      "/api/:entity",
-      "Create a declared DomainModel entity for the caller role.",
-    ],
-    [
-      "POST",
-      "/api/:entity/:recordId/events/:event",
-      "Trigger a declared FlowModel event when policy and state allow it.",
-    ],
-    [
-      "GET",
-      "/api/audit",
-      "Read immutable audit events when policy permits audit.",
-    ],
-    [
-      "GET",
-      "/api/capability-events",
-      "Read executed declared capability effects when policy permits audit.",
-    ],
-    ...(hasCommerceCapabilities(graph)
-      ? [
-          [
-            "GET",
-            "/api/commerce/:entity/:recordId/items",
-            "Read cart items for the caller role.",
-          ],
-          [
-            "POST",
-            "/api/commerce/:entity/:recordId/items",
-            "Add a declared catalog item to a cart for the caller role.",
-          ],
-        ]
-      : []),
-  ] as const;
-  const entities = graph.domain.entities.length
-    ? graph.domain.entities
-        .map((entity) => `- \`${entity.key}\` — ${entity.label}`)
-        .join("\n")
-    : "- No entities declared.";
-  const flows = graph.flow.flows.length
-    ? graph.flow.flows
-        .map(
-          (flow) =>
-            `- \`${flow.id}\` on \`${flow.entity}\`: ${flow.events.map((event) => `\`${event}\``).join(", ") || "no events"}`,
-        )
-        .join("\n")
-    : "- No flows declared.";
-  const identityBoundary = usesFixtureSessions
-    ? "Every request is bound to an opaque local fixture session during local compilation; the server resolves the principal and checks the declared resource/action before performing work."
-    : "Every request is role-scoped through the `x-factory-role` header.";
-  return `# API reference\n\nThis API is compiled from the immutable Published Graph for **${graph.metadata.name}**. ${identityBoundary}\n\n## Endpoints\n\n| Method | Path | Contract |\n| --- | --- | --- |\n${endpoints.map(([method, path, description]) => `| ${method} | \`${path}\` | ${description} |`).join("\n")}\n\n## Domain endpoints\n\n${entities}\n\n## Declared flow events\n\n${flows}\n`;
-}
-
-function renderEntityRelationshipDiagram(graph: ApplicationGraphV1): string {
-  const entities = graph.domain.entities.map((entity) => {
-    const fields = entity.fields.length
-      ? entity.fields
-          .map(
-            (field) =>
-              `- \`${field.key}\`: ${field.type}${field.required ? " (required)" : ""}${field.unique ? ", unique" : ""}`,
-          )
-          .join("\n")
-      : "- No fields declared.";
-    const indexes = entity.indexes.length
-      ? `\n\nIndexes: ${entity.indexes.map((index) => `\`${index.fields.join(", ")}\`${index.unique ? " (unique)" : ""}`).join("; ")}`
-      : "";
-    return `### ${entity.label} (\`${entity.key}\`)\n\n${fields}${indexes}`;
-  });
-  const relationships = graph.domain.relations.length
-    ? graph.domain.relations
-        .map((relation) => {
-          const [from, to] = relationshipCardinality(relation.kind);
-          return `- \`${relation.from}\` ${from} → ${to} \`${relation.to}\`${relation.field ? ` via \`${relation.field}\`` : ""}`;
-        })
-        .join("\n")
-    : "- No relationships declared.";
-  return `# Entity relationship diagram\n\nThis document is a deterministic DomainModel projection, not a reverse-engineered database schema.\n\n## Relationships\n\n${relationships}\n\n## Entities\n\n${entities.join("\n\n") || "No entities declared."}\n`;
-}
-
-function renderPermissionMatrix(graph: ApplicationGraphV1): string {
-  const rows = graph.policy.permissions.length
-    ? graph.policy.permissions
-        .map(
-          (permission) =>
-            `| ${markdownCell(permission.role)} | ${markdownCell(permission.resource)} | ${permission.actions.map(markdownCell).join(", ")} |`,
-        )
-        .join("\n")
-    : "| — | — | No permissions declared |";
-  return `# Permission matrix\n\nThis is the reviewable PolicyModel projection that compiles to \`api/policy/policy.csv\`.\n\n| Role | Resource | Allowed actions |\n| --- | --- | --- |\n${rows}\n\n## Declared roles\n\n${graph.policy.roles.length ? graph.policy.roles.map((role) => `- \`${role}\``).join("\n") : "- No roles declared."}\n`;
-}
-
-function renderDocumentation(graph: ApplicationGraphV1): string {
-  const entities = graph.domain.entities.map(
-    (entity) =>
-      `- **${entity.label}**: ${entity.fields.map((field) => field.key).join(", ") || "No fields"}`,
-  );
-  return `# ${graph.metadata.name}\n\nThis application was compiled from a Factory Published Graph.\n\n## Generated documentation\n\n- [API reference](api-reference.md)\n- [Entity relationship diagram](entity-relationship.md)\n- [Permission matrix](permission-matrix.md)\n\n## Entities\n${entities.join("\n") || "- No entities declared."}\n`;
-}
-
 function renderCapabilityLock(
   graph: ApplicationGraphV1,
   compositionLock: CapabilityCompositionLockV1,
@@ -3954,11 +3835,17 @@ function renderCapabilityTemplateLock(
  * This function is pure: the Worker owns filesystem writes, Compose identity,
  * artifact digests, and cleanup.
  */
-export function generateApplicationBundle(
+/**
+ * Resolves the explicit immutable compilation view consumed by target plugins.
+ * The facade builds it once from the validated Published Graph, the
+ * canonicalized composition lock, and the resolved contribution layer; every
+ * plugin renders only from this view, never from mutable Draft state or
+ * profile-name semantics.
+ */
+export function buildCompilationInput(
   input: PublishedGraphInput,
   options: GenerateApplicationBundleOptions = {},
-): GeneratedApplicationBundle {
-  const plan = buildCompilationPlan(input);
+): PublishedCompilationInput {
   const graph = assertValidApplicationGraph(input.graph);
   // A Published Graph deliberately does not retain mutable Draft selections.
   // The Compiler materializes a private lock view for Profile-specific
@@ -3970,18 +3857,9 @@ export function generateApplicationBundle(
   );
   const restaurantRuntimeEnabled =
     hasRestaurantOrderingComposition(rendererGraph);
-  let renderedRestaurantRuntime:
-    ReturnType<typeof renderRestaurantRuntime> | undefined;
-  const restaurantRuntime = () => {
-    if (!restaurantRuntimeEnabled) return null;
-    renderedRestaurantRuntime ??= renderRestaurantRuntime(rendererGraph);
-    return renderedRestaurantRuntime;
-  };
-  const capabilityTemplates = resolveCapabilityTemplateContributions(
-    graph,
-    input.compositionLock,
-    options.repositoryRoot,
-  );
+  const renderedRestaurantRuntime = restaurantRuntimeEnabled
+    ? renderRestaurantRuntime(rendererGraph)
+    : undefined;
   const targetContributionPlans = resolveTargetContributionPlans(
     input,
     options,
@@ -4025,6 +3903,90 @@ export function generateApplicationBundle(
       : []),
     ...(notificationOutbox ? [notificationOutboxMigration] : []),
   ];
+  return {
+    publishedRevisionId: input.publishedRevisionId,
+    graph,
+    compositionLock: input.compositionLock,
+    rendererGraph,
+    context: {
+      restaurantRuntimeEnabled,
+      restaurantArtifacts: {
+        apiReference: renderedRestaurantRuntime?.apiReference,
+        prismaSchema: renderedRestaurantRuntime?.prismaSchema,
+        initialMigration: renderedRestaurantRuntime?.initialMigration,
+      },
+      identityPolicyEnabled: identityPolicy !== undefined,
+      orderOperationsPersistence:
+        useGenericOrderOperationsPersistence && orderOperationsPersistence
+          ? {
+              schema: orderOperationsPersistence.schema,
+              migration: orderOperationsPersistence.migration,
+            }
+          : undefined,
+      useGenericOrderOperationsPersistence,
+      moneyPricingPersistence:
+        useGenericMoneyPricingPersistence && moneyPricingPersistence
+          ? {
+              schema: moneyPricingPersistence.schema,
+              migration: moneyPricingPersistence.migration,
+            }
+          : undefined,
+      useGenericMoneyPricingPersistence,
+      notificationOutboxEnabled: notificationOutbox !== undefined,
+      additionalPrismaSchemaFragments,
+      additionalMigrationFragments,
+    },
+  };
+}
+
+export function generateApplicationBundle(
+  input: PublishedGraphInput,
+  options: GenerateApplicationBundleOptions = {},
+): GeneratedApplicationBundle {
+  const plan = buildCompilationPlan(input);
+  const compilationInput = buildCompilationInput(input, options);
+  const graph = compilationInput.graph;
+  const rendererGraph = compilationInput.rendererGraph;
+  const {
+    restaurantRuntimeEnabled,
+    useGenericOrderOperationsPersistence,
+    additionalPrismaSchemaFragments,
+    additionalMigrationFragments,
+  } = compilationInput.context;
+  let renderedRestaurantRuntime:
+    ReturnType<typeof renderRestaurantRuntime> | undefined;
+  const restaurantRuntime = () => {
+    if (!restaurantRuntimeEnabled) return null;
+    renderedRestaurantRuntime ??= renderRestaurantRuntime(rendererGraph);
+    return renderedRestaurantRuntime;
+  };
+  const capabilityTemplates = resolveCapabilityTemplateContributions(
+    graph,
+    input.compositionLock,
+    options.repositoryRoot,
+  );
+  const targetContributionPlans = resolveTargetContributionPlans(
+    input,
+    options,
+  );
+  const renderedTargetContributions = targetContributionPlans.map(
+    renderTargetContribution,
+  );
+  const identityPolicy = resolveIdentityPolicyRuntimeContribution(
+    input,
+    renderedTargetContributions,
+  );
+  const orderOperationsPersistence =
+    resolveOrderOperationsPersistenceContribution(
+      input,
+      renderedTargetContributions,
+    );
+  const notificationOutbox =
+    resolveNotificationOutboxRuntimeContribution(input);
+  const renderedDocumentationFiles = compilerTargetRegistry.run(
+    "documentation",
+    compilationInput,
+  );
   const useResolvedContributions =
     input.compositionLock.resolvedContributionDigests.length > 0;
   const usePackageCartHandler = input.compositionLock.packages.some(
@@ -4474,24 +4436,10 @@ export function generateApplicationBundle(
       path: "tests/journeys.generated.md",
       render: () => `# Generated role journeys\n\nGraph: ${plan.graphHash}\n`,
     },
-    {
-      path: "docs/api-reference.md",
-      render: () =>
-        restaurantRuntime()?.apiReference ??
-        renderApiReference(graph, Boolean(identityPolicy)),
-    },
-    {
-      path: "docs/entity-relationship.md",
-      render: () => renderEntityRelationshipDiagram(graph),
-    },
-    {
-      path: "docs/permission-matrix.md",
-      render: () => renderPermissionMatrix(graph),
-    },
-    {
-      path: "docs/application.md",
-      render: () => renderDocumentation(graph),
-    },
+    ...renderedDocumentationFiles.map((file) => ({
+      path: file.path,
+      render: () => file.content,
+    })),
     {
       path: "web/Dockerfile",
       render: () =>

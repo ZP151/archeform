@@ -247,6 +247,55 @@ that contains it.
 - **Next task:** Stage 2 (documentation target parity migration):
   `refactor(compiler): migrate documentation target`.
 
+### Stage 2: Documentation target parity migration (2026-08-06)
+
+- **Owned task and paths:**
+  - created `packages/compiler/src/targets/documentation/target.ts`
+    (`DocumentationPlanV1`, `documentationTargetPlugin`, private
+    `markdownCell`/`relationshipCardinality`/`hasCommerceCapabilities` copies,
+    plan/render/validate split);
+  - created `packages/compiler/test/documentation-target-parity.test.ts`
+    (frozen legacy digest vectors for all five Profiles x four docs files,
+    repeated-render determinism, and five fail-closed validation cases);
+  - `packages/compiler/src/index.ts`: added the exported
+    `buildCompilationInput` view resolver (validated graph, renderer lock
+    view, explicit `CompilationContextV1`), registered the documentation
+    plugin on the facade-owned registry, delegated the four docs files
+    through `supports -> plan -> render -> validate`, and removed the
+    centralized `markdownCell`, `relationshipCardinality`,
+    `renderApiReference`, `renderEntityRelationshipDiagram`,
+    `renderPermissionMatrix`, and `renderDocumentation` renderers (134 lines
+    deleted).
+- **RED:** the parity test could not import the plugin before it existed; the
+  registry had no documentation target.
+- **GREEN and parity evidence (Node v22.11.0):**
+  - legacy digests captured from `generateApplicationBundle` on the
+    pre-migration tree and frozen into the parity test (five Profiles x four
+    docs paths, 20 SHA-256 vectors, including the Restaurant
+    `api-reference` override and the identity-policy fixture-session
+    boundary for Retail Counter and Grocery Pickup);
+  - plugin render through the facade registry reproduces every frozen digest
+    exactly: 6/6 parity tests (5 profiles + determinism), plus 5/5
+    fail-closed validation tests = 11/11 focused;
+  - full `@factory/compiler` suite: 303/303 serial (17 files);
+  - `@factory/compiler-worker` regression: 81/81;
+  - Compiler typecheck, build, Prettier lint, and `git diff --check` clean.
+- **Digest parity disposition:** all 20 file/byte/digest vectors match with
+  no unexplained difference; no intentional output change.
+- **Review findings and repairs:** pending task review.
+- **Remote reachability:** the iteration commit is pushed to
+  `origin/feat/compiler-target-plugin-kernel` (observed via
+  `git branch -r --contains`).
+- **Residual risk:** the facade re-resolves the contribution layer for its
+  own orchestration (capabilityTemplates, renderedTargetContributions,
+  identityPolicy, orderOperationsPersistence, notificationOutbox) and
+  re-renders the Restaurant runtime lazily; both are pure and byte-identical,
+  and the parity gate pins the documentation bytes. The documentation target
+  owns a private `hasCommerceCapabilities` copy (the facade keeps its own for
+  six other renderers); parity keeps them in sync.
+- **Next task:** task review, PM, QA, release-review, PM acceptance gates at
+  the remote-reachable commit, then Stage 3 (policy target parity).
+
 ## Residual risks and stop conditions
 
 - Any stop condition declared by the Skill (unexplained output drift, public
