@@ -17,6 +17,26 @@ import {
  * undefined values, bigint, non-finite numbers, non-plain prototypes, and
  * cycles fail closed at plan time.
  */
+function requirePlainDataDescriptor(
+  value: object,
+  key: PropertyKey,
+  path: string,
+): PropertyDescriptor {
+  if (typeof key !== "string") {
+    throw new Error(`Compiler target plan '${path}' must be plain data.`);
+  }
+  const descriptor = Object.getOwnPropertyDescriptor(value, key);
+  if (
+    !descriptor ||
+    !("value" in descriptor) ||
+    !descriptor.enumerable ||
+    typeof descriptor.value === "function"
+  ) {
+    throw new Error(`Compiler target plan '${path}' must be plain data.`);
+  }
+  return descriptor;
+}
+
 export function assertSerializablePlan(plan: unknown): void {
   const active = new WeakSet<object>();
   const visit = (value: unknown, path: string): void => {
@@ -48,23 +68,20 @@ export function assertSerializablePlan(plan: unknown): void {
       );
     }
     if (Array.isArray(value)) {
-      for (const [index, element] of value.entries()) {
-        visit(element, `${path}[${index}]`);
+      for (let index = 0; index < value.length; index += 1) {
+        const descriptor = requirePlainDataDescriptor(
+          value,
+          String(index),
+          `${path}[${index}]`,
+        );
+        visit(descriptor.value, `${path}[${index}]`);
+      }
+      if (Reflect.ownKeys(value).length !== value.length) {
+        throw new Error(`Compiler target plan '${path}' must be plain data.`);
       }
     } else {
       for (const key of Reflect.ownKeys(value)) {
-        if (typeof key !== "string") {
-          throw new Error(`Compiler target plan '${path}' must be plain data.`);
-        }
-        const descriptor = Object.getOwnPropertyDescriptor(value, key);
-        if (
-          !descriptor ||
-          !("value" in descriptor) ||
-          !descriptor.enumerable ||
-          typeof descriptor.value === "function"
-        ) {
-          throw new Error(`Compiler target plan '${path}' must be plain data.`);
-        }
+        const descriptor = requirePlainDataDescriptor(value, key, path);
         visit(descriptor.value, `${path}.${key}`);
       }
     }

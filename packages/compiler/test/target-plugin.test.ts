@@ -242,6 +242,45 @@ describe("plan serializability boundary", () => {
     expect(() => assertSerializablePlan(plan)).toThrow("must be plain data");
   });
 
+  it("rejects an array with an extra own property", () => {
+    const plan = [1] as unknown as Record<string, unknown>;
+    plan.extra = "dropped by JSON";
+
+    expect(() => assertSerializablePlan(plan)).toThrow("must be plain data");
+  });
+
+  it("rejects an array with a symbol-keyed property", () => {
+    const plan = [1] as unknown as Record<PropertyKey, unknown>;
+    Object.defineProperty(plan, Symbol("unexpected"), {
+      value: 1,
+      enumerable: true,
+    });
+
+    expect(() => assertSerializablePlan(plan)).toThrow("must be plain data");
+  });
+
+  it("rejects a sparse array", () => {
+    expect(() => assertSerializablePlan(new Array(1))).toThrow(
+      "must be plain data",
+    );
+  });
+
+  it("rejects an accessor-backed array index without invoking it", () => {
+    let reads = 0;
+    const plan: unknown[] = [];
+    Object.defineProperty(plan, "0", {
+      enumerable: true,
+      get: () => {
+        reads += 1;
+        return 1;
+      },
+    });
+    plan.length = 1;
+
+    expect(() => assertSerializablePlan(plan)).toThrow("must be plain data");
+    expect(reads).toBe(0);
+  });
+
   it("accepts a shared non-cyclic reference", () => {
     const shared = { key: "value" };
 
