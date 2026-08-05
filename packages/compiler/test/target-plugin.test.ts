@@ -198,6 +198,50 @@ describe("plan serializability boundary", () => {
     );
   });
 
+  it("rejects a symbol-keyed plan property", () => {
+    const plan: Record<PropertyKey, unknown> = { count: 1 };
+    Object.defineProperty(plan, Symbol("unexpected"), {
+      value: 1,
+      enumerable: true,
+    });
+
+    expect(() => assertSerializablePlan(plan)).toThrow("must be plain data");
+  });
+
+  it("rejects an accessor-backed plan property without invoking it", () => {
+    let reads = 0;
+    const plan: Record<string, unknown> = {};
+    Object.defineProperty(plan, "count", {
+      enumerable: true,
+      get: () => {
+        reads += 1;
+        return 1;
+      },
+    });
+
+    expect(() => assertSerializablePlan(plan)).toThrow("must be plain data");
+    expect(reads).toBe(0);
+  });
+
+  it("rejects a non-enumerable plan property", () => {
+    const plan: Record<string, unknown> = { count: 1 };
+    Object.defineProperty(plan, "hidden", {
+      value: "dropped by JSON",
+      enumerable: false,
+    });
+
+    expect(() => assertSerializablePlan(plan)).toThrow("must be plain data");
+  });
+
+  it("rejects a toJSON function on a plan record", () => {
+    const plan: Record<string, unknown> = {
+      count: 1,
+      toJSON: () => ({ rewritten: true }),
+    };
+
+    expect(() => assertSerializablePlan(plan)).toThrow("must be plain data");
+  });
+
   it("accepts a shared non-cyclic reference", () => {
     const shared = { key: "value" };
 

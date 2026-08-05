@@ -13,8 +13,9 @@ import {
 /**
  * Rejects a plan that is not a serializable plain-data value. Plans are
  * deterministic records that must survive JSON round-trips without losing or
- * changing meaning; functions, symbols, undefined values, bigint, non-finite
- * numbers, non-plain prototypes, and cycles fail closed at plan time.
+ * changing meaning; functions, symbols, symbol keys, accessors, `toJSON`,
+ * undefined values, bigint, non-finite numbers, non-plain prototypes, and
+ * cycles fail closed at plan time.
  */
 export function assertSerializablePlan(plan: unknown): void {
   const active = new WeakSet<object>();
@@ -51,8 +52,20 @@ export function assertSerializablePlan(plan: unknown): void {
         visit(element, `${path}[${index}]`);
       }
     } else {
-      for (const key of Object.keys(value)) {
-        visit((value as Record<string, unknown>)[key], `${path}.${key}`);
+      for (const key of Reflect.ownKeys(value)) {
+        if (typeof key !== "string") {
+          throw new Error(`Compiler target plan '${path}' must be plain data.`);
+        }
+        const descriptor = Object.getOwnPropertyDescriptor(value, key);
+        if (
+          !descriptor ||
+          !("value" in descriptor) ||
+          !descriptor.enumerable ||
+          typeof descriptor.value === "function"
+        ) {
+          throw new Error(`Compiler target plan '${path}' must be plain data.`);
+        }
+        visit(descriptor.value, `${path}.${key}`);
       }
     }
     active.delete(value);
