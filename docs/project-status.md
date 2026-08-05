@@ -140,10 +140,15 @@ passed 208 tests, typecheck, Prettier lint, and build.
 Typed Capability Binding Task 2 is reconciled against accepted Task 2A and is
 `accepted` at Target-Commit `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` after
 independent task review, behavioral QA, release review, and fresh verification
-passed with no P0/P1/P2. That compiler-admission dependency is accepted. The
-next slice is Stage 1 of the compiler-target-plugin-kernel Goal: implement the
-`CompilerTargetPluginV1` kernel (`feat(compiler): add target plugin kernel`),
-then migrate the documentation target with exact parity. `commerce.cart@1.0.1`
+passed with no P0/P1/P2. That compiler-admission dependency is accepted.
+Stage 1 of the compiler-target-plugin-kernel Goal — the `CompilerTargetPluginV1`
+kernel (`feat(compiler): add target plugin kernel`) — is implemented at
+`197270e973cd10b3879662d863b31b2418032a7b` and passed independent task review
+(TASK_REVIEW_PASS, SPEC PASS, QUALITY PASS, no P0/P1/P2 after the bounded
+`assertSerializablePlan` repair). Its iteration state is `ready_for_qa`; the
+next gate is fresh independent behavioral QA against `197270e`, then PM
+`reviewed`, release review, and PM acceptance, after which the documentation
+target migration proceeds with exact parity. `commerce.cart@1.0.1`
 already has a package-owned handler and is not the next unimplemented slice.
 
 ## Persistent shared order operations — 2026-08-01
@@ -1551,8 +1556,21 @@ Task 2 `reviewed -> accepted`. Task 2 acceptance is limited to the typed
 manifest and binding contracts; Typed Binding Graph Tasks 3 through 7 remain
 `planned` and blocked, Commercial Foundation Task 2 remains `implementing`
 and escalated, and its Tasks 3 and 4 remain `planned` and blocked. Task 2
-acceptance unblocks Stage 1 of the compiler-target-plugin-kernel Goal
+acceptance unblocked Stage 1 of the compiler-target-plugin-kernel Goal
 (`feat(compiler): add target plugin kernel`) but does not accept that Goal.
-The next smallest slice is that Stage 1 implementation on the
-`feat/compiler-target-plugin-kernel` branch; the documentation/policy/database
-parity migrations proceed serially after it.
+Stage 1 is implemented at `197270e973cd10b3879662d863b31b2418032a7b` and its
+iteration state is `ready_for_qa`: independent task review returned
+TASK_REVIEW_PASS (SPEC PASS, QUALITY PASS, no P0/P1/P2) at the clean tree
+exactly at `197270e`, after repair commit `197270e` (bounded to
+`packages/compiler/src/core/target-registry.ts` and
+`packages/compiler/test/target-plugin.test.ts`, +62/-67) closed the three
+`assertSerializablePlan` P2s found in the initial `5a692fe` review. Focused
+kernel suites pass 47/47 (15 target-plugin + 15 target-registry + 17
+generated-files), the full Compiler suite passes 284/284 serial (16 files),
+the Worker regression passes 81/81, Compiler typecheck and Prettier lint pass
+at the clean tree, `git diff --check` is clean, all 38 prior facade exports
+are preserved plus 12 kernel symbols, and `197270e` is the remote-reachable
+branch tip of `origin/feat/compiler-target-plugin-kernel`. The next smallest
+slice is fresh independent behavioral QA against `197270e`, then PM
+`ready_for_qa -> reviewed`, then release review, then PM acceptance, after
+which the documentation/policy/database parity migrations proceed serially.
