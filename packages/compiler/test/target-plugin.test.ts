@@ -166,6 +166,11 @@ describe("plan serializability boundary", () => {
       message: "must be plain data",
     },
     {
+      label: "a bigint value",
+      plan: { count: 1n },
+      message: "must be plain data",
+    },
+    {
       label: "a NaN value",
       plan: { count: Number.NaN },
       message: "must be finite",
@@ -182,5 +187,22 @@ describe("plan serializability boundary", () => {
     },
   ])("rejects $label", ({ plan, message }) => {
     expect(() => assertSerializablePlan(plan)).toThrow(message);
+  });
+
+  it("rejects an array-rooted cycle with the fail-closed message", () => {
+    const cyclicArray: unknown[] = [];
+    cyclicArray.push(cyclicArray);
+
+    expect(() => assertSerializablePlan(cyclicArray)).toThrow(
+      "must not contain cycles",
+    );
+  });
+
+  it("accepts a shared non-cyclic reference", () => {
+    const shared = { key: "value" };
+
+    expect(() =>
+      assertSerializablePlan({ first: shared, second: shared }),
+    ).not.toThrow();
   });
 });

@@ -13,78 +13,51 @@ import {
 /**
  * Rejects a plan that is not a serializable plain-data value. Plans are
  * deterministic records that must survive JSON round-trips without losing or
- * changing meaning; functions, symbols, undefined values, and cycles fail
- * closed at plan time.
+ * changing meaning; functions, symbols, undefined values, bigint, non-finite
+ * numbers, non-plain prototypes, and cycles fail closed at plan time.
  */
-export function assertSerializablePlan(plan: unknown, path = "plan"): void {
-  if (plan === null) return;
-  if (typeof plan === "string" || typeof plan === "boolean") return;
-  if (typeof plan === "number") {
-    if (!Number.isFinite(plan)) {
-      throw new Error(`Compiler target plan '${path}' must be finite.`);
+export function assertSerializablePlan(plan: unknown): void {
+  const active = new WeakSet<object>();
+  const visit = (value: unknown, path: string): void => {
+    if (value === null) return;
+    if (typeof value === "string" || typeof value === "boolean") return;
+    if (typeof value === "number") {
+      if (!Number.isFinite(value)) {
+        throw new Error(`Compiler target plan '${path}' must be finite.`);
+      }
+      return;
     }
-    return;
-  }
-  if (Array.isArray(plan)) {
-    for (const [index, element] of plan.entries()) {
-      assertSerializablePlan(element, `${path}[${index}]`);
+    if (typeof value !== "object") {
+      throw new Error(`Compiler target plan '${path}' must be plain data.`);
     }
-    return;
-  }
-  if (typeof plan === "object") {
-    const seen = new WeakSet<object>();
-    const visit = (value: unknown, currentPath: string): void => {
-      if (value === null) return;
-      if (typeof value !== "object") {
-        if (
-          value === undefined ||
-          typeof value === "function" ||
-          typeof value === "symbol"
-        ) {
-          throw new Error(
-            `Compiler target plan '${currentPath}' must be plain data.`,
-          );
-        }
-        if (typeof value === "number" && !Number.isFinite(value)) {
-          throw new Error(
-            `Compiler target plan '${currentPath}' must be finite.`,
-          );
-        }
-        return;
+    if (active.has(value)) {
+      throw new Error(
+        `Compiler target plan '${path}' must not contain cycles.`,
+      );
+    }
+    active.add(value);
+    const prototype = Object.getPrototypeOf(value);
+    if (
+      prototype !== Object.prototype &&
+      prototype !== Array.prototype &&
+      prototype !== null
+    ) {
+      throw new Error(
+        `Compiler target plan '${path}' must use plain records and arrays.`,
+      );
+    }
+    if (Array.isArray(value)) {
+      for (const [index, element] of value.entries()) {
+        visit(element, `${path}[${index}]`);
       }
-      if (seen.has(value)) {
-        throw new Error(
-          `Compiler target plan '${currentPath}' must not contain cycles.`,
-        );
+    } else {
+      for (const key of Object.keys(value)) {
+        visit((value as Record<string, unknown>)[key], `${path}.${key}`);
       }
-      seen.add(value);
-      const prototype = Object.getPrototypeOf(value);
-      if (
-        prototype !== Object.prototype &&
-        prototype !== Array.prototype &&
-        prototype !== null
-      ) {
-        throw new Error(
-          `Compiler target plan '${currentPath}' must use plain records and arrays.`,
-        );
-      }
-      if (Array.isArray(value)) {
-        for (const [index, element] of value.entries()) {
-          visit(element, `${currentPath}[${index}]`);
-        }
-      } else {
-        for (const key of Object.keys(value)) {
-          visit(
-            (value as Record<string, unknown>)[key],
-            `${currentPath}.${key}`,
-          );
-        }
-      }
-    };
-    visit(plan, path);
-    return;
-  }
-  throw new Error(`Compiler target plan '${path}' must be plain data.`);
+    }
+    active.delete(value);
+  };
+  visit(plan, "plan");
 }
 
 /**
