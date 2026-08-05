@@ -179,6 +179,18 @@ not acceptance.
   source/governance drift and secret checks were clean. The PM records
   `reviewed -> accepted` for Task 2A only. Tasks 3 through 7 remain `planned`;
   none of them is dispatched by this transition.
+- Under the approved compiler-target-plugin-kernel Goal (Stage 0), Task 2
+  completed its final gates: fresh independent release review at the
+  remote-reachable Target-Commit
+  `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` returned RELEASE PASS with no
+  P0/P1/P2, and fresh verification passed the focused suites 83/83 (37
+  typed-binding-contract, 46 composition-contract) including the single-digest
+  determinism probe. The PM records Task 2 `reviewed -> accepted`. Task 2
+  acceptance is limited to the typed manifest and binding contracts; Typed
+  Binding Graph Tasks 3 through 7 remain `planned` and blocked, and Commercial
+  Foundation Task 2 remains `implementing` and escalated. Task 2 acceptance
+  unblocks Stage 1 of the compiler-target-plugin-kernel Goal but does not
+  accept that Goal.
 - No frontend/backend parallel implementation is permitted in this project.
 - Commercial Capability Foundation Task 2 remains `implementing` and
   escalated. It cannot resume acceptance until this project's Task 7 is
@@ -191,9 +203,9 @@ not acceptance.
 | Task                                           | State          | Specialization | Contract owner                               | Contract status                                 |
 | ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | ----------------------------------------------- |
 | 1. Pure typed Graph symbol index               | `accepted`     | `integration`  | Application Graph Type System                | Release review and fresh verification passed.   |
-| 2. Typed manifest and binding contracts        | `reviewed`     | `integration`  | Capability Binding Contract                  | Independent task review and behavioral QA passed at 0dbe0cf with no P0/P1/P2; awaiting fresh independent release review. |
+| 2. Typed manifest and binding contracts        | `accepted`     | `integration`  | Capability Binding Contract                  | Release review and fresh verification passed at 0dbe0cf with no P0/P1/P2. |
 | 2A. Immutable composition resolution boundary  | `accepted`     | `integration`  | Capability Composition Resolution Boundary   | Release review and fresh verification passed.   |
-| 3. Serialized owner-aware Graph selections     | `planned`      | `integration`  | Application Graph Serialization              | Blocked on accepted Tasks 2 and 2A.             |
+| 3. Serialized owner-aware Graph selections     | `planned`      | `integration`  | Application Graph Serialization              | Remains `planned` and blocked; Graph tasks do not start on Task 2 acceptance. |
 | 4. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 3 serialized contract. |
 | 5. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-4.                  |
 | 6. Graph-aware Publish and compiler admission  | `planned`      | `backend`      | Published Graph and Compiler Admission       | Blocked on accepted Tasks 1-5.                  |
@@ -299,11 +311,42 @@ satisfying the ledger state machine's `ready_for_qa -> reviewed` condition.
 The PM records **Task 2 `ready_for_qa -> reviewed`** citing that
 Target-Commit. This is not release review or acceptance.
 
-**Remaining Task 2 gates (in order, each against the same remote-reachable
-Target-Commit `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec`):** fresh independent
-release review; PM `reviewed -> accepted`. Only the PM context records those
-transitions. This reconciliation changes no product code, contract, ADR, or
-task path.
+**Independent release review at Target-Commit
+`0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` (read-only release-review context,
+Node `v22.11.0`):**
+
+- Release review returned RELEASE PASS with no P0/P1/P2 findings at the
+  remote-reachable Target-Commit `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec`
+  (`origin/feat/compiler-target-plugin-kernel`).
+- Audit: `0dbe0cf` changed only
+  `packages/capabilities/test/typed-binding-contract.test.ts` (+25 lines),
+  inside both Task 2's four authorized paths and Task 2A's five-path boundary.
+  The reconciliation range `fa57d52~1..0dbe0cf` is exactly three files: this
+  typed-binding ledger, `docs/project-status.md`, and the authorized test
+  path. Product code is byte-identical between `0dbe0cf` and HEAD (branch tip
+  `2cc799f`); the remaining diff to HEAD is governance docs only.
+- Lifecycle: no Graph serialization, Published revision, lock, digest, or
+  Draft -> Publish -> Compilation change; ADR-0006/0007/0008 unchanged.
+- Provenance and secrets: no credentials, raw prompts or responses, or local
+  URLs appear in the range.
+- Git: linear history with no force-push or rewrite; `git diff --check` clean;
+  worktree clean.
+- Fresh safe re-run: the focused suites passed 83/83 (37
+  typed-binding-contract, 46 composition-contract), including the
+  single-digest determinism probe.
+
+**Transition recorded:** independent release review and fresh verification
+passed at `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` with no unresolved
+load-bearing finding, satisfying the ledger state machine's
+`reviewed -> accepted` condition. The PM records **Task 2
+`reviewed -> accepted`** citing that Target-Commit.
+
+**Acceptance limitation:** Task 2 acceptance is limited to the typed manifest
+and binding contracts. Typed Binding Graph Tasks 3 through 7 remain `planned`
+and blocked; Commercial Foundation Task 2 remains `implementing` and
+escalated. Task 2 acceptance unblocks Stage 1 of the
+compiler-target-plugin-kernel Goal but does not accept that Goal. This
+reconciliation changes no product code, contract, ADR, or task path.
 
 ## Task 1: Add a pure typed Graph symbol index
 
@@ -514,8 +557,8 @@ task path.
 
 ## Task 2: Freeze typed manifest and binding contracts
 
-- **State:** `reviewed` (reconciled with accepted Task 2A; independent task
-  review and behavioral QA passed at
+- **State:** `accepted` (reconciled with accepted Task 2A; independent task
+  review, behavioral QA, release review, and fresh verification passed at
   `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec`)
 - **Specialization:** `integration`
 - **Bounded writer:** Typed Manifest Contract Integration
@@ -779,7 +822,14 @@ task path.
   key-or-required mismatch, field constraints on non-fields, missing field keys,
   and field keys on non-field inputs.
 - Contract tests, Capabilities typecheck, task review, QA, release review, and
-  fresh verification pass before `accepted`.
+  fresh verification passed at Target-Commit
+  `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` with no P0/P1/P2 (see the
+  2026-08-06 reconciliation section). The PM records Task 2
+  `reviewed -> accepted`. Task 2 acceptance is limited to the typed manifest
+  and binding contracts; Typed Binding Graph Tasks 3 through 7 remain
+  `planned` and blocked, and Commercial Foundation Task 2 remains `implementing`
+  and escalated. Task 2 acceptance unblocks Stage 1 of the
+  compiler-target-plugin-kernel Goal but does not accept that Goal.
 
 ## Task 2A: Establish an immutable composition resolution boundary
 
@@ -793,10 +843,12 @@ task path.
   verification with no P0/P1/P2. Task 2A is accepted and frozen.
 - **Contract artifact:** ADR-0008 DEC-001 through DEC-005 and
   `docs/superpowers/plans/2026-08-01-immutable-composition-resolution-input.md`.
-- **Dependencies:** Task 1 `accepted` and ADR-0008 `Accepted`. Task 2 remains
+- **Dependencies:** Task 1 `accepted` and ADR-0008 `Accepted`. Task 2 was
   `implementing`, with local repair and review stopped pending separate PM
-  reconciliation of the accepted Task 2A evidence; it was not an implementation
-  dependency for the architecture-owned boundary repair.
+  reconciliation of the accepted Task 2A evidence; the 2026-08-06 Stage 0
+  reconciliation then recorded Task 2 `reviewed -> accepted` at `0dbe0cf`.
+  Task 2 was not an implementation dependency for the architecture-owned
+  boundary repair.
 - **Produces:** one descriptor-validated, Factory-owned, frozen composition
   resolution snapshot consumed by public package verification and
   provider-overlap checks, matching, validation, normalization, dependency
@@ -988,10 +1040,10 @@ task path.
 - **Contract owner:** Application Graph Serialization
 - **Contract artifact:** ADR-0007 DEC-001 through DEC-005 and the design's
   serialized Draft Graph contract.
-- **Dependencies:** Tasks 1, 2, and 2A `accepted`. Tasks 1 and 2A are accepted;
-  Task 2 remains `implementing` with local repair and review stopped pending
-  separate PM reconciliation. Graph implementation remains blocked until Task
-  2 is independently accepted and reconciled.
+- **Dependencies:** Tasks 1, 2, and 2A `accepted`; all three are now accepted.
+  Graph implementation nevertheless remains blocked: Typed Binding Graph Tasks
+  3 through 7 remain `planned` and blocked and do not start on Task 2
+  acceptance (see the 2026-08-06 reconciliation acceptance limitation).
 - **Produces:** additive `SerializedCompositionBindingV1` support for exact
   owner-aware field objects, structural owner/field validation, deterministic
   Graph-hash coverage, historic hash stability, and browser-safe behavior.
@@ -1271,12 +1323,15 @@ task path.
 ## Next smallest valuable slice
 
 Task 2's repair-round-4 repeated-read P1 is closed by the accepted Task 2A
-boundary, and independent task review and behavioral QA both passed at the
-remote-reachable Target-Commit `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec`
-with no P0/P1/P2 (see the 2026-08-06 reconciliation section above). The PM
-records Task 2 `ready_for_qa -> reviewed`. The next smallest slice is fresh
-independent release review against `0dbe0cf`, then PM
-`reviewed -> accepted`. Keep Task 2 at `reviewed` until those gates complete.
-Do not start Graph Task 3; keep Graph Tasks 3 through 7 `planned` and blocked
-until their serialized dependencies are accepted. The compiler-target-plugin
-kernel may start only after Task 2 returns to `accepted`.
+boundary, and independent task review, behavioral QA, release review, and
+fresh verification all passed at the remote-reachable Target-Commit
+`0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` with no P0/P1/P2 (see the
+2026-08-06 reconciliation section above). The PM records Task 2
+`reviewed -> accepted`. Task 2 acceptance is limited to the typed manifest
+and binding contracts; Typed Binding Graph Tasks 3 through 7 remain `planned`
+and blocked, and Commercial Foundation Task 2 remains `implementing` and
+escalated. Task 2 acceptance unblocks Stage 1 of the
+compiler-target-plugin-kernel Goal (`feat(compiler): add target plugin
+kernel`) but does not accept that Goal. The next smallest slice is that Stage
+1 implementation; keep Graph Tasks 3 through 7 `planned` and blocked until
+their serialized dependencies are accepted.
