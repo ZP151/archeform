@@ -171,10 +171,24 @@ passed focused 55/55, facade compilation-plan 51/51, full compiler serial
 worktree is clean. The PM records Stage 1 `reviewed -> accepted` citing
 `249fc85`. Stage 1 acceptance covers the plugin kernel (contract, registry,
 generated-file rules, facade re-exports) with the serializability hardening
-sequence; the next iteration is Stage 2 (documentation target parity
-migration). Typed Binding Graph Tasks 3-7 remain `planned` and blocked, and
-Commercial Foundation Task 2 remains escalated. `commerce.cart@1.0.1` already
-has a package-owned handler and is not the next unimplemented slice.
+sequence. Stage 2 (documentation target parity migration) is implemented at
+Target-Commit `3fae49480d5e481fd5ed0916f0a44e5ebcc9c9c5` and its iteration
+state is `ready_for_qa`: independent task review returned TASK_REVIEW_PASS
+(SPEC PASS, QUALITY PASS, no P0/P1/P2), after `3fae494`'s behavior-neutral
+split of `buildDocumentationPlan` into
+`projectDocumentationEndpoints`/`projectDocumentationEntitySections`/
+`projectDocumentationRelationRows` closed the two P2s from the initial
+`3f57542` review (60-line guidance; fixture-session profile narrative
+corrected to Expense Approval and Simple Ecommerce). Fresh evidence:
+documentation parity + validation tests 11/11 (5 profiles x 4 frozen
+SHA-256 vectors + determinism + 5 fail-closed cases), full Compiler suite
+303/303 serial (17 files), typecheck, Prettier lint, and `git diff --check`
+clean. The next gate is fresh independent behavioral QA at `3fae494`, then
+PM `ready_for_qa -> reviewed`, then release review, then PM `reviewed ->
+accepted`, then Stage 3 (policy target parity). Typed Binding Graph Tasks 3-7
+remain `planned` and blocked, and Commercial Foundation Task 2 remains
+escalated. `commerce.cart@1.0.1` already has a package-owned handler and is
+not the next unimplemented slice.
 
 ## Persistent shared order operations — 2026-08-01
 
@@ -1626,9 +1640,29 @@ serial 292/292, and typecheck and Prettier; `249fc85` is remote-reachable
 from `origin/feat/compiler-target-plugin-kernel` and the worktree is clean.
 The PM records Stage 1 `reviewed -> accepted` citing `249fc85`. Stage 1
 acceptance covers the plugin kernel (contract, registry, generated-file
-rules, facade re-exports) with the serializability hardening sequence; the
-next iteration is Stage 2 (documentation target parity migration). Typed
-Binding Graph Tasks 3-7 remain `planned` and blocked, and Commercial
-Foundation Task 2 remains escalated. The next smallest slice is Stage 2:
-`refactor(compiler): migrate documentation target`, after which the
-policy/database parity migrations proceed serially.
+rules, facade re-exports) with the serializability hardening sequence.
+Stage 2 (documentation target parity migration) is implemented at
+Target-Commit `3fae49480d5e481fd5ed0916f0a44e5ebcc9c9c5` and its iteration
+state is `ready_for_qa`: independent task review returned TASK_REVIEW_PASS
+(SPEC PASS, QUALITY PASS, no P0/P1/P2) at the clean tree exactly at
+`3fae494`, after the two P2s from the initial `3f57542` review were closed —
+`buildDocumentationPlan` split into
+`projectDocumentationEndpoints`/`projectDocumentationEntitySections`/
+`projectDocumentationRelationRows` (behavior-neutral, 20/20 frozen digests
+still reproduced), and the fixture-session profile narrative corrected to
+Expense Approval and Simple Ecommerce (retail-counter and grocery-pickup use
+`x-factory-role`; Restaurant uses the runtime override). Fresh evidence at
+`3fae494`: documentation parity + validation tests 11/11 (5 profiles x 4
+frozen SHA-256 vectors + determinism + 5 fail-closed cases), full Compiler
+suite 303/303 serial (17 files), typecheck, Prettier lint, and
+`git diff --check` clean. The migration adds
+`packages/compiler/src/targets/documentation/target.ts`
+(`CompilerTargetPluginV1<DocumentationPlanV1>`), the frozen-digest parity
+test, facade delegation of the four docs files through the facade-owned
+registry with the six centralized renderers removed (134 lines), and the
+exported `buildCompilationInput` resolver. Typed Binding Graph Tasks 3-7
+remain `planned` and blocked, and Commercial Foundation Task 2 remains
+escalated. The next smallest slice is fresh independent behavioral QA at
+`3fae494`, then PM `ready_for_qa -> reviewed`, then release review, then PM
+`reviewed -> accepted`, after which the policy/database parity migrations
+proceed serially.

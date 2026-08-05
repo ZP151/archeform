@@ -249,6 +249,11 @@ that contains it.
 
 ### Stage 2: Documentation target parity migration (2026-08-06)
 
+- **Iteration state:** `ready_for_qa` — independent task review passed at
+  Target-Commit `3fae49480d5e481fd5ed0916f0a44e5ebcc9c9c5` (TASK_REVIEW_PASS,
+  SPEC PASS, QUALITY PASS, no P0/P1/P2); the next gate is fresh independent
+  behavioral QA at `3fae494`, then PM `ready_for_qa -> reviewed`, then
+  release review, then PM `reviewed -> accepted`.
 - **Owned task and paths:**
   - created `packages/compiler/src/targets/documentation/target.ts`
     (`DocumentationPlanV1`, `documentationTargetPlugin`, private
@@ -282,9 +287,29 @@ that contains it.
   - Compiler typecheck, build, Prettier lint, and `git diff --check` clean.
 - **Digest parity disposition:** all 20 file/byte/digest vectors match with
   no unexplained difference; no intentional output change.
-- **Review findings and repairs:** pending task review.
-- **Remote reachability:** the iteration commit is pushed to
-  `origin/feat/compiler-target-plugin-kernel` (observed via
+- **Review findings and repairs:** initial independent task review of
+  `3f57542` (`refactor: migrate documentation target`) found two P2s:
+  (1) `buildDocumentationPlan` exceeded the 60-line guidance — repaired by
+  `3fae494` (`refactor: split documentation plan projections`) with the
+  behavior-neutral extraction into `projectDocumentationEndpoints`,
+  `projectDocumentationEntitySections`, and
+  `projectDocumentationRelationRows`; all 20/20 frozen digests still
+  reproduce exactly;
+  (2) the ledger/parity-test narrative mislabeled which profiles carry the
+  identity-policy fixture-session boundary — corrected to Expense Approval
+  and Simple Ecommerce (verified by a fresh probe and reviewer
+  recomputation; retail-counter and grocery-pickup use `x-factory-role`;
+  Restaurant uses the runtime override).
+- **Final independent task review at `3fae494`:** TASK_REVIEW_PASS with SPEC
+  PASS, QUALITY PASS, and no P0/P1/P2 at the clean tree exactly at the
+  remote-reachable branch tip `3fae494`. Fresh evidence at `3fae494`:
+  documentation parity + validation tests 11/11 (5 profiles x 4 frozen
+  SHA-256 vectors + determinism + 5 fail-closed cases); full compiler suite
+  303/303 serial (17 files); typecheck, Prettier lint, and `git diff --check`
+  clean.
+- **Remote reachability:** `3fae49480d5e481fd5ed0916f0a44e5ebcc9c9c5` is the
+  branch tip of `origin/feat/compiler-target-plugin-kernel`; `3f57542` and
+  `0ff7fa3` are also reachable from it (observed via
   `git branch -r --contains`).
 - **Residual risk:** the facade re-resolves the contribution layer for its
   own orchestration (capabilityTemplates, renderedTargetContributions,
@@ -293,8 +318,14 @@ that contains it.
   and the parity gate pins the documentation bytes. The documentation target
   owns a private `hasCommerceCapabilities` copy (the facade keeps its own for
   six other renderers); parity keeps them in sync.
-- **Next task:** task review, PM, QA, release-review, PM acceptance gates at
-  the remote-reachable commit, then Stage 3 (policy target parity).
+- **Gates completed (cite Target-Commit
+  `3fae49480d5e481fd5ed0916f0a44e5ebcc9c9c5`):**
+  - independent task review: TASK_REVIEW_PASS (SPEC PASS, QUALITY PASS, no
+    P0/P1/P2) at the clean tree exactly at `3fae494`;
+  - PM: iteration state `ready_for_qa`.
+- **Next task:** fresh independent behavioral QA at `3fae494`, then PM
+  `ready_for_qa -> reviewed`, then independent release review at `3fae494`,
+  then PM `reviewed -> accepted`, then Stage 3 (policy target parity).
 
 ## Residual risks and stop conditions
 
