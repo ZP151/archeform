@@ -1238,10 +1238,18 @@ On Node `v22.11.0`, it records:
   Independent task review then returned FAIL: separate reads of
   `manifest.parameters` in schema validation and binding validation allow a
   getter to supply different strict parameter schemas between stages. Repair
-  round 4 remains `implementing`, but independent reproduction and accepted
-  ADR-0008 stop further local Task 2 repair. Task 2A is now accepted; Task 2
-  review, QA, release review, and acceptance verification remain stopped until
-  a separate PM reconciliation authorizes its remaining gates.
+  round 4 remained `implementing`, and accepted ADR-0008 stopped further local
+  Task 2 repair. Task 2A is accepted. On 2026-08-06 the compiler-target-plugin
+  Goal's Stage 0 reconciled Task 2 with accepted Task 2A using fresh evidence:
+  the focused Task 2/2A suites passed 80/80 (34 typed-binding-contract, 46
+  composition-contract), including the dedicated getter-backed
+  `manifest.parameters` witness that rejects with zero getter invocations,
+  and the full Capabilities (279/279) and Compiler (237/237) suites passed on
+  the `feat/compiler-target-plugin-kernel` branch. The accepted Task 2A
+  immutable resolution boundary closes the repeated-read P1: schema and
+  binding validation now consume the same frozen Factory-owned snapshot.
+  Task 2 therefore resumes its declared review, QA, release review, and PM
+  transitions without further local repair; it is not yet `accepted`.
 - Repair round 4 may not change physical package roots and registrations,
   profile recipes, public Draft composition, Publish, compiler, Workbench,
   lifecycle, historical bindings, or introduce
@@ -1481,9 +1489,14 @@ On Node `v22.11.0`, it records:
 
 ## Next smallest valuable slice
 
-Reconcile accepted Task 2A against Task 2's repair-round-4 repeated-read P1 and
-determine the smallest bounded Task 2 re-review or repair gate. Keep Task 2
-`implementing` until that separate reconciliation is complete. Do not start
-Graph Task 3; keep Typed Binding Graph Tasks 3 through 7 `planned` and blocked,
-Commercial Foundation Task 2 `implementing` and escalated, and its Tasks 3 and
-4 `planned` and blocked.
+Task 2's repeated-read P1 is closed by the accepted Task 2A boundary (fresh
+80/80 focused evidence on 2026-08-06). The next smallest slice is the ordered
+Task 2 gate sequence: fresh independent task review, PM `implementing ->
+ready_for_qa`, independent behavioral QA, PM `ready_for_qa -> reviewed`,
+independent release review, PM `reviewed -> accepted`. Keep Task 2
+`implementing` until those gates complete. Do not start Graph Task 3; keep
+Typed Binding Graph Tasks 3 through 7 `planned` and blocked, Commercial
+Foundation Task 2 `implementing` and escalated, and its Tasks 3 and 4
+`planned` and blocked. After Task 2 acceptance, the compiler-target-plugin
+kernel and the documentation/policy/database parity migrations proceed on the
+`feat/compiler-target-plugin-kernel` branch.

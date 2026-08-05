@@ -1,6 +1,6 @@
 # Typed Capability Binding Validation Project Ledger
 
-Updated: 2026-08-01
+Updated: 2026-08-06
 
 ADR:
 `docs/adr/adr-0006-typed-capability-binding-validation.md` and
@@ -191,13 +191,58 @@ not acceptance.
 | Task                                           | State          | Specialization | Contract owner                               | Contract status                                 |
 | ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | ----------------------------------------------- |
 | 1. Pure typed Graph symbol index               | `accepted`     | `integration`  | Application Graph Type System                | Release review and fresh verification passed.   |
-| 2. Typed manifest and binding contracts        | `implementing` | `integration`  | Capability Binding Contract                  | Repair round 4 task review failed with one P1.  |
+| 2. Typed manifest and binding contracts        | `implementing` | `integration`  | Capability Binding Contract                  | P1 closed by accepted Task 2A boundary; remaining gates in progress. |
 | 2A. Immutable composition resolution boundary  | `accepted`     | `integration`  | Capability Composition Resolution Boundary   | Release review and fresh verification passed.   |
 | 3. Serialized owner-aware Graph selections     | `planned`      | `integration`  | Application Graph Serialization              | Blocked on accepted Tasks 2 and 2A.             |
 | 4. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 3 serialized contract. |
 | 5. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-4.                  |
 | 6. Graph-aware Publish and compiler admission  | `planned`      | `backend`      | Published Graph and Compiler Admission       | Blocked on accepted Tasks 1-5.                  |
 | 7. Current recipe migration and acceptance     | `planned`      | `integration`  | Typed Binding Migration and Release Evidence | Blocked on accepted Tasks 1, 2, 2A, and 3-6.    |
+
+## Task 2 reconciliation with accepted Task 2A — 2026-08-06
+
+Under the approved compiler-target-plugin-kernel Goal (Stage 0), the PM
+reconciliation of Task 2's repair-round-4 repeated-read P1 was completed with
+fresh focused evidence on the `feat/compiler-target-plugin-kernel` feature
+branch of the current repository tree.
+
+**Decision:** the accepted Task 2A immutable composition resolution boundary
+closes Task 2's repair-round-4 P1. No further bounded local Task 2 repair is
+required. Task 2 resumes its declared review, QA, release review, and PM
+state transitions at the current tree and will only become `accepted` after
+every remaining gate passes in order.
+
+**Fresh evidence (Node `v22.11.0`):**
+
+- `pnpm --filter @factory/capabilities test -- --run test/typed-binding-contract.test.ts test/composition-contract.test.ts`
+  passed 80/80 focused tests (34 typed-binding-contract, 46
+  composition-contract).
+- The dedicated repeated-read witness test
+  `rejects an accessor-backed parameters declaration without invoking it`
+  (`packages/capabilities/test/composition-contract.test.ts`) exercises a
+  `manifest.parameters` getter that returns a required `graph-symbol` schema
+  on the first read and an optional `number` schema on the second read. The
+  public composition resolution path rejects the composition and the probe
+  asserts `parameterReads === 0`: the descriptor-based capture fails closed
+  before any raw read. Schema validation
+  (`validateCapabilityBindingSchemaSnapshot`) and binding validation
+  (`validateBindings`) now consume the same frozen, Factory-owned snapshot
+  compiled once by `compileValidatedManifestContract`, so a getter-backed
+  manifest cannot supply different strict parameter schemas between stages
+  through any public path.
+- `pnpm --filter @factory/capabilities test -- --run` passed 279/279 tests
+  (20 files).
+- `pnpm --filter @factory/compiler test -- --run` passed 237/237 tests
+  (13 files).
+- `git status` and `git diff --check` were clean before the reconciliation
+  record.
+
+**Remaining Task 2 gates (in order, each against the same remote-reachable
+`Target-Commit`):** fresh independent task review; PM `implementing ->
+ready_for_qa`; fresh independent behavioral QA; PM `ready_for_qa ->
+reviewed`; fresh independent release review; PM `reviewed -> accepted`.
+Only the PM context records those transitions. This reconciliation changes
+no product code, contract, ADR, or task path.
 
 ## Task 1: Add a pure typed Graph symbol index
 
@@ -1162,8 +1207,12 @@ not acceptance.
 
 ## Next smallest valuable slice
 
-Reconcile accepted Task 2A against Task 2's repair-round-4 repeated-read P1 and
-determine the smallest bounded Task 2 re-review or repair gate. Keep Task 2
-`implementing` until that separate reconciliation is complete. Do not start
-Graph Task 3; keep Graph Tasks 3 through 7 `planned` and blocked until their
-serialized dependencies are accepted.
+Task 2's repair-round-4 repeated-read P1 is closed by the accepted Task 2A
+boundary (see the 2026-08-06 reconciliation section above). The next smallest
+slice is the ordered Task 2 gate sequence: fresh independent task review, PM
+`implementing -> ready_for_qa`, fresh independent behavioral QA, PM
+`ready_for_qa -> reviewed`, fresh independent release review, PM
+`reviewed -> accepted`. Keep Task 2 `implementing` until those gates complete.
+Do not start Graph Task 3; keep Graph Tasks 3 through 7 `planned` and blocked
+until their serialized dependencies are accepted. The compiler-target-plugin
+kernel may start only after Task 2 returns to `accepted`.
