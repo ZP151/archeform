@@ -1,7 +1,7 @@
 ---
 Date: 2026-08-06
-Status: Proposed
-Approved-By: Pending founder review
+Status: Approved
+Approved-By: Founder
 Required-Plan: docs/superpowers/plans/2026-08-06-compiler-target-plugin-kernel.md
 ---
 
