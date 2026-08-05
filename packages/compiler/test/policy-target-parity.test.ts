@@ -213,9 +213,26 @@ describe("policy target fail-closed validation", () => {
     }
   });
 
-  it("rejects a malformed policy file", () => {
+  it.each([
+    {
+      label: "a model.conf without matchers",
+      path: "api/policy/model.conf",
+      content: "not a model",
+    },
+    {
+      label: "a policy.csv without a trailing newline",
+      path: "api/policy/policy.csv",
+      content: "p, shopper, product, read",
+    },
+    {
+      label: "a policy module without an enforcer",
+      path: "api/src/policy.ts",
+      content: "export const policy = {};\n",
+    },
+  ])("rejects $label", ({ path, content }) => {
     const files = completeSet();
-    files[0] = { path: "api/policy/model.conf", content: "not a model" };
+    const index = files.findIndex((file) => file.path === path);
+    files[index] = { path, content };
 
     const result = policyTargetPlugin.validate(files);
 
@@ -223,7 +240,7 @@ describe("policy target fail-closed validation", () => {
     if (!result.ok) {
       expect(result.issues).toContainEqual(
         expect.objectContaining({
-          path: "api/policy/model.conf",
+          path,
           code: "malformed.policy-file",
         }),
       );
