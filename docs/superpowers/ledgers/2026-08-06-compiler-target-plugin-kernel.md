@@ -502,6 +502,11 @@ that contains it.
 
 ### Stage 4: Database target parity migration (2026-08-06)
 
+- **Iteration state:** `ready_for_qa` — independent task review passed at
+  Target-Commit `76933ca7b7295a6ce053d1bfdc3dfa605aa8487f` (TASK_REVIEW_PASS,
+  SPEC PASS, QUALITY PASS, no P0/P1/P2); the next gate is fresh independent
+  behavioral QA at `76933ca`, then PM `ready_for_qa -> reviewed`, then
+  release review, then PM `reviewed -> accepted`.
 - **Owned task and paths:**
   - created `packages/compiler/src/targets/database/target.ts` (707 lines;
     the design's file-size guidance is a maintainability signal — the
@@ -551,16 +556,36 @@ that contains it.
 - **Digest parity disposition:** all 20 file/byte/digest vectors match with
   no unexplained difference; no intentional output change; no migration bytes
   changed, so no migration smoke run was required (the design's condition).
-- **Review findings and repairs:** pending task review.
-- **Remote reachability:** the iteration commit is pushed to
-  `origin/feat/compiler-target-plugin-kernel` (observed via
+- **Review findings and repairs:** initial independent task review of
+  `35fa51d` (`refactor: migrate database target`) found one P2: the ledger
+  line-count inaccuracy (667 recorded vs 707 actual). Corrected at `76933ca`
+  (ledger-only, +5/-1), which also records the responsibility-based
+  file-size exception: the renderers were moved verbatim to preserve byte
+  parity, and the parity gate justifies the cohesive exception (matching the
+  design's "preserve cohesive logic" clause).
+- **Final independent task review at `76933ca`:** TASK_REVIEW_PASS with SPEC
+  PASS, QUALITY PASS, and no P0/P1/P2 at the clean tree exactly at the
+  remote-reachable branch tip `76933ca`. The code tree is byte-identical to
+  `35fa51d` (reviewed fully). Fresh evidence at `76933ca`: database parity +
+  validation tests 13/13; full compiler suite 329/329 serial (19 files);
+  typecheck, Prettier lint, and `git diff --check` clean. No migration bytes
+  changed (exact parity), so no migration smoke was required per the design.
+- **Remote reachability:** `76933ca7b7295a6ce053d1bfdc3dfa605aa8487f` is the
+  branch tip of `origin/feat/compiler-target-plugin-kernel`; `35fa51d` and
+  `2e2753a` are also reachable from it (observed via
   `git branch -r --contains`).
 - **Residual risk:** the database target owns private naming/predicate
   copies shared with the facade; the parity gate pins the output bytes.
   `renderPrismaRecordStore` (api/src/prisma-record-store.ts) remains
   facade-owned by design (runtime code, not a database target file).
-- **Next task:** task review, PM, QA, release-review, PM acceptance gates at
-  the remote-reachable commit, then final acceptance (Stage 5).
+- **Gates completed (cite Target-Commit
+  `76933ca7b7295a6ce053d1bfdc3dfa605aa8487f`):**
+  - independent task review: TASK_REVIEW_PASS (SPEC PASS, QUALITY PASS, no
+    P0/P1/P2) at the clean tree exactly at `76933ca`;
+  - PM: iteration state `ready_for_qa`.
+- **Next task:** fresh independent behavioral QA at `76933ca`, then PM
+  `ready_for_qa -> reviewed`, then independent release review at `76933ca`,
+  then PM `reviewed -> accepted` (final goal acceptance).
 
 ## Residual risks and stop conditions
 

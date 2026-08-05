@@ -256,12 +256,34 @@ clean); `5140815` remote-reachable, linear history, no force-push/amend,
 worktree clean. The PM records Stage 3 `reviewed -> accepted` citing
 `5140815`. Stage 3 acceptance covers the policy target migration (plugin
 with key `casbin-policy`, 15 frozen digest vectors across all five Profiles,
-facade delegation, centralized renderers removed); the next iteration is
-Stage 4 (database target parity migration: Prisma schema x2, initial
-migration, seed, and package-owned database contributions). Typed Binding
-Graph Tasks 3-7 remain `planned` and blocked, and Commercial Foundation Task
-2 remains escalated. `commerce.cart@1.0.1` already has a package-owned
-handler and is not the next unimplemented slice.
+facade delegation, centralized renderers removed). Stage 4 (database target
+parity migration) is implemented at Target-Commit
+`76933ca7b7295a6ce053d1bfdc3dfa605aa8487f` and its iteration state is
+`ready_for_qa`: independent task review returned TASK_REVIEW_PASS (SPEC
+PASS, QUALITY PASS, no P0/P1/P2) at the clean tree exactly at `76933ca`,
+after the `35fa51d` review's one P2 (ledger line-count inaccuracy, 667 vs
+actual 707) was corrected at `76933ca` (ledger-only, +5/-1) with the
+responsibility-based file-size exception recorded (renderers moved verbatim,
+parity gate justifies the cohesive exception). Fresh evidence at `76933ca`:
+database parity + validation 13/13, full Compiler suite 329/329 serial (19
+files), typecheck, Prettier lint, and `git diff --check` clean; the code
+tree is byte-identical to `35fa51d` (reviewed fully). The migration adds
+`packages/compiler/src/targets/database/target.ts` (707 lines,
+`DatabasePlanV1`, nine legacy renderers moved byte-identically — verified
+by diff against `2e2753a` — plus private
+`toPascalCase`/`toCamelCase`/`hasCommerceCapabilities` copies and
+fail-closed validation), the parity test (20 frozen vectors, 5 profiles x 4
+paths), and facade delegation of the four database files via the
+facade-owned registry with the nine centralized renderers removed (facade
+diff +10/-572); the database package.json/Dockerfile/.dockerignore and
+`renderPrismaRecordStore` remain facade-owned. No migration bytes changed
+(exact parity), so no migration smoke was required per the design. The next
+gate is fresh independent behavioral QA at `76933ca`, then PM
+`ready_for_qa -> reviewed`, then release review, then PM `reviewed ->
+accepted` (final goal acceptance). Typed Binding Graph Tasks 3-7 remain
+`planned` and blocked, and Commercial Foundation Task 2 remains escalated.
+`commerce.cart@1.0.1` already has a package-owned handler and is not the
+next unimplemented slice.
 
 ## Persistent shared order operations — 2026-08-01
 
@@ -1822,7 +1844,30 @@ force-push/amend, worktree clean, all gate records cite `5140815`. The PM
 records Stage 3 `reviewed -> accepted` citing `5140815`. Stage 3 acceptance
 covers the policy target migration (plugin with key `casbin-policy`, 15
 frozen digest vectors across all five Profiles, facade delegation,
-centralized renderers removed). The next smallest slice is Stage 4 (database
-target parity migration): `refactor(compiler): migrate database target`
-(Prisma schema x2, initial migration, seed, and package-owned database
-contributions), which proceeds serially.
+centralized renderers removed). Stage 4 (database target parity migration)
+is implemented at Target-Commit `76933ca7b7295a6ce053d1bfdc3dfa605aa8487f`
+and its iteration state is `ready_for_qa`: independent task review returned
+TASK_REVIEW_PASS (SPEC PASS, QUALITY PASS, no P0/P1/P2) at the clean tree
+exactly at `76933ca`, after the one P2 from the initial `35fa51d` review
+(ledger line-count inaccuracy, 667 vs actual 707) was corrected at
+`76933ca` (ledger-only, +5/-1), which also records the responsibility-based
+file-size exception (renderers moved verbatim; the parity gate justifies
+the cohesive exception, matching the design's "preserve cohesive logic"
+clause). Fresh evidence at `76933ca`: database parity + validation 13/13;
+full Compiler suite 329/329 serial (19 files); typecheck, Prettier lint,
+and `git diff --check` clean; code tree byte-identical to `35fa51d`
+(reviewed fully). The migration adds
+`packages/compiler/src/targets/database/target.ts` (707 lines,
+`DatabasePlanV1`, the nine legacy renderers moved byte-identically —
+verified by diff against `2e2753a` — private
+`toPascalCase`/`toCamelCase`/`hasCommerceCapabilities` copies, and
+fail-closed validation on missing/unexpected/malformed), the parity test
+(20 frozen vectors, 5 profiles x 4 paths), and facade delegation of the
+four database files via the facade-owned registry with the nine centralized
+renderers removed (facade diff +10/-572); the database
+package.json/Dockerfile/.dockerignore and `renderPrismaRecordStore` remain
+facade-owned. No migration bytes changed (exact parity), so no migration
+smoke was required per the design. The next smallest slice is fresh
+independent behavioral QA at `76933ca`, then PM `ready_for_qa -> reviewed`,
+then independent release review at `76933ca`, then PM `reviewed -> accepted`
+(final goal acceptance).
