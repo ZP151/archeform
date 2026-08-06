@@ -32,7 +32,7 @@ leak, or cleanup failure returns the task to `implementing` with evidence.
 | ---- | -------------------------------------------------- | ------- | ------------- | -------- |
 | 1    | Verification/evidence/Draft-Diff contracts         | accepted | f804d67       | task review, QA, and release review each PASSed f804d67; worker baseline 81/81 |
 | 2    | Isolated lifecycle and cleanup                     | accepted | 9b954ea       | task review PASS (9b954ea, re-review 2a23b0b, P2s d01e5f3); QA FAIL P1 (9b954ea) then PASS (d01e5f3); release review PASS (f392446); focused 19/19; worker 100/100; graph 70/70 |
-| 3    | Migration, API, role, denial, idempotency probes   | implementing | e58b5a6       | RED 0/21 (missing modules) then 21/21; worker 121/121; typecheck/lint clean; task review pending |
+| 3    | Migration, API, role, denial, idempotency probes   | implementing | e58b5a6       | task review FAIL P2 (credential header names passed the shape check) repaired at d652bfc; RED 1/22 then GREEN 22/22; worker 122/122; typecheck/lint clean; task re-review pending |
 | 4    | Deterministic diagnosis and constrained Draft Diff | planned | —             | —        |
 | 5    | Control Plane persistence and review APIs          | planned | —             | —        |
 | 6    | BullMQ integration and one profile acceptance      | planned | —             | —        |
@@ -396,6 +396,21 @@ only fixed allowlisted prose plus declared status/role/action facts.
   pass; `git diff --check` clean; secret scan clean (the only credential-like
   strings in the diff are synthetic hostile-fixture data that the tests assert
   are rejected).
+
+**P2 repair round (task-review finding at e58b5a6, repaired at d652bfc):**
+the reviewer FAILed the gate with one P2: header-name validation was a shape
+check (`/^[a-z][a-z0-9-]{0,63}$/`), not an allowlist — credential-named
+headers (`authorization`, `x-api-key`, `cookie`) passed whenever the value was
+identifier-shaped, so the comment/ledger claim that credential headers are
+rejected was overstated (the reviewer proved `authorization/BearerX` was
+accepted at e58b5a6). Impact was contained (values are identifier-bounded so
+real bearer/Basic forms cannot be expressed; probes only ever send
+`x-factory-role`; values never reach evidence) but the fix is fail-closed:
+header names must now match the explicit allowlist — `x-factory-role` only.
+Repaired with TDD: a regression test asserting `authorization`, `x-api-key`,
+and `cookie` names with benign-shaped values are rejected without any fetch
+confirmed failing first (RED, 1/22) then green (GREEN, 22/22 focused; 41/41
+with lifecycle; 122/122 full worker; typecheck/lint clean).
 
 **Contracts:** six probes each return exactly one bounded `VerificationStepV1`
 (kind migration/health/api/role-journey/authorization-denial/idempotency);
