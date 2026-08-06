@@ -34,7 +34,7 @@ leak, or cleanup failure returns the task to `implementing` with evidence.
 | 2    | Isolated lifecycle and cleanup                     | accepted | 9b954ea       | task review PASS (9b954ea, re-review 2a23b0b, P2s d01e5f3); QA FAIL P1 (9b954ea) then PASS (d01e5f3); release review PASS (f392446); focused 19/19; worker 100/100; graph 70/70 |
 | 3    | Migration, API, role, denial, idempotency probes   | accepted | fe50aca       | task review FAIL P2 (header names) repaired d652bfc, re-review PASS d652bfc; QA FAIL P1 (unreachable endpoints emitted httpStatus 0 → evidence contract rejected → probe.crashed) repaired de2e667, QA re-run PASS de2e667 (P1 symptom reproduced on old code, closed end-to-end; 147-check contract sweep; RED 5/27 → GREEN 27/27 + 20/20 lifecycle); worker 128/128; typecheck/lint clean; release review FAIL 2 P2s (plan checkboxes unchecked; residual-risk overstatement) remediated fe50aca, re-review PASS fe50aca; PM acceptance at fe50aca |
 | 4    | Deterministic diagnosis and constrained Draft Diff | accepted   | e7ffb02       | feature `feat: add safe verification diagnosis` (9637528); RED graph 26/26 + worker 4/4 (module missing), GREEN 26/26 + 4/4; full graph 98/98, worker 132/132; graph typecheck/lint/build clean; worker typecheck/lint clean; task review FAIL P2 (derived diagnosisId/baseDraftRevisionId overflow factoryId 128 at schema-extreme inputs, reproduced by reviewer) repaired 3a032a0 (bounded derived IDs, RED 2/28 → GREEN 28/28); re-review PASS at 3a032a0 (P2 independently reproduced at 9637528 length 138 and closed; edge-math probes 128/119/118/117/1-char green; identity binding untrimmed; gates 28/98/4 + worker 132/132, typecheck/lint/build clean; P0/P1/P2 none); QA PASS at 3a032a0 (P2 reproduced at parent 26/2 test fail + 138/134-char overflow, closed at fix; sweep 28/98/4 + worker 132/132; 9/9 adversarial probes incl. round-trip and identity binding; commit hygiene 2 files; P0/P1/P2 none); release review FAIL 2 P2s (blocked-segment entity keys produce schema-invalid affectedPaths, reproduced by probe; undocumented baseDraftRevisionId resolution seam) repaired e7ffb02 (blockedPathSegments guard fails closed to graph.unknown_entity, RED 4/32 → GREEN 32/32, full graph 102/102, worker 132/132; resolution contract documented in module docstring + plan); release re-review PASS at e7ffb02 (both P2s reproduced at parent 3a032a0 incl. parseDiagnosis throw and add-binding diff failure, closed at fix; 0/9 collateral differences; 32/102/4 + worker 132/132; typecheck/lint/build clean; P0/P1/P2 none); PM acceptance at e7ffb02 (independent check: clean tree, remediation diff read, PM runs 32/102/4/132 green) |
-| 5    | Control Plane persistence and review APIs          | planned | —             | —        |
+| 5    | Control Plane persistence and review APIs          | ready_for_qa | 4ad23f3       | feature `feat: expose verification evidence review` (4ad23f3); RED service 17/17 + controller 6/6 module-missing; GREEN 17/17 + 6/6 + prisma-schema 8/8; full control-plane 145/145; typecheck/lint/build clean; 4 RED-round fixture/classification corrections documented in section |
 | 6    | BullMQ integration and one profile acceptance      | planned | —             | —        |
 | 7    | Independent gates and release hand-off             | planned | —             | —        |
 
@@ -674,6 +674,107 @@ mapping over the full probe failure-code vocabulary, immutable Published
 Graph protection at both boundaries, bounded derived IDs, hostile-evidence
 fail-closed, and draft diffs emitted only when a concrete safe operation is
 derivable, with the approval resolution contract documented for Task 5.
+
+## Task 5 — persist run evidence and expose review APIs — 2026-08-07
+
+**Changed paths:** `apps/control-plane/prisma/schema.prisma` (+25:
+`VerificationRun` model and the `Compilation.verificationRuns` back-relation),
+`apps/control-plane/prisma/migrations/20260807_add_verification_run/migration.sql`
+(new, hand-written, Prisma-style constraint names, `ON DELETE RESTRICT ON
+UPDATE CASCADE`, mirroring the 20260730 composition-lock migration style),
+`apps/control-plane/src/lifecycle.service.ts` (+2/-2: exported `exactRecord`,
+`requiredString`, and `succeededCompilation` for reuse — single source of
+truth, no duplication),
+`apps/control-plane/src/verification/verification.service.ts` (new:
+`createRun`/`getRun`/`reportEvidence`/`approveDraftDiff`),
+`apps/control-plane/src/verification/verification.controller.ts` (new: 4
+routes, worker-only evidence route behind `x-factory-internal-token`),
+`apps/control-plane/src/app.module.ts` (+4, registered controller + provider),
+`apps/control-plane/test/verification.service.test.ts` (new, 17 tests),
+`apps/control-plane/test/verification.controller.test.ts` (new, 6 tests),
+`apps/control-plane/test/prisma-schema.test.ts` (+54, VerificationRun model
+assertions and a no-secret-field-name sweep).
+
+**RED:** both new suites failed before implementation — the service and
+controller modules did not exist (service 17/17 module-missing, controller 6/6
+module-missing).
+
+**GREEN:** service 17/17, controller 6/6, prisma-schema 8/8; full
+control-plane 145/145; typecheck, lint, and build clean at 4ad23f3. All four
+RED-round iterations were test-fixture or error-classification bugs, not logic
+bugs, and are recorded here for the reviewers:
+- the stale-base fixture used an empty domain (`entities: []`), which is
+  semantically invalid — the policy permissions reference the removed expense
+  entity — so `parseApplicationGraph` threw `GraphSemanticError` before the
+  hash check (correct fail-closed behavior for a corrupt persisted draft,
+  wrong fixture for the stale path); the fixture now uses a valid newer draft
+  (expense gained a `note` field) so the stale-hash path is genuinely
+  exercised;
+- `field: "missing-field"` is not a contract-legal `fieldKey`
+  (`/^[a-z][a-zA-Z0-9_]*$/` — hyphens rejected), so the not-applicable case
+  failed at parse time with a 400 instead of `draft_diff_not_approvable`; the
+  fixture now uses `field: "note"` (legal key, absent from the entity);
+- `value: "not-a-boolean"` for a `unique` constraint is shape-valid in the
+  Draft Diff contract (strings allowed) but shape-INVALID in the Graph field
+  schema, and `@factory/graph` surfaces shape failures as raw `ZodError`
+  (semantic failures as `GraphSemanticError`); the approval boundary now
+  classifies both as non-applicability and refuses with 422
+  `draft_diff_rejected` — mirroring the catch-all `validatedGraph` in the
+  lifecycle service while keeping the 422 business-refusal semantics the
+  tests pin;
+- the digest assertion read `result.evidenceDigest` off the mock's stub row
+  (null) instead of the update call args; it now asserts the digest the
+  service actually wrote.
+
+**Boundary design:** `createRun` binds the run identity to a compilation,
+refuses non-succeeded compilations (422 `compilation_not_succeeded`), is
+idempotent on retry with the same identity and compilation (no second
+create), and returns 409 on a conflicting identity bound to a different
+compilation. `reportEvidence` parses the evidence through the contract
+redaction backstop, verifies the evidence's run identity matches the
+addressed run, digests the parsed bundle deterministically (`sha256:` over
+the schema-ordered JSON — the parsed object is rebuilt in schema key order),
+persists only the bounded bundle, its digest, and the optional
+diagnosis/Draft Diff (raw requests, responses, and generated material are
+never stored), and maps the run to `succeeded`/`failed` from the evidence's
+step statuses. A terminal run accepts only an identical digest (idempotent
+retry); any different digest is a 409 illegal status transition.
+`approveDraftDiff` resolves `baseDraftRevisionId` by application-graph
+identity (`draft-<metadata id>` per the Task 4 resolution contract), takes
+the LATEST mutable draft of that application graph, refuses a different
+identity (`draft_diff_mismatch`) and drift (`hashApplicationGraph` vs
+`baseGraphHash` → `draft_diff_stale`), translates ONLY `change-constraint`
+operations into `{op: "add", path: /domain/entities/<i>/fields/<j>/<constraint>}`
+Graph Diffs (add-binding/remove-binding/replace-input →
+`draft_diff_not_approvable`: composition lock metadata cannot be fabricated
+honestly at a review boundary), refuses unknown entities/fields the same way,
+applies via `applyGraphDiffToDraft` (GraphDiffError/GraphSemanticError/
+ZodError → `draft_diff_rejected`), and persists a new draft revision at
+`latest.revisionNumber + 1` mirroring `proposeDraftRevision`. Input envelopes
+are `exactRecord`-checked at the controller, so caller-controlled fields
+(such as `compilationId` on the approve route) are 400 before the handler
+runs. The internal evidence route requires the worker token
+(`assertInternalWorkerToken`), 401 for missing or wrong tokens.
+
+**Security/redaction:** evidence summaries are contract-allowlisted prose
+with the 4-check redaction backstop; persisted columns are the bounded
+bundle, its digest, and the reviewable diagnosis/Draft Diff — never raw
+requests, responses, or generated material; the schema test asserts no
+secret/token/credential/password-named fields on VerificationRun. Draft Diff
+paths are derived from entity/field array indexes, never from caller
+strings, so no JSON-pointer injection is possible.
+
+**Residual risk (accepted):** approval is a deliberately narrow deterministic
+translator (change-constraint only); broader diff kinds remain proposals for
+human review. The `draft-<metadata id>` symbolic identity plus the drift
+check refuse any base that does not match the current mutable draft, by
+design. ZodError name-matching (control-plane has no direct zod dependency)
+tracks `@factory/graph`'s error surface; it is pinned by the
+not-a-boolean regression test. VerificationRun statuses are stored as text
+and validated only at the boundary — consistent with the existing
+`PreviewRun`/`Compilation` pattern.
+
+**Task-review gate:** launched next at 4ad23f3.
 
 ## Gate protocol
 

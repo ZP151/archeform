@@ -120,11 +120,11 @@
 - Endpoints are read/review oriented: create run from a Published Compilation, get bounded status/evidence, and approve a Draft Diff into a mutable Draft revision through the existing lifecycle service.
 - Draft Diff approval resolves `baseDraftRevisionId` by application-graph identity (every draft revision of an application graph carries the same graph metadata id), takes the LATEST mutable Draft revision of that application graph, and refuses when `hashApplicationGraph(draft.graph)` diverges from the diff's `baseGraphHash`.
 
-- [ ] Write failing tests for ownership of compilation identity, idempotent retry, illegal status transition, redaction, and approval refusal for invalid diffs.
-- [ ] Run focused Control Plane tests and confirm failure.
-- [ ] Implement Prisma migration and service/controller using existing lifecycle validation and reporter patterns.
-- [ ] Run focused tests, typecheck, lint, and build for `@factory/control-plane`.
-- [ ] Commit with message `feat: expose verification evidence review`.
+- [x] Write failing tests for ownership of compilation identity, idempotent retry, illegal status transition, redaction, and approval refusal for invalid diffs.
+- [x] Run focused Control Plane tests and confirm failure.
+- [x] Implement Prisma migration and service/controller using existing lifecycle validation and reporter patterns.
+- [x] Run focused tests, typecheck, lint, and build for `@factory/control-plane`.
+- [x] Commit with message `feat: expose verification evidence review`.
 
 ### Task 6: Integrate the Worker queue and one end-to-end profile
 
