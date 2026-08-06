@@ -30,7 +30,7 @@ leak, or cleanup failure returns the task to `implementing` with evidence.
 
 | Task | Deliverable                                        | State   | Target commit | Evidence |
 | ---- | -------------------------------------------------- | ------- | ------------- | -------- |
-| 1    | Verification/evidence/Draft-Diff contracts         | implementing | —     | —        |
+| 1    | Verification/evidence/Draft-Diff contracts         | accepted | f804d67       | task review, QA, and release review each PASSed f804d67; worker baseline 81/81 |
 | 2    | Isolated lifecycle and cleanup                     | planned | —             | —        |
 | 3    | Migration, API, role, denial, idempotency probes   | planned | —             | —        |
 | 4    | Deterministic diagnosis and constrained Draft Diff | planned | —             | —        |
@@ -127,7 +127,24 @@ artifact digest manifest), `DraftDiffV1` (four constrained operations:
 source path/URL/shell/JSON patch), `DiagnosisV1` (category
 graph/capability/binding/target/runtime/unknown, stable code, Graph paths,
 nullable Draft Diff), `assertConsistentVerificationRetry` fail-closed retry
-identity, `VerificationContractError`.
+identity, `VerificationContractError`. Parse helpers: `parseVerificationRun`,
+`parseVerificationEvidence(input, run?)`, `parseDraftDiff`, `parseDiagnosis`
+— all reject malformed input with `VerificationContractError`; the evidence
+helper additionally cross-checks identity, digest, and ordered step IDs when
+the owning run is supplied. Schema exports with z.infer type aliases:
+`VerificationStepKindV1`, `VerificationStepStatusV1`, `VerificationRunStatusV1`,
+`DraftDiffOperationV1`.
+
+**Gates (all three independent, all citing f804d67):** task review PASS (with
+hostile-input probes: 13/13 credential forms rejected, 7/7 benign forms
+accepted, RED property proven against the pre-fix parent), QA PASS (42/42
+realistic-usage smoke tests including exact boundary values on both sides of
+every contract limit, export-surface compile via a strict NodeNext consumer,
+secret scan clean), release review PASS (ledger counts match reruns 35/35 and
+70/70, diff chain touches only the three expected files, secret scan clean
+with synthetic fixtures identified as such, plan Task 1 checkboxes all marked,
+worker baseline `@factory/compiler-worker` 81/81 undisturbed, no
+`GOAL_COMPLETE` claim). PM acceptance: Task 1 recorded `accepted` at f804d67.
 
 **Residual risk:** bounded contract text is a redaction backstop; probe
 construction in later Tasks remains responsible for emitting only allowlisted
