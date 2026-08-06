@@ -103,15 +103,30 @@ describe("runHealthProbe", () => {
     expect(step.httpStatus).toBe(200);
   });
 
-  it("fails bounded when the health endpoint is unreachable", async () => {
+  it("fails bounded when the health endpoint is unreachable, with contract-valid evidence", async () => {
     const { context } = probeContext({
       kind: "health",
       health: vi.fn(async () => boundedRequest(0, { ok: false })),
     });
     const step = await runHealthProbe(context);
     expect(step.status).toBe("failed");
+    // A no-response is distinct from a wrong status: no httpStatus field (the
+    // contract bounds it to 100..599) and its own bounded code.
+    expect(step.failureCode).toBe("health.unreachable");
+    expect(step.httpStatus).toBeUndefined();
+    expect(verificationStepSchema.safeParse(step).success).toBe(true);
+  });
+
+  it("fails bounded with a bounded httpStatus when the health endpoint responds with a wrong status", async () => {
+    const { context } = probeContext({
+      kind: "health",
+      health: vi.fn(async () => boundedRequest(503)),
+    });
+    const step = await runHealthProbe(context);
+    expect(step.status).toBe("failed");
     expect(step.failureCode).toBe("health.failed");
-    expect(step.httpStatus).toBe(0);
+    expect(step.httpStatus).toBe(503);
+    expect(verificationStepSchema.safeParse(step).success).toBe(true);
   });
 });
 
@@ -148,6 +163,19 @@ describe("runApiProbe", () => {
     expect(step.status).toBe("failed");
     expect(step.failureCode).toBe("api.unexpected_status");
     expect(step.httpStatus).toBe(500);
+    expect(verificationStepSchema.safeParse(step).success).toBe(true);
+  });
+
+  it("fails bounded with a distinct code and no httpStatus when the API is unreachable", async () => {
+    const { context } = probeContext({
+      kind: "api",
+      request: vi.fn(async () => boundedRequest(0, { ok: false })),
+    });
+    const step = await runApiProbe(context, productRead);
+    expect(step.status).toBe("failed");
+    expect(step.failureCode).toBe("api.unreachable");
+    expect(step.httpStatus).toBeUndefined();
+    expect(verificationStepSchema.safeParse(step).success).toBe(true);
   });
 
   it("fails closed on an untrusted route before any request", async () => {
@@ -214,6 +242,28 @@ describe("runRoleJourneyProbe", () => {
     expect(step.status).toBe("failed");
     expect(step.failureCode).toBe("role-journey.unexpected_status");
     expect(step.httpStatus).toBe(403);
+    expect(verificationStepSchema.safeParse(step).success).toBe(true);
+  });
+
+  it("fails bounded with a distinct code and no httpStatus when the API is unreachable", async () => {
+    const { context } = probeContext({
+      kind: "role-journey",
+      request: vi.fn(async () => boundedRequest(0, { ok: false })),
+    });
+    const journey: RoleJourneyFixture = {
+      journeyId: "expense-create",
+      action: "expense.create",
+      principal: "employee",
+    };
+    const step = await runRoleJourneyProbe(
+      context,
+      journey,
+      expenseApprovalApiRegistry,
+    );
+    expect(step.status).toBe("failed");
+    expect(step.failureCode).toBe("role-journey.unreachable");
+    expect(step.httpStatus).toBeUndefined();
+    expect(verificationStepSchema.safeParse(step).success).toBe(true);
   });
 });
 
@@ -285,6 +335,28 @@ describe("runAuthorizationDenialProbe", () => {
     expect(step.status).toBe("failed");
     expect(step.failureCode).toBe("authorization.denial_mismatch");
     expect(step.httpStatus).toBe(201);
+    expect(verificationStepSchema.safeParse(step).success).toBe(true);
+  });
+
+  it("fails bounded with a distinct code and no httpStatus when the API is unreachable", async () => {
+    const { context } = probeContext({
+      kind: "authorization-denial",
+      request: vi.fn(async () => boundedRequest(0, { ok: false })),
+    });
+    const journey: RoleJourneyFixture = {
+      journeyId: "expense-approve-denied",
+      action: "expense.approve",
+      principal: "employee",
+    };
+    const step = await runAuthorizationDenialProbe(
+      context,
+      journey,
+      expenseApprovalApiRegistry,
+    );
+    expect(step.status).toBe("failed");
+    expect(step.failureCode).toBe("authorization.unreachable");
+    expect(step.httpStatus).toBeUndefined();
+    expect(verificationStepSchema.safeParse(step).success).toBe(true);
   });
 });
 
@@ -340,6 +412,21 @@ describe("runIdempotencyProbe", () => {
     expect(step.status).toBe("failed");
     expect(step.failureCode).toBe("idempotency.first_request_unexpected");
     expect(request).toHaveBeenCalledTimes(1);
+  });
+
+  it("fails bounded with a distinct code and no httpStatus when the first request is unreachable", async () => {
+    const request = vi.fn(async () => boundedRequest(0, { ok: false }));
+    const { context } = probeContext({ kind: "idempotency", request });
+    const step = await runIdempotencyProbe(
+      context,
+      journey(),
+      simpleCommerceApiRegistry,
+    );
+    expect(step.status).toBe("failed");
+    expect(step.failureCode).toBe("idempotency.unreachable");
+    expect(step.httpStatus).toBeUndefined();
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(verificationStepSchema.safeParse(step).success).toBe(true);
   });
 
   it("fails bounded when the replay is not rejected", async () => {

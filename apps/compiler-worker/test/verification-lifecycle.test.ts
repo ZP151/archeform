@@ -19,6 +19,7 @@ import {
   VerificationEnvironment,
   type BoundedRequestResult,
 } from "../src/verifier/verification-environment.js";
+import { runHealthProbe } from "../src/verifier/probes.js";
 
 const runId = "verify-01h3k6f";
 const profileKey = "expense-approval";
@@ -351,6 +352,32 @@ describe("runVerificationLifecycle", () => {
       "http://127.0.0.1:3001/expenses",
       expect.anything(),
     );
+  });
+
+  it("records a bounded unreachable-endpoint failure instead of crashing the probe", async () => {
+    const deps = dependencies({
+      fetch: (async () => {
+        throw new TypeError("fetch failed");
+      }) as unknown as typeof fetch,
+      runProbe: async (entry, environment) => {
+        if (entry.kind === "health") {
+          return runHealthProbe({
+            entry,
+            environment,
+            signal: new AbortController().signal,
+          });
+        }
+        return passedStep(entry.stepId, entry.kind);
+      },
+    });
+    const evidence = await runVerificationLifecycle(validInput(), deps);
+
+    const health = evidence.steps[1];
+    expect(health.status).toBe("failed");
+    expect(health.failureCode).toBe("health.unreachable");
+    expect(health.summary).toMatch(/did not respond/i);
+    expect(evidence.cleanup.succeeded).toBe(true);
+    expect(parseVerificationEvidence(evidence)).toEqual(evidence);
   });
 
   it("aborts a hanging probe at the lifecycle timeout, skips it, and still cleans up", async () => {

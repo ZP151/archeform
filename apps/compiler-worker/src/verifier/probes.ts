@@ -68,6 +68,18 @@ function journeyFacts(
   return principal === undefined ? { action } : { role: principal, action };
 }
 
+/**
+ * The evidence contract bounds httpStatus to 100..599. A status of 0 means
+ * the endpoint never responded (network failure or timeout) — no HTTP status
+ * exists, so the step must not carry an httpStatus field at all; the failure
+ * code distinguishes the no-response case.
+ */
+function statusFacts(status: number): Pick<VerificationStepV1, "httpStatus"> {
+  return Number.isInteger(status) && status >= 100 && status <= 599
+    ? { httpStatus: status }
+    : {};
+}
+
 /** The generated app exposes one deterministic migration command. */
 export async function runMigrationProbe(
   context: ProbeContext,
@@ -105,7 +117,16 @@ export async function runHealthProbe(
       "health",
       "Health endpoint returned 200.",
       result.durationMs,
-      { httpStatus: result.status },
+      statusFacts(result.status),
+    );
+  }
+  if (result.status === 0) {
+    return failedStep(
+      context.entry,
+      "health",
+      "health.unreachable",
+      "Health endpoint did not respond.",
+      result.durationMs,
     );
   }
   return failedStep(
@@ -114,7 +135,7 @@ export async function runHealthProbe(
     "health.failed",
     "Health endpoint did not return 200.",
     result.durationMs,
-    { httpStatus: result.status },
+    statusFacts(result.status),
   );
 }
 
@@ -135,7 +156,17 @@ export async function runApiProbe(
       "api",
       "API action returned the expected status.",
       result.durationMs,
-      { httpStatus: result.status, action: action.action },
+      { ...statusFacts(result.status), action: action.action },
+    );
+  }
+  if (result.status === 0) {
+    return failedStep(
+      context.entry,
+      "api",
+      "api.unreachable",
+      "API action did not respond.",
+      result.durationMs,
+      { action: action.action },
     );
   }
   return failedStep(
@@ -144,7 +175,7 @@ export async function runApiProbe(
     "api.unexpected_status",
     "API action did not return the expected status.",
     result.durationMs,
-    { httpStatus: result.status, action: action.action },
+    { ...statusFacts(result.status), action: action.action },
   );
 }
 
@@ -174,9 +205,19 @@ export async function runRoleJourneyProbe(
       "Role journey completed as declared.",
       result.durationMs,
       {
-        httpStatus: result.status,
+        ...statusFacts(result.status),
         ...journeyFacts(journey.principal, journey.action),
       },
+    );
+  }
+  if (result.status === 0) {
+    return failedStep(
+      context.entry,
+      "role-journey",
+      "role-journey.unreachable",
+      "Role journey did not respond.",
+      result.durationMs,
+      journeyFacts(journey.principal, journey.action),
     );
   }
   return failedStep(
@@ -186,7 +227,7 @@ export async function runRoleJourneyProbe(
     "Role journey did not complete as declared.",
     result.durationMs,
     {
-      httpStatus: result.status,
+      ...statusFacts(result.status),
       ...journeyFacts(journey.principal, journey.action),
     },
   );
@@ -222,9 +263,19 @@ export async function runAuthorizationDenialProbe(
       "Authorization denied the principal as declared.",
       result.durationMs,
       {
-        httpStatus: result.status,
+        ...statusFacts(result.status),
         ...journeyFacts(journey.principal, journey.action),
       },
+    );
+  }
+  if (result.status === 0) {
+    return failedStep(
+      context.entry,
+      "authorization-denial",
+      "authorization.unreachable",
+      "Authorization denial could not be confirmed because the API did not respond.",
+      result.durationMs,
+      journeyFacts(journey.principal, journey.action),
     );
   }
   return failedStep(
@@ -234,7 +285,7 @@ export async function runAuthorizationDenialProbe(
     "Authorization did not deny the principal as declared.",
     result.durationMs,
     {
-      httpStatus: result.status,
+      ...statusFacts(result.status),
       ...journeyFacts(journey.principal, journey.action),
     },
   );
@@ -269,6 +320,16 @@ export async function runIdempotencyProbe(
     requestOptions,
   );
   if (first.status !== action.expectedStatus) {
+    if (first.status === 0) {
+      return failedStep(
+        context.entry,
+        "idempotency",
+        "idempotency.unreachable",
+        "The first request did not respond.",
+        first.durationMs,
+        journeyFacts(journey.principal, journey.action),
+      );
+    }
     return failedStep(
       context.entry,
       "idempotency",
@@ -276,7 +337,7 @@ export async function runIdempotencyProbe(
       "The first request did not complete as declared.",
       first.durationMs,
       {
-        httpStatus: first.status,
+        ...statusFacts(first.status),
         ...journeyFacts(journey.principal, journey.action),
       },
     );
@@ -295,7 +356,7 @@ export async function runIdempotencyProbe(
       "Repeated idempotency key was not rejected.",
       repeated.durationMs,
       {
-        httpStatus: repeated.status,
+        ...statusFacts(repeated.status),
         ...journeyFacts(journey.principal, journey.action),
       },
     );
@@ -306,7 +367,7 @@ export async function runIdempotencyProbe(
     "Repeated idempotency key was rejected without duplicate side effects.",
     first.durationMs + repeated.durationMs,
     {
-      httpStatus: repeated.status,
+      ...statusFacts(repeated.status),
       ...journeyFacts(journey.principal, journey.action),
     },
   );
