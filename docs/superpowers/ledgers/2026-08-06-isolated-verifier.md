@@ -34,7 +34,7 @@ leak, or cleanup failure returns the task to `implementing` with evidence.
 | 2    | Isolated lifecycle and cleanup                     | accepted | 9b954ea       | task review PASS (9b954ea, re-review 2a23b0b, P2s d01e5f3); QA FAIL P1 (9b954ea) then PASS (d01e5f3); release review PASS (f392446); focused 19/19; worker 100/100; graph 70/70 |
 | 3    | Migration, API, role, denial, idempotency probes   | accepted | fe50aca       | task review FAIL P2 (header names) repaired d652bfc, re-review PASS d652bfc; QA FAIL P1 (unreachable endpoints emitted httpStatus 0 → evidence contract rejected → probe.crashed) repaired de2e667, QA re-run PASS de2e667 (P1 symptom reproduced on old code, closed end-to-end; 147-check contract sweep; RED 5/27 → GREEN 27/27 + 20/20 lifecycle); worker 128/128; typecheck/lint clean; release review FAIL 2 P2s (plan checkboxes unchecked; residual-risk overstatement) remediated fe50aca, re-review PASS fe50aca; PM acceptance at fe50aca |
 | 4    | Deterministic diagnosis and constrained Draft Diff | accepted   | e7ffb02       | feature `feat: add safe verification diagnosis` (9637528); RED graph 26/26 + worker 4/4 (module missing), GREEN 26/26 + 4/4; full graph 98/98, worker 132/132; graph typecheck/lint/build clean; worker typecheck/lint clean; task review FAIL P2 (derived diagnosisId/baseDraftRevisionId overflow factoryId 128 at schema-extreme inputs, reproduced by reviewer) repaired 3a032a0 (bounded derived IDs, RED 2/28 → GREEN 28/28); re-review PASS at 3a032a0 (P2 independently reproduced at 9637528 length 138 and closed; edge-math probes 128/119/118/117/1-char green; identity binding untrimmed; gates 28/98/4 + worker 132/132, typecheck/lint/build clean; P0/P1/P2 none); QA PASS at 3a032a0 (P2 reproduced at parent 26/2 test fail + 138/134-char overflow, closed at fix; sweep 28/98/4 + worker 132/132; 9/9 adversarial probes incl. round-trip and identity binding; commit hygiene 2 files; P0/P1/P2 none); release review FAIL 2 P2s (blocked-segment entity keys produce schema-invalid affectedPaths, reproduced by probe; undocumented baseDraftRevisionId resolution seam) repaired e7ffb02 (blockedPathSegments guard fails closed to graph.unknown_entity, RED 4/32 → GREEN 32/32, full graph 102/102, worker 132/132; resolution contract documented in module docstring + plan); release re-review PASS at e7ffb02 (both P2s reproduced at parent 3a032a0 incl. parseDiagnosis throw and add-binding diff failure, closed at fix; 0/9 collateral differences; 32/102/4 + worker 132/132; typecheck/lint/build clean; P0/P1/P2 none); PM acceptance at e7ffb02 (independent check: clean tree, remediation diff read, PM runs 32/102/4/132 green) |
-| 5    | Control Plane persistence and review APIs          | ready_for_qa | 4ad23f3       | feature `feat: expose verification evidence review` (4ad23f3); RED service 17/17 + controller 6/6 module-missing; GREEN 17/17 + 6/6 + prisma-schema 8/8; full control-plane 145/145; typecheck/lint/build clean; 4 RED-round fixture/classification corrections documented in section |
+| 5    | Control Plane persistence and review APIs          | accepted | 4ad23f3       | feature `feat: expose verification evidence review` (4ad23f3); RED service 17/17 + controller 6/6 module-missing; GREEN 17/17 + 6/6 + prisma-schema 8/8; full control-plane 145/145; typecheck/lint/build clean; task review PASS 4ad23f3 (28/28 probes, non-blocking races/diagnosis-bind/migration-static/approval-gate notes accepted); QA PASS 4ad23f3 (RED reproduced at parent 3a032a0 module-missing; 28/28 probes; 4 non-blocking notes confirmed none escalated); release review PASS 4ad23f3 (60/60 probes incl. pointer hygiene, type-constraints, persisted-key allowlist, token timingSafeEqual; pre-existing no-baseline-migration note accepted); PM acceptance at 4ad23f3 (own runs 31/31 + 145/145 + typecheck/lint/build clean) |
 | 6    | BullMQ integration and one profile acceptance      | planned | —             | —        |
 | 7    | Independent gates and release hand-off             | planned | —             | —        |
 
@@ -871,6 +871,24 @@ run-status gate on approval + advisory affectedPaths (accepted by plan);
 case retryable DB-unique-violation 500, never corruption; (6)
 compilationDigest cross-bind belongs to the Task 6 worker (already
 recorded). PM acceptance launched next.
+**PM acceptance at 4ad23f3:** the PM independently verified at the commit —
+working tree clean (main tree HEAD c62c9ea, feature commit 4ad23f3 in
+history); the implementation read directly against the plan's Task 5
+interfaces (the boundary design above was authored and reviewed in this
+session; the three gate reviewers each re-read it independently); the PM's
+own runs at the commit: focused 31/31 (service 17, controller 6,
+prisma-schema 8), full control-plane 145/145, typecheck/lint/build clean.
+Task 5 is ACCEPTED: VerificationRun persistence bound to an immutable
+compilation — run identity ownership with idempotent retry and 409 on
+conflict, succeeded-compilation gate, deterministic sha256 evidence digest
+over the schema-ordered bundle, contract redaction backstop with run-identity
+binding, terminal-run same-digest idempotency vs 409 on divergence,
+worker-token-guarded internal evidence route, and Draft Diff approval that
+resolves `draft-<metadata id>` by application-graph identity against the
+latest mutable draft, refuses mismatch/stale/not-applicable/rejected, and
+translates only change-constraint operations into index-derived Graph Diff
+paths — raw requests, responses, and generated material are never
+persisted.
 
 ## Gate protocol
 
