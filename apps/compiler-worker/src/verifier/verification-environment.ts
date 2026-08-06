@@ -38,6 +38,19 @@ export type BoundedRequestResult = {
   readonly durationMs: number;
 };
 
+/**
+ * Declared fixture data carried on one bounded request: an allowlisted role
+ * header and a flat JSON body. Both are validated before the request is sent;
+ * neither is ever persisted or echoed into evidence.
+ */
+export type RequestOptions = {
+  readonly headers?: readonly {
+    readonly name: string;
+    readonly value: string;
+  }[];
+  readonly body?: string;
+};
+
 const httpMethods: readonly HttpMethod[] = [
   "GET",
   "POST",
@@ -50,10 +63,59 @@ const safeCommandToken = /^[a-zA-Z0-9._-]+$/;
 const maximumCommandTokens = 10;
 
 /**
+ * Declared request headers are fixture data: an allowlisted lowercase name
+ * (never a credential header) and an identifier-style value. The API role
+ * header `x-factory-role` is the supported case.
+ */
+const safeHeaderName = /^[a-z][a-z0-9-]{0,63}$/;
+const safeHeaderValue = /^[a-zA-Z0-9._-]{1,64}$/;
+const maximumDeclaredHeaders = 8;
+
+/**
+ * Request bodies are bounded declared JSON fixtures: a flat record of
+ * primitive values, never nested objects, arrays, or unbounded text.
+ */
+const maximumRequestBodyBytes = 512;
+const maximumBodyKeys = 16;
+const maximumBodyStringValueLength = 200;
+const bodyKeyPattern = /^[a-zA-Z0-9._-]{1,64}$/;
+
+function isFlatDeclaredJsonBody(body: string): boolean {
+  if (typeof body !== "string" || body.length > maximumRequestBodyBytes) {
+    return false;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return false;
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return false;
+  }
+  const entries = Object.entries(parsed as Record<string, unknown>);
+  if (entries.length === 0 || entries.length > maximumBodyKeys) {
+    return false;
+  }
+  return entries.every(([key, value]) => {
+    if (!bodyKeyPattern.test(key)) {
+      return false;
+    }
+    if (typeof value === "string") {
+      return value.length <= maximumBodyStringValueLength;
+    }
+    return (
+      (typeof value === "number" && Number.isFinite(value)) ||
+      typeof value === "boolean"
+    );
+  });
+}
+
+/**
  * A bounded Graph-facing route: absolute, forward-slash segments only, with no
  * traversal segments, query strings, or wildcards.
  */
-function isSafeRequestPath(path: string): boolean {
+export function isSafeRequestPath(path: string): boolean {
   if (!path.startsWith("/") || path.includes("?") || path.includes("#")) {
     return false;
   }
@@ -240,20 +302,24 @@ export class VerificationEnvironment {
 
   /**
    * Sends one bounded HTTP request to the isolated API. The response body is
-   * never read or persisted — only the bounded status is returned.
+   * never read or persisted — only the bounded status is returned. Declared
+   * fixture options (role header, flat JSON body) are validated fail closed
+   * before the request is sent.
    */
   async request(
     method: HttpMethod,
     path: string,
     port: "web" | "api" = "api",
+    options?: RequestOptions,
   ): Promise<BoundedRequestResult> {
-    return this.boundedFetch(method, path, port);
+    return this.boundedFetch(method, path, port, options);
   }
 
   private async boundedFetch(
     method: HttpMethod,
     path: string,
     port: "web" | "api",
+    options?: RequestOptions,
   ): Promise<BoundedRequestResult> {
     if (!httpMethods.includes(method)) {
       throw new VerificationLifecycleError(
@@ -281,6 +347,34 @@ export class VerificationEnvironment {
         "The HTTP client is not configured.",
       );
     }
+    if (options) {
+      if (options.headers !== undefined) {
+        if (
+          !Array.isArray(options.headers) ||
+          options.headers.length > maximumDeclaredHeaders ||
+          options.headers.some(
+            (header) =>
+              !header ||
+              typeof header.name !== "string" ||
+              typeof header.value !== "string" ||
+              !safeHeaderName.test(header.name) ||
+              header.name.toLowerCase() === "content-type" ||
+              !safeHeaderValue.test(header.value),
+          )
+        ) {
+          throw new VerificationLifecycleError(
+            "invalid_request_header",
+            "Request headers must be declared fixture data.",
+          );
+        }
+      }
+      if (options.body !== undefined && !isFlatDeclaredJsonBody(options.body)) {
+        throw new VerificationLifecycleError(
+          "invalid_request_body",
+          "Request bodies must be bounded declared fixtures.",
+        );
+      }
+    }
     const controller = new AbortController();
     const timer = setTimeout(
       () => controller.abort(),
@@ -289,11 +383,23 @@ export class VerificationEnvironment {
     const startedMs = this.options.nowMs?.() ?? performance.now();
     const portKey = port === "web" ? "webPort" : "apiPort";
     const url = `http://127.0.0.1:${this.startedPreview[portKey]}${path}`;
+    const init: RequestInit = { method, signal: controller.signal };
+    if (options?.headers && options.headers.length > 0) {
+      init.headers = Object.fromEntries(
+        options.headers.map(({ name, value }) => [name, value]),
+      );
+    }
+    if (options?.body !== undefined) {
+      // JSON bodies always carry the JSON content type; the fixture can never
+      // override it.
+      init.headers = {
+        ...(init.headers ?? {}),
+        "content-type": "application/json",
+      };
+      init.body = options.body;
+    }
     try {
-      const response = await this.options.fetch(url, {
-        method,
-        signal: controller.signal,
-      });
+      const response = await this.options.fetch(url, init);
       return {
         status: response?.status ?? 0,
         ok: response?.ok ?? false,
