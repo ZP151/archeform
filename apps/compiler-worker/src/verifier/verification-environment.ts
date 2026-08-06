@@ -205,7 +205,7 @@ export class VerificationEnvironment {
     );
     const startedMs = this.options.nowMs?.() ?? performance.now();
     try {
-      await this.options.processRunner?.(
+      await this.options.processRunner(
         {
           file: "docker",
           args: [

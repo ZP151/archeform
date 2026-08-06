@@ -252,11 +252,26 @@ again), both forwarded to the environment constructor; the environment
 throws `process_runner_required`/`fetch_required` when either is
 unconfigured (programming errors are never bounded results); skip wording
 corrected to "after an earlier probe crashed." Regression: focused 19/19
-(4 new), worker 100/100 (81 baseline + 19), typecheck pass, lint pass, `git
-diff --check` clean; graph suite untouched (dist carries Task 1 contracts).
-Per the gate protocol the task returned to `implementing` with the QA
-evidence and re-advanced to `ready_for_qa` for re-review at the repaired
-commit.
+(3 new `it` blocks plus one crash test extended to three probes), worker
+100/100 (81 baseline + 19), typecheck pass, lint pass, `git diff --check`
+clean; graph suite untouched (dist carries Task 1 contracts). Per the gate
+protocol the task returned to `implementing` with the QA evidence and
+re-advanced to `ready_for_qa` for re-review at the repaired commit.
+
+**Re-review (task review, PASS with three P2s, citing 2a23b0b):** the
+repair commit 2a23b0b PASSed every gate — required runner/client fields are
+compile-enforced (`tsc` consumer omitting either fails), both forwarded into
+the environment constructor, the runner guard throws outside the try/catch
+so invocation is guaranteed, fetch invoked directly, throwing/never-
+resolving/rejecting runners and clients produce truthful bounded evidence,
+and the evidence round-trips. Hostile wiring probes 5/5. Three P2s noted:
+(a) vestigial `?.` on the processRunner invocation — unreachable as a no-op
+today but inconsistent with the direct fetch invocation; repaired by
+invoking the runner directly under the existing guard; (b) the repair commit
+hash was unnamed in the ledger — repaired by citing 2a23b0b here;
+(c) "(4 new)" was imprecise — corrected to 3 new tests plus one extended
+test. The P2 repair changes no observable behavior; the 19 focused tests
+still cover runner-less and client-less fail-closed paths.
 
 **Gates (independent, citing 9b954ea):** task review returned FAIL with one
 P1 — the Task 2 ledger record never cited 9b954ea (Target-commit column `—`,
