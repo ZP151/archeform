@@ -76,11 +76,11 @@
 - `runMigrationProbe`, `runHealthProbe`, `runApiProbe`, `runRoleJourneyProbe`, `runAuthorizationDenialProbe`, and `runIdempotencyProbe` each return one bounded `VerificationStepV1`.
 - Role journeys are declared fixture data: principal role, route/action, expected status, and idempotency key; they never accept arbitrary URLs or code.
 
-- [ ] Write failing tests for successful Expense or Ecommerce submission, approval/payment role denial, repeated idempotency key, malformed response redaction, and unknown route rejection.
-- [ ] Run focused tests and confirm failure.
-- [ ] Implement fixture-driven HTTP probes with an allowlisted route/action registry and response summaries only.
-- [ ] Re-run focused probes and the relevant existing profile runtime suites.
-- [ ] Commit with message `feat: verify generated application journeys`.
+- [x] Write failing tests for successful Expense or Ecommerce submission, approval/payment role denial, repeated idempotency key, malformed response redaction, and unknown route rejection.
+- [x] Run focused tests and confirm failure.
+- [x] Implement fixture-driven HTTP probes with an allowlisted route/action registry and response summaries only.
+- [x] Re-run focused probes and the relevant existing profile runtime suites.
+- [x] Commit with message `feat: verify generated application journeys`.
 
 ### Task 4: Implement deterministic diagnosis and reviewable Draft Diff
 

@@ -441,12 +441,17 @@ registry and never accept arbitrary URLs or code; malformed or hostile fixtures
 throw `VerificationContractError` before any request (recorded as
 `probe.crashed` by the lifecycle).
 
-**Residual risk (accepted):** success journeys on record-bearing routes
-(`expense.approve`, `order.place`, `order.capture-payment` as authorized
-principals) cannot pass end-to-end until the Task 6 acceptance fixture seeds
-the referenced records — the registry entries are declared data and the
-end-to-end acceptance is Task 6's scope; denial journeys and create/list/read
-journeys are fully exercisable now.
+**Residual risk (accepted):** denial journeys, migration, and health are fully
+exercisable against real generated apps now; create/list/read SUCCESS journeys
+are not — both target profiles require `core.identity-policy`, so the generated
+app resolves principals from the `x-factory-fixture-session` header and denies
+every request without one (403 missing-session), while the probe header
+allowlist is exactly `x-factory-role`; `expense.read` additionally references
+`expense-fixture-01`, which no profile seeds. Task 6's acceptance fixture must
+therefore provide the fixture-session mechanism (an allowlist extension or a
+non-identity composition), not merely seed records, before success journeys
+can pass end-to-end; the registry entries are declared data and the end-to-end
+acceptance is Task 6's scope.
 
 ## Gate protocol
 
