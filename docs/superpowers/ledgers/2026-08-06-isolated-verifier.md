@@ -32,7 +32,7 @@ leak, or cleanup failure returns the task to `implementing` with evidence.
 | ---- | -------------------------------------------------- | ------- | ------------- | -------- |
 | 1    | Verification/evidence/Draft-Diff contracts         | accepted | f804d67       | task review, QA, and release review each PASSed f804d67; worker baseline 81/81 |
 | 2    | Isolated lifecycle and cleanup                     | accepted | 9b954ea       | task review PASS (9b954ea, re-review 2a23b0b, P2s d01e5f3); QA FAIL P1 (9b954ea) then PASS (d01e5f3); release review PASS (f392446); focused 19/19; worker 100/100; graph 70/70 |
-| 3    | Migration, API, role, denial, idempotency probes   | planned | —             | —        |
+| 3    | Migration, API, role, denial, idempotency probes   | implementing | e58b5a6       | RED 0/21 (missing modules) then 21/21; worker 121/121; typecheck/lint clean; task review pending |
 | 4    | Deterministic diagnosis and constrained Draft Diff | planned | —             | —        |
 | 5    | Control Plane persistence and review APIs          | planned | —             | —        |
 | 6    | BullMQ integration and one profile acceptance      | planned | —             | —        |
@@ -341,6 +341,76 @@ and `boundedErrorMessage` does not credential-redact raw text (unreachable
 today because environment errors are always wrapped in fixed allowlisted
 messages; if a future dependency threw credential-like text, the evidence
 contract would reject the whole bundle — fail-closed, nothing bad persisted).
+
+## Task 3 — migration, API, role, denial, idempotency probes — 2026-08-06
+
+**Paths changed (e58b5a6):**
+`apps/compiler-worker/src/verifier/role-journey.ts` (new — declared fixture
+data: per-profile allowlisted API registries for expense-approval and
+simple-ecommerce, journey fixture types, and fail-closed validation),
+`apps/compiler-worker/src/verifier/probes.ts` (new — the six probes:
+`runMigrationProbe`, `runHealthProbe`, `runApiProbe`,
+`runRoleJourneyProbe`, `runAuthorizationDenialProbe`,
+`runIdempotencyProbe`),
+`apps/compiler-worker/src/verifier/verification-environment.ts` (+120 — the
+`request` surface extended with declared fixture options: allowlisted role
+header (`x-factory-role`, credential headers rejected) and bounded flat-JSON
+bodies; `isSafeRequestPath` exported for fixture validation),
+`apps/compiler-worker/test/verification-probes.test.ts` (new, 21 tests).
+
+**RED:** the focused suite failed to load before implementation (0 tests run —
+missing `probes.js`/`role-journey.js` modules). **GREEN + fixture repairs:**
+the first implementation round passed 18/21; three failures were test-fixture
+bugs, not probe bugs — the denial and API-status tests never mocked the
+declared status (default mock returned 201 where the fixture declares 403/200),
+so the probes correctly reported mismatch. The fixtures were corrected to mock
+the declared statuses; 21/21 green.
+
+**Design (grounded in the generated app):** order transitions are the only
+keyed path — `POST /api/:entity/:recordId/events/:event` with body
+`{expectedVersion, idempotencyKey}`, repeated keys rejected with 403 via
+`rejected()` — so the idempotency probe asserts status-only semantics: first
+request must return the declared status, the byte-identical replay must be
+rejected with 403. Denials are proven before any record lookup (policy-first),
+so denial journeys work without seeded records; success journeys on
+record-bearing routes are wired to seeded fixture records by the Task 6
+acceptance fixture. The environment never reads response bodies; probes return
+only fixed allowlisted prose plus declared status/role/action facts.
+
+**Evidence (Node v22.11.0, e58b5a6):**
+- Focused `verification-probes.test.ts`: 21/21 — migration applied/unapplied;
+  health 200/unreachable; API action expected status, unexpected status, and
+  untrusted-route fail-closed; Expense create journey as employee with
+  role header + declared body forwarded; journey status mismatch; approval
+  denial (employee attempts approve → 403), payment denial (shopper attempts
+  capture-payment → 403), denial mismatch; idempotency pass (first 201, replay
+  403, two byte-identical requests), first-request failure (one request only),
+  replay not rejected; hostile body/response material never echoed into
+  summaries and the bounded summary passes the contract redaction backstop;
+  unregistered action and untrusted principal fail closed before any request;
+  environment forwards declared headers/bodies with JSON content type and
+  rejects credential headers, hostile header values, nested/oversized/non-JSON
+  bodies.
+- Full `@factory/compiler-worker` suite: 121/121 (12 files, incl. 19 lifecycle
+  tests on the extended request surface); `typecheck` pass; `lint` (Prettier)
+  pass; `git diff --check` clean; secret scan clean (the only credential-like
+  strings in the diff are synthetic hostile-fixture data that the tests assert
+  are rejected).
+
+**Contracts:** six probes each return exactly one bounded `VerificationStepV1`
+(kind migration/health/api/role-journey/authorization-denial/idempotency);
+journeys are static declared fixtures (journeyId, registry action, principal,
+optional body, idempotency key/version) that resolve routes from the per-profile
+registry and never accept arbitrary URLs or code; malformed or hostile fixtures
+throw `VerificationContractError` before any request (recorded as
+`probe.crashed` by the lifecycle).
+
+**Residual risk (accepted):** success journeys on record-bearing routes
+(`expense.approve`, `order.place`, `order.capture-payment` as authorized
+principals) cannot pass end-to-end until the Task 6 acceptance fixture seeds
+the referenced records — the registry entries are declared data and the
+end-to-end acceptance is Task 6's scope; denial journeys and create/list/read
+journeys are fully exercisable now.
 
 ## Gate protocol
 
