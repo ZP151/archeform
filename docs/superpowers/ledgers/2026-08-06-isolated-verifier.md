@@ -33,7 +33,7 @@ leak, or cleanup failure returns the task to `implementing` with evidence.
 | 1    | Verification/evidence/Draft-Diff contracts         | accepted | f804d67       | task review, QA, and release review each PASSed f804d67; worker baseline 81/81 |
 | 2    | Isolated lifecycle and cleanup                     | accepted | 9b954ea       | task review PASS (9b954ea, re-review 2a23b0b, P2s d01e5f3); QA FAIL P1 (9b954ea) then PASS (d01e5f3); release review PASS (f392446); focused 19/19; worker 100/100; graph 70/70 |
 | 3    | Migration, API, role, denial, idempotency probes   | accepted | fe50aca       | task review FAIL P2 (header names) repaired d652bfc, re-review PASS d652bfc; QA FAIL P1 (unreachable endpoints emitted httpStatus 0 → evidence contract rejected → probe.crashed) repaired de2e667, QA re-run PASS de2e667 (P1 symptom reproduced on old code, closed end-to-end; 147-check contract sweep; RED 5/27 → GREEN 27/27 + 20/20 lifecycle); worker 128/128; typecheck/lint clean; release review FAIL 2 P2s (plan checkboxes unchecked; residual-risk overstatement) remediated fe50aca, re-review PASS fe50aca; PM acceptance at fe50aca |
-| 4    | Deterministic diagnosis and constrained Draft Diff | ready_for_qa | 3a032a0       | feature `feat: add safe verification diagnosis` (9637528); RED graph 26/26 + worker 4/4 (module missing), GREEN 26/26 + 4/4; full graph 98/98, worker 132/132; graph typecheck/lint/build clean; worker typecheck/lint clean; task review FAIL P2 (derived diagnosisId/baseDraftRevisionId overflow factoryId 128 at schema-extreme inputs, reproduced by reviewer) repaired 3a032a0 (bounded derived IDs, RED 2/28 → GREEN 28/28), re-review pending |
+| 4    | Deterministic diagnosis and constrained Draft Diff | ready_for_qa | 3a032a0       | feature `feat: add safe verification diagnosis` (9637528); RED graph 26/26 + worker 4/4 (module missing), GREEN 26/26 + 4/4; full graph 98/98, worker 132/132; graph typecheck/lint/build clean; worker typecheck/lint clean; task review FAIL P2 (derived diagnosisId/baseDraftRevisionId overflow factoryId 128 at schema-extreme inputs, reproduced by reviewer) repaired 3a032a0 (bounded derived IDs, RED 2/28 → GREEN 28/28); re-review PASS at 3a032a0 (P2 independently reproduced at 9637528 length 138 and closed; edge-math probes 128/119/118/117/1-char green; identity binding untrimmed; gates 28/98/4 + worker 132/132, typecheck/lint/build clean; P0/P1/P2 none) |
 | 5    | Control Plane persistence and review APIs          | planned | —             | —        |
 | 6    | BullMQ integration and one profile acceptance      | planned | —             | —        |
 | 7    | Independent gates and release hand-off             | planned | —             | —        |
@@ -561,6 +561,27 @@ The reviewer's non-blocking notes (single-op constraint diffs, the
 index-requirement case honestly resolving to no diff, deliberate double-parse
 at the worker boundary) were accepted without change. Task 4 re-advanced to
 `ready_for_qa` at 3a032a0; re-review pending.
+**Task-review re-round (PASS at 3a032a0):** the reviewer re-ran the gate
+independently at the repaired commit: the diff is exactly scoped
+(`diagnosis.ts` +14/-5 adding the module-private `derivedId`, the suite +53/-2
+adding the `orderGraph` graphId / `evidence` verificationRunId parameters and
+the two 128-char regression tests); the original P2 was independently
+reproduced at 9637528 (diagnosisId length 138, `parseDiagnosis` throwing the
+128-character error) and is closed — both regression tests fail at 9637528 and
+pass at 3a032a0; nine independent edge-math probes (128/119/118/117/1-char run
+IDs, 128/123/122/6-char graph IDs) confirm deterministic bounding at the
+cutover, with identity binding intact (`verificationRunId`/`baseGraphHash`
+pass through untrimmed) and derived IDs regex-legal; no consumer keys off the
+derived IDs, so trim collisions are harmless display-level identity. All gates
+green at 3a032a0: diagnosis-contract 28/28, full graph 98/98, worker
+verification-diagnosis 4/4 against rebuilt dist (derivedId confirmed in
+dist), full worker 132/132, graph typecheck/lint/build clean, worker
+typecheck/lint clean. VERDICT PASS — P0/P1/P2 none; the two non-blocking
+notes (latent `derivedId` behavior for a prefix >= 128 chars, unreachable at
+both fixed call sites; two `order-operations-lifecycle` full-suite failures
+once, reproduced identically at the pre-fix commit, pre-existing parallel-run
+flakiness) were accepted. Task 4 stands `ready_for_qa` at 3a032a0; QA gate
+launched next.
 
 ## Gate protocol
 
