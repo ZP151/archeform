@@ -31,7 +31,7 @@ leak, or cleanup failure returns the task to `implementing` with evidence.
 | Task | Deliverable                                        | State   | Target commit | Evidence |
 | ---- | -------------------------------------------------- | ------- | ------------- | -------- |
 | 1    | Verification/evidence/Draft-Diff contracts         | accepted | f804d67       | task review, QA, and release review each PASSed f804d67; worker baseline 81/81 |
-| 2    | Isolated lifecycle and cleanup                     | planned | —             | —        |
+| 2    | Isolated lifecycle and cleanup                     | ready_for_qa | —        | focused 16/16; worker 97/97; graph 70/70; typecheck/lint pass |
 | 3    | Migration, API, role, denial, idempotency probes   | planned | —             | —        |
 | 4    | Deterministic diagnosis and constrained Draft Diff | planned | —             | —        |
 | 5    | Control Plane persistence and review APIs          | planned | —             | —        |
@@ -150,6 +150,76 @@ worker baseline `@factory/compiler-worker` 81/81 undisturbed, no
 construction in later Tasks remains responsible for emitting only allowlisted
 evidence. `parseVerificationEvidence(input, run?)` cross-checks identity,
 digest, and step order when the run is supplied.
+
+## Task 2 — isolated lifecycle and cleanup — 2026-08-06
+
+**Paths changed:** `apps/compiler-worker/src/verifier/verification-lifecycle.ts`
+(new), `apps/compiler-worker/src/verifier/verification-environment.ts` (new),
+`apps/compiler-worker/test/verification-lifecycle.test.ts` (new),
+`apps/compiler-worker/src/preview-runner.ts` (plan-sanctioned small reusable
+export of `safeArtifactManifest`).
+
+**RED:** the focused suite was written first and failed to collect — the
+verifier modules did not exist.
+
+**GREEN + fixture repairs:** implementation in three passes. First pass
+introduced three self-inflicted failures the tests rightly caught: (a) the
+test fixture used `operationTimeoutMs: 50` while the lifecycle enforces a
+bounded 1s floor (unbounded/degenerate timeouts are rejected by design), fixed
+by moving the fixture to the floor; (b) `evidence.artifactDigests` is the
+path+digest manifest by contract, while the fixture compared against the full
+size-bearing manifest, fixed by comparing the digest-only projection;
+(c) the hostile-artifact-path test's mocked compilation returned an extra
+artifact so the derived digest differed from the fixture digest and the digest
+gate tripped first, fixed by deriving the expected digest from the mocked
+manifest so the run reaches the artifact-manifest gate. A stale
+`@factory/graph` dist (the worker resolves the package to built output, which
+predated Task 1) was rebuilt; the graph barrel re-export now carries the
+verification contracts, and the graph suite still passes 70/70.
+
+**Evidence (Node v22.11.0):**
+- Focused `verification-lifecycle.test.ts`: 16/16 — declared-order probes with
+  cleanup last and evidence bound to the derived run (identity, digest,
+  ordered step IDs, digest-only artifact manifest, ISO timestamps); digest
+  mismatch rejected before Docker starts (start/stop preview never called);
+  untrusted artifact path (`../../etc/passwd`) rejected before Docker starts;
+  mutable draft-shaped input rejected before compiling; unbounded/out-of-range
+  timeouts (`0`, `-1`, `1`, `3_600_001`, `NaN`) rejected before compiling;
+  duplicate/unknown step-plan IDs rejected before compiling; probe crash →
+  `probe.crashed` failed step, later probes skipped, cleanup still ran; hanging
+  probe aborted at the lifecycle timeout → skipped step with `/timeout/i`
+  summary, cleanup still ran; boot failure → all probes `skipped` with
+  `/did not start/i` summaries (never fabricated as results), cleanup still
+  ran; cleanup failure reported truthfully (`cleanup.succeeded` false,
+  `/cleanup failed/i`, evidence still contract-parses); digest derivation
+  deterministic across manifest reordering and sensitive to graph hash and
+  artifact set; environment delegates boot/cleanup to the preview runner with
+  bounded options; migrations run through a bounded `docker compose exec -T
+  migrate` command shape; untrusted command tokens rejected before any process
+  run; bounded health/request statuses via injected fetch (body never read);
+  request paths with traversal/query/`#` rejected before any fetch.
+- Full `@factory/compiler-worker` suite: 97/97 (81 baseline + 16 new);
+  `typecheck` pass; `lint` (Prettier) pass; `git diff --check` clean.
+- `@factory/graph` suite: 70/70 (re-run after dist rebuild).
+
+**Security observations:** the lifecycle never persists raw process output or
+HTTP bodies — every environment operation returns bounded status results and
+evidence summaries are fixed allowlisted prose; the digest gate and the
+artifact-manifest gate both run before Docker starts; probe crashes and
+timeouts are recorded as failed/skipped steps with allowlisted summaries,
+never fabricated results; cleanup ALWAYS runs and its outcome is reported
+truthfully in the cleanup facts; migration commands are token-allowlisted
+(`/^[a-zA-Z0-9._-]+$/`, max 10 tokens) and pinned to the fixed
+`compose --project-directory <artifactRoot>/.preview-runs/<runId> exec -T
+migrate` invocation; request routes must be absolute single-segment paths
+without traversal, query, or fragment. Secret scan: clean (one hostile-test
+query string `?secret=1` is a deliberate rejection fixture).
+
+**Residual risk:** bounded operation timeouts abort in-flight work but
+timeouts of subprocesses under docker compose are best-effort; `now`/`nowMs`
+are injectable for determinism in tests, production uses wall-clock. The
+lifecycle assumes the preview-runner guards it already validates (its full
+guard set is exercised by the worker baseline suite).
 
 ## Gate protocol
 

@@ -56,11 +56,11 @@
 - `runVerificationLifecycle(input, dependencies)` returns a `VerificationEvidenceV1` and always invokes cleanup in `finally`.
 - The lifecycle rejects mutable Draft input, untrusted artifact paths, mismatched compilation digests, and unbounded timeouts before Docker starts.
 
-- [ ] Add failing tests for step order, timeout/cancellation cleanup, digest mismatch, path escape, and cleanup failure reporting.
-- [ ] Run the focused test and confirm failure.
-- [ ] Implement the smallest adapter over `executeCompilation`, `startPreviewRun`, and `stopPreviewRun`; do not duplicate Docker command construction.
-- [ ] Re-run focused tests plus existing `pnpm --filter @factory/compiler-worker test`.
-- [ ] Commit with message `feat: add isolated verification lifecycle`.
+- [x] Add failing tests for step order, timeout/cancellation cleanup, digest mismatch, path escape, and cleanup failure reporting.
+- [x] Run the focused test and confirm failure.
+- [x] Implement the smallest adapter over `executeCompilation`, `startPreviewRun`, and `stopPreviewRun`; do not duplicate Docker command construction.
+- [x] Re-run focused tests plus existing `pnpm --filter @factory/compiler-worker test`.
+- [x] Commit with message `feat: add isolated verification lifecycle`.
 
 ### Task 3: Add migration, API, role, denial, and idempotency probes
 

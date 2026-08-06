@@ -351,7 +351,7 @@ type ArtifactEvidence = PreviewRuntimeRequest["artifacts"][number];
 const restaurantDemoTokenComposeContract =
   'RESTAURANT_DEMO_TABLE_TOKEN: "${RESTAURANT_DEMO_TABLE_TOKEN:?Set RESTAURANT_DEMO_TABLE_TOKEN for local demo bootstrap}"';
 
-function safeArtifactManifest(
+export function safeArtifactManifest(
   artifacts: PreviewRuntimeRequest["artifacts"],
 ): PreviewRuntimeRequest["artifacts"] {
   if (!Array.isArray(artifacts)) throw new Error("Invalid artifact manifest.");
