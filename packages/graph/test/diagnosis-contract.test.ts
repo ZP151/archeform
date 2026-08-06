@@ -99,7 +99,10 @@ type IdempotencyField =
   | { readonly variant: "not-required" }
   | { readonly variant: "correct" };
 
-function orderGraph(idempotency: IdempotencyField): ApplicationGraphV1 {
+function orderGraph(
+  idempotency: IdempotencyField,
+  graphId: string = "order-tracking",
+): ApplicationGraphV1 {
   const graph = expenseGraph();
   const fields = [
     { key: "amount", type: "decimal" as const, required: true },
@@ -120,7 +123,7 @@ function orderGraph(idempotency: IdempotencyField): ApplicationGraphV1 {
   }
   return {
     ...graph,
-    metadata: { ...graph.metadata, id: "order-tracking" },
+    metadata: { ...graph.metadata, id: graphId },
     // Every other section must agree with the renamed entity, or semantic
     // validation rejects the graph as a whole.
     page: { pages: [], navigation: [] },
@@ -164,10 +167,11 @@ function failedStep(
 
 function evidence(
   steps: readonly VerificationStepV1[],
+  verificationRunId: string = runId,
 ): VerificationEvidenceV1 {
   return {
     apiVersion: "factory.verification-evidence/v1",
-    verificationRunId: runId,
+    verificationRunId,
     compilationDigest: digestOf("compilation"),
     steps: [
       ...steps,
@@ -799,5 +803,48 @@ describe("diagnoseVerification", () => {
         lockFixture(hashApplicationGraph(graph), true),
       ),
     ).toThrow(VerificationContractError);
+  });
+
+  it("bounds a schema-extreme run identity so the derived diagnosis id stays contract-shaped", () => {
+    const graph = expenseGraph();
+    // 128 characters is the factoryId maximum; the derived id must not exceed it.
+    const extremeRunId = `verify-${"a".repeat(121)}`;
+    const diagnosis = diagnoseVerification(
+      evidence(
+        [failedStep("health", "health", "health.unreachable")],
+        extremeRunId,
+      ),
+      graph,
+      lockFixture(hashApplicationGraph(graph), true),
+    );
+
+    expect(diagnosis.diagnosisId.startsWith("diagnosis-")).toBe(true);
+    expect(diagnosis.diagnosisId.length).toBeLessThanOrEqual(128);
+    expect(parseDiagnosis(diagnosis)).toEqual(diagnosis);
+  });
+
+  it("bounds a schema-extreme graph id so the derived draft base id stays contract-shaped", () => {
+    const graph = orderGraph({ variant: "not-unique" }, "a".repeat(128));
+    const diagnosis = diagnoseVerification(
+      evidence([
+        failedStep(
+          "idempotency",
+          "idempotency",
+          "idempotency.replay_not_rejected",
+          {
+            httpStatus: 200,
+            action: "order.place",
+          },
+        ),
+      ]),
+      graph,
+      lockFixture(hashApplicationGraph(graph), true),
+    );
+
+    const diff = diagnosis.draftDiff as DraftDiffV1;
+    expect(diff.baseDraftRevisionId.startsWith("draft-")).toBe(true);
+    expect(diff.baseDraftRevisionId.length).toBeLessThanOrEqual(128);
+    expect(parseDraftDiff(diff)).toEqual(diff);
+    expect(parseDiagnosis(diagnosis)).toEqual(diagnosis);
   });
 });

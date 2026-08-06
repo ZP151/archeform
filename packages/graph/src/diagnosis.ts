@@ -74,6 +74,16 @@ function rationaleFor(code: string): string {
   return code.replaceAll("_", "-");
 }
 
+/**
+ * Derived IDs must stay within the factoryId bound (128). A schema-legal
+ * source at its own maximum length would otherwise overflow the prefix, so
+ * the source is trimmed deterministically — identity binding still travels
+ * in the intact verificationRunId/baseGraphHash fields.
+ */
+function derivedId(prefix: string, source: string): string {
+  return `${prefix}${source.slice(0, 128 - prefix.length)}`;
+}
+
 function runtime(
   code: string,
   summary: string,
@@ -276,7 +286,7 @@ function makeDiff(
 ): DraftDiffV1 {
   return {
     apiVersion: "factory.draft-diff/v1",
-    baseDraftRevisionId: `draft-${graph.metadata.id}`,
+    baseDraftRevisionId: derivedId("draft-", graph.metadata.id),
     baseGraphHash,
     operations: [...operations],
     affectedPaths: [...affectedPaths],
@@ -291,7 +301,7 @@ function makeDiagnosis(
 ): DiagnosisV1 {
   return {
     apiVersion: "factory.verification-diagnosis/v1",
-    diagnosisId: `diagnosis-${evidence.verificationRunId}`,
+    diagnosisId: derivedId("diagnosis-", evidence.verificationRunId),
     verificationRunId: evidence.verificationRunId,
     category: mapped.category,
     code: mapped.code,
