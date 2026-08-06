@@ -25,6 +25,16 @@ import {
  * Diff is proposed only when a concrete, safe operation can be derived (an
  * unbound identity policy for a missed denial, or a fixable idempotencyKey
  * constraint for an accepted replay). Every other failure produces no diff.
+ *
+ * The derived `baseDraftRevisionId` is a symbolic reference
+ * (`draft-<graph metadata id>`) to the mutable Draft revision of the graph's
+ * application graph; it is not a persisted row id. The Control Plane approval
+ * path resolves it by application-graph identity (the lifecycle enforces that
+ * every draft revision of an application graph carries the same metadata id),
+ * takes the LATEST mutable Draft revision of that application graph, and
+ * refuses when `hashApplicationGraph(draft.graph)` diverges from the diff's
+ * `baseGraphHash` — a draft edited after the published snapshot is not a valid
+ * approval base.
  */
 
 /** Revision envelopes are not Published Graphs; they fail closed. */
@@ -33,6 +43,20 @@ const revisionEnvelopeKeys = new Set([
   "revision",
   "publishedRevision",
   "draftRevisionId",
+]);
+
+/**
+ * Segments the graphEvidencePath contract refuses. The domain entity-key schema
+ * permits these keys, so an entity may be named `constructor`; a diagnosis that
+ * addresses it as `/domain/constructor` would itself be schema-invalid, so such
+ * entities are treated as not addressable and the mapping fails closed.
+ */
+const blockedPathSegments = new Set([
+  ".",
+  "..",
+  "__proto__",
+  "constructor",
+  "prototype",
 ]);
 
 /** Structural validation of the immutable composition lock. */
@@ -393,6 +417,7 @@ function mapFailure(
   const entity = entityOf(step.action);
   const entityKnown =
     entity !== undefined &&
+    !blockedPathSegments.has(entity) &&
     graph.domain.entities.some((candidate) => candidate.key === entity);
 
   switch (step.failureCode) {
@@ -435,7 +460,7 @@ function mapFailure(
       return entityKnown
         ? bindingStatusMismatch(entity)
         : graphUnknown(
-            "The failing journey targets a domain entity the Graph does not define.",
+            "The failing journey targets a domain entity the Graph does not define or cannot address.",
           );
     case "authorization.denial_mismatch":
       if (entity === undefined) {
@@ -447,7 +472,7 @@ function mapFailure(
       return entityKnown
         ? denial(graph, baseGraphHash, entity, lock)
         : graphUnknown(
-            "The failing journey targets a domain entity the Graph does not define.",
+            "The failing journey targets a domain entity the Graph does not define or cannot address.",
           );
     case "idempotency.replay_not_rejected":
       if (entity === undefined) {
@@ -459,7 +484,7 @@ function mapFailure(
       return entityKnown
         ? idempotency(graph, baseGraphHash, entity)
         : graphUnknown(
-            "The failing journey targets a domain entity the Graph does not define.",
+            "The failing journey targets a domain entity the Graph does not define or cannot address.",
           );
     default:
       return unknown(

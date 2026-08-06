@@ -118,6 +118,7 @@
 
 - Persist immutable run identity, status transitions, evidence digest, diagnosis, and Draft Diff proposal; do not persist raw request/response material.
 - Endpoints are read/review oriented: create run from a Published Compilation, get bounded status/evidence, and approve a Draft Diff into a mutable Draft revision through the existing lifecycle service.
+- Draft Diff approval resolves `baseDraftRevisionId` by application-graph identity (every draft revision of an application graph carries the same graph metadata id), takes the LATEST mutable Draft revision of that application graph, and refuses when `hashApplicationGraph(draft.graph)` diverges from the diff's `baseGraphHash`.
 
 - [ ] Write failing tests for ownership of compilation identity, idempotent retry, illegal status transition, redaction, and approval refusal for invalid diffs.
 - [ ] Run focused Control Plane tests and confirm failure.

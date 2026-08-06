@@ -102,6 +102,7 @@ type IdempotencyField =
 function orderGraph(
   idempotency: IdempotencyField,
   graphId: string = "order-tracking",
+  entityKey: string = "order",
 ): ApplicationGraphV1 {
   const graph = expenseGraph();
   const fields = [
@@ -130,7 +131,7 @@ function orderGraph(
     domain: {
       entities: [
         {
-          key: "order",
+          key: entityKey,
           label: "Order",
           fields,
           indexes: [],
@@ -141,7 +142,7 @@ function orderGraph(
     policy: {
       roles: ["customer"],
       permissions: [
-        { role: "customer", resource: "order", actions: ["place"] },
+        { role: "customer", resource: entityKey, actions: ["place"] },
       ],
     },
     flow: { flows: [] },
@@ -672,6 +673,113 @@ describe("diagnoseVerification", () => {
     expect(diagnosis.category).toBe("graph");
     expect(diagnosis.affectedPaths).toEqual(["/domain"]);
     expect(diagnosis.draftDiff).toBeNull();
+  });
+
+  it("fails closed when the journey entity key is a blocked graph path segment", () => {
+    // The entity-key schema permits "constructor", but graphEvidencePath
+    // rejects it as a path segment; the diagnosis must never carry a path
+    // the contract itself refuses, so the entity is not addressable.
+    const graph = orderGraph(
+      { variant: "correct" },
+      "constructor-graph",
+      "constructor",
+    );
+    const diagnosis = diagnoseVerification(
+      evidence([
+        failedStep("api", "api", "api.unexpected_status", {
+          httpStatus: 404,
+          action: "constructor.create",
+        }),
+      ]),
+      graph,
+      lockFixture(hashApplicationGraph(graph), true),
+    );
+
+    expect(diagnosis.category).toBe("graph");
+    expect(diagnosis.code).toBe("graph.unknown_entity");
+    expect(diagnosis.affectedPaths).toEqual(["/domain"]);
+    expect(diagnosis.draftDiff).toBeNull();
+    expect(parseDiagnosis(diagnosis)).toEqual(diagnosis);
+  });
+
+  it("fails closed for denial mismatch on a blocked-segment entity", () => {
+    const graph = orderGraph(
+      { variant: "correct" },
+      "prototype-graph",
+      "prototype",
+    );
+    const diagnosis = diagnoseVerification(
+      evidence([
+        failedStep(
+          "authorization",
+          "authorization-denial",
+          "authorization.denial_mismatch",
+          {
+            httpStatus: 403,
+            action: "prototype.approve",
+          },
+        ),
+      ]),
+      graph,
+      lockFixture(hashApplicationGraph(graph), false),
+    );
+
+    expect(diagnosis.category).toBe("graph");
+    expect(diagnosis.code).toBe("graph.unknown_entity");
+    expect(diagnosis.affectedPaths).toEqual(["/domain"]);
+    expect(diagnosis.draftDiff).toBeNull();
+    expect(parseDiagnosis(diagnosis)).toEqual(diagnosis);
+  });
+
+  it("fails closed for idempotency replay on a blocked-segment entity", () => {
+    const graph = orderGraph(
+      { variant: "correct" },
+      "constructor-graph",
+      "constructor",
+    );
+    const diagnosis = diagnoseVerification(
+      evidence([
+        failedStep(
+          "idempotency",
+          "idempotency",
+          "idempotency.replay_not_rejected",
+          {
+            httpStatus: 200,
+            action: "constructor.place",
+          },
+        ),
+      ]),
+      graph,
+      lockFixture(hashApplicationGraph(graph), true),
+    );
+
+    expect(diagnosis.category).toBe("graph");
+    expect(diagnosis.code).toBe("graph.unknown_entity");
+    expect(diagnosis.affectedPaths).toEqual(["/domain"]);
+    expect(diagnosis.draftDiff).toBeNull();
+    expect(parseDiagnosis(diagnosis)).toEqual(diagnosis);
+  });
+
+  it("never emits a blocked-segment entity path for runtime unreachable codes", () => {
+    const graph = orderGraph(
+      { variant: "correct" },
+      "constructor-graph",
+      "constructor",
+    );
+    const diagnosis = diagnoseVerification(
+      evidence([
+        failedStep("api", "api", "api.unreachable", {
+          action: "constructor.create",
+        }),
+      ]),
+      graph,
+      lockFixture(hashApplicationGraph(graph), true),
+    );
+
+    expect(diagnosis.category).toBe("runtime");
+    expect(diagnosis.code).toBe("runtime.unreachable");
+    expect(diagnosis.affectedPaths).toEqual(["/metadata"]);
+    expect(parseDiagnosis(diagnosis)).toEqual(diagnosis);
   });
 
   it("fails closed on a missing action identity for entity-derived codes", () => {
