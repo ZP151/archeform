@@ -33,7 +33,7 @@ leak, or cleanup failure returns the task to `implementing` with evidence.
 | 1    | Verification/evidence/Draft-Diff contracts         | accepted | f804d67       | task review, QA, and release review each PASSed f804d67; worker baseline 81/81 |
 | 2    | Isolated lifecycle and cleanup                     | accepted | 9b954ea       | task review PASS (9b954ea, re-review 2a23b0b, P2s d01e5f3); QA FAIL P1 (9b954ea) then PASS (d01e5f3); release review PASS (f392446); focused 19/19; worker 100/100; graph 70/70 |
 | 3    | Migration, API, role, denial, idempotency probes   | accepted | fe50aca       | task review FAIL P2 (header names) repaired d652bfc, re-review PASS d652bfc; QA FAIL P1 (unreachable endpoints emitted httpStatus 0 → evidence contract rejected → probe.crashed) repaired de2e667, QA re-run PASS de2e667 (P1 symptom reproduced on old code, closed end-to-end; 147-check contract sweep; RED 5/27 → GREEN 27/27 + 20/20 lifecycle); worker 128/128; typecheck/lint clean; release review FAIL 2 P2s (plan checkboxes unchecked; residual-risk overstatement) remediated fe50aca, re-review PASS fe50aca; PM acceptance at fe50aca |
-| 4    | Deterministic diagnosis and constrained Draft Diff | ready_for_qa | e7ffb02       | feature `feat: add safe verification diagnosis` (9637528); RED graph 26/26 + worker 4/4 (module missing), GREEN 26/26 + 4/4; full graph 98/98, worker 132/132; graph typecheck/lint/build clean; worker typecheck/lint clean; task review FAIL P2 (derived diagnosisId/baseDraftRevisionId overflow factoryId 128 at schema-extreme inputs, reproduced by reviewer) repaired 3a032a0 (bounded derived IDs, RED 2/28 → GREEN 28/28); re-review PASS at 3a032a0 (P2 independently reproduced at 9637528 length 138 and closed; edge-math probes 128/119/118/117/1-char green; identity binding untrimmed; gates 28/98/4 + worker 132/132, typecheck/lint/build clean; P0/P1/P2 none); QA PASS at 3a032a0 (P2 reproduced at parent 26/2 test fail + 138/134-char overflow, closed at fix; sweep 28/98/4 + worker 132/132; 9/9 adversarial probes incl. round-trip and identity binding; commit hygiene 2 files; P0/P1/P2 none); release review FAIL 2 P2s (blocked-segment entity keys produce schema-invalid affectedPaths, reproduced by probe; undocumented baseDraftRevisionId resolution seam) repaired e7ffb02 (blockedPathSegments guard fails closed to graph.unknown_entity, RED 4/32 → GREEN 32/32, full graph 102/102, worker 132/132; resolution contract documented in module docstring + plan), release re-review pending |
+| 4    | Deterministic diagnosis and constrained Draft Diff | accepted   | e7ffb02       | feature `feat: add safe verification diagnosis` (9637528); RED graph 26/26 + worker 4/4 (module missing), GREEN 26/26 + 4/4; full graph 98/98, worker 132/132; graph typecheck/lint/build clean; worker typecheck/lint clean; task review FAIL P2 (derived diagnosisId/baseDraftRevisionId overflow factoryId 128 at schema-extreme inputs, reproduced by reviewer) repaired 3a032a0 (bounded derived IDs, RED 2/28 → GREEN 28/28); re-review PASS at 3a032a0 (P2 independently reproduced at 9637528 length 138 and closed; edge-math probes 128/119/118/117/1-char green; identity binding untrimmed; gates 28/98/4 + worker 132/132, typecheck/lint/build clean; P0/P1/P2 none); QA PASS at 3a032a0 (P2 reproduced at parent 26/2 test fail + 138/134-char overflow, closed at fix; sweep 28/98/4 + worker 132/132; 9/9 adversarial probes incl. round-trip and identity binding; commit hygiene 2 files; P0/P1/P2 none); release review FAIL 2 P2s (blocked-segment entity keys produce schema-invalid affectedPaths, reproduced by probe; undocumented baseDraftRevisionId resolution seam) repaired e7ffb02 (blockedPathSegments guard fails closed to graph.unknown_entity, RED 4/32 → GREEN 32/32, full graph 102/102, worker 132/132; resolution contract documented in module docstring + plan); release re-review PASS at e7ffb02 (both P2s reproduced at parent 3a032a0 incl. parseDiagnosis throw and add-binding diff failure, closed at fix; 0/9 collateral differences; 32/102/4 + worker 132/132; typecheck/lint/build clean; P0/P1/P2 none); PM acceptance at e7ffb02 (independent check: clean tree, remediation diff read, PM runs 32/102/4/132 green) |
 | 5    | Control Plane persistence and review APIs          | planned | —             | —        |
 | 6    | BullMQ integration and one profile acceptance      | planned | —             | —        |
 | 7    | Independent gates and release hand-off             | planned | —             | —        |
@@ -637,6 +637,43 @@ gate with two P2s, both independently reproduced:
   `baseGraphHash` (a draft edited after the published snapshot is not a valid
   approval base). Task 4 re-advanced to `ready_for_qa` at e7ffb02; release
   re-review launched next.
+**Release re-review (PASS at e7ffb02):** the release reviewer re-ran the gate
+in a detached worktree and confirmed both P2s closed: P2-1 reproduced at the
+parent 3a032a0 exactly as found (binding.status_mismatch with
+`["/domain/constructor"]` — `parseDiagnosis` throwing "Affected paths must be
+mutable Graph paths."; the denial case emitted the add-binding diff with a
+blocked affected path failing `parseDraftDiff`; the four regression tests fail
+28/4 at the parent) and closed at e7ffb02 (every blocked-entity case fails
+closed to graph.unknown_entity with ["/domain"], unreachable to ["/metadata"],
+draftDiff null, every diagnosis round-trips; the blocked set exactly matches
+the five graphEvidencePath-refused segments, and the entity-key schema admits
+only constructor/prototype of them — "."/".."/"__proto__" are defense in
+depth); P2-2 verified against code (assertGraphIdentity enforces
+metadata.id === aggregate.key on every appendDraftRevision, latest-draft
+selection by revisionNumber desc, hashApplicationGraph exported) and the
+contract is sufficient for Task 5's approval interface. Gates: 32/32, 102/102,
+4/4, full worker 132/132 single clean run, typecheck/lint/build clean.
+Adversarial battery: 0/9 collateral differences vs the parent across a 9-case
+normal-mapping comparison; no diff op for blocked entities; determinism holds;
+no stale consumers of the old summary. Commit hygiene: e7ffb02^..e7ffb02
+touches exactly diagnosis.ts (+31), diagnosis-contract.test.ts (+112), plan
+(+1); diff --check clean. VERDICT PASS — P0/P1/P2 none. Non-blocking notes
+(transient @factory/capabilities build TS7006 in a file untouched by this
+diff, environmental; the blockedPathSegments and graphEvidencePath segment
+lists are coupled across files with no equality test — recorded as residual
+risk, noted for Task 7 hardening) accepted.
+**PM acceptance at e7ffb02:** the PM independently verified at the commit —
+working tree clean; the remediation diff read directly (the `entityKnown`
+choke point covers every `/domain/<entity>` emission site, summary prose
+honest, resolution contract documented); the PM's own runs at the commit:
+diagnosis-contract 32/32, full graph 102/102, worker verification-diagnosis
+4/4, full worker 132/132, graph typecheck/lint/build clean, worker
+typecheck/lint clean. Task 4 is ACCEPTED: deterministic diagnosis and
+reviewable Draft Diff are delivered as designed — first-failed-step-wins
+mapping over the full probe failure-code vocabulary, immutable Published
+Graph protection at both boundaries, bounded derived IDs, hostile-evidence
+fail-closed, and draft diffs emitted only when a concrete safe operation is
+derivable, with the approval resolution contract documented for Task 5.
 
 ## Gate protocol
 
