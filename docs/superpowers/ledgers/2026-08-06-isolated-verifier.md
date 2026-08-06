@@ -32,7 +32,7 @@ leak, or cleanup failure returns the task to `implementing` with evidence.
 | ---- | -------------------------------------------------- | ------- | ------------- | -------- |
 | 1    | Verification/evidence/Draft-Diff contracts         | accepted | f804d67       | task review, QA, and release review each PASSed f804d67; worker baseline 81/81 |
 | 2    | Isolated lifecycle and cleanup                     | accepted | 9b954ea       | task review PASS (9b954ea, re-review 2a23b0b, P2s d01e5f3); QA FAIL P1 (9b954ea) then PASS (d01e5f3); release review PASS (f392446); focused 19/19; worker 100/100; graph 70/70 |
-| 3    | Migration, API, role, denial, idempotency probes   | ready_for_qa | e58b5a6       | task review FAIL P2 (credential header names passed the shape check) repaired at d652bfc; re-review PASS d652bfc (RED 1/22 reproduced in a detached worktree; exploit closed with 11 empirical header probes); focused 22/22; worker 122/122; typecheck/lint clean; QA pending |
+| 3    | Migration, API, role, denial, idempotency probes   | ready_for_qa | e58b5a6       | task review FAIL P2 (header names) repaired d652bfc, re-review PASS d652bfc; QA FAIL P1 (unreachable endpoints emitted httpStatus 0 → evidence contract rejected → probe.crashed) repaired de2e667; RED 5/27 then GREEN 27/27 + lifecycle regression; worker 128/128; typecheck/lint clean; QA re-run pending |
 | 4    | Deterministic diagnosis and constrained Draft Diff | planned | —             | —        |
 | 5    | Control Plane persistence and review APIs          | planned | —             | —        |
 | 6    | BullMQ integration and one profile acceptance      | planned | —             | —        |
@@ -411,6 +411,27 @@ Repaired with TDD: a regression test asserting `authorization`, `x-api-key`,
 and `cookie` names with benign-shaped values are rejected without any fetch
 confirmed failing first (RED, 1/22) then green (GREEN, 22/22 focused; 41/41
 with lifecycle; 122/122 full worker; typecheck/lint clean).
+
+**P1 repair round (QA finding at e58b5a6, repaired at de2e667):** the QA gate
+FAILed with one P1: on an unreachable endpoint the environment reports
+`status: 0`, the probes copied it into `httpStatus: 0`, and the evidence
+contract bounds `httpStatus` to 100..599 — so the lifecycle's parse gate
+rejected the step and the real evidence became `probe.crashed`; the declared
+bounded failure codes (`health.failed`, `api.unexpected_status`,
+`role-journey.unexpected_status`, `authorization.denial_mismatch`,
+`idempotency.first_request_unexpected`) were unreachable for a dead preview,
+the most common real-world defect. QA proved it end-to-end through
+`runVerificationLifecycle` with the real `runHealthProbe` against a dead
+port. Repaired with TDD: regression tests asserting each probe's no-response
+path yields a distinct bounded code (`health.unreachable`, `api.unreachable`,
+`role-journey.unreachable`, `authorization.unreachable`, `idempotency.unreachable`)
+with NO `httpStatus` field (the contract has no status for a no-response) and
+with the step parsing `verificationStepSchema` confirmed failing first (RED,
+5/27) then green (GREEN, 27/27); a lifecycle-level regression test proves the
+bounded failure now flows through the real parse gate into evidence instead
+of `probe.crashed`; wrong-status failures still carry their bounded
+`httpStatus` (e.g. 503/health.failed). Full worker 128/128; typecheck/lint
+clean.
 
 **Contracts:** six probes each return exactly one bounded `VerificationStepV1`
 (kind migration/health/api/role-journey/authorization-denial/idempotency);
