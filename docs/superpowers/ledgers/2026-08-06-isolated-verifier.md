@@ -31,7 +31,7 @@ leak, or cleanup failure returns the task to `implementing` with evidence.
 | Task | Deliverable                                        | State   | Target commit | Evidence |
 | ---- | -------------------------------------------------- | ------- | ------------- | -------- |
 | 1    | Verification/evidence/Draft-Diff contracts         | accepted | f804d67       | task review, QA, and release review each PASSed f804d67; worker baseline 81/81 |
-| 2    | Isolated lifecycle and cleanup                     | ready_for_qa | —        | focused 16/16; worker 97/97; graph 70/70; typecheck/lint pass |
+| 2    | Isolated lifecycle and cleanup                     | ready_for_qa | 9b954ea       | task review PASSed all code/test/security gates at 9b954ea (75/75 hostile probes); P1 citation repaired; focused 16/16; worker 97/97; graph 70/70 |
 | 3    | Migration, API, role, denial, idempotency probes   | planned | —             | —        |
 | 4    | Deterministic diagnosis and constrained Draft Diff | planned | —             | —        |
 | 5    | Control Plane persistence and review APIs          | planned | —             | —        |
@@ -220,6 +220,30 @@ timeouts of subprocesses under docker compose are best-effort; `now`/`nowMs`
 are injectable for determinism in tests, production uses wall-clock. The
 lifecycle assumes the preview-runner guards it already validates (its full
 guard set is exercised by the worker baseline suite).
+
+**Gates (independent, citing 9b954ea):** task review returned FAIL with one
+P1 — the Task 2 ledger record never cited 9b954ea (Target-commit column `—`,
+zero hash mentions in narrative), a gate-protocol documentation requirement;
+every code, test, security, and hostile-input gate PASSed (requirements
+1–9 verified independently: contract fidelity with the Task 1 contracts,
+fail-closed pre-Docker gates probed with draft-shaped input, digest
+mismatch, traversal + backslash artifact paths, `Infinity`/`-Infinity`/
+fractional/string timeouts, 100-entry plans, hostile step IDs, `md5:`/bad
+identities; cleanup-after-crash/timeout/boot-failure and truthful cleanup
+failure with evidence still parsing; no fabricated evidence — wrong stepId,
+wrong kind, and credential-like probe summaries recorded as
+`probe.crashed`; bounded results with HTTP bodies never read; composition
+over the preview-runner primitives; 75/75 + 7/7 hostile probes from the
+throwaway tmp dir; secret scan clean). The P1 was repaired here by citing
+9b954ea in the row and this narrative; per the protocol the task returned to
+`implementing` and re-advanced to `ready_for_qa` with the repair recorded.
+Two non-blocking P2s recorded: the environment constructor relies on the
+lifecycle's validated inputs plus the preview-runner's own guards (defensive
+depth only — a directly constructed hostile environment is still bounded),
+and `boundedErrorMessage` does not credential-redact raw text (unreachable
+today because environment errors are always wrapped in fixed allowlisted
+messages; if a future dependency threw credential-like text, the evidence
+contract would reject the whole bundle — fail-closed, nothing bad persisted).
 
 ## Gate protocol
 
