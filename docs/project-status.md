@@ -32,13 +32,14 @@ prototypes through the shared `commerce.order-operations@1.1.0` lock, including
 Preview stop and cleanup. This is not production readiness and does not alter
 the historical evidence below.
 
-The next bounded execution goal is the P0 Compiler Target Plugin Kernel. Its
-first gate reconciles Typed Capability Binding Task 2 with accepted Task 2A;
-plugin implementation cannot begin while that compiler-admission dependency is
-unexplained. After reconciliation, the goal introduces
-`CompilerTargetPluginV1` and serially migrates documentation, policy, and
-database targets through exact file/byte/digest parity. See
-`docs/superpowers/specs/2026-08-06-compiler-target-plugin-kernel-goal-design.md`.
+The P0 Compiler Target Plugin Kernel Goal is accepted at branch tip `1137e1e`;
+its database target migration was accepted at `76933ca`, and fresh focused
+gates remain green (`@factory/compiler` 329/329 and
+`@factory/compiler-worker` 81/81). The next bounded execution goal is the P0
+Isolated Verifier: compile an immutable Compilation, run it in isolated
+resources, prove migrations/health/API/role journeys/denial/idempotency,
+cleanup every resource, and emit safe diagnosis plus a reviewable Draft Diff.
+See `docs/superpowers/specs/2026-08-06-isolated-verifier-goal-design.md`.
 
 ## Durable notification outbox across Expense and Ecommerce — 2026-08-01
 
@@ -135,7 +136,7 @@ unchanged, while the historical lock remains replayable. Fresh verification:
 the focused compilation-plan suite passed 49 tests; `@factory/compiler`
 passed 208 tests, typecheck, Prettier lint, and build.
 
-### Next smallest delivery slice
+### Compiler target plugin kernel — accepted; isolated verifier next
 
 Typed Capability Binding Task 2 is reconciled against accepted Task 2A and is
 `accepted` at Target-Commit `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` after
@@ -1944,7 +1945,9 @@ the tip: focused kernel suites 55/55 (23 target-plugin + 15 target-registry
   digest vectors across all five Profiles, package-owned contribution
   fragments preserved, facade delegation, nine centralized renderers
   removed); this completes all three target migrations (documentation,
-  policy, database). The next smallest slice is Stage 5 final acceptance:
-  full repository gates (affected Graph/Capabilities/Control Plane/Worker
-  suites, formatting/secret/provenance checks), roadmap update, and
-  GOAL_COMPLETE.
+  policy, database). Stage 5 final acceptance is recorded in the ledger and
+  the Goal is complete. The next smallest slice is the P0 Isolated Verifier,
+  defined in `docs/superpowers/specs/2026-08-06-isolated-verifier-goal-design.md`,
+  with its plan and PM ledger in
+  `docs/superpowers/plans/2026-08-06-isolated-verifier.md` and
+  `docs/superpowers/ledgers/2026-08-06-isolated-verifier.md`.

@@ -46,7 +46,7 @@ supports -> plan -> render -> validate
   responsibility-based extraction; no generic utils/helpers modules were
   introduced.
 
-### Verification loop
+### Verification loop — next execution goal: P0 Isolated Verifier
 
 Every generated-application acceptance path must run:
 
@@ -61,6 +61,11 @@ denied role journeys, migrations, health, API behavior, idempotency, and
 resource cleanup. Safe diagnosis identifies Graph-, capability-, binding-, or
 target-level causes and proposes a constrained new Draft Diff; it must not
 modify generated source, runtime state, Published Graphs, or Compilations.
+
+The Compiler Target Plugin Kernel and its documentation, policy, and database
+parity migrations are accepted. The next executable plan is
+`docs/superpowers/plans/2026-08-06-isolated-verifier.md`, with the PM ledger at
+`docs/superpowers/ledgers/2026-08-06-isolated-verifier.md`.
 
 P0 acceptance gates:
 
@@ -123,17 +128,13 @@ P1 acceptance gates:
 
 ## Dependency-aware sequence
 
-1. Stabilise immutable Graph, capability-lock, and compiler admission
-   boundaries already under active verification.
-2. Define and test `CompilerTargetPluginV1`; migrate docs, policy, then
-   database with output-digest comparison to the current compiler.
-3. Establish the isolated verifier and its safe-diagnosis-to-Draft-Diff
-   contract against the migrated targets.
-4. Deliver the staged AI `RequirementSpec` and `CompositionPlan` boundary,
+1. Establish the isolated verifier and its safe-diagnosis-to-Draft-Diff
+   contract against the accepted compiler targets.
+2. Deliver the staged AI `RequirementSpec` and `CompositionPlan` boundary,
    then permit constrained Draft Diffs.
-5. Expand cross-profile capabilities and Factory-owned Workbench wrappers with
+3. Expand cross-profile capabilities and Factory-owned Workbench wrappers with
    verified generated-application journeys.
-6. Add managed delivery and fleet operations, then consider additional
+4. Add managed delivery and fleet operations, then consider additional
    framework adapters.
 
 ## Ecosystem and source-study rules
@@ -167,6 +168,6 @@ focused boundary tests, and a removal path.
 Existing completed acceptance evidence remains historical and is recorded in
 `docs/project-status.md`. Retail Counter and Grocery Pickup are accepted local
 generated prototypes, including Preview stop and exact cleanup. They are not
-production-readiness evidence. The next bounded goal first reconciles the
-active typed-binding contract dependency, then delivers the compiler plugin
-kernel and documentation, policy, and database parity gates.
+production-readiness evidence. The compiler target plugin kernel and its three
+parity migrations are accepted; the next bounded goal is the isolated verifier
+and safe diagnosis-to-Draft-Diff loop.
