@@ -33,7 +33,7 @@ leak, or cleanup failure returns the task to `implementing` with evidence.
 | 1    | Verification/evidence/Draft-Diff contracts         | accepted | f804d67       | task review, QA, and release review each PASSed f804d67; worker baseline 81/81 |
 | 2    | Isolated lifecycle and cleanup                     | accepted | 9b954ea       | task review PASS (9b954ea, re-review 2a23b0b, P2s d01e5f3); QA FAIL P1 (9b954ea) then PASS (d01e5f3); release review PASS (f392446); focused 19/19; worker 100/100; graph 70/70 |
 | 3    | Migration, API, role, denial, idempotency probes   | accepted | fe50aca       | task review FAIL P2 (header names) repaired d652bfc, re-review PASS d652bfc; QA FAIL P1 (unreachable endpoints emitted httpStatus 0 → evidence contract rejected → probe.crashed) repaired de2e667, QA re-run PASS de2e667 (P1 symptom reproduced on old code, closed end-to-end; 147-check contract sweep; RED 5/27 → GREEN 27/27 + 20/20 lifecycle); worker 128/128; typecheck/lint clean; release review FAIL 2 P2s (plan checkboxes unchecked; residual-risk overstatement) remediated fe50aca, re-review PASS fe50aca; PM acceptance at fe50aca |
-| 4    | Deterministic diagnosis and constrained Draft Diff | ready_for_qa | 3a032a0       | feature `feat: add safe verification diagnosis` (9637528); RED graph 26/26 + worker 4/4 (module missing), GREEN 26/26 + 4/4; full graph 98/98, worker 132/132; graph typecheck/lint/build clean; worker typecheck/lint clean; task review FAIL P2 (derived diagnosisId/baseDraftRevisionId overflow factoryId 128 at schema-extreme inputs, reproduced by reviewer) repaired 3a032a0 (bounded derived IDs, RED 2/28 → GREEN 28/28); re-review PASS at 3a032a0 (P2 independently reproduced at 9637528 length 138 and closed; edge-math probes 128/119/118/117/1-char green; identity binding untrimmed; gates 28/98/4 + worker 132/132, typecheck/lint/build clean; P0/P1/P2 none) |
+| 4    | Deterministic diagnosis and constrained Draft Diff | ready_for_qa | 3a032a0       | feature `feat: add safe verification diagnosis` (9637528); RED graph 26/26 + worker 4/4 (module missing), GREEN 26/26 + 4/4; full graph 98/98, worker 132/132; graph typecheck/lint/build clean; worker typecheck/lint clean; task review FAIL P2 (derived diagnosisId/baseDraftRevisionId overflow factoryId 128 at schema-extreme inputs, reproduced by reviewer) repaired 3a032a0 (bounded derived IDs, RED 2/28 → GREEN 28/28); re-review PASS at 3a032a0 (P2 independently reproduced at 9637528 length 138 and closed; edge-math probes 128/119/118/117/1-char green; identity binding untrimmed; gates 28/98/4 + worker 132/132, typecheck/lint/build clean; P0/P1/P2 none); QA PASS at 3a032a0 (P2 reproduced at parent 26/2 test fail + 138/134-char overflow, closed at fix; sweep 28/98/4 + worker 132/132; 9/9 adversarial probes incl. round-trip and identity binding; commit hygiene 2 files; P0/P1/P2 none) |
 | 5    | Control Plane persistence and review APIs          | planned | —             | —        |
 | 6    | BullMQ integration and one profile acceptance      | planned | —             | —        |
 | 7    | Independent gates and release hand-off             | planned | —             | —        |
@@ -582,6 +582,27 @@ both fixed call sites; two `order-operations-lifecycle` full-suite failures
 once, reproduced identically at the pre-fix commit, pre-existing parallel-run
 flakiness) were accepted. Task 4 stands `ready_for_qa` at 3a032a0; QA gate
 launched next.
+**QA gate (PASS at 3a032a0):** QA ran independently in its own detached
+worktree (parent worktree at 9637528 for reproduction): P2 independently
+reproduced (128-char runId -> diagnosisId 138 chars, `parseDiagnosis` throwing
+the 128-character contract error; 128-char graph id -> baseDraftRevisionId 134
+chars, `parseDraftDiff` throwing) and confirmed closed at the fix; the shipped
+regression tests genuinely detect the bug (26/2 fail at 9637528, 28/28 pass at
+3a032a0). Full sweep at 3a032a0: diagnosis-contract 28/28, full graph 98/98,
+graph build clean, worker verification-diagnosis 4/4 against rebuilt dist,
+full worker 132/132 (one clean rerun; the known order-operations-lifecycle
+contention flake passes solo and file is untouched by Task 4), typecheck/lint
+4/4 both packages. 9/9 adversarial probes: edge-math (runId 1/117/118/119/128,
+graph id 6/122/123/128 — all derived IDs <= 128, regex-legal, round-trip),
+identity binding intact under 128-char runId (full verificationRunId and
+baseGraphHash untrimmed), hostile evidence prose never copied into diagnosis/
+diff, end-to-end parse round-trips for both diff op kinds, envelope rejection,
+determinism. Commit hygiene: diff 3a032a0^ -> 3a032a0 touches only
+diagnosis.ts and diagnosis-contract.test.ts (62+/5-). VERDICT PASS — P0/P1/P2
+none; non-blocking notes (fresh-worktree dep builds; colliding 118-char
+derived display IDs accepted by design with identity traveling intact; probe
+artifacts left in the job tmp dir) accepted. Release-review gate launched
+next.
 
 ## Gate protocol
 
