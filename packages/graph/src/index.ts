@@ -10,6 +10,7 @@ import {
 } from "./model.js";
 
 export * from "./model.js";
+export * from "./verification.js";
 
 function canonicalize(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonicalize);

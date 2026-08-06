@@ -35,11 +35,11 @@
 - `VerificationEvidenceV1` contains only allowlisted step status, bounded summaries, artifact digests, and cleanup facts.
 - `DraftDiffV1` contains a base mutable Draft revision, constrained operations, affected paths, rationale code, and no executable source.
 
-- [ ] Write failing tests for valid records, unknown step/status rejection, secret-like fields, raw prompt/response rejection, duplicate step IDs, and conflicting retry identity.
-- [ ] Run `pnpm --filter @factory/graph test -- verification-contract.test.ts`; confirm the new contract tests fail before implementation.
-- [ ] Implement the schemas with exact-key validation and bounded string/array limits; export only the public types from the package index.
-- [ ] Re-run the focused test, then `pnpm --filter @factory/graph typecheck` and `pnpm --filter @factory/graph lint`.
-- [ ] Commit only the contract and tests with message `feat: define isolated verification contracts`.
+- [x] Write failing tests for valid records, unknown step/status rejection, secret-like fields, raw prompt/response rejection, duplicate step IDs, and conflicting retry identity.
+- [x] Run `pnpm --filter @factory/graph test -- verification-contract.test.ts`; confirm the new contract tests fail before implementation.
+- [x] Implement the schemas with exact-key validation and bounded string/array limits; export only the public types from the package index.
+- [x] Re-run the focused test, then `pnpm --filter @factory/graph typecheck` and `pnpm --filter @factory/graph lint`.
+- [x] Commit only the contract and tests with message `feat: define isolated verification contracts`.
 
 ### Task 2: Build the isolated verification lifecycle
 
