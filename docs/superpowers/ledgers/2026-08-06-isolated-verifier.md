@@ -31,7 +31,7 @@ leak, or cleanup failure returns the task to `implementing` with evidence.
 | Task | Deliverable                                        | State   | Target commit | Evidence |
 | ---- | -------------------------------------------------- | ------- | ------------- | -------- |
 | 1    | Verification/evidence/Draft-Diff contracts         | accepted | f804d67       | task review, QA, and release review each PASSed f804d67; worker baseline 81/81 |
-| 2    | Isolated lifecycle and cleanup                     | reviewed | 9b954ea       | task review PASSed 9b954ea code gates and re-review PASSed 2a23b0b (P2s repaired at d01e5f3); QA FAILed P1 at 9b954ea, re-run PASSed d01e5f3; focused 19/19; worker 100/100; graph 70/70 |
+| 2    | Isolated lifecycle and cleanup                     | accepted | 9b954ea       | task review PASS (9b954ea, re-review 2a23b0b, P2s d01e5f3); QA FAIL P1 (9b954ea) then PASS (d01e5f3); release review PASS (f392446); focused 19/19; worker 100/100; graph 70/70 |
 | 3    | Migration, API, role, denial, idempotency probes   | planned | —             | —        |
 | 4    | Deterministic diagnosis and constrained Draft Diff | planned | —             | —        |
 | 5    | Control Plane persistence and review APIs          | planned | —             | —        |
@@ -277,6 +277,31 @@ with `/timeout/i`, rejecting fetch → `{status:0, ok:false}`, cleanup always
 ran, no dangling timers (all scenarios exit clean under a 90s hard timeout).
 One P2 (documentation): d01e5f3 was not hash-cited in the ledger — repaired
 by this record, which cites it. Row state advanced to `reviewed`.
+
+**Release review (independent, PASS with two P2s, citing f392446):** every
+recorded count re-verified against the tree — focused 19/19, worker 100/100,
+graph 70/70, typecheck, lint, diff check — with the diff chain touching
+exactly the three Task 2 source/test files plus the one-line
+`safeArtifactManifest` export and the two docs files; graph dist correctly
+gitignored; Task 1 contracts and the compiler package byte-identical to
+f804d67; secret scan clean (only the documented `?secret=1` rejection
+fixture); Task 2 plan checkboxes all marked with Tasks 3–7 untouched; no
+`GOAL_COMPLETE` claim and an unchanged completion-marker rule. Two
+non-blocking P2s: (a) the record commits 3ea1088/f392446 are not hash-cited
+in the ledger (3ea1088 could have been by the final record; f392446 cannot
+self-cite) — accepted with this record, which cites 3ea1088 and names the
+tip; (b) the Task 2 chain's strict parent is the Task 1 acceptance-record
+commit a9d083c rather than f804d67 directly — expected protocol bookkeeping.
+
+**PM acceptance (Task 2 accepted at 9b954ea with repairs 2a23b0b, d01e5f3,
+records 3ea1088, f392446):** the three independent gates each PASSed the
+Task 2 deliverable citing the same feature commit: task review (code gates
+at 9b954ea, re-review at 2a23b0b), QA (re-run at d01e5f3 after the wiring
+P1 repair), and release review (f392446). Evidence: focused 19/19; worker
+100/100 (81 baseline + 19); graph 70/70; worker typecheck and lint pass;
+`git diff --check` clean; clean worktree; remote-reachable commit. Both
+release-review P2s are documentation-precision items, resolved by this
+record. Task 2 recorded `accepted`.
 
 **Re-review (task review, PASS with three P2s, citing 2a23b0b):** the
 repair commit 2a23b0b PASSed every gate — required runner/client fields are
