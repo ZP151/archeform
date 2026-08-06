@@ -1,35 +1,16 @@
-import { createHash } from "node:crypto";
-
 import { z } from "zod";
 
 import {
   applicationGraphSchema,
   assertValidApplicationGraph,
   GraphSemanticError,
+  hashApplicationGraph,
   type ApplicationGraphV1,
 } from "./model.js";
 
 export * from "./model.js";
 export * from "./verification.js";
-
-function canonicalize(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalize);
-  if (value && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, nested]) => [key, canonicalize(nested)]),
-    );
-  }
-  return value;
-}
-
-/** A stable, content-addressable hash of a valid Graph. Array order is intentional Graph meaning. */
-export function hashApplicationGraph(input: unknown): string {
-  const graph = assertValidApplicationGraph(input);
-  const canonicalJson = JSON.stringify(canonicalize(graph));
-  return `sha256:${createHash("sha256").update(canonicalJson).digest("hex")}`;
-}
+export * from "./diagnosis.js";
 
 export const publishedGraphExchangeSchema = z
   .object({

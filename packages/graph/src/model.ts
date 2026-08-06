@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { z } from "zod";
 
 const identifier = z
@@ -849,4 +851,23 @@ export function assertValidApplicationGraph(
   const issues = validateApplicationGraph(graph);
   if (issues.length > 0) throw new GraphSemanticError(issues);
   return graph;
+}
+
+function canonicalize(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, nested]) => [key, canonicalize(nested)]),
+    );
+  }
+  return value;
+}
+
+/** A stable, content-addressable hash of a valid Graph. Array order is intentional Graph meaning. */
+export function hashApplicationGraph(input: unknown): string {
+  const graph = assertValidApplicationGraph(input);
+  const canonicalJson = JSON.stringify(canonicalize(graph));
+  return `sha256:${createHash("sha256").update(canonicalJson).digest("hex")}`;
 }
