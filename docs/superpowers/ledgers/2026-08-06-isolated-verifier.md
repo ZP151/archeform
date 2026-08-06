@@ -31,7 +31,7 @@ leak, or cleanup failure returns the task to `implementing` with evidence.
 | Task | Deliverable                                        | State   | Target commit | Evidence |
 | ---- | -------------------------------------------------- | ------- | ------------- | -------- |
 | 1    | Verification/evidence/Draft-Diff contracts         | accepted | f804d67       | task review, QA, and release review each PASSed f804d67; worker baseline 81/81 |
-| 2    | Isolated lifecycle and cleanup                     | ready_for_qa | 9b954ea       | task review PASSed all code gates at 9b954ea; QA FAILed P1 wiring → repaired (runner wiring); re-review pending; focused 19/19; worker 100/100; graph 70/70 |
+| 2    | Isolated lifecycle and cleanup                     | reviewed | 9b954ea       | task review PASSed 9b954ea code gates and re-review PASSed 2a23b0b (P2s repaired at d01e5f3); QA FAILed P1 at 9b954ea, re-run PASSed d01e5f3; focused 19/19; worker 100/100; graph 70/70 |
 | 3    | Migration, API, role, denial, idempotency probes   | planned | —             | —        |
 | 4    | Deterministic diagnosis and constrained Draft Diff | planned | —             | —        |
 | 5    | Control Plane persistence and review APIs          | planned | —             | —        |
@@ -257,6 +257,26 @@ corrected to "after an earlier probe crashed." Regression: focused 19/19
 clean; graph suite untouched (dist carries Task 1 contracts). Per the gate
 protocol the task returned to `implementing` with the QA evidence and
 re-advanced to `ready_for_qa` for re-review at the repaired commit.
+
+**QA re-run (independent, PASS with one P2, citing d01e5f3):** the repaired
+deliverable PASSed end-to-end — a realistic-usage script drove
+`runVerificationLifecycle` with Task 3-style probes (migration, api,
+authorization-denial, health) over an injected runner plus REAL Node fetch
+against a real HTTP server on 127.0.0.1; the runner was invoked exactly once
+with the pinned full compose shape and a live AbortSignal, the server
+actually received GET/POST/health traffic at the apiPort URL, the real 403
+came back as a truthful bounded denial, evidence bound to the run with
+cleanup last, and the vestigial `?.` removal changed nothing observable
+(runner-less still throws `process_runner_required`). Boundary spot-checks:
+99-entry plan runs vs 100 rejected pre-compile; timeout 1_000 accepted vs
+999 rejected pre-compile; 10-token migrate runs vs 11/0-token rejected
+pre-run; consumer omitting `fetch` or `processRunner` fails typecheck with
+TS2741 while a complete consumer typechecks clean. Truthful-evidence
+regressions: throwing runner → bounded failed step, hanging runner → skipped
+with `/timeout/i`, rejecting fetch → `{status:0, ok:false}`, cleanup always
+ran, no dangling timers (all scenarios exit clean under a 90s hard timeout).
+One P2 (documentation): d01e5f3 was not hash-cited in the ledger — repaired
+by this record, which cites it. Row state advanced to `reviewed`.
 
 **Re-review (task review, PASS with three P2s, citing 2a23b0b):** the
 repair commit 2a23b0b PASSed every gate — required runner/client fields are
