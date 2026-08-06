@@ -213,6 +213,55 @@ describe("VerificationEvidenceV1", () => {
     ).toThrow(/redact/i);
   });
 
+  it("rejects env-style compound credential keys fail closed", () => {
+    for (const summary of [
+      "secret_key=sk-live-1234",
+      "Secret_Access_Key=AKIA123",
+      "AWS_SECRET_ACCESS_KEY=AKIA123",
+      "database password=generated",
+    ]) {
+      expect(() =>
+        parseVerificationEvidence({
+          ...validEvidence(),
+          steps: [validStep({ summary })],
+        }),
+      ).toThrow(/redact/i);
+    }
+  });
+
+  it("rejects separator-less bearer credential forms fail closed", () => {
+    for (const summary of [
+      "Bearer xyz",
+      "Authorization Bearer xyz",
+      "sent bearer token directly",
+    ]) {
+      expect(() =>
+        parseVerificationEvidence({
+          ...validEvidence(),
+          steps: [validStep({ summary })],
+        }),
+      ).toThrow(/redact/i);
+    }
+  });
+
+  it("still accepts allowlisted authorization-denial vocabulary", () => {
+    expect(() =>
+      parseVerificationEvidence({
+        ...validEvidence(),
+        steps: [
+          validStep({
+            stepId: "authorization-denial",
+            kind: "authorization-denial",
+            role: "merchant",
+            action: "fulfill",
+            httpStatus: 403,
+            summary: "Authorization denial returned 403 for role merchant.",
+          }),
+        ],
+      }),
+    ).not.toThrow();
+  });
+
   it("rejects an unknown step kind", () => {
     expect(() =>
       parseVerificationEvidence({

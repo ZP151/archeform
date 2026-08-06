@@ -34,9 +34,21 @@ const isoDateTime = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?Z$/);
 
-/** Credential-like assignments must never reach persisted evidence. */
+/** Credential-like assignments with plain keys must never reach persisted evidence. */
 const credentialLikeAssignment =
-  /(authorization|set-cookie|cookie|api[_-]?key|pass(word)?|secret|private[_-]?key|bearer|access[_-]?token|refresh[_-]?token|token)\s*[:=]/i;
+  /\b(?:authorization|set-cookie|cookie|api[_-]?key|pass(?:word|wd|words)?|secret|private[_-]?key|bearer|access[_-]?token|refresh[_-]?token|token)\b\s*[:=]/i;
+
+/**
+ * Env-style compound keys, e.g. `AWS_SECRET_ACCESS_KEY=`, `Secret_Access_Key=`,
+ * or `client_secret=` — the credential keyword is embedded in a longer key
+ * token. Conservative by design: evidence is allowlisted prose, so any
+ * key-like token followed by an assignment fails closed.
+ */
+const compoundCredentialKey =
+  /\b[a-z0-9_]*(?:secret|password|passwd|pass|token|key|auth)[a-z0-9_]*\s*[:=]/i;
+
+/** Separator-less bearer forms, e.g. `Bearer xyz` or `Authorization Bearer xyz`. */
+const bareBearerForm = /\bbearer\b/i;
 
 /**
  * Bounded, redacted evidence text. It is a backstop on top of allowlisted
@@ -50,9 +62,15 @@ const safeBoundedString = z
   .refine((value) => !/[\u0000-\u001f\u007f]/.test(value), {
     message: "Evidence cannot contain control characters.",
   })
-  .refine((value) => !credentialLikeAssignment.test(value), {
-    message: "Redact credential-like assignments from evidence.",
-  });
+  .refine(
+    (value) =>
+      !credentialLikeAssignment.test(value) &&
+      !compoundCredentialKey.test(value) &&
+      !bareBearerForm.test(value),
+    {
+      message: "Redact credential-like assignments from evidence.",
+    },
+  );
 
 const stepIdSchema = z
   .string()

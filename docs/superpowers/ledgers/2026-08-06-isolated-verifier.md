@@ -51,22 +51,36 @@ keys are dotted (`core.crud`) while the op schema reused the plain Graph
 identifier regex, and the diagnosis `code` (`migration.apply_failed`) and step
 `failureCode` allow underscores. Both were corrected inside the new module.
 
+**P2 repair (task-review finding):** the reviewer found the redaction backstop
+missed env-style compound credential keys (`secret_key=`, `Secret_Access_Key=`,
+`AWS_SECRET_ACCESS_KEY=`) and separator-less bearer forms (`Bearer xyz`).
+Repaired with TDD: regression tests added first and confirmed failing (RED),
+then the backstop was hardened into three checks — plain-key assignments with
+word boundaries, env-style compound keys (any key-like token containing a
+credential keyword and followed by `:`/`=`), and a standalone `bearer` token.
+Regression tests confirmed green (GREEN), and an over-rejection guard test
+keeps the allowlisted `authorization-denial` prose vocabulary accepted.
+
 **Evidence (Node v22.11.0):**
-- Focused `verification-contract.test.ts`: 29/29 — valid run/evidence/diff/
+- Focused `verification-contract.test.ts`: 32/32 — valid run/evidence/diff/
   diagnosis records; unknown run status, step kind, step status, diagnosis
   category rejection; non-sha256 compilation digest and step digest rejection;
   duplicate ordered step IDs in runs and evidence; evidence/run step-ID
   disagreement; hostile `modelPrompt`/`rawResponse` unknown keys rejected by
-  exact-key validation; credential-like assignments in summaries
-  (`authorization: Bearer ...`, `api_key=...`, `password=...`) rejected with
-  the redaction message; out-of-range HTTP status (600); unbounded summary
+  exact-key validation; credential-like material in summaries rejected with
+  the redaction message: plain assignments (`authorization: Bearer ...`,
+  `api_key=...`, `password=...`), env-style compound keys (`secret_key=`,
+  `Secret_Access_Key=`, `AWS_SECRET_ACCESS_KEY=`, `database password=`),
+  separator-less bearer forms (`Bearer xyz`, `Authorization Bearer xyz`,
+  `sent bearer token directly`), while allowlisted `authorization-denial`
+  prose stays accepted; out-of-range HTTP status (600); unbounded summary
   (10,000 chars); missing cleanup facts; artifact path traversal
   (`../../etc/passwd`); unknown diff operations (arbitrary JSON patch
   rejected), nested object values, source paths and URLs in affected paths,
   empty operation lists; non-Graph affected path in diagnosis; conflicting
   retry identity (same `verificationRunId`, different `compilationDigest`)
   fails closed while idempotent and distinct identities pass.
-- Full `@factory/graph` suite: 64/64 (3 files); `typecheck` pass; `lint`
+- Full `@factory/graph` suite: 67/67 (3 files); `typecheck` pass; `lint`
   (Prettier) pass; `git diff --check` clean.
 
 **Contracts:** `VerificationRunV1` (immutable `compilationDigest`, profileKey,
