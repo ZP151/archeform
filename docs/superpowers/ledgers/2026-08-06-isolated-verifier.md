@@ -33,7 +33,7 @@ leak, or cleanup failure returns the task to `implementing` with evidence.
 | 1    | Verification/evidence/Draft-Diff contracts         | accepted | f804d67       | task review, QA, and release review each PASSed f804d67; worker baseline 81/81 |
 | 2    | Isolated lifecycle and cleanup                     | accepted | 9b954ea       | task review PASS (9b954ea, re-review 2a23b0b, P2s d01e5f3); QA FAIL P1 (9b954ea) then PASS (d01e5f3); release review PASS (f392446); focused 19/19; worker 100/100; graph 70/70 |
 | 3    | Migration, API, role, denial, idempotency probes   | accepted | fe50aca       | task review FAIL P2 (header names) repaired d652bfc, re-review PASS d652bfc; QA FAIL P1 (unreachable endpoints emitted httpStatus 0 → evidence contract rejected → probe.crashed) repaired de2e667, QA re-run PASS de2e667 (P1 symptom reproduced on old code, closed end-to-end; 147-check contract sweep; RED 5/27 → GREEN 27/27 + 20/20 lifecycle); worker 128/128; typecheck/lint clean; release review FAIL 2 P2s (plan checkboxes unchecked; residual-risk overstatement) remediated fe50aca, re-review PASS fe50aca; PM acceptance at fe50aca |
-| 4    | Deterministic diagnosis and constrained Draft Diff | planned | —             | —        |
+| 4    | Deterministic diagnosis and constrained Draft Diff | ready_for_qa | 9637528       | feature `feat: add safe verification diagnosis`; RED graph 26/26 + worker 4/4 (module missing), GREEN 26/26 + 4/4; full graph 96/96, worker 132/132; graph typecheck/lint/build clean; worker typecheck/lint clean; task review pending |
 | 5    | Control Plane persistence and review APIs          | planned | —             | —        |
 | 6    | BullMQ integration and one profile acceptance      | planned | —             | —        |
 | 7    | Independent gates and release hand-off             | planned | —             | —        |
@@ -477,6 +477,75 @@ same code commit chain e58b5a6/d652bfc/de2e667 with the docs remediation at
 fe50aca; focused 27/27 probes, 20/20 lifecycle, 128/128 worker, typecheck/lint
 clean, secret scan clean. Residual risk above is accepted and owned by Task 6.
 Task 3 recorded `accepted`.
+
+## Task 4 — deterministic diagnosis and constrained Draft Diff — 2026-08-06
+
+**Changed paths:** `packages/graph/src/diagnosis.ts` (new, pure mapping),
+`packages/graph/src/index.ts` (exports `./diagnosis.js`), `packages/graph/src/model.ts`
+(`canonicalize`/`hashApplicationGraph` moved here from `index.ts` so diagnosis
+imports model/verification without a module cycle; the `@factory/graph` public
+surface is unchanged because index already re-exports model),
+`packages/graph/test/diagnosis-contract.test.ts` (new, 26 tests),
+`apps/compiler-worker/src/verifier/diagnosis.ts` (new, worker-boundary parse
+gate), `apps/compiler-worker/test/verification-diagnosis.test.ts` (new, 4 tests).
+
+**RED:** both suites failed before implementation — the diagnosis module did
+not exist (graph 26/26 module-missing, worker 4/4 module-missing).
+
+**GREEN:** graph 26/26; worker 4/4; full suites after the `hashApplicationGraph`
+move: graph 96/96, worker 132/132; graph typecheck/lint/build clean; worker
+typecheck/lint clean. Two RED→GREEN fixture iterations were test-fixture bugs,
+not logic bugs: the `orderGraph` fixture initially kept expense cross-references
+while renaming the entity (semantic validation correctly rejected it — 4
+issues), and the cleanup test double-appended stepId `cleanup` (evidence
+contract correctly rejected duplicate step IDs). One mapper gap found by the
+tests: `probe.crashed` fell through to `unknown.unmapped_failure` instead of
+its own code — fixed explicitly.
+
+**Deterministic mapping (first failed step in evidence order wins):** failure
+code -> category/code/diff. `runtime.*` (`migration.failed`, `health.failed`,
+all five `*.unreachable`, cleanup failure) -> category `runtime` with distinct
+codes and NO diff; `probe.crashed` and unrecognized codes -> `unknown` with NO
+diff; lock-checksum-vs-graph mismatch -> `target.graph_lock_mismatch` (checked
+before step mapping); journey entity absent from the Graph -> `graph.unknown_entity`;
+status mismatches (`api.unexpected_status`, `role-journey.unexpected_status`,
+`idempotency.first_request_unexpected`) -> `binding.status_mismatch` with NO
+diff (no safe value is derivable); `authorization.denial_mismatch` ->
+`binding.denial_policy_not_bound` with an `add-binding core.identity-policy`
+diff when the lock lacks the capability, else `binding.denial_not_enforced`
+with NO diff; `idempotency.replay_not_rejected` -> `capability.*` with a
+`change-constraint` diff only when a concrete constraint fix is derivable
+(type/unique/required on `idempotencyKey`, mirroring the
+`commerce.inventory-ledger` field requirement), else NO diff. `replace-input`
+and `remove-binding` remain contract-legal but are never emitted: no evidence
+input can deterministically supply a new input value or justify removing a
+binding — an honest null diff beats a fabricated op. Affected paths are
+`/domain/<entity>` (validated against the snapshot), `/domain`, or `/metadata`;
+diagnosis summaries and diff summaries are fixed allowlisted prose and never
+copy evidence text. The diff `rationaleCode` is the diagnosis code with
+underscores hyphenated (rationale codes forbid underscores); `baseDraftRevisionId`
+is derived `draft-<graph-id>`, `baseGraphHash` is `hashApplicationGraph(snapshot)`
+— only hashes and safe summaries are preserved.
+
+**Immutable Published Graph protection:** draft revision envelopes, published
+exchange envelopes, and any carrier with `status`/`revision`/`publishedRevision`/
+`draftRevisionId` keys are rejected by `VerificationContractError` both in the
+pure function and again at the worker boundary before parsing; every produced
+diff binds to the derived draft base, never to the snapshot.
+
+**Hostile evidence:** the pure function re-parses evidence through
+`parseVerificationEvidence` (redaction backstop); action strings are resolved
+only through the snapshot's entity keys; a missing action identity on
+entity-derived codes fails closed to `unknown.missing_identity`; unmapped
+failure codes fail closed to `unknown.unmapped_failure`.
+
+**Residual risk (accepted):** the `graph` category only detects a missing
+journey entity and `target` only detects lock/graph checksum mismatch — both
+are honest narrow detectors; diff operations are proposals for human review
+and are never applied automatically (approval into a mutable Draft revision is
+Task 5's scope); the worker boundary parses graph input before the pure
+function re-parses it (double validation is deliberate fail-closed behavior).
+Task 4 advanced to `ready_for_qa` at 9637528; task review pending.
 
 ## Gate protocol
 

@@ -97,11 +97,11 @@
 - `diagnoseVerification(evidence, graphSnapshot, compositionLock)` returns `DiagnosisV1` with category, stable code, affected Graph paths, and a constrained `DraftDiffV1` or `null`.
 - Allowed diff operations are `replace-input`, `add-binding`, `remove-binding`, and `change-constraint`; no source path, URL, credential, shell command, or arbitrary JSON patch is accepted.
 
-- [ ] Write failing tests for each diagnosis category, no-diff unknown failures, immutable Published Graph protection, and hostile evidence fields.
-- [ ] Run both focused suites and confirm failure.
-- [ ] Implement deterministic mappings from step codes to diff operations; preserve only hashes and safe summaries.
-- [ ] Re-run focused suites and graph package gates.
-- [ ] Commit with message `feat: add safe verification diagnosis`.
+- [x] Write failing tests for each diagnosis category, no-diff unknown failures, immutable Published Graph protection, and hostile evidence fields.
+- [x] Run both focused suites and confirm failure.
+- [x] Implement deterministic mappings from step codes to diff operations; preserve only hashes and safe summaries.
+- [x] Re-run focused suites and graph package gates.
+- [x] Commit with message `feat: add safe verification diagnosis`.
 
 ### Task 5: Persist run evidence and expose review APIs
 
