@@ -32,7 +32,7 @@ leak, or cleanup failure returns the task to `implementing` with evidence.
 | ---- | -------------------------------------------------- | ------- | ------------- | -------- |
 | 1    | Verification/evidence/Draft-Diff contracts         | accepted | f804d67       | task review, QA, and release review each PASSed f804d67; worker baseline 81/81 |
 | 2    | Isolated lifecycle and cleanup                     | accepted | 9b954ea       | task review PASS (9b954ea, re-review 2a23b0b, P2s d01e5f3); QA FAIL P1 (9b954ea) then PASS (d01e5f3); release review PASS (f392446); focused 19/19; worker 100/100; graph 70/70 |
-| 3    | Migration, API, role, denial, idempotency probes   | implementing | e58b5a6       | task review FAIL P2 (credential header names passed the shape check) repaired at d652bfc; RED 1/22 then GREEN 22/22; worker 122/122; typecheck/lint clean; task re-review pending |
+| 3    | Migration, API, role, denial, idempotency probes   | ready_for_qa | e58b5a6       | task review FAIL P2 (credential header names passed the shape check) repaired at d652bfc; re-review PASS d652bfc (RED 1/22 reproduced in a detached worktree; exploit closed with 11 empirical header probes); focused 22/22; worker 122/122; typecheck/lint clean; QA pending |
 | 4    | Deterministic diagnosis and constrained Draft Diff | planned | —             | —        |
 | 5    | Control Plane persistence and review APIs          | planned | —             | —        |
 | 6    | BullMQ integration and one profile acceptance      | planned | —             | —        |
