@@ -797,6 +797,39 @@ verificationRunId parsed but not cross-bound against the addressed run
 + `prisma validate` (no live Postgres on this machine); approveDraftDiff
 imposes no run-status gate and affectedPaths are advisory (spec requires
 neither). Task 5 stands `ready_for_qa` at 4ad23f3; QA gate launched next.
+**QA gate (PASS at 4ad23f3):** QA ran independently in its own detached
+worktrees. RED at the parent (3a032a0): both suites absent there; run with
+the gate's test files in the parent worktree they failed 2/2 suites, the
+only error being module-missing for `src/verification/*` (vitest 2.x counts
+a collection failure as 0 tests per file, so the ledger's "17/17, 6/6
+module-missing" framing is a count-style claim; the cause is exactly as
+stated). GREEN at the gate: graph build clean, prisma generate clean with
+VerificationRun present, focused 31/31 (17+6+8), full control-plane 145/145
+across 14 files run twice, typecheck/lint/build clean. Adversarial battery
+28/28 across 20+ scenarios incl. key-order-shuffled evidence -> identical
+canonical digest (parser canonicalizes to schema order), 128-char boundary
+accepted vs 129-char rejected, no draftRevision created on any refusal,
+success path applies at `/domain/entities/0/fields/0/unique` with
+revisionNumber latest+1, corrupt persisted draft -> draft_diff_rejected,
+idempotent createRun retry (3 calls, 1 create). Migration validation:
+`prisma validate` OK, Prisma-engine `migrate diff --from-empty
+--to-schema-datamodel` confirms table/constraint set matches migration.sql,
+schema test against generated DMMF 8/8; live-DB application impossible (no
+Postgres on this machine). Commit hygiene: exactly the 9 claimed files,
+diff --check clean, lifecycle.service.ts diff exactly the three
+function->export changes. VERDICT PASS — P0/P1/P2 none; all four prior
+non-blocking notes independently confirmed, none escalated (race worst case
+is a DB-unique-constraint-backed transient 500, retryable — the repo's
+`startPreview` race-resilient pattern exists but the new code mirrors the
+pre-existing appendDraftRevision/proposeDraftRevision check-then-create and
+no corruption path exists; diagnosis run identity nit with evidence
+authoritative; migration static validation; approval without run-status
+gate and advisory affectedPaths — plan requires none). Observation for the
+record: `reportEvidence` does not cross-check `evidence.compilationDigest`
+against the compilation's `inputGraphHash` at the control-plane boundary —
+the contract's full cross-bind exists for the Task 6 worker and the plan's
+Task 5 interfaces do not demand it here. Release-review gate launched
+next.
 
 ## Gate protocol
 
