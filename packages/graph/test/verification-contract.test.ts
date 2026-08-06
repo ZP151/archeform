@@ -247,6 +247,9 @@ describe("VerificationEvidenceV1", () => {
   it("rejects bare Basic auth credentials fail closed", () => {
     for (const summary of [
       "Basic dXNlcjpwYXNz",
+      "Basic aGVsbG8=",
+      "Basic dTpw",
+      "Basic AbCd",
       "Authorization: Basic dXNlcjpwYXNz",
     ]) {
       expect(() =>
@@ -276,6 +279,7 @@ describe("VerificationEvidenceV1", () => {
     for (const summary of [
       "basic health check returned 200",
       "Basic requirements passed.",
+      "basic API contract",
       "Status: ok",
     ]) {
       expect(() =>

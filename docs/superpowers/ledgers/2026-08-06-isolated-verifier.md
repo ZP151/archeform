@@ -76,6 +76,13 @@ behavior (`monkey=banana`, `hockey=2` rejected; rationale: evidence is
 allowlisted prose with no assignment forms, and the backstop cannot tell
 `monkey=` from `secret_key=`).
 
+**P2 repair round 3 (re-review observation):** the PASS noted the Basic
+discriminator was position-locked to token index >= 3, letting degenerate
+base64 slip (`Basic dTpw` = `u:p`, `Basic AbCd`). Repaired with TDD: a 4+ char
+length lookahead frees the discriminator to sit anywhere in the token, which
+still accepts 3-char tokens (`basic API contract`, `basic 200 response`).
+Regression tests confirmed failing first (RED) then green (GREEN).
+
 **Evidence (Node v22.11.0):**
 - Focused `verification-contract.test.ts`: 35/35 — valid run/evidence/diff/
   diagnosis records; unknown run status, step kind, step status, diagnosis
@@ -88,10 +95,12 @@ allowlisted prose with no assignment forms, and the backstop cannot tell
   `Secret_Access_Key=`, `AWS_SECRET_ACCESS_KEY=`, `database password=`),
   separator-less bearer forms (`Bearer xyz`, `Authorization Bearer xyz`,
   `sent bearer token directly`), bare Basic credentials (`Basic dXNlcjpwYXNz`,
+  `Basic aGVsbG8=`, degenerate `Basic dTpw` and `Basic AbCd`,
   `Authorization: Basic dXNlcjpwYXNz`), and deliberate fail-closed guard
   (`monkey=banana`, `hockey=2`), while allowlisted `authorization-denial`
-  prose, `Status: ok`, `basic health check returned 200`, and
-  `Basic requirements passed.` stay accepted; out-of-range HTTP status (600);
+  prose, `Status: ok`, `basic health check returned 200`,
+  `basic API contract`, and `Basic requirements passed.` stay accepted;
+  out-of-range HTTP status (600);
   unbounded summary (10,000 chars); missing cleanup facts; artifact path
   traversal (`../../etc/passwd`); unknown diff operations (arbitrary JSON
   patch rejected), nested object values, source paths and URLs in affected

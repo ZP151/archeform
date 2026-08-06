@@ -54,14 +54,14 @@ const bareBearerForm = /\bbearer\b/i;
 
 /**
  * Separator-less Basic credentials, e.g. `Basic dXNlcjpwYXNz`. The token must
- * be at least four characters and contain an uppercase letter, digit, or
- * `+`/`/` — base64 of any printable user:password pair always does — so prose
- * like `basic health check`, `Basic requirements`, or `basic API contract`
- * stays accepted. Deliberately not case-insensitive: the discriminator needs a
- * real uppercase character.
+ * be at least four characters (base64 of any user:password pair is) and
+ * contain an uppercase letter, digit, or `+`/`/` anywhere — real base64
+ * always does — so prose like `basic health check`, `Basic requirements`, or
+ * `basic API contract` stays accepted. Deliberately not case-insensitive: the
+ * discriminator needs a real uppercase character.
  */
 const bareBasicCredential =
-  /\b[bB]asic\s+[a-zA-Z0-9+/]{3,}[A-Z0-9+/][a-zA-Z0-9+/]*={0,2}\b/;
+  /\b[bB]asic\s+(?=[a-zA-Z0-9+/]{4,}={0,2}\b)[a-zA-Z0-9+/]*[A-Z0-9+/][a-zA-Z0-9+/]*={0,2}\b/;
 
 /**
  * Bounded, redacted evidence text. It is a backstop on top of allowlisted
