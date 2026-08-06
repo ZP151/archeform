@@ -33,7 +33,7 @@ leak, or cleanup failure returns the task to `implementing` with evidence.
 | 1    | Verification/evidence/Draft-Diff contracts         | accepted | f804d67       | task review, QA, and release review each PASSed f804d67; worker baseline 81/81 |
 | 2    | Isolated lifecycle and cleanup                     | accepted | 9b954ea       | task review PASS (9b954ea, re-review 2a23b0b, P2s d01e5f3); QA FAIL P1 (9b954ea) then PASS (d01e5f3); release review PASS (f392446); focused 19/19; worker 100/100; graph 70/70 |
 | 3    | Migration, API, role, denial, idempotency probes   | accepted | fe50aca       | task review FAIL P2 (header names) repaired d652bfc, re-review PASS d652bfc; QA FAIL P1 (unreachable endpoints emitted httpStatus 0 → evidence contract rejected → probe.crashed) repaired de2e667, QA re-run PASS de2e667 (P1 symptom reproduced on old code, closed end-to-end; 147-check contract sweep; RED 5/27 → GREEN 27/27 + 20/20 lifecycle); worker 128/128; typecheck/lint clean; release review FAIL 2 P2s (plan checkboxes unchecked; residual-risk overstatement) remediated fe50aca, re-review PASS fe50aca; PM acceptance at fe50aca |
-| 4    | Deterministic diagnosis and constrained Draft Diff | ready_for_qa | 9637528       | feature `feat: add safe verification diagnosis`; RED graph 26/26 + worker 4/4 (module missing), GREEN 26/26 + 4/4; full graph 96/96, worker 132/132; graph typecheck/lint/build clean; worker typecheck/lint clean; task review pending |
+| 4    | Deterministic diagnosis and constrained Draft Diff | ready_for_qa | 3a032a0       | feature `feat: add safe verification diagnosis` (9637528); RED graph 26/26 + worker 4/4 (module missing), GREEN 26/26 + 4/4; full graph 98/98, worker 132/132; graph typecheck/lint/build clean; worker typecheck/lint clean; task review FAIL P2 (derived diagnosisId/baseDraftRevisionId overflow factoryId 128 at schema-extreme inputs, reproduced by reviewer) repaired 3a032a0 (bounded derived IDs, RED 2/28 → GREEN 28/28), re-review pending |
 | 5    | Control Plane persistence and review APIs          | planned | —             | —        |
 | 6    | BullMQ integration and one profile acceptance      | planned | —             | —        |
 | 7    | Independent gates and release hand-off             | planned | —             | —        |
@@ -545,7 +545,22 @@ are honest narrow detectors; diff operations are proposals for human review
 and are never applied automatically (approval into a mutable Draft revision is
 Task 5's scope); the worker boundary parses graph input before the pure
 function re-parses it (double validation is deliberate fail-closed behavior).
-Task 4 advanced to `ready_for_qa` at 9637528; task review pending.
+**Task-review round (FAIL at 9637528, repaired at 3a032a0):** the task
+reviewer FAILed the gate with one P2 (executed probe): `diagnosisId` was
+derived `diagnosis-${verificationRunId}` and `baseDraftRevisionId`
+`draft-${graph.metadata.id}`, and both source IDs are contract-legal at 128
+characters — the prefix then overflowed the 128-character factoryId bound and
+the produced record failed `parseDiagnosis`/`parseDraftDiff` (fail-closed
+downstream, but schema-invalid output for schema-legal input). Repaired with
+TDD at 3a032a0: a deterministic `derivedId(prefix, source)` trims the source
+to keep the derived ID within the bound (identity binding still travels in
+the intact `verificationRunId`/`baseGraphHash` fields); two regression tests
+with 128-char run and graph IDs confirmed failing first (RED 2/28) then green
+(GREEN 28/28; full graph 98/98, worker 132/132; typecheck/lint/build clean).
+The reviewer's non-blocking notes (single-op constraint diffs, the
+index-requirement case honestly resolving to no diff, deliberate double-parse
+at the worker boundary) were accepted without change. Task 4 re-advanced to
+`ready_for_qa` at 3a032a0; re-review pending.
 
 ## Gate protocol
 
