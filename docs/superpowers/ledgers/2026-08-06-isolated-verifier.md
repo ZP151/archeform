@@ -774,7 +774,29 @@ not-a-boolean regression test. VerificationRun statuses are stored as text
 and validated only at the boundary — consistent with the existing
 `PreviewRun`/`Compilation` pattern.
 
-**Task-review gate:** launched next at 4ad23f3.
+**Task-review gate (PASS at 4ad23f3):** the task reviewer ran independently in
+a detached worktree at the feature commit (full hash
+4ad23f3658347d6f7494d7d2c9c6401e0644fedd): focused suites 31/31 (17+6+8),
+full control-plane 145/145 run twice, typecheck/lint/build clean, prisma
+generate with VerificationRun present; 28/28 adversarial checks across 14
+scenarios (129-char verificationRunId -> 400; key-order-shuffled evidence ->
+identical digest; terminal same-digest re-report idempotent with zero extra
+updates; different evidence on terminal run -> 409; evidence run-identity
+mismatch -> 400; leaked-secret and unknown-key rejections; approve with
+matching hash but other-graph identity -> 422 draft_diff_mismatch with no
+revision created; stale hash -> draft_diff_stale; add-binding ->
+draft_diff_not_approvable; full success path bumps revisionNumber and stores
+a revalidated graph; no published revision -> draft_diff_rejected); commit
+hygiene exactly the 9 claimed files, diff --check clean; RED plausibility
+confirmed structurally (parent has no src/verification/); ledger/plan
+consistent. VERDICT PASS — P0/P1/P2 none. Non-blocking notes accepted:
+check-then-create races on idempotent createRun and concurrent approvals
+(consistent with existing repo patterns, not spec-demanded); diagnosis
+verificationRunId parsed but not cross-bound against the addressed run
+(evidence is the authoritative record); migration validated field-for-field
++ `prisma validate` (no live Postgres on this machine); approveDraftDiff
+imposes no run-status gate and affectedPaths are advisory (spec requires
+neither). Task 5 stands `ready_for_qa` at 4ad23f3; QA gate launched next.
 
 ## Gate protocol
 
