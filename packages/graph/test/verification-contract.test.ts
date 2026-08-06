@@ -244,6 +244,49 @@ describe("VerificationEvidenceV1", () => {
     }
   });
 
+  it("rejects bare Basic auth credentials fail closed", () => {
+    for (const summary of [
+      "Basic dXNlcjpwYXNz",
+      "Authorization: Basic dXNlcjpwYXNz",
+    ]) {
+      expect(() =>
+        parseVerificationEvidence({
+          ...validEvidence(),
+          steps: [validStep({ summary })],
+        }),
+      ).toThrow(/redact/i);
+    }
+  });
+
+  it("rejects keyword-bearing assignment tokens fail closed, even benign-looking", () => {
+    // The compound-key backstop cannot distinguish `monkey=` from `secret_key=`
+    // and is deliberately conservative: evidence is allowlisted prose with no
+    // assignment forms, so any keyword-bearing key-like token fails closed.
+    for (const summary of ["monkey=banana", "hockey=2"]) {
+      expect(() =>
+        parseVerificationEvidence({
+          ...validEvidence(),
+          steps: [validStep({ summary })],
+        }),
+      ).toThrow(/redact/i);
+    }
+  });
+
+  it("accepts benign prose without credential shape", () => {
+    for (const summary of [
+      "basic health check returned 200",
+      "Basic requirements passed.",
+      "Status: ok",
+    ]) {
+      expect(() =>
+        parseVerificationEvidence({
+          ...validEvidence(),
+          steps: [validStep({ summary })],
+        }),
+      ).not.toThrow();
+    }
+  });
+
   it("still accepts allowlisted authorization-denial vocabulary", () => {
     expect(() =>
       parseVerificationEvidence({

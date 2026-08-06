@@ -42,13 +42,26 @@ const credentialLikeAssignment =
  * Env-style compound keys, e.g. `AWS_SECRET_ACCESS_KEY=`, `Secret_Access_Key=`,
  * or `client_secret=` — the credential keyword is embedded in a longer key
  * token. Conservative by design: evidence is allowlisted prose, so any
- * key-like token followed by an assignment fails closed.
+ * key-like token followed by an assignment fails closed (this deliberately
+ * also rejects benign-looking tokens such as `monkey=banana`; that behavior
+ * is guarded by test).
  */
 const compoundCredentialKey =
   /\b[a-z0-9_]*(?:secret|password|passwd|pass|token|key|auth)[a-z0-9_]*\s*[:=]/i;
 
 /** Separator-less bearer forms, e.g. `Bearer xyz` or `Authorization Bearer xyz`. */
 const bareBearerForm = /\bbearer\b/i;
+
+/**
+ * Separator-less Basic credentials, e.g. `Basic dXNlcjpwYXNz`. The token must
+ * be at least four characters and contain an uppercase letter, digit, or
+ * `+`/`/` — base64 of any printable user:password pair always does — so prose
+ * like `basic health check`, `Basic requirements`, or `basic API contract`
+ * stays accepted. Deliberately not case-insensitive: the discriminator needs a
+ * real uppercase character.
+ */
+const bareBasicCredential =
+  /\b[bB]asic\s+[a-zA-Z0-9+/]{3,}[A-Z0-9+/][a-zA-Z0-9+/]*={0,2}\b/;
 
 /**
  * Bounded, redacted evidence text. It is a backstop on top of allowlisted
@@ -66,7 +79,8 @@ const safeBoundedString = z
     (value) =>
       !credentialLikeAssignment.test(value) &&
       !compoundCredentialKey.test(value) &&
-      !bareBearerForm.test(value),
+      !bareBearerForm.test(value) &&
+      !bareBasicCredential.test(value),
     {
       message: "Redact credential-like assignments from evidence.",
     },

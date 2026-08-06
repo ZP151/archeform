@@ -51,18 +51,33 @@ keys are dotted (`core.crud`) while the op schema reused the plain Graph
 identifier regex, and the diagnosis `code` (`migration.apply_failed`) and step
 `failureCode` allow underscores. Both were corrected inside the new module.
 
-**P2 repair (task-review finding):** the reviewer found the redaction backstop
-missed env-style compound credential keys (`secret_key=`, `Secret_Access_Key=`,
-`AWS_SECRET_ACCESS_KEY=`) and separator-less bearer forms (`Bearer xyz`).
-Repaired with TDD: regression tests added first and confirmed failing (RED),
-then the backstop was hardened into three checks — plain-key assignments with
-word boundaries, env-style compound keys (any key-like token containing a
-credential keyword and followed by `:`/`=`), and a standalone `bearer` token.
-Regression tests confirmed green (GREEN), and an over-rejection guard test
-keeps the allowlisted `authorization-denial` prose vocabulary accepted.
+**P2 repair round 1 (task-review finding):** the reviewer found the redaction
+backstop missed env-style compound credential keys (`secret_key=`,
+`Secret_Access_Key=`, `AWS_SECRET_ACCESS_KEY=`) and separator-less bearer forms
+(`Bearer xyz`). Repaired with TDD: regression tests added first and confirmed
+failing (RED), then the backstop was hardened into three checks — plain-key
+assignments with word boundaries, env-style compound keys (any key-like token
+containing a credential keyword and followed by `:`/`=`), and a standalone
+`bearer` token. Regression tests confirmed green (GREEN), and an over-rejection
+guard test keeps the allowlisted `authorization-denial` prose vocabulary
+accepted.
+
+**P2 repair round 2 (re-review observations, PASSed with two non-blocking
+P2s):** the re-reviewer PASSed but observed (a) `Basic dXNlcjpwYXNz`
+(separator-less Basic base64 credential) slipped past the backstop, and
+(b) `monkey=banana` is deliberately over-rejected by the compound-key check.
+Repaired (a) with TDD — a fourth backstop check for bare Basic credentials
+whose token must contain a real uppercase letter, digit, or `+`/`/` (every
+base64 of a printable user:password pair does), so `Basic requirements passed.`
+and `basic health check returned 200` stay accepted; regression tests confirmed
+failing first (RED) then green (GREEN). Resolved (b) as the reviewer's
+sanctioned alternative: a guard test asserting the deliberate fail-closed
+behavior (`monkey=banana`, `hockey=2` rejected; rationale: evidence is
+allowlisted prose with no assignment forms, and the backstop cannot tell
+`monkey=` from `secret_key=`).
 
 **Evidence (Node v22.11.0):**
-- Focused `verification-contract.test.ts`: 32/32 — valid run/evidence/diff/
+- Focused `verification-contract.test.ts`: 35/35 — valid run/evidence/diff/
   diagnosis records; unknown run status, step kind, step status, diagnosis
   category rejection; non-sha256 compilation digest and step digest rejection;
   duplicate ordered step IDs in runs and evidence; evidence/run step-ID
@@ -72,16 +87,26 @@ keeps the allowlisted `authorization-denial` prose vocabulary accepted.
   `api_key=...`, `password=...`), env-style compound keys (`secret_key=`,
   `Secret_Access_Key=`, `AWS_SECRET_ACCESS_KEY=`, `database password=`),
   separator-less bearer forms (`Bearer xyz`, `Authorization Bearer xyz`,
-  `sent bearer token directly`), while allowlisted `authorization-denial`
-  prose stays accepted; out-of-range HTTP status (600); unbounded summary
-  (10,000 chars); missing cleanup facts; artifact path traversal
-  (`../../etc/passwd`); unknown diff operations (arbitrary JSON patch
-  rejected), nested object values, source paths and URLs in affected paths,
-  empty operation lists; non-Graph affected path in diagnosis; conflicting
-  retry identity (same `verificationRunId`, different `compilationDigest`)
-  fails closed while idempotent and distinct identities pass.
-- Full `@factory/graph` suite: 67/67 (3 files); `typecheck` pass; `lint`
+  `sent bearer token directly`), bare Basic credentials (`Basic dXNlcjpwYXNz`,
+  `Authorization: Basic dXNlcjpwYXNz`), and deliberate fail-closed guard
+  (`monkey=banana`, `hockey=2`), while allowlisted `authorization-denial`
+  prose, `Status: ok`, `basic health check returned 200`, and
+  `Basic requirements passed.` stay accepted; out-of-range HTTP status (600);
+  unbounded summary (10,000 chars); missing cleanup facts; artifact path
+  traversal (`../../etc/passwd`); unknown diff operations (arbitrary JSON
+  patch rejected), nested object values, source paths and URLs in affected
+  paths, empty operation lists; non-Graph affected path in diagnosis;
+  conflicting retry identity (same `verificationRunId`, different
+  `compilationDigest`) fails closed while idempotent and distinct identities
+  pass.
+- Full `@factory/graph` suite: 70/70 (3 files); `typecheck` pass; `lint`
   (Prettier) pass; `git diff --check` clean.
+
+**Residual risk (redaction backstop):** bare credentials that are neither
+assigned nor bearer/Basic-shaped (e.g. a bare `sk-live-...` value) are out of
+backstop scope by design — the allowlisted evidence vocabulary is the first
+line of defense, and the backstop covers credential-like *assignments* and
+separator-less bearer/Basic forms.
 
 **Contracts:** `VerificationRunV1` (immutable `compilationDigest`, profileKey,
 run status, ISO timestamps, ordered unique stepIds),
