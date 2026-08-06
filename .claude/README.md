@@ -16,7 +16,7 @@ without routine founder confirmation.
    local-only and never enter this repository.
 3. Paste the applicable Long-running Goal prompt below into Claude Code.
 
-The Skill creates or refreshes the detailed plan and ledger, executes tasks,
+The Goal creates or refreshes the detailed plan and ledger, executes tasks,
 invokes the independent task reviewer, QA, release reviewer, and PM contexts,
 commits and pushes green iterations, reconciles evidence, and continues until
 `GOAL_COMPLETE` or a declared stop condition. The founder does not manually
@@ -44,7 +44,7 @@ model:
 Pursue the approved Factory Pilot P0 Compiler Target Plugin Goal autonomously
 until GOAL_COMPLETE.
 
-Treat CLAUDE.md, AGENTS.md, the founder-approved Goal design, the project Skill,
+Treat CLAUDE.md, AGENTS.md, the founder-approved Goal design, the project Goal files,
 the current project status, roadmap, ADRs, and ledgers as durable authority.
 Create and maintain the detailed implementation plan and Goal ledger yourself.
 Do not wait for routine confirmation and do not stop merely to report progress.
