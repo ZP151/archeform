@@ -83,9 +83,34 @@ model Compilation {
   artifacts           Artifact[]
   providerMetadata    ProviderMetadata[]
   previewRuns         PreviewRun[]
+  verificationRuns    VerificationRun[]
 
   @@unique([publishedRevisionId, sequence])
   @@index([publishedRevisionId])
+}
+
+/// One immutable verification run against an immutable compilation. Only the
+/// bounded, allowlisted evidence bundle, its digest, and the reviewable
+/// diagnosis/Draft Diff proposal are persisted; raw requests, responses, and
+/// generated material never are.
+model VerificationRun {
+  id                String      @id @default(cuid())
+  verificationRunId String      @unique
+  compilationId     String
+  profileKey        String
+  status            String
+  startedAt         DateTime?
+  completedAt       DateTime?
+  stepIds           Json
+  evidenceDigest    String?
+  evidence          Json?
+  diagnosis         Json?
+  draftDiff         Json?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  compilation       Compilation @relation(fields: [compilationId], references: [id], onDelete: Restrict)
+
+  @@index([compilationId])
 }
 
 /// A local, Factory-governed execution request for generated artifacts from one

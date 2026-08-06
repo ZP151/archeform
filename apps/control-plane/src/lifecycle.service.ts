@@ -78,7 +78,7 @@ export type WorkbenchApplicationSummary = {
   };
 };
 
-function exactRecord(
+export function exactRecord(
   input: unknown,
   allowedKeys: readonly string[],
   requiredKeys: readonly string[],
@@ -102,7 +102,7 @@ function exactRecord(
   return record;
 }
 
-function requiredString(record: UnknownRecord, key: string): string {
+export function requiredString(record: UnknownRecord, key: string): string {
   const value = record[key];
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new BadRequestException(`${key} must be a non-empty string.`);
@@ -292,7 +292,7 @@ function summaryCompilationCompletedAt(result: unknown): string | null {
     : null;
 }
 
-function succeededCompilation(result: unknown): boolean {
+export function succeededCompilation(result: unknown): boolean {
   return (
     !!result &&
     typeof result === "object" &&

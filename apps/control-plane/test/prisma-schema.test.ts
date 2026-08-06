@@ -29,6 +29,7 @@ describe("control-plane lifecycle schema", () => {
         "PreviewRun",
         "Artifact",
         "ProviderMetadata",
+        "VerificationRun",
       ]),
     );
 
@@ -60,6 +61,59 @@ describe("control-plane lifecycle schema", () => {
       type: "ProviderMetadata",
       isList: true,
     });
+    expect(field("Compilation", "verificationRuns")).toMatchObject({
+      type: "VerificationRun",
+      isList: true,
+    });
+  });
+
+  it("persists bounded verification evidence against an immutable compilation", () => {
+    expect(field("VerificationRun", "verificationRunId")).toMatchObject({
+      type: "String",
+      isRequired: true,
+      isUnique: true,
+    });
+    expect(field("VerificationRun", "compilationId")).toMatchObject({
+      type: "String",
+      isRequired: true,
+    });
+    expect(field("VerificationRun", "profileKey")).toMatchObject({
+      type: "String",
+      isRequired: true,
+    });
+    expect(field("VerificationRun", "status")).toMatchObject({
+      type: "String",
+      isRequired: true,
+    });
+    expect(field("VerificationRun", "stepIds")).toMatchObject({
+      type: "Json",
+      isRequired: true,
+    });
+    expect(field("VerificationRun", "evidenceDigest")).toMatchObject({
+      type: "String",
+      isRequired: false,
+    });
+    expect(field("VerificationRun", "evidence")).toMatchObject({
+      type: "Json",
+      isRequired: false,
+    });
+    expect(field("VerificationRun", "diagnosis")).toMatchObject({
+      type: "Json",
+      isRequired: false,
+    });
+    expect(field("VerificationRun", "draftDiff")).toMatchObject({
+      type: "Json",
+      isRequired: false,
+    });
+    expect(field("VerificationRun", "compilation")).toMatchObject({
+      type: "Compilation",
+      isRequired: true,
+    });
+    expect(
+      model("VerificationRun").fields.some(({ name }) =>
+        /secret|token|credential|password/i.test(name),
+      ),
+    ).toBe(false);
   });
 
   it("persists preview runs against an immutable compilation without runtime source or credentials", () => {

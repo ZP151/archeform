@@ -18,13 +18,16 @@ import {
   PREVIEW_RUN_QUEUE,
 } from "./preview-run-queue.js";
 import { PortfolioModule } from "./portfolio/portfolio.module.js";
+import { VerificationController } from "./verification/verification.controller.js";
+import { VerificationService } from "./verification/verification.service.js";
 
 @Module({
   imports: [PrismaModule, PortfolioModule],
-  controllers: [AppController, LifecycleController],
+  controllers: [AppController, LifecycleController, VerificationController],
   providers: [
     AppService,
     LifecycleService,
+    VerificationService,
     BullMqCompilationQueue,
     BullMqPreviewRunQueue,
     { provide: COMPILATION_QUEUE, useExisting: BullMqCompilationQueue },
