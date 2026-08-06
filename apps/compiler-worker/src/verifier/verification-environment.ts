@@ -185,6 +185,14 @@ export class VerificationEnvironment {
         "The isolated environment has not started.",
       );
     }
+    // A missing runner is a programming error, never a bounded result —
+    // otherwise a migration could report success without running anything.
+    if (!this.options.processRunner) {
+      throw new VerificationLifecycleError(
+        "process_runner_required",
+        "The migration runner is not configured.",
+      );
+    }
     const previewDirectory = posix.join(
       this.options.artifactRoot,
       ".preview-runs",
@@ -265,6 +273,14 @@ export class VerificationEnvironment {
         "The isolated environment has not started.",
       );
     }
+    // A missing client is a programming error, never a bounded result —
+    // otherwise every HTTP probe would silently report a dead endpoint.
+    if (!this.options.fetch) {
+      throw new VerificationLifecycleError(
+        "fetch_required",
+        "The HTTP client is not configured.",
+      );
+    }
     const controller = new AbortController();
     const timer = setTimeout(
       () => controller.abort(),
@@ -274,7 +290,7 @@ export class VerificationEnvironment {
     const portKey = port === "web" ? "webPort" : "apiPort";
     const url = `http://127.0.0.1:${this.startedPreview[portKey]}${path}`;
     try {
-      const response = await this.options.fetch?.(url, {
+      const response = await this.options.fetch(url, {
         method,
         signal: controller.signal,
       });

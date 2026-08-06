@@ -12,7 +12,10 @@ import {
 } from "@factory/graph";
 
 import type { executeCompilation } from "../compilation-executor.js";
-import { safeArtifactManifest } from "../preview-runner.js";
+import {
+  safeArtifactManifest,
+  type PreviewProcessRunner,
+} from "../preview-runner.js";
 import {
   VerificationEnvironment,
   VerificationLifecycleError,
@@ -52,6 +55,10 @@ export type VerificationLifecycleDependencies = {
   readonly executeCompilation: typeof executeCompilation;
   readonly startPreviewRun: VerificationEnvironmentOptions["startPreviewRun"];
   readonly stopPreviewRun: VerificationEnvironmentOptions["stopPreviewRun"];
+  /** The bounded process runner probes use; migrations never run without one. */
+  readonly processRunner: PreviewProcessRunner;
+  /** The bounded HTTP client probes use; requests never run without one. */
+  readonly fetch: typeof fetch;
   readonly runProbe: (
     entry: VerificationStepPlanEntry,
     environment: VerificationEnvironment,
@@ -282,6 +289,8 @@ export async function runVerificationLifecycle(
     operationTimeoutMs,
     startPreviewRun: dependencies.startPreviewRun,
     stopPreviewRun: dependencies.stopPreviewRun,
+    processRunner: dependencies.processRunner,
+    fetch: dependencies.fetch,
     nowMs,
   });
 
@@ -305,7 +314,7 @@ export async function runVerificationLifecycle(
     } else if (probeAborted) {
       step = skippedStep(
         entry,
-        "Probe was skipped after an earlier probe failed.",
+        "Probe was skipped after an earlier probe crashed.",
       );
     } else {
       const controller = new AbortController();

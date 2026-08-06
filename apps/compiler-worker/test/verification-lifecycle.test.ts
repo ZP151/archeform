@@ -113,6 +113,9 @@ function dependencies(
   return {
     artifactRoot: "generated",
     operationTimeoutMs: 1_000,
+    processRunner: vi.fn(async () => undefined),
+    fetch: (async () =>
+      new Response("{}", { status: 200 })) as unknown as typeof fetch,
     executeCompilation: vi.fn(async () => ({
       rootDirectory: "expense-approval-published-expense-approval",
       graphHash,
@@ -266,18 +269,88 @@ describe("runVerificationLifecycle", () => {
         return passedStep(entry.stepId, entry.kind);
       }),
     });
-    const evidence = await runVerificationLifecycle(validInput(), deps);
+    const evidence = await runVerificationLifecycle(
+      validInput({
+        stepPlan: [
+          { stepId: "migration", kind: "migration" },
+          { stepId: "health", kind: "health" },
+          { stepId: "api", kind: "api" },
+        ],
+      }),
+      deps,
+    );
 
     expect(deps.stopPreviewRun).toHaveBeenCalledTimes(1);
     expect(evidence.steps.map((step) => step.stepId)).toEqual([
       "migration",
       "health",
+      "api",
       "cleanup",
     ]);
     const crashed = evidence.steps[1];
     expect(crashed.status).toBe("failed");
     expect(crashed.failureCode).toBe("probe.crashed");
+    // Later probes are skipped after a crash — not after a plain failure —
+    // and the skip summary says so.
+    const skipped = evidence.steps[2];
+    expect(skipped.status).toBe("skipped");
+    expect(skipped.summary).toMatch(/crashed/i);
     expect(evidence.cleanup.succeeded).toBe(true);
+  });
+
+  it("forwards the injected process runner and HTTP client into the probe environment", async () => {
+    const processRunner = vi.fn(async () => undefined);
+    const fetchMock = vi.fn(async () => new Response("{}", { status: 200 }));
+    const deps = dependencies({
+      processRunner,
+      fetch: fetchMock as unknown as typeof fetch,
+      runProbe: vi.fn(async (entry, environment) => {
+        if (entry.kind === "migration") {
+          const migrated = await environment.migrate([
+            "npx",
+            "prisma",
+            "migrate",
+            "status",
+          ]);
+          expect(migrated.succeeded).toBe(true);
+        } else {
+          const status = await environment.request("GET", "/expenses");
+          expect(status.status).toBe(200);
+        }
+        return passedStep(entry.stepId, entry.kind);
+      }),
+    });
+    const evidence = await runVerificationLifecycle(validInput(), deps);
+
+    expect(evidence.steps.map((step) => step.stepId)).toEqual([
+      "migration",
+      "health",
+      "cleanup",
+    ]);
+    expect(evidence.cleanup.succeeded).toBe(true);
+    // The migration must run through the injected runner, pinned to the
+    // fixed compose exec shape — never a silent no-op.
+    expect(processRunner).toHaveBeenCalledWith(
+      expect.objectContaining({
+        file: "docker",
+        args: expect.arrayContaining([
+          "compose",
+          "exec",
+          "-T",
+          "migrate",
+          "npx",
+          "prisma",
+          "migrate",
+          "status",
+        ]),
+      }),
+      expect.any(AbortSignal),
+    );
+    // The HTTP probe must hit the isolated API through the injected client.
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:3001/expenses",
+      expect.anything(),
+    );
   });
 
   it("aborts a hanging probe at the lifecycle timeout, skips it, and still cleans up", async () => {
@@ -469,5 +542,19 @@ describe("VerificationEnvironment", () => {
       VerificationLifecycleError,
     );
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when the migration runner is not configured", async () => {
+    const { env } = environment({ processRunner: undefined });
+    await env.boot();
+    await expect(
+      env.migrate(["npx", "prisma", "migrate", "status"]),
+    ).rejects.toThrow(VerificationLifecycleError);
+  });
+
+  it("fails closed when the HTTP client is not configured", async () => {
+    const { env } = environment({ fetch: undefined });
+    await env.boot();
+    await expect(env.health()).rejects.toThrow(VerificationLifecycleError);
   });
 });

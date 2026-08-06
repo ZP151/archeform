@@ -31,7 +31,7 @@ leak, or cleanup failure returns the task to `implementing` with evidence.
 | Task | Deliverable                                        | State   | Target commit | Evidence |
 | ---- | -------------------------------------------------- | ------- | ------------- | -------- |
 | 1    | Verification/evidence/Draft-Diff contracts         | accepted | f804d67       | task review, QA, and release review each PASSed f804d67; worker baseline 81/81 |
-| 2    | Isolated lifecycle and cleanup                     | ready_for_qa | 9b954ea       | task review PASSed all code/test/security gates at 9b954ea (75/75 hostile probes); P1 citation repaired; focused 16/16; worker 97/97; graph 70/70 |
+| 2    | Isolated lifecycle and cleanup                     | ready_for_qa | 9b954ea       | task review PASSed all code gates at 9b954ea; QA FAILed P1 wiring → repaired (runner wiring); re-review pending; focused 19/19; worker 100/100; graph 70/70 |
 | 3    | Migration, API, role, denial, idempotency probes   | planned | —             | —        |
 | 4    | Deterministic diagnosis and constrained Draft Diff | planned | —             | —        |
 | 5    | Control Plane persistence and review APIs          | planned | —             | —        |
@@ -220,6 +220,43 @@ timeouts of subprocesses under docker compose are best-effort; `now`/`nowMs`
 are injectable for determinism in tests, production uses wall-clock. The
 lifecycle assumes the preview-runner guards it already validates (its full
 guard set is exercised by the worker baseline suite).
+
+**QA gate (independent, citing 9b954ea):** returned FAIL with one P1 and two
+P2s. P1 — functional wiring defect: `runVerificationLifecycle` never
+forwarded `processRunner`/`fetch` into `VerificationEnvironment`
+(`VerificationLifecycleDependencies` declared neither field), so inside any
+lifecycle run `migrate()` no-oped through `processRunner?.()` to
+`{succeeded: true}` — a migration probe could report PASSED without Docker
+ever running (silent false-positive evidence) — and `fetch?.()` was always
+undefined, so HTTP probes could never succeed. TypeScript excess-property
+checking forbade consumers from wiring runners in. P2s: (a) the crash-cascade
+skip summary said "after an earlier probe failed" but only crashes cascade —
+a `status: "failed"` step does not skip later probes; (b) runner-less
+`migrate()` silently succeeded while a missing `fetch` at least failed
+fail-ward (status 0). The QA verified the wiring gap empirically (Script B:
+migration "passed" with no runner; health got status 0) and proved the
+repaired composition works 13/13 with a simulated fix.
+
+**P1 repair round (QA finding):** repaired with TDD — three RED test groups
+added first and confirmed failing: (1) a lifecycle test whose probe calls
+`environment.migrate(...)`/`environment.request(...)` asserts the injected
+runner is invoked with the pinned `compose exec -T migrate` shape and the
+injected client hits `http://127.0.0.1:<apiPort>/expenses`; (2) environment
+fail-closed tests asserting runner-less `migrate()` and client-less
+`health()` throw `VerificationLifecycleError` instead of bounding;
+(3) the crash test extended to a three-probe plan asserting the later skip
+summary matches `/crashed/i`. Implementation: `VerificationLifecycleDependencies`
+gains required `processRunner: PreviewProcessRunner` and `fetch: typeof
+fetch` (compile-time enforcement — the false-pass class is impossible
+again), both forwarded to the environment constructor; the environment
+throws `process_runner_required`/`fetch_required` when either is
+unconfigured (programming errors are never bounded results); skip wording
+corrected to "after an earlier probe crashed." Regression: focused 19/19
+(4 new), worker 100/100 (81 baseline + 19), typecheck pass, lint pass, `git
+diff --check` clean; graph suite untouched (dist carries Task 1 contracts).
+Per the gate protocol the task returned to `implementing` with the QA
+evidence and re-advanced to `ready_for_qa` for re-review at the repaired
+commit.
 
 **Gates (independent, citing 9b954ea):** task review returned FAIL with one
 P1 — the Task 2 ledger record never cited 9b954ea (Target-commit column `—`,
