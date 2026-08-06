@@ -473,6 +473,21 @@ describe("VerificationEnvironment request fixtures", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("rejects credential-named headers even when the value is identifier-shaped", async () => {
+    // The name allowlist is the enforcement: a credential header name must
+    // never reach the isolated API even with a benign-shaped value.
+    const { fetchMock, env } = environment();
+    await env.boot();
+    for (const credentialName of ["authorization", "x-api-key", "cookie"]) {
+      await expect(
+        env.request("GET", "/api/expense", "api", {
+          headers: [{ name: credentialName, value: "BearerX" }],
+        }),
+      ).rejects.toThrow(VerificationLifecycleError);
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("rejects bodies that are not bounded flat declared JSON", async () => {
     const { fetchMock, env } = environment();
     await env.boot();

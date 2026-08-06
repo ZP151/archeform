@@ -63,11 +63,12 @@ const safeCommandToken = /^[a-zA-Z0-9._-]+$/;
 const maximumCommandTokens = 10;
 
 /**
- * Declared request headers are fixture data: an allowlisted lowercase name
- * (never a credential header) and an identifier-style value. The API role
- * header `x-factory-role` is the supported case.
+ * Declared request headers are fixture data: an explicitly allowlisted name
+ * (only the API role header `x-factory-role`) and an identifier-style value.
+ * A shape check would let credential-named headers through with benign-shaped
+ * values, so the name must match the allowlist exactly.
  */
-const safeHeaderName = /^[a-z][a-z0-9-]{0,63}$/;
+const allowedHeaderNames = new Set(["x-factory-role"]);
 const safeHeaderValue = /^[a-zA-Z0-9._-]{1,64}$/;
 const maximumDeclaredHeaders = 8;
 
@@ -356,9 +357,8 @@ export class VerificationEnvironment {
             (header) =>
               !header ||
               typeof header.name !== "string" ||
+              !allowedHeaderNames.has(header.name.toLowerCase()) ||
               typeof header.value !== "string" ||
-              !safeHeaderName.test(header.name) ||
-              header.name.toLowerCase() === "content-type" ||
               !safeHeaderValue.test(header.value),
           )
         ) {
