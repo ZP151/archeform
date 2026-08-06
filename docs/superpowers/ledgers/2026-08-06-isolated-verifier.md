@@ -32,7 +32,7 @@ leak, or cleanup failure returns the task to `implementing` with evidence.
 | ---- | -------------------------------------------------- | ------- | ------------- | -------- |
 | 1    | Verification/evidence/Draft-Diff contracts         | accepted | f804d67       | task review, QA, and release review each PASSed f804d67; worker baseline 81/81 |
 | 2    | Isolated lifecycle and cleanup                     | accepted | 9b954ea       | task review PASS (9b954ea, re-review 2a23b0b, P2s d01e5f3); QA FAIL P1 (9b954ea) then PASS (d01e5f3); release review PASS (f392446); focused 19/19; worker 100/100; graph 70/70 |
-| 3    | Migration, API, role, denial, idempotency probes   | reviewed | e58b5a6       | task review FAIL P2 (header names) repaired d652bfc, re-review PASS d652bfc; QA FAIL P1 (unreachable endpoints emitted httpStatus 0 → evidence contract rejected → probe.crashed) repaired de2e667, QA re-run PASS de2e667 (P1 symptom reproduced on old code, closed end-to-end; 147-check contract sweep; RED 5/27 → GREEN 27/27 + 20/20 lifecycle); worker 128/128; typecheck/lint clean; release review pending |
+| 3    | Migration, API, role, denial, idempotency probes   | accepted | fe50aca       | task review FAIL P2 (header names) repaired d652bfc, re-review PASS d652bfc; QA FAIL P1 (unreachable endpoints emitted httpStatus 0 → evidence contract rejected → probe.crashed) repaired de2e667, QA re-run PASS de2e667 (P1 symptom reproduced on old code, closed end-to-end; 147-check contract sweep; RED 5/27 → GREEN 27/27 + 20/20 lifecycle); worker 128/128; typecheck/lint clean; release review FAIL 2 P2s (plan checkboxes unchecked; residual-risk overstatement) remediated fe50aca, re-review PASS fe50aca; PM acceptance at fe50aca |
 | 4    | Deterministic diagnosis and constrained Draft Diff | planned | —             | —        |
 | 5    | Control Plane persistence and review APIs          | planned | —             | —        |
 | 6    | BullMQ integration and one profile acceptance      | planned | —             | —        |
@@ -452,6 +452,31 @@ therefore provide the fixture-session mechanism (an allowlist extension or a
 non-identity composition), not merely seed records, before success journeys
 can pass end-to-end; the registry entries are declared data and the end-to-end
 acceptance is Task 6's scope.
+
+**Release review round (FAIL at 200936f, remediated at fe50aca):** the release
+reviewer FAILed the gate with two P2 findings, both ledger/documentation
+accuracy issues (the delivered code was judged sound): (1) the plan Task 3
+checkboxes were unchecked — marked `[x]` at fe50aca; (2) the residual-risk
+paragraph overstated what is exercisable now — corrected at fe50aca to state
+that denial, migration, and health are exercisable while create/list/read
+SUCCESS journeys are not until Task 6 provides the fixture-session mechanism
+(header-allowlist extension or non-identity composition), not merely seeded
+records; `expense.read` also references unseeded `expense-fixture-01`. The
+re-review gate independently verified every factual claim in the corrected
+paragraph against the code at fe50aca (identity-policy requirement in both
+profiles, `x-factory-fixture-session` principal resolution with 403
+missing-session, `x-factory-role`-only header allowlist, no profile seeding
+`expense-fixture-01`) and returned PASS with zero findings (one informational
+note: denial probes assert only `status === 403`, so a session-gate 403
+satisfies them — accurate, not an overstatement).
+
+**PM acceptance (Task 3 accepted at fe50aca):** task review FAIL P2 → repaired
+d652bfc → re-review PASS; QA FAIL P1 → repaired de2e667 → re-run PASS; release
+review FAIL 2 P2s → remediated fe50aca → re-review PASS; all gates cite the
+same code commit chain e58b5a6/d652bfc/de2e667 with the docs remediation at
+fe50aca; focused 27/27 probes, 20/20 lifecycle, 128/128 worker, typecheck/lint
+clean, secret scan clean. Residual risk above is accepted and owned by Task 6.
+Task 3 recorded `accepted`.
 
 ## Gate protocol
 
