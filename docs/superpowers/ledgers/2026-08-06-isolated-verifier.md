@@ -830,6 +830,47 @@ against the compilation's `inputGraphHash` at the control-plane boundary —
 the contract's full cross-bind exists for the Task 6 worker and the plan's
 Task 5 interfaces do not demand it here. Release-review gate launched
 next.
+**Release-review gate (PASS at 4ad23f3):** the release reviewer ran the full
+sweep in a detached worktree at the exact gate hash (graph build/
+typecheck/lint clean, graph tests 102/102, prisma generate + validate clean,
+focused 31/31, full control-plane 145/145, control-plane typecheck/lint/
+build clean; migration DDL identical to `prisma migrate diff --from-empty
+--to-schema-datamodel`, 20 normalized statements) plus a 60/60 adversarial
+battery across 13 groups, including the release angles: affectedPaths
+naming an unrelated root does not redirect the mutation (mutation lands on
+the ops-named entity/field; traversal segments rejected at contract parse;
+path derivation is numeric-index + 3-value enum, re-gated by
+`assertPermittedDiffPath` — no caller string can reach a JSON pointer);
+type-constraint approvals (type "unique" -> draft_diff_rejected, type=true
+-> draft_diff_rejected, type "string" on an enum field persists a
+contract-valid graph — the graph package enforces no enum/value consistency
+rule, acceptable per mandate); persisted-key allowlist (persisted evidence
+keys exactly the 7 contract keys; diagnosis/draftDiff columns null when
+absent); 128/129-char and 400/401-char boundaries; missing cleanup and
+missing artifactDigests fail closed with nothing persisted (artifactDigests
+is contract-REQUIRED, not optional — reviewer's initial probe expectation
+was wrong, the service was right); 20 ops applied vs 21 ops rejected at
+parse; token guard compares sha256 digests via `timingSafeEqual` with
+constant 32-byte buffers (no length-timing leak); digest determinism under
+key-order shuffle; zero revisions created on every refusal. Hygiene: diff
+exactly the 9 claimed files, diff --check clean, `4ad23f3^..HEAD` = feature
+commit + three ledger/docs commits only; security vocabulary scan clean
+(test-only fixture strings, token read solely from
+process.env.FACTORY_INTERNAL_WORKER_TOKEN, .env gitignored); boundary
+surface exactly 4 routes / 4 service methods / 1 controller + 1 provider;
+plan Task 5 checkboxes all [x]; ledger complete. VERDICT PASS — P0/P1/P2
+none. Non-blocking notes accepted: (1) the baseline schema has NO tracked
+migration repo-wide (only 20260730_add_composition_lock ALTER + the new
+20260807_add_verification_run exist; identical state at parent) — pre-
+existing, out of Task 5 scope, provisioning via migrate dev/db push;
+recommend a baseline migration outside this program; (2) type "string" on
+an enum field persists a contract-valid graph (no enum/value consistency
+rule in the graph package) — worth Task 6 worker consideration; (3) no
+run-status gate on approval + advisory affectedPaths (accepted by plan);
+(4) artifactDigests contract-required, fail-closed; (5) concurrency worst
+case retryable DB-unique-violation 500, never corruption; (6)
+compilationDigest cross-bind belongs to the Task 6 worker (already
+recorded). PM acceptance launched next.
 
 ## Gate protocol
 
