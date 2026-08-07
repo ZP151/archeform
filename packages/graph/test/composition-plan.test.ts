@@ -669,4 +669,32 @@ describe("CompositionDecisionV1 and Draft-only application", () => {
       ).toThrow(CompositionError);
     }
   });
+
+  it("never echoes the offending key material in a rejection message", () => {
+    // The message may name the container, but never the material itself
+    // (NEW-1): a `__proto__` key or a full URL key must not appear verbatim.
+    function messageFor(value: unknown): string {
+      try {
+        parseCompositionPlan({
+          ...planFixture(),
+          proposedOperations: [
+            { op: "add", path: "/flow/flows/0/transitions/-", value },
+          ],
+        });
+      } catch (error) {
+        return error instanceof Error ? error.message : String(error);
+      }
+      throw new Error("expected the plan to be rejected");
+    }
+
+    const message = messageFor(
+      JSON.parse('{"__proto__":{"x":1}}'),
+    );
+    expect(message).toMatch(/carries unsafe material/);
+    expect(message).not.toContain("__proto__");
+
+    const urlMessage = messageFor({ "https://evil.example.com": "ingest" });
+    expect(urlMessage).toMatch(/carries unsafe material/);
+    expect(urlMessage).not.toContain("https://evil.example.com");
+  });
 });

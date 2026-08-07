@@ -117,8 +117,10 @@ function walkUnsafeValue(
       value as Record<string, unknown>,
     )) {
       // Object keys are material too: a `__proto__`, `constructor`, URL, or
-      // path key inside a value fails closed the same way a leaf would.
-      if (!unsafeMaterialPattern.test(key)) fail([...keyPath, key]);
+      // path key inside a value fails closed the same way a leaf would. The
+      // failing key itself is the offending material, so it must not be
+      // echoed into the message — only its container is named.
+      if (!unsafeMaterialPattern.test(key)) fail(keyPath);
       walkUnsafeValue(child, [...keyPath, key], fail);
     }
   }
