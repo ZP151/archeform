@@ -1,0 +1,10 @@
+{
+  "status": "verified",
+  "checks": [
+    "register-media-reference",
+    "append-capability-event",
+    "owner-entity-binding",
+    "file-field-binding",
+    "remove-effect"
+  ]
+}

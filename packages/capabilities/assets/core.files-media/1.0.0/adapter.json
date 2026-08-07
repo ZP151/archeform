@@ -1,0 +1,22 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": ["api.runtime", "flow.effect"],
+  "parameters": [
+    { "key": "mediaEntity", "type": "graph-symbol", "required": true },
+    { "key": "fileField", "type": "graph-symbol", "required": true }
+  ],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/core.files-media.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:f1611f5a2f48b0ccccbcb6e1842ace9edf5440e8bccd7b9a19552498cd5f2a87"
+    }
+  ],
+  "contributes": { "effects": ["files.media.register"] },
+  "disable": {
+    "removeIntegrationCapabilities": ["files.media.register"]
+  }
+}

@@ -651,6 +651,7 @@ describe("capability catalog", () => {
       "core.identity-policy",
       "core.policy-declarations",
       "core.location-context",
+      "core.files-media",
       "commerce.catalog",
       "commerce.cart",
       "commerce.line-configuration",
@@ -900,7 +901,7 @@ describe("capability catalog", () => {
   });
 
   it("verifies every registered capability manifest against its declared digest", () => {
-    expect(capabilityAssets).toHaveLength(50);
+    expect(capabilityAssets).toHaveLength(51);
     for (const asset of capabilityAssets) {
       expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     }

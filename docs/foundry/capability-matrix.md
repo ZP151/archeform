@@ -11,28 +11,29 @@ promotion requirement.
 
 ## Portfolio summary — 2026-08-08
 
-| Count | Value |
-| --- | --- |
-| Current families | 23 |
-| Eligible | 0 |
-| Quarantined | 23 |
-| Rejected | 0 |
+| Count            | Value |
+| ---------------- | ----- |
+| Current families | 24    |
+| Eligible         | 0     |
+| Quarantined      | 24    |
+| Rejected         | 0     |
 
-**Zero families are eligible today, by design**: every current family now
-declares the strict binding contract (Task 6 Batch 0 manifest repair), so
-none are rejected; all 23 are quarantined solely for lacking two
-independent Profile verifier locks. The matrix surfaces exactly this state
-so the remaining work is visible and accountable.
+**Zero families are eligible today, by design**: every current family
+declares the strict binding contract (Task 6 Batch 0 repaired the 23
+pre-existing manifests; Batch 1 declares it from birth), so none are
+rejected; all 24 are quarantined solely for lacking two independent
+Profile verifier locks. The matrix surfaces exactly this state so the
+remaining work is visible and accountable.
 
 ## Families by category
 
-| Category | Families |
-| --- | --- |
-| Core (8) | audit, crud, workflow, notification, identity-context, identity-policy, policy-declarations, location-context |
-| Commerce (9) | catalog, cart, line-configuration, money-pricing, inventory, inventory-ledger, order, order-operations, simulated-payment |
-| Restaurant (6) | table-session, menu, ordering, kitchen, cashier, reporting |
+| Category       | Families                                                                                                                   |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Core (9)       | audit, crud, workflow, notification, identity-context, identity-policy, policy-declarations, location-context, files-media |
+| Commerce (9)   | catalog, cart, line-configuration, money-pricing, inventory, inventory-ledger, order, order-operations, simulated-payment  |
+| Restaurant (6) | table-session, menu, ordering, kitchen, cashier, reporting                                                                 |
 
-## Quarantined — manifest requirements met, two-Profile proof outstanding (23)
+## Quarantined — manifest requirements met, two-Profile proof outstanding (24)
 
 All current families satisfy the manifest-side requirements (binding
 contract, verification state, fixtures, contract tests, output slots) and
@@ -40,6 +41,7 @@ are quarantined solely for lacking two independent Profile verifier locks:
 
 - core.audit
 - core.crud
+- core.files-media
 - core.notification
 - core.workflow
 - core.identity-context

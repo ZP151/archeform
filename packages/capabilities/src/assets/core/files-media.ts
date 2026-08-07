@@ -1,0 +1,57 @@
+import {
+  removeCapabilityOperations,
+  type CapabilityAssetV1,
+} from "../contract.js";
+
+export const filesMediaAssetV1_0_0: CapabilityAssetV1 = {
+  manifest: {
+    apiVersion: "factory.capability/v1",
+    bindingContract: "factory.capability-binding/v1",
+    key: "core.files-media",
+    version: "1.0.0",
+    category: "core",
+    name: "Files and media",
+    description:
+      "Registers file and media references against an owning domain entity.",
+    packageRoot: "packages/capabilities/assets/core.files-media/1.0.0",
+    manifestDigest:
+      "sha256:a90d13d99503659593a4fd9292b30015acc81b3b599c064266bf7333537c2539",
+    lifecycle: "golden",
+    profiles: [],
+    effects: ["files.media.register"],
+    inputSchema: [
+      { key: "mediaEntity", type: "domain.entity", required: true },
+      {
+        key: "fileField",
+        type: "domain.field",
+        required: true,
+        ownerBinding: "mediaEntity",
+        fieldTypes: ["string", "url"],
+      },
+    ],
+    outputSlots: ["api.runtime", "flow.effect"],
+    templates: [
+      {
+        id: "api-capability-module",
+        source: "templates/api/capability-module.ts.tpl",
+        target: "api/src/capabilities/core.files-media.ts",
+        outputSlot: "api.runtime",
+        digest:
+          "sha256:f1611f5a2f48b0ccccbcb6e1842ace9edf5440e8bccd7b9a19552498cd5f2a87",
+      },
+    ],
+    parameters: [
+      { key: "mediaEntity", type: "graph-symbol", required: true },
+      { key: "fileField", type: "graph-symbol", required: true },
+    ],
+    provides: [{ interfaceKey: "files.media", version: "v1" }],
+    verification: {
+      fixture: "fixtures/default.json",
+      contractTest: "tests/contract.json",
+      status: "verified",
+    },
+  },
+  disable(graph) {
+    removeCapabilityOperations(graph, ["files.media.register"]);
+  },
+};
