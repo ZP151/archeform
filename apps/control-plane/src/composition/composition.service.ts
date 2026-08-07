@@ -190,7 +190,19 @@ export class CompositionService {
       parseRequirementSpec,
       review.requirement,
     );
-    const outcome = this.planner.propose(requirement, baseDraft);
+    let outcome: PlanCompositionOutcomeV1;
+    try {
+      outcome = this.planner.propose(requirement, baseDraft);
+    } catch (error) {
+      // The provider is a constrained seam: its bounded failures surface as
+      // composition conflicts, never raw 500s, and nothing is persisted.
+      if (error instanceof CompositionError) {
+        throw new ConflictException(
+          `Composition planning failed: ${error.message}`,
+        );
+      }
+      throw error;
+    }
     if (outcome.kind === "clarification") {
       const clarification = CompositionService.parse(
         parseCompositionClarification,
