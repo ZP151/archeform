@@ -348,7 +348,6 @@ function operationsFor(
       fragment = null;
     }
     if (fragment === null) continue;
-    if (fragment === null) continue;
     const boundFlow = resolved.bindings.find(
       (binding) =>
         binding.capabilityKey === asset.manifest.key &&

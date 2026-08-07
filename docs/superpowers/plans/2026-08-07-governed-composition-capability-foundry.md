@@ -74,7 +74,8 @@
       breaking, and strict admission evidence checks.
 - [x] Run full `@factory/capabilities` tests, typecheck, lint, and build.
 - [x] Commit `feat(capabilities): add governed composition planner`
-      (`3c1848c`, with F1/F2 hardening at `e13bef1`).
+      (`3c1848c`, repaired at `64e954b1` — TRB-1/TRB-2 (QA F1/F2) closed;
+      capabilities 313/313).
 
 ### Task 3: Persist plan review and Draft-only application in the Control Plane
 
