@@ -192,6 +192,23 @@ fixture operations, multi-provider dependency closure, admission priority,
 digest known-answer). State: Train B `ready_for_qa` at `64e954b1`, pending
 re-verification task review before `reviewed`.
 
+### 2026-08-08 — Train B re-verification task review: two P2 notes repaired at `8bd6ff1`
+
+Re-verification task review at `64e954b1` confirmed both P1 repairs
+behaviorally (malformed-fixture clarification; multi-provider edges) and
+returned `TASK_REVIEW_FAIL` with two P2 notes. Per the state vocabulary,
+any P2 finding returns the owning item to `implementing`.
+
+| ID | Severity | Finding | Repair |
+| -- | -------- | ------- | ------ |
+| TRB-P2-1 | P2 | Plan Task 2 checkpoint misattributed Train B hardening to `e13bef1` (Train A's commit); the actual repair `64e954b1` was never referenced in the plan | Task 2 checkpoint now reads `3c1848c`, repaired at `64e954b1` — TRB-1/TRB-2 (QA F1/F2) closed; capabilities 313/313 |
+| TRB-P2-2 | P2 | Dead duplicate guard in `operationsFor`: `if (fragment === null) continue;` appears twice consecutively; the second branch is unreachable | Duplicate line deleted |
+
+Repair commit `8bd6ff1` (`fix(capabilities): remove dead planner guard;
+correct plan attribution`) — `@factory/capabilities` 313/313, Prettier
+lint green. Pushed; worktree clean. State: Train B `ready_for_qa` at
+`8bd6ff1`, pending re-verification gates before `reviewed`.
+
 ### 2026-08-08 — Task 3 (Train B) implemented: Control Plane plan review
 
 `CompositionReview` persistence (schema + handwritten migration), the
