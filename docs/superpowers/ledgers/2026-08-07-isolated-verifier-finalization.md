@@ -150,10 +150,15 @@ re-verified at the final remote-reachable commit `924bd5b`:
   ledger task table shows Tasks 1–4 completed). First re-close returned
   PM_REOPEN (procedural): the governance commit must cite the final
   remote-reachable commit `924bd5b`, record the acceptance re-run values,
-  and close with a clean worktree. Final re-close at this governance commit:
-  deterministic counts (Worker 163, Graph 103, Control Plane 150, Compiler
-  330), acceptance evidence consistent across ledger, expense doc, and
-  release doc, all gates closed at `924bd5b`, worktree clean — accepted.
+  and close with a clean worktree. Final verdict returned by the resumed PM
+  context on 2026-08-07: **PM_ACCEPT** — read-only verification confirmed
+  linear history (`4c70d2c` -> `41fae0f` -> `ee97b97` -> `765dd39` ->
+  `924bd5b` -> `219d254`), empty worktree, local = remote =
+  `219d254fd6673e36ae1894392282ed54df972b45`, `924bd5b` = 4 files (+55/−20)
+  and `219d254` = the six governance docs (+295/−38), deterministic counts
+  (Worker 163, Graph 103, Control Plane 150, Compiler 330), acceptance
+  evidence consistent across ledger, expense doc, and release doc, and the
+  release-doc path-prefix P2 fixed; zero open items at P0/P1/P2.
 
 ## Completion marker
 
