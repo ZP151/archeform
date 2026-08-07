@@ -776,5 +776,38 @@ describe("ApplicationGraphV1", () => {
         ],
       }),
     ).toThrow(GraphDiffError);
+
+    // `~1` escapes decode to a `/` inside the segment; the guard must reject
+    // the decoded prototype tokens, not only whole-segment matches.
+    for (const token of ["constructor", "prototype"]) {
+      expect(() =>
+        applyGraphDiffToDraft(draft, {
+          apiVersion: "factory.graph-diff/v1",
+          operations: [
+            { op: "add", path: `/page/~1${token}`, value: { injected: true } },
+          ],
+        }),
+      ).toThrow(GraphDiffError);
+    }
+  });
+
+  it("rejects integration-root alias add paths", () => {
+    const draft = createDraftRevision(expenseGraph, "draft-1");
+
+    // Empty, ".", and ".." segments cannot be validated Graph keys; alias
+    // paths that collapse onto the protected integration root must be
+    // rejected rather than silently absorbed.
+    for (const alias of [
+      "/integration/",
+      "/integration/.",
+      "/integration/..",
+    ]) {
+      expect(() =>
+        applyGraphDiffToDraft(draft, {
+          apiVersion: "factory.graph-diff/v1",
+          operations: [{ op: "add", path: alias, value: { injected: true } }],
+        }),
+      ).toThrow(GraphDiffError);
+    }
   });
 });

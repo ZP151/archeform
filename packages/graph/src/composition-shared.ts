@@ -39,12 +39,16 @@ export const compositionSurfaceSchema = z.enum([
  * `www` prefix remain allowed: they are inert text with legitimate placeholder
  * use (for example `example.com` in acceptance scenarios) and cannot be
  * confused with domain-qualified Factory identifiers such as
- * `graph.domain.expense`. Written as a positive assertion of safety (zod
- * `.regex()` requires the text to match) so the schema stays a ZodString and
- * consumers can still tighten `.max()` length limits.
+ * `graph.domain.expense`. Matching is case-insensitive and full-string
+ * `constructor`/`prototype` rejections tolerate leading and trailing
+ * whitespace (`Constructor`, `"constructor "`, `" prototype"`), while prose
+ * that merely mentions the words in context (for example "the prototype
+ * journey was reviewed") still passes. Written as a positive assertion of
+ * safety (zod `.regex()` requires the text to match) so the schema stays a
+ * ZodString and consumers can still tighten `.max()` length limits.
  */
 export const unsafeMaterialPattern =
-  /^(?!.*(?:(:\/\/)|(^\s*[\\/])|(\.\.[\\/])|([a-zA-Z]:[\\/])|((?<=\s)[\\/][^\s])|(^\s*$)|(__proto__)|(^constructor$)|(^prototype$)|((^|\s)(www\.))))/;
+  /^(?!.*(?:(:\/\/)|(^\s*[\\/])|(\.\.[\\/])|([a-zA-Z]:[\\/])|((?<=\s)[\\/][^\s])|(^\s*$)|(__proto__)|(^\s*(constructor|prototype)\s*$)|((^|\s)(www\.))))/i;
 
 export const safeBusinessTextSchema = z
   .string()

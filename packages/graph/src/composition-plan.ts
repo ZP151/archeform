@@ -195,21 +195,31 @@ function decodePointer(path: string): string[] {
 
 function assertSafeCompositionOperationPath(path: string): void {
   const segments = decodePointer(path);
-  // Check the decoded segments: `~1`-escaped pointers decode to `/`, so a
-  // path like `/page/~1__proto__` must be rejected after decoding, and any
-  // segment carrying prototype material is never legitimate Graph structure.
+  // Guard checks run over decoded segments: `~1`-escaped pointers decode to
+  // `/`, so prototype material must be detected per slash-decoded token
+  // (`/page/~1constructor` decodes to a segment carrying the `constructor`
+  // token) and every validated Graph key is a plain identifier, so a token
+  // carrying `__proto__` or an exact prototype key is never legitimate
+  // structure. Paths are also normalized before root checks: JSON Pointer
+  // may encode empty, `.`, or `..` segments, but no validated Graph key can
+  // be one, so alias paths such as `/integration/` or `/integration/.`
+  // cannot slip past the protected-subtree guards.
+  const tokens = segments.flatMap((segment) => segment.split("/"));
   if (
-    segments.some(
-      (segment) =>
-        segment.includes("__proto__") ||
-        ["constructor", "prototype"].includes(segment),
+    tokens.some(
+      (token) =>
+        token.includes("__proto__") ||
+        ["constructor", "prototype"].includes(token),
     )
   ) {
     throw new CompositionError(
       "Composition Diff paths cannot reference prototype keys.",
     );
   }
-  const [root, second] = segments;
+  const normalized = segments.filter(
+    (segment) => segment !== "" && segment !== "." && segment !== "..",
+  );
+  const [root, second] = normalized;
   if (!mutableRoots.has(root)) {
     throw new CompositionError(
       `Composition Diff path '${path}' is outside the mutable Application Graph.`,
