@@ -718,6 +718,29 @@ eligible, 27 quarantined (`fewer-than-two-profiles`), 0 rejected** —
 consistent with the honest position that no family claims two-Profile
 proof until real verifier evidence lands (Batch 2).
 
+### 2026-08-08 — Task 6 Batch 1 gate round: task review PASS, QA P1 pin repair
+
+The independent task review returned **TASK_REVIEW_PASS with zero findings**
+at `68bea3c5` (digests independently recomputed for all four families —
+manifest digest, template digest, adapter/component agreement; package
+verification, binding-key identity, no `message.template` pairing; matrix
+27/0/27/0 exact; capabilities 352/352; typecheck clean; tree clean; all five
+iteration commits remote-reachable).
+
+Behavioral QA returned **QA_REPAIR_REQUIRED with one P1 (QA-P1)** at the same
+commit: `apps/control-plane/src/portfolio/portfolio-summary.service.test.ts`
+pinned `capabilities: { golden: 23, lockedVersions: 50 }`, but the service
+derives the counts live from `@factory/capabilities` — Batch 1 legitimately
+moved the portfolio to 27 golden / 54 locked, so the suite was deterministically
+182/183 and the docs' "control-plane 183/183" claim was unreproducible. All
+other QA probes passed (7/7 behavioural and fail-closed probes, adversarial
+pairing/owner-binding boundaries, evidence self-check covers all 27 families,
+matrix counts exact and deep-frozen, 352/352 + 175/175 + 34/34 + typecheck,
+outbox runtime 1 pending drained / 1 delivered / safeFailure true, secret
+boundary clean). **Repaired** by updating the pin to 27/54 (test-only, no
+production code touched); control-plane re-verified **183/183 (17 files)** at
+the repair commit. Re-review of the repair is recorded with its disposition.
+
 ## Required evidence per promoted family
 
 | Evidence    | Required form                                                       |
