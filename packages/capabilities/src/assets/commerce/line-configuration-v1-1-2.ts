@@ -3,6 +3,7 @@ import type { CapabilityAssetV1 } from "../contract.js";
 export const lineConfigurationAssetV1_1_2: CapabilityAssetV1 = {
   manifest: {
     apiVersion: "factory.capability/v1",
+    bindingContract: "factory.capability-binding/v1",
     key: "commerce.line-configuration",
     version: "1.1.2",
     category: "commerce",
@@ -12,7 +13,7 @@ export const lineConfigurationAssetV1_1_2: CapabilityAssetV1 = {
     packageRoot:
       "packages/capabilities/assets/commerce.line-configuration/1.1.2",
     manifestDigest:
-      "sha256:4a31deb44d3b53a0d929154b4ac64ffeaac9e571126118811c269e1880293075",
+      "sha256:c1913c2b949728d859d363812476200ed57d57d992c7f6cd8d6b3ec90c9a2872",
     lifecycle: "golden",
     profiles: [
       "restaurant-ordering",

@@ -3,6 +3,7 @@ import type { CapabilityAssetV1 } from "../contract.js";
 export const orderAssetV1_2_0: CapabilityAssetV1 = {
   manifest: {
     apiVersion: "factory.capability/v1",
+    bindingContract: "factory.capability-binding/v1",
     key: "commerce.order",
     version: "1.2.0",
     category: "commerce",
@@ -10,7 +11,7 @@ export const orderAssetV1_2_0: CapabilityAssetV1 = {
     description: "Creates orders and applies declared order state transitions.",
     packageRoot: "packages/capabilities/assets/commerce.order/1.2.0",
     manifestDigest:
-      "sha256:505cf0f6435f1ad88d1b7fe2fae890483739d6acdc58339f7e11609824b1a34f",
+      "sha256:c8f5451b3144daac59ad589cb4e8483b5014c6c9cd98a4bc3e7b23577cb56f77",
     lifecycle: "golden",
     profiles: [
       "restaurant-ordering",
@@ -21,6 +22,7 @@ export const orderAssetV1_2_0: CapabilityAssetV1 = {
     effects: ["order.create", "order.transition"],
     inputSchema: [
       { key: "orderEntity", type: "domain.entity", required: true },
+      { key: "orderFlow", type: "flow.flow", required: true },
     ],
     outputSlots: [
       "api.runtime",

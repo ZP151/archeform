@@ -240,17 +240,16 @@ describe("buildFoundryMatrix", () => {
 
   it("reports the declared registry honestly with zero eligible families", () => {
     // Default inputs: the 23 current families with their declared records.
-    // The matrix claims nothing the evidence does not prove: no family has
-    // two-Profile locks yet, and 14 current manifests have not declared a
-    // binding contract at all, so the honest verdict is zero eligible — 9
-    // quarantined for missing two-Profile proof, 14 rejected for a missing
-    // binding contract (a manifest-readiness gap Task 6 must repair). The
-    // matrix exists to surface exactly this split.
+    // The matrix claims nothing the evidence does not prove: every current
+    // manifest now declares a binding contract (Task 6 Batch 0 repaired all
+    // 23), but no family has two-Profile locks yet, so the honest verdict is
+    // zero eligible — all 23 quarantined for missing two-Profile proof, none
+    // rejected. The matrix exists to surface exactly this split.
     const matrix = buildFoundryMatrix();
     expect(matrix.counts.currentFamilies).toBe(23);
     expect(matrix.counts.eligible).toBe(0);
-    expect(matrix.counts.quarantined).toBe(9);
-    expect(matrix.counts.rejected).toBe(14);
+    expect(matrix.counts.quarantined).toBe(23);
+    expect(matrix.counts.rejected).toBe(0);
     expect(matrix.counts.missingEvidence).toBe(0);
     expect(matrix.counts.staleEvidence).toBe(0);
     expect(matrix.counts.duplicateEvidence).toBe(0);
@@ -273,36 +272,37 @@ describe("buildFoundryMatrix", () => {
           row.reasonCodes[0] === "missing-binding-contract",
       ),
     ).toBe(true);
-    // Pin the exact split: the 9 families that satisfy the manifest contract
-    // today, and the 14 that do not. A manifest repair moves a family from
-    // the rejected set into quarantine — the counts tripwire catches it.
+    // Pin the exact split: all 23 current families satisfy the manifest
+    // contract after the Task 6 Batch 0 repair (every manifest declares a
+    // binding contract), so the whole set is quarantined for missing
+    // two-Profile proof and nothing is rejected. The counts tripwire catches
+    // a manifest regression moving a family into rejection.
     expect(quarantined.map((row) => row.key).sort()).toEqual([
-      "commerce.money-pricing",
-      "commerce.order-operations",
-      "core.identity-policy",
-      "core.policy-declarations",
-      "restaurant.cashier",
-      "restaurant.kitchen",
-      "restaurant.ordering",
-      "restaurant.reporting",
-      "restaurant.table-session",
-    ]);
-    expect(rejected.map((row) => row.key).sort()).toEqual([
       "commerce.cart",
       "commerce.catalog",
       "commerce.inventory",
       "commerce.inventory-ledger",
       "commerce.line-configuration",
+      "commerce.money-pricing",
       "commerce.order",
+      "commerce.order-operations",
       "commerce.simulated-payment",
       "core.audit",
       "core.crud",
       "core.identity-context",
+      "core.identity-policy",
       "core.location-context",
       "core.notification",
+      "core.policy-declarations",
       "core.workflow",
+      "restaurant.cashier",
+      "restaurant.kitchen",
       "restaurant.menu",
+      "restaurant.ordering",
+      "restaurant.reporting",
+      "restaurant.table-session",
     ]);
+    expect(rejected).toEqual([]);
   });
 
   it("deep-freezes the matrix output so callers cannot rewrite verdicts", () => {

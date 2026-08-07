@@ -7,6 +7,7 @@ import {
 export const auditAssetV1_0_2: CapabilityAssetV1 = {
   manifest: {
     apiVersion: "factory.capability/v1",
+    bindingContract: "factory.capability-binding/v1",
     key: "core.audit",
     version: "1.0.2",
     category: "core",
@@ -15,11 +16,11 @@ export const auditAssetV1_0_2: CapabilityAssetV1 = {
       "Records actor, action, subject, and immutable timestamp evidence.",
     packageRoot: "packages/capabilities/assets/core.audit/1.0.2",
     manifestDigest:
-      "sha256:e3b0137460e6c1b2a156b97a972623db656ce294c54c8913b4c3c43155828e7a",
+      "sha256:e1bddb2e6f5874f29be6e64a363ed14be5f913e5723f0e21612584c1a1f65b52",
     lifecycle: "golden",
     profiles: ["expense-approval", "restaurant-ordering", "simple-ecommerce"],
     effects: ["audit.record"],
-    inputSchema: [{ key: "retention", type: "duration", required: false }],
+    inputSchema: [{ key: "actorRole", type: "policy.role", required: true }],
     outputSlots: ["api.runtime", "policy.rule", "test.fixture", "flow.effect"],
     templates: [
       {

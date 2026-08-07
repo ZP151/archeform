@@ -1,17 +1,27 @@
 {
   "apiVersion": "factory.capability/v1",
+  "bindingContract": "factory.capability-binding/v1",
   "key": "core.notification",
   "version": "1.1.1",
   "category": "core",
   "name": "Notifications",
   "description": "Persists durable notification intents with declared templates for deterministic local delivery.",
   "packageRoot": "packages/capabilities/assets/core.notification/1.1.1",
-  "manifestDigest": "sha256:9258e7686b55c69dcafdc8d4d4e7484da527dae56134b25629855cca3df8b8d4",
+  "manifestDigest": "sha256:207eaa0fd719013129ba84bd8f66f82219b619ee1f5c9e2d4e3d896c339e6132",
   "lifecycle": "golden",
   "profiles": ["expense-approval", "restaurant-ordering", "simple-ecommerce"],
   "effects": ["notification.send"],
   "inputSchema": [
-    { "key": "template", "type": "message.template", "required": false }
+    {
+      "key": "recipientRole",
+      "type": "policy.role",
+      "required": true
+    },
+    {
+      "key": "template",
+      "type": "message.template",
+      "required": false
+    }
   ],
   "outputSlots": [
     "api.runtime",
@@ -30,7 +40,11 @@
     }
   ],
   "parameters": [
-    { "key": "recipientRole", "type": "graph-symbol", "required": true },
+    {
+      "key": "recipientRole",
+      "type": "graph-symbol",
+      "required": true
+    },
     {
       "key": "template",
       "type": "enum",
@@ -38,7 +52,12 @@
       "values": ["expense.approval-outcome", "ecommerce.order-outcome"]
     }
   ],
-  "provides": [{ "interfaceKey": "notification.outbox", "version": "v1" }],
+  "provides": [
+    {
+      "interfaceKey": "notification.outbox",
+      "version": "v1"
+    }
+  ],
   "verification": {
     "fixture": "fixtures/default.json",
     "fixtureDigest": "sha256:60466a2c1fb5d4dba4900ecbc38d9ae5a79c106c5edd35a160fae3a690875d4e",

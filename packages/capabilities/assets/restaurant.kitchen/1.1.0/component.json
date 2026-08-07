@@ -17,10 +17,26 @@
     "kitchen.ticket.ready"
   ],
   "inputSchema": [
-    { "key": "ticketEntity", "type": "domain.entity", "required": true },
-    { "key": "orderEntity", "type": "domain.entity", "required": true },
-    { "key": "kitchenPage", "type": "page.page", "required": true },
-    { "key": "merchantRole", "type": "policy.role", "required": true }
+    {
+      "key": "ticketEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "orderEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "kitchenPage",
+      "type": "page.page",
+      "required": true
+    },
+    {
+      "key": "merchantRole",
+      "type": "policy.role",
+      "required": true
+    }
   ],
   "outputSlots": [
     "api.runtime",
@@ -41,10 +57,26 @@
     }
   ],
   "parameters": [
-    { "key": "ticketEntity", "type": "graph-symbol", "required": true },
-    { "key": "orderEntity", "type": "graph-symbol", "required": true },
-    { "key": "kitchenPage", "type": "graph-symbol", "required": true },
-    { "key": "merchantRole", "type": "graph-symbol", "required": true }
+    {
+      "key": "ticketEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "orderEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "kitchenPage",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "merchantRole",
+      "type": "graph-symbol",
+      "required": true
+    }
   ],
   "verification": {
     "fixture": "fixtures/default.json",

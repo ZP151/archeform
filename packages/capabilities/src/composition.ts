@@ -96,6 +96,9 @@ const supportedBindingInputTypes = new Set<CapabilityBindingInputTypeV1>([
   "flow.flow",
   "integration.provider",
   "experience.token",
+  // Value-selection input: its value domain is bounded by the manifest's own
+  // enum parameter values, so a caller can never inject an arbitrary choice.
+  "message.template",
 ]);
 const supportedBindingFieldTypes = new Set<CapabilityBindingFieldTypeV1>([
   "string",
@@ -1056,9 +1059,26 @@ function validateStrictContractAlignment(
         `Capability package '${manifest.key}' parameter '${key}' required flag must match inputSchema.`,
       );
     }
+    if (parameter.type === "enum") {
+      // Bounded enum parameters are contract-legal under the strict binding
+      // contract: their allowed values are declared in the manifest itself,
+      // so no caller can inject an arbitrary selection. They pair only with
+      // message.template binding inputs (the value-selection input type).
+      if (bindingSchema.type !== "message.template") {
+        throw new Error(
+          `Capability package '${manifest.key}' enum parameter '${key}' must pair with a message.template binding input.`,
+        );
+      }
+      continue;
+    }
     if (parameter.type !== "graph-symbol") {
       throw new Error(
         `Capability package '${manifest.key}' typed binding parameter '${key}' must use graph-symbol.`,
+      );
+    }
+    if (bindingSchema.type === "message.template") {
+      throw new Error(
+        `Capability package '${manifest.key}' graph-symbol parameter '${key}' must not pair with a message.template binding input.`,
       );
     }
   }

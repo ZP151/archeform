@@ -12,14 +12,47 @@
   "profiles": ["restaurant-ordering", "simple-ecommerce"],
   "effects": ["pricing.quote", "pricing.snapshot", "payment.refund.allocate"],
   "inputSchema": [
-    { "key": "orderEntity", "type": "domain.entity", "required": true },
-    { "key": "orderLineEntity", "type": "domain.entity", "required": true },
-    { "key": "catalogEntity", "type": "domain.entity", "required": true },
-    { "key": "priceField", "type": "domain.field", "ownerBinding": "catalogEntity", "fieldTypes": ["decimal"], "fieldRequired": true, "required": true },
-    { "key": "customerRole", "type": "policy.role", "required": true },
-    { "key": "merchantRole", "type": "policy.role", "required": true }
+    {
+      "key": "orderEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "orderLineEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "catalogEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "priceField",
+      "type": "domain.field",
+      "ownerBinding": "catalogEntity",
+      "fieldTypes": ["decimal"],
+      "fieldRequired": true,
+      "required": true
+    },
+    {
+      "key": "customerRole",
+      "type": "policy.role",
+      "required": true
+    },
+    {
+      "key": "merchantRole",
+      "type": "policy.role",
+      "required": true
+    }
   ],
-  "outputSlots": ["api.runtime", "database.schema", "database.migration", "flow.effect", "test.fixture"],
+  "outputSlots": [
+    "api.runtime",
+    "database.schema",
+    "database.migration",
+    "flow.effect",
+    "test.fixture"
+  ],
   "runtimeHandlers": ["moneyPricing"],
   "templates": [
     {
@@ -57,21 +90,60 @@
     }
   ],
   "parameters": [
-    { "key": "orderEntity", "type": "graph-symbol", "required": true },
-    { "key": "orderLineEntity", "type": "graph-symbol", "required": true },
-    { "key": "catalogEntity", "type": "graph-symbol", "required": true },
-    { "key": "priceField", "type": "graph-symbol", "required": true },
-    { "key": "customerRole", "type": "graph-symbol", "required": true },
-    { "key": "merchantRole", "type": "graph-symbol", "required": true }
+    {
+      "key": "orderEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "orderLineEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "catalogEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "priceField",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "customerRole",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "merchantRole",
+      "type": "graph-symbol",
+      "required": true
+    }
   ],
   "requires": [
-    { "interfaceKey": "commerce.catalog-item", "version": "v1" },
-    { "interfaceKey": "commerce.order-operations", "version": "v1" }
+    {
+      "interfaceKey": "commerce.catalog-item",
+      "version": "v1"
+    },
+    {
+      "interfaceKey": "commerce.order-operations",
+      "version": "v1"
+    }
   ],
   "provides": [
-    { "interfaceKey": "commerce.price-quote", "version": "v1" },
-    { "interfaceKey": "commerce.price-snapshot", "version": "v1" },
-    { "interfaceKey": "commerce.refund-allocation", "version": "v1" }
+    {
+      "interfaceKey": "commerce.price-quote",
+      "version": "v1"
+    },
+    {
+      "interfaceKey": "commerce.price-snapshot",
+      "version": "v1"
+    },
+    {
+      "interfaceKey": "commerce.refund-allocation",
+      "version": "v1"
+    }
   ],
   "verification": {
     "fixture": "fixtures/default.json",

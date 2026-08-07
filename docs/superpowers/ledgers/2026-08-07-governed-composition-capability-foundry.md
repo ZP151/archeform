@@ -567,6 +567,62 @@ Foundry evidence matrix is the deterministic promotion authority: zero
 families are claimed eligible until real two-Profile verifier evidence and
 the Task 6 manifest repairs land. Train C is `reviewed`.
 
+### 2026-08-08 — Task 6 Batch 0 implemented: manifest readiness repair
+
+**The Task 6 Batch 0 manifest repair lands** (all 23 current families now
+declare the strict `factory.capability-binding/v1` contract):
+
+- **Contract extension (generic, capability-agnostic):** `composition.ts`
+  gained one bounded value-selection input type (`message.template`),
+  paired with manifest-declared enum parameters whose allowed values are
+  bounded by the manifest itself — so no caller can inject an arbitrary
+  selection. Graph-symbol parameters reject `message.template` pairing.
+  Bounded enum parameters pair only with `message.template`.
+- **Manifest conformance:** all 23 manifests satisfy the strict contract —
+  parameters/inputSchema key-identity, `domain.field` owners with declared
+  field types, and the declared `domain.entity`/`page.page`/`policy.role`/
+  `flow.flow` shapes. `restaurant.menu` gained its mirror parameters;
+  `core.notification` gained its `recipientRole` input; the 11 previously
+  non-conforming families were aligned 1:1.
+- **Binding values:** profile bindings for `domain.field` parameters now
+  carry the owning entity symbol plus `fieldKey` (`stock`/`code`), matching
+  the shape the compiler renderer already substituted (`{{fieldKey}}`
+  generated output is byte-identical).
+- **Digests recomputed and re-synced:** all 23 `manifestDigest` values
+  recomputed (canonical JSON minus digest) and re-pinned in the TS assets,
+  on-disk `component.json` packages, and the 14 declared evidence records
+  in `foundry-evidence.ts`. The package-local `restaurant.menu` adapter.json
+  gained its parameters slice.
+
+**Observed results:** capabilities suite repaired from 101 failed to
+**329/329 passing**; the five remaining failures after the binding repair
+were all honest pin updates (composition-planner digest, foundry-matrix
+quarantine split 9+14 → 23+0, overlap test supplied valid menu bindings so
+the undeclared-provider overlap — `inventory.adjust` — remains the reason
+for rejection, and the menu adapter parameters slice). Foundry matrix now
+reports the honest post-repair state: **zero eligible, 23 quarantined
+(`fewer-than-two-profiles`), 0 rejected** — no family claims two-Profile
+proof until real verifier evidence lands (Batch 2).
+
+**Workspace regression:** graph, capabilities, compiler, compiler-worker
+(163/163 incl. the four published order-operations compilations),
+control-plane, adapters, external-intake, intake-cli, and portfolio-public
+build and test green (7 test tasks replayed from turbo cache — inputs
+unchanged); the generated-notification-outbox runtime verification passes
+(1 pending drained, 1 delivered — `bindings.template` runtime consumption
+intact). Two workbench issues are verified **pre-existing** (both
+reproduced in a scratch worktree at the accepted Task 5 HEAD `e9a09241`
+with zero Batch 0 changes): the Next.js production build fails on this
+machine with `UnhandledSchemeError: node:crypto`, and one workbench Home
+test (fetch-mocked, no capabilities dependency) timed out at 5 s under the
+10-package concurrent suite with a Windows tinypool `kill EPERM` teardown
+crash — the workbench suite passes 73/73 when run alone. Repo-wide
+`format:check` reports 110 pre-existing prettier drift files (tooling
+under `.agents/`); the 47-file Batch 0 change set is prettier-clean with
+zero overlap. The isolated-verifier expense record pins pre-repair digests
+by design; Batch 2 re-runs the Docker verifier loop and regenerates the
+evidence records.
+
 ## Required evidence per promoted family
 
 | Evidence    | Required form                                                       |

@@ -235,6 +235,40 @@ records Train C Task 5 `ready_for_qa -> reviewed`. Suites at final state:
 capabilities 329/329 (24 files), graph 175/175, control-plane 183/183,
 typecheck, Prettier, and build green.
 
+Train D Task 6 Batch 0 (manifest readiness repair) is implemented at the
+pending commit, closing the exact gap Task 5 recorded: all 23 current
+families now declare the strict `factory.capability-binding/v1` contract.
+`composition.ts` gained one generic bounded value-selection input type
+(`message.template`) paired only with manifest-declared enum parameters —
+the manifest bounds the allowed values, so a caller can never inject an
+arbitrary selection; graph-symbol parameters reject that pairing. Every
+manifest's parameters and inputSchema agree key-for-key with matching
+required flags; `domain.field` inputs declare owning entity and field
+types; profile bindings for field parameters carry the owning entity
+symbol plus `fieldKey` (compiler output stays byte-identical); and all 23
+manifest digests were recomputed and re-pinned across the TS assets,
+on-disk `component.json` packages, the `restaurant.menu` adapter.json
+parameters slice, and the 14 declared evidence records. Observed results:
+capabilities suite repaired from 101 failing to **329/329** (24 files);
+the five residual failures were honest pin updates, including the
+foundry-matrix split now reporting **zero eligible — 23 quarantined
+(`fewer-than-two-profiles`), 0 rejected**. Compiler (money-pricing runtime
+4/4 incl. the out-of-binding quote rejection), compiler-worker 163/163
+(16 files, incl. the four published order-operations compilations),
+generated-notification-outbox runtime verification, third-party notices,
+and source-study checks all green; 7 test tasks replayed from turbo cache
+(inputs unchanged). Two workbench issues are verified pre-existing
+(reproduced in a scratch worktree at the accepted Task 5 HEAD `e9a09241`
+with zero Batch 0 changes): the Next.js production build's
+`UnhandledSchemeError: node:crypto`, and one fetch-mocked Home test
+timing out at 5 s under the concurrent suite (Windows tinypool
+`kill EPERM` teardown crash); workbench tests pass 73/73 alone. The
+repo-wide `format:check` 110-file prettier drift is pre-existing tooling
+files with zero overlap on the 47-file Batch 0 change set (which is
+prettier-clean). Batch 1 adds new capability families toward 25–35;
+Batch 2 re-runs the isolated verifier and regenerates the evidence
+records whose digest pins are stale by design.
+
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including
 Preview stop and cleanup. This is not production readiness and does not alter

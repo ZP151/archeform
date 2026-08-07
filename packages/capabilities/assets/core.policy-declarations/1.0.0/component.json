@@ -36,7 +36,12 @@
       "digest": "sha256:05c687edf087fa7d2c91b4f1e2cebb2fd0d8c543234017ee735bc28f7cd67bae"
     }
   ],
-  "provides": [{ "interfaceKey": "policy.resource-action", "version": "v1" }],
+  "provides": [
+    {
+      "interfaceKey": "policy.resource-action",
+      "version": "v1"
+    }
+  ],
   "verification": {
     "fixture": "fixtures/default.json",
     "fixtureDigest": "sha256:c8aab600ba976a92a0281d1a1458867f5d21af5046a85b1a38f713ef35e319d5",

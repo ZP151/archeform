@@ -17,10 +17,26 @@
     "table-session.expire"
   ],
   "inputSchema": [
-    { "key": "tableEntity", "type": "domain.entity", "required": true },
-    { "key": "sessionEntity", "type": "domain.entity", "required": true },
-    { "key": "entryPage", "type": "page.page", "required": true },
-    { "key": "customerRole", "type": "policy.role", "required": true }
+    {
+      "key": "tableEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "sessionEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "entryPage",
+      "type": "page.page",
+      "required": true
+    },
+    {
+      "key": "customerRole",
+      "type": "policy.role",
+      "required": true
+    }
   ],
   "outputSlots": [
     "api.runtime",
@@ -41,10 +57,26 @@
     }
   ],
   "parameters": [
-    { "key": "tableEntity", "type": "graph-symbol", "required": true },
-    { "key": "sessionEntity", "type": "graph-symbol", "required": true },
-    { "key": "entryPage", "type": "graph-symbol", "required": true },
-    { "key": "customerRole", "type": "graph-symbol", "required": true }
+    {
+      "key": "tableEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "sessionEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "entryPage",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "customerRole",
+      "type": "graph-symbol",
+      "required": true
+    }
   ],
   "verification": {
     "fixture": "fixtures/default.json",

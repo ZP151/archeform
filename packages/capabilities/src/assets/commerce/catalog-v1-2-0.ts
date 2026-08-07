@@ -3,6 +3,7 @@ import type { CapabilityAssetV1 } from "../contract.js";
 export const catalogAssetV1_2_0: CapabilityAssetV1 = {
   manifest: {
     apiVersion: "factory.capability/v1",
+    bindingContract: "factory.capability-binding/v1",
     key: "commerce.catalog",
     version: "1.2.0",
     category: "commerce",
@@ -10,7 +11,7 @@ export const catalogAssetV1_2_0: CapabilityAssetV1 = {
     description: "Lists and reads declared purchasable catalog records.",
     packageRoot: "packages/capabilities/assets/commerce.catalog/1.2.0",
     manifestDigest:
-      "sha256:653150e5a08eb78a97ca36128e2c24e59e3550e275038e16b4b92fc15268b70d",
+      "sha256:9819588b9b59c13a80a561c91ee1f14ebf73bbde16c3504f2de52e41934a8fcc",
     lifecycle: "golden",
     profiles: [
       "restaurant-ordering",
@@ -21,6 +22,8 @@ export const catalogAssetV1_2_0: CapabilityAssetV1 = {
     effects: ["catalog.list", "catalog.read"],
     inputSchema: [
       { key: "catalogEntity", type: "domain.entity", required: true },
+      { key: "catalogPage", type: "page.page", required: true },
+      { key: "customerRole", type: "policy.role", required: true },
     ],
     outputSlots: [
       "api.runtime",

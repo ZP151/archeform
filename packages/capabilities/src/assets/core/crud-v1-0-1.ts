@@ -3,6 +3,7 @@ import type { CapabilityAssetV1 } from "../contract.js";
 export const crudAssetV1_0_1: CapabilityAssetV1 = {
   manifest: {
     apiVersion: "factory.capability/v1",
+    bindingContract: "factory.capability-binding/v1",
     key: "core.crud",
     version: "1.0.1",
     category: "core",
@@ -11,11 +12,14 @@ export const crudAssetV1_0_1: CapabilityAssetV1 = {
       "Creates, reads, updates, and deletes validated domain records.",
     packageRoot: "packages/capabilities/assets/core.crud/1.0.1",
     manifestDigest:
-      "sha256:ac6197b00e529f519f1b062c9189a368eb9b94be125444a7c2f90cec46200f26",
+      "sha256:1a15e681745571572da2491f32db38224ccf8948fb51d14abe312dd3f722e97a",
     lifecycle: "golden",
     profiles: ["expense-approval", "restaurant-ordering", "simple-ecommerce"],
     effects: ["data.create", "data.read", "data.update", "data.delete"],
-    inputSchema: [{ key: "entities", type: "domain.entities", required: true }],
+    inputSchema: [
+      { key: "entityKey", type: "domain.entity", required: true },
+      { key: "routeKey", type: "page.page", required: true },
+    ],
     outputSlots: [
       "api.runtime",
       "database.schema",

@@ -1,12 +1,13 @@
 {
   "apiVersion": "factory.capability/v1",
+  "bindingContract": "factory.capability-binding/v1",
   "key": "commerce.line-configuration",
   "version": "1.1.2",
   "category": "commerce",
   "name": "Line configuration",
   "description": "Selects bounded product options, derives price snapshots on the server, and rejects unavailable combinations.",
   "packageRoot": "packages/capabilities/assets/commerce.line-configuration/1.1.2",
-  "manifestDigest": "sha256:4a31deb44d3b53a0d929154b4ac64ffeaac9e571126118811c269e1880293075",
+  "manifestDigest": "sha256:c1913c2b949728d859d363812476200ed57d57d992c7f6cd8d6b3ec90c9a2872",
   "lifecycle": "golden",
   "profiles": [
     "restaurant-ordering",
@@ -23,14 +24,46 @@
     "catalog.option.select"
   ],
   "inputSchema": [
-    { "key": "catalogEntity", "type": "domain.entity", "required": true },
-    { "key": "lineEntity", "type": "domain.entity", "required": true },
-    { "key": "optionGroupEntity", "type": "domain.entity", "required": true },
-    { "key": "optionEntity", "type": "domain.entity", "required": true },
-    { "key": "customerRole", "type": "policy.role", "required": true },
-    { "key": "merchantRole", "type": "policy.role", "required": true },
-    { "key": "catalogPage", "type": "page.page", "required": true },
-    { "key": "merchantPage", "type": "page.page", "required": true }
+    {
+      "key": "catalogEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "lineEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "optionGroupEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "optionEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "customerRole",
+      "type": "policy.role",
+      "required": true
+    },
+    {
+      "key": "merchantRole",
+      "type": "policy.role",
+      "required": true
+    },
+    {
+      "key": "catalogPage",
+      "type": "page.page",
+      "required": true
+    },
+    {
+      "key": "merchantPage",
+      "type": "page.page",
+      "required": true
+    }
   ],
   "outputSlots": [
     "api.runtime",
@@ -50,20 +83,63 @@
     }
   ],
   "parameters": [
-    { "key": "catalogEntity", "type": "graph-symbol", "required": true },
-    { "key": "lineEntity", "type": "graph-symbol", "required": true },
-    { "key": "optionGroupEntity", "type": "graph-symbol", "required": true },
-    { "key": "optionEntity", "type": "graph-symbol", "required": true },
-    { "key": "customerRole", "type": "graph-symbol", "required": true },
-    { "key": "merchantRole", "type": "graph-symbol", "required": true },
-    { "key": "catalogPage", "type": "graph-symbol", "required": true },
-    { "key": "merchantPage", "type": "graph-symbol", "required": true }
+    {
+      "key": "catalogEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "lineEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "optionGroupEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "optionEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "customerRole",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "merchantRole",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "catalogPage",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "merchantPage",
+      "type": "graph-symbol",
+      "required": true
+    }
   ],
   "requires": [
-    { "interfaceKey": "commerce.catalog-item", "version": "v1" },
-    { "interfaceKey": "core.location-context", "version": "v1" }
+    {
+      "interfaceKey": "commerce.catalog-item",
+      "version": "v1"
+    },
+    {
+      "interfaceKey": "core.location-context",
+      "version": "v1"
+    }
   ],
-  "provides": [{ "interfaceKey": "commerce.configured-line", "version": "v1" }],
+  "provides": [
+    {
+      "interfaceKey": "commerce.configured-line",
+      "version": "v1"
+    }
+  ],
   "verification": {
     "fixture": "fixtures/default.json",
     "fixtureDigest": "sha256:5fe47a2349951bf1c244c8f4de820570225a92160fed0ab14e53a27c8bc4068b",

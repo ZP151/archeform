@@ -228,6 +228,27 @@ with no findings at `0ce7899b` (task review TASK_REVIEW_PASS; QA_PASS
 35/35) and the PM records Train C Task 5 `ready_for_qa -> reviewed`
 (capabilities 329/329, graph 175/175, control-plane 183/183).
 
+Train D Task 6 Batch 0 (manifest readiness repair) is implemented at the
+pending commit: all 23 current families now declare the strict
+`factory.capability-binding/v1` contract. `composition.ts` gained one
+generic bounded input type (`message.template`, paired only with
+manifest-declared enum parameters whose values the manifest itself bounds —
+no caller can inject an arbitrary selection); every manifest's parameters
+and inputSchema now agree key-for-key with required flags; `domain.field`
+inputs declare their owning entity and field types; profile bindings carry
+the owning entity symbol plus `fieldKey` (compiler-rendered output stays
+byte-identical); and all 23 manifest digests were recomputed and re-pinned
+across the TS assets, on-disk packages, and evidence records. The
+capabilities suite was repaired from 101 failing to **329/329**; the Foundry
+matrix now reports the honest post-repair split — zero eligible, all 23
+quarantined for missing two-Profile proof, none rejected — and the
+generated-notification-outbox runtime still delivers with the new
+manifests. Two workbench issues (Next.js `node:crypto` build failure and a
+concurrent-suite Home test timeout) were reproduced at the accepted Task 5
+HEAD with zero Batch 0 changes and are recorded as pre-existing environment
+limitations. Batch 1 next: new capability families to reach 25–35, then
+Batch 2 re-runs the isolated verifier to regenerate two-Profile evidence.
+
 ## P2 and P3
 
 - **P2:** managed deployment, observability, fleet upgrades, and rollbacks,

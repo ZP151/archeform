@@ -3,6 +3,7 @@ import type { CapabilityAssetV1 } from "../contract.js";
 export const cartAssetV1_0_1: CapabilityAssetV1 = {
   manifest: {
     apiVersion: "factory.capability/v1",
+    bindingContract: "factory.capability-binding/v1",
     key: "commerce.cart",
     version: "1.0.1",
     category: "commerce",
@@ -10,13 +11,15 @@ export const cartAssetV1_0_1: CapabilityAssetV1 = {
     description: "Maintains a customer-owned set of purchasable line items.",
     packageRoot: "packages/capabilities/assets/commerce.cart/1.0.1",
     manifestDigest:
-      "sha256:de18db11d81d3a90938e43eb48b641d48ee2fe991541d64d2cf4cc1e29b6c207",
+      "sha256:02209db2f89a645d72e5e413fcf0dfce65bce0c030174e9704ad08831f1ad094",
     lifecycle: "golden",
     profiles: ["restaurant-ordering", "simple-ecommerce"],
     effects: ["cart.add", "cart.remove", "cart.checkout"],
     inputSchema: [
       { key: "catalogEntity", type: "domain.entity", required: true },
       { key: "orderEntity", type: "domain.entity", required: true },
+      { key: "cartPage", type: "page.page", required: true },
+      { key: "customerRole", type: "policy.role", required: true },
     ],
     outputSlots: [
       "api.runtime",

@@ -15,13 +15,14 @@ promotion requirement.
 | --- | --- |
 | Current families | 23 |
 | Eligible | 0 |
-| Quarantined | 9 |
-| Rejected | 14 |
+| Quarantined | 23 |
+| Rejected | 0 |
 
-**Zero families are eligible today, by design**: no family holds two
-independent Profile verifier locks yet, and 14 families have not declared a
-binding contract in their current manifests. The matrix surfaces exactly
-this state so the remaining work is visible and accountable.
+**Zero families are eligible today, by design**: every current family now
+declares the strict binding contract (Task 6 Batch 0 manifest repair), so
+none are rejected; all 23 are quarantined solely for lacking two
+independent Profile verifier locks. The matrix surfaces exactly this state
+so the remaining work is visible and accountable.
 
 ## Families by category
 
@@ -31,42 +32,40 @@ this state so the remaining work is visible and accountable.
 | Commerce (9) | catalog, cart, line-configuration, money-pricing, inventory, inventory-ledger, order, order-operations, simulated-payment |
 | Restaurant (6) | table-session, menu, ordering, kitchen, cashier, reporting |
 
-## Quarantined — manifest requirements met, two-Profile proof outstanding (9)
+## Quarantined — manifest requirements met, two-Profile proof outstanding (23)
 
-These families satisfy the manifest-side requirements (binding contract,
-verification state, fixtures, contract tests, output slots) and are
-quarantined solely for lacking two independent Profile verifier locks:
-
-- commerce.money-pricing
-- commerce.order-operations
-- core.identity-policy
-- core.policy-declarations
-- restaurant.cashier
-- restaurant.kitchen
-- restaurant.ordering
-- restaurant.reporting
-- restaurant.table-session
-
-## Rejected — binding contract not declared in the current manifest (14)
-
-These families are rejected because their current manifests do not declare a
-binding contract. A manifest repair is a prerequisite before any promotion
-evidence can be considered:
+All current families satisfy the manifest-side requirements (binding
+contract, verification state, fixtures, contract tests, output slots) and
+are quarantined solely for lacking two independent Profile verifier locks:
 
 - core.audit
 - core.crud
 - core.notification
 - core.workflow
 - core.identity-context
+- core.identity-policy
+- core.policy-declarations
 - core.location-context
 - commerce.catalog
 - commerce.cart
 - commerce.line-configuration
+- commerce.money-pricing
 - commerce.inventory
 - commerce.inventory-ledger
 - commerce.order
+- commerce.order-operations
 - commerce.simulated-payment
+- restaurant.table-session
 - restaurant.menu
+- restaurant.ordering
+- restaurant.kitchen
+- restaurant.cashier
+- restaurant.reporting
+
+## Rejected — binding contract not declared in the current manifest (0)
+
+No current family is rejected: every manifest declares the strict binding
+contract after the Task 6 Batch 0 repair.
 
 ## How to read the matrix
 

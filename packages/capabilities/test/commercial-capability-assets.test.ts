@@ -68,7 +68,10 @@ const location = () =>
   selection("core.location-context", {
     locationEntity: { graphSymbol: "graph.domain.location" },
     contextEntity: { graphSymbol: "graph.domain.location-context" },
-    locationCodeField: { graphSymbol: "graph.domain.location-code" },
+    locationCodeField: {
+      graphSymbol: "graph.domain.location",
+      fieldKey: "code",
+    },
     customerRole: { graphSymbol: "graph.policy.customer" },
   });
 const configuredLine = () =>
@@ -85,7 +88,10 @@ const configuredLine = () =>
 const inventoryLedger = () =>
   selection("commerce.inventory-ledger", {
     catalogEntity: { graphSymbol: "graph.domain.catalog-item" },
-    stockField: { graphSymbol: "graph.domain.stock" },
+    stockField: {
+      graphSymbol: "graph.domain.catalog-item",
+      fieldKey: "stock",
+    },
     movementEntity: { graphSymbol: "graph.domain.stock-movement" },
     orderEntity: { graphSymbol: "graph.domain.order" },
     locationEntity: { graphSymbol: "graph.domain.location" },

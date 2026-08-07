@@ -3,6 +3,7 @@ import type { CapabilityAssetV1 } from "../contract.js";
 export const inventoryAssetV1_1_1: CapabilityAssetV1 = {
   manifest: {
     apiVersion: "factory.capability/v1",
+    bindingContract: "factory.capability-binding/v1",
     key: "commerce.inventory",
     version: "1.1.1",
     category: "commerce",
@@ -11,7 +12,7 @@ export const inventoryAssetV1_1_1: CapabilityAssetV1 = {
       "Reserves available stock on a declared order transition and compensates it on cancellation.",
     packageRoot: "packages/capabilities/assets/commerce.inventory/1.1.1",
     manifestDigest:
-      "sha256:5ce03072bff9c17e79686807af1e912c41f772e89e30ec8d91ff77e248e05d40",
+      "sha256:a6abfec1b2f2ff7d12c776a2efa706cab4267766ae309f3f3fbfa597c3fde34e",
     lifecycle: "golden",
     profiles: [
       "restaurant-ordering",
@@ -22,7 +23,14 @@ export const inventoryAssetV1_1_1: CapabilityAssetV1 = {
     effects: ["inventory.reserve", "inventory.release", "inventory.decrement"],
     inputSchema: [
       { key: "catalogEntity", type: "domain.entity", required: true },
-      { key: "stockField", type: "domain.field", required: true },
+      {
+        key: "stockField",
+        type: "domain.field",
+        required: true,
+        ownerBinding: "catalogEntity",
+        fieldTypes: ["integer"],
+        fieldRequired: true,
+      },
     ],
     outputSlots: [
       "api.runtime",

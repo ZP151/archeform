@@ -3,6 +3,7 @@ import type { CapabilityAssetV1 } from "../contract.js";
 export const simulatedPaymentAssetV1_0_1: CapabilityAssetV1 = {
   manifest: {
     apiVersion: "factory.capability/v1",
+    bindingContract: "factory.capability-binding/v1",
     key: "commerce.simulated-payment",
     version: "1.0.1",
     category: "commerce",
@@ -12,11 +13,14 @@ export const simulatedPaymentAssetV1_0_1: CapabilityAssetV1 = {
     packageRoot:
       "packages/capabilities/assets/commerce.simulated-payment/1.0.1",
     manifestDigest:
-      "sha256:7e09745d72204d8930020217f379424962dc9ab24d4c4017d7a6a5d3623e81f9",
+      "sha256:5ca3c620bc4565ef1da0fa115d6e5a298450a94ce954bde05e40c58b26740edc",
     lifecycle: "golden",
     profiles: ["restaurant-ordering", "simple-ecommerce"],
     effects: ["payment.simulate"],
-    inputSchema: [{ key: "currency", type: "currency.code", required: false }],
+    inputSchema: [
+      { key: "orderEntity", type: "domain.entity", required: true },
+      { key: "orderFlow", type: "flow.flow", required: true },
+    ],
     outputSlots: ["api.runtime", "flow.effect", "test.fixture"],
     templates: [
       {

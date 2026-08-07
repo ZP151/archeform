@@ -97,27 +97,27 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
     declareFamily(
       "core.audit",
       "1.0.2",
-      "sha256:e3b0137460e6c1b2a156b97a972623db656ce294c54c8913b4c3c43155828e7a",
+      "sha256:e1bddb2e6f5874f29be6e64a363ed14be5f913e5723f0e21612584c1a1f65b52",
     ),
     declareFamily(
       "core.crud",
       "1.0.1",
-      "sha256:ac6197b00e529f519f1b062c9189a368eb9b94be125444a7c2f90cec46200f26",
+      "sha256:1a15e681745571572da2491f32db38224ccf8948fb51d14abe312dd3f722e97a",
     ),
     declareFamily(
       "core.notification",
       "1.1.1",
-      "sha256:9258e7686b55c69dcafdc8d4d4e7484da527dae56134b25629855cca3df8b8d4",
+      "sha256:207eaa0fd719013129ba84bd8f66f82219b619ee1f5c9e2d4e3d896c339e6132",
     ),
     declareFamily(
       "core.workflow",
       "1.0.1",
-      "sha256:8de6fdf5675c757d775ab5d563a738896f48473a0bbaa3d250790bccea5fcff0",
+      "sha256:f6a10ca009bbb14952c2a6767458582ade9b526376e476c39927edde546a7a7e",
     ),
     declareFamily(
       "core.identity-context",
       "1.0.0",
-      "sha256:6d717ecf2dc70db0096cf75d3241f55462402d7e0822c52e66c80677d20b5ec5",
+      "sha256:c2fc92f426d6e3995565681e55a8d7d5a5c8379c30ce4b9d2ecb0b538c2b8ca1",
     ),
     declareFamily(
       "core.identity-policy",
@@ -132,22 +132,22 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
     declareFamily(
       "core.location-context",
       "1.0.0",
-      "sha256:82cf5bf06758c6cac3f144dd15f177ae1582bca4cee1f6ce313ec3a65090ac84",
+      "sha256:591b260f53f2fa0b8e838cb8b9ab350819aa720326b49c1a67f99990ae61df0d",
     ),
     declareFamily(
       "commerce.catalog",
       "1.2.0",
-      "sha256:653150e5a08eb78a97ca36128e2c24e59e3550e275038e16b4b92fc15268b70d",
+      "sha256:9819588b9b59c13a80a561c91ee1f14ebf73bbde16c3504f2de52e41934a8fcc",
     ),
     declareFamily(
       "commerce.cart",
       "1.0.1",
-      "sha256:de18db11d81d3a90938e43eb48b641d48ee2fe991541d64d2cf4cc1e29b6c207",
+      "sha256:02209db2f89a645d72e5e413fcf0dfce65bce0c030174e9704ad08831f1ad094",
     ),
     declareFamily(
       "commerce.line-configuration",
       "1.1.2",
-      "sha256:4a31deb44d3b53a0d929154b4ac64ffeaac9e571126118811c269e1880293075",
+      "sha256:c1913c2b949728d859d363812476200ed57d57d992c7f6cd8d6b3ec90c9a2872",
     ),
     declareFamily(
       "commerce.money-pricing",
@@ -157,17 +157,17 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
     declareFamily(
       "commerce.inventory",
       "1.1.1",
-      "sha256:5ce03072bff9c17e79686807af1e912c41f772e89e30ec8d91ff77e248e05d40",
+      "sha256:a6abfec1b2f2ff7d12c776a2efa706cab4267766ae309f3f3fbfa597c3fde34e",
     ),
     declareFamily(
       "commerce.inventory-ledger",
       "1.0.0",
-      "sha256:eaf32edcc1aedd8f79f6c44a27c72ba9781cb654061c25f82f9b52601047ff7e",
+      "sha256:611d7b77c806ffbaea4fbe262a7df4a459bb0f7a1d9e1b95150d8053744e4cbb",
     ),
     declareFamily(
       "commerce.order",
       "1.2.0",
-      "sha256:505cf0f6435f1ad88d1b7fe2fae890483739d6acdc58339f7e11609824b1a34f",
+      "sha256:c8f5451b3144daac59ad589cb4e8483b5014c6c9cd98a4bc3e7b23577cb56f77",
     ),
     declareFamily(
       "commerce.order-operations",
@@ -177,7 +177,7 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
     declareFamily(
       "commerce.simulated-payment",
       "1.0.1",
-      "sha256:7e09745d72204d8930020217f379424962dc9ab24d4c4017d7a6a5d3623e81f9",
+      "sha256:5ca3c620bc4565ef1da0fa115d6e5a298450a94ce954bde05e40c58b26740edc",
     ),
     declareFamily(
       "restaurant.table-session",
@@ -187,7 +187,7 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
     declareFamily(
       "restaurant.menu",
       "1.0.0",
-      "sha256:0f02482633421d04ef987e5239ad717f1b1b207d5ad6319e1d5f3604e7313fcd",
+      "sha256:1efb3891dba96a724ac2e07050d4d0d0ce34648bb0745c48799c85c2b486bf30",
     ),
     declareFamily(
       "restaurant.ordering",

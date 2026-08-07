@@ -1060,11 +1060,17 @@ const baseProfileCompositionBindings: Readonly<
     },
     "commerce.inventory": {
       catalogEntity: { graphSymbol: "graph.domain.menu-item" },
-      stockField: { graphSymbol: "graph.domain.stock" },
+      stockField: {
+        graphSymbol: "graph.domain.menu-item",
+        fieldKey: "stock",
+      },
     },
     "commerce.inventory-ledger": {
       catalogEntity: { graphSymbol: "graph.domain.menu-item" },
-      stockField: { graphSymbol: "graph.domain.stock" },
+      stockField: {
+        graphSymbol: "graph.domain.menu-item",
+        fieldKey: "stock",
+      },
       movementEntity: { graphSymbol: "graph.domain.inventory-ledger" },
       orderEntity: { graphSymbol: "graph.domain.order" },
       locationEntity: { graphSymbol: "graph.domain.restaurant-location" },
@@ -1116,7 +1122,10 @@ const baseProfileCompositionBindings: Readonly<
     "core.location-context": {
       locationEntity: { graphSymbol: "graph.domain.restaurant-table" },
       contextEntity: { graphSymbol: "graph.domain.table-session" },
-      locationCodeField: { graphSymbol: "graph.domain.code" },
+      locationCodeField: {
+        graphSymbol: "graph.domain.restaurant-table",
+        fieldKey: "code",
+      },
       customerRole: { graphSymbol: "graph.policy.customer" },
     },
     "restaurant.table-session": {
@@ -1181,11 +1190,17 @@ const baseProfileCompositionBindings: Readonly<
     },
     "commerce.inventory": {
       catalogEntity: { graphSymbol: "graph.domain.product" },
-      stockField: { graphSymbol: "graph.domain.stock" },
+      stockField: {
+        graphSymbol: "graph.domain.product",
+        fieldKey: "stock",
+      },
     },
     "commerce.inventory-ledger": {
       catalogEntity: { graphSymbol: "graph.domain.product" },
-      stockField: { graphSymbol: "graph.domain.stock" },
+      stockField: {
+        graphSymbol: "graph.domain.product",
+        fieldKey: "stock",
+      },
       movementEntity: { graphSymbol: "graph.domain.stock-movement" },
       orderEntity: { graphSymbol: "graph.domain.order" },
       locationEntity: { graphSymbol: "graph.domain.store" },
@@ -1239,7 +1254,10 @@ const baseProfileCompositionBindings: Readonly<
     "core.location-context": {
       locationEntity: { graphSymbol: "graph.domain.store" },
       contextEntity: { graphSymbol: "graph.domain.shopper-session" },
-      locationCodeField: { graphSymbol: "graph.domain.code" },
+      locationCodeField: {
+        graphSymbol: "graph.domain.store",
+        fieldKey: "code",
+      },
       customerRole: { graphSymbol: "graph.policy.shopper" },
     },
   },

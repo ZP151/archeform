@@ -6,6 +6,7 @@ import {
 export const notificationAssetV1_1_1: CapabilityAssetV1 = {
   manifest: {
     apiVersion: "factory.capability/v1",
+    bindingContract: "factory.capability-binding/v1",
     key: "core.notification",
     version: "1.1.1",
     category: "core",
@@ -14,11 +15,12 @@ export const notificationAssetV1_1_1: CapabilityAssetV1 = {
       "Persists durable notification intents with declared templates for deterministic local delivery.",
     packageRoot: "packages/capabilities/assets/core.notification/1.1.1",
     manifestDigest:
-      "sha256:9258e7686b55c69dcafdc8d4d4e7484da527dae56134b25629855cca3df8b8d4",
+      "sha256:207eaa0fd719013129ba84bd8f66f82219b619ee1f5c9e2d4e3d896c339e6132",
     lifecycle: "golden",
     profiles: ["expense-approval", "restaurant-ordering", "simple-ecommerce"],
     effects: ["notification.send"],
     inputSchema: [
+      { key: "recipientRole", type: "policy.role", required: true },
       { key: "template", type: "message.template", required: false },
     ],
     outputSlots: [

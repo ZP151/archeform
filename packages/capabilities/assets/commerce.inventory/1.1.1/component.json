@@ -1,12 +1,13 @@
 {
   "apiVersion": "factory.capability/v1",
+  "bindingContract": "factory.capability-binding/v1",
   "key": "commerce.inventory",
   "version": "1.1.1",
   "category": "commerce",
   "name": "Inventory reservation",
   "description": "Reserves available stock on a declared order transition and compensates it on cancellation.",
   "packageRoot": "packages/capabilities/assets/commerce.inventory/1.1.1",
-  "manifestDigest": "sha256:5ce03072bff9c17e79686807af1e912c41f772e89e30ec8d91ff77e248e05d40",
+  "manifestDigest": "sha256:a6abfec1b2f2ff7d12c776a2efa706cab4267766ae309f3f3fbfa597c3fde34e",
   "lifecycle": "golden",
   "profiles": [
     "restaurant-ordering",
@@ -16,8 +17,19 @@
   ],
   "effects": ["inventory.reserve", "inventory.release", "inventory.decrement"],
   "inputSchema": [
-    { "key": "catalogEntity", "type": "domain.entity", "required": true },
-    { "key": "stockField", "type": "domain.field", "required": true }
+    {
+      "key": "catalogEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "stockField",
+      "type": "domain.field",
+      "required": true,
+      "ownerBinding": "catalogEntity",
+      "fieldTypes": ["integer"],
+      "fieldRequired": true
+    }
   ],
   "outputSlots": [
     "api.runtime",
@@ -35,10 +47,23 @@
     }
   ],
   "parameters": [
-    { "key": "catalogEntity", "type": "graph-symbol", "required": true },
-    { "key": "stockField", "type": "graph-symbol", "required": true }
+    {
+      "key": "catalogEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "stockField",
+      "type": "graph-symbol",
+      "required": true
+    }
   ],
-  "requires": [{ "interfaceKey": "commerce.order-event", "version": "v1" }],
+  "requires": [
+    {
+      "interfaceKey": "commerce.order-event",
+      "version": "v1"
+    }
+  ],
   "verification": {
     "fixture": "fixtures/default.json",
     "fixtureDigest": "sha256:ecd77b2a2e93b9babc143eafd3194997fae6a9f5cfceae29ea9c76c9ca732b86",
