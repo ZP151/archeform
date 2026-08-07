@@ -89,7 +89,7 @@ P0 acceptance gates:
 - Published Graphs and completed Compilations remain immutable under verifier
   and diagnosis tests.
 
-## P1 — governed composition, AI, and Workbench expansion
+## P1 — Governed Composition & Capability Foundry (active Goal)
 
 ### Staged AI composition
 
@@ -130,6 +130,12 @@ P1 acceptance gates:
   locks, binding validation, and generated-application evidence.
 - New Workbench components prove their Factory wrapper and capability-registry
   boundary; third-party editor data is not persisted as Graph truth.
+- The Foundry has 25–35 verified capability families, and each counted family
+  has current immutable lock, provenance and licence evidence, typed binding
+  validation, fixtures, positive and negative tests, and isolated evidence from
+  two Profile Graphs.
+- `ProfileRecipeCatalogV1` contains at least 100 representative recipes and
+  twelve independently compiled anchor Profiles across the defined domains.
 
 ## P2 and P3
 
@@ -143,9 +149,10 @@ P1 acceptance gates:
 1. Finish and independently accept the isolated verifier against the accepted
    compiler targets, including the real Docker loop and terminal failure path.
 2. Deliver the staged AI `RequirementSpec` and `CompositionPlan` boundary,
-   then permit constrained Draft Diffs.
-3. Expand cross-profile capabilities and Factory-owned Workbench wrappers with
-   verified generated-application journeys.
+   then permit constrained Draft Diffs and reviewable decisions.
+3. Build the Capability Foundry, expand cross-profile capability families, and
+   establish the 100+ recipe catalogue with verified generated-application
+   journeys.
 4. Add managed delivery and fleet operations, then consider additional
    framework adapters.
 

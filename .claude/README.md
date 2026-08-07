@@ -8,19 +8,19 @@ without routine founder confirmation.
 
 ## One-time activation sequence
 
-1. Review and approve the Goal design:
-   `docs/superpowers/specs/2026-08-06-compiler-target-plugin-kernel-goal-design.md`.
+1. Read the active Goal Design, plan, and ledger named in
+   `docs/project-status.md`.
 2. Start Claude Code on a suitable feature branch or isolated worktree and
    select the locally configured
    DeepSeek V4 Flash provider/model. Provider configuration and credentials are
    local-only and never enter this repository.
 3. Paste the applicable Long-running Goal prompt below into Claude Code.
 
-The Goal creates or refreshes the detailed plan and ledger, executes tasks,
-invokes the independent task reviewer, QA, release reviewer, and PM contexts,
-commits and pushes green iterations, reconciles evidence, and continues until
-`GOAL_COMPLETE` or a declared stop condition. The founder does not manually
-relay work between agents.
+The Goal executes the approved plan, maintains the ledger, invokes independent
+task review, QA, release review, and PM contexts, commits and pushes green
+iterations, reconciles evidence, and continues until `GOAL_COMPLETE` or a
+declared stop condition. The founder does not manually relay work between
+agents.
 
 ## Hard boundaries
 
@@ -35,7 +35,71 @@ The sensitive-access hook prevents common accidental disclosure. It is not a
 hostile subprocess or operating-system sandbox. All normal development,
 package-manager, test, and Git commands remain available.
 
-## Previous compiler Goal prompt
+## Active long-running Goal: P1 Governed Composition & Capability Foundry
+
+Paste the following into a new Claude Code Goal after selecting the locally
+configured model. It has no special command dependency.
+
+```text
+Pursue the approved Factory Pilot P1 Governed Composition & Capability Foundry
+Goal autonomously until GOAL_COMPLETE. Before editing, read CLAUDE.md,
+AGENTS.md, docs/strategy/2026-08-02-graph-first-verified-application-factory.md,
+docs/project-status.md, docs/roadmap.md,
+docs/superpowers/specs/2026-08-07-governed-composition-capability-foundry-goal-design.md,
+docs/superpowers/plans/2026-08-07-governed-composition-capability-foundry.md,
+and docs/superpowers/ledgers/2026-08-07-governed-composition-capability-foundry.md.
+
+Treat the active Goal Design, plan, ledger, accepted P0 evidence, and the
+Application Graph lifecycle as durable authority. Work continuously without
+routine confirmation. Keep the plan and ledger accurate from observed command
+evidence. Use independent task-reviewer, QA, release-reviewer, and PM contexts
+at the specified gates; repair their findings and rerun invalidated gates.
+
+Implement the complete governed chain:
+Requirement -> RequirementSpec -> CompositionPlan -> reviewable constrained
+Draft-only Graph Diff -> Draft -> Publish -> immutable Compilation -> existing
+isolated verification. Factory owns semantics. AI is optional, may only make a
+schema-valid proposal through the established environment-only boundary, and
+may never choose arbitrary packages, paths, URLs, code, provider controls, or
+published-state mutations. Deterministic planning remains CI authority.
+
+Build the Capability Foundry rather than one-off Profile conditionals. A
+counted capability family must have immutable version and digest, licence and
+provenance evidence, owner and lifecycle state, typed bindings and output
+slots, fixtures, positive and negative tests, and isolated generated-app proof
+from two Profile Graphs. Extend the verified set to 25–35 families, create the
+versioned ProfileRecipeCatalogV1 with at least 100 representative recipes, and
+compile twelve independent anchor Profiles across internal workflow,
+operations, scheduling, support, content, data, retail, restaurant, and
+ecommerce. Reuse only approved capability contracts; record a source study
+before copying any third-party implementation.
+
+Use TDD when practical. Split large files by stable Graph, planner, Foundry,
+compiler, or Workbench responsibility. Preserve Draft -> Publish -> immutable
+Compilation and the accepted Docker verifier. For every green task run focused
+tests, then proportional package, integration, browser, and Docker regression
+checks. Update plan checkboxes, the PM ledger, project status, roadmap, recipe
+evidence, and acceptance reports only from observed results. Commit and push
+each green iteration on the feature branch; never force-push, rewrite pushed
+history, or push a known failing iteration.
+
+Do not stop to report ordinary progress. Continue through all delivery trains.
+Return GOAL_NEEDS_DECISION only for a required change to public Graph or
+composition contracts, dependency or licence admission, external system,
+credential handling, immutable lifecycle, or destructive history. Never read,
+print, persist, commit, screenshot, or summarize local environment files,
+credentials, raw prompts, or raw model responses.
+
+Return GOAL_COMPLETE only after every delivery train is accepted: the governed
+planner and review path is proven, the Foundry count and two-Profile evidence
+are current, the 100+ catalogue and twelve anchor Profiles compile and verify,
+the Workbench flow is browser-tested, all independent gates cite one
+remote-reachable commit, and the worktree is clean. Include commits, exact
+verification commands and totals, evidence paths, remaining product gaps, and
+the next recommended Goal.
+```
+
+## Historical compiler Goal prompt (superseded)
 
 Paste the following into a new Claude Code Goal after selecting the configured
 model:
@@ -83,7 +147,7 @@ Return GOAL_COMPLETE with commit hashes, exact verification commands and test
 totals, remaining product gaps, and the next recommended Goal.
 ```
 
-## Next long-running Goal prompt: P0 Isolated Verifier
+## Historical P0 Isolated Verifier Goal prompt (superseded)
 
 Paste the following into a new Claude Code Goal after selecting the configured
 DeepSeek V4 Flash provider/model:
@@ -137,7 +201,7 @@ scope, public contracts, dependencies, external systems, credentials, or the
 immutable lifecycle would change, return GOAL_NEEDS_DECISION with evidence.
 ```
 
-## Current continuation Goal: finish interrupted Task 6
+## Historical interrupted-task continuation prompt (superseded)
 
 The current worktree already contains uncommitted Task 6 implementation. Paste
 this prompt into Claude Code to resume that exact work without losing it:

@@ -19,13 +19,16 @@ idempotency, cleanup, safe diagnosis, and a new reviewable Draft Diff. Neither
 the verifier nor diagnosis may patch generated source; Published Graphs and
 Compilations remain immutable.
 
-P1 is staged AI composition (`RequirementSpec -> CompositionPlan -> constrained
-Graph Diff`), cross-profile capabilities, and Workbench expansion through
-Factory-owned wrappers and the capability registry. P2 is managed deployment,
-observability, fleet upgrades, and rollbacks; P3 is additional framework
-adapters. Prospective Testcontainers for Node, fast-check, and ts-morph use,
-and source-study-only references, remain subject to the existing licence,
-provenance, notice, and security gates.
+P1 is now the approved **Governed Composition & Capability Foundry Goal**:
+`RequirementSpec -> CompositionPlan -> constrained Draft-only Graph Diff`,
+25–35 Foundry-verified capability families, a 100+ representative Profile
+recipe catalogue, twelve compiled anchor Profiles, and a guided Workbench flow.
+Its authority is the Goal Design, implementation plan, and PM ledger at
+`docs/superpowers/{specs,plans,ledgers}/2026-08-07-governed-composition-capability-foundry*`.
+P2 is managed deployment, observability, fleet upgrades, and rollbacks; P3 is
+additional framework adapters. Prospective Testcontainers for Node, fast-check,
+and ts-morph use, and source-study-only references, remain subject to the
+existing licence, provenance, notice, and security gates.
 
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including

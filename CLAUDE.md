@@ -16,9 +16,10 @@ Before changing files, read in this order:
 5. every active ledger or ADR named by that goal
 6. tests and source files explicitly owned by the next incomplete task
 
-When the user invokes `/factory-p0-compiler`, follow that project Skill as the
-active execution contract. Long-term portfolio targets are product direction,
-not permission to expand the current Goal.
+The active execution contract is the latest approved Goal Design, plan, and
+ledger named in `docs/project-status.md`. Long-term portfolio targets are
+product direction, not permission to expand the active Goal beyond its stated
+completion gates.
 
 ## Execution discipline
 
