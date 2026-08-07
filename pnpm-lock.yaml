@@ -156,6 +156,9 @@ importers:
 
   packages/adapters:
     dependencies:
+      '@factory/capabilities':
+        specifier: workspace:*
+        version: link:../capabilities
       '@factory/graph':
         specifier: workspace:*
         version: link:../graph
