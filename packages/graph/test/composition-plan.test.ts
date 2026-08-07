@@ -600,4 +600,73 @@ describe("CompositionDecisionV1 and Draft-only application", () => {
     });
     expect(hashCompositionDiff(safeDiff)).toMatch(/^sha256:[a-f0-9]{64}$/);
   });
+
+  it("rejects unsafe material on a later line of a multi-line value leaf", () => {
+    // The value scan must look past the first newline (RV-1): a URL or
+    // prototype token on a later line is still material.
+    for (const value of [
+      "ok\ncallback https://evil.example.com",
+      "first line\nsecond line\nwww.evil.example.com",
+      "line one\n__proto__",
+    ]) {
+      expect(() =>
+        parseCompositionPlan({
+          ...planFixture(),
+          proposedOperations: [
+            { op: "add", path: "/flow/flows/0/transitions/-", value },
+          ],
+        }),
+      ).toThrow(CompositionError);
+    }
+    // Clean multi-line prose stays allowed.
+    expect(
+      parseCompositionPlan({
+        ...planFixture(),
+        proposedOperations: [
+          {
+            op: "add",
+            path: "/flow/flows/0/transitions/-",
+            value: "first line\nsecond line",
+          },
+        ],
+      }).proposedOperations[0].value,
+    ).toBe("first line\nsecond line");
+  });
+
+  it("rejects unsafe material on a later line of multi-line business text", () => {
+    expect(() =>
+      parseCompositionPlan({
+        ...planFixture(),
+        explanation: "Reviewed the flow.\nSee https://evil.example.com/ingest.",
+      }),
+    ).toThrow(CompositionError);
+  });
+
+  it("rejects prototype-key and URL material as object keys inside a value", () => {
+    // The scan must test object keys, not only string leaves (RV-2).
+    // `__proto__` is built via JSON.parse: a literal would set the object's
+    // prototype instead of creating an own enumerable key.
+    const values = [
+      JSON.parse(
+        '{"from":"submitted","event":"reject","to":"rejected","__proto__":{}}',
+      ),
+      { from: "submitted", event: "reject", to: "rejected", constructor: {} },
+      {
+        from: "submitted",
+        nested: { prototype: { injected: true } },
+        to: "rejected",
+      },
+      { from: "submitted", "https://evil.example.com": "ingest", to: "x" },
+    ];
+    for (const value of values) {
+      expect(() =>
+        parseCompositionPlan({
+          ...planFixture(),
+          proposedOperations: [
+            { op: "add", path: "/flow/flows/0/transitions/-", value },
+          ],
+        }),
+      ).toThrow(CompositionError);
+    }
+  });
 });

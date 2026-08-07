@@ -48,10 +48,12 @@ export const compositionSurfaceSchema = z.enum([
  * but never as a suffix of a larger word (`bwww.example.com` stays allowed).
  * Written as a positive assertion of
  * safety (zod `.regex()` requires the text to match) so the schema stays a
- * ZodString and consumers can still tighten `.max()` length limits.
+ * ZodString and consumers can still tighten `.max()` length limits. The
+ * `[\s\S]` scan crosses line terminators, so material on any line of a
+ * multi-line value fails closed.
  */
 export const unsafeMaterialPattern =
-  /^(?!.*(?:(:\/\/)|(^\s*[\\/])|(\.\.[\\/])|([a-zA-Z]:[\\/])|((?<=\s)[\\/][^\s])|(^\s*$)|(__proto__)|(^\s*(constructor|prototype)\s*$)|((^|[^a-z0-9-])(www\.))))/i;
+  /^(?![\s\S]*(?:(:\/\/)|(^\s*[\\/])|(\.\.[\\/])|([a-zA-Z]:[\\/])|((?<=\s)[\\/][^\s])|(^\s*$)|(__proto__)|(^\s*(constructor|prototype)\s*$)|((^|[^a-z0-9-])(www\.))))/i;
 
 export const safeBusinessTextSchema = z
   .string()
@@ -114,15 +116,19 @@ function walkUnsafeValue(
     for (const [key, child] of Object.entries(
       value as Record<string, unknown>,
     )) {
+      // Object keys are material too: a `__proto__`, `constructor`, URL, or
+      // path key inside a value fails closed the same way a leaf would.
+      if (!unsafeMaterialPattern.test(key)) fail([...keyPath, key]);
       walkUnsafeValue(child, [...keyPath, key], fail);
     }
   }
 }
 
 /**
- * Fails closed when any string leaf of an operation value carries unsafe
- * material (URLs, www hosts, absolute or traversal paths, prototype keys).
- * The error never echoes the offending material itself.
+ * Fails closed when any string leaf or object key of an operation value
+ * carries unsafe material (URLs, www hosts, absolute or traversal paths,
+ * prototype keys) on any line. The error never echoes the offending
+ * material itself.
  */
 export function assertSafeCompositionOperationValues(
   operations: readonly {
