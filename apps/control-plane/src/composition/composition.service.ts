@@ -11,8 +11,11 @@ import { fileURLToPath } from "node:url";
 
 import {
   applyApprovedComposition,
+  assertPlanAgainstRequirement,
   CompositionError,
   createDraftRevision,
+  GraphDiffError,
+  GraphSemanticError,
   hashApplicationGraph,
   hashCompositionDiff,
   hashCompositionPlan,
@@ -208,14 +211,30 @@ export class CompositionService {
       baseGraphHash: plan.draftBaseChecksum,
       operations: plan.proposedOperations,
     };
+    // The plan must satisfy the stored requirement and must carry nothing the
+    // review boundary may persist (unsafe material fails at hash/scan).
+    let planChecksum: string;
+    let diffChecksum: string;
+    try {
+      assertPlanAgainstRequirement(plan, requirement);
+      planChecksum = hashCompositionPlan(plan);
+      diffChecksum = hashCompositionDiff(diff);
+    } catch (error) {
+      if (error instanceof CompositionError) {
+        throw new ConflictException(
+          `Composition plan rejected: ${error.message}`,
+        );
+      }
+      throw error;
+    }
     const updated = await this.prisma.compositionReview.update({
       where: { id: reviewId },
       data: {
         plan: plan as unknown as Prisma.InputJsonValue,
-        planChecksum: hashCompositionPlan(plan),
+        planChecksum,
         planId: plan.planId,
         diff: diff as unknown as Prisma.InputJsonValue,
-        diffChecksum: hashCompositionDiff(diff),
+        diffChecksum,
         safeSummary: safePlanSummary(plan) as unknown as Prisma.InputJsonValue,
         status: "planned",
       },
@@ -309,7 +328,11 @@ export class CompositionService {
         review.diff,
       );
     } catch (error) {
-      if (error instanceof CompositionError) {
+      if (
+        error instanceof CompositionError ||
+        error instanceof GraphDiffError ||
+        error instanceof GraphSemanticError
+      ) {
         throw new ConflictException(
           `Composition application refused: ${error.message}`,
         );

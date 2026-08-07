@@ -432,6 +432,57 @@ describe("CompositionService.requestPlan", () => {
       composition.requestPlan("graph-1", "review-1"),
     ).rejects.toThrow(NotFoundException);
   });
+
+  it("refuses to persist a plan whose operation value carries unsafe material", async () => {
+    const unsafePlan: CompositionPlanV1 = {
+      ...planFixture(),
+      proposedOperations: [
+        {
+          op: "add",
+          path: "/flow/flows/0/transitions/-",
+          value: {
+            from: "draft",
+            event: "submit",
+            to: "submitted",
+            callbackUrl: "https://evil.example.com/ingest",
+          },
+        },
+      ],
+    };
+    const prisma = prismaMock();
+    prisma.compositionReview.findUnique.mockResolvedValue(reviewRow());
+    prisma.draftRevision.findFirst.mockResolvedValue(latestDraft);
+    const { composition } = serviceWith(
+      prisma,
+      plannerStub({ kind: "plan", plan: unsafePlan }),
+    );
+
+    // The scan runs before the prisma update, so nothing unsafe is persisted.
+    await expect(
+      composition.requestPlan("graph-1", "review-1"),
+    ).rejects.toThrow(ConflictException);
+    expect(prisma.compositionReview.update).not.toHaveBeenCalled();
+  });
+
+  it("refuses a seam plan that does not bind the review requirement", async () => {
+    const foreignPlan: CompositionPlanV1 = {
+      ...planFixture(),
+      requirementChecksum:
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    };
+    const prisma = prismaMock();
+    prisma.compositionReview.findUnique.mockResolvedValue(reviewRow());
+    prisma.draftRevision.findFirst.mockResolvedValue(latestDraft);
+    const { composition } = serviceWith(
+      prisma,
+      plannerStub({ kind: "plan", plan: foreignPlan }),
+    );
+
+    await expect(
+      composition.requestPlan("graph-1", "review-1"),
+    ).rejects.toThrow("Composition plan rejected");
+    expect(prisma.compositionReview.update).not.toHaveBeenCalled();
+  });
 });
 
 describe("CompositionService.decide", () => {
@@ -482,17 +533,25 @@ describe("CompositionService.decide", () => {
     prisma.compositionReview.findUnique.mockResolvedValue(reviewRow());
     const { composition } = serviceWith(prisma, plannerStub(null));
 
+    // The status guard must be the refuser: a decision with otherwise
+    // matching checksums still fails because the review has no plan state.
     await expect(
       composition.decide("graph-1", "review-1", {
         decision: decisionFixture(plan),
       }),
-    ).rejects.toThrow(ConflictException);
+    ).rejects.toThrow("Review has no plan to decide on.");
   });
 
   it("refuses a decision whose plan checksum was altered", async () => {
     const prisma = prismaMock();
     prisma.compositionReview.findUnique.mockResolvedValue(
-      reviewRow({ plan, diff, status: "planned" }),
+      reviewRow({
+        plan,
+        diff,
+        status: "planned",
+        planChecksum: hashCompositionPlan(plan),
+        diffChecksum: hashCompositionDiff(diff),
+      }),
     );
     const { composition } = serviceWith(prisma, plannerStub(null));
     const tampered = decisionFixture(plan, {
@@ -502,13 +561,19 @@ describe("CompositionService.decide", () => {
 
     await expect(
       composition.decide("graph-1", "review-1", { decision: tampered }),
-    ).rejects.toThrow(ConflictException);
+    ).rejects.toThrow("Decision plan checksum does not match the stored plan.");
   });
 
   it("refuses a decision whose Diff checksum was altered", async () => {
     const prisma = prismaMock();
     prisma.compositionReview.findUnique.mockResolvedValue(
-      reviewRow({ plan, diff, status: "planned" }),
+      reviewRow({
+        plan,
+        diff,
+        status: "planned",
+        planChecksum: hashCompositionPlan(plan),
+        diffChecksum: hashCompositionDiff(diff),
+      }),
     );
     const { composition } = serviceWith(prisma, plannerStub(null));
     const tampered = decisionFixture(plan, {
@@ -518,13 +583,19 @@ describe("CompositionService.decide", () => {
 
     await expect(
       composition.decide("graph-1", "review-1", { decision: tampered }),
-    ).rejects.toThrow(ConflictException);
+    ).rejects.toThrow("Decision Diff checksum does not match the stored Diff.");
   });
 
   it("refuses a decision for a different Draft revision", async () => {
     const prisma = prismaMock();
     prisma.compositionReview.findUnique.mockResolvedValue(
-      reviewRow({ plan, diff, status: "planned" }),
+      reviewRow({
+        plan,
+        diff,
+        status: "planned",
+        planChecksum: hashCompositionPlan(plan),
+        diffChecksum: hashCompositionDiff(diff),
+      }),
     );
     const { composition } = serviceWith(prisma, plannerStub(null));
 
@@ -616,14 +687,28 @@ describe("CompositionService.apply", () => {
   });
 
   it("refuses to apply an unapproved plan", async () => {
+    const rejected = decisionFixture(plan, {
+      decisionId: "decision-rejected-1",
+      decision: "rejected",
+    });
     const prisma = prismaMock();
     prisma.compositionReview.findUnique.mockResolvedValue(
-      reviewRow({ plan, diff, status: "planned" }),
+      reviewRow({
+        plan,
+        diff,
+        decision: rejected,
+        decisionId: rejected.decisionId,
+        status: "rejected",
+        planChecksum: hashCompositionPlan(plan),
+        diffChecksum: hashCompositionDiff(diff),
+      }),
     );
     const { composition } = serviceWith(prisma, plannerStub(null));
 
+    // The status guard must be the refuser: a fully recorded rejected review
+    // still fails the approval gate, not the missing-plan/decision checks.
     await expect(composition.apply("graph-1", "review-1")).rejects.toThrow(
-      ConflictException,
+      "Only an approved plan can be applied to the Draft.",
     );
   });
 
@@ -680,5 +765,40 @@ describe("CompositionService.apply", () => {
     await expect(composition.apply("graph-1", "review-1")).rejects.toThrow(
       ConflictException,
     );
+  });
+
+  it("bounds application errors when the approved Diff cannot resolve", async () => {
+    const unreachablePlan: CompositionPlanV1 = {
+      ...planFixture(),
+      proposedOperations: [
+        {
+          op: "add",
+          path: "/flow/flows/9/transitions/-",
+          value: { from: "draft", event: "submit", to: "submitted" },
+        },
+      ],
+    };
+    const unreachableDiff = diffFixture(unreachablePlan);
+    const decision = decisionFixture(unreachablePlan);
+    const prisma = prismaMock();
+    prisma.compositionReview.findUnique.mockResolvedValue(
+      reviewRow({
+        plan: unreachablePlan,
+        planChecksum: hashCompositionPlan(unreachablePlan),
+        diff: unreachableDiff,
+        diffChecksum: hashCompositionDiff(unreachableDiff),
+        decision,
+        decisionId: decision.decisionId,
+        status: "approved",
+      }),
+    );
+    prisma.draftRevision.findFirst.mockResolvedValue(latestDraft);
+    const { composition } = serviceWith(prisma, plannerStub(null));
+
+    // The Graph-level failure surfaces as a bounded conflict, not a raw 500.
+    await expect(composition.apply("graph-1", "review-1")).rejects.toThrow(
+      "Composition application refused",
+    );
+    expect(prisma.compositionReview.update).not.toHaveBeenCalled();
   });
 });
