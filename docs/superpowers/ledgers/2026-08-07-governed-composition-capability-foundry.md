@@ -33,14 +33,14 @@ Train shape follows the Goal Design spec (six trains; Train B's completion
 gate is "Control Plane APIs, Workbench review, fixture planner, guarded model
 adapter").
 
-| Train                     | Tasks                    | State        | Latest commit | Evidence                                             |
-| ------------------------- | ------------------------ | ------------ | ------------- | ---------------------------------------------------- |
-| A. Composition contracts  | 1                        | reviewed     | e13bef1       | RequirementSpec, plan, decision, recipe schema tests |
-| B. Planner and review     | 2, 3, 4, 8               | ready_for_qa | 74e918d       | deterministic plan, Draft-only review tests, Control Plane APIs |
-| C. Foundry quality system | 5                        | reviewed     | 0ce7899b      | declared evidence registry, honest matrix, promotion policy, promotion tests |
-| D. Capability batches     | 6                        | planned      | —             | 25–35 eligible families, two Profiles each           |
-| E. Portfolio proof        | 7                        | planned      | —             | 100+ recipes, 12 compiled anchors                    |
-| F. Release                | 9                        | planned      | —             | independent gates and final record                   |
+| Train                     | Tasks      | State        | Latest commit | Evidence                                                                     |
+| ------------------------- | ---------- | ------------ | ------------- | ---------------------------------------------------------------------------- |
+| A. Composition contracts  | 1          | reviewed     | e13bef1       | RequirementSpec, plan, decision, recipe schema tests                         |
+| B. Planner and review     | 2, 3, 4, 8 | ready_for_qa | 74e918d       | deterministic plan, Draft-only review tests, Control Plane APIs              |
+| C. Foundry quality system | 5          | reviewed     | 0ce7899b      | declared evidence registry, honest matrix, promotion policy, promotion tests |
+| D. Capability batches     | 6          | planned      | —             | 25–35 eligible families, two Profiles each                                   |
+| E. Portfolio proof        | 7          | planned      | —             | 100+ recipes, 12 compiled anchors                                            |
+| F. Release                | 9          | planned      | —             | independent gates and final record                                           |
 
 ## Iteration record
 
@@ -66,14 +66,14 @@ Independent task review (`TASK_REVIEW_PASS` at f97eafa) and behavioral QA
 (`QA_FAIL` at f97eafa) surfaced six findings. Per the state vocabulary, any
 P0/P1/P2 finding returns the owning item to `implementing`.
 
-| ID | Severity | Finding | Repair |
-| -- | -------- | ------- | ------ |
-| QA-1 | P1 | Root-level `/integration` replace bypassed the second-segment guard and rewrote `assetLocks`/`compositionProfile` | Both guard mirrors now block whole-subtree `integration` operations (composition-plan.ts, index.ts) |
-| QA-2 | P2 | `~1`-escaped prototype-key `add` path (`/page/~1__proto__`) evaded the literal segment check | Prototype check runs on decoded segments; any decoded segment containing `__proto__` is rejected |
-| QA-3 | P2 | Prototype-key strings (`__proto__`, `constructor`, `prototype`) accepted as business text | Pattern rejects `__proto__` anywhere and full-string `constructor`/`prototype`; natural prose (e.g. "the prototype journey") still passes |
-| TR-1 | P2 | Four nested requirement-spec item schemas were not `.strict()`; nested `rawModelResponse`/`prompts` were silently stripped | All nested item schemas are now exact-key |
-| TR-2 | P2 | Scheme-less `www.`-prefixed domains accepted | Pattern now rejects `www.`-prefixed hosts; scheme-less bare placeholder domains remain allowed (documented boundary — inert text, and domain-qualified identifiers like `graph.domain.expense` must keep working) |
-| TR-3 | P2 | Recipe binding rule was one-directional: a locked capability could have no binding requirement | Every locked capability must now declare at least one binding requirement |
+| ID   | Severity | Finding                                                                                                                    | Repair                                                                                                                                                                                                            |
+| ---- | -------- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| QA-1 | P1       | Root-level `/integration` replace bypassed the second-segment guard and rewrote `assetLocks`/`compositionProfile`          | Both guard mirrors now block whole-subtree `integration` operations (composition-plan.ts, index.ts)                                                                                                               |
+| QA-2 | P2       | `~1`-escaped prototype-key `add` path (`/page/~1__proto__`) evaded the literal segment check                               | Prototype check runs on decoded segments; any decoded segment containing `__proto__` is rejected                                                                                                                  |
+| QA-3 | P2       | Prototype-key strings (`__proto__`, `constructor`, `prototype`) accepted as business text                                  | Pattern rejects `__proto__` anywhere and full-string `constructor`/`prototype`; natural prose (e.g. "the prototype journey") still passes                                                                         |
+| TR-1 | P2       | Four nested requirement-spec item schemas were not `.strict()`; nested `rawModelResponse`/`prompts` were silently stripped | All nested item schemas are now exact-key                                                                                                                                                                         |
+| TR-2 | P2       | Scheme-less `www.`-prefixed domains accepted                                                                               | Pattern now rejects `www.`-prefixed hosts; scheme-less bare placeholder domains remain allowed (documented boundary — inert text, and domain-qualified identifiers like `graph.domain.expense` must keep working) |
+| TR-3 | P2       | Recipe binding rule was one-directional: a locked capability could have no binding requirement                             | Every locked capability must now declare at least one binding requirement                                                                                                                                         |
 
 Repair commit `67cf682` (`fix(graph): close composition fail-closed boundary
 gaps`) adds 10 regression tests: graph `pnpm --filter @factory/graph test` —
@@ -88,12 +88,12 @@ Re-verification on `67cf682` passed (`TASK_REVIEW_PASS`, `QA_PASS`) with P2
 notes. Per the state vocabulary, any P2 finding returns the owning item to
 `implementing`; the repair was committed.
 
-| ID | Severity | Finding | Repair |
-| -- | -------- | ------- | ------ |
-| TR-4 | P2 | Plan-level guard tests passed for the wrong reason: the approved-decision fixture bound the safe Diff's checksum, so the checksum check fired before the path guard | The bad operations now ride inside the plan's own `proposedOperations`, so `parseCompositionPlan` exercises the guard directly at parse (composition-plan.test.ts) |
-| QA-4 | P2 | Integration-root alias `add` paths (`/integration/`, `/integration/.`, `/integration/..`) passed the second-segment guard and were silently absorbed | Root checks now run over segments normalized by dropping empty/`.`/`..` segments (no validated Graph key can be one); aliases throw in both guard mirrors |
-| QA-5 | P2 | `~1`-escaped prototype tokens (`/page/~1constructor`, `/page/~1prototype`) decoded to literal keys that passed the whole-segment check | The guard inspects every slash-decoded token, not only whole segments |
-| QA-6 | P2 | Business-text case/whitespace variants (`Constructor`, `"constructor "`, `" prototype"`, `WWW.example.com`) parsed as inert text | Pattern is case-insensitive; full-string `constructor`/`prototype` rejections tolerate surrounding whitespace; natural prose still passes |
+| ID   | Severity | Finding                                                                                                                                                             | Repair                                                                                                                                                             |
+| ---- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| TR-4 | P2       | Plan-level guard tests passed for the wrong reason: the approved-decision fixture bound the safe Diff's checksum, so the checksum check fired before the path guard | The bad operations now ride inside the plan's own `proposedOperations`, so `parseCompositionPlan` exercises the guard directly at parse (composition-plan.test.ts) |
+| QA-4 | P2       | Integration-root alias `add` paths (`/integration/`, `/integration/.`, `/integration/..`) passed the second-segment guard and were silently absorbed                | Root checks now run over segments normalized by dropping empty/`.`/`..` segments (no validated Graph key can be one); aliases throw in both guard mirrors          |
+| QA-5 | P2       | `~1`-escaped prototype tokens (`/page/~1constructor`, `/page/~1prototype`) decoded to literal keys that passed the whole-segment check                              | The guard inspects every slash-decoded token, not only whole segments                                                                                              |
+| QA-6 | P2       | Business-text case/whitespace variants (`Constructor`, `"constructor "`, `" prototype"`, `WWW.example.com`) parsed as inert text                                    | Pattern is case-insensitive; full-string `constructor`/`prototype` rejections tolerate surrounding whitespace; natural prose still passes                          |
 
 Repair commit `7524e6b` (`fix(graph): close composition guard alias, token,
 and case gaps`) — graph `pnpm --filter @factory/graph test` 152 passed (7
@@ -105,7 +105,7 @@ clean. State: Train A `ready_for_qa`, pending re-verification gates on
 ### 2026-08-08 — Task 2 (Train B) implemented: planner and admission
 
 - New `composition-planner.ts`: `planComposition(requirement, catalog,
-  baseDraft, repositoryRoot, assets)` deterministically resolves recipes
+baseDraft, repositoryRoot, assets)` deterministically resolves recipes
   against approved current assets — recipe scoring (2× scenario journeys +
   1× workflow journeys, stable catalog-order ties), golden-lifecycle locks,
   structural Graph-symbol bindings (requirement-named keys preferred),
@@ -122,7 +122,7 @@ clean. State: Train A `ready_for_qa`, pending re-verification gates on
   hashes the canonical key-sorted lock identity with a self-contained
   FIPS 180-4 SHA-256, locked by a node:crypto known-answer test.
 - RED: focused suites written first. GREEN: `pnpm --filter
-  @factory/capabilities test` — 310 passed (22 files; 282 prior + 11
+@factory/capabilities test` — 310 passed (22 files; 282 prior + 11
   planner + 17 admission); typecheck, prettier lint, and build green.
 - Commit `3c1848c` `feat(capabilities): add governed composition planner`
   pushed; worktree clean apart from gate scratch probes.
@@ -135,11 +135,11 @@ Re-verification task review on `7524e6b` returned `TASK_REVIEW_PASS`
 (SPEC PASS, QUALITY PASS) with three P2 hardening notes; the two
 code-level ones were repaired, the third is an orchestration note.
 
-| ID | Severity | Finding | Repair |
-| -- | -------- | ------- | ------ |
-| F1 | P2 | Path-guard exact-token list was case-sensitive while the business-text guard is case-insensitive: `/page/Constructor`, `/page/PROTOTYPE` passed | Token predicate lowercases before comparing in both guard mirrors; case variants now throw at plan parse and apply |
-| F2 | P2 | `www.` boundary was `(^|\s)` so punctuation-adjacent hosts (`(www.example.com)`, `;www.x.com`) passed business-text validation | Boundary is now `(^|[^a-z0-9-])`; suffix words (`bwww.example.com`) still pass |
-| F3 | P2 | Worktree hygiene: parallel gate scratch probes in the shared tree make suite counts vary run-to-run | Orchestration note, not a code defect; committed-state counts exclude probe files |
+| ID  | Severity | Finding                                                                                                                                         | Repair                                                                                                             |
+| --- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| F1  | P2       | Path-guard exact-token list was case-sensitive while the business-text guard is case-insensitive: `/page/Constructor`, `/page/PROTOTYPE` passed | Token predicate lowercases before comparing in both guard mirrors; case variants now throw at plan parse and apply |
+| F2  | P2       | `www.` boundary was `(^                                                                                                                         | \s)` so punctuation-adjacent hosts (`(www.example.com)`, `;www.x.com`) passed business-text validation             | Boundary is now `(^ | [^a-z0-9-])`; suffix words (`bwww.example.com`) still pass |
+| F3  | P2       | Worktree hygiene: parallel gate scratch probes in the shared tree make suite counts vary run-to-run                                             | Orchestration note, not a code defect; committed-state counts exclude probe files                                  |
 
 Repair commit `e13bef1` (`fix(graph): harden path-guard case handling and
 www boundaries`) — graph `pnpm --filter @factory/graph test` 153 passed (7
@@ -172,10 +172,10 @@ Train B gates at `3c1848c` independently failed on the same two P1
 implementation defects (task review TRB-1/TRB-2; behavioral QA F1/F2).
 Per the state vocabulary, the item returned to `implementing`.
 
-| ID | Severity | Finding | Repair |
-| -- | -------- | ------- | ------ |
-| TRB-1 / F1 | P1 | `operationsFor` wrapped the fixture `readFileSync` in try/catch but called `JSON.parse(raw)` outside it — a malformed golden-asset fixture threw a raw `SyntaxError` instead of a bounded clarification | The parse and `transitionFragment` conversion now run inside the try; unreadable or malformed fixtures yield no fragment and the planner returns a schema-valid clarification |
-| TRB-2 / F2 | P1 | `dependencyEdges` used a last-write-wins `Map<string, string>` — a `multiProvider` requirement silently dropped all but one provider edge from `dependencyGraph` | `Map<string, string[]>` collects every provider per interface identity; the plan artifact reports all of them, matching the resolver's dependency closure |
+| ID         | Severity | Finding                                                                                                                                                                                                 | Repair                                                                                                                                                                        |
+| ---------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TRB-1 / F1 | P1       | `operationsFor` wrapped the fixture `readFileSync` in try/catch but called `JSON.parse(raw)` outside it — a malformed golden-asset fixture threw a raw `SyntaxError` instead of a bounded clarification | The parse and `transitionFragment` conversion now run inside the try; unreadable or malformed fixtures yield no fragment and the planner returns a schema-valid clarification |
+| TRB-2 / F2 | P1       | `dependencyEdges` used a last-write-wins `Map<string, string>` — a `multiProvider` requirement silently dropped all but one provider edge from `dependencyGraph`                                        | `Map<string, string[]>` collects every provider per interface identity; the plan artifact reports all of them, matching the resolver's dependency closure                     |
 
 Repair commit `64e954b1` (`fix(capabilities): close planner fail-closed
 fixture and multi-provider gaps`) also relaxes
@@ -199,10 +199,10 @@ behaviorally (malformed-fixture clarification; multi-provider edges) and
 returned `TASK_REVIEW_FAIL` with two P2 notes. Per the state vocabulary,
 any P2 finding returns the owning item to `implementing`.
 
-| ID | Severity | Finding | Repair |
-| -- | -------- | ------- | ------ |
-| TRB-P2-1 | P2 | Plan Task 2 checkpoint misattributed Train B hardening to `e13bef1` (Train A's commit); the actual repair `64e954b1` was never referenced in the plan | Task 2 checkpoint now reads `3c1848c`, repaired at `64e954b1` — TRB-1/TRB-2 (QA F1/F2) closed; capabilities 313/313 |
-| TRB-P2-2 | P2 | Dead duplicate guard in `operationsFor`: `if (fragment === null) continue;` appears twice consecutively; the second branch is unreachable | Duplicate line deleted |
+| ID       | Severity | Finding                                                                                                                                               | Repair                                                                                                              |
+| -------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| TRB-P2-1 | P2       | Plan Task 2 checkpoint misattributed Train B hardening to `e13bef1` (Train A's commit); the actual repair `64e954b1` was never referenced in the plan | Task 2 checkpoint now reads `3c1848c`, repaired at `64e954b1` — TRB-1/TRB-2 (QA F1/F2) closed; capabilities 313/313 |
+| TRB-P2-2 | P2       | Dead duplicate guard in `operationsFor`: `if (fragment === null) continue;` appears twice consecutively; the second branch is unreachable             | Duplicate line deleted                                                                                              |
 
 Repair commit `8bd6ff1` (`fix(capabilities): remove dead planner guard;
 correct plan attribution`) — `@factory/capabilities` 313/313, Prettier
@@ -232,13 +232,13 @@ behavioral QA FAIL with F-1/F-2). Per the state vocabulary, any P0/P1/P2
 finding returns the owning item to `implementing`; the repair batch was
 committed.
 
-| ID | Severity | Finding | Repair |
-| -- | -------- | ------- | ------ |
-| F-1 | P1 | `requestPlan` persisted URL/secret material riding operation-`value` objects (schema-unknown `z.unknown`): a plan or Diff with a `callbackUrl: https://…` value passed hashing and reached the prisma update | Deep value scan at the schema gate: `assertSafeCompositionOperationValues` walks every string leaf of `proposedOperations`/`diff.operations` against `unsafeMaterialPattern` inside `parseCompositionPlan` and `hashCompositionDiff`, so the service, apply re-hash, and the future guarded model adapter all fail closed; the error never echoes the offending material. Commit `fbdd4ce` |
-| F-2 | P2 | `plan.requirementChecksum` was never verified at the seam — a plan bound to a foreign requirement could be stored and decided | `requestPlan` now runs `assertPlanAgainstRequirement` + `hashCompositionPlan` + `hashCompositionDiff` before the prisma update, mapping `CompositionError` to a bounded `ConflictException("Composition plan rejected: …")`; nothing unsafe or foreign is ever persisted. Commit `507feca` |
-| TR-5 | P2 | `apply()` let `GraphDiffError`/`GraphSemanticError` from `applyGraphDiffToDraft` escape as raw 500s (e.g. an approved Diff targeting an out-of-range flow container) | `apply()` catch maps all three error classes to `ConflictException("Composition application refused: …")`. Commit `507feca` |
-| TR-6 | P2 | Tamper tests fired on mismatch-vs-null: planned-review fixtures defaulted `planChecksum`/`diffChecksum` to null, so status-guard tests would pass even if their named guards were deleted | Planned-review fixtures now bind the real `hashCompositionPlan(plan)`/`hashCompositionDiff(diff)`, including a rejected decision in the unapproved-apply fixture, and the exact guard messages are asserted. Commit `507feca` |
-| QA-R1 | P2 | Stale `packages/capabilities/dist` predating `8bd6ff1` | `dist/` is gitignored/untracked; repair is a local rebuild only — both packages rebuilt from committed source before the suite runs |
+| ID    | Severity | Finding                                                                                                                                                                                                      | Repair                                                                                                                                                                                                                                                                                                                                                                                     |
+| ----- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| F-1   | P1       | `requestPlan` persisted URL/secret material riding operation-`value` objects (schema-unknown `z.unknown`): a plan or Diff with a `callbackUrl: https://…` value passed hashing and reached the prisma update | Deep value scan at the schema gate: `assertSafeCompositionOperationValues` walks every string leaf of `proposedOperations`/`diff.operations` against `unsafeMaterialPattern` inside `parseCompositionPlan` and `hashCompositionDiff`, so the service, apply re-hash, and the future guarded model adapter all fail closed; the error never echoes the offending material. Commit `fbdd4ce` |
+| F-2   | P2       | `plan.requirementChecksum` was never verified at the seam — a plan bound to a foreign requirement could be stored and decided                                                                                | `requestPlan` now runs `assertPlanAgainstRequirement` + `hashCompositionPlan` + `hashCompositionDiff` before the prisma update, mapping `CompositionError` to a bounded `ConflictException("Composition plan rejected: …")`; nothing unsafe or foreign is ever persisted. Commit `507feca`                                                                                                 |
+| TR-5  | P2       | `apply()` let `GraphDiffError`/`GraphSemanticError` from `applyGraphDiffToDraft` escape as raw 500s (e.g. an approved Diff targeting an out-of-range flow container)                                         | `apply()` catch maps all three error classes to `ConflictException("Composition application refused: …")`. Commit `507feca`                                                                                                                                                                                                                                                                |
+| TR-6  | P2       | Tamper tests fired on mismatch-vs-null: planned-review fixtures defaulted `planChecksum`/`diffChecksum` to null, so status-guard tests would pass even if their named guards were deleted                    | Planned-review fixtures now bind the real `hashCompositionPlan(plan)`/`hashCompositionDiff(diff)`, including a rejected decision in the unapproved-apply fixture, and the exact guard messages are asserted. Commit `507feca`                                                                                                                                                              |
+| QA-R1 | P2       | Stale `packages/capabilities/dist` predating `8bd6ff1`                                                                                                                                                       | `dist/` is gitignored/untracked; repair is a local rebuild only — both packages rebuilt from committed source before the suite runs                                                                                                                                                                                                                                                        |
 
 Three new service boundary tests (unsafe values never reach the prisma
 update, foreign requirement checksum refused before persistence, unresolvable
@@ -260,10 +260,10 @@ findings) and explicitly deferred the in-flight boundary changes to this
 round. Per the state vocabulary, the P2s return Train B to `implementing`;
 the repair was committed at `a8914d0`.
 
-| ID | Severity | Finding | Repair |
-| -- | -------- | ------- | ------ |
-| RV-1 | P2 | `unsafeMaterialPattern`'s negative lookahead used `.*`, which cannot cross line terminators: a URL, `www` host, or `__proto__` token on any line after the first evaded both the operation-value scan and `safeBusinessTextSchema` (`"ok\ncallback https://evil.example.com"` tested safe) | Lookahead scan widened to `[\s\S]*` so every line of multi-line values and prose is covered; one-character pattern change closes both surfaces |
-| RV-2 | P2 | `walkUnsafeValue` scanned string leaves only; object keys inside an operation value were never tested, so `__proto__`, `constructor`, `prototype`, URL, or path material as a key passed (data-only impact — no prototype mutation, since mutation keys come from path-guarded pointers) | The walker now tests every walked object key with the same pattern before descending; prototype-key, URL, and path keys fail closed like leaves |
+| ID   | Severity | Finding                                                                                                                                                                                                                                                                                    | Repair                                                                                                                                          |
+| ---- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| RV-1 | P2       | `unsafeMaterialPattern`'s negative lookahead used `.*`, which cannot cross line terminators: a URL, `www` host, or `__proto__` token on any line after the first evaded both the operation-value scan and `safeBusinessTextSchema` (`"ok\ncallback https://evil.example.com"` tested safe) | Lookahead scan widened to `[\s\S]*` so every line of multi-line values and prose is covered; one-character pattern change closes both surfaces  |
+| RV-2 | P2       | `walkUnsafeValue` scanned string leaves only; object keys inside an operation value were never tested, so `__proto__`, `constructor`, `prototype`, URL, or path material as a key passed (data-only impact — no prototype mutation, since mutation keys come from path-guarded pointers)   | The walker now tests every walked object key with the same pattern before descending; prototype-key, URL, and path keys fail closed like leaves |
 
 Regression tests (RED confirmed by the gate's verified repros, GREEN at the
 repair): multi-line URL/www/`__proto__` value leaves rejected while clean
@@ -289,9 +289,9 @@ its mapped 409 — the "error never echoes the offending material" property
 asserted non-echo for keys. Per the state vocabulary the P2 returns Train
 B to `implementing`.
 
-| ID | Severity | Finding | Repair |
-| -- | -------- | ------- | ------ |
-| NEW-1 | P2 | Key failures joined the offending key into the message (`carries unsafe material in '__proto__'`; a URL key appeared verbatim) | The walker now fails with the container keyPath only — a failing key is itself the material, so only its location is named; safe leaf keys may still appear in the path. Regression test asserts both rejections match `/carries unsafe material/` and contain neither token verbatim. Commit `f337174` (+ `ed82b17` Prettier formatting) |
+| ID    | Severity | Finding                                                                                                                        | Repair                                                                                                                                                                                                                                                                                                                                    |
+| ----- | -------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| NEW-1 | P2       | Key failures joined the offending key into the message (`carries unsafe material in '__proto__'`; a URL key appeared verbatim) | The walker now fails with the container keyPath only — a failing key is itself the material, so only its location is named; safe leaf keys may still appear in the path. Regression test asserts both rejections match `/carries unsafe material/` and contain neither token verbatim. Commit `f337174` (+ `ed82b17` Prettier formatting) |
 
 graph 160/160 (159 + 1), capabilities 313/313, control-plane 177/177
 against the rebuilt dist, adapters 34/34, typecheck and Prettier lint
@@ -335,7 +335,7 @@ reviewed; ledger sections above cite every repair round).
 authority, delivered in two commits:
 
 - `50b0e23` (`feat(adapters): add constrained composition planning
-  adapters`) — `DeterministicCompositionPlannerAdapter` (the structured
+adapters`) — `DeterministicCompositionPlannerAdapter` (the structured
   brief must parse as an exact RequirementSpecV1; the plan then comes
   entirely from `planComposition` over the approved assets — it never
   invents selections, versions, bindings, paths, or operations) and
@@ -351,9 +351,9 @@ authority, delivered in two commits:
   node entry. 14 new tests (4 deterministic, 10 OpenAI); adapters 34/34,
   typecheck, Prettier lint, and build green.
 - `34b81ed` (`feat(control-plane): bounded provider failures and AI
-  boundary tests`) — the `COMPOSITION_PLANNER` seam maps a provider's
+boundary tests`) — the `COMPOSITION_PLANNER` seam maps a provider's
   bounded `CompositionError` to `ConflictException("Composition planning
-  failed: …")` instead of a raw 500 (nothing persisted on the failure
+failed: …")` instead of a raw 500 (nothing persisted on the failure
   path); `composition-ai-boundary.test.ts` pins the AI boundary at the
   seam: only the constrained projection of a schema-valid proposal is
   persisted (safeSummary carries no free-form text; every stored key and
@@ -581,9 +581,15 @@ declare the strict `factory.capability-binding/v1` contract):
 - **Manifest conformance:** all 23 manifests satisfy the strict contract —
   parameters/inputSchema key-identity, `domain.field` owners with declared
   field types, and the declared `domain.entity`/`page.page`/`policy.role`/
-  `flow.flow` shapes. `restaurant.menu` gained its mirror parameters;
-  `core.notification` gained its `recipientRole` input; the 11 previously
-  non-conforming families were aligned 1:1.
+  `flow.flow` shapes. Of the 14 families repaired: 10 were aligned 1:1
+  (core.audit, core.crud, core.workflow, core.location-context,
+  commerce.catalog, commerce.cart, commerce.inventory,
+  commerce.inventory-ledger, commerce.order, commerce.simulated-payment);
+  `core.notification` gained its `recipientRole` input alongside the
+  bounded-enum `template` parameter; `restaurant.menu` gained its mirror
+  graph-symbol parameters; and `core.identity-context` with
+  `commerce.line-configuration` already satisfied the strict contract,
+  receiving bindingContract declarations only.
 - **Binding values:** profile bindings for `domain.field` parameters now
   carry the owning entity symbol plus `fieldKey` (`stock`/`code`), matching
   the shape the compiler renderer already substituted (`{{fieldKey}}`

@@ -521,6 +521,55 @@ describe("typed capability binding contract", () => {
     }
   });
 
+  it("accepts a bounded enum parameter paired with a message.template input", () => {
+    const manifest = strictManifest(
+      [{ key: "template", type: "message.template", required: false }],
+      [
+        {
+          key: "template",
+          type: "enum",
+          required: false,
+          values: ["ecommerce.order-outcome", "expense.approval-outcome"],
+        },
+      ],
+    );
+
+    expect(() =>
+      resolveStrictManifest(manifest, {
+        template: "ecommerce.order-outcome",
+      }),
+    ).not.toThrow();
+  });
+
+  it("rejects a bounded enum parameter paired with any non-message.template input", () => {
+    const manifest = strictManifest(
+      [{ key: "template", type: "policy.role", required: false }],
+      [
+        {
+          key: "template",
+          type: "enum",
+          required: false,
+          values: ["ecommerce.order-outcome"],
+        },
+      ],
+    );
+
+    expect(() => resolveStrictManifest(manifest)).toThrow(
+      "must pair with a message.template binding input",
+    );
+  });
+
+  it("rejects a graph-symbol parameter paired with a message.template input", () => {
+    const manifest = strictManifest(
+      [{ key: "flowKey", type: "message.template", required: true }],
+      [{ key: "flowKey", type: "graph-symbol", required: true }],
+    );
+
+    expect(() => resolveStrictManifest(manifest)).toThrow(
+      "must not pair with a message.template binding input",
+    );
+  });
+
   it("rejects a strict parameter that inherits its declaration", () => {
     const inheritedParameter = Object.create({
       key: "catalogEntity",
