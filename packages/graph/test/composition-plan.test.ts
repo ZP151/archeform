@@ -903,6 +903,28 @@ describe("Composition Diff escaped path material (QA-4-1)", () => {
     ).toThrow(CompositionError);
   });
 
+  it("keeps ~1/~0-escaped literal segments through plan parse and Diff hash", () => {
+    // QA-4-1-R1: the decode-then-scan must never over-reject — legitimate
+    // `~1`/`~0` escapes (literal `/` and `~` in record keys) decode to clean
+    // material and must parse and hash exactly like unescaped pointers.
+    for (const path of [
+      "/experience/theme/tokens/a~1b",
+      "/experience/theme/tokens/a~0b~1c~0d",
+    ]) {
+      const plan = {
+        ...planFixture(),
+        proposedOperations: [{ op: "add", path, value: "clean" }],
+      };
+      expect(() => parseCompositionPlan(plan)).not.toThrow();
+      expect(() =>
+        hashCompositionDiff({
+          apiVersion: "factory.graph-diff/v1",
+          operations: plan.proposedOperations,
+        }),
+      ).not.toThrow();
+    }
+  });
+
   it("refuses an escaped-material diff at decision application", () => {
     // The Diff checksum is computed by hashCompositionDiff, which must refuse
     // the escaped path before any application, so the Draft never moves.

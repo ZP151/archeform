@@ -869,4 +869,28 @@ describe("ApplicationGraphV1", () => {
       ).toThrow(GraphDiffError);
     }
   });
+
+  it("applies ~1/~0-escaped literal segments with their decoded keys", () => {
+    // QA-4-1-R1: the decode-then-scan must never over-reject — legitimate
+    // `~1`/`~0` escapes decode to literal `/` and `~` in record keys and must
+    // apply with their decoded keys.
+    const draft = createDraftRevision(expenseGraph, "draft-1");
+    const result = applyGraphDiffToDraft(draft, {
+      apiVersion: "factory.graph-diff/v1",
+      operations: [
+        { op: "add", path: "/experience/theme/tokens/a~1b", value: "clean" },
+        {
+          op: "add",
+          path: "/experience/theme/tokens/a~0b~1c~0d",
+          value: "clean",
+        },
+      ],
+    });
+
+    expect(result.revision).toBe(2);
+    expect(result.graph.experience.theme.tokens).toMatchObject({
+      "a/b": "clean",
+      "a~b/c~d": "clean",
+    });
+  });
 });
