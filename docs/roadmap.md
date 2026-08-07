@@ -268,7 +268,18 @@ binding contract and all quarantined solely for lacking two-Profile proof
 (zero eligible / 27 quarantined / 0 rejected — honest by construction).
 Observed results: capabilities 352/352 (28 files), graph 175/175,
 control-plane 183/183, adapters 34/34, compiler 330/330 (scratch worktree),
-`verify:generated-notification-outbox` green. Batch 2 next: re-run the
+`verify:generated-notification-outbox` green. The Batch 1 gate round closed
+with all three independent gates PASS: task review at `68bea3c5`, and
+behavioral QA plus release review at `d3e18f5a` (final HEAD, origin tip;
+both commits remote-reachable on the same chain) after the single QA P1 —
+the control-plane portfolio test's stale `golden: 23 / lockedVersions: 50`
+pin vs the live-derived 27/54 (deterministic 182/183) — was repaired at the
+test+docs-only commit `d3e18f5a` (pin → 27/54). Suites at final HEAD:
+control-plane 183/183 (17 files), capabilities 352/352, graph 175/175,
+adapters 34/34, typecheck clean; outbox runtime 1 pending drained / 1
+delivered / safeFailure true. Task 6 remains `implementing` — `reviewed`
+awaits all batches (Batch 2 isolated-verifier evidence regeneration, Batch
+3 evidence locks). Batch 2 next: re-run the
 isolated verifier (expense-approval, simple-ecommerce,
 restaurant-ordering) against the rebuilt digest set and regenerate the
 evidence records whose pins are stale by design.

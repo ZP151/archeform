@@ -295,8 +295,20 @@ binding resolution, three fail-closed rejections). Matrix at final HEAD:
 175/175, control-plane 183/183, adapters 34/34, typecheck clean; compiler
 330/330 re-run in a scratch worktree (test fixtures are forbidden in the
 main tree); `verify:generated-notification-outbox` green with the rebuilt
-packages (1 pending drained, 1 delivered). The Batch 1 gate round is
-underway.
+packages (1 pending drained, 1 delivered). The Batch 1 gate round closed
+with all three independent gates PASS: task review TASK_REVIEW_PASS (zero
+findings) at `68bea3c5`, and behavioral QA QA_PASS and release review
+RELEASE_PASS (zero findings) at `d3e18f5a` — both commits remote-reachable
+on the same chain, final HEAD == origin tip == `d3e18f5a`. The one P1 QA
+found at `68bea3c5` (the control-plane portfolio test's stale
+`golden: 23 / lockedVersions: 50` pin vs the live-derived 27/54, which made
+the suite deterministically 182/183) was repaired at the test+docs-only
+commit `d3e18f5a` (pin → 27/54) and re-verified. Suites at final HEAD:
+control-plane 183/183 (17 files), capabilities 352/352 (28 files), graph
+175/175, adapters 34/34, typecheck clean; outbox runtime 1 pending drained /
+1 delivered / safeFailure true; secret boundary clean; tree byte-clean.
+Task 6 remains `implementing` — `reviewed` awaits all batches (Batch 2
+isolated-verifier evidence regeneration and Batch 3 evidence locks).
 
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including

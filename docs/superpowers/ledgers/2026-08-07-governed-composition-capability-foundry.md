@@ -741,6 +741,48 @@ boundary clean). **Repaired** by updating the pin to 27/54 (test-only, no
 production code touched); control-plane re-verified **183/183 (17 files)** at
 the repair commit. Re-review of the repair is recorded with its disposition.
 
+### 2026-08-08 — Task 6 Batch 1 gate round closed: all three gates PASS at `68bea3c5` / `d3e18f5a`
+
+The Batch 1 gate round closes with all three independent gates PASS. Task
+review cites `68bea3c5`; behavioral QA and release review cite `d3e18f5a`
+(final HEAD, origin tip). Both Target-Commits are remote-reachable on
+`feat/governed-composition-capability-foundry` and on the same chain
+(`d3e18f5a` is a descendant of `68bea3c5`).
+
+- **Independent task review — `TASK_REVIEW_PASS` at `68bea3c5`, zero
+  findings:** SPEC PASS + QUALITY PASS — digest recompute ×4 (manifest,
+  template, adapter agreement), package verification, strict
+  `factory.capability-binding/v1` contract from birth, `profiles: []`
+  honesty, matrix 27/0/27/0 exact, capabilities 352/352 (28 files),
+  typecheck clean, tree clean.
+- **Independent behavioral QA — `QA_PASS` at `d3e18f5a`, zero findings:**
+  the single P1 found at `68bea3c5` — `portfolio-summary.service.test.ts`
+  pinned `capabilities: { golden: 23, lockedVersions: 50 }` while the
+  service derives the counts live from `@factory/capabilities`, so Batch 1's
+  legitimate move to 27 golden / 54 locked made the suite deterministically
+  182/183 — was repaired at the test+docs-only commit `d3e18f5a`
+  (`fix(control-plane): repair portfolio count pin for 27-family
+  portfolio`; pin → 27/54; the gate-round ledger section above landed in the
+  same commit) and re-verified at the repair: control-plane 183/183 (17
+  files), capabilities 352/352, graph 175/175, adapters 34/34, typecheck
+  clean, outbox runtime
+  `{"pendingBeforeDrain":1,"delivered":1,"safeFailure":true}`, secret
+  boundary clean, tree byte-clean.
+- **Independent release review — `RELEASE_PASS` at `d3e18f5a`, zero
+  findings:** lifecycle invariants PASS (the 37-file Batch 1 diff touches
+  only packages/capabilities, docs, and one control-plane test; immutable
+  Published Graphs and Compilations untouched; `dist/` gitignored),
+  contracts PASS (`composition.ts` 0-line diff), provenance PASS (all
+  first-party MIT; evidence digests byte-agree), secrets PASS, tests re-run
+  green (352/352, 183/183, 175/175, 34/34), Git PASS (HEAD == origin tip ==
+  Target-Commit; tree clean).
+
+Per the state vocabulary the PM alone advances a state: Train D Task 6
+remains `implementing` at `d3e18f5a` — Batch 1 is delivered and its gate
+round closed with all three gates PASS, but `reviewed` awaits all batches
+(Batch 2 isolated-verifier evidence regeneration and Batch 3 evidence locks
+remain pending).
+
 ## Required evidence per promoted family
 
 | Evidence    | Required form                                                       |
