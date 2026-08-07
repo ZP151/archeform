@@ -52,6 +52,18 @@ export type {
   FoundryAdmissionVerdictV1,
   FoundryProfileLockEvidenceV1,
 } from "./foundry-admission.js";
+export {
+  declaredFoundryFamilyEvidence,
+  familyEvidenceToAdmissionEvidence,
+} from "./foundry-evidence.js";
+export type { FoundryFamilyEvidenceV1 } from "./foundry-evidence.js";
+export { buildFoundryMatrix } from "./foundry-matrix.js";
+export type {
+  FoundryMatrixCountsV1,
+  FoundryMatrixResultV1,
+  FoundryMatrixRowV1,
+  FoundryMatrixV1,
+} from "./foundry-matrix.js";
 export type {
   ProfileCapabilityReadinessV1,
   ProfileGeneratedTargetV1,
