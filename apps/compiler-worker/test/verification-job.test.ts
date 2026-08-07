@@ -2,7 +2,10 @@ import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import type { PublishedGraphInput } from "@factory/compiler";
 import { createCapabilityCompositionLock } from "@factory/capabilities";
-import { hashApplicationGraph } from "@factory/graph";
+import {
+  hashApplicationGraph,
+  parseVerificationEvidence,
+} from "@factory/graph";
 
 import type { VerificationReporter } from "../src/verification-reporter.js";
 import { deriveCompilationDigest } from "../src/verifier/verification-lifecycle.js";
@@ -287,71 +290,122 @@ describe("queued verification run", () => {
     ).toEqual((reporter.report as ReturnType<typeof vi.fn>).mock.calls[1][0]);
   });
 
-  it("fails closed on payload-shape mutations before compilation starts", async () => {
+  it("refuses to compile a draft-envelope payload and reports a bounded failure", async () => {
     const { reporter, dependencies, executeCompilation } = collaborators();
     const input = jobInput();
-
-    const preflightMutations = [
-      { ...input, extraKey: "x" },
-      { ...input, profileKey: "unknown-profile" },
-      { ...input, artifacts: [] },
-      { ...input, artifacts: [{ ...input.artifacts[0], sizeBytes: -1 }] },
-      {
-        ...input,
-        graph: {
-          ...input.graph,
-          status: "draft",
-          revision: { number: 1 },
-        } as unknown as typeof input.graph,
-      },
-    ];
-    for (const candidate of preflightMutations) {
-      await expect(
-        executeQueuedVerificationRun(
-          "generated",
-          candidate,
-          reporter,
-          dependencies,
-        ),
-      ).rejects.toThrow();
-    }
-    expect(executeCompilation).not.toHaveBeenCalled();
-    expect(reporter.report).not.toHaveBeenCalled();
-  });
-
-  it("rejects a tampered artifact digest against the real compilation output", async () => {
-    // A format-valid but wrong digest cannot be distinguished from declared
-    // fixture data before compilation, so the job compiles honestly and the
-    // lifecycle rejects when the compiled manifest does not match the
-    // immutable digest — and no evidence is ever reported.
-    const { reporter, dependencies, executeCompilation } = collaborators();
-    const input = {
-      ...jobInput(),
-      artifacts: [{ ...jobInput().artifacts[0], digest: digestOf("tampered") }],
+    const draftEnvelope = {
+      ...input,
+      graph: {
+        ...input.graph,
+        status: "draft",
+        revision: { number: 1 },
+      } as unknown as typeof input.graph,
     };
-    await expect(
-      executeQueuedVerificationRun("generated", input, reporter, dependencies),
-    ).rejects.toThrow();
-    expect(executeCompilation).toHaveBeenCalledTimes(1);
-    expect(reporter.report).not.toHaveBeenCalled();
+    const evidence = await executeQueuedVerificationRun(
+      "generated",
+      draftEnvelope,
+      reporter,
+      dependencies,
+    );
+    // The draft-shaped Graph is refused before compilation, and the boundary
+    // records a terminal failure evidence instead of stranding the run.
+    expect(executeCompilation).not.toHaveBeenCalled();
+    expect(evidence.steps[0]).toMatchObject({
+      status: "failed",
+      failureCode: "job.contract_violation",
+    });
+    expect(reporter.report).toHaveBeenCalledTimes(1);
   });
 
-  it("fails closed on an unknown or missing job key", async () => {
+  it("fails closed on a non-record payload without fabricating a report", async () => {
     const { reporter, dependencies } = collaborators();
-    const input = jobInput();
-    const missing = { ...input } as Record<string, unknown>;
-    delete missing.compilationId;
-    await expect(
-      executeQueuedVerificationRun(
-        "generated",
-        missing,
-        reporter,
-        dependencies,
-      ),
-    ).rejects.toThrow();
     await expect(
       executeQueuedVerificationRun("generated", null, reporter, dependencies),
     ).rejects.toThrow();
     expect(reporter.report).not.toHaveBeenCalled();
+  });
+
+  describe("terminal failure boundary", () => {
+    it("reports one safe terminal failure evidence when a dependency throws after run creation", async () => {
+      const { reporter, dependencies, executeCompilation } = collaborators();
+      executeCompilation.mockRejectedValue(new Error("compile failed"));
+      const input = jobInput();
+      const evidence = await executeQueuedVerificationRun(
+        "generated",
+        input,
+        reporter,
+        dependencies,
+      );
+      expect(evidence.steps).toHaveLength(1);
+      expect(evidence.steps[0]).toMatchObject({
+        stepId: "verification",
+        kind: "immutable-snapshot",
+        status: "failed",
+        failureCode: "job.unmapped_failure",
+      });
+      expect(evidence.cleanup.succeeded).toBe(false);
+      expect(evidence.verificationRunId).toBe(input.verificationRunId);
+      expect(evidence.compilationDigest).toBe(
+        deriveCompilationDigest(
+          hashApplicationGraph(input.graph),
+          input.artifacts,
+        ),
+      );
+      expect(reporter.report).toHaveBeenCalledTimes(1);
+      const [report] = (reporter.report as ReturnType<typeof vi.fn>).mock
+        .calls[0];
+      expect(report.diagnosis).toBeUndefined();
+      expect(parseVerificationEvidence(report.evidence)).toEqual(
+        report.evidence,
+      );
+    });
+
+    it("maps a lifecycle digest mismatch to its bounded allowlisted code", async () => {
+      // A format-valid but wrong digest cannot be distinguished from declared
+      // fixture data before compilation, so the job compiles honestly; the
+      // lifecycle then rejects and the boundary maps the exact lifecycle code.
+      const { reporter, dependencies, executeCompilation } = collaborators();
+      const input = {
+        ...jobInput(),
+        artifacts: [
+          { ...jobInput().artifacts[0], digest: digestOf("tampered") },
+        ],
+      };
+      const evidence = await executeQueuedVerificationRun(
+        "generated",
+        input,
+        reporter,
+        dependencies,
+      );
+      expect(executeCompilation).toHaveBeenCalledTimes(1);
+      expect(evidence.steps[0].failureCode).toBe("compilation_digest_mismatch");
+      expect(reporter.report).toHaveBeenCalledTimes(1);
+    });
+
+    it("reports a bounded contract violation for payload-shape mutations", async () => {
+      const { reporter, dependencies, executeCompilation } = collaborators();
+      const input = jobInput();
+      const missingKey = { ...input } as Record<string, unknown>;
+      delete missingKey.compilationId;
+      const candidates: unknown[] = [
+        { ...input, extraKey: "x" },
+        { ...input, profileKey: "unknown-profile" },
+        { ...input, artifacts: [] },
+        { ...input, artifacts: [{ ...input.artifacts[0], sizeBytes: -1 }] },
+        missingKey,
+      ];
+      for (const candidate of candidates) {
+        const evidence = await executeQueuedVerificationRun(
+          "generated",
+          candidate,
+          reporter,
+          dependencies,
+        );
+        expect(evidence.steps[0].status).toBe("failed");
+        expect(evidence.steps[0].failureCode).toMatch(/^[a-z][a-z0-9._-]*$/);
+      }
+      expect(executeCompilation).not.toHaveBeenCalled();
+      expect(reporter.report).toHaveBeenCalledTimes(candidates.length);
+    });
   });
 });

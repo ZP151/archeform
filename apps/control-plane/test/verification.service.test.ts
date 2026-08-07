@@ -493,6 +493,48 @@ describe("VerificationService", () => {
     expect(prisma.verificationRun.update).toHaveBeenCalledTimes(1);
   });
 
+  it("accepts the worker terminal failure record without a diagnosis", async () => {
+    const prisma = prismaMock();
+    prisma.verificationRun.findUnique.mockResolvedValue(runRow);
+    prisma.verificationRun.update.mockResolvedValue({
+      ...runRow,
+      status: "failed",
+    });
+    const service = verificationService(prisma);
+
+    const result = await service.reportEvidence("verify-01h3k6f", {
+      evidence: {
+        apiVersion: "factory.verification-evidence/v1",
+        verificationRunId: "verify-01h3k6f",
+        compilationDigest: digestOf("compilation"),
+        steps: [
+          {
+            stepId: "verification",
+            kind: "immutable-snapshot",
+            status: "failed",
+            failureCode: "compilation_digest_mismatch",
+            summary:
+              "The verification job terminated before completing the declared step plan.",
+          },
+        ],
+        cleanup: {
+          succeeded: false,
+          summary:
+            "The verification job terminated before the preview cleanup ran.",
+        },
+        artifactDigests: [],
+        completedAt: "2026-08-07T00:00:00.000Z",
+      },
+    });
+    expect(result.status).toBe("failed");
+    const update = prisma.verificationRun.update.mock.calls[0][0] as {
+      data: Record<string, unknown>;
+    };
+    expect(update.data.stepIds).toEqual(["verification"]);
+    expect(update.data.diagnosis).toBeUndefined();
+    expect(update.data.evidenceDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
+  });
+
   it("rejects an approval for an unknown verification run", async () => {
     const prisma = prismaMock();
     prisma.verificationRun.findUnique.mockResolvedValue(null);

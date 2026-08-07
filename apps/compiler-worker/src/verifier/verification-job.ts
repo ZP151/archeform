@@ -1,6 +1,7 @@
 import type { PublishedGraphInput } from "@factory/compiler";
 import {
   hashApplicationGraph,
+  parseVerificationEvidence,
   VerificationContractError,
   type DiagnosisV1,
   type VerificationEvidenceV1,
@@ -23,6 +24,7 @@ import {
   runRoleJourneyProbe,
   type ProbeContext,
 } from "./probes.js";
+import { VerificationLifecycleError } from "./verification-lifecycle.js";
 import {
   resolveRegistryAction,
   type IdempotencyJourneyFixture,
@@ -44,8 +46,10 @@ import {
  * safe evidence bundle, and one final diagnosis (only when a step failed).
  * The job validates the exact payload fail closed before compilation, resolves
  * the deterministic profile, then delegates to the isolated lifecycle; the
- * lifecycle always cleans up, and compile failures propagate honestly (the
- * job never fabricates evidence for a compilation that did not happen).
+ * lifecycle always cleans up, and a worker exception after the run was
+ * created is mapped to one safe terminal failure evidence instead of leaving
+ * the run at `pending` forever (the job never fabricates a success evidence
+ * for a compilation that did not happen).
  */
 
 export type VerificationRunInput = {
@@ -182,13 +186,120 @@ function probeRunnerFor(profile: VerificationProfile) {
 }
 
 /**
+ * Terminal failure boundary. A worker exception after the run was created
+ * (any fail-closed guard, compile failure, digest mismatch, or rejected
+ * report) must not leave the run at `pending`: the adapter maps it to one
+ * safe terminal failure evidence through the existing reporter contract, so
+ * the Control Plane records a deterministic terminal `failed` status. The
+ * failure record carries only an allowlisted diagnostic code and bounded
+ * prose — never process output. When the payload is too corrupt to derive a
+ * digest, no safe record can be built and the original failure propagates
+ * honestly instead.
+ */
+
+const jobFailureStepId = "verification";
+const jobFailureStepKind = "immutable-snapshot" as const;
+const jobFailureSummary =
+  "The verification job terminated before completing the declared step plan.";
+const jobFailureCleanupSummary =
+  "The verification job terminated before the preview cleanup ran.";
+
+function boundedFailureCode(error: unknown): string {
+  if (error instanceof VerificationLifecycleError) {
+    // Lifecycle codes are Factory-authored; anything off the allowlist shape
+    // fails closed to the generic code.
+    return /^[a-z][a-z0-9._-]{0,99}$/.test(error.code)
+      ? error.code
+      : "job.unmapped_failure";
+  }
+  if (error instanceof VerificationContractError) {
+    return "job.contract_violation";
+  }
+  return "job.unmapped_failure";
+}
+
+/**
+ * Builds and reports the bounded terminal failure evidence for one queued
+ * job. Returns the contract-validated evidence, or `undefined` when no safe
+ * record can be constructed or delivered (the caller then rethrows).
+ */
+export async function reportVerificationJobFailure(
+  input: unknown,
+  reporter: VerificationReporter,
+  error: unknown,
+  now?: () => string,
+): Promise<VerificationEvidenceV1 | undefined> {
+  try {
+    const job = input as VerificationRunInput;
+    const evidence: VerificationEvidenceV1 = {
+      apiVersion: "factory.verification-evidence/v1",
+      verificationRunId: job.verificationRunId,
+      compilationDigest: deriveCompilationDigest(
+        hashApplicationGraph(job.graph),
+        job.artifacts,
+      ),
+      steps: [
+        {
+          stepId: jobFailureStepId,
+          kind: jobFailureStepKind,
+          status: "failed",
+          failureCode: boundedFailureCode(error),
+          summary: jobFailureSummary,
+        },
+      ],
+      cleanup: {
+        succeeded: false,
+        summary: jobFailureCleanupSummary,
+      },
+      artifactDigests: job.artifacts.map(({ path, digest }) => ({
+        path,
+        digest,
+      })),
+      completedAt: (now ?? (() => new Date().toISOString()))(),
+    };
+    const validated = parseVerificationEvidence(evidence);
+    await reporter.report({ evidence: validated, diagnosis: undefined });
+    return validated;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Runs one queued verification job end to end: compile the immutable input,
  * boot the isolated preview, run the declared profile probes, always clean
  * up, and report exactly one evidence bundle plus — only when a step failed —
  * one deterministic diagnosis. Retries with the same job identity re-run the
- * same deterministic lifecycle and report idempotently.
+ * same deterministic lifecycle and report idempotently. A worker exception
+ * after the run was created is closed by one safe terminal failure report;
+ * only when even that record cannot be built does the job fail honestly.
  */
 export async function executeQueuedVerificationRun(
+  artifactRoot: string,
+  input: VerificationRunInput,
+  reporter: VerificationReporter,
+  dependencies: VerificationRunDependencies,
+): Promise<VerificationEvidenceV1> {
+  try {
+    return await executeVerifiedRun(
+      artifactRoot,
+      input,
+      reporter,
+      dependencies,
+    );
+  } catch (error) {
+    const failureEvidence = await reportVerificationJobFailure(
+      input,
+      reporter,
+      error,
+      dependencies.now,
+    );
+    if (failureEvidence === undefined) throw error;
+    return failureEvidence;
+  }
+}
+
+async function executeVerifiedRun(
   artifactRoot: string,
   input: VerificationRunInput,
   reporter: VerificationReporter,
