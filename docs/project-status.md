@@ -235,9 +235,11 @@ records Train C Task 5 `ready_for_qa -> reviewed`. Suites at final state:
 capabilities 329/329 (24 files), graph 175/175, control-plane 183/183,
 typecheck, Prettier, and build green.
 
-Train D Task 6 Batch 0 (manifest readiness repair) is implemented at the
-pending commit, closing the exact gap Task 5 recorded: all 23 current
-families now declare the strict `factory.capability-binding/v1` contract.
+Train D Task 6 Batch 0 (manifest readiness repair) is implemented at
+`36cc7dea` (strict contract declaration) and `cd6baf6` (pairing rules pinned
+by mutation-red tests; ledger reconciled), closing the exact gap Task 5
+recorded: all 23 current families now declare the strict
+`factory.capability-binding/v1` contract.
 `composition.ts` gained one generic bounded value-selection input type
 (`message.template`) paired only with manifest-declared enum parameters —
 the manifest bounds the allowed values, so a caller can never inject an
@@ -266,9 +268,18 @@ timing out at 5 s under the concurrent suite (Windows tinypool
 `kill EPERM` teardown crash); workbench tests pass 73/73 alone. The
 repo-wide `format:check` 110-file prettier drift is pre-existing tooling
 files with zero overlap on the 47-file Batch 0 change set (which is
-prettier-clean). Batch 1 adds new capability families toward 25–35;
-Batch 2 re-runs the isolated verifier and regenerates the evidence
-records whose digest pins are stale by design.
+prettier-clean). Batch 0's three independent gates closed with PASS: task
+review TASK_REVIEW_PASS and behavioral QA QA_PASS (7/7 probes, zero
+findings) at `cd6baf6`, and release review RELEASE_PASS at the docs-only
+`7120106` (its single P2 doc suite-count drift repaired and verified
+closed); both commits are remote-reachable and the worktree is clean. The
+PM advances Train D Task 6 to `implementing` at `7120106` — Batch 0
+delivered and gate-verified; `reviewed` awaits all batches. Matrix state:
+zero eligible, 23 quarantined (`fewer-than-two-profiles`), 0 rejected;
+capabilities 332/332 (24 files), graph 175/175, compiler 330/330. Batch 1
+adds new capability families toward 25–35; Batch 2 re-runs the isolated
+verifier and regenerates the evidence records whose digest pins are stale
+by design.
 
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including

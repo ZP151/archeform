@@ -38,7 +38,7 @@ adapter").
 | A. Composition contracts  | 1          | reviewed     | e13bef1       | RequirementSpec, plan, decision, recipe schema tests                         |
 | B. Planner and review     | 2, 3, 4, 8 | ready_for_qa | 74e918d       | deterministic plan, Draft-only review tests, Control Plane APIs              |
 | C. Foundry quality system | 5          | reviewed     | 0ce7899b      | declared evidence registry, honest matrix, promotion policy, promotion tests |
-| D. Capability batches     | 6          | planned      | —             | 25–35 eligible families, two Profiles each                                   |
+| D. Capability batches     | 6          | implementing | 7120106       | Batch 0 gate-verified; 25–35 eligible families, two Profiles each            |
 | E. Portfolio proof        | 7          | planned      | —             | 100+ recipes, 12 compiled anchors                                            |
 | F. Release                | 9          | planned      | —             | independent gates and final record                                           |
 
@@ -630,6 +630,41 @@ under `.agents/`); the 47-file Batch 0 change set is prettier-clean with
 zero overlap. The isolated-verifier expense record pins pre-repair digests
 by design; Batch 2 re-runs the Docker verifier loop and regenerates the
 evidence records.
+
+### 2026-08-08 — Task 6 Batch 0 gate closure: all three gates PASS at cd6baf6 / 7120106
+
+All three independent gates for Task 6 Batch 0 returned PASS, citing the same
+remote-reachable Target-Commit chain: task review and behavioral QA at
+`cd6baf6` (`cd6baf66ff4cc24f91991b7835e433bc7e06b7bd`), release review at
+`7120106` (`71201069f1c66bc5f1d1a018d9191f2407ef4a87`), the docs-only repair
+commit whose parent is `cd6baf6`. Both commits are pushed to
+`feat/governed-composition-capability-foundry`; the worktree is clean.
+
+- **Independent task review — `TASK_REVIEW_PASS` at `cd6baf6`:** both prior P2
+  findings confirmed repaired — the enum/`message.template` pairing rules are
+  now pinned by mutation-red regression tests (capabilities 332/332), and the
+  ledger's 14-family breakdown is reconciled with the repaired matrix split.
+  The repair diff is test/docs-only; tree clean.
+- **Independent behavioral QA — `QA_PASS` at `cd6baf6`, zero findings:** 7/7
+  probes — manifest readiness 23/23, digests 23/23 recomputed, binding
+  conformance, compiler byte-stability, adversarial pairing/overlap, secret
+  boundary clean, and the regression suites (capabilities 332/332, graph
+  175/175, compiler 330/330) run in a scratch worktree.
+- **Independent release review — `RELEASE_PASS` at `7120106`:** its single P2
+  (doc suite-count drift, 329/329 → 332/332 in three docs) was repaired at the
+  docs-only commit `7120106` and verified closed; lifecycle invariants,
+  contracts, provenance/secrets, and remote integration all clean.
+
+Observed matrix state at final HEAD: **23 quarantined
+(`fewer-than-two-profiles`) / 0 rejected / 0 eligible**; capabilities 332/332
+(24 files), graph 175/175, compiler 330/330. Zero families are eligible; no
+two-Profile proof is claimed until real verifier evidence lands.
+
+Per the state vocabulary the PM alone advances a state: the PM records Train D
+Task 6 `planned -> implementing` at `7120106` — Batch 0 is delivered and
+gate-verified; `reviewed` awaits all batches (Batches 1–3 remain pending:
+new capability families toward 25–35, verifier evidence regeneration, and the
+remainder).
 
 ## Required evidence per promoted family
 

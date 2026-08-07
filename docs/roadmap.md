@@ -228,9 +228,10 @@ with no findings at `0ce7899b` (task review TASK_REVIEW_PASS; QA_PASS
 35/35) and the PM records Train C Task 5 `ready_for_qa -> reviewed`
 (capabilities 329/329, graph 175/175, control-plane 183/183).
 
-Train D Task 6 Batch 0 (manifest readiness repair) is implemented at the
-pending commit: all 23 current families now declare the strict
-`factory.capability-binding/v1` contract. `composition.ts` gained one
+Train D Task 6 Batch 0 (manifest readiness repair) is implemented at
+`36cc7dea` (strict contract declaration) and `cd6baf6` (pairing rules pinned
+by mutation-red tests; ledger reconciled): all 23 current families now
+declare the strict `factory.capability-binding/v1` contract. `composition.ts` gained one
 generic bounded input type (`message.template`, paired only with
 manifest-declared enum parameters whose values the manifest itself bounds —
 no caller can inject an arbitrary selection); every manifest's parameters
@@ -248,7 +249,14 @@ generated-notification-outbox runtime still delivers with the new
 manifests. Two workbench issues (Next.js `node:crypto` build failure and a
 concurrent-suite Home test timeout) were reproduced at the accepted Task 5
 HEAD with zero Batch 0 changes and are recorded as pre-existing environment
-limitations. Batch 1 next: new capability families to reach 25–35, then
+limitations. Batch 0's three independent gates closed with PASS: task
+review TASK_REVIEW_PASS and behavioral QA QA_PASS (7/7 probes, zero
+findings) at `cd6baf6`, and release review RELEASE_PASS at the docs-only
+`7120106` (its P2 doc suite-count drift, 329/329 → 332/332 in three docs,
+repaired and verified closed); both commits are remote-reachable and the
+worktree is clean. The PM advances Train D Task 6 to `implementing` at
+`7120106` — Batch 0 delivered and gate-verified; `reviewed` awaits all
+batches. Batch 1 next: new capability families to reach 25–35, then
 Batch 2 re-runs the isolated verifier to regenerate two-Profile evidence.
 
 ## P2 and P3
