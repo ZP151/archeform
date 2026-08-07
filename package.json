@@ -18,6 +18,7 @@
     "verify:third-party": "node scripts/verify-third-party-notices.mjs",
     "verify:source-studies": "node scripts/verify-source-studies.mjs",
     "verify:generated-notification-outbox": "pnpm --filter @factory/graph build && pnpm --filter @factory/capabilities build && pnpm --filter @factory/compiler build && node scripts/verify-generated-notification-outbox.mjs",
+    "verify:isolated-verifier-expense": "node scripts/verify-isolated-verifier-expense.mjs",
     "compose:up": "docker compose --env-file .env -f infra/docker-compose.yml up --build",
     "compose:down": "docker compose --env-file .env -f infra/docker-compose.yml down -v",
     "intake": "node --env-file-if-exists=.env apps/intake-cli/dist/main.js"

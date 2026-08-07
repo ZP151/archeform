@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
   UnprocessableEntityException,
@@ -30,8 +31,14 @@ import {
   exactRecord,
   requiredString,
   succeededCompilation,
+  validatedGraph,
+  verifiedPublishedCompositionLock,
 } from "../lifecycle.service.js";
 import { PrismaService } from "../prisma.service.js";
+import {
+  VERIFICATION_RUN_QUEUE,
+  type VerificationRunQueue,
+} from "../verification-run-queue.js";
 
 const verificationRunIdPattern = /^[a-z0-9-]{1,128}$/;
 const profileKeyPattern = /^[a-z][a-z0-9-]{0,63}$/;
@@ -119,7 +126,11 @@ function translateOperations(
 
 @Injectable()
 export class VerificationService {
-  public constructor(private readonly prisma: PrismaService) {}
+  public constructor(
+    private readonly prisma: PrismaService,
+    @Inject(VERIFICATION_RUN_QUEUE)
+    private readonly verificationQueue: VerificationRunQueue,
+  ) {}
 
   public async createRun(compilationId: string, input: unknown) {
     const body = exactRecord(
@@ -152,6 +163,10 @@ export class VerificationService {
     }
     const compilation = await this.prisma.compilation.findUnique({
       where: { id: compilationId },
+      include: {
+        publishedRevision: true,
+        artifacts: { orderBy: { path: "asc" } },
+      },
     });
     if (!compilation || compilation.id !== compilationId) {
       throw new NotFoundException("Compilation was not found.");
@@ -162,7 +177,29 @@ export class VerificationService {
         reason: "Only succeeded compilations can be verified.",
       });
     }
-    return this.prisma.verificationRun.create({
+    if (!compilation.publishedRevision) {
+      throw new ConflictException(
+        "Compilation carries no published revision to verify.",
+      );
+    }
+    // The immutable job snapshot is validated BEFORE the run row is created:
+    // the published graph must hash to the recorded revision hash, and the
+    // stored composition lock must match its recorded digest. Rejected input
+    // never leaves a run row behind and never enqueues a job.
+    const { graph, graphHash } = validatedGraph(
+      compilation.publishedRevision.graph,
+    );
+    if (graphHash !== compilation.publishedRevision.graphHash) {
+      throw new ConflictException(
+        "Published graph hash does not match the recorded revision.",
+      );
+    }
+    const compositionLock = verifiedPublishedCompositionLock(
+      compilation.publishedRevision.compositionLock,
+      compilation.publishedRevision.compositionLockHash,
+      graphHash,
+    );
+    const run = await this.prisma.verificationRun.create({
       data: {
         verificationRunId,
         compilationId,
@@ -171,6 +208,23 @@ export class VerificationService {
         stepIds: [],
       },
     });
+    await this.verificationQueue.enqueue({
+      verificationRunId,
+      compilationId,
+      profileKey,
+      publishedRevisionId: compilation.publishedRevision.id,
+      graph,
+      compositionLock,
+      artifacts: compilation.artifacts.map(({ path, digest, sizeBytes }) => {
+        if (sizeBytes === null) {
+          throw new ConflictException(
+            "Compilation artifacts must record their size.",
+          );
+        }
+        return { path, digest, sizeBytes };
+      }),
+    });
+    return run;
   }
 
   public async getRun(verificationRunId: string) {

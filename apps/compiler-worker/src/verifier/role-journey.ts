@@ -26,6 +26,12 @@ export type RoleJourneyFixture = {
   readonly action: string;
   /** The `x-factory-role` header value; absent means an anonymous request. */
   readonly principal?: string;
+  /**
+   * The `x-factory-fixture-session` header value for session-bound generated
+   * applications. Mutually exclusive with `principal`: a journey resolves
+   * exactly one principal kind, never both.
+   */
+  readonly sessionId?: string;
   /** A bounded flat declared JSON body, e.g. a create payload. */
   readonly body?: string;
 };
@@ -202,6 +208,21 @@ export function validateRoleJourney(
     ) {
       throw new VerificationContractError(
         "Role journey principals must be declared fixture data.",
+      );
+    }
+  }
+  if (journey.sessionId !== undefined) {
+    if (
+      typeof journey.sessionId !== "string" ||
+      !principalPattern.test(journey.sessionId)
+    ) {
+      throw new VerificationContractError(
+        "Role journey sessions must be declared fixture data.",
+      );
+    }
+    if (journey.principal !== undefined) {
+      throw new VerificationContractError(
+        "Role journeys resolve exactly one principal kind.",
       );
     }
   }

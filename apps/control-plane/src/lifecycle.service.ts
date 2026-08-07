@@ -393,7 +393,7 @@ function jsonValue(value: unknown, key: string): Prisma.InputJsonValue {
   }
 }
 
-function validatedGraph(input: unknown): {
+export function validatedGraph(input: unknown): {
   graph: ApplicationGraphV1;
   graphHash: string;
 } {
@@ -461,7 +461,7 @@ function hasEqualJsonStructure(left: unknown, right: unknown): boolean {
   );
 }
 
-function verifiedPublishedCompositionLock(
+export function verifiedPublishedCompositionLock(
   input: unknown,
   storedHash: string | null,
   graphHash: string,

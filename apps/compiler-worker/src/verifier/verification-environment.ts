@@ -64,11 +64,15 @@ const maximumCommandTokens = 10;
 
 /**
  * Declared request headers are fixture data: an explicitly allowlisted name
- * (only the API role header `x-factory-role`) and an identifier-style value.
- * A shape check would let credential-named headers through with benign-shaped
- * values, so the name must match the allowlist exactly.
+ * (the API role header `x-factory-role` and the session-bound generated-app
+ * header `x-factory-fixture-session`) and an identifier-style value. A shape
+ * check would let credential-named headers through with benign-shaped values,
+ * so the name must match the allowlist exactly.
  */
-const allowedHeaderNames = new Set(["x-factory-role"]);
+const allowedHeaderNames = new Set([
+  "x-factory-role",
+  "x-factory-fixture-session",
+]);
 const safeHeaderValue = /^[a-zA-Z0-9._-]{1,64}$/;
 const maximumDeclaredHeaders = 8;
 
@@ -224,9 +228,12 @@ export class VerificationEnvironment {
   }
 
   /**
-   * Runs one bounded, allowlisted migration command inside the migrate
-   * service. Only plain identifier-style tokens are accepted, and the command
-   * can never escape the fixed `compose exec -T migrate` invocation.
+   * Runs one bounded, allowlisted migration command inside the api service.
+   * Only plain identifier-style tokens are accepted, and the command can
+   * never escape the fixed `compose exec -T api` invocation. The generated
+   * migrate service is one-shot (it applies the schema, seeds, and exits), so
+   * a migration command cannot `exec` into it; the api service runs the same
+   * generated schema, carries the Prisma CLI, and stays up for the journeys.
    */
   async migrate(command: readonly string[]): Promise<BoundedCommandResult> {
     if (
@@ -281,7 +288,7 @@ export class VerificationEnvironment {
             previewDirectory,
             "exec",
             "-T",
-            "migrate",
+            "api",
             ...command,
           ],
           environment: {},

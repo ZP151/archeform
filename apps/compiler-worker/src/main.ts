@@ -1,5 +1,6 @@
 import { Queue, Worker } from "bullmq";
 
+import { executeCompilation } from "./compilation-executor.js";
 import { createControlPlaneReporter } from "./control-plane-reporter.js";
 import { readWorkerConfig } from "./config.js";
 import {
@@ -13,6 +14,16 @@ import {
 } from "./queued-preview-run.js";
 import { createPreviewReporter } from "./preview-reporter.js";
 import { createPreviewDispatchClient } from "./preview-dispatch-client.js";
+import {
+  runDockerCompose,
+  startPreviewRun,
+  stopPreviewRun,
+} from "./preview-runner.js";
+import { createVerificationReporter } from "./verification-reporter.js";
+import {
+  executeQueuedVerificationRun,
+  type VerificationRunInput,
+} from "./verifier/verification-job.js";
 
 const config = readWorkerConfig();
 const connection = {
@@ -32,6 +43,10 @@ const previewDispatchClient = createPreviewDispatchClient(
   config.internalWorkerToken,
 );
 const previewRuntime = createPreviewRuntime(config.previewOperationTimeoutMs);
+const verificationReporter = createVerificationReporter(
+  config.controlPlaneUrl,
+  config.internalWorkerToken,
+);
 
 const queue = new Queue(config.queueName, { connection });
 const worker = new Worker<CompilationJob>(
@@ -54,6 +69,27 @@ const previewWorker = new Worker<PreviewRunJob>(
     ),
   { connection, concurrency: 2 },
 );
+const verificationQueue = new Queue(config.verificationQueueName, {
+  connection,
+});
+const verificationWorker = new Worker<VerificationRunInput>(
+  config.verificationQueueName,
+  async (job) =>
+    executeQueuedVerificationRun(
+      config.artifactRoot,
+      job.data,
+      verificationReporter,
+      {
+        operationTimeoutMs: config.previewOperationTimeoutMs,
+        executeCompilation,
+        startPreviewRun,
+        stopPreviewRun,
+        processRunner: runDockerCompose,
+        fetch,
+      },
+    ),
+  { connection },
+);
 
 worker.on("ready", () => {
   console.info(`Factory compiler worker ready for queue ${config.queueName}`);
@@ -63,6 +99,11 @@ previewWorker.on("ready", () => {
     `Factory preview worker ready for queue ${config.previewQueueName}`,
   );
 });
+verificationWorker.on("ready", () => {
+  console.info(
+    `Factory verification worker ready for queue ${config.verificationQueueName}`,
+  );
+});
 
 async function shutdown(): Promise<void> {
   await Promise.all([
@@ -70,6 +111,8 @@ async function shutdown(): Promise<void> {
     queue.close(),
     previewWorker.close(),
     previewQueue.close(),
+    verificationWorker.close(),
+    verificationQueue.close(),
   ]);
 }
 

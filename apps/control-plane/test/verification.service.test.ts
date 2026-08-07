@@ -6,10 +6,12 @@ import {
 } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
+import { createCapabilityCompositionLock } from "@factory/capabilities";
 import { hashApplicationGraph } from "@factory/graph";
 
 import type { ApplicationGraphV1 } from "@factory/graph";
 import type { PrismaService } from "../src/prisma.service.js";
+import type { VerificationRunQueue } from "../src/verification-run-queue.js";
 import { VerificationService } from "../src/verification/verification.service.js";
 import { localApplicationGraph } from "./application-graph.fixture.js";
 
@@ -94,6 +96,23 @@ function prismaMock() {
 
 const graphHash = hashApplicationGraph(graph);
 
+const compositionLock = createCapabilityCompositionLock({
+  graphChecksum: graphHash,
+  selections: [],
+});
+
+const artifactRow = {
+  id: "artifact-1",
+  compilationId: "compilation-1",
+  kind: "compiled",
+  path: "docker-compose.yml",
+  digest: digestOf("compose"),
+  mediaType: "text/yaml",
+  sizeBytes: 512,
+  metadata: {},
+  createdAt: new Date("2026-08-07T00:00:00.000Z"),
+};
+
 const compilation = {
   id: "compilation-1",
   publishedRevisionId: "published-1",
@@ -103,8 +122,22 @@ const compilation = {
   compilerVersion: "0.1.0",
   result: { status: "succeeded" },
   compiledAt: new Date("2026-08-07T00:00:00.000Z"),
+  publishedRevision: {
+    id: "published-1",
+    applicationGraphId: "graph-1",
+    sourceDraftRevisionId: "draft-cuid-0",
+    revisionNumber: 1,
+    graph,
+    graphHash,
+    compositionLock,
+    compositionLockHash: compositionLock.lockDigest,
+    publishedAt: new Date("2026-08-07T00:00:00.000Z"),
+  },
+  artifacts: [artifactRow],
 };
 
+// Standalone published revision used by the approval tests; the lock is not
+// needed there, so it is kept null to prove the approval path never reads it.
 const publishedRevision = {
   id: "published-1",
   applicationGraphId: "graph-1",
@@ -199,10 +232,24 @@ const unprocessable = (promise: Promise<unknown>, code: string) =>
       (error.getResponse() as { code?: string }).code === code,
   );
 
+function queueMock() {
+  return { enqueue: vi.fn().mockResolvedValue(undefined) };
+}
+
+function verificationService(
+  prisma: ReturnType<typeof prismaMock>,
+  queue = queueMock(),
+) {
+  return new VerificationService(
+    prisma as unknown as PrismaService,
+    queue as unknown as VerificationRunQueue,
+  );
+}
+
 describe("VerificationService", () => {
   it("rejects a create run request with unknown or missing fields", async () => {
     const prisma = prismaMock();
-    const service = new VerificationService(prisma as unknown as PrismaService);
+    const service = verificationService(prisma);
 
     await expect(
       service.createRun("compilation-1", { verificationRunId: "x" }),
@@ -220,7 +267,7 @@ describe("VerificationService", () => {
     const prisma = prismaMock();
     prisma.compilation.findUnique.mockResolvedValue(compilation);
     prisma.verificationRun.create.mockResolvedValue(runRow);
-    const service = new VerificationService(prisma as unknown as PrismaService);
+    const service = verificationService(prisma);
 
     await expect(
       service.createRun("compilation-missing", {
@@ -251,7 +298,7 @@ describe("VerificationService", () => {
       ...compilation,
       result: { status: "queued" },
     });
-    const service = new VerificationService(prisma as unknown as PrismaService);
+    const service = verificationService(prisma);
 
     await expect(
       service.createRun("compilation-1", {
@@ -265,7 +312,7 @@ describe("VerificationService", () => {
     const prisma = prismaMock();
     prisma.compilation.findUnique.mockResolvedValue(compilation);
     prisma.verificationRun.findUnique.mockResolvedValue(runRow);
-    const service = new VerificationService(prisma as unknown as PrismaService);
+    const service = verificationService(prisma);
 
     const result = await service.createRun("compilation-1", {
       verificationRunId: "verify-01h3k6f",
@@ -285,7 +332,7 @@ describe("VerificationService", () => {
       ...runRow,
       compilationId: "compilation-2",
     });
-    const service = new VerificationService(prisma as unknown as PrismaService);
+    const service = verificationService(prisma);
 
     await expect(
       service.createRun("compilation-1", {
@@ -298,7 +345,7 @@ describe("VerificationService", () => {
   it("rejects a malformed run identity and profile key", async () => {
     const prisma = prismaMock();
     prisma.compilation.findUnique.mockResolvedValue(compilation);
-    const service = new VerificationService(prisma as unknown as PrismaService);
+    const service = verificationService(prisma);
 
     await expect(
       service.createRun("compilation-1", {
@@ -321,7 +368,7 @@ describe("VerificationService", () => {
       ...runRow,
       status: "succeeded",
     });
-    const service = new VerificationService(prisma as unknown as PrismaService);
+    const service = verificationService(prisma);
 
     const result = await service.reportEvidence("verify-01h3k6f", {
       evidence: evidenceInput(),
@@ -344,7 +391,7 @@ describe("VerificationService", () => {
       ...runRow,
       status: "failed",
     });
-    const service = new VerificationService(prisma as unknown as PrismaService);
+    const service = verificationService(prisma);
 
     const result = await service.reportEvidence("verify-01h3k6f", {
       evidence: failedEvidenceInput(),
@@ -355,7 +402,7 @@ describe("VerificationService", () => {
   it("rejects evidence whose run identity does not match the addressed run", async () => {
     const prisma = prismaMock();
     prisma.verificationRun.findUnique.mockResolvedValue(runRow);
-    const service = new VerificationService(prisma as unknown as PrismaService);
+    const service = verificationService(prisma);
 
     await expect(
       service.reportEvidence("verify-other-run", {
@@ -368,7 +415,7 @@ describe("VerificationService", () => {
   it("rejects evidence that is not contract-shaped or leaks secrets", async () => {
     const prisma = prismaMock();
     prisma.verificationRun.findUnique.mockResolvedValue(runRow);
-    const service = new VerificationService(prisma as unknown as PrismaService);
+    const service = verificationService(prisma);
 
     await expect(
       service.reportEvidence("verify-01h3k6f", {
@@ -405,7 +452,7 @@ describe("VerificationService", () => {
       stepIds: ["authorization-denial", "health", "cleanup"],
     };
     prisma.verificationRun.findUnique.mockResolvedValue(completed);
-    const service = new VerificationService(prisma as unknown as PrismaService);
+    const service = verificationService(prisma);
 
     await expect(
       service.reportEvidence("verify-01h3k6f", {
@@ -422,7 +469,7 @@ describe("VerificationService", () => {
       ...runRow,
       status: "failed",
     });
-    const service = new VerificationService(prisma as unknown as PrismaService);
+    const service = verificationService(prisma);
     await service.reportEvidence("verify-01h3k6f", {
       evidence: failedEvidenceInput(),
     });
@@ -449,7 +496,7 @@ describe("VerificationService", () => {
   it("rejects an approval for an unknown verification run", async () => {
     const prisma = prismaMock();
     prisma.verificationRun.findUnique.mockResolvedValue(null);
-    const service = new VerificationService(prisma as unknown as PrismaService);
+    const service = verificationService(prisma);
 
     await expect(
       service.approveDraftDiff("verify-01h3k6f", {
@@ -489,7 +536,7 @@ describe("VerificationService", () => {
       ...latestDraft,
       revisionNumber: 6,
     });
-    const service = new VerificationService(prisma as unknown as PrismaService);
+    const service = verificationService(prisma);
 
     const result = await service.approveDraftDiff("verify-01h3k6f", {
       draftDiff: {
@@ -548,7 +595,7 @@ describe("VerificationService", () => {
         },
       },
     });
-    const service = new VerificationService(prisma as unknown as PrismaService);
+    const service = verificationService(prisma);
 
     const diff = {
       apiVersion: "factory.draft-diff/v1",
@@ -591,7 +638,7 @@ describe("VerificationService", () => {
       publishedRevision,
     });
     prisma.draftRevision.findFirst.mockResolvedValue(latestDraft);
-    const service = new VerificationService(prisma as unknown as PrismaService);
+    const service = verificationService(prisma);
 
     const base = {
       apiVersion: "factory.draft-diff/v1",
@@ -665,7 +712,7 @@ describe("VerificationService", () => {
       publishedRevision,
     });
     prisma.draftRevision.findFirst.mockResolvedValue(latestDraft);
-    const service = new VerificationService(prisma as unknown as PrismaService);
+    const service = verificationService(prisma);
 
     await unprocessable(
       service.approveDraftDiff("verify-01h3k6f", {
@@ -690,5 +737,97 @@ describe("VerificationService", () => {
       "draft_diff_rejected",
     );
     expect(prisma.draftRevision.create).not.toHaveBeenCalled();
+  });
+
+  it("enqueues one immutable verification job for a newly created run", async () => {
+    const prisma = prismaMock();
+    const queue = queueMock();
+    prisma.compilation.findUnique.mockResolvedValue(compilation);
+    prisma.verificationRun.create.mockResolvedValue(runRow);
+    const service = verificationService(prisma, queue);
+
+    const result = await service.createRun("compilation-1", {
+      verificationRunId: "verify-01h3k6f",
+      profileKey: "expense-approval",
+    });
+
+    expect(result).toEqual(runRow);
+    expect(queue.enqueue).toHaveBeenCalledTimes(1);
+    expect(queue.enqueue).toHaveBeenCalledWith({
+      verificationRunId: "verify-01h3k6f",
+      compilationId: "compilation-1",
+      profileKey: "expense-approval",
+      publishedRevisionId: "published-1",
+      graph,
+      compositionLock,
+      artifacts: [
+        {
+          path: "docker-compose.yml",
+          digest: digestOf("compose"),
+          sizeBytes: 512,
+        },
+      ],
+    });
+  });
+
+  it("does not re-enqueue when an existing run is retried", async () => {
+    const prisma = prismaMock();
+    const queue = queueMock();
+    prisma.compilation.findUnique.mockResolvedValue(compilation);
+    prisma.verificationRun.findUnique.mockResolvedValue(runRow);
+    const service = verificationService(prisma, queue);
+
+    await service.createRun("compilation-1", {
+      verificationRunId: "verify-01h3k6f",
+      profileKey: "expense-approval",
+    });
+
+    expect(prisma.verificationRun.create).not.toHaveBeenCalled();
+    expect(queue.enqueue).not.toHaveBeenCalled();
+  });
+
+  it("refuses to enqueue a run whose compilation carries no composition lock", async () => {
+    const prisma = prismaMock();
+    const queue = queueMock();
+    prisma.compilation.findUnique.mockResolvedValue({
+      ...compilation,
+      publishedRevision: {
+        ...compilation.publishedRevision,
+        compositionLock: null,
+        compositionLockHash: null,
+      },
+    });
+    const service = verificationService(prisma, queue);
+
+    await expect(
+      service.createRun("compilation-1", {
+        verificationRunId: "verify-01h3k6f",
+        profileKey: "expense-approval",
+      }),
+    ).rejects.toThrow(ConflictException);
+    expect(prisma.verificationRun.create).not.toHaveBeenCalled();
+    expect(queue.enqueue).not.toHaveBeenCalled();
+  });
+
+  it("refuses to enqueue when the published graph hash diverges from the stored hash", async () => {
+    const prisma = prismaMock();
+    const queue = queueMock();
+    prisma.compilation.findUnique.mockResolvedValue({
+      ...compilation,
+      publishedRevision: {
+        ...compilation.publishedRevision,
+        graphHash: digestOf("other"),
+      },
+    });
+    const service = verificationService(prisma, queue);
+
+    await expect(
+      service.createRun("compilation-1", {
+        verificationRunId: "verify-01h3k6f",
+        profileKey: "expense-approval",
+      }),
+    ).rejects.toThrow(ConflictException);
+    expect(prisma.verificationRun.create).not.toHaveBeenCalled();
+    expect(queue.enqueue).not.toHaveBeenCalled();
   });
 });

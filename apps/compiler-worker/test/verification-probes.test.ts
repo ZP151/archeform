@@ -265,6 +265,48 @@ describe("runRoleJourneyProbe", () => {
     expect(step.httpStatus).toBeUndefined();
     expect(verificationStepSchema.safeParse(step).success).toBe(true);
   });
+
+  it("forwards a declared fixture session header instead of a role header", async () => {
+    const { request, context } = probeContext({ kind: "role-journey" });
+    const journey: RoleJourneyFixture = {
+      journeyId: "manager-approves-expense",
+      action: "expense.approve",
+      sessionId: "fixture-session-manager",
+    };
+    const step = await runRoleJourneyProbe(
+      context,
+      journey,
+      expenseApprovalApiRegistry,
+    );
+    expect(step.status).toBe("passed");
+    expect(step.action).toBe("expense.approve");
+    expect(request).toHaveBeenCalledWith(
+      "POST",
+      "/api/expense/expense-fixture-01/events/approve",
+      "api",
+      expect.objectContaining({
+        headers: [
+          {
+            name: "x-factory-fixture-session",
+            value: "fixture-session-manager",
+          },
+        ],
+      }),
+    );
+  });
+
+  it("fails closed when a journey declares both a session and a role principal", async () => {
+    const { context } = probeContext({ kind: "role-journey" });
+    const journey: RoleJourneyFixture = {
+      journeyId: "manager-approves-expense",
+      action: "expense.approve",
+      principal: "manager",
+      sessionId: "fixture-session-manager",
+    };
+    await expect(
+      runRoleJourneyProbe(context, journey, expenseApprovalApiRegistry),
+    ).rejects.toThrow(VerificationContractError);
+  });
 });
 
 describe("runAuthorizationDenialProbe", () => {
@@ -540,6 +582,34 @@ describe("VerificationEnvironment request fixtures", () => {
           "content-type": "application/json",
         },
         body: '{"amount":42}',
+      }),
+    );
+  });
+
+  it("forwards declared fixture session headers into the isolated API", async () => {
+    const { fetchMock, env } = environment();
+    await env.boot();
+    const result = await env.request(
+      "POST",
+      "/api/expense/expense-fixture-01/events/approve",
+      "api",
+      {
+        headers: [
+          {
+            name: "x-factory-fixture-session",
+            value: "fixture-session-manager",
+          },
+        ],
+      },
+    );
+    expect(result.status).toBe(201);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:3001/api/expense/expense-fixture-01/events/approve",
+      expect.objectContaining({
+        method: "POST",
+        headers: {
+          "x-factory-fixture-session": "fixture-session-manager",
+        },
       }),
     );
   });

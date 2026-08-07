@@ -20,6 +20,10 @@ import {
 import { PortfolioModule } from "./portfolio/portfolio.module.js";
 import { VerificationController } from "./verification/verification.controller.js";
 import { VerificationService } from "./verification/verification.service.js";
+import {
+  BullMqVerificationRunQueue,
+  VERIFICATION_RUN_QUEUE,
+} from "./verification-run-queue.js";
 
 @Module({
   imports: [PrismaModule, PortfolioModule],
@@ -30,8 +34,13 @@ import { VerificationService } from "./verification/verification.service.js";
     VerificationService,
     BullMqCompilationQueue,
     BullMqPreviewRunQueue,
+    BullMqVerificationRunQueue,
     { provide: COMPILATION_QUEUE, useExisting: BullMqCompilationQueue },
     { provide: PREVIEW_RUN_QUEUE, useExisting: BullMqPreviewRunQueue },
+    {
+      provide: VERIFICATION_RUN_QUEUE,
+      useExisting: BullMqVerificationRunQueue,
+    },
     {
       provide: GRAPH_PROPOSAL_PROVIDER,
       useFactory: createGraphProposalProvider,

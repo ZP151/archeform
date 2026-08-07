@@ -69,6 +69,23 @@ function journeyFacts(
 }
 
 /**
+ * The declared fixture header for one journey: a fixture session for
+ * session-bound generated applications, or the API role header for
+ * principal-bound ones. Both kinds are validated in role-journey.ts before
+ * any request is sent; a journey can never declare both.
+ */
+function journeyHeaders(
+  journey: RoleJourneyFixture,
+): readonly { name: string; value: string }[] | undefined {
+  if (journey.sessionId !== undefined) {
+    return [{ name: "x-factory-fixture-session", value: journey.sessionId }];
+  }
+  return journey.principal === undefined
+    ? undefined
+    : [{ name: "x-factory-role", value: journey.principal }];
+}
+
+/**
  * The evidence contract bounds httpStatus to 100..599. A status of 0 means
  * the endpoint never responded (network failure or timeout) — no HTTP status
  * exists, so the step must not carry an httpStatus field at all; the failure
@@ -191,10 +208,7 @@ export async function runRoleJourneyProbe(
     action.route,
     "api",
     {
-      headers:
-        journey.principal === undefined
-          ? undefined
-          : [{ name: "x-factory-role", value: journey.principal }],
+      headers: journeyHeaders(journey),
       body: journey.body,
     },
   );
@@ -249,10 +263,7 @@ export async function runAuthorizationDenialProbe(
     action.route,
     "api",
     {
-      headers:
-        journey.principal === undefined
-          ? undefined
-          : [{ name: "x-factory-role", value: journey.principal }],
+      headers: journeyHeaders(journey),
       body: journey.body,
     },
   );
@@ -304,10 +315,7 @@ export async function runIdempotencyProbe(
 ): Promise<VerificationStepV1> {
   const action = validateIdempotencyJourney(journey, registry);
   const requestOptions = {
-    headers:
-      journey.principal === undefined
-        ? undefined
-        : [{ name: "x-factory-role", value: journey.principal }],
+    headers: journeyHeaders(journey),
     body: JSON.stringify({
       expectedVersion: journey.expectedVersion,
       idempotencyKey: journey.idempotencyKey,

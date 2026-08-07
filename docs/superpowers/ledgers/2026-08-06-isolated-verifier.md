@@ -890,6 +890,278 @@ translates only change-constraint operations into index-derived Graph Diff
 paths — raw requests, responses, and generated material are never
 persisted.
 
+## Task 6: Integrate the Worker queue and one end-to-end profile
+
+### Boundary design (authored 2026-08-07 before implementation)
+
+**Queue shape.** The verification job follows the existing BullMQ boundary:
+the Control Plane enqueues (like `compilation-queue.ts`/`preview-run-queue.ts`)
+and the Worker executes with exact-key validation (like `previewRunJob`).
+Job payload keys are exactly: `verificationRunId`, `compilationId`,
+`profileKey`, `publishedRevisionId`, `graph`, `compositionLock`, `artifacts`.
+The plan interface "accepts only a Published Compilation ID, immutable
+artifact manifest, and derived verificationRunId" is implemented as the
+identity set (`compilationId` + `artifacts` + `verificationRunId`); the Graph
+input and profile key ride the job exactly as the compilation queue already
+carries `graph` + `compositionLock` for the Worker. Unknown keys fail closed
+before any execution. `verificationRunId`/`profileKey` are bounded
+Factory-derived patterns; `graph` is parsed (`parseApplicationGraph`),
+`compositionLock` is a bounded record, and `artifacts` reuse the preview
+dispatch safe-artifact checks (relative path, sha256 digest, safe size).
+
+**Fixture-session mechanism (Task 3 release-review Finding 2).** The compiler
+already emits session-bound deny-by-default apps when the composition lock
+selects `core.identity-policy` with the `local-fixture-sessions` contribution:
+the generated API resolves principals from `x-factory-fixture-session`
+(`fixture-session-<role>`) and denies 403 without one, authorizing declared
+resource/action pairs BEFORE record lookup. The expense-approval profile
+requires `core.identity-policy` in its composition recipe, so the acceptance
+fixture is `composeDefaultCapabilityDraft({profile:"expense-approval"})` plus
+`createCapabilityCompositionLock` — the fixture sessions come with the locked
+composition, NOT from worker seeding. Two adaptations make it end-to-end
+deterministic:
+
+1. The composed draft graph has `seedData: null`, so `expense.read` on
+   `expense-fixture-01` cannot succeed; the acceptance fixture adds one
+   deterministic seed record (`expense` / `expense-fixture-01` / amount,
+   description, status `draft` — the flow's initialState) which the generated
+   app's migrate service seeds at boot (`prisma migrate deploy && tsx
+   prisma/seed.ts`), so every journey is replayable from a clean boot.
+2. The probe header allowlist is exactly `x-factory-role` today; the
+   fixture-session app ignores `x-factory-role`, so role journeys must send
+   `x-factory-fixture-session`. Journey fixtures gain a declared optional
+   `sessionId` (bounded identifier; mutually exclusive with `principal`), the
+   environment header allowlist becomes exactly
+   `{x-factory-role, x-factory-fixture-session}`, and the probes send the
+   session header when declared. Both are non-secret fixture headers; the
+   allowlist remains exact (credential-named headers still fail closed).
+
+**Profile registry.** The acceptance profile (step plan + journey fixtures) is
+production fixture data, so it lives in
+`apps/compiler-worker/src/verifier/verification-profiles.ts` (same reasoning
+that placed the API registries in `role-journey.ts`; the worker builds with
+`rootDir: src`, so a fixture under `test/fixtures` cannot be imported by
+`dist`). The deterministic acceptance GRAPH + lock + seed fixture lives at
+`apps/compiler-worker/test/fixtures/expense-approval.ts` and is consumed by
+the integration tests and the Docker-backed acceptance command. This splits
+the plan's "one deterministic acceptance fixture" into the two artifacts the
+runtime actually needs; the ledger records the path adjustment.
+
+**Step plan.** `[{migration}, {health}, {employee-creates-expense
+role-journey}, {employee-submits-expense idempotency}, {manager-approves-expense
+role-journey}, {employee-denied-approval authorization-denial}]` — ordered so
+`expense-fixture-01` is created as `draft`, submitted once (201 then replay
+403 via the flow state machine: `submit` is not valid from `submitted`), then
+approved by manager; the denial journey runs last (policy-first denial, 403
+independent of record state). No bare `api` steps: on the fixture-session app
+every API route except `/health` requires a session, and `runApiProbe` sends
+no headers, so an api step would deterministically fail.
+
+**Job behavior.** `executeQueuedVerificationRun` validates the payload, fails
+closed on unknown profileKey, derives `expectedCompilationDigest` from
+`hashApplicationGraph(graph)` + the manifest (deterministic; binds the
+immutable manifest to the graph), runs `runVerificationLifecycle` with a
+profile-driven probe runner (step kind → probe function; the journey for a
+step resolves by stepId from the profile and the probes' own validators fail
+closed), and reports ONE evidence bundle to
+`POST internal/verification-runs/:id/evidence` via a new
+`verification-reporter.ts` (mirror of `control-plane-reporter.ts`). Diagnosis
+is computed (via the existing `diagnoseCompilation` adapter) only when at
+least one step failed — `diagnoseVerification` throws on all-pass evidence —
+and rides the report as `{evidence, diagnosis}`; the Draft Diff proposal
+inside the diagnosis is the reviewable artifact. Retries with the same
+identity recompute the same evidence (deterministic compile) and the Control
+Plane's same-digest idempotency accepts them. Compile-phase failures
+(`executeCompilation` throw, digest mismatch) propagate: the lifecycle has no
+environment to clean and cannot fabricate contract-shaped evidence, so the
+job fails honestly and BullMQ retries it; a run left `pending` is a
+monitoring concern, not a fabricated failure (noted as residual risk).
+
+**Control Plane enqueue.** `VerificationService.createRun` gains an injected
+`VERIFICATION_RUN_QUEUE` (new `verification-run-queue.ts`, `BullMQ` with
+`FACTORY_VERIFICATION_QUEUE ?? "factory-verification-runs"`). On fresh run
+creation it loads the compilation with `publishedRevision` + `artifacts`,
+validates graph hash against the stored hash and the composition lock via the
+existing lifecycle helpers (exported `validatedGraph` and
+`verifiedPublishedCompositionLock`), and enqueues the immutable payload.
+Idempotent retries return the existing run WITHOUT re-enqueueing (a pending
+run with no job is not silently re-fanned-out; the compile queue has the same
+property).
+
+### RED phase
+
+Failing tests first (planned):
+
+- `apps/compiler-worker/test/verification-profiles.test.ts` — acceptance
+  profile: step kinds contract-valid, journey IDs bounded, sessionIds follow
+  the `fixture-session-<role>` convention, journeys resolve in the registry,
+  and the fixture graph parses with a self-consistent lock checksum and the
+  `expense-fixture-01` draft seed.
+- `apps/compiler-worker/test/verification-job.test.ts` — the five plan
+  integration checkboxes: compile-to-cleanup (compile → boot → probes →
+  cleanup, one evidence report, no diagnosis on success), authorization
+  denial (session-bound 403 passes), idempotency replay (201 then 403),
+  diagnosis proposal (a failed step yields diagnosis with a reviewable Draft
+  Diff), immutable-state snapshots (identical payloads → identical evidence;
+  mutated payloads, unknown profileKey, and draft envelopes fail closed).
+- `apps/compiler-worker/test/verification-probes.test.ts` — extended:
+  sessionId journeys forward `x-factory-fixture-session` and never
+  `x-factory-role`.
+- `apps/control-plane/test/verification.service.test.ts` — extended: createRun
+  enqueues the immutable job payload; idempotent retry does not re-enqueue.
+
+**RED observed 2026-08-07 (pre-implementation, uncommitted):**
+
+- `verification-profiles.test.ts` — suite FAILS TO LOAD: `Failed to load url
+  ../src/verifier/verification-profiles.js … Does the file exist?` (module not
+  yet implemented).
+- `verification-job.test.ts` — suite FAILS TO LOAD: `Failed to load url
+  ../src/verifier/verification-job.js … Does the file exist?` (module not yet
+  implemented).
+- `verification-probes.test.ts` — 3/13 fail, exactly the three new session
+  tests: (a) the declared fixture-session header is not forwarded by
+  `runRoleJourneyProbe` (call assertion fails), (b) a journey declaring both
+  `sessionId` and a role principal RESOLVES instead of rejecting with
+  `VerificationContractError`, (c) `VerificationEnvironment.request` throws
+  `VerificationLifecycleError: Request headers must be declared fixture data`
+  for `x-factory-fixture-session` (allowlist not yet extended). Original 10
+  tests pass.
+- `verification.service.test.ts` (control plane) — 3/21 fail: createRun never
+  calls `queue.enqueue` (immutable payload absent), and the no-composition-lock
+  and graph-hash-divergence cases resolve instead of throwing
+  `ConflictException`; no row is created in either rejected case (validation
+  precedes row creation). The retry test passes pre-implementation because the
+  current service already returns the existing run without enqueueing —
+  expected, and it stays green only if the enqueue path preserves that.
+
+### GREEN phase
+
+**GREEN observed 2026-08-07 (post-implementation, uncommitted until the Task 6
+commit):**
+
+- Focused suites: `verification-profiles.test.ts` 9/9, `verification-job.test.ts`
+  9/9, `verification-probes.test.ts` 30/30 (worker 48/48);
+  `verification.service.test.ts` 21/21 (control plane).
+- Full suites (final formatted state): compiler-worker 153/153 (15 files),
+  control-plane 149/149 (14 files), graph 102/102 (4 files).
+- Typecheck: `pnpm --filter @factory/compiler-worker typecheck` and
+  `pnpm --filter @factory/control-plane typecheck` clean; builds
+  (`tsc -p tsconfig.json`) clean for both apps.
+- Lint: `prettier --check src test` clean for both apps (11 files written by
+  `prettier --write` after the first lint pass flagged them: worker
+  `src/verification-reporter.ts`, `src/verifier/{verification-job.ts,
+  verification-profiles.ts, verification-environment.ts, probes.ts,
+  role-journey.ts}`, `test/{verification-job,verification-probes,
+  verification-profiles}.test.ts`, `test/fixtures/expense-approval.ts`;
+  control-plane `src/app.module.ts`, `src/verification/verification.service.ts`,
+  `test/verification.service.test.ts`).
+- Implementation notes recorded for the gates:
+  - **Honest tampered-digest semantics.** A format-valid but wrong artifact
+    digest is indistinguishable from declared fixture data before compilation
+    (the composition lock records no artifact manifest), so the job compiles
+    and the lifecycle rejects on `compilation_digest_mismatch` against the
+    real compile output; the test asserts `executeCompilation` ran exactly
+    once and `report` never ran. Payload-shape mutations (extra key, unknown
+    profileKey, empty artifacts, negative sizeBytes, draft/revision envelopes)
+    fail closed BEFORE compilation.
+  - **Declared clock for evidence determinism.** The lifecycle otherwise
+    stamps wall-clock `startedAt/completedAt/durationMs`, so identical job
+    inputs produce different evidence — incompatible with the control plane's
+    same-digest idempotency. `VerificationRunDependencies` gains optional
+    `now`/`nowMs` and the job forwards them to the lifecycle; the acceptance
+    harness supplies a declared clock and the snapshot test asserts two
+    identical runs deep-equal AND report byte-identical payloads.
+  - **worker-config defaults.** `readWorkerConfig` now returns
+    `verificationQueueName` (`FACTORY_VERIFICATION_QUEUE ?? "factory-verification-runs"`);
+    both worker-config tests updated to expect it.
+  - **Cross-task defect found during acceptance design (Task 3 probe).** The
+    migration probe ran `docker compose exec -T migrate npx prisma migrate
+    status`, but the generated migrate service is one-shot (applies the
+    schema, seeds, and exits), and `docker compose exec` fails against an
+    exited container (verified empirically). Fix: the environment's
+    `migrate()` now execs into the long-running `api` service, which runs the
+    same generated schema, carries the Prisma CLI, and stays up for the
+    journeys; the pinned lifecycle test updated in place (worker suite
+    re-verified 153/153 after the change).
+- Changed paths for this task: worker
+  `src/{config.ts,main.ts,verification-reporter.ts,verifier/diagnosis.ts,
+  verifier/probes.ts,verifier/role-journey.ts,verifier/verification-environment.ts,
+  verifier/verification-job.ts,verifier/verification-profiles.ts}`,
+  `test/{verification-job.test.ts,verification-probes.test.ts,
+  verification-profiles.test.ts,worker-config.test.ts,
+  fixtures/expense-approval.ts}`; control-plane
+  `src/{app.module.ts,verification-run-queue.ts,
+  verification/verification.service.ts,lifecycle.service.ts}` (exports),
+  `test/verification.service.test.ts`.
+- Security/redaction: no generated source, graph, credentials, prompts, or raw
+  probe bodies persisted anywhere in this task; evidence summaries remain
+  allowlisted prose; synthetic fixture sessions and digest values only.
+
+### Diagnostic trail (acceptance runs 1–5, 2026-08-07)
+
+The Docker-backed acceptance command (`pnpm verify:isolated-verifier-expense`,
+`scripts/verify-isolated-verifier-expense.mjs`) failed five times against real
+Docker Desktop infrastructure before reaching the full loop. Each failure was
+reproduced and fixed with evidence; the fixes are part of the Task 6 commit.
+
+1. **Run 1 — env interpolation in the compose poll.** `waitForComposeService`
+   polled `docker compose ps` without `FACTORY_REDIS_PASSWORD` /
+   `FACTORY_INTERNAL_WORKER_TOKEN`, so compose interpolation failed
+   (`${FACTORY_REDIS_PASSWORD:?required}`) and every poll returned non-zero.
+   Fixed by passing the generated env into the poll.
+2. **Run 2 — joined `-f` argv.** The infra compose file list was joined into
+   one string and passed as a single `-f` value, so docker looked for a file
+   named `-f <path> -f <path>`. Fixed with the `composeArgs(...extra)` helper
+   that splits the file list into separate argv tokens.
+3. **Run 3 — not reproducible after the run-2 fix.** The same failure message
+   recurred once; the containers were torn down before diagnosis. The poll
+   path was verified independently (manual up + `ps -q`, node mirror, and a
+   fresh-slate run, all passing on the first poll). `waitForComposeService`
+   now surfaces the last poll's stderr and the compose `ps -a` table on
+   failure so a recurrence is self-diagnosing.
+4. **Run 4 — seed PrismaClient without `DATABASE_URL`.** The script's own
+   `new PrismaClient()` resolves `env("DATABASE_URL")` from the script
+   process's environment, which only received it inside per-command env
+   dicts. Fixed with `process.env.DATABASE_URL = DATABASE_URL` before
+   constructing the client.
+5. **Run 5 — artifact digests did not match the worker's compilation.** The
+   run was created (201) but stayed `pending` for the full 25-minute poll
+   with no preview containers. Reproduction on the host with visible logs
+   reproduced the stall; the queue job's `failedReason` in redis was
+   `The compiled artifacts do not match the immutable compilation digest.`
+   The seed had computed artifact digests from the in-memory draft graph,
+   but PostgreSQL `jsonb` normalizes object keys, so the queued job carried a
+   key-reordered graph and the worker's compiled bundle differed in exactly
+   the four graph-embedding files (`capability-lock.json`,
+   `composition-lock.json`, `api/src/application-runtime.ts`,
+   `database/prisma/seed.ts`; the other 58/62 files matched). The product's
+   fail-closed digest guard worked exactly as designed. Fixed by generating
+   the acceptance bundle from the stored revision read back from the
+   database — the exact bytes the job carries. The seed also now clears
+   stale `VerificationRun` rows for the compilation so a re-run does not
+   return a stale `pending` run through the idempotent branch.
+
+**Product observation (carried to the gates, not changed mid-task).** A
+verification job whose handler throws (any fail-closed guard, compile
+failure, or report rejection) leaves the run at `pending` forever: the job
+fails silently (no BullMQ `failed` listener), no evidence report is sent, and
+the idempotent branch returns the stale `pending` run without re-enqueueing,
+so the run can never reach a terminal status or be retried through the API.
+This is the same family as the Task 5 release-review residual (pending-run
+monitoring). The Task 6 gates should decide whether the "one final status"
+contract requires a job-failure → run-failed mapping.
+
+### Acceptance record
+
+**Docker-backed acceptance command (Task 6 plan checkbox).** The acceptance
+script and its evidence are recorded in
+`docs/acceptance/isolated-verifier-expense.md` once the Docker Desktop daemon
+is available. The command is
+`pnpm --filter @factory/compiler-worker acceptance:expense` (or the documented
+`node` invocation) and exercises the full loop: publish → queue → worker →
+isolated preview → probes → one evidence bundle → control-plane persistence —
+inside a generated, session-bound, deny-by-default application.
+
 ## Gate protocol
 
 Each task must record: changed paths, tests run and exact counts, typecheck,

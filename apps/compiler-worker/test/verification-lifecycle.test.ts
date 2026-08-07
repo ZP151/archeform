@@ -330,7 +330,9 @@ describe("runVerificationLifecycle", () => {
     ]);
     expect(evidence.cleanup.succeeded).toBe(true);
     // The migration must run through the injected runner, pinned to the
-    // fixed compose exec shape — never a silent no-op.
+    // fixed compose exec shape — never a silent no-op. The target is the
+    // long-running api service: the generated migrate service is one-shot
+    // and exits after applying the schema, so `exec` cannot reach it.
     expect(processRunner).toHaveBeenCalledWith(
       expect.objectContaining({
         file: "docker",
@@ -338,7 +340,7 @@ describe("runVerificationLifecycle", () => {
           "compose",
           "exec",
           "-T",
-          "migrate",
+          "api",
           "npx",
           "prisma",
           "migrate",

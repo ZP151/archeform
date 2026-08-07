@@ -6,8 +6,11 @@ import {
   type DiagnosisV1,
 } from "@factory/graph";
 
-/** Revision envelopes are not Published Graphs; they fail closed at the boundary. */
-const revisionEnvelopeKeys = new Set([
+/**
+ * Revision envelopes are not Published Graphs; they fail closed at the
+ * boundary. Shared by the diagnosis adapter and the queued job's pre-flight.
+ */
+export const revisionEnvelopeKeys = new Set([
   "status",
   "revision",
   "publishedRevision",
