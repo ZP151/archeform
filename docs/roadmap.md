@@ -173,7 +173,12 @@ operation values were never tested) and QA_PASS (19/19 probes); both were
 repaired at `a8914d0` — the lookahead now scans `[\s\S]*` across lines and
 `walkUnsafeValue` tests every walked key (graph 159/159, capabilities
 313/313, control-plane 177/177); it is `ready_for_qa` at `a8914d0` pending
-re-verification gates.
+re-verification gates. Round 2 at `50b0e23` returned TASK_REVIEW_PASS
+with one P2 (NEW-1: key failures echoed the offending key into the
+rejection message), repaired at `f337174` — the walker names the container
+only and a regression test asserts non-echo for `__proto__`/URL keys
+(graph 160/160, capabilities 313/313, control-plane 177/177); it is
+`ready_for_qa` at `ed82b17` pending re-verification gates.
 
 ## P2 and P3
 

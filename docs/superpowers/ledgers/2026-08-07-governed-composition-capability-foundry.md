@@ -278,6 +278,27 @@ pushed; adapters package work (Task 4) remains uncommitted in the worktree
 and is owned by its own train. State: Train B `ready_for_qa` at `a8914d0`,
 pending re-verification gates on `a8914d0` before `reviewed`.
 
+### 2026-08-08 — Task 3 re-verification round 2: NEW-1 repaired at `f337174`
+
+Re-verification task review at `50b0e23` returned `TASK_REVIEW_PASS` with
+one new P2: on an object-key failure the value walker passed
+`[...keyPath, key]` to the fail callback, so the offending key itself
+(`__proto__`, a full URL) was echoed verbatim in the rejection message and
+its mapped 409 — the "error never echoes the offending material" property
+(F-1/RV-2) held for leaves but not for the RV-2 key surface. No test
+asserted non-echo for keys. Per the state vocabulary the P2 returns Train
+B to `implementing`.
+
+| ID | Severity | Finding | Repair |
+| -- | -------- | ------- | ------ |
+| NEW-1 | P2 | Key failures joined the offending key into the message (`carries unsafe material in '__proto__'`; a URL key appeared verbatim) | The walker now fails with the container keyPath only — a failing key is itself the material, so only its location is named; safe leaf keys may still appear in the path. Regression test asserts both rejections match `/carries unsafe material/` and contain neither token verbatim. Commit `f337174` (+ `ed82b17` Prettier formatting) |
+
+graph 160/160 (159 + 1), capabilities 313/313, control-plane 177/177
+against the rebuilt dist, adapters 34/34, typecheck and Prettier lint
+green. Pushed; worktree clean. State: Train B `ready_for_qa` at `ed82b17`
+(Tasks 2–3 landed), pending re-verification gates on `ed82b17` before
+`reviewed`.
+
 ## Required evidence per promoted family
 
 | Evidence    | Required form                                                       |

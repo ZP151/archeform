@@ -146,6 +146,17 @@ control-plane 177/177 against the rebuilt dist, typecheck and Prettier lint
 green. Train B is `ready_for_qa` at `a8914d0` (Tasks 2–3 landed), pending
 re-verification gates on `a8914d0`.
 
+Task 3's re-verification round 2 at `50b0e23` returned TASK_REVIEW_PASS
+with one P2 (NEW-1: object-key failures echoed the offending key itself
+into the rejection message — the non-echo property held for leaves but
+not the RV-2 key surface; no test asserted it). Repaired at `f337174`:
+the walker now fails with the container path only, and a regression test
+asserts both the `__proto__`-key and URL-key rejections never echo the
+token verbatim. graph 160/160 (159 + 1), capabilities 313/313,
+control-plane 177/177 against the rebuilt dist, adapters 34/34, Prettier
+lint green (formatting follow-up `ed82b17`). Train B is `ready_for_qa` at
+`ed82b17` (Tasks 2–3 landed), pending re-verification gates on `ed82b17`.
+
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including
 Preview stop and cleanup. This is not production readiness and does not alter

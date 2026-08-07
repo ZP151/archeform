@@ -124,6 +124,13 @@
       object keys, clean multi-line prose preserved). Fresh verification:
       graph 159/159, capabilities 313/313, control-plane 177/177, typecheck
       and Prettier lint green.
+- [x] Task 3 re-verification round 2 at `50b0e23` (TASK_REVIEW_PASS with
+      one new P2): NEW-1 repaired at `f337174` — object-key failures no
+      longer echo the offending key into the rejection message (the walker
+      names the container only); regression test asserts non-echo for
+      `__proto__` and URL keys. Fresh verification: graph 160/160,
+      capabilities 313/313, control-plane 177/177, adapters 34/34, Prettier
+      lint green (`ed82b17`).
 
 ### Task 4: Add deterministic and guarded AI planning adapters
 
