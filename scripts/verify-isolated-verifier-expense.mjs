@@ -571,7 +571,8 @@ async function main() {
   // per-operation timeout at 20 minutes and eight sequential operations, the
   // worst bounded case is 160 minutes, so the window is 180.
   let run;
-  const deadline = Date.now() + 180 * 60 * 1_000;
+  const pollStartedAt = Date.now();
+  const deadline = pollStartedAt + 180 * 60 * 1_000;
   let lastProgressLine = 0;
   for (;;) {
     const response = await fetch(
@@ -588,10 +589,10 @@ async function main() {
       console.error(workerTail(worker, controlPlane));
       fail("Verification run did not reach a terminal status.");
     }
-    const elapsedMinutes = Math.floor(
-      (Date.now() - (deadline - 60 * 60 * 1_000)) / 60_000,
-    );
-    if (elapsedMinutes > lastProgressLine) {
+    // Progress anchors to the poll start so a stuck run reports at a steady
+    // cadence instead of staying silent for the first part of the window.
+    const elapsedMinutes = Math.floor((Date.now() - pollStartedAt) / 60_000);
+    if (elapsedMinutes > lastProgressLine + 14) {
       lastProgressLine = elapsedMinutes;
       console.error(
         `verification run still pending after ${elapsedMinutes} min (status ${run.status})`,
@@ -731,6 +732,7 @@ async function main() {
   );
   const generatedProject = `factory-generated-tests-${VERIFICATION_RUN_ID}`;
   let testResult;
+  let generatedBootError;
   try {
     runSync("generated preview start", "docker", [
       "compose",
@@ -774,6 +776,10 @@ async function main() {
         input: await readFile(journeyTest, "utf8"),
       },
     );
+  } catch (error) {
+    // Preserve the boot failure so it is rethrown after the cleanup checks;
+    // a leaked preview must never be masked by a boot error.
+    generatedBootError = error;
   } finally {
     // The generated-test preview must not leak even if the boot or the
     // injection fails mid-way.
@@ -808,6 +814,7 @@ async function main() {
       generatedLeftovers.stdout.trim().length === 0,
     "Generated-tests containers remain after teardown.",
   );
+  if (generatedBootError) throw generatedBootError;
   if (testResult !== undefined && testResult.status !== 0) {
     // Surface the bounded tail of the in-container test run; the preview is
     // already torn down, so this output is the only trace of the failure.
