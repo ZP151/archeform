@@ -259,6 +259,20 @@ worktree is clean. The PM advances Train D Task 6 to `implementing` at
 batches. Batch 1 next: new capability families to reach 25–35, then
 Batch 2 re-runs the isolated verifier to regenerate two-Profile evidence.
 
+**Batch 1 (Task 6) is delivered at `a8a6be5`:** four new capability
+families — `core.files-media`, `core.search` (Foundation), `core.scheduling`,
+`core.approvals` (Operational) — one family per commit, TDD, all pushed to
+`feat/governed-composition-capability-foundry`. The portfolio stands at
+**27 current families** (within the 25–35 band), all declaring the strict
+binding contract and all quarantined solely for lacking two-Profile proof
+(zero eligible / 27 quarantined / 0 rejected — honest by construction).
+Observed results: capabilities 352/352 (28 files), graph 175/175,
+control-plane 183/183, adapters 34/34, compiler 330/330 (scratch worktree),
+`verify:generated-notification-outbox` green. Batch 2 next: re-run the
+isolated verifier (expense-approval, simple-ecommerce,
+restaurant-ordering) against the rebuilt digest set and regenerate the
+evidence records whose pins are stale by design.
+
 ## P2 and P3
 
 - **P2:** managed deployment, observability, fleet upgrades, and rollbacks,

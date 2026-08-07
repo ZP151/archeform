@@ -666,6 +666,58 @@ gate-verified; `reviewed` awaits all batches (Batches 1–3 remain pending:
 new capability families toward 25–35, verifier evidence regeneration, and the
 remainder).
 
+### 2026-08-08 — Task 6 Batch 1 implemented: four new capability families (27 current)
+
+**Batch 1 lands four new capability families** per the spec order
+(Foundation → Operational), one family per commit, TDD (failing tests
+first, then the green asset): `core.files-media` (8732a69a), `core.search`
+(34ea12f1), `core.scheduling` (94a12dc), `core.approvals` (a8a6be5). All
+four are pushed to `feat/governed-composition-capability-foundry`.
+
+- **Foundation — `core.files-media` v1.0.0:** effect `files.media.register`,
+  domain inputs (mediaEntity `domain.entity`, fileField `domain.field`
+  ownerBinding mediaEntity, fieldTypes string/url), provides
+  `files.media` v1.
+- **Foundation — `core.search` v1.0.0:** effect `search.execute`, domain
+  inputs (searchEntity `domain.entity`, searchField `domain.field`
+  ownerBinding searchEntity, fieldTypes string/text), provides
+  `search.index` v1.
+- **Operational — `core.scheduling` v1.0.0:** effect `schedule.plan`, domain
+  inputs (scheduleEntity `domain.entity`, scheduleField `domain.field`
+  ownerBinding scheduleEntity, fieldTypes datetime), provides
+  `schedule.plan` v1.
+- **Operational — `core.approvals` v1.0.0:** effect `approval.request`,
+  inputs (approvalEntity `domain.entity` required, approvalRole
+  `policy.role` required — no domain.field, like core.audit), provides
+  `approval.request` v1.
+
+All four declare the strict `factory.capability-binding/v1` contract from
+birth (parameters/inputSchema key-identity with matching required flags,
+bounded `domain.field` owners, graph-symbol parameters), `profiles: []` —
+honest: no current Factory Profile recipe selects them yet (Task 7 anchors
+will adopt them) — and full package verification (`component.json`
+canonical-identical to the TS manifest, digest recomputed after the
+template digest was finalised, adapter.json parameters slice matching, one
+fixture + one contract test per package, effect template that calls
+`store.appendCapabilityEvent`). Each family's test file pins five
+behaviours: package verification, valid binding resolution, and three
+fail-closed rejections (missing `fieldKey`, undeclared input key, missing
+required entity binding). Evidence records in `foundry-evidence.ts`,
+`currentCapabilityAssets`, the registry test pin, the matrix quarantine
+list, and `capability-matrix.md` all updated per family.
+
+**Observed results:** capabilities **352/352** (28 files; 332 + 20 new
+family tests), graph 175/175, control-plane 183/183, adapters 34/34,
+typecheck clean. Compiler suite 330/330 re-run in a scratch worktree (the
+compiler test suite writes generated fixtures under `packages/compiler/test`,
+forbidden in the main tree; the worktree needed a real `pnpm install
+--frozen-lockfile` — a node_modules junction breaks vitest's root discovery
+— and rebuilt graph/capabilities/compiler because workspace packages
+resolve via built dist). Matrix at final HEAD: **27 current families, zero
+eligible, 27 quarantined (`fewer-than-two-profiles`), 0 rejected** —
+consistent with the honest position that no family claims two-Profile
+proof until real verifier evidence lands (Batch 2).
+
 ## Required evidence per promoted family
 
 | Evidence    | Required form                                                       |

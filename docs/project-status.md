@@ -281,6 +281,23 @@ adds new capability families toward 25–35; Batch 2 re-runs the isolated
 verifier and regenerates the evidence records whose digest pins are stale
 by design.
 
+**Task 6 Batch 1 delivered: four new capability families, 27 current.**
+`core.files-media`, `core.search`, `core.scheduling`, and `core.approvals`
+land one family per commit (8732a69a → 34ea12f1 → 94a12dc → a8a6be5,
+pushed), each with the strict `factory.capability-binding/v1` contract
+declared from birth, `profiles: []` (no current Factory Profile recipe
+selects them yet — Task 7 anchors adopt them), a verified package
+(canonical component.json, digest re-pinned, adapter parameters slice,
+fixture + contract test), and five pin tests (package verification, valid
+binding resolution, three fail-closed rejections). Matrix at final HEAD:
+**27 current, zero eligible, 27 quarantined (`fewer-than-two-profiles`),
+0 rejected**. Observed results: capabilities **352/352** (28 files), graph
+175/175, control-plane 183/183, adapters 34/34, typecheck clean; compiler
+330/330 re-run in a scratch worktree (test fixtures are forbidden in the
+main tree); `verify:generated-notification-outbox` green with the rebuilt
+packages (1 pending drained, 1 delivered). The Batch 1 gate round is
+underway.
+
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including
 Preview stop and cleanup. This is not production readiness and does not alter
