@@ -7,6 +7,7 @@ import {
   createDraftRevision,
   hashApplicationGraph,
   hashRequirementSpec,
+  parseCompositionClarification,
   type ApplicationGraphV1,
   type DraftRevisionV1,
   type RequirementSpecV1,
@@ -412,6 +413,52 @@ describe("planComposition", () => {
     ]);
   });
 
+  it("reports every matching provider for multi-provider requirements", () => {
+    const baseA = syntheticAsset("test.base-a", {
+      provides: [{ interfaceKey: "test.base", version: "v1" }],
+    });
+    const baseB = syntheticAsset("test.base-b", {
+      provides: [{ interfaceKey: "test.base", version: "v1" }],
+    });
+    const dependent = syntheticAsset("test.dependent", {
+      version: "1.1.0",
+      provides: [],
+      requires: [
+        { interfaceKey: "test.base", version: "v1", multiProvider: true },
+      ],
+    });
+    const recipe = recipeFixture({
+      id: "multi-provider-recipe",
+      capabilities: [
+        { key: "test.base-a", version: "1.0.0" },
+        { key: "test.base-b", version: "1.0.0" },
+        { key: "test.dependent", version: "1.1.0" },
+      ],
+      bindings: ["test.base-a", "test.base-b", "test.dependent"].map(
+        (capabilityKey) => ({
+          capabilityKey,
+          inputKey: "flowKey",
+          required: true,
+          target: "flow.flow",
+        }),
+      ),
+    });
+    const root = materializeSyntheticRepository([baseA, baseB, dependent]);
+    const plan = assertPlan(
+      planComposition(
+        requirementFixture,
+        catalogFixture([recipe]),
+        draftFixture(),
+        root,
+        [baseA, baseB, dependent],
+      ),
+    );
+    expect(plan.dependencyGraph).toEqual([
+      { capabilityKey: "test.dependent", dependsOn: "test.base-a" },
+      { capabilityKey: "test.dependent", dependsOn: "test.base-b" },
+    ]);
+  });
+
   it("returns a clarification when a locked requirement has no provider", () => {
     const base = syntheticAsset("test.base");
     const dependent = syntheticAsset("test.dependent", {
@@ -574,6 +621,58 @@ describe("planComposition", () => {
       ),
     );
     expect(clarification.questions[0].question).toContain("no Graph change");
+  });
+
+  it("clarifies, rather than throwing, when a locked fixture is malformed", () => {
+    const asset = syntheticAsset("test.base");
+    const recipe = recipeFixture({
+      id: "corrupt-fixture-recipe",
+      capabilities: [{ key: "test.base", version: "1.0.0" }],
+      bindings: [
+        {
+          capabilityKey: "test.base",
+          inputKey: "flowKey",
+          required: true,
+          target: "flow.flow",
+        },
+      ],
+    });
+    const root = join(
+      tmpdir(),
+      `planner-corrupt-${Math.random().toString(36).slice(2)}`,
+    );
+    const fixturePath = join(
+      root,
+      asset.manifest.packageRoot,
+      asset.manifest.verification.fixture,
+    );
+    mkdirSync(resolve(fixturePath, ".."), { recursive: true });
+    writeFileSync(fixturePath, "{ this is not json", "utf8");
+    const clarification = assertClarification(
+      planComposition(
+        requirementFixture,
+        catalogFixture([recipe]),
+        draftFixture(),
+        root,
+        [asset],
+      ),
+    );
+    expect(clarification.questions[0].question).toContain("no Graph change");
+  });
+
+  it("keeps clarifications schema-valid when the catalogue has no recipes", () => {
+    const clarification = assertClarification(
+      planComposition(
+        requirementFixture,
+        catalogFixture([]),
+        draftFixture(),
+        repositoryRoot,
+        currentCapabilityAssets,
+      ),
+    );
+    expect(clarification.questions.length).toBeGreaterThanOrEqual(1);
+    expect(parseCompositionClarification(clarification)).toEqual(clarification);
+    expect(clarification.questions[0].question).toContain("No recipe");
   });
 
   it("refuses to plan against a non-draft base revision", () => {

@@ -62,7 +62,10 @@ export const profileRecipeCatalogSchema = z
   .object({
     apiVersion: z.literal("factory.profile-recipe-catalog/v1"),
     schemaVersion: z.literal("v1"),
-    recipes: z.array(profileRecipeSchema).min(1).max(500),
+    // An empty catalogue is a valid staged state: the planner answers such a
+    // catalogue with a schema-valid clarification instead of guessing, and the
+    // authoritative portfolio catalogue is populated before release.
+    recipes: z.array(profileRecipeSchema).max(500),
   })
   .strict();
 

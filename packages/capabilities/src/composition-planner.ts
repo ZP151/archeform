@@ -251,26 +251,36 @@ function selectionsFor(
 function dependencyEdges(
   assets: readonly CapabilityAssetV1[],
 ): { capabilityKey: string; dependsOn: string }[] {
-  const providers = new Map<string, string>();
+  // Collect every matching provider per interface identity: the resolver's
+  // dependency closure selects all providers for multi-provider
+  // requirements, so the plan artifact must report all of them, not a
+  // last-write-wins single provider.
+  const providers = new Map<string, string[]>();
   for (const asset of assets) {
     for (const provided of asset.manifest.provides ?? []) {
-      providers.set(
-        `${provided.interfaceKey}@${provided.version}`,
-        asset.manifest.key,
-      );
+      const identity = `${provided.interfaceKey}@${provided.version}`;
+      const existing = providers.get(identity);
+      if (existing === undefined) {
+        providers.set(identity, [asset.manifest.key]);
+      } else if (!existing.includes(asset.manifest.key)) {
+        existing.push(asset.manifest.key);
+      }
     }
   }
   const edges: { capabilityKey: string; dependsOn: string }[] = [];
   for (const asset of assets) {
     for (const requirement of asset.manifest.requires ?? []) {
-      const provider = providers.get(
+      const matches = providers.get(
         `${requirement.interfaceKey}@${requirement.version}`,
       );
-      if (provider !== undefined && provider !== asset.manifest.key) {
-        edges.push({
-          capabilityKey: asset.manifest.key,
-          dependsOn: provider,
-        });
+      if (matches === undefined) continue;
+      for (const provider of matches) {
+        if (provider !== asset.manifest.key) {
+          edges.push({
+            capabilityKey: asset.manifest.key,
+            dependsOn: provider,
+          });
+        }
       }
     }
   }
@@ -321,18 +331,23 @@ function operationsFor(
   const operations: { op: "add"; path: string; value: unknown }[] = [];
   for (const asset of resolved.assets) {
     const fixture = asset.manifest.verification.fixture;
-    let raw: string;
+    let fragment: {
+      from: string;
+      event: string;
+      to: string;
+    } | null = null;
     try {
-      raw = readFileSync(
+      const raw = readFileSync(
         join(repositoryRoot, asset.manifest.packageRoot, fixture),
         "utf8",
       );
+      // An unreadable or malformed fixture yields no fragment; the
+      // deterministic planner never guesses content.
+      fragment = transitionFragment(JSON.parse(raw));
     } catch {
-      // An unreadable fixture yields no fragment; the deterministic planner
-      // never guesses content.
-      continue;
+      fragment = null;
     }
-    const fragment = transitionFragment(JSON.parse(raw));
+    if (fragment === null) continue;
     if (fragment === null) continue;
     const boundFlow = resolved.bindings.find(
       (binding) =>
@@ -445,6 +460,14 @@ export function planComposition(
       key: `question-${index + 1}`,
       question: failure.question,
     }));
+  // A catalogue with no recipes produces no failures; the clarification
+  // contract requires at least one question, so never emit an empty set.
+  if (questions.length === 0) {
+    questions.push({
+      key: "question-1",
+      question: "No recipe in the catalogue matches the requirement.",
+    });
+  }
   return deepFreeze({
     kind: "clarification",
     clarification: {
