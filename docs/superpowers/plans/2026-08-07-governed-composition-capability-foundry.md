@@ -166,6 +166,25 @@
 - [x] Commit `feat(adapters): add constrained composition planners`
       (`50b0e23`) and the Control Plane seam hardening + AI boundary tests
       (`34b81ed`).
+- [x] Gate round 1 at `57f68eb`: task review TASK_REVIEW_PASS (no findings).
+      Behavioral QA QA_PASS 28/28 with two P2 seam-hardening notes on the
+      Task 3-reviewed graph boundary: QA-1 (Diff path strings were never
+      scanned against the unsafe-material boundary) and QA-2 (zod strict
+      unrecognized-key/invalid-enum messages and the mutable-root rejection
+      echoed offending material). Per the state vocabulary Task 4 returns to
+      `implementing`.
+- [x] Repair at `52432a6b` (`fix(graph): scan Diff paths for material and
+      never echo rejected material`): `unsafeCompositionDiffPathPattern`
+      applied to raw paths in `assertSafeCompositionOperationPath` and
+      `hashCompositionDiff` (a Diff clears the same path guards as a plan);
+      `parseStrict` maps `unrecognized_keys`/`invalid_enum_value` to fixed
+      failure-class details; the mutable-root rejection no longer quotes the
+      path. RED evidence: graph 5 failed | 33 passed, seam 1 failed | 4
+      passed. Fresh verification: graph 167/167, control-plane 182/182,
+      adapters 34/34, capabilities 313/313, typecheck, Prettier, build
+      green; graph `dist/` rebuilt. Additivity vs `e13bef1`: strictly
+      narrowing (only rejects paths already forbidden; messages only remove
+      material).
 
 ### Task 5: Implement the Foundry evidence matrix and promotion workflow
 

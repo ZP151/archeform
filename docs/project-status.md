@@ -180,9 +180,19 @@ persisted. The Control Plane seam maps bounded provider failures to
 persisted, and `composition-ai-boundary.test.ts` pins the boundary (safe
 projection only, no raw prompt/response/credential material in any
 stored key or leaf, idempotent clarifications, unsafe provider plans
-refused pre-persistence). control-plane 181/181, graph 160/160,
-capabilities 313/313, adapters 34/34. State: Task 4 `ready_for_qa` at
-`34b81ed`, pending independent gates.
+refused pre-persistence). Task 4's gate round 1 at `57f68eb`: task review
+TASK_REVIEW_PASS (no findings); behavioral QA QA_PASS 28/28 with two P2
+seam-hardening notes (QA-1: Diff path strings were never scanned against
+the unsafe-material boundary — URL material inside a path persisted; QA-2:
+zod strict unrecognized-key/invalid-enum messages and the mutable-root
+rejection echoed offending material). Repaired at `52432a6b`:
+`unsafeCompositionDiffPathPattern` guards raw paths in
+`assertSafeCompositionOperationPath` and `hashCompositionDiff`,
+`parseStrict` replaces echo-prone zod details with fixed failure-class
+text, and the mutable-root message no longer quotes the path. RED evidence:
+graph 5 failed | 33 passed, seam 1 failed | 4 passed. Fresh verification:
+graph 167/167, control-plane 182/182, capabilities 313/313, adapters 34/34.
+State: Task 4 `ready_for_qa` at `52432a6b`, pending re-verification gates.
 
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including

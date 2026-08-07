@@ -366,6 +366,62 @@ authority, delivered in two commits:
 State: Train B Task 4 `ready_for_qa` at `34b81ed`, pending independent
 gates before `reviewed`.
 
+### 2026-08-08 — Task 4 gate round: QA-1/QA-2 repaired at `52432a6b`
+
+The independent task review returned TASK_REVIEW_PASS with no findings at
+`57f68eb` (adapters 34/34, graph 160/160, capabilities 313/313, control-plane
+181/181; every gate invariant cited). The sequential behavioral QA gate then
+returned QA_PASS (28 probes, all deleted) with two P2 seam-hardening notes on
+the Task 3-reviewed graph boundary — per the state vocabulary both findings
+returned Task 4 to `implementing`:
+
+- **QA-1 (P2)** — operation path strings were never scanned against the
+  unsafe-material boundary: a provider plan with a URL embedded in a
+  `proposedOperations` path (clean value) passed `parseCompositionPlan` and
+  persisted through the seam (`assertSafeCompositionOperationValues` scans
+  values only). Reachable only through a hypothetical non-deterministic
+  provider at `COMPOSITION_PLANNER` (production wiring and both in-scope
+  adapters take operations exclusively from `planComposition`).
+- **QA-2 (P2)** — two rejection surfaces echoed offending material: zod
+  strict's unrecognized-key message named each offending key verbatim, the
+  invalid-enum message named the received value, and the mutable-root
+  rejection quoted the whole path (breaking the F-1/NEW-1 non-echo property
+  on the seam's 409 messages).
+
+Repair at `52432a6b` (`fix(graph): scan Diff paths for material and never
+echo rejected material`):
+
+- `unsafeCompositionDiffPathPattern` — a pointer-specific scan
+  (URL schemes, Windows drive roots, `__proto__`, `www` hosts; the
+  business-text pattern cannot apply verbatim because every legitimate
+  pointer starts with `/`, which the text pattern rejects; `..` traversal
+  remains the structural alias handled by the pointer root guards). Applied
+  on the raw string at the top of `assertSafeCompositionOperationPath` and
+  added to `hashCompositionDiff` so a Diff clears the same path guards as a
+  plan's proposed operations. The failure message is fixed and never echoes
+  the path.
+- `parseStrict` replaces `unrecognized_keys` and `invalid_enum_value`
+  issue details with fixed failure-class text (the container path still
+  names where); the mutable-root rejection no longer quotes the path.
+- Seven new graph tests (RED: 5 failed | 33 passed) covering URL-in-path
+  non-echo, Windows drive roots, Diff-hash path guarding, clean-pointer
+  preservation (including `/metadata/name` and `/experience/theme/mode`),
+  unknown-key/`__proto__`-key non-echo, enum-value non-echo, and the fixed
+  outside-root message; one new seam test (RED: 1 failed | 4 passed)
+  proving a URL-in-path provider plan is refused with nothing persisted.
+
+Additivity vs the Task 3-reviewed boundary (`e13bef1`): the path scan is
+monotone — it only fails paths that already carried material forbidden by
+the Task 3 vocabulary — and the message changes only remove material from
+error output; no message any test asserts changed (no test asserted the
+previous strings; verified by grep). Fresh verification: graph 167/167,
+control-plane 182/182 (177 + 4 + 1), adapters 34/34, capabilities 313/313,
+typecheck, Prettier lint, and build green; graph `dist/` rebuilt so the
+control plane resolves the repaired boundary.
+
+State: Train B Task 4 `ready_for_qa` at `52432a6b`, pending re-verification
+gates before `reviewed`.
+
 ## Required evidence per promoted family
 
 | Evidence    | Required form                                                       |

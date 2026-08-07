@@ -187,8 +187,14 @@ the deterministic adapter returns only the planner's resolution over
 approved assets, the guarded OpenAI adapter contributes only parsed safe
 business text and fails closed on any divergence or unsafe material, and
 the Control Plane seam maps bounded provider failures to conflicts with
-nothing persisted (control-plane 181/181, adapters 34/34); it is
-`ready_for_qa` at `34b81ed` pending independent gates.
+nothing persisted (control-plane 181/181, adapters 34/34). Task 4's gate
+round 1 (task review PASS, behavioral QA QA_PASS 28/28 with two P2
+seam-hardening notes — path strings never scanned for material; zod
+strict and mutable-root messages echoing offending material) was repaired
+at `52432a6b`: Diff paths now clear the same guards as plan operations,
+and no rejection message echoes rejected material (graph 167/167,
+control-plane 182/182, capabilities 313/313, adapters 34/34); it is
+`ready_for_qa` at `52432a6b` pending re-verification gates.
 
 ## P2 and P3
 
