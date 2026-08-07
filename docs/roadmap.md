@@ -137,6 +137,12 @@ P1 acceptance gates:
 - `ProfileRecipeCatalogV1` contains at least 100 representative recipes and
   twelve independently compiled anchor Profiles across the defined domains.
 
+Current evidence: the staged composition contracts (Train A of the active
+Goal) are implemented at `f97eafa` — `RequirementSpecV1`/`CompositionPlanV1`/
+`CompositionDecisionV1`/`CompositionClarificationV1`/`ProfileRecipeCatalogV1`
+with canonical hashes, checksum-bound plan/Draft/Diff review, and Draft-only
+application (`@factory/graph` 141/141, typecheck/lint/build green).
+
 ## P2 and P3
 
 - **P2:** managed deployment, observability, fleet upgrades, and rollbacks,

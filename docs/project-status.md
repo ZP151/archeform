@@ -30,6 +30,27 @@ additional framework adapters. Prospective Testcontainers for Node, fast-check,
 and ts-morph use, and source-study-only references, remain subject to the
 existing licence, provenance, notice, and security gates.
 
+## Current iteration — governed composition contracts (Train A)
+
+Plan Task 1 is implemented at commit `f97eafa`
+(`feat(graph): define governed composition contracts`, pushed to
+`feat/governed-composition-capability-foundry`, worktree clean). The Graph
+package now owns exact-key `RequirementSpecV1`, `CompositionPlanV1`,
+`CompositionDecisionV1`, `CompositionClarificationV1`, and
+`ProfileRecipeCatalogV1` contracts: canonical SHA-256 hashes, checksum binding
+of every plan to one Requirement and one mutable Draft revision,
+graph-symbol existence checks against the typed Graph index, immutable
+capability locks with manifest digests, bounded explainability fields, a
+fail-closed unsafe-material boundary (URLs, absolute and Windows paths even
+mid-sentence, traversal segments, whitespace-only payloads, package paths,
+prototype keys), and Draft-only application of an approved decision whose plan
+and Diff checksums both match with operations exactly equal to the declared
+plan. Recipes require binding requirements per capability and reason codes
+iff unsupported; anchors require at least one acceptance journey. Fresh
+verification: `@factory/graph` 141/141 tests across 7 files, typecheck,
+Prettier lint, and build all green. State: Train A `ready_for_qa`, awaiting
+independent task review and behavioral QA before `reviewed`.
+
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including
 Preview stop and cleanup. This is not production readiness and does not alter

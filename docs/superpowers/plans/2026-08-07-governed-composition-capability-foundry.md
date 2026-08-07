@@ -43,11 +43,11 @@
 - `CompositionDecisionV1` may approve only a constrained Graph Diff whose base
   Draft checksum and plan checksum match.
 
-- [ ] Write failing tests rejecting raw model material, unknown keys, package paths, URLs, mutable asset locks, non-Draft base revisions, stale checksums, duplicate bindings, undeclared output slots, unsafe Graph operations, and recipes without required capability evidence.
-- [ ] Run the three focused suites and record RED.
-- [ ] Implement exact-key Zod schemas, canonical hashes, graph-symbol existence checks, capability-lock verification hooks, and bounded explainability fields.
-- [ ] Run `pnpm --filter @factory/graph test`, typecheck, lint, and build.
-- [ ] Commit `feat(graph): define governed composition contracts`.
+- [x] Write failing tests rejecting raw model material, unknown keys, package paths, URLs, mutable asset locks, non-Draft base revisions, stale checksums, duplicate bindings, undeclared output slots, unsafe Graph operations, and recipes without required capability evidence.
+- [x] Run the three focused suites and record RED (9 failed | 114 passed; later corrections: stale-checksum at binding time, catalog anchor/composable acceptance, graph-symbol existence).
+- [x] Implement exact-key Zod schemas, canonical hashes, graph-symbol existence checks, capability-lock verification hooks, and bounded explainability fields.
+- [x] Run `pnpm --filter @factory/graph test` (141 passed), typecheck, lint, and build — all green at commit f97eafa.
+- [x] Commit `feat(graph): define governed composition contracts` (f97eafa, pushed; tree clean).
 
 ### Task 2: Build deterministic composition resolution and fail-closed admission
 

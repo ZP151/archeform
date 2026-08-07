@@ -29,15 +29,33 @@ boundary violation returns the owning item to `implementing`.
 
 ## Delivery trains
 
-| Train                     | State   | Target commit | Evidence                                             |
-| ------------------------- | ------- | ------------- | ---------------------------------------------------- |
-| A. Composition contracts  | planned | —             | RequirementSpec, plan, decision, recipe schema tests |
-| B. Planner and review     | planned | —             | deterministic plan and Draft-only review tests       |
-| C. Foundry quality system | planned | —             | promotion matrix and rejection evidence              |
-| D. Capability batches     | planned | —             | 25–35 eligible families, two Profiles each           |
-| E. Portfolio proof        | planned | —             | 100+ recipes, 12 compiled anchors                    |
-| F. Guided Workbench flow  | planned | —             | browser flow and role simulation evidence            |
-| G. Release                | planned | —             | independent gates and final record                   |
+| Train                     | State        | Target commit | Evidence                                             |
+| ------------------------- | ------------ | ------------- | ---------------------------------------------------- |
+| A. Composition contracts  | ready_for_qa | f97eafa       | RequirementSpec, plan, decision, recipe schema tests |
+| B. Planner and review     | planned      | —             | deterministic plan and Draft-only review tests       |
+| C. Foundry quality system | planned      | —             | promotion matrix and rejection evidence              |
+| D. Capability batches     | planned      | —             | 25–35 eligible families, two Profiles each           |
+| E. Portfolio proof        | planned      | —             | 100+ recipes, 12 compiled anchors                    |
+| F. Guided Workbench flow  | planned      | —             | browser flow and role simulation evidence            |
+| G. Release                | planned      | —             | independent gates and final record                   |
+
+## Iteration record
+
+### 2026-08-08 — Task 1 (Train A) implemented: composition contracts
+
+- New Graph contracts: `RequirementSpecV1`, `CompositionPlanV1`,
+  `CompositionDecisionV1`, `CompositionClarificationV1`, `ProfileRecipeV1`,
+  `ProfileRecipeCatalogV1`, plus shared fail-closed helpers
+  (`composition-shared.ts`).
+- RED: 9 failed | 114 passed on the three new suites; three test corrections
+  recorded (stale-checksum bound at `assertPlanAgainstRequirement` time,
+  catalog anchor/composable acceptance, graph-symbol existence).
+- GREEN: `pnpm --filter @factory/graph test` — 141 passed (7 files);
+  typecheck, prettier lint, and build all green.
+- Commit `f97eafa` `feat(graph): define governed composition contracts`
+  pushed to `feat/governed-composition-capability-foundry`; worktree clean.
+- State: Train A `ready_for_qa`, awaiting independent task review and QA
+  verdicts before `reviewed`.
 
 ## Required evidence per promoted family
 
