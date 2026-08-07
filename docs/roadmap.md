@@ -203,7 +203,7 @@ probes) and the PM records Task 4 `ready_for_qa -> reviewed` — Train B
 Tasks 2–4 are `reviewed` (graph 175/175, control-plane 183/183,
 capabilities 313/313, adapters 34/34).
 
-Train D Task 5 (Foundry evidence matrix and promotion workflow) is
+Train C Task 5 (Foundry evidence matrix and promotion workflow) is
 implemented at `b59f8645`: a declared evidence registry binds every current
 family to its
 exact key/version/manifest-digest (23 literal records, first-party policy
@@ -223,8 +223,10 @@ manifest-readiness repair for the 14 is Train D's next batch; the gate
 round returned task review TASK_REVIEW_PASS and behavioral QA QA_FAIL with
 two P2 runtime-immutability gaps (QA-1: registry records mutable; QA-2:
 matrix output mutable), repaired by deep-freezing the declared records and
-the matrix result with two runtime pins (capabilities 329/329, graph
-175/175, control-plane 183/183).
+the matrix result with two runtime pins. Both re-verification gates closed
+with no findings at `0ce7899b` (task review TASK_REVIEW_PASS; QA_PASS
+35/35) and the PM records Train C Task 5 `ready_for_qa -> reviewed`
+(capabilities 329/329, graph 175/175, control-plane 183/183).
 
 ## P2 and P3
 

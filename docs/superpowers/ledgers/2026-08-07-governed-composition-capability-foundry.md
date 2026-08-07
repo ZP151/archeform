@@ -37,7 +37,7 @@ adapter").
 | ------------------------- | ------------------------ | ------------ | ------------- | ---------------------------------------------------- |
 | A. Composition contracts  | 1                        | reviewed     | e13bef1       | RequirementSpec, plan, decision, recipe schema tests |
 | B. Planner and review     | 2, 3, 4, 8               | ready_for_qa | 74e918d       | deterministic plan, Draft-only review tests, Control Plane APIs |
-| C. Foundry quality system | 5                        | planned      | —             | family manifest, provenance, matrix, promotion tests |
+| C. Foundry quality system | 5                        | reviewed     | 0ce7899b      | declared evidence registry, honest matrix, promotion policy, promotion tests |
 | D. Capability batches     | 6                        | planned      | —             | 25–35 eligible families, two Profiles each           |
 | E. Portfolio proof        | 7                        | planned      | —             | 100+ recipes, 12 compiled anchors                    |
 | F. Release                | 9                        | planned      | —             | independent gates and final record                   |
@@ -551,6 +551,21 @@ every record and its profile-lock array, the matrix rows/counts/reason
 codes, and that strict-mode assignment to `counts` throws. Suite at final
 state: capabilities 329/329 (24 files; 327 + 2 pins), graph 175/175,
 control-plane 183/183, typecheck, Prettier, and build green.
+
+### 2026-08-08 — Task 5 gate round closed: PM records `ready_for_qa -> reviewed`
+
+**The PM records Train C Task 5 `ready_for_qa -> reviewed` at `0ce7899b`**:
+both independent gates closed with no findings at final HEAD. Task review
+TASK_REVIEW_PASS (23/23 declared digests independently verified against the
+on-disk manifests; honest 9-quarantined/14-rejected split reproduced from
+the admission predicates; docs match the matrix exactly; one doc-drift
+observation aligned at `5473726`). Behavioral QA re-verification QA_PASS —
+35/35 probes (QA-1/QA-2 mutation attempts throw and leave state
+byte-identical; honest counts exact; six synthetic boundaries; determinism;
+suite 329/329, tsc clean; probe files deleted, worktree byte-clean). The
+Foundry evidence matrix is the deterministic promotion authority: zero
+families are claimed eligible until real two-Profile verifier evidence and
+the Task 6 manifest repairs land. Train C is `reviewed`.
 
 ## Required evidence per promoted family
 

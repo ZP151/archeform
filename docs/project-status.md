@@ -205,7 +205,7 @@ the PM records Train B Task 4 `ready_for_qa -> reviewed` — Train B Tasks
 2–4 are `reviewed`. Suites at final HEAD: graph 175/175, control-plane
 183/183, capabilities 313/313, adapters 34/34.
 
-Train D Task 5 (Foundry evidence matrix and promotion workflow) is
+Train C Task 5 (Foundry evidence matrix and promotion workflow) is
 implemented at `b59f8645`: a declared evidence registry binds each of the
 23 current
 families to its exact key/version/manifest-digest with the shared
@@ -220,7 +220,7 @@ manifests declare no binding contract** (`missing-binding-contract`: core
 audit/crud/notification/workflow/identity-context/location-context,
 commerce catalog/cart/line-configuration/inventory/inventory-ledger/order/
 simulated-payment, restaurant.menu). That manifest-readiness gap is Train
-D's next batch work. Public evidence: `docs/foundry/capability-matrix.md`
+D's (Task 6) batch work. Public evidence: `docs/foundry/capability-matrix.md`
 (source-free summary) and `docs/foundry/promotion-policy.md`. TDD RED
 evidence: 11 failed | 0 passed before implementation. The gate round
 returned task review TASK_REVIEW_PASS (one doc-drift observation aligned
@@ -228,9 +228,12 @@ at `5473726`) and behavioral QA QA_FAIL with two P2 runtime-immutability
 gaps (QA-1: declared registry record elements were mutable; QA-2: matrix
 output rows/counts were mutable) — repaired with the established
 `deepFreeze` idiom so no caller can rewrite a verdict at runtime, plus two
-`Object.isFrozen`/throw pins. Suites at final state: capabilities 329/329
-(24 files), graph 175/175, control-plane 183/183, typecheck, Prettier, and
-build green. Train D is `implementing`, pending re-verification gates.
+`Object.isFrozen`/throw pins. Both re-verification gates closed with no
+findings at `0ce7899b` (task review TASK_REVIEW_PASS after the plan
+alignment at `5473726`; behavioral QA QA_PASS, 35/35 probes) and the PM
+records Train C Task 5 `ready_for_qa -> reviewed`. Suites at final state:
+capabilities 329/329 (24 files), graph 175/175, control-plane 183/183,
+typecheck, Prettier, and build green.
 
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including
