@@ -95,6 +95,53 @@ export class CompositionError extends Error {
   }
 }
 
+function walkUnsafeValue(
+  value: unknown,
+  keyPath: string[],
+  fail: (keyPath: string[]) => void,
+): void {
+  if (typeof value === "string") {
+    if (!unsafeMaterialPattern.test(value)) fail(keyPath);
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (let index = 0; index < value.length; index += 1) {
+      walkUnsafeValue(value[index], [...keyPath, String(index)], fail);
+    }
+    return;
+  }
+  if (value !== null && typeof value === "object") {
+    for (const [key, child] of Object.entries(
+      value as Record<string, unknown>,
+    )) {
+      walkUnsafeValue(child, [...keyPath, key], fail);
+    }
+  }
+}
+
+/**
+ * Fails closed when any string leaf of an operation value carries unsafe
+ * material (URLs, www hosts, absolute or traversal paths, prototype keys).
+ * The error never echoes the offending material itself.
+ */
+export function assertSafeCompositionOperationValues(
+  operations: readonly {
+    readonly path?: string;
+    readonly value?: unknown;
+  }[],
+): void {
+  for (const operation of operations) {
+    if (!("value" in operation) || operation.value === undefined) continue;
+    walkUnsafeValue(operation.value, [], (keyPath) => {
+      const at = operation.path === undefined ? "" : ` at '${operation.path}'`;
+      const inKey = keyPath.length === 0 ? "" : ` in '${keyPath.join(".")}'`;
+      throw new CompositionError(
+        `Composition operation${at} carries unsafe material${inKey}.`,
+      );
+    });
+  }
+}
+
 export function parseStrict<T>(schema: z.ZodType<T>, input: unknown): T {
   try {
     return schema.parse(input);

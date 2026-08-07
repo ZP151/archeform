@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import {
+  assertSafeCompositionOperationValues,
   canonicalEquals,
   capabilityKeySchema,
   CompositionError,
@@ -320,6 +321,7 @@ export function parseCompositionPlan(input: unknown): CompositionPlanV1 {
   for (const operation of plan.proposedOperations) {
     assertSafeCompositionOperationPath(operation.path);
   }
+  assertSafeCompositionOperationValues(plan.proposedOperations);
   return plan;
 }
 
@@ -357,6 +359,7 @@ export function assertCompositionDecision(
 
 export function hashCompositionDiff(input: unknown): string {
   const diff = parseStrict(compositionDiffSchema, input);
+  assertSafeCompositionOperationValues(diff.operations);
   return digestJson(diff);
 }
 

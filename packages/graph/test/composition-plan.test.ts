@@ -538,4 +538,66 @@ describe("CompositionDecisionV1 and Draft-only application", () => {
       }),
     ).toThrow(CompositionError);
   });
+
+  it("rejects a plan whose operation value carries a URL or www host", () => {
+    for (const value of [
+      {
+        from: "submitted",
+        event: "reject",
+        to: "rejected",
+        callbackUrl: "https://evil.example.com/ingest",
+      },
+      {
+        from: "submitted",
+        event: "reject",
+        to: "rejected",
+        nested: { link: "https://evil.example.com" },
+      },
+      {
+        from: "submitted",
+        event: "reject",
+        to: "rejected",
+        site: "www.example.com",
+      },
+    ]) {
+      expect(() =>
+        parseCompositionPlan({
+          ...planFixture(),
+          proposedOperations: [
+            { op: "add", path: "/flow/flows/0/transitions/-", value },
+          ],
+        }),
+      ).toThrow(CompositionError);
+    }
+  });
+
+  it("rejects a Diff whose operation value carries unsafe material when hashed", () => {
+    expect(() =>
+      hashCompositionDiff({
+        apiVersion: "factory.graph-diff/v1",
+        operations: [
+          {
+            op: "add",
+            path: "/flow/flows/0/transitions/-",
+            value: {
+              from: "submitted",
+              event: "reject",
+              to: "rejected",
+              ingest: "https://evil.example.com",
+            },
+          },
+        ],
+      }),
+    ).toThrow(CompositionError);
+  });
+
+  it("keeps clean operation values through plan parse and Diff hash", () => {
+    const plan = parseCompositionPlan(planFixture());
+    expect(plan.proposedOperations[0].value).toEqual({
+      from: "submitted",
+      event: "reject",
+      to: "rejected",
+    });
+    expect(hashCompositionDiff(safeDiff)).toMatch(/^sha256:[a-f0-9]{64}$/);
+  });
 });
