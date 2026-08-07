@@ -42,6 +42,16 @@ export {
   createCapabilityCompositionLock,
   resolveCapabilityComposition,
 } from "./composition.js";
+export {
+  evaluateFoundryAdmission,
+  expectedFoundryLockDigest,
+} from "./foundry-admission.js";
+export type {
+  FoundryAdmissionEvidenceV1,
+  FoundryAdmissionResultV1,
+  FoundryAdmissionVerdictV1,
+  FoundryProfileLockEvidenceV1,
+} from "./foundry-admission.js";
 export type {
   ProfileCapabilityReadinessV1,
   ProfileGeneratedTargetV1,
