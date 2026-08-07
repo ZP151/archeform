@@ -31,7 +31,7 @@ boundary violation returns the owning item to `implementing`.
 
 | Train                     | State        | Target commit | Evidence                                             |
 | ------------------------- | ------------ | ------------- | ---------------------------------------------------- |
-| A. Composition contracts  | ready_for_qa | 67cf682       | RequirementSpec, plan, decision, recipe schema tests |
+| A. Composition contracts  | ready_for_qa | 7524e6b       | RequirementSpec, plan, decision, recipe schema tests |
 | B. Planner and review     | planned      | —             | deterministic plan and Draft-only review tests       |
 | C. Foundry quality system | planned      | —             | promotion matrix and rejection evidence              |
 | D. Capability batches     | planned      | —             | 25–35 eligible families, two Profiles each           |
@@ -78,6 +78,26 @@ gaps`) adds 10 regression tests: graph `pnpm --filter @factory/graph test` —
 `pnpm --filter @factory/capabilities test` — 282 passed, typecheck green.
 Pushed; worktree clean. State: Train A `ready_for_qa`, pending re-verification
 gates on `67cf682` before `reviewed`.
+
+### 2026-08-08 — Train A re-verification P2 notes repaired at `7524e6b`
+
+Re-verification on `67cf682` passed (`TASK_REVIEW_PASS`, `QA_PASS`) with P2
+notes. Per the state vocabulary, any P2 finding returns the owning item to
+`implementing`; the repair was committed.
+
+| ID | Severity | Finding | Repair |
+| -- | -------- | ------- | ------ |
+| TR-4 | P2 | Plan-level guard tests passed for the wrong reason: the approved-decision fixture bound the safe Diff's checksum, so the checksum check fired before the path guard | The bad operations now ride inside the plan's own `proposedOperations`, so `parseCompositionPlan` exercises the guard directly at parse (composition-plan.test.ts) |
+| QA-4 | P2 | Integration-root alias `add` paths (`/integration/`, `/integration/.`, `/integration/..`) passed the second-segment guard and were silently absorbed | Root checks now run over segments normalized by dropping empty/`.`/`..` segments (no validated Graph key can be one); aliases throw in both guard mirrors |
+| QA-5 | P2 | `~1`-escaped prototype tokens (`/page/~1constructor`, `/page/~1prototype`) decoded to literal keys that passed the whole-segment check | The guard inspects every slash-decoded token, not only whole segments |
+| QA-6 | P2 | Business-text case/whitespace variants (`Constructor`, `"constructor "`, `" prototype"`, `WWW.example.com`) parsed as inert text | Pattern is case-insensitive; full-string `constructor`/`prototype` rejections tolerate surrounding whitespace; natural prose still passes |
+
+Repair commit `7524e6b` (`fix(graph): close composition guard alias, token,
+and case gaps`) — graph `pnpm --filter @factory/graph test` 152 passed (7
+files), typecheck/lint/build green; proportional regression
+`pnpm --filter @factory/capabilities test` — 282 passed. Pushed; worktree
+clean. State: Train A `ready_for_qa`, pending re-verification gates on
+`7524e6b` before `reviewed`.
 
 ## Required evidence per promoted family
 

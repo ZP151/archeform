@@ -34,9 +34,10 @@ existing licence, provenance, notice, and security gates.
 
 Plan Task 1 is implemented at commit `f97eafa`
 (`feat(graph): define governed composition contracts`) and hardened at
-`67cf682` (`fix(graph): close composition fail-closed boundary gaps`) after
-independent task review and behavioral QA findings, both pushed to
-`feat/governed-composition-capability-foundry`, worktree clean. The Graph
+`67cf682` (`fix(graph): close composition fail-closed boundary gaps`) and
+`7524e6b` (`fix(graph): close composition guard alias, token, and case
+gaps`) after independent task review and behavioral QA findings, all pushed
+to `feat/governed-composition-capability-foundry`, worktree clean. The Graph
 package now owns exact-key `RequirementSpecV1`, `CompositionPlanV1`,
 `CompositionDecisionV1`, `CompositionClarificationV1`, and
 `ProfileRecipeCatalogV1` contracts: canonical SHA-256 hashes, checksum binding
@@ -45,17 +46,20 @@ graph-symbol existence checks against the typed Graph index, immutable
 capability locks with manifest digests, bounded explainability fields, a
 fail-closed unsafe-material boundary (URLs, `www`-prefixed hosts, absolute and
 Windows paths even mid-sentence, traversal segments, whitespace-only
-payloads, package paths, prototype-key material), and Draft-only application
-of an approved decision whose plan and Diff checksums both match with
-operations exactly equal to the declared plan. Guards also reject whole-subtree
-`/integration` rewrites, `~1`-escaped prototype-key paths (checked after
-pointer decoding), and nested unknown keys in requirement items; recipes
-require binding requirements per locked capability and reason codes iff
-unsupported; anchors require at least one acceptance journey. Fresh
-verification: `@factory/graph` 151/151 tests across 7 files (10 new regression
-tests for the six gate findings), `@factory/capabilities` 282/282, typecheck,
-Prettier lint, and build all green. State: Train A `ready_for_qa`, re-gated on
-`67cf682` before `reviewed`.
+payloads, package paths, prototype-key material — matched
+case-insensitively, with whitespace-tolerant full-string
+`constructor`/`prototype` rejections), and Draft-only application of an
+approved decision whose plan and Diff checksums both match with operations
+exactly equal to the declared plan. Guards also reject whole-subtree
+`/integration` rewrites (including `/integration/`, `/integration/.`,
+`/integration/..` aliases), `~1`-escaped prototype-key paths and decoded
+prototype tokens (checked after pointer decoding), and nested unknown keys in
+requirement items; recipes require binding requirements per locked capability
+and reason codes iff unsupported; anchors require at least one acceptance
+journey. Fresh verification: `@factory/graph` 152/152 tests across 7 files
+(15 regression tests across the two gate repair rounds), `@factory/capabilities`
+282/282, typecheck, Prettier lint, and build all green. State: Train A
+`ready_for_qa`, re-gated on `7524e6b` before `reviewed`.
 
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including
