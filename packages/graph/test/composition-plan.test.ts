@@ -687,9 +687,7 @@ describe("CompositionDecisionV1 and Draft-only application", () => {
       throw new Error("expected the plan to be rejected");
     }
 
-    const message = messageFor(
-      JSON.parse('{"__proto__":{"x":1}}'),
-    );
+    const message = messageFor(JSON.parse('{"__proto__":{"x":1}}'));
     expect(message).toMatch(/carries unsafe material/);
     expect(message).not.toContain("__proto__");
 
