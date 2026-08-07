@@ -181,7 +181,14 @@ only and a regression test asserts non-echo for `__proto__`/URL keys
 `ready_for_qa` at `ed82b17` pending re-verification gates. Round 3 at
 `342b19c` closed both re-verification gates with no findings (task review
 PASS; behavioral QA 27/27), and the PM records Task 3 `ready_for_qa ->
-reviewed` — Train B Tasks 2–3 are `reviewed` at `342b19c`.
+reviewed` — Train B Tasks 2–3 are `reviewed` at `342b19c`. Task 4
+(constrained planning adapters) is implemented at `50b0e23` + `34b81ed`:
+the deterministic adapter returns only the planner's resolution over
+approved assets, the guarded OpenAI adapter contributes only parsed safe
+business text and fails closed on any divergence or unsafe material, and
+the Control Plane seam maps bounded provider failures to conflicts with
+nothing persisted (control-plane 181/181, adapters 34/34); it is
+`ready_for_qa` at `34b81ed` pending independent gates.
 
 ## P2 and P3
 

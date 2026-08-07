@@ -329,6 +329,43 @@ Per the state vocabulary the PM alone advances a state: the PM records
 Train B Task 3 `ready_for_qa -> reviewed` at `342b19c` (Tasks 2–3
 reviewed; ledger sections above cite every repair round).
 
+### 2026-08-08 — Task 4 (Train B) implemented: constrained planning adapters
+
+`CompositionPlannerAdapterV1` seam over the existing deterministic
+authority, delivered in two commits:
+
+- `50b0e23` (`feat(adapters): add constrained composition planning
+  adapters`) — `DeterministicCompositionPlannerAdapter` (the structured
+  brief must parse as an exact RequirementSpecV1; the plan then comes
+  entirely from `planComposition` over the approved assets — it never
+  invents selections, versions, bindings, paths, or operations) and
+  `OpenAIConstrainedCompositionPlannerAdapter` (strict-JSON-schema model
+  output; every authoritative part — locks, bindings, slots, operations,
+  checksums, complexity — must equal the deterministic planner's
+  resolution; lock versions must be approved assets; business text must
+  pass the unsafe-material boundary; any divergence, unknown version,
+  unsafe material, or transport failure returns a bounded
+  `CompositionPlannerError` with a fixed error-code vocabulary; the API
+  key is read from the environment at call time and never persisted).
+  `@factory/capabilities` now type-exports `CapabilityAssetV1` from the
+  node entry. 14 new tests (4 deterministic, 10 OpenAI); adapters 34/34,
+  typecheck, Prettier lint, and build green.
+- `34b81ed` (`feat(control-plane): bounded provider failures and AI
+  boundary tests`) — the `COMPOSITION_PLANNER` seam maps a provider's
+  bounded `CompositionError` to `ConflictException("Composition planning
+  failed: …")` instead of a raw 500 (nothing persisted on the failure
+  path); `composition-ai-boundary.test.ts` pins the AI boundary at the
+  seam: only the constrained projection of a schema-valid proposal is
+  persisted (safeSummary carries no free-form text; every stored key and
+  leaf walks clean of raw prompt/response/credential keys and unsafe
+  material), clarifications store without re-planning (idempotent), a
+  throwing provider maps to the bounded conflict, and a provider plan
+  carrying unsafe business text is refused before persistence.
+  control-plane 181/181 (177 + 4).
+
+State: Train B Task 4 `ready_for_qa` at `34b81ed`, pending independent
+gates before `reviewed`.
+
 ## Required evidence per promoted family
 
 | Evidence    | Required form                                                       |

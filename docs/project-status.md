@@ -167,6 +167,23 @@ all six guards fire by their exact messages; redaction and the safe E2E
 path hold). The PM records Train B Task 3 `ready_for_qa -> reviewed` at
 `342b19c`; Tasks 2–3 are `reviewed`.
 
+Train B Task 4 (constrained planning adapters) is implemented at
+`50b0e23` + `34b81ed`: the deterministic adapter returns only the
+deterministic planner's resolution over approved assets (never inventing
+selections, versions, bindings, paths, or operations), and the guarded
+OpenAI adapter may contribute only parsed safe business text — every
+authoritative field must equal the deterministic reference, unknown
+versions and unsafe material fail closed with bounded error codes, and
+the API key is read from the environment at call time and never
+persisted. The Control Plane seam maps bounded provider failures to
+`ConflictException("Composition planning failed: …")` with nothing
+persisted, and `composition-ai-boundary.test.ts` pins the boundary (safe
+projection only, no raw prompt/response/credential material in any
+stored key or leaf, idempotent clarifications, unsafe provider plans
+refused pre-persistence). control-plane 181/181, graph 160/160,
+capabilities 313/313, adapters 34/34. State: Task 4 `ready_for_qa` at
+`34b81ed`, pending independent gates.
+
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including
 Preview stop and cleanup. This is not production readiness and does not alter

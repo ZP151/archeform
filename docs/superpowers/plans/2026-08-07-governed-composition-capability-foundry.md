@@ -154,15 +154,18 @@
 - The OpenAI adapter reads a key only from environment at call time and returns
   a bounded validation failure for malformed/unavailable provider output.
 
-- [ ] Write failing tests for output with Graph operations, package paths, URLs,
-      unknown capability versions, raw prompt persistence, and model/provider
-      transport errors.
-- [ ] Run deterministic adapter tests in fixture mode and confirm RED.
-- [ ] Implement deterministic planning first, then the optional provider adapter
-      behind the same schema gate and safe diagnostic boundary.
-- [ ] Run adapter, Graph, and Control Plane regression suites; run a guarded
-      real-provider check only when the local environment is configured.
-- [ ] Commit `feat(adapters): add constrained composition planners`.
+- [x] RED: deterministic adapter tests fail until the workspace dependency
+      and module are added (module resolution), then the 14-test suite goes
+      green; boundary tests appended after the Task 3 gate round closed.
+- [x] Implement deterministic planning first, then the optional provider
+      adapter behind the same schema gate and safe diagnostic boundary.
+- [x] Adapter regression (34/34, 9 files), Graph 160/160, Control Plane
+      181/181 (177 + 4 seam boundary tests at `34b81ed`), typecheck,
+      Prettier lint, and build green. A guarded real-provider check runs
+      only when the local environment is configured (Task 9).
+- [x] Commit `feat(adapters): add constrained composition planners`
+      (`50b0e23`) and the Control Plane seam hardening + AI boundary tests
+      (`34b81ed`).
 
 ### Task 5: Implement the Foundry evidence matrix and promotion workflow
 
