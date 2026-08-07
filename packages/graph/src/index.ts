@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { unsafeCompositionDiffPathPattern } from "./composition-shared.js";
 import {
   applicationGraphSchema,
   assertValidApplicationGraph,
@@ -147,6 +148,17 @@ function decodePointer(path: string): string[] {
 
 function assertPermittedDiffPath(path: string): string[] {
   const segments = decodePointer(path);
+  // Escaped material decodes after a raw scan, so the raw boundary scans the
+  // decoded segments too: `/experience/theme/tokens/https:~1~1evil.example
+  // .com` carries no literal scheme yet its decoded segment is a URL that
+  // would land in a record surface such as experience.theme.tokens
+  // (QA-4-1). The joined string has no leading `/`, so the business-text
+  // `^\s*[\\/]` alternative cannot apply even if this pattern later grows.
+  if (!unsafeCompositionDiffPathPattern.test(segments.join("/"))) {
+    throw new GraphDiffError(
+      "Graph Diff paths cannot carry URL, absolute-path, or prototype-key material.",
+    );
+  }
   // Guard checks run over decoded segments: `~1`-escaped pointers decode to
   // `/`, so prototype material must be detected per slash-decoded token
   // (`/page/~1constructor` decodes to a segment carrying the `constructor`

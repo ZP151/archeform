@@ -207,6 +207,18 @@ function assertSafeCompositionOperationPath(path: string): void {
     );
   }
   const segments = decodePointer(path);
+  // Escaped material decodes after the raw scan: `/experience/theme/tokens/
+  // https:~1~1evil.example.com` carries no literal scheme yet its decoded
+  // segment is a URL (QA-4-1). The decoded segments are re-joined and
+  // scanned with the same path material pattern, so `~1`-escaped schemes,
+  // drive roots, and hosts fail closed exactly like their unescaped forms.
+  // The joined string has no leading `/`, so the business-text `^\s*[\\/]`
+  // alternative cannot apply even if this pattern later grows.
+  if (!unsafeCompositionDiffPathPattern.test(segments.join("/"))) {
+    throw new CompositionError(
+      "Composition Diff paths cannot carry URL, absolute-path, or prototype-key material.",
+    );
+  }
   // Guard checks run over decoded segments: `~1`-escaped pointers decode to
   // `/`, so prototype material must be detected per slash-decoded token
   // (`/page/~1constructor` decodes to a segment carrying the `constructor`

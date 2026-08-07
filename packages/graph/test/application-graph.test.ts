@@ -820,4 +820,53 @@ describe("ApplicationGraphV1", () => {
       ).toThrow(GraphDiffError);
     }
   });
+
+  it("rejects escaped URL material in a path without echoing it", () => {
+    // QA-4-1: a `~1`-escaped scheme decodes to a real URL after the raw
+    // string scan, so the raw pointer carries no literal `://` yet its
+    // decoded segment is a URL that would land in a record surface such as
+    // experience.theme.tokens. The decoded segments must fail closed with a
+    // fixed message that never echoes the host, scheme, or path.
+    const draft = createDraftRevision(expenseGraph, "draft-1");
+
+    let message = "";
+    try {
+      applyGraphDiffToDraft(draft, {
+        apiVersion: "factory.graph-diff/v1",
+        operations: [
+          {
+            op: "add",
+            path: "/experience/theme/tokens/https:~1~1evil.example.com",
+            value: "clean",
+          },
+        ],
+      });
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toMatch(/cannot carry URL/);
+    expect(message).not.toContain("evil.example.com");
+    expect(message).not.toContain("https:");
+    expect(message).not.toContain("https:~1~1evil.example.com");
+  });
+
+  it("rejects unescaped URL and drive-root material in raw Diff paths", () => {
+    // The raw boundary shares the same path material boundary as the
+    // composition layer: a URL or drive root in a pointer is never legitimate
+    // Graph structure, escaped or not.
+    const draft = createDraftRevision(expenseGraph, "draft-1");
+
+    for (const path of [
+      "/experience/theme/tokens/https://evil.example.com",
+      "/experience/theme/tokens/C:/windows/system32/x",
+      "/experience/theme/tokens/C:~1windows/x",
+    ]) {
+      expect(() =>
+        applyGraphDiffToDraft(draft, {
+          apiVersion: "factory.graph-diff/v1",
+          operations: [{ op: "add", path, value: "clean" }],
+        }),
+      ).toThrow(GraphDiffError);
+    }
+  });
 });

@@ -845,3 +845,91 @@ describe("Composition Diff path material and rejection non-echo", () => {
     expect(message).not.toContain("/published/0");
   });
 });
+
+describe("Composition Diff escaped path material (QA-4-1)", () => {
+  // QA-4-1: `~1`-escaped material decodes to a URL after the raw string
+  // scan, so `/experience/theme/tokens/https:~1~1evil.example.com` carries no
+  // literal scheme yet its decoded segment is a URL. The decoded segments
+  // must be scanned with the same path material pattern so escaped schemes,
+  // drive roots, and hosts fail closed exactly like their unescaped forms.
+  it("refuses an escaped URL path at plan parse without echoing it", () => {
+    for (const path of [
+      "/experience/theme/tokens/https:~1~1evil.example.com",
+      "/experience/theme/tokens/HTTPS:~1~1evil.example.com",
+    ]) {
+      let message = "";
+      try {
+        parseCompositionPlan({
+          ...planFixture(),
+          proposedOperations: [{ op: "add", path, value: "clean" }],
+        });
+      } catch (error) {
+        message = error instanceof Error ? error.message : String(error);
+      }
+      expect(message).toMatch(/Composition Diff paths cannot carry/);
+      expect(message).not.toContain("evil.example.com");
+      expect(message).not.toContain("https:");
+      expect(message).not.toContain(path);
+    }
+  });
+
+  it("refuses an escaped URL path at Diff hash", () => {
+    expect(() =>
+      hashCompositionDiff({
+        apiVersion: "factory.graph-diff/v1",
+        operations: [
+          {
+            op: "add",
+            path: "/experience/theme/tokens/https:~1~1evil.example.com",
+            value: "clean",
+          },
+        ],
+      }),
+    ).toThrow(CompositionError);
+  });
+
+  it("refuses an escaped Windows drive root in a path", () => {
+    expect(() =>
+      parseCompositionPlan({
+        ...planFixture(),
+        proposedOperations: [
+          {
+            op: "add",
+            path: "/experience/theme/tokens/C:~1windows/x",
+            value: "clean",
+          },
+        ],
+      }),
+    ).toThrow(CompositionError);
+  });
+
+  it("refuses an escaped-material diff at decision application", () => {
+    // The Diff checksum is computed by hashCompositionDiff, which must refuse
+    // the escaped path before any application, so the Draft never moves.
+    const plan = planFixture();
+    const escaped = {
+      apiVersion: "factory.graph-diff/v1",
+      operations: [
+        {
+          op: "add",
+          path: "/experience/theme/tokens/https:~1~1evil.example.com",
+          value: "clean",
+        },
+      ],
+    };
+    expect(() => hashCompositionDiff(escaped)).toThrow(CompositionError);
+    expect(() =>
+      applyApprovedComposition(
+        {
+          ...approvedDecision(plan),
+          diffChecksum:
+            "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        },
+        plan,
+        draft,
+        escaped,
+      ),
+    ).toThrow(CompositionError);
+    expect(draft.revision).toBe(1);
+  });
+});

@@ -434,4 +434,29 @@ describe("CompositionService AI planning boundary", () => {
     ).rejects.toThrow(/Composition plan rejected/);
     expect(prisma.compositionReview.update).not.toHaveBeenCalled();
   });
+
+  it("refuses a provider plan carrying an escaped URL inside a Diff path", async () => {
+    // QA-4-1: `~1`-escaped material decodes to a URL after the raw string
+    // scan, so the raw pointer carries no literal `://`. The decoded-segment
+    // scan must still refuse the plan with nothing persisted.
+    const { prisma, composition } = await plannedService(
+      plannerStub({
+        kind: "plan",
+        plan: planFixture({
+          proposedOperations: [
+            {
+              op: "add",
+              path: "/experience/theme/tokens/https:~1~1evil.example.com",
+              value: "clean",
+            },
+          ],
+        }),
+      }),
+    );
+
+    await expect(
+      composition.requestPlan("graph-1", "review-1"),
+    ).rejects.toThrow(/Composition plan rejected/);
+    expect(prisma.compositionReview.update).not.toHaveBeenCalled();
+  });
 });
