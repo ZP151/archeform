@@ -91,7 +91,7 @@ function declareFamily(
   });
 }
 
-/** One declared evidence record per current capability family (25). */
+/** One declared evidence record per current capability family (26). */
 export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
   Object.freeze([
     declareFamily(
@@ -143,6 +143,11 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
       "core.search",
       "1.0.0",
       "sha256:1f2c1968afdb43ee52993fc6d6e7e297c2b7b7aa43777564fae6d6fb774c26c4",
+    ),
+    declareFamily(
+      "core.scheduling",
+      "1.0.0",
+      "sha256:26b31d8dfefb61c9c5446c3c1e87c5bfd5688b3bb0897a31d422f4d74ef61f44",
     ),
     declareFamily(
       "commerce.catalog",

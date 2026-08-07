@@ -18,6 +18,7 @@ import { policyDeclarationsAssetV1_0_0 } from "./core/policy-declarations-v1-0-0
 import { locationContextAssetV1_0_0 } from "./core/location-context-v1-0-0.js";
 import { filesMediaAssetV1_0_0 } from "./core/files-media.js";
 import { searchAssetV1_0_0 } from "./core/search.js";
+import { schedulingAssetV1_0_0 } from "./core/scheduling.js";
 import { catalogAsset } from "./commerce/catalog.js";
 import { catalogAssetV1_1_0 } from "./commerce/catalog-v1-1-0.js";
 import { catalogAssetV1_2_0 } from "./commerce/catalog-v1-2-0.js";
@@ -79,6 +80,7 @@ export {
   locationContextAssetV1_0_0,
   filesMediaAssetV1_0_0,
   searchAssetV1_0_0,
+  schedulingAssetV1_0_0,
   moneyPricingAssetV1_0_0,
   moneyPricingAssetV1_1_0,
   notificationAsset,
@@ -121,6 +123,7 @@ export const currentCapabilityAssets: readonly CapabilityAssetV1[] =
     locationContextAssetV1_0_0,
     filesMediaAssetV1_0_0,
     searchAssetV1_0_0,
+    schedulingAssetV1_0_0,
     catalogAssetV1_2_0,
     cartAssetV1_0_1,
     lineConfigurationAssetV1_1_2,
