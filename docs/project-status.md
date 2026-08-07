@@ -1,6 +1,6 @@
 # Factory Pilot delivery status
 
-Updated: 2026-08-06
+Updated: 2026-08-07
 
 ## Approved implementation target — 2026-08-02
 
@@ -33,13 +33,14 @@ Preview stop and cleanup. This is not production readiness and does not alter
 the historical evidence below.
 
 The P0 Compiler Target Plugin Kernel Goal is accepted at branch tip `1137e1e`;
-its database target migration was accepted at `76933ca`, and fresh focused
-gates remain green (`@factory/compiler` 329/329 and
-`@factory/compiler-worker` 81/81). The next bounded execution goal is the P0
-Isolated Verifier: compile an immutable Compilation, run it in isolated
-resources, prove migrations/health/API/role journeys/denial/idempotency,
-cleanup every resource, and emit safe diagnosis plus a reviewable Draft Diff.
-See `docs/superpowers/specs/2026-08-06-isolated-verifier-goal-design.md`.
+its database target migration was accepted at `76933ca`. The P0 Isolated
+Verifier Tasks 1–5 are accepted and the interrupted Task 6 implementation is
+present but uncommitted on `feat/isolated-verifier`. Fresh deterministic gates
+are green (`@factory/compiler-worker` 153/153, `@factory/control-plane` 149/149,
+`@factory/graph` 102/102, Worker/Control Plane typechecks), but Docker Desktop
+was unavailable during the latest inspection, so no real end-to-end acceptance
+is claimed. The active continuation Goal is documented at
+`docs/superpowers/specs/2026-08-07-isolated-verifier-finalization-goal-design.md`.
 
 ## Durable notification outbox across Expense and Ecommerce — 2026-08-01
 

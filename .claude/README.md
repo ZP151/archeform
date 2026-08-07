@@ -136,3 +136,44 @@ paths, remaining product gaps, and the next recommended Goal. If approved
 scope, public contracts, dependencies, external systems, credentials, or the
 immutable lifecycle would change, return GOAL_NEEDS_DECISION with evidence.
 ```
+
+## Current continuation Goal: finish interrupted Task 6
+
+The current worktree already contains uncommitted Task 6 implementation. Paste
+this prompt into Claude Code to resume that exact work without losing it:
+
+```text
+Resume and complete the approved Factory Pilot P0 Isolated Verifier
+Finalization Goal. First read CLAUDE.md, AGENTS.md, docs/project-status.md,
+docs/roadmap.md, the accepted 2026-08-06 isolated-verifier ledger, and the
+2026-08-07 finalization spec, plan, and ledger. Inspect the current dirty tree
+before editing; preserve relevant Task 6 changes and do not reset, clean, amend,
+force-push, or discard user/agent work.
+
+The current focused evidence is green (compiler-worker 153/153, control-plane
+149/149, graph 102/102, plus both app typechecks), but the real Docker
+acceptance has not passed and the worktree is uncommitted. Finish Task 6 and
+Task 7 only: review the existing worker job, verification queue, profile
+fixtures, Control Plane enqueue path, reporter, and
+scripts/verify-isolated-verifier-expense.mjs; close the recorded pending-run
+failure boundary with a focused RED test and the smallest safe terminal-status
+repair; then commit the implementation.
+
+Run pnpm verify:isolated-verifier-expense against real Docker Desktop. It must
+prove immutable Compilation input, isolated boot, migration, health, API, role
+journeys, authorization denial, idempotency, cleanup, generated journey tests,
+and one safe evidence bundle. Do not replace Docker with mocks. If Docker is
+unavailable, record the exact daemon error and keep the Goal open; never claim
+acceptance. Repair only failures reproduced by bounded evidence, and keep
+credentials, raw prompts/responses, raw HTTP bodies, unrestricted logs, and
+untrusted paths out of state and reports.
+
+Use the existing independent task-reviewer, QA, release-reviewer, and PM gates.
+Update both ledgers, project status, roadmap, and acceptance evidence from
+observed commands. Commit and push each green iteration to the current remote
+feature branch. Mark GOAL_COMPLETE only after the Docker command exits 0,
+terminal failure behavior is tested, all gates cite one remote-reachable commit,
+and git status is clean. Otherwise return GOAL_NEEDS_DECISION only for a real
+scope, contract, dependency, credential, lifecycle, or destructive-history
+decision; ordinary failures must be repaired autonomously.
+```

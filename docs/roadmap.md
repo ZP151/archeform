@@ -46,7 +46,7 @@ supports -> plan -> render -> validate
   responsibility-based extraction; no generic utils/helpers modules were
   introduced.
 
-### Verification loop — next execution goal: P0 Isolated Verifier
+### Verification loop — active Goal: P0 Isolated Verifier finalization
 
 Every generated-application acceptance path must run:
 
@@ -63,9 +63,11 @@ target-level causes and proposes a constrained new Draft Diff; it must not
 modify generated source, runtime state, Published Graphs, or Compilations.
 
 The Compiler Target Plugin Kernel and its documentation, policy, and database
-parity migrations are accepted. The next executable plan is
-`docs/superpowers/plans/2026-08-06-isolated-verifier.md`, with the PM ledger at
-`docs/superpowers/ledgers/2026-08-06-isolated-verifier.md`.
+parity migrations are accepted. Isolated Verifier Tasks 1–5 are accepted; the
+current executable continuation plan is
+`docs/superpowers/plans/2026-08-07-isolated-verifier-finalization.md`, with the
+PM ledger at
+`docs/superpowers/ledgers/2026-08-07-isolated-verifier-finalization.md`.
 
 P0 acceptance gates:
 
@@ -128,8 +130,8 @@ P1 acceptance gates:
 
 ## Dependency-aware sequence
 
-1. Establish the isolated verifier and its safe-diagnosis-to-Draft-Diff
-   contract against the accepted compiler targets.
+1. Finish and independently accept the isolated verifier against the accepted
+   compiler targets, including the real Docker loop and terminal failure path.
 2. Deliver the staged AI `RequirementSpec` and `CompositionPlan` boundary,
    then permit constrained Draft Diffs.
 3. Expand cross-profile capabilities and Factory-owned Workbench wrappers with
