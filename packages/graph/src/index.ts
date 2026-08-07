@@ -11,6 +11,10 @@ import {
 export * from "./model.js";
 export * from "./verification.js";
 export * from "./diagnosis.js";
+export * from "./composition-shared.js";
+export * from "./requirement-spec.js";
+export * from "./composition-plan.js";
+export * from "./profile-recipe-catalog.js";
 
 export const publishedGraphExchangeSchema = z
   .object({
