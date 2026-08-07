@@ -159,12 +159,14 @@ output slots, fixture-fragment operations, bounded clarifications,
 schema-valid answers for an empty staged catalogue) and
 `evaluateFoundryAdmission` with sorted reason codes over a KAT-verified
 pure-JS lock digest (`@factory/capabilities` 313/313, graph 153/153).
-Train B's Control Plane review (Task 3) is implemented at `74e918d`: the
-Control Plane persists governed `CompositionReview` cycles (requirement
-creation, idempotent Draft-bound planning, clarification storage,
-checksum-bound decisions) and applies only approved constrained Diffs
-through the existing Draft lifecycle (control-plane suite 174/174); it is
-`ready_for_qa` pending independent gates.
+Train B's Control Plane review (Task 3) is implemented at `74e918d` and
+repaired at `fbdd4ce` + `507feca` after its gate round: operation-`value`
+material is deep-scanned against the unsafe-material boundary at the schema
+gate (`parseCompositionPlan`/`hashCompositionDiff`), the plan's
+requirement checksum is verified at the seam before persistence, and
+Graph-level application failures surface as bounded conflicts
+(control-plane 177/177, graph 156/156, capabilities 313/313); it is
+`ready_for_qa` at `507feca` pending re-verification gates.
 
 ## P2 and P3
 

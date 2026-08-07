@@ -105,8 +105,31 @@ existing Draft lifecycle. Control Plane suite 174/174 across 16 files (+23
 composition review tests: published-graph refusal, stale-Draft refusal,
 unapproved-plan refusal, altered checksum refusal, idempotent decisions,
 persisted-key redaction), typecheck, Prettier lint, and build all green.
-Migration DDL verified against Prisma-generated schema. Train B is
-`ready_for_qa` at `74e918d` (Tasks 2–3 landed), pending independent gates.
+Migration DDL verified against Prisma-generated schema.
+
+Task 3's gate round completed (task review PASS with two P2s; behavioral QA
+FAIL with F-1/F-2). Per the state vocabulary the item returned to
+`implementing`; the repair batch is committed at `fbdd4ce` and `507feca`.
+F-1 (P1): operation-`value` objects are schema-unknown, so URL/secret
+material could ride a plan or Diff into persistence — `parseCompositionPlan`
+and `hashCompositionDiff` now deep-scan every string leaf of
+`proposedOperations`/`diff.operations` against `unsafeMaterialPattern`, so
+the service, apply re-hash, and the future guarded model adapter all fail
+closed (the error never echoes the offending material). F-2 (P2):
+`plan.requirementChecksum` is now verified at the seam
+(`assertPlanAgainstRequirement` plus both hashes computed before the prisma
+update, `CompositionError` mapped to a bounded
+`ConflictException("Composition plan rejected: …")`). Task-review P2s:
+`apply()` maps `GraphDiffError`/`GraphSemanticError` to bounded
+`ConflictException("Composition application refused: …")`, and tamper tests
+now bind real stored checksums (a rejected decision in the unapproved-apply
+fixture, exact guard messages asserted). QA-R1 (stale `packages/capabilities/
+dist`) is a gitignored local-rebuild-only note — both packages rebuilt from
+committed source before the suite runs. Fresh verification: control-plane
+177/177 (16 files; 174 + 3 boundary tests), graph 156/156 (7 files),
+capabilities 313/313, typecheck, Prettier lint, and build green. Train B is
+`ready_for_qa` at `507feca` (Tasks 2–3 landed), pending re-verification
+gates.
 
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including

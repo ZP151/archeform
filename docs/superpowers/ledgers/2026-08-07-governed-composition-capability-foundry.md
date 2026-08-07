@@ -225,6 +225,32 @@ lint, and build green. Commit `74e918d`
 clean. State: Train B `ready_for_qa` (Tasks 2–3), awaiting independent gates
 on `74e918d` before `reviewed`.
 
+### 2026-08-08 — Task 3 gate round: P1/P2 findings repaired at `fbdd4ce` + `507feca`
+
+Task 3's gate round completed (task review PASS with two P2 findings;
+behavioral QA FAIL with F-1/F-2). Per the state vocabulary, any P0/P1/P2
+finding returns the owning item to `implementing`; the repair batch was
+committed.
+
+| ID | Severity | Finding | Repair |
+| -- | -------- | ------- | ------ |
+| F-1 | P1 | `requestPlan` persisted URL/secret material riding operation-`value` objects (schema-unknown `z.unknown`): a plan or Diff with a `callbackUrl: https://…` value passed hashing and reached the prisma update | Deep value scan at the schema gate: `assertSafeCompositionOperationValues` walks every string leaf of `proposedOperations`/`diff.operations` against `unsafeMaterialPattern` inside `parseCompositionPlan` and `hashCompositionDiff`, so the service, apply re-hash, and the future guarded model adapter all fail closed; the error never echoes the offending material. Commit `fbdd4ce` |
+| F-2 | P2 | `plan.requirementChecksum` was never verified at the seam — a plan bound to a foreign requirement could be stored and decided | `requestPlan` now runs `assertPlanAgainstRequirement` + `hashCompositionPlan` + `hashCompositionDiff` before the prisma update, mapping `CompositionError` to a bounded `ConflictException("Composition plan rejected: …")`; nothing unsafe or foreign is ever persisted. Commit `507feca` |
+| TR-5 | P2 | `apply()` let `GraphDiffError`/`GraphSemanticError` from `applyGraphDiffToDraft` escape as raw 500s (e.g. an approved Diff targeting an out-of-range flow container) | `apply()` catch maps all three error classes to `ConflictException("Composition application refused: …")`. Commit `507feca` |
+| TR-6 | P2 | Tamper tests fired on mismatch-vs-null: planned-review fixtures defaulted `planChecksum`/`diffChecksum` to null, so status-guard tests would pass even if their named guards were deleted | Planned-review fixtures now bind the real `hashCompositionPlan(plan)`/`hashCompositionDiff(diff)`, including a rejected decision in the unapproved-apply fixture, and the exact guard messages are asserted. Commit `507feca` |
+| QA-R1 | P2 | Stale `packages/capabilities/dist` predating `8bd6ff1` | `dist/` is gitignored/untracked; repair is a local rebuild only — both packages rebuilt from committed source before the suite runs |
+
+Three new service boundary tests (unsafe values never reach the prisma
+update, foreign requirement checksum refused before persistence, unresolvable
+Diff surfaces as a bounded conflict): control-plane 177/177 (16 files; 174 +
+3), graph 156/156 (7 files), capabilities 313/313, typecheck and Prettier
+lint green. Both commits pushed to
+`feat/governed-composition-capability-foundry`; worktree clean. State: Train
+B `ready_for_qa` at `507feca`, pending re-verification gates on `507feca`
+before `reviewed`. Train A's reviewed record is re-confirmed at release
+gates: the shared guard change (`fbdd4ce`) is additive to `e13bef1` and the
+full graph suite at head is green.
+
 ## Required evidence per promoted family
 
 | Evidence    | Required form                                                       |

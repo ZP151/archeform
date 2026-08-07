@@ -107,6 +107,14 @@
       migration DDL verified against Prisma-generated schema).
 - [x] Commit `feat(control-plane): review governed composition plans`
       (`74e918d`).
+- [x] Task 3 gate round repairs committed at `fbdd4ce` + `507feca`: operation
+      values deep-scanned against the unsafe-material boundary at the schema
+      gate (F-1 P1), requirement checksum verified at the seam (F-2 P2),
+      Graph-level application failures mapped to bounded conflicts (TR-5 P2),
+      tamper fixtures bound to real stored checksums (TR-6 P2), stale
+      capabilities `dist/` rebuilt locally (QA-R1). Fresh verification:
+      control-plane 177/177, graph 156/156, capabilities 313/313, typecheck,
+      Prettier lint, and build green.
 
 ### Task 4: Add deterministic and guarded AI planning adapters
 
