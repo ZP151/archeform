@@ -218,7 +218,7 @@
 
 **Interfaces:**
 
-- `FoundryEvidenceV1` binds asset digest/version to fixtures, negative tests,
+- `FoundryFamilyEvidenceV1` binds asset digest/version to fixtures, negative tests,
   compiler slots, Profile locks, verifier evidence, and provenance state.
 - `buildFoundryMatrix()` reports only current eligible families and never counts
   aliases, historical versions, or partial/candidate assets.
