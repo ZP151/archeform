@@ -31,7 +31,7 @@ boundary violation returns the owning item to `implementing`.
 
 | Train                     | State        | Target commit | Evidence                                             |
 | ------------------------- | ------------ | ------------- | ---------------------------------------------------- |
-| A. Composition contracts  | ready_for_qa | f97eafa       | RequirementSpec, plan, decision, recipe schema tests |
+| A. Composition contracts  | ready_for_qa | 67cf682       | RequirementSpec, plan, decision, recipe schema tests |
 | B. Planner and review     | planned      | —             | deterministic plan and Draft-only review tests       |
 | C. Foundry quality system | planned      | —             | promotion matrix and rejection evidence              |
 | D. Capability batches     | planned      | —             | 25–35 eligible families, two Profiles each           |
@@ -56,6 +56,28 @@ boundary violation returns the owning item to `implementing`.
   pushed to `feat/governed-composition-capability-foundry`; worktree clean.
 - State: Train A `ready_for_qa`, awaiting independent task review and QA
   verdicts before `reviewed`.
+
+### 2026-08-08 — Train A gate findings returned to `implementing`; repair committed
+
+Independent task review (`TASK_REVIEW_PASS` at f97eafa) and behavioral QA
+(`QA_FAIL` at f97eafa) surfaced six findings. Per the state vocabulary, any
+P0/P1/P2 finding returns the owning item to `implementing`.
+
+| ID | Severity | Finding | Repair |
+| -- | -------- | ------- | ------ |
+| QA-1 | P1 | Root-level `/integration` replace bypassed the second-segment guard and rewrote `assetLocks`/`compositionProfile` | Both guard mirrors now block whole-subtree `integration` operations (composition-plan.ts, index.ts) |
+| QA-2 | P2 | `~1`-escaped prototype-key `add` path (`/page/~1__proto__`) evaded the literal segment check | Prototype check runs on decoded segments; any decoded segment containing `__proto__` is rejected |
+| QA-3 | P2 | Prototype-key strings (`__proto__`, `constructor`, `prototype`) accepted as business text | Pattern rejects `__proto__` anywhere and full-string `constructor`/`prototype`; natural prose (e.g. "the prototype journey") still passes |
+| TR-1 | P2 | Four nested requirement-spec item schemas were not `.strict()`; nested `rawModelResponse`/`prompts` were silently stripped | All nested item schemas are now exact-key |
+| TR-2 | P2 | Scheme-less `www.`-prefixed domains accepted | Pattern now rejects `www.`-prefixed hosts; scheme-less bare placeholder domains remain allowed (documented boundary — inert text, and domain-qualified identifiers like `graph.domain.expense` must keep working) |
+| TR-3 | P2 | Recipe binding rule was one-directional: a locked capability could have no binding requirement | Every locked capability must now declare at least one binding requirement |
+
+Repair commit `67cf682` (`fix(graph): close composition fail-closed boundary
+gaps`) adds 10 regression tests: graph `pnpm --filter @factory/graph test` —
+151 passed (7 files), typecheck/lint/build green; proportional regression
+`pnpm --filter @factory/capabilities test` — 282 passed, typecheck green.
+Pushed; worktree clean. State: Train A `ready_for_qa`, pending re-verification
+gates on `67cf682` before `reviewed`.
 
 ## Required evidence per promoted family
 

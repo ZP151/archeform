@@ -138,10 +138,15 @@ P1 acceptance gates:
   twelve independently compiled anchor Profiles across the defined domains.
 
 Current evidence: the staged composition contracts (Train A of the active
-Goal) are implemented at `f97eafa` — `RequirementSpecV1`/`CompositionPlanV1`/
-`CompositionDecisionV1`/`CompositionClarificationV1`/`ProfileRecipeCatalogV1`
-with canonical hashes, checksum-bound plan/Draft/Diff review, and Draft-only
-application (`@factory/graph` 141/141, typecheck/lint/build green).
+Goal) are implemented at `f97eafa` and hardened at `67cf682` after
+independent task review and behavioral QA findings —
+`RequirementSpecV1`/`CompositionPlanV1`/`CompositionDecisionV1`/
+`CompositionClarificationV1`/`ProfileRecipeCatalogV1` with canonical hashes,
+checksum-bound plan/Draft/Diff review, Draft-only application, and fail-closed
+guards over whole-subtree integration rewrites, decoded prototype-key paths,
+prototype-key text, nested exact-key items, and recipe lock/binding
+requirements (`@factory/graph` 151/151, typecheck/lint/build green;
+`@factory/capabilities` 282/282).
 
 ## P2 and P3
 
