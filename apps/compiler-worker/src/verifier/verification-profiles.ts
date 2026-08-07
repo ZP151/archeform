@@ -56,6 +56,10 @@ const expenseApprovalJourneys: Readonly<Record<string, VerificationJourney>> = {
     journeyId: "employee-creates-expense",
     action: "expense.create",
     sessionId: "fixture-session-employee",
+    // The generated create handler fails closed on missing required fields,
+    // so the journey must declare the expense's required payload (status is
+    // runtime-supplied by the flow's initialState).
+    body: JSON.stringify({ amount: "125.50", description: "Team lunch" }),
   },
   "employee-submits-expense": {
     journeyId: "employee-submits-expense",

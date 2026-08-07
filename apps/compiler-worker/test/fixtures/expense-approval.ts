@@ -69,5 +69,20 @@ export function acceptanceManifest(): readonly {
         "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       sizeBytes: 1024,
     },
+    // The real generated bundle carries Next.js catch-all dynamic routes;
+    // the manifest must match the compiled shape or the evidence contract
+    // never sees the segments it actually has to allow.
+    {
+      path: "web/app/[...path]/page.tsx",
+      digest:
+        "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      sizeBytes: 2048,
+    },
+    {
+      path: "web/app/api/[...path]/route.ts",
+      digest:
+        "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      sizeBytes: 2048,
+    },
   ];
 }

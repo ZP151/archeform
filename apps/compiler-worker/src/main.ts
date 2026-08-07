@@ -72,6 +72,22 @@ const previewWorker = new Worker<PreviewRunJob>(
 const verificationQueue = new Queue(config.verificationQueueName, {
   connection,
 });
+
+/**
+ * Bounded diagnostic line for queue-level verification failures. The job
+ * adapter reports one terminal evidence bundle for failures inside the
+ * handler, but a job can still fail at the queue layer (a stale job, a
+ * malformed payload, a crash before the boundary runs); without a listener
+ * that failure would be invisible to the acceptance harness. Only the job id
+ * and a bounded, newline-free message are ever logged.
+ */
+function boundedFailureMessage(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error);
+  return (
+    raw.replace(/[\x00-\x1f\x7f]/g, " ").trim() || "unknown failure"
+  ).slice(0, 180);
+}
+
 const verificationWorker = new Worker<VerificationRunInput>(
   config.verificationQueueName,
   async (job) =>
@@ -81,15 +97,74 @@ const verificationWorker = new Worker<VerificationRunInput>(
       verificationReporter,
       {
         operationTimeoutMs: config.previewOperationTimeoutMs,
-        executeCompilation,
-        startPreviewRun,
-        stopPreviewRun,
+        executeCompilation: async (artifactRoot, input) => {
+          console.info(
+            `Factory verification job ${job.id}: compiling the immutable input`,
+          );
+          try {
+            const result = await executeCompilation(artifactRoot, input);
+            console.info(
+              `Factory verification job ${job.id}: compilation finished`,
+            );
+            return result;
+          } catch (error) {
+            console.error(
+              `Factory verification job ${job.id}: compilation failed (${boundedFailureMessage(error)})`,
+            );
+            throw error;
+          }
+        },
+        startPreviewRun: async (artifactRoot, request) => {
+          console.info(
+            `Factory verification job ${job.id}: booting the isolated preview`,
+          );
+          try {
+            const result = await startPreviewRun(artifactRoot, request);
+            console.info(
+              `Factory verification job ${job.id}: preview boot finished`,
+            );
+            return result;
+          } catch (error) {
+            console.error(
+              `Factory verification job ${job.id}: preview boot failed (${boundedFailureMessage(error)})`,
+            );
+            throw error;
+          }
+        },
+        stopPreviewRun: async (artifactRoot, request) => {
+          console.info(
+            `Factory verification job ${job.id}: stopping the preview`,
+          );
+          try {
+            await stopPreviewRun(artifactRoot, request);
+            console.info(`Factory verification job ${job.id}: preview stopped`);
+          } catch (error) {
+            console.error(
+              `Factory verification job ${job.id}: preview stop failed (${boundedFailureMessage(error)})`,
+            );
+            throw error;
+          }
+        },
         processRunner: runDockerCompose,
         fetch,
       },
     ),
   { connection },
 );
+
+verificationWorker.on("failed", (job, error) => {
+  console.error(
+    `Factory verification job ${job?.id ?? "unknown"} failed: ${boundedFailureMessage(error)}`,
+  );
+});
+verificationWorker.on("stalled", (jobId) => {
+  console.error(`Factory verification job stalled: ${jobId}`);
+});
+verificationWorker.on("error", (error) => {
+  console.error(
+    `Factory verification worker error: ${boundedFailureMessage(error)}`,
+  );
+});
 
 worker.on("ready", () => {
   console.info(`Factory compiler worker ready for queue ${config.queueName}`);

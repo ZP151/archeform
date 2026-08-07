@@ -466,6 +466,46 @@ async function verifyComposeArtifact(
   await verifiedArtifactContents(composeFile, composeArtifact);
 }
 
+/**
+ * The Docker CLI discovers its compose plugin and config through host lookup
+ * variables: on Windows, `docker compose` resolves via
+ * `%ProgramFiles%\Docker\cli-plugins` (PROGRAMFILES), the profile config
+ * dirs, and PATH; without them the CLI cannot resolve the subcommand at all
+ * ("unknown command: docker compose"). The preview environment therefore
+ * carries a bounded allowlist of these host lookup variables through to the
+ * CLI process — never arbitrary host values, and the generated compose file
+ * only ever interpolates the FACTORY_* variables (plus the Restaurant demo
+ * bootstrap token contract), so nothing else can leak into the preview.
+ */
+const dockerHostLookupVariables = [
+  "PROGRAMFILES",
+  "ProgramW6432",
+  "PROGRAMDATA",
+  "APPDATA",
+  "LOCALAPPDATA",
+  "USERPROFILE",
+  "HOMEDRIVE",
+  "HOMEPATH",
+  "HOME",
+  "PATH",
+  "PATHEXT",
+  "SYSTEMROOT",
+  "WINDIR",
+  "SYSTEMDRIVE",
+  "COMSPEC",
+  "TEMP",
+  "TMP",
+] as const;
+
+export function dockerHostLookupEnvironment(): Record<string, string> {
+  const environment: Record<string, string> = {};
+  for (const key of dockerHostLookupVariables) {
+    const value = process.env[key];
+    if (value !== undefined) environment[key] = value;
+  }
+  return environment;
+}
+
 async function previewEnvironment(
   composeFile: string,
   artifacts: PreviewRuntimeRequest["artifacts"],
@@ -482,6 +522,7 @@ async function previewEnvironment(
   const environment: Record<string, string> = {
     FACTORY_COMPOSE_PROJECT_NAME: project,
     ...(includePorts ? { FACTORY_WEB_PORT: "0", FACTORY_API_PORT: "0" } : {}),
+    ...dockerHostLookupEnvironment(),
   };
   if (!compose.toString("utf8").includes(restaurantDemoTokenComposeContract))
     return environment;

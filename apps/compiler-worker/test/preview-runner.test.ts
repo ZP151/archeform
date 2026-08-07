@@ -294,7 +294,7 @@ describe("preview runner", () => {
     }
   });
 
-  it("forwards only the required Restaurant bootstrap token to preview Docker commands", async () => {
+  it("forwards the bootstrap token and Docker CLI lookup variables to preview Docker commands", async () => {
     const { root } = await sourceFixture(restaurantCompose);
     const spawned: Parameters<PreviewProcessRunner>[0][] = [];
     const processRunner: PreviewProcessRunner = async (command) => {
@@ -305,6 +305,28 @@ describe("preview runner", () => {
         return "127.0.0.1:49102\n";
     };
     vi.stubEnv("RESTAURANT_DEMO_TABLE_TOKEN", "test-run-scoped-token");
+    // The Docker CLI on Windows discovers its compose plugin through host
+    // lookup variables (e.g. %ProgramFiles%\Docker\cli-plugins); without
+    // them the CLI cannot resolve `docker compose` at all.
+    const dockerLookupVariables = [
+      "PROGRAMFILES",
+      "ProgramW6432",
+      "PROGRAMDATA",
+      "APPDATA",
+      "LOCALAPPDATA",
+      "USERPROFILE",
+      "HOMEDRIVE",
+      "HOMEPATH",
+      "HOME",
+      "PATH",
+      "PATHEXT",
+      "SYSTEMROOT",
+      "WINDIR",
+      "SYSTEMDRIVE",
+      "COMSPEC",
+      "TEMP",
+      "TMP",
+    ];
 
     try {
       await expect(
@@ -316,12 +338,19 @@ describe("preview runner", () => {
       ).resolves.toMatchObject({ previewUrl: "http://127.0.0.1:49101" });
       expect(spawned).toHaveLength(4);
       for (const command of spawned) {
-        expect(command.environment).toEqual({
-          FACTORY_COMPOSE_PROJECT_NAME: "factory-preview-preview-1",
-          FACTORY_WEB_PORT: "0",
-          FACTORY_API_PORT: "0",
-          RESTAURANT_DEMO_TABLE_TOKEN: "test-run-scoped-token",
-        });
+        expect(command.environment).toEqual(
+          expect.objectContaining({
+            FACTORY_COMPOSE_PROJECT_NAME: "factory-preview-preview-1",
+            FACTORY_WEB_PORT: "0",
+            FACTORY_API_PORT: "0",
+            RESTAURANT_DEMO_TABLE_TOKEN: "test-run-scoped-token",
+          }),
+        );
+        for (const key of dockerLookupVariables) {
+          if (process.env[key] !== undefined) {
+            expect(command.environment[key]).toBe(process.env[key]);
+          }
+        }
       }
     } finally {
       vi.unstubAllEnvs();
@@ -866,12 +895,20 @@ describe("preview runner", () => {
             "--volumes",
             "--remove-orphans",
           ],
-          environment: {
+          environment: expect.objectContaining({
             FACTORY_COMPOSE_PROJECT_NAME: "factory-preview-preview-1",
-          },
+          }),
         },
         expect.any(AbortSignal),
       );
+      // Stop needs the same Docker CLI host lookup allowlist as start:
+      // without PROGRAMFILES the compose plugin is undiscoverable on
+      // Windows and `down` would fail exactly like `up` did.
+      const stopCommand = processRunner.mock.calls.at(-1)?.[0];
+      expect(stopCommand?.environment.PROGRAMFILES).toBe(
+        process.env.PROGRAMFILES,
+      );
+      expect(stopCommand?.environment.FACTORY_WEB_PORT).toBeUndefined();
       await expect(readFile(join(source, "src", "app.ts"))).resolves.toEqual(
         application,
       );

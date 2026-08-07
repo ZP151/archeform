@@ -3191,15 +3191,18 @@ function renderJourneyTest(graph: ApplicationGraphV1): string {
     "",
     "describe('generated role journey', () => {",
     "  it('executes the declared record flow', async () => {",
-    `    const record = await applicationRuntime.create(${JSON.stringify(createPermission.role)}, ${JSON.stringify(entity.key)}, ${JSON.stringify(payload)});`,
+    `    let record = await applicationRuntime.create(${JSON.stringify(createPermission.role)}, ${JSON.stringify(entity.key)}, ${JSON.stringify(payload)});`,
     `    expect(record.status).toBe(${JSON.stringify(flow.initialState)});`,
     ...(cartJourney
       ? [
           `    await applicationRuntime.addCartItem(${JSON.stringify(createPermission.role)}, ${JSON.stringify(entity.key)}, record.id, ${JSON.stringify({ catalogEntity, catalogRecordId: catalogSeed!.id ?? `seed-${catalogSeed!.entity}-1`, quantity: 1 })});`,
         ]
       : []),
+    // transition() returns the updated record and never mutates the
+    // create()-returned object in place, so the binding follows the returned
+    // record through the flow.
     ...transitions.flatMap((transition, index) => [
-      `    await applicationRuntime.transition(${JSON.stringify(transition.roles?.[0] ?? createPermission.role)}, ${JSON.stringify(entity.key)}, record.id, ${JSON.stringify(transition.event)}${versionedOrderJourney ? `, { expectedVersion: ${index}, idempotencyKey: ${JSON.stringify(`generated-${transition.event}-${index + 1}`)} }` : ""});`,
+      `    record = await applicationRuntime.transition(${JSON.stringify(transition.roles?.[0] ?? createPermission.role)}, ${JSON.stringify(entity.key)}, record.id, ${JSON.stringify(transition.event)}${versionedOrderJourney ? `, { expectedVersion: ${index}, idempotencyKey: ${JSON.stringify(`generated-${transition.event}-${index + 1}`)} }` : ""});`,
       `    expect(record.status).toBe(${JSON.stringify(transition.to)});`,
     ]),
     ...(auditRole

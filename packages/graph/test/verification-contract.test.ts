@@ -374,6 +374,21 @@ describe("VerificationEvidenceV1", () => {
       }),
     ).toThrow(VerificationContractError);
   });
+
+  it("accepts Next.js dynamic-route segments in generated artifact paths", () => {
+    // The compiled bundle carries catch-all route directories
+    // (`web/app/[...path]/page.tsx`); a contract that cannot address them
+    // rejects the verifier's own evidence for every real compilation.
+    expect(() =>
+      parseVerificationEvidence({
+        ...validEvidence(),
+        artifactDigests: [
+          { path: "web/app/[...path]/page.tsx", digest: compilationDigest },
+          { path: "web/app/api/[...path]/route.ts", digest: compilationDigest },
+        ],
+      }),
+    ).not.toThrow();
+  });
 });
 
 describe("DraftDiffV1", () => {

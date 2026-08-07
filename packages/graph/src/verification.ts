@@ -136,13 +136,16 @@ const graphEvidencePath = z
 
 /**
  * A generated artifact path from the immutable Compilation manifest. It is
- * relative, forward-slash only, and contains no traversal segments.
+ * relative, forward-slash only, and contains no traversal segments. Next.js
+ * catch-all dynamic routes (`web/app/[...path]/page.tsx`) are part of the
+ * generated bundle, so brackets are the only extension to the bounded
+ * charset; the traversal blocklist below still rejects every escape.
  */
 const generatedArtifactPath = z
   .string()
   .min(1)
   .max(200)
-  .regex(/^[a-zA-Z0-9._-]+(?:\/[a-zA-Z0-9._-]+)*$/)
+  .regex(/^[a-zA-Z0-9._\[\]-]+(?:\/[a-zA-Z0-9._\[\]-]+)*$/)
   .refine(
     (path) =>
       path

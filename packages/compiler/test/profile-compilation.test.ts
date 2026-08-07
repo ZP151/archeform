@@ -155,6 +155,32 @@ describe("profile compilation", () => {
     );
   });
 
+  it("follows the runtime-returned record through the declared flow", () => {
+    const graph = composeProfileDraft({ profile: "expense-approval" }).graph;
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "expense-returned-record-journey-1",
+        graph,
+      }).files.map((file) => [file.path, file.content]),
+    );
+    const journey = files["api/test/journey.generated.test.ts"]!;
+
+    // transition() returns the updated record and never mutates the
+    // create()-returned object in place; the journey must follow the returned
+    // binding through the flow or it fails against the real runtime (the
+    // in-container acceptance caught exactly that: 'draft' never became
+    // 'submitted').
+    expect(journey).toContain("let record = await applicationRuntime.create(");
+    expect(journey).toContain(
+      'record = await applicationRuntime.transition("employee", "expense", record.id, "submit")',
+    );
+    expect(journey).toContain(
+      'record = await applicationRuntime.transition("manager", "expense", record.id, "approve")',
+    );
+    expect(journey).toContain('expect(record.status).toBe("submitted")');
+    expect(journey).toContain('expect(record.status).toBe("approved")');
+  });
+
   it.each([
     ["expense-approval", '"event": "approve"'],
     ["simple-ecommerce", '"event": "pay"'],

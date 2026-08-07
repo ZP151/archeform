@@ -25,6 +25,11 @@ import {
   type RegisteredApiAction,
   type RoleJourneyFixture,
 } from "../src/verifier/role-journey.js";
+import { resolveVerificationProfile } from "../src/verifier/verification-profiles.js";
+import {
+  acceptanceCompilation,
+  acceptanceProfileKey,
+} from "./fixtures/expense-approval.js";
 
 function boundedRequest(
   status: number,
@@ -662,5 +667,32 @@ describe("VerificationEnvironment request fixtures", () => {
       env.request("POST", "/api/expense", "api", { body: "not json" }),
     ).rejects.toThrow(VerificationLifecycleError);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("expense-approval acceptance profile", () => {
+  it("declares the create payload the generated runtime requires", () => {
+    // Regression: the generated API's create handler fails closed on any
+    // missing required field (403 via the generic rejection path). The
+    // journey fixture must declare a body covering the graph's required
+    // fields; without it the real acceptance fails at
+    // employee-creates-expense against the generated API while the fake
+    // test API (which answers 201 regardless of body) stays green.
+    const profile = resolveVerificationProfile(acceptanceProfileKey);
+    const graph = acceptanceCompilation().graph;
+    const expense = graph.domain.entities.find(
+      (entity) => entity.key === "expense",
+    );
+    expect(expense).toBeDefined();
+    const requiredFields = expense!.fields
+      .filter((field) => field.required && field.key !== "status")
+      .map((field) => field.key);
+    expect(requiredFields.length).toBeGreaterThan(0);
+    const create = profile.journeys["employee-creates-expense"];
+    expect(create.body).toBeDefined();
+    const body = JSON.parse(create.body as string) as Record<string, unknown>;
+    for (const field of requiredFields) {
+      expect(body).toHaveProperty(field);
+    }
   });
 });

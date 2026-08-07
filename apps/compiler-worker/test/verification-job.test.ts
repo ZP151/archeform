@@ -407,5 +407,51 @@ describe("queued verification run", () => {
       expect(executeCompilation).not.toHaveBeenCalled();
       expect(reporter.report).toHaveBeenCalledTimes(candidates.length);
     });
+
+    it("keeps the run terminal when the real bundle carries Next.js dynamic-route artifacts", async () => {
+      // The real compiled bundle contains `web/app/[...path]/page.tsx`
+      // catch-all routes. Regression: the artifact-path contract rejected
+      // brackets, so the boundary's own failure evidence failed its parser,
+      // the report was silently skipped, and the run stranded at `pending`.
+      const { reporter, dependencies, executeCompilation } = collaborators();
+      executeCompilation.mockRejectedValue(new Error("compile failed"));
+      const evidence = await executeQueuedVerificationRun(
+        "generated",
+        jobInput(),
+        reporter,
+        dependencies,
+      );
+      expect(evidence.steps[0]).toMatchObject({
+        status: "failed",
+        failureCode: "job.unmapped_failure",
+      });
+      expect(reporter.report).toHaveBeenCalledTimes(1);
+      const [report] = (reporter.report as ReturnType<typeof vi.fn>).mock
+        .calls[0];
+      expect(parseVerificationEvidence(report.evidence)).toEqual(
+        report.evidence,
+      );
+    });
+
+    it("records contract-valid boot-failure evidence over the real bundle manifest", async () => {
+      // Boot failure with the real manifest: every probe is skipped, cleanup
+      // is still reported truthfully, and the evidence must parse as
+      // contract-valid instead of stranding the run at `pending`.
+      const { reporter, dependencies, startPreviewRun } = collaborators();
+      startPreviewRun.mockRejectedValue(new Error("preview boot failed"));
+      const evidence = await executeQueuedVerificationRun(
+        "generated",
+        jobInput(),
+        reporter,
+        dependencies,
+      );
+      expect(
+        evidence.steps.every(
+          (step) => step.status === "skipped" || step.stepId === "cleanup",
+        ),
+      ).toBe(true);
+      expect(evidence.steps.at(-1)).toMatchObject({ stepId: "cleanup" });
+      expect(reporter.report).toHaveBeenCalledTimes(1);
+    });
   });
 });

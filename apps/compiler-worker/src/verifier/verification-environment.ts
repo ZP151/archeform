@@ -1,11 +1,12 @@
 import { posix } from "node:path";
 
-import type {
-  PreviewProcessRunner,
-  PreviewRuntimeRequest,
-  StartedPreview,
-  startPreviewRun,
-  stopPreviewRun,
+import {
+  dockerHostLookupEnvironment,
+  type PreviewProcessRunner,
+  type PreviewRuntimeRequest,
+  type StartedPreview,
+  type startPreviewRun,
+  type stopPreviewRun,
 } from "../preview-runner.js";
 
 /**
@@ -291,7 +292,11 @@ export class VerificationEnvironment {
             "api",
             ...command,
           ],
-          environment: {},
+          // The migration probe runs real Docker Compose, so it needs the
+          // same host lookup allowlist as boot/stop: without PROGRAMFILES
+          // the CLI cannot resolve its compose plugin and every migration
+          // probe fails instantly ("unknown command: docker compose").
+          environment: dockerHostLookupEnvironment(),
         },
         controller.signal,
       );

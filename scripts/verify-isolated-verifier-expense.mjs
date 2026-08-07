@@ -188,10 +188,7 @@ async function waitForComposeService(service, timeoutMs, env) {
     .filter((line) => line.length > 0)
     .slice(-6)
     .join("\n");
-  const psTable = (psAll.stdout ?? "")
-    .split(/\r?\n/)
-    .slice(0, 12)
-    .join("\n");
+  const psTable = (psAll.stdout ?? "").split(/\r?\n/).slice(0, 12).join("\n");
   fail(
     `Compose service did not start: ${service}\n` +
       (stderrTail ? `last poll stderr:\n${stderrTail}\n` : "") +
@@ -207,16 +204,26 @@ async function main() {
   // ---- Preflight --------------------------------------------------------
   const dockerInfo = spawnSync("docker", ["info"], { encoding: "utf8" });
   assert(dockerInfo.status === 0, "The Docker daemon is not reachable.");
-  runSync("worker build", "pnpm", ["--filter", "@factory/compiler-worker", "build"]);
-  runSync("control plane build", "pnpm", ["--filter", "@factory/control-plane", "build"]);
+  runSync("worker build", "pnpm", [
+    "--filter",
+    "@factory/compiler-worker",
+    "build",
+  ]);
+  runSync("control plane build", "pnpm", [
+    "--filter",
+    "@factory/control-plane",
+    "build",
+  ]);
 
   // ---- Infrastructure: postgres + redis only ----------------------------
   artifactRoot = await mkdtemp(join(tmpdir(), "factory-verifier-artifacts-"));
-  const infrastructureDir = await mkdtemp(join(tmpdir(), "factory-verifier-infra-"));
+  const infrastructureDir = await mkdtemp(
+    join(tmpdir(), "factory-verifier-infra-"),
+  );
   overrideFile = join(infrastructureDir, "redis-ports.yml");
   await writeFile(
     overrideFile,
-    "services:\n  redis:\n    ports:\n      - \"127.0.0.1:6379:6379\"\n",
+    'services:\n  redis:\n    ports:\n      - "127.0.0.1:6379:6379"\n',
     "utf8",
   );
   COMPOSE_FILE = [
@@ -232,7 +239,16 @@ async function main() {
   runSync(
     "infrastructure start",
     "docker",
-    ["compose", "--env-file", ".env", ...COMPOSE_FILE.split(" "), "up", "-d", "postgres", "redis"],
+    [
+      "compose",
+      "--env-file",
+      ".env",
+      ...COMPOSE_FILE.split(" "),
+      "up",
+      "-d",
+      "postgres",
+      "redis",
+    ],
     { env: composeEnv },
   );
   // Postgres: wait for the container, then pg_isready inside it.
@@ -242,7 +258,18 @@ async function main() {
     const check = () => {
       const probe = spawnSync(
         "docker",
-        ["compose", ...COMPOSE_FILE.split(" "), "exec", "-T", "postgres", "pg_isready", "-U", "factory", "-d", "factory_pilot"],
+        [
+          "compose",
+          ...COMPOSE_FILE.split(" "),
+          "exec",
+          "-T",
+          "postgres",
+          "pg_isready",
+          "-U",
+          "factory",
+          "-d",
+          "factory_pilot",
+        ],
         { encoding: "utf8", env: { ...process.env, ...composeEnv } },
       );
       if (probe.status === 0) resolvePromise(true);
@@ -258,10 +285,21 @@ async function main() {
     const check = () => {
       const probe = spawnSync(
         "docker",
-        ["compose", ...COMPOSE_FILE.split(" "), "exec", "-T", "redis", "redis-cli", "-a", REDIS_PASSWORD, "ping"],
+        [
+          "compose",
+          ...COMPOSE_FILE.split(" "),
+          "exec",
+          "-T",
+          "redis",
+          "redis-cli",
+          "-a",
+          REDIS_PASSWORD,
+          "ping",
+        ],
         { encoding: "utf8", env: { ...process.env, ...composeEnv } },
       );
-      if (probe.status === 0 && probe.stdout.trim() === "PONG") resolvePromise(true);
+      if (probe.status === 0 && probe.stdout.trim() === "PONG")
+        resolvePromise(true);
       else if (Date.now() > deadline) resolvePromise(false);
       else setTimeout(check, 1_000);
     };
@@ -273,7 +311,15 @@ async function main() {
   runSync(
     "prisma db push",
     "pnpm",
-    ["--filter", "@factory/control-plane", "exec", "prisma", "db", "push", "--skip-generate"],
+    [
+      "--filter",
+      "@factory/control-plane",
+      "exec",
+      "prisma",
+      "db",
+      "push",
+      "--skip-generate",
+    ],
     { env: { DATABASE_URL } },
   );
 
@@ -318,7 +364,11 @@ async function main() {
         },
       },
       update: { graph },
-      create: { applicationGraphId: applicationGraph.id, revisionNumber: 1, graph },
+      create: {
+        applicationGraphId: applicationGraph.id,
+        revisionNumber: 1,
+        graph,
+      },
     });
     await prisma.publishedRevision.upsert({
       where: { id: PUBLISHED_REVISION_ID },
@@ -471,7 +521,8 @@ async function main() {
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 2_000));
   }
   assert(
-    Number.isInteger(compileResult.artifactCount) && compileResult.artifactCount > 0,
+    Number.isInteger(compileResult.artifactCount) &&
+      compileResult.artifactCount > 0,
     `Compilation succeeded with no recorded artifacts: ${JSON.stringify(compileResult)}`,
   );
 
@@ -487,11 +538,20 @@ async function main() {
       }),
     },
   );
-  assert(createResponse.status === 201, `Create verification run: ${createResponse.status}`);
+  assert(
+    createResponse.status === 201,
+    `Create verification run: ${createResponse.status}`,
+  );
 
   // ---- Wait for the terminal run -----------------------------------------
+  // The configured preview operation timeout bounds each lifecycle operation
+  // (boot, each probe, cleanup) separately, so a bounded but slow lifecycle can
+  // legitimately take tens of minutes. The poll window must exceed the worst
+  // bounded case (boot + cleanup + per-step timeouts) or the harness would tear
+  // down a still-working worker and misreport the run as stuck.
   let run;
-  const deadline = Date.now() + 25 * 60 * 1_000;
+  const deadline = Date.now() + 60 * 60 * 1_000;
+  let lastProgressLine = 0;
   for (;;) {
     const response = await fetch(
       `${CONTROL_PLANE_URL}/verification-runs/${VERIFICATION_RUN_ID}`,
@@ -507,10 +567,28 @@ async function main() {
       console.error(workerTail(worker, controlPlane));
       fail("Verification run did not reach a terminal status.");
     }
+    const elapsedMinutes = Math.floor(
+      (Date.now() - (deadline - 60 * 60 * 1_000)) / 60_000,
+    );
+    if (elapsedMinutes > lastProgressLine) {
+      lastProgressLine = elapsedMinutes;
+      console.error(
+        `verification run still pending after ${elapsedMinutes} min (status ${run.status})`,
+      );
+    }
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 5_000));
   }
 
   // ---- Assertions ---------------------------------------------------------
+  // A terminal failure is the exact evidence this harness exists to surface:
+  // print the bounded step record and the worker's captured output before the
+  // assertions discard them (the infrastructure is torn down on exit).
+  if (run.status !== "succeeded") {
+    console.error(
+      `Run ${run.status} evidence: ${JSON.stringify(run.evidence?.steps ?? run, null, 2)}`,
+    );
+    console.error(workerTail(worker, controlPlane));
+  }
   const expectedStepIds = [
     "migration",
     "health",
@@ -525,25 +603,57 @@ async function main() {
     JSON.stringify(run.stepIds) === JSON.stringify(expectedStepIds),
     `Unexpected stepIds: ${JSON.stringify(run.stepIds)}`,
   );
-  assert(/^sha256:[a-f0-9]{64}$/.test(run.evidenceDigest), "Evidence digest shape is invalid.");
+  assert(
+    /^sha256:[a-f0-9]{64}$/.test(run.evidenceDigest),
+    "Evidence digest shape is invalid.",
+  );
   const steps = run.evidence.steps;
-  assert(steps.every((step) => step.status === "passed"), "Not every step passed.");
-  const statusOf = (stepId) => steps.find((step) => step.stepId === stepId)?.httpStatus;
-  assert(statusOf("employee-creates-expense") === 201, "Create journey status is not 201.");
-  assert(statusOf("employee-submits-expense") === 403, "Idempotency replay status is not 403.");
-  assert(statusOf("manager-approves-expense") === 201, "Approve journey status is not 201.");
-  assert(statusOf("employee-denied-approval") === 403, "Authorization denial status is not 403.");
-  assert(run.evidence.cleanup.succeeded === true, "Preview cleanup did not succeed.");
+  assert(
+    steps.every((step) => step.status === "passed"),
+    "Not every step passed.",
+  );
+  const statusOf = (stepId) =>
+    steps.find((step) => step.stepId === stepId)?.httpStatus;
+  assert(
+    statusOf("employee-creates-expense") === 201,
+    "Create journey status is not 201.",
+  );
+  assert(
+    statusOf("employee-submits-expense") === 403,
+    "Idempotency replay status is not 403.",
+  );
+  assert(
+    statusOf("manager-approves-expense") === 201,
+    "Approve journey status is not 201.",
+  );
+  assert(
+    statusOf("employee-denied-approval") === 403,
+    "Authorization denial status is not 403.",
+  );
+  assert(
+    run.evidence.cleanup.succeeded === true,
+    "Preview cleanup did not succeed.",
+  );
   assert(run.diagnosis === null, "A passing run must not persist a diagnosis.");
 
   // The isolated preview project must be fully removed after the run.
   const previewProject = `factory-preview-preview-${VERIFICATION_RUN_ID}`;
   const leftovers = spawnSync(
     "docker",
-    ["ps", "-a", "--filter", `name=${previewProject}`, "--format", "{{.Names}}"],
+    [
+      "ps",
+      "-a",
+      "--filter",
+      `name=${previewProject}`,
+      "--format",
+      "{{.Names}}",
+    ],
     { encoding: "utf8" },
   );
-  assert(leftovers.status === 0 && leftovers.stdout.trim().length === 0, "Preview containers remain after cleanup.");
+  assert(
+    leftovers.status === 0 && leftovers.stdout.trim().length === 0,
+    "Preview containers remain after cleanup.",
+  );
 
   // ---- Idempotent retry: the same identity returns the same terminal run --
   const retryResponse = await fetch(
@@ -557,27 +667,65 @@ async function main() {
       }),
     },
   );
-  assert(retryResponse.status === 201, `Idempotent retry: ${retryResponse.status}`);
+  assert(
+    retryResponse.status === 201,
+    `Idempotent retry: ${retryResponse.status}`,
+  );
   const retried = await retryResponse.json();
-  assert(retried.verificationRunId === run.verificationRunId, "Retry returned a different run identity.");
-  assert(retried.evidenceDigest === run.evidenceDigest, "Retry returned different evidence.");
+  assert(
+    retried.verificationRunId === run.verificationRunId,
+    "Retry returned a different run identity.",
+  );
+  assert(
+    retried.evidenceDigest === run.evidenceDigest,
+    "Retry returned different evidence.",
+  );
 
   // ---- Generated-app tests: the profile's own journey suite --------------
   // The worker materialized the immutable bundle into the artifact root; boot
   // that exact source as a fresh preview (images are cached, so this is fast),
   // inject the generated journey test into the api image, and run it against
-  // the generated database.
-  const generatedDirectory = join(artifactRoot, "expense-approval-published-expense-approval-1");
-  const generatedProject = `factory-generated-tests-${VERIFICATION_RUN_ID}`;
-  runSync(
-    "generated preview start",
-    "docker",
-    ["compose", "--file", join(generatedDirectory, "docker-compose.yml"), "--project-name", generatedProject, "up", "--build", "--detach", "--wait", "--wait-timeout", "900"],
+  // the generated database. The api image is built from the bundle without the
+  // test directory (`COPY src ./src` only), so the injection creates it.
+  const generatedDirectory = join(
+    artifactRoot,
+    "expense-approval-published-expense-approval-1",
   );
-  const journeyTest = join(generatedDirectory, "api", "test", "journey.generated.test.ts");
+  const generatedProject = `factory-generated-tests-${VERIFICATION_RUN_ID}`;
+  runSync("generated preview start", "docker", [
+    "compose",
+    "--file",
+    join(generatedDirectory, "docker-compose.yml"),
+    "--project-name",
+    generatedProject,
+    "up",
+    "--build",
+    "--detach",
+    "--wait",
+    "--wait-timeout",
+    "900",
+  ]);
+  const journeyTest = join(
+    generatedDirectory,
+    "api",
+    "test",
+    "journey.generated.test.ts",
+  );
   const testResult = spawnSync(
     "docker",
-    ["compose", "--file", join(generatedDirectory, "docker-compose.yml"), "--project-name", generatedProject, "exec", "-T", "api", "sh", "-c", "cat > /app/test/journey.generated.test.ts && pnpm test"],
+    [
+      "compose",
+      "--file",
+      join(generatedDirectory, "docker-compose.yml"),
+      "--project-name",
+      generatedProject,
+      "exec",
+      "-T",
+      "api",
+      "sh",
+      "-c",
+      "mkdir -p /app/test && cat > /app/test/journey.generated.test.ts && pnpm test",
+    ],
     {
       cwd: repoRoot,
       encoding: "utf8",
@@ -586,7 +734,29 @@ async function main() {
       input: await readFile(journeyTest, "utf8"),
     },
   );
-  spawnSync("docker", ["compose", "--file", join(generatedDirectory, "docker-compose.yml"), "--project-name", generatedProject, "down", "--volumes"], { stdio: "ignore" });
+  spawnSync(
+    "docker",
+    [
+      "compose",
+      "--file",
+      join(generatedDirectory, "docker-compose.yml"),
+      "--project-name",
+      generatedProject,
+      "down",
+      "--volumes",
+    ],
+    { stdio: "ignore" },
+  );
+  if (testResult.status !== 0) {
+    // Surface the bounded tail of the in-container test run; the preview is
+    // already torn down, so this output is the only trace of the failure.
+    const output = `${testResult.stdout ?? ""}${testResult.stderr ?? ""}`
+      .trim()
+      .slice(-8000);
+    console.error(
+      `Generated journey test output:\n${output || "(no output captured)"}`,
+    );
+  }
   assert(testResult.status === 0, "Generated journey tests failed.");
 
   console.log(
