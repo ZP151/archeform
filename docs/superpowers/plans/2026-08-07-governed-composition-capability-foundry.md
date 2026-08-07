@@ -66,14 +66,15 @@
 - `evaluateFoundryAdmission(asset, evidence)` returns `eligible`, `partial`,
   `quarantined`, or `rejected` with stable reason codes.
 
-- [ ] Write failing tests for deterministic plan ordering, incompatible locks,
+- [x] Write failing tests for deterministic plan ordering, incompatible locks,
       missing dependency/binding/slot, lifecycle rejection, source/provenance
       omission, and a candidate with fewer than two verified Profiles.
-- [ ] Run focused tests and confirm RED.
-- [ ] Implement resolver scoring only over approved current assets, stable tie
+- [x] Run focused tests and confirm RED.
+- [x] Implement resolver scoring only over approved current assets, stable tie
       breaking, and strict admission evidence checks.
-- [ ] Run full `@factory/capabilities` tests, typecheck, lint, and build.
-- [ ] Commit `feat(capabilities): add governed composition planner`.
+- [x] Run full `@factory/capabilities` tests, typecheck, lint, and build.
+- [x] Commit `feat(capabilities): add governed composition planner`
+      (`3c1848c`, with F1/F2 hardening at `e13bef1`).
 
 ### Task 3: Persist plan review and Draft-only application in the Control Plane
 

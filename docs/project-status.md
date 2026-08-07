@@ -30,15 +30,17 @@ additional framework adapters. Prospective Testcontainers for Node, fast-check,
 and ts-morph use, and source-study-only references, remain subject to the
 existing licence, provenance, notice, and security gates.
 
-## Current iteration — governed composition contracts (Train A)
+## Current iteration — governed composition contracts and planner (Trains A + B)
 
 Plan Task 1 is implemented at commit `f97eafa`
 (`feat(graph): define governed composition contracts`) and hardened at
-`67cf682` (`fix(graph): close composition fail-closed boundary gaps`) and
-`7524e6b` (`fix(graph): close composition guard alias, token, and case
-gaps`) after independent task review and behavioral QA findings, all pushed
-to `feat/governed-composition-capability-foundry`, worktree clean. The Graph
-package now owns exact-key `RequirementSpecV1`, `CompositionPlanV1`,
+`67cf682`, `7524e6b`, and `e13bef1` (guard repairs and hardening: alias
+paths, escaped and case-variant prototype tokens, case-insensitive and
+whitespace-tolerant business-text rejections, punctuation-adjacent `www`
+hosts, non-draft/checksum boundaries) after independent task review and
+behavioral QA findings, all pushed to
+`feat/governed-composition-capability-foundry`. The Graph package now owns
+exact-key `RequirementSpecV1`, `CompositionPlanV1`,
 `CompositionDecisionV1`, `CompositionClarificationV1`, and
 `ProfileRecipeCatalogV1` contracts: canonical SHA-256 hashes, checksum binding
 of every plan to one Requirement and one mutable Draft revision,
@@ -56,10 +58,29 @@ exactly equal to the declared plan. Guards also reject whole-subtree
 prototype tokens (checked after pointer decoding), and nested unknown keys in
 requirement items; recipes require binding requirements per locked capability
 and reason codes iff unsupported; anchors require at least one acceptance
-journey. Fresh verification: `@factory/graph` 152/152 tests across 7 files
-(15 regression tests across the two gate repair rounds), `@factory/capabilities`
-282/282, typecheck, Prettier lint, and build all green. State: Train A
-`ready_for_qa`, re-gated on `7524e6b` before `reviewed`.
+journey.
+
+Plan Task 2 is implemented at commit `3c1848c`
+(`feat(capabilities): add governed composition planner`): `planComposition`
+deterministically resolves a requirement against the approved current
+capability assets — recipe scoring over acceptance journeys with stable
+catalog-order ties, golden-lifecycle locks with immutable digests, typed
+Graph-symbol bindings resolved structurally against the Draft
+(requirement-named keys preferred), prefix-mapped output slots filtered to
+recipe surfaces, fixture-fragment Graph operations, and dependency closure
+through the deterministic resolver. Unresolvable candidates return bounded
+`CompositionClarificationV1` questions (no provider, missing binding, no
+output slots, non-golden lifecycle, unknown version, no Graph change) and
+non-Draft bases throw. `evaluateFoundryAdmission` buckets capability
+evidence into `eligible/partial/quarantined/rejected` with sorted reason
+codes, backed by `expectedFoundryLockDigest` over a pure-JS FIPS 180-4
+SHA-256 verified against a node:crypto known-answer vector.
+
+Fresh verification: `@factory/graph` 153/153 tests across 7 files,
+`@factory/capabilities` 310/310 across 22 files, typecheck, Prettier lint,
+and build all green. State: Train A `ready_for_qa`, re-gated on `e13bef1`
+before `reviewed`; Train B `ready_for_qa`, pending independent gates on
+`3c1848c`.
 
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including

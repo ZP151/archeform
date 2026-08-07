@@ -31,8 +31,8 @@ boundary violation returns the owning item to `implementing`.
 
 | Train                     | State        | Target commit | Evidence                                             |
 | ------------------------- | ------------ | ------------- | ---------------------------------------------------- |
-| A. Composition contracts  | ready_for_qa | 7524e6b       | RequirementSpec, plan, decision, recipe schema tests |
-| B. Planner and review     | planned      | —             | deterministic plan and Draft-only review tests       |
+| A. Composition contracts  | ready_for_qa | e13bef1       | RequirementSpec, plan, decision, recipe schema tests |
+| B. Planner and review     | ready_for_qa | 3c1848c       | deterministic plan and Draft-only review tests       |
 | C. Foundry quality system | planned      | —             | promotion matrix and rejection evidence              |
 | D. Capability batches     | planned      | —             | 25–35 eligible families, two Profiles each           |
 | E. Portfolio proof        | planned      | —             | 100+ recipes, 12 compiled anchors                    |
@@ -98,6 +98,52 @@ files), typecheck/lint/build green; proportional regression
 `pnpm --filter @factory/capabilities test` — 282 passed. Pushed; worktree
 clean. State: Train A `ready_for_qa`, pending re-verification gates on
 `7524e6b` before `reviewed`.
+
+### 2026-08-08 — Task 2 (Train B) implemented: planner and admission
+
+- New `composition-planner.ts`: `planComposition(requirement, catalog,
+  baseDraft, repositoryRoot, assets)` deterministically resolves recipes
+  against approved current assets — recipe scoring (2× scenario journeys +
+  1× workflow journeys, stable catalog-order ties), golden-lifecycle locks,
+  structural Graph-symbol bindings (requirement-named keys preferred),
+  prefix-mapped output slots filtered to recipe surfaces, fixture-fragment
+  operations (skip if the transition already exists), and dependency
+  closure via the deterministic resolver. Unresolvable candidates return a
+  bounded `CompositionClarificationV1` (no-provider, missing binding,
+  no output slots, non-golden lifecycle, unknown version, no Graph change,
+  duplicate questions capped at 30). Non-Draft bases throw.
+- New `foundry-admission.ts`: pure browser-safe
+  `evaluateFoundryAdmission(asset, evidence)` buckets
+  `eligible/partial/quarantined/rejected` with sorted reason codes
+  (rejected wins over quarantined over partial); `expectedFoundryLockDigest`
+  hashes the canonical key-sorted lock identity with a self-contained
+  FIPS 180-4 SHA-256, locked by a node:crypto known-answer test.
+- RED: focused suites written first. GREEN: `pnpm --filter
+  @factory/capabilities test` — 310 passed (22 files; 282 prior + 11
+  planner + 17 admission); typecheck, prettier lint, and build green.
+- Commit `3c1848c` `feat(capabilities): add governed composition planner`
+  pushed; worktree clean apart from gate scratch probes.
+- State: Train B `ready_for_qa`, awaiting independent gates before
+  `reviewed`.
+
+### 2026-08-08 — Train A re-verification P2 hardening notes repaired at `e13bef1`
+
+Re-verification task review on `7524e6b` returned `TASK_REVIEW_PASS`
+(SPEC PASS, QUALITY PASS) with three P2 hardening notes; the two
+code-level ones were repaired, the third is an orchestration note.
+
+| ID | Severity | Finding | Repair |
+| -- | -------- | ------- | ------ |
+| F1 | P2 | Path-guard exact-token list was case-sensitive while the business-text guard is case-insensitive: `/page/Constructor`, `/page/PROTOTYPE` passed | Token predicate lowercases before comparing in both guard mirrors; case variants now throw at plan parse and apply |
+| F2 | P2 | `www.` boundary was `(^|\s)` so punctuation-adjacent hosts (`(www.example.com)`, `;www.x.com`) passed business-text validation | Boundary is now `(^|[^a-z0-9-])`; suffix words (`bwww.example.com`) still pass |
+| F3 | P2 | Worktree hygiene: parallel gate scratch probes in the shared tree make suite counts vary run-to-run | Orchestration note, not a code defect; committed-state counts exclude probe files |
+
+Repair commit `e13bef1` (`fix(graph): harden path-guard case handling and
+www boundaries`) — graph `pnpm --filter @factory/graph test` 153 passed (7
+files, probes excluded), typecheck/lint/build green; proportional
+regression `pnpm --filter @factory/capabilities test` — 310 passed. Pushed.
+State: Train A `ready_for_qa`, pending re-verification gates on `e13bef1`
+before `reviewed`.
 
 ## Required evidence per promoted family
 
