@@ -1,0 +1,57 @@
+import {
+  removeCapabilityOperations,
+  type CapabilityAssetV1,
+} from "../contract.js";
+
+export const searchAssetV1_0_0: CapabilityAssetV1 = {
+  manifest: {
+    apiVersion: "factory.capability/v1",
+    bindingContract: "factory.capability-binding/v1",
+    key: "core.search",
+    version: "1.0.0",
+    category: "core",
+    name: "Search",
+    description:
+      "Executes a deterministic search over an indexed domain entity field.",
+    packageRoot: "packages/capabilities/assets/core.search/1.0.0",
+    manifestDigest:
+      "sha256:1f2c1968afdb43ee52993fc6d6e7e297c2b7b7aa43777564fae6d6fb774c26c4",
+    lifecycle: "golden",
+    profiles: [],
+    effects: ["search.execute"],
+    inputSchema: [
+      { key: "searchEntity", type: "domain.entity", required: true },
+      {
+        key: "searchField",
+        type: "domain.field",
+        required: true,
+        ownerBinding: "searchEntity",
+        fieldTypes: ["string", "text"],
+      },
+    ],
+    outputSlots: ["api.runtime", "flow.effect"],
+    templates: [
+      {
+        id: "api-capability-module",
+        source: "templates/api/capability-module.ts.tpl",
+        target: "api/src/capabilities/core.search.ts",
+        outputSlot: "api.runtime",
+        digest:
+          "sha256:c474ea34a897a3861c6933d26cb4a15cbac0fb976b9f9100ad316cd9307ed29f",
+      },
+    ],
+    parameters: [
+      { key: "searchEntity", type: "graph-symbol", required: true },
+      { key: "searchField", type: "graph-symbol", required: true },
+    ],
+    provides: [{ interfaceKey: "search.index", version: "v1" }],
+    verification: {
+      fixture: "fixtures/default.json",
+      contractTest: "tests/contract.json",
+      status: "verified",
+    },
+  },
+  disable(graph) {
+    removeCapabilityOperations(graph, ["search.execute"]);
+  },
+};

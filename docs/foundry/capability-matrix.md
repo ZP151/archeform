@@ -13,15 +13,15 @@ promotion requirement.
 
 | Count            | Value |
 | ---------------- | ----- |
-| Current families | 24    |
+| Current families | 25    |
 | Eligible         | 0     |
-| Quarantined      | 24    |
+| Quarantined      | 25    |
 | Rejected         | 0     |
 
 **Zero families are eligible today, by design**: every current family
 declares the strict binding contract (Task 6 Batch 0 repaired the 23
 pre-existing manifests; Batch 1 declares it from birth), so none are
-rejected; all 24 are quarantined solely for lacking two independent
+rejected; all 25 are quarantined solely for lacking two independent
 Profile verifier locks. The matrix surfaces exactly this state so the
 remaining work is visible and accountable.
 
@@ -29,11 +29,11 @@ remaining work is visible and accountable.
 
 | Category       | Families                                                                                                                   |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Core (9)       | audit, crud, workflow, notification, identity-context, identity-policy, policy-declarations, location-context, files-media |
+| Core (10)      | audit, crud, workflow, notification, identity-context, identity-policy, policy-declarations, location-context, files-media, search |
 | Commerce (9)   | catalog, cart, line-configuration, money-pricing, inventory, inventory-ledger, order, order-operations, simulated-payment  |
 | Restaurant (6) | table-session, menu, ordering, kitchen, cashier, reporting                                                                 |
 
-## Quarantined — manifest requirements met, two-Profile proof outstanding (24)
+## Quarantined — manifest requirements met, two-Profile proof outstanding (25)
 
 All current families satisfy the manifest-side requirements (binding
 contract, verification state, fixtures, contract tests, output slots) and
@@ -43,6 +43,7 @@ are quarantined solely for lacking two independent Profile verifier locks:
 - core.crud
 - core.files-media
 - core.notification
+- core.search
 - core.workflow
 - core.identity-context
 - core.identity-policy
