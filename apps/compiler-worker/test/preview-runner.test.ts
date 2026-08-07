@@ -351,6 +351,22 @@ describe("preview runner", () => {
             expect(command.environment[key]).toBe(process.env[key]);
           }
         }
+        // The forwarded environment must be exactly the preview variables,
+        // the bootstrap token, and the Docker CLI lookup allowlist: no other
+        // host variable may reach the preview Docker commands, or the
+        // "bounded allowlist" property of the fix is unenforced.
+        const allowlistedKeys = new Set([
+          "FACTORY_COMPOSE_PROJECT_NAME",
+          "FACTORY_WEB_PORT",
+          "FACTORY_API_PORT",
+          "RESTAURANT_DEMO_TABLE_TOKEN",
+          ...dockerLookupVariables,
+        ]);
+        expect(
+          Object.keys(command.environment).every((key) =>
+            allowlistedKeys.has(key),
+          ),
+        ).toBe(true);
       }
     } finally {
       vi.unstubAllEnvs();

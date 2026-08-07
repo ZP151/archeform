@@ -19,6 +19,7 @@ import {
   VerificationEnvironment,
   type BoundedRequestResult,
 } from "../src/verifier/verification-environment.js";
+import { dockerHostLookupEnvironment } from "../src/preview-runner.js";
 import { runHealthProbe } from "../src/verifier/probes.js";
 
 const runId = "verify-01h3k6f";
@@ -533,6 +534,11 @@ describe("VerificationEnvironment", () => {
       }),
       expect.any(AbortSignal),
     );
+    // The migration probe runs real Docker Compose, so it needs the same host
+    // lookup allowlist as boot/stop: without PROGRAMFILES the CLI cannot
+    // resolve its compose plugin and every migration probe fails instantly.
+    const migrateCommand = vi.mocked(processRunner).mock.calls.at(-1)![0];
+    expect(migrateCommand.environment).toEqual(dockerHostLookupEnvironment());
   });
 
   it("rejects migration commands with untrusted tokens", async () => {

@@ -154,11 +154,13 @@ const verificationWorker = new Worker<VerificationRunInput>(
 
 verificationWorker.on("failed", (job, error) => {
   console.error(
-    `Factory verification job ${job?.id ?? "unknown"} failed: ${boundedFailureMessage(error)}`,
+    `Factory verification job ${boundedFailureMessage(job?.id ?? "unknown")} failed: ${boundedFailureMessage(error)}`,
   );
 });
 verificationWorker.on("stalled", (jobId) => {
-  console.error(`Factory verification job stalled: ${jobId}`);
+  console.error(
+    `Factory verification job stalled: ${boundedFailureMessage(jobId)}`,
+  );
 });
 verificationWorker.on("error", (error) => {
   console.error(

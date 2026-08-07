@@ -204,6 +204,25 @@ async function main() {
   // ---- Preflight --------------------------------------------------------
   const dockerInfo = spawnSync("docker", ["info"], { encoding: "utf8" });
   assert(dockerInfo.status === 0, "The Docker daemon is not reachable.");
+  // The run ids here are constants, so the preview and generated-tests
+  // project names are stable across runs. A crashed prior run's containers
+  // must not be silently adopted by this one.
+  const stalePreview = spawnSync(
+    "docker",
+    [
+      "ps",
+      "-a",
+      "--filter",
+      "name=^factory-(preview|generated-tests)-",
+      "--format",
+      "{{.Names}}",
+    ],
+    { encoding: "utf8" },
+  );
+  assert(
+    stalePreview.status === 0 && stalePreview.stdout.trim().length === 0,
+    "Stale preview or generated-tests containers exist before the run.",
+  );
   runSync("worker build", "pnpm", [
     "--filter",
     "@factory/compiler-worker",
@@ -548,9 +567,11 @@ async function main() {
   // (boot, each probe, cleanup) separately, so a bounded but slow lifecycle can
   // legitimately take tens of minutes. The poll window must exceed the worst
   // bounded case (boot + cleanup + per-step timeouts) or the harness would tear
-  // down a still-working worker and misreport the run as stuck.
+  // down a still-working worker and misreport the run as stuck. With the
+  // per-operation timeout at 20 minutes and eight sequential operations, the
+  // worst bounded case is 160 minutes, so the window is 180.
   let run;
-  const deadline = Date.now() + 60 * 60 * 1_000;
+  const deadline = Date.now() + 180 * 60 * 1_000;
   let lastProgressLine = 0;
   for (;;) {
     const response = await fetch(
@@ -636,7 +657,8 @@ async function main() {
   );
   assert(run.diagnosis === null, "A passing run must not persist a diagnosis.");
 
-  // The isolated preview project must be fully removed after the run.
+  // The isolated preview project must be fully removed after the run: no
+  // containers and no project volumes may remain.
   const previewProject = `factory-preview-preview-${VERIFICATION_RUN_ID}`;
   const leftovers = spawnSync(
     "docker",
@@ -653,6 +675,22 @@ async function main() {
   assert(
     leftovers.status === 0 && leftovers.stdout.trim().length === 0,
     "Preview containers remain after cleanup.",
+  );
+  const leftoverVolumes = spawnSync(
+    "docker",
+    [
+      "volume",
+      "ls",
+      "--filter",
+      `name=${previewProject}`,
+      "--format",
+      "{{.Name}}",
+    ],
+    { encoding: "utf8" },
+  );
+  assert(
+    leftoverVolumes.status === 0 && leftoverVolumes.stdout.trim().length === 0,
+    "Preview volumes remain after cleanup.",
   );
 
   // ---- Idempotent retry: the same identity returns the same terminal run --
@@ -692,62 +730,85 @@ async function main() {
     "expense-approval-published-expense-approval-1",
   );
   const generatedProject = `factory-generated-tests-${VERIFICATION_RUN_ID}`;
-  runSync("generated preview start", "docker", [
-    "compose",
-    "--file",
-    join(generatedDirectory, "docker-compose.yml"),
-    "--project-name",
-    generatedProject,
-    "up",
-    "--build",
-    "--detach",
-    "--wait",
-    "--wait-timeout",
-    "900",
-  ]);
-  const journeyTest = join(
-    generatedDirectory,
-    "api",
-    "test",
-    "journey.generated.test.ts",
-  );
-  const testResult = spawnSync(
-    "docker",
-    [
+  let testResult;
+  try {
+    runSync("generated preview start", "docker", [
       "compose",
       "--file",
       join(generatedDirectory, "docker-compose.yml"),
       "--project-name",
       generatedProject,
-      "exec",
-      "-T",
+      "up",
+      "--build",
+      "--detach",
+      "--wait",
+      "--wait-timeout",
+      "900",
+    ]);
+    const journeyTest = join(
+      generatedDirectory,
       "api",
-      "sh",
-      "-c",
-      "mkdir -p /app/test && cat > /app/test/journey.generated.test.ts && pnpm test",
-    ],
-    {
-      cwd: repoRoot,
-      encoding: "utf8",
-      env: { ...process.env },
-      maxBuffer: 64 * 1024 * 1024,
-      input: await readFile(journeyTest, "utf8"),
-    },
-  );
-  spawnSync(
+      "test",
+      "journey.generated.test.ts",
+    );
+    testResult = spawnSync(
+      "docker",
+      [
+        "compose",
+        "--file",
+        join(generatedDirectory, "docker-compose.yml"),
+        "--project-name",
+        generatedProject,
+        "exec",
+        "-T",
+        "api",
+        "sh",
+        "-c",
+        "mkdir -p /app/test && cat > /app/test/journey.generated.test.ts && pnpm test",
+      ],
+      {
+        cwd: repoRoot,
+        encoding: "utf8",
+        env: { ...process.env },
+        maxBuffer: 64 * 1024 * 1024,
+        input: await readFile(journeyTest, "utf8"),
+      },
+    );
+  } finally {
+    // The generated-test preview must not leak even if the boot or the
+    // injection fails mid-way.
+    spawnSync(
+      "docker",
+      [
+        "compose",
+        "--file",
+        join(generatedDirectory, "docker-compose.yml"),
+        "--project-name",
+        generatedProject,
+        "down",
+        "--volumes",
+      ],
+      { stdio: "ignore" },
+    );
+  }
+  const generatedLeftovers = spawnSync(
     "docker",
     [
-      "compose",
-      "--file",
-      join(generatedDirectory, "docker-compose.yml"),
-      "--project-name",
-      generatedProject,
-      "down",
-      "--volumes",
+      "ps",
+      "-a",
+      "--filter",
+      `name=${generatedProject}`,
+      "--format",
+      "{{.Names}}",
     ],
-    { stdio: "ignore" },
+    { encoding: "utf8" },
   );
-  if (testResult.status !== 0) {
+  assert(
+    generatedLeftovers.status === 0 &&
+      generatedLeftovers.stdout.trim().length === 0,
+    "Generated-tests containers remain after teardown.",
+  );
+  if (testResult !== undefined && testResult.status !== 0) {
     // Surface the bounded tail of the in-container test run; the preview is
     // already torn down, so this output is the only trace of the failure.
     const output = `${testResult.stdout ?? ""}${testResult.stderr ?? ""}`
