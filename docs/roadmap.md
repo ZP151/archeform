@@ -147,13 +147,21 @@ guards over whole-subtree integration rewrites (including empty/`.`/`..`
 alias paths), decoded prototype-key paths and `~1`-escaped prototype tokens,
 case-insensitive prototype-key and `www` business text (including
 punctuation-adjacent hosts), nested exact-key items, and recipe lock/binding
-requirements (`@factory/graph` 153/153, typecheck/lint/build green). Train B
-(planner and Foundry admission) is implemented at `3c1848c`: deterministic
-`planComposition` (recipe scoring, golden-lifecycle locks, structural
-Graph-symbol bindings, surface-mapped output slots, fixture-fragment
-operations, bounded clarifications) and `evaluateFoundryAdmission` with
-sorted reason codes over a KAT-verified pure-JS lock digest
-(`@factory/capabilities` 310/310).
+requirements (`@factory/graph` 153/153, typecheck/lint/build green). Train A
+is `reviewed` at `e13bef1` (task review, QA, release review, and PM gate all
+PASS; held at `reviewed` until every train is accepted). Train B (planner and
+Foundry admission) is implemented at `3c1848c` and repaired at `64e954b1`
+after both independent gates failed on the same two P1 defects (unguarded
+fixture `JSON.parse` throw; multi-provider dependency edges lost by a
+last-write-wins map): deterministic `planComposition` (recipe scoring,
+golden-lifecycle locks, structural Graph-symbol bindings, surface-mapped
+output slots, fixture-fragment operations, bounded clarifications,
+schema-valid answers for an empty staged catalogue) and
+`evaluateFoundryAdmission` with sorted reason codes over a KAT-verified
+pure-JS lock digest (`@factory/capabilities` 313/313, graph 153/153).
+Train C (Task 3) is `implementing`: the Control Plane persists governed
+`CompositionReview` cycles and applies only approved constrained Diffs
+through the existing Draft lifecycle (control-plane suite 174/174).
 
 ## P2 and P3
 

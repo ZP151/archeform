@@ -1,6 +1,6 @@
 # Factory Pilot delivery status
 
-Updated: 2026-08-07
+Updated: 2026-08-08
 
 ## Approved implementation target — 2026-08-02
 
@@ -76,11 +76,35 @@ evidence into `eligible/partial/quarantined/rejected` with sorted reason
 codes, backed by `expectedFoundryLockDigest` over a pure-JS FIPS 180-4
 SHA-256 verified against a node:crypto known-answer vector.
 
+Independent task review and behavioral QA at `3c1848c` found two P1
+implementation defects (fixture `JSON.parse` outside the guarded read so a
+malformed fixture threw instead of clarifying; multi-provider dependency
+edges lost by a last-write-wins map), each reported under two IDs
+(TRB-1/TRB-2 and F1/F2). Repair commit `64e954b1`
+(`fix(capabilities): close planner fail-closed fixture and multi-provider
+gaps`) closes all four with regression tests and relaxes the recipe
+catalogue to allow an empty staged catalogue (schema-valid clarification,
+never a guess). Behavioral QA re-verification at `64e954b1`: 35/35
+behavior probes pass, including cross-process byte-identical plan
+determinism.
+
 Fresh verification: `@factory/graph` 153/153 tests across 7 files,
-`@factory/capabilities` 310/310 across 22 files, typecheck, Prettier lint,
-and build all green. State: Train A `ready_for_qa`, re-gated on `e13bef1`
-before `reviewed`; Train B `ready_for_qa`, pending independent gates on
-`3c1848c`.
+`@factory/capabilities` 313/313 across 22 files, typecheck, Prettier lint,
+and build all green. Train A is `reviewed` at `e13bef1` (task review, QA,
+release review, and PM gate all PASS; the PM holds it at `reviewed` until
+every train is accepted). Train B is `ready_for_qa` at `64e954b1`, pending
+re-verification task review.
+
+Train C (Task 3) is `implementing`: the Control Plane now persists governed
+`CompositionReview` cycles (schema + handwritten migration), plans through
+the deterministic `COMPOSITION_PLANNER` seam (empty staged catalogue until
+the 100+ recipe portfolio lands), records reviewer decisions bound to the
+stored plan and Diff checksums, and applies only the approved constrained
+Diff through the existing Draft lifecycle. Control Plane suite 174/174
+across 16 files (+23 composition review tests: published-graph refusal,
+stale-Draft refusal, unapproved-plan refusal, altered checksum refusal,
+idempotent decisions, persisted-key redaction), typecheck, Prettier lint,
+and build all green. Uncommitted.
 
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including

@@ -26,6 +26,7 @@ model ApplicationGraph {
   workspace          Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
   draftRevisions     DraftRevision[]
   publishedRevisions PublishedRevision[]
+  compositionReviews CompositionReview[]
 
   @@unique([workspaceId, key])
   @@index([workspaceId])
@@ -41,6 +42,7 @@ model DraftRevision {
   createdAt          DateTime           @default(now())
   applicationGraph   ApplicationGraph   @relation(fields: [applicationGraphId], references: [id], onDelete: Restrict)
   publishedRevision  PublishedRevision?
+  compositionReviews CompositionReview[]
 
   @@unique([applicationGraphId, revisionNumber])
   @@unique([id, applicationGraphId])
@@ -111,6 +113,36 @@ model VerificationRun {
   compilation       Compilation @relation(fields: [compilationId], references: [id], onDelete: Restrict)
 
   @@index([compilationId])
+}
+
+/// One governed composition review cycle over a mutable Draft revision. Only
+/// schema-valid contracts are persisted — RequirementSpec, CompositionPlan,
+/// reviewer decision, a safe plan summary, and the constrained Draft Diff
+/// checksum. Raw model responses, prompts, and provider transport material
+/// never enter this table.
+model CompositionReview {
+  id                  String            @id @default(cuid())
+  applicationGraphId  String
+  draftRevisionId     String
+  requirement         Json
+  requirementChecksum String
+  draftBaseChecksum   String
+  plan                Json?
+  planChecksum        String?
+  planId              String?
+  clarification       Json?
+  safeSummary         Json?
+  diff                Json?
+  diffChecksum        String?
+  decision            Json?
+  decisionId          String?           @unique
+  status              String
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  applicationGraph    ApplicationGraph  @relation(fields: [applicationGraphId], references: [id], onDelete: Restrict)
+  draftRevision       DraftRevision     @relation(fields: [draftRevisionId, applicationGraphId], references: [id, applicationGraphId], onDelete: Restrict)
+
+  @@index([applicationGraphId])
 }
 
 /// A local, Factory-governed execution request for generated artifacts from one

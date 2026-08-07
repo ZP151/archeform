@@ -242,4 +242,69 @@ describe("control-plane lifecycle schema", () => {
       ),
     ).toBe(false);
   });
+
+  it("persists only schema-valid composition review records against a Draft", () => {
+    expect(field("CompositionReview", "applicationGraphId")).toMatchObject({
+      type: "String",
+      isRequired: true,
+    });
+    expect(field("CompositionReview", "draftRevisionId")).toMatchObject({
+      type: "String",
+      isRequired: true,
+    });
+    expect(field("CompositionReview", "requirement")).toMatchObject({
+      type: "Json",
+      isRequired: true,
+    });
+    expect(field("CompositionReview", "requirementChecksum")).toMatchObject({
+      type: "String",
+      isRequired: true,
+    });
+    expect(field("CompositionReview", "draftBaseChecksum")).toMatchObject({
+      type: "String",
+      isRequired: true,
+    });
+    expect(field("CompositionReview", "plan")).toMatchObject({
+      type: "Json",
+      isRequired: false,
+    });
+    expect(field("CompositionReview", "planChecksum")).toMatchObject({
+      type: "String",
+      isRequired: false,
+    });
+    expect(field("CompositionReview", "clarification")).toMatchObject({
+      type: "Json",
+      isRequired: false,
+    });
+    expect(field("CompositionReview", "safeSummary")).toMatchObject({
+      type: "Json",
+      isRequired: false,
+    });
+    expect(field("CompositionReview", "diff")).toMatchObject({
+      type: "Json",
+      isRequired: false,
+    });
+    expect(field("CompositionReview", "diffChecksum")).toMatchObject({
+      type: "String",
+      isRequired: false,
+    });
+    expect(field("CompositionReview", "decision")).toMatchObject({
+      type: "Json",
+      isRequired: false,
+    });
+    expect(field("CompositionReview", "decisionId")).toMatchObject({
+      type: "String",
+      isRequired: false,
+      isUnique: true,
+    });
+    expect(field("CompositionReview", "draftRevision")).toMatchObject({
+      relationFromFields: ["draftRevisionId", "applicationGraphId"],
+      relationToFields: ["id", "applicationGraphId"],
+    });
+    expect(
+      model("CompositionReview").fields.some(({ name }) =>
+        /secret|token|credential|password|prompt|rawModel/i.test(name),
+      ),
+    ).toBe(false);
+  });
 });

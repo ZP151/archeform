@@ -6,6 +6,12 @@ import {
   BullMqCompilationQueue,
   COMPILATION_QUEUE,
 } from "./compilation-queue.js";
+import { CompositionController } from "./composition/composition.controller.js";
+import {
+  COMPOSITION_PLANNER,
+  CompositionService,
+  createCompositionPlannerProvider,
+} from "./composition/composition.service.js";
 import {
   createGraphProposalProvider,
   GRAPH_PROPOSAL_PROVIDER,
@@ -27,11 +33,17 @@ import {
 
 @Module({
   imports: [PrismaModule, PortfolioModule],
-  controllers: [AppController, LifecycleController, VerificationController],
+  controllers: [
+    AppController,
+    LifecycleController,
+    VerificationController,
+    CompositionController,
+  ],
   providers: [
     AppService,
     LifecycleService,
     VerificationService,
+    CompositionService,
     BullMqCompilationQueue,
     BullMqPreviewRunQueue,
     BullMqVerificationRunQueue,
@@ -44,6 +56,10 @@ import {
     {
       provide: GRAPH_PROPOSAL_PROVIDER,
       useFactory: createGraphProposalProvider,
+    },
+    {
+      provide: COMPOSITION_PLANNER,
+      useFactory: createCompositionPlannerProvider,
     },
   ],
 })

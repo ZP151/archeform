@@ -31,8 +31,8 @@ boundary violation returns the owning item to `implementing`.
 
 | Train                     | State        | Target commit | Evidence                                             |
 | ------------------------- | ------------ | ------------- | ---------------------------------------------------- |
-| A. Composition contracts  | ready_for_qa | e13bef1       | RequirementSpec, plan, decision, recipe schema tests |
-| B. Planner and review     | ready_for_qa | 3c1848c       | deterministic plan and Draft-only review tests       |
+| A. Composition contracts  | reviewed     | e13bef1       | RequirementSpec, plan, decision, recipe schema tests |
+| B. Planner and review     | ready_for_qa | 64e954b1      | deterministic plan and Draft-only review tests       |
 | C. Foundry quality system | planned      | —             | promotion matrix and rejection evidence              |
 | D. Capability batches     | planned      | —             | 25–35 eligible families, two Profiles each           |
 | E. Portfolio proof        | planned      | —             | 100+ recipes, 12 compiled anchors                    |
@@ -144,6 +144,63 @@ files, probes excluded), typecheck/lint/build green; proportional
 regression `pnpm --filter @factory/capabilities test` — 310 passed. Pushed.
 State: Train A `ready_for_qa`, pending re-verification gates on `e13bef1`
 before `reviewed`.
+
+### 2026-08-08 — Train A release and PM gates PASS; Train B gate findings repaired at `64e954b1`
+
+Train A closed its gate rounds at `e13bef1`:
+
+- Independent task review: `TASK_REVIEW_PASS` at `e13bef1` (SPEC PASS,
+  QUALITY PASS, no P0/P1/P2).
+- Independent behavioral QA: `QA_PASS` at `e13bef1` — 153/153 graph tests,
+  313/313 capabilities tests at head, typecheck and Prettier lint green.
+- Independent release review: `RELEASE_REVIEW_PASS` at `e13bef1` — all six
+  contracts export from the `@factory/graph` main entry and bind
+  decision→plan→Diff→Draft by canonical SHA-256; the Application Graph
+  remains the sole business authority (`/integration` whole-subtree and
+  non-mutable roots blocked in both guard mirrors, Draft-only application);
+  no AI, credential, or URL material in the range; regression green at head.
+- PM gate: `PM_GATE_PASS` — Train A advances `ready_for_qa -> reviewed` at
+  `e13bef1` and holds at `reviewed` (`accepted` awaits every delivery train).
+- The P2 observation (committed graph `dist/` predating the `e13bef1`
+  hardening) is addressed: a fresh build from committed source is green and
+  the release train rebuilds both packages.
+
+Train B gates at `3c1848c` independently failed on the same two P1
+implementation defects (task review TRB-1/TRB-2; behavioral QA F1/F2).
+Per the state vocabulary, the item returned to `implementing`.
+
+| ID | Severity | Finding | Repair |
+| -- | -------- | ------- | ------ |
+| TRB-1 / F1 | P1 | `operationsFor` wrapped the fixture `readFileSync` in try/catch but called `JSON.parse(raw)` outside it — a malformed golden-asset fixture threw a raw `SyntaxError` instead of a bounded clarification | The parse and `transitionFragment` conversion now run inside the try; unreadable or malformed fixtures yield no fragment and the planner returns a schema-valid clarification |
+| TRB-2 / F2 | P1 | `dependencyEdges` used a last-write-wins `Map<string, string>` — a `multiProvider` requirement silently dropped all but one provider edge from `dependencyGraph` | `Map<string, string[]>` collects every provider per interface identity; the plan artifact reports all of them, matching the resolver's dependency closure |
+
+Repair commit `64e954b1` (`fix(capabilities): close planner fail-closed
+fixture and multi-provider gaps`) also relaxes
+`profileRecipeCatalogSchema.recipes` from `min(1)` to `max(500)` (empty
+staged catalogues are legitimate: the planner answers them with a
+schema-valid clarification instead of guessing). Fresh verification:
+`@factory/capabilities` 313/313 (22 files; 310 + 3 regression tests),
+`@factory/graph` 153/153 (7 files), typecheck, Prettier lint, and build
+green. Pushed to `feat/governed-composition-capability-foundry`.
+Behavioral QA re-verification at `64e954b1`: 35/35 behavior probes pass
+(cross-process byte-identical determinism, plan validity and deep-freeze,
+Draft-only boundary, clarification bounds at 30, fail-closed bindings,
+fixture operations, multi-provider dependency closure, admission priority,
+digest known-answer). State: Train B `ready_for_qa` at `64e954b1`, pending
+re-verification task review before `reviewed`.
+
+### 2026-08-08 — Task 3 (Train C) implementing: Control Plane plan review
+
+`CompositionReview` persistence (schema + handwritten migration), the
+deterministic planning seam (`COMPOSITION_PLANNER` backed by
+`planComposition` with the staged empty catalogue), and the
+`CompositionService`/`CompositionController` review boundary:
+requirement creation (persisted-key redaction via strict
+`parseRequirementSpec`), idempotent Draft-bound planning, clarification
+storage, checksum-bound reviewer decisions, and application of only the
+approved constrained Diff through the existing Draft lifecycle. Control
+Plane suite 174/174 (16 files; +23 composition tests), typecheck, Prettier
+lint, and build green. Uncommitted.
 
 ## Required evidence per promoted family
 

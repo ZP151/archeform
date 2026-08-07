@@ -27,6 +27,7 @@ import { resolveCapabilityAssetLock } from "./index.js";
 
 export { planComposition } from "./composition-planner.js";
 export type { PlanCompositionOutcomeV1 } from "./composition-planner.js";
+export { currentCapabilityAssets } from "./assets/index.js";
 
 export interface ResolvedCapabilityAssetTemplate {
   readonly assetKey: string;
