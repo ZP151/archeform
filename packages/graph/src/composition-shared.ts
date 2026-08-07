@@ -43,12 +43,15 @@ export const compositionSurfaceSchema = z.enum([
  * `constructor`/`prototype` rejections tolerate leading and trailing
  * whitespace (`Constructor`, `"constructor "`, `" prototype"`), while prose
  * that merely mentions the words in context (for example "the prototype
- * journey was reviewed") still passes. Written as a positive assertion of
+ * journey was reviewed") still passes. A `www` prefix is caught at any
+ * non-word boundary (`(www.example.com)`, `;www.x.com`, `https://www.x.com`)
+ * but never as a suffix of a larger word (`bwww.example.com` stays allowed).
+ * Written as a positive assertion of
  * safety (zod `.regex()` requires the text to match) so the schema stays a
  * ZodString and consumers can still tighten `.max()` length limits.
  */
 export const unsafeMaterialPattern =
-  /^(?!.*(?:(:\/\/)|(^\s*[\\/])|(\.\.[\\/])|([a-zA-Z]:[\\/])|((?<=\s)[\\/][^\s])|(^\s*$)|(__proto__)|(^\s*(constructor|prototype)\s*$)|((^|\s)(www\.))))/i;
+  /^(?!.*(?:(:\/\/)|(^\s*[\\/])|(\.\.[\\/])|([a-zA-Z]:[\\/])|((?<=\s)[\\/][^\s])|(^\s*$)|(__proto__)|(^\s*(constructor|prototype)\s*$)|((^|[^a-z0-9-])(www\.))))/i;
 
 export const safeBusinessTextSchema = z
   .string()

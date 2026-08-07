@@ -205,12 +205,19 @@ function assertSafeCompositionOperationPath(path: string): void {
   // be one, so alias paths such as `/integration/` or `/integration/.`
   // cannot slip past the protected-subtree guards.
   const tokens = segments.flatMap((segment) => segment.split("/"));
+  // Compared case-insensitively, mirroring the business-text guard: `~1`
+  // escapes and case variants (`/page/Constructor`) are caught the same way
+  // `"constructor "` is caught in prose. No validated Graph key contains
+  // these strings in any case, so nothing legitimate is rejected.
   if (
-    tokens.some(
-      (token) =>
-        token.includes("__proto__") ||
-        ["constructor", "prototype"].includes(token),
-    )
+    tokens.some((token) => {
+      const lowered = token.toLowerCase();
+      return (
+        lowered.includes("__proto__") ||
+        lowered === "constructor" ||
+        lowered === "prototype"
+      );
+    })
   ) {
     throw new CompositionError(
       "Composition Diff paths cannot reference prototype keys.",

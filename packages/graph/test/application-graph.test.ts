@@ -789,6 +789,16 @@ describe("ApplicationGraphV1", () => {
         }),
       ).toThrow(GraphDiffError);
     }
+
+    // Case variants mirror the case-insensitive business-text guard.
+    for (const path of ["/page/Constructor", "/page/PROTOTYPE"]) {
+      expect(() =>
+        applyGraphDiffToDraft(draft, {
+          apiVersion: "factory.graph-diff/v1",
+          operations: [{ op: "add", path, value: { injected: true } }],
+        }),
+      ).toThrow(GraphDiffError);
+    }
   });
 
   it("rejects integration-root alias add paths", () => {

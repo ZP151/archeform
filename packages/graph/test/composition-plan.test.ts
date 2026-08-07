@@ -443,6 +443,22 @@ describe("CompositionDecisionV1 and Draft-only application", () => {
     ).toThrow(CompositionError);
   });
 
+  it("rejects case variants of prototype keys in operation paths", () => {
+    for (const path of [
+      "/page/Constructor",
+      "/page/PROTOTYPE",
+      "/page/~1__PROTO__",
+      "/flow/Prototype",
+    ]) {
+      expect(() =>
+        parseCompositionPlan({
+          ...planFixture(),
+          proposedOperations: [{ op: "add", path, value: { injected: true } }],
+        }),
+      ).toThrow(CompositionError);
+    }
+  });
+
   it("rejects prototype-key material in business text but keeps natural prose", () => {
     for (const payload of [
       "__proto__",
@@ -477,6 +493,8 @@ describe("CompositionDecisionV1 and Draft-only application", () => {
     for (const payload of [
       "See www.example.com for the ledger policy.",
       "See WWW.example.com for the ledger policy.",
+      "Hosted at (www.example.com) behind a proxy.",
+      "Mirror;www.x.com hosts the report.",
     ]) {
       expect(() =>
         parseCompositionPlan({
@@ -485,12 +503,17 @@ describe("CompositionDecisionV1 and Draft-only application", () => {
         }),
       ).toThrow(CompositionError);
     }
-    expect(
-      parseCompositionPlan({
-        ...planFixture(),
-        explanation: "See example.com for the ledger policy.",
-      }).explanation,
-    ).toBe("See example.com for the ledger policy.");
+    for (const payload of [
+      "See example.com for the ledger policy.",
+      "bwww.example.com hosts the report.",
+    ]) {
+      expect(
+        parseCompositionPlan({
+          ...planFixture(),
+          explanation: payload,
+        }).explanation,
+      ).toBe(payload);
+    }
   });
 
   it("rejects a Diff with an operation the plan never declared", () => {
