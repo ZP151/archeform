@@ -205,6 +205,27 @@ the PM records Train B Task 4 `ready_for_qa -> reviewed` — Train B Tasks
 2–4 are `reviewed`. Suites at final HEAD: graph 175/175, control-plane
 183/183, capabilities 313/313, adapters 34/34.
 
+Train D Task 5 (Foundry evidence matrix and promotion workflow) is
+implemented at `b59f8645`: a declared evidence registry binds each of the
+23 current
+families to its exact key/version/manifest-digest with the shared
+first-party policy fields and empty verifier locks, and `buildFoundryMatrix`
+computes one deterministic verdict per current family
+(`eligible/partial/quarantined/rejected/missing-evidence/stale-evidence/
+duplicate-evidence`), never counting aliases, historical versions, or
+retired families. The matrix reports the honest state: zero eligible
+families — 9 quarantined for lacking two-Profile verifier evidence
+(`fewer-than-two-profiles`) and 14 **rejected because their current
+manifests declare no binding contract** (`missing-binding-contract`: core
+audit/crud/notification/workflow/identity-context/location-context,
+commerce catalog/cart/line-configuration/inventory/inventory-ledger/order/
+simulated-payment, restaurant.menu). That manifest-readiness gap is Train
+D's next batch work. Public evidence: `docs/foundry/capability-matrix.md`
+(source-free summary) and `docs/foundry/promotion-policy.md`. TDD RED
+evidence: 11 failed | 0 passed before implementation. Suites at final
+state: capabilities 327/327 (24 files), graph 175/175, control-plane
+183/183, typecheck, Prettier, and build green. Train D is `implementing`.
+
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including
 Preview stop and cleanup. This is not production readiness and does not alter

@@ -486,6 +486,49 @@ environment-only credential boundary, deterministic authority intact,
 nothing unsafe persists, applies, or is echoed. Train B Tasks 2–4 are
 `reviewed`.
 
+### 2026-08-08 — Task 5 implementation round: evidence registry and matrix
+
+TDD run: RED before implementation (11 failed | 0 passed — the two new test
+files could not even resolve the not-yet-written modules). Implemented at
+`b59f8645`: `foundry-evidence.ts` (declared evidence registry: 23 literal
+records, each
+bound to the exact key/version/manifest-digest of a current family and
+carrying the shared first-party policy fields — MIT licence, first-party
+provenance, factory-platform owner, two-minor-version deprecation notice,
+major-version compatibility declaration — with `profileLocks` starting
+empty) and `foundry-matrix.ts` (`buildFoundryMatrix`: exactly one row per
+current family; verdicts `eligible/partial/quarantined/rejected/
+missing-evidence/stale-evidence/duplicate-evidence`; counts always sum to
+rows; rows sorted stably by key; never counts aliases, historical versions,
+or retired families). Docs `docs/foundry/capability-matrix.md` (source-free
+public summary) and `docs/foundry/promotion-policy.md` written.
+
+Honest matrix outcome, verified by a debug probe against the built dist
+then pinned in the suite: all 23 declared digests match their current
+assets, yet **zero families are eligible**. 9 families are quarantined for
+`fewer-than-two-profiles` (they satisfy the manifest-side admission checks —
+binding contract, verification, fixtures, contract tests, output slots —
+but hold no verifier locks; commerce.money-pricing, commerce.order-operations,
+core.identity-policy, core.policy-declarations, restaurant.cashier,
+restaurant.kitchen, restaurant.ordering, restaurant.reporting,
+restaurant.table-session). 14 families are **rejected for
+`missing-binding-contract`**: their current manifests do not declare a
+binding contract at all (core.audit, core.crud, core.notification,
+core.workflow, core.identity-context, core.location-context, commerce.catalog,
+commerce.cart, commerce.line-configuration, commerce.inventory,
+commerce.inventory-ledger, commerce.order, commerce.simulated-payment,
+restaurant.menu). The matrix surfaced a manifest-readiness gap that Train D
+(Task 6) must repair before any promotion evidence can apply — this is the
+honest state and the matrix's job.
+
+Fixture lesson from the RED-to-GREEN round: evidence locks are bound to the
+family identity digest, so a record fixture must compute lock digests per
+target asset — a cross-bound lock is stale evidence and correctly
+quarantines the family (the initial test asserted an inflated 2 eligible;
+the honest verdict is the correct one). Suite at final state: capabilities
+327/327 (24 files), graph 175/175, control-plane 183/183, typecheck and
+Prettier green.
+
 ## Required evidence per promoted family
 
 | Evidence    | Required form                                                       |

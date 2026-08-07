@@ -203,6 +203,25 @@ probes) and the PM records Task 4 `ready_for_qa -> reviewed` — Train B
 Tasks 2–4 are `reviewed` (graph 175/175, control-plane 183/183,
 capabilities 313/313, adapters 34/34).
 
+Train D Task 5 (Foundry evidence matrix and promotion workflow) is
+implemented at `b59f8645`: a declared evidence registry binds every current
+family to its
+exact key/version/manifest-digest (23 literal records, first-party policy
+fields, empty verifier locks), and `buildFoundryMatrix` reports one
+deterministic verdict per current family — eligible only with full
+manifest-side evidence plus two Profile verifier locks, and never counting
+aliases, historical versions, or retired families. The honest matrix state:
+**zero eligible** — 9 families quarantined for missing two-Profile evidence
+(commerce.money-pricing, commerce.order-operations, core.identity-policy,
+core.policy-declarations, and the five restaurant families) and 14 rejected
+because their current manifests declare no binding contract (core
+audit/crud/notification/workflow/identity-context/location-context, commerce
+catalog/cart/line-configuration/inventory/inventory-ledger/order/
+simulated-payment, restaurant.menu). `docs/foundry/capability-matrix.md` and
+`docs/foundry/promotion-policy.md` record the honest split; the
+manifest-readiness repair for the 14 is Train D's next batch
+(capabilities 327/327, graph 175/175, control-plane 183/183).
+
 ## P2 and P3
 
 - **P2:** managed deployment, observability, fleet upgrades, and rollbacks,

@@ -223,13 +223,34 @@
 - `buildFoundryMatrix()` reports only current eligible families and never counts
   aliases, historical versions, or partial/candidate assets.
 
-- [ ] Write failing tests for duplicate family aliases, historical-version
+- [x] Write failing tests for duplicate family aliases, historical-version
       inflation, missing licence/source-study evidence, missing two-Profile proof,
       and stale verifier evidence.
-- [ ] Run focused tests and confirm RED.
-- [ ] Implement the matrix, promotion policy, and a source-free public summary.
-- [ ] Run capabilities and relevant compiler/verifier regression suites.
-- [ ] Commit `feat(foundry): enforce capability promotion evidence`.
+- [x] Run focused tests and confirm RED.
+- [x] Implement the matrix, promotion policy, and a source-free public summary.
+- [x] Run capabilities and relevant compiler/verifier regression suites.
+- [x] Commit `feat(foundry): enforce capability promotion evidence` at
+      `b59f8645`.
+
+**Checkpoint — implementation round:** RED confirmed before implementation
+(11 failed | 0 passed, module resolution). Implemented the declared evidence
+registry (`foundry-evidence.ts` — 23 literal records bound to the exact
+key/version/manifest-digest of each current family, shared first-party policy
+fields, empty profile locks) and the deterministic matrix (`foundry-matrix.ts`
+— one row per current family, verdicts
+`eligible/partial/quarantined/rejected/missing-evidence/stale-evidence/duplicate-evidence`,
+counts always summing to rows, stable key ordering). Honest outcome from the
+built matrix: all 23 declared digests match their current assets, yet zero
+families are eligible — 9 are quarantined (`fewer-than-two-profiles`, no
+verifier locks yet) and 14 are rejected (`missing-binding-contract`: those
+manifests do not declare a binding contract today). The matrix surfaced a
+manifest-readiness gap that Task 6 must repair; `docs/foundry/capability-matrix.md`
+and `docs/foundry/promotion-policy.md` record the honest split. Suites at
+final state: capabilities 327/327 (24 files), graph 175/175, control-plane
+183/183, typecheck and Prettier green. Two test-fixture lessons fixed in
+round: lock digests must be derived per target asset (cross-bound locks are
+stale evidence), and the fixture signature defaults overrides first so a
+single overrides object cannot be mistaken for an asset.
 
 ### Task 6: Expand shared capability families in independently accepted batches
 
