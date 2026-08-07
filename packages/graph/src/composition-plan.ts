@@ -12,6 +12,7 @@ import {
   safeBusinessTextSchema,
   semanticVersionSchema,
   sha256DigestSchema,
+  unsafeCompositionDiffPathPattern,
 } from "./composition-shared.js";
 import {
   createGraphSymbolIndex,
@@ -195,6 +196,16 @@ function decodePointer(path: string): string[] {
 }
 
 function assertSafeCompositionOperationPath(path: string): void {
+  // Material is rejected on the raw pointer before any decoding: a URL,
+  // Windows drive root, `__proto__`, or `www` host embedded in a path is
+  // never legitimate Graph structure, on any line. The failing path is the
+  // offending material, so it is never echoed — only the fixed reason is
+  // reported (QA-1).
+  if (!unsafeCompositionDiffPathPattern.test(path)) {
+    throw new CompositionError(
+      "Composition Diff paths cannot carry URL, absolute-path, or prototype-key material.",
+    );
+  }
   const segments = decodePointer(path);
   // Guard checks run over decoded segments: `~1`-escaped pointers decode to
   // `/`, so prototype material must be detected per slash-decoded token
@@ -229,8 +240,10 @@ function assertSafeCompositionOperationPath(path: string): void {
   );
   const [root, second] = normalized;
   if (!mutableRoots.has(root)) {
+    // The path is the material that failed, so it must not be echoed (QA-2b);
+    // the fixed message names the failure class only.
     throw new CompositionError(
-      `Composition Diff path '${path}' is outside the mutable Application Graph.`,
+      "Composition Diff path is outside the mutable Application Graph.",
     );
   }
   if (root === "metadata" && second !== "name") {
@@ -359,6 +372,12 @@ export function assertCompositionDecision(
 
 export function hashCompositionDiff(input: unknown): string {
   const diff = parseStrict(compositionDiffSchema, input);
+  // A Diff must clear the same path guards as a plan's proposed operations:
+  // material embedded in a path and pointers outside the mutable roots are
+  // rejected before the Diff is checksummed (QA-1).
+  for (const operation of diff.operations) {
+    assertSafeCompositionOperationPath(operation.path);
+  }
   assertSafeCompositionOperationValues(diff.operations);
   return digestJson(diff);
 }

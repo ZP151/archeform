@@ -696,3 +696,152 @@ describe("CompositionDecisionV1 and Draft-only application", () => {
     expect(urlMessage).not.toContain("https://evil.example.com");
   });
 });
+
+describe("Composition Diff path material and rejection non-echo", () => {
+  it("rejects a URL embedded in an operation path without echoing it", () => {
+    // QA-1: the value scan never covered path strings, so a URL inside a Diff
+    // path persisted through the seam. The path is offending material: it must
+    // fail closed with a fixed message that never echoes the path or URL.
+    for (const path of [
+      "/page/0/https://evil.example.com/ingest",
+      "/https://evil.example.com/ingest",
+    ]) {
+      let message = "";
+      try {
+        parseCompositionPlan({
+          ...planFixture(),
+          proposedOperations: [
+            { op: "replace", path, value: { title: "clean" } },
+          ],
+        });
+      } catch (error) {
+        message = error instanceof Error ? error.message : String(error);
+      }
+      expect(message).toMatch(/Composition Diff paths cannot carry/);
+      expect(message).not.toContain("https://evil.example.com");
+      expect(message).not.toContain(path);
+    }
+  });
+
+  it("rejects a Windows drive root embedded in an operation path", () => {
+    expect(() =>
+      parseCompositionPlan({
+        ...planFixture(),
+        proposedOperations: [
+          { op: "add", path: "/C:/windows/system32/x", value: "clean" },
+        ],
+      }),
+    ).toThrow(CompositionError);
+  });
+
+  it("rejects URL material in a Diff path when hashed", () => {
+    expect(() =>
+      hashCompositionDiff({
+        apiVersion: "factory.graph-diff/v1",
+        operations: [
+          {
+            op: "replace",
+            path: "/page/0/https://evil.example.com/ingest",
+            value: { title: "clean" },
+          },
+        ],
+      }),
+    ).toThrow(CompositionError);
+  });
+
+  it("keeps clean Diff paths through plan parse and Diff hash", () => {
+    // The path scan must never reject legitimate Graph pointers: they always
+    // start with `/` and carry no scheme, drive root, or host material.
+    for (const path of [
+      "/page/0",
+      "/domain/entities/0/fields/-",
+      "/flow/flows/0/transitions/-",
+      "/metadata/name",
+      "/experience/theme/mode",
+    ]) {
+      const plan = {
+        ...planFixture(),
+        proposedOperations: [{ op: "replace", path, value: { ok: true } }],
+      };
+      expect(() => parseCompositionPlan(plan)).not.toThrow();
+      expect(() =>
+        hashCompositionDiff({
+          apiVersion: "factory.graph-diff/v1",
+          operations: plan.proposedOperations,
+        }),
+      ).not.toThrow();
+    }
+  });
+
+  it("never echoes an unrecognized plan key in a rejection message", () => {
+    // QA-2(a): zod strict's unknown-key message names each offending key
+    // verbatim. The rejection must name the container only.
+    let message = "";
+    try {
+      parseCompositionPlan({
+        ...planFixture(),
+        risks: [
+          { key: "risk-1", level: "low", description: "clean", smuggled: "x" },
+        ],
+      });
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toMatch(/Composition record is invalid at 'risks\.0'/);
+    expect(message).not.toContain("smuggled");
+
+    // A `__proto__` own key (JSON.parse-built, so it is an own property, not
+    // the object prototype) must likewise never appear in the message.
+    message = "";
+    try {
+      parseCompositionPlan({
+        ...planFixture(),
+        risks: [
+          JSON.parse(
+            '{"key":"risk-1","level":"low","description":"clean","__proto__":{"x":1}}',
+          ),
+        ],
+      });
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).not.toContain("__proto__");
+  });
+
+  it("never echoes a received value in an enum rejection message", () => {
+    // zod's invalid-enum message names the received value verbatim; that is
+    // material and must be replaced by a fixed detail.
+    let message = "";
+    try {
+      parseCompositionPlan({
+        ...planFixture(),
+        complexity: "https://evil.example.com",
+      });
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toMatch(/Composition record is invalid at 'complexity'/);
+    expect(message).not.toContain("https://evil.example.com");
+  });
+
+  it("reports an outside-root path without echoing the path", () => {
+    // QA-2(b): the mutable-root rejection previously quoted the whole path,
+    // which can carry the very material it rejects. The message names the
+    // failure class only.
+    let message = "";
+    try {
+      parseCompositionPlan({
+        ...planFixture(),
+        proposedOperations: [
+          { op: "add", path: "/published/0", value: "clean" },
+        ],
+      });
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toBe(
+      "Composition Diff path is outside the mutable Application Graph.",
+    );
+    expect(message).not.toContain("/published/0");
+  });
+});

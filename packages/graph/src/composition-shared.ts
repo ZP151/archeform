@@ -64,6 +64,18 @@ export const safeBusinessTextSchema = z
       "Business text cannot contain URLs, absolute paths, traversal segments, or prototype-key material.",
   });
 
+/**
+ * Path-specific unsafe-material scan for Graph Diff JSON Pointers. The
+ * business-text pattern cannot be applied verbatim to a pointer: every
+ * legitimate Diff path starts with `/`, which the text pattern rejects. Only
+ * material alternatives apply to paths — URL schemes, Windows drive roots,
+ * prototype keys, and `www` hosts (case-insensitive). Traversal (`..`)
+ * segments are structural alias tokens handled by the pointer root guards,
+ * not material.
+ */
+export const unsafeCompositionDiffPathPattern =
+  /^(?![\s\S]*(?:(:\/\/)|([a-zA-Z]:[\\/])|(__proto__)|((^|[^a-z0-9-])(www\.))))/i;
+
 function canonicalize(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonicalize);
   if (value && typeof value === "object") {
@@ -158,7 +170,19 @@ export function parseStrict<T>(schema: z.ZodType<T>, input: unknown): T {
     if (error instanceof z.ZodError) {
       const first = error.issues[0];
       const where = first?.path?.length ? ` at '${first.path.join(".")}'` : "";
-      const detail = first ? `: ${first.message}` : "";
+      // Zod strict-mode messages can echo caller-provided material: the
+      // unrecognized-key list names each offending key verbatim and the
+      // invalid-enum message names the received value. Neither may cross the
+      // boundary, so both are replaced with fixed details that name the
+      // failure class only; the container path above still identifies where.
+      let detail = "";
+      if (first) {
+        if (first.code === "unrecognized_keys")
+          detail = ": Unrecognized key(s).";
+        else if (first.code === "invalid_enum_value")
+          detail = ": Invalid enum value.";
+        else detail = `: ${first.message}`;
+      }
       throw new CompositionError(
         `Composition record is invalid${where}${detail}`,
       );

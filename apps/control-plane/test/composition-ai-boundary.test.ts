@@ -409,4 +409,29 @@ describe("CompositionService AI planning boundary", () => {
     ).rejects.toThrow(/Composition plan rejected/);
     expect(prisma.compositionReview.update).not.toHaveBeenCalled();
   });
+
+  it("refuses a provider plan carrying a URL inside a Diff path", async () => {
+    // QA-1: the operation-value scan never covered path strings, so URL
+    // material embedded in a path persisted through the seam. The plan must be
+    // rejected with nothing persisted.
+    const { prisma, composition } = await plannedService(
+      plannerStub({
+        kind: "plan",
+        plan: planFixture({
+          proposedOperations: [
+            {
+              op: "replace",
+              path: "/page/0/https://evil.example.com/ingest",
+              value: { title: "clean" },
+            },
+          ],
+        }),
+      }),
+    );
+
+    await expect(
+      composition.requestPlan("graph-1", "review-1"),
+    ).rejects.toThrow(/Composition plan rejected/);
+    expect(prisma.compositionReview.update).not.toHaveBeenCalled();
+  });
 });
