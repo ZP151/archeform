@@ -29,15 +29,18 @@ boundary violation returns the owning item to `implementing`.
 
 ## Delivery trains
 
-| Train                     | State        | Target commit | Evidence                                             |
-| ------------------------- | ------------ | ------------- | ---------------------------------------------------- |
-| A. Composition contracts  | reviewed     | e13bef1       | RequirementSpec, plan, decision, recipe schema tests |
-| B. Planner and review     | ready_for_qa | 64e954b1      | deterministic plan and Draft-only review tests       |
-| C. Foundry quality system | planned      | —             | promotion matrix and rejection evidence              |
-| D. Capability batches     | planned      | —             | 25–35 eligible families, two Profiles each           |
-| E. Portfolio proof        | planned      | —             | 100+ recipes, 12 compiled anchors                    |
-| F. Guided Workbench flow  | planned      | —             | browser flow and role simulation evidence            |
-| G. Release                | planned      | —             | independent gates and final record                   |
+Train shape follows the Goal Design spec (six trains; Train B's completion
+gate is "Control Plane APIs, Workbench review, fixture planner, guarded model
+adapter").
+
+| Train                     | Tasks                    | State        | Latest commit | Evidence                                             |
+| ------------------------- | ------------------------ | ------------ | ------------- | ---------------------------------------------------- |
+| A. Composition contracts  | 1                        | reviewed     | e13bef1       | RequirementSpec, plan, decision, recipe schema tests |
+| B. Planner and review     | 2, 3, 4, 8               | ready_for_qa | 74e918d       | deterministic plan, Draft-only review tests, Control Plane APIs |
+| C. Foundry quality system | 5                        | planned      | —             | family manifest, provenance, matrix, promotion tests |
+| D. Capability batches     | 6                        | planned      | —             | 25–35 eligible families, two Profiles each           |
+| E. Portfolio proof        | 7                        | planned      | —             | 100+ recipes, 12 compiled anchors                    |
+| F. Release                | 9                        | planned      | —             | independent gates and final record                   |
 
 ## Iteration record
 
@@ -189,7 +192,7 @@ fixture operations, multi-provider dependency closure, admission priority,
 digest known-answer). State: Train B `ready_for_qa` at `64e954b1`, pending
 re-verification task review before `reviewed`.
 
-### 2026-08-08 — Task 3 (Train C) implementing: Control Plane plan review
+### 2026-08-08 — Task 3 (Train B) implemented: Control Plane plan review
 
 `CompositionReview` persistence (schema + handwritten migration), the
 deterministic planning seam (`COMPOSITION_PLANNER` backed by
@@ -200,7 +203,10 @@ requirement creation (persisted-key redaction via strict
 storage, checksum-bound reviewer decisions, and application of only the
 approved constrained Diff through the existing Draft lifecycle. Control
 Plane suite 174/174 (16 files; +23 composition tests), typecheck, Prettier
-lint, and build green. Uncommitted.
+lint, and build green. Commit `74e918d`
+(`feat(control-plane): review governed composition plans`) pushed; worktree
+clean. State: Train B `ready_for_qa` (Tasks 2–3), awaiting independent gates
+on `74e918d` before `reviewed`.
 
 ## Required evidence per promoted family
 

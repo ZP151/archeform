@@ -95,16 +95,18 @@ release review, and PM gate all PASS; the PM holds it at `reviewed` until
 every train is accepted). Train B is `ready_for_qa` at `64e954b1`, pending
 re-verification task review.
 
-Train C (Task 3) is `implementing`: the Control Plane now persists governed
-`CompositionReview` cycles (schema + handwritten migration), plans through
-the deterministic `COMPOSITION_PLANNER` seam (empty staged catalogue until
-the 100+ recipe portfolio lands), records reviewer decisions bound to the
-stored plan and Diff checksums, and applies only the approved constrained
-Diff through the existing Draft lifecycle. Control Plane suite 174/174
-across 16 files (+23 composition review tests: published-graph refusal,
-stale-Draft refusal, unapproved-plan refusal, altered checksum refusal,
-idempotent decisions, persisted-key redaction), typecheck, Prettier lint,
-and build all green. Uncommitted.
+Train B's Control Plane review (Task 3) is implemented at `74e918d`: the
+Control Plane persists governed `CompositionReview` cycles (schema +
+handwritten migration), plans through the deterministic
+`COMPOSITION_PLANNER` seam (empty staged catalogue until the 100+ recipe
+portfolio lands), records reviewer decisions bound to the stored plan and
+Diff checksums, and applies only the approved constrained Diff through the
+existing Draft lifecycle. Control Plane suite 174/174 across 16 files (+23
+composition review tests: published-graph refusal, stale-Draft refusal,
+unapproved-plan refusal, altered checksum refusal, idempotent decisions,
+persisted-key redaction), typecheck, Prettier lint, and build all green.
+Migration DDL verified against Prisma-generated schema. Train B is
+`ready_for_qa` at `74e918d` (Tasks 2–3 landed), pending independent gates.
 
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including

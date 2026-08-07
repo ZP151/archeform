@@ -95,14 +95,17 @@
   reject the plan, and apply only the approved Diff through the existing Draft
   lifecycle service.
 
-- [ ] Write failing tests for published-graph refusal, stale Draft refusal,
+- [x] Write failing tests for published-graph refusal, stale Draft refusal,
       unapproved-plan refusal, altered plan/diff checksum refusal, idempotent
       decisions, and persisted-key redaction.
-- [ ] Run focused Control Plane suites and confirm RED.
-- [ ] Add the Prisma migration, service/controller, and composition queue only
-      if background planning is proven necessary by a deterministic test.
-- [ ] Run Control Plane tests, typecheck, lint, and build.
-- [ ] Commit `feat(control-plane): review governed composition plans`.
+- [x] Run focused Control Plane suites and confirm RED.
+- [x] Add the Prisma migration and service/controller; no background queue was
+      needed — the deterministic planner answers synchronously and the review
+      boundary is request-scoped.
+- [x] Run Control Plane tests, typecheck, lint, and build (174/174, 16 files;
+      migration DDL verified against Prisma-generated schema).
+- [x] Commit `feat(control-plane): review governed composition plans`
+      (`74e918d`).
 
 ### Task 4: Add deterministic and guarded AI planning adapters
 
