@@ -299,6 +299,36 @@ green. Pushed; worktree clean. State: Train B `ready_for_qa` at `ed82b17`
 (Tasks 2–3 landed), pending re-verification gates on `ed82b17` before
 `reviewed`.
 
+### 2026-08-08 — Task 3 accepted: both re-verification gates pass at `342b19c`
+
+Independent task review at `342b19c` returned `TASK_REVIEW_PASS` with no
+findings: NEW-1 verified closed (walker fails key hits with the container
+keyPath only — `composition-shared.ts:123`; regression test
+`composition-plan.test.ts:659-698` would fail pre-repair); RV-1/RV-2 hold
+at HEAD (`[\s\S]*` lookahead byte-verified against `38618ad..342b19c`,
+anchored alternatives unchanged); F-1/F-2/TR-5/TR-6 hold; guard order
+intact (decide idempotency → status → draftId → planChecksum →
+diffChecksum); path-guard logic 0-line diff since `e13bef1`; Train A
+additivity confirmed (all three repair commits strictly narrowing — no
+previously-rejected input accepted); suites graph 160/160, capabilities
+313/313, control-plane 177/177, adapters 34/34; worktree byte-clean, HEAD
+unmoved.
+
+Independent behavioral QA at `342b19c` returned `QA_PASS` (27/27 probes,
+no findings): multi-line URL/www/`__proto__` leaves and business text
+refused at requestPlan and at the stored-diff hash (no update, no
+`appendDraftRevision`); `__proto__` (JSON.parse-built own key),
+`constructor`, nested `prototype`, and URL object keys refused at both
+surfaces; rejection messages match `/carries unsafe material/` and never
+echo `__proto__`, the URL, or `www.` (container-only naming); F-1/F-2/TR-5
+re-probed green; all six TR-6 guards fire by their exact messages;
+redaction holds; clean E2E persists only safe material and applies through
+`lifecycle.appendDraftRevision`.
+
+Per the state vocabulary the PM alone advances a state: the PM records
+Train B Task 3 `ready_for_qa -> reviewed` at `342b19c` (Tasks 2–3
+reviewed; ledger sections above cite every repair round).
+
 ## Required evidence per promoted family
 
 | Evidence    | Required form                                                       |

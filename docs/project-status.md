@@ -157,6 +157,16 @@ control-plane 177/177 against the rebuilt dist, adapters 34/34, Prettier
 lint green (formatting follow-up `ed82b17`). Train B is `ready_for_qa` at
 `ed82b17` (Tasks 2–3 landed), pending re-verification gates on `ed82b17`.
 
+Task 3's re-verification round 3 at `342b19c` closed both gates with no
+findings: task review TASK_REVIEW_PASS (NEW-1/RV-1/RV-2/F-1/F-2/TR-5/TR-6
+all verified closed at file:line; guard order intact; Train A additivity
+confirmed) and behavioral QA QA_PASS 27/27 (multi-line and object-key
+material refused at both the plan and stored-diff surfaces with no
+persistence or Draft mutation; rejection messages never echo the material;
+all six guards fire by their exact messages; redaction and the safe E2E
+path hold). The PM records Train B Task 3 `ready_for_qa -> reviewed` at
+`342b19c`; Tasks 2–3 are `reviewed`.
+
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including
 Preview stop and cleanup. This is not production readiness and does not alter

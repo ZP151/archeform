@@ -178,7 +178,10 @@ with one P2 (NEW-1: key failures echoed the offending key into the
 rejection message), repaired at `f337174` — the walker names the container
 only and a regression test asserts non-echo for `__proto__`/URL keys
 (graph 160/160, capabilities 313/313, control-plane 177/177); it is
-`ready_for_qa` at `ed82b17` pending re-verification gates.
+`ready_for_qa` at `ed82b17` pending re-verification gates. Round 3 at
+`342b19c` closed both re-verification gates with no findings (task review
+PASS; behavioral QA 27/27), and the PM records Task 3 `ready_for_qa ->
+reviewed` — Train B Tasks 2–3 are `reviewed` at `342b19c`.
 
 ## P2 and P3
 

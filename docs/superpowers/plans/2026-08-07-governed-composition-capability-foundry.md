@@ -131,6 +131,11 @@
       `__proto__` and URL keys. Fresh verification: graph 160/160,
       capabilities 313/313, control-plane 177/177, adapters 34/34, Prettier
       lint green (`ed82b17`).
+- [x] Task 3 accepted at `342b19c`: re-verification task review
+      TASK_REVIEW_PASS (no findings; NEW-1/RV-1/RV-2/F-1/F-2/TR-5/TR-6 all
+      verified closed) and behavioral QA QA_PASS 27/27 (no findings). The
+      PM records Task 3 `ready_for_qa -> reviewed`; Train B Tasks 2–3 are
+      `reviewed`.
 
 ### Task 4: Add deterministic and guarded AI planning adapters
 
