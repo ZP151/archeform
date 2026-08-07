@@ -219,8 +219,12 @@ audit/crud/notification/workflow/identity-context/location-context, commerce
 catalog/cart/line-configuration/inventory/inventory-ledger/order/
 simulated-payment, restaurant.menu). `docs/foundry/capability-matrix.md` and
 `docs/foundry/promotion-policy.md` record the honest split; the
-manifest-readiness repair for the 14 is Train D's next batch
-(capabilities 327/327, graph 175/175, control-plane 183/183).
+manifest-readiness repair for the 14 is Train D's next batch; the gate
+round returned task review TASK_REVIEW_PASS and behavioral QA QA_FAIL with
+two P2 runtime-immutability gaps (QA-1: registry records mutable; QA-2:
+matrix output mutable), repaired by deep-freezing the declared records and
+the matrix result with two runtime pins (capabilities 329/329, graph
+175/175, control-plane 183/183).
 
 ## P2 and P3
 

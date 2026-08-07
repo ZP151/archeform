@@ -529,6 +529,29 @@ the honest verdict is the correct one). Suite at final state: capabilities
 327/327 (24 files), graph 175/175, control-plane 183/183, typecheck and
 Prettier green.
 
+### 2026-08-08 — Task 5 gate round: QA_FAIL with two P2 immutability gaps, repaired
+
+The task-review gate returned TASK_REVIEW_PASS with no findings (23/23
+declared digests independently verified against the on-disk manifests and
+the registry alignment test; honest 9/14 split reproduced from the
+admission predicates; docs match the matrix; capabilities 327/327). One
+doc-drift observation (plan Interfaces line named `FoundryEvidenceV1`;
+implemented type is `FoundryFamilyEvidenceV1`) was aligned at `5473726`.
+The sequential behavioral QA gate then returned **QA_FAIL with two P2
+findings (QA-1, QA-2)**: the declared registry's array was frozen but its
+record elements were mutable at runtime (`record.licence = …` succeeded),
+and the matrix output (`rows`, every row, `reasonCodes`, `counts`) was not
+runtime-frozen — strict-mode assignments silently rewrote verdicts. TS
+`readonly` alone was compile-time-only. Repaired with the established
+module-local `deepFreeze` idiom (already used in composition-planner.ts and
+composition.ts): each declared record is deep-frozen in `declareFamily`,
+and `buildFoundryMatrix` returns a deep-frozen result. Two new runtime pins
+(after RED: 2 failed | 14 passed) assert `Object.isFrozen` on the registry,
+every record and its profile-lock array, the matrix rows/counts/reason
+codes, and that strict-mode assignment to `counts` throws. Suite at final
+state: capabilities 329/329 (24 files; 327 + 2 pins), graph 175/175,
+control-plane 183/183, typecheck, Prettier, and build green.
+
 ## Required evidence per promoted family
 
 | Evidence    | Required form                                                       |

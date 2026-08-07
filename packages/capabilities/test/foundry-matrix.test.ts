@@ -305,6 +305,23 @@ describe("buildFoundryMatrix", () => {
     ]);
   });
 
+  it("deep-freezes the matrix output so callers cannot rewrite verdicts", () => {
+    // The verdicts are computed once and must be read-only (QA-2): rows,
+    // every row (with its reason codes), and counts are frozen at build
+    // time, and strict-mode assignment throws instead of silently
+    // rewriting a verdict.
+    const matrix = buildFoundryMatrix([asset], [recordFixture()]);
+    expect(Object.isFrozen(matrix.rows)).toBe(true);
+    expect(Object.isFrozen(matrix.counts)).toBe(true);
+    for (const row of matrix.rows) {
+      expect(Object.isFrozen(row)).toBe(true);
+      expect(Object.isFrozen(row.reasonCodes)).toBe(true);
+    }
+    expect(() => {
+      (matrix.counts as { eligible: number }).eligible = 5;
+    }).toThrow(TypeError);
+  });
+
   it("orders rows stably by family key", () => {
     const matrix = buildFoundryMatrix(
       [otherAsset, asset],

@@ -66,6 +66,18 @@ describe("declaredFoundryFamilyEvidence", () => {
     }
   });
 
+  it("is runtime-frozen so caller mutation cannot rewrite verdicts", () => {
+    // The readonly contract is enforced at runtime (QA-1): the declared
+    // registry and every record — including its profile-lock array — are
+    // deep-frozen, so a caller mutating a field changes nothing for the
+    // matrix or for any other caller.
+    expect(Object.isFrozen(declaredFoundryFamilyEvidence)).toBe(true);
+    for (const record of declaredFoundryFamilyEvidence) {
+      expect(Object.isFrozen(record)).toBe(true);
+      expect(Object.isFrozen(record.profileLocks)).toBe(true);
+    }
+  });
+
   it("claims no two-Profile proof until verifier evidence lands", () => {
     // Honest starting state: every declared record has empty profile locks,
     // so the matrix can never report an eligible family this round. The

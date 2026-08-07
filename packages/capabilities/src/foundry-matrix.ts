@@ -120,10 +120,24 @@ function rowFor(
   };
 }
 
+/** Runtime-enforced immutability: freezes an object and every nested value. */
+function deepFreeze<T>(value: T): T {
+  if (value && typeof value === "object") {
+    for (const nested of Object.values(value as Record<string, unknown>)) {
+      deepFreeze(nested);
+    }
+    return Object.freeze(value);
+  }
+  return value;
+}
+
 /**
  * Builds the Foundry matrix over the current families (parameterized so
  * tests can inject synthetic assets and evidence records). Rows are sorted
  * by family key for stable output; counts always sum to the row count.
+ * The whole result — rows, every row with its reason codes, and counts —
+ * is deep-frozen so a caller can never rewrite a verdict after build
+ * (QA-2).
  */
 export function buildFoundryMatrix(
   assets: readonly CapabilityAssetV1[] = currentCapabilityAssets,
@@ -136,7 +150,7 @@ export function buildFoundryMatrix(
   const count = (result: FoundryMatrixResultV1) =>
     rows.filter((row) => row.result === result).length;
 
-  return {
+  return deepFreeze({
     rows,
     counts: {
       currentFamilies: rows.length,
@@ -148,5 +162,5 @@ export function buildFoundryMatrix(
       staleEvidence: count("stale-evidence"),
       duplicateEvidence: count("duplicate-evidence"),
     },
-  };
+  });
 }

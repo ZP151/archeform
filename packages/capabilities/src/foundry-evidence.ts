@@ -52,20 +52,32 @@ export function familyEvidenceToAdmissionEvidence(
   };
 }
 
+/** Runtime-enforced immutability: freezes an object and every nested value. */
+function deepFreeze<T>(value: T): T {
+  if (value && typeof value === "object") {
+    for (const nested of Object.values(value as Record<string, unknown>)) {
+      deepFreeze(nested);
+    }
+    return Object.freeze(value);
+  }
+  return value;
+}
+
 /**
  * Shared first-party policy fields for the declared registry: the repo
  * licence is MIT (LICENSE), every current family is first-party owned by
  * the factory platform, and the deprecation and compatibility policy is
  * uniform across families. Digests are the literal reviewed values — the
  * coverage self-check test in foundry-evidence.test.ts enforces that each
- * still matches its current asset.
+ * still matches its current asset. Records are deep-frozen so a caller can
+ * never rewrite registry state at runtime (QA-1).
  */
 function declareFamily(
   key: string,
   version: string,
   manifestDigest: string,
 ): FoundryFamilyEvidenceV1 {
-  return {
+  return deepFreeze({
     key,
     version,
     manifestDigest,
@@ -76,7 +88,7 @@ function declareFamily(
     compatibilityDeclaration: "API-compatible within the major version",
     digestVerified: true,
     profileLocks: [],
-  };
+  });
 }
 
 /** One declared evidence record per current capability family (23). */

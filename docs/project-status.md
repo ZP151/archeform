@@ -222,9 +222,15 @@ commerce catalog/cart/line-configuration/inventory/inventory-ledger/order/
 simulated-payment, restaurant.menu). That manifest-readiness gap is Train
 D's next batch work. Public evidence: `docs/foundry/capability-matrix.md`
 (source-free summary) and `docs/foundry/promotion-policy.md`. TDD RED
-evidence: 11 failed | 0 passed before implementation. Suites at final
-state: capabilities 327/327 (24 files), graph 175/175, control-plane
-183/183, typecheck, Prettier, and build green. Train D is `implementing`.
+evidence: 11 failed | 0 passed before implementation. The gate round
+returned task review TASK_REVIEW_PASS (one doc-drift observation aligned
+at `5473726`) and behavioral QA QA_FAIL with two P2 runtime-immutability
+gaps (QA-1: declared registry record elements were mutable; QA-2: matrix
+output rows/counts were mutable) — repaired with the established
+`deepFreeze` idiom so no caller can rewrite a verdict at runtime, plus two
+`Object.isFrozen`/throw pins. Suites at final state: capabilities 329/329
+(24 files), graph 175/175, control-plane 183/183, typecheck, Prettier, and
+build green. Train D is `implementing`, pending re-verification gates.
 
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including
