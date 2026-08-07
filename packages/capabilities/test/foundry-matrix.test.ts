@@ -239,17 +239,17 @@ describe("buildFoundryMatrix", () => {
   });
 
   it("reports the declared registry honestly with zero eligible families", () => {
-    // Default inputs: the 26 current families with their declared records.
+    // Default inputs: the 27 current families with their declared records.
     // The matrix claims nothing the evidence does not prove: every current
     // manifest declares a binding contract (Task 6 Batch 0 repaired all 23,
     // Batch 1 adds families that declare it from birth), but no family has
-    // two-Profile locks yet, so the honest verdict is zero eligible — all 26
+    // two-Profile locks yet, so the honest verdict is zero eligible — all 27
     // quarantined for missing two-Profile proof, none rejected. The matrix
     // exists to surface exactly this split.
     const matrix = buildFoundryMatrix();
-    expect(matrix.counts.currentFamilies).toBe(26);
+    expect(matrix.counts.currentFamilies).toBe(27);
     expect(matrix.counts.eligible).toBe(0);
-    expect(matrix.counts.quarantined).toBe(26);
+    expect(matrix.counts.quarantined).toBe(27);
     expect(matrix.counts.rejected).toBe(0);
     expect(matrix.counts.missingEvidence).toBe(0);
     expect(matrix.counts.staleEvidence).toBe(0);
@@ -273,7 +273,7 @@ describe("buildFoundryMatrix", () => {
           row.reasonCodes[0] === "missing-binding-contract",
       ),
     ).toBe(true);
-    // Pin the exact split: all 26 current families satisfy the manifest
+    // Pin the exact split: all 27 current families satisfy the manifest
     // contract (Task 6 Batch 0 repaired the 23 pre-existing manifests, Batch
     // 1 declares it from birth), so the whole set is quarantined for missing
     // two-Profile proof and nothing is rejected. The counts tripwire catches
@@ -288,6 +288,7 @@ describe("buildFoundryMatrix", () => {
       "commerce.order",
       "commerce.order-operations",
       "commerce.simulated-payment",
+      "core.approvals",
       "core.audit",
       "core.crud",
       "core.files-media",

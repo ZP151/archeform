@@ -1,0 +1,10 @@
+{
+  "status": "verified",
+  "checks": [
+    "request-approval",
+    "append-capability-event",
+    "approval-entity-binding",
+    "approval-role-binding",
+    "remove-effect"
+  ]
+}

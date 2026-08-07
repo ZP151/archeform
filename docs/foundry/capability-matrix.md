@@ -13,15 +13,15 @@ promotion requirement.
 
 | Count            | Value |
 | ---------------- | ----- |
-| Current families | 26    |
+| Current families | 27    |
 | Eligible         | 0     |
-| Quarantined      | 26    |
+| Quarantined      | 27    |
 | Rejected         | 0     |
 
 **Zero families are eligible today, by design**: every current family
 declares the strict binding contract (Task 6 Batch 0 repaired the 23
 pre-existing manifests; Batch 1 declares it from birth), so none are
-rejected; all 26 are quarantined solely for lacking two independent
+rejected; all 27 are quarantined solely for lacking two independent
 Profile verifier locks. The matrix surfaces exactly this state so the
 remaining work is visible and accountable.
 
@@ -29,16 +29,17 @@ remaining work is visible and accountable.
 
 | Category       | Families                                                                                                                   |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Core (11)      | audit, crud, workflow, notification, identity-context, identity-policy, policy-declarations, location-context, files-media, search, scheduling |
+| Core (12)      | audit, crud, workflow, notification, identity-context, identity-policy, policy-declarations, location-context, files-media, search, scheduling, approvals |
 | Commerce (9)   | catalog, cart, line-configuration, money-pricing, inventory, inventory-ledger, order, order-operations, simulated-payment  |
 | Restaurant (6) | table-session, menu, ordering, kitchen, cashier, reporting                                                                 |
 
-## Quarantined — manifest requirements met, two-Profile proof outstanding (26)
+## Quarantined — manifest requirements met, two-Profile proof outstanding (27)
 
 All current families satisfy the manifest-side requirements (binding
 contract, verification state, fixtures, contract tests, output slots) and
 are quarantined solely for lacking two independent Profile verifier locks:
 
+- core.approvals
 - core.audit
 - core.crud
 - core.files-media

@@ -1,0 +1,38 @@
+{
+  "apiVersion": "factory.capability/v1",
+  "key": "core.approvals",
+  "version": "1.0.0",
+  "category": "core",
+  "name": "Approvals",
+  "description": "Requests a deterministic approval from a declared policy role for a domain entity.",
+  "packageRoot": "packages/capabilities/assets/core.approvals/1.0.0",
+  "manifestDigest": "sha256:26a2e7ccc3f59a97879e6797370d23b629499810403061c7026f7c0e365684be",
+  "lifecycle": "golden",
+  "bindingContract": "factory.capability-binding/v1",
+  "profiles": [],
+  "effects": ["approval.request"],
+  "inputSchema": [
+    { "key": "approvalEntity", "type": "domain.entity", "required": true },
+    { "key": "approvalRole", "type": "policy.role", "required": true }
+  ],
+  "outputSlots": ["api.runtime", "flow.effect"],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/core.approvals.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:131d6bfe54716b07d718ca07aea20b01f2dbc5feb411b7d20dcdd3e2a6ff2d26"
+    }
+  ],
+  "parameters": [
+    { "key": "approvalEntity", "type": "graph-symbol", "required": true },
+    { "key": "approvalRole", "type": "graph-symbol", "required": true }
+  ],
+  "provides": [{ "interfaceKey": "approval.request", "version": "v1" }],
+  "verification": {
+    "fixture": "fixtures/default.json",
+    "contractTest": "tests/contract.json",
+    "status": "verified"
+  }
+}
