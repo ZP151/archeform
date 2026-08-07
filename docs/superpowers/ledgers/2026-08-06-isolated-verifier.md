@@ -1176,3 +1176,17 @@ records fresh independent review, QA, release review, PM acceptance, a clean
 worktree, and a remote-reachable commit. The next Goal after completion is
 staged AI composition (`RequirementSpec -> CompositionPlan -> constrained
 Graph Diff`).
+
+## Cross-link: Task 6/7 finalization
+
+Task 6 (queued verification failure boundary and Docker acceptance) and Task 7
+(independent review, QA, release review, PM acceptance) are finalized in the
+2026-08-07 continuation ledger:
+`docs/superpowers/ledgers/2026-08-07-isolated-verifier-finalization.md`, with
+the runtime evidence in `docs/acceptance/isolated-verifier-expense.md` and the
+release hand-off in `docs/acceptance/isolated-verifier-release.md`. The
+Docker-backed acceptance (`pnpm verify:isolated-verifier-expense`) exits 0 at
+commits `41fae0f`, `ee97b97`, and the final reviewed commit `924bd5b`
+(evidence digest `sha256:433b0852…343f`, compilation
+`cmsj1uvkz0001w4eo7o1gfkad`, artifact digest byte-identical across the green
+runs).

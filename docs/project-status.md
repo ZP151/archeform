@@ -34,13 +34,22 @@ the historical evidence below.
 
 The P0 Compiler Target Plugin Kernel Goal is accepted at branch tip `1137e1e`;
 its database target migration was accepted at `76933ca`. The P0 Isolated
-Verifier Tasks 1–5 are accepted and the interrupted Task 6 implementation is
-present but uncommitted on `feat/isolated-verifier`. Fresh deterministic gates
-are green (`@factory/compiler-worker` 153/153, `@factory/control-plane` 149/149,
-`@factory/graph` 102/102, Worker/Control Plane typechecks), but Docker Desktop
-was unavailable during the latest inspection, so no real end-to-end acceptance
-is claimed. The active continuation Goal is documented at
-`docs/superpowers/specs/2026-08-07-isolated-verifier-finalization-goal-design.md`.
+Verifier is now finalized and accepted on `feat/isolated-verifier` at commit
+`924bd5b`: the queued verification failure boundary is closed (`4c70d2c`), the
+real Docker acceptance passes (`41fae0f`, first green run), was re-run green
+after review hardening (`ee97b97`), and the final acceptance re-run at the
+reviewed commit `924bd5b` returned the acceptance evidence digest
+`sha256:433b08523a0924033dd4c949ad2b2034e445c23ae1ae7c5c6703fb262819343f`
+(compilation `cmsj1uvkz0001w4eo7o1gfkad`, artifact digest byte-identical
+across all green runs). The Worker suite gate is reproducible at `924bd5b`
+(vitest timeout config plus harness and diagnostics hardening). Fresh
+deterministic gates are green (`@factory/compiler-worker` 163/163 across 16
+files, `@factory/graph` 103/103, `@factory/control-plane` 150/150,
+`@factory/compiler` 330/330 with typecheck/lint/build). Independent task
+review, behavioral QA, release review, and PM acceptance all close at the
+final commit `924bd5b`. See `docs/acceptance/isolated-verifier-expense.md`
+and `docs/acceptance/isolated-verifier-release.md`, with the governing Goal
+at `docs/superpowers/specs/2026-08-07-isolated-verifier-finalization-goal-design.md`.
 
 ## Durable notification outbox across Expense and Ecommerce — 2026-08-01
 

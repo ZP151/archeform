@@ -46,7 +46,7 @@ supports -> plan -> render -> validate
   responsibility-based extraction; no generic utils/helpers modules were
   introduced.
 
-### Verification loop — active Goal: P0 Isolated Verifier finalization
+### Verification loop — satisfied: P0 Isolated Verifier finalization
 
 Every generated-application acceptance path must run:
 
@@ -62,12 +62,22 @@ resource cleanup. Safe diagnosis identifies Graph-, capability-, binding-, or
 target-level causes and proposes a constrained new Draft Diff; it must not
 modify generated source, runtime state, Published Graphs, or Compilations.
 
-The Compiler Target Plugin Kernel and its documentation, policy, and database
-parity migrations are accepted. Isolated Verifier Tasks 1–5 are accepted; the
-current executable continuation plan is
-`docs/superpowers/plans/2026-08-07-isolated-verifier-finalization.md`, with the
-PM ledger at
-`docs/superpowers/ledgers/2026-08-07-isolated-verifier-finalization.md`.
+**Satisfied on 2026-08-07** by the P0 Isolated Verifier Finalization Goal
+(`docs/superpowers/ledgers/2026-08-07-isolated-verifier-finalization.md`). The
+queued verification run always reaches a terminal status (failed jobs are
+terminated with a bounded diagnostic; stalled and queue-layer failures are
+observed), and the real Docker acceptance
+(`pnpm verify:isolated-verifier-expense`) proves compile, isolated boot,
+migration, health, API, role journeys, authorization denial, idempotent
+retry, cleanup, generated journey tests, and safe allowlisted evidence end to
+end at commits `4c70d2c`/`41fae0f`/`ee97b97`/`765dd39`/`924bd5b` (see
+`docs/acceptance/isolated-verifier-expense.md` and
+`docs/acceptance/isolated-verifier-release.md`). The Compiler Target Plugin
+Kernel and its documentation, policy, and database parity migrations were
+already accepted; Isolated Verifier Tasks 1–5 were accepted in the 2026-08-06
+ledger and Task 6 finalization is now complete. Safe diagnosis remains scoped
+to a reviewable Draft Diff proposal and never patches generated source,
+runtime state, Published Graphs, or Compilations.
 
 P0 acceptance gates:
 
