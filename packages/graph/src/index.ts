@@ -147,9 +147,14 @@ function decodePointer(path: string): string[] {
 
 function assertPermittedDiffPath(path: string): string[] {
   const segments = decodePointer(path);
+  // Check the decoded segments: `~1`-escaped pointers decode to `/`, so a
+  // path like `/page/~1__proto__` must be rejected after decoding, and any
+  // segment carrying prototype material is never legitimate Graph structure.
   if (
-    segments.some((segment) =>
-      ["__proto__", "constructor", "prototype"].includes(segment),
+    segments.some(
+      (segment) =>
+        segment.includes("__proto__") ||
+        ["constructor", "prototype"].includes(segment),
     )
   ) {
     throw new GraphDiffError(
@@ -175,6 +180,11 @@ function assertPermittedDiffPath(path: string): string[] {
   if (root === "metadata" && second !== "name") {
     throw new GraphDiffError(
       "Graph Diff may update metadata.name but never Graph identity or workspace scope.",
+    );
+  }
+  if (root === "integration" && second === undefined) {
+    throw new GraphDiffError(
+      "Graph Diff cannot replace the whole integration subtree (capability assets and composition profile are plan-selected).",
     );
   }
   if (

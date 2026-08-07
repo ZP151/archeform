@@ -8,11 +8,13 @@ import {
   safeBusinessTextSchema,
 } from "./composition-shared.js";
 
-const namedItemSchema = z.object({
-  key: identifierSchema,
-  label: safeBusinessTextSchema.max(160),
-  description: safeBusinessTextSchema.max(1000).optional(),
-});
+const namedItemSchema = z
+  .object({
+    key: identifierSchema,
+    label: safeBusinessTextSchema.max(160),
+    description: safeBusinessTextSchema.max(1000).optional(),
+  })
+  .strict();
 
 /**
  * A Factory-owned requirement record. It carries outcome, actors, domain
@@ -30,36 +32,42 @@ export const requirementSpecSchema = z
     workflows: z.array(namedItemSchema).max(40),
     constraints: z
       .array(
-        z.object({
-          key: identifierSchema,
-          kind: z.enum([
-            "performance",
-            "security",
-            "compliance",
-            "usability",
-            "availability",
-            "cost",
-          ]),
-          statement: safeBusinessTextSchema.max(1000),
-        }),
+        z
+          .object({
+            key: identifierSchema,
+            kind: z.enum([
+              "performance",
+              "security",
+              "compliance",
+              "usability",
+              "availability",
+              "cost",
+            ]),
+            statement: safeBusinessTextSchema.max(1000),
+          })
+          .strict(),
       )
       .max(30),
     openQuestions: z
       .array(
-        z.object({
-          question: safeBusinessTextSchema.max(500),
-          answer: safeBusinessTextSchema.max(1000).optional(),
-        }),
+        z
+          .object({
+            question: safeBusinessTextSchema.max(500),
+            answer: safeBusinessTextSchema.max(1000).optional(),
+          })
+          .strict(),
       )
       .max(30),
     acceptanceScenarios: z
       .array(
-        z.object({
-          key: identifierSchema,
-          given: safeBusinessTextSchema.max(1000),
-          when: safeBusinessTextSchema.max(1000),
-          then: safeBusinessTextSchema.max(1000),
-        }),
+        z
+          .object({
+            key: identifierSchema,
+            given: safeBusinessTextSchema.max(1000),
+            when: safeBusinessTextSchema.max(1000),
+            then: safeBusinessTextSchema.max(1000),
+          })
+          .strict(),
       )
       .max(40),
   })

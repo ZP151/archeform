@@ -195,9 +195,14 @@ function decodePointer(path: string): string[] {
 
 function assertSafeCompositionOperationPath(path: string): void {
   const segments = decodePointer(path);
+  // Check the decoded segments: `~1`-escaped pointers decode to `/`, so a
+  // path like `/page/~1__proto__` must be rejected after decoding, and any
+  // segment carrying prototype material is never legitimate Graph structure.
   if (
-    segments.some((segment) =>
-      ["__proto__", "constructor", "prototype"].includes(segment),
+    segments.some(
+      (segment) =>
+        segment.includes("__proto__") ||
+        ["constructor", "prototype"].includes(segment),
     )
   ) {
     throw new CompositionError(
@@ -213,6 +218,11 @@ function assertSafeCompositionOperationPath(path: string): void {
   if (root === "metadata" && second !== "name") {
     throw new CompositionError(
       "Composition Diff may update metadata.name but never Graph identity or workspace scope.",
+    );
+  }
+  if (root === "integration" && second === undefined) {
+    throw new CompositionError(
+      "Composition Diff cannot replace the whole integration subtree (capability assets and composition profile are plan-selected).",
     );
   }
   if (

@@ -87,12 +87,14 @@ export function parseProfileRecipe(input: unknown): ProfileRecipeV1 {
   }
 
   const seenBindings = new Set<string>();
+  const boundKeys = new Set<string>();
   for (const binding of recipe.bindings) {
     if (!declaredKeyOnly.has(binding.capabilityKey)) {
       throw new CompositionError(
         `Profile recipe '${recipe.id}' declares a binding for capability '${binding.capabilityKey}' that it never locks.`,
       );
     }
+    boundKeys.add(binding.capabilityKey);
     const id = `${binding.capabilityKey}:${binding.inputKey}`;
     if (seenBindings.has(id)) {
       throw new CompositionError(
@@ -100,6 +102,13 @@ export function parseProfileRecipe(input: unknown): ProfileRecipeV1 {
       );
     }
     seenBindings.add(id);
+  }
+  for (const lock of recipe.capabilities) {
+    if (!boundKeys.has(lock.key)) {
+      throw new CompositionError(
+        `Profile recipe '${recipe.id}' locks capability '${lock.key}' but declares no binding requirement for it.`,
+      );
+    }
   }
 
   const seenSurfaces = new Set<string>();

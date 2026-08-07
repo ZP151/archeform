@@ -390,6 +390,104 @@ describe("CompositionDecisionV1 and Draft-only application", () => {
     ).toThrow(CompositionError);
   });
 
+  it("rejects a root-level /integration replace that rewrites the lock subtree", () => {
+    const plan = parseCompositionPlan(planFixture());
+    const rootReplace = {
+      apiVersion: "factory.graph-diff/v1",
+      operations: [
+        {
+          op: "replace",
+          path: "/integration",
+          value: {
+            providers: [],
+            capabilities: [],
+            assetLocks: [
+              {
+                key: "core.workflow",
+                version: "2.0.0",
+                packageRoot: "packages/capabilities/assets/core.workflow/2.0.0",
+                manifestDigest:
+                  "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+                lifecycle: "golden",
+              },
+            ],
+            compositionProfile: "expense-approval",
+          },
+        },
+      ],
+    };
+    expect(() =>
+      applyApprovedComposition(
+        approvedDecision(plan),
+        plan,
+        draft,
+        rootReplace,
+      ),
+    ).toThrow(CompositionError);
+  });
+
+  it("rejects root-level /integration removal", () => {
+    const plan = parseCompositionPlan(planFixture());
+    const rootRemove = {
+      apiVersion: "factory.graph-diff/v1",
+      operations: [{ op: "remove", path: "/integration" }],
+    };
+    expect(() =>
+      applyApprovedComposition(approvedDecision(plan), plan, draft, rootRemove),
+    ).toThrow(CompositionError);
+  });
+
+  it("rejects an escaped ~1__proto__ add path after pointer decoding", () => {
+    const plan = parseCompositionPlan(planFixture());
+    const escaped = {
+      apiVersion: "factory.graph-diff/v1",
+      operations: [
+        { op: "add", path: "/page/~1__proto__", value: { injected: true } },
+      ],
+    };
+    expect(() =>
+      applyApprovedComposition(approvedDecision(plan), plan, draft, escaped),
+    ).toThrow(CompositionError);
+  });
+
+  it("rejects prototype-key material in business text but keeps natural prose", () => {
+    for (const payload of ["__proto__", "constructor", "prototype"]) {
+      expect(() =>
+        parseCompositionPlan({
+          ...planFixture(),
+          explanation: payload,
+        }),
+      ).toThrow(CompositionError);
+    }
+    expect(() =>
+      parseCompositionPlan({
+        ...planFixture(),
+        explanation: "Reference __proto__ is never legitimate.",
+      }),
+    ).toThrow(CompositionError);
+    expect(
+      parseCompositionPlan({
+        ...planFixture(),
+        explanation: "The prototype journey was reviewed.",
+      }).explanation,
+    ).toBe("The prototype journey was reviewed.");
+  });
+
+  it("rejects www-prefixed domains while keeping bare placeholder domains", () => {
+    expect(() =>
+      parseCompositionPlan({
+        ...planFixture(),
+        explanation: "See www.example.com for the ledger policy.",
+      }),
+    ).toThrow(CompositionError);
+    expect(
+      parseCompositionPlan({
+        ...planFixture(),
+        explanation: "See example.com for the ledger policy.",
+      }).explanation,
+    ).toBe("See example.com for the ledger policy.");
+  });
+
   it("rejects a Diff with an operation the plan never declared", () => {
     const plan = parseCompositionPlan(planFixture());
     const undeclared = {

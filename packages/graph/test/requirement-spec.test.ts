@@ -102,6 +102,47 @@ describe("RequirementSpecV1", () => {
     }
   });
 
+  it("rejects unknown keys nested inside actor and scenario items", () => {
+    expect(() =>
+      parseRequirementSpec({
+        ...requirementFixture,
+        actors: [
+          ...requirementFixture.actors,
+          { key: "auditor", label: "Auditor", rawModelResponse: "..." },
+        ],
+      }),
+    ).toThrow(CompositionError);
+    expect(() =>
+      parseRequirementSpec({
+        ...requirementFixture,
+        acceptanceScenarios: [
+          ...requirementFixture.acceptanceScenarios,
+          {
+            key: "audit-trail",
+            given: "a",
+            when: "b",
+            then: "c",
+            prompts: ["..."],
+          },
+        ],
+      }),
+    ).toThrow(CompositionError);
+  });
+
+  it("rejects prototype-key material in business text", () => {
+    for (const outcome of ["__proto__", "constructor", "prototype"]) {
+      expect(() =>
+        parseRequirementSpec({ ...requirementFixture, outcome }),
+      ).toThrow(CompositionError);
+    }
+    expect(
+      parseRequirementSpec({
+        ...requirementFixture,
+        outcome: "The prototype covers the full journey.",
+      }).outcome,
+    ).toBe("The prototype covers the full journey.");
+  });
+
   it("rejects empty open questions and untyped constraints", () => {
     expect(() =>
       parseRequirementSpec({

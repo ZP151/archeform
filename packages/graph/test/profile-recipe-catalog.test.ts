@@ -61,6 +61,18 @@ describe("ProfileRecipeV1", () => {
     ).toThrow(CompositionError);
   });
 
+  it("rejects a recipe that locks a capability without binding requirements", () => {
+    expect(() =>
+      parseProfileRecipe({
+        ...recipeFixture,
+        capabilities: [
+          { key: "core.workflow", version: "1.1.0" },
+          { key: "core.notification", version: "1.1.1" },
+        ],
+      }),
+    ).toThrow(CompositionError);
+  });
+
   it("rejects a binding for a capability the recipe never declares", () => {
     expect(() =>
       parseProfileRecipe({

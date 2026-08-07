@@ -33,14 +33,18 @@ export const compositionSurfaceSchema = z.enum([
 ]);
 
 /**
- * Business text may never smuggle URLs, absolute or Windows paths (even
- * mid-sentence), traversal segments, or whitespace-only payloads. Written as
- * a positive assertion of safety (zod `.regex()` requires the text to match)
- * so the schema stays a ZodString and consumers can still tighten `.max()`
- * length limits.
+ * Business text may never smuggle URLs (scheme'd or `www`-prefixed), absolute
+ * or Windows paths (even mid-sentence), traversal segments, prototype-key
+ * material, or whitespace-only payloads. Scheme-less bare domains without a
+ * `www` prefix remain allowed: they are inert text with legitimate placeholder
+ * use (for example `example.com` in acceptance scenarios) and cannot be
+ * confused with domain-qualified Factory identifiers such as
+ * `graph.domain.expense`. Written as a positive assertion of safety (zod
+ * `.regex()` requires the text to match) so the schema stays a ZodString and
+ * consumers can still tighten `.max()` length limits.
  */
 export const unsafeMaterialPattern =
-  /^(?!.*(?:(:\/\/)|(^\s*[\\/])|(\.\.[\\/])|([a-zA-Z]:[\\/])|((?<=\s)[\\/][^\s])|(^\s*$)))/;
+  /^(?!.*(?:(:\/\/)|(^\s*[\\/])|(\.\.[\\/])|([a-zA-Z]:[\\/])|((?<=\s)[\\/][^\s])|(^\s*$)|(__proto__)|(^constructor$)|(^prototype$)|((^|\s)(www\.))))/;
 
 export const safeBusinessTextSchema = z
   .string()
@@ -48,7 +52,7 @@ export const safeBusinessTextSchema = z
   .max(2000)
   .regex(unsafeMaterialPattern, {
     message:
-      "Business text cannot contain URLs, absolute paths, or traversal segments.",
+      "Business text cannot contain URLs, absolute paths, traversal segments, or prototype-key material.",
   });
 
 function canonicalize(value: unknown): unknown {

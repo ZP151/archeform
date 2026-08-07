@@ -726,4 +726,55 @@ describe("ApplicationGraphV1", () => {
       }),
     ).toThrow(GraphDiffError);
   });
+
+  it("rejects a root-level /integration replace and removal", () => {
+    const draft = createDraftRevision(expenseGraph, "draft-1");
+
+    expect(() =>
+      applyGraphDiffToDraft(draft, {
+        apiVersion: "factory.graph-diff/v1",
+        operations: [
+          {
+            op: "replace",
+            path: "/integration",
+            value: {
+              providers: [],
+              capabilities: [],
+              assetLocks: [],
+              compositionProfile: "expense-approval",
+            },
+          },
+        ],
+      }),
+    ).toThrow(GraphDiffError);
+
+    expect(() =>
+      applyGraphDiffToDraft(draft, {
+        apiVersion: "factory.graph-diff/v1",
+        operations: [{ op: "remove", path: "/integration" }],
+      }),
+    ).toThrow(GraphDiffError);
+  });
+
+  it("rejects escaped and unescaped prototype-key add paths", () => {
+    const draft = createDraftRevision(expenseGraph, "draft-1");
+
+    expect(() =>
+      applyGraphDiffToDraft(draft, {
+        apiVersion: "factory.graph-diff/v1",
+        operations: [
+          { op: "add", path: "/page/~1__proto__", value: { injected: true } },
+        ],
+      }),
+    ).toThrow(GraphDiffError);
+
+    expect(() =>
+      applyGraphDiffToDraft(draft, {
+        apiVersion: "factory.graph-diff/v1",
+        operations: [
+          { op: "add", path: "/page/__proto__", value: { injected: true } },
+        ],
+      }),
+    ).toThrow(GraphDiffError);
+  });
 });
