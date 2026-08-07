@@ -601,8 +601,10 @@ declare the strict `factory.capability-binding/v1` contract):
   gained its parameters slice.
 
 **Observed results:** capabilities suite repaired from 101 failed to
-**329/329 passing**; the five remaining failures after the binding repair
-were all honest pin updates (composition-planner digest, foundry-matrix
+**332/332 passing** (24 files; the three mutation-red pairing-rule
+regression tests landed with the gate-round repair at cd6baf6); the five
+remaining failures after the binding repair were all honest pin updates
+(composition-planner digest, foundry-matrix
 quarantine split 9+14 → 23+0, overlap test supplied valid menu bindings so
 the undeclared-provider overlap — `inventory.adjust` — remains the reason
 for rejection, and the menu adapter parameters slice). Foundry matrix now

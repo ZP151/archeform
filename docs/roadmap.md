@@ -239,7 +239,9 @@ inputs declare their owning entity and field types; profile bindings carry
 the owning entity symbol plus `fieldKey` (compiler-rendered output stays
 byte-identical); and all 23 manifest digests were recomputed and re-pinned
 across the TS assets, on-disk packages, and evidence records. The
-capabilities suite was repaired from 101 failing to **329/329**; the Foundry
+capabilities suite was repaired from 101 failing to **332/332** (the three
+mutation-red pairing-rule tests landed with the gate-round repair); the
+Foundry
 matrix now reports the honest post-repair split — zero eligible, all 23
 quarantined for missing two-Profile proof, none rejected — and the
 generated-notification-outbox runtime still delivers with the new

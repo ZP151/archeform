@@ -138,7 +138,7 @@ the pattern's `.*` lookahead could not cross line terminators, so
 multi-line values/prose with a URL or `__proto__` token after the first
 line evaded the scan — the lookahead now uses `[\s\S]*`. RV-2:
 `walkUnsafeValue` scanned string leaves only, so `__proto__`/`constructor`/
-URL/path material as an object *key* inside a value passed — the walker now
+URL/path material as an object _key_ inside a value passed — the walker now
 tests every walked key. Regression tests added (multi-line unsafe leaves,
 multi-line unsafe business text, prototype-key/URL object keys, clean
 multi-line prose preserved); graph 159/159 (156 + 3), capabilities 313/313,
@@ -249,7 +249,8 @@ symbol plus `fieldKey` (compiler output stays byte-identical); and all 23
 manifest digests were recomputed and re-pinned across the TS assets,
 on-disk `component.json` packages, the `restaurant.menu` adapter.json
 parameters slice, and the 14 declared evidence records. Observed results:
-capabilities suite repaired from 101 failing to **329/329** (24 files);
+capabilities suite repaired from 101 failing to **332/332** (24 files;
+three mutation-red pairing-rule tests landed with the gate-round repair);
 the five residual failures were honest pin updates, including the
 foundry-matrix split now reporting **zero eligible — 23 quarantined
 (`fewer-than-two-profiles`), 0 rejected**. Compiler (money-pricing runtime
