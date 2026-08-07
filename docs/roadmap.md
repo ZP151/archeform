@@ -165,8 +165,15 @@ material is deep-scanned against the unsafe-material boundary at the schema
 gate (`parseCompositionPlan`/`hashCompositionDiff`), the plan's
 requirement checksum is verified at the seam before persistence, and
 Graph-level application failures surface as bounded conflicts
-(control-plane 177/177, graph 156/156, capabilities 313/313); it is
-`ready_for_qa` at `507feca` pending re-verification gates.
+(control-plane 177/177, graph 156/156, capabilities 313/313). Task 3's
+re-verification at `38618ad` returned TASK_REVIEW_PASS with two P2
+scan-boundary gaps (RV-1: `.*` lookahead could not cross line terminators,
+so multi-line unsafe material evaded the scan; RV-2: object keys inside
+operation values were never tested) and QA_PASS (19/19 probes); both were
+repaired at `a8914d0` — the lookahead now scans `[\s\S]*` across lines and
+`walkUnsafeValue` tests every walked key (graph 159/159, capabilities
+313/313, control-plane 177/177); it is `ready_for_qa` at `a8914d0` pending
+re-verification gates.
 
 ## P2 and P3
 

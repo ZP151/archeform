@@ -115,6 +115,15 @@
       capabilities `dist/` rebuilt locally (QA-R1). Fresh verification:
       control-plane 177/177, graph 156/156, capabilities 313/313, typecheck,
       Prettier lint, and build green.
+- [x] Task 3 re-verification round at `38618ad` (TASK_REVIEW_PASS with two
+      new P2 scan-boundary gaps; QA_PASS 19/19): repaired at `a8914d0` —
+      RV-1: the unsafe-material lookahead now scans `[\s\S]*` so multi-line
+      values and prose fail closed on any line; RV-2: `walkUnsafeValue` tests
+      every object key inside a value, not only string leaves. Regression
+      tests added (multi-line unsafe leaves/text, prototype-key and URL
+      object keys, clean multi-line prose preserved). Fresh verification:
+      graph 159/159, capabilities 313/313, control-plane 177/177, typecheck
+      and Prettier lint green.
 
 ### Task 4: Add deterministic and guarded AI planning adapters
 

@@ -131,6 +131,21 @@ capabilities 313/313, typecheck, Prettier lint, and build green. Train B is
 `ready_for_qa` at `507feca` (Tasks 2–3 landed), pending re-verification
 gates.
 
+Task 3's re-verification round at `38618ad` returned TASK_REVIEW_PASS with
+two new P2 scan-boundary gaps and QA_PASS (19/19 probes, no findings; the
+QA gate deferred the in-flight boundary edits to their own round). RV-1:
+the pattern's `.*` lookahead could not cross line terminators, so
+multi-line values/prose with a URL or `__proto__` token after the first
+line evaded the scan — the lookahead now uses `[\s\S]*`. RV-2:
+`walkUnsafeValue` scanned string leaves only, so `__proto__`/`constructor`/
+URL/path material as an object *key* inside a value passed — the walker now
+tests every walked key. Regression tests added (multi-line unsafe leaves,
+multi-line unsafe business text, prototype-key/URL object keys, clean
+multi-line prose preserved); graph 159/159 (156 + 3), capabilities 313/313,
+control-plane 177/177 against the rebuilt dist, typecheck and Prettier lint
+green. Train B is `ready_for_qa` at `a8914d0` (Tasks 2–3 landed), pending
+re-verification gates on `a8914d0`.
+
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including
 Preview stop and cleanup. This is not production readiness and does not alter

@@ -251,6 +251,33 @@ before `reviewed`. Train A's reviewed record is re-confirmed at release
 gates: the shared guard change (`fbdd4ce`) is additive to `e13bef1` and the
 full graph suite at head is green.
 
+### 2026-08-08 — Task 3 re-verification: RV-1/RV-2 repaired at `a8914d0`
+
+Re-verification task review at `38618ad` returned `TASK_REVIEW_PASS` with
+two new P2 findings in the shared scan boundary (both inside the repair
+range); behavioral QA at `38618ad` returned `QA_PASS` (19/19 probes, no
+findings) and explicitly deferred the in-flight boundary changes to this
+round. Per the state vocabulary, the P2s return Train B to `implementing`;
+the repair was committed at `a8914d0`.
+
+| ID | Severity | Finding | Repair |
+| -- | -------- | ------- | ------ |
+| RV-1 | P2 | `unsafeMaterialPattern`'s negative lookahead used `.*`, which cannot cross line terminators: a URL, `www` host, or `__proto__` token on any line after the first evaded both the operation-value scan and `safeBusinessTextSchema` (`"ok\ncallback https://evil.example.com"` tested safe) | Lookahead scan widened to `[\s\S]*` so every line of multi-line values and prose is covered; one-character pattern change closes both surfaces |
+| RV-2 | P2 | `walkUnsafeValue` scanned string leaves only; object keys inside an operation value were never tested, so `__proto__`, `constructor`, `prototype`, URL, or path material as a key passed (data-only impact — no prototype mutation, since mutation keys come from path-guarded pointers) | The walker now tests every walked object key with the same pattern before descending; prototype-key, URL, and path keys fail closed like leaves |
+
+Regression tests (RED confirmed by the gate's verified repros, GREEN at the
+repair): multi-line URL/www/`__proto__` value leaves rejected while clean
+multi-line prose parses; multi-line business text with a URL rejected;
+`__proto__` (built via `JSON.parse`, since a literal would set the prototype
+rather than an own key), `constructor`, nested `prototype`, and URL object
+keys inside values rejected. graph 159/159 (156 + 3), capabilities 313/313,
+control-plane 177/177 against the rebuilt dist, typecheck and Prettier lint
+green. Commit `a8914d0`
+(`fix(graph): close multi-line and value-key material gaps (RV-1/RV-2)`)
+pushed; adapters package work (Task 4) remains uncommitted in the worktree
+and is owned by its own train. State: Train B `ready_for_qa` at `a8914d0`,
+pending re-verification gates on `a8914d0` before `reviewed`.
+
 ## Required evidence per promoted family
 
 | Evidence    | Required form                                                       |
