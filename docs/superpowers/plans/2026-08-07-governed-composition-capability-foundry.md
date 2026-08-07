@@ -185,6 +185,25 @@
       green; graph `dist/` rebuilt. Additivity vs `e13bef1`: strictly
       narrowing (only rejects paths already forbidden; messages only remove
       material).
+- [x] Re-verification round at `7ab4c5ed`: task review TASK_REVIEW_PASS (no
+      findings) at `52432a6b`; behavioral QA returned QA_FAIL with one P0
+      (QA-4-1): `~1`-escaped URL material decodes after the raw scan,
+      persisted through the seam, applied into `experience.theme.tokens`,
+      and echoed at apply. Repaired by scanning the decoded segments (re-
+      joined, no leading `/`) in both `assertSafeCompositionOperationPath`
+      and the raw-boundary mirror `assertPermittedDiffPath` (which
+      previously applied both escaped and unescaped URL paths). RED: graph
+      5 failed | 168 passed, seam 1 failed | 5 passed. Fresh: graph 173/173,
+      control-plane 183/183, adapters 34/34, capabilities 313/313.
+- [x] P2 closure at `1d9865d` (test-only): QA-4-1-R1 (no positive
+      `~1`/`~0` decode pin) repaired with parse+hash pins (`a~1b`, `a~0b~1c~0d`)
+      and an apply pin asserting the decoded keys land. Closing review
+      TASK_REVIEW_PASS no findings (pins proven load-bearing by mutation in
+      both directions). Final behavioral QA QA_PASS — 24 probes, no
+      findings; suites at final HEAD graph 175/175, control-plane 183/183,
+      adapters 34/34, capabilities 313/313. **PM records Task 4
+      `ready_for_qa -> reviewed` at `1d9865d`**; Train B Tasks 2–4 are
+      `reviewed`.
 
 ### Task 5: Implement the Foundry evidence matrix and promotion workflow
 

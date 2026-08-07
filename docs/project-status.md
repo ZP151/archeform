@@ -192,7 +192,18 @@ rejection echoed offending material). Repaired at `52432a6b`:
 text, and the mutable-root message no longer quotes the path. RED evidence:
 graph 5 failed | 33 passed, seam 1 failed | 4 passed. Fresh verification:
 graph 167/167, control-plane 182/182, capabilities 313/313, adapters 34/34.
-State: Task 4 `ready_for_qa` at `52432a6b`, pending re-verification gates.
+Re-verification QA found one P0 (QA-4-1) at `7ab4c5ed`-fixed in the same
+round: `~1`-escaped URL material decodes after the raw scan, so the
+decoded segments are now scanned in both path guards (`assertSafeCompositionOperationPath`
+and the raw-boundary mirror `assertPermittedDiffPath`, which previously
+applied both escaped and unescaped URL paths into record surfaces such as
+`experience.theme.tokens`). RED: graph 5 failed | 168 passed, seam 1 failed
+| 5 passed. A test-only P2 closure (`1d9865d`) pinned the positive
+`~1`/`~0` decode class. Both re-verification gates closed with no findings
+at `1d9865d` (task review TASK_REVIEW_PASS; QA_PASS with 24 probes), and
+the PM records Train B Task 4 `ready_for_qa -> reviewed` — Train B Tasks
+2–4 are `reviewed`. Suites at final HEAD: graph 175/175, control-plane
+183/183, capabilities 313/313, adapters 34/34.
 
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including

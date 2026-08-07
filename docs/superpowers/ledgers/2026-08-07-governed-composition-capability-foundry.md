@@ -422,6 +422,70 @@ control plane resolves the repaired boundary.
 State: Train B Task 4 `ready_for_qa` at `52432a6b`, pending re-verification
 gates before `reviewed`.
 
+### 2026-08-08 — Task 4 gate round: QA-4-1 repaired at `7ab4c5ed`, closed at `1d9865d`
+
+The re-verification task review returned TASK_REVIEW_PASS with no findings
+at `52432a6b`, but the sequential behavioral QA gate returned **QA_FAIL
+with one P0 (QA-4-1)**: `~1`-escaped material decodes to a URL after the
+raw-string scan — `/experience/theme/tokens/https:~1~1evil.example.com`
+carries no literal `://`, yet its decoded segment is a URL. The QA proved
+the whole chain: the plan parsed, the Diff hashed, the seam's `requestPlan`
+**persisted** the escaped leaf, `applyApprovedComposition` **applied** it
+into the `experience.theme.tokens` record surface (`{"https://evil.example
+.com":"injected"}`), and the apply-time rejection echoed the decoded URL.
+Percent-encoded schemes also passed parse and hash. The decode-then-scan
+principle had been applied to prototype tokens only (`e13bef1`-era) — never
+to URL/drive/host material.
+
+Repair at `7ab4c5ed` (`fix(graph): scan decoded Diff path segments for
+escaped material`): both path guards re-join the decoded segments (no
+leading `/`) and scan them with the same `unsafeCompositionDiffPathPattern`
+— `assertSafeCompositionOperationPath` (closes plan parse, Diff hash, the
+seam's requestPlan, and decision application) and the raw-boundary mirror
+`assertPermittedDiffPath` in `index.ts` (closes `applyGraphDiffToDraft`,
+which previously applied both escaped AND unescaped URL paths). RED
+evidence: graph 5 failed | 168 passed, seam 1 failed | 5 passed. Fresh
+verification: graph 173/173, control-plane 183/183, adapters 34/34,
+capabilities 313/313, typecheck, Prettier, build green; graph `dist/`
+rebuilt.
+
+Task review at `7ab4c5ed` returned TASK_REVIEW_PASS with one P2
+(QA-4-1-R1): no committed test pinned the positive `~1`/`~0` decode case,
+so a future decode regression or over-rejection would go uncaught.
+Repaired at `1d9865d` (test-only): parse+hash pins for `a~1b` → `a/b` and
+`a~0b~1c~0d` → `a~b/c~d`, and an apply pin asserting the decoded keys land
+in the record surface. The closing task review TASK_REVIEW_PASS with no
+findings verified the pins by mutation — removing the `~1`/`~0` replacement
+makes the apply pin fail while the parse/hash pins still pass (catching a
+broken decode), and an over-rejecting guard makes the parse/hash pins fail.
+
+Final behavioral QA at `1d9865d`: **QA_PASS** — 24 probes (13 graph + 8
+control-plane + 3 adapters), all green, all deleted. `~1`-escaped URLs,
+scheme splits, multi-escapes, mixed raw+escaped, escaped drive roots, and
+escaped URLs on a second line refused at every entry (parse, hash, seam,
+decision apply, raw boundary) with the byte-exact fixed message and zero
+echo; `~0`-split (`https:~0~0evil` → `https:~~evil`) and `www~1evil.com`
+(→ `www/evil.com`) decode to inert forms the `e13bef1`/TR-2 boundary allows
+— the real attack class is fully refused; positive escapes and clean
+pointers apply end-to-end through a decision+plan+diff triple and the seam
+E2E; non-echo byte-exact on all four rejection classes; tampered
+material-path diffs can never match a decision checksum; the deterministic
+adapter stays byte-identical across identical briefs. Suites at final HEAD:
+graph 175/175, control-plane 183/183, adapters 34/34, capabilities 313/313.
+Additivity vs `52432a6b` and `e13bef1`: strictly narrowing — the decoded
+scan only rejects pointers whose decoded segments carry material the
+vocabulary already forbids; diff 52432a6b..1d9865d touches only the two
+guards plus tests and docs.
+
+**The PM records Train B Task 4 `ready_for_qa -> reviewed` at `1d9865d`**:
+both re-verification gates closed with no findings at final HEAD — task
+review TASK_REVIEW_PASS (QA-1/QA-2/QA-4-1/QA-4-1-R1 all verified closed,
+additivity confirmed) and behavioral QA QA_PASS (24 probes, no findings).
+The guarded-AI boundary holds: schema-valid proposals only through the
+environment-only credential boundary, deterministic authority intact,
+nothing unsafe persists, applies, or is echoed. Train B Tasks 2–4 are
+`reviewed`.
+
 ## Required evidence per promoted family
 
 | Evidence    | Required form                                                       |

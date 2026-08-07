@@ -192,9 +192,16 @@ round 1 (task review PASS, behavioral QA QA_PASS 28/28 with two P2
 seam-hardening notes — path strings never scanned for material; zod
 strict and mutable-root messages echoing offending material) was repaired
 at `52432a6b`: Diff paths now clear the same guards as plan operations,
-and no rejection message echoes rejected material (graph 167/167,
-control-plane 182/182, capabilities 313/313, adapters 34/34); it is
-`ready_for_qa` at `52432a6b` pending re-verification gates.
+and no rejection message echoes rejected material. Re-verification QA
+then found one P0 (QA-4-1): `~1`-escaped URL material decodes after the
+raw scan and persisted/applied through record surfaces; repaired at
+`7ab4c5ed` by scanning the decoded segments in both path guards (the raw
+boundary previously applied even unescaped URL paths), with a test-only
+positive-escape pin closure at `1d9865d`. Both re-verification gates
+closed with no findings at `1d9865d` (TASK_REVIEW_PASS; QA_PASS 24
+probes) and the PM records Task 4 `ready_for_qa -> reviewed` — Train B
+Tasks 2–4 are `reviewed` (graph 175/175, control-plane 183/183,
+capabilities 313/313, adapters 34/34).
 
 ## P2 and P3
 
