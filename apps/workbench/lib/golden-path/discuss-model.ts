@@ -244,7 +244,7 @@ function expenseApprovalSpec(session: DiscussSession): RequirementSpecV1 {
         given:
           "an employee with a draft expense record under the approval threshold",
         when: "the employee submits the expense",
-        then: "the record enters the review workflow awaiting manager action and the submission is recorded in the audit trail",
+        then: "the record enters the review workflow awaiting manager action",
       },
       {
         key: "manager-approve",
