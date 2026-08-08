@@ -40,9 +40,28 @@ owning slice to `implementing`.
 | S1    | Discuss mode: RequirementSpec brief + clarifications | implementing | 2fe78d30 | 11 focused tests; workbench 84/84; graph 175/175 |
 | S2    | Plan mode: deterministic alternatives + visual Diff | implementing | 671e45b2 | 12 focused tests; workbench 96/96; capabilities 356/356 |
 | S3    | Build mode: accepted plan to Draft + Experience System | implementing | (see record) | 14 focused tests; workbench 110/110; graph 188/188; capabilities 356/356; control-plane 184/184; compiler-worker 183/183 |
-| S4    | Role and data simulation over the mutable Draft | implementing | (see record) | 16 focused tests; workbench 126/126; graph 188/188; capabilities 356/356; control-plane 184/184; compiler-worker 183/183 |
+| S4    | Role and data simulation over the mutable Draft | implementing | 5c3a3c52 | 16 focused tests; workbench 126/126; graph 188/188; capabilities 356/356; control-plane 184/184; compiler-worker 183/183 |
+| S5    | Unified bounded Activity/Evidence Timeline | implementing | (see record) | 13 focused tests; workbench 139/139; graph 188/188; capabilities 356/356; control-plane 184/184; compiler-worker 183/183 |
 
 ## Slice records
+
+### 2026-08-08 — S5 Unified bounded Activity/Evidence Timeline implemented
+
+`apps/workbench/lib/golden-path/timeline.ts` (+ 13 focused tests) delivers
+one bounded activity/evidence timeline for the Golden Path: compilation,
+isolated boot, migration, health, API, journey, authorization-denial,
+idempotency, cleanup, preview, and safe-diagnosis events carry only a
+bounded status, duration (0-600s), safe reason codes
+(`/^[a-z][a-z0-9._-]*$/`), bounded business text (reuses the Graph's
+`safeBusinessTextSchema`), and app-relative artifact links (no schemes,
+drive letters, leading slashes, traversal, queries, or fragments).
+Unknown shapes are rejected outright — raw prompts, provider responses,
+request bodies, logs, and secrets are not event fields; a deployment is
+not an event kind, so the timeline never presents a deployment. Appends
+are pure and deterministic (`at` is the sequential append index):
+identical append sequences produce identical timelines.
+
+S5 state stays `implementing` for PM advancement.
 
 ### 2026-08-08 — S4 Role and data simulation implemented
 
