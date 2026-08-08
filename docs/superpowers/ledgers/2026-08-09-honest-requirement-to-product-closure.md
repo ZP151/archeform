@@ -188,3 +188,48 @@ acceptance continues under Task 9).
   clean, `next build` green, full workspace suite 16/16 tasks (compiler
   342/342). No credential, prompt, or provider material touched this task.
 - Commit: `feat(studio): edit generated multi-page products through Puck`.
+
+## 2026-08-09 — Task 6: Generalize simulation and generated role journeys
+
+State: `done` (unit/integration green; browser acceptance continues under
+Task 9).
+
+- The graph-driven simulator (`lib/product-journey/graph-simulator.ts`, 8
+  tests): a pure walker over a composed Graph's declared flow scenarios.
+  `startGraphSimulation(graph, scenarioKey)` snapshots the declared flow,
+  its transitions (event/from/to/roles/effects), the policy roles and
+  permissions, and seeds records from the Graph's own seed data at their
+  declared stages; `dispatchGraphSimulationEvent` validates the event
+  against the record's current stage, the firing role against the
+  transition's declared roles (falling back to the declared policy
+  permissions), records denials without moving the record, and captures the
+  transition's declared capability effects in the journey history.
+- The tests execute both acceptance journeys entirely from declared
+  scenarios: Expense submit/approve (with the audit.record and
+  notification.send effects the approval transition declares) and
+  Appointment book/confirm/reschedule/cancel-requested/cancel, plus denials
+  (manager cannot submit), the policy fallback for role-less transitions,
+  and invalid event/stage and unknown record/scenario failures. A source
+  test proves neither `graph-simulator.ts` nor `role-simulator.tsx`
+  contains product identifiers or scenario switches of any kind.
+- The role simulator panel (`components/journey/role-simulator.tsx`, 5
+  tests): scenario select over the declared flows, seeded record with
+  stage, only the events valid from the current stage (labelled with their
+  declared roles), a fire-as-role select that surfaces denials, journey
+  history with declared effects, and a reset. Mounted into the shell under
+  Task 7.
+- Generated role journeys: `renderJourneyTest` (extracted to
+  `packages/compiler/src/journey-test-renderer.ts`) now also emits a
+  denied-action test derived from the same declared scenario — the first
+  event from the initial stage fired by a role the transition does not
+  declare, asserting `cannot trigger` and that the record stays at the
+  initial stage. The plan's `packages/compiler/src/targets/tests/*`
+  location does not exist (runtime tests live in `packages/compiler/test/`);
+  the generated file is `api/test/journey.generated.test.ts` in the bundle.
+- Evidence: workbench 29 files/195 tests, compiler 21 files/346 tests
+  (incl. new `test/role-journey-runtime.test.ts` proving Expense
+  submit/approve/audit and Appointment book/reschedule journeys plus the
+  denial tests derive from the composed Graphs and stay materially
+  different), workspace typecheck 16/16, prettier clean. No credential,
+  prompt, or provider material touched this task.
+- Commit: `feat(simulation): execute role journeys from application graphs`.
