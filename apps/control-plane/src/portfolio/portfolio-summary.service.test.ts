@@ -29,7 +29,7 @@ describe("WorkspacePortfolioSummaryService", () => {
       profiles: expect.arrayContaining([
         expect.objectContaining({
           profile: "restaurant-ordering",
-          requiredPackages: 18,
+          requiredPackages: 20,
         }),
       ]),
       readiness: expect.arrayContaining([
