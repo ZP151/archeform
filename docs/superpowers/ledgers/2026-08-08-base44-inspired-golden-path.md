@@ -43,7 +43,7 @@ owning slice to `implementing`.
 | S4    | Role and data simulation over the mutable Draft | implementing | 5c3a3c52 | 16 focused tests; workbench 126/126; graph 188/188; capabilities 356/356; control-plane 184/184; compiler-worker 183/183 |
 | S5    | Unified bounded Activity/Evidence Timeline | implementing | 3989e3cf | 13 focused tests; workbench 139/139; graph 188/188; capabilities 356/356; control-plane 184/184; compiler-worker 183/183 |
 | S6    | One-action Publish -> Compile -> Verify -> Preview + cleanup | implementing | (see record) | 13 focused + 3 client tests; workbench 155/155; graph 188/188; control-plane 184/184 |
-| S7    | Mode shell UI, lineage canvas, browser E2E acceptance | implementing | (see record) | (see record) |
+| S7    | Mode shell UI, lineage canvas, browser E2E acceptance | implementing | 395ca36a | workbench 222/222; capabilities 356/356; graph 190/190; adapters 34/34; control-plane 184/184; compiler-worker 183/183; compiler 332/332; browser E2E green (2.3m, incl. cleanup proof) |
 
 ## Slice records
 
