@@ -41,9 +41,33 @@ owning slice to `implementing`.
 | S2    | Plan mode: deterministic alternatives + visual Diff | implementing | 671e45b2 | 12 focused tests; workbench 96/96; capabilities 356/356 |
 | S3    | Build mode: accepted plan to Draft + Experience System | implementing | (see record) | 14 focused tests; workbench 110/110; graph 188/188; capabilities 356/356; control-plane 184/184; compiler-worker 183/183 |
 | S4    | Role and data simulation over the mutable Draft | implementing | 5c3a3c52 | 16 focused tests; workbench 126/126; graph 188/188; capabilities 356/356; control-plane 184/184; compiler-worker 183/183 |
-| S5    | Unified bounded Activity/Evidence Timeline | implementing | (see record) | 13 focused tests; workbench 139/139; graph 188/188; capabilities 356/356; control-plane 184/184; compiler-worker 183/183 |
+| S5    | Unified bounded Activity/Evidence Timeline | implementing | 3989e3cf | 13 focused tests; workbench 139/139; graph 188/188; capabilities 356/356; control-plane 184/184; compiler-worker 183/183 |
+| S6    | One-action Publish -> Compile -> Verify -> Preview + cleanup | implementing | (see record) | 13 focused + 3 client tests; workbench 155/155; graph 188/188; control-plane 184/184 |
 
 ## Slice records
+
+### 2026-08-08 — S6 One-action release model implemented
+
+`apps/workbench/lib/golden-path/release-model.ts` (+ 13 focused tests) is
+the pure one-action release state machine over the existing control-plane
+endpoints: an eligible Published Draft advances publish -> compile ->
+isolated verification -> preview, with a cleanup control. Every progress
+event is a pure transition that fails closed on a wrong phase, a
+mismatched identifier, or a terminal phase; failures carry only bounded
+safe reason codes; a failed verification may carry a reviewable Draft
+Diff that the caller may review but the model never applies. The runtime
+preview URL stays on the state and never enters the timeline (timeline
+links are app-relative evidence refs only). Every release state is
+labelled as a local preview over the immutable Draft lifecycle, never a
+deployment.
+
+The control-plane client gains the verification surface (3 new tests):
+`createVerificationRun`, `getVerificationRun`, and
+`approveVerificationDraftDiff` (the server translates change-constraint
+Draft Diff operations into the next immutable Draft revision). The
+timeline gains the bounded `verify` event kind. The mode-shell UI wiring
+lands with the S7 release journey. S6 state stays `implementing` for PM
+advancement.
 
 ### 2026-08-08 — S5 Unified bounded Activity/Evidence Timeline implemented
 

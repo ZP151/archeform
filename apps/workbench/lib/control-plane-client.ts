@@ -248,6 +248,59 @@ export type WorkbenchPreviewRun = {
   readonly updatedAt: string;
 };
 
+export type WorkbenchVerificationRun = {
+  readonly verificationRunId: string;
+  readonly compilationId: string;
+  readonly profileKey: string;
+  readonly status: "pending" | "succeeded" | "failed" | "cancelled";
+  readonly stepIds: readonly string[];
+  readonly evidenceDigest: string | null;
+  readonly evidence: unknown;
+  readonly diagnosis: unknown;
+  readonly draftDiff: unknown;
+};
+
+function workbenchVerificationRun(
+  record: WorkbenchVerificationRun,
+): WorkbenchVerificationRun {
+  return {
+    verificationRunId: record.verificationRunId,
+    compilationId: record.compilationId,
+    profileKey: record.profileKey,
+    status: record.status,
+    stepIds: record.stepIds,
+    evidenceDigest: record.evidenceDigest,
+    evidence: record.evidence,
+    diagnosis: record.diagnosis,
+    draftDiff: record.draftDiff,
+  };
+}
+
+export type WorkbenchVerificationApproval = {
+  readonly draft: WorkbenchDraft;
+  readonly draftDiff: unknown;
+};
+
+function workbenchVerificationApproval(record: {
+  readonly draftRevision: {
+    readonly id: string;
+    readonly applicationGraphId: string;
+    readonly revisionNumber: number;
+    readonly graph: ApplicationGraphV1;
+  };
+  readonly draftDiff: unknown;
+}): WorkbenchVerificationApproval {
+  return {
+    draft: {
+      applicationGraphId: record.draftRevision.applicationGraphId,
+      draftRevisionId: record.draftRevision.id,
+      revisionNumber: record.draftRevision.revisionNumber,
+      graph: record.draftRevision.graph,
+    },
+    draftDiff: record.draftDiff,
+  };
+}
+
 function workbenchPreviewRun(record: WorkbenchPreviewRun): WorkbenchPreviewRun {
   return {
     id: record.id,
@@ -934,5 +987,46 @@ export class ControlPlaneClient {
       `/preview-runs/${encodeURIComponent(previewRunId)}/stop`,
       { method: "POST", body: JSON.stringify({}) },
     ).then(workbenchPreviewRun);
+  }
+
+  createVerificationRun(
+    compilationId: string,
+    verificationRunId: string,
+    profileKey: string,
+  ): Promise<WorkbenchVerificationRun> {
+    return this.request<WorkbenchVerificationRun>(
+      `/compilations/${encodeURIComponent(compilationId)}/verification-runs`,
+      {
+        method: "POST",
+        body: JSON.stringify({ verificationRunId, profileKey }),
+      },
+    ).then(workbenchVerificationRun);
+  }
+
+  getVerificationRun(
+    verificationRunId: string,
+  ): Promise<WorkbenchVerificationRun> {
+    return this.request<WorkbenchVerificationRun>(
+      `/verification-runs/${encodeURIComponent(verificationRunId)}`,
+      { method: "GET" },
+    ).then(workbenchVerificationRun);
+  }
+
+  approveVerificationDraftDiff(
+    verificationRunId: string,
+    draftDiff: unknown,
+  ): Promise<WorkbenchVerificationApproval> {
+    return this.request<{
+      readonly draftRevision: {
+        readonly id: string;
+        readonly applicationGraphId: string;
+        readonly revisionNumber: number;
+        readonly graph: ApplicationGraphV1;
+      };
+      readonly draftDiff: unknown;
+    }>(`/verification-runs/${encodeURIComponent(verificationRunId)}/approve`, {
+      method: "POST",
+      body: JSON.stringify({ draftDiff }),
+    }).then(workbenchVerificationApproval);
   }
 }

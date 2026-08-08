@@ -445,6 +445,106 @@ describe("ControlPlaneClient", () => {
     );
   });
 
+  it("starts a verification run bound to the immutable compilation identifier", async () => {
+    const run = {
+      verificationRunId: "verification-run-1",
+      compilationId: "compilation-1",
+      profileKey: "expense-approval",
+      status: "pending",
+      stepIds: [],
+      evidenceDigest: null,
+      evidence: null,
+      diagnosis: null,
+      draftDiff: null,
+    };
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify(run), { status: 201 }));
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(
+      client.createVerificationRun(
+        "compilation-1",
+        "verification-run-1",
+        "expense-approval",
+      ),
+    ).resolves.toEqual(run);
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/compilations/compilation-1/verification-runs",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          verificationRunId: "verification-run-1",
+          profileKey: "expense-approval",
+        }),
+      }),
+    );
+  });
+
+  it("reads a verification run by its Factory-issued identifier", async () => {
+    const run = {
+      verificationRunId: "verification-run-1",
+      compilationId: "compilation-1",
+      profileKey: "expense-approval",
+      status: "succeeded",
+      stepIds: ["isolated-boot", "employee-submit"],
+      evidenceDigest: "sha256:" + "b".repeat(64),
+      evidence: { steps: [] },
+      diagnosis: null,
+      draftDiff: null,
+    };
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify(run), { status: 200 }));
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(
+      client.getVerificationRun("verification-run-1"),
+    ).resolves.toEqual(run);
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/verification-runs/verification-run-1",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("approves a reviewable Draft Diff into the next immutable Draft revision", async () => {
+    const draftDiff = { apiVersion: "factory.draft-diff/v1", operations: [] };
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          draftRevision: {
+            id: "draft-4",
+            applicationGraphId: "graph-1",
+            revisionNumber: 4,
+            graph: workbenchGraph,
+          },
+          draftDiff,
+        }),
+        { status: 200 },
+      ),
+    );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(
+      client.approveVerificationDraftDiff("verification-run-1", draftDiff),
+    ).resolves.toEqual({
+      draft: {
+        applicationGraphId: "graph-1",
+        draftRevisionId: "draft-4",
+        revisionNumber: 4,
+        graph: workbenchGraph,
+      },
+      draftDiff,
+    });
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/verification-runs/verification-run-1/approve",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ draftDiff }),
+      }),
+    );
+  });
+
   it("calls a browser-style fetch function without binding it to the client", async () => {
     let receiver: unknown = "not-called";
     const fetcher = function (this: unknown): Promise<Response> {

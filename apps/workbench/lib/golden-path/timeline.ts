@@ -22,6 +22,7 @@ export type TimelineEventKind =
   | "simulate"
   | "publish"
   | "compile"
+  | "verify"
   | "boot"
   | "migrate"
   | "health"
@@ -63,6 +64,7 @@ const TIMELINE_EVENT_KINDS: readonly string[] = [
   "simulate",
   "publish",
   "compile",
+  "verify",
   "boot",
   "migrate",
   "health",
