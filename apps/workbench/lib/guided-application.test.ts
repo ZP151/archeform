@@ -25,7 +25,7 @@ describe("guided application composition", () => {
     });
     expect(graph.experience.theme.mode).toBe("dark");
     expect(graph.integration).not.toHaveProperty("assetLocks");
-    expect(graph.integration.compositionSelections).toHaveLength(6);
+    expect(graph.integration.compositionSelections).toHaveLength(7);
     expect(() => assertValidApplicationGraph(graph)).not.toThrow();
     expect(guidedProfileSummary(graph)).toEqual({
       pages: 2,
