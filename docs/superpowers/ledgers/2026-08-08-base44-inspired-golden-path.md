@@ -40,8 +40,33 @@ owning slice to `implementing`.
 | S1    | Discuss mode: RequirementSpec brief + clarifications | implementing | 2fe78d30 | 11 focused tests; workbench 84/84; graph 175/175 |
 | S2    | Plan mode: deterministic alternatives + visual Diff | implementing | 671e45b2 | 12 focused tests; workbench 96/96; capabilities 356/356 |
 | S3    | Build mode: accepted plan to Draft + Experience System | implementing | (see record) | 14 focused tests; workbench 110/110; graph 188/188; capabilities 356/356; control-plane 184/184; compiler-worker 183/183 |
+| S4    | Role and data simulation over the mutable Draft | implementing | (see record) | 16 focused tests; workbench 126/126; graph 188/188; capabilities 356/356; control-plane 184/184; compiler-worker 183/183 |
 
 ## Slice records
+
+### 2026-08-08 — S4 Role and data simulation implemented
+
+`apps/workbench/lib/golden-path/simulator.ts` (+ 16 focused tests) delivers
+the deterministic role and data simulation over the mutable Draft: scenario
+records are seeded by the module (the starter Graph declares no seed data),
+role switching, visible navigation, and the per-role action surface are
+derived from the Draft's policy, and record transitions follow the Draft's
+flow transitions with audit events recorded only for effect-declared
+transitions. Policy is the authoritative action gate — the plan-built
+roleless `submit` transition is still denied for roles whose policy surface
+lacks `submit` (manager/finance) — and the flow's transition roles gate
+additionally. Every state carries `kind: "simulation"` and a label stating
+it runs over the mutable Draft (not a deployment); the module never
+presents the simulation as deployment or production verification.
+
+Denials are recorded on the returned state with a bounded reason
+(`policy-denied` / `flow-state` / `transition-role`); reset restores the
+deterministic seed. The full starter surface was probed first and pinned in
+the tests: policy permissions (employee expense [create, read, submit];
+manager [read, approve, reject]; finance [read, audit]), single Expenses
+navigation entry, expense-review flow with role-guarded approve/reject
+(audit.record + notification.send effects) and the Build-added roleless
+submit. S4 state stays `implementing` for PM advancement.
 
 ### 2026-08-08 — S3 Build mode implemented
 
