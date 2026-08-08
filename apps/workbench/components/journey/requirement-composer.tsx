@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Lightbulb, Sparkles } from "lucide-react";
 
 /**
@@ -17,6 +17,8 @@ export interface RequirementComposerProps {
   readonly onInterpret: () => void;
   readonly examplePrompts: readonly string[];
   readonly onApplyExample: (brief: string) => void;
+  /** Bumped by the shell's Ctrl+K (or Cmd+K) to land focus here. */
+  readonly commandFocusToken?: number;
 }
 
 export function RequirementComposer({
@@ -27,9 +29,17 @@ export function RequirementComposer({
   onInterpret,
   examplePrompts,
   onApplyExample,
+  commandFocusToken,
 }: RequirementComposerProps) {
   const [examplesOpen, setExamplesOpen] = useState(false);
+  const briefRef = useRef<HTMLTextAreaElement>(null);
   const canInterpret = brief.trim().length > 0 && !busy;
+
+  useEffect(() => {
+    if (commandFocusToken !== undefined) {
+      briefRef.current?.focus();
+    }
+  }, [commandFocusToken]);
 
   return (
     <section aria-label="Create a product from a requirement">
@@ -39,6 +49,7 @@ export function RequirementComposer({
         they manage, and how decisions are made.
       </p>
       <textarea
+        ref={briefRef}
         aria-label="Requirement brief"
         value={brief}
         onChange={(event) => onBriefChange(event.target.value)}

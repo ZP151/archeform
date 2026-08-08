@@ -233,3 +233,46 @@ Task 9).
   different), workspace typecheck 16/16, prettier clean. No credential,
   prompt, or provider material touched this task.
 - Commit: `feat(simulation): execute role journeys from application graphs`.
+
+## 2026-08-09 — Task 7: Focus the Workbench console on product creation
+
+State: `ready_for_qa` (unit suites green, typecheck/build green, focused
+browser checks pending).
+
+- `components/workbench.tsx` is now a thin composition root (146 lines, well
+  under the 350-line requirement) rendering `WorkbenchShell` around the
+  active surface: Home, Puck ProductStudio, DomainCanvas, FlowStudio +
+  RoleSimulator, PolicyCanvas, AiCanvas, CodeCanvas. The old
+  PropertiesPanel/RevisionTimeline and portfolio panels are gone; their
+  behaviors moved to the dismissed overlays.
+- Home (`components/workbench-home.tsx`, 146 lines) is the creation decision:
+  the requirement composer is the sole decision until a journey stage
+  replaces it; the compact recent-products row renders only when local
+  application records exist. Portfolio intelligence moved to the Library
+  drawer; readiness/supply/coverage panels no longer compete with creation.
+- Shell components (`components/shell/*`): icon rail with arrow-key
+  navigation and an active-state label; utility bar with a working project
+  switcher (`select`), the real Draft revision, lifecycle chip, overlay
+  triggers, theme toggle, Publish and Compile; operations bar with connection
+  state, dirty badge, Save draft; Inspector (read-only unit-carrying facts
+  from Graph/Draft/Compilation), History (draft snapshots + immutable
+  publications), Activity (compilation evidence, count-first artifact list,
+  snapshot behind one inspect click), Library (portfolio intelligence).
+- Overlay handling is stack-ordered: `WorkbenchState.overlayStack` records
+  most-recently-opened last, Escape closes the top, focus returns to the
+  trigger (`workbench-model.test.ts` pins the order).
+- RoleSimulator is mounted into the shell on the Flow surface.
+- Visual system per plan: native variable-font stack, 4px spacing rhythm,
+  8–12px radii, hairline dividers, one emerald accent, restrained shadows,
+  140–200ms transitions.
+- Evidence: workbench 30 files/210 tests (7 shell failures found and fixed
+  during this task: stub path graph-initial, overlayStack recency for
+  Escape, unit-carrying inspector facts, split recent-row test, singular
+  artifact count, History ready-wait), workspace typecheck 16/16, `next
+  build` production build clean, focused Playwright viewport checks at
+  1440x900 and 1024x768 (primary action "Interpret requirement" + active
+  rail state visible without scrolling) against the rebuilt compose image.
+  `docs/acceptance/workbench-action-inventory.md` catalogs every visible
+  control with action, server/local effect, keyboard access, test, and
+  disposition.
+- Commit: `refactor(workbench): focus the console on product creation`.

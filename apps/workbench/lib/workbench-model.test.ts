@@ -38,6 +38,74 @@ describe("transitionWorkbench", () => {
     expect(next.activeSurface).toBe("home");
   });
 
+  it("opens and closes each dismissible overlay independently", () => {
+    expect(initialWorkbenchState.inspectorOpen).toBe(true);
+    expect(initialWorkbenchState.historyOpen).toBe(false);
+    expect(initialWorkbenchState.activityOpen).toBe(false);
+    expect(initialWorkbenchState.libraryOpen).toBe(false);
+
+    const activity = transitionWorkbench(initialWorkbenchState, {
+      type: "toggle-activity",
+    });
+    expect(activity.activityOpen).toBe(true);
+    expect(activity.inspectorOpen).toBe(true);
+
+    const library = transitionWorkbench(activity, { type: "toggle-library" });
+    expect(library.libraryOpen).toBe(true);
+    expect(library.activityOpen).toBe(true);
+
+    const dismissed = transitionWorkbench(library, {
+      type: "toggle-activity",
+    });
+    expect(dismissed.activityOpen).toBe(false);
+    expect(dismissed.libraryOpen).toBe(true);
+
+    const closedInspector = transitionWorkbench(dismissed, {
+      type: "toggle-inspector",
+    });
+    expect(closedInspector.inspectorOpen).toBe(false);
+  });
+
+  it("orders the overlay stack most-recently-opened last for Escape", () => {
+    expect(initialWorkbenchState.overlayStack).toEqual(["inspector"]);
+
+    const activity = transitionWorkbench(initialWorkbenchState, {
+      type: "toggle-activity",
+    });
+    expect(activity.overlayStack).toEqual(["inspector", "activity"]);
+
+    const library = transitionWorkbench(activity, { type: "toggle-library" });
+    expect(library.overlayStack).toEqual(["inspector", "activity", "library"]);
+
+    // Escape closes the top entry first: the overlay opened most recently.
+    const topClosed = transitionWorkbench(library, {
+      type: "toggle-library",
+    });
+    expect(topClosed.libraryOpen).toBe(false);
+    expect(topClosed.overlayStack).toEqual(["inspector", "activity"]);
+
+    const history = transitionWorkbench(topClosed, { type: "open-history" });
+    expect(history.historyOpen).toBe(true);
+    expect(history.overlayStack).toEqual(["inspector", "activity", "history"]);
+
+    const historyClosed = transitionWorkbench(history, {
+      type: "close-history",
+    });
+    expect(historyClosed.historyOpen).toBe(false);
+    expect(historyClosed.overlayStack).toEqual(["inspector", "activity"]);
+  });
+
+  it("advances the command-focus token so the composer can land focus", () => {
+    const first = transitionWorkbench(initialWorkbenchState, {
+      type: "command-focus",
+    });
+    const second = transitionWorkbench(first, { type: "command-focus" });
+
+    expect(first.commandFocusToken).toBe(1);
+    expect(second.commandFocusToken).toBe(2);
+    expect(second.activeSurface).toBe("home");
+  });
+
   it("records editor intent as a Draft proposal without mutating lifecycle ownership", () => {
     const proposed = transitionWorkbench(initialWorkbenchState, {
       type: "propose-draft-change",

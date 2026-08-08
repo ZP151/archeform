@@ -298,147 +298,29 @@ describe("WorkbenchHome", () => {
     expect(container.textContent).toContain("Interpret requirement");
   });
 
-  it("shows safe capability, intake, and compilation intelligence", () => {
+  it("keeps Home focused on creation; portfolio intelligence lives in the Library", () => {
     act(() => {
       root.render(
         <WorkbenchHome
-          applications={[]}
+          applications={[restaurantDraft]}
           loading={false}
           onCompile={vi.fn()}
           onOpen={vi.fn()}
           journey={briefJourney()}
-          portfolioSummary={{
-            apiVersion: "factory.workspace-portfolio-summary/v1",
-            profiles: [
-              {
-                profile: "restaurant-ordering",
-                label: "Restaurant ordering",
-                category: "commerce",
-                requiredPackages: 18,
-                optionalPackages: 1,
-              },
-            ],
-            readiness: [
-              {
-                apiVersion: "factory.profile-readiness/v1",
-                profile: "restaurant-ordering",
-                label: "Restaurant ordering",
-                generatedTargets: [
-                  "simulator",
-                  "web",
-                  "api",
-                  "database",
-                  "tests",
-                  "docs",
-                ],
-                capabilities: [
-                  { key: "commerce.catalog", status: "available" },
-                  { key: "commerce.transaction", status: "partial" },
-                  { key: "commerce.order-amendment", status: "partial" },
-                  { key: "payment.provider", status: "provider-required" },
-                ],
-              },
-              {
-                apiVersion: "factory.profile-readiness/v1",
-                profile: "simple-ecommerce",
-                label: "Simple ecommerce",
-                generatedTargets: [
-                  "simulator",
-                  "web",
-                  "api",
-                  "database",
-                  "tests",
-                  "docs",
-                ],
-                capabilities: [
-                  { key: "commerce.catalog", status: "available" },
-                  { key: "commerce.transaction", status: "partial" },
-                  { key: "payment.provider", status: "provider-required" },
-                ],
-              },
-            ],
-            coverage: [
-              {
-                apiVersion: "factory.profile-coverage/v1",
-                key: "commerce.order-operations",
-                label: "Order operations",
-                status: "partial",
-                packageKeys: [
-                  "commerce.order",
-                  "commerce.inventory",
-                  "core.audit",
-                ],
-                profiles: [
-                  "restaurant-ordering",
-                  "simple-ecommerce",
-                  "retail-counter",
-                  "grocery-pickup",
-                ],
-              },
-            ],
-            capabilities: {
-              golden: 23,
-              lockedVersions: 48,
-              candidate: 0,
-              provider: 0,
-            },
-            capabilityFamilies: [
-              {
-                key: "core.identity-policy",
-                lifecycle: "golden",
-                version: "1.0.0",
-                profileCount: 2,
-                validation: "verified",
-                generatedTargetState: "ready",
-              },
-            ],
-            intake: {
-              portfolioSources: 43,
-              intakeEligible: 19,
-              candidateBlueprints: 19,
-              quarantined: 0,
-              blocked: 0,
-            },
-            supply: {
-              apiVersion: "factory.capability-supply-summary/v1",
-              families: [
-                {
-                  key: "commerce-transaction",
-                  profiles: [
-                    "restaurant-ordering",
-                    "simple-ecommerce",
-                    "retail-counter",
-                    "grocery-pickup",
-                  ],
-                  discovery: 4,
-                  quarantined: 0,
-                  blocked: 0,
-                  action: "integrate",
-                },
-              ],
-            },
-            compilations: { queued: 0, running: 1, succeeded: 3, failed: 1 },
-          }}
         />,
       );
     });
 
-    expect(container.textContent).toContain("Capability coverage");
-    expect(container.textContent).toContain("Source intake");
-    expect(container.textContent).toContain("Compilation health");
-    expect(container.textContent).toContain("Restaurant ordering");
-    expect(container.textContent).toContain("Golden");
-    expect(container.textContent).toContain("Eligible");
-    expect(container.textContent).toContain("Profile readiness");
-    expect(container.textContent).toContain("Profile coverage");
-    expect(container.textContent).toContain("Order operations");
-    expect(container.textContent).toContain("Planned");
-    expect(container.textContent).toContain("Capability supply");
-    expect(container.textContent).toContain("commerce-transaction");
-    expect(container.textContent).toContain("Identity and policy");
-    expect(container.textContent).toContain("Available 1");
-    expect(container.textContent).toContain("Provider 1");
-    expect(container.textContent).not.toContain("https://github.com");
+    // Home is the composer plus the compact recent-products row. The
+    // read-only portfolio panels moved to the Library drawer (covered in the
+    // shell suite) so nothing competes with the primary creation decision.
+    expect(
+      container.querySelector('textarea[aria-label="Requirement brief"]'),
+    ).not.toBeNull();
+    expect(container.textContent).toContain("Recent products");
+    expect(container.textContent).not.toContain("Portfolio intelligence");
+    expect(container.textContent).not.toContain("Capability supply");
+    expect(container.textContent).not.toContain("Profile readiness");
   });
 
   it("opens Restaurant from Home and keeps compilation disabled until publish", () => {
@@ -458,7 +340,6 @@ describe("WorkbenchHome", () => {
     });
 
     expect(container.textContent).toContain("Restaurant ordering");
-    expect(container.textContent).toContain("6 / 6 Golden assets");
     expect(container.textContent).toContain("Draft r.3");
     const open = container.querySelector<HTMLButtonElement>(
       'button[aria-label="Open Restaurant ordering"]',
@@ -491,8 +372,8 @@ describe("WorkbenchHome", () => {
       );
     });
 
-    expect(container.textContent).toContain("Recent activity");
-    expect(container.textContent).toContain("Needs attention");
+    expect(container.textContent).toContain("Recent products");
+    expect(container.textContent).toContain("Failed");
     expect(container.textContent).toContain("Draft r.4 · Published r.2");
     const compile = container.querySelector<HTMLButtonElement>(
       'button[aria-label="Compile Expense approval"]',

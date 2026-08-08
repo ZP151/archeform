@@ -3067,3 +3067,457 @@ input:focus-visible {
   color: var(--muted);
 }
 
+/* ------------------------------------------------------------------ */
+/* Task 7 — focused console shell. Active rail label, working project */
+/* switcher, dismissible overlays (Inspector / History / Activity /   */
+/* Library), the compact recent-products row, and the flow simulation */
+/* layout. 4px spacing base, hairline dividers, one emerald accent,   */
+/* restrained shadows, 140–200ms overlay transitions.                 */
+/* ------------------------------------------------------------------ */
+
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 2px;
+}
+
+/* The active rail destination shows its text label. */
+.rail-item.is-active {
+  width: auto;
+  min-width: 40px;
+  padding: 0 10px;
+  gap: 6px;
+  justify-items: center;
+}
+.rail-item.is-active span {
+  display: inline;
+  font-size: 10px;
+  font-weight: 720;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* Working project switcher: a real select, not a placeholder. */
+.project-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  color: var(--muted);
+}
+.project-switcher select {
+  max-width: 220px;
+  padding: 7px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--ink);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 720;
+  letter-spacing: -0.015em;
+}
+.project-switcher select:hover:not(:disabled),
+.project-switcher:focus-within select {
+  border-color: var(--line-strong);
+  background: var(--surface);
+}
+.project-switcher select:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+/* Shared dismissible overlay sheet. */
+.overlay-sheet {
+  position: fixed;
+  z-index: 6;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  width: 320px;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  padding: 20px 18px;
+  border-left: 1px solid var(--line-strong);
+  background: var(--paper);
+  box-shadow: -14px 0 40px rgb(26 43 58 / 0.07);
+  transition:
+    box-shadow 0.18s,
+    background 0.18s;
+}
+.overlay-sheet:focus {
+  outline: none;
+}
+.overlay-sheet-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.overlay-sheet-heading h2 {
+  margin: 3px 0 0;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+.eyebrow-label {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.overlay-close {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 17px;
+  line-height: 1;
+}
+.overlay-close:hover {
+  color: var(--ink);
+  background: var(--surface);
+}
+
+/* Inspector: read-only facts only. */
+.inspector-facts {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+.inspector-fact {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--line);
+}
+.inspector-fact dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+.inspector-fact dd {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 650;
+  text-align: right;
+}
+.inspector-note {
+  margin: auto 0 0;
+  padding-top: 12px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+/* Read-only portfolio intelligence panels. */
+.metric-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.metric-panel h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+}
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.metric-cell {
+  display: grid;
+  gap: 2px;
+}
+.metric-cell strong {
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+}
+.metric-label {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.metric-ready {
+  color: var(--accent-dark);
+}
+.metric-neutral {
+  color: var(--muted);
+}
+.metric-attention {
+  color: var(--danger);
+}
+.panel-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.panel-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: baseline;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.panel-list li:last-child {
+  border-bottom: 0;
+}
+.panel-list li code {
+  font-size: 11.5px;
+}
+.panel-list li span {
+  color: var(--muted);
+  text-align: right;
+}
+.readiness-counts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.readiness-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+.readiness-available {
+  color: var(--accent-dark);
+}
+.readiness-partial,
+.readiness-planned,
+.readiness-provider {
+  color: var(--muted);
+}
+
+/* Activity sheet sections. */
+.activity-sections {
+  display: grid;
+  gap: 16px;
+}
+.activity-list h3,
+.activity-evidence h3,
+.artifact-snapshot strong {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 750;
+}
+.activity-evidence > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.activity-evidence p + p {
+  margin-top: 4px;
+}
+.artifact-list button {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  color: var(--accent-dark);
+  background: transparent;
+  font: inherit;
+  text-overflow: ellipsis;
+}
+.artifact-list button:hover {
+  text-decoration: underline;
+}
+.artifact-snapshot {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.artifact-snapshot small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+}
+.artifact-snapshot pre {
+  max-height: 300px;
+  overflow: auto;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--canvas);
+  font-size: 10.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* History: the revision timeline as an overlay sheet. */
+.revision-timeline {
+  width: 360px;
+  margin: 0;
+  padding: 20px 18px;
+  border: 0;
+  border-left: 1px solid var(--line-strong);
+  box-shadow: -14px 0 40px rgb(26 43 58 / 0.07);
+}
+.timeline-entries {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.timeline-entries li {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 8px;
+  align-items: baseline;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--line);
+  font:
+    11.5px/1.45 ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+}
+.timeline-entries li.is-current {
+  background: var(--accent-soft);
+}
+.timeline-entries li.is-current em {
+  grid-column: 3;
+  color: var(--accent-dark);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 720;
+  text-transform: uppercase;
+}
+.revision-kind {
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 720;
+}
+.revision-kind-draft {
+  color: var(--amber);
+  background: color-mix(in srgb, var(--amber) 10%, transparent);
+}
+.revision-kind-published {
+  color: var(--accent-dark);
+  background: var(--accent-soft);
+}
+.timeline-entries li small {
+  grid-column: 3;
+  color: var(--muted);
+}
+.timeline-empty {
+  color: var(--muted);
+}
+
+/* Home: composer is the primary decision; products are a compact row. */
+.workbench-home {
+  display: grid;
+  gap: 18px;
+  width: 100%;
+  align-content: start;
+}
+.home-composer {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+}
+.recent-products {
+  display: grid;
+  gap: 10px;
+}
+.recent-products h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+}
+.recent-products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px;
+}
+.recent-product {
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  transition: border-color 0.16s;
+}
+.recent-product:hover {
+  border-color: var(--line-strong);
+}
+.recent-product-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.recent-product-heading strong {
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+.recent-failed {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--danger);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.recent-product-meta {
+  display: grid;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.recent-product-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.recent-product-actions {
+  display: flex;
+  gap: 8px;
+}
+.recent-product-actions .quiet-button,
+.recent-product-actions .compile-button {
+  min-height: 28px;
+  font-size: 11.5px;
+}
+
+/* Flow surface: the studio and the role simulator share the board. */
+.flow-simulation-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr);
+  gap: 16px;
+  align-items: start;
+  width: 100%;
+}
+@media (max-width: 1100px) {
+  .flow-simulation-layout {
+    grid-template-columns: 1fr;
+  }
+}
