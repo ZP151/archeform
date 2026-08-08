@@ -10,15 +10,16 @@ export const VERIFICATION_RUN_QUEUE = Symbol("VERIFICATION_RUN_QUEUE");
 
 /**
  * The immutable verification job payload. The worker receives exactly this
- * snapshot: the run identity, the compilation identity, the profile key, and
- * the Published Graph + composition lock + artifact manifest the compilation
- * recorded. The graph is intentionally NOT an exchange envelope — the worker
- * validates the exact keys fail closed before anything runs.
+ * snapshot: the run identity, the compilation identity, an optional profile
+ * key (absent for graph-derived verification plans), and the Published Graph
+ * + composition lock + artifact manifest the compilation recorded. The graph
+ * is intentionally NOT an exchange envelope — the worker validates the exact
+ * keys fail closed before anything runs.
  */
 export interface VerificationJob {
   readonly verificationRunId: string;
   readonly compilationId: string;
-  readonly profileKey: string;
+  readonly profileKey?: string;
   readonly publishedRevisionId: string;
   readonly graph: ApplicationGraphV1;
   readonly compositionLock: CapabilityCompositionLockV1;

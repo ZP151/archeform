@@ -24,10 +24,12 @@ export class VerificationController {
     @Param("compilationId") compilationId: string,
     @Body() body: unknown,
   ) {
+    // profileKey is optional: a run without one derives its verification
+    // plan from the Published Graph itself.
     exactRecord(
       body,
       ["verificationRunId", "profileKey"],
-      ["verificationRunId", "profileKey"],
+      ["verificationRunId"],
     );
     return this.verification.createRun(compilationId, body);
   }

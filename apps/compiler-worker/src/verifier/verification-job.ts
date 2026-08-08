@@ -36,6 +36,7 @@ import {
   type VerificationStepPlanEntry,
 } from "./verification-lifecycle.js";
 import type { VerificationEnvironment } from "./verification-environment.js";
+import { deriveVerificationProfile } from "./verification-graph-plan.js";
 import {
   resolveVerificationProfile,
   type VerificationProfile,
@@ -55,7 +56,8 @@ import {
 export type VerificationRunInput = {
   readonly verificationRunId: string;
   readonly compilationId: string;
-  readonly profileKey: string;
+  /** Optional: absent, the plan is derived from the Published Graph. */
+  readonly profileKey?: string;
   readonly publishedRevisionId: string;
   readonly graph: PublishedGraphInput["graph"];
   readonly compositionLock: PublishedGraphInput["compositionLock"];
@@ -95,18 +97,27 @@ function assertJobInput(input: unknown): asserts input is VerificationRunInput {
     );
   }
   const record = input as unknown as Record<string, unknown>;
-  if (
-    Object.keys(record).sort().join(",") !==
-    verificationJobKeyAllowlist.join(",")
-  ) {
-    throw new VerificationContractError(
-      "Verification jobs must declare exactly the immutable payload.",
-    );
+  const declaredKeys = Object.keys(record).sort();
+  for (const key of declaredKeys) {
+    if (!verificationJobKeyAllowlist.includes(key)) {
+      throw new VerificationContractError(
+        "Verification jobs must declare exactly the immutable payload.",
+      );
+    }
+  }
+  // profileKey is optional: absent, the worker derives the verification plan
+  // from the Published Graph itself. Every other payload key is required.
+  for (const key of verificationJobKeyAllowlist) {
+    if (key === "profileKey") continue;
+    if (!declaredKeys.includes(key)) {
+      throw new VerificationContractError(
+        "Verification jobs must declare exactly the immutable payload.",
+      );
+    }
   }
   for (const key of [
     "verificationRunId",
     "compilationId",
-    "profileKey",
     "publishedRevisionId",
   ]) {
     if (typeof record[key] !== "string" || record[key].length === 0) {
@@ -114,6 +125,14 @@ function assertJobInput(input: unknown): asserts input is VerificationRunInput {
         "Verification job identity must be Factory-derived.",
       );
     }
+  }
+  if (
+    record.profileKey !== undefined &&
+    (typeof record.profileKey !== "string" || record.profileKey.length === 0)
+  ) {
+    throw new VerificationContractError(
+      "Verification job profile key must be Factory-derived.",
+    );
   }
   if (
     !record.graph ||
@@ -306,7 +325,13 @@ async function executeVerifiedRun(
   dependencies: VerificationRunDependencies,
 ): Promise<VerificationEvidenceV1> {
   assertJobInput(input);
-  const profile = resolveVerificationProfile(input.profileKey);
+  // A named profile resolves the static acceptance plan; without one the
+  // deterministic plan is derived from the Published Graph itself, so any
+  // composed product advances through the same isolated lifecycle.
+  const profile =
+    input.profileKey !== undefined
+      ? resolveVerificationProfile(input.profileKey)
+      : deriveVerificationProfile(input.graph, input.compositionLock);
   if (
     typeof input.graph === "object" &&
     input.graph !== null &&
@@ -327,7 +352,7 @@ async function executeVerifiedRun(
   const evidence = await runVerificationLifecycle(
     {
       verificationRunId: input.verificationRunId,
-      profileKey: input.profileKey,
+      profileKey: profile.profileKey,
       compilation: {
         publishedRevisionId: input.publishedRevisionId,
         graph: input.graph,

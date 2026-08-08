@@ -40,6 +40,7 @@ export type VerificationStepPlanEntry = {
 
 export type VerificationLifecycleInput = {
   readonly verificationRunId: string;
+  /** The resolved plan key: a named acceptance profile or graph-derived key. */
   readonly profileKey: string;
   /** The immutable Published Graph input; draft-shaped inputs are rejected. */
   readonly compilation: PublishedGraphInput;

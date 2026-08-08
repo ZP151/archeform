@@ -70,6 +70,21 @@ describe("VerificationController", () => {
       response: { id: "run-1", status: "pending" },
     },
     {
+      method: "POST",
+      path: "/compilations/compilation-1/verification-runs",
+      body: {
+        verificationRunId: "verify-01h3k6f",
+      },
+      handler: verification.createRun,
+      arguments: [
+        "compilation-1",
+        {
+          verificationRunId: "verify-01h3k6f",
+        },
+      ],
+      response: { id: "run-1", profileKey: null, status: "pending" },
+    },
+    {
       method: "GET",
       path: "/verification-runs/verify-01h3k6f",
       handler: verification.getRun,

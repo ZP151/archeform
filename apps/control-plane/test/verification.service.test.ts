@@ -247,12 +247,16 @@ function verificationService(
 }
 
 describe("VerificationService", () => {
-  it("rejects a create run request with unknown or missing fields", async () => {
+  it("rejects a create run request with unknown fields or a malformed profile key", async () => {
     const prisma = prismaMock();
     const service = verificationService(prisma);
 
+    // profileKey is optional, but a declared one must be a string.
     await expect(
-      service.createRun("compilation-1", { verificationRunId: "x" }),
+      service.createRun("compilation-1", {
+        verificationRunId: "verify-01h3k6f",
+        profileKey: 7,
+      }),
     ).rejects.toThrow(BadRequestException);
     await expect(
       service.createRun("compilation-1", {
@@ -359,6 +363,48 @@ describe("VerificationService", () => {
         profileKey: "Bad Key!",
       }),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  it("creates a run without a profile key so the worker derives the plan from the Published Graph", async () => {
+    const prisma = prismaMock();
+    const queue = queueMock();
+    prisma.compilation.findUnique.mockResolvedValue(compilation);
+    prisma.verificationRun.create.mockResolvedValue({
+      ...runRow,
+      profileKey: null,
+    });
+    const service = verificationService(prisma, queue);
+
+    const result = await service.createRun("compilation-1", {
+      verificationRunId: "verify-01h3k6f",
+    });
+
+    expect(result).toEqual({ ...runRow, profileKey: null });
+    expect(prisma.verificationRun.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        verificationRunId: "verify-01h3k6f",
+        compilationId: "compilation-1",
+        profileKey: null,
+        status: "pending",
+      }),
+    });
+    // The immutable job declares no profile key: the worker derives the
+    // verification plan from the Published Graph itself.
+    expect(queue.enqueue).toHaveBeenCalledWith({
+      verificationRunId: "verify-01h3k6f",
+      compilationId: "compilation-1",
+      profileKey: undefined,
+      publishedRevisionId: "published-1",
+      graph,
+      compositionLock,
+      artifacts: [
+        {
+          path: "docker-compose.yml",
+          digest: digestOf("compose"),
+          sizeBytes: 512,
+        },
+      ],
+    });
   });
 
   it("reports evidence and marks a fully passing run succeeded", async () => {

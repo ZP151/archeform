@@ -99,7 +99,7 @@ model VerificationRun {
   id                String      @id @default(cuid())
   verificationRunId String      @unique
   compilationId     String
-  profileKey        String
+  profileKey        String?
   status            String
   startedAt         DateTime?
   completedAt       DateTime?

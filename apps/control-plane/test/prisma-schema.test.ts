@@ -77,9 +77,11 @@ describe("control-plane lifecycle schema", () => {
       type: "String",
       isRequired: true,
     });
+    // Optional: without a profile key the worker derives the verification
+    // plan from the Published Graph itself.
     expect(field("VerificationRun", "profileKey")).toMatchObject({
       type: "String",
-      isRequired: true,
+      isRequired: false,
     });
     expect(field("VerificationRun", "status")).toMatchObject({
       type: "String",

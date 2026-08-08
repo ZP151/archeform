@@ -136,16 +136,21 @@ export class VerificationService {
     const body = exactRecord(
       input,
       ["verificationRunId", "profileKey"],
-      ["verificationRunId", "profileKey"],
+      ["verificationRunId"],
     );
     const verificationRunId = requiredString(body, "verificationRunId");
-    const profileKey = requiredString(body, "profileKey");
+    // profileKey is optional: absent, the worker derives the verification
+    // plan from the Published Graph itself. The run row records null.
+    const profileKey =
+      body.profileKey === undefined
+        ? undefined
+        : requiredString(body, "profileKey");
     if (!verificationRunIdPattern.test(verificationRunId)) {
       throw new BadRequestException(
         "verificationRunId must be a bounded factory identifier.",
       );
     }
-    if (!profileKeyPattern.test(profileKey)) {
+    if (profileKey !== undefined && !profileKeyPattern.test(profileKey)) {
       throw new BadRequestException(
         "profileKey must be a bounded graph identifier.",
       );
@@ -203,7 +208,7 @@ export class VerificationService {
       data: {
         verificationRunId,
         compilationId,
-        profileKey,
+        profileKey: profileKey ?? null,
         status: "pending",
         stepIds: [],
       },

@@ -15,6 +15,7 @@ import {
   acceptanceManifest,
   acceptanceProfileKey,
 } from "./fixtures/expense-approval.js";
+import { expenseApprovalGraph, graphLock } from "./fixtures/graph-products.js";
 
 function digestOf(label: string): string {
   return `sha256:${createHash("sha256").update(label).digest("hex")}`;
@@ -201,6 +202,69 @@ describe("queued verification run", () => {
     expect(idempotency?.status).toBe("passed");
     expect(idempotency?.httpStatus).toBe(403);
     expect(idempotency?.action).toBe("expense.submit");
+  });
+
+  it("derives the verification plan from the Published Graph when no profile key is declared", async () => {
+    const graph = expenseApprovalGraph();
+    const input = {
+      verificationRunId: "verify-graph-derived",
+      compilationId: "compilation-1",
+      publishedRevisionId: "rev-graph-derived",
+      graph,
+      compositionLock: graphLock([{ key: "core.identity-policy" }]),
+      artifacts: acceptanceManifest(),
+    };
+    const routes: Record<string, readonly number[]> = {
+      "GET /health none": [200],
+      "POST /api/expense fixture-session-employee": [201],
+      "GET /api/expense/sample-expense fixture-session-employee": [200],
+      "POST /api/expense/sample-expense/events/submit fixture-session-employee":
+        [201, 403],
+      "POST /api/expense/sample-expense/events/approve fixture-session-manager":
+        [201],
+      "POST /api/expense/sample-expense/events/reject fixture-session-manager":
+        [201],
+      "POST /api/expense/sample-expense/events/submit fixture-session-manager":
+        [403],
+    };
+    const { reporter, dependencies, fetch, stopPreviewRun } =
+      collaborators(routes);
+    const evidence = await executeQueuedVerificationRun(
+      "generated",
+      input,
+      reporter,
+      dependencies,
+    );
+
+    // The graph-derived plan drove the run: its own journey IDs and sessions,
+    // not the static acceptance profile's.
+    expect(stepIdsOf(evidence)).toEqual([
+      "migration",
+      "health",
+      "expense-create",
+      "expense-read",
+      "expense-submit",
+      "expense-approve",
+      "expense-reject",
+      "expense-denied-submit",
+      "cleanup",
+    ]);
+    expect(evidence.steps.every((step) => step.status === "passed")).toBe(true);
+    expect(evidence.cleanup.succeeded).toBe(true);
+    expect(stopPreviewRun).toHaveBeenCalledTimes(1);
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/expense/sample-expense/events/approve"),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "x-factory-fixture-session": "fixture-session-manager",
+        }),
+      }),
+    );
+    expect(reporter.report).toHaveBeenCalledTimes(1);
+    const [report] = (reporter.report as ReturnType<typeof vi.fn>).mock
+      .calls[0];
+    expect(report.diagnosis).toBeUndefined();
+    expect(evidence.verificationRunId).toBe("verify-graph-derived");
   });
 
   it("reports a reviewable diagnosis with a Draft Diff proposal on failure", async () => {
