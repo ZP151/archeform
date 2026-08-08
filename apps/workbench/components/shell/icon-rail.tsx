@@ -7,6 +7,7 @@ import {
   FolderKanban,
   House,
   LayoutPanelLeft,
+  Rocket,
   ShieldCheck,
   Sparkles,
   Workflow,
@@ -42,6 +43,12 @@ export const RAIL_DESTINATIONS: readonly {
   { id: "policy", label: "Policy", icon: ShieldCheck, hint: "Set controls" },
   { id: "ai", label: "AI", icon: Bot, hint: "Configure intelligence" },
   { id: "code", label: "Code", icon: Code2, hint: "Inspect generated output" },
+  {
+    id: "release",
+    label: "Release",
+    icon: Rocket,
+    hint: "Publish, compile, verify, preview",
+  },
 ];
 
 type Props = {

@@ -199,10 +199,12 @@ export function verificationStarted(
 export function evidenceSummaryOf(
   steps: readonly { readonly stepId: string; readonly status: string }[],
 ): ReleaseEvidenceSummary {
+  // Evidence steps report the isolated lifecycle statuses (passed / failed /
+  // skipped); skipped steps count toward the total but neither side.
   let passed = 0;
   let failed = 0;
   for (const step of steps) {
-    if (step.status === "succeeded") passed += 1;
+    if (step.status === "passed") passed += 1;
     if (step.status === "failed") failed += 1;
   }
   return { steps: steps.length, passed, failed };

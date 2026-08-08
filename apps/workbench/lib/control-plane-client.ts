@@ -277,7 +277,8 @@ export type WorkbenchPreviewRun = {
 export type WorkbenchVerificationRun = {
   readonly verificationRunId: string;
   readonly compilationId: string;
-  readonly profileKey: string;
+  /** Null when the worker derives the verification plan from the Published Graph. */
+  readonly profileKey: string | null;
   readonly status: "pending" | "succeeded" | "failed" | "cancelled";
   readonly stepIds: readonly string[];
   readonly evidenceDigest: string | null;
@@ -1017,16 +1018,24 @@ export class ControlPlaneClient {
     ).then(workbenchPreviewRun);
   }
 
+  /**
+   * Profile key is optional: without one the worker derives the verification
+   * plan from the Published Graph itself, so any composed product verifies.
+   */
   createVerificationRun(
     compilationId: string,
     verificationRunId: string,
-    profileKey: string,
+    profileKey?: string,
   ): Promise<WorkbenchVerificationRun> {
     return this.request<WorkbenchVerificationRun>(
       `/compilations/${encodeURIComponent(compilationId)}/verification-runs`,
       {
         method: "POST",
-        body: JSON.stringify({ verificationRunId, profileKey }),
+        body: JSON.stringify(
+          profileKey === undefined
+            ? { verificationRunId }
+            : { verificationRunId, profileKey },
+        ),
       },
     ).then(workbenchVerificationRun);
   }

@@ -60,6 +60,7 @@ export function WorkbenchShell({ controller, children }: Props) {
     openApplication,
     compileApplication,
     inspectArtifact,
+    release,
   } = controller;
 
   const active =
@@ -173,6 +174,7 @@ export function WorkbenchShell({ controller, children }: Props) {
             compilation={compilation}
             artifactLoading={artifactLoading}
             artifactSnapshot={artifactSnapshot}
+            release={release.release}
             onInspectArtifact={inspectArtifact}
             onCompile={compileApplication}
             onOpen={openApplication}

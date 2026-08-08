@@ -131,6 +131,17 @@ export function InspectorSheet({
             value: publishedRevisionId ? "Bound" : "None",
           },
         ];
+      case "release":
+        return [
+          {
+            label: "Lifecycle",
+            value: lifecycle === "draft" ? "Draft" : "Published",
+          },
+          {
+            label: "Published revision",
+            value: publishedRevisionId ? "Bound" : "None",
+          },
+        ];
     }
   };
 

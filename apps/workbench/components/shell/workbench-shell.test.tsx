@@ -315,7 +315,16 @@ describe("Workbench shell", () => {
       'nav[aria-label="Workbench navigation"]',
     );
     expect(rail).not.toBeNull();
-    const labels = ["Home", "Page", "Domain", "Flow", "Policy", "AI", "Code"];
+    const labels = [
+      "Home",
+      "Page",
+      "Domain",
+      "Flow",
+      "Policy",
+      "AI",
+      "Code",
+      "Release",
+    ];
     const buttons = labels.map((label) =>
       container.querySelector<HTMLButtonElement>(
         `button[aria-label="${label}"]`,

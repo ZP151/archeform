@@ -481,6 +481,37 @@ describe("ControlPlaneClient", () => {
     );
   });
 
+  it("creates a verification run without a profile key so the worker derives the plan from the Published Graph", async () => {
+    const run = {
+      verificationRunId: "verification-run-2",
+      compilationId: "compilation-1",
+      profileKey: null,
+      status: "pending",
+      stepIds: [],
+      evidenceDigest: null,
+      evidence: null,
+      diagnosis: null,
+      draftDiff: null,
+    };
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify(run), { status: 201 }));
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(
+      client.createVerificationRun("compilation-1", "verification-run-2"),
+    ).resolves.toEqual(run);
+    // The profile key is absent from the request body entirely — the worker
+    // derives the verification plan from the Published Graph itself.
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/compilations/compilation-1/verification-runs",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ verificationRunId: "verification-run-2" }),
+      }),
+    );
+  });
+
   it("reads a verification run by its Factory-issued identifier", async () => {
     const run = {
       verificationRunId: "verification-run-1",

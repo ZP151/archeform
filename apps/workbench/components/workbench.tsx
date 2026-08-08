@@ -12,6 +12,7 @@ import { DomainCanvas } from "./canvases/domain-canvas";
 import { PolicyCanvas } from "./canvases/policy-canvas";
 import { AiCanvas } from "./canvases/ai-canvas";
 import { CodeCanvas } from "./canvases/code-canvas";
+import { ReleaseWorkspace } from "./journey/release-workspace";
 
 /** The transient example prompts offered by the Home composer popover. */
 export const EXAMPLE_PROMPTS: readonly string[] = [
@@ -140,6 +141,13 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
             onStopPreview={controller.stopPreview}
             publishedRevision={controller.publishedRevision}
             previewRun={controller.previewRun}
+          />
+        );
+      case "release":
+        return (
+          <ReleaseWorkspace
+            controller={controller.release}
+            onViewEvidence={controller.toggleActivity}
           />
         );
     }

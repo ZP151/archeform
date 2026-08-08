@@ -276,3 +276,51 @@ browser checks pending).
   control with action, server/local effect, keyboard access, test, and
   disposition.
 - Commit: `refactor(workbench): focus the console on product creation`.
+
+## 2026-08-09 — Task 8: Release, evidence, failure recovery integration
+
+State: `in_progress` (T8-A/B/C green and pushed; T8-D e2e extension pending).
+
+- T8-A (`977104bb`, `refactor(workbench): relocate release model and timeline
+  to product-journey`): `release-model.ts` and `timeline.ts` moved from the
+  Expense-shaped surface wiring into `lib/product-journey/` and generalized —
+  wording, phase names, and reason codes carry no profile-specific
+  condition; the pure state machine (publishing -> compiling -> verifying ->
+  starting-preview -> preview -> cleaned-up, plus `releaseFailed` from any
+  non-terminal phase) is shared by every composed product.
+- T8-C (`5325194`, `feat(verification): derive isolated verification plans
+  from any published graph`): the verification worker derives the plan from
+  the Published Graph instead of a static Profile. A run is created WITHOUT a
+  profile key (`POST /compilations/:id/verification-runs` body is exactly
+  `{"verificationRunId": "..."}`), so any composed product — Expense,
+  Appointment, or a future prompt — verifies through the same path.
+- T8-B (`use-release-journey.ts` + `components/journey/release-workspace.tsx`
+  + shell wiring): the release surface. `useReleaseJourney` drives the pure
+  model against the control plane: publish -> compile (polled) -> verify
+  (polled, fail-closed on empty evidence -> `verification.evidence_missing`,
+  carries the worker's bounded diagnosis code and, when proposed, the
+  reviewable Draft Diff) -> preview (polled) -> cleanup. Approval lives
+  outside the model: the model never applies a diff; `approveDraftDiff`
+  submits to the review boundary, surfaces a bounded `approvalError` on
+  refusal, and hands the approved Draft revision back to the parent to adopt
+  via `openLocalApplication` (revision bump, not a fresh local draft). The
+  surface reseeds when the open Draft revision changes.
+- ReleaseWorkspace renders the five-phase rail derived deterministically from
+  the timeline, a count-first evidence summary ("N steps · X passed · Y
+  failed") that opens the Activity sheet, phase action cards, the preview
+  card with the runtime URL and Stop-and-clean-up, and the failure card with
+  diagnosis code + Draft Diff review (with the never-applies-automatically
+  note) + approval + restart. The full release timeline lives behind the
+  Activity sheet, never beneath the workspace.
+- Evidence: three new/updated suites — `use-release-journey.test.tsx` (9:
+  seeding/gates, full publish->compile->verify with the no-profile-key body
+  asserted, fail-closed empty evidence, diagnosis+diff+approve, 409 refusal,
+  preview+cleanup, reset, reseed), `release-workspace.test.tsx` (9: empty,
+  publishing note, 5-phase rail, count-first evidence without a
+  `.release-timeline` on the surface, preview card, failing rail, Draft Diff
+  review+approve, approval refusal, cleaned-up restart), plus shell/rail/
+  inspector/control-plane client updates. Workbench suite 32 files/233 tests
+  green, workspace `tsc --noEmit` clean, prettier clean. Release model and
+  timeline contain no profile-specific condition; verification is
+  graph-derived, not template-derived.
+- Commit: `feat(release): verify and preview any composed product graph`.

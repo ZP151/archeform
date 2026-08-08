@@ -9,6 +9,7 @@ import type {
   WorkbenchWorkspacePortfolioSummary,
 } from "../../lib/control-plane-client";
 import { toPortfolioHomeModel } from "../../lib/portfolio-summary";
+import type { ReleaseState } from "../../lib/product-journey/release-model";
 import { MetricPanel } from "./portfolio-metrics";
 import { activityLabel, activityTime, RecentProducts } from "./recent-products";
 
@@ -21,6 +22,7 @@ type Props = {
   readonly compilation: WorkbenchCompilation | null;
   readonly artifactLoading: boolean;
   readonly artifactSnapshot: WorkbenchArtifactContent | null;
+  readonly release: ReleaseState | null;
   readonly onInspectArtifact: (artifactPath: string) => void;
   readonly onCompile: (applicationKey: string) => void;
   readonly onOpen: (applicationKey: string) => void;
@@ -43,6 +45,7 @@ export function ActivitySheet({
   compilation,
   artifactLoading,
   artifactSnapshot,
+  release,
   onInspectArtifact,
   onCompile,
   onOpen,
@@ -141,6 +144,32 @@ export function ActivitySheet({
                   ))}
                 </ul>
               )}
+            </>
+          )}
+        </section>
+        <section className="activity-release" aria-label="Release evidence">
+          <h3>Release evidence</h3>
+          {release === null ? (
+            <p>No release pipeline yet.</p>
+          ) : (
+            <>
+              <p>
+                {release.phase}
+                {release.evidenceSummary !== undefined &&
+                  ` · ${release.evidenceSummary.steps} steps · ${release.evidenceSummary.passed} passed · ${release.evidenceSummary.failed} failed`}
+              </p>
+              <ol className="release-timeline">
+                {release.timeline.events.map((event, index) => (
+                  <li
+                    key={`${event.kind}-${index}`}
+                    className={`release-timeline-event release-timeline-${event.status}`}
+                  >
+                    <span>{event.title}</span>
+                    <code>{event.status}</code>
+                    {event.reason !== undefined && <code>{event.reason}</code>}
+                  </li>
+                ))}
+              </ol>
             </>
           )}
         </section>

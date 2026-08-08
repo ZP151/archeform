@@ -36,9 +36,9 @@ function happyPath() {
   release = compilationSucceeded(release, "compilation-1");
   release = verificationStarted(release, "verification-run-1");
   release = verificationSucceeded(release, [
-    { stepId: "isolated-boot", status: "succeeded" },
-    { stepId: "employee-submit", status: "succeeded" },
-    { stepId: "manager-approval", status: "succeeded" },
+    { stepId: "isolated-boot", status: "passed" },
+    { stepId: "employee-submit", status: "passed" },
+    { stepId: "manager-approval", status: "passed" },
   ]);
   release = previewStarted(release, "preview-1", "http://127.0.0.1:43101");
   release = previewStopped(release);
@@ -106,7 +106,7 @@ describe("the one-action release journey", () => {
     release = compilationSucceeded(release, "compilation-1");
     release = verificationStarted(release, "verification-run-1");
     release = verificationSucceeded(release, [
-      { stepId: "boot", status: "succeeded" },
+      { stepId: "boot", status: "passed" },
     ]);
     release = previewStarted(release, "preview-1", "http://127.0.0.1:43101");
 
@@ -137,9 +137,9 @@ describe("product-agnostic acceptance releases", () => {
     release = compilationSucceeded(release, "compilation-expense-1");
     release = verificationStarted(release, "verification-expense-1");
     release = verificationSucceeded(release, [
-      { stepId: "employee-submit", status: "succeeded" },
-      { stepId: "manager-approval", status: "succeeded" },
-      { stepId: "authorization-denial", status: "succeeded" },
+      { stepId: "employee-submit", status: "passed" },
+      { stepId: "manager-approval", status: "passed" },
+      { stepId: "authorization-denial", status: "passed" },
     ]);
     release = previewStarted(
       release,
@@ -161,9 +161,9 @@ describe("product-agnostic acceptance releases", () => {
     release = compilationSucceeded(release, "compilation-appointment-1");
     release = verificationStarted(release, "verification-appointment-1");
     release = verificationSucceeded(release, [
-      { stepId: "customer-books", status: "succeeded" },
-      { stepId: "clinic-confirms", status: "succeeded" },
-      { stepId: "authorization-denial", status: "succeeded" },
+      { stepId: "customer-books", status: "passed" },
+      { stepId: "clinic-confirms", status: "passed" },
+      { stepId: "authorization-denial", status: "passed" },
     ]);
     release = previewStarted(
       release,
@@ -206,7 +206,7 @@ describe("fail-closed guards", () => {
     release = compilationSucceeded(release, "compilation-1");
     release = verificationStarted(release, "verification-run-1");
     release = verificationSucceeded(release, [
-      { stepId: "boot", status: "succeeded" },
+      { stepId: "boot", status: "passed" },
     ]);
     expect(() => previewStopped(release)).toThrow(/preview/i);
   });
@@ -365,8 +365,8 @@ describe("evidenceSummaryOf", () => {
   it("counts bounded evidence steps", () => {
     expect(
       evidenceSummaryOf([
-        { stepId: "a", status: "succeeded" },
-        { stepId: "b", status: "succeeded" },
+        { stepId: "a", status: "passed" },
+        { stepId: "b", status: "passed" },
         { stepId: "c", status: "failed" },
         { stepId: "d", status: "skipped" },
       ]),

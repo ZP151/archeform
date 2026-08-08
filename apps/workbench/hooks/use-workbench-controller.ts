@@ -40,6 +40,7 @@ import {
   serializeGraphExchange,
 } from "../lib/graph-exchange";
 import { useProductJourney } from "../lib/product-journey/use-product-journey";
+import { useReleaseJourney } from "../lib/product-journey/use-release-journey";
 import {
   initialWorkbenchState,
   transitionWorkbench,
@@ -93,6 +94,7 @@ export type WorkbenchController = {
   readonly compilingApplicationKey: string | null;
   readonly flowDiagram: ReturnType<typeof flowModelToReactFlow>;
   readonly journey: ReturnType<typeof useProductJourney>;
+  readonly release: ReturnType<typeof useReleaseJourney>;
 
   readonly inspectorTriggerRef: React.RefObject<HTMLButtonElement | null>;
   readonly activityTriggerRef: React.RefObject<HTMLButtonElement | null>;
@@ -252,6 +254,37 @@ export function useWorkbenchController({
       }
     },
     [],
+  );
+
+  const release = useReleaseJourney(
+    controlPlaneUrl,
+    remoteDraft === null
+      ? null
+      : {
+          applicationGraphId: remoteDraft.applicationGraphId,
+          draftRevisionId: remoteDraft.draftRevisionId,
+        },
+    useCallback(
+      (draft: WorkbenchDraft) => {
+        // The approval created a new Draft revision of the same application
+        // graph; adopting re-opens the application so the newest revision
+        // becomes the open Draft, and the release surface reseeds for it.
+        void controlPlane
+          .openLocalApplication(draft.applicationGraphId)
+          .then((opened) => {
+            adoptOpenedApplication(opened);
+            setOperationError(null);
+          })
+          .catch((error) => {
+            setOperationError(
+              error instanceof Error
+                ? error.message
+                : "The approved Draft could not be adopted.",
+            );
+          });
+      },
+      [controlPlane, adoptOpenedApplication],
+    ),
   );
 
   const bootstrapGraph = useCallback(
@@ -826,6 +859,7 @@ export function useWorkbenchController({
     compilingApplicationKey,
     flowDiagram,
     journey,
+    release,
     inspectorTriggerRef,
     activityTriggerRef,
     libraryTriggerRef,
