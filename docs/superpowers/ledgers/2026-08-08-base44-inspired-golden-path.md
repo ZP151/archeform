@@ -44,6 +44,7 @@ owning slice to `implementing`.
 | S5    | Unified bounded Activity/Evidence Timeline | implementing | 3989e3cf | 13 focused tests; workbench 139/139; graph 188/188; capabilities 356/356; control-plane 184/184; compiler-worker 183/183 |
 | S6    | One-action Publish -> Compile -> Verify -> Preview + cleanup | implementing | (see record) | 13 focused + 3 client tests; workbench 155/155; graph 188/188; control-plane 184/184 |
 | S7    | Mode shell UI, lineage canvas, browser E2E acceptance | implementing | 395ca36a | workbench 222/222; capabilities 356/356; graph 190/190; adapters 34/34; control-plane 184/184; compiler-worker 183/183; compiler 332/332; browser E2E green (2.3m, incl. cleanup proof) |
+| S8    | Clean-checkout acceptance + gates + close | implementing | 89bd684 | clean clone: build 10/10; workbench 222/222; graph 190/190; capabilities 356/356; adapters 34/34; compiler-worker 183/183; control-plane 184/184; compiler 332/332; E2E green (2.1m); acceptance gates reviewed |
 
 ## Slice records
 
@@ -286,6 +287,67 @@ The approved design's `Required-Plan: pending design review` is satisfied:
 eight test-first slices (S1-S8) over the verified existing surface; the
 roadmap gains the **P1 Product Closure gate** ahead of the Foundry breadth
 gates. S1 begins now.
+
+### 2026-08-09 — S8 Clean-checkout acceptance + gates + close
+
+**Clean-checkout verification** (fresh clone of
+`feat/governed-composition-capability-foundry` @ `89bd684`, frozen lockfile):
+`pnpm install --frozen-lockfile` -> `pnpm --filter @factory/control-plane
+prisma:generate` (the committed build depends on generated Prisma client
+types; the Dockerfile already runs this step) -> `pnpm build` (turbo
+10/10, incl. the workbench production `next build`). Then, in the clean
+tree: workbench 222/222; graph 190/190; capabilities 356/356; adapters
+34/34; compiler-worker 183/183; control-plane 184/184; compiler 332/332
+(committed single-fork pool config). The Expense browser E2E from the
+clean checkout passes (2.1m) against the compose stack built from the same
+committed source.
+
+One environment note: the control-plane vitest suite is load-fragile under
+full parallelism on this machine (tinypool worker stack-overflow crash —
+the same class the compiler config documents and pins); an isolated run is
+green. Pinning the forks pool for the control-plane suite is recorded as a
+gap below.
+
+**Acceptance-gate self-review** (per the design's gates): the complete
+journey completes without editing source or manually assembling capability
+locks (E2E, twice green incl. clean checkout); Discuss cannot mutate a
+Draft and Build requires an accepted, checksum-bound plan (S1/S3 focused
+tests, fail-closed on tampered checksums); the default generated product is
+coherent in light and dark themes (deterministic Experience System token
+defaults) — an automated a11y audit of the generated app remains a gap;
+role simulation proves allowed and denied journeys before Publish (S4
+tests + the E2E's recorded `authorization-denial` evidence); only a
+Published Graph compiles and the isolated verifier passes before the
+preview is marked ready (S6 release model + E2E ordering); failure produces
+bounded evidence and a reviewable Draft Diff without mutating immutable or
+generated artifacts (S5 timeline + release-model Draft Diff, unit-covered);
+no sensitive material in persisted state, evidence, screenshots, or reports
+(bounded timeline schema, env-only credentials, E2E reports carry none);
+and every required suite is green from a clean checkout (this record).
+
+**Remaining gaps**: (1) no automated accessibility audit (axe-class) over
+the generated application in the E2E — the Experience System declares the
+states and themes, the generated preview renders, but the declared
+accessibility checks are not yet asserted at the browser level; (2) the
+failed-verification -> reviewable Draft Diff -> next revision path is
+unit-covered but not exercised end-to-end in the browser journey (no
+failure injection in the E2E); (3) the control-plane vitest suite should
+pin the forks pool like the compiler does, so full-parallelism runs are
+deterministic on this machine; (4) the journey UI reports completion when
+the stop request is accepted; the terminal teardown is proven by the E2E
+cleanup poll (eventually-consistent by design). The `2026-08-08` plan,
+adaptive-requirement-interview, and archeform-brand documents remain
+uncommitted by explicit exclusion.
+
+**Recommended next goal (P1 post-closure)**: a hardening round before
+resuming Foundry breadth — (a) browser-level accessibility assertions over
+the generated Expense Approval app (light/dark theme toggle + declared
+contrast/focus checks), (b) an E2E scenario driving a failing verification
+through the reviewable Draft Diff to the next immutable revision, and (c)
+pin the control-plane vitest pool. After hardening, resume the roadmap's
+Foundry breadth gates (100+ recipe catalogue, twelve compiled anchors).
+
+S8 state stays `implementing` for PM advancement.
 
 ## Completion marker
 

@@ -1,6 +1,6 @@
 # Factory Pilot delivery status
 
-Updated: 2026-08-08
+Updated: 2026-08-09
 
 ## Approved implementation target — 2026-08-02
 
@@ -2375,3 +2375,38 @@ the tip: focused kernel suites 55/55 (23 target-plugin + 15 target-registry
   with its plan and PM ledger in
   `docs/superpowers/plans/2026-08-06-isolated-verifier.md` and
   `docs/superpowers/ledgers/2026-08-06-isolated-verifier.md`.
+
+## Current iteration — P1 Product Closure: Base44-inspired Golden Path accepted
+
+The P1 Product Closure gate is complete: one low-friction, evidence-backed
+path from a business requirement to a runnable local preview for the Expense
+Approval profile, with the browser journey and the generated application
+passing acceptance from a clean checkout. Authority: the Goal Design, plan,
+and PM ledger at
+`docs/superpowers/{specs,plans,ledgers}/2026-08-08-base44-inspired-golden-path*`
+(plan and design remain uncommitted by explicit exclusion; the ledger is
+committed).
+
+- The four-mode Workbench journey (Discuss -> Plan -> Build -> Release) is
+  test-first over the immutable lifecycle: Discuss cannot mutate a Draft;
+  Build requires an accepted, checksum-bound CompositionDecision; only a
+  Published Graph compiles; the isolated verifier passes before the preview
+  is marked ready; the preview is a generated application, never the
+  Workbench. Slice commits `2fe78d30` (S1) through `395ca36a` (S7) and the
+  closure record `89bd684`.
+- Browser E2E green (twice, incl. clean checkout): the complete journey
+  including role/data simulation with recorded authorization denial, the
+  generated-app preview, and docker-level proof that the preview project's
+  containers, network, volumes, and worker artifact directory are removed.
+- Clean-checkout verification from the committed branch: turbo build 10/10
+  (incl. workbench production build; `prisma:generate` precedes the
+  control-plane build as in the Dockerfile); workbench 222/222; graph
+  190/190; capabilities 356/356; adapters 34/34; compiler-worker 183/183;
+  control-plane 184/184; compiler 332/332.
+- Acceptance-gate self-review passed with three recorded gaps (see the S8
+  ledger record): no automated axe-class accessibility audit over the
+  generated app in the E2E; the failed-verification -> reviewable Draft
+  Diff -> next revision path is unit-covered but not browser-exercised; the
+  control-plane vitest suite should pin the forks pool for deterministic
+  full-parallelism runs on this machine. Recommended next goal: a hardening
+  round on those three items before resuming Foundry breadth gates.
