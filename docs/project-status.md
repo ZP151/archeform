@@ -2410,3 +2410,34 @@ committed).
   control-plane vitest suite should pin the forks pool for deterministic
   full-parallelism runs on this machine. Recommended next goal: a hardening
   round on those three items before resuming Foundry breadth gates.
+
+## Current iteration — P1 Product Closure reopened: Honest Requirement-to-Product Closure
+
+The P1 Product Closure gate is **reopened** on 2026-08-09. The Base44-inspired
+Golden Path acceptance is retained as **fixed Expense Approval replay
+evidence** only: it starts from the `guided-template-expense-approval` starter,
+clicks fixed clarification answers, and accepts canned Expense framings — a
+blank or non-Expense workspace cannot start the journey, and no free-form
+requirement enters the system. It therefore does not prove requirement-to-
+product closure. Authority: the 2026-08-09 plan and PM ledger at
+`docs/superpowers/{plans,ledgers}/2026-08-09-honest-requirement-to-product-closure.md`
+and the acceptance record `docs/acceptance/requirement-to-product-closure.md`.
+
+- Acceptance boundary: two unrelated free-form prompts — Expense Approval and
+  Appointment Booking — each from an empty workspace with **no Profile,
+  starter, or template selection**, producing materially different entities,
+  fields, pages, routes, roles, workflows, navigation, seed scenarios, and
+  role journeys, both editable in multi-page Page Studio, publishable,
+  compilable, independently bootable, verifiable, previewed, and cleanly
+  removed. Final local acceptance uses the real OpenAI interpreter with
+  environment-only credentials; nothing raw is persisted.
+- Task 1 (boundary pin) landed: `e2e/golden-path.spec.ts` no longer clicks
+  `guided-template-expense-approval`; two prompt-driven scenarios start from
+  an empty workspace and expect a Requirement Summary. RED evidence recorded:
+  the focused browser run fails at the missing `Requirement brief` composer
+  (the empty-workspace requirement composer does not exist yet).
+- The Workbench is being rebuilt around this primary journey: sparse main
+  canvas, icon rail, contextual sheets, one obvious primary action, compact
+  typography, Lucide icons, light default and dark functional. Portfolio
+  Intelligence, Source Intake, Profile Readiness, Capability Supply, and long
+  evidence lists leave the default Home frame.

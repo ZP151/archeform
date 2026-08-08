@@ -91,29 +91,48 @@ P0 acceptance gates:
 
 ## P1 — Governed Composition & Capability Foundry (active Goal)
 
-### P1 Product Closure gate (Base44-inspired Golden Path, active)
+### P1 Product Closure gate (Honest Requirement-to-Product Closure, active)
 
-The approved Base44-inspired Golden Path design
+The Product Closure gate is **reopened on 2026-08-09**. The Base44-inspired
+Golden Path goal
 (`docs/superpowers/specs/2026-08-08-base44-inspired-golden-path-design.md`)
-inserts a **Product Closure** gate ahead of the remaining Foundry breadth
-gates. Before resuming breadth-first Capability Foundry expansion, Factory
-completes one low-friction, evidence-backed path from a business requirement
-to a runnable local preview:
+completed one low-friction Expense Approval replay, retained as **fixed replay
+evidence** (commits `2fe78d30`..`e398561`, clean-checkout suites, docker-level
+cleanup proof), but a blank or non-Expense workspace cannot start that journey
+and no free-form requirement enters the system. It does not prove
+requirement-to-product closure. The active gate is the 2026-08-09 honest
+requirement-to-product closure plan:
 
 ```text
-Discuss -> RequirementSpec -> plan alternatives -> visual Graph Diff
--> Draft -> role/data simulation -> Publish -> Compile
--> isolated verification -> preview URL
+empty workspace -> free-form requirement -> validated RequirementSpec and
+ProductBlueprint -> deterministic capability plan -> generated Application
+Graph -> editable multi-page Puck product -> Publish -> Compile -> isolated
+verification -> runnable preview and cleanup
 ```
+
+Two unrelated prompts — Expense Approval and Appointment Booking — must pass
+from an empty workspace **without selecting a Profile or starter**, with
+materially different entities, fields, pages, routes, roles, permissions,
+workflows, navigation, seed scenarios, and role journeys; both products are
+edited in multi-page Page Studio, published, compiled, independently booted,
+verified, previewed, and cleanly removed. The Workbench is rebuilt around this
+primary journey (icon rail, contextual sheets, one primary action, compact
+typography, Lucide, light default / dark functional; portfolio noise leaves
+the default Home frame). The real OpenAI provider is used for final local
+acceptance through environment-only credentials; raw prompts, responses, and
+credentials are never persisted. Implementation plan:
+`docs/superpowers/plans/2026-08-09-honest-requirement-to-product-closure.md`;
+acceptance record:
+`docs/acceptance/requirement-to-product-closure.md`; PM ledger:
+`docs/superpowers/ledgers/2026-08-09-honest-requirement-to-product-closure.md`.
 
 Delivery order changes; platform authority does not. The `ApplicationGraphV1`
 remains the sole business source of truth, and the lifecycle remains mutable
-Draft -> immutable Published Graph -> immutable Compilation. New capability
-families and vertical Profiles are paused; the 100+ recipe catalogue and
-12-anchor expansion resume after Product Closure is accepted. The acceptance
-profile is Expense Approval; Restaurant Ordering and Simple Ecommerce remain
-regression profiles and do not block the first product-flow acceptance.
-Implementation plan: `docs/superpowers/plans/2026-08-08-base44-inspired-golden-path.md`.
+Draft -> immutable Published Graph -> immutable Compilation. Only the
+deterministic planner may select approved immutable capability locks; the
+model may propose business semantics only. New capability families and
+vertical Profiles remain paused; the 100+ recipe catalogue and 12-anchor
+expansion resume after the honest Product Closure is accepted.
 
 ### Staged AI composition
 
