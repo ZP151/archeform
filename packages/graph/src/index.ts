@@ -10,6 +10,7 @@ import {
 } from "./model.js";
 
 export * from "./model.js";
+export * from "./experience.js";
 export * from "./verification.js";
 export * from "./diagnosis.js";
 export * from "./composition-shared.js";
@@ -136,6 +137,31 @@ export function createDraftRevision(
     status: "draft",
     revision: 1,
     graph: assertValidApplicationGraph(graph),
+  };
+}
+
+/**
+ * Appends the next immutable Draft revision from arbitrary valid Graph
+ * content (e.g. restoring an earlier revision's graph). Never mutates the
+ * current revision; the revision counter advances monotonically.
+ */
+export function appendDraftRevision(
+  graphInput: unknown,
+  draft: DraftRevisionV1,
+): DraftRevisionV1 {
+  if (draft.status !== "draft") {
+    throw new GraphSemanticError([
+      {
+        code: "revision.not_draft",
+        message: "Only mutable Draft revisions accept appended revisions.",
+        path: [],
+      },
+    ]);
+  }
+  return {
+    ...draft,
+    revision: draft.revision + 1,
+    graph: assertValidApplicationGraph(graphInput),
   };
 }
 

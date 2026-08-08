@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 
 import { z } from "zod";
 
+import { experienceDesignSystemSchema } from "./experience.js";
+
 const identifier = z
   .string()
   .min(1)
@@ -251,6 +253,7 @@ const experienceModelSchema = z.object({
     mode: z.enum(["light", "dark", "system"]),
     tokens: z.record(z.string().min(1)).default({}),
   }),
+  designSystem: experienceDesignSystemSchema.optional(),
   locales: z.array(z.string().min(2).max(32)).min(1),
 });
 
@@ -611,6 +614,18 @@ export function validateApplicationGraph(
       );
     }
   });
+  graph.experience.designSystem?.selection.pageLayouts &&
+    Object.keys(graph.experience.designSystem.selection.pageLayouts).forEach(
+      (pageId) => {
+        if (!pageIds.has(pageId)) {
+          issue(
+            "experience.design_system.page_layout_unknown_page",
+            `Page layout references unknown page '${pageId}'.`,
+            ["experience", "designSystem", "selection", "pageLayouts", pageId],
+          );
+        }
+      },
+    );
 
   const entityKeys = new Set(graph.domain.entities.map((entity) => entity.key));
   for (const duplicate of duplicateValues(
