@@ -1018,6 +1018,60 @@ Task 6 remains `implementing`; the next batch (Batch 4: record verification
 digest literals on the four partial families' current assets, then re-declare
 evidence to move cart/audit/crud/workflow to eligible) is tracked as Task #34.
 
+### 2026-08-08 — Task 6 Batch 4: verification digest literals on the four locked assets
+
+Batch 4 moves the four locked-but-digest-less families to eligible by
+recording the reviewed verification digest literals on their current
+assets, from the actual on-disk packages:
+
+- `commerce.cart@1.0.1`: fixture
+  `sha256:d67eabef3aa20729725939d0bcd03a7e7aa9ce58a76e8968f09bf2e8adfb512d`,
+  contract test
+  `sha256:01b2ad5e8635728d62061fb06bed09267295d9ea6d1beb29f114c3d9ab9e1fa7`.
+- `core.audit@1.0.2`: fixture
+  `sha256:d5ccc2735f139c947853eba2e2658fa050254b42785ad529ed51116dd847e96f`,
+  contract test
+  `sha256:21335a5e618119a4db05444913cd73a8940ce758df5b42de89b2ac739c94c7bb`.
+- `core.crud@1.0.1`: fixture
+  `sha256:43e83c12606bf900ae30fd02a6e3f77e61d2629f9cd7c75c5376d8d5d9d8de5a`,
+  contract test
+  `sha256:5c17c71d7ac9863cae94372dfe4ecf4536009c3f18923a118a0b7237f0b27f9b`.
+- `core.workflow@1.0.1`: fixture
+  `sha256:aa7783202e6f8c2148561f4f93b8577ff5768438315f06abdb4a0242ea514255`,
+  contract test
+  `sha256:0dcf1aa4e43a556075472cfe8e640974240fde538dd226588efa43f14d86d67a`.
+
+Each asset's manifest digest was recomputed (sha256 of the canonical
+manifest minus the digest field) and the physical `component.json`
+regenerated to mirror the registry contract exactly:
+`core.audit@1.0.2` `sha256:fe6616252c7b44efe61d516d305e689f3f593d70d5287baac31b5f31013addc8`,
+`core.crud@1.0.1` `sha256:8dede9ba8d63bea9b09c7bf7ac6ce784c52595b644d03eca52ea6996a31882d1`,
+`core.workflow@1.0.1` `sha256:16ebf7d8128f30e656d7c86e39ef36323991cf7af7ea18a5d81a3ac0e4c06884`,
+`commerce.cart@1.0.1` `sha256:20b9900c018b5590bb6481b1c6fb30a0bece3fd1b42baa8ebfceb6a6bd5c5216`.
+
+Because a lock digest is derived from the asset identity (key, version,
+packageRoot, manifest digest, lifecycle), the four families' verifier lock
+digests were re-derived through the same harness pipeline as Batch 3:
+`core.audit` `sha256:9cf4dcebe313e30e502a676b2fbacdb86933effb1e6fec787e4616ebe1063ebf`,
+`core.crud` `sha256:398819ff35083e9d83cd8ad9930a615eaf5c60848b78646b4f2b84eb3bff6635`,
+`core.workflow` `sha256:7cb0fa678431c81aaff88ece04bbe91cfbef4f75129d66a2ec22bcebc537dd76`,
+`commerce.cart` `sha256:d550242d29b89d73dde2f39563a324ce47213be5a0b2dc4b97320fe55265829f`.
+The three profile graph checksums were reproduced byte-identical to Batch 3
+(manifest edits cannot perturb a composition), so the other 11 locked
+families' locks remain valid unchanged.
+
+**Matrix: 15 eligible / 0 partial / 12 quarantined / 0 rejected.** The
+evidence self-check pins the exact eligible list (the 15 two-Profile-locked
+families) and the mirror test keeps evidence digests equal to the current
+assets in both directions. The 12 quarantined families (core.approvals,
+core.files-media, core.identity-context, core.scheduling, core.search,
+commerce.simulated-payment, and the six restaurant families) hold fewer
+than two Profile locks at graph level; reaching them requires profile
+composition changes, which Batch 5 scopes.
+
+Suites: capabilities 354/354 (28 files), graph 175/175, control-plane
+184/184, typecheck clean.
+
 ## Required evidence per promoted family
 
 | Evidence    | Required form                                                       |

@@ -9,26 +9,25 @@ honest by construction: a family is counted as eligible only when its
 declared evidence record matches the current family digest and passes every
 promotion requirement.
 
-## Portfolio summary — 2026-08-08 (Batch 3)
+## Portfolio summary — 2026-08-08 (Batch 4)
 
 | Count            | Value |
 | ---------------- | ----- |
 | Current families | 27    |
-| Eligible         | 11    |
-| Partial          | 4     |
+| Eligible         | 15    |
+| Partial          | 0     |
 | Quarantined      | 12    |
 | Rejected         | 0     |
 
-**Eleven families are eligible after Batch 3**: every current family
+**Fifteen families are eligible after Batch 4**: every current family
 declares the strict binding contract (Task 6 Batch 0 repaired the 23
 pre-existing manifests; Batch 1 declares it from birth), so none are
-rejected. Batch 3 declared the isolated-verifier profile locks and the
-reviewed verification digests the current assets record: the 11 families
-with two-Profile locks and reviewed digests are eligible; the 4 locked
-families whose current assets record no verification digest literals stay
-partial (missing-evidence-digests); the 12 without two-Profile proof stay
-quarantined. The matrix surfaces exactly this state so the remaining work
-is visible and accountable.
+rejected. Batch 3 declared the isolated-verifier profile locks; Batch 4
+recorded the reviewed verification digest literals on the four remaining
+locked assets (commerce.cart, core.audit, core.crud, core.workflow), so no
+family stays partial. The 12 without two-Profile proof stay quarantined.
+The matrix surfaces exactly this state so the remaining work is visible
+and accountable.
 
 ## Families by category
 
@@ -38,7 +37,7 @@ is visible and accountable.
 | Commerce (9)   | catalog, cart, line-configuration, money-pricing, inventory, inventory-ledger, order, order-operations, simulated-payment  |
 | Restaurant (6) | table-session, menu, ordering, kitchen, cashier, reporting                                                                 |
 
-## Eligible — two-Profile locks and reviewed verification digests (11)
+## Eligible — two-Profile locks and reviewed verification digests (15)
 
 These families carry profile locks from two or more of the three isolated
 verifier profile graphs (expense-approval, simple-ecommerce,
@@ -46,6 +45,7 @@ restaurant-ordering) at the current asset digest, and their evidence
 records mirror the reviewed fixture and contract-test digest literals of
 the current assets:
 
+- commerce.cart
 - commerce.catalog
 - commerce.inventory
 - commerce.inventory-ledger
@@ -53,21 +53,19 @@ the current assets:
 - commerce.money-pricing
 - commerce.order
 - commerce.order-operations
+- core.audit
+- core.crud
 - core.identity-policy
 - core.location-context
 - core.notification
 - core.policy-declarations
-
-## Partial — two-Profile locks, verification digest literals outstanding (4)
-
-These families have two-Profile locks from the isolated verifier graphs,
-but their current assets record no fixture/contract-test digest literals,
-so their evidence records honestly declare none:
-
-- commerce.cart
-- core.audit
-- core.crud
 - core.workflow
+
+## Partial — two-Profile locks, verification digest literals outstanding (0)
+
+No current family is partial: Batch 4 recorded the reviewed verification
+digest literals on the four assets that lacked them (commerce.cart,
+core.audit, core.crud, core.workflow).
 
 ## Quarantined — two-Profile proof outstanding (12)
 

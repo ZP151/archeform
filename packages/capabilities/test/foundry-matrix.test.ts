@@ -238,21 +238,20 @@ describe("buildFoundryMatrix", () => {
     });
   });
 
-  it("reports the declared registry honestly with the Batch 3 split", () => {
+  it("reports the declared registry honestly with the Batch 4 split", () => {
     // Default inputs: the 27 current families with their declared records.
     // The matrix claims nothing the evidence does not prove: every current
     // manifest declares a binding contract and verified fixture/negative
     // tests (Task 6 Batch 0 repaired all 23, Batch 1 adds families that
-    // declare it from birth), and Batch 3 declares the isolated-verifier
-    // profile locks and reviewed digest literals. The honest verdict: 11
-    // eligible (two-Profile locks + reviewed digests), 4 partial (two-Profile
-    // locks, but the current assets record no digest literals), 12
-    // quarantined (no two-Profile proof), zero rejected. The matrix exists
-    // to surface exactly this split.
+    // declare it from birth), and Batch 3/4 declare the isolated-verifier
+    // profile locks and reviewed digest literals. The honest verdict: 15
+    // eligible (two-Profile locks + reviewed digest literals), zero partial,
+    // 12 quarantined (no two-Profile proof), zero rejected. The matrix
+    // exists to surface exactly this split.
     const matrix = buildFoundryMatrix();
     expect(matrix.counts.currentFamilies).toBe(27);
-    expect(matrix.counts.eligible).toBe(11);
-    expect(matrix.counts.partial).toBe(4);
+    expect(matrix.counts.eligible).toBe(15);
+    expect(matrix.counts.partial).toBe(0);
     expect(matrix.counts.quarantined).toBe(12);
     expect(matrix.counts.rejected).toBe(0);
     expect(matrix.counts.missingEvidence).toBe(0);
@@ -285,17 +284,12 @@ describe("buildFoundryMatrix", () => {
           row.reasonCodes[0] === "missing-binding-contract",
       ),
     ).toBe(true);
-    // Pin the exact split: the four locked families whose current assets
-    // record no verification digest literals stay partial; the twelve
-    // without two-Profile proof stay quarantined; nothing is rejected. The
-    // counts tripwire catches a manifest regression moving a family into
-    // rejection.
-    expect(partial.map((row) => row.key).sort()).toEqual([
-      "commerce.cart",
-      "core.audit",
-      "core.crud",
-      "core.workflow",
-    ]);
+    // Pin the exact split: Batch 4 recorded the verification digest
+    // literals on the four remaining locked assets (cart/audit/crud/
+    // workflow), so nothing stays partial; the twelve without two-Profile
+    // proof stay quarantined; nothing is rejected. The counts tripwire
+    // catches a manifest regression moving a family into rejection.
+    expect(partial).toEqual([]);
     expect(quarantined.map((row) => row.key).sort()).toEqual([
       "commerce.simulated-payment",
       "core.approvals",

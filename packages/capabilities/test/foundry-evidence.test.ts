@@ -19,8 +19,8 @@ import { declaredFoundryFamilyEvidence } from "../src/index.js";
  * asset bump without a deliberate registry update fails the self-check), no
  * duplicate or historical records are counted, and the registry claims
  * nothing it cannot prove — profile locks are declared only from real
- * isolated-verifier evidence (Batch 3), and verification digests mirror
- * exactly the literals the reviewed current assets record.
+ * isolated-verifier evidence (Batches 3 and 4), and verification digests
+ * mirror exactly the literals the reviewed current assets record.
  */
 describe("declaredFoundryFamilyEvidence", () => {
   const byKey = new Map(
@@ -171,11 +171,10 @@ describe("declaredFoundryFamilyEvidence", () => {
   });
 
   it("admits the locked families exactly as the evidence proves", () => {
-    // Honest split after Batch 3: the 11 families with two-Profile locks and
-    // reviewed verification digests are eligible; the 4 locked families whose
-    // current assets record no digest literals stay partial
-    // (missing-evidence-digests); the 12 without two-Profile proof stay
-    // quarantined. The admission projection must surface the exact reasons.
+    // Honest split after Batch 4: the 15 families with two-Profile locks and
+    // reviewed verification digests are eligible; the 12 without two-Profile
+    // proof stay quarantined; nothing is partial and nothing is rejected.
+    // The admission projection must surface the exact reasons.
     const verdictFor = (key: string) => {
       const asset = currentCapabilityAssets.find(
         (candidate: CapabilityAssetV1) => candidate.manifest.key === key,
@@ -190,6 +189,7 @@ describe("declaredFoundryFamilyEvidence", () => {
       (record) => verdictFor(record.key).result === "eligible",
     );
     expect(eligible.map((record) => record.key).sort()).toEqual([
+      "commerce.cart",
       "commerce.catalog",
       "commerce.inventory",
       "commerce.inventory-ledger",
@@ -197,25 +197,18 @@ describe("declaredFoundryFamilyEvidence", () => {
       "commerce.money-pricing",
       "commerce.order",
       "commerce.order-operations",
+      "core.audit",
+      "core.crud",
       "core.identity-policy",
       "core.location-context",
       "core.notification",
       "core.policy-declarations",
+      "core.workflow",
     ]);
     const partial = declaredFoundryFamilyEvidence.filter(
       (record) => verdictFor(record.key).result === "partial",
     );
-    expect(partial.map((record) => record.key).sort()).toEqual([
-      "commerce.cart",
-      "core.audit",
-      "core.crud",
-      "core.workflow",
-    ]);
-    for (const record of partial) {
-      expect(verdictFor(record.key).reasonCodes).toEqual([
-        "missing-evidence-digests",
-      ]);
-    }
+    expect(partial).toEqual([]);
     const quarantined = declaredFoundryFamilyEvidence.filter(
       (record) => verdictFor(record.key).result === "quarantined",
     );

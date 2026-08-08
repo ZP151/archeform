@@ -14,11 +14,12 @@ import type {
  * never masquerade as current.
  *
  * `profileLocks` are declared only from real isolated-verifier evidence
- * (Batch 3): families locked by two or more of the three verified Profile
- * Graphs carry those locks; families without two-Profile proof declare none.
- * The verification digests mirror exactly the literals the reviewed current
- * assets record — a family whose asset records no digest literal stays
- * honestly partial until the asset records it.
+ * (Batches 3 and 4): families locked by two or more of the three verified
+ * Profile Graphs carry those locks; families without two-Profile proof
+ * declare none. The verification digests mirror exactly the literals the
+ * reviewed current assets record — a family whose asset records no digest
+ * literal declares none, and stays out of the eligible set until the asset
+ * records it.
  */
 export interface FoundryFamilyEvidenceV1 {
   readonly key: string;
@@ -113,24 +114,28 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
     declareFamily(
       "core.audit",
       "1.0.2",
-      "sha256:e1bddb2e6f5874f29be6e64a363ed14be5f913e5723f0e21612584c1a1f65b52",
+      "sha256:fe6616252c7b44efe61d516d305e689f3f593d70d5287baac31b5f31013addc8",
       {
+        fixtureDigest: "sha256:d5ccc2735f139c947853eba2e2658fa050254b42785ad529ed51116dd847e96f",
+        contractTestDigest: "sha256:21335a5e618119a4db05444913cd73a8940ce758df5b42de89b2ac739c94c7bb",
         profileLocks: [
-          { profile: "expense-approval", graphChecksum: "sha256:ce59b448807b35561c95b897eff68dd14ccd7f2e808e160c36eaad425b0caa2a", lockDigest: "sha256:55da34dd2c3ed463c1fab5c8c3857ff53b1f5a9f95a77deb5a1897cadd819536", verifierStatus: "passed" },
-          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:55da34dd2c3ed463c1fab5c8c3857ff53b1f5a9f95a77deb5a1897cadd819536", verifierStatus: "passed" },
-          { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:55da34dd2c3ed463c1fab5c8c3857ff53b1f5a9f95a77deb5a1897cadd819536", verifierStatus: "passed" },
+          { profile: "expense-approval", graphChecksum: "sha256:ce59b448807b35561c95b897eff68dd14ccd7f2e808e160c36eaad425b0caa2a", lockDigest: "sha256:9cf4dcebe313e30e502a676b2fbacdb86933effb1e6fec787e4616ebe1063ebf", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:9cf4dcebe313e30e502a676b2fbacdb86933effb1e6fec787e4616ebe1063ebf", verifierStatus: "passed" },
+          { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:9cf4dcebe313e30e502a676b2fbacdb86933effb1e6fec787e4616ebe1063ebf", verifierStatus: "passed" },
         ],
       },
     ),
     declareFamily(
       "core.crud",
       "1.0.1",
-      "sha256:1a15e681745571572da2491f32db38224ccf8948fb51d14abe312dd3f722e97a",
+      "sha256:8dede9ba8d63bea9b09c7bf7ac6ce784c52595b644d03eca52ea6996a31882d1",
       {
+        fixtureDigest: "sha256:43e83c12606bf900ae30fd02a6e3f77e61d2629f9cd7c75c5376d8d5d9d8de5a",
+        contractTestDigest: "sha256:5c17c71d7ac9863cae94372dfe4ecf4536009c3f18923a118a0b7237f0b27f9b",
         profileLocks: [
-          { profile: "expense-approval", graphChecksum: "sha256:ce59b448807b35561c95b897eff68dd14ccd7f2e808e160c36eaad425b0caa2a", lockDigest: "sha256:ae28b3178e4bcb2f154b21956bb3acd5935c5522df32988a415b0346b0bc3262", verifierStatus: "passed" },
-          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:ae28b3178e4bcb2f154b21956bb3acd5935c5522df32988a415b0346b0bc3262", verifierStatus: "passed" },
-          { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:ae28b3178e4bcb2f154b21956bb3acd5935c5522df32988a415b0346b0bc3262", verifierStatus: "passed" },
+          { profile: "expense-approval", graphChecksum: "sha256:ce59b448807b35561c95b897eff68dd14ccd7f2e808e160c36eaad425b0caa2a", lockDigest: "sha256:398819ff35083e9d83cd8ad9930a615eaf5c60848b78646b4f2b84eb3bff6635", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:398819ff35083e9d83cd8ad9930a615eaf5c60848b78646b4f2b84eb3bff6635", verifierStatus: "passed" },
+          { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:398819ff35083e9d83cd8ad9930a615eaf5c60848b78646b4f2b84eb3bff6635", verifierStatus: "passed" },
         ],
       },
     ),
@@ -150,12 +155,14 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
     declareFamily(
       "core.workflow",
       "1.0.1",
-      "sha256:f6a10ca009bbb14952c2a6767458582ade9b526376e476c39927edde546a7a7e",
+      "sha256:16ebf7d8128f30e656d7c86e39ef36323991cf7af7ea18a5d81a3ac0e4c06884",
       {
+        fixtureDigest: "sha256:aa7783202e6f8c2148561f4f93b8577ff5768438315f06abdb4a0242ea514255",
+        contractTestDigest: "sha256:0dcf1aa4e43a556075472cfe8e640974240fde538dd226588efa43f14d86d67a",
         profileLocks: [
-          { profile: "expense-approval", graphChecksum: "sha256:ce59b448807b35561c95b897eff68dd14ccd7f2e808e160c36eaad425b0caa2a", lockDigest: "sha256:eeabac24d8d796114e5c5888073fdc1debe1e6d0205a9378fe2ce0eb1fa808b5", verifierStatus: "passed" },
-          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:eeabac24d8d796114e5c5888073fdc1debe1e6d0205a9378fe2ce0eb1fa808b5", verifierStatus: "passed" },
-          { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:eeabac24d8d796114e5c5888073fdc1debe1e6d0205a9378fe2ce0eb1fa808b5", verifierStatus: "passed" },
+          { profile: "expense-approval", graphChecksum: "sha256:ce59b448807b35561c95b897eff68dd14ccd7f2e808e160c36eaad425b0caa2a", lockDigest: "sha256:7cb0fa678431c81aaff88ece04bbe91cfbef4f75129d66a2ec22bcebc537dd76", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:7cb0fa678431c81aaff88ece04bbe91cfbef4f75129d66a2ec22bcebc537dd76", verifierStatus: "passed" },
+          { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:7cb0fa678431c81aaff88ece04bbe91cfbef4f75129d66a2ec22bcebc537dd76", verifierStatus: "passed" },
         ],
       },
     ),
@@ -243,11 +250,13 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
     declareFamily(
       "commerce.cart",
       "1.0.1",
-      "sha256:02209db2f89a645d72e5e413fcf0dfce65bce0c030174e9704ad08831f1ad094",
+      "sha256:20b9900c018b5590bb6481b1c6fb30a0bece3fd1b42baa8ebfceb6a6bd5c5216",
       {
+        fixtureDigest: "sha256:d67eabef3aa20729725939d0bcd03a7e7aa9ce58a76e8968f09bf2e8adfb512d",
+        contractTestDigest: "sha256:01b2ad5e8635728d62061fb06bed09267295d9ea6d1beb29f114c3d9ab9e1fa7",
         profileLocks: [
-          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:168e92d3f44ddc89356bc07727e673c3263fe776fa240a37a067f7672925020a", verifierStatus: "passed" },
-          { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:168e92d3f44ddc89356bc07727e673c3263fe776fa240a37a067f7672925020a", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:d550242d29b89d73dde2f39563a324ce47213be5a0b2dc4b97320fe55265829f", verifierStatus: "passed" },
+          { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:d550242d29b89d73dde2f39563a324ce47213be5a0b2dc4b97320fe55265829f", verifierStatus: "passed" },
         ],
       },
     ),

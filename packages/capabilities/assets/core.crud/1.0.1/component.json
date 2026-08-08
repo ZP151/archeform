@@ -7,7 +7,7 @@
   "name": "Managed records",
   "description": "Creates, reads, updates, and deletes validated domain records.",
   "packageRoot": "packages/capabilities/assets/core.crud/1.0.1",
-  "manifestDigest": "sha256:1a15e681745571572da2491f32db38224ccf8948fb51d14abe312dd3f722e97a",
+  "manifestDigest": "sha256:8dede9ba8d63bea9b09c7bf7ac6ce784c52595b644d03eca52ea6996a31882d1",
   "lifecycle": "golden",
   "profiles": ["expense-approval", "restaurant-ordering", "simple-ecommerce"],
   "effects": ["data.create", "data.read", "data.update", "data.delete"],
@@ -89,7 +89,9 @@
   ],
   "verification": {
     "fixture": "fixtures/default.json",
+    "fixtureDigest": "sha256:43e83c12606bf900ae30fd02a6e3f77e61d2629f9cd7c75c5376d8d5d9d8de5a",
     "contractTest": "tests/contract.json",
+    "contractTestDigest": "sha256:5c17c71d7ac9863cae94372dfe4ecf4536009c3f18923a118a0b7237f0b27f9b",
     "status": "verified"
   }
 }

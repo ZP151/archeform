@@ -7,7 +7,7 @@
   "name": "Audit trail",
   "description": "Records actor, action, subject, and immutable timestamp evidence.",
   "packageRoot": "packages/capabilities/assets/core.audit/1.0.2",
-  "manifestDigest": "sha256:e1bddb2e6f5874f29be6e64a363ed14be5f913e5723f0e21612584c1a1f65b52",
+  "manifestDigest": "sha256:fe6616252c7b44efe61d516d305e689f3f593d70d5287baac31b5f31013addc8",
   "lifecycle": "golden",
   "profiles": ["expense-approval", "restaurant-ordering", "simple-ecommerce"],
   "effects": ["audit.record"],
@@ -43,7 +43,9 @@
   ],
   "verification": {
     "fixture": "fixtures/default.json",
+    "fixtureDigest": "sha256:d5ccc2735f139c947853eba2e2658fa050254b42785ad529ed51116dd847e96f",
     "contractTest": "tests/contract.json",
+    "contractTestDigest": "sha256:21335a5e618119a4db05444913cd73a8940ce758df5b42de89b2ac739c94c7bb",
     "status": "verified"
   }
 }

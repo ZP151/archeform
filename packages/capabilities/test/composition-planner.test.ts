@@ -262,7 +262,7 @@ describe("planComposition", () => {
         key: "core.workflow",
         version: "1.0.1",
         manifestDigest:
-          "sha256:f6a10ca009bbb14952c2a6767458582ade9b526376e476c39927edde546a7a7e",
+          "sha256:16ebf7d8128f30e656d7c86e39ef36323991cf7af7ea18a5d81a3ac0e4c06884",
       },
     ]);
     expect(plan.graphBindings).toEqual([

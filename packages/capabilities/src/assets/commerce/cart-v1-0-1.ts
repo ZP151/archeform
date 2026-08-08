@@ -11,7 +11,7 @@ export const cartAssetV1_0_1: CapabilityAssetV1 = {
     description: "Maintains a customer-owned set of purchasable line items.",
     packageRoot: "packages/capabilities/assets/commerce.cart/1.0.1",
     manifestDigest:
-      "sha256:02209db2f89a645d72e5e413fcf0dfce65bce0c030174e9704ad08831f1ad094",
+      "sha256:20b9900c018b5590bb6481b1c6fb30a0bece3fd1b42baa8ebfceb6a6bd5c5216",
     lifecycle: "golden",
     profiles: ["restaurant-ordering", "simple-ecommerce"],
     effects: ["cart.add", "cart.remove", "cart.checkout"],
@@ -48,7 +48,11 @@ export const cartAssetV1_0_1: CapabilityAssetV1 = {
     provides: [{ interfaceKey: "commerce.cart", version: "v1" }],
     verification: {
       fixture: "fixtures/default.json",
+      fixtureDigest:
+        "sha256:d67eabef3aa20729725939d0bcd03a7e7aa9ce58a76e8968f09bf2e8adfb512d",
       contractTest: "tests/contract.json",
+      contractTestDigest:
+        "sha256:01b2ad5e8635728d62061fb06bed09267295d9ea6d1beb29f114c3d9ab9e1fa7",
       status: "verified",
     },
   },

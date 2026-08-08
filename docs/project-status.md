@@ -384,6 +384,23 @@ review (zero P0/P1), and PM accept. The three P2-informational notes were
 repaired in the closure commit: exact per-profile graph checksum literals
 now sit in the ledger and are pinned in the evidence self-check tests.
 
+**Task 6 Batch 4 delivered: verification digest literals on the remaining
+locked assets.** The four families whose assets declared no verification
+digest literals — commerce.cart@1.0.1, core.audit@1.0.2, core.crud@1.0.1,
+core.workflow@1.0.1 — now record `fixtureDigest` and `contractTestDigest`
+literals computed from their on-disk fixture and contract-test packages
+(sha256 of `fixtures/default.json` and `tests/contract.json`), with
+recomputed manifest digests and re-derived verifier lock digests recorded
+in the evidence registry and the physical `component.json` manifests. The
+matrix advances to 15 eligible families, zero partial, 12 quarantined
+(fewer-than-two-profiles), zero rejected. The three profile graph checksums
+are byte-identical to Batch 3 — the manifest edit did not perturb any
+composition — so the other 11 families' locks remain valid. Suites:
+capabilities 354/354 (28 files), graph 175/175, control-plane 184/184,
+typecheck clean. The 12 quarantined families need two-Profile verifier
+locks, which requires profile composition changes; Batch 5 scopes that
+path.
+
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including
 Preview stop and cleanup. This is not production readiness and does not alter
