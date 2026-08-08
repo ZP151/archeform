@@ -13,9 +13,12 @@ import type {
  * evidence record fails the coverage self-check, and stale evidence can
  * never masquerade as current.
  *
- * `profileLocks` start empty: no family may claim two-Profile proof until
- * an independent verifier records it (Task 6). The matrix therefore reports
- * an honest eligible count of zero until real evidence lands.
+ * `profileLocks` are declared only from real isolated-verifier evidence
+ * (Batch 3): families locked by two or more of the three verified Profile
+ * Graphs carry those locks; families without two-Profile proof declare none.
+ * The verification digests mirror exactly the literals the reviewed current
+ * assets record — a family whose asset records no digest literal stays
+ * honestly partial until the asset records it.
  */
 export interface FoundryFamilyEvidenceV1 {
   readonly key: string;
@@ -71,11 +74,22 @@ function deepFreeze<T>(value: T): T {
  * coverage self-check test in foundry-evidence.test.ts enforces that each
  * still matches its current asset. Records are deep-frozen so a caller can
  * never rewrite registry state at runtime (QA-1).
+ *
+ * The optional evidence argument carries only what an independent verifier
+ * recorded: the reviewed verification digests the current asset manifest
+ * declares (mirrored verbatim — never invented here) and the profile locks
+ * from the isolated verifier profile graphs. Families without two-Profile
+ * proof declare none, so the matrix can never count them eligible.
  */
 function declareFamily(
   key: string,
   version: string,
   manifestDigest: string,
+  evidence: {
+    readonly fixtureDigest?: string;
+    readonly contractTestDigest?: string;
+    readonly profileLocks?: readonly FoundryProfileLockEvidenceV1[];
+  } = {},
 ): FoundryFamilyEvidenceV1 {
   return deepFreeze({
     key,
@@ -87,7 +101,9 @@ function declareFamily(
     deprecationPolicy: "two-minor-version notice",
     compatibilityDeclaration: "API-compatible within the major version",
     digestVerified: true,
-    profileLocks: [],
+    fixtureDigest: evidence.fixtureDigest,
+    contractTestDigest: evidence.contractTestDigest,
+    profileLocks: evidence.profileLocks ?? [],
   });
 }
 
@@ -98,41 +114,98 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
       "core.audit",
       "1.0.2",
       "sha256:e1bddb2e6f5874f29be6e64a363ed14be5f913e5723f0e21612584c1a1f65b52",
+      {
+        profileLocks: [
+          { profile: "expense-approval", graphChecksum: "sha256:ce59b448807b35561c95b897eff68dd14ccd7f2e808e160c36eaad425b0caa2a", lockDigest: "sha256:55da34dd2c3ed463c1fab5c8c3857ff53b1f5a9f95a77deb5a1897cadd819536", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:55da34dd2c3ed463c1fab5c8c3857ff53b1f5a9f95a77deb5a1897cadd819536", verifierStatus: "passed" },
+          { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:55da34dd2c3ed463c1fab5c8c3857ff53b1f5a9f95a77deb5a1897cadd819536", verifierStatus: "passed" },
+        ],
+      },
     ),
     declareFamily(
       "core.crud",
       "1.0.1",
       "sha256:1a15e681745571572da2491f32db38224ccf8948fb51d14abe312dd3f722e97a",
+      {
+        profileLocks: [
+          { profile: "expense-approval", graphChecksum: "sha256:ce59b448807b35561c95b897eff68dd14ccd7f2e808e160c36eaad425b0caa2a", lockDigest: "sha256:ae28b3178e4bcb2f154b21956bb3acd5935c5522df32988a415b0346b0bc3262", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:ae28b3178e4bcb2f154b21956bb3acd5935c5522df32988a415b0346b0bc3262", verifierStatus: "passed" },
+          { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:ae28b3178e4bcb2f154b21956bb3acd5935c5522df32988a415b0346b0bc3262", verifierStatus: "passed" },
+        ],
+      },
     ),
     declareFamily(
       "core.notification",
       "1.1.1",
       "sha256:207eaa0fd719013129ba84bd8f66f82219b619ee1f5c9e2d4e3d896c339e6132",
+      {
+        fixtureDigest: "sha256:60466a2c1fb5d4dba4900ecbc38d9ae5a79c106c5edd35a160fae3a690875d4e",
+        contractTestDigest: "sha256:494d52acbf679f22246a7979f0436c0b3dcb65d0ca4f4e85b728b25166462cd9",
+        profileLocks: [
+          { profile: "expense-approval", graphChecksum: "sha256:ce59b448807b35561c95b897eff68dd14ccd7f2e808e160c36eaad425b0caa2a", lockDigest: "sha256:af2ff7f0d9f761524b239664caf7cf34a1b613577e1bba5b4243750f5d1abfc2", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:af2ff7f0d9f761524b239664caf7cf34a1b613577e1bba5b4243750f5d1abfc2", verifierStatus: "passed" },
+        ],
+      },
     ),
     declareFamily(
       "core.workflow",
       "1.0.1",
       "sha256:f6a10ca009bbb14952c2a6767458582ade9b526376e476c39927edde546a7a7e",
+      {
+        profileLocks: [
+          { profile: "expense-approval", graphChecksum: "sha256:ce59b448807b35561c95b897eff68dd14ccd7f2e808e160c36eaad425b0caa2a", lockDigest: "sha256:eeabac24d8d796114e5c5888073fdc1debe1e6d0205a9378fe2ce0eb1fa808b5", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:eeabac24d8d796114e5c5888073fdc1debe1e6d0205a9378fe2ce0eb1fa808b5", verifierStatus: "passed" },
+          { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:eeabac24d8d796114e5c5888073fdc1debe1e6d0205a9378fe2ce0eb1fa808b5", verifierStatus: "passed" },
+        ],
+      },
     ),
     declareFamily(
       "core.identity-context",
       "1.0.0",
       "sha256:c2fc92f426d6e3995565681e55a8d7d5a5c8379c30ce4b9d2ecb0b538c2b8ca1",
+      {
+        fixtureDigest: "sha256:a21ce291cbb396b86c829e498ddd5d8046ba52689cc9c434325b3d162db5a008",
+        contractTestDigest: "sha256:557907a4a9f1ab43f603a0f7956164b136c8820a02207d7756629960958a38dc",
+      },
     ),
     declareFamily(
       "core.identity-policy",
       "1.0.0",
       "sha256:a216444b219f00431820a0df8e2bc3b604296430beb8fa6549f1b40c92025d82",
+      {
+        fixtureDigest: "sha256:6c61ba129df9ab99afa28a6ef49d43678277a991176d9b7ea77b8529d96126be",
+        contractTestDigest: "sha256:6578b78b5b616050ca4e8cd7282d86d66df6a943f93ae0267c773fa4719b1176",
+        profileLocks: [
+          { profile: "expense-approval", graphChecksum: "sha256:ce59b448807b35561c95b897eff68dd14ccd7f2e808e160c36eaad425b0caa2a", lockDigest: "sha256:e3b10f6596a5231b815150c316015340d64abea16a6acc49c713862b6a12b454", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:e3b10f6596a5231b815150c316015340d64abea16a6acc49c713862b6a12b454", verifierStatus: "passed" },
+        ],
+      },
     ),
     declareFamily(
       "core.policy-declarations",
       "1.0.0",
       "sha256:56e6ead5aaa6e9f5fe9cf7c608b6b51b16064964cf95cd123bdc3e0725642c54",
+      {
+        fixtureDigest: "sha256:c8aab600ba976a92a0281d1a1458867f5d21af5046a85b1a38f713ef35e319d5",
+        contractTestDigest: "sha256:d6cf25a56c4b66f4bf74fb2df76c13a8c6637f1e8b55b2f824e97a52325f9755",
+        profileLocks: [
+          { profile: "expense-approval", graphChecksum: "sha256:ce59b448807b35561c95b897eff68dd14ccd7f2e808e160c36eaad425b0caa2a", lockDigest: "sha256:5025313a96ecf42d587a1ddf6509c88db0ea861547dc7909faef4db58df85c51", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:5025313a96ecf42d587a1ddf6509c88db0ea861547dc7909faef4db58df85c51", verifierStatus: "passed" },
+        ],
+      },
     ),
     declareFamily(
       "core.location-context",
       "1.0.0",
       "sha256:591b260f53f2fa0b8e838cb8b9ab350819aa720326b49c1a67f99990ae61df0d",
+      {
+        fixtureDigest: "sha256:cdc1850c4b5f49bc7b2d9b1afb3c8a570b00037e99c277780b290c80744cb2f3",
+        contractTestDigest: "sha256:b9a590e83f13b3ad20154ae686a20db98dc51982cee5fcd7e204909917d0032f",
+        profileLocks: [
+          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:6411aea0d340977ae70b5abf68bd56fc101f5e70f972072ec4e217978f3bf62c", verifierStatus: "passed" },
+          { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:6411aea0d340977ae70b5abf68bd56fc101f5e70f972072ec4e217978f3bf62c", verifierStatus: "passed" },
+        ],
+      },
     ),
     declareFamily(
       "core.files-media",
@@ -158,41 +231,103 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
       "commerce.catalog",
       "1.2.0",
       "sha256:9819588b9b59c13a80a561c91ee1f14ebf73bbde16c3504f2de52e41934a8fcc",
+      {
+        fixtureDigest: "sha256:efa900139bdfdb892cf04d1a55eb9b47b0f2b1653eaa3b78655a939964d6a1e2",
+        contractTestDigest: "sha256:e5f2218889d101590173edc35bee32f7f697ad2c87c042a511f5a56cffc2bff9",
+        profileLocks: [
+          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:9e8d418231b881c0afed2b31e673ed3b92fbd7b2ba27f91e2d24f34aab55687f", verifierStatus: "passed" },
+          { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:9e8d418231b881c0afed2b31e673ed3b92fbd7b2ba27f91e2d24f34aab55687f", verifierStatus: "passed" },
+        ],
+      },
     ),
     declareFamily(
       "commerce.cart",
       "1.0.1",
       "sha256:02209db2f89a645d72e5e413fcf0dfce65bce0c030174e9704ad08831f1ad094",
+      {
+        profileLocks: [
+          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:168e92d3f44ddc89356bc07727e673c3263fe776fa240a37a067f7672925020a", verifierStatus: "passed" },
+          { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:168e92d3f44ddc89356bc07727e673c3263fe776fa240a37a067f7672925020a", verifierStatus: "passed" },
+        ],
+      },
     ),
     declareFamily(
       "commerce.line-configuration",
       "1.1.2",
       "sha256:c1913c2b949728d859d363812476200ed57d57d992c7f6cd8d6b3ec90c9a2872",
+      {
+        fixtureDigest: "sha256:5fe47a2349951bf1c244c8f4de820570225a92160fed0ab14e53a27c8bc4068b",
+        contractTestDigest: "sha256:6a52f4e8ce2fc36bb0190219f518c259cfd03fb20c6f839446e41feea52d8df4",
+        profileLocks: [
+          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:c3fe0bc03f074acda14a4011890ef185aab5431fe4a889a15e46f232ed8cced4", verifierStatus: "passed" },
+          { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:c3fe0bc03f074acda14a4011890ef185aab5431fe4a889a15e46f232ed8cced4", verifierStatus: "passed" },
+        ],
+      },
     ),
     declareFamily(
       "commerce.money-pricing",
       "1.1.0",
       "sha256:09c15dd80f6bf8f15f37f7bd9f334f1a65c63e875fc0c6a7e4655a283b0d3a23",
+      {
+        fixtureDigest: "sha256:3c576bc374e9c918d26aba99d0d1efa3b5e2314364a0fe938c31cb167453cc54",
+        contractTestDigest: "sha256:72187588f8aa8a9c684d3819abe4b7e35ef0fb2dfd47d4a788f0a090914c8a70",
+        profileLocks: [
+          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:23e3e52a2ea5231e9d3ec8f261a44c35ff3e52385f369534fa31c96212b32e7f", verifierStatus: "passed" },
+          { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:23e3e52a2ea5231e9d3ec8f261a44c35ff3e52385f369534fa31c96212b32e7f", verifierStatus: "passed" },
+        ],
+      },
     ),
     declareFamily(
       "commerce.inventory",
       "1.1.1",
       "sha256:a6abfec1b2f2ff7d12c776a2efa706cab4267766ae309f3f3fbfa597c3fde34e",
+      {
+        fixtureDigest: "sha256:ecd77b2a2e93b9babc143eafd3194997fae6a9f5cfceae29ea9c76c9ca732b86",
+        contractTestDigest: "sha256:a423510a3392d53c7280897abc6ef9bd84e8f24d7bc3588b4a99f0a354ec734b",
+        profileLocks: [
+          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:494c0b5df2d7742f4d70ef067754551f558f2c4122806fa789bd6c44535e77e7", verifierStatus: "passed" },
+          { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:494c0b5df2d7742f4d70ef067754551f558f2c4122806fa789bd6c44535e77e7", verifierStatus: "passed" },
+        ],
+      },
     ),
     declareFamily(
       "commerce.inventory-ledger",
       "1.0.0",
       "sha256:611d7b77c806ffbaea4fbe262a7df4a459bb0f7a1d9e1b95150d8053744e4cbb",
+      {
+        fixtureDigest: "sha256:582b408b9ada232cca271538f57202c5738717020815b901194b6faf3cd990b0",
+        contractTestDigest: "sha256:1e39d52256eb44a7ea380a70bda290555ffb16b3d7d28e0a6ce1f4c842680d9a",
+        profileLocks: [
+          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:11c9843be3b4c4a7e6a39d0b5b053a21d7f8473c15b344fd58b5a105a39d6eb8", verifierStatus: "passed" },
+          { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:11c9843be3b4c4a7e6a39d0b5b053a21d7f8473c15b344fd58b5a105a39d6eb8", verifierStatus: "passed" },
+        ],
+      },
     ),
     declareFamily(
       "commerce.order",
       "1.2.0",
       "sha256:c8f5451b3144daac59ad589cb4e8483b5014c6c9cd98a4bc3e7b23577cb56f77",
+      {
+        fixtureDigest: "sha256:30b991eacc460e246e0e8162bcf0d9067ec27a6871da96541351b82597621f1a",
+        contractTestDigest: "sha256:ba4918dad55420aadea9e44d3a6a74c778c15cedb808110d60d18364f3913954",
+        profileLocks: [
+          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:3ada55a896632b8d0c12e7db2514beb0eba847014abf89d10d629f6e7afd6cfa", verifierStatus: "passed" },
+          { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:3ada55a896632b8d0c12e7db2514beb0eba847014abf89d10d629f6e7afd6cfa", verifierStatus: "passed" },
+        ],
+      },
     ),
     declareFamily(
       "commerce.order-operations",
       "1.1.0",
       "sha256:652fe4c0e6695a92b2622c934af56b8175374bdecdb3bac3834d90a2c00b3a71",
+      {
+        fixtureDigest: "sha256:35d7e54ff29cfa3fdf902c6bfa0618d5c861a9d6e0a2abdb51387d8585b1f5a4",
+        contractTestDigest: "sha256:11cf0672fde864eee65383abf2319b780405b3bc5145ce885d4a71b5e8a93a8d",
+        profileLocks: [
+          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:3ec9cdc5a66c7d57188f55f65a6f4c61988d5d85b8c419e0d75127d246cf188b", verifierStatus: "passed" },
+          { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:3ec9cdc5a66c7d57188f55f65a6f4c61988d5d85b8c419e0d75127d246cf188b", verifierStatus: "passed" },
+        ],
+      },
     ),
     declareFamily(
       "commerce.simulated-payment",

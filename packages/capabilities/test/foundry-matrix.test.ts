@@ -238,18 +238,22 @@ describe("buildFoundryMatrix", () => {
     });
   });
 
-  it("reports the declared registry honestly with zero eligible families", () => {
+  it("reports the declared registry honestly with the Batch 3 split", () => {
     // Default inputs: the 27 current families with their declared records.
     // The matrix claims nothing the evidence does not prove: every current
-    // manifest declares a binding contract (Task 6 Batch 0 repaired all 23,
-    // Batch 1 adds families that declare it from birth), but no family has
-    // two-Profile locks yet, so the honest verdict is zero eligible — all 27
-    // quarantined for missing two-Profile proof, none rejected. The matrix
-    // exists to surface exactly this split.
+    // manifest declares a binding contract and verified fixture/negative
+    // tests (Task 6 Batch 0 repaired all 23, Batch 1 adds families that
+    // declare it from birth), and Batch 3 declares the isolated-verifier
+    // profile locks and reviewed digest literals. The honest verdict: 11
+    // eligible (two-Profile locks + reviewed digests), 4 partial (two-Profile
+    // locks, but the current assets record no digest literals), 12
+    // quarantined (no two-Profile proof), zero rejected. The matrix exists
+    // to surface exactly this split.
     const matrix = buildFoundryMatrix();
     expect(matrix.counts.currentFamilies).toBe(27);
-    expect(matrix.counts.eligible).toBe(0);
-    expect(matrix.counts.quarantined).toBe(27);
+    expect(matrix.counts.eligible).toBe(11);
+    expect(matrix.counts.partial).toBe(4);
+    expect(matrix.counts.quarantined).toBe(12);
     expect(matrix.counts.rejected).toBe(0);
     expect(matrix.counts.missingEvidence).toBe(0);
     expect(matrix.counts.staleEvidence).toBe(0);
@@ -259,11 +263,19 @@ describe("buildFoundryMatrix", () => {
       (row) => row.result === "quarantined",
     );
     const rejected = matrix.rows.filter((row) => row.result === "rejected");
+    const partial = matrix.rows.filter((row) => row.result === "partial");
     expect(
       quarantined.every(
         (row) =>
           row.reasonCodes.length === 1 &&
           row.reasonCodes[0] === "fewer-than-two-profiles",
+      ),
+    ).toBe(true);
+    expect(
+      partial.every(
+        (row) =>
+          row.reasonCodes.length === 1 &&
+          row.reasonCodes[0] === "missing-evidence-digests",
       ),
     ).toBe(true);
     expect(
@@ -273,33 +285,24 @@ describe("buildFoundryMatrix", () => {
           row.reasonCodes[0] === "missing-binding-contract",
       ),
     ).toBe(true);
-    // Pin the exact split: all 27 current families satisfy the manifest
-    // contract (Task 6 Batch 0 repaired the 23 pre-existing manifests, Batch
-    // 1 declares it from birth), so the whole set is quarantined for missing
-    // two-Profile proof and nothing is rejected. The counts tripwire catches
-    // a manifest regression moving a family into rejection.
-    expect(quarantined.map((row) => row.key).sort()).toEqual([
+    // Pin the exact split: the four locked families whose current assets
+    // record no verification digest literals stay partial; the twelve
+    // without two-Profile proof stay quarantined; nothing is rejected. The
+    // counts tripwire catches a manifest regression moving a family into
+    // rejection.
+    expect(partial.map((row) => row.key).sort()).toEqual([
       "commerce.cart",
-      "commerce.catalog",
-      "commerce.inventory",
-      "commerce.inventory-ledger",
-      "commerce.line-configuration",
-      "commerce.money-pricing",
-      "commerce.order",
-      "commerce.order-operations",
-      "commerce.simulated-payment",
-      "core.approvals",
       "core.audit",
       "core.crud",
+      "core.workflow",
+    ]);
+    expect(quarantined.map((row) => row.key).sort()).toEqual([
+      "commerce.simulated-payment",
+      "core.approvals",
       "core.files-media",
       "core.identity-context",
-      "core.identity-policy",
-      "core.location-context",
-      "core.notification",
-      "core.policy-declarations",
       "core.scheduling",
       "core.search",
-      "core.workflow",
       "restaurant.cashier",
       "restaurant.kitchen",
       "restaurant.menu",

@@ -9,21 +9,26 @@ honest by construction: a family is counted as eligible only when its
 declared evidence record matches the current family digest and passes every
 promotion requirement.
 
-## Portfolio summary — 2026-08-08
+## Portfolio summary — 2026-08-08 (Batch 3)
 
 | Count            | Value |
 | ---------------- | ----- |
 | Current families | 27    |
-| Eligible         | 0     |
-| Quarantined      | 27    |
+| Eligible         | 11    |
+| Partial          | 4     |
+| Quarantined      | 12    |
 | Rejected         | 0     |
 
-**Zero families are eligible today, by design**: every current family
+**Eleven families are eligible after Batch 3**: every current family
 declares the strict binding contract (Task 6 Batch 0 repaired the 23
 pre-existing manifests; Batch 1 declares it from birth), so none are
-rejected; all 27 are quarantined solely for lacking two independent
-Profile verifier locks. The matrix surfaces exactly this state so the
-remaining work is visible and accountable.
+rejected. Batch 3 declared the isolated-verifier profile locks and the
+reviewed verification digests the current assets record: the 11 families
+with two-Profile locks and reviewed digests are eligible; the 4 locked
+families whose current assets record no verification digest literals stay
+partial (missing-evidence-digests); the 12 without two-Profile proof stay
+quarantined. The matrix surfaces exactly this state so the remaining work
+is visible and accountable.
 
 ## Families by category
 
@@ -33,32 +38,48 @@ remaining work is visible and accountable.
 | Commerce (9)   | catalog, cart, line-configuration, money-pricing, inventory, inventory-ledger, order, order-operations, simulated-payment  |
 | Restaurant (6) | table-session, menu, ordering, kitchen, cashier, reporting                                                                 |
 
-## Quarantined — manifest requirements met, two-Profile proof outstanding (27)
+## Eligible — two-Profile locks and reviewed verification digests (11)
 
-All current families satisfy the manifest-side requirements (binding
-contract, verification state, fixtures, contract tests, output slots) and
-are quarantined solely for lacking two independent Profile verifier locks:
+These families carry profile locks from two or more of the three isolated
+verifier profile graphs (expense-approval, simple-ecommerce,
+restaurant-ordering) at the current asset digest, and their evidence
+records mirror the reviewed fixture and contract-test digest literals of
+the current assets:
 
-- core.approvals
-- core.audit
-- core.crud
-- core.files-media
-- core.notification
-- core.scheduling
-- core.search
-- core.workflow
-- core.identity-context
-- core.identity-policy
-- core.policy-declarations
-- core.location-context
 - commerce.catalog
-- commerce.cart
-- commerce.line-configuration
-- commerce.money-pricing
 - commerce.inventory
 - commerce.inventory-ledger
+- commerce.line-configuration
+- commerce.money-pricing
 - commerce.order
 - commerce.order-operations
+- core.identity-policy
+- core.location-context
+- core.notification
+- core.policy-declarations
+
+## Partial — two-Profile locks, verification digest literals outstanding (4)
+
+These families have two-Profile locks from the isolated verifier graphs,
+but their current assets record no fixture/contract-test digest literals,
+so their evidence records honestly declare none:
+
+- commerce.cart
+- core.audit
+- core.crud
+- core.workflow
+
+## Quarantined — two-Profile proof outstanding (12)
+
+These families satisfy the manifest-side requirements (binding contract,
+verification state, fixtures, contract tests, output slots) but hold
+fewer than two independent Profile verifier locks:
+
+- core.approvals
+- core.files-media
+- core.identity-context
+- core.scheduling
+- core.search
 - commerce.simulated-payment
 - restaurant.table-session
 - restaurant.menu

@@ -357,7 +357,26 @@ journey are accepted with rationale (the flow model does not declare
 non-transition effects, `renderExpectedEffectPairs` fails closed by design,
 and drift is loud — it fails the Docker-backed journey suite); and the
 ledger's diff-scope sentence now enumerates the governance records it also
-updated. Task 6 Batch 3 (profileLocks in foundry family evidence) is next.
+updated.
+
+**Task 6 Batch 3 delivered: profile locks and verification digests declared
+in the Foundry evidence registry.** `declaredFoundryFamilyEvidence` now
+carries real isolated-verifier profile locks for the 15 families locked by
+two or more of the three verified Profile Graphs (expense-approval,
+simple-ecommerce, restaurant-ordering), at the exact graph checksums and
+immutable lock digests the harness reproduces, plus the reviewed fixture
+and contract-test digest literals the current assets record. The matrix
+advances from 0 to 11 eligible families (commerce.catalog, inventory,
+inventory-ledger, line-configuration, money-pricing, order,
+order-operations; core.identity-policy, location-context, notification,
+policy-declarations). Four locked families stay honestly partial
+(missing-evidence-digests): commerce.cart, core.audit, core.crud,
+core.workflow — their current assets record no verification digest
+literals, so the registry declares none (a self-check test pins that
+evidence digests mirror the current assets exactly, both directions).
+Twelve families remain quarantined (fewer-than-two-profiles), zero
+rejected. Full capabilities suite 354/354, typecheck clean. Task 6 Batch 4
+(families toward the 25–35 verified target) is next.
 
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including

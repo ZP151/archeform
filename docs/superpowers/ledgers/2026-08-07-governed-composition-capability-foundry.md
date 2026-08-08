@@ -932,6 +932,48 @@ P2 repairs committed with this record:
 Task 6 remains `implementing`; the next batch (Batch 3 evidence locks) is
 tracked as Task #33.
 
+### 2026-08-08 — Task 6 Batch 3 implemented: profile locks and verification digests declared (11 eligible)
+
+Batch 3 (Task #33) declared real isolated-verifier evidence in
+`declaredFoundryFamilyEvidence` (`packages/capabilities/src/foundry-evidence.ts`):
+
+- **Profile locks.** The 15 families locked by two or more of the three
+  verified Profile Graphs now carry those locks — profile, graph checksum
+  of the verified graph, immutable lock digest, and `passed` status. Lock
+  digests are `expectedFoundryLockDigest` over the current asset identity,
+  and graph checksums reproduce the harness's composed-graph hashes
+  (`composeDefaultCapabilityDraft` → strip composition selections →
+  harness SEED_DATA → `hashApplicationGraph`) byte-for-byte; a re-probe
+  against a fresh dist after the change diffed identical. The three
+  profiles lock 6, 16, and 18 families respectively; 15 families hold ≥2
+  locks, 12 hold none and claim none.
+- **Verification digests.** Records mirror the reviewed fixture and
+  contract-test digest literals the current assets declare — 11 of the 15
+  locked families plus `core.identity-context` (1-lock; digests mirrored
+  because the current asset declares them, though it remains quarantined).
+  The four locked families whose current assets record no digest literals
+  (`commerce.cart`, `core.audit`, `core.crud`, `core.workflow`) declare
+  none — honest partial, not invented evidence.
+- **Tests (TDD, RED → GREEN).** `foundry-evidence.test.ts` gained three
+  pins: exactly which 15 families hold locks and that every lock matches
+  `expectedFoundryLockDigest` of the current asset with a passed status
+  and a verifier-profile graph checksum; evidence digests equal the
+  current asset's declared verification digests in both directions (a
+  registry can never invent a digest or omit one the asset declares);
+  admission verdicts exactly 11 eligible / 4 partial
+  (missing-evidence-digests) / 12 quarantined (fewer-than-two-profiles) /
+  0 rejected. `foundry-matrix.test.ts` repins the honest-registry split to
+  those counts with the exact family lists.
+- **Verification.** Full capabilities suite 354/354 (28 files), typecheck
+  clean; `docs/foundry/capability-matrix.md` updated to the Batch 3 split
+  (11 eligible / 4 partial / 12 quarantined / 0 rejected).
+
+Batch 3 advances the matrix from 0 to 11 eligible families with two-Profile
+evidence and zero invented claims; the four partial families are the honest
+surface for the next batch (record verification digest literals on their
+current assets, then re-declare). Task 6 remains `implementing`; Batch 4
+toward the 25–35 verified target is next.
+
 ## Required evidence per promoted family
 
 | Evidence    | Required form                                                       |
