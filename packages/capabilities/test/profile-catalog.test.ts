@@ -13,6 +13,7 @@ describe("Factory Profile catalog", () => {
         profile: "expense-approval",
         category: "approval",
         requiredCapabilities: [
+          "core.approvals",
           "core.audit",
           "core.crud",
           "core.workflow",

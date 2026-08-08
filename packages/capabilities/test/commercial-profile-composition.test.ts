@@ -571,14 +571,21 @@ describe("commercial profile composition", () => {
     const composition = composeDefaultCapabilityDraft({
       profile: "restaurant-ordering",
     });
+    // Batch 5: restaurant.menu is now a declared recipe member (its
+    // inventory.adjust pair with commerce.inventory-ledger is allowlisted),
+    // so the undeclared-overlap probe uses the pair that is deliberately
+    // NOT allowlisted: commerce.simulated-payment declares payment.simulate,
+    // which restaurant.cashier owns in this profile. The overlap guard fires
+    // before binding resolution — the simulated-payment binding points at
+    // graph.flow.ecommerce-order, which does not exist in the restaurant
+    // graph, and the guard must reject for the overlap, not the symbol.
     const selections = [
       ...(composition.graph.integration.compositionSelections ?? []),
       {
-        lock: lockCapabilityAsset(getCapabilityAsset("restaurant.menu")),
+        lock: lockCapabilityAsset(getCapabilityAsset("commerce.simulated-payment")),
         bindings: {
-          categoryEntity: { graphSymbol: "graph.domain.menu-item" },
-          itemEntity: { graphSymbol: "graph.domain.menu-item" },
-          inventoryEntity: { graphSymbol: "graph.domain.inventory-ledger" },
+          orderEntity: { graphSymbol: "graph.domain.order" },
+          orderFlow: { graphSymbol: "graph.flow.ecommerce-order" },
         },
       },
     ];
@@ -588,7 +595,7 @@ describe("commercial profile composition", () => {
         graph: composition.graph,
         selections,
       }),
-    ).toThrow("inventory.adjust");
+    ).toThrow("payment.simulate");
   });
 
   it.each([

@@ -14,7 +14,7 @@ import type {
  * never masquerade as current.
  *
  * `profileLocks` are declared only from real isolated-verifier evidence
- * (Batches 3 and 4): families locked by two or more of the three verified
+ * (Batches 3–5): families locked by two or more of the three verified
  * Profile Graphs carry those locks; families without two-Profile proof
  * declare none. The verification digests mirror exactly the literals the
  * reviewed current assets record — a family whose asset records no digest
@@ -120,7 +120,7 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
         contractTestDigest: "sha256:21335a5e618119a4db05444913cd73a8940ce758df5b42de89b2ac739c94c7bb",
         profileLocks: [
           { profile: "expense-approval", graphChecksum: "sha256:ce59b448807b35561c95b897eff68dd14ccd7f2e808e160c36eaad425b0caa2a", lockDigest: "sha256:9cf4dcebe313e30e502a676b2fbacdb86933effb1e6fec787e4616ebe1063ebf", verifierStatus: "passed" },
-          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:9cf4dcebe313e30e502a676b2fbacdb86933effb1e6fec787e4616ebe1063ebf", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:eecaf73e1f1b1321fc4a23b50c3c8099f6508b4aeb61cec725144829eb24b71c", lockDigest: "sha256:9cf4dcebe313e30e502a676b2fbacdb86933effb1e6fec787e4616ebe1063ebf", verifierStatus: "passed" },
           { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:9cf4dcebe313e30e502a676b2fbacdb86933effb1e6fec787e4616ebe1063ebf", verifierStatus: "passed" },
         ],
       },
@@ -134,7 +134,7 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
         contractTestDigest: "sha256:5c17c71d7ac9863cae94372dfe4ecf4536009c3f18923a118a0b7237f0b27f9b",
         profileLocks: [
           { profile: "expense-approval", graphChecksum: "sha256:ce59b448807b35561c95b897eff68dd14ccd7f2e808e160c36eaad425b0caa2a", lockDigest: "sha256:398819ff35083e9d83cd8ad9930a615eaf5c60848b78646b4f2b84eb3bff6635", verifierStatus: "passed" },
-          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:398819ff35083e9d83cd8ad9930a615eaf5c60848b78646b4f2b84eb3bff6635", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:eecaf73e1f1b1321fc4a23b50c3c8099f6508b4aeb61cec725144829eb24b71c", lockDigest: "sha256:398819ff35083e9d83cd8ad9930a615eaf5c60848b78646b4f2b84eb3bff6635", verifierStatus: "passed" },
           { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:398819ff35083e9d83cd8ad9930a615eaf5c60848b78646b4f2b84eb3bff6635", verifierStatus: "passed" },
         ],
       },
@@ -148,7 +148,7 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
         contractTestDigest: "sha256:494d52acbf679f22246a7979f0436c0b3dcb65d0ca4f4e85b728b25166462cd9",
         profileLocks: [
           { profile: "expense-approval", graphChecksum: "sha256:ce59b448807b35561c95b897eff68dd14ccd7f2e808e160c36eaad425b0caa2a", lockDigest: "sha256:af2ff7f0d9f761524b239664caf7cf34a1b613577e1bba5b4243750f5d1abfc2", verifierStatus: "passed" },
-          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:af2ff7f0d9f761524b239664caf7cf34a1b613577e1bba5b4243750f5d1abfc2", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:eecaf73e1f1b1321fc4a23b50c3c8099f6508b4aeb61cec725144829eb24b71c", lockDigest: "sha256:af2ff7f0d9f761524b239664caf7cf34a1b613577e1bba5b4243750f5d1abfc2", verifierStatus: "passed" },
         ],
       },
     ),
@@ -161,7 +161,7 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
         contractTestDigest: "sha256:0dcf1aa4e43a556075472cfe8e640974240fde538dd226588efa43f14d86d67a",
         profileLocks: [
           { profile: "expense-approval", graphChecksum: "sha256:ce59b448807b35561c95b897eff68dd14ccd7f2e808e160c36eaad425b0caa2a", lockDigest: "sha256:7cb0fa678431c81aaff88ece04bbe91cfbef4f75129d66a2ec22bcebc537dd76", verifierStatus: "passed" },
-          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:7cb0fa678431c81aaff88ece04bbe91cfbef4f75129d66a2ec22bcebc537dd76", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:eecaf73e1f1b1321fc4a23b50c3c8099f6508b4aeb61cec725144829eb24b71c", lockDigest: "sha256:7cb0fa678431c81aaff88ece04bbe91cfbef4f75129d66a2ec22bcebc537dd76", verifierStatus: "passed" },
           { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:7cb0fa678431c81aaff88ece04bbe91cfbef4f75129d66a2ec22bcebc537dd76", verifierStatus: "passed" },
         ],
       },
@@ -184,7 +184,7 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
         contractTestDigest: "sha256:6578b78b5b616050ca4e8cd7282d86d66df6a943f93ae0267c773fa4719b1176",
         profileLocks: [
           { profile: "expense-approval", graphChecksum: "sha256:ce59b448807b35561c95b897eff68dd14ccd7f2e808e160c36eaad425b0caa2a", lockDigest: "sha256:e3b10f6596a5231b815150c316015340d64abea16a6acc49c713862b6a12b454", verifierStatus: "passed" },
-          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:e3b10f6596a5231b815150c316015340d64abea16a6acc49c713862b6a12b454", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:eecaf73e1f1b1321fc4a23b50c3c8099f6508b4aeb61cec725144829eb24b71c", lockDigest: "sha256:e3b10f6596a5231b815150c316015340d64abea16a6acc49c713862b6a12b454", verifierStatus: "passed" },
         ],
       },
     ),
@@ -197,7 +197,7 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
         contractTestDigest: "sha256:d6cf25a56c4b66f4bf74fb2df76c13a8c6637f1e8b55b2f824e97a52325f9755",
         profileLocks: [
           { profile: "expense-approval", graphChecksum: "sha256:ce59b448807b35561c95b897eff68dd14ccd7f2e808e160c36eaad425b0caa2a", lockDigest: "sha256:5025313a96ecf42d587a1ddf6509c88db0ea861547dc7909faef4db58df85c51", verifierStatus: "passed" },
-          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:5025313a96ecf42d587a1ddf6509c88db0ea861547dc7909faef4db58df85c51", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:eecaf73e1f1b1321fc4a23b50c3c8099f6508b4aeb61cec725144829eb24b71c", lockDigest: "sha256:5025313a96ecf42d587a1ddf6509c88db0ea861547dc7909faef4db58df85c51", verifierStatus: "passed" },
         ],
       },
     ),
@@ -209,7 +209,7 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
         fixtureDigest: "sha256:cdc1850c4b5f49bc7b2d9b1afb3c8a570b00037e99c277780b290c80744cb2f3",
         contractTestDigest: "sha256:b9a590e83f13b3ad20154ae686a20db98dc51982cee5fcd7e204909917d0032f",
         profileLocks: [
-          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:6411aea0d340977ae70b5abf68bd56fc101f5e70f972072ec4e217978f3bf62c", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:eecaf73e1f1b1321fc4a23b50c3c8099f6508b4aeb61cec725144829eb24b71c", lockDigest: "sha256:6411aea0d340977ae70b5abf68bd56fc101f5e70f972072ec4e217978f3bf62c", verifierStatus: "passed" },
           { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:6411aea0d340977ae70b5abf68bd56fc101f5e70f972072ec4e217978f3bf62c", verifierStatus: "passed" },
         ],
       },
@@ -217,12 +217,34 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
     declareFamily(
       "core.files-media",
       "1.0.0",
-      "sha256:a90d13d99503659593a4fd9292b30015acc81b3b599c064266bf7333537c2539",
+      "sha256:5c4fbf964825b8504efc91c965b68e63eb6c7e139201d333d806989f16d2e249",
+      {
+        // Batch 5: restaurant-ordering and simple-ecommerce both lock
+        // core.files-media through typed bindings (menu-item.imageUrl /
+        // product.imageUrl) — two isolated-verifier Profile Graphs, so the
+        // family becomes eligible. The verification digests are the
+        // reviewed literals of the on-disk fixture and contract test, and
+        // the lock digests were re-derived for the new asset identity.
+        fixtureDigest: "sha256:4098e8d30b623e735c584140580690ff00e84397b53f3fda228ee187fc695422",
+        contractTestDigest: "sha256:5450abdaf2bbf487d8a92ce272b3890c36dd7a29a5654005dde09464923733e5",
+        profileLocks: [
+          { profile: "simple-ecommerce", graphChecksum: "sha256:eecaf73e1f1b1321fc4a23b50c3c8099f6508b4aeb61cec725144829eb24b71c", lockDigest: "sha256:c9427c17d9085f2a93146af96345074081f8d51a1410c4b2eea392166a8f5d80", verifierStatus: "passed" },
+          { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:c9427c17d9085f2a93146af96345074081f8d51a1410c4b2eea392166a8f5d80", verifierStatus: "passed" },
+        ],
+      },
     ),
     declareFamily(
       "core.search",
       "1.0.0",
       "sha256:1f2c1968afdb43ee52993fc6d6e7e297c2b7b7aa43777564fae6d6fb774c26c4",
+      {
+        // Batch 5: simple-ecommerce locks core.search through the typed
+        // binding (product.name); one Profile Graph only, so the family
+        // stays quarantined until a second Profile locks it.
+        profileLocks: [
+          { profile: "simple-ecommerce", graphChecksum: "sha256:eecaf73e1f1b1321fc4a23b50c3c8099f6508b4aeb61cec725144829eb24b71c", lockDigest: "sha256:2e49fe5e99ee8fd9ffc4477e18ac744bcfce9c557776acf42f3e460255557649", verifierStatus: "passed" },
+        ],
+      },
     ),
     declareFamily(
       "core.scheduling",
@@ -233,6 +255,14 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
       "core.approvals",
       "1.0.0",
       "sha256:26a2e7ccc3f59a97879e6797370d23b629499810403061c7026f7c0e365684be",
+      {
+        // Batch 5: expense-approval locks core.approvals through the typed
+        // binding (expense entity / manager role); one Profile Graph only,
+        // so the family stays quarantined until a second Profile locks it.
+        profileLocks: [
+          { profile: "expense-approval", graphChecksum: "sha256:ce59b448807b35561c95b897eff68dd14ccd7f2e808e160c36eaad425b0caa2a", lockDigest: "sha256:cf28a4370395bab4528b8ead538d90a847f3ea144b7b04968675ee4fdc77c368", verifierStatus: "passed" },
+        ],
+      },
     ),
     declareFamily(
       "commerce.catalog",
@@ -242,7 +272,7 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
         fixtureDigest: "sha256:efa900139bdfdb892cf04d1a55eb9b47b0f2b1653eaa3b78655a939964d6a1e2",
         contractTestDigest: "sha256:e5f2218889d101590173edc35bee32f7f697ad2c87c042a511f5a56cffc2bff9",
         profileLocks: [
-          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:9e8d418231b881c0afed2b31e673ed3b92fbd7b2ba27f91e2d24f34aab55687f", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:eecaf73e1f1b1321fc4a23b50c3c8099f6508b4aeb61cec725144829eb24b71c", lockDigest: "sha256:9e8d418231b881c0afed2b31e673ed3b92fbd7b2ba27f91e2d24f34aab55687f", verifierStatus: "passed" },
           { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:9e8d418231b881c0afed2b31e673ed3b92fbd7b2ba27f91e2d24f34aab55687f", verifierStatus: "passed" },
         ],
       },
@@ -255,7 +285,7 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
         fixtureDigest: "sha256:d67eabef3aa20729725939d0bcd03a7e7aa9ce58a76e8968f09bf2e8adfb512d",
         contractTestDigest: "sha256:01b2ad5e8635728d62061fb06bed09267295d9ea6d1beb29f114c3d9ab9e1fa7",
         profileLocks: [
-          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:d550242d29b89d73dde2f39563a324ce47213be5a0b2dc4b97320fe55265829f", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:eecaf73e1f1b1321fc4a23b50c3c8099f6508b4aeb61cec725144829eb24b71c", lockDigest: "sha256:d550242d29b89d73dde2f39563a324ce47213be5a0b2dc4b97320fe55265829f", verifierStatus: "passed" },
           { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:d550242d29b89d73dde2f39563a324ce47213be5a0b2dc4b97320fe55265829f", verifierStatus: "passed" },
         ],
       },
@@ -268,7 +298,7 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
         fixtureDigest: "sha256:5fe47a2349951bf1c244c8f4de820570225a92160fed0ab14e53a27c8bc4068b",
         contractTestDigest: "sha256:6a52f4e8ce2fc36bb0190219f518c259cfd03fb20c6f839446e41feea52d8df4",
         profileLocks: [
-          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:c3fe0bc03f074acda14a4011890ef185aab5431fe4a889a15e46f232ed8cced4", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:eecaf73e1f1b1321fc4a23b50c3c8099f6508b4aeb61cec725144829eb24b71c", lockDigest: "sha256:c3fe0bc03f074acda14a4011890ef185aab5431fe4a889a15e46f232ed8cced4", verifierStatus: "passed" },
           { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:c3fe0bc03f074acda14a4011890ef185aab5431fe4a889a15e46f232ed8cced4", verifierStatus: "passed" },
         ],
       },
@@ -281,7 +311,7 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
         fixtureDigest: "sha256:3c576bc374e9c918d26aba99d0d1efa3b5e2314364a0fe938c31cb167453cc54",
         contractTestDigest: "sha256:72187588f8aa8a9c684d3819abe4b7e35ef0fb2dfd47d4a788f0a090914c8a70",
         profileLocks: [
-          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:23e3e52a2ea5231e9d3ec8f261a44c35ff3e52385f369534fa31c96212b32e7f", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:eecaf73e1f1b1321fc4a23b50c3c8099f6508b4aeb61cec725144829eb24b71c", lockDigest: "sha256:23e3e52a2ea5231e9d3ec8f261a44c35ff3e52385f369534fa31c96212b32e7f", verifierStatus: "passed" },
           { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:23e3e52a2ea5231e9d3ec8f261a44c35ff3e52385f369534fa31c96212b32e7f", verifierStatus: "passed" },
         ],
       },
@@ -294,7 +324,7 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
         fixtureDigest: "sha256:ecd77b2a2e93b9babc143eafd3194997fae6a9f5cfceae29ea9c76c9ca732b86",
         contractTestDigest: "sha256:a423510a3392d53c7280897abc6ef9bd84e8f24d7bc3588b4a99f0a354ec734b",
         profileLocks: [
-          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:494c0b5df2d7742f4d70ef067754551f558f2c4122806fa789bd6c44535e77e7", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:eecaf73e1f1b1321fc4a23b50c3c8099f6508b4aeb61cec725144829eb24b71c", lockDigest: "sha256:494c0b5df2d7742f4d70ef067754551f558f2c4122806fa789bd6c44535e77e7", verifierStatus: "passed" },
           { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:494c0b5df2d7742f4d70ef067754551f558f2c4122806fa789bd6c44535e77e7", verifierStatus: "passed" },
         ],
       },
@@ -307,7 +337,7 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
         fixtureDigest: "sha256:582b408b9ada232cca271538f57202c5738717020815b901194b6faf3cd990b0",
         contractTestDigest: "sha256:1e39d52256eb44a7ea380a70bda290555ffb16b3d7d28e0a6ce1f4c842680d9a",
         profileLocks: [
-          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:11c9843be3b4c4a7e6a39d0b5b053a21d7f8473c15b344fd58b5a105a39d6eb8", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:eecaf73e1f1b1321fc4a23b50c3c8099f6508b4aeb61cec725144829eb24b71c", lockDigest: "sha256:11c9843be3b4c4a7e6a39d0b5b053a21d7f8473c15b344fd58b5a105a39d6eb8", verifierStatus: "passed" },
           { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:11c9843be3b4c4a7e6a39d0b5b053a21d7f8473c15b344fd58b5a105a39d6eb8", verifierStatus: "passed" },
         ],
       },
@@ -320,7 +350,7 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
         fixtureDigest: "sha256:30b991eacc460e246e0e8162bcf0d9067ec27a6871da96541351b82597621f1a",
         contractTestDigest: "sha256:ba4918dad55420aadea9e44d3a6a74c778c15cedb808110d60d18364f3913954",
         profileLocks: [
-          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:3ada55a896632b8d0c12e7db2514beb0eba847014abf89d10d629f6e7afd6cfa", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:eecaf73e1f1b1321fc4a23b50c3c8099f6508b4aeb61cec725144829eb24b71c", lockDigest: "sha256:3ada55a896632b8d0c12e7db2514beb0eba847014abf89d10d629f6e7afd6cfa", verifierStatus: "passed" },
           { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:3ada55a896632b8d0c12e7db2514beb0eba847014abf89d10d629f6e7afd6cfa", verifierStatus: "passed" },
         ],
       },
@@ -333,7 +363,7 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
         fixtureDigest: "sha256:35d7e54ff29cfa3fdf902c6bfa0618d5c861a9d6e0a2abdb51387d8585b1f5a4",
         contractTestDigest: "sha256:11cf0672fde864eee65383abf2319b780405b3bc5145ce885d4a71b5e8a93a8d",
         profileLocks: [
-          { profile: "simple-ecommerce", graphChecksum: "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137", lockDigest: "sha256:3ec9cdc5a66c7d57188f55f65a6f4c61988d5d85b8c419e0d75127d246cf188b", verifierStatus: "passed" },
+          { profile: "simple-ecommerce", graphChecksum: "sha256:eecaf73e1f1b1321fc4a23b50c3c8099f6508b4aeb61cec725144829eb24b71c", lockDigest: "sha256:3ec9cdc5a66c7d57188f55f65a6f4c61988d5d85b8c419e0d75127d246cf188b", verifierStatus: "passed" },
           { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:3ec9cdc5a66c7d57188f55f65a6f4c61988d5d85b8c419e0d75127d246cf188b", verifierStatus: "passed" },
         ],
       },
@@ -352,6 +382,15 @@ export const declaredFoundryFamilyEvidence: readonly FoundryFamilyEvidenceV1[] =
       "restaurant.menu",
       "1.0.0",
       "sha256:1efb3891dba96a724ac2e07050d4d0d0ce34648bb0745c48799c85c2b486bf30",
+      {
+        // Batch 5: restaurant-ordering locks restaurant.menu through the
+        // typed binding (menu-category / menu-item / menu-item inventory);
+        // one Profile Graph only, so the family stays quarantined until a
+        // second Profile locks it.
+        profileLocks: [
+          { profile: "restaurant-ordering", graphChecksum: "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701", lockDigest: "sha256:61ae3aef214ce874100d3d05442b62a1dc6f309d3c2883cec1bfc67ec20b7bb0", verifierStatus: "passed" },
+        ],
+      },
     ),
     declareFamily(
       "restaurant.ordering",

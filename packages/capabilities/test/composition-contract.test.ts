@@ -354,7 +354,7 @@ describe("capability composition contract", () => {
       composeDefaultCapabilityDraft({ profile: "restaurant-ordering" }).graph
         .integration.compositionSelections ?? [];
 
-    expect(largestSelections).toHaveLength(18);
+    expect(largestSelections).toHaveLength(20);
     expect(largestSelections).not.toContainEqual(
       expect.objectContaining({
         lock: expect.objectContaining({ key: "core.notification" }),

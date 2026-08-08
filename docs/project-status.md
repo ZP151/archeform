@@ -413,8 +413,33 @@ eligible), independent release review PASS (zero findings), and PM accept
 registry is unaffected (the mirror self-check already bound all 27 records
 to asset literals), so the honest split stays 15/0/12/0. Suites:
 capabilities 356/356 (28 files), graph 175/175, control-plane 184/184,
-typecheck clean. Task 6 Batch 4 is closed; Batch 5 (profile composition
-changes to unlock the 12 quarantined families) is next.
+typecheck clean.
+
+**Task 6 Batch 5 delivered: recipe-driven verifier expansion, 16 eligible.**
+The three verified Profile recipes were extended deterministically:
+`core.approvals` joins expense-approval (typed to expense/manager),
+`core.files-media` joins simple-ecommerce (product/imageUrl) and
+restaurant-ordering (menu-item/imageUrl), `core.search` joins
+simple-ecommerce (product/name), and `restaurant.menu` joins
+restaurant-ordering (menu-category/menu-item/menu-item); the `inventory.adjust`
+pair `[commerce.inventory-ledger, restaurant.menu]` was allowlisted as the
+declared drive-and-record overlap, while the earlier `payment.simulate`
+placement was reverted — the cashier IS the restaurant's payment surface,
+so no arbitrary allowlist. Only the simple-ecommerce graph checksum moved
+(`sha256:eecaf73e…`); expense-approval and restaurant-ordering are
+byte-identical to Batch 4 (the restaurant "drift" during scoping was a
+stale scratch copy of the acceptance seeds, not a real change).
+`core.files-media` recorded its reviewed fixture/contract-test digest
+literals and re-derived lock digests, and the evidence registry now
+declares files-media with two locks (eligible) and approvals/search/menu
+with their first locks (honestly quarantined). Split: 16/0/11/0.
+Suites: capabilities 356/356 (28 files), graph 175/175, typecheck clean;
+the isolated-verifier Docker acceptances re-ran for all three profiles
+and passed end-to-end (evidence digests `sha256:94365800…` /
+`sha256:830996eb…` / `sha256:7f7f02a9…` for expense, ecommerce,
+restaurant, all `generatedTests: passed`). Task 6 Batch 5 is closed; the
+second-lock path for the 11 quarantined families is Task 7's anchor
+Profiles.
 
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including

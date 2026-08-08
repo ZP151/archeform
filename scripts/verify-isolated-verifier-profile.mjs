@@ -119,7 +119,16 @@ const PROFILES = {
       {
         entity: "product",
         id: "everyday-tote",
-        values: { name: "Everyday tote", price: 48, stock: 20 },
+        // Batch 5: the product entity now carries the core.files-media typed
+        // binding surface (product.imageUrl, required), so the acceptance
+        // seed must carry the field or the composed graph fails semantic
+        // validation (domain.seed.field_missing).
+        values: {
+          name: "Everyday tote",
+          price: 48,
+          stock: 20,
+          imageUrl: "/products/everyday-tote.jpg",
+        },
       },
       {
         entity: "order",

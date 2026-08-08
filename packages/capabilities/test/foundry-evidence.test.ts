@@ -46,7 +46,7 @@ describe("declaredFoundryFamilyEvidence", () => {
     "expense-approval":
       "sha256:ce59b448807b35561c95b897eff68dd14ccd7f2e808e160c36eaad425b0caa2a",
     "simple-ecommerce":
-      "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137",
+      "sha256:eecaf73e1f1b1321fc4a23b50c3c8099f6508b4aeb61cec725144829eb24b71c",
     "restaurant-ordering":
       "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701",
   };
@@ -99,16 +99,18 @@ describe("declaredFoundryFamilyEvidence", () => {
   });
 
   it("declares profile locks only from real isolated-verifier evidence", () => {
-    // Batch 3: every family locked by two or more of the three isolated
-    // verifier profile graphs declares those locks — exactly, with the lock
-    // digest an independent verifier must record for the current asset
-    // (`expectedFoundryLockDigest`), a passed status, and a graph checksum
-    // from one of the three verified graphs. Families without two-Profile
-    // proof stay lock-free: the matrix can never report them eligible.
+    // Every family locked by the isolated verifier profile graphs declares
+    // those locks — exactly, with the lock digest an independent verifier
+    // must record for the current asset (`expectedFoundryLockDigest`), a
+    // passed status, and a graph checksum from one of the three verified
+    // graphs. Batch 3 declared only two-Profile-locked families; Batch 5
+    // adds first locks for core.approvals, core.search and restaurant.menu
+    // (still quarantined — one Profile cannot prove eligibility) and the
+    // second Profile lock for core.files-media (becomes eligible).
     const locked = declaredFoundryFamilyEvidence.filter(
       (record) => record.profileLocks.length > 0,
     );
-    expect(locked.length).toBe(15);
+    expect(locked.length).toBe(19);
     const lockedKeys = locked.map((record) => record.key).sort();
     expect(lockedKeys).toEqual([
       "commerce.cart",
@@ -119,16 +121,31 @@ describe("declaredFoundryFamilyEvidence", () => {
       "commerce.money-pricing",
       "commerce.order",
       "commerce.order-operations",
+      "core.approvals",
       "core.audit",
       "core.crud",
+      "core.files-media",
       "core.identity-policy",
       "core.location-context",
       "core.notification",
       "core.policy-declarations",
+      "core.search",
       "core.workflow",
+      "restaurant.menu",
+    ]);
+    const twoProfile = locked.filter(
+      (record) => record.profileLocks.length >= 2,
+    );
+    const firstLock = locked.filter(
+      (record) => record.profileLocks.length === 1,
+    );
+    expect(twoProfile.length).toBe(16);
+    expect(firstLock.map((record) => record.key).sort()).toEqual([
+      "core.approvals",
+      "core.search",
+      "restaurant.menu",
     ]);
     for (const record of locked) {
-      expect(record.profileLocks.length).toBeGreaterThanOrEqual(2);
       const asset = currentCapabilityAssets.find(
         (candidate) => candidate.manifest.key === record.key,
       )!;
@@ -144,12 +161,12 @@ describe("declaredFoundryFamilyEvidence", () => {
         seen.add(lock.profile);
       }
     }
-    // Every family without two-Profile proof still claims nothing.
+    // Every family without declared locks still claims nothing.
     expect(
       declaredFoundryFamilyEvidence.filter(
         (record) => record.profileLocks.length === 0,
       ).length,
-    ).toBe(12);
+    ).toBe(8);
   });
 
   it("mirrors the reviewed verification digests of the current assets", () => {
@@ -171,8 +188,8 @@ describe("declaredFoundryFamilyEvidence", () => {
   });
 
   it("admits the locked families exactly as the evidence proves", () => {
-    // Honest split after Batch 4: the 15 families with two-Profile locks and
-    // reviewed verification digests are eligible; the 12 without two-Profile
+    // Honest split after Batch 5: the 16 families with two-Profile locks and
+    // reviewed verification digests are eligible; the 11 without two-Profile
     // proof stay quarantined; nothing is partial and nothing is rejected.
     // The admission projection must surface the exact reasons.
     const verdictFor = (key: string) => {
@@ -199,6 +216,7 @@ describe("declaredFoundryFamilyEvidence", () => {
       "commerce.order-operations",
       "core.audit",
       "core.crud",
+      "core.files-media",
       "core.identity-policy",
       "core.location-context",
       "core.notification",
@@ -212,7 +230,7 @@ describe("declaredFoundryFamilyEvidence", () => {
     const quarantined = declaredFoundryFamilyEvidence.filter(
       (record) => verdictFor(record.key).result === "quarantined",
     );
-    expect(quarantined.length).toBe(12);
+    expect(quarantined.length).toBe(11);
     for (const record of quarantined) {
       expect(verdictFor(record.key).reasonCodes).toEqual([
         "fewer-than-two-profiles",

@@ -240,21 +240,21 @@ describe("buildFoundryMatrix", () => {
     });
   });
 
-  it("reports the declared registry honestly with the Batch 4 split", () => {
+  it("reports the declared registry honestly with the Batch 5 split", () => {
     // Default inputs: the 27 current families with their declared records.
     // The matrix claims nothing the evidence does not prove: every current
     // manifest declares a binding contract and verified fixture/negative
     // tests (Task 6 Batch 0 repaired all 23, Batch 1 adds families that
-    // declare it from birth), and Batch 3/4 declare the isolated-verifier
-    // profile locks and reviewed digest literals. The honest verdict: 15
+    // declare it from birth), and Batches 3-5 declare the isolated-verifier
+    // profile locks and reviewed digest literals. The honest verdict: 16
     // eligible (two-Profile locks + reviewed digest literals), zero partial,
-    // 12 quarantined (no two-Profile proof), zero rejected. The matrix
+    // 11 quarantined (no two-Profile proof), zero rejected. The matrix
     // exists to surface exactly this split.
     const matrix = buildFoundryMatrix();
     expect(matrix.counts.currentFamilies).toBe(27);
-    expect(matrix.counts.eligible).toBe(15);
+    expect(matrix.counts.eligible).toBe(16);
     expect(matrix.counts.partial).toBe(0);
-    expect(matrix.counts.quarantined).toBe(12);
+    expect(matrix.counts.quarantined).toBe(11);
     expect(matrix.counts.rejected).toBe(0);
     expect(matrix.counts.missingEvidence).toBe(0);
     expect(matrix.counts.staleEvidence).toBe(0);
@@ -286,16 +286,16 @@ describe("buildFoundryMatrix", () => {
           row.reasonCodes[0] === "missing-binding-contract",
       ),
     ).toBe(true);
-    // Pin the exact split: Batch 4 recorded the verification digest
-    // literals on the four remaining locked assets (cart/audit/crud/
-    // workflow), so nothing stays partial; the twelve without two-Profile
-    // proof stay quarantined; nothing is rejected. The counts tripwire
+    // Pin the exact split: nothing stays partial; the eleven without
+    // two-Profile proof stay quarantined — core.files-media left the list
+    // in Batch 5 (its second Profile lock arrived), while core.approvals,
+    // core.search and restaurant.menu stay with their first locks until a
+    // second Profile locks them; nothing is rejected. The counts tripwire
     // catches a manifest regression moving a family into rejection.
     expect(partial).toEqual([]);
     expect(quarantined.map((row) => row.key).sort()).toEqual([
       "commerce.simulated-payment",
       "core.approvals",
-      "core.files-media",
       "core.identity-context",
       "core.scheduling",
       "core.search",

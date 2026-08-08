@@ -1817,11 +1817,13 @@ describe("capability catalog", () => {
       "commerce.order-operations",
       "core.audit",
       "core.crud",
+      "core.files-media",
       "core.identity-context",
       "core.location-context",
       "core.workflow",
       "restaurant.cashier",
       "restaurant.kitchen",
+      "restaurant.menu",
       "restaurant.ordering",
       "restaurant.reporting",
       "restaurant.table-session",
@@ -1839,6 +1841,7 @@ describe("capability catalog", () => {
 
     const expectedProviders = {
       "audit.record": ["core.audit"],
+      "files.media.register": ["core.files-media"],
       "data.create": ["core.crud"],
       "data.read": ["core.crud"],
       "data.update": ["core.crud"],
@@ -1856,11 +1859,15 @@ describe("capability catalog", () => {
         "commerce.inventory",
         "commerce.inventory-ledger",
       ],
-      "inventory.adjust": ["commerce.inventory-ledger"],
+      "inventory.adjust": ["commerce.inventory-ledger", "restaurant.menu"],
       "inventory.ledger.read": ["commerce.inventory-ledger"],
       "line.configuration.validate": ["commerce.line-configuration"],
       "line.configuration.price": ["commerce.line-configuration"],
       "line.configuration.availability.manage": ["commerce.line-configuration"],
+      "menu.category.list": ["restaurant.menu"],
+      "menu.item.list": ["restaurant.menu"],
+      "menu.item.search": ["restaurant.menu"],
+      "menu.item.manage": ["restaurant.menu"],
       "pricing.quote": ["commerce.money-pricing"],
       "pricing.snapshot": ["commerce.money-pricing"],
       "payment.refund.allocate": ["commerce.money-pricing"],
@@ -1942,6 +1949,10 @@ describe("capability catalog", () => {
         .sort(([left], [right]) => String(left).localeCompare(String(right))),
     ).toEqual([
       [
+        "inventory.adjust",
+        ["commerce.inventory-ledger", "restaurant.menu"],
+      ],
+      [
         "inventory.decrement",
         ["commerce.inventory", "commerce.inventory-ledger"],
       ],
@@ -1954,7 +1965,7 @@ describe("capability catalog", () => {
         ["commerce.inventory", "commerce.inventory-ledger"],
       ],
     ]);
-    expect(selectedAssets.map(({ manifest }) => manifest.key)).not.toContain(
+    expect(selectedAssets.map(({ manifest }) => manifest.key)).toContain(
       "restaurant.menu",
     );
   });

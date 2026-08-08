@@ -136,7 +136,7 @@ describe("Restaurant Ordering profile", () => {
         bindings,
       }));
 
-    expect(restaurantSelections).toHaveLength(5);
+    expect(restaurantSelections).toHaveLength(6);
     expect(restaurantSelections).toEqual(
       expect.arrayContaining([
         {
@@ -190,6 +190,17 @@ describe("Restaurant Ordering profile", () => {
             inventoryEntity: { graphSymbol: "graph.domain.inventory-ledger" },
             analyticsPage: { graphSymbol: "graph.page.merchant-analytics" },
             merchantRole: { graphSymbol: "graph.policy.manager" },
+          },
+        },
+        {
+          // Batch 5: restaurant.menu joins the Restaurant-owned lock set
+          // through its typed category/item/inventory bindings.
+          key: "restaurant.menu",
+          version: "1.0.0",
+          bindings: {
+            categoryEntity: { graphSymbol: "graph.domain.menu-category" },
+            itemEntity: { graphSymbol: "graph.domain.menu-item" },
+            inventoryEntity: { graphSymbol: "graph.domain.menu-item" },
           },
         },
       ]),
@@ -858,7 +869,7 @@ describe("Restaurant Ordering profile", () => {
         "core.location-context",
       ]),
     );
-    expect(graph.integration.assetLocks).not.toContainEqual(
+    expect(graph.integration.assetLocks).toContainEqual(
       expect.objectContaining({ key: "restaurant.menu" }),
     );
     expect(graph.integration.assetLocks).not.toContainEqual(

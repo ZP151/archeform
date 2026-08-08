@@ -15,7 +15,7 @@ export const filesMediaAssetV1_0_0: CapabilityAssetV1 = {
       "Registers file and media references against an owning domain entity.",
     packageRoot: "packages/capabilities/assets/core.files-media/1.0.0",
     manifestDigest:
-      "sha256:a90d13d99503659593a4fd9292b30015acc81b3b599c064266bf7333537c2539",
+      "sha256:5c4fbf964825b8504efc91c965b68e63eb6c7e139201d333d806989f16d2e249",
     lifecycle: "golden",
     profiles: [],
     effects: ["files.media.register"],
@@ -47,7 +47,11 @@ export const filesMediaAssetV1_0_0: CapabilityAssetV1 = {
     provides: [{ interfaceKey: "files.media", version: "v1" }],
     verification: {
       fixture: "fixtures/default.json",
+      fixtureDigest:
+        "sha256:4098e8d30b623e735c584140580690ff00e84397b53f3fda228ee187fc695422",
       contractTest: "tests/contract.json",
+      contractTestDigest:
+        "sha256:5450abdaf2bbf487d8a92ce272b3890c36dd7a29a5654005dde09464923733e5",
       status: "verified",
     },
   },

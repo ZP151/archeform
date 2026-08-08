@@ -1110,6 +1110,84 @@ graph 175/175, control-plane 184/184, typecheck clean. Closure commit
 follows this section; Task 6 Batch 4 then closes and Batch 5 scopes the
 profile-composition changes that unlock the 12 quarantined families.
 
+### 2026-08-08 — Task 6 Batch 5: recipe-driven verifier expansion (16 eligible)
+
+Batch 5 (Task #35) extends the three verified Profile recipes
+deterministically so more shared families gain isolated-verifier Profile
+locks, without touching any asset or graph starter content that would move
+a reviewed checksum:
+
+- **expense-approval** (6 → 7 selections): `core.approvals` joins the
+  required recipe, typed-bound to `graph.domain.expense` /
+  `graph.policy.manager` (approvalEntity/approvalRole).
+- **simple-ecommerce** (16 → 18 selections): `core.files-media` typed-bound
+  to `product` / `product.imageUrl` (mediaEntity/fileField) and
+  `core.search` typed-bound to `product` / `product.name`
+  (searchEntity/searchField); the product entity gains the `imageUrl`
+  field (url, required) and the starter seeds carry it, so the typed
+  binding compiles into the generated app.
+- **restaurant-ordering** (18 → 20 selections): `restaurant.menu`
+  typed-bound to `menu-category` / `menu-item` / `menu-item`
+  (categoryEntity/itemEntity/inventoryEntity) and `core.files-media`
+  typed-bound to `menu-item` / `menu-item.imageUrl`.
+- **Effect overlap policy**: `inventory.adjust` is now allowlisted as the
+  declared pair `[commerce.inventory-ledger, restaurant.menu]` — one drives
+  the adjustment, the other records the movement, the same drive-and-record
+  pattern as the reserve/release/decrement allowlist. `payment.simulate`
+  was NOT allowlisted: the earlier placement probe (restaurant +
+  commerce.simulated-payment) was wrong by design — the cashier IS the
+  restaurant's payment surface — so the placement was reverted and
+  simulated-payment keeps its single ecommerce lock.
+- **Graph checksums**: only simple-ecommerce changes
+  (`sha256:460b8d75…` → `sha256:eecaf73e1f1b1321fc4a23b50c3c8099f6508b4aeb61cec725144829eb24b71c`),
+  from the product field + seeds. expense-approval (`ce59b448…`) and
+  restaurant-ordering (`1f04bbe3…`) are byte-identical — an experiment with
+  the recipe change stashed proved the composition-selection strip makes
+  the hash recipe-independent; the restaurant "drift" seen during scoping
+  was an artifact of a stale scratch copy of the acceptance seeds missing
+  the Batch 2 `menu-category` fixture repair, and the real acceptance
+  script's seeds reproduce the pin.
+- **core.files-media verification digests**: the reviewed literals of the
+  on-disk fixture and contract test are now recorded on the asset
+  (`fixtureDigest sha256:4098e8d3…`, `contractTestDigest sha256:5450abda…`),
+  its manifest digest recomputed (`sha256:5c4fbf96…`, physical
+  `component.json` regenerated to mirror), and the family's two lock
+  digests re-derived for the new asset identity (`sha256:c9427c17…`).
+  Without the digest literals the family would sit partial — two-Profile
+  locks but no reviewed digests — the exact Batch 4 pattern.
+- **Evidence registry**: all 15 simple-ecommerce locks re-declared at the
+  new graph checksum; core.files-media declared with two locks (eligible);
+  core.approvals (expense), core.search (ecommerce) and restaurant.menu
+  (restaurant) declared with their first locks — honestly quarantined
+  until a second Profile locks them.
+- **Tests**: 64/64 focused (evidence, matrix, composition-contract), full
+  capabilities 356/356 (28 files), graph and control-plane suites run in
+  the gate round; the composition-shape pins (largest restaurant
+  composition 18 → 20, restaurant lock set 5 → 6, provider and overlap
+  maps) updated to the new recipes, and the undeclared-overlap probe now
+  uses the deliberately un-allowlisted payment.simulate pair.
+
+**Matrix: 16 eligible / 0 partial / 11 quarantined / 0 rejected.** The
+second-lock path for the remaining 11 (restaurant families, approvals,
+search, identity-context, scheduling, simulated-payment) is Task 7's
+additional anchor Profiles — recorded in the task description.
+
+**Isolated-verifier Docker acceptances (re-ran for all three Profiles
+because the generated apps and composition locks changed).** Observed
+results, all `status: succeeded` with every step green and
+`generatedTests: passed`:
+
+| Profile            | Evidence digest                    | Compilation digest                  |
+| ------------------ | ---------------------------------- | ----------------------------------- |
+| expense-approval   | `sha256:94365800…` (943658005d36…) | `sha256:723c0d7d…`                  |
+| simple-ecommerce   | `sha256:830996eb…` (830996eb6acb…) | `sha256:2a81fe5b…`                  |
+| restaurant-ordering| `sha256:7f7f02a9…` (7f7f02a9c2ce…) | `sha256:c1367e3f…`                  |
+
+Each run exercised the full step sequence against the freshly composed
+generated app (migration, health, positive path, fail-closed denial,
+cleanup) with Preview cleanup and idempotent retry on. These three runs
+are the Batch 5 observed-acceptance evidence recorded in the task report.
+
 ## Required evidence per promoted family
 
 | Evidence    | Required form                                                       |
