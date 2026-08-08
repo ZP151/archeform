@@ -8,7 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
     "pretest": "prisma generate",
-    "test": "vitest run",
+    "test": "pnpm build && vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "prettier --check src test",
     "prisma:generate": "prisma generate",

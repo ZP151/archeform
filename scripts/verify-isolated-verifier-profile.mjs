@@ -1,15 +1,24 @@
 #!/usr/bin/env node
 /**
- * Docker-backed acceptance for the isolated verifier (Task 6).
+ * Docker-backed acceptance for the isolated verifier (Task 6 Batch 2).
  *
- * Exercises the full loop against real infrastructure: a deterministic
- * Published Revision is seeded into PostgreSQL, the Compilation is created
- * through the real Control Plane API and compiled by the Worker (which
- * records the immutable artifact manifest), the Control Plane queues one
- * verification run, the Worker re-compiles the immutable input, boots the
- * generated application as an isolated Docker preview, runs the six bounded
- * probes against it, reports one evidence bundle, and the run reaches a
- * terminal status with the allowlisted evidence persisted.
+ * Exercises the full loop against real infrastructure, parameterized by
+ * profile: the deterministic Published Revision is seeded into PostgreSQL,
+ * the Compilation is created through the real Control Plane API and compiled
+ * by the Worker (which records the immutable artifact manifest), the Control
+ * Plane queues one verification run, the Worker re-compiles the immutable
+ * input, boots the generated application as an isolated Docker preview, runs
+ * the six bounded probes against it, reports one evidence bundle, and the run
+ * reaches a terminal status with the allowlisted evidence persisted. The
+ * profile's own generated journey suite then runs in a fresh preview.
+ *
+ * The three acceptance profiles are the platform's authored fixtures:
+ * - expense-approval: session-bound (fixture sessions), flow event submit.
+ * - simple-ecommerce: session-bound, flow events submit/pay/fulfil/cancel.
+ * - restaurant-ordering: role-header bound and header-idempotent; every
+ *   command carries its table-session token and idempotency key as declared
+ *   headers, and the merchant E2E fixtures the database seed renders derive
+ *   their session digests from RESTAURANT_DEMO_TABLE_TOKEN at boot.
  *
  * Safety properties of this record:
  * - The generated application, Graph, and probe requests are exercised but
@@ -20,8 +29,14 @@
  * - The Compose project is the dedicated `factory-pilot` infra stack
  *   (postgres + redis only); `docker compose down` restores the environment
  *   without removing volumes.
+ * - The Restaurant demo table token is the worker's authored fixture constant
+ *   (imported from the compiled worker), set verbatim into the worker and the
+ *   generated preview environments — never read from the ambient machine.
  *
- * Usage: pnpm verify:isolated-verifier-expense
+ * Usage:
+ *   pnpm verify:isolated-verifier-expense          # expense-approval
+ *   pnpm verify:isolated-verifier-simple-ecommerce # simple-ecommerce
+ *   pnpm verify:isolated-verifier-restaurant-ordering
  * Requires: Docker daemon running, ports 5432/6379/3000 free, node >= 22.
  */
 import { spawn, spawnSync } from "node:child_process";
@@ -40,6 +55,10 @@ import {
   hashApplicationGraph,
   parseApplicationGraph,
 } from "../packages/graph/dist/index.js";
+import {
+  restaurantVerifierDemoToken,
+  restaurantVerifierMenuItemPrice,
+} from "../apps/compiler-worker/dist/verifier/verification-profiles.js";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(import.meta.url);
@@ -47,11 +66,195 @@ const { PrismaClient } = require(
   resolve(repoRoot, "apps/control-plane/node_modules/@prisma/client"),
 );
 
+// ---- Profile configuration -------------------------------------------------
+// Each profile is a deterministic pair of (graph seed, expected evidence):
+// the seeded records are the exact fixture set the worker profile resolves
+// against, and the expected step order and statuses are the observable
+// contract of one passing run. Statuses are the bounded HTTP results the
+// probes record: 201 for mutation journeys, 200 for reads, 403 for the
+// idempotency replay and every authorization denial.
+const PROFILES = {
+  "expense-approval": {
+    graphKey: "expense-approval",
+    publishedRevisionId: "published-expense-approval-1",
+    verificationRunId: "verify-expense-acceptance-1",
+    profileKey: "expense-approval",
+    graphName: "Expense Approval",
+    restaurant: false,
+    seedData: [
+      {
+        entity: "expense",
+        id: "expense-fixture-01",
+        values: {
+          amount: "125.50",
+          description: "Team lunch",
+          status: "draft",
+        },
+      },
+    ],
+    expectedStepIds: [
+      "migration",
+      "health",
+      "employee-creates-expense",
+      "employee-submits-expense",
+      "manager-approves-expense",
+      "employee-denied-approval",
+      "cleanup",
+    ],
+    expectedStatuses: {
+      "employee-creates-expense": 201,
+      "employee-submits-expense": 403,
+      "manager-approves-expense": 201,
+      "employee-denied-approval": 403,
+    },
+  },
+  "simple-ecommerce": {
+    graphKey: "simple-ecommerce",
+    publishedRevisionId: "published-simple-ecommerce-1",
+    verificationRunId: "verify-ecommerce-acceptance-1",
+    profileKey: "simple-ecommerce",
+    graphName: "Simple Ecommerce",
+    restaurant: false,
+    seedData: [
+      {
+        entity: "product",
+        id: "everyday-tote",
+        values: { name: "Everyday tote", price: 48, stock: 20 },
+      },
+      {
+        entity: "order",
+        id: "order-fixture-01",
+        values: { status: "cart", version: 0 },
+      },
+    ],
+    expectedStepIds: [
+      "migration",
+      "health",
+      "shopper-creates-order",
+      "shopper-submits-order",
+      "shopper-pays-order",
+      "merchant-fulfils-order",
+      "shopper-reads-catalog",
+      "shopper-denied-cancel",
+      "cleanup",
+    ],
+    expectedStatuses: {
+      "shopper-creates-order": 201,
+      "shopper-submits-order": 403,
+      "shopper-pays-order": 201,
+      "merchant-fulfils-order": 201,
+      "shopper-reads-catalog": 200,
+      "shopper-denied-cancel": 403,
+    },
+  },
+  "restaurant-ordering": {
+    graphKey: "restaurant-ordering",
+    publishedRevisionId: "published-restaurant-ordering-1",
+    verificationRunId: "verify-restaurant-acceptance-1",
+    profileKey: "restaurant-ordering",
+    graphName: "Restaurant Ordering",
+    restaurant: true,
+    // The seeded menu-item price must equal the amount the cashier payment
+    // covers (the worker profile declares the same authored constant), and
+    // the rendered seed derives the merchant E2E session digests from
+    // RESTAURANT_DEMO_TABLE_TOKEN at boot.
+    seedData: [
+      {
+        entity: "restaurant-location",
+        id: "main-location",
+        values: { name: "Main restaurant", currency: "USD", active: true },
+      },
+      {
+        entity: "restaurant-table",
+        id: "table-12",
+        values: { code: "T12", number: 12, status: "open", active: true },
+      },
+      {
+        entity: "menu-item",
+        id: "margherita-pizza",
+        values: {
+          categoryKey: "mains",
+          name: "Margherita pizza",
+          description: "Tomato, mozzarella, and basil",
+          price: restaurantVerifierMenuItemPrice,
+          available: true,
+          stock: 10,
+          preparationMinutes: 12,
+          imageUrl: "/menu/margherita-pizza.jpg",
+        },
+      },
+      {
+        entity: "table-session",
+        // The rendered seed derives the demo session id from the table seed
+        // and overwrites tokenDigest/status/expiry from the demo token.
+        id: "table-12-demo-session",
+        values: {
+          tableCode: "T12",
+          tokenDigest: "verifier-fixture-placeholder",
+          status: "active",
+          openedAt: "2026-08-01T00:00:00.000Z",
+          expiresAt: "2099-01-01T00:00:00.000Z",
+          guestCount: 2,
+        },
+      },
+    ],
+    expectedStepIds: [
+      "migration",
+      "health",
+      "customer-resolves-demo-session",
+      "customer-reads-menu",
+      "cashier-pays-merchant-order",
+      "merchant-seats-table",
+      "kitchen-lists-tickets",
+      "manager-reads-summary",
+      "manager-reads-low-stock",
+      "customer-denied-cancel",
+      "kitchen-denied-payment",
+      "customer-denied-reports",
+      "cleanup",
+    ],
+    expectedStatuses: {
+      "customer-resolves-demo-session": 201,
+      "customer-reads-menu": 200,
+      "cashier-pays-merchant-order": 201,
+      "merchant-seats-table": 201,
+      "kitchen-lists-tickets": 200,
+      "manager-reads-summary": 200,
+      "manager-reads-low-stock": 200,
+      "customer-denied-cancel": 403,
+      "kitchen-denied-payment": 403,
+      "customer-denied-reports": 403,
+    },
+  },
+};
+
+const PROFILE_ARG = process.argv[2];
+const PROFILE = PROFILES[PROFILE_ARG];
+if (!PROFILE) {
+  throw new Error(
+    `Unknown profile ${JSON.stringify(PROFILE_ARG)}; expected one of: ${Object.keys(PROFILES).join(", ")}`,
+  );
+}
+const {
+  graphKey: GRAPH_KEY,
+  publishedRevisionId: PUBLISHED_REVISION_ID,
+  verificationRunId: VERIFICATION_RUN_ID,
+  profileKey: PROFILE_KEY,
+  graphName: GRAPH_NAME,
+  restaurant: RESTAURANT,
+  seedData: SEED_DATA,
+  expectedStepIds: EXPECTED_STEP_IDS,
+  expectedStatuses: EXPECTED_STATUSES,
+} = PROFILE;
+// The Restaurant runtime reads its demo table token from the environment at
+// preview boot (the worker injects it into the preview; the generated-tests
+// preview reads it from this process). It is the worker's authored fixture
+// constant, never ambient machine state.
+if (RESTAURANT) {
+  process.env.RESTAURANT_DEMO_TABLE_TOKEN = restaurantVerifierDemoToken;
+}
+
 const WORKSPACE_SLUG = "isolated-verifier-acceptance";
-const GRAPH_KEY = "expense-approval";
-const PUBLISHED_REVISION_ID = "published-expense-approval-1";
-const VERIFICATION_RUN_ID = "verify-expense-acceptance-1";
-const PROFILE_KEY = "expense-approval";
 const POSTGRES_PORT = process.env.FACTORY_POSTGRES_PORT ?? "5432";
 const REDIS_PORT = "6379";
 const CONTROL_PLANE_PORT = "3000";
@@ -346,13 +549,7 @@ async function main() {
   const selections = draft.graph.integration.compositionSelections;
   const graph = structuredClone(draft.graph);
   delete graph.integration.compositionSelections;
-  graph.domain.seedData = [
-    {
-      entity: "expense",
-      id: "expense-fixture-01",
-      values: { amount: "125.50", description: "Team lunch", status: "draft" },
-    },
-  ];
+  graph.domain.seedData = SEED_DATA;
   const draftGraphHash = hashApplicationGraph(graph);
   const compositionLock = createCapabilityCompositionLock({
     graphChecksum: draftGraphHash,
@@ -372,7 +569,7 @@ async function main() {
       create: {
         workspaceId: workspace.id,
         key: GRAPH_KEY,
-        name: "Expense Approval",
+        name: GRAPH_NAME,
       },
     });
     await prisma.draftRevision.upsert({
@@ -476,13 +673,26 @@ async function main() {
     PORT: CONTROL_PLANE_PORT,
     OPENAI_MODEL: "gpt-5",
   };
+  if (RESTAURANT) {
+    // The worker injects the demo table token into the preview environment at
+    // boot; the generated compose migrate service requires it.
+    appEnv.RESTAURANT_DEMO_TABLE_TOKEN = restaurantVerifierDemoToken;
+  }
   const controlPlane = spawnChild(
     "control plane",
     process.execPath,
     ["apps/control-plane/dist/main.js"],
     appEnv,
   );
-  await waitForHttp(`${CONTROL_PLANE_URL}/health`, 120_000);
+  try {
+    await waitForHttp(`${CONTROL_PLANE_URL}/health`, 120_000);
+  } catch (error) {
+    // A control-plane boot failure is otherwise silent (the child output is
+    // captured in memory); surface its bounded tail before the teardown
+    // discards it, so a recurrence is self-diagnosing.
+    console.error(workerTail(controlPlane));
+    throw error;
+  }
 
   const worker = spawnChild(
     "worker",
@@ -568,8 +778,8 @@ async function main() {
   // legitimately take tens of minutes. The poll window must exceed the worst
   // bounded case (boot + cleanup + per-step timeouts) or the harness would tear
   // down a still-working worker and misreport the run as stuck. With the
-  // per-operation timeout at 20 minutes and eight sequential operations, the
-  // worst bounded case is 160 minutes, so the window is 180.
+  // per-operation timeout at 20 minutes and sequential operations, the worst
+  // bounded case is hours, so the window is 180.
   let run;
   const pollStartedAt = Date.now();
   const deadline = pollStartedAt + 180 * 60 * 1_000;
@@ -611,18 +821,9 @@ async function main() {
     );
     console.error(workerTail(worker, controlPlane));
   }
-  const expectedStepIds = [
-    "migration",
-    "health",
-    "employee-creates-expense",
-    "employee-submits-expense",
-    "manager-approves-expense",
-    "employee-denied-approval",
-    "cleanup",
-  ];
   assert(run.status === "succeeded", `Verification run status: ${run.status}`);
   assert(
-    JSON.stringify(run.stepIds) === JSON.stringify(expectedStepIds),
+    JSON.stringify(run.stepIds) === JSON.stringify(EXPECTED_STEP_IDS),
     `Unexpected stepIds: ${JSON.stringify(run.stepIds)}`,
   );
   assert(
@@ -636,22 +837,12 @@ async function main() {
   );
   const statusOf = (stepId) =>
     steps.find((step) => step.stepId === stepId)?.httpStatus;
-  assert(
-    statusOf("employee-creates-expense") === 201,
-    "Create journey status is not 201.",
-  );
-  assert(
-    statusOf("employee-submits-expense") === 403,
-    "Idempotency replay status is not 403.",
-  );
-  assert(
-    statusOf("manager-approves-expense") === 201,
-    "Approve journey status is not 201.",
-  );
-  assert(
-    statusOf("employee-denied-approval") === 403,
-    "Authorization denial status is not 403.",
-  );
+  for (const [stepId, expectedStatus] of Object.entries(EXPECTED_STATUSES)) {
+    assert(
+      statusOf(stepId) === expectedStatus,
+      `${stepId} status is not ${expectedStatus}.`,
+    );
+  }
   assert(
     run.evidence.cleanup.succeeded === true,
     "Preview cleanup did not succeed.",
@@ -728,7 +919,7 @@ async function main() {
   // test directory (`COPY src ./src` only), so the injection creates it.
   const generatedDirectory = join(
     artifactRoot,
-    "expense-approval-published-expense-approval-1",
+    `${GRAPH_KEY}-${PUBLISHED_REVISION_ID}`,
   );
   const generatedProject = `factory-generated-tests-${VERIFICATION_RUN_ID}`;
   let testResult;
@@ -839,6 +1030,7 @@ async function main() {
         previewCleanup: true,
         idempotentRetry: true,
         generatedTests: "passed",
+        restaurantDemoToken: RESTAURANT ? "fixture constant" : undefined,
         infra: "postgres+redis in Docker, control plane+worker on host",
       },
       null,
@@ -880,7 +1072,7 @@ async function teardown() {
 try {
   await main();
 } catch (error) {
-  console.error(`verify-isolated-verifier-expense: ${error.message}`);
+  console.error(`verify-isolated-verifier-profile: ${error.message}`);
   process.exitCode = 1;
 } finally {
   await teardown();

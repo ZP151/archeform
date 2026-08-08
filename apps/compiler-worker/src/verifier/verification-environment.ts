@@ -73,6 +73,10 @@ const maximumCommandTokens = 10;
 const allowedHeaderNames = new Set([
   "x-factory-role",
   "x-factory-fixture-session",
+  // The Restaurant runtime's declared contract: the table-session token and
+  // the command idempotency key travel as headers, never in the body.
+  "x-factory-table-session-token",
+  "x-factory-idempotency-key",
 ]);
 const safeHeaderValue = /^[a-zA-Z0-9._-]{1,64}$/;
 const maximumDeclaredHeaders = 8;

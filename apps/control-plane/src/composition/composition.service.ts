@@ -38,7 +38,9 @@ import {
   exactRecord,
   validatedGraph,
 } from "../lifecycle.service.js";
-import type { PrismaService } from "../prisma.service.js";
+// A value import: Nest resolves the constructor parameter from
+// `design:paramtypes`, so the injectable class must carry a runtime token.
+import { PrismaService } from "../prisma.service.js";
 
 /**
  * The deterministic planning seam. Only schema-valid proposals may cross it:

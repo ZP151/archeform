@@ -69,10 +69,12 @@ function journeyFacts(
 }
 
 /**
- * The declared fixture header for one journey: a fixture session for
- * session-bound generated applications, or the API role header for
- * principal-bound ones. Both kinds are validated in role-journey.ts before
- * any request is sent; a journey can never declare both.
+ * The declared fixture headers for one journey: a fixture session for
+ * session-bound generated applications, the API role header for
+ * principal-bound ones, and any declared journey headers (the Restaurant
+ * runtime's session-token and idempotency-key contract). Every header is
+ * validated in role-journey.ts before any request is sent; a journey can
+ * never declare both principal kinds.
  */
 function journeyHeaders(
   journey: RoleJourneyFixture,
@@ -80,9 +82,14 @@ function journeyHeaders(
   if (journey.sessionId !== undefined) {
     return [{ name: "x-factory-fixture-session", value: journey.sessionId }];
   }
-  return journey.principal === undefined
+  const principalHeader =
+    journey.principal === undefined
+      ? []
+      : [{ name: "x-factory-role", value: journey.principal }];
+  const declaredHeaders = journey.headers ?? [];
+  return principalHeader.length === 0 && declaredHeaders.length === 0
     ? undefined
-    : [{ name: "x-factory-role", value: journey.principal }];
+    : [...principalHeader, ...declaredHeaders];
 }
 
 /**

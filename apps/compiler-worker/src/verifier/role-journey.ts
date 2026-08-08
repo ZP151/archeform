@@ -19,6 +19,13 @@ export type RegisteredApiAction = {
   readonly expectedStatus: number;
 };
 
+export type DeclaredJourneyHeader = {
+  /** A bounded header name, e.g. `x-factory-idempotency-key`. */
+  readonly name: string;
+  /** A bounded header value, e.g. a fixture session-token digest. */
+  readonly value: string;
+};
+
 export type RoleJourneyFixture = {
   /** Bounds into the verification step ID; `[a-z0-9-]{1,64}`. */
   readonly journeyId: string;
@@ -32,6 +39,13 @@ export type RoleJourneyFixture = {
    * exactly one principal kind, never both.
    */
   readonly sessionId?: string;
+  /**
+   * Declared extra headers for header-bound generated applications (the
+   * Restaurant runtime reads the table-session token and the command
+   * idempotency key from headers). At most two, never the reserved fixture
+   * principal headers, and never duplicated.
+   */
+  readonly headers?: readonly DeclaredJourneyHeader[];
   /** A bounded flat declared JSON body, e.g. a create payload. */
   readonly body?: string;
 };
@@ -47,6 +61,17 @@ const actionPattern = /^[a-zA-Z0-9._-]{1,64}$/;
 const journeyIdPattern = /^[a-z0-9-]{1,64}$/;
 const principalPattern = /^[a-zA-Z0-9._-]{1,64}$/;
 const idempotencyKeyPattern = /^[a-z0-9-]{1,128}$/;
+const headerNamePattern = /^[a-z][a-z0-9-]{0,63}$/;
+// Mirrors the environment's safeHeaderValue contract: header values are
+// bounded printable fixture data, never arbitrary text.
+const headerValuePattern = /^[a-zA-Z0-9._-]{1,64}$/;
+const maximumDeclaredJourneyHeaders = 2;
+// A journey resolves its principal through exactly one fixture channel; a
+// declared header may never smuggle a reserved channel name in.
+const reservedHeaderNames = new Set([
+  "x-factory-role",
+  "x-factory-fixture-session",
+]);
 const httpMethods: readonly HttpMethod[] = [
   "GET",
   "POST",
@@ -102,8 +127,11 @@ export const expenseApprovalApiRegistry: readonly RegisteredApiAction[] = [
 
 /**
  * Simple ecommerce: shoppers read the seeded catalog and place orders;
- * merchants manage the catalog and run order operations (cancel, capture
- * payment). Order transitions carry `{expectedVersion, idempotencyKey}`.
+ * merchants run order operations (fulfil, cancel). The generated runtime
+ * dispatches transitions strictly by the declared flow event name on
+ * `/api/:entity/:recordId/events/:event`, so every order action here is a
+ * real flow event (submit/pay/fulfil/cancel) — a route that is not a flow
+ * event can never exist in the generated API and would fail closed.
  */
 export const simpleCommerceApiRegistry: readonly RegisteredApiAction[] = [
   {
@@ -125,9 +153,21 @@ export const simpleCommerceApiRegistry: readonly RegisteredApiAction[] = [
     expectedStatus: 201,
   },
   {
-    action: "order.place",
+    action: "order.submit",
     method: "POST",
-    route: "/api/order/order-fixture-01/events/place",
+    route: "/api/order/order-fixture-01/events/submit",
+    expectedStatus: 201,
+  },
+  {
+    action: "order.pay",
+    method: "POST",
+    route: "/api/order/order-fixture-01/events/pay",
+    expectedStatus: 201,
+  },
+  {
+    action: "order.fulfil",
+    method: "POST",
+    route: "/api/order/order-fixture-01/events/fulfil",
     expectedStatus: 201,
   },
   {
@@ -136,10 +176,66 @@ export const simpleCommerceApiRegistry: readonly RegisteredApiAction[] = [
     route: "/api/order/order-fixture-01/events/cancel",
     expectedStatus: 201,
   },
+];
+
+/**
+ * Restaurant ordering: customers resolve a seeded table session and read the
+ * menu; cashiers record payments against the seeded merchant E2E order (the
+ * database seed derives its session-token digest from the same demo token the
+ * verifier declares); managers seat tables and read reports; kitchen reads
+ * the tickets a payment creates. Every command carries its idempotency key
+ * and session token as declared headers — the Restaurant runtime reads them
+ * from `x-factory-idempotency-key` / `x-factory-table-session-token`, never
+ * from the body.
+ */
+export const restaurantOrderingApiRegistry: readonly RegisteredApiAction[] = [
   {
-    action: "order.capture-payment",
+    action: "table-session.resolve",
     method: "POST",
-    route: "/api/order/order-fixture-01/events/capture-payment",
+    route: "/api/restaurant/table-sessions/resolve",
+    expectedStatus: 201,
+  },
+  {
+    action: "menu-item.list",
+    method: "GET",
+    route: "/api/restaurant/menu/items",
+    expectedStatus: 200,
+  },
+  {
+    action: "order.pay",
+    method: "POST",
+    route: "/api/restaurant/orders/merchant-e2e-cashier-order/payments",
+    expectedStatus: 201,
+  },
+  {
+    action: "kitchen-ticket.list",
+    method: "GET",
+    route: "/api/restaurant/merchant/kitchen-tickets",
+    expectedStatus: 200,
+  },
+  {
+    action: "order.audit-summary",
+    method: "GET",
+    route: "/api/restaurant/reports/summary",
+    expectedStatus: 200,
+  },
+  {
+    action: "inventory.audit-low-stock",
+    method: "GET",
+    route: "/api/restaurant/reports/low-stock",
+    expectedStatus: 200,
+  },
+  {
+    action: "restaurant-table.seat",
+    method: "POST",
+    route:
+      "/api/restaurant/merchant/tables/merchant-e2e-cashier-table/events/seat",
+    expectedStatus: 201,
+  },
+  {
+    action: "order.cancel",
+    method: "POST",
+    route: "/api/restaurant/orders/merchant-e2e-cancellation-order/cancel",
     expectedStatus: 201,
   },
 ];
@@ -224,6 +320,34 @@ export function validateRoleJourney(
       throw new VerificationContractError(
         "Role journeys resolve exactly one principal kind.",
       );
+    }
+  }
+  if (journey.headers !== undefined) {
+    if (
+      !Array.isArray(journey.headers) ||
+      journey.headers.length === 0 ||
+      journey.headers.length > maximumDeclaredJourneyHeaders
+    ) {
+      throw new VerificationContractError(
+        "Role journey headers must be declared fixture data.",
+      );
+    }
+    const seen = new Set<string>();
+    for (const header of journey.headers) {
+      if (
+        !header ||
+        typeof header.name !== "string" ||
+        !headerNamePattern.test(header.name) ||
+        reservedHeaderNames.has(header.name) ||
+        typeof header.value !== "string" ||
+        !headerValuePattern.test(header.value) ||
+        seen.has(header.name)
+      ) {
+        throw new VerificationContractError(
+          "Role journey headers must be declared fixture data.",
+        );
+      }
+      seen.add(header.name);
     }
   }
   if (journey.body !== undefined) {

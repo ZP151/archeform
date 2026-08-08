@@ -345,14 +345,14 @@ describe("runAuthorizationDenialProbe", () => {
     );
   });
 
-  it("confirms a payment denial when a shopper tries to capture payment", async () => {
+  it("confirms a payment denial when a shopper tries to cancel", async () => {
     const { context } = probeContext({
       kind: "authorization-denial",
       request: vi.fn(async () => boundedRequest(403)),
     });
     const journey: RoleJourneyFixture = {
-      journeyId: "order-capture-denied",
-      action: "order.capture-payment",
+      journeyId: "order-cancel-denied",
+      action: "order.cancel",
       principal: "shopper",
     };
     const step = await runAuthorizationDenialProbe(
@@ -410,11 +410,11 @@ describe("runAuthorizationDenialProbe", () => {
 describe("runIdempotencyProbe", () => {
   function journey(): IdempotencyJourneyFixture {
     return {
-      journeyId: "order-place",
-      action: "order.place",
+      journeyId: "order-submit",
+      action: "order.submit",
       principal: "shopper",
-      idempotencyKey: "verify-order-place-01",
-      expectedVersion: 1,
+      idempotencyKey: "verify-order-submit-01",
+      expectedVersion: 0,
     };
   }
 
@@ -438,11 +438,11 @@ describe("runIdempotencyProbe", () => {
     for (const call of request.mock.calls) {
       expect(call).toEqual([
         "POST",
-        "/api/order/order-fixture-01/events/place",
+        "/api/order/order-fixture-01/events/submit",
         "api",
         expect.objectContaining({
           headers: [{ name: "x-factory-role", value: "shopper" }],
-          body: '{"expectedVersion":1,"idempotencyKey":"verify-order-place-01"}',
+          body: '{"expectedVersion":0,"idempotencyKey":"verify-order-submit-01"}',
         }),
       ]);
     }
