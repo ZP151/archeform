@@ -37,9 +37,89 @@ owning slice to `implementing`.
 
 | Slice | Scope                                              | State | Latest commit | Evidence |
 | ----- | -------------------------------------------------- | ----- | ------------- | -------- |
-| S1    | Discuss mode: RequirementSpec brief + clarifications | planned | — | — |
+| S1    | Discuss mode: RequirementSpec brief + clarifications | implementing | 2fe78d30 | 11 focused tests; workbench 84/84; graph 175/175 |
+| S2    | Plan mode: deterministic alternatives + visual Diff | implementing | 671e45b2 | 12 focused tests; workbench 96/96; capabilities 356/356 |
+| S3    | Build mode: accepted plan to Draft + Experience System | implementing | (see record) | 14 focused tests; workbench 110/110; graph 188/188; capabilities 356/356; control-plane 184/184; compiler-worker 183/183 |
 
 ## Slice records
+
+### 2026-08-08 — S3 Build mode implemented
+
+`packages/graph` gains the Factory-owned Experience System
+(`experience.ts`, 13 focused tests): semantic colour/typography/spacing/
+radius/elevation/motion tokens with per-group validated value languages
+(no CSS injection surface), light and dark themes, approved shell and
+page-layout recipes, density presets, approved component variants, and
+the accessible focus/contrast/validation/loading/empty/error states —
+all schema-validated with deterministic Factory defaults
+(`EXPERIENCE_DESIGN_SYSTEM_DEFAULTS`) so the first Golden Path needs no
+visual adjustment. Declared design systems are optional on the
+ExperienceModel (backward compatible); `resolveExperienceDesignSystem`
+merges declarations over defaults; `defaultPageLayoutFor`/`resolvePageLayout`
+pick the deterministic recipe per page kind; page-layout selections
+reference existing pages (graph-level semantic check). The immutable
+lifecycle gains `appendDraftRevision` for content restore.
+
+`apps/workbench/lib/golden-path/build-model.ts` (+ 14 focused tests)
+delivers Build mode over the immutable lifecycle: the accepted,
+checksum-bound `CompositionDecision` advances the mutable Draft through
+`applyApprovedComposition` (fail-closed on rejected decisions, tampered
+checksums, stale base Drafts); Experience adjustments and approved page
+layout variants are constrained Graph Diffs over the resolved system;
+Draft revision comparison surfaces Experience changes entry-level;
+restore appends the next immutable revision from an earlier revision's
+content — history is never rewritten. The Workbench Build UI surface
+wiring lands with the S7 mode shell.
+
+Also fixed: `control-plane` portfolio summary still pinned the stale
+restaurant-ordering package count (18, now 20 after accepted Foundry
+recipe growth) — same drift class as the S1 workbench tables; aligned
+in a separate fix commit.
+
+S3 state stays `implementing` for PM advancement.
+
+### 2026-08-08 — S2 Plan mode implemented
+
+`plan-alternatives.ts` produces up to three schema-valid `CompositionPlanV1`
+alternatives over the deterministic planner with a schema-valid anchor
+recipe catalogue (7 approved locks, surfaces web/api/database, the S1
+acceptance journeys). Alternatives differ only by requirement framing
+variants (standard / strict / light); each carries a safe summary,
+capability locks, compatibility, risks, affected pages/entities/roles/
+flows, acceptance journeys, and known limitations. Fail-closed: unresolved
+required questions block Plan; planner clarifications return bounded
+results.
+
+`graph-diff-visual.ts` derives entry-level visual Graph Diff (pages,
+entities, roles, flows) from the plan's constrained
+`factory.graph-diff/v1` operations — never from generated source — and
+fails closed on stale base Draft checksums.
+
+The S1 `employee-submit` scenario was amended to state only the
+review-entry guarantee: fixture-derived transitions carry no capability
+effects, so the plan-built Draft records audit events on approve/reject
+(effect-declared) but not on the fixture-added submit. Surfaced as a
+known limitation on every alternative.
+
+S2 state stays `implementing` for PM advancement.
+
+### 2026-08-08 — S1 Discuss mode implemented
+
+`apps/workbench/lib/golden-path/discuss-model.ts` (+ 11 tests) delivers the
+bounded Discuss state machine: deterministic Expense Approval clarification
+set (approval threshold, manager role, audit trail, multi-level approval),
+immutable answering with explicit deferral, fail-closed unresolved-required
+questions that block Plan, and a deterministic starter requirement fixture
+reproducible without AI. Discuss cannot mutate a Draft — the module exports
+no Graph or Draft surface; the only output is a schema-valid
+RequirementSpecV1 (asserted at build time, sha256-able for plan binding).
+
+The workbench suite was red at dispatch with two stale count tables
+(expense-approval 6→7, restaurant-ordering 18→20, simple-ecommerce 16→18)
+caused by accepted Foundry recipe growth after 2026-08-02. Fixed in
+`bf73cdf`; full workbench 84/84 green, typecheck and prettier clean.
+
+S1 state stays `implementing` for PM advancement.
 
 ### 2026-08-08 — Plan and roadmap
 
