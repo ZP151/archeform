@@ -91,6 +91,30 @@ P0 acceptance gates:
 
 ## P1 — Governed Composition & Capability Foundry (active Goal)
 
+### P1 Product Closure gate (Base44-inspired Golden Path, active)
+
+The approved Base44-inspired Golden Path design
+(`docs/superpowers/specs/2026-08-08-base44-inspired-golden-path-design.md`)
+inserts a **Product Closure** gate ahead of the remaining Foundry breadth
+gates. Before resuming breadth-first Capability Foundry expansion, Factory
+completes one low-friction, evidence-backed path from a business requirement
+to a runnable local preview:
+
+```text
+Discuss -> RequirementSpec -> plan alternatives -> visual Graph Diff
+-> Draft -> role/data simulation -> Publish -> Compile
+-> isolated verification -> preview URL
+```
+
+Delivery order changes; platform authority does not. The `ApplicationGraphV1`
+remains the sole business source of truth, and the lifecycle remains mutable
+Draft -> immutable Published Graph -> immutable Compilation. New capability
+families and vertical Profiles are paused; the 100+ recipe catalogue and
+12-anchor expansion resume after Product Closure is accepted. The acceptance
+profile is Expense Approval; Restaurant Ordering and Simple Ecommerce remain
+regression profiles and do not block the first product-flow acceptance.
+Implementation plan: `docs/superpowers/plans/2026-08-08-base44-inspired-golden-path.md`.
+
 ### Staged AI composition
 
 Replace one-shot AI Graph Diffs with a staged, reviewable flow:
