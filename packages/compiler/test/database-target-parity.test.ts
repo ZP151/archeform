@@ -39,6 +39,16 @@ const profiles: readonly FactoryProfile[] = [
  * (the API copy is a byte duplicate); the Restaurant profile carries the
  * specialized runtime schema/migration/seed, and the generic commerce
  * profiles carry the package-owned order-operations persistence fragments.
+ *
+ * Re-baselined 2026-08-08 (documented in the Golden Path Slice 7 ledger):
+ * (1) expense-approval seed.ts changed because the profile starter graph now
+ * declares the deterministic `expense-fixture-01` seed record (the
+ * verification contract's record-bearing journeys were 403ing on a clean
+ * boot with an empty seed); (2) simple-ecommerce / retail-counter /
+ * grocery-pickup schema/migration/seed changed because accepted recipe-growth
+ * commits after the 2026-08-06 freeze altered those starter graphs (proven
+ * pre-existing on the clean tree via git stash; restaurant-ordering and the
+ * expense-approval schema/migration are byte-identical to the freeze).
  */
 const LEGACY_DIGESTS: Readonly<
   Record<FactoryProfile, Readonly<Record<string, string>>>
@@ -51,7 +61,7 @@ const LEGACY_DIGESTS: Readonly<
     "database/prisma/migrations/0001_initial/migration.sql":
       "2229af3704a3b919ad43b98472198a197f4da191118e4f441088fa6390fa04a8",
     "database/prisma/seed.ts":
-      "463810888e67780ea59619fe70775ca49882c9ed8c46d560f116e3f4a9840532",
+      "e071772bd6a9f1ae9c815f2e41b5a4786aa7d7e36eb0e0ca1e0623c51d57547f",
   },
   "restaurant-ordering": {
     "database/prisma/schema.prisma":
@@ -65,33 +75,33 @@ const LEGACY_DIGESTS: Readonly<
   },
   "simple-ecommerce": {
     "database/prisma/schema.prisma":
-      "6c45c29c45944fd5d4cd3e63d144f98a6e2d2761aab1a384f7b18e50ac23c3a5",
+      "3af9642ea2c1d1a7fb4578207e5f2a142b6e9bcaeef1833a1e6abe094d8db2aa",
     "api/prisma/schema.prisma":
-      "6c45c29c45944fd5d4cd3e63d144f98a6e2d2761aab1a384f7b18e50ac23c3a5",
+      "3af9642ea2c1d1a7fb4578207e5f2a142b6e9bcaeef1833a1e6abe094d8db2aa",
     "database/prisma/migrations/0001_initial/migration.sql":
-      "8b010cfe57ef90e206e313b90854704c6c8cf9cce1391e589f912073c3dce74d",
+      "a48099178008987193918786c37da5f9c61a2d2ffddb8f6928ea879bbd0a15d4",
     "database/prisma/seed.ts":
-      "a70835831bd62564b7ab60b36d46dd945e616236fb4f050286c632ae88a84632",
+      "9fd87df5204d70cacd85b257587702831e3380ca923fd7f5e6650469d9d53361",
   },
   "retail-counter": {
     "database/prisma/schema.prisma":
-      "1b03b93fe1625033ed6dc5065a4c9bf8aca3c0ff96b72156ab720b17d99edc13",
+      "660318f1b2d50f158f8b1686175b81d4a5cc166f4cd8970455233ff78fc09dbb",
     "api/prisma/schema.prisma":
-      "1b03b93fe1625033ed6dc5065a4c9bf8aca3c0ff96b72156ab720b17d99edc13",
+      "660318f1b2d50f158f8b1686175b81d4a5cc166f4cd8970455233ff78fc09dbb",
     "database/prisma/migrations/0001_initial/migration.sql":
-      "4089f842108d95a40384c1d17dc5bbe2e0aa3d08bf674bec32e910cf0b230e61",
+      "5688a40eadaf88643fdc6dda2d3a4a145a9d463ad20671612a85c1655cfa16b1",
     "database/prisma/seed.ts":
-      "46c474cce13b796b5e32d8593e85e8adc4a96612d343ae5d682587786e2ac26e",
+      "025f39a13cfcd66500188e933b4a895aa417a07a0a5308567e25a6ad9d960724",
   },
   "grocery-pickup": {
     "database/prisma/schema.prisma":
-      "aef33691e236dbf123c4d332113e43144dc416d552b997e61a01bd55f53ed1cc",
+      "22fd2bf17fbfc0c3467f35c356743707c6229985765c40f748d18346452c7940",
     "api/prisma/schema.prisma":
-      "aef33691e236dbf123c4d332113e43144dc416d552b997e61a01bd55f53ed1cc",
+      "22fd2bf17fbfc0c3467f35c356743707c6229985765c40f748d18346452c7940",
     "database/prisma/migrations/0001_initial/migration.sql":
-      "8628a630337dad3dd46a2dd7a531b0f1197b6c450987a3c7265eae17dd2a9696",
+      "bf9b57bc1520155249039fc719e8d19f70be545856e456c730fd733b1ae6d9c7",
     "database/prisma/seed.ts":
-      "3498eb7d94108bd07954992c103521c2ef805c7ab0f5a6f0fa748d6dbf7fc966",
+      "261d55d3c50c5bb1f38b35601bcf09bd34e2793f200d67470bc9e3ce5e7d97d4",
   },
 };
 

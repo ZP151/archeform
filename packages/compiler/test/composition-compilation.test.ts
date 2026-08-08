@@ -386,8 +386,14 @@ describe("immutable composition compilation", () => {
       delete publishedGraph.integration.compositionSelections;
 
       expect(draft.integration).not.toHaveProperty("assetLocks");
+      // Re-baselined 2026-08-08 (Golden Path Slice 7 ledger): the strict
+      // binding-contract and recipe-growth commits accepted after the
+      // 2026-08-06 digest freeze added two selections per default composition
+      // (Restaurant 18 -> 20, Ecommerce 16 -> 18); proven pre-existing on the
+      // clean tree via git stash, same decision class as the target-parity
+      // re-baseline.
       expect(selections).toHaveLength(
-        profile === "restaurant-ordering" ? 18 : 16,
+        profile === "restaurant-ordering" ? 20 : 18,
       );
       expect(publishedGraph.integration).not.toHaveProperty(
         "compositionSelections",

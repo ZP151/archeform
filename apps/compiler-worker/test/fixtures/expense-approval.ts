@@ -13,10 +13,10 @@ import { hashApplicationGraph } from "@factory/graph";
  * 403 without one) and authorizes declared resource/action pairs before any
  * record lookup.
  *
- * The composed draft declares no seed records, so this fixture adds exactly
- * one deterministic record (`expense-fixture-01` in the flow's initialState
- * `draft`); the generated app's migrate service seeds it at boot, which makes
- * every journey replayable from a clean boot.
+ * The composed draft declares the deterministic seed record
+ * (`expense-fixture-01` in the flow's initialState `draft`) from the profile
+ * starter graph; the generated app's migrate service seeds it at boot, which
+ * makes every journey replayable from a clean boot.
  *
  * The fixture is a pure function of the profile name: same input, same
  * graph, same lock, same digest. It is consumed by the worker integration
@@ -33,13 +33,6 @@ export function acceptanceCompilation(): PublishedGraphInput {
   const selections = draft.integration.compositionSelections;
   const graph = structuredClone(draft);
   delete graph.integration.compositionSelections;
-  graph.domain.seedData = [
-    {
-      entity: "expense",
-      id: "expense-fixture-01",
-      values: { amount: "125.50", description: "Team lunch", status: "draft" },
-    },
-  ];
   return {
     publishedRevisionId: acceptancePublishedRevisionId,
     graph,

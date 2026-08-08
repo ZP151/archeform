@@ -27,6 +27,8 @@ services:
       ]
     environment:
       FACTORY_REDIS_PASSWORD: ${FACTORY_REDIS_PASSWORD:?required}
+    ports:
+      - "127.0.0.1:${FACTORY_REDIS_PORT:-6379}:6379"
     healthcheck:
       test:
         [
@@ -66,12 +68,17 @@ services:
     build:
       context: ..
       dockerfile: apps/compiler-worker/Dockerfile
+    # The verification probes and the worker's docker CLI both address the
+    # generated previews through the host loopback (docker publishes the
+    # generated compose ports on 127.0.0.1), so the worker must share the
+    # host network namespace instead of the compose bridge.
+    network_mode: host
     environment:
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://127.0.0.1:${FACTORY_REDIS_PORT:-6379}
       FACTORY_REDIS_PASSWORD: ${FACTORY_REDIS_PASSWORD:?required}
       FACTORY_INTERNAL_WORKER_TOKEN: ${FACTORY_INTERNAL_WORKER_TOKEN:?required}
       FACTORY_ARTIFACT_ROOT: /artifacts
-      FACTORY_CONTROL_PLANE_URL: http://control-plane:3000
+      FACTORY_CONTROL_PLANE_URL: http://127.0.0.1:${FACTORY_CONTROL_PLANE_PORT:-3000}
       RESTAURANT_DEMO_TABLE_TOKEN: ${RESTAURANT_DEMO_TABLE_TOKEN:-}
     depends_on:
       redis:
@@ -92,6 +99,9 @@ services:
       - control-plane
     environment:
       NEXT_PUBLIC_CONTROL_PLANE_URL: ${FACTORY_PUBLIC_CONTROL_PLANE_URL:-http://localhost:${FACTORY_CONTROL_PLANE_PORT:-3000}}
+      # The Golden Path plan route reads recipe fixtures from the repository
+      # root (the whole workspace is copied into the image at /workspace).
+      FACTORY_REPOSITORY_ROOT: /workspace
     ports:
       - "${FACTORY_WORKBENCH_PORT:-5174}:5174"
 

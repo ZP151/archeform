@@ -37,6 +37,14 @@ const profiles: readonly FactoryProfile[] = [
  * documented decision, not a silent refactor drift. The vectors include the
  * Restaurant api-reference override and the identity-policy fixture-session
  * boundary for Expense Approval and Simple Ecommerce.
+ *
+ * Re-baselined 2026-08-08 (documented in the Golden Path Slice 7 ledger):
+ * simple-ecommerce / retail-counter / grocery-pickup entity-relationship and
+ * application docs changed because accepted recipe-growth commits after the
+ * 2026-08-06 freeze altered those starter graphs (proven pre-existing on the
+ * clean tree via git stash). Expense Approval and Restaurant docs are
+ * byte-identical to the freeze; all api-reference and permission-matrix
+ * vectors are unchanged.
  */
 const LEGACY_DIGESTS: Readonly<
   Record<FactoryProfile, Readonly<Record<string, string>>>
@@ -65,31 +73,31 @@ const LEGACY_DIGESTS: Readonly<
     "docs/api-reference.md":
       "c9601a2e36b4f986a399b73bddd37eba27789763a7a85cc555d684c4f1c4cf3f",
     "docs/entity-relationship.md":
-      "f582454684aba98191e364d66bef8466377688bf2b03ae059081f6acdcb5d02f",
+      "34f126a366804944b803332fae9624b3aacd8ae665ad427041294af77e2b5915",
     "docs/permission-matrix.md":
       "33619df6d5b95aa489aebc6dc7f4cd2055b3628ee0ed55b05921fe58ae221ddc",
     "docs/application.md":
-      "45d1c18dcc53fff12ef19aa9263ffe5b3a44873adc3828824bd0b79959f43741",
+      "7a77645551514f1a70c4af926d00bf532afaea88c68b42585f82ed7b6b69af21",
   },
   "retail-counter": {
     "docs/api-reference.md":
       "5c14933e3448f7361f29437c5a671ae69c25b029a2b78db4af9542d0e1b1421e",
     "docs/entity-relationship.md":
-      "37a6b817beb5039abaf70209d3c53edb3bc13031ac9b20d4fc25dba482835553",
+      "0f1c928ea5664be66e69ac42279c155c5ecd129c2ef4fe77c38f3c635a16e4ac",
     "docs/permission-matrix.md":
       "62f79cc0d7dd13fb46cfcd18b96b033a1403905f1ba17995fabc2d6942076258",
     "docs/application.md":
-      "64fe92bb3fd3d6a2fabb7ac1b4f54d1fcadca00200f180252d4a98f12c886c86",
+      "05ae5a93c4697561c7d19c828d46559a8e65082296925babac5b3f5cb92a8746",
   },
   "grocery-pickup": {
     "docs/api-reference.md":
       "2fa2022dddbe99ec094de68e01a5783c692d58662873831ab3c38a04d749c5a2",
     "docs/entity-relationship.md":
-      "d9cd2ad6928b9fec8bf6911a2bac1720d98a381bb365670af1fad34c1f23e316",
+      "a4403fdb402f65c810fd8956e2ee093e0b6766e5453da32fd4bbe487c7defdec",
     "docs/permission-matrix.md":
       "943653c45f0e4b44efa76b560834907246ce828dbee7ea47cc5f9e617399be59",
     "docs/application.md":
-      "130eb5a0740a616daf6b34b5053e8c8ed19557859ecae6a880b37631c0f47ac0",
+      "c5785cf89dd58290144a24be7454ae88bd47dcf1b98d70b3110cb60a42fdacf5",
   },
 };
 

@@ -1,5 +1,12 @@
 export type Surface =
-  "home" | "page" | "domain" | "flow" | "policy" | "ai" | "code";
+  | "home"
+  | "page"
+  | "domain"
+  | "flow"
+  | "policy"
+  | "ai"
+  | "code"
+  | "golden-path";
 export type Theme = "light" | "dark";
 export type PreviewRunStatus =
   "starting" | "ready" | "stopping" | "stopped" | "failed";

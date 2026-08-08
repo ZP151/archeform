@@ -1732,6 +1732,17 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               field: "subjectRef",
             },
           ],
+          seedData: [
+            {
+              entity: "expense",
+              id: "expense-fixture-01",
+              values: {
+                amount: "125.50",
+                description: "Team lunch",
+                status: "draft",
+              },
+            },
+          ],
         },
         {
           roles: ["employee", "manager", "finance"],

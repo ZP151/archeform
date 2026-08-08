@@ -1,6 +1,6 @@
-import { createHash } from "node:crypto";
-
 import { z } from "zod";
+
+import { sha256HexUtf8 } from "./sha256.js";
 
 /** Dotted capability-family keys (for example `core.crud`), never paths. */
 export const capabilityKeySchema = z
@@ -90,9 +90,7 @@ function canonicalize(value: unknown): unknown {
 
 /** Stable content-addressable digest over canonical key-sorted JSON. */
 export function digestJson(value: unknown): string {
-  return `sha256:${createHash("sha256")
-    .update(JSON.stringify(canonicalize(value)))
-    .digest("hex")}`;
+  return `sha256:${sha256HexUtf8(JSON.stringify(canonicalize(value)))}`;
 }
 
 /** Deep equality over canonical JSON. Array order is meaning. */

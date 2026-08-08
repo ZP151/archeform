@@ -432,6 +432,78 @@ describe("WorkbenchHome", () => {
     expect(container.textContent).not.toContain("Compilation queued");
   });
 
+  it("retries the control-plane bootstrap while the plane is still booting", async () => {
+    vi.useFakeTimers();
+    try {
+      let bootstrapAttempts = 0;
+      const fetcher = vi.fn(
+        async (input: RequestInfo | URL, init?: RequestInit) => {
+          const url = new URL(String(input));
+          const method = init?.method ?? "GET";
+          if (
+            method === "GET" &&
+            url.pathname ===
+              "/workspaces/local/application-graphs/ops-workspace"
+          ) {
+            bootstrapAttempts += 1;
+            if (bootstrapAttempts < 3) {
+              // The compose stack starts the control plane cold; until it
+              // accepts connections the mount-time bootstrap fails.
+              throw new Error("connection refused");
+            }
+            return responseJson({
+              id: "graph-initial",
+              draftRevisions: [
+                {
+                  id: "draft-initial",
+                  revisionNumber: 1,
+                  graph: workbenchGraph,
+                },
+              ],
+              publishedRevisions: [],
+            });
+          }
+          if (
+            method === "GET" &&
+            url.pathname === "/workspaces/local/application-graphs"
+          ) {
+            return responseJson([]);
+          }
+          return new Response("unexpected request", { status: 500 });
+        },
+      );
+      vi.stubGlobal("fetch", fetcher);
+
+      await act(async () => {
+        root.render(
+          <Workbench
+            controlPlaneUrl="http://control-plane.test"
+            initialGraph={workbenchGraph}
+          />,
+        );
+      });
+
+      // The first attempt fails; the shell must not stay wedged on the
+      // unavailable state forever.
+      expect(bootstrapAttempts).toBe(1);
+      expect(container.textContent).toContain("Control Plane unavailable");
+
+      // Advance the bounded retry schedule: attempt 2 fails again, attempt 3
+      // succeeds and the shell reports the plane ready.
+      await act(async () => {
+        vi.advanceTimersByTime(2_000);
+      });
+      expect(bootstrapAttempts).toBe(2);
+      await act(async () => {
+        vi.advanceTimersByTime(2_000);
+      });
+      expect(bootstrapAttempts).toBe(3);
+      expect(container.textContent).toContain("Control Plane ready");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it.each(["succeeded", "failed"] as const)(
     "refreshes application activity after a queued compilation %s and whenever Home activates",
     async (terminalStatus) => {

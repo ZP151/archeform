@@ -22,6 +22,7 @@ import {
   Moon,
   PanelRight,
   Plus,
+  Rocket,
   Settings2,
   ShieldCheck,
   Sparkles,
@@ -63,6 +64,7 @@ import {
 } from "../lib/guided-application";
 import { PageStudio } from "./page-studio";
 import { FlowStudio } from "./flow-studio";
+import { GoldenPathWorkspace } from "./golden-path/mode-shell";
 import { DomainRelationGraph } from "./domain-relation-graph";
 import { GuidedCreationDrawer } from "./guided-creation-drawer";
 import { WorkbenchHome } from "./workbench-home";
@@ -112,12 +114,27 @@ const navigation: Navigation[] = [
   { id: "policy", label: "Policy", icon: ShieldCheck, hint: "Set controls" },
   { id: "ai", label: "AI", icon: Bot, hint: "Configure intelligence" },
   { id: "code", label: "Code", icon: Code2, hint: "Inspect generated output" },
+  {
+    id: "golden-path",
+    label: "Golden Path",
+    icon: Rocket,
+    hint: "Run the governed Golden Path",
+  },
 ];
 
 type Props = {
   initialGraph: ApplicationGraphV1;
   controlPlaneUrl: string;
 };
+
+/**
+ * The control plane starts cold with the compose stack, so the mount-time
+ * bootstrap can race its boot. These bound the retry schedule: one attempt
+ * immediately, then one every two seconds until the plane accepts
+ * connections (or the bound is exhausted and the shell stays offline).
+ */
+const BOOTSTRAP_RETRY_DELAY_MS = 2_000;
+const BOOTSTRAP_RETRY_LIMIT = 45;
 
 export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   const [state, dispatch] = useReducer(
@@ -282,12 +299,32 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   );
 
   useEffect(() => {
-    void bootstrapGraph(initialGraph)
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const attemptBootstrap = async (retriesLeft: number): Promise<void> => {
+      try {
+        await bootstrapGraph(initialGraph);
+      } catch {
+        // The control plane may still be booting; retry on a bounded schedule
+        // instead of wedging the shell in "offline". The bootstrap is
+        // idempotent (GET-first, create-on-404), so retries are safe, and a
+        // newer request superseding this one resolves the loop naturally.
+        if (cancelled || retriesLeft <= 0) return;
+        timer = setTimeout(() => {
+          void attemptBootstrap(retriesLeft - 1);
+        }, BOOTSTRAP_RETRY_DELAY_MS);
+      }
+    };
+    void attemptBootstrap(BOOTSTRAP_RETRY_LIMIT)
       .catch(() => undefined)
       .finally(() => {
         void refreshApplications();
         void refreshPortfolio();
       });
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) clearTimeout(timer);
+    };
   }, [bootstrapGraph, initialGraph, refreshApplications, refreshPortfolio]);
 
   useEffect(() => {
@@ -927,6 +964,26 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
                   previewRun={previewRun}
                   artifactLoading={artifactLoading}
                   artifactSnapshot={artifactSnapshot}
+                />
+              )}
+              {state.activeSurface === "golden-path" && (
+                <GoldenPathWorkspace
+                  graph={graph}
+                  client={controlPlane}
+                  applicationGraphId={
+                    remoteDraft?.applicationGraphId ?? undefined
+                  }
+                  onDraftApplied={(draft) => {
+                    setRemoteDraft(draft);
+                    setGraph(draft.graph);
+                    setDraftDirty(false);
+                    setAiProposal(null);
+                  }}
+                  onPublished={(published) => {
+                    setPublishedRevision(published);
+                    setCompilation(null);
+                    setPreviewRun(null);
+                  }}
                 />
               )}
             </section>
@@ -1943,6 +2000,7 @@ function PropertiesPanel({ surface }: { surface: Surface }) {
     policy: "Policy details",
     ai: "Assistant settings",
     code: "Build details",
+    "golden-path": "Golden Path journey",
   };
   return (
     <aside className="properties" aria-label="Properties">

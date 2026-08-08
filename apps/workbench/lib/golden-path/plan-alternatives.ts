@@ -1,19 +1,17 @@
 import { resolve } from "node:path";
 
-import {
-  createDraftRevision,
-  type CompositionClarificationV1,
-  type CompositionPlanV1,
-  type DraftRevisionV1,
-  type ProfileRecipeCatalogV1,
-  type ProfileRecipeV1,
-  type RequirementSpecV1,
+import type {
+  CompositionClarificationV1,
+  CompositionPlanV1,
+  DraftRevisionV1,
+  ProfileRecipeCatalogV1,
+  ProfileRecipeV1,
+  RequirementSpecV1,
 } from "@factory/graph";
 import {
   currentCapabilityAssets,
   planComposition,
 } from "@factory/capabilities/node";
-import { createProfileDraft } from "../profile-starters";
 import {
   answerClarification,
   buildRequirementSpec,
@@ -21,6 +19,11 @@ import {
   type ClarificationKey,
   type DiscussSession,
 } from "./discuss-model";
+// The planning base is browser-safe and lives in its own module; the
+// deterministic planner below reads recipe fixtures from disk and runs only
+// server-side (see the Golden Path plan route in app/api/golden-path/plan).
+import { createExpenseApprovalPlanningBase } from "./planning-base";
+export { createExpenseApprovalPlanningBase } from "./planning-base";
 
 /**
  * Plan mode over the deterministic planner: up to three bounded,
@@ -166,29 +169,6 @@ export function expenseApprovalRecipeCatalog(): ProfileRecipeCatalogV1 {
     schemaVersion: "v1",
     recipes: [EXPENSE_APPROVAL_RECIPE],
   };
-}
-
-/**
- * The planning base Draft: the profile starter without the `submit`
- * transition, which is exactly the Graph change the recipe fixture proposes.
- * The accepted plan reproduces the canonical starter wiring through the
- * governed loop.
- */
-export function createExpenseApprovalPlanningBase(): DraftRevisionV1 {
-  const starter = createProfileDraft("expense-approval");
-  const flow = starter.flow.flows.find((f) => f.id === "expense-review");
-  if (flow === undefined) {
-    throw new Error("Expense starter has no expense-review flow.");
-  }
-  flow.transitions = flow.transitions.filter(
-    (transition) =>
-      !(
-        transition.from === "draft" &&
-        transition.event === "submit" &&
-        transition.to === "submitted"
-      ),
-  );
-  return createDraftRevision(starter, "expense-approval-planning-base");
 }
 
 /**

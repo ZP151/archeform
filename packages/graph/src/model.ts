@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { sha256HexUtf8 } from "./sha256.js";
 
 import { z } from "zod";
 
@@ -884,5 +884,5 @@ function canonicalize(value: unknown): unknown {
 export function hashApplicationGraph(input: unknown): string {
   const graph = assertValidApplicationGraph(input);
   const canonicalJson = JSON.stringify(canonicalize(graph));
-  return `sha256:${createHash("sha256").update(canonicalJson).digest("hex")}`;
+  return `sha256:${sha256HexUtf8(canonicalJson)}`;
 }

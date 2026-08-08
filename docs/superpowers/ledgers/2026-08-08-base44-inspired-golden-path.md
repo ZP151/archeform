@@ -43,6 +43,7 @@ owning slice to `implementing`.
 | S4    | Role and data simulation over the mutable Draft | implementing | 5c3a3c52 | 16 focused tests; workbench 126/126; graph 188/188; capabilities 356/356; control-plane 184/184; compiler-worker 183/183 |
 | S5    | Unified bounded Activity/Evidence Timeline | implementing | 3989e3cf | 13 focused tests; workbench 139/139; graph 188/188; capabilities 356/356; control-plane 184/184; compiler-worker 183/183 |
 | S6    | One-action Publish -> Compile -> Verify -> Preview + cleanup | implementing | (see record) | 13 focused + 3 client tests; workbench 155/155; graph 188/188; control-plane 184/184 |
+| S7    | Mode shell UI, lineage canvas, browser E2E acceptance | implementing | (see record) | (see record) |
 
 ## Slice records
 
@@ -68,6 +69,95 @@ Draft Diff operations into the next immutable Draft revision). The
 timeline gains the bounded `verify` event kind. The mode-shell UI wiring
 lands with the S7 release journey. S6 state stays `implementing` for PM
 advancement.
+
+### 2026-08-08 — S7 Mode shell UI, lineage canvas, browser E2E acceptance
+
+The workbench gains the mode-shell wiring over the S1-S6 pure models:
+`components/golden-path/` renders the four-mode shell (Discuss -> Plan ->
+Build -> Release) with the immutable Draft lifecycle, the lineage canvas
+(`lineage-model.ts` + tests) derives Draft lineage purely from the
+control-plane evidence (Application Graph revisions, asset locks,
+verification/preview runs), and `apps/workbench/app/api/` hosts the
+mode-boundary routes. The client journey model (`journey-model.ts` +
+tests, `polling.ts` + tests) drives the browser E2E acceptance over the
+immutable lifecycle: Discuss -> RequirementSpec -> plan alternatives ->
+visual Graph Diff -> Draft -> role/data simulation -> Publish -> Compile ->
+isolated verification -> preview and cleanup.
+
+Delivery fixes that made the journey pass end-to-end:
+
+- **Worker credentials and host networking** (`infra/docker-compose.yml`):
+  the compiler-worker runs with `network_mode: host` and publishes Redis on
+  127.0.0.1 so the verification probes' hardcoded `http://127.0.0.1:${port}`
+  resolves inside the container; ephemeral credentials are generated per
+  `compose:up` and never committed.
+- **Seed contract fix** (`packages/capabilities`): the Expense Approval
+  starter graph template now declares the deterministic `expense-fixture-01`
+  seed record (`renderPrismaSeed` renders `graph.domain.seedData` into the
+  generated app's migrate-time seed). Before this, the compiled app booted
+  with an empty seed and every record-bearing verification transition
+  (employee submits, manager approves) failed closed with 403
+  "Record 'expense-fixture-01' was not found". The verifier registries and
+  role journeys are unchanged; the acceptance fixture's manual seed add
+  became redundant and was removed.
+- **Pre-existing parity drift re-baselined** (documented decision, per the
+  frozen parity contract): accepted recipe-growth commits after the
+  2026-08-06 digest freeze changed the simple-ecommerce / retail-counter /
+  grocery-pickup starter graphs and added two selections per default
+  composition. Proven pre-existing via git stash on the clean tree, then
+  re-baselined: `database-target-parity.test.ts` and
+  `documentation-target-parity.test.ts` digests updated (restaurant and
+  expense-approval byte-identical to the freeze), and
+  `composition-compilation.test.ts` selection counts 18 -> 20 /
+  16 -> 18 with the decision noted in-file.
+- **Pure-TS sha256** (`packages/graph/src/sha256.ts` + tests) so digest
+  computation needs no Node crypto import in browser contexts.
+- **Journey timeline wiring** (`apps/workbench/lib/golden-path/journey-model.ts`):
+  `updateRelease`/`startRelease` now merge the release's own evidence
+  timeline (publish -> compile -> verify -> boot -> cleanup) into the
+  journey timeline once per stage (`releaseTimelineMerged` cursor, reset
+  when a Draft Diff restarts the release). The browser E2E asserts exactly
+  this evidence trail on the timeline; without the merge the journey UI
+  showed only discuss/plan/build/simulate events and the journey could not
+  pass acceptance.
+- **Bounded control-plane bootstrap retry**
+  (`apps/workbench/components/workbench.tsx`): the mount-time bootstrap ran
+  once and wedged the shell in `offline` when the page loaded while the
+  control plane was still booting (Nest starts cold with the compose stack,
+  ~60s after `compose:up` returns). The mount effect now retries on a
+  bounded schedule (2s apart, 45 attempts) — safe because
+  `bootstrapLocalDraft` is idempotent (GET-first, create-on-404) — and the
+  browser E2E's first wait covers the full cold-boot window. One new
+  focused component test drives the retry with fake timers (two refusals
+  then success); the shell shows "Control Plane unavailable" while retrying
+  and flips to "Control Plane ready" when the plane accepts connections.
+- **Eventually-consistent cleanup proof** (`e2e/golden-path.spec.ts`): the
+  stop endpoint transitions the preview run to `stopping` and enqueues the
+  worker job, which then tears down the compose project (containers,
+  network, volumes) and removes the copied preview directory seconds later.
+  The E2E now polls for the terminal resource-free state (120s bound)
+  instead of asserting immediately after the stop request returns — run 13
+  showed the teardown completing moments after the earlier instant
+  assertion failed.
+
+**Browser E2E acceptance (2026-08-09):** the complete Expense Approval
+browser journey passes end-to-end (2.3m): app creation -> Discuss ->
+RequirementSpec -> plan alternatives -> visual Graph Diff -> Draft (token
+and layout adjustments) -> role/data simulation with recorded
+authorization denial -> one-action publish -> compile -> isolated
+verification -> generated-app preview -> Stop preview -> docker-level proof
+that the preview project's containers, network, volumes, and worker
+artifact directory are removed. The generated preview is a real
+application (`main.generated-app`, no Puck studio), never the Workbench.
+Run 13 exercised the exact cold-start race the bootstrap retry was built
+for and passed the entire journey; run 14 is fully green including the
+cleanup poll.
+
+Evidence: workbench full 222/222 (golden-path lib + components 139/139);
+capabilities 356/356; graph 190/190; adapters 34/34; control-plane 184/184;
+compiler-worker 183/183; compiler 332/332 (incl. re-baselined parity +
+composition suites); browser E2E green (see above). S7 state stays
+`implementing` for PM advancement.
 
 ### 2026-08-08 — S5 Unified bounded Activity/Evidence Timeline implemented
 

@@ -1948,10 +1948,7 @@ describe("capability catalog", () => {
         .map(([effect, providers]) => [effect, providers.sort()])
         .sort(([left], [right]) => String(left).localeCompare(String(right))),
     ).toEqual([
-      [
-        "inventory.adjust",
-        ["commerce.inventory-ledger", "restaurant.menu"],
-      ],
+      ["inventory.adjust", ["commerce.inventory-ledger", "restaurant.menu"]],
       [
         "inventory.decrement",
         ["commerce.inventory", "commerce.inventory-ledger"],
@@ -2105,12 +2102,15 @@ describe("capability catalog", () => {
     }
   });
 
-  it("ships deterministic catalog seed scenarios for Restaurant and Ecommerce", () => {
+  it("ships deterministic catalog seed scenarios for Restaurant, Ecommerce, and Expense Approval", () => {
     const restaurant = profileGraphs.find(
       ({ profile }) => profile === "restaurant-ordering",
     )!.graph;
     const ecommerce = profileGraphs.find(
       ({ profile }) => profile === "simple-ecommerce",
+    )!.graph;
+    const expense = profileGraphs.find(
+      ({ profile }) => profile === "expense-approval",
     )!.graph;
 
     expect(restaurant.domain.seedData).toEqual(
@@ -2120,6 +2120,19 @@ describe("capability catalog", () => {
     );
     expect(ecommerce.domain.seedData).toEqual(
       expect.arrayContaining([expect.objectContaining({ entity: "product" })]),
+    );
+    // The Expense Approval acceptance journeys move the declared fixture
+    // record through the flow (draft -> submitted -> approved), so the
+    // starter graph must carry it for the compiled app to pass its own
+    // isolated verification.
+    expect(expense.domain.seedData).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          entity: "expense",
+          id: "expense-fixture-01",
+          values: expect.objectContaining({ status: "draft" }),
+        }),
+      ]),
     );
   });
 
