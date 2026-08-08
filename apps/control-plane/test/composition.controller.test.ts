@@ -13,6 +13,7 @@ import {
 
 import { CompositionController } from "../src/composition/composition.controller.js";
 import { CompositionService } from "../src/composition/composition.service.js";
+import { ProductCompositionService } from "../src/composition/product-composition.service.js";
 
 const composition = {
   createRequirement: vi.fn(),
@@ -22,9 +23,20 @@ const composition = {
   apply: vi.fn(),
 };
 
+const productComposition = {
+  createProductRequirement: vi.fn(),
+  requestProductPlan: vi.fn(),
+  getReview: vi.fn(),
+  chooseProductPlan: vi.fn(),
+  applyProduct: vi.fn(),
+};
+
 @Module({
   controllers: [CompositionController],
-  providers: [{ provide: CompositionService, useValue: composition }],
+  providers: [
+    { provide: CompositionService, useValue: composition },
+    { provide: ProductCompositionService, useValue: productComposition },
+  ],
 })
 class TestModule {}
 
@@ -89,6 +101,45 @@ describe("CompositionController", () => {
       handler: composition.apply,
       arguments: ["graph-1", "review-1"],
       response: { draftRevision: { id: "draft-cuid-6" } },
+    },
+    {
+      method: "POST",
+      path: "/product/requirements",
+      body: { requirement: { apiVersion: "factory.requirement-spec/v1" } },
+      handler: productComposition.createProductRequirement,
+      arguments: [
+        { requirement: { apiVersion: "factory.requirement-spec/v1" } },
+      ],
+      response: { review: { id: "review-1", status: "planning" } },
+    },
+    {
+      method: "GET",
+      path: "/product/requirements/review-1",
+      handler: productComposition.getReview,
+      arguments: ["review-1"],
+      response: { review: { id: "review-1", status: "planned" } },
+    },
+    {
+      method: "POST",
+      path: "/product/requirements/review-1/plan",
+      handler: productComposition.requestProductPlan,
+      arguments: ["review-1"],
+      response: { alternatives: [{ key: "standard" }] },
+    },
+    {
+      method: "POST",
+      path: "/product/requirements/review-1/choices",
+      body: { alternativeKey: "standard" },
+      handler: productComposition.chooseProductPlan,
+      arguments: ["review-1", { alternativeKey: "standard" }],
+      response: { review: { id: "review-1", status: "approved" } },
+    },
+    {
+      method: "POST",
+      path: "/product/requirements/review-1/apply",
+      handler: productComposition.applyProduct,
+      arguments: ["review-1"],
+      response: { draftRevision: { id: "draft-cuid-2" } },
     },
   ])(
     "maps $method $path to the composition review boundary",

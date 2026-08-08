@@ -25,12 +25,15 @@ import {
   parseRequirementSpec,
   type CompositionPlanV1,
   type DraftRevisionV1,
+  type ProductBlueprintV1,
   type RequirementSpecV1,
 } from "@factory/graph";
 import {
   currentCapabilityAssets,
   planComposition,
+  planProductAlternatives,
   type PlanCompositionOutcomeV1,
+  type ProductPlanAlternative,
 } from "@factory/capabilities/node";
 
 import {
@@ -44,13 +47,21 @@ import { PrismaService } from "../prisma.service.js";
 
 /**
  * The deterministic planning seam. Only schema-valid proposals may cross it:
- * a plan or a bounded clarification, never free-form output.
+ * a plan or a bounded clarification, never free-form output. The product
+ * closure seam proposes deterministic plan alternatives for an accepted
+ * blueprint over a blank Draft — still a fixed deterministic function, never
+ * a model choice.
  */
 export interface CompositionPlannerProvider {
   propose(
     requirement: RequirementSpecV1,
     baseDraft: DraftRevisionV1,
   ): PlanCompositionOutcomeV1;
+  proposeProduct(input: {
+    readonly requirement: RequirementSpecV1;
+    readonly blueprint: ProductBlueprintV1;
+    readonly baseDraft: DraftRevisionV1;
+  }): readonly ProductPlanAlternative[];
 }
 
 export const COMPOSITION_PLANNER = Symbol("COMPOSITION_PLANNER");
@@ -74,6 +85,8 @@ export function createCompositionPlannerProvider(): CompositionPlannerProvider {
         FACTORY_REPOSITORY_ROOT,
         currentCapabilityAssets,
       ),
+    proposeProduct: ({ requirement, blueprint, baseDraft }) =>
+      planProductAlternatives({ requirement, blueprint, baseDraft }),
   };
 }
 
@@ -83,7 +96,7 @@ const FACTORY_REPOSITORY_ROOT = resolve(
 );
 
 /** A bounded, review-safe projection of a plan (no free-form fields). */
-function safePlanSummary(plan: CompositionPlanV1) {
+export function safePlanSummary(plan: CompositionPlanV1) {
   return {
     planId: plan.planId,
     capabilityLocks: plan.capabilityLocks.map(({ key, version }) => ({

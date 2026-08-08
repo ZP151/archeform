@@ -10,6 +10,7 @@ import {
 } from "./model.js";
 
 export * from "./model.js";
+export * from "./blank-application.js";
 export * from "./experience.js";
 export * from "./verification.js";
 export * from "./diagnosis.js";

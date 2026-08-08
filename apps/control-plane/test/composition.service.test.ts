@@ -246,7 +246,10 @@ function reviewRow(overrides: Record<string, unknown> = {}) {
 }
 
 function plannerStub(outcome: unknown) {
-  return { propose: vi.fn().mockReturnValue(outcome) };
+  return {
+    propose: vi.fn().mockReturnValue(outcome),
+    proposeProduct: vi.fn().mockReturnValue([]),
+  };
 }
 
 function serviceWith(

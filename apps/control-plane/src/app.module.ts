@@ -12,6 +12,7 @@ import {
   CompositionService,
   createCompositionPlannerProvider,
 } from "./composition/composition.service.js";
+import { ProductCompositionService } from "./composition/product-composition.service.js";
 import {
   createGraphProposalProvider,
   GRAPH_PROPOSAL_PROVIDER,
@@ -44,6 +45,7 @@ import {
     LifecycleService,
     VerificationService,
     CompositionService,
+    ProductCompositionService,
     BullMqCompilationQueue,
     BullMqPreviewRunQueue,
     BullMqVerificationRunQueue,

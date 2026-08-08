@@ -116,7 +116,8 @@ model VerificationRun {
 }
 
 /// One governed composition review cycle over a mutable Draft revision. Only
-/// schema-valid contracts are persisted — RequirementSpec, CompositionPlan,
+/// schema-valid contracts are persisted — RequirementSpec, accepted
+/// ProductBlueprint, deterministic plan alternatives, CompositionPlan,
 /// reviewer decision, a safe plan summary, and the constrained Draft Diff
 /// checksum. Raw model responses, prompts, and provider transport material
 /// never enter this table.
@@ -126,6 +127,8 @@ model CompositionReview {
   draftRevisionId     String
   requirement         Json
   requirementChecksum String
+  blueprint           Json?
+  productAlternatives Json?
   draftBaseChecksum   String
   plan                Json?
   planChecksum        String?

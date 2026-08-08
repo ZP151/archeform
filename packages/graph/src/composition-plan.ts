@@ -394,6 +394,24 @@ export function hashCompositionDiff(input: unknown): string {
   return digestJson(diff);
 }
 
+/**
+ * Canonical integrity digest for a product composition Diff. Unlike
+ * `hashCompositionDiff` this intentionally skips the material scan: the
+ * deterministic composer derives page routes (`/expense-list`) that the scan
+ * rejects, and plan-carried proposedOperations therefore exclude page
+ * operations. The complete route-bearing Diff is bound to the approval
+ * decision through this digest and re-validated as a full Application Graph
+ * at apply time — no material can survive that boundary. The strict parse
+ * still rejects malformed or altered Diffs before hashing.
+ */
+export function hashProductCompositionDiff(input: unknown): string {
+  const diff = parseStrict(compositionDiffSchema, input);
+  for (const operation of diff.operations) {
+    assertSafeCompositionOperationPath(operation.path);
+  }
+  return digestJson(diff);
+}
+
 /** A plan is bound to exactly the requirement it was planned from. */
 export function assertPlanAgainstRequirement(
   plan: CompositionPlanV1,

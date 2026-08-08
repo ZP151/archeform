@@ -114,6 +114,32 @@ export type {
   CreateCapabilityCompositionLockInput,
   ResolveCapabilityCompositionInput,
 } from "./composition.js";
+export {
+  assertProductCapabilityCatalogue,
+  currentCapabilityCatalogue,
+} from "./capability-catalogue.js";
+export type {
+  CatalogueAssetRefV1,
+  CapabilityTrigger,
+  ProductCapabilityCatalogueV1,
+} from "./capability-catalogue.js";
+export {
+  composeProductDraft,
+  composeProductIntegration,
+  deriveProductOperations,
+  hasApprovalDecision,
+  primaryListPage,
+} from "./product-composer.js";
+export type {
+  ProductDerivationInput,
+  ProductDerivationOutcome,
+} from "./product-composer.js";
+export { planProductAlternatives } from "./plan-alternatives.js";
+export type {
+  PlanProductAlternativesInput,
+  ProductPlanAlternative,
+  ProductPlanAlternativeKey,
+} from "./plan-alternatives.js";
 
 export {
   assertRestaurantOrderingProfile,
