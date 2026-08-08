@@ -37,6 +37,19 @@ describe("declaredFoundryFamilyEvidence", () => {
     "simple-ecommerce",
     "restaurant-ordering",
   ]);
+  // The exact graph checksum of each verified Profile Graph, reproduced by
+  // the harness pipeline (composeDefaultCapabilityDraft -> strip
+  // composition selections -> SEED_DATA -> hashApplicationGraph) and
+  // reviewed into the registry. Pinned per-profile so a composed-graph
+  // change that would silently stale a declared lock fails loudly here.
+  const PROFILE_GRAPH_CHECKSUMS: Readonly<Record<string, string>> = {
+    "expense-approval":
+      "sha256:ce59b448807b35561c95b897eff68dd14ccd7f2e808e160c36eaad425b0caa2a",
+    "simple-ecommerce":
+      "sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137",
+    "restaurant-ordering":
+      "sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701",
+  };
 
   it("declares exactly one matching record per current family", () => {
     expect(declaredFoundryFamilyEvidence.length).toBe(
@@ -124,7 +137,9 @@ describe("declaredFoundryFamilyEvidence", () => {
         expect(lock.verifierStatus).toBe("passed");
         expect(lock.lockDigest).toBe(expectedFoundryLockDigest(asset));
         expect(VERIFIER_PROFILES.has(lock.profile)).toBe(true);
-        expect(lock.graphChecksum).toMatch(/^sha256:[0-9a-f]{64}$/);
+        expect(lock.graphChecksum).toBe(
+          PROFILE_GRAPH_CHECKSUMS[lock.profile],
+        );
         expect(seen.has(lock.profile)).toBe(false); // one lock per profile
         seen.add(lock.profile);
       }

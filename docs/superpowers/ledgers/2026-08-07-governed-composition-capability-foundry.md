@@ -944,9 +944,23 @@ Batch 3 (Task #33) declared real isolated-verifier evidence in
   and graph checksums reproduce the harness's composed-graph hashes
   (`composeDefaultCapabilityDraft` → strip composition selections →
   harness SEED_DATA → `hashApplicationGraph`) byte-for-byte; a re-probe
-  against a fresh dist after the change diffed identical. The three
-  profiles lock 6, 16, and 18 families respectively; 15 families hold ≥2
-  locks, 12 hold none and claim none.
+  against a fresh dist after the change diffed identical. The exact
+  checksums of the three verified graphs — expense-approval
+  `sha256:ce59b448807b35561c95b897eff68dd14ccd7f2e808e160c36eaad425b0caa2a`,
+  simple-ecommerce
+  `sha256:460b8d75f1b06fbcc8a4b5c007fa8e17fe6439bda300088af50cd843cfe1d137`,
+  restaurant-ordering
+  `sha256:1f04bbe32cd7b05782b2ee904861609b0190a3bbfc32e7e8eb6dbbbb80223701` —
+  are pinned per-profile in the self-check test, so a composed-graph change
+  that would silently stale a declared lock fails loudly. The three profiles
+  select 6, 16, and 18 families in their composed graphs respectively
+  (graph-level lock sets, 40 lock instances); the registry records only the
+  15 families holding ≥2 verifier locks — 33 lock instances. The other 12
+  families declare no locks: 5 hold none at graph level, and 7
+  (commerce.simulated-payment, core.identity-context,
+  restaurant.cashier/kitchen/ordering/reporting/table-session) hold exactly
+  one and are deliberately unrecorded until a second Profile locks them, so
+  the matrix can never count them eligible.
 - **Verification digests.** Records mirror the reviewed fixture and
   contract-test digest literals the current assets declare — 11 of the 15
   locked families plus `core.identity-context` (1-lock; digests mirrored
@@ -973,6 +987,36 @@ evidence and zero invented claims; the four partial families are the honest
 surface for the next batch (record verification digest literals on their
 current assets, then re-declare). Task 6 remains `implementing`; Batch 4
 toward the 25–35 verified target is next.
+
+### 2026-08-08 — Task 6 Batch 3 gate round: dispositions recorded
+
+The Batch 3 gate round ran against Target-Commit `7b4a3011` (diff
+`b7e25a9d..7b4a3011`). Dispositions:
+
+- **Independent task review — TASK_REVIEW_PASS**, zero P0/P1. One
+  P2-informational (ledger wording: the loose "12 hold none and claim none"
+  framing around lock counts) repaired in this closure commit.
+- **Independent behavioral QA — QA_PASS**, zero findings. Focused
+  evidence/matrix suite 18/18; full capabilities suite 354/354 (28 files);
+  worker suite 183/183; graph suite 175/175; typecheck clean.
+- **Independent release review — RELEASE_PASS**, zero P0/P1. Two
+  P2-informational notes addressed here: (1) the ledger's 6/16/18 framing
+  replaced with the exact per-profile graph checksum literals and the
+  40-instance vs 33-lock clarification; (2) checksum literals are now
+  recorded in this ledger and pinned in `foundry-evidence.test.ts` so the
+  review trail carries them. No dist mutation, no fixture mutation,
+  skip/only grep clean, secrets scan clean.
+- **PM gate — PM_ACCEPT**. The PM P2-informational (tests pinned checksums
+  by format only) repaired in this closure commit: the tests now pin the
+  exact per-profile graph checksum literals.
+
+P2 dispositions: all three P2-informational notes repaired in the closure
+commit — ledger wording with checksum literals, and exact per-profile
+checksum pins in the evidence self-check.
+
+Task 6 remains `implementing`; the next batch (Batch 4: record verification
+digest literals on the four partial families' current assets, then re-declare
+evidence to move cart/audit/crud/workflow to eligible) is tracked as Task #34.
 
 ## Required evidence per promoted family
 

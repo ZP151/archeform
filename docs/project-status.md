@@ -376,7 +376,13 @@ literals, so the registry declares none (a self-check test pins that
 evidence digests mirror the current assets exactly, both directions).
 Twelve families remain quarantined (fewer-than-two-profiles), zero
 rejected. Full capabilities suite 354/354, typecheck clean. Task 6 Batch 4
-(families toward the 25–35 verified target) is next.
+(families toward the 25–35 verified target) is next. The Batch 3 gate round
+closed at commit `7b4a3011` with all four gates PASS: independent task
+review (zero P0/P1), independent behavioral QA (18/18 focused, 354/354
+full, 183/183 worker, 175/175 graph, typecheck clean), independent release
+review (zero P0/P1), and PM accept. The three P2-informational notes were
+repaired in the closure commit: exact per-profile graph checksum literals
+now sit in the ledger and are pinned in the evidence self-check tests.
 
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including
