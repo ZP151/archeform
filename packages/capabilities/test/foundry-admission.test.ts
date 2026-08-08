@@ -23,8 +23,14 @@ function evidenceFixture(
     deprecationPolicy: "two-minor-version notice",
     compatibilityDeclaration: "API-compatible within the major version",
     digestVerified: true,
-    fixtureDigest: digestA,
-    contractTestDigest: digestB,
+    // Evidence mirrors the reviewed literals the asset manifest records —
+    // never invented in the registry (see the same invariant in
+    // foundry-evidence.test.ts). A wrong-but-present digest must NOT be
+    // eligible: the admission boundary value-compares below.
+    fixtureDigest: orderOperationsAssetV1_1_0.manifest.verification
+      ?.fixtureDigest,
+    contractTestDigest: orderOperationsAssetV1_1_0.manifest.verification
+      ?.contractTestDigest,
     profileLocks: [
       {
         profile: "simple-ecommerce",
@@ -306,6 +312,49 @@ describe("evaluateFoundryAdmission", () => {
     expect(result).toEqual({
       result: "partial",
       reasonCodes: ["missing-evidence-digests"],
+    });
+  });
+
+  it("marks a candidate partial when evidence digests are stale against the asset", () => {
+    // QA Batch 4 P2: a wrong-but-present fixtureDigest must not pass as
+    // eligible. The admission boundary value-compares the evidence literal
+    // against the digest the current asset manifest records.
+    const result = evaluateFoundryAdmission(
+      orderOperationsAssetV1_1_0,
+      evidenceFixture({
+        fixtureDigest: digestA, // present but stale: asset records another value
+      }),
+    );
+    expect(result).toEqual({
+      result: "partial",
+      reasonCodes: ["stale-evidence-digests"],
+    });
+  });
+
+  it("marks a candidate partial when evidence claims digests the asset does not record", () => {
+    const asset = syntheticAsset(); // verification block records no digest literals
+    const result = evaluateFoundryAdmission(
+      asset,
+      evidenceFixture({
+        profileLocks: [
+          {
+            profile: "simple-ecommerce",
+            graphChecksum: digestA,
+            lockDigest: expectedFoundryLockDigest(asset),
+            verifierStatus: "passed",
+          },
+          {
+            profile: "restaurant-ordering",
+            graphChecksum: digestB,
+            lockDigest: expectedFoundryLockDigest(asset),
+            verifierStatus: "passed",
+          },
+        ],
+      }),
+    );
+    expect(result).toEqual({
+      result: "partial",
+      reasonCodes: ["stale-evidence-digests"],
     });
   });
 

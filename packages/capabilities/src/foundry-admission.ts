@@ -92,6 +92,20 @@ const PARTIAL: Readonly<
   "missing-evidence-digests": (_asset, evidence) =>
     evidence.fixtureDigest === undefined ||
     evidence.contractTestDigest === undefined,
+  "stale-evidence-digests": (asset, evidence) => {
+    // QA Batch 4 P2 repair: presence is not enough. Evidence that claims a
+    // digest must claim exactly the reviewed literal the current asset
+    // manifest records — a wrong-but-present value, or a digest the asset
+    // does not record, is stale and cannot be eligible.
+    const declaredFixture = asset.manifest.verification?.fixtureDigest;
+    const declaredContract = asset.manifest.verification?.contractTestDigest;
+    return (
+      (evidence.fixtureDigest !== undefined &&
+        evidence.fixtureDigest !== declaredFixture) ||
+      (evidence.contractTestDigest !== undefined &&
+        evidence.contractTestDigest !== declaredContract)
+    );
+  },
   "pending-verifier-evidence": (_asset, evidence) =>
     evidence.profileLocks.some((lock) => lock.verifierStatus === "pending"),
 };

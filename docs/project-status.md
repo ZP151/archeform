@@ -401,6 +401,21 @@ typecheck clean. The 12 quarantined families need two-Profile verifier
 locks, which requires profile composition changes; Batch 5 scopes that
 path.
 
+**Task 6 Batch 4 gate round closed: the QA P2 was repaired in the closure
+commit.** All four gates ran against `36d04f2`: independent task review
+PASS (zero findings), independent behavioral QA PASS with one P2 (the
+admission boundary validated evidence digest *presence* only — a
+wrong-but-present `fixtureDigest`/`contractTestDigest` value passed as
+eligible), independent release review PASS (zero findings), and PM accept
+(three P2-informational notes). The closure commit adds a
+`stale-evidence-digests` value-compare to the PARTIAL bucket of
+`evaluateFoundryAdmission` with two fail-closed tests; the committed
+registry is unaffected (the mirror self-check already bound all 27 records
+to asset literals), so the honest split stays 15/0/12/0. Suites:
+capabilities 356/356 (28 files), graph 175/175, control-plane 184/184,
+typecheck clean. Task 6 Batch 4 is closed; Batch 5 (profile composition
+changes to unlock the 12 quarantined families) is next.
+
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including
 Preview stop and cleanup. This is not production readiness and does not alter

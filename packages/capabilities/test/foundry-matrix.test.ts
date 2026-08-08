@@ -37,7 +37,9 @@ function syntheticAsset(
       parameters: [{ key: "entity", type: "graph-symbol", required: true }],
       verification: {
         fixture: "fixtures/default.json",
+        fixtureDigest: digestA,
         contractTest: "tests/contract.json",
+        contractTestDigest: digestB,
         status: "verified",
       },
       ...overrides,

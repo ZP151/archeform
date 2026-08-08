@@ -1072,6 +1072,44 @@ composition changes, which Batch 5 scopes.
 Suites: capabilities 354/354 (28 files), graph 175/175, control-plane
 184/184, typecheck clean.
 
+### 2026-08-08 — Task 6 Batch 4 gate round: dispositions recorded
+
+Four independent gates ran against Target-Commit `36d04f2` (diff
+`7b4a3011..36d04f2`, the Batch 4 delivery plus the Batch 3 closure
+`82893db2`):
+
+- **Task review — `TASK_REVIEW_PASS`**, zero P0/P1/P2 findings.
+- **QA — `QA_PASS` with one P2 behavioral finding (probe a2)**:
+  `evaluateFoundryAdmission` validated evidence digest *presence* only — a
+  wrong-but-present `fixtureDigest`/`contractTestDigest` value passed as
+  eligible at the admission boundary; runtime enforcement relied on the
+  mirror self-check test and load-time package verification. QA did not
+  block the batch and recommended a follow-up repair.
+- **Release review — `RELEASE_REVIEW_PASS`**, zero P0/P1/P2 findings.
+- **PM — `PM_ACCEPT`** with three P2-informational notes: the delivery-train
+  table's Latest-commit column reads `7120106` (pre-existing convention: the
+  table pin updates at release time, not per gate round); the reviewed diff
+  includes the Batch 3 closure commit `82893db2` (expected — the closure
+  lands before the next round); the Batch 4 lock re-derivation is pinned by
+  the machine-computed mirror tests.
+
+**Closure repair (QA P2, same precedent as Batch 3):** the PARTIAL bucket of
+`evaluateFoundryAdmission` now value-compares evidence digests against the
+reviewed literals the current asset manifest records. A wrong-but-present
+digest, or a digest the asset does not record, is `stale-evidence-digests`
+and cannot be eligible. Two fail-closed tests were added (stale value;
+invented presence), and the matrix/admission test fixtures were corrected to
+mirror the asset literals — the pre-fix fixture was itself a wrong-but-present
+digest passing as eligible, which is exactly the reported defect. The
+committed registry is unaffected (the mirror test already bound all 27
+records to asset literals in both directions), so the honest split is
+unchanged: **15 eligible / 0 partial / 12 quarantined / 0 rejected.**
+
+Closure suites: capabilities 356/356 (28 files, +2 new fail-closed tests),
+graph 175/175, control-plane 184/184, typecheck clean. Closure commit
+follows this section; Task 6 Batch 4 then closes and Batch 5 scopes the
+profile-composition changes that unlock the 12 quarantined families.
+
 ## Required evidence per promoted family
 
 | Evidence    | Required form                                                       |
