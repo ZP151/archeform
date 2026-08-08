@@ -839,8 +839,98 @@ at the reviewed commit plus the Batch 2 repairs; capabilities and graph
 suites unchanged from Batch 1 (352/352, 175/175). The repair diff touches
 only `packages/compiler` (runtime template, database target, tests),
 `apps/compiler-worker` (verification profiles/tests), the harness script,
-and the acceptance docs — immutable Published Graphs and Compilations
-untouched. The Batch 2 gate round is recorded with its disposition below.
+the acceptance docs, and the two governance records (`docs/project-status.md`
+and this ledger) — immutable Published Graphs and Compilations untouched.
+The Batch 2 gate round is recorded with its disposition below.
+
+### 2026-08-08 — Task 6 Batch 2 gate round: all four gates PASS, P2 repairs committed
+
+The Batch 2 gate round ran against Target-Commit `902962e3` (diff
+`a4e835c1..902962e3`). Dispositions:
+
+- **Independent task review — `TASK_REVIEW_PASS`, zero P0/P1:** SPEC PASS
+  (fail-closed menu-category validation at
+  `packages/compiler/src/targets/database/target.ts:482-511`; journey
+  expectations rendered from the composed Graph's own transitions
+  (`restaurant-runtime.ts:147-166`, six order-flow expectations);
+  `shopper-adds-cart-item` step, body, and registry route; `mains` seed
+  ordered before its menu item), QUALITY PASS (tests for every behavior,
+  RED states provable against `a4e835c1`, zero unrelated changes in the
+  12-file diff), zero transcription drift across commit message, ledger,
+  project-status, and the three acceptance records. Three P2-informational
+  notes: (a) the "single-fork" execution mode was documented but not pinned
+  in committed config; (b) graph-as-authority rendering covers the six
+  order-flow transition expectations, while three non-transition command
+  effect pairs remain template literals; (c) the diff-scope sentence
+  omitted the two governance docs the diff also updated.
+- **Independent behavioral QA — `QA_PASS`, zero findings:** compiler focused
+  suite 11/11 (both Batch 2 regression tests), worker profile suite 29/29,
+  fail-closed probes green against a freshly built dist (menu-category
+  rejection and the notification-lock rejection, the latter matching the
+  existing pin verbatim), journey-rendering probe green (three flat rows,
+  no `notification.send/send`, no nested arrays), acceptance docs match the
+  harness's pinned step IDs and statuses exactly, worker full suite 183/183.
+  Two claims explicitly unverified by the gate: the full compiler suite
+  count (its own full-suite run hit the threads-pool worker hang — the same
+  infrastructure flake the P2-1 repair pins out of the default path) and
+  the Docker-backed digests (not re-run; docs/ledger mutual consistency
+  confirmed, prior gate scratch logs corroborate). The compiler-suite gap
+  is closed by the P2-1 verification re-run below.
+- **Independent release review — `RELEASE_PASS`, zero findings:** lifecycle
+  invariants PASS (12-file diff strictly in scope; no Published Graph or
+  Compilation fixture mutated; no `dist/` committed; linear history,
+  HEAD == origin tip == `902962e3`, tree byte-clean), contracts PASS
+  (composition recipes 0-line diff; notification-free draft pinned at
+  `capability-registry.test.ts:1662`/`:1684`; lock rejection pinned at
+  `notification-outbox-runtime.test.ts:501`), provenance PASS (all
+  first-party), secrets PASS (demo token is an authored fixture constant,
+  value absent from `docs/`, only its SHA-256 digest persists), docs-truth
+  PASS (every evidence value byte-identical across all four layers; the two
+  worker-count framings are explicitly time-scoped to their commits, not
+  drift), Git PASS. Three P2-informational notes, all brief- or
+  framing-level (the contract family's filename in the review brief — it
+  lives in `capability-registry.test.ts` at the same line range — and two
+  commit-scoped suite-count framings that are temporal, not drift).
+- **PM gate — `PM_ACCEPT`, zero findings:** Batch 2 complete and disciplined
+  (three-profile evidence regenerated from observed results, repairs with
+  root causes and dispositions recorded, deterministic checks mutually
+  consistent, pushed, tree clean); no premature advance — Task 6 remains
+  `implementing` at `7120106`; Batch 3 (profileLocks in
+  `declaredFoundryFamilyEvidence` from real verifier evidence) is untouched
+  and still pending; the gate-round disposition belongs in a follow-up
+  ledger commit, which this section is.
+
+P2 repairs committed with this record:
+
+- **P2-1 (single-fork unpinned) — REPAIRED.** `packages/compiler/vitest.config.ts`
+  now pins `pool: "forks"` with `singleFork: true`, so the "compiler N/N
+  single-fork" deterministic check is a committed artifact rather than a
+  manual invocation detail. Full compiler suite re-run with the plain
+  scripted command confirms 332/332 (19 files) single-fork (368.70s) — the
+  documented check reproduces exactly from committed config, and the QA
+  gate's full-suite gap is thereby closed.
+- **P2-2 (non-transition effect literals) — ACCEPTED with rationale.** The
+  three remaining pairs (`order.line.add/add`, `table-session.create/create`,
+  `inventory.adjust/adjust` + `audit.record/record`) are non-transition
+  command effects, which the order flow's transition list does not declare
+  (`renderExpectedEffectPairs` fails closed by design on undeclared
+  transitions, so no renderable source exists in the flow model). The
+  customer-command pairs are derived from the Golden asset manifests via
+  `acceptedAssetEffect` (fail-closed registration and operation checks,
+  `restaurant-runtime.ts:90-127`); the Merchant resource-command pairs are
+  fixed by the generated service's asset-derived command implementations.
+  Drift is loud, not silent: any asset/effect change diverges the generated
+  service from the journey test and fails the Docker-backed journey suite —
+  the same mechanism that surfaced the notification defect this batch
+  closed. Tracked as a hardening note: extend `RestaurantCommandEffects` to
+  the Merchant commands in a future batch and render the journey pairs from
+  that declaration in the same pass.
+- **P2-3 (diff-scope sentence subset claim) — REPAIRED.** The sentence above
+  now enumerates `docs/project-status.md` and this ledger alongside the
+  acceptance records.
+
+Task 6 remains `implementing`; the next batch (Batch 3 evidence locks) is
+tracked as Task #33.
 
 ## Required evidence per promoted family
 

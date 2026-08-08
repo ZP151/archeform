@@ -338,6 +338,27 @@ regenerated alongside (see the three acceptance records under
 184/184 (18 files), capabilities 352/352 and graph 175/175 unchanged from
 Batch 1.
 
+**Task 6 Batch 2 gate round closed at `902962e3` + the P2-repair commit: all
+four gates PASS, zero P0/P1 findings.** Independent task review
+(`TASK_REVIEW_PASS`: SPEC/QUALITY PASS, zero transcription drift across
+commit message, ledger, status, and the three acceptance records), behavioral
+QA (`QA_PASS`: focused suites 11/11 and 29/29, fail-closed probes green
+against a fresh dist, journey-rendering probe green, docs match the harness
+pins exactly, worker full suite 183/183), release review (`RELEASE_PASS`:
+12-file diff strictly in scope, immutable Graphs/Compilations untouched,
+contracts/provenance/secrets/docs-truth/Git all PASS), and PM gate
+(`PM_ACCEPT`: Batch 2 complete and disciplined; Task 6 correctly remains
+`implementing` with Batch 3 evidence locks pending). The three task-review
+P2-informational notes were repaired with the gate record: the compiler
+"single-fork" deterministic check is now pinned in committed vitest config
+and re-verified 332/332 (19 files) with the plain scripted command; the
+three remaining non-transition command-effect literals in the generated
+journey are accepted with rationale (the flow model does not declare
+non-transition effects, `renderExpectedEffectPairs` fails closed by design,
+and drift is loud — it fails the Docker-backed journey suite); and the
+ledger's diff-scope sentence now enumerates the governance records it also
+updated. Task 6 Batch 3 (profileLocks in foundry family evidence) is next.
+
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including
 Preview stop and cleanup. This is not production readiness and does not alter
