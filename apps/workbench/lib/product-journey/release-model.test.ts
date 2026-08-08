@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { DraftRevisionV1 } from "@factory/graph";
+import type { DraftDiffV1, DraftRevisionV1 } from "@factory/graph";
 
 import {
   assertReleaseEligibility,
@@ -121,6 +121,62 @@ describe("the one-action release journey", () => {
   });
 });
 
+describe("product-agnostic acceptance releases", () => {
+  function acceptanceRelease(release: ReturnType<typeof happyPath>) {
+    expect(release.phase).toBe("cleaned-up");
+    expect(release.evidenceSummary).toEqual({ steps: 3, passed: 3, failed: 0 });
+  }
+
+  it("advances the full lifecycle for the Expense Approval product", () => {
+    let release = beginRelease({
+      applicationGraphId: "graph-expense-approval",
+      draftRevisionId: "draft-expense-approval",
+    });
+    release = publishingSucceeded(release, "published-expense-approval-1");
+    release = compilationStarted(release, "compilation-expense-1");
+    release = compilationSucceeded(release, "compilation-expense-1");
+    release = verificationStarted(release, "verification-expense-1");
+    release = verificationSucceeded(release, [
+      { stepId: "employee-submit", status: "succeeded" },
+      { stepId: "manager-approval", status: "succeeded" },
+      { stepId: "authorization-denial", status: "succeeded" },
+    ]);
+    release = previewStarted(
+      release,
+      "preview-expense-1",
+      "http://127.0.0.1:43101",
+    );
+    release = previewStopped(release);
+    acceptanceRelease(release);
+    expect(release.publishedRevisionId).toBe("published-expense-approval-1");
+  });
+
+  it("advances the full lifecycle for the Appointment Booking product", () => {
+    let release = beginRelease({
+      applicationGraphId: "graph-appointment-booking",
+      draftRevisionId: "draft-appointment-booking",
+    });
+    release = publishingSucceeded(release, "published-appointment-1");
+    release = compilationStarted(release, "compilation-appointment-1");
+    release = compilationSucceeded(release, "compilation-appointment-1");
+    release = verificationStarted(release, "verification-appointment-1");
+    release = verificationSucceeded(release, [
+      { stepId: "customer-books", status: "succeeded" },
+      { stepId: "clinic-confirms", status: "succeeded" },
+      { stepId: "authorization-denial", status: "succeeded" },
+    ]);
+    release = previewStarted(
+      release,
+      "preview-appointment-1",
+      "http://127.0.0.1:43102",
+    );
+    release = previewStopped(release);
+    acceptanceRelease(release);
+    expect(release.previewRunId).toBe("preview-appointment-1");
+    expect(release.previewUrl).toBe("http://127.0.0.1:43102");
+  });
+});
+
 describe("fail-closed guards", () => {
   it("rejects mismatched or out-of-order progress events", () => {
     const started = beginRelease({
@@ -200,19 +256,22 @@ describe("failure and safe diagnosis", () => {
   });
 
   it("carries a failed verification's reviewable Draft Diff without applying it", () => {
-    const proposedDraftDiff = {
-      apiVersion: "factory.draft-diff/v1" as const,
+    const proposedDraftDiff: DraftDiffV1 = {
+      apiVersion: "factory.draft-diff/v1",
       baseDraftRevisionId: "draft-1",
       baseGraphHash: "sha256:" + "a".repeat(64),
       operations: [
         {
-          op: "change-constraint" as const,
+          op: "change-constraint",
           entity: "expense",
           field: "amount",
-          constraint: "maxValue",
-          value: 5000,
+          constraint: "type",
+          value: "currency",
         },
       ],
+      affectedPaths: ["domain.expense.fields.amount"],
+      rationaleCode: "verification.expense-amount-type",
+      summary: "Type the expense amount field as currency.",
     };
     let release = beginRelease({
       applicationGraphId: "graph-1",
@@ -231,6 +290,74 @@ describe("failure and safe diagnosis", () => {
     // apply surface and never patches a Published Graph, Compilation, or
     // running state.
     expect(release).not.toHaveProperty("apply");
+  });
+
+  it("carries a verification failure's reviewable Draft Diff verbatim for review", () => {
+    const proposedDraftDiff: DraftDiffV1 = {
+      apiVersion: "factory.draft-diff/v1",
+      baseDraftRevisionId: "draft-appointment-booking",
+      baseGraphHash: "sha256:" + "b".repeat(64),
+      operations: [
+        {
+          op: "change-constraint" as const,
+          entity: "appointment",
+          field: "slotLimit",
+          constraint: "required",
+          value: true,
+        },
+      ],
+      affectedPaths: ["domain.appointment.fields.slotLimit"],
+      rationaleCode: "verification.appointment-slot-limit",
+      summary: "Raise the appointment slot limit after verification.",
+    };
+    let release = beginRelease({
+      applicationGraphId: "graph-appointment-booking",
+      draftRevisionId: "draft-appointment-booking",
+    });
+    release = publishingSucceeded(release, "published-appointment-1");
+    release = compilationStarted(release, "compilation-appointment-1");
+    release = compilationSucceeded(release, "compilation-appointment-1");
+    release = verificationStarted(release, "verification-appointment-1");
+    release = releaseFailed(
+      release,
+      "verify.appointment_slot_limit_exceeded",
+      proposedDraftDiff,
+    );
+
+    expect(release.phase).toBe("failed");
+    expect(release.diagnosis).toBe("verify.appointment_slot_limit_exceeded");
+    // The Diff is carried for the caller to review and approve elsewhere; it
+    // is never applied here and never mutates the Draft or Compilation.
+    expect(release.proposedDraftDiff).toEqual(proposedDraftDiff);
+    expect(release).not.toHaveProperty("apply");
+    // A failed release is terminal: it cannot continue, re-fail, or clean up.
+    expect(() => releaseFailed(release, "verify.timeout")).toThrow(/phase/i);
+    expect(() => previewStopped(release)).toThrow(/phase/i);
+  });
+
+  it("cleans up after a successful preview and records the cleanup evidence", () => {
+    const release = happyPath();
+    expect(release.phase).toBe("cleaned-up");
+    expect(
+      release.timeline.events.filter((event) => event.kind === "cleanup"),
+    ).toEqual([
+      {
+        kind: "cleanup",
+        status: "succeeded",
+        durationMs: 0,
+        title: "Preview stopped and cleaned up",
+        at: 7,
+      },
+    ]);
+  });
+
+  it("cannot fail a release that already reached a terminal phase", () => {
+    const cleaned = happyPath();
+    expect(() => releaseFailed(cleaned, "cleanup.failed")).toThrow(/phase/i);
+    expect(() => verificationStarted(cleaned, "verification-2")).toThrow(
+      /phase/i,
+    );
+    expect(() => previewStopped(cleaned)).toThrow(/phase/i);
   });
 });
 

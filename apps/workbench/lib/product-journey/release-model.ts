@@ -7,15 +7,19 @@ import {
 } from "./timeline";
 
 /**
- * One-action release over the immutable lifecycle for the Expense Approval
- * Golden Path: an eligible Published Draft advances publish -> compile ->
- * isolated verification -> preview, with a cleanup control. Every progress
- * event is a pure transition that fails closed on a wrong phase, a
- * mismatched identifier, or a terminal phase; failures carry only bounded
- * safe reason codes. The model holds identifiers and safe evidence summaries
- * only — never generated source, Patches, or running state — and exposes no
- * apply surface. A failed verification may carry a reviewable Draft Diff
- * that the caller may choose to review; the model never applies it.
+ * One-action release over the immutable lifecycle of any composed product:
+ * an eligible Published Draft advances publish -> compile -> isolated
+ * verification -> preview, with a cleanup control. Every progress event is a
+ * pure transition that fails closed on a wrong phase, a mismatched
+ * identifier, or a terminal phase; failures carry only bounded safe reason
+ * codes. The model holds identifiers and safe evidence summaries only — never
+ * generated source, Patches, or running state — and exposes no apply surface.
+ * A failed verification may carry a reviewable Draft Diff that the caller may
+ * choose to review; the model never applies it.
+ *
+ * The model is product-agnostic: it carries no profile, entity, or
+ * scenario-specific condition, so any Published Graph can advance through
+ * the same release lifecycle.
  *
  * Clearly labelled: every release state states it is a local preview over
  * the Draft lifecycle, never a deployment.
@@ -105,7 +109,7 @@ export function beginRelease(input: {
     applicationGraphId: input.applicationGraphId,
     draftRevisionId: input.draftRevisionId,
     timeline: appendTimelineEvent(
-      createTimeline("Golden Path release evidence"),
+      createTimeline("Release evidence"),
       {
         kind: "publish",
         status: "running",

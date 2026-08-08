@@ -1,7 +1,7 @@
 import { safeBusinessTextSchema } from "@factory/graph";
 
 /**
- * One bounded activity/evidence timeline for the Golden Path. Events render
+ * One bounded activity/evidence timeline for a product release. Events render
  * compilation, isolated boot, migration, health, API, journey,
  * authorization-denial, idempotency, cleanup, preview, and safe-diagnosis
  * outcomes with a bounded status, duration, safe reason codes, and
@@ -193,7 +193,7 @@ function assertTimelineEventShape(event: TimelineEvent): void {
 }
 
 export function createTimeline(
-  title = "Golden Path activity and evidence",
+  title = "Release activity and evidence",
 ): TimelineState {
   assertSafeText("Timeline title", title);
   return { kind: "timeline", title, events: [] };
