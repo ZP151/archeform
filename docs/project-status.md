@@ -310,6 +310,34 @@ control-plane 183/183 (17 files), capabilities 352/352 (28 files), graph
 Task 6 remains `implementing` — `reviewed` awaits all batches (Batch 2
 isolated-verifier evidence regeneration and Batch 3 evidence locks).
 
+**Task 6 Batch 2 delivered: isolated-verifier evidence regenerated across
+all three profiles.** The Batch 2 re-runs surfaced two verifier fixture
+defects through the real Docker-backed runtimes, both repaired
+platform-side with TDD (no Published Graph or Compilation touched):
+simple-ecommerce's seeded order had no cart line, so `order.submit`, `pay`,
+and `fulfil` failed closed `403` vs `201` — closed with a new
+`shopper-adds-cart-item` role-journey step that stocks the order through the
+commerce line route (pinned by profile tests); restaurant-ordering's preview
+never booted because the harness seed dropped the `menu-category` its
+`menu-item` referenced (`MenuItem_categoryKey_fkey` P2003) — closed with a
+fail-closed compiler validation (every seeded `menu-item.categoryKey` must
+resolve to a seeded `menu-category`) plus the missing fixture; and the
+restaurant generated journey test then hardcoded the canonical
+`notification.send/send` effect while the composed default Restaurant Draft
+is notification-free by pinned contract — closed by rendering the generated
+journey's expected effect pairs from the composed Graph's own transitions.
+Green evidence at the repair commit: ecommerce ten steps, digest
+`sha256:2f98d7135e88e216212e946cd2824c3946d108f5a12e910e849a2a8b35679aa1`,
+compilation `cmsjn1csh0001w484k7l16ktb`; restaurant thirteen steps, digest
+`sha256:2d33f32caea919d4b1c7354b4f9ead86c713362a4f7af5fbfd3211734f46b90f`,
+compilation `cmsjpncv60001w414q557eai4`, both with idempotent retry, preview
+cleanup, and the generated journey suites passing; expense approval
+regenerated alongside (see the three acceptance records under
+`docs/acceptance/`). Deterministic checks at the repair commit: compiler
+332/332 (19 files) single-fork, worker 183/183 (16 files), control plane
+184/184 (18 files), capabilities 352/352 and graph 175/175 unchanged from
+Batch 1.
+
 Retail Counter and Grocery Pickup are independently accepted as local generated
 prototypes through the shared `commerce.order-operations@1.1.0` lock, including
 Preview stop and cleanup. This is not production readiness and does not alter

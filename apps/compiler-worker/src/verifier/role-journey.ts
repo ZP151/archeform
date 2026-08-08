@@ -126,12 +126,16 @@ export const expenseApprovalApiRegistry: readonly RegisteredApiAction[] = [
 ];
 
 /**
- * Simple ecommerce: shoppers read the seeded catalog and place orders;
- * merchants run order operations (fulfil, cancel). The generated runtime
- * dispatches transitions strictly by the declared flow event name on
- * `/api/:entity/:recordId/events/:event`, so every order action here is a
- * real flow event (submit/pay/fulfil/cancel) — a route that is not a flow
- * event can never exist in the generated API and would fail closed.
+ * Simple ecommerce: shoppers read the seeded catalog, stock the seeded cart
+ * through the commerce line route, and place orders; merchants run order
+ * operations (fulfil, cancel). The generated runtime dispatches transitions
+ * strictly by the declared flow event name on
+ * `/api/:entity/:recordId/events/:event`, so every order event action here is
+ * a real flow event (submit/pay/fulfil/cancel) — a route that is not a flow
+ * event can never exist in the generated API and would fail closed. The
+ * line-add action is the one commerce route exception: cart lines live in
+ * the dedicated commerce line store, and order operations refuse an empty
+ * cart.
  */
 export const simpleCommerceApiRegistry: readonly RegisteredApiAction[] = [
   {
@@ -150,6 +154,12 @@ export const simpleCommerceApiRegistry: readonly RegisteredApiAction[] = [
     action: "order.create",
     method: "POST",
     route: "/api/order",
+    expectedStatus: 201,
+  },
+  {
+    action: "order.line-add",
+    method: "POST",
+    route: "/api/commerce/order/order-fixture-01/items",
     expectedStatus: 201,
   },
   {

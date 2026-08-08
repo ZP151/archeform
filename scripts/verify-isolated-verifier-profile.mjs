@@ -131,6 +131,7 @@ const PROFILES = {
       "migration",
       "health",
       "shopper-creates-order",
+      "shopper-adds-cart-item",
       "shopper-submits-order",
       "shopper-pays-order",
       "merchant-fulfils-order",
@@ -140,6 +141,7 @@ const PROFILES = {
     ],
     expectedStatuses: {
       "shopper-creates-order": 201,
+      "shopper-adds-cart-item": 201,
       "shopper-submits-order": 403,
       "shopper-pays-order": 201,
       "merchant-fulfils-order": 201,
@@ -168,6 +170,14 @@ const PROFILES = {
         entity: "restaurant-table",
         id: "table-12",
         values: { code: "T12", number: 12, status: "open", active: true },
+      },
+      {
+        // The seeded menu items reference this category by key; without it the
+        // rendered seed violates the MenuItem_categoryKey foreign key at
+        // migrate time and the preview never boots.
+        entity: "menu-category",
+        id: "mains",
+        values: { name: "Mains", sortOrder: 1, active: true },
       },
       {
         entity: "menu-item",

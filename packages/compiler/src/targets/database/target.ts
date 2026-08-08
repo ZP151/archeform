@@ -476,6 +476,39 @@ function renderPrismaSeed(
       "Restaurant seed generation requires table, location, and menu-item fixtures.",
     );
   }
+  // Every seeded menu-item categoryKey must resolve to a seeded
+  // menu-category record: the rendered seed would otherwise violate the
+  // MenuItem_categoryKey foreign key at migrate time and every downstream
+  // preview would fail to boot. Fail closed deterministically at compile.
+  const seededMenuCategoryIds = new Set(
+    (graph.domain.seedData ?? [])
+      .filter((seed) => seed.entity === "menu-category")
+      .map((seed) => seed.id),
+  );
+  const unresolvedMenuCategoryKeys = hasRestaurantRuntime
+    ? [
+        ...new Set(
+          (graph.domain.seedData ?? [])
+            .filter((seed) => seed.entity === "menu-item")
+            .map(
+              (seed) =>
+                (seed.values as { categoryKey?: unknown }).categoryKey,
+            )
+            .filter(
+              (categoryKey) =>
+                typeof categoryKey !== "string" ||
+                categoryKey.length === 0 ||
+                !seededMenuCategoryIds.has(categoryKey),
+            )
+            .map((categoryKey) => categoryKey ?? "<missing>"),
+        ),
+      ]
+    : [];
+  if (unresolvedMenuCategoryKeys.length > 0) {
+    throw new Error(
+      `Restaurant seed generation requires a seeded menu-category for every menu-item categoryKey (unresolved: ${unresolvedMenuCategoryKeys.join(", ")}).`,
+    );
+  }
   const restaurantSessionSeed = restaurantTableSeed
     ? {
         id: `${restaurantTableSeed.id ?? "restaurant-table"}-demo-session`,

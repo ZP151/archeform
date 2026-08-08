@@ -154,14 +154,17 @@ describe("simple ecommerce verification profile", () => {
   it("orders the plan so the seeded record moves cart -> submitted -> paid -> fulfilled, denial last", () => {
     const ids = ecommerceProfile.stepPlan.map((entry) => entry.stepId);
     const kinds = ecommerceProfile.stepPlan.map((entry) => entry.kind);
+    const addLineIndex = ids.indexOf("shopper-adds-cart-item");
     const submitIndex = ids.indexOf("shopper-submits-order");
     const payIndex = ids.indexOf("shopper-pays-order");
     const fulfilIndex = ids.indexOf("merchant-fulfils-order");
     const denyIndex = ids.indexOf("shopper-denied-cancel");
-    expect(submitIndex).toBeGreaterThan(ids.indexOf("shopper-creates-order"));
+    expect(addLineIndex).toBeGreaterThan(ids.indexOf("shopper-creates-order"));
+    expect(submitIndex).toBeGreaterThan(addLineIndex);
     expect(payIndex).toBeGreaterThan(submitIndex);
     expect(fulfilIndex).toBeGreaterThan(payIndex);
     expect(denyIndex).toBeGreaterThan(fulfilIndex);
+    expect(kinds[addLineIndex]).toBe("role-journey");
     expect(kinds[submitIndex]).toBe("idempotency");
     expect(kinds[payIndex]).toBe("role-journey");
     expect(kinds[fulfilIndex]).toBe("role-journey");
@@ -170,6 +173,28 @@ describe("simple ecommerce verification profile", () => {
     expect(ecommerceProfile.journeys["merchant-fulfils-order"].sessionId).toBe(
       "fixture-session-merchant",
     );
+  });
+
+  it("adds a cart line to the seeded order before the flow moves it", () => {
+    // The order-operations runtime computes the payment due from the cart
+    // lines and refuses an empty cart ("Order operations require at least
+    // one cart item."), so the acceptance flow must stock the seeded
+    // order-fixture-01 through the commerce line route before submit.
+    const journey = ecommerceProfile.journeys["shopper-adds-cart-item"];
+    expect(journey).toBeDefined();
+    expect(journey.action).toBe("order.line-add");
+    expect(journey.sessionId).toBe("fixture-session-shopper");
+    expect(journey.body).toBe(
+      JSON.stringify({
+        catalogEntity: "product",
+        catalogRecordId: "everyday-tote",
+        quantity: 1,
+      }),
+    );
+    const action = validateRoleJourney(journey, ecommerceProfile.apiRegistry);
+    expect(action.method).toBe("POST");
+    expect(action.route).toBe("/api/commerce/order/order-fixture-01/items");
+    expect(action.expectedStatus).toBe(201);
   });
 });
 

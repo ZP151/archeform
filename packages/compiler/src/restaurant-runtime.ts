@@ -144,6 +144,28 @@ function restaurantOrderTransitions(
   }));
 }
 
+function renderExpectedEffectPairs(
+  transitions: readonly RestaurantOrderTransition[],
+  from: string,
+  event: string,
+  to: string,
+): string {
+  const declared = transitions.find(
+    (candidate) =>
+      candidate.from === from &&
+      candidate.event === event &&
+      candidate.to === to,
+  );
+  if (!declared) {
+    throw new Error(
+      `Restaurant FlowModel does not declare transition '${from} --${event}--> ${to}'.`,
+    );
+  }
+  return declared.effects
+    .map((effect) => `${JSON.stringify(`${effect.capability}/${effect.operation}`)}`)
+    .join(", ");
+}
+
 function renderTransitionEffects(
   transitions: readonly RestaurantOrderTransition[],
 ): string {
@@ -1785,7 +1807,9 @@ ALTER TABLE "InventoryLedger" ADD CONSTRAINT "InventoryLedger_locationId_fkey" F
   return tables.join("\n\n") + "\n" + indexesAndConstraints;
 }
 
-function renderGeneratedTests(): string {
+function renderGeneratedTests(
+  transitions: readonly RestaurantOrderTransition[],
+): string {
   return String.raw`import { describe, expect, it } from "vitest";
 import { enforce } from "../src/policy.js";
 import { rejected } from "../src/main.js";
@@ -2202,20 +2226,20 @@ describe("generated Restaurant transaction service", () => {
     expect(harness.state.menuItems[0]!.stock).toBe(5);
     expect(harness.state.inventory).toHaveLength(1);
     expect(harness.state.inventory[0]).toMatchObject({ delta: 2, provenance: "order-release", orderId: "order-1" });
-    expect(effectPairs(harness.state)).toEqual(["inventory.release/release", "order.transition/transition", "audit.record/record"]);
+    expect(effectPairs(harness.state)).toEqual([${renderExpectedEffectPairs(transitions, "submitted", "cancel", "cancelled")}]);
     expect(harness.state.outbox).toHaveLength(1);
   });
 
   it("persists exactly the declared capability effects and one outbox event", async () => {
     const submitted = createHarness();
     await submitted.service.submitOrder("customer", submitted.token, "order-1", "submit", { expectedVersion: 0 });
-    expect(effectPairs(submitted.state)).toEqual(["order.create/create", "inventory.reserve/reserve", "audit.record/record"]);
+    expect(effectPairs(submitted.state)).toEqual([${renderExpectedEffectPairs(transitions, "cart", "submit", "submitted")}]);
     expect(submitted.state.audits).toHaveLength(1);
     expect(submitted.state.outbox).toHaveLength(1);
 
     const payment = createHarness({ status: "submitted" });
     await payment.service.recordPayment("cashier", undefined, "order-1", "pay", { expectedVersion: 0, amount: 10, method: "cash" });
-    expect(effectPairs(payment.state)).toEqual(["payment.simulate/simulate", "inventory.decrement/decrement", "order.transition/transition", "audit.record/record"]);
+    expect(effectPairs(payment.state)).toEqual([${renderExpectedEffectPairs(transitions, "submitted", "pay", "paid")}]);
     expect(payment.state.audits).toHaveLength(1);
     expect(payment.state.outbox).toHaveLength(1);
 
@@ -2224,22 +2248,22 @@ describe("generated Restaurant transaction service", () => {
     await kitchen.service.transitionKitchenTicket("kitchen", "ticket-1", "start-preparing", "start", { expectedVersion: 1 });
     await kitchen.service.transitionKitchenTicket("kitchen", "ticket-1", "mark-ready", "ready", { expectedVersion: 2 });
     expect(effectPairs(kitchen.state)).toEqual([
-      "order.transition/transition", "audit.record/record",
-      "order.transition/transition", "audit.record/record",
-      "order.transition/transition", "notification.send/send", "audit.record/record",
+      ${renderExpectedEffectPairs(transitions, "paid", "accept", "accepted")},
+      ${renderExpectedEffectPairs(transitions, "accepted", "start-preparing", "preparing")},
+      ${renderExpectedEffectPairs(transitions, "preparing", "mark-ready", "ready")},
     ]);
     expect(kitchen.state.audits).toHaveLength(3);
     expect(kitchen.state.outbox).toHaveLength(3);
 
     const served = createHarness({ status: "ready", paymentStatus: "paid" });
     await served.service.serveOrder("cashier", "order-1", "serve", { expectedVersion: 0 });
-    expect(effectPairs(served.state)).toEqual(["order.transition/transition", "audit.record/record"]);
+    expect(effectPairs(served.state)).toEqual([${renderExpectedEffectPairs(transitions, "ready", "serve", "served")}]);
     expect(served.state.audits).toHaveLength(1);
     expect(served.state.outbox).toHaveLength(1);
 
     const paidCancellation = createHarness({ status: "paid", paymentStatus: "paid" });
     await paidCancellation.service.cancelOrder("manager", "order-1", "cancel-paid", { expectedVersion: 0, reason: "Manager reversal" });
-    expect(effectPairs(paidCancellation.state)).toEqual(["order.transition/transition", "audit.record/record"]);
+    expect(effectPairs(paidCancellation.state)).toEqual([${renderExpectedEffectPairs(transitions, "paid", "cancel", "cancelled")}]);
     expect(paidCancellation.state.audits).toHaveLength(1);
     expect(paidCancellation.state.outbox).toHaveLength(1);
 
@@ -2662,7 +2686,7 @@ export function renderRestaurantRuntime(
     main: renderMain(graph.metadata.name),
     prismaSchema: renderPrismaSchema(),
     initialMigration: renderInitialMigration(),
-    generatedTests: renderGeneratedTests(),
+    generatedTests: renderGeneratedTests(transitions),
     apiReference: renderApiReference(graph.metadata.name),
     transitionalWebShell: renderTransitionalWebShell(graph.metadata.name),
   };

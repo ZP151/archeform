@@ -105,16 +105,20 @@ const expenseApprovalJourneys: Readonly<Record<string, VerificationJourney>> = {
 /**
  * The Simple Ecommerce acceptance profile. Like Expense Approval, the
  * generated application is session-bound, so every journey carries the
- * compiler's `fixture-session-<role>` convention. The plan moves the seeded
- * record cart -> submitted -> paid -> fulfilled through the declared flow
- * events, with the denied cancel last: it must fail against the fulfilled
- * record. The catalog read is a session-bearing role journey (the generic
- * controller denies 403 without a fixture session).
+ * compiler's `fixture-session-<role>` convention. The shopper stocks the
+ * seeded record through the commerce line route (the order-operations
+ * runtime computes the payment due from the cart lines and refuses an
+ * empty cart), then the plan moves it cart -> submitted -> paid -> fulfilled
+ * through the declared flow events, with the denied cancel last: it must
+ * fail against the fulfilled record. The catalog read is a session-bearing
+ * role journey (the generic controller denies 403 without a fixture
+ * session).
  */
 const simpleCommerceStepPlan: readonly VerificationStepPlanEntry[] = [
   { stepId: "migration", kind: "migration" },
   { stepId: "health", kind: "health" },
   { stepId: "shopper-creates-order", kind: "role-journey" },
+  { stepId: "shopper-adds-cart-item", kind: "role-journey" },
   { stepId: "shopper-submits-order", kind: "idempotency" },
   { stepId: "shopper-pays-order", kind: "role-journey" },
   { stepId: "merchant-fulfils-order", kind: "role-journey" },
@@ -129,6 +133,19 @@ const simpleCommerceJourneys: Readonly<Record<string, VerificationJourney>> = {
     sessionId: "fixture-session-shopper",
     // The generated create handler runtime-supplies status and version, so
     // the journey exercises the runtime defaulting path with an empty body.
+  },
+  "shopper-adds-cart-item": {
+    journeyId: "shopper-adds-cart-item",
+    action: "order.line-add",
+    sessionId: "fixture-session-shopper",
+    // Stock the seeded order through the commerce line route: order
+    // operations compute the payment due from the cart lines and refuse an
+    // empty cart, so the flow must begin with a line.
+    body: JSON.stringify({
+      catalogEntity: "product",
+      catalogRecordId: "everyday-tote",
+      quantity: 1,
+    }),
   },
   "shopper-submits-order": {
     journeyId: "shopper-submits-order",

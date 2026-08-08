@@ -68,12 +68,18 @@ function generateApplicationBundle(
   );
 }
 
-function merchantFiles() {
+function merchantFilesWith(graph: PublishedGraphInput["graph"]) {
   return Object.fromEntries(
     generateApplicationBundle({
       publishedRevisionId: "restaurant-merchant-published-1",
-      graph: composeProfileDraft({ profile: "restaurant-ordering" }).graph,
+      graph,
     }).files.map((file) => [file.path, file.content]),
+  );
+}
+
+function merchantFiles() {
+  return merchantFilesWith(
+    composeProfileDraft({ profile: "restaurant-ordering" }).graph,
   );
 }
 
@@ -311,5 +317,43 @@ describe("Restaurant Merchant runtime compilation", () => {
       "publish:inventory.changed",
       "mark:second",
     ]);
+  });
+});
+
+describe("Restaurant generated journey rendering", () => {
+  it("renders journey expectations from the composed Graph, not the canonical asset", () => {
+    // The default Restaurant draft composes without the optional
+    // notification capability, so the generated journey must not demand a
+    // notification effect the composed Graph does not declare. The compiled
+    // service already derives its transition effects from the Graph; the
+    // generated journey test must apply the same authority.
+    const journey = merchantFiles()["api/test/journey.generated.test.ts"]!;
+    expect(journey).not.toContain('"notification.send/send"');
+    // The kitchen expectation must stay one flat array of pair strings,
+    // never one nested array per transition.
+    expect(journey).not.toContain('[["order.transition/transition"');
+  });
+});
+
+describe("Restaurant seed reference integrity", () => {
+  it("fails closed when a seeded menu item references an unseeded category", () => {
+    const graph = composeProfileDraft({ profile: "restaurant-ordering" }).graph;
+    graph.domain.seedData = (graph.domain.seedData ?? [])
+      .map((seed) => ({ ...seed }))
+      .filter((seed) => seed.entity !== "menu-category");
+    const seededMenuItems = (graph.domain.seedData ?? []).filter(
+      (seed) => seed.entity === "menu-item",
+    );
+    expect(seededMenuItems.length).toBeGreaterThan(0);
+
+    // A menu-item categoryKey must resolve to a seeded menu-category record:
+    // otherwise the rendered seed violates the MenuItem_categoryKey foreign
+    // key at migrate time and every downstream preview fails to boot.
+    expect(() =>
+      generateApplicationBundle({
+        publishedRevisionId: "restaurant-seed-integrity-1",
+        graph,
+      }),
+    ).toThrow(/menu-category/);
   });
 });

@@ -783,6 +783,65 @@ round closed with all three gates PASS, but `reviewed` awaits all batches
 (Batch 2 isolated-verifier evidence regeneration and Batch 3 evidence locks
 remain pending).
 
+### 2026-08-08 — Task 6 Batch 2 delivered: isolated-verifier evidence regenerated across all three profiles
+
+Batch 2 re-ran the isolated verifier for all three profiles and regenerated
+the evidence records whose digest pins were stale by design. Two verifier
+fixture defects surfaced through the real Docker-backed runtimes and were
+repaired platform-side (TDD where practical) — no published Graph or
+Compilation was touched:
+
+- **Expense approval** — evidence regenerated; see
+  `docs/acceptance/isolated-verifier-expense.md`.
+- **Simple ecommerce** — the first re-run failed closed on `order.submit`,
+  `order.pay`, and `order.fulfil` (`403` vs declared `201`): the
+  order-operations runtime refuses an empty cart and the seeded order had no
+  cart line. Closed with a platform-authored fixture change: the acceptance
+  flow now stocks the seeded order through the commerce line route — a new
+  `shopper-adds-cart-item` role-journey step
+  (`POST /api/commerce/order/order-fixture-01/items`,
+  `{"catalogEntity":"product","catalogRecordId":"everyday-tote","quantity":1}`)
+  between create and submit, pinned by profile tests asserting the step
+  order, the journey body, and the registry route. Green re-run: ten steps,
+  evidence digest `sha256:2f98d7135e88e216212e946cd2824c3946d108f5a12e910e849a2a8b35679aa1`,
+  compilation `cmsjn1csh0001w484k7l16ktb`, artifact digest
+  `sha256:8ddc3efa4e14a5f271e7a1ce2d7c9634afcfb4f9090c0a730690c50334626651`,
+  generated journey tests passed.
+- **Restaurant ordering** — two defects closed. (1) The preview never booted:
+  `migrate` exited 1 with a `MenuItem_categoryKey_fkey` foreign-key violation
+  (P2003) because the harness's seed fixture replaced the default draft seed
+  array wholesale and dropped the `menu-category` record its `menu-item`
+  referenced. Closed with a fail-closed compiler validation (every seeded
+  `menu-item.categoryKey` must resolve to a seeded `menu-category`, throwing
+  at compile time otherwise — RED/GREEN compiler test) plus the missing
+  `mains` category fixture in the harness seed, ordered before its menu
+  items. (2) The generated journey test then failed on mark-ready: the
+  template hardcoded the canonical `notification.send/send` effect while the
+  composed default Restaurant Draft is notification-free by pinned
+  composition contract (notification-free draft and no durable notification
+  lock are asserted in the composition-contract suite) and the compiler
+  fails closed on a restaurant notification lock ("does not support
+  notification.outbox/v1") — so the runtime legitimately emitted only
+  `[order.transition, audit.record]`. Closed by rendering the generated
+  journey's expected effect pairs from the composed Graph's own transitions
+  (graph-as-authority, RED/GREEN compiler test asserting the notification-
+  free expectation and flat rendering first). Green re-run: all thirteen
+  steps `passed`, evidence digest
+  `sha256:2d33f32caea919d4b1c7354b4f9ead86c713362a4f7af5fbfd3211734f46b90f`,
+  compilation `cmsjpncv60001w414q557eai4`, artifact digest
+  `sha256:0be478173b883ac83cde3e42ac5a6db98a1c60de11cb7ad1839038f300d9c09a`,
+  idempotent retry and preview cleanup true, generated journey tests passed;
+  see `docs/acceptance/isolated-verifier-restaurant-ordering.md`.
+
+Deterministic checks at the Batch 2 repair: compiler 332/332 (19 files)
+single-fork; worker 183/183 (16 files) and control plane 184/184 (18 files)
+at the reviewed commit plus the Batch 2 repairs; capabilities and graph
+suites unchanged from Batch 1 (352/352, 175/175). The repair diff touches
+only `packages/compiler` (runtime template, database target, tests),
+`apps/compiler-worker` (verification profiles/tests), the harness script,
+and the acceptance docs — immutable Published Graphs and Compilations
+untouched. The Batch 2 gate round is recorded with its disposition below.
+
 ## Required evidence per promoted family
 
 | Evidence    | Required form                                                       |
