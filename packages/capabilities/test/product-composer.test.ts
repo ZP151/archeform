@@ -240,11 +240,12 @@ describe("composeProductDraft", () => {
       states: ["requested", "confirmed", "cancelled"],
       events: ["confirm", "cancel", "reschedule"],
     });
-    // No approval decision exists, so no audit effects are derived.
+    // No approval decision exists, so no audit effects are derived; the
+    // audit package is still locked to satisfy identity-policy's interface.
     for (const transition of flow.transitions) {
       expect(transition.effects).toBeUndefined();
     }
-    expect(composed.graph.integration.compositionSelections).toHaveLength(5);
+    expect(composed.graph.integration.compositionSelections).toHaveLength(6);
   });
 
   it("produces different composed products for the two prompts", () => {
@@ -283,14 +284,19 @@ describe("composeProductDraft", () => {
     expect(graphA.flow.flows.map((f) => f.id)).not.toEqual(
       graphB.flow.flows.map((f) => f.id),
     );
+    // Both prompts lock the same dependency-closed capability set; the
+    // selection bindings (entities, routes, roles) differ materially.
     expect(
       graphA.integration.compositionSelections?.map((s) => s.lock.key),
+    ).toEqual(graphB.integration.compositionSelections?.map((s) => s.lock.key));
+    expect(
+      graphA.integration.compositionSelections?.map((s) => s.bindings),
     ).not.toEqual(
-      graphB.integration.compositionSelections?.map((s) => s.lock.key),
+      graphB.integration.compositionSelections?.map((s) => s.bindings),
     );
   });
 
-  it("composes the minimal alternative without optional capabilities or effects", () => {
+  it("composes the minimal alternative with the closed required set", () => {
     const { requirement, blueprint } = expenseApprovalPrompt();
     const base = blankDraft("expense-approval", "Expense Approval");
     const [, minimal] = planProductAlternatives({
@@ -305,6 +311,8 @@ describe("composeProductDraft", () => {
       baseDraft: base,
     });
     const composed = applyGraphDiffToDraft(base, diff);
+    // `core.audit` is part of the closed required set (identity-policy's
+    // provider), so even minimal carries it; notification stays optional.
     expect(
       composed.graph.integration.compositionSelections?.map((s) => s.lock.key),
     ).toEqual([
@@ -312,10 +320,20 @@ describe("composeProductDraft", () => {
       "core.workflow",
       "core.identity-policy",
       "core.policy-declarations",
+      "core.audit",
     ]);
-    for (const transition of composed.graph.flow.flows[0].transitions) {
-      expect(transition.effects).toBeUndefined();
-    }
+    // The expense blueprint has an approval decision, so its minimal flows
+    // record audit events; notification effects remain unselected.
+    expect(composed.graph.flow.flows[0].transitions[0].effects).toEqual([
+      { capability: "audit.record", operation: "record" },
+    ]);
+    expect(
+      composed.graph.flow.flows[0].transitions[0].effects,
+    ).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ capability: "notification.send" }),
+      ]),
+    );
   });
 
   it("rejects stale checksums, altered plans, and non-blank derivation input", () => {

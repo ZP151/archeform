@@ -160,7 +160,10 @@ export function assertSafeCompositionOperationValues(
   }
 }
 
-export function parseStrict<T>(schema: z.ZodType<T>, input: unknown): T {
+export function parseStrict<T>(
+  schema: z.ZodType<T, z.ZodTypeDef, any>,
+  input: unknown,
+): T {
   try {
     return schema.parse(input);
   } catch (error) {

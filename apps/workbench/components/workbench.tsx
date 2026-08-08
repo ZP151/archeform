@@ -58,18 +58,18 @@ import {
   type WorkbenchWorkspacePortfolioSummary,
 } from "../lib/control-plane-client";
 import { useProductJourney } from "../lib/product-journey/use-product-journey";
-import { PageStudio } from "./page-studio";
 import { FlowStudio } from "./flow-studio";
 import { DomainRelationGraph } from "./domain-relation-graph";
 import { WorkbenchHome } from "./workbench-home";
+import { ProductStudio } from "./journey/product-studio";
 import {
   domainModelToReactFlow,
   flowModelToReactFlow,
-  pageModelToPuckDocument,
 } from "@factory/adapters/browser";
 import type {
   ApplicationGraphV1,
   DomainModel,
+  ExperienceModel,
   FlowModel,
   PageModel,
   PolicyModel,
@@ -184,10 +184,6 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   const controlPlane = useMemo(
     () => new ControlPlaneClient(controlPlaneUrl),
     [controlPlaneUrl],
-  );
-  const pageDocument = useMemo(
-    () => pageModelToPuckDocument(graph.page),
-    [graph.page],
   );
   const flowDiagram = useMemo(
     () => flowModelToReactFlow(graph.flow),
@@ -635,6 +631,11 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
     setDraftDirty(true);
     dispatch({ type: "propose-draft-change", source: "Page Studio" });
   };
+  const changeExperienceModel = (experience: ExperienceModel) => {
+    setGraph((current) => ({ ...current, experience }));
+    setDraftDirty(true);
+    dispatch({ type: "propose-draft-change", source: "Page Studio" });
+  };
   const changeDomainModel = (domain: DomainModel) => {
     setGraph((current) => ({ ...current, domain }));
     setDraftDirty(true);
@@ -939,10 +940,12 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
                 />
               )}
               {state.activeSurface === "page" && (
-                <PageStudio
-                  pageDocument={pageDocument}
+                <ProductStudio
+                  page={graph.page}
+                  experience={graph.experience}
                   entityKeys={graph.domain.entities.map((entity) => entity.key)}
                   onPageModelChange={changePageModel}
+                  onExperienceModelChange={changeExperienceModel}
                 />
               )}
               {state.activeSurface === "domain" && (

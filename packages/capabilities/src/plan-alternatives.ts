@@ -154,16 +154,20 @@ function bindingsForKeys(
     );
   }
   if (keys.has("core.audit")) {
-    const approver = blueprint.actors.find((actor) =>
-      actor.permissions.some((permission) =>
-        permission.actions.some(
-          (action) => action === "approve" || action === "reject",
+    // The audit actor is the approval-deciding role when the product has
+    // one; otherwise the primary actor is the audited actor. Every locked
+    // product binds `actorRole`, so the audit runtime always has a role.
+    const approver =
+      blueprint.actors.find((actor) =>
+        actor.permissions.some((permission) =>
+          permission.actions.some(
+            (action) => action === "approve" || action === "reject",
+          ),
         ),
-      ),
-    );
+      ) ?? blueprint.actors[0];
     if (approver === undefined) {
       throw new CompositionError(
-        "Audit capability triggered without an approval-decision actor.",
+        "Audit capability requires at least one blueprint actor.",
       );
     }
     bindings.push({
@@ -188,17 +192,72 @@ function selectedKeysFor(
   key: ProductPlanAlternativeKey,
 ): readonly string[] {
   const required = catalogue.required.map((asset) => asset.key);
-  if (key === "minimal") return required;
-  const triggered = catalogue.optional
-    .filter((entry) =>
-      entry.triggers.some((trigger) =>
-        trigger === "approval-decision"
-          ? hasApprovalDecision(blueprint)
-          : blueprint.workflows.length > 0,
-      ),
-    )
-    .map((entry) => entry.asset.key);
-  return [...required, ...triggered];
+  const selected =
+    key === "minimal"
+      ? [...required]
+      : [
+          ...required,
+          ...catalogue.optional
+            .filter((entry) =>
+              entry.triggers.some((trigger) =>
+                trigger === "approval-decision"
+                  ? hasApprovalDecision(blueprint)
+                  : blueprint.workflows.length > 0,
+              ),
+            )
+            .map((entry) => entry.asset.key),
+        ];
+  assertSelectionClosure(catalogue, selected);
+  return selected;
+}
+
+/**
+ * Every selected asset's interface requirements must be satisfiable by the
+ * selected set itself, or the plan can never resolve into a composition
+ * lock. An unsatisfiable plan must fail here — before review and acceptance —
+ * never at publish time.
+ */
+function assertSelectionClosure(
+  catalogue: ProductCapabilityCatalogueV1,
+  selectedKeys: readonly string[],
+): void {
+  const assets = catalogueAssets(catalogue);
+  const byKey = new Map(assets.map((asset) => [asset.key, asset]));
+  const providers = new Map<string, string>();
+  for (const asset of assets) {
+    for (const provided of asset.provides) {
+      const identity = `${provided.interfaceKey}@${provided.version}`;
+      const existing = providers.get(identity);
+      if (existing !== undefined && existing !== asset.key) {
+        throw new CompositionError(
+          `Catalogue assets '${existing}' and '${asset.key}' both provide interface '${identity}'.`,
+        );
+      }
+      providers.set(identity, asset.key);
+    }
+  }
+  for (const key of selectedKeys) {
+    const asset = byKey.get(key);
+    if (asset === undefined) {
+      throw new CompositionError(
+        `Catalogue has no asset for selected capability '${key}'.`,
+      );
+    }
+    for (const requirement of asset.requires) {
+      const identity = `${requirement.interfaceKey}@${requirement.version}`;
+      const provider = providers.get(identity);
+      if (provider === undefined) {
+        throw new CompositionError(
+          `Catalogue asset '${key}' requires interface '${identity}' that no catalogue asset provides.`,
+        );
+      }
+      if (!selectedKeys.includes(provider)) {
+        throw new CompositionError(
+          `Selected capability '${key}' requires interface '${identity}' provided by '${provider}', which the plan does not select.`,
+        );
+      }
+    }
+  }
 }
 
 function buildPlan(input: {

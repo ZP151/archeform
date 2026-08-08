@@ -28,6 +28,13 @@ const catalogueInputSchema = z
   })
   .strict();
 
+const catalogueInterfaceRefSchema = z
+  .object({
+    interfaceKey: capabilityKeySchema,
+    version: z.string().regex(/^v\d+$/),
+  })
+  .strict();
+
 export const catalogueAssetSchema = z
   .object({
     key: capabilityKeySchema,
@@ -36,6 +43,11 @@ export const catalogueAssetSchema = z
     manifestDigest: sha256DigestSchema,
     lifecycle: z.literal("golden"),
     inputs: z.array(catalogueInputSchema).max(50),
+    // The interface contracts each asset requires and provides, mirrored
+    // from its manifest so the deterministic planner can close any
+    // selection over its declared dependencies before a plan is reviewed.
+    requires: z.array(catalogueInterfaceRefSchema).default([]),
+    provides: z.array(catalogueInterfaceRefSchema).default([]),
   })
   .strict();
 
@@ -87,12 +99,23 @@ function assetRef(asset: CapabilityAssetV1): CatalogueAssetRefV1 {
       key: input.key,
       required: input.required,
     })),
+    requires: (asset.manifest.requires ?? []).map((requirement) => ({
+      interfaceKey: requirement.interfaceKey,
+      version: requirement.version,
+    })),
+    provides: (asset.manifest.provides ?? []).map((provided) => ({
+      interfaceKey: provided.interfaceKey,
+      version: provided.version,
+    })),
   };
 }
 
 /**
  * The current approved catalogue: the capability assets every composed
  * product needs, plus the optional assets their declared triggers activate.
+ * The required set is dependency-closed: `core.identity-policy` requires the
+ * `audit.event@v1` interface, so `core.audit` is required with it — every
+ * product lock set must resolve, and the planner re-verifies the closure.
  */
 export function currentCapabilityCatalogue(): ProductCapabilityCatalogueV1 {
   const byKeyVersion = new Map(
@@ -117,9 +140,9 @@ export function currentCapabilityCatalogue(): ProductCapabilityCatalogueV1 {
       "core.workflow@1.0.1",
       "core.identity-policy@1.0.0",
       "core.policy-declarations@1.0.0",
+      "core.audit@1.0.2",
     ].map(lookup),
     optional: [
-      { asset: lookup("core.audit@1.0.2"), triggers: ["approval-decision"] },
       {
         asset: lookup("core.notification@1.1.1"),
         triggers: ["workflow-driven"],

@@ -20,6 +20,7 @@ import {
 import {
   assertValidApplicationGraph,
   hashApplicationGraph,
+  resolveExperienceDesignSystem,
   type ApplicationGraphV1,
 } from "@factory/graph";
 import { createGeneratedPageRuntimeProjection } from "./page-runtime-projection.js";
@@ -2545,6 +2546,7 @@ function renderPageRuntime(
       fields: entity.fields.map((field) => ({
         key: field.key,
         required: field.required,
+        type: field.type,
       })),
     })),
     policy: graph.policy,
@@ -2577,9 +2579,9 @@ function renderPageRuntime(
     'import { useEffect, useState } from "react";',
     "",
     "type JsonRecord = Record<string, unknown>;",
-    "type PageRuntimeBlock = { readonly id: string; readonly type: 'hero' | 'form' | 'collection' | 'catalog' | 'catalog-configurator' | 'cart' | 'queue' | 'checkout'; readonly entity?: string; readonly props: Readonly<Record<string, string>> };",
+    "type PageRuntimeBlock = { readonly id: string; readonly type: 'hero' | 'form' | 'collection' | 'catalog' | 'catalog-configurator' | 'cart' | 'queue' | 'checkout' | 'stats' | 'list' | 'detail' | 'calendar' | 'settings'; readonly entity?: string; readonly props: Readonly<Record<string, string>> };",
     "type PageRuntimeProjection = { readonly apiVersion: 'factory.generated-page-runtime/v1'; readonly applicationName: string; readonly themeMode: 'light' | 'dark' | 'system'; readonly pages: readonly { readonly id: string; readonly route: string; readonly title: string; readonly blocks: readonly PageRuntimeBlock[] }[]; readonly navigation: readonly { readonly id: string; readonly label: string; readonly route: string }[]; readonly routeFallback: { readonly rootRoute: string | null; readonly unknownRoute: 'not-found' }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null } };",
-    "type RuntimeEntity = { readonly key: string; readonly label: string; readonly fields: readonly { readonly key: string; readonly required: boolean }[] };",
+    "type RuntimeEntity = { readonly key: string; readonly label: string; readonly fields: readonly { readonly key: string; readonly required: boolean; readonly type: string }[] };",
     "type RuntimeDefinition = { readonly applicationName: string; readonly themeMode: 'light' | 'dark' | 'system'; readonly entities: readonly RuntimeEntity[]; readonly policy: { readonly roles: readonly string[]; readonly permissions: readonly { readonly role: string; readonly resource: string; readonly actions: readonly string[] }[] }; readonly flow: { readonly flows: readonly { readonly entity: string; readonly transitions: readonly { readonly from: string; readonly event: string; readonly to: string; readonly roles: readonly string[] }[] }[] }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null } };",
     "type BlockContext = { readonly role: string; readonly formRouteByEntity: Readonly<Record<string, string>>; readonly checkoutRoute: string | null; readonly cartItems: readonly JsonRecord[]; readonly cartId: string | null; readonly reportError: (reason: unknown) => void; readonly addToCart: (catalogEntity: string, catalogRecordId: string) => Promise<void>; readonly configureLine: (catalogEntity: string, catalogRecordId: string, optionIds: readonly string[]) => Promise<JsonRecord>; readonly checkoutCart: () => Promise<void> };",
     "",
@@ -2673,6 +2675,35 @@ function renderPageRuntime(
     "  return <EntityRecords block={block} entity={entity} role={context.role} reportError={context.reportError} />;",
     "}",
     "",
+    "function ListBlock({ block, entity, context }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly context: BlockContext }) {",
+    "  return <EntityRecords block={block} entity={entity} role={context.role} formRoute={context.formRouteByEntity[entity.key]} reportError={context.reportError} />;",
+    "}",
+    "",
+    "function DetailBlock({ block, entity, context }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly context: BlockContext }) {",
+    "  return <EntityRecords block={block} entity={entity} role={context.role} reportError={context.reportError} />;",
+    "}",
+    "",
+    "function CalendarBlock({ block, entity, context }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly context: BlockContext }) {",
+    "  const allowed = can(context.role, entity.key, 'read');",
+    "  const { records, error, refresh } = useEntityRecords(entity, context.role, allowed);",
+    "  const dateField = entity.fields.find((field) => field.type === 'date' || field.type === 'datetime');",
+    "  const groups = dateField ? records.reduce((grouped, record) => { const label = String(record[dateField.key] ?? '').slice(0, 10); if (!label) return grouped; const bucket = grouped.find((entry) => entry.label === label); if (bucket) bucket.records.push(record); else grouped.push({ label, records: [record] }); return grouped; }, [] as { readonly label: string; readonly records: readonly JsonRecord[] }[]) : null;",
+    "  if (!allowed) return <section className='generated-card'><h2>{block.props.title ?? 'Schedule'}</h2><p>Your selected role cannot read this schedule.</p></section>;",
+    "  return <section className='generated-card'><div className='generated-section-heading'><div><p>{dateField ? 'calendar' : 'schedule'}</p><h2>{block.props.title ?? 'Schedule'}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}>Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}{groups ? <ul className='generated-calendar'>{groups.map((group) => <li key={group.label}><strong>{group.label}</strong><ul className='generated-records'>{group.records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code></li>)}</ul></li>)}</ul> : <ul className='generated-records'>{records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code></li>)}</ul>}</section>;",
+    "}",
+    "",
+    "function StatsBlock({ block, entity, context }: { readonly block: PageRuntimeBlock; readonly entity?: RuntimeEntity; readonly context: BlockContext }) {",
+    "  if (!entity) return <section className='generated-card generated-stats'><p>{block.props.eyebrow ?? 'overview'}</p><h2>{block.props.heading ?? block.props.title ?? 'Overview'}</h2><span>No entity bound</span></section>;",
+    "  const allowed = can(context.role, entity.key, 'read');",
+    "  const { records, error, refresh } = useEntityRecords(entity, context.role, allowed);",
+    "  return <section className='generated-card'><div className='generated-section-heading'><div><p>{block.props.eyebrow ?? 'overview'}</p><h2>{block.props.heading ?? block.props.title ?? `Overview`}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}>Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<div className='generated-stats'><strong>{allowed ? records.length : '–'}</strong><span>{entity.label.toLowerCase()} records</span></div></section>;",
+    "}",
+    "",
+    "function SettingsBlock({ block, entity, context }: { readonly block: PageRuntimeBlock; readonly entity?: RuntimeEntity; readonly context: BlockContext }) {",
+    "  if (!entity) return <section className='generated-card'><p>settings</p><h2>{block.props.title ?? 'Settings'}</h2><span>{projection.applicationName}</span></section>;",
+    "  return <FormBlock block={block} entity={entity} role={context.role} reportError={context.reportError} />;",
+    "}",
+    "",
     "function CatalogBlock({ block, entity, context }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly context: BlockContext }) {",
     "  const allowed = can(context.role, entity.key, 'read');",
     "  const { records, error, refresh } = useEntityRecords(entity, context.role, allowed);",
@@ -2717,6 +2748,11 @@ function renderPageRuntime(
     "  if (block.type === 'catalog-configurator') return <CatalogConfiguratorBlock block={block} entity={entity} context={context} />;",
     "  if (block.type === 'cart') return <CartBlock block={block} context={context} />;",
     "  if (block.type === 'queue') return <QueueBlock block={block} entity={entity} context={context} />;",
+    "  if (block.type === 'list') return <ListBlock block={block} entity={entity} context={context} />;",
+    "  if (block.type === 'detail') return <DetailBlock block={block} entity={entity} context={context} />;",
+    "  if (block.type === 'calendar') return <CalendarBlock block={block} entity={entity} context={context} />;",
+    "  if (block.type === 'stats') return <StatsBlock block={block} entity={entity} context={context} />;",
+    "  if (block.type === 'settings') return <SettingsBlock block={block} entity={entity} context={context} />;",
     "  if (block.type === 'checkout') return <CheckoutBlock block={block} context={context} />;",
     "  return null;",
     "}",
@@ -2831,25 +2867,50 @@ function renderWebProxyRoute(
   ].join("\n");
 }
 
-function renderWebStyles(): string {
-  const lightTheme =
-    "--factory-bg: #f5f7f8; --factory-surface: #ffffff; --factory-surface-muted: #edf2f3; --factory-text: #152225; --factory-muted: #52646a; --factory-border: #cbd7da; --factory-accent: #0b766e; --factory-accent-text: #ffffff; --factory-danger: #b42318;";
-  const darkTheme =
-    "--factory-bg: #10191b; --factory-surface: #182426; --factory-surface-muted: #223235; --factory-text: #e8f1f2; --factory-muted: #b3c4c7; --factory-border: #3b5155; --factory-accent: #55c9ba; --factory-accent-text: #062522; --factory-danger: #ffb4ab;";
+function renderWebStyles(graph: ApplicationGraphV1): string {
+  // The generated application styles come entirely from the resolved
+  // Experience Design System: every token group (colour, typography,
+  // spacing, radius, elevation, motion) becomes a CSS variable, and the
+  // legacy alias surface keeps the rendered components stable. Token edits
+  // made in the Page Studio therefore survive Publish and compilation.
+  const system = resolveExperienceDesignSystem(graph.experience);
+  const themeBlock = (mode: "light" | "dark"): string => {
+    const tokenVars: string[] = [];
+    for (const [group, tokens] of Object.entries(system.tokens)) {
+      for (const [key, value] of Object.entries(
+        tokens as Record<string, unknown>,
+      )) {
+        // The colour group carries light/dark containers; only scalar
+        // token values become CSS variables.
+        if (typeof value !== "string") continue;
+        tokenVars.push(`--factory-${group}-${key}: ${value};`);
+      }
+    }
+    const colours = system.tokens.colour[mode];
+    for (const [key, value] of Object.entries(colours)) {
+      tokenVars.push(`--factory-colour-${key}: ${value};`);
+    }
+    const aliases =
+      " --factory-bg: var(--factory-colour-background); --factory-surface-muted: var(--factory-colour-surface); --factory-muted: var(--factory-colour-text-muted); --factory-accent: var(--factory-colour-brand); --factory-accent-text: var(--factory-colour-background); --factory-surface: var(--factory-colour-surface); --factory-text: var(--factory-colour-text); --factory-border: var(--factory-colour-border); --factory-danger: var(--factory-colour-danger);";
+    return tokenVars.join(" ") + aliases;
+  };
+  const lightTheme = themeBlock("light");
+  const darkTheme = themeBlock("dark");
   return [
-    ":root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; }",
+    "* { box-sizing: border-box; } body { margin: 0; } button, input, select { font: inherit; }",
     `.generated-app[data-theme='light'] { color-scheme: light; ${lightTheme} }`,
     `.generated-app[data-theme='dark'] { color-scheme: dark; ${darkTheme} }`,
     `.generated-app[data-theme='system'] { color-scheme: light dark; ${lightTheme} }`,
     `@media (prefers-color-scheme: dark) { .generated-app[data-theme='system'] { ${darkTheme} } }`,
-    "* { box-sizing: border-box; } body { margin: 0; } button, input, select { font: inherit; }",
-    ".generated-app { min-height: 100vh; margin: 0; padding: 40px max(20px, calc((100vw - 1120px) / 2)); background: var(--factory-bg); color: var(--factory-text); }",
-    ".generated-header, .generated-section-heading, .generated-app nav, .generated-records li { display: flex; align-items: center; gap: 16px; } .generated-header, .generated-section-heading { justify-content: space-between; } .generated-app h1, .generated-app h2, .generated-app h3, .generated-app p { margin: 0; } .generated-app p { color: var(--factory-muted); }",
-    ".generated-app nav { flex-wrap: wrap; margin: 24px 0; } .generated-app a, .generated-app button { border: 1px solid var(--factory-border); border-radius: 8px; padding: 8px 12px; background: var(--factory-surface); color: inherit; text-decoration: none; cursor: pointer; } .generated-app button:disabled { cursor: not-allowed; opacity: .55; } .generated-primary { border-color: var(--factory-accent) !important; background: var(--factory-accent) !important; color: var(--factory-accent-text) !important; }",
-    ".generated-page { display: grid; gap: 20px; } .generated-hero, .generated-card { border: 1px solid var(--factory-border); border-radius: 16px; background: var(--factory-surface); padding: 24px; } .generated-hero { display: grid; gap: 12px; min-height: 220px; align-content: center; } .generated-card { display: grid; gap: 16px; }",
-    ".generated-card form { display: grid; gap: 12px; } .generated-card form label { display: grid; gap: 6px; } .generated-card input, .generated-card select, .generated-header select { width: 100%; border: 1px solid var(--factory-border); border-radius: 8px; padding: 9px; background: var(--factory-surface); color: inherit; } .generated-header label { display: grid; gap: 6px; }",
-    ".generated-records { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; } .generated-records li { justify-content: space-between; flex-wrap: wrap; padding: 12px; background: var(--factory-surface-muted); border-radius: 10px; } .generated-records code { overflow-wrap: anywhere; } .generated-records span { display: flex; gap: 6px; flex-wrap: wrap; } .generated-cart-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px; background: var(--factory-surface-muted); border-radius: 12px; } .generated-error { color: var(--factory-danger) !important; }",
-    "@media (max-width: 720px) { .generated-app { padding: 24px 16px 48px; } .generated-header, .generated-section-heading, .generated-cart-summary { align-items: flex-start; flex-direction: column; } .generated-header label { width: 100%; } .generated-section-heading > div:last-child { display: flex; flex-wrap: wrap; gap: 8px; } }",
+    ".generated-app { font-family: var(--factory-typography-font-family); font-size: var(--factory-typography-font-size-base); min-height: 100vh; margin: 0; padding: var(--factory-spacing-space-8) max(var(--factory-spacing-space-4), calc((100vw - 1120px) / 2)); background: var(--factory-bg); color: var(--factory-text); }",
+    ".generated-header, .generated-section-heading, .generated-app nav, .generated-records li { display: flex; align-items: center; gap: var(--factory-spacing-space-4); } .generated-header, .generated-section-heading { justify-content: space-between; } .generated-app h1, .generated-app h2, .generated-app h3, .generated-app p { margin: 0; } .generated-app p { color: var(--factory-muted); }",
+    ".generated-app nav { flex-wrap: wrap; margin: var(--factory-spacing-space-6) 0; } .generated-app a, .generated-app button { border: 1px solid var(--factory-border); border-radius: var(--factory-radius-radius-base); padding: var(--factory-spacing-space-2) var(--factory-spacing-space-3); background: var(--factory-surface); color: inherit; text-decoration: none; cursor: pointer; transition: background var(--factory-motion-duration-fast) var(--factory-motion-easing-standard); } .generated-app button:disabled { cursor: not-allowed; opacity: .55; } .generated-primary { border-color: var(--factory-accent) !important; background: var(--factory-accent) !important; color: var(--factory-accent-text) !important; }",
+    ".generated-page { display: grid; gap: var(--factory-spacing-space-6); } .generated-hero, .generated-card { border: 1px solid var(--factory-border); border-radius: var(--factory-radius-radius-lg); background: var(--factory-surface); box-shadow: var(--factory-elevation-elevation-sm); padding: var(--factory-spacing-space-6); } .generated-hero { display: grid; gap: var(--factory-spacing-space-3); min-height: 220px; align-content: center; } .generated-card { display: grid; gap: var(--factory-spacing-space-4); }",
+    ".generated-card form { display: grid; gap: var(--factory-spacing-space-3); } .generated-card form label { display: grid; gap: var(--factory-spacing-space-2); } .generated-card input, .generated-card select, .generated-header select { width: 100%; border: 1px solid var(--factory-border); border-radius: var(--factory-radius-radius-base); padding: var(--factory-spacing-space-2); background: var(--factory-surface); color: inherit; } .generated-header label { display: grid; gap: var(--factory-spacing-space-2); }",
+    ".generated-records { display: grid; gap: var(--factory-spacing-space-2); padding: 0; margin: 0; list-style: none; } .generated-records li { justify-content: space-between; flex-wrap: wrap; padding: var(--factory-spacing-space-3); background: var(--factory-surface-muted); border-radius: var(--factory-radius-radius-base); } .generated-records code { overflow-wrap: anywhere; } .generated-records span { display: flex; gap: var(--factory-spacing-space-2); flex-wrap: wrap; } .generated-cart-summary { display: flex; align-items: center; justify-content: space-between; gap: var(--factory-spacing-space-3); padding: var(--factory-spacing-space-4); background: var(--factory-surface-muted); border-radius: var(--factory-radius-radius-base); } .generated-error { color: var(--factory-danger) !important; }",
+    ".generated-stats { display: grid; gap: var(--factory-spacing-space-2); align-items: baseline; grid-auto-flow: column; justify-content: start; } .generated-stats strong { font-size: var(--factory-typography-font-size-xl); } .generated-stats span { color: var(--factory-muted); }",
+    ".generated-calendar { display: grid; gap: var(--factory-spacing-space-4); padding: 0; margin: 0; list-style: none; } .generated-calendar > li { display: grid; gap: var(--factory-spacing-space-2); } .generated-calendar > li > strong { color: var(--factory-muted); text-transform: uppercase; font-size: var(--factory-typography-font-size-sm); }",
+    "@media (max-width: 720px) { .generated-app { padding: var(--factory-spacing-space-6) var(--factory-spacing-space-4) var(--factory-spacing-space-8); } .generated-header, .generated-section-heading, .generated-cart-summary { align-items: flex-start; flex-direction: column; } .generated-header label { width: 100%; } .generated-section-heading > div:last-child { display: flex; flex-wrap: wrap; gap: var(--factory-spacing-space-2); } }",
     "",
   ].join("\n");
 }
@@ -3616,7 +3677,7 @@ export function generateApplicationBundle(
     },
     {
       path: "web/app/globals.css",
-      render: () => renderWebStyles(),
+      render: () => renderWebStyles(rendererGraph),
     },
     {
       path: "api/package.json",

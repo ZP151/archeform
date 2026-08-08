@@ -149,3 +149,42 @@ waits on Task 8 e2e replacement).
   Task 8, and `e2e/golden-path.spec.ts` (Prompt A/B) is the live browser
   authority meanwhile.
 - Commit: `feat(workbench): make requirement creation the primary journey`.
+
+## 2026-08-09 — Task 5: Edit generated multi-page products through Puck
+
+State: `done` (unit/integration green; production build green; browser
+acceptance continues under Task 9).
+
+- Compiler side: the composition page runtime round trip now emits the full
+  edited page tree (projection of navigation + blocks), responsive theme
+  tokens, and runtime renderers for every declared block type; the composer
+  no longer emits undefined-entity bindings or closures that break the
+  runtime projection. Prompt A and Prompt B each round-trip with edited
+  headline, navigation, and layout in the generated bundle.
+- The constrained studio edit layer (`lib/product-journey/page-bindings.ts`,
+  14 tests): a pure, schema-validated op surface over a composed Draft —
+  reorder/insert/delete/copy blocks (approved `insertableBlockTypes` only),
+  bounded text props, entity binding to declared entities, page layout,
+  design tokens (validated through `assertExperienceDesignSystem`, rejected
+  values never echo), approved component variants, density, shell. No op can
+  introduce routes, arbitrary components, CSS, scripts, packages, or source:
+  the Graph schema and the approved catalogues close those doors.
+- Studio UI: `page-tree.tsx` (tree + reorder + add page, 4 tests),
+  `responsive-preview.tsx` (viewport preview that mirrors the compiler's
+  `--factory-*` token emission, 3 tests), `page-studio.tsx` rewritten to a
+  multi-page Puck canvas (per-page route/title, block select, entity binding,
+  block actions, design panel), `product-studio.tsx` (tree | Puck | preview
+  grid, 4 tests), and workbench wiring with `changeExperienceModel` so the
+  Draft's declared design system is editable alongside its pages. New pages
+  go through the constrained `addPage` op with forced navigation; there is
+  deliberately no page-delete op (dangling navigation targets are out of
+  scope for this task).
+- Fixed a pre-existing production-build failure: the Task 2 interpret route
+  exported helper functions Next's route validator rejects. The bounded
+  envelope (`parseInterpretPayload`, `classifyInterpretationError`,
+  `InterpretPayload`) moved to `lib/product-journey/interpret-payload.ts`;
+  the route file now exports only its HTTP handler.
+- Evidence: workbench 27 files/182 tests, workspace typecheck 16/16, prettier
+  clean, `next build` green, full workspace suite 16/16 tasks (compiler
+  342/342). No credential, prompt, or provider material touched this task.
+- Commit: `feat(studio): edit generated multi-page products through Puck`.

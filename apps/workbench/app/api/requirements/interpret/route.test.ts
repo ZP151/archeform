@@ -7,10 +7,10 @@ import {
 } from "@factory/adapters";
 
 import {
-  POST,
   classifyInterpretationError,
   parseInterpretPayload,
-} from "./route";
+} from "../../../../lib/product-journey/interpret-payload";
+import { POST } from "./route";
 
 const expenseBrief =
   "Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions.";

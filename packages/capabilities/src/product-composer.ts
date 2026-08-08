@@ -166,7 +166,14 @@ function derivedPages(
     } else {
       entity = entityFor(intent);
     }
-    const block = { id: `${intent.key}-${type}`, type, entity };
+    // Unbound blocks (for example a settings page without a target entity)
+    // carry no entity key at all: the Graph schema marks it optional, and
+    // compiler target plans reject explicit undefined values.
+    const block = {
+      id: `${intent.key}-${type}`,
+      type,
+      ...(entity === undefined ? {} : { entity }),
+    };
     pages.push({
       id: intent.key,
       route: `/${intent.key}`,
@@ -373,7 +380,10 @@ function derivedFlows(
     events: workflow.transitions.map((transition) => transition.key),
     transitions: workflow.transitions.map((transition) => {
       const effects: { capability: string; operation: string }[] = [];
-      if (audit)
+      // Audit is locked for every product (identity-policy requires its
+      // interface), but flow effects stay blueprint-driven: only products
+      // with an approval decision record audit events.
+      if (audit && hasApprovalDecision(blueprint))
         effects.push({ capability: "audit.record", operation: "record" });
       if (notification && isDecisionActor(blueprint, transition.actorKey)) {
         effects.push({ capability: "notification.send", operation: "send" });

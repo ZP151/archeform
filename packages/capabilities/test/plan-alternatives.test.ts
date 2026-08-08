@@ -68,6 +68,7 @@ describe("planProductAlternatives", () => {
       "core.workflow",
       "core.identity-policy",
       "core.policy-declarations",
+      "core.audit",
     ]);
     // The alternatives differ in their declared graph changes too.
     expect(standard.proposedOperations).not.toEqual(minimal.proposedOperations);
@@ -167,7 +168,7 @@ describe("planProductAlternatives", () => {
     ]);
   });
 
-  it("omits audit (no approval decision) for Prompt B and differs from Prompt A", () => {
+  it("keeps Prompt B's plan dependency-closed and differs from Prompt A", () => {
     const promptA = expenseApprovalPrompt();
     const promptB = appointmentBookingPrompt();
     const baseA = blankDraft("expense-approval", "Expense Approval");
@@ -178,11 +179,15 @@ describe("planProductAlternatives", () => {
       blueprint: promptB.blueprint,
       baseDraft: baseB,
     });
+    // `core.identity-policy` requires the `audit.event@v1` interface, so the
+    // closed selection carries `core.audit` even without an approval
+    // decision; a plan without it could never resolve into a lock.
     expect(planKeys(standardB.plan)).toEqual([
       "core.crud",
       "core.workflow",
       "core.identity-policy",
       "core.policy-declarations",
+      "core.audit",
       "core.notification",
     ]);
     expect(planKeys(minimalB.plan)).toEqual([
@@ -190,6 +195,7 @@ describe("planProductAlternatives", () => {
       "core.workflow",
       "core.identity-policy",
       "core.policy-declarations",
+      "core.audit",
     ]);
     expect(standardB.plan.planId).toBe("appointment-booking-standard");
 
@@ -198,7 +204,11 @@ describe("planProductAlternatives", () => {
       blueprint: promptA.blueprint,
       baseDraft: baseA,
     });
-    expect(planKeys(standardA.plan)).not.toEqual(planKeys(standardB.plan));
+    // Both prompts lock the same closed capability set; the products differ
+    // in their declared graph changes and bindings, not the package set.
+    expect(standardA.plan.graphBindings).not.toEqual(
+      standardB.plan.graphBindings,
+    );
     expect(standardA.plan.proposedOperations).not.toEqual(
       standardB.plan.proposedOperations,
     );
@@ -218,6 +228,49 @@ describe("planProductAlternatives", () => {
         graphSymbol: "graph.page.service-list",
       },
     ]);
+  });
+
+  it("binds the primary actor as the audit actor when no approver exists", () => {
+    const { requirement, blueprint } = appointmentBookingPrompt();
+    const base = blankDraft("appointment-booking", "Appointment Booking");
+    const [standard] = planProductAlternatives({
+      requirement,
+      blueprint,
+      baseDraft: base,
+    });
+    const auditBindings = standard.plan.graphBindings.filter(
+      (binding) => binding.capabilityKey === "core.audit",
+    );
+    expect(auditBindings).toEqual([
+      {
+        capabilityKey: "core.audit",
+        inputKey: "actorRole",
+        graphSymbol: "graph.policy.customer",
+      },
+    ]);
+  });
+
+  it("rejects a plan whose selection cannot satisfy its requirements", () => {
+    const { requirement, blueprint } = expenseApprovalPrompt();
+    const base = blankDraft("expense-approval", "Expense Approval");
+    // Dropping the audit provider while `core.identity-policy` remains
+    // required can never resolve into a lock: the planner must fail at plan
+    // time, before the plan is reviewed or accepted.
+    const catalogue = {
+      apiVersion: "factory.product-capability-catalogue/v1" as const,
+      required: currentCapabilityCatalogue().required.filter(
+        (asset) => asset.key !== "core.audit",
+      ),
+      optional: currentCapabilityCatalogue().optional,
+    };
+    expect(() =>
+      planProductAlternatives({
+        requirement,
+        blueprint,
+        baseDraft: base,
+        catalogue,
+      }),
+    ).toThrow(/requires interface 'audit\.event@v1'/);
   });
 
   it("collapses to a single alternative when nothing optional is triggered", () => {
