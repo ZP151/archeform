@@ -1114,8 +1114,10 @@ profile-composition changes that unlock the 12 quarantined families.
 
 Batch 5 (Task #35) extends the three verified Profile recipes
 deterministically so more shared families gain isolated-verifier Profile
-locks, without touching any asset or graph starter content that would move
-a reviewed checksum:
+locks, without touching any asset package or published graph content;
+the one starter-content edit (the simple-ecommerce product field and
+seeds, disclosed in the checksum bullet below) is the sanctioned
+exception that moves that profile's reviewed checksum:
 
 - **expense-approval** (6 → 7 selections): `core.approvals` joins the
   required recipe, typed-bound to `graph.domain.expense` /
@@ -1187,6 +1189,51 @@ Each run exercised the full step sequence against the freshly composed
 generated app (migration, health, positive path, fail-closed denial,
 cleanup) with Preview cleanup and idempotent retry on. These three runs
 are the Batch 5 observed-acceptance evidence recorded in the task report.
+
+### 2026-08-08 — Batch 5 gate round closed (PASS; two informational notes)
+
+The four-gate round ran against commit `c42a02da` (base `c15d05ae`):
+
+- **Independent task review — PASS.** Every numeric claim independently
+  reproduced: all three checksum pins recomputed through the script's
+  exact pipeline (expense `ce59b448…`, ecommerce `eecaf73e…`, restaurant
+  `1f04bbe3…`); files-media fixture/contract digests match the physical
+  files; manifest digest `5c4fbf96…` recomputed in the registry's
+  canonical form; all 27 declared lock digests match
+  `expectedFoundryLockDigest` (zero stale `460b8d75` refs); no family
+  claims locks it does not hold; diff confined to capabilities +
+  verify-script seeds + docs, no published graph or compilation touched.
+  One P2 wording note repaired in this section (the intro sentence now
+  discloses the sanctioned ecommerce starter-content exception).
+- **QA — PASS.** Behavioral probes through the public compose API:
+  7/18/20 selections with the exact typed bindings; allowlist closed-form
+  control (removing the `inventory.adjust` entry flips the restaurant
+  composition from accepted to rejected naming the effect; payment.simulate
+  and identity.context.resolve remain deliberately blocked; a new arbitrary
+  pair is rejected); tamper probe on files-media's fixtureDigest literal
+  moved the family to partial/stale-evidence-digests and was reverted
+  byte-clean; single-lock families (approvals/search/menu) stay
+  quarantined; matrix 27/16/0/11/0 with every eligible family on ≥2 locks.
+  Suites: capabilities 356/356, graph 175/175, worker 183/183, typecheck
+  clean. Three informational notes accepted (closed-form guard by design;
+  truncated digest literals match the evidence format; enabledEffects
+  observability nuance).
+- **Release review — READY-WITH-NOTES.** Docs cross-consistent (split,
+  eligible/quarantined lists, pins, acceptance digests identical across
+  ledger/status/matrix and code); linear history, remote reachable
+  (ahead 1 = the push below); diff scan clean of credentials and raw
+  model material; licence/provenance records intact; immutability holds;
+  portfolio 27 families with 16 eligible (the 25–35 target remains
+  Task 7's second-lock path). One P1 (untracked review scratch script)
+  removed from the worktree; one P2 (push pending) resolved by the
+  closure push; root `.env` is a pre-existing gitignored dev file,
+  not part of the diff.
+- **PM adjudication — PASS, no repairs outstanding.** The two
+  informational wording notes were accepted; the worktree is clean and
+  the batch is pushed at the closure commit. Task 6 Batch 5 closes with
+  the matrix at 16 eligible / 0 partial / 11 quarantined / 0 rejected;
+  the 11 quarantined families carry their first locks and need a second
+  Profile lock via Task 7's anchor Profiles.
 
 ## Required evidence per promoted family
 
