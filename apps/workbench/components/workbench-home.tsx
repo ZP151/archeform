@@ -1,6 +1,6 @@
 "use client";
 
-import { getProfileComposition } from "@factory/capabilities";
+import type { RequirementSpecV1 } from "@factory/graph";
 import React from "react";
 import {
   AlertTriangle,
@@ -10,11 +10,11 @@ import {
   Clock3,
   Code2,
   Layers3,
-  Plus,
 } from "lucide-react";
 
 import type { WorkbenchApplicationSummary } from "../lib/control-plane-client";
-import { profileStarterOptions } from "../lib/profile-starters";
+import type { WorkbenchWorkspacePortfolioSummary } from "../lib/control-plane-client";
+import type { ProductJourneyStage } from "../lib/product-journey/journey-model";
 import {
   toPortfolioHomeModel,
   type PortfolioMetric,
@@ -22,7 +22,42 @@ import {
   type ProfileCoverageHomeModel,
   type ProfileReadinessHomeModel,
 } from "../lib/portfolio-summary";
-import type { WorkbenchWorkspacePortfolioSummary } from "../lib/control-plane-client";
+import { ClarificationPanel } from "./journey/clarification-panel";
+import { GraphDiffReview } from "./journey/graph-diff-review";
+import { PlanReview, type PlanReviewAlternative } from "./journey/plan-review";
+import { RequirementComposer } from "./journey/requirement-composer";
+
+/**
+ * The whole product creation journey renders on Home as the primary decision:
+ * the free-form composer is the default, clarifying questions, plan
+ * comparison, and the approved Diff review replace it as the journey
+ * progresses, and a failed journey returns to the composer with the bounded
+ * error visible. Applications stay open underneath so existing products
+ * remain reachable without competing for the primary action.
+ */
+
+export type WorkbenchHomeJourneyProps = {
+  readonly stage: ProductJourneyStage;
+  readonly busy: boolean;
+  readonly error: string | null;
+  /** The transient brief editing buffer; the composer binds to it. */
+  readonly brief: string;
+  readonly onBriefChange: (brief: string) => void;
+  readonly onInterpret: () => void;
+  readonly examplePrompts: readonly string[];
+  readonly onApplyExample: (brief: string) => void;
+  readonly requirement: RequirementSpecV1 | null;
+  readonly blueprintTitle: string;
+  readonly openQuestions: readonly { key: string; question: string }[];
+  readonly answers: Readonly<Record<string, string>>;
+  readonly onAnswerChange: (key: string, answer: string) => void;
+  readonly onContinue: () => void;
+  readonly planAlternatives: readonly PlanReviewAlternative[] | null;
+  readonly chosenKey: string | null;
+  readonly onChoose: (key: string) => void;
+  readonly diffChecksum: string | null;
+  readonly onApply: () => void;
+};
 
 type Props = {
   readonly applications: readonly WorkbenchApplicationSummary[];
@@ -30,7 +65,7 @@ type Props = {
   readonly portfolioLoading?: boolean;
   readonly portfolioSummary?: WorkbenchWorkspacePortfolioSummary | null;
   readonly compilingKey?: string | null;
-  readonly onCreate: () => void;
+  readonly journey: WorkbenchHomeJourneyProps;
   readonly onOpen: (applicationKey: string) => void;
   readonly onCompile: (applicationKey: string) => void;
 };
@@ -443,13 +478,74 @@ function ApplicationCard({
   );
 }
 
+function JourneySlot({
+  journey,
+}: {
+  readonly journey: WorkbenchHomeJourneyProps;
+}) {
+  if (journey.stage === "clarifying" && journey.requirement !== null) {
+    return (
+      <ClarificationPanel
+        requirement={journey.requirement}
+        blueprintTitle={journey.blueprintTitle}
+        questions={journey.openQuestions}
+        answers={journey.answers}
+        onAnswerChange={journey.onAnswerChange}
+        busy={journey.busy}
+        error={journey.error}
+        onContinue={journey.onContinue}
+      />
+    );
+  }
+  if (
+    journey.stage === "planning" &&
+    journey.requirement !== null &&
+    journey.planAlternatives !== null
+  ) {
+    return (
+      <PlanReview
+        requirement={journey.requirement}
+        blueprintTitle={journey.blueprintTitle}
+        alternatives={journey.planAlternatives}
+        chosenKey={journey.chosenKey}
+        busy={journey.busy}
+        error={journey.error}
+        onChoose={journey.onChoose}
+      />
+    );
+  }
+  if (journey.stage === "reviewing") {
+    return (
+      <GraphDiffReview
+        diffChecksum={journey.diffChecksum ?? "pending"}
+        busy={journey.busy}
+        error={journey.error}
+        onApply={journey.onApply}
+      />
+    );
+  }
+  // brief, applied, and failed all return to the composer; a failure keeps
+  // its bounded error visible above the composer.
+  return (
+    <RequirementComposer
+      brief={journey.brief}
+      onBriefChange={journey.onBriefChange}
+      busy={journey.busy}
+      error={journey.error}
+      onInterpret={journey.onInterpret}
+      examplePrompts={journey.examplePrompts}
+      onApplyExample={journey.onApplyExample}
+    />
+  );
+}
+
 export function WorkbenchHome({
   applications,
   loading,
   portfolioLoading = false,
   portfolioSummary = null,
   compilingKey = null,
-  onCreate,
+  journey,
   onOpen,
   onCompile,
 }: Props) {
@@ -461,65 +557,14 @@ export function WorkbenchHome({
   const portfolio = portfolioSummary
     ? toPortfolioHomeModel(portfolioSummary)
     : null;
-  const knownProfiles = new Set(
-    profileStarterOptions.map((profile) => profile.profile),
-  );
-  const applicationGroups = [
-    ...profileStarterOptions.map((profile) => ({
-      id: profile.profile,
-      label: profile.label,
-      applications: applications.filter(
-        (application) => application.compositionProfile === profile.profile,
-      ),
-    })),
-    {
-      id: "custom",
-      label: "Custom Profile",
-      applications: applications.filter(
-        (application) =>
-          !application.compositionProfile ||
-          !knownProfiles.has(
-            application.compositionProfile as (typeof profileStarterOptions)[number]["profile"],
-          ),
-      ),
-    },
-  ].filter((group) => group.applications.length > 0);
 
   return (
     <div
       aria-label="Workbench Home"
       style={{ display: "grid", gap: 18, width: "100%", alignContent: "start" }}
     >
-      <section
-        style={{
-          ...sectionStyle,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 20,
-          background:
-            "linear-gradient(120deg, var(--panel, #fff), rgba(121, 133, 121, 0.08))",
-        }}
-      >
-        <div>
-          <p className="eyebrow">
-            <span /> Application portfolio
-          </p>
-          <h2 style={{ margin: "4px 0 6px", fontSize: "1.45rem" }}>
-            Build from verified capability packages
-          </h2>
-          <p style={{ margin: 0, color: "var(--muted, #66706a)" }}>
-            Open a Draft, publish an immutable revision, then compile it.
-          </p>
-        </div>
-        <button
-          aria-label="Create a new application"
-          className="new-application-button"
-          onClick={onCreate}
-          type="button"
-        >
-          <Plus size={15} /> New application
-        </button>
+      <section aria-label="Product creation" style={sectionStyle}>
+        <JourneySlot journey={journey} />
       </section>
 
       <section aria-label="Portfolio intelligence" style={sectionStyle}>
@@ -578,61 +623,6 @@ export function WorkbenchHome({
         )}
       </section>
 
-      <section aria-labelledby="home-profiles" style={sectionStyle}>
-        <h2 id="home-profiles" style={{ marginTop: 0 }}>
-          Profiles
-        </h2>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: 12,
-          }}
-        >
-          {profileStarterOptions.map((profile) => {
-            const composition = getProfileComposition(profile.profile);
-            const projectCount = applications.filter(
-              (application) =>
-                application.compositionProfile === profile.profile,
-            ).length;
-            return (
-              <article
-                key={profile.profile}
-                style={{
-                  border: "1px solid var(--line, #d8ddd8)",
-                  borderRadius: 12,
-                  padding: 14,
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 10,
-                  }}
-                >
-                  <h3 style={{ margin: 0, fontSize: "1rem" }}>
-                    {profile.label}
-                  </h3>
-                  <span title="Profile starter">
-                    <CheckCircle2 size={16} aria-hidden="true" /> Starter
-                  </span>
-                </div>
-                <p style={{ color: "var(--muted, #66706a)" }}>
-                  {profile.description}
-                </p>
-                <p style={{ fontSize: 13 }}>
-                  <Layers3 size={14} aria-hidden="true" />{" "}
-                  {composition.requiredCapabilities.length} required ·{" "}
-                  {composition.defaultOptionalCapabilities.length} optional ·{" "}
-                  {projectCount} applications
-                </p>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
       {portfolio && <CapabilitySupplyPanel supply={portfolio.supply} />}
 
       {portfolio && (
@@ -687,26 +677,19 @@ export function WorkbenchHome({
           {loading ? (
             <p role="status">Loading local applications…</p>
           ) : applications.length === 0 ? (
-            <p>No applications yet. Start from a verified Profile.</p>
+            <p>
+              No applications yet. Compose a product from a requirement above.
+            </p>
           ) : (
-            <div style={{ display: "grid", gap: 16 }}>
-              {applicationGroups.map((group) => (
-                <section key={group.id} aria-label={`${group.label} projects`}>
-                  <h3 style={{ margin: "0 0 8px", fontSize: "0.95rem" }}>
-                    {group.label} projects
-                  </h3>
-                  <div style={{ display: "grid", gap: 10 }}>
-                    {group.applications.map((application) => (
-                      <ApplicationCard
-                        application={application}
-                        compiling={compilingKey === application.key}
-                        key={application.id}
-                        onCompile={onCompile}
-                        onOpen={onOpen}
-                      />
-                    ))}
-                  </div>
-                </section>
+            <div style={{ display: "grid", gap: 10 }}>
+              {applications.map((application) => (
+                <ApplicationCard
+                  application={application}
+                  compiling={compilingKey === application.key}
+                  key={application.id}
+                  onCompile={onCompile}
+                  onOpen={onOpen}
+                />
               ))}
             </div>
           )}

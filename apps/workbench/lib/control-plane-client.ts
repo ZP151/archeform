@@ -1,6 +1,10 @@
+import type { ProductPlanAlternativeKey } from "@factory/capabilities/node";
 import type {
   ApplicationGraphV1,
+  CompositionPlanV1,
+  ProductBlueprintV1,
   PublishedGraphExchangeV1,
+  RequirementSpecV1,
 } from "@factory/graph";
 
 type Fetcher = (
@@ -25,6 +29,28 @@ export type WorkbenchDraft = {
   readonly draftRevisionId: string;
   readonly revisionNumber: number;
   readonly graph: ApplicationGraphV1;
+};
+
+/** The product closure review row as the journey binds to it. */
+export type WorkbenchProductReview = {
+  readonly id: string;
+  readonly applicationGraphId: string;
+  readonly status: string;
+  readonly requirementChecksum: string;
+  readonly draftBaseChecksum: string;
+};
+
+export type WorkbenchProductPlanAlternative = {
+  readonly key: ProductPlanAlternativeKey;
+  readonly label: string;
+  readonly plan: CompositionPlanV1;
+};
+
+export type WorkbenchProductApplied = {
+  readonly applicationGraphId: string;
+  readonly revisionNumber: number;
+  readonly graph: ApplicationGraphV1;
+  readonly reviewStatus: string;
 };
 
 type AiProposalResponse = {
@@ -786,13 +812,15 @@ export class ControlPlaneClient {
 
   constructor(
     baseUrl: string,
-    private readonly fetcher: Fetcher = fetch,
+    private readonly fetcher?: Fetcher,
   ) {
     this.baseUrl = baseUrl.replace(/\/$/, "");
   }
 
   private async request<T>(path: string, init: RequestInit): Promise<T> {
-    const fetcher = this.fetcher;
+    // The global fetch is resolved at request time so test environments can
+    // install their transport after the client is constructed.
+    const fetcher = this.fetcher ?? fetch;
     const response = await fetcher(`${this.baseUrl}${path}`, {
       ...init,
       headers: { "content-type": "application/json", ...init.headers },
@@ -1028,5 +1056,66 @@ export class ControlPlaneClient {
       method: "POST",
       body: JSON.stringify({ draftDiff }),
     }).then(workbenchVerificationApproval);
+  }
+
+  /**
+   * Product closure journey over a blank Draft. Each step passes only the
+   * schema-valid contracts: the requirement and its checksum-bound blueprint,
+   * a review id, an alternative key, and finally the apply signal that turns
+   * the blank Draft into the composed product Graph.
+   */
+
+  async createProductRequirement(input: {
+    readonly name?: string;
+    readonly requirement: RequirementSpecV1;
+    readonly blueprint: ProductBlueprintV1;
+  }): Promise<WorkbenchProductReview> {
+    const created = await this.request<{
+      readonly review: WorkbenchProductReview;
+    }>("/product/requirements", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+    return created.review;
+  }
+
+  async requestProductPlan(
+    reviewId: string,
+  ): Promise<readonly WorkbenchProductPlanAlternative[]> {
+    const result = await this.request<{
+      readonly alternatives: readonly WorkbenchProductPlanAlternative[];
+    }>(`/product/requirements/${encodeURIComponent(reviewId)}/plan`, {
+      method: "POST",
+    });
+    return result.alternatives;
+  }
+
+  async chooseProductPlan(
+    reviewId: string,
+    alternativeKey: string,
+  ): Promise<{ readonly reviewId: string; readonly checksum: string }> {
+    const result = await this.request<{ readonly checksum: string }>(
+      `/product/requirements/${encodeURIComponent(reviewId)}/choices`,
+      { method: "POST", body: JSON.stringify({ alternativeKey }) },
+    );
+    return { reviewId, checksum: result.checksum };
+  }
+
+  async applyProduct(reviewId: string): Promise<WorkbenchProductApplied> {
+    const result = await this.request<{
+      readonly draftRevision: DraftRecord;
+      readonly review: {
+        readonly applicationGraphId: string;
+        readonly status: string;
+      };
+    }>(`/product/requirements/${encodeURIComponent(reviewId)}/apply`, {
+      method: "POST",
+    });
+    return {
+      applicationGraphId: result.review.applicationGraphId,
+      revisionNumber: result.draftRevision.revisionNumber,
+      graph: result.draftRevision.graph,
+      reviewStatus: result.review.status,
+    };
   }
 }

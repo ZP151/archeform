@@ -22,7 +22,6 @@ import {
   Moon,
   PanelRight,
   Plus,
-  Rocket,
   Settings2,
   ShieldCheck,
   Sparkles,
@@ -58,15 +57,10 @@ import {
   type WorkbenchRevisionTimeline,
   type WorkbenchWorkspacePortfolioSummary,
 } from "../lib/control-plane-client";
-import {
-  createGuidedApplicationDraft,
-  type GuidedApplicationInput,
-} from "../lib/guided-application";
+import { useProductJourney } from "../lib/product-journey/use-product-journey";
 import { PageStudio } from "./page-studio";
 import { FlowStudio } from "./flow-studio";
-import { GoldenPathWorkspace } from "./golden-path/mode-shell";
 import { DomainRelationGraph } from "./domain-relation-graph";
-import { GuidedCreationDrawer } from "./guided-creation-drawer";
 import { WorkbenchHome } from "./workbench-home";
 import {
   domainModelToReactFlow,
@@ -101,7 +95,7 @@ const navigation: Navigation[] = [
     id: "home",
     label: "Home",
     icon: House,
-    hint: "Operate applications and Profiles",
+    hint: "Compose products and operate applications",
   },
   {
     id: "page",
@@ -114,12 +108,12 @@ const navigation: Navigation[] = [
   { id: "policy", label: "Policy", icon: ShieldCheck, hint: "Set controls" },
   { id: "ai", label: "AI", icon: Bot, hint: "Configure intelligence" },
   { id: "code", label: "Code", icon: Code2, hint: "Inspect generated output" },
-  {
-    id: "golden-path",
-    label: "Golden Path",
-    icon: Rocket,
-    hint: "Run the governed Golden Path",
-  },
+];
+
+/** The transient example prompts offered by the Home composer popover. */
+const EXAMPLE_PROMPTS: readonly string[] = [
+  "Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions.",
+  "Build an appointment booking application. Customers choose a service and an available time, staff confirm or reschedule appointments, and administrators manage services, schedules, and cancellations.",
 ];
 
 type Props = {
@@ -174,7 +168,6 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   const [artifactSnapshot, setArtifactSnapshot] =
     useState<WorkbenchArtifactContent | null>(null);
   const [artifactLoading, setArtifactLoading] = useState(false);
-  const [guidedCreationOpen, setGuidedCreationOpen] = useState(false);
   const [applications, setApplications] = useState<
     readonly WorkbenchApplicationSummary[]
   >([]);
@@ -689,11 +682,28 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   };
   const active =
     navigation.find((item) => item.id === state.activeSurface) ?? navigation[0];
-  const createGuidedDraft = async (input: GuidedApplicationInput) => {
-    setOperationError(null);
-    const nonce = globalThis.crypto.randomUUID().toLowerCase();
-    await bootstrapGraph(createGuidedApplicationDraft(input, nonce));
+  const journey = useProductJourney(controlPlaneUrl);
+
+  /**
+   * Applies the accepted composition Diff and adopts the composed Graph as
+   * the open local Draft. The product Graph lives in the local workspace (the
+   * product review bound it by key), so the bootstrap GET adopts the applied
+   * revision as-is; the next Publish/Compile actions then operate on it.
+   */
+  const applyComposedProduct = async (): Promise<void> => {
+    const applied = await journey.applyProduct();
+    if (applied === null) return; // failed; the composer shows the bounded error
+    try {
+      await bootstrapGraph(applied.graph);
+    } catch (error) {
+      setOperationError(
+        error instanceof Error
+          ? error.message
+          : "The composed product could not be opened.",
+      );
+    }
     await refreshApplications();
+    journey.reset();
     dispatch({ type: "open", surface: "page" });
   };
 
@@ -791,13 +801,6 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
       <section className="shell">
         <header className="topbar">
           <div className="project-control">
-            <button
-              className="new-application-button"
-              onClick={() => setGuidedCreationOpen(true)}
-              type="button"
-            >
-              <Plus size={15} /> New application
-            </button>
             <div className="project-picker" aria-label="Current application">
               <span className="project-glyph">
                 <FolderKanban size={15} />
@@ -882,13 +885,6 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
             <div className="heading-actions">
               <button
                 className="quiet-button"
-                onClick={() => setGuidedCreationOpen(true)}
-                type="button"
-              >
-                <Plus size={15} /> Add
-              </button>
-              <button
-                className="quiet-button"
                 disabled={!remoteDraft || historyLoading}
                 onClick={toggleRevisionTimeline}
               >
@@ -909,8 +905,37 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
                   portfolioLoading={portfolioLoading}
                   portfolioSummary={portfolioSummary}
                   onCompile={compileApplication}
-                  onCreate={() => setGuidedCreationOpen(true)}
                   onOpen={openApplication}
+                  journey={{
+                    stage: journey.state.stage,
+                    busy: journey.busy,
+                    error: journey.state.error,
+                    brief: journey.briefDraft,
+                    onBriefChange: journey.setBriefDraft,
+                    onInterpret: () => {
+                      void journey.submitBrief();
+                    },
+                    examplePrompts: EXAMPLE_PROMPTS,
+                    onApplyExample: (brief) => journey.setBriefDraft(brief),
+                    requirement: journey.state.interpretation?.spec ?? null,
+                    blueprintTitle: journey.blueprintTitle,
+                    openQuestions: journey.openQuestions,
+                    answers: journey.answers,
+                    onAnswerChange: (key, answer) =>
+                      journey.setAnswer(key, answer),
+                    onContinue: () => {
+                      void journey.answerQuestions();
+                    },
+                    planAlternatives: journey.planAlternatives,
+                    chosenKey: journey.state.selectedAlternativeKey,
+                    onChoose: (key) => {
+                      void journey.chooseAlternative(key);
+                    },
+                    diffChecksum: journey.state.diffChecksum,
+                    onApply: () => {
+                      void applyComposedProduct();
+                    },
+                  }}
                 />
               )}
               {state.activeSurface === "page" && (
@@ -966,26 +991,6 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
                   artifactSnapshot={artifactSnapshot}
                 />
               )}
-              {state.activeSurface === "golden-path" && (
-                <GoldenPathWorkspace
-                  graph={graph}
-                  client={controlPlane}
-                  applicationGraphId={
-                    remoteDraft?.applicationGraphId ?? undefined
-                  }
-                  onDraftApplied={(draft) => {
-                    setRemoteDraft(draft);
-                    setGraph(draft.graph);
-                    setDraftDirty(false);
-                    setAiProposal(null);
-                  }}
-                  onPublished={(published) => {
-                    setPublishedRevision(published);
-                    setCompilation(null);
-                    setPreviewRun(null);
-                  }}
-                />
-              )}
             </section>
             {state.lastProposal && (
               <p className="draft-proposal-status" role="status">
@@ -1028,11 +1033,6 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
           </div>
         </section>
       </section>
-      <GuidedCreationDrawer
-        onClose={() => setGuidedCreationOpen(false)}
-        onCreate={createGuidedDraft}
-        open={guidedCreationOpen}
-      />
     </main>
   );
 }
@@ -1993,14 +1993,13 @@ function CodeCanvas({
 
 function PropertiesPanel({ surface }: { surface: Surface }) {
   const titles: Record<Surface, string> = {
-    home: "Application portfolio",
+    home: "Product creation",
     page: "Page settings",
     domain: "Record details",
     flow: "Step properties",
     policy: "Policy details",
     ai: "Assistant settings",
     code: "Build details",
-    "golden-path": "Golden Path journey",
   };
   return (
     <aside className="properties" aria-label="Properties">
