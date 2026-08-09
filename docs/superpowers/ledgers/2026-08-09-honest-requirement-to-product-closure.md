@@ -279,7 +279,7 @@ browser checks pending).
 
 ## 2026-08-09 — Task 8: Release, evidence, failure recovery integration
 
-State: `in_progress` (T8-A/B/C green and pushed; T8-D e2e extension pending).
+State: `in_progress` (T8-A/B/C/D green and pushed; Task 9 real-model acceptance pending).
 
 - T8-A (`977104bb`, `refactor(workbench): relocate release model and timeline
   to product-journey`): `release-model.ts` and `timeline.ts` moved from the
@@ -324,3 +324,167 @@ State: `in_progress` (T8-A/B/C green and pushed; T8-D e2e extension pending).
   timeline contain no profile-specific condition; verification is
   graph-derived, not template-derived.
 - Commit: `feat(release): verify and preview any composed product graph`.
+- T8-D (`e2e/golden-path.spec.ts` + journey fixes): both prompts now
+  drive the full pipeline from the Release surface — publish the Draft as an
+  immutable revision (POST published-revisions, `sha256:` graph hash), compile
+  the Published Graph (POST /compilations, binding `publishedRevisionId`),
+  isolated verification (the worker derives the plan from the Published Graph:
+  migration + health + per-transition role journeys + idempotency + one
+  `-denied-` authorization denial per entity), the count-first evidence
+  behind the Activity sheet (N steps · N passed · 0 failed, per-step list
+  including the `-denied-` step, failed-count 0), the preview boot (isolated
+  compose project `factory-preview-<runId>`, runtime URL, `main.generated-app`
+  in a fresh browser page), and Stop-and-clean-up (containers, network,
+  volume, and `/artifacts/.preview-runs/<runId>` all gone; five release
+  phases all `release-phase-succeeded`).
+- Two root causes found and fixed this segment:
+  1. **Interpret route provider selection**: the compose container runs
+     `NODE_ENV=production`, so the route always selected the real OpenAI
+     adapter and failed closed (503, no key configured) — the journey could
+     not start in the stack. Provider selection moved to
+     `lib/product-journey/interpret-provider.ts` with an explicit
+     development/E2E-only lever `FACTORY_FIXTURE_MODE=1` (default off, never
+     a fallback; documented on the route, in compose, and in `.env.example`;
+     unit test proves fixture only under test-or-lever and the real adapter
+     otherwise). Final acceptance runs without the lever, as the plan
+     requires.
+  2. **Journey never advanced past planning**: nothing in the application
+     called `journey.createProduct()` (only unit tests did), so an accepted
+     interpretation with no open questions stalled with a null review and no
+     plan surface. `use-product-journey.ts` now latches the automatic
+     planning step (`planningStartedRef`): the review and its alternatives are
+     created exactly once per product (StrictMode-safe), and a failure or
+     reset re-arms the latch. Proven by a counting unit test
+     (`createCalls === 1`).
+- E2E iteration evidence: run 3 proved Prompt B completes interpret -> plan
+  -> choose -> apply -> Release region (Prompt A was blocked by a leftover
+  diagnostic graph — the journey failed closed on the 409 conflict, correctly);
+  run 4 exposed the lever-less recreate (the route again failed closed, both
+  prompts). Fixes: `exact: true` on the Release region/rail selectors (the
+  surface canvas board region is labeled "<surface> canvas", which contains
+  "Release" as a substring), and the workbench container recreated from a
+  shell carrying `FACTORY_FIXTURE_MODE=1`.
+- Also hardened the acceptance record's criterion 1 proof: serial mode +
+  cross-test assertion that Prompt B's Published Graph hash differs from
+  Prompt A's (materially different released products, not just different
+  briefs).
+- **Prisma `DateTime` parity fix (seed)**: the preview's `migrate` step died
+  on the composed Expense product — `Invalid value for argument 'date':
+  premature end of input. Expected ISO-8601 DateTime.` at `seed.ts:32`
+  (Prisma 6.19.3). The Graph keeps the natural date-only value
+  `"2026-08-01"` for a `date` field (the composer's deterministic seed), but
+  `renderPrismaSeed` serialized it verbatim into a `DateTime @db.Date`
+  column. The database target now owns the temporal contract: it maps the
+  Graph's declared `date`/`datetime` field types and normalizes only
+  zone-less shapes (date-only → `T00:00:00.000Z`; zone-less datetime →
+  pinned `Z` with seconds). Frozen legacy digests are untouched (no starter
+  graph declares a temporal seed value). RED→GREEN regression test in
+  `database-target-parity.test.ts` parses the emitted `records` literal and
+  asserts every date/datetime value is zone-qualified ISO-8601, with the
+  exact regression (`"date": "2026-08-01"` absent). Compiler suite
+  348/348, `tsc --noEmit` clean.
+- `scripts/verify-source-studies.{mjs,test.ts}` were committed unformatted
+  (prettier printWidth violations) and broke `pnpm format:check` on the clean
+  tree; reformatted (whitespace-only) so the acceptance command passes.
+- Workbench suite 32 files/235 tests green; interpret route suite 12 green;
+  workspace `tsc --noEmit` clean; prettier clean.
+- Run-7 exposed four root causes in the graph-derived verification path; all
+  fixed with RED→GREEN tests, no fixture widening:
+  1. **Verifier derived a date-only value → Prisma 403**:
+     `derivedCreateValue` for a `date` field returned `"2026-09-01"` and the
+     preview's create request failed validation (`Invalid value for argument
+     'date'`). The derived create value is now zone-qualified
+     (`"2026-09-01T00:00:00.000Z"`), matching the same Prisma DateTime parser
+     contract the seed fix established.
+  2. **Branching transitions replayed on the seeded record**: approve/reject
+     both branch from `submitted`, so the second chain step hit an already
+     terminal record. The plan now chains final transitions onto a fresh
+     record: the graph-derived journey is `create` + path steps using
+     `-fresh` template routes (`/api/{entityKey}/{recordId}/events/{event}`),
+     whose create's bounded `id` is captured and substituted (prologue
+     capture only for the first chain step, 16KB bounded body, top-level `id`
+     pattern only; never persisted or evidenced). Idempotency and
+     authorization-denial journeys keep their static seeded routes under
+     natural names.
+  3. **`renderPrismaSeed` omitted required FK scalars**: the composed
+     Appointment Graph's `serviceKey` scalar was never emitted, so the
+     preview seed failed to bind appointment→service. The database target now
+     binds every required foreign key to its seeded target (by `id` or the
+     target's declared natural-key value), throwing a bounded
+     `Seed generation requires a seeded target for every required foreign
+     key` when no seeded target exists; non-required unresolvable FKs stay
+     unbound. Parity suite covers the real pipeline (appointment.serviceKey
+     → sample-service), the fail-closed throw, and the optional-FK pass.
+  4. **Session-bound create could not bind its FK**: the composed `session`
+     entity's natural-key FK to an unseeded `principal` made a session
+     create undrivable, so the graph-derived plan omitted the create journey
+     honestly (create-role missing or FK unbindable → no create step, no
+     registry entry, and no chain). `role-journey.chain_unreachable` /
+     `chain_unexpected` / `record_id_not_captured` remain the bounded chain
+     failure codes.
+- Run-8: both prompts green through publish → compile → derived verification
+  (N steps · N passed · 0 failed, `-denied-` step present) → preview boot
+  (`main.generated-app`) → Stop-and-clean-up (containers, network, volume,
+  `.preview-runs` dir gone; five `release-phase-succeeded` phases).
+- Run-7 e2e leftovers removed: expense
+  (`cmslev9nj0002no4tu9ejv7aq`) and appointment (`cmslf25t20026no4ti40mo84r`)
+  graph chains (124 Artifact rows, 2 VerificationRun, 2 Compilation, 2
+  CompositionReview, 2 PublishedRevision, 4 DraftRevision, 2
+  ApplicationGraph) via the FK-chain cleanup mirroring the accepted run-6
+  pass; both run-7 artifact directories removed from the shared volume; no
+  preview containers, networks, or volumes remain; repro-expense /
+  repro-appointment compose projects (run-7 repro leftovers) stopped and
+  removed with volumes. Historical product graphs and earlier runs' evidence
+  left untouched.
+- Compiler suite 351/351, worker suite 207/207, parity 17/17, derivation
+  12/12, probes 54/54 combined, job 14/14; workspace `tsc --noEmit` clean;
+  prettier clean.
+- Run-9 outcome: the first post-hardening e2e pass was a **false green** —
+  `releaseTheProduct` returned `published.graphHash` at the top of the
+  pipeline body (added by the hardening edit), so lines 218-318
+  (compile -> verify -> preview -> cleanup) were unreachable dead code and
+  the tests "passed" without executing the release. Diagnosed from the raw
+  Playwright trace (test body ends at the publish step, then After Hooks).
+  The unconditional early return is removed; the hash is returned only
+  after the full pipeline has run.
+- Run-10 outcome: Prompt B's verification genuinely failed (evidence summary
+  never appeared; 4 probes returned 403: idempotency `appointment.request`,
+  two `request`-fresh chains, and `cancel-requested`). Root cause: the
+  composed Appointment Graph was internally inconsistent — the flow declared
+  events `request` and `cancel-requested` that no actor's policy permissions
+  granted (the composed runtime authorizes `(role, entity, event)` against
+  the blueprint grants), plus a semantic bug where the customer's `request`
+  transition confirmed the appointment (`requested -> confirmed` = a
+  self-confirmation). Fixed in the fixture: booking is the customer's create
+  journey (customer `["create", "read"]` only, seeded record starts
+  "requested"), administrators own `["read", "delete", "cancel", "manage"]`,
+  the `request` transition is gone, and `cancel-requested` became the
+  vocabulary-bounded `delete` (`requested -> cancelled`). A system-level
+  fail-closed invariant now guards the whole interpreter family: in
+  `assertProductBlueprint` (packages/graph), every workflow transition must
+  be granted to its actor — an ungranted transition throws before anything
+  can be composed (protects the real OpenAI path in Task 9). RED->GREEN
+  regression tests cover the grant invariant, the fixture permissions, the
+  graph simulator legs (confirm/reschedule/cancel/delete), and the generated
+  role-journey runtime (staff confirm/reschedule; customer denied confirm).
+- Run-11: **genuine double-green** (2 passed, 5.4m, serial). Prompt A
+  (Expense) graph `cmsljhbj80002qh4t7h7bom68`, Prompt B (Appointment)
+  graph `cmsljjmbb0026qh4t3jyspf2j`; published hashes materially different
+  (sha256:8c4f4011… vs sha256:f595e9b8…). Both graphs: 1 revision, 1
+  compilation, 1 succeeded verification
+  (`cmsljhr980023qh4trjed07go` 08:27:26→08:28:03,
+  `cmsljk1fc0047qh4tjqgnqcsj` 08:29:12→08:31:30), 1 preview run; worker
+  jobs 16/17. Evidence payloads: Prompt A 10/10 (create, read,
+  submit-idempotency with 403 replay rejection, approve, reject,
+  `-denied-` authorization denial, employee read, cleanup), Prompt B 14/14
+  (confirm-idempotency with 403 replay rejection, reschedule/delete/cancel
+  chains 201, denied-confirm 403, cleanup). Preview cleanup proven: no
+  preview containers, networks, volumes, or `.preview-runs` directories
+  remain. Full trace files captured for both journeys. Suite counts: graph
+  206, adapters 44, capabilities 371, control-plane 209, compiler-worker
+  207, workbench 236, compiler 351, external-intake 430, intake-cli 67,
+  portfolio-public 2 = 2123 tests green; workspace `tsc --noEmit` clean;
+  prettier clean on every non-excluded changed file. Run-9/10 leftover rows
+  and artifact directories removed (FK-chain cleanup, mirroring the
+  accepted run-6/7/8 passes); historical product graphs untouched.
+- Commit: `feat(e2e): release both prompt products through the full pipeline`.

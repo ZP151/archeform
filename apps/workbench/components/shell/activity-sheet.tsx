@@ -170,6 +170,22 @@ export function ActivitySheet({
                   </li>
                 ))}
               </ol>
+              {release.evidenceSteps !== undefined && (
+                <ol
+                  className="release-evidence-steps"
+                  aria-label="Verification evidence steps"
+                >
+                  {release.evidenceSteps.map((step) => (
+                    <li
+                      key={step.stepId}
+                      className={`release-evidence-step release-evidence-${step.status}`}
+                    >
+                      <code>{step.stepId}</code>
+                      <span>{step.status}</span>
+                    </li>
+                  ))}
+                </ol>
+              )}
             </>
           )}
         </section>

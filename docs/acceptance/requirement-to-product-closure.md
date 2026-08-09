@@ -75,3 +75,22 @@ manage services, schedules, and cancellations.
   scenarios; the focused browser run is **RED — 2 failed**, both timing out
   at `getByLabel("Requirement brief")` (element not found) because the
   empty-workspace requirement composer does not exist yet. Commit: TBD.
+- **2026-08-09 — Task 8 (fixture-mode journeys GREEN; real-model runs
+  pending):** both prompt scenarios now drive the full release pipeline in
+  the Compose stack — free-form brief -> interpretation -> review ->
+  alternatives -> plan apply -> Draft -> Page Studio edit -> Publish
+  (immutable revision, `sha256:` graph hash) -> Compilation -> graph-derived
+  isolated verification (role journeys + idempotency + `-denied-`
+  authorization denial) -> preview boot (`main.generated-app`) -> Stop and
+  clean up (containers, networks, volumes, `/artifacts/.preview-runs`
+  removed). Run 11: 2 passed (5.4m, serial), genuine double-green — Prompt A
+  graph `cmsljhbj80002qh4t7h7bom68`, Prompt B `cmsljjmbb0026qh4t3jyspf2j`,
+  materially different published hashes
+  (sha256:8c4f4011… vs sha256:f595e9b8…), verifications succeeded (worker
+  jobs 16/17), evidence 10/10 and 14/14 steps with 0 failed, preview
+  cleanup proven. The interpreter used the `FACTORY_FIXTURE_MODE=1`
+  development lever; acceptance criterion 4 (real OpenAI provider from the
+  local environment key, no lever) remains open as Task 9, along with
+  criteria 5-7 (clean-checkout acceptance, axe accessibility + themes,
+  action inventory). Detailed per-run record including the run-9 false-green
+  and run-10 failed-verification root causes: ledger Task 8 section.

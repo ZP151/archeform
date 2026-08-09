@@ -57,7 +57,12 @@ function fakeApi(
     }
     const index = counters.get(key) ?? 0;
     counters.set(key, index + 1);
-    return new Response("{}", { status: statuses[index % statuses.length] });
+    // Every 2xx body declares the deterministic record id the graph-derived
+    // chain journeys capture from their create (the environment reads the
+    // body only when a probe asks, and only for the create it authored).
+    return new Response('{"id":"cm-graph-derived-record"}', {
+      status: statuses[index % statuses.length],
+    });
   });
 }
 
@@ -220,9 +225,13 @@ describe("queued verification run", () => {
       "GET /api/expense/sample-expense fixture-session-employee": [200],
       "POST /api/expense/sample-expense/events/submit fixture-session-employee":
         [201, 403],
-      "POST /api/expense/sample-expense/events/approve fixture-session-manager":
+      // The approve/reject chains walk a fresh record: create, submit-fresh,
+      // then the chained transition on the captured id.
+      "POST /api/expense/cm-graph-derived-record/events/submit fixture-session-employee":
         [201],
-      "POST /api/expense/sample-expense/events/reject fixture-session-manager":
+      "POST /api/expense/cm-graph-derived-record/events/approve fixture-session-manager":
+        [201],
+      "POST /api/expense/cm-graph-derived-record/events/reject fixture-session-manager":
         [201],
       "POST /api/expense/sample-expense/events/submit fixture-session-manager":
         [403],
@@ -253,7 +262,9 @@ describe("queued verification run", () => {
     expect(evidence.cleanup.succeeded).toBe(true);
     expect(stopPreviewRun).toHaveBeenCalledTimes(1);
     expect(fetch).toHaveBeenCalledWith(
-      expect.stringContaining("/api/expense/sample-expense/events/approve"),
+      expect.stringContaining(
+        "/api/expense/cm-graph-derived-record/events/approve",
+      ),
       expect.objectContaining({
         headers: expect.objectContaining({
           "x-factory-fixture-session": "fixture-session-manager",

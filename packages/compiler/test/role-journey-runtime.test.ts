@@ -91,15 +91,17 @@ describe("generated role journeys from Graph-declared scenarios", () => {
     expect(journey).toContain('applicationRuntime.auditLog("finance")');
   });
 
-  it("executes the Appointment book and reschedule journey with its declared roles", async () => {
+  it("executes the Appointment confirm and reschedule journey with its declared roles", async () => {
     const graph = await composedGraphFor(bookingBrief);
     const journey = journeyFileFor(graph);
 
     expect(journey).toContain(
       'let record = await applicationRuntime.create("customer", "appointment"',
     );
+    // Booking is the customer's create journey; the seeded record starts
+    // "requested" and no customer-owned transition may confirm it.
     expect(journey).toContain(
-      'record = await applicationRuntime.transition("customer", "appointment", record.id, "request")',
+      'record = await applicationRuntime.transition("staff", "appointment", record.id, "confirm")',
     );
     expect(journey).toContain(
       'record = await applicationRuntime.transition("staff", "appointment", record.id, "reschedule")',
@@ -122,9 +124,9 @@ describe("generated role journeys from Graph-declared scenarios", () => {
     expect(expense).toContain('expect(record.status).toBe("draft")');
 
     const booking = journeyFileFor(await composedGraphFor(bookingBrief));
-    // request is declared for customer; staff is denied.
+    // confirm is declared for staff; the customer is denied.
     expect(booking).toContain(
-      'applicationRuntime.transition("staff", "appointment", record.id, "request")',
+      'applicationRuntime.transition("customer", "appointment", record.id, "confirm")',
     );
     expect(booking).toContain("rejects.toThrow('cannot trigger')");
     expect(booking).toContain('expect(record.status).toBe("requested")');

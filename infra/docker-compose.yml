@@ -102,6 +102,10 @@ services:
       # The Golden Path plan route reads recipe fixtures from the repository
       # root (the whole workspace is copied into the image at /workspace).
       FACTORY_REPOSITORY_ROOT: /workspace
+      # Explicit development/E2E-only lever for the deterministic fixture
+      # interpreter; default off, never a fallback. Final acceptance runs
+      # without it and fails closed unless a real provider key is configured.
+      FACTORY_FIXTURE_MODE: ${FACTORY_FIXTURE_MODE:-}
     ports:
       - "${FACTORY_WORKBENCH_PORT:-5174}:5174"
 

@@ -8,6 +8,7 @@ import {
 
 import type { VerificationStepPlanEntry } from "./verification-lifecycle.js";
 import {
+  type ChainJourneyStep,
   type IdempotencyJourneyFixture,
   type RegisteredApiAction,
   type RoleJourneyFixture,
@@ -35,14 +36,26 @@ import type { VerificationProfile } from "./verification-profiles.js";
  *   initialState (product-composer `derivedSeedData`), so transitions run
  *   against the seeded record: the first transition that makes progress is
  *   exercised as the idempotency probe (the byte-identical replay is
- *   rejected once the record left the initial state), the remaining
- *   transitions as role journeys, and the denial targets the first
- *   transition with a role that is not allowed (falling back to an anonymous
- *   request, which the identity policy denies by default).
+ *   rejected once the record left the initial state), and the denial targets
+ *   the first transition with a role that is not allowed (falling back to an
+ *   anonymous request, which the identity policy denies by default).
+ * - Branching transitions (approve AND reject) cannot both drive the seeded
+ *   record — the first leaves the other's source state — so every transition
+ *   after the idempotency probe runs as a chain journey on its own fresh
+ *   record: the chain creates the record, walks the shortest path from the
+ *   initial state to the transition's source state, then drives the
+ *   transition itself. Each step carries the role the flow allows for it,
+ *   and the create response's bounded `id` addresses the fresh record (the
+ *   id is pattern-validated, never persisted, never evidenced).
  * - Create bodies supply every required field with a type-derived value
  *   (the generated create handler fails closed on missing required fields);
  *   `status` and (for commerce order entities) `version` are runtime-supplied
- *   and never declared.
+ *   and never declared. A required foreign-key scalar binds to the seeded
+ *   target record (an id-referencing relation binds the seeded target id, a
+ *   natural-key relation binds the seeded target value); a required
+ *   reference that cannot bind — the derived identity session references a
+ *   principal nothing seeds and no role may create — omits that create
+ *   journey honestly instead of claiming undrivable evidence.
  *
  * Derivation is a pure function of the Published Graph + composition lock:
  * identical inputs derive identical plans. Everything the derivation cannot
@@ -153,7 +166,10 @@ function derivedCreateValue(
     case "boolean":
       return false;
     case "date":
-      return "2026-09-01";
+      // The generated create handler writes through Prisma, whose DateTime
+      // parser rejects a date-only value ("premature end of input. Expected
+      // ISO-8601 DateTime.") — the same contract the database target renders.
+      return "2026-09-01T00:00:00.000Z";
     case "datetime":
       return "2026-09-01T09:00:00Z";
     case "enum":
@@ -177,22 +193,208 @@ function derivedCreateValue(
 }
 
 function createBodyFor(
+  graph: ApplicationGraphV1,
   entity: ApplicationGraphV1["domain"]["entities"][number],
   hasFlow: boolean,
   isOrderEntity: boolean,
 ): string | undefined {
-  const required = entity.fields.filter(
+  const required = requiredCreateFields(entity, hasFlow, isOrderEntity);
+  if (required.length === 0) return undefined;
+  const body: Record<string, unknown> = {};
+  for (const field of required) {
+    body[field.key] =
+      foreignKeyValue(graph, entity.key, field.key) ??
+      derivedCreateValue(entity.key, field);
+  }
+  return JSON.stringify(body);
+}
+
+function requiredCreateFields(
+  entity: ApplicationGraphV1["domain"]["entities"][number],
+  hasFlow: boolean,
+  isOrderEntity: boolean,
+): ApplicationGraphV1["domain"]["entities"][number]["fields"] {
+  return entity.fields.filter(
     (field) =>
       field.required &&
       !(field.key === "status" && hasFlow) &&
       !(field.key === "version" && isOrderEntity),
   );
-  if (required.length === 0) return undefined;
-  const body: Record<string, unknown> = {};
-  for (const field of required) {
-    body[field.key] = derivedCreateValue(entity.key, field);
+}
+
+/**
+ * Mirrors the database target's `resolveRelationForeignKey` for the fields a
+ * generated create body must satisfy: a required scalar that owns a declared
+ * relation (the composed products always declare `field`) must reference an
+ * existing target record — the seeded target id for id-referencing relations,
+ * the seeded target's declared value for natural-key relations. A relation
+ * whose target resolves neither way leaves the create undrivable.
+ */
+function foreignKeyValue(
+  graph: ApplicationGraphV1,
+  entityKey: string,
+  fieldKey: string,
+): string | undefined {
+  for (const relation of graph.domain.relations ?? []) {
+    if (
+      relation.kind === "many-to-many" ||
+      relation.field !== fieldKey ||
+      relation.from !== entityKey
+    ) {
+      continue;
+    }
+    const target = graph.domain.entities.find(
+      (candidate) => candidate.key === relation.to,
+    );
+    if (target === undefined) return undefined;
+    const naturalKeyCandidates = target.fields.filter(
+      (field) =>
+        field.unique === true &&
+        relation.field!.toLowerCase().endsWith(field.key.toLowerCase()),
+    );
+    if (naturalKeyCandidates.length === 1) {
+      const seed = (graph.domain.seedData ?? []).find(
+        (candidate) => candidate.entity === relation.to,
+      );
+      const value = seed?.values[naturalKeyCandidates[0]!.key];
+      return typeof value === "string" && value.length > 0 ? value : undefined;
+    }
+    return seedRecordId(graph, relation.to);
   }
-  return JSON.stringify(body);
+  return undefined;
+}
+
+/**
+ * A required create field that owns a foreign-key relation whose target
+ * cannot bind leaves the create journey undrivable: the generated handler
+ * would reject it with a foreign-key violation, so the derivation omits the
+ * journey rather than claim failing evidence.
+ */
+function hasUnbindableRequiredForeignKey(
+  graph: ApplicationGraphV1,
+  entity: ApplicationGraphV1["domain"]["entities"][number],
+  hasFlow: boolean,
+  isOrderEntity: boolean,
+): boolean {
+  return requiredCreateFields(entity, hasFlow, isOrderEntity).some(
+    (field) =>
+      (graph.domain.relations ?? []).some(
+        (relation) =>
+          relation.kind !== "many-to-many" &&
+          relation.field === field.key &&
+          relation.from === entity.key,
+      ) && foreignKeyValue(graph, entity.key, field.key) === undefined,
+  );
+}
+
+/**
+ * The shortest deterministic event path from the flow's initial state to the
+ * target state (breadth-first over the declared transitions, so identical
+ * flows derive identical chains). A transition whose source is unreachable
+ * from the initial state, or whose path needs a step no role may drive, is
+ * omitted honestly — the derivation never invents product semantics.
+ */
+function transitionPath(
+  flow: ApplicationGraphV1["flow"]["flows"][number],
+  targetState: string,
+): readonly string[] | undefined {
+  if (targetState === flow.initialState) return [];
+  const predecessorEvent = new Map<string, string>();
+  const visited = new Set<string>([flow.initialState]);
+  const queue: string[] = [flow.initialState];
+  while (queue.length > 0) {
+    const state = queue.shift()!;
+    for (const transition of flow.transitions) {
+      if (transition.from !== state || transition.to === state) continue;
+      if (visited.has(transition.to)) continue;
+      visited.add(transition.to);
+      predecessorEvent.set(transition.to, transition.event);
+      if (transition.to === targetState) {
+        const path: string[] = [];
+        let current = targetState;
+        while (current !== flow.initialState) {
+          const event = predecessorEvent.get(current);
+          if (event === undefined) return undefined;
+          path.unshift(event);
+          current = flow.transitions.find(
+            (candidate) => candidate.event === event,
+          )!.from;
+        }
+        return path;
+      }
+      queue.push(transition.to);
+    }
+  }
+  return undefined;
+}
+
+/** The principal fixture for one role, in the journey's own principal kind. */
+function principalFor(
+  lock: CompositionLock,
+  role: string,
+): { sessionId: string } | { principal: string } {
+  return isSessionBound(lock)
+    ? { sessionId: `fixture-session-${role}` }
+    : { principal: role };
+}
+
+/**
+ * The chain prologue for a fresh-record journey: the create step (performed by
+ * the entity's create role) followed by the shortest path from the flow's
+ * initial state to the transition's source state, each step performed by the
+ * role its own transition allows. Every path step resolves a `-fresh` template
+ * registry action (deduplicated per entity; the natural-name static routes
+ * address the seeded record). The final transition is the journey's own action
+ * against a template route. Returns undefined — and the caller omits the
+ * journey — when the path is unreachable, any step is unroleable, or the
+ * entity's create journey is undrivable.
+ */
+function chainFor(
+  graph: ApplicationGraphV1,
+  lock: CompositionLock,
+  permissions: Permissions,
+  entityKey: string,
+  flow: ApplicationGraphV1["flow"]["flows"][number],
+  transition: ApplicationGraphV1["flow"]["flows"][number]["transitions"][number],
+  createRole: string | undefined,
+  createUnbindable: boolean,
+  freshActions: Set<string>,
+  apiRegistry: RegisteredApiAction[],
+  createBody: string | undefined,
+): readonly ChainJourneyStep[] | undefined {
+  if (createRole === undefined || createUnbindable) return undefined;
+  const path = transitionPath(flow, transition.from);
+  if (path === undefined) return undefined;
+  const chain: ChainJourneyStep[] = [
+    {
+      action: `${entityKey}.create`,
+      ...(createBody === undefined ? {} : { body: createBody }),
+      ...principalFor(lock, createRole),
+    },
+  ];
+  for (const event of path) {
+    const stepTransition = flow.transitions.find(
+      (candidate) => candidate.event === event,
+    );
+    if (stepTransition === undefined) return undefined;
+    const stepRoles = stepTransition.roles ?? [];
+    const stepRole =
+      stepRoles[0] ??
+      firstRoleWith(graph.policy.roles, permissions, entityKey, "read");
+    if (stepRole === undefined) return undefined;
+    const freshAction = `${entityKey}.${event}-fresh`;
+    if (!freshActions.has(freshAction)) {
+      freshActions.add(freshAction);
+      apiRegistry.push({
+        action: freshAction,
+        method: "POST",
+        route: `/api/${entityKey}/{recordId}/events/${event}`,
+        expectedStatus: 201,
+      });
+    }
+    chain.push({ action: freshAction, ...principalFor(lock, stepRole) });
+  }
+  return chain;
 }
 
 function journeyFor(
@@ -289,6 +491,18 @@ export function deriveVerificationProfile(
       entityKey,
       "read",
     );
+    const hasFlow = flow !== undefined;
+    const isOrderEntity = entityKey === orderEntityKey;
+    // The derived identity session entity owns an unbindable required foreign
+    // key (its subjectRef references principals nothing seeds and no role may
+    // create): the create journey and its registry action are omitted honestly
+    // instead of claiming evidence the generated handler rejects.
+    const createUnbindable = hasUnbindableRequiredForeignKey(
+      graph,
+      entity,
+      hasFlow,
+      isOrderEntity,
+    );
 
     // Generic routes are deterministic for every entity.
     apiRegistry.push({
@@ -297,15 +511,11 @@ export function deriveVerificationProfile(
       route: `/api/${entityKey}`,
       expectedStatus: 200,
     });
-    if (createRole !== undefined) {
+    if (createRole !== undefined && !createUnbindable) {
       const journeyId = `${entityKey}-create`;
       journeyIdPattern(journeyId);
       addStep({ stepId: journeyId, kind: "role-journey" });
-      const body = createBodyFor(
-        entity,
-        flow !== undefined,
-        entityKey === orderEntityKey,
-      );
+      const body = createBodyFor(graph, entity, hasFlow, isOrderEntity);
       journeys[journeyId] = journeyFor(
         graph,
         lock,
@@ -342,17 +552,20 @@ export function deriveVerificationProfile(
 
     // Order entities carry version + idempotency-key semantics the generic
     // derivation cannot drive; their transitions are omitted honestly.
-    if (
-      flow === undefined ||
-      recordId === undefined ||
-      entityKey === orderEntityKey
-    ) {
+    if (flow === undefined || recordId === undefined || isOrderEntity) {
       continue;
     }
 
     const transitionRoles = (
       transition: ApplicationGraphV1["flow"]["flows"][number]["transitions"][number],
     ) => transition.roles ?? [];
+
+    // One `-fresh` template action per path event: chain journeys walk a fresh
+    // record through their path steps, and each path step needs its own route
+    // (the natural-name static routes address the seeded record, which the
+    // idempotency probe already left in the initial state). Entries dedupe
+    // per entity; a path step is only registered when a journey drives it.
+    const freshActions = new Set<string>();
     for (const [index, transition] of flow.transitions.entries()) {
       const roles = transitionRoles(transition);
       const role =
@@ -362,10 +575,13 @@ export function deriveVerificationProfile(
       const journeyId = `${entityKey}-${transition.event}`;
       journeyIdPattern(journeyId);
       const makesProgress = transition.from !== transition.to;
-      if (index === 0 && makesProgress) {
-        // The first transition is exercised once and replayed: the seeded
-        // record leaves the initial state, so the byte-identical replay is
-        // rejected — the generated proof of no duplicate side effects.
+      const drivesSeededRecord =
+        index === 0 && makesProgress && transition.from === flow.initialState;
+      if (drivesSeededRecord) {
+        // The first making-progress transition from the initial state is
+        // exercised once and replayed: the seeded record leaves the initial
+        // state, so the byte-identical replay is rejected — the generated
+        // proof of no duplicate side effects.
         addStep({ stepId: journeyId, kind: "idempotency" });
         const idempotencyKey = `verify-${entityKey}-${transition.event}-${recordId}`;
         journeys[journeyId] = {
@@ -380,6 +596,29 @@ export function deriveVerificationProfile(
           expectedVersion: 0,
         };
       } else {
+        // A later (or non-initial) transition cannot drive the seeded record:
+        // the idempotency probe already moved it past the initial state, and a
+        // branch transition shares its source state with the first transition.
+        // The journey creates a fresh record, walks the shortest declared path
+        // to the transition's source state (each step as the role its own
+        // transition allows), then drives the transition on the fresh record.
+        // A path the derivation cannot drive — unreachable source state, a
+        // step no role may perform, or an undrivable create — omits the
+        // journey honestly rather than claim failing evidence.
+        const chain = chainFor(
+          graph,
+          lock,
+          permissions,
+          entityKey,
+          flow,
+          transition,
+          createRole,
+          createUnbindable,
+          freshActions,
+          apiRegistry,
+          createBodyFor(graph, entity, hasFlow, isOrderEntity),
+        );
+        if (chain === undefined) continue;
         addStep({ stepId: journeyId, kind: "role-journey" });
         journeys[journeyId] = journeyFor(
           graph,
@@ -387,12 +626,15 @@ export function deriveVerificationProfile(
           journeyId,
           `${entityKey}.${transition.event}`,
           role,
+          { chain },
         );
       }
       apiRegistry.push({
         action: `${entityKey}.${transition.event}`,
         method: "POST",
-        route: `/api/${entityKey}/${recordId}/events/${transition.event}`,
+        route: drivesSeededRecord
+          ? `/api/${entityKey}/${recordId}/events/${transition.event}`
+          : `/api/${entityKey}/{recordId}/events/${transition.event}`,
         expectedStatus: 201,
       });
     }

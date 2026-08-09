@@ -1,16 +1,23 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { hashRequirementSpec } from "@factory/graph";
 import {
+  FixtureRequirementInterpreter,
+  OpenAIRequirementInterpreterAdapter,
   RequirementInterpreterError,
   type RequirementInterpretationV1,
 } from "@factory/adapters";
 
+import { interpreter } from "../../../../lib/product-journey/interpret-provider";
 import {
   classifyInterpretationError,
   parseInterpretPayload,
 } from "../../../../lib/product-journey/interpret-payload";
 import { POST } from "./route";
+
+afterEach(() => {
+  delete process.env.FACTORY_FIXTURE_MODE;
+});
 
 const expenseBrief =
   "Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions.";
@@ -135,6 +142,25 @@ describe("Requirement interpret route", () => {
   it("rejects an unknown envelope field fail-closed", async () => {
     const response = await post({ session: { brief: expenseBrief } });
     expect(response.status).toBe(400);
+  });
+
+  it("selects the fixture only under test or the explicit dev lever", () => {
+    const environment = process.env as Record<string, string | undefined>;
+    const originalNodeEnv = environment.NODE_ENV;
+    try {
+      // Outside test with no lever the route must demand the real provider.
+      environment.NODE_ENV = "production";
+      expect(interpreter()).toBeInstanceOf(OpenAIRequirementInterpreterAdapter);
+      // The explicit dev/E2E lever activates the deterministic fixture.
+      environment.FACTORY_FIXTURE_MODE = "1";
+      expect(interpreter()).toBeInstanceOf(FixtureRequirementInterpreter);
+      // The lever is never a default: unset again, the real provider returns.
+      delete environment.FACTORY_FIXTURE_MODE;
+      expect(interpreter()).toBeInstanceOf(OpenAIRequirementInterpreterAdapter);
+    } finally {
+      if (originalNodeEnv === undefined) delete environment.NODE_ENV;
+      else environment.NODE_ENV = originalNodeEnv;
+    }
   });
 
   it("classifies configuration and provider failures to bounded statuses", () => {

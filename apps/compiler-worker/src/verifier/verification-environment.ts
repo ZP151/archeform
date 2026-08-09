@@ -13,7 +13,10 @@ import {
  * A bounded, isolated runtime environment for one verification run. Every
  * operation carries the run's operation timeout, never persists raw process
  * output or HTTP bodies, and returns only bounded status results — the probes
- * in the verifier turn those into allowlisted evidence summaries.
+ * in the verifier turn those into allowlisted evidence summaries. The one
+ * exception: a chain journey may ask to capture the pattern-validated
+ * top-level `id` of a record the probe itself created (bounded read, never
+ * persisted, never evidenced — see `request`).
  */
 
 export class VerificationLifecycleError extends Error {
@@ -37,6 +40,13 @@ export type BoundedRequestResult = {
   readonly status: number;
   readonly ok: boolean;
   readonly durationMs: number;
+  /**
+   * The pattern-validated top-level `id` of a record this probe itself
+   * created, captured only when the caller requested it. It is never
+   * persisted and never enters evidence — chain journeys use it to address
+   * the fresh record they created.
+   */
+  readonly recordId?: string;
 };
 
 /**
@@ -328,8 +338,9 @@ export class VerificationEnvironment {
     path: string,
     port: "web" | "api" = "api",
     options?: RequestOptions,
+    captureRecordId = false,
   ): Promise<BoundedRequestResult> {
-    return this.boundedFetch(method, path, port, options);
+    return this.boundedFetch(method, path, port, options, captureRecordId);
   }
 
   private async boundedFetch(
@@ -337,6 +348,7 @@ export class VerificationEnvironment {
     path: string,
     port: "web" | "api",
     options?: RequestOptions,
+    captureRecordId = false,
   ): Promise<BoundedRequestResult> {
     if (!httpMethods.includes(method)) {
       throw new VerificationLifecycleError(
@@ -416,10 +428,23 @@ export class VerificationEnvironment {
     }
     try {
       const response = await this.options.fetch(url, init);
+      // The one narrow exception to the never-read-body invariant: when a
+      // chain journey explicitly asks, the response of the create it authored
+      // is read — bounded and pattern-validated — for the top-level `id` of
+      // the record the probe itself just created. The id is used only to
+      // address that same fresh record in subsequent chain steps; it never
+      // enters evidence and is never persisted.
+      const recordId =
+        captureRecordId &&
+        (response?.status ?? 0) >= 200 &&
+        (response?.status ?? 0) < 300
+          ? await captureCreatedRecordId(response)
+          : undefined;
       return {
         status: response?.status ?? 0,
         ok: response?.ok ?? false,
         durationMs: this.elapsed(startedMs),
+        ...(recordId === undefined ? {} : { recordId }),
       };
     } catch {
       // Network failures and timeouts are bounded results, never raw output.
@@ -428,4 +453,52 @@ export class VerificationEnvironment {
       clearTimeout(timer);
     }
   }
+}
+
+const maximumCapturedResponseBytes = 16 * 1024;
+const capturedRecordIdPattern = /^[a-zA-Z0-9._~-]{1,64}$/;
+
+/**
+ * Reads at most `maximumCapturedResponseBytes` of a response and extracts the
+ * top-level `id` string, pattern-validated. Any over-limit body, malformed
+ * JSON, or shape mismatch yields no capture (the caller fails closed) — the
+ * body is never stored, logged, or echoed anywhere else.
+ */
+async function captureCreatedRecordId(
+  response: Response,
+): Promise<string | undefined> {
+  if (!response.body) {
+    return undefined;
+  }
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value === undefined) continue;
+      total += value.byteLength;
+      if (total > maximumCapturedResponseBytes) {
+        return undefined;
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return undefined;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(new TextDecoder().decode(Buffer.concat(chunks)));
+  } catch {
+    return undefined;
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return undefined;
+  }
+  const id = (parsed as Record<string, unknown>).id;
+  if (typeof id !== "string" || !capturedRecordIdPattern.test(id)) {
+    return undefined;
+  }
+  return id;
 }

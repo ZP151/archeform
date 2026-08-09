@@ -436,11 +436,108 @@ function renderPrismaSeed(
   graph: ApplicationGraphV1,
   hasRestaurantRuntime: boolean,
 ): string {
-  const records = (graph.domain.seedData ?? []).map((seed, index) => ({
-    delegate: toCamelCase(seed.entity),
-    id: seed.id ?? `seed-${seed.entity}-${index + 1}`,
-    values: seed.values,
-  }));
+  // The Graph keeps natural values for temporal fields (a `date` field holds
+  // "2026-08-01"); the database target renders the Prisma contract, whose
+  // DateTime parser rejects zone-less values at migrate time ("premature end
+  // of input. Expected ISO-8601 DateTime."). Normalize only the values the
+  // Graph itself declares as date or datetime, and only the zone-less shapes.
+  const temporalFieldTypes = new Map(
+    graph.domain.entities.flatMap((entity) =>
+      entity.fields
+        .filter((field) => field.type === "date" || field.type === "datetime")
+        .map((field) => [
+          `${toCamelCase(entity.key)}:${field.key}`,
+          field.type,
+        ]),
+    ),
+  );
+  const prismaDateTimeValue = (
+    entityKey: string,
+    fieldKey: string,
+    value: unknown,
+  ): unknown => {
+    if (temporalFieldTypes.get(`${entityKey}:${fieldKey}`) === undefined) {
+      return value;
+    }
+    if (typeof value !== "string") return value;
+    const dateOnly = /^(\d{4}-\d{2}-\d{2})$/.exec(value);
+    if (dateOnly !== null) return `${dateOnly[1]}T00:00:00.000Z`;
+    const zoneLess =
+      /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?)$/.exec(value);
+    if (zoneLess !== null) {
+      const time = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(zoneLess[1])
+        ? zoneLess[1]
+        : `${zoneLess[1]}:00`;
+      return `${time}Z`;
+    }
+    return value;
+  };
+  // A declared-field relation's owning scalar must reference an existing
+  // record at migrate time. The Graph keeps natural values for reference
+  // fields and the product-composer's derived seeds never declare them, so
+  // the rendered seed binds the owning scalar to its seeded target: the
+  // seeded target id for id-referencing relations, the seeded target's
+  // declared value for natural-key relations. A required scalar whose target
+  // has no seed fails closed at compile (mirroring the menu-category check
+  // below) — the rendered seed would otherwise crash at migrate time
+  // ("Argument `service` is missing") and every downstream preview would
+  // fail to boot.
+  const seeds = graph.domain.seedData ?? [];
+  const unresolvedRequiredForeignKeys: string[] = [];
+  const records = seeds.map((seed, index) => {
+    const values = Object.fromEntries(
+      Object.entries(seed.values).map(([key, value]) => [
+        key,
+        prismaDateTimeValue(seed.entity, key, value),
+      ]),
+    );
+    for (const relation of graph.domain.relations ?? []) {
+      if (
+        relation.kind === "many-to-many" ||
+        relation.field === undefined ||
+        relation.from !== seed.entity
+      ) {
+        continue;
+      }
+      const foreignKey = resolveRelationForeignKey(graph, relation);
+      if (foreignKey.scalarField in values) continue;
+      const targetIndex = seeds.findIndex(
+        (candidate) => candidate.entity === foreignKey.targetKey,
+      );
+      if (targetIndex < 0) {
+        if (foreignKey.required) {
+          unresolvedRequiredForeignKeys.push(
+            `${seed.entity}.${foreignKey.scalarField} -> ${foreignKey.targetKey}`,
+          );
+        }
+        continue;
+      }
+      if (foreignKey.targetField === "id") {
+        values[foreignKey.scalarField] =
+          seeds[targetIndex]!.id ??
+          `seed-${foreignKey.targetKey}-${targetIndex + 1}`;
+      } else {
+        const targetValue = seeds[targetIndex]!.values[foreignKey.targetField];
+        if (targetValue !== undefined) {
+          values[foreignKey.scalarField] = targetValue;
+        } else if (foreignKey.required) {
+          unresolvedRequiredForeignKeys.push(
+            `${seed.entity}.${foreignKey.scalarField} -> ${foreignKey.targetKey}`,
+          );
+        }
+      }
+    }
+    return {
+      delegate: toCamelCase(seed.entity),
+      id: seed.id ?? `seed-${seed.entity}-${index + 1}`,
+      values,
+    };
+  });
+  if (unresolvedRequiredForeignKeys.length > 0) {
+    throw new Error(
+      `Seed generation requires a seeded target for every required foreign key (unresolved: ${unresolvedRequiredForeignKeys.join(", ")}).`,
+    );
+  }
   const restaurantTableSeed = hasRestaurantRuntime
     ? (graph.domain.seedData ?? []).find(
         (seed) => seed.entity === "restaurant-table",
@@ -491,8 +588,7 @@ function renderPrismaSeed(
           (graph.domain.seedData ?? [])
             .filter((seed) => seed.entity === "menu-item")
             .map(
-              (seed) =>
-                (seed.values as { categoryKey?: unknown }).categoryKey,
+              (seed) => (seed.values as { categoryKey?: unknown }).categoryKey,
             )
             .filter(
               (categoryKey) =>

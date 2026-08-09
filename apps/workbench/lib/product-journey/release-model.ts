@@ -40,6 +40,15 @@ export interface ReleaseEvidenceSummary {
   readonly failed: number;
 }
 
+/** One isolated verification evidence step: a role journey, the authorization
+ * denial, the idempotency replay, or a boot probe. Kept verbatim behind the
+ * count-first summary so the Activity sheet can show what was actually
+ * probed; never rendered on the release surface itself. */
+export interface ReleaseEvidenceStep {
+  readonly stepId: string;
+  readonly status: "passed" | "failed" | "skipped";
+}
+
 export interface ReleaseState {
   readonly kind: "release";
   readonly label: string;
@@ -50,6 +59,7 @@ export interface ReleaseState {
   readonly compilationId?: string;
   readonly verificationRunId?: string;
   readonly evidenceSummary?: ReleaseEvidenceSummary;
+  readonly evidenceSteps?: readonly ReleaseEvidenceStep[];
   readonly previewRunId?: string;
   readonly previewUrl?: string | null;
   readonly diagnosis?: string;
@@ -108,15 +118,12 @@ export function beginRelease(input: {
     phase: "publishing",
     applicationGraphId: input.applicationGraphId,
     draftRevisionId: input.draftRevisionId,
-    timeline: appendTimelineEvent(
-      createTimeline("Release evidence"),
-      {
-        kind: "publish",
-        status: "running",
-        durationMs: 0,
-        title: "Publishing the Draft",
-      },
-    ),
+    timeline: appendTimelineEvent(createTimeline("Release evidence"), {
+      kind: "publish",
+      status: "running",
+      durationMs: 0,
+      title: "Publishing the Draft",
+    }),
   };
 }
 
@@ -210,6 +217,20 @@ export function evidenceSummaryOf(
   return { steps: steps.length, passed, failed };
 }
 
+function evidenceStepsOf(
+  steps: readonly { readonly stepId: string; readonly status: string }[],
+): readonly ReleaseEvidenceStep[] {
+  // The isolated lifecycle reports only passed / failed / skipped; anything
+  // else is not evidence and is dropped.
+  return steps.flatMap((step) =>
+    step.status === "passed" ||
+    step.status === "failed" ||
+    step.status === "skipped"
+      ? [{ stepId: step.stepId, status: step.status }]
+      : [],
+  );
+}
+
 export function verificationSucceeded(
   state: ReleaseState,
   steps: readonly { readonly stepId: string; readonly status: string }[],
@@ -219,6 +240,7 @@ export function verificationSucceeded(
     ...state,
     phase: "starting-preview",
     evidenceSummary: evidenceSummaryOf(steps),
+    evidenceSteps: evidenceStepsOf(steps),
     timeline: appendTimelineEvent(state.timeline, {
       kind: "verify",
       status: "succeeded",

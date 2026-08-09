@@ -307,8 +307,27 @@ describe("useProductJourney", () => {
     expect(controller().answers["approval-levels"]).toBeUndefined();
   });
 
-  it("creates the product review and receives deterministic alternatives", async () => {
-    stubTransport({});
+  it("auto-creates the review and receives deterministic alternatives exactly once", async () => {
+    let createCalls = 0;
+    stubTransport({
+      createProduct: (init) => {
+        createCalls += 1;
+        const body = JSON.parse(String(init?.body ?? "{}")) as {
+          requirement?: { requirementId?: string };
+        };
+        const requirementId =
+          body.requirement?.requirementId ?? "expense-approval-requirement";
+        return {
+          review: {
+            id: "review-1",
+            applicationGraphId: requirementId,
+            status: "planning",
+            requirementChecksum: hashRequirementSpec(body.requirement as never),
+            draftBaseChecksum: "sha256:blank",
+          },
+        };
+      },
+    });
     act(() => {
       controller().setBriefDraft(expenseBrief);
     });
@@ -317,9 +336,9 @@ describe("useProductJourney", () => {
     await act(async () => {
       await controller().submitBrief();
     });
-    await act(async () => {
-      await controller().createProduct();
-    });
+    // An accepted interpretation with no open questions lands in planning and
+    // the review is created automatically — no manual step in between.
+    expect(controller().state.stage).toBe("planning");
     expect(controller().state.review?.status).toBe("planning");
     expect(controller().state.alternatives?.map(({ key }) => key)).toEqual([
       "standard",
@@ -329,6 +348,7 @@ describe("useProductJourney", () => {
       "standard",
       "minimal",
     ]);
+    expect(createCalls).toBe(1);
     const [standard] = controller().planAlternatives ?? [];
     expect(JSON.stringify(standard)).not.toContain("proposedOperations");
   });
@@ -340,9 +360,6 @@ describe("useProductJourney", () => {
     });
     await act(async () => {
       await controller().submitBrief();
-    });
-    await act(async () => {
-      await controller().createProduct();
     });
     await act(async () => {
       await controller().chooseAlternative("minimal");
@@ -359,9 +376,6 @@ describe("useProductJourney", () => {
     });
     await act(async () => {
       await controller().submitBrief();
-    });
-    await act(async () => {
-      await controller().createProduct();
     });
     await act(async () => {
       await controller().chooseAlternative("standard");

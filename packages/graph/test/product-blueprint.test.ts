@@ -303,6 +303,24 @@ describe("productBlueprintSchema", () => {
     );
   });
 
+  it("rejects a transition its actor is not granted (the composed runtime could never serve it)", () => {
+    const ungranted = validBlueprint();
+    const workflow = (ungranted.workflows as Record<string, unknown>[])[0];
+    const approve = (workflow.transitions as Record<string, unknown>[]).find(
+      (transition) => transition.key === "approve",
+    );
+    expect(approve).toBeDefined();
+    // The employee actor holds create/read/submit only; driving "approve"
+    // with the employee role would 403 at runtime.
+    approve!.actorKey = "employee";
+    expect(() => assertProductBlueprint(ungranted)).toThrow(/not granted/);
+
+    // The inverse direction stays open: a granted action with no declared
+    // transition is a conservative grant, not an undrivable flow.
+    const extraGrant = validBlueprint();
+    expect(() => assertProductBlueprint(extraGrant)).not.toThrow();
+  });
+
   it("rejects invalid state/transition sets (unreachable or undefined)", () => {
     const singleState = validBlueprint();
     (singleState.workflows as Record<string, unknown>[])[0].states = [

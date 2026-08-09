@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { FixtureRequirementInterpreter } from "@factory/adapters";
 import {
   composeDefaultCapabilityDraft,
   composeProfileDraft,
@@ -8,7 +9,13 @@ import {
   type FactoryProfile,
 } from "@factory/capabilities";
 import {
+  composeProductDraft,
+  planProductAlternatives,
+} from "@factory/capabilities/node";
+import {
+  applyGraphDiffToDraft,
   assertValidApplicationGraph,
+  createBlankApplicationDraft,
   hashApplicationGraph,
   type ApplicationGraphV1,
 } from "@factory/graph";
@@ -185,6 +192,239 @@ describe("database target file/byte/digest parity", () => {
     ).toEqual(
       second.map((file) => `${file.path}:${sha256Digest(file.content)}`),
     );
+  });
+});
+
+describe("seed renders Prisma-valid ISO-8601 for date and datetime fields", () => {
+  // The database target emits the seed delegate as the camel-cased entity
+  // key; the field-type map below keys on the same shape.
+  function toCamelCase(value: string): string {
+    return value
+      .split(/[-_]/)
+      .map((part) => `${part[0]?.toUpperCase() ?? ""}${part.slice(1)}`)
+      .join("")
+      .replace(/^./, (first) => first.toLowerCase());
+  }
+
+  const fixtureInterpreter = new FixtureRequirementInterpreter();
+  const expenseBrief =
+    "Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions.";
+
+  async function composedExpenseGraph(): Promise<ApplicationGraphV1> {
+    const interpretation = await fixtureInterpreter.interpret({
+      brief: expenseBrief,
+    });
+    const baseDraft = createBlankApplicationDraft({
+      applicationId: interpretation.spec.requirementId,
+      workspaceId: "local-workspace",
+      name: interpretation.spec.requirementId,
+    });
+    const [standard] = planProductAlternatives({
+      requirement: interpretation.spec,
+      blueprint: interpretation.blueprint,
+      baseDraft,
+    });
+    const { diff } = composeProductDraft({
+      plan: standard.plan,
+      blueprint: interpretation.blueprint,
+      baseDraft,
+    });
+    return assertValidApplicationGraph(
+      applyGraphDiffToDraft(baseDraft, diff).graph,
+    );
+  }
+
+  it("emits only Prisma-valid date and datetime values in the seed", async () => {
+    const graph = await composedExpenseGraph();
+    const registry = createCompilerTargetRegistryV1();
+    registry.register(databaseTargetPlugin);
+    const files = registry.run(
+      "prisma-postgres",
+      buildCompilationInput({
+        publishedRevisionId: `published-${graph.metadata.id}`,
+        graph,
+        compositionLock: createCapabilityCompositionLock({
+          graphChecksum: hashApplicationGraph(graph),
+          selections: graph.integration.compositionSelections ?? [],
+        }),
+      }),
+    );
+    const seed = files.find((file) => file.path === "database/prisma/seed.ts");
+    expect(seed).toBeDefined();
+
+    // The graph's own field types drive the contract: the composer keeps the
+    // natural date-only shape ("2026-08-01") in the Graph, and the database
+    // target must render a value the Prisma DateTime parser accepts
+    // (ISO-8601 with a zone). A date-only string fails at migrate time with
+    // "premature end of input. Expected ISO-8601 DateTime."
+    const recordsSource = /const records = (\[[\s\S]*?\])\s*as const;/.exec(
+      seed!.content,
+    );
+    expect(
+      recordsSource,
+      "seed must declare its records literal",
+    ).not.toBeNull();
+    const records = JSON.parse(recordsSource![1]) as ReadonlyArray<{
+      readonly delegate: string;
+      readonly values: Readonly<Record<string, unknown>>;
+    }>;
+    const dateFieldTypes = new Map(
+      graph.domain.entities.flatMap((entity) =>
+        entity.fields
+          .filter((field) => field.type === "date" || field.type === "datetime")
+          .map(
+            (field) =>
+              [`${toCamelCase(entity.key)}:${field.key}`, field.type] as const,
+          ),
+      ),
+    );
+    expect(dateFieldTypes.size).toBeGreaterThan(0);
+    for (const record of records) {
+      for (const [fieldKey, value] of Object.entries(record.values)) {
+        const fieldType = dateFieldTypes.get(`${record.delegate}:${fieldKey}`);
+        if (fieldType === undefined || typeof value !== "string") continue;
+        expect(
+          value,
+          `${record.delegate}.${fieldKey} (${fieldType}) must be zone-qualified ISO-8601`,
+        ).toMatch(
+          /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?(Z|[+-]\d{2}:\d{2})$/,
+        );
+      }
+    }
+    // The exact regression: the expense `date` field must not be emitted as
+    // the natural date-only Graph value.
+    expect(seed!.content).not.toContain('"date": "2026-08-01"');
+  });
+});
+
+describe("seed binds required foreign-key scalars to seeded target records", () => {
+  const registry = createCompilerTargetRegistryV1();
+  registry.register(databaseTargetPlugin);
+
+  const fixtureInterpreter = new FixtureRequirementInterpreter();
+  const bookingBrief =
+    "Build an appointment booking application. Customers choose a service and an available time, staff confirm or reschedule appointments, and administrators manage services, schedules, and cancellations.";
+
+  async function composedAppointmentGraph(): Promise<ApplicationGraphV1> {
+    const interpretation = await fixtureInterpreter.interpret({
+      brief: bookingBrief,
+    });
+    const baseDraft = createBlankApplicationDraft({
+      applicationId: interpretation.spec.requirementId,
+      workspaceId: "local-workspace",
+      name: interpretation.spec.requirementId,
+    });
+    const [standard] = planProductAlternatives({
+      requirement: interpretation.spec,
+      blueprint: interpretation.blueprint,
+      baseDraft,
+    });
+    const { diff } = composeProductDraft({
+      plan: standard.plan,
+      blueprint: interpretation.blueprint,
+      baseDraft,
+    });
+    return assertValidApplicationGraph(
+      applyGraphDiffToDraft(baseDraft, diff).graph,
+    );
+  }
+
+  function compileSeed(graph: ApplicationGraphV1): string {
+    const files = registry.run(
+      "prisma-postgres",
+      buildCompilationInput({
+        publishedRevisionId: `published-${graph.metadata.id}`,
+        graph,
+        compositionLock: createCapabilityCompositionLock({
+          graphChecksum: hashApplicationGraph(graph),
+          selections: graph.integration.compositionSelections ?? [],
+        }),
+      }),
+    );
+    const seed = files.find((file) => file.path === "database/prisma/seed.ts");
+    expect(seed, "missing database/prisma/seed.ts").toBeDefined();
+    return seed!.content;
+  }
+
+  function seedRecords(seedContent: string): ReadonlyArray<{
+    readonly delegate: string;
+    readonly values: Readonly<Record<string, unknown>>;
+  }> {
+    const recordsSource = /const records = (\[[\s\S]*?\])\s*as const;/.exec(
+      seedContent,
+    );
+    expect(
+      recordsSource,
+      "seed must declare its records literal",
+    ).not.toBeNull();
+    return JSON.parse(recordsSource![1]);
+  }
+
+  it("binds the appointment serviceKey to the seeded service record id", async () => {
+    // Run-7 regression: the composed appointment seed declared no serviceKey,
+    // so migrate crashed with "Argument `service` is missing" and every
+    // appointment journey was skipped. The owning scalar must bind to the
+    // seeded service record id (an id-referencing relation).
+    const graph = await composedAppointmentGraph();
+    const appointmentRelation = (graph.domain.relations ?? []).find(
+      (relation) =>
+        relation.from === "appointment" && relation.to === "service",
+    );
+    expect(appointmentRelation).toBeDefined();
+    const records = seedRecords(compileSeed(graph));
+    const appointment = records.find(
+      (record) => record.delegate === "appointment",
+    );
+    expect(appointment).toBeDefined();
+    expect(appointment!.values.serviceKey).toBe("sample-service");
+  });
+
+  it("fails closed when a required foreign key has no seeded target", async () => {
+    const graph = await composedAppointmentGraph();
+    const withoutServiceSeed: ApplicationGraphV1 = {
+      ...graph,
+      domain: {
+        ...graph.domain,
+        seedData: (graph.domain.seedData ?? []).filter(
+          (seed) => seed.entity !== "service",
+        ),
+      },
+    };
+    expect(() => compileSeed(withoutServiceSeed)).toThrow(
+      /required foreign key/,
+    );
+  });
+
+  it("leaves non-required foreign keys unbound when the target is not seeded", async () => {
+    // An optional reference must not fail the compile: the generated schema
+    // accepts null, and the seed remains migratable without a binding.
+    const graph = await composedAppointmentGraph();
+    const withoutServiceSeed: ApplicationGraphV1 = {
+      ...graph,
+      domain: {
+        ...graph.domain,
+        entities: graph.domain.entities.map((entity) =>
+          entity.key === "appointment"
+            ? {
+                ...entity,
+                fields: entity.fields.map((field) =>
+                  field.key === "serviceKey"
+                    ? { ...field, required: false }
+                    : field,
+                ),
+              }
+            : entity,
+        ),
+        seedData: (graph.domain.seedData ?? []).filter(
+          (seed) => seed.entity !== "service",
+        ),
+      },
+    };
+    const records = seedRecords(compileSeed(withoutServiceSeed));
+    const appointment = records.find(
+      (record) => record.delegate === "appointment",
+    );
+    expect(appointment!.values.serviceKey).toBeUndefined();
   });
 });
 

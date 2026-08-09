@@ -352,19 +352,38 @@ export function useReleaseJourney(
     if (busyRef.current) return;
     const current = releaseRef.current;
     const previewRunId = current?.previewRunId;
+    const compilationId = current?.compilationId;
     if (
       current === null ||
       current.phase !== "preview" ||
-      previewRunId === undefined
+      previewRunId === undefined ||
+      compilationId === undefined
     ) {
       return;
     }
     void run(async () => {
       try {
+        // The stop endpoint only enqueues the worker action; the preview-run
+        // row reaches "stopped" only after the worker confirms the compose
+        // project and its artifact directory are gone. The cleaned-up phase
+        // must never be shown before that confirmation.
         await controlPlane.stopPreviewRun(previewRunId);
-        const latest = releaseRef.current;
-        if (latest === null) return;
-        setRelease(previewStopped(latest));
+        while (aliveRef.current) {
+          const latest = await controlPlane.getCurrentPreviewRun(compilationId);
+          if (latest?.status === "stopped") {
+            const at = releaseRef.current;
+            if (at === null) return;
+            setRelease(previewStopped(at));
+            return;
+          }
+          if (latest?.status === "failed" || latest === null) {
+            const at = releaseRef.current;
+            if (at === null) return;
+            setRelease(releaseFailed(at, "cleanup.failed"));
+            return;
+          }
+          await sleep(POLL_INTERVAL_MS);
+        }
       } catch (error) {
         fail("cleanup.failed", error);
       }

@@ -104,19 +104,16 @@ describe("graph simulation on composed products", () => {
     ]);
   });
 
-  it("executes the Appointment book, confirm, reschedule, and cancel journey legs from declared transitions", async () => {
+  it("executes the Appointment confirm, reschedule, cancel, and delete journey legs from declared transitions", async () => {
     const graph = await composedGraphFor(bookingBrief);
     const start = () => startGraphSimulation(graph, "appointment-lifecycle");
 
-    // book: the customer requests an available time.
-    const booked = dispatchGraphSimulationEvent(start(), {
-      roleKey: "customer",
-      eventKey: "request",
-      recordId: start().records[0].id,
-    });
-    expect(booked.records[0].stage).toBe("confirmed");
+    // Booking an appointment is the customer's create journey: the seeded
+    // record already starts "requested". The customer owns no transition —
+    // a customer-owned "request" that confirmed the appointment would be a
+    // self-confirmation, so the declared flow carries none.
 
-    // confirm: staff confirms a fresh request.
+    // confirm: staff confirms the requested appointment.
     const confirmed = dispatchGraphSimulationEvent(start(), {
       roleKey: "staff",
       eventKey: "confirm",
@@ -128,8 +125,8 @@ describe("graph simulation on composed products", () => {
     const fresh = start();
     const rescheduled = dispatchGraphSimulationEvent(
       dispatchGraphSimulationEvent(fresh, {
-        roleKey: "customer",
-        eventKey: "request",
+        roleKey: "staff",
+        eventKey: "confirm",
         recordId: fresh.records[0].id,
       }),
       {
@@ -143,8 +140,8 @@ describe("graph simulation on composed products", () => {
     // cancel: an administrator cancels a confirmed appointment.
     const cancelled = dispatchGraphSimulationEvent(
       dispatchGraphSimulationEvent(fresh, {
-        roleKey: "customer",
-        eventKey: "request",
+        roleKey: "staff",
+        eventKey: "confirm",
         recordId: fresh.records[0].id,
       }),
       {
@@ -155,10 +152,10 @@ describe("graph simulation on composed products", () => {
     );
     expect(cancelled.records[0].stage).toBe("cancelled");
 
-    // cancel-requested: an administrator cancels before confirmation.
+    // delete: an administrator removes an appointment before confirmation.
     const cancelledEarly = dispatchGraphSimulationEvent(start(), {
       roleKey: "administrator",
-      eventKey: "cancel-requested",
+      eventKey: "delete",
       recordId: start().records[0].id,
     });
     expect(cancelledEarly.records[0].stage).toBe("cancelled");

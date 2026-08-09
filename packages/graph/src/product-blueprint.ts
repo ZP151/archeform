@@ -238,6 +238,23 @@ export function assertProductBlueprint(input: unknown): ProductBlueprintV1 {
   const entityKeys = new Set(blueprint.entities.map((entity) => entity.key));
   const actorKeys = new Set(blueprint.actors.map((actor) => actor.key));
 
+  // The grant map backs the flow consistency invariant below: every declared
+  // transition event must be granted to its actor, or the composed runtime's
+  // policy could never serve the declared flow (every transition composes
+  // verbatim into `flow.flows[].transitions[]` and the generated API
+  // authorizes `(role, entity, event)` against the composed permissions).
+  const grantedActions = new Map<
+    string,
+    ReadonlyMap<string, ReadonlySet<string>>
+  >();
+  for (const actor of blueprint.actors) {
+    const byEntity = new Map<string, Set<string>>();
+    for (const permission of actor.permissions) {
+      byEntity.set(permission.entityKey, new Set(permission.actions));
+    }
+    grantedActions.set(actor.key, byEntity);
+  }
+
   for (const actor of blueprint.actors) {
     const entityKeysSeen = new Set<string>();
     for (const permission of actor.permissions) {
@@ -293,6 +310,14 @@ export function assertProductBlueprint(input: unknown): ProductBlueprintV1 {
       if (!actorKeys.has(transition.actorKey)) {
         throw new CompositionError(
           `Transition '${transition.key}' references unknown actor '${transition.actorKey}'.`,
+        );
+      }
+      const grants = grantedActions
+        .get(transition.actorKey)
+        ?.get(workflow.entityKey);
+      if (grants === undefined || !grants.has(transition.key)) {
+        throw new CompositionError(
+          `Transition '${transition.key}' of workflow '${workflow.key}' is not granted to its actor '${transition.actorKey}' for entity '${workflow.entityKey}' — the composed runtime could never serve the declared flow. Grant '${transition.key}' to the actor, or drop the transition.`,
         );
       }
     }

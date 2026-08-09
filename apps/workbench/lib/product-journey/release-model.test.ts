@@ -82,6 +82,13 @@ describe("the one-action release journey", () => {
     expect(release.verificationRunId).toBe("verification-run-1");
     expect(release.previewRunId).toBe("preview-1");
     expect(release.evidenceSummary).toEqual({ steps: 3, passed: 3, failed: 0 });
+    // The step-level evidence is retained verbatim for the Activity sheet,
+    // while the summary stays count-first on the release surface.
+    expect(release.evidenceSteps).toEqual([
+      { stepId: "isolated-boot", status: "passed" },
+      { stepId: "employee-submit", status: "passed" },
+      { stepId: "manager-approval", status: "passed" },
+    ]);
     expect(
       release.timeline.events.map((event) => [event.kind, event.status]),
     ).toEqual([
@@ -372,6 +379,26 @@ describe("evidenceSummaryOf", () => {
       ]),
     ).toEqual({ steps: 4, passed: 2, failed: 1 });
     expect(evidenceSummaryOf([])).toEqual({ steps: 0, passed: 0, failed: 0 });
+  });
+
+  it("keeps only lifecycle statuses as step evidence", () => {
+    let release = beginRelease({
+      applicationGraphId: "graph-1",
+      draftRevisionId: "draft-1",
+    });
+    release = publishingSucceeded(release, "published-1");
+    release = compilationStarted(release, "compilation-1");
+    release = compilationSucceeded(release, "compilation-1");
+    release = verificationStarted(release, "verification-run-1");
+    release = verificationSucceeded(release, [
+      { stepId: "expense-create", status: "passed" },
+      { stepId: "expense-deny", status: "passed" },
+      { stepId: "invented", status: "succeeded" as never },
+    ]);
+    expect(release.evidenceSteps).toEqual([
+      { stepId: "expense-create", status: "passed" },
+      { stepId: "expense-deny", status: "passed" },
+    ]);
   });
 });
 

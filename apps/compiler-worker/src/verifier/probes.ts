@@ -3,6 +3,8 @@ import type { VerificationStepV1 } from "@factory/graph";
 import type { VerificationStepPlanEntry } from "./verification-lifecycle.js";
 import type { VerificationEnvironment } from "./verification-environment.js";
 import {
+  resolveRegistryAction,
+  substituteRecordId,
   validateApiAction,
   validateIdempotencyJourney,
   validateRoleJourney,
@@ -210,9 +212,16 @@ export async function runRoleJourneyProbe(
   registry: readonly RegisteredApiAction[],
 ): Promise<VerificationStepV1> {
   const action = validateRoleJourney(journey, registry);
+  let recordId: string | undefined;
+  if (journey.chain !== undefined) {
+    const prologue = await runChainPrologue(context, journey, registry);
+    if (!prologue.ok) return prologue.step;
+    recordId = prologue.recordId;
+  }
+  const route = substituteRecordId(action.route, recordId);
   const result = await context.environment.request(
     action.method,
-    action.route,
+    route,
     "api",
     {
       headers: journeyHeaders(journey),
@@ -252,6 +261,92 @@ export async function runRoleJourneyProbe(
       ...journeyFacts(journey.principal, journey.action),
     },
   );
+}
+
+type ChainPrologueResult =
+  | { readonly ok: false; readonly step: VerificationStepV1 }
+  | { readonly ok: true; readonly recordId?: string };
+
+/**
+ * Drives a journey's chain prologue in order against a fresh record: the
+ * first step must be the create (validated in role-journey.ts), whose
+ * bounded response id is captured and substituted into every later step's
+ * route. A prologue step that returns anything but its declared status, or a
+ * create that yields no bounded id, fails the step closed — the fresh-record
+ * journey must never fall back to the seeded record.
+ */
+async function runChainPrologue(
+  context: ProbeContext,
+  journey: RoleJourneyFixture,
+  registry: readonly RegisteredApiAction[],
+): Promise<ChainPrologueResult> {
+  let recordId: string | undefined;
+  for (const [index, step] of journey.chain!.entries()) {
+    const stepAction = resolveRegistryAction(registry, step.action);
+    const stepRoute = substituteRecordId(stepAction.route, recordId);
+    const merged: RoleJourneyFixture = {
+      ...journey,
+      sessionId: step.sessionId ?? journey.sessionId,
+      principal: step.principal ?? journey.principal,
+    };
+    const result = await context.environment.request(
+      stepAction.method,
+      stepRoute,
+      "api",
+      {
+        headers: journeyHeaders(merged),
+        body: step.body,
+      },
+      index === 0,
+    );
+    if (result.status !== stepAction.expectedStatus) {
+      const facts = {
+        ...statusFacts(result.status),
+        ...journeyFacts(merged.principal, stepAction.action),
+      };
+      if (result.status === 0) {
+        return {
+          ok: false,
+          step: failedStep(
+            context.entry,
+            "role-journey",
+            "role-journey.chain_unreachable",
+            "A chain prologue request did not respond.",
+            result.durationMs,
+            facts,
+          ),
+        };
+      }
+      return {
+        ok: false,
+        step: failedStep(
+          context.entry,
+          "role-journey",
+          "role-journey.chain_unexpected",
+          "A chain prologue request did not complete as declared.",
+          result.durationMs,
+          facts,
+        ),
+      };
+    }
+    if (index === 0) {
+      if (result.recordId === undefined) {
+        return {
+          ok: false,
+          step: failedStep(
+            context.entry,
+            "role-journey",
+            "role-journey.record_id_not_captured",
+            "The chain create did not return a bounded record id.",
+            result.durationMs,
+            { action: stepAction.action },
+          ),
+        };
+      }
+      recordId = result.recordId;
+    }
+  }
+  return { ok: true, recordId };
 }
 
 /**

@@ -358,7 +358,9 @@ function appointmentBookingInterpretation(): RequirementInterpretationV1 {
         permissions: [
           {
             entityKey: "appointment",
-            actions: ["create", "read", "update", "cancel"],
+            // Booking an appointment is the create journey; the composed
+            // lifecycle has no customer-owned update or cancel transition.
+            actions: ["create", "read"],
           },
         ],
       },
@@ -384,7 +386,14 @@ function appointmentBookingInterpretation(): RequirementInterpretationV1 {
             entityKey: "schedule",
             actions: ["create", "read", "update", "delete", "manage"],
           },
-          { entityKey: "appointment", actions: ["read", "cancel", "manage"] },
+          {
+            // Cancellation is declared as one approved transition per source
+            // state — delete removes an unconfirmed request, cancel a
+            // confirmed appointment — and every declared transition must be
+            // granted to its actor for the composed runtime to serve the flow.
+            entityKey: "appointment",
+            actions: ["read", "delete", "cancel", "manage"],
+          },
         ],
       },
     ],
@@ -496,13 +505,9 @@ function appointmentBookingInterpretation(): RequirementInterpretationV1 {
           { key: "cancelled", label: "Cancelled" },
         ],
         transitions: [
-          {
-            key: "request",
-            from: "requested",
-            to: "confirmed",
-            label: "Request",
-            actorKey: "customer",
-          },
+          // Booking an appointment is the customer's create journey (the
+          // seeded record starts "requested"); no customer-owned transition
+          // may confirm the appointment. Confirming is staff-only.
           {
             key: "confirm",
             from: "requested",
@@ -518,7 +523,7 @@ function appointmentBookingInterpretation(): RequirementInterpretationV1 {
             actorKey: "staff",
           },
           {
-            key: "cancel-requested",
+            key: "delete",
             from: "requested",
             to: "cancelled",
             label: "Cancel request",

@@ -3767,6 +3767,41 @@ select:focus-visible {
   background: color-mix(in srgb, #d64545 12%, transparent);
   color: #d64545;
 }
+.release-evidence-steps {
+  margin: 10px 0 0;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.release-evidence-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.release-evidence-step code {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--accent-soft);
+}
+.release-evidence-step span {
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+.release-evidence-passed span {
+  color: var(--accent-dark);
+}
+.release-evidence-failed span {
+  color: #d64545;
+}
+.release-evidence-skipped span {
+  color: var(--muted);
+}
 
 /* Flow surface: the studio and the role simulator share the board. */
 .flow-simulation-layout {

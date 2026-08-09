@@ -14,7 +14,12 @@ export type RegisteredApiAction = {
   /** The declared action name, e.g. `expense.create`. */
   readonly action: string;
   readonly method: HttpMethod;
-  /** A concrete allowlisted route in the generated API, e.g. `/api/expense`. */
+  /**
+   * An allowlisted route in the generated API, e.g. `/api/expense`. A route
+   * may carry exactly one `{recordId}` token for record-bearing actions whose
+   * record is created by a chain prologue; the probe substitutes the bounded
+   * captured id before the request is sent.
+   */
   readonly route: string;
   readonly expectedStatus: number;
 };
@@ -48,6 +53,34 @@ export type RoleJourneyFixture = {
   readonly headers?: readonly DeclaredJourneyHeader[];
   /** A bounded flat declared JSON body, e.g. a create payload. */
   readonly body?: string;
+  /**
+   * Optional prologue for record-bearing journeys: the steps run in order
+   * against a fresh record — the first step must be a create (POST / 201
+   * without a `{recordId}` route), whose response's bounded top-level `id`
+   * is captured and substituted for `{recordId}` in every later step route
+   * and the final action route. Branching transitions (approve AND reject)
+   * drive their own records this way, because the seeded record can only
+   * host one branch. The captured id is pattern-validated, never persisted,
+   * and never enters evidence.
+   */
+  readonly chain?: readonly ChainJourneyStep[];
+};
+
+/**
+ * One prologue step of a chain journey. Steps resolve in the profile
+ * registry and run with the journey's principal kind; a step may override
+ * the principal/session value for steps a different role may perform (the
+ * employee creates and submits, the manager approves).
+ */
+export type ChainJourneyStep = {
+  /** Must resolve in the profile registry; unknown actions fail closed. */
+  readonly action: string;
+  /** Optional declared body for this prologue request. */
+  readonly body?: string;
+  /** Overrides the journey's session value for this step only. */
+  readonly sessionId?: string;
+  /** Overrides the journey's principal value for this step only. */
+  readonly principal?: string;
 };
 
 export type IdempotencyJourneyFixture = RoleJourneyFixture & {
@@ -265,10 +298,33 @@ export function resolveRegistryAction(
 }
 
 /**
+ * A route template carries exactly one `{recordId}` segment; every other
+ * segment is a bounded Graph-facing path segment. The concrete route after
+ * substitution must itself pass `isSafeRequestPath` (the probe re-validates
+ * the substituted path fail closed).
+ */
+function isSafeRouteTemplate(path: string): boolean {
+  const segments = path.split("/").slice(1);
+  const tokens = segments.filter((segment) => segment === "{recordId}");
+  if (tokens.length !== 1) {
+    return false;
+  }
+  return segments.every(
+    (segment) =>
+      segment === "{recordId}" ||
+      (segment !== "" &&
+        segment !== "." &&
+        segment !== ".." &&
+        /^[a-zA-Z0-9._~-]+$/.test(segment)),
+  );
+}
+
+/**
  * Fails closed on any malformed or untrusted registry entry: the route must
- * be a bounded Graph-facing route, the method and status bounded, and the
- * action name a declared identifier. A hostile fixture is a programming
- * error, never a bounded probe result.
+ * be a bounded Graph-facing route (a concrete path or a single-token
+ * `{recordId}` template), the method and status bounded, and the action name
+ * a declared identifier. A hostile fixture is a programming error, never a
+ * bounded probe result.
  */
 export function validateApiAction(action: RegisteredApiAction): void {
   if (
@@ -277,7 +333,7 @@ export function validateApiAction(action: RegisteredApiAction): void {
     !actionPattern.test(action.action) ||
     !httpMethods.includes(action.method) ||
     typeof action.route !== "string" ||
-    !isSafeRequestPath(action.route) ||
+    !(isSafeRequestPath(action.route) || isSafeRouteTemplate(action.route)) ||
     !Number.isInteger(action.expectedStatus) ||
     action.expectedStatus < 100 ||
     action.expectedStatus > 599
@@ -286,6 +342,35 @@ export function validateApiAction(action: RegisteredApiAction): void {
       "API actions must be declared fixture data.",
     );
   }
+}
+
+/** A bounded generated record id, e.g. a Prisma cuid. */
+const capturedRecordIdPattern = /^[a-zA-Z0-9._~-]{1,64}$/;
+
+/**
+ * Substitutes a bounded captured record id into a route template and
+ * re-validates the concrete path fail closed. A template without a captured
+ * id (the create never returned one) is a programming error, never a request.
+ */
+export function substituteRecordId(
+  route: string,
+  recordId: string | undefined,
+): string {
+  if (route.includes("{recordId}")) {
+    if (recordId === undefined || !capturedRecordIdPattern.test(recordId)) {
+      throw new VerificationContractError(
+        "A record-bearing route requires a bounded captured record id.",
+      );
+    }
+    const concrete = route.replace("{recordId}", recordId);
+    if (!isSafeRequestPath(concrete)) {
+      throw new VerificationContractError(
+        "A substituted route must remain a bounded Graph-facing route.",
+      );
+    }
+    return concrete;
+  }
+  return route;
 }
 
 /**
@@ -367,7 +452,102 @@ export function validateRoleJourney(
       );
     }
   }
+  if (journey.chain !== undefined) {
+    validateChainPrologue(journey, registry);
+  }
   return resolveRegistryAction(registry, journey.action);
+}
+
+const maximumChainSteps = 8;
+
+function validateChainPrologue(
+  journey: RoleJourneyFixture,
+  registry: readonly RegisteredApiAction[],
+): void {
+  if (
+    !Array.isArray(journey.chain) ||
+    journey.chain.length === 0 ||
+    journey.chain.length > maximumChainSteps
+  ) {
+    throw new VerificationContractError(
+      "Chain journeys must declare a bounded prologue.",
+    );
+  }
+  const principalKind =
+    journey.sessionId !== undefined
+      ? "session"
+      : journey.principal !== undefined
+        ? "principal"
+        : "anonymous";
+  for (const [index, step] of journey.chain.entries()) {
+    if (
+      !step ||
+      typeof step.action !== "string" ||
+      !actionPattern.test(step.action)
+    ) {
+      throw new VerificationContractError(
+        "Chain steps must be declared fixture data.",
+      );
+    }
+    if (
+      step.body !== undefined &&
+      (typeof step.body !== "string" || step.body.length === 0)
+    ) {
+      throw new VerificationContractError(
+        "Chain step bodies must be declared fixture data.",
+      );
+    }
+    if (step.principal !== undefined && step.sessionId !== undefined) {
+      throw new VerificationContractError(
+        "Chain steps resolve exactly one principal kind.",
+      );
+    }
+    if (
+      principalKind === "anonymous" &&
+      (step.principal !== undefined || step.sessionId !== undefined)
+    ) {
+      throw new VerificationContractError(
+        "Anonymous journeys cannot declare chain principals.",
+      );
+    }
+    if (principalKind === "session" && step.principal !== undefined) {
+      throw new VerificationContractError(
+        "Chain steps must match the journey's principal kind.",
+      );
+    }
+    if (principalKind === "principal" && step.sessionId !== undefined) {
+      throw new VerificationContractError(
+        "Chain steps must match the journey's principal kind.",
+      );
+    }
+    if (
+      step.sessionId !== undefined &&
+      !principalPattern.test(step.sessionId)
+    ) {
+      throw new VerificationContractError(
+        "Chain step sessions must be declared fixture data.",
+      );
+    }
+    if (
+      step.principal !== undefined &&
+      !principalPattern.test(step.principal)
+    ) {
+      throw new VerificationContractError(
+        "Chain step principals must be declared fixture data.",
+      );
+    }
+    const stepAction = resolveRegistryAction(registry, step.action);
+    if (
+      index === 0 &&
+      (stepAction.method !== "POST" ||
+        stepAction.expectedStatus !== 201 ||
+        stepAction.route.includes("{recordId}"))
+    ) {
+      throw new VerificationContractError(
+        "Chain journeys must begin with a record create.",
+      );
+    }
+  }
 }
 
 export function validateIdempotencyJourney(

@@ -80,6 +80,18 @@ const previewStarting = {
   previewUrl: null,
 };
 
+const previewStopping = {
+  ...previewReady,
+  status: "stopping",
+  previewUrl: null,
+};
+
+const previewStopped = {
+  ...previewReady,
+  status: "stopped",
+  previewUrl: null,
+};
+
 function Harness({
   controlPlaneUrl,
   target,
@@ -421,8 +433,10 @@ describe("useReleaseJourney", () => {
       "GET /compilations/compilation-1/preview-runs/current": [
         previewStarting,
         previewReady,
+        previewStopping,
+        previewStopped,
       ],
-      "POST /preview-runs/preview-1/stop": [previewReady],
+      "POST /preview-runs/preview-1/stop": [previewStopping],
     });
     const controller = mount();
     const live = (): ReleaseJourneyController =>
@@ -449,8 +463,59 @@ describe("useReleaseJourney", () => {
 
     await act(async () => {
       controller.cleanupRelease();
+      await vi.advanceTimersByTimeAsync(1_500);
     });
     expect(live().release?.phase).toBe("cleaned-up");
+    expect(live().canReset).toBe(true);
+  });
+
+  it("fails closed when the worker reports the cleanup failed", async () => {
+    // The worker reports its stop failed: the preview-run row flips to
+    // failed while the journey is still awaiting the confirmation, so the
+    // journey must never claim a cleaned-up preview.
+    const failedPreview = { ...previewStopping, status: "failed" };
+    stubTransport({
+      "POST /application-graphs/expense-approval/published-revisions": [
+        publishedRevision,
+      ],
+      "POST /compilations": [pendingCompilation],
+      "GET /compilations/compilation-1": [succeededCompilation],
+      "POST /compilations/compilation-1/verification-runs": [pendingRun],
+      "GET /verification-runs/verify-1": [succeededRun],
+      "POST /compilations/compilation-1/preview-runs": [previewStarting],
+      "GET /compilations/compilation-1/preview-runs/current": [
+        previewStarting,
+        previewReady,
+        previewStopping,
+        failedPreview,
+      ],
+      "POST /preview-runs/preview-1/stop": [previewStopping],
+    });
+    const controller = mount();
+    const live = (): ReleaseJourneyController =>
+      globalThis.__release as ReleaseJourneyController;
+
+    await act(async () => {
+      controller.publishRelease();
+    });
+    await act(async () => {
+      controller.compileRelease();
+      await vi.advanceTimersByTimeAsync(1_500);
+    });
+    await act(async () => {
+      controller.verifyRelease();
+      await vi.advanceTimersByTimeAsync(1_500);
+    });
+    await act(async () => {
+      controller.previewRelease();
+      await vi.advanceTimersByTimeAsync(1_500);
+    });
+    await act(async () => {
+      controller.cleanupRelease();
+      await vi.advanceTimersByTimeAsync(1_500);
+    });
+    expect(live().release?.phase).toBe("failed");
+    expect(live().release?.diagnosis).toBe("cleanup.failed");
     expect(live().canReset).toBe(true);
   });
 

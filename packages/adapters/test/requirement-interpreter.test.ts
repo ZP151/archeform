@@ -138,7 +138,13 @@ describe("FixtureRequirementInterpreter (test authority)", () => {
     );
     expect(
       workflow?.transitions.map((transition) => transition.key).sort(),
-    ).toEqual(expect.arrayContaining(["confirm", "reschedule", "cancel"]));
+    ).toEqual(
+      expect.arrayContaining(["confirm", "reschedule", "delete", "cancel"]),
+    );
+    // Every declared transition must be granted to its actor: the composed
+    // runtime authorizes (role, entity, event) against the blueprint
+    // permissions, and assertProductBlueprint now rejects ungranted flows.
+    expect(() => parseProductBlueprint(interpretation.blueprint)).not.toThrow();
 
     // Material difference: neither spec hash nor blueprint hash may collide.
     const other = await interpreter.interpret({

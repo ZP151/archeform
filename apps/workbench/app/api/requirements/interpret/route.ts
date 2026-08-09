@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 
-import {
-  FixtureRequirementInterpreter,
-  OpenAIRequirementInterpreterAdapter,
-} from "@factory/adapters";
+import { interpreter } from "../../../../lib/product-journey/interpret-provider";
 
 import {
   classifyInterpretationError,
@@ -15,20 +12,13 @@ import {
  * clarification answers are transient input interpreted into the
  * checksum-bound RequirementSpec and ProductBlueprint. The brief and answers
  * never persist and never appear in the response — only the parsed
- * interpretation crosses the boundary. Under test the deterministic fixture
+ * interpretation crosses the boundary. Provider selection lives in
+ * `interpret-provider`: under test and under the explicit
+ * FACTORY_FIXTURE_MODE=1 development/E2E lever the deterministic fixture
  * interprets; everywhere else the real OpenAI interpreter runs, and a
  * missing provider key fails closed with 503 rather than silently running a
  * fake model.
  */
-
-function interpreter() {
-  // The fixture is the deterministic test authority; any other environment
-  // must use the real provider or fail closed without a configured key.
-  if (process.env.NODE_ENV === "test") {
-    return new FixtureRequirementInterpreter();
-  }
-  return new OpenAIRequirementInterpreterAdapter();
-}
 
 export async function POST(request: Request): Promise<NextResponse> {
   let body: unknown;

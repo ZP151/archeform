@@ -1,4 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { FixtureRequirementInterpreter } from "@factory/adapters";
 import { createCapabilityCompositionLock } from "@factory/capabilities";
@@ -14,7 +17,10 @@ import {
 } from "@factory/graph";
 
 import { createGeneratedPageRuntimeProjection } from "../src/page-runtime-projection.js";
-import { generateApplicationBundle, type PublishedGraphInput } from "../src/index.js";
+import {
+  generateApplicationBundle,
+  type PublishedGraphInput,
+} from "../src/index.js";
 
 const fixtureInterpreter = new FixtureRequirementInterpreter();
 
@@ -72,7 +78,9 @@ function bundleInputFor(graph: ApplicationGraphV1): PublishedGraphInput {
 function withBoundedStudioEdits(graph: ApplicationGraphV1): ApplicationGraphV1 {
   const [first, second, ...rest] = graph.page.pages;
   const [headingPage] = graph.page.pages.filter((page) =>
-    page.blocks.some((block) => block.type === "stats" || block.type === "list"),
+    page.blocks.some(
+      (block) => block.type === "stats" || block.type === "list",
+    ),
   );
   const headingBlock = headingPage?.blocks.find((block) =>
     ["stats", "list"].includes(block.type),
@@ -163,7 +171,9 @@ describe("composition page runtime round trip", () => {
           ),
         );
         expect(
-          projection.pages.flatMap((page) => page.blocks.map((block) => block.props.heading)),
+          projection.pages.flatMap((page) =>
+            page.blocks.map((block) => block.props.heading),
+          ),
         ).toContain("Edited headline");
       });
 
@@ -192,4 +202,64 @@ describe("composition page runtime round trip", () => {
       });
     });
   }
+
+  describe("the generated page runtime type-checks with the strict compiler", () => {
+    const generatedDirectories: string[] = [];
+
+    afterEach(() => {
+      while (generatedDirectories.length > 0) {
+        rmSync(generatedDirectories.pop() as string, {
+          recursive: true,
+          force: true,
+        });
+      }
+    });
+
+    it("emits a type-checkable runtime for the calendar product", async () => {
+      // The isolated preview build type-checks the emitted bundle (that is
+      // where the runtime bug was found), so the unit suite must catch a
+      // non-compiling emission before any pipeline run. The check runs inside
+      // this package so "react" resolves to the @types/react devDependency;
+      // the emitted file is otherwise self-contained.
+      const graph = await composedGraphFor(bookingBrief);
+      const bundle = generateApplicationBundle(bundleInputFor(graph));
+      const runtime = bundle.files.find(
+        (file) => file.path === "web/app/page-runtime.tsx",
+      );
+      expect(runtime).toBeDefined();
+
+      const directory = join(__dirname, ".typecheck", `runtime-${Date.now()}`);
+      mkdirSync(directory, { recursive: true });
+      generatedDirectories.push(directory);
+      writeFileSync(
+        join(directory, "tsconfig.json"),
+        JSON.stringify({
+          compilerOptions: {
+            noEmit: true,
+            strict: true,
+            target: "es2022",
+            module: "esnext",
+            moduleResolution: "bundler",
+            jsx: "react-jsx",
+            lib: ["es2022", "dom"],
+            skipLibCheck: true,
+            types: [],
+          },
+          include: ["page-runtime.tsx"],
+        }),
+      );
+      writeFileSync(
+        join(directory, "page-runtime.tsx"),
+        runtime?.content ?? "",
+      );
+
+      const tsc = require.resolve("typescript/bin/tsc");
+      const check = spawnSync(
+        process.execPath,
+        [tsc, "--noEmit", "-p", join(directory, "tsconfig.json")],
+        { encoding: "utf8" },
+      );
+      expect(check.status, check.stderr + check.stdout).toBe(0);
+    });
+  });
 });

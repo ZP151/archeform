@@ -243,6 +243,437 @@ export function appointmentBookingGraph(): ApplicationGraphV1 {
   };
 }
 
+/**
+ * The real composed Expense Approval product (mirrors the Published Graph the
+ * acceptance prompt produced on 2026-08-09): the derived identity entities,
+ * the session-to-principal natural-key relation, and the branching approve /
+ * reject transitions the seeded record cannot host both of. The derived seed
+ * covers `expense` and `employee` only — no principal or session records.
+ */
+export function composedExpenseProductGraph(): ApplicationGraphV1 {
+  return {
+    ...baseGraph("expense-approval-product", "Expense Approval Product"),
+    domain: {
+      entities: [
+        {
+          key: "expense",
+          label: "Expense",
+          fields: [
+            { key: "amount", type: "decimal", required: true },
+            {
+              key: "category",
+              type: "enum",
+              required: true,
+              values: ["travel", "meals", "software", "office", "other"],
+            },
+            { key: "date", type: "date", required: true },
+            { key: "receipt", type: "url", required: false },
+            { key: "notes", type: "text", required: false },
+            {
+              key: "status",
+              type: "enum",
+              required: true,
+              values: ["draft", "submitted", "approved", "rejected"],
+            },
+          ],
+          indexes: [],
+        },
+        {
+          key: "employee",
+          label: "Employee",
+          fields: [
+            { key: "name", type: "string", required: true },
+            { key: "department", type: "string", required: false },
+          ],
+          indexes: [],
+        },
+        {
+          key: "expense-approval-requirement-principal",
+          label: "Expense principal",
+          fields: [
+            { key: "subjectRef", type: "string", required: true, unique: true },
+            {
+              key: "role",
+              type: "enum",
+              required: true,
+              values: ["employee", "manager", "finance"],
+            },
+            { key: "active", type: "boolean", required: true },
+          ],
+          indexes: [],
+        },
+        {
+          key: "expense-approval-requirement-session",
+          label: "Expense session",
+          fields: [
+            { key: "subjectRef", type: "string", required: true },
+            {
+              key: "status",
+              type: "enum",
+              required: true,
+              values: ["active", "expired"],
+            },
+            { key: "expiresAt", type: "datetime", required: true },
+          ],
+          indexes: [],
+        },
+      ],
+      relations: [
+        {
+          from: "expense-approval-requirement-session",
+          to: "expense-approval-requirement-principal",
+          kind: "many-to-one",
+          field: "subjectRef",
+        },
+      ],
+      seedData: [
+        {
+          entity: "expense",
+          id: "sample-expense",
+          values: {
+            amount: 125.5,
+            category: "travel",
+            date: "2026-08-01",
+            receipt: "sample-receipt.pdf",
+            notes: "Sample Notes detail",
+            status: "draft",
+          },
+        },
+        {
+          entity: "employee",
+          id: "sample-employee",
+          values: {
+            name: "Sample Name",
+            department: "Sample Department",
+          },
+        },
+      ],
+    },
+    policy: {
+      roles: ["employee", "manager", "finance"],
+      permissions: [
+        {
+          role: "employee",
+          resource: "expense",
+          actions: ["create", "read", "submit"],
+        },
+        {
+          role: "employee",
+          resource: "employee",
+          actions: ["read", "update"],
+        },
+        {
+          role: "employee",
+          resource: "expense-approval-requirement-principal",
+          actions: ["read"],
+        },
+        {
+          role: "employee",
+          resource: "expense-approval-requirement-session",
+          actions: ["create", "read", "update"],
+        },
+        {
+          role: "manager",
+          resource: "expense",
+          actions: ["read", "approve", "reject"],
+        },
+        {
+          role: "manager",
+          resource: "expense-approval-requirement-principal",
+          actions: ["read"],
+        },
+        {
+          role: "manager",
+          resource: "expense-approval-requirement-session",
+          actions: ["read"],
+        },
+        {
+          role: "finance",
+          resource: "expense",
+          actions: ["read", "audit"],
+        },
+        {
+          role: "finance",
+          resource: "expense-approval-requirement-principal",
+          actions: ["read"],
+        },
+        {
+          role: "finance",
+          resource: "expense-approval-requirement-session",
+          actions: ["read"],
+        },
+      ],
+    },
+    flow: {
+      flows: [
+        {
+          id: "expense-approval",
+          entity: "expense",
+          initialState: "draft",
+          states: ["draft", "submitted", "approved", "rejected"],
+          events: ["submit", "approve", "reject"],
+          transitions: [
+            {
+              from: "draft",
+              event: "submit",
+              to: "submitted",
+              roles: ["employee"],
+            },
+            {
+              from: "submitted",
+              event: "approve",
+              to: "approved",
+              roles: ["manager"],
+            },
+            {
+              from: "submitted",
+              event: "reject",
+              to: "rejected",
+              roles: ["manager"],
+            },
+          ],
+        },
+      ],
+    },
+  };
+}
+
+/**
+ * The real composed Appointment Booking product (mirrors the Published Graph
+ * the acceptance prompt produced on 2026-08-09): the service reference (FK
+ * scalar `serviceKey` -> `service.id`), the session-to-principal natural-key
+ * relation, and the five-transition branching flow (request and confirm both
+ * leave `requested`; cancel-requested and cancel leave different states).
+ * Seeds cover service, appointment, and schedule only.
+ */
+export function composedAppointmentProductGraph(): ApplicationGraphV1 {
+  return {
+    ...baseGraph("appointment-booking-product", "Appointment Booking Product"),
+    domain: {
+      entities: [
+        {
+          key: "service",
+          label: "Service",
+          fields: [
+            { key: "name", type: "string", required: true },
+            { key: "durationMinutes", type: "integer", required: true },
+            { key: "price", type: "decimal", required: true },
+          ],
+          indexes: [],
+        },
+        {
+          key: "appointment",
+          label: "Appointment",
+          fields: [
+            { key: "serviceKey", type: "string", required: true },
+            { key: "startsAt", type: "datetime", required: true },
+            { key: "customerName", type: "string", required: true },
+            { key: "notes", type: "text", required: false },
+            {
+              key: "status",
+              type: "enum",
+              required: true,
+              values: ["requested", "confirmed", "rescheduled", "cancelled"],
+            },
+          ],
+          indexes: [],
+        },
+        {
+          key: "schedule",
+          label: "Schedule",
+          fields: [
+            { key: "day", type: "date", required: true },
+            { key: "capacity", type: "integer", required: true },
+          ],
+          indexes: [],
+        },
+        {
+          key: "appointment-booking-requirement-principal",
+          label: "Appointment principal",
+          fields: [
+            { key: "subjectRef", type: "string", required: true, unique: true },
+            {
+              key: "role",
+              type: "enum",
+              required: true,
+              values: ["customer", "staff", "administrator"],
+            },
+            { key: "active", type: "boolean", required: true },
+          ],
+          indexes: [],
+        },
+        {
+          key: "appointment-booking-requirement-session",
+          label: "Appointment session",
+          fields: [
+            { key: "subjectRef", type: "string", required: true },
+            {
+              key: "status",
+              type: "enum",
+              required: true,
+              values: ["active", "expired"],
+            },
+            { key: "expiresAt", type: "datetime", required: true },
+          ],
+          indexes: [],
+        },
+      ],
+      relations: [
+        {
+          from: "appointment",
+          to: "service",
+          kind: "many-to-one",
+          field: "serviceKey",
+        },
+        {
+          from: "appointment-booking-requirement-session",
+          to: "appointment-booking-requirement-principal",
+          kind: "many-to-one",
+          field: "subjectRef",
+        },
+      ],
+      seedData: [
+        {
+          entity: "service",
+          id: "sample-service",
+          values: {
+            name: "Sample Name",
+            price: 125.5,
+            durationMinutes: 12,
+          },
+        },
+        {
+          entity: "appointment",
+          id: "sample-appointment",
+          values: {
+            customerName: "Sample Customer name",
+            startsAt: "2026-08-01T09:00:00Z",
+            notes: "Sample Notes detail",
+            status: "requested",
+          },
+        },
+        {
+          entity: "schedule",
+          id: "sample-schedule",
+          values: {
+            day: "2026-08-01",
+            capacity: 12,
+          },
+        },
+      ],
+    },
+    policy: {
+      roles: ["customer", "staff", "administrator"],
+      permissions: [
+        {
+          role: "customer",
+          resource: "appointment",
+          actions: ["create", "read", "update", "cancel"],
+        },
+        {
+          role: "customer",
+          resource: "appointment-booking-requirement-principal",
+          actions: ["read"],
+        },
+        {
+          role: "customer",
+          resource: "appointment-booking-requirement-session",
+          actions: ["create", "read", "update"],
+        },
+        {
+          role: "staff",
+          resource: "appointment",
+          actions: ["read", "confirm", "reschedule"],
+        },
+        {
+          role: "staff",
+          resource: "appointment-booking-requirement-principal",
+          actions: ["read"],
+        },
+        {
+          role: "staff",
+          resource: "appointment-booking-requirement-session",
+          actions: ["read"],
+        },
+        {
+          role: "administrator",
+          resource: "service",
+          actions: ["create", "read", "update", "delete", "manage"],
+        },
+        {
+          role: "administrator",
+          resource: "schedule",
+          actions: ["create", "read", "update", "delete", "manage"],
+        },
+        {
+          role: "administrator",
+          resource: "appointment",
+          actions: ["read", "cancel", "manage"],
+        },
+        {
+          role: "administrator",
+          resource: "appointment-booking-requirement-principal",
+          actions: ["read"],
+        },
+        {
+          role: "administrator",
+          resource: "appointment-booking-requirement-session",
+          actions: ["read"],
+        },
+      ],
+    },
+    flow: {
+      flows: [
+        {
+          id: "appointment-lifecycle",
+          entity: "appointment",
+          initialState: "requested",
+          states: ["requested", "confirmed", "rescheduled", "cancelled"],
+          events: [
+            "request",
+            "confirm",
+            "reschedule",
+            "cancel-requested",
+            "cancel",
+          ],
+          transitions: [
+            {
+              from: "requested",
+              event: "request",
+              to: "confirmed",
+              roles: ["customer"],
+            },
+            {
+              from: "requested",
+              event: "confirm",
+              to: "confirmed",
+              roles: ["staff"],
+            },
+            {
+              from: "confirmed",
+              event: "reschedule",
+              to: "rescheduled",
+              roles: ["staff"],
+            },
+            {
+              from: "requested",
+              event: "cancel-requested",
+              to: "cancelled",
+              roles: ["administrator"],
+            },
+            {
+              from: "confirmed",
+              event: "cancel",
+              to: "cancelled",
+              roles: ["administrator"],
+            },
+          ],
+        },
+      ],
+    },
+  };
+}
+
 /** Every policy role is allowed on the first transition: the denial must fall back to an anonymous request. */
 export function singleRoleGraph(): ApplicationGraphV1 {
   return {

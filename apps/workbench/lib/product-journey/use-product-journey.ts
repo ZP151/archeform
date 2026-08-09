@@ -1,4 +1,11 @@
-import { useCallback, useMemo, useReducer, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 
 import type { RequirementInterpretationV1 } from "@factory/adapters";
 import type { ApplicationGraphV1 } from "@factory/graph";
@@ -127,6 +134,12 @@ export function useProductJourney(
   const [briefDraft, setBriefDraft] = useState("");
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const busyRef = useRef(false);
+  /**
+   * Latches the automatic planning step: once an accepted interpretation
+   * reaches the planning stage, the review and its alternatives are created
+   * exactly once (StrictMode-safe), and a failure or reset re-arms it.
+   */
+  const planningStartedRef = useRef(false);
   const controlPlane = useMemo(
     () => new ControlPlaneClient(controlPlaneUrl),
     [controlPlaneUrl],
@@ -217,6 +230,22 @@ export function useProductJourney(
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [run, state, controlPlane]);
+
+  // An accepted interpretation with no open questions lands directly in the
+  // planning stage; the review and its plan alternatives are created here,
+  // once, so the plan surface appears without an extra manual step. A
+  // failure or reset re-arms the latch for the next product.
+  useEffect(() => {
+    if (state.stage === "planning" && state.review === null) {
+      if (planningStartedRef.current) return;
+      planningStartedRef.current = true;
+      void createProduct();
+      return;
+    }
+    if (state.stage === "failed" || state.stage === "brief") {
+      planningStartedRef.current = false;
+    }
+  }, [state.stage, state.review, createProduct]);
 
   const chooseAlternative = useCallback(
     async (key: string): Promise<void> => {

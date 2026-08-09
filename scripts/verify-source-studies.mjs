@@ -21,7 +21,11 @@ const requiredStudies = [
 ];
 
 for (const required of requiredStudies) {
-  const path = resolve(repositoryRoot, "docs/ecosystem/source-studies", required.file);
+  const path = resolve(
+    repositoryRoot,
+    "docs/ecosystem/source-studies",
+    required.file,
+  );
   const markdown = await readFile(path, "utf8");
   const requiredLines = [
     `repository: ${required.repository}`,
@@ -36,15 +40,23 @@ for (const required of requiredStudies) {
     throw new Error(`${required.file} is missing: ${missing.join(", ")}`);
   }
 
-  if (required.excludedPath && !markdown.includes(`- ${required.excludedPath}`)) {
+  if (
+    required.excludedPath &&
+    !markdown.includes(`- ${required.excludedPath}`)
+  ) {
     throw new Error(`${required.file} must exclude ${required.excludedPath}`);
   }
 
   const pathBlock = markdown.match(/^paths:\n((?:  - .+\n)+)/m)?.[1] ?? "";
-  const includedPaths = Array.from(pathBlock.matchAll(/^  - (.+)$/gm), ([, path]) => path);
+  const includedPaths = Array.from(
+    pathBlock.matchAll(/^  - (.+)$/gm),
+    ([, path]) => path,
+  );
   if (includedPaths.some((path) => path.startsWith("ee/"))) {
     throw new Error(`${required.file} cannot include an Amplication ee/ path`);
   }
 }
 
-process.stdout.write(`Verified ${requiredStudies.length} immutable reference-only source studies.\n`);
+process.stdout.write(
+  `Verified ${requiredStudies.length} immutable reference-only source studies.\n`,
+);
