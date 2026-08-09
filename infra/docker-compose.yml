@@ -50,8 +50,9 @@ services:
       FACTORY_INTERNAL_WORKER_TOKEN: ${FACTORY_INTERNAL_WORKER_TOKEN:?required}
       PORT: 3000
       FACTORY_ARTIFACT_ROOT: /artifacts
-      # Optional and intentionally passed only into the local Control Plane.
-      # Neither the Worker nor generated applications receive model credentials.
+      # Optional model credentials for the local server boundaries only.
+      # The Workbench receives them at its own boundary below; neither the
+      # Worker nor generated applications receive model credentials.
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5}
     depends_on:
@@ -102,6 +103,13 @@ services:
       # The Golden Path plan route reads recipe fixtures from the repository
       # root (the whole workspace is copied into the image at /workspace).
       FACTORY_REPOSITORY_ROOT: /workspace
+      # Model credentials for the requirement interpretation route, which
+      # runs in the Workbench server. Interpolated from the local
+      # environment at compose time (never a committed literal) and never
+      # exposed through a NEXT_PUBLIC_* name: Next.js would inline those
+      # into browser bundles.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5}
       # Explicit development/E2E-only lever for the deterministic fixture
       # interpreter; default off, never a fallback. Final acceptance runs
       # without it and fails closed unless a real provider key is configured.

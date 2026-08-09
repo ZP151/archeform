@@ -30,5 +30,7 @@ export function interpreter(): RequirementInterpreterAdapterV1 {
   ) {
     return new FixtureRequirementInterpreter();
   }
-  return new OpenAIRequirementInterpreterAdapter();
+  return new OpenAIRequirementInterpreterAdapter({
+    model: process.env.OPENAI_MODEL || "gpt-5",
+  });
 }
