@@ -61,10 +61,17 @@ Advanced surfaces unless an exception requires attention.
 - Compiler, source export, and isolated acceptance owner: `platform`.
 - Draft Preview Snapshot creation, retention, and disposal owner:
   `control-plane`; preview surface rendering owner: `platform`.
-- Contract status: `proposed` until Task 1 is reviewed; parallel implementation
-  against Graph v2 is forbidden before the contract is frozen.
+- Contract status: `frozen` for Task 1 implementation under founder-accepted
+  ADR-0009. Task 1 implementation is not yet reviewed or accepted; downstream
+  implementation against Graph v2 remains forbidden until Task 1 is accepted
+  and pushed.
 - Contract artifact:
   `docs/superpowers/specs/2026-08-10-prompt-to-polished-restaurant-product-design.md`.
+- Exact Task 1 public signatures and the additive journey/binding gap closure:
+  the frozen shared-contract checkpoint in the Task 1 section of this ledger.
+- Governance decision artifact:
+  `docs/adr/adr-0009-application-graph-v2-shared-contract.md` (`Accepted`,
+  `keep` the current runtime profile and add the versioned V2 contract).
 
 Any change to Graph v2, `DraftPreviewSnapshotV1`, lifecycle, compiler input,
 surface ownership, or generated-source ownership stops parallel work and
@@ -2778,15 +2785,52 @@ rejected.`; one journey passes and one fails after 11.6 minutes. The harness
     product or Task 1 implementation, provider/model call, service, Docker,
     Compose, live-gate replay, cloud deployment, or path outside the list is
     authorized.
+- D0 delivery is complete. Controller commit
+  `484aa5c42a481efdd8e7c4a2e234c7773d7e5857`
+  (`docs: establish executable technology governance`) contains exactly the 19
+  authorized paths and was pushed without force to
+  `feat/governed-composition-capability-foundry`. Fresh controller evidence
+  records local HEAD and the upstream remote tip at that exact hash, worktree
+  status count 0, and the committed accepted-state governance CLI passing. PM
+  records the pushed equality and closes D0 delivery. D0 remains `accepted`;
+  this delivery gate is consumed and is not replayed against later Task 1 live
+  state. The PM-owned Task 1 kickoff records below form the new dirty baseline
+  and do not alter the delivered D0 commit.
 
 ## Task 1 — Freeze Product Intent and Application Graph v2
 
-State: `planned`.
+State: `accepted`.
 
-Owner: `integration`.
+Owner: `integration` using one GPT-5.6-Sol writer.
 
-Allowed paths: `packages/graph/src/**`, `packages/graph/test/**`, and Graph
-contract documentation assigned by PM.
+Specialization: Graph serialization, immutable lifecycle, canonical hashing,
+and compatibility boundaries.
+
+Contract owner: `integration`.
+
+Contract status: `frozen`.
+
+Contract artifact:
+`docs/superpowers/specs/2026-08-10-prompt-to-polished-restaurant-product-design.md`,
+authorized by accepted
+`docs/adr/adr-0009-application-graph-v2-shared-contract.md`.
+
+Allowed paths:
+
+- `packages/graph/src/product-intent.ts`;
+- `packages/graph/src/product-recipe.ts`;
+- `packages/graph/src/application-graph-v2.ts`;
+- `packages/graph/src/source-overlay.ts`;
+- `packages/graph/src/draft-preview-snapshot.ts`;
+- `packages/graph/src/application-graph-adapter.ts`;
+- `packages/graph/src/index.ts`;
+- `packages/graph/src/browser.ts`;
+- `packages/graph/test/product-intent.test.ts`;
+- `packages/graph/test/product-recipe.test.ts`;
+- `packages/graph/test/application-graph-v2.test.ts`;
+- `packages/graph/test/source-overlay.test.ts`;
+- `packages/graph/test/draft-preview-snapshot.test.ts`;
+- `packages/graph/test/application-graph-adapter.test.ts`.
 
 Acceptance evidence:
 
@@ -2801,8 +2845,848 @@ Acceptance evidence:
 - production compilers accept only Published V1/V2 Graph inputs through an
   explicit version adapter.
 
-Blocked by: D0 PM acceptance and the reviewed D0 commit pushed with local HEAD
-verified equal to the remote branch tip. Task 0 is already accepted.
+Blocked by: none. Task 0 is accepted, and D0 delivery is closed at
+`484aa5c42a481efdd8e7c4a2e234c7773d7e5857` with local HEAD verified equal to
+the upstream remote tip.
+
+Task 1 implementation checkpoint — 2026-08-12:
+
+- Governance is already satisfied by founder-accepted ADR-0009. This wave keeps
+  the current Golden runtime profile and implements only the frozen additive
+  `factory.application-graph/v2` contract. Any runtime, dependency, provider,
+  security boundary, serialization identifier, compatibility rule, or other
+  material contract deviation stops the writer and returns to PM and technology
+  governance; it is not absorbed into Task 1.
+- TDD starts with focused REDs for the exact approved contracts and adversarial
+  boundaries: strict Product Intent, Experience Brief, Product Recipe, surface,
+  screen, Graph V2, Source Overlay, and Draft Preview Snapshot schemas; excess
+  keys and package/source/provider material; duplicate or unresolved references;
+  cross-surface navigation; unsafe overlays and client-writable server fields;
+  immutable snapshot revision/checksum binding and legal transitions; explicit
+  deploy/export/Compilation rejection; stable canonical V2 hashing; byte- and
+  hash-immutable V1-to-V2 Draft upgrade; explicit V1/V2 adapters; and unknown or
+  missing version rejection. The writer runs the focused Graph test after every
+  RED/GREEN cycle and makes only the minimum contract-preserving implementation.
+- GREEN requires `pnpm --filter @factory/graph test`,
+  `pnpm --filter @factory/graph typecheck`, and
+  `pnpm exec prettier --check packages/graph/src packages/graph/test`, plus a
+  self-review proving browser exports contain no runtime-only dependency and the
+  diff stays inside the exact 14 paths.
+- One independent GPT-5.6-Sol task review then covers frozen-interface fidelity,
+  lifecycle and V1 immutability, canonical hashing, fail-closed versioning,
+  security/material boundaries, browser safety, and path containment. After no
+  open P0/P1, one provider-free, service-free GPT-5.6-Terra QA pass reruns the
+  complete Graph tests, typecheck, formatting, deterministic/hash fixtures, and
+  the schema, lifecycle, adapter, overlay, and browser-export adversarial matrix.
+  One final independent Sol release review and fresh PM verification are
+  required before Task 1 may become `accepted` or receive commit/push authority.
+- First dependency wave: exactly one Sol integration writer owns the 14 paths.
+  Read-only mapping may inspect existing V1 parsers, hashes, and exports, but no
+  parallel writer starts. Tasks 2 and 3 remain `planned` and blocked; Restaurant
+  semantics, UI registry/source, compilers, Workbench, providers, services,
+  Docker, and Compose remain unauthorized. Only after Task 1 is accepted and its
+  reviewed commit is pushed may PM start Tasks 2 and 3 as the first path-disjoint
+  parallel product wave. A shared-contract change stops both future lines and
+  returns to this contract owner.
+
+Task 1 frozen shared-contract checkpoint — 2026-08-12:
+
+- This checkpoint closes implementation ambiguities inside the founder-accepted
+  additive V2 decision. It does not change the Golden runtime profile, V1
+  serialization or hash behavior, a security/tenant/provider boundary, a
+  compiler target, a generated template, a service, Docker, or Compose. The
+  exact 14-path Task 1 wave may resume against this checkpoint. Task 1 remains
+  `implementing`; no review, acceptance, commit, push, or downstream-task gate
+  is implied.
+- The shared digest alias and strict Published V1 input envelope are exact:
+
+  ```ts
+  export type Sha256Digest = `sha256:${string}`;
+
+  export type PublishedApplicationGraphV1Input = {
+    kind: "published-application-graph";
+    status: "published";
+    graphVersion: "factory.application-graph/v1";
+    revisionId: string;
+    revisionNumber: number;
+    graphHash: Sha256Digest;
+    graph: ApplicationGraphV1;
+  };
+  ```
+
+  The record is exact-key. `revisionNumber` is a positive integer;
+  `graphVersion` must equal `graph.apiVersion`; and `graphHash` must equal the
+  existing canonical `hashApplicationGraph(graph)`. Historic Published V1
+  bytes and hashes are inputs only and remain immutable.
+
+- The V1-to-V2 upgrade context, immutable new Draft envelope, and public
+  signature are exact:
+
+  ```ts
+  export type ApplicationGraphV1ToV2UpgradeContext = {
+    migrationVersion: "factory.application-graph-v1-to-v2/v1";
+    targetDraftRevisionId: string;
+    targetDraftRevisionNumber: number;
+    surfaces: ApplicationSurfaceV1[];
+    pageUpgrades: Array<{
+      pageId: string;
+      surfaceKey: string;
+      screenIntent: ScreenIntentV1;
+      recipe: {
+        key: string;
+        version: string;
+        regions: Array<{ key: string; blockIds: string[] }>;
+      };
+    }>;
+    responsiveNavigation: Array<{
+      surfaceKey: string;
+      compactAt: number;
+      collapse: "drawer" | "tabs" | "none";
+    }>;
+    seedScenarios: ApplicationGraphV2["seedScenarios"];
+    journeys: ApplicationGraphV2["journeys"];
+    fieldAuthorities: ApplicationGraphV2["fieldAuthorities"];
+    bindingPolicies: ApplicationGraphV2["bindingPolicies"];
+  };
+
+  export type ApplicationGraphV2DraftRevision = {
+    kind: "application-graph-draft-revision";
+    status: "draft";
+    revisionId: string;
+    revisionNumber: number;
+    graphVersion: "factory.application-graph/v2";
+    graphHash: Sha256Digest;
+    graph: ApplicationGraphV2;
+    lineage: {
+      kind: "application-graph-v1-upgrade";
+      migrationVersion: "factory.application-graph-v1-to-v2/v1";
+      source: Omit<PublishedApplicationGraphV1Input, "graph">;
+    };
+  };
+
+  export function upgradeApplicationGraphV1ToV2Draft(
+    source: PublishedApplicationGraphV1Input,
+    context: ApplicationGraphV1ToV2UpgradeContext,
+  ): ApplicationGraphV2DraftRevision;
+  ```
+
+  Both inputs are strict and target revision numbers are positive integers.
+  The source envelope is parsed and its version/hash binding verified before
+  upgrade. `pageUpgrades` contains exactly one entry for every V1 page and no
+  unknown page. The upgrade retains the V1 metadata, page base data, domain,
+  policy, flow, integration, and experience base data while attaching only the
+  explicit V2 context, then returns a fresh parsed V2 Graph and new canonical
+  hash. It never mutates `source`, `source.graph`, or `context`. Lineage records
+  the exact Published source kind, status, Graph version, revision identity,
+  positive revision number, and hash, while deliberately omitting duplicate
+  source Graph bytes.
+
+- The strict Published V2 envelope, discriminated input/output unions, and
+  adapter signature are exact:
+
+  ```ts
+  export type PublishedApplicationGraphV2Input = {
+    kind: "published-application-graph";
+    status: "published";
+    graphVersion: "factory.application-graph/v2";
+    revisionId: string;
+    revisionNumber: number;
+    graphHash: Sha256Digest;
+    graph: ApplicationGraphV2;
+  };
+
+  export type PublishedApplicationGraphInput =
+    PublishedApplicationGraphV1Input | PublishedApplicationGraphV2Input;
+
+  export type AdaptedPublishedApplicationGraph =
+    PublishedApplicationGraphV1Input | PublishedApplicationGraphV2Input;
+
+  export function adaptPublishedApplicationGraph(
+    input: unknown,
+  ): AdaptedPublishedApplicationGraph;
+  ```
+
+  The adapter parses outer `kind`, `status`, and `graphVersion` first and
+  dispatches only the exact V1 or V2 branch. It strict-parses the matching Graph,
+  verifies the positive revision and canonical hash, and returns a fresh
+  validated envelope on the same version branch. Extra keys, a missing,
+  unknown, or mismatched version, a Draft, or a preview snapshot fail closed.
+  The adapter never guesses, defaults, upgrades, or down-converts.
+
+- `ApplicationGraphV2` gains one minimal Graph-internal journey namespace; it
+  is not a seventh model-facing interface:
+
+  ```ts
+  journeys: Array<{
+    key: string;
+    label: string;
+    actorRoleKey: string;
+    flowKeys: string[];
+    entryPageKey: string;
+    outcome: string;
+  }>;
+  ```
+
+  Journey keys are unique. `actorRoleKey` resolves to an authorization role in
+  `policy.roles`; `flowKeys` is non-empty, unique within the journey, and every
+  key resolves to `flow.flows[].id`; and `entryPageKey` resolves to one Graph
+  page. Every embedded `ScreenIntentV1.primaryJourneyKeys` entry resolves to
+  this namespace, and every Graph flow is reachable from at least one journey.
+  `ProductRecipeV1.acceptanceJourneyKeys` uses the same journey-key namespace;
+  it is never an alias for `ProductRecipeV1.flows`. Because a standalone
+  Product Recipe does not contain a Graph, its structural parser checks exact
+  keys, grammar, and uniqueness, while the deterministic recipe/composer
+  admission gate must resolve those keys against the composed Graph's
+  `journeys` before the Draft is valid.
+
+- `ApplicationGraphV2` gains one intrinsic, generic authority classification
+  for every domain field:
+
+  ```ts
+  fieldAuthorities: Array<{
+    entityKey: string;
+    fieldKey: string;
+    authority: "client" | "server";
+  }>;
+  ```
+
+  The tuple `(entityKey, fieldKey)` is unique and resolves exactly one declared
+  Graph domain field. Every domain field has exactly one `fieldAuthorities`
+  entry; unknown fields, duplicates, and omissions fail closed. This is the
+  source of authority truth. It uses no field-key, entity-key, product-name, or
+  regular-expression heuristic. The deterministic approved Product
+  Recipe/composer alone supplies it. Provider/model output cannot supply or
+  override it. Task 2 must classify server-derived totals, order state, payment
+  state, inventory movement, and audit fields as `server`; client-owned input
+  fields are classified explicitly as `client`.
+
+- `ApplicationGraphV2` binds each block binding to that intrinsic field
+  authority through:
+
+  ```ts
+  bindingPolicies: Array<{
+    pageId: string;
+    blockId: string;
+    bindingKey: string;
+    entityKey: string;
+    fieldKey: string;
+    access: "read" | "write";
+    authority: "client" | "server";
+  }>;
+  ```
+
+  The tuple `(pageId, blockId, bindingKey)` is unique. `pageId` resolves a Graph
+  page; `blockId` resolves a block on that page; `bindingKey` resolves a key in
+  that block's binding record; and `entityKey` plus `fieldKey` resolve one Graph
+  domain field. Every Graph block binding has exactly one policy.
+  `bindingPolicy.authority` must exactly equal the referenced
+  `fieldAuthorities` entry. `access: "write"` is valid only when that intrinsic
+  field authority is `client`; a server-authoritative field therefore remains
+  non-writable even if a caller relabels only its binding policy as
+  `{ access: "write", authority: "client" }`. The deterministic approved
+  Product Recipe/composer alone owns both `fieldAuthorities` and
+  `bindingPolicies`. Provider/model output cannot supply or override either,
+  and `ScreenIntentV1` remains bounded product meaning rather than an authority
+  channel.
+
+- The Draft Preview Snapshot transition command/result unions and public
+  signature are exact:
+
+  ```ts
+  export type DraftPreviewSnapshotTransitionCommand =
+    | {
+        kind: "start-rendering" | "activate";
+        occurredAt: string;
+        currentDraftRevisionId: string;
+        currentGraphChecksum: Sha256Digest;
+      }
+    | { kind: "dispose" | "expire"; occurredAt: string }
+    | {
+        kind: "deploy" | "export" | "publish" | "create-compilation";
+        occurredAt: string;
+      };
+
+  export type DraftPreviewSnapshotTransitionResult = {
+    snapshot: DraftPreviewSnapshotV1;
+    event: {
+      kind: "draft-preview-snapshot-transition";
+      snapshotId: string;
+      from: DraftPreviewSnapshotV1["state"];
+      to: DraftPreviewSnapshotV1["state"];
+      occurredAt: string;
+    };
+  };
+
+  export function transitionDraftPreviewSnapshot(
+    snapshot: unknown,
+    command: DraftPreviewSnapshotTransitionCommand,
+  ): DraftPreviewSnapshotTransitionResult;
+  ```
+
+  Snapshot and command records are strict. `start-rendering` permits only
+  `ready -> rendering`, and `activate` permits only `rendering -> active`; both
+  require exact `currentDraftRevisionId` and `currentGraphChecksum` matches and
+  `occurredAt < expiresAt`. `dispose` permits
+  `ready|rendering|active -> disposed`. `expire` permits
+  `ready|rendering|active -> expired` only when `occurredAt >= expiresAt`.
+  Terminal snapshots reject every command. `deploy`, `export`, `publish`, and
+  `create-compilation` always reject explicitly. A legal transition returns a
+  fresh snapshot plus append-only event, never mutates either input, and keeps
+  the snapshot's Draft binding and checksums identical; the event owns the
+  transition timestamp because the frozen snapshot shape has no `updatedAt`.
+
+- These types, validators, hashers, upgrade/adapter functions, and snapshot
+  functions must be browser-safe exports. They add no runtime-only dependency.
+  All prior Task 1 RED/GREEN, exact-scope, task-review, QA, release-review, and
+  fresh-verification gates remain unchanged.
+
+Independent Task 1 review checkpoint — 2026-08-12:
+
+- Independent review returns `FAIL` with three P1 findings. Task 1 remains
+  `implementing`; QA, release review, acceptance, commit, push, Tasks 2 and 3,
+  and every product/runtime/provider/service/Docker/Compose action remain
+  blocked. The same sole Sol integration writer may repair only inside the
+  exact 14 Task 1 paths after this formatted freeze, followed by a fresh
+  independent Task 1 re-review.
+- **P1 — intrinsic field authority.** Implement the exact `fieldAuthorities`
+  contract above, add it to
+  `ApplicationGraphV1ToV2UpgradeContext`, copy it immutably into the new V2
+  Draft, and validate total field coverage plus binding-policy equality. The
+  focused fixture declares `order.total` as `server`; changing its binding
+  policy to `{ access: "write", authority: "client" }` must fail. Do not add
+  protected-name lists, field-key patterns, product-name branches, or other
+  heuristics.
+- **P1 — own `__proto__` fail-closed.** The strict Published V1 adapter test
+  must construct an own enumerable nested `__proto__` key, rather than merely
+  changing an object's prototype, and prove the envelope rejects it as an
+  extra key before any normalization. Existing V1 parsing, canonical bytes,
+  and hashes remain unchanged.
+- **P1 — fixed V2 canonical hash vector.** The complete valid V2 fixture,
+  including `fieldAuthorities`, must pin one exact `sha256:<64 lowercase hex>`
+  result. Reordered object keys must match that fixed digest, while meaningful
+  array reordering must not. A regex-only digest assertion or comparison only
+  against another call to the same hasher is insufficient.
+
+Task 1 final writer and same-Sol review handoff — 2026-08-12:
+
+- The original Task 1 RED run recorded 51 failures out of 288 tests while the
+  237 inherited Graph tests stayed green. The final focused six-file suite now
+  passes 63/63, and the complete Graph suite passes 291/291 across 18 files.
+  This preserves the RED-to-GREEN history rather than treating a final green
+  run alone as TDD evidence.
+- Final writer verification is green for Graph typecheck, Graph build, exact-14
+  Prettier, `git diff --check`, generated declaration exports, browser-runtime
+  imports/exports, and exact path containment: all 14 and only the 14 assigned
+  Graph paths are changed. The broader
+  `pnpm exec prettier --check packages/graph/src packages/graph/test` remains
+  nonzero only for inherited formatting in the unmodified
+  `packages/graph/test/blank-application.test.ts` and
+  `packages/graph/test/hash-product-composition-diff.test.ts`; neither file is
+  part of Task 1 or changed by this wave.
+- Review history is closed for the QA handoff. The original independent review
+  found the three P1s recorded above: missing intrinsic `fieldAuthorities`,
+  insufficient own-`__proto__` V1 fail-closed proof, and no literal canonical
+  V2 hash vector. All three were repaired. The same Sol re-review then found one
+  inherited-object P1: a binding key named `constructor` could satisfy lookup
+  through the object prototype. The writer added an own-property RED and made
+  binding lookup require an own key. Final same-Sol review returns `PASS` with
+  P0/P1/P2=0/0/0 and explicitly recommends `ready_for_qa`.
+- Fresh PM verification reproduces the final focused 63/63 and complete
+  291/291 results, typecheck, build, exact-14 Prettier, `git diff --check`,
+  declaration presence, zero runtime-only imports in the browser-safe source,
+  four required browser runtime exports, and containment
+  `Expected=14 Actual=14 Missing=0 Unexpected=0`. PM therefore advances Task 1
+  `implementing -> ready_for_qa`. This is not QA, release review, acceptance,
+  delivery, commit/push authority, or permission to start Tasks 2 and 3.
+- One exact-tree GPT-5.6-Terra QA pass is now authorized and is strictly
+  provider-free, model-free, service-free, network-free, Docker-free, and
+  Compose-free. Terra is read-only and must run:
+  `pnpm --filter @factory/graph test`; the focused six Task 1 test files;
+  `pnpm --filter @factory/graph typecheck`;
+  `pnpm --filter @factory/graph build`; exact-14 Prettier; and
+  `git diff --check`. QA must independently verify exact-14 containment,
+  generated declaration exports, browser-safe import/runtime exports, fixed V2
+  hashing and meaningful array order, strict unknown/extra/prototype-key
+  rejection including own `__proto__` and `constructor`, total
+  `fieldAuthorities` coverage and binding-policy equality, journey resolution,
+  V1 byte/hash immutability and V2 Draft lineage, fail-closed Published V1/V2
+  adapters, snapshot binding/transitions/prohibited actions, and Source Overlay
+  containment. The two named inherited broad-Prettier warnings may be reported
+  but are not repair authority. Any product defect or open P0/P1 returns Task 1
+  to `implementing`; Terra changes no files.
+- Tasks 2 and 3 remain `planned` and blocked. Final Sol release review, fresh PM
+  acceptance verification, reviewed commit, non-force push, and local/remote
+  equality are still required before any downstream implementation or delivery
+  authority exists.
+
+Task 1 Terra QA handoff — 2026-08-12:
+
+- Independent GPT-5.6-Terra QA returns `PASS` with P0/P1/P2=0/0/0 on the exact
+  `ready_for_qa` tree. QA changed no files and made no provider/model call,
+  network request, service start, Docker action, or Compose action.
+- Terra reproduces the complete Graph suite at 291/291 across 18 files and the
+  focused six Task 1 files at 63/63 with verbose adversarial coverage. Graph
+  typecheck and build pass; exact-14 Prettier and `git diff --check` pass;
+  containment is 14/14 with no missing or unexpected Graph path; generated
+  declaration symbols are present; the browser-safe source has zero banned
+  runtime imports; and the compiled browser entry exposes the required dynamic
+  exports.
+- QA covers the full strict schema, literal hash, meaningful array order,
+  intrinsic field-authority, binding-policy, journey, Source Overlay,
+  Draft Preview Snapshot, Published V1/V2 adapter, upgrade-lineage, and V1
+  byte/hash-immutability matrix. It includes missing/unknown versions, nested
+  excess and own prototype-named keys, own `__proto__`, inherited
+  `constructor`, unresolved references, relabeled server writes, snapshot
+  binding/time/state violations, prohibited production actions, unsafe overlay
+  paths, declaration visibility, and browser/runtime boundaries.
+- The broad
+  `pnpm exec prettier --check packages/graph/src packages/graph/test` warning is
+  unchanged and inherited only:
+  `packages/graph/test/blank-application.test.ts` and
+  `packages/graph/test/hash-product-composition-diff.test.ts` remain unmodified
+  and outside the Task 1 path set. QA correctly records them without expanding
+  repair scope.
+- Fresh PM reconciliation reproduces full 291/291, focused 63/63, typecheck,
+  build, exact-14 Prettier, `git diff --check`, containment
+  `Expected=14 Actual=14 Missing=0 Unexpected=0`, declaration symbols, zero
+  banned browser-runtime imports, four browser dynamic exports, and the same two
+  unmodified inherited broad-Prettier warnings. Task 1 stays `ready_for_qa`;
+  this QA PASS is not release review, acceptance, delivery, commit/push
+  authority, or downstream authorization.
+- Exactly one independent GPT-5.6-Sol final release review is now authorized on
+  this exact tree. It is read-only and provider-free, model-call-free,
+  service-free, network-free, Docker-free, and Compose-free. The reviewer must
+  reconcile the accepted ADR/design and frozen ledger contract, all 14 Graph
+  paths, original RED and repair history, same-Sol task-review closure, Terra QA
+  evidence, V1 immutability, strict/fail-closed boundaries, lifecycle and
+  security invariants, browser/declaration exposure, test adequacy, and exact
+  path containment. The two inherited formatting warnings are observation only
+  and grant no write scope.
+- Only a final Sol `ACCEPT` with no open P0/P1 permits PM to run fresh acceptance
+  verification and consider Task 1 acceptance/delivery. A rejection or any open
+  P0/P1 returns Task 1 to `implementing` under a newly frozen repair. Until PM
+  records acceptance and the reviewed commit is pushed with local/remote
+  equality, Tasks 2 and 3 remain `planned` and blocked, and no commit, push,
+  product, provider, service, Docker, Compose, or downstream action is
+  authorized.
+
+Task 1 final Sol release rejection and repair freeze — 2026-08-12:
+
+- Independent final GPT-5.6-Sol release review returns `REJECT` with
+  P0/P1/P2=0/3/2. PM returns Task 1 from `ready_for_qa` to `implementing`.
+  The preceding task-review and Terra QA passes remain historical evidence for
+  the pre-repair tree only. They do not authorize release, acceptance,
+  delivery, commit/push, or downstream work.
+- P1 A — binding target integrity: every `bindingPolicies` entry must bind the
+  actual block target. The corresponding own binding value must equal exactly
+  `graph.domain.${entityKey}.${fieldKey}`. A policy cannot relabel another
+  target, including `order.note`, as an authorized field.
+- P1 B — Source Overlay root authority: `declaredSlots` never authorize a path
+  outside `writableRoots`. Every normalized `declaredSlots.file` and
+  `files.path` must remain strictly within `src/extensions/**`. Package
+  manifests, lockfiles, configuration files, executable entry points, absolute
+  paths, backslash/URL variants, dot segments, and path traversal are rejected;
+  callers cannot self-authorize an out-of-root target by declaring it.
+- P1 C — Published adapter record boundary: before Zod normalization, the
+  adapter must recursively require plain own-property record input. Arrays are
+  allowed; every record prototype must be exactly `Object.prototype` or `null`,
+  and every required field must be an own property. Inherited envelope or Graph
+  fields fail closed. This does not change V1 schemas, bytes, or hash behavior.
+- P2 D — seed membership: required seed-field membership uses own-property
+  checks only. Focused cases cover `constructor`, `toString`, and `__proto__`
+  without relaxing the schema.
+- P2 E — journey actor consistency: for every flow referenced by a journey,
+  that journey's `actorRoleKey` must appear in every transition's `roles`.
+  Existing transition permission-grant validation remains required.
+- PM authorizes exactly one same-writer TDD repair inside the already frozen 14
+  Graph source/test paths. The writer first adds focused RED evidence for all
+  five findings, then makes the smallest GREEN implementation. No public
+  schema/signature addition, path expansion, V1 mutation, runtime/dependency,
+  provider/model, service, network, Docker, Compose, or product-semantic change
+  is authorized. There is no accepted-design conflict.
+- The repaired tree must pass the focused six-file suite, the full 18-file Graph
+  suite, typecheck, build, exact-14 Prettier and containment, diff/whitespace,
+  declaration and browser-runtime checks, literal hash vectors, V1 fixtures,
+  and the full strict/hash/authority/journey/overlay/snapshot/Published matrix.
+  The two inherited broad-Prettier warnings remain observation-only if the
+  corresponding unmodified files remain outside the repair.
+- Gate sequence is fixed: clean same-Sol task re-review, PM transition back to
+  `ready_for_qa`, fresh exact-tree provider-free Terra QA, independent final Sol
+  release review, then fresh PM acceptance reconciliation only on `ACCEPT` with
+  no open P0/P1. QA, release, acceptance, delivery, commit/push, and Tasks 2–3
+  remain blocked while this repair is active.
+
+Task 1 five-finding repair and same-Sol re-review handoff — 2026-08-12:
+
+- The writer preserved TDD evidence for the release-review repair. Before any
+  production change, the focused affected set recorded 10 failures and 39
+  passes. After the smallest repair, that affected set passes 49/49; the six
+  Task 1 test files pass 75/75; the full Graph suite passes 303/303 across 18
+  files; and the strict/hash/V1 set passes 108/108.
+- All five frozen findings are closed without a public schema/signature change
+  or path expansion. Binding policies now prove the exact underlying
+  `graph.domain.${entityKey}.${fieldKey}` target; Source Overlay declarations
+  cannot authorize paths outside normalized `src/extensions/**`; the Published
+  adapter recursively enforces plain own-property records before Zod; seed
+  required-field membership is own-property-only for `constructor`, `toString`,
+  and `__proto__`; and each journey actor is present in every transition of
+  every referenced flow while existing permission-grant checks remain intact.
+- Same-Sol task re-review returns `PASS` with P0/P1/P2=0/0/0 and closes A–E.
+  Fresh PM verification reproduces focused 75/75, complete 303/303,
+  strict/hash/V1 108/108, typecheck, build, exact-14 Prettier,
+  `git diff --check`, containment
+  `Expected=14 Actual=14 Missing=0 Unexpected=0`, declaration exports, zero
+  banned browser-runtime imports, and four required dynamic browser exports.
+  The broad Prettier warning remains limited to the same two unmodified
+  inherited tests:
+  `packages/graph/test/blank-application.test.ts` and
+  `packages/graph/test/hash-product-composition-diff.test.ts`.
+- PM advances Task 1 `implementing -> ready_for_qa`. This transition supersedes
+  the earlier QA tree but is not QA, release review, acceptance, delivery,
+  commit/push authority, or permission to begin Tasks 2 and 3.
+- Exactly one fresh GPT-5.6-Terra QA pass is authorized on this exact repaired
+  tree. Terra is read-only and must remain provider-free, model-call-free,
+  network-free, service-free, Docker-free, and Compose-free. It must reproduce
+  the full 303-test Graph suite, focused six-file 75-test suite,
+  strict/hash/V1 108-test suite, typecheck, build, exact-14 Prettier,
+  `git diff --check`, exact path containment, declaration/browser exposure, and
+  the full strict/hash/authority/journey/overlay/snapshot/Published/V1
+  immutability matrix. QA must explicitly retest A–E, including exact binding
+  target equality, overlay self-authorization attempts, recursive inherited
+  records, prototype-named seed fields, and journey actor coverage across every
+  referenced-flow transition. Terra changes no files.
+- Any product defect or open P0/P1 returns Task 1 to `implementing` under a new
+  PM repair freeze. A clean Terra result returns to PM for reconciliation and
+  authorization of a new independent final Sol release review. Release review,
+  acceptance, delivery, commit/push, and all downstream work remain blocked.
+
+Task 1 repaired-tree Terra QA handoff — 2026-08-12:
+
+- Fresh GPT-5.6-Terra QA returns a `PASS` recommendation on the exact repaired
+  tree with P0/P1/P2=0/0/1. QA changed no files and made no provider/model call,
+  network request, service start, Docker action, or Compose action. Task 1 stays
+  `ready_for_qa`; this is not release, acceptance, delivery, commit/push, or
+  downstream authority.
+- Terra reproduces the full Graph suite at 303/303 across 18 files, the focused
+  six Task 1 files at 75/75, the strict/hash/V1 set at 108/108, typecheck, build,
+  exact-14 Prettier, `git diff --check`, containment 14/14 with no missing or
+  unexpected path, declaration exports, zero banned browser-runtime imports,
+  and all four required dynamic browser exports. The repository regression
+  matrix for release findings A–E passes. The broad Prettier warning remains
+  limited to the same two unmodified inherited tests and grants no repair scope.
+- The single P2 is a QA-harness coverage limitation, not a demonstrated product
+  defect. After three failed fixture-extraction attempts, Terra's ad hoc
+  extractor could not inject a second transition for an additional journey
+  actor adversarial case. The existing repository test proves E on a
+  one-transition failure, and `assertJourneyActorConsistency` iterates every
+  journey, every referenced flow, and every transition. PM does not authorize a
+  product-code or shared-contract change for this P2; final release review must
+  inspect and explicitly disposition the limitation.
+- Exactly one independent GPT-5.6-Sol final release review is authorized on this
+  exact repaired and QA-reviewed tree. It is read-only and must remain
+  provider-free, model-call-free, network-free, service-free, Docker-free, and
+  Compose-free. The reviewer reconciles the accepted ADR/design, frozen ledger,
+  all 14 Graph paths, RED/GREEN and same-Sol repair review history, fresh Terra
+  evidence, strict/hash/V1 and browser/declaration boundaries, all A–E repairs,
+  and the open P2 harness-coverage limitation. The reviewer changes no files.
+- Only a final Sol `ACCEPT` with no open P0/P1 permits PM to run fresh acceptance
+  verification and consider Task 1 acceptance. A `REJECT` or any open P0/P1
+  returns Task 1 to `implementing` under a new PM repair freeze. Repository
+  release, delivery, commit/push, Tasks 2–3, and all downstream work remain
+  blocked until PM records acceptance and the remaining delivery-policy gates
+  are independently satisfied.
+
+Task 1 Windows-safe Source Overlay repair freeze — 2026-08-12:
+
+- Final GPT-5.6-Sol re-review returns `REJECT` with P0/P1/P2=0/1/0. The remaining
+  P1 is a Windows path-alias bypass in Source Overlay validation. PM returns
+  Task 1 from `ready_for_qa` to `implementing`; all preceding repair, task-review,
+  and Terra evidence remains historical for the rejected tree only and grants
+  no later-gate authority.
+- The earlier journey QA P2 is closed without product changes. An independent
+  two-transition probe passes, corroborating the repository regression and the
+  production loop across every transition of every journey-referenced flow.
+  It is not part of this repair.
+- The exact path contract is now frozen. `safeRelativePath` rejects any segment
+  containing an ASCII control character U+0000–U+001F or U+007F; any
+  Windows-invalid character `<`, `>`, `:`, `"`, `|`, `?`, or `*`; a backslash;
+  a trailing dot; or a trailing space. It also rejects the case-insensitive
+  Windows device stems `CON`, `PRN`, `AUX`, `NUL`, `CLOCK$`, `COM1`–`COM9`, and
+  `LPT1`–`LPT9`, including forms with an extension or a trailing alias.
+- Paths remain relative sequences of nonempty forward-slash segments. Empty,
+  `.`, and `..` segments, absolute paths, drive-prefixed paths, URLs, and path
+  traversal remain invalid. Canonical keys used for uniqueness, writable-root,
+  and reserved-path checks must use the Windows-safe normalized path and compare
+  case-insensitively; Windows aliases cannot evade a reserved check or coexist
+  as distinct slot/file paths.
+- Exactly one same Sol writer is authorized to make the smallest TDD repair
+  inside the already frozen 14 Task 1 Graph paths. Focused RED evidence must
+  precede production changes and cover `package.json.`, `package.json `,
+  `package.json::$DATA`, `main.tsx.`, ASCII-control segments, all device-stem
+  families with case/extension aliases, case-only duplicate aliases, and benign
+  neighboring names that must remain accepted. No schema/signature addition,
+  V1 change, path expansion, runtime/dependency, provider/model, service,
+  network, Docker, Compose, or product-semantic change is authorized.
+- The GREEN tree must pass the affected Source Overlay tests, all six Task 1
+  files, the full 18-file Graph suite, strict/hash/V1 suite, typecheck, build,
+  exact-14 Prettier and containment, `git diff --check`, declaration and browser
+  checks, all A–E regressions, and benign-neighbor path cases. The same two
+  inherited broad-Prettier warnings remain observation-only if unchanged.
+- Gate sequence is fixed: same-Sol task re-review, fresh exact-tree Terra QA,
+  independent final Sol release review, then PM acceptance reconciliation only
+  after `ACCEPT` with no open P0/P1. QA, release review, acceptance, repository
+  release, delivery, commit/push, Tasks 2–3, and all downstream work remain
+  blocked while the repair is active.
+
+Task 1 Windows-safe repair and same-Sol re-review handoff — 2026-08-12:
+
+- The writer preserved focused TDD evidence. Before production changes, the
+  Source Overlay repair suite recorded 41 failures and 34 passes. After the
+  smallest repair, Source Overlay passes 75/75; the six Task 1 files pass
+  128/128; the full Graph suite passes 356/356 across 18 files; and the
+  strict/hash/V1 set passes 161/161.
+- The repair changes only `packages/graph/src/source-overlay.ts` and
+  `packages/graph/test/source-overlay.test.ts` within the frozen 14-path Task 1
+  boundary. It adds the exact Windows-invalid/control/trailing-alias/device-stem
+  rejection and case-insensitive canonical comparison frozen above, with
+  malicious and benign-neighbor regressions. It adds no schema/signature,
+  dependency, runtime, provider, service, network, Docker, Compose, or V1
+  change. All prior A–E repairs remain intact.
+- Same-Sol task re-review returns `PASS` with P0/P1/P2=0/0/0. The Windows alias
+  P1 is closed. Fresh PM verification reproduces Source Overlay 75/75, focused
+  128/128, complete 356/356, strict/hash/V1 161/161, typecheck, build, exact-14
+  Prettier, `git diff --check`, containment
+  `Expected=14 Actual=14 Missing=0 Unexpected=0`, declaration exports, zero
+  banned browser-runtime imports, and all four required dynamic browser exports.
+  The same two unmodified inherited broad-Prettier warnings remain observation
+  only.
+- PM advances Task 1 `implementing -> ready_for_qa`. This is not QA, final
+  release review, acceptance, repository release, delivery, commit/push, or
+  downstream authority.
+- Exactly one fresh GPT-5.6-Terra QA pass is authorized on this exact repaired
+  tree. Terra is read-only and must remain provider-free, model-call-free,
+  network-free, service-free, Docker-free, and Compose-free. It must reproduce
+  Source Overlay 75/75, the focused six-file 128/128, full Graph 356/356,
+  strict/hash/V1 161/161, typecheck, build, exact-14 Prettier,
+  `git diff --check`, exact containment, declaration/browser exposure, and the
+  complete strict/hash/authority/journey/overlay/snapshot/Published/V1
+  immutability matrix. QA must independently exercise the malicious and benign
+  Windows path matrix: controls, invalid characters, trailing dot/space, ADS,
+  device stems and extensions, case-only collisions, case-insensitive
+  root/reserved checks, traversal/drive/URL/backslash rejection, and benign
+  neighboring names. Terra changes no files.
+- Any product defect or open P0/P1 returns Task 1 to `implementing` under a new
+  PM freeze. A clean Terra result returns to PM before any final Sol review is
+  authorized. Final release review, acceptance, repository release, delivery,
+  commit/push, Tasks 2–3, and all downstream work remain blocked.
+
+Task 1 Windows-repaired Terra QA handoff — 2026-08-12:
+
+- Fresh GPT-5.6-Terra QA returns `PASS` with P0/P1/P2=0/0/0 on the exact
+  Windows-repaired tree. QA changed no files and made no provider/model call,
+  network request, service start, Docker action, or Compose action. Task 1 stays
+  `ready_for_qa`; this is not release review, acceptance, repository release,
+  delivery, commit/push, or downstream authority.
+- Terra reproduces Source Overlay 75/75, the focused six Task 1 files 128/128,
+  the complete Graph suite 356/356 across 18 files, strict/hash/V1 161/161,
+  typecheck, build, exact-14 Prettier, `git diff --check`, containment 14/14 with
+  no missing or unexpected path, declaration exports, zero banned
+  browser-runtime imports, and all four required dynamic browser exports.
+- QA passes the complete malicious/benign Windows path matrix: ASCII controls,
+  Windows-invalid characters and ADS, trailing dot/space aliases, every frozen
+  device-stem family with mixed case and extensions, case-only collisions,
+  case-insensitive root/reserved matching, traversal/drive/URL/backslash
+  rejection, and benign neighboring names. All prior A–E repository regressions
+  also pass. Broad Prettier still warns only on the same two unmodified inherited
+  tests; that observation grants no write scope.
+- Exactly one independent GPT-5.6-Sol final release review is authorized on this
+  exact QA-passed tree. It is read-only and must remain provider-free,
+  model-call-free, network-free, service-free, Docker-free, and Compose-free.
+  The reviewer reconciles the accepted ADR/design, frozen ledger, all 14 Graph
+  paths, complete RED/GREEN and repair-review history, fresh Terra evidence, V1
+  immutability, strict/hash/lifecycle/security boundaries, browser/declaration
+  exposure, A–E repairs, the closed journey probe, and the complete Windows path
+  contract. The reviewer changes no files.
+- Only a final Sol `ACCEPT` with no open P0/P1 permits PM to run fresh acceptance
+  verification and consider Task 1 acceptance. A `REJECT` or any open P0/P1
+  returns Task 1 to `implementing` under a new PM freeze. Repository release,
+  delivery, commit/push, Tasks 2–3, and all downstream work remain blocked until
+  PM records acceptance and the remaining delivery-policy gates are satisfied.
+
+Task 1 DOS 8.3 alias repair freeze — 2026-08-12:
+
+- Final GPT-5.6-Sol release review returns `REJECT` with P0/P1/P2=0/1/0. The
+  remaining P1 is a Windows DOS 8.3 short-name bypass of Source Overlay reserved
+  paths: `PACKAG~1.JSO`, `TSCONF~1.JSO`, and `VITEST~1.TS` are currently accepted.
+  The reviewer confirms the first two resolve byte-identically to their reserved
+  long-name targets on the exact review volume. PM returns Task 1 from
+  `ready_for_qa` to `implementing`; the preceding QA pass is historical evidence
+  for the rejected tree only.
+- The minimal path contract is frozen: `safeRelativePath` rejects `~` in every
+  path segment. This conservative lexical rule prevents DOS short-name aliases
+  without filesystem resolution, runtime I/O, platform probing, or an incomplete
+  long-name-to-short-name inference table. Every previously frozen Windows path
+  rejection and canonical-comparison invariant remains unchanged.
+- Exactly one same Sol writer is authorized to make the smallest TDD repair
+  inside the frozen 14 Task 1 Graph paths, limited in practice to the Source
+  Overlay source/test pair. Focused RED evidence must precede production changes
+  and cover mixed-case short aliases for reserved package, configuration, and
+  executable-entry paths, including the three confirmed examples, plus benign
+  near-neighbor paths without a tilde that must remain accepted. The complete
+  existing malicious/benign Windows matrix must remain green.
+- No schema/signature addition, path expansion, V1 change, filesystem call,
+  runtime/dependency, provider/model, service, network, Docker, Compose, or
+  product-semantic change is authorized. Rejecting `~` is the complete repair;
+  the writer must not add filesystem-dependent alias resolution.
+- The repaired tree must pass the affected Source Overlay suite, all six Task 1
+  files, full 18-file Graph suite, strict/hash/V1 suite, typecheck, build,
+  exact-14 Prettier and containment, `git diff --check`, declaration/browser
+  checks, prior A–E regressions, the closed journey probe, the full existing
+  Windows matrix, new short-alias attacks, and benign no-tilde neighbors. The
+  same two inherited broad-Prettier warnings remain observation-only if
+  unchanged.
+- Gate sequence is fixed: same-Sol task re-review, fresh exact-tree Terra QA,
+  independent final Sol release review, then PM acceptance reconciliation only
+  after `ACCEPT` with no open P0/P1. QA, release review, acceptance, repository
+  release, delivery, commit/push, Tasks 2–3, and all downstream work remain
+  blocked while this repair is active.
+
+Task 1 DOS alias repair and same-Sol re-review handoff — 2026-08-12:
+
+- The writer preserved focused TDD evidence: before the production change, the
+  Source Overlay suite recorded 9 failures and 80 passes. After the minimal
+  repair, Source Overlay passes 89/89; the six Task 1 files pass 142/142; the
+  full Graph suite passes 370/370 across 18 files; and the strict/hash/V1 set,
+  including the browser entry boundary, passes 176/176.
+- The repair only adds `~` to the per-segment lexical rejection in
+  `packages/graph/src/source-overlay.ts` and adds the frozen malicious/benign
+  cases in `packages/graph/test/source-overlay.test.ts`. All prior Windows path
+  cases, A–E repairs, V1 behavior, public schemas/signatures, declarations, and
+  browser boundaries remain intact. No filesystem resolution or runtime I/O was
+  added.
+- Same-Sol task re-review returns `PASS` with P0/P1/P2=0/0/0 and closes the DOS
+  alias P1. Fresh PM verification reproduces Source Overlay 89/89, focused
+  142/142, complete 370/370, strict/hash/V1 176/176, typecheck, build, exact-14
+  Prettier, `git diff --check`, containment
+  `Expected=14 Actual=14 Missing=0 Unexpected=0`, declaration exports, zero
+  banned browser-runtime imports, and all four required dynamic browser exports.
+  The same two unmodified inherited broad-Prettier warnings remain observation
+  only.
+- PM advances Task 1 `implementing -> ready_for_qa`. This is not QA, final
+  release review, acceptance, repository release, delivery, commit/push, or
+  downstream authority.
+- Exactly one fresh GPT-5.6-Terra QA pass is authorized on this exact repaired
+  tree. Terra is read-only and must remain provider-free, model-call-free,
+  network-free, service-free, Docker-free, and Compose-free. It must reproduce
+  Source Overlay 89/89, focused 142/142, full Graph 370/370, strict/hash/V1
+  176/176, typecheck, build, exact-14 Prettier, `git diff --check`, exact
+  containment, declaration/browser exposure, and the complete
+  strict/hash/authority/journey/overlay/snapshot/Published/V1 matrix. QA must
+  independently retest the confirmed DOS package/configuration/entry aliases,
+  mixed-case and nested tilde variants, benign no-tilde neighbors, the complete
+  prior Windows malicious/benign matrix, all A–E regressions, and the closed
+  journey probe. Terra changes no files.
+- Any product defect or open P0/P1 returns Task 1 to `implementing` under a new
+  PM freeze. A clean Terra result returns to PM before any final Sol review is
+  authorized. Final release review, acceptance, repository release, delivery,
+  commit/push, Tasks 2–3, and all downstream work remain blocked.
+
+Task 1 DOS-repaired Terra QA handoff — 2026-08-12:
+
+- Fresh GPT-5.6-Terra QA returns `PASS` with P0/P1/P2=0/0/0 on the exact
+  DOS-repaired tree. QA changed no files and made no provider/model call, network
+  request, service start, Docker action, or Compose action. Task 1 stays
+  `ready_for_qa`; this is not release review, acceptance, repository release,
+  delivery, commit/push, or downstream authority.
+- Terra reproduces Source Overlay 89/89, the focused six Task 1 files 142/142,
+  the complete Graph suite 370/370 across 18 files, strict/hash/V1/browser
+  176/176, typecheck, build, exact-14 Prettier, `git diff --check`, containment
+  14/14 with no missing or unexpected path, declaration exports, zero banned
+  browser-runtime imports, and all four required dynamic browser exports.
+- QA passes the confirmed DOS package/configuration/entry aliases, mixed-case
+  and nested tilde variants, benign no-tilde neighbors, the complete prior
+  Windows malicious/benign path matrix, all A–E regressions, and the closed
+  journey probe. Broad Prettier still warns only on the same two unmodified
+  inherited tests; that observation grants no write scope.
+- Exactly one independent GPT-5.6-Sol final release review is authorized on this
+  exact QA-passed tree. It is read-only and must remain provider-free,
+  model-call-free, network-free, service-free, Docker-free, and Compose-free.
+  The reviewer reconciles the accepted ADR/design, frozen ledger, all 14 Graph
+  paths, complete RED/GREEN and repair-review history, fresh Terra evidence, V1
+  immutability, strict/hash/lifecycle/security boundaries, browser/declaration
+  exposure, A–E repairs, the closed journey probe, the complete Windows path
+  contract, and DOS alias/benign-neighbor coverage. The reviewer changes no
+  files.
+- Only a final Sol `ACCEPT` with no open P0/P1 permits PM to run fresh acceptance
+  verification and consider Task 1 acceptance. A `REJECT` or any open P0/P1
+  returns Task 1 to `implementing` under a new PM freeze. Repository release,
+  delivery, commit/push, Tasks 2–3, and all downstream work remain blocked until
+  PM records acceptance and the remaining delivery-policy gates are satisfied.
+
+Task 1 final acceptance and delivery-manifest freeze — 2026-08-12:
+
+- Independent final GPT-5.6-Sol release review returns `ACCEPT` with
+  P0/P1/P2=0/0/0 on the exact DOS-repaired and Terra-QA-passed tree. All prior
+  release findings, including A–E, Windows aliases, DOS short names, and the
+  journey multi-transition probe, are closed with no open finding.
+- Fresh PM acceptance reconciliation passes the complete Graph suite 370/370
+  across 18 files, focused six-file suite 142/142, Source Overlay 89/89,
+  strict/hash/V1/browser 176/176, typecheck, build, exact-14 and PM-document
+  Prettier, `git diff --check`, Graph containment
+  `Expected=14 Actual=14 Missing=0 Unexpected=0`, generated declaration exports,
+  zero banned browser-runtime imports, and all four required dynamic browser
+  exports. The exact delivery manifest is
+  `Expected=17 Actual=17 Missing=0 Unexpected=0`, and the non-disclosing
+  sensitive-pattern scan returns zero matches. The two inherited broad-Prettier
+  warnings remain outside the manifest and unchanged.
+- PM marks Task 1 `accepted`. This is not delivery, integration into `main`, a
+  repository release, Product Publish, cloud deployment, or authority to begin
+  Tasks 2 and 3. Current branch
+  `feat/governed-composition-capability-foundry` is at base
+  `484aa5c42a481efdd8e7c4a2e234c7773d7e5857`, equal to its upstream before the
+  Task 1 commit.
+
+Exact Task 1 delivery manifest — 17 paths:
+
+1. `packages/graph/src/product-intent.ts`
+2. `packages/graph/src/product-recipe.ts`
+3. `packages/graph/src/application-graph-v2.ts`
+4. `packages/graph/src/source-overlay.ts`
+5. `packages/graph/src/draft-preview-snapshot.ts`
+6. `packages/graph/src/application-graph-adapter.ts`
+7. `packages/graph/src/index.ts`
+8. `packages/graph/src/browser.ts`
+9. `packages/graph/test/product-intent.test.ts`
+10. `packages/graph/test/product-recipe.test.ts`
+11. `packages/graph/test/application-graph-v2.test.ts`
+12. `packages/graph/test/source-overlay.test.ts`
+13. `packages/graph/test/draft-preview-snapshot.test.ts`
+14. `packages/graph/test/application-graph-adapter.test.ts`
+15. `docs/superpowers/ledgers/2026-08-10-prompt-to-polished-restaurant-product.md`
+16. `docs/project-status.md`
+17. `docs/roadmap.md`
+
+Controller-only Task 1 delivery sequence:
+
+1. Confirm the active branch, base/upstream relationship, and worktree still
+   match this acceptance record. Stage exactly the 17 manifest paths by explicit
+   path, with no glob, generated artifact, inherited formatting file, or other
+   worktree path included.
+2. Verify the staged-path set is exactly 17 with no missing or unexpected path;
+   run `git diff --cached --check`; repeat the non-disclosing sensitive scan on
+   the staged manifest; and stop on any mismatch, credential-like material,
+   unexpected remote divergence, hook failure, or changed acceptance evidence.
+3. Create one reviewed English commit with the authorized subject
+   `feat(graph): add application graph v2 contracts`. Do not amend, squash
+   unrelated work, rewrite history, or force any Git operation.
+4. Push the current iteration branch normally and without force. Do not merge
+   `main`, create a tag or repository release, invoke Product Publish, or run a
+   provider, model, network service, Docker, or Compose workflow as part of this
+   delivery.
+5. Verify the post-push local `HEAD` equals the upstream branch tip and report
+   the commit hash plus equality evidence to PM. Tasks 2 and 3 remain `planned`
+   and blocked until PM records that exact local/remote equality and closes Task
+   1 delivery.
 
 ## Task 2 — Compose one deterministic Restaurant Product Recipe
 

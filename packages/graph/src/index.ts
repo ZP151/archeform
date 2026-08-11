@@ -19,6 +19,12 @@ export * from "./requirement-spec.js";
 export * from "./product-blueprint.js";
 export * from "./composition-plan.js";
 export * from "./profile-recipe-catalog.js";
+export * from "./product-intent.js";
+export * from "./product-recipe.js";
+export * from "./source-overlay.js";
+export * from "./application-graph-v2.js";
+export * from "./draft-preview-snapshot.js";
+export * from "./application-graph-adapter.js";
 
 export const publishedGraphExchangeSchema = z
   .object({

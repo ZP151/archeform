@@ -21,7 +21,7 @@ controlled extension boundaries.
 The full status history through 2026-08-09 is preserved verbatim in
 [`archive/status-history/2026-08-09-project-status.md`](archive/status-history/2026-08-09-project-status.md).
 
-## Current gate — deliver accepted D0 governance repair
+## Current gate — implement the frozen Application Graph v2 contract
 
 Task 0 Product Closure is `accepted` on the current reviewed tree. Final Terra
 release QA passed, and independent Sol release review returned `ACCEPT` with
@@ -198,7 +198,47 @@ no-preview 6/6), accepted-state CLI, complete fixture/scanner/lifecycle/ADR/Task
 sensitive-material evidence. PM restores the exact 19-path controller delivery
 authority. D0 remains `accepted`; Task 1 remains `planned`, `proposed`, and
 blocked until PM records the pushed local/remote equality. No product, provider,
-service, Docker, or cloud action is authorized.
+service, Docker, or cloud action is authorized. D0 delivery is now complete at
+commit `484aa5c42a481efdd8e7c4a2e234c7773d7e5857`
+(`docs: establish executable technology governance`). The commit contains the
+exact 19 authorized paths and was pushed without force to
+`feat/governed-composition-capability-foundry`; fresh evidence records local
+HEAD equal to the upstream remote tip at the same hash, worktree status count
+0, and the committed accepted-state governance CLI passing. D0 delivery is
+fully closed.
+
+Task 1 is `accepted` under integration ownership after independent final Sol
+release review `ACCEPT` with P0/P1/P2=0/0/0 and fresh PM acceptance
+reconciliation. ADR-0009 is accepted, and the additive
+`factory.application-graph/v2` contract remains frozen without changing the
+current Golden runtime profile. Task 1 is not yet delivered. Tasks 2 and 3
+remain planned and blocked; no Restaurant semantics, UI, provider, service,
+Docker, or Compose work is authorized.
+
+The formerly implicit Task 1 shared boundaries are frozen in the PM ledger:
+strict Published V1/V2 envelopes and version adapter, an explicit
+Published-V1-to-new-V2-Draft upgrade context with immutable source lineage and
+hashes, exact Draft Preview Snapshot transition commands/results and prohibited
+production actions, a Graph V2 `journeys` namespace, intrinsic total
+`fieldAuthorities`, and matching per-binding `bindingPolicies`. The original
+three P1s—intrinsic field authority, own-`__proto__` V1 rejection, and a literal
+V2 hash vector—are repaired. A same-Sol re-review P1 for inherited
+`constructor` binding lookup is also repaired through own-property validation.
+Fresh acceptance evidence passes the six Task 1 files 142/142, Source Overlay
+89/89, full Graph 370/370 across 18 files, strict/hash/V1/browser 176/176,
+typecheck, build, exact-14 and PM-document formatting, diff/whitespace,
+containment, declarations, browser checks, prior A–E regressions, the complete
+Windows/DOS matrix, and the journey probe. The exact changed-path manifest is
+17/17—14 Graph paths plus this ledger, project status, and roadmap—with zero
+sensitive-pattern matches. Broad Prettier still warns only on the same two
+unmodified inherited tests. The next smallest valuable slice is controller-only
+delivery: stage exactly the 17-path manifest, verify staged containment/diff and
+sensitive scan, create one reviewed commit
+`feat(graph): add application graph v2 contracts`, push the current branch
+without force, and prove local `HEAD` equals upstream. The active risks are an
+unexpected staged path, hook failure, or remote divergence. Tasks 2 and 3,
+delivery closure, integration, release, provider/service work, and downstream
+implementation remain blocked until PM records local/remote equality.
 
 Authorities:
 
@@ -277,17 +317,13 @@ Authorities:
 
 The next authorized sequence is:
 
-1. rerun the accepted-state CLI, stage only the exact 19 paths, verify the
-   staged manifest and
-   sensitive-material boundary, create the reviewed D0 commit, push without
-   force, and verify local HEAD equals the remote branch tip;
-2. only after PM records that pushed equality, freeze `ProductIntentV1`,
-   `ExperienceBriefV1`, `ProductRecipeV1`,
-   `ApplicationSurfaceV1`, `ScreenIntentV1`, `SourceOverlayV1`,
-   `DraftPreviewSnapshotV1`, and `factory.application-graph/v2` in Task 1;
-3. begin Task 2 Restaurant semantics and Task 3 UI Registry/Workbench source
-   foundation in parallel only after the Graph v2 contract is reviewed and
-   frozen;
+1. complete Task 1 TDD inside the exact 14 Graph paths and pass Graph tests,
+   typecheck, formatting, self-review, and exact-scope audit;
+2. pass independent Sol task review, provider-free Terra QA, final Sol release
+   review, and fresh PM verification, then commit and push accepted Task 1;
+3. begin Task 2 Restaurant semantics and Task 3 UI Registry/source foundation
+   in parallel only after the Graph v2 contract is reviewed and
+   the accepted Task 1 commit is pushed;
 4. converge those two lines in the customer and merchant compiler surfaces;
    pause both if a shared contract change is required.
 

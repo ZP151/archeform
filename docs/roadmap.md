@@ -95,9 +95,13 @@ P0 acceptance gates:
 ## P1 — Product Closure, then Prompt-to-Polished Restaurant Product
 
 > **Roadmap update — 2026-08-12:** Honest Requirement-to-Product Closure and D0
-> are accepted; ADR-0009 is founder-accepted. The reviewed D0 commit and
-> non-force push remain pending before Task 1, which stays blocked until local
-> HEAD equals the remote branch tip.
+> are accepted and delivered. D0 commit
+> `484aa5c42a481efdd8e7c4a2e234c7773d7e5857` was pushed without force, with
+> local HEAD equal to the upstream remote tip. ADR-0009 is founder-accepted, the
+> additive Graph v2 contract is frozen. Task 1 is accepted after final Sol
+> `ACCEPT` with P0/P1/P2=0/0/0 and fresh PM reconciliation, but is not yet
+> delivered. Exact 17-path controller commit/push/equality evidence is next;
+> Tasks 2 and 3 remain blocked.
 > Prompt-to-Polished Restaurant Product is the sole P1 product target. The
 > Foundry, 100+ recipe catalogue, twelve-anchor
 > expansion, cloud deployment, production payments, connector marketplace,
@@ -105,7 +109,7 @@ P0 acceptance gates:
 > historical Foundry evidence below remains valid platform foundation; it is
 > not an active breadth target.
 
-### P1 Product Closure gate (accepted; delivery pending)
+### P1 Product Closure gate (accepted and delivered)
 
 Product Closure was reopened on 2026-08-09. The Base44-inspired
 Golden Path goal
@@ -181,9 +185,11 @@ Acceptance requires the restaurant prompt to produce the customer and merchant
 surfaces, at least fifteen surface-owned screens, multi-block editable page
 trees, shared transactional behavior, generated source, isolated runtime
 verification, accessibility, clean-checkout reproducibility, and cleanup.
-Product code begins only after the accepted D0 scope is committed and pushed,
-local HEAD equals the remote branch tip, and the Graph v2 contract is reviewed
-and frozen.
+The D0 dependency is now satisfied. Task 1 implements the frozen additive Graph
+v2 contract as a serialized single-writer wave. Restaurant semantics, UI source,
+compilers, Workbench changes, providers, services, and Docker remain blocked
+until Task 1 is accepted and its reviewed commit is pushed; only then may the
+Task 2 and Task 3 path-disjoint product wave begin.
 
 The root README controls public identity: active Workbench copy and metadata
 move to Archeform · 元象 during this target. Existing `@factory/*` packages,
@@ -481,7 +487,12 @@ the prior detailed record is archived at
 kernel and isolated verifier are accepted platform foundations. The
 Base44-inspired Expense Approval journey is fixed replay evidence only. Honest
 Requirement-to-Product Closure and D0 are accepted on the current reviewed tree;
-ADR-0009 is founder-accepted. The controller-owned exact-scope commit and
-non-force push remain pending. No Restaurant Product implementation is
-authorized before local HEAD equals the remote branch tip and the Graph v2
-contract is reviewed and frozen.
+ADR-0009 is founder-accepted. D0 is delivered at
+`484aa5c42a481efdd8e7c4a2e234c7773d7e5857`, pushed without force with local
+HEAD equal to the upstream remote tip. The Graph v2 contract is frozen and Task
+1 is accepted after final Sol `ACCEPT` with P0/P1/P2=0/0/0 plus fresh PM
+verification. Delivery remains open: the controller must stage exactly the 17
+accepted paths, pass staged diff/sensitive checks, create the single reviewed
+commit, push without force, and prove local/upstream equality. Restaurant
+semantics, UI, provider, service, and Docker work stay blocked until PM records
+that equality.
