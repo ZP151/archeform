@@ -65,7 +65,15 @@ The complete project-scoped `obra/superpowers` skill set in `.agents/skills/` is
 - `create-architectural-decision-record`: create a proposed, versioned technical decision for `tech_lead`; source is copied unchanged from Awesome Copilot.
 - `brainstorming`, `executing-plans`, `requesting-code-review`, `receiving-code-review`, `using-git-worktrees`, and the other original source skills are retained unchanged for their documented triggers.
 
-The Superpowers directories are direct copies of the MIT-licensed `obra/superpowers` workflow library, and the ADR skill is a direct copy from MIT-licensed GitHub Awesome Copilot. Both are pinned to source commits; see `THIRD_PARTY_NOTICES.md`. They supplement rather than replace the Archeform approval, catalog, and threat-model rules.
+The 14 named Superpowers directories are direct copies of the MIT-licensed
+`obra/superpowers` workflow library at tag `v6.2.0` and its peeled commit; the
+ADR skill is an unchanged copy from one exact GitHub Awesome Copilot commit
+(with no tag claim). Exact repositories, source paths, commits, blob/content
+hashes, CRLF-only working-tree divergence, and license sources are recorded in
+`.agents/skills/UPSTREAM_PROVENANCE.md`; the full retained notices are in
+`THIRD_PARTY_NOTICES.md`. These skills supplement rather than replace
+`docs/tech-governance.md`, `docs/threat-model.md`, or Archeform approval and
+catalog rules.
 
 ## Usage
 
@@ -75,6 +83,6 @@ For a normal feature cycle, ask: `Have pm check whether tech_lead needs an ADR, 
 
 For the active long iteration, use
 `docs/agent-workstreams/2026-08-10-archeform-codex-iteration.md` as the
-controller contract. The controller must resume the dirty Task 0 handoff rather
-than recreate it, then follow the Graph-freeze and explicitly approved parallel
-waves recorded in the plan.
+controller contract. The controller must use its ledger-state-driven recovery
+rule, skip accepted work and consumed live gates, and then follow the
+Graph-freeze and explicitly approved parallel waves recorded in the plan.

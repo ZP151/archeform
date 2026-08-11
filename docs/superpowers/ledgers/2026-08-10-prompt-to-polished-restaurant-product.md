@@ -6,6 +6,20 @@ Design authority:
 `docs/superpowers/specs/2026-08-10-prompt-to-polished-restaurant-product-design.md`.
 Branch: `feat/governed-composition-capability-foundry`.
 
+<!-- d0-authority-map:start -->
+
+- `docs/iterations/2026-08-10-prompt-to-polished-product-reset.md`: the reset records founder decisions.
+- `docs/superpowers/specs/2026-08-10-prompt-to-polished-restaurant-product-design.md`: the design owns the product contract.
+- `docs/superpowers/plans/2026-08-10-prompt-to-polished-restaurant-product.md`: the plan owns execution order.
+- `docs/superpowers/ledgers/2026-08-10-prompt-to-polished-restaurant-product.md`: the ledger alone owns live task state.
+- `docs/research/2026-08-10-product-builder-ui-ecosystem.md`: the research owns external evidence.
+
+Product approval does not approve a proposed technology decision. A design,
+plan, or ADR proposal is not founder approval; the explicit governance gate in
+`docs/tech-governance.md` remains required.
+
+<!-- d0-authority-map:end -->
+
 Iteration states are controlled by PM only:
 
 ```text
@@ -78,7 +92,7 @@ reason for either line to widen its paths.
 
 ## D0 — Record the product reset and freeze scope
 
-State: `implementing`.
+State: `accepted`.
 
 Owner: `pm`.
 
@@ -1927,6 +1941,843 @@ rejected.`; one journey passes and one fails after 11.6 minutes. The harness
   equals the remote branch tip. This acceptance authorizes no additional
   provider/live run. D0 remains `implementing`, and Task 1 remains blocked until
   the Task 0 commit and push complete and D0 is reviewed.
+- Independent Tech Lead review of D0 returns `FAIL` with
+  P0/P1/P2=0/3/1. D0 remains `implementing`; Task 1 remains `planned` with its
+  contract `proposed` and blocked. The implementation plan and product-design
+  text do not constitute founder acceptance of a technology decision. No ADR
+  currently records approval for the additive
+  `factory.application-graph/v2` shared-data contract.
+- Freeze one bounded, provider-free D0 governance repair under one Sol writer;
+  the following paths are the complete writer boundary:
+  - governance and decision authority: `AGENTS.md`, `.codex/README.md`,
+    `.codex/agents/pm.toml`, `.codex/agents/tech_lead.toml`,
+    `docs/tech-governance.md`, `docs/threat-model.md`, and
+    `docs/adr/adr-0009-application-graph-v2-shared-contract.md`;
+  - mutual authority links:
+    `docs/iterations/2026-08-10-prompt-to-polished-product-reset.md`,
+    `docs/superpowers/specs/2026-08-10-prompt-to-polished-restaurant-product-design.md`,
+    `docs/superpowers/plans/2026-08-10-prompt-to-polished-restaurant-product.md`,
+    and `docs/research/2026-08-10-product-builder-ui-ecosystem.md`;
+  - copied-skill provenance: `.codex/README.md`,
+    `THIRD_PARTY_NOTICES.md`, and
+    `.agents/skills/UPSTREAM_PROVENANCE.md`;
+  - state-driven recovery:
+    `docs/agent-workstreams/2026-08-10-archeform-codex-iteration.md`;
+  - executable documentation-contract verification:
+    `scripts/verify-d0-governance.mjs` and
+    `scripts/verify-d0-governance.test.mjs`.
+- The controller alone owns this ledger, any status reconciliation, manifest
+  reconciliation if containment requires it, and the eventual reviewed commit
+  and push. The writer must stop before changing any path outside the frozen
+  list.
+- Contract A must make technology governance executable: the Tech Lead and PM
+  role instructions read an existing, current governance authority and threat
+  model; `AGENTS.md` contains the exhaustive dispatch triggers for changes to
+  runtime/framework/package or supported version, database/ORM/queue/provider
+  or Compose topology, stable Graph/API/schema/identifier/serialization or
+  compatibility contracts, security/credential/tenant/data boundaries,
+  compiler targets/generated templates/deployment/operability, and every
+  current-to-proposed Golden profile transition. The governance authority must
+  distinguish the current accepted profile from a proposed profile and require
+  a Tech Lead `keep`, `experiment`, `migrate`, or `reject` recommendation plus
+  explicit founder acceptance before PM authorizes implementation. The threat
+  model is the current authority for assets, trust boundaries, attacker
+  capabilities, abuse cases, required controls, and residual-risk ownership;
+  design or plan prose cannot silently supersede it. The Tech Lead must create
+  only a **proposed** ADR at
+  `docs/adr/adr-0009-application-graph-v2-shared-contract.md` for the additive
+  `factory.application-graph/v2` contract, covering current V1, proposed V2,
+  Published-V1 immutability, adapters, compatibility, migration, rollback,
+  threats, and measurable verification, and then stop for an explicit founder
+  accept/reject decision. D0 and Task 1 cannot pass that decision gate by
+  inference.
+- Contract B must give the reset, design, plan, ledger, and research documents
+  consistent mutual links and one non-overlapping authority map: reset records
+  founder decisions, design owns product contract, plan owns execution order,
+  this ledger alone owns live state, and research owns external evidence. The
+  writer updates the four assigned non-ledger documents; the controller makes
+  the matching ledger link. No document may claim state authority or founder
+  approval from another document's proposal.
+- Contract C must make every direct-copy or pinned-source claim for local skills
+  truthful. Each retained claim needs the upstream repository, full commit SHA,
+  exact source path, license identity/source and retained-notice location, plus
+  an honest local hash/divergence classification. If that evidence cannot be
+  established, the direct-copy/pinned claim must be corrected or removed and
+  the local adaptation described without inventing provenance.
+- Contract D must replace task-name-specific startup with ledger-state-driven
+  recovery: reconcile an in-flight review/accept/commit handoff first, otherwise
+  select the earliest unblocked non-accepted task; skip every accepted task;
+  never replay an already consumed provider, model, service, Docker, Compose,
+  theme, Golden Path, action-inventory, or other live gate. A consumed live gate
+  remains closed unless the ledger records a new explicit founder authorization
+  with exact scope. On the current state the controller may complete the
+  accepted Task 0 commit/push handoff and D0 repair; it may not rerun Task 0 or
+  start Task 1.
+- Verification is TDD and provider-free. First capture a focused RED from
+  `node --test scripts/verify-d0-governance.test.mjs` against at least the
+  missing/broken governance authority, cross-links, provenance, and recovery
+  cases; then make that focused test and
+  `node scripts/verify-d0-governance.mjs` GREEN. Also run scoped Prettier, TOML
+  parsing, and `git diff --check`. No Task 1 implementation, product/runtime
+  code, provider/model call, service, Docker, Compose, or live acceptance gate
+  is authorized. After the writer handoff, require one independent Sol review
+  with no open P0/P1, then one Terra QA pass. Founder acceptance of the proposed
+  Graph V2 ADR remains a separate required stop. Only after review, QA, explicit
+  founder decision, PM acceptance, and controller commit/push may D0 become
+  `accepted` and Task 1 be considered for implementation.
+- D0 task review returns **Spec ❌** and **Needs fixes** with
+  P0/P1/P2=0/3/0. Fix round 1 records all three P1 findings:
+  1. The required five-document authority map is incomplete: this ledger had no
+     marker-delimited `d0-authority-map` block, while the verifier inspected only
+     four documents, so the gate falsely passed without the sole live-state
+     authority satisfying Contract B.
+  2. A secondary authority contradicts live D0 state: `docs/tech-governance.md`
+     says “D0 and Task 1 remain blocked” while this ledger says D0 is
+     `implementing`. The repair must say D0 cannot be accepted and Task 1 cannot
+     begin; it must not assign D0 the `blocked` state.
+  3. The Golden-profile gate asserts prose rather than the tracked manifest
+     authorities: the verifier regexes its own prose instead of comparing
+     package ranges, lockfile resolutions, Dockerfile runtime tags, and Compose
+     image majors, so real profile drift can pass.
+     The PM-owned portion of fix round 1 adds the exact fifth authority-map block
+     above and preserves this ledger as the only live-state authority. The Sol
+     writer separately owns the frozen tech-governance wording and executable
+     Golden-profile verification repairs; it must not edit this ledger. D0 remains
+     `implementing`, and Task 1 remains `planned`, `proposed`, and blocked. No Task
+     1 implementation, provider/model call, service, Docker, Compose, live-gate
+     replay, acceptance, commit, or push is authorized by this checkpoint.
+- D0 fix-round-1 writer evidence and the scoped Sol re-review are complete.
+  TDD evidence is initial RED 0/3 with 81 reported violations, initial GREEN
+  3/3, fix RED with 3 passing and 7 failing, and final GREEN 10/10. The direct
+  CLI governance verifier passes; all 11 project TOML files parse; scoped
+  Prettier, diff checking, and the frozen-scope audit pass. This ledger contains
+  the fifth marker-delimited authority map, byte-identical to the reset, design,
+  plan, and research blocks. The exact changed paths at review are:
+  - `.agents/skills/UPSTREAM_PROVENANCE.md`;
+  - `.codex/README.md`;
+  - `.codex/agents/pm.toml`;
+  - `.codex/agents/tech_lead.toml`;
+  - `AGENTS.md`;
+  - `THIRD_PARTY_NOTICES.md`;
+  - `docs/adr/adr-0009-application-graph-v2-shared-contract.md`;
+  - `docs/agent-workstreams/2026-08-10-archeform-codex-iteration.md`;
+  - `docs/iterations/2026-08-10-prompt-to-polished-product-reset.md`;
+  - `docs/research/2026-08-10-product-builder-ui-ecosystem.md`;
+  - `docs/superpowers/ledgers/2026-08-10-prompt-to-polished-restaurant-product.md`;
+  - `docs/superpowers/plans/2026-08-10-prompt-to-polished-restaurant-product.md`;
+  - `docs/superpowers/specs/2026-08-10-prompt-to-polished-restaurant-product-design.md`;
+  - `docs/tech-governance.md`;
+  - `docs/threat-model.md`;
+  - `scripts/verify-d0-governance.mjs`;
+  - `scripts/verify-d0-governance.test.mjs`.
+- The scoped Sol re-review returns `PASS` with P0/P1/P2=0/0/0: all three prior
+  P1s are closed and no new breakage is found. D0 advances to `ready_for_qa` for
+  one independent Terra QA pass over exactly this provider-free documentation
+  and governance slice. QA must re-run the 10/10 focused verifier tests, direct
+  CLI verifier, five-block identity, 11-file TOML parsing, scoped Prettier,
+  diff/whitespace check, and exact-path scope audit; it remains read-only. Task
+  1 remains `planned`, its contract remains `proposed`, and it stays blocked.
+  ADR-0009 remains `Proposed` and requires an explicit founder accept/reject
+  decision before D0 acceptance or Task 1 implementation. No provider/model
+  call, service, Docker, Compose, live-gate replay, Task 1 change, acceptance,
+  commit, or push is authorized by this handoff.
+- Independent Terra QA returns `FAIL` with P0/P1/P2=0/1/0. Fresh governance
+  verifier tests pass 9/10: the blocked-state negative test emits its expected
+  issue only when the ledger state is `implementing`. Once the legitimate PM
+  transition set D0 to `ready_for_qa`, a mutation assigning “D0 and Task 1
+  remain blocked” escaped that specific invariant and produced only generic
+  missing-gate issues. D0 returns to `implementing`; Task 1 remains `planned`,
+  its contract remains `proposed`, and it stays blocked. ADR-0009 remains
+  `Proposed` pending explicit founder acceptance or rejection.
+- Freeze D0 fix round 2 to exactly `scripts/verify-d0-governance.mjs` and
+  `scripts/verify-d0-governance.test.mjs`; the writer may return its evidence
+  report but may change no other path. The verifier must reject assigning D0 a
+  `blocked` state independently of D0's current normal lifecycle state, without
+  weakening the distinct Task 1 blocked gate. Capture a focused RED reproducing
+  the escape with D0 at `ready_for_qa`, then GREEN the focused and full
+  provider-free governance suite. Run the direct CLI verifier, scoped Prettier,
+  diff/whitespace checking, and exact two-path scope audit. One scoped Sol
+  re-review with no open P0/P1 is required before Terra QA restarts. No Task 1
+  implementation, provider/model call, service, Docker, Compose, live gate,
+  acceptance, commit, or push is authorized.
+- D0 fix round 2 is complete on exactly `scripts/verify-d0-governance.mjs` and
+  `scripts/verify-d0-governance.test.mjs`. Focused RED is 10/11, reproducing the
+  lifecycle-independent blocked-state escape; GREEN is 11/11. The direct CLI
+  verifier, scoped Prettier, diff/whitespace check, and exact two-path audit all
+  pass. The scoped Sol re-review returns `PASS` with P0/P1/P2=0/0/0: the Terra
+  QA P1 is closed and no new breakage is found. D0 advances to `ready_for_qa` for
+  a Terra QA restart on this exact tree. Terra must run the full 11/11 governance
+  suite plus the prior complete provider-free checklist: direct CLI verifier,
+  five authority-block identity, all 11 TOML files, scoped Prettier,
+  diff/whitespace checking, and exact-path scope audit. Task 1 remains `planned`,
+  its contract remains `proposed`, and it stays blocked. ADR-0009 remains
+  `Proposed` pending explicit founder acceptance or rejection. No Task 1
+  implementation, provider/model call, service, Docker, Compose, live-gate
+  replay, acceptance, commit, or push is authorized.
+- Restarted independent Terra QA returns `PASS` with P0/P1/P2=0/0/0 on the
+  exact reviewed tree. The full governance suite passes 11/11, the direct CLI
+  verifier passes, and all five marker-delimited authority maps are identical at
+  SHA-256
+  `7F02C5DCA0F46AC9FFEB0B424EBF671EE71F24B75152030D2A3B0905F3C00AF0`.
+  All 11 TOML files parse; scoped formatting, diff/whitespace checking, and the
+  exact-path scope audit pass. Golden-profile verification is bound to the
+  tracked package ranges, lockfile resolutions, Dockerfile runtime tags, and
+  Compose image majors rather than governance prose. Copied-skill provenance
+  verifies the recorded upstream full SHAs, license sources/notices, and honest
+  local hash/divergence classifications. No open QA finding remains.
+- D0 advances to `reviewed`, not `accepted`, for the explicit founder ADR gate.
+  The exact founder decision prompt is: **Accept or reject ADR-0009, which
+  recommends keeping the current Golden runtime profile and introducing
+  additive versioned `factory.application-graph/v2` with V1
+  immutable/compatible boundaries.** No choice is inferred from the plan,
+  design, ADR recommendation, review, or QA evidence. If the founder accepts,
+  one final independent Sol release gate, PM acceptance, and the
+  controller-owned reviewed commit/push with remote-tip verification still
+  remain. If the founder rejects, D0 returns to governance repair and Task 1 is
+  replanned; implementation does not begin. Task 1 remains `planned`, its
+  contract remains `proposed`, and it stays blocked. ADR-0009 remains
+  `Proposed`. No Task 1 implementation, provider/model call, service, Docker,
+  Compose, live-gate replay, acceptance, commit, or push is authorized before
+  the founder decision.
+- Founder decision for the exact ADR-0009 accept/reject gate is recorded without
+  inference. The founder response in chat is `接受，继续`. ADR-0009 is marked
+  `Accepted` with decision date 2026-08-11 and decision source `founder chat`.
+  This accepts the ADR recommendation to keep the current Golden runtime profile
+  and introduce additive versioned `factory.application-graph/v2` with V1
+  immutable/compatible boundaries. It does not accept D0 or authorize Task 1.
+  D0 remains `reviewed`; Task 1 remains `planned`, its contract remains
+  `proposed`, and it stays blocked until D0's reviewed commit/push and remote-tip
+  verification complete. The final independent Sol release gate is now
+  authorized on the exact D0 tree, provider-free and read-only. On `PASS` with
+  no open P0/P1, PM may accept D0 and the controller may create and push the
+  reviewed commit. No product or Task 1 change, provider/model call, service,
+  Docker, Compose, or live-gate replay is authorized.
+- The required post-decision governance transition check is RED exactly as the
+  fail-closed gate anticipated: the focused suite passes 10/11, with only “ADR-0009
+  missing Proposed status,” and the direct CLI verifier fails with the same one
+  issue. The verifier still hardcodes the pre-decision `Proposed` state and does
+  not yet validate the recorded `Accepted` decision state. PM changes no
+  verifier code. Freeze one bounded writer repair to exactly
+  `scripts/verify-d0-governance.mjs` and
+  `scripts/verify-d0-governance.test.mjs`: make ADR-state verification
+  decision-aware while failing closed on an `Accepted` status without the
+  matching accepted founder gate, decision date 2026-08-11, and decision source
+  `founder chat`, and on contradictory `Proposed`/accepted combinations. Preserve
+  all existing governance, Golden-profile, provenance, authority-map, and
+  recovery checks. GREEN requires 11/11 plus direct CLI, scoped Prettier,
+  diff/whitespace, and exact two-path audit, followed by scoped independent Sol
+  re-review and Terra recheck before the final independent Sol release gate.
+  D0 remains `reviewed`, not accepted; Task 1 remains `planned`, `proposed`, and
+  blocked. The final release gate is paused, and no product or Task 1 change,
+  provider/model call, service, Docker, Compose, live-gate replay, acceptance,
+  commit, or push is authorized until this repair is clean.
+- D0 founder-transition fix round 3 scoped Sol re-review returns `FAIL` with
+  P0/P1/P2=0/1/0. The exact P1 is a non-exclusive decision-state check: the
+  verifier detects `gateAccepted` and `gateNotRecorded`, but its `Accepted`
+  branch does not reject `gateNotRecorded`. An ADR containing both decision
+  markers plus otherwise valid accepted metadata therefore passes. The test
+  replaces markers rather than exercising their coexistence, and the
+  `Proposed` branch also fails to reject orphan visible accepted-decision
+  metadata. The recorded founder decision and ADR semantics do not change. D0
+  remains `reviewed`, not accepted; Task 1 remains `planned`, its contract
+  `proposed`, and blocked.
+- Freeze fix round 4/5 to a fresh Sol writer on exactly
+  `scripts/verify-d0-governance.mjs` and
+  `scripts/verify-d0-governance.test.mjs`; only an ignored local handoff/review
+  report may be created outside those tracked paths. Require exactly one founder
+  decision marker. The `Accepted` branch must reject coexistence with the
+  not-recorded marker, and the `Proposed` branch must reject any visible accepted
+  decision metadata. Add focused coexistence and orphan-metadata RED tests, then
+  GREEN the focused and complete provider-free suite. Run the direct CLI
+  verifier, scoped Prettier, diff/whitespace check, and exact two-path audit.
+  One scoped Sol re-review must pass before the Terra recheck and final
+  independent Sol release gate resume. No ADR, ledger, or status semantics may
+  change in the writer round. No product or Task 1 change, provider/model call,
+  service, Docker, Compose, live-gate replay, acceptance, commit, or push is
+  authorized.
+- D0 fix round 4 writer and scoped Sol re-review are complete on exactly
+  `scripts/verify-d0-governance.mjs` and
+  `scripts/verify-d0-governance.test.mjs`. Focused RED is 18/20 for the
+  coexistence and orphan accepted-metadata defects; GREEN is 20/20. The
+  source-native suite passes 26/26. The direct CLI verifier, scoped Prettier,
+  diff/whitespace check, and exact two-path audit pass. The scoped Sol re-review
+  returns `PASS` with P0/P1/P2=0/0/0: the prior P1 is closed, mutually exclusive
+  founder-decision state is enforced, and no new breakage is found. Bare-root
+  Node discovery still encounters pre-existing compiled Vitest output; this is
+  classified as an out-of-scope pre-existing discovery condition, not evidence
+  from or a widening of this two-path repair.
+- D0 remains `reviewed`, not accepted. ADR-0009 remains `Accepted`; Task 1
+  remains `planned`, its contract `proposed`, and blocked. Authorize one
+  independent Terra recheck on this exact tree: run the complete focused suite
+  20/20, source-native suite 26/26, and direct CLI verifier, then revalidate the
+  prior complete provider-free D0 evidence including five-map hash identity, all
+  11 TOMLs, Golden-profile manifest bindings, copied-skill provenance,
+  state-driven recovery, scoped Prettier, diff/whitespace, and exact-path audit.
+  Only a clean Terra pass authorizes the final independent Sol release review.
+  No product or Task 1 change, provider/model call, service, Docker, Compose,
+  live-gate replay, acceptance, commit, or push is authorized.
+- Final founder-accepted D0 Terra recheck returns `PASS` with
+  P0/P1/P2=0/0/0 on the exact current tree. The focused governance suite passes
+  20/20, the source-native suite passes 26/26, and the direct CLI verifier
+  passes. All five authority maps remain identical at SHA-256
+  `7F02C5DCA0F46AC9FFEB0B424EBF671EE71F24B75152030D2A3B0905F3C00AF0`;
+  all 11 TOML files parse; scoped formatting, diff/whitespace, and exact-path
+  scope checks pass. Golden-profile manifest bindings, copied-skill provenance,
+  mutually exclusive founder-decision state, and state-driven recovery evidence
+  all pass. Bare-root Node discovery of pre-existing compiled Vitest output
+  remains non-required and outside this D0 slice.
+- D0 remains `reviewed`, not accepted; ADR-0009 remains `Accepted`; Task 1
+  remains `planned`, its contract `proposed`, and blocked. Authorize exactly one
+  final independent Sol release review of the entire D0 slice and current tree,
+  provider-free and read-only. On `ACCEPT` with no open P0/P1, PM may accept D0
+  and the controller may create and push the reviewed commit, then verify the
+  remote branch tip. On any P0/P1, route one bounded repair within the remaining
+  cap and keep Task 1 blocked. No product or Task 1 change, provider/model call,
+  service, Docker, Compose, live-gate replay, acceptance, commit, or push is
+  otherwise authorized.
+- Final independent D0 Sol release review returns `REJECT` with
+  P0/P1/P2=0/3/0. PM may not accept D0 or authorize commit/push. The three exact
+  P1 findings are:
+  1. `docs/tech-governance.md` still treats ADR-0009 as awaiting founder
+     acceptance while V1 remains the currently implemented contract and also
+     carries live D0 task state; the workstream retains a checkpoint-specific,
+     already-consumed founder gate. Secondary authorities therefore conflict
+     with the accepted ADR and can replay consumed state instead of deferring
+     live task state and authorization solely to this ledger.
+  2. The verifier does not parse the actual D0 and Task 1 sections for `State`,
+     contract status, and `Blocked by`. Prose checks can pass while those
+     authoritative fields prematurely unblock Task 1 or mark implementation
+     active.
+  3. Golden-profile verification does not parse every documented profile-table
+     row and compare it bidirectionally with manifest ranges, lockfile exact
+     resolutions, Dockerfile tags, and Compose image tags. A drift introduced
+     from the authority-table side can therefore pass.
+- Freeze the single remaining repair, round 5/5, under one fresh Sol writer.
+  The only tracked writer paths are `docs/tech-governance.md`,
+  `docs/agent-workstreams/2026-08-10-archeform-codex-iteration.md`,
+  `scripts/verify-d0-governance.mjs`, and
+  `scripts/verify-d0-governance.test.mjs`; only an ignored local handoff/review
+  report is additionally permitted. The repair contract is:
+  1. Technology governance records ADR-0009 as founder-accepted while V1 remains
+     the currently implemented Application Graph contract, removes live D0 task
+     state, and defers all task state and authorization to this ledger. The
+     workstream removes its checkpoint-specific consumed founder gate and
+     defers recovery and authorization to the live ledger.
+  2. The verifier parses the actual D0 and Task 1 sections, including `State`,
+     contract status, and `Blocked by`, and rejects premature Task 1 unblocking
+     or implementation. Tests mutate those actual fields, not explanatory
+     prose.
+  3. The verifier parses every documented Golden-profile table row and compares
+     it bidirectionally with package-manifest ranges, lockfile exact resolutions,
+     Dockerfile runtime tags, and Compose image tags. Add an authority-table-side
+     mutation RED. Do not edit package manifests, lockfiles, Dockerfiles, or
+     Compose files.
+     Capture behavioral RED evidence for all three findings, then GREEN the full
+     provider-free suite and direct CLI verifier; run scoped Prettier, all TOML
+     parsing, diff/whitespace, and exact four-path audit. Require one scoped Sol
+     re-review and one Terra recheck. This is the repair cap: any residual
+     load-bearing P0/P1 stops and blocks the Goal, with no further repair round. D0
+     remains `reviewed`, not accepted; Task 1 remains `planned`, its contract
+     `proposed`, and blocked. No product or Task 1 change, provider/model call,
+     service, Docker, Compose, live-gate replay, acceptance, commit, or push is
+     authorized.
+- Final round-5 scoped Sol re-review returns `ACCEPT` with P0/P1/P2=0/0/0. All
+  three final-release P1s are addressed and no new breakage is found. D0 remains
+  `reviewed`, not accepted; ADR-0009 remains `Accepted`; Task 1 remains
+  `planned`, its contract `proposed`, and blocked by its authoritative field
+  below.
+- Authorize the one final independent Terra recheck required by this ledger on
+  the exact current round-5 tree, provider-free and read-only. Terra must run the
+  source-native suite 52/52 and direct CLI verifier; verify all five authority
+  maps, all 11 TOMLs, scoped Prettier, diff/whitespace, and exact-path scope;
+  prove bidirectional Golden-profile table truth against manifests, lockfile,
+  Dockerfiles, and Compose; parse and validate the actual live D0 and Task 1
+  states, Task 1 contract status, and authoritative `Blocked by` field; and
+  revalidate the accepted ADR decision, copied-skill provenance, threat-model
+  authority, and state-driven recovery. No bare-root compiled-test discovery is
+  required. On Terra `PASS` with no open P0/P1, PM may accept D0 and authorize
+  the controller-owned reviewed commit/push with local HEAD verified equal to
+  the remote branch tip. Any P0/P1 at this repair cap stops and blocks the Goal;
+  no repair round remains. No product or Task 1 change, provider/model call,
+  service, Docker, Compose, or live-gate replay is authorized.
+- Final round-5 independent Terra QA returns `PASS` with P0/P1/P2=0/0/0 on
+  fresh evidence. The source-native suite passes 52/52 and the direct CLI
+  verifier passes. All five authority maps, all 11 TOMLs, scoped Prettier,
+  diff/whitespace, and exact-scope checks are green. Bidirectional Golden-profile
+  truth, actual live D0 and Task 1 fields plus the authoritative blocker,
+  accepted ADR-0009, copied-skill provenance, threat-model authority, and
+  state-driven recovery all pass. No open P0/P1 remains at the round-5 cap.
+- PM accepts D0 on 2026-08-12. Task 1 remains `planned`, its contract remains
+  `proposed`, and it stays blocked until delivery completes. The controller is
+  explicitly authorized to stage exactly the following D0 scope and no other
+  path:
+  - `.agents/skills/UPSTREAM_PROVENANCE.md`;
+  - `.codex/README.md`;
+  - `.codex/agents/pm.toml`;
+  - `.codex/agents/tech_lead.toml`;
+  - `AGENTS.md`;
+  - `THIRD_PARTY_NOTICES.md`;
+  - `docs/adr/adr-0009-application-graph-v2-shared-contract.md`;
+  - `docs/agent-workstreams/2026-08-10-archeform-codex-iteration.md`;
+  - `docs/iterations/2026-08-10-prompt-to-polished-product-reset.md`;
+  - `docs/project-status.md`;
+  - `docs/research/2026-08-10-product-builder-ui-ecosystem.md`;
+  - `docs/roadmap.md`;
+  - `docs/superpowers/ledgers/2026-08-10-prompt-to-polished-restaurant-product.md`;
+  - `docs/superpowers/plans/2026-08-10-prompt-to-polished-restaurant-product.md`;
+  - `docs/superpowers/specs/2026-08-10-prompt-to-polished-restaurant-product-design.md`;
+  - `docs/tech-governance.md`;
+  - `docs/threat-model.md`;
+  - `scripts/verify-d0-governance.mjs`;
+  - `scripts/verify-d0-governance.test.mjs`.
+    Before commit, the controller must verify the staged manifest equals this
+    exact 19-path list and contains no credential, raw model material, or unrelated
+    path. The controller may then create the reviewed D0 commit, push the current
+    branch without force under `docs/delivery-policy.md`, and verify local HEAD
+    equals the remote branch tip. This acceptance does not itself unblock Task 1:
+    PM must record that push equality before changing Task 1 state or contract
+    status. No product or Task 1 implementation, provider/model call, service,
+    Docker, Compose, or live-gate replay is authorized.
+- Controller final-tree verification after PM acceptance fails closed.
+  Source-native governance tests pass 51/52 and the direct governance CLI exits
+  1 because the verifier hard-rejects the legitimate ledger transition to D0
+  state `accepted` and still requires `reviewed`. Independent Sol classification
+  is P0/P1/P2=0/1/0: this is a load-bearing final-release P1 inside the delivery
+  gate. The prior Terra evidence predates this executable state transition and
+  therefore cannot authorize delivery of the accepted tree.
+- The round-5/5 repair cap recorded above is exhausted, so no repair is
+  authorized. The prior stage, commit, and push authorization is revoked. D0
+  remains `accepted` as the exact state that reproduces the blocker, but its
+  delivery is blocked and PM does not authorize a commit or push. Task 1 remains
+  `planned`, its contract `proposed`, and blocked by the authoritative field
+  below. New explicit founder authority is required to reopen one minimal
+  post-accept transition repair; no such authority is inferred from the earlier
+  ADR acceptance or continuation response. Until then, no verifier, product, or
+  Task 1 change, provider/model call, service, Docker, Compose, live-gate replay,
+  staging, commit, or push is authorized.
+- After the recorded accepted-state P1 blocker, the founder explicitly responds
+  `接受，继续`. This is new authority from founder chat dated 2026-08-12 and
+  reopens exactly one minimal D0 post-accept transition repair. It does not
+  alter the founder-accepted ADR-0009 decision or erase the prior PM acceptance
+  and failed-delivery history. D0 moves to `implementing` only for this repair;
+  Task 1 remains `planned`, its contract `proposed`, and blocked by its
+  authoritative field below.
+- Freeze one Sol TDD writer to exactly `scripts/verify-d0-governance.mjs` and
+  `scripts/verify-d0-governance.test.mjs`. PM alone may update this ledger,
+  `docs/project-status.md`, and later acceptance/delivery records. The repair
+  must make the legitimate current D0 `accepted` state verify green without
+  weakening any pre-accept, lifecycle-state, contract-status, or Task 1 blocker
+  fail-closed check. Add focused RED/GREEN coverage for valid accepted-state
+  consistency and for contradictory or premature accepted states, including an
+  unaccepted ADR, premature Task 1 implementation/unblocking, or a weakened
+  push-equality blocker. GREEN requires the complete provider-free governance
+  suite and direct CLI verifier, scoped Prettier, diff/whitespace, and exact
+  two-path audit.
+- After the writer handoff require one independent Sol review with no open
+  P0/P1, then one independent Terra QA pass on the exact tree. Only after both
+  pass may PM re-accept D0 and restore delivery authority for the exact 19-path
+  D0 manifest, reviewed commit, non-force push, and local HEAD/remote-tip
+  equality verification. No further repair is authorized by this decision. No
+  product or Task 1 change, provider/model call, service, Docker, Compose,
+  live-gate replay, staging, commit, or push is authorized during the repair.
+- The founder-authorized accepted-transition writer handoff is complete on
+  exactly `scripts/verify-d0-governance.mjs` and
+  `scripts/verify-d0-governance.test.mjs`. RED reproduces the reviewed-only
+  rejection of the legitimate accepted D0 state. GREEN passes the combined
+  source-native command 58/58, comprising governance 52/52 plus no-preview 6/6,
+  and the direct CLI verifier; scoped Prettier, diff/whitespace, and exact
+  two-path scope checks pass. It retains strict fail-closed validation of Task 1
+  state, contract status, and the authoritative push-equality blocker. D0
+  remains `implementing` while the independent Sol task review runs. Task 1
+  remains `planned`, `proposed`, and blocked; ADR-0009 remains `Accepted`. Terra
+  QA, PM re-acceptance, staging, commit, and push are not yet authorized. No
+  product or Task 1 change, provider/model call, service, Docker, Compose, or
+  live-gate replay is authorized.
+- Independent Sol review returns `FAIL` with P0/P1/P2=0/2/0. The two P1s are:
+  1. The verifier's implementing-authorization markers use unscoped whole-ledger
+     regular expressions. Historical authorization therefore survives a later
+     re-acceptance, consumption, supersession, or revocation and can be replayed
+     as current authority.
+  2. The handoff evidence wording called 58/58 the governance source-native
+     suite. The combined source-native command is 58/58: the governance file is
+     52/52 and the no-preview resource-guard file is 6/6. No test is missing;
+     the record is corrected above.
+     The writer continues in the same exact verifier/test scope with TDD for one
+     ordered authorization record and explicit supersession/revocation; no new
+     repair path or authority is added. D0 remains `implementing`; Terra QA and all
+     delivery actions remain unauthorized pending a clean scoped Sol re-review.
+     Task 1 remains `planned`, `proposed`, and blocked. No product or Task 1 change,
+     provider/model call, service, Docker, Compose, live-gate replay, staging,
+     commit, or push is authorized.
+- The same-scope replay-repair writer re-handoff is complete on the exact
+  verifier/test paths. Focused RED is 0/5 across stale, split, revoked, consumed,
+  and duplicate authorization cases. GREEN passes the combined source-native
+  command 63/63, comprising governance 57/57 plus no-preview 6/6; the focused
+  replay suite passes 7/7 and the broader governance suite passes 25/25. The
+  direct CLI verifier, scoped Prettier, diff/whitespace, and exact two-path scope
+  checks pass. The same Sol reviewer recheck has started. D0 remains
+  `implementing`; Task 1 remains `planned`, `proposed`, and blocked. Terra QA,
+  PM re-acceptance, staging, commit, and push remain unauthorized pending the
+  reviewer verdict. No product or Task 1 change, provider/model call, service,
+  Docker, Compose, or live-gate replay is authorized.
+- The same Sol re-review returns `PASS` with P0/P1/P2=0/0/0: both prior P1s are
+  addressed and no new breakage is found. Fresh evidence passes focused 7/7,
+  broader 25/25, and the combined source-native command 63/63, comprising
+  governance 57/57 plus no-preview 6/6; the direct CLI verifier, scoped
+  Prettier, and diff/whitespace checks pass.
+- D0 advances to `ready_for_qa`. Authorize one independent Terra QA pass,
+  provider-free and read-only, on this exact tree. QA must prove ordered,
+  one-time authorization freshness and consumption across accepted, reviewed,
+  and explicitly authorized implementing states; validate ADR-0009, actual D0
+  and Task 1 state, Task 1 contract status and authoritative push-equality
+  blocker; rerun the complete governance and Golden-profile truth, copied-skill
+  provenance, threat-model authority, and state-driven recovery gates; and
+  verify the exact 19-path scope with formatting and diff/whitespace clean.
+  Task 1 remains `planned`, `proposed`, and blocked. PM re-acceptance, staging,
+  commit, and push remain unauthorized until Terra passes with no open P0/P1.
+  No product or Task 1 change, provider/model call, service, Docker, Compose, or
+  live-gate replay is authorized.
+- Terra QA stops before the full run and returns `FAIL` with P0/P1/P2=0/1/0.
+  After PM legally advanced D0 to `ready_for_qa`, the current direct CLI verifier
+  exits 1 and the checked-in contract passes 0/1 because the verifier explicitly
+  rejects `ready_for_qa`. The load-bearing root cause is phase-specific
+  allowed-state encoding rather than validation of the governed D0 lifecycle;
+  the preceding Sol review missed this executable transition.
+- D0 returns to `implementing`. Continue within the existing founder-authorized
+  repair and the same exact two tracked paths,
+  `scripts/verify-d0-governance.mjs` and
+  `scripts/verify-d0-governance.test.mjs`; no scope or repair authority expands.
+  TDD must accept `ready_for_qa` only when one current ordered record contains
+  both the Sol `PASS` and Terra authorization, and must reject a missing, split,
+  stale, later-review-failed, revoked, superseded, or consumed record. Preserve
+  the fresh implementing, reviewed, and accepted lifecycle rules plus strict
+  ADR-0009, Task 1 state, Task 1 contract status, and authoritative push-equality
+  blocker checks. GREEN requires focused and full provider-free suites, direct
+  CLI, scoped Prettier, diff/whitespace, and exact two-path audit. Then require
+  the same Sol reviewer to re-review before Terra restarts on the exact tree.
+  Task 1 remains `planned`, `proposed`, and blocked. Terra restart, PM
+  re-acceptance, staging, commit, and push remain unauthorized pending the clean
+  re-review. No product or Task 1 change, provider/model call, service, Docker,
+  Compose, or live-gate replay is authorized.
+- The same two-path `ready_for_qa` P1 writer re-handoff is complete. Focused RED
+  is 0/10 across valid, missing, split, and duplicate authorization records plus
+  later Sol failure, Terra failure, revocation, supersession, consumption, and
+  return-to-implementing cases. GREEN passes focused 10/10, broader 34/34, and
+  the combined source-native command 72/72, comprising governance 66/66 plus
+  no-preview 6/6. The current `implementing` state passes the direct CLI
+  verifier; scoped Prettier, diff/whitespace, and exact two-path checks pass.
+  The same Sol reviewer re-review has started. D0 remains `implementing`; Task 1
+  remains `planned`, `proposed`, and blocked. Terra restart, PM re-acceptance,
+  staging, commit, and push remain unauthorized pending the reviewer verdict.
+  No product or Task 1 change, provider/model call, service, Docker, Compose, or
+  live-gate replay is authorized.
+- The same Sol re-review returns `FAIL` with P0/P1/P2=0/1/0. Ready-authority
+  invalidation recognizes later `Sol review` and `Sol re-review` failure wording
+  but misses the repository-native `Sol task review returns FAIL`; the
+  adversarial fixture therefore leaves stale authority valid. This is the third
+  related wording gap and is treated as a semantic gate-outcome classification
+  defect, not another exact-sentence omission.
+- Continue in the same exact ordered-record model and the same two tracked paths,
+  `scripts/verify-d0-governance.mjs` and
+  `scripts/verify-d0-governance.test.mjs`. Implement one bounded semantic
+  classifier: any later required Sol or Terra gate record carrying `FAIL` or
+  nonzero P0/P1/P2 consumes ready authority across the bounded vocabulary of
+  review, re-review, task review, release review, QA, and recheck. Add
+  parameterized REDs for every supported gate/outcome form plus false-positive
+  controls for unrelated prose and zero-severity passing records. Do not add a
+  broader ledger schema, widen paths, or weaken the existing ordered-record,
+  state, ADR, Task 1 contract, or push-equality blocker checks. D0 remains
+  `implementing`; Task 1 remains `planned`, `proposed`, and blocked. Terra,
+  re-acceptance, staging, commit, and push remain unauthorized pending a clean
+  same-Sol re-review. No product or Task 1 change, provider/model call, service,
+  Docker, Compose, or live-gate replay is authorized.
+- The semantic-classifier writer handoff declares the combined source-native
+  command green at 82/82, comprising governance 76/76 plus no-preview 6/6, with
+  the direct CLI verifier, scoped Prettier, diff/whitespace, and exact two-path
+  scope checks also green. The same Sol re-review nevertheless returns `FAIL`
+  with P0/P1/P2=0/1/0. The classifier uses only the first `P0/P1/P2` tuple in a
+  gate record, so a historical 0/0/0 tuple can mask a later current 0/1/0 tuple
+  in that same record. The declared green evidence therefore does not close the
+  load-bearing ready-authority invalidation gate.
+- Freeze the correction to the same exact verifier/test paths and ordered-record
+  model. TDD must evaluate every non-quoted `P0/P1/P2` tuple in a bounded Sol or
+  Terra gate record and consume ready authority when any tuple is nonzero,
+  regardless of zero/nonzero order or mixed PASS/FAIL outcome wording. Add both
+  tuple-order variants, mixed-outcome coverage, multiple-all-zero controls, and
+  quoted-history nonzero controls that must not invalidate current authority.
+  Preserve every existing vocabulary, lifecycle, authorization freshness, ADR,
+  Task 1 contract, and push-equality blocker check. Fresh controller evidence on
+  the in-progress TDD tree is intentionally RED at governance 79/81: the
+  zero-then-nonzero and mixed PASS/FAIL controls fail, while the reverse-order,
+  quoted-history, and all-zero controls pass. Require GREEN focused and complete
+  provider-free suites, direct CLI, scoped Prettier, diff/whitespace, and exact
+  two-path scope before the same Sol reviewer rechecks. D0 remains
+  `implementing`; Task 1 remains `planned`, its contract remains `proposed`, and
+  it stays blocked. Terra, PM re-acceptance, staging, commit, push, product or
+  Task 1 code, provider/model calls, services, Docker, Compose, and live-gate
+  replay remain unauthorized.
+- The all-tuples writer GREEN handoff is complete on exactly
+  `scripts/verify-d0-governance.mjs` and
+  `scripts/verify-d0-governance.test.mjs`. Focused tuple-order and quoted-history
+  coverage passes 5/5, the broader ledger suite passes 49/49, and the combined
+  source-native command passes 87/87, comprising governance 81/81 plus
+  no-preview 6/6. The direct CLI verifier, scoped Prettier, diff/whitespace, and
+  exact two-path scope checks pass. The same Sol reviewer re-review has started.
+  D0 remains `implementing`; Task 1 remains `planned`, its contract remains
+  `proposed`, and it stays blocked. Terra, PM re-acceptance, staging, commit,
+  push, product or Task 1 code, provider/model calls, services, Docker, Compose,
+  and live-gate replay remain unauthorized pending the reviewer verdict.
+- The same Sol re-review returns `FAIL` with P0/P1/P2=0/1/0. The remaining P1
+  is a quote-boundary defect: tuple classification removes straight and curly
+  double-quoted history but still counts Markdown inline-code history. A valid
+  current ready record with plain P0/P1/P2=0/0/0 is therefore consumed when its
+  explanation contains backtick-quoted `historical P0/P1/P2=0/1/0`.
+- Continue TDD on the same exact ordered-record model and the same two tracked
+  paths, `scripts/verify-d0-governance.mjs` and
+  `scripts/verify-d0-governance.test.mjs`. Exclude severity tuples inside native
+  Markdown inline-code explanatory spans from tuple classification without
+  suppressing genuine backticked `PASS` or `FAIL` verdict tokens. Add focused
+  controls for backtick-quoted, straight-single-quoted, and curly-quoted history,
+  plus actual backticked and plain verdict failures and genuine unquoted nonzero
+  tuples. Preserve the all-tuples behavior, bounded Sol/Terra vocabulary,
+  ordered authority, lifecycle, ADR, Task 1 contract, and push-equality blocker
+  checks. No broader parser or ledger schema, path, product, provider, service,
+  Docker, Compose, or live-gate scope is authorized. D0 remains `implementing`;
+  Task 1 remains `planned`, its contract remains `proposed`, and it stays
+  blocked. Terra, PM re-acceptance, staging, commit, and push remain unauthorized
+  pending a GREEN handoff and clean same-Sol re-review.
+- The inline-code quote-boundary writer GREEN handoff is complete on the same
+  exact verifier/test paths. Focused RED is 4/5 with only the valid inline-code
+  historical-tuple control failing. GREEN passes the focused quote-boundary
+  suite 5/5, the broader ledger suite 53/53, and the combined source-native
+  command 91/91, comprising governance 85/85 plus no-preview 6/6. The direct CLI
+  verifier, scoped Prettier, diff/whitespace, and exact two-path scope checks
+  pass. The same Sol reviewer re-review has started. D0 remains `implementing`;
+  Task 1 remains `planned`, its contract remains `proposed`, and it stays
+  blocked. Terra, PM re-acceptance, staging, commit, push, product or Task 1
+  code, provider/model calls, services, Docker, Compose, and live-gate replay
+  remain unauthorized pending the reviewer verdict.
+- The same Sol final re-review returns `FAIL` with P0/P1/P2=0/1/0. The exact
+  quote-boundary contract is still uncovered: the sanitizer removes an inline
+  code span only when the tuple is the span's complete content. The required
+  ledger case is a complete explanatory span such as
+  `historical P0/P1/P2=0/1/0`, and the required ASCII single-quoted form is
+  `'historical P0/P1/P2=0/1/0'`; the writer test instead placed `historical`
+  outside the code span and used ASCII double quotes.
+- Continue TDD on exactly `scripts/verify-d0-governance.mjs` and
+  `scripts/verify-d0-governance.test.mjs`. Tuple sanitization must remove the
+  complete paired span when that span contains a severity tuple for native
+  Markdown backticks, ASCII single quotes, ASCII double quotes, curly single
+  quotes, and curly double quotes. Standalone backticked `PASS` and `FAIL`
+  verdict tokens must remain visible to genuine verdict classification. Add
+  exact regressions for every paired-span form plus genuine backticked and plain
+  verdict failures and unquoted nonzero tuples. Preserve all-tuples evaluation,
+  bounded gate vocabulary, ordered authority, lifecycle, ADR, Task 1 contract,
+  and push-equality blocker checks. Do not add a broader parser or ledger schema,
+  widen paths, or authorize product, provider/model, service, Docker, Compose,
+  or live-gate work. D0 remains `implementing`; Task 1 remains `planned`, its
+  contract remains `proposed`, and it stays blocked. Terra, PM re-acceptance,
+  staging, commit, and push remain unauthorized pending a GREEN handoff and
+  clean same-Sol re-review.
+- The complete paired-span writer GREEN handoff is complete on the same exact
+  verifier/test paths. Focused RED is 2/5: the Markdown backtick phrase, ASCII
+  single-quoted phrase, and curly single-quoted phrase fail while the other two
+  paired-span controls pass. GREEN passes the focused paired-span suite 5/5, the
+  broader ledger suite 56/56, and the combined source-native command 94/94,
+  comprising governance 88/88 plus no-preview 6/6. The direct CLI verifier,
+  scoped Prettier, diff/whitespace, and exact two-path scope checks pass. The
+  same Sol reviewer re-review has started. D0 remains `implementing`; Task 1
+  remains `planned`, its contract remains `proposed`, and it stays blocked.
+  Terra, PM re-acceptance, staging, commit, push, product or Task 1 code,
+  provider/model calls, services, Docker, Compose, and live-gate replay remain
+  unauthorized pending the reviewer verdict.
+- The same Sol re-review returns `FAIL` with P0/P1/P2=0/1/0. The paired-span
+  regular expression fails open on apostrophes: it treats intra-word ASCII and
+  curly apostrophes as single-quote delimiters, so a genuine unquoted nonzero
+  tuple between text such as `reviewer's` and `team's` is removed and stale
+  ready authority remains valid.
+- Continue TDD on exactly `scripts/verify-d0-governance.mjs` and
+  `scripts/verify-d0-governance.test.mjs` with a boundary-aware paired-span
+  scanner, not another broad regular expression. ASCII and curly single quotes
+  may open or close a paired explanatory span only at non-word boundaries;
+  intra-word ASCII or Unicode apostrophes in possessives and contractions never
+  delimit a span. Add genuine-nonzero REDs between ASCII possessives and between
+  curly possessives, contraction controls, exact tuple-containing quote-span
+  positives, and unmatched or mixed-delimiter cases that must not suppress a
+  genuine tuple. Preserve Markdown backtick and double-quote handling,
+  standalone backticked verdict visibility, all-tuples evaluation, bounded gate
+  vocabulary, ordered authority, lifecycle, ADR, Task 1 contract, and
+  push-equality blocker checks. Do not widen the parser or ledger schema, paths,
+  product, provider/model, service, Docker, Compose, or live-gate scope. D0
+  remains `implementing`; Task 1 remains `planned`, its contract remains
+  `proposed`, and it stays blocked. Terra, PM re-acceptance, staging, commit, and
+  push remain unauthorized pending a GREEN handoff and clean same-Sol re-review.
+- The boundary-aware scanner writer GREEN handoff is complete on the same exact
+  verifier/test paths. Focused RED is 9/11 with the ASCII/curly possessive and
+  contraction controls failing. GREEN passes the focused scanner suite 11/11,
+  the broader ledger suite 64/64, and the combined source-native command
+  102/102, comprising governance 96/96 plus no-preview 6/6. The direct CLI
+  verifier, scoped Prettier, diff/whitespace, and exact two-path scope checks
+  pass. The same Sol reviewer re-review has started. D0 remains `implementing`;
+  Task 1 remains `planned`, its contract remains `proposed`, and it stays
+  blocked. Terra, PM re-acceptance, staging, commit, push, product or Task 1
+  code, provider/model calls, services, Docker, Compose, and live-gate replay
+  remain unauthorized pending the reviewer verdict.
+- The same Sol re-review returns `PASS` with P0/P1/P2=0/0/0. Fresh evidence
+  passes the boundary-aware scanner suite 11/11 and the complete provider-free
+  source-native command 102/102, comprising governance 96/96 plus no-preview
+  6/6; the direct CLI verifier, scoped Prettier, and diff/whitespace checks pass.
+  Lifecycle, accepted ADR-0009, live Task 1 state and proposed contract, and the
+  authoritative push-equality blocker remain strict. D0 advances to
+  `ready_for_qa`. Authorize one independent Terra QA pass, provider-free and
+  read-only, on this exact tree. QA must revalidate authorization freshness,
+  the scanner boundaries, complete D0 governance evidence, live fields and
+  blockers, exact two-path implementation scope, and the exact 19-path D0
+  delivery manifest without changing files. Task 1 remains `planned`, its
+  contract remains `proposed`, and it stays blocked. PM re-acceptance, staging,
+  commit, push, delivery, product or Task 1 code, provider/model calls, services,
+  Docker, Compose, and live-gate replay remain unauthorized pending Terra PASS
+  with no open P0/P1.
+- Final Terra restart returns `PASS` with P0/P1/P2=0/0/0 on the exact
+  `ready_for_qa` tree. The combined source-native command passes 102/102,
+  comprising governance 96/96 plus no-preview 6/6, and the direct CLI verifier
+  passes. Boundary-scanner behavior, lifecycle, accepted ADR-0009, live Task 1
+  state and proposed contract, the authoritative push-equality blocker,
+  bidirectional Golden-profile truth, copied-skill provenance, threat-model
+  authority, state-driven recovery, all 11 TOMLs, formatting, diff/whitespace,
+  and the exact 19-path scope pass. The sensitive-material scan is clean.
+- PM re-accepts D0 on 2026-08-12. Task 1 remains `planned`, its contract remains
+  `proposed`, and it stays blocked until PM records the reviewed D0 commit pushed
+  with local HEAD equal to the remote branch tip. The prior revoked delivery
+  authorization is not reused. The controller must first rerun
+  `node scripts/verify-d0-governance.mjs` on this exact post-transition
+  `accepted` tree and receive exit code 0; the earlier `ready_for_qa` CLI result
+  does not satisfy this gate. After that accepted-state check, the controller is
+  authorized to stage exactly these 19 paths and no other path:
+  - `.agents/skills/UPSTREAM_PROVENANCE.md`;
+  - `.codex/README.md`;
+  - `.codex/agents/pm.toml`;
+  - `.codex/agents/tech_lead.toml`;
+  - `AGENTS.md`;
+  - `THIRD_PARTY_NOTICES.md`;
+  - `docs/adr/adr-0009-application-graph-v2-shared-contract.md`;
+  - `docs/agent-workstreams/2026-08-10-archeform-codex-iteration.md`;
+  - `docs/iterations/2026-08-10-prompt-to-polished-product-reset.md`;
+  - `docs/project-status.md`;
+  - `docs/research/2026-08-10-product-builder-ui-ecosystem.md`;
+  - `docs/roadmap.md`;
+  - `docs/superpowers/ledgers/2026-08-10-prompt-to-polished-restaurant-product.md`;
+  - `docs/superpowers/plans/2026-08-10-prompt-to-polished-restaurant-product.md`;
+  - `docs/superpowers/specs/2026-08-10-prompt-to-polished-restaurant-product-design.md`;
+  - `docs/tech-governance.md`;
+  - `docs/threat-model.md`;
+  - `scripts/verify-d0-governance.mjs`;
+  - `scripts/verify-d0-governance.test.mjs`.
+    The controller must verify that the staged manifest equals this exact list
+    and contains no credential, raw model material, or unrelated path, then
+    create one reviewed D0 commit, push the current branch without force under
+    `docs/delivery-policy.md`, and verify local HEAD equals the remote branch
+    tip. PM must record that equality before Task 1 state or contract status may
+    change. No product or Task 1 implementation, provider/model call, service,
+    Docker, Compose, live-gate replay, cloud deployment, or any path outside the
+    list is authorized.
+- Controller pre-commit verification on the exact accepted tree fails combined
+  source-native 101/102. The sole failure is the fixture
+  `ledger verification accepts the authorized post-accept repair state`: its
+  positive setup changes the copied live ledger state from `accepted` to
+  `implementing` but retains the later PM re-acceptance above, so production
+  correctly rejects the historical founder repair authority as consumed. The
+  direct accepted-state CLI remains green; this is a test-fixture P1, not a
+  production fail-open.
+- The stage, commit, and push authorization above is temporarily revoked. Keep
+  live D0 State `accepted`; do not rewrite acceptance or founder-authority
+  history. Freeze one test-only TDD correction to
+  `scripts/verify-d0-governance.test.mjs`. The positive authorized-implementing
+  helper must reconstruct that historical slice by truncating the copied ledger
+  before the final PM re-acceptance and consumption record. The stale-authority
+  negative must retain the complete final history and continue to prove that
+  production rejects consumed authority. Do not change
+  `scripts/verify-d0-governance.mjs`, any ledger schema, or any other path.
+  Require focused and complete provider-free GREEN, the direct accepted-state
+  CLI, scoped Prettier, diff/whitespace, and exact one-path scope, followed by
+  the same Sol review and one exact accepted-tree, provider-free, read-only
+  Terra QA pass. PM may restore the exact 19-path delivery authorization only
+  after both gates pass with no open P0/P1. Task 1 remains `planned`, its
+  contract remains `proposed`, and it stays blocked. Staging, commit, push,
+  product or Task 1 implementation, provider/model calls, services, Docker,
+  Compose, cloud deployment, and live-gate replay remain unauthorized.
+- The fixture-only writer GREEN handoff is complete on
+  `scripts/verify-d0-governance.test.mjs`; production verification code is
+  unchanged. Focused RED is 0/1 on the consumed-authority positive fixture. The
+  helper now reconstructs pre-consumption implementing history, while the stale
+  negative retains the complete final re-accepted history. GREEN passes the
+  post-accept suite 7/7 and the combined source-native command 102/102,
+  comprising governance 96/96 plus no-preview 6/6. The direct accepted-state
+  CLI verifier, scoped Prettier, diff/whitespace, and exact test-only scope
+  checks pass. The same Sol review has started. D0 remains `accepted`; Task 1
+  remains `planned`, its contract remains `proposed`, and it stays blocked.
+  Delivery, Terra QA, staging, commit, push, product or Task 1 implementation,
+  provider/model calls, services, Docker, Compose, cloud deployment, and
+  live-gate replay remain unauthorized pending the reviewer verdict.
+- The same Sol fixture re-review returns `PASS` with P0/P1/P2=0/0/0. Fresh
+  evidence passes the post-accept suite 7/7 and the complete provider-free
+  source-native command 102/102; the direct accepted-state CLI verifier, scoped
+  Prettier, and diff/whitespace checks pass. Production verification remains
+  unchanged, the positive fixture reconstructs pre-consumption history, and the
+  stale negative retains the complete final history. Authorize one independent
+  Terra QA pass, provider-free and read-only, on this exact accepted tree. QA
+  must revalidate the fixture boundary, full governance 96/96 plus no-preview
+  6/6, accepted-state CLI, scanner/lifecycle/ADR/Task 1 state, proposed contract
+  and blocker, Golden-profile truth, provenance, threat model, recovery, all 11
+  TOMLs, formatting, diff/whitespace, exact 19-path scope, and the
+  sensitive-material boundary. On Terra `PASS` with no open P0/P1, PM may
+  restore the exact 19-path delivery authority. D0 remains `accepted`; Task 1
+  remains `planned`, its contract remains `proposed`, and it stays blocked.
+  Delivery, staging, commit, push, product or Task 1 implementation,
+  provider/model calls, services, Docker, Compose, cloud deployment, and
+  live-gate replay remain unauthorized pending Terra and a later PM restoration
+  record.
+- Final accepted-tree Terra QA returns `PASS` with P0/P1/P2=0/0/0. The combined
+  provider-free source-native command passes 102/102, comprising governance
+  96/96 plus no-preview 6/6, and the direct accepted-state CLI verifier passes.
+  The complete fixture and scanner boundaries, lifecycle, accepted ADR-0009,
+  live Task 1 state and proposed contract, authoritative push-equality blocker,
+  bidirectional Golden-profile truth, copied-skill provenance, threat-model
+  authority, state-driven recovery, all 11 TOMLs, all five authority maps,
+  formatting, diff/whitespace, exact 19-path scope, and sensitive-material scan
+  are clean. No open P0/P1 remains.
+- PM restores delivery authority for this exact accepted tree. The controller
+  must first rerun `node scripts/verify-d0-governance.mjs` after this restoration
+  record and receive exit code 0. It may then stage exactly these 19 paths and no
+  other path:
+  - `.agents/skills/UPSTREAM_PROVENANCE.md`;
+  - `.codex/README.md`;
+  - `.codex/agents/pm.toml`;
+  - `.codex/agents/tech_lead.toml`;
+  - `AGENTS.md`;
+  - `THIRD_PARTY_NOTICES.md`;
+  - `docs/adr/adr-0009-application-graph-v2-shared-contract.md`;
+  - `docs/agent-workstreams/2026-08-10-archeform-codex-iteration.md`;
+  - `docs/iterations/2026-08-10-prompt-to-polished-product-reset.md`;
+  - `docs/project-status.md`;
+  - `docs/research/2026-08-10-product-builder-ui-ecosystem.md`;
+  - `docs/roadmap.md`;
+  - `docs/superpowers/ledgers/2026-08-10-prompt-to-polished-restaurant-product.md`;
+  - `docs/superpowers/plans/2026-08-10-prompt-to-polished-restaurant-product.md`;
+  - `docs/superpowers/specs/2026-08-10-prompt-to-polished-restaurant-product-design.md`;
+  - `docs/tech-governance.md`;
+  - `docs/threat-model.md`;
+  - `scripts/verify-d0-governance.mjs`;
+  - `scripts/verify-d0-governance.test.mjs`.
+    The controller must prove the staged manifest equals this exact list and
+    repeat the sensitive-material boundary check, then create one reviewed D0
+    commit, push the current branch without force under
+    `docs/delivery-policy.md`, and verify local HEAD equals the remote branch
+    tip. D0 remains `accepted`; Task 1 remains `planned`, its contract remains
+    `proposed`, and it stays blocked until PM records that pushed equality. No
+    product or Task 1 implementation, provider/model call, service, Docker,
+    Compose, live-gate replay, cloud deployment, or path outside the list is
+    authorized.
 
 ## Task 1 — Freeze Product Intent and Application Graph v2
 
@@ -1950,7 +2801,8 @@ Acceptance evidence:
 - production compilers accept only Published V1/V2 Graph inputs through an
   explicit version adapter.
 
-Blocked by: Task 0 accepted and D0 reviewed.
+Blocked by: D0 PM acceptance and the reviewed D0 commit pushed with local HEAD
+verified equal to the remote branch tip. Task 0 is already accepted.
 
 ## Task 2 — Compose one deterministic Restaurant Product Recipe
 

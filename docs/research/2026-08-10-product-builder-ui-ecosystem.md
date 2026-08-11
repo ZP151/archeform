@@ -4,6 +4,22 @@ Date: 2026-08-10
 Status: Adopted as product and dependency guidance
 Scope: public product patterns and first-party documentation only
 
+## Authority map
+
+<!-- d0-authority-map:start -->
+
+- `docs/iterations/2026-08-10-prompt-to-polished-product-reset.md`: the reset records founder decisions.
+- `docs/superpowers/specs/2026-08-10-prompt-to-polished-restaurant-product-design.md`: the design owns the product contract.
+- `docs/superpowers/plans/2026-08-10-prompt-to-polished-restaurant-product.md`: the plan owns execution order.
+- `docs/superpowers/ledgers/2026-08-10-prompt-to-polished-restaurant-product.md`: the ledger alone owns live task state.
+- `docs/research/2026-08-10-product-builder-ui-ecosystem.md`: the research owns external evidence.
+
+Product approval does not approve a proposed technology decision. A design,
+plan, or ADR proposal is not founder approval; the explicit governance gate in
+`docs/tech-governance.md` remains required.
+
+<!-- d0-authority-map:end -->
+
 ## Research question
 
 Which public product-builder patterns and UI ecosystems can shorten Archeform's

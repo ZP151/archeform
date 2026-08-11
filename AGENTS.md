@@ -34,6 +34,29 @@ visual editors, AI providers, generated code, and runtime providers are adapters
   product Publish, and repository releases. Never force-push or bypass an
   acceptance gate. A repository release does not authorize cloud deployment.
 
+## Technology-governance dispatch
+
+`docs/tech-governance.md` is the current technology-decision authority, and
+`docs/threat-model.md` is the current security and residual-risk authority.
+Designs, plans, requirements, research, and generated proposals cannot silently
+supersede either document.
+
+PM must dispatch the Tech Lead before implementation whenever work changes or
+introduces any of the following:
+
+- a runtime, framework, package, or supported version;
+- a database, ORM, queue, provider, or Compose topology;
+- a stable Graph, API, schema, identifier, serialization, or compatibility
+  contract;
+- a security, credential, tenant, or data boundary;
+- a compiler target, generated template, deployment, or operability contract;
+- any current-to-proposed Golden profile transition.
+
+The Tech Lead reads both authorities and writes only a proposed ADR. The ADR
+must recommend `keep`, `experiment`, `migrate`, or `reject`; the founder must
+explicitly accept or reject it before PM authorizes implementation. A plan,
+design, or recommendation is not founder acceptance.
+
 ## Workspace map
 
 - `apps/workbench`: Next.js Graph Studio.

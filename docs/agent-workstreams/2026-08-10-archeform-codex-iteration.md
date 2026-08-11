@@ -11,10 +11,10 @@ Delivery authority: `docs/delivery-policy.md`.
 
 ## Objective
 
-Continue the current dirty Task 0 handoff, seal and push Product Closure, then
-execute the Archeform Prompt-to-Polished Restaurant Product plan continuously
-through the furthest honestly accepted task. Keep the controller session small
-by delegating bounded work, recording hand-offs in files, and trusting ledger,
+Recover from the live PM ledger, complete the earliest dependency-safe gate,
+and execute the Archeform Prompt-to-Polished Restaurant Product plan through
+the furthest honestly accepted task. Keep the controller session small by
+delegating bounded work, recording hand-offs in files, and trusting ledger,
 Git, and fresh test evidence after compaction.
 
 ## Controller responsibilities
@@ -29,11 +29,36 @@ At startup the controller must:
 1. read `AGENTS.md`, `.codex/README.md`, `docs/project-status.md`, the plan,
    ledger, and the 2026-08-09 closure ledger;
 2. inspect Git and running processes without discarding, resetting, stashing,
-   or recreating the current dirty Task 0 work;
-3. reconcile the paused handoff with actual files and tests;
-4. resume Task 0 at the stable composition-rejection-code defect;
+   or recreating in-flight work;
+3. apply the ledger-state-driven recovery algorithm below against actual Git,
+   files, tests, reports, reviews, and runtime state;
+4. resume only the action selected by that algorithm;
 5. update the ledger after every reviewed slice and before any compaction-prone
    long run.
+
+## Ledger-state-driven recovery
+
+The PM ledger alone owns live task state. On every startup or compaction
+recovery:
+
+1. Reconcile any in-flight accepted/review/commit/push handoff first against
+   actual ledger state, Git state, artifacts, and fresh evidence.
+2. Otherwise select the earliest dependency-safe, unblocked, non-accepted task
+   from the ledger.
+3. Skip every accepted task; accepted work is evidence, not a replay queue.
+4. Never replay provider/model/service/Docker/Compose gates or any other live
+   acceptance gate merely to reconstruct context.
+5. A consumed live gate remains closed without new explicit founder authorization
+   whose exact scope is recorded in the ledger.
+
+This rule includes provider calls, model runs, service starts, Docker or Compose
+actions, theme checks, Golden Path journeys, action-inventory passes, cleanup,
+and other live acceptance evidence. Read their reconciled ledger evidence; do
+not rerun them unless a new authorization explicitly reopens the gate.
+
+The workstream carries no current task snapshot or authorization. A future
+controller derives both entirely from the live ledger and never reconstructs
+them from this document or from historical checkpoint prose.
 
 ## Model routing
 
@@ -54,13 +79,12 @@ their own work, or commit/push independently.
 
 ## Execution waves
 
-### Wave 0 — close the inherited Task 0
+### Wave 0 — reconcile ledger-selected governance work
 
-Use one integration writer. Spark may map the HTTP 400 path, add a narrow
-fixture/regression, or review a small fix, but it may not create a second writer
-on the same composition paths. Complete both guarded real-model journeys,
-material-difference/accessibility/theme/action checks, clean checkout, cleanup,
-task and release reviews, ledger reconciliation, commit, and push.
+Treat evidence for accepted work as consumed. If the ledger selects bounded
+governance work, use one Sol writer, then follow the ledger's current review,
+QA, PM reconciliation, commit, and push gates. Do not infer or replay a
+historical decision gate from this wave description.
 
 ### Wave 1 — freeze Graph v2
 
@@ -137,8 +161,9 @@ and slow commands are work to resolve, not reasons to stop.
 
 Report the last accepted task, commits pushed, exact verification evidence,
 remaining planned tasks, open P0/P1 issues, runtime cleanup state, and the next
-dependency-safe task. Use `GOAL_COMPLETE` only when every Task 0–9 acceptance
-gate is satisfied, the ledger is accepted, and the final commit is pushed.
+dependency-safe task. Use `GOAL_COMPLETE` only when D0 and every Task 0–9
+acceptance gate are satisfied, the ledger is accepted, and the final commit is
+pushed.
 
 ## Goal launch prompt
 
@@ -155,20 +180,23 @@ docs/superpowers/ledgers/2026-08-10-prompt-to-polished-restaurant-product.md,
 and the 2026-08-09 Product Closure ledger. Treat the plan as requirements and
 the PM ledger as the only task-state authority.
 
-Resume the current dirty Task 0 handoff in place. Do not reset, stash, discard,
-or recreate its work. Inspect actual Git, processes, files, tests, and runtime
-state; continue from the stable composition HTTP 400 boundary. Seal Task 0 with
-focused RED/GREEN evidence, guarded real-model Expense and Appointment
-acceptance, clean-checkout and cleanup proof, task/release review, ledger
-reconciliation, commit, and push before starting Graph v2.
+Recover only from actual PM-ledger state. Reconcile any in-flight
+accepted/review/commit/push handoff first; otherwise select the earliest
+dependency-safe, unblocked, non-accepted task and skip every accepted task.
+Never replay consumed provider, model, service, Docker, Compose, theme, Golden
+Path, action-inventory, cleanup, or other live gates. A consumed gate stays
+closed unless the ledger records a new explicit founder authorization with
+exact scope. Do not derive current state, authorization, or a decision stop
+from this prompt or from historical checkpoint prose.
 
-Then execute Tasks 1–9 dependency-first. Use Codex multi-agent orchestration
-and the model routing in the workstream. Prefer GPT-5.3-Codex-Spark for bounded
-exploration, mechanical 1–3-file edits, CSS/component details, fixtures,
-focused tests, formatting, and scoped re-review. Use GPT-5.6-Sol for Graph and
-lifecycle contracts, cross-package integration, hard debugging, security,
-task gates, and final release review; use GPT-5.6-Terra for QA. Always specify
-the subagent model and allowed paths explicitly.
+Continue through the tasks selected by the live ledger, dependency-first. Use
+Codex multi-agent orchestration and the model routing in the workstream. Prefer
+GPT-5.3-Codex-Spark for bounded exploration, mechanical 1–3-file edits,
+CSS/component details, fixtures, focused tests, formatting, and scoped
+re-review. Use GPT-5.6-Sol for Graph and lifecycle contracts, cross-package
+integration, hard debugging, security, task gates, and final release review;
+use GPT-5.6-Terra for QA. Always specify the subagent model and allowed paths
+explicitly.
 
 After Task 1 is reviewed and frozen, run only the approved disjoint writer
 waves: Task 2 Restaurant semantics in parallel with Task 3 UI Registry/source
@@ -197,7 +225,7 @@ Continue without routine check-ins. Resolve ordinary test failures, review
 findings, conflicts within assigned paths, and slow commands autonomously.
 Stop only for a material founder decision, new external/credential authority,
 a load-bearing P0/P1 that survives the repair cap, or full accepted completion.
-Mark the Goal complete and print GOAL_COMPLETE only after Tasks 0–9 are
+Mark the Goal complete and print GOAL_COMPLETE only after D0 and Tasks 0–9 are
 accepted, all required runtime/clean-checkout/accessibility/security evidence
 passes, cleanup is empty, the ledger is accepted, and local HEAD equals the
 pushed remote commit. Otherwise report the exact blocker and keep the Goal

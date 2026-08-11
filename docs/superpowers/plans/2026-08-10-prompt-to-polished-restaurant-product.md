@@ -22,6 +22,22 @@ shadcn/ui Radix source, Lucide, NestJS, Prisma/PostgreSQL, XState, Casbin,
 BullMQ/Redis, Vitest, Playwright, Docker Compose, and the environment-only
 OpenAI adapter.
 
+## Authority map
+
+<!-- d0-authority-map:start -->
+
+- `docs/iterations/2026-08-10-prompt-to-polished-product-reset.md`: the reset records founder decisions.
+- `docs/superpowers/specs/2026-08-10-prompt-to-polished-restaurant-product-design.md`: the design owns the product contract.
+- `docs/superpowers/plans/2026-08-10-prompt-to-polished-restaurant-product.md`: the plan owns execution order.
+- `docs/superpowers/ledgers/2026-08-10-prompt-to-polished-restaurant-product.md`: the ledger alone owns live task state.
+- `docs/research/2026-08-10-product-builder-ui-ecosystem.md`: the research owns external evidence.
+
+Product approval does not approve a proposed technology decision. A design,
+plan, or ADR proposal is not founder approval; the explicit governance gate in
+`docs/tech-governance.md` remains required.
+
+<!-- d0-authority-map:end -->
+
 ## Global constraints
 
 - Preserve mutable Draft -> immutable Published Graph -> immutable Compilation.
@@ -32,8 +48,8 @@ OpenAI adapter.
   a Published Revision independently and never promotes a preview snapshot.
 - Finish and push 2026-08-09 Task 9 before starting Graph v2 product code.
 - Start each product behavior with a focused failing test.
-- New projects use `factory.application-graph/v2`; V1 Published content and
-  hashes never change.
+- If proposed ADR-0009 receives explicit founder acceptance, new projects use
+  `factory.application-graph/v2`; V1 Published content and hashes never change.
 - The model proposes bounded business and experience semantics only. It cannot
   select packages, versions, paths, routes, URLs, providers, source, runtime
   destinations, credentials, or executable code.

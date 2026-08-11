@@ -9,6 +9,22 @@ Required-Plan: docs/superpowers/plans/2026-08-10-prompt-to-polished-restaurant-p
 
 # Prompt-to-Polished Restaurant Product Design
 
+## Authority map
+
+<!-- d0-authority-map:start -->
+
+- `docs/iterations/2026-08-10-prompt-to-polished-product-reset.md`: the reset records founder decisions.
+- `docs/superpowers/specs/2026-08-10-prompt-to-polished-restaurant-product-design.md`: the design owns the product contract.
+- `docs/superpowers/plans/2026-08-10-prompt-to-polished-restaurant-product.md`: the plan owns execution order.
+- `docs/superpowers/ledgers/2026-08-10-prompt-to-polished-restaurant-product.md`: the ledger alone owns live task state.
+- `docs/research/2026-08-10-product-builder-ui-ecosystem.md`: the research owns external evidence.
+
+Product approval does not approve a proposed technology decision. A design,
+plan, or ADR proposal is not founder approval; the explicit governance gate in
+`docs/tech-governance.md` remains required.
+
+<!-- d0-authority-map:end -->
+
 ## Outcome
 
 Archeform will turn one business brief into a polished, runnable product
@@ -313,6 +329,10 @@ provider response, or raw prompt. A disposed, expired, checksum-mismatched, or
 non-current snapshot cannot start a preview.
 
 ## `factory.application-graph/v2`
+
+This product-level contract is proposed implementation intent, not a technology
+approval. ADR-0009 and its explicit founder accept/reject gate control whether
+Task 1 may implement it.
 
 Graph v2 retains Domain, Policy, Flow, Integration, and Experience semantics
 and adds first-class product surfaces and screen recipes.

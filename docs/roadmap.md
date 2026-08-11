@@ -94,8 +94,10 @@ P0 acceptance gates:
 
 ## P1 — Product Closure, then Prompt-to-Polished Restaurant Product
 
-> **Roadmap update — 2026-08-11:** Honest Requirement-to-Product Closure is
-> accepted; its reviewed commit and push remain pending before Task 1.
+> **Roadmap update — 2026-08-12:** Honest Requirement-to-Product Closure and D0
+> are accepted; ADR-0009 is founder-accepted. The reviewed D0 commit and
+> non-force push remain pending before Task 1, which stays blocked until local
+> HEAD equals the remote branch tip.
 > Prompt-to-Polished Restaurant Product is the sole P1 product target. The
 > Foundry, 100+ recipe catalogue, twelve-anchor
 > expansion, cloud deployment, production payments, connector marketplace,
@@ -179,8 +181,9 @@ Acceptance requires the restaurant prompt to produce the customer and merchant
 surfaces, at least fifteen surface-owned screens, multi-block editable page
 trees, shared transactional behavior, generated source, isolated runtime
 verification, accessibility, clean-checkout reproducibility, and cleanup.
-Product code begins only after the accepted Product Closure commit is pushed,
-D0 is reviewed, and the Graph v2 contract is reviewed and frozen.
+Product code begins only after the accepted D0 scope is committed and pushed,
+local HEAD equals the remote branch tip, and the Graph v2 contract is reviewed
+and frozen.
 
 The root README controls public identity: active Workbench copy and metadata
 move to Archeform · 元象 during this target. Existing `@factory/*` packages,
@@ -477,7 +480,8 @@ the prior detailed record is archived at
 `docs/archive/status-history/2026-08-09-project-status.md`. The compiler plugin
 kernel and isolated verifier are accepted platform foundations. The
 Base44-inspired Expense Approval journey is fixed replay evidence only. Honest
-Requirement-to-Product Closure is accepted on the current reviewed tree; its
-controller-owned commit and push remain pending. No Restaurant Product
-implementation is authorized before that push, D0 review, and the Graph v2
-contract review.
+Requirement-to-Product Closure and D0 are accepted on the current reviewed tree;
+ADR-0009 is founder-accepted. The controller-owned exact-scope commit and
+non-force push remain pending. No Restaurant Product implementation is
+authorized before local HEAD equals the remote branch tip and the Graph v2
+contract is reviewed and frozen.
