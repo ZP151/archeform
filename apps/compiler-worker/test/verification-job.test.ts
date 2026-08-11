@@ -509,9 +509,9 @@ describe("queued verification run", () => {
     });
 
     it("records contract-valid boot-failure evidence over the real bundle manifest", async () => {
-      // Boot failure with the real manifest: every probe is skipped, cleanup
-      // is still reported truthfully, and the evidence must parse as
-      // contract-valid instead of stranding the run at `pending`.
+      // Boot failure with the real manifest: the first planned step records
+      // the bounded start failure, later probes are skipped, and cleanup is
+      // still reported truthfully instead of stranding the run at `pending`.
       const { reporter, dependencies, startPreviewRun } = collaborators();
       startPreviewRun.mockRejectedValue(new Error("preview boot failed"));
       const evidence = await executeQueuedVerificationRun(
@@ -520,12 +520,17 @@ describe("queued verification run", () => {
         reporter,
         dependencies,
       );
+      expect(evidence.steps[0]).toMatchObject({
+        status: "failed",
+        failureCode: "preview_start_failed",
+      });
       expect(
-        evidence.steps.every(
-          (step) => step.status === "skipped" || step.stepId === "cleanup",
-        ),
+        evidence.steps.slice(1, -1).every((step) => step.status === "skipped"),
       ).toBe(true);
-      expect(evidence.steps.at(-1)).toMatchObject({ stepId: "cleanup" });
+      expect(evidence.steps.at(-1)).toMatchObject({
+        stepId: "cleanup",
+        status: "passed",
+      });
       expect(reporter.report).toHaveBeenCalledTimes(1);
     });
   });

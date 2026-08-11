@@ -58,7 +58,10 @@ describe("compilation executor", () => {
 
   it("reports only immutable compilation evidence after materializing a queued Published Graph", async () => {
     const directory = await mkdtemp(join(tmpdir(), "factory-compile-"));
-    const reporter = { complete: vi.fn().mockResolvedValue(undefined) };
+    const reporter = {
+      complete: vi.fn().mockResolvedValue(undefined),
+      fail: vi.fn().mockResolvedValue(undefined),
+    };
     try {
       const result = await executeQueuedCompilation(
         directory,
@@ -81,17 +84,157 @@ describe("compilation executor", () => {
         artifacts: result.artifacts,
       });
       expect(reporter.complete.mock.calls[0]?.[0]).not.toHaveProperty("graph");
+      expect(reporter.fail).not.toHaveBeenCalled();
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
   });
 
-  it("refuses a Worker job whose persisted composition-lock artifact digest differs", async () => {
+  it("reports one bounded failure and hides execution exceptions", async () => {
     const directory = await mkdtemp(join(tmpdir(), "factory-compile-"));
-    const reporter = { complete: vi.fn().mockResolvedValue(undefined) };
+    const reporter = {
+      complete: vi.fn().mockResolvedValue(undefined),
+      fail: vi.fn().mockResolvedValue(undefined),
+    };
+    const errorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
     try {
-      await expect(
-        executeQueuedCompilation(
+      let observed: unknown;
+      try {
+        await executeQueuedCompilation(
+          directory,
+          {
+            compilationId: "compilation-1",
+            publishedRevisionId: "published-1",
+            target: "application-bundle",
+            compilerVersion: "0.1.0",
+            graph: {
+              ...graph,
+              metadata: { ...graph.metadata, name: "must-not-leak" },
+            },
+            compositionLock: {
+              ...compositionLock,
+              lockDigest: "must-not-leak",
+            },
+          },
+          reporter,
+        );
+      } catch (error) {
+        observed = error;
+      }
+
+      expect(observed).toBeInstanceOf(Error);
+      expect((observed as Error).message).toBe(
+        "Queued compilation failed after bounded failure reporting.",
+      );
+      expect((observed as Error).cause).toBeUndefined();
+      expect(reporter.complete).not.toHaveBeenCalled();
+      expect(reporter.fail).toHaveBeenCalledTimes(1);
+      expect(reporter.fail).toHaveBeenCalledWith({
+        compilationId: "compilation-1",
+      });
+      expect(JSON.stringify(reporter.fail.mock.calls)).not.toContain(
+        "must-not-leak",
+      );
+      expect(errorSpy).not.toHaveBeenCalled();
+      expect(logSpy).not.toHaveBeenCalled();
+    } finally {
+      errorSpy.mockRestore();
+      logSpy.mockRestore();
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    { transientFailures: 1, expectedAttempts: 2 },
+    { transientFailures: 2, expectedAttempts: 3 },
+  ])(
+    "returns the successful compilation after $transientFailures transient completion rejection(s)",
+    async ({ transientFailures, expectedAttempts }) => {
+      const directory = await mkdtemp(join(tmpdir(), "factory-compile-"));
+      let attempts = 0;
+      const reporter = {
+        complete: vi.fn().mockImplementation(async () => {
+          attempts += 1;
+          if (attempts <= transientFailures) {
+            throw new Error("transient completion rejection must-not-leak");
+          }
+        }),
+        fail: vi.fn().mockResolvedValue(undefined),
+      };
+      try {
+        await expect(
+          executeQueuedCompilation(
+            directory,
+            {
+              compilationId: "compilation-1",
+              publishedRevisionId: "published-1",
+              target: "application-bundle",
+              compilerVersion: "0.1.0",
+              graph,
+              compositionLock,
+            },
+            reporter,
+          ),
+        ).resolves.toMatchObject({ rootDirectory: "expense-published-1" });
+        expect(reporter.complete).toHaveBeenCalledTimes(expectedAttempts);
+        expect(reporter.fail).not.toHaveBeenCalled();
+      } finally {
+        await rm(directory, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it("retries identical success evidence when the accepted response is lost", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "factory-compile-"));
+    const reporter = {
+      complete: vi
+        .fn()
+        .mockRejectedValueOnce(new Error("accepted response must-not-leak"))
+        .mockResolvedValueOnce(undefined),
+      fail: vi.fn().mockResolvedValue(undefined),
+    };
+    try {
+      const result = await executeQueuedCompilation(
+        directory,
+        {
+          compilationId: "compilation-1",
+          publishedRevisionId: "published-1",
+          target: "application-bundle",
+          compilerVersion: "0.1.0",
+          graph,
+          compositionLock,
+        },
+        reporter,
+      );
+
+      expect(result.rootDirectory).toBe("expense-published-1");
+      expect(reporter.complete).toHaveBeenCalledTimes(2);
+      expect(reporter.complete.mock.calls[1]?.[0]).toEqual(
+        reporter.complete.mock.calls[0]?.[0],
+      );
+      expect(reporter.fail).not.toHaveBeenCalled();
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("leaves successful execution retryable when completion reporting is exhausted", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "factory-compile-"));
+    const reporter = {
+      complete: vi.fn().mockRejectedValue(new Error("provider must-not-leak")),
+      fail: vi.fn().mockResolvedValue(undefined),
+    };
+    const errorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    try {
+      let observed: unknown;
+      try {
+        await executeQueuedCompilation(
           directory,
           {
             compilationId: "compilation-1",
@@ -99,17 +242,31 @@ describe("compilation executor", () => {
             target: "application-bundle",
             compilerVersion: "0.1.0",
             graph,
-            compositionLock: {
-              ...compositionLock,
-              lockDigest:
-                "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            },
+            compositionLock,
           },
           reporter,
-        ),
-      ).rejects.toThrow("composition lock");
-      expect(reporter.complete).not.toHaveBeenCalled();
+        );
+      } catch (error) {
+        observed = error;
+      }
+
+      expect(observed).toBeInstanceOf(Error);
+      expect((observed as Error).message).toBe(
+        "Queued compilation completion reporting failed after bounded attempts.",
+      );
+      expect((observed as Error).cause).toBeUndefined();
+      expect(JSON.stringify(observed)).not.toContain("must-not-leak");
+      expect(reporter.complete).toHaveBeenCalledTimes(3);
+      const [firstAttempt, secondAttempt, thirdAttempt] =
+        reporter.complete.mock.calls.map(([evidence]) => evidence);
+      expect(secondAttempt).toEqual(firstAttempt);
+      expect(thirdAttempt).toEqual(firstAttempt);
+      expect(reporter.fail).not.toHaveBeenCalled();
+      expect(errorSpy).not.toHaveBeenCalled();
+      expect(logSpy).not.toHaveBeenCalled();
     } finally {
+      errorSpy.mockRestore();
+      logSpy.mockRestore();
       await rm(directory, { recursive: true, force: true });
     }
   });

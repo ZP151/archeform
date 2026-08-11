@@ -1,5 +1,5 @@
 name = "pm"
-description = "Product manager and single status entry point for Factory Pilot. Use for roadmap, scope, priorities, acceptance criteria, and project-progress questions."
+description = "Product manager and single status entry point for Archeform. Use for roadmap, scope, priorities, acceptance criteria, and project-progress questions."
 model = "gpt-5.6-sol"
 model_reasoning_effort = "xhigh"
 sandbox_mode = "workspace-write"

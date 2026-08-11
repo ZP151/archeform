@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { hashRequirementSpec } from "@factory/graph";
 import {
@@ -110,14 +110,22 @@ describe("Requirement interpret route", () => {
   });
 
   it("rejects an empty or oversized brief", async () => {
-    expect((await post({ brief: "   " })).status).toBe(400);
-    expect((await post({ brief: "x".repeat(12_001) })).status).toBe(400);
+    for (const body of [{ brief: "   " }, { brief: "x".repeat(12_001) }]) {
+      const response = await post(body);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({
+        error: {
+          apiVersion: "factory.requirement-interpretation-error/v1",
+          code: "requirement.request_invalid",
+        },
+      });
+    }
   });
 
   it("rejects an oversized clarification answer", async () => {
     const response = await post({
       brief: vagueBrief,
-      answers: { "q-something": "x".repeat(65) },
+      answers: { "q-something": "x".repeat(1_001) },
     });
     expect(response.status).toBe(400);
   });
@@ -137,6 +145,12 @@ describe("Requirement interpret route", () => {
       }),
     );
     expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: {
+        apiVersion: "factory.requirement-interpretation-error/v1",
+        code: "requirement.request_invalid",
+      },
+    });
   });
 
   it("rejects an unknown envelope field fail-closed", async () => {
@@ -163,33 +177,115 @@ describe("Requirement interpret route", () => {
     }
   });
 
-  it("classifies configuration and provider failures to bounded statuses", () => {
-    expect(
-      classifyInterpretationError(
-        new RequirementInterpreterError("no key", "configuration_missing"),
-      ).status,
-    ).toBe(503);
-    expect(
-      classifyInterpretationError(
-        new RequirementInterpreterError("short brief", "brief_invalid"),
-      ).status,
-    ).toBe(400);
+  it("classifies every failure to its exact code-only body and status", () => {
     expect(
       classifyInterpretationError(
         new RequirementInterpreterError(
-          "rate limited",
-          "provider_rate_limited",
+          "must-not-surface",
+          "provider_not_configured",
         ),
-      ).status,
-    ).toBe(503);
+      ),
+    ).toEqual({
+      status: 503,
+      body: {
+        error: {
+          apiVersion: "factory.requirement-interpretation-error/v1",
+          code: "requirement.provider_not_configured",
+        },
+      },
+    });
+    expect(
+      classifyInterpretationError(
+        new RequirementInterpreterError("must-not-surface", "request_invalid"),
+      ),
+    ).toEqual({
+      status: 400,
+      body: {
+        error: {
+          apiVersion: "factory.requirement-interpretation-error/v1",
+          code: "requirement.request_invalid",
+        },
+      },
+    });
+    expect(
+      classifyInterpretationError(
+        new RequirementInterpreterError("must-not-surface", "output_invalid"),
+      ),
+    ).toEqual({
+      status: 422,
+      body: {
+        error: {
+          apiVersion: "factory.requirement-interpretation-error/v1",
+          code: "requirement.output_invalid",
+        },
+      },
+    });
     expect(
       classifyInterpretationError(
         new RequirementInterpreterError(
-          "rejected",
-          "provider_request_rejected",
+          "must-not-surface",
+          "provider_rejected",
         ),
-      ).status,
-    ).toBe(502);
+      ),
+    ).toEqual({
+      status: 502,
+      body: {
+        error: {
+          apiVersion: "factory.requirement-interpretation-error/v1",
+          code: "requirement.provider_rejected",
+        },
+      },
+    });
+    expect(
+      classifyInterpretationError(
+        new RequirementInterpreterError("must-not-surface", "timeout"),
+      ),
+    ).toEqual({
+      status: 504,
+      body: {
+        error: {
+          apiVersion: "factory.requirement-interpretation-error/v1",
+          code: "requirement.timeout",
+        },
+      },
+    });
+    expect(classifyInterpretationError(new Error("must-not-surface"))).toEqual({
+      status: 500,
+      body: {
+        error: {
+          apiVersion: "factory.requirement-interpretation-error/v1",
+          code: "requirement.failed",
+        },
+      },
+    });
+  });
+
+  it("fails closed for a hostile runtime interpreter code without echoing or logging it", () => {
+    const sentinel = "HOSTILE-RUNTIME-CODE-MUST-NOT-SURFACE";
+    const consoleSpies = ["log", "info", "warn", "error", "debug", "trace"].map(
+      (method) =>
+        vi.spyOn(console, method as "log").mockImplementation(() => undefined),
+    );
+    const error = new RequirementInterpreterError("fixed", "failed");
+    Object.defineProperty(error, "code", { value: sentinel });
+
+    const classified = classifyInterpretationError(error);
+
+    expect(classified).toEqual({
+      status: 500,
+      body: {
+        error: {
+          apiVersion: "factory.requirement-interpretation-error/v1",
+          code: "requirement.failed",
+        },
+      },
+    });
+    expect(
+      JSON.stringify({
+        classified,
+        console: consoleSpies.map((spy) => spy.mock.calls),
+      }),
+    ).not.toContain(sentinel);
   });
 
   it("parses only the bounded brief and answers envelope", () => {
@@ -207,6 +303,66 @@ describe("Requirement interpret route", () => {
     ).toBeNull();
     expect(
       parseInterpretPayload({ brief: expenseBrief, answers: [1, 2] }),
+    ).toBeNull();
+  });
+
+  it("parses bounded structured clarification context and rejects mismatches", () => {
+    const context = [
+      {
+        key: "approval-role",
+        category: "authorization",
+        defaultPolicy: "required",
+        question: "Who may approve a request?",
+        answer: "Managers approve submitted requests.",
+      },
+    ];
+    expect(
+      parseInterpretPayload({
+        brief: expenseBrief,
+        answers: { "approval-role": context[0].answer },
+        clarificationContext: context,
+      }),
+    ).toEqual({
+      brief: expenseBrief,
+      answers: { "approval-role": context[0].answer },
+      clarificationContext: context,
+    });
+    expect(
+      parseInterpretPayload({
+        brief: expenseBrief,
+        answers: { "approval-role": "A different answer." },
+        clarificationContext: context,
+      }),
+    ).toBeNull();
+  });
+
+  it("accepts only a validated prior interpretation as transient context", async () => {
+    const priorInterpretation =
+      await new FixtureRequirementInterpreter().interpret({
+        brief: expenseBrief,
+        answers: {},
+      });
+    expect(
+      parseInterpretPayload({ brief: expenseBrief, priorInterpretation }),
+    ).toEqual({ brief: expenseBrief, answers: {}, priorInterpretation });
+    expect(
+      parseInterpretPayload({
+        brief: expenseBrief,
+        priorInterpretation: { ...priorInterpretation, clarifications: [] },
+        extra: true,
+      }),
+    ).toBeNull();
+    expect(
+      parseInterpretPayload({
+        brief: expenseBrief,
+        priorInterpretation: {
+          ...priorInterpretation,
+          blueprint: {
+            ...priorInterpretation.blueprint,
+            requirementChecksum: `sha256:${"0".repeat(64)}`,
+          },
+        },
+      }),
     ).toBeNull();
   });
 });

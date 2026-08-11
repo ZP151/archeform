@@ -43,6 +43,7 @@ const requirementFixture: RequirementSpecV1 = {
   ],
   openQuestions: [
     {
+      category: "business-rule",
       question: "Should rejected claims be editable after rejection?",
     },
   ],
@@ -61,6 +62,18 @@ describe("RequirementSpecV1", () => {
     expect(parseRequirementSpec(requirementFixture).requirementId).toBe(
       "expense-tracking",
     );
+  });
+
+  it("rejects a requirementId that cannot become a graph-symbol segment", () => {
+    // The requirementId becomes the graph key and the identity-policy domain
+    // symbols (`graph.domain.<requirementId>-principal`); its grammar must
+    // match the plan's lowercase-kebab graph-symbol grammar.
+    expect(() =>
+      parseRequirementSpec({
+        ...requirementFixture,
+        requirementId: "expenseApproval",
+      }),
+    ).toThrow(CompositionError);
   });
 
   it("rejects unknown keys such as raw model material", () => {
@@ -147,7 +160,7 @@ describe("RequirementSpecV1", () => {
     expect(() =>
       parseRequirementSpec({
         ...requirementFixture,
-        openQuestions: [{ question: "  " }],
+        openQuestions: [{ category: "business-rule", question: "  " }],
       }),
     ).toThrow(CompositionError);
     expect(() =>

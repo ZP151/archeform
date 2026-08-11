@@ -25,6 +25,7 @@ import {
   executeQueuedVerificationRun,
   type VerificationRunInput,
 } from "./verifier/verification-job.js";
+import { createLoggedVerificationOperations } from "./verifier/verification-logging.js";
 
 const config = readWorkerConfig();
 const connection = {
@@ -76,65 +77,26 @@ const verificationQueue = new Queue(config.verificationQueueName, {
 
 const verificationWorker = new Worker<VerificationRunInput>(
   config.verificationQueueName,
-  async (job) =>
-    executeQueuedVerificationRun(
+  async (job) => {
+    const loggedOperations = createLoggedVerificationOperations({
+      jobId: job.id,
+      executeCompilation,
+      startPreviewRun,
+      stopPreviewRun,
+      logger: console,
+    });
+    return executeQueuedVerificationRun(
       config.artifactRoot,
       job.data,
       verificationReporter,
       {
         operationTimeoutMs: config.previewOperationTimeoutMs,
-        executeCompilation: async (artifactRoot, input) => {
-          console.info(
-            `Factory verification job ${job.id}: compiling the immutable input`,
-          );
-          try {
-            const result = await executeCompilation(artifactRoot, input);
-            console.info(
-              `Factory verification job ${job.id}: compilation finished`,
-            );
-            return result;
-          } catch (error) {
-            console.error(
-              `Factory verification job ${job.id}: compilation failed (${boundedFailureMessage(error)})`,
-            );
-            throw error;
-          }
-        },
-        startPreviewRun: async (artifactRoot, request) => {
-          console.info(
-            `Factory verification job ${job.id}: booting the isolated preview`,
-          );
-          try {
-            const result = await startPreviewRun(artifactRoot, request);
-            console.info(
-              `Factory verification job ${job.id}: preview boot finished`,
-            );
-            return result;
-          } catch (error) {
-            console.error(
-              `Factory verification job ${job.id}: preview boot failed (${boundedFailureMessage(error)})`,
-            );
-            throw error;
-          }
-        },
-        stopPreviewRun: async (artifactRoot, request) => {
-          console.info(
-            `Factory verification job ${job.id}: stopping the preview`,
-          );
-          try {
-            await stopPreviewRun(artifactRoot, request);
-            console.info(`Factory verification job ${job.id}: preview stopped`);
-          } catch (error) {
-            console.error(
-              `Factory verification job ${job.id}: preview stop failed (${boundedFailureMessage(error)})`,
-            );
-            throw error;
-          }
-        },
+        ...loggedOperations,
         processRunner: runDockerCompose,
         fetch,
       },
-    ),
+    );
+  },
   { connection },
 );
 

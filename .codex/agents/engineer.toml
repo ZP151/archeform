@@ -1,5 +1,5 @@
 name = "engineer"
-description = "Implementation owner for one bounded Factory Pilot vertical slice."
+description = "Implementation owner for one bounded Archeform vertical slice."
 model = "gpt-5.6-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"

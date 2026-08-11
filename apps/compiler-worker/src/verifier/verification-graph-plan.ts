@@ -556,6 +556,17 @@ export function deriveVerificationProfile(
       continue;
     }
 
+    // The first transition's journey decision, captured for the authorization
+    // denial that mirrors it: the denial can only be probed honestly when the
+    // transition journey itself was derived (its action registered; for a
+    // `{recordId}` template route, the fresh-record chain to substitute).
+    let firstTransitionJourney:
+      | {
+          readonly action: string;
+          readonly chain?: readonly ChainJourneyStep[];
+        }
+      | undefined;
+
     const transitionRoles = (
       transition: ApplicationGraphV1["flow"]["flows"][number]["transitions"][number],
     ) => transition.roles ?? [];
@@ -574,6 +585,23 @@ export function deriveVerificationProfile(
       if (role === undefined) continue;
       const journeyId = `${entityKey}-${transition.event}`;
       journeyIdPattern(journeyId);
+      // A flow may legitimately declare a `create` transition (the blueprint
+      // draws its transition events from the same bounded verbs as the grants,
+      // and `create` is one of them), but the entity create journey above
+      // already claims `<entity>-create`. The transition journey takes its own
+      // identity and the registry registers its transition route under the
+      // matching action, so both evidence sets coexist: the create handler
+      // (POST /api/<entity>) and the create transition on a fresh record
+      // (POST /api/<entity>/{recordId}/events/create).
+      const createCollision =
+        transition.event === "create" && stepIds.has(journeyId);
+      const stepJourneyId = createCollision
+        ? `${journeyId}-transition`
+        : journeyId;
+      journeyIdPattern(stepJourneyId);
+      const stepAction = createCollision
+        ? `${entityKey}.${transition.event}-transition`
+        : `${entityKey}.${transition.event}`;
       const makesProgress = transition.from !== transition.to;
       const drivesSeededRecord =
         index === 0 && makesProgress && transition.from === flow.initialState;
@@ -582,16 +610,11 @@ export function deriveVerificationProfile(
         // exercised once and replayed: the seeded record leaves the initial
         // state, so the byte-identical replay is rejected — the generated
         // proof of no duplicate side effects.
-        addStep({ stepId: journeyId, kind: "idempotency" });
+        addStep({ stepId: stepJourneyId, kind: "idempotency" });
+        firstTransitionJourney = { action: stepAction };
         const idempotencyKey = `verify-${entityKey}-${transition.event}-${recordId}`;
-        journeys[journeyId] = {
-          ...journeyFor(
-            graph,
-            lock,
-            journeyId,
-            `${entityKey}.${transition.event}`,
-            role,
-          ),
+        journeys[stepJourneyId] = {
+          ...journeyFor(graph, lock, stepJourneyId, stepAction, role),
           idempotencyKey,
           expectedVersion: 0,
         };
@@ -619,18 +642,21 @@ export function deriveVerificationProfile(
           createBodyFor(graph, entity, hasFlow, isOrderEntity),
         );
         if (chain === undefined) continue;
-        addStep({ stepId: journeyId, kind: "role-journey" });
-        journeys[journeyId] = journeyFor(
+        addStep({ stepId: stepJourneyId, kind: "role-journey" });
+        journeys[stepJourneyId] = journeyFor(
           graph,
           lock,
-          journeyId,
-          `${entityKey}.${transition.event}`,
+          stepJourneyId,
+          stepAction,
           role,
           { chain },
         );
+        if (index === 0) {
+          firstTransitionJourney = { action: stepAction, chain };
+        }
       }
       apiRegistry.push({
-        action: `${entityKey}.${transition.event}`,
+        action: stepAction,
         method: "POST",
         route: drivesSeededRecord
           ? `/api/${entityKey}/${recordId}/events/${transition.event}`
@@ -641,21 +667,32 @@ export function deriveVerificationProfile(
 
     // Authorization denial on the first transition: a role the transition
     // does not allow (the identity policy's default deny covers the case
-    // where every role is allowed).
-    const firstTransition = flow.transitions[0];
-    const denialRole = graph.policy.roles.find(
-      (role) => !transitionRoles(firstTransition).includes(role),
-    );
-    const journeyId = `${entityKey}-denied-${firstTransition.event}`;
-    journeyIdPattern(journeyId);
-    addStep({ stepId: journeyId, kind: "authorization-denial" });
-    journeys[journeyId] = journeyFor(
-      graph,
-      lock,
-      journeyId,
-      `${entityKey}.${firstTransition.event}`,
-      denialRole,
-    );
+    // where every role is allowed). The denial mirrors the journey derived
+    // for the first transition — the same action, and the fresh-record chain
+    // when the transition route carries a `{recordId}` template. When the
+    // first transition journey could not be derived (no role, or a chain the
+    // derivation cannot drive), the denial is omitted honestly: probing an
+    // unregistered action or a literal template route would crash instead of
+    // denying.
+    if (firstTransitionJourney !== undefined) {
+      const firstTransition = flow.transitions[0];
+      const denialRole = graph.policy.roles.find(
+        (role) => !transitionRoles(firstTransition).includes(role),
+      );
+      const journeyId = `${entityKey}-denied-${firstTransition.event}`;
+      journeyIdPattern(journeyId);
+      addStep({ stepId: journeyId, kind: "authorization-denial" });
+      journeys[journeyId] = journeyFor(
+        graph,
+        lock,
+        journeyId,
+        firstTransitionJourney.action,
+        denialRole,
+        firstTransitionJourney.chain === undefined
+          ? {}
+          : { chain: firstTransitionJourney.chain },
+      );
+    }
   }
 
   if (stepPlan.length > maximumStepPlanLength) {

@@ -7,7 +7,12 @@ import {
   useState,
 } from "react";
 
-import type { RequirementInterpretationV1 } from "@factory/adapters";
+import type {
+  ClarificationAnswerContextV1,
+  ClarificationQuestionV1,
+  RequirementInterpretationV1,
+} from "@factory/adapters/requirements/browser";
+import { resolveClarificationCycle } from "@factory/adapters/requirements/browser";
 import type { ApplicationGraphV1 } from "@factory/graph";
 
 import {
@@ -25,6 +30,14 @@ import {
   createRequirementInput,
   type ProductJourneyState,
 } from "./journey-model";
+import {
+  parseInterpretationResponse,
+  productJourneyFailure,
+  requirementFailure,
+  type ProductJourneyFailure,
+  type ProductJourneyFailureCode,
+  type ProductJourneyFailurePhase,
+} from "./interpret-contract";
 
 /**
  * The product journey controller: orchestrates the pure journey state machine
@@ -45,7 +58,7 @@ export interface ProductJourneyController {
   /** The live clarification answers buffer, keyed by question key. */
   readonly answers: Readonly<Record<string, string>>;
   readonly setAnswer: (key: string, value: string) => void;
-  readonly openQuestions: readonly { key: string; question: string }[];
+  readonly openQuestions: readonly ClarificationQuestionV1[];
   readonly blueprintTitle: string;
   readonly planAlternatives: readonly PlanReviewAlternative[] | null;
   submitBrief: () => Promise<void>;
@@ -59,67 +72,220 @@ export interface ProductJourneyController {
   reset: () => void;
 }
 
-/**
- * Keeps the answers buffer honest: only keys the current interpretation still
- * asks about survive a new interpretation.
- */
-function pruneAnswers(
-  answers: Readonly<Record<string, string>>,
-  interpretation: RequirementInterpretationV1,
-): Record<string, string> {
-  const openKeys = new Set(
-    interpretation.clarifications.flatMap((clarification) =>
-      clarification.questions.map((question) => question.key),
-    ),
-  );
-  return Object.fromEntries(
-    Object.entries(answers).filter(([key]) => openKeys.has(key)),
-  );
-}
-
 async function interpretRoute(
   brief: string,
   answers: Readonly<Record<string, string>>,
+  phase: "interpretation" | "clarification",
+  clarificationContext: readonly ClarificationAnswerContextV1[] = [],
+  priorInterpretation?: RequirementInterpretationV1,
 ): Promise<RequirementInterpretationV1> {
-  // Transport failures are bounded here: no raw fetch error text crosses the
-  // journey boundary.
-  let response: Response;
+  const controller = new AbortController();
+  let timedOut = false;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  // One abortable deadline covers both headers and body consumption. The
+  // response body can stall independently of fetch, so clearing the timer at
+  // the header boundary would leave the journey unbounded.
   try {
-    response = await fetch("/api/requirements/interpret", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ brief, answers }),
-    });
-  } catch {
-    throw new Error("Requirement interpretation failed.");
+    const result = await Promise.race([
+      (async () => {
+        const response = await fetch("/api/requirements/interpret", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            brief,
+            answers,
+            clarificationContext,
+            ...(priorInterpretation === undefined
+              ? {}
+              : { priorInterpretation }),
+          }),
+          signal: controller.signal,
+        });
+        const body = (await response.json().catch(() => null)) as {
+          interpretation?: RequirementInterpretationV1;
+        } | null;
+        return { response, body };
+      })(),
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => {
+          timedOut = true;
+          controller.abort();
+          reject(
+            new ProductJourneyFailureError(
+              requirementFailure(phase, "requirement.timeout"),
+            ),
+          );
+        }, REQUIREMENT_INTERPRETATION_TIMEOUT_MS);
+      }),
+    ]);
+    const parsed = parseInterpretationResponse(
+      result.response.status,
+      result.body,
+      phase,
+    );
+    if (!parsed.ok) throw new ProductJourneyFailureError(parsed.failure);
+    return parsed.interpretation;
+  } catch (error) {
+    if (timedOut) {
+      throw new ProductJourneyFailureError(
+        requirementFailure(phase, "requirement.timeout"),
+      );
+    }
+    if (error instanceof ProductJourneyFailureError) throw error;
+    throw new ProductJourneyFailureError(
+      requirementFailure(phase, "requirement.failed"),
+    );
+  } finally {
+    if (timeout !== undefined) clearTimeout(timeout);
   }
-  const body = (await response.json().catch(() => null)) as {
-    interpretation?: RequirementInterpretationV1;
-    error?: string;
-  } | null;
-  if (!response.ok || body === null || body.interpretation === undefined) {
-    throw new Error(body?.error ?? "Requirement interpretation failed.");
-  }
-  return body.interpretation;
 }
 
-function boundedFailure(error: unknown, fallback: string): string {
+const REQUIREMENT_INTERPRETATION_TIMEOUT_MS = 555_000;
+const PRODUCT_PHASE_TIMEOUT_MS = 180_000;
+
+class ProductJourneyFailureError extends Error {
+  public constructor(public readonly failure: ProductJourneyFailure) {
+    super(failure.message);
+    this.name = "ProductJourneyFailureError";
+  }
+}
+
+async function withProductPhaseDeadline<T>(
+  operation: (signal: AbortSignal) => Promise<T>,
+  message: string,
+): Promise<T> {
+  const controller = new AbortController();
+  let timedOut = false;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      operation(controller.signal),
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => {
+          timedOut = true;
+          controller.abort();
+          reject(new Error(message));
+        }, PRODUCT_PHASE_TIMEOUT_MS);
+      }),
+    ]);
+  } catch (error) {
+    if (timedOut) throw new Error(message);
+    throw error;
+  } finally {
+    if (timeout !== undefined) clearTimeout(timeout);
+  }
+}
+
+async function withRecoverableProductPhase<T>(input: {
+  readonly operation: (signal: AbortSignal) => Promise<T>;
+  readonly timeoutMessage: string;
+  readonly reconciliationTimeoutMessage: string;
+}): Promise<T> {
+  try {
+    return await withProductPhaseDeadline(
+      input.operation,
+      input.timeoutMessage,
+    );
+  } catch (error) {
+    // A Control Plane response is authoritative and must not be replayed.
+    // Transport loss and a locally enforced deadline are ambiguous: the
+    // server may have accepted the operation, so exactly one repeat asks the
+    // idempotent server boundary to return the same result.
+    if (
+      error instanceof ControlPlaneError ||
+      error instanceof ProductJourneyFailureError
+    ) {
+      throw error;
+    }
+    return withProductPhaseDeadline(
+      input.operation,
+      input.reconciliationTimeoutMessage,
+    );
+  }
+}
+
+const compositionFailureCodes = new Set<ProductJourneyFailureCode>([
+  "composition.request_envelope_invalid",
+  "composition.request_identity_invalid",
+  "composition.requirement_invalid",
+  "composition.blueprint_invalid",
+  "composition.requirement_blueprint_checksum_mismatch",
+]);
+
+function boundedProductFailure(input: {
+  readonly error: unknown;
+  readonly phase: ProductJourneyFailurePhase;
+  readonly fallbackCode: ProductJourneyFailureCode;
+  readonly fallbackMessage: string;
+}): ProductJourneyFailure {
+  const { error, phase } = input;
+  if (error instanceof ProductJourneyFailureError) return error.failure;
   if (error instanceof ControlPlaneError) {
     switch (error.status) {
-      case 400:
-        return "The control plane rejected the product requirement.";
+      case 400: {
+        const code =
+          error.code !== undefined &&
+          compositionFailureCodes.has(error.code as ProductJourneyFailureCode)
+            ? (error.code as ProductJourneyFailureCode)
+            : "product.failed";
+        return productJourneyFailure(
+          phase,
+          code,
+          code === "product.failed"
+            ? "The control plane rejected the product requirement."
+            : `The control plane rejected the product requirement. (${code})`,
+        );
+      }
       case 404:
-        return "The product requirement was not found; start over.";
+        return productJourneyFailure(
+          phase,
+          "product.not_found",
+          "The product requirement was not found; start over.",
+        );
       case 409:
-        return "The product requirement moved or already has a decision; start over.";
+        return productJourneyFailure(
+          phase,
+          "product.conflict",
+          "The product requirement moved or already has a decision; start over.",
+        );
       case 503:
-        return "The control plane is not ready yet; try again shortly.";
+        return productJourneyFailure(
+          phase,
+          "product.unavailable",
+          "The control plane is not ready yet; try again shortly.",
+        );
       default:
-        return fallback;
+        return productJourneyFailure(
+          phase,
+          input.fallbackCode,
+          input.fallbackMessage,
+        );
     }
   }
-  if (error instanceof Error && error.message.length > 0) return error.message;
-  return fallback;
+  const timeoutCodes: Readonly<Record<string, ProductJourneyFailureCode>> = {
+    "Product review creation timed out.": "product.review_timeout",
+    "Product review reconciliation timed out.":
+      "product.review_reconciliation_timeout",
+    "Product planning timed out.": "product.planning_timeout",
+    "Product plan reconciliation timed out.":
+      "product.planning_reconciliation_timeout",
+    "Product decision timed out.": "product.failed",
+    "Product decision reconciliation timed out.": "product.failed",
+    "Product application timed out.": "product.failed",
+    "Product application reconciliation timed out.": "product.failed",
+  };
+  if (error instanceof Error && timeoutCodes[error.message] !== undefined) {
+    return productJourneyFailure(
+      phase,
+      timeoutCodes[error.message],
+      error.message,
+    );
+  }
+  return productJourneyFailure(
+    phase,
+    input.fallbackCode,
+    input.fallbackMessage,
+  );
 }
 
 export function useProductJourney(
@@ -140,6 +306,7 @@ export function useProductJourney(
    * exactly once (StrictMode-safe), and a failure or reset re-arms it.
    */
   const planningStartedRef = useRef(false);
+  const productRequestIdRef = useRef<string | null>(null);
   const controlPlane = useMemo(
     () => new ControlPlaneClient(controlPlaneUrl),
     [controlPlaneUrl],
@@ -176,13 +343,22 @@ export function useProductJourney(
       try {
         const brief = briefDraft.trim();
         dispatch({ type: "submit-brief", brief });
-        const interpretation = await interpretRoute(brief, {});
+        const interpretation = await interpretRoute(
+          brief,
+          {},
+          "interpretation",
+        );
         dispatch({ type: "interpretation-accepted", interpretation });
-        setAnswers((current) => pruneAnswers(current, interpretation));
+        setAnswers({});
       } catch (error) {
         dispatch({
           type: "fail",
-          error: boundedFailure(error, "Requirement interpretation failed."),
+          failure: boundedProductFailure({
+            error,
+            phase: "interpretation",
+            fallbackCode: "requirement.failed",
+            fallbackMessage: "Requirement interpretation failed.",
+          }),
         });
       }
     });
@@ -192,14 +368,52 @@ export function useProductJourney(
   const answerQuestions = useCallback(async (): Promise<void> => {
     await run(async () => {
       try {
-        dispatch({ type: "clarify-answered", answers });
-        const interpretation = await interpretRoute(state.brief, answers);
-        dispatch({ type: "interpretation-accepted", interpretation });
-        setAnswers((current) => pruneAnswers(current, interpretation));
+        if (state.interpretationCycles >= 2) {
+          dispatch({
+            type: "fail",
+            failure: productJourneyFailure(
+              "clarification",
+              "journey.interpretation_cycle_bound",
+              "Requirement interpretation exceeded the two-cycle safety bound.",
+            ),
+          });
+          return;
+        }
+        const cumulativeAnswers = { ...state.answers, ...answers };
+        const priorQuestions = openClarificationQuestions(state);
+        const clarificationContext = priorQuestions.flatMap((question) => {
+          const answer = cumulativeAnswers[question.key]?.trim();
+          return answer ? [{ ...question, answer }] : [];
+        });
+        dispatch({ type: "clarify-answered", answers: cumulativeAnswers });
+        const proposed = await interpretRoute(
+          state.brief,
+          cumulativeAnswers,
+          "clarification",
+          clarificationContext,
+          state.interpretation ?? undefined,
+        );
+        const resolved = resolveClarificationCycle({
+          interpretation: proposed,
+          priorQuestions,
+          answers: cumulativeAnswers,
+          applySafeDefaults: true,
+        });
+        dispatch({ type: "clarify-answered", answers: resolved.answers });
+        dispatch({
+          type: "interpretation-accepted",
+          interpretation: resolved.interpretation,
+        });
+        setAnswers({ ...resolved.answers });
       } catch (error) {
         dispatch({
           type: "fail",
-          error: boundedFailure(error, "Requirement interpretation failed."),
+          failure: boundedProductFailure({
+            error,
+            phase: "clarification",
+            fallbackCode: "requirement.failed",
+            fallbackMessage: "Requirement interpretation failed.",
+          }),
         });
       }
     });
@@ -208,23 +422,54 @@ export function useProductJourney(
 
   const createProduct = useCallback(async (): Promise<void> => {
     await run(async () => {
+      let review: ProductJourneyState["review"];
       try {
         const input = createRequirementInput(state);
-        const review = await controlPlane.createProductRequirement({
+        productRequestIdRef.current ??= `request-${globalThis.crypto.randomUUID()}`;
+        const request = {
+          requestId: productRequestIdRef.current,
           name: state.interpretation?.blueprint.title,
           requirement: input.requirement,
           blueprint: input.blueprint,
+        };
+        review = await withRecoverableProductPhase({
+          operation: (signal) =>
+            controlPlane.createProductRequirement(request, signal),
+          timeoutMessage: "Product review creation timed out.",
+          reconciliationTimeoutMessage:
+            "Product review reconciliation timed out.",
         });
         dispatch({ type: "review-created", review });
-        const alternatives = await controlPlane.requestProductPlan(review.id);
+      } catch (error) {
+        dispatch({
+          type: "fail",
+          failure: boundedProductFailure({
+            error,
+            phase: "review",
+            fallbackCode: "product.failed",
+            fallbackMessage: "The product requirement could not be created.",
+          }),
+        });
+        return;
+      }
+      try {
+        const alternatives = await withRecoverableProductPhase({
+          operation: (signal) =>
+            controlPlane.requestProductPlan(review.id, signal),
+          timeoutMessage: "Product planning timed out.",
+          reconciliationTimeoutMessage:
+            "Product plan reconciliation timed out.",
+        });
         dispatch({ type: "alternatives-received", alternatives });
       } catch (error) {
         dispatch({
           type: "fail",
-          error: boundedFailure(
+          failure: boundedProductFailure({
             error,
-            "The product requirement could not be created.",
-          ),
+            phase: "planning",
+            fallbackCode: "product.failed",
+            fallbackMessage: "The product plan could not be created.",
+          }),
         });
       }
     });
@@ -255,7 +500,13 @@ export function useProductJourney(
           if (review === null) {
             throw new Error("Create the product review before planning.");
           }
-          const chosen = await controlPlane.chooseProductPlan(review.id, key);
+          const chosen = await withRecoverableProductPhase({
+            operation: (signal) =>
+              controlPlane.chooseProductPlan(review.id, key, signal),
+            timeoutMessage: "Product decision timed out.",
+            reconciliationTimeoutMessage:
+              "Product decision reconciliation timed out.",
+          });
           dispatch({
             type: "alternative-chosen",
             key,
@@ -264,10 +515,12 @@ export function useProductJourney(
         } catch (error) {
           dispatch({
             type: "fail",
-            error: boundedFailure(
+            failure: boundedProductFailure({
               error,
-              "The plan decision could not be recorded.",
-            ),
+              phase: "decision",
+              fallbackCode: "product.failed",
+              fallbackMessage: "The plan decision could not be recorded.",
+            }),
           });
         }
       });
@@ -285,15 +538,22 @@ export function useProductJourney(
           if (review === null) {
             throw new Error("Create the product review before applying.");
           }
-          applied = await controlPlane.applyProduct(review.id);
+          applied = await withRecoverableProductPhase({
+            operation: (signal) => controlPlane.applyProduct(review.id, signal),
+            timeoutMessage: "Product application timed out.",
+            reconciliationTimeoutMessage:
+              "Product application reconciliation timed out.",
+          });
           dispatch({ type: "applied" });
         } catch (error) {
           dispatch({
             type: "fail",
-            error: boundedFailure(
+            failure: boundedProductFailure({
               error,
-              "The composed product could not be applied.",
-            ),
+              phase: "apply",
+              fallbackCode: "product.failed",
+              fallbackMessage: "The composed product could not be applied.",
+            }),
           });
         }
       });
@@ -304,6 +564,7 @@ export function useProductJourney(
   const reset = useCallback((): void => {
     setBriefDraft("");
     setAnswers({});
+    productRequestIdRef.current = null;
     dispatch({ type: "reset" });
   }, []);
 

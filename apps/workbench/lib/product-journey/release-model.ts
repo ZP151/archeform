@@ -5,6 +5,7 @@ import {
   createTimeline,
   type TimelineState,
 } from "./timeline";
+import { normalizeReleaseDiagnosisCode } from "./release-diagnosis";
 
 /**
  * One-action release over the immutable lifecycle of any composed product:
@@ -70,8 +71,6 @@ export interface ReleaseState {
 const RELEASE_LABEL =
   "Local preview release over the immutable Draft lifecycle (not a deployment).";
 
-const safeReasonCode = /^[a-z][a-z0-9._-]*$/;
-
 export class ReleaseError extends Error {
   public constructor(message: string) {
     super(message);
@@ -80,7 +79,7 @@ export class ReleaseError extends Error {
 }
 
 function assertReason(reason: string): void {
-  if (!safeReasonCode.test(reason)) {
+  if (normalizeReleaseDiagnosisCode(reason) !== reason) {
     throw new ReleaseError(
       "Release diagnosis must be a bounded safe reason code.",
     );

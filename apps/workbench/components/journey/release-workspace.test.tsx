@@ -229,7 +229,7 @@ describe("ReleaseWorkspace", () => {
 
   it("renders the reviewable Draft Diff and the approval control, with the never-applied note", () => {
     const release = failedDuringVerification(
-      "binding.missing_identity_policy",
+      "binding.denial_policy_not_bound",
       addBindingDiff,
     );
     const approveDraftDiff = vi.fn();
@@ -259,7 +259,7 @@ describe("ReleaseWorkspace", () => {
 
   it("surfaces a bounded approval refusal", () => {
     const release = failedDuringVerification(
-      "binding.missing_identity_policy",
+      "binding.denial_policy_not_bound",
       addBindingDiff,
     );
     render(

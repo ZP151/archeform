@@ -56,6 +56,7 @@ const requirementFixture: RequirementSpecV1 = {
   ],
   openQuestions: [
     {
+      category: "business-rule",
       question: "Should rejected claims be editable after rejection?",
     },
   ],

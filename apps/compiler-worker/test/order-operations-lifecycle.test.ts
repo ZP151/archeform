@@ -109,7 +109,7 @@ describe("Order Operations published compilation", () => {
               "utf8",
             ),
           ).resolves.toContain("getOrderOperationReceipt");
-          expect(schema).toContain("model OrderOperationReceipt");
+          expect(schema).toContain("model Factory_OrderOperationReceipt");
         } else {
           expect(schema).toContain("model RestaurantCommand");
           expect(schema).toContain("model PaymentAttempt");

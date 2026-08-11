@@ -5,7 +5,11 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
+import {
+  Prisma,
+  type CompositionReview,
+  type DraftRevision,
+} from "@prisma/client";
 
 import {
   applyGraphDiffToDraft,
@@ -17,8 +21,10 @@ import {
   createDraftRevision,
   GraphDiffError,
   GraphSemanticError,
+  graphDiffSchema,
   hashApplicationGraph,
   hashCompositionPlan,
+  hashProductBlueprint,
   hashRequirementSpec,
   parseRequirementSpec,
   type CompositionPlanV1,
@@ -47,6 +53,25 @@ import {
 const LOCAL_WORKSPACE_SLUG = "local-workspace";
 const LOCAL_WORKSPACE_NAME = "Local workspace";
 
+type ProductCompositionRejectionCode =
+  | "composition.request_envelope_invalid"
+  | "composition.request_identity_invalid"
+  | "composition.requirement_invalid"
+  | "composition.blueprint_invalid"
+  | "composition.requirement_blueprint_checksum_mismatch";
+
+function productCompositionRejection(
+  code: ProductCompositionRejectionCode,
+  message: string,
+): BadRequestException {
+  return new BadRequestException({
+    statusCode: 400,
+    error: "Bad Request",
+    code,
+    message,
+  });
+}
+
 function uniqueConstraint(error: unknown): boolean {
   return (
     !!error &&
@@ -54,6 +79,16 @@ function uniqueConstraint(error: unknown): boolean {
     (error as { code?: unknown }).code === "P2002"
   );
 }
+
+function serializationConflict(error: unknown): boolean {
+  return (
+    !!error &&
+    typeof error === "object" &&
+    (error as { code?: unknown }).code === "P2034"
+  );
+}
+
+const PRODUCT_APPLY_TRANSACTION_ATTEMPTS = 2;
 
 /**
  * The honest product closure journey over a blank Draft. A free-form
@@ -70,7 +105,7 @@ export class ProductCompositionService {
     private readonly prisma: PrismaService,
     @Inject(COMPOSITION_PLANNER)
     private readonly planner: CompositionPlannerProvider,
-    private readonly lifecycle: LifecycleService,
+    _lifecycle: LifecycleService,
   ) {}
 
   private static parse<T>(parseFn: (input: unknown) => T, input: unknown): T {
@@ -141,35 +176,115 @@ export class ProductCompositionService {
     return blueprint;
   }
 
-  /**
-   * Creates the blank Application Graph, its first Draft revision, and a
-   * planning review bound to the requirement and its checksum-bound blueprint.
-   * The Graph identity is the requirement id; an id that already exists is a
-   * bounded conflict, never a silent overwrite.
-   */
-  async createProductRequirement(input: unknown) {
-    const body = exactRecord(
-      input,
-      ["name", "requirement", "blueprint"],
-      ["requirement", "blueprint"],
-    );
-    const requirement = ProductCompositionService.parse(
-      parseRequirementSpec,
-      body.requirement,
-    );
-    const blueprint = ProductCompositionService.parse(
-      assertProductBlueprint,
-      body.blueprint,
-    );
-    if (blueprint.requirementChecksum !== hashRequirementSpec(requirement)) {
-      throw new BadRequestException(
-        "Blueprint requirement checksum does not match the requirement.",
+  private chosenProductWire(review: CompositionReview) {
+    if (
+      review.decisionId === null ||
+      review.plan === null ||
+      review.diff === null ||
+      review.diffChecksum === null
+    ) {
+      throw new ConflictException(
+        "Product decision is missing its approved composition.",
       );
     }
-    const name =
-      body.name === undefined
-        ? requirement.requirementId
-        : requiredString(body, "name");
+    let plan: CompositionPlanV1;
+    let diff;
+    try {
+      plan = assertCompositionPlan(review.plan);
+      diff = graphDiffSchema.parse(review.diff);
+    } catch {
+      throw new ConflictException(
+        "Product decision is missing its approved composition.",
+      );
+    }
+    return { review, plan, diff, checksum: review.diffChecksum };
+  }
+
+  /**
+   * Creates the blank Application Graph, its first Draft revision, and a
+   * fully planned review bound to the requirement and its checksum-bound
+   * blueprint — all in one transaction. The plan proposal and its store
+   * boundary run inside the same transaction, so a rejected proposal rolls
+   * the whole creation back: a failed journey can never leak a partial Graph
+   * that would occupy the requirement key forever. The Graph identity is the
+   * requirement id; an id that already exists is a bounded conflict, never a
+   * silent overwrite.
+   */
+  async createProductRequirement(input: unknown) {
+    let body: Record<string, unknown>;
+    try {
+      body = exactRecord(
+        input,
+        ["requestId", "name", "requirement", "blueprint"],
+        ["requestId", "requirement", "blueprint"],
+      );
+    } catch {
+      throw productCompositionRejection(
+        "composition.request_envelope_invalid",
+        "Product requirement request is invalid.",
+      );
+    }
+    let requestId: string;
+    try {
+      requestId = requiredString(body, "requestId");
+    } catch {
+      throw productCompositionRejection(
+        "composition.request_identity_invalid",
+        "Product request identity is invalid.",
+      );
+    }
+    if (!/^[a-z][a-z0-9-]{7,80}$/.test(requestId)) {
+      throw productCompositionRejection(
+        "composition.request_identity_invalid",
+        "Product request identity is invalid.",
+      );
+    }
+    let requirement: RequirementSpecV1;
+    try {
+      requirement = parseRequirementSpec(body.requirement);
+    } catch {
+      throw productCompositionRejection(
+        "composition.requirement_invalid",
+        "Product requirement contract is invalid.",
+      );
+    }
+    let blueprint: ProductBlueprintV1;
+    try {
+      blueprint = assertProductBlueprint(body.blueprint);
+    } catch {
+      throw productCompositionRejection(
+        "composition.blueprint_invalid",
+        "Product blueprint contract is invalid.",
+      );
+    }
+    if (blueprint.requirementChecksum !== hashRequirementSpec(requirement)) {
+      throw productCompositionRejection(
+        "composition.requirement_blueprint_checksum_mismatch",
+        "Product blueprint does not bind the requirement.",
+      );
+    }
+    let name = requirement.requirementId;
+    if (body.name !== undefined) {
+      try {
+        name = requiredString(body, "name");
+      } catch {
+        throw productCompositionRejection(
+          "composition.request_envelope_invalid",
+          "Product requirement request is invalid.",
+        );
+      }
+    }
+    const existing = await this.prisma.compositionReview.findUnique({
+      where: { id: requestId },
+    });
+    if (existing) {
+      return this.reconcileProductRequirement(
+        existing,
+        requirement,
+        blueprint,
+        name,
+      );
+    }
     const blank = createBlankApplicationDraft({
       applicationId: requirement.requirementId,
       workspaceId: LOCAL_WORKSPACE_SLUG,
@@ -197,21 +312,45 @@ export class ProductCompositionService {
           },
           include: { draftRevisions: true },
         });
+        const { graph } = validatedGraph(created.draftRevisions[0].graph);
+        const baseDraft = createDraftRevision(
+          graph,
+          created.draftRevisions[0].id,
+        );
+        const storedAlternatives = this.proposeStoredAlternatives(
+          requirement,
+          blueprint,
+          baseDraft,
+        );
         const review = await transaction.compositionReview.create({
           data: {
+            id: requestId,
             applicationGraphId: created.id,
             draftRevisionId: created.draftRevisions[0].id,
             requirement: requirement as unknown as Prisma.InputJsonValue,
             requirementChecksum: hashRequirementSpec(requirement),
             blueprint: blueprint as unknown as Prisma.InputJsonValue,
             draftBaseChecksum: hashApplicationGraph(blank.graph),
-            status: "planning",
+            productAlternatives:
+              storedAlternatives as unknown as Prisma.InputJsonValue,
+            status: "planned",
           },
         });
         return { applicationGraph: created, review };
       });
     } catch (error) {
       if (uniqueConstraint(error)) {
+        const completed = await this.prisma.compositionReview.findUnique({
+          where: { id: requestId },
+        });
+        if (completed) {
+          return this.reconcileProductRequirement(
+            completed,
+            requirement,
+            blueprint,
+            name,
+          );
+        }
         throw new ConflictException(
           `Application Graph '${requirement.requirementId}' already exists.`,
         );
@@ -219,6 +358,86 @@ export class ProductCompositionService {
       throw error;
     }
     return aggregate;
+  }
+
+  private async reconcileProductRequirement(
+    review: {
+      id: string;
+      applicationGraphId: string;
+      requirement: unknown;
+      requirementChecksum: string;
+      blueprint: unknown;
+    },
+    requirement: RequirementSpecV1,
+    blueprint: ProductBlueprintV1,
+    name: string,
+  ) {
+    const storedRequirement = this.storedRequirement(review);
+    const storedBlueprint = this.storedBlueprint(review);
+    if (
+      review.requirementChecksum !== hashRequirementSpec(requirement) ||
+      hashRequirementSpec(storedRequirement) !==
+        hashRequirementSpec(requirement) ||
+      hashProductBlueprint(storedBlueprint) !== hashProductBlueprint(blueprint)
+    ) {
+      throw new ConflictException(
+        "Product request identity is already bound to different input.",
+      );
+    }
+    const storedApplication = await this.prisma.applicationGraph.findUnique({
+      where: { id: review.applicationGraphId },
+      select: { name: true },
+    });
+    if (storedApplication?.name !== name) {
+      throw new ConflictException(
+        "Product request identity is already bound to different input.",
+      );
+    }
+    return {
+      applicationGraph: { id: review.applicationGraphId },
+      review,
+    };
+  }
+
+  /**
+   * The plan seam's store boundary, shared by the atomic creation and the
+   * explicit plan request: only schema-valid alternatives pass, and anything
+   * else is a bounded conflict with nothing persisted. The proposal itself is
+   * a fixed deterministic function of the accepted blueprint over the blank
+   * Draft — never a model choice at this boundary.
+   */
+  private proposeStoredAlternatives(
+    requirement: RequirementSpecV1,
+    blueprint: ProductBlueprintV1,
+    baseDraft: DraftRevisionV1,
+  ): readonly { key: string; label: string; plan: CompositionPlanV1 }[] {
+    let alternatives: readonly ProductPlanAlternative[];
+    try {
+      alternatives = this.planner.proposeProduct({
+        requirement,
+        blueprint,
+        baseDraft,
+      });
+    } catch (error) {
+      if (error instanceof CompositionError) {
+        throw new ConflictException(
+          `Composition planning failed: ${error.message}`,
+        );
+      }
+      throw error;
+    }
+    // The store boundary re-asserts every plan the seam proposes; invalid
+    // material fails before anything is persisted.
+    for (const alternative of alternatives) {
+      try {
+        assertCompositionPlan(alternative.plan);
+      } catch {
+        throw new ConflictException(
+          "Composition planning failed: the seam proposed an invalid plan.",
+        );
+      }
+    }
+    return alternatives.map(({ key, label, plan }) => ({ key, label, plan }));
   }
 
   /**
@@ -251,37 +470,11 @@ export class ProductCompositionService {
       );
     }
     const baseDraft = await this.reviewBaseDraft(review);
-    let alternatives: readonly ProductPlanAlternative[];
-    try {
-      alternatives = this.planner.proposeProduct({
-        requirement,
-        blueprint,
-        baseDraft,
-      });
-    } catch (error) {
-      if (error instanceof CompositionError) {
-        throw new ConflictException(
-          `Composition planning failed: ${error.message}`,
-        );
-      }
-      throw error;
-    }
-    // The store boundary re-asserts every plan the seam proposes; invalid
-    // material fails before anything is persisted.
-    for (const alternative of alternatives) {
-      try {
-        assertCompositionPlan(alternative.plan);
-      } catch {
-        throw new ConflictException(
-          "Composition planning failed: the seam proposed an invalid plan.",
-        );
-      }
-    }
-    const stored = alternatives.map(({ key, label, plan }) => ({
-      key,
-      label,
-      plan,
-    }));
+    const stored = this.proposeStoredAlternatives(
+      requirement,
+      blueprint,
+      baseDraft,
+    );
     const updated = await this.prisma.compositionReview.update({
       where: { id: reviewId },
       data: {
@@ -304,7 +497,7 @@ export class ProductCompositionService {
     const review = await this.findReview(reviewId);
     if (review.decisionId !== null) {
       if (review.decisionId === `product-${reviewId}-${alternativeKey}`) {
-        return { review };
+        return this.chosenProductWire(review);
       }
       throw new ConflictException(
         "Product requirement already has a decision.",
@@ -361,8 +554,8 @@ export class ProductCompositionService {
         "Deterministic composition of the accepted blueprint over the approved capability catalogue.",
       decidedAt: new Date().toISOString(),
     };
-    const updated = await this.prisma.compositionReview.update({
-      where: { id: reviewId },
+    const transitioned = await this.prisma.compositionReview.updateMany({
+      where: { id: reviewId, status: "planned", decisionId: null },
       data: {
         plan: plan as unknown as Prisma.InputJsonValue,
         planChecksum: decision.planChecksum,
@@ -375,12 +568,16 @@ export class ProductCompositionService {
         status: "approved",
       },
     });
-    return {
-      review: updated,
-      plan,
-      diff: composed.diff,
-      checksum: composed.checksum,
-    };
+    const stored = await this.findReview(reviewId);
+    if (transitioned.count !== 1) {
+      if (stored.decisionId === decision.decisionId) {
+        return this.chosenProductWire(stored);
+      }
+      throw new ConflictException(
+        "Product requirement already has a decision.",
+      );
+    }
+    return this.chosenProductWire(stored);
   }
 
   /**
@@ -389,8 +586,50 @@ export class ProductCompositionService {
    * Graph must resolve every plan binding before it becomes the next Draft
    * revision.
    */
-  async applyProduct(reviewId: string) {
-    const review = await this.findReview(reviewId);
+  private async reconstructAppliedProduct(
+    transaction: Prisma.TransactionClient,
+    review: CompositionReview,
+  ): Promise<{
+    draftRevision: DraftRevision;
+    review: CompositionReview;
+  }> {
+    const base = await transaction.draftRevision.findUnique({
+      where: { id: review.draftRevisionId },
+    });
+    if (!base || base.applicationGraphId !== review.applicationGraphId) {
+      throw new ConflictException(
+        "Applied product base Draft revision was not found.",
+      );
+    }
+    const draftRevision = await transaction.draftRevision.findUnique({
+      where: {
+        applicationGraphId_revisionNumber: {
+          applicationGraphId: review.applicationGraphId,
+          revisionNumber: base.revisionNumber + 1,
+        },
+      },
+    });
+    if (!draftRevision) {
+      throw new ConflictException(
+        "Applied product Draft revision was not found.",
+      );
+    }
+    return { draftRevision, review };
+  }
+
+  private async applyProductTransaction(
+    transaction: Prisma.TransactionClient,
+    reviewId: string,
+  ) {
+    const review = await transaction.compositionReview.findUnique({
+      where: { id: reviewId },
+    });
+    if (!review) {
+      throw new NotFoundException("Product requirement was not found.");
+    }
+    if (review.status === "applied") {
+      return this.reconstructAppliedProduct(transaction, review);
+    }
     if (review.status !== "approved") {
       throw new ConflictException(
         "Only an approved product plan can be applied to the Draft.",
@@ -403,7 +642,28 @@ export class ProductCompositionService {
     }
     const plan = assertCompositionPlan(review.plan);
     const blueprint = this.storedBlueprint(review);
-    const baseDraft = await this.reviewBaseDraft(review);
+    const base = await transaction.draftRevision.findUnique({
+      where: { id: review.draftRevisionId },
+    });
+    if (!base || base.applicationGraphId !== review.applicationGraphId) {
+      throw new ConflictException(
+        "Application Graph has no mutable Draft revision.",
+      );
+    }
+    const latest = await transaction.draftRevision.findFirst({
+      where: { applicationGraphId: review.applicationGraphId },
+      orderBy: { revisionNumber: "desc" },
+    });
+    const { graph } = validatedGraph(base.graph);
+    if (
+      latest?.id !== base.id ||
+      hashApplicationGraph(graph) !== review.draftBaseChecksum
+    ) {
+      throw new ConflictException(
+        "Draft revision moved since the requirement was created; re-create the requirement.",
+      );
+    }
+    const baseDraft = createDraftRevision(graph, base.id);
     let composed;
     try {
       composed = composeProductDraft({ plan, blueprint, baseDraft });
@@ -438,15 +698,57 @@ export class ProductCompositionService {
       }
       throw error;
     }
-    const draftRevision = await this.lifecycle.appendDraftRevision(
-      review.applicationGraphId,
-      { graph: applied.graph },
-    );
-    const updated = await this.prisma.compositionReview.update({
-      where: { id: reviewId },
+    const transitioned = await transaction.compositionReview.updateMany({
+      where: {
+        id: reviewId,
+        status: "approved",
+        decisionId: review.decisionId,
+      },
       data: { status: "applied" },
     });
+    if (transitioned.count !== 1) {
+      const current = await transaction.compositionReview.findUnique({
+        where: { id: reviewId },
+      });
+      if (current?.status === "applied") {
+        return this.reconstructAppliedProduct(transaction, current);
+      }
+      throw new ConflictException("Product application conflicted.");
+    }
+    const draftRevision = await transaction.draftRevision.create({
+      data: {
+        applicationGraphId: review.applicationGraphId,
+        revisionNumber: base.revisionNumber + 1,
+        graph: applied.graph as unknown as Prisma.InputJsonValue,
+      },
+    });
+    const updated = await transaction.compositionReview.findUnique({
+      where: { id: reviewId },
+    });
+    if (!updated || updated.status !== "applied") {
+      throw new ConflictException("Product application conflicted.");
+    }
     return { draftRevision, review: updated };
+  }
+
+  async applyProduct(reviewId: string) {
+    for (
+      let attempt = 0;
+      attempt < PRODUCT_APPLY_TRANSACTION_ATTEMPTS;
+      attempt += 1
+    ) {
+      try {
+        return await this.prisma.$transaction(
+          (transaction) => this.applyProductTransaction(transaction, reviewId),
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+      } catch (error) {
+        if (!serializationConflict(error)) throw error;
+      }
+    }
+    throw new ConflictException(
+      "Product application conflicted; retry the operation.",
+    );
   }
 
   async getReview(reviewId: string) {

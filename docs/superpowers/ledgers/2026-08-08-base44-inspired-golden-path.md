@@ -1,5 +1,12 @@
 # P1 Base44-Inspired Golden Path Ledger
 
+> **Historical status — 2026-08-10:** The recorded slices produced the fixed
+> Expense Approval replay later treated as completed regression evidence. They
+> did not prove free-form requirement-to-product closure. The 2026-08-09
+> closure ledger inherits the reusable evidence; the 2026-08-10 Restaurant
+> Product ledger supersedes this ledger only for forward product delivery.
+> Historical task rows below are intentionally unchanged.
+
 **Goal:** Complete one low-friction, evidence-backed path from a business
 requirement to a runnable local preview for the Expense Approval profile,
 without editing source and without manually assembling capability locks.

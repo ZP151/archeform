@@ -334,6 +334,7 @@ export function DomainCanvas({
                 />
                 Required
                 <input
+                  aria-label={`${field.key} Unique`}
                   checked={field.unique ?? false}
                   onChange={(event) => {
                     try {

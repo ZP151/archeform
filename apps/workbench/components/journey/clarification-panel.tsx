@@ -1,6 +1,10 @@
-import type { RequirementSpecV1 } from "@factory/graph";
+import type {
+  CompositionClarificationV1,
+  RequirementSpecV1,
+} from "@factory/graph";
 
 import { RequirementSummary } from "./requirement-summary";
+import { ANSWER_MAX_LENGTH } from "../../lib/product-journey/journey-model";
 
 /**
  * The clarification step: every open question of the parsed requirement gets
@@ -11,7 +15,7 @@ import { RequirementSummary } from "./requirement-summary";
 export interface ClarificationPanelProps {
   readonly requirement: RequirementSpecV1;
   readonly blueprintTitle: string;
-  readonly questions: readonly { key: string; question: string }[];
+  readonly questions: readonly CompositionClarificationV1["questions"][number][];
   readonly answers: Readonly<Record<string, string>>;
   readonly onAnswerChange: (key: string, answer: string) => void;
   readonly busy: boolean;
@@ -37,14 +41,16 @@ export function ClarificationPanel({
       />
       <h3>Answer the open questions</h3>
       <ol className="clarification-questions">
-        {questions.map(({ key, question }) => (
+        {questions.map(({ key, category, defaultPolicy, question }) => (
           <li key={key}>
             <label htmlFor={`answer-${key}`}>{question}</label>
             <input
               id={`answer-${key}`}
               aria-label={key}
+              data-clarification-category={category}
+              data-clarification-default-policy={defaultPolicy}
               value={answers[key] ?? ""}
-              maxLength={64}
+              maxLength={ANSWER_MAX_LENGTH}
               onChange={(event) => onAnswerChange(key, event.target.value)}
             />
           </li>

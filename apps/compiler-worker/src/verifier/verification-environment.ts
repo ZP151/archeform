@@ -1,6 +1,7 @@
 import { posix } from "node:path";
 
 import {
+  PreviewRunFailure,
   dockerHostLookupEnvironment,
   type PreviewProcessRunner,
   type PreviewRuntimeRequest,
@@ -179,6 +180,7 @@ export type VerificationEnvironmentOptions = {
 export class VerificationEnvironment {
   private readonly previewRequest: PreviewRuntimeRequest;
   private startedPreview: StartedPreview | null = null;
+  private cleanupComplete = false;
 
   constructor(private readonly options: VerificationEnvironmentOptions) {
     this.previewRequest = {
@@ -219,14 +221,27 @@ export class VerificationEnvironment {
       );
       return this.startedPreview;
     } catch (error) {
+      this.cleanupComplete =
+        error instanceof PreviewRunFailure && error.cleanupComplete;
+      const code = boundedErrorCode(error, "preview_start_failed");
       throw new VerificationLifecycleError(
-        boundedErrorCode(error, "preview_start_failed"),
+        code === "preview_artifact_failed" ||
+          code === "preview_compose_up_failed" ||
+          code === "preview_port_discovery_failed" ||
+          code === "preview_start_failed" ||
+          code === "preview_start_timeout" ||
+          code === "preview_start_cancelled" ||
+          code === "preview_readiness_failed" ||
+          code === "preview_health_check_failed"
+          ? code
+          : "preview_start_failed",
         "The isolated preview failed to start.",
       );
     }
   }
 
   async cleanup(): Promise<void> {
+    if (this.cleanupComplete) return;
     try {
       await this.options.stopPreviewRun(
         this.options.artifactRoot,

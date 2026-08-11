@@ -3,7 +3,11 @@ import { z } from "zod";
 import {
   CompositionError,
   digestJson,
+  factoryOwnedRecordIdentityDeclarationError,
+  graphFieldKeySchema,
+  graphKeySchema,
   identifierSchema,
+  isFactoryOwnedRecordIdentityFieldKey,
   parseStrict,
   safeBusinessTextSchema,
   sha256DigestSchema,
@@ -34,8 +38,15 @@ export const blueprintFieldTypeSchema = z.enum([
   "file",
 ]);
 
-/** Approved business actions a blueprint actor may hold over an entity. */
-export const blueprintActionSchema = z.enum([
+/**
+ * The bounded business-action vocabulary a blueprint may declare. This is the
+ * deterministic capability lock: the composed runtime authorizes
+ * `(role, entity, event)` against grants of exactly these verbs, so both the
+ * permission grants and the workflow transitions must be drawn from it. The
+ * model proposes which of the approved verbs apply; it may never invent a
+ * verb outside the vocabulary (a transition the runtime could never grant).
+ */
+export const blueprintActionVerbs = [
   "create",
   "read",
   "update",
@@ -48,11 +59,23 @@ export const blueprintActionSchema = z.enum([
   "cancel",
   "audit",
   "manage",
-]);
+] as const;
 
+/** Approved business actions a blueprint actor may hold over an entity. */
+export const blueprintActionSchema = z.enum(blueprintActionVerbs);
+
+// Actor, entity, workflow, and page-intent keys become graph-symbol segments
+// verbatim (`graph.policy.<key>`, `graph.domain.<key>`, `graph.flow.<key>`,
+// `graph.page.<key>`), so they must be lowercase-kebab graph keys. Field keys
+// become graph domain entity field keys verbatim (`domain.entities[].fields[].key`),
+// whose grammar is lowercase-first camelCase with underscores — never hyphens.
+// Workflow state keys become graph flow state identifiers verbatim
+// (`flow.flows[].states[].key`), which are lowercase-kebab like the other graph
+// symbols. Each is locked to the exact grammar the Application Graph will
+// re-validate at the apply seam.
 const blueprintActorSchema = z
   .object({
-    key: identifierSchema,
+    key: graphKeySchema,
     label: safeBusinessTextSchema.max(160),
     description: safeBusinessTextSchema.max(500).optional(),
     permissions: z
@@ -71,7 +94,7 @@ const blueprintActorSchema = z
 
 const blueprintEntityFieldSchema = z
   .object({
-    key: identifierSchema,
+    key: graphFieldKeySchema,
     label: safeBusinessTextSchema.max(160),
     description: safeBusinessTextSchema.max(500).optional(),
     type: blueprintFieldTypeSchema,
@@ -83,7 +106,7 @@ const blueprintEntityFieldSchema = z
 
 const blueprintEntitySchema = z
   .object({
-    key: identifierSchema,
+    key: graphKeySchema,
     label: safeBusinessTextSchema.max(160),
     description: safeBusinessTextSchema.max(500).optional(),
     fields: z.array(blueprintEntityFieldSchema).min(1).max(60),
@@ -92,7 +115,7 @@ const blueprintEntitySchema = z
 
 const blueprintPageIntentSchema = z
   .object({
-    key: identifierSchema,
+    key: graphKeySchema,
     label: safeBusinessTextSchema.max(160),
     intent: pageIntentSchema,
     entityKey: identifierSchema.optional(),
@@ -101,14 +124,18 @@ const blueprintPageIntentSchema = z
 
 const blueprintStateSchema = z
   .object({
-    key: identifierSchema,
+    key: graphKeySchema,
     label: safeBusinessTextSchema.max(160),
   })
   .strict();
 
+// A transition key is the event the generated API authorizes
+// `(role, entity, event)` against, so it must come from the same bounded
+// action vocabulary the permission grants are drawn from. A key outside the
+// vocabulary could never be granted and the runtime could never serve it.
 const blueprintTransitionSchema = z
   .object({
-    key: identifierSchema,
+    key: z.enum(blueprintActionVerbs),
     from: identifierSchema,
     to: identifierSchema,
     label: safeBusinessTextSchema.max(160),
@@ -118,7 +145,7 @@ const blueprintTransitionSchema = z
 
 const blueprintWorkflowSchema = z
   .object({
-    key: identifierSchema,
+    key: graphKeySchema,
     label: safeBusinessTextSchema.max(160),
     entityKey: identifierSchema,
     states: z.array(blueprintStateSchema).min(2).max(20),
@@ -229,6 +256,15 @@ function assertFieldShape(
  */
 export function assertProductBlueprint(input: unknown): ProductBlueprintV1 {
   const blueprint = parseStrict(productBlueprintSchema, input);
+  for (const entity of blueprint.entities) {
+    if (
+      entity.fields.some((field) =>
+        isFactoryOwnedRecordIdentityFieldKey(field.key),
+      )
+    ) {
+      throw new CompositionError(factoryOwnedRecordIdentityDeclarationError);
+    }
+  }
   assertUniqueKeys(blueprint.actors, "actor");
   assertUniqueKeys(blueprint.entities, "entity");
   assertUniqueKeys(blueprint.pageIntents, "page intent");

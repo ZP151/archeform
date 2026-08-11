@@ -513,7 +513,56 @@ interface NotificationOutboxRuntimeContribution {
   readonly template: string | null;
 }
 
-const notificationOutboxPrismaSchema = `model NotificationOutbox {
+const COMPILER_STORAGE_PREFIX = "Factory_";
+
+function compilerStorageName(name: string): string {
+  return `${COMPILER_STORAGE_PREFIX}${name}`;
+}
+
+/**
+ * Capability contribution digests are verified while planning, before their
+ * rendered content reaches these persistence resolvers. Remap only complete
+ * Prisma identifier tokens in that verified content; signed asset source and
+ * its digest remain unchanged.
+ */
+function remapPrismaStorageNames(
+  source: string,
+  names: readonly string[],
+): string {
+  return names.reduce(
+    (rendered, name) =>
+      rendered.replace(
+        new RegExp(`(^|[^A-Za-z0-9_])${name}(?=$|[^A-Za-z0-9_])`, "gm"),
+        (_, prefix: string) => `${prefix}${compilerStorageName(name)}`,
+      ),
+    source,
+  );
+}
+
+/**
+ * SQL contribution identifiers are double quoted. Rename an exact model/table
+ * token and identifiers derived from it (indexes and constraints), while
+ * leaving columns and arbitrary string content untouched.
+ */
+function remapSqlStorageNames(
+  source: string,
+  names: readonly string[],
+): string {
+  const remapped = new Map(
+    names.map((name) => [name, compilerStorageName(name)]),
+  );
+  return source.replace(/"([^"]+)"/g, (quoted, identifier: string) => {
+    for (const [name, factoryName] of remapped) {
+      if (identifier === name) return `"${factoryName}"`;
+      if (identifier.startsWith(`${name}_`)) {
+        return `"${factoryName}${identifier.slice(name.length)}"`;
+      }
+    }
+    return quoted;
+  });
+}
+
+const notificationOutboxPrismaSchema = `model Factory_NotificationOutbox {
   id String @id @default(cuid())
   dedupeKey String @unique
   actor String
@@ -529,7 +578,7 @@ const notificationOutboxPrismaSchema = `model NotificationOutbox {
   @@index([status, availableAt])
 }`;
 
-const notificationOutboxMigration = `CREATE TABLE "NotificationOutbox" (
+const notificationOutboxMigration = `CREATE TABLE "Factory_NotificationOutbox" (
   "id" TEXT NOT NULL PRIMARY KEY,
   "dedupeKey" TEXT NOT NULL UNIQUE,
   "actor" TEXT NOT NULL,
@@ -543,7 +592,7 @@ const notificationOutboxMigration = `CREATE TABLE "NotificationOutbox" (
   "deliveredAt" TIMESTAMP(3),
   "lastError" TEXT
 );
-CREATE INDEX "NotificationOutbox_status_availableAt_idx" ON "NotificationOutbox" ("status", "availableAt");`;
+CREATE INDEX "Factory_NotificationOutbox_status_availableAt_idx" ON "Factory_NotificationOutbox" ("status", "availableAt");`;
 
 function renderNotificationOutboxWorker(): string {
   return `import type { NotificationOutboxEntry, RecordStore } from "./application-runtime.js";
@@ -766,8 +815,10 @@ function resolveOrderOperationsPersistenceContribution(
     );
   }
   return Object.freeze({
-    schema: schema.content,
-    migration: migration.content,
+    schema: remapPrismaStorageNames(schema.content, ["OrderOperationReceipt"]),
+    migration: remapSqlStorageNames(migration.content, [
+      "OrderOperationReceipt",
+    ]),
   });
 }
 
@@ -807,8 +858,14 @@ function resolveMoneyPricingPersistenceContribution(
     );
   }
   return Object.freeze({
-    schema: schema.content,
-    migration: migration.content,
+    schema: remapPrismaStorageNames(schema.content, [
+      "PriceSnapshot",
+      "PriceAllocation",
+    ]),
+    migration: remapSqlStorageNames(migration.content, [
+      "PriceSnapshot",
+      "PriceAllocation",
+    ]),
   });
 }
 
@@ -1538,10 +1595,12 @@ function runtimeDefinition(graph: ApplicationGraphV1) {
   return {
     entities: graph.domain.entities.map((entity) => ({
       key: entity.key,
-      fields: entity.fields.map((field) => ({
-        key: field.key,
-        required: field.required,
-      })),
+      fields: entity.fields
+        .filter((field) => field.key !== "id")
+        .map((field) => ({
+          key: field.key,
+          required: field.required,
+        })),
     })),
     permissions: graph.policy.permissions,
     capabilities: graph.integration.capabilities,
@@ -1590,6 +1649,10 @@ function renderApplicationRuntime(
     'import { enforce } from "./policy.js";',
     "",
     "export type StoredRecord = Record<string, unknown> & { id: string; status?: string; version?: number };",
+    "export const factoryOwnedRecordIdentityInputError = \"Record input cannot declare Factory-owned record identity 'id'.\";",
+    "export function assertFactoryOwnedRecordIdentityInput(input: Record<string, unknown>): void {",
+    "  if (Object.prototype.hasOwnProperty.call(input, 'id')) throw new Error(factoryOwnedRecordIdentityInputError);",
+    "}",
     "export type AuditEvent = { actor: string; action: string; entity: string; recordId: string; at: string };",
     "export type CapabilityEvent = { actor: string; capability: string; operation: string; entity: string; recordId: string; outcome: 'completed'; at: string };",
     ...(notificationOutbox
@@ -1715,6 +1778,7 @@ function renderApplicationRuntime(
     ...(notificationOutbox
       ? [
           "  async create(entityKey: string, input: Record<string, unknown>): Promise<StoredRecord> {",
+          "    assertFactoryOwnedRecordIdentityInput(input);",
           "    return this.coordinateMutation(() => {",
           "      const collection = this.collection(entityKey);",
           "      const record: StoredRecord = { id: `${entityKey}-${collection.size + 1}`, ...input };",
@@ -1723,6 +1787,7 @@ function renderApplicationRuntime(
           "    });",
           "  }",
           "  async update(entityKey: string, recordId: string, input: Record<string, unknown>): Promise<StoredRecord> {",
+          "    assertFactoryOwnedRecordIdentityInput(input);",
           "    return this.coordinateMutation(() => {",
           "      const record = this.collection(entityKey).get(recordId);",
           "      if (!record) throw new Error(`Record '${recordId}' was not found.`);",
@@ -1735,12 +1800,14 @@ function renderApplicationRuntime(
         ]
       : [
           "  async create(entityKey: string, input: Record<string, unknown>): Promise<StoredRecord> {",
+          "    assertFactoryOwnedRecordIdentityInput(input);",
           "    const collection = this.collection(entityKey);",
           "    const record: StoredRecord = { id: `${entityKey}-${collection.size + 1}`, ...input };",
           "    collection.set(record.id, record);",
           "    return record;",
           "  }",
           "  async update(entityKey: string, recordId: string, input: Record<string, unknown>): Promise<StoredRecord> {",
+          "    assertFactoryOwnedRecordIdentityInput(input);",
           "    const record = await this.find(entityKey, recordId);",
           "    if (!record) throw new Error(`Record '${recordId}' was not found.`);",
           "    Object.assign(record, input);",
@@ -2015,6 +2082,7 @@ function renderApplicationRuntime(
     "  async create(role: string, entityKey: string, input: Record<string, unknown>): Promise<StoredRecord> {",
     "    const entity = this.entity(entityKey);",
     "    await this.assertAllowed(role, entityKey, 'create');",
+    "    assertFactoryOwnedRecordIdentityInput(input);",
     "    const allowedFields = new Set(entity.fields.map((field) => field.key));",
     "    const unknown = Object.keys(input).find((key) => !allowedFields.has(key));",
     "    if (unknown) throw new Error(`Unknown field '${unknown}' for '${entityKey}'.`);",
@@ -2257,6 +2325,15 @@ function renderPrismaRecordStore(
 ): string {
   const commerce = hasCommerceCapabilities(graph);
   const capabilityOutcome = hasRestaurantRuntime ? "succeeded" : "completed";
+  const auditAccessor = hasRestaurantRuntime
+    ? "auditEvent"
+    : "factory_AuditEvent";
+  const capabilityAccessor = hasRestaurantRuntime
+    ? "capabilityEvent"
+    : "factory_CapabilityEvent";
+  const commerceAccessor = hasRestaurantRuntime
+    ? "commerceLineItem"
+    : "factory_CommerceLineItem";
   const delegates = Object.fromEntries(
     graph.domain.entities.map((entity) => [
       entity.key,
@@ -2266,6 +2343,7 @@ function renderPrismaRecordStore(
   return [
     'import { PrismaClient } from "@prisma/client";',
     `import type { AuditEvent, CapabilityEvent,${commerce ? " CommerceLineItem," : ""}${notificationOutbox ? " NotificationOutboxEntry, NotificationOutboxInput," : ""}${persistentOrderOperationReceipts ? " OrderOperationReceipt," : ""} RecordStore, StoredRecord } from "./application-runtime.js";`,
+    'import { assertFactoryOwnedRecordIdentityInput } from "./application-runtime.js";',
     "",
     "type CrudDelegate = {",
     "  findMany(): Promise<unknown[]>;",
@@ -2332,23 +2410,23 @@ function renderPrismaRecordStore(
     "  }",
     "",
     "  private auditDelegate(): AuditDelegate {",
-    "    return (this.prisma as unknown as { auditEvent: AuditDelegate }).auditEvent;",
+    `    return (this.prisma as unknown as { ${auditAccessor}: AuditDelegate }).${auditAccessor};`,
     "  }",
     "",
     "  private capabilityDelegate(): CapabilityDelegate {",
-    "    return (this.prisma as unknown as { capabilityEvent: CapabilityDelegate }).capabilityEvent;",
+    `    return (this.prisma as unknown as { ${capabilityAccessor}: CapabilityDelegate }).${capabilityAccessor};`,
     "  }",
     ...(notificationOutbox
       ? [
           "  private notificationOutboxDelegate(): NotificationOutboxDelegate {",
-          "    return (this.prisma as unknown as { notificationOutbox: NotificationOutboxDelegate }).notificationOutbox;",
+          "    return (this.prisma as unknown as { factory_NotificationOutbox: NotificationOutboxDelegate }).factory_NotificationOutbox;",
           "  }",
         ]
       : []),
     ...(persistentOrderOperationReceipts
       ? [
           "  private orderOperationReceiptDelegate(): OrderOperationReceiptDelegate {",
-          "    return (this.prisma as unknown as { orderOperationReceipt: OrderOperationReceiptDelegate }).orderOperationReceipt;",
+          "    return (this.prisma as unknown as { factory_OrderOperationReceipt: OrderOperationReceiptDelegate }).factory_OrderOperationReceipt;",
           "  }",
         ]
       : []),
@@ -2356,7 +2434,7 @@ function renderPrismaRecordStore(
       ? [
           "",
           "  private commerceLineDelegate(): CommerceLineDelegate {",
-          "    return (this.prisma as unknown as { commerceLineItem: CommerceLineDelegate }).commerceLineItem;",
+          `    return (this.prisma as unknown as { ${commerceAccessor}: CommerceLineDelegate }).${commerceAccessor};`,
           "  }",
         ]
       : []),
@@ -2371,10 +2449,12 @@ function renderPrismaRecordStore(
     "  }",
     "",
     "  async create(entityKey: string, input: Record<string, unknown>): Promise<StoredRecord> {",
+    "    assertFactoryOwnedRecordIdentityInput(input);",
     "    return asStoredRecord(await this.delegate(entityKey).create({ data: input }));",
     "  }",
     "",
     "  async update(entityKey: string, recordId: string, input: Record<string, unknown>): Promise<StoredRecord> {",
+    "    assertFactoryOwnedRecordIdentityInput(input);",
     "    return asStoredRecord(await this.delegate(entityKey).update({ where: { id: recordId }, data: input }));",
     "  }",
     "",
@@ -2544,11 +2624,13 @@ function renderPageRuntime(
     entities: graph.domain.entities.map((entity) => ({
       key: entity.key,
       label: entity.label,
-      fields: entity.fields.map((field) => ({
-        key: field.key,
-        required: field.required,
-        type: field.type,
-      })),
+      fields: entity.fields
+        .filter((field) => field.key !== "id")
+        .map((field) => ({
+          key: field.key,
+          required: field.required,
+          type: field.type,
+        })),
     })),
     policy: graph.policy,
     flow: {
@@ -2643,7 +2725,7 @@ function renderPageRuntime(
     "",
     "function FormBlock({ block, entity, role, reportError }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly role: string; readonly reportError: (reason: unknown) => void }) {",
     "  const [values, setValues] = useState<Record<string, string>>({});",
-    "  const fields = entity.fields.filter((field) => field.key !== 'status');",
+    "  const fields = entity.fields.filter((field) => field.key !== 'id' && field.key !== 'status');",
     "  if (!can(role, entity.key, 'create')) return <section className='generated-card'><h2>{block.props.title ?? \`Create ${entity.label}\`}</h2><p>Your selected role cannot create this record.</p></section>;",
     "  const createRecord = async () => {",
     "    const payload = Object.fromEntries(fields.map((field) => [field.key, values[field.key] ?? '']));",
@@ -3496,7 +3578,7 @@ export function generateApplicationBundle(
     {
       path: "web/app/layout.tsx",
       render: () =>
-        'import type { ReactNode } from "react";\nimport "./globals.css";\n\nexport default function RootLayout({ children }: { children: ReactNode }) { return <html lang="en"><body>{children}</body></html>; }\n',
+        `import type { ReactNode } from "react";\nimport "./globals.css";\n\nexport const metadata = { title: ${JSON.stringify(graph.metadata.name)} };\n\nexport default function RootLayout({ children }: { children: ReactNode }) { return <html lang="en"><body>{children}</body></html>; }\n`,
     },
     {
       path: "web/app/page-runtime.tsx",

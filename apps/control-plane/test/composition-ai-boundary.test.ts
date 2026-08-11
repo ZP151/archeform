@@ -336,7 +336,12 @@ describe("CompositionService AI planning boundary", () => {
         apiVersion: "factory.composition-clarification/v1",
         requirementChecksum: hashRequirementSpec(requirement),
         questions: [
-          { key: "question-1", question: "Which flow hosts the journey?" },
+          {
+            key: "question-1",
+            category: "business-rule",
+            defaultPolicy: "required",
+            question: "Which flow hosts the journey?",
+          },
         ],
       },
     });
@@ -357,6 +362,8 @@ describe("CompositionService AI planning boundary", () => {
     const stored = prisma.compositionReview.update.mock.calls[0][0].data;
     expect(stored.clarification.questions[0]).toEqual({
       key: "question-1",
+      category: "business-rule",
+      defaultPolicy: "required",
       question: "Which flow hosts the journey?",
     });
     expect(stored).not.toHaveProperty("plan");

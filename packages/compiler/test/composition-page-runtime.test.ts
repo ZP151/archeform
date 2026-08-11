@@ -11,6 +11,8 @@ import {
 } from "@factory/capabilities/node";
 import {
   applyGraphDiffToDraft,
+  assertProductBlueprint,
+  assertValidApplicationGraph,
   createBlankApplicationDraft,
   hashApplicationGraph,
   type ApplicationGraphV1,
@@ -140,6 +142,64 @@ function withBoundedStudioEdits(graph: ApplicationGraphV1): ApplicationGraphV1 {
 }
 
 describe("composition page runtime round trip", () => {
+  it("compiles a valid composed graph with two references to the same target", async () => {
+    const interpretation = await fixtureInterpreter.interpret({
+      brief: bookingBrief,
+    });
+    const blueprint = assertProductBlueprint({
+      ...interpretation.blueprint,
+      entities: interpretation.blueprint.entities.map((entity) =>
+        entity.key === "appointment"
+          ? {
+              ...entity,
+              fields: [
+                ...entity.fields,
+                {
+                  key: "secondaryServiceKey",
+                  label: "Secondary service",
+                  type: "reference",
+                  required: true,
+                  referenceTo: "service",
+                },
+              ],
+            }
+          : entity,
+      ),
+    });
+    const baseDraft = createBlankApplicationDraft({
+      applicationId: interpretation.spec.requirementId,
+      workspaceId: "local-workspace",
+      name: interpretation.spec.requirementId,
+    });
+    const [standard] = planProductAlternatives({
+      requirement: interpretation.spec,
+      blueprint,
+      baseDraft,
+    });
+    const { diff } = composeProductDraft({
+      plan: standard.plan,
+      blueprint,
+      baseDraft,
+    });
+    const graph = assertValidApplicationGraph(
+      applyGraphDiffToDraft(baseDraft, diff).graph,
+    );
+
+    expect(
+      graph.domain.relations
+        .filter(
+          (relation) =>
+            relation.from === "appointment" && relation.to === "service",
+        )
+        .map((relation) => relation.field),
+    ).toEqual(["serviceKey", "secondaryServiceKey"]);
+
+    const bundle = generateApplicationBundle(bundleInputFor(graph));
+    expect(bundle.files).toContainEqual(
+      expect.objectContaining({ path: "database/prisma/schema.prisma" }),
+    );
+  });
+
   for (const [promptLabel, brief] of [
     ["Prompt A (Expense Approval)", expenseBrief],
     ["Prompt B (Appointment Booking)", bookingBrief],

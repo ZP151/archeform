@@ -53,7 +53,20 @@ const pendingCompilation = {
 
 const succeededCompilation = {
   ...pendingCompilation,
-  result: { status: "succeeded" },
+  result: {
+    status: "succeeded",
+    artifactCount: 0,
+    completedAt: "2026-08-10T12:00:00.000Z",
+  },
+};
+
+const failedCompilation = {
+  ...pendingCompilation,
+  result: {
+    status: "failed",
+    failureCode: "compilation.failed",
+    completedAt: "2026-08-10T12:00:00.000Z",
+  },
 };
 
 const publishedRevision = {
@@ -160,8 +173,8 @@ const addBindingDiff = {
     },
   ],
   affectedPaths: ["/domain/expense"],
-  rationaleCode: "binding-missing-identity-policy",
-  summary: "Bind the identity policy so role journeys are session-scoped.",
+  rationaleCode: "binding.denial-policy-not-bound",
+  summary: "Bind the identity policy so declared denials are enforced.",
 };
 
 describe("useReleaseJourney", () => {
@@ -284,6 +297,82 @@ describe("useReleaseJourney", () => {
     );
   });
 
+  it("fails a compilation that remains pending at its elapsed deadline", async () => {
+    stubTransport({
+      "POST /application-graphs/expense-approval/published-revisions": [
+        publishedRevision,
+      ],
+      "POST /compilations": [pendingCompilation],
+      "GET /compilations/compilation-1": [pendingCompilation],
+    });
+    const controller = mount();
+    const live = (): ReleaseJourneyController =>
+      globalThis.__release as ReleaseJourneyController;
+
+    await act(async () => controller.publishRelease());
+    await act(async () => {
+      controller.compileRelease();
+      await vi.advanceTimersByTimeAsync(300_000);
+    });
+
+    expect(live().release?.phase).toBe("failed");
+    expect(live().release?.diagnosis).toBe("compilation.timeout");
+    expect(live().busy).toBe(false);
+  });
+
+  it("immediately maps terminal compilation failure to its fixed failure code", async () => {
+    stubTransport({
+      "POST /application-graphs/expense-approval/published-revisions": [
+        publishedRevision,
+      ],
+      "POST /compilations": [pendingCompilation],
+      "GET /compilations/compilation-1": [failedCompilation],
+    });
+    const controller = mount();
+    const live = (): ReleaseJourneyController =>
+      globalThis.__release as ReleaseJourneyController;
+
+    await act(async () => controller.publishRelease());
+    await act(async () => controller.compileRelease());
+
+    expect(live().release?.phase).toBe("failed");
+    expect(live().release?.diagnosis).toBe("compilation.failed");
+    expect(live().busy).toBe(false);
+  });
+
+  it("allows verification through 300 seconds and times out at 900 seconds", async () => {
+    stubTransport({
+      "POST /application-graphs/expense-approval/published-revisions": [
+        publishedRevision,
+      ],
+      "POST /compilations": [pendingCompilation],
+      "GET /compilations/compilation-1": [succeededCompilation],
+      "POST /compilations/compilation-1/verification-runs": [pendingRun],
+      "GET /verification-runs/verify-1": [pendingRun],
+    });
+    const controller = mount();
+    const live = (): ReleaseJourneyController =>
+      globalThis.__release as ReleaseJourneyController;
+
+    await act(async () => controller.publishRelease());
+    await act(async () => controller.compileRelease());
+    await act(async () => {
+      controller.verifyRelease();
+      await vi.advanceTimersByTimeAsync(300_000);
+    });
+
+    expect(live().release?.phase).toBe("verifying");
+    expect(live().busy).toBe(true);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(600_000);
+    });
+
+    expect(live().release?.phase).toBe("failed");
+    expect(live().release?.diagnosis).toBe("verification.timeout");
+    expect(live().busy).toBe(false);
+  });
+
   it("fails closed when a succeeded run reports no evidence steps", async () => {
     stubTransport({
       "POST /application-graphs/expense-approval/published-revisions": [
@@ -328,7 +417,7 @@ describe("useReleaseJourney", () => {
         diagnosisId: "diagnosis-1",
         verificationRunId: "verify-1",
         category: "binding",
-        code: "binding.missing_identity_policy",
+        code: "binding.denial_policy_not_bound",
         affectedPaths: ["/domain/expense"],
       },
       draftDiff: addBindingDiff,
@@ -360,7 +449,7 @@ describe("useReleaseJourney", () => {
     });
 
     expect(live().release?.phase).toBe("failed");
-    expect(live().release?.diagnosis).toBe("binding.missing_identity_policy");
+    expect(live().release?.diagnosis).toBe("binding.denial_policy_not_bound");
     expect(live().release?.proposedDraftDiff?.operations[0]).toEqual({
       op: "add-binding",
       capability: "core.identity-policy",
@@ -384,7 +473,7 @@ describe("useReleaseJourney", () => {
       ...succeededRun,
       status: "failed",
       evidence: { steps: [...evidenceSteps] },
-      diagnosis: { code: "binding.missing_identity_policy" },
+      diagnosis: { code: "binding.denial_policy_not_bound" },
       draftDiff: addBindingDiff,
     };
     stubTransport({
@@ -418,6 +507,40 @@ describe("useReleaseJourney", () => {
 
     expect(onApproved).not.toHaveBeenCalled();
     expect(live().approvalError).toBe("release.conflict");
+  });
+
+  it("collapses an unknown safe-shaped worker diagnosis", async () => {
+    const failedRun = {
+      ...succeededRun,
+      status: "failed",
+      evidence: { steps: [...evidenceSteps] },
+      diagnosis: { code: "runtime.preview_not_allowlisted" },
+      draftDiff: null,
+    };
+    stubTransport({
+      "POST /application-graphs/expense-approval/published-revisions": [
+        publishedRevision,
+      ],
+      "POST /compilations": [pendingCompilation],
+      "GET /compilations/compilation-1": [succeededCompilation],
+      "POST /compilations/compilation-1/verification-runs": [pendingRun],
+      "GET /verification-runs/verify-1": [pendingRun, failedRun],
+    });
+    const controller = mount();
+    const live = (): ReleaseJourneyController =>
+      globalThis.__release as ReleaseJourneyController;
+
+    await act(async () => controller.publishRelease());
+    await act(async () => {
+      controller.compileRelease();
+      await vi.advanceTimersByTimeAsync(1_500);
+    });
+    await act(async () => {
+      controller.verifyRelease();
+      await vi.advanceTimersByTimeAsync(1_500);
+    });
+
+    expect(live().release?.diagnosis).toBe("verification.failed");
   });
 
   it("starts the preview and cleans it up to a terminal phase", async () => {

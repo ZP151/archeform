@@ -155,7 +155,12 @@ function clarificationFixture(): CompositionClarificationV1 {
     apiVersion: "factory.composition-clarification/v1",
     requirementChecksum: hashRequirementSpec(requirement),
     questions: [
-      { key: "question-1", question: "Which flow should host the journey?" },
+      {
+        key: "question-1",
+        category: "business-rule",
+        defaultPolicy: "required",
+        question: "Which flow should host the journey?",
+      },
     ],
   };
 }

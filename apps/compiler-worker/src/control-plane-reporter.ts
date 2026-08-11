@@ -34,5 +34,24 @@ export function createControlPlaneReporter(
         throw new Error("Control Plane rejected compilation evidence.");
       }
     },
+    async fail(evidence) {
+      const response = await fetchImplementation(
+        `${baseUrl}/internal/compilations/${encodeURIComponent(evidence.compilationId)}/failed`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-factory-internal-token": internalWorkerToken,
+          },
+          body: JSON.stringify({
+            apiVersion: "factory.compilation-failure/v1",
+            failureCode: "compilation.failed",
+          }),
+        },
+      );
+      if (!response.ok) {
+        throw new Error("Control Plane rejected compilation failure evidence.");
+      }
+    },
   };
 }

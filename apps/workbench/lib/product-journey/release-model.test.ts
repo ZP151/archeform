@@ -223,7 +223,7 @@ describe("fail-closed guards", () => {
       applicationGraphId: "graph-1",
       draftRevisionId: "draft-1",
     });
-    release = releaseFailed(release, "publish.rejected");
+    release = releaseFailed(release, "release.rejected");
     expect(release.phase).toBe("failed");
     expect(() => publishingSucceeded(release, "published-1")).toThrow(/phase/i);
 
@@ -241,14 +241,14 @@ describe("failure and safe diagnosis", () => {
     });
     release = publishingSucceeded(release, "published-1");
     release = compilationStarted(release, "compilation-1");
-    release = releaseFailed(release, "compile.timeout");
+    release = releaseFailed(release, "compilation.timeout");
 
     expect(release.phase).toBe("failed");
-    expect(release.diagnosis).toBe("compile.timeout");
+    expect(release.diagnosis).toBe("compilation.timeout");
     expect(release.timeline.events.at(-1)).toMatchObject({
       kind: "diagnosis",
       status: "failed",
-      reason: "compile.timeout",
+      reason: "compilation.timeout",
     });
   });
 
@@ -259,6 +259,16 @@ describe("failure and safe diagnosis", () => {
     });
     expect(() =>
       releaseFailed(release, "Timeout with stack trace: /usr/lib/secret"),
+    ).toThrow(/diagnosis/i);
+  });
+
+  it("rejects a safe-shaped diagnosis outside the exact allowlist", () => {
+    const release = beginRelease({
+      applicationGraphId: "graph-1",
+      draftRevisionId: "draft-1",
+    });
+    expect(() =>
+      releaseFailed(release, "runtime.preview_not_allowlisted"),
     ).toThrow(/diagnosis/i);
   });
 
@@ -288,10 +298,10 @@ describe("failure and safe diagnosis", () => {
     release = compilationStarted(release, "compilation-1");
     release = compilationSucceeded(release, "compilation-1");
     release = verificationStarted(release, "verification-run-1");
-    release = releaseFailed(release, "verify.expense_threshold_exceeded");
+    release = releaseFailed(release, "binding.status_mismatch");
 
     expect(release.phase).toBe("failed");
-    expect(release.diagnosis).toBe("verify.expense_threshold_exceeded");
+    expect(release.diagnosis).toBe("binding.status_mismatch");
     expect(release.proposedDraftDiff).toBeUndefined();
     // The model carries only identifiers and safe summaries; it exposes no
     // apply surface and never patches a Published Graph, Compilation, or
@@ -327,12 +337,12 @@ describe("failure and safe diagnosis", () => {
     release = verificationStarted(release, "verification-appointment-1");
     release = releaseFailed(
       release,
-      "verify.appointment_slot_limit_exceeded",
+      "binding.denial_policy_not_bound",
       proposedDraftDiff,
     );
 
     expect(release.phase).toBe("failed");
-    expect(release.diagnosis).toBe("verify.appointment_slot_limit_exceeded");
+    expect(release.diagnosis).toBe("binding.denial_policy_not_bound");
     // The Diff is carried for the caller to review and approve elsewhere; it
     // is never applied here and never mutates the Draft or Compilation.
     expect(release.proposedDraftDiff).toEqual(proposedDraftDiff);

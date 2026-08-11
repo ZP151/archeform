@@ -29,7 +29,7 @@ import type { ReleaseJourneyController } from "../../lib/product-journey/use-rel
 type Props = {
   readonly controller: ReleaseJourneyController;
   /** Opens the Activity sheet, which renders the full release timeline. */
-  readonly onViewEvidence: () => void;
+  readonly onViewEvidence: (trigger: HTMLButtonElement) => void;
 };
 
 type PhaseStep = {
@@ -172,7 +172,7 @@ export function ReleaseWorkspace({ controller, onViewEvidence }: Props) {
           <button
             type="button"
             className="release-link-button"
-            onClick={onViewEvidence}
+            onClick={(event) => onViewEvidence(event.currentTarget)}
           >
             View evidence
           </button>

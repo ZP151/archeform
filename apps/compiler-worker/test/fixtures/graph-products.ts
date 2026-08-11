@@ -814,7 +814,7 @@ export function expenseWithoutEnumValuesGraph(): ApplicationGraphV1 {
   };
 }
 
-/** A transition event whose derived step ID collides with the create step: the derivation fails closed. */
+/** A flow-declared `create` transition (a bounded blueprint verb) whose base derived step ID would collide with the entity create journey: the derivation resolves it onto its own `-transition` identity. */
 export function expenseWithCollidingTransitionGraph(): ApplicationGraphV1 {
   const graph = expenseApprovalGraph();
   const flow = graph.flow.flows[0];

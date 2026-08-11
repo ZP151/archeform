@@ -153,7 +153,10 @@ describe("preview runner", () => {
           operationTimeoutMs: 600,
           readinessTimeoutMs: 10,
         }),
-      ).rejects.toMatchObject({ code: "preview_health_check_failed" });
+      ).rejects.toMatchObject({
+        code: "preview_readiness_failed",
+        cleanupComplete: true,
+      });
 
       expect(healthChecks).toBeGreaterThanOrEqual(1);
       const downCommands = commands.filter((command) =>
@@ -201,7 +204,7 @@ describe("preview runner", () => {
           operationTimeoutMs: 20,
           readinessTimeoutMs: 600,
         }),
-      ).rejects.toMatchObject({ code: "preview_health_check_failed" });
+      ).rejects.toMatchObject({ code: "preview_readiness_failed" });
       expect(healthChecks).toBe(1);
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -286,7 +289,7 @@ describe("preview runner", () => {
           request(restaurantRegisteredArtifacts),
           processRunner,
         ),
-      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      ).rejects.toMatchObject({ code: "preview_artifact_failed" });
       expect(processRunner).not.toHaveBeenCalled();
     } finally {
       vi.unstubAllEnvs();
@@ -491,7 +494,10 @@ describe("preview runner", () => {
         startPreviewRun(root, request(registeredArtifacts), processRunner, {
           operationTimeoutMs: 10,
         }),
-      ).rejects.toMatchObject({ code: "preview_start_timeout" });
+      ).rejects.toMatchObject({
+        code: "preview_start_timeout",
+        cleanupComplete: false,
+      });
       expect(commands).toHaveLength(2);
       expect(commands[0]?.args).toContain("up");
       expect(commands[1]?.args).toContain("down");
@@ -709,7 +715,7 @@ describe("preview runner", () => {
 
       await expect(
         startPreviewRun(root, request(registeredArtifacts), processRunner),
-      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      ).rejects.toMatchObject({ code: "preview_artifact_failed" });
       expect(processRunner).not.toHaveBeenCalled();
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -729,7 +735,7 @@ describe("preview runner", () => {
     try {
       await expect(
         startPreviewRun(root, request(wrongSize), processRunner),
-      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      ).rejects.toMatchObject({ code: "preview_artifact_failed" });
       expect(processRunner).not.toHaveBeenCalled();
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -746,7 +752,7 @@ describe("preview runner", () => {
 
       await expect(
         startPreviewRun(root, request(registeredArtifacts), processRunner),
-      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      ).rejects.toMatchObject({ code: "preview_artifact_failed" });
       expect(processRunner).not.toHaveBeenCalled();
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -766,7 +772,7 @@ describe("preview runner", () => {
 
       await expect(
         startPreviewRun(root, request(registeredArtifacts), processRunner),
-      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      ).rejects.toMatchObject({ code: "preview_artifact_failed" });
       expect(processRunner).not.toHaveBeenCalled();
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -785,7 +791,7 @@ describe("preview runner", () => {
           request([...registeredArtifacts, registeredArtifacts[1]!]),
           processRunner,
         ),
-      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      ).rejects.toMatchObject({ code: "preview_artifact_failed" });
       expect(processRunner).not.toHaveBeenCalled();
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -806,7 +812,7 @@ describe("preview runner", () => {
 
       await expect(
         startPreviewRun(root, request(registeredArtifacts), processRunner),
-      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      ).rejects.toMatchObject({ code: "preview_artifact_failed" });
       expect(processRunner).not.toHaveBeenCalled();
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -848,7 +854,7 @@ describe("preview runner", () => {
             request([registeredArtifacts[0]!, entry]),
             processRunner,
           ),
-        ).rejects.toMatchObject({ code: "preview_start_failed" });
+        ).rejects.toMatchObject({ code: "preview_artifact_failed" });
         expect(processRunner).not.toHaveBeenCalled();
       } finally {
         await rm(root, { recursive: true, force: true });
@@ -870,7 +876,7 @@ describe("preview runner", () => {
           request([artifact("src/app.ts", application)]),
           processRunner,
         ),
-      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      ).rejects.toMatchObject({ code: "preview_artifact_failed" });
       expect(processRunner).not.toHaveBeenCalled();
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -1155,7 +1161,7 @@ describe("preview runner", () => {
     try {
       await expect(
         startPreviewRun(root, request(registeredArtifacts), processRunner),
-      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      ).rejects.toMatchObject({ code: "preview_compose_up_failed" });
       expect(commands).toHaveLength(1);
       expect(commands[0]?.args).toContain("up");
     } finally {
@@ -1177,7 +1183,7 @@ describe("preview runner", () => {
     try {
       await expect(
         startPreviewRun(root, request(registeredArtifacts), startRunner),
-      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      ).rejects.toMatchObject({ code: "preview_compose_up_failed" });
       await expect(readFile(join(preview, "src", "app.ts"))).resolves.toEqual(
         application,
       );
@@ -1199,6 +1205,27 @@ describe("preview runner", () => {
         application,
       );
       await expect(readFile(join(preview, "src", "app.ts"))).rejects.toThrow();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports invalid Compose loopback ports as port discovery failures", async () => {
+    const { root } = await sourceFixture();
+    const processRunner: PreviewProcessRunner = async (command) => {
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "web")
+        return "0.0.0.0:49101\n";
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "api")
+        return "127.0.0.1:49102\n";
+    };
+
+    try {
+      await expect(
+        startPreviewRun(root, request(registeredArtifacts), processRunner),
+      ).rejects.toMatchObject({
+        code: "preview_port_discovery_failed",
+        cleanupComplete: true,
+      });
     } finally {
       await rm(root, { recursive: true, force: true });
     }

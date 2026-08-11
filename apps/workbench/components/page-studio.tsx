@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Puck, type Config, type Data } from "@puckeditor/core";
 import "@puckeditor/core/puck.css";
 import type { PuckPageDocument } from "@factory/adapters/browser";
@@ -98,6 +98,7 @@ export function PageStudio({
   onPageModelChange,
   onExperienceModelChange,
 }: Props) {
+  const studioRef = useRef<HTMLElement>(null);
   const selectedPage =
     pageDocument.pageModel.pages.find((page) => page.id === selectedPageId) ??
     pageDocument.pageModel.pages[0];
@@ -133,6 +134,29 @@ export function PageStudio({
       setSelectedBlockId(selectedPage.blocks[0]?.id ?? "");
     }
   }, [selectedBlockId, selectedPage]);
+  useEffect(() => {
+    const studio = studioRef.current;
+    if (!studio) return;
+
+    const labelViewportZoom = () => {
+      const zoom = studio.querySelector<HTMLSelectElement>(
+        'select[class*="_ViewportControls-zoomSelect_"]',
+      );
+      if (
+        zoom &&
+        !zoom.getAttribute("aria-label") &&
+        !zoom.getAttribute("aria-labelledby") &&
+        zoom.labels.length === 0
+      ) {
+        zoom.setAttribute("aria-label", "Viewport zoom");
+      }
+    };
+
+    labelViewportZoom();
+    const observer = new MutationObserver(labelViewportZoom);
+    observer.observe(studio, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
 
   const applyEdit = (edit: StudioEdit): boolean => {
     try {
@@ -202,7 +226,11 @@ export function PageStudio({
   );
 
   return (
-    <section className="page-studio-canvas" aria-label="Puck Page Studio">
+    <section
+      ref={studioRef}
+      className="page-studio-canvas"
+      aria-label="Puck Page Studio"
+    >
       <form
         className="page-route-editor"
         onSubmit={(event) => {

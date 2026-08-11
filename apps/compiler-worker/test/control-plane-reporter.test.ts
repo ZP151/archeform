@@ -43,4 +43,31 @@ describe("control-plane reporter", () => {
       },
     );
   });
+
+  it("posts the exact authenticated failure contract without caller diagnostics", async () => {
+    const fetchImplementation = vi.fn().mockResolvedValue({ ok: true });
+    const reporter = createControlPlaneReporter(
+      "http://control-plane:3000/",
+      "configured-worker-token",
+      fetchImplementation as typeof fetch,
+    );
+
+    await reporter.fail({ compilationId: "compilation-1" });
+
+    expect(fetchImplementation).toHaveBeenCalledTimes(1);
+    expect(fetchImplementation).toHaveBeenCalledWith(
+      "http://control-plane:3000/internal/compilations/compilation-1/failed",
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-factory-internal-token": "configured-worker-token",
+        },
+        body: JSON.stringify({
+          apiVersion: "factory.compilation-failure/v1",
+          failureCode: "compilation.failed",
+        }),
+      },
+    );
+  });
 });

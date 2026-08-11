@@ -7,6 +7,11 @@ import type {
   RequirementSpecV1,
 } from "@factory/graph";
 
+import {
+  parseCompilationResult,
+  type WorkbenchCompilationResult,
+} from "./compilation-status";
+
 type Fetcher = (
   input: RequestInfo | URL,
   init?: RequestInit,
@@ -107,10 +112,7 @@ export type WorkbenchCompilation = {
   readonly id: string;
   readonly publishedRevisionId: string;
   readonly target: string;
-  readonly result: {
-    readonly status: string;
-    readonly completedAt?: string | null;
-  };
+  readonly result: WorkbenchCompilationResult;
   readonly artifacts?: readonly {
     readonly path: string;
     readonly digest: string;
@@ -118,6 +120,63 @@ export type WorkbenchCompilation = {
     readonly sizeBytes?: number | null;
   }[];
 };
+
+function compilationResponse(input: unknown): WorkbenchCompilation {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new Error("Control Plane compilation response is invalid.");
+  }
+  const record = input as Record<string, unknown>;
+  const requiredString = (key: string): string => {
+    const value = record[key];
+    if (typeof value !== "string" || value.length === 0) {
+      throw new Error("Control Plane compilation response is invalid.");
+    }
+    return value;
+  };
+  let artifacts: WorkbenchCompilation["artifacts"];
+  if (record.artifacts !== undefined) {
+    if (!Array.isArray(record.artifacts)) {
+      throw new Error("Control Plane compilation response is invalid.");
+    }
+    artifacts = record.artifacts.map((inputArtifact) => {
+      if (
+        !inputArtifact ||
+        typeof inputArtifact !== "object" ||
+        Array.isArray(inputArtifact)
+      ) {
+        throw new Error("Control Plane compilation response is invalid.");
+      }
+      const artifact = inputArtifact as Record<string, unknown>;
+      if (
+        typeof artifact.path !== "string" ||
+        typeof artifact.digest !== "string" ||
+        typeof artifact.mediaType !== "string" ||
+        (artifact.sizeBytes !== undefined &&
+          artifact.sizeBytes !== null &&
+          (typeof artifact.sizeBytes !== "number" ||
+            !Number.isSafeInteger(artifact.sizeBytes) ||
+            artifact.sizeBytes < 0))
+      ) {
+        throw new Error("Control Plane compilation response is invalid.");
+      }
+      return {
+        path: artifact.path,
+        digest: artifact.digest,
+        mediaType: artifact.mediaType,
+        ...(artifact.sizeBytes === undefined
+          ? {}
+          : { sizeBytes: artifact.sizeBytes as number | null }),
+      };
+    });
+  }
+  return {
+    id: requiredString("id"),
+    publishedRevisionId: requiredString("publishedRevisionId"),
+    target: requiredString("target"),
+    result: parseCompilationResult(record.result),
+    ...(artifacts === undefined ? {} : { artifacts }),
+  };
+}
 
 export type WorkbenchApplicationSummary = {
   readonly id: string;
@@ -342,8 +401,39 @@ function workbenchPreviewRun(record: WorkbenchPreviewRun): WorkbenchPreviewRun {
   };
 }
 
+export type ControlPlaneRejectionCode =
+  | "composition.request_envelope_invalid"
+  | "composition.request_identity_invalid"
+  | "composition.requirement_invalid"
+  | "composition.blueprint_invalid"
+  | "composition.requirement_blueprint_checksum_mismatch";
+
+const CONTROL_PLANE_REJECTION_CODES = new Set<ControlPlaneRejectionCode>([
+  "composition.request_envelope_invalid",
+  "composition.request_identity_invalid",
+  "composition.requirement_invalid",
+  "composition.blueprint_invalid",
+  "composition.requirement_blueprint_checksum_mismatch",
+]);
+
+function controlPlaneRejectionCode(
+  body: unknown,
+): ControlPlaneRejectionCode | undefined {
+  if (body === null || typeof body !== "object" || Array.isArray(body)) {
+    return undefined;
+  }
+  const code = (body as { readonly code?: unknown }).code;
+  return typeof code === "string" &&
+    CONTROL_PLANE_REJECTION_CODES.has(code as ControlPlaneRejectionCode)
+    ? (code as ControlPlaneRejectionCode)
+    : undefined;
+}
+
 export class ControlPlaneError extends Error {
-  constructor(readonly status: number) {
+  constructor(
+    readonly status: number,
+    readonly code?: ControlPlaneRejectionCode,
+  ) {
     super(`Control Plane request failed with ${status}.`);
   }
 }
@@ -826,7 +916,13 @@ export class ControlPlaneClient {
       ...init,
       headers: { "content-type": "application/json", ...init.headers },
     });
-    if (!response.ok) throw new ControlPlaneError(response.status);
+    if (!response.ok) {
+      const body: unknown = await response.json().catch(() => null);
+      throw new ControlPlaneError(
+        response.status,
+        controlPlaneRejectionCode(body),
+      );
+    }
     return response.json() as Promise<T>;
   }
 
@@ -969,20 +1065,21 @@ export class ControlPlaneClient {
   createCompilation(
     publishedRevisionId: string,
   ): Promise<WorkbenchCompilation> {
-    return this.request("/compilations", {
+    return this.request<unknown>("/compilations", {
       method: "POST",
       body: JSON.stringify({
         publishedRevisionId,
         target: "application-bundle",
         compilerVersion: "factory-compiler/v1",
       }),
-    });
+    }).then(compilationResponse);
   }
 
   getCompilation(compilationId: string): Promise<WorkbenchCompilation> {
-    return this.request(`/compilations/${encodeURIComponent(compilationId)}`, {
-      method: "GET",
-    });
+    return this.request<unknown>(
+      `/compilations/${encodeURIComponent(compilationId)}`,
+      { method: "GET" },
+    ).then(compilationResponse);
   }
 
   getCompilationArtifact(
@@ -1074,27 +1171,34 @@ export class ControlPlaneClient {
    * the blank Draft into the composed product Graph.
    */
 
-  async createProductRequirement(input: {
-    readonly name?: string;
-    readonly requirement: RequirementSpecV1;
-    readonly blueprint: ProductBlueprintV1;
-  }): Promise<WorkbenchProductReview> {
+  async createProductRequirement(
+    input: {
+      readonly requestId: string;
+      readonly name?: string;
+      readonly requirement: RequirementSpecV1;
+      readonly blueprint: ProductBlueprintV1;
+    },
+    signal?: AbortSignal,
+  ): Promise<WorkbenchProductReview> {
     const created = await this.request<{
       readonly review: WorkbenchProductReview;
     }>("/product/requirements", {
       method: "POST",
       body: JSON.stringify(input),
+      signal,
     });
     return created.review;
   }
 
   async requestProductPlan(
     reviewId: string,
+    signal?: AbortSignal,
   ): Promise<readonly WorkbenchProductPlanAlternative[]> {
     const result = await this.request<{
       readonly alternatives: readonly WorkbenchProductPlanAlternative[];
     }>(`/product/requirements/${encodeURIComponent(reviewId)}/plan`, {
       method: "POST",
+      signal,
     });
     return result.alternatives;
   }
@@ -1102,15 +1206,19 @@ export class ControlPlaneClient {
   async chooseProductPlan(
     reviewId: string,
     alternativeKey: string,
+    signal?: AbortSignal,
   ): Promise<{ readonly reviewId: string; readonly checksum: string }> {
     const result = await this.request<{ readonly checksum: string }>(
       `/product/requirements/${encodeURIComponent(reviewId)}/choices`,
-      { method: "POST", body: JSON.stringify({ alternativeKey }) },
+      { method: "POST", body: JSON.stringify({ alternativeKey }), signal },
     );
     return { reviewId, checksum: result.checksum };
   }
 
-  async applyProduct(reviewId: string): Promise<WorkbenchProductApplied> {
+  async applyProduct(
+    reviewId: string,
+    signal?: AbortSignal,
+  ): Promise<WorkbenchProductApplied> {
     const result = await this.request<{
       readonly draftRevision: DraftRecord;
       readonly review: {
@@ -1119,6 +1227,7 @@ export class ControlPlaneClient {
       };
     }>(`/product/requirements/${encodeURIComponent(reviewId)}/apply`, {
       method: "POST",
+      signal,
     });
     return {
       applicationGraphId: result.review.applicationGraphId,

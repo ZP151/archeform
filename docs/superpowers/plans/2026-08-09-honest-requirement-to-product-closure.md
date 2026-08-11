@@ -1,5 +1,13 @@
 # Honest Requirement-to-Product Closure Implementation Plan
 
+> **Current status — 2026-08-10:** This plan remains `implementing` as Task 0
+> of the Prompt-to-Polished Restaurant Product iteration. It must still close
+> bounded clarification, both guarded real-model journeys, material-difference,
+> accessibility/theme, action-inventory, clean-checkout, cleanup, independent
+> review, ledger reconciliation, commit, and push. Once sealed, Expense
+> Approval and Appointment Booking remain regression products; the Restaurant
+> Product iteration supersedes them only as the forward experience target.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use
 > superpowers:subagent-driven-development (recommended) or
 > superpowers:executing-plans to implement this plan task-by-task. Steps use

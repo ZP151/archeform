@@ -134,6 +134,8 @@ type Props = {
   readonly controlPlaneUrl: string;
 };
 
+const WORKBENCH_THEME_STORAGE_KEY = "factory.workbench.theme";
+
 export function useWorkbenchController({
   initialGraph,
   controlPlaneUrl,
@@ -142,6 +144,13 @@ export function useWorkbenchController({
     transitionWorkbench,
     initialWorkbenchState,
   );
+  useEffect(() => {
+    if (
+      globalThis.localStorage?.getItem(WORKBENCH_THEME_STORAGE_KEY) === "dark"
+    ) {
+      dispatch({ type: "toggle-theme" });
+    }
+  }, []);
   const [graph, setGraph] = useState(initialGraph);
   const [remoteDraft, setRemoteDraft] = useState<WorkbenchDraft | null>(null);
   const [publishedRevision, setPublishedRevision] =
@@ -819,8 +828,12 @@ export function useWorkbenchController({
   }, []);
 
   const toggleTheme = useCallback(() => {
+    globalThis.localStorage?.setItem(
+      WORKBENCH_THEME_STORAGE_KEY,
+      state.theme === "light" ? "dark" : "light",
+    );
     dispatch({ type: "toggle-theme" });
-  }, []);
+  }, [state.theme]);
   const toggleInspector = useCallback(() => {
     dispatch({ type: "toggle-inspector" });
   }, []);

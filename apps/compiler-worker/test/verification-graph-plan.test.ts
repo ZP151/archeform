@@ -333,13 +333,150 @@ describe("graph-derived verification plan", () => {
     ).toThrow(VerificationContractError);
   });
 
-  it("fails closed on a derived step ID collision", () => {
-    expect(() =>
-      deriveVerificationProfile(
-        expenseWithCollidingTransitionGraph(),
-        identityPolicy,
+  it("resolves the entity-create collision with a distinct transition identity", () => {
+    // A flow may legitimately declare a `create` transition (the blueprint
+    // draws transition events from the same bounded verbs as the grants), but
+    // the entity create journey already claims `<entity>-create`. The
+    // transition journey must take its own identity — otherwise the derivation
+    // dead-ends the whole product at verification (real-model regression: a
+    // workflow declaring create/update/delete transitions threw a step-ID
+    // collision contract violation the moment the composed product was
+    // verified).
+    const profile = deriveVerificationProfile(
+      expenseWithCollidingTransitionGraph(),
+      identityPolicy,
+    );
+    // The appended create transition (draft -> submitted, after submit) walks
+    // a fresh record: the handler create, then the transition on it.
+    expect(profile.stepPlan).toContainEqual({
+      stepId: "expense-create-transition",
+      kind: "role-journey",
+    });
+    expect(profile.journeys["expense-create-transition"]).toEqual({
+      journeyId: "expense-create-transition",
+      action: "expense.create-transition",
+      sessionId: "fixture-session-employee",
+      chain: [
+        {
+          action: "expense.create",
+          sessionId: "fixture-session-employee",
+          body: '{"amount":37.5,"category":"travel","incurredOn":"2026-09-01T00:00:00.000Z"}',
+        },
+      ],
+    });
+    // The handler and the transition coexist under distinct registry actions.
+    expect(
+      profile.apiRegistry.find((action) => action.action === "expense.create"),
+    ).toMatchObject({
+      method: "POST",
+      route: "/api/expense",
+      expectedStatus: 201,
+    });
+    expect(
+      profile.apiRegistry.find(
+        (action) => action.action === "expense.create-transition",
       ),
-    ).toThrow(VerificationContractError);
+    ).toMatchObject({
+      method: "POST",
+      route: "/api/expense/{recordId}/events/create",
+      expectedStatus: 201,
+    });
+    // The entity create journey keeps its own identity untouched.
+    expect(profile.journeys["expense-create"].action).toBe("expense.create");
+  });
+
+  it("derives a self-loop create transition on its own identity (real-model shape)", () => {
+    // The real model declares `create` as the first transition, a draft ->
+    // draft self-loop: the transition journey still claims its own identity,
+    // and the authorization denial probes the transition route, not the create
+    // handler.
+    const graph = expenseApprovalGraph();
+    const flow = graph.flow.flows[0];
+    const withSelfLoopCreate = {
+      ...graph,
+      flow: {
+        flows: [
+          {
+            ...flow,
+            events: ["create", ...flow.events],
+            transitions: [
+              {
+                from: "draft",
+                event: "create",
+                to: "draft",
+                roles: ["employee"],
+              },
+              ...flow.transitions,
+            ],
+          },
+        ],
+      },
+    };
+    const profile = deriveVerificationProfile(
+      withSelfLoopCreate,
+      identityPolicy,
+    );
+    expect(profile.stepPlan).toContainEqual({
+      stepId: "expense-create-transition",
+      kind: "role-journey",
+    });
+    expect(profile.stepPlan).toContainEqual({
+      stepId: "expense-denied-create",
+      kind: "authorization-denial",
+    });
+    expect(profile.journeys["expense-denied-create"].action).toBe(
+      "expense.create-transition",
+    );
+    expect(profile.journeys["expense-create-transition"].chain).toEqual([
+      {
+        action: "expense.create",
+        sessionId: "fixture-session-employee",
+        body: '{"amount":37.5,"category":"travel","incurredOn":"2026-09-01T00:00:00.000Z"}',
+      },
+    ]);
+  });
+
+  it("drives the colliding-create denial over a fresh record (real-model regression)", () => {
+    // The real-model workflow's first transition is the colliding create (a
+    // draft -> draft self-loop): the denial probes the transition route, which
+    // is a `{recordId}` template with no seeded record to address. The denial
+    // journey must carry the same fresh-record chain as the transition journey
+    // it denies — otherwise the probe fails closed on the literal template
+    // route and crashes (`unknown.probe_crashed`) instead of denying.
+    const graph = expenseApprovalGraph();
+    const flow = graph.flow.flows[0];
+    const withSelfLoopCreate = {
+      ...graph,
+      flow: {
+        flows: [
+          {
+            ...flow,
+            events: ["create", ...flow.events],
+            transitions: [
+              {
+                from: "draft",
+                event: "create",
+                to: "draft",
+                roles: ["employee"],
+              },
+              ...flow.transitions,
+            ],
+          },
+        ],
+      },
+    };
+    const profile = deriveVerificationProfile(
+      withSelfLoopCreate,
+      identityPolicy,
+    );
+    const denial = profile.journeys["expense-denied-create"];
+    expect(denial.action).toBe("expense.create-transition");
+    // The denial addresses a real record: the same chain the transition
+    // journey drives, so the probe substitutes the captured id instead of
+    // sending the literal template route.
+    expect(denial.chain).toEqual(
+      profile.journeys["expense-create-transition"].chain,
+    );
   });
 
   it("digest-bounds the profile key for over-long graph ids", () => {

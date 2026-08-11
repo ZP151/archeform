@@ -1,19 +1,59 @@
-# Factory Pilot agent configuration
+# Archeform agent configuration
 
 This folder defines project-scoped Codex custom agents. Codex loads one TOML file per role when that role is spawned. The repository-level `AGENTS.md` defines how the roles cooperate.
 
 ## Roles
 
-| Agent | Owns | Default use |
-|---|---|---|
-| `pm` | Scope, acceptance criteria, and `docs/project-status.md` | Ask for current project progress or the next priority |
-| `tech_lead` | Technology profiles, stack evolution, and interface decisions | Request an ADR before changing framework, runtime, or shared contract |
-| `explorer` | Read-only code-path and test mapping | Map an unfamiliar or cross-cutting slice before implementation |
-| `engineer` | One bounded implementation slice | Build or fix a vertical slice |
-| `task_reviewer` | One task's specification and quality gate | Review an engineer hand-off before QA begins |
-| `qa` | Executable verification and focused regressions | Validate a completed slice |
-| `reviewer` | Independent risk review | Check a diff or release candidate |
-| `market_researcher` | Public market and ecosystem evidence | Update positioning without founder outreach |
+| Agent               | Owns                                                          | Default use                                                                           |
+| ------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `pm`                | Scope, acceptance criteria, and `docs/project-status.md`      | Ask for current project progress or the next priority                                 |
+| `tech_lead`         | Technology profiles, stack evolution, and interface decisions | Request an ADR before changing framework, runtime, or shared contract                 |
+| `explorer`          | Read-only code-path and test mapping                          | Map an unfamiliar or cross-cutting slice before implementation                        |
+| `engineer`          | One bounded implementation slice                              | Build or fix a vertical slice                                                         |
+| `task_reviewer`     | One task's specification and quality gate                     | Review an engineer hand-off before QA begins                                          |
+| `qa`                | Executable verification and focused regressions               | Validate a completed slice                                                            |
+| `reviewer`          | Independent risk review                                       | Check a diff or release candidate                                                     |
+| `market_researcher` | Public market and ecosystem evidence                          | Update positioning without founder outreach                                           |
+| `spark_worker`      | Small frozen-contract implementation slices                   | Accelerate component/CSS extraction, focused tests, fixtures, and mechanical adapters |
+| `spark_reviewer`    | Small-diff and fix-round review                               | Fast local review before the full task/release gate                                   |
+
+## Model allocation
+
+The controller and permanent roles keep model choice proportional to risk:
+
+- `gpt-5.6-sol`: PM, Tech Lead, integration/architecture work, complex
+  implementation, contract review, security/lifecycle review, and release
+  judgment.
+- `gpt-5.6-terra`: QA and public ecosystem research where broad verification
+  or synthesis matters more than local edit latency.
+- `gpt-5.3-codex-spark`: the default subagent, Explorer, bounded mechanical
+  implementation, UI detail work, focused tests, fixtures, formatting, and
+  scoped fix re-review.
+
+Spark never owns Graph/lifecycle contract changes, shared API/Prisma/Compose
+changes, security adjudication, ledger transitions, real-model acceptance, or
+the final release decision. A Spark task must name its allowed paths and fit a
+frozen contract; otherwise dispatch `engineer` or return to the controller.
+
+The project permits up to three subagents beside the controller. Parallel
+writers are allowed only when the active plan explicitly names the wave, the
+shared contract is frozen, and paths are disjoint. Read-only exploration and
+review may otherwise fill unused slots.
+
+## UI reuse and delivery
+
+Every UI task begins with the reuse inventory in `docs/delivery-policy.md`.
+The assigned agent must name the existing primitives, patterns, blocks, screen
+recipes, experience recipes, product templates, or legacy Workbench assets it
+will reuse. New UI source needs a recorded functional gap and must enter the
+appropriate registry with provenance and focused evidence; visual variation
+alone is normally a token or recipe parameter, not a new component.
+
+The controller owns the Git cadence. Reviewed tasks receive one bounded commit
+and a push to the active iteration branch. Only an accepted iteration may be
+integrated into `main`, and only an accepted main commit may become a repository
+release. Product Publish and repository release are separate lifecycle events;
+neither implies cloud deployment.
 
 ## Engineering workflow skills
 
@@ -25,10 +65,16 @@ The complete project-scoped `obra/superpowers` skill set in `.agents/skills/` is
 - `create-architectural-decision-record`: create a proposed, versioned technical decision for `tech_lead`; source is copied unchanged from Awesome Copilot.
 - `brainstorming`, `executing-plans`, `requesting-code-review`, `receiving-code-review`, `using-git-worktrees`, and the other original source skills are retained unchanged for their documented triggers.
 
-The Superpowers directories are direct copies of the MIT-licensed `obra/superpowers` workflow library, and the ADR skill is a direct copy from MIT-licensed GitHub Awesome Copilot. Both are pinned to source commits; see `THIRD_PARTY_NOTICES.md`. They supplement rather than replace the Factory Pilot approval, catalog, and threat-model rules.
+The Superpowers directories are direct copies of the MIT-licensed `obra/superpowers` workflow library, and the ADR skill is a direct copy from MIT-licensed GitHub Awesome Copilot. Both are pinned to source commits; see `THIRD_PARTY_NOTICES.md`. They supplement rather than replace the Archeform approval, catalog, and threat-model rules.
 
 ## Usage
 
 Ask the main Codex chat: `Ask the pm agent for the current project status.` The PM must inspect repository evidence and return the current milestone, test state, risks, and next slice.
 
 For a normal feature cycle, ask: `Have pm check whether tech_lead needs an ADR, plan the slice and create a specialized task ledger, use explorer to map affected paths, have engineer implement it test-first, task_reviewer gate the hand-off, qa validate it, reviewer review the slice, then have pm update status.`
+
+For the active long iteration, use
+`docs/agent-workstreams/2026-08-10-archeform-codex-iteration.md` as the
+controller contract. The controller must resume the dirty Task 0 handoff rather
+than recreate it, then follow the Graph-freeze and explicitly approved parallel
+waves recorded in the plan.

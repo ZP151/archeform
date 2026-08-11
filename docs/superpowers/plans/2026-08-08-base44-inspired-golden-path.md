@@ -1,5 +1,13 @@
 # Base44-Inspired Golden Path — Implementation Plan
 
+> **Historical status — 2026-08-10:** This plan completed a fixed Expense
+> Approval replay and retained useful Workbench, verification, and cleanup
+> evidence. The 2026-08-09 Product Closure iteration inherited that evidence
+> but reopened product closure because the replay did not start from a
+> free-form requirement. The 2026-08-10 Restaurant Product iteration
+> supersedes this plan only as the forward product-experience target; preserve
+> the existing content and evidence as historical regression material.
+
 - **Date:** 2026-08-08
 - **Status:** Approved for implementation
 - **Spec:** docs/superpowers/specs/2026-08-08-base44-inspired-golden-path-design.md
@@ -72,6 +80,23 @@ clean.
 - Deterministic Expense Approval starter requirement fixture so the journey
   is reproducible without AI.
 
+### S1A — Adaptive Requirement Interview: user-confirmed requirement baseline
+
+- Replace the fixed Expense Approval question sequence with the Factory-owned
+  deterministic decision graph in
+  `docs/superpowers/specs/2026-08-08-adaptive-requirement-interview-design.md`.
+  Discuss asks exactly one applicable question at a time, exposes a
+  recommendation and rationale, permits only safe deferrals, and requires an
+  explicit Requirement Summary confirmation before Plan.
+- The structured completed interview is the primary `RequirementSpecV1` and
+  Plan baseline. It cannot mutate a Draft, select packages, introduce source
+  or credentials, or persist raw chat/provider material. Unsupported second
+  approval and receipt answers become visible limitations or bounded blocking
+  clarifications rather than invented capabilities.
+- This slice is a prerequisite for S2 acceptance. Its detailed test-first
+  implementation plan is
+  `docs/superpowers/plans/2026-08-08-adaptive-requirement-interview.md`.
+
 ### S2 — Plan mode: deterministic plan alternatives + visual Graph Diff
 
 - `apps/workbench/lib/golden-path/plan-alternatives.ts` (+ test): up to three
@@ -79,8 +104,10 @@ clean.
   deterministic planner over the recipe catalogue and approved assets. Each
   alternative carries a safe summary, capability locks, compatibility
   evidence, risks, affected pages/data/policy/flows, acceptance journeys, and
-  known limitations. Alternatives differ deterministically (requirement
-  framing variants), never by random or model choice.
+  known limitations. The first alternative uses the user's confirmed Discuss
+  answers as its baseline; at most two comparisons change exactly one declared
+  supported answer relative to that baseline. Alternatives never override an
+  unrelated user answer and never vary by random or model choice.
 - `apps/workbench/lib/golden-path/graph-diff-visual.ts` (+ test): entry-level
   visual Graph Diff (pages, entities, roles, flows) between the base Draft and
   each alternative, derived from the constrained `factory.graph-diff/v1`

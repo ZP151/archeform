@@ -239,7 +239,11 @@ function derivedEntities(
     const fields: ApplicationGraphV1["domain"]["entities"][number]["fields"] =
       entity.fields.map((field) => {
         if (field.type === "reference") {
-          return { key: field.key, type: "string", required: field.required };
+          return {
+            key: referenceScalarKey(field.key),
+            type: "string",
+            required: field.required,
+          };
         }
         if (field.type === "enum") {
           return {
@@ -309,6 +313,17 @@ function derivedEntities(
   return entities;
 }
 
+/**
+ * Graph v1 relations do not carry an explicit target-field contract. The
+ * database compiler therefore treats `*Id` and `*Key` scalar names as an
+ * unambiguous reference to the target's injected id. Preserve already
+ * explicit names and make every semantic reference name explicit before the
+ * Graph crosses the immutable publish boundary.
+ */
+function referenceScalarKey(fieldKey: string): string {
+  return /(?:id|key)$/i.test(fieldKey) ? fieldKey : `${fieldKey}Id`;
+}
+
 function derivedRelations(
   blueprint: ProductBlueprintV1,
   applicationId: string,
@@ -321,7 +336,7 @@ function derivedRelations(
           from: entity.key,
           to: field.referenceTo,
           kind: "many-to-one",
-          field: field.key,
+          field: referenceScalarKey(field.key),
         });
       }
     }

@@ -9,6 +9,14 @@ Required-Plan: pending design review
 
 # Base44-Inspired Golden Path Design
 
+> **Historical status — 2026-08-10:** This iteration completed a fixed Expense
+> Approval replay and retained useful Workbench, verification, and cleanup
+> evidence. The 2026-08-09 Product Closure iteration inherited that evidence
+> but reopened product closure because the replay did not start from a
+> free-form requirement. The 2026-08-10 Restaurant Product iteration
+> supersedes this document only as the forward product-experience target; this
+> design remains historical regression evidence.
+
 ## Outcome
 
 Factory Pilot will complete one low-friction, evidence-backed path from a

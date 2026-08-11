@@ -1,5 +1,12 @@
 # PM ledger — Honest Requirement-to-Product Closure
 
+> **Current status — 2026-08-10:** This ledger remains active and is inherited
+> unchanged as Task 0 of the Prompt-to-Polished Restaurant Product iteration.
+> Final real-model, reproducibility, cleanup, review, commit, and push evidence
+> remains required before acceptance. After closure, this ledger becomes the
+> regression authority for Expense Approval and Appointment Booking; it is not
+> the forward Restaurant Product delivery ledger.
+
 Goal authority: `docs/superpowers/plans/2026-08-09-honest-requirement-to-product-closure.md`.
 Branch: `feat/governed-composition-capability-foundry`. Iteration states use
 `planned -> implementing -> ready_for_qa -> reviewed -> accepted`.
@@ -18,7 +25,7 @@ State: `implementing` (Task 1 RED record landed).
   - **Prompt A — Expense Approval**: free-form brief -> `Requirement summary`
     containing expense/manager/finance; no template selection.
   - **Prompt B — Appointment Booking**: free-form brief -> `Requirement
-    summary` containing appointment/service; no Profile/template UI on the
+summary` containing appointment/service; no Profile/template UI on the
     primary frame at any point.
 - RED evidence (2026-08-09, compose stack `factory-pilot` up):
   `pnpm exec playwright test e2e/golden-path.spec.ts --list` lists both
@@ -40,7 +47,7 @@ State: `ready_for_qa` (unit suites green, browser acceptance pending).
   rejects them (test-pinned).
 - `RequirementInterpretationV1` contract in `@factory/adapters`
   (`requirements/requirement-interpreter.ts`): `{spec, blueprint,
-  clarifications}`; `assertRequirementInterpretation` re-validates every
+clarifications}`; `assertRequirementInterpretation` re-validates every
   adapter output and binds blueprint + clarifications to the exact
   `hashRequirementSpec`; `deriveClarifications` projects unanswered
   open questions into bounded clarification records.
@@ -59,7 +66,7 @@ State: `ready_for_qa` (unit suites green, browser acceptance pending).
   files. Blueprint hashes for Prompt A and Prompt B differ (material
   difference pinned in tests).
 - Commit: `feat(requirements): interpret briefs into bounded product
-  blueprints` (63ddc78c).
+blueprints` (63ddc78c).
 
 ## 2026-08-09 — Task 3: Generic blank-Draft planning and Graph composition
 
@@ -79,7 +86,7 @@ workbench primary journey is Task 4).
     effects. Only this catalogue may be selected; the model never chooses
     package paths or versions.
   - `plan-alternatives.ts` — `planProductAlternatives({requirement,
-    blueprint, baseDraft})` derives `standard` and `minimal` alternatives
+blueprint, baseDraft})` derives `standard` and `minimal` alternatives
     over the blank Draft from the blueprint alone.
   - `product-composer.ts` — `composeProductDraft` produces the full
     GraphDiffV1 (routes `/page.key`, CRUD bound to first entity + primary
@@ -100,7 +107,7 @@ workbench primary journey is Task 4).
   all touched files. `createExpenseApprovalPlanningBase` is absent from the
   product path.
 - Commit: `feat(composition): compose product graphs from accepted
-  requirements` (d517513).
+requirements` (d517513).
 
 ## 2026-08-09 — Task 4: Make requirement creation the primary Workbench journey
 
@@ -269,7 +276,7 @@ browser checks pending).
   during this task: stub path graph-initial, overlayStack recency for
   Escape, unit-carrying inspector facts, split recent-row test, singular
   artifact count, History ready-wait), workspace typecheck 16/16, `next
-  build` production build clean, focused Playwright viewport checks at
+build` production build clean, focused Playwright viewport checks at
   1440x900 and 1024x768 (primary action "Interpret requirement" + active
   rail state visible without scrolling) against the rebuilt compose image.
   `docs/acceptance/workbench-action-inventory.md` catalogs every visible
@@ -282,29 +289,29 @@ browser checks pending).
 State: `in_progress` (T8-A/B/C/D green and pushed; Task 9 real-model acceptance pending).
 
 - T8-A (`977104bb`, `refactor(workbench): relocate release model and timeline
-  to product-journey`): `release-model.ts` and `timeline.ts` moved from the
+to product-journey`): `release-model.ts` and `timeline.ts` moved from the
   Expense-shaped surface wiring into `lib/product-journey/` and generalized —
   wording, phase names, and reason codes carry no profile-specific
   condition; the pure state machine (publishing -> compiling -> verifying ->
   starting-preview -> preview -> cleaned-up, plus `releaseFailed` from any
   non-terminal phase) is shared by every composed product.
 - T8-C (`5325194`, `feat(verification): derive isolated verification plans
-  from any published graph`): the verification worker derives the plan from
+from any published graph`): the verification worker derives the plan from
   the Published Graph instead of a static Profile. A run is created WITHOUT a
   profile key (`POST /compilations/:id/verification-runs` body is exactly
   `{"verificationRunId": "..."}`), so any composed product — Expense,
   Appointment, or a future prompt — verifies through the same path.
 - T8-B (`use-release-journey.ts` + `components/journey/release-workspace.tsx`
-  + shell wiring): the release surface. `useReleaseJourney` drives the pure
-  model against the control plane: publish -> compile (polled) -> verify
-  (polled, fail-closed on empty evidence -> `verification.evidence_missing`,
-  carries the worker's bounded diagnosis code and, when proposed, the
-  reviewable Draft Diff) -> preview (polled) -> cleanup. Approval lives
-  outside the model: the model never applies a diff; `approveDraftDiff`
-  submits to the review boundary, surfaces a bounded `approvalError` on
-  refusal, and hands the approved Draft revision back to the parent to adopt
-  via `openLocalApplication` (revision bump, not a fresh local draft). The
-  surface reseeds when the open Draft revision changes.
+  - shell wiring): the release surface. `useReleaseJourney` drives the pure
+    model against the control plane: publish -> compile (polled) -> verify
+    (polled, fail-closed on empty evidence -> `verification.evidence_missing`,
+    carries the worker's bounded diagnosis code and, when proposed, the
+    reviewable Draft Diff) -> preview (polled) -> cleanup. Approval lives
+    outside the model: the model never applies a diff; `approveDraftDiff`
+    submits to the review boundary, surfaces a bounded `approvalError` on
+    refusal, and hands the approved Draft revision back to the parent to adopt
+    via `openLocalApplication` (revision bump, not a fresh local draft). The
+    surface reseeds when the open Draft revision changes.
 - ReleaseWorkspace renders the five-phase rail derived deterministically from
   the timeline, a count-first evidence summary ("N steps · X passed · Y
   failed") that opens the Activity sheet, phase action cards, the preview
@@ -370,7 +377,7 @@ State: `in_progress` (T8-A/B/C/D green and pushed; Task 9 real-model acceptance 
   briefs).
 - **Prisma `DateTime` parity fix (seed)**: the preview's `migrate` step died
   on the composed Expense product — `Invalid value for argument 'date':
-  premature end of input. Expected ISO-8601 DateTime.` at `seed.ts:32`
+premature end of input. Expected ISO-8601 DateTime.` at `seed.ts:32`
   (Prisma 6.19.3). The Graph keeps the natural date-only value
   `"2026-08-01"` for a `date` field (the composer's deterministic seed), but
   `renderPrismaSeed` serialized it verbatim into a `DateTime @db.Date`
@@ -393,7 +400,7 @@ State: `in_progress` (T8-A/B/C/D green and pushed; Task 9 real-model acceptance 
   1. **Verifier derived a date-only value → Prisma 403**:
      `derivedCreateValue` for a `date` field returned `"2026-09-01"` and the
      preview's create request failed validation (`Invalid value for argument
-     'date'`). The derived create value is now zone-qualified
+'date'`). The derived create value is now zone-qualified
      (`"2026-09-01T00:00:00.000Z"`), matching the same Prisma DateTime parser
      contract the seed fix established.
   2. **Branching transitions replayed on the seeded record**: approve/reject
@@ -412,7 +419,7 @@ State: `in_progress` (T8-A/B/C/D green and pushed; Task 9 real-model acceptance 
      binds every required foreign key to its seeded target (by `id` or the
      target's declared natural-key value), throwing a bounded
      `Seed generation requires a seeded target for every required foreign
-     key` when no seeded target exists; non-required unresolvable FKs stay
+key` when no seeded target exists; non-required unresolvable FKs stay
      unbound. Parity suite covers the real pipeline (appointment.serviceKey
      → sample-service), the fail-closed throw, and the optional-FK pass.
   4. **Session-bound create could not bind its FK**: the composed `session`
@@ -488,3 +495,28 @@ State: `in_progress` (T8-A/B/C/D green and pushed; Task 9 real-model acceptance 
   and artifact directories removed (FK-chain cleanup, mirroring the
   accepted run-6/7/8 passes); historical product graphs untouched.
 - Commit: `feat(e2e): release both prompt products through the full pipeline`.
+
+## 2026-08-10 — Task 9 continuation: stable composition rejection boundary
+
+State: `implementing` (reviewed diagnostic slice green; guarded rerun pending).
+
+- The latest Appointment Review-creation HTTP 400 was localized before any
+  workspace, Application Graph, Draft Revision, or Composition Review
+  transaction write. The previous Workbench client retained only HTTP status,
+  so the exact rejecting validation check was not recoverable from the failed
+  run without unsafe payload capture.
+- The Control Plane now returns one of five fixed safe `composition.*` codes
+  for request envelope, request identity, requirement contract, blueprint
+  contract, or checksum binding failures. Workbench retains only that explicit
+  allowlist and appends only the safe code to its existing bounded failure
+  sentence; response messages, rejected values, and bodies are discarded.
+- TDD evidence: RED was 5 Control Plane and 6 Workbench failures. Focused GREEN
+  is 28/28 Control Plane and 54/54 Workbench; full implementer suites are
+  219/219 and 261/261. Controller independently reran both focused suites with
+  exit 0. Independent Sol task review approved specification compliance and
+  task quality with no P0/P1.
+- No provider call, service mutation, commit, or push occurred in this slice.
+  The next run must rebuild the shared stack, use the guarded Appointment path
+  to surface only the stable code if rejection remains, and convert that exact
+  boundary into a deterministic regression before the two-prompt acceptance is
+  rerun.

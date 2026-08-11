@@ -17,6 +17,10 @@
     "./browser": {
       "types": "./dist/browser.d.ts",
       "default": "./dist/browser.js"
+    },
+    "./requirements/browser": {
+      "types": "./dist/requirements-browser.d.ts",
+      "default": "./dist/requirements-browser.js"
     }
   },
   "scripts": {

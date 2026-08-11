@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RequirementSpecV1 } from "@factory/graph";
 
 import { ClarificationPanel } from "./clarification-panel";
+import { ANSWER_MAX_LENGTH } from "../../lib/product-journey/journey-model";
 
 const vagueSpec: RequirementSpecV1 = {
   apiVersion: "factory.requirement-spec/v1",
@@ -24,9 +25,16 @@ const vagueSpec: RequirementSpecV1 = {
 };
 
 const questions = [
-  { key: "approval-object", question: "What item requires approval?" },
+  {
+    key: "approval-object",
+    category: "business-rule" as const,
+    defaultPolicy: "required" as const,
+    question: "What item requires approval?",
+  },
   {
     key: "approval-levels",
+    category: "business-rule" as const,
+    defaultPolicy: "required" as const,
     question: "How many levels of approval are required?",
   },
 ];
@@ -74,9 +82,11 @@ describe("ClarificationPanel", () => {
       container.querySelector('textarea[aria-label="Requirement summary"]'),
     ).not.toBeNull();
     for (const question of questions) {
-      expect(
-        container.querySelector(`input[aria-label="${question.key}"]`),
-      ).not.toBeNull();
+      const input = container.querySelector(
+        `input[aria-label="${question.key}"]`,
+      ) as HTMLInputElement | null;
+      expect(input).not.toBeNull();
+      expect(input?.maxLength).toBe(ANSWER_MAX_LENGTH);
     }
   });
 

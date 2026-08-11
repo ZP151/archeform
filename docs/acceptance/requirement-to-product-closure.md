@@ -1,8 +1,17 @@
 # Honest Requirement-to-Product Closure — acceptance record
 
-Status: **REOPENED — pending**. Authority:
+> **Current status — 2026-08-11:** Accepted as Task 0 of the
+> Prompt-to-Polished Restaurant Product iteration. The reviewed branch commit
+> and push remain the controller's delivery step before Task 1 may begin. This
+> record now remains regression evidence rather than the forward
+> product-experience target.
+
+Status: **ACCEPTED — delivery pending**. Authority:
 `docs/superpowers/plans/2026-08-09-honest-requirement-to-product-closure.md`.
-Ledger: `docs/superpowers/ledgers/2026-08-09-honest-requirement-to-product-closure.md`.
+Active PM ledger:
+`docs/superpowers/ledgers/2026-08-10-prompt-to-polished-restaurant-product.md`.
+Closure history:
+`docs/superpowers/ledgers/2026-08-09-honest-requirement-to-product-closure.md`.
 
 ## Status correction (2026-08-09)
 
@@ -19,7 +28,7 @@ proof) is **retained as fixed Expense replay evidence** only, and the P1
 Product Closure gate is **reopened** by the 2026-08-09 honest
 requirement-to-product closure plan.
 
-## Pending scenarios
+## Accepted scenarios
 
 Each scenario starts from an **empty workspace** and a **free-form
 requirement**. No Profile, starter, template, or canned framing may be
@@ -94,3 +103,16 @@ manage services, schedules, and cancellations.
   criteria 5-7 (clean-checkout acceptance, axe accessibility + themes,
   action inventory). Detailed per-run record including the run-9 false-green
   and run-10 failed-verification root causes: ledger Task 8 section.
+- **2026-08-11 — Task 0 final acceptance:** the Option A run reconstructed the
+  exact reviewed 105-tracked/56-untracked manifest in a clean checkout, passed
+  frozen install, all 16 typecheck tasks, all 16 test tasks, all 10 builds, and
+  an isolated healthy Compose stack. The environment-only real-model Prompt A
+  and Prompt B journeys passed 2/2 in 20.3 minutes; Published Graph material
+  difference, accessibility/theme evidence, and the live action inventory
+  passed. Exactly 26 canonical evidence PNGs were regenerated and copied with
+  hash equality. Containers, networks, and volumes finished at 0/0/0 and the
+  post-run preview guard passed. No credential, raw prompt, response, or other
+  raw model material entered output or evidence. Final Terra release QA passed,
+  and independent Sol release review returned `ACCEPT` with P0/P1/P2=0/0/4;
+  the four P2s are deferred and nonblocking in the active PM ledger. PM accepted
+  Task 0; the controller-owned reviewed commit and push remain pending.

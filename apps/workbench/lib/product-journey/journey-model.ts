@@ -1,6 +1,10 @@
 import type { RequirementInterpretationV1 } from "@factory/adapters";
 import type { ProductPlanAlternative } from "@factory/capabilities/node";
-import type { CompositionPlanV1 } from "@factory/graph";
+import type {
+  CompositionClarificationV1,
+  CompositionPlanV1,
+} from "@factory/graph";
+import type { ProductJourneyFailure } from "./interpret-contract";
 
 /**
  * The product creation journey state machine. The free-form brief is
@@ -16,7 +20,7 @@ export type ProductJourneyStage =
   "brief" | "clarifying" | "planning" | "reviewing" | "applied" | "failed";
 
 export const BRIEF_MAX_LENGTH = 12_000;
-export const ANSWER_MAX_LENGTH = 64;
+export const ANSWER_MAX_LENGTH = 1_000;
 export const ANSWER_LIMIT = 30;
 
 export interface ProductJourneyReview {
@@ -33,11 +37,13 @@ export interface ProductJourneyState {
   /** Transient business brief. Never persisted, logged, or reported. */
   readonly brief: string;
   readonly answers: Readonly<Record<string, string>>;
+  readonly interpretationCycles: number;
   readonly interpretation: RequirementInterpretationV1 | null;
   readonly review: ProductJourneyReview | null;
   readonly alternatives: readonly ProductPlanAlternative[] | null;
   readonly selectedAlternativeKey: string | null;
   readonly diffChecksum: string | null;
+  readonly failure: ProductJourneyFailure | null;
   readonly error: string | null;
 }
 
@@ -55,7 +61,7 @@ export type ProductJourneyAction =
     }
   | { type: "alternative-chosen"; key: string; diffChecksum: string }
   | { type: "applied" }
-  | { type: "fail"; error: string }
+  | { type: "fail"; failure: ProductJourneyFailure }
   | { type: "reset" };
 
 export function beginProductJourney(): ProductJourneyState {
@@ -64,11 +70,13 @@ export function beginProductJourney(): ProductJourneyState {
     stage: "brief",
     brief: "",
     answers: {},
+    interpretationCycles: 0,
     interpretation: null,
     review: null,
     alternatives: null,
     selectedAlternativeKey: null,
     diffChecksum: null,
+    failure: null,
     error: null,
   };
 }
@@ -118,14 +126,50 @@ export function journeyTransition(
       if (state.stage !== "brief" && state.stage !== "clarifying") {
         throw new Error("Interpret the requirement from the brief stage.");
       }
+      const interpretationCycles = state.interpretationCycles + 1;
+      if (interpretationCycles > 2) {
+        const failure: ProductJourneyFailure = {
+          phase: "clarification",
+          code: "journey.interpretation_cycle_bound",
+          message:
+            "Requirement interpretation exceeded the two-cycle safety bound.",
+        };
+        return {
+          ...state,
+          stage: "failed",
+          failure,
+          error: failure.message,
+        };
+      }
+      if (
+        interpretationCycles === 2 &&
+        action.interpretation.clarifications.length > 0
+      ) {
+        const failure: ProductJourneyFailure = {
+          phase: "clarification",
+          code: "journey.clarification_exhausted",
+          message:
+            "Critical requirement ambiguity remains after two interpretation cycles.",
+        };
+        return {
+          ...state,
+          interpretation: action.interpretation,
+          interpretationCycles,
+          stage: "failed",
+          failure,
+          error: failure.message,
+        };
+      }
       return {
         ...state,
         interpretation: action.interpretation,
+        interpretationCycles,
         stage:
           action.interpretation.clarifications.length > 0
             ? "clarifying"
             : "planning",
         error: null,
+        failure: null,
       };
     }
     case "clarify-answered": {
@@ -145,7 +189,10 @@ export function journeyTransition(
           );
         }
       }
-      return { ...state, answers: { ...action.answers } };
+      return {
+        ...state,
+        answers: { ...state.answers, ...action.answers },
+      };
     }
     case "review-created": {
       const interpretation = requireInterpretation(state);
@@ -200,7 +247,12 @@ export function journeyTransition(
       if (state.stage === "applied") {
         throw new Error("The product is already applied to the Draft.");
       }
-      return { ...state, stage: "failed", error: action.error };
+      return {
+        ...state,
+        stage: "failed",
+        failure: action.failure,
+        error: action.failure.message,
+      };
     }
     case "reset": {
       if (
@@ -220,7 +272,7 @@ export function journeyTransition(
 /** The open clarification questions of the current interpretation, if any. */
 export function openClarificationQuestions(
   state: ProductJourneyState,
-): readonly { key: string; question: string }[] {
+): readonly CompositionClarificationV1["questions"][number][] {
   return (
     state.interpretation?.clarifications.flatMap(
       (clarification) => clarification.questions,

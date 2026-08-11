@@ -117,6 +117,63 @@ function draftGraphWithBindings(bindings: Record<string, unknown>): unknown {
 }
 
 describe("ApplicationGraphV1", () => {
+  it.each([
+    {
+      name: "optional string",
+      fields: [{ key: "id", type: "string", required: false }],
+    },
+    {
+      name: "required non-string",
+      fields: [{ key: "id", type: "integer", required: true }],
+    },
+    {
+      name: "empty seed value",
+      fields: [{ key: "id", type: "string", required: true }],
+      seedData: [{ entity: "expense", values: { id: "" } }],
+    },
+    {
+      name: "duplicate declarations",
+      fields: [
+        { key: "id", type: "string", required: true },
+        { key: "id", type: "integer", required: false },
+      ],
+    },
+  ])(
+    "rejects $name entity-declared Factory identity with one safe semantic error",
+    ({ fields, seedData }) => {
+      const graph = structuredClone(expenseGraph) as unknown as {
+        domain: {
+          entities: Array<{ fields: unknown[] }>;
+          seedData?: unknown;
+        };
+      };
+      graph.domain.entities[0].fields = fields;
+      if (seedData !== undefined) graph.domain.seedData = seedData;
+
+      const reservedIssues = validateApplicationGraph(graph).filter(
+        (issue) => issue.code === "domain.field.factory_identity_reserved",
+      );
+      expect(reservedIssues).toHaveLength(fields.length);
+      expect(reservedIssues).toEqual(
+        fields.map((_, index) => ({
+          code: "domain.field.factory_identity_reserved",
+          message:
+            "Entity fields cannot declare Factory-owned record identity 'id'.",
+          path: ["domain", "entities", 0, "fields", index, "key"],
+        })),
+      );
+      expect(() => parseApplicationGraph(graph)).toThrow(GraphSemanticError);
+      try {
+        parseApplicationGraph(graph);
+      } catch (error) {
+        expect(error).toBeInstanceOf(GraphSemanticError);
+        expect((error as GraphSemanticError).issues).toEqual(
+          expect.arrayContaining(reservedIssues),
+        );
+      }
+    },
+  );
+
   it("resolves duplicate field keys only under their declared entity owner", () => {
     const graph = structuredClone(expenseGraph);
     graph.domain.entities.push(

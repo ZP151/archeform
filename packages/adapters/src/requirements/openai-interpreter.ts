@@ -2,8 +2,11 @@ import OpenAI from "openai";
 import { z } from "zod";
 
 import {
+  blueprintActionVerbs,
   blueprintActionSchema,
   blueprintFieldTypeSchema,
+  graphFieldKeySchema,
+  graphKeySchema,
   hashRequirementSpec,
   identifierSchema,
   pageIntentSchema,
@@ -12,14 +15,15 @@ import {
 } from "@factory/graph";
 
 import {
-  classifyOpenAITransportFailure,
   type OpenAIResponseTransport,
   type OpenAITransportRequest,
 } from "../ai.js";
 import {
   RequirementInterpreterError,
   assertRequirementInterpretation,
+  clarificationQuestionsMatch,
   deriveClarifications,
+  type ClarificationAnswerContextV1,
   type RequirementInterpreterAdapterV1,
   type RequirementInterpretationV1,
 } from "./requirement-interpreter.js";
@@ -50,7 +54,11 @@ const modelNamedItemSchema = z
 const modelRequirementSchema = z
   .object({
     apiVersion: z.literal("factory.requirement-spec/v1"),
-    requirementId: identifierSchema,
+    // The requirementId becomes the graph key and the identity-policy domain
+    // symbols (`graph.domain.<requirementId>-principal`); it mirrors the
+    // authoritative graphKeySchema so the model can never propose a key the
+    // seam would later reject.
+    requirementId: graphKeySchema,
     outcome: safeBusinessTextSchema,
     actors: z.array(modelNamedItemSchema).min(1).max(30),
     domainConcepts: z.array(modelNamedItemSchema).max(60),
@@ -77,6 +85,15 @@ const modelRequirementSchema = z
       .array(
         z
           .object({
+            category: z.enum([
+              "experience.visual-style",
+              "authorization",
+              "visibility",
+              "role",
+              "business-rule",
+              "data",
+              "integration",
+            ]),
             question: safeBusinessTextSchema.max(500),
             answer: optionalText(safeBusinessTextSchema.max(1000)),
           })
@@ -98,9 +115,46 @@ const modelRequirementSchema = z
   })
   .strict();
 
+type ModelRequirement = z.infer<typeof modelRequirementSchema>;
+
+/**
+ * The provider cannot revoke a user's answer to the exact same deterministic
+ * clarification key. Different or newly phrased questions remain unresolved
+ * and are handled by the bounded clarification policy.
+ */
+function reconcileClarificationAnswers(
+  spec: ModelRequirement,
+  answers: Readonly<Record<string, string>>,
+  clarificationContext: readonly ClarificationAnswerContextV1[],
+): ModelRequirement {
+  const projected = deriveClarifications(spec).flatMap(
+    (clarification) => clarification.questions,
+  );
+  let projectedIndex = 0;
+  return {
+    ...spec,
+    openQuestions: spec.openQuestions.map((question) => {
+      if (question.answer !== undefined) return question;
+      const clarification = projected[projectedIndex];
+      projectedIndex += 1;
+      if (clarification?.question !== question.question) return question;
+      const contextualAnswer = clarificationContext.find(
+        (context) =>
+          context.category === question.category &&
+          clarificationQuestionsMatch(context.question, question.question),
+      )?.answer;
+      const answer =
+        answers[clarification.key]?.trim() ?? contextualAnswer?.trim();
+      return answer ? { ...question, answer } : question;
+    }),
+  };
+}
+
+const modelFieldKeySchema = graphFieldKeySchema.refine((key) => key !== "id");
+
 const modelFieldSchema = z
   .object({
-    key: identifierSchema,
+    key: modelFieldKeySchema,
     label: safeBusinessTextSchema.max(160),
     description: optionalText(safeBusinessTextSchema.max(500)),
     type: blueprintFieldTypeSchema,
@@ -112,9 +166,17 @@ const modelFieldSchema = z
   })
   .strict();
 
+// Entity, actor, page-intent, and workflow keys become graph-symbol segments
+// verbatim (`graph.domain.<key>`, `graph.policy.<key>`, `graph.page.<key>`,
+// `graph.flow.<key>`); they mirror the authoritative graphKeySchema. Field keys
+// become graph domain entity field keys verbatim (`domain.entities[].fields[].key`),
+// whose grammar is lowercase-first camelCase with underscores — never hyphens;
+// state keys become graph flow state identifiers (lowercase-kebab like the
+// other graph symbols). Journey keys stay ordinary identifiers (they never
+// reach the graph).
 const modelEntitySchema = z
   .object({
-    key: identifierSchema,
+    key: graphKeySchema,
     label: safeBusinessTextSchema.max(160),
     description: optionalText(safeBusinessTextSchema.max(500)),
     fields: z.array(modelFieldSchema).min(1).max(60),
@@ -123,7 +185,7 @@ const modelEntitySchema = z
 
 const modelActorSchema = z
   .object({
-    key: identifierSchema,
+    key: graphKeySchema,
     label: safeBusinessTextSchema.max(160),
     description: optionalText(safeBusinessTextSchema.max(500)),
     permissions: z
@@ -142,7 +204,7 @@ const modelActorSchema = z
 
 const modelPageIntentSchema = z
   .object({
-    key: identifierSchema,
+    key: graphKeySchema,
     label: safeBusinessTextSchema.max(160),
     intent: pageIntentSchema,
     entityKey: optionalText(identifierSchema),
@@ -151,14 +213,17 @@ const modelPageIntentSchema = z
 
 const modelStateSchema = z
   .object({
-    key: identifierSchema,
+    key: graphKeySchema,
     label: safeBusinessTextSchema.max(160),
   })
   .strict();
 
+// The same bounded vocabulary as the provider schema and the authoritative
+// blueprint schema: a transition key is the event the runtime authorizes
+// (role, entity, event) against, so it must be grantable.
 const modelTransitionSchema = z
   .object({
-    key: identifierSchema,
+    key: z.enum(blueprintActionVerbs),
     from: identifierSchema,
     to: identifierSchema,
     label: safeBusinessTextSchema.max(160),
@@ -168,7 +233,7 @@ const modelTransitionSchema = z
 
 const modelWorkflowSchema = z
   .object({
-    key: identifierSchema,
+    key: graphKeySchema,
     label: safeBusinessTextSchema.max(160),
     entityKey: identifierSchema,
     states: z.array(modelStateSchema).min(2).max(20),
@@ -221,6 +286,26 @@ const modelInterpretationSchema = z
 
 type ModelInterpretation = z.infer<typeof modelInterpretationSchema>;
 
+/**
+ * Same grammar as graphKeySchema: the provider-side lock for keys that become
+ * graph-symbol segments verbatim (`graph.flow.<key>`, `graph.domain.<key>`,
+ * `graph.policy.<key>`, `graph.page.<key>`). Lowercase kebab only — a
+ * camelCase key could never produce a plan the seam accepts, so the provider
+ * is steered here, the mirror schema mirrors it, and the authoritative
+ * boundary rejects it.
+ */
+const graphKeyJsonPattern = "^[a-z][a-z0-9-]*$";
+
+/**
+ * Entity FIELD keys become graph `domain.entities[].fields[].key` verbatim,
+ * whose grammar is lowercase-first camelCase with underscores — hyphens and
+ * the exact Factory-owned identity key `id` are forbidden. Distinct from the
+ * kebab grammar above on purpose: the provider must never generalize one
+ * grammar to the other surface.
+ */
+const graphFieldKeyJsonPattern =
+  "^([a-hj-z][a-zA-Z0-9_]*|i|i[a-ce-zA-Z0-9_][a-zA-Z0-9_]*|id[a-zA-Z0-9_]+)$";
+
 function namedItemJsonSchema(): Record<string, unknown> {
   return {
     type: "object",
@@ -248,7 +333,7 @@ function fieldJsonSchema(): Record<string, unknown> {
       "referenceTo",
     ],
     properties: {
-      key: { type: "string", pattern: "^[a-z][a-zA-Z0-9-]*$" },
+      key: { type: "string", pattern: graphFieldKeyJsonPattern },
       label: { type: "string", minLength: 1, maxLength: 160 },
       description: { anyOf: [{ type: "string" }, { type: "null" }] },
       type: {
@@ -309,7 +394,7 @@ const interpretationJsonSchema: Record<string, unknown> = {
       ],
       properties: {
         apiVersion: { type: "string", const: "factory.requirement-spec/v1" },
-        requirementId: { type: "string", pattern: "^[a-z][a-zA-Z0-9-]*$" },
+        requirementId: { type: "string", pattern: graphKeyJsonPattern },
         outcome: { type: "string", minLength: 1, maxLength: 2000 },
         actors: {
           type: "array",
@@ -357,8 +442,20 @@ const interpretationJsonSchema: Record<string, unknown> = {
           items: {
             type: "object",
             additionalProperties: false,
-            required: ["question", "answer"],
+            required: ["category", "question", "answer"],
             properties: {
+              category: {
+                type: "string",
+                enum: [
+                  "experience.visual-style",
+                  "authorization",
+                  "visibility",
+                  "role",
+                  "business-rule",
+                  "data",
+                  "integration",
+                ],
+              },
               question: { type: "string", minLength: 1, maxLength: 500 },
               answer: { anyOf: [{ type: "string" }, { type: "null" }] },
             },
@@ -405,7 +502,7 @@ const interpretationJsonSchema: Record<string, unknown> = {
             additionalProperties: false,
             required: ["key", "label", "description", "permissions"],
             properties: {
-              key: { type: "string", pattern: "^[a-z][a-zA-Z0-9-]*$" },
+              key: { type: "string", pattern: graphKeyJsonPattern },
               label: { type: "string", minLength: 1, maxLength: 160 },
               description: { anyOf: [{ type: "string" }, { type: "null" }] },
               permissions: {
@@ -458,7 +555,7 @@ const interpretationJsonSchema: Record<string, unknown> = {
             additionalProperties: false,
             required: ["key", "label", "description", "fields"],
             properties: {
-              key: { type: "string", pattern: "^[a-z][a-zA-Z0-9-]*$" },
+              key: { type: "string", pattern: graphKeyJsonPattern },
               label: { type: "string", minLength: 1, maxLength: 160 },
               description: { anyOf: [{ type: "string" }, { type: "null" }] },
               fields: {
@@ -479,7 +576,7 @@ const interpretationJsonSchema: Record<string, unknown> = {
             additionalProperties: false,
             required: ["key", "label", "intent", "entityKey"],
             properties: {
-              key: { type: "string", pattern: "^[a-z][a-zA-Z0-9-]*$" },
+              key: { type: "string", pattern: graphKeyJsonPattern },
               label: { type: "string", minLength: 1, maxLength: 160 },
               intent: {
                 type: "string",
@@ -511,7 +608,7 @@ const interpretationJsonSchema: Record<string, unknown> = {
             additionalProperties: false,
             required: ["key", "label", "entityKey", "states", "transitions"],
             properties: {
-              key: { type: "string", pattern: "^[a-z][a-zA-Z0-9-]*$" },
+              key: { type: "string", pattern: graphKeyJsonPattern },
               label: { type: "string", minLength: 1, maxLength: 160 },
               entityKey: { type: "string", pattern: "^[a-z][a-zA-Z0-9-]*$" },
               states: {
@@ -523,7 +620,7 @@ const interpretationJsonSchema: Record<string, unknown> = {
                   additionalProperties: false,
                   required: ["key", "label"],
                   properties: {
-                    key: { type: "string", pattern: "^[a-z][a-zA-Z0-9-]*$" },
+                    key: { type: "string", pattern: graphKeyJsonPattern },
                     label: { type: "string", minLength: 1, maxLength: 160 },
                   },
                 },
@@ -537,7 +634,27 @@ const interpretationJsonSchema: Record<string, unknown> = {
                   additionalProperties: false,
                   required: ["key", "from", "to", "label", "actorKey"],
                   properties: {
-                    key: { type: "string", pattern: "^[a-z][a-zA-Z0-9-]*$" },
+                    // The same bounded action vocabulary the permission
+                    // grants are drawn from: a transition key is the event
+                    // the runtime authorizes (role, entity, event) against,
+                    // so it must be grantable.
+                    key: {
+                      type: "string",
+                      enum: [
+                        "create",
+                        "read",
+                        "update",
+                        "delete",
+                        "submit",
+                        "approve",
+                        "reject",
+                        "confirm",
+                        "reschedule",
+                        "cancel",
+                        "audit",
+                        "manage",
+                      ],
+                    },
                     from: { type: "string", pattern: "^[a-z][a-zA-Z0-9-]*$" },
                     to: { type: "string", pattern: "^[a-z][a-zA-Z0-9-]*$" },
                     label: { type: "string", minLength: 1, maxLength: 160 },
@@ -596,32 +713,187 @@ const interpretationInstructions = [
   "Business text must not contain URLs, absolute or Windows paths, traversal segments, or prototype-key material.",
   "Do not invent actors, entities, workflows, or acceptance scenarios the brief does not imply.",
   "If the brief is ambiguous, leave an open question in the spec instead of guessing.",
+  "Consolidate every material clarification into the first response; never ask one question at a time.",
+  "When clarification answers are supplied, treat them as authoritative business input, apply them to the complete spec and blueprint, and mark the corresponding open questions answered.",
+  "clarificationContext contains the original category, question, and user answer for each opaque answer key; use that semantic context and do not ask for the same decision again.",
+  "When priorInterpretation is supplied, treat it as the validated baseline: revise only semantics affected by the supplied answers, preserve stable identifiers and unaffected actors, entities, fields, workflows, pages, and journeys, and return the complete revised interpretation.",
+  "Do not repeat, rephrase, or progressively reveal additional questions after answers are supplied. Leave only a genuinely new safety-critical ambiguity open; use conventional product defaults for any remaining noncritical detail.",
+  "Classify every open question using its narrow Factory category. Use experience.visual-style only for optional aesthetic direction; authorization, visibility, role, business-rule, data, and integration questions are never optional visual preferences.",
+  "Every workflow must be internally consistent with the actors and permissions: each transition's from and to must be states declared in the same workflow, the transition's actor must be a declared actor, and that actor's permissions must grant the transition's event as an action on the workflow's entity.",
+  "Transition events and permission grants may only use the bounded action vocabulary: create, read, update, delete, submit, approve, reject, confirm, reschedule, cancel, audit, manage — never invent a verb outside this vocabulary.",
+  "Every enum-typed field must include its options as a list of at least two distinct business values; every reference-typed field must name an entity declared in the same blueprint.",
+  "Never duplicate any key: actors, entities, fields, workflows, states, transitions, page intents, and journeys must each be unique.",
+  "Keys that become graph symbols — the requirementId and every actor, entity, workflow, page-intent, and workflow-state key — must be lowercase kebab-case: lowercase letters, digits, and hyphens only, starting with a lowercase letter. Never use camelCase for these keys (for example expense-approval, not expenseApproval).",
+  "Entity field keys use the opposite grammar: lowercase-first camelCase with letters, digits, and underscores only, and never a hyphen — for example submittedBy, never submitted-by. Do not apply the kebab-case rule to field keys.",
+  "Identity is Factory-owned. Never declare an entity field with the exact key id; the runtime supplies record identity outside blueprint fields.",
+  "Journey steps may only reference declared actors.",
+  "The composed runtime rejects inconsistent flows, so never declare a transition, state, journey step, or actor that you do not fully grant.",
+  "If a repair note is included, adjust the proposal to satisfy it exactly and return a complete, valid interpretation.",
 ].join(" ");
 
-class OpenAIResponsesApiTransport implements OpenAIResponseTransport {
+type OpenAIRequirementClient = {
+  readonly responses: {
+    create(
+      body: Record<string, unknown>,
+      options: {
+        readonly signal: AbortSignal;
+        readonly timeout: 180_000;
+        readonly maxRetries: 0;
+      },
+    ): Promise<{ readonly output_text: string }>;
+  };
+};
+
+export class OpenAIRequirementResponsesApiTransport implements OpenAIResponseTransport {
+  private readonly createClient: (apiKey: string) => OpenAIRequirementClient;
+
+  public constructor(
+    options: {
+      readonly createClient?: (apiKey: string) => OpenAIRequirementClient;
+    } = {},
+  ) {
+    this.createClient =
+      options.createClient ??
+      ((apiKey) =>
+        new OpenAI({ apiKey }) as unknown as OpenAIRequirementClient);
+  }
+
   public async create(
     request: OpenAITransportRequest,
   ): Promise<{ outputText: string }> {
-    // The API key exists only in this invocation's stack frame. The OpenAI SDK
-    // and this adapter are configured not to persist the response remotely or
-    // locally.
-    const client = new OpenAI({ apiKey: request.apiKey });
-    const response = await client.responses.create({
-      model: request.model,
-      instructions: request.instructions,
-      input: request.input,
-      store: request.store,
-      text: {
-        format: {
-          type: "json_schema",
-          name: "factory_requirement_interpretation",
-          strict: request.strictJson,
-          schema: request.jsonSchema,
+    if (
+      request.signal === undefined ||
+      request.timeout !== 180_000 ||
+      request.maxRetries !== 0
+    ) {
+      throw new Error("Requirement transport policy is missing.");
+    }
+    const client = this.createClient(request.apiKey);
+    const response = await client.responses.create(
+      {
+        model: request.model,
+        instructions: request.instructions,
+        input: request.input,
+        store: request.store,
+        text: {
+          format: {
+            type: "json_schema",
+            name: "factory_requirement_interpretation",
+            strict: request.strictJson,
+            schema: request.jsonSchema,
+          },
         },
       },
-    });
+      {
+        signal: request.signal,
+        timeout: request.timeout,
+        maxRetries: request.maxRetries,
+      },
+    );
     return { outputText: response.output_text };
   }
+}
+
+const PROVIDER_ROUND_TIMEOUT_MS = 180_000 as const;
+const INTERPRETATION_TOTAL_TIMEOUT_MS = 540_000;
+const MAX_REPAIR_ROUNDS = 2;
+const FIXED_REPAIR_INSTRUCTION =
+  "The previous interpretation was invalid. Return one complete interpretation that satisfies the required schema and semantic contract.";
+
+class InterpretationAbort extends Error {}
+
+function composeAbortSignals(signals: readonly AbortSignal[]): {
+  readonly signal: AbortSignal;
+  dispose: () => void;
+} {
+  const controller = new AbortController();
+  const listeners: Array<{
+    readonly signal: AbortSignal;
+    readonly listener: () => void;
+  }> = [];
+  const abort = (): void => {
+    if (!controller.signal.aborted) controller.abort();
+  };
+  for (const signal of signals) {
+    if (signal.aborted) {
+      abort();
+      break;
+    }
+    const listener = (): void => abort();
+    signal.addEventListener("abort", listener, { once: true });
+    listeners.push({ signal, listener });
+  }
+  return {
+    signal: controller.signal,
+    dispose: () => {
+      for (const item of listeners) {
+        item.signal.removeEventListener("abort", item.listener);
+      }
+    },
+  };
+}
+
+async function withAbort<T>(work: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) throw new InterpretationAbort();
+  let listener: (() => void) | undefined;
+  try {
+    return await Promise.race([
+      work,
+      new Promise<never>((_, reject) => {
+        listener = () => reject(new InterpretationAbort());
+        signal.addEventListener("abort", listener, { once: true });
+      }),
+    ]);
+  } finally {
+    if (listener !== undefined) signal.removeEventListener("abort", listener);
+  }
+}
+
+function providerStatus(error: unknown): unknown {
+  return typeof error === "object" && error !== null && "status" in error
+    ? (error as { readonly status?: unknown }).status
+    : undefined;
+}
+
+function isProviderTimeout(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const name =
+    "name" in error ? (error as { readonly name?: unknown }).name : undefined;
+  const code =
+    "code" in error ? (error as { readonly code?: unknown }).code : undefined;
+  return (
+    name === "AbortError" ||
+    name === "APIConnectionTimeoutError" ||
+    code === "ETIMEDOUT"
+  );
+}
+
+function timeoutFailure(): RequirementInterpreterError {
+  return new RequirementInterpreterError(
+    "Requirement interpretation timed out.",
+    "timeout",
+  );
+}
+
+function outputFailure(): RequirementInterpreterError {
+  return new RequirementInterpreterError(
+    "Requirement interpretation output was invalid.",
+    "output_invalid",
+  );
+}
+
+function providerFailure(error: unknown): RequirementInterpreterError {
+  const status = providerStatus(error);
+  if (status === 400 || status === 401 || status === 403) {
+    return new RequirementInterpreterError(
+      "Requirement interpretation provider rejected the request.",
+      "provider_rejected",
+    );
+  }
+  return new RequirementInterpreterError(
+    "Requirement interpretation provider is unavailable.",
+    "provider_unavailable",
+  );
 }
 
 export type OpenAIRequirementInterpreterOptions = {
@@ -648,7 +920,8 @@ export class OpenAIRequirementInterpreterAdapter implements RequirementInterpret
 
   public constructor(options: OpenAIRequirementInterpreterOptions = {}) {
     this.model = options.model ?? "gpt-5";
-    this.transport = options.transport ?? new OpenAIResponsesApiTransport();
+    this.transport =
+      options.transport ?? new OpenAIRequirementResponsesApiTransport();
     this.readEnvironment =
       options.readEnvironment ?? (() => process.env.OPENAI_API_KEY);
   }
@@ -656,68 +929,136 @@ export class OpenAIRequirementInterpreterAdapter implements RequirementInterpret
   public async interpret(input: {
     readonly brief: string;
     readonly answers: Readonly<Record<string, string>>;
+    readonly clarificationContext?: readonly ClarificationAnswerContextV1[];
+    readonly priorInterpretation?: RequirementInterpretationV1;
+    readonly signal?: AbortSignal;
   }): Promise<RequirementInterpretationV1> {
     if (typeof input.brief !== "string" || input.brief.trim().length === 0) {
       throw new RequirementInterpreterError(
         "The requirement brief must be non-empty prose text.",
-        "brief_invalid",
+        "request_invalid",
       );
     }
+    if (input.signal?.aborted) throw timeoutFailure();
     const apiKey = this.readEnvironment();
     if (!apiKey) {
       throw new RequirementInterpreterError(
-        "OPENAI_API_KEY must be set in the local process environment.",
-        "configuration_missing",
+        "No requirement interpretation provider is configured.",
+        "provider_not_configured",
       );
     }
+    const priorInterpretation =
+      input.priorInterpretation === undefined
+        ? undefined
+        : assertRequirementInterpretation(input.priorInterpretation);
 
-    let outputText: string;
+    // One invocation owns a hard total deadline. Each semantic call also owns
+    // a round deadline; provider/network failures never enter the repair loop.
+    // Schema and semantic repair uses one fixed instruction that cannot carry
+    // parser, validator, candidate, provider, or abort material.
+    const totalController = new AbortController();
+    const totalTimer = setTimeout(
+      () => totalController.abort(),
+      INTERPRETATION_TOTAL_TIMEOUT_MS,
+    );
+    let repairNote: string | undefined;
     try {
-      const response = await this.transport.create({
-        apiKey,
-        model: this.model,
-        instructions: interpretationInstructions,
-        input: JSON.stringify({
-          brief: input.brief,
-          answers: input.answers,
-        }),
-        store: false,
-        strictJson: true,
-        jsonSchema: interpretationJsonSchema,
-      });
-      outputText = response.outputText;
-    } catch (error) {
-      // Never surface a provider response: upstream errors can carry request
-      // context, which is intentionally not an application artifact.
-      const code = classifyOpenAITransportFailure(error);
-      throw new RequirementInterpreterError(
-        "OpenAI requirement interpretation request failed.",
-        code === "proposal_invalid" ? "provider_request_failed" : code,
-      );
-    }
+      for (let round = 0; round <= MAX_REPAIR_ROUNDS; round += 1) {
+        if (input.signal?.aborted || totalController.signal.aborted) {
+          throw timeoutFailure();
+        }
+        const roundController = new AbortController();
+        const roundTimer = setTimeout(
+          () => roundController.abort(),
+          PROVIDER_ROUND_TIMEOUT_MS,
+        );
+        const combined = composeAbortSignals([
+          ...(input.signal === undefined ? [] : [input.signal]),
+          totalController.signal,
+          roundController.signal,
+        ]);
+        let outputText: string;
+        try {
+          const response = await withAbort(
+            this.transport.create({
+              apiKey,
+              model: this.model,
+              instructions: interpretationInstructions,
+              input: JSON.stringify({
+                brief: input.brief,
+                answers: input.answers,
+                clarificationContext: input.clarificationContext ?? [],
+                ...(priorInterpretation === undefined
+                  ? {}
+                  : { priorInterpretation }),
+                ...(repairNote === undefined ? {} : { repair: repairNote }),
+              }),
+              store: false,
+              strictJson: true,
+              jsonSchema: interpretationJsonSchema,
+              signal: combined.signal,
+              timeout: PROVIDER_ROUND_TIMEOUT_MS,
+              maxRetries: 0,
+            }),
+            combined.signal,
+          );
+          outputText = response.outputText;
+        } catch (error) {
+          if (combined.signal.aborted || isProviderTimeout(error)) {
+            throw timeoutFailure();
+          }
+          throw providerFailure(error);
+        } finally {
+          clearTimeout(roundTimer);
+          combined.dispose();
+        }
 
-    let candidate: ModelInterpretation;
-    try {
-      const parsed = JSON.parse(outputText) as unknown;
-      candidate = parseStrict(modelInterpretationSchema, parsed);
-    } catch (error) {
-      if (error instanceof RequirementInterpreterError) throw error;
-      throw new RequirementInterpreterError(
-        "OpenAI requirement interpretation candidate is invalid.",
-      );
-    }
+        if (input.signal?.aborted || totalController.signal.aborted) {
+          throw timeoutFailure();
+        }
 
-    const spec = candidate.spec;
-    // The checksum is always computed from the validated spec; the model can
-    // never bind the blueprint to a different requirement.
-    const blueprint = {
-      ...candidate.blueprint,
-      requirementChecksum: hashRequirementSpec(spec),
-    };
-    return assertRequirementInterpretation({
-      spec,
-      blueprint,
-      clarifications: deriveClarifications(spec),
-    });
+        let candidate: ModelInterpretation;
+        try {
+          const parsed = JSON.parse(outputText) as unknown;
+          candidate = parseStrict(modelInterpretationSchema, parsed);
+        } catch {
+          if (round >= MAX_REPAIR_ROUNDS) throw outputFailure();
+          repairNote = FIXED_REPAIR_INSTRUCTION;
+          continue;
+        }
+
+        const spec = reconcileClarificationAnswers(
+          candidate.spec,
+          input.answers,
+          input.clarificationContext ?? [],
+        );
+        const clarifications = deriveClarifications(spec);
+        if (
+          (input.clarificationContext?.length ?? 0) > 0 &&
+          clarifications.length > 0
+        ) {
+          if (round >= MAX_REPAIR_ROUNDS) throw outputFailure();
+          repairNote = FIXED_REPAIR_INSTRUCTION;
+          continue;
+        }
+        const blueprint = {
+          ...candidate.blueprint,
+          requirementChecksum: hashRequirementSpec(spec),
+        };
+        try {
+          return assertRequirementInterpretation({
+            spec,
+            blueprint,
+            clarifications,
+          });
+        } catch {
+          if (round >= MAX_REPAIR_ROUNDS) throw outputFailure();
+          repairNote = FIXED_REPAIR_INSTRUCTION;
+        }
+      }
+      throw outputFailure();
+    } finally {
+      clearTimeout(totalTimer);
+    }
   }
 }

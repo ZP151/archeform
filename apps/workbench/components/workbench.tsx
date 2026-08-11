@@ -50,6 +50,7 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
               stage: journey.state.stage,
               busy: journey.busy,
               error: journey.state.error,
+              failure: journey.state.failure,
               brief: journey.briefDraft,
               onBriefChange: journey.setBriefDraft,
               onInterpret: () => {
@@ -147,7 +148,10 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
         return (
           <ReleaseWorkspace
             controller={controller.release}
-            onViewEvidence={controller.toggleActivity}
+            onViewEvidence={(trigger) => {
+              controller.activityTriggerRef.current = trigger;
+              controller.toggleActivity();
+            }}
           />
         );
     }

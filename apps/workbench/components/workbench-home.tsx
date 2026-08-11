@@ -1,9 +1,13 @@
 "use client";
 
-import type { RequirementSpecV1 } from "@factory/graph";
+import type {
+  CompositionClarificationV1,
+  RequirementSpecV1,
+} from "@factory/graph";
 
 import type { WorkbenchApplicationSummary } from "../lib/control-plane-client";
 import type { ProductJourneyStage } from "../lib/product-journey/journey-model";
+import type { ProductJourneyFailure } from "../lib/product-journey/interpret-contract";
 import { ClarificationPanel } from "./journey/clarification-panel";
 import { GraphDiffReview } from "./journey/graph-diff-review";
 import { PlanReview, type PlanReviewAlternative } from "./journey/plan-review";
@@ -23,6 +27,7 @@ export type WorkbenchHomeJourneyProps = {
   readonly stage: ProductJourneyStage;
   readonly busy: boolean;
   readonly error: string | null;
+  readonly failure: ProductJourneyFailure | null;
   /** The transient brief editing buffer; the composer binds to it. */
   readonly brief: string;
   readonly onBriefChange: (brief: string) => void;
@@ -31,7 +36,7 @@ export type WorkbenchHomeJourneyProps = {
   readonly onApplyExample: (brief: string) => void;
   readonly requirement: RequirementSpecV1 | null;
   readonly blueprintTitle: string;
-  readonly openQuestions: readonly { key: string; question: string }[];
+  readonly openQuestions: readonly CompositionClarificationV1["questions"][number][];
   readonly answers: Readonly<Record<string, string>>;
   readonly onAnswerChange: (key: string, answer: string) => void;
   readonly onContinue: () => void;
@@ -126,9 +131,28 @@ export function WorkbenchHome({
   onOpen,
   onCompile,
 }: Props) {
+  const requirementFailure =
+    journey.failure?.phase === "interpretation" ||
+    journey.failure?.phase === "clarification"
+      ? journey.failure
+      : null;
+  const requirementOutcome =
+    journey.requirement !== null
+      ? "accepted"
+      : requirementFailure === null
+        ? undefined
+        : "failed";
   return (
     <div className="workbench-home" aria-label="Workbench Home">
-      <section className="home-composer" aria-label="Product creation">
+      <section
+        className="home-composer"
+        aria-label="Product creation"
+        data-requirement-outcome={requirementOutcome}
+        data-requirement-failure-code={requirementFailure?.code}
+        data-journey-outcome={journey.failure === null ? undefined : "failed"}
+        data-journey-failure-phase={journey.failure?.phase}
+        data-journey-failure-code={journey.failure?.code}
+      >
         <JourneySlot journey={journey} commandFocusToken={commandFocusToken} />
       </section>
       <RecentProducts

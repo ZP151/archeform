@@ -3,6 +3,10 @@ import { sha256HexUtf8 } from "./sha256.js";
 import { z } from "zod";
 
 import { experienceDesignSystemSchema } from "./experience.js";
+import {
+  factoryOwnedRecordIdentityDeclarationError,
+  isFactoryOwnedRecordIdentityFieldKey,
+} from "./composition-shared.js";
 
 const identifier = z
   .string()
@@ -451,11 +455,37 @@ function ambiguousTypedSymbolIssues(
   ];
 }
 
+function factoryOwnedRecordIdentityIssues(
+  graph: ApplicationGraphV1,
+): GraphValidationIssue[] {
+  return graph.domain.entities.flatMap((entity, entityIndex) =>
+    entity.fields.flatMap((field, fieldIndex) =>
+      isFactoryOwnedRecordIdentityFieldKey(field.key)
+        ? [
+            {
+              code: "domain.field.factory_identity_reserved",
+              message: factoryOwnedRecordIdentityDeclarationError,
+              path: [
+                "domain",
+                "entities",
+                entityIndex,
+                "fields",
+                fieldIndex,
+                "key",
+              ] as const,
+            },
+          ]
+        : [],
+    ),
+  );
+}
+
 export function parseApplicationGraph(input: unknown): ApplicationGraphV1 {
   const graph = applicationGraphSchema.parse(input);
   const parsingIssues = [
     ...candidateCapabilityIssues(graph),
     ...ambiguousTypedSymbolIssues(graph),
+    ...factoryOwnedRecordIdentityIssues(graph),
     ...compositionGraphSymbolIssues(graph),
   ];
   if (parsingIssues.length > 0) {
@@ -577,6 +607,7 @@ export function validateApplicationGraph(
   ) => issues.push({ code, message, path });
   issues.push(...candidateCapabilityIssues(graph));
   issues.push(...ambiguousTypedSymbolIssues(graph));
+  issues.push(...factoryOwnedRecordIdentityIssues(graph));
 
   const pageIds = new Set(graph.page.pages.map((page) => page.id));
   for (const duplicate of duplicateValues(

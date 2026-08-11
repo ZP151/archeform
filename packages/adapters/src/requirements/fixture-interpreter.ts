@@ -579,9 +579,14 @@ function vagueApprovalInterpretation(
   answers: Readonly<Record<string, string>>,
 ): RequirementInterpretationV1 {
   const openQuestions = [
-    { key: "approval-object", question: "What item requires approval?" },
+    {
+      key: "approval-object",
+      category: "business-rule" as const,
+      question: "What item requires approval?",
+    },
     {
       key: "approval-levels",
+      category: "business-rule" as const,
       question: "How many levels of approval are required?",
     },
   ];
@@ -625,8 +630,8 @@ function vagueApprovalInterpretation(
     openQuestions: openQuestions.map((item) => {
       const answer = answers[item.key];
       return answer === undefined
-        ? { question: item.question }
-        : { question: item.question, answer };
+        ? { category: item.category, question: item.question }
+        : { category: item.category, question: item.question, answer };
     }),
     acceptanceScenarios: [
       {
@@ -738,7 +743,12 @@ function vagueApprovalInterpretation(
 
   const questions = openQuestions
     .filter((item) => answers[item.key] === undefined)
-    .map((item) => ({ key: item.key, question: item.question }));
+    .map((item) => ({
+      key: item.key,
+      category: item.category,
+      defaultPolicy: "required" as const,
+      question: item.question,
+    }));
   return {
     spec,
     blueprint,
@@ -778,18 +788,25 @@ export class FixtureRequirementInterpreter implements RequirementInterpreterAdap
   public async interpret(input: {
     readonly brief: string;
     readonly answers: Readonly<Record<string, string>>;
+    readonly signal?: AbortSignal;
   }): Promise<RequirementInterpretationV1> {
+    if (input.signal?.aborted) {
+      throw new RequirementInterpreterError(
+        "Requirement interpretation timed out.",
+        "timeout",
+      );
+    }
     if (typeof input.brief !== "string" || normalizeBrief(input.brief) === "") {
       throw new RequirementInterpreterError(
         "The requirement brief must be non-empty prose text.",
-        "brief_invalid",
+        "request_invalid",
       );
     }
     const factory = canonicalBriefs.get(normalizeBrief(input.brief));
     if (factory === undefined) {
       throw new RequirementInterpreterError(
         "No fixture interpretation exists for this brief.",
-        "brief_invalid",
+        "request_invalid",
       );
     }
     return assertRequirementInterpretation(factory(input.answers));

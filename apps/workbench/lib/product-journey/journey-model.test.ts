@@ -141,6 +141,29 @@ describe("Product journey model", () => {
     expect(openClarificationQuestions(state)).toEqual([]);
   });
 
+  it("uses the frozen journey codes for the interpretation-cycle bound and exhausted clarification", async () => {
+    const unresolved = await interpretedBrief(vagueBrief);
+    const cycleBound = journeyTransition(
+      stateWith({
+        stage: "clarifying",
+        interpretationCycles: 2,
+        interpretation: unresolved,
+      }),
+      { type: "interpretation-accepted", interpretation: unresolved },
+    );
+    expect(cycleBound.failure?.code).toBe("journey.interpretation_cycle_bound");
+
+    const exhausted = journeyTransition(
+      stateWith({
+        stage: "clarifying",
+        interpretationCycles: 1,
+        interpretation: unresolved,
+      }),
+      { type: "interpretation-accepted", interpretation: unresolved },
+    );
+    expect(exhausted.failure?.code).toBe("journey.clarification_exhausted");
+  });
+
   it("refuses oversized clarification answers", async () => {
     const interpretation = await interpretedBrief(vagueBrief);
     const state = journeyTransition(stateWith({ stage: "brief" }), {
@@ -150,7 +173,7 @@ describe("Product journey model", () => {
     expect(() =>
       journeyTransition(state, {
         type: "clarify-answered",
-        answers: { "q-something": "x".repeat(65) },
+        answers: { "q-something": "x".repeat(1_001) },
       }),
     ).toThrow(/answer/i);
   });
@@ -308,16 +331,26 @@ describe("Product journey model", () => {
   it("fails closed with a bounded error and returns to the brief to retry", async () => {
     let state = journeyTransition(beginProductJourney(), {
       type: "fail",
-      error: "No AI provider is configured.",
+      failure: {
+        phase: "interpretation",
+        code: "requirement.provider_not_configured",
+        message: "Requirement interpretation is not configured.",
+      },
     });
     expect(state.stage).toBe("failed");
-    expect(state.error).toBe("No AI provider is configured.");
+    expect(state.error).toBe("Requirement interpretation is not configured.");
+    expect(state.failure).toEqual({
+      phase: "interpretation",
+      code: "requirement.provider_not_configured",
+      message: "Requirement interpretation is not configured.",
+    });
     state = journeyTransition(state, {
       type: "submit-brief",
       brief: expenseBrief,
     });
     expect(state.stage).toBe("brief");
     expect(state.error).toBeNull();
+    expect(state.failure).toBeNull();
     expect(state.brief).toBe(expenseBrief);
   });
 
@@ -336,7 +369,10 @@ describe("Product journey model", () => {
 
   it("resets a failed journey to retry from a clean workspace", () => {
     const state = journeyTransition(
-      stateWith({ stage: "failed", error: "No AI provider is configured." }),
+      stateWith({
+        stage: "failed",
+        error: "Requirement interpretation is not configured.",
+      }),
       { type: "reset" },
     );
     expect(state).toEqual(beginProductJourney());
@@ -394,6 +430,23 @@ describe("Product journey model", () => {
     expect(() => createRequirementInput(beginProductJourney())).toThrow(
       /interpret/i,
     );
+  });
+
+  it("keeps clarification answers cumulative when a later response adds answers", () => {
+    let state = stateWith({ stage: "clarifying" });
+    state = journeyTransition(state, {
+      type: "clarify-answered",
+      answers: { "approval-object": "expense reports" },
+    });
+    state = journeyTransition(state, {
+      type: "clarify-answered",
+      answers: { "approval-levels": "single" },
+    });
+
+    expect(state.answers).toEqual({
+      "approval-object": "expense reports",
+      "approval-levels": "single",
+    });
   });
 
   it("keeps the two acceptance briefs materially different through the journey", async () => {

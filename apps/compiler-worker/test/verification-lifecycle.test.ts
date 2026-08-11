@@ -19,7 +19,10 @@ import {
   VerificationEnvironment,
   type BoundedRequestResult,
 } from "../src/verifier/verification-environment.js";
-import { dockerHostLookupEnvironment } from "../src/preview-runner.js";
+import {
+  PreviewRunFailure,
+  dockerHostLookupEnvironment,
+} from "../src/preview-runner.js";
 import { runHealthProbe } from "../src/verifier/probes.js";
 
 const runId = "verify-01h3k6f";
@@ -383,19 +386,30 @@ describe("runVerificationLifecycle", () => {
     expect(parseVerificationEvidence(evidence)).toEqual(evidence);
   });
 
-  it("aborts a hanging probe at the lifecycle timeout, skips it, and still cleans up", async () => {
+  it("fails a timed-out required probe, continues later probes, and still cleans up", async () => {
     const deps = dependencies({
-      runProbe: vi.fn(async () => {
-        await new Promise<void>(() => undefined);
-        return passedStep("migration", "migration");
+      runProbe: vi.fn(async (entry) => {
+        if (entry.stepId === "migration") {
+          await new Promise<void>(() => undefined);
+        }
+        return passedStep(entry.stepId, entry.kind);
       }),
     });
     const evidence = await runVerificationLifecycle(validInput(), deps);
 
     expect(deps.stopPreviewRun).toHaveBeenCalledTimes(1);
-    const skipped = evidence.steps[0];
-    expect(skipped.status).toBe("skipped");
-    expect(skipped.summary).toMatch(/timeout/i);
+    expect(evidence.steps[0]).toMatchObject({
+      stepId: "migration",
+      kind: "migration",
+      status: "failed",
+      failureCode: "probe.timeout",
+      summary: "Probe did not finish before the lifecycle timeout.",
+    });
+    expect(evidence.steps[1]).toMatchObject({
+      stepId: "health",
+      kind: "health",
+      status: "passed",
+    });
     expect(evidence.steps.map((step) => step.stepId)).toEqual([
       "migration",
       "health",
@@ -404,25 +418,89 @@ describe("runVerificationLifecycle", () => {
     expect(evidence.cleanup.succeeded).toBe(true);
   });
 
-  it("records a boot failure without fabricating probe results, and still cleans up", async () => {
+  it("records a self-cleaned boot failure and does not stop the preview twice", async () => {
     const deps = dependencies({
       startPreviewRun: vi.fn(async () => {
-        throw new Error("docker exploded");
+        throw new PreviewRunFailure("preview_readiness_failed", true);
+      }),
+      stopPreviewRun: vi.fn(async () => {
+        throw new Error("a second stop must not run");
       }),
     });
     const evidence = await runVerificationLifecycle(validInput(), deps);
 
-    expect(deps.stopPreviewRun).toHaveBeenCalledTimes(1);
+    expect(deps.stopPreviewRun).not.toHaveBeenCalled();
     expect(evidence.steps.map((step) => step.stepId)).toEqual([
       "migration",
       "health",
       "cleanup",
     ]);
-    for (const step of evidence.steps.slice(0, 2)) {
-      expect(step.status).toBe("skipped");
-      expect(step.summary).toMatch(/did not start/i);
-    }
+    expect(evidence.steps[0]).toMatchObject({
+      stepId: "migration",
+      kind: "migration",
+      status: "failed",
+      failureCode: "preview_readiness_failed",
+    });
+    expect(evidence.steps[1]).toMatchObject({
+      stepId: "health",
+      kind: "health",
+      status: "skipped",
+    });
     expect(evidence.cleanup.succeeded).toBe(true);
+    expect(evidence.steps[2]).toMatchObject({
+      stepId: "cleanup",
+      kind: "cleanup",
+      status: "passed",
+    });
+  });
+
+  it.each([
+    "preview_artifact_failed",
+    "preview_compose_up_failed",
+    "preview_port_discovery_failed",
+    "preview_start_timeout",
+    "preview_start_cancelled",
+    "preview_readiness_failed",
+    "preview_start_failed",
+    "preview_health_check_failed",
+  ] as const)("preserves the bounded boot failure code %s", async (code) => {
+    const deps = dependencies({
+      startPreviewRun: vi.fn(async () => {
+        throw new PreviewRunFailure(code, true);
+      }),
+    });
+
+    const evidence = await runVerificationLifecycle(validInput(), deps);
+
+    expect(evidence.steps[0]).toMatchObject({
+      status: "failed",
+      failureCode: code,
+    });
+    expect(evidence.cleanup.succeeded).toBe(true);
+  });
+
+  it("stops after an incomplete boot cleanup and reports stop failure truthfully", async () => {
+    const deps = dependencies({
+      startPreviewRun: vi.fn(async () => {
+        throw new PreviewRunFailure("preview_start_timeout");
+      }),
+      stopPreviewRun: vi.fn(async () => {
+        throw new PreviewRunFailure("preview_stop_failed");
+      }),
+    });
+    const evidence = await runVerificationLifecycle(validInput(), deps);
+
+    expect(deps.stopPreviewRun).toHaveBeenCalledTimes(1);
+    expect(evidence.steps[0]).toMatchObject({
+      status: "failed",
+      failureCode: "preview_start_timeout",
+    });
+    expect(evidence.steps[1]?.status).toBe("skipped");
+    expect(evidence.steps[2]).toMatchObject({
+      stepId: "cleanup",
+      status: "failed",
+    });
+    expect(evidence.cleanup.succeeded).toBe(false);
   });
 
   it("reports a cleanup failure truthfully instead of crashing the evidence", async () => {

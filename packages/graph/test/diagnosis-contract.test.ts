@@ -582,6 +582,87 @@ describe("diagnoseVerification", () => {
     expect(diagnosis.draftDiff).toBeNull();
   });
 
+  it.each([
+    [
+      "preview_artifact_failed",
+      "runtime.preview_artifact_failed",
+      "The isolated preview artifacts could not be verified or materialized before Docker startup. Recreate them from the same immutable Compilation; no Graph change is proposed.",
+    ],
+    [
+      "preview_compose_up_failed",
+      "runtime.preview_compose_up_failed",
+      "Docker Compose failed while building or starting the isolated services, including bootstrap migration. Reproduce that stage with the same immutable artifacts; no Graph change is proposed.",
+    ],
+    [
+      "preview_port_discovery_failed",
+      "runtime.preview_port_discovery_failed",
+      "The isolated services started, but Docker Compose did not return valid loopback web and API ports. Verify the generated port publication contract; no Graph change is proposed.",
+    ],
+    [
+      "preview_start_timeout",
+      "runtime.preview_start_timeout",
+      "Preview startup exceeded the existing operation deadline. Reproduce the failure before changing any timeout; no Graph change is proposed.",
+    ],
+    [
+      "preview_start_cancelled",
+      "runtime.preview_start_cancelled",
+      "Preview startup was cancelled before completion. Verify the caller and cleanup transition before retrying from a clean resource state; no Graph change is proposed.",
+    ],
+    [
+      "preview_readiness_failed",
+      "runtime.preview_readiness_failed",
+      "The isolated services published ports, but the generated web service did not become ready within the existing readiness window. Reproduce readiness against the same artifacts; no Graph change is proposed.",
+    ],
+    [
+      "preview_health_check_failed",
+      "runtime.preview_readiness_failed",
+      "The isolated services published ports, but the generated web service did not become ready within the existing readiness window. Reproduce readiness against the same artifacts; no Graph change is proposed.",
+    ],
+  ])("maps %s to its bounded runtime failure", (failureCode, code, summary) => {
+    const graph = expenseGraph();
+    const diagnosis = diagnoseVerification(
+      evidence([failedStep("migration", "migration", failureCode)]),
+      graph,
+      lockFixture(hashApplicationGraph(graph), true),
+    );
+
+    expect(diagnosis.category).toBe("runtime");
+    expect(diagnosis.code).toBe(code);
+    expect(diagnosis.summary).toBe(summary);
+    expect(diagnosis.affectedPaths).toEqual(["/metadata"]);
+    expect(diagnosis.draftDiff).toBeNull();
+  });
+
+  it("keeps the legacy generic preview-start diagnosis neutral", () => {
+    const graph = expenseGraph();
+    const diagnosis = diagnoseVerification(
+      evidence([failedStep("migration", "migration", "preview_start_failed")]),
+      graph,
+      lockFixture(hashApplicationGraph(graph), true),
+    );
+
+    expect(diagnosis.code).toBe("runtime.preview_start_failed");
+    expect(diagnosis.summary).toBe(
+      "The isolated preview failed to start; the cause is not determined by this diagnosis.",
+    );
+    expect(diagnosis.affectedPaths).toEqual(["/metadata"]);
+    expect(diagnosis.draftDiff).toBeNull();
+  });
+
+  it("maps a required probe deadline to one bounded runtime failure", () => {
+    const graph = expenseGraph();
+    const diagnosis = diagnoseVerification(
+      evidence([failedStep("migration", "migration", "probe.timeout")]),
+      graph,
+      lockFixture(hashApplicationGraph(graph), true),
+    );
+
+    expect(diagnosis.category).toBe("runtime");
+    expect(diagnosis.code).toBe("runtime.probe_timeout");
+    expect(diagnosis.affectedPaths).toEqual(["/metadata"]);
+    expect(diagnosis.draftDiff).toBeNull();
+  });
+
   it("diagnoses only the first failed step in evidence order", () => {
     const graph = expenseGraph();
     const diagnosis = diagnoseVerification(

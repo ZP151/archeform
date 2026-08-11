@@ -281,10 +281,32 @@ describe("CompositionPlanV1", () => {
       apiVersion: "factory.composition-clarification/v1",
       requirementChecksum: hashRequirementSpec(requirement),
       questions: [
-        { key: "currency", question: "Which currency do expenses use?" },
+        {
+          key: "currency",
+          category: "business-rule",
+          defaultPolicy: "required",
+          question: "Which currency do expenses use?",
+        },
       ],
     });
     expect(clarification.questions).toHaveLength(1);
+  });
+
+  it("rejects Factory visual defaults for authorization questions", () => {
+    expect(() =>
+      parseCompositionClarification({
+        apiVersion: "factory.composition-clarification/v1",
+        requirementChecksum: hashRequirementSpec(requirement),
+        questions: [
+          {
+            key: "approval-role",
+            category: "authorization",
+            defaultPolicy: "factory-standard-visual",
+            question: "Which role can approve a payment?",
+          },
+        ],
+      }),
+    ).toThrow();
   });
 
   it("hashes canonically regardless of object key order", () => {

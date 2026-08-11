@@ -219,7 +219,7 @@ describe("composeProductDraft", () => {
         from: "appointment",
         to: "service",
         kind: "many-to-one",
-        field: "serviceRef",
+        field: "serviceRefId",
       },
       {
         from: "appointment-booking-session",
@@ -246,6 +246,65 @@ describe("composeProductDraft", () => {
       expect(transition.effects).toBeUndefined();
     }
     expect(composed.graph.integration.compositionSelections).toHaveLength(6);
+  });
+
+  it("normalizes a semantic reference name to an explicit id scalar before compilation", () => {
+    const { requirement, blueprint: baseBlueprint } = expenseApprovalPrompt();
+    const blueprint = assertProductBlueprint({
+      ...baseBlueprint,
+      entities: [
+        ...baseBlueprint.entities,
+        {
+          key: "user",
+          label: "User",
+          fields: [
+            {
+              key: "email",
+              label: "Email",
+              type: "text",
+              required: true,
+            },
+          ],
+        },
+        {
+          key: "audit-log",
+          label: "Audit log",
+          fields: [
+            {
+              key: "performedBy",
+              label: "Performed by",
+              type: "reference",
+              required: true,
+              referenceTo: "user",
+            },
+          ],
+        },
+      ],
+    });
+    const base = blankDraft("expense-audit", "Expense Audit");
+    const [alternative] = planProductAlternatives({
+      requirement,
+      blueprint,
+      baseDraft: base,
+    });
+    const { diff } = composeProductDraft({
+      plan: alternative.plan,
+      blueprint,
+      baseDraft: base,
+    });
+    const composed = applyGraphDiffToDraft(base, diff);
+
+    expect(
+      composed.graph.domain.entities
+        .find((entity) => entity.key === "audit-log")
+        ?.fields.map((field) => field.key),
+    ).toContain("performedById");
+    expect(composed.graph.domain.relations).toContainEqual({
+      from: "audit-log",
+      to: "user",
+      kind: "many-to-one",
+      field: "performedById",
+    });
   });
 
   it("produces different composed products for the two prompts", () => {
@@ -327,9 +386,7 @@ describe("composeProductDraft", () => {
     expect(composed.graph.flow.flows[0].transitions[0].effects).toEqual([
       { capability: "audit.record", operation: "record" },
     ]);
-    expect(
-      composed.graph.flow.flows[0].transitions[0].effects,
-    ).not.toEqual(
+    expect(composed.graph.flow.flows[0].transitions[0].effects).not.toEqual(
       expect.arrayContaining([
         expect.objectContaining({ capability: "notification.send" }),
       ]),

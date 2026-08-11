@@ -108,16 +108,18 @@ describe("Money pricing runtime compilation", () => {
       ]),
     );
 
-    expect(files["api/prisma/schema.prisma"]).toContain("model PriceSnapshot");
+    expect(files["api/prisma/schema.prisma"]).toContain(
+      "model Factory_PriceSnapshot",
+    );
     expect(files["database/prisma/schema.prisma"]).toContain(
-      "model PriceAllocation",
+      "model Factory_PriceAllocation",
     );
     expect(
       files["database/prisma/migrations/0001_initial/migration.sql"],
-    ).toContain('CREATE TABLE "PriceSnapshot"');
+    ).toContain('CREATE TABLE "Factory_PriceSnapshot"');
     expect(
       files["database/prisma/migrations/0001_initial/migration.sql"],
-    ).toContain('CREATE TABLE "PriceAllocation"');
+    ).toContain('CREATE TABLE "Factory_PriceAllocation"');
   });
 
   it("derives an Ecommerce quote from locked Catalog records instead of client prices", async () => {

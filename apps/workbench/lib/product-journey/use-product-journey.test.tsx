@@ -18,6 +18,7 @@ import {
   useProductJourney,
   type ProductJourneyController,
 } from "./use-product-journey";
+import { ANSWER_MAX_LENGTH } from "./journey-model";
 import type { WorkbenchProductApplied } from "../control-plane-client";
 
 const fixtureInterpreter = new FixtureRequirementInterpreter();
@@ -53,6 +54,50 @@ async function interpretationFor(
   return fixtureInterpreter.interpret({ brief, answers });
 }
 
+function withOpenQuestion(
+  interpretation: RequirementInterpretationV1,
+  key: string,
+  question: string,
+  policy: {
+    readonly category:
+      | "experience.visual-style"
+      | "authorization"
+      | "visibility"
+      | "role"
+      | "business-rule"
+      | "data"
+      | "integration";
+    readonly defaultPolicy: "factory-standard-visual" | "required";
+  } = { category: "business-rule", defaultPolicy: "required" },
+): RequirementInterpretationV1 {
+  const spec = {
+    ...structuredClone(interpretation.spec),
+    openQuestions: [{ category: policy.category, question }],
+  };
+  const requirementChecksum = hashRequirementSpec(spec);
+  return {
+    spec,
+    blueprint: {
+      ...structuredClone(interpretation.blueprint),
+      requirementChecksum,
+    },
+    clarifications: [
+      {
+        apiVersion: "factory.composition-clarification/v1",
+        requirementChecksum,
+        questions: [
+          {
+            key,
+            category: policy.category,
+            defaultPolicy: policy.defaultPolicy,
+            question,
+          },
+        ],
+      },
+    ],
+  };
+}
+
 function alternativesFor(interpretation: RequirementInterpretationV1) {
   return planProductAlternatives({
     requirement: interpretation.spec,
@@ -70,6 +115,7 @@ type RouteStub = {
   readonly respond: (init?: RequestInit) => unknown;
   readonly status?: number;
   readonly error?: string;
+  readonly failureBody?: unknown;
 };
 
 /**
@@ -79,10 +125,18 @@ type RouteStub = {
  */
 function stubTransport(overrides: {
   readonly createProduct?: (init?: RequestInit) => unknown;
+  readonly createProductRejection?: {
+    readonly status: number;
+    readonly body: unknown;
+  };
   readonly plan?: (init?: RequestInit) => unknown;
   readonly choices?: (init?: RequestInit) => unknown;
   readonly apply?: (init?: RequestInit) => unknown;
   readonly interpret?: (init?: RequestInit) => unknown;
+  readonly interpretRejection?: {
+    readonly status: number;
+    readonly body: unknown;
+  };
 }) {
   const routes: RouteStub[] = [];
   const interpretBody = (
@@ -111,6 +165,8 @@ function stubTransport(overrides: {
       const { brief, answers } = interpretBody(init);
       return { interpretation: await interpretationFor(brief, answers) };
     },
+    status: overrides.interpretRejection?.status,
+    failureBody: overrides.interpretRejection?.body,
   });
   routes.push({
     matches: (url, init) =>
@@ -139,6 +195,8 @@ function stubTransport(overrides: {
         },
       };
     },
+    status: overrides.createProductRejection?.status,
+    failureBody: overrides.createProductRejection?.body,
   });
   routes.push({
     matches: (url) => url.endsWith("/plan"),
@@ -183,7 +241,9 @@ function stubTransport(overrides: {
         if (!route.matches(url, init)) continue;
         const status = route.status ?? 200;
         const payload =
-          status === 200 ? await route.respond(init) : { error: route.error };
+          status === 200
+            ? await route.respond(init)
+            : (route.failureBody ?? { error: route.error });
         return new Response(JSON.stringify(payload), {
           status,
           headers: { "content-type": "application/json" },
@@ -243,6 +303,7 @@ describe("useProductJourney", () => {
   afterEach(() => {
     globalThis.__controller = undefined;
     act(() => root.unmount());
+    vi.useRealTimers();
     container.remove();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
@@ -256,7 +317,10 @@ describe("useProductJourney", () => {
     await act(async () => {
       await controller().submitBrief();
     });
-    expect(controller().state.stage).toBe("planning");
+    expect(
+      controller().state.stage,
+      controller().state.error ?? "no journey error",
+    ).toBe("planning");
     expect(controller().state.interpretation?.spec.requirementId).toBe(
       "expense-approval-requirement",
     );
@@ -289,18 +353,384 @@ describe("useProductJourney", () => {
     });
     expect(controller().state.stage).toBe("planning");
     expect(controller().openQuestions).toEqual([]);
-    // Nothing is left open, so the transient buffer is pruned back to empty:
-    // answered questions leave no stale values behind.
-    expect(controller().answers).toEqual({});
+    // Answered values remain cumulative for the full transient journey. A
+    // later provider rephrasing can therefore inherit the prior answer rather
+    // than asking the user again or losing context.
+    expect(controller().answers).toEqual({
+      "approval-object": "expense reports",
+      "approval-levels": "single",
+    });
+  });
+
+  it("converges a semantically repeated question in the second interpretation without losing its answer", async () => {
+    const first = await interpretationFor(vagueBrief);
+    const repeated = withOpenQuestion(
+      first,
+      "approval-level-count",
+      "What number of approval levels are required?",
+    );
+    let calls = 0;
+    const transport = stubTransport({
+      interpret: () => ({ interpretation: calls++ === 0 ? first : repeated }),
+    });
+    act(() => controller().setBriefDraft(vagueBrief));
+    await act(async () => controller().submitBrief());
+    act(() => {
+      controller().setAnswer("approval-object", "expense reports");
+      controller().setAnswer("approval-levels", "single");
+    });
+    await act(async () => controller().answerQuestions());
+
+    expect(
+      controller().state.stage,
+      controller().state.error ?? "no journey error",
+    ).toBe("planning");
+    expect(controller().openQuestions).toEqual([]);
+    expect(controller().answers).toMatchObject({
+      "approval-object": "expense reports",
+      "approval-levels": "single",
+      "approval-level-count": "single",
+    });
+    const interpretBodies = transport.mock.calls
+      .filter(([url]) => String(url).includes("/api/requirements/interpret"))
+      .map(([, init]) => JSON.parse(String(init?.body ?? "{}")));
+    expect(interpretBodies).toHaveLength(2);
+    expect(interpretBodies[1].answers).toMatchObject({
+      "approval-object": "expense reports",
+      "approval-levels": "single",
+    });
+    expect(interpretBodies[1].clarificationContext).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "approval-object",
+          question: expect.any(String),
+          answer: "expense reports",
+        }),
+        expect.objectContaining({
+          key: "approval-levels",
+          question: expect.any(String),
+          answer: "single",
+        }),
+      ]),
+    );
+    expect(interpretBodies[1].priorInterpretation).toEqual(first);
+  });
+
+  it("uses a declared safe default for noncritical ambiguity at the two-cycle bound", async () => {
+    const first = await interpretationFor(vagueBrief);
+    const visualQuestion = withOpenQuestion(
+      first,
+      "visual-theme",
+      "Which visual theme should the product use?",
+      {
+        category: "experience.visual-style",
+        defaultPolicy: "factory-standard-visual",
+      },
+    );
+    let calls = 0;
+    stubTransport({
+      interpret: () => ({
+        interpretation: calls++ === 0 ? first : visualQuestion,
+      }),
+    });
+    act(() => controller().setBriefDraft(vagueBrief));
+    await act(async () => controller().submitBrief());
+    act(() => {
+      controller().setAnswer("approval-object", "expense reports");
+      controller().setAnswer("approval-levels", "single");
+    });
+    await act(async () => controller().answerQuestions());
+
+    expect(controller().state.stage).toBe("planning");
+    expect(controller().answers["visual-theme"]).toBe(
+      "Use the product's standard visual theme.",
+    );
+    expect(calls).toBe(2);
+  });
+
+  it("fails with a bounded message when critical ambiguity remains after two interpretation cycles", async () => {
+    const first = await interpretationFor(vagueBrief);
+    const criticalQuestion = withOpenQuestion(
+      first,
+      "payment-approver",
+      "Which role may approve a payment?",
+      { category: "authorization", defaultPolicy: "required" },
+    );
+    let calls = 0;
+    stubTransport({
+      interpret: () => ({
+        interpretation: calls++ === 0 ? first : criticalQuestion,
+      }),
+    });
+    act(() => controller().setBriefDraft(vagueBrief));
+    await act(async () => controller().submitBrief());
+    act(() => {
+      controller().setAnswer("approval-object", "expense reports");
+      controller().setAnswer("approval-levels", "single");
+    });
+    await act(async () => controller().answerQuestions());
+
+    expect(controller().state.stage).toBe("failed");
+    expect(controller().state.error).toBe(
+      "Critical requirement ambiguity remains after two interpretation cycles.",
+    );
+    expect(controller().state.failure?.code).toBe(
+      "journey.clarification_exhausted",
+    );
+    expect(calls).toBe(2);
+  });
+
+  it("does not default a visual question that also contains a critical payment decision", async () => {
+    const first = await interpretationFor(vagueBrief);
+    const mixedQuestion = withOpenQuestion(
+      first,
+      "visual-payment-provider",
+      "Which visual style and payment provider should be used?",
+      { category: "integration", defaultPolicy: "required" },
+    );
+    let calls = 0;
+    stubTransport({
+      interpret: () => ({
+        interpretation: calls++ === 0 ? first : mixedQuestion,
+      }),
+    });
+    act(() => controller().setBriefDraft(vagueBrief));
+    await act(async () => controller().submitBrief());
+    act(() => {
+      controller().setAnswer("approval-object", "expense reports");
+      controller().setAnswer("approval-levels", "single");
+    });
+    await act(async () => controller().answerQuestions());
+
+    expect(controller().state.stage).toBe("failed");
+    expect(controller().answers["visual-payment-provider"]).toBeUndefined();
+    expect(calls).toBe(2);
+  });
+
+  it("fails the initial interpretation independently when its phase timeout expires", async () => {
+    vi.useFakeTimers();
+    const interpretation = await interpretationFor(expenseBrief);
+    stubTransport({
+      interpret: () =>
+        new Promise((resolve) => {
+          window.setTimeout(() => resolve({ interpretation }), 556_000);
+        }),
+    });
+    act(() => controller().setBriefDraft(expenseBrief));
+    let pending!: Promise<void>;
+    act(() => {
+      pending = controller().submitBrief();
+    });
+    await act(async () => vi.advanceTimersByTimeAsync(555_000));
+
+    expect(controller().state.stage).toBe("failed");
+    expect(controller().state.error).toBe(
+      "Requirement interpretation timed out.",
+    );
+    expect(controller().state.failure).toEqual({
+      phase: "interpretation",
+      code: "requirement.timeout",
+      message: "Requirement interpretation timed out.",
+    });
+    expect(controller().state.brief).toBe(expenseBrief);
+    expect(controller().briefDraft).toBe(expenseBrief);
+    await act(async () => vi.advanceTimersByTimeAsync(1_000));
+    await pending;
+    vi.useRealTimers();
+  });
+
+  it("fails clarification independently when its phase timeout expires", async () => {
+    vi.useFakeTimers();
+    const first = await interpretationFor(vagueBrief);
+    const second = await interpretationFor(vagueBrief, {
+      "approval-object": "expense reports",
+      "approval-levels": "single",
+    });
+    let calls = 0;
+    stubTransport({
+      interpret: () => {
+        calls += 1;
+        if (calls === 1) return { interpretation: first };
+        return new Promise((resolve) => {
+          window.setTimeout(() => resolve({ interpretation: second }), 556_000);
+        });
+      },
+    });
+    act(() => controller().setBriefDraft(vagueBrief));
+    await act(async () => controller().submitBrief());
+    act(() => {
+      controller().setAnswer("approval-object", "expense reports");
+      controller().setAnswer("approval-levels", "single");
+    });
+    let pending!: Promise<void>;
+    act(() => {
+      pending = controller().answerQuestions();
+    });
+    await act(async () => vi.advanceTimersByTimeAsync(555_000));
+
+    expect(controller().state.stage).toBe("failed");
+    expect(controller().state.error).toBe(
+      "Requirement clarification timed out.",
+    );
+    expect(controller().state.failure).toEqual({
+      phase: "clarification",
+      code: "requirement.timeout",
+      message: "Requirement clarification timed out.",
+    });
+    expect(controller().state.brief).toBe(vagueBrief);
+    expect(controller().answers).toMatchObject({
+      "approval-object": "expense reports",
+      "approval-levels": "single",
+    });
+    await act(async () => vi.advanceTimersByTimeAsync(1_000));
+    await pending;
+  });
+
+  it("allows the bounded clarification phase to cover provider repair rounds", async () => {
+    vi.useFakeTimers();
+    const first = await interpretationFor(vagueBrief);
+    const second = await interpretationFor(vagueBrief, {
+      "approval-object": "expense reports",
+      "approval-levels": "single",
+    });
+    let calls = 0;
+    stubTransport({
+      interpret: () => {
+        calls += 1;
+        if (calls === 1) return { interpretation: first };
+        return new Promise((resolve) => {
+          window.setTimeout(() => resolve({ interpretation: second }), 181_000);
+        });
+      },
+    });
+    act(() => controller().setBriefDraft(vagueBrief));
+    await act(async () => controller().submitBrief());
+    act(() => {
+      controller().setAnswer("approval-object", "expense reports");
+      controller().setAnswer("approval-levels", "single");
+    });
+    let pending!: Promise<void>;
+    act(() => {
+      pending = controller().answerQuestions();
+    });
+    await act(async () => vi.advanceTimersByTimeAsync(180_000));
+
+    expect(controller().state.stage).toBe("clarifying");
+
+    await act(async () => vi.advanceTimersByTimeAsync(1_000));
+    await pending;
+    expect(controller().state.stage).toBe("planning");
+  });
+
+  it("keeps the interpretation deadline active while the response body stalls", async () => {
+    const interpretation = await interpretationFor(expenseBrief);
+    vi.useFakeTimers();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          ({
+            ok: true,
+            json: () =>
+              new Promise((resolve) => {
+                window.setTimeout(() => resolve({ interpretation }), 556_000);
+              }),
+          }) as Response,
+      ),
+    );
+    act(() => controller().setBriefDraft(expenseBrief));
+    let pending!: Promise<void>;
+    act(() => {
+      pending = controller().submitBrief();
+    });
+    await act(async () => vi.advanceTimersByTimeAsync(555_000));
+
+    expect(controller().state.stage).toBe("failed");
+    expect(controller().state.error).toBe(
+      "Requirement interpretation timed out.",
+    );
+    await act(async () => vi.advanceTimersByTimeAsync(1_000));
+    await pending;
+  });
+
+  it("reconciles a late product review completion with the same request identity", async () => {
+    const interpretation = await interpretationFor(expenseBrief);
+    vi.useFakeTimers();
+    const requestIds: string[] = [];
+    const lateReview = new Promise((resolve) => {
+      window.setTimeout(
+        () =>
+          resolve({
+            review: {
+              id: "request-late-review",
+              applicationGraphId: interpretation.spec.requirementId,
+              status: "planned",
+              requirementChecksum: hashRequirementSpec(interpretation.spec),
+              draftBaseChecksum: "sha256:blank",
+            },
+          }),
+        181_000,
+      );
+    });
+    stubTransport({
+      interpret: () => ({ interpretation }),
+      createProduct: (init) => {
+        requestIds.push(
+          (JSON.parse(String(init?.body)) as { requestId: string }).requestId,
+        );
+        return lateReview;
+      },
+    });
+    act(() => controller().setBriefDraft(expenseBrief));
+    await act(async () => controller().submitBrief());
+    await act(async () => vi.advanceTimersByTimeAsync(180_000));
+    await act(async () => vi.advanceTimersByTimeAsync(1_000));
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(requestIds).toHaveLength(2);
+    expect(new Set(requestIds).size).toBe(1);
+    expect(controller().state.stage).toBe("planning");
+    expect(controller().state.review?.id).toBe("request-late-review");
+  });
+
+  it("bounds product planning independently", async () => {
+    const interpretation = await interpretationFor(expenseBrief);
+    vi.useFakeTimers();
+    stubTransport({
+      interpret: () => ({ interpretation }),
+      plan: () =>
+        new Promise((resolve) => {
+          window.setTimeout(() => resolve({ alternatives: [] }), 181_000);
+        }),
+    });
+    act(() => controller().setBriefDraft(expenseBrief));
+    await act(async () => controller().submitBrief());
+    await act(async () => vi.advanceTimersByTimeAsync(360_000));
+
+    expect(controller().state.stage).toBe("failed");
+    expect(controller().state.error).toBe(
+      "Product plan reconciliation timed out.",
+    );
+    expect(controller().state.failure).toEqual({
+      phase: "planning",
+      code: "product.planning_reconciliation_timeout",
+      message: "Product plan reconciliation timed out.",
+    });
+    await act(async () => vi.advanceTimersByTimeAsync(1_000));
   });
 
   it("bounds the answers buffer and treats an emptied input as unanswered", () => {
     stubTransport({});
     act(() => {
-      controller().setAnswer("approval-object", "x".repeat(65));
+      controller().setAnswer("approval-object", "x".repeat(1_001));
       controller().setAnswer("approval-levels", "single");
     });
-    expect(controller().answers["approval-object"]).toHaveLength(64);
+    expect(controller().answers["approval-object"]).toHaveLength(
+      ANSWER_MAX_LENGTH,
+    );
     act(() => {
       controller().setAnswer("approval-levels", "   ");
     });
@@ -369,6 +799,59 @@ describe("useProductJourney", () => {
     expect(controller().state.diffChecksum).toBe("sha256:diff");
   });
 
+  it("aborts each stalled choice attempt and stops after one reconciliation", async () => {
+    vi.useFakeTimers();
+    const signals: AbortSignal[] = [];
+    stubTransport({
+      choices: (init) => {
+        signals.push(init?.signal as AbortSignal);
+        return new Promise(() => undefined);
+      },
+    });
+    act(() => controller().setBriefDraft(expenseBrief));
+    await act(async () => controller().submitBrief());
+
+    let pending!: Promise<void>;
+    act(() => {
+      pending = controller().chooseAlternative("standard");
+    });
+    await act(async () => vi.advanceTimersByTimeAsync(180_000));
+
+    expect(signals).toHaveLength(2);
+    expect(signals[0].aborted).toBe(true);
+    expect(signals[1].aborted).toBe(false);
+
+    await act(async () => vi.advanceTimersByTimeAsync(180_000));
+    await pending;
+
+    expect(signals).toHaveLength(2);
+    expect(signals[1].aborted).toBe(true);
+    expect(controller().state.failure).toEqual({
+      phase: "decision",
+      code: "product.failed",
+      message: "Product decision reconciliation timed out.",
+    });
+  });
+
+  it("reconciles one lost choice response with the same alternative", async () => {
+    let calls = 0;
+    stubTransport({
+      choices: () => {
+        calls += 1;
+        if (calls === 1) throw new TypeError("response lost");
+        return { checksum: "sha256:stable-diff" };
+      },
+    });
+    act(() => controller().setBriefDraft(expenseBrief));
+    await act(async () => controller().submitBrief());
+
+    await act(async () => controller().chooseAlternative("standard"));
+
+    expect(calls).toBe(2);
+    expect(controller().state.stage).toBe("reviewing");
+    expect(controller().state.diffChecksum).toBe("sha256:stable-diff");
+  });
+
   it("applies the approved product and returns the composed Graph for adoption", async () => {
     stubTransport({});
     act(() => {
@@ -397,6 +880,82 @@ describe("useProductJourney", () => {
     expect(captured.applied?.graph).not.toBeNull();
   });
 
+  it("aborts each stalled apply attempt and stops after one reconciliation", async () => {
+    vi.useFakeTimers();
+    const signals: AbortSignal[] = [];
+    stubTransport({
+      apply: (init) => {
+        signals.push(init?.signal as AbortSignal);
+        return new Promise(() => undefined);
+      },
+    });
+    act(() => controller().setBriefDraft(expenseBrief));
+    await act(async () => controller().submitBrief());
+    await act(async () => controller().chooseAlternative("standard"));
+
+    let pending!: Promise<WorkbenchProductApplied | null>;
+    act(() => {
+      pending = controller().applyProduct();
+    });
+    await act(async () => vi.advanceTimersByTimeAsync(180_000));
+
+    expect(signals).toHaveLength(2);
+    expect(signals[0].aborted).toBe(true);
+    expect(signals[1].aborted).toBe(false);
+
+    await act(async () => vi.advanceTimersByTimeAsync(180_000));
+    await pending;
+
+    expect(signals).toHaveLength(2);
+    expect(signals[1].aborted).toBe(true);
+    expect(controller().state.failure).toEqual({
+      phase: "apply",
+      code: "product.failed",
+      message: "Product application reconciliation timed out.",
+    });
+  });
+
+  it("reconciles one lost apply response to the exact applied result", async () => {
+    let calls = 0;
+    const graph = blankDraftGraph("expense-approval-requirement");
+    stubTransport({
+      apply: () => {
+        calls += 1;
+        if (calls === 1) throw new TypeError("accepted response lost");
+        return {
+          draftRevision: {
+            id: "draft-cuid-2",
+            revisionNumber: 2,
+            graph,
+          },
+          review: {
+            applicationGraphId: "expense-approval-requirement",
+            status: "applied",
+          },
+        };
+      },
+    });
+    act(() => controller().setBriefDraft(expenseBrief));
+    await act(async () => controller().submitBrief());
+    await act(async () => controller().chooseAlternative("standard"));
+
+    const captured: { applied: WorkbenchProductApplied | null } = {
+      applied: null,
+    };
+    await act(async () => {
+      captured.applied = await controller().applyProduct();
+    });
+
+    expect(calls).toBe(2);
+    expect(captured.applied).toEqual({
+      applicationGraphId: "expense-approval-requirement",
+      revisionNumber: 2,
+      graph,
+      reviewStatus: "applied",
+    });
+    expect(controller().state.stage).toBe("applied");
+  });
+
   it("fails closed when the interpret provider is unavailable and retries", async () => {
     stubTransport({
       interpret: () => {
@@ -422,6 +981,142 @@ describe("useProductJourney", () => {
     expect(controller().state.stage).toBe("failed");
   });
 
+  it.each([
+    [
+      400,
+      "requirement.request_invalid",
+      "Check the requirement and try again.",
+    ],
+    [
+      422,
+      "requirement.output_invalid",
+      "Requirement interpretation was rejected.",
+    ],
+    [
+      502,
+      "requirement.provider_rejected",
+      "Requirement interpretation could not start.",
+    ],
+    [
+      503,
+      "requirement.provider_not_configured",
+      "Requirement interpretation is not configured.",
+    ],
+    [
+      503,
+      "requirement.provider_unavailable",
+      "Requirement interpretation is temporarily unavailable.",
+    ],
+    [504, "requirement.timeout", "Requirement interpretation timed out."],
+    [500, "requirement.failed", "Requirement interpretation failed."],
+  ] as const)(
+    "maps exact interpretation failure %s/%s to fixed local state",
+    async (status, code, message) => {
+      stubTransport({
+        interpretRejection: {
+          status,
+          body: {
+            error: {
+              apiVersion: "factory.requirement-interpretation-error/v1",
+              code,
+            },
+          },
+        },
+      });
+      act(() => controller().setBriefDraft(expenseBrief));
+
+      await act(async () => controller().submitBrief());
+
+      expect(controller().state.stage).toBe("failed");
+      expect(controller().state.error).toBe(message);
+      expect(controller().state.failure).toEqual({
+        phase: "interpretation",
+        code,
+        message,
+      });
+    },
+  );
+
+  it.each([
+    {
+      status: 503,
+      body: {
+        error: {
+          apiVersion: "factory.requirement-interpretation-error/v1",
+          code: "requirement.provider_unavailable",
+          detail: "HOSTILE-SENTINEL-MUST-NOT-SURFACE",
+        },
+      },
+    },
+    {
+      status: 502,
+      body: {
+        error: {
+          apiVersion: "factory.requirement-interpretation-error/v1",
+          code: "requirement.provider_unavailable",
+        },
+      },
+    },
+    {
+      status: 503,
+      body: {
+        error: {
+          apiVersion: "factory.requirement-interpretation-error/v2",
+          code: "requirement.provider_unavailable",
+        },
+      },
+    },
+    {
+      status: 503,
+      body: {
+        error: {
+          apiVersion: "factory.requirement-interpretation-error/v1",
+          code: "requirement.hostile-unknown",
+        },
+      },
+    },
+  ])(
+    "collapses malformed, extra, unknown, or status-mismatched failure bodies",
+    async ({ status, body }) => {
+      stubTransport({ interpretRejection: { status, body } });
+      act(() => controller().setBriefDraft(expenseBrief));
+
+      await act(async () => controller().submitBrief());
+
+      expect(controller().state.failure).toEqual({
+        phase: "interpretation",
+        code: "requirement.failed",
+        message: "Requirement interpretation failed.",
+      });
+      expect(JSON.stringify(controller().state)).not.toContain(
+        "HOSTILE-SENTINEL-MUST-NOT-SURFACE",
+      );
+    },
+  );
+
+  it("strictly revalidates the exact success envelope before accepting it", async () => {
+    const interpretation = await interpretationFor(expenseBrief);
+    stubTransport({
+      interpret: () => ({
+        interpretation,
+        extra: "HOSTILE-SENTINEL-MUST-NOT-SURFACE",
+      }),
+    });
+    act(() => controller().setBriefDraft(expenseBrief));
+
+    await act(async () => controller().submitBrief());
+
+    expect(controller().state.failure).toEqual({
+      phase: "interpretation",
+      code: "requirement.failed",
+      message: "Requirement interpretation failed.",
+    });
+    expect(controller().state.interpretation).toBeNull();
+    expect(JSON.stringify(controller().state)).not.toContain(
+      "HOSTILE-SENTINEL-MUST-NOT-SURFACE",
+    );
+  });
+
   it("bounds a rejected product requirement to a retryable message", async () => {
     stubTransport({
       createProduct: () => {
@@ -438,6 +1133,33 @@ describe("useProductJourney", () => {
     expect(controller().state.stage).toBe("failed");
     expect(controller().state.error).toBeTruthy();
     expect(controller().state.brief).toBe(expenseBrief);
+  });
+
+  it("surfaces only the approved rejection code with the safe product failure", async () => {
+    stubTransport({
+      createProductRejection: {
+        status: 400,
+        body: {
+          code: "composition.blueprint_invalid",
+          message: "Rejected must-not-echo blueprint details.",
+          rejectedValue: "must-not-echo",
+        },
+      },
+    });
+    act(() => controller().setBriefDraft(expenseBrief));
+
+    await act(async () => {
+      await controller().submitBrief();
+    });
+
+    expect(controller().state.stage).toBe("failed");
+    expect(controller().state.error).toBe(
+      "The control plane rejected the product requirement. (composition.blueprint_invalid)",
+    );
+    expect(controller().state.error).not.toContain("must-not-echo");
+    expect(controller().state.failure?.code).toBe(
+      "composition.blueprint_invalid",
+    );
   });
 
   it("resets a finished journey so the next product starts clean", async () => {

@@ -279,6 +279,7 @@ async function runChainPrologue(
   context: ProbeContext,
   journey: RoleJourneyFixture,
   registry: readonly RegisteredApiAction[],
+  stepKind: VerificationStepV1["kind"] = "role-journey",
 ): Promise<ChainPrologueResult> {
   let recordId: string | undefined;
   for (const [index, step] of journey.chain!.entries()) {
@@ -309,7 +310,7 @@ async function runChainPrologue(
           ok: false,
           step: failedStep(
             context.entry,
-            "role-journey",
+            stepKind,
             "role-journey.chain_unreachable",
             "A chain prologue request did not respond.",
             result.durationMs,
@@ -321,7 +322,7 @@ async function runChainPrologue(
         ok: false,
         step: failedStep(
           context.entry,
-          "role-journey",
+          stepKind,
           "role-journey.chain_unexpected",
           "A chain prologue request did not complete as declared.",
           result.durationMs,
@@ -335,7 +336,7 @@ async function runChainPrologue(
           ok: false,
           step: failedStep(
             context.entry,
-            "role-journey",
+            stepKind,
             "role-journey.record_id_not_captured",
             "The chain create did not return a bounded record id.",
             result.durationMs,
@@ -352,7 +353,12 @@ async function runChainPrologue(
 /**
  * A declared denial journey must be rejected with 403: the generated
  * application denies policy violations before any record lookup, so this
- * probe proves the denial without depending on seeded records.
+ * probe proves the denial without depending on seeded records. A denial over
+ * a record-bearing route (`{recordId}` template — the colliding-create
+ * denial) drives the journey's fresh-record chain first, exactly like a role
+ * journey: the record is created as the allowed role, and the transition is
+ * then probed as the denied principal. The literal template route would fail
+ * closed (`invalid_request_path`) and crash instead of denying.
  */
 export async function runAuthorizationDenialProbe(
   context: ProbeContext,
@@ -360,9 +366,21 @@ export async function runAuthorizationDenialProbe(
   registry: readonly RegisteredApiAction[],
 ): Promise<VerificationStepV1> {
   const action = validateRoleJourney(journey, registry);
+  let recordId: string | undefined;
+  if (journey.chain !== undefined) {
+    const prologue = await runChainPrologue(
+      context,
+      journey,
+      registry,
+      "authorization-denial",
+    );
+    if (!prologue.ok) return prologue.step;
+    recordId = prologue.recordId;
+  }
+  const route = substituteRecordId(action.route, recordId);
   const result = await context.environment.request(
     action.method,
-    action.route,
+    route,
     "api",
     {
       headers: journeyHeaders(journey),

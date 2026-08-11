@@ -149,9 +149,32 @@ export const compositionClarificationSchema = z
         z
           .object({
             key: identifierSchema,
+            category: z.enum([
+              "experience.visual-style",
+              "authorization",
+              "visibility",
+              "role",
+              "business-rule",
+              "data",
+              "integration",
+            ]),
+            defaultPolicy: z.enum(["factory-standard-visual", "required"]),
             question: safeBusinessTextSchema.max(500),
           })
-          .strict(),
+          .strict()
+          .superRefine((question, context) => {
+            if (
+              question.defaultPolicy === "factory-standard-visual" &&
+              question.category !== "experience.visual-style"
+            ) {
+              context.addIssue({
+                code: z.ZodIssueCode.custom,
+                message:
+                  "Only experience.visual-style questions may use the Factory visual default.",
+                path: ["defaultPolicy"],
+              });
+            }
+          }),
       )
       .min(1)
       .max(30),

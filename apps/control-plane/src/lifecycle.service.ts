@@ -183,11 +183,13 @@ function artifactEvidence(input: unknown): ArtifactEvidence {
   return { path, digest: requiredSha256(record, "digest"), sizeBytes };
 }
 
-function completionEvidence(input: unknown): {
+type CompletionEvidence = {
   readonly graphHash: string;
   readonly rootDirectory: string;
   readonly artifacts: readonly ArtifactEvidence[];
-} {
+};
+
+function completionEvidence(input: unknown): CompletionEvidence {
   const body = exactRecord(
     input,
     ["graphHash", "rootDirectory", "artifacts"],
@@ -208,6 +210,112 @@ function completionEvidence(input: unknown): {
     rootDirectory: generatedRootDirectory(body),
     artifacts,
   };
+}
+
+const COMPILATION_FAILURE_API_VERSION = "factory.compilation-failure/v1";
+const COMPILATION_FAILURE_CODE = "compilation.failed";
+
+function compilationFailureEvidence(input: unknown): void {
+  const body = exactRecord(
+    input,
+    ["apiVersion", "failureCode"],
+    ["apiVersion", "failureCode"],
+  );
+  if (body.apiVersion !== COMPILATION_FAILURE_API_VERSION) {
+    throw new BadRequestException(
+      `apiVersion must be ${COMPILATION_FAILURE_API_VERSION}.`,
+    );
+  }
+  if (body.failureCode !== COMPILATION_FAILURE_CODE) {
+    throw new BadRequestException(
+      `failureCode must be ${COMPILATION_FAILURE_CODE}.`,
+    );
+  }
+}
+
+function hasExactKeys(
+  record: UnknownRecord,
+  expectedKeys: readonly string[],
+): boolean {
+  const actual = Object.keys(record).sort();
+  const expected = [...expectedKeys].sort();
+  return (
+    actual.length === expected.length &&
+    actual.every((key, index) => key === expected[index])
+  );
+}
+
+function canonicalIso(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const parsed = new Date(value);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString() === value;
+}
+
+function failedCompilation(result: unknown): boolean {
+  if (!result || typeof result !== "object" || Array.isArray(result)) {
+    return false;
+  }
+  const record = result as UnknownRecord;
+  return (
+    hasExactKeys(record, ["status", "failureCode", "completedAt"]) &&
+    record.status === "failed" &&
+    record.failureCode === COMPILATION_FAILURE_CODE &&
+    canonicalIso(record.completedAt)
+  );
+}
+
+function matchingSucceededCompilation(
+  compilation: {
+    readonly inputGraphHash: string;
+    readonly result: unknown;
+    readonly artifacts: readonly {
+      readonly path: string;
+      readonly digest: string;
+      readonly sizeBytes: number | null;
+      readonly metadata: unknown;
+    }[];
+  },
+  evidence: CompletionEvidence,
+): boolean {
+  if (
+    !compilation.result ||
+    typeof compilation.result !== "object" ||
+    Array.isArray(compilation.result)
+  ) {
+    return false;
+  }
+  const result = compilation.result as UnknownRecord;
+  if (
+    !hasExactKeys(result, ["status", "artifactCount", "completedAt"]) ||
+    result.status !== "succeeded" ||
+    result.artifactCount !== evidence.artifacts.length ||
+    !canonicalIso(result.completedAt) ||
+    compilation.inputGraphHash !== evidence.graphHash ||
+    compilation.artifacts.length !== evidence.artifacts.length
+  ) {
+    return false;
+  }
+  const stored = [...compilation.artifacts].sort((left, right) =>
+    left.path.localeCompare(right.path),
+  );
+  const reported = [...evidence.artifacts].sort((left, right) =>
+    left.path.localeCompare(right.path),
+  );
+  return stored.every((artifact, index) => {
+    const expected = reported[index];
+    const metadata = artifact.metadata;
+    const rootDirectory =
+      metadata && typeof metadata === "object" && !Array.isArray(metadata)
+        ? (metadata as UnknownRecord).rootDirectory
+        : undefined;
+    return (
+      expected !== undefined &&
+      artifact.path === expected.path &&
+      artifact.digest === expected.digest &&
+      artifact.sizeBytes === expected.sizeBytes &&
+      rootDirectory === evidence.rootDirectory
+    );
+  });
 }
 
 function queuedCompilation(result: unknown): boolean {
@@ -380,6 +488,14 @@ function uniqueConstraint(error: unknown): boolean {
     !!error &&
     typeof error === "object" &&
     (error as { code?: unknown }).code === "P2002"
+  );
+}
+
+function serializationConflict(error: unknown): boolean {
+  return (
+    !!error &&
+    typeof error === "object" &&
+    (error as { code?: unknown }).code === "P2034"
   );
 }
 
@@ -1164,42 +1280,136 @@ export class LifecycleService {
     return generatedRootDirectory({ rootDirectory: roots[0] });
   }
 
+  private async compilationTerminalTransaction<T>(
+    operation: (transaction: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(operation, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        });
+      } catch (error) {
+        if (!serializationConflict(error)) throw error;
+      }
+    }
+    throw new ConflictException("Compilation terminal evidence conflicted.");
+  }
+
   async completeCompilation(compilationId: string, input: unknown) {
     const evidence = completionEvidence(input);
-    const compilation = await this.prisma.compilation.findUnique({
-      where: { id: compilationId },
-    });
-    if (!compilation) throw new NotFoundException("Compilation was not found.");
-    if (!queuedCompilation(compilation.result)) {
-      throw new ConflictException(
-        "Compilation is no longer awaiting Worker evidence.",
-      );
-    }
-    if (compilation.inputGraphHash !== evidence.graphHash) {
-      throw new ConflictException(
-        "Worker evidence Graph hash does not match the Compilation input.",
-      );
-    }
-    await this.prisma.artifact.createMany({
-      data: evidence.artifacts.map((artifact) => ({
-        compilationId,
-        kind: "generated-file",
-        path: artifact.path,
-        digest: artifact.digest,
-        mediaType: "application/vnd.factory.generated-file",
-        sizeBytes: artifact.sizeBytes,
-        metadata: { rootDirectory: evidence.rootDirectory },
-      })),
-    });
-    return this.prisma.compilation.update({
-      where: { id: compilationId },
-      data: {
-        result: {
-          status: "succeeded",
-          artifactCount: evidence.artifacts.length,
-          completedAt: new Date().toISOString(),
+    return this.compilationTerminalTransaction(async (transaction) => {
+      const compilation = await transaction.compilation.findUnique({
+        where: { id: compilationId },
+        include: { artifacts: { orderBy: { path: "asc" } } },
+      });
+      if (!compilation) {
+        throw new NotFoundException("Compilation was not found.");
+      }
+      if (matchingSucceededCompilation(compilation, evidence)) {
+        return compilation;
+      }
+      if (!queuedCompilation(compilation.result)) {
+        throw new ConflictException(
+          "Compilation is no longer awaiting Worker evidence.",
+        );
+      }
+      if (compilation.inputGraphHash !== evidence.graphHash) {
+        throw new ConflictException(
+          "Worker evidence Graph hash does not match the Compilation input.",
+        );
+      }
+      const result = {
+        status: "succeeded",
+        artifactCount: evidence.artifacts.length,
+        completedAt: new Date().toISOString(),
+      };
+      const transitioned = await transaction.compilation.updateMany({
+        where: {
+          id: compilationId,
+          result: { equals: { status: "queued" } },
         },
-      },
+        data: { result },
+      });
+      if (transitioned.count !== 1) {
+        const terminal = await transaction.compilation.findUnique({
+          where: { id: compilationId },
+          include: { artifacts: { orderBy: { path: "asc" } } },
+        });
+        if (terminal && matchingSucceededCompilation(terminal, evidence)) {
+          return terminal;
+        }
+        throw new ConflictException(
+          "Compilation terminal evidence conflicted.",
+        );
+      }
+      await transaction.artifact.createMany({
+        data: evidence.artifacts.map((artifact) => ({
+          compilationId,
+          kind: "generated-file",
+          path: artifact.path,
+          digest: artifact.digest,
+          mediaType: "application/vnd.factory.generated-file",
+          sizeBytes: artifact.sizeBytes,
+          metadata: { rootDirectory: evidence.rootDirectory },
+        })),
+      });
+      return { ...compilation, result };
+    });
+  }
+
+  async failCompilation(compilationId: string, input: unknown) {
+    compilationFailureEvidence(input);
+    return this.compilationTerminalTransaction(async (transaction) => {
+      const compilation = await transaction.compilation.findUnique({
+        where: { id: compilationId },
+        include: { artifacts: { orderBy: { path: "asc" } } },
+      });
+      if (!compilation) {
+        throw new NotFoundException("Compilation was not found.");
+      }
+      if (
+        failedCompilation(compilation.result) &&
+        compilation.artifacts.length === 0
+      ) {
+        return compilation;
+      }
+      if (
+        !queuedCompilation(compilation.result) ||
+        compilation.artifacts.length
+      ) {
+        throw new ConflictException(
+          "Compilation is no longer awaiting Worker evidence.",
+        );
+      }
+      const result = {
+        status: "failed",
+        failureCode: COMPILATION_FAILURE_CODE,
+        completedAt: new Date().toISOString(),
+      };
+      const transitioned = await transaction.compilation.updateMany({
+        where: {
+          id: compilationId,
+          result: { equals: { status: "queued" } },
+        },
+        data: { result },
+      });
+      if (transitioned.count !== 1) {
+        const terminal = await transaction.compilation.findUnique({
+          where: { id: compilationId },
+          include: { artifacts: { orderBy: { path: "asc" } } },
+        });
+        if (
+          terminal &&
+          failedCompilation(terminal.result) &&
+          terminal.artifacts.length === 0
+        ) {
+          return terminal;
+        }
+        throw new ConflictException(
+          "Compilation terminal evidence conflicted.",
+        );
+      }
+      return { ...compilation, result };
     });
   }
 }

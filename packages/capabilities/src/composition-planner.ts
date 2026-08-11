@@ -457,6 +457,8 @@ export function planComposition(
     .slice(0, 30)
     .map((failure, index) => ({
       key: `question-${index + 1}`,
+      category: "business-rule" as const,
+      defaultPolicy: "required" as const,
       question: failure.question,
     }));
   // A catalogue with no recipes produces no failures; the clarification
@@ -464,6 +466,8 @@ export function planComposition(
   if (questions.length === 0) {
     questions.push({
       key: "question-1",
+      category: "business-rule",
+      defaultPolicy: "required",
       question: "No recipe in the catalogue matches the requirement.",
     });
   }

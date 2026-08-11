@@ -137,6 +137,43 @@ function validBlueprint(): Record<string, unknown> {
 }
 
 describe("productBlueprintSchema", () => {
+  it.each([
+    {
+      name: "optional string",
+      fields: [
+        { key: "id", label: "Identifier", type: "text", required: false },
+      ],
+    },
+    {
+      name: "required non-string",
+      fields: [
+        { key: "id", label: "Identifier", type: "number", required: true },
+      ],
+    },
+    {
+      name: "duplicate declarations",
+      fields: [
+        { key: "id", label: "Identifier", type: "text", required: true },
+        {
+          key: "id",
+          label: "Second identifier",
+          type: "number",
+          required: false,
+        },
+      ],
+    },
+  ])(
+    "rejects $name entity-declared Factory identity with one fixed safe error",
+    ({ fields }) => {
+      const blueprint = validBlueprint();
+      (blueprint.entities as Record<string, unknown>[])[0].fields = fields;
+
+      expect(() => assertProductBlueprint(blueprint)).toThrow(
+        "Entity fields cannot declare Factory-owned record identity 'id'.",
+      );
+    },
+  );
+
   it("accepts a schema-valid blueprint and computes a stable hash", () => {
     const blueprint = assertProductBlueprint(validBlueprint());
     expect(blueprint.title).toBe("Expense Approval");
@@ -321,6 +358,21 @@ describe("productBlueprintSchema", () => {
     expect(() => assertProductBlueprint(extraGrant)).not.toThrow();
   });
 
+  it("rejects a transition whose event is outside the bounded action vocabulary (the runtime could never grant it)", () => {
+    const inventedVerb = validBlueprint();
+    const workflow = (inventedVerb.workflows as Record<string, unknown>[])[0];
+    workflow.transitions = (
+      workflow.transitions as Record<string, unknown>[]
+    ).map((transition) =>
+      transition.key === "approve"
+        ? { ...transition, key: "audit-from-approved" }
+        : transition,
+    );
+    expect(() => assertProductBlueprint(inventedVerb)).toThrow(
+      /Invalid enum value/,
+    );
+  });
+
   it("rejects invalid state/transition sets (unreachable or undefined)", () => {
     const singleState = validBlueprint();
     (singleState.workflows as Record<string, unknown>[])[0].states = [
@@ -387,6 +439,78 @@ describe("productBlueprintSchema", () => {
     const badVersion = validBlueprint();
     badVersion.apiVersion = "factory.product-blueprint/v2";
     expect(() => assertProductBlueprint(badVersion)).toThrow(/invalid/);
+  });
+
+  it("rejects keys that cannot become graph-symbol segments (camelCase)", () => {
+    // Blueprint keys become plan graph symbols verbatim (`graph.flow.<workflow>`,
+    // `graph.domain.<entity>`, `graph.policy.<actor>`, `graph.page.<intent>`)
+    // whose grammar is lowercase-kebab only; a camelCase key could never
+    // produce a plan the seam accepts, so it must fail here at the blueprint
+    // boundary instead of dead-ending the planning request later.
+    const camelWorkflow = validBlueprint();
+    (camelWorkflow.workflows as Record<string, unknown>[])[0].key =
+      "expenseApproval";
+    expect(() => assertProductBlueprint(camelWorkflow)).toThrow(/invalid/);
+
+    const camelEntity = validBlueprint();
+    (camelEntity.entities as Record<string, unknown>[])[0].key =
+      "expenseRecord";
+    expect(() => assertProductBlueprint(camelEntity)).toThrow(/invalid/);
+
+    const camelActor = validBlueprint();
+    (camelActor.actors as Record<string, unknown>[])[0].key = "financeManager";
+    expect(() => assertProductBlueprint(camelActor)).toThrow(/invalid/);
+
+    const camelIntent = validBlueprint();
+    (camelIntent.pageIntents as Record<string, unknown>[])[0].key =
+      "expenseList";
+    expect(() => assertProductBlueprint(camelIntent)).toThrow(/invalid/);
+  });
+
+  it("rejects field keys the graph field grammar could never accept (hyphenated)", () => {
+    // Entity field keys become graph `domain.entities[].fields[].key` verbatim,
+    // whose grammar is lowercase-first camelCase with underscores — hyphens are
+    // forbidden. A hyphenated field key (the apply seam's raw-ZodError class of
+    // failure) must die here at the blueprint boundary.
+    const hyphenField = validBlueprint();
+    const hyphenFields = (hyphenField.entities as Record<string, unknown>[])[0]
+      .fields as Record<string, unknown>[];
+    hyphenFields[0].key = "submitted-by";
+    expect(() => assertProductBlueprint(hyphenField)).toThrow(/invalid/);
+
+    const hyphenIndexedField = validBlueprint();
+    const hyphenIndexedFields = (
+      hyphenIndexedField.entities as Record<string, unknown>[]
+    )[0].fields as Record<string, unknown>[];
+    hyphenIndexedFields[1].key = "audited-by";
+    expect(() => assertProductBlueprint(hyphenIndexedField)).toThrow(/invalid/);
+
+    // The other direction stays legal: camelCase/underscore field keys pass.
+    const camelField = validBlueprint();
+    const camelFields = (camelField.entities as Record<string, unknown>[])[0]
+      .fields as Record<string, unknown>[];
+    camelFields[0].key = "submittedBy";
+    expect(() => assertProductBlueprint(camelField)).not.toThrow();
+  });
+
+  it("rejects workflow state keys the graph flow grammar could never accept (camelCase)", () => {
+    // Workflow state keys become graph `flow.flows[].states[].key` verbatim,
+    // which are lowercase-kebab like the other graph symbols; a camelCase state
+    // key could never compose into a graph the apply seam accepts.
+    const camelState = validBlueprint();
+    const camelStates = (camelState.workflows as Record<string, unknown>[])[0]
+      .states as Record<string, unknown>[];
+    camelStates[1].key = "inReview";
+    expect(() => assertProductBlueprint(camelState)).toThrow(/invalid/);
+
+    // The other direction stays legal: kebab state keys pass. (The `rejected`
+    // state is unreferenced by any transition, so renaming it cannot trip the
+    // semantic cross-reference checks.)
+    const kebabState = validBlueprint();
+    const kebabStates = (kebabState.workflows as Record<string, unknown>[])[0]
+      .states as Record<string, unknown>[];
+    kebabStates[3].key = "in-review";
+    expect(() => assertProductBlueprint(kebabState)).not.toThrow();
   });
 
   it("rejects identifier-shaped material (dotted capability keys, paths)", () => {

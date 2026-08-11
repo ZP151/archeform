@@ -22,6 +22,9 @@ vi.mock("@puckeditor/core", () => ({
     <div data-testid="puck">
       <span>{headerTitle}</span>
       <span>{data.content.map((block) => block.type).join(",")}</span>
+      <select className="_ViewportControls-zoomSelect_test">
+        <option value="0.25">25% (Auto)</option>
+      </select>
     </div>
   ),
 }));
@@ -145,6 +148,15 @@ describe("ProductStudio", () => {
     expect(
       container.querySelector(".preview-viewports button")?.textContent,
     ).toContain("Desktop");
+  });
+
+  it("gives the embedded Puck viewport zoom selector an accessible name", () => {
+    render({});
+    expect(
+      container
+        .querySelector('select[class*="_ViewportControls-zoomSelect_"]')
+        ?.getAttribute("aria-label"),
+    ).toBe("Viewport zoom");
   });
 
   it("loads the selected page into Puck and updates the preview route", () => {

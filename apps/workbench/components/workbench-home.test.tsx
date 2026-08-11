@@ -27,6 +27,7 @@ function briefJourney(
     stage: "brief",
     busy: false,
     error: null,
+    failure: null,
     brief: "",
     onBriefChange: vi.fn(),
     onInterpret: vi.fn(),
@@ -286,6 +287,11 @@ describe("WorkbenchHome", () => {
           journey={briefJourney({
             stage: "failed",
             error: "The control plane is not ready yet; try again shortly.",
+            failure: {
+              phase: "review",
+              code: "product.unavailable",
+              message: "The control plane is not ready yet; try again shortly.",
+            },
           })}
         />,
       );
@@ -296,6 +302,64 @@ describe("WorkbenchHome", () => {
     ).not.toBeNull();
     expect(container.textContent).toContain("not ready yet");
     expect(container.textContent).toContain("Interpret requirement");
+  });
+
+  it("exposes an accepted requirement outcome independently from later planning", async () => {
+    const interpretation = await new FixtureRequirementInterpreter().interpret({
+      brief: expenseBrief,
+      answers: {},
+    });
+    act(() => {
+      root.render(
+        <WorkbenchHome
+          applications={[]}
+          loading={false}
+          onCompile={vi.fn()}
+          onOpen={vi.fn()}
+          journey={briefJourney({
+            stage: "planning",
+            requirement: interpretation.spec,
+            blueprintTitle: interpretation.blueprint.title,
+            planAlternatives: null,
+          })}
+        />,
+      );
+    });
+
+    const region = container.querySelector('[aria-label="Product creation"]');
+    expect(region?.getAttribute("data-requirement-outcome")).toBe("accepted");
+    expect(region?.hasAttribute("data-requirement-failure-code")).toBe(false);
+  });
+
+  it("exposes only a scoped requirement failure code and phase", () => {
+    act(() => {
+      root.render(
+        <WorkbenchHome
+          applications={[]}
+          loading={false}
+          onCompile={vi.fn()}
+          onOpen={vi.fn()}
+          journey={briefJourney({
+            stage: "failed",
+            error: "Requirement interpretation was rejected.",
+            failure: {
+              phase: "interpretation",
+              code: "requirement.output_invalid",
+              message: "Requirement interpretation was rejected.",
+            },
+          })}
+        />,
+      );
+    });
+
+    const region = container.querySelector('[aria-label="Product creation"]');
+    expect(region?.getAttribute("data-requirement-outcome")).toBe("failed");
+    expect(region?.getAttribute("data-journey-failure-phase")).toBe(
+      "interpretation",
+    );
+    expect(region?.getAttribute("data-requirement-failure-code")).toBe(
+      "requirement.output_invalid",
+    );
   });
 
   it("keeps Home focused on creation; portfolio intelligence lives in the Library", () => {
@@ -640,10 +704,18 @@ describe("WorkbenchHome", () => {
               id: "compilation-1",
               publishedRevisionId: "published-restaurant",
               target: "application-bundle",
-              result: {
-                status: terminalStatus,
-                completedAt: "2026-07-30T04:00:00.000Z",
-              },
+              result:
+                terminalStatus === "succeeded"
+                  ? {
+                      status: "succeeded",
+                      artifactCount: 0,
+                      completedAt: "2026-07-30T04:00:00.000Z",
+                    }
+                  : {
+                      status: "failed",
+                      failureCode: "compilation.failed",
+                      completedAt: "2026-07-30T04:00:00.000Z",
+                    },
             });
           }
           if (

@@ -232,6 +232,7 @@ function stubControlPlane(
           target: "application-bundle",
           result: {
             status: "succeeded",
+            artifactCount: 1,
             completedAt: "2026-07-30T04:00:00.000Z",
           },
           artifacts: [
@@ -462,6 +463,12 @@ describe("Workbench shell", () => {
       expect(inspector()?.textContent).toContain("1 entities");
       expect(inspector()?.textContent).toContain("2 fields");
     });
+    expect(
+      container.querySelector('input[aria-label="title Unique"]'),
+    ).not.toBeNull();
+    expect(
+      container.querySelector('input[aria-label="status Unique"]'),
+    ).not.toBeNull();
 
     act(() => {
       container

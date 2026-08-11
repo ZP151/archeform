@@ -21,6 +21,7 @@ import {
   verificationSucceeded,
   type ReleaseState,
 } from "./release-model";
+import { normalizeReleaseDiagnosisCode } from "./release-diagnosis";
 
 /**
  * The release journey controller: drives one product's immutable release
@@ -62,8 +63,15 @@ export interface ReleaseJourneyController {
 }
 
 const POLL_INTERVAL_MS = 1_500;
+const RELEASE_PHASE_TIMEOUT_MS = 300_000;
+const VERIFICATION_PHASE_TIMEOUT_MS = 900_000;
 
-const safeReasonCode = /^[a-z][a-z0-9._-]*$/;
+class ReleasePhaseTimeoutError extends Error {
+  public constructor() {
+    super("Release phase timed out.");
+    this.name = "ReleasePhaseTimeoutError";
+  }
+}
 
 function safeCodeOf(error: unknown, fallback: string): string {
   if (error instanceof ControlPlaneError) {
@@ -102,8 +110,7 @@ function evidenceStepsOf(
 /** The worker's diagnosis code, bounded to a safe reason code. */
 function diagnosisCodeOf(run: WorkbenchVerificationRun): string {
   const code = (run.diagnosis as { readonly code?: unknown } | null)?.code;
-  if (typeof code === "string" && safeReasonCode.test(code)) return code;
-  return "verification.failed";
+  return normalizeReleaseDiagnosisCode(code);
 }
 
 /** The reviewable Draft Diff, only when the worker actually proposed one. */
@@ -122,6 +129,34 @@ function draftDiffOf(run: WorkbenchVerificationRun): DraftDiffV1 | undefined {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Bounds a remote release phase and invalidates its late continuation. Fetch
+ * does not currently accept a signal through ControlPlaneClient, so the
+ * active predicate prevents a response that arrives after the deadline from
+ * advancing the release state.
+ */
+async function withReleasePhaseDeadline(
+  work: (isActive: () => boolean) => Promise<void>,
+  timeoutMs = RELEASE_PHASE_TIMEOUT_MS,
+): Promise<void> {
+  let active = true;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      work(() => active),
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(
+          () => reject(new ReleasePhaseTimeoutError()),
+          timeoutMs,
+        );
+      }),
+    ]);
+  } finally {
+    active = false;
+    if (timeout !== undefined) clearTimeout(timeout);
+  }
 }
 
 export function useReleaseJourney(
@@ -214,29 +249,40 @@ export function useReleaseJourney(
     }
     void run(async () => {
       try {
-        const queued =
-          await controlPlane.createCompilation(publishedRevisionId);
-        const started = releaseRef.current;
-        if (started === null) return;
-        // The started state is held locally: the model binds the terminal
-        // transition to the compilation identifier it started, and the ref
-        // has not committed the started state until this action's render.
-        const startedState = compilationStarted(started, queued.id);
-        setRelease(startedState);
-        while (aliveRef.current) {
-          const latest = await controlPlane.getCompilation(queued.id);
-          if (!isPendingCompilation(latest.result.status)) {
-            if (latest.result.status === "succeeded") {
-              setRelease(compilationSucceeded(startedState, queued.id));
-            } else {
-              setRelease(releaseFailed(startedState, "compilation.failed"));
+        await withReleasePhaseDeadline(async (isActive) => {
+          const queued =
+            await controlPlane.createCompilation(publishedRevisionId);
+          if (!isActive()) return;
+          const started = releaseRef.current;
+          if (started === null) return;
+          // The started state is held locally: the model binds the terminal
+          // transition to the compilation identifier it started, and the ref
+          // has not committed the started state until this action's render.
+          const startedState = compilationStarted(started, queued.id);
+          setRelease(startedState);
+          while (aliveRef.current && isActive()) {
+            const latest = await controlPlane.getCompilation(queued.id);
+            if (!isActive()) return;
+            if (!isPendingCompilation(latest.result.status)) {
+              if (latest.result.status === "succeeded") {
+                setRelease(compilationSucceeded(startedState, queued.id));
+              } else if (latest.result.status === "failed") {
+                setRelease(
+                  releaseFailed(startedState, latest.result.failureCode),
+                );
+              }
+              return;
             }
-            return;
+            await sleep(POLL_INTERVAL_MS);
           }
-          await sleep(POLL_INTERVAL_MS);
-        }
+        });
       } catch (error) {
-        fail("compilation.failed", error);
+        fail(
+          error instanceof ReleasePhaseTimeoutError
+            ? "compilation.timeout"
+            : "compilation.failed",
+          error,
+        );
       }
     });
   }, [controlPlane, run, fail]);
@@ -254,56 +300,65 @@ export function useReleaseJourney(
     }
     void run(async () => {
       try {
-        // No profile key: the worker derives the verification plan from the
-        // Published Graph, so any composed product verifies identically.
-        const queued = await controlPlane.createVerificationRun(
-          compilationId,
-          `verify-${crypto.randomUUID()}`,
-        );
-        const started = releaseRef.current;
-        if (started === null) return;
-        // The started state is held locally for the same reason as the
-        // compilation: the terminal transition must see the verification run
-        // identifier the model bound, which the ref cannot show until this
-        // action's render commits.
-        const startedState = verificationStarted(
-          started,
-          queued.verificationRunId,
-        );
-        setRelease(startedState);
-        while (aliveRef.current) {
-          const latest = await controlPlane.getVerificationRun(
+        await withReleasePhaseDeadline(async (isActive) => {
+          // No profile key: the worker derives the verification plan from the
+          // Published Graph, so any composed product verifies identically.
+          const queued = await controlPlane.createVerificationRun(
+            compilationId,
+            `verify-${crypto.randomUUID()}`,
+          );
+          if (!isActive()) return;
+          const started = releaseRef.current;
+          if (started === null) return;
+          // The started state is held locally for the same reason as the
+          // compilation: the terminal transition must see the verification run
+          // identifier the model bound, which the ref cannot show until this
+          // action's render commits.
+          const startedState = verificationStarted(
+            started,
             queued.verificationRunId,
           );
-          if (latest.status === "succeeded") {
-            const steps = evidenceStepsOf(latest);
-            if (steps.length === 0) {
-              // A "succeeded" run that reports no steps cannot be summarized
-              // honestly; fail closed instead of fabricating counts.
+          setRelease(startedState);
+          while (aliveRef.current && isActive()) {
+            const latest = await controlPlane.getVerificationRun(
+              queued.verificationRunId,
+            );
+            if (!isActive()) return;
+            if (latest.status === "succeeded") {
+              const steps = evidenceStepsOf(latest);
+              if (steps.length === 0) {
+                // A "succeeded" run that reports no steps cannot be summarized
+                // honestly; fail closed instead of fabricating counts.
+                setRelease(
+                  releaseFailed(startedState, "verification.evidence_missing"),
+                );
+                return;
+              }
+              setRelease(verificationSucceeded(startedState, steps));
+              return;
+            }
+            if (latest.status === "failed" || latest.status === "cancelled") {
               setRelease(
-                releaseFailed(startedState, "verification.evidence_missing"),
+                releaseFailed(
+                  startedState,
+                  latest.status === "cancelled"
+                    ? "verification.cancelled"
+                    : diagnosisCodeOf(latest),
+                  draftDiffOf(latest),
+                ),
               );
               return;
             }
-            setRelease(verificationSucceeded(startedState, steps));
-            return;
+            await sleep(POLL_INTERVAL_MS);
           }
-          if (latest.status === "failed" || latest.status === "cancelled") {
-            setRelease(
-              releaseFailed(
-                startedState,
-                latest.status === "cancelled"
-                  ? "verification.cancelled"
-                  : diagnosisCodeOf(latest),
-                draftDiffOf(latest),
-              ),
-            );
-            return;
-          }
-          await sleep(POLL_INTERVAL_MS);
-        }
+        }, VERIFICATION_PHASE_TIMEOUT_MS);
       } catch (error) {
-        fail("verification.failed", error);
+        fail(
+          error instanceof ReleasePhaseTimeoutError
+            ? "verification.timeout"
+            : "verification.failed",
+          error,
+        );
       }
     });
   }, [controlPlane, run, fail]);

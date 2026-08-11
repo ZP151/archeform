@@ -1,5 +1,4 @@
 import {
-  CompositionError,
   hashRequirementSpec,
   parseCompositionClarification,
   parseProductBlueprint,
@@ -8,6 +7,16 @@ import {
   type ProductBlueprintV1,
   type RequirementSpecV1,
 } from "@factory/graph";
+
+import {
+  factoryClarificationDefault,
+  SAFE_NONCRITICAL_CLARIFICATION_DEFAULT,
+} from "./clarification-policy.js";
+
+export {
+  factoryClarificationDefault,
+  SAFE_NONCRITICAL_CLARIFICATION_DEFAULT,
+} from "./clarification-policy.js";
 
 /**
  * One transient interpretation of a free-form business brief: a validated
@@ -21,32 +30,163 @@ export interface RequirementInterpretationV1 {
   readonly clarifications: readonly CompositionClarificationV1[];
 }
 
+export type ClarificationQuestionV1 =
+  CompositionClarificationV1["questions"][number];
+
+/**
+ * Transient context for one answered clarification. It gives a provider the
+ * question semantics that an opaque stable key alone cannot communicate.
+ * This envelope is request-only and must never be persisted or logged.
+ */
+export interface ClarificationAnswerContextV1 extends ClarificationQuestionV1 {
+  readonly answer: string;
+}
+
 export interface RequirementInterpreterAdapterV1 {
   interpret(input: {
     readonly brief: string;
     readonly answers: Readonly<Record<string, string>>;
+    readonly clarificationContext?: readonly ClarificationAnswerContextV1[];
+    /** Validated transient baseline for an incremental clarification pass. */
+    readonly priorInterpretation?: RequirementInterpretationV1;
+    /** Caller cancellation is transient and must reach the provider request. */
+    readonly signal?: AbortSignal;
   }): Promise<RequirementInterpretationV1>;
 }
 
 export type RequirementInterpreterErrorCode =
-  | "brief_invalid"
-  | "interpretation_invalid"
-  | "configuration_missing"
-  | "provider_request_failed"
-  | "provider_request_rejected"
-  | "provider_authentication_failed"
-  | "provider_access_denied"
-  | "model_unavailable"
-  | "provider_rate_limited";
+  | "request_invalid"
+  | "output_invalid"
+  | "provider_rejected"
+  | "provider_not_configured"
+  | "provider_unavailable"
+  | "timeout"
+  | "failed";
 
 export class RequirementInterpreterError extends Error {
   public constructor(
     message: string,
-    public readonly code: RequirementInterpreterErrorCode = "interpretation_invalid",
+    public readonly code: RequirementInterpreterErrorCode = "output_invalid",
   ) {
     super(message);
     this.name = "RequirementInterpreterError";
   }
+}
+
+const QUESTION_STOP_WORDS = new Set(["a", "an", "of", "the", "what", "which"]);
+
+function questionTokens(question: string): readonly string[] {
+  const normalized = question
+    .normalize("NFKD")
+    .toLowerCase()
+    .replace(/what\s+number\s+of|how\s+many/g, "count")
+    .replace(/approvals?|approved|approving/g, "approve")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  return [
+    ...new Set(
+      normalized
+        .split(/\s+/)
+        .filter((token) => token.length > 0 && !QUESTION_STOP_WORDS.has(token))
+        .map((token) =>
+          token.length > 4 && token.endsWith("s") ? token.slice(0, -1) : token,
+        ),
+    ),
+  ].sort();
+}
+
+/**
+ * Deterministic semantic identity for a provider that rephrases an already
+ * answered clarification. This deliberately has no fuzzy fallback: one
+ * extra actor, negation, protected action, or resource makes the identities
+ * different and therefore cannot inherit an authorization-sensitive answer.
+ */
+export function clarificationQuestionsMatch(
+  left: string,
+  right: string,
+): boolean {
+  const leftTokens = questionTokens(left);
+  const rightTokens = questionTokens(right);
+  if (leftTokens.length === 0 || rightTokens.length === 0) return false;
+  return leftTokens.join("|") === rightTokens.join("|");
+}
+
+/**
+ * Resolves one bounded follow-up interpretation without another provider
+ * call. Answers to stable keys or exact normalized repeated questions are
+ * carried to the provider's new key. Only explicitly visual, noncritical
+ * ambiguity receives a safe platform default; every other novel question
+ * remains open for the journey's critical-ambiguity gate.
+ */
+export function resolveClarificationCycle(input: {
+  readonly interpretation: RequirementInterpretationV1;
+  readonly priorQuestions: readonly ClarificationQuestionV1[];
+  readonly answers: Readonly<Record<string, string>>;
+  readonly applySafeDefaults: boolean;
+}): {
+  readonly interpretation: RequirementInterpretationV1;
+  readonly answers: Readonly<Record<string, string>>;
+  readonly unresolved: readonly ClarificationQuestionV1[];
+} {
+  const answers = { ...input.answers };
+  const currentQuestions = input.interpretation.clarifications.flatMap(
+    (clarification) => clarification.questions,
+  );
+  const resolvedByQuestion = new Map<string, string>();
+
+  for (const current of currentQuestions) {
+    let answer: string | undefined = answers[current.key]?.trim();
+    if (!answer) {
+      const repeated = input.priorQuestions.find(
+        (prior) =>
+          Boolean(answers[prior.key]?.trim()) &&
+          clarificationQuestionsMatch(prior.question, current.question),
+      );
+      if (repeated !== undefined) answer = answers[repeated.key]?.trim();
+    }
+    if (!answer && input.applySafeDefaults) {
+      answer = factoryClarificationDefault(current) ?? undefined;
+    }
+    if (!answer) continue;
+    answers[current.key] = answer;
+    resolvedByQuestion.set(current.question, answer);
+  }
+
+  const spec = {
+    ...input.interpretation.spec,
+    openQuestions: input.interpretation.spec.openQuestions.map((item) => {
+      if (item.answer !== undefined) return item;
+      const resolved = [...resolvedByQuestion.entries()].find(([question]) =>
+        clarificationQuestionsMatch(question, item.question),
+      )?.[1];
+      return resolved === undefined ? item : { ...item, answer: resolved };
+    }),
+  };
+  const requirementChecksum = hashRequirementSpec(spec);
+  const clarifications = input.interpretation.clarifications
+    .map((clarification) => ({
+      ...clarification,
+      requirementChecksum,
+      questions: clarification.questions.filter(
+        (question) => !resolvedByQuestion.has(question.question),
+      ),
+    }))
+    .filter((clarification) => clarification.questions.length > 0);
+  const interpretation = assertRequirementInterpretation({
+    spec,
+    blueprint: {
+      ...input.interpretation.blueprint,
+      requirementChecksum,
+    },
+    clarifications,
+  });
+  return {
+    interpretation,
+    answers,
+    unresolved: interpretation.clarifications.flatMap(
+      (clarification) => clarification.questions,
+    ),
+  };
 }
 
 /**
@@ -65,13 +205,9 @@ export function assertRequirementInterpretation(input: {
       return work();
     } catch (error) {
       if (error instanceof RequirementInterpreterError) throw error;
-      // Schema and cross-reference failures are bounded CompositionErrors;
-      // every adapter surfaces them under the interpreter contract.
-      if (error instanceof CompositionError) {
-        throw new RequirementInterpreterError(error.message);
-      }
       throw new RequirementInterpreterError(
-        "Requirement interpretation is invalid.",
+        "Requirement interpretation output was invalid.",
+        "output_invalid",
       );
     }
   };
@@ -80,14 +216,16 @@ export function assertRequirementInterpretation(input: {
   const checksum = hashRequirementSpec(spec);
   if (blueprint.requirementChecksum !== checksum) {
     throw new RequirementInterpreterError(
-      "The blueprint must bind the exact requirement checksum.",
+      "Requirement interpretation output was invalid.",
+      "output_invalid",
     );
   }
   const clarifications = input.clarifications.map((clarification) => {
     const parsed = parse(() => parseCompositionClarification(clarification));
     if (parsed.requirementChecksum !== checksum) {
       throw new RequirementInterpreterError(
-        "Clarifications must bind the exact requirement checksum.",
+        "Requirement interpretation output was invalid.",
+        "output_invalid",
       );
     }
     return parsed;
@@ -114,8 +252,14 @@ export function deriveClarifications(
   spec: RequirementSpecV1,
 ): readonly CompositionClarificationV1[] {
   const unanswered = spec.openQuestions
+    .filter((question) => question.answer === undefined)
     .map((question, index) => ({
       key: slugify(question.question, index),
+      category: question.category,
+      defaultPolicy:
+        question.category === "experience.visual-style"
+          ? ("factory-standard-visual" as const)
+          : ("required" as const),
       question: question.question,
     }))
     .filter((item) => item.question.length > 0);
@@ -129,7 +273,7 @@ export function deriveClarifications(
       suffix += 1;
     }
     seen.add(key);
-    return { key, question: item.question };
+    return { ...item, key };
   });
   return [
     {

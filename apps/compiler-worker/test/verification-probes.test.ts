@@ -647,6 +647,85 @@ describe("runAuthorizationDenialProbe", () => {
     expect(step.httpStatus).toBeUndefined();
     expect(verificationStepSchema.safeParse(step).success).toBe(true);
   });
+
+  it("drives a fresh-record chain before denying the transition route (real-model regression)", async () => {
+    // The graph-derived denial for a colliding create transition targets the
+    // `{recordId}` template route: the probe must create its own record (as
+    // the allowed role), substitute the captured id, and only then probe the
+    // transition as the denied principal — the literal template route would
+    // fail closed and crash (`unknown.probe_crashed`) instead of denying.
+    const request = vi.fn(
+      async (
+        _method: string,
+        _path: string,
+        _port: string,
+        _options: unknown,
+        capture: boolean,
+      ) => {
+        if (capture === true) {
+          return { ...boundedRequest(201), recordId: "cm-chain-record-01" };
+        }
+        return boundedRequest(403);
+      },
+    );
+    const { context } = probeContext({
+      kind: "authorization-denial",
+      request,
+    });
+    const journey: RoleJourneyFixture = {
+      journeyId: "expense-denied-create",
+      action: "expense.create-transition",
+      principal: "manager",
+      chain: [
+        {
+          action: "expense.create",
+          principal: "employee",
+          body: '{"amount":37.5,"category":"travel","incurredOn":"2026-09-01T00:00:00.000Z"}',
+        },
+      ],
+    };
+    const registry: readonly RegisteredApiAction[] = [
+      {
+        action: "expense.create",
+        method: "POST",
+        route: "/api/expense",
+        expectedStatus: 201,
+      },
+      {
+        action: "expense.create-transition",
+        method: "POST",
+        route: "/api/expense/{recordId}/events/create",
+        expectedStatus: 201,
+      },
+    ];
+    const step = await runAuthorizationDenialProbe(context, journey, registry);
+    expect(step.status).toBe("passed");
+    expect(step.kind).toBe("authorization-denial");
+    expect(step.role).toBe("manager");
+    expect(step.action).toBe("expense.create-transition");
+    expect(step.httpStatus).toBe(403);
+    expect(request).toHaveBeenCalledTimes(2);
+    // The create ran as the allowed role with record capture...
+    expect(request.mock.calls[0]).toEqual([
+      "POST",
+      "/api/expense",
+      "api",
+      expect.objectContaining({
+        headers: [{ name: "x-factory-role", value: "employee" }],
+      }),
+      true,
+    ]);
+    // ...then the transition as the denied principal against the substituted
+    // concrete route — never the literal template.
+    expect(request.mock.calls[1]).toEqual([
+      "POST",
+      "/api/expense/cm-chain-record-01/events/create",
+      "api",
+      expect.objectContaining({
+        headers: [{ name: "x-factory-role", value: "manager" }],
+      }),
+    ]);
+  });
 });
 
 describe("runIdempotencyProbe", () => {

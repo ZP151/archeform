@@ -157,6 +157,16 @@ export class LifecycleController {
     return this.lifecycle.completeCompilation(compilationId, body);
   }
 
+  @Post("internal/compilations/:compilationId/failed")
+  failCompilation(
+    @Param("compilationId") compilationId: string,
+    @Body() body: unknown,
+    @Headers("x-factory-internal-token") internalToken: string | undefined,
+  ) {
+    assertInternalWorkerToken(internalToken);
+    return this.lifecycle.failCompilation(compilationId, body);
+  }
+
   @Get("internal/preview-runs/:previewRunId/dispatch")
   getPreviewDispatch(
     @Param("previewRunId") previewRunId: string,

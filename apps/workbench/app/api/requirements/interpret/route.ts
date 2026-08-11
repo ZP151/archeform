@@ -4,6 +4,7 @@ import { interpreter } from "../../../../lib/product-journey/interpret-provider"
 
 import {
   classifyInterpretationError,
+  interpretationError,
   parseInterpretPayload,
 } from "../../../../lib/product-journey/interpret-payload";
 
@@ -25,26 +26,22 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json(
-      { error: "Invalid request body." },
-      { status: 400 },
-    );
+    const failure = interpretationError("requirement.request_invalid");
+    return NextResponse.json(failure.body, { status: failure.status });
   }
   const payload = parseInterpretPayload(body);
   if (payload === null) {
-    return NextResponse.json(
-      { error: "Invalid requirement brief or answers." },
-      { status: 400 },
-    );
+    const failure = interpretationError("requirement.request_invalid");
+    return NextResponse.json(failure.body, { status: failure.status });
   }
   try {
-    const result = await interpreter().interpret(payload);
+    const result = await interpreter().interpret({
+      ...payload,
+      signal: request.signal,
+    });
     return NextResponse.json({ interpretation: result });
   } catch (error) {
     const classified = classifyInterpretationError(error);
-    return NextResponse.json(
-      { error: classified.error },
-      { status: classified.status },
-    );
+    return NextResponse.json(classified.body, { status: classified.status });
   }
 }

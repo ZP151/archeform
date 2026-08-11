@@ -1,10 +1,20 @@
-import { RequirementInterpreterError } from "@factory/adapters";
+import {
+  assertRequirementInterpretation,
+  RequirementInterpreterError,
+  type ClarificationAnswerContextV1,
+  type RequirementInterpretationV1,
+} from "@factory/adapters";
 
 import {
   ANSWER_LIMIT,
   ANSWER_MAX_LENGTH,
   BRIEF_MAX_LENGTH,
 } from "./journey-model";
+import {
+  ERROR_API_VERSION,
+  REQUIREMENT_FAILURE_STATUSES,
+  type RequirementInterpretationFailureCode,
+} from "./interpret-contract";
 
 /**
  * The bounded interpretation request envelope and its failure statuses.
@@ -16,7 +26,19 @@ import {
 export interface InterpretPayload {
   readonly brief: string;
   readonly answers: Readonly<Record<string, string>>;
+  readonly clarificationContext?: readonly ClarificationAnswerContextV1[];
+  readonly priorInterpretation?: RequirementInterpretationV1;
 }
+
+const CLARIFICATION_CATEGORIES = new Set([
+  "experience.visual-style",
+  "authorization",
+  "visibility",
+  "role",
+  "business-rule",
+  "data",
+  "integration",
+]);
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -30,13 +52,22 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
 export function parseInterpretPayload(value: unknown): InterpretPayload | null {
   if (!isPlainRecord(value)) return null;
   const keys = Object.keys(value);
-  if (keys.some((key) => key !== "brief" && key !== "answers")) return null;
-  const { brief, answers } = value;
+  if (
+    keys.some(
+      (key) =>
+        key !== "brief" &&
+        key !== "answers" &&
+        key !== "clarificationContext" &&
+        key !== "priorInterpretation",
+    )
+  )
+    return null;
+  const { brief, answers, clarificationContext, priorInterpretation } = value;
   if (typeof brief !== "string" || brief.trim().length === 0) return null;
   if (brief.length > BRIEF_MAX_LENGTH) return null;
-  if (answers === undefined) return { brief: brief.trim(), answers: {} };
-  if (!isPlainRecord(answers)) return null;
-  const entries = Object.entries(answers);
+  const answerRecord = answers === undefined ? {} : answers;
+  if (!isPlainRecord(answerRecord)) return null;
+  const entries = Object.entries(answerRecord);
   if (entries.length > ANSWER_LIMIT) return null;
   const validated: Record<string, string> = {};
   for (const [key, answer] of entries) {
@@ -46,7 +77,90 @@ export function parseInterpretPayload(value: unknown): InterpretPayload | null {
     if (key.length === 0) return null;
     validated[key] = answer;
   }
-  return { brief: brief.trim(), answers: validated };
+  let validatedPrior: RequirementInterpretationV1 | undefined;
+  if (priorInterpretation !== undefined) {
+    if (!isPlainRecord(priorInterpretation)) return null;
+    if (
+      Object.keys(priorInterpretation).some(
+        (key) => !["spec", "blueprint", "clarifications"].includes(key),
+      ) ||
+      !Array.isArray(priorInterpretation.clarifications)
+    )
+      return null;
+    try {
+      validatedPrior = assertRequirementInterpretation({
+        spec: priorInterpretation.spec,
+        blueprint: priorInterpretation.blueprint,
+        clarifications: priorInterpretation.clarifications,
+      });
+    } catch {
+      return null;
+    }
+  }
+  if (clarificationContext === undefined) {
+    return {
+      brief: brief.trim(),
+      answers: validated,
+      ...(validatedPrior === undefined
+        ? {}
+        : { priorInterpretation: validatedPrior }),
+    };
+  }
+  if (
+    !Array.isArray(clarificationContext) ||
+    clarificationContext.length > ANSWER_LIMIT
+  )
+    return null;
+  const seen = new Set<string>();
+  const validatedContext: ClarificationAnswerContextV1[] = [];
+  for (const candidate of clarificationContext) {
+    if (!isPlainRecord(candidate)) return null;
+    if (
+      Object.keys(candidate).some(
+        (key) =>
+          !["key", "category", "defaultPolicy", "question", "answer"].includes(
+            key,
+          ),
+      )
+    )
+      return null;
+    const { key, category, defaultPolicy, question, answer } = candidate;
+    if (
+      typeof key !== "string" ||
+      key.length === 0 ||
+      seen.has(key) ||
+      typeof category !== "string" ||
+      !CLARIFICATION_CATEGORIES.has(category) ||
+      (defaultPolicy !== "required" &&
+        defaultPolicy !== "factory-standard-visual") ||
+      (defaultPolicy === "factory-standard-visual" &&
+        category !== "experience.visual-style") ||
+      typeof question !== "string" ||
+      question.trim().length === 0 ||
+      question.length > 500 ||
+      typeof answer !== "string" ||
+      answer.length === 0 ||
+      answer.length > ANSWER_MAX_LENGTH ||
+      validated[key] !== answer
+    )
+      return null;
+    seen.add(key);
+    validatedContext.push({
+      key,
+      category: category as ClarificationAnswerContextV1["category"],
+      defaultPolicy,
+      question,
+      answer,
+    });
+  }
+  return {
+    brief: brief.trim(),
+    answers: validated,
+    clarificationContext: validatedContext,
+    ...(validatedPrior === undefined
+      ? {}
+      : { priorInterpretation: validatedPrior }),
+  };
 }
 
 /**
@@ -55,19 +169,39 @@ export function parseInterpretPayload(value: unknown): InterpretPayload | null {
  */
 export function classifyInterpretationError(error: unknown): {
   status: number;
-  error: string;
+  body: {
+    readonly error: {
+      readonly apiVersion: typeof ERROR_API_VERSION;
+      readonly code: RequirementInterpretationFailureCode;
+    };
+  };
 } {
-  if (!(error instanceof RequirementInterpreterError)) {
-    return { status: 500, error: "Requirement interpretation failed." };
-  }
-  switch (error.code) {
-    case "brief_invalid":
-      return { status: 400, error: error.message };
-    case "configuration_missing":
-    case "model_unavailable":
-    case "provider_rate_limited":
-      return { status: 503, error: error.message };
-    default:
-      return { status: 502, error: error.message };
-  }
+  const candidate =
+    error instanceof RequirementInterpreterError
+      ? `requirement.${error.code}`
+      : "requirement.failed";
+  const code = Object.prototype.hasOwnProperty.call(
+    REQUIREMENT_FAILURE_STATUSES,
+    candidate,
+  )
+    ? (candidate as RequirementInterpretationFailureCode)
+    : "requirement.failed";
+  return interpretationError(code);
+}
+
+export function interpretationError(
+  code: RequirementInterpretationFailureCode,
+): {
+  readonly status: number;
+  readonly body: {
+    readonly error: {
+      readonly apiVersion: typeof ERROR_API_VERSION;
+      readonly code: RequirementInterpretationFailureCode;
+    };
+  };
+} {
+  return {
+    status: REQUIREMENT_FAILURE_STATUSES[code],
+    body: { error: { apiVersion: ERROR_API_VERSION, code } },
+  };
 }

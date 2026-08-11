@@ -279,7 +279,7 @@ describe("Order Operations runtime compilation", () => {
     const files = ecommerceFiles();
 
     expect(files["api/prisma/schema.prisma"]).toContain(
-      "model OrderOperationReceipt",
+      "model Factory_OrderOperationReceipt",
     );
     expect(files["api/src/application-runtime.ts"]).toContain(
       "getOrderOperationReceipt",

@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   CompositionError,
   digestJson,
+  graphKeySchema,
   identifierSchema,
   parseStrict,
   safeBusinessTextSchema,
@@ -25,7 +26,10 @@ const namedItemSchema = z
 export const requirementSpecSchema = z
   .object({
     apiVersion: z.literal("factory.requirement-spec/v1"),
-    requirementId: identifierSchema,
+    // The requirementId becomes the graph key and the identity-policy domain
+    // symbols (`graph.domain.<requirementId>-principal`), so it must be a
+    // lowercase-kebab graph key, not a general identifier.
+    requirementId: graphKeySchema,
     outcome: safeBusinessTextSchema,
     actors: z.array(namedItemSchema).min(1).max(30),
     domainConcepts: z.array(namedItemSchema).max(60),
@@ -52,6 +56,15 @@ export const requirementSpecSchema = z
       .array(
         z
           .object({
+            category: z.enum([
+              "experience.visual-style",
+              "authorization",
+              "visibility",
+              "role",
+              "business-rule",
+              "data",
+              "integration",
+            ]),
             question: safeBusinessTextSchema.max(500),
             answer: safeBusinessTextSchema.max(1000).optional(),
           })

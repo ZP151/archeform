@@ -3,6 +3,7 @@ import { createPublishedGraphExchange } from "@factory/graph";
 
 import {
   ControlPlaneClient,
+  ControlPlaneError,
   type WorkbenchPreviewRun,
 } from "./control-plane-client";
 import { workbenchGraph } from "./workbench-graph";
@@ -43,6 +44,143 @@ const profileCoverage = [
 ];
 
 describe("ControlPlaneClient", () => {
+  it("propagates the caller AbortSignal through product choice and apply transport", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ checksum: "sha256:diff" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            draftRevision: {
+              id: "draft-2",
+              revisionNumber: 2,
+              graph: workbenchGraph,
+            },
+            review: {
+              applicationGraphId: "graph-1",
+              status: "applied",
+            },
+          }),
+          {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          },
+        ),
+      );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+    const choiceController = new AbortController();
+    const applyController = new AbortController();
+
+    await client.chooseProductPlan(
+      "review-1",
+      "standard",
+      choiceController.signal,
+    );
+    await client.applyProduct("review-1", applyController.signal);
+
+    expect(fetcher).toHaveBeenNthCalledWith(
+      1,
+      "http://control-plane.test/product/requirements/review-1/choices",
+      expect.objectContaining({ signal: choiceController.signal }),
+    );
+    expect(fetcher).toHaveBeenNthCalledWith(
+      2,
+      "http://control-plane.test/product/requirements/review-1/apply",
+      expect.objectContaining({ signal: applyController.signal }),
+    );
+  });
+
+  it.each([
+    "composition.request_envelope_invalid",
+    "composition.request_identity_invalid",
+    "composition.requirement_invalid",
+    "composition.blueprint_invalid",
+    "composition.requirement_blueprint_checksum_mismatch",
+  ])(
+    "retains the approved rejection code %s without exposing its response",
+    async (code) => {
+      const fetcher = vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            statusCode: 400,
+            error: "Bad Request",
+            code,
+            message: "Rejected value must-not-echo failed validation.",
+            rejectedValue: "must-not-echo",
+          }),
+          { status: 400, headers: { "content-type": "application/json" } },
+        ),
+      );
+      const client = new ControlPlaneClient(
+        "http://control-plane.test",
+        fetcher,
+      );
+
+      let rejection: ControlPlaneError | undefined;
+      try {
+        await client.createProductRequirement({
+          requestId: "request-client-1234",
+          requirement: {} as never,
+          blueprint: {} as never,
+        });
+      } catch (error) {
+        if (error instanceof ControlPlaneError) rejection = error;
+        else throw error;
+      }
+
+      expect(rejection).toMatchObject({ status: 400, code });
+      expect(rejection?.message).toBe("Control Plane request failed with 400.");
+      expect(JSON.stringify(rejection)).not.toContain("must-not-echo");
+    },
+  );
+
+  it.each([
+    [
+      "unknown code",
+      JSON.stringify({
+        code: "composition.unapproved",
+        message: "must-not-echo",
+      }),
+    ],
+    [
+      "non-string code",
+      JSON.stringify({
+        code: ["composition.requirement_invalid"],
+        message: "must-not-echo",
+      }),
+    ],
+    ["malformed body", "{not-json:must-not-echo"],
+  ])("drops rejection codes from a %s response", async (_label, body) => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(body, {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    let rejection: ControlPlaneError | undefined;
+    try {
+      await client.createProductRequirement({
+        requestId: "request-client-1234",
+        requirement: {} as never,
+        blueprint: {} as never,
+      });
+    } catch (error) {
+      if (error instanceof ControlPlaneError) rejection = error;
+      else throw error;
+    }
+
+    expect(rejection).toMatchObject({ status: 400 });
+    expect(rejection?.code).toBeUndefined();
+    expect(JSON.stringify(rejection)).not.toContain("must-not-echo");
+  });
+
   it("reads only safe Workspace Portfolio summary fields", async () => {
     const fetcher = vi.fn().mockResolvedValue(
       new Response(
@@ -776,6 +914,10 @@ describe("ControlPlaneClient", () => {
           id: "compilation-1",
           publishedRevisionId: "published-1",
           target: "application-bundle",
+          sequence: 1,
+          inputGraphHash: "sha256:" + "a".repeat(64),
+          compilerVersion: "factory-compiler/v1",
+          compiledAt: "2026-08-10T11:59:00.000Z",
           result: { status: "queued" },
         }),
         { status: 201, headers: { "content-type": "application/json" } },
@@ -783,11 +925,10 @@ describe("ControlPlaneClient", () => {
     );
     const client = new ControlPlaneClient("http://control-plane.test", fetcher);
 
-    await expect(
-      client.createCompilation("published-1"),
-    ).resolves.toMatchObject({
+    await expect(client.createCompilation("published-1")).resolves.toEqual({
       id: "compilation-1",
       publishedRevisionId: "published-1",
+      target: "application-bundle",
       result: { status: "queued" },
     });
     expect(fetcher).toHaveBeenCalledWith(
@@ -810,7 +951,11 @@ describe("ControlPlaneClient", () => {
           id: "compilation-1",
           publishedRevisionId: "published-1",
           target: "application-bundle",
-          result: { status: "succeeded" },
+          result: {
+            status: "succeeded",
+            artifactCount: 1,
+            completedAt: "2026-08-10T12:00:00.000Z",
+          },
           artifacts: [
             {
               path: "web/app/page.tsx",
@@ -827,7 +972,11 @@ describe("ControlPlaneClient", () => {
     await expect(client.getCompilation("compilation-1")).resolves.toMatchObject(
       {
         id: "compilation-1",
-        result: { status: "succeeded" },
+        result: {
+          status: "succeeded",
+          artifactCount: 1,
+          completedAt: "2026-08-10T12:00:00.000Z",
+        },
         artifacts: [{ path: "web/app/page.tsx" }],
       },
     );
@@ -836,6 +985,44 @@ describe("ControlPlaneClient", () => {
       expect.objectContaining({ method: "GET" }),
     );
   });
+
+  it.each(["createCompilation", "getCompilation"] as const)(
+    "%s rejects unsafe compilation result fields instead of casting them",
+    async (method) => {
+      const fetcher = vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            id: "compilation-1",
+            publishedRevisionId: "published-1",
+            target: "application-bundle",
+            sequence: 1,
+            compilerVersion: "factory-compiler/v1",
+            compiledAt: "2026-08-10T11:59:00.000Z",
+            result: {
+              status: "failed",
+              failureCode: "compilation.failed",
+              completedAt: "2026-08-10T12:00:00.000Z",
+              response: "must-not-surface",
+            },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      );
+      const client = new ControlPlaneClient(
+        "http://control-plane.test",
+        fetcher,
+      );
+
+      const request =
+        method === "createCompilation"
+          ? client.createCompilation("published-1")
+          : client.getCompilation("compilation-1");
+
+      await expect(request).rejects.toThrow(
+        "Control Plane compilation result is invalid.",
+      );
+    },
+  );
 
   it("reads only a registered generated artifact snapshot by compilation and encoded path", async () => {
     const fetcher = vi.fn().mockResolvedValue(

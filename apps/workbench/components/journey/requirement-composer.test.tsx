@@ -104,11 +104,12 @@ describe("RequirementComposer", () => {
 
   it("surfaces a bounded interpretation error", () => {
     render({
-      error: "OPENAI_API_KEY must be set in the local process environment.",
+      error: "Requirement interpretation is not configured.",
     });
     expect(container.textContent).toContain(
-      "OPENAI_API_KEY must be set in the local process environment.",
+      "Requirement interpretation is not configured.",
     );
+    expect(container.textContent).not.toContain("OPENAI_API_KEY");
   });
 
   it("offers example prompts behind one secondary popover", () => {

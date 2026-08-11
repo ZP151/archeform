@@ -162,6 +162,36 @@ function crashedStep(entry: VerificationStepPlanEntry): VerificationStepV1 {
   };
 }
 
+function previewStartFailureCode(error: unknown): string {
+  if (error instanceof VerificationLifecycleError) {
+    switch (error.code) {
+      case "preview_artifact_failed":
+      case "preview_compose_up_failed":
+      case "preview_port_discovery_failed":
+      case "preview_start_failed":
+      case "preview_start_timeout":
+      case "preview_start_cancelled":
+      case "preview_readiness_failed":
+      case "preview_health_check_failed":
+        return error.code;
+    }
+  }
+  return "preview_start_failed";
+}
+
+function failedBootStep(
+  entry: VerificationStepPlanEntry,
+  failureCode: string,
+): VerificationStepV1 {
+  return {
+    stepId: entry.stepId,
+    kind: entry.kind,
+    status: "failed",
+    failureCode,
+    summary: "The isolated preview failed to start.",
+  };
+}
+
 function abortSignal(signal: AbortSignal): Promise<void> {
   if (signal.aborted) {
     return Promise.resolve();
@@ -297,21 +327,26 @@ export async function runVerificationLifecycle(
 
   const probeSteps: VerificationStepV1[] = [];
   let environmentFailed = false;
+  let environmentFailureCode = "preview_start_failed";
   let probeAborted = false;
 
   try {
     await environment.boot();
-  } catch {
+  } catch (error) {
     environmentFailed = true;
+    environmentFailureCode = previewStartFailureCode(error);
   }
 
   for (const entry of input.stepPlan) {
     let step: VerificationStepV1;
     if (environmentFailed) {
-      step = skippedStep(
-        entry,
-        "Probe was skipped because the isolated environment did not start.",
-      );
+      step =
+        probeSteps.length === 0
+          ? failedBootStep(entry, environmentFailureCode)
+          : skippedStep(
+              entry,
+              "Probe was skipped because the isolated environment did not start.",
+            );
     } else if (probeAborted) {
       step = skippedStep(
         entry,
@@ -330,10 +365,13 @@ export async function runVerificationLifecycle(
           ),
         ]);
         if (raced.outcome === "timeout") {
-          step = skippedStep(
-            entry,
-            "Probe did not finish before the lifecycle timeout.",
-          );
+          step = {
+            stepId: entry.stepId,
+            kind: entry.kind,
+            status: "failed",
+            failureCode: "probe.timeout",
+            summary: "Probe did not finish before the lifecycle timeout.",
+          };
         } else {
           const parsed = verificationStepSchema.safeParse(raced.probeStep);
           if (

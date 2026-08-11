@@ -2,6 +2,16 @@ import { z } from "zod";
 
 import { sha256HexUtf8 } from "./sha256.js";
 
+export const factoryOwnedRecordIdentityFieldKey = "id";
+export const factoryOwnedRecordIdentityDeclarationError =
+  "Entity fields cannot declare Factory-owned record identity 'id'.";
+
+export function isFactoryOwnedRecordIdentityFieldKey(
+  key: unknown,
+): key is typeof factoryOwnedRecordIdentityFieldKey {
+  return key === factoryOwnedRecordIdentityFieldKey;
+}
+
 /** Dotted capability-family keys (for example `core.crud`), never paths. */
 export const capabilityKeySchema = z
   .string()
@@ -15,6 +25,33 @@ export const identifierSchema = z
   .min(1)
   .max(128)
   .regex(/^[a-z][a-zA-Z0-9-]*$/);
+
+/**
+ * Keys that become graph-symbol segments verbatim (`graph.flow.<key>`,
+ * `graph.domain.<key>`, `graph.policy.<key>`, `graph.page.<key>`): lowercase
+ * kebab only, matching the plan grammar in composition-plan.ts. A camelCase
+ * blueprint key could never produce a plan the seam accepts, so it must fail
+ * here at the schema boundary.
+ */
+export const graphKeySchema = z
+  .string()
+  .min(1)
+  .max(128)
+  .regex(/^[a-z][a-z0-9-]*$/);
+
+/**
+ * Keys that become Application Graph domain entity field keys verbatim
+ * (`domain.entities[].fields[].key`, and the field keys of entity indexes).
+ * The Graph model's field grammar is lowercase-first with letters, digits,
+ * and underscores — camelCase is allowed, hyphens are not — so a blueprint
+ * field key must match it here, at the schema boundary, rather than
+ * dead-ending the composition apply later with a raw Graph validation error.
+ */
+export const graphFieldKeySchema = z
+  .string()
+  .min(1)
+  .max(128)
+  .regex(/^[a-z][a-zA-Z0-9_]*$/);
 
 export const semanticVersionSchema = z
   .string()
