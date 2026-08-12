@@ -98,10 +98,29 @@ P0 acceptance gates:
 > are accepted and delivered. D0 commit
 > `484aa5c42a481efdd8e7c4a2e234c7773d7e5857` was pushed without force, with
 > local HEAD equal to the upstream remote tip. ADR-0009 is founder-accepted, the
-> additive Graph v2 contract is frozen. Task 1 is accepted after final Sol
-> `ACCEPT` with P0/P1/P2=0/0/0 and fresh PM reconciliation, but is not yet
-> delivered. Exact 17-path controller commit/push/equality evidence is next;
-> Tasks 2 and 3 remain blocked.
+> additive Graph v2 contract is frozen. Task 1 is delivered at
+> `a6e4e6945e79f7ca7cf93686ee00628534f98acd` after final Sol `ACCEPT` with
+> P0/P1/P2=0/0/0, fresh PM reconciliation, exact 17-path commit, non-force push,
+> local/upstream equality, and an empty worktree. Its delivery gate is consumed.
+> Tasks 2 and 3 remain planned because their Restaurant journey/key/binding
+> contract is not yet compatible and frozen, and Task 3 package/source intake
+> required technology governance. ADR-0010 is now founder-`Accepted` via the
+> verbatim response `接受` in founder chat on 2026-08-12. It authorizes PM to
+> freeze one serialized additive Graph V3 prerequisite plus a constrained
+> private UI package experiment; copied shadcn/ui source and new direct Radix
+> dependencies remain rejected. The Graph V3 prerequisite had reached
+> `ready_for_qa` after completed exact-10-path implementation, P1 repair, and
+> independent Sol task-review approval with P0/P1/P2=0/0/0. Fresh exact-tree
+> Terra QA passed P0/P1/P2=0/0/0, but final Sol release review rejected the tree
+> with P0/P1/P2=0/2/0 for hostile array and direct schema-boundary gaps. The V3
+> six-path TDD repair passed same-Sol re-review with P0/P1/P2=0/0/0, and
+> repaired-tree Terra QA passed P0/P1/P2=0/0/0, but the new final Sol review
+> returns `RELEASE_REJECT`, P0/P1/P2=0/1/0, for compiler-wrapper required-field
+> descriptors. The frozen two-path repair now passes same-Sol re-review with
+> P0/P1/P2=0/0/0, compiler-repaired Terra QA passes P0/P1/P2=0/0/0, and the
+> escalated final Sol review returns `RELEASE_ACCEPT`, P0/P1/P2=0/0/0. V3 is
+> `accepted` but not delivered; exact-16 controller delivery is authorized.
+> Tasks 2 and 3 still have zero immediate writers pending equality.
 > Prompt-to-Polished Restaurant Product is the sole P1 product target. The
 > Foundry, 100+ recipe catalogue, twelve-anchor
 > expansion, cloud deployment, production payments, connector marketplace,
@@ -185,11 +204,82 @@ Acceptance requires the restaurant prompt to produce the customer and merchant
 surfaces, at least fifteen surface-owned screens, multi-block editable page
 trees, shared transactional behavior, generated source, isolated runtime
 verification, accessibility, clean-checkout reproducibility, and cleanup.
-The D0 dependency is now satisfied. Task 1 implements the frozen additive Graph
-v2 contract as a serialized single-writer wave. Restaurant semantics, UI source,
+The D0 dependency is satisfied, and Task 1 has delivered the frozen additive
+Graph v2 contract. A post-delivery gate audit found that delivery is necessary
+but not sufficient for the Task 2/Task 3 wave: the accepted journey invariant
+cannot represent the existing shared multi-role Restaurant order flow as one
+actor journey, the accepted Graph block-binding contract is Domain-field-only
+while the UI registry plan also names Flow/Policy bindings, and the exact
+fifteen-screen/recipe/registry/authority key map is not frozen. New UI package
+and shadcn/ui Radix source/dependency intake also remains subject to a Tech Lead
+proposal and explicit founder acceptance. Restaurant semantics, UI source,
 compilers, Workbench changes, providers, services, and Docker remain blocked
-until Task 1 is accepted and its reviewed commit is pushed; only then may the
-Task 2 and Task 3 path-disjoint product wave begin.
+until those shared decisions are accepted and PM freezes the versioned
+cross-task manifest.
+
+Founder-accepted
+`docs/adr/adr-0010-restaurant-product-graph-v3-and-ui-registry-boundary.md`
+recommends keeping the Golden runtime and immutable Graph V1/V2, migrating the
+Restaurant target additively to `factory.application-graph/v3` with step-scoped
+journey actors and typed non-authoritative Domain/Flow/Policy policies,
+experimenting with seven private version `0.1.0` UI/recipe packages only on the
+accepted React/TypeScript/Vitest/Lucide coordinates, and rejecting copied
+shadcn/ui source or new direct Radix dependencies in this wave. It also specifies
+`factory.draft-preview-snapshot/v2` and explicit V2-to-V3 Draft lineage, and
+records the founder's verbatim response `接受` from founder chat on 2026-08-12.
+The founder also wrote verbatim `Task 2/3 也授权，如果需要`; PM treats that as
+conditional future authorization. A serialized Graph V3 contract slice must be
+accepted, delivered, and pushed before the Task 2/Task 3 manifest or parallel
+wave. Once that prerequisite and the exact disjoint shared manifest are frozen,
+PM may start Tasks 2 and 3 without another founder prompt. Until then both stay
+planned with zero writers, and any shared-contract change stops both.
+
+The Graph V3 prerequisite is `accepted` but not delivered. Its exact contract
+and ten-path implementation manifest are frozen in
+`docs/superpowers/ledgers/2026-08-12-application-graph-v3-prerequisite.md`; the
+execution plan is
+`docs/superpowers/plans/2026-08-12-application-graph-v3-prerequisite.md`. It adds
+Graph V3, Snapshot V2, strict V2-to-V3 Draft lineage, strict Published V1/V2/V3
+adaptation, and a fail-closed compiler version entry. The current compiler is
+still V1-only: V1 delegates byte-identically, while V2/V3 return exact unsupported
+errors with no projection. Final repair evidence passes Graph 414/414, compiler
+411/411, adapter 26/26, focused compatibility 85/85, compiler dispatch 8/8,
+typecheck/build, exact-10 formatting, diff, containment, declarations, browser,
+and banned-import checks. Final same-Sol task review is specification
+`COMPLIANT`, quality `APPROVED`, P0/P1/P2=0/0/0. Fresh read-only Terra QA passes
+P0/P1/P2=0/0/0 with focused Graph 59/59, broader behavior 71/71, compiler
+dispatch 8/8, full Graph 414/414, full compiler 411/411, typecheck/build,
+format/diff/containment, declaration/browser, banned-import, and sensitive-scan
+gates green. Final Sol release review nevertheless returns `REJECT` with
+P0/P1/P2=0/2/0: adapter arrays do not require the standard prototype and invoke
+instance `.map()`, while direct Graph V3/Snapshot V2 schema and public APIs can
+normalize inherited or hidden hostile input. The same-writer six-path RED→GREEN
+repair passes combined 110/110, compatibility 180/180, full Graph 465/465, and
+compiler 411/411 with no public-contract, compiler, dependency, or manifest
+expansion. Same-Sol re-review is `COMPLIANT`/`APPROVED`, P0/P1/P2=0/0/0, with
+121 hostile checks and zero caller invocations. Fresh repaired-tree Terra QA
+passes P0/P1/P2=0/0/0, including hostile arrays 28/28, direct Node/browser
+boundaries 23/23, corrected helper 6/6 with zero caller invocation, full Graph
+465/465, and compiler 411/411. The initial helper anomaly was harness inversion/
+spread only and produced no product finding or edit. Exactly one new independent
+read-only Sol final release review returned `RELEASE_REJECT`, P0/P1/P2=0/1/0:
+the compiler wrapper accepts hidden required data and invokes accessor required
+fields. Both prior Graph boundary P1 families remain closed. A same-writer
+compiler source/test RED→GREEN is authorized with no public-contract, schema,
+target, dependency, or manifest expansion. Same-Sol re-review, fresh Terra QA,
+and another final Sol release review remain mandatory. The compiler repair now
+passes focused 12/12, compiler 415/415, Graph 465/465, hostile 110/110, and
+compatibility 180/180. Same-Sol re-review is `COMPLIANT`/`APPROVED`,
+P0/P1/P2=0/0/0, with exact descriptor rejection and zero getter calls. Exactly
+compiler-repaired Terra QA passes P0/P1/P2=0/0/0. Three full compiler runs exit
+0, but Terra transparently does not claim the exact 415 total because aggregate
+stdout truncated; prior writer/reviewer/PM 415/415 evidence remains separate.
+The escalated final Sol review returns `RELEASE_ACCEPT`, P0/P1/P2=0/0/0, and
+fresh PM verification reproduces compiler 415/415 with complete raw output plus
+all frozen gates. Controller delivery is authorized for exactly the frozen 16
+paths with subject `feat(graph): add application graph v3 contracts`, staged
+equality/diff/sensitive checks, non-force push, and local/upstream equality.
+Task 2/Task 3 remain blocked until PM records delivery equality.
 
 The root README controls public identity: active Workbench copy and metadata
 move to Archeform · 元象 during this target. Existing `@factory/*` packages,
@@ -205,10 +295,14 @@ ui-primitives -> ui-patterns -> workbench-ui / generated-ui
               -> screen-recipes -> experience-recipes -> product-recipes
 ```
 
-After Graph v2 review/freeze, Restaurant semantics and the UI Registry/source
-foundation begin as two parallel write lines. Customer and merchant compilers
-start only when both inputs are ready for QA. Shared contract changes stop the
-parallel wave and return to the Graph contract owner.
+After Graph v2 delivery, founder acceptance of ADR-0010, and delivery of the
+accepted Graph V3 prerequisite, Restaurant semantics and the UI Registry/source
+foundation may begin as two parallel write lines only when one exact versioned
+key-and-binding manifest proves their shared keys, authorities, journey/flow
+semantics, and binding ports are compatible.
+Until then both remain `planned` with no implementation writer. Customer and
+merchant compilers start only when both inputs are ready for QA. Shared contract
+changes stop the parallel wave and return to the contract owner.
 
 Workbench implementation includes characterization-first decomposition of the
 current 3,818-line global stylesheet, 907-line controller, and 1,131-line
@@ -490,9 +584,23 @@ Requirement-to-Product Closure and D0 are accepted on the current reviewed tree;
 ADR-0009 is founder-accepted. D0 is delivered at
 `484aa5c42a481efdd8e7c4a2e234c7773d7e5857`, pushed without force with local
 HEAD equal to the upstream remote tip. The Graph v2 contract is frozen and Task
-1 is accepted after final Sol `ACCEPT` with P0/P1/P2=0/0/0 plus fresh PM
-verification. Delivery remains open: the controller must stage exactly the 17
-accepted paths, pass staged diff/sensitive checks, create the single reviewed
-commit, push without force, and prove local/upstream equality. Restaurant
-semantics, UI, provider, service, and Docker work stay blocked until PM records
-that equality.
+1 is delivered at `a6e4e6945e79f7ca7cf93686ee00628534f98acd`
+after final Sol `ACCEPT` with P0/P1/P2=0/0/0, fresh PM verification, exact
+17-path commit, non-force push, and local/upstream equality. Its delivery gate
+is closed. ADR-0010 is founder-accepted through the exact response `接受` on
+2026-08-12. The serialized Graph V3 prerequisite had reached `ready_for_qa`
+after its exact frozen ten-path implementation, independent Sol task review,
+and fresh Terra QA passed with P0/P1/P2=0/0/0. Final Sol release review rejected
+it with P0/P1/P2=0/2/0. The frozen six-path recursive-boundary repair now passes
+same-Sol re-review P0/P1/P2=0/0/0, and repaired-tree Terra QA now passes
+P0/P1/P2=0/0/0. The new final Sol review returns `RELEASE_REJECT`,
+P0/P1/P2=0/1/0. The compiler-wrapper two-path repair now passes same-Sol review
+P0/P1/P2=0/0/0, and compiler-repaired Terra QA passes P0/P1/P2=0/0/0.
+Escalated final Sol returns `RELEASE_ACCEPT`, P0/P1/P2=0/0/0; V3 is `accepted`
+but not delivered, with exact-16 controller delivery next.
+Restaurant semantics and UI remain planned and blocked on V3
+re-review/QA/release/acceptance/delivery and one
+exact compatible Restaurant Task 2/Task 3 key-and-binding manifest. The
+additional exact founder response `Task 2/3 也授权，如果需要` is conditional future
+authority; it does not bypass those gates. Provider, service, Docker, delivery,
+and downstream work remain unauthorized.

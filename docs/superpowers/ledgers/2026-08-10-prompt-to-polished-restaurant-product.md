@@ -73,7 +73,7 @@ Advanced surfaces unless an exception requires attention.
   `docs/adr/adr-0009-application-graph-v2-shared-contract.md` (`Accepted`,
   `keep` the current runtime profile and add the versioned V2 contract).
 
-Any change to Graph v2, `DraftPreviewSnapshotV1`, lifecycle, compiler input,
+Any change to Graph v2/v3, `DraftPreviewSnapshotV1`/`V2`, lifecycle, compiler input,
 surface ownership, or generated-source ownership stops parallel work and
 returns to the Task 1 integration owner.
 
@@ -91,11 +91,12 @@ promoted to Sol under the workstream's fallback rule, while Terra remains QA;
 the intended local Spark configuration is preserved and D0 records the actual
 runtime gap instead of claiming false availability.
 
-After Task 1 is frozen, Task 2 and Task 3 start together as the only parallel
-product-code writer lines. Task 2 owns business semantics and never changes UI
-registry source; Task 3 owns UI source/registry and never changes Restaurant
-semantics. A missing shared key or binding is a Task 1 contract issue, not a
-reason for either line to widen its paths.
+After Task 1 is delivered, Task 2 and Task 3 are eligible to start together only
+when PM proves their shared keys and bindings are fully satisfied by an accepted
+contract. Task 2 owns business semantics and never changes UI registry source;
+Task 3 owns UI source/registry and never changes Restaurant semantics. A missing
+or conflicting shared key or binding stops the wave and returns to the contract
+owner; it is not a reason for either line to widen its paths.
 
 ## D0 — Record the product reset and freeze scope
 
@@ -2799,7 +2800,7 @@ rejected.`; one journey passes and one fails after 11.6 minutes. The harness
 
 ## Task 1 — Freeze Product Intent and Application Graph v2
 
-State: `accepted`.
+State: `delivered`.
 
 Owner: `integration` using one GPT-5.6-Sol writer.
 
@@ -3688,14 +3689,63 @@ Controller-only Task 1 delivery sequence:
    and blocked until PM records that exact local/remote equality and closes Task
    1 delivery.
 
+Task 1 delivery closure — 2026-08-12:
+
+- Controller commit `a6e4e6945e79f7ca7cf93686ee00628534f98acd`
+  has the exact reviewed subject
+  `feat(graph): add application graph v2 contracts` and contains exactly the
+  frozen 17-path manifest: 14 Task 1 Graph paths plus this ledger, project
+  status, and roadmap.
+- The commit was pushed without force to
+  `feat/governed-composition-capability-foundry`. Fresh post-push evidence
+  records local `HEAD` and the upstream branch tip at the same exact hash, with
+  an empty worktree. PM therefore records Task 1 as `delivered`, closes and
+  consumes its delivery gate, and does not replay it against later work.
+- Delivery does not authorize integration into `main`, a tag or repository
+  release, Product Publish, cloud deployment, providers, models, services,
+  Docker, or Compose. Task 2 and Task 3 may start only if their shared
+  Restaurant key, journey, and binding contract is fully compatible with the
+  delivered Task 1 contract and any new technology intake has completed its
+  governance gate.
+
 ## Task 2 — Compose one deterministic Restaurant Product Recipe
 
 State: `planned`.
 
-Owner: `backend` with `integration` review.
+Owner: one `backend` implementation writer, with `integration` as contract
+owner and task reviewer. No implementation writer is authorized yet.
 
-Allowed paths: `packages/capabilities/**`, restaurant fixtures assigned by PM,
-and focused capability tests.
+Specialization: deterministic Restaurant domain, policy, flow, journey,
+authority, seed, and two-surface composition semantics.
+
+Contract owner: `integration`.
+
+Contract status: `blocked`; ADR-0010 is accepted, but its serialized Graph V3
+prerequisite is not delivered and the cross-task Restaurant key-and-binding
+manifest is not frozen.
+
+Contract artifact: the delivered Task 1 contract plus required artifact
+`docs/superpowers/specs/2026-08-12-restaurant-task2-task3-key-binding-contract.md`.
+That versioned manifest may be created and frozen only after the accepted Graph
+V3 prerequisite is delivered; it does not exist yet and no writer may infer it
+from the design prose. Accepted ADR
+`docs/adr/adr-0010-restaurant-product-graph-v3-and-ui-registry-boundary.md`
+provides conditional future authority but does not dispatch this task.
+
+Exact prospective allowed paths, inactive until this task becomes
+`implementing`:
+
+- `packages/capabilities/src/commerce/product-recipe.ts`;
+- `packages/capabilities/src/restaurant/product-recipe.ts`;
+- `packages/capabilities/src/restaurant/product-graph.ts`;
+- `packages/capabilities/src/capability-catalogue.ts`;
+- `packages/capabilities/src/plan-alternatives.ts`;
+- `packages/capabilities/src/product-composer.ts`;
+- `packages/capabilities/src/index.ts`;
+- `packages/capabilities/test/restaurant-product-recipe.test.ts`;
+- `packages/capabilities/test/restaurant-product-composition.test.ts`;
+- `packages/capabilities/test/product-composer.test.ts`;
+- `packages/capabilities/test/restaurant-product-fixture.ts`.
 
 Acceptance evidence:
 
@@ -3707,27 +3757,96 @@ Acceptance evidence:
   are present;
 - repeated fixture composition produces the same Graph and hash.
 
-Blocked by: Task 1 reviewed and contract frozen.
+Blocked by:
+
+- the delivered Task 1 journey rule requires a journey actor to be present in
+  every transition of every referenced flow, while the existing Restaurant
+  order flow intentionally assigns customer, kitchen, cashier, and manager to
+  different transitions; no single actor can validly reference that whole
+  flow;
+- the exact fifteen page keys, recipe keys, registry/block keys, field
+  authority classifications, flow partitioning, and legacy-to-new-screen map
+  are not frozen in one versioned cross-task manifest;
+- any resolution that changes the stable Graph contract requires a Tech Lead
+  proposal and explicit founder acceptance before implementation.
+
+Authorization: conditional future authority only. Keep Task 2 `planned`; do not
+write REDs or production code until Graph V3 is accepted, delivered, and pushed,
+and PM freezes the exact cross-task manifest. No additional founder prompt is
+required after those gates.
 
 ## Task 3 — Establish the UI Registry and shared source foundation
 
 State: `planned`.
 
-Owner: `frontend`.
+Owner: one `frontend` implementation writer, with `integration` as shared
+contract owner and task reviewer. No implementation writer is authorized yet.
 
-Allowed paths: `packages/ui-primitives/**`, `packages/ui-patterns/**`,
-`packages/workbench-ui/**`, `packages/generated-ui/**`,
-`packages/screen-recipes/**`, `packages/experience-recipes/**`,
-`packages/product-recipes/**`, their tests, and explicitly assigned workspace
-package manifests.
+Specialization: reuse-first UI source registry, accessible primitives and
+patterns, generated business blocks, screen/experience/product recipes,
+provenance, and source ownership.
+
+Contract owner: `integration` for shared keys and bindings; `frontend` for the
+registry implementation after contract and governance acceptance.
+
+Contract status: `blocked`; ADR-0010 is accepted, but its serialized Graph V3
+prerequisite is not delivered and the registry binding manifest is not frozen.
+
+Contract artifact: the same required
+`docs/superpowers/specs/2026-08-12-restaurant-task2-task3-key-binding-contract.md`
+plus accepted technology-governance ADR
+`docs/adr/adr-0010-restaurant-product-graph-v3-and-ui-registry-boundary.md`
+which rejects copied shadcn/ui source and new direct Radix dependencies in this
+wave. A pinned source-study record is outside this wave and is required only if
+a later demonstrated gap starts a separately governed source-intake decision.
+
+Exact prospective allowed paths, inactive until this task becomes
+`implementing`:
+
+- `packages/ui-primitives/package.json`;
+- `packages/ui-primitives/src/index.ts`;
+- `packages/ui-primitives/src/components/**`;
+- `packages/ui-primitives/THIRD_PARTY_NOTICES.md`;
+- `packages/ui-primitives/test/components.test.tsx`;
+- `packages/ui-patterns/package.json`;
+- `packages/ui-patterns/src/index.ts`;
+- `packages/ui-patterns/src/navigation/**`;
+- `packages/ui-patterns/src/forms/**`;
+- `packages/ui-patterns/src/feedback/**`;
+- `packages/ui-patterns/test/pattern-contracts.test.tsx`;
+- `packages/workbench-ui/package.json`;
+- `packages/workbench-ui/src/index.ts`;
+- `packages/generated-ui/package.json`;
+- `packages/generated-ui/src/customer/**`;
+- `packages/generated-ui/src/merchant/**`;
+- `packages/generated-ui/src/states/**`;
+- `packages/generated-ui/test/restaurant-blocks.test.tsx`;
+- `packages/screen-recipes/package.json`;
+- `packages/screen-recipes/src/customer/**`;
+- `packages/screen-recipes/src/merchant/**`;
+- `packages/screen-recipes/src/index.ts`;
+- `packages/screen-recipes/test/restaurant-screens.test.ts`;
+- `packages/experience-recipes/package.json`;
+- `packages/experience-recipes/src/fine-dining.ts`;
+- `packages/experience-recipes/src/index.ts`;
+- `packages/experience-recipes/test/fine-dining.test.ts`;
+- `packages/product-recipes/package.json`;
+- `packages/product-recipes/src/restaurant-ordering.ts`;
+- `packages/product-recipes/src/index.ts`;
+- `packages/product-recipes/test/restaurant-product.test.ts`.
+
+No root workspace manifest, lockfile, dependency, runtime, provider, service,
+Docker, or Compose path is authorized by this prospective set. Any required
+expansion returns to PM and technology governance before writing.
 
 Acceptance evidence:
 
 - task hand-off records the searched template/registry inventory, reused keys
   and paths, parameterization, rejected candidates, and any functional gap that
   justified new source;
-- pinned shadcn/ui Radix source and Lucide primitives retain provenance and
-  license notices;
+- the experiment uses only the accepted React, TypeScript, Vitest, and Lucide
+  coordinates; copied shadcn/ui source and new direct Radix dependencies are
+  absent;
 - generated business blocks cover customer, merchant, and state surfaces;
 - each primitive, pattern, block, screen, experience, and product registry item
   owns version, source, license, schema, slots/nesting, bindings, complete UI
@@ -3741,7 +3860,281 @@ Acceptance evidence:
   rejects near-equivalent registry entries without distinct semantics;
 - no Aceternity item enters production without per-item evidence.
 
-Blocked by: Task 1 reviewed and contract frozen.
+Blocked by:
+
+- Task 1 binding policies authorize only exact
+  `graph.domain.<entityKey>.<fieldKey>` block-binding targets, while the Task 3
+  plan currently requires registry declarations for Domain, Flow, and Policy
+  bindings; whether Flow/Policy are registry metadata or Graph bindings is a
+  shared contract decision and cannot be inferred by the frontend writer;
+- the exact Task 2/Task 3 page, recipe, block, slot, port, and authority key map
+  is not frozen;
+- the seven private UI workspace packages are only a founder-accepted
+  experiment and cannot start before the Graph V3 and shared-manifest gates;
+  copied shadcn/ui source and new direct Radix dependencies remain rejected.
+
+Authorization: conditional future authority only. Keep Task 3 `planned`; do not
+write inventory artifacts, REDs, package manifests, notices, or production code
+until Graph V3 is accepted, delivered, and pushed, and PM freezes the exact
+cross-task manifest. No copied source or new direct Radix dependency is
+authorized, and no additional founder prompt is required after the stated gates.
+
+Task 2/Task 3 first-wave gate audit — 2026-08-12:
+
+- Task 1 delivery equality is satisfied, but equality alone is insufficient for
+  parallel dispatch. Read-only repository audit confirms the delivered Graph
+  suite at 370/370 and finds the three material conflicts above. Existing
+  Restaurant entity, role, flow, and block vocabulary is reusable evidence, but
+  its legacy screens/routes are not the new fifteen-screen contract.
+- The first wave therefore does not start. Tasks 2 and 3 remain path-disjoint
+  prospective tasks with zero immediate writer authority; no writer may create
+  aliases, split flows, relabel Graph bindings, or select dependencies to work
+  around the missing shared decision.
+- Tech Lead ADR-0010 recommends: `keep` the accepted Golden runtime and
+  immutable Graph V1/V2; `migrate` the Restaurant product additively to
+  `factory.application-graph/v3` with step-scoped journey actors, typed
+  Domain/Flow/Policy policies, explicit V2-to-V3 Draft lineage, and
+  `factory.draft-preview-snapshot/v2`; `experiment` with the seven private
+  version `0.1.0` UI/recipe workspace packages using only the accepted React,
+  TypeScript, Vitest, and Lucide coordinates; and `reject` copied shadcn/ui
+  source or new direct Radix dependencies in this wave. Flow and Policy
+  bindings remain non-authoritative client declarations and every state change
+  remains subject to server tenant, actor, policy, transition, revision,
+  idempotency, and concurrency checks.
+- Founder acceptance checkpoint — 2026-08-12: the founder explicitly accepted
+  ADR-0010 in founder chat with the verbatim response `接受`. The founder also
+  wrote verbatim `Task 2/3 也授权，如果需要`; PM records that second response as
+  conditional future authorization, not immediate dispatch. Tasks 2 and 3 may
+  start without another founder prompt only after Graph V3 passes review, QA,
+  release review, PM acceptance, one reviewed commit and non-force push with
+  local/upstream equality, and PM freezes their exact shared Restaurant
+  key-and-binding manifest with disjoint paths.
+- PM therefore opens one serialized Graph V3 prerequisite under
+  `docs/superpowers/ledgers/2026-08-12-application-graph-v3-prerequisite.md`.
+  Until that prerequisite is delivered and the shared manifest is frozen, Tasks
+  2 and 3 stay `planned` with zero writers. Any shared-contract change stops both
+  and returns to the Graph contract owner.
+- Graph V3 prerequisite freeze — 2026-08-12: state `implementing`, contract
+  `frozen`, owner one GPT-5.6-Sol integration writer. Exact implementation plan:
+  `docs/superpowers/plans/2026-08-12-application-graph-v3-prerequisite.md`.
+  Writer ownership is exactly ten paths: new Graph V3 and Snapshot V2 source and
+  tests; Graph adapter, adapter test, Node export, and browser export; compiler
+  facade and one version-dispatch test. The full exact manifest and public
+  signatures are in the prerequisite ledger. No other path and no commit/push is
+  authorized for the writer.
+- Reconciliation corrects one prior assumption: the delivered compiler still
+  consumes only legacy V1 `PublishedGraphInput`; it does not compile V2. The
+  frozen additive entry strict-adapts Published V1/V2/V3, delegates V1
+  byte-identically to the legacy compiler, and rejects valid V2/V3 with exact
+  unsupported-version errors. V3 compilation is deferred to a later frozen
+  compiler-target task; no projection or down-conversion is allowed.
+- Fresh pre-RED baseline passes Graph 18 files/370 tests plus typecheck/build and
+  compiler 22 files/403 tests. Sol task review, provider-free Terra QA, final Sol
+  release review, fresh PM acceptance, and one controller-only reviewed
+  commit/non-force push with equality are mandatory before Task 2/3 manifest
+  freeze or writer dispatch.
+
+Graph V3 prerequisite writer/review checkpoint — 2026-08-12:
+
+- The exact ten-path implementation is handed off and the sole Sol writer is
+  paused. Initial RED was Graph 6 failed/12 passed and compiler dispatch 7/7
+  failed with production untouched. Final writer evidence includes focused Graph
+  51/51, compiler dispatch 8/8, strict-wrapper RED 1/8 to GREEN 8/8, migration
+  `DataCloneError` RED 1/18 to GREEN 18/18, full compiler 411/411, and full Graph
+  initially 406 then repaired to 414/414.
+- Independent Sol task review found one P1 family in recursive Published/context
+  handling of symbol-keyed and non-enumerable own properties. Repair RED was
+  adapter 8 failed/18 passed; GREEN is adapter 26/26, focused compatibility
+  85/85, compiler dispatch 8/8, plus green typecheck, build, exact-10 formatting,
+  diff, 10/10 containment, declarations, browser exports, and banned-import
+  checks.
+- Final same-Sol re-review returns specification `COMPLIANT`, code quality
+  `APPROVED`, P0/P1/P2=0/0/0, independent adapter 26/26, and all 8/8 adversarial
+  probes rejected. PM advances only the serialized Graph V3 prerequisite to
+  `ready_for_qa`.
+- Exactly one fresh, read-only GPT-5.6-Terra QA pass is authorized on the exact
+  reviewed tree and complete frozen matrix. It must be provider/model/network/
+  service/Docker/Compose-free and change no files. Task 2 and Task 3 stay
+  `planned` with zero writers. Final release review, acceptance, the exact
+  16-path delivery, commit, push, shared-manifest freeze, and downstream work
+  remain unauthorized.
+
+Graph V3 prerequisite Terra QA checkpoint — 2026-08-12:
+
+- The single authorized exact-tree Terra pass is consumed and returns `PASS`
+  with P0/P1/P2=0/0/0. Evidence is focused Graph 59/59, broader behavioral
+  matrix 71/71, compiler dispatch 8/8, full Graph 20 files/414 tests, and full
+  compiler 23 files/411 tests.
+- Graph/compiler typecheck and build, exact-10 Prettier, diff, implementation
+  containment 10/10, delivery containment 16/16, declarations 21/21, dynamic
+  browser exports 8/8, zero banned Node imports in the browser closure, and zero
+  changed-hunk sensitive-material matches all pass. The only warning is the
+  inherited non-failing Node `punycode` deprecation warning.
+- Terra made no edit and used no provider, model, network, service, Docker, or
+  Compose action. The prerequisite remains `ready_for_qa`.
+- Exactly one independent read-only GPT-5.6-Sol final release review is now
+  authorized on the exact Terra-passed tree under the release-review skill. It
+  must inspect the actual diff, call paths, tests, threat model, delivery policy,
+  ADR, ledger, plan, and exact containment, then return explicit `ACCEPT` or
+  `REJECT` plus P0/P1/P2 and actionable file/line evidence. Task 2 and Task 3
+  remain `planned` with zero writers; acceptance, delivery, commit, push,
+  shared-manifest freeze, and downstream work remain blocked pending final Sol
+  `ACCEPT` with no open P0/P1 and fresh PM reconciliation.
+
+Graph V3 prerequisite final-release rejection — 2026-08-12:
+
+- Final Sol release review returns `REJECT` with P0/P1/P2=0/2/0. Focused Graph
+  59/59 and compiler dispatch 8/8 still pass, proving a matrix gap. PM returns
+  only the Graph V3 prerequisite from `ready_for_qa` to `implementing`; the prior
+  Terra PASS is historical evidence, not acceptance or delivery authority.
+- P1 A: adapter recursive arrays accept `Array` subclasses/custom prototypes and
+  copy through caller-controlled instance `.map()`. The repair requires standard
+  dense arrays, own enumerable data descriptors, descriptor-value/manual copy,
+  and no accessor, inherited index, iterator, or caller-method execution across
+  Published V1/V2/V3 and V2-to-V3 contexts.
+- P1 B: direct Graph V3 and Snapshot V2 schema/assert/hash/transition APIs allow
+  Zod normalization to hide inherited fields and symbol-keyed, non-enumerable,
+  accessor, or nested hostile extras. The same recursive all-own plain-record/
+  plain-array boundary must govern Node/browser direct APIs and exported schemas.
+- The same sole Sol writer is authorized for focused RED→GREEN in exactly six
+  paths: adapter source/test, Graph V3 source/test, and Snapshot V2 source/test.
+  No signature, schema field, serialized version, compiler, dependency, shared
+  source, or manifest expansion is authorized.
+- Required gates are same-Sol task re-review, fresh Terra QA, a new independent
+  final Sol release review, then fresh PM reconciliation only on explicit
+  `ACCEPT` with no open P0/P1. Acceptance, delivery, commit, push, shared
+  Restaurant manifest freeze, and Task 2/Task 3 writers remain blocked.
+
+Graph V3 recursive-boundary repair checkpoint — 2026-08-12:
+
+- The six-path writer handoff records adapter P1 A RED 20 failed/26 passed and
+  direct Graph V3/Snapshot V2 P1 B RED 15 failed/41 passed with production
+  untouched. GREEN is combined repair 110/110, compatibility 180/180, full
+  Graph 465/465, compiler 411/411, and dispatch 8/8.
+- Typecheck/build, exact-10 format, diff, repair 6/6, implementation 10/10,
+  delivery 16/16, declarations, browser exports/import closure, sensitive scan,
+  and pinned-hash gates all pass. The inherited non-failing `punycode` warning
+  is unchanged.
+- Same-Sol re-review returns specification `COMPLIANT`, code quality `APPROVED`,
+  P0/P1/P2=0/0/0, and `ready_for_qa: yes`. Its independent hostile probe reports
+  121 checks, zero failures, and zero caller invocations.
+- PM advances only the Graph V3 prerequisite to `ready_for_qa` and authorizes
+  exactly one fresh read-only Terra QA pass on the exact repaired tree. Terra
+  must repeat both complete hostile-array and direct Graph/Snapshot boundary
+  matrices plus all frozen gates without provider, model, network, service,
+  Docker, Compose, or file edits.
+- A new final Sol release review is not yet authorized. Acceptance, delivery,
+  commit, push, shared Restaurant manifest freeze, and Task 2/Task 3 writers
+  remain blocked pending Terra reconciliation.
+
+Graph V3 repaired-tree Terra checkpoint — 2026-08-12:
+
+- Fresh repaired-tree Terra QA returns `PASS`, P0/P1/P2=0/0/0. It passes
+  focused repair 110/110, compatibility/browser 180/180, hostile arrays 28/28,
+  direct Node/browser V3/Snapshot boundaries 23/23, corrected independent helper
+  6/6 with zero caller invocation, compiler dispatch 8/8, full Graph 465/465,
+  and compiler 411/411.
+- Typecheck/build/format/diff, exact repair/implementation/delivery containment
+  6/10/16, declarations 23/23, identical browser exports 8/8, zero banned Node
+  imports, pinned hashes 3/3, zero sensitive matches, and no drift all pass.
+- The initial helper anomaly was caused only by inverted helper expectations and
+  object spread. The corrected probe is green; QA records no product finding,
+  made no edit, and used no provider, model, network, service, Docker, or Compose
+  action. The single Terra authority is consumed; V3 remains `ready_for_qa`.
+- Exactly one new independent read-only Sol final release review is authorized
+  against the repaired exact tree under the release-review skill. It must return
+  `RELEASE_ACCEPT` or `RELEASE_REJECT` with P0/P1/P2 and evidence. Acceptance,
+  delivery, commit, push, the shared Restaurant manifest, and Task 2/Task 3
+  writers remain blocked pending `RELEASE_ACCEPT` with no open P0/P1 and fresh
+  PM reconciliation.
+
+Graph V3 compiler-wrapper release rejection — 2026-08-12:
+
+- New independent final Sol review returns `RELEASE_REJECT`, P0/P1/P2=0/1/0.
+  The prior strict-array and direct Graph V3/Snapshot V2 P1 families remain
+  closed and there is no other finding. PM returns only the V3 prerequisite to
+  `implementing`.
+- The versioned compiler wrapper checks plain prototype, exact own-key count,
+  and key ownership but then dereferences the two required properties. Accessor
+  required fields execute—independent probe calls=1—and non-enumerable required
+  data fields are accepted.
+- The same sole Sol writer is authorized for RED→GREEN only in compiler
+  `src/index.ts` and `test/application-graph-version-dispatch.test.ts`. Both
+  required fields must be own enumerable data descriptors, accessor and hidden
+  required fields must fail with the unchanged exact wrapper error and zero
+  calls, and production must consume descriptor values only. Valid V1 byte
+  parity and V2/V3 unsupported controls remain exact.
+- No public contract, error, Graph schema, serialized version, target, template,
+  dependency, or manifest expansion is authorized. Same-Sol task re-review,
+  fresh Terra QA, and another final Sol release review are mandatory.
+- Acceptance, delivery, commit, push, shared Restaurant manifest freeze, and
+  Task 2/Task 3 writers remain blocked. This is the third failed repair/review
+  cycle; any further rejection or scope/path change stops another writer round
+  pending controller governance escalation.
+
+Graph V3 compiler-wrapper repair checkpoint — 2026-08-12:
+
+- Compiler RED is 4 failed/8 passed with production untouched. GREEN is focused
+  dispatch 12/12, full compiler 415/415, Graph 465/465, prior hostile matrix
+  110/110, and compatibility/browser 180/180.
+- Typecheck/build/format/diff, exact 2/10/16 containment, declarations, browser
+  export/import closure, sensitive scan, and pinned-hash gates all pass.
+- Same-Sol re-review returns `COMPLIANT`/`APPROVED`, P0/P1/P2=0/0/0, and
+  `ready_for_qa: yes`. Independent descriptor probes reject accessors and hidden
+  data for both wrapper fields with the exact error and zero calls; symbol,
+  inherited, and non-plain cases, parity, ordering, and V2/V3 errors remain
+  exact.
+- PM advances only V3 to `ready_for_qa` and authorizes exactly one fresh
+  read-only Terra QA pass on the compiler-repaired exact tree. Terra must repeat
+  the complete descriptor matrix and every frozen Graph/compiler gate without
+  provider, model, network, service, Docker, Compose, or file edits.
+- Final release review, acceptance, delivery, commit, push, shared Restaurant
+  manifest freeze, and Task 2/Task 3 writers remain blocked. The third-cycle
+  escalation stays active.
+
+Graph V3 compiler-repaired Terra checkpoint — 2026-08-12:
+
+- Terra QA returns `PASS`, P0/P1/P2=0/0/0. It passes dispatch 12/12, hostile
+  Graph 110/110, compatibility/browser 180/180, Graph 465/465, independent
+  descriptor probe 13/13 with exact rejection/zero calls and V1/V2/V3 ordering
+  and parity, direct Graph/Snapshot probe 8/8 with zero calls, type/build/format/
+  diff, 2/10/16 containment, declarations 23/23, browser 8/8, zero imports and
+  sensitive matches, and all three pins.
+- Full compiler ran three times with exit code 0, but captured aggregate stdout
+  truncated after database parity. Terra transparently does not claim a precise
+  415 count from that output; prior writer/reviewer/PM 415/415 evidence remains
+  separate. This is an evidence-capture limitation, not a product defect.
+- Terra found no drift, changed no file, and used no provider, model, network,
+  service, Docker, or Compose action. V3 remains `ready_for_qa`.
+- Under the recorded third-cycle escalation, exactly one final independent
+  read-only Sol release review is authorized. It must adjudicate the compiler
+  evidence limitation and return `RELEASE_ACCEPT` or `RELEASE_REJECT` with
+  P0/P1/P2 and evidence. Acceptance, delivery, commit, push, shared Restaurant
+  manifest freeze, and Task 2/Task 3 writers remain blocked; no further writer
+  round is pre-authorized.
+
+Graph V3 final acceptance and delivery freeze — 2026-08-12:
+
+- Escalated final independent Sol returns `RELEASE_ACCEPT`, P0/P1/P2=0/0/0.
+  Compiler descriptor probe 70, adapter probe 10, and direct/browser Graph/
+  Snapshot probe 70 all pass with zero getter/caller invocation. Both prior
+  Graph P1 families and the compiler P1 are closed; there is no other finding.
+- Final evidence passes focused Graph/browser 111/111, dispatch 12/12, Graph
+  465/465, compiler 23 files/415 tests with raw exit 0, both typechecks, exact-10
+  format/diff, implementation 10/10 and delivery 16/16 containment,
+  declarations 23/23, browser 8/8, zero imports/sensitive matches, and all pins.
+  Complete final-review and PM compiler output resolves Terra's earlier
+  truncated-output limitation.
+- PM marks only the Graph V3 prerequisite `accepted` (not delivered). Controller
+  delivery is authorized for exactly the frozen 16 paths and exact subject
+  `feat(graph): add application graph v3 contracts` after explicit staging,
+  staged equality/diff/sensitive checks, and all frozen gates.
+- The controller may push only without force and must prove local `HEAD` equals
+  upstream with a clean tree. PM must record the commit, exact paths, push, and
+  equality before consuming the gate.
+- Task 2 and Task 3 remain `planned` with zero writers. Their shared
+  key-and-binding manifest may be frozen only after PM records V3 delivery
+  equality; acceptance alone does not start them.
 
 ## Task 4 — Compile and run the customer mobile surface
 
@@ -3758,7 +4151,7 @@ Acceptance evidence:
   Orders, Order Detail, and Profile;
 - customer journeys work against generated APIs;
 - production artifacts accept only a Published Graph;
-- the preview renderer accepts only `DraftPreviewSnapshotV1`, renders the same
+- the Graph V3 preview renderer accepts only `DraftPreviewSnapshotV2`, renders the same
   customer surface semantics, and emits no exportable/deployable artifact or
   Compilation record;
 - migration, health, role journey, denial, idempotency, source, and cleanup

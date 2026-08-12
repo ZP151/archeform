@@ -23,7 +23,9 @@ export * from "./product-intent.js";
 export * from "./product-recipe.js";
 export * from "./source-overlay.js";
 export * from "./application-graph-v2.js";
+export * from "./application-graph-v3.js";
 export * from "./draft-preview-snapshot.js";
+export * from "./draft-preview-snapshot-v2.js";
 export * from "./application-graph-adapter.js";
 
 export const publishedGraphExchangeSchema = z

@@ -7,6 +7,12 @@ import {
   type ApplicationGraphV2,
 } from "./application-graph-v2.js";
 import {
+  applicationGraphV3Schema,
+  assertApplicationGraphV3,
+  hashApplicationGraphV3,
+  type ApplicationGraphV3,
+} from "./application-graph-v3.js";
+import {
   CompositionError,
   graphKeySchema,
   parseStrict,
@@ -138,15 +144,115 @@ export type PublishedApplicationGraphV2Input = {
   graph: ApplicationGraphV2;
 };
 
+const publishedV3Schema = z
+  .object({
+    kind: z.literal("published-application-graph"),
+    status: z.literal("published"),
+    graphVersion: z.literal("factory.application-graph/v3"),
+    revisionId: graphKeySchema,
+    revisionNumber: z.number().int().positive(),
+    graphHash: sha256DigestSchema,
+    graph: applicationGraphV3Schema,
+  })
+  .strict();
+
+export type PublishedApplicationGraphV3Input = {
+  kind: "published-application-graph";
+  status: "published";
+  graphVersion: "factory.application-graph/v3";
+  revisionId: string;
+  revisionNumber: number;
+  graphHash: Sha256Digest;
+  graph: ApplicationGraphV3;
+};
+
 export type PublishedApplicationGraphInput =
-  PublishedApplicationGraphV1Input | PublishedApplicationGraphV2Input;
+  | PublishedApplicationGraphV1Input
+  | PublishedApplicationGraphV2Input
+  | PublishedApplicationGraphV3Input;
 
-export type AdaptedPublishedApplicationGraph =
-  PublishedApplicationGraphV1Input | PublishedApplicationGraphV2Input;
+export type AdaptedPublishedApplicationGraph = PublishedApplicationGraphInput;
 
-function copyPlainOwnRecordInput(input: unknown): unknown {
+export type ApplicationGraphV2ToV3UpgradeContext = {
+  migrationVersion: "factory.application-graph-v2-to-v3/v1";
+  targetDraftRevisionId: string;
+  targetDraftRevisionNumber: number;
+  journeys: ApplicationGraphV3["journeys"];
+};
+
+export type ApplicationGraphV3DraftRevision = {
+  kind: "application-graph-draft-revision";
+  status: "draft";
+  revisionId: string;
+  revisionNumber: number;
+  graphVersion: "factory.application-graph/v3";
+  graphHash: Sha256Digest;
+  graph: ApplicationGraphV3;
+  lineage: {
+    kind: "application-graph-v2-upgrade";
+    migrationVersion: "factory.application-graph-v2-to-v3/v1";
+    source: Omit<PublishedApplicationGraphV2Input, "graph">;
+  };
+};
+
+const applicationGraphV2ToV3UpgradeContextSchema = z
+  .object({
+    migrationVersion: z.literal("factory.application-graph-v2-to-v3/v1"),
+    targetDraftRevisionId: graphKeySchema,
+    targetDraftRevisionNumber: z.number().int().positive(),
+    journeys: z.array(z.unknown()),
+  })
+  .strict();
+
+function isArrayIndexKey(key: string, length: number): boolean {
+  const index = Number(key);
+  return (
+    Number.isInteger(index) &&
+    index >= 0 &&
+    index < length &&
+    String(index) === key
+  );
+}
+
+function copyPlainOwnRecordInput(
+  input: unknown,
+  scope = "Published Application Graph",
+): unknown {
   if (Array.isArray(input)) {
-    return input.map(copyPlainOwnRecordInput);
+    if (Object.getPrototypeOf(input) !== Array.prototype) {
+      throw new CompositionError(
+        `${scope} input must contain only plain arrays.`,
+      );
+    }
+    for (const key of Reflect.ownKeys(input)) {
+      if (key === "length") continue;
+      const descriptor = Object.getOwnPropertyDescriptor(input, key);
+      if (
+        typeof key !== "string" ||
+        !isArrayIndexKey(key, input.length) ||
+        descriptor?.enumerable !== true ||
+        !("value" in descriptor)
+      ) {
+        throw new CompositionError(
+          `${scope} contains an unrecognized extra key.`,
+        );
+      }
+    }
+    const copy: unknown[] = [];
+    for (let index = 0; index < input.length; index += 1) {
+      const descriptor = Object.getOwnPropertyDescriptor(input, String(index));
+      if (
+        !descriptor ||
+        descriptor.enumerable !== true ||
+        !("value" in descriptor)
+      ) {
+        throw new CompositionError(
+          `${scope} input must contain only dense plain arrays.`,
+        );
+      }
+      copy.push(copyPlainOwnRecordInput(descriptor.value, scope));
+    }
+    return copy;
   }
   if (input !== null && typeof input === "object") {
     const prototype = Object.getPrototypeOf(input);
@@ -156,10 +262,18 @@ function copyPlainOwnRecordInput(input: unknown): unknown {
       );
     }
     const copy: Record<string, unknown> = Object.create(null);
-    for (const [key, value] of Object.entries(
-      input as Record<string, unknown>,
-    )) {
-      copy[key] = copyPlainOwnRecordInput(value);
+    for (const key of Reflect.ownKeys(input)) {
+      const descriptor = Object.getOwnPropertyDescriptor(input, key);
+      if (
+        typeof key !== "string" ||
+        descriptor?.enumerable !== true ||
+        !("value" in descriptor)
+      ) {
+        throw new CompositionError(
+          `${scope} contains an unrecognized extra key.`,
+        );
+      }
+      copy[key] = copyPlainOwnRecordInput(descriptor.value, scope);
     }
     return copy;
   }
@@ -183,11 +297,14 @@ function hasDiscardedKeys(input: unknown, parsed: unknown): boolean {
       return true;
     }
     const parsedRecord = parsed as Record<string, unknown>;
-    return Object.entries(input as Record<string, unknown>).some(
-      ([key, value]) =>
+    return Reflect.ownKeys(input).some((key) => {
+      if (typeof key !== "string") return true;
+      const value = (input as Record<string, unknown>)[key];
+      return (
         !Object.prototype.hasOwnProperty.call(parsedRecord, key) ||
-        hasDiscardedKeys(value, parsedRecord[key]),
-    );
+        hasDiscardedKeys(value, parsedRecord[key])
+      );
+    });
   }
   return false;
 }
@@ -241,6 +358,26 @@ function assertPublishedV2(input: unknown): PublishedApplicationGraphV2Input {
     ...parsed,
     graph,
   }) as PublishedApplicationGraphV2Input;
+}
+
+function assertPublishedV3(input: unknown): PublishedApplicationGraphV3Input {
+  const ownInput = copyPlainOwnRecordInput(input);
+  const parsed = parseStrict(publishedV3Schema, ownInput);
+  const graph = assertApplicationGraphV3(parsed.graph);
+  if (parsed.graphVersion !== graph.apiVersion) {
+    throw new CompositionError(
+      "Published Application Graph envelope version does not match its Graph.",
+    );
+  }
+  if (parsed.graphHash !== hashApplicationGraphV3(graph)) {
+    throw new CompositionError(
+      "Published Application Graph hash does not match its Graph.",
+    );
+  }
+  return structuredClone({
+    ...parsed,
+    graph,
+  }) as PublishedApplicationGraphV3Input;
 }
 
 export function upgradeApplicationGraphV1ToV2Draft(
@@ -332,6 +469,64 @@ export function upgradeApplicationGraphV1ToV2Draft(
   };
 }
 
+export function upgradeApplicationGraphV2ToV3Draft(
+  sourceInput: PublishedApplicationGraphV2Input,
+  contextInput: ApplicationGraphV2ToV3UpgradeContext,
+): ApplicationGraphV3DraftRevision {
+  const source = assertPublishedV2(sourceInput);
+  const ownContextInput = copyPlainOwnRecordInput(
+    contextInput,
+    "Application Graph V2-to-V3 upgrade context",
+  );
+  const context = parseStrict(
+    applicationGraphV2ToV3UpgradeContextSchema,
+    ownContextInput,
+  );
+  if (context.targetDraftRevisionId === source.revisionId) {
+    throw new CompositionError(
+      "A V2-to-V3 upgrade requires a new Draft revision id different from its Published source.",
+    );
+  }
+
+  const {
+    apiVersion: _apiVersion,
+    journeys: _journeys,
+    bindingPolicies,
+    ...retained
+  } = source.graph;
+  const graph = assertApplicationGraphV3({
+    ...structuredClone(retained),
+    apiVersion: "factory.application-graph/v3",
+    journeys: context.journeys,
+    bindingPolicies: bindingPolicies.map((policy) => ({
+      kind: "domain-field" as const,
+      ...structuredClone(policy),
+    })),
+  });
+  const graphHash = hashApplicationGraphV3(graph);
+  return {
+    kind: "application-graph-draft-revision",
+    status: "draft",
+    revisionId: context.targetDraftRevisionId,
+    revisionNumber: context.targetDraftRevisionNumber,
+    graphVersion: "factory.application-graph/v3",
+    graphHash,
+    graph: structuredClone(graph),
+    lineage: {
+      kind: "application-graph-v2-upgrade",
+      migrationVersion: context.migrationVersion,
+      source: {
+        kind: source.kind,
+        status: source.status,
+        graphVersion: source.graphVersion,
+        revisionId: source.revisionId,
+        revisionNumber: source.revisionNumber,
+        graphHash: source.graphHash,
+      },
+    },
+  };
+}
+
 const outerPublishedDiscriminatorSchema = z
   .object({
     kind: z.literal("published-application-graph"),
@@ -339,6 +534,7 @@ const outerPublishedDiscriminatorSchema = z
     graphVersion: z.enum([
       "factory.application-graph/v1",
       "factory.application-graph/v2",
+      "factory.application-graph/v3",
     ]),
   })
   .passthrough();
@@ -360,7 +556,11 @@ export function adaptPublishedApplicationGraph(
       "Published Application Graph envelope version does not match its Graph.",
     );
   }
-  return outer.graphVersion === "factory.application-graph/v1"
-    ? assertPublishedV1(ownInput)
-    : assertPublishedV2(ownInput);
+  if (outer.graphVersion === "factory.application-graph/v1") {
+    return assertPublishedV1(ownInput);
+  }
+  if (outer.graphVersion === "factory.application-graph/v2") {
+    return assertPublishedV2(ownInput);
+  }
+  return assertPublishedV3(ownInput);
 }

@@ -18,10 +18,12 @@ import {
   type ResolvedCapabilityAssetTemplate,
 } from "@factory/capabilities/node";
 import {
+  adaptPublishedApplicationGraph,
   assertValidApplicationGraph,
   hashApplicationGraph,
   resolveExperienceDesignSystem,
   type ApplicationGraphV1,
+  type PublishedApplicationGraphInput,
 } from "@factory/graph";
 import { renderJourneyTest } from "./journey-test-renderer.js";
 import { createGeneratedPageRuntimeProjection } from "./page-runtime-projection.js";
@@ -116,6 +118,11 @@ export {
 export interface PublishedGraphInput {
   readonly publishedRevisionId: string;
   readonly graph: ApplicationGraphV1;
+  readonly compositionLock: CapabilityCompositionLockV1;
+}
+
+export interface PublishedApplicationGraphCompilationInput {
+  readonly publishedGraph: PublishedApplicationGraphInput;
   readonly compositionLock: CapabilityCompositionLockV1;
 }
 
@@ -3862,4 +3869,61 @@ export function generateApplicationBundle(
     content: render(),
   }));
   return { rootDirectory, graphHash: plan.graphHash, files };
+}
+
+export function generateVersionedApplicationBundle(
+  input: PublishedApplicationGraphCompilationInput,
+  options?: GenerateApplicationBundleOptions,
+): GeneratedApplicationBundle {
+  const candidate = input as unknown;
+  const wrapperError =
+    "Versioned compilation input must be a plain record with exactly publishedGraph and compositionLock.";
+  if (
+    candidate === null ||
+    typeof candidate !== "object" ||
+    Array.isArray(candidate) ||
+    (Object.getPrototypeOf(candidate) !== Object.prototype &&
+      Object.getPrototypeOf(candidate) !== null) ||
+    Reflect.ownKeys(candidate).length !== 2 ||
+    !Object.prototype.hasOwnProperty.call(candidate, "publishedGraph") ||
+    !Object.prototype.hasOwnProperty.call(candidate, "compositionLock")
+  ) {
+    throw new Error(wrapperError);
+  }
+
+  const publishedGraphDescriptor = Object.getOwnPropertyDescriptor(
+    candidate,
+    "publishedGraph",
+  );
+  const compositionLockDescriptor = Object.getOwnPropertyDescriptor(
+    candidate,
+    "compositionLock",
+  );
+  if (
+    !publishedGraphDescriptor ||
+    publishedGraphDescriptor.enumerable !== true ||
+    !("value" in publishedGraphDescriptor) ||
+    !compositionLockDescriptor ||
+    compositionLockDescriptor.enumerable !== true ||
+    !("value" in compositionLockDescriptor)
+  ) {
+    throw new Error(wrapperError);
+  }
+
+  const publishedGraph = adaptPublishedApplicationGraph(
+    publishedGraphDescriptor.value,
+  );
+  if (publishedGraph.graphVersion === "factory.application-graph/v1") {
+    return generateApplicationBundle(
+      {
+        publishedRevisionId: publishedGraph.revisionId,
+        graph: publishedGraph.graph,
+        compositionLock: compositionLockDescriptor.value,
+      },
+      options,
+    );
+  }
+  throw new Error(
+    `Published Application Graph version '${publishedGraph.graphVersion}' is not supported by the current compiler.`,
+  );
 }
