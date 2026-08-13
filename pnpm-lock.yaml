@@ -199,9 +199,15 @@ importers:
       "@factory/capabilities":
         specifier: workspace:*
         version: link:../capabilities
+      "@factory/experience-recipes":
+        specifier: workspace:*
+        version: link:../experience-recipes
       "@factory/graph":
         specifier: workspace:*
         version: link:../graph
+      "@factory/screen-recipes":
+        specifier: workspace:*
+        version: link:../screen-recipes
       casbin:
         specifier: ^5.37.0
         version: 5.51.1

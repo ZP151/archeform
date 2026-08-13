@@ -90,6 +90,10 @@ export {
   restaurantRuntimeEndpoints,
   type RestaurantRuntimeArtifacts,
 } from "./restaurant-runtime.js";
+export {
+  generateRestaurantCustomerApplicationBundle,
+  renderRestaurantDraftPreviewSurface,
+} from "./targets/restaurant-v3/index.js";
 
 // Compiler target plugin kernel (public facade re-exports).
 export {
