@@ -4,24 +4,32 @@ import {
   assertProductBlueprint,
   canonicalEquals,
   hashApplicationGraph,
+  hashApplicationGraphV3,
   hashProductCompositionDiff,
+  type ApplicationGraphV3,
   type ApplicationGraphV1,
   type BlueprintEntityFieldV1,
   type CompositionPlanV1,
   type DraftRevisionV1,
   type GraphDiffV1,
+  type ExperienceBriefV1,
   type ProductBlueprintV1,
+  type ProductIntentV1,
+  type ProductRecipeV2,
 } from "@factory/graph";
 
 import type {
   CapabilityBindingValueV1,
   CapabilitySelectionV1,
 } from "./composition.js";
+import { copyStrictOwnDataEnvelope } from "./commerce/product-recipe.js";
 import {
   assertProductCapabilityCatalogue,
   currentCapabilityCatalogue,
+  selectProductRecipeForIntent,
   type ProductCapabilityCatalogueV1,
 } from "./capability-catalogue.js";
+import { composeRestaurantProductGraph } from "./restaurant/product-graph.js";
 
 /**
  * Deterministic composition of an accepted blueprint into a complete
@@ -78,6 +86,59 @@ const FIELD_TYPES: Readonly<Record<BlueprintFieldType, DomainFieldType>> =
     // relation branch handles the link, this entry only closes the map.
     reference: "string",
   });
+
+export interface ComposeProductRecipeInput {
+  readonly intent: ProductIntentV1;
+  readonly experience: ExperienceBriefV1;
+  readonly baseDraft: DraftRevisionV1;
+  readonly proposedRecipeKey?: string;
+}
+
+export interface ComposeProductRecipeOutcome {
+  readonly recipe: ProductRecipeV2;
+  readonly graph: ApplicationGraphV3;
+  readonly graphHash: string;
+}
+
+export function composeProductRecipe(
+  input: ComposeProductRecipeInput,
+): ComposeProductRecipeOutcome;
+export function composeProductRecipe(
+  input: unknown,
+): ComposeProductRecipeOutcome {
+  const envelope = copyStrictOwnDataEnvelope(
+    input,
+    ["intent", "experience", "baseDraft"],
+    ["proposedRecipeKey"],
+    "Product Recipe composition input is invalid.",
+  );
+  const proposedRecipeKey = envelope.proposedRecipeKey;
+  if (
+    proposedRecipeKey !== undefined &&
+    (typeof proposedRecipeKey !== "string" ||
+      proposedRecipeKey.length > 128 ||
+      !/^[a-z][a-z0-9-]*$/.test(proposedRecipeKey))
+  ) {
+    throw new CompositionError("Product Recipe composition input is invalid.");
+  }
+  const parsedInput: ComposeProductRecipeInput = {
+    intent: envelope.intent as ProductIntentV1,
+    experience: envelope.experience as ExperienceBriefV1,
+    baseDraft: envelope.baseDraft as DraftRevisionV1,
+    ...(proposedRecipeKey === undefined ? {} : { proposedRecipeKey }),
+  };
+  const recipe = selectProductRecipeForIntent({
+    intent: parsedInput.intent,
+    ...(proposedRecipeKey === undefined ? {} : { proposedRecipeKey }),
+  });
+  if (recipe === undefined || recipe.key !== "restaurant-ordering") {
+    throw new CompositionError(
+      `No eligible deterministic Product Recipe exists for intent '${parsedInput.intent.productType}'.`,
+    );
+  }
+  const graph = composeRestaurantProductGraph(parsedInput);
+  return { recipe, graph, graphHash: hashApplicationGraphV3(graph) };
+}
 
 export interface ProductDerivationInput {
   readonly blueprint: ProductBlueprintV1;

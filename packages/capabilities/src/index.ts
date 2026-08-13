@@ -117,13 +117,17 @@ export type {
 export {
   assertProductCapabilityCatalogue,
   currentCapabilityCatalogue,
+  currentProductRecipeCatalogue,
+  selectProductRecipeForIntent,
 } from "./capability-catalogue.js";
 export type {
   CatalogueAssetRefV1,
   CapabilityTrigger,
   ProductCapabilityCatalogueV1,
+  SelectProductRecipeForIntentInput,
 } from "./capability-catalogue.js";
 export {
+  composeProductRecipe,
   composeProductDraft,
   composeProductIntegration,
   deriveProductOperations,
@@ -131,10 +135,15 @@ export {
   primaryListPage,
 } from "./product-composer.js";
 export type {
+  ComposeProductRecipeInput,
+  ComposeProductRecipeOutcome,
   ProductDerivationInput,
   ProductDerivationOutcome,
 } from "./product-composer.js";
-export { planProductAlternatives } from "./plan-alternatives.js";
+export {
+  planProductAlternatives,
+  planProductRecipeAlternative,
+} from "./plan-alternatives.js";
 export type {
   PlanProductAlternativesInput,
   ProductPlanAlternative,
@@ -146,6 +155,14 @@ export {
   hasRestaurantOrderingComposition,
   validateRestaurantOrderingProfile,
 } from "./restaurant/profile.js";
+export {
+  restaurantAcceptanceJourneyKeys,
+  restaurantOrderingProductRecipe,
+  restaurantProductPages,
+} from "./restaurant/product-recipe.js";
+export type { RestaurantProductPageDefinition } from "./restaurant/product-recipe.js";
+export { composeRestaurantProductGraph } from "./restaurant/product-graph.js";
+export type { ComposeRestaurantProductGraphInput } from "./restaurant/product-graph.js";
 export type {
   RestaurantAdjustmentReason,
   RestaurantEntityKey,

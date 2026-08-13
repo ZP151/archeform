@@ -1,17 +1,22 @@
 import { z } from "zod";
 
 import {
+  assertProductIntent,
   CompositionError,
   capabilityKeySchema,
   identifierSchema,
   parseStrict,
   sha256DigestSchema,
+  type ProductIntentV1,
+  type ProductRecipeV2,
 } from "@factory/graph";
 
 import {
   currentCapabilityAssets,
   type CapabilityAssetV1,
 } from "./assets/index.js";
+import { copyStrictOwnDataEnvelope } from "./commerce/product-recipe.js";
+import { restaurantOrderingProductRecipe } from "./restaurant/product-recipe.js";
 
 /**
  * The approved, deterministic capability surface the product composer may
@@ -149,4 +154,48 @@ export function currentCapabilityCatalogue(): ProductCapabilityCatalogueV1 {
       },
     ],
   });
+}
+
+export interface SelectProductRecipeForIntentInput {
+  readonly intent: ProductIntentV1;
+  readonly proposedRecipeKey?: string;
+}
+
+export function currentProductRecipeCatalogue(): readonly ProductRecipeV2[] {
+  return [restaurantOrderingProductRecipe()];
+}
+
+export function selectProductRecipeForIntent(
+  input: SelectProductRecipeForIntentInput,
+): ProductRecipeV2 | undefined;
+export function selectProductRecipeForIntent(
+  input: unknown,
+): ProductRecipeV2 | undefined {
+  const envelope = copyStrictOwnDataEnvelope(
+    input,
+    ["intent"],
+    ["proposedRecipeKey"],
+    "Product Recipe selection input is invalid.",
+  );
+  const proposedRecipeKey = envelope.proposedRecipeKey;
+  if (
+    proposedRecipeKey !== undefined &&
+    (typeof proposedRecipeKey !== "string" ||
+      proposedRecipeKey.length > 128 ||
+      !/^[a-z][a-z0-9-]*$/.test(proposedRecipeKey))
+  ) {
+    throw new CompositionError("Product Recipe selection input is invalid.");
+  }
+  const intent = assertProductIntent(envelope.intent);
+  const eligible = currentProductRecipeCatalogue().find((recipe) =>
+    recipe.intentMatchers.some(
+      (matcher) => matcher.productType === intent.productType,
+    ),
+  );
+  if (proposedRecipeKey !== undefined && proposedRecipeKey !== eligible?.key) {
+    throw new CompositionError(
+      `Proposed Product Recipe '${proposedRecipeKey}' is not eligible for intent '${intent.productType}'.`,
+    );
+  }
+  return eligible;
 }

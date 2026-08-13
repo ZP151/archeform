@@ -11,12 +11,14 @@ import {
 import {
   composeProductDraft,
   composeProductIntegration,
+  composeProductRecipe,
   planProductAlternatives,
 } from "../src/index.js";
 import {
   appointmentBookingPrompt,
   expenseApprovalPrompt,
 } from "./product-fixtures.js";
+import { restaurantProductFixture } from "./restaurant-product-fixture.js";
 
 function blankDraft(applicationId: string, name: string): DraftRevisionV1 {
   return createBlankApplicationDraft({
@@ -27,6 +29,73 @@ function blankDraft(applicationId: string, name: string): DraftRevisionV1 {
 }
 
 describe("composeProductDraft", () => {
+  it("composes only the eligible deterministic Restaurant recipe and rejects semantic overrides", () => {
+    const fixture = restaurantProductFixture();
+    const first = composeProductRecipe(fixture);
+    const second = composeProductRecipe({
+      ...fixture,
+      proposedRecipeKey: "restaurant-ordering",
+    });
+    expect(first.recipe.key).toBe("restaurant-ordering");
+    expect(first.graph).toEqual(second.graph);
+    expect(first.graphHash).toBe(second.graphHash);
+    expect(() =>
+      composeProductRecipe({
+        ...fixture,
+        pages: [{ id: "provider-owned" }],
+      } as never),
+    ).toThrow(/override|input/i);
+    expect(() =>
+      composeProductRecipe({
+        ...fixture,
+        fieldAuthorities: [],
+      } as never),
+    ).toThrow(/override|input/i);
+  });
+
+  it("redacts hostile Product Recipe composition wrappers without invoking accessors", () => {
+    const fixture = restaurantProductFixture();
+    const fixedMessage = "Product Recipe composition input is invalid.";
+    let getterCalls = 0;
+    const accessor = Object.defineProperty(
+      { intent: fixture.intent, experience: fixture.experience },
+      "baseDraft",
+      {
+        enumerable: true,
+        get() {
+          getterCalls += 1;
+          return fixture.baseDraft;
+        },
+      },
+    );
+    const throwingProxy = new Proxy(fixture, {
+      getOwnPropertyDescriptor() {
+        throw new Error("DO-NOT-ECHO-composition-reflection");
+      },
+    });
+    const malformed = [
+      null,
+      {},
+      { intent: fixture.intent, experience: fixture.experience },
+      { ...fixture, extra: "DO-NOT-ECHO-extra" },
+      { ...fixture, proposedRecipeKey: "not_an_identifier" },
+      accessor,
+      throwingProxy,
+    ];
+    for (const candidate of malformed) {
+      let error: unknown;
+      try {
+        composeProductRecipe(candidate as never);
+      } catch (caught) {
+        error = caught;
+      }
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toBe(fixedMessage);
+      expect((error as Error).message).not.toContain("DO-NOT-ECHO");
+    }
+    expect(getterCalls).toBe(0);
+  });
+
   it("composes Prompt A from a blank Draft into a valid product revision", () => {
     const { requirement, blueprint } = expenseApprovalPrompt();
     const base = blankDraft("expense-approval", "Expense Approval");

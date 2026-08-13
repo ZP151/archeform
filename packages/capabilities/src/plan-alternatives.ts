@@ -14,8 +14,10 @@ import {
 import {
   assertProductCapabilityCatalogue,
   currentCapabilityCatalogue,
+  selectProductRecipeForIntent,
   type CatalogueAssetRefV1,
   type ProductCapabilityCatalogueV1,
+  type SelectProductRecipeForIntentInput,
 } from "./capability-catalogue.js";
 import {
   composeProductIntegration,
@@ -48,6 +50,12 @@ export interface PlanProductAlternativesInput {
   readonly blueprint: ProductBlueprintV1;
   readonly baseDraft: DraftRevisionV1;
   readonly catalogue?: unknown;
+}
+
+export function planProductRecipeAlternative(
+  input: SelectProductRecipeForIntentInput,
+) {
+  return selectProductRecipeForIntent(input);
 }
 
 function assertBlankBase(draft: DraftRevisionV1): void {
