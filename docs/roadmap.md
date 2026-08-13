@@ -156,10 +156,10 @@ P0 acceptance gates:
 > seven-journey closure, and complete-product ESM import. The shared contract
 > remains `ffa017cf...732b732`; the Task 3 lock delta is seven importers and
 > `+72/-0`. The non-force push succeeded and local `HEAD` equals upstream at the
-> Task 3 commit. Task 4 now has a frozen 18-path customer compiler/runtime plan
-> and is `implementing` under one writer. Task 5 remains serialized behind Task
-> 4 delivery. This does not reopen Graph contract expansion or authorize
-> Workbench/Control Plane integration.
+> Task 3 commit. Task 4 is delivered at `0e85ed61` with an exact 18-path commit,
+> final P0/P1=0/0 review, and pushed equality. Task 5 now has a frozen 17-path
+> merchant/dual-surface plan and is `implementing` under one writer. This does
+> not reopen Graph expansion or authorize Workbench/Control Plane integration.
 
 ### P1 Product Closure gate (accepted and delivered)
 
@@ -337,8 +337,9 @@ key-and-binding manifest is refrozen for V2 at SHA-256
 Restaurant semantics and the UI Registry/source foundation are delivered.
 Task 4's strict Published Graph V3 customer compiler, independently runnable
 eight-page application, shared local runtime, and artifact-free Snapshot V2
-preview are `implementing` under an exact 18-path plan and one review. Task 5's
-merchant compiler remains blocked until Task 4 delivery.
+preview are delivered. Task 5's seven-page merchant desktop, shared state/API,
+dual-surface bundle, and exact Restaurant V3 dispatch are `implementing` under
+an exact 17-path plan and one review.
 
 Workbench implementation includes characterization-first decomposition of the
 current 3,818-line global stylesheet, 907-line controller, and 1,131-line
@@ -640,7 +641,7 @@ exact 17-path commit, non-force push, local/upstream equality, and preserved
 at SHA-256 `ffa017cf14cd911495d70d8cf490bb637b570057235d3d841657e0f7c732b732`.
 Restaurant semantics and UI Registry are delivered at `fbcf92ea` and
 `8313e7ae` with independent P0/P1/P2=0/0/0 reviews and pushed equality.
-Task 4 customer compiler/runtime implementation is the current gate; Task 5
-merchant planning follows its delivered shared signatures.
+Task 5 merchant/dual-surface compiler implementation is the current gate;
+Workbench rebuilding follows the delivered two-surface product.
 Provider, service, Docker, cloud/deployment, and production-payment work remain
 unauthorized.

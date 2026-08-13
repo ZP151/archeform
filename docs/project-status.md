@@ -100,8 +100,8 @@ summary matches the current evidence and accepted Restaurant goal. The accepted
 additive contract preserves V1 and separates owned pages from visible
 navigation. Copied shadcn/ui source, direct Radix, another external coordinate,
 provider/model/network/service work, Docker, Compose, Workbench, and Control
-Plane integration remain unauthorized. Task 4 is now the sole implementation
-slice; Task 5 remains serialized behind it.
+Plane integration remain unauthorized. Task 4 is delivered; Task 5 is now the
+sole implementation slice.
 
 The main risks are shared-contract drift, accidental lockfile resolution drift,
 client relabeling of server totals/state/payment/inventory/audit fields, and UI
@@ -109,14 +109,14 @@ ports that imply authority. Frozen tests and the stop-both rule address these.
 
 ### Next smallest valuable slice
 
-Execute the frozen Task 4 plan at
-[`superpowers/plans/2026-08-14-restaurant-customer-compiler-task4.md`](superpowers/plans/2026-08-14-restaurant-customer-compiler-task4.md):
-a strict Published Graph V3 customer compiler target, eight independently
-runnable pages, shared local Restaurant state/API, exact Task 3 source closure,
-and a Snapshot V2 preview projection that creates no artifact. The scope is
-exactly 18 paths with one writer and one independent review. Task 5 remains
-planned until Task 4 is delivered; Workbench/Control Plane publication remains
-Task 6. V3-to-V1 down-conversion and further Graph expansion remain prohibited.
+Execute the frozen Task 5 plan at
+[`superpowers/plans/2026-08-14-restaurant-merchant-compiler-task5.md`](superpowers/plans/2026-08-14-restaurant-merchant-compiler-task5.md):
+extend the delivered shared runtime with Graph-authorized merchant operations,
+render seven desktop pages from Task 3 source, assemble one deterministic
+dual-surface bundle, and enable strict governed Restaurant Graph V3 dispatch.
+The scope is exactly 17 paths with one writer and one independent review.
+Workbench/Control Plane publication remains Task 6; V3-to-V1 down-conversion
+and further Graph expansion remain prohibited.
 
 ### Retained historical reconciliation through V3 acceptance
 
@@ -561,10 +561,9 @@ Authorities:
 ## Next gate
 
 Product Recipe V2, Task 2 Restaurant semantics, and Task 3 UI Registry are
-delivered. The Task 4 customer compiler/runtime plan is frozen and
-`implementing` under exactly one 18-path writer. Task 5 is planned and blocked
-until Task 4's shared V3 target/preview contracts are reviewed, committed,
-pushed, and locally equal to upstream.
+delivered. Task 4 is delivered at `0e85ed6135abeea3f3c44624856b796fa05c2c03`
+with an exact 18-path commit and pushed equality. Task 5 is `implementing` under
+one exact 17-path writer; Task 6 remains blocked until its delivery.
 
 ## Explicitly deferred
 

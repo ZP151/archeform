@@ -4351,7 +4351,7 @@ Task 2/Task 3 acceptance and delivery — 2026-08-14:
 
 ## Task 4 — Compile and run the customer mobile surface
 
-State: `implementing`.
+State: `delivered`.
 
 Owner: exactly one compiler integration writer using the frozen Task 4 plan.
 
@@ -4374,18 +4374,21 @@ Acceptance evidence:
 - migration, health, role journey, denial, idempotency, source, and cleanup
   checks pass.
 
-Blocked by: implementation TDD, one independent code review, exact-manifest
-delivery, non-force push, and local/upstream equality. Task 5 stays planned
-until these shared V3 target and preview contracts are delivered.
+Delivery: commit `0e85ed6135abeea3f3c44624856b796fa05c2c03`, exact
+18 paths, non-force push, local/upstream equality, and clean worktree. Fresh
+controller evidence passed focused 56/56, Compiler 471/471, Graph 661/661,
+Capabilities 384/384, type/build/static gates, and final independent P0/P1=0/0.
 
 ## Task 5 — Compile and run the merchant desktop surface
 
-State: `planned`.
+State: `implementing`.
 
-Owner: `platform` with `frontend` package inputs.
+Owner: exactly one compiler integration writer using the frozen Task 5 plan.
 
-Allowed paths: compiler targets, generated-project templates, merchant-surface
-fixtures, and focused compiler/runtime tests assigned by PM.
+Allowed paths: exactly the 17 paths in
+`docs/superpowers/plans/2026-08-14-restaurant-merchant-compiler-task5.md`.
+There is no dependency/lockfile, Graph/Task2/Task3, Workbench, Control Plane,
+provider, network, service, Docker, Compose, commit, or push authority.
 
 Acceptance evidence:
 
@@ -4398,8 +4401,8 @@ Acceptance evidence:
 - role journeys, denials, audit, migration, health, idempotency, and cleanup
   pass.
 
-Blocked by: Task 4 delivery and a Task 5 manifest frozen against the delivered
-shared V3 compiler/preview signatures.
+Blocked by: implementation TDD, one independent code review, exact-manifest
+delivery, non-force push, and local/upstream equality. Task 6 remains planned.
 
 ## Task 6 — Rebuild the Workbench prompt-to-live journey
 
