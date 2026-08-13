@@ -39,7 +39,7 @@ describe("transitionWorkbench", () => {
   });
 
   it("opens and closes each dismissible overlay independently", () => {
-    expect(initialWorkbenchState.inspectorOpen).toBe(true);
+    expect(initialWorkbenchState.inspectorOpen).toBe(false);
     expect(initialWorkbenchState.historyOpen).toBe(false);
     expect(initialWorkbenchState.activityOpen).toBe(false);
     expect(initialWorkbenchState.libraryOpen).toBe(false);
@@ -48,7 +48,7 @@ describe("transitionWorkbench", () => {
       type: "toggle-activity",
     });
     expect(activity.activityOpen).toBe(true);
-    expect(activity.inspectorOpen).toBe(true);
+    expect(activity.inspectorOpen).toBe(false);
 
     const library = transitionWorkbench(activity, { type: "toggle-library" });
     expect(library.libraryOpen).toBe(true);
@@ -63,36 +63,36 @@ describe("transitionWorkbench", () => {
     const closedInspector = transitionWorkbench(dismissed, {
       type: "toggle-inspector",
     });
-    expect(closedInspector.inspectorOpen).toBe(false);
+    expect(closedInspector.inspectorOpen).toBe(true);
   });
 
   it("orders the overlay stack most-recently-opened last for Escape", () => {
-    expect(initialWorkbenchState.overlayStack).toEqual(["inspector"]);
+    expect(initialWorkbenchState.overlayStack).toEqual([]);
 
     const activity = transitionWorkbench(initialWorkbenchState, {
       type: "toggle-activity",
     });
-    expect(activity.overlayStack).toEqual(["inspector", "activity"]);
+    expect(activity.overlayStack).toEqual(["activity"]);
 
     const library = transitionWorkbench(activity, { type: "toggle-library" });
-    expect(library.overlayStack).toEqual(["inspector", "activity", "library"]);
+    expect(library.overlayStack).toEqual(["activity", "library"]);
 
     // Escape closes the top entry first: the overlay opened most recently.
     const topClosed = transitionWorkbench(library, {
       type: "toggle-library",
     });
     expect(topClosed.libraryOpen).toBe(false);
-    expect(topClosed.overlayStack).toEqual(["inspector", "activity"]);
+    expect(topClosed.overlayStack).toEqual(["activity"]);
 
     const history = transitionWorkbench(topClosed, { type: "open-history" });
     expect(history.historyOpen).toBe(true);
-    expect(history.overlayStack).toEqual(["inspector", "activity", "history"]);
+    expect(history.overlayStack).toEqual(["activity", "history"]);
 
     const historyClosed = transitionWorkbench(history, {
       type: "close-history",
     });
     expect(historyClosed.historyOpen).toBe(false);
-    expect(historyClosed.overlayStack).toEqual(["inspector", "activity"]);
+    expect(historyClosed.overlayStack).toEqual(["activity"]);
   });
 
   it("advances the command-focus token so the composer can land focus", () => {

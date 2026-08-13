@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import { findWorkbenchContext } from "@factory/workbench-ui";
 
 import type { WorkbenchController } from "../../hooks/use-workbench-controller";
-import { RAIL_DESTINATIONS } from "./icon-rail";
-import { IconRail } from "./icon-rail";
+import { resolveWorkbenchContext } from "../../state/workbench-shell-machine";
+import { BuilderNavigation, IconRail } from "./icon-rail";
 import { UtilityBar } from "./utility-bar";
 import { InspectorSheet } from "./inspector-sheet";
 import { ActivitySheet } from "./activity-sheet";
@@ -63,9 +64,13 @@ export function WorkbenchShell({ controller, children }: Props) {
     release,
   } = controller;
 
-  const active =
-    RAIL_DESTINATIONS.find((item) => item.id === state.activeSurface) ??
-    RAIL_DESTINATIONS[0];
+  const contextKey = resolveWorkbenchContext(
+    state.activeSurface,
+    controller.journey.state.stage,
+    controller.journey.busy,
+  );
+  const context = findWorkbenchContext(contextKey);
+  const resetJourney = controller.journey.reset;
   const busyConnection =
     connectionState === "saving" ||
     connectionState === "proposing" ||
@@ -85,6 +90,7 @@ export function WorkbenchShell({ controller, children }: Props) {
       }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
+        resetJourney();
         commandFocus();
       }
     };
@@ -97,11 +103,22 @@ export function WorkbenchShell({ controller, children }: Props) {
     toggleActivity,
     toggleLibrary,
     commandFocus,
+    resetJourney,
   ]);
+
+  useEffect(() => {
+    if (contextKey === "builder" && state.libraryOpen) toggleLibrary();
+  }, [contextKey, state.libraryOpen, toggleLibrary]);
 
   return (
     <main className={`workbench theme-${state.theme}`} data-theme={state.theme}>
-      <IconRail activeSurface={state.activeSurface} onNavigate={navigate} />
+      <IconRail
+        activeSurface={state.activeSurface}
+        onNavigate={(surface) => {
+          resetJourney();
+          navigate(surface);
+        }}
+      />
       <section className="shell">
         <UtilityBar
           applicationName={graph.metadata.name}
@@ -113,6 +130,7 @@ export function WorkbenchShell({ controller, children }: Props) {
           inspectorOpen={state.inspectorOpen}
           activityOpen={state.activityOpen}
           libraryOpen={state.libraryOpen}
+          showLibrary={contextKey === "workspace-home"}
           published={state.lifecycle === "published"}
           canPublish={remoteDraft !== null && !busyConnection}
           onSwitchApplication={openApplication}
@@ -128,11 +146,17 @@ export function WorkbenchShell({ controller, children }: Props) {
           libraryTriggerRef={libraryTriggerRef}
           historyTriggerRef={historyTriggerRef}
         />
+        {contextKey === "builder" && (
+          <BuilderNavigation
+            activeSurface={state.activeSurface}
+            onNavigate={navigate}
+          />
+        )}
         <section className="work-area">
           <div className={`canvas surface-${state.activeSurface}`}>
             <section
               className="canvas-board"
-              aria-label={`${active.label} canvas`}
+              aria-label={`${context.label} canvas`}
             >
               {children}
             </section>
@@ -182,7 +206,7 @@ export function WorkbenchShell({ controller, children }: Props) {
             onClose={toggleActivity}
           />
           <LibraryDrawer
-            open={state.libraryOpen}
+            open={contextKey === "workspace-home" && state.libraryOpen}
             loading={portfolioLoading}
             portfolio={portfolioSummary}
             triggerRef={libraryTriggerRef}

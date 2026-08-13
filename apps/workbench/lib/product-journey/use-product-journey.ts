@@ -300,6 +300,7 @@ export function useProductJourney(
   const [briefDraft, setBriefDraft] = useState("");
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const busyRef = useRef(false);
+  const generationRef = useRef(0);
   /**
    * Latches the automatic planning step: once an accepted interpretation
    * reaches the planning stage, the review and its alternatives are created
@@ -313,17 +314,26 @@ export function useProductJourney(
   );
 
   /** One in-flight journey step at a time; concurrent calls are dropped. */
-  const run = useCallback(async (work: () => Promise<void>): Promise<void> => {
-    if (busyRef.current) return;
-    busyRef.current = true;
-    setBusy(true);
-    try {
-      await work();
-    } finally {
-      busyRef.current = false;
-      setBusy(false);
-    }
-  }, []);
+  const run = useCallback(
+    async (
+      work: (isCurrent: () => boolean) => Promise<void>,
+    ): Promise<void> => {
+      if (busyRef.current) return;
+      const generation = generationRef.current;
+      const isCurrent = () => generationRef.current === generation;
+      busyRef.current = true;
+      setBusy(true);
+      try {
+        await work(isCurrent);
+      } finally {
+        if (isCurrent()) {
+          busyRef.current = false;
+          setBusy(false);
+        }
+      }
+    },
+    [],
+  );
 
   const setAnswer = useCallback((key: string, value: string): void => {
     setAnswers((current) => {
@@ -339,7 +349,7 @@ export function useProductJourney(
   }, []);
 
   const submitBrief = useCallback(async (): Promise<void> => {
-    await run(async () => {
+    await run(async (isCurrent) => {
       try {
         const brief = briefDraft.trim();
         dispatch({ type: "submit-brief", brief });
@@ -348,9 +358,11 @@ export function useProductJourney(
           {},
           "interpretation",
         );
+        if (!isCurrent()) return;
         dispatch({ type: "interpretation-accepted", interpretation });
         setAnswers({});
       } catch (error) {
+        if (!isCurrent()) return;
         dispatch({
           type: "fail",
           failure: boundedProductFailure({
@@ -366,7 +378,7 @@ export function useProductJourney(
   }, [run, briefDraft]);
 
   const answerQuestions = useCallback(async (): Promise<void> => {
-    await run(async () => {
+    await run(async (isCurrent) => {
       try {
         if (state.interpretationCycles >= 2) {
           dispatch({
@@ -393,6 +405,7 @@ export function useProductJourney(
           clarificationContext,
           state.interpretation ?? undefined,
         );
+        if (!isCurrent()) return;
         const resolved = resolveClarificationCycle({
           interpretation: proposed,
           priorQuestions,
@@ -406,6 +419,7 @@ export function useProductJourney(
         });
         setAnswers({ ...resolved.answers });
       } catch (error) {
+        if (!isCurrent()) return;
         dispatch({
           type: "fail",
           failure: boundedProductFailure({
@@ -421,7 +435,7 @@ export function useProductJourney(
   }, [run, state, answers]);
 
   const createProduct = useCallback(async (): Promise<void> => {
-    await run(async () => {
+    await run(async (isCurrent) => {
       let review: ProductJourneyState["review"];
       try {
         const input = createRequirementInput(state);
@@ -439,8 +453,10 @@ export function useProductJourney(
           reconciliationTimeoutMessage:
             "Product review reconciliation timed out.",
         });
+        if (!isCurrent()) return;
         dispatch({ type: "review-created", review });
       } catch (error) {
+        if (!isCurrent()) return;
         dispatch({
           type: "fail",
           failure: boundedProductFailure({
@@ -460,8 +476,10 @@ export function useProductJourney(
           reconciliationTimeoutMessage:
             "Product plan reconciliation timed out.",
         });
+        if (!isCurrent()) return;
         dispatch({ type: "alternatives-received", alternatives });
       } catch (error) {
+        if (!isCurrent()) return;
         dispatch({
           type: "fail",
           failure: boundedProductFailure({
@@ -494,7 +512,7 @@ export function useProductJourney(
 
   const chooseAlternative = useCallback(
     async (key: string): Promise<void> => {
-      await run(async () => {
+      await run(async (isCurrent) => {
         try {
           const review = state.review;
           if (review === null) {
@@ -507,12 +525,14 @@ export function useProductJourney(
             reconciliationTimeoutMessage:
               "Product decision reconciliation timed out.",
           });
+          if (!isCurrent()) return;
           dispatch({
             type: "alternative-chosen",
             key,
             diffChecksum: chosen.checksum,
           });
         } catch (error) {
+          if (!isCurrent()) return;
           dispatch({
             type: "fail",
             failure: boundedProductFailure({
@@ -532,20 +552,23 @@ export function useProductJourney(
   const applyProduct =
     useCallback(async (): Promise<WorkbenchProductApplied | null> => {
       let applied: WorkbenchProductApplied | null = null;
-      await run(async () => {
+      await run(async (isCurrent) => {
         try {
           const review = state.review;
           if (review === null) {
             throw new Error("Create the product review before applying.");
           }
-          applied = await withRecoverableProductPhase({
+          const result = await withRecoverableProductPhase({
             operation: (signal) => controlPlane.applyProduct(review.id, signal),
             timeoutMessage: "Product application timed out.",
             reconciliationTimeoutMessage:
               "Product application reconciliation timed out.",
           });
+          if (!isCurrent()) return;
+          applied = result;
           dispatch({ type: "applied" });
         } catch (error) {
+          if (!isCurrent()) return;
           dispatch({
             type: "fail",
             failure: boundedProductFailure({
@@ -562,6 +585,9 @@ export function useProductJourney(
     }, [run, state, controlPlane]);
 
   const reset = useCallback((): void => {
+    generationRef.current += 1;
+    busyRef.current = false;
+    setBusy(false);
     setBriefDraft("");
     setAnswers({});
     productRequestIdRef.current = null;

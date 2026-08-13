@@ -6,6 +6,53 @@ export const workbenchUiBoundary = deepFreeze({
   generatedRuntimeDependency: false,
 } as const);
 
+export type WorkbenchContextKey = "workspace-home" | "builder";
+
+export type WorkbenchDestinationKey =
+  "apps" | "page" | "data" | "workflow" | "access" | "ai" | "code" | "release";
+
+export type WorkbenchContextDefinition = {
+  readonly key: WorkbenchContextKey;
+  readonly label: string;
+  readonly destinations: readonly {
+    readonly key: WorkbenchDestinationKey;
+    readonly label: string;
+    readonly icon: string;
+  }[];
+};
+
+export const workbenchContextRegistry: readonly WorkbenchContextDefinition[] =
+  deepFreeze([
+    {
+      key: "workspace-home",
+      label: "Apps",
+      destinations: [{ key: "apps", label: "Apps", icon: "layout-grid" }],
+    },
+    {
+      key: "builder",
+      label: "Builder",
+      destinations: [
+        { key: "page", label: "Page", icon: "panels-top-left" },
+        { key: "data", label: "Data", icon: "database" },
+        { key: "workflow", label: "Workflow", icon: "workflow" },
+        { key: "access", label: "Access", icon: "shield-check" },
+        { key: "ai", label: "AI", icon: "sparkles" },
+        { key: "code", label: "Code", icon: "code-2" },
+        { key: "release", label: "Publish", icon: "rocket" },
+      ],
+    },
+  ] satisfies WorkbenchContextDefinition[]);
+
+export function findWorkbenchContext(
+  key: WorkbenchContextKey,
+): WorkbenchContextDefinition {
+  const context = workbenchContextRegistry.find(
+    (candidate) => candidate.key === key,
+  );
+  if (!context) throw new Error("Unknown Workbench context.");
+  return context;
+}
+
 export function workbenchPrimitiveKeys(): readonly string[] {
   return uiPrimitiveRegistry.map(({ key }) => key);
 }

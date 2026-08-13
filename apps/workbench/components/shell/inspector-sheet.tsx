@@ -44,6 +44,7 @@ export function InspectorSheet({
   onClose,
 }: Props) {
   const panelRef = useRef<HTMLElement>(null);
+  const wasOpenRef = useRef(false);
   const factRows = (): readonly Fact[] => {
     switch (surface) {
       case "home":
@@ -146,11 +147,15 @@ export function InspectorSheet({
   };
 
   useEffect(() => {
-    if (!open) {
-      triggerRef.current?.focus();
+    if (open) {
+      wasOpenRef.current = true;
+      panelRef.current?.focus();
       return;
     }
-    panelRef.current?.focus();
+    if (wasOpenRef.current) {
+      wasOpenRef.current = false;
+      triggerRef.current?.focus();
+    }
   }, [open, triggerRef]);
 
   if (!open) return null;

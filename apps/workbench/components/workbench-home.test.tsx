@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FixtureRequirementInterpreter } from "@factory/adapters";
 
+import { metadata } from "../app/layout";
 import type { WorkbenchApplicationSummary } from "../lib/control-plane-client";
 import { workbenchGraph } from "../lib/workbench-graph";
 import type { PlanReviewAlternative } from "./journey/plan-review";
@@ -178,7 +179,14 @@ describe("WorkbenchHome", () => {
     expect(
       container.querySelector('textarea[aria-label="Requirement brief"]'),
     ).not.toBeNull();
-    expect(container.textContent).toContain("Interpret requirement");
+    expect(metadata.title).toBe("Archeform · 元象");
+    expect(
+      container.querySelector('section[aria-label="Apps"]'),
+    ).not.toBeNull();
+    expect(
+      container.querySelector('section[aria-label="Describe a product"]'),
+    ).not.toBeNull();
+    expect(container.textContent).toContain("Create product");
     expect(container.textContent).toContain("Example prompts");
     // No Profile starter cards, no template picker, no separate creation
     // button: composition starts from the free-form requirement.
@@ -188,6 +196,9 @@ describe("WorkbenchHome", () => {
       container.querySelector('button[aria-label="Create a new application"]'),
     ).toBeNull();
     expect(container.textContent).not.toContain("Profiles");
+    expect(container.textContent).not.toMatch(
+      /Factory Pilot|Graph|Inspector|capability lock|Start from a template/i,
+    );
   });
 
   it("replaces the composer with clarification questions when the journey asks them", async () => {
@@ -301,7 +312,7 @@ describe("WorkbenchHome", () => {
       container.querySelector('textarea[aria-label="Requirement brief"]'),
     ).not.toBeNull();
     expect(container.textContent).toContain("not ready yet");
-    expect(container.textContent).toContain("Interpret requirement");
+    expect(container.textContent).toContain("Create product");
   });
 
   it("exposes an accepted requirement outcome independently from later planning", async () => {
@@ -765,7 +776,7 @@ describe("WorkbenchHome", () => {
 
       act(() => {
         container
-          .querySelector<HTMLButtonElement>('button[aria-label="Home"]')
+          .querySelector<HTMLButtonElement>('button[aria-label="Apps"]')
           ?.click();
       });
       await waitForAssertion(() => {

@@ -2,6 +2,8 @@
 
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { WorkbenchApplicationSummary } from "../../lib/control-plane-client";
@@ -153,6 +155,9 @@ function stubControlPlane(
         url.pathname === "/workspaces/local/application-graphs"
       ) {
         return responseJson([...applications]);
+      }
+      if (method === "POST" && url.pathname === "/api/requirements/interpret") {
+        return new Promise<Response>(() => undefined);
       }
       if (
         method === "GET" &&
@@ -309,66 +314,244 @@ describe("Workbench shell", () => {
     });
   }
 
-  it("navigates rail destinations with arrow keys and exposes hints as tooltips", () => {
+  it("loads bounded shell, Home, and Builder style modules exactly once", () => {
+    const globalCss = readFileSync(
+      join(process.cwd(), "app/globals.css"),
+      "utf8",
+    );
+    const modules = [
+      "tokens.css",
+      "base.css",
+      "shell.css",
+      "workspace-home.css",
+      "builder-workspace.css",
+    ];
+    for (const module of modules) {
+      const importRule = `@import \"../styles/${module}\";`;
+      expect(globalCss.split(importRule)).toHaveLength(2);
+      const source = readFileSync(
+        join(process.cwd(), "styles", module),
+        "utf8",
+      );
+      expect(source.trim().split(/\r?\n/u).length).toBeLessThanOrEqual(300);
+    }
+    for (const extractedSelector of [
+      ":root {",
+      ".rail {",
+      ".topbar {",
+      ".workspace-navigation {",
+      ".builder-navigation {",
+      ".workbench-home {",
+      ".builder-workspace {",
+      ".work-area {",
+      ".workbench-operations {",
+      ".canvas {",
+      ".canvas-board {",
+      ".project-switcher {",
+      ".overlay-sheet {",
+    ]) {
+      expect(globalCss).not.toContain(extractedSelector);
+    }
+    const tokens = readFileSync(
+      join(process.cwd(), "styles/tokens.css"),
+      "utf8",
+    );
+    expect(tokens).toContain("--canvas: #f5f7f9;");
+    expect(tokens).toContain("--accent: #07936f;");
+    expect(tokens).toContain("--canvas: #10161d;");
+    const shellCss = readFileSync(
+      join(process.cwd(), "styles/shell.css"),
+      "utf8",
+    );
+    expect(shellCss).not.toMatch(
+      /button\[aria-label="(?:History|Activity|Library)"\][^{]*\{[^}]*display:\s*none/gu,
+    );
+  });
+
+  it("does not move focus when closed overlays first mount", () => {
+    const sentinel = document.createElement("button");
+    sentinel.textContent = "Before workbench";
+    document.body.append(sentinel);
+    sentinel.focus();
+
+    renderWorkbench();
+
+    expect(document.activeElement).toBe(sentinel);
+    sentinel.remove();
+  });
+
+  it("keeps Apps as the only workspace-level destination", () => {
     renderWorkbench();
 
     const rail = container.querySelector<HTMLElement>(
-      'nav[aria-label="Workbench navigation"]',
+      'nav[aria-label="Workspace navigation"]',
     );
     expect(rail).not.toBeNull();
-    const labels = [
-      "Home",
-      "Page",
-      "Domain",
-      "Flow",
-      "Policy",
-      "AI",
-      "Code",
-      "Release",
-    ];
-    const buttons = labels.map((label) =>
-      container.querySelector<HTMLButtonElement>(
-        `button[aria-label="${label}"]`,
-      )!,
-    );
-    expect(buttons.every(Boolean)).toBe(true);
-    // Tooltips carry the declared hint for each destination.
-    expect(buttons[0].title).toContain(
-      "Compose products and operate applications",
-    );
-    expect(buttons[3].title).toContain("Connect decisions");
+    const buttons = rail?.querySelectorAll("button") ?? [];
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]?.getAttribute("aria-label")).toBe("Apps");
+    expect(buttons[0]?.getAttribute("title")).toContain("describe or resume");
+  });
 
-    buttons[0].focus();
+  it("moves a product request into the local Builder workspace", async () => {
+    renderWorkbench();
+
+    const brief = container.querySelector<HTMLTextAreaElement>(
+      'textarea[aria-label="Requirement brief"]',
+    )!;
     act(() => {
-      buttons[0].dispatchEvent(
-        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
+      const setValue = Object.getOwnPropertyDescriptor(
+        HTMLTextAreaElement.prototype,
+        "value",
+      )?.set;
+      setValue?.call(
+        brief,
+        "Build a restaurant product for customers and merchant operators.",
+      );
+      brief.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>("button.primary-action")
+        ?.click();
+    });
+
+    await waitForAssertion(() => {
+      expect(
+        container.querySelector('section[aria-label="Builder workspace"]'),
+      ).not.toBeNull();
+      expect(
+        container.querySelector('section[aria-label="Product conversation"]'),
+      ).not.toBeNull();
+      expect(
+        container.querySelector('section[aria-label="Responsive preview"]'),
+      ).not.toBeNull();
+    });
+
+    const workspaceNav = container.querySelector<HTMLElement>(
+      'nav[aria-label="Workspace navigation"]',
+    )!;
+    expect(
+      Array.from(workspaceNav.querySelectorAll("button"), (button) =>
+        button.getAttribute("aria-label"),
+      ),
+    ).toEqual(["Apps"]);
+    expect(
+      Array.from(
+        container.querySelectorAll<HTMLElement>(
+          'nav[aria-label="Builder navigation"] button',
+        ),
+        (button) => button.getAttribute("aria-label"),
+      ),
+    ).toEqual(["Page", "Data", "Workflow", "Access", "AI", "Code", "Publish"]);
+
+    const page = container.querySelector<HTMLButtonElement>(
+      'nav[aria-label="Builder navigation"] button[aria-label="Page"]',
+    )!;
+    const data = container.querySelector<HTMLButtonElement>(
+      'nav[aria-label="Builder navigation"] button[aria-label="Data"]',
+    )!;
+    page.focus();
+    act(() => {
+      page.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
       );
     });
-    expect(document.activeElement).toBe(buttons[1]);
-    act(() => {
-      buttons[1].dispatchEvent(
-        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
-      );
+    expect(document.activeElement).toBe(data);
+
+    const advanced = container.querySelector<HTMLButtonElement>(
+      'button[aria-label="Advanced"]',
+    )!;
+    expect(advanced).not.toBeNull();
+    expect(advanced.title).toBe("Open advanced settings");
+    expect(advanced.title).not.toMatch(/Graph|lock|evidence/iu);
+    expect(container.querySelector(".inspector-sheet")).toBeNull();
+    act(() => advanced.click());
+    await waitForAssertion(() => {
+      expect(container.querySelector(".inspector-sheet")).not.toBeNull();
     });
-    expect(document.activeElement).toBe(buttons[2]);
     act(() => {
-      buttons[2].dispatchEvent(
-        new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }),
-      );
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     });
-    expect(document.activeElement).toBe(buttons[1]);
+    await waitForAssertion(() => {
+      expect(container.querySelector(".inspector-sheet")).toBeNull();
+      expect(document.activeElement).toBe(advanced);
+    });
+  });
+
+  it("returns to Apps immediately and stays reset while interpretation is pending", async () => {
+    renderWorkbench();
+    const brief = container.querySelector<HTMLTextAreaElement>(
+      'textarea[aria-label="Requirement brief"]',
+    )!;
     act(() => {
-      buttons[1].dispatchEvent(
-        new KeyboardEvent("keydown", { key: "End", bubbles: true }),
-      );
+      Object.getOwnPropertyDescriptor(
+        HTMLTextAreaElement.prototype,
+        "value",
+      )?.set?.call(brief, "Build a restaurant ordering product.");
+      brief.dispatchEvent(new Event("input", { bubbles: true }));
     });
-    expect(document.activeElement).toBe(buttons[buttons.length - 1]);
     act(() => {
-      buttons[buttons.length - 1].dispatchEvent(
-        new KeyboardEvent("keydown", { key: "Home", bubbles: true }),
-      );
+      container
+        .querySelector<HTMLButtonElement>("button.primary-action")
+        ?.click();
     });
-    expect(document.activeElement).toBe(buttons[0]);
+    await waitForAssertion(() => {
+      expect(
+        container.querySelector('section[aria-label="Builder workspace"]'),
+      ).not.toBeNull();
+    });
+
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>('button[aria-label="Apps"]')
+        ?.click();
+    });
+    await waitForAssertion(() => {
+      expect(
+        container.querySelector('section[aria-label="Apps"]'),
+      ).not.toBeNull();
+      expect(
+        container.querySelector('section[aria-label="Builder workspace"]'),
+      ).toBeNull();
+    });
+  });
+
+  it("closes Library before entering Builder", async () => {
+    renderWorkbench();
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>('button[aria-label="Library"]')
+        ?.click();
+    });
+    await waitForAssertion(() => {
+      expect(container.querySelector(".library-drawer")).not.toBeNull();
+    });
+
+    const brief = container.querySelector<HTMLTextAreaElement>(
+      'textarea[aria-label="Requirement brief"]',
+    )!;
+    act(() => {
+      Object.getOwnPropertyDescriptor(
+        HTMLTextAreaElement.prototype,
+        "value",
+      )?.set?.call(brief, "Build a restaurant ordering product.");
+      brief.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>("button.primary-action")
+        ?.click();
+    });
+    await waitForAssertion(() => {
+      expect(
+        container.querySelector('section[aria-label="Builder workspace"]'),
+      ).not.toBeNull();
+      expect(container.querySelector(".library-drawer")).toBeNull();
+      expect(
+        container.querySelector('button[aria-label="Library"]'),
+      ).toBeNull();
+    });
   });
 
   it("restores focus to the Activity trigger after the sheet closes", async () => {
@@ -411,33 +594,6 @@ describe("Workbench shell", () => {
         container.querySelector('textarea[aria-label="Requirement brief"]'),
       );
     });
-
-    // From another surface the command opens Home and lands in the brief.
-    act(() => {
-      container
-        .querySelector<HTMLButtonElement>('button[aria-label="Page"]')
-        ?.click();
-    });
-    expect(
-      container
-        .querySelector<HTMLButtonElement>('button[aria-label="Page"]')
-        ?.getAttribute("aria-current"),
-    ).toBe("page");
-    act(() => {
-      window.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "k", ctrlKey: true }),
-      );
-    });
-    await waitForAssertion(() => {
-      expect(
-        container
-          .querySelector<HTMLButtonElement>('button[aria-label="Home"]')
-          ?.getAttribute("aria-current"),
-      ).toBe("page");
-      expect(document.activeElement).toBe(
-        container.querySelector('textarea[aria-label="Requirement brief"]'),
-      );
-    });
   });
 
   it("shows contextual inspector facts for each surface and no placeholder fields", async () => {
@@ -448,47 +604,19 @@ describe("Workbench shell", () => {
     });
     const inspector = () =>
       container.querySelector<HTMLElement>(".inspector-sheet");
-    expect(inspector()).not.toBeNull();
+    expect(inspector()).toBeNull();
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>('button[aria-label="Advanced"]')
+        ?.click();
+    });
+    await waitForAssertion(() => {
+      expect(inspector()).not.toBeNull();
+    });
     expect(inspector()?.textContent).toContain("Ops workspace");
     // The inspector never renders placeholder inputs or decorative menus.
     expect(inspector()?.querySelector("input, select")).toBeNull();
     expect(inspector()?.textContent).not.toContain("•••");
-
-    act(() => {
-      container
-        .querySelector<HTMLButtonElement>('button[aria-label="Domain"]')
-        ?.click();
-    });
-    await waitForAssertion(() => {
-      expect(inspector()?.textContent).toContain("1 entities");
-      expect(inspector()?.textContent).toContain("2 fields");
-    });
-    expect(
-      container.querySelector('input[aria-label="title Unique"]'),
-    ).not.toBeNull();
-    expect(
-      container.querySelector('input[aria-label="status Unique"]'),
-    ).not.toBeNull();
-
-    act(() => {
-      container
-        .querySelector<HTMLButtonElement>('button[aria-label="Flow"]')
-        ?.click();
-    });
-    await waitForAssertion(() => {
-      expect(inspector()?.textContent).toContain("1 flows");
-      expect(inspector()?.textContent).toContain("2 transitions");
-    });
-
-    act(() => {
-      container
-        .querySelector<HTMLButtonElement>('button[aria-label="Policy"]')
-        ?.click();
-    });
-    await waitForAssertion(() => {
-      expect(inspector()?.textContent).toContain("2 roles");
-      expect(inspector()?.textContent).toContain("2 permissions");
-    });
   });
 
   it("switches the theme from the utility bar", () => {

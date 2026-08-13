@@ -36,17 +36,17 @@ export function RequirementComposer({
   const canInterpret = brief.trim().length > 0 && !busy;
 
   useEffect(() => {
-    if (commandFocusToken !== undefined) {
+    if (commandFocusToken !== undefined && commandFocusToken > 0) {
       briefRef.current?.focus();
     }
   }, [commandFocusToken]);
 
   return (
-    <section aria-label="Create a product from a requirement">
-      <h2>Create a product from a requirement</h2>
+    <section aria-label="Describe a product">
+      <h2>Describe a product</h2>
       <p>
-        Describe the application you need in plain language: who uses it, what
-        they manage, and how decisions are made.
+        Tell us who it is for and what they need to accomplish; Archeform will
+        shape a complete first Draft.
       </p>
       <textarea
         ref={briefRef}
@@ -95,7 +95,7 @@ export function RequirementComposer({
         onClick={onInterpret}
       >
         <Sparkles size={16} aria-hidden="true" />
-        Interpret requirement
+        Create product
       </button>
     </section>
   );

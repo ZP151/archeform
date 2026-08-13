@@ -54,12 +54,16 @@ describe("RequirementComposer", () => {
       'textarea[aria-label="Requirement brief"]',
     );
     expect(textarea).not.toBeNull();
-    expect(
-      container.querySelector('button[name="Interpret requirement"]'),
-    ).toBeNull();
+    expect(container.querySelector('button[name="Create product"]')).toBeNull();
+    expect(container.querySelector("h2")?.textContent).toBe(
+      "Describe a product",
+    );
+    expect(container.querySelector("section > p")?.textContent).toBe(
+      "Tell us who it is for and what they need to accomplish; Archeform will shape a complete first Draft.",
+    );
     expect(
       [...container.querySelectorAll("button")].some((button) =>
-        button.textContent?.includes("Interpret requirement"),
+        button.textContent?.includes("Create product"),
       ),
     ).toBe(true);
   });
@@ -85,7 +89,7 @@ describe("RequirementComposer", () => {
     const onInterpret = vi.fn();
     render({ brief: "", busy: true, onInterpret });
     const busyButton = [...container.querySelectorAll("button")].find(
-      (button) => button.textContent?.includes("Interpret requirement"),
+      (button) => button.textContent?.includes("Create product"),
     );
     expect((busyButton as HTMLButtonElement).disabled).toBe(true);
     act(() => busyButton?.click());
@@ -96,7 +100,7 @@ describe("RequirementComposer", () => {
     const onInterpret = vi.fn();
     render({ brief: "Build an expense application.", onInterpret });
     const button = [...container.querySelectorAll("button")].find((candidate) =>
-      candidate.textContent?.includes("Interpret requirement"),
+      candidate.textContent?.includes("Create product"),
     ) as HTMLButtonElement;
     act(() => button.click());
     expect(onInterpret).toHaveBeenCalledTimes(1);

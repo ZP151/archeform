@@ -13,6 +13,8 @@ import { PolicyCanvas } from "./canvases/policy-canvas";
 import { AiCanvas } from "./canvases/ai-canvas";
 import { CodeCanvas } from "./canvases/code-canvas";
 import { ReleaseWorkspace } from "./journey/release-workspace";
+import { BuildingPreview } from "./journey/building-preview";
+import { resolveWorkbenchContext } from "../state/workbench-shell-machine";
 
 /** The transient example prompts offered by the Home composer popover. */
 export const EXAMPLE_PROMPTS: readonly string[] = [
@@ -34,11 +36,55 @@ type Props = {
 export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   const controller = useWorkbenchController({ initialGraph, controlPlaneUrl });
   const { state, graph, journey, flowDiagram } = controller;
+  const journeyProps = {
+    stage: journey.state.stage,
+    busy: journey.busy,
+    error: journey.state.error,
+    failure: journey.state.failure,
+    brief: journey.briefDraft,
+    onBriefChange: journey.setBriefDraft,
+    onInterpret: () => {
+      void journey.submitBrief();
+    },
+    examplePrompts: EXAMPLE_PROMPTS,
+    onApplyExample: (brief: string) => journey.setBriefDraft(brief),
+    requirement: journey.state.interpretation?.spec ?? null,
+    blueprintTitle: journey.blueprintTitle,
+    openQuestions: journey.openQuestions,
+    answers: journey.answers,
+    onAnswerChange: (key: string, answer: string) =>
+      journey.setAnswer(key, answer),
+    onContinue: () => {
+      void journey.answerQuestions();
+    },
+    planAlternatives: journey.planAlternatives,
+    chosenKey: journey.state.selectedAlternativeKey,
+    onChoose: (key: string) => {
+      void journey.chooseAlternative(key);
+    },
+    diffChecksum: journey.state.diffChecksum,
+    onApply: () => {
+      void controller.applyComposedProduct();
+    },
+  };
+  const context = resolveWorkbenchContext(
+    state.activeSurface,
+    journey.state.stage,
+    journey.busy,
+  );
 
   const surface = (() => {
     switch (state.activeSurface) {
       case "home":
-        return (
+        return context === "builder" ? (
+          <BuildingPreview
+            journey={journeyProps}
+            commandFocusToken={state.commandFocusToken}
+            page={graph.page.pages[0] ?? null}
+            experience={graph.experience}
+            revision={state.revision}
+          />
+        ) : (
           <WorkbenchHome
             applications={controller.applications}
             compilingKey={controller.compilingApplicationKey}
@@ -46,36 +92,7 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
             onCompile={controller.compileApplication}
             onOpen={controller.openApplication}
             commandFocusToken={state.commandFocusToken}
-            journey={{
-              stage: journey.state.stage,
-              busy: journey.busy,
-              error: journey.state.error,
-              failure: journey.state.failure,
-              brief: journey.briefDraft,
-              onBriefChange: journey.setBriefDraft,
-              onInterpret: () => {
-                void journey.submitBrief();
-              },
-              examplePrompts: EXAMPLE_PROMPTS,
-              onApplyExample: (brief) => journey.setBriefDraft(brief),
-              requirement: journey.state.interpretation?.spec ?? null,
-              blueprintTitle: journey.blueprintTitle,
-              openQuestions: journey.openQuestions,
-              answers: journey.answers,
-              onAnswerChange: (key, answer) => journey.setAnswer(key, answer),
-              onContinue: () => {
-                void journey.answerQuestions();
-              },
-              planAlternatives: journey.planAlternatives,
-              chosenKey: journey.state.selectedAlternativeKey,
-              onChoose: (key) => {
-                void journey.chooseAlternative(key);
-              },
-              diffChecksum: journey.state.diffChecksum,
-              onApply: () => {
-                void controller.applyComposedProduct();
-              },
-            }}
+            journey={journeyProps}
           />
         );
       case "page":

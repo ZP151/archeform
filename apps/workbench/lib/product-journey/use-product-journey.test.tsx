@@ -1191,6 +1191,38 @@ describe("useProductJourney", () => {
     expect(controller().answers).toEqual({});
   });
 
+  it("invalidates an in-flight journey when reset returns to Apps", async () => {
+    const interpretation = await interpretationFor(expenseBrief);
+    let resolveInterpretation!: (value: {
+      interpretation: RequirementInterpretationV1;
+    }) => void;
+    stubTransport({
+      interpret: () =>
+        new Promise((resolve) => {
+          resolveInterpretation = resolve;
+        }),
+    });
+    act(() => controller().setBriefDraft(expenseBrief));
+    let pending!: Promise<void>;
+    act(() => {
+      pending = controller().submitBrief();
+    });
+    await waitFor(() => expect(controller().busy).toBe(true));
+
+    act(() => controller().reset());
+    expect(controller().busy).toBe(false);
+    expect(controller().state.stage).toBe("brief");
+    expect(controller().state.interpretation).toBeNull();
+
+    await act(async () => {
+      resolveInterpretation({ interpretation });
+      await pending;
+    });
+    expect(controller().busy).toBe(false);
+    expect(controller().state.stage).toBe("brief");
+    expect(controller().state.interpretation).toBeNull();
+  });
+
   it("proves the persisted boundary never carries the verbatim brief", async () => {
     const transport = stubTransport({});
     act(() => {

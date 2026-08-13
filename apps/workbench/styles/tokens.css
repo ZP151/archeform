@@ -1,0 +1,37 @@
+:root {
+  --canvas: #f5f7f9;
+  --paper: #fff;
+  --surface: #fbfcfd;
+  --panel: #f8fafb;
+  --ink: #17212b;
+  --muted: #74808e;
+  --line: #e4e8ed;
+  --line-strong: #d4dbe3;
+  --accent: #07936f;
+  --accent-dark: #04765a;
+  --accent-soft: #e4f6f0;
+  --violet: #7659d6;
+  --amber: #c57b05;
+  --danger: #b42318;
+  --shadow: 0 16px 45px rgb(26 43 58 / 0.08);
+  --shell-rail: 68px;
+  --shell-topbar: 60px;
+}
+
+.workbench.theme-dark {
+  --canvas: #10161d;
+  --paper: #151d26;
+  --surface: #18212b;
+  --panel: #121a23;
+  --ink: #edf3f7;
+  --muted: #9aa7b5;
+  --line: #273340;
+  --line-strong: #354352;
+  --accent: #3bd3aa;
+  --accent-dark: #83ebcc;
+  --accent-soft: #133c36;
+  --violet: #ab9afa;
+  --amber: #f2ba54;
+  --danger: #ff8d82;
+  --shadow: 0 18px 55px rgb(0 0 0 / 0.28);
+}

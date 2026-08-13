@@ -35,6 +35,7 @@ type Props = {
   readonly inspectorOpen: boolean;
   readonly activityOpen: boolean;
   readonly libraryOpen: boolean;
+  readonly showLibrary: boolean;
   readonly published: boolean;
   /** False while no Draft is bound or the lifecycle already published. */
   readonly canPublish: boolean;
@@ -68,6 +69,7 @@ export function UtilityBar({
   inspectorOpen,
   activityOpen,
   libraryOpen,
+  showLibrary,
   published,
   canPublish,
   onSwitchApplication,
@@ -135,15 +137,16 @@ export function UtilityBar({
       </div>
       <div className="top-actions">
         <button
-          className="utility-button"
+          className="utility-button advanced-button"
           ref={inspectorTriggerRef}
           onClick={onToggleInspector}
           aria-pressed={inspectorOpen}
-          aria-label="Toggle inspector"
-          title="Toggle the contextual inspector"
+          aria-label="Advanced"
+          title="Open advanced settings"
           type="button"
         >
           <PanelRight size={16} aria-hidden="true" />
+          <span>Advanced</span>
         </button>
         <button
           className="utility-button"
@@ -166,17 +169,19 @@ export function UtilityBar({
         >
           <Activity size={16} aria-hidden="true" />
         </button>
-        <button
-          className="utility-button"
-          ref={libraryTriggerRef}
-          onClick={onToggleLibrary}
-          aria-pressed={libraryOpen}
-          aria-label="Library"
-          title="Portfolio intelligence"
-          type="button"
-        >
-          <Library size={16} aria-hidden="true" />
-        </button>
+        {showLibrary && (
+          <button
+            className="utility-button"
+            ref={libraryTriggerRef}
+            onClick={onToggleLibrary}
+            aria-pressed={libraryOpen}
+            aria-label="Library"
+            title="Portfolio intelligence"
+            type="button"
+          >
+            <Library size={16} aria-hidden="true" />
+          </button>
+        )}
         <button
           className="utility-button"
           onClick={onToggleTheme}

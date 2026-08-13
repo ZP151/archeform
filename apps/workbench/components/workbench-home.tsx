@@ -58,7 +58,7 @@ type Props = {
   readonly onCompile: (applicationKey: string) => void;
 };
 
-function JourneySlot({
+export function ProductConversation({
   journey,
   commandFocusToken,
 }: {
@@ -143,7 +143,7 @@ export function WorkbenchHome({
         ? undefined
         : "failed";
   return (
-    <div className="workbench-home" aria-label="Workbench Home">
+    <section className="workbench-home" aria-label="Apps">
       <section
         className="home-composer"
         aria-label="Product creation"
@@ -153,7 +153,10 @@ export function WorkbenchHome({
         data-journey-failure-phase={journey.failure?.phase}
         data-journey-failure-code={journey.failure?.code}
       >
-        <JourneySlot journey={journey} commandFocusToken={commandFocusToken} />
+        <ProductConversation
+          journey={journey}
+          commandFocusToken={commandFocusToken}
+        />
       </section>
       <RecentProducts
         applications={applications}
@@ -162,6 +165,6 @@ export function WorkbenchHome({
         onCompile={onCompile}
         onOpen={onOpen}
       />
-    </div>
+    </section>
   );
 }

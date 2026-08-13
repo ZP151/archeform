@@ -75,9 +75,18 @@ instantiation, Snapshot V2 lifecycle, and App Management.
 - Modify: `apps/workbench/components/journey/requirement-composer.test.tsx`
 - Create: `apps/workbench/components/journey/building-preview.tsx`
 - Create: `apps/workbench/components/journey/building-preview.test.tsx`
+- Modify: `apps/workbench/lib/product-journey/use-product-journey.ts`
+- Modify: `apps/workbench/lib/product-journey/use-product-journey.test.tsx`
+- Modify: `apps/workbench/components/shell/inspector-sheet.tsx`
+- Modify: `apps/workbench/components/shell/history-panel.tsx`
+- Modify: `apps/workbench/components/shell/activity-sheet.tsx`
+- Modify: `apps/workbench/components/shell/library-drawer.tsx`
 
-No other path is writable. `apps/workbench/hooks/use-workbench-controller.ts`
-and `apps/workbench/lib/control-plane-client.ts` are read-only characterization
+The six final paths above are the bounded independent-review repair: reset
+invalidates in-flight journey generations, and overlay focus returns only after
+a real open-to-closed transition. No other path is writable.
+`apps/workbench/hooks/use-workbench-controller.ts` and
+`apps/workbench/lib/control-plane-client.ts` remain read-only characterization
 inputs because Task 6A adds no controller effect or wire method.
 
 ---
@@ -106,14 +115,14 @@ export function findWorkbenchContext(
 ): WorkbenchContextDefinition;
 ```
 
-- [ ] **Step 1: Write the failing registry and importer tests**
+- [x] **Step 1: Write the failing registry and importer tests**
 
 Require exactly two context records. Workspace Home contains only `apps`;
 Builder contains `page`, `data`, `workflow`, `access`, `ai`, `code`, `release`
 in that order. Assert deep freezing, unique keys, Lucide-only icon identifiers,
 concise labels, and no Graph/evidence/template/management/cloud destination.
 
-- [ ] **Step 2: Run the focused test and confirm RED**
+- [x] **Step 2: Run the focused test and confirm RED**
 
 ```powershell
 node node_modules/vitest/vitest.mjs run test/boundary.test.ts
@@ -121,12 +130,12 @@ node node_modules/vitest/vitest.mjs run test/boundary.test.ts
 
 Expected: FAIL because the context APIs do not exist.
 
-- [ ] **Step 3: Implement the exact immutable registry**
+- [x] **Step 3: Implement the exact immutable registry**
 
 Reuse `deepFreeze`. Unknown lookup throws `Unknown Workbench context.` without
 echoing the rejected key.
 
-- [ ] **Step 4: Add the existing internal package edge**
+- [x] **Step 4: Add the existing internal package edge**
 
 Add `"@factory/workbench-ui": "workspace:*"` to the Workbench manifest and only
 this lock importer entry:
@@ -137,7 +146,7 @@ this lock importer entry:
   version: link:../../packages/workbench-ui
 ```
 
-- [ ] **Step 5: Run package test, typecheck, and build**
+- [x] **Step 5: Run package test, typecheck, and build**
 
 If the ignored junction is absent, create only
 `apps/workbench/node_modules/@factory/workbench-ui` ->
@@ -176,24 +185,24 @@ export function isBuildingStage(
 ): boolean;
 ```
 
-- [ ] **Step 1: Write state-machine RED tests**
+- [x] **Step 1: Write state-machine RED tests**
 
 Prove idle `home + brief|failed` is `workspace-home`; a busy Home request and
 Home during clarifying, planning, or reviewing is `builder`; every non-home
 surface is `builder`. Prove initial Inspector is closed and `overlayStack` is
 empty.
 
-- [ ] **Step 2: Run focused tests and confirm RED**
+- [x] **Step 2: Run focused tests and confirm RED**
 
 ```powershell
 node node_modules/vitest/vitest.mjs run state/workbench-shell-machine.test.ts lib/workbench-model.test.ts
 ```
 
-- [ ] **Step 3: Implement pure exhaustive resolution and closed default**
+- [x] **Step 3: Implement pure exhaustive resolution and closed default**
 
 Do not persist a new context field; derive it so Draft state is unchanged.
 
-- [ ] **Step 4: Run focused tests and confirm GREEN**
+- [x] **Step 4: Run focused tests and confirm GREEN**
 
 ---
 
@@ -211,7 +220,7 @@ Do not persist a new context field; derive it so Draft state is unchanged.
 Workspace Home headed `Apps`, one primary `Describe a product` composer, and
 backed Resume rows. Render no fake template action.
 
-- [ ] **Step 1: Write the Workspace Home RED**
+- [x] **Step 1: Write the Workspace Home RED**
 
 Assert metadata title `Archeform · 元象`; `Apps` and `Describe a product`
 landmarks; one primary `Create product` action using the existing interpreter;
@@ -219,17 +228,17 @@ secondary keyboard-reachable examples; only backed Open/Compile resume actions;
 and no visible `Factory Pilot`, `Graph`, `Inspector`, capability lock, or
 template button.
 
-- [ ] **Step 2: Run focused tests and confirm RED**
+- [x] **Step 2: Run focused tests and confirm RED**
 
 ```powershell
 node node_modules/vitest/vitest.mjs run components/workbench-home.test.tsx components/journey/requirement-composer.test.tsx
 ```
 
-- [ ] **Step 3: Implement the hierarchy without callback changes**
+- [x] **Step 3: Implement the hierarchy without callback changes**
 
 Use one concise sentence. Keep bounded errors and focus behavior exact.
 
-- [ ] **Step 4: Run focused tests and confirm GREEN**
+- [x] **Step 4: Run focused tests and confirm GREEN**
 
 ---
 
@@ -258,7 +267,7 @@ export function BuildingPreview(props: {
 }): JSX.Element;
 ```
 
-- [ ] **Step 1: Write the Builder RED**
+- [x] **Step 1: Write the Builder RED**
 
 Prove a valid brief opens `Builder workspace`; the left region shows the
 existing bounded journey step; the right shows `Responsive preview`; the global
@@ -266,27 +275,27 @@ rail contains Apps only; Builder destinations are local and arrow-key
 navigable; Apps restores Home; Advanced starts closed, opens Inspector, closes
 with Escape, and restores focus; Publish/Compile availability remains exact.
 
-- [ ] **Step 2: Run focused tests and confirm RED**
+- [x] **Step 2: Run focused tests and confirm RED**
 
 ```powershell
 node node_modules/vitest/vitest.mjs run components/journey/building-preview.test.tsx components/shell/workbench-shell.test.tsx components/workbench-home.test.tsx
 ```
 
-- [ ] **Step 3: Implement Builder by composition**
+- [x] **Step 3: Implement Builder by composition**
 
 Export the existing private Journey slot without changing its branches. Compose
 it with the current Draft's first page through `ResponsivePreview`. Use bounded
 product-language labels: `Understanding the product`, `Shaping the plan`,
 `Reviewing the change`, and `Draft ready`.
 
-- [ ] **Step 4: Implement context-local navigation**
+- [x] **Step 4: Implement context-local navigation**
 
 Map existing surfaces: `page -> Page`, `domain -> Data`, `flow -> Workflow`,
 `policy -> Access`, `ai -> AI`, `code -> Code`, `release -> Publish`. Advanced
 is the existing Inspector trigger, relabelled and closed by default. History
 and Activity stay backed utilities; Library is absent from the default Builder.
 
-- [ ] **Step 5: Run focused tests and confirm GREEN**
+- [x] **Step 5: Run focused tests and confirm GREEN**
 
 ---
 
@@ -301,21 +310,21 @@ and Activity stay backed utilities; Library is absent from the default Builder.
 - Create: `apps/workbench/styles/workspace-home.css`
 - Create: `apps/workbench/styles/builder-workspace.css`
 
-- [ ] **Step 1: Add a style-boundary RED test**
+- [x] **Step 1: Add a style-boundary RED test**
 
 Assert every import is present once, each new CSS file is <=300 lines, and
 extracted selectors are not duplicated in `globals.css`.
 
-- [ ] **Step 2: Run the test and confirm RED**
+- [x] **Step 2: Run the test and confirm RED**
 
-- [ ] **Step 3: Extract without changing token semantics**
+- [x] **Step 3: Extract without changing token semantics**
 
 Move root tokens to `tokens.css`; reset/focus/reduced-motion to `base.css`;
 rail/topbar/canvas/overlay/status to `shell.css`; Home/composer/recent-product to
 `workspace-home.css`; and new conversation/preview layout to
 `builder-workspace.css`. Keep unrelated editor CSS global for later slices.
 
-- [ ] **Step 4: Run focused tests and production build**
+- [x] **Step 4: Run focused tests and production build**
 
 ```powershell
 node node_modules/vitest/vitest.mjs run components/shell/workbench-shell.test.tsx components/workbench-home.test.tsx components/journey/building-preview.test.tsx
@@ -330,7 +339,7 @@ Expected: exit 0. Replace extracted mixed-support `end` values with `flex-end`.
 
 **Files:** all exact manifest paths; no new path.
 
-- [ ] **Step 1: Run all package tests**
+- [x] **Step 1: Run all package tests**
 
 ```powershell
 cd packages/workbench-ui
@@ -342,7 +351,7 @@ node node_modules/vitest/vitest.mjs run
 Record inherited non-failing React `act(...)`, DNS-stub, and `punycode`
 warnings separately; do not hide them.
 
-- [ ] **Step 2: Run typecheck and builds**
+- [x] **Step 2: Run typecheck and builds**
 
 ```powershell
 cd packages/workbench-ui
@@ -353,25 +362,25 @@ node ..\..\packages\compiler\node_modules\typescript\bin\tsc -p tsconfig.json --
 node node_modules/next/dist/bin/next build
 ```
 
-- [ ] **Step 3: Run format, scope, and safety gates**
+- [x] **Step 3: Run format, scope, and safety gates**
 
 Direct Prettier over the exact manifest; `git diff --check`; exact containment;
 lock importer-only; package snapshot equality; no Graph/Control Plane/compiler/
 capability/provider/Docker/Compose diff; no credential/high-confidence secret.
 
-- [ ] **Step 4: Inspect real desktop and narrow layouts**
+- [x] **Step 4: Inspect real desktop and narrow layouts**
 
 Verify 1440x900 and 390x844: primary action visible, Builder order usable,
 actions keyboard reachable, overlays restore focus, dark theme works, and no
 technical detail enters the default frame.
 
-- [ ] **Step 5: Request one independent code review**
+- [x] **Step 5: Request one independent code review**
 
 Review product-goal alignment, retained behavior, accessibility, responsive
 layout, exact scope, and absence of Graph/API authority changes. Repair any
 actionable P0/P1 with focused TDD, then rerun the full gates once.
 
-- [ ] **Step 6: Commit and push the exact manifest**
+- [x] **Step 6: Commit and push the exact manifest**
 
 After fresh cached equality/diff/sensitive checks, commit once:
 
@@ -381,3 +390,9 @@ feat(workbench): add prompt-to-live workspace foundation
 
 Push without force and prove local `HEAD` equals upstream with no remaining
 implementation path.
+
+The final independent review returned `P0/P1/P2=0/0/1` and `READY=yes` after
+all five blocking interaction findings were repaired. The retained P2 is a
+test-hardening opportunity: the generation-reset regression directly covers
+pending interpretation, while the production guards also protect later
+clarification, review, planning, decision, and apply completions.
