@@ -1,8 +1,27 @@
 import { describe, expect, it } from "vitest";
 
-import { assertProductRecipe } from "../src/index.js";
+import { assertProductRecipe, digestJson } from "../src/index.js";
 
 const digest = `sha256:${"b".repeat(64)}`;
+
+const customerPageKeys = [
+  "customer-home",
+  "customer-menu",
+  "customer-dish-detail",
+  "customer-cart",
+  "customer-checkout",
+  "customer-orders",
+  "customer-order-detail",
+  "customer-profile",
+] as const;
+
+const customerTabKeys = [
+  "customer-home",
+  "customer-menu",
+  "customer-cart",
+  "customer-orders",
+  "customer-profile",
+] as const;
 
 function validRecipe(): Record<string, unknown> {
   return {
@@ -47,9 +66,45 @@ function validRecipe(): Record<string, unknown> {
   };
 }
 
+function restaurantCustomerV1(): Record<string, unknown> {
+  const recipe = validRecipe();
+  const surface = (recipe.surfaces as Record<string, unknown>[])[0];
+  surface.entryPageKey = "customer-home";
+  (surface.navigation as Record<string, unknown>).items = customerTabKeys.map(
+    (pageKey) => ({ pageKey, label: pageKey, icon: "circle" }),
+  );
+  recipe.screens = customerPageKeys.map((key) => ({
+    apiVersion: "factory.screen-intent/v1",
+    key,
+    label: key,
+    purpose: "discovery",
+    primaryJourneyKeys: ["place-order"],
+    entityKeys: ["order"],
+    capabilityKeys: ["commerce.orders"],
+    recipeKey: `restaurant-${key}`,
+    preferredViewport: "mobile",
+  }));
+  return recipe;
+}
+
 describe("ProductRecipeV1", () => {
   it("accepts exact deterministic recipe metadata", () => {
-    expect(assertProductRecipe(validRecipe())).toEqual(validRecipe());
+    const parsed = assertProductRecipe(validRecipe());
+
+    expect(parsed).toEqual(validRecipe());
+    expect(parsed.apiVersion).toBe("factory.product-recipe/v1");
+    expect(parsed.surfaces[0]?.apiVersion).toBe(
+      "factory.application-surface/v1",
+    );
+    expect(digestJson(parsed)).toBe(
+      "sha256:8fcae397e5ede2344c4e71e3a0be03e48315365c5002ee342b7a76476dbfe7d9",
+    );
+  });
+
+  it("cannot represent screens owned outside visible navigation", () => {
+    expect(() => assertProductRecipe(restaurantCustomerV1())).toThrow(
+      "Product Recipe screen 'customer-dish-detail' has no surface owner.",
+    );
   });
 
   it("rejects extra source, package, provider, route, and runtime authority", () => {

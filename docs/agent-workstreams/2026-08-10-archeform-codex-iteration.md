@@ -121,7 +121,8 @@ Sol/Terra acceptance and release-review activity.
 
 ## Per-task loop
 
-For every ledger task:
+For serialized or cross-package contracts, security/authority boundaries, and
+the final release, use the heavy loop:
 
 1. generate a bounded task brief and report path;
 2. record the base commit and allowed paths;
@@ -131,6 +132,14 @@ For every ledger task:
 6. route P0/P1 findings through bounded fix/re-review rounds;
 7. run task-level verification and reconcile the PM ledger;
 8. commit and push the reviewed green task before starting its dependent wave.
+
+For ordinary deterministic components, pages, recipes, fixtures, and local
+integration inside the accepted Restaurant scope, use focused TDD, relevant
+package checks, one independent review, PM reconciliation, and controller
+commit/push. Do not add per-slice Terra QA or Sol release review unless the
+ledger identifies a concrete load-bearing risk. Ordinary provider-free local
+repairs are not counted against a repair cap; continue them within the frozen
+write manifest until tests and review are clean.
 
 For UI tasks, the brief and hand-off must contain a reuse inventory: searched
 registries/templates, reused keys and paths, parameterization, rejected
@@ -149,13 +158,16 @@ checks, confirm cleanup, and confirm local HEAD equals the pushed remote commit.
 
 Continue without asking for routine permission. Stop only when:
 
-- a founder decision would materially change product scope or a frozen contract;
-- a secret/credential or external production action needs new authority;
-- a load-bearing P0/P1 survives the documented repair cap;
+- a decision changes product scope or commits to irreversible architecture;
+- a secret, credential, external authority, cloud action, or deployment needs
+  new authority;
+- a load-bearing issue survives the applicable real-model or high-cost rerun
+  cap;
 - the active plan is fully accepted and pushed.
 
 Ordinary test failures, review findings, merge conflicts inside assigned paths,
-and slow commands are work to resolve, not reasons to stop.
+reversible P1 choices inside the accepted Restaurant scope, and slow commands
+are work to resolve, not reasons to stop and do not require founder reapproval.
 
 ## Required final report
 
@@ -223,8 +235,11 @@ and the accepted repository release.
 
 Continue without routine check-ins. Resolve ordinary test failures, review
 findings, conflicts within assigned paths, and slow commands autonomously.
-Stop only for a material founder decision, new external/credential authority,
-a load-bearing P0/P1 that survives the repair cap, or full accepted completion.
+Stop only for a product-scope or irreversible-architecture founder decision,
+new external/credential/cloud/deployment authority, a load-bearing issue that
+survives an applicable real-model or high-cost rerun cap, or full accepted
+completion. Ordinary provider-free local fixes are uncapped within their frozen
+manifest.
 Mark the Goal complete and print GOAL_COMPLETE only after D0 and Tasks 0–9 are
 accepted, all required runtime/clean-checkout/accessibility/security evidence
 passes, cleanup is empty, the ledger is accepted, and local HEAD equals the

@@ -1,6 +1,6 @@
 # Archeform delivery status
 
-Updated: 2026-08-12
+Updated: 2026-08-14
 
 ## Product outcome
 
@@ -21,7 +21,125 @@ controlled extension boundaries.
 The full status history through 2026-08-09 is preserved verbatim in
 [`archive/status-history/2026-08-09-project-status.md`](archive/status-history/2026-08-09-project-status.md).
 
-## Current gate — controller delivery of accepted Graph V3
+## Current milestone — Product Recipe surface-ownership governance
+
+### Current authoritative checkpoint — 2026-08-14
+
+Graph V3 is delivered and its gate is consumed. Controller commit
+`8230197241589865f289c223fc346b6d91a438ae` has the exact subject
+`feat(graph): add application graph v3 contracts`, exactly the frozen 16 paths,
+and a successful non-force push on
+`feat/governed-composition-capability-foundry`. Local `HEAD` equals upstream at
+that exact hash and the delivered baseline was clean. Before delivery, focused
+Graph/browser 111/111, dispatch 12/12, Graph 465/465, compiler 415/415,
+typecheck/build, formatting/diff, declaration/browser/import, exact-manifest,
+and sensitive checks passed. Staged Expected16/Actual16 equality had no missing,
+unexpected, unstaged, or untracked path.
+
+The shared contract recorded as frozen is
+[`superpowers/specs/2026-08-12-restaurant-task2-task3-key-binding-contract.md`](superpowers/specs/2026-08-12-restaurant-task2-task3-key-binding-contract.md).
+Its formatted SHA-256 is
+`75d67d44e922c3064fd5a63fc877366e2d17259be4fcebace1adbc4a6a8a4423`.
+It fixes two surfaces, fifteen page/route/recipe identities, the legacy mapping,
+registry namespaces, the complete field-authority classification, three flows,
+seven step-scoped V3 journeys, transition/UI Policy keys, and every page/block
+Domain/Flow/Policy binding port. The legacy actorless table-session expiry paths
+become explicit manager-granted V3 transitions; V1/V2 bytes and validators are
+unchanged.
+
+A pre-write shared-contract check found that this manifest cannot be expressed
+by delivered `ProductRecipeV1`. Its surface owner set is exactly
+`entryPageKey` plus `navigation.items[].pageKey`, and it rejects every unowned
+screen. The manifest requires `customer-dish-detail`, `customer-checkout`, and
+`customer-order-detail` to belong to `customer-mobile` while deliberately
+excluding them from the five-item bottom-tab navigation. Adding hidden or
+duplicate navigation entries would violate the exact navigation contract.
+The stop-both rule is active and the prior hash remains historical evidence,
+not an executable Task 2/Task 3 dispatch contract.
+
+### Active work
+
+- ADR-0011 is founder-accepted. PM froze one serialized Product Recipe V2
+  prerequisite under exactly one GPT-5.6-Sol integration writer and four Graph
+  source/test paths. Final Sol release review returns `RELEASE_REJECT`,
+  actionable `P0/P1/P2=0/3/1`, plus the deferred prohibited nested-Zod P2. The
+  prerequisite is `implementing` for one last finite same-writer repair: ignore
+  hostile optional parse params across both schemas and all five entrypoints,
+  enforce a global array-length budget of 100 before prototype/key/slot
+  inspection, and remove stale current authority. The prior Terra PASS is
+  historical evidence only. `pnpm-workspace.yaml` is exactly restored to HEAD
+  blob `286cf7f5643db97142c425abe7c8e5d5663f5d65` after the reviewer's accidental
+  pnpm wrapper/network attempt; workspace and lockfile statuses are clean and
+  no product drift resulted. Final writer handoff records RED 34 passing/36
+  failing and GREEN params/array 56/56, entrypoints 32/32, A/B/C/D 6/8/12/1,
+  focused 203/203, full Graph 661/661, and green direct typecheck, build, format,
+  diff, browser, fixed hash, V1 parity, exact-four containment, and restored
+  workspace/lockfile gates. The same final Sol re-review returns
+  `RELEASE_ACCEPT`, actionable `P0/P1/P2=0/0/0`, the deferred prohibited
+  nested-Zod P2, and `READY_FOR_QA YES`; independent params 50/50, arrays 6/6,
+  semantics 10/10, V1/hash/adapter/dispatch/browser 12/12, and all reported
+  static/containment gates pass. Technical and governance P1s are closed. The
+  prerequisite is `ready_for_qa`, and exactly one fresh independent Terra
+  read-only exact-tree recheck using direct runtime only then passes actionable
+  `P0/P1/P2=0/0/0`, the deferred prohibited nested-Zod P2, and
+  `READY_FOR_FINAL_RELEASE_REVIEW YES`. Direct targeted 56/56, entrypoints
+  32/32, focused 203/203, full Graph 661/661, retained A–D/envelope/cycle/shared
+  semantics, TypeScript `--noEmit`, format/diff, independent params 40/40,
+  arrays 6/6, dist/browser/hash/V1/dispatch/adapter, exact-four containment, and
+  workspace restoration pass. Final independent Sol release review returns
+  `RELEASE_ACCEPT`, actionable `P0/P1/P2=0/0/0`, with the deferred prohibited
+  nested-Zod P2. No further QA/review is required. Fresh PM reconciliation
+  accepts the exact tree on 2026-08-14. Controller delivery is authorized for
+  the exact 17-path manifest: 13 deliberate current-wave governance paths plus
+  the exact-four implementation. The Task 3 inventory and 21 scaffolds are the
+  exact excluded 22-path residual and must remain untouched. The exact contract,
+  errors, gates, and authority are in
+  the
+  [`Product Recipe V2 ledger`](superpowers/ledgers/2026-08-14-product-recipe-v2-prerequisite.md)
+  and complete
+  [`checkbox plan`](superpowers/plans/2026-08-14-product-recipe-v2-prerequisite.md).
+- Task 2 is `planned` and contract-blocked. Its writer made no capability-path
+  write before reporting the mismatch. Its prospective eleven paths remain
+  listed in the inactive
+  [`Task 2 plan`](superpowers/plans/2026-08-12-restaurant-product-recipe-task2.md).
+- Task 3 is `planned` and contract-blocked. Its stopped dirty baseline is
+  preserved: one reuse-inventory record plus seven package manifests, seven
+  tsconfigs, and seven test scaffolds. It has no `src/**` file and no lockfile
+  diff. Its attempted test stopped before behavior because package-local
+  dependency tooling was unavailable. The inactive boundaries remain in the
+  [`Task 3 plan`](superpowers/plans/2026-08-12-ui-registry-task3.md).
+- No Task 2 or Task 3 writer is active. The preserved dirty scaffolds are not
+  accepted behavior evidence and must not be discarded, extended, installed,
+  committed or pushed in this delivery.
+
+### Blocked decisions and risks
+
+No founder technology decision is currently blocking this prerequisite.
+[`ADR-0011`](adr/adr-0011-product-recipe-surface-page-ownership.md) is Accepted
+from the exact 2026-08-14 founder response
+`参考以下总结，若符合项目目标，则持续接受而迭代。`; PM confirmed that the referenced
+summary matches the current evidence and accepted Restaurant goal. The accepted
+additive contract preserves V1 and separates owned pages from visible
+navigation. Copied shadcn/ui source, direct
+Radix, another external coordinate, provider/model/network/service work,
+Docker, Compose, compilers, Workbench, and downstream Tasks 4/5 remain
+unauthorized. Only the exact accepted controller delivery below is open.
+
+The main risks are shared-contract drift, accidental lockfile resolution drift,
+client relabeling of server totals/state/payment/inventory/audit fields, and UI
+ports that imply authority. Frozen tests and the stop-both rule address these.
+
+### Next smallest valuable slice
+
+Controller stages only the exact 17-path accepted manifest, proves staged and
+residual equality, cached diff/sensitive checks, restored workspace/lock state,
+commits with subject `feat(graph): add product recipe v2 contracts`, pushes
+without force, and proves local/upstream equality plus the exact preserved
+22-path Task 3 residual. Task 2/Task 3 remain blocked until that equality is
+recorded. Hidden navigation, nested Zod use, optional-params customization,
+arrays over 100, and V2-to-V1 down-conversion remain prohibited.
+
+### Retained historical reconciliation through V3 acceptance
 
 Task 0 Product Closure is `accepted` on the current reviewed tree. Final Terra
 release QA passed, and independent Sol release review returned `ACCEPT` with
@@ -463,17 +581,11 @@ Authorities:
 
 ## Next gate
 
-The next authorized sequence is:
-
-1. deliver exactly the accepted 16 paths through explicit controller staging,
-   staged equality/diff/sensitive gates, one reviewed commit, non-force push,
-   and local/upstream equality with a clean tree;
-2. PM records and consumes the exact Graph V3 delivery equality gate;
-3. freeze one exact versioned Restaurant Task 2/Task 3 key-and-binding manifest
-   and its digest against the delivered Graph V3 contract;
-4. only then move Tasks 2 and 3 from `planned` to `implementing` and dispatch
-   one path-disjoint writer per task under the founder's already recorded
-   conditional authority.
+Product Recipe V2 final release review and PM acceptance are complete. The only
+current authority is controller delivery of the exact 17-path manifest with the
+frozen subject, non-force push, local/upstream equality, and exact preserved
+22-path Task 3 residual. Task 2/Task 3 and Tasks 4/5 remain blocked through that
+equality and a subsequent PM refreeze/resumption record.
 
 ## Explicitly deferred
 

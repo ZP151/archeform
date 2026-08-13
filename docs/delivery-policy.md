@@ -39,6 +39,34 @@ tokens or recipe parameters. They do not justify a duplicate component. A new
 asset must own distinct semantics, interaction, state, accessibility, or slot
 behavior and must include provenance and tests.
 
+## Proportionate gates and routine authority
+
+Use the full task-review, independent Terra QA, independent Sol release-review,
+PM-acceptance, and controller-delivery sequence for serialized or cross-package
+contracts, security or authority boundaries, and the final repository release.
+The active ledger may also require that sequence for another explicitly
+load-bearing slice.
+
+Ordinary deterministic component, page, recipe, fixture, and local integration
+work inside an accepted frozen scope uses focused TDD, the relevant package
+checks, and one independent review. It does not require a fresh Terra pass and
+Sol release review for every mechanical slice; those checks remain available
+when the ledger identifies a concrete load-bearing risk and remain mandatory at
+the final release gate.
+
+Repair caps limit real-model, provider, live-service, destructive, or otherwise
+high-cost reruns. They do not limit ordinary provider-free local fixes: an
+in-scope writer may continue RED/GREEN/review repair until the deterministic
+checks and review are clean, while preserving the frozen contract and write
+manifest.
+
+Founder reapproval is unnecessary for ordinary P1 prioritization and reversible
+implementation choices inside an accepted product scope. Stop for founder or
+controller authority only when work changes product scope, makes an
+irreversible architecture decision, needs external credentials or authority,
+performs cloud/deployment action, or leaves a load-bearing issue unresolved
+after the applicable high-cost repair cap.
+
 ## Task commits and pushes
 
 The controller, not a worker, owns normal Git mutations after review.

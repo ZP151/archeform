@@ -3712,28 +3712,32 @@ Task 1 delivery closure — 2026-08-12:
 
 State: `planned`.
 
-Owner: one `backend` implementation writer, with `integration` as contract
-owner and task reviewer. No implementation writer is authorized yet.
+Owner: `backend` after the shared-contract prerequisite; `integration` remains
+contract owner. No Task 2 writer is active.
 
 Specialization: deterministic Restaurant domain, policy, flow, journey,
 authority, seed, and two-surface composition semantics.
 
 Contract owner: `integration`.
 
-Contract status: `blocked`; ADR-0010 is accepted, but its serialized Graph V3
-prerequisite is not delivered and the cross-task Restaurant key-and-binding
-manifest is not frozen.
+Contract status: `blocked`; the delivered Graph V3 prerequisite remains valid,
+but the recorded frozen Restaurant manifest is not expressible by
+`ProductRecipeV1` surface ownership.
 
-Contract artifact: the delivered Task 1 contract plus required artifact
+Contract artifact: the delivered Graph V3 contract plus frozen artifact
 `docs/superpowers/specs/2026-08-12-restaurant-task2-task3-key-binding-contract.md`.
-That versioned manifest may be created and frozen only after the accepted Graph
-V3 prerequisite is delivered; it does not exist yet and no writer may infer it
-from the design prose. Accepted ADR
+Its currently inactive implementation plan is
+`docs/superpowers/plans/2026-08-12-restaurant-product-recipe-task2.md`.
+Accepted ADR
 `docs/adr/adr-0010-restaurant-product-graph-v3-and-ui-registry-boundary.md`
-provides conditional future authority but does not dispatch this task.
+and the founder's recorded conditional authority do not cover the newly found
+stable Product Recipe serialization change. Proposed
+`docs/adr/adr-0011-product-recipe-surface-page-ownership.md` recommends
+`migrate` through additive Product Recipe/Application Surface V2 contracts
+while `keep` preserves V1 unchanged. Explicit founder acceptance is required
+before a serialized prerequisite can be frozen.
 
-Exact prospective allowed paths, inactive until this task becomes
-`implementing`:
+Exact prospective paths, inactive while the contract is blocked:
 
 - `packages/capabilities/src/commerce/product-recipe.ts`;
 - `packages/capabilities/src/restaurant/product-recipe.ts`;
@@ -3757,30 +3761,26 @@ Acceptance evidence:
   are present;
 - repeated fixture composition produces the same Graph and hash.
 
-Blocked by:
+Resolved prerequisite notes:
 
-- the delivered Task 1 journey rule requires a journey actor to be present in
-  every transition of every referenced flow, while the existing Restaurant
-  order flow intentionally assigns customer, kitchen, cashier, and manager to
-  different transitions; no single actor can validly reference that whole
-  flow;
-- the exact fifteen page keys, recipe keys, registry/block keys, field
-  authority classifications, flow partitioning, and legacy-to-new-screen map
-  are not frozen in one versioned cross-task manifest;
-- any resolution that changes the stable Graph contract requires a Tech Lead
-  proposal and explicit founder acceptance before implementation.
+- delivered V3 step-scoped actors preserve the multi-role order lifecycle;
+- the shared manifest freezes the exact fifteen pages, recipes, registry/block
+  keys, authority classifications, flow coverage, and legacy mapping;
+- the two legacy actorless expiry paths gain explicit manager grants only in
+  the deterministic V3 product layer; the legacy V1 profile stays unchanged.
 
-Authorization: conditional future authority only. Keep Task 2 `planned`; do not
-write REDs or production code until Graph V3 is accepted, delivered, and pushed,
-and PM freezes the exact cross-task manifest. No additional founder prompt is
-required after those gates.
+Authorization: none. The prior writer stopped before any capability-path write.
+Do not add REDs, implementation, dependency, commit, or push work until a
+founder-accepted ADR is converted into one serialized prerequisite ledger and
+delivered contract. No hidden or duplicate navigation item may substitute for
+explicit surface ownership.
 
 ## Task 3 — Establish the UI Registry and shared source foundation
 
 State: `planned`.
 
-Owner: one `frontend` implementation writer, with `integration` as shared
-contract owner and task reviewer. No implementation writer is authorized yet.
+Owner: `frontend` after the shared-contract prerequisite; `integration` remains
+shared contract owner. No Task 3 writer is active.
 
 Specialization: reuse-first UI source registry, accessible primitives and
 patterns, generated business blocks, screen/experience/product recipes,
@@ -3789,8 +3789,9 @@ provenance, and source ownership.
 Contract owner: `integration` for shared keys and bindings; `frontend` for the
 registry implementation after contract and governance acceptance.
 
-Contract status: `blocked`; ADR-0010 is accepted, but its serialized Graph V3
-prerequisite is not delivered and the registry binding manifest is not frozen.
+Contract status: `blocked`; ADR-0010 and delivered Graph V3 remain valid, but
+the shared manifest's surface-page ownership cannot pass the delivered
+`ProductRecipeV1` validator without corrupting its exact navigation contract.
 
 Contract artifact: the same required
 `docs/superpowers/specs/2026-08-12-restaurant-task2-task3-key-binding-contract.md`
@@ -3800,44 +3801,60 @@ which rejects copied shadcn/ui source and new direct Radix dependencies in this
 wave. A pinned source-study record is outside this wave and is required only if
 a later demonstrated gap starts a separately governed source-intake decision.
 
-Exact prospective allowed paths, inactive until this task becomes
-`implementing`:
+Inactive implementation plan:
+`docs/superpowers/plans/2026-08-12-ui-registry-task3.md`.
 
+Exact prospective boundaries; the existing dirty scaffolds are preserved but
+no further write is authorized:
+
+- `docs/research/2026-08-12-archeform-ui-registry-reuse-inventory.md`;
+- `pnpm-lock.yaml`, limited to seven new workspace importers and the exact
+  already locked ADR-0010 coordinates;
 - `packages/ui-primitives/package.json`;
+- `packages/ui-primitives/tsconfig.json`;
 - `packages/ui-primitives/src/index.ts`;
 - `packages/ui-primitives/src/components/**`;
 - `packages/ui-primitives/THIRD_PARTY_NOTICES.md`;
 - `packages/ui-primitives/test/components.test.tsx`;
 - `packages/ui-patterns/package.json`;
+- `packages/ui-patterns/tsconfig.json`;
 - `packages/ui-patterns/src/index.ts`;
 - `packages/ui-patterns/src/navigation/**`;
 - `packages/ui-patterns/src/forms/**`;
 - `packages/ui-patterns/src/feedback/**`;
 - `packages/ui-patterns/test/pattern-contracts.test.tsx`;
 - `packages/workbench-ui/package.json`;
+- `packages/workbench-ui/tsconfig.json`;
 - `packages/workbench-ui/src/index.ts`;
+- `packages/workbench-ui/src/**`;
+- `packages/workbench-ui/test/**`;
 - `packages/generated-ui/package.json`;
+- `packages/generated-ui/tsconfig.json`;
+- `packages/generated-ui/src/index.ts`;
 - `packages/generated-ui/src/customer/**`;
 - `packages/generated-ui/src/merchant/**`;
 - `packages/generated-ui/src/states/**`;
 - `packages/generated-ui/test/restaurant-blocks.test.tsx`;
 - `packages/screen-recipes/package.json`;
+- `packages/screen-recipes/tsconfig.json`;
 - `packages/screen-recipes/src/customer/**`;
 - `packages/screen-recipes/src/merchant/**`;
 - `packages/screen-recipes/src/index.ts`;
 - `packages/screen-recipes/test/restaurant-screens.test.ts`;
 - `packages/experience-recipes/package.json`;
+- `packages/experience-recipes/tsconfig.json`;
 - `packages/experience-recipes/src/fine-dining.ts`;
 - `packages/experience-recipes/src/index.ts`;
 - `packages/experience-recipes/test/fine-dining.test.ts`;
 - `packages/product-recipes/package.json`;
+- `packages/product-recipes/tsconfig.json`;
 - `packages/product-recipes/src/restaurant-ordering.ts`;
 - `packages/product-recipes/src/index.ts`;
 - `packages/product-recipes/test/restaurant-product.test.ts`.
 
-No root workspace manifest, lockfile, dependency, runtime, provider, service,
-Docker, or Compose path is authorized by this prospective set. Any required
-expansion returns to PM and technology governance before writing.
+No root workspace manifest, external version/resolution change, runtime,
+provider, service, Docker, or Compose path is authorized. Any expansion returns
+to PM and technology governance before writing.
 
 Acceptance evidence:
 
@@ -3860,24 +3877,21 @@ Acceptance evidence:
   rejects near-equivalent registry entries without distinct semantics;
 - no Aceternity item enters production without per-item evidence.
 
-Blocked by:
+Resolved prerequisite notes:
 
-- Task 1 binding policies authorize only exact
-  `graph.domain.<entityKey>.<fieldKey>` block-binding targets, while the Task 3
-  plan currently requires registry declarations for Domain, Flow, and Policy
-  bindings; whether Flow/Policy are registry metadata or Graph bindings is a
-  shared contract decision and cannot be inferred by the frontend writer;
-- the exact Task 2/Task 3 page, recipe, block, slot, port, and authority key map
-  is not frozen;
-- the seven private UI workspace packages are only a founder-accepted
-  experiment and cannot start before the Graph V3 and shared-manifest gates;
-  copied shadcn/ui source and new direct Radix dependencies remain rejected.
+- delivered V3 provides exact Domain/Flow/Policy policy discriminators and the
+  shared manifest assigns each actual block port;
+- the exact page, recipe, block, slot, port, authority, and registry namespaces
+  are frozen;
+- ADR-0010 and the shared manifest constrain the seven-package experiment;
+  copied shadcn/ui source and direct Radix dependencies remain rejected.
 
-Authorization: conditional future authority only. Keep Task 3 `planned`; do not
-write inventory artifacts, REDs, package manifests, notices, or production code
-until Graph V3 is accepted, delivered, and pushed, and PM freezes the exact
-cross-task manifest. No copied source or new direct Radix dependency is
-authorized, and no additional founder prompt is required after the stated gates.
+Authorization: none. Preserve the reuse inventory and exactly 21 package
+scaffold files already present: seven manifests, seven tsconfigs, and seven
+tests. They contain no `src/**` implementation and produced no behavior RED;
+the attempted package test stopped at missing local dependency tooling. There
+is no `pnpm-lock.yaml` diff. Do not install, extend, delete, commit, or push the
+scaffolds until the shared prerequisite is accepted and delivered.
 
 Task 2/Task 3 first-wave gate audit — 2026-08-12:
 
@@ -4135,6 +4149,151 @@ Graph V3 final acceptance and delivery freeze — 2026-08-12:
 - Task 2 and Task 3 remain `planned` with zero writers. Their shared
   key-and-binding manifest may be frozen only after PM records V3 delivery
   equality; acceptance alone does not start them.
+
+Graph V3 delivery and Restaurant first-wave freeze — 2026-08-12:
+
+- Controller delivered exact commit
+  `8230197241589865f289c223fc346b6d91a438ae` with subject
+  `feat(graph): add application graph v3 contracts` and exactly the frozen 16
+  paths. The non-force push succeeded; local `HEAD` equals upstream at the same
+  hash and the delivered baseline is clean. Pre-stage focused 111/111,
+  dispatch 12/12, Graph 465/465, compiler 415/415, typecheck/build, format/diff,
+  declarations/browser/import, manifest, and sensitive gates passed. Staged
+  Expected16/Actual16 equality had no missing, unexpected, unstaged, or
+  untracked path. PM marks V3 `delivered` and consumes its delivery authority.
+- The versioned shared contract is frozen at
+  `docs/superpowers/specs/2026-08-12-restaurant-task2-task3-key-binding-contract.md`.
+  Its formatted SHA-256 is
+  `75d67d44e922c3064fd5a63fc877366e2d17259be4fcebace1adbc4a6a8a4423`.
+  It fixes the exact two surfaces, fifteen pages/routes/recipes and legacy map,
+  registry namespaces, closed field-authority classification, three flow keys,
+  seven step-scoped journeys, transition/UI Policy keys, and every page/block
+  Domain/Flow/Policy binding. The legacy actorless table-session expiry paths
+  receive explicit manager V3 grants and Policy permissions; V1/V2 remain
+  immutable. No new architecture ambiguity remains.
+- Task 2 advances to `implementing` under one GPT-5.6-Sol backend writer with
+  exactly the eleven capability paths above and plan
+  `docs/superpowers/plans/2026-08-12-restaurant-product-recipe-task2.md`.
+  Task 3 advances to `implementing` under one GPT-5.6-Terra frontend writer with
+  exactly the seven package boundaries, internal reuse-inventory record, and
+  lockfile importer-only boundary above and plan
+  `docs/superpowers/plans/2026-08-12-ui-registry-task3.md`.
+- ADR-0010 remains controlling: the Golden runtime and immutable Graph V1/V2
+  are kept; the private packages are an experiment on only the accepted locked
+  coordinates; copied shadcn/ui source, direct Radix, another external
+  dependency/version, provider/model/network/service code, Docker, and Compose
+  remain rejected. Actual browser screenshots are a Task 4/5 runtime gate;
+  Task 3 owns deterministic screenshot-state declarations without adding a
+  browser dependency.
+- The paths are disjoint. A missing or changed shared key, field, authority,
+  journey, binding port, dependency/source requirement, or Graph contract stops
+  both writers immediately and returns to PM/integration ownership. Neither
+  task has commit/push authority. Each must complete focused RED→GREEN, one
+  independent Sol task review, fresh Terra QA, independent Sol release review,
+  PM acceptance, and controller-only delivery. Tasks 4/5 and every downstream
+  product/delivery action remain blocked.
+
+Task 2/Task 3 shared-contract stop-both — 2026-08-12:
+
+- Before Task 2 wrote a test or production path, the backend writer proved the
+  exact fifteen-screen manifest cannot satisfy delivered `ProductRecipeV1`.
+  `assertProductRecipe` derives a surface's complete ownership set only from
+  `entryPageKey` and visible `navigation.items[].pageKey`, then rejects every
+  screen outside that set.
+- The frozen manifest deliberately owns `customer-dish-detail`,
+  `customer-checkout`, and `customer-order-detail` on `customer-mobile` while
+  omitting them from the exact bottom-tab sequence. Adding hidden or duplicate
+  tab items would violate the product contract and is prohibited. Task 2 made
+  zero capability-path writes.
+- Task 3 stopped immediately. Its dirty baseline is one reuse-inventory record
+  plus exactly 21 untracked scaffold files: a manifest, tsconfig, and test in
+  each of seven private packages. No `src/**` file or lockfile diff exists. The
+  attempted package test stopped before behavior because package-local
+  dependency tooling was unavailable; it is not RED evidence.
+- PM invokes the shared-contract stop rule. Task 2 and Task 3 return to
+  `planned`; both contract statuses are `blocked`; all writer, install,
+  dependency-resolution, commit, push, provider/model/network/service, Docker,
+  and Compose authority is revoked. Existing dirty work must be preserved.
+- This is a stable serialization trigger. Accepted ADR-0010 does not authorize
+  changing Product Recipe ownership. Proposed
+  `docs/adr/adr-0011-product-recipe-surface-page-ownership.md` must preserve V1
+  bytes,
+  parsing, and hashes; explicitly separate owned page keys from visible
+  navigation in an additive version; reject unknown, missing, duplicate, and
+  cross-surface ownership; and require explicit founder acceptance. Only then
+  may PM freeze one serialized prerequisite writer and exact paths/gates before
+  refreezing this shared manifest and resuming the parallel wave.
+
+ADR-0011 acceptance and Product Recipe V2 prerequisite freeze — 2026-08-14:
+
+- The founder responded in founder chat exactly
+  `参考以下总结，若符合项目目标，则持续接受而迭代。` PM confirms that the referenced
+  summary matches current repository evidence and the accepted Restaurant
+  product goal. It recommends ADR-0011 and continued delivery of the documented
+  vertical slice, so PM records ADR-0011 `Accepted` on 2026-08-14.
+- The accepted decision keeps Product Recipe/Application Surface V1 immutable
+  and adds `factory.product-recipe/v2` plus
+  `factory.application-surface/v2`. V2 surface `ownedPageKeys` is required,
+  non-empty, bounded at 100, ordered, and unique; it is the complete owner set,
+  while navigation remains visible navigation only. Every screen has exactly
+  one owner; entry and visible navigation are subsets of the same surface's
+  ownership.
+- The exact public V2 API, semantic errors, strict hostile own-data boundary,
+  one-way V1 Draft adapter, no-down-conversion rule, four-path manifest, TDD
+  matrix, and acceptance/delivery sequence are frozen in
+  `docs/superpowers/ledgers/2026-08-14-product-recipe-v2-prerequisite.md` and
+  `docs/superpowers/plans/2026-08-14-product-recipe-v2-prerequisite.md`.
+- Local `HEAD` and upstream are equal at delivered Graph V3 commit
+  `8230197241589865f289c223fc346b6d91a438ae`. Task 2 still has zero
+  capability-path writes. Task 3's one reuse inventory plus exactly 21 scaffold
+  files remain preserved with no `src/**` or lockfile diff.
+- Exactly one GPT-5.6-Sol integration writer is authorized for only
+  `packages/graph/src/product-recipe.ts`,
+  `packages/graph/test/product-recipe-v2.test.ts`,
+  `packages/graph/test/product-recipe.test.ts`, and
+  `packages/graph/test/browser-entry.test.ts`. The writer does not stage,
+  commit, or push. No Task 2 or Task 3 writer is authorized.
+- Because this is a serialized contract, it must pass focused RED/GREEN, one Sol
+  task review, fresh read-only Terra QA, independent Sol release review, fresh
+  PM acceptance, and controller-only delivery/non-force push with local/upstream
+  equality. The later accepted delivery manifest and preserved residual baseline
+  are frozen below. Only after equality may PM amend/refreeze the Restaurant
+  manifest and resume Task 2/Task 3.
+- Prospectively, the heavy gate is reserved for serialized/cross-package
+  contracts, security/authority boundaries, and final release. Ordinary
+  deterministic component/page work inside accepted scope uses TDD plus one
+  independent review. Repair caps govern real-model/high-cost reruns, not
+  ordinary provider-free local fixes. Founder reapproval is not required for
+  an ordinary P1 or reversible in-scope choice; it remains required for product
+  scope change, irreversible architecture, external credentials/authority,
+  cloud/deployment, or a surviving load-bearing issue.
+- There is no material contract ambiguity. Any V1 behavior change, seventh
+  implementation path, dependency, down-conversion, inferred ownership, hidden
+  navigation, new serialized field, external authority, or irreversible
+  architecture decision stops the writer and returns to PM.
+
+Product Recipe V2 final acceptance and delivery freeze — 2026-08-14:
+
+- The final independent Sol release review returns `RELEASE_ACCEPT`, actionable
+  P0/P1/P2=0/0/0, with the separately deferred/prohibited nested-Zod P2. The
+  direct-runtime Terra recheck and every frozen contract, compatibility,
+  hostile-boundary, type, format/diff, browser/hash, restoration, and exact-four
+  containment gate remain green. No further QA or review is required.
+- Fresh PM reconciliation accepts the Product Recipe V2 prerequisite on
+  2026-08-14. Controller delivery is authorized for exactly 17 paths: the four
+  Product Recipe V2 implementation paths plus 13 deliberate governance records
+  that make the founder decision, Graph V3 closure, current status/policy, shared
+  contract, and inactive downstream plans self-contained. The exact subject is
+  `feat(graph): add product recipe v2 contracts`; push is non-force.
+- The Task 3 reuse inventory plus 21 package scaffolds are the exact excluded
+  22-path residual baseline. They are not staged, deleted, stashed, committed,
+  or claimed as accepted behavior. Delivery requires Expected17/Actual17 staged
+  equality, cached diff/sensitive PASS, workspace/lock restoration, local
+  `HEAD` equal to upstream after push, and post-push dirty equality to exactly
+  those 22 residual paths rather than a globally clean worktree.
+- Task 2 and Task 3 remain `planned`/blocked until PM records pushed equality.
+  Only then may PM refreeze the shared contract for Product Recipe V2 and
+  separately resume the founder's conditional Task 2/Task 3 authorization.
 
 ## Task 4 — Compile and run the customer mobile surface
 

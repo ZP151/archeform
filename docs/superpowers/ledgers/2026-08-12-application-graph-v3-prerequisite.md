@@ -2,10 +2,10 @@
 
 Date: 2026-08-12
 
-State: `accepted` (not delivered).
+State: `delivered`.
 
-Owner: `integration`. No implementation or review writer has further authority;
-delivery is controller-only under the acceptance freeze below.
+Owner: `integration`. The delivery authority is consumed; no implementation,
+review, commit, or push authority remains in this prerequisite.
 
 Specialization: versioned Graph serialization, canonical hashing, immutable
 Draft/Published lineage, preview-only lifecycle, browser-safe adapters, typed
@@ -1099,3 +1099,28 @@ and the exact Restaurant Task 2/Task 3 shared key-and-binding manifest be frozen
 Task 2 and Task 3 remain `planned` with zero writers until that separate equality
 record. Any path mismatch, remote divergence, failed gate, sensitive match, or
 dirty post-push tree stops delivery for PM reconciliation.
+
+## Delivery closure — 2026-08-12
+
+Controller delivery is complete on branch
+`feat/governed-composition-capability-foundry` at commit
+`8230197241589865f289c223fc346b6d91a438ae`, with the exact subject
+`feat(graph): add application graph v3 contracts` and exactly the frozen
+16-path manifest. The controller reran the complete accepted gate before
+staging: focused Graph/browser 111/111, compiler dispatch 12/12, full Graph
+465/465, full compiler 23 files/415 tests, both typechecks/builds, Prettier and
+diff, declarations 23/23, browser exports 8/8, zero banned Node imports, exact
+manifest, and zero sensitive matches.
+
+Staged equality was Expected16/Actual16/Missing0/Unexpected0 with zero unstaged
+or untracked paths; cached diff and sensitive checks passed. The commit was
+pushed without force. Fresh post-push evidence records local `HEAD` equal to
+the upstream tip at the exact commit and a clean worktree (status count 0).
+PM therefore marks this prerequisite `delivered`, closes and consumes its
+delivery gate, and does not replay that authority.
+
+Delivery does not authorize V2/V3 compilation, a generated target, Product
+Publish, integration into `main`, a repository release, cloud deployment,
+provider/model/service work, Docker, or Compose. It satisfies the serialized
+Graph prerequisite for the separately frozen Restaurant Task 2/Task 3 shared
+contract.

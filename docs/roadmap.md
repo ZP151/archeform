@@ -119,8 +119,27 @@ P0 acceptance gates:
 > descriptors. The frozen two-path repair now passes same-Sol re-review with
 > P0/P1/P2=0/0/0, compiler-repaired Terra QA passes P0/P1/P2=0/0/0, and the
 > escalated final Sol review returns `RELEASE_ACCEPT`, P0/P1/P2=0/0/0. V3 is
-> `accepted` but not delivered; exact-16 controller delivery is authorized.
-> Tasks 2 and 3 still have zero immediate writers pending equality.
+> now delivered at `8230197241589865f289c223fc346b6d91a438ae`: exact subject,
+> exact 16 paths, non-force push, local/upstream equality, and clean delivered
+> baseline are proven, so its delivery gate is consumed. The frozen
+> `factory.restaurant-task2-task3-contract/v1` manifest recorded the exact
+> fifteen pages/routes/recipes, registry namespaces, authority registry, three
+> flows, seven step-scoped journeys, Policy keys, and all Domain/Flow/Policy
+> block ports. A pre-write stop-both audit then proved it is not expressible by
+> delivered `ProductRecipeV1`: three customer-owned detail/checkout pages are
+> intentionally absent from bottom tabs, while V1 derives ownership only from
+> entry plus visible navigation and rejects unowned screens. Task 2 made no
+> write; Task 3 stopped at inventory and 21 scaffold files with no source or
+> lockfile diff. Both tasks remain `planned`/contract-blocked. ADR-0011 is now
+> founder-`Accepted` from the exact 2026-08-14 response
+> `参考以下总结，若符合项目目标，则持续接受而迭代。`; the referenced summary matches
+> repository evidence and the accepted Restaurant goal. The exact-four Product
+> Recipe V2 implementation passes all direct-runtime review/QA/release gates and
+> fresh PM acceptance. Controller delivery is frozen at exactly 17 paths: four
+> implementation plus 13 required governance records, excluding the preserved
+> Task 3 inventory and 21 scaffolds. Task 2/Task 3 resume only after non-force
+> push, local/upstream equality, exact residual equality, and PM refreeze. Hidden
+> or duplicate navigation is not an allowed workaround.
 > Prompt-to-Polished Restaurant Product is the sole P1 product target. The
 > Foundry, 100+ recipe catalogue, twelve-anchor
 > expansion, cloud deployment, production payments, connector marketplace,
@@ -234,7 +253,7 @@ wave. Once that prerequisite and the exact disjoint shared manifest are frozen,
 PM may start Tasks 2 and 3 without another founder prompt. Until then both stay
 planned with zero writers, and any shared-contract change stops both.
 
-The Graph V3 prerequisite is `accepted` but not delivered. Its exact contract
+The Graph V3 prerequisite is `delivered`. Its exact contract
 and ten-path implementation manifest are frozen in
 `docs/superpowers/ledgers/2026-08-12-application-graph-v3-prerequisite.md`; the
 execution plan is
@@ -276,10 +295,12 @@ compiler-repaired Terra QA passes P0/P1/P2=0/0/0. Three full compiler runs exit
 stdout truncated; prior writer/reviewer/PM 415/415 evidence remains separate.
 The escalated final Sol review returns `RELEASE_ACCEPT`, P0/P1/P2=0/0/0, and
 fresh PM verification reproduces compiler 415/415 with complete raw output plus
-all frozen gates. Controller delivery is authorized for exactly the frozen 16
-paths with subject `feat(graph): add application graph v3 contracts`, staged
-equality/diff/sensitive checks, non-force push, and local/upstream equality.
-Task 2/Task 3 remain blocked until PM records delivery equality.
+all frozen gates. Controller delivery completed at
+`8230197241589865f289c223fc346b6d91a438ae` with the frozen subject, exact
+16-path equality, non-force push, local/upstream equality, and a clean tree.
+The gate is consumed. The later Product Recipe ownership mismatch does not
+reopen Graph V3 delivery, but it blocks the shared Restaurant manifest and both
+Task 2/Task 3 writers.
 
 The root README controls public identity: active Workbench copy and metadata
 move to Archeform · 元象 during this target. Existing `@factory/*` packages,
@@ -295,14 +316,13 @@ ui-primitives -> ui-patterns -> workbench-ui / generated-ui
               -> screen-recipes -> experience-recipes -> product-recipes
 ```
 
-After Graph v2 delivery, founder acceptance of ADR-0010, and delivery of the
-accepted Graph V3 prerequisite, Restaurant semantics and the UI Registry/source
-foundation may begin as two parallel write lines only when one exact versioned
-key-and-binding manifest proves their shared keys, authorities, journey/flow
-semantics, and binding ports are compatible.
-Until then both remain `planned` with no implementation writer. Customer and
-merchant compilers start only when both inputs are ready for QA. Shared contract
-changes stop the parallel wave and return to the contract owner.
+Graph v2 delivery, founder acceptance of ADR-0010, and Graph V3 delivery remain
+satisfied. The exact key-and-binding manifest is blocked because its page
+ownership and navigation requirements cannot coexist under Product Recipe V1.
+Restaurant semantics and the UI Registry/source foundation return to
+`planned`. A founder-accepted additive Product Recipe contract and one
+serialized delivered prerequisite are required before PM can refreeze and
+restart the disjoint wave. Customer and merchant compilers remain blocked.
 
 Workbench implementation includes characterization-first decomposition of the
 current 3,818-line global stylesheet, 907-line controller, and 1,131-line
@@ -534,7 +554,8 @@ be resumed without a new post-Restaurant roadmap decision.
    and cleanup.
 2. Freeze the Graph v2, Product Intent, Experience Brief, Product Recipe,
    Application Surface, Screen Intent, Source Overlay, and Draft Preview
-   Snapshot contracts.
+   Snapshot contracts; deliver additive Product Recipe/Application Surface V2
+   ownership before Restaurant composition resumes.
 3. Compose one deterministic Restaurant Product Recipe and establish the
    pinned UI-source foundation plus Fine Dining experience recipe.
 4. Compile and run the customer mobile and merchant desktop surfaces against
@@ -588,19 +609,19 @@ HEAD equal to the upstream remote tip. The Graph v2 contract is frozen and Task
 after final Sol `ACCEPT` with P0/P1/P2=0/0/0, fresh PM verification, exact
 17-path commit, non-force push, and local/upstream equality. Its delivery gate
 is closed. ADR-0010 is founder-accepted through the exact response `接受` on
-2026-08-12. The serialized Graph V3 prerequisite had reached `ready_for_qa`
-after its exact frozen ten-path implementation, independent Sol task review,
-and fresh Terra QA passed with P0/P1/P2=0/0/0. Final Sol release review rejected
-it with P0/P1/P2=0/2/0. The frozen six-path recursive-boundary repair now passes
-same-Sol re-review P0/P1/P2=0/0/0, and repaired-tree Terra QA now passes
-P0/P1/P2=0/0/0. The new final Sol review returns `RELEASE_REJECT`,
-P0/P1/P2=0/1/0. The compiler-wrapper two-path repair now passes same-Sol review
-P0/P1/P2=0/0/0, and compiler-repaired Terra QA passes P0/P1/P2=0/0/0.
-Escalated final Sol returns `RELEASE_ACCEPT`, P0/P1/P2=0/0/0; V3 is `accepted`
-but not delivered, with exact-16 controller delivery next.
-Restaurant semantics and UI remain planned and blocked on V3
-re-review/QA/release/acceptance/delivery and one
-exact compatible Restaurant Task 2/Task 3 key-and-binding manifest. The
-additional exact founder response `Task 2/3 也授权，如果需要` is conditional future
-authority; it does not bypass those gates. Provider, service, Docker, delivery,
-and downstream work remain unauthorized.
+2026-08-12. Graph V3 is delivered at
+`8230197241589865f289c223fc346b6d91a438ae` after final Sol
+`RELEASE_ACCEPT`, fresh PM verification, exact-16 commit, non-force push, and
+local/upstream equality. Its delivery gate is consumed. The frozen Restaurant
+manifest then exposed the Product Recipe V1 ownership mismatch before any Task
+2 write; Task 3 stopped at inventory and 21 scaffolds. ADR-0011 is accepted
+from the founder's exact 2026-08-14 response
+`参考以下总结，若符合项目目标，则持续接受而迭代。`. The additive Product
+Recipe/Application Surface V2 exact-four implementation now passes final Sol
+`RELEASE_ACCEPT`, actionable P0/P1/P2=0/0/0, direct Terra, and fresh PM
+acceptance. Exact 17-path controller delivery is authorized with non-force push,
+local/upstream equality, and the preserved 22-path Task 3 residual.
+Restaurant semantics and UI remain `planned`/blocked until delivery equality
+and a subsequent PM contract refreeze/resumption record. Provider,
+service, Docker, cloud/deployment, Task 2/Task 3 delivery, and downstream work
+remain unauthorized.
