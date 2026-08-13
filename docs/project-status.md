@@ -21,7 +21,7 @@ controlled extension boundaries.
 The full status history through 2026-08-09 is preserved verbatim in
 [`archive/status-history/2026-08-09-project-status.md`](archive/status-history/2026-08-09-project-status.md).
 
-## Current milestone — Restaurant semantics and UI source foundation
+## Current milestone — Restaurant dual-surface compiler/runtime
 
 ### Current authoritative checkpoint — 2026-08-14
 
@@ -98,10 +98,10 @@ from the exact 2026-08-14 founder response
 `参考以下总结，若符合项目目标，则持续接受而迭代。`; PM confirmed that the referenced
 summary matches the current evidence and accepted Restaurant goal. The accepted
 additive contract preserves V1 and separates owned pages from visible
-navigation. Copied shadcn/ui source, direct
-Radix, another external coordinate, provider/model/network/service work,
-Docker, Compose, compilers, Workbench, and downstream Tasks 4/5 remain
-unauthorized. The Task 2/Task 3 refreeze adds no new technology coordinate.
+navigation. Copied shadcn/ui source, direct Radix, another external coordinate,
+provider/model/network/service work, Docker, Compose, Workbench, and Control
+Plane integration remain unauthorized. Task 4 is now the sole implementation
+slice; Task 5 remains serialized behind it.
 
 The main risks are shared-contract drift, accidental lockfile resolution drift,
 client relabeling of server totals/state/payment/inventory/audit fields, and UI
@@ -109,11 +109,14 @@ ports that imply authority. Frozen tests and the stop-both rule address these.
 
 ### Next smallest valuable slice
 
-Freeze the exact Task 4 and Task 5 compiler/runtime path manifests. The next
-product slice is the independently runnable customer mobile and merchant
-desktop applications against one Published Graph V3. Hidden navigation,
-nested Zod use, optional-params customization, arrays over 100, and V2-to-V1
-down-conversion remain prohibited.
+Execute the frozen Task 4 plan at
+[`superpowers/plans/2026-08-14-restaurant-customer-compiler-task4.md`](superpowers/plans/2026-08-14-restaurant-customer-compiler-task4.md):
+a strict Published Graph V3 customer compiler target, eight independently
+runnable pages, shared local Restaurant state/API, exact Task 3 source closure,
+and a Snapshot V2 preview projection that creates no artifact. The scope is
+exactly 18 paths with one writer and one independent review. Task 5 remains
+planned until Task 4 is delivered; Workbench/Control Plane publication remains
+Task 6. V3-to-V1 down-conversion and further Graph expansion remain prohibited.
 
 ### Retained historical reconciliation through V3 acceptance
 
@@ -557,11 +560,11 @@ Authorities:
 
 ## Next gate
 
-Product Recipe V2 delivery is consumed. Task 2 Restaurant semantics and Task 3
-UI Registry are independently accepted, committed, and pushed, with local
-`HEAD` equal to upstream at `8313e7ae49f8782bd3ab104d0141c60c96f6e4c3`.
-Task 4 and Task 5 may now receive exact, path-disjoint compiler/runtime
-manifests for the customer mobile and merchant desktop vertical slices.
+Product Recipe V2, Task 2 Restaurant semantics, and Task 3 UI Registry are
+delivered. The Task 4 customer compiler/runtime plan is frozen and
+`implementing` under exactly one 18-path writer. Task 5 is planned and blocked
+until Task 4's shared V3 target/preview contracts are reviewed, committed,
+pushed, and locally equal to upstream.
 
 ## Explicitly deferred
 

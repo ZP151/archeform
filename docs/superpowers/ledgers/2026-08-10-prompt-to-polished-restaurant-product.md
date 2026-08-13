@@ -4351,12 +4351,16 @@ Task 2/Task 3 acceptance and delivery — 2026-08-14:
 
 ## Task 4 — Compile and run the customer mobile surface
 
-State: `planned`.
+State: `implementing`.
 
-Owner: `platform` with `frontend` package inputs.
+Owner: exactly one compiler integration writer using the frozen Task 4 plan.
 
-Allowed paths: compiler targets, generated-project templates, customer-surface
-fixtures, and focused compiler/runtime tests assigned by PM.
+Allowed paths: exactly the 18 paths in
+`docs/superpowers/plans/2026-08-14-restaurant-customer-compiler-task4.md`.
+The writer may add only the two existing workspace dependencies named there and
+must use direct local runtimes; package resolution, Graph/Task2/Task3 changes,
+provider calls, services, Docker, Compose, Workbench, Control Plane, commit, and
+push are not authorized.
 
 Acceptance evidence:
 
@@ -4370,7 +4374,9 @@ Acceptance evidence:
 - migration, health, role journey, denial, idempotency, source, and cleanup
   checks pass.
 
-Blocked by: exact PM-owned compiler/runtime path manifest and acceptance gates.
+Blocked by: implementation TDD, one independent code review, exact-manifest
+delivery, non-force push, and local/upstream equality. Task 5 stays planned
+until these shared V3 target and preview contracts are delivered.
 
 ## Task 5 — Compile and run the merchant desktop surface
 
@@ -4392,7 +4398,8 @@ Acceptance evidence:
 - role journeys, denials, audit, migration, health, idempotency, and cleanup
   pass.
 
-Blocked by: exact PM-owned compiler/runtime path manifest and acceptance gates.
+Blocked by: Task 4 delivery and a Task 5 manifest frozen against the delivered
+shared V3 compiler/preview signatures.
 
 ## Task 6 — Rebuild the Workbench prompt-to-live journey
 
