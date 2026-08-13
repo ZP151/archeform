@@ -89,6 +89,13 @@ historical evidence, not the executable Task 2/Task 3 contract.
   surface ownership, generated block ports, and the 53,497-byte complete
   product source selection. The shared contract SHA remains
   `ffa017cf14cd911495d70d8cf490bb637b570057235d3d841657e0f7c732b732`.
+- Task 4 is delivered at `0e85ed6135abeea3f3c44624856b796fa05c2c03`.
+  Task 5 is delivered at `96712e8653507910f4c78ebe9c964a9428f9fef5`
+  with exactly 17 compiler paths, the exact subject
+  `feat(compiler): add restaurant merchant v3 target`, non-force push,
+  local/upstream equality, and a clean tree. Fresh delivery evidence passes
+  focused 67/67, Compiler 491/491, Graph 661/661, Capabilities 384/384,
+  type/build/static gates, and independent P0/P1/P2=0/0/0.
 
 ### Blocked decisions and risks
 
@@ -99,9 +106,10 @@ from the exact 2026-08-14 founder response
 summary matches the current evidence and accepted Restaurant goal. The accepted
 additive contract preserves V1 and separates owned pages from visible
 navigation. Copied shadcn/ui source, direct Radix, another external coordinate,
-provider/model/network/service work, Docker, Compose, Workbench, and Control
-Plane integration remain unauthorized. Task 4 is delivered; Task 5 is now the
-sole implementation slice.
+provider/model/network/service work, Docker, Compose, and Workbench API/Control
+Plane contract expansion remain unauthorized. The internal Task 6A Workbench
+foundation is now the sole implementation slice; it reuses existing APIs and
+adds no Graph or wire contract.
 
 The main risks are shared-contract drift, accidental lockfile resolution drift,
 client relabeling of server totals/state/payment/inventory/audit fields, and UI
@@ -109,14 +117,14 @@ ports that imply authority. Frozen tests and the stop-both rule address these.
 
 ### Next smallest valuable slice
 
-Execute the frozen Task 5 plan at
-[`superpowers/plans/2026-08-14-restaurant-merchant-compiler-task5.md`](superpowers/plans/2026-08-14-restaurant-merchant-compiler-task5.md):
-extend the delivered shared runtime with Graph-authorized merchant operations,
-render seven desktop pages from Task 3 source, assemble one deterministic
-dual-surface bundle, and enable strict governed Restaurant Graph V3 dispatch.
-The scope is exactly 17 paths with one writer and one independent review.
-Workbench/Control Plane publication remains Task 6; V3-to-V1 down-conversion
-and further Graph expansion remain prohibited.
+Execute Task 6A at
+[`superpowers/plans/2026-08-14-workbench-prompt-to-live-foundation.md`](superpowers/plans/2026-08-14-workbench-prompt-to-live-foundation.md):
+deliver distinct Workspace Home and Builder contexts, the Archeform identity,
+default-hidden Advanced inspection, product-language build progress, and the
+first style/state decomposition while preserving existing Describe, resume,
+edit, preview, and Publish behavior. Template cloning, Snapshot V2 lifecycle,
+App Management, V3-to-V1 down-conversion, and further Graph expansion are not
+part of this slice.
 
 ### Retained historical reconciliation through V3 acceptance
 
@@ -560,10 +568,10 @@ Authorities:
 
 ## Next gate
 
-Product Recipe V2, Task 2 Restaurant semantics, and Task 3 UI Registry are
-delivered. Task 4 is delivered at `0e85ed6135abeea3f3c44624856b796fa05c2c03`
-with an exact 18-path commit and pushed equality. Task 5 is `implementing` under
-one exact 17-path writer; Task 6 remains blocked until its delivery.
+Product Recipe V2, Task 2 Restaurant semantics, Task 3 UI Registry, Task 4
+customer compilation, and Task 5 merchant/dual-surface compilation are
+delivered. Task 6A Workbench prompt-to-live foundation is `implementing` under
+its exact internal Workbench/UI plan; no Control Plane API expansion is active.
 
 ## Explicitly deferred
 

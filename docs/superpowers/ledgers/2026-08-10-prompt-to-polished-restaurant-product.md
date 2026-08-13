@@ -4381,9 +4381,9 @@ Capabilities 384/384, type/build/static gates, and final independent P0/P1=0/0.
 
 ## Task 5 — Compile and run the merchant desktop surface
 
-State: `implementing`.
+State: `delivered`.
 
-Owner: exactly one compiler integration writer using the frozen Task 5 plan.
+Owner: completed compiler integration slice.
 
 Allowed paths: exactly the 17 paths in
 `docs/superpowers/plans/2026-08-14-restaurant-merchant-compiler-task5.md`.
@@ -4401,17 +4401,32 @@ Acceptance evidence:
 - role journeys, denials, audit, migration, health, idempotency, and cleanup
   pass.
 
-Blocked by: implementation TDD, one independent code review, exact-manifest
-delivery, non-force push, and local/upstream equality. Task 6 remains planned.
+Delivery: commit `96712e8653507910f4c78ebe9c964a9428f9fef5`, exact
+17 paths, subject `feat(compiler): add restaurant merchant v3 target`,
+non-force push, local/upstream equality, and clean worktree. Fresh controller
+evidence passed focused 67/67, Compiler 491/491, Graph 661/661, Capabilities
+384/384, all three package typechecks, Compiler build, exact formatting/diff/
+containment/sensitive gates, and final independent P0/P1/P2=0/0/0. The sole
+inherited observation is the existing non-failing `punycode` deprecation.
 
 ## Task 6 — Rebuild the Workbench prompt-to-live journey
 
-State: `planned`.
+State: `implementing` through the bounded Task 6A foundation slice.
 
-Owner: `frontend` with `control-plane` preview lifecycle support.
+Owner: Workbench frontend for Task 6A. No Control Plane write is active in this
+slice.
 
 Allowed paths: `apps/workbench/**`, `packages/workbench-ui/**`, assigned
 Control Plane preview endpoints/services, and their tests.
+
+Current executable plan:
+`docs/superpowers/plans/2026-08-14-workbench-prompt-to-live-foundation.md`.
+Task 6A changes only the exact internal Workbench/UI manifest frozen there. It
+adds Workspace Home and Builder contexts, keeps only backed controls, closes
+Advanced by default, migrates active branding to Archeform, and extracts the
+styles/state responsibilities it touches. It does not add a Graph/API contract,
+template clone, Snapshot V2 lifecycle, App Management, external dependency,
+provider, service, Docker, or Compose change. Those remain later Task 6 slices.
 
 Acceptance evidence:
 
@@ -4445,8 +4460,9 @@ Acceptance evidence:
 - no active user-facing `Factory Pilot` remains outside an explicitly allowed
   historical, legal, package, or serialized protocol occurrence.
 
-Blocked by: Task 1 reviewed; Tasks 2 and 3 expose stable fixtures and UI blocks;
-Tasks 4 and 5 expose snapshot preview renderers.
+Task 6A prerequisites are consumed: Tasks 1–5 are delivered. Task 6B remains
+blocked until Task 6A is reviewed, delivered, and pushed with local/upstream
+equality.
 
 ## Task 7 — Make Page, Data, Users, Workflow, and Experience contextual editors
 

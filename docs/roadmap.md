@@ -157,9 +157,10 @@ P0 acceptance gates:
 > remains `ffa017cf...732b732`; the Task 3 lock delta is seven importers and
 > `+72/-0`. The non-force push succeeded and local `HEAD` equals upstream at the
 > Task 3 commit. Task 4 is delivered at `0e85ed61` with an exact 18-path commit,
-> final P0/P1=0/0 review, and pushed equality. Task 5 now has a frozen 17-path
-> merchant/dual-surface plan and is `implementing` under one writer. This does
-> not reopen Graph expansion or authorize Workbench/Control Plane integration.
+> final P0/P1=0/0 review, and pushed equality. Task 5 is delivered at
+> `96712e86` with an exact 17-path commit, final P0/P1/P2=0/0/0 review, and
+> pushed equality. Task 6A now begins the internal Workbench foundation without
+> Graph or Control Plane API expansion.
 
 ### P1 Product Closure gate (accepted and delivered)
 
@@ -338,8 +339,10 @@ Restaurant semantics and the UI Registry/source foundation are delivered.
 Task 4's strict Published Graph V3 customer compiler, independently runnable
 eight-page application, shared local runtime, and artifact-free Snapshot V2
 preview are delivered. Task 5's seven-page merchant desktop, shared state/API,
-dual-surface bundle, and exact Restaurant V3 dispatch are `implementing` under
-an exact 17-path plan and one review.
+dual-surface bundle, and exact Restaurant V3 dispatch are delivered at
+`96712e86`. Task 6A now implements distinct Workspace Home and Builder
+contexts, Archeform identity, default-hidden Advanced inspection, and the first
+style/state decomposition by reusing existing Workbench behavior and APIs.
 
 Workbench implementation includes characterization-first decomposition of the
 current 3,818-line global stylesheet, 907-line controller, and 1,131-line
@@ -641,7 +644,8 @@ exact 17-path commit, non-force push, local/upstream equality, and preserved
 at SHA-256 `ffa017cf14cd911495d70d8cf490bb637b570057235d3d841657e0f7c732b732`.
 Restaurant semantics and UI Registry are delivered at `fbcf92ea` and
 `8313e7ae` with independent P0/P1/P2=0/0/0 reviews and pushed equality.
-Task 5 merchant/dual-surface compiler implementation is the current gate;
-Workbench rebuilding follows the delivered two-surface product.
+Task 5 merchant/dual-surface compilation is delivered. The current gate is the
+Task 6A Workbench prompt-to-live foundation; template/Snapshot API work follows
+as a separate slice after Task 6A delivery.
 Provider, service, Docker, cloud/deployment, and production-payment work remain
 unauthorized.
