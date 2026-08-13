@@ -1,0 +1,21 @@
+{
+  "name": "@factory/generated-ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "prettier --check src test"
+  },
+  "dependencies": {
+    "@factory/ui-patterns": "workspace:*",
+    "@factory/ui-primitives": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.8"
+  }
+}

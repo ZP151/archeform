@@ -225,6 +225,12 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)(happy-dom@20.11.1)(terser@5.49.0)
 
+  packages/experience-recipes:
+    devDependencies:
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)(happy-dom@20.11.1)(terser@5.49.0)
+
   packages/external-intake:
     dependencies:
       "@factory/portfolio-public":
@@ -233,6 +239,19 @@ importers:
       zod:
         specifier: ^3.24.1
         version: 3.25.76
+    devDependencies:
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)(happy-dom@20.11.1)(terser@5.49.0)
+
+  packages/generated-ui:
+    dependencies:
+      "@factory/ui-patterns":
+        specifier: workspace:*
+        version: link:../ui-patterns
+      "@factory/ui-primitives":
+        specifier: workspace:*
+        version: link:../ui-primitives
     devDependencies:
       vitest:
         specifier: ^2.1.8
@@ -248,7 +267,60 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)(happy-dom@20.11.1)(terser@5.49.0)
 
+  packages/product-recipes:
+    dependencies:
+      "@factory/experience-recipes":
+        specifier: workspace:*
+        version: link:../experience-recipes
+      "@factory/screen-recipes":
+        specifier: workspace:*
+        version: link:../screen-recipes
+    devDependencies:
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)(happy-dom@20.11.1)(terser@5.49.0)
+
   packages/portfolio-public:
+    devDependencies:
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)(happy-dom@20.11.1)(terser@5.49.0)
+
+  packages/screen-recipes:
+    dependencies:
+      "@factory/generated-ui":
+        specifier: workspace:*
+        version: link:../generated-ui
+    devDependencies:
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)(happy-dom@20.11.1)(terser@5.49.0)
+
+  packages/ui-patterns:
+    dependencies:
+      "@factory/ui-primitives":
+        specifier: workspace:*
+        version: link:../ui-primitives
+    devDependencies:
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)(happy-dom@20.11.1)(terser@5.49.0)
+
+  packages/ui-primitives:
+    dependencies:
+      lucide-react:
+        specifier: ^0.468.0
+        version: 0.468.0(react@19.2.8)
+    devDependencies:
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)(happy-dom@20.11.1)(terser@5.49.0)
+
+  packages/workbench-ui:
+    dependencies:
+      "@factory/ui-primitives":
+        specifier: workspace:*
+        version: link:../ui-primitives
     devDependencies:
       vitest:
         specifier: ^2.1.8
