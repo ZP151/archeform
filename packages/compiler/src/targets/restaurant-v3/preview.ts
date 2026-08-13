@@ -73,7 +73,6 @@ export function renderRestaurantDraftPreviewSurface(
     const requestedTime = Date.parse(requestedAt);
     if (
       snapshot.state !== "rendering" ||
-      surfaceKey !== "customer-mobile" ||
       !Number.isFinite(requestedTime) ||
       requestedTime < Date.parse(snapshot.createdAt) ||
       requestedTime >= Date.parse(snapshot.expiresAt)

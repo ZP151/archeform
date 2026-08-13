@@ -130,6 +130,41 @@ describe("generated Restaurant customer runtime", () => {
     await app.started.close();
   });
 
+  it("exposes the expanded shared schema without changing customer authority", async () => {
+    const app = await startRuntime();
+    const catalog = await json(app.base, "/api/catalog");
+    expect(catalog.body.items[0]).toMatchObject({
+      version: 1,
+      available: true,
+      stock: 12,
+    });
+    const denied = await json(
+      app.base,
+      "/api/merchant/catalog/dish-truffle-risotto",
+      {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+          "x-role": "manager",
+          "idempotency-key": "spoof-manager",
+        },
+        body: JSON.stringify({
+          expectedVersion: 1,
+          available: false,
+          stock: 0,
+          principalRole: "manager",
+        }),
+      },
+    );
+    expect(denied.response.status).toBe(403);
+    expect((await json(app.base, "/api/catalog")).body.items[0]).toMatchObject({
+      version: 1,
+      available: true,
+      stock: 12,
+    });
+    await app.started.close();
+  });
+
   it("checks out with simulated payment and exposes orders and profile updates", async () => {
     const app = await startRuntime();
     const headers = {

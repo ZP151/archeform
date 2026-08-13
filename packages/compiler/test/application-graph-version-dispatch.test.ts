@@ -14,6 +14,7 @@ import {
   generateVersionedApplicationBundle,
   type PublishedApplicationGraphCompilationInput,
 } from "../src/index.js";
+import { restaurantProductV3Fixture } from "./fixtures/restaurant-product-v3.js";
 
 function validV1Graph(): ApplicationGraphV1 {
   return {
@@ -143,11 +144,6 @@ describe("Application Graph compiler version dispatch", () => {
       publishedV2,
       "Published Application Graph version 'factory.application-graph/v2' is not supported by the current compiler.",
     ],
-    [
-      "factory.application-graph/v3",
-      publishedV3,
-      "Published Application Graph version 'factory.application-graph/v3' is not supported by the current compiler.",
-    ],
   ] as const)(
     "rejects a strict valid %s envelope without projection or down-conversion",
     (_version, published, message) => {
@@ -156,6 +152,26 @@ describe("Application Graph compiler version dispatch", () => {
       ).toThrow(message);
     },
   );
+
+  it("dispatches only the exact governed Restaurant V3 product", () => {
+    const fixture = restaurantProductV3Fixture();
+    const bundle = generateVersionedApplicationBundle({
+      publishedGraph: fixture.publishedGraph,
+      compositionLock: fixture.compositionLock,
+    });
+    expect(bundle.rootDirectory).toBe(
+      "restaurant-product-restaurant-product-v3-published-1",
+    );
+    expect(
+      bundle.files.some(({ path }) => path === "src/customer/app.mjs"),
+    ).toBe(true);
+    expect(
+      bundle.files.some(({ path }) => path === "src/merchant/app.mjs"),
+    ).toBe(true);
+    expect(() =>
+      generateVersionedApplicationBundle(versionedInput(publishedV3())),
+    ).toThrow("Restaurant product compilation input is invalid.");
+  });
 
   it("rejects missing, extra, inherited, and non-plain wrapper fields before adaptation", () => {
     const message =

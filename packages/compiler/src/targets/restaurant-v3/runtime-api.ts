@@ -11,12 +11,22 @@ export type RestaurantRuntimeSourceV1 = {
 function seedModule(): string {
   return `export const restaurantSeed = Object.freeze({
   catalog: [
-    { id: "dish-truffle-risotto", name: "Truffle risotto", description: "Arborio rice and winter truffle", price: 3200, available: true },
-    { id: "dish-seared-salmon", name: "Seared salmon", description: "Salmon, beurre blanc, herbs", price: 2800, available: true }
+    { id: "dish-truffle-risotto", version: 1, name: "Truffle risotto", description: "Arborio rice and winter truffle", price: 3200, available: true, stock: 12, preparationMinutes: 18 },
+    { id: "dish-seared-salmon", version: 1, name: "Seared salmon", description: "Salmon, beurre blanc, herbs", price: 2800, available: true, stock: 10, preparationMinutes: 16 }
   ],
   cart: { id: "cart-customer-1", version: 1, items: [], total: 0 },
   orders: [],
-  profile: { id: "customer-1", version: 1, subjectRef: "local-customer", displayName: "Guest", email: "guest@example.invalid", locale: "en", marketingOptIn: false, role: "customer" }
+  profile: { id: "customer-1", version: 1, subjectRef: "local-customer", displayName: "Guest", email: "guest@example.invalid", locale: "en", marketingOptIn: false, role: "customer" },
+  tables: [
+    { id: "table-1", version: 1, code: "T1", number: 1, capacity: 2, status: "open", active: true },
+    { id: "table-2", version: 1, code: "T2", number: 2, capacity: 4, status: "open", active: true }
+  ],
+  principals: [
+    { id: "manager-1", subjectRef: "local-manager", displayName: "Manager", role: "manager", active: true },
+    { id: "kitchen-1", subjectRef: "local-kitchen", displayName: "Kitchen", role: "kitchen", active: true },
+    { id: "cashier-1", subjectRef: "local-cashier", displayName: "Cashier", role: "cashier", active: true }
+  ],
+  settings: { version: 1, name: "Maison Aurelia", currency: "USD", taxRate: 0, serviceChargeRate: 0, timezone: "UTC", logoUrl: "", serviceOpen: true }
 });
 `;
 }
@@ -61,6 +71,126 @@ function apiModule(plan: RestaurantProductPlanV1): string {
       "restaurant-principal.marketingOptIn",
     ].every((field) => clientFields.has(field)),
   };
+  const permission = (role: string, resource: string, action: string) =>
+    plan.policy.permissions.some(
+      (entry) =>
+        entry.role === role &&
+        entry.resource === resource &&
+        entry.actions.includes(action),
+    );
+  const transition = (
+    flowKey: string,
+    from: string,
+    event: string,
+    to: string,
+    role: string,
+  ) =>
+    plan.flows
+      .find(({ id }) => id === flowKey)
+      ?.transitions.some(
+        (entry) =>
+          entry.from === from &&
+          entry.event === event &&
+          entry.to === to &&
+          entry.roles?.includes(role),
+      ) === true;
+  const writableField = (pageId: string, entityKey: string, fieldKey: string) =>
+    plan.fieldAuthorities.some(
+      (entry) =>
+        entry.entityKey === entityKey &&
+        entry.fieldKey === fieldKey &&
+        entry.authority === "client",
+    ) &&
+    plan.bindingPolicies.some(
+      (entry) =>
+        entry.pageId === pageId &&
+        entry.kind === "domain-field" &&
+        entry.entityKey === entityKey &&
+        entry.fieldKey === fieldKey &&
+        entry.access === "write" &&
+        entry.authority === "client",
+    );
+  const catalogFields = Object.fromEntries(
+    ["name", "description", "price", "available", "preparationMinutes"].map(
+      (field) => [
+        field,
+        writableField("merchant-menu-management", "menu-item", field),
+      ],
+    ),
+  );
+  const settingsFields = Object.fromEntries(
+    [
+      "name",
+      "currency",
+      "taxRate",
+      "serviceChargeRate",
+      "timezone",
+      "logoUrl",
+      "serviceOpen",
+    ].map((field) => [
+      field,
+      writableField("merchant-settings", "restaurant-location", field),
+    ]),
+  );
+  const merchantPolicy = {
+    catalogFields,
+    inventoryStock:
+      permission("manager", "inventory-ledger", "record-manager-adjustment") &&
+      transition(
+        "restaurant-inventory-ledger",
+        "recorded",
+        "record-manager-adjustment",
+        "recorded",
+        "manager",
+      ) &&
+      plan.bindingPolicies.some(
+        (entry) =>
+          entry.pageId === "merchant-menu-management" &&
+          entry.kind === "flow-transition" &&
+          entry.flowKey === "restaurant-inventory-ledger" &&
+          entry.from === "recorded" &&
+          entry.event === "record-manager-adjustment" &&
+          entry.to === "recorded" &&
+          entry.access === "request",
+      ),
+    settings:
+      permission("manager", "restaurant-location", "update") &&
+      Object.values(settingsFields).every(Boolean),
+    settingsFields,
+    cancel:
+      permission("manager", "order", "cancel") &&
+      transition("restaurant-order", "paid", "cancel", "cancelled", "manager"),
+    pay:
+      permission("cashier", "order", "pay") &&
+      transition("restaurant-order", "submitted", "pay", "paid", "cashier"),
+    accept:
+      permission("kitchen", "order", "accept") &&
+      transition("restaurant-order", "paid", "accept", "accepted", "kitchen"),
+    startPreparing:
+      permission("kitchen", "order", "start-preparing") &&
+      transition(
+        "restaurant-order",
+        "accepted",
+        "start-preparing",
+        "preparing",
+        "kitchen",
+      ),
+    markReady:
+      permission("kitchen", "order", "mark-ready") &&
+      transition(
+        "restaurant-order",
+        "preparing",
+        "mark-ready",
+        "ready",
+        "kitchen",
+      ),
+    table: ["activate", "close", "expire"].every((action) =>
+      permission("manager", "table-session", action),
+    ),
+    priority:
+      writableField("merchant-orders", "order", "priority") &&
+      plan.policy.roles.includes("manager"),
+  };
   return `import { createHash } from "node:crypto";
 
 const json = (response, status, body) => {
@@ -69,6 +199,7 @@ const json = (response, status, body) => {
 };
 const digest = (value) => createHash("sha256").update(value).digest("hex");
 const runtimePolicy = Object.freeze(${JSON.stringify(runtimePolicy)});
+const merchantPolicy = Object.freeze(${JSON.stringify(merchantPolicy)});
 const may = (operation) => runtimePolicy[operation] === true;
 function assertBounded(value, depth = 0) {
   if (depth > 12) { const error = new Error("invalid"); error.status = 400; throw error; }
@@ -95,10 +226,12 @@ function receipt(state, operation, key, payload) {
   if (previous && previous.payloadDigest !== payloadDigest) { const error = new Error("conflict"); error.status = 409; throw error; }
   return { previous, payloadDigest, receiptKey };
 }
-function audit(state, action, subjectId) {
-  state.audit.push({ id: "audit-" + String(state.audit.length + 1).padStart(4, "0"), actorRole: "customer", action, subjectEntity: "restaurant-runtime", subjectId, occurredAt: "2026-08-14T00:00:00.000Z", revisionId: state.revisionId });
+function audit(state, actorRole, action, subjectId) {
+  state.audit.push({ id: "audit-" + String(state.audit.length + 1).padStart(4, "0"), actorRole, action, subjectEntity: "restaurant-runtime", subjectId, occurredAt: "2026-08-14T00:00:00.000Z", revisionId: state.revisionId });
 }
 function total(state) { return state.cart.items.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0); }
+function fail(status) { const error = new Error("runtime"); error.status = status; throw error; }
+function exactVersion(raw, record) { if (raw.expectedVersion !== record.version) fail(409); }
 
 export function createRestaurantApiHandler(store, principalRole = "customer") {
   return async function handle(request, response) {
@@ -121,10 +254,10 @@ export function createRestaurantApiHandler(store, principalRole = "customer") {
           if (replay.previous) return replay.previous.response;
           if (raw.expectedVersion !== state.cart.version) { const error = new Error("version"); error.status = 409; throw error; }
           if (typeof raw.itemId !== "string" || !Number.isInteger(raw.quantity) || raw.quantity < 1 || raw.quantity > 20) { const error = new Error("invalid"); error.status = 400; throw error; }
-          const item = state.catalog.find((candidate) => candidate.id === raw.itemId && candidate.available);
+          const item = state.catalog.find((candidate) => candidate.id === raw.itemId && candidate.available && candidate.stock >= raw.quantity);
           if (!item) { const error = new Error("missing"); error.status = 404; throw error; }
           state.cart.items.push({ id: "cart-line-" + String(state.cart.items.length + 1).padStart(4, "0"), itemId: item.id, name: item.name, quantity: raw.quantity, unitPrice: item.price });
-          state.cart.version += 1; state.cart.total = total(state); audit(state, "cart.item-added", state.cart.id);
+          state.cart.version += 1; state.cart.total = total(state); audit(state, "customer", "cart.item-added", state.cart.id);
           const response = { cart: structuredClone(state.cart) };
           state.receipts[replay.receiptKey] = { payloadDigest: replay.payloadDigest, response };
           return response;
@@ -139,7 +272,7 @@ export function createRestaurantApiHandler(store, principalRole = "customer") {
           if (raw.expectedVersion !== state.cart.version) { const error = new Error("version"); error.status = 409; throw error; }
           const line = state.cart.items.find((candidate) => candidate.id === cartLine[1]);
           if (!line || !Number.isInteger(raw.quantity) || raw.quantity < 1 || raw.quantity > 20) { const error = new Error("invalid"); error.status = 400; throw error; }
-          line.quantity = raw.quantity; state.cart.version += 1; state.cart.total = total(state); audit(state, "cart.item-updated", line.id);
+          line.quantity = raw.quantity; state.cart.version += 1; state.cart.total = total(state); audit(state, "customer", "cart.item-updated", line.id);
           const response = { cart: structuredClone(state.cart) }; state.receipts[replay.receiptKey] = { payloadDigest: replay.payloadDigest, response }; return response;
         }));
       }
@@ -150,7 +283,7 @@ export function createRestaurantApiHandler(store, principalRole = "customer") {
           const replay = receipt(state, "cart.delete:" + cartLine[1], String(request.headers["idempotency-key"] ?? ""), payload); if (replay.previous) return replay.previous.response;
           if (Number(request.headers["x-expected-version"]) !== state.cart.version) { const error = new Error("version"); error.status = 409; throw error; }
           const index = state.cart.items.findIndex((candidate) => candidate.id === cartLine[1]); if (index < 0) { const error = new Error("missing"); error.status = 404; throw error; }
-          state.cart.items.splice(index, 1); state.cart.version += 1; state.cart.total = total(state); audit(state, "cart.item-deleted", cartLine[1]);
+          state.cart.items.splice(index, 1); state.cart.version += 1; state.cart.total = total(state); audit(state, "customer", "cart.item-deleted", cartLine[1]);
           const response = { cart: structuredClone(state.cart) }; state.receipts[replay.receiptKey] = { payloadDigest: replay.payloadDigest, response }; return response;
         }));
       }
@@ -160,8 +293,10 @@ export function createRestaurantApiHandler(store, principalRole = "customer") {
         return json(response, 200, await store.mutate((state) => {
           const replay = receipt(state, "checkout", String(request.headers["idempotency-key"] ?? ""), payload); if (replay.previous) return replay.previous.response;
           if (raw.expectedVersion !== state.cart.version || state.cart.items.length === 0 || raw.method !== "simulated-card") { const error = new Error("version"); error.status = 409; throw error; }
-          const order = { id: "order-" + String(state.orders.length + 1).padStart(4, "0"), version: 1, items: structuredClone(state.cart.items), total: state.cart.total, status: "paid", paymentStatus: "simulated-paid", paymentMethod: "simulated-card", submittedAt: "2026-08-14T00:00:00.000Z", paidAt: "2026-08-14T00:00:00.000Z" };
-          state.orders.push(order); state.cart = { id: state.cart.id, version: state.cart.version + 1, items: [], total: 0 }; audit(state, "order.checked-out", order.id);
+          for (const line of state.cart.items) { const item = state.catalog.find((candidate) => candidate.id === line.itemId); if (!item || !item.available || item.stock < line.quantity) fail(409); }
+          for (const line of state.cart.items) { const item = state.catalog.find((candidate) => candidate.id === line.itemId); item.stock -= line.quantity; item.version += 1; }
+          const order = { id: "order-" + String(state.orders.length + 1).padStart(4, "0"), version: 1, items: structuredClone(state.cart.items), total: state.cart.total, status: "paid", paymentStatus: "simulated-paid", paymentMethod: "simulated-card", priority: "normal", kitchenStatus: "queued", submittedAt: "2026-08-14T00:00:00.000Z", paidAt: "2026-08-14T00:00:00.000Z" };
+          state.orders.push(order); state.cart = { id: state.cart.id, version: state.cart.version + 1, items: [], total: 0 }; audit(state, "customer", "order.checked-out", order.id);
           const response = { order: structuredClone(order) }; state.receipts[replay.receiptKey] = { payloadDigest: replay.payloadDigest, response }; return response;
         }));
       }
@@ -174,14 +309,87 @@ export function createRestaurantApiHandler(store, principalRole = "customer") {
         return json(response, 200, await store.mutate((state) => {
           const replay = receipt(state, "profile.update", String(request.headers["idempotency-key"] ?? ""), payload); if (replay.previous) return replay.previous.response;
           if (raw.expectedVersion !== state.profile.version || typeof raw.displayName !== "string" || raw.displayName.length > 120 || typeof raw.locale !== "string" || raw.locale.length > 16 || typeof raw.marketingOptIn !== "boolean") { const error = new Error("invalid"); error.status = 400; throw error; }
-          state.profile.displayName = raw.displayName; state.profile.locale = raw.locale; state.profile.marketingOptIn = raw.marketingOptIn; state.profile.version += 1; audit(state, "profile.updated", state.profile.id);
+          state.profile.displayName = raw.displayName; state.profile.locale = raw.locale; state.profile.marketingOptIn = raw.marketingOptIn; state.profile.version += 1; audit(state, "customer", "profile.updated", state.profile.id);
           const response = { profile: structuredClone(state.profile) }; state.receipts[replay.receiptKey] = { payloadDigest: replay.payloadDigest, response }; return response;
+        }));
+      }
+      const merchantRole = principalRole === "manager" || principalRole === "kitchen" || principalRole === "cashier";
+      if (path.startsWith("/api/merchant/") && !merchantRole) return json(response, 403, { error: "Request denied." });
+      if (request.method === "GET" && path === "/api/merchant/dashboard") { const state = await store.read(); return json(response, 200, { dashboard: { orderCount: state.orders.length, openOrderCount: state.orders.filter((order) => !["cancelled", "served"].includes(order.status)).length, availableItemCount: state.catalog.filter((item) => item.available && item.stock > 0).length, activeTableCount: state.tables.filter((table) => table.active).length } }); }
+      if (request.method === "GET" && path === "/api/merchant/catalog") return json(response, 200, { items: (await store.read()).catalog });
+      if (request.method === "GET" && path === "/api/merchant/orders") return json(response, 200, { orders: (await store.read()).orders });
+      if (request.method === "GET" && path === "/api/merchant/kitchen") return json(response, 200, { orders: (await store.read()).orders.filter((order) => !["cancelled", "served"].includes(order.status)) });
+      if (request.method === "GET" && path === "/api/merchant/tables") return json(response, 200, { tables: (await store.read()).tables });
+      if (request.method === "GET" && path === "/api/merchant/principals") return json(response, 200, { principals: (await store.read()).principals });
+      if (request.method === "GET" && path === "/api/merchant/settings") return json(response, 200, { settings: (await store.read()).settings });
+      const catalogItem = path.match(/^\\/api\\/merchant\\/catalog\\/([^/]+)$/);
+      if (catalogItem && request.method === "PATCH") {
+        const raw = await body(request); const payload = JSON.stringify(raw); const itemId = decodeURIComponent(catalogItem[1]);
+        const requestedFields = ["name", "description", "price", "available", "preparationMinutes"].filter((field) => Object.hasOwn(raw, field));
+        if (principalRole !== "manager" || requestedFields.some((field) => merchantPolicy.catalogFields[field] !== true) || (Object.hasOwn(raw, "stock") && merchantPolicy.inventoryStock !== true)) return json(response, 403, { error: "Request denied." });
+        return json(response, 200, await store.mutate((state) => {
+          const replay = receipt(state, "merchant.catalog:" + itemId, String(request.headers["idempotency-key"] ?? ""), payload); if (replay.previous) return replay.previous.response;
+          const item = state.catalog.find((candidate) => candidate.id === itemId); if (!item) fail(404); exactVersion(raw, item); const updates = {};
+          if (Object.hasOwn(raw, "name")) { if (typeof raw.name !== "string" || !raw.name.trim() || raw.name.length > 120) fail(400); updates.name = raw.name; }
+          if (Object.hasOwn(raw, "description")) { if (typeof raw.description !== "string" || raw.description.length > 1000) fail(400); updates.description = raw.description; }
+          if (Object.hasOwn(raw, "price")) { if (!Number.isInteger(raw.price) || raw.price < 0 || raw.price > 10000000) fail(400); updates.price = raw.price; }
+          if (Object.hasOwn(raw, "available")) { if (typeof raw.available !== "boolean") fail(400); updates.available = raw.available; }
+          if (Object.hasOwn(raw, "stock")) { if (!Number.isInteger(raw.stock) || raw.stock < 0 || raw.stock > 10000) fail(400); updates.stock = raw.stock; }
+          if (Object.hasOwn(raw, "preparationMinutes")) { if (!Number.isInteger(raw.preparationMinutes) || raw.preparationMinutes < 1 || raw.preparationMinutes > 1440) fail(400); updates.preparationMinutes = raw.preparationMinutes; }
+          if (Object.keys(updates).length === 0) fail(400); Object.assign(item, updates); item.version += 1; audit(state, principalRole, "catalog.updated", item.id);
+          const response = { item: structuredClone(item) }; state.receipts[replay.receiptKey] = { payloadDigest: replay.payloadDigest, response }; return response;
+        }));
+      }
+      const orderAction = path.match(/^\\/api\\/merchant\\/orders\\/([^/]+)\\/actions$/);
+      if (orderAction && request.method === "POST") {
+        const raw = await body(request); const payload = JSON.stringify(raw); const orderId = decodeURIComponent(orderAction[1]);
+        const allowed = (raw.action === "cancel" && principalRole === "manager" && merchantPolicy.cancel) || (raw.action === "set-priority" && principalRole === "manager" && merchantPolicy.priority) || (raw.action === "pay" && principalRole === "cashier" && merchantPolicy.pay);
+        if (!allowed) return json(response, 403, { error: "Request denied." });
+        return json(response, 200, await store.mutate((state) => {
+          const replay = receipt(state, "merchant.order:" + orderId + ":" + raw.action, String(request.headers["idempotency-key"] ?? ""), payload); if (replay.previous) return replay.previous.response;
+          const order = state.orders.find((candidate) => candidate.id === orderId); if (!order) fail(404); exactVersion(raw, order);
+          if (raw.action === "set-priority") { if (!["low", "normal", "high"].includes(raw.priority)) fail(400); order.priority = raw.priority; }
+          else if (raw.action === "cancel") { if (order.status !== "submitted" && order.status !== "paid") fail(409); order.status = "cancelled"; order.kitchenStatus = "cancelled"; }
+          else { if (order.status !== "submitted") fail(409); order.status = "paid"; order.paymentStatus = "simulated-paid"; order.paidAt = "2026-08-14T00:00:00.000Z"; }
+          order.version += 1; audit(state, principalRole, "order." + raw.action, order.id); const response = { order: structuredClone(order) }; state.receipts[replay.receiptKey] = { payloadDigest: replay.payloadDigest, response }; return response;
+        }));
+      }
+      const kitchenAction = path.match(/^\\/api\\/merchant\\/kitchen\\/([^/]+)\\/actions$/);
+      if (kitchenAction && request.method === "POST") {
+        const raw = await body(request); const payload = JSON.stringify(raw); const orderId = decodeURIComponent(kitchenAction[1]);
+        const transitions = { accept: ["paid", "accepted", merchantPolicy.accept], "start-preparing": ["accepted", "preparing", merchantPolicy.startPreparing], "mark-ready": ["preparing", "ready", merchantPolicy.markReady] }; const transition = transitions[raw.action];
+        if (principalRole !== "kitchen" || !transition?.[2]) return json(response, 403, { error: "Request denied." });
+        return json(response, 200, await store.mutate((state) => {
+          const replay = receipt(state, "merchant.kitchen:" + orderId + ":" + raw.action, String(request.headers["idempotency-key"] ?? ""), payload); if (replay.previous) return replay.previous.response;
+          const order = state.orders.find((candidate) => candidate.id === orderId); if (!order) fail(404); exactVersion(raw, order); if (order.status !== transition[0]) fail(409);
+          order.status = transition[1]; order.kitchenStatus = transition[1]; order.version += 1; const timestamp = raw.action === "accept" ? "acceptedAt" : raw.action === "start-preparing" ? "startedAt" : "readyAt"; order[timestamp] = "2026-08-14T00:00:00.000Z";
+          audit(state, principalRole, "kitchen." + raw.action, order.id); const response = { order: structuredClone(order) }; state.receipts[replay.receiptKey] = { payloadDigest: replay.payloadDigest, response }; return response;
+        }));
+      }
+      const tableAction = path.match(/^\\/api\\/merchant\\/tables\\/([^/]+)\\/actions$/);
+      if (tableAction && request.method === "POST") {
+        if (principalRole !== "manager" || !merchantPolicy.table) return json(response, 403, { error: "Request denied." });
+        const raw = await body(request); const payload = JSON.stringify(raw); const tableId = decodeURIComponent(tableAction[1]); const transitions = { activate: ["open", "active"], close: ["active", "closed"], expire: [null, "closed"] }; const transition = transitions[raw.action]; if (!transition) fail(400);
+        return json(response, 200, await store.mutate((state) => {
+          const replay = receipt(state, "merchant.table:" + tableId + ":" + raw.action, String(request.headers["idempotency-key"] ?? ""), payload); if (replay.previous) return replay.previous.response;
+          const table = state.tables.find((candidate) => candidate.id === tableId); if (!table) fail(404); exactVersion(raw, table); if (transition[0] && table.status !== transition[0]) fail(409); if (raw.action === "expire" && table.status !== "open" && table.status !== "active") fail(409);
+          table.status = transition[1]; table.version += 1; audit(state, principalRole, "table." + raw.action, table.id); const response = { table: structuredClone(table) }; state.receipts[replay.receiptKey] = { payloadDigest: replay.payloadDigest, response }; return response;
+        }));
+      }
+      if (request.method === "PUT" && path === "/api/merchant/settings") {
+        const raw = await body(request); const payload = JSON.stringify(raw);
+        const requestedFields = ["name", "currency", "taxRate", "serviceChargeRate", "timezone", "logoUrl", "serviceOpen"].filter((field) => Object.hasOwn(raw, field));
+        if (principalRole !== "manager" || !merchantPolicy.settings || requestedFields.some((field) => merchantPolicy.settingsFields[field] !== true)) return json(response, 403, { error: "Request denied." });
+        return json(response, 200, await store.mutate((state) => {
+          const replay = receipt(state, "merchant.settings", String(request.headers["idempotency-key"] ?? ""), payload); if (replay.previous) return replay.previous.response; exactVersion(raw, state.settings);
+          if (typeof raw.name !== "string" || !raw.name.trim() || raw.name.length > 120 || typeof raw.currency !== "string" || !/^[A-Z]{3}$/.test(raw.currency) || typeof raw.taxRate !== "number" || raw.taxRate < 0 || raw.taxRate > 100 || typeof raw.serviceChargeRate !== "number" || raw.serviceChargeRate < 0 || raw.serviceChargeRate > 100 || typeof raw.timezone !== "string" || !raw.timezone || raw.timezone.length > 100 || typeof raw.logoUrl !== "string" || raw.logoUrl.length > 2048 || (raw.logoUrl && !/^https?:\\/\\//.test(raw.logoUrl)) || typeof raw.serviceOpen !== "boolean") fail(400);
+          Object.assign(state.settings, { name: raw.name, currency: raw.currency, taxRate: raw.taxRate, serviceChargeRate: raw.serviceChargeRate, timezone: raw.timezone, logoUrl: raw.logoUrl, serviceOpen: raw.serviceOpen }); state.settings.version += 1; audit(state, principalRole, "settings.updated", "restaurant-location"); const response = { settings: structuredClone(state.settings) }; state.receipts[replay.receiptKey] = { payloadDigest: replay.payloadDigest, response }; return response;
         }));
       }
       return json(response, 404, { error: "Not found." });
     } catch (error) {
       const status = Number(error?.status) || 400;
-      return json(response, status, { error: status === 413 ? "Request too large." : status === 409 ? "Request conflict." : status === 404 ? "Not found." : "Invalid request." });
+      return json(response, status, { error: status === 413 ? "Request too large." : status === 409 ? "Request conflict." : status === 404 ? "Not found." : status === 403 ? "Request denied." : "Invalid request." });
     }
   };
 }

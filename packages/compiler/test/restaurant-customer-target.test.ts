@@ -47,7 +47,7 @@ describe("Restaurant customer bundle target", () => {
       "src/runtime/policy.mjs",
       "src/runtime/api.mjs",
       "src/runtime/seed.mjs",
-      "src/generated/restaurant-ui.mjs",
+      "src/generated/customer-restaurant-ui.mjs",
       "src/generated/fine-dining.mjs",
       "src/customer/app.mjs",
       "src/customer/styles.css",
@@ -128,9 +128,7 @@ describe("Restaurant customer bundle target", () => {
     expect(Object.keys(files).some((path) => path.includes("merchant"))).toBe(
       false,
     );
-    expect(Object.values(files).join("\n")).not.toMatch(
-      /restaurant-merchant|\/merchant/,
-    );
+    expect(app).not.toMatch(/restaurant-merchant|\/merchant/);
   });
 
   it("executes the generated customer journey tests", async () => {
@@ -198,6 +196,13 @@ describe("Restaurant customer bundle target", () => {
           '<main class="factory-screen mobile-shell"',
         );
       }
+      const generatedUi = await fetch(
+        `http://127.0.0.1:${port}/generated/customer-restaurant-ui.mjs`,
+      );
+      expect(generatedUi.status).toBe(200);
+      expect(await generatedUi.text()).toContain(
+        "export function renderMobileProductShell",
+      );
       const controller = await import(
         `${pathToFileURL(join(root, "src/customer/app.mjs")).href}?controller=${Date.now()}`
       );
@@ -270,7 +275,7 @@ describe("Restaurant customer bundle target", () => {
     }
   });
 
-  it("rejects every invalid Task 1 input and keeps generic V3 unsupported", () => {
+  it("rejects every invalid Task 1 input and dispatches the governed V3 product", () => {
     const fixture = restaurantProductV3Fixture();
     const invalid = [
       fixture.graph,
@@ -293,11 +298,12 @@ describe("Restaurant customer bundle target", () => {
       expect(() =>
         generateRestaurantCustomerApplicationBundle(input as never),
       ).toThrow("Restaurant product compilation input is invalid.");
-    expect(() =>
-      generateVersionedApplicationBundle({
-        publishedGraph: fixture.publishedGraph,
-        compositionLock: fixture.compositionLock,
-      }),
-    ).toThrow(/not supported by the current compiler/);
+    const product = generateVersionedApplicationBundle({
+      publishedGraph: fixture.publishedGraph,
+      compositionLock: fixture.compositionLock,
+    });
+    expect(
+      product.files.some(({ path }) => path === "src/merchant/app.mjs"),
+    ).toBe(true);
   });
 });

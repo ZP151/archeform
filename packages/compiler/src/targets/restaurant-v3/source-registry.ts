@@ -15,8 +15,10 @@ export type RestaurantSourceOriginV1 = {
 };
 
 export type RestaurantSurfaceSourceV1 = {
-  readonly surfaceKey: "customer-mobile";
-  readonly module: "src/generated/restaurant-ui.mjs";
+  readonly surfaceKey: RestaurantSurfaceKey;
+  readonly module:
+    | "src/generated/customer-restaurant-ui.mjs"
+    | "src/generated/merchant-restaurant-ui.mjs";
   readonly digest: `sha256:${string}`;
   readonly origins: readonly RestaurantSourceOriginV1[];
   readonly code: string;
@@ -47,6 +49,16 @@ const customerRecipeKeys = Object.freeze([
   "restaurant-customer-profile",
 ]);
 
+const merchantRecipeKeys = Object.freeze([
+  "restaurant-merchant-dashboard",
+  "restaurant-merchant-menu-management",
+  "restaurant-merchant-orders",
+  "restaurant-merchant-kitchen-queue",
+  "restaurant-merchant-tables",
+  "restaurant-merchant-users-roles",
+  "restaurant-merchant-settings",
+]);
+
 function deepFreeze<T>(value: T): T {
   if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
     for (const child of Object.values(value as Record<string, unknown>))
@@ -56,14 +68,21 @@ function deepFreeze<T>(value: T): T {
   return value;
 }
 
-function createCustomerSource(): RestaurantSurfaceSourceV1 {
-  const code = selectRestaurantRecipeSource(customerRecipeKeys);
+function createSurfaceSource(
+  surfaceKey: RestaurantSurfaceKey,
+): RestaurantSurfaceSourceV1 {
+  const recipeKeys =
+    surfaceKey === "customer-mobile" ? customerRecipeKeys : merchantRecipeKeys;
+  const code = selectRestaurantRecipeSource(recipeKeys);
   if (code.includes("@factory/") || /\beval\s*\(|\bFunction\s*\(/.test(code)) {
     throw new Error("Restaurant surface source is invalid.");
   }
   return deepFreeze({
-    surfaceKey: "customer-mobile",
-    module: "src/generated/restaurant-ui.mjs",
+    surfaceKey,
+    module:
+      surfaceKey === "customer-mobile"
+        ? "src/generated/customer-restaurant-ui.mjs"
+        : "src/generated/merchant-restaurant-ui.mjs",
     digest: `sha256:${sha256Digest(code)}`,
     origins: [
       {
@@ -71,7 +90,7 @@ function createCustomerSource(): RestaurantSurfaceSourceV1 {
         version: "0.1.0",
         ownership: "factory-authored",
         license: "UNLICENSED",
-        recipeKeys: customerRecipeKeys,
+        recipeKeys,
       },
     ],
     code,
@@ -81,17 +100,18 @@ function createCustomerSource(): RestaurantSurfaceSourceV1 {
 export function selectRestaurantSurfaceSource(
   surfaceKey: RestaurantSurfaceKey,
 ): RestaurantSurfaceSourceV1 {
-  if (surfaceKey !== "customer-mobile") {
-    throw new Error("Restaurant surface source is invalid.");
-  }
-  return createCustomerSource();
+  return createSurfaceSource(surfaceKey);
 }
 
 export function validateRestaurantSurfaceSource(
   input: unknown,
 ): RestaurantSurfaceSourceV1 {
   try {
-    const expected = createCustomerSource();
+    if (!input || typeof input !== "object") throw new Error();
+    const surfaceKey = (input as RestaurantSurfaceSourceV1).surfaceKey;
+    if (surfaceKey !== "customer-mobile" && surfaceKey !== "merchant-desktop")
+      throw new Error();
+    const expected = createSurfaceSource(surfaceKey);
     if (!isDeepStrictEqual(input, expected)) throw new Error();
     return expected;
   } catch {

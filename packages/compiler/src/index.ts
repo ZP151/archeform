@@ -49,6 +49,7 @@ import {
 import { databaseTargetPlugin } from "./targets/database/target.js";
 import { documentationTargetPlugin } from "./targets/documentation/target.js";
 import { policyTargetPlugin } from "./targets/policy/target.js";
+import { generateRestaurantProductApplicationBundle } from "./targets/restaurant-v3/product-target.js";
 
 /**
  * The facade-owned deterministic target registry. Migrated targets register
@@ -92,6 +93,7 @@ export {
 } from "./restaurant-runtime.js";
 export {
   generateRestaurantCustomerApplicationBundle,
+  generateRestaurantProductApplicationBundle,
   renderRestaurantDraftPreviewSurface,
 } from "./targets/restaurant-v3/index.js";
 
@@ -3922,6 +3924,15 @@ export function generateVersionedApplicationBundle(
       {
         publishedRevisionId: publishedGraph.revisionId,
         graph: publishedGraph.graph,
+        compositionLock: compositionLockDescriptor.value,
+      },
+      options,
+    );
+  }
+  if (publishedGraph.graphVersion === "factory.application-graph/v3") {
+    return generateRestaurantProductApplicationBundle(
+      {
+        publishedGraph,
         compositionLock: compositionLockDescriptor.value,
       },
       options,

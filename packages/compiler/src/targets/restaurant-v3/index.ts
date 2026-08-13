@@ -1,4 +1,6 @@
 export { generateRestaurantCustomerApplicationBundle } from "./customer-target.js";
+export { renderRestaurantMerchantContribution } from "./merchant-target.js";
+export { generateRestaurantProductApplicationBundle } from "./product-target.js";
 export {
   assertRestaurantProductCompilationInput,
   type RestaurantProductCompilationInputV1,

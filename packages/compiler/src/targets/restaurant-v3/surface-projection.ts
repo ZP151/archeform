@@ -33,7 +33,9 @@ export type RestaurantPagePlanV1 = {
   readonly title: string;
   readonly surfaceKey: RestaurantSurfaceKey;
   readonly screenIntent: RestaurantProductPlanV1["pages"][number]["screenIntent"];
-  readonly recipe: RestaurantProductPlanV1["pages"][number]["recipe"];
+  readonly recipe: RestaurantProductPlanV1["pages"][number]["recipe"] & {
+    readonly layoutKey: "mobile-product-shell" | "merchant-workspace-shell";
+  };
   readonly blocks: readonly RestaurantProjectedBlockV1[];
 };
 
@@ -58,16 +60,40 @@ function deepFreeze<T>(value: T): T {
   return value;
 }
 
+const governedNavigation = {
+  "customer-mobile": [
+    ["Home", "customer-home"],
+    ["Menu", "customer-menu"],
+    ["Cart", "customer-cart"],
+    ["Orders", "customer-orders"],
+    ["Profile", "customer-profile"],
+  ],
+  "merchant-desktop": [
+    ["Dashboard", "merchant-dashboard"],
+    ["Menu Management", "merchant-menu-management"],
+    ["Orders", "merchant-orders"],
+    ["Kitchen Queue", "merchant-kitchen-queue"],
+    ["Tables", "merchant-tables"],
+    ["Users/Roles", "merchant-users-roles"],
+    ["Settings", "merchant-settings"],
+  ],
+} as const;
+
 function createSurface(
   plan: RestaurantProductPlanV1,
   surfaceKey: RestaurantSurfaceKey,
 ): RestaurantSurfacePlanV1 {
-  if (surfaceKey !== "customer-mobile") {
-    throw new Error("Restaurant surface projection is invalid.");
-  }
   const surface = plan.surfaces.find(({ key }) => key === surfaceKey);
   if (!surface) throw new Error("Restaurant surface projection is invalid.");
   const source = selectRestaurantSurfaceSource(surfaceKey);
+  const expectedNavigation = governedNavigation[surfaceKey];
+  if (
+    !isDeepStrictEqual(
+      surface.navigation.items.map(({ pageKey }) => pageKey),
+      expectedNavigation.map(([, pageKey]) => pageKey),
+    )
+  )
+    throw new Error("Restaurant surface projection is invalid.");
   const pages = plan.pages
     .filter((page) => page.surfaceKey === surfaceKey)
     .map((page) => {
@@ -93,7 +119,7 @@ function createSurface(
         title: page.title,
         surfaceKey,
         screenIntent: page.screenIntent,
-        recipe: page.recipe,
+        recipe: { ...page.recipe, layoutKey: recipe.layoutKey },
         blocks: recipe.blocks.map(({ id, type, bindings }) => ({
           id,
           type,
@@ -107,7 +133,10 @@ function createSurface(
         apiVersion: "factory.restaurant-surface-plan/v1",
         surfaceKey,
         pages,
-        navigation: surface.navigation.items,
+        navigation: surface.navigation.items.map((item, index) => ({
+          ...item,
+          label: expectedNavigation[index]![0],
+        })),
         source: {
           origins: source.origins,
           module: source.module,
@@ -131,7 +160,11 @@ export function validateRestaurantSurfacePlan(
   try {
     if (!input || typeof input !== "object") throw new Error();
     const plan = input as RestaurantSurfacePlanV1;
-    if (plan.surfaceKey !== "customer-mobile") throw new Error();
+    if (
+      plan.surfaceKey !== "customer-mobile" &&
+      plan.surfaceKey !== "merchant-desktop"
+    )
+      throw new Error();
     const source = selectRestaurantSurfaceSource(plan.surfaceKey);
     if (
       !isDeepStrictEqual(plan.source, {
@@ -144,6 +177,14 @@ export function validateRestaurantSurfacePlan(
     const expectedRecipes = restaurantScreenRecipes.filter(
       ({ surface }) => surface === plan.surfaceKey,
     );
+    const expectedNavigation = governedNavigation[plan.surfaceKey];
+    if (
+      !isDeepStrictEqual(
+        plan.navigation.map(({ label, pageKey }) => [label, pageKey]),
+        expectedNavigation,
+      )
+    )
+      throw new Error();
     if (plan.pages.length !== expectedRecipes.length) throw new Error();
     for (let index = 0; index < expectedRecipes.length; index += 1) {
       const page = plan.pages[index];
@@ -154,6 +195,7 @@ export function validateRestaurantSurfacePlan(
         page.id !== recipe.pageKey ||
         page.route !== recipe.route ||
         page.recipe.key !== recipe.key ||
+        page.recipe.layoutKey !== recipe.layoutKey ||
         page.recipe.regions.length !== 1 ||
         page.recipe.regions[0]?.key !== "main" ||
         !isDeepStrictEqual(

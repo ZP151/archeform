@@ -17,8 +17,8 @@ import {
 } from "./source-registry.js";
 import { projectRestaurantSurface } from "./surface-projection.js";
 
-function customerAppModule(): string {
-  return `import { renderMobileProductShell, renderMenuHero, renderCategoryRail, renderMenuItemCard, renderDishConfigurator, renderCartLine, renderOrderSummary, renderPaymentState, renderActiveOrderList, renderOrderTimeline, renderCustomerProfileForm } from "../generated/restaurant-ui.mjs";
+export function renderRestaurantCustomerAppModule(): string {
+  return `import { renderMobileProductShell, renderMenuHero, renderCategoryRail, renderMenuItemCard, renderDishConfigurator, renderCartLine, renderOrderSummary, renderPaymentState, renderActiveOrderList, renderOrderTimeline, renderCustomerProfileForm } from "../generated/customer-restaurant-ui.mjs";
 
 export const customerRoutes = Object.freeze(["/", "/menu", "/menu/:itemId", "/cart", "/checkout", "/orders", "/orders/:orderId", "/profile"]);
 export const customerTabs = Object.freeze([
@@ -119,7 +119,7 @@ export function attachCustomerController(root = document) {
 `;
 }
 
-function customerJourneyTest(): string {
+export function renderRestaurantCustomerJourneyTest(): string {
   return `import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -200,7 +200,7 @@ function renderFiles(input: PublishedApplicationGraphCompilationInput): {
     const pathname = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
     if (request.method === "GET" && pathname === "/customer/styles.css") { response.writeHead(200, { "content-type": "text/css; charset=utf-8" }); response.end(${JSON.stringify(customerStyles)}); return; }
     if (request.method === "GET" && pathname === "/customer/app.mjs") { response.writeHead(200, { "content-type": "text/javascript; charset=utf-8" }); response.end(await readFile(new URL("./customer/app.mjs", import.meta.url), "utf8")); return; }
-    if (request.method === "GET" && pathname === "/generated/restaurant-ui.mjs") { response.writeHead(200, { "content-type": "text/javascript; charset=utf-8" }); response.end(await readFile(new URL("./generated/restaurant-ui.mjs", import.meta.url), "utf8")); return; }
+    if (request.method === "GET" && pathname === "/generated/customer-restaurant-ui.mjs") { response.writeHead(200, { "content-type": "text/javascript; charset=utf-8" }); response.end(await readFile(new URL("./generated/customer-restaurant-ui.mjs", import.meta.url), "utf8")); return; }
     if (request.method === "GET" && matchCustomerRoute(pathname)) { const html = renderCustomerPage(pathname, await store.read()); response.writeHead(200, { "content-type": "text/html; charset=utf-8" }); response.end(html); return; }
     return apiHandler(request, response);
   });`,
@@ -266,11 +266,17 @@ function renderFiles(input: PublishedApplicationGraphCompilationInput): {
     },
     { path: "src/runtime/api.mjs", content: runtime.apiModule },
     { path: "src/runtime/seed.mjs", content: runtime.seedModule },
-    { path: "src/generated/restaurant-ui.mjs", content: ui.code },
+    { path: "src/generated/customer-restaurant-ui.mjs", content: ui.code },
     { path: "src/generated/fine-dining.mjs", content: experience.code },
-    { path: "src/customer/app.mjs", content: customerAppModule() },
+    {
+      path: "src/customer/app.mjs",
+      content: renderRestaurantCustomerAppModule(),
+    },
     { path: "src/customer/styles.css", content: customerStyles },
-    { path: "test/customer-journey.test.mjs", content: customerJourneyTest() },
+    {
+      path: "test/customer-journey.test.mjs",
+      content: renderRestaurantCustomerJourneyTest(),
+    },
   ];
   assertSafeGeneratedFileSet(files);
   return { rootDirectory, graphHash: plan.graphHash, files };

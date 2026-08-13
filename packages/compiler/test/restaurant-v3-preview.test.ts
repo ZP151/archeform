@@ -7,6 +7,8 @@ import {
 
 import { restaurantProductV3Fixture } from "./fixtures/restaurant-product-v3.js";
 import { renderRestaurantDraftPreviewSurface } from "../src/targets/restaurant-v3/preview.js";
+import { planRestaurantProduct } from "../src/targets/restaurant-v3/plan.js";
+import { projectRestaurantSurface } from "../src/targets/restaurant-v3/surface-projection.js";
 
 const fsSpies = vi.hoisted(() => ({
   writeFileSync: vi.fn(),
@@ -87,6 +89,33 @@ describe("Restaurant V3 Draft preview", () => {
     expect(Object.isFrozen(document)).toBe(true);
   });
 
+  it("renders merchant desktop with exact production projector parity", () => {
+    const fixture = restaurantProductV3Fixture();
+    const document = renderRestaurantDraftPreviewSurface(
+      renderingSnapshot(),
+      "merchant-desktop",
+      () => fixture.graph,
+      "2026-08-14T00:30:00.000Z",
+    );
+    const production = projectRestaurantSurface(
+      planRestaurantProduct({
+        publishedGraph: fixture.publishedGraph,
+        compositionLock: fixture.compositionLock,
+      }),
+      "merchant-desktop",
+    );
+    expect(document.surface).toEqual(production);
+    expect(document.surface.pages.map(({ route }) => route)).toEqual([
+      "/merchant",
+      "/merchant/menu",
+      "/merchant/orders",
+      "/merchant/kitchen",
+      "/merchant/tables",
+      "/merchant/users",
+      "/merchant/settings",
+    ]);
+  });
+
   it.each(["ready", "active", "disposed", "expired"] as const)(
     "rejects %s lifecycle state",
     (state) => {
@@ -106,16 +135,6 @@ describe("Restaurant V3 Draft preview", () => {
           "customer-mobile",
           () => restaurantProductV3Fixture().graph,
           "not-a-date",
-        ),
-    ],
-    [
-      "wrong surface",
-      () =>
-        renderRestaurantDraftPreviewSurface(
-          renderingSnapshot(),
-          "merchant-desktop",
-          () => restaurantProductV3Fixture().graph,
-          "2026-08-14T00:30:00.000Z",
         ),
     ],
     [
