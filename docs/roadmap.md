@@ -147,6 +147,19 @@ P0 acceptance gates:
 > historical Foundry evidence below remains valid platform foundation; it is
 > not an active breadth target.
 
+> **Roadmap update — 2026-08-14, Restaurant foundation delivered:** Product
+> Recipe V2 is delivered at `0aeae1c0`. Task 2 Restaurant semantics is delivered
+> at `fbcf92eaf916c9eefa618cad163b44c34dcb0c3c`; Task 3 UI Registry is delivered
+> at `8313e7ae49f8782bd3ab104d0141c60c96f6e4c3`. Both independent reviews return
+> P0/P1/P2=0/0/0. Fresh integrated evidence passes Capabilities 384/384, Graph
+> 661/661, UI 44/44, all nine package typechecks/builds, exact fifteen-page and
+> seven-journey closure, and complete-product ESM import. The shared contract
+> remains `ffa017cf...732b732`; the Task 3 lock delta is seven importers and
+> `+72/-0`. The non-force push succeeded and local `HEAD` equals upstream at the
+> Task 3 commit. The next authorized planning slice is the exact, path-disjoint
+> customer-mobile and merchant-desktop compiler/runtime manifests; this does not
+> reopen Graph contract expansion.
+
 ### P1 Product Closure gate (accepted and delivered)
 
 Product Closure was reopened on 2026-08-09. The Base44-inspired
@@ -317,12 +330,12 @@ ui-primitives -> ui-patterns -> workbench-ui / generated-ui
 ```
 
 Graph v2 delivery, founder acceptance of ADR-0010, and Graph V3 delivery remain
-satisfied. The exact key-and-binding manifest is blocked because its page
-ownership and navigation requirements cannot coexist under Product Recipe V1.
-Restaurant semantics and the UI Registry/source foundation return to
-`planned`. A founder-accepted additive Product Recipe contract and one
-serialized delivered prerequisite are required before PM can refreeze and
-restart the disjoint wave. Customer and merchant compilers remain blocked.
+satisfied. Product Recipe V2 is delivered at `0aeae1c0`; the exact
+key-and-binding manifest is refrozen for V2 at SHA-256
+`ffa017cf14cd911495d70d8cf490bb637b570057235d3d841657e0f7c732b732`.
+Restaurant semantics and the UI Registry/source foundation are `implementing`
+under path-disjoint writers with focused TDD and one code review each. Customer
+and merchant compilers remain blocked.
 
 Workbench implementation includes characterization-first decomposition of the
 current 3,818-line global stylesheet, 907-line controller, and 1,131-line
@@ -617,11 +630,13 @@ manifest then exposed the Product Recipe V1 ownership mismatch before any Task
 2 write; Task 3 stopped at inventory and 21 scaffolds. ADR-0011 is accepted
 from the founder's exact 2026-08-14 response
 `参考以下总结，若符合项目目标，则持续接受而迭代。`. The additive Product
-Recipe/Application Surface V2 exact-four implementation now passes final Sol
-`RELEASE_ACCEPT`, actionable P0/P1/P2=0/0/0, direct Terra, and fresh PM
-acceptance. Exact 17-path controller delivery is authorized with non-force push,
-local/upstream equality, and the preserved 22-path Task 3 residual.
-Restaurant semantics and UI remain `planned`/blocked until delivery equality
-and a subsequent PM contract refreeze/resumption record. Provider,
-service, Docker, cloud/deployment, Task 2/Task 3 delivery, and downstream work
-remain unauthorized.
+Recipe/Application Surface V2 is delivered at `0aeae1c0` after final Sol
+`RELEASE_ACCEPT`, actionable P0/P1/P2=0/0/0, direct Terra, fresh PM acceptance,
+exact 17-path commit, non-force push, local/upstream equality, and preserved
+22-path Task 3 residual. The shared contract is refrozen for Product Recipe V2
+at SHA-256 `ffa017cf14cd911495d70d8cf490bb637b570057235d3d841657e0f7c732b732`.
+Restaurant semantics and UI Registry are delivered at `fbcf92ea` and
+`8313e7ae` with independent P0/P1/P2=0/0/0 reviews and pushed equality.
+Customer/merchant compiler path manifests are the next planning gate.
+Provider, service, Docker, cloud/deployment, and production-payment work remain
+unauthorized.

@@ -1,12 +1,17 @@
 # Restaurant Product Recipe Task 2 implementation plan
 
+State: `delivered`.
+
+Post-delivery base:
+`0aeae1c0ba7afcb1f074329a30e51bb18c8aacfa`
+
 > **For the assigned backend writer:** use test-driven development and stop on
 > any mismatch with the frozen shared manifest. Do not edit outside the exact
 > paths below.
 
-**Goal:** compose one deterministic `restaurant-ordering` Product Recipe and a
-valid `factory.application-graph/v3` with the exact fifteen-screen Restaurant
-semantics.
+**Goal:** compose one deterministic `restaurant-ordering`
+`factory.product-recipe/v2` and a valid `factory.application-graph/v3` with the
+exact fifteen-screen Restaurant semantics.
 
 **Architecture:** validate and retain the existing Golden capability
 composition as the base. Add a deterministic product layer with its own frozen
@@ -20,6 +25,8 @@ shared contract.
 
 **Contract:**
 `docs/superpowers/specs/2026-08-12-restaurant-task2-task3-key-binding-contract.md`.
+Refrozen formatted SHA-256:
+`ffa017cf14cd911495d70d8cf490bb637b570057235d3d841657e0f7c732b732`.
 
 **Exact write paths:**
 
@@ -54,7 +61,7 @@ and explicit legacy mapping in the shared manifest. Assign manager to both
 legacy table-session expiry transitions and add exact event permissions; do not
 weaken V3 validation or broaden unrelated roles.
 
-Parse the result through `assertProductRecipe` and
+Parse the result through `assertProductRecipeV2` and
 `assertApplicationGraphV3`, compute its canonical V3 hash, and return fresh
 data without mutating catalogue/profile inputs.
 
@@ -74,7 +81,9 @@ check, exact-path containment, browser-safe import checks, deterministic
 repeat/hash equality, and changed-hunk sensitive scan. Record all counts and
 the exact changed paths. Do not commit or push.
 
-Pause for one independent Sol task review, fresh provider/model/network/
-service/Docker/Compose-free Terra QA, independent Sol release review, PM
-acceptance, and controller-only delivery. Task 2 completion does not authorize
+Pause for one independent code review and PM reconciliation, then
+controller-only delivery. This deterministic in-scope composition uses the
+proportionate gate: focused TDD, relevant package/full compatibility checks, and
+one code review. It does not require a separate Terra QA/final-Sol loop unless a
+new serialized/security issue emerges. Task 2 completion does not authorize
 Task 4/5.

@@ -2,6 +2,9 @@
 
 Date: 2026-08-12
 
+Refrozen: 2026-08-14 after Product Recipe V2 delivery at
+`0aeae1c0ba7afcb1f074329a30e51bb18c8aacfa`
+
 Contract ID: `factory.restaurant-task2-task3-contract/v1`
 
 State: `frozen`
@@ -10,12 +13,17 @@ Contract owner: `integration`
 
 Graph target: `factory.application-graph/v3`
 
+Product Recipe target: `factory.product-recipe/v2`
+
 This manifest is the only shared key authority for the first Restaurant Task 2
 and Task 3 wave. It is additive to the delivered immutable Graph V1/V2
 contracts and consumes the delivered V3 prerequisite at commit
-`8230197241589865f289c223fc346b6d91a438ae`. A mismatch stops both writers and
-returns to the contract owner; neither writer may add an alias, infer a key, or
-change a shared shape locally.
+`8230197241589865f289c223fc346b6d91a438ae` plus the delivered additive Product
+Recipe/Application Surface V2 prerequisite at commit
+`0aeae1c0ba7afcb1f074329a30e51bb18c8aacfa`. Product Recipe V1 and Application
+Surface V1 remain immutable. A mismatch stops both writers and returns to the
+contract owner; neither writer may add an alias, infer a key, or change a shared
+shape locally.
 
 ## Technology boundary
 
@@ -66,6 +74,16 @@ Customer navigation uses bottom tabs in this exact order: `customer-home`,
 Dish Detail, Checkout, and Order Detail are owned customer pages reached from a
 parent journey but are not duplicate tab entries. Merchant navigation uses a
 compact sidebar in the exact page-table order.
+
+Product Recipe V2 ownership is exact and ordered. `customer-mobile` owns
+`customer-home`, `customer-menu`, `customer-dish-detail`, `customer-cart`,
+`customer-checkout`, `customer-orders`, `customer-order-detail`, and
+`customer-profile`. `merchant-desktop` owns `merchant-dashboard`,
+`merchant-menu-management`, `merchant-orders`, `merchant-kitchen-queue`,
+`merchant-tables`, `merchant-users-roles`, and `merchant-settings`. Every page
+in the table appears in exactly one `ownedPageKeys` array; entry and visible
+navigation targets are subsets. No hidden/duplicate navigation convention or
+V2-to-V1 down-conversion is permitted.
 
 The legacy mapping is explicit: `table-entry` folds into `customer-home`;
 `customer-menu` maps to `customer-menu`; `customer-cart` splits into

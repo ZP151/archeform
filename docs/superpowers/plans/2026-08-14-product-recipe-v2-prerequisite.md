@@ -1316,7 +1316,7 @@ implementation containment, and no dirty path outside the classified 17-path
 delivery manifest plus preserved 22-path Task 3 baseline; the worktree is not
 globally clean because the residual baseline must not be deleted or stashed.
 
-- [ ] **Step 5: Deliver exactly once through the controller**
+- [x] **Step 5: Deliver exactly once through the controller**
 
 The controller explicitly stages the exact 17 paths frozen in the prerequisite
 ledger and no other path. The manifest contains the four accepted implementation
@@ -1336,13 +1336,26 @@ record commit hash, subject, all 17 paths, push result, equality, and the exact
 22-path residual status. Do not amend, force-push, rewrite history, stage a
 residual path, or claim global worktree cleanliness.
 
-- [ ] **Step 6: Close prerequisite and keep downstream blocked until equality**
+Recorded result: commit `0aeae1c0ba7afcb1f074329a30e51bb18c8aacfa`, exact
+subject, exact 17 paths, successful non-force push, local `HEAD` equal to
+upstream, tracked dirty 0, staged 0, and exact 22-path residual. The remote
+moved-repository notice is informational; no remote configuration change is
+authorized now.
+
+- [x] **Step 6: Close prerequisite and refreeze downstream after equality**
 
 After equality is recorded, mark this prerequisite `delivered` and consume its
 delivery authority. PM may then amend/refreeze the Restaurant shared manifest
 for Product Recipe V2 before authorizing Task 2 and Task 3. Until that separate
 record exists, both remain `planned`/`blocked`, Task 2 remains unwritten, and
 Task 3 inventory plus 21 scaffolds remain preserved.
+
+Recorded result: equality is proven and delivery authority is consumed. The
+prerequisite is `delivered`. PM separately refreezes the shared Restaurant
+contract for Product Recipe V2 at formatted SHA-256
+`ffa017cf14cd911495d70d8cf490bb637b570057235d3d841657e0f7c732b732` and resumes
+the path-disjoint Task 2/Task 3 plans under their prior conditional founder
+authority. This closure does not itself authorize Task 4/5.
 
 ---
 

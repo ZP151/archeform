@@ -1,5 +1,10 @@
 # UI Registry Task 3 implementation plan
 
+State: `delivered`.
+
+Post-delivery base:
+`0aeae1c0ba7afcb1f074329a30e51bb18c8aacfa`
+
 > **For the assigned frontend writer:** inventory before creation, use
 > test-driven development, and stop on any mismatch with the frozen shared
 > manifest or ADR-0010. Do not edit outside the exact boundaries below.
@@ -17,6 +22,8 @@ authority.
 shared contract.
 
 **Contracts:** the frozen Restaurant shared manifest and accepted ADR-0010.
+Refrozen shared-manifest formatted SHA-256:
+`ffa017cf14cd911495d70d8cf490bb637b570057235d3d841657e0f7c732b732`.
 
 **Exact write boundaries:**
 
@@ -47,6 +54,18 @@ shared contract.
 `pnpm-lock.yaml` is limited to the seven new workspace importers and references
 to the exact already locked coordinates accepted by ADR-0010. Any other lock
 diff stops the task.
+
+The preserved inventory and 21 scaffolds may resume immediately for RED/source
+work, but complete cross-package resolution cannot pass with the current local
+state alone: the seven lockfile importers and local workspace links do not yet
+exist. Exactly one bounded offline workspace reconciliation is authorized using
+the already installed direct pnpm runtime. It may update `pnpm-lock.yaml` only
+with the seven importers and references to already locked `lucide-react`
+0.468.0, Vitest 2.1.9, React 19, and existing workspace coordinates, and may
+create ignored local links. No network, package download, new coordinate,
+version/resolution change, root workspace edit, or second install attempt is
+authorized. Diff beyond that exact lock boundary stops the writer and returns
+to PM.
 
 ## Task A — Reuse inventory and RED contract tests
 
@@ -90,7 +109,9 @@ exact-boundary containment, duplicate/source-provenance checks, generated-source
 closure, accessibility/interaction fixture checks, and changed-hunk sensitive
 scan. Record all counts and exact paths. Do not commit or push.
 
-Pause for one independent Sol task review, fresh provider/model/network/
-service/Docker/Compose-free Terra QA, independent Sol release review, PM
-acceptance, and controller-only delivery. A source/dependency or shared-key
-change stops both Task 2 and Task 3.
+Pause for one independent code review and PM reconciliation, then
+controller-only delivery. This ordinary deterministic component/recipe work
+uses focused TDD, relevant package/full compatibility checks, and one code
+review. It does not require a separate Terra QA/final-Sol loop unless a new
+serialized/security issue emerges. A source/dependency or shared-key change
+stops both Task 2 and Task 3.

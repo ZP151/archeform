@@ -2,7 +2,7 @@
 
 Date: 2026-08-14
 
-State: `accepted`
+State: `delivered`
 
 Contract: `frozen`
 
@@ -516,6 +516,30 @@ claim a globally clean worktree, delete/stash the residual baseline, amend,
 force-push, or stage any residual path. Task 2/Task 3 remain `planned`/blocked
 until PM records that equality; after it, PM may separately refreeze their
 Product Recipe V2 contract and resume the founder's conditional authorization.
+
+## Delivery closure and consumed authority
+
+Controller delivery completed at commit
+`0aeae1c0ba7afcb1f074329a30e51bb18c8aacfa` with exact subject
+`feat(graph): add product recipe v2 contracts` and the exact frozen 17 paths.
+The non-force push to `feat/governed-composition-capability-foundry` succeeded.
+The remote emitted a moved-repository notice; this is informational and does not
+invalidate the push, and remote configuration must not be changed in this gate.
+
+Fresh post-push evidence records local `HEAD` equal to upstream at
+`0aeae1c0ba7afcb1f074329a30e51bb18c8aacfa`, tracked dirty count 0, staged count
+0, and the residual untracked set equal to exactly the preserved 22 Task 3 paths
+(one inventory plus 21 scaffolds). The prerequisite is `delivered`; its
+acceptance, review, commit, and push authorities are consumed and cannot be
+replayed.
+
+The founder's prior exact conditional authorization `Task 2/3 也授权，如果需要`
+and the 2026-08-14 direction `参考以下总结，若符合项目目标，则持续接受而迭代。` now apply
+to the post-delivery Restaurant wave. PM refreezes
+`factory.restaurant-task2-task3-contract/v1` for Product Recipe V2 at formatted
+SHA-256 `ffa017cf14cd911495d70d8cf490bb637b570057235d3d841657e0f7c732b732`.
+Task 2 and Task 3 may resume in parallel only in their disjoint plans and paths;
+the Product Recipe V2 prerequisite has no further writer.
 
 ## Ambiguity and stop conditions
 

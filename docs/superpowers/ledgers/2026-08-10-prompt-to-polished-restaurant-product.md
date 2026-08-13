@@ -3710,34 +3710,28 @@ Task 1 delivery closure — 2026-08-12:
 
 ## Task 2 — Compose one deterministic Restaurant Product Recipe
 
-State: `planned`.
+State: `delivered`.
 
-Owner: `backend` after the shared-contract prerequisite; `integration` remains
-contract owner. No Task 2 writer is active.
+Owner: exactly one GPT-5.6-Sol `backend` writer; `integration` remains contract
+owner.
 
 Specialization: deterministic Restaurant domain, policy, flow, journey,
 authority, seed, and two-surface composition semantics.
 
 Contract owner: `integration`.
 
-Contract status: `blocked`; the delivered Graph V3 prerequisite remains valid,
-but the recorded frozen Restaurant manifest is not expressible by
-`ProductRecipeV1` surface ownership.
+Contract status: `refrozen` for `factory.product-recipe/v2` after delivery at
+`0aeae1c0ba7afcb1f074329a30e51bb18c8aacfa`. Formatted shared-manifest SHA-256:
+`ffa017cf14cd911495d70d8cf490bb637b570057235d3d841657e0f7c732b732`.
 
 Contract artifact: the delivered Graph V3 contract plus frozen artifact
 `docs/superpowers/specs/2026-08-12-restaurant-task2-task3-key-binding-contract.md`.
-Its currently inactive implementation plan is
+Its active implementation plan is
 `docs/superpowers/plans/2026-08-12-restaurant-product-recipe-task2.md`.
-Accepted ADR
-`docs/adr/adr-0010-restaurant-product-graph-v3-and-ui-registry-boundary.md`
-and the founder's recorded conditional authority do not cover the newly found
-stable Product Recipe serialization change. Proposed
-`docs/adr/adr-0011-product-recipe-surface-page-ownership.md` recommends
-`migrate` through additive Product Recipe/Application Surface V2 contracts
-while `keep` preserves V1 unchanged. Explicit founder acceptance is required
-before a serialized prerequisite can be frozen.
+Accepted ADR-0011 and delivered Product Recipe V2 close the prior serialization
+block while preserving V1.
 
-Exact prospective paths, inactive while the contract is blocked:
+Exact writer paths:
 
 - `packages/capabilities/src/commerce/product-recipe.ts`;
 - `packages/capabilities/src/restaurant/product-recipe.ts`;
@@ -3769,18 +3763,19 @@ Resolved prerequisite notes:
 - the two legacy actorless expiry paths gain explicit manager grants only in
   the deterministic V3 product layer; the legacy V1 profile stays unchanged.
 
-Authorization: none. The prior writer stopped before any capability-path write.
-Do not add REDs, implementation, dependency, commit, or push work until a
-founder-accepted ADR is converted into one serialized prerequisite ledger and
-delivered contract. No hidden or duplicate navigation item may substitute for
-explicit surface ownership.
+Authorization: the sole writer may execute focused RED/GREEN in exactly the
+eleven paths above from base `0aeae1c0ba7afcb1f074329a30e51bb18c8aacfa`.
+Product output must parse through `assertProductRecipeV2`; V1 remains immutable.
+Use relevant compatibility gates and one independent code review. No
+dependency, install, provider/model/network/service, Docker, Compose, commit,
+push, hidden navigation, or V2-to-V1 down-conversion is authorized.
 
 ## Task 3 — Establish the UI Registry and shared source foundation
 
-State: `planned`.
+State: `delivered`.
 
-Owner: `frontend` after the shared-contract prerequisite; `integration` remains
-shared contract owner. No Task 3 writer is active.
+Owner: exactly one GPT-5.6-Terra `frontend` writer; `integration` remains shared
+contract owner.
 
 Specialization: reuse-first UI source registry, accessible primitives and
 patterns, generated business blocks, screen/experience/product recipes,
@@ -3789,9 +3784,9 @@ provenance, and source ownership.
 Contract owner: `integration` for shared keys and bindings; `frontend` for the
 registry implementation after contract and governance acceptance.
 
-Contract status: `blocked`; ADR-0010 and delivered Graph V3 remain valid, but
-the shared manifest's surface-page ownership cannot pass the delivered
-`ProductRecipeV1` validator without corrupting its exact navigation contract.
+Contract status: `refrozen` for Product Recipe V2 at formatted shared-manifest
+SHA-256 `ffa017cf14cd911495d70d8cf490bb637b570057235d3d841657e0f7c732b732` on base
+`0aeae1c0ba7afcb1f074329a30e51bb18c8aacfa`.
 
 Contract artifact: the same required
 `docs/superpowers/specs/2026-08-12-restaurant-task2-task3-key-binding-contract.md`
@@ -3801,11 +3796,11 @@ which rejects copied shadcn/ui source and new direct Radix dependencies in this
 wave. A pinned source-study record is outside this wave and is required only if
 a later demonstrated gap starts a separately governed source-intake decision.
 
-Inactive implementation plan:
+Active implementation plan:
 `docs/superpowers/plans/2026-08-12-ui-registry-task3.md`.
 
-Exact prospective boundaries; the existing dirty scaffolds are preserved but
-no further write is authorized:
+Exact writer boundaries; the preserved inventory and 21 scaffolds are the
+starting baseline:
 
 - `docs/research/2026-08-12-archeform-ui-registry-reuse-inventory.md`;
 - `pnpm-lock.yaml`, limited to seven new workspace importers and the exact
@@ -3886,12 +3881,16 @@ Resolved prerequisite notes:
 - ADR-0010 and the shared manifest constrain the seven-package experiment;
   copied shadcn/ui source and direct Radix dependencies remain rejected.
 
-Authorization: none. Preserve the reuse inventory and exactly 21 package
-scaffold files already present: seven manifests, seven tsconfigs, and seven
-tests. They contain no `src/**` implementation and produced no behavior RED;
-the attempted package test stopped at missing local dependency tooling. There
-is no `pnpm-lock.yaml` diff. Do not install, extend, delete, commit, or push the
-scaffolds until the shared prerequisite is accepted and delivered.
+Authorization: the sole writer may execute focused RED/GREEN within the exact
+boundaries above. The current inventory and 21 scaffolds contain no accepted
+behavior and must be extended, not discarded. They can begin RED/source work
+without an install, but full cross-package resolution cannot complete because
+the seven lock importers and local workspace links are absent. Exactly one
+direct-pnpm offline reconciliation is authorized to add only those importers,
+already locked coordinates, and ignored local links. No network, new
+coordinate, version/resolution drift, root workspace edit, broader lock diff,
+provider/model/service, Docker, Compose, commit, or push is authorized. Use
+relevant compatibility gates and one independent code review.
 
 Task 2/Task 3 first-wave gate audit — 2026-08-12:
 
@@ -4295,6 +4294,61 @@ Product Recipe V2 final acceptance and delivery freeze — 2026-08-14:
   Only then may PM refreeze the shared contract for Product Recipe V2 and
   separately resume the founder's conditional Task 2/Task 3 authorization.
 
+Product Recipe V2 delivery closure and parallel-wave resumption — 2026-08-14:
+
+- Controller delivered commit
+  `0aeae1c0ba7afcb1f074329a30e51bb18c8aacfa` with the exact subject and 17
+  paths. The non-force push succeeded; local `HEAD` equals upstream, tracked
+  dirty and staged counts are zero, and the untracked residual is exactly the
+  preserved Task 3 inventory plus 21 scaffolds. The remote moved-repository
+  notice is informational; remote configuration remains unchanged. The Product
+  Recipe V2 delivery gate is consumed.
+- PM refreezes `factory.restaurant-task2-task3-contract/v1` for
+  `factory.product-recipe/v2` at formatted SHA-256
+  `ffa017cf14cd911495d70d8cf490bb637b570057235d3d841657e0f7c732b732`.
+- Task 2 advances to `implementing` under exactly one GPT-5.6-Sol backend writer
+  over its eleven capability paths. Task 3 advances to `implementing` under
+  exactly one GPT-5.6-Terra frontend writer over its inventory, seven private
+  package boundaries, and importer-only `pnpm-lock.yaml` boundary. The writers
+  are path-disjoint and may run in parallel.
+- Task 3 may start RED/source work from the preserved scaffolds without an
+  install. Full cross-package resolution requires one bounded direct-pnpm
+  offline reconciliation because the seven lock importers and local links are
+  absent. It may add only those importers, references to already locked
+  coordinates, and ignored local links; no network, new coordinate,
+  version/resolution drift, root workspace edit, or second attempt is
+  authorized.
+- Both deterministic tasks use focused TDD, relevant compatibility gates, one
+  independent code review, PM reconciliation, and controller delivery. A heavy
+  Terra/final-Sol loop is required only if a new serialized/security issue
+  emerges. Task 4/5 remain blocked.
+
+Task 2/Task 3 acceptance and delivery — 2026-08-14:
+
+- Task 2 passes focused 20/20, full Capabilities 384/384, full Graph 661/661,
+  both package typechecks/builds, exact eleven-path containment, and independent
+  review with P0/P1/P2=0/0/0. The recursive Restaurant page registry and strict
+  proposal boundary close the two review findings. Controller commit
+  `fbcf92eaf916c9eefa618cad163b44c34dcb0c3c` has subject
+  `feat(capabilities): add restaurant product recipe` and exactly eleven paths.
+- Task 3 passes 44/44 tests, seven typechecks/builds, 270 normal renderer
+  executions, 135 inherited-state rejections, 135 unsafe-URL scrubs, fifteen
+  screen-source ESM imports, full-product ESM import, exact 31-path containment,
+  and independent review with P0/P1/P2=0/0/0. Controller commit
+  `8313e7ae49f8782bd3ab104d0141c60c96f6e4c3` has subject
+  `feat(ui): add restaurant ui registries`; its lock delta is exactly seven
+  importers and `+72/-0`, with no package or snapshot drift.
+- The shared contract remains byte-stable at SHA-256
+  `ffa017cf14cd911495d70d8cf490bb637b570057235d3d841657e0f7c732b732`.
+  Cross-task closure proves the same fifteen pages, seven journeys, surface
+  ownership, generated block ports, and a complete 53,497-byte importable ESM
+  product source selection.
+- Both commits were pushed without force. Local `HEAD` equals upstream at
+  `8313e7ae49f8782bd3ab104d0141c60c96f6e4c3`. Task 2 and Task 3 are delivered;
+  their gates are consumed. Task 4 and Task 5 may now be frozen as exact,
+  path-disjoint compiler/runtime slices. No provider, service, Docker, Compose,
+  cloud, or production-payment authority is implied.
+
 ## Task 4 — Compile and run the customer mobile surface
 
 State: `planned`.
@@ -4316,7 +4370,7 @@ Acceptance evidence:
 - migration, health, role journey, denial, idempotency, source, and cleanup
   checks pass.
 
-Blocked by: Tasks 2 and 3 ready for QA.
+Blocked by: exact PM-owned compiler/runtime path manifest and acceptance gates.
 
 ## Task 5 — Compile and run the merchant desktop surface
 
@@ -4338,7 +4392,7 @@ Acceptance evidence:
 - role journeys, denials, audit, migration, health, idempotency, and cleanup
   pass.
 
-Blocked by: Tasks 2 and 3 ready for QA.
+Blocked by: exact PM-owned compiler/runtime path manifest and acceptance gates.
 
 ## Task 6 — Rebuild the Workbench prompt-to-live journey
 
