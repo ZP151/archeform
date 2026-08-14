@@ -129,6 +129,21 @@ historical evidence, not the executable Task 2/Task 3 contract.
   Graph, Product Recipe, Screen Recipe, generated runtime, Publish,
   Compilation, Prisma, dependencies, lockfiles, providers, services, and
   deployment remain unchanged.
+- Task 7C is `accepted`, not delivered, on clean delivered base
+  `5f984691f426e6068479c44b4fa41baf2f8aaada`, equal to upstream. Accepted
+  [`ADR-0015`](adr/adr-0015-template-restaurant-seed-data-edit.md) authorizes
+  only `Menu items -> Margherita pizza -> Dish name`: update the mirrored
+  `menu-item.name` seed/scenario value to `Heirloom tomato pizza`, append Draft
+  r.5 and one active immutable Snapshot V2, then update Customer Menu and
+  Merchant Menu Management only from the strict checksum-matched response. The
+  [`executable plan`](superpowers/plans/2026-08-14-template-restaurant-seed-data-edit.md)
+  freezes exactly 22 implementation paths. Graph, Capabilities, recipes,
+  Compiler, Prisma, packages, lockfiles, generated runtime, Publish, Source,
+  providers, services, and deployment remain excluded. Final evidence passes
+  focused Control Plane 90 and Workbench 86; full Control Plane 370, Workbench
+  439, Graph 661, Capabilities 384, Compiler 501; five no-emits, builds, Prisma,
+  Next, Playwright 1/1, and exact-28/static gates. Final Sol returns
+  `RELEASE_ACCEPT` and targeted Terra returns `PASS`, both P0/P1/P2=0/0/0.
 - The first independent two-axis Task 7B review returned NOT READY with
   P0/P1/P2=0/6/3. Actionable findings cover hostile array reflection
   amplification, unchanged-order 400 versus fixed 409, registry closure after
@@ -149,11 +164,12 @@ summary matches the current evidence and accepted Restaurant goal. The accepted
 additive contract preserves V1 and separates owned pages from visible
 navigation. Copied shadcn/ui source, direct Radix, another external coordinate,
 provider/model/network/service work, Docker, Compose, and unassigned Workbench
-API/Control Plane expansion remain unauthorized. ADR-0013 authorizes and closes
-only the exact local Page-title command delivered by Task 7A. ADR-0014 is
-accepted under the same standing founder direction only for the exact
-same-set Page block-order operation; it does not authorize generated-runtime
-ordering, another Graph contract, or broader editor behavior.
+API/Control Plane expansion remain unauthorized. ADR-0013 authorizes only the
+delivered Page-title command and ADR-0014 only the delivered same-set Page
+block-order operation. ADR-0015 is accepted under the same standing founder
+direction only for the exact mirrored Restaurant seed-name operation; it does
+not authorize generic Data CRUD, generated-runtime changes, another Graph
+contract, or broader editor behavior.
 
 The main risks are shared-contract drift, accidental lockfile resolution drift,
 client relabeling of server totals/state/payment/inventory/audit fields, and UI
@@ -161,12 +177,11 @@ ports that imply authority. Frozen tests and the stop-both rule address these.
 
 ### Next smallest valuable slice
 
-Complete the frozen Task 7B repair on the exact 25-path manifest, obtain a clean
-same task review, then run one fresh Terra QA pass and one final independent Sol
-release review before PM acceptance and the exact 31-path commit/push. Keep
-Data, Users, Workflow, Experience, Source, Publish, Compilation, block
-insertion/deletion, and generated-runtime ordering serialized behind later
-reviewed slices.
+Controller-deliver only the accepted exact 28-path Task 7C tree with subject
+`feat(workbench): add governed restaurant data editing`, non-force push, and
+local/upstream equality. Keep every other Data field/record, Users, Workflow,
+Experience, Source, Publish, Compilation, block editing, and generated-runtime
+behavior deferred.
 
 ### Retained historical reconciliation through V3 acceptance
 
@@ -610,14 +625,11 @@ Authorities:
 
 ## Next gate
 
-Tasks 0-7B are delivered by their enclosing reviewed commits. Task 7B final Sol
-returns `RELEASE_ACCEPT`, actionable P0/P1/P2=0/0/0, after final same-reviewer
-0/0/0 and corrected fresh Terra PASS 0/0/0. Terra's transient TypeScript 5.7.2
-failure was a withdrawn harness error; the intended root TypeScript 5.9.3
-Workbench no-emit gate passes. PM accepts the exact 31-path tree and authorizes
-only the controller's frozen-subject commit and non-force push. Broader editor,
-Task 8, and Task 9 work remain blocked until pushed equality and a new bounded
-contract/path freeze. No additional Control Plane/editor expansion is active.
+Tasks 0-7B are delivered; local HEAD and upstream equal
+`5f984691f426e6068479c44b4fa41baf2f8aaada`. Task 7C is accepted but not
+delivered on the exact 28-path tree. Only controller staging, exact equality,
+the frozen-subject commit, non-force push, and pushed equality remain. Task 8,
+Task 9, and every broader editor remain blocked.
 
 ## Explicitly deferred
 

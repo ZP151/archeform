@@ -29,6 +29,11 @@ import {
 
 import { PrismaService } from "../prisma.service.js";
 import {
+  applyCapturedTemplateDataFieldEdit,
+  captureTemplateDataFieldRevisionInput,
+  type AppendTemplateDataFieldRevisionInput,
+} from "./template-data-field-edit.js";
+import {
   applyCapturedTemplatePageBlockOrderEdit,
   captureTemplatePageBlockOrderRevisionInput,
   type AppendTemplatePageBlockOrderRevisionInput,
@@ -825,6 +830,118 @@ export class TemplateService {
         },
       })) as StoredDraft;
       return this.instanceFrom(transaction, application, draft);
+    };
+    for (let attempt = 0; attempt < TRANSACTION_ATTEMPTS; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(operation, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        });
+      } catch (error) {
+        if (uniqueConstraint(error)) {
+          throw new ConflictException(
+            "Template Draft revision moved; reload before editing.",
+          );
+        }
+        if (!serializationConflict(error)) throw error;
+      }
+    }
+    throw new ConflictException(
+      "Template Draft revision moved; reload before editing.",
+    );
+  }
+
+  async appendTemplateDataFieldRevision(
+    applicationGraphId: string,
+    input: unknown,
+  ): Promise<TemplateDraftInstanceV1> {
+    let command: AppendTemplateDataFieldRevisionInput;
+    try {
+      command = captureTemplateDataFieldRevisionInput(input);
+    } catch {
+      throw new BadRequestException(INVALID_REQUEST);
+    }
+    const id = applicationKey(applicationGraphId);
+    const operation = async (transaction: Prisma.TransactionClient) => {
+      const application = (await transaction.applicationGraph.findFirst({
+        where: { id, workspace: { slug: LOCAL_WORKSPACE_SLUG } },
+        include: {
+          workspace: true,
+          draftRevisions: {
+            orderBy: { revisionNumber: "desc" },
+            take: 1,
+            include: {
+              draftPreviewSnapshots: {
+                orderBy: { createdAt: "desc" },
+                take: 1,
+              },
+            },
+          },
+        },
+      })) as StoredApplication | null;
+      if (!application || application.workspace.slug !== LOCAL_WORKSPACE_SLUG) {
+        throw new NotFoundException("Template Draft was not found.");
+      }
+      assertStoredOrigin(application.templateOrigin);
+      const latest = application.draftRevisions[0];
+      if (!latest) throw new BadRequestException(INVALID_REQUEST);
+      if (latest.id !== command.baseDraftRevisionId) {
+        throw new ConflictException(
+          "Template Draft revision moved; reload before editing.",
+        );
+      }
+
+      let graph: ApplicationGraphV3;
+      try {
+        const current = assertApplicationGraphV3(latest.graph);
+        if (
+          application.workspace.slug !== LOCAL_WORKSPACE_SLUG ||
+          current.metadata.id !== application.key ||
+          current.metadata.workspaceId !== LOCAL_WORKSPACE_SLUG ||
+          current.metadata.name !== application.name ||
+          latest.applicationGraphId !== application.id
+        ) {
+          throw new Error(INVALID_REQUEST);
+        }
+        const currentSnapshot = assertDraftPreviewSnapshotV2(
+          latest.draftPreviewSnapshots?.[0]?.snapshot,
+        );
+        if (
+          currentSnapshot.workspaceId !== LOCAL_WORKSPACE_SLUG ||
+          currentSnapshot.applicationGraphId !== application.id ||
+          currentSnapshot.draftRevisionId !== latest.id ||
+          currentSnapshot.graphChecksum !== hashApplicationGraphV3(current) ||
+          currentSnapshot.state !== "active"
+        ) {
+          throw new Error(INVALID_REQUEST);
+        }
+        graph = assertRestaurantDraftPreviewGraphClosure(
+          applyCapturedTemplateDataFieldEdit(current, command).graph,
+        );
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          error.message ===
+            "Template Draft revision moved; reload before editing."
+        ) {
+          throw new ConflictException(error.message);
+        }
+        throw new BadRequestException(INVALID_REQUEST);
+      }
+
+      const draft = (await transaction.draftRevision.create({
+        data: {
+          applicationGraphId: application.id,
+          revisionNumber: latest.revisionNumber + 1,
+          graph: graph as unknown as Prisma.InputJsonValue,
+        },
+      })) as StoredDraft;
+      try {
+        return await this.instanceFrom(transaction, application, draft);
+      } catch (error) {
+        if (uniqueConstraint(error) || serializationConflict(error))
+          throw error;
+        throw new BadRequestException(INVALID_REQUEST);
+      }
     };
     for (let attempt = 0; attempt < TRANSACTION_ATTEMPTS; attempt += 1) {
       try {

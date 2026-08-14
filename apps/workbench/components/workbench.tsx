@@ -21,6 +21,7 @@ import {
   type TemplatePageSelection,
 } from "./template-draft-workspace";
 import { TemplatePageWorkspace } from "./template-page-workspace";
+import { TemplateDataWorkspace } from "./template-data-workspace";
 
 /** The transient example prompts offered by the Home composer popover. */
 export const EXAMPLE_PROMPTS: readonly string[] = [
@@ -157,7 +158,15 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
           />
         );
       case "domain":
-        return (
+        return controller.templateDraft ? (
+          <TemplateDataWorkspace
+            instance={controller.templateDraft}
+            busy={controller.templateBusy}
+            error={controller.templateError}
+            onSave={controller.editTemplateDataField}
+            onBack={controller.returnToTemplatePreview}
+          />
+        ) : (
           <DomainCanvas
             graph={graph}
             onDomainChange={controller.changeDomainModel}

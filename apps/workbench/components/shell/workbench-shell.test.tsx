@@ -137,10 +137,12 @@ function stubControlPlane(
     >[];
     readonly failFirstTemplateClone?: boolean;
     readonly failTemplatePageRevision?: boolean;
+    readonly failFirstTemplateDataRevision?: boolean;
   } = {},
 ): ReturnType<typeof vi.fn> {
   const applications = options.applications ?? [];
   let templateCloneAttempts = 0;
+  let templateDataRevisionAttempts = 0;
   const fetcher = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = new URL(String(input));
@@ -182,6 +184,20 @@ function stubControlPlane(
           );
         }
         return responseJson(options.templateDrafts?.[2] ?? null, 201);
+      }
+      if (
+        method === "POST" &&
+        url.pathname ===
+          "/template-draft-instances/application-1/data-field-revisions"
+      ) {
+        templateDataRevisionAttempts += 1;
+        if (
+          options.failFirstTemplateDataRevision &&
+          templateDataRevisionAttempts === 1
+        ) {
+          return responseJson({ message: "HOSTILE_DATA_SAVE_SENTINEL" }, 503);
+        }
+        return responseJson(options.templateDrafts?.at(-1) ?? null, 201);
       }
       if (
         method === "GET" &&
@@ -350,12 +366,14 @@ describe("Workbench shell", () => {
     templateDrafts?: readonly ReturnType<typeof templateDraftResponse>[],
     failFirstTemplateClone = false,
     failTemplatePageRevision = false,
+    failFirstTemplateDataRevision = false,
   ) {
     const fetcher = stubControlPlane({
       applications,
       templateDrafts,
       failFirstTemplateClone,
       failTemplatePageRevision,
+      failFirstTemplateDataRevision,
     });
     vi.stubGlobal("fetch", fetcher);
     act(() => {
@@ -381,6 +399,7 @@ describe("Workbench shell", () => {
       "workspace-home.css",
       "builder-workspace.css",
       "template-draft.css",
+      "template-data.css",
       "template-preview.css",
       "template-page.css",
     ];
@@ -869,7 +888,7 @@ describe("Workbench shell", () => {
         ),
         (button) => button.getAttribute("aria-label"),
       ),
-    ).toEqual(["Page"]);
+    ).toEqual(["Page", "Data"]);
     const pageTitle = container.querySelector<HTMLInputElement>(
       'input[aria-label="Page title"]',
     )!;
@@ -918,6 +937,135 @@ describe("Workbench shell", () => {
           'button[aria-label="Select Seasonal Menu"][aria-current="page"]',
         ),
       ).not.toBeNull();
+    });
+  });
+
+  it("keeps r.4 previews authoritative through a failed Data save and replaces the instance only on strict r.5", async () => {
+    const fourth = templateDraftResponse(
+      4,
+      { pageId: "customer-menu", title: "Seasonal Menu" },
+      {
+        pageId: "customer-home",
+        blockIds: ["home-items", "home-hero", "home-categories"],
+      },
+    );
+    const fifth = templateDraftResponse(
+      5,
+      { pageId: "customer-menu", title: "Seasonal Menu" },
+      {
+        pageId: "customer-home",
+        blockIds: ["home-items", "home-hero", "home-categories"],
+      },
+      "Heirloom tomato pizza",
+    );
+    const fetcher = renderWorkbench(
+      undefined,
+      [fourth, fifth],
+      false,
+      false,
+      true,
+    );
+
+    await waitForAssertion(() => {
+      expect(
+        container.querySelector<HTMLButtonElement>(
+          'button[aria-label="Start from Maison Aurelia"]',
+        ),
+      ).not.toBeNull();
+    });
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>(
+          'button[aria-label="Start from Maison Aurelia"]',
+        )
+        ?.click();
+    });
+    await waitForAssertion(() => {
+      expect(container.textContent).toContain("Preview synced · Draft r.4");
+    });
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>('button[aria-label="Edit Home"]')
+        ?.click();
+    });
+    await waitForAssertion(() => {
+      expect(
+        container.querySelector(
+          'section[aria-label="Template Page workspace"]',
+        ),
+      ).not.toBeNull();
+    });
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>('button[aria-label="Data"]')
+        ?.click();
+    });
+    await waitForAssertion(() => {
+      expect(
+        container.querySelector(
+          'section[aria-label="Template Data workspace"]',
+        ),
+      ).not.toBeNull();
+    });
+    const input = container.querySelector<HTMLInputElement>(
+      'input[aria-label="Dish name"]',
+    )!;
+    act(() => {
+      Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )?.set?.call(input, "  Heirloom tomato pizza  ");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      container
+        .querySelector("form")
+        ?.dispatchEvent(
+          new Event("submit", { bubbles: true, cancelable: true }),
+        );
+    });
+    await waitForAssertion(() => {
+      expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+        "Template data could not be saved.",
+      );
+    });
+    expect(input.value).toBe("  Heirloom tomato pizza  ");
+    expect(container.textContent).toContain("Draft r.4 · Preview active");
+    expect(
+      Array.from(
+        container.querySelectorAll("[data-template-data-preview] strong"),
+      ).map((element) => element.textContent),
+    ).toEqual(["Margherita pizza", "Margherita pizza"]);
+    expect(container.textContent).not.toContain("HOSTILE_DATA_SAVE_SENTINEL");
+
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>(
+          'button[aria-label="Save dish name as new Draft"]',
+        )
+        ?.click();
+    });
+    await waitForAssertion(() => {
+      expect(container.textContent).toContain("Draft r.5 · Preview active");
+      expect(
+        Array.from(
+          container.querySelectorAll("[data-template-data-preview] strong"),
+        ).map((element) => element.textContent),
+      ).toEqual(["Heirloom tomato pizza", "Heirloom tomato pizza"]);
+    });
+    const calls = fetcher.mock.calls.filter(([input, init]) => {
+      const url = new URL(String(input));
+      return (
+        init?.method === "POST" &&
+        url.pathname ===
+          "/template-draft-instances/application-1/data-field-revisions"
+      );
+    });
+    expect(calls).toHaveLength(2);
+    expect(JSON.parse(String(calls[0]?.[1]?.body))).toEqual({
+      baseDraftRevisionId: "draft-4",
+      entityKey: "menu-item",
+      recordId: "margherita-pizza",
+      fieldKey: "name",
+      value: "Heirloom tomato pizza",
     });
   });
 

@@ -176,6 +176,15 @@ P0 acceptance gates:
 > Snapshot. Final Sol returns `RELEASE_ACCEPT`, actionable P0/P1/P2=0/0/0,
 > after corrected Terra PASS. Generated runtime order, broader editors, Source,
 > Publish, and Compilation remain deferred.
+> ADR-0015 is Accepted under the founder's standing instruction. Task 7C is
+> accepted, not delivered, on clean pushed base `5f984691`: exactly one mirrored
+> `menu-item`/`margherita-pizza`/`name` seed-field edit, Draft r.5, one active
+> Snapshot V2, and strict-response-only Customer Menu plus Merchant Menu
+> Management updates. Final Sol returns `RELEASE_ACCEPT` and targeted Terra
+> returns `PASS`, both P0/P1/P2=0/0/0; focused/full five-package, no-emit,
+> build/Prisma/Next, Playwright, exact-28, and static gates pass. Only
+> controller exact-28 delivery remains. Generic Data CRUD and all Graph/
+> platform/compiler/recipe/Prisma/dependency/runtime expansion remain deferred.
 
 ### P1 Product Closure gate (accepted and delivered)
 
@@ -358,9 +367,11 @@ dual-surface bundle, and exact Restaurant V3 dispatch are delivered at
 `96712e86`. Task 6A's distinct Apps/Builder contexts, Archeform identity,
 default-hidden Advanced inspection, and first style/state decomposition are
 delivered at `1a659a27`. Task 6B delivers the curated Restaurant template as an
-independent V3 Draft with an immutable dual-surface Snapshot V2 preview. The next
-vertical slice links preview selection to one bounded Page edit and Draft r.3,
-without another Graph contract.
+independent V3 Draft with an immutable dual-surface Snapshot V2 preview. Task 7A
+and 7B deliver Page title and same-set block-order edits through Draft r.4. The
+ADR-0015 Task 7C is accepted and awaits controller delivery: one checksum-bound
+mirrored Restaurant seed-name edit through Draft r.5, without another Graph or
+platform contract.
 
 Workbench implementation includes characterization-first decomposition of the
 current 3,818-line global stylesheet, 907-line controller, and 1,131-line
@@ -663,15 +674,12 @@ at SHA-256 `ffa017cf14cd911495d70d8cf490bb637b570057235d3d841657e0f7c732b732`.
 Restaurant semantics and UI Registry are delivered at `fbcf92ea` and
 `8313e7ae` with independent P0/P1/P2=0/0/0 reviews and pushed equality.
 Task 5 merchant/dual-surface compilation, Task 6A/6B Workbench foundations, and
-Task 7A Page-title editing are delivered. ADR-0014 and the exact Task 7B plan
-are frozen. The first two-axis review rejected the initial tree with six P1s;
-same-writer TDD repair on the corrected 25-path manifest and final evidence
-closure now pass the same independent reviewer with P0/P1/P2=0/0/0. Task 7B is
-delivered by its enclosing reviewed commit after corrected fresh Terra QA
-0/0/0 and final Sol `RELEASE_ACCEPT` with actionable P0/P1/P2=0/0/0. PM accepts
-the exact 31-path delivery and authorizes only its frozen-subject controller
-commit and non-force push. Later Data/Users/Workflow/Experience, Source,
-Publish, Compilation, block insertion/deletion, and generated-runtime ordering
-remain serialized behind newly frozen reviewed slices.
+Task 7A/7B Page editing are delivered through pushed-equal commit `5f984691`.
+ADR-0015 Task 7C is accepted, not delivered, on the exact 22-path Data slice and
+exact-28 delivery tree: one mirrored Restaurant seed-name edit, Draft r.5, and
+strict Snapshot-bound dual-preview update. Controller delivery is the only open
+gate. Every other Data/Users/Workflow/Experience, Source, Publish, Compilation,
+block edit, and generated-runtime change remains serialized behind a later
+reviewed freeze.
 Provider, service, Docker, cloud/deployment, and production-payment work remain
 unauthorized.

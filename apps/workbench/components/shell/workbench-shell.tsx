@@ -182,7 +182,9 @@ export function WorkbenchShell({ controller, children }: Props) {
           <BuilderNavigation
             activeSurface={state.activeSurface}
             onNavigate={navigate}
-            allowedDestinations={templateDraftActive ? ["page"] : undefined}
+            allowedDestinations={
+              templateDraftActive ? ["page", "data"] : undefined
+            }
           />
         )}
         <section className="work-area">

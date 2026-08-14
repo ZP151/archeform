@@ -104,6 +104,7 @@ export function TemplatePageWorkspace({
           tabIndex={-1}
           data-page-save-status="success"
           role="status"
+          aria-live="polite"
         >
           Draft r.{instance.draft.revisionNumber} · Preview active
         </p>

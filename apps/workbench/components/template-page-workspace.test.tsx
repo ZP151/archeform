@@ -271,4 +271,45 @@ describe("TemplatePageWorkspace", () => {
     ]);
     expect(container.textContent).toContain("Draft r.4 · Preview active");
   });
+
+  it("preserves the accepted Page title and order when a later Data revision arrives", () => {
+    const instance = templateDraftResponse(
+      5,
+      { pageId: "customer-menu", title: "Seasonal Menu" },
+      {
+        pageId: "customer-home",
+        blockIds: ["home-items", "home-hero", "home-categories"],
+      },
+      "Heirloom tomato pizza",
+    );
+    act(() => {
+      root.render(
+        <TemplatePageWorkspace
+          instance={instance}
+          selection={{
+            surfaceKey: "customer-mobile",
+            pageId: "customer-home",
+          }}
+          busy={false}
+          error={null}
+          onSave={vi.fn()}
+          onBack={vi.fn()}
+        />,
+      );
+    });
+
+    expect(container.textContent).toContain("Draft r.5 · Preview active");
+    expect(
+      Array.from(
+        container.querySelectorAll(
+          ".template-page-preview .template-block-grid strong",
+        ),
+      ).map((element) => element.textContent),
+    ).toEqual(["Signature dishes", "Seasonal menu", "Menu categories"]);
+    expect(
+      instance.previews[0].surface.pages.find(
+        ({ id }) => id === "customer-menu",
+      )?.title,
+    ).toBe("Seasonal Menu");
+  });
 });

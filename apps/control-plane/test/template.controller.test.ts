@@ -21,6 +21,7 @@ const templates = {
   appendTemplateDraftRevision: vi.fn(),
   appendTemplatePageRevision: vi.fn(),
   appendTemplatePageBlockOrderRevision: vi.fn(),
+  appendTemplateDataFieldRevision: vi.fn(),
 };
 
 @Module({
@@ -167,6 +168,36 @@ describe("TemplateController", () => {
     expect(response.status).toBe(201);
     expect(await response.json()).toEqual({ id: "instance-4" });
     expect(templates.appendTemplatePageBlockOrderRevision).toHaveBeenCalledWith(
+      "application-1",
+      body,
+    );
+  });
+
+  it("routes the exact raw template Restaurant data-field command", async () => {
+    const body = {
+      baseDraftRevisionId: "draft-4",
+      entityKey: "menu-item",
+      recordId: "margherita-pizza",
+      fieldKey: "name",
+      value: "Heirloom tomato pizza",
+    };
+    templates.appendTemplateDataFieldRevision.mockResolvedValue({
+      id: "instance-5",
+    });
+
+    const response = await fetch(
+      `${baseUrl}/template-draft-instances/application-1/data-field-revisions`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+
+    expect(response.status).toBe(201);
+    expect(await response.json()).toEqual({ id: "instance-5" });
+    expect(templates.appendTemplateDataFieldRevision).toHaveBeenCalledOnce();
+    expect(templates.appendTemplateDataFieldRevision).toHaveBeenCalledWith(
       "application-1",
       body,
     );

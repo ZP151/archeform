@@ -283,4 +283,36 @@ describe("TemplateDraftWorkspace", () => {
       pageId: "merchant-desktop-0",
     });
   });
+
+  it("keeps the controlled Page selection when a later Draft instance replaces preview data", () => {
+    const selection = {
+      surfaceKey: "customer-mobile" as const,
+      pageId: "customer-mobile-1",
+    };
+    const render = (revision: number) => {
+      act(() => {
+        root.render(
+          <TemplateDraftWorkspace
+            instance={instance(revision)}
+            selection={selection}
+            busy={false}
+            error={null}
+            onRename={vi.fn()}
+            onSelectionChange={vi.fn()}
+            onEditPage={vi.fn()}
+          />,
+        );
+      });
+    };
+
+    render(4);
+    render(5);
+
+    expect(
+      container.querySelector('button[aria-current="page"]')?.textContent,
+    ).toContain("Menu");
+    expect(
+      container.querySelector('article[aria-label="Menu preview"]'),
+    ).not.toBeNull();
+  });
 });

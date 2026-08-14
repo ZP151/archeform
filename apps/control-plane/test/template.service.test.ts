@@ -1569,3 +1569,406 @@ describe("TemplateService", () => {
     },
   );
 });
+
+const dataFieldCommand = {
+  baseDraftRevisionId: "draft-4",
+  entityKey: "menu-item" as const,
+  recordId: "margherita-pizza" as const,
+  fieldKey: "name" as const,
+  value: "Heirloom tomato pizza",
+};
+
+function dataFieldSnapshot(
+  graph: ReturnType<typeof createCuratedRestaurantTemplateGraph>,
+  overrides: Record<string, unknown> = {},
+) {
+  const snapshotBase = {
+    apiVersion: "factory.draft-preview-snapshot/v2" as const,
+    id: "preview-4",
+    workspaceId: "local-workspace",
+    applicationGraphId: "application-1",
+    draftRevisionId: "draft-4",
+    graphVersion: "factory.application-graph/v3" as const,
+    graphChecksum: hashApplicationGraphV3(graph),
+    snapshotChecksum:
+      "sha256:0000000000000000000000000000000000000000000000000000000000000000" as const,
+    disposition: "preview-only" as const,
+    state: "active" as const,
+    createdAt: "2026-08-14T07:30:00.000Z",
+    expiresAt: "2026-08-14T08:30:00.000Z",
+    ...overrides,
+  };
+  return assertDraftPreviewSnapshotV2({
+    ...snapshotBase,
+    snapshotChecksum: hashDraftPreviewSnapshotV2(snapshotBase),
+  });
+}
+
+function dataFieldAggregate(
+  service: TemplateService,
+  graph = createCuratedRestaurantTemplateGraph(
+    "restaurant-template-001",
+    "Maison Rivage",
+  ),
+) {
+  const template = service.listCuratedTemplates()[0]!;
+  return {
+    id: "application-1",
+    key: "restaurant-template-001",
+    name: "Maison Rivage",
+    templateOrigin: {
+      templateKey: template.key,
+      templateVersion: template.version,
+      templateGraphChecksum: template.graphChecksum,
+    },
+    workspace: { slug: "local-workspace" },
+    draftRevisions: [
+      {
+        id: "draft-4",
+        applicationGraphId: "application-1",
+        revisionNumber: 4,
+        graph,
+        draftPreviewSnapshots: [{ snapshot: dataFieldSnapshot(graph) }],
+      },
+    ],
+  };
+}
+
+describe("TemplateService Restaurant data-field revision", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-14T08:00:00.000Z"));
+    compilerCalls.failSourceClosure = false;
+    compilerCalls.failRender = false;
+    compilerCalls.closure.mockClear();
+    compilerCalls.render.mockClear();
+  });
+
+  it("atomically appends r.5 and one checksum-bound active Snapshot without mutating r.4", async () => {
+    const prisma = prismaMock();
+    const service = new TemplateService(prisma as unknown as PrismaService);
+    const aggregate = dataFieldAggregate(service);
+    const previous = structuredClone(aggregate.draftRevisions[0]!);
+    prisma.applicationGraph.findFirst.mockResolvedValue(aggregate);
+    prisma.draftRevision.create.mockImplementation(async ({ data }: any) => ({
+      id: "draft-5",
+      ...data,
+    }));
+    prisma.draftPreviewSnapshot.create.mockImplementation(
+      async ({ data }: any) => data,
+    );
+
+    const result = await service.appendTemplateDataFieldRevision(
+      "application-1",
+      dataFieldCommand,
+    );
+
+    const seedIndex = result.draft.graph.domain.seedData!.findIndex(
+      ({ entity, id }) => entity === "menu-item" && id === "margherita-pizza",
+    );
+    expect(result.draft).toMatchObject({
+      draftRevisionId: "draft-5",
+      revisionNumber: 5,
+    });
+    expect(result.draft.graph.domain.seedData![seedIndex]!.values.name).toBe(
+      "Heirloom tomato pizza",
+    );
+    expect(
+      result.draft.graph.seedScenarios[0]!.records[seedIndex]!.values.name,
+    ).toBe("Heirloom tomato pizza");
+    expect(result.snapshot).toMatchObject({
+      draftRevisionId: "draft-5",
+      graphChecksum: hashApplicationGraphV3(result.draft.graph),
+      state: "active",
+    });
+    expect(result.previews.map(({ surface }) => surface.surfaceKey)).toEqual([
+      "customer-mobile",
+      "merchant-desktop",
+    ]);
+    expect(compilerCalls.closure).toHaveBeenCalledOnce();
+    expect(compilerCalls.render).toHaveBeenCalledTimes(2);
+    expect(prisma.draftRevision.create).toHaveBeenCalledOnce();
+    expect(prisma.draftPreviewSnapshot.create).toHaveBeenCalledOnce();
+    expect(aggregate.draftRevisions[0]).toEqual(previous);
+    expect(prisma.applicationGraph.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: "application-1",
+        workspace: { slug: "local-workspace" },
+      },
+      include: {
+        workspace: true,
+        draftRevisions: {
+          orderBy: { revisionNumber: "desc" },
+          take: 1,
+          include: {
+            draftPreviewSnapshots: {
+              orderBy: { createdAt: "desc" },
+              take: 1,
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it.each([
+    ["missing", null],
+    ["malformed", { malformed: true }],
+    [
+      "wrong Graph checksum",
+      {
+        graphChecksum:
+          "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      },
+    ],
+    ["wrong workspace identity", { workspaceId: "other-workspace" }],
+    ["wrong Application identity", { applicationGraphId: "application-2" }],
+    ["wrong Draft identity", { draftRevisionId: "draft-3" }],
+    ["non-active state", { state: "rendering" }],
+  ] as const)(
+    "rejects a %s current Snapshot with fixed 400 before closure or append",
+    async (_label, drift) => {
+      const prisma = prismaMock();
+      const service = new TemplateService(prisma as unknown as PrismaService);
+      const aggregate = dataFieldAggregate(service);
+      const draft = aggregate.draftRevisions[0]!;
+      if (drift === null) {
+        draft.draftPreviewSnapshots = [];
+      } else if ("malformed" in drift) {
+        draft.draftPreviewSnapshots = [{ snapshot: drift }];
+      } else {
+        draft.draftPreviewSnapshots = [
+          { snapshot: dataFieldSnapshot(draft.graph, drift) },
+        ];
+      }
+      const previous = structuredClone(aggregate);
+      prisma.applicationGraph.findFirst.mockResolvedValue(aggregate);
+
+      const error = await service
+        .appendTemplateDataFieldRevision("application-1", dataFieldCommand)
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as BadRequestException).getStatus()).toBe(400);
+      expect((error as Error).message).toBe(
+        "Template Draft request is invalid.",
+      );
+      expect(aggregate).toEqual(previous);
+      expect(compilerCalls.closure).not.toHaveBeenCalled();
+      expect(compilerCalls.render).not.toHaveBeenCalled();
+      expect(prisma.draftRevision.create).not.toHaveBeenCalled();
+      expect(prisma.draftPreviewSnapshot.create).not.toHaveBeenCalled();
+    },
+  );
+
+  it("captures once before Prisma and reuses only frozen primitives across three Serializable attempts", async () => {
+    const prisma = prismaMock();
+    const service = new TemplateService(prisma as unknown as PrismaService);
+    prisma.applicationGraph.findFirst.mockResolvedValue(
+      dataFieldAggregate(service),
+    );
+    prisma.draftRevision.create.mockImplementation(async ({ data }: any) => ({
+      id: "draft-5",
+      ...data,
+    }));
+    prisma.draftPreviewSnapshot.create.mockImplementation(
+      async ({ data }: any) => data,
+    );
+    const events: string[] = [];
+    const calls = { prototype: 0, keys: 0, descriptors: 0 };
+    const input = new Proxy(
+      { ...dataFieldCommand },
+      {
+        getPrototypeOf(target) {
+          calls.prototype += 1;
+          events.push("capture:prototype");
+          return Reflect.getPrototypeOf(target);
+        },
+        ownKeys(target) {
+          calls.keys += 1;
+          events.push("capture:keys");
+          return Reflect.ownKeys(target);
+        },
+        getOwnPropertyDescriptor(target, key) {
+          calls.descriptors += 1;
+          events.push(`capture:descriptor:${String(key)}`);
+          return Reflect.getOwnPropertyDescriptor(target, key);
+        },
+      },
+    );
+    let attempts = 0;
+    const execute = prisma.$transaction.getMockImplementation()!;
+    prisma.$transaction.mockImplementation(async (...args: any[]) => {
+      attempts += 1;
+      events.push(`transaction:${attempts}`);
+      const result = await execute(...args);
+      if (attempts < 3) throw { code: "P2034" };
+      return result;
+    });
+
+    await expect(
+      service.appendTemplateDataFieldRevision("application-1", input),
+    ).resolves.toMatchObject({ draft: { revisionNumber: 5 } });
+    expect(prisma.$transaction).toHaveBeenCalledTimes(3);
+    expect(events.indexOf("transaction:1")).toBeGreaterThan(
+      events.lastIndexOf("capture:descriptor:value"),
+    );
+    expect(calls).toEqual({ prototype: 1, keys: 1, descriptors: 5 });
+  });
+
+  it("scopes the Application by local workspace before origin inspection", async () => {
+    const prisma = prismaMock();
+    const service = new TemplateService(prisma as unknown as PrismaService);
+    prisma.applicationGraph.findFirst.mockImplementation(async ({ where }) => {
+      expect(where).toEqual({
+        id: "application-1",
+        workspace: { slug: "local-workspace" },
+      });
+      return null;
+    });
+
+    await expect(
+      service.appendTemplateDataFieldRevision(
+        "application-1",
+        dataFieldCommand,
+      ),
+    ).rejects.toThrow("Template Draft was not found.");
+    expect(prisma.applicationGraph.findUnique).not.toHaveBeenCalled();
+    expect(prisma.draftRevision.create).not.toHaveBeenCalled();
+  });
+
+  it("maps stale, normalized no-op, P2002, and exhausted P2034 to the fixed 409", async () => {
+    const prisma = prismaMock();
+    const service = new TemplateService(prisma as unknown as PrismaService);
+    prisma.applicationGraph.findFirst.mockResolvedValue(
+      dataFieldAggregate(service),
+    );
+
+    for (const input of [
+      { ...dataFieldCommand, baseDraftRevisionId: "draft-3" },
+      { ...dataFieldCommand, value: "  Margherita pizza  " },
+    ]) {
+      const error = await service
+        .appendTemplateDataFieldRevision("application-1", input)
+        .catch((caught: unknown) => caught);
+      expect(error).toBeInstanceOf(ConflictException);
+      expect((error as ConflictException).getStatus()).toBe(409);
+      expect((error as Error).message).toBe(
+        "Template Draft revision moved; reload before editing.",
+      );
+    }
+
+    prisma.draftRevision.create.mockRejectedValueOnce({ code: "P2002" });
+    await expect(
+      service.appendTemplateDataFieldRevision(
+        "application-1",
+        dataFieldCommand,
+      ),
+    ).rejects.toThrow("Template Draft revision moved; reload before editing.");
+
+    const retryPrisma = prismaMock();
+    retryPrisma.$transaction.mockRejectedValue({ code: "P2034" });
+    const retryService = new TemplateService(
+      retryPrisma as unknown as PrismaService,
+    );
+    await expect(
+      retryService.appendTemplateDataFieldRevision(
+        "application-1",
+        dataFieldCommand,
+      ),
+    ).rejects.toThrow("Template Draft revision moved; reload before editing.");
+    expect(retryPrisma.$transaction).toHaveBeenCalledTimes(3);
+  });
+
+  it.each(["data closure", "compiler closure"] as const)(
+    "rejects %s before Draft create or renderer invocation",
+    async (failure) => {
+      const prisma = prismaMock();
+      const service = new TemplateService(prisma as unknown as PrismaService);
+      const graph = createCuratedRestaurantTemplateGraph(
+        "restaurant-template-001",
+        "Maison Rivage",
+      );
+      if (failure === "data closure") {
+        graph.seedScenarios[0]!.records.find(
+          ({ entityKey, values }) =>
+            entityKey === "menu-item" && values.name === "Margherita pizza",
+        )!.values.name = "Scenario drift";
+      } else {
+        compilerCalls.failSourceClosure = true;
+      }
+      prisma.applicationGraph.findFirst.mockResolvedValue(
+        dataFieldAggregate(service, graph),
+      );
+
+      const error = await service
+        .appendTemplateDataFieldRevision("application-1", dataFieldCommand)
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as BadRequestException).getStatus()).toBe(400);
+      expect((error as Error).message).toBe(
+        "Template Draft request is invalid.",
+      );
+      expect(prisma.draftRevision.create).not.toHaveBeenCalled();
+      expect(prisma.draftPreviewSnapshot.create).not.toHaveBeenCalled();
+      expect(compilerCalls.render).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["renderer", "snapshot"] as const)(
+    "rolls back the attempted data Draft and Snapshot when %s fails",
+    async (failure) => {
+      const prisma = prismaMock();
+      const service = new TemplateService(prisma as unknown as PrismaService);
+      const aggregate = dataFieldAggregate(service);
+      if (failure === "renderer") compilerCalls.failRender = true;
+      const attemptedDrafts: unknown[] = [];
+      const attemptedSnapshots: unknown[] = [];
+      const committedDrafts: unknown[] = [];
+      const committedSnapshots: unknown[] = [];
+      prisma.$transaction.mockImplementation(async (operation: any) => {
+        const stagedDrafts: unknown[] = [];
+        const stagedSnapshots: unknown[] = [];
+        const transaction = {
+          workspace: prisma.workspace,
+          applicationGraph: prisma.applicationGraph,
+          draftRevision: {
+            ...prisma.draftRevision,
+            create: vi.fn(async ({ data }: any) => {
+              const draft = { id: "draft-5", ...data };
+              attemptedDrafts.push(draft);
+              stagedDrafts.push(draft);
+              return draft;
+            }),
+          },
+          draftPreviewSnapshot: {
+            ...prisma.draftPreviewSnapshot,
+            create: vi.fn(async ({ data }: any) => {
+              attemptedSnapshots.push(data);
+              stagedSnapshots.push(data);
+              if (failure === "snapshot") throw new Error("snapshot-failed");
+              return data;
+            }),
+          },
+        };
+        prisma.applicationGraph.findFirst.mockResolvedValue(aggregate);
+        const result = await operation(transaction);
+        committedDrafts.push(...stagedDrafts);
+        committedSnapshots.push(...stagedSnapshots);
+        return result;
+      });
+
+      await expect(
+        service.appendTemplateDataFieldRevision(
+          "application-1",
+          dataFieldCommand,
+        ),
+      ).rejects.toThrow("Template Draft request is invalid.");
+      expect(attemptedDrafts).toHaveLength(1);
+      expect(attemptedSnapshots).toHaveLength(failure === "snapshot" ? 1 : 0);
+      expect(committedDrafts).toEqual([]);
+      expect(committedSnapshots).toEqual([]);
+    },
+  );
+});

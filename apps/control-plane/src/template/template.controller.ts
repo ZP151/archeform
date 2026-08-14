@@ -54,4 +54,15 @@ export class TemplateController {
       body,
     );
   }
+
+  @Post("template-draft-instances/:applicationGraphId/data-field-revisions")
+  appendTemplateDataFieldRevision(
+    @Param("applicationGraphId") applicationGraphId: string,
+    @Body() body: unknown,
+  ) {
+    return this.templates.appendTemplateDataFieldRevision(
+      applicationGraphId,
+      body,
+    );
+  }
 }

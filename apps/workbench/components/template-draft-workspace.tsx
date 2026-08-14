@@ -159,7 +159,7 @@ export function TemplateDraftWorkspace({
             {instance.origin.templateVersion}
           </span>
           <h1>{instance.draft.graph.metadata.name}</h1>
-          <p>
+          <p role="status" aria-live="polite">
             <CheckCircle2 size={14} aria-hidden="true" /> Preview synced · Draft
             r.
             {instance.draft.revisionNumber}

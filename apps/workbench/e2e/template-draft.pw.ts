@@ -8,9 +8,9 @@ const jsonHeaders = {
   "content-type": "application/json",
 };
 
-test("clones, renames, edits, and reorders one page in an independent Restaurant Draft", async ({
+test("clones through an authoritative Restaurant data-field Draft r.5", async ({
   page,
-}, testInfo) => {
+}) => {
   const first = templateDraftResponse(1);
   const second = templateDraftResponse(2);
   const third = templateDraftResponse(3, {
@@ -25,9 +25,19 @@ test("clones, renames, edits, and reorders one page in an independent Restaurant
       blockIds: ["home-items", "home-hero", "home-categories"],
     },
   );
+  const fifth = templateDraftResponse(
+    5,
+    { pageId: "customer-menu", title: "Seasonal Menu" },
+    {
+      pageId: "customer-home",
+      blockIds: ["home-items", "home-hero", "home-categories"],
+    },
+    "Heirloom tomato pizza",
+  );
   let templateCreated = false;
   let currentTemplate = first;
   let blockOrderAttempts = 0;
+  let dataFieldAttempts = 0;
   await page.route("http://127.0.0.1:3000/**", async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
@@ -185,6 +195,34 @@ test("clones, renames, edits, and reorders one page in an independent Restaurant
       });
       return;
     }
+    if (
+      request.method() === "POST" &&
+      path === "/template-draft-instances/application-1/data-field-revisions"
+    ) {
+      expect(request.postDataJSON()).toEqual({
+        baseDraftRevisionId: "draft-4",
+        entityKey: "menu-item",
+        recordId: "margherita-pizza",
+        fieldKey: "name",
+        value: "Heirloom tomato pizza",
+      });
+      dataFieldAttempts += 1;
+      if (dataFieldAttempts === 1) {
+        await route.fulfill({
+          status: 409,
+          headers: jsonHeaders,
+          body: JSON.stringify({ message: "HOSTILE_DATA_SAVE_DETAIL" }),
+        });
+        return;
+      }
+      currentTemplate = fifth;
+      await route.fulfill({
+        status: 201,
+        headers: jsonHeaders,
+        body: JSON.stringify(fifth),
+      });
+      return;
+    }
     await route.fulfill({
       status: 404,
       headers: jsonHeaders,
@@ -222,7 +260,12 @@ test("clones, renames, edits, and reorders one page in an independent Restaurant
     page
       .getByRole("navigation", { name: "Builder navigation" })
       .getByRole("button"),
-  ).toHaveCount(1);
+  ).toHaveCount(2);
+  await expect(
+    page
+      .getByRole("navigation", { name: "Builder navigation" })
+      .getByRole("button"),
+  ).toHaveText(["Page", "Data"]);
   const pageTitle = page.getByRole("textbox", { name: "Page title" });
   await pageTitle.fill("Seasonal Menu");
   await expect(
@@ -361,53 +404,87 @@ test("clones, renames, edits, and reorders one page in an independent Restaurant
     third.previews[0].surface.pages[0]!.blocks.map(({ id }) => id),
   ).toEqual(["home-hero", "home-categories", "home-items"]);
 
+  await page
+    .getByRole("navigation", { name: "Builder navigation" })
+    .getByRole("button", { name: "Data" })
+    .click();
+  await expect(
+    page.getByRole("region", { name: "Template Data workspace" }),
+  ).toBeVisible();
+  const dishName = page.getByRole("textbox", { name: "Dish name" });
+  await expect(dishName).toHaveValue("Margherita pizza");
+  const dataPreviews = page.locator("[data-template-data-preview] strong");
+  await expect(dataPreviews).toHaveText([
+    "Margherita pizza",
+    "Margherita pizza",
+  ]);
+  await dishName.fill("Heirloom tomato pizza");
+  await expect(dataPreviews).toHaveText([
+    "Margherita pizza",
+    "Margherita pizza",
+  ]);
+  await dishName.press("Enter");
+  await expect(
+    page
+      .getByRole("region", { name: "Template Data workspace" })
+      .getByRole("alert"),
+  ).toHaveText("Template data could not be saved.");
+  await expect(page.getByText("HOSTILE_DATA_SAVE_DETAIL")).toHaveCount(0);
+  await expect(dishName).toHaveValue("Heirloom tomato pizza");
+  await expect(dataPreviews).toHaveText([
+    "Margherita pizza",
+    "Margherita pizza",
+  ]);
+  expect(currentTemplate).toEqual(fourth);
+  await page
+    .getByRole("button", { name: "Save dish name as new Draft" })
+    .click();
+  await expect(page.getByText("Draft r.5 · Preview active")).toBeVisible();
+  await expect(dataPreviews).toHaveText([
+    "Heirloom tomato pizza",
+    "Heirloom tomato pizza",
+  ]);
+  await expect
+    .soft(page.locator('[data-template-data-save-status="success"]'))
+    .toBeFocused();
+  expect(dataFieldAttempts).toBe(2);
+  expect(
+    fourth.draft.graph.domain.seedData!.find(
+      ({ id }) => id === "margherita-pizza",
+    )!.values.name,
+  ).toBe("Margherita pizza");
+  expect(fourth.snapshot.id).toBe("preview-4");
+  expect(fifth.snapshot.id).toBe("preview-5");
+  expect(fifth.snapshot.graphChecksum).not.toBe(fourth.snapshot.graphChecksum);
+
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
   await page.getByRole("button", { name: "Open Maison Rivage" }).click();
-  await expect(page.getByText("Preview synced · Draft r.4")).toBeVisible();
+  await expect(page.getByText("Preview synced · Draft r.5")).toBeVisible();
   await page.getByRole("button", { name: "Select Home" }).click();
   await page.getByRole("button", { name: "Edit Home" }).click();
-  await expect(
-    page.getByLabel("Home preview").locator(".template-block-grid strong"),
-  ).toHaveText(["Signature dishes", "Seasonal menu", "Menu categories"]);
-  expect
-    .soft(
-      await puckBlocks.evaluateAll((elements) =>
-        elements.map((element) => element.getAttribute("data-puck-component")),
-      ),
-    )
-    .toEqual(["home-items", "home-hero", "home-categories"]);
-  const editorBox = await page.locator(".template-page-editor").boundingBox();
-  const orderBox = await page
-    .locator(".template-page-block-order")
+  await page
+    .getByRole("navigation", { name: "Builder navigation" })
+    .getByRole("button", { name: "Data" })
+    .click();
+  await expect(dishName).toHaveValue("Heirloom tomato pizza");
+  await expect(dataPreviews).toHaveText([
+    "Heirloom tomato pizza",
+    "Heirloom tomato pizza",
+  ]);
+  const editorBox = await page.locator(".template-data-editor").boundingBox();
+  const previewBox = await page
+    .locator(".template-data-previews")
     .boundingBox();
-  const puckBox = await page.locator(".template-order-puck").boundingBox();
-  const keyboardBox = await page
-    .locator(".template-order-keyboard")
+  const saveDataBox = await page
+    .getByRole("button", { name: "Save dish name as new Draft" })
     .boundingBox();
-  const saveOrderBox = await page
-    .getByRole("button", { name: "Save block order" })
-    .boundingBox();
-  const previewBox = await page.locator(".template-page-preview").boundingBox();
   expect(editorBox).not.toBeNull();
-  expect(orderBox).not.toBeNull();
-  expect(puckBox).not.toBeNull();
-  expect(keyboardBox).not.toBeNull();
-  expect(saveOrderBox).not.toBeNull();
   expect(previewBox).not.toBeNull();
-  expect
-    .soft(orderBox!.y)
-    .toBeGreaterThan(editorBox!.y + editorBox!.height - 1);
-  expect.soft(keyboardBox!.y).toBeGreaterThan(puckBox!.y + puckBox!.height - 1);
-  expect
-    .soft(saveOrderBox!.y)
-    .toBeGreaterThan(keyboardBox!.y + keyboardBox!.height - 1);
+  expect(saveDataBox).not.toBeNull();
   expect
     .soft(previewBox!.y)
     .toBeGreaterThan(editorBox!.y + editorBox!.height - 1);
-  expect
-    .soft(previewBox!.y)
-    .toBeGreaterThan(orderBox!.y + orderBox!.height - 1);
   expect
     .soft(
       await page.evaluate(() => ({
@@ -417,15 +494,38 @@ test("clones, renames, edits, and reorders one page in an independent Restaurant
     )
     .toEqual({ clientWidth: 390, scrollWidth: 390 });
   for (const button of await page
-    .locator(".template-page-block-order button")
+    .locator(".template-data-workspace button")
     .all()) {
     const box = await button.boundingBox();
     expect(box).not.toBeNull();
     expect.soft(box!.width).toBeGreaterThanOrEqual(44);
     expect.soft(box!.height).toBeGreaterThanOrEqual(44);
   }
-  await page.screenshot({
-    path: testInfo.outputPath("template-page-r4.png"),
-    fullPage: true,
+  expect(saveDataBox!.height).toBeGreaterThanOrEqual(44);
+  const contrast = await dishName.evaluate((element) => {
+    const parse = (value: string) =>
+      value
+        .match(/\d+(?:\.\d+)?/g)!
+        .slice(0, 3)
+        .map(Number);
+    const luminance = (rgb: number[]) => {
+      const channels = rgb.map((channel) => {
+        const normalized = channel / 255;
+        return normalized <= 0.03928
+          ? normalized / 12.92
+          : ((normalized + 0.055) / 1.055) ** 2.4;
+      });
+      return (
+        0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!
+      );
+    };
+    const style = getComputedStyle(element);
+    const foreground = luminance(parse(style.color));
+    const background = luminance(parse(style.backgroundColor));
+    return (
+      (Math.max(foreground, background) + 0.05) /
+      (Math.min(foreground, background) + 0.05)
+    );
   });
+  expect(contrast).toBeGreaterThanOrEqual(4.5);
 });

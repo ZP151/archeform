@@ -4472,11 +4472,12 @@ Product Recipe, provider, or deployment contracts.
 
 ## Task 7 — Make Page, Data, Users, Workflow, and Experience contextual editors
 
-State: `delivered` for bounded Task 7B by its enclosing reviewed commit; Task
-7A remains delivered by its enclosing reviewed commit.
+State: Task 7A and 7B are `delivered`; bounded Task 7C is `accepted`, not
+delivered, on its exact reviewed 28-path tree.
 
-Owner: controller delivery authority is consumed by the enclosing reviewed
-commit. Task 7A and Task 7B writer/reviewer authorities are consumed.
+Owner: Task 7A/7B authorities are consumed. Task 7C implementation and review
+authorities are consumed; only PM-authorized controller staging, commit,
+non-force push, and equality verification remain.
 
 Allowed paths: Workbench Page/Puck, Domain, Policy, Flow, Experience, selection
 context, Draft operation, and adjacent test paths assigned by PM.
@@ -4733,6 +4734,117 @@ Task 7B is `delivered` by its enclosing reviewed commit. Data, Users, Workflow,
 Experience, Source, Publish, Compilation, block insertion/deletion/editing,
 generated-runtime ordering, Task 8, and Task 9 writers remain zero until a new
 bounded slice is frozen after pushed equality.
+
+### Task 7C frozen execution — 2026-08-14
+
+State: `accepted`, not delivered. Current exact dirty partition is 28 paths with
+index count zero; local `HEAD` and upstream both equal
+`5f984691f426e6068479c44b4fa41baf2f8aaada`.
+
+Decision and contract:
+
+- ADR-0015 is Accepted under the founder standing instruction
+  `参考以下总结，若符合项目目标，则持续接受而迭代。`; PM adjudicates the slice as
+  bounded, additive/reversible, directly advancing the polished editable
+  Restaurant product, and introducing no Graph/platform expansion.
+- Visible outcome is exactly Builder -> Data -> Menu items -> Margherita pizza
+  -> Dish name, `Margherita pizza` -> `Heirloom tomato pizza`.
+- Exact POST route:
+  `/template-draft-instances/:applicationGraphId/data-field-revisions` with
+  own-plain five-field body
+  `{baseDraftRevisionId,entityKey,recordId,fieldKey,value}` and literal selectors
+  `menu-item`, `margherita-pizza`, `name`; normalized value is 2..120 with no
+  controls.
+- Capture is hostile-safe and once-only before Prisma; local workspace precedes
+  origin; latest base is mandatory. The current Graph must have exactly one
+  matched seed, exactly one `fine-dining-service` scenario, a complete
+  index-aligned seed/scenario mirror, required string/client-authoritative
+  `menu-item.name`, the exact three customer reads, merchant write, and manager
+  `menu-item:update`.
+- Update only the two aligned `values.name` locations and prove complete
+  restoration equality. Reassert Graph V3 and run the existing compiler preview
+  closure before append/render.
+- At most three Serializable attempts. Stale/no-op/P2002/exhausted P2034 return
+  fixed 409; malformed/closure-invalid returns fixed 400. Draft r.5, two renders,
+  and exactly one active immutable Snapshot V2 are atomic; errors never log or
+  echo inputs/Graph/Snapshot material.
+- Workbench derives the visible seed only from the strict Graph after Snapshot
+  checksum match. Customer Menu and Merchant Menu Management change only after
+  strict success; pending/failure never changes either preview.
+
+Authorities:
+
+- [ADR-0015](../../adr/adr-0015-template-restaurant-seed-data-edit.md)
+- [Task 7C design](../specs/2026-08-14-template-restaurant-seed-data-edit-design.md)
+- [Task 7C executable plan](../plans/2026-08-14-template-restaurant-seed-data-edit.md)
+- [Delivery policy](../../delivery-policy.md)
+
+Exact writer manifest (22):
+
+```text
+apps/control-plane/src/template/template-data-field-edit.ts
+apps/control-plane/src/template/template.controller.ts
+apps/control-plane/src/template/template.service.ts
+apps/control-plane/test/template-data-field-edit.test.ts
+apps/control-plane/test/template.controller.test.ts
+apps/control-plane/test/template.service.test.ts
+apps/workbench/lib/control-plane-client.ts
+apps/workbench/lib/control-plane-client.test.ts
+apps/workbench/hooks/use-workbench-controller.ts
+apps/workbench/components/workbench.tsx
+apps/workbench/components/template-data-workspace.tsx
+apps/workbench/components/template-data-workspace.test.tsx
+apps/workbench/components/template-draft-workspace.tsx
+apps/workbench/components/template-draft-workspace.test.tsx
+apps/workbench/components/template-page-workspace.tsx
+apps/workbench/components/template-page-workspace.test.tsx
+apps/workbench/components/shell/workbench-shell.tsx
+apps/workbench/components/shell/workbench-shell.test.tsx
+apps/workbench/styles/template-data.css
+apps/workbench/app/globals.css
+apps/workbench/test/template-draft-fixture.ts
+apps/workbench/e2e/template-draft.pw.ts
+```
+
+Any additional implementation path is a PM STOP. Compiler, Graph,
+Capabilities, Product/Screen Recipes, Prisma, package, lockfile, generated
+runtime, Docker, and Compose paths are explicitly excluded.
+
+Exact controller governance manifest (6):
+
+```text
+docs/adr/adr-0015-template-restaurant-seed-data-edit.md
+docs/project-status.md
+docs/roadmap.md
+docs/superpowers/ledgers/2026-08-10-prompt-to-polished-restaurant-product.md
+docs/superpowers/plans/2026-08-14-template-restaurant-seed-data-edit.md
+docs/superpowers/specs/2026-08-14-template-restaurant-seed-data-edit-design.md
+```
+
+Acceptance evidence:
+
+- Focused final GREEN: Control Plane 90, Workbench 86. Full GREEN: Control Plane
+  370, Workbench 439, Graph 661, Capabilities 384, Compiler 501. Five no-emit
+  gates, builds, Prisma, Next, Playwright 1/1, exact-28 containment, formatting,
+  diff, and static boundaries pass.
+- The current-Snapshot hash/admission P1, JSON key-order P2, and final
+  double-submit P1 are closed; the last repair is the bounded two-file latch.
+- The same independent Sol reviewer returns final `RELEASE_ACCEPT` with
+  P0/P1/P2=0/0/0. Post-repair targeted Terra returns `PASS`, P0/P1/P2=0/0/0,
+  and `READY_FOR_DELIVERY YES`.
+- PM accepts this exact tree. The controller alone is authorized to stage the
+  exact 22+6 paths, prove staged Expected28/Actual28 with no missing,
+  unexpected, unstaged, or untracked path, rerun sensitive/diff gates, commit
+  exactly `feat(workbench): add governed restaurant data editing`, push without
+  force, and prove local `HEAD` equals upstream with a clean tree. Task 7C
+  remains not delivered until that equality is recorded.
+
+Deferred: every other entity/record/field, generic CRUD/schema forms, Users,
+permissions editing, Workflow, Experience, Page/block/content changes, history
+picker, Source, export, Publish, Compilation, generated-runtime behavior,
+provider/service/network/queue/worker, Docker/Compose, deployment, dependency,
+package, lockfile, Graph, Capability, recipe, Compiler, Prisma, or database
+change.
 
 ## Task 8 — Add Source Mode, controlled overlays, ZIP, and Git export
 

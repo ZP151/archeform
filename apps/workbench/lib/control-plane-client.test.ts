@@ -9,6 +9,8 @@ import { templateDraftResponse } from "../test/template-draft-fixture";
 import {
   ControlPlaneClient,
   ControlPlaneError,
+  deriveTemplateDataFieldValue,
+  type AppendTemplateDataFieldRevisionInput,
   type WorkbenchPreviewRun,
 } from "./control-plane-client";
 import { workbenchGraph } from "./workbench-graph";
@@ -223,6 +225,192 @@ describe("ControlPlaneClient", () => {
     );
     await expect(
       client.appendTemplatePageBlockOrderRevision("application-1", input),
+    ).rejects.toThrow("Control Plane template response is invalid.");
+  });
+
+  it("appends the exact five-field Restaurant data command and admits only the strict r.5 response", async () => {
+    const revised = templateDraftResponse(
+      5,
+      undefined,
+      undefined,
+      "Heirloom tomato pizza",
+    );
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify(revised), { status: 201 }),
+      );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+    const input: AppendTemplateDataFieldRevisionInput = {
+      baseDraftRevisionId: "draft-4",
+      entityKey: "menu-item",
+      recordId: "margherita-pizza",
+      fieldKey: "name",
+      value: "Heirloom tomato pizza",
+    };
+
+    const result = await client.appendTemplateDataFieldRevision(
+      "application/1",
+      input,
+    );
+
+    expect(result.draft.revisionNumber).toBe(5);
+    expect(deriveTemplateDataFieldValue(result)).toBe("Heirloom tomato pizza");
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/template-draft-instances/application%2F1/data-field-revisions",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    );
+  });
+
+  it("admits an index-aligned scenario mirror whose object keys use a different order", async () => {
+    const response = structuredClone(
+      templateDraftResponse(5, undefined, undefined, "Heirloom tomato pizza"),
+    );
+    const scenarioRecord = response.draft.graph.seedScenarios[0]!.records.find(
+      ({ entityKey, values }) =>
+        entityKey === "menu-item" && values.name === "Heirloom tomato pizza",
+    )!;
+    scenarioRecord.values = Object.fromEntries(
+      Object.entries(scenarioRecord.values).reverse(),
+    );
+    response.snapshot.graphChecksum = hashApplicationGraphV3(
+      response.draft.graph,
+    );
+    response.snapshot.snapshotChecksum = hashDraftPreviewSnapshotV2(
+      response.snapshot,
+    );
+    response.previews.forEach((preview) => {
+      preview.graphChecksum = response.snapshot.graphChecksum;
+    });
+    const client = new ControlPlaneClient(
+      "http://control-plane.test",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(JSON.stringify(response), { status: 201 }),
+        ),
+    );
+
+    await expect(
+      client.appendTemplateDataFieldRevision("application-1", {
+        baseDraftRevisionId: "draft-4",
+        entityKey: "menu-item",
+        recordId: "margherita-pizza",
+        fieldKey: "name",
+        value: "Heirloom tomato pizza",
+      }),
+    ).resolves.toMatchObject({ draft: { revisionNumber: 5 } });
+  });
+
+  it("rejects a hostile scenario value without invoking its accessor or echoing its error", () => {
+    const response = structuredClone(templateDraftResponse(5));
+    const scenarioRecord = response.draft.graph.seedScenarios[0]!.records.find(
+      ({ entityKey, values }) =>
+        entityKey === "menu-item" && values.name === "Margherita pizza",
+    )!;
+    let getterCalls = 0;
+    Object.defineProperty(scenarioRecord.values, "name", {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        throw new Error("HOSTILE_SCENARIO_ACCESSOR");
+      },
+    });
+
+    expect(() => deriveTemplateDataFieldValue(response)).toThrow(
+      "Control Plane template response is invalid.",
+    );
+    expect(getterCalls).toBe(0);
+  });
+
+  it.each([
+    "scenario mirror",
+    "seed identity",
+    "Draft binding",
+    "preview pair",
+  ] as const)(
+    "rejects a data response with %s drift before replacement",
+    async (drift) => {
+      const response = structuredClone(
+        templateDraftResponse(5, undefined, undefined, "Heirloom tomato pizza"),
+      );
+      if (drift === "scenario mirror") {
+        const record = response.draft.graph.seedScenarios[0]!.records.find(
+          ({ entityKey, values }) =>
+            entityKey === "menu-item" &&
+            values.name === "Heirloom tomato pizza",
+        )!;
+        record.values.name = "Scenario drift";
+      } else if (drift === "seed identity") {
+        response.draft.graph.domain.seedData!.find(
+          ({ id }) => id === "margherita-pizza",
+        )!.id = "unsupported-pizza";
+      } else if (drift === "Draft binding") {
+        response.draft.draftRevisionId = "draft-foreign";
+      } else {
+        (response.previews as unknown as unknown[]).reverse();
+      }
+      if (drift === "scenario mirror" || drift === "seed identity") {
+        response.snapshot.graphChecksum = hashApplicationGraphV3(
+          response.draft.graph,
+        );
+        response.snapshot.snapshotChecksum = hashDraftPreviewSnapshotV2(
+          response.snapshot,
+        );
+        response.previews.forEach((preview) => {
+          preview.graphChecksum = response.snapshot.graphChecksum;
+        });
+      }
+      const client = new ControlPlaneClient(
+        "http://control-plane.test",
+        vi
+          .fn()
+          .mockResolvedValue(
+            new Response(JSON.stringify(response), { status: 201 }),
+          ),
+      );
+
+      await expect(
+        client.appendTemplateDataFieldRevision("application-1", {
+          baseDraftRevisionId: "draft-4",
+          entityKey: "menu-item",
+          recordId: "margherita-pizza",
+          fieldKey: "name",
+          value: "Heirloom tomato pizza",
+        }),
+      ).rejects.toThrow("Control Plane template response is invalid.");
+    },
+  );
+
+  it("rejects a checksum-mismatched Graph before its visible seed value can be derived", async () => {
+    const response = templateDraftResponse(
+      5,
+      undefined,
+      undefined,
+      "Heirloom tomato pizza",
+    );
+    response.snapshot.graphChecksum =
+      "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+    const client = new ControlPlaneClient(
+      "http://control-plane.test",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(JSON.stringify(response), { status: 201 }),
+        ),
+    );
+
+    await expect(
+      client.appendTemplateDataFieldRevision("application-1", {
+        baseDraftRevisionId: "draft-4",
+        entityKey: "menu-item",
+        recordId: "margherita-pizza",
+        fieldKey: "name",
+        value: "Heirloom tomato pizza",
+      }),
     ).rejects.toThrow("Control Plane template response is invalid.");
   });
 

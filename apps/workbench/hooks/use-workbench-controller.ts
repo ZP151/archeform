@@ -135,6 +135,7 @@ export type WorkbenchController = {
         }
     ),
   ) => void;
+  readonly editTemplateDataField: (value: string) => void;
   readonly returnToTemplatePreview: () => void;
   readonly inspectArtifact: (artifactPath: string) => void;
   readonly startPreview: () => void;
@@ -985,6 +986,36 @@ export function useWorkbenchController({
     [controlPlane, templateDraft],
   );
 
+  const editTemplateDataField = useCallback(
+    (value: string) => {
+      if (!templateDraft) return;
+      setTemplateBusy(true);
+      setTemplateError(null);
+      setConnectionState("saving");
+      void controlPlane
+        .appendTemplateDataFieldRevision(
+          templateDraft.draft.applicationGraphId,
+          {
+            baseDraftRevisionId: templateDraft.draft.draftRevisionId,
+            entityKey: "menu-item",
+            recordId: "margherita-pizza",
+            fieldKey: "name",
+            value: value.trim(),
+          },
+        )
+        .then((instance) => {
+          setTemplateDraft(instance);
+          setConnectionState("ready");
+        })
+        .catch(() => {
+          setConnectionState("ready");
+          setTemplateError("Template data could not be saved.");
+        })
+        .finally(() => setTemplateBusy(false));
+    },
+    [controlPlane, templateDraft],
+  );
+
   const compileApplication = useCallback(
     (applicationKey: string) => {
       setOperationError(null);
@@ -1104,6 +1135,7 @@ export function useWorkbenchController({
     startCuratedTemplate,
     renameTemplateDraft,
     editTemplatePageTitle,
+    editTemplateDataField,
     returnToTemplatePreview,
     inspectArtifact,
     startPreview,

@@ -13,6 +13,7 @@ export function templateDraftResponse(
   revisionNumber = 1,
   pageTitle?: { readonly pageId: string; readonly title: string },
   pageOrder?: { readonly pageId: string; readonly blockIds: readonly string[] },
+  dataValue?: string,
 ) {
   const source = composeRestaurantProductGraph(restaurantProductFixture());
   const sourceGraph = structuredClone(source);
@@ -39,6 +40,22 @@ export function templateDraftResponse(
     Object.assign(page.recipe.regions[0]!, {
       blockIds: [...pageOrder.blockIds],
     });
+  }
+  if (dataValue !== undefined) {
+    const seedIndex = sourceGraph.domain.seedData?.findIndex(
+      ({ entity, id }) => entity === "menu-item" && id === "margherita-pizza",
+    );
+    if (seedIndex === undefined || seedIndex < 0) {
+      throw new Error("Fixture seed is unknown.");
+    }
+    sourceGraph.domain.seedData![seedIndex]!.values.name = dataValue;
+    const scenario = sourceGraph.seedScenarios.find(
+      ({ key }) => key === "fine-dining-service",
+    );
+    if (!scenario?.records[seedIndex]) {
+      throw new Error("Fixture scenario seed is unknown.");
+    }
+    scenario.records[seedIndex]!.values.name = dataValue;
   }
   const graph = assertApplicationGraphV3({
     ...sourceGraph,

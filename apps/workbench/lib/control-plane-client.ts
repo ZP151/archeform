@@ -102,6 +102,14 @@ export type WorkbenchTemplateDraftInstance = {
   ];
 };
 
+export type AppendTemplateDataFieldRevisionInput = {
+  readonly baseDraftRevisionId: string;
+  readonly entityKey: "menu-item";
+  readonly recordId: "margherita-pizza";
+  readonly fieldKey: "name";
+  readonly value: string;
+};
+
 const templateResponseError = "Control Plane template response is invalid.";
 const previewNavigationLabels = {
   "customer-mobile": ["Home", "Menu", "Cart", "Orders", "Profile"],
@@ -132,7 +140,86 @@ function responseString(record: Record<string, unknown>, key: string): string {
 }
 
 function jsonEqual(left: unknown, right: unknown): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
+  try {
+    if (Object.is(left, right)) return true;
+    if (
+      left === null ||
+      right === null ||
+      typeof left !== "object" ||
+      typeof right !== "object"
+    ) {
+      return false;
+    }
+    const leftArray = Array.isArray(left);
+    const rightArray = Array.isArray(right);
+    if (leftArray || rightArray) {
+      if (
+        !leftArray ||
+        !rightArray ||
+        Object.getPrototypeOf(left) !== Array.prototype ||
+        Object.getPrototypeOf(right) !== Array.prototype ||
+        left.length !== right.length ||
+        Reflect.ownKeys(left).length !== left.length + 1 ||
+        Reflect.ownKeys(right).length !== right.length + 1
+      ) {
+        return false;
+      }
+      for (let index = 0; index < left.length; index += 1) {
+        const leftDescriptor = Object.getOwnPropertyDescriptor(
+          left,
+          String(index),
+        );
+        const rightDescriptor = Object.getOwnPropertyDescriptor(
+          right,
+          String(index),
+        );
+        if (
+          leftDescriptor?.enumerable !== true ||
+          rightDescriptor?.enumerable !== true ||
+          !("value" in leftDescriptor) ||
+          !("value" in rightDescriptor) ||
+          !jsonEqual(leftDescriptor.value, rightDescriptor.value)
+        ) {
+          return false;
+        }
+      }
+      return true;
+    }
+    const leftPrototype = Object.getPrototypeOf(left);
+    const rightPrototype = Object.getPrototypeOf(right);
+    if (
+      (leftPrototype !== Object.prototype && leftPrototype !== null) ||
+      (rightPrototype !== Object.prototype && rightPrototype !== null)
+    ) {
+      return false;
+    }
+    const leftKeys = Reflect.ownKeys(left);
+    const rightKeys = Reflect.ownKeys(right);
+    if (
+      leftKeys.length !== rightKeys.length ||
+      leftKeys.some((key) => typeof key !== "string") ||
+      rightKeys.some((key) => typeof key !== "string")
+    ) {
+      return false;
+    }
+    for (const key of leftKeys) {
+      if (typeof key !== "string") return false;
+      const leftDescriptor = Object.getOwnPropertyDescriptor(left, key);
+      const rightDescriptor = Object.getOwnPropertyDescriptor(right, key);
+      if (
+        leftDescriptor?.enumerable !== true ||
+        rightDescriptor?.enumerable !== true ||
+        !("value" in leftDescriptor) ||
+        !("value" in rightDescriptor) ||
+        !jsonEqual(leftDescriptor.value, rightDescriptor.value)
+      ) {
+        return false;
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function expectedPreviewBinding(
@@ -379,6 +466,45 @@ function templateDraftResponse(input: unknown): WorkbenchTemplateDraftInstance {
       snapshot,
       previews: parsedPreviews,
     };
+  } catch {
+    throw new Error(templateResponseError);
+  }
+}
+
+export function deriveTemplateDataFieldValue(
+  instance: WorkbenchTemplateDraftInstance,
+): string {
+  try {
+    const seedData = instance.draft.graph.domain.seedData;
+    const scenario = instance.draft.graph.seedScenarios[0];
+    if (
+      !seedData ||
+      instance.draft.graph.seedScenarios.length !== 1 ||
+      scenario?.key !== "fine-dining-service" ||
+      scenario.records.length !== seedData.length ||
+      seedData.some(
+        (seed, index) =>
+          scenario.records[index]?.entityKey !== seed.entity ||
+          !jsonEqual(scenario.records[index]?.values, seed.values),
+      )
+    ) {
+      throw new Error();
+    }
+    const matches = seedData.flatMap((seed, index) =>
+      seed.entity === "menu-item" && seed.id === "margherita-pizza"
+        ? [{ seed, scenario: scenario.records[index] }]
+        : [],
+    );
+    const value = matches[0]?.seed.values.name;
+    if (
+      matches.length !== 1 ||
+      !matches[0]?.scenario ||
+      typeof value !== "string" ||
+      matches[0].scenario.values.name !== value
+    ) {
+      throw new Error();
+    }
+    return value;
   } catch {
     throw new Error(templateResponseError);
   }
@@ -1380,6 +1506,19 @@ export class ControlPlaneClient {
       { method: "POST", body: JSON.stringify(input) },
     );
     return templateDraftResponse(response);
+  }
+
+  async appendTemplateDataFieldRevision(
+    applicationGraphId: string,
+    input: AppendTemplateDataFieldRevisionInput,
+  ): Promise<WorkbenchTemplateDraftInstance> {
+    const response = await this.request<unknown>(
+      `/template-draft-instances/${encodeURIComponent(applicationGraphId)}/data-field-revisions`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+    const instance = templateDraftResponse(response);
+    deriveTemplateDataFieldValue(instance);
+    return instance;
   }
 
   async listLocalApplicationSummaries(): Promise<
