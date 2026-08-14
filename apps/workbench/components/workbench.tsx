@@ -225,6 +225,9 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
       case "code":
         return (
           <CodeCanvas
+            artifactError={controller.artifactError}
+            artifactLoading={controller.artifactLoading}
+            artifactSnapshot={controller.artifactSnapshot}
             canExport={Boolean(
               controller.remoteDraft && controller.publishedRevision,
             )}
@@ -233,11 +236,13 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
             graph={graph}
             onExportPublishedGraph={controller.exportPublishedGraph}
             onImportPublishedGraph={controller.importPublishedGraph}
+            onInspectArtifact={controller.inspectArtifact}
             onOpenPreview={controller.openPreview}
             onStartPreview={controller.startPreview}
             onStopPreview={controller.stopPreview}
             publishedRevision={controller.publishedRevision}
             previewRun={controller.previewRun}
+            selectedArtifact={controller.selectedArtifact}
           />
         );
       case "release":

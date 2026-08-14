@@ -4472,11 +4472,10 @@ Product Recipe, provider, or deployment contracts.
 
 ## Task 7 — Make Page, Data, Users, Workflow, and Experience contextual editors
 
-State: Task 7A, 7B, and 7C are `delivered`; Task 7D Experience is `accepted`,
-not delivered.
+State: Task 7A, 7B, 7C, and 7D are `delivered`.
 
-Owner: Task 7A/7B/7C authorities are consumed. Task 7D writer/review/QA/release
-authorities are consumed; only controller exact-29 delivery authority remains.
+Owner: Task 7A/7B/7C/7D writer, review, QA, release, and delivery authorities
+are consumed.
 
 Allowed paths: Workbench Page/Puck, Domain, Policy, Flow, Experience, selection
 context, Draft operation, and adjacent test paths assigned by PM.
@@ -4844,16 +4843,15 @@ provider/service/network/queue/worker, Docker/Compose, deployment, dependency,
 package, lockfile, Graph, Capability, recipe, Compiler, Prisma, or database
 change.
 
-Access design stop: the earlier permission-only proposal remains
-`blocked_at_design` with writer count zero because Graph V3 requires the
-declared `manager:restaurant-principal:update` permission behind its governed
-`canManage` binding; no Access ADR, route, UI, or implementation authority
-exists.
+Access/Workflow design stop: Graph-valid permission or actor additions are not
+enforced by the current Restaurant compiler/runtime, so Workbench must not
+present them as product behavior; no ADR, route, UI, or writer authority exists.
 
 ### Task 7D Experience freeze — 2026-08-14
 
-State: `accepted`, not delivered, on base
-`78955444cb82d95346fb4fbded03167f982eb693`.
+State: `delivered` at `35da63df867dc0271254b1cbad38e5613a27c348`
+with exact subject `feat(workbench): add governed restaurant theme editing`,
+non-force push, local/upstream equality, and a clean tree.
 
 Contract:
 
@@ -4927,15 +4925,15 @@ docs/superpowers/plans/2026-08-14-template-restaurant-experience-theme.md
 docs/superpowers/specs/2026-08-14-template-restaurant-experience-theme-design.md
 ```
 
-Evidence: implementation and the P1 repair are complete; independent review
+Evidence: implementation and the P1 repair completed; independent review
 returns `PASS`; targeted Terra returns `PASS`; final Sol returns
 `RELEASE_ACCEPT`, actionable P0/P1/P2=0/0/0; and PM records
 `PM_DELIVERY_AUTHORITY YES` for the exact 29 paths.
 
-Remaining gate: controller alone stages Expected29/Actual29 with zero missing,
-unexpected, unstaged, or untracked path; proves staged diff/sensitive equality;
-commits exact subject `feat(workbench): add governed restaurant theme editing`;
-pushes without force; and proves local `HEAD` equals upstream with a clean tree.
+Controller delivery consumed the exact 23+6 manifest, staged
+Expected29/Actual29 with no missing, unexpected, unstaged, or untracked path,
+committed the frozen subject, pushed without force, and proved local `HEAD`
+equals upstream at the delivered hash with a clean tree.
 
 Deferred: every other theme mode/property, tokens, designSystem, locales,
 navigation, Data, Access, Users, Workflow, Page/content, history, Source,
@@ -4945,23 +4943,89 @@ Docker/Compose, and deployment.
 
 ## Task 8 — Add Source Mode, controlled overlays, ZIP, and Git export
 
-State: `planned`.
+State: Task 8A Source Explorer is `accepted`, not delivered. Search, diff,
+overlays, ZIP, Git, and export remain `planned` with writer count zero.
 
-Owner: `platform` with `frontend` integration.
+Owner: writer/review/QA/final-Sol authorities are consumed; controller-only
+exact-15 delivery remains.
 
-Allowed paths: source manifest/export compiler targets, Workbench Code surface,
-Git adapter, ZIP export, and their tests when assigned by PM.
+### Task 8A Source Explorer freeze — 2026-08-14
 
-Acceptance evidence:
+Decision and contract:
 
-- Code shows the complete generated file tree, origins, search, and diff;
-- ZIP and Graph-first Git export share one manifest and checksums;
-- only `src/extensions/**` and declared slots are writable;
-- baseline digest and conflict state use `SourceOverlayV1`;
-- Draft Preview Snapshot output is never visible as exportable source;
-- credentials, raw model material, and private files are absent.
+- [ADR-0017](../../adr/adr-0017-workbench-source-explorer.md) is Accepted under
+  the founder standing instruction
+  `参考以下总结，若符合项目目标，则持续接受而迭代。`; PM confirms the slice is bounded,
+  additive/reversible, read-only, product-truthful, and requires no platform or
+  runtime expansion.
+- Exact journey: Builder -> Code -> Source, available only for the current
+  succeeded immutable Compilation.
+- `GET /compilations/:compilationId` remains the complete registered artifact-
+  tree authority. Workbench copies and orders rows by path, showing path, media
+  type, optional byte size, and digest.
+- Selection clears stale content and calls only the existing
+  `GET /compilations/:compilationId/artifact-content?path=...` route. The client
+  admits exactly own-data `{path,digest,content}` only when path and digest equal
+  the selected manifest descriptor; the server has already reread and SHA-256
+  verified the registered bytes.
+- Pending shows the selected path and no old content. Failure shows no
+  unverified content. A monotonic request token prevents an older selection
+  response from replacing the latest selection.
+- Search, diff, edit, Source Overlay, ZIP, Git, export, Draft Preview Snapshot
+  source, current-Draft source claims, and Compilation creation are excluded.
 
-Blocked by: Tasks 1, 4, and 5 reviewed.
+Authorities:
+
+- [Task 8A design](../specs/2026-08-14-workbench-source-explorer-design.md)
+- [Task 8A executable plan](../plans/2026-08-14-workbench-source-explorer.md)
+- [Delivery policy](../../delivery-policy.md)
+
+Exact writer manifest (9):
+
+```text
+apps/workbench/lib/control-plane-client.ts
+apps/workbench/lib/control-plane-client.test.ts
+apps/workbench/hooks/use-workbench-controller.ts
+apps/workbench/components/workbench.tsx
+apps/workbench/components/canvases/code-canvas.tsx
+apps/workbench/components/canvases/code-canvas.test.tsx
+apps/workbench/app/globals.css
+apps/workbench/e2e/source-explorer.pw.ts
+apps/workbench/components/shell/workbench-shell.test.tsx
+```
+
+The initial full Workbench run is the accepted RED at 480/482: both failures
+share only malformed mock digest `sha256:journey` in the existing shell test,
+which the strict client correctly rejects. The same writer is authorized to
+change only that fixture to one valid 64-lowercase-hex digest, then rerun the
+focused/full/browser/static gates and independent review. No production
+validation weakening or digest synthesis is authorized.
+
+Any tenth implementation path is a PM STOP. No Control Plane, Graph,
+Capabilities, recipe, Compiler/generated runtime, Prisma/database, package/
+dependency/lock, provider/network/service, Docker, Compose, or deployment path
+is authorized.
+
+Gates: focused TDD, full Workbench test/no-emit/Next compatibility, exact
+Playwright journey at 1440px and 390px, exact/static evidence, one independent
+intended-vs-implemented review, targeted real-browser QA, and one fresh final
+Sol review of strict response admission. PM/controller alone may deliver the
+exact nine implementation plus six governance paths with commit subject
+`feat(workbench): add governed source explorer`, non-force push, local/upstream
+equality, and a clean tree.
+
+The repaired-tree independent re-review is clean; targeted Terra returns
+`PASS`; final Sol after the P2 characterization returns `RELEASE_ACCEPT`,
+actionable P0/P1/P2=0/0/0. Stale failure plus valid success A/B coverage proves
+only the current token controls artifact error and admitted content. PM records
+`PM_DELIVERY_AUTHORITY YES` for exact 15 and the frozen subject. Only controller
+staging, equality, commit, non-force push, and local/upstream proof remain.
+
+Later Task 8 acceptance remains: Code eventually gains search/diff, ZIP and
+Graph-first Git share one checksum manifest, writable extensions use
+`SourceOverlayV1`, Draft Preview Snapshot output is never exportable source, and
+credentials, raw model material, and private files stay absent. No later Task 8
+writer is authorized by Task 8A.
 
 ## Task 9 — Close the Restaurant Product with guarded real-model acceptance
 

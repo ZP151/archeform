@@ -323,7 +323,8 @@ function stubControlPlane(
           artifacts: [
             {
               path: "api/test/journey.generated.test.ts",
-              digest: "sha256:journey",
+              digest:
+                "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
               mediaType: "text/plain",
             },
           ],

@@ -599,18 +599,41 @@ export type WorkbenchRevisionTimeline = {
   readonly published: readonly WorkbenchPublishedRevision[];
 };
 
+export type WorkbenchCompilationArtifact = {
+  readonly path: string;
+  readonly digest: string;
+  readonly mediaType: string;
+  readonly sizeBytes?: number | null;
+};
+
 export type WorkbenchCompilation = {
   readonly id: string;
   readonly publishedRevisionId: string;
   readonly target: string;
   readonly result: WorkbenchCompilationResult;
-  readonly artifacts?: readonly {
-    readonly path: string;
-    readonly digest: string;
-    readonly mediaType: string;
-    readonly sizeBytes?: number | null;
-  }[];
+  readonly artifacts?: readonly WorkbenchCompilationArtifact[];
 };
+
+const ARTIFACT_DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/;
+const MAX_ARTIFACT_CONTENT_BYTES = 1_000_000;
+
+function isSafeArtifactPath(path: string): boolean {
+  if (
+    path.length === 0 ||
+    path.startsWith("/") ||
+    path.includes("\\") ||
+    path.includes("\0") ||
+    /^[A-Za-z]:\//.test(path)
+  ) {
+    return false;
+  }
+
+  return path
+    .split("/")
+    .every(
+      (segment) => segment.length > 0 && segment !== "." && segment !== "..",
+    );
+}
 
 function compilationResponse(input: unknown): WorkbenchCompilation {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
@@ -629,36 +652,46 @@ function compilationResponse(input: unknown): WorkbenchCompilation {
     if (!Array.isArray(record.artifacts)) {
       throw new Error("Control Plane compilation response is invalid.");
     }
-    artifacts = record.artifacts.map((inputArtifact) => {
-      if (
-        !inputArtifact ||
-        typeof inputArtifact !== "object" ||
-        Array.isArray(inputArtifact)
-      ) {
-        throw new Error("Control Plane compilation response is invalid.");
-      }
-      const artifact = inputArtifact as Record<string, unknown>;
-      if (
-        typeof artifact.path !== "string" ||
-        typeof artifact.digest !== "string" ||
-        typeof artifact.mediaType !== "string" ||
-        (artifact.sizeBytes !== undefined &&
-          artifact.sizeBytes !== null &&
-          (typeof artifact.sizeBytes !== "number" ||
-            !Number.isSafeInteger(artifact.sizeBytes) ||
-            artifact.sizeBytes < 0))
-      ) {
-        throw new Error("Control Plane compilation response is invalid.");
-      }
-      return {
-        path: artifact.path,
-        digest: artifact.digest,
-        mediaType: artifact.mediaType,
-        ...(artifact.sizeBytes === undefined
-          ? {}
-          : { sizeBytes: artifact.sizeBytes as number | null }),
-      };
-    });
+    const artifactPaths = new Set<string>();
+    artifacts = Object.freeze(
+      record.artifacts.map((inputArtifact) => {
+        if (
+          !inputArtifact ||
+          typeof inputArtifact !== "object" ||
+          Array.isArray(inputArtifact)
+        ) {
+          throw new Error("Control Plane compilation response is invalid.");
+        }
+        const artifact = inputArtifact as Record<string, unknown>;
+        if (
+          typeof artifact.path !== "string" ||
+          !isSafeArtifactPath(artifact.path) ||
+          typeof artifact.digest !== "string" ||
+          !ARTIFACT_DIGEST_PATTERN.test(artifact.digest) ||
+          typeof artifact.mediaType !== "string" ||
+          artifact.mediaType.length === 0 ||
+          (artifact.sizeBytes !== undefined &&
+            artifact.sizeBytes !== null &&
+            (typeof artifact.sizeBytes !== "number" ||
+              !Number.isSafeInteger(artifact.sizeBytes) ||
+              artifact.sizeBytes < 0))
+        ) {
+          throw new Error("Control Plane compilation response is invalid.");
+        }
+        if (artifactPaths.has(artifact.path)) {
+          throw new Error("Control Plane compilation response is invalid.");
+        }
+        artifactPaths.add(artifact.path);
+        return Object.freeze({
+          path: artifact.path,
+          digest: artifact.digest,
+          mediaType: artifact.mediaType,
+          ...(artifact.sizeBytes === undefined
+            ? {}
+            : { sizeBytes: artifact.sizeBytes as number | null }),
+        });
+      }),
+    );
   }
   return {
     id: requiredString("id"),
@@ -815,6 +848,72 @@ export type WorkbenchArtifactContent = {
   readonly digest: string;
   readonly content: string;
 };
+
+const INVALID_ARTIFACT_RESPONSE_MESSAGE =
+  "Control Plane artifact response is invalid.";
+
+export function admitCompilationArtifactContent(
+  input: unknown,
+  selected: WorkbenchCompilationArtifact,
+): WorkbenchArtifactContent {
+  try {
+    if (
+      !input ||
+      typeof input !== "object" ||
+      Array.isArray(input) ||
+      Object.getPrototypeOf(input) !== Object.prototype
+    ) {
+      throw new Error(INVALID_ARTIFACT_RESPONSE_MESSAGE);
+    }
+
+    const keys = Reflect.ownKeys(input);
+    if (
+      keys.length !== 3 ||
+      !keys.every((key) => typeof key === "string") ||
+      !keys.includes("path") ||
+      !keys.includes("digest") ||
+      !keys.includes("content")
+    ) {
+      throw new Error(INVALID_ARTIFACT_RESPONSE_MESSAGE);
+    }
+
+    const pathDescriptor = Object.getOwnPropertyDescriptor(input, "path");
+    const digestDescriptor = Object.getOwnPropertyDescriptor(input, "digest");
+    const contentDescriptor = Object.getOwnPropertyDescriptor(input, "content");
+    const descriptors = [pathDescriptor, digestDescriptor, contentDescriptor];
+    if (
+      descriptors.some(
+        (descriptor) =>
+          descriptor === undefined ||
+          descriptor.enumerable !== true ||
+          !Object.hasOwn(descriptor, "value"),
+      )
+    ) {
+      throw new Error(INVALID_ARTIFACT_RESPONSE_MESSAGE);
+    }
+
+    const path = pathDescriptor?.value;
+    const digest = digestDescriptor?.value;
+    const content = contentDescriptor?.value;
+    if (
+      typeof path !== "string" ||
+      !isSafeArtifactPath(path) ||
+      typeof digest !== "string" ||
+      !ARTIFACT_DIGEST_PATTERN.test(digest) ||
+      typeof content !== "string" ||
+      path !== selected.path ||
+      digest !== selected.digest ||
+      content.length > MAX_ARTIFACT_CONTENT_BYTES ||
+      new TextEncoder().encode(content).byteLength > MAX_ARTIFACT_CONTENT_BYTES
+    ) {
+      throw new Error(INVALID_ARTIFACT_RESPONSE_MESSAGE);
+    }
+
+    return Object.freeze({ path, digest, content });
+  } catch {
+    throw new Error(INVALID_ARTIFACT_RESPONSE_MESSAGE);
+  }
+}
 
 export type WorkbenchPreviewRun = {
   readonly id: string;
@@ -1688,12 +1787,12 @@ export class ControlPlaneClient {
 
   getCompilationArtifact(
     compilationId: string,
-    artifactPath: string,
+    selected: WorkbenchCompilationArtifact,
   ): Promise<WorkbenchArtifactContent> {
-    return this.request(
-      `/compilations/${encodeURIComponent(compilationId)}/artifact-content?path=${encodeURIComponent(artifactPath)}`,
+    return this.request<unknown>(
+      `/compilations/${encodeURIComponent(compilationId)}/artifact-content?path=${encodeURIComponent(selected.path)}`,
       { method: "GET" },
-    );
+    ).then((response) => admitCompilationArtifactContent(response, selected));
   }
 
   startPreviewRun(compilationId: string): Promise<WorkbenchPreviewRun> {

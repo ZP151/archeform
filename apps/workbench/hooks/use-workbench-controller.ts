@@ -26,6 +26,7 @@ import {
   type WorkbenchApplicationSummary,
   type WorkbenchArtifactContent,
   type WorkbenchCompilation,
+  type WorkbenchCompilationArtifact,
   type WorkbenchDraft,
   type WorkbenchOpenedApplication,
   type WorkbenchPreviewRun,
@@ -88,6 +89,8 @@ export type WorkbenchController = {
   readonly historyOpen: boolean;
   readonly historyLoading: boolean;
   readonly artifactSnapshot: WorkbenchArtifactContent | null;
+  readonly selectedArtifact: WorkbenchCompilationArtifact | null;
+  readonly artifactError: string | null;
   readonly artifactLoading: boolean;
   readonly applications: readonly WorkbenchApplicationSummary[];
   readonly applicationsLoading: boolean;
@@ -198,6 +201,11 @@ export function useWorkbenchController({
   const [historyLoading, setHistoryLoading] = useState(false);
   const [artifactSnapshot, setArtifactSnapshot] =
     useState<WorkbenchArtifactContent | null>(null);
+  const [artifactSelection, setArtifactSelection] = useState<{
+    readonly compilationId: string;
+    readonly artifact: WorkbenchCompilationArtifact;
+  } | null>(null);
+  const [artifactError, setArtifactError] = useState<string | null>(null);
   const [artifactLoading, setArtifactLoading] = useState(false);
   const [applications, setApplications] = useState<
     readonly WorkbenchApplicationSummary[]
@@ -218,6 +226,20 @@ export function useWorkbenchController({
   const [templateBusy, setTemplateBusy] = useState(false);
   const [templateError, setTemplateError] = useState<string | null>(null);
   const bootstrapRequest = useRef(0);
+  const artifactRequestToken = useRef(0);
+  const selectedArtifact =
+    artifactSelection !== null &&
+    artifactSelection.compilationId === compilation?.id
+      ? artifactSelection.artifact
+      : null;
+
+  useEffect(() => {
+    artifactRequestToken.current += 1;
+    setArtifactSelection(null);
+    setArtifactSnapshot(null);
+    setArtifactError(null);
+    setArtifactLoading(false);
+  }, [compilation?.id]);
   const applicationsRequest = useRef(0);
   const portfolioRequest = useRef(0);
   const templateCloneRequest = useRef<{
@@ -614,20 +636,44 @@ export function useWorkbenchController({
   const inspectArtifact = useCallback(
     (artifactPath: string) => {
       if (!compilation) return;
+      const artifact = compilation.artifacts?.find(
+        (candidate) => candidate.path === artifactPath,
+      );
+      if (!artifact) return;
+      const selected = Object.freeze({
+        path: artifact.path,
+        digest: artifact.digest,
+        mediaType: artifact.mediaType,
+        ...(artifact.sizeBytes === undefined
+          ? {}
+          : { sizeBytes: artifact.sizeBytes }),
+      });
+      const token = ++artifactRequestToken.current;
+      setArtifactSelection({
+        compilationId: compilation.id,
+        artifact: selected,
+      });
+      setArtifactSnapshot(null);
+      setArtifactError(null);
       setArtifactLoading(true);
-      setOperationError(null);
       void controlPlane
-        .getCompilationArtifact(compilation.id, artifactPath)
-        .then(setArtifactSnapshot)
-        .catch((error) => {
-          setArtifactSnapshot(null);
-          setOperationError(
-            error instanceof Error
-              ? error.message
-              : "Generated artifact could not be inspected.",
-          );
+        .getCompilationArtifact(compilation.id, selected)
+        .then((content) => {
+          if (artifactRequestToken.current === token) {
+            setArtifactSnapshot(content);
+          }
         })
-        .finally(() => setArtifactLoading(false));
+        .catch(() => {
+          if (artifactRequestToken.current === token) {
+            setArtifactSnapshot(null);
+            setArtifactError("Generated artifact could not be inspected.");
+          }
+        })
+        .finally(() => {
+          if (artifactRequestToken.current === token) {
+            setArtifactLoading(false);
+          }
+        });
     },
     [compilation, controlPlane],
   );
@@ -1129,6 +1175,8 @@ export function useWorkbenchController({
     historyOpen: state.historyOpen,
     historyLoading,
     artifactSnapshot,
+    selectedArtifact,
+    artifactError,
     artifactLoading,
     applications,
     applicationsLoading,

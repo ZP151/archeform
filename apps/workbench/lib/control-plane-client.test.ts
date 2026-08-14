@@ -7,12 +7,14 @@ import {
 import { templateDraftResponse } from "../test/template-draft-fixture";
 
 import {
+  admitCompilationArtifactContent,
   ControlPlaneClient,
   ControlPlaneError,
   deriveTemplateDataFieldValue,
   deriveTemplateExperienceThemeMode,
   type AppendTemplateDataFieldRevisionInput,
   type AppendTemplateExperienceThemeRevisionInput,
+  type WorkbenchCompilationArtifact,
   type WorkbenchPreviewRun,
 } from "./control-plane-client";
 import { workbenchGraph } from "./workbench-graph";
@@ -1561,7 +1563,8 @@ describe("ControlPlaneClient", () => {
           artifacts: [
             {
               path: "web/app/page.tsx",
-              digest: "sha256:abc",
+              digest:
+                "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
               mediaType: "text/typescript",
             },
           ],
@@ -1586,6 +1589,367 @@ describe("ControlPlaneClient", () => {
       "http://control-plane.test/compilations/compilation-1",
       expect.objectContaining({ method: "GET" }),
     );
+  });
+
+  it("preserves a complete safe unique artifact manifest when a consumer sorts a copy", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: "compilation-1",
+          publishedRevisionId: "published-1",
+          target: "application-bundle",
+          result: {
+            status: "succeeded",
+            artifactCount: 2,
+            completedAt: "2026-08-14T12:00:00.000Z",
+          },
+          artifacts: [
+            {
+              path: "web/app/page.tsx",
+              digest:
+                "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              mediaType: "text/typescript",
+              sizeBytes: 256,
+            },
+            {
+              path: "api/package.json",
+              digest:
+                "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              mediaType: "application/json",
+              sizeBytes: 128,
+            },
+          ],
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    const compilation = await client.getCompilation("compilation-1");
+    expect(compilation.artifacts).toEqual([
+      {
+        path: "web/app/page.tsx",
+        digest:
+          "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        mediaType: "text/typescript",
+        sizeBytes: 256,
+      },
+      {
+        path: "api/package.json",
+        digest:
+          "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        mediaType: "application/json",
+        sizeBytes: 128,
+      },
+    ]);
+
+    const ordered = [...compilation.artifacts!].sort((left, right) =>
+      left.path < right.path ? -1 : left.path > right.path ? 1 : 0,
+    );
+    expect(ordered.map(({ path }) => path)).toEqual([
+      "api/package.json",
+      "web/app/page.tsx",
+    ]);
+    expect(compilation.artifacts?.map(({ path }) => path)).toEqual([
+      "web/app/page.tsx",
+      "api/package.json",
+    ]);
+  });
+
+  it.each([
+    [
+      "empty path",
+      [
+        {
+          path: "",
+          digest: `sha256:${"a".repeat(64)}`,
+          mediaType: "text/plain",
+        },
+      ],
+    ],
+    [
+      "absolute path",
+      [
+        {
+          path: "/api/main.ts",
+          digest: `sha256:${"a".repeat(64)}`,
+          mediaType: "text/plain",
+        },
+      ],
+    ],
+    [
+      "drive path",
+      [
+        {
+          path: "C:/api/main.ts",
+          digest: `sha256:${"a".repeat(64)}`,
+          mediaType: "text/plain",
+        },
+      ],
+    ],
+    [
+      "backslash path",
+      [
+        {
+          path: "api\\main.ts",
+          digest: `sha256:${"a".repeat(64)}`,
+          mediaType: "text/plain",
+        },
+      ],
+    ],
+    [
+      "dot segment",
+      [
+        {
+          path: "api/./main.ts",
+          digest: `sha256:${"a".repeat(64)}`,
+          mediaType: "text/plain",
+        },
+      ],
+    ],
+    [
+      "parent segment",
+      [
+        {
+          path: "api/../main.ts",
+          digest: `sha256:${"a".repeat(64)}`,
+          mediaType: "text/plain",
+        },
+      ],
+    ],
+    [
+      "short digest",
+      [{ path: "api/main.ts", digest: "sha256:abc", mediaType: "text/plain" }],
+    ],
+    [
+      "uppercase digest",
+      [
+        {
+          path: "api/main.ts",
+          digest: `sha256:${"A".repeat(64)}`,
+          mediaType: "text/plain",
+        },
+      ],
+    ],
+    [
+      "empty media type",
+      [
+        {
+          path: "api/main.ts",
+          digest: `sha256:${"a".repeat(64)}`,
+          mediaType: "",
+        },
+      ],
+    ],
+    [
+      "negative size",
+      [
+        {
+          path: "api/main.ts",
+          digest: `sha256:${"a".repeat(64)}`,
+          mediaType: "text/plain",
+          sizeBytes: -1,
+        },
+      ],
+    ],
+    [
+      "fractional size",
+      [
+        {
+          path: "api/main.ts",
+          digest: `sha256:${"a".repeat(64)}`,
+          mediaType: "text/plain",
+          sizeBytes: 1.5,
+        },
+      ],
+    ],
+    [
+      "unsafe size",
+      [
+        {
+          path: "api/main.ts",
+          digest: `sha256:${"a".repeat(64)}`,
+          mediaType: "text/plain",
+          sizeBytes: Number.MAX_SAFE_INTEGER + 1,
+        },
+      ],
+    ],
+    [
+      "duplicate path",
+      [
+        {
+          path: "api/main.ts",
+          digest: `sha256:${"a".repeat(64)}`,
+          mediaType: "text/plain",
+        },
+        {
+          path: "api/main.ts",
+          digest: `sha256:${"b".repeat(64)}`,
+          mediaType: "text/typescript",
+        },
+      ],
+    ],
+  ])("rejects a compilation manifest with %s", async (_label, artifacts) => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: "compilation-1",
+          publishedRevisionId: "published-1",
+          target: "application-bundle",
+          result: {
+            status: "succeeded",
+            artifactCount: artifacts.length,
+            completedAt: "2026-08-14T12:00:00.000Z",
+          },
+          artifacts,
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(client.getCompilation("compilation-1")).rejects.toThrow(
+      "Control Plane compilation response is invalid.",
+    );
+  });
+
+  it("admits either JSON key order as a fresh frozen descriptor-bound primitive copy", () => {
+    const selected: WorkbenchCompilationArtifact = {
+      path: "web/app/page.tsx",
+      digest:
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      mediaType: "text/typescript",
+      sizeBytes: 27,
+    };
+    const first = {
+      content: "export const ready = true;\n",
+      digest: selected.digest,
+      path: selected.path,
+    };
+    const second = {
+      path: selected.path,
+      digest: selected.digest,
+      content: "export const ready = true;\n",
+    };
+
+    const admittedFirst = admitCompilationArtifactContent(first, selected);
+    const admittedSecond = admitCompilationArtifactContent(second, selected);
+    expect(admittedFirst).toEqual({
+      path: "web/app/page.tsx",
+      digest:
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      content: "export const ready = true;\n",
+    });
+    expect(admittedSecond).toEqual(admittedFirst);
+    expect(admittedFirst).not.toBe(first);
+    expect(Object.isFrozen(admittedFirst)).toBe(true);
+    first.content = "changed after admission";
+    expect(admittedFirst.content).toBe("export const ready = true;\n");
+  });
+
+  it("rejects hostile artifact responses with one fixed error and invokes no accessors or conversions", () => {
+    const selected: WorkbenchCompilationArtifact = {
+      path: "web/app/page.tsx",
+      digest:
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      mediaType: "text/typescript",
+    };
+    let getterCalls = 0;
+    let conversionCalls = 0;
+    const accessor = {
+      path: selected.path,
+      digest: selected.digest,
+      get content() {
+        getterCalls += 1;
+        return "must not be read";
+      },
+    };
+    const nonEnumerable = {
+      path: selected.path,
+      digest: selected.digest,
+      content: "hidden",
+    };
+    Object.defineProperty(nonEnumerable, "content", { enumerable: false });
+    const symbol = {
+      path: selected.path,
+      digest: selected.digest,
+      content: "extra symbol",
+      [Symbol("extra")]: true,
+    };
+    const inherited = Object.create({ inherited: true });
+    Object.assign(inherited, {
+      path: selected.path,
+      digest: selected.digest,
+      content: "custom prototype",
+    });
+    const conversions = {
+      toJSON() {
+        conversionCalls += 1;
+        return "converted";
+      },
+      toString() {
+        conversionCalls += 1;
+        return "converted";
+      },
+      valueOf() {
+        conversionCalls += 1;
+        return "converted";
+      },
+    };
+    const throwingProxy = new Proxy(
+      {},
+      {
+        ownKeys() {
+          throw new Error("HOSTILE_PROXY_DETAIL");
+        },
+      },
+    );
+    const revoked = Proxy.revocable({}, {});
+    revoked.revoke();
+    const cases: readonly unknown[] = [
+      null,
+      [],
+      new String("boxed"),
+      inherited,
+      {
+        path: selected.path,
+        digest: selected.digest,
+        content: "extra",
+        extra: true,
+      },
+      symbol,
+      nonEnumerable,
+      accessor,
+      throwingProxy,
+      revoked.proxy,
+      {
+        path: "api/package.json",
+        digest: selected.digest,
+        content: "wrong path",
+      },
+      {
+        path: selected.path,
+        digest:
+          "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        content: "wrong digest",
+      },
+      { path: selected.path, digest: "sha256:abc", content: "bad digest" },
+      { path: selected.path, digest: selected.digest, content: 42 },
+      { path: selected.path, digest: selected.digest, content: conversions },
+      {
+        path: selected.path,
+        digest: selected.digest,
+        content: "é".repeat(500_001),
+      },
+    ];
+
+    for (const input of cases) {
+      expect(() => admitCompilationArtifactContent(input, selected)).toThrow(
+        "Control Plane artifact response is invalid.",
+      );
+    }
+    expect(getterCalls).toBe(0);
+    expect(conversionCalls).toBe(0);
   });
 
   it.each(["createCompilation", "getCompilation"] as const)(
@@ -1626,7 +1990,14 @@ describe("ControlPlaneClient", () => {
     },
   );
 
-  it("reads only a registered generated artifact snapshot by compilation and encoded path", async () => {
+  it("reads only the selected registered descriptor by compilation and encoded path", async () => {
+    const selected: WorkbenchCompilationArtifact = {
+      path: "docs/api-reference.md",
+      digest:
+        "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      mediaType: "text/markdown",
+      sizeBytes: 16,
+    };
     const fetcher = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -1641,7 +2012,7 @@ describe("ControlPlaneClient", () => {
     const client = new ControlPlaneClient("http://control-plane.test", fetcher);
 
     await expect(
-      client.getCompilationArtifact("compilation-1", "docs/api-reference.md"),
+      client.getCompilationArtifact("compilation-1", selected),
     ).resolves.toEqual({
       path: "docs/api-reference.md",
       digest:
@@ -1653,6 +2024,45 @@ describe("ControlPlaneClient", () => {
       expect.objectContaining({ method: "GET" }),
     );
   });
+
+  it.each([
+    {
+      path: "api/package.json",
+      digest:
+        "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      content: "wrong registered path",
+    },
+    {
+      path: "docs/api-reference.md",
+      digest:
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      content: "wrong registered digest",
+    },
+  ])(
+    "rejects artifact content that is not bound to the selected descriptor",
+    async (response) => {
+      const selected: WorkbenchCompilationArtifact = {
+        path: "docs/api-reference.md",
+        digest:
+          "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        mediaType: "text/markdown",
+      };
+      const fetcher = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(response), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+      const client = new ControlPlaneClient(
+        "http://control-plane.test",
+        fetcher,
+      );
+
+      await expect(
+        client.getCompilationArtifact("compilation-1", selected),
+      ).rejects.toThrow("Control Plane artifact response is invalid.");
+    },
+  );
 
   it("reads ordered Draft and Published revision snapshots for the Workbench timeline", async () => {
     const fetcher = vi

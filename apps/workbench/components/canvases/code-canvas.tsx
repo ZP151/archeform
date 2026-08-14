@@ -5,7 +5,9 @@ import { useRef } from "react";
 import { previewRunPresentation } from "../../lib/workbench-model";
 import { diffApplicationGraphs } from "../../lib/graph-diff";
 import type {
+  WorkbenchArtifactContent,
   WorkbenchCompilation,
+  WorkbenchCompilationArtifact,
   WorkbenchPreviewRun,
   WorkbenchPublishedRevision,
 } from "../../lib/control-plane-client";
@@ -21,34 +23,44 @@ const ADAPTER_METADATA = [
 
 /**
  * The Code canvas: the published Graph projection, its diff from the Draft,
- * the immutable Compilation status, and the isolated preview controls.
- * Artifact evidence lives in the Activity sheet — one inspect click away —
- * so the canvas itself stays a facts surface, not a source browser.
+ * the immutable Compilation status, its registered Source artifacts, and the
+ * isolated preview controls. The Source viewer only renders descriptor-bound,
+ * admitted content from a succeeded Compilation.
  */
 export function CodeCanvas({
   graph,
+  artifactError,
+  artifactLoading,
+  artifactSnapshot,
   publishedRevision,
   compilation,
   canExport,
   exchangeStatus,
   onExportPublishedGraph,
   onImportPublishedGraph,
+  onInspectArtifact,
   onOpenPreview,
   onStartPreview,
   onStopPreview,
   previewRun,
+  selectedArtifact,
 }: {
   graph: ApplicationGraphV1;
+  artifactError: string | null;
+  artifactLoading: boolean;
+  artifactSnapshot: WorkbenchArtifactContent | null;
   publishedRevision: WorkbenchPublishedRevision | null;
   compilation: WorkbenchCompilation | null;
   canExport: boolean;
   exchangeStatus: string | null;
   onExportPublishedGraph: () => void;
   onImportPublishedGraph: (file: File) => void;
+  onInspectArtifact: (artifactPath: string) => void;
   onOpenPreview: () => void;
   onStartPreview: () => void;
   onStopPreview: () => void;
   previewRun: WorkbenchPreviewRun | null;
+  selectedArtifact: WorkbenchCompilationArtifact | null;
 }) {
   const importInput = useRef<HTMLInputElement>(null);
   const graphDiff = publishedRevision?.graph
@@ -58,6 +70,27 @@ export function CodeCanvas({
     compilation?.result.status === "succeeded",
     previewRun,
   );
+  const artifacts = [...(compilation?.artifacts ?? [])].sort((left, right) =>
+    left.path < right.path ? -1 : left.path > right.path ? 1 : 0,
+  );
+  const verifiedArtifact =
+    !artifactLoading &&
+    !artifactError &&
+    artifactSnapshot !== null &&
+    selectedArtifact !== null &&
+    artifactSnapshot.path === selectedArtifact.path &&
+    artifactSnapshot.digest === selectedArtifact.digest
+      ? artifactSnapshot
+      : null;
+  const artifactStatus = !selectedArtifact
+    ? "Select a registered artifact."
+    : artifactLoading
+      ? "Verifying registered artifact"
+      : artifactError
+        ? artifactError
+        : verifiedArtifact
+          ? "Verified registered artifact."
+          : "Registered artifact content is not verified.";
   return (
     <div className="code-canvas">
       <div className="code-tabs">
@@ -90,6 +123,71 @@ export function CodeCanvas({
           <b>{JSON.stringify(compilation?.result.status ?? "not queued")}</b>
         </code>
       </pre>
+      {compilation?.result.status === "succeeded" && (
+        <section className="source-explorer" aria-label="Source">
+          <header>
+            <strong>Source</strong>
+            <small>Registered output from this immutable Compilation</small>
+          </header>
+          <div className="source-explorer-layout">
+            <nav
+              aria-label="Registered source artifacts"
+              className="source-artifact-tree"
+            >
+              <ul>
+                {artifacts.map((artifact) => {
+                  const size = formatArtifactSize(artifact.sizeBytes);
+                  return (
+                    <li key={artifact.path}>
+                      <button
+                        aria-current={
+                          selectedArtifact?.path === artifact.path
+                            ? "true"
+                            : undefined
+                        }
+                        aria-label={`Open ${artifact.path}; ${artifact.mediaType}${size ? `; ${size}` : ""}; digest ${artifact.digest}`}
+                        data-source-path={artifact.path}
+                        onClick={() => onInspectArtifact(artifact.path)}
+                        type="button"
+                      >
+                        <strong>{artifact.path}</strong>
+                        <span>{artifact.mediaType}</span>
+                        {size && <span>{size}</span>}
+                        <code className="source-artifact-digest">
+                          {artifact.digest}
+                        </code>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+            <section
+              aria-label="Verified source content"
+              className="source-content-viewer"
+            >
+              <div className="source-content-heading">
+                <strong>
+                  {selectedArtifact?.path ?? "No artifact selected"}
+                </strong>
+                {selectedArtifact && (
+                  <span className="source-selected-digest">
+                    {selectedArtifact.digest}
+                  </span>
+                )}
+              </div>
+              <p aria-live="polite" role="status">
+                {artifactStatus}
+              </p>
+              {verifiedArtifact && (
+                <pre>
+                  <code>{verifiedArtifact.content}</code>
+                </pre>
+              )}
+            </section>
+          </div>
+        </section>
+      )}
       <section className="graph-diff" aria-label="Application Graph diff">
         <div>
           <strong>Graph diff</strong>
@@ -211,4 +309,13 @@ export function CodeCanvas({
       )}
     </div>
   );
+}
+
+function formatArtifactSize(
+  sizeBytes: number | null | undefined,
+): string | null {
+  if (sizeBytes === null || sizeBytes === undefined) return null;
+  if (sizeBytes < 1_000) return `${sizeBytes} B`;
+  if (sizeBytes < 1_000_000) return `${(sizeBytes / 1_000).toFixed(1)} KB`;
+  return `${(sizeBytes / 1_000_000).toFixed(1)} MB`;
 }
