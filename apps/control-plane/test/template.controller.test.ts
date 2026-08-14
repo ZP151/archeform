@@ -22,6 +22,7 @@ const templates = {
   appendTemplatePageRevision: vi.fn(),
   appendTemplatePageBlockOrderRevision: vi.fn(),
   appendTemplateDataFieldRevision: vi.fn(),
+  appendTemplateExperienceThemeRevision: vi.fn(),
 };
 
 @Module({
@@ -201,6 +202,34 @@ describe("TemplateController", () => {
       "application-1",
       body,
     );
+  });
+
+  it("routes the exact raw template Restaurant Experience theme command", async () => {
+    const body = {
+      baseDraftRevisionId: "draft-5",
+      mode: "dark",
+    };
+    templates.appendTemplateExperienceThemeRevision.mockResolvedValue({
+      id: "instance-6",
+    });
+
+    const response = await fetch(
+      `${baseUrl}/template-draft-instances/application-1/experience-theme-revisions`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+
+    expect(response.status).toBe(201);
+    expect(await response.json()).toEqual({ id: "instance-6" });
+    expect(
+      templates.appendTemplateExperienceThemeRevision,
+    ).toHaveBeenCalledOnce();
+    expect(
+      templates.appendTemplateExperienceThemeRevision,
+    ).toHaveBeenCalledWith("application-1", body);
   });
 
   it("routes a resumable template Draft open by application key", async () => {

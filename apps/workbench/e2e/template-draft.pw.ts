@@ -8,7 +8,7 @@ const jsonHeaders = {
   "content-type": "application/json",
 };
 
-test("clones through an authoritative Restaurant data-field Draft r.5", async ({
+test("clones through an authoritative Restaurant Experience Draft r.6", async ({
   page,
 }) => {
   const first = templateDraftResponse(1);
@@ -34,10 +34,21 @@ test("clones through an authoritative Restaurant data-field Draft r.5", async ({
     },
     "Heirloom tomato pizza",
   );
+  const sixth = templateDraftResponse(
+    6,
+    { pageId: "customer-menu", title: "Seasonal Menu" },
+    {
+      pageId: "customer-home",
+      blockIds: ["home-items", "home-hero", "home-categories"],
+    },
+    "Heirloom tomato pizza",
+    "dark",
+  );
   let templateCreated = false;
   let currentTemplate = first;
   let blockOrderAttempts = 0;
   let dataFieldAttempts = 0;
+  let experienceThemeAttempts = 0;
   await page.route("http://127.0.0.1:3000/**", async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
@@ -223,6 +234,32 @@ test("clones through an authoritative Restaurant data-field Draft r.5", async ({
       });
       return;
     }
+    if (
+      request.method() === "POST" &&
+      path ===
+        "/template-draft-instances/application-1/experience-theme-revisions"
+    ) {
+      expect(request.postDataJSON()).toEqual({
+        baseDraftRevisionId: "draft-5",
+        mode: "dark",
+      });
+      experienceThemeAttempts += 1;
+      if (experienceThemeAttempts === 1) {
+        await route.fulfill({
+          status: 409,
+          headers: jsonHeaders,
+          body: JSON.stringify({ message: "HOSTILE_EXPERIENCE_SAVE_DETAIL" }),
+        });
+        return;
+      }
+      currentTemplate = sixth;
+      await route.fulfill({
+        status: 201,
+        headers: jsonHeaders,
+        body: JSON.stringify(sixth),
+      });
+      return;
+    }
     await route.fulfill({
       status: 404,
       headers: jsonHeaders,
@@ -260,12 +297,12 @@ test("clones through an authoritative Restaurant data-field Draft r.5", async ({
     page
       .getByRole("navigation", { name: "Builder navigation" })
       .getByRole("button"),
-  ).toHaveCount(2);
+  ).toHaveCount(3);
   await expect(
     page
       .getByRole("navigation", { name: "Builder navigation" })
       .getByRole("button"),
-  ).toHaveText(["Page", "Data"]);
+  ).toHaveText(["Page", "Data", "Experience"]);
   const pageTitle = page.getByRole("textbox", { name: "Page title" });
   await pageTitle.fill("Seasonal Menu");
   await expect(
@@ -457,10 +494,69 @@ test("clones through an authoritative Restaurant data-field Draft r.5", async ({
   expect(fifth.snapshot.id).toBe("preview-5");
   expect(fifth.snapshot.graphChecksum).not.toBe(fourth.snapshot.graphChecksum);
 
+  const builderNavigation = page.getByRole("navigation", {
+    name: "Builder navigation",
+  });
+  const experienceDestination = builderNavigation.getByRole("button", {
+    name: "Experience",
+  });
+  await experienceDestination.focus();
+  await expect(experienceDestination).toBeFocused();
+  await experienceDestination.press("Enter");
+  const experienceWorkspace = page.getByRole("region", {
+    name: "Template Experience workspace",
+  });
+  await expect(experienceWorkspace).toBeVisible();
+  const light = page.getByRole("radio", { name: "Light" });
+  const dark = page.getByRole("radio", { name: "Dark" });
+  const experienceFrames = page.locator("[data-template-experience-preview]");
+  const experienceFrameThemes = () =>
+    experienceFrames.evaluateAll((frames) =>
+      frames.map((frame) => frame.getAttribute("data-template-theme")),
+    );
+  await expect(light).toBeChecked();
+  await expect(dark).not.toBeChecked();
+  expect(await experienceFrameThemes()).toEqual(["light", "light"]);
+  await dark.check();
+  await expect(dark).toBeChecked();
+  expect(await experienceFrameThemes()).toEqual(["light", "light"]);
+  await experienceWorkspace.locator("form").evaluate((form) => {
+    form.dispatchEvent(
+      new Event("submit", { bubbles: true, cancelable: true }),
+    );
+    form.dispatchEvent(
+      new Event("submit", { bubbles: true, cancelable: true }),
+    );
+  });
+  await expect(experienceWorkspace.getByRole("alert")).toHaveText(
+    "Template experience could not be saved.",
+  );
+  await expect(page.getByText("HOSTILE_EXPERIENCE_SAVE_DETAIL")).toHaveCount(0);
+  await expect(dark).toBeChecked();
+  await expect(dark).toBeFocused();
+  expect(await experienceFrameThemes()).toEqual(["light", "light"]);
+  expect(experienceThemeAttempts).toBe(1);
+  expect(currentTemplate).toEqual(fifth);
+
+  await page
+    .getByRole("button", { name: "Save dark theme as new Draft" })
+    .click();
+  await expect(page.getByText("Draft r.6 · Preview active")).toBeVisible();
+  expect(await experienceFrameThemes()).toEqual(["dark", "dark"]);
+  await expect
+    .soft(page.locator('[data-template-experience-save-status="success"]'))
+    .toBeFocused();
+  expect(experienceThemeAttempts).toBe(2);
+  expect(fifth.draft.graph.experience.theme.mode).toBe("light");
+  expect(fifth.snapshot.id).toBe("preview-5");
+  expect(sixth.draft.graph.experience.theme.mode).toBe("dark");
+  expect(sixth.snapshot.id).toBe("preview-6");
+  expect(sixth.snapshot.graphChecksum).not.toBe(fifth.snapshot.graphChecksum);
+
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
   await page.getByRole("button", { name: "Open Maison Rivage" }).click();
-  await expect(page.getByText("Preview synced · Draft r.5")).toBeVisible();
+  await expect(page.getByText("Preview synced · Draft r.6")).toBeVisible();
   await page.getByRole("button", { name: "Select Home" }).click();
   await page.getByRole("button", { name: "Edit Home" }).click();
   await page
@@ -528,4 +624,74 @@ test("clones through an authoritative Restaurant data-field Draft r.5", async ({
     );
   });
   expect(contrast).toBeGreaterThanOrEqual(4.5);
+
+  await page
+    .getByRole("navigation", { name: "Builder navigation" })
+    .getByRole("button", { name: "Experience" })
+    .click();
+  await expect(experienceWorkspace).toBeVisible();
+  await expect(dark).toBeChecked();
+  await expect(light).not.toBeChecked();
+  expect(await experienceFrameThemes()).toEqual(["dark", "dark"]);
+  await expect(experienceFrames).toContainText([
+    "Snapshot preview-6",
+    "Snapshot preview-6",
+  ]);
+  const experienceEditorBox = await page
+    .locator(".template-experience-editor")
+    .boundingBox();
+  const experiencePreviewBox = await page
+    .locator(".template-experience-previews")
+    .boundingBox();
+  expect(experienceEditorBox).not.toBeNull();
+  expect(experiencePreviewBox).not.toBeNull();
+  expect
+    .soft(experiencePreviewBox!.y)
+    .toBeGreaterThan(experienceEditorBox!.y + experienceEditorBox!.height - 1);
+  for (const target of await page
+    .locator(
+      ".template-experience-workspace button, .template-experience-option",
+    )
+    .all()) {
+    const box = await target.boundingBox();
+    expect(box).not.toBeNull();
+    expect.soft(box!.width).toBeGreaterThanOrEqual(44);
+    expect.soft(box!.height).toBeGreaterThanOrEqual(44);
+  }
+  expect
+    .soft(
+      await page.evaluate(() => ({
+        clientWidth: document.documentElement.clientWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+      })),
+    )
+    .toEqual({ clientWidth: 390, scrollWidth: 390 });
+  const darkFrameContrast = await experienceFrames
+    .first()
+    .evaluate((element) => {
+      const parse = (value: string) =>
+        value
+          .match(/\d+(?:\.\d+)?/g)!
+          .slice(0, 3)
+          .map(Number);
+      const luminance = (rgb: number[]) => {
+        const channels = rgb.map((channel) => {
+          const normalized = channel / 255;
+          return normalized <= 0.03928
+            ? normalized / 12.92
+            : ((normalized + 0.055) / 1.055) ** 2.4;
+        });
+        return (
+          0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!
+        );
+      };
+      const style = getComputedStyle(element);
+      const foreground = luminance(parse(style.color));
+      const background = luminance(parse(style.backgroundColor));
+      return (
+        (Math.max(foreground, background) + 0.05) /
+        (Math.min(foreground, background) + 0.05)
+      );
+    });
+  expect(darkFrameContrast).toBeGreaterThanOrEqual(4.5);
 });

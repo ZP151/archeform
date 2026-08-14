@@ -22,6 +22,7 @@ import {
 } from "./template-draft-workspace";
 import { TemplatePageWorkspace } from "./template-page-workspace";
 import { TemplateDataWorkspace } from "./template-data-workspace";
+import { TemplateExperienceWorkspace } from "./template-experience-workspace";
 
 /** The transient example prompts offered by the Home composer popover. */
 export const EXAMPLE_PROMPTS: readonly string[] = [
@@ -94,7 +95,7 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
     },
   };
   const context = resolveWorkbenchContext(
-    state.activeSurface,
+    state.activeSurface === "experience" ? "page" : state.activeSurface,
     journey.state.stage,
     journey.busy,
   );
@@ -184,6 +185,24 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
             />
             <RoleSimulator graph={graph} />
           </div>
+        );
+      case "experience":
+        return controller.templateDraft ? (
+          <TemplateExperienceWorkspace
+            instance={controller.templateDraft}
+            busy={controller.templateBusy}
+            error={controller.templateError}
+            onSave={controller.editTemplateExperienceTheme}
+            onBack={controller.returnToTemplatePreview}
+          />
+        ) : (
+          <ProductStudio
+            page={graph.page}
+            experience={graph.experience}
+            entityKeys={graph.domain.entities.map((entity) => entity.key)}
+            onPageModelChange={controller.changePageModel}
+            onExperienceModelChange={controller.changeExperienceModel}
+          />
         );
       case "policy":
         return (

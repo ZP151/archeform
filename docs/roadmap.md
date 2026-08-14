@@ -177,14 +177,25 @@ P0 acceptance gates:
 > after corrected Terra PASS. Generated runtime order, broader editors, Source,
 > Publish, and Compilation remain deferred.
 > ADR-0015 is Accepted under the founder's standing instruction. Task 7C is
-> accepted, not delivered, on clean pushed base `5f984691`: exactly one mirrored
+> delivered at pushed-equal commit `78955444`: exactly one mirrored
 > `menu-item`/`margherita-pizza`/`name` seed-field edit, Draft r.5, one active
 > Snapshot V2, and strict-response-only Customer Menu plus Merchant Menu
 > Management updates. Final Sol returns `RELEASE_ACCEPT` and targeted Terra
 > returns `PASS`, both P0/P1/P2=0/0/0; focused/full five-package, no-emit,
-> build/Prisma/Next, Playwright, exact-28, and static gates pass. Only
-> controller exact-28 delivery remains. Generic Data CRUD and all Graph/
+> build/Prisma/Next, Playwright, exact-28, and static gates pass. Generic Data
+> CRUD and all Graph/
 > platform/compiler/recipe/Prisma/dependency/runtime expansion remain deferred.
+> The earlier Access permission-only proposal is stopped at design because
+> Graph V3 requires the declared permission behind its governed `canManage`
+> binding. ADR-0016 is Accepted for Task 7D Experience: the bounded existing
+> Graph operation changes only Restaurant `experience.theme.mode` Light -> Dark,
+> appends Draft r.6 plus one active Snapshot V2, and switches both Workbench
+> preview frames only from the strict response. Its plan freezes 23
+> implementation paths; Graph/Capability/recipe/Compiler/runtime/Prisma/
+> dependency expansion remains deferred. Implementation, repaired-tree review,
+> targeted Terra, and final Sol are complete; final Sol returns
+> `RELEASE_ACCEPT`, actionable P0/P1/P2=0/0/0. PM accepts the exact 29-path tree
+> for controller delivery; it is not yet delivered.
 
 ### P1 Product Closure gate (accepted and delivered)
 
@@ -369,9 +380,10 @@ default-hidden Advanced inspection, and first style/state decomposition are
 delivered at `1a659a27`. Task 6B delivers the curated Restaurant template as an
 independent V3 Draft with an immutable dual-surface Snapshot V2 preview. Task 7A
 and 7B deliver Page title and same-set block-order edits through Draft r.4. The
-ADR-0015 Task 7C is accepted and awaits controller delivery: one checksum-bound
-mirrored Restaurant seed-name edit through Draft r.5, without another Graph or
-platform contract.
+ADR-0015 Task 7C is delivered through Draft r.5 at `78955444`. ADR-0016 Task 7D
+Experience is PM-accepted, not delivered, for the exact Light -> Dark Draft r.6
+operation and 29-path delivery manifest. The earlier Access proposal remains
+blocked at design.
 
 Workbench implementation includes characterization-first decomposition of the
 current 3,818-line global stylesheet, 907-line controller, and 1,131-line
@@ -674,12 +686,14 @@ at SHA-256 `ffa017cf14cd911495d70d8cf490bb637b570057235d3d841657e0f7c732b732`.
 Restaurant semantics and UI Registry are delivered at `fbcf92ea` and
 `8313e7ae` with independent P0/P1/P2=0/0/0 reviews and pushed equality.
 Task 5 merchant/dual-surface compilation, Task 6A/6B Workbench foundations, and
-Task 7A/7B Page editing are delivered through pushed-equal commit `5f984691`.
-ADR-0015 Task 7C is accepted, not delivered, on the exact 22-path Data slice and
-exact-28 delivery tree: one mirrored Restaurant seed-name edit, Draft r.5, and
-strict Snapshot-bound dual-preview update. Controller delivery is the only open
-gate. Every other Data/Users/Workflow/Experience, Source, Publish, Compilation,
-block edit, and generated-runtime change remains serialized behind a later
-reviewed freeze.
+Task 7A/7B Page editing and ADR-0015 Task 7C Data editing are delivered through
+pushed-equal commit `78955444`; Task 7C adds one mirrored Restaurant seed-name
+edit, Draft r.5, and strict Snapshot-bound dual-preview update. The earlier
+Access permission-only proposal is stopped at design. ADR-0016 Task 7D
+Experience is accepted for delivery, but not delivered, for only Light -> Dark,
+Draft r.6, one active Snapshot V2, and strict-response-only Customer/Merchant
+frame updates. Every other Data,
+Access, Users, Workflow, Experience, Source, Publish, Compilation, block edit,
+and generated-runtime change remains serialized behind a later reviewed freeze.
 Provider, service, Docker, cloud/deployment, and production-payment work remain
 unauthorized.

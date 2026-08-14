@@ -65,4 +65,17 @@ export class TemplateController {
       body,
     );
   }
+
+  @Post(
+    "template-draft-instances/:applicationGraphId/experience-theme-revisions",
+  )
+  appendTemplateExperienceThemeRevision(
+    @Param("applicationGraphId") applicationGraphId: string,
+    @Body() body: unknown,
+  ) {
+    return this.templates.appendTemplateExperienceThemeRevision(
+      applicationGraphId,
+      body,
+    );
+  }
 }

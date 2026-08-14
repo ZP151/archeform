@@ -14,6 +14,7 @@ export function templateDraftResponse(
   pageTitle?: { readonly pageId: string; readonly title: string },
   pageOrder?: { readonly pageId: string; readonly blockIds: readonly string[] },
   dataValue?: string,
+  themeMode?: "light" | "dark",
 ) {
   const source = composeRestaurantProductGraph(restaurantProductFixture());
   const sourceGraph = structuredClone(source);
@@ -56,6 +57,9 @@ export function templateDraftResponse(
       throw new Error("Fixture scenario seed is unknown.");
     }
     scenario.records[seedIndex]!.values.name = dataValue;
+  }
+  if (themeMode !== undefined) {
+    sourceGraph.experience.theme.mode = themeMode;
   }
   const graph = assertApplicationGraphV3({
     ...sourceGraph,

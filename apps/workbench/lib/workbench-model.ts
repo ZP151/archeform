@@ -1,5 +1,6 @@
 export type Surface =
   "home" | "page" | "domain" | "flow" | "policy" | "ai" | "code" | "release";
+export type WorkbenchSurface = Surface | "experience";
 export type Theme = "light" | "dark";
 export type PreviewRunStatus =
   "starting" | "ready" | "stopping" | "stopped" | "failed";
@@ -20,7 +21,7 @@ export type PreviewRunPresentation = {
 export type OverlayId = "inspector" | "history" | "activity" | "library";
 
 export type WorkbenchState = {
-  activeSurface: Surface;
+  activeSurface: WorkbenchSurface;
   lifecycle: "draft" | "published";
   revision: string;
   theme: Theme;
@@ -44,7 +45,7 @@ export type WorkbenchState = {
 };
 
 export type WorkbenchAction =
-  | { type: "open"; surface: Surface }
+  | { type: "open"; surface: WorkbenchSurface }
   | { type: "publish" }
   | { type: "synchronize-draft"; revision: string }
   | { type: "toggle-theme" }

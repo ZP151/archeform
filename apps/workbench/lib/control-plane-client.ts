@@ -110,6 +110,11 @@ export type AppendTemplateDataFieldRevisionInput = {
   readonly value: string;
 };
 
+export type AppendTemplateExperienceThemeRevisionInput = {
+  readonly baseDraftRevisionId: string;
+  readonly mode: "dark";
+};
+
 const templateResponseError = "Control Plane template response is invalid.";
 const previewNavigationLabels = {
   "customer-mobile": ["Home", "Menu", "Cart", "Orders", "Profile"],
@@ -505,6 +510,18 @@ export function deriveTemplateDataFieldValue(
       throw new Error();
     }
     return value;
+  } catch {
+    throw new Error(templateResponseError);
+  }
+}
+
+export function deriveTemplateExperienceThemeMode(
+  instance: WorkbenchTemplateDraftInstance,
+): "light" | "dark" {
+  try {
+    const mode = instance.draft.graph.experience.theme.mode;
+    if (mode !== "light" && mode !== "dark") throw new Error();
+    return mode;
   } catch {
     throw new Error(templateResponseError);
   }
@@ -1518,6 +1535,19 @@ export class ControlPlaneClient {
     );
     const instance = templateDraftResponse(response);
     deriveTemplateDataFieldValue(instance);
+    return instance;
+  }
+
+  async appendTemplateExperienceThemeRevision(
+    applicationGraphId: string,
+    input: AppendTemplateExperienceThemeRevisionInput,
+  ): Promise<WorkbenchTemplateDraftInstance> {
+    const response = await this.request<unknown>(
+      `/template-draft-instances/${encodeURIComponent(applicationGraphId)}/experience-theme-revisions`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+    const instance = templateDraftResponse(response);
+    deriveTemplateExperienceThemeMode(instance);
     return instance;
   }
 

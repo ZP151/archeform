@@ -9,7 +9,15 @@ export const workbenchUiBoundary = deepFreeze({
 export type WorkbenchContextKey = "workspace-home" | "builder";
 
 export type WorkbenchDestinationKey =
-  "apps" | "page" | "data" | "workflow" | "access" | "ai" | "code" | "release";
+  | "apps"
+  | "page"
+  | "data"
+  | "workflow"
+  | "access"
+  | "experience"
+  | "ai"
+  | "code"
+  | "release";
 
 export type WorkbenchContextDefinition = {
   readonly key: WorkbenchContextKey;
@@ -36,6 +44,7 @@ export const workbenchContextRegistry: readonly WorkbenchContextDefinition[] =
         { key: "data", label: "Data", icon: "database" },
         { key: "workflow", label: "Workflow", icon: "workflow" },
         { key: "access", label: "Access", icon: "shield-check" },
+        { key: "experience", label: "Experience", icon: "palette" },
         { key: "ai", label: "AI", icon: "sparkles" },
         { key: "code", label: "Code", icon: "code-2" },
         { key: "release", label: "Publish", icon: "rocket" },

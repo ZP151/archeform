@@ -138,11 +138,13 @@ function stubControlPlane(
     readonly failFirstTemplateClone?: boolean;
     readonly failTemplatePageRevision?: boolean;
     readonly failFirstTemplateDataRevision?: boolean;
+    readonly failFirstTemplateExperienceRevision?: boolean;
   } = {},
 ): ReturnType<typeof vi.fn> {
   const applications = options.applications ?? [];
   let templateCloneAttempts = 0;
   let templateDataRevisionAttempts = 0;
+  let templateExperienceRevisionAttempts = 0;
   const fetcher = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = new URL(String(input));
@@ -196,6 +198,23 @@ function stubControlPlane(
           templateDataRevisionAttempts === 1
         ) {
           return responseJson({ message: "HOSTILE_DATA_SAVE_SENTINEL" }, 503);
+        }
+        return responseJson(options.templateDrafts?.at(-1) ?? null, 201);
+      }
+      if (
+        method === "POST" &&
+        url.pathname ===
+          "/template-draft-instances/application-1/experience-theme-revisions"
+      ) {
+        templateExperienceRevisionAttempts += 1;
+        if (
+          options.failFirstTemplateExperienceRevision &&
+          templateExperienceRevisionAttempts === 1
+        ) {
+          return responseJson(
+            { message: "HOSTILE_EXPERIENCE_SAVE_SENTINEL" },
+            503,
+          );
         }
         return responseJson(options.templateDrafts?.at(-1) ?? null, 201);
       }
@@ -367,6 +386,7 @@ describe("Workbench shell", () => {
     failFirstTemplateClone = false,
     failTemplatePageRevision = false,
     failFirstTemplateDataRevision = false,
+    failFirstTemplateExperienceRevision = false,
   ) {
     const fetcher = stubControlPlane({
       applications,
@@ -374,6 +394,7 @@ describe("Workbench shell", () => {
       failFirstTemplateClone,
       failTemplatePageRevision,
       failFirstTemplateDataRevision,
+      failFirstTemplateExperienceRevision,
     });
     vi.stubGlobal("fetch", fetcher);
     act(() => {
@@ -400,6 +421,7 @@ describe("Workbench shell", () => {
       "builder-workspace.css",
       "template-draft.css",
       "template-data.css",
+      "template-experience.css",
       "template-preview.css",
       "template-page.css",
     ];
@@ -470,7 +492,7 @@ describe("Workbench shell", () => {
     expect(buttons[0]?.getAttribute("title")).toContain("describe or resume");
   });
 
-  it("moves a product request into the local Builder workspace", async () => {
+  it("moves a product request into the legacy non-template Builder destinations", async () => {
     renderWorkbench();
 
     const brief = container.querySelector<HTMLTextAreaElement>(
@@ -888,7 +910,7 @@ describe("Workbench shell", () => {
         ),
         (button) => button.getAttribute("aria-label"),
       ),
-    ).toEqual(["Page", "Data"]);
+    ).toEqual(["Page", "Data", "Experience"]);
     const pageTitle = container.querySelector<HTMLInputElement>(
       'input[aria-label="Page title"]',
     )!;
@@ -1066,6 +1088,156 @@ describe("Workbench shell", () => {
       recordId: "margherita-pizza",
       fieldKey: "name",
       value: "Heirloom tomato pizza",
+    });
+  });
+
+  it("adds keyboard-reachable Experience and keeps r.5 light through failure before strict r.6 dark replacement", async () => {
+    const fifth = templateDraftResponse(
+      5,
+      { pageId: "customer-menu", title: "Seasonal Menu" },
+      {
+        pageId: "customer-home",
+        blockIds: ["home-items", "home-hero", "home-categories"],
+      },
+      "Heirloom tomato pizza",
+      "light",
+    );
+    const sixth = templateDraftResponse(
+      6,
+      { pageId: "customer-menu", title: "Seasonal Menu" },
+      {
+        pageId: "customer-home",
+        blockIds: ["home-items", "home-hero", "home-categories"],
+      },
+      "Heirloom tomato pizza",
+      "dark",
+    );
+    const fetcher = renderWorkbench(
+      undefined,
+      [fifth, sixth],
+      false,
+      false,
+      false,
+      true,
+    );
+
+    await waitForAssertion(() => {
+      expect(
+        container.querySelector<HTMLButtonElement>(
+          'button[aria-label="Start from Maison Aurelia"]',
+        ),
+      ).not.toBeNull();
+    });
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>(
+          'button[aria-label="Start from Maison Aurelia"]',
+        )
+        ?.click();
+    });
+    await waitForAssertion(() => {
+      expect(container.textContent).toContain("Preview synced · Draft r.5");
+    });
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>('button[aria-label="Edit Home"]')
+        ?.click();
+    });
+    await waitForAssertion(() => {
+      expect(
+        container.querySelector(
+          'section[aria-label="Template Page workspace"]',
+        ),
+      ).not.toBeNull();
+    });
+
+    const builderButtons = Array.from(
+      container.querySelectorAll<HTMLButtonElement>(
+        'nav[aria-label="Builder navigation"] button',
+      ),
+    );
+    expect(
+      builderButtons.map((button) => button.getAttribute("aria-label")),
+    ).toEqual(["Page", "Data", "Experience"]);
+    builderButtons[0]!.focus();
+    act(() => {
+      builderButtons[0]!.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "End", bubbles: true }),
+      );
+    });
+    expect(document.activeElement).toBe(builderButtons[2]);
+    act(() => builderButtons[2]!.click());
+    await waitForAssertion(() => {
+      expect(
+        container.querySelector(
+          'section[aria-label="Template Experience workspace"]',
+        ),
+      ).not.toBeNull();
+    });
+
+    const dark = container.querySelector<HTMLInputElement>(
+      'input[type="radio"][aria-label="Dark"]',
+    )!;
+    const frames = () =>
+      Array.from(
+        container.querySelectorAll<HTMLElement>(
+          "[data-template-experience-preview]",
+        ),
+        (frame) => frame.dataset.templateTheme,
+      );
+    expect(frames()).toEqual(["light", "light"]);
+    act(() => dark.click());
+    expect(dark.checked).toBe(true);
+    expect(frames()).toEqual(["light", "light"]);
+    const form = container.querySelector("form")!;
+    act(() => {
+      form.dispatchEvent(
+        new Event("submit", { bubbles: true, cancelable: true }),
+      );
+      form.dispatchEvent(
+        new Event("submit", { bubbles: true, cancelable: true }),
+      );
+    });
+    await waitForAssertion(() => {
+      expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+        "Template experience could not be saved.",
+      );
+    });
+    expect(container.textContent).not.toContain(
+      "HOSTILE_EXPERIENCE_SAVE_SENTINEL",
+    );
+    expect(dark.checked).toBe(true);
+    expect(frames()).toEqual(["light", "light"]);
+    expect(document.activeElement).toBe(dark);
+
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>(
+          'button[aria-label="Save dark theme as new Draft"]',
+        )
+        ?.click();
+    });
+    await waitForAssertion(() => {
+      expect(container.textContent).toContain("Draft r.6 · Preview active");
+      expect(frames()).toEqual(["dark", "dark"]);
+    });
+    expect(
+      document.activeElement?.getAttribute(
+        "data-template-experience-save-status",
+      ),
+    ).toBe("success");
+    const calls = fetcher.mock.calls.filter(([input, init]) => {
+      const url = new URL(String(input));
+      return (
+        init?.method === "POST" &&
+        url.pathname ===
+          "/template-draft-instances/application-1/experience-theme-revisions"
+      );
+    });
+    expect(calls).toHaveLength(2);
+    expect(JSON.parse(String(calls[0]?.[1]?.body))).toEqual({
+      baseDraftRevisionId: "draft-5",
+      mode: "dark",
     });
   });
 

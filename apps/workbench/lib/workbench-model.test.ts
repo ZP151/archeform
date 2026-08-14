@@ -29,6 +29,17 @@ describe("transitionWorkbench", () => {
     expect(published.revision).toBe("r.18");
   });
 
+  it("opens the additive Experience surface without changing the retained chrome theme", () => {
+    const opened = transitionWorkbench(initialWorkbenchState, {
+      type: "open",
+      surface: "experience",
+    });
+
+    expect(opened.activeSurface).toBe("experience");
+    expect(opened.theme).toBe("light");
+    expect(opened.lifecycle).toBe("draft");
+  });
+
   it("toggles the retained theme without changing the active decision surface", () => {
     const next = transitionWorkbench(initialWorkbenchState, {
       type: "toggle-theme",

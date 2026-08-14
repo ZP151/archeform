@@ -10,7 +10,9 @@ import {
   ControlPlaneClient,
   ControlPlaneError,
   deriveTemplateDataFieldValue,
+  deriveTemplateExperienceThemeMode,
   type AppendTemplateDataFieldRevisionInput,
+  type AppendTemplateExperienceThemeRevisionInput,
   type WorkbenchPreviewRun,
 } from "./control-plane-client";
 import { workbenchGraph } from "./workbench-graph";
@@ -410,6 +412,155 @@ describe("ControlPlaneClient", () => {
         recordId: "margherita-pizza",
         fieldKey: "name",
         value: "Heirloom tomato pizza",
+      }),
+    ).rejects.toThrow("Control Plane template response is invalid.");
+  });
+
+  it("appends the exact two-field Experience command and admits a key-reordered strict r.6 response", async () => {
+    const revised = templateDraftResponse(
+      6,
+      { pageId: "customer-menu", title: "Seasonal Menu" },
+      {
+        pageId: "customer-home",
+        blockIds: ["home-items", "home-hero", "home-categories"],
+      },
+      "Heirloom tomato pizza",
+      "dark",
+    );
+    const reordered = Object.fromEntries(Object.entries(revised).reverse());
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify(reordered), { status: 201 }),
+      );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+    const input: AppendTemplateExperienceThemeRevisionInput = {
+      baseDraftRevisionId: "draft-5",
+      mode: "dark",
+    };
+
+    const result = await client.appendTemplateExperienceThemeRevision(
+      "application/1",
+      input,
+    );
+
+    expect(result.draft.revisionNumber).toBe(6);
+    expect(deriveTemplateExperienceThemeMode(result)).toBe("dark");
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/template-draft-instances/application%2F1/experience-theme-revisions",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    );
+  });
+
+  it("derives light and dark only from admitted Graph instances", () => {
+    expect(deriveTemplateExperienceThemeMode(templateDraftResponse(5))).toBe(
+      "light",
+    );
+    expect(
+      deriveTemplateExperienceThemeMode(
+        templateDraftResponse(
+          6,
+          undefined,
+          undefined,
+          "Heirloom tomato pizza",
+          "dark",
+        ),
+      ),
+    ).toBe("dark");
+  });
+
+  it.each([
+    "Graph checksum",
+    "latest Draft identity",
+    "latest Snapshot identity",
+    "active Snapshot state",
+    "preview pair",
+    "unsupported system theme",
+  ] as const)(
+    "rejects Experience response %s drift before replacement",
+    async (drift) => {
+      const response = structuredClone(
+        templateDraftResponse(
+          6,
+          undefined,
+          undefined,
+          "Heirloom tomato pizza",
+          "dark",
+        ),
+      );
+      if (drift === "Graph checksum") {
+        response.snapshot.graphChecksum =
+          "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+      } else if (drift === "latest Draft identity") {
+        response.draft.draftRevisionId = "draft-foreign";
+      } else if (drift === "latest Snapshot identity") {
+        response.snapshot.draftRevisionId = "draft-foreign";
+        response.snapshot.snapshotChecksum = hashDraftPreviewSnapshotV2(
+          response.snapshot,
+        );
+      } else if (drift === "active Snapshot state") {
+        (response.snapshot as { state: string }).state = "rendering";
+        response.snapshot.snapshotChecksum = hashDraftPreviewSnapshotV2(
+          response.snapshot,
+        );
+      } else if (drift === "preview pair") {
+        (response.previews as unknown as unknown[]).reverse();
+      } else {
+        response.draft.graph.experience.theme.mode = "system";
+        response.snapshot.graphChecksum = hashApplicationGraphV3(
+          response.draft.graph,
+        );
+        response.snapshot.snapshotChecksum = hashDraftPreviewSnapshotV2(
+          response.snapshot,
+        );
+        response.previews.forEach((preview) => {
+          preview.graphChecksum = response.snapshot.graphChecksum;
+        });
+      }
+      const client = new ControlPlaneClient(
+        "http://control-plane.test",
+        vi
+          .fn()
+          .mockResolvedValue(
+            new Response(JSON.stringify(response), { status: 201 }),
+          ),
+      );
+
+      await expect(
+        client.appendTemplateExperienceThemeRevision("application-1", {
+          baseDraftRevisionId: "draft-5",
+          mode: "dark",
+        }),
+      ).rejects.toThrow("Control Plane template response is invalid.");
+    },
+  );
+
+  it("rejects a checksum-mismatched dark Graph before visible theme derivation", async () => {
+    const response = templateDraftResponse(
+      6,
+      undefined,
+      undefined,
+      "Heirloom tomato pizza",
+      "dark",
+    );
+    response.snapshot.graphChecksum =
+      "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+    const client = new ControlPlaneClient(
+      "http://control-plane.test",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(JSON.stringify(response), { status: 201 }),
+        ),
+    );
+
+    await expect(
+      client.appendTemplateExperienceThemeRevision("application-1", {
+        baseDraftRevisionId: "draft-5",
+        mode: "dark",
       }),
     ).rejects.toThrow("Control Plane template response is invalid.");
   });

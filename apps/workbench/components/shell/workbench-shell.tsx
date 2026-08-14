@@ -65,7 +65,7 @@ export function WorkbenchShell({ controller, children }: Props) {
   } = controller;
 
   const contextKey = resolveWorkbenchContext(
-    state.activeSurface,
+    state.activeSurface === "experience" ? "page" : state.activeSurface,
     controller.journey.state.stage,
     controller.journey.busy,
   );
@@ -183,7 +183,17 @@ export function WorkbenchShell({ controller, children }: Props) {
             activeSurface={state.activeSurface}
             onNavigate={navigate}
             allowedDestinations={
-              templateDraftActive ? ["page", "data"] : undefined
+              templateDraftActive
+                ? ["page", "data", "experience"]
+                : [
+                    "page",
+                    "data",
+                    "workflow",
+                    "access",
+                    "ai",
+                    "code",
+                    "release",
+                  ]
             }
           />
         )}
@@ -216,7 +226,11 @@ export function WorkbenchShell({ controller, children }: Props) {
           {!templateDraftActive && (
             <InspectorSheet
               open={state.inspectorOpen}
-              surface={state.activeSurface}
+              surface={
+                state.activeSurface === "experience"
+                  ? "page"
+                  : state.activeSurface
+              }
               graph={graph}
               compilation={compilation}
               publishedRevisionId={publishedRevision?.id ?? null}

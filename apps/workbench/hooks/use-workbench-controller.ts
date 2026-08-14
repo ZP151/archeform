@@ -136,6 +136,7 @@ export type WorkbenchController = {
     ),
   ) => void;
   readonly editTemplateDataField: (value: string) => void;
+  readonly editTemplateExperienceTheme: (mode: "dark") => void;
   readonly returnToTemplatePreview: () => void;
   readonly inspectArtifact: (artifactPath: string) => void;
   readonly startPreview: () => void;
@@ -1016,6 +1017,33 @@ export function useWorkbenchController({
     [controlPlane, templateDraft],
   );
 
+  const editTemplateExperienceTheme = useCallback(
+    (mode: "dark") => {
+      if (!templateDraft) return;
+      setTemplateBusy(true);
+      setTemplateError(null);
+      setConnectionState("saving");
+      void controlPlane
+        .appendTemplateExperienceThemeRevision(
+          templateDraft.draft.applicationGraphId,
+          {
+            baseDraftRevisionId: templateDraft.draft.draftRevisionId,
+            mode,
+          },
+        )
+        .then((instance) => {
+          setTemplateDraft(instance);
+          setConnectionState("ready");
+        })
+        .catch(() => {
+          setConnectionState("ready");
+          setTemplateError("Template experience could not be saved.");
+        })
+        .finally(() => setTemplateBusy(false));
+    },
+    [controlPlane, templateDraft],
+  );
+
   const compileApplication = useCallback(
     (applicationKey: string) => {
       setOperationError(null);
@@ -1136,6 +1164,7 @@ export function useWorkbenchController({
     renameTemplateDraft,
     editTemplatePageTitle,
     editTemplateDataField,
+    editTemplateExperienceTheme,
     returnToTemplatePreview,
     inspectArtifact,
     startPreview,

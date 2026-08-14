@@ -63,6 +63,7 @@ describe("Workbench UI boundary", () => {
           { key: "data", label: "Data", icon: "database" },
           { key: "workflow", label: "Workflow", icon: "workflow" },
           { key: "access", label: "Access", icon: "shield-check" },
+          { key: "experience", label: "Experience", icon: "palette" },
           { key: "ai", label: "AI", icon: "sparkles" },
           { key: "code", label: "Code", icon: "code-2" },
           { key: "release", label: "Publish", icon: "rocket" },
@@ -78,7 +79,16 @@ describe("Workbench UI boundary", () => {
       workbenchUi
         .findWorkbenchContext("builder")
         .destinations.map(({ key }) => key),
-    ).toEqual(["page", "data", "workflow", "access", "ai", "code", "release"]);
+    ).toEqual([
+      "page",
+      "data",
+      "workflow",
+      "access",
+      "experience",
+      "ai",
+      "code",
+      "release",
+    ]);
   });
 
   it("deep-freezes context definitions and redacts unknown lookup material", () => {

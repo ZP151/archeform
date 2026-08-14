@@ -10,9 +10,42 @@ import {
 const compilerCalls = vi.hoisted(() => ({
   failSourceClosure: false,
   failRender: false,
+  failRenderSurface: null as string | null,
   closure: vi.fn(),
   render: vi.fn(),
 }));
+const graphCalls = vi.hoisted(() => ({
+  events: [] as string[],
+  failDarkHash: false,
+}));
+vi.mock("@factory/graph", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@factory/graph")>();
+  return {
+    ...actual,
+    hashApplicationGraphV3: (
+      ...args: Parameters<typeof actual.hashApplicationGraphV3>
+    ) => {
+      let mode = "unknown";
+      try {
+        const graph = args[0] as {
+          readonly experience?: {
+            readonly theme?: { readonly mode?: unknown };
+          };
+        };
+        if (typeof graph.experience?.theme?.mode === "string") {
+          mode = graph.experience.theme.mode;
+        }
+      } catch {
+        mode = "hostile";
+      }
+      graphCalls.events.push(`hash:${mode}`);
+      if (graphCalls.failDarkHash && mode === "dark") {
+        throw new Error("HOSTILE_THEME_HASH_SENTINEL");
+      }
+      return actual.hashApplicationGraphV3(...args);
+    },
+  };
+});
 vi.mock("@factory/compiler", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@factory/compiler")>();
   return {
@@ -32,7 +65,10 @@ vi.mock("@factory/compiler", async (importOriginal) => {
       ...args: Parameters<typeof actual.renderRestaurantDraftPreviewSurface>
     ) => {
       compilerCalls.render(...args);
-      if (compilerCalls.failRender) {
+      if (
+        compilerCalls.failRender ||
+        compilerCalls.failRenderSurface === args[1]
+      ) {
         throw new Error("Restaurant Draft preview is invalid.");
       }
       return actual.renderRestaurantDraftPreviewSurface(...args);
@@ -92,6 +128,7 @@ describe("TemplateService", () => {
     vi.setSystemTime(new Date("2026-08-14T08:00:00.000Z"));
     compilerCalls.failSourceClosure = false;
     compilerCalls.failRender = false;
+    compilerCalls.failRenderSurface = null;
     compilerCalls.closure.mockClear();
     compilerCalls.render.mockClear();
   });
@@ -1640,6 +1677,7 @@ describe("TemplateService Restaurant data-field revision", () => {
     vi.setSystemTime(new Date("2026-08-14T08:00:00.000Z"));
     compilerCalls.failSourceClosure = false;
     compilerCalls.failRender = false;
+    compilerCalls.failRenderSurface = null;
     compilerCalls.closure.mockClear();
     compilerCalls.render.mockClear();
   });
@@ -1967,6 +2005,482 @@ describe("TemplateService Restaurant data-field revision", () => {
       ).rejects.toThrow("Template Draft request is invalid.");
       expect(attemptedDrafts).toHaveLength(1);
       expect(attemptedSnapshots).toHaveLength(failure === "snapshot" ? 1 : 0);
+      expect(committedDrafts).toEqual([]);
+      expect(committedSnapshots).toEqual([]);
+    },
+  );
+});
+
+const experienceThemeCommand = {
+  baseDraftRevisionId: "draft-5",
+  mode: "dark" as const,
+};
+
+function experienceAggregate(service: TemplateService) {
+  const graph = createCuratedRestaurantTemplateGraph(
+    "restaurant-template-001",
+    "Maison Rivage",
+  );
+  const seedIndex = graph.domain.seedData!.findIndex(
+    ({ entity, id }) => entity === "menu-item" && id === "margherita-pizza",
+  );
+  graph.domain.seedData![seedIndex]!.values.name = "Heirloom tomato pizza";
+  graph.seedScenarios[0]!.records[seedIndex]!.values.name =
+    "Heirloom tomato pizza";
+  const aggregate = dataFieldAggregate(service, graph);
+  const draft = aggregate.draftRevisions[0]!;
+  draft.id = "draft-5";
+  draft.revisionNumber = 5;
+  draft.draftPreviewSnapshots = [
+    {
+      snapshot: dataFieldSnapshot(graph, {
+        id: "preview-5",
+        draftRevisionId: "draft-5",
+      }),
+    },
+  ];
+  return aggregate;
+}
+
+describe("TemplateService Restaurant Experience theme revision", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-14T08:00:00.000Z"));
+    compilerCalls.failSourceClosure = false;
+    compilerCalls.failRender = false;
+    compilerCalls.failRenderSurface = null;
+    compilerCalls.closure.mockClear();
+    compilerCalls.render.mockClear();
+    graphCalls.events.length = 0;
+    graphCalls.failDarkHash = false;
+  });
+
+  it("atomically appends r.6 and one checksum-bound active Snapshot without mutating r.5", async () => {
+    const prisma = prismaMock();
+    const service = new TemplateService(prisma as unknown as PrismaService);
+    const aggregate = experienceAggregate(service);
+    const previous = structuredClone(aggregate.draftRevisions[0]!);
+    prisma.applicationGraph.findFirst.mockResolvedValue(aggregate);
+    graphCalls.events.length = 0;
+    prisma.draftRevision.create.mockImplementation(async ({ data }: any) => {
+      graphCalls.events.push("draft:create");
+      return { id: "draft-6", ...data };
+    });
+    prisma.draftPreviewSnapshot.create.mockImplementation(
+      async ({ data }: any) => data,
+    );
+
+    const result = await service.appendTemplateExperienceThemeRevision(
+      "application-1",
+      experienceThemeCommand,
+    );
+
+    expect(result.draft).toMatchObject({
+      draftRevisionId: "draft-6",
+      revisionNumber: 6,
+      graph: { experience: { theme: { mode: "dark" } } },
+    });
+    expect(result.snapshot).toMatchObject({
+      draftRevisionId: "draft-6",
+      graphChecksum: hashApplicationGraphV3(result.draft.graph),
+      state: "active",
+    });
+    expect(result.previews.map(({ surface }) => surface.surfaceKey)).toEqual([
+      "customer-mobile",
+      "merchant-desktop",
+    ]);
+    expect(compilerCalls.closure).toHaveBeenCalledOnce();
+    expect(compilerCalls.render).toHaveBeenCalledTimes(2);
+    expect(prisma.draftRevision.create).toHaveBeenCalledOnce();
+    expect(prisma.draftPreviewSnapshot.create).toHaveBeenCalledOnce();
+    expect(aggregate.draftRevisions[0]).toEqual(previous);
+    expect(graphCalls.events.indexOf("hash:dark")).toBeGreaterThanOrEqual(0);
+    expect(graphCalls.events.indexOf("hash:dark")).toBeLessThan(
+      graphCalls.events.indexOf("draft:create"),
+    );
+    expect(prisma.applicationGraph.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: "application-1",
+        workspace: { slug: "local-workspace" },
+      },
+      include: {
+        workspace: true,
+        draftRevisions: {
+          orderBy: { revisionNumber: "desc" },
+          take: 1,
+          include: {
+            draftPreviewSnapshots: {
+              orderBy: { createdAt: "desc" },
+              take: 1,
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it.each([
+    ["missing", null],
+    ["malformed", { malformed: true }],
+    [
+      "wrong Graph checksum",
+      {
+        graphChecksum:
+          "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      },
+    ],
+    ["wrong workspace identity", { workspaceId: "other-workspace" }],
+    ["wrong Application identity", { applicationGraphId: "application-2" }],
+    ["wrong Draft identity", { draftRevisionId: "draft-4" }],
+    ["non-active state", { state: "rendering" }],
+  ] as const)(
+    "rejects a %s current Snapshot with fixed 400 before closure or append",
+    async (_label, drift) => {
+      const prisma = prismaMock();
+      const service = new TemplateService(prisma as unknown as PrismaService);
+      const aggregate = experienceAggregate(service);
+      const draft = aggregate.draftRevisions[0]!;
+      if (drift === null) {
+        draft.draftPreviewSnapshots = [];
+      } else if ("malformed" in drift) {
+        draft.draftPreviewSnapshots = [{ snapshot: drift }];
+      } else {
+        draft.draftPreviewSnapshots = [
+          {
+            snapshot: dataFieldSnapshot(draft.graph, {
+              id: "preview-5",
+              draftRevisionId: "draft-5",
+              ...drift,
+            }),
+          },
+        ];
+      }
+      const previous = structuredClone(aggregate);
+      prisma.applicationGraph.findFirst.mockResolvedValue(aggregate);
+
+      const error = await service
+        .appendTemplateExperienceThemeRevision(
+          "application-1",
+          experienceThemeCommand,
+        )
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as BadRequestException).getStatus()).toBe(400);
+      expect((error as Error).message).toBe(
+        "Template Draft request is invalid.",
+      );
+      expect(aggregate).toEqual(previous);
+      expect(compilerCalls.closure).not.toHaveBeenCalled();
+      expect(compilerCalls.render).not.toHaveBeenCalled();
+      expect(prisma.draftRevision.create).not.toHaveBeenCalled();
+      expect(prisma.draftPreviewSnapshot.create).not.toHaveBeenCalled();
+    },
+  );
+
+  it("captures once before Prisma and reuses frozen primitives across three Serializable attempts", async () => {
+    const prisma = prismaMock();
+    const service = new TemplateService(prisma as unknown as PrismaService);
+    prisma.applicationGraph.findFirst.mockResolvedValue(
+      experienceAggregate(service),
+    );
+    prisma.draftRevision.create.mockImplementation(async ({ data }: any) => ({
+      id: "draft-6",
+      ...data,
+    }));
+    prisma.draftPreviewSnapshot.create.mockImplementation(
+      async ({ data }: any) => data,
+    );
+    const events: string[] = [];
+    const calls = { prototype: 0, keys: 0, descriptors: 0 };
+    const input = new Proxy(
+      { ...experienceThemeCommand },
+      {
+        getPrototypeOf(target) {
+          calls.prototype += 1;
+          events.push("capture:prototype");
+          return Reflect.getPrototypeOf(target);
+        },
+        ownKeys(target) {
+          calls.keys += 1;
+          events.push("capture:keys");
+          return Reflect.ownKeys(target);
+        },
+        getOwnPropertyDescriptor(target, key) {
+          calls.descriptors += 1;
+          events.push(`capture:descriptor:${String(key)}`);
+          return Reflect.getOwnPropertyDescriptor(target, key);
+        },
+      },
+    );
+    let attempts = 0;
+    const execute = prisma.$transaction.getMockImplementation()!;
+    prisma.$transaction.mockImplementation(async (...args: any[]) => {
+      attempts += 1;
+      events.push(`transaction:${attempts}`);
+      const result = await execute(...args);
+      if (attempts < 3) throw { code: "P2034" };
+      return result;
+    });
+
+    await expect(
+      service.appendTemplateExperienceThemeRevision("application-1", input),
+    ).resolves.toMatchObject({ draft: { revisionNumber: 6 } });
+    expect(prisma.$transaction).toHaveBeenCalledTimes(3);
+    expect(events.indexOf("transaction:1")).toBeGreaterThan(
+      events.lastIndexOf("capture:descriptor:mode"),
+    );
+    expect(calls).toEqual({ prototype: 1, keys: 1, descriptors: 2 });
+  });
+
+  it("scopes the Application by local workspace before origin inspection", async () => {
+    const prisma = prismaMock();
+    const service = new TemplateService(prisma as unknown as PrismaService);
+    prisma.applicationGraph.findFirst.mockImplementation(async ({ where }) => {
+      expect(where).toEqual({
+        id: "application-1",
+        workspace: { slug: "local-workspace" },
+      });
+      return null;
+    });
+
+    const error = await service
+      .appendTemplateExperienceThemeRevision(
+        "application-1",
+        experienceThemeCommand,
+      )
+      .catch((caught: unknown) => caught);
+    expect((error as { getStatus(): number }).getStatus()).toBe(404);
+    expect((error as Error).message).toBe("Template Draft was not found.");
+    expect(prisma.applicationGraph.findUnique).not.toHaveBeenCalled();
+    expect(prisma.draftRevision.create).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      "origin drift",
+      (aggregate: ReturnType<typeof experienceAggregate>) => {
+        aggregate.templateOrigin = { templateKey: "other-template" };
+      },
+    ],
+    [
+      "missing latest Draft",
+      (aggregate: ReturnType<typeof experienceAggregate>) => {
+        aggregate.draftRevisions = [];
+      },
+    ],
+    [
+      "Application name drift",
+      (aggregate: ReturnType<typeof experienceAggregate>) => {
+        aggregate.name = "Other Restaurant";
+      },
+    ],
+    [
+      "Draft ownership drift",
+      (aggregate: ReturnType<typeof experienceAggregate>) => {
+        aggregate.draftRevisions[0]!.applicationGraphId = "application-2";
+      },
+    ],
+    [
+      "current system mode",
+      (aggregate: ReturnType<typeof experienceAggregate>) => {
+        aggregate.draftRevisions[0]!.graph.experience.theme.mode = "system";
+        aggregate.draftRevisions[0]!.draftPreviewSnapshots = [
+          {
+            snapshot: dataFieldSnapshot(aggregate.draftRevisions[0]!.graph, {
+              id: "preview-5",
+              draftRevisionId: "draft-5",
+            }),
+          },
+        ];
+      },
+    ],
+  ] as const)(
+    "rejects %s with fixed 400 before append",
+    async (_label, drift) => {
+      const prisma = prismaMock();
+      const service = new TemplateService(prisma as unknown as PrismaService);
+      const aggregate = experienceAggregate(service);
+      drift(aggregate);
+      prisma.applicationGraph.findFirst.mockResolvedValue(aggregate);
+
+      const error = await service
+        .appendTemplateExperienceThemeRevision(
+          "application-1",
+          experienceThemeCommand,
+        )
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as BadRequestException).getStatus()).toBe(400);
+      expect((error as Error).message).toBe(
+        "Template Draft request is invalid.",
+      );
+      expect(prisma.draftRevision.create).not.toHaveBeenCalled();
+      expect(compilerCalls.render).not.toHaveBeenCalled();
+    },
+  );
+
+  it("maps stale base, current dark, P2002, and exhausted P2034 to the fixed 409", async () => {
+    const prisma = prismaMock();
+    const service = new TemplateService(prisma as unknown as PrismaService);
+    const aggregate = experienceAggregate(service);
+    prisma.applicationGraph.findFirst.mockResolvedValue(aggregate);
+
+    for (const input of [
+      { ...experienceThemeCommand, baseDraftRevisionId: "draft-4" },
+      experienceThemeCommand,
+    ]) {
+      if (input === experienceThemeCommand) {
+        aggregate.draftRevisions[0]!.graph.experience.theme.mode = "dark";
+        aggregate.draftRevisions[0]!.draftPreviewSnapshots = [
+          {
+            snapshot: dataFieldSnapshot(aggregate.draftRevisions[0]!.graph, {
+              id: "preview-5",
+              draftRevisionId: "draft-5",
+            }),
+          },
+        ];
+      }
+      const error = await service
+        .appendTemplateExperienceThemeRevision("application-1", input)
+        .catch((caught: unknown) => caught);
+      expect(error).toBeInstanceOf(ConflictException);
+      expect((error as ConflictException).getStatus()).toBe(409);
+      expect((error as Error).message).toBe(
+        "Template Draft revision moved; reload before editing.",
+      );
+    }
+
+    aggregate.draftRevisions[0]!.graph.experience.theme.mode = "light";
+    aggregate.draftRevisions[0]!.draftPreviewSnapshots = [
+      {
+        snapshot: dataFieldSnapshot(aggregate.draftRevisions[0]!.graph, {
+          id: "preview-5",
+          draftRevisionId: "draft-5",
+        }),
+      },
+    ];
+    prisma.draftRevision.create.mockRejectedValueOnce({ code: "P2002" });
+    await expect(
+      service.appendTemplateExperienceThemeRevision(
+        "application-1",
+        experienceThemeCommand,
+      ),
+    ).rejects.toThrow("Template Draft revision moved; reload before editing.");
+
+    const retryPrisma = prismaMock();
+    retryPrisma.$transaction.mockRejectedValue({ code: "P2034" });
+    const retryService = new TemplateService(
+      retryPrisma as unknown as PrismaService,
+    );
+    await expect(
+      retryService.appendTemplateExperienceThemeRevision(
+        "application-1",
+        experienceThemeCommand,
+      ),
+    ).rejects.toThrow("Template Draft revision moved; reload before editing.");
+    expect(retryPrisma.$transaction).toHaveBeenCalledTimes(3);
+  });
+
+  it.each(["compiler closure", "candidate checksum"] as const)(
+    "rejects %s with fixed 400 before Draft create or rendering",
+    async (failure) => {
+      const prisma = prismaMock();
+      const service = new TemplateService(prisma as unknown as PrismaService);
+      const aggregate = experienceAggregate(service);
+      prisma.applicationGraph.findFirst.mockResolvedValue(aggregate);
+      if (failure === "compiler closure") {
+        compilerCalls.failSourceClosure = true;
+      } else {
+        graphCalls.failDarkHash = true;
+      }
+
+      const error = await service
+        .appendTemplateExperienceThemeRevision(
+          "application-1",
+          experienceThemeCommand,
+        )
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as Error).message).toBe(
+        "Template Draft request is invalid.",
+      );
+      expect(prisma.draftRevision.create).not.toHaveBeenCalled();
+      expect(prisma.draftPreviewSnapshot.create).not.toHaveBeenCalled();
+      expect(compilerCalls.render).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    "customer renderer",
+    "merchant renderer",
+    "Snapshot insert",
+    "response assembly",
+  ] as const)(
+    "rolls back the attempted r.6 Draft and Snapshot when %s fails",
+    async (failure) => {
+      const prisma = prismaMock();
+      const service = new TemplateService(prisma as unknown as PrismaService);
+      const aggregate = experienceAggregate(service);
+      const attemptedDrafts: unknown[] = [];
+      const attemptedSnapshots: unknown[] = [];
+      const committedDrafts: unknown[] = [];
+      const committedSnapshots: unknown[] = [];
+      if (failure === "customer renderer") {
+        compilerCalls.failRenderSurface = "customer-mobile";
+      } else if (failure === "merchant renderer") {
+        compilerCalls.failRenderSurface = "merchant-desktop";
+      }
+      prisma.applicationGraph.findFirst.mockResolvedValue(aggregate);
+      prisma.$transaction.mockImplementation(async (operation: any) => {
+        const stagedDrafts: unknown[] = [];
+        const stagedSnapshots: unknown[] = [];
+        const transaction = {
+          workspace: prisma.workspace,
+          applicationGraph: prisma.applicationGraph,
+          draftRevision: {
+            ...prisma.draftRevision,
+            create: vi.fn(async ({ data }: any) => {
+              const draft = {
+                id: "draft-6",
+                ...data,
+                ...(failure === "response assembly" ? { graph: {} } : {}),
+              };
+              attemptedDrafts.push(draft);
+              stagedDrafts.push(draft);
+              return draft;
+            }),
+          },
+          draftPreviewSnapshot: {
+            ...prisma.draftPreviewSnapshot,
+            create: vi.fn(async ({ data }: any) => {
+              attemptedSnapshots.push(data);
+              stagedSnapshots.push(data);
+              if (failure === "Snapshot insert") {
+                throw new Error("HOSTILE_SNAPSHOT_INSERT_SENTINEL");
+              }
+              return data;
+            }),
+          },
+        };
+        const result = await operation(transaction);
+        committedDrafts.push(...stagedDrafts);
+        committedSnapshots.push(...stagedSnapshots);
+        return result;
+      });
+
+      await expect(
+        service.appendTemplateExperienceThemeRevision(
+          "application-1",
+          experienceThemeCommand,
+        ),
+      ).rejects.toThrow("Template Draft request is invalid.");
+      expect(attemptedDrafts).toHaveLength(1);
+      expect(attemptedSnapshots).toHaveLength(
+        failure === "Snapshot insert" ? 1 : 0,
+      );
       expect(committedDrafts).toEqual([]);
       expect(committedSnapshots).toEqual([]);
     },

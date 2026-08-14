@@ -6,6 +6,7 @@ import {
   Code2,
   Database,
   LayoutGrid,
+  Palette,
   PanelsTopLeft,
   Rocket,
   ShieldCheck,
@@ -17,15 +18,18 @@ import {
   type WorkbenchDestinationKey,
 } from "@factory/workbench-ui";
 
-import type { Surface } from "../../lib/workbench-model";
+import type { WorkbenchState } from "../../lib/workbench-model";
+
+type ActiveSurface = WorkbenchState["activeSurface"];
 
 const builderSurfaceByDestination: Readonly<
-  Record<Exclude<WorkbenchDestinationKey, "apps">, Surface>
+  Record<Exclude<WorkbenchDestinationKey, "apps">, ActiveSurface>
 > = {
   page: "page",
   data: "domain",
   workflow: "flow",
   access: "policy",
+  experience: "experience",
   ai: "ai",
   code: "code",
   release: "release",
@@ -38,6 +42,7 @@ const iconByDestination: Readonly<Record<WorkbenchDestinationKey, LucideIcon>> =
     data: Database,
     workflow: Workflow,
     access: ShieldCheck,
+    experience: Palette,
     ai: Bot,
     code: Code2,
     release: Rocket,
@@ -67,8 +72,8 @@ export function IconRail({
   activeSurface,
   onNavigate,
 }: {
-  readonly activeSurface: Surface;
-  readonly onNavigate: (surface: Surface) => void;
+  readonly activeSurface: ActiveSurface;
+  readonly onNavigate: (surface: ActiveSurface) => void;
 }) {
   const navRef = useRef<HTMLElement>(null);
   const Icon = iconByDestination.apps;
@@ -102,8 +107,8 @@ export function BuilderNavigation({
   onNavigate,
   allowedDestinations,
 }: {
-  readonly activeSurface: Surface;
-  readonly onNavigate: (surface: Surface) => void;
+  readonly activeSurface: ActiveSurface;
+  readonly onNavigate: (surface: ActiveSurface) => void;
   readonly allowedDestinations?: readonly Exclude<
     WorkbenchDestinationKey,
     "apps"

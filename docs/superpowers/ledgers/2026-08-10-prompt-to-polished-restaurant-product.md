@@ -4472,12 +4472,11 @@ Product Recipe, provider, or deployment contracts.
 
 ## Task 7 — Make Page, Data, Users, Workflow, and Experience contextual editors
 
-State: Task 7A and 7B are `delivered`; bounded Task 7C is `accepted`, not
-delivered, on its exact reviewed 28-path tree.
+State: Task 7A, 7B, and 7C are `delivered`; Task 7D Experience is `accepted`,
+not delivered.
 
-Owner: Task 7A/7B authorities are consumed. Task 7C implementation and review
-authorities are consumed; only PM-authorized controller staging, commit,
-non-force push, and equality verification remain.
+Owner: Task 7A/7B/7C authorities are consumed. Task 7D writer/review/QA/release
+authorities are consumed; only controller exact-29 delivery authority remains.
 
 Allowed paths: Workbench Page/Puck, Domain, Policy, Flow, Experience, selection
 context, Draft operation, and adjacent test paths assigned by PM.
@@ -4737,9 +4736,9 @@ bounded slice is frozen after pushed equality.
 
 ### Task 7C frozen execution — 2026-08-14
 
-State: `accepted`, not delivered. Current exact dirty partition is 28 paths with
-index count zero; local `HEAD` and upstream both equal
-`5f984691f426e6068479c44b4fa41baf2f8aaada`.
+State: `delivered` at `78955444cb82d95346fb4fbded03167f982eb693` with
+exact subject `feat(workbench): add governed restaurant data editing`,
+non-force push, local/upstream equality, and a clean tree.
 
 Decision and contract:
 
@@ -4832,12 +4831,11 @@ Acceptance evidence:
 - The same independent Sol reviewer returns final `RELEASE_ACCEPT` with
   P0/P1/P2=0/0/0. Post-repair targeted Terra returns `PASS`, P0/P1/P2=0/0/0,
   and `READY_FOR_DELIVERY YES`.
-- PM accepts this exact tree. The controller alone is authorized to stage the
-  exact 22+6 paths, prove staged Expected28/Actual28 with no missing,
-  unexpected, unstaged, or untracked path, rerun sensitive/diff gates, commit
-  exactly `feat(workbench): add governed restaurant data editing`, push without
-  force, and prove local `HEAD` equals upstream with a clean tree. Task 7C
-  remains not delivered until that equality is recorded.
+- Controller delivery consumed the exact 22+6 manifest, staged
+  Expected28/Actual28 with no missing, unexpected, unstaged, or untracked path,
+  committed exactly `feat(workbench): add governed restaurant data editing`,
+  pushed without force, and proved local `HEAD` equals upstream at
+  `78955444cb82d95346fb4fbded03167f982eb693` with a clean tree.
 
 Deferred: every other entity/record/field, generic CRUD/schema forms, Users,
 permissions editing, Workflow, Experience, Page/block/content changes, history
@@ -4845,6 +4843,105 @@ picker, Source, export, Publish, Compilation, generated-runtime behavior,
 provider/service/network/queue/worker, Docker/Compose, deployment, dependency,
 package, lockfile, Graph, Capability, recipe, Compiler, Prisma, or database
 change.
+
+Access design stop: the earlier permission-only proposal remains
+`blocked_at_design` with writer count zero because Graph V3 requires the
+declared `manager:restaurant-principal:update` permission behind its governed
+`canManage` binding; no Access ADR, route, UI, or implementation authority
+exists.
+
+### Task 7D Experience freeze — 2026-08-14
+
+State: `accepted`, not delivered, on base
+`78955444cb82d95346fb4fbded03167f982eb693`.
+
+Contract:
+
+- ADR-0016 is Accepted under the founder standing instruction
+  `参考以下总结，若符合项目目标，则持续接受而迭代。`; PM adjudicates this slice as
+  bounded, append-only/reversible, directly advancing the polished editable
+  Restaurant, and requiring no Graph/platform expansion or new prompt.
+- Exact outcome: Builder -> Experience -> Theme, Light -> Dark. Exact POST:
+  `/template-draft-instances/:applicationGraphId/experience-theme-revisions`
+  with strict own-data `{baseDraftRevisionId,mode:"dark"}`.
+- Capture happens once before Prisma and never invokes caller behavior. Every
+  one of at most three Serializable attempts revalidates local workspace before
+  origin, latest Draft/base, latest active Snapshot V2 identity/checksum, exact
+  current light mode, Graph V3, and existing compiler preview closure.
+- Change only `graph.experience.theme.mode`; restoring light must equal the
+  complete base Graph. Stale/no-op/P2002/exhausted P2034 use fixed 409;
+  malformed/authority/closure drift uses fixed 400; errors never log or echo
+  request, Graph, Snapshot, or hostile material.
+- Draft r.6, exactly two renders, and one active immutable Snapshot V2 are
+  atomic. Customer and Merchant Workbench frames derive dark only from the
+  strict checksum-matched response; pending/failure remain accepted light.
+- The additive Workbench `Experience` destination/surface is operator UI only.
+  Tokens, designSystem, locales, navigation, Graph/Capability/recipe/Compiler/
+  runtime/Prisma/dependency/provider/service/deployment behavior stays fixed.
+
+Authorities:
+
+- [ADR-0016](../../adr/adr-0016-template-restaurant-experience-theme-revision.md)
+- [Task 7D design](../specs/2026-08-14-template-restaurant-experience-theme-design.md)
+- [Task 7D executable plan](../plans/2026-08-14-template-restaurant-experience-theme.md)
+- [Delivery policy](../../delivery-policy.md)
+
+Exact writer manifest (23):
+
+```text
+apps/control-plane/src/template/template-experience-theme-edit.ts
+apps/control-plane/src/template/template.controller.ts
+apps/control-plane/src/template/template.service.ts
+apps/control-plane/test/template-experience-theme-edit.test.ts
+apps/control-plane/test/template.controller.test.ts
+apps/control-plane/test/template.service.test.ts
+packages/workbench-ui/src/index.ts
+packages/workbench-ui/test/boundary.test.ts
+apps/workbench/lib/workbench-model.ts
+apps/workbench/lib/workbench-model.test.ts
+apps/workbench/components/shell/icon-rail.tsx
+apps/workbench/components/shell/workbench-shell.tsx
+apps/workbench/components/shell/workbench-shell.test.tsx
+apps/workbench/lib/control-plane-client.ts
+apps/workbench/lib/control-plane-client.test.ts
+apps/workbench/hooks/use-workbench-controller.ts
+apps/workbench/components/workbench.tsx
+apps/workbench/components/template-experience-workspace.tsx
+apps/workbench/components/template-experience-workspace.test.tsx
+apps/workbench/styles/template-experience.css
+apps/workbench/app/globals.css
+apps/workbench/test/template-draft-fixture.ts
+apps/workbench/e2e/template-draft.pw.ts
+```
+
+Any additional implementation path is a PM STOP.
+
+Exact controller governance manifest (6):
+
+```text
+docs/adr/adr-0016-template-restaurant-experience-theme-revision.md
+docs/project-status.md
+docs/roadmap.md
+docs/superpowers/ledgers/2026-08-10-prompt-to-polished-restaurant-product.md
+docs/superpowers/plans/2026-08-14-template-restaurant-experience-theme.md
+docs/superpowers/specs/2026-08-14-template-restaurant-experience-theme-design.md
+```
+
+Evidence: implementation and the P1 repair are complete; independent review
+returns `PASS`; targeted Terra returns `PASS`; final Sol returns
+`RELEASE_ACCEPT`, actionable P0/P1/P2=0/0/0; and PM records
+`PM_DELIVERY_AUTHORITY YES` for the exact 29 paths.
+
+Remaining gate: controller alone stages Expected29/Actual29 with zero missing,
+unexpected, unstaged, or untracked path; proves staged diff/sensitive equality;
+commits exact subject `feat(workbench): add governed restaurant theme editing`;
+pushes without force; and proves local `HEAD` equals upstream with a clean tree.
+
+Deferred: every other theme mode/property, tokens, designSystem, locales,
+navigation, Data, Access, Users, Workflow, Page/content, history, Source,
+export, Publish, Compilation, generated runtime, Graph, Capability, recipe,
+Compiler, Prisma/database, package/dependency/lock, provider/network/service,
+Docker/Compose, and deployment.
 
 ## Task 8 — Add Source Mode, controlled overlays, ZIP, and Git export
 

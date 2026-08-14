@@ -129,8 +129,10 @@ historical evidence, not the executable Task 2/Task 3 contract.
   Graph, Product Recipe, Screen Recipe, generated runtime, Publish,
   Compilation, Prisma, dependencies, lockfiles, providers, services, and
   deployment remain unchanged.
-- Task 7C is `accepted`, not delivered, on clean delivered base
-  `5f984691f426e6068479c44b4fa41baf2f8aaada`, equal to upstream. Accepted
+- Task 7C is delivered at
+  `78955444cb82d95346fb4fbded03167f982eb693` with exact subject
+  `feat(workbench): add governed restaurant data editing`, non-force push,
+  local/upstream equality, and a clean tree. Accepted
   [`ADR-0015`](adr/adr-0015-template-restaurant-seed-data-edit.md) authorizes
   only `Menu items -> Margherita pizza -> Dish name`: update the mirrored
   `menu-item.name` seed/scenario value to `Heirloom tomato pizza`, append Draft
@@ -144,6 +146,19 @@ historical evidence, not the executable Task 2/Task 3 contract.
   439, Graph 661, Capabilities 384, Compiler 501; five no-emits, builds, Prisma,
   Next, Playwright 1/1, and exact-28/static gates. Final Sol returns
   `RELEASE_ACCEPT` and targeted Terra returns `PASS`, both P0/P1/P2=0/0/0.
+- Task 7D Experience is `accepted`, not delivered, under
+  [`ADR-0016`](adr/adr-0016-template-restaurant-experience-theme-revision.md).
+  Its exact outcome is Builder -> Experience -> Theme, Light -> Dark: append
+  Draft r.6 and one active immutable Snapshot V2, then switch the Customer and
+  Merchant Workbench preview frames only from a strict checksum-bound response.
+  The [design](superpowers/specs/2026-08-14-template-restaurant-experience-theme-design.md)
+  and [executable plan](superpowers/plans/2026-08-14-template-restaurant-experience-theme.md)
+  freeze exactly 23 implementation paths and an additive Workbench Experience
+  destination. Graph, Capabilities, recipes, Compiler, generated runtime,
+  Prisma, dependencies, providers, services, and deployment remain unchanged.
+  Independent review passes after the P1 repair, targeted Terra passes, and
+  final Sol returns `RELEASE_ACCEPT`, actionable P0/P1/P2=0/0/0. PM grants
+  delivery authority for only the exact 29 paths and frozen subject.
 - The first independent two-axis Task 7B review returned NOT READY with
   P0/P1/P2=0/6/3. Actionable findings cover hostile array reflection
   amplification, unchanged-order 400 versus fixed 409, registry closure after
@@ -171,17 +186,20 @@ direction only for the exact mirrored Restaurant seed-name operation; it does
 not authorize generic Data CRUD, generated-runtime changes, another Graph
 contract, or broader editor behavior.
 
+The earlier Access permission-only proposal remains `blocked_at_design` because
+Graph V3 requires the declared permission behind its governed `canManage`
+binding; no Access ADR, route, UI, or writer authority exists.
+
 The main risks are shared-contract drift, accidental lockfile resolution drift,
 client relabeling of server totals/state/payment/inventory/audit fields, and UI
 ports that imply authority. Frozen tests and the stop-both rule address these.
 
 ### Next smallest valuable slice
 
-Controller-deliver only the accepted exact 28-path Task 7C tree with subject
-`feat(workbench): add governed restaurant data editing`, non-force push, and
-local/upstream equality. Keep every other Data field/record, Users, Workflow,
-Experience, Source, Publish, Compilation, block editing, and generated-runtime
-behavior deferred.
+Perform only controller delivery of the PM-accepted ADR-0016 exact 29-path tree
+with the frozen subject, non-force push, and local/upstream equality proof. Keep
+Access, every other Experience property/mode, Data, Users, Workflow, Source,
+Publish, Compilation, block editing, and generated-runtime behavior deferred.
 
 ### Retained historical reconciliation through V3 acceptance
 
@@ -625,11 +643,12 @@ Authorities:
 
 ## Next gate
 
-Tasks 0-7B are delivered; local HEAD and upstream equal
-`5f984691f426e6068479c44b4fa41baf2f8aaada`. Task 7C is accepted but not
-delivered on the exact 28-path tree. Only controller staging, exact equality,
-the frozen-subject commit, non-force push, and pushed equality remain. Task 8,
-Task 9, and every broader editor remain blocked.
+Tasks 0-7C are delivered; local HEAD and upstream equal
+`78955444cb82d95346fb4fbded03167f982eb693`. The Access candidate remains
+blocked at design. ADR-0016 Task 7D Experience is PM-accepted but not delivered.
+Only controller exact-29 staging, the frozen commit, non-force push, and
+local/upstream equality remain. Task 8, Task 9, and every broader editor remain
+blocked.
 
 ## Explicitly deferred
 
