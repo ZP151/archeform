@@ -181,8 +181,10 @@ historical evidence, not the executable Task 2/Task 3 contract.
   and final Sol returns `RELEASE_ACCEPT`, actionable P0/P1/P2=0/0/0, after
   stale-failure and valid-success A/B characterization. Controller delivery
   consumed the exact 15 paths.
-- Task 8B Source Search is `accepted`, not delivered, under the founder standing
-  instruction and ordinary deterministic UI delivery policy. It adds only local
+- Task 8B Source Search is delivered at
+  `84a90c4b17fe30bc35921fb25aebf228009678be` with exact subject
+  `feat(workbench): add source search`, non-force push, local/upstream equality,
+  and a clean tree. It adds only local
   case-insensitive manifest-path filtering and bounded inert find-in-current-
   verified-file highlighting. The
   [executable plan](superpowers/plans/2026-08-14-workbench-source-search.md)
@@ -195,7 +197,22 @@ historical evidence, not the executable Task 2/Task 3 contract.
   same-ID Compilation replacement P1 is repaired RED 1/16 -> GREEN 16/16; fresh
   full Workbench 489, no-emit, Next, browser 1/1, and exact-eight static gates
   pass. The same reviewer returns P0/P1/P2=0/0/0 and
-  `READY_FOR_DELIVERY YES`; PM authorizes only exact-eight controller delivery.
+  `READY_FOR_DELIVERY YES`; controller delivery consumed the exact eight paths.
+- Task 8C Verified Source Transfer is `accepted`, not delivered, under the
+  founder standing instruction and ordinary deterministic UI delivery policy.
+  The [executable plan](superpowers/plans/2026-08-14-workbench-verified-source-transfer.md)
+  freezes the same exact four Workbench paths. Only the current verified file
+  can be copied or downloaded; copy transfers the exact admitted content with a
+  stale-completion token, while download emits the exact UTF-8 bytes using a
+  scrubbed safe basename hint and deterministic Object URL cleanup. Selection,
+  pending/failure, or Compilation invalidation clears/disables transfer state.
+  No new request, client, hook, API, Control Plane, dependency, ZIP, Diff, Git,
+  overlay, or persistence work is authorized.
+  Mandatory RED is unit 28/44 plus browser 1/1 with production untouched. GREEN
+  passes focused 44, full Workbench 517, no-emit, Next, browser 1/1, and clean
+  exact-eight static/containment gates. The independent review returns
+  P0/P1/P2=0/0/0 and `READY_FOR_DELIVERY YES`; PM authorizes only controller
+  exact-eight delivery.
 - The first independent two-axis Task 7B review returned NOT READY with
   P0/P1/P2=0/6/3. Actionable findings cover hostile array reflection
   amplification, unchanged-order 400 versus fixed 409, registry closure after
@@ -233,7 +250,7 @@ ports that imply authority. Frozen tests and the stop-both rule address these.
 
 ### Next smallest valuable slice
 
-Controller-deliver only the reviewed Task 8B exact-eight tree after expected/
+Controller-deliver only the reviewed Task 8C exact-eight tree after expected/
 actual, staged diff, and sensitive-material checks. Keep Access, Workflow,
 semantic/regex search, content preload, Diff/edit/overlay/ZIP/Git, Draft Snapshot
 source, Publish, Compilation creation, and generated-runtime behavior deferred.
@@ -680,11 +697,12 @@ Authorities:
 
 ## Next gate
 
-Tasks 0-8A are delivered; local HEAD and upstream equal
-`8c2767bb2c333d2086ca1b2d0f8cdc4c348bf7f0`. Access and Workflow candidates
-remain blocked at design by runtime truth. Task 8B Source Search is accepted,
-not delivered, with exact-eight controller delivery authorized. Task 8C+
-editing/export behavior, Task 9, and every broader editor remain blocked.
+Tasks 0-8B are delivered; local HEAD and upstream equal
+`84a90c4b17fe30bc35921fb25aebf228009678be`. Access and Workflow candidates
+remain blocked at design by runtime truth. Task 8C Verified Source Transfer is
+accepted, not delivered, with exact-eight controller delivery authorized. Task
+8D+ Diff/ZIP/Git/editing behavior, Task 9, and every broader editor remain
+blocked.
 
 ## Explicitly deferred
 

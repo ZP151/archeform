@@ -24,8 +24,7 @@ const selectedArtifact = {
 };
 
 const lateContent = "export const lateA = true;\n";
-const selectedContent =
-  '<script id="source-hostile">window.evil=true</script>\n';
+const selectedContent = '<script id="source-hostile">window.evil=true</script>';
 
 const compilation = {
   id: "compilation-1",
@@ -81,6 +80,7 @@ const applicationSummary = {
 };
 
 test("explores only the latest verified registered source at 1440px and 390px", async ({
+  context,
   page,
 }) => {
   let selectedAttempts = 0;
@@ -107,6 +107,10 @@ test("explores only the latest verified registered source at 1440px and 390px", 
   });
   const selectedFailureGate = new Promise<void>((resolve) => {
     releaseSelectedFailure = resolve;
+  });
+
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], {
+    origin: "http://127.0.0.1:5174",
   });
 
   await page.route("http://127.0.0.1:3000/**", async (route) => {
@@ -295,9 +299,17 @@ test("explores only the latest verified registered source at 1440px and 390px", 
   const findInFile = source.getByRole("searchbox", {
     name: "Find in current file",
   });
+  const copyCurrentFile = viewer.getByRole("button", {
+    name: "Copy current file",
+  });
+  const downloadCurrentFile = viewer.getByRole("button", {
+    name: "Download current file",
+  });
   await expect(pathFilter).toHaveAttribute("maxlength", "120");
   await expect(findInFile).toHaveAttribute("maxlength", "120");
   await expect(findInFile).toBeDisabled();
+  await expect(copyCurrentFile).toBeDisabled();
+  await expect(downloadCurrentFile).toBeDisabled();
   await expect(sourceButtons).toHaveCount(2);
   expect(
     await sourceButtons.evaluateAll((buttons) =>
@@ -343,6 +355,8 @@ test("explores only the latest verified registered source at 1440px and 390px", 
   await expect(viewer).toContainText(lateArtifact.path);
   await expect(viewer.locator("pre code")).toHaveCount(0);
   await expect(findInFile).toBeDisabled();
+  await expect(copyCurrentFile).toBeDisabled();
+  await expect(downloadCurrentFile).toBeDisabled();
 
   await selectedButton.focus();
   await expect(selectedButton).toBeFocused();
@@ -358,6 +372,8 @@ test("explores only the latest verified registered source at 1440px and 390px", 
   await expect(viewer).toContainText(selectedArtifact.path);
   await expect(viewer.locator("pre code")).toHaveCount(0);
   await expect(findInFile).toBeDisabled();
+  await expect(copyCurrentFile).toBeDisabled();
+  await expect(downloadCurrentFile).toBeDisabled();
 
   releaseSelectedFailure();
   await expect(viewer.getByRole("status")).toHaveText(
@@ -365,6 +381,8 @@ test("explores only the latest verified registered source at 1440px and 390px", 
   );
   await expect(viewer.locator("pre code")).toHaveCount(0);
   await expect(findInFile).toBeDisabled();
+  await expect(copyCurrentFile).toBeDisabled();
+  await expect(downloadCurrentFile).toBeDisabled();
   await expect(page.locator(".operation-error")).toHaveCount(0);
   await expect(page.getByText("HOSTILE_SERVER_DETAIL")).toHaveCount(0);
   await expect(page.getByText("HOSTILE_UNVERIFIED_CONTENT")).toHaveCount(0);
@@ -374,7 +392,15 @@ test("explores only the latest verified registered source at 1440px and 390px", 
   await expect(viewer).toContainText(selectedArtifact.digest);
   await expect(page.locator("#source-hostile")).toHaveCount(0);
   await expect(findInFile).toBeEnabled();
+  await expect(copyCurrentFile).toBeEnabled();
+  await expect(downloadCurrentFile).toBeEnabled();
   const requestsBeforeFinding = artifactContentRequests;
+  await pathFilter.fill("PACKAGE");
+  await expect(sourceButtons).toHaveCount(1);
+  await expect(sourceButtons).toHaveAttribute(
+    "data-source-path",
+    selectedArtifact.path,
+  );
   await findInFile.fill("SCRIPT");
   await expect(viewer.getByText("2 matches.", { exact: true })).toBeVisible();
   await expect(viewer.locator("mark")).toHaveCount(2);
@@ -382,6 +408,58 @@ test("explores only the latest verified registered source at 1440px and 390px", 
   await expect(page.locator("#source-hostile")).toHaveCount(0);
   expect(artifactContentRequests).toBe(requestsBeforeFinding);
   expect(selectedAttempts).toBe(2);
+
+  const routeCountersBeforeTransfer = {
+    artifactContentRequests,
+    compilationRequests,
+    lateRequests,
+    previewStartFailures,
+    selectedAttempts,
+  };
+  await copyCurrentFile.focus();
+  await expect(copyCurrentFile).toBeFocused();
+  await expect(copyCurrentFile).toHaveCSS("outline-style", "solid");
+  await copyCurrentFile.press("Enter");
+  await expect(viewer.locator(".source-transfer-status")).toHaveText(
+    "Copied current file.",
+  );
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+    selectedContent,
+  );
+  await downloadCurrentFile.focus();
+  await expect(downloadCurrentFile).toBeFocused();
+  await expect(downloadCurrentFile).toHaveCSS("outline-style", "solid");
+  const downloadPromise = page.waitForEvent("download");
+  await downloadCurrentFile.press("Enter");
+  const sourceDownload = await downloadPromise;
+  expect(sourceDownload.suggestedFilename()).toBe("package.json");
+  const sourceStream = await sourceDownload.createReadStream();
+  expect(sourceStream).not.toBeNull();
+  const sourceChunks: Buffer[] = [];
+  for await (const chunk of sourceStream!) {
+    sourceChunks.push(Buffer.from(chunk));
+  }
+  expect(Buffer.concat(sourceChunks)).toEqual(
+    Buffer.from(selectedContent, "utf8"),
+  );
+  await expect(viewer.locator(".source-transfer-status")).toHaveText(
+    "Download started.",
+  );
+  expect({
+    artifactContentRequests,
+    compilationRequests,
+    lateRequests,
+    previewStartFailures,
+    selectedAttempts,
+  }).toEqual(routeCountersBeforeTransfer);
+  await expect(pathFilter).toHaveValue("PACKAGE");
+  await expect(findInFile).toHaveValue("SCRIPT");
+  await expect(viewer.locator("mark")).toHaveCount(2);
+  await expect(viewer.locator("pre code")).toHaveText(selectedContent);
+  await expect(page.locator("#source-hostile")).toHaveCount(0);
+  await pathFilter.fill("");
+  await expect(sourceButtons).toHaveCount(2);
+  expect(artifactContentRequests).toBe(requestsBeforeFinding);
 
   await page.getByRole("button", { name: "Start preview" }).click();
   await expect.poll(() => previewStartFailures).toBe(1);
@@ -394,6 +472,9 @@ test("explores only the latest verified registered source at 1440px and 390px", 
   await expect(viewer.locator("pre code")).toHaveText(selectedContent);
   await expect(findInFile).toHaveValue("SCRIPT");
   await expect(viewer.locator("mark")).toHaveCount(2);
+  await expect(viewer.locator(".source-transfer-status")).toHaveText(
+    "Download started.",
+  );
 
   releaseLateFailure();
   await lateFailureFulfilled;
@@ -404,6 +485,9 @@ test("explores only the latest verified registered source at 1440px and 390px", 
     "Verified registered artifact.",
   );
   await expect(findInFile).toHaveValue("SCRIPT");
+  await expect(viewer.locator(".source-transfer-status")).toHaveText(
+    "Download started.",
+  );
 
   await lateButton.press("Enter");
   await expect.poll(() => lateRequests).toBe(2);
@@ -414,11 +498,17 @@ test("explores only the latest verified registered source at 1440px and 390px", 
   await expect(findInFile).toBeDisabled();
   await expect(findInFile).toHaveValue("");
   await expect(viewer.locator("mark")).toHaveCount(0);
+  await expect(copyCurrentFile).toBeDisabled();
+  await expect(downloadCurrentFile).toBeDisabled();
+  await expect(viewer.locator(".source-transfer-status")).toHaveCount(0);
   await selectedButton.press("Enter");
   await expect.poll(() => selectedAttempts).toBe(3);
   await expect(viewer.locator("pre code")).toHaveText(selectedContent);
   await expect(findInFile).toBeEnabled();
   await expect(findInFile).toHaveValue("");
+  await expect(copyCurrentFile).toBeEnabled();
+  await expect(downloadCurrentFile).toBeEnabled();
+  await expect(viewer.locator(".source-transfer-status")).toHaveCount(0);
   releaseLateSuccess();
   await lateSuccessFulfilled;
   await expect(viewer).toContainText(selectedArtifact.path);
@@ -474,6 +564,14 @@ test("explores only the latest verified registered source at 1440px and 390px", 
     name: "Find in current file",
   });
   await expect(reloadedFind).toBeDisabled();
+  const reloadedCopy = reloadedViewer.getByRole("button", {
+    name: "Copy current file",
+  });
+  const reloadedDownload = reloadedViewer.getByRole("button", {
+    name: "Download current file",
+  });
+  await expect(reloadedCopy).toBeDisabled();
+  await expect(reloadedDownload).toBeDisabled();
 
   await page.setViewportSize({ width: 390, height: 844 });
   const reloadedTree = reloadedSource.getByRole("navigation", {
@@ -503,6 +601,8 @@ test("explores only the latest verified registered source at 1440px and 390px", 
   await expect(reloadedViewer.locator("pre code")).toHaveText(selectedContent);
   await expect(page.locator("#source-hostile")).toHaveCount(0);
   await expect(reloadedFind).toBeEnabled();
+  await expect(reloadedCopy).toBeEnabled();
+  await expect(reloadedDownload).toBeEnabled();
   const requestsBeforeNarrowFind = artifactContentRequests;
   await reloadedFind.fill("window.evil");
   await expect(
@@ -511,6 +611,19 @@ test("explores only the latest verified registered source at 1440px and 390px", 
   await expect(reloadedViewer.locator("mark")).toHaveCount(1);
   await expect(reloadedViewer.locator("pre code")).toHaveText(selectedContent);
   expect(artifactContentRequests).toBe(requestsBeforeNarrowFind);
+  await reloadedCopy.focus();
+  await expect(reloadedCopy).toBeFocused();
+  await expect(reloadedCopy).toHaveCSS("outline-style", "solid");
+  await reloadedCopy.press("Enter");
+  await expect(reloadedViewer.locator(".source-transfer-status")).toHaveText(
+    "Copied current file.",
+  );
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+    selectedContent,
+  );
+  await reloadedDownload.focus();
+  await expect(reloadedDownload).toBeFocused();
+  await expect(reloadedDownload).toHaveCSS("outline-style", "solid");
   for (const button of await reloadedTree.locator("[data-source-path]").all()) {
     const box = await button.boundingBox();
     expect(box).not.toBeNull();
@@ -526,4 +639,21 @@ test("explores only the latest verified registered source at 1440px and 390px", 
     expect.soft(box!.width, `${label} width`).toBeGreaterThanOrEqual(44);
     expect.soft(box!.height, `${label} height`).toBeGreaterThanOrEqual(44);
   }
+  const narrowCopyBox = await reloadedCopy.boundingBox();
+  const narrowDownloadBox = await reloadedDownload.boundingBox();
+  expect(narrowCopyBox).not.toBeNull();
+  expect(narrowDownloadBox).not.toBeNull();
+  expect.soft(narrowCopyBox!.width).toBeGreaterThanOrEqual(44);
+  expect.soft(narrowCopyBox!.height).toBeGreaterThanOrEqual(44);
+  expect.soft(narrowDownloadBox!.width).toBeGreaterThanOrEqual(44);
+  expect.soft(narrowDownloadBox!.height).toBeGreaterThanOrEqual(44);
+  expect.soft(narrowDownloadBox!.y).toBeGreaterThan(narrowCopyBox!.y);
+  expect
+    .soft(
+      await page.evaluate(() => ({
+        clientWidth: document.documentElement.clientWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+      })),
+    )
+    .toEqual({ clientWidth: 390, scrollWidth: 390 });
 });

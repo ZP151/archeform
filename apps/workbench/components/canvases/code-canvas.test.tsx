@@ -144,6 +144,30 @@ describe("CodeCanvas Source explorer", () => {
     });
   }
 
+  function buttonLabelled(labelText: string) {
+    const button = Array.from(
+      container.querySelectorAll<HTMLButtonElement>("button"),
+    ).find((candidate) => candidate.textContent === labelText);
+    expect(button, `button ${labelText}`).toBeDefined();
+    return button!;
+  }
+
+  function transferStatus() {
+    return (
+      container.querySelector(".source-transfer-status")?.textContent ?? null
+    );
+  }
+
+  function deferred() {
+    let resolve!: () => void;
+    let reject!: (reason?: unknown) => void;
+    const promise = new Promise<void>((resolvePromise, rejectPromise) => {
+      resolve = resolvePromise;
+      reject = rejectPromise;
+    });
+    return { promise, reject, resolve };
+  }
+
   it.each([
     ["absent", null],
     ["queued", compilation("queued")],
@@ -161,6 +185,16 @@ describe("CodeCanvas Source explorer", () => {
           'nav[aria-label="Registered source artifacts"]',
         ),
       ).toBeNull();
+      expect(
+        Array.from(container.querySelectorAll("button")).some(
+          (button) => button.textContent === "Copy current file",
+        ),
+      ).toBe(false);
+      expect(
+        Array.from(container.querySelectorAll("button")).some(
+          (button) => button.textContent === "Download current file",
+        ),
+      ).toBe(false);
     },
   );
 
@@ -589,5 +623,519 @@ describe("CodeCanvas Source explorer", () => {
     expect(find.disabled).toBe(false);
     expect(find.value).toBe("");
     expect(container.querySelectorAll("mark")).toHaveLength(0);
+  });
+
+  it.each([
+    {
+      label: "no selection",
+      selected: null,
+      loading: false,
+      error: null,
+      snapshot: null,
+    },
+    {
+      label: "selection pending",
+      selected: webArtifact,
+      loading: true,
+      error: null,
+      snapshot: {
+        path: webArtifact.path,
+        digest: webArtifact.digest,
+        content: "stale content",
+      },
+    },
+    {
+      label: "artifact failure",
+      selected: webArtifact,
+      loading: false,
+      error: "Generated artifact could not be inspected.",
+      snapshot: null,
+    },
+    {
+      label: "null content",
+      selected: webArtifact,
+      loading: false,
+      error: null,
+      snapshot: null,
+    },
+    {
+      label: "mismatched path",
+      selected: webArtifact,
+      loading: false,
+      error: null,
+      snapshot: {
+        path: apiArtifact.path,
+        digest: webArtifact.digest,
+        content: "wrong path",
+      },
+    },
+    {
+      label: "mismatched digest",
+      selected: webArtifact,
+      loading: false,
+      error: null,
+      snapshot: {
+        path: webArtifact.path,
+        digest: apiArtifact.digest,
+        content: "wrong digest",
+      },
+    },
+  ])("keeps verified transfer disabled for $label", (testCase) => {
+    renderSource({
+      artifactError: testCase.error,
+      artifactLoading: testCase.loading,
+      artifactSnapshot: testCase.snapshot,
+      selectedArtifact: testCase.selected,
+    });
+
+    expect(buttonLabelled("Copy current file").disabled).toBe(true);
+    expect(buttonLabelled("Download current file").disabled).toBe(true);
+    expect(transferStatus()).toBeNull();
+  });
+
+  it("enables native transfer actions only for current verified content without inspecting another artifact", () => {
+    const onInspectArtifact = vi.fn();
+    renderSource({ onInspectArtifact });
+    expect(buttonLabelled("Copy current file").disabled).toBe(true);
+    expect(buttonLabelled("Download current file").disabled).toBe(true);
+
+    renderSource({
+      selectedArtifact: webArtifact,
+      artifactSnapshot: {
+        path: webArtifact.path,
+        digest: webArtifact.digest,
+        content: "verified content",
+      },
+      onInspectArtifact,
+    });
+
+    const copy = buttonLabelled("Copy current file");
+    const download = buttonLabelled("Download current file");
+    expect(copy.disabled).toBe(false);
+    expect(download.disabled).toBe(false);
+    expect(copy.type).toBe("button");
+    expect(download.type).toBe("button");
+    expect(copy.closest(".source-transfer-actions")).not.toBeNull();
+    expect(copy.closest(".source-content-heading")).toBe(
+      download.closest(".source-content-heading"),
+    );
+    expect(onInspectArtifact).not.toHaveBeenCalled();
+  });
+
+  it("copies exact verified content once, blocks both actions while pending, and preserves search state", async () => {
+    const gate = deferred();
+    const writeText = vi.fn(() => gate.promise);
+    const createObjectURL = vi
+      .spyOn(URL, "createObjectURL")
+      .mockReturnValue("blob:should-not-download");
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    const content = '  café 😀\n<script id="source-hostile">SCRIPT</script>\n';
+    const onInspectArtifact = vi.fn();
+    renderSource({
+      selectedArtifact: webArtifact,
+      artifactSnapshot: {
+        path: webArtifact.path,
+        digest: webArtifact.digest,
+        content,
+      },
+      onInspectArtifact,
+    });
+    const filter = inputLabelled("Filter source files");
+    const find = inputLabelled("Find in current file");
+    changeInput(filter, "WEB/APP");
+    changeInput(find, "script");
+    const copy = buttonLabelled("Copy current file");
+    const download = buttonLabelled("Download current file");
+
+    act(() => {
+      copy.click();
+      copy.click();
+      download.click();
+    });
+
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(writeText).toHaveBeenCalledWith(content);
+    expect(createObjectURL).not.toHaveBeenCalled();
+    expect(copy.disabled).toBe(true);
+    expect(download.disabled).toBe(true);
+    expect(transferStatus()).toBe("Copying current file…");
+    const status = container.querySelector(".source-transfer-status");
+    expect(status?.getAttribute("role")).toBe("status");
+    expect(status?.getAttribute("aria-live")).toBe("polite");
+
+    await act(async () => {
+      gate.resolve();
+      await gate.promise;
+    });
+
+    expect(transferStatus()).toBe("Copied current file.");
+    expect(copy.disabled).toBe(false);
+    expect(download.disabled).toBe(false);
+    expect(filter.value).toBe("WEB/APP");
+    expect(find.value).toBe("script");
+    expect(
+      container.querySelectorAll(".source-content-viewer mark"),
+    ).toHaveLength(3);
+    expect(
+      container.querySelector(".source-content-viewer code")?.textContent,
+    ).toBe(content);
+    expect(onInspectArtifact).not.toHaveBeenCalled();
+  });
+
+  it("uses only the fixed clipboard failure while preserving verified source and highlights", async () => {
+    const gate = deferred();
+    const writeText = vi.fn(() => gate.promise);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    const content = "needle <script>needle</script>";
+    renderSource({
+      selectedArtifact: webArtifact,
+      artifactSnapshot: {
+        path: webArtifact.path,
+        digest: webArtifact.digest,
+        content,
+      },
+    });
+    const find = inputLabelled("Find in current file");
+    changeInput(find, "needle");
+    act(() => buttonLabelled("Copy current file").click());
+    expect(transferStatus()).toBe("Copying current file…");
+
+    await act(async () => {
+      gate.reject(new Error("HOSTILE_CLIPBOARD_DETAIL"));
+      await gate.promise.catch(() => undefined);
+    });
+
+    expect(transferStatus()).toBe("Current file could not be copied.");
+    expect(container.textContent).not.toContain("HOSTILE_CLIPBOARD_DETAIL");
+    expect(
+      container.querySelector(".source-content-viewer code")?.textContent,
+    ).toBe(content);
+    expect(
+      container.querySelectorAll(".source-content-viewer mark"),
+    ).toHaveLength(2);
+  });
+
+  it.each(["resolve", "reject"])(
+    "suppresses a stale clipboard %s after selecting a new artifact",
+    async (settlement) => {
+      const gate = deferred();
+      const writeText = vi.fn(() => gate.promise);
+      vi.stubGlobal("navigator", { clipboard: { writeText } });
+      const currentCompilation = compilation("succeeded");
+      const onInspectArtifact = vi.fn();
+      const content = "exact source A";
+      renderSource({
+        currentCompilation,
+        selectedArtifact: webArtifact,
+        artifactSnapshot: {
+          path: webArtifact.path,
+          digest: webArtifact.digest,
+          content,
+        },
+        onInspectArtifact,
+      });
+      act(() => buttonLabelled("Copy current file").click());
+      expect(transferStatus()).toBe("Copying current file…");
+
+      act(() =>
+        container
+          .querySelector<HTMLButtonElement>(
+            `[data-source-path="${apiArtifact.path}"]`,
+          )
+          ?.click(),
+      );
+
+      expect(onInspectArtifact).toHaveBeenCalledTimes(1);
+      expect(onInspectArtifact).toHaveBeenCalledWith(apiArtifact.path);
+      expect(transferStatus()).toBeNull();
+      expect(buttonLabelled("Copy current file").disabled).toBe(true);
+      expect(buttonLabelled("Download current file").disabled).toBe(true);
+      renderSource({
+        currentCompilation,
+        selectedArtifact: apiArtifact,
+        artifactLoading: true,
+        artifactSnapshot: null,
+        onInspectArtifact,
+      });
+
+      await act(async () => {
+        if (settlement === "resolve") gate.resolve();
+        else gate.reject(new Error("HOSTILE_STALE_CLIPBOARD_DETAIL"));
+        await gate.promise.catch(() => undefined);
+      });
+
+      expect(writeText).toHaveBeenCalledTimes(1);
+      expect(writeText).toHaveBeenCalledWith(content);
+      expect(transferStatus()).toBeNull();
+      expect(container.textContent).not.toContain(
+        "HOSTILE_STALE_CLIPBOARD_DETAIL",
+      );
+      renderSource({
+        currentCompilation,
+        selectedArtifact: apiArtifact,
+        artifactSnapshot: {
+          path: apiArtifact.path,
+          digest: apiArtifact.digest,
+          content: "exact source B",
+        },
+        onInspectArtifact,
+      });
+      expect(buttonLabelled("Copy current file").disabled).toBe(false);
+      expect(buttonLabelled("Download current file").disabled).toBe(false);
+      expect(transferStatus()).toBeNull();
+    },
+  );
+
+  it.each([
+    {
+      label: "same-id Compilation replacement",
+      next: () => ({
+        currentCompilation: compilation("succeeded"),
+        selectedArtifact: webArtifact,
+        artifactLoading: false,
+        artifactSnapshot: {
+          path: webArtifact.path,
+          digest: webArtifact.digest,
+          content: "verified content",
+        },
+        artifactError: null,
+      }),
+      expectsActions: true,
+    },
+    {
+      label: "selection pending",
+      next: () => ({
+        currentCompilation: compilation("succeeded"),
+        selectedArtifact: webArtifact,
+        artifactLoading: true,
+        artifactSnapshot: null,
+        artifactError: null,
+      }),
+      expectsActions: false,
+    },
+    {
+      label: "selection failure",
+      next: () => ({
+        currentCompilation: compilation("succeeded"),
+        selectedArtifact: webArtifact,
+        artifactLoading: false,
+        artifactSnapshot: null,
+        artifactError: "Generated artifact could not be inspected.",
+      }),
+      expectsActions: false,
+    },
+  ])(
+    "clears completed transfer state on $label",
+    async ({ next, expectsActions }) => {
+      vi.stubGlobal("navigator", {
+        clipboard: { writeText: vi.fn(() => Promise.resolve()) },
+      });
+      renderSource({
+        currentCompilation: compilation("succeeded"),
+        selectedArtifact: webArtifact,
+        artifactSnapshot: {
+          path: webArtifact.path,
+          digest: webArtifact.digest,
+          content: "verified content",
+        },
+      });
+      await act(async () => {
+        buttonLabelled("Copy current file").click();
+        await Promise.resolve();
+      });
+      expect(transferStatus()).toBe("Copied current file.");
+
+      renderSource(next());
+
+      expect(transferStatus()).toBeNull();
+      expect(buttonLabelled("Copy current file").disabled).toBe(
+        !expectsActions,
+      );
+      expect(buttonLabelled("Download current file").disabled).toBe(
+        !expectsActions,
+      );
+    },
+  );
+
+  it.each([
+    ["web/app/page.tsx", "page.tsx"],
+    ["web/report<final>?.tsx", "report_final__.tsx"],
+    ["web/a\u0000b\u001fc\u007fd.ts", "a_b_c_d.ts"],
+    ['web/a<b>c:d"e\\f|g?h*i.ts', "a_b_c_d_e_f_g_h_i.ts"],
+    ["web/report.txt.  ", "report.txt"],
+    ["web/...", "source.txt"],
+    ["web/", "source.txt"],
+    ["api/CON.json", "_CON.json"],
+    ["api/lpt9.TXT", "_lpt9.TXT"],
+    ["api/COM10.txt", "COM10.txt"],
+  ])("uses safe download basename %s -> %s", (path, expectedFilename) => {
+    const artifact = { ...webArtifact, path };
+    const createObjectURL = vi
+      .spyOn(URL, "createObjectURL")
+      .mockReturnValue("blob:verified-source");
+    const revokeObjectURL = vi
+      .spyOn(URL, "revokeObjectURL")
+      .mockImplementation(() => undefined);
+    let clickedDownload: string | null = null;
+    let clickedHref: string | null = null;
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(function (this: HTMLAnchorElement) {
+        clickedDownload = this.download;
+        clickedHref = this.href;
+      });
+    renderSource({
+      currentCompilation: compilation("succeeded", [artifact]),
+      selectedArtifact: artifact,
+      artifactSnapshot: {
+        path,
+        digest: artifact.digest,
+        content: "verified bytes",
+      },
+    });
+
+    act(() => buttonLabelled("Download current file").click());
+
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(clickedDownload).toBe(expectedFilename);
+    expect(clickedHref).toBe("blob:verified-source");
+    expect(revokeObjectURL).toHaveBeenCalledTimes(1);
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:verified-source");
+    expect(transferStatus()).toBe("Download started.");
+  });
+
+  it("downloads one exact UTF-8 application/octet-stream Blob and preserves current find/filter state", async () => {
+    const content = " \u0000café 😀\n<script>needle</script>\n ";
+    const onInspectArtifact = vi.fn();
+    const createObjectURL = vi
+      .spyOn(URL, "createObjectURL")
+      .mockReturnValue("blob:exact-source");
+    const revokeObjectURL = vi
+      .spyOn(URL, "revokeObjectURL")
+      .mockImplementation(() => undefined);
+    let clickedDownload: string | null = null;
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(function (this: HTMLAnchorElement) {
+        clickedDownload = this.download;
+      });
+    renderSource({
+      selectedArtifact: webArtifact,
+      artifactSnapshot: {
+        path: webArtifact.path,
+        digest: webArtifact.digest,
+        content,
+      },
+      onInspectArtifact,
+    });
+    const filter = inputLabelled("Filter source files");
+    const find = inputLabelled("Find in current file");
+    changeInput(filter, "WEB/APP");
+    changeInput(find, "needle");
+
+    act(() => buttonLabelled("Download current file").click());
+
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+    const blob = createObjectURL.mock.calls[0]?.[0];
+    expect(blob).toBeInstanceOf(Blob);
+    if (!(blob instanceof Blob)) throw new Error("expected source Blob");
+    expect(blob.type).toBe("application/octet-stream");
+    expect(Array.from(new Uint8Array(await blob.arrayBuffer()))).toEqual(
+      Array.from(new TextEncoder().encode(content)),
+    );
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(clickedDownload).toBe("page.tsx");
+    expect(revokeObjectURL).toHaveBeenCalledTimes(1);
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:exact-source");
+    expect(transferStatus()).toBe("Download started.");
+    expect(filter.value).toBe("WEB/APP");
+    expect(find.value).toBe("needle");
+    expect(
+      container.querySelectorAll(".source-content-viewer mark"),
+    ).toHaveLength(1);
+    expect(
+      container.querySelector(".source-content-viewer code")?.textContent,
+    ).toBe(content);
+    expect(onInspectArtifact).not.toHaveBeenCalled();
+  });
+
+  it("uses a fixed download failure and no revoke when Object URL creation fails", () => {
+    const createObjectURL = vi
+      .spyOn(URL, "createObjectURL")
+      .mockImplementation(() => {
+        throw new Error("HOSTILE_CREATE_URL_DETAIL");
+      });
+    const revokeObjectURL = vi.spyOn(URL, "revokeObjectURL");
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click");
+    renderSource({
+      selectedArtifact: webArtifact,
+      artifactSnapshot: {
+        path: webArtifact.path,
+        digest: webArtifact.digest,
+        content: "verified content",
+      },
+    });
+
+    act(() => buttonLabelled("Download current file").click());
+
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+    expect(click).not.toHaveBeenCalled();
+    expect(revokeObjectURL).not.toHaveBeenCalled();
+    expect(transferStatus()).toBe("Current file could not be downloaded.");
+    expect(container.textContent).not.toContain("HOSTILE_CREATE_URL_DETAIL");
+  });
+
+  it("revokes a created Object URL once when the local download click fails", () => {
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:click-failure");
+    const revokeObjectURL = vi
+      .spyOn(URL, "revokeObjectURL")
+      .mockImplementation(() => undefined);
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {
+      throw new Error("HOSTILE_DOWNLOAD_CLICK_DETAIL");
+    });
+    renderSource({
+      selectedArtifact: webArtifact,
+      artifactSnapshot: {
+        path: webArtifact.path,
+        digest: webArtifact.digest,
+        content: "verified content",
+      },
+    });
+
+    act(() => buttonLabelled("Download current file").click());
+
+    expect(revokeObjectURL).toHaveBeenCalledTimes(1);
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:click-failure");
+    expect(transferStatus()).toBe("Current file could not be downloaded.");
+    expect(container.textContent).not.toContain(
+      "HOSTILE_DOWNLOAD_CLICK_DETAIL",
+    );
+  });
+
+  it("keeps successful fixed download state when Object URL revoke itself fails", () => {
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:revoke-failure");
+    const revokeObjectURL = vi
+      .spyOn(URL, "revokeObjectURL")
+      .mockImplementation(() => {
+        throw new Error("HOSTILE_REVOKE_DETAIL");
+      });
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(
+      () => undefined,
+    );
+    renderSource({
+      selectedArtifact: webArtifact,
+      artifactSnapshot: {
+        path: webArtifact.path,
+        digest: webArtifact.digest,
+        content: "verified content",
+      },
+    });
+
+    act(() => buttonLabelled("Download current file").click());
+
+    expect(revokeObjectURL).toHaveBeenCalledTimes(1);
+    expect(transferStatus()).toBe("Download started.");
+    expect(container.textContent).not.toContain("HOSTILE_REVOKE_DETAIL");
   });
 });

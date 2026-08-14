@@ -23,6 +23,25 @@ const ADAPTER_METADATA = [
 
 const maximumSourceQueryLength = 120;
 const maximumRenderedSourceMatches = 500;
+const unsafeSourceFilenameCharacterPattern =
+  /[\u0000-\u001f\u007f<>:"\/\\|?*]/gu;
+const trailingSourceFilenameCharacterPattern = /[. ]+$/u;
+const windowsDeviceSourceFilenamePattern =
+  /^(?:con|prn|aux|nul|clock\$|com[1-9]|lpt[1-9])(?:\.|$)/iu;
+
+type SourceTransferStatus =
+  | "Copying current file…"
+  | "Copied current file."
+  | "Current file could not be copied."
+  | "Download started."
+  | "Current file could not be downloaded."
+  | null;
+
+type SourceTransferAuthority = {
+  readonly compilation: WorkbenchCompilation;
+  readonly path: string;
+  readonly digest: string;
+};
 
 type SourceMatchPlan = {
   readonly count: number;
@@ -77,6 +96,31 @@ function sourceMatchStatus(plan: SourceMatchPlan) {
   return `${plan.count} matches.`;
 }
 
+function sourceDownloadFilename(path: string): string {
+  const basename = path.split("/").at(-1) ?? "";
+  const scrubbed = basename
+    .replace(unsafeSourceFilenameCharacterPattern, "_")
+    .replace(trailingSourceFilenameCharacterPattern, "");
+  if (scrubbed === "" || scrubbed === "." || scrubbed === "..") {
+    return "source.txt";
+  }
+  return windowsDeviceSourceFilenamePattern.test(scrubbed)
+    ? `_${scrubbed}`
+    : scrubbed;
+}
+
+function sameSourceTransferAuthority(
+  left: SourceTransferAuthority,
+  right: SourceTransferAuthority | null,
+) {
+  return (
+    right !== null &&
+    left.compilation === right.compilation &&
+    left.path === right.path &&
+    left.digest === right.digest
+  );
+}
+
 /**
  * The Code canvas: the published Graph projection, its diff from the Draft,
  * the immutable Compilation status, its registered Source artifacts, and the
@@ -121,6 +165,17 @@ export function CodeCanvas({
   const importInput = useRef<HTMLInputElement>(null);
   const [pathFilterQuery, setPathFilterQuery] = useState("");
   const [findQuery, setFindQuery] = useState("");
+  const [sourceTransferStatus, setSourceTransferStatus] =
+    useState<SourceTransferStatus>(null);
+  const [sourceTransferIsPending, setSourceTransferIsPending] = useState(false);
+  const [sourceTransferIsInvalidated, setSourceTransferIsInvalidated] =
+    useState(false);
+  const sourceTransferToken = useRef(0);
+  const sourceTransferPending = useRef(false);
+  const sourceTransferInvalidated = useRef(false);
+  const currentSourceTransferAuthority = useRef<SourceTransferAuthority | null>(
+    null,
+  );
   const graphDiff = publishedRevision?.graph
     ? diffApplicationGraphs(publishedRevision.graph, graph)
     : null;
@@ -149,6 +204,14 @@ export function CodeCanvas({
     artifactSnapshot.digest === selectedArtifact.digest
       ? artifactSnapshot
       : null;
+  currentSourceTransferAuthority.current =
+    verifiedArtifact && compilation
+      ? {
+          compilation,
+          path: verifiedArtifact.path,
+          digest: verifiedArtifact.digest,
+        }
+      : null;
   const effectiveFindQuery = verifiedArtifact ? findQuery : "";
   const sourceMatchPlan = useMemo(
     () =>
@@ -166,6 +229,125 @@ export function CodeCanvas({
     verifiedArtifact?.path,
     verifiedArtifact?.digest,
   ]);
+  useEffect(() => {
+    sourceTransferToken.current += 1;
+    sourceTransferPending.current = false;
+    sourceTransferInvalidated.current = false;
+    setSourceTransferIsPending(false);
+    setSourceTransferIsInvalidated(false);
+    setSourceTransferStatus(null);
+  }, [
+    compilation,
+    selectedArtifact?.path,
+    selectedArtifact?.digest,
+    artifactLoading,
+    artifactError,
+    verifiedArtifact?.path,
+    verifiedArtifact?.digest,
+  ]);
+  function invalidateSourceTransfer() {
+    sourceTransferToken.current += 1;
+    sourceTransferPending.current = false;
+    sourceTransferInvalidated.current = true;
+    setSourceTransferIsPending(false);
+    setSourceTransferIsInvalidated(true);
+    setSourceTransferStatus(null);
+  }
+  function inspectArtifact(artifactPath: string) {
+    invalidateSourceTransfer();
+    onInspectArtifact(artifactPath);
+  }
+  async function copyCurrentFile() {
+    if (
+      sourceTransferPending.current ||
+      sourceTransferInvalidated.current ||
+      !verifiedArtifact ||
+      !compilation
+    ) {
+      return;
+    }
+    const authority: SourceTransferAuthority = {
+      compilation,
+      path: verifiedArtifact.path,
+      digest: verifiedArtifact.digest,
+    };
+    const token = sourceTransferToken.current + 1;
+    sourceTransferToken.current = token;
+    sourceTransferPending.current = true;
+    setSourceTransferIsPending(true);
+    setSourceTransferStatus("Copying current file…");
+    try {
+      await navigator.clipboard.writeText(verifiedArtifact.content);
+      if (
+        token === sourceTransferToken.current &&
+        !sourceTransferInvalidated.current &&
+        sameSourceTransferAuthority(
+          authority,
+          currentSourceTransferAuthority.current,
+        )
+      ) {
+        setSourceTransferStatus("Copied current file.");
+      }
+    } catch {
+      if (
+        token === sourceTransferToken.current &&
+        !sourceTransferInvalidated.current &&
+        sameSourceTransferAuthority(
+          authority,
+          currentSourceTransferAuthority.current,
+        )
+      ) {
+        setSourceTransferStatus("Current file could not be copied.");
+      }
+    } finally {
+      if (
+        token === sourceTransferToken.current &&
+        !sourceTransferInvalidated.current &&
+        sameSourceTransferAuthority(
+          authority,
+          currentSourceTransferAuthority.current,
+        )
+      ) {
+        sourceTransferPending.current = false;
+        setSourceTransferIsPending(false);
+      }
+    }
+  }
+  function downloadCurrentFile() {
+    if (
+      sourceTransferPending.current ||
+      sourceTransferInvalidated.current ||
+      !verifiedArtifact
+    ) {
+      return;
+    }
+    sourceTransferToken.current += 1;
+    let objectUrl: string | null = null;
+    try {
+      objectUrl = URL.createObjectURL(
+        new Blob([verifiedArtifact.content], {
+          type: "application/octet-stream",
+        }),
+      );
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = sourceDownloadFilename(verifiedArtifact.path);
+      link.click();
+      setSourceTransferStatus("Download started.");
+    } catch {
+      setSourceTransferStatus("Current file could not be downloaded.");
+    } finally {
+      if (objectUrl !== null) {
+        try {
+          URL.revokeObjectURL(objectUrl);
+        } catch {
+          // Revocation is best-effort after the one required attempt.
+        }
+      }
+    }
+  }
+  const sourceTransferDisabled =
+    !verifiedArtifact || sourceTransferIsPending || sourceTransferIsInvalidated;
   const artifactStatus = !selectedArtifact
     ? "Select a registered artifact."
     : artifactLoading
@@ -257,7 +439,7 @@ export function CodeCanvas({
                           }
                           aria-label={`Open ${artifact.path}; ${artifact.mediaType}${size ? `; ${size}` : ""}; digest ${artifact.digest}`}
                           data-source-path={artifact.path}
-                          onClick={() => onInspectArtifact(artifact.path)}
+                          onClick={() => inspectArtifact(artifact.path)}
                           type="button"
                         >
                           <strong>{artifact.path}</strong>
@@ -286,6 +468,22 @@ export function CodeCanvas({
                     {selectedArtifact.digest}
                   </span>
                 )}
+                <div className="source-transfer-actions">
+                  <button
+                    disabled={sourceTransferDisabled}
+                    onClick={copyCurrentFile}
+                    type="button"
+                  >
+                    Copy current file
+                  </button>
+                  <button
+                    disabled={sourceTransferDisabled}
+                    onClick={downloadCurrentFile}
+                    type="button"
+                  >
+                    Download current file
+                  </button>
+                </div>
               </div>
               <div className="source-search-control source-current-file-find">
                 <label htmlFor="source-current-file-find">
@@ -321,6 +519,15 @@ export function CodeCanvas({
                   role="status"
                 >
                   {sourceMatchStatus(sourceMatchPlan)}
+                </p>
+              )}
+              {sourceTransferStatus && (
+                <p
+                  aria-live="polite"
+                  className="source-transfer-status"
+                  role="status"
+                >
+                  {sourceTransferStatus}
                 </p>
               )}
               {verifiedArtifact && (

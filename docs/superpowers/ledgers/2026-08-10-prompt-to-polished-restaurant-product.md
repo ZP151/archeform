@@ -4943,12 +4943,12 @@ Docker/Compose, and deployment.
 
 ## Task 8 — Add Source Mode, controlled overlays, ZIP, and Git export
 
-State: Task 8A Source Explorer is `delivered`; Task 8B Source Search is
-`accepted`, not delivered. Diff, editing, overlays, ZIP, Git, and export remain
-`planned` with writer count zero.
+State: Task 8A Source Explorer and Task 8B Source Search are `delivered`; Task
+8C Verified Source Transfer is `accepted`, not delivered. Diff, editing,
+overlays, ZIP, Git, and export remain `planned` with writer count zero.
 
-Owner: Task 8A authorities are consumed. Task 8B writer and reviewer authorities
-are consumed; only PM/controller exact-eight delivery remains.
+Owner: Task 8A/8B authorities and Task 8C writer/reviewer authorities are
+consumed; only PM/controller exact-eight Task 8C delivery remains.
 
 ### Task 8A Source Explorer freeze — 2026-08-14
 
@@ -5024,8 +5024,7 @@ proved local `HEAD` equals upstream at
 
 ### Task 8B Source Search freeze — 2026-08-14
 
-State: `accepted`, not delivered, on base
-`8c2767bb2c333d2086ca1b2d0f8cdc4c348bf7f0`.
+State: `delivered` at `84a90c4b17fe30bc35921fb25aebf228009678be`.
 
 Decision and contract:
 
@@ -5074,12 +5073,72 @@ full Workbench 488, no-emit, Next, and browser 1/1. Independent review found one
 P1: same-ID Compilation replacement retained stale find state. Repair RED 1/16
 became GREEN 16/16; fresh full Workbench 489, no-emit, Next, browser 1/1, and
 exact-eight static gates pass. The same reviewer closes P0/P1/P2=0/0/0 with
-`READY_FOR_DELIVERY YES`; PM authorizes controller-only exact-eight delivery.
+`READY_FOR_DELIVERY YES`. Controller delivery consumed the exact eight,
+committed `feat(workbench): add source search`, pushed without force, and
+proved local `HEAD` equals upstream with a clean tree.
+
+### Task 8C Verified Source Transfer freeze — 2026-08-14
+
+State: `accepted`, not delivered, on base
+`84a90c4b17fe30bc35921fb25aebf228009678be`.
+
+Decision and contract:
+
+- The founder standing instruction
+  `参考以下总结，若符合项目目标，则持续接受而迭代。` covers this bounded,
+  additive/reversible, local deterministic UI slice. Delivery policy classifies
+  it as ordinary component work; no ADR is required because no stable API,
+  Graph, security, runtime, persistence, dependency, or lifecycle contract
+  changes.
+- In the existing Source viewer, `Copy current file` and
+  `Download current file` are disabled unless current succeeded-Compilation
+  path/digest/content already form the existing `verifiedArtifact`.
+- Copy passes the exact admitted content to the native clipboard without
+  transformation. Fixed no-echo pending/success/failure states are bound by a
+  monotonic token and current authority so an older completion cannot claim a
+  newer selection.
+- Download creates one `application/octet-stream` UTF-8 Blob from those exact
+  bytes, uses a safe basename hint, clicks one local anchor, and revokes a
+  created Object URL exactly once from `finally`. The basename replaces C0/DEL
+  and `<>:"/\\|?*` with `_`, removes trailing periods/spaces, falls back to
+  `source.txt` when empty or dot-only, and prefixes Windows device stems with
+  `_`.
+- Selection, pending/failure, or Compilation invalidation disables actions and
+  clears transfer state. Copy/download make zero new requests, never call
+  `onInspectArtifact`, and preserve path filter, current-file find, admitted
+  viewer content, and unrelated operation state.
+- ZIP is stopped because there is no bounded archive/export contract or direct
+  Workbench ZIP dependency. Source Diff is stopped because no durable,
+  discoverable previous-Compilation baseline exists. Git, Source Overlay,
+  editing, and every broader Source contract remain deferred.
+
+Authority:
+
+- [Task 8C executable plan](../plans/2026-08-14-workbench-verified-source-transfer.md)
+- [Delivery policy](../../delivery-policy.md)
+
+Exact writer manifest (4):
+
+```text
+apps/workbench/components/canvases/code-canvas.tsx
+apps/workbench/components/canvases/code-canvas.test.tsx
+apps/workbench/app/globals.css
+apps/workbench/e2e/source-explorer.pw.ts
+```
+
+Any fifth implementation path is a PM STOP. Mandatory RED was unit 28/44 plus
+browser 1/1 with production untouched. GREEN is focused 44, full Workbench 517,
+no-emit, Next, and browser 1/1; exact-eight static/containment gates are clean.
+The independent review closes P0/P1/P2=0/0/0 with
+`READY_FOR_DELIVERY YES`. PM/controller alone may deliver the exact four
+implementation plus four governance paths with subject
+`feat(workbench): add verified source transfer`, non-force push,
+local/upstream equality, and a clean tree.
 
 Later Task 8 acceptance remains: Code eventually gains search/diff, ZIP and
 Graph-first Git share one checksum manifest, writable extensions use
 `SourceOverlayV1`, Draft Preview Snapshot output is never exportable source, and
-credentials, raw model material, and private files stay absent. Task 8B does not
+credentials, raw model material, and private files stay absent. Task 8C does not
 authorize any later Task 8 writer.
 
 ## Task 9 — Close the Restaurant Product with guarded real-model acceptance

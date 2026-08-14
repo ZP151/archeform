@@ -205,14 +205,24 @@ P0 acceptance gates:
 > Repaired-tree re-review is clean, targeted Terra returns `PASS`, and final Sol
 > returns `RELEASE_ACCEPT`, actionable P0/P1/P2=0/0/0, after stale-failure and
 > valid-success A/B characterization. Controller delivery consumed the exact 15
-> paths. Task 8B Source Search is accepted, not delivered, as ordinary
-> deterministic UI: local path filtering plus bounded inert find in the current
-> verified file, exactly four implementation paths, no API/client/hook/search
-> service, and no broader Source authority.
+> paths. Task 8B Source Search is delivered at
+> `84a90c4b17fe30bc35921fb25aebf228009678be` as ordinary deterministic UI:
+> local path filtering plus bounded inert find in the current verified file,
+> exactly four implementation paths, no API/client/hook/search service, and no
+> broader Source authority.
 > Mandatory RED is unit 6/15 plus browser 1/1; the same reviewer closes the
 > same-ID Compilation replacement repair at P0/P1/P2=0/0/0 and
 > `READY_FOR_DELIVERY YES` after fresh full Workbench 489, no-emit, Next,
-> browser 1/1, and exact-eight static gates. PM authorizes only controller
+> browser 1/1, and exact-eight static gates; controller delivery consumed exact
+> eight. Task 8C Verified Source Transfer is accepted, not delivered:
+> verified-only copy/download, exact admitted content/UTF-8 bytes,
+> stale-copy suppression, safe basename hint, deterministic Object URL cleanup,
+> and zero new request or client/hook/API/dependency path. ZIP and Source Diff
+> remain stopped by missing bounded archive and durable baseline contracts.
+> Mandatory RED is unit 28/44 plus browser 1/1 with production untouched; GREEN
+> is focused 44, full Workbench 517, no-emit, Next, and browser 1/1. Exact-eight
+> static/containment gates are clean, and the independent review closes
+> P0/P1/P2=0/0/0 with `READY_FOR_DELIVERY YES`. PM authorizes only controller
 > exact-eight delivery.
 
 ### P1 Product Closure gate (accepted and delivered)
@@ -404,7 +414,9 @@ containment and pushed equality. Access and Workflow follow-ups remain blocked
 at design because the current generated runtime would not enforce the proposed
 Graph-only authority. ADR-0017 Task 8A Source Explorer is delivered at
 `8c2767bb` with exact-15 containment and pushed equality. Task 8B Source Search
-is accepted, not delivered, with exact-eight controller delivery authorized.
+is delivered at `84a90c4b` with exact-eight containment and pushed equality.
+Task 8C Verified Source Transfer is accepted, not delivered, with exact-eight
+controller delivery authorized.
 
 Workbench implementation includes characterization-first decomposition of the
 current 3,818-line global stylesheet, 907-line controller, and 1,131-line
@@ -713,10 +725,11 @@ and strict-response-only Customer/Merchant frame updates. Access and Workflow
 follow-ups are stopped at design because the generated runtime would not enforce
 their Graph-only authority. ADR-0017 Task 8A is delivered at `8c2767bb` for a
 read-only succeeded-Compilation artifact tree and strictly bound content viewer.
-Task 8B Source Search is accepted, not delivered, for local path filtering and
-bounded inert find in the current verified file; its exact-eight reviewed tree
-is authorized for controller delivery. Every other Data, Access, Users, Workflow,
-Experience, Source edit/export, Publish, Compilation creation, block edit, and
-generated-runtime change remains serialized behind a later reviewed freeze.
+Task 8B Source Search is delivered at `84a90c4b`; Task 8C Verified Source
+Transfer is accepted, not delivered, with only its reviewed local verified-file
+copy/download exact-eight tree authorized for controller delivery. Every other
+Data, Access, Users, Workflow, Experience, Source Diff/ZIP/Git/edit/export,
+Publish, Compilation creation, block edit, and generated-runtime change remains
+serialized behind a later reviewed freeze.
 Provider, service, Docker, cloud/deployment, and production-payment work remain
 unauthorized.
