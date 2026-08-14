@@ -1349,6 +1349,22 @@ export class ControlPlaneClient {
     return templateDraftResponse(response);
   }
 
+  async appendTemplatePageRevision(
+    applicationGraphId: string,
+    input: {
+      readonly baseDraftRevisionId: string;
+      readonly surfaceKey: "customer-mobile" | "merchant-desktop";
+      readonly pageId: string;
+      readonly title: string;
+    },
+  ): Promise<WorkbenchTemplateDraftInstance> {
+    const response = await this.request<unknown>(
+      `/template-draft-instances/${encodeURIComponent(applicationGraphId)}/page-revisions`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+    return templateDraftResponse(response);
+  }
+
   async listLocalApplicationSummaries(): Promise<
     readonly WorkbenchApplicationSummary[]
   > {

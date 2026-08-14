@@ -5,6 +5,7 @@
 @import "../styles/builder-workspace.css";
 @import "../styles/template-draft.css";
 @import "../styles/template-preview.css";
+@import "../styles/template-page.css";
 
 .revision-timeline {
   position: relative;

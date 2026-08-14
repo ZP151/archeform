@@ -132,11 +132,11 @@ function stubControlPlane(
   options: {
     readonly applications?: readonly WorkbenchApplicationSummary[];
     readonly portfolio?: unknown;
-    readonly templateDrafts?: readonly [
-      ReturnType<typeof templateDraftResponse>,
-      ReturnType<typeof templateDraftResponse>,
-    ];
+    readonly templateDrafts?: readonly ReturnType<
+      typeof templateDraftResponse
+    >[];
     readonly failFirstTemplateClone?: boolean;
+    readonly failTemplatePageRevision?: boolean;
   } = {},
 ): ReturnType<typeof vi.fn> {
   const applications = options.applications ?? [];
@@ -169,6 +169,19 @@ function stubControlPlane(
         url.pathname === "/template-draft-instances/application-1/revisions"
       ) {
         return responseJson(options.templateDrafts?.[1] ?? null, 201);
+      }
+      if (
+        method === "POST" &&
+        url.pathname ===
+          "/template-draft-instances/application-1/page-revisions"
+      ) {
+        if (options.failTemplatePageRevision) {
+          return responseJson(
+            { message: "HOSTILE_PAGE_SAVE_HTTP_SENTINEL" },
+            503,
+          );
+        }
+        return responseJson(options.templateDrafts?.[2] ?? null, 201);
       }
       if (
         method === "GET" &&
@@ -334,16 +347,15 @@ describe("Workbench shell", () => {
 
   function renderWorkbench(
     applications?: readonly WorkbenchApplicationSummary[],
-    templateDrafts?: readonly [
-      ReturnType<typeof templateDraftResponse>,
-      ReturnType<typeof templateDraftResponse>,
-    ],
+    templateDrafts?: readonly ReturnType<typeof templateDraftResponse>[],
     failFirstTemplateClone = false,
+    failTemplatePageRevision = false,
   ) {
     const fetcher = stubControlPlane({
       applications,
       templateDrafts,
       failFirstTemplateClone,
+      failTemplatePageRevision,
     });
     vi.stubGlobal("fetch", fetcher);
     act(() => {
@@ -370,6 +382,7 @@ describe("Workbench shell", () => {
       "builder-workspace.css",
       "template-draft.css",
       "template-preview.css",
+      "template-page.css",
     ];
     for (const module of modules) {
       const importRule = `@import \"../styles/${module}\";`;
@@ -729,6 +742,10 @@ describe("Workbench shell", () => {
   it("clones a V3 template, isolates legacy actions, and appends a renamed Draft", async () => {
     const first = templateDraftResponse(1);
     const second = templateDraftResponse(2);
+    const third = templateDraftResponse(3, {
+      pageId: "customer-menu",
+      title: "Seasonal Menu",
+    });
     const sameNameTemplates: readonly WorkbenchApplicationSummary[] = [
       {
         ...restaurantSummary,
@@ -751,7 +768,7 @@ describe("Workbench shell", () => {
         },
       },
     ];
-    const fetcher = renderWorkbench(sameNameTemplates, [first, second]);
+    const fetcher = renderWorkbench(sameNameTemplates, [first, second, third]);
 
     await waitForAssertion(() => {
       expect(
@@ -822,6 +839,86 @@ describe("Workbench shell", () => {
       baseDraftRevisionId: "draft-1",
       name: "Maison Rivage",
     });
+
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>('button[aria-label="Select Menu"]')
+        ?.click();
+    });
+    await waitForAssertion(() => {
+      expect(
+        container.querySelector('button[aria-label="Edit Menu"]'),
+      ).not.toBeNull();
+    });
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>('button[aria-label="Edit Menu"]')
+        ?.click();
+    });
+    await waitForAssertion(() => {
+      expect(
+        container.querySelector(
+          'section[aria-label="Template Page workspace"]',
+        ),
+      ).not.toBeNull();
+    });
+    expect(
+      Array.from(
+        container.querySelectorAll<HTMLElement>(
+          'nav[aria-label="Builder navigation"] button',
+        ),
+        (button) => button.getAttribute("aria-label"),
+      ),
+    ).toEqual(["Page"]);
+    const pageTitle = container.querySelector<HTMLInputElement>(
+      'input[aria-label="Page title"]',
+    )!;
+    act(() => {
+      Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )?.set?.call(pageTitle, "Seasonal Menu");
+      pageTitle.dispatchEvent(new Event("input", { bubbles: true }));
+      container
+        .querySelector("form")
+        ?.dispatchEvent(
+          new Event("submit", { bubbles: true, cancelable: true }),
+        );
+    });
+    await waitForAssertion(() => {
+      expect(container.textContent).toContain("Draft r.3 · Preview active");
+      expect(container.textContent).toContain("Seasonal Menu");
+    });
+    const pageRevisionCall = fetcher.mock.calls.find(([input, init]) => {
+      const url = new URL(String(input));
+      return (
+        init?.method === "POST" &&
+        url.pathname ===
+          "/template-draft-instances/application-1/page-revisions"
+      );
+    });
+    expect(JSON.parse(String(pageRevisionCall?.[1]?.body))).toEqual({
+      baseDraftRevisionId: "draft-2",
+      surfaceKey: "customer-mobile",
+      pageId: "customer-menu",
+      title: "Seasonal Menu",
+    });
+
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>(
+          'button[aria-label="Back to preview"]',
+        )
+        ?.click();
+    });
+    await waitForAssertion(() => {
+      expect(container.textContent).toContain("Preview synced · Draft r.3");
+      expect(
+        container.querySelector(
+          'button[aria-label="Select Seasonal Menu"][aria-current="page"]',
+        ),
+      ).not.toBeNull();
+    });
   });
 
   it("reuses the clone request identity after a recoverable response failure", async () => {
@@ -876,6 +973,75 @@ describe("Workbench shell", () => {
       );
     expect(bodies).toHaveLength(2);
     expect(bodies[1]?.requestId).toBe(bodies[0]?.requestId);
+  });
+
+  it("shows one fixed error when a template Page save fails", async () => {
+    const first = templateDraftResponse(1);
+    renderWorkbench(undefined, [first], false, true);
+
+    await waitForAssertion(() => {
+      expect(
+        container.querySelector<HTMLButtonElement>(
+          'button[aria-label="Start from Maison Aurelia"]',
+        ),
+      ).not.toBeNull();
+    });
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>(
+          'button[aria-label="Start from Maison Aurelia"]',
+        )
+        ?.click();
+    });
+    await waitForAssertion(() => {
+      expect(container.textContent).toContain("Preview synced · Draft r.1");
+    });
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>('button[aria-label="Select Menu"]')
+        ?.click();
+    });
+    await waitForAssertion(() => {
+      expect(
+        container.querySelector('button[aria-label="Edit Menu"]'),
+      ).not.toBeNull();
+    });
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>('button[aria-label="Edit Menu"]')
+        ?.click();
+    });
+    await waitForAssertion(() => {
+      expect(
+        container.querySelector(
+          'section[aria-label="Template Page workspace"]',
+        ),
+      ).not.toBeNull();
+    });
+    const pageTitle = container.querySelector<HTMLInputElement>(
+      'input[aria-label="Page title"]',
+    )!;
+    act(() => {
+      Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )?.set?.call(pageTitle, "Seasonal Menu");
+      pageTitle.dispatchEvent(new Event("input", { bubbles: true }));
+      container
+        .querySelector("form")
+        ?.dispatchEvent(
+          new Event("submit", { bubbles: true, cancelable: true }),
+        );
+    });
+
+    await waitForAssertion(() => {
+      expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+        "Template page could not be saved.",
+      );
+    });
+    expect(container.textContent).not.toContain(
+      "HOSTILE_PAGE_SAVE_HTTP_SENTINEL",
+    );
   });
 
   it("keeps the composer as the sole Home decision when no applications exist", () => {

@@ -150,6 +150,42 @@ describe("ControlPlaneClient", () => {
     ).rejects.toThrow("Control Plane template response is invalid.");
   });
 
+  it("appends a page revision through the exact route and rejects projection drift", async () => {
+    const revised = templateDraftResponse(3);
+    const drifted = structuredClone(revised);
+    drifted.previews[0].surface.pages[1]!.title = "Invented menu";
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(revised), { status: 201 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(drifted), { status: 201 }),
+      );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+    const input = {
+      baseDraftRevisionId: "draft-2",
+      surfaceKey: "customer-mobile" as const,
+      pageId: "customer-menu",
+      title: "Seasonal Menu",
+    };
+
+    await expect(
+      client.appendTemplatePageRevision("application-1", input),
+    ).resolves.toMatchObject({
+      draft: { revisionNumber: 3 },
+      snapshot: { id: "preview-3", state: "active" },
+    });
+    expect(fetcher).toHaveBeenNthCalledWith(
+      1,
+      "http://control-plane.test/template-draft-instances/application-1/page-revisions",
+      expect.objectContaining({ method: "POST", body: JSON.stringify(input) }),
+    );
+    await expect(
+      client.appendTemplatePageRevision("application-1", input),
+    ).rejects.toThrow("Control Plane template response is invalid.");
+  });
+
   it("rejects a template response whose Graph and Snapshot identity do not match", async () => {
     const checksumDrift = structuredClone(templateDraftResponse(1));
     checksumDrift.draft.graph.metadata.name = "Checksum drift";
@@ -164,10 +200,16 @@ describe("ControlPlaneClient", () => {
     workspaceDrift.snapshot.snapshotChecksum = hashDraftPreviewSnapshotV2(
       workspaceDrift.snapshot,
     );
-    workspaceDrift.previews = workspaceDrift.previews.map((preview) => ({
-      ...preview,
-      graphChecksum: workspaceDrift.snapshot.graphChecksum,
-    })) as typeof workspaceDrift.previews;
+    workspaceDrift.previews = [
+      {
+        ...workspaceDrift.previews[0],
+        graphChecksum: workspaceDrift.snapshot.graphChecksum,
+      },
+      {
+        ...workspaceDrift.previews[1],
+        graphChecksum: workspaceDrift.snapshot.graphChecksum,
+      },
+    ];
     const projectionDrift = structuredClone(templateDraftResponse(1));
     projectionDrift.previews[0].surface.pages[0]!.title = "Invented title";
     const fetcher = vi

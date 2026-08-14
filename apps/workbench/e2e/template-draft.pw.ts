@@ -8,11 +8,15 @@ const jsonHeaders = {
   "content-type": "application/json",
 };
 
-test("clones, previews, and renames an independent Restaurant Draft", async ({
+test("clones, renames, and edits one page in an independent Restaurant Draft", async ({
   page,
 }, testInfo) => {
   const first = templateDraftResponse(1);
   const second = templateDraftResponse(2);
+  const third = templateDraftResponse(3, {
+    pageId: "customer-menu",
+    title: "Seasonal Menu",
+  });
   await page.route("http://127.0.0.1:3000/**", async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
@@ -78,6 +82,23 @@ test("clones, previews, and renames an independent Restaurant Draft", async ({
       });
       return;
     }
+    if (
+      request.method() === "POST" &&
+      path === "/template-draft-instances/application-1/page-revisions"
+    ) {
+      expect(request.postDataJSON()).toEqual({
+        baseDraftRevisionId: "draft-2",
+        surfaceKey: "customer-mobile",
+        pageId: "customer-menu",
+        title: "Seasonal Menu",
+      });
+      await route.fulfill({
+        status: 201,
+        headers: jsonHeaders,
+        body: JSON.stringify(third),
+      });
+      return;
+    }
     await route.fulfill({
       status: 404,
       headers: jsonHeaders,
@@ -103,8 +124,48 @@ test("clones, previews, and renames an independent Restaurant Draft", async ({
   await expect(
     page.getByRole("heading", { name: "Maison Rivage" }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Preview details" }).click();
+  await expect(page.getByText("preview-2")).toBeVisible();
+  await page.getByRole("button", { name: "Preview details" }).click();
+  await page.getByRole("button", { name: "Select Menu" }).click();
+  await page.getByRole("button", { name: "Edit Menu" }).click();
+  await expect(
+    page.getByRole("region", { name: "Template Page workspace" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("navigation", { name: "Builder navigation" })
+      .getByRole("button"),
+  ).toHaveCount(1);
+  const pageTitle = page.getByRole("textbox", { name: "Page title" });
+  await pageTitle.fill("Seasonal Menu");
+  await expect(
+    page.getByLabel("Menu preview").getByRole("heading", { name: "Menu" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Seasonal Menu preview")).toHaveCount(0);
+  await pageTitle.press("Enter");
+  await expect(page.getByText("Draft r.3 · Preview active")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Seasonal Menu" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Back to preview" }).click();
+  await expect(page.getByText("Preview synced · Draft r.3")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Select Seasonal Menu" }),
+  ).toHaveAttribute("aria-current", "page");
+  await page.getByRole("button", { name: "Preview details" }).click();
+  await expect(page.getByText("preview-3")).toBeVisible();
+  await expect(page.getByText("preview-2")).toHaveCount(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Preview details" }).click();
+  await page.getByRole("button", { name: "Edit Seasonal Menu" }).click();
+  const editorBox = await page.locator(".template-page-editor").boundingBox();
+  const previewBox = await page.locator(".template-page-preview").boundingBox();
+  expect(editorBox).not.toBeNull();
+  expect(previewBox).not.toBeNull();
+  expect(previewBox!.y).toBeGreaterThan(editorBox!.y + editorBox!.height - 1);
   await page.screenshot({
-    path: testInfo.outputPath("template-draft-r2.png"),
+    path: testInfo.outputPath("template-page-r3.png"),
     fullPage: true,
   });
 });

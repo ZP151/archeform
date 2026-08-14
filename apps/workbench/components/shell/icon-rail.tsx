@@ -100,11 +100,21 @@ export function IconRail({
 export function BuilderNavigation({
   activeSurface,
   onNavigate,
+  allowedDestinations,
 }: {
   readonly activeSurface: Surface;
   readonly onNavigate: (surface: Surface) => void;
+  readonly allowedDestinations?: readonly Exclude<
+    WorkbenchDestinationKey,
+    "apps"
+  >[];
 }) {
-  const destinations = findWorkbenchContext("builder").destinations;
+  const destinations = findWorkbenchContext("builder").destinations.filter(
+    ({ key }) =>
+      key === "apps" ||
+      allowedDestinations === undefined ||
+      allowedDestinations.includes(key),
+  );
   return (
     <nav
       className="builder-navigation"

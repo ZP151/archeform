@@ -33,4 +33,12 @@ export class TemplateController {
   ) {
     return this.templates.appendTemplateDraftRevision(applicationGraphId, body);
   }
+
+  @Post("template-draft-instances/:applicationGraphId/page-revisions")
+  appendTemplatePageRevision(
+    @Param("applicationGraphId") applicationGraphId: string,
+    @Body() body: unknown,
+  ) {
+    return this.templates.appendTemplatePageRevision(applicationGraphId, body);
+  }
 }

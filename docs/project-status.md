@@ -109,6 +109,15 @@ historical evidence, not the executable Task 2/Task 3 contract.
   Publish, or Compilation. Fresh evidence passes Control Plane 253/253,
   Workbench 384/384, the real browser clone/preview/rename journey 1/1, both
   package typechecks/builds, and final independent review P0/P1/P2=0/0/0.
+- Task 7A is delivered by its enclosing reviewed commit under accepted
+  [`ADR-0013`](adr/adr-0013-template-page-draft-revision-operation.md). It is
+  limited to selecting one delivered Restaurant page, changing only its title,
+  and appending Graph V3 Draft r.3 plus a new immutable Snapshot V2. Graph,
+  Puck, Data, Users, Workflow, Experience, Publish, Compilation, dependencies,
+  providers, and deployment remain unchanged. Fresh evidence passes Control
+  Plane 278/278, Workbench 390/390, Graph 661/661, Capabilities 384/384,
+  Compiler 491/491, both typechecks/builds, Prisma validation, browser journey
+  1/1, exact 28-path containment, and independent P0/P1/P2=0/0/0 review.
 
 ### Blocked decisions and risks
 
@@ -119,11 +128,9 @@ from the exact 2026-08-14 founder response
 summary matches the current evidence and accepted Restaurant goal. The accepted
 additive contract preserves V1 and separates owned pages from visible
 navigation. Copied shadcn/ui source, direct Radix, another external coordinate,
-provider/model/network/service work, Docker, Compose, and Workbench API/Control
-Plane contract expansion remain unauthorized. The delivered Task 6B template
-lifecycle is an additive local API and persistence boundary accepted in
-ADR-0012 and adds no Graph, provider, external dependency, marketplace, or
-production deployment.
+provider/model/network/service work, Docker, Compose, and unassigned Workbench
+API/Control Plane expansion remain unauthorized. ADR-0013 authorizes and closes
+only the exact local Page-title command delivered by Task 7A.
 
 The main risks are shared-contract drift, accidental lockfile resolution drift,
 client relabeling of server totals/state/payment/inventory/audit fields, and UI
@@ -131,11 +138,11 @@ ports that imply authority. Frozen tests and the stop-both rule address these.
 
 ### Next smallest valuable slice
 
-Start the smallest Task 7 editor slice: selecting a page in the delivered
-customer or merchant preview must open that exact page in the Page workspace,
-persist one bounded edit as Draft r.3, and create a new immutable Snapshot V2.
-Keep Data, Users, Workflow, Experience, Source, and export work behind later
-vertical slices; do not expand Graph contracts.
+Freeze the next smallest visible Task 7 slice: a bounded Graph V3 Page block
+round-trip for one existing recipe region. Do not implement it until the Puck/
+V3 ownership, binding preservation, and source-export boundary is accepted.
+Keep Data, Users, Workflow, Experience, Source, Publish, and Compilation
+serialized behind reviewed slices.
 
 ### Retained historical reconciliation through V3 acceptance
 
@@ -579,10 +586,9 @@ Authorities:
 
 ## Next gate
 
-Product Recipe V2, Task 2 Restaurant semantics, Task 3 UI Registry, Task 4
-customer compilation, and Task 5 merchant/dual-surface compilation are
-delivered. Task 6A Workbench prompt-to-live foundation is `implementing` under
-its exact internal Workbench/UI plan; no Control Plane API expansion is active.
+Tasks 0-7A are delivered. The next gate is a design/ADR freeze for one bounded
+Graph V3 Page block round-trip; no implementation writer or additional Control
+Plane/editor expansion is active yet.
 
 ## Explicitly deferred
 

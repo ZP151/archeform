@@ -123,6 +123,12 @@ export type WorkbenchController = {
   readonly compileApplication: (applicationKey: string) => void;
   readonly startCuratedTemplate: (templateKey: string) => void;
   readonly renameTemplateDraft: (name: string) => void;
+  readonly editTemplatePageTitle: (input: {
+    readonly surfaceKey: "customer-mobile" | "merchant-desktop";
+    readonly pageId: string;
+    readonly title: string;
+  }) => void;
+  readonly returnToTemplatePreview: () => void;
   readonly inspectArtifact: (artifactPath: string) => void;
   readonly startPreview: () => void;
   readonly stopPreview: () => void;
@@ -925,6 +931,34 @@ export function useWorkbenchController({
     [controlPlane, refreshApplications, templateDraft],
   );
 
+  const editTemplatePageTitle = useCallback(
+    (input: {
+      readonly surfaceKey: "customer-mobile" | "merchant-desktop";
+      readonly pageId: string;
+      readonly title: string;
+    }) => {
+      if (!templateDraft) return;
+      setTemplateBusy(true);
+      setTemplateError(null);
+      setConnectionState("saving");
+      void controlPlane
+        .appendTemplatePageRevision(templateDraft.draft.applicationGraphId, {
+          baseDraftRevisionId: templateDraft.draft.draftRevisionId,
+          ...input,
+        })
+        .then((instance) => {
+          setTemplateDraft(instance);
+          setConnectionState("ready");
+        })
+        .catch(() => {
+          setConnectionState("ready");
+          setTemplateError("Template page could not be saved.");
+        })
+        .finally(() => setTemplateBusy(false));
+    },
+    [controlPlane, templateDraft],
+  );
+
   const compileApplication = useCallback(
     (applicationKey: string) => {
       setOperationError(null);
@@ -965,6 +999,10 @@ export function useWorkbenchController({
       setTemplateError(null);
     }
     dispatch({ type: "open", surface });
+  }, []);
+  const returnToTemplatePreview = useCallback(() => {
+    setTemplateError(null);
+    dispatch({ type: "open", surface: "home" });
   }, []);
 
   const toggleTheme = useCallback(() => {
@@ -1039,6 +1077,8 @@ export function useWorkbenchController({
     compileApplication,
     startCuratedTemplate,
     renameTemplateDraft,
+    editTemplatePageTitle,
+    returnToTemplatePreview,
     inspectArtifact,
     startPreview,
     stopPreview,

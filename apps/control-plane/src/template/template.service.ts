@@ -25,6 +25,11 @@ import {
 } from "@factory/graph";
 
 import { PrismaService } from "../prisma.service.js";
+import {
+  applyCapturedTemplatePageTitleEdit,
+  captureTemplatePageRevisionInput,
+  type AppendTemplatePageRevisionInput,
+} from "./template-page-edit.js";
 
 const LOCAL_WORKSPACE_SLUG = "local-workspace";
 const LOCAL_WORKSPACE_NAME = "Local workspace";
@@ -655,6 +660,77 @@ export class TemplateService {
       });
       const updated: StoredApplication = { ...application, name };
       return this.instanceFrom(transaction, updated, draft);
+    };
+    for (let attempt = 0; attempt < TRANSACTION_ATTEMPTS; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(operation, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        });
+      } catch (error) {
+        if (uniqueConstraint(error)) {
+          throw new ConflictException(
+            "Template Draft revision moved; reload before editing.",
+          );
+        }
+        if (!serializationConflict(error)) throw error;
+      }
+    }
+    throw new ConflictException(
+      "Template Draft revision moved; reload before editing.",
+    );
+  }
+
+  async appendTemplatePageRevision(
+    applicationGraphId: string,
+    input: unknown,
+  ): Promise<TemplateDraftInstanceV1> {
+    let command: AppendTemplatePageRevisionInput;
+    try {
+      command = captureTemplatePageRevisionInput(input);
+    } catch {
+      throw new BadRequestException(INVALID_REQUEST);
+    }
+    const id = applicationKey(applicationGraphId);
+    const operation = async (transaction: Prisma.TransactionClient) => {
+      const application = (await transaction.applicationGraph.findFirst({
+        where: { id, workspace: { slug: LOCAL_WORKSPACE_SLUG } },
+        include: {
+          workspace: true,
+          draftRevisions: {
+            orderBy: { revisionNumber: "desc" },
+            take: 1,
+          },
+        },
+      })) as StoredApplication | null;
+      if (!application || application.workspace.slug !== LOCAL_WORKSPACE_SLUG) {
+        throw new NotFoundException("Template Draft was not found.");
+      }
+      assertStoredOrigin(application.templateOrigin);
+      const latest = application.draftRevisions[0];
+      if (!latest) throw new ConflictException("Template Draft is invalid.");
+      if (latest.id !== command.baseDraftRevisionId) {
+        throw new ConflictException(
+          "Template Draft revision moved; reload before editing.",
+        );
+      }
+      const current = assertApplicationGraphV3(latest.graph);
+      let edit;
+      try {
+        edit = applyCapturedTemplatePageTitleEdit(current, command);
+      } catch (error) {
+        if (error instanceof Error && error.message === INVALID_REQUEST) {
+          throw new BadRequestException(INVALID_REQUEST);
+        }
+        throw error;
+      }
+      const draft = (await transaction.draftRevision.create({
+        data: {
+          applicationGraphId: application.id,
+          revisionNumber: latest.revisionNumber + 1,
+          graph: edit.graph as unknown as Prisma.InputJsonValue,
+        },
+      })) as StoredDraft;
+      return this.instanceFrom(transaction, application, draft);
     };
     for (let attempt = 0; attempt < TRANSACTION_ATTEMPTS; attempt += 1) {
       try {

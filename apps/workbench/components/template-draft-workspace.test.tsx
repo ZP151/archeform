@@ -5,7 +5,10 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { WorkbenchTemplateDraftInstance } from "../lib/control-plane-client";
-import { TemplateDraftWorkspace } from "./template-draft-workspace";
+import {
+  TemplateDraftWorkspace,
+  type TemplatePageSelection,
+} from "./template-draft-workspace";
 
 function instance(revisionNumber = 1): WorkbenchTemplateDraftInstance {
   const surface = (
@@ -131,15 +134,25 @@ describe("TemplateDraftWorkspace", () => {
   });
 
   it("shows a real dual-surface Draft preview while technical checksums stay disclosed", () => {
-    act(() => {
-      root.render(
+    function Harness() {
+      const [selection, setSelection] = React.useState<TemplatePageSelection>({
+        surfaceKey: "customer-mobile" as const,
+        pageId: "customer-mobile-0",
+      });
+      return (
         <TemplateDraftWorkspace
           instance={instance()}
+          selection={selection}
           busy={false}
           error={null}
           onRename={vi.fn()}
-        />,
+          onSelectionChange={setSelection}
+          onEditPage={vi.fn()}
+        />
       );
+    }
+    act(() => {
+      root.render(<Harness />);
     });
 
     expect(container.textContent).toContain("Maison Aurelia");
@@ -179,9 +192,15 @@ describe("TemplateDraftWorkspace", () => {
       root.render(
         <TemplateDraftWorkspace
           instance={instance()}
+          selection={{
+            surfaceKey: "customer-mobile",
+            pageId: "customer-mobile-0",
+          }}
           busy={false}
           error={null}
           onRename={onRename}
+          onSelectionChange={vi.fn()}
+          onEditPage={vi.fn()}
         />,
       );
     });
@@ -207,5 +226,61 @@ describe("TemplateDraftWorkspace", () => {
     });
 
     expect(onRename).toHaveBeenCalledWith("Maison Rivage");
+  });
+
+  it("renders controlled selection and delegates select and edit events", () => {
+    const onSelectionChange = vi.fn();
+    const onEditPage = vi.fn();
+    function Harness() {
+      const [selection, setSelection] = React.useState<TemplatePageSelection>({
+        surfaceKey: "customer-mobile" as const,
+        pageId: "customer-mobile-1",
+      });
+      return (
+        <TemplateDraftWorkspace
+          instance={instance(2)}
+          selection={selection}
+          busy={false}
+          error={null}
+          onRename={vi.fn()}
+          onSelectionChange={(next) => {
+            onSelectionChange(next);
+            setSelection(next);
+          }}
+          onEditPage={onEditPage}
+        />
+      );
+    }
+    act(() => {
+      root.render(<Harness />);
+    });
+
+    expect(
+      container.querySelector('button[aria-current="page"]')?.textContent,
+    ).toContain("Menu");
+    expect(
+      container.querySelector('article[aria-label="Menu preview"]'),
+    ).not.toBeNull();
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>('button[aria-label="Edit Menu"]')
+        ?.click();
+    });
+    expect(onEditPage).toHaveBeenCalledWith({
+      surfaceKey: "customer-mobile",
+      pageId: "customer-mobile-1",
+    });
+
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>(
+          'button[aria-label="Merchant desktop"]',
+        )
+        ?.click();
+    });
+    expect(onSelectionChange).toHaveBeenCalledWith({
+      surfaceKey: "merchant-desktop",
+      pageId: "merchant-desktop-0",
+    });
   });
 });

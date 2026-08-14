@@ -19,6 +19,7 @@ const templates = {
   instantiateCuratedTemplate: vi.fn(),
   openTemplateDraft: vi.fn(),
   appendTemplateDraftRevision: vi.fn(),
+  appendTemplatePageRevision: vi.fn(),
 };
 
 @Module({
@@ -108,6 +109,34 @@ describe("TemplateController", () => {
     expect(response.status).toBe(201);
     expect(await response.json()).toEqual({ id: "instance-2" });
     expect(templates.appendTemplateDraftRevision).toHaveBeenCalledWith(
+      "application-1",
+      body,
+    );
+  });
+
+  it("routes the exact server-owned template Page revision command", async () => {
+    const body = {
+      baseDraftRevisionId: "draft-2",
+      surfaceKey: "customer-mobile",
+      pageId: "customer-menu",
+      title: "Seasonal Menu",
+    };
+    templates.appendTemplatePageRevision.mockResolvedValue({
+      id: "instance-3",
+    });
+
+    const response = await fetch(
+      `${baseUrl}/template-draft-instances/application-1/page-revisions`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+
+    expect(response.status).toBe(201);
+    expect(await response.json()).toEqual({ id: "instance-3" });
+    expect(templates.appendTemplatePageRevision).toHaveBeenCalledWith(
       "application-1",
       body,
     );

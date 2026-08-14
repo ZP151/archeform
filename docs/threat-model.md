@@ -81,9 +81,10 @@ access is privileged and remains explicitly outside a production-safe boundary.
   unsupported identifiers without compatibility guessing.
 - Append a new Draft revision for every edit. Publish produces a distinct,
   immutable Published revision with stable content hash and capability lock.
-- Pre-Publish preview consumes only an immutable, digest-bound
-  `DraftPreviewSnapshotV1`. It is ephemeral, non-deployable, non-exportable,
-  and cannot create or become a Compilation.
+- Pre-Publish preview consumes only an immutable, digest-bound, explicitly
+  versioned `DraftPreviewSnapshotV1` or `DraftPreviewSnapshotV2`. The accepted
+  Graph V3 Restaurant path uses V2. Both versions are ephemeral,
+  non-deployable, non-exportable, and cannot create or become a Compilation.
 - Production compilers consume only immutable Published Graphs. Historic
   Published V1 content, serialization, and hashes never change.
 

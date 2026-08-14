@@ -1,6 +1,7 @@
 "use client";
 
 import type { ApplicationGraphV1 } from "@factory/graph";
+import { useState } from "react";
 
 import { useWorkbenchController } from "../hooks/use-workbench-controller";
 import { WorkbenchShell } from "./shell/workbench-shell";
@@ -15,7 +16,11 @@ import { CodeCanvas } from "./canvases/code-canvas";
 import { ReleaseWorkspace } from "./journey/release-workspace";
 import { BuildingPreview } from "./journey/building-preview";
 import { resolveWorkbenchContext } from "../state/workbench-shell-machine";
-import { TemplateDraftWorkspace } from "./template-draft-workspace";
+import {
+  TemplateDraftWorkspace,
+  type TemplatePageSelection,
+} from "./template-draft-workspace";
+import { TemplatePageWorkspace } from "./template-page-workspace";
 
 /** The transient example prompts offered by the Home composer popover. */
 export const EXAMPLE_PROMPTS: readonly string[] = [
@@ -36,7 +41,26 @@ type Props = {
  */
 export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   const controller = useWorkbenchController({ initialGraph, controlPlaneUrl });
+  const [templateSelection, setTemplateSelection] =
+    useState<TemplatePageSelection | null>(null);
   const { state, graph, journey, flowDiagram } = controller;
+  const defaultTemplatePage =
+    controller.templateDraft?.previews[0].surface.pages[0];
+  const selectionIsCurrent = controller.templateDraft?.previews.some(
+    ({ surface }) =>
+      surface.surfaceKey === templateSelection?.surfaceKey &&
+      surface.pages.some(({ id }) => id === templateSelection.pageId),
+  );
+  const activeTemplateSelection =
+    selectionIsCurrent && templateSelection
+      ? templateSelection
+      : defaultTemplatePage
+        ? {
+            surfaceKey:
+              controller.templateDraft!.previews[0].surface.surfaceKey,
+            pageId: defaultTemplatePage.id,
+          }
+        : null;
   const journeyProps = {
     stage: journey.state.stage,
     busy: journey.busy,
@@ -80,9 +104,15 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
         return controller.templateDraft ? (
           <TemplateDraftWorkspace
             instance={controller.templateDraft}
+            selection={activeTemplateSelection!}
             busy={controller.templateBusy}
             error={controller.templateError}
             onRename={controller.renameTemplateDraft}
+            onSelectionChange={setTemplateSelection}
+            onEditPage={(selection) => {
+              setTemplateSelection(selection);
+              controller.navigate("page");
+            }}
           />
         ) : context === "builder" ? (
           <BuildingPreview
@@ -108,7 +138,16 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
           />
         );
       case "page":
-        return (
+        return controller.templateDraft && activeTemplateSelection ? (
+          <TemplatePageWorkspace
+            instance={controller.templateDraft}
+            selection={activeTemplateSelection}
+            busy={controller.templateBusy}
+            error={controller.templateError}
+            onSave={controller.editTemplatePageTitle}
+            onBack={controller.returnToTemplatePreview}
+          />
+        ) : (
           <ProductStudio
             page={graph.page}
             experience={graph.experience}

@@ -4472,9 +4472,10 @@ Product Recipe, provider, or deployment contracts.
 
 ## Task 7 — Make Page, Data, Users, Workflow, and Experience contextual editors
 
-State: `planned`.
+State: `delivered` for bounded Task 7A by its enclosing reviewed commit; broader
+Task 7 remains `planned`.
 
-Owner: `frontend`.
+Owner: none active. The Task 7A writer and reviewer authorities are consumed.
 
 Allowed paths: Workbench Page/Puck, Domain, Policy, Flow, Experience, selection
 context, Draft operation, and adjacent test paths assigned by PM.
@@ -4491,6 +4492,67 @@ Acceptance evidence:
 
 Blocked by: none for the first bounded Page-selection/editor slice. Broader Data,
 Users, Workflow, and Experience work remains serialized behind that slice.
+
+### Task 7A frozen execution — 2026-08-14
+
+ADR-0013 is Accepted from the founder's standing instruction
+`参考以下总结，若符合项目目标，则持续接受而迭代。` PM/controller confirmed the
+slice is the next accepted Restaurant outcome, is append-only and reversible,
+and does not expand Graph, Product Recipe, Puck, compiler, dependency, provider,
+service, or deployment boundaries. The threat model now names both Snapshot V1
+and accepted Snapshot V2 explicitly.
+
+Contract:
+
+- exact route `POST /template-draft-instances/:applicationGraphId/page-revisions`;
+- exact own-plain body `{baseDraftRevisionId,surfaceKey,pageId,title}`;
+- only `graph.page.pages[].title` may change;
+- one Serializable operation appends the next Draft and an active Snapshot V2;
+- stale/replayed bases fail with the fixed reload conflict and never rebase;
+- prior Draft/Snapshot rows remain immutable; V1 lifecycle, Publish,
+  Compilation, Source, export, and provider/runtime paths remain unchanged.
+
+Executable plan:
+`docs/superpowers/plans/2026-08-14-template-page-editor.md`.
+
+Writer implementation authority is exactly the plan's 21-path manifest: six
+Template Control Plane source/test paths and fifteen Workbench client,
+controller, Preview/Page/shell/style/fixture/browser paths. Need for any other
+implementation path is a PM stop. Governance paths are controller-owned.
+
+Gates were intentionally bounded: focused TDD RED/GREEN; full Control Plane and
+Workbench plus Graph/Capabilities/Compiler compatibility; type/build/Prisma/
+browser/static evidence; one independent code review; same-writer repair; and
+fresh controller verification. Ordinary UI work used no separate Terra/Sol
+release-review loop.
+
+Final Task 7A evidence:
+
+- pure operation RED missing module -> GREEN 12/12;
+- route/service RED 4 failed/24 passed -> GREEN, strict client RED 1/40 ->
+  GREEN, and UI RED 3 failed/19 passed plus one missing suite -> GREEN;
+- independent review initially found late/repeated input admission,
+  cross-workspace origin oracle, arbitrary UI error text, and missing renderer
+  rollback evidence; same-writer RED was Control Plane 5 failed/12 passed and
+  Workbench 1 failed/19 passed;
+- repaired focused suites pass Control Plane 37/37 and Workbench 67/67; input is
+  captured once before Prisma, workspace scoping precedes origin inspection,
+  errors are fixed/redacted, and renderer/Snapshot failures prove atomicity;
+- fresh controller gates pass Control Plane 22 files/278 tests, Workbench 39
+  files/390 tests, Graph 661, Capabilities 384, Compiler 491, both no-emit
+  checks, Control Plane build, Next production build, Prisma validation,
+  Playwright r.2 -> r.3 1/1, formatting/diff/sensitive/browser-import checks,
+  and exact implementation 21 plus governance 7 containment;
+- authoritative independent re-review is READY YES with P0/P1/P2=0/0/0.
+
+Delivery is the enclosing exact 28-path commit with subject
+`feat(workbench): add template page draft editing`, followed by non-force push
+and local/upstream equality. No dependency, lockfile, Graph, Product Recipe,
+compiler, Prisma, provider, service, Docker, Compose, Publish, export, or
+deployment path changes. The next possible Task 7 slice has zero writers until
+a bounded Graph V3 Page block round-trip design/ADR freezes Puck ownership,
+binding preservation, and source-export boundaries. Data, Users, Workflow,
+Experience, Source, Publish, and Compilation writers remain zero.
 
 ## Task 8 — Add Source Mode, controlled overlays, ZIP, and Git export
 

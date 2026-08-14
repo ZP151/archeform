@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Info,
   Monitor,
+  Pencil,
   Save,
   Smartphone,
 } from "lucide-react";
@@ -16,7 +17,10 @@ import type {
   WorkbenchTemplatePreviewSurface,
 } from "../lib/control-plane-client";
 
-type SurfaceKey = WorkbenchTemplatePreviewSurface["surface"]["surfaceKey"];
+export type TemplatePageSelection = {
+  readonly surfaceKey: WorkbenchTemplatePreviewSurface["surface"]["surfaceKey"];
+  readonly pageId: string;
+};
 
 function titleFromKey(key: string): string {
   return key
@@ -42,13 +46,13 @@ function previewLabel(type: string): string {
   return known[type] ?? titleFromKey(type);
 }
 
-function ProductPagePreview({
+export function ProductPagePreview({
   page,
   surfaceKey,
   applicationName,
 }: {
   readonly page: WorkbenchTemplatePreviewSurface["surface"]["pages"][number];
-  readonly surfaceKey: SurfaceKey;
+  readonly surfaceKey: TemplatePageSelection["surfaceKey"];
   readonly applicationName: string;
 }) {
   return (
@@ -100,42 +104,47 @@ function ProductPagePreview({
 
 export function TemplateDraftWorkspace({
   instance,
+  selection,
   busy,
   error,
   onRename,
+  onSelectionChange,
+  onEditPage,
 }: {
   readonly instance: WorkbenchTemplateDraftInstance;
+  readonly selection: TemplatePageSelection;
   readonly busy: boolean;
   readonly error: string | null;
   readonly onRename: (name: string) => void;
+  readonly onSelectionChange: (selection: TemplatePageSelection) => void;
+  readonly onEditPage: (selection: TemplatePageSelection) => void;
 }) {
-  const [surfaceKey, setSurfaceKey] = useState<SurfaceKey>("customer-mobile");
-  const [selectedPageId, setSelectedPageId] = useState<string>(
-    instance.previews[0].surface.pages[0]?.id ?? "",
-  );
   const [name, setName] = useState(instance.draft.graph.metadata.name);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const preview = useMemo(
     () =>
       instance.previews.find(
-        (candidate) => candidate.surface.surfaceKey === surfaceKey,
+        (candidate) => candidate.surface.surfaceKey === selection.surfaceKey,
       ) ?? instance.previews[0],
-    [instance.previews, surfaceKey],
+    [instance.previews, selection.surfaceKey],
   );
   const page =
-    preview.surface.pages.find(({ id }) => id === selectedPageId) ??
+    preview.surface.pages.find(({ id }) => id === selection.pageId) ??
     preview.surface.pages[0];
+  const surfaceKey = preview.surface.surfaceKey;
 
   useEffect(() => {
     setName(instance.draft.graph.metadata.name);
   }, [instance.draft.graph.metadata.name]);
 
-  const changeSurface = (next: SurfaceKey): void => {
+  const changeSurface = (next: TemplatePageSelection["surfaceKey"]): void => {
     const nextPreview = instance.previews.find(
       (candidate) => candidate.surface.surfaceKey === next,
     );
-    setSurfaceKey(next);
-    setSelectedPageId(nextPreview?.surface.pages[0]?.id ?? "");
+    onSelectionChange({
+      surfaceKey: next,
+      pageId: nextPreview?.surface.pages[0]?.id ?? "",
+    });
   };
 
   return (
@@ -218,8 +227,11 @@ export function TemplateDraftWorkspace({
             <button
               type="button"
               key={candidate.id}
+              aria-label={`Select ${candidate.title}`}
               aria-current={candidate.id === page?.id ? "page" : undefined}
-              onClick={() => setSelectedPageId(candidate.id)}
+              onClick={() =>
+                onSelectionChange({ surfaceKey, pageId: candidate.id })
+              }
             >
               <span>{candidate.title}</span>
               <small>{candidate.route}</small>
@@ -229,11 +241,22 @@ export function TemplateDraftWorkspace({
         </nav>
         <div className="template-preview-stage">
           {page && (
-            <ProductPagePreview
-              page={page}
-              surfaceKey={surfaceKey}
-              applicationName={instance.draft.graph.metadata.name}
-            />
+            <>
+              <div className="template-preview-actions">
+                <button
+                  type="button"
+                  aria-label={`Edit ${page.title}`}
+                  onClick={() => onEditPage({ surfaceKey, pageId: page.id })}
+                >
+                  <Pencil size={14} aria-hidden="true" /> Edit page
+                </button>
+              </div>
+              <ProductPagePreview
+                page={page}
+                surfaceKey={surfaceKey}
+                applicationName={instance.draft.graph.metadata.name}
+              />
+            </>
           )}
         </div>
       </div>

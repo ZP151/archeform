@@ -6,12 +6,24 @@ import {
 } from "@factory/graph";
 
 import { restaurantProductFixture } from "../../../packages/capabilities/test/restaurant-product-fixture.js";
+import type { WorkbenchTemplateDraftInstance } from "../lib/control-plane-client";
 
 /** A strict server-shaped template response shared by Workbench boundary tests. */
-export function templateDraftResponse(revisionNumber = 1) {
+export function templateDraftResponse(
+  revisionNumber = 1,
+  pageTitle?: { readonly pageId: string; readonly title: string },
+) {
   const source = composeRestaurantProductGraph(restaurantProductFixture());
+  const sourceGraph = structuredClone(source);
+  if (pageTitle) {
+    const page = sourceGraph.page.pages.find(
+      ({ id }) => id === pageTitle.pageId,
+    );
+    if (!page) throw new Error("Fixture page is unknown.");
+    page.title = pageTitle.title;
+  }
   const graph = assertApplicationGraphV3({
-    ...structuredClone(source),
+    ...sourceGraph,
     metadata: {
       ...source.metadata,
       id: "restaurant-template-001",
@@ -79,8 +91,8 @@ export function templateDraftResponse(revisionNumber = 1) {
             ...page.recipe,
             layoutKey:
               surfaceKey === "customer-mobile"
-                ? "mobile-product-shell"
-                : "merchant-workspace-shell",
+                ? ("mobile-product-shell" as const)
+                : ("merchant-workspace-shell" as const),
           },
           blocks: page.blocks.map(({ id, type }) => ({
             id,
@@ -143,13 +155,13 @@ export function templateDraftResponse(revisionNumber = 1) {
       description: "A polished customer and merchant Restaurant product.",
       surfaces: ["customer-mobile", "merchant-desktop"] as const,
       graphChecksum:
-        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as const,
     },
     origin: {
       templateKey: "restaurant-dual-surface" as const,
       templateVersion: "1.0.0" as const,
       templateGraphChecksum:
-        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as const,
     },
     draft: {
       applicationGraphId: "application-1",
@@ -159,6 +171,9 @@ export function templateDraftResponse(revisionNumber = 1) {
       graph,
     },
     snapshot,
-    previews: [surface("customer-mobile"), surface("merchant-desktop")],
-  };
+    previews: [
+      surface("customer-mobile"),
+      surface("merchant-desktop"),
+    ] as const,
+  } satisfies WorkbenchTemplateDraftInstance;
 }
