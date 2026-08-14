@@ -94,6 +94,7 @@ export {
 export {
   generateRestaurantCustomerApplicationBundle,
   generateRestaurantProductApplicationBundle,
+  assertRestaurantDraftPreviewGraphClosure,
   renderRestaurantDraftPreviewSurface,
 } from "./targets/restaurant-v3/index.js";
 

@@ -10,7 +10,10 @@ import {
   composeDefaultCapabilityDraft,
   composeRestaurantProductGraph,
 } from "@factory/capabilities";
-import { renderRestaurantDraftPreviewSurface } from "@factory/compiler";
+import {
+  assertRestaurantDraftPreviewGraphClosure,
+  renderRestaurantDraftPreviewSurface,
+} from "@factory/compiler";
 import {
   assertApplicationGraphV3,
   assertDraftPreviewSnapshotV2,
@@ -25,6 +28,11 @@ import {
 } from "@factory/graph";
 
 import { PrismaService } from "../prisma.service.js";
+import {
+  applyCapturedTemplatePageBlockOrderEdit,
+  captureTemplatePageBlockOrderRevisionInput,
+  type AppendTemplatePageBlockOrderRevisionInput,
+} from "./template-page-block-order.js";
 import {
   applyCapturedTemplatePageTitleEdit,
   captureTemplatePageRevisionInput,
@@ -728,6 +736,92 @@ export class TemplateService {
           applicationGraphId: application.id,
           revisionNumber: latest.revisionNumber + 1,
           graph: edit.graph as unknown as Prisma.InputJsonValue,
+        },
+      })) as StoredDraft;
+      return this.instanceFrom(transaction, application, draft);
+    };
+    for (let attempt = 0; attempt < TRANSACTION_ATTEMPTS; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(operation, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        });
+      } catch (error) {
+        if (uniqueConstraint(error)) {
+          throw new ConflictException(
+            "Template Draft revision moved; reload before editing.",
+          );
+        }
+        if (!serializationConflict(error)) throw error;
+      }
+    }
+    throw new ConflictException(
+      "Template Draft revision moved; reload before editing.",
+    );
+  }
+
+  async appendTemplatePageBlockOrderRevision(
+    applicationGraphId: string,
+    input: unknown,
+  ): Promise<TemplateDraftInstanceV1> {
+    let command: AppendTemplatePageBlockOrderRevisionInput;
+    try {
+      command = captureTemplatePageBlockOrderRevisionInput(input);
+    } catch {
+      throw new BadRequestException(INVALID_REQUEST);
+    }
+    const id = applicationKey(applicationGraphId);
+    const operation = async (transaction: Prisma.TransactionClient) => {
+      const application = (await transaction.applicationGraph.findFirst({
+        where: { id, workspace: { slug: LOCAL_WORKSPACE_SLUG } },
+        include: {
+          workspace: true,
+          draftRevisions: {
+            orderBy: { revisionNumber: "desc" },
+            take: 1,
+          },
+        },
+      })) as StoredApplication | null;
+      if (!application || application.workspace.slug !== LOCAL_WORKSPACE_SLUG) {
+        throw new NotFoundException("Template Draft was not found.");
+      }
+      assertStoredOrigin(application.templateOrigin);
+      const latest = application.draftRevisions[0];
+      if (!latest) throw new ConflictException("Template Draft is invalid.");
+      if (latest.id !== command.baseDraftRevisionId) {
+        throw new ConflictException(
+          "Template Draft revision moved; reload before editing.",
+        );
+      }
+      const current = assertApplicationGraphV3(latest.graph);
+      if (
+        current.metadata.id !== application.key ||
+        current.metadata.workspaceId !== LOCAL_WORKSPACE_SLUG ||
+        current.metadata.name !== application.name
+      ) {
+        throw new ConflictException("Template Draft identity is invalid.");
+      }
+      let edit;
+      try {
+        edit = applyCapturedTemplatePageBlockOrderEdit(current, command);
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          error.message ===
+            "Template Draft revision moved; reload before editing."
+        ) {
+          throw new ConflictException(error.message);
+        }
+        if (error instanceof Error && error.message === INVALID_REQUEST) {
+          throw new BadRequestException(INVALID_REQUEST);
+        }
+        throw error;
+      }
+      const closedGraph = assertRestaurantDraftPreviewGraphClosure(edit.graph);
+      const draft = (await transaction.draftRevision.create({
+        data: {
+          applicationGraphId: application.id,
+          revisionNumber: latest.revisionNumber + 1,
+          graph: closedGraph as unknown as Prisma.InputJsonValue,
         },
       })) as StoredDraft;
       return this.instanceFrom(transaction, application, draft);

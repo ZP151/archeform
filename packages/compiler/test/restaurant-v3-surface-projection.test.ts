@@ -46,7 +46,65 @@ function merchantSurface() {
   );
 }
 
+function reorderedSurface(
+  surfaceKey: "customer-mobile" | "merchant-desktop",
+  pageId: string,
+  blockIds: readonly string[],
+) {
+  const fixture = restaurantProductV3Fixture();
+  const plan = structuredClone(
+    planRestaurantProduct({
+      publishedGraph: fixture.publishedGraph,
+      compositionLock: fixture.compositionLock,
+    }),
+  );
+  const page = plan.pages.find(({ id }) => id === pageId)!;
+  const blocksById = new Map(page.blocks.map((block) => [block.id, block]));
+  page.blocks = blockIds.map((blockId) => blocksById.get(blockId)!);
+  page.recipe.regions[0]!.blockIds = [...blockIds];
+  return projectRestaurantSurface(plan, surfaceKey);
+}
+
 describe("Restaurant V3 surface projection", () => {
+  it.each([
+    [
+      "customer",
+      "customer-mobile",
+      "customer-home",
+      ["home-items", "home-hero", "home-categories"],
+      [
+        ["home-items", "menu-item-card"],
+        ["home-hero", "menu-hero"],
+        ["home-categories", "category-rail"],
+      ],
+    ],
+    [
+      "merchant",
+      "merchant-desktop",
+      "merchant-dashboard",
+      ["dashboard-tables", "dashboard-metrics", "dashboard-orders"],
+      [
+        ["dashboard-tables", "table-map"],
+        ["dashboard-metrics", "metric-card"],
+        ["dashboard-orders", "active-order-list"],
+      ],
+    ],
+  ] as const)(
+    "projects a valid %s same-set permutation in Graph order",
+    (_label, surfaceKey, pageId, blockIds, expectedBlocks) => {
+      const surface = reorderedSurface(surfaceKey, pageId, blockIds);
+      const page = surface.pages.find(({ id }) => id === pageId)!;
+
+      expect(page.blocks.map(({ id, type }) => [id, type])).toEqual(
+        expectedBlocks,
+      );
+      expect(page.recipe.regions).toEqual([
+        { key: "main", blockIds: [...blockIds] },
+      ]);
+      expect(() => validateRestaurantSurfacePlan(surface)).not.toThrow();
+    },
+  );
+
   it("projects the exact customer page and visible navigation order", () => {
     const surface = customerSurface();
     expect(surface.pages.map(({ id }) => id)).toEqual(customerPageKeys);

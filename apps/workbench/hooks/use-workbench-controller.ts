@@ -123,11 +123,18 @@ export type WorkbenchController = {
   readonly compileApplication: (applicationKey: string) => void;
   readonly startCuratedTemplate: (templateKey: string) => void;
   readonly renameTemplateDraft: (name: string) => void;
-  readonly editTemplatePageTitle: (input: {
-    readonly surfaceKey: "customer-mobile" | "merchant-desktop";
-    readonly pageId: string;
-    readonly title: string;
-  }) => void;
+  readonly editTemplatePageTitle: (
+    input: {
+      readonly surfaceKey: "customer-mobile" | "merchant-desktop";
+      readonly pageId: string;
+    } & (
+      | { readonly title: string }
+      | {
+          readonly regionKey: "main";
+          readonly blockIds: readonly string[];
+        }
+    ),
+  ) => void;
   readonly returnToTemplatePreview: () => void;
   readonly inspectArtifact: (artifactPath: string) => void;
   readonly startPreview: () => void;
@@ -932,20 +939,39 @@ export function useWorkbenchController({
   );
 
   const editTemplatePageTitle = useCallback(
-    (input: {
-      readonly surfaceKey: "customer-mobile" | "merchant-desktop";
-      readonly pageId: string;
-      readonly title: string;
-    }) => {
+    (
+      input: {
+        readonly surfaceKey: "customer-mobile" | "merchant-desktop";
+        readonly pageId: string;
+      } & (
+        | { readonly title: string }
+        | {
+            readonly regionKey: "main";
+            readonly blockIds: readonly string[];
+          }
+      ),
+    ) => {
       if (!templateDraft) return;
       setTemplateBusy(true);
       setTemplateError(null);
       setConnectionState("saving");
-      void controlPlane
-        .appendTemplatePageRevision(templateDraft.draft.applicationGraphId, {
-          baseDraftRevisionId: templateDraft.draft.draftRevisionId,
-          ...input,
-        })
+      const request =
+        "blockIds" in input
+          ? controlPlane.appendTemplatePageBlockOrderRevision(
+              templateDraft.draft.applicationGraphId,
+              {
+                baseDraftRevisionId: templateDraft.draft.draftRevisionId,
+                ...input,
+              },
+            )
+          : controlPlane.appendTemplatePageRevision(
+              templateDraft.draft.applicationGraphId,
+              {
+                baseDraftRevisionId: templateDraft.draft.draftRevisionId,
+                ...input,
+              },
+            );
+      void request
         .then((instance) => {
           setTemplateDraft(instance);
           setConnectionState("ready");

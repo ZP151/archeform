@@ -170,7 +170,12 @@ P0 acceptance gates:
 > ADR-0013: one selected Restaurant page title becomes Draft r.3 and a new
 > Snapshot V2. Fresh gates pass Control Plane 278, Workbench 390, Graph 661,
 > Capabilities 384, Compiler 491, browser 1/1, and independent review 0/0/0.
-> Broader editors, Puck V3, Source, Publish, and Compilation remain deferred.
+> ADR-0014 is accepted and Task 7B is delivered by its enclosing reviewed
+> commit: same-set block ordering for one existing Graph V3 `main` region, using
+> Puck only as a constrained reorder surface and appending Draft r.4 plus a new
+> Snapshot. Final Sol returns `RELEASE_ACCEPT`, actionable P0/P1/P2=0/0/0,
+> after corrected Terra PASS. Generated runtime order, broader editors, Source,
+> Publish, and Compilation remain deferred.
 
 ### P1 Product Closure gate (accepted and delivered)
 
@@ -658,8 +663,15 @@ at SHA-256 `ffa017cf14cd911495d70d8cf490bb637b570057235d3d841657e0f7c732b732`.
 Restaurant semantics and UI Registry are delivered at `fbcf92ea` and
 `8313e7ae` with independent P0/P1/P2=0/0/0 reviews and pushed equality.
 Task 5 merchant/dual-surface compilation, Task 6A/6B Workbench foundations, and
-Task 7A Page-title editing are delivered. The next gate is a bounded design/ADR
-for one Graph V3 Page block round-trip. Later Data/Users/Workflow/Experience,
-Source, Publish, and Compilation remain serialized behind reviewed slices.
+Task 7A Page-title editing are delivered. ADR-0014 and the exact Task 7B plan
+are frozen. The first two-axis review rejected the initial tree with six P1s;
+same-writer TDD repair on the corrected 25-path manifest and final evidence
+closure now pass the same independent reviewer with P0/P1/P2=0/0/0. Task 7B is
+delivered by its enclosing reviewed commit after corrected fresh Terra QA
+0/0/0 and final Sol `RELEASE_ACCEPT` with actionable P0/P1/P2=0/0/0. PM accepts
+the exact 31-path delivery and authorizes only its frozen-subject controller
+commit and non-force push. Later Data/Users/Workflow/Experience, Source,
+Publish, Compilation, block insertion/deletion, and generated-runtime ordering
+remain serialized behind newly frozen reviewed slices.
 Provider, service, Docker, cloud/deployment, and production-payment work remain
 unauthorized.

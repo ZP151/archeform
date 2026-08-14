@@ -27,6 +27,21 @@ type RestaurantProjectedBlockV1 = {
   >;
 };
 
+function graphBindingsFor(
+  bindings: RestaurantProjectedBlockV1["bindings"],
+): Readonly<Record<string, string>> {
+  return Object.fromEntries(
+    Object.entries(bindings).map(([key, binding]) => [
+      key,
+      binding.kind === "domain-field"
+        ? `graph.domain.${binding.target}`
+        : binding.kind === "flow-transition"
+          ? `graph.flow.${binding.target.replaceAll(":", ".")}`
+          : `graph.policy.${binding.target.replaceAll(":", ".")}`,
+    ]),
+  );
+}
+
 export type RestaurantPagePlanV1 = {
   readonly id: string;
   readonly route: string;
@@ -100,16 +115,34 @@ function createSurface(
       const recipe = restaurantScreenRecipes.find(
         ({ key }) => key === page.recipe.key,
       );
+      const region = page.recipe.regions[0];
+      const registryById = new Map(
+        recipe?.blocks.map((block) => [block.id, block]),
+      );
+      const pageBlockIds = page.blocks.map(({ id }) => id);
       if (
         !recipe ||
         recipe.pageKey !== page.id ||
         recipe.route !== page.route ||
         recipe.surface !== surfaceKey ||
         recipe.region !== "main" ||
-        !isDeepStrictEqual(
-          recipe.blocks.map(({ id, type }) => [id, type]),
-          page.blocks.map(({ id, type }) => [id, type]),
-        )
+        page.recipe.version !== recipe.version ||
+        page.recipe.regions.length !== 1 ||
+        region?.key !== "main" ||
+        !isDeepStrictEqual(region.blockIds, pageBlockIds) ||
+        page.blocks.length !== recipe.blocks.length ||
+        new Set(pageBlockIds).size !== pageBlockIds.length ||
+        page.blocks.some((block) => {
+          const governed = registryById.get(block.id);
+          return (
+            !governed ||
+            governed.type !== block.type ||
+            !isDeepStrictEqual(
+              graphBindingsFor(governed.bindings),
+              block.bindings,
+            )
+          );
+        })
       ) {
         throw new Error("Restaurant surface projection is invalid.");
       }
@@ -120,11 +153,14 @@ function createSurface(
         surfaceKey,
         screenIntent: page.screenIntent,
         recipe: { ...page.recipe, layoutKey: recipe.layoutKey },
-        blocks: recipe.blocks.map(({ id, type, bindings }) => ({
-          id,
-          type,
-          bindings,
-        })),
+        blocks: pageBlockIds.map((id) => {
+          const governed = registryById.get(id)!;
+          return {
+            id: governed.id,
+            type: governed.type,
+            bindings: governed.bindings,
+          };
+        }),
       };
     });
   return deepFreeze(
@@ -189,27 +225,31 @@ export function validateRestaurantSurfacePlan(
     for (let index = 0; index < expectedRecipes.length; index += 1) {
       const page = plan.pages[index];
       const recipe = expectedRecipes[index];
+      const blockIds = page?.blocks.map(({ id }) => id) ?? [];
+      const registryById = new Map(
+        recipe?.blocks.map((block) => [block.id, block]),
+      );
       if (
         !page ||
         !recipe ||
         page.id !== recipe.pageKey ||
         page.route !== recipe.route ||
         page.recipe.key !== recipe.key ||
+        page.recipe.version !== recipe.version ||
         page.recipe.layoutKey !== recipe.layoutKey ||
         page.recipe.regions.length !== 1 ||
         page.recipe.regions[0]?.key !== "main" ||
-        !isDeepStrictEqual(
-          page.recipe.regions[0]?.blockIds,
-          recipe.blocks.map(({ id }) => id),
-        ) ||
-        !isDeepStrictEqual(
-          page.blocks,
-          recipe.blocks.map(({ id, type, bindings }) => ({
-            id,
-            type,
-            bindings,
-          })),
-        )
+        !isDeepStrictEqual(page.recipe.regions[0]?.blockIds, blockIds) ||
+        page.blocks.length !== recipe.blocks.length ||
+        new Set(blockIds).size !== blockIds.length ||
+        page.blocks.some((block) => {
+          const governed = registryById.get(block.id);
+          return (
+            !governed ||
+            governed.type !== block.type ||
+            !isDeepStrictEqual(governed.bindings, block.bindings)
+          );
+        })
       )
         throw new Error();
     }

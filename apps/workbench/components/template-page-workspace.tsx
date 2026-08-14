@@ -9,8 +9,14 @@ import {
   ProductPagePreview,
   type TemplatePageSelection,
 } from "./template-draft-workspace";
+import { TemplatePageBlockOrder } from "./template-page-block-order";
 
-type SaveInput = TemplatePageSelection & { readonly title: string };
+type SaveInput =
+  | (TemplatePageSelection & { readonly title: string })
+  | (TemplatePageSelection & {
+      readonly regionKey: "main";
+      readonly blockIds: readonly string[];
+    });
 
 function validTitle(value: string, current: string): boolean {
   const title = value.trim();
@@ -103,36 +109,55 @@ export function TemplatePageWorkspace({
         </p>
       </header>
       <div className="template-page-layout">
-        <form
-          className="template-page-editor"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (canSave) onSave({ ...selection, title: title.trim() });
-          }}
-        >
-          <div>
-            <span>Content</span>
-            <h2>Page title</h2>
-            <p>Update the name people see in navigation and this preview.</p>
-          </div>
-          <label htmlFor="template-page-title">Page title</label>
-          <input
-            id="template-page-title"
-            aria-label="Page title"
-            value={title}
-            maxLength={80}
-            onChange={(event) => setTitle(event.target.value)}
-          />
-          {error && <p role="alert">{error}</p>}
-          <button
-            type="submit"
-            aria-label="Save page title"
-            disabled={!canSave}
+        <div className="template-page-editor-stack">
+          {error && (
+            <p className="template-page-error" role="alert">
+              {error}
+            </p>
+          )}
+          <form
+            className="template-page-editor"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (canSave) onSave({ ...selection, title: title.trim() });
+            }}
           >
-            <Save size={15} aria-hidden="true" />{" "}
-            {busy ? "Saving…" : "Save as new Draft"}
-          </button>
-        </form>
+            <div>
+              <span>Content</span>
+              <h2>Page title</h2>
+              <p>Update the name people see in navigation and this preview.</p>
+            </div>
+            <label htmlFor="template-page-title">Page title</label>
+            <input
+              id="template-page-title"
+              aria-label="Page title"
+              value={title}
+              maxLength={80}
+              onChange={(event) => setTitle(event.target.value)}
+            />
+            <button
+              type="submit"
+              aria-label="Save page title"
+              disabled={!canSave}
+            >
+              <Save size={15} aria-hidden="true" />{" "}
+              {busy ? "Saving…" : "Save as new Draft"}
+            </button>
+          </form>
+          {page.blocks.length >= 2 && (
+            <TemplatePageBlockOrder
+              blocks={page.blocks}
+              busy={busy}
+              onSave={(blockIds) =>
+                onSave({
+                  ...selection,
+                  regionKey: "main",
+                  blockIds,
+                })
+              }
+            />
+          )}
+        </div>
         <div className="template-page-preview">
           <span>Live preview</span>
           <ProductPagePreview

@@ -41,4 +41,17 @@ export class TemplateController {
   ) {
     return this.templates.appendTemplatePageRevision(applicationGraphId, body);
   }
+
+  @Post(
+    "template-draft-instances/:applicationGraphId/page-block-order-revisions",
+  )
+  appendTemplatePageBlockOrderRevision(
+    @Param("applicationGraphId") applicationGraphId: string,
+    @Body() body: unknown,
+  ) {
+    return this.templates.appendTemplatePageBlockOrderRevision(
+      applicationGraphId,
+      body,
+    );
+  }
 }

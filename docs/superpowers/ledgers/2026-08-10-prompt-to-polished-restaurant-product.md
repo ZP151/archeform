@@ -4472,10 +4472,11 @@ Product Recipe, provider, or deployment contracts.
 
 ## Task 7 — Make Page, Data, Users, Workflow, and Experience contextual editors
 
-State: `delivered` for bounded Task 7A by its enclosing reviewed commit; broader
-Task 7 remains `planned`.
+State: `delivered` for bounded Task 7B by its enclosing reviewed commit; Task
+7A remains delivered by its enclosing reviewed commit.
 
-Owner: none active. The Task 7A writer and reviewer authorities are consumed.
+Owner: controller delivery authority is consumed by the enclosing reviewed
+commit. Task 7A and Task 7B writer/reviewer authorities are consumed.
 
 Allowed paths: Workbench Page/Puck, Domain, Policy, Flow, Experience, selection
 context, Draft operation, and adjacent test paths assigned by PM.
@@ -4549,10 +4550,189 @@ Delivery is the enclosing exact 28-path commit with subject
 `feat(workbench): add template page draft editing`, followed by non-force push
 and local/upstream equality. No dependency, lockfile, Graph, Product Recipe,
 compiler, Prisma, provider, service, Docker, Compose, Publish, export, or
-deployment path changes. The next possible Task 7 slice has zero writers until
-a bounded Graph V3 Page block round-trip design/ADR freezes Puck ownership,
-binding preservation, and source-export boundaries. Data, Users, Workflow,
-Experience, Source, Publish, and Compilation writers remain zero.
+deployment path changes. The next bounded Graph V3 Page block round-trip is
+governed by the accepted ADR and frozen execution record below. Data, Users,
+Workflow, Experience, Source, Publish, and Compilation writers remain zero.
+
+### Task 7B frozen execution — 2026-08-14
+
+ADR-0014 is Accepted from the founder's standing instruction
+`参考以下总结，若符合项目目标，则持续接受而迭代。` PM/controller confirmed that
+same-set Page block ordering is the next visible Restaurant slice and that the
+decision is additive, append-only, reversible, and within the accepted Graph
+V3 and Snapshot V2 boundaries.
+
+Contract:
+
+- exact route
+  `POST /template-draft-instances/:applicationGraphId/page-block-order-revisions`;
+- exact own-plain body
+  `{baseDraftRevisionId,surfaceKey,pageId,regionKey,blockIds}`;
+- `regionKey` is exactly `main`; `blockIds` is an ordinary dense own-data Array
+  of 2..20 unique Graph keys and must be a changed exact permutation;
+- only the selected page's `blocks` order and matching `main.blockIds` order may
+  change; every block value, binding, recipe, source, policy, authority, and all
+  other Graph content remains structurally equal;
+- one bounded Serializable operation appends the next Draft and one immutable
+  dual-surface Snapshot V2; stale/replayed bases conflict and never rebase;
+- internal Draft projection becomes Graph-order authoritative only after exact
+  registry membership/type/binding/source validation;
+- Puck allows drag and keyboard reordering only; insert, edit, duplicate, and
+  delete are disabled; and
+- generated Customer/Merchant runtime markup and production compilation remain
+  unchanged and continue rejecting reordered Drafts.
+
+Executable plan:
+`docs/superpowers/plans/2026-08-14-template-page-block-order.md`.
+
+The corrected sole writer authority is exactly 25 implementation paths: seven
+Compiler projection/preview/facade source/tests, six Control Plane operation/
+route/service source/tests, and twelve Workbench adapter/Puck/Page/controller/
+client/style/fixture/browser paths enumerated in the plan. Need for any
+additional implementation path is a PM stop. No Graph, Product Recipe, Screen
+Recipe, generated target/runtime,
+Prisma, package, workspace, lockfile, provider, service, Docker, Compose,
+Source, Publish, Compilation, export, commit, or push write is authorized.
+
+Execution gates are focused TDD RED/GREEN, full Compiler/Control Plane/
+Workbench/Graph/Capabilities compatibility, type/build/Prisma/browser/static
+evidence, independent task review, same-writer TDD repair for any P0/P1, fresh
+independent Terra QA, independent final Sol release review, PM acceptance,
+fresh controller verification, and one exact 31-path reviewed commit with
+subject `feat(workbench): add governed page block ordering`, non-force push, and
+local/upstream equality.
+
+First Task 7B independent review and repair freeze — 2026-08-14:
+
+- Writer RED/GREEN and self-review produced focused Compiler 57/57, Control
+  Plane 52/52, Workbench 56/56, Playwright 1/1, full five-package 2,250 tests,
+  three no-emit checks, builds, Prisma validation, exact containment, and static
+  gates. This evidence is historical for the rejected tree only.
+- Independent two-axis review returns NOT READY with P0/P1/P2=0/6/3. Confirmed
+  P1s are: hostile Array own-key reflection amplification; unchanged current
+  order returning 400 instead of the fixed reload conflict; registry/type/
+  binding/source closure occurring after a Draft-create attempt; Puck adapter
+  acceptance of extra fields and hostile accessors; stale real Puck canvas
+  after keyboard/authoritative prop changes; and governance omission of the
+  mandatory Terra/final-Sol release sequence.
+- PM verified the findings. The same writer is reopened for TDD repair in the
+  corrected exact 25 paths. Three added paths are only
+  `packages/compiler/src/targets/restaurant-v3/preview.ts`,
+  `packages/compiler/src/targets/restaurant-v3/index.ts`, and
+  `packages/compiler/src/index.ts`, so a pure Compiler-owned dual-surface
+  closure assertion can be invoked before append or render. This is no Graph,
+  recipe, target, generated-runtime, dependency, or architecture expansion.
+- Required RED/GREEN covers bounded reflection, exact unchanged conflict,
+  zero-append/zero-render closure drift, hostile/exact Puck data, actual canvas
+  synchronization, shared permutation logic, and stronger history/focus/390px
+  browser evidence. After GREEN, the same independent task reviewer must
+  re-review the exact tree. Terra QA and final Sol release review remain blocked
+  until a clean re-review and PM reconciliation.
+
+Task 7B repaired-tree re-review checkpoint — 2026-08-14:
+
+- Same-writer repair passes focused Compiler 63/63, Control Plane 58/58,
+  Workbench 34/34, Playwright 1/1, full five-package 2,282/2,282, all three
+  no-emit checks, builds, Prisma validation, exact 25/31 containment, and static
+  gates.
+- The same independent reviewer confirms all six prior P1 defects are closed
+  and returns P0/P1/P2=0/0/4, but READY_FOR_QA NO until the frozen evidence
+  contract is complete. Remaining P2s are: service-seam source-drift must prove
+  zero Draft/renderer invocation; a real-browser failed-save must prove actual
+  Puck canvas retains the accepted local permutation while server preview stays
+  unchanged; the stale bottom status gate must be corrected; and the reuse
+  inventory must explicitly record generated-template and pinned source-study
+  searches.
+- PM corrected the two governance records and reopens the same writer only for
+  `apps/control-plane/test/template.service.test.ts` and
+  `apps/workbench/e2e/template-draft.pw.ts`. No production edit is authorized or
+  expected. After those exact evidence tests pass, the same reviewer must issue
+  a final task-review verdict before Terra QA can start.
+
+Task 7B final task-review handoff and Terra authorization — 2026-08-14:
+
+- The evidence-only reopen changed only the service and browser test paths.
+  Source drift now proves one closure call and zero Draft, Snapshot, or renderer
+  calls. Real Playwright proves a fixed failed save retains the actual Puck local
+  permutation while r.3 Snapshot/server preview remain unchanged, then the same
+  command succeeds as r.4 with focus, authoritative reload, 390px, overflow, and
+  44px evidence.
+- The same independent reviewer returns P0/P1/P2=0/0/0 and
+  READY_FOR_QA YES. Fresh non-emitting reviewer evidence passes Compiler 63/63,
+  Control Plane 59/59, Workbench affected suites 76/76, all three no-emit checks,
+  exact 25 implementation plus six governance paths, empty index, clean diff,
+  and zero forbidden Graph/recipe/runtime/Prisma/dependency/lock drift.
+- PM advances Task 7B to `ready_for_qa`, pauses the writer, and authorizes exactly
+  one fresh independent GPT-5.6-Terra read-only pass on this exact tree. Terra
+  must use direct existing runtimes only; no pnpm/corepack/install/network/
+  provider/model/service/Docker/Compose, file edit, emitting build, stage,
+  commit, or push is authorized.
+- QA must rerun focused Compiler/Control Plane/Workbench repair suites, full
+  five-package tests, three no-emit checks, exact-25 formatting/diff/containment,
+  and the real Playwright journey; independently probe bounded reflection,
+  unchanged 409, pre-append dual-surface closure, hostile Puck capture, actual
+  canvas synchronization, r.3 immutability, r.4 reload, focus, and 390px. Only a
+  QA PASS with no open P0/P1 returns to PM for final Sol authorization.
+- Final Sol release review, PM acceptance, staging, delivery, commit, push, and
+  all later editor/Task 8/Task 9 authorities remain blocked.
+
+Task 7B Terra QA handoff and final Sol authorization — 2026-08-14:
+
+- The single authorized fresh Terra QA pass is consumed and returns corrected
+  PASS with P0/P1/P2=0/0/0 and READY_FOR_FINAL_RELEASE_REVIEW YES. Fresh direct
+  evidence passes focused Compiler 63/63, Control Plane 59/59, Workbench 76/76;
+  full Compiler 501/501, Control Plane 315/315, Workbench 422/422, Graph 661/661,
+  Capabilities 384/384; real Playwright 1/1; all three no-emit checks; exact-25
+  format/diff/static gates; and exact 25+6 containment with no forbidden drift.
+- Terra initially selected the unreferenced `.pnpm` TypeScript 5.7.2 store path
+  manually and reported inherited NodeNext diagnostics. Controller root-cause
+  proof showed the repository root `node_modules/typescript` junction targets
+  TypeScript 5.9.3; the exact intended Workbench no-emit command exits zero.
+  Terra reran that command, withdrew the 5.7.2 finding completely, and issued
+  the corrected PASS. No product or governance file changed during QA.
+- Exactly one fresh independent GPT-5.6-Sol final release review is now
+  authorized, read-only, on this exact Terra-passed tree. It must reconcile the
+  accepted ADR/design/plan/ledger and delivery policy; inspect all 31 paths;
+  independently verify the six repaired P1 boundaries, Puck/browser/history/
+  responsive evidence, V1/production-compilation compatibility, exact
+  containment, and all fresh QA gates; and return RELEASE_ACCEPT only with no
+  actionable P0/P1.
+- PM acceptance, staging, delivery, commit, push, and every later editor/Task
+  8/Task 9 authority remain blocked pending final Sol reconciliation.
+
+Task 7B final release acceptance and delivery authority — 2026-08-14:
+
+- The single authorized independent GPT-5.6-Sol final release review is
+  consumed and returns `RELEASE_ACCEPT`, actionable P0/P1/P2=0/0/0, no deferred
+  Task 7B issue, and READY YES. It independently confirms strict one-time hostile
+  capture, bounded reflection, fixed stale/unchanged 409 behavior, pre-append
+  dual-surface Compiler closure, Serializable retry, Draft/Snapshot atomicity,
+  r.3 immutability, exact Puck capture/shared reduction/remount, fixed client
+  error, authoritative success replacement, projection compatibility, and
+  continued production-compile rejection of reordered Drafts.
+- Fresh final-review evidence passes focused Compiler 63/63, Control Plane
+  59/59, Workbench 76/76; full Compiler 501/501, Control Plane 315/315,
+  Workbench 422/422, Graph 661/661, Capabilities 384/384; and all three
+  repository-root TypeScript 5.9.3 no-emit checks. Format, diff, browser-import,
+  sensitive, and exact Expected31/Actual31 containment checks pass with zero
+  missing, unexpected, staged, or forbidden path. Corrected Terra QA already
+  passed the real browser journey 1/1 on this same tree.
+- PM accepts the exact 31-path delivery tree. The controller alone is authorized
+  to stage those 31 paths, prove staged equality and sensitive checks, create
+  exactly one commit with subject
+  `feat(workbench): add governed page block ordering`, push the active branch
+  without force, and prove local `HEAD` equals upstream with no residual dirty
+  path. The enclosing reviewed commit is the bounded Task 7B delivery.
+- This authority does not enable Data, Users, Workflow, Experience, Source,
+  Publish, Compilation, block insertion/deletion/editing, generated-runtime
+  ordering, provider, service, Docker, Compose, or deployment work. The next
+  bounded editor slice requires a fresh contract and path freeze after pushed
+  equality.
+
+Task 7B is `delivered` by its enclosing reviewed commit. Data, Users, Workflow,
+Experience, Source, Publish, Compilation, block insertion/deletion/editing,
+generated-runtime ordering, Task 8, and Task 9 writers remain zero until a new
+bounded slice is frozen after pushed equality.
 
 ## Task 8 — Add Source Mode, controlled overlays, ZIP, and Git export
 

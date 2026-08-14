@@ -4,6 +4,18 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@puckeditor/core", () => {
+  function Puck({ children }: { children?: React.ReactNode }) {
+    return <div data-testid="puck-order-surface">{children}</div>;
+  }
+  Puck.Layout = ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="puck-layout">{children}</div>
+  );
+  Puck.Outline = () => <div data-testid="puck-outline" />;
+  Puck.Preview = () => <div data-testid="puck-preview" />;
+  return { Puck };
+});
+
 import { templateDraftResponse } from "../test/template-draft-fixture";
 import { TemplatePageWorkspace } from "./template-page-workspace";
 
@@ -170,5 +182,93 @@ describe("TemplatePageWorkspace", () => {
     expect(document.activeElement?.getAttribute("data-page-save-status")).toBe(
       "success",
     );
+  });
+
+  it("keeps a keyboard order local until a successful server response", () => {
+    const onSave = vi.fn();
+    const blockSelection = {
+      surfaceKey: "customer-mobile" as const,
+      pageId: "customer-home",
+    };
+    const render = (
+      instance: ReturnType<typeof templateDraftResponse>,
+      error: string | null,
+    ) => {
+      act(() => {
+        root.render(
+          <TemplatePageWorkspace
+            instance={instance}
+            selection={blockSelection}
+            busy={false}
+            error={error}
+            onSave={onSave}
+            onBack={vi.fn()}
+          />,
+        );
+      });
+    };
+    const previewLabels = () =>
+      Array.from(
+        container.querySelectorAll(
+          ".template-page-preview .template-block-grid strong",
+        ),
+      ).map((element) => element.textContent);
+
+    const third = templateDraftResponse(3);
+    render(third, null);
+    expect(previewLabels()).toEqual([
+      "Seasonal menu",
+      "Menu categories",
+      "Signature dishes",
+    ]);
+    const moveItemsUp = () =>
+      container.querySelector<HTMLButtonElement>(
+        'button[aria-label="Move menu-item-card home-items up"]',
+      )!;
+    act(() => moveItemsUp().click());
+    act(() => moveItemsUp().click());
+    expect(previewLabels()).toEqual([
+      "Seasonal menu",
+      "Menu categories",
+      "Signature dishes",
+    ]);
+    act(() =>
+      container
+        .querySelector<HTMLButtonElement>(
+          'button[aria-label="Save block order"]',
+        )!
+        .click(),
+    );
+    expect(onSave).toHaveBeenCalledWith({
+      surfaceKey: "customer-mobile",
+      pageId: "customer-home",
+      regionKey: "main",
+      blockIds: ["home-items", "home-hero", "home-categories"],
+    });
+
+    render(third, "Template page could not be saved.");
+    expect(
+      container.querySelector('.template-page-block-order [role="status"]')
+        ?.textContent,
+    ).toContain("Proposed order");
+    expect(previewLabels()).toEqual([
+      "Seasonal menu",
+      "Menu categories",
+      "Signature dishes",
+    ]);
+
+    render(
+      templateDraftResponse(4, undefined, {
+        pageId: "customer-home",
+        blockIds: ["home-items", "home-hero", "home-categories"],
+      }),
+      null,
+    );
+    expect(previewLabels()).toEqual([
+      "Signature dishes",
+      "Seasonal menu",
+      "Menu categories",
+    ]);
+    expect(container.textContent).toContain("Draft r.4 · Preview active");
   });
 });

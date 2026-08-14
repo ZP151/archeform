@@ -186,6 +186,46 @@ describe("ControlPlaneClient", () => {
     ).rejects.toThrow("Control Plane template response is invalid.");
   });
 
+  it("appends an exact block-order revision and rejects a projection not matching Graph order", async () => {
+    const revised = templateDraftResponse(4, undefined, {
+      pageId: "customer-home",
+      blockIds: ["home-items", "home-hero", "home-categories"],
+    });
+    const drifted = structuredClone(revised);
+    drifted.previews[0].surface.pages[0]!.blocks.reverse();
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(revised), { status: 201 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(drifted), { status: 201 }),
+      );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+    const input = {
+      baseDraftRevisionId: "draft-3",
+      surfaceKey: "customer-mobile" as const,
+      pageId: "customer-home",
+      regionKey: "main" as const,
+      blockIds: ["home-items", "home-hero", "home-categories"],
+    };
+
+    await expect(
+      client.appendTemplatePageBlockOrderRevision("application-1", input),
+    ).resolves.toMatchObject({
+      draft: { revisionNumber: 4 },
+      snapshot: { id: "preview-4", state: "active" },
+    });
+    expect(fetcher).toHaveBeenNthCalledWith(
+      1,
+      "http://control-plane.test/template-draft-instances/application-1/page-block-order-revisions",
+      expect.objectContaining({ method: "POST", body: JSON.stringify(input) }),
+    );
+    await expect(
+      client.appendTemplatePageBlockOrderRevision("application-1", input),
+    ).rejects.toThrow("Control Plane template response is invalid.");
+  });
+
   it("rejects a template response whose Graph and Snapshot identity do not match", async () => {
     const checksumDrift = structuredClone(templateDraftResponse(1));
     checksumDrift.draft.graph.metadata.name = "Checksum drift";

@@ -7,6 +7,39 @@ import {
   hashDraftPreviewSnapshotV2,
 } from "@factory/graph";
 
+const compilerCalls = vi.hoisted(() => ({
+  failSourceClosure: false,
+  failRender: false,
+  closure: vi.fn(),
+  render: vi.fn(),
+}));
+vi.mock("@factory/compiler", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@factory/compiler")>();
+  return {
+    ...actual,
+    assertRestaurantDraftPreviewGraphClosure: (
+      ...args: Parameters<
+        typeof actual.assertRestaurantDraftPreviewGraphClosure
+      >
+    ) => {
+      compilerCalls.closure(...args);
+      if (compilerCalls.failSourceClosure) {
+        throw new Error("Restaurant Draft preview is invalid.");
+      }
+      return actual.assertRestaurantDraftPreviewGraphClosure(...args);
+    },
+    renderRestaurantDraftPreviewSurface: (
+      ...args: Parameters<typeof actual.renderRestaurantDraftPreviewSurface>
+    ) => {
+      compilerCalls.render(...args);
+      if (compilerCalls.failRender) {
+        throw new Error("Restaurant Draft preview is invalid.");
+      }
+      return actual.renderRestaurantDraftPreviewSurface(...args);
+    },
+  };
+});
+
 import {
   createCuratedRestaurantTemplateGraph,
   TemplateService,
@@ -57,6 +90,10 @@ describe("TemplateService", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-14T08:00:00.000Z"));
+    compilerCalls.failSourceClosure = false;
+    compilerCalls.failRender = false;
+    compilerCalls.closure.mockClear();
+    compilerCalls.render.mockClear();
   });
 
   it("lists one immutable first-party Restaurant template with a governed checksum", () => {
@@ -950,4 +987,585 @@ describe("TemplateService", () => {
     expect(committedDrafts).toEqual([]);
     expect(committedSnapshots).toEqual([]);
   });
+
+  it("reorders one Page by appending Draft r.4 and an active dual-surface Snapshot", async () => {
+    const prisma = prismaMock();
+    const service = new TemplateService(prisma as unknown as PrismaService);
+    const template = service.listCuratedTemplates()[0]!;
+    const graph = createCuratedRestaurantTemplateGraph(
+      "restaurant-template-001",
+      "Maison Rivage",
+    );
+    const previousGraph = structuredClone(graph);
+    const snapshotBase = {
+      apiVersion: "factory.draft-preview-snapshot/v2" as const,
+      id: "preview-3",
+      workspaceId: "local-workspace",
+      applicationGraphId: "application-1",
+      draftRevisionId: "draft-3",
+      graphVersion: "factory.application-graph/v3" as const,
+      graphChecksum: hashApplicationGraphV3(graph),
+      snapshotChecksum:
+        "sha256:0000000000000000000000000000000000000000000000000000000000000000" as const,
+      disposition: "preview-only" as const,
+      state: "active" as const,
+      createdAt: "2026-08-14T07:30:00.000Z",
+      expiresAt: "2026-08-14T08:30:00.000Z",
+    };
+    const previousSnapshot = assertDraftPreviewSnapshotV2({
+      ...snapshotBase,
+      snapshotChecksum: hashDraftPreviewSnapshotV2(snapshotBase),
+    });
+    const previousDraft = {
+      id: "draft-3",
+      applicationGraphId: "application-1",
+      revisionNumber: 3,
+      graph,
+      draftPreviewSnapshots: [{ snapshot: previousSnapshot }],
+    };
+    const previousDraftCopy = structuredClone(previousDraft);
+    prisma.applicationGraph.findFirst.mockResolvedValue({
+      id: "application-1",
+      key: "restaurant-template-001",
+      name: "Maison Rivage",
+      templateOrigin: {
+        templateKey: template.key,
+        templateVersion: template.version,
+        templateGraphChecksum: template.graphChecksum,
+      },
+      workspace: { slug: "local-workspace" },
+      draftRevisions: [previousDraft],
+    });
+    prisma.draftRevision.create.mockImplementation(async ({ data }: any) => ({
+      id: "draft-4",
+      ...data,
+    }));
+    prisma.draftPreviewSnapshot.create.mockImplementation(
+      async ({ data }: any) => ({ ...data }),
+    );
+
+    const result = await service.appendTemplatePageBlockOrderRevision(
+      "application-1",
+      {
+        baseDraftRevisionId: "draft-3",
+        surfaceKey: "customer-mobile",
+        pageId: "customer-home",
+        regionKey: "main",
+        blockIds: ["home-items", "home-hero", "home-categories"],
+      },
+    );
+
+    const resultPage = result.draft.graph.page.pages.find(
+      ({ id }) => id === "customer-home",
+    )!;
+    expect(result.draft).toMatchObject({
+      draftRevisionId: "draft-4",
+      revisionNumber: 4,
+    });
+    expect(resultPage.blocks.map(({ id }) => id)).toEqual([
+      "home-items",
+      "home-hero",
+      "home-categories",
+    ]);
+    expect(resultPage.recipe.regions[0]?.blockIds).toEqual([
+      "home-items",
+      "home-hero",
+      "home-categories",
+    ]);
+    expect(
+      resultPage.blocks.map(({ id, bindings }) => ({ id, bindings })),
+    ).toEqual(
+      [
+        previousGraph.page.pages
+          .find(({ id }) => id === "customer-home")!
+          .blocks.find(({ id }) => id === "home-items")!,
+        previousGraph.page.pages
+          .find(({ id }) => id === "customer-home")!
+          .blocks.find(({ id }) => id === "home-hero")!,
+        previousGraph.page.pages
+          .find(({ id }) => id === "customer-home")!
+          .blocks.find(({ id }) => id === "home-categories")!,
+      ].map(({ id, bindings }) => ({ id, bindings })),
+    );
+    expect(result.snapshot).toMatchObject({
+      draftRevisionId: "draft-4",
+      graphChecksum: hashApplicationGraphV3(result.draft.graph),
+      state: "active",
+    });
+    expect(
+      result.previews[0].surface.pages
+        .find(({ id }) => id === "customer-home")!
+        .blocks.map(({ id }) => id),
+    ).toEqual(["home-items", "home-hero", "home-categories"]);
+    expect(graph).toEqual(previousGraph);
+    expect(previousDraft).toEqual(previousDraftCopy);
+    expect(previousSnapshot.graphChecksum).toBe(
+      hashApplicationGraphV3(previousGraph),
+    );
+    expect(
+      previousDraft.graph.page.pages
+        .find(({ id }) => id === "customer-home")!
+        .blocks.map(({ id, bindings }) => ({ id, bindings })),
+    ).toEqual(
+      previousGraph.page.pages
+        .find(({ id }) => id === "customer-home")!
+        .blocks.map(({ id, bindings }) => ({ id, bindings })),
+    );
+    expect(prisma.draftRevision.create).toHaveBeenCalledOnce();
+    expect(prisma.draftPreviewSnapshot.create).toHaveBeenCalledOnce();
+    expect(prisma.applicationGraph.update).not.toHaveBeenCalled();
+  });
+
+  it("captures the block-order command once before Prisma and reuses primitives across three attempts", async () => {
+    const prisma = prismaMock();
+    const service = new TemplateService(prisma as unknown as PrismaService);
+    const template = service.listCuratedTemplates()[0]!;
+    const graph = createCuratedRestaurantTemplateGraph(
+      "restaurant-template-001",
+      "Maison Rivage",
+    );
+    prisma.applicationGraph.findFirst.mockResolvedValue({
+      id: "application-1",
+      key: "restaurant-template-001",
+      name: "Maison Rivage",
+      templateOrigin: {
+        templateKey: template.key,
+        templateVersion: template.version,
+        templateGraphChecksum: template.graphChecksum,
+      },
+      workspace: { slug: "local-workspace" },
+      draftRevisions: [
+        {
+          id: "draft-3",
+          applicationGraphId: "application-1",
+          revisionNumber: 3,
+          graph,
+        },
+      ],
+    });
+    prisma.draftRevision.create.mockImplementation(async ({ data }: any) => ({
+      id: "draft-4",
+      ...data,
+    }));
+    prisma.draftPreviewSnapshot.create.mockImplementation(
+      async ({ data }: any) => ({ ...data }),
+    );
+
+    const events: string[] = [];
+    const calls = {
+      bodyPrototype: 0,
+      bodyKeys: 0,
+      bodyDescriptors: 0,
+      arrayPrototype: 0,
+      arrayKeys: 0,
+      arrayDescriptors: 0,
+    };
+    const blockIds = new Proxy(["home-items", "home-hero", "home-categories"], {
+      getPrototypeOf(target) {
+        calls.arrayPrototype += 1;
+        events.push("capture:array-prototype");
+        return Reflect.getPrototypeOf(target);
+      },
+      ownKeys(target) {
+        calls.arrayKeys += 1;
+        events.push("capture:array-keys");
+        return Reflect.ownKeys(target);
+      },
+      getOwnPropertyDescriptor(target, key) {
+        calls.arrayDescriptors += 1;
+        events.push(`capture:array-descriptor:${String(key)}`);
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    });
+    const input = new Proxy(
+      {
+        baseDraftRevisionId: "draft-3",
+        surfaceKey: "customer-mobile",
+        pageId: "customer-home",
+        regionKey: "main",
+        blockIds,
+      },
+      {
+        getPrototypeOf(target) {
+          calls.bodyPrototype += 1;
+          events.push("capture:body-prototype");
+          return Reflect.getPrototypeOf(target);
+        },
+        ownKeys(target) {
+          calls.bodyKeys += 1;
+          events.push("capture:body-keys");
+          return Reflect.ownKeys(target);
+        },
+        getOwnPropertyDescriptor(target, key) {
+          calls.bodyDescriptors += 1;
+          events.push(`capture:body-descriptor:${String(key)}`);
+          return Reflect.getOwnPropertyDescriptor(target, key);
+        },
+      },
+    );
+    let attempts = 0;
+    const execute = prisma.$transaction.getMockImplementation()!;
+    prisma.$transaction.mockImplementation(async (...args: any[]) => {
+      attempts += 1;
+      events.push(`transaction:${attempts}`);
+      const result = await execute(...args);
+      if (attempts < 3) throw { code: "P2034" };
+      return result;
+    });
+
+    await expect(
+      service.appendTemplatePageBlockOrderRevision("application-1", input),
+    ).resolves.toMatchObject({ draft: { revisionNumber: 4 } });
+    expect(prisma.$transaction).toHaveBeenCalledTimes(3);
+    expect(events.indexOf("transaction:1")).toBeGreaterThan(
+      events.lastIndexOf("capture:array-descriptor:length"),
+    );
+    expect(calls).toEqual({
+      bodyPrototype: 1,
+      bodyKeys: 1,
+      bodyDescriptors: 5,
+      arrayPrototype: 1,
+      arrayKeys: 1,
+      arrayDescriptors: 4,
+    });
+  });
+
+  it("returns fixed not-found for cross-workspace invalid origin before inspection", async () => {
+    const prisma = prismaMock();
+    const service = new TemplateService(prisma as unknown as PrismaService);
+    prisma.applicationGraph.findFirst.mockImplementation(async ({ where }) => {
+      expect(where).toEqual({
+        id: "application-1",
+        workspace: { slug: "local-workspace" },
+      });
+      return null;
+    });
+
+    await expect(
+      service.appendTemplatePageBlockOrderRevision("application-1", {
+        baseDraftRevisionId: "draft-3",
+        surfaceKey: "customer-mobile",
+        pageId: "customer-home",
+        regionKey: "main",
+        blockIds: ["home-items", "home-hero", "home-categories"],
+      }),
+    ).rejects.toThrow("Template Draft was not found.");
+    expect(prisma.applicationGraph.findUnique).not.toHaveBeenCalled();
+    expect(prisma.draftRevision.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects stored Graph identity drift before attempting a block-order Draft", async () => {
+    const prisma = prismaMock();
+    const service = new TemplateService(prisma as unknown as PrismaService);
+    const template = service.listCuratedTemplates()[0]!;
+    const graph = createCuratedRestaurantTemplateGraph(
+      "restaurant-template-001",
+      "Maison Rivage",
+    );
+    Object.assign(graph.metadata, { workspaceId: "other-workspace" });
+    prisma.applicationGraph.findFirst.mockResolvedValue({
+      id: "application-1",
+      key: "restaurant-template-001",
+      name: "Maison Rivage",
+      templateOrigin: {
+        templateKey: template.key,
+        templateVersion: template.version,
+        templateGraphChecksum: template.graphChecksum,
+      },
+      workspace: { slug: "local-workspace" },
+      draftRevisions: [
+        {
+          id: "draft-3",
+          applicationGraphId: "application-1",
+          revisionNumber: 3,
+          graph,
+        },
+      ],
+    });
+
+    await expect(
+      service.appendTemplatePageBlockOrderRevision("application-1", {
+        baseDraftRevisionId: "draft-3",
+        surfaceKey: "customer-mobile",
+        pageId: "customer-home",
+        regionKey: "main",
+        blockIds: ["home-items", "home-hero", "home-categories"],
+      }),
+    ).rejects.toThrow("Template Draft identity is invalid.");
+    expect(prisma.draftRevision.create).not.toHaveBeenCalled();
+  });
+
+  it("normalizes stale, same-set, P2002, and exhausted P2034 conflicts without rebasing", async () => {
+    const prisma = prismaMock();
+    const service = new TemplateService(prisma as unknown as PrismaService);
+    const template = service.listCuratedTemplates()[0]!;
+    const graph = createCuratedRestaurantTemplateGraph(
+      "restaurant-template-001",
+      "Maison Rivage",
+    );
+    const aggregate = {
+      id: "application-1",
+      key: "restaurant-template-001",
+      name: "Maison Rivage",
+      templateOrigin: {
+        templateKey: template.key,
+        templateVersion: template.version,
+        templateGraphChecksum: template.graphChecksum,
+      },
+      workspace: { slug: "local-workspace" },
+      draftRevisions: [
+        {
+          id: "draft-3",
+          applicationGraphId: "application-1",
+          revisionNumber: 3,
+          graph,
+        },
+      ],
+    };
+    prisma.applicationGraph.findFirst.mockResolvedValue(aggregate);
+
+    await expect(
+      service.appendTemplatePageBlockOrderRevision("application-1", {
+        baseDraftRevisionId: "draft-2",
+        surfaceKey: "customer-mobile",
+        pageId: "customer-home",
+        regionKey: "main",
+        blockIds: ["home-hero", "home-categories", "home-items"],
+      }),
+    ).rejects.toThrow("Template Draft revision moved; reload before editing.");
+
+    prisma.draftRevision.create.mockRejectedValueOnce({ code: "P2002" });
+    await expect(
+      service.appendTemplatePageBlockOrderRevision("application-1", {
+        baseDraftRevisionId: "draft-3",
+        surfaceKey: "customer-mobile",
+        pageId: "customer-home",
+        regionKey: "main",
+        blockIds: ["home-items", "home-hero", "home-categories"],
+      }),
+    ).rejects.toThrow("Template Draft revision moved; reload before editing.");
+
+    const retryPrisma = prismaMock();
+    retryPrisma.$transaction.mockRejectedValue({ code: "P2034" });
+    const retryService = new TemplateService(
+      retryPrisma as unknown as PrismaService,
+    );
+    await expect(
+      retryService.appendTemplatePageBlockOrderRevision("application-1", {
+        baseDraftRevisionId: "draft-3",
+        surfaceKey: "customer-mobile",
+        pageId: "customer-home",
+        regionKey: "main",
+        blockIds: ["home-items", "home-hero", "home-categories"],
+      }),
+    ).rejects.toThrow("Template Draft revision moved; reload before editing.");
+    expect(retryPrisma.$transaction).toHaveBeenCalledTimes(3);
+  });
+
+  it("returns the fixed 409 for an unchanged current-base order with zero writes or render", async () => {
+    const prisma = prismaMock();
+    const service = new TemplateService(prisma as unknown as PrismaService);
+    const template = service.listCuratedTemplates()[0]!;
+    const graph = createCuratedRestaurantTemplateGraph(
+      "restaurant-template-001",
+      "Maison Rivage",
+    );
+    prisma.applicationGraph.findFirst.mockResolvedValue({
+      id: "application-1",
+      key: "restaurant-template-001",
+      name: "Maison Rivage",
+      templateOrigin: {
+        templateKey: template.key,
+        templateVersion: template.version,
+        templateGraphChecksum: template.graphChecksum,
+      },
+      workspace: { slug: "local-workspace" },
+      draftRevisions: [
+        {
+          id: "draft-3",
+          applicationGraphId: "application-1",
+          revisionNumber: 3,
+          graph,
+        },
+      ],
+    });
+
+    const rejection = await service
+      .appendTemplatePageBlockOrderRevision("application-1", {
+        baseDraftRevisionId: "draft-3",
+        surfaceKey: "customer-mobile",
+        pageId: "customer-home",
+        regionKey: "main",
+        blockIds: ["home-hero", "home-categories", "home-items"],
+      })
+      .catch((error: unknown) => error);
+
+    expect(rejection).toBeInstanceOf(ConflictException);
+    expect((rejection as ConflictException).getStatus()).toBe(409);
+    expect((rejection as Error).message).toBe(
+      "Template Draft revision moved; reload before editing.",
+    );
+    expect(prisma.draftRevision.create).not.toHaveBeenCalled();
+    expect(prisma.draftPreviewSnapshot.create).not.toHaveBeenCalled();
+    expect(compilerCalls.render).not.toHaveBeenCalled();
+  });
+
+  it.each(["type", "binding", "recipe", "source"] as const)(
+    "rejects schema-valid Restaurant %s closure drift before Draft create or render",
+    async (kind) => {
+      const prisma = prismaMock();
+      const service = new TemplateService(prisma as unknown as PrismaService);
+      const template = service.listCuratedTemplates()[0]!;
+      const graph = createCuratedRestaurantTemplateGraph(
+        "restaurant-template-001",
+        "Maison Rivage",
+      );
+      const page = graph.page.pages.find(({ id }) => id === "customer-home")!;
+      if (kind === "type") {
+        page.blocks[0]!.type = "category-rail";
+      } else if (kind === "binding") {
+        page.blocks[0]!.bindings.locationName =
+          "graph.domain.restaurant-location.serviceOpen";
+        const policy = graph.bindingPolicies.find(
+          (candidate) =>
+            candidate.kind === "domain-field" &&
+            candidate.pageId === "customer-home" &&
+            candidate.blockId === "home-hero" &&
+            candidate.bindingKey === "locationName",
+        );
+        if (!policy || policy.kind !== "domain-field") throw new Error();
+        policy.fieldKey = "serviceOpen";
+      } else if (kind === "recipe") {
+        page.recipe.version = "9.9.9";
+      } else {
+        compilerCalls.failSourceClosure = true;
+      }
+      expect(() => assertApplicationGraphV3(graph)).not.toThrow();
+      prisma.applicationGraph.findFirst.mockResolvedValue({
+        id: "application-1",
+        key: "restaurant-template-001",
+        name: "Maison Rivage",
+        templateOrigin: {
+          templateKey: template.key,
+          templateVersion: template.version,
+          templateGraphChecksum: template.graphChecksum,
+        },
+        workspace: { slug: "local-workspace" },
+        draftRevisions: [
+          {
+            id: "draft-3",
+            applicationGraphId: "application-1",
+            revisionNumber: 3,
+            graph,
+          },
+        ],
+      });
+      prisma.draftRevision.create.mockImplementation(async ({ data }: any) => ({
+        id: "draft-4",
+        ...data,
+      }));
+
+      await expect(
+        service.appendTemplatePageBlockOrderRevision("application-1", {
+          baseDraftRevisionId: "draft-3",
+          surfaceKey: "customer-mobile",
+          pageId: "customer-home",
+          regionKey: "main",
+          blockIds: ["home-items", "home-hero", "home-categories"],
+        }),
+      ).rejects.toThrow("Restaurant Draft preview is invalid.");
+      expect(compilerCalls.closure).toHaveBeenCalledOnce();
+      expect(prisma.draftRevision.create).not.toHaveBeenCalled();
+      expect(prisma.draftPreviewSnapshot.create).not.toHaveBeenCalled();
+      expect(compilerCalls.render).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["snapshot", "renderer"] as const)(
+    "rolls back the block-order Draft when %s fails",
+    async (failure) => {
+      const prisma = prismaMock();
+      const service = new TemplateService(prisma as unknown as PrismaService);
+      const template = service.listCuratedTemplates()[0]!;
+      const graph = createCuratedRestaurantTemplateGraph(
+        "restaurant-template-001",
+        "Maison Rivage",
+      );
+      if (failure === "renderer") {
+        compilerCalls.failRender = true;
+      }
+      const aggregate = {
+        id: "application-1",
+        key: "restaurant-template-001",
+        name: "Maison Rivage",
+        templateOrigin: {
+          templateKey: template.key,
+          templateVersion: template.version,
+          templateGraphChecksum: template.graphChecksum,
+        },
+        workspace: { slug: "local-workspace" },
+        draftRevisions: [
+          {
+            id: "draft-3",
+            applicationGraphId: "application-1",
+            revisionNumber: 3,
+            graph,
+          },
+        ],
+      };
+      const attemptedDrafts: unknown[] = [];
+      const attemptedSnapshots: unknown[] = [];
+      const committedDrafts: unknown[] = [];
+      const committedSnapshots: unknown[] = [];
+      prisma.$transaction.mockImplementation(async (operation: any) => {
+        const stagedDrafts: unknown[] = [];
+        const stagedSnapshots: unknown[] = [];
+        const transaction = {
+          workspace: prisma.workspace,
+          applicationGraph: prisma.applicationGraph,
+          draftRevision: {
+            ...prisma.draftRevision,
+            create: vi.fn(async ({ data }: any) => {
+              const draft = { id: "draft-4", ...data };
+              attemptedDrafts.push(draft);
+              stagedDrafts.push(draft);
+              return draft;
+            }),
+          },
+          draftPreviewSnapshot: {
+            ...prisma.draftPreviewSnapshot,
+            create: vi.fn(async ({ data }: any) => {
+              attemptedSnapshots.push(data);
+              stagedSnapshots.push(data);
+              if (failure === "snapshot") throw new Error("snapshot-failed");
+              return data;
+            }),
+          },
+        };
+        const result = await operation(transaction);
+        committedDrafts.push(...stagedDrafts);
+        committedSnapshots.push(...stagedSnapshots);
+        return result;
+      });
+      prisma.applicationGraph.findFirst.mockResolvedValue(aggregate);
+
+      await expect(
+        service.appendTemplatePageBlockOrderRevision("application-1", {
+          baseDraftRevisionId: "draft-3",
+          surfaceKey: "customer-mobile",
+          pageId: "customer-home",
+          regionKey: "main",
+          blockIds: ["home-items", "home-hero", "home-categories"],
+        }),
+      ).rejects.toThrow(
+        failure === "snapshot"
+          ? "snapshot-failed"
+          : "Restaurant Draft preview is invalid.",
+      );
+      expect(attemptedDrafts).toHaveLength(1);
+      expect(attemptedSnapshots).toHaveLength(failure === "snapshot" ? 1 : 0);
+      expect(committedDrafts).toEqual([]);
+      expect(committedSnapshots).toEqual([]);
+    },
+  );
 });

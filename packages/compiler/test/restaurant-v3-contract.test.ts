@@ -5,6 +5,8 @@ import { createCapabilityCompositionLock } from "@factory/capabilities";
 import { restaurantProductV3Fixture } from "./fixtures/restaurant-product-v3.js";
 import { assertRestaurantProductCompilationInput } from "../src/targets/restaurant-v3/contracts.js";
 import { planRestaurantProduct } from "../src/targets/restaurant-v3/plan.js";
+import * as compilerFacade from "../src/index.js";
+import * as restaurantTarget from "../src/targets/restaurant-v3/index.js";
 
 const boundaryError = "Restaurant product compilation input is invalid.";
 
@@ -14,6 +16,29 @@ function validInput() {
 }
 
 describe("Restaurant V3 compilation contract", () => {
+  it("exports only the pure Draft-preview closure assertion through the target and Compiler facade", () => {
+    expect(
+      (
+        restaurantTarget as typeof restaurantTarget & {
+          assertRestaurantDraftPreviewGraphClosure?: unknown;
+        }
+      ).assertRestaurantDraftPreviewGraphClosure,
+    ).toBeTypeOf("function");
+    expect(
+      (
+        compilerFacade as typeof compilerFacade & {
+          assertRestaurantDraftPreviewGraphClosure?: unknown;
+        }
+      ).assertRestaurantDraftPreviewGraphClosure,
+    ).toBe(
+      (
+        restaurantTarget as typeof restaurantTarget & {
+          assertRestaurantDraftPreviewGraphClosure?: unknown;
+        }
+      ).assertRestaurantDraftPreviewGraphClosure,
+    );
+  });
+
   it("pins the delivered Published Restaurant V3 closure", () => {
     const fixture = restaurantProductV3Fixture();
     expect({
@@ -147,6 +172,31 @@ describe("Restaurant V3 compilation contract", () => {
       selections:
         input.publishedGraph.graph.integration.compositionSelections ?? [],
     });
+    expect(() => assertRestaurantProductCompilationInput(input)).toThrow(
+      new Error(boundaryError),
+    );
+  });
+
+  it("keeps production compilation closed to a validly rehashed block reorder", () => {
+    const input = validInput();
+    const page = input.publishedGraph.graph.page.pages.find(
+      ({ id }) => id === "customer-home",
+    )!;
+    page.blocks = [page.blocks[2]!, page.blocks[0]!, page.blocks[1]!];
+    page.recipe.regions[0]!.blockIds = [
+      "home-items",
+      "home-hero",
+      "home-categories",
+    ];
+    input.publishedGraph.graphHash = hashApplicationGraphV3(
+      input.publishedGraph.graph,
+    );
+    input.compositionLock = createCapabilityCompositionLock({
+      graphChecksum: input.publishedGraph.graphHash,
+      selections:
+        input.publishedGraph.graph.integration.compositionSelections ?? [],
+    });
+
     expect(() => assertRestaurantProductCompilationInput(input)).toThrow(
       new Error(boundaryError),
     );

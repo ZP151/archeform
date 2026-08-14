@@ -6,9 +6,17 @@ import {
 } from "@factory/graph";
 
 import { restaurantProductV3Fixture } from "./fixtures/restaurant-product-v3.js";
-import { renderRestaurantDraftPreviewSurface } from "../src/targets/restaurant-v3/preview.js";
+import * as previewApi from "../src/targets/restaurant-v3/preview.js";
 import { planRestaurantProduct } from "../src/targets/restaurant-v3/plan.js";
 import { projectRestaurantSurface } from "../src/targets/restaurant-v3/surface-projection.js";
+
+const { renderRestaurantDraftPreviewSurface } = previewApi;
+const assertDraftPreviewClosure = (input: unknown) =>
+  (
+    previewApi as typeof previewApi & {
+      assertRestaurantDraftPreviewGraphClosure(input: unknown): unknown;
+    }
+  ).assertRestaurantDraftPreviewGraphClosure(input);
 
 const fsSpies = vi.hoisted(() => ({
   writeFileSync: vi.fn(),
@@ -16,8 +24,9 @@ const fsSpies = vi.hoisted(() => ({
 }));
 vi.mock("node:fs", () => fsSpies);
 
-function renderingSnapshot(): DraftPreviewSnapshotV2 {
-  const graphChecksum = restaurantProductV3Fixture().graphHash;
+function renderingSnapshot(
+  graphChecksum = restaurantProductV3Fixture().graphHash,
+): DraftPreviewSnapshotV2 {
   const bound = {
     apiVersion: "factory.draft-preview-snapshot/v2" as const,
     id: "restaurant-preview-1",
@@ -61,6 +70,90 @@ function allKeys(value: unknown, result = new Set<string>()): Set<string> {
 }
 
 describe("Restaurant V3 Draft preview", () => {
+  it("purely asserts the original and reordered dual-surface registry/source closure", () => {
+    const original = restaurantProductV3Fixture().graph;
+    expect(assertDraftPreviewClosure(original)).toEqual(original);
+
+    const reordered = structuredClone(original);
+    for (const [pageId, blockIds] of [
+      ["customer-home", ["home-items", "home-hero", "home-categories"]],
+      [
+        "merchant-dashboard",
+        ["dashboard-tables", "dashboard-metrics", "dashboard-orders"],
+      ],
+    ] as const) {
+      const page = reordered.page.pages.find(({ id }) => id === pageId)!;
+      const byId = new Map(page.blocks.map((block) => [block.id, block]));
+      page.blocks = blockIds.map((id) => byId.get(id)!);
+      page.recipe.regions[0]!.blockIds = [...blockIds];
+    }
+    expect(assertDraftPreviewClosure(reordered)).toEqual(reordered);
+  });
+
+  it.each(["type", "binding", "recipe", "source"] as const)(
+    "rejects %s drift at the pure dual-surface closure boundary",
+    (kind) => {
+      const graph = structuredClone(restaurantProductV3Fixture().graph);
+      const page = graph.page.pages.find(({ id }) => id === "customer-home")!;
+      if (kind === "type") {
+        page.blocks[0]!.type = "category-rail";
+      } else if (kind === "binding") {
+        page.blocks[0]!.bindings.locationName =
+          "graph.domain.restaurant-location.serviceOpen";
+        const policy = graph.bindingPolicies.find(
+          (candidate) =>
+            candidate.kind === "domain-field" &&
+            candidate.pageId === "customer-home" &&
+            candidate.blockId === "home-hero" &&
+            candidate.bindingKey === "locationName",
+        );
+        if (!policy || policy.kind !== "domain-field") throw new Error();
+        policy.fieldKey = "serviceOpen";
+      } else if (kind === "recipe") {
+        page.recipe.version = "9.9.9";
+      } else {
+        Object.assign(graph, {
+          source: {
+            module: "src/generated/private.mjs",
+            digest: `sha256:${"0".repeat(64)}`,
+          },
+        });
+      }
+
+      expect(() => assertDraftPreviewClosure(graph)).toThrow(
+        new Error("Restaurant Draft preview is invalid."),
+      );
+    },
+  );
+
+  it("renders a reordered Draft in Graph order without changing membership", () => {
+    const fixture = restaurantProductV3Fixture();
+    const graph = structuredClone(fixture.graph);
+    const page = graph.page.pages.find(({ id }) => id === "customer-home")!;
+    const blocksById = new Map(page.blocks.map((block) => [block.id, block]));
+    const blockIds = ["home-items", "home-hero", "home-categories"];
+    page.blocks = blockIds.map((blockId) => blocksById.get(blockId)!);
+    page.recipe.regions[0]!.blockIds = blockIds;
+    const graphChecksum = hashApplicationGraphV3(graph);
+
+    const document = renderRestaurantDraftPreviewSurface(
+      renderingSnapshot(graphChecksum),
+      "customer-mobile",
+      () => graph,
+      "2026-08-14T00:30:00.000Z",
+    );
+
+    expect(
+      document.surface.pages
+        .find(({ id }) => id === "customer-home")!
+        .blocks.map(({ id, type }) => [id, type]),
+    ).toEqual([
+      ["home-items", "menu-item-card"],
+      ["home-hero", "menu-hero"],
+      ["home-categories", "category-rail"],
+    ]);
+  });
+
   it("renders the exact frozen customer projection from rendering state", () => {
     const snapshot = renderingSnapshot();
     let resolverCalls = 0;

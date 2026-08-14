@@ -20,6 +20,7 @@ const templates = {
   openTemplateDraft: vi.fn(),
   appendTemplateDraftRevision: vi.fn(),
   appendTemplatePageRevision: vi.fn(),
+  appendTemplatePageBlockOrderRevision: vi.fn(),
 };
 
 @Module({
@@ -137,6 +138,35 @@ describe("TemplateController", () => {
     expect(response.status).toBe(201);
     expect(await response.json()).toEqual({ id: "instance-3" });
     expect(templates.appendTemplatePageRevision).toHaveBeenCalledWith(
+      "application-1",
+      body,
+    );
+  });
+
+  it("routes the exact server-owned template Page block-order command", async () => {
+    const body = {
+      baseDraftRevisionId: "draft-3",
+      surfaceKey: "customer-mobile",
+      pageId: "customer-home",
+      regionKey: "main",
+      blockIds: ["home-items", "home-hero", "home-categories"],
+    };
+    templates.appendTemplatePageBlockOrderRevision.mockResolvedValue({
+      id: "instance-4",
+    });
+
+    const response = await fetch(
+      `${baseUrl}/template-draft-instances/application-1/page-block-order-revisions`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+
+    expect(response.status).toBe(201);
+    expect(await response.json()).toEqual({ id: "instance-4" });
+    expect(templates.appendTemplatePageBlockOrderRevision).toHaveBeenCalledWith(
       "application-1",
       body,
     );

@@ -118,6 +118,26 @@ historical evidence, not the executable Task 2/Task 3 contract.
   Plane 278/278, Workbench 390/390, Graph 661/661, Capabilities 384/384,
   Compiler 491/491, both typechecks/builds, Prisma validation, browser journey
   1/1, exact 28-path containment, and independent P0/P1/P2=0/0/0 review.
+- Task 7B is delivered by its enclosing reviewed commit under accepted
+  [`ADR-0014`](adr/adr-0014-template-page-block-order-round-trip.md). It is the
+  bounded visible Page slice: reorder the existing exact block set in one
+  Graph V3 `main` region, append a Draft and immutable Snapshot V2, and show the
+  server-authoritative order in Workbench. Its exact 25 implementation paths are
+  frozen in
+  [`the executable plan`](superpowers/plans/2026-08-14-template-page-block-order.md).
+  Puck permits drag only; insert, edit, duplicate, and delete remain disabled.
+  Graph, Product Recipe, Screen Recipe, generated runtime, Publish,
+  Compilation, Prisma, dependencies, lockfiles, providers, services, and
+  deployment remain unchanged.
+- The first independent two-axis Task 7B review returned NOT READY with
+  P0/P1/P2=0/6/3. Actionable findings cover hostile array reflection
+  amplification, unchanged-order 400 versus fixed 409, registry closure after
+  Draft-create attempt, hostile/extra Puck data, real Puck canvas synchronization,
+  and the mandatory full release-gate sequence. PM froze same-writer TDD repair,
+  added only the existing Compiler preview and two barrel paths needed for a pure
+  pre-append closure assertion, and corrected the scope to 25 implementation / 31
+  delivery paths. No Graph, recipe, runtime, database, dependency, or lockfile
+  expansion is authorized.
 
 ### Blocked decisions and risks
 
@@ -130,7 +150,10 @@ additive contract preserves V1 and separates owned pages from visible
 navigation. Copied shadcn/ui source, direct Radix, another external coordinate,
 provider/model/network/service work, Docker, Compose, and unassigned Workbench
 API/Control Plane expansion remain unauthorized. ADR-0013 authorizes and closes
-only the exact local Page-title command delivered by Task 7A.
+only the exact local Page-title command delivered by Task 7A. ADR-0014 is
+accepted under the same standing founder direction only for the exact
+same-set Page block-order operation; it does not authorize generated-runtime
+ordering, another Graph contract, or broader editor behavior.
 
 The main risks are shared-contract drift, accidental lockfile resolution drift,
 client relabeling of server totals/state/payment/inventory/audit fields, and UI
@@ -138,11 +161,12 @@ ports that imply authority. Frozen tests and the stop-both rule address these.
 
 ### Next smallest valuable slice
 
-Freeze the next smallest visible Task 7 slice: a bounded Graph V3 Page block
-round-trip for one existing recipe region. Do not implement it until the Puck/
-V3 ownership, binding preservation, and source-export boundary is accepted.
-Keep Data, Users, Workflow, Experience, Source, Publish, and Compilation
-serialized behind reviewed slices.
+Complete the frozen Task 7B repair on the exact 25-path manifest, obtain a clean
+same task review, then run one fresh Terra QA pass and one final independent Sol
+release review before PM acceptance and the exact 31-path commit/push. Keep
+Data, Users, Workflow, Experience, Source, Publish, Compilation, block
+insertion/deletion, and generated-runtime ordering serialized behind later
+reviewed slices.
 
 ### Retained historical reconciliation through V3 acceptance
 
@@ -586,9 +610,14 @@ Authorities:
 
 ## Next gate
 
-Tasks 0-7A are delivered. The next gate is a design/ADR freeze for one bounded
-Graph V3 Page block round-trip; no implementation writer or additional Control
-Plane/editor expansion is active yet.
+Tasks 0-7B are delivered by their enclosing reviewed commits. Task 7B final Sol
+returns `RELEASE_ACCEPT`, actionable P0/P1/P2=0/0/0, after final same-reviewer
+0/0/0 and corrected fresh Terra PASS 0/0/0. Terra's transient TypeScript 5.7.2
+failure was a withdrawn harness error; the intended root TypeScript 5.9.3
+Workbench no-emit gate passes. PM accepts the exact 31-path tree and authorizes
+only the controller's frozen-subject commit and non-force push. Broader editor,
+Task 8, and Task 9 work remain blocked until pushed equality and a new bounded
+contract/path freeze. No additional Control Plane/editor expansion is active.
 
 ## Explicitly deferred
 

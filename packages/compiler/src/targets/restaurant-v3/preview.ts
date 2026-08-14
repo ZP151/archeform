@@ -10,6 +10,7 @@ import type { RestaurantSurfaceKey } from "./contracts.js";
 import type { RestaurantProductPlanV1 } from "./plan.js";
 import {
   projectRestaurantSurface,
+  validateRestaurantSurfacePlan,
   type RestaurantSurfacePlanV1,
 } from "./surface-projection.js";
 
@@ -62,6 +63,21 @@ function previewPlan(
   );
 }
 
+export function assertRestaurantDraftPreviewGraphClosure(
+  graphInput: unknown,
+): ApplicationGraphV3 {
+  try {
+    const graph = assertApplicationGraphV3(graphInput);
+    const plan = previewPlan(graph, hashApplicationGraphV3(graph));
+    for (const surfaceKey of ["customer-mobile", "merchant-desktop"] as const) {
+      validateRestaurantSurfacePlan(projectRestaurantSurface(plan, surfaceKey));
+    }
+    return graph;
+  } catch {
+    throw new Error("Restaurant Draft preview is invalid.");
+  }
+}
+
 export function renderRestaurantDraftPreviewSurface(
   snapshotInput: unknown,
   surfaceKey: RestaurantSurfaceKey,
@@ -79,7 +95,9 @@ export function renderRestaurantDraftPreviewSurface(
     ) {
       throw new Error();
     }
-    const graph = assertApplicationGraphV3(resolveGraph(snapshot));
+    const graph = assertRestaurantDraftPreviewGraphClosure(
+      resolveGraph(snapshot),
+    );
     if (hashApplicationGraphV3(graph) !== snapshot.graphChecksum)
       throw new Error();
     return deepFreeze({

@@ -7,4 +7,7 @@ export {
   type RestaurantSurfaceKey,
 } from "./contracts.js";
 export { planRestaurantProduct, type RestaurantProductPlanV1 } from "./plan.js";
-export { renderRestaurantDraftPreviewSurface } from "./preview.js";
+export {
+  assertRestaurantDraftPreviewGraphClosure,
+  renderRestaurantDraftPreviewSurface,
+} from "./preview.js";

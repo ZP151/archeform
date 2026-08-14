@@ -12,6 +12,7 @@ import type { WorkbenchTemplateDraftInstance } from "../lib/control-plane-client
 export function templateDraftResponse(
   revisionNumber = 1,
   pageTitle?: { readonly pageId: string; readonly title: string },
+  pageOrder?: { readonly pageId: string; readonly blockIds: readonly string[] },
 ) {
   const source = composeRestaurantProductGraph(restaurantProductFixture());
   const sourceGraph = structuredClone(source);
@@ -21,6 +22,23 @@ export function templateDraftResponse(
     );
     if (!page) throw new Error("Fixture page is unknown.");
     page.title = pageTitle.title;
+  }
+  if (pageOrder) {
+    const page = sourceGraph.page.pages.find(
+      ({ id }) => id === pageOrder.pageId,
+    );
+    if (!page) throw new Error("Fixture page is unknown.");
+    const byId = new Map(page.blocks.map((block) => [block.id, block]));
+    Object.assign(page, {
+      blocks: pageOrder.blockIds.map((blockId) => {
+        const block = byId.get(blockId);
+        if (!block) throw new Error("Fixture block is unknown.");
+        return block;
+      }),
+    });
+    Object.assign(page.recipe.regions[0]!, {
+      blockIds: [...pageOrder.blockIds],
+    });
   }
   const graph = assertApplicationGraphV3({
     ...sourceGraph,
