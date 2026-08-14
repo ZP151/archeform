@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { previewRunPresentation } from "../../lib/workbench-model";
 import { diffApplicationGraphs } from "../../lib/graph-diff";
@@ -20,6 +20,62 @@ const ADAPTER_METADATA = [
   ["XState", "Flow compiler", "xstate/v1"],
   ["Casbin", "Policy compiler", "casbin/v1"],
 ] as const;
+
+const maximumSourceQueryLength = 120;
+const maximumRenderedSourceMatches = 500;
+
+type SourceMatchPlan = {
+  readonly count: number;
+  readonly ranges: readonly {
+    readonly start: number;
+    readonly end: number;
+  }[];
+};
+
+function buildSourceMatchPlan(content: string, query: string): SourceMatchPlan {
+  if (!query) return { count: 0, ranges: [] };
+
+  const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const expression = new RegExp(escapedQuery, "giu");
+  const ranges: { start: number; end: number }[] = [];
+  let count = 0;
+  let match: RegExpExecArray | null;
+  while ((match = expression.exec(content)) !== null) {
+    count += 1;
+    if (ranges.length < maximumRenderedSourceMatches) {
+      ranges.push({ start: match.index, end: match.index + match[0].length });
+    }
+  }
+  return { count, ranges };
+}
+
+function renderSourceWithMarks(
+  content: string,
+  ranges: SourceMatchPlan["ranges"],
+) {
+  const renderedSource = [];
+  let cursor = 0;
+  for (const range of ranges) {
+    renderedSource.push(content.slice(cursor, range.start));
+    renderedSource.push(
+      <mark key={`${range.start}:${range.end}`}>
+        {content.slice(range.start, range.end)}
+      </mark>,
+    );
+    cursor = range.end;
+  }
+  renderedSource.push(content.slice(cursor));
+  return renderedSource;
+}
+
+function sourceMatchStatus(plan: SourceMatchPlan) {
+  if (plan.count === 0) return "No matches.";
+  if (plan.count === 1) return "1 match.";
+  if (plan.count > maximumRenderedSourceMatches) {
+    return `${plan.count} matches. Highlighting the first 500.`;
+  }
+  return `${plan.count} matches.`;
+}
 
 /**
  * The Code canvas: the published Graph projection, its diff from the Draft,
@@ -63,6 +119,8 @@ export function CodeCanvas({
   selectedArtifact: WorkbenchCompilationArtifact | null;
 }) {
   const importInput = useRef<HTMLInputElement>(null);
+  const [pathFilterQuery, setPathFilterQuery] = useState("");
+  const [findQuery, setFindQuery] = useState("");
   const graphDiff = publishedRevision?.graph
     ? diffApplicationGraphs(publishedRevision.graph, graph)
     : null;
@@ -73,7 +131,16 @@ export function CodeCanvas({
   const artifacts = [...(compilation?.artifacts ?? [])].sort((left, right) =>
     left.path < right.path ? -1 : left.path > right.path ? 1 : 0,
   );
+  const filteredArtifacts = useMemo(() => {
+    const normalizedQuery = pathFilterQuery.toLowerCase();
+    return normalizedQuery
+      ? artifacts.filter((artifact) =>
+          artifact.path.toLowerCase().includes(normalizedQuery),
+        )
+      : artifacts;
+  }, [artifacts, pathFilterQuery]);
   const verifiedArtifact =
+    compilation?.result.status === "succeeded" &&
     !artifactLoading &&
     !artifactError &&
     artifactSnapshot !== null &&
@@ -82,6 +149,23 @@ export function CodeCanvas({
     artifactSnapshot.digest === selectedArtifact.digest
       ? artifactSnapshot
       : null;
+  const effectiveFindQuery = verifiedArtifact ? findQuery : "";
+  const sourceMatchPlan = useMemo(
+    () =>
+      buildSourceMatchPlan(verifiedArtifact?.content ?? "", effectiveFindQuery),
+    [effectiveFindQuery, verifiedArtifact?.content],
+  );
+  useEffect(() => {
+    setFindQuery("");
+  }, [
+    compilation,
+    selectedArtifact?.path,
+    selectedArtifact?.digest,
+    artifactLoading,
+    artifactError,
+    verifiedArtifact?.path,
+    verifiedArtifact?.digest,
+  ]);
   const artifactStatus = !selectedArtifact
     ? "Select a registered artifact."
     : artifactLoading
@@ -134,33 +218,60 @@ export function CodeCanvas({
               aria-label="Registered source artifacts"
               className="source-artifact-tree"
             >
-              <ul>
-                {artifacts.map((artifact) => {
-                  const size = formatArtifactSize(artifact.sizeBytes);
-                  return (
-                    <li key={artifact.path}>
-                      <button
-                        aria-current={
-                          selectedArtifact?.path === artifact.path
-                            ? "true"
-                            : undefined
-                        }
-                        aria-label={`Open ${artifact.path}; ${artifact.mediaType}${size ? `; ${size}` : ""}; digest ${artifact.digest}`}
-                        data-source-path={artifact.path}
-                        onClick={() => onInspectArtifact(artifact.path)}
-                        type="button"
-                      >
-                        <strong>{artifact.path}</strong>
-                        <span>{artifact.mediaType}</span>
-                        {size && <span>{size}</span>}
-                        <code className="source-artifact-digest">
-                          {artifact.digest}
-                        </code>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+              <div className="source-search-control source-path-filter">
+                <label htmlFor="source-path-filter">Filter source files</label>
+                <input
+                  id="source-path-filter"
+                  maxLength={maximumSourceQueryLength}
+                  onChange={(event) =>
+                    setPathFilterQuery(
+                      event.currentTarget.value.slice(
+                        0,
+                        maximumSourceQueryLength,
+                      ),
+                    )
+                  }
+                  type="search"
+                  value={pathFilterQuery}
+                />
+              </div>
+              {filteredArtifacts.length === 0 ? (
+                <p
+                  aria-live="polite"
+                  className="source-filter-status"
+                  role="status"
+                >
+                  No source files match.
+                </p>
+              ) : (
+                <ul>
+                  {filteredArtifacts.map((artifact) => {
+                    const size = formatArtifactSize(artifact.sizeBytes);
+                    return (
+                      <li key={artifact.path}>
+                        <button
+                          aria-current={
+                            selectedArtifact?.path === artifact.path
+                              ? "true"
+                              : undefined
+                          }
+                          aria-label={`Open ${artifact.path}; ${artifact.mediaType}${size ? `; ${size}` : ""}; digest ${artifact.digest}`}
+                          data-source-path={artifact.path}
+                          onClick={() => onInspectArtifact(artifact.path)}
+                          type="button"
+                        >
+                          <strong>{artifact.path}</strong>
+                          <span>{artifact.mediaType}</span>
+                          {size && <span>{size}</span>}
+                          <code className="source-artifact-digest">
+                            {artifact.digest}
+                          </code>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </nav>
             <section
               aria-label="Verified source content"
@@ -176,12 +287,50 @@ export function CodeCanvas({
                   </span>
                 )}
               </div>
-              <p aria-live="polite" role="status">
+              <div className="source-search-control source-current-file-find">
+                <label htmlFor="source-current-file-find">
+                  Find in current file
+                </label>
+                <input
+                  disabled={!verifiedArtifact}
+                  id="source-current-file-find"
+                  maxLength={maximumSourceQueryLength}
+                  onChange={(event) =>
+                    setFindQuery(
+                      event.currentTarget.value.slice(
+                        0,
+                        maximumSourceQueryLength,
+                      ),
+                    )
+                  }
+                  type="search"
+                  value={effectiveFindQuery}
+                />
+              </div>
+              <p
+                aria-live="polite"
+                className="source-artifact-status"
+                role="status"
+              >
                 {artifactStatus}
               </p>
+              {effectiveFindQuery && (
+                <p
+                  aria-live="polite"
+                  className="source-match-status"
+                  role="status"
+                >
+                  {sourceMatchStatus(sourceMatchPlan)}
+                </p>
+              )}
               {verifiedArtifact && (
                 <pre>
-                  <code>{verifiedArtifact.content}</code>
+                  <code>
+                    {renderSourceWithMarks(
+                      verifiedArtifact.content,
+                      sourceMatchPlan.ranges,
+                    )}
+                  </code>
                 </pre>
               )}
             </section>

@@ -4943,11 +4943,12 @@ Docker/Compose, and deployment.
 
 ## Task 8 — Add Source Mode, controlled overlays, ZIP, and Git export
 
-State: Task 8A Source Explorer is `accepted`, not delivered. Search, diff,
-overlays, ZIP, Git, and export remain `planned` with writer count zero.
+State: Task 8A Source Explorer is `delivered`; Task 8B Source Search is
+`accepted`, not delivered. Diff, editing, overlays, ZIP, Git, and export remain
+`planned` with writer count zero.
 
-Owner: writer/review/QA/final-Sol authorities are consumed; controller-only
-exact-15 delivery remains.
+Owner: Task 8A authorities are consumed. Task 8B writer and reviewer authorities
+are consumed; only PM/controller exact-eight delivery remains.
 
 ### Task 8A Source Explorer freeze — 2026-08-14
 
@@ -5006,26 +5007,80 @@ Capabilities, recipe, Compiler/generated runtime, Prisma/database, package/
 dependency/lock, provider/network/service, Docker, Compose, or deployment path
 is authorized.
 
-Gates: focused TDD, full Workbench test/no-emit/Next compatibility, exact
+Gates were focused TDD, full Workbench test/no-emit/Next compatibility, exact
 Playwright journey at 1440px and 390px, exact/static evidence, one independent
 intended-vs-implemented review, targeted real-browser QA, and one fresh final
-Sol review of strict response admission. PM/controller alone may deliver the
-exact nine implementation plus six governance paths with commit subject
-`feat(workbench): add governed source explorer`, non-force push, local/upstream
-equality, and a clean tree.
+Sol review of strict response admission.
 
 The repaired-tree independent re-review is clean; targeted Terra returns
 `PASS`; final Sol after the P2 characterization returns `RELEASE_ACCEPT`,
 actionable P0/P1/P2=0/0/0. Stale failure plus valid success A/B coverage proves
 only the current token controls artifact error and admitted content. PM records
-`PM_DELIVERY_AUTHORITY YES` for exact 15 and the frozen subject. Only controller
-staging, equality, commit, non-force push, and local/upstream proof remain.
+`PM_DELIVERY_AUTHORITY YES` for exact 15 and the frozen subject. Controller
+delivery consumed the exact 15, committed
+`feat(workbench): add governed source explorer`, pushed without force, and
+proved local `HEAD` equals upstream at
+`8c2767bb2c333d2086ca1b2d0f8cdc4c348bf7f0` with a clean tree.
+
+### Task 8B Source Search freeze — 2026-08-14
+
+State: `accepted`, not delivered, on base
+`8c2767bb2c333d2086ca1b2d0f8cdc4c348bf7f0`.
+
+Decision and contract:
+
+- The founder standing instruction
+  `参考以下总结，若符合项目目标，则持续接受而迭代。` covers this bounded,
+  additive/reversible, deterministic UI slice. Delivery policy classifies it as
+  ordinary component work; no Tech Lead dispatch or ADR is required because no
+  stable API, Graph, security, runtime, persistence, dependency, or lifecycle
+  contract changes.
+- Inside the delivered verified Source Explorer, `Filter source files` applies
+  a local case-insensitive literal filter only to registered manifest paths.
+  Empty shows all, zero matches shows a fixed state, and typing never requests
+  content.
+- `Find in current file` consumes only the current verified content. It is
+  case-insensitive literal substring search with exact non-overlapping count,
+  React text/`mark` rendering, 120-character query limit, and at most 500
+  rendered ranges. It clears/disables on pending, artifact failure, or
+  Compilation invalidation; no raw HTML is parsed or rendered.
+- No other file content is loaded. Search service/index, API/client/hook,
+  semantic/regex search, Diff, edit/replace, overlay, ZIP, Git, export, and Draft
+  Preview Snapshot content remain excluded.
+
+Authority:
+
+- [Task 8B executable plan](../plans/2026-08-14-workbench-source-search.md)
+- [Delivery policy](../../delivery-policy.md)
+
+Exact writer manifest (4):
+
+```text
+apps/workbench/components/canvases/code-canvas.tsx
+apps/workbench/components/canvases/code-canvas.test.tsx
+apps/workbench/app/globals.css
+apps/workbench/e2e/source-explorer.pw.ts
+```
+
+Any fifth implementation path is a PM STOP. One Sol writer used focused TDD,
+then full Workbench/no-emit/Next and real-browser gates. One independent review
+was the only post-writer review gate. PM/controller alone may deliver the exact
+four implementation plus four governance paths with subject
+`feat(workbench): add source search`, non-force push, local/upstream equality,
+and a clean tree.
+
+Mandatory RED was unit 6/15 plus browser 1/1; initial GREEN was focused 15,
+full Workbench 488, no-emit, Next, and browser 1/1. Independent review found one
+P1: same-ID Compilation replacement retained stale find state. Repair RED 1/16
+became GREEN 16/16; fresh full Workbench 489, no-emit, Next, browser 1/1, and
+exact-eight static gates pass. The same reviewer closes P0/P1/P2=0/0/0 with
+`READY_FOR_DELIVERY YES`; PM authorizes controller-only exact-eight delivery.
 
 Later Task 8 acceptance remains: Code eventually gains search/diff, ZIP and
 Graph-first Git share one checksum manifest, writable extensions use
 `SourceOverlayV1`, Draft Preview Snapshot output is never exportable source, and
-credentials, raw model material, and private files stay absent. No later Task 8
-writer is authorized by Task 8A.
+credentials, raw model material, and private files stay absent. Task 8B does not
+authorize any later Task 8 writer.
 
 ## Task 9 — Close the Restaurant Product with guarded real-model acceptance
 

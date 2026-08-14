@@ -195,7 +195,8 @@ P0 acceptance gates:
 > implementation paths; Graph/Capability/recipe/Compiler/runtime/Prisma/
 > dependency expansion remains deferred. Review, targeted Terra, and final Sol
 > passed with actionable P0/P1/P2=0/0/0, and controller delivery consumed the
-> exact 29 paths. ADR-0017 Task 8A Source Explorer is accepted, not delivered:
+> exact 29 paths. ADR-0017 Task 8A Source Explorer is delivered at
+> `8c2767bb2c333d2086ca1b2d0f8cdc4c348bf7f0`:
 > only a succeeded immutable Compilation exposes its complete registered
 > path-ordered artifact tree, and selected content appears only after exact
 > manifest path/digest admission plus the existing server rehash. Its exact
@@ -203,7 +204,16 @@ P0 acceptance gates:
 > Draft Snapshot source, and platform/runtime expansion.
 > Repaired-tree re-review is clean, targeted Terra returns `PASS`, and final Sol
 > returns `RELEASE_ACCEPT`, actionable P0/P1/P2=0/0/0, after stale-failure and
-> valid-success A/B characterization. PM authorizes only exact-15 delivery.
+> valid-success A/B characterization. Controller delivery consumed the exact 15
+> paths. Task 8B Source Search is accepted, not delivered, as ordinary
+> deterministic UI: local path filtering plus bounded inert find in the current
+> verified file, exactly four implementation paths, no API/client/hook/search
+> service, and no broader Source authority.
+> Mandatory RED is unit 6/15 plus browser 1/1; the same reviewer closes the
+> same-ID Compilation replacement repair at P0/P1/P2=0/0/0 and
+> `READY_FOR_DELIVERY YES` after fresh full Workbench 489, no-emit, Next,
+> browser 1/1, and exact-eight static gates. PM authorizes only controller
+> exact-eight delivery.
 
 ### P1 Product Closure gate (accepted and delivered)
 
@@ -392,9 +402,9 @@ ADR-0015 Task 7C is delivered through Draft r.5 at `78955444`. ADR-0016 Task 7D
 Experience is delivered through Draft r.6 at `35da63df` with exact 29-path
 containment and pushed equality. Access and Workflow follow-ups remain blocked
 at design because the current generated runtime would not enforce the proposed
-Graph-only authority. ADR-0017 Task 8A Source Explorer is accepted, not
-delivered, in exactly nine Workbench paths; controller-only exact-15 delivery is
-authorized.
+Graph-only authority. ADR-0017 Task 8A Source Explorer is delivered at
+`8c2767bb` with exact-15 containment and pushed equality. Task 8B Source Search
+is accepted, not delivered, with exact-eight controller delivery authorized.
 
 Workbench implementation includes characterization-first decomposition of the
 current 3,818-line global stylesheet, 907-line controller, and 1,131-line
@@ -701,10 +711,11 @@ Task 7A-7D contextual editing are delivered through pushed-equal commit
 `35da63df`; Task 7D adds only Light -> Dark, Draft r.6, one active Snapshot V2,
 and strict-response-only Customer/Merchant frame updates. Access and Workflow
 follow-ups are stopped at design because the generated runtime would not enforce
-their Graph-only authority. ADR-0017 Task 8A is accepted, not delivered, for a
-read-only succeeded-Compilation artifact tree and strictly bound content viewer
-in exactly nine Workbench paths, with exact-15 controller delivery authorized.
-Every other Data, Access, Users, Workflow,
+their Graph-only authority. ADR-0017 Task 8A is delivered at `8c2767bb` for a
+read-only succeeded-Compilation artifact tree and strictly bound content viewer.
+Task 8B Source Search is accepted, not delivered, for local path filtering and
+bounded inert find in the current verified file; its exact-eight reviewed tree
+is authorized for controller delivery. Every other Data, Access, Users, Workflow,
 Experience, Source edit/export, Publish, Compilation creation, block edit, and
 generated-runtime change remains serialized behind a later reviewed freeze.
 Provider, service, Docker, cloud/deployment, and production-payment work remain

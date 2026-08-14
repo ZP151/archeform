@@ -1234,6 +1234,8 @@
 .source-explorer small,
 .source-explorer span,
 .source-explorer button,
+.source-explorer label,
+.source-explorer input,
 .source-explorer p,
 .source-explorer code {
   font:
@@ -1260,6 +1262,42 @@
   border: 1px solid #263644;
   border-radius: 7px;
   background: #0a1017;
+}
+.source-search-control {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-bottom: 1px solid #263644;
+}
+.source-search-control label {
+  color: #8395a6;
+}
+.source-search-control input {
+  width: 100%;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px 11px;
+  border: 1px solid #33495b;
+  border-radius: 5px;
+  color: #d9e9ea;
+  background: #070c11;
+}
+.source-search-control input:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+.source-search-control input:focus,
+.source-search-control input:focus-visible {
+  border-color: #8de7c8;
+  outline: 2px solid #8de7c8;
+  outline-offset: 1px;
+}
+.source-filter-status {
+  min-height: 44px;
+  margin: 0;
+  padding: 13px 12px;
+  color: #8395a6;
 }
 .source-artifact-tree ul {
   display: grid;
@@ -1345,6 +1383,10 @@
   color: #c7d7dc;
   background: #070c11;
   white-space: pre;
+}
+.source-content-viewer mark {
+  color: #07100d;
+  background: #8de7c8;
 }
 .compilation-artifacts {
   padding: 15px 17px 17px;

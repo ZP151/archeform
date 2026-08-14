@@ -85,6 +85,7 @@ test("explores only the latest verified registered source at 1440px and 390px", 
 }) => {
   let selectedAttempts = 0;
   let lateRequests = 0;
+  let artifactContentRequests = 0;
   let compilationRequests = 0;
   let previewStartFailures = 0;
   let releaseLateFailure!: () => void;
@@ -198,6 +199,7 @@ test("explores only the latest verified registered source at 1440px and 390px", 
       request.method() === "GET" &&
       path === "/compilations/compilation-1/artifact-content"
     ) {
+      artifactContentRequests += 1;
       const artifactPath = url.searchParams.get("path");
       if (artifactPath === lateArtifact.path) {
         lateRequests += 1;
@@ -287,6 +289,15 @@ test("explores only the latest verified registered source at 1440px and 390px", 
     name: "Verified source content",
   });
   const sourceButtons = tree.locator("[data-source-path]");
+  const pathFilter = source.getByRole("searchbox", {
+    name: "Filter source files",
+  });
+  const findInFile = source.getByRole("searchbox", {
+    name: "Find in current file",
+  });
+  await expect(pathFilter).toHaveAttribute("maxlength", "120");
+  await expect(findInFile).toHaveAttribute("maxlength", "120");
+  await expect(findInFile).toBeDisabled();
   await expect(sourceButtons).toHaveCount(2);
   expect(
     await sourceButtons.evaluateAll((buttons) =>
@@ -299,6 +310,23 @@ test("explores only the latest verified registered source at 1440px and 390px", 
     "aria-label",
     new RegExp(selectedArtifact.digest),
   );
+
+  const requestsBeforeFiltering = artifactContentRequests;
+  await pathFilter.focus();
+  await expect(pathFilter).toBeFocused();
+  await expect(pathFilter).toHaveCSS("outline-style", "solid");
+  await pathFilter.fill("WEB/APP");
+  await expect(sourceButtons).toHaveCount(1);
+  await expect(sourceButtons).toHaveAttribute(
+    "data-source-path",
+    lateArtifact.path,
+  );
+  await pathFilter.fill("[");
+  await expect(sourceButtons).toHaveCount(0);
+  await expect(tree.getByRole("status")).toHaveText("No source files match.");
+  await pathFilter.fill("");
+  await expect(sourceButtons).toHaveCount(2);
+  expect(artifactContentRequests).toBe(requestsBeforeFiltering);
 
   const lateButton = tree.locator(`[data-source-path="${lateArtifact.path}"]`);
   const selectedButton = tree.locator(
@@ -314,6 +342,7 @@ test("explores only the latest verified registered source at 1440px and 390px", 
   );
   await expect(viewer).toContainText(lateArtifact.path);
   await expect(viewer.locator("pre code")).toHaveCount(0);
+  await expect(findInFile).toBeDisabled();
 
   await selectedButton.focus();
   await expect(selectedButton).toBeFocused();
@@ -328,12 +357,14 @@ test("explores only the latest verified registered source at 1440px and 390px", 
   );
   await expect(viewer).toContainText(selectedArtifact.path);
   await expect(viewer.locator("pre code")).toHaveCount(0);
+  await expect(findInFile).toBeDisabled();
 
   releaseSelectedFailure();
   await expect(viewer.getByRole("status")).toHaveText(
     "Generated artifact could not be inspected.",
   );
   await expect(viewer.locator("pre code")).toHaveCount(0);
+  await expect(findInFile).toBeDisabled();
   await expect(page.locator(".operation-error")).toHaveCount(0);
   await expect(page.getByText("HOSTILE_SERVER_DETAIL")).toHaveCount(0);
   await expect(page.getByText("HOSTILE_UNVERIFIED_CONTENT")).toHaveCount(0);
@@ -342,6 +373,14 @@ test("explores only the latest verified registered source at 1440px and 390px", 
   await expect(viewer.locator("pre code")).toHaveText(selectedContent);
   await expect(viewer).toContainText(selectedArtifact.digest);
   await expect(page.locator("#source-hostile")).toHaveCount(0);
+  await expect(findInFile).toBeEnabled();
+  const requestsBeforeFinding = artifactContentRequests;
+  await findInFile.fill("SCRIPT");
+  await expect(viewer.getByText("2 matches.", { exact: true })).toBeVisible();
+  await expect(viewer.locator("mark")).toHaveCount(2);
+  await expect(viewer.locator("pre code")).toHaveText(selectedContent);
+  await expect(page.locator("#source-hostile")).toHaveCount(0);
+  expect(artifactContentRequests).toBe(requestsBeforeFinding);
   expect(selectedAttempts).toBe(2);
 
   await page.getByRole("button", { name: "Start preview" }).click();
@@ -349,19 +388,22 @@ test("explores only the latest verified registered source at 1440px and 390px", 
   await expect(page.locator(".operation-error")).toHaveText(
     "Control Plane request failed with 500.",
   );
-  await expect(viewer.getByRole("status")).toHaveText(
+  await expect(viewer.locator(".source-artifact-status")).toHaveText(
     "Verified registered artifact.",
   );
   await expect(viewer.locator("pre code")).toHaveText(selectedContent);
+  await expect(findInFile).toHaveValue("SCRIPT");
+  await expect(viewer.locator("mark")).toHaveCount(2);
 
   releaseLateFailure();
   await lateFailureFulfilled;
   await expect(viewer.locator("pre code")).toHaveText(selectedContent);
   await expect(viewer).toContainText(selectedArtifact.path);
   await expect(viewer).not.toContainText(lateContent);
-  await expect(viewer.getByRole("status")).toHaveText(
+  await expect(viewer.locator(".source-artifact-status")).toHaveText(
     "Verified registered artifact.",
   );
+  await expect(findInFile).toHaveValue("SCRIPT");
 
   await lateButton.press("Enter");
   await expect.poll(() => lateRequests).toBe(2);
@@ -369,15 +411,20 @@ test("explores only the latest verified registered source at 1440px and 390px", 
     "Verifying registered artifact",
   );
   await expect(viewer.locator("pre code")).toHaveCount(0);
+  await expect(findInFile).toBeDisabled();
+  await expect(findInFile).toHaveValue("");
+  await expect(viewer.locator("mark")).toHaveCount(0);
   await selectedButton.press("Enter");
   await expect.poll(() => selectedAttempts).toBe(3);
   await expect(viewer.locator("pre code")).toHaveText(selectedContent);
+  await expect(findInFile).toBeEnabled();
+  await expect(findInFile).toHaveValue("");
   releaseLateSuccess();
   await lateSuccessFulfilled;
   await expect(viewer).toContainText(selectedArtifact.path);
   await expect(viewer).toContainText(selectedArtifact.digest);
   await expect(viewer.locator("pre code")).toHaveText(selectedContent);
-  await expect(viewer.getByRole("status")).toHaveText(
+  await expect(viewer.locator(".source-artifact-status")).toHaveText(
     "Verified registered artifact.",
   );
   await expect(viewer).not.toContainText(lateContent);
@@ -399,6 +446,12 @@ test("explores only the latest verified registered source at 1440px and 390px", 
     expect.soft(box!.width).toBeGreaterThanOrEqual(44);
     expect.soft(box!.height).toBeGreaterThanOrEqual(44);
   }
+  for (const input of [pathFilter, findInFile]) {
+    const box = await input.boundingBox();
+    expect(box).not.toBeNull();
+    expect.soft(box!.width).toBeGreaterThanOrEqual(44);
+    expect.soft(box!.height).toBeGreaterThanOrEqual(44);
+  }
 
   await page.reload();
   await openCompilation();
@@ -414,6 +467,13 @@ test("explores only the latest verified registered source at 1440px and 390px", 
     "Select a registered artifact.",
   );
   await expect(reloadedViewer.locator("pre code")).toHaveCount(0);
+  const reloadedPathFilter = reloadedSource.getByRole("searchbox", {
+    name: "Filter source files",
+  });
+  const reloadedFind = reloadedSource.getByRole("searchbox", {
+    name: "Find in current file",
+  });
+  await expect(reloadedFind).toBeDisabled();
 
   await page.setViewportSize({ width: 390, height: 844 });
   const reloadedTree = reloadedSource.getByRole("navigation", {
@@ -442,10 +502,28 @@ test("explores only the latest verified registered source at 1440px and 390px", 
   await narrowSelected.press("Enter");
   await expect(reloadedViewer.locator("pre code")).toHaveText(selectedContent);
   await expect(page.locator("#source-hostile")).toHaveCount(0);
+  await expect(reloadedFind).toBeEnabled();
+  const requestsBeforeNarrowFind = artifactContentRequests;
+  await reloadedFind.fill("window.evil");
+  await expect(
+    reloadedViewer.getByText("1 match.", { exact: true }),
+  ).toBeVisible();
+  await expect(reloadedViewer.locator("mark")).toHaveCount(1);
+  await expect(reloadedViewer.locator("pre code")).toHaveText(selectedContent);
+  expect(artifactContentRequests).toBe(requestsBeforeNarrowFind);
   for (const button of await reloadedTree.locator("[data-source-path]").all()) {
     const box = await button.boundingBox();
     expect(box).not.toBeNull();
     expect.soft(box!.width).toBeGreaterThanOrEqual(44);
     expect.soft(box!.height).toBeGreaterThanOrEqual(44);
+  }
+  for (const [label, input] of [
+    ["Filter source files", reloadedPathFilter],
+    ["Find in current file", reloadedFind],
+  ] as const) {
+    const box = await input.boundingBox();
+    expect(box).not.toBeNull();
+    expect.soft(box!.width, `${label} width`).toBeGreaterThanOrEqual(44);
+    expect.soft(box!.height, `${label} height`).toBeGreaterThanOrEqual(44);
   }
 });
