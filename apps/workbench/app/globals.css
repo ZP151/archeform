@@ -3,6 +3,8 @@
 @import "../styles/shell.css";
 @import "../styles/workspace-home.css";
 @import "../styles/builder-workspace.css";
+@import "../styles/template-draft.css";
+@import "../styles/template-preview.css";
 
 .revision-timeline {
   position: relative;

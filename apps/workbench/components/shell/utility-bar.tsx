@@ -19,6 +19,7 @@ import type { Theme } from "../../lib/workbench-model";
 
 type Props = {
   readonly applicationName: string;
+  readonly currentApplicationKey: string;
   readonly applications: readonly WorkbenchApplicationSummary[];
   readonly revision: string;
   readonly lifecycle: "draft" | "published";
@@ -36,6 +37,8 @@ type Props = {
   readonly activityOpen: boolean;
   readonly libraryOpen: boolean;
   readonly showLibrary: boolean;
+  /** False when the open product has no legacy Inspector/History projection. */
+  readonly showDraftTools: boolean;
   readonly published: boolean;
   /** False while no Draft is bound or the lifecycle already published. */
   readonly canPublish: boolean;
@@ -61,6 +64,7 @@ type Props = {
  */
 export function UtilityBar({
   applicationName,
+  currentApplicationKey,
   applications,
   revision,
   lifecycle,
@@ -70,6 +74,7 @@ export function UtilityBar({
   activityOpen,
   libraryOpen,
   showLibrary,
+  showDraftTools,
   published,
   canPublish,
   onSwitchApplication,
@@ -85,9 +90,6 @@ export function UtilityBar({
   libraryTriggerRef,
   historyTriggerRef,
 }: Props) {
-  const currentKey = applications.find(
-    (application) => application.name === applicationName,
-  )?.key;
   const busyConnection =
     connectionState === "saving" ||
     connectionState === "proposing" ||
@@ -102,7 +104,7 @@ export function UtilityBar({
           <select
             aria-label="Switch application"
             disabled={applications.length === 0}
-            value={currentKey ?? ""}
+            value={currentApplicationKey}
             onChange={(event) => onSwitchApplication(event.target.value)}
           >
             {applications.length === 0 ? (
@@ -136,39 +138,45 @@ export function UtilityBar({
         </span>
       </div>
       <div className="top-actions">
-        <button
-          className="utility-button advanced-button"
-          ref={inspectorTriggerRef}
-          onClick={onToggleInspector}
-          aria-pressed={inspectorOpen}
-          aria-label="Advanced"
-          title="Open advanced settings"
-          type="button"
-        >
-          <PanelRight size={16} aria-hidden="true" />
-          <span>Advanced</span>
-        </button>
-        <button
-          className="utility-button"
-          ref={historyTriggerRef}
-          onClick={onToggleHistory}
-          aria-label="History"
-          title="Draft snapshots and immutable publications"
-          type="button"
-        >
-          <History size={16} aria-hidden="true" />
-        </button>
-        <button
-          className="utility-button"
-          ref={activityTriggerRef}
-          onClick={onToggleActivity}
-          aria-pressed={activityOpen}
-          aria-label="Activity"
-          title="Recent activity and compilation evidence"
-          type="button"
-        >
-          <Activity size={16} aria-hidden="true" />
-        </button>
+        {showDraftTools && (
+          <>
+            <button
+              className="utility-button advanced-button"
+              ref={inspectorTriggerRef}
+              onClick={onToggleInspector}
+              aria-pressed={inspectorOpen}
+              aria-label="Advanced"
+              title="Open advanced settings"
+              type="button"
+            >
+              <PanelRight size={16} aria-hidden="true" />
+              <span>Advanced</span>
+            </button>
+            <button
+              className="utility-button"
+              ref={historyTriggerRef}
+              onClick={onToggleHistory}
+              aria-label="History"
+              title="Draft snapshots and immutable publications"
+              type="button"
+            >
+              <History size={16} aria-hidden="true" />
+            </button>
+          </>
+        )}
+        {showDraftTools && (
+          <button
+            className="utility-button"
+            ref={activityTriggerRef}
+            onClick={onToggleActivity}
+            aria-pressed={activityOpen}
+            aria-label="Activity"
+            title="Recent activity and compilation evidence"
+            type="button"
+          >
+            <Activity size={16} aria-hidden="true" />
+          </button>
+        )}
         {showLibrary && (
           <button
             className="utility-button"

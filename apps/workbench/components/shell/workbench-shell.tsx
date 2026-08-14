@@ -70,6 +70,7 @@ export function WorkbenchShell({ controller, children }: Props) {
     controller.journey.busy,
   );
   const context = findWorkbenchContext(contextKey);
+  const templateDraftActive = controller.templateDraft !== null;
   const resetJourney = controller.journey.reset;
   const busyConnection =
     connectionState === "saving" ||
@@ -110,6 +111,24 @@ export function WorkbenchShell({ controller, children }: Props) {
     if (contextKey === "builder" && state.libraryOpen) toggleLibrary();
   }, [contextKey, state.libraryOpen, toggleLibrary]);
 
+  useEffect(() => {
+    if (!templateDraftActive) return;
+    if (state.inspectorOpen) toggleInspector();
+    if (historyOpen) closeHistory();
+    if (state.activityOpen) toggleActivity();
+    if (state.libraryOpen) toggleLibrary();
+  }, [
+    closeHistory,
+    historyOpen,
+    state.activityOpen,
+    state.inspectorOpen,
+    state.libraryOpen,
+    templateDraftActive,
+    toggleInspector,
+    toggleActivity,
+    toggleLibrary,
+  ]);
+
   return (
     <main className={`workbench theme-${state.theme}`} data-theme={state.theme}>
       <IconRail
@@ -121,18 +140,31 @@ export function WorkbenchShell({ controller, children }: Props) {
       />
       <section className="shell">
         <UtilityBar
-          applicationName={graph.metadata.name}
+          applicationName={
+            controller.templateDraft?.draft.graph.metadata.name ??
+            graph.metadata.name
+          }
+          currentApplicationKey={
+            controller.templateDraft?.draft.applicationKey ?? graph.metadata.id
+          }
           applications={applications}
-          revision={state.revision}
-          lifecycle={state.lifecycle}
+          revision={
+            templateDraftActive
+              ? `r.${controller.templateDraft?.draft.revisionNumber}`
+              : state.revision
+          }
+          lifecycle={templateDraftActive ? "draft" : state.lifecycle}
           connectionState={connectionState}
           theme={state.theme}
           inspectorOpen={state.inspectorOpen}
           activityOpen={state.activityOpen}
           libraryOpen={state.libraryOpen}
-          showLibrary={contextKey === "workspace-home"}
-          published={state.lifecycle === "published"}
-          canPublish={remoteDraft !== null && !busyConnection}
+          showLibrary={contextKey === "workspace-home" && !templateDraftActive}
+          showDraftTools={!templateDraftActive}
+          published={!templateDraftActive && state.lifecycle === "published"}
+          canPublish={
+            !templateDraftActive && remoteDraft !== null && !busyConnection
+          }
           onSwitchApplication={openApplication}
           onToggleInspector={toggleInspector}
           onToggleActivity={toggleActivity}
@@ -167,46 +199,56 @@ export function WorkbenchShell({ controller, children }: Props) {
               </p>
             )}
           </div>
-          <HistoryPanel
-            open={historyOpen}
-            loading={historyLoading}
-            currentDraftId={remoteDraft?.draftRevisionId ?? null}
-            currentPublishedId={publishedRevision?.id ?? null}
-            timeline={revisionTimeline}
-            triggerRef={historyTriggerRef}
-            onClose={closeHistory}
-          />
-          <InspectorSheet
-            open={state.inspectorOpen}
-            surface={state.activeSurface}
-            graph={graph}
-            compilation={compilation}
-            publishedRevisionId={publishedRevision?.id ?? null}
-            revision={state.revision}
-            lifecycle={state.lifecycle}
-            draftProposals={state.draftProposals}
-            lastProposal={state.lastProposal}
-            triggerRef={inspectorTriggerRef}
-            onClose={toggleInspector}
-          />
-          <ActivitySheet
-            open={state.activityOpen}
-            applications={applications}
-            loading={applicationsLoading}
-            compilingKey={compilingApplicationKey}
-            portfolio={portfolioSummary}
-            compilation={compilation}
-            artifactLoading={artifactLoading}
-            artifactSnapshot={artifactSnapshot}
-            release={release.release}
-            onInspectArtifact={inspectArtifact}
-            onCompile={compileApplication}
-            onOpen={openApplication}
-            triggerRef={activityTriggerRef}
-            onClose={toggleActivity}
-          />
+          {!templateDraftActive && (
+            <HistoryPanel
+              open={historyOpen}
+              loading={historyLoading}
+              currentDraftId={remoteDraft?.draftRevisionId ?? null}
+              currentPublishedId={publishedRevision?.id ?? null}
+              timeline={revisionTimeline}
+              triggerRef={historyTriggerRef}
+              onClose={closeHistory}
+            />
+          )}
+          {!templateDraftActive && (
+            <InspectorSheet
+              open={state.inspectorOpen}
+              surface={state.activeSurface}
+              graph={graph}
+              compilation={compilation}
+              publishedRevisionId={publishedRevision?.id ?? null}
+              revision={state.revision}
+              lifecycle={state.lifecycle}
+              draftProposals={state.draftProposals}
+              lastProposal={state.lastProposal}
+              triggerRef={inspectorTriggerRef}
+              onClose={toggleInspector}
+            />
+          )}
+          {!templateDraftActive && (
+            <ActivitySheet
+              open={state.activityOpen}
+              applications={applications}
+              loading={applicationsLoading}
+              compilingKey={compilingApplicationKey}
+              portfolio={portfolioSummary}
+              compilation={compilation}
+              artifactLoading={artifactLoading}
+              artifactSnapshot={artifactSnapshot}
+              release={release.release}
+              onInspectArtifact={inspectArtifact}
+              onCompile={compileApplication}
+              onOpen={openApplication}
+              triggerRef={activityTriggerRef}
+              onClose={toggleActivity}
+            />
+          )}
           <LibraryDrawer
-            open={contextKey === "workspace-home" && state.libraryOpen}
+            open={
+              !templateDraftActive &&
+              contextKey === "workspace-home" &&
+              state.libraryOpen
+            }
             loading={portfolioLoading}
             portfolio={portfolioSummary}
             triggerRef={libraryTriggerRef}
@@ -220,11 +262,13 @@ export function WorkbenchShell({ controller, children }: Props) {
               ? "Control Plane unavailable"
               : `Control Plane ${connectionState}`}
           </span>
-          {draftDirty && <span className="draft-changed">Unsaved Draft</span>}
+          {!templateDraftActive && draftDirty && (
+            <span className="draft-changed">Unsaved Draft</span>
+          )}
           {operationError && (
             <span className="operation-error">{operationError}</span>
           )}
-          {draftDirty && remoteDraft && (
+          {!templateDraftActive && draftDirty && remoteDraft && (
             <button
               className="quiet-button"
               onClick={saveDraft}

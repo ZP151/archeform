@@ -5,7 +5,10 @@ import type {
   RequirementSpecV1,
 } from "@factory/graph";
 
-import type { WorkbenchApplicationSummary } from "../lib/control-plane-client";
+import type {
+  WorkbenchApplicationSummary,
+  WorkbenchCuratedTemplate,
+} from "../lib/control-plane-client";
 import type { ProductJourneyStage } from "../lib/product-journey/journey-model";
 import type { ProductJourneyFailure } from "../lib/product-journey/interpret-contract";
 import { ClarificationPanel } from "./journey/clarification-panel";
@@ -56,6 +59,10 @@ type Props = {
   readonly journey: WorkbenchHomeJourneyProps;
   readonly onOpen: (applicationKey: string) => void;
   readonly onCompile: (applicationKey: string) => void;
+  readonly curatedTemplates?: readonly WorkbenchCuratedTemplate[];
+  readonly templatesLoading?: boolean;
+  readonly templateBusy?: boolean;
+  readonly onStartTemplate?: (templateKey: string) => void;
 };
 
 export function ProductConversation({
@@ -130,6 +137,10 @@ export function WorkbenchHome({
   journey,
   onOpen,
   onCompile,
+  curatedTemplates = [],
+  templatesLoading = false,
+  templateBusy = false,
+  onStartTemplate = () => undefined,
 }: Props) {
   const requirementFailure =
     journey.failure?.phase === "interpretation" ||
@@ -144,19 +155,60 @@ export function WorkbenchHome({
         : "failed";
   return (
     <section className="workbench-home" aria-label="Apps">
-      <section
-        className="home-composer"
-        aria-label="Product creation"
-        data-requirement-outcome={requirementOutcome}
-        data-requirement-failure-code={requirementFailure?.code}
-        data-journey-outcome={journey.failure === null ? undefined : "failed"}
-        data-journey-failure-phase={journey.failure?.phase}
-        data-journey-failure-code={journey.failure?.code}
-      >
-        <ProductConversation
-          journey={journey}
-          commandFocusToken={commandFocusToken}
-        />
+      <section className="home-start-grid" aria-label="Start a product">
+        <section
+          className="home-composer"
+          aria-label="Product creation"
+          data-requirement-outcome={requirementOutcome}
+          data-requirement-failure-code={requirementFailure?.code}
+          data-journey-outcome={journey.failure === null ? undefined : "failed"}
+          data-journey-failure-phase={journey.failure?.phase}
+          data-journey-failure-code={journey.failure?.code}
+        >
+          <ProductConversation
+            journey={journey}
+            commandFocusToken={commandFocusToken}
+          />
+        </section>
+        <aside className="template-start" aria-label="Start from a template">
+          <header>
+            <span>Start from a template</span>
+            <p>Clone a complete product and make it yours.</p>
+          </header>
+          {templatesLoading ? (
+            <p className="template-loading" role="status">
+              Loading templates…
+            </p>
+          ) : (
+            curatedTemplates.map((template) => (
+              <article className="template-card" key={template.key}>
+                <div className="template-card-preview" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                <div>
+                  <small>Restaurant · v{template.version}</small>
+                  <strong>{template.name}</strong>
+                  <p>{template.description}</p>
+                </div>
+                <ul aria-label="Included surfaces">
+                  <li>Customer mobile</li>
+                  <li>Merchant desktop</li>
+                </ul>
+                <button
+                  type="button"
+                  className="template-start-button"
+                  aria-label={`Start from ${template.name}`}
+                  disabled={templateBusy}
+                  onClick={() => onStartTemplate(template.key)}
+                >
+                  {templateBusy ? "Creating Draft…" : "Use template"}
+                </button>
+              </article>
+            ))
+          )}
+        </aside>
       </section>
       <RecentProducts
         applications={applications}

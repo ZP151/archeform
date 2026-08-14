@@ -17,16 +17,18 @@ model Workspace {
 }
 
 model ApplicationGraph {
-  id                 String              @id @default(cuid())
-  workspaceId        String
-  key                String
-  name               String
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  workspace          Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
-  draftRevisions     DraftRevision[]
-  publishedRevisions PublishedRevision[]
-  compositionReviews CompositionReview[]
+  id                    String                 @id @default(cuid())
+  workspaceId           String
+  key                   String
+  name                  String
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  templateOrigin        Json?
+  workspace             Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  draftRevisions        DraftRevision[]
+  publishedRevisions    PublishedRevision[]
+  compositionReviews    CompositionReview[]
+  draftPreviewSnapshots DraftPreviewSnapshot[]
 
   @@unique([workspaceId, key])
   @@index([workspaceId])
@@ -35,18 +37,35 @@ model ApplicationGraph {
 /// Ordered, immutable snapshots make up the mutable draft timeline. Editing creates
 /// a new revision instead of overwriting an existing Graph snapshot.
 model DraftRevision {
-  id                 String             @id @default(cuid())
-  applicationGraphId String
-  revisionNumber     Int
-  graph              Json
-  createdAt          DateTime           @default(now())
-  applicationGraph   ApplicationGraph   @relation(fields: [applicationGraphId], references: [id], onDelete: Restrict)
-  publishedRevision  PublishedRevision?
-  compositionReviews CompositionReview[]
+  id                    String                 @id @default(cuid())
+  applicationGraphId    String
+  revisionNumber        Int
+  graph                 Json
+  createdAt             DateTime               @default(now())
+  applicationGraph      ApplicationGraph       @relation(fields: [applicationGraphId], references: [id], onDelete: Restrict)
+  publishedRevision     PublishedRevision?
+  compositionReviews    CompositionReview[]
+  draftPreviewSnapshots DraftPreviewSnapshot[]
 
   @@unique([applicationGraphId, revisionNumber])
   @@unique([id, applicationGraphId])
   @@index([applicationGraphId])
+}
+
+/// Append-only, preview-only binding of one mutable Draft revision to its
+/// exact Graph V3 checksum. A later preview appends another record; Publish and
+/// Compilation never consume this model.
+model DraftPreviewSnapshot {
+  id                 String           @id
+  applicationGraphId String
+  draftRevisionId    String
+  snapshot           Json
+  createdAt          DateTime         @default(now())
+  applicationGraph   ApplicationGraph @relation(fields: [applicationGraphId], references: [id], onDelete: Restrict)
+  draftRevision      DraftRevision    @relation(fields: [draftRevisionId, applicationGraphId], references: [id, applicationGraphId], onDelete: Restrict)
+
+  @@index([applicationGraphId])
+  @@index([draftRevisionId])
 }
 
 /// Append-only publication snapshot. Application code must never update or delete a
@@ -122,7 +141,7 @@ model VerificationRun {
 /// checksum. Raw model responses, prompts, and provider transport material
 /// never enter this table.
 model CompositionReview {
-  id                  String            @id @default(cuid())
+  id                  String           @id @default(cuid())
   applicationGraphId  String
   draftRevisionId     String
   requirement         Json
@@ -138,12 +157,12 @@ model CompositionReview {
   diff                Json?
   diffChecksum        String?
   decision            Json?
-  decisionId          String?           @unique
+  decisionId          String?          @unique
   status              String
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
-  applicationGraph    ApplicationGraph  @relation(fields: [applicationGraphId], references: [id], onDelete: Restrict)
-  draftRevision       DraftRevision     @relation(fields: [draftRevisionId, applicationGraphId], references: [id, applicationGraphId], onDelete: Restrict)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  applicationGraph    ApplicationGraph @relation(fields: [applicationGraphId], references: [id], onDelete: Restrict)
+  draftRevision       DraftRevision    @relation(fields: [draftRevisionId, applicationGraphId], references: [id, applicationGraphId], onDelete: Restrict)
 
   @@index([applicationGraphId])
 }

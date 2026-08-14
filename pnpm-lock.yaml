@@ -59,6 +59,9 @@ importers:
       "@factory/capabilities":
         specifier: workspace:*
         version: link:../../packages/capabilities
+      "@factory/compiler":
+        specifier: workspace:*
+        version: link:../../packages/compiler
       "@factory/graph":
         specifier: workspace:*
         version: link:../../packages/graph

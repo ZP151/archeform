@@ -32,6 +32,8 @@ import {
   type WorkbenchPublishedRevision,
   type WorkbenchRevisionTimeline,
   type WorkbenchWorkspacePortfolioSummary,
+  type WorkbenchCuratedTemplate,
+  type WorkbenchTemplateDraftInstance,
 } from "../lib/control-plane-client";
 import { isPendingCompilation } from "../lib/compilation-status";
 import {
@@ -92,6 +94,11 @@ export type WorkbenchController = {
   readonly portfolioSummary: WorkbenchWorkspacePortfolioSummary | null;
   readonly portfolioLoading: boolean;
   readonly compilingApplicationKey: string | null;
+  readonly curatedTemplates: readonly WorkbenchCuratedTemplate[];
+  readonly templatesLoading: boolean;
+  readonly templateDraft: WorkbenchTemplateDraftInstance | null;
+  readonly templateBusy: boolean;
+  readonly templateError: string | null;
   readonly flowDiagram: ReturnType<typeof flowModelToReactFlow>;
   readonly journey: ReturnType<typeof useProductJourney>;
   readonly release: ReturnType<typeof useReleaseJourney>;
@@ -114,6 +121,8 @@ export type WorkbenchController = {
   readonly queueCompilation: () => void;
   readonly openApplication: (applicationKey: string) => void;
   readonly compileApplication: (applicationKey: string) => void;
+  readonly startCuratedTemplate: (templateKey: string) => void;
+  readonly renameTemplateDraft: (name: string) => void;
   readonly inspectArtifact: (artifactPath: string) => void;
   readonly startPreview: () => void;
   readonly stopPreview: () => void;
@@ -185,9 +194,21 @@ export function useWorkbenchController({
   const [compilingApplicationKey, setCompilingApplicationKey] = useState<
     string | null
   >(null);
+  const [curatedTemplates, setCuratedTemplates] = useState<
+    readonly WorkbenchCuratedTemplate[]
+  >([]);
+  const [templatesLoading, setTemplatesLoading] = useState(true);
+  const [templateDraft, setTemplateDraft] =
+    useState<WorkbenchTemplateDraftInstance | null>(null);
+  const [templateBusy, setTemplateBusy] = useState(false);
+  const [templateError, setTemplateError] = useState<string | null>(null);
   const bootstrapRequest = useRef(0);
   const applicationsRequest = useRef(0);
   const portfolioRequest = useRef(0);
+  const templateCloneRequest = useRef<{
+    readonly templateKey: string;
+    readonly requestId: string;
+  } | null>(null);
   const inspectorTriggerRef = useRef<HTMLButtonElement>(null);
   const activityTriggerRef = useRef<HTMLButtonElement>(null);
   const libraryTriggerRef = useRef<HTMLButtonElement>(null);
@@ -358,6 +379,25 @@ export function useWorkbenchController({
       if (timer !== undefined) clearTimeout(timer);
     };
   }, [bootstrapGraph, initialGraph, refreshApplications, refreshPortfolio]);
+
+  useEffect(() => {
+    let active = true;
+    setTemplatesLoading(true);
+    void controlPlane
+      .listCuratedTemplates()
+      .then((templates) => {
+        if (active) setCuratedTemplates(templates);
+      })
+      .catch(() => {
+        if (active) setCuratedTemplates([]);
+      })
+      .finally(() => {
+        if (active) setTemplatesLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [controlPlane]);
 
   useEffect(() => {
     if (state.activeSurface === "home") {
@@ -771,9 +811,36 @@ export function useWorkbenchController({
     (applicationKey: string) => {
       setOperationError(null);
       setConnectionState("connecting");
+      const summary = applications.find(
+        (candidate) => candidate.key === applicationKey,
+      );
+      if (summary?.templateOrigin) {
+        setTemplateBusy(true);
+        setTemplateError(null);
+        void controlPlane
+          .openTemplateDraft(applicationKey)
+          .then((instance) => {
+            setTemplateDraft(instance);
+            setConnectionState("ready");
+            dispatch({ type: "open", surface: "home" });
+          })
+          .catch((error) => {
+            setConnectionState("offline");
+            const message =
+              error instanceof Error
+                ? error.message
+                : "Template Draft could not be opened.";
+            setTemplateError(message);
+            setOperationError(message);
+          })
+          .finally(() => setTemplateBusy(false));
+        return;
+      }
       void controlPlane
         .openLocalApplication(applicationKey)
         .then((opened) => {
+          setTemplateDraft(null);
+          setTemplateError(null);
           adoptOpenedApplication(opened);
           dispatch({ type: "open", surface: "page" });
         })
@@ -786,7 +853,76 @@ export function useWorkbenchController({
           );
         });
     },
-    [controlPlane, adoptOpenedApplication],
+    [applications, controlPlane, adoptOpenedApplication],
+  );
+
+  const startCuratedTemplate = useCallback(
+    (templateKey: string) => {
+      setTemplateBusy(true);
+      setTemplateError(null);
+      setOperationError(null);
+      setConnectionState("connecting");
+      const pendingRequest =
+        templateCloneRequest.current?.templateKey === templateKey
+          ? templateCloneRequest.current
+          : {
+              templateKey,
+              requestId: `restaurant-${globalThis.crypto.randomUUID()}`,
+            };
+      templateCloneRequest.current = pendingRequest;
+      const selected = curatedTemplates.find(({ key }) => key === templateKey);
+      void controlPlane
+        .instantiateCuratedTemplate(templateKey, {
+          requestId: pendingRequest.requestId,
+          ...(selected ? { name: selected.name } : {}),
+        })
+        .then((instance) => {
+          templateCloneRequest.current = null;
+          setTemplateDraft(instance);
+          setConnectionState("ready");
+          void refreshApplications();
+        })
+        .catch((error) => {
+          setConnectionState("offline");
+          const message =
+            error instanceof Error
+              ? error.message
+              : "Template Draft could not be created.";
+          setTemplateError(message);
+          setOperationError(message);
+        })
+        .finally(() => setTemplateBusy(false));
+    },
+    [controlPlane, curatedTemplates, refreshApplications],
+  );
+
+  const renameTemplateDraft = useCallback(
+    (name: string) => {
+      if (!templateDraft) return;
+      setTemplateBusy(true);
+      setTemplateError(null);
+      setConnectionState("saving");
+      void controlPlane
+        .appendTemplateDraftRevision(templateDraft.draft.applicationGraphId, {
+          baseDraftRevisionId: templateDraft.draft.draftRevisionId,
+          name,
+        })
+        .then((instance) => {
+          setTemplateDraft(instance);
+          setConnectionState("ready");
+          void refreshApplications();
+        })
+        .catch((error) => {
+          setConnectionState("offline");
+          setTemplateError(
+            error instanceof Error
+              ? error.message
+              : "Template Draft could not be saved.",
+          );
+        })
+        .finally(() => setTemplateBusy(false));
+    },
+    [controlPlane, refreshApplications, templateDraft],
   );
 
   const compileApplication = useCallback(
@@ -824,6 +960,10 @@ export function useWorkbenchController({
   );
 
   const navigate = useCallback((surface: WorkbenchState["activeSurface"]) => {
+    if (surface === "home") {
+      setTemplateDraft(null);
+      setTemplateError(null);
+    }
     dispatch({ type: "open", surface });
   }, []);
 
@@ -844,6 +984,8 @@ export function useWorkbenchController({
     dispatch({ type: "toggle-library" });
   }, []);
   const commandFocus = useCallback(() => {
+    setTemplateDraft(null);
+    setTemplateError(null);
     dispatch({ type: "open", surface: "home" });
     dispatch({ type: "command-focus" });
   }, []);
@@ -870,6 +1012,11 @@ export function useWorkbenchController({
     portfolioSummary,
     portfolioLoading,
     compilingApplicationKey,
+    curatedTemplates,
+    templatesLoading,
+    templateDraft,
+    templateBusy,
+    templateError,
     flowDiagram,
     journey,
     release,
@@ -890,6 +1037,8 @@ export function useWorkbenchController({
     queueCompilation,
     openApplication,
     compileApplication,
+    startCuratedTemplate,
+    renameTemplateDraft,
     inspectArtifact,
     startPreview,
     stopPreview,

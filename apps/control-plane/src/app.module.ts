@@ -27,6 +27,8 @@ import {
 import { PortfolioModule } from "./portfolio/portfolio.module.js";
 import { VerificationController } from "./verification/verification.controller.js";
 import { VerificationService } from "./verification/verification.service.js";
+import { TemplateController } from "./template/template.controller.js";
+import { TemplateService } from "./template/template.service.js";
 import {
   BullMqVerificationRunQueue,
   VERIFICATION_RUN_QUEUE,
@@ -39,6 +41,7 @@ import {
     LifecycleController,
     VerificationController,
     CompositionController,
+    TemplateController,
   ],
   providers: [
     AppService,
@@ -46,6 +49,7 @@ import {
     VerificationService,
     CompositionService,
     ProductCompositionService,
+    TemplateService,
     BullMqCompilationQueue,
     BullMqPreviewRunQueue,
     BullMqVerificationRunQueue,

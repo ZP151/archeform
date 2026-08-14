@@ -57,6 +57,10 @@ export type WorkbenchApplicationSummary = {
   readonly id: string;
   readonly key: string;
   readonly name: string;
+  readonly templateOrigin: {
+    readonly templateKey: string;
+    readonly templateVersion: string;
+  } | null;
   readonly compositionProfile: string | null;
   readonly latestDraft: {
     readonly revisionNumber: number;
@@ -77,6 +81,27 @@ export type WorkbenchApplicationSummary = {
     readonly totalAssets: number;
   };
 };
+
+function summaryTemplateOrigin(
+  input: unknown,
+): WorkbenchApplicationSummary["templateOrigin"] {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+  const record = input as UnknownRecord;
+  if (
+    Object.keys(record).sort().join(",") !==
+      "templateGraphChecksum,templateKey,templateVersion" ||
+    typeof record.templateKey !== "string" ||
+    typeof record.templateVersion !== "string" ||
+    typeof record.templateGraphChecksum !== "string" ||
+    !/^sha256:[a-f0-9]{64}$/.test(record.templateGraphChecksum)
+  ) {
+    return null;
+  }
+  return {
+    templateKey: record.templateKey,
+    templateVersion: record.templateVersion,
+  };
+}
 
 export function exactRecord(
   input: unknown,
@@ -663,6 +688,7 @@ export class LifecycleService {
         id: true,
         key: true,
         name: true,
+        templateOrigin: true,
         draftRevisions: {
           orderBy: { revisionNumber: "desc" },
           take: 1,
@@ -702,6 +728,7 @@ export class LifecycleService {
         id: application.id,
         key: application.key,
         name: application.name,
+        templateOrigin: summaryTemplateOrigin(application.templateOrigin),
         ...graphFields,
         latestDraft: latestDraft
           ? {

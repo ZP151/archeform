@@ -4411,22 +4411,21 @@ inherited observation is the existing non-failing `punycode` deprecation.
 
 ## Task 6 — Rebuild the Workbench prompt-to-live journey
 
-State: `implementing` through the bounded Task 6A foundation slice.
+State: `delivered` through the bounded Task 6B template lifecycle slice.
 
-Owner: Workbench frontend for Task 6A. No Control Plane write is active in this
-slice.
+Owner: controller-integrated Workbench/Control Plane implementation for Task
+6B. Task 6A is delivered at `1a659a2700056fa5c6814aadd6cb0fb924f27596`.
 
 Allowed paths: `apps/workbench/**`, `packages/workbench-ui/**`, assigned
 Control Plane preview endpoints/services, and their tests.
 
 Current executable plan:
-`docs/superpowers/plans/2026-08-14-workbench-prompt-to-live-foundation.md`.
-Task 6A changes only the exact internal Workbench/UI manifest frozen there. It
-adds Workspace Home and Builder contexts, keeps only backed controls, closes
-Advanced by default, migrates active branding to Archeform, and extracts the
-styles/state responsibilities it touches. It does not add a Graph/API contract,
-template clone, Snapshot V2 lifecycle, App Management, external dependency,
-provider, service, Docker, or Compose change. Those remain later Task 6 slices.
+`docs/superpowers/plans/2026-08-14-curated-template-draft-preview.md`.
+Accepted ADR-0012 authorizes exactly one first-party Restaurant template, its
+local idempotent clone/open/rename API, nullable template origin, append-only
+Draft Preview Snapshot V2 persistence, and the focused Workbench product view.
+The slice does not change Graph/Product Recipe, enable V3 Publish/Compilation,
+add an external dependency, or perform provider/network/Docker/Compose work.
 
 Acceptance evidence:
 
@@ -4460,9 +4459,16 @@ Acceptance evidence:
 - no active user-facing `Factory Pilot` remains outside an explicitly allowed
   historical, legal, package, or serialized protocol occurrence.
 
-Task 6A prerequisites are consumed: Tasks 1–5 are delivered. Task 6B remains
-blocked until Task 6A is reviewed, delivered, and pushed with local/upstream
-equality.
+Task 6A prerequisites are consumed. Task 6B delivers the exact 36-path slice in
+`docs/superpowers/plans/2026-08-14-curated-template-draft-preview.md`: one
+curated Restaurant template, independent Graph V3 Draft clone, append-only
+Snapshot V2 lifecycle, real 8-page customer and 7-page merchant projections,
+and rename-only Draft r.2. Fresh evidence passes Control Plane 253/253,
+Workbench 384/384, browser clone/preview/rename 1/1, both package typechecks and
+builds, Prisma validation, exact formatting/containment/diff gates, and final
+independent review P0/P1/P2=0/0/0. The enclosing commit is the single intentional
+Task 6B delivery; it does not enable V3 Publish/Compilation or change Graph,
+Product Recipe, provider, or deployment contracts.
 
 ## Task 7 — Make Page, Data, Users, Workflow, and Experience contextual editors
 
@@ -4483,7 +4489,8 @@ Acceptance evidence:
   require a new Draft Preview Snapshot before preview changes;
 - no editor mutates Published Graphs or existing preview snapshots.
 
-Blocked by: Tasks 2, 3, and 6 ready for QA.
+Blocked by: none for the first bounded Page-selection/editor slice. Broader Data,
+Users, Workflow, and Experience work remains serialized behind that slice.
 
 ## Task 8 — Add Source Mode, controlled overlays, ZIP, and Git export
 

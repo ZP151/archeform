@@ -159,8 +159,13 @@ P0 acceptance gates:
 > Task 3 commit. Task 4 is delivered at `0e85ed61` with an exact 18-path commit,
 > final P0/P1=0/0 review, and pushed equality. Task 5 is delivered at
 > `96712e86` with an exact 17-path commit, final P0/P1/P2=0/0/0 review, and
-> pushed equality. Task 6A now begins the internal Workbench foundation without
-> Graph or Control Plane API expansion.
+> pushed equality. Task 6A is delivered at `1a659a27` with pushed equality and
+> no blocking review finding. Task 6B is delivered by its enclosing commit under
+> accepted ADR-0012: one curated Restaurant template becomes an independent V3
+> Draft, immediately renders customer and merchant Snapshot V2 previews, and a
+> rename appends Draft r.2 plus a new Snapshot. Fresh evidence passes Control
+> Plane 253/253, Workbench 384/384, browser journey 1/1, and final review
+> P0/P1/P2=0/0/0. Graph and V3 Publish/Compilation remain unchanged.
 
 ### P1 Product Closure gate (accepted and delivered)
 
@@ -340,9 +345,12 @@ Task 4's strict Published Graph V3 customer compiler, independently runnable
 eight-page application, shared local runtime, and artifact-free Snapshot V2
 preview are delivered. Task 5's seven-page merchant desktop, shared state/API,
 dual-surface bundle, and exact Restaurant V3 dispatch are delivered at
-`96712e86`. Task 6A now implements distinct Workspace Home and Builder
-contexts, Archeform identity, default-hidden Advanced inspection, and the first
-style/state decomposition by reusing existing Workbench behavior and APIs.
+`96712e86`. Task 6A's distinct Apps/Builder contexts, Archeform identity,
+default-hidden Advanced inspection, and first style/state decomposition are
+delivered at `1a659a27`. Task 6B delivers the curated Restaurant template as an
+independent V3 Draft with an immutable dual-surface Snapshot V2 preview. The next
+vertical slice links preview selection to one bounded Page edit and Draft r.3,
+without another Graph contract.
 
 Workbench implementation includes characterization-first decomposition of the
 current 3,818-line global stylesheet, 907-line controller, and 1,131-line

@@ -617,6 +617,7 @@ describe("LifecycleService", () => {
         id: "graph-restaurant",
         key: "restaurant-ordering",
         name: "Restaurant ordering",
+        templateOrigin: null,
         draftRevisions: [
           {
             revisionNumber: 3,
@@ -663,6 +664,7 @@ describe("LifecycleService", () => {
         id: "graph-restaurant",
         key: "restaurant-ordering",
         name: "Restaurant ordering",
+        templateOrigin: null,
         compositionProfile: "restaurant-ordering",
         latestDraft: {
           revisionNumber: 3,
@@ -691,6 +693,7 @@ describe("LifecycleService", () => {
         id: true,
         key: true,
         name: true,
+        templateOrigin: true,
         draftRevisions: {
           orderBy: { revisionNumber: "desc" },
           take: 1,

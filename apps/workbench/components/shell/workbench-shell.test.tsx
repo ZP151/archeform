@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { WorkbenchApplicationSummary } from "../../lib/control-plane-client";
 import { workbenchGraph } from "../../lib/workbench-graph";
+import { templateDraftResponse } from "../../test/template-draft-fixture";
 import { Workbench } from "../workbench";
 
 const restaurantSummary: WorkbenchApplicationSummary = {
@@ -131,13 +132,44 @@ function stubControlPlane(
   options: {
     readonly applications?: readonly WorkbenchApplicationSummary[];
     readonly portfolio?: unknown;
+    readonly templateDrafts?: readonly [
+      ReturnType<typeof templateDraftResponse>,
+      ReturnType<typeof templateDraftResponse>,
+    ];
+    readonly failFirstTemplateClone?: boolean;
   } = {},
 ): ReturnType<typeof vi.fn> {
   const applications = options.applications ?? [];
+  let templateCloneAttempts = 0;
   const fetcher = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = new URL(String(input));
       const method = init?.method ?? "GET";
+      if (
+        method === "GET" &&
+        url.pathname === "/workspaces/local/curated-templates"
+      ) {
+        return responseJson(
+          options.templateDrafts ? [options.templateDrafts[0].template] : [],
+        );
+      }
+      if (
+        method === "POST" &&
+        url.pathname ===
+          "/workspaces/local/curated-templates/restaurant-dual-surface/instances"
+      ) {
+        templateCloneAttempts += 1;
+        if (options.failFirstTemplateClone && templateCloneAttempts === 1) {
+          return responseJson({ error: "temporarily unavailable" }, 503);
+        }
+        return responseJson(options.templateDrafts?.[0] ?? null, 201);
+      }
+      if (
+        method === "POST" &&
+        url.pathname === "/template-draft-instances/application-1/revisions"
+      ) {
+        return responseJson(options.templateDrafts?.[1] ?? null, 201);
+      }
       if (
         method === "GET" &&
         url.pathname === "/workspaces/local/application-graphs/ops-workspace"
@@ -302,8 +334,18 @@ describe("Workbench shell", () => {
 
   function renderWorkbench(
     applications?: readonly WorkbenchApplicationSummary[],
+    templateDrafts?: readonly [
+      ReturnType<typeof templateDraftResponse>,
+      ReturnType<typeof templateDraftResponse>,
+    ],
+    failFirstTemplateClone = false,
   ) {
-    vi.stubGlobal("fetch", stubControlPlane({ applications }));
+    const fetcher = stubControlPlane({
+      applications,
+      templateDrafts,
+      failFirstTemplateClone,
+    });
+    vi.stubGlobal("fetch", fetcher);
     act(() => {
       root.render(
         <Workbench
@@ -312,6 +354,7 @@ describe("Workbench shell", () => {
         />,
       );
     });
+    return fetcher;
   }
 
   it("loads bounded shell, Home, and Builder style modules exactly once", () => {
@@ -325,6 +368,8 @@ describe("Workbench shell", () => {
       "shell.css",
       "workspace-home.css",
       "builder-workspace.css",
+      "template-draft.css",
+      "template-preview.css",
     ];
     for (const module of modules) {
       const importRule = `@import \"../styles/${module}\";`;
@@ -679,6 +724,158 @@ describe("Workbench shell", () => {
     await waitForAssertion(() => {
       expect(container.textContent).toContain("Compile succeeded");
     });
+  });
+
+  it("clones a V3 template, isolates legacy actions, and appends a renamed Draft", async () => {
+    const first = templateDraftResponse(1);
+    const second = templateDraftResponse(2);
+    const sameNameTemplates: readonly WorkbenchApplicationSummary[] = [
+      {
+        ...restaurantSummary,
+        id: "graph-other-template",
+        key: "other-template-clone",
+        name: "Maison Aurelia",
+        templateOrigin: {
+          templateKey: "restaurant-dual-surface",
+          templateVersion: "1.0.0",
+        },
+      },
+      {
+        ...restaurantSummary,
+        id: "application-1",
+        key: "restaurant-template-001",
+        name: "Maison Aurelia",
+        templateOrigin: {
+          templateKey: "restaurant-dual-surface",
+          templateVersion: "1.0.0",
+        },
+      },
+    ];
+    const fetcher = renderWorkbench(sameNameTemplates, [first, second]);
+
+    await waitForAssertion(() => {
+      expect(
+        container.querySelector<HTMLButtonElement>(
+          'button[aria-label="Start from Maison Aurelia"]',
+        ),
+      ).not.toBeNull();
+    });
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>(
+          'button[aria-label="Start from Maison Aurelia"]',
+        )
+        ?.click();
+    });
+
+    await waitForAssertion(() => {
+      expect(container.textContent).toContain("Preview synced · Draft r.1");
+      expect(container.textContent).toContain("8 customer pages");
+      expect(container.textContent).toContain("7 merchant pages");
+    });
+    expect(
+      container.querySelector<HTMLSelectElement>(
+        'select[aria-label="Switch application"]',
+      )?.value,
+    ).toBe("restaurant-template-001");
+    expect(
+      container.querySelector<HTMLButtonElement>(
+        'button[aria-label="Publish draft"]',
+      )?.disabled,
+    ).toBe(true);
+    expect(container.querySelector('button[aria-label="Compile"]')).toBeNull();
+    expect(container.querySelector('button[aria-label="Advanced"]')).toBeNull();
+    expect(container.querySelector('button[aria-label="History"]')).toBeNull();
+    expect(container.querySelector('button[aria-label="Activity"]')).toBeNull();
+    expect(container.querySelector('button[aria-label="Library"]')).toBeNull();
+
+    const input = container.querySelector<HTMLInputElement>(
+      'input[aria-label="Application name"]',
+    );
+    act(() => {
+      Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )?.set?.call(input, "Maison Rivage");
+      input?.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>(
+          'button[aria-label="Save application name"]',
+        )
+        ?.click();
+    });
+    await waitForAssertion(() => {
+      expect(container.textContent).toContain("Preview synced · Draft r.2");
+      expect(container.textContent).toContain("Maison Rivage");
+    });
+
+    const revisionCall = fetcher.mock.calls.find(([input, init]) => {
+      const url = new URL(String(input));
+      return (
+        init?.method === "POST" &&
+        url.pathname === "/template-draft-instances/application-1/revisions"
+      );
+    });
+    expect(JSON.parse(String(revisionCall?.[1]?.body))).toEqual({
+      baseDraftRevisionId: "draft-1",
+      name: "Maison Rivage",
+    });
+  });
+
+  it("reuses the clone request identity after a recoverable response failure", async () => {
+    const first = templateDraftResponse(1);
+    const second = templateDraftResponse(2);
+    const fetcher = renderWorkbench(undefined, [first, second], true);
+
+    await waitForAssertion(() => {
+      expect(
+        container.querySelector<HTMLButtonElement>(
+          'button[aria-label="Start from Maison Aurelia"]',
+        ),
+      ).not.toBeNull();
+    });
+    const start = () => {
+      act(() => {
+        container
+          .querySelector<HTMLButtonElement>(
+            'button[aria-label="Start from Maison Aurelia"]',
+          )
+          ?.click();
+      });
+    };
+    start();
+    await waitForAssertion(() => {
+      expect(container.textContent).toContain(
+        "Control Plane request failed with 503.",
+      );
+      expect(
+        container.querySelector<HTMLButtonElement>(
+          'button[aria-label="Start from Maison Aurelia"]',
+        )?.disabled,
+      ).toBe(false);
+    });
+    start();
+    await waitForAssertion(() => {
+      expect(container.textContent).toContain("Preview synced · Draft r.1");
+    });
+
+    const bodies = fetcher.mock.calls
+      .filter(([input, init]) => {
+        const url = new URL(String(input));
+        return (
+          init?.method === "POST" &&
+          url.pathname.endsWith(
+            "/curated-templates/restaurant-dual-surface/instances",
+          )
+        );
+      })
+      .map(
+        ([, init]) => JSON.parse(String(init?.body)) as { requestId: string },
+      );
+    expect(bodies).toHaveLength(2);
+    expect(bodies[1]?.requestId).toBe(bodies[0]?.requestId);
   });
 
   it("keeps the composer as the sole Home decision when no applications exist", () => {

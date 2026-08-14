@@ -24,6 +24,7 @@ describe("control-plane lifecycle schema", () => {
         "Workspace",
         "ApplicationGraph",
         "DraftRevision",
+        "DraftPreviewSnapshot",
         "PublishedRevision",
         "Compilation",
         "PreviewRun",
@@ -178,6 +179,39 @@ describe("control-plane lifecycle schema", () => {
       type: "String",
       isRequired: true,
     });
+  });
+
+  it("stores curated-template origin separately from Graph truth and binds append-only preview snapshots to a Draft", () => {
+    expect(field("ApplicationGraph", "templateOrigin")).toMatchObject({
+      type: "Json",
+      isRequired: false,
+    });
+    expect(field("ApplicationGraph", "draftPreviewSnapshots")).toMatchObject({
+      type: "DraftPreviewSnapshot",
+      isList: true,
+    });
+    expect(field("DraftRevision", "draftPreviewSnapshots")).toMatchObject({
+      type: "DraftPreviewSnapshot",
+      isList: true,
+    });
+    expect(field("DraftPreviewSnapshot", "snapshot")).toMatchObject({
+      type: "Json",
+      isRequired: true,
+    });
+    expect(field("DraftPreviewSnapshot", "draftRevision")).toMatchObject({
+      relationFromFields: ["draftRevisionId", "applicationGraphId"],
+      relationToFields: ["id", "applicationGraphId"],
+    });
+    expect(field("DraftPreviewSnapshot", "draftRevisionId").isUnique).toBe(
+      false,
+    );
+    expect(
+      model("DraftPreviewSnapshot").fields.some(({ name }) =>
+        /secret|credential|provider|prompt|response|source|environment/i.test(
+          name,
+        ),
+      ),
+    ).toBe(false);
   });
 
   it("allows compilations to consume only immutable published revisions", () => {

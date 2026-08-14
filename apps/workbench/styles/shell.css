@@ -180,6 +180,8 @@
 .publish-button:disabled {
   color: var(--accent-dark);
   background: var(--accent-soft);
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .compile-button {

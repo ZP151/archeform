@@ -17,6 +17,7 @@
   "dependencies": {
     "@factory/adapters": "workspace:*",
     "@factory/capabilities": "workspace:*",
+    "@factory/compiler": "workspace:*",
     "@factory/graph": "workspace:*",
     "@factory/portfolio-public": "workspace:*",
     "@nestjs/common": "^10.4.15",

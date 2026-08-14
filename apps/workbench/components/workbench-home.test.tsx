@@ -156,6 +156,53 @@ describe("WorkbenchHome", () => {
     root = createRoot(container);
   });
 
+  it("offers Describe and one real curated-template action as equal product starts", () => {
+    const onStartTemplate = vi.fn();
+    act(() => {
+      root.render(
+        <WorkbenchHome
+          applications={[]}
+          loading={false}
+          onCompile={vi.fn()}
+          onOpen={vi.fn()}
+          journey={briefJourney()}
+          curatedTemplates={[
+            {
+              apiVersion: "factory.curated-template/v1",
+              key: "restaurant-dual-surface",
+              version: "1.0.0",
+              name: "Maison Aurelia",
+              description:
+                "A polished customer ordering app and merchant operations workspace.",
+              surfaces: ["customer-mobile", "merchant-desktop"],
+              graphChecksum:
+                "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            },
+          ]}
+          templatesLoading={false}
+          templateBusy={false}
+          onStartTemplate={onStartTemplate}
+        />,
+      );
+    });
+
+    expect(container.textContent).toContain("Describe a product");
+    expect(container.textContent).toContain("Start from a template");
+    expect(container.textContent).toContain("Maison Aurelia");
+    expect(container.textContent).toContain("Customer mobile");
+    expect(container.textContent).toContain("Merchant desktop");
+    expect(container.textContent).not.toContain("sha256:");
+
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>(
+          'button[aria-label="Start from Maison Aurelia"]',
+        )
+        ?.click();
+    });
+    expect(onStartTemplate).toHaveBeenCalledWith("restaurant-dual-surface");
+  });
+
   afterEach(() => {
     act(() => root.unmount());
     container.remove();
@@ -197,7 +244,7 @@ describe("WorkbenchHome", () => {
     ).toBeNull();
     expect(container.textContent).not.toContain("Profiles");
     expect(container.textContent).not.toMatch(
-      /Factory Pilot|Graph|Inspector|capability lock|Start from a template/i,
+      /Factory Pilot|Graph|Inspector|capability lock/i,
     );
   });
 

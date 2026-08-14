@@ -15,6 +15,7 @@ import { CodeCanvas } from "./canvases/code-canvas";
 import { ReleaseWorkspace } from "./journey/release-workspace";
 import { BuildingPreview } from "./journey/building-preview";
 import { resolveWorkbenchContext } from "../state/workbench-shell-machine";
+import { TemplateDraftWorkspace } from "./template-draft-workspace";
 
 /** The transient example prompts offered by the Home composer popover. */
 export const EXAMPLE_PROMPTS: readonly string[] = [
@@ -76,7 +77,14 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   const surface = (() => {
     switch (state.activeSurface) {
       case "home":
-        return context === "builder" ? (
+        return controller.templateDraft ? (
+          <TemplateDraftWorkspace
+            instance={controller.templateDraft}
+            busy={controller.templateBusy}
+            error={controller.templateError}
+            onRename={controller.renameTemplateDraft}
+          />
+        ) : context === "builder" ? (
           <BuildingPreview
             journey={journeyProps}
             commandFocusToken={state.commandFocusToken}
@@ -93,6 +101,10 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
             onOpen={controller.openApplication}
             commandFocusToken={state.commandFocusToken}
             journey={journeyProps}
+            curatedTemplates={controller.curatedTemplates}
+            templatesLoading={controller.templatesLoading}
+            templateBusy={controller.templateBusy}
+            onStartTemplate={controller.startCuratedTemplate}
           />
         );
       case "page":

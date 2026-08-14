@@ -96,6 +96,19 @@ historical evidence, not the executable Task 2/Task 3 contract.
   local/upstream equality, and a clean tree. Fresh delivery evidence passes
   focused 67/67, Compiler 491/491, Graph 661/661, Capabilities 384/384,
   type/build/static gates, and independent P0/P1/P2=0/0/0.
+- Task 6A is delivered and pushed at
+  `1a659a2700056fa5c6814aadd6cb0fb924f27596`. It replaces the former mixed
+  shell with distinct Apps and Builder contexts, makes Advanced progressive,
+  and preserves the existing V1 product journey. Fresh delivery evidence passed
+  375 Workbench tests and independent review had no blocking finding.
+- Task 6B is delivered by the enclosing Task 6B commit under accepted
+  [`ADR-0012`](adr/adr-0012-curated-template-draft-preview-lifecycle.md). The
+  delivered slice adds one first-party Restaurant template, an independent V3
+  Draft clone, append-only Snapshot V2 persistence, a dual-surface product
+  preview, and rename-only Draft r.2 editing. It does not widen Graph, V3
+  Publish, or Compilation. Fresh evidence passes Control Plane 253/253,
+  Workbench 384/384, the real browser clone/preview/rename journey 1/1, both
+  package typechecks/builds, and final independent review P0/P1/P2=0/0/0.
 
 ### Blocked decisions and risks
 
@@ -107,9 +120,10 @@ summary matches the current evidence and accepted Restaurant goal. The accepted
 additive contract preserves V1 and separates owned pages from visible
 navigation. Copied shadcn/ui source, direct Radix, another external coordinate,
 provider/model/network/service work, Docker, Compose, and Workbench API/Control
-Plane contract expansion remain unauthorized. The internal Task 6A Workbench
-foundation is now the sole implementation slice; it reuses existing APIs and
-adds no Graph or wire contract.
+Plane contract expansion remain unauthorized. The delivered Task 6B template
+lifecycle is an additive local API and persistence boundary accepted in
+ADR-0012 and adds no Graph, provider, external dependency, marketplace, or
+production deployment.
 
 The main risks are shared-contract drift, accidental lockfile resolution drift,
 client relabeling of server totals/state/payment/inventory/audit fields, and UI
@@ -117,14 +131,11 @@ ports that imply authority. Frozen tests and the stop-both rule address these.
 
 ### Next smallest valuable slice
 
-Execute Task 6A at
-[`superpowers/plans/2026-08-14-workbench-prompt-to-live-foundation.md`](superpowers/plans/2026-08-14-workbench-prompt-to-live-foundation.md):
-deliver distinct Workspace Home and Builder contexts, the Archeform identity,
-default-hidden Advanced inspection, product-language build progress, and the
-first style/state decomposition while preserving existing Describe, resume,
-edit, preview, and Publish behavior. Template cloning, Snapshot V2 lifecycle,
-App Management, V3-to-V1 down-conversion, and further Graph expansion are not
-part of this slice.
+Start the smallest Task 7 editor slice: selecting a page in the delivered
+customer or merchant preview must open that exact page in the Page workspace,
+persist one bounded edit as Draft r.3, and create a new immutable Snapshot V2.
+Keep Data, Users, Workflow, Experience, Source, and export work behind later
+vertical slices; do not expand Graph contracts.
 
 ### Retained historical reconciliation through V3 acceptance
 

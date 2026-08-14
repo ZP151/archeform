@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { createPublishedGraphExchange } from "@factory/graph";
+import {
+  createPublishedGraphExchange,
+  hashApplicationGraphV3,
+  hashDraftPreviewSnapshotV2,
+} from "@factory/graph";
+import { templateDraftResponse } from "../test/template-draft-fixture";
 
 import {
   ControlPlaneClient,
@@ -44,6 +49,181 @@ const profileCoverage = [
 ];
 
 describe("ControlPlaneClient", () => {
+  it("lists, clones, and revises a strict curated template Draft", async () => {
+    const first = templateDraftResponse(1);
+    const second = templateDraftResponse(2);
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([first.template]), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(first), { status: 201 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(second), { status: 201 }),
+      );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(client.listCuratedTemplates()).resolves.toEqual([
+      first.template,
+    ]);
+    const cloned = await client.instantiateCuratedTemplate(
+      "restaurant-dual-surface",
+      {
+        requestId: "restaurant-template-001",
+        name: "Maison Aurelia",
+      },
+    );
+    const revised = await client.appendTemplateDraftRevision("application-1", {
+      baseDraftRevisionId: "draft-1",
+      name: "Maison Rivage",
+    });
+    expect(cloned).toMatchObject({
+      template: first.template,
+      draft: { revisionNumber: 1 },
+      snapshot: { id: "preview-1", state: "active" },
+    });
+    expect(revised).toMatchObject({
+      template: second.template,
+      draft: { revisionNumber: 2 },
+      snapshot: { id: "preview-2", state: "active" },
+    });
+    expect(cloned.previews.map(({ surface }) => surface.pages.length)).toEqual([
+      8, 7,
+    ]);
+
+    expect(fetcher).toHaveBeenNthCalledWith(
+      2,
+      "http://control-plane.test/workspaces/local/curated-templates/restaurant-dual-surface/instances",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          requestId: "restaurant-template-001",
+          name: "Maison Aurelia",
+        }),
+      }),
+    );
+    expect(fetcher).toHaveBeenNthCalledWith(
+      3,
+      "http://control-plane.test/template-draft-instances/application-1/revisions",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          baseDraftRevisionId: "draft-1",
+          name: "Maison Rivage",
+        }),
+      }),
+    );
+  });
+
+  it("rejects malformed template responses instead of guessing by shape", async () => {
+    const valid = templateDraftResponse(1);
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            ...valid,
+            apiVersion: "factory.template-draft-instance/v2",
+          }),
+          { status: 201 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ ...valid, previews: valid.previews.slice(0, 1) }),
+          { status: 201 },
+        ),
+      );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(
+      client.instantiateCuratedTemplate("restaurant-dual-surface", {
+        requestId: "restaurant-template-001",
+      }),
+    ).rejects.toThrow("Control Plane template response is invalid.");
+    await expect(
+      client.instantiateCuratedTemplate("restaurant-dual-surface", {
+        requestId: "restaurant-template-002",
+      }),
+    ).rejects.toThrow("Control Plane template response is invalid.");
+  });
+
+  it("rejects a template response whose Graph and Snapshot identity do not match", async () => {
+    const checksumDrift = structuredClone(templateDraftResponse(1));
+    checksumDrift.draft.graph.metadata.name = "Checksum drift";
+    const workspaceDrift = structuredClone(templateDraftResponse(1));
+    workspaceDrift.draft.graph.metadata.workspaceId = "other-workspace";
+    workspaceDrift.snapshot = {
+      ...workspaceDrift.snapshot,
+      graphChecksum: hashApplicationGraphV3(workspaceDrift.draft.graph),
+      snapshotChecksum:
+        "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    };
+    workspaceDrift.snapshot.snapshotChecksum = hashDraftPreviewSnapshotV2(
+      workspaceDrift.snapshot,
+    );
+    workspaceDrift.previews = workspaceDrift.previews.map((preview) => ({
+      ...preview,
+      graphChecksum: workspaceDrift.snapshot.graphChecksum,
+    })) as typeof workspaceDrift.previews;
+    const projectionDrift = structuredClone(templateDraftResponse(1));
+    projectionDrift.previews[0].surface.pages[0]!.title = "Invented title";
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(checksumDrift), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(workspaceDrift), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(projectionDrift), { status: 200 }),
+      );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(
+      client.openTemplateDraft("restaurant-template-001"),
+    ).rejects.toThrow("Control Plane template response is invalid.");
+    await expect(
+      client.openTemplateDraft("restaurant-template-001"),
+    ).rejects.toThrow("Control Plane template response is invalid.");
+    await expect(
+      client.openTemplateDraft("restaurant-template-001"),
+    ).rejects.toThrow("Control Plane template response is invalid.");
+  });
+
+  it("copies only the template preview fields consumed by the default product view", async () => {
+    const valid = templateDraftResponse(1);
+    const hostile = structuredClone(valid) as unknown as Record<
+      string,
+      unknown
+    >;
+    (hostile.template as Record<string, unknown>).internalEvidence =
+      "HOSTILE-TECHNICAL-SENTINEL";
+    const firstPage = (
+      (hostile.previews as Record<string, unknown>[])[0]?.surface as Record<
+        string,
+        unknown
+      >
+    ).pages as Record<string, unknown>[];
+    firstPage[0]!.internalEvidence = "HOSTILE-TECHNICAL-SENTINEL";
+    (firstPage[0]!.recipe as Record<string, unknown>).internalEvidence =
+      "HOSTILE-TECHNICAL-SENTINEL";
+    const firstBlock = (firstPage[0]!.blocks as Record<string, unknown>[])[0]!;
+    firstBlock.internalEvidence = "HOSTILE-TECHNICAL-SENTINEL";
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify(hostile), { status: 200 }),
+      );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    const parsed = await client.openTemplateDraft("restaurant-template-001");
+
+    expect(JSON.stringify(parsed)).not.toContain("HOSTILE-TECHNICAL-SENTINEL");
+  });
   it("propagates the caller AbortSignal through product choice and apply transport", async () => {
     const fetcher = vi
       .fn()
@@ -459,6 +639,7 @@ describe("ControlPlaneClient", () => {
         id: "graph-restaurant",
         key: "restaurant-ordering",
         name: "Restaurant ordering",
+        templateOrigin: null,
         compositionProfile: "restaurant-ordering",
         latestDraft: {
           revisionNumber: 3,

@@ -1,10 +1,17 @@
 import type { ProductPlanAlternativeKey } from "@factory/capabilities/node";
 import type {
   ApplicationGraphV1,
+  ApplicationGraphV3,
   CompositionPlanV1,
   ProductBlueprintV1,
   PublishedGraphExchangeV1,
   RequirementSpecV1,
+} from "@factory/graph";
+import {
+  assertApplicationGraphV3,
+  assertDraftPreviewSnapshotV2,
+  hashApplicationGraphV3,
+  type DraftPreviewSnapshotV2,
 } from "@factory/graph";
 
 import {
@@ -35,6 +42,347 @@ export type WorkbenchDraft = {
   readonly revisionNumber: number;
   readonly graph: ApplicationGraphV1;
 };
+
+export type WorkbenchCuratedTemplate = {
+  readonly apiVersion: "factory.curated-template/v1";
+  readonly key: "restaurant-dual-surface";
+  readonly version: "1.0.0";
+  readonly name: "Maison Aurelia";
+  readonly description: string;
+  readonly surfaces: readonly ["customer-mobile", "merchant-desktop"];
+  readonly graphChecksum: `sha256:${string}`;
+};
+
+export type WorkbenchTemplatePreviewSurface = {
+  readonly apiVersion: "factory.restaurant-draft-preview-surface/v2";
+  readonly disposition: "preview-only";
+  readonly snapshotId: string;
+  readonly graphChecksum: `sha256:${string}`;
+  readonly surface: {
+    readonly apiVersion: "factory.restaurant-surface-plan/v1";
+    readonly surfaceKey: "customer-mobile" | "merchant-desktop";
+    readonly pages: readonly {
+      readonly id: string;
+      readonly route: string;
+      readonly title: string;
+      readonly surfaceKey: "customer-mobile" | "merchant-desktop";
+      readonly recipe: {
+        readonly key: string;
+        readonly version: string;
+        readonly layoutKey: "mobile-product-shell" | "merchant-workspace-shell";
+      };
+      readonly blocks: readonly {
+        readonly id: string;
+        readonly type: string;
+      }[];
+    }[];
+    readonly navigation: readonly unknown[];
+  };
+};
+
+export type WorkbenchTemplateDraftInstance = {
+  readonly apiVersion: "factory.template-draft-instance/v1";
+  readonly template: WorkbenchCuratedTemplate;
+  readonly origin: {
+    readonly templateKey: "restaurant-dual-surface";
+    readonly templateVersion: "1.0.0";
+    readonly templateGraphChecksum: `sha256:${string}`;
+  };
+  readonly draft: {
+    readonly applicationGraphId: string;
+    readonly applicationKey: string;
+    readonly draftRevisionId: string;
+    readonly revisionNumber: number;
+    readonly graph: ApplicationGraphV3;
+  };
+  readonly snapshot: DraftPreviewSnapshotV2;
+  readonly previews: readonly [
+    WorkbenchTemplatePreviewSurface,
+    WorkbenchTemplatePreviewSurface,
+  ];
+};
+
+const templateResponseError = "Control Plane template response is invalid.";
+const previewNavigationLabels = {
+  "customer-mobile": ["Home", "Menu", "Cart", "Orders", "Profile"],
+  "merchant-desktop": [
+    "Dashboard",
+    "Menu Management",
+    "Orders",
+    "Kitchen Queue",
+    "Tables",
+    "Users/Roles",
+    "Settings",
+  ],
+} as const;
+
+function responseRecord(input: unknown): Record<string, unknown> {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new Error(templateResponseError);
+  }
+  return input as Record<string, unknown>;
+}
+
+function responseString(record: Record<string, unknown>, key: string): string {
+  const value = record[key];
+  if (typeof value !== "string" || value.length === 0) {
+    throw new Error(templateResponseError);
+  }
+  return value;
+}
+
+function jsonEqual(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function expectedPreviewBinding(
+  policy: ApplicationGraphV3["bindingPolicies"][number],
+) {
+  if (policy.kind === "domain-field") {
+    return {
+      kind: policy.kind,
+      target: `${policy.entityKey}.${policy.fieldKey}`,
+      mode: policy.access,
+    };
+  }
+  if (policy.kind === "flow-transition") {
+    return {
+      kind: policy.kind,
+      target: `${policy.flowKey}:${policy.from}:${policy.event}:${policy.to}`,
+      mode: policy.access,
+    };
+  }
+  return {
+    kind: policy.kind,
+    target: `${policy.roleKey}:${policy.resource}:${policy.action}`,
+    mode: policy.access,
+  };
+}
+
+function curatedTemplateResponse(input: unknown): WorkbenchCuratedTemplate {
+  const record = responseRecord(input);
+  const surfaces = record.surfaces;
+  if (
+    record.apiVersion !== "factory.curated-template/v1" ||
+    record.key !== "restaurant-dual-surface" ||
+    record.version !== "1.0.0" ||
+    record.name !== "Maison Aurelia" ||
+    typeof record.description !== "string" ||
+    !Array.isArray(surfaces) ||
+    surfaces.length !== 2 ||
+    surfaces[0] !== "customer-mobile" ||
+    surfaces[1] !== "merchant-desktop" ||
+    !/^sha256:[a-f0-9]{64}$/.test(responseString(record, "graphChecksum"))
+  ) {
+    throw new Error(templateResponseError);
+  }
+  return {
+    apiVersion: "factory.curated-template/v1",
+    key: "restaurant-dual-surface",
+    version: "1.0.0",
+    name: "Maison Aurelia",
+    description: record.description,
+    surfaces: ["customer-mobile", "merchant-desktop"],
+    graphChecksum: responseString(
+      record,
+      "graphChecksum",
+    ) as `sha256:${string}`,
+  };
+}
+
+function previewSurfaceResponse(
+  input: unknown,
+  expectedSurface: "customer-mobile" | "merchant-desktop",
+  snapshot: DraftPreviewSnapshotV2,
+  graph: ApplicationGraphV3,
+): WorkbenchTemplatePreviewSurface {
+  const record = responseRecord(input);
+  const surface = responseRecord(record.surface);
+  const expectedPages = graph.page.pages.filter(
+    (page) => page.surfaceKey === expectedSurface,
+  );
+  const graphSurface = graph.surfaces.find(
+    (candidate) => candidate.key === expectedSurface,
+  );
+  const expectedNavigation = graphSurface?.navigation.items.map(
+    (item, index) => ({
+      ...item,
+      label: previewNavigationLabels[expectedSurface][index],
+    }),
+  );
+  const source = responseRecord(surface.source);
+  const origins = source.origins;
+  if (
+    record.apiVersion !== "factory.restaurant-draft-preview-surface/v2" ||
+    record.disposition !== "preview-only" ||
+    record.snapshotId !== snapshot.id ||
+    record.graphChecksum !== snapshot.graphChecksum ||
+    surface.apiVersion !== "factory.restaurant-surface-plan/v1" ||
+    surface.surfaceKey !== expectedSurface ||
+    !Array.isArray(surface.pages) ||
+    surface.pages.length !== expectedPages.length ||
+    !Array.isArray(surface.navigation) ||
+    !expectedNavigation ||
+    !jsonEqual(surface.navigation, expectedNavigation) ||
+    !Array.isArray(origins) ||
+    origins.length !== 1 ||
+    source.module !==
+      (expectedSurface === "customer-mobile"
+        ? "src/generated/customer-restaurant-ui.mjs"
+        : "src/generated/merchant-restaurant-ui.mjs") ||
+    !/^sha256:[a-f0-9]{64}$/.test(responseString(source, "digest"))
+  ) {
+    throw new Error(templateResponseError);
+  }
+  const origin = responseRecord(origins[0]);
+  if (
+    origin.package !== "@factory/screen-recipes" ||
+    origin.version !== "0.1.0" ||
+    origin.ownership !== "factory-authored" ||
+    origin.license !== "UNLICENSED" ||
+    !jsonEqual(
+      origin.recipeKeys,
+      expectedPages.map((page) => page.recipe.key),
+    )
+  ) {
+    throw new Error(templateResponseError);
+  }
+  const pages = surface.pages.map((pageInput, pageIndex) => {
+    const page = responseRecord(pageInput);
+    const recipe = responseRecord(page.recipe);
+    const expectedPage = expectedPages[pageIndex];
+    if (
+      !expectedPage ||
+      page.id !== expectedPage.id ||
+      page.route !== expectedPage.route ||
+      page.title !== expectedPage.title ||
+      page.surfaceKey !== expectedSurface ||
+      !jsonEqual(page.screenIntent, expectedPage.screenIntent) ||
+      recipe.key !== expectedPage.recipe.key ||
+      recipe.version !== expectedPage.recipe.version ||
+      !jsonEqual(recipe.regions, expectedPage.recipe.regions) ||
+      recipe.layoutKey !==
+        (expectedSurface === "customer-mobile"
+          ? "mobile-product-shell"
+          : "merchant-workspace-shell") ||
+      !Array.isArray(page.blocks) ||
+      page.blocks.length !== expectedPage.blocks.length ||
+      page.blocks.some((blockInput, blockIndex) => {
+        const block = responseRecord(blockInput);
+        const expectedBlock = expectedPage.blocks[blockIndex];
+        const expectedBindings = Object.fromEntries(
+          graph.bindingPolicies
+            .filter(
+              (policy) =>
+                policy.pageId === expectedPage.id &&
+                policy.blockId === expectedBlock?.id,
+            )
+            .map((policy) => [
+              policy.bindingKey,
+              expectedPreviewBinding(policy),
+            ]),
+        );
+        return (
+          !expectedBlock ||
+          block.id !== expectedBlock.id ||
+          block.type !== expectedBlock.type ||
+          !jsonEqual(block.bindings, expectedBindings)
+        );
+      })
+    ) {
+      throw new Error(templateResponseError);
+    }
+    return {
+      id: responseString(page, "id"),
+      route: responseString(page, "route"),
+      title: responseString(page, "title"),
+      surfaceKey: expectedSurface,
+      recipe: {
+        key: responseString(recipe, "key"),
+        version: responseString(recipe, "version"),
+        layoutKey: recipe.layoutKey as
+          "mobile-product-shell" | "merchant-workspace-shell",
+      },
+      blocks: page.blocks.map((blockInput) => {
+        const block = responseRecord(blockInput);
+        return {
+          id: responseString(block, "id"),
+          type: responseString(block, "type"),
+        };
+      }),
+    };
+  });
+  return {
+    apiVersion: "factory.restaurant-draft-preview-surface/v2",
+    disposition: "preview-only",
+    snapshotId: snapshot.id,
+    graphChecksum: snapshot.graphChecksum,
+    surface: {
+      apiVersion: "factory.restaurant-surface-plan/v1",
+      surfaceKey: expectedSurface,
+      pages,
+      navigation: expectedNavigation.map((item) => ({ ...item })),
+    },
+  };
+}
+
+function templateDraftResponse(input: unknown): WorkbenchTemplateDraftInstance {
+  try {
+    const record = responseRecord(input);
+    if (record.apiVersion !== "factory.template-draft-instance/v1") {
+      throw new Error();
+    }
+    const template = curatedTemplateResponse(record.template);
+    const origin = responseRecord(record.origin);
+    const draft = responseRecord(record.draft);
+    const graph = assertApplicationGraphV3(draft.graph);
+    const snapshot = assertDraftPreviewSnapshotV2(record.snapshot);
+    const previews = record.previews;
+    if (
+      origin.templateKey !== template.key ||
+      origin.templateVersion !== template.version ||
+      origin.templateGraphChecksum !== template.graphChecksum ||
+      responseString(draft, "applicationGraphId") !==
+        snapshot.applicationGraphId ||
+      responseString(draft, "draftRevisionId") !== snapshot.draftRevisionId ||
+      responseString(draft, "applicationKey") !== graph.metadata.id ||
+      graph.metadata.workspaceId !== snapshot.workspaceId ||
+      hashApplicationGraphV3(graph) !== snapshot.graphChecksum ||
+      draft.revisionNumber !== Number(draft.revisionNumber) ||
+      !Number.isSafeInteger(draft.revisionNumber) ||
+      Number(draft.revisionNumber) < 1 ||
+      snapshot.state !== "active" ||
+      !Array.isArray(previews) ||
+      previews.length !== 2
+    ) {
+      throw new Error();
+    }
+    const parsedPreviews = [
+      previewSurfaceResponse(previews[0], "customer-mobile", snapshot, graph),
+      previewSurfaceResponse(previews[1], "merchant-desktop", snapshot, graph),
+    ] as const;
+    return {
+      apiVersion: "factory.template-draft-instance/v1",
+      template,
+      origin: {
+        templateKey: template.key,
+        templateVersion: template.version,
+        templateGraphChecksum: template.graphChecksum,
+      },
+      draft: {
+        applicationGraphId: snapshot.applicationGraphId,
+        applicationKey: graph.metadata.id,
+        draftRevisionId: snapshot.draftRevisionId,
+        revisionNumber: Number(draft.revisionNumber),
+        graph,
+      },
+      snapshot,
+      previews: parsedPreviews,
+    };
+  } catch {
+    throw new Error(templateResponseError);
+  }
+}
 
 /** The product closure review row as the journey binds to it. */
 export type WorkbenchProductReview = {
@@ -182,6 +530,10 @@ export type WorkbenchApplicationSummary = {
   readonly id: string;
   readonly key: string;
   readonly name: string;
+  readonly templateOrigin?: {
+    readonly templateKey: string;
+    readonly templateVersion: string;
+  } | null;
   readonly compositionProfile: string | null;
   readonly latestDraft: {
     readonly revisionNumber: number;
@@ -488,6 +840,12 @@ function applicationSummary(
     id: record.id,
     key: record.key,
     name: record.name,
+    templateOrigin: record.templateOrigin
+      ? {
+          templateKey: record.templateOrigin.templateKey,
+          templateVersion: record.templateOrigin.templateVersion,
+        }
+      : null,
     compositionProfile: record.compositionProfile,
     latestDraft: record.latestDraft
       ? {
@@ -945,6 +1303,50 @@ export class ControlPlaneClient {
       { method: "POST", body: JSON.stringify({ graph }) },
     );
     return recordAsDraft(created);
+  }
+
+  async listCuratedTemplates(): Promise<readonly WorkbenchCuratedTemplate[]> {
+    const response = await this.request<unknown>(
+      "/workspaces/local/curated-templates",
+      { method: "GET" },
+    );
+    if (!Array.isArray(response)) throw new Error(templateResponseError);
+    return response.map(curatedTemplateResponse);
+  }
+
+  async instantiateCuratedTemplate(
+    templateKey: string,
+    input: { readonly requestId: string; readonly name?: string },
+  ): Promise<WorkbenchTemplateDraftInstance> {
+    const response = await this.request<unknown>(
+      `/workspaces/local/curated-templates/${encodeURIComponent(templateKey)}/instances`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+    return templateDraftResponse(response);
+  }
+
+  async openTemplateDraft(
+    applicationKey: string,
+  ): Promise<WorkbenchTemplateDraftInstance> {
+    const response = await this.request<unknown>(
+      `/workspaces/local/template-draft-instances/${encodeURIComponent(applicationKey)}`,
+      { method: "GET" },
+    );
+    return templateDraftResponse(response);
+  }
+
+  async appendTemplateDraftRevision(
+    applicationGraphId: string,
+    input: {
+      readonly baseDraftRevisionId: string;
+      readonly name: string;
+    },
+  ): Promise<WorkbenchTemplateDraftInstance> {
+    const response = await this.request<unknown>(
+      `/template-draft-instances/${encodeURIComponent(applicationGraphId)}/revisions`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+    return templateDraftResponse(response);
   }
 
   async listLocalApplicationSummaries(): Promise<
