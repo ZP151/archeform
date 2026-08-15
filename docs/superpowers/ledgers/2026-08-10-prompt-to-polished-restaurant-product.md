@@ -5140,8 +5140,10 @@ authorize any later Task 8 writer.
 
 ## D0 — Restaurant V3 Runtime Catalog Parity
 
-State: `accepted`; `ready_for_writer`; not implemented or delivered, on base
-`97b6dbdb6176ca26af6d7fa2b71dad6bbc692e19`.
+State: `delivered` at `74c68a132f48b3230992fad2f3fa80abfb066b84`, non-force
+push, local/upstream equality, clean tree. Independent Sol review returned
+P0/P1/P2=0/0/0; focused 121/121, full Compiler 579, Graph 661, Capabilities 384,
+and all three no-emit/build gates passed.
 
 Owner: one Sol writer for exact ten Compiler paths, then one independent Sol
 review. PM/controller retains exact-sixteen delivery.
@@ -5204,6 +5206,30 @@ Controller delivery, after PM acceptance, is exact ten implementation plus six
 governance paths with Expected16/Actual16 equality, zero index/unrelated paths,
 subject `fix(compiler): bind restaurant runtime catalog to graph seed`,
 non-force push, local/upstream equality, and a clean tree.
+
+## Task 8 source breadth (compiler core)
+
+State: `delivered` under accepted
+[ADR-0019](../../adr/adr-0019-workbench-source-diff-export-overlay.md).
+
+Delivered `buildSourceManifest`, `applySourceOverlay`, `diffGeneratedFiles`,
+`buildSourceZip`, and `buildGitExport` in
+`packages/compiler/src/targets/source/`. No Graph, Capability, Recipe, schema,
+dependency, Control Plane route, provider, service, Docker, Compose, or
+deployment change.
+
+Gates: focused 24/24; full Compiler 603, Graph 661, Capabilities 384; three
+no-emit/build gates; independent Sol review ACCEPT with P0/P1/P2=0/0/5. The five
+non-blocking P2s are deferred: git file/dir prefix-collision rejection (closed in
+this slice), package/config/entry exclusion at the source-export admission layer,
+and diff/mediaType/origin contract clarifications.
+
+Deferred: the Workbench download/diff surface and its E2E journey, which require
+a tenant- and digest-scoped read-only source-export route.
+
+Controller delivery: exact ten implementation plus six governance paths, subject
+`feat(source): add diff, export, and controlled overlay`, non-force push,
+local/upstream equality, clean tree.
 
 ## Task 9 — Close the Restaurant Product with guarded real-model acceptance
 

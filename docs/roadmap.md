@@ -224,13 +224,21 @@ P0 acceptance gates:
 > is focused 44, full Workbench 517, no-emit, Next, and browser 1/1. Exact-eight
 > static/containment gates are clean, and the independent review closes
 > P0/P1/P2=0/0/0 with `READY_FOR_DELIVERY YES`; controller delivery consumed
-> exact eight. ADR-0018 D0 Restaurant V3 Runtime Catalog Parity is accepted,
-> ready for one exact-ten Compiler writer, and not delivered. It admits only the
-> canonical plus exact delivered r.6 value family through normalization back to
-> the canonical hash, then derives one deterministic customer/merchant catalog
-> from strict mirrored Graph seed data with exact USD major-to-minor semantics.
-> Publish, workers, Workbench, Graph/Capability/Recipe/schema, and broader
-> generated-runtime behavior remain deferred.
+> exact eight. ADR-0018 D0 Restaurant V3 Runtime Catalog Parity is delivered at
+> `74c68a13` with exact subject `fix(compiler): bind restaurant runtime catalog
+to graph seed`, non-force push, local/upstream equality, and a clean tree. It
+> admits only the canonical plus exact delivered r.6 value family through
+> normalization back to the canonical hash, then derives one deterministic
+> customer/merchant catalog from strict mirrored Graph seed data with exact USD
+> major-to-minor semantics. ADR-0019 Task 8 source breadth (compiler core) is
+> delivered: deterministic source manifest, controlled overlay apply,
+> generated-file diff, deterministic ZIP export, and Graph-first Git export in
+> `packages/compiler/src/targets/source/`, with independent Sol review ACCEPT
+> (P0/P1/P2=0/0/5, all five P2 deferred). The Workbench download/diff surface and
+> its E2E journey are deferred to a follow-up that adds a tenant- and
+> digest-scoped read-only source-export route. Publish, workers, Workbench,
+> Graph/Capability/Recipe/schema, and broader generated-runtime behavior remain
+> deferred.
 
 ### P1 Product Closure gate (accepted and delivered)
 
@@ -424,7 +432,11 @@ Graph-only authority. ADR-0017 Task 8A Source Explorer is delivered at
 is delivered at `84a90c4b` with exact-eight containment and pushed equality.
 Task 8C Verified Source Transfer is delivered at `97b6dbdb` with exact-eight
 containment and pushed equality. ADR-0018 D0 Restaurant V3 Runtime Catalog
-Parity is accepted, ready for its exact-ten Compiler writer, and not delivered.
+Parity is delivered at `74c68a13` with pushed equality. ADR-0019 Task 8 source
+breadth (compiler core) is delivered: deterministic source manifest, controlled
+overlay apply, generated-file diff, deterministic ZIP export, and Graph-first
+Git export. The Workbench download/diff surface is deferred to a follow-up
+source-export route.
 
 Workbench implementation includes characterization-first decomposition of the
 current 3,818-line global stylesheet, 907-line controller, and 1,131-line
@@ -735,11 +747,12 @@ their Graph-only authority. ADR-0017 Task 8A is delivered at `8c2767bb` for a
 read-only succeeded-Compilation artifact tree and strictly bound content viewer.
 Task 8B Source Search is delivered at `84a90c4b`; Task 8C Verified Source
 Transfer is delivered at `97b6dbdb`. ADR-0018 D0 Restaurant V3 Runtime Catalog
-Parity is accepted, ready for one exact-ten Compiler writer, and not delivered;
-it closes only strict Graph-seed-to-shared-runtime catalog truth for the
-canonical and delivered r.6 family. Every other Data, Access, Users, Workflow,
-Experience, Source Diff/ZIP/Git/edit/export, Publish, Compilation creation,
-block edit, and generated-runtime change remains serialized behind a later
-reviewed freeze.
+Parity is delivered at `74c68a13`. ADR-0019 Task 8 source breadth (compiler core)
+is delivered: deterministic source manifest, controlled overlay apply,
+generated-file diff, deterministic ZIP export, and Graph-first Git export. The
+Workbench download/diff surface remains deferred to a follow-up source-export
+route; every other Data, Access, Users, Workflow, Experience, Source edit,
+Publish, Compilation creation, block edit, and generated-runtime change remains
+serialized behind a later reviewed freeze.
 Provider, service, Docker, cloud/deployment, and production-payment work remain
 unauthorized.

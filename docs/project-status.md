@@ -216,18 +216,30 @@ historical evidence, not the executable Task 2/Task 3 contract.
   exact-eight static/containment gates. The independent review returns
   P0/P1/P2=0/0/0 and `READY_FOR_DELIVERY YES`; controller delivery consumed the
   exact eight paths.
-- D0 Restaurant V3 Runtime Catalog Parity is `accepted`, ready for one writer,
-  and not delivered. [ADR-0018](adr/adr-0018-restaurant-v3-runtime-catalog-parity.md)
-  replaces only the Restaurant compiler's blanket canonical Graph hash pin
-  with an exact r.6-family normalize-to-canonical-hash proof and binds both
-  generated surfaces to one strict Graph-seeded runtime catalog. USD Graph
-  prices remain major-unit numbers with finite `0..100000` and at most two
-  decimals; runtime/API rows emit integer minor units. The
-  [design](superpowers/specs/2026-08-14-restaurant-v3-runtime-catalog-parity-design.md)
-  and [plan](superpowers/plans/2026-08-14-restaurant-v3-runtime-catalog-parity.md)
-  freeze exactly ten Compiler paths. No Control Plane, worker, Publish,
-  Workbench, Graph/Capability/Recipe/schema, Prisma, package, dependency,
-  service, Docker, Compose, or deployment path is authorized.
+- D0 Restaurant V3 Runtime Catalog Parity is `delivered` at
+  `74c68a132f48b3230992fad2f3fa80abfb066b84` with exact subject
+  `fix(compiler): bind restaurant runtime catalog to graph seed`, non-force push,
+  local/upstream equality, and a clean tree.
+  [ADR-0018](adr/adr-0018-restaurant-v3-runtime-catalog-parity.md) replaces only
+  the Restaurant compiler's blanket canonical Graph hash pin with an exact
+  r.6-family normalize-to-canonical-hash proof and binds both generated surfaces
+  to one strict Graph-seeded runtime catalog. USD Graph prices remain major-unit
+  numbers with finite `0..100000` and at most two decimals; runtime/API rows emit
+  integer minor units. Focused 121/121, full Compiler 579, Graph 661, and
+  Capabilities 384 passed with all three no-emit/build gates; independent Sol
+  review returned P0/P1/P2=0/0/0.
+- Task 8 source breadth (compiler core) is `delivered` under accepted
+  [ADR-0019](adr/adr-0019-workbench-source-diff-export-overlay.md). It adds the
+  deterministic source manifest, controlled overlay apply, generated-file diff,
+  deterministic ZIP export, and Graph-first Git export in
+  `packages/compiler/src/targets/source/`. No Graph, Capability, Recipe, schema,
+  dependency, Control Plane route, provider, service, Docker, Compose, or
+  deployment change. Independent Sol review returned ACCEPT with P0/P1/P2=0/0/5;
+  the five non-blocking P2s (git file/dir prefix-collision rejection now closed,
+  package/config/entry exclusion deferred to the source-export admission layer,
+  diff/mediaType/origin contract clarifications) are recorded as deferred. The
+  Workbench download/diff surface and its E2E journey are deferred to a follow-up
+  slice that adds a tenant- and digest-scoped read-only source-export route.
 - The first independent two-axis Task 7B review returned NOT READY with
   P0/P1/P2=0/6/3. Actionable findings cover hostile array reflection
   amplification, unchanged-order 400 versus fixed 409, registry closure after
@@ -712,12 +724,12 @@ Authorities:
 
 ## Next gate
 
-Tasks 0-8C are delivered; local HEAD and upstream equal
-`97b6dbdb6176ca26af6d7fa2b71dad6bbc692e19`. Access and Workflow candidates
-remain blocked at design by runtime truth. D0 Restaurant V3 Runtime Catalog
-Parity is accepted, ready for its exact-ten writer, and not delivered. Source
-breadth, Publish/Compilation lifecycle, Task 9, and every broader editor remain
-blocked.
+Tasks 0-8C and the Task 8 source-breadth compiler core are delivered. The next
+gate is the deferred Workbench source-export route (ZIP/Git download plus diff
+surface), followed by Access and Workflow contextual editors (blocked at design
+until the runtime enforces Graph-valid permission/actor additions) and Task 9
+guarded real-model acceptance. Publish/Compilation lifecycle and every broader
+editor remain blocked.
 
 ## Explicitly deferred
 
