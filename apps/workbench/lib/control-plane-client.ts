@@ -115,6 +115,11 @@ export type AppendTemplateExperienceThemeRevisionInput = {
   readonly mode: "dark";
 };
 
+export type AppendTemplateAccessRevisionInput = {
+  readonly baseDraftRevisionId: string;
+  readonly roleKey: string;
+};
+
 const templateResponseError = "Control Plane template response is invalid.";
 const previewNavigationLabels = {
   "customer-mobile": ["Home", "Menu", "Cart", "Orders", "Profile"],
@@ -522,6 +527,35 @@ export function deriveTemplateExperienceThemeMode(
     const mode = instance.draft.graph.experience.theme.mode;
     if (mode !== "light" && mode !== "dark") throw new Error();
     return mode;
+  } catch {
+    throw new Error(templateResponseError);
+  }
+}
+
+export type TemplateAccessState = {
+  readonly roles: readonly string[];
+  readonly permissions: readonly {
+    readonly role: string;
+    readonly resource: string;
+    readonly actions: readonly string[];
+  }[];
+};
+
+export function deriveTemplateAccessState(
+  instance: WorkbenchTemplateDraftInstance,
+): TemplateAccessState {
+  try {
+    const roles = instance.draft.graph.policy.roles;
+    const permissions = instance.draft.graph.policy.permissions;
+    if (!Array.isArray(roles) || !Array.isArray(permissions)) throw new Error();
+    return {
+      roles: roles.map((role) => String(role)),
+      permissions: permissions.map((permission) => ({
+        role: String(permission.role),
+        resource: String(permission.resource),
+        actions: permission.actions.map((action) => String(action)),
+      })),
+    };
   } catch {
     throw new Error(templateResponseError);
   }
@@ -1669,6 +1703,19 @@ export class ControlPlaneClient {
     );
     const instance = templateDraftResponse(response);
     deriveTemplateExperienceThemeMode(instance);
+    return instance;
+  }
+
+  async appendTemplateAccessRevision(
+    applicationGraphId: string,
+    input: AppendTemplateAccessRevisionInput,
+  ): Promise<WorkbenchTemplateDraftInstance> {
+    const response = await this.request<unknown>(
+      `/template-draft-instances/${encodeURIComponent(applicationGraphId)}/access-revisions`,
+      { method: "POST", body: JSON.stringify(input) },
+    );
+    const instance = templateDraftResponse(response);
+    deriveTemplateAccessState(instance);
     return instance;
   }
 

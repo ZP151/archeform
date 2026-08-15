@@ -12,8 +12,10 @@ import {
   ControlPlaneError,
   deriveTemplateDataFieldValue,
   deriveTemplateExperienceThemeMode,
+  deriveTemplateAccessState,
   type AppendTemplateDataFieldRevisionInput,
   type AppendTemplateExperienceThemeRevisionInput,
+  type AppendTemplateAccessRevisionInput,
   type WorkbenchCompilationArtifact,
   type WorkbenchPreviewRun,
 } from "./control-plane-client";
@@ -472,6 +474,50 @@ describe("ControlPlaneClient", () => {
         ),
       ),
     ).toBe("dark");
+  });
+
+  it("posts an exact Access role command and derives the declared roles", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify(templateDraftResponse(7)), { status: 201 }),
+      );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+    const input: AppendTemplateAccessRevisionInput = {
+      baseDraftRevisionId: "draft-6",
+      roleKey: "host",
+    };
+
+    const result = await client.appendTemplateAccessRevision(
+      "application-1",
+      input,
+    );
+
+    expect(result.draft.revisionNumber).toBe(7);
+    expect(deriveTemplateAccessState(result).roles).toEqual([
+      "customer",
+      "cashier",
+      "kitchen",
+      "manager",
+    ]);
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/template-draft-instances/application-1/access-revisions",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    );
+  });
+
+  it("derives the declared roles and permissions only from admitted instances", () => {
+    expect(deriveTemplateAccessState(templateDraftResponse(6))).toMatchObject({
+      roles: ["customer", "cashier", "kitchen", "manager"],
+    });
+    const hostile = structuredClone(templateDraftResponse(6));
+    (hostile.draft.graph.policy as unknown as { roles: unknown }).roles = null;
+    expect(() => deriveTemplateAccessState(hostile)).toThrow(
+      "Control Plane template response is invalid.",
+    );
   });
 
   it.each([

@@ -23,6 +23,7 @@ import {
 import { TemplatePageWorkspace } from "./template-page-workspace";
 import { TemplateDataWorkspace } from "./template-data-workspace";
 import { TemplateExperienceWorkspace } from "./template-experience-workspace";
+import { TemplateAccessWorkspace } from "./template-access-workspace";
 
 /** The transient example prompts offered by the Home composer popover. */
 export const EXAMPLE_PROMPTS: readonly string[] = [
@@ -205,7 +206,15 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
           />
         );
       case "policy":
-        return (
+        return controller.templateDraft ? (
+          <TemplateAccessWorkspace
+            instance={controller.templateDraft}
+            busy={controller.templateBusy}
+            error={controller.templateError}
+            onSave={controller.editTemplateAccessRole}
+            onBack={controller.returnToTemplatePreview}
+          />
+        ) : (
           <PolicyCanvas
             graph={graph}
             onPolicyChange={controller.changePolicyModel}

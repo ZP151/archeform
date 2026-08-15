@@ -80,6 +80,10 @@ import {
   createCuratedRestaurantTemplateGraph,
   TemplateService,
 } from "../src/template/template.service.js";
+import {
+  applyCapturedTemplateAccessEdit,
+  captureTemplateAccessRevisionInput,
+} from "../src/template/template-access-edit.js";
 import type { PrismaService } from "../src/prisma.service.js";
 import { ControlPlaneClient } from "../../workbench/lib/control-plane-client.js";
 
@@ -2485,4 +2489,256 @@ describe("TemplateService Restaurant Experience theme revision", () => {
       expect(committedSnapshots).toEqual([]);
     },
   );
+});
+
+const accessCommand = {
+  baseDraftRevisionId: "draft-6",
+  roleKey: "host",
+};
+
+function accessAggregate(service: TemplateService) {
+  const aggregate = dataFieldAggregate(service);
+  const draft = aggregate.draftRevisions[0]!;
+  draft.id = "draft-6";
+  draft.revisionNumber = 6;
+  draft.draftPreviewSnapshots = [
+    {
+      snapshot: dataFieldSnapshot(draft.graph, {
+        id: "preview-6",
+        draftRevisionId: "draft-6",
+      }),
+    },
+  ];
+  return aggregate;
+}
+
+describe("TemplateService Restaurant Access role revision", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-14T08:00:00.000Z"));
+    compilerCalls.failSourceClosure = false;
+    compilerCalls.failRender = false;
+    compilerCalls.failRenderSurface = null;
+    compilerCalls.closure.mockClear();
+    compilerCalls.render.mockClear();
+  });
+
+  it("atomically appends r.7 with a declared role and bounded permission without mutating r.6", async () => {
+    const prisma = prismaMock();
+    const service = new TemplateService(prisma as unknown as PrismaService);
+    const aggregate = accessAggregate(service);
+    const previous = structuredClone(aggregate.draftRevisions[0]!);
+    prisma.applicationGraph.findFirst.mockResolvedValue(aggregate);
+    prisma.draftRevision.create.mockImplementation(async ({ data }: any) => ({
+      id: "draft-7",
+      ...data,
+    }));
+    prisma.draftPreviewSnapshot.create.mockImplementation(
+      async ({ data }: any) => data,
+    );
+
+    const result = await service.appendTemplateAccessRevision(
+      "application-1",
+      accessCommand,
+    );
+
+    expect(result.draft).toMatchObject({
+      draftRevisionId: "draft-7",
+      revisionNumber: 7,
+    });
+    expect(result.draft.graph.policy.roles).toEqual([
+      "customer",
+      "cashier",
+      "kitchen",
+      "manager",
+      "host",
+    ]);
+    expect(result.draft.graph.policy.permissions).toContainEqual({
+      role: "host",
+      resource: "table-session",
+      actions: ["read"],
+    });
+    expect(result.snapshot).toMatchObject({
+      draftRevisionId: "draft-7",
+      graphChecksum: hashApplicationGraphV3(result.draft.graph),
+      state: "active",
+    });
+    expect(result.previews.map(({ surface }) => surface.surfaceKey)).toEqual([
+      "customer-mobile",
+      "merchant-desktop",
+    ]);
+    expect(compilerCalls.closure).toHaveBeenCalledOnce();
+    expect(compilerCalls.render).toHaveBeenCalledTimes(2);
+    expect(prisma.draftRevision.create).toHaveBeenCalledOnce();
+    expect(prisma.draftPreviewSnapshot.create).toHaveBeenCalledOnce();
+    expect(aggregate.draftRevisions[0]).toEqual(previous);
+    expect(prisma.applicationGraph.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: "application-1",
+        workspace: { slug: "local-workspace" },
+      },
+      include: {
+        workspace: true,
+        draftRevisions: {
+          orderBy: { revisionNumber: "desc" },
+          take: 1,
+          include: {
+            draftPreviewSnapshots: {
+              orderBy: { createdAt: "desc" },
+              take: 1,
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it.each([
+    ["duplicate role", { ...accessCommand, roleKey: "manager" }],
+    ["uppercase-leading role", { ...accessCommand, roleKey: "Host" }],
+    ["leading digit role", { ...accessCommand, roleKey: "1host" }],
+    ["empty role", { ...accessCommand, roleKey: "" }],
+    ["underscored role", { ...accessCommand, roleKey: "host_role" }],
+    ["missing role key", { baseDraftRevisionId: "draft-6" }],
+    ["extra command key", { ...accessCommand, extra: true }],
+    ["null command", null],
+  ] as const)(
+    "rejects a %s with fixed 400 before closure or append",
+    async (_label, input) => {
+      const prisma = prismaMock();
+      const service = new TemplateService(prisma as unknown as PrismaService);
+      const aggregate = accessAggregate(service);
+      const previous = structuredClone(aggregate);
+      prisma.applicationGraph.findFirst.mockResolvedValue(aggregate);
+
+      const error = await service
+        .appendTemplateAccessRevision("application-1", input)
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as BadRequestException).getStatus()).toBe(400);
+      expect((error as Error).message).toBe(
+        "Template Draft request is invalid.",
+      );
+      expect(aggregate).toEqual(previous);
+      expect(compilerCalls.closure).not.toHaveBeenCalled();
+      expect(compilerCalls.render).not.toHaveBeenCalled();
+      expect(prisma.draftRevision.create).not.toHaveBeenCalled();
+      expect(prisma.draftPreviewSnapshot.create).not.toHaveBeenCalled();
+    },
+  );
+
+  it("maps a stale base Draft id to the fixed 409", async () => {
+    const prisma = prismaMock();
+    const service = new TemplateService(prisma as unknown as PrismaService);
+    prisma.applicationGraph.findFirst.mockResolvedValue(
+      accessAggregate(service),
+    );
+
+    const error = await service
+      .appendTemplateAccessRevision("application-1", {
+        ...accessCommand,
+        baseDraftRevisionId: "draft-5",
+      })
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(ConflictException);
+    expect((error as ConflictException).getStatus()).toBe(409);
+    expect((error as Error).message).toBe(
+      "Template Draft revision moved; reload before editing.",
+    );
+    expect(compilerCalls.closure).not.toHaveBeenCalled();
+    expect(prisma.draftRevision.create).not.toHaveBeenCalled();
+  });
+
+  it("scopes the Application by local workspace before origin inspection", async () => {
+    const prisma = prismaMock();
+    const service = new TemplateService(prisma as unknown as PrismaService);
+    prisma.applicationGraph.findFirst.mockImplementation(async ({ where }) => {
+      expect(where).toEqual({
+        id: "application-1",
+        workspace: { slug: "local-workspace" },
+      });
+      return null;
+    });
+
+    await expect(
+      service.appendTemplateAccessRevision("application-1", accessCommand),
+    ).rejects.toThrow("Template Draft was not found.");
+    expect(prisma.applicationGraph.findUnique).not.toHaveBeenCalled();
+    expect(prisma.draftRevision.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("template-access-edit admission", () => {
+  const baseGraph = () =>
+    createCuratedRestaurantTemplateGraph(
+      "restaurant-template-001",
+      "Maison Rivage",
+    );
+
+  it("adds exactly one role and one bounded permission and preserves the negative space", () => {
+    const graph = baseGraph();
+    const command = { baseDraftRevisionId: "draft-6", roleKey: "host" };
+
+    const result = applyCapturedTemplateAccessEdit(graph, command);
+
+    expect(result.graph.policy.roles).toEqual([
+      "customer",
+      "cashier",
+      "kitchen",
+      "manager",
+      "host",
+    ]);
+    expect(result.graph.policy.permissions).toContainEqual({
+      role: "host",
+      resource: "table-session",
+      actions: ["read"],
+    });
+    const reverted = structuredClone(result.graph);
+    reverted.policy.roles = graph.policy.roles.slice();
+    reverted.policy.permissions = graph.policy.permissions.slice();
+    expect(reverted).toEqual(graph);
+  });
+
+  it("rejects a duplicate role without mutating the input", () => {
+    const graph = baseGraph();
+    const previous = structuredClone(graph);
+
+    expect(() =>
+      applyCapturedTemplateAccessEdit(graph, {
+        baseDraftRevisionId: "draft-6",
+        roleKey: "manager",
+      }),
+    ).toThrow("Template Draft request is invalid.");
+    expect(graph).toEqual(previous);
+  });
+
+  it("fails closed when a canonical role is absent", () => {
+    const graph = baseGraph();
+    graph.policy.roles = graph.policy.roles.filter(
+      (role) => role !== "manager",
+    );
+
+    expect(() =>
+      applyCapturedTemplateAccessEdit(graph, {
+        baseDraftRevisionId: "draft-6",
+        roleKey: "host",
+      }),
+    ).toThrow("Template Draft request is invalid.");
+  });
+
+  it.each([
+    "uppercase-leading role",
+    "leading digit role",
+    "underscored role",
+    "empty role",
+  ] as const)("rejects a %s role key at capture", (_label, roleKey) => {
+    expect(() =>
+      captureTemplateAccessRevisionInput({
+        baseDraftRevisionId: "draft-6",
+        roleKey: roleKey as string,
+      }),
+    ).toThrow("Template Draft request is invalid.");
+  });
 });

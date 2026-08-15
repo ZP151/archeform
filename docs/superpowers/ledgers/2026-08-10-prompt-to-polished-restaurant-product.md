@@ -5304,6 +5304,33 @@ Controller delivery: exact four implementation plus five governance paths,
 subject `feat(compiler): admit graph-valid permission and actor additions`,
 non-force push, local/upstream equality, clean tree.
 
+## Workbench Access contextual editor
+
+State: `delivered` under ADR-0021 and ADR-0022.
+
+Delivered: Builder -> Access on the Restaurant template Draft renders the
+declared roles/permissions and admits one bounded write — add a team role
+(Graph key, 1..128, `^[a-z][a-zA-Z0-9-]*$`, not already declared) with a
+bounded `table-session`/`read` permission — appended as Draft r.7 and one
+active immutable Snapshot V2. Only `policy.roles` and `policy.permissions`
+change; the Draft must still pass `assertApplicationGraphV3` and
+`assertRestaurantDraftPreviewGraphClosure`, and duplicate, malformed, or
+canonical-role-removing edits fail closed.
+
+Gates: Control Plane 439/439 (84 template-service), Workbench 528/528, Graph
+661/661, Compiler 615/615 (contract 74/74), Capabilities 384/384; both
+no-emit typechecks, Prettier, and `git diff --check` clean. Independent Sol
+review REJECT P0/P1/P2=0/1/5 first, then ACCEPT P0/P1/P2=0/0/4 after the
+same-reviewer P1 repair (direct apply-function rejection-path tests); the four
+P2s are recorded as deferred non-blocking.
+
+Unblocked: nothing further in this slice; the Workflow editor (flow/journey
+admission) remains deferred, and Task 9 guarded real-model acceptance is next.
+
+Controller delivery: exact eleven implementation plus two design/plan paths,
+subject `feat(workbench): add governed restaurant access editing`, non-force
+push, local/upstream equality, clean tree.
+
 ## Task 9 — Close the Restaurant Product with guarded real-model acceptance
 
 State: `planned`.

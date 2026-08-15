@@ -23,6 +23,7 @@ const templates = {
   appendTemplatePageBlockOrderRevision: vi.fn(),
   appendTemplateDataFieldRevision: vi.fn(),
   appendTemplateExperienceThemeRevision: vi.fn(),
+  appendTemplateAccessRevision: vi.fn(),
 };
 
 @Module({
@@ -230,6 +231,33 @@ describe("TemplateController", () => {
     expect(
       templates.appendTemplateExperienceThemeRevision,
     ).toHaveBeenCalledWith("application-1", body);
+  });
+
+  it("routes the exact raw template Restaurant Access role command", async () => {
+    const body = {
+      baseDraftRevisionId: "draft-6",
+      roleKey: "host",
+    };
+    templates.appendTemplateAccessRevision.mockResolvedValue({
+      id: "instance-7",
+    });
+
+    const response = await fetch(
+      `${baseUrl}/template-draft-instances/application-1/access-revisions`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+
+    expect(response.status).toBe(201);
+    expect(await response.json()).toEqual({ id: "instance-7" });
+    expect(templates.appendTemplateAccessRevision).toHaveBeenCalledOnce();
+    expect(templates.appendTemplateAccessRevision).toHaveBeenCalledWith(
+      "application-1",
+      body,
+    );
   });
 
   it("routes a resumable template Draft open by application key", async () => {

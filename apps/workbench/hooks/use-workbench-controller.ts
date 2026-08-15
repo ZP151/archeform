@@ -140,6 +140,7 @@ export type WorkbenchController = {
   ) => void;
   readonly editTemplateDataField: (value: string) => void;
   readonly editTemplateExperienceTheme: (mode: "dark") => void;
+  readonly editTemplateAccessRole: (roleKey: string) => void;
   readonly returnToTemplatePreview: () => void;
   readonly inspectArtifact: (artifactPath: string) => void;
   readonly downloadSourceArchive: (format: "zip" | "git") => Promise<void>;
@@ -1123,6 +1124,30 @@ export function useWorkbenchController({
     [controlPlane, templateDraft],
   );
 
+  const editTemplateAccessRole = useCallback(
+    (roleKey: string) => {
+      if (!templateDraft) return;
+      setTemplateBusy(true);
+      setTemplateError(null);
+      setConnectionState("saving");
+      void controlPlane
+        .appendTemplateAccessRevision(templateDraft.draft.applicationGraphId, {
+          baseDraftRevisionId: templateDraft.draft.draftRevisionId,
+          roleKey: roleKey.trim(),
+        })
+        .then((instance) => {
+          setTemplateDraft(instance);
+          setConnectionState("ready");
+        })
+        .catch(() => {
+          setConnectionState("ready");
+          setTemplateError("Template access could not be saved.");
+        })
+        .finally(() => setTemplateBusy(false));
+    },
+    [controlPlane, templateDraft],
+  );
+
   const compileApplication = useCallback(
     (applicationKey: string) => {
       setOperationError(null);
@@ -1246,6 +1271,7 @@ export function useWorkbenchController({
     editTemplatePageTitle,
     editTemplateDataField,
     editTemplateExperienceTheme,
+    editTemplateAccessRole,
     returnToTemplatePreview,
     inspectArtifact,
     downloadSourceArchive,

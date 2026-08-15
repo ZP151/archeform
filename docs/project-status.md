@@ -274,6 +274,25 @@ historical evidence, not the executable Task 2/Task 3 contract.
   Independent Sol review returned ACCEPT with P0/P1/P2=0/0/2; the two non-
   blocking P2s (package-internal circular import hazard and role/permission
   ordering-drift acceptance) are recorded as deferred.
+- The Workbench Access contextual editor is `delivered` under ADR-0021 and
+  ADR-0022. Builder -> Access on the Restaurant template Draft renders the
+  declared roles/permissions and admits one bounded write — add a team role
+  (Graph key, 1..128, `^[a-z][a-zA-Z0-9-]*$`, not already declared) with a
+  bounded `table-session`/`read` permission — appended as Draft r.7 and one
+  active immutable Snapshot V2. It is the
+  [design](superpowers/specs/2026-08-14-workbench-access-contextual-editor-design.md)
+  and [plan](superpowers/plans/2026-08-14-workbench-access-contextual-editor.md)
+  freeze, implemented across the Control Plane `template-access-edit.ts`
+  capture/apply, the `appendTemplateAccessRevision` service method and
+  `POST /template-draft-instances/:id/access-revisions` route, and the
+  Workbench client/controller/`template-access-workspace` surface. Only
+  `policy.roles` and `policy.permissions` change; the resulting Draft must
+  still pass `assertApplicationGraphV3` and
+  `assertRestaurantDraftPreviewGraphClosure`, and duplicate, malformed, or
+  canonical-role-removing edits fail closed. Independent Sol review returned
+  ACCEPT with P0/P1/P2=0/0/4 after a same-reviewer P1 repair; the four P2s
+  (negative-injection parity, routing-test, r.7 fixture-role, and
+  branch-isolation canaries) are recorded as deferred non-blocking.
 - The first independent two-axis Task 7B review returned NOT READY with
   P0/P1/P2=0/6/3. Actionable findings cover hostile array reflection
   amplification, unchanged-order 400 versus fixed 409, registry closure after
@@ -775,13 +794,12 @@ Authorities:
 
 Tasks 0-8C, the Task 8 source-breadth compiler core, the Task 8 source-export
 route plus Workbench download surface, the generated-runtime Graph-valid
-permission/actor enforcement, and the ADR-0022 compiler admission of
-role/permission additions are delivered. The next gate is the Workbench Access
-contextual editor (role/permission editing, now unblocked), then the Workflow
-editor (flow/journey admission — deferred), then Task 9 guarded real-model
-acceptance (which requires an environment-only OpenAI credential plus the
-Docker/Compose full stack). Publish/Compilation lifecycle and every broader
-editor remain blocked.
+permission/actor enforcement, the ADR-0022 compiler admission of
+role/permission additions, and the Workbench Access contextual editor are
+delivered. The next gate is the Workflow editor (flow/journey admission —
+deferred), then Task 9 guarded real-model acceptance (which requires an
+environment-only OpenAI credential plus the Docker/Compose full stack).
+Publish/Compilation lifecycle and every broader editor remain blocked.
 
 ## Explicitly deferred
 

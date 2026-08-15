@@ -78,4 +78,15 @@ export class TemplateController {
       body,
     );
   }
+
+  @Post("template-draft-instances/:applicationGraphId/access-revisions")
+  appendTemplateAccessRevision(
+    @Param("applicationGraphId") applicationGraphId: string,
+    @Body() body: unknown,
+  ) {
+    return this.templates.appendTemplateAccessRevision(
+      applicationGraphId,
+      body,
+    );
+  }
 }

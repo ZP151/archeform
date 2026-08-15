@@ -430,10 +430,12 @@ ADR-0015 Task 7C is delivered through Draft r.5 at `78955444`. ADR-0016 Task 7D
 Experience is delivered through Draft r.6 at `35da63df` with exact 29-path
 containment and pushed equality. Access and Workflow follow-ups were blocked at
 design because the generated runtime did not enforce Graph-only authority;
-ADR-0021 delivers that generic Graph-valid permission/actor enforcement, and
-ADR-0022 delivers the compiler admission of role/permission additions, so the
-Access editor is unblocked (flow/journey admission remains deferred to the
-Workflow editor slice). ADR-0017 Task 8A Source Explorer
+ADR-0021 delivers that generic Graph-valid permission/actor enforcement,
+ADR-0022 delivers the compiler admission of role/permission additions, and the
+Workbench Access contextual editor is now delivered (add a bounded team role
+with a `table-session`/`read` permission as Draft r.7 and one Snapshot V2;
+flow/journey admission remains deferred to the Workflow editor slice).
+ADR-0017 Task 8A Source Explorer
 is delivered at
 `8c2767bb` with exact-15 containment and pushed equality. Task 8B Source Search
 is delivered at `84a90c4b` with exact-eight containment and pushed equality.
