@@ -402,18 +402,6 @@ describe("Restaurant V3 compilation contract", () => {
 
   it.each([
     [
-      "revision identity",
-      (input: any) => {
-        input.publishedGraph.revisionId = "hostile-published-revision";
-      },
-    ],
-    [
-      "revision number",
-      (input: any) => {
-        input.publishedGraph.revisionNumber = 2;
-      },
-    ],
-    [
       "lock package order",
       (input: any) => {
         input.compositionLock = structuredClone(input.compositionLock);
@@ -425,6 +413,22 @@ describe("Restaurant V3 compilation contract", () => {
     mutate(input);
     expect(() => assertRestaurantProductCompilationInput(input)).toThrow(
       new Error(boundaryError),
+    );
+  });
+
+  it("admits a non-canonical revision identity and number over an unchanged Graph", () => {
+    const input = restaurantV6Input();
+    input.publishedGraph.revisionId = "template-instance-published-2";
+    input.publishedGraph.revisionNumber = 2;
+
+    const captured = assertRestaurantProductCompilationInput(input);
+
+    expect(captured.publishedGraph.revisionId).toBe(
+      "template-instance-published-2",
+    );
+    expect(captured.publishedGraph.revisionNumber).toBe(2);
+    expect(captured.publishedGraph.graphHash).toBe(
+      hashApplicationGraphV3(input.publishedGraph.graph),
     );
   });
 

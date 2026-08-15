@@ -19,13 +19,18 @@ import {
 } from "@factory/capabilities";
 import { createVerifiedCapabilityCompositionLock } from "@factory/capabilities/node";
 import {
+  adaptPublishedApplicationGraph,
   applyGraphDiffToDraft,
+  assertApplicationGraphV3,
   createDraftRevision,
   createPublishedGraphExchange,
   hashApplicationGraph,
+  hashApplicationGraphV3,
   parseApplicationGraph,
   parsePublishedGraphExchange,
   type ApplicationGraphV1,
+  type ApplicationGraphV3,
+  type PublishedApplicationGraphV3Input,
 } from "@factory/graph";
 import { GraphProposalError } from "@factory/adapters/ai";
 import {
@@ -682,6 +687,29 @@ function assertGraphIdentity(
   }
 }
 
+function isV3Graph(input: unknown): boolean {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return false;
+  const record = input as Record<string, unknown>;
+  return (
+    record.apiVersion === "factory.application-graph/v3" ||
+    record.graphVersion === "factory.application-graph/v3"
+  );
+}
+
+function assertV3GraphIdentity(
+  graph: ApplicationGraphV3,
+  aggregate: { key: string; workspace: { slug: string } },
+): void {
+  if (
+    graph.metadata.id !== aggregate.key ||
+    graph.metadata.workspaceId !== aggregate.workspace.slug
+  ) {
+    throw new BadRequestException(
+      "Application Graph identity does not match its aggregate.",
+    );
+  }
+}
+
 @Injectable()
 export class LifecycleService {
   private readonly artifactReader = new GeneratedArtifactReader();
@@ -943,6 +971,9 @@ export class LifecycleService {
       throw new NotFoundException(
         "Draft revision was not found for this Graph.",
       );
+    if (isV3Graph(draft.graph)) {
+      return this.publishDraftV3(applicationGraphId, draftRevisionId, draft);
+    }
     const { graph } = validatedGraph(draft.graph);
     assertGraphIdentity(graph, draft.applicationGraph);
     return this.prisma.$transaction(async (transaction) => {
@@ -961,6 +992,56 @@ export class LifecycleService {
         publishedGraph,
         this.capabilityRepositoryRoot,
       );
+      return transaction.publishedRevision.create({
+        data: {
+          applicationGraphId,
+          sourceDraftRevisionId: draftRevisionId,
+          revisionNumber: publishedCount + 1,
+          graph: publishedGraph as unknown as Prisma.InputJsonValue,
+          graphHash,
+          compositionLock: jsonValue(compositionLock, "compositionLock"),
+          compositionLockHash: compositionLock.lockDigest,
+        },
+      });
+    });
+  }
+
+  private async publishDraftV3(
+    applicationGraphId: string,
+    draftRevisionId: string,
+    draft: {
+      readonly graph: unknown;
+      readonly applicationGraph: {
+        readonly key: string;
+        readonly workspace: { readonly slug: string };
+      };
+    },
+  ) {
+    const graph = assertApplicationGraphV3(draft.graph);
+    assertV3GraphIdentity(graph, draft.applicationGraph);
+    return this.prisma.$transaction(async (transaction) => {
+      const existing = await transaction.publishedRevision.findFirst({
+        where: { sourceDraftRevisionId: draftRevisionId, applicationGraphId },
+      });
+      if (existing)
+        throw new ConflictException("Draft revision is already published.");
+      const publishedCount = await transaction.publishedRevision.count({
+        where: { applicationGraphId },
+      });
+      const graphHash = hashApplicationGraphV3(graph);
+      const publishedGraph: PublishedApplicationGraphV3Input = {
+        kind: "published-application-graph",
+        status: "published",
+        graphVersion: "factory.application-graph/v3",
+        revisionId: `${draft.applicationGraph.key}-published-${publishedCount + 1}`,
+        revisionNumber: publishedCount + 1,
+        graphHash,
+        graph,
+      };
+      const compositionLock = createCapabilityCompositionLock({
+        graphChecksum: graphHash,
+        selections: graph.integration.compositionSelections ?? [],
+      });
       return transaction.publishedRevision.create({
         data: {
           applicationGraphId,
@@ -1022,6 +1103,9 @@ export class LifecycleService {
     });
     if (!published)
       throw new NotFoundException("Published revision was not found.");
+    if (isV3Graph(published.graph)) {
+      return this.createV3Compilation(published, target, compilerVersion);
+    }
     const { graph, graphHash } = validatedGraph(published.graph);
     if (graphHash !== published.graphHash) {
       throw new ConflictException(
@@ -1051,7 +1135,62 @@ export class LifecycleService {
       publishedRevisionId,
       target,
       compilerVersion,
+      graphVersion: "factory.application-graph/v1",
       graph,
+      compositionLock,
+    });
+    return compilation;
+  }
+
+  private async createV3Compilation(
+    published: {
+      readonly id: string;
+      readonly graphHash: string;
+      readonly compositionLock: unknown;
+      readonly compositionLockHash: string | null;
+      readonly graph: unknown;
+    },
+    target: string,
+    compilerVersion: string,
+  ) {
+    const publishedGraph = adaptPublishedApplicationGraph(published.graph);
+    if (publishedGraph.graphVersion !== "factory.application-graph/v3") {
+      throw new BadRequestException("Published revision is not a V3 Graph.");
+    }
+    const graphHash = hashApplicationGraphV3(publishedGraph.graph);
+    if (
+      graphHash !== published.graphHash ||
+      graphHash !== publishedGraph.graphHash
+    ) {
+      throw new ConflictException(
+        "Published Revision Graph hash does not match its stored hash.",
+      );
+    }
+    const compositionLock = verifiedPublishedCompositionLock(
+      published.compositionLock,
+      published.compositionLockHash,
+      graphHash,
+    );
+    const compilationCount = await this.prisma.compilation.count({
+      where: { publishedRevisionId: published.id },
+    });
+    const compilation = await this.prisma.compilation.create({
+      data: {
+        publishedRevisionId: published.id,
+        sequence: compilationCount + 1,
+        target,
+        inputGraphHash: published.graphHash,
+        compilerVersion,
+        result: jsonValue({ status: "queued" }, "result"),
+      },
+    });
+    await this.compilationQueue.enqueue({
+      compilationId: compilation.id,
+      publishedRevisionId: published.id,
+      target,
+      compilerVersion,
+      graphVersion: "factory.application-graph/v3",
+      publishedGraph,
       compositionLock,
     });
     return compilation;

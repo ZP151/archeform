@@ -5388,6 +5388,33 @@ Two findings are recorded as evidence:
 Task 9 therefore remains `planned`; its V3 Publish/Compilation/launch-closure
 prerequisite and a restaurant real-model acceptance harness are the next work.
 
+## V3 Publish/Compilation closure — slice 1
+
+State: `delivered` under accepted
+[ADR-0023](../../adr/adr-0023-v3-publish-compilation-launch-closure.md)
+(founder verbatim `accept and continue`, 2026-08-15).
+
+Delivered: a Restaurant Graph V3 Draft publishes to an immutable V3 Published
+Revision (envelope `{kind, status, graphVersion:"factory.application-graph/v3",
+revisionId, revisionNumber, graphHash: hashApplicationGraphV3(graph), graph}` +
+`createCapabilityCompositionLock`) and compiles through the delivered Restaurant
+V3 target. `assertRestaurantProductCompilationInput` no longer pins the revision
+identity/number (schema-bounded via `publishedV3Schema`); the graph hash,
+composition-lock idempotency, canonical-hash negative space, exact graph, and
+authority checks stay exact. The Worker dispatches V3 to
+`generateRestaurantProductApplicationBundle`; the V1 path is byte-identical
+(only an explicit `graphVersion:"factory.application-graph/v1"` was added).
+
+Gates: Control Plane 441/441 (83 lifecycle), Compiler Worker 227/227, Compiler
+614/614 (contract 73/73), Graph 661/661, Capabilities 384/384; three no-emit
+typechecks, Prettier, and `git diff --check` clean. Independent Sol review
+returned ACCEPT with P0/P1/P2=0/0/3; the three P2s (500-vs-400 on corrupted
+stored V3 rows, advisory V3 `target` not guarded, and two test-coverage gaps)
+are recorded as deferred non-blocking.
+
+Remaining for Task 9: slice 2 (Workbench `Publish draft` + Release surface
+wiring) and a restaurant real-model acceptance harness.
+
 ## Deferred work
 
 The following remain outside this iteration until Task 9 is accepted:

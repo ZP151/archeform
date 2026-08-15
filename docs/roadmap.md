@@ -435,6 +435,9 @@ ADR-0022 delivers the compiler admission of role/permission additions, and the
 Workbench Access contextual editor is now delivered (add a bounded team role
 with a `table-session`/`read` permission as Draft r.7 and one Snapshot V2;
 flow/journey admission remains deferred to the Workflow editor slice).
+ADR-0023 then delivers the V3 Publish/Compilation closure slice 1: a Restaurant
+V3 Draft publishes to an immutable V3 Published Revision and compiles through
+the Restaurant V3 target, unblocking the Workbench Publish surface and Task 9.
 ADR-0017 Task 8A Source Explorer
 is delivered at
 `8c2767bb` with exact-15 containment and pushed equality. Task 8B Source Search

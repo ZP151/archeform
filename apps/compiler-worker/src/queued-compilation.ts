@@ -1,14 +1,25 @@
-import type { PublishedGraphInput } from "@factory/compiler";
+import type { CapabilityCompositionLockV1 } from "@factory/capabilities";
+import type {
+  ApplicationGraphV1,
+  PublishedApplicationGraphV3Input,
+} from "@factory/graph";
 
 import {
   executeCompilation,
+  executeV3Compilation,
   type CompilationExecutionResult,
 } from "./compilation-executor.js";
 
-export interface CompilationJob extends PublishedGraphInput {
+export interface CompilationJob {
   readonly compilationId: string;
+  readonly publishedRevisionId: string;
   readonly target: string;
   readonly compilerVersion: string;
+  readonly compositionLock: CapabilityCompositionLockV1;
+  readonly graphVersion:
+    "factory.application-graph/v1" | "factory.application-graph/v3";
+  readonly graph?: ApplicationGraphV1;
+  readonly publishedGraph?: PublishedApplicationGraphV3Input;
 }
 
 export interface CompilationReporter {
@@ -38,11 +49,17 @@ export async function executeQueuedCompilation(
 ): Promise<CompilationExecutionResult> {
   let result: CompilationExecutionResult;
   try {
-    result = await executeCompilation(artifactRoot, {
-      publishedRevisionId: job.publishedRevisionId,
-      graph: job.graph,
-      compositionLock: job.compositionLock,
-    });
+    result =
+      job.graphVersion === "factory.application-graph/v3"
+        ? await executeV3Compilation(artifactRoot, {
+            publishedGraph: job.publishedGraph!,
+            compositionLock: job.compositionLock,
+          })
+        : await executeCompilation(artifactRoot, {
+            publishedRevisionId: job.publishedRevisionId,
+            graph: job.graph!,
+            compositionLock: job.compositionLock,
+          });
   } catch {
     try {
       await reporter.fail({ compilationId: job.compilationId });

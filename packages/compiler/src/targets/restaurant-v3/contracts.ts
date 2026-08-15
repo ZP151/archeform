@@ -565,9 +565,7 @@ export function assertRestaurantProductCompilationInput(
     }
     if (
       publishedGraph.kind !== "published-application-graph" ||
-      publishedGraph.status !== "published" ||
-      publishedGraph.revisionId !== "restaurant-product-v3-published-1" ||
-      publishedGraph.revisionNumber !== 1
+      publishedGraph.status !== "published"
     ) {
       throw new Error(invalidInputMessage);
     }

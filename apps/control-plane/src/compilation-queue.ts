@@ -2,7 +2,10 @@ import { Injectable, type OnModuleDestroy } from "@nestjs/common";
 import { Queue } from "bullmq";
 
 import type { CapabilityCompositionLockV1 } from "@factory/capabilities";
-import type { ApplicationGraphV1 } from "@factory/graph";
+import type {
+  ApplicationGraphV1,
+  PublishedApplicationGraphV3Input,
+} from "@factory/graph";
 
 export const COMPILATION_QUEUE = Symbol("COMPILATION_QUEUE");
 
@@ -11,8 +14,11 @@ export interface CompilationJob {
   readonly publishedRevisionId: string;
   readonly target: string;
   readonly compilerVersion: string;
-  readonly graph: ApplicationGraphV1;
   readonly compositionLock: CapabilityCompositionLockV1;
+  readonly graphVersion:
+    "factory.application-graph/v1" | "factory.application-graph/v3";
+  readonly graph?: ApplicationGraphV1;
+  readonly publishedGraph?: PublishedApplicationGraphV3Input;
 }
 
 export interface CompilationQueue {

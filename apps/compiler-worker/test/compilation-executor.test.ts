@@ -4,9 +4,23 @@ import { join } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { hashApplicationGraph } from "@factory/graph";
+import {
+  hashApplicationGraph,
+  hashApplicationGraphV3,
+  createDraftRevision,
+} from "@factory/graph";
+import {
+  composeDefaultCapabilityDraft,
+  composeRestaurantProductGraph,
+  createCapabilityCompositionLock,
+  restaurantOrderingExperienceBrief,
+  restaurantOrderingProductIntent,
+} from "@factory/capabilities";
 
-import { executeCompilation } from "../src/compilation-executor.js";
+import {
+  executeCompilation,
+  executeV3Compilation,
+} from "../src/compilation-executor.js";
 import { executeQueuedCompilation } from "../src/queued-compilation.js";
 
 const graph = {
@@ -56,6 +70,53 @@ describe("compilation executor", () => {
     }
   });
 
+  it("compiles an immutable Restaurant V3 Published Graph through the V3 target", async () => {
+    const intent = restaurantOrderingProductIntent();
+    const experience = restaurantOrderingExperienceBrief();
+    const base = composeDefaultCapabilityDraft({
+      profile: "restaurant-ordering",
+    });
+    const baseDraft = createDraftRevision(
+      base.graph,
+      "restaurant-ordering-draft",
+    );
+    const graph = composeRestaurantProductGraph({
+      intent,
+      experience,
+      baseDraft,
+    });
+    const graphHash = hashApplicationGraphV3(graph);
+    const publishedGraph = {
+      kind: "published-application-graph" as const,
+      status: "published" as const,
+      graphVersion: "factory.application-graph/v3" as const,
+      revisionId: "restaurant-product-v3-published-1",
+      revisionNumber: 1,
+      graphHash,
+      graph,
+    };
+    const compositionLock = createCapabilityCompositionLock({
+      graphChecksum: graphHash,
+      selections: base.graph.integration.compositionSelections ?? [],
+    });
+
+    const directory = await mkdtemp(join(tmpdir(), "factory-compile-"));
+    try {
+      const result = await executeV3Compilation(directory, {
+        publishedGraph,
+        compositionLock,
+      });
+
+      expect(result.rootDirectory).toBe(
+        "restaurant-product-restaurant-product-v3-published-1",
+      );
+      expect(result.artifacts.length).toBeGreaterThan(0);
+      expect(result.graphHash).toMatch(/^sha256:/);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   it("reports only immutable compilation evidence after materializing a queued Published Graph", async () => {
     const directory = await mkdtemp(join(tmpdir(), "factory-compile-"));
     const reporter = {
@@ -70,6 +131,7 @@ describe("compilation executor", () => {
           publishedRevisionId: "published-1",
           target: "application-bundle",
           compilerVersion: "0.1.0",
+          graphVersion: "factory.application-graph/v1",
           graph,
           compositionLock,
         },
@@ -110,6 +172,7 @@ describe("compilation executor", () => {
             publishedRevisionId: "published-1",
             target: "application-bundle",
             compilerVersion: "0.1.0",
+            graphVersion: "factory.application-graph/v1",
             graph: {
               ...graph,
               metadata: { ...graph.metadata, name: "must-not-leak" },
@@ -204,6 +267,7 @@ describe("compilation executor", () => {
           publishedRevisionId: "published-1",
           target: "application-bundle",
           compilerVersion: "0.1.0",
+          graphVersion: "factory.application-graph/v1",
           graph,
           compositionLock,
         },

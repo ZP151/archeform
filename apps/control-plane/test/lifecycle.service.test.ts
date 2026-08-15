@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createPublishedGraphExchange,
   hashApplicationGraph,
+  hashApplicationGraphV3,
 } from "@factory/graph";
 import {
   createCapabilityCompositionLock,
@@ -19,6 +20,7 @@ import {
 
 import { LifecycleService } from "../src/lifecycle.service.js";
 import type { PrismaService } from "../src/prisma.service.js";
+import { createCuratedRestaurantTemplateGraph } from "../src/template/template.service.js";
 import { localApplicationGraph } from "./application-graph.fixture.js";
 
 const repositoryRoot = resolve(
@@ -869,6 +871,54 @@ describe("LifecycleService", () => {
     });
   });
 
+  it("publishes a V3 Restaurant Draft to an immutable V3 Published Revision", async () => {
+    const v3Graph = createCuratedRestaurantTemplateGraph(
+      "restaurant-template-001",
+      "Maison Rivage",
+    );
+    prisma.draftRevision.findFirst.mockResolvedValue({
+      ...draftRevision,
+      graph: v3Graph,
+      applicationGraph: {
+        ...applicationGraph,
+        key: "restaurant-template-001",
+        name: "Maison Rivage",
+        workspace,
+      },
+    });
+    prisma.publishedRevision.findFirst.mockResolvedValue(null);
+    prisma.publishedRevision.count.mockResolvedValue(0);
+    prisma.publishedRevision.create.mockImplementation(async ({ data }) => ({
+      id: "published-1",
+      ...data,
+    }));
+
+    const published = await service.publishDraft(applicationGraph.id, {
+      draftRevisionId: draftRevision.id,
+    });
+
+    const graphHash = hashApplicationGraphV3(v3Graph);
+    expect(published).toMatchObject({
+      graphHash,
+      revisionNumber: 1,
+      graph: {
+        kind: "published-application-graph",
+        status: "published",
+        graphVersion: "factory.application-graph/v3",
+        revisionId: "restaurant-template-001-published-1",
+        revisionNumber: 1,
+        graphHash,
+      },
+      compositionLock: {
+        apiVersion: "factory.composition/v1",
+        applicationGraphChecksum: graphHash,
+      },
+    });
+    expect(published.compositionLockHash).toBe(
+      published.compositionLock.lockDigest,
+    );
+  });
+
   it("stores an immutable composition lock only when a validated Draft is published", async () => {
     prisma.draftRevision.findFirst.mockResolvedValue({
       ...draftRevision,
@@ -1231,10 +1281,60 @@ describe("LifecycleService", () => {
       publishedRevisionId: "published-1",
       target: "application-bundle",
       compilerVersion: "0.1.0",
+      graphVersion: "factory.application-graph/v1",
       graph: localApplicationGraph,
       compositionLock: expect.objectContaining({
         apiVersion: "factory.composition/v1",
       }),
+    });
+  });
+
+  it("queues a V3 Published Graph through the Restaurant V3 target", async () => {
+    const v3Graph = createCuratedRestaurantTemplateGraph(
+      "restaurant-template-001",
+      "Maison Rivage",
+    );
+    const v3GraphHash = hashApplicationGraphV3(v3Graph);
+    const v3PublishedGraph = {
+      kind: "published-application-graph" as const,
+      status: "published" as const,
+      graphVersion: "factory.application-graph/v3" as const,
+      revisionId: "restaurant-template-001-published-1",
+      revisionNumber: 1,
+      graphHash: v3GraphHash,
+      graph: v3Graph,
+    };
+    const v3CompositionLock = createCapabilityCompositionLock({
+      graphChecksum: v3GraphHash,
+      selections: v3Graph.integration.compositionSelections ?? [],
+    });
+    prisma.publishedRevision.findUnique.mockResolvedValue({
+      id: "published-1",
+      graph: v3PublishedGraph,
+      graphHash: v3GraphHash,
+      compositionLock: v3CompositionLock,
+      compositionLockHash: v3CompositionLock.lockDigest,
+    });
+    prisma.compilation.count.mockResolvedValue(0);
+    prisma.compilation.create.mockResolvedValue({ id: "compilation-1" });
+    queue.enqueue.mockResolvedValue(undefined);
+
+    await expect(
+      service.createCompilation({
+        publishedRevisionId: "published-1",
+        target: "restaurant-v3",
+        compilerVersion: "0.1.0",
+      }),
+    ).resolves.toEqual({ id: "compilation-1" });
+
+    expect(queue.enqueue).toHaveBeenCalledWith({
+      compilationId: "compilation-1",
+      publishedRevisionId: "published-1",
+      target: "restaurant-v3",
+      compilerVersion: "0.1.0",
+      graphVersion: "factory.application-graph/v3",
+      publishedGraph: v3PublishedGraph,
+      compositionLock: v3CompositionLock,
     });
   });
 
