@@ -26,54 +26,41 @@ ADR-0021 made the generated runtime enforce arbitrary Graph-valid authority.
 
 ### Admitted locations
 
-Only these locations may diverge from canonical, and only by bounded additions
-or removals:
+Only these locations may diverge from canonical in this slice:
 
-- `policy.roles`: a non-empty, unique, ordered array of Graph keys 1..128. The
-  four canonical roles must remain present.
-- `policy.permissions`: rows `{role, resource, actions}` where `role` is a
-  declared role, `resource` is an existing Graph key, and `actions` is a
-  non-empty, unique, ordered subset of the known action vocabulary. Duplicate
-  `(role, resource)` rows are rejected. The canonical rows must remain present.
-- `flows[].transitions`: each `{from, event, to, roles}` must reference states
-  declared on the same flow and roles declared in `policy.roles`. The canonical
-  flows and their canonical transitions must remain present.
-- `journeys`: the canonical seven journey keys must remain present; each journey
-  step references a declared flow and a declared actor role. New journey keys
-  are not admitted in this slice.
+- `policy.roles`: the four canonical roles must remain present; additions are
+  unique Graph keys 1..128.
+- `policy.permissions`: each row's `role` must be a declared role, `resource` a
+  Graph key, and `actions` non-empty, unique, and ordered (the existing
+  `actionRank` check covers ordering). Multiple rows may share a `(role,
+resource)` with distinct action subsets — the runtime merges them, so this is
+  not a rejection.
+
+`flows`, `journeys`, `fieldAuthorities` (99), and `bindingPolicies` (135) remain
+canonical; flow and journey admission is deferred to the Workflow editor slice.
 
 ### Negative space
 
 Every other location — metadata, pages, surfaces, navigation, entities,
 relations, seed, scenarios, theme, integration, envelope, Composition Lock,
-`fieldAuthorities` (99), and `bindingPolicies` (135) — remains canonical.
+`flows`, `journeys`, `fieldAuthorities` (99), and `bindingPolicies` (135) —
+remains canonical.
 
 ### Normalization
 
-`normalizeAllowedRestaurantValues` is extended to restore, in addition to the
-existing r.6 values, the canonical `policy.roles`, `policy.permissions`,
-`flows`, and `journeys`. The normalized Graph must hash to the existing
-canonical hash. The admitted candidate is returned unnormalized (with its
-permission/actor additions) so the generic runtime can enforce them.
+`normalizeAllowedRestaurantValues` restores, in addition to the existing r.6
+values, the canonical `policy.roles` and `policy.permissions` via the cached
+`getCanonicalRestaurantAuthority()`. The normalized Graph must hash to the
+existing canonical hash. The admitted candidate is returned unnormalized (with
+its role/permission additions) so the generic runtime can enforce them.
 
-### Implementation finding (2026-08-14)
+### Canonical authority extraction
 
-Two facts block the frozen normalize-to-canonical approach as written:
-
-1. The canonical `policy.permissions`, `flows`, and `journeys` are produced by
-   `composeRestaurantProductGraph` from the Restaurant `intent` and `experience`
-   (test fixtures), which the compiler does not import. The compiler can
-   hardcode only the four roles.
-2. The Graph V3 schema cross-references authority: journey steps require their
-   actor roles to hold the matching `policy.permissions`, so the authority
-   cannot be stripped to empty for a separate hash — it must be restored to the
-   canonical values.
-
-Revised approach: extract the canonical Restaurant authority
-(`roles`/`permissions`/`flows`/`journeys`) into a shared source location
-(`@factory/capabilities`) with a cached `getCanonicalRestaurantAuthority()`,
-import it from `contracts.ts`, and restore those exact values during
-normalization. Implementation is deferred to that extraction slice.
+`getCanonicalRestaurantAuthority()` in `@factory/capabilities` composes the
+canonical Restaurant V3 Graph once from the standard product `intent` and
+`experience` (source-level constants, not test fixtures) and returns the cached
+authority. The compiler imports it to restore the canonical roles and
+permissions during normalization.
 
 ## Security boundary
 
@@ -86,8 +73,10 @@ normalization. Implementation is deferred to that extraction slice.
 
 ## Exact implementation manifest
 
-1. `packages/compiler/src/targets/restaurant-v3/contracts.ts`
-2. `packages/compiler/test/restaurant-v3-contract.test.ts`
+1. `packages/capabilities/src/restaurant/canonical-restaurant.ts`
+2. `packages/capabilities/src/index.ts`
+3. `packages/compiler/src/targets/restaurant-v3/contracts.ts`
+4. `packages/compiler/test/restaurant-v3-contract.test.ts`
 
 No fixture, Graph, Capability, Recipe, schema, facade, package, lockfile,
 Control Plane, worker, Publish, provider, service, Docker, Compose, or

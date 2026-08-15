@@ -5279,6 +5279,31 @@ Controller delivery: exact three implementation plus six governance paths,
 subject `feat(compiler): enforce graph-valid runtime permissions and actors`,
 non-force push, local/upstream equality, clean tree.
 
+## Compiler admission of role and permission additions
+
+State: `delivered` under accepted
+[ADR-0022](../../adr/adr-0022-compiler-admission-permission-actor-additions.md).
+
+Delivered: a cached `getCanonicalRestaurantAuthority()` in
+`@factory/capabilities` (composed from source-level standard Restaurant
+`intent`/`experience`) plus bounded admission of `policy.roles` and
+`policy.permissions` additions in `assertRestaurantProductCompilationInput`;
+`normalizeAllowedRestaurantValues` restores the canonical roles and permissions
+so the canonical-hash negative space holds, and the admitted candidate keeps its
+additions for the generic runtime. Flows, journeys, field authorities, and
+bindings remain pinned; flow/journey admission is deferred to the Workflow
+editor slice.
+
+Gates: contract 74/74 (five new admission tests); full Compiler 620, Graph 661,
+Capabilities 384; three no-emit typechecks; independent Sol review ACCEPT with
+P0/P1/P2=0/0/2 (two non-blocking P2 deferred).
+
+Unblocked: the Workbench Access contextual editor (role/permission editing).
+
+Controller delivery: exact four implementation plus five governance paths,
+subject `feat(compiler): admit graph-valid permission and actor additions`,
+non-force push, local/upstream equality, clean tree.
+
 ## Task 9 — Close the Restaurant Product with guarded real-model acceptance
 
 State: `planned`.

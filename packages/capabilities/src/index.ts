@@ -163,6 +163,12 @@ export {
 export type { RestaurantProductPageDefinition } from "./restaurant/product-recipe.js";
 export { composeRestaurantProductGraph } from "./restaurant/product-graph.js";
 export type { ComposeRestaurantProductGraphInput } from "./restaurant/product-graph.js";
+export {
+  getCanonicalRestaurantAuthority,
+  restaurantOrderingExperienceBrief,
+  restaurantOrderingProductIntent,
+  type CanonicalRestaurantAuthorityV1,
+} from "./restaurant/canonical-restaurant.js";
 export type {
   RestaurantAdjustmentReason,
   RestaurantEntityKey,

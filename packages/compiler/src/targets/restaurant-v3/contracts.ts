@@ -2,6 +2,7 @@ import { isDeepStrictEqual } from "node:util";
 
 import {
   createCapabilityCompositionLock,
+  getCanonicalRestaurantAuthority,
   type CapabilityCompositionLockV1,
 } from "@factory/capabilities";
 import {
@@ -347,6 +348,9 @@ function normalizeAllowedRestaurantValues(
   normalized.seedScenarios[0]!.records[seedIndex]!.values.name =
     "Margherita pizza";
   normalized.experience.theme.mode = "light";
+  const authority = getCanonicalRestaurantAuthority();
+  normalized.policy.roles = structuredClone(authority.roles);
+  normalized.policy.permissions = structuredClone(authority.permissions);
   return normalized;
 }
 
@@ -489,12 +493,9 @@ function assertExactRestaurantGraph(
       [...customerPages, ...merchantPages],
     ) ||
     !isDeepStrictEqual(pageContract, recipeContract) ||
-    !isDeepStrictEqual(graph.policy.roles, [
-      "customer",
-      "cashier",
-      "kitchen",
-      "manager",
-    ]) ||
+    !["customer", "cashier", "kitchen", "manager"].every((role) =>
+      graph.policy.roles.includes(role),
+    ) ||
     !isDeepStrictEqual(
       graph.journeys.map(({ key }) => key),
       journeyKeys,
@@ -504,6 +505,36 @@ function assertExactRestaurantGraph(
     !isDeepStrictEqual(bindingContract, recipeBindingContract)
   ) {
     throw new Error(invalidInputMessage);
+  }
+}
+
+function assertValidRestaurantAuthority(
+  graph: PublishedApplicationGraphV3Input["graph"],
+): void {
+  if (
+    graph.policy.roles.length !== new Set(graph.policy.roles).size ||
+    !graph.policy.roles.every(
+      (role) =>
+        role.length >= 1 &&
+        role.length <= 128 &&
+        /^[a-z][a-zA-Z0-9-]*$/.test(role),
+    )
+  ) {
+    failInvalid();
+  }
+  const roleSet = new Set(graph.policy.roles);
+  for (const { role, resource, actions } of graph.policy.permissions) {
+    if (!roleSet.has(role)) failInvalid();
+    if (
+      resource.length < 1 ||
+      resource.length > 128 ||
+      !/^[a-z][a-zA-Z0-9-]*$/.test(resource)
+    ) {
+      failInvalid();
+    }
+    if (actions.length === 0 || new Set(actions).size !== actions.length) {
+      failInvalid();
+    }
   }
 }
 
@@ -561,6 +592,7 @@ export function assertRestaurantProductCompilationInput(
       throw new Error(invalidInputMessage);
     }
     assertExactRestaurantGraph(publishedGraph.graph);
+    assertValidRestaurantAuthority(publishedGraph.graph);
     assertBoundedString(publishedGraph.graph.metadata.name, 2, 80);
     const menu = publishedGraph.graph.page.pages.find(
       ({ id }) => id === "customer-menu",

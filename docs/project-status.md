@@ -261,6 +261,19 @@ historical evidence, not the executable Task 2/Task 3 contract.
   addition is enforced and any removal fails closed. Independent Sol review
   returned ACCEPT with P0/P1/P2=0/0/0 after two P1 and one P2 repair. This is the
   prerequisite for the Access and Workflow contextual editors.
+- Compiler admission of Graph-valid permission and actor additions is
+  `delivered` under accepted
+  [ADR-0022](adr/adr-0022-compiler-admission-permission-actor-additions.md). It
+  extracts a cached `getCanonicalRestaurantAuthority()` into
+  `@factory/capabilities` (composed from source-level standard Restaurant
+  `intent`/`experience`, not test fixtures) and admits bounded additions to
+  `policy.roles` and `policy.permissions` while `normalizeAllowedRestaurantValues`
+  restores the canonical roles and permissions so the canonical-hash negative
+  space still holds. Flows, journeys, field authorities, and bindings remain
+  pinned; flow and journey admission is deferred to the Workflow editor slice.
+  Independent Sol review returned ACCEPT with P0/P1/P2=0/0/2; the two non-
+  blocking P2s (package-internal circular import hazard and role/permission
+  ordering-drift acceptance) are recorded as deferred.
 - The first independent two-axis Task 7B review returned NOT READY with
   P0/P1/P2=0/6/3. Actionable findings cover hostile array reflection
   amplification, unchanged-order 400 versus fixed 409, registry closure after
@@ -761,13 +774,14 @@ Authorities:
 ## Next gate
 
 Tasks 0-8C, the Task 8 source-breadth compiler core, the Task 8 source-export
-route plus Workbench download surface, and the generated-runtime Graph-valid
-permission/actor enforcement are delivered. The next gate is the ADR-0022
-compiler admission of permission/actor additions (blocked on a
-`@factory/capabilities` canonical-authority extraction), then the Access and
-Workflow contextual editors, then Task 9 guarded real-model acceptance (which
-requires an environment-only OpenAI credential plus the Docker/Compose full
-stack). Publish/Compilation lifecycle and every broader editor remain blocked.
+route plus Workbench download surface, the generated-runtime Graph-valid
+permission/actor enforcement, and the ADR-0022 compiler admission of
+role/permission additions are delivered. The next gate is the Workbench Access
+contextual editor (role/permission editing, now unblocked), then the Workflow
+editor (flow/journey admission — deferred), then Task 9 guarded real-model
+acceptance (which requires an environment-only OpenAI credential plus the
+Docker/Compose full stack). Publish/Compilation lifecycle and every broader
+editor remain blocked.
 
 ## Explicitly deferred
 

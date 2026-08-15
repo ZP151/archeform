@@ -4,36 +4,39 @@
 > superpowers:test-driven-development for every behavior change and
 > superpowers:verification-before-completion before handoff.
 
-**Goal:** Admit bounded Graph-valid additions to roles, permissions, flow
-transitions, and journeys at the Restaurant compiler boundary while keeping the
-canonical-hash negative space for every non-permission/actor location.
+**Goal:** Admit bounded Graph-valid additions to roles and permissions at the
+Restaurant compiler boundary while keeping the canonical-hash negative space for
+flows, journeys, and every non-authority location. Flow and journey admission is
+deferred to the Workflow editor slice.
 
-**Base and upstream:** `36ddba30c0ae65f22bd410efc878036f3552ace3`.
+**Base and upstream:** `e434ecac` (docs: record compiler permission admission
+blocker).
 
 ## Exact implementation manifest
 
-1. `packages/compiler/src/targets/restaurant-v3/contracts.ts`
-2. `packages/compiler/test/restaurant-v3-contract.test.ts`
+1. `packages/capabilities/src/restaurant/canonical-restaurant.ts`
+2. `packages/capabilities/src/index.ts`
+3. `packages/compiler/src/targets/restaurant-v3/contracts.ts`
+4. `packages/compiler/test/restaurant-v3-contract.test.ts`
 
-## Task 1: Validate and admit the bounded delta
+## Task 1: Extract canonical authority and admit the bounded delta
 
-**Files:** 1, 2.
+**Files:** 1, 2, 3, 4.
 
-- [ ] **RED** a bounded role/permission/transition addition is admitted; an
-      unknown, duplicate, cross-referencing, unbounded, or missing-canonical
-      entry fails closed; a removed canonical role/permission/transition fails
-      closed.
-- [ ] **GREEN** `normalizeAllowedRestaurantValues` restores the canonical
-      roles/permissions/flows/journeys so the normalized Graph still hashes to
-      the canonical hash, and the admitted candidate is returned unnormalized.
+- [ ] **RED** a bounded role/permission addition is admitted; an unknown,
+      undeclared, malformed, or missing-canonical role fails closed.
+- [ ] **GREEN** `getCanonicalRestaurantAuthority()` composes once and
+      `normalizeAllowedRestaurantValues` restores the canonical roles and
+      permissions so the normalized Graph still hashes to the canonical hash,
+      and the admitted candidate is returned unnormalized.
 - [ ] Run `node node_modules/vitest/vitest.mjs run test/restaurant-v3-contract.test.ts`.
 
 ## Task 2: Canonical and r.6 parity
 
-**Files:** 1, 2.
+**Files:** 3, 4.
 
-- [ ] **GREEN** canonical and r.6 compilation remain byte-identical; the
-      non-permission/actor negative space still rejects drift.
+- [ ] **GREEN** canonical and r.6 compilation remain byte-identical; flows,
+      journeys, and the non-authority negative space still reject drift.
 - [ ] Run `node node_modules/vitest/vitest.mjs run test/restaurant-v3-contract.test.ts`.
 
 ## Task 3: Compatibility, review, and delivery
@@ -63,7 +66,7 @@ canonical-hash negative space for every non-permission/actor location.
 
 ## Stop conditions
 
-STOP for a third implementation path; a Graph/Capability/Recipe/schema change; a
+STOP for a fifth implementation path; a Graph/Capability/Recipe/schema change; a
 new dependency/provider/network/service/Docker/Compose/deployment step; any
-undeclared or unbounded admission; any non-permission/actor negative-space
-drift; or a secret or raw-model leak.
+undeclared or unbounded admission; any flow, journey, or non-authority
+negative-space drift; or a secret or raw-model leak.

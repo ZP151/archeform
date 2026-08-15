@@ -171,6 +171,78 @@ describe("Restaurant V3 compilation contract", () => {
     expect(plan.experience.theme.mode).toBe("dark");
   });
 
+  it("admits a bounded role addition with a matching permission", () => {
+    const input = validInput();
+    input.publishedGraph.graph.policy.roles = [
+      ...input.publishedGraph.graph.policy.roles,
+      "waiter",
+    ];
+    input.publishedGraph.graph.policy.permissions = [
+      ...input.publishedGraph.graph.policy.permissions,
+      { role: "waiter", resource: "order-line", actions: ["create"] },
+    ];
+    rehash(input);
+
+    const captured = assertRestaurantProductCompilationInput(input);
+    expect(captured.publishedGraph.graph.policy.roles).toContain("waiter");
+    expect(
+      captured.publishedGraph.graph.policy.permissions.some(
+        (permission) =>
+          permission.role === "waiter" &&
+          permission.resource === "order-line" &&
+          permission.actions.includes("create"),
+      ),
+    ).toBe(true);
+  });
+
+  it("admits an added permission for an existing role", () => {
+    const input = validInput();
+    input.publishedGraph.graph.policy.permissions = [
+      ...input.publishedGraph.graph.policy.permissions,
+      { role: "manager", resource: "menu-item", actions: ["delete"] },
+    ];
+    rehash(input);
+
+    expect(() => assertRestaurantProductCompilationInput(input)).not.toThrow();
+  });
+
+  it.each([
+    [
+      "removed canonical role",
+      (input: any) => {
+        input.publishedGraph.graph.policy.roles =
+          input.publishedGraph.graph.policy.roles.filter(
+            (role: string) => role !== "customer",
+          );
+      },
+    ],
+    [
+      "undeclared permission role",
+      (input: any) => {
+        input.publishedGraph.graph.policy.permissions = [
+          ...input.publishedGraph.graph.policy.permissions,
+          { role: "intruder", resource: "order", actions: ["submit"] },
+        ];
+      },
+    ],
+    [
+      "malformed role key",
+      (input: any) => {
+        input.publishedGraph.graph.policy.roles = [
+          ...input.publishedGraph.graph.policy.roles,
+          "Bad Role!",
+        ];
+      },
+    ],
+  ])("rejects authority drift: %s", (_label, mutate) => {
+    const input = validInput();
+    mutate(input);
+    rehashIfValid(input);
+    expect(() => assertRestaurantProductCompilationInput(input)).toThrow(
+      new Error(boundaryError),
+    );
+  });
+
   it.each([
     [
       "unequal Home orders",
