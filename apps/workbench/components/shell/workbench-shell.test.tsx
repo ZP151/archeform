@@ -841,7 +841,7 @@ describe("Workbench shell", () => {
       container.querySelector<HTMLButtonElement>(
         'button[aria-label="Publish draft"]',
       )?.disabled,
-    ).toBe(true);
+    ).toBe(false);
     expect(container.querySelector('button[aria-label="Compile"]')).toBeNull();
     expect(container.querySelector('button[aria-label="Advanced"]')).toBeNull();
     expect(container.querySelector('button[aria-label="History"]')).toBeNull();

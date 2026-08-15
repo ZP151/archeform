@@ -102,6 +102,11 @@ export type WorkbenchController = {
   readonly templateDraft: WorkbenchTemplateDraftInstance | null;
   readonly templateBusy: boolean;
   readonly templateError: string | null;
+  readonly templatePublishedRevision: {
+    readonly id: string;
+    readonly revisionNumber: number;
+    readonly graphHash: string;
+  } | null;
   readonly flowDiagram: ReturnType<typeof flowModelToReactFlow>;
   readonly journey: ReturnType<typeof useProductJourney>;
   readonly release: ReturnType<typeof useReleaseJourney>;
@@ -141,6 +146,8 @@ export type WorkbenchController = {
   readonly editTemplateDataField: (value: string) => void;
   readonly editTemplateExperienceTheme: (mode: "dark") => void;
   readonly editTemplateAccessRole: (roleKey: string) => void;
+  readonly publishTemplateDraft: () => void;
+  readonly queueTemplateCompilation: () => void;
   readonly returnToTemplatePreview: () => void;
   readonly inspectArtifact: (artifactPath: string) => void;
   readonly downloadSourceArchive: (format: "zip" | "git") => Promise<void>;
@@ -184,6 +191,11 @@ export function useWorkbenchController({
   const [remoteDraft, setRemoteDraft] = useState<WorkbenchDraft | null>(null);
   const [publishedRevision, setPublishedRevision] =
     useState<WorkbenchPublishedRevision | null>(null);
+  const [templatePublishedRevision, setTemplatePublishedRevision] = useState<{
+    readonly id: string;
+    readonly revisionNumber: number;
+    readonly graphHash: string;
+  } | null>(null);
   const [compilation, setCompilation] = useState<WorkbenchCompilation | null>(
     null,
   );
@@ -1148,6 +1160,48 @@ export function useWorkbenchController({
     [controlPlane, templateDraft],
   );
 
+  const publishTemplateDraft = useCallback(() => {
+    if (!templateDraft) return;
+    setTemplateBusy(true);
+    setTemplateError(null);
+    setConnectionState("publishing");
+    void controlPlane
+      .publishDraft(
+        templateDraft.draft.applicationGraphId,
+        templateDraft.draft.draftRevisionId,
+      )
+      .then((published) => {
+        setTemplatePublishedRevision({
+          id: published.id,
+          revisionNumber: published.revisionNumber,
+          graphHash: published.graphHash,
+        });
+        setConnectionState("published");
+      })
+      .catch(() => {
+        setConnectionState("ready");
+        setTemplateError("Template draft could not be published.");
+      })
+      .finally(() => setTemplateBusy(false));
+  }, [controlPlane, templateDraft]);
+
+  const queueTemplateCompilation = useCallback(() => {
+    if (!templatePublishedRevision) return;
+    setConnectionState("compiling");
+    void controlPlane
+      .createCompilation(templatePublishedRevision.id)
+      .then((next) => {
+        setCompilation(next);
+        setConnectionState("published");
+        dispatch({ type: "open", surface: "code" });
+        void refreshApplications();
+      })
+      .catch(() => {
+        setConnectionState("offline");
+        setOperationError("Compilation could not be queued.");
+      });
+  }, [templatePublishedRevision, controlPlane, refreshApplications]);
+
   const compileApplication = useCallback(
     (applicationKey: string) => {
       setOperationError(null);
@@ -1246,6 +1300,7 @@ export function useWorkbenchController({
     templateDraft,
     templateBusy,
     templateError,
+    templatePublishedRevision,
     flowDiagram,
     journey,
     release,
@@ -1272,6 +1327,8 @@ export function useWorkbenchController({
     editTemplateDataField,
     editTemplateExperienceTheme,
     editTemplateAccessRole,
+    publishTemplateDraft,
+    queueTemplateCompilation,
     returnToTemplatePreview,
     inspectArtifact,
     downloadSourceArchive,

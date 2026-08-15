@@ -161,9 +161,15 @@ export function WorkbenchShell({ controller, children }: Props) {
           libraryOpen={state.libraryOpen}
           showLibrary={contextKey === "workspace-home" && !templateDraftActive}
           showDraftTools={!templateDraftActive}
-          published={!templateDraftActive && state.lifecycle === "published"}
+          published={
+            templateDraftActive
+              ? controller.templatePublishedRevision !== null
+              : state.lifecycle === "published"
+          }
           canPublish={
-            !templateDraftActive && remoteDraft !== null && !busyConnection
+            templateDraftActive
+              ? controller.templateDraft !== null && !busyConnection
+              : remoteDraft !== null && !busyConnection
           }
           onSwitchApplication={openApplication}
           onToggleInspector={toggleInspector}
@@ -171,8 +177,14 @@ export function WorkbenchShell({ controller, children }: Props) {
           onToggleLibrary={toggleLibrary}
           onToggleHistory={toggleHistory}
           onToggleTheme={toggleTheme}
-          onPublish={publish}
-          onCompile={queueCompilation}
+          onPublish={
+            templateDraftActive ? controller.publishTemplateDraft : publish
+          }
+          onCompile={
+            templateDraftActive
+              ? controller.queueTemplateCompilation
+              : queueCompilation
+          }
           inspectorTriggerRef={inspectorTriggerRef}
           activityTriggerRef={activityTriggerRef}
           libraryTriggerRef={libraryTriggerRef}

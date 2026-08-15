@@ -274,7 +274,7 @@ test("clones through an authoritative Restaurant Experience Draft r.6", async ({
   await expect(page.getByText("7 merchant pages")).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Publish draft" }),
-  ).toBeDisabled();
+  ).toBeEnabled();
   await expect(page.getByRole("button", { name: "Advanced" })).toHaveCount(0);
 
   await page
