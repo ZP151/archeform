@@ -911,7 +911,7 @@ describe("Workbench shell", () => {
         ),
         (button) => button.getAttribute("aria-label"),
       ),
-    ).toEqual(["Page", "Data", "Experience"]);
+    ).toEqual(["Page", "Data", "Access", "Experience"]);
     const pageTitle = container.querySelector<HTMLInputElement>(
       'input[aria-label="Page title"]',
     )!;
@@ -1159,15 +1159,15 @@ describe("Workbench shell", () => {
     );
     expect(
       builderButtons.map((button) => button.getAttribute("aria-label")),
-    ).toEqual(["Page", "Data", "Experience"]);
+    ).toEqual(["Page", "Data", "Access", "Experience"]);
     builderButtons[0]!.focus();
     act(() => {
       builderButtons[0]!.dispatchEvent(
         new KeyboardEvent("keydown", { key: "End", bubbles: true }),
       );
     });
-    expect(document.activeElement).toBe(builderButtons[2]);
-    act(() => builderButtons[2]!.click());
+    expect(document.activeElement).toBe(builderButtons[3]);
+    act(() => builderButtons[3]!.click());
     await waitForAssertion(() => {
       expect(
         container.querySelector(

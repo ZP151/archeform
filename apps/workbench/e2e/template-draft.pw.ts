@@ -302,7 +302,7 @@ test("clones through an authoritative Restaurant Experience Draft r.6", async ({
     page
       .getByRole("navigation", { name: "Builder navigation" })
       .getByRole("button"),
-  ).toHaveText(["Page", "Data", "Experience"]);
+  ).toHaveText(["Page", "Data", "Access", "Experience"]);
   const pageTitle = page.getByRole("textbox", { name: "Page title" });
   await pageTitle.fill("Seasonal Menu");
   await expect(

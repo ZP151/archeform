@@ -184,7 +184,7 @@ export function WorkbenchShell({ controller, children }: Props) {
             onNavigate={navigate}
             allowedDestinations={
               templateDraftActive
-                ? ["page", "data", "experience"]
+                ? ["page", "data", "access", "experience"]
                 : [
                     "page",
                     "data",
