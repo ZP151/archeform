@@ -305,20 +305,17 @@ historical evidence, not the executable Task 2/Task 3 contract.
 
 ### Blocked decisions and risks
 
-- ADR-0022 (compiler admission of Graph permission/actor additions) is accepted,
-  but its implementation is blocked on a material decision: the canonical
-  Restaurant `policy.permissions`/`flows`/`journeys` are produced by
-  `composeRestaurantProductGraph` from the Restaurant `intent`/`experience`
-  fixtures, which the compiler does not import, and the Graph V3 schema
-  cross-references journeys -> roles -> permissions so the authority cannot be
-  stripped. The revised approach is to extract a cached
-  `getCanonicalRestaurantAuthority()` into `@factory/capabilities`.
-- The Access and Workflow contextual editors depend on ADR-0022 and are not a
-  hard Task 9 prerequisite (Task 9's contextual-editing acceptance is satisfied
-  by the delivered Page/Data/Experience editors).
+- The Workflow contextual editor (flow/journey admission) remains deferred; only
+  role/permission additions are admitted (ADR-0022) and edited (the delivered
+  Access editor). Page/Data/Experience/Access satisfy Task 9's
+  contextual-editing acceptance.
 - Task 9 guarded real-model acceptance, `main` integration, and the repository
-  release require an environment-only OpenAI credential plus the Docker/Compose
-  full-stack local topology, which are not available in this autonomous session.
+  release require the environment-only OpenAI credential and the Docker/Compose
+  full stack, which are now available, but are blocked on the not-yet-delivered
+  honest V3 Publish/Compilation/launch closure for the Restaurant product and a
+  restaurant real-model acceptance harness (the existing golden-path e2e is a
+  stale V1 Expense/Appointment closure). The Docker image build chains were
+  corrected at `854292c0` so a fresh isolated stack builds and boots.
 
 No founder technology decision is currently blocking this prerequisite.
 [`ADR-0011`](adr/adr-0011-product-recipe-surface-page-ownership.md) is Accepted

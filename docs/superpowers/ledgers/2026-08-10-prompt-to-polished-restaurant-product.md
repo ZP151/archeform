@@ -5361,6 +5361,33 @@ Acceptance evidence:
 Blocked by: Tasks 3–8 reviewed, D0 delivered, and a separately frozen honest
 V3 Publish/Compilation/launch closure.
 
+### Task 9 execution attempt — 2026-08-15
+
+Controller brought up a fresh isolated `factory-t9-acceptance` Compose stack and
+ran the guarded golden-path e2e against the environment-only real-model key.
+Two findings are recorded as evidence:
+
+- **Docker image build chains were stale and are fixed.** The Control Plane,
+  Compiler Worker, and Workbench Dockerfiles did not build the compiler's
+  transitive workspace packages (`ui-primitives`, `ui-patterns`,
+  `generated-ui`, `screen-recipes`, `experience-recipes`, `compiler`,
+  `workbench-ui`), so a fresh build (`docker compose up --build`) failed at
+  `@factory/compiler` `tsc`. The three Dockerfiles were corrected to build the
+  full dependency chain and delivered at commit `854292c0` with subject
+  `fix(build): include compiler transitive deps in Docker images`; the isolated
+  stack then built and booted healthy (postgres/redis healthy, control-plane
+  health 200, empty database).
+- **The guarded golden-path e2e is stale and not the Task 9 harness.** It
+  drives the V1 Expense/Appointment closure, whose requirement-composer button
+  is now `Create product` (the spec still waits for `Interpret requirement`),
+  so Prompt A timed out at 30 minutes before any model call. Task 9 requires
+  the restaurant prompt and the V3 Publish/Compilation/launch closure, which is
+  not yet delivered, so the acceptance run cannot proceed until that closure is
+  frozen and a restaurant acceptance spec exists.
+
+Task 9 therefore remains `planned`; its V3 Publish/Compilation/launch-closure
+prerequisite and a restaurant real-model acceptance harness are the next work.
+
 ## Deferred work
 
 The following remain outside this iteration until Task 9 is accepted:
