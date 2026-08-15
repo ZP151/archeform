@@ -79,7 +79,7 @@ describe("generated Restaurant merchant runtime", () => {
       customer.base,
       "/api/cart/items",
       mutation(
-        { itemId: "dish-truffle-risotto", quantity: 1, expectedVersion: 1 },
+        { itemId: "margherita-pizza", quantity: 1, expectedVersion: 1 },
         "add",
       ),
     );
@@ -101,7 +101,7 @@ describe("generated Restaurant merchant runtime", () => {
     ).toBe("order-0001");
     const catalog = await json(
       manager.base,
-      "/api/merchant/catalog/dish-truffle-risotto",
+      "/api/merchant/catalog/margherita-pizza",
       {
         ...mutation(
           { expectedVersion: 2, available: false, stock: 6 },
@@ -196,18 +196,18 @@ describe("generated Restaurant merchant runtime", () => {
     };
     const first = await json(
       manager.base,
-      "/api/merchant/catalog/dish-seared-salmon",
+      "/api/merchant/catalog/mushroom-risotto",
       { ...mutation(payload, "same"), method: "PATCH" },
     );
     const replay = await json(
       manager.base,
-      "/api/merchant/catalog/dish-seared-salmon",
+      "/api/merchant/catalog/mushroom-risotto",
       { ...mutation(payload, "same"), method: "PATCH" },
     );
     expect(replay.body).toEqual(first.body);
     expect(
       (
-        await json(manager.base, "/api/merchant/catalog/dish-seared-salmon", {
+        await json(manager.base, "/api/merchant/catalog/mushroom-risotto", {
           ...mutation({ ...payload, stock: 8 }, "same"),
           method: "PATCH",
         })
@@ -215,7 +215,7 @@ describe("generated Restaurant merchant runtime", () => {
     ).toBe(409);
     expect(
       (
-        await json(manager.base, "/api/merchant/catalog/dish-seared-salmon", {
+        await json(manager.base, "/api/merchant/catalog/mushroom-risotto", {
           ...mutation({ expectedVersion: 1, stock: 8 }, "other"),
           method: "PATCH",
         })
@@ -227,7 +227,7 @@ describe("generated Restaurant merchant runtime", () => {
       const server = await start(app, role);
       const denied = await json(
         server.base,
-        "/api/merchant/catalog/dish-seared-salmon",
+        "/api/merchant/catalog/mushroom-risotto",
         {
           ...mutation(
             { expectedVersion: 2, available: true },
@@ -256,7 +256,7 @@ describe("generated Restaurant merchant runtime", () => {
       customer.base,
       "/api/cart/items",
       mutation(
-        { itemId: "dish-seared-salmon", quantity: 1, expectedVersion: 1 },
+        { itemId: "mushroom-risotto", quantity: 1, expectedVersion: 1 },
         "add-order",
       ),
     );
@@ -328,7 +328,7 @@ describe("generated Restaurant merchant runtime", () => {
     const manager = await start(app, "manager");
     const catalog = await json(
       manager.base,
-      "/api/merchant/catalog/dish-truffle-risotto",
+      "/api/merchant/catalog/margherita-pizza",
       {
         ...mutation({ expectedVersion: 1, available: false }, "drift-catalog"),
         method: "PATCH",
@@ -355,5 +355,55 @@ describe("generated Restaurant merchant runtime", () => {
     const state = JSON.parse(await readFile(app.statePath, "utf8"));
     expect(state.audit).toEqual([]);
     await manager.server.close();
+  });
+
+  it("shares the r.6 Graph catalog and merchant mutation through one persisted state", async () => {
+    const app = await generatedRuntime((plan) => {
+      const seedIndex = plan.domain.seedData!.findIndex(
+        ({ entity, id }) => entity === "menu-item" && id === "margherita-pizza",
+      );
+      plan.domain.seedData![seedIndex]!.values.name = "Heirloom tomato pizza";
+      plan.seedScenarios[0]!.records[seedIndex]!.values.name =
+        "Heirloom tomato pizza";
+    });
+    const customer = await start(app, "customer");
+    expect(
+      (await json(customer.base, "/api/catalog")).body.items[0],
+    ).toMatchObject({
+      id: "margherita-pizza",
+      name: "Heirloom tomato pizza",
+      price: 1400,
+    });
+    await customer.server.close();
+
+    const manager = await start(app, "manager");
+    const merchantCatalog = await json(manager.base, "/api/merchant/catalog");
+    expect(merchantCatalog.body.items[0]).toMatchObject({
+      id: "margherita-pizza",
+      name: "Heirloom tomato pizza",
+      price: 1400,
+    });
+    const changed = await json(
+      manager.base,
+      "/api/merchant/catalog/margherita-pizza",
+      {
+        ...mutation(
+          { expectedVersion: 1, name: "Heirloom tomato pizza tonight" },
+          "r6-name",
+        ),
+        method: "PATCH",
+      },
+    );
+    expect(changed.body.item).toMatchObject({
+      name: "Heirloom tomato pizza tonight",
+      version: 2,
+    });
+    await manager.server.close();
+
+    const restarted = await start(app, "customer");
+    expect(
+      (await json(restarted.base, "/api/catalog")).body.items[0].name,
+    ).toBe("Heirloom tomato pizza tonight");
+    await restarted.server.close();
   });
 });

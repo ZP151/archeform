@@ -4943,12 +4943,11 @@ Docker/Compose, and deployment.
 
 ## Task 8 — Add Source Mode, controlled overlays, ZIP, and Git export
 
-State: Task 8A Source Explorer and Task 8B Source Search are `delivered`; Task
-8C Verified Source Transfer is `accepted`, not delivered. Diff, editing,
-overlays, ZIP, Git, and export remain `planned` with writer count zero.
+State: Task 8A Source Explorer, Task 8B Source Search, and Task 8C Verified
+Source Transfer are `delivered`. Diff, editing, overlays, ZIP, Git, and export
+remain `planned` with writer count zero.
 
-Owner: Task 8A/8B authorities and Task 8C writer/reviewer authorities are
-consumed; only PM/controller exact-eight Task 8C delivery remains.
+Owner: Task 8A/8B/8C writer, review, and controller authorities are consumed.
 
 ### Task 8A Source Explorer freeze — 2026-08-14
 
@@ -5079,8 +5078,7 @@ proved local `HEAD` equals upstream with a clean tree.
 
 ### Task 8C Verified Source Transfer freeze — 2026-08-14
 
-State: `accepted`, not delivered, on base
-`84a90c4b17fe30bc35921fb25aebf228009678be`.
+State: `delivered` at `97b6dbdb6176ca26af6d7fa2b71dad6bbc692e19`.
 
 Decision and contract:
 
@@ -5130,16 +5128,82 @@ Any fifth implementation path is a PM STOP. Mandatory RED was unit 28/44 plus
 browser 1/1 with production untouched. GREEN is focused 44, full Workbench 517,
 no-emit, Next, and browser 1/1; exact-eight static/containment gates are clean.
 The independent review closes P0/P1/P2=0/0/0 with
-`READY_FOR_DELIVERY YES`. PM/controller alone may deliver the exact four
-implementation plus four governance paths with subject
-`feat(workbench): add verified source transfer`, non-force push,
-local/upstream equality, and a clean tree.
+`READY_FOR_DELIVERY YES`. Controller delivery consumed the exact eight paths,
+committed `feat(workbench): add verified source transfer`, pushed without
+force, and proved local `HEAD` equals upstream with a clean tree.
 
 Later Task 8 acceptance remains: Code eventually gains search/diff, ZIP and
 Graph-first Git share one checksum manifest, writable extensions use
 `SourceOverlayV1`, Draft Preview Snapshot output is never exportable source, and
 credentials, raw model material, and private files stay absent. Task 8C does not
 authorize any later Task 8 writer.
+
+## D0 — Restaurant V3 Runtime Catalog Parity
+
+State: `accepted`; `ready_for_writer`; not implemented or delivered, on base
+`97b6dbdb6176ca26af6d7fa2b71dad6bbc692e19`.
+
+Owner: one Sol writer for exact ten Compiler paths, then one independent Sol
+review. PM/controller retains exact-sixteen delivery.
+
+Decision and contract:
+
+- [ADR-0018](../../adr/adr-0018-restaurant-v3-runtime-catalog-parity.md) is
+  Accepted under `参考以下总结，若符合项目目标，则持续接受而迭代。`; the slice is
+  bounded, reversible, and corrects existing dual-Restaurant runtime truth, so
+  no new founder prompt is required.
+- Keep strict Published V3/hash/Composition-Lock admission. Accept only the
+  canonical Graph plus the delivered r.6 value family: application name,
+  Customer Menu title, equal same-set Customer Home block/region order,
+  mirrored Margherita name, and theme mode. Validate first, restore only those
+  values in a clone, then require the complete normalized V3 hash to equal the
+  existing canonical hash; all unlisted drift fails.
+- Require one exact `fine-dining-service` scenario fully index-aligned and
+  deeply mirrored with `domain.seedData`; exact unique category/two menu items,
+  field types/required flags/authorities/bindings, manager `menu-item:update`,
+  bounded primitive values, safe image URLs, and resolving category refs.
+- Graph price is finite USD major units `0..100000` with at most two decimals
+  by `Number(price.toFixed(2)) === price`; runtime emits
+  `Math.round(price * 100)` integer minor units `0..10000000` with no implicit
+  rounding.
+- Emit deterministic seed-order version-1 catalog rows containing only
+  category key, name, description, minor price, available, stock, preparation
+  minutes, and image URL. Customer and merchant retain one shared state/API.
+- [Design](../specs/2026-08-14-restaurant-v3-runtime-catalog-parity-design.md)
+  and [executable plan](../plans/2026-08-14-restaurant-v3-runtime-catalog-parity.md)
+  are the writer authority. D0 does not claim Publish, worker compilation,
+  Workbench launch, or visible title/order/theme runtime parity.
+
+Exact writer manifest (10):
+
+```text
+packages/compiler/src/targets/restaurant-v3/contracts.ts
+packages/compiler/src/targets/restaurant-v3/runtime-api.ts
+packages/compiler/src/targets/restaurant-v3/customer-target.ts
+packages/compiler/src/targets/restaurant-v3/merchant-target.ts
+packages/compiler/src/targets/restaurant-v3/product-target.ts
+packages/compiler/test/restaurant-v3-contract.test.ts
+packages/compiler/test/restaurant-customer-runtime.test.ts
+packages/compiler/test/restaurant-merchant-v3-runtime.test.ts
+packages/compiler/test/restaurant-customer-target.test.ts
+packages/compiler/test/restaurant-product-v3-target.test.ts
+```
+
+Any eleventh implementation path is a PM STOP. No new canonical fixture/import,
+Control Plane, worker, Publish, Workbench, PreviewRunner, Graph/Capability/
+Recipe/schema/facade, Prisma, package/dependency/lock, provider/network/service,
+Docker/Compose, or deployment path is authorized.
+
+Gates: mandatory focused RED/GREEN; full Compiler, Graph, and Capabilities;
+their no-emit/build gates; generated Node journeys; exact-ten format/diff/
+containment/static evidence; and one independent intended-vs-implemented Sol
+review. Terra or separate final Sol is required only if review escalates a
+stable-boundary/security P0/P1 or a repair changes the frozen contract.
+
+Controller delivery, after PM acceptance, is exact ten implementation plus six
+governance paths with Expected16/Actual16 equality, zero index/unrelated paths,
+subject `fix(compiler): bind restaurant runtime catalog to graph seed`,
+non-force push, local/upstream equality, and a clean tree.
 
 ## Task 9 — Close the Restaurant Product with guarded real-model acceptance
 
@@ -5168,7 +5232,8 @@ Acceptance evidence:
   tag are pushed, and a GitHub Release is created when authenticated tooling is
   available without claiming cloud deployment.
 
-Blocked by: Tasks 3–8 reviewed.
+Blocked by: Tasks 3–8 reviewed, D0 delivered, and a separately frozen honest
+V3 Publish/Compilation/launch closure.
 
 ## Deferred work
 

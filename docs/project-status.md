@@ -198,9 +198,12 @@ historical evidence, not the executable Task 2/Task 3 contract.
   full Workbench 489, no-emit, Next, browser 1/1, and exact-eight static gates
   pass. The same reviewer returns P0/P1/P2=0/0/0 and
   `READY_FOR_DELIVERY YES`; controller delivery consumed the exact eight paths.
-- Task 8C Verified Source Transfer is `accepted`, not delivered, under the
-  founder standing instruction and ordinary deterministic UI delivery policy.
-  The [executable plan](superpowers/plans/2026-08-14-workbench-verified-source-transfer.md)
+- Task 8C Verified Source Transfer is delivered at
+  `97b6dbdb6176ca26af6d7fa2b71dad6bbc692e19` with exact subject
+  `feat(workbench): add verified source transfer`, non-force push,
+  local/upstream equality, and a clean tree. Under the founder standing
+  instruction and ordinary deterministic UI delivery policy, the
+  [executable plan](superpowers/plans/2026-08-14-workbench-verified-source-transfer.md)
   freezes the same exact four Workbench paths. Only the current verified file
   can be copied or downloaded; copy transfers the exact admitted content with a
   stale-completion token, while download emits the exact UTF-8 bytes using a
@@ -211,8 +214,20 @@ historical evidence, not the executable Task 2/Task 3 contract.
   Mandatory RED is unit 28/44 plus browser 1/1 with production untouched. GREEN
   passes focused 44, full Workbench 517, no-emit, Next, browser 1/1, and clean
   exact-eight static/containment gates. The independent review returns
-  P0/P1/P2=0/0/0 and `READY_FOR_DELIVERY YES`; PM authorizes only controller
-  exact-eight delivery.
+  P0/P1/P2=0/0/0 and `READY_FOR_DELIVERY YES`; controller delivery consumed the
+  exact eight paths.
+- D0 Restaurant V3 Runtime Catalog Parity is `accepted`, ready for one writer,
+  and not delivered. [ADR-0018](adr/adr-0018-restaurant-v3-runtime-catalog-parity.md)
+  replaces only the Restaurant compiler's blanket canonical Graph hash pin
+  with an exact r.6-family normalize-to-canonical-hash proof and binds both
+  generated surfaces to one strict Graph-seeded runtime catalog. USD Graph
+  prices remain major-unit numbers with finite `0..100000` and at most two
+  decimals; runtime/API rows emit integer minor units. The
+  [design](superpowers/specs/2026-08-14-restaurant-v3-runtime-catalog-parity-design.md)
+  and [plan](superpowers/plans/2026-08-14-restaurant-v3-runtime-catalog-parity.md)
+  freeze exactly ten Compiler paths. No Control Plane, worker, Publish,
+  Workbench, Graph/Capability/Recipe/schema, Prisma, package, dependency,
+  service, Docker, Compose, or deployment path is authorized.
 - The first independent two-axis Task 7B review returned NOT READY with
   P0/P1/P2=0/6/3. Actionable findings cover hostile array reflection
   amplification, unchanged-order 400 versus fixed 409, registry closure after
@@ -250,10 +265,10 @@ ports that imply authority. Frozen tests and the stop-both rule address these.
 
 ### Next smallest valuable slice
 
-Controller-deliver only the reviewed Task 8C exact-eight tree after expected/
-actual, staged diff, and sensitive-material checks. Keep Access, Workflow,
-semantic/regex search, content preload, Diff/edit/overlay/ZIP/Git, Draft Snapshot
-source, Publish, Compilation creation, and generated-runtime behavior deferred.
+Authorize one Sol writer for D0's exact-ten Compiler tree only after the exact
+governance freeze, base equality, and clean-tree checks. Keep Access, Workflow,
+Source breadth, Publish, worker/Compilation lifecycle, visible title/order/theme
+runtime parity, and every broader generated-runtime change deferred.
 
 ### Retained historical reconciliation through V3 acceptance
 
@@ -697,11 +712,11 @@ Authorities:
 
 ## Next gate
 
-Tasks 0-8B are delivered; local HEAD and upstream equal
-`84a90c4b17fe30bc35921fb25aebf228009678be`. Access and Workflow candidates
-remain blocked at design by runtime truth. Task 8C Verified Source Transfer is
-accepted, not delivered, with exact-eight controller delivery authorized. Task
-8D+ Diff/ZIP/Git/editing behavior, Task 9, and every broader editor remain
+Tasks 0-8C are delivered; local HEAD and upstream equal
+`97b6dbdb6176ca26af6d7fa2b71dad6bbc692e19`. Access and Workflow candidates
+remain blocked at design by runtime truth. D0 Restaurant V3 Runtime Catalog
+Parity is accepted, ready for its exact-ten writer, and not delivered. Source
+breadth, Publish/Compilation lifecycle, Task 9, and every broader editor remain
 blocked.
 
 ## Explicitly deferred

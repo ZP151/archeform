@@ -82,7 +82,10 @@ export function attachMerchantController(root = document) {
 `;
 }
 
-function merchantJourneyTest(): string {
+function merchantJourneyTest(plan: RestaurantProductPlanV1): string {
+  const primary = plan.domain.seedData!.find(
+    ({ entity }) => entity === "menu-item",
+  )!;
   return `import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -95,9 +98,10 @@ test("merchant sees and progresses shared customer state", async () => {
   try {
     let server = await startRestaurantServer({ statePath, principalRole: "customer" }); let base = "http://127.0.0.1:" + server.port;
     const headers = { "content-type": "application/json", "idempotency-key": "generated" };
-    await request(base, "/api/cart/items", { method: "POST", headers, body: JSON.stringify({ itemId: "dish-truffle-risotto", quantity: 1, expectedVersion: 1 }) });
+    const customerItem = (await request(base, "/api/catalog")).body.items[0]; assert.equal(customerItem.id, ${JSON.stringify(primary.id)}); assert.equal(customerItem.name, ${JSON.stringify(primary.values.name)});
+    await request(base, "/api/cart/items", { method: "POST", headers, body: JSON.stringify({ itemId: ${JSON.stringify(primary.id)}, quantity: 1, expectedVersion: 1 }) });
     await request(base, "/api/checkout", { method: "POST", headers: { ...headers, "idempotency-key": "checkout" }, body: JSON.stringify({ expectedVersion: 2, method: "simulated-card" }) }); await server.close();
-    server = await startRestaurantServer({ statePath, principalRole: "manager" }); base = "http://127.0.0.1:" + server.port; assert.equal((await request(base, "/api/merchant/orders")).body.orders.length, 1); await server.close();
+    server = await startRestaurantServer({ statePath, principalRole: "manager" }); base = "http://127.0.0.1:" + server.port; assert.equal((await request(base, "/api/merchant/catalog")).body.items[0].name, ${JSON.stringify(primary.values.name)}); assert.equal((await request(base, "/api/merchant/orders")).body.orders.length, 1); await server.close();
     server = await startRestaurantServer({ statePath, principalRole: "kitchen" }); base = "http://127.0.0.1:" + server.port;
     const accepted = await request(base, "/api/merchant/kitchen/order-0001/actions", { method: "POST", headers: { ...headers, "idempotency-key": "accept" }, body: JSON.stringify({ action: "accept", expectedVersion: 1 }) }); assert.equal(accepted.body.order.status, "accepted"); await server.close();
   } finally { await rm(root, { recursive: true, force: true }); }
@@ -118,7 +122,10 @@ export function renderRestaurantMerchantContribution(
       content:
         ":root{font-family:Inter,ui-sans-serif,sans-serif;background:#f5f3ee;color:#211f1a}.merchant-shell{display:grid;grid-template-columns:16rem minmax(0,1fr);min-height:100vh}.merchant-sidebar{display:flex;flex-direction:column;gap:.5rem;padding:1.5rem;background:#211f1a}.merchant-sidebar a{color:#fff;text-decoration:none;padding:.75rem}#content{padding:2rem;display:grid;gap:1rem}.factory-block{background:#fff;padding:1rem;border:1px solid #d8d3c8}@media(max-width:760px){.merchant-shell{grid-template-columns:1fr}.merchant-sidebar{position:static}}\n",
     },
-    { path: "test/merchant-journey.test.mjs", content: merchantJourneyTest() },
+    {
+      path: "test/merchant-journey.test.mjs",
+      content: merchantJourneyTest(plan),
+    },
   ];
   assertSafeGeneratedFileSet(files);
   return Object.freeze({ surface, files: Object.freeze(files) });

@@ -4,6 +4,8 @@ import { dirname, join } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 
 import { afterEach, describe, expect, it } from "vitest";
+import { createCapabilityCompositionLock } from "@factory/capabilities";
+import { hashApplicationGraphV3 } from "@factory/graph";
 
 import { restaurantProductV3Fixture } from "./fixtures/restaurant-product-v3.js";
 import {
@@ -20,12 +22,44 @@ afterEach(async () =>
   ),
 );
 
-function compile() {
+function canonicalInput() {
   const fixture = restaurantProductV3Fixture();
-  return generateRestaurantCustomerApplicationBundle({
+  return {
     publishedGraph: fixture.publishedGraph,
     compositionLock: fixture.compositionLock,
+  };
+}
+
+function restaurantV6Input() {
+  const input = canonicalInput();
+  const graph = input.publishedGraph.graph;
+  graph.metadata.name = "Maison Rivage";
+  graph.page.pages.find(({ id }) => id === "customer-menu")!.title =
+    "Seasonal Menu";
+  const home = graph.page.pages.find(({ id }) => id === "customer-home")!;
+  home.blocks = [home.blocks[2]!, home.blocks[0]!, home.blocks[1]!];
+  home.recipe.regions[0]!.blockIds = [
+    "home-items",
+    "home-hero",
+    "home-categories",
+  ];
+  const seedIndex = graph.domain.seedData!.findIndex(
+    ({ entity, id }) => entity === "menu-item" && id === "margherita-pizza",
+  );
+  graph.domain.seedData![seedIndex]!.values.name = "Heirloom tomato pizza";
+  graph.seedScenarios[0]!.records[seedIndex]!.values.name =
+    "Heirloom tomato pizza";
+  graph.experience.theme.mode = "dark";
+  input.publishedGraph.graphHash = hashApplicationGraphV3(graph);
+  input.compositionLock = createCapabilityCompositionLock({
+    graphChecksum: input.publishedGraph.graphHash,
+    selections: graph.integration.compositionSelections ?? [],
   });
+  return input;
+}
+
+function compile(input = canonicalInput()) {
+  return generateRestaurantCustomerApplicationBundle(input);
 }
 
 describe("Restaurant customer bundle target", () => {
@@ -149,6 +183,44 @@ describe("Restaurant customer bundle target", () => {
     expect(result.stdout).toMatch(/pass 2/);
   });
 
+  it("uses only admitted Graph record identities in the r.6 generated customer journey", async () => {
+    const bundle = compile(restaurantV6Input());
+    const files = Object.fromEntries(
+      bundle.files.map(({ path, content }) => [path, content]),
+    );
+    const generated = Object.values(files).join("\n");
+    expect(generated).not.toMatch(/dish-truffle-risotto|dish-seared-salmon/);
+    expect(files["src/runtime/seed.mjs"]).toContain('"id":"margherita-pizza"');
+    expect(files["src/runtime/seed.mjs"]).toContain(
+      '"name":"Heirloom tomato pizza"',
+    );
+    expect(files["test/customer-journey.test.mjs"]).toContain(
+      "margherita-pizza",
+    );
+    expect(files["README.md"]).toContain("Maison Rivage");
+    const manifest = JSON.parse(files["graph/manifest.json"]);
+    expect(
+      manifest.pages
+        .find(({ id }: any) => id === "customer-home")
+        .blocks.map(({ id }: any) => id),
+    ).toEqual(["home-items", "home-hero", "home-categories"]);
+
+    const root = await mkdtemp(join(tmpdir(), "archeform-customer-r6-"));
+    roots.push(root);
+    for (const file of bundle.files) {
+      const path = join(root, file.path);
+      await mkdir(dirname(path), { recursive: true });
+      await writeFile(path, file.content, "utf8");
+    }
+    const result = spawnSync(
+      process.execPath,
+      ["--test", join(root, "test/customer-journey.test.mjs")],
+      { encoding: "utf8", timeout: 30_000 },
+    );
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+    expect(result.stdout).toMatch(/pass 2/);
+  });
+
   it("starts from the package script entry and serves all eight customer routes", async () => {
     const bundle = compile();
     const root = await mkdtemp(join(tmpdir(), "archeform-customer-start-"));
@@ -183,7 +255,7 @@ describe("Restaurant customer bundle target", () => {
       for (const route of [
         "/",
         "/menu",
-        "/menu/dish-truffle-risotto",
+        "/menu/margherita-pizza",
         "/cart",
         "/checkout",
         "/orders",
@@ -215,20 +287,20 @@ describe("Restaurant customer bundle target", () => {
           controller.normalizeCustomerFormAction(
             { quantity: "1" },
             {
-              itemId: "dish-truffle-risotto",
+              itemId: "margherita-pizza",
               expectedVersion: "1",
               idempotencyKey: "controller-add",
             },
           ),
         );
-        expect(added.cart.total).toBe(3200);
+        expect(added.cart.total).toBe(1400);
         const updated = await controller.invokeCustomerAction("cart.update", {
           lineId: added.cart.items[0].id,
           quantity: 2,
           expectedVersion: 2,
           idempotencyKey: "controller-update",
         });
-        expect(updated.cart.total).toBe(6400);
+        expect(updated.cart.total).toBe(2800);
         const removed = await controller.invokeCustomerAction("cart.delete", {
           lineId: added.cart.items[0].id,
           expectedVersion: 3,
@@ -236,7 +308,7 @@ describe("Restaurant customer bundle target", () => {
         });
         expect(removed.cart.items).toEqual([]);
         await controller.invokeCustomerAction("cart.add", {
-          itemId: "dish-truffle-risotto",
+          itemId: "margherita-pizza",
           quantity: 1,
           expectedVersion: 4,
           idempotencyKey: "controller-readd",

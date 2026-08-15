@@ -9,7 +9,7 @@ import type {
   PublishedApplicationGraphCompilationInput,
 } from "../../index.js";
 import { assertRestaurantProductCompilationInput } from "./contracts.js";
-import { planRestaurantProduct } from "./plan.js";
+import { planRestaurantProduct, type RestaurantProductPlanV1 } from "./plan.js";
 import { renderRestaurantCustomerRuntime } from "./runtime-api.js";
 import {
   selectRestaurantExperienceSource,
@@ -119,7 +119,14 @@ export function attachCustomerController(root = document) {
 `;
 }
 
-export function renderRestaurantCustomerJourneyTest(): string {
+export function renderRestaurantCustomerJourneyTest(
+  plan: RestaurantProductPlanV1,
+): string {
+  const menuItems = plan.domain.seedData!.filter(
+    ({ entity }) => entity === "menu-item",
+  );
+  const primary = menuItems[0]!;
+  const secondary = menuItems[1]!;
   return `import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -139,13 +146,16 @@ test("customer journey derives totals, pays, persists audit, and cleans up", asy
   const app = await fixture();
   try {
     const headers = { "content-type": "application/json", "x-role": "customer", "idempotency-key": "generated-add" };
-    const added = await request(app.base, "/api/cart/items", { method: "POST", headers, body: JSON.stringify({ itemId: "dish-truffle-risotto", quantity: 2, expectedVersion: 1, total: 1 }) });
-    assert.equal(added.body.cart.total, 6400);
+    const catalog = (await request(app.base, "/api/catalog")).body.items;
+    const item = catalog.find((candidate) => candidate.id === ${JSON.stringify(primary.id)});
+    assert.equal(item.name, ${JSON.stringify(primary.values.name)});
+    const added = await request(app.base, "/api/cart/items", { method: "POST", headers, body: JSON.stringify({ itemId: ${JSON.stringify(primary.id)}, quantity: 2, expectedVersion: 1, total: 1 }) });
+    assert.equal(added.body.cart.total, item.price * 2);
     const paid = await request(app.base, "/api/checkout", { method: "POST", headers: { ...headers, "idempotency-key": "generated-checkout" }, body: JSON.stringify({ expectedVersion: 2, method: "simulated-card", status: "failed" }) });
-    assert.deepEqual({ total: paid.body.order.total, status: paid.body.order.status }, { total: 6400, status: "paid" });
+    assert.deepEqual({ total: paid.body.order.total, status: paid.body.order.status }, { total: item.price * 2, status: "paid" });
     const persisted = JSON.parse(await readFile(app.statePath, "utf8"));
     assert.equal(persisted.audit.length, 2);
-    for (const route of ["/", "/menu", "/menu/dish-truffle-risotto", "/cart", "/checkout", "/orders", "/orders/order-0001", "/profile"]) {
+    for (const route of ["/", "/menu", "/menu/" + ${JSON.stringify(primary.id)}, "/cart", "/checkout", "/orders", "/orders/order-0001", "/profile"]) {
       const page = await fetch(app.base + route);
       assert.equal(page.status, 200);
       assert.match(await page.text(), /<main class="factory-screen mobile-shell"/);
@@ -156,13 +166,13 @@ test("customer journey derives totals, pays, persists audit, and cleans up", asy
 test("customer boundary denies manager and preserves idempotent replay", async () => {
   const deniedApp = await fixture("manager");
   try {
-    const payload = JSON.stringify({ itemId: "dish-seared-salmon", quantity: 1, expectedVersion: 1 });
+    const payload = JSON.stringify({ itemId: ${JSON.stringify(secondary.id)}, quantity: 1, expectedVersion: 1 });
     const denied = await request(deniedApp.base, "/api/cart/items", { method: "POST", headers: { "content-type": "application/json", "x-role": "customer", "idempotency-key": "denied" }, body: payload });
     assert.equal(denied.response.status, 403);
   } finally { await deniedApp.server.close(); await rm(deniedApp.root, { recursive: true, force: true }); }
   const app = await fixture("customer");
   try {
-    const payload = JSON.stringify({ itemId: "dish-seared-salmon", quantity: 1, expectedVersion: 1 });
+    const payload = JSON.stringify({ itemId: ${JSON.stringify(secondary.id)}, quantity: 1, expectedVersion: 1 });
     const headers = { "content-type": "application/json", "x-role": "customer", "idempotency-key": "replay" };
     const first = await request(app.base, "/api/cart/items", { method: "POST", headers, body: payload });
     const replay = await request(app.base, "/api/cart/items", { method: "POST", headers, body: payload });
@@ -275,7 +285,7 @@ function renderFiles(input: PublishedApplicationGraphCompilationInput): {
     { path: "src/customer/styles.css", content: customerStyles },
     {
       path: "test/customer-journey.test.mjs",
-      content: renderRestaurantCustomerJourneyTest(),
+      content: renderRestaurantCustomerJourneyTest(plan),
     },
   ];
   assertSafeGeneratedFileSet(files);

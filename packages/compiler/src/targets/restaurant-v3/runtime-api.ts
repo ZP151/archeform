@@ -1,3 +1,5 @@
+import { isDeepStrictEqual } from "node:util";
+
 import type { RestaurantProductPlanV1 } from "./plan.js";
 import { renderRestaurantRuntimeStateModule } from "./runtime-state.js";
 
@@ -8,12 +10,215 @@ export type RestaurantRuntimeSourceV1 = {
   readonly serverModule: string;
 };
 
-function seedModule(): string {
+type RestaurantRuntimeCatalogItemV1 = {
+  readonly id: string;
+  readonly version: 1;
+  readonly categoryKey: string;
+  readonly name: string;
+  readonly description: string;
+  readonly price: number;
+  readonly available: boolean;
+  readonly stock: number;
+  readonly preparationMinutes: number;
+  readonly imageUrl: string;
+};
+
+const invalidInputMessage = "Restaurant product compilation input is invalid.";
+
+function failInvalid(): never {
+  throw new Error(invalidInputMessage);
+}
+
+function assertGraphKey(value: unknown): asserts value is string {
+  if (
+    typeof value !== "string" ||
+    value.length < 1 ||
+    value.length > 128 ||
+    !/^[a-z][a-zA-Z0-9-]*$/.test(value)
+  ) {
+    failInvalid();
+  }
+}
+
+function assertBoundedString(
+  value: unknown,
+  minimum: number,
+  maximum: number,
+): asserts value is string {
+  if (
+    typeof value !== "string" ||
+    value.length < minimum ||
+    value.length > maximum ||
+    value.trim() !== value ||
+    /[\u0000-\u001f\u007f]/.test(value)
+  ) {
+    failInvalid();
+  }
+}
+
+function assertInteger(
+  value: unknown,
+  minimum: number,
+  maximum: number,
+): asserts value is number {
+  if (
+    typeof value !== "number" ||
+    !Number.isInteger(value) ||
+    value < minimum ||
+    value > maximum
+  ) {
+    failInvalid();
+  }
+}
+
+function restaurantPriceMinor(price: unknown): number {
+  if (
+    typeof price !== "number" ||
+    !Number.isFinite(price) ||
+    price < 0 ||
+    price > 100_000 ||
+    Number(price.toFixed(2)) !== price
+  ) {
+    failInvalid();
+  }
+  const minor = Math.round(price * 100);
+  if (!Number.isInteger(minor) || minor < 0 || minor > 10_000_000) {
+    failInvalid();
+  }
+  return minor;
+}
+
+function assertSafeImageUrl(value: unknown): asserts value is string {
+  assertBoundedString(value, 1, 2048);
+  const lower = value.toLowerCase();
+  if (
+    !value.startsWith("/") &&
+    !value.startsWith("#") &&
+    !value.startsWith("?") &&
+    !lower.startsWith("http://") &&
+    !lower.startsWith("https://")
+  ) {
+    failInvalid();
+  }
+}
+
+function restaurantRuntimeCatalog(
+  plan: RestaurantProductPlanV1,
+): readonly RestaurantRuntimeCatalogItemV1[] {
+  try {
+    const seedData = plan.domain.seedData;
+    const scenario = plan.seedScenarios[0];
+    if (
+      !Array.isArray(seedData) ||
+      plan.seedScenarios.length !== 1 ||
+      scenario?.key !== "fine-dining-service" ||
+      scenario.records.length !== seedData.length
+    ) {
+      failInvalid();
+    }
+
+    const identities = new Set<string>();
+    for (let index = 0; index < seedData.length; index += 1) {
+      const seed = seedData[index]!;
+      const mirror = scenario.records[index]!;
+      assertGraphKey(seed.entity);
+      assertGraphKey(seed.id);
+      const identity = `${seed.entity}\u0000${seed.id}`;
+      if (identities.has(identity)) failInvalid();
+      identities.add(identity);
+      if (
+        mirror.entityKey !== seed.entity ||
+        !isDeepStrictEqual(mirror.values, seed.values)
+      ) {
+        failInvalid();
+      }
+    }
+
+    const categories = seedData.filter(
+      ({ entity }) => entity === "menu-category",
+    );
+    const items = seedData.filter(({ entity }) => entity === "menu-item");
+    if (
+      categories.length !== 1 ||
+      categories[0]!.id !== "mains" ||
+      items.length !== 2 ||
+      items[0]!.id !== "margherita-pizza" ||
+      items[1]!.id !== "mushroom-risotto"
+    ) {
+      failInvalid();
+    }
+
+    const categoryKeys = new Set<string>();
+    for (const category of categories) {
+      assertGraphKey(category.id);
+      if (
+        !isDeepStrictEqual(Object.keys(category.values), [
+          "name",
+          "sortOrder",
+          "active",
+        ])
+      ) {
+        failInvalid();
+      }
+      assertBoundedString(category.values.name, 1, 120);
+      assertInteger(category.values.sortOrder, 0, 10_000);
+      if (typeof category.values.active !== "boolean") failInvalid();
+      categoryKeys.add(category.id);
+    }
+
+    return Object.freeze(
+      items.map(({ id, values }) => {
+        assertGraphKey(id);
+        if (
+          !isDeepStrictEqual(Object.keys(values), [
+            "categoryKey",
+            "name",
+            "description",
+            "price",
+            "available",
+            "stock",
+            "preparationMinutes",
+            "imageUrl",
+          ])
+        ) {
+          failInvalid();
+        }
+        assertGraphKey(values.categoryKey);
+        if (!categoryKeys.has(values.categoryKey)) failInvalid();
+        assertBoundedString(
+          values.name,
+          id === "margherita-pizza" ? 2 : 1,
+          120,
+        );
+        assertBoundedString(values.description, 1, 1000);
+        const price = restaurantPriceMinor(values.price);
+        if (typeof values.available !== "boolean") failInvalid();
+        assertInteger(values.stock, 0, 10_000);
+        assertInteger(values.preparationMinutes, 1, 1440);
+        assertSafeImageUrl(values.imageUrl);
+        return Object.freeze({
+          id,
+          version: 1 as const,
+          categoryKey: values.categoryKey,
+          name: values.name,
+          description: values.description,
+          price,
+          available: values.available,
+          stock: values.stock,
+          preparationMinutes: values.preparationMinutes,
+          imageUrl: values.imageUrl,
+        });
+      }),
+    );
+  } catch {
+    failInvalid();
+  }
+}
+
+function seedModule(plan: RestaurantProductPlanV1): string {
+  const catalog = restaurantRuntimeCatalog(plan);
   return `export const restaurantSeed = Object.freeze({
-  catalog: [
-    { id: "dish-truffle-risotto", version: 1, name: "Truffle risotto", description: "Arborio rice and winter truffle", price: 3200, available: true, stock: 12, preparationMinutes: 18 },
-    { id: "dish-seared-salmon", version: 1, name: "Seared salmon", description: "Salmon, beurre blanc, herbs", price: 2800, available: true, stock: 10, preparationMinutes: 16 }
-  ],
+  catalog: ${JSON.stringify(catalog)},
   cart: { id: "cart-customer-1", version: 1, items: [], total: 0 },
   orders: [],
   profile: { id: "customer-1", version: 1, subjectRef: "local-customer", displayName: "Guest", email: "guest@example.invalid", locale: "en", marketingOptIn: false, role: "customer" },
@@ -427,7 +632,7 @@ export function renderRestaurantCustomerRuntime(
   return Object.freeze({
     stateModule: renderRestaurantRuntimeStateModule(),
     apiModule: apiModule(plan),
-    seedModule: seedModule(),
+    seedModule: seedModule(plan),
     serverModule: serverModule(plan.publishedRevisionId),
   });
 }
