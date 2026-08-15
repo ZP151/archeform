@@ -273,6 +273,21 @@ historical evidence, not the executable Task 2/Task 3 contract.
 
 ### Blocked decisions and risks
 
+- ADR-0022 (compiler admission of Graph permission/actor additions) is accepted,
+  but its implementation is blocked on a material decision: the canonical
+  Restaurant `policy.permissions`/`flows`/`journeys` are produced by
+  `composeRestaurantProductGraph` from the Restaurant `intent`/`experience`
+  fixtures, which the compiler does not import, and the Graph V3 schema
+  cross-references journeys -> roles -> permissions so the authority cannot be
+  stripped. The revised approach is to extract a cached
+  `getCanonicalRestaurantAuthority()` into `@factory/capabilities`.
+- The Access and Workflow contextual editors depend on ADR-0022 and are not a
+  hard Task 9 prerequisite (Task 9's contextual-editing acceptance is satisfied
+  by the delivered Page/Data/Experience editors).
+- Task 9 guarded real-model acceptance, `main` integration, and the repository
+  release require an environment-only OpenAI credential plus the Docker/Compose
+  full-stack local topology, which are not available in this autonomous session.
+
 No founder technology decision is currently blocking this prerequisite.
 [`ADR-0011`](adr/adr-0011-product-recipe-surface-page-ownership.md) is Accepted
 from the exact 2026-08-14 founder response
@@ -747,10 +762,12 @@ Authorities:
 
 Tasks 0-8C, the Task 8 source-breadth compiler core, the Task 8 source-export
 route plus Workbench download surface, and the generated-runtime Graph-valid
-permission/actor enforcement are delivered. The next gate is the Access and
-Workflow contextual editors (now unblocked by the runtime enforcement),
-followed by Task 9 guarded real-model acceptance. Publish/Compilation lifecycle
-and every broader editor remain blocked.
+permission/actor enforcement are delivered. The next gate is the ADR-0022
+compiler admission of permission/actor additions (blocked on a
+`@factory/capabilities` canonical-authority extraction), then the Access and
+Workflow contextual editors, then Task 9 guarded real-model acceptance (which
+requires an environment-only OpenAI credential plus the Docker/Compose full
+stack). Publish/Compilation lifecycle and every broader editor remain blocked.
 
 ## Explicitly deferred
 
