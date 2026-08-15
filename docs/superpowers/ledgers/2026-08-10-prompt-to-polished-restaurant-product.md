@@ -5255,6 +5255,30 @@ Controller delivery: exact eleven implementation plus six governance paths,
 subject `feat(control-plane): add source archive export`, non-force push,
 local/upstream equality, clean tree.
 
+## Generated runtime permission and actor enforcement
+
+State: `delivered` under accepted
+[ADR-0021](../../adr/adr-0021-generated-runtime-permission-actor-enforcement.md).
+
+Delivered: the generated Restaurant API handler now serializes
+`policy.permissions`, `roles`, `flows`, `fieldAuthorities`, and
+`bindingPolicies` as frozen data and authorizes every state-changing endpoint
+through generic `permission`/`transition`/`flowRequest`/`clientField`/
+`writableField` predicates, so any Graph-valid permission or actor addition is
+enforced and any removal fails closed. No Graph, Capability, Recipe, schema,
+endpoint, state-version, dependency, provider, service, Docker, Compose, or
+deployment change.
+
+Gates: focused customer 39/39 and merchant 6/6; full Compiler 610, Graph 661,
+Capabilities 384; three no-emit/build gates; independent Sol review ACCEPT with
+P0/P1/P2=0/0/0 after two P1 and one P2 repair.
+
+Unblocked: the Workbench Access and Workflow contextual editors.
+
+Controller delivery: exact three implementation plus six governance paths,
+subject `feat(compiler): enforce graph-valid runtime permissions and actors`,
+non-force push, local/upstream equality, clean tree.
+
 ## Task 9 — Close the Restaurant Product with guarded real-model acceptance
 
 State: `planned`.

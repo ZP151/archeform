@@ -251,6 +251,16 @@ historical evidence, not the executable Task 2/Task 3 contract.
   returned ACCEPT with P0/P1/P2=0/0/0. The
   `e2e/restaurant-source-export.spec.ts` journey is deferred to Task 9's
   full-stack acceptance.
+- Generated runtime Graph-valid permission and actor enforcement is `delivered`
+  under accepted
+  [ADR-0021](adr/adr-0021-generated-runtime-permission-actor-enforcement.md). It
+  replaces the fixed capability-flag authorization with generic
+  `permission`/`transition`/`flowRequest`/`clientField`/`writableField` predicates
+  over the serialized Published Graph `policy.permissions`, `flows`,
+  `fieldAuthorities`, and `bindingPolicies`, so any Graph-valid permission or actor
+  addition is enforced and any removal fails closed. Independent Sol review
+  returned ACCEPT with P0/P1/P2=0/0/0 after two P1 and one P2 repair. This is the
+  prerequisite for the Access and Workflow contextual editors.
 - The first independent two-axis Task 7B review returned NOT READY with
   P0/P1/P2=0/6/3. Actionable findings cover hostile array reflection
   amplification, unchanged-order 400 versus fixed 409, registry closure after
@@ -735,12 +745,12 @@ Authorities:
 
 ## Next gate
 
-Tasks 0-8C, the Task 8 source-breadth compiler core, and the Task 8
-source-export route plus Workbench download surface are delivered. The next gate
-is Access and Workflow contextual editors (blocked at design until the runtime
-enforces Graph-valid permission/actor additions), followed by Task 9 guarded
-real-model acceptance. Publish/Compilation lifecycle and every broader editor
-remain blocked.
+Tasks 0-8C, the Task 8 source-breadth compiler core, the Task 8 source-export
+route plus Workbench download surface, and the generated-runtime Graph-valid
+permission/actor enforcement are delivered. The next gate is the Access and
+Workflow contextual editors (now unblocked by the runtime enforcement),
+followed by Task 9 guarded real-model acceptance. Publish/Compilation lifecycle
+and every broader editor remain blocked.
 
 ## Explicitly deferred
 

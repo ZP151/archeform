@@ -307,6 +307,21 @@ describe("generated Restaurant merchant runtime", () => {
     await kitchen.server.close();
   });
 
+  it("denies non-manager order-priority mutation", async () => {
+    const app = await generatedRuntime();
+    const kitchen = await start(app, "kitchen");
+    const result = await json(
+      kitchen.base,
+      "/api/merchant/orders/order-0001/actions",
+      mutation(
+        { action: "set-priority", priority: "high", expectedVersion: 1 },
+        "kitchen-priority",
+      ),
+    );
+    expect(result.response.status).toBe(403);
+    await kitchen.server.close();
+  });
+
   it("denies fields whose exact Graph binding or client authority is absent", async () => {
     const app = await generatedRuntime((plan) => {
       const available = plan.bindingPolicies.filter(

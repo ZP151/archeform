@@ -237,165 +237,12 @@ function seedModule(plan: RestaurantProductPlanV1): string {
 }
 
 function apiModule(plan: RestaurantProductPlanV1): string {
-  const customerPermissions = new Set(
-    plan.policy.permissions
-      .filter(({ role }) => role === "customer")
-      .flatMap(({ resource, actions }) =>
-        actions.map((action) => `${resource}:${action}`),
-      ),
-  );
-  const flowRequests = new Set(
-    plan.bindingPolicies
-      .filter(
-        (policy) =>
-          policy.kind === "flow-transition" && policy.access === "request",
-      )
-      .map((policy) =>
-        policy.kind === "flow-transition"
-          ? `${policy.flowKey}:${policy.from}:${policy.event}:${policy.to}`
-          : "",
-      ),
-  );
-  const clientFields = new Set(
-    plan.fieldAuthorities
-      .filter(({ authority }) => authority === "client")
-      .map(({ entityKey, fieldKey }) => `${entityKey}.${fieldKey}`),
-  );
-  const runtimePolicy = {
-    "cart.add": customerPermissions.has("order-line:create"),
-    "cart.update": customerPermissions.has("order-line:update"),
-    "cart.delete": customerPermissions.has("order-line:delete"),
-    checkout:
-      customerPermissions.has("order:submit") &&
-      customerPermissions.has("order:pay") &&
-      flowRequests.has("restaurant-order:cart:submit:submitted") &&
-      flowRequests.has("restaurant-order:submitted:pay:paid"),
-    "profile.update": [
-      "restaurant-principal.displayName",
-      "restaurant-principal.locale",
-      "restaurant-principal.marketingOptIn",
-    ].every((field) => clientFields.has(field)),
-  };
-  const permission = (role: string, resource: string, action: string) =>
-    plan.policy.permissions.some(
-      (entry) =>
-        entry.role === role &&
-        entry.resource === resource &&
-        entry.actions.includes(action),
-    );
-  const transition = (
-    flowKey: string,
-    from: string,
-    event: string,
-    to: string,
-    role: string,
-  ) =>
-    plan.flows
-      .find(({ id }) => id === flowKey)
-      ?.transitions.some(
-        (entry) =>
-          entry.from === from &&
-          entry.event === event &&
-          entry.to === to &&
-          entry.roles?.includes(role),
-      ) === true;
-  const writableField = (pageId: string, entityKey: string, fieldKey: string) =>
-    plan.fieldAuthorities.some(
-      (entry) =>
-        entry.entityKey === entityKey &&
-        entry.fieldKey === fieldKey &&
-        entry.authority === "client",
-    ) &&
-    plan.bindingPolicies.some(
-      (entry) =>
-        entry.pageId === pageId &&
-        entry.kind === "domain-field" &&
-        entry.entityKey === entityKey &&
-        entry.fieldKey === fieldKey &&
-        entry.access === "write" &&
-        entry.authority === "client",
-    );
-  const catalogFields = Object.fromEntries(
-    ["name", "description", "price", "available", "preparationMinutes"].map(
-      (field) => [
-        field,
-        writableField("merchant-menu-management", "menu-item", field),
-      ],
-    ),
-  );
-  const settingsFields = Object.fromEntries(
-    [
-      "name",
-      "currency",
-      "taxRate",
-      "serviceChargeRate",
-      "timezone",
-      "logoUrl",
-      "serviceOpen",
-    ].map((field) => [
-      field,
-      writableField("merchant-settings", "restaurant-location", field),
-    ]),
-  );
-  const merchantPolicy = {
-    catalogFields,
-    inventoryStock:
-      permission("manager", "inventory-ledger", "record-manager-adjustment") &&
-      transition(
-        "restaurant-inventory-ledger",
-        "recorded",
-        "record-manager-adjustment",
-        "recorded",
-        "manager",
-      ) &&
-      plan.bindingPolicies.some(
-        (entry) =>
-          entry.pageId === "merchant-menu-management" &&
-          entry.kind === "flow-transition" &&
-          entry.flowKey === "restaurant-inventory-ledger" &&
-          entry.from === "recorded" &&
-          entry.event === "record-manager-adjustment" &&
-          entry.to === "recorded" &&
-          entry.access === "request",
-      ),
-    settings:
-      permission("manager", "restaurant-location", "update") &&
-      Object.values(settingsFields).every(Boolean),
-    settingsFields,
-    cancel:
-      permission("manager", "order", "cancel") &&
-      transition("restaurant-order", "paid", "cancel", "cancelled", "manager"),
-    pay:
-      permission("cashier", "order", "pay") &&
-      transition("restaurant-order", "submitted", "pay", "paid", "cashier"),
-    accept:
-      permission("kitchen", "order", "accept") &&
-      transition("restaurant-order", "paid", "accept", "accepted", "kitchen"),
-    startPreparing:
-      permission("kitchen", "order", "start-preparing") &&
-      transition(
-        "restaurant-order",
-        "accepted",
-        "start-preparing",
-        "preparing",
-        "kitchen",
-      ),
-    markReady:
-      permission("kitchen", "order", "mark-ready") &&
-      transition(
-        "restaurant-order",
-        "preparing",
-        "mark-ready",
-        "ready",
-        "kitchen",
-      ),
-    table: ["activate", "close", "expire"].every((action) =>
-      permission("manager", "table-session", action),
-    ),
-    priority:
-      writableField("merchant-orders", "order", "priority") &&
-      plan.policy.roles.includes("manager"),
-  };
+  const permissions = plan.policy.permissions;
+  const roles = plan.policy.roles;
+  const flows = plan.flows;
+  const fieldAuthorities = plan.fieldAuthorities;
+  const bindingPolicies = plan.bindingPolicies;
+
   return `import { createHash } from "node:crypto";
 
 const json = (response, status, body) => {
@@ -403,9 +250,16 @@ const json = (response, status, body) => {
   response.end(JSON.stringify(body));
 };
 const digest = (value) => createHash("sha256").update(value).digest("hex");
-const runtimePolicy = Object.freeze(${JSON.stringify(runtimePolicy)});
-const merchantPolicy = Object.freeze(${JSON.stringify(merchantPolicy)});
-const may = (operation) => runtimePolicy[operation] === true;
+const permissions = Object.freeze(${JSON.stringify(permissions)});
+const roles = Object.freeze(${JSON.stringify(roles)});
+const flows = Object.freeze(${JSON.stringify(flows)});
+const fieldAuthorities = Object.freeze(${JSON.stringify(fieldAuthorities)});
+const bindingPolicies = Object.freeze(${JSON.stringify(bindingPolicies)});
+const permission = (role, resource, action) => roles.includes(role) && permissions.some((entry) => entry.role === role && entry.resource === resource && entry.actions.includes(action));
+const transition = (flowKey, from, event, to, role) => flows.some((flow) => flow.id === flowKey && flow.transitions.some((entry) => entry.from === from && entry.event === event && entry.to === to && entry.roles?.includes(role) === true));
+const flowRequest = (flowKey, from, event, to) => bindingPolicies.some((entry) => entry.kind === "flow-transition" && entry.flowKey === flowKey && entry.from === from && entry.event === event && entry.to === to && entry.access === "request");
+const clientField = (entityKey, fieldKey) => fieldAuthorities.some((entry) => entry.entityKey === entityKey && entry.fieldKey === fieldKey && entry.authority === "client");
+const writableField = (pageId, entityKey, fieldKey) => clientField(entityKey, fieldKey) && bindingPolicies.some((entry) => entry.pageId === pageId && entry.kind === "domain-field" && entry.entityKey === entityKey && entry.fieldKey === fieldKey && entry.access === "write" && entry.authority === "client");
 function assertBounded(value, depth = 0) {
   if (depth > 12) { const error = new Error("invalid"); error.status = 400; throw error; }
   if (typeof value === "string" && value.length > 4096) { const error = new Error("invalid"); error.status = 400; throw error; }
@@ -445,6 +299,7 @@ export function createRestaurantApiHandler(store, principalRole = "customer") {
       const url = new URL(request.url ?? "/", "http://127.0.0.1");
       const path = url.pathname;
       if (request.method === "GET" && path === "/health") return json(response, 200, { status: "ready", schemaVersion: 1 });
+      if (!roles.includes(principalRole)) return json(response, 403, { error: "Request denied." });
       if (request.method === "GET" && path === "/api/catalog") return json(response, 200, { items: (await store.read()).catalog });
       if (request.method === "GET" && path.startsWith("/api/catalog/")) {
         const item = (await store.read()).catalog.find((candidate) => candidate.id === decodeURIComponent(path.slice(13)));
@@ -452,7 +307,7 @@ export function createRestaurantApiHandler(store, principalRole = "customer") {
       }
       if (request.method === "GET" && path === "/api/cart") return json(response, 200, { cart: (await store.read()).cart });
       if (request.method === "POST" && path === "/api/cart/items") {
-        if (principalRole !== "customer" || !may("cart.add")) return json(response, 403, { error: "Request denied." });
+        if (!permission(principalRole, "order-line", "create")) return json(response, 403, { error: "Request denied." });
         const raw = await body(request); const payload = JSON.stringify(raw);
         return json(response, 200, await store.mutate((state) => {
           const replay = receipt(state, "cart.add", String(request.headers["idempotency-key"] ?? ""), payload);
@@ -470,7 +325,7 @@ export function createRestaurantApiHandler(store, principalRole = "customer") {
       }
       const cartLine = path.match(/^\\/api\\/cart\\/items\\/([^/]+)$/);
       if (cartLine && request.method === "PATCH") {
-        if (principalRole !== "customer" || !may("cart.update")) return json(response, 403, { error: "Request denied." });
+        if (!permission(principalRole, "order-line", "update")) return json(response, 403, { error: "Request denied." });
         const raw = await body(request); const payload = JSON.stringify(raw);
         return json(response, 200, await store.mutate((state) => {
           const replay = receipt(state, "cart.update:" + cartLine[1], String(request.headers["idempotency-key"] ?? ""), payload); if (replay.previous) return replay.previous.response;
@@ -482,7 +337,7 @@ export function createRestaurantApiHandler(store, principalRole = "customer") {
         }));
       }
       if (cartLine && request.method === "DELETE") {
-        if (principalRole !== "customer" || !may("cart.delete")) return json(response, 403, { error: "Request denied." });
+        if (!permission(principalRole, "order-line", "delete")) return json(response, 403, { error: "Request denied." });
         const payload = "delete:" + cartLine[1];
         return json(response, 200, await store.mutate((state) => {
           const replay = receipt(state, "cart.delete:" + cartLine[1], String(request.headers["idempotency-key"] ?? ""), payload); if (replay.previous) return replay.previous.response;
@@ -493,7 +348,7 @@ export function createRestaurantApiHandler(store, principalRole = "customer") {
         }));
       }
       if (request.method === "POST" && path === "/api/checkout") {
-        if (principalRole !== "customer" || !may("checkout")) return json(response, 403, { error: "Request denied." });
+        if (!permission(principalRole, "order", "submit") || !permission(principalRole, "order", "pay") || !flowRequest("restaurant-order", "cart", "submit", "submitted") || !flowRequest("restaurant-order", "submitted", "pay", "paid")) return json(response, 403, { error: "Request denied." });
         const raw = await body(request); const payload = JSON.stringify(raw);
         return json(response, 200, await store.mutate((state) => {
           const replay = receipt(state, "checkout", String(request.headers["idempotency-key"] ?? ""), payload); if (replay.previous) return replay.previous.response;
@@ -509,7 +364,7 @@ export function createRestaurantApiHandler(store, principalRole = "customer") {
       if (request.method === "GET" && path.startsWith("/api/orders/")) { const order = (await store.read()).orders.find((candidate) => candidate.id === path.slice(12)); return order ? json(response, 200, { order }) : json(response, 404, { error: "Not found." }); }
       if (request.method === "GET" && path === "/api/profile") return json(response, 200, { profile: (await store.read()).profile });
       if (request.method === "PUT" && path === "/api/profile") {
-        if (principalRole !== "customer" || !may("profile.update")) return json(response, 403, { error: "Request denied." });
+        if (!clientField("restaurant-principal", "displayName") || !clientField("restaurant-principal", "locale") || !clientField("restaurant-principal", "marketingOptIn")) return json(response, 403, { error: "Request denied." });
         const raw = await body(request); const payload = JSON.stringify(raw);
         return json(response, 200, await store.mutate((state) => {
           const replay = receipt(state, "profile.update", String(request.headers["idempotency-key"] ?? ""), payload); if (replay.previous) return replay.previous.response;
@@ -531,7 +386,7 @@ export function createRestaurantApiHandler(store, principalRole = "customer") {
       if (catalogItem && request.method === "PATCH") {
         const raw = await body(request); const payload = JSON.stringify(raw); const itemId = decodeURIComponent(catalogItem[1]);
         const requestedFields = ["name", "description", "price", "available", "preparationMinutes"].filter((field) => Object.hasOwn(raw, field));
-        if (principalRole !== "manager" || requestedFields.some((field) => merchantPolicy.catalogFields[field] !== true) || (Object.hasOwn(raw, "stock") && merchantPolicy.inventoryStock !== true)) return json(response, 403, { error: "Request denied." });
+        if (!permission(principalRole, "menu-item", "update") || requestedFields.some((field) => !writableField("merchant-menu-management", "menu-item", field)) || (Object.hasOwn(raw, "stock") && !(permission(principalRole, "inventory-ledger", "record-manager-adjustment") && transition("restaurant-inventory-ledger", "recorded", "record-manager-adjustment", "recorded", principalRole) && flowRequest("restaurant-inventory-ledger", "recorded", "record-manager-adjustment", "recorded")))) return json(response, 403, { error: "Request denied." });
         return json(response, 200, await store.mutate((state) => {
           const replay = receipt(state, "merchant.catalog:" + itemId, String(request.headers["idempotency-key"] ?? ""), payload); if (replay.previous) return replay.previous.response;
           const item = state.catalog.find((candidate) => candidate.id === itemId); if (!item) fail(404); exactVersion(raw, item); const updates = {};
@@ -548,7 +403,7 @@ export function createRestaurantApiHandler(store, principalRole = "customer") {
       const orderAction = path.match(/^\\/api\\/merchant\\/orders\\/([^/]+)\\/actions$/);
       if (orderAction && request.method === "POST") {
         const raw = await body(request); const payload = JSON.stringify(raw); const orderId = decodeURIComponent(orderAction[1]);
-        const allowed = (raw.action === "cancel" && principalRole === "manager" && merchantPolicy.cancel) || (raw.action === "set-priority" && principalRole === "manager" && merchantPolicy.priority) || (raw.action === "pay" && principalRole === "cashier" && merchantPolicy.pay);
+        const allowed = (raw.action === "cancel" && permission(principalRole, "order", "cancel") && transition("restaurant-order", "paid", "cancel", "cancelled", principalRole)) || (raw.action === "set-priority" && writableField("merchant-orders", "order", "priority") && permission(principalRole, "order", "cancel")) || (raw.action === "pay" && permission(principalRole, "order", "pay") && transition("restaurant-order", "submitted", "pay", "paid", principalRole));
         if (!allowed) return json(response, 403, { error: "Request denied." });
         return json(response, 200, await store.mutate((state) => {
           const replay = receipt(state, "merchant.order:" + orderId + ":" + raw.action, String(request.headers["idempotency-key"] ?? ""), payload); if (replay.previous) return replay.previous.response;
@@ -562,29 +417,29 @@ export function createRestaurantApiHandler(store, principalRole = "customer") {
       const kitchenAction = path.match(/^\\/api\\/merchant\\/kitchen\\/([^/]+)\\/actions$/);
       if (kitchenAction && request.method === "POST") {
         const raw = await body(request); const payload = JSON.stringify(raw); const orderId = decodeURIComponent(kitchenAction[1]);
-        const transitions = { accept: ["paid", "accepted", merchantPolicy.accept], "start-preparing": ["accepted", "preparing", merchantPolicy.startPreparing], "mark-ready": ["preparing", "ready", merchantPolicy.markReady] }; const transition = transitions[raw.action];
-        if (principalRole !== "kitchen" || !transition?.[2]) return json(response, 403, { error: "Request denied." });
+        const kitchenTransitions = { accept: ["paid", "accepted"], "start-preparing": ["accepted", "preparing"], "mark-ready": ["preparing", "ready"] }; const kitchenTransition = kitchenTransitions[raw.action];
+        if (!kitchenTransition || !permission(principalRole, "order", raw.action) || !transition("restaurant-order", kitchenTransition[0], raw.action, kitchenTransition[1], principalRole)) return json(response, 403, { error: "Request denied." });
         return json(response, 200, await store.mutate((state) => {
           const replay = receipt(state, "merchant.kitchen:" + orderId + ":" + raw.action, String(request.headers["idempotency-key"] ?? ""), payload); if (replay.previous) return replay.previous.response;
-          const order = state.orders.find((candidate) => candidate.id === orderId); if (!order) fail(404); exactVersion(raw, order); if (order.status !== transition[0]) fail(409);
-          order.status = transition[1]; order.kitchenStatus = transition[1]; order.version += 1; const timestamp = raw.action === "accept" ? "acceptedAt" : raw.action === "start-preparing" ? "startedAt" : "readyAt"; order[timestamp] = "2026-08-14T00:00:00.000Z";
+          const order = state.orders.find((candidate) => candidate.id === orderId); if (!order) fail(404); exactVersion(raw, order); if (order.status !== kitchenTransition[0]) fail(409);
+          order.status = kitchenTransition[1]; order.kitchenStatus = kitchenTransition[1]; order.version += 1; const timestamp = raw.action === "accept" ? "acceptedAt" : raw.action === "start-preparing" ? "startedAt" : "readyAt"; order[timestamp] = "2026-08-14T00:00:00.000Z";
           audit(state, principalRole, "kitchen." + raw.action, order.id); const response = { order: structuredClone(order) }; state.receipts[replay.receiptKey] = { payloadDigest: replay.payloadDigest, response }; return response;
         }));
       }
       const tableAction = path.match(/^\\/api\\/merchant\\/tables\\/([^/]+)\\/actions$/);
       if (tableAction && request.method === "POST") {
-        if (principalRole !== "manager" || !merchantPolicy.table) return json(response, 403, { error: "Request denied." });
-        const raw = await body(request); const payload = JSON.stringify(raw); const tableId = decodeURIComponent(tableAction[1]); const transitions = { activate: ["open", "active"], close: ["active", "closed"], expire: [null, "closed"] }; const transition = transitions[raw.action]; if (!transition) fail(400);
+        const raw = await body(request); const payload = JSON.stringify(raw); const tableId = decodeURIComponent(tableAction[1]); const tableTransitions = { activate: ["open", "active"], close: ["active", "closed"], expire: [null, "closed"] }; const tableTransition = tableTransitions[raw.action]; if (!tableTransition) fail(400);
+        if (!permission(principalRole, "table-session", raw.action)) return json(response, 403, { error: "Request denied." });
         return json(response, 200, await store.mutate((state) => {
           const replay = receipt(state, "merchant.table:" + tableId + ":" + raw.action, String(request.headers["idempotency-key"] ?? ""), payload); if (replay.previous) return replay.previous.response;
-          const table = state.tables.find((candidate) => candidate.id === tableId); if (!table) fail(404); exactVersion(raw, table); if (transition[0] && table.status !== transition[0]) fail(409); if (raw.action === "expire" && table.status !== "open" && table.status !== "active") fail(409);
-          table.status = transition[1]; table.version += 1; audit(state, principalRole, "table." + raw.action, table.id); const response = { table: structuredClone(table) }; state.receipts[replay.receiptKey] = { payloadDigest: replay.payloadDigest, response }; return response;
+          const table = state.tables.find((candidate) => candidate.id === tableId); if (!table) fail(404); exactVersion(raw, table); if (tableTransition[0] && table.status !== tableTransition[0]) fail(409); if (raw.action === "expire" && table.status !== "open" && table.status !== "active") fail(409);
+          table.status = tableTransition[1]; table.version += 1; audit(state, principalRole, "table." + raw.action, table.id); const response = { table: structuredClone(table) }; state.receipts[replay.receiptKey] = { payloadDigest: replay.payloadDigest, response }; return response;
         }));
       }
       if (request.method === "PUT" && path === "/api/merchant/settings") {
         const raw = await body(request); const payload = JSON.stringify(raw);
         const requestedFields = ["name", "currency", "taxRate", "serviceChargeRate", "timezone", "logoUrl", "serviceOpen"].filter((field) => Object.hasOwn(raw, field));
-        if (principalRole !== "manager" || !merchantPolicy.settings || requestedFields.some((field) => merchantPolicy.settingsFields[field] !== true)) return json(response, 403, { error: "Request denied." });
+        if (!permission(principalRole, "restaurant-location", "update") || requestedFields.some((field) => !writableField("merchant-settings", "restaurant-location", field))) return json(response, 403, { error: "Request denied." });
         return json(response, 200, await store.mutate((state) => {
           const replay = receipt(state, "merchant.settings", String(request.headers["idempotency-key"] ?? ""), payload); if (replay.previous) return replay.previous.response; exactVersion(raw, state.settings);
           if (typeof raw.name !== "string" || !raw.name.trim() || raw.name.length > 120 || typeof raw.currency !== "string" || !/^[A-Z]{3}$/.test(raw.currency) || typeof raw.taxRate !== "number" || raw.taxRate < 0 || raw.taxRate > 100 || typeof raw.serviceChargeRate !== "number" || raw.serviceChargeRate < 0 || raw.serviceChargeRate > 100 || typeof raw.timezone !== "string" || !raw.timezone || raw.timezone.length > 100 || typeof raw.logoUrl !== "string" || raw.logoUrl.length > 2048 || (raw.logoUrl && !/^https?:\\/\\//.test(raw.logoUrl)) || typeof raw.serviceOpen !== "boolean") fail(400);

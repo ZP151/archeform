@@ -428,9 +428,11 @@ independent V3 Draft with an immutable dual-surface Snapshot V2 preview. Task 7A
 and 7B deliver Page title and same-set block-order edits through Draft r.4. The
 ADR-0015 Task 7C is delivered through Draft r.5 at `78955444`. ADR-0016 Task 7D
 Experience is delivered through Draft r.6 at `35da63df` with exact 29-path
-containment and pushed equality. Access and Workflow follow-ups remain blocked
-at design because the current generated runtime would not enforce the proposed
-Graph-only authority. ADR-0017 Task 8A Source Explorer is delivered at
+containment and pushed equality. Access and Workflow follow-ups were blocked at
+design because the generated runtime did not enforce Graph-only authority;
+ADR-0021 now delivers that generic Graph-valid permission/actor enforcement, so
+the Access and Workflow editors are unblocked. ADR-0017 Task 8A Source Explorer
+is delivered at
 `8c2767bb` with exact-15 containment and pushed equality. Task 8B Source Search
 is delivered at `84a90c4b` with exact-eight containment and pushed equality.
 Task 8C Verified Source Transfer is delivered at `97b6dbdb` with exact-eight
@@ -745,8 +747,9 @@ Task 5 merchant/dual-surface compilation, Task 6A/6B Workbench foundations, and
 Task 7A-7D contextual editing are delivered through pushed-equal commit
 `35da63df`; Task 7D adds only Light -> Dark, Draft r.6, one active Snapshot V2,
 and strict-response-only Customer/Merchant frame updates. Access and Workflow
-follow-ups are stopped at design because the generated runtime would not enforce
-their Graph-only authority. ADR-0017 Task 8A is delivered at `8c2767bb` for a
+follow-ups were stopped at design because the generated runtime would not enforce
+their Graph-only authority; ADR-0021 now delivers that enforcement. ADR-0017
+Task 8A is delivered at `8c2767bb` for a
 read-only succeeded-Compilation artifact tree and strictly bound content viewer.
 Task 8B Source Search is delivered at `84a90c4b`; Task 8C Verified Source
 Transfer is delivered at `97b6dbdb`. ADR-0018 D0 Restaurant V3 Runtime Catalog

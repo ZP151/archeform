@@ -626,4 +626,60 @@ describe("generated Restaurant customer runtime", () => {
       new Error("Restaurant product compilation input is invalid."),
     );
   });
+
+  it("fails closed when a Graph permission is removed", async () => {
+    const plan = structuredClone(canonicalPlan());
+    const entry = plan.policy.permissions.find(
+      (permission) =>
+        permission.role === "customer" && permission.resource === "order-line",
+    )!;
+    entry.actions = entry.actions.filter((action) => action !== "create");
+
+    const app = await startRuntime("customer", plan);
+    const result = await json(app.base, "/api/cart/items", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "idempotency-key": "removed-permission-1",
+      },
+      body: JSON.stringify({
+        itemId: "margherita-pizza",
+        quantity: 1,
+        expectedVersion: 1,
+      }),
+    });
+
+    expect(result.response.status).toBe(403);
+  });
+
+  it("enforces an added Graph permission for a new actor", async () => {
+    const plan = structuredClone(canonicalPlan());
+    plan.policy.roles = [...plan.policy.roles, "waiter"];
+    plan.policy.permissions = [
+      ...plan.policy.permissions,
+      { role: "waiter", resource: "order-line", actions: ["create"] },
+    ];
+
+    const app = await startRuntime("waiter", plan);
+    const result = await json(app.base, "/api/cart/items", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "idempotency-key": "added-permission-1",
+      },
+      body: JSON.stringify({
+        itemId: "margherita-pizza",
+        quantity: 1,
+        expectedVersion: 1,
+      }),
+    });
+
+    expect(result.response.status).toBe(200);
+  });
+
+  it("rejects an undeclared principal role", async () => {
+    const app = await startRuntime("intruder");
+    const catalog = await json(app.base, "/api/catalog");
+    expect(catalog.response.status).toBe(403);
+  });
 });
