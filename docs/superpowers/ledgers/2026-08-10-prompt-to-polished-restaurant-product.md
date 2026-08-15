@@ -5231,6 +5231,30 @@ Controller delivery: exact ten implementation plus six governance paths, subject
 `feat(source): add diff, export, and controlled overlay`, non-force push,
 local/upstream equality, clean tree.
 
+## Task 8 source-export route (control plane + Workbench)
+
+State: `delivered` under accepted
+[ADR-0020](../../adr/adr-0020-workbench-source-export-route.md).
+
+Delivered: compiler facade re-exports of the source target; one read-only,
+tenant- and digest-scoped `GET /compilations/:id/source-archive?format=zip|git`
+route (rehashes every artifact via `GeneratedArtifactReader`, then
+`buildSourceZip`/`buildGitExport`); the Workbench `getCompilationSourceArchive`
+client transport; and the Code canvas download buttons. No Graph, Capability,
+Recipe, schema, dependency, provider, service, Docker, Compose, or deployment
+change.
+
+Gates: focused index-exports 2/2, source-archive 6/6, client 2/2, code-canvas
+46/46; full Compiler 606, Control Plane 420, Workbench 521; three no-emit
+typechecks; independent Sol review ACCEPT with P0/P1/P2=0/0/0.
+
+Deferred: the `e2e/restaurant-source-export.spec.ts` journey, which runs during
+Task 9's full-stack acceptance.
+
+Controller delivery: exact eleven implementation plus six governance paths,
+subject `feat(control-plane): add source archive export`, non-force push,
+local/upstream equality, clean tree.
+
 ## Task 9 — Close the Restaurant Product with guarded real-model acceptance
 
 State: `planned`.

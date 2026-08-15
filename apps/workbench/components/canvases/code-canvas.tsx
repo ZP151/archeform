@@ -139,6 +139,7 @@ export function CodeCanvas({
   onExportPublishedGraph,
   onImportPublishedGraph,
   onInspectArtifact,
+  onDownloadSourceArchive,
   onOpenPreview,
   onStartPreview,
   onStopPreview,
@@ -156,6 +157,7 @@ export function CodeCanvas({
   onExportPublishedGraph: () => void;
   onImportPublishedGraph: (file: File) => void;
   onInspectArtifact: (artifactPath: string) => void;
+  onDownloadSourceArchive: (format: "zip" | "git") => void;
   onOpenPreview: () => void;
   onStartPreview: () => void;
   onStopPreview: () => void;
@@ -482,6 +484,20 @@ export function CodeCanvas({
                     type="button"
                   >
                     Download current file
+                  </button>
+                  <button
+                    disabled={compilation?.result.status !== "succeeded"}
+                    onClick={() => onDownloadSourceArchive("zip")}
+                    type="button"
+                  >
+                    Download source ZIP
+                  </button>
+                  <button
+                    disabled={compilation?.result.status !== "succeeded"}
+                    onClick={() => onDownloadSourceArchive("git")}
+                    type="button"
+                  >
+                    Download source Git export
                   </button>
                 </div>
               </div>

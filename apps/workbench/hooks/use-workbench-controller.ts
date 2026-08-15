@@ -142,6 +142,7 @@ export type WorkbenchController = {
   readonly editTemplateExperienceTheme: (mode: "dark") => void;
   readonly returnToTemplatePreview: () => void;
   readonly inspectArtifact: (artifactPath: string) => void;
+  readonly downloadSourceArchive: (format: "zip" | "git") => Promise<void>;
   readonly startPreview: () => void;
   readonly stopPreview: () => void;
   readonly openPreview: () => void;
@@ -674,6 +675,38 @@ export function useWorkbenchController({
             setArtifactLoading(false);
           }
         });
+    },
+    [compilation, controlPlane],
+  );
+
+  const downloadSourceArchive = useCallback(
+    async (format: "zip" | "git") => {
+      if (!compilation || compilation.result.status !== "succeeded") return;
+      setOperationError(null);
+      let objectUrl: string | null = null;
+      try {
+        const archive = await controlPlane.getCompilationSourceArchive(
+          compilation.id,
+          format,
+        );
+        objectUrl = URL.createObjectURL(
+          new Blob([archive.bytes.slice()], { type: archive.contentType }),
+        );
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = archive.filename;
+        link.click();
+      } catch {
+        setOperationError("Generated source archive could not be downloaded.");
+      } finally {
+        if (objectUrl !== null) {
+          try {
+            URL.revokeObjectURL(objectUrl);
+          } catch {
+            // Revocation is best-effort after the one required attempt.
+          }
+        }
+      }
     },
     [compilation, controlPlane],
   );
@@ -1215,6 +1248,7 @@ export function useWorkbenchController({
     editTemplateExperienceTheme,
     returnToTemplatePreview,
     inspectArtifact,
+    downloadSourceArchive,
     startPreview,
     stopPreview,
     openPreview,

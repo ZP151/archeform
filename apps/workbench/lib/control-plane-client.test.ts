@@ -2219,4 +2219,49 @@ describe("ControlPlaneClient", () => {
       }),
     );
   });
+
+  describe("getCompilationSourceArchive", () => {
+    it("returns the archive bytes and derived filename for ZIP", async () => {
+      const bytes = new Uint8Array([0x50, 0x4b, 0x03, 0x04]);
+      const fetcher = vi.fn().mockResolvedValue(
+        new Response(bytes, {
+          status: 200,
+          headers: { "content-type": "application/zip" },
+        }),
+      );
+      const client = new ControlPlaneClient(
+        "http://control-plane.test",
+        fetcher,
+      );
+
+      const archive = await client.getCompilationSourceArchive(
+        "compilation-1",
+        "zip",
+      );
+
+      expect(archive.filename).toBe("compilation-1.zip");
+      expect(archive.contentType).toBe("application/zip");
+      expect([...archive.bytes]).toEqual([0x50, 0x4b, 0x03, 0x04]);
+      expect(fetcher).toHaveBeenCalledWith(
+        "http://control-plane.test/compilations/compilation-1/source-archive?format=zip",
+        expect.objectContaining({ method: "GET" }),
+      );
+    });
+
+    it("throws ControlPlaneError on a non-ok response", async () => {
+      const fetcher = vi
+        .fn()
+        .mockResolvedValue(
+          new Response(JSON.stringify({ message: "nope" }), { status: 400 }),
+        );
+      const client = new ControlPlaneClient(
+        "http://control-plane.test",
+        fetcher,
+      );
+
+      await expect(
+        client.getCompilationSourceArchive("compilation-1", "git"),
+      ).rejects.toThrow(ControlPlaneError);
+    });
+  });
 });

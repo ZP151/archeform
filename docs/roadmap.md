@@ -234,9 +234,12 @@ to graph seed`, non-force push, local/upstream equality, and a clean tree. It
 > delivered: deterministic source manifest, controlled overlay apply,
 > generated-file diff, deterministic ZIP export, and Graph-first Git export in
 > `packages/compiler/src/targets/source/`, with independent Sol review ACCEPT
-> (P0/P1/P2=0/0/5, all five P2 deferred). The Workbench download/diff surface and
-> its E2E journey are deferred to a follow-up that adds a tenant- and
-> digest-scoped read-only source-export route. Publish, workers, Workbench,
+> (P0/P1/P2=0/0/5, all five P2 deferred). ADR-0020 Task 8 source-export route and
+> Workbench download surface is delivered: one read-only, tenant- and
+> digest-scoped `GET /compilations/:id/source-archive?format=zip|git` route plus
+> the Workbench download buttons, with independent Sol review ACCEPT
+> (P0/P1/P2=0/0/0). The `e2e/restaurant-source-export.spec.ts` journey is deferred
+> to Task 9's full-stack acceptance. Publish, workers, Workbench,
 > Graph/Capability/Recipe/schema, and broader generated-runtime behavior remain
 > deferred.
 

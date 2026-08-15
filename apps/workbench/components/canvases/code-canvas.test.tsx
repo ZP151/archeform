@@ -88,6 +88,7 @@ describe("CodeCanvas Source explorer", () => {
     artifactSnapshot = null,
     artifactError = null,
     onInspectArtifact = vi.fn(),
+    onDownloadSourceArchive = vi.fn(),
   }: {
     currentCompilation?: WorkbenchCompilation | null;
     selectedArtifact?: WorkbenchCompilationArtifact | null;
@@ -95,6 +96,7 @@ describe("CodeCanvas Source explorer", () => {
     artifactSnapshot?: WorkbenchArtifactContent | null;
     artifactError?: string | null;
     onInspectArtifact?: (path: string) => void;
+    onDownloadSourceArchive?: (format: "zip" | "git") => void;
   } = {}) {
     act(() => {
       root.render(
@@ -109,6 +111,7 @@ describe("CodeCanvas Source explorer", () => {
           onExportPublishedGraph={vi.fn()}
           onImportPublishedGraph={vi.fn()}
           onInspectArtifact={onInspectArtifact}
+          onDownloadSourceArchive={onDownloadSourceArchive}
           onOpenPreview={vi.fn()}
           onStartPreview={vi.fn()}
           onStopPreview={vi.fn()}
@@ -118,7 +121,7 @@ describe("CodeCanvas Source explorer", () => {
         />,
       );
     });
-    return { onInspectArtifact };
+    return { onInspectArtifact, onDownloadSourceArchive };
   }
 
   function inputLabelled(labelText: string) {
@@ -1137,5 +1140,29 @@ describe("CodeCanvas Source explorer", () => {
     expect(revokeObjectURL).toHaveBeenCalledTimes(1);
     expect(transferStatus()).toBe("Download started.");
     expect(container.textContent).not.toContain("HOSTILE_REVOKE_DETAIL");
+  });
+
+  it("downloads the source archive for a succeeded Compilation", () => {
+    const { onDownloadSourceArchive } = renderSource({
+      currentCompilation: compilation("succeeded"),
+    });
+
+    const zip = buttonLabelled("Download source ZIP");
+    const git = buttonLabelled("Download source Git export");
+    expect(zip.disabled).toBe(false);
+    expect(git.disabled).toBe(false);
+
+    act(() => zip.click());
+    act(() => git.click());
+
+    expect(onDownloadSourceArchive).toHaveBeenNthCalledWith(1, "zip");
+    expect(onDownloadSourceArchive).toHaveBeenNthCalledWith(2, "git");
+  });
+
+  it("omits source archive download without a succeeded Compilation", () => {
+    renderSource({ currentCompilation: null });
+
+    expect(container.textContent).not.toContain("Download source ZIP");
+    expect(container.textContent).not.toContain("Download source Git export");
   });
 });

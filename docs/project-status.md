@@ -240,6 +240,17 @@ historical evidence, not the executable Task 2/Task 3 contract.
   diff/mediaType/origin contract clarifications) are recorded as deferred. The
   Workbench download/diff surface and its E2E journey are deferred to a follow-up
   slice that adds a tenant- and digest-scoped read-only source-export route.
+- Task 8 source-export route and Workbench download surface is `delivered` under
+  accepted [ADR-0020](adr/adr-0020-workbench-source-export-route.md). It adds one
+  read-only, tenant- and digest-scoped
+  `GET /compilations/:id/source-archive?format=zip|git` route that rehashes every
+  registered artifact through `GeneratedArtifactReader` and builds the archive via
+  the delivered `buildSourceZip`/`buildGitExport`, plus the Workbench download
+  buttons and client transport. No Graph, Capability, Recipe, schema, dependency,
+  provider, service, Docker, Compose, or deployment change. Independent Sol review
+  returned ACCEPT with P0/P1/P2=0/0/0. The
+  `e2e/restaurant-source-export.spec.ts` journey is deferred to Task 9's
+  full-stack acceptance.
 - The first independent two-axis Task 7B review returned NOT READY with
   P0/P1/P2=0/6/3. Actionable findings cover hostile array reflection
   amplification, unchanged-order 400 versus fixed 409, registry closure after
@@ -724,12 +735,12 @@ Authorities:
 
 ## Next gate
 
-Tasks 0-8C and the Task 8 source-breadth compiler core are delivered. The next
-gate is the deferred Workbench source-export route (ZIP/Git download plus diff
-surface), followed by Access and Workflow contextual editors (blocked at design
-until the runtime enforces Graph-valid permission/actor additions) and Task 9
-guarded real-model acceptance. Publish/Compilation lifecycle and every broader
-editor remain blocked.
+Tasks 0-8C, the Task 8 source-breadth compiler core, and the Task 8
+source-export route plus Workbench download surface are delivered. The next gate
+is Access and Workflow contextual editors (blocked at design until the runtime
+enforces Graph-valid permission/actor additions), followed by Task 9 guarded
+real-model acceptance. Publish/Compilation lifecycle and every broader editor
+remain blocked.
 
 ## Explicitly deferred
 

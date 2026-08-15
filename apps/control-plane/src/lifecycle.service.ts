@@ -28,6 +28,12 @@ import {
   type ApplicationGraphV1,
 } from "@factory/graph";
 import { GraphProposalError } from "@factory/adapters/ai";
+import {
+  buildGitExport,
+  buildSourceZip,
+  type GeneratedFile,
+  type GitExportV1,
+} from "@factory/compiler";
 
 import { GeneratedArtifactReader } from "./artifact-content.js";
 import { PrismaService } from "./prisma.service.js";
@@ -432,6 +438,34 @@ export function succeededCompilation(result: unknown): boolean {
     !Array.isArray(result) &&
     (result as UnknownRecord).status === "succeeded"
   );
+}
+
+/**
+ * Serializes a Git object store into a deterministic, self-describing byte
+ * stream: one `<40-hex-id><4-byte big-endian length><zlib bytes>` record per
+ * object, sorted by id. Equal input produces byte-identical output.
+ */
+function serializeGitObjects(export_: GitExportV1): Uint8Array {
+  const ids = [...export_.objects.keys()].sort();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (const id of ids) {
+    const bytes = export_.objects.get(id)!;
+    const header = new Uint8Array(44);
+    for (let index = 0; index < 40; index += 1) {
+      header[index] = id.charCodeAt(index);
+    }
+    new DataView(header.buffer).setUint32(40, bytes.length, false);
+    chunks.push(header, bytes);
+    total += 44 + bytes.length;
+  }
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return out;
 }
 
 function previewPort(value: unknown, key: string): number {
@@ -1065,6 +1099,75 @@ export class LifecycleService {
         "Generated artifact content does not match registered evidence.",
       );
     }
+  }
+
+  async getCompilationSourceArchive(
+    compilationId: string,
+    format: string | undefined,
+  ) {
+    const id = requiredString({ compilationId }, "compilationId");
+    const requestedFormat = format ?? "zip";
+    if (requestedFormat !== "zip" && requestedFormat !== "git") {
+      throw new BadRequestException(
+        "Source archive format must be 'zip' or 'git'.",
+      );
+    }
+    const compilation = await this.prisma.compilation.findUnique({
+      where: { id },
+      include: { artifacts: { orderBy: { path: "asc" } } },
+    });
+    if (!compilation) throw new NotFoundException("Compilation was not found.");
+    if (!succeededCompilation(compilation.result)) {
+      throw new ConflictException(
+        "Compilation must succeed before its source can be exported.",
+      );
+    }
+
+    const files: GeneratedFile[] = [];
+    for (const artifact of compilation.artifacts) {
+      const metadata = artifact.metadata;
+      const rootDirectory =
+        metadata && typeof metadata === "object" && !Array.isArray(metadata)
+          ? (metadata as UnknownRecord).rootDirectory
+          : undefined;
+      if (typeof rootDirectory !== "string") {
+        throw new ConflictException(
+          "Generated artifact has no registered root directory.",
+        );
+      }
+      try {
+        const read = await this.artifactReader.read({
+          rootDirectory,
+          path: artifact.path,
+          digest: artifact.digest,
+        });
+        files.push({ path: read.path, content: read.content });
+      } catch {
+        throw new ConflictException(
+          "Generated artifact content does not match registered evidence.",
+        );
+      }
+    }
+
+    if (requestedFormat === "zip") {
+      return {
+        filename: `${id}.zip`,
+        contentType: "application/zip",
+        bytes: buildSourceZip(files),
+      };
+    }
+    const gitExport = buildGitExport({
+      files,
+      message: `Graph-first source export for ${id}\n`,
+      author: "Archeform <dev@archeform.local>",
+      committer: "Archeform <dev@archeform.local>",
+      timestampSeconds: 0,
+    });
+    return {
+      filename: `${id}.git`,
+      contentType: "application/octet-stream",
+      bytes: serializeGitObjects(gitExport),
+    };
   }
 
   async createPreviewRun(compilationId: string) {

@@ -1526,6 +1526,28 @@ export class ControlPlaneClient {
     return response.json() as Promise<T>;
   }
 
+  private async requestBinary(
+    path: string,
+  ): Promise<{ readonly contentType: string; readonly bytes: ArrayBuffer }> {
+    const fetcher = this.fetcher ?? fetch;
+    const response = await fetcher(`${this.baseUrl}${path}`, {
+      method: "GET",
+      headers: { "content-type": "application/json" },
+    });
+    if (!response.ok) {
+      const body: unknown = await response.json().catch(() => null);
+      throw new ControlPlaneError(
+        response.status,
+        controlPlaneRejectionCode(body),
+      );
+    }
+    return {
+      contentType:
+        response.headers.get("content-type") ?? "application/octet-stream",
+      bytes: await response.arrayBuffer(),
+    };
+  }
+
   async bootstrapLocalDraft(
     graph: ApplicationGraphV1,
   ): Promise<WorkbenchDraft> {
@@ -1793,6 +1815,23 @@ export class ControlPlaneClient {
       `/compilations/${encodeURIComponent(compilationId)}/artifact-content?path=${encodeURIComponent(selected.path)}`,
       { method: "GET" },
     ).then((response) => admitCompilationArtifactContent(response, selected));
+  }
+
+  getCompilationSourceArchive(
+    compilationId: string,
+    format: "zip" | "git",
+  ): Promise<{
+    readonly filename: string;
+    readonly contentType: string;
+    readonly bytes: Uint8Array;
+  }> {
+    return this.requestBinary(
+      `/compilations/${encodeURIComponent(compilationId)}/source-archive?format=${format}`,
+    ).then(({ contentType, bytes }) => ({
+      filename: `${compilationId}.${format}`,
+      contentType,
+      bytes: new Uint8Array(bytes),
+    }));
   }
 
   startPreviewRun(compilationId: string): Promise<WorkbenchPreviewRun> {

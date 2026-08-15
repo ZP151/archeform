@@ -121,6 +121,35 @@ export {
   CompilerTargetRegistryV1,
   createCompilerTargetRegistryV1,
 } from "./core/target-registry.js";
+export {
+  buildSourceManifest,
+  sourceBaselineDigest,
+  type SourceManifestEntryV1,
+  type SourceManifestInputV1,
+  type SourceManifestV1,
+  type SourceOriginV1,
+} from "./targets/source/source-manifest.js";
+export {
+  applySourceOverlay,
+  type SourceOverlayApplyInputV1,
+} from "./targets/source/overlay.js";
+export {
+  diffGeneratedFiles,
+  type ChangedFileDiffV1,
+  type GeneratedFileDiffV1,
+} from "./targets/source/diff.js";
+export { buildSourceZip } from "./targets/source/export-zip.js";
+export {
+  buildGitExport,
+  gitBlobObject,
+  gitCommitObject,
+  gitTreeObject,
+  type GitCommitInputV1,
+  type GitExportInputV1,
+  type GitExportV1,
+  type GitObjectV1,
+  type GitTreeEntryV1,
+} from "./targets/source/export-git.js";
 
 export interface PublishedGraphInput {
   readonly publishedRevisionId: string;

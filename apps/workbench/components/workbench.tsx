@@ -237,6 +237,7 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
             onExportPublishedGraph={controller.exportPublishedGraph}
             onImportPublishedGraph={controller.importPublishedGraph}
             onInspectArtifact={controller.inspectArtifact}
+            onDownloadSourceArchive={controller.downloadSourceArchive}
             onOpenPreview={controller.openPreview}
             onStartPreview={controller.startPreview}
             onStopPreview={controller.stopPreview}
