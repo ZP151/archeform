@@ -793,12 +793,12 @@ Tasks 0-8C, the Task 8 source-breadth compiler core, the Task 8 source-export
 route plus Workbench download surface, the generated-runtime Graph-valid
 permission/actor enforcement, the ADR-0022 compiler admission of
 role/permission additions, the Workbench Access contextual editor, and the
-V3 Publish/Compilation closure slice 1 (V3 Draft -> immutable V3 Published
-Revision -> Restaurant V3 compile, under accepted ADR-0023) are delivered. The
-next gate is the V3 closure slice 2 (Workbench `Publish draft` + Release
-surface wiring) plus a restaurant real-model acceptance harness, then Task 9
-guarded real-model acceptance and `main` integration/release. The Workflow
-editor (flow/journey admission) remains deferred.
+V3 Publish/Compilation closure (slice 1 lifecycle + slice 2 Workbench
+`Publish draft`/`Compile`, under accepted ADR-0023) are delivered. The next
+gate is a restaurant acceptance harness (the existing golden-path e2e is a
+stale V1 Expense/Appointment closure), then Task 9 guarded real-model
+acceptance and `main` integration/release. The Workflow editor (flow/journey
+admission) remains deferred.
 
 ## Explicitly deferred
 

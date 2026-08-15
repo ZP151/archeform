@@ -5412,8 +5412,17 @@ returned ACCEPT with P0/P1/P2=0/0/3; the three P2s (500-vs-400 on corrupted
 stored V3 rows, advisory V3 `target` not guarded, and two test-coverage gaps)
 are recorded as deferred non-blocking.
 
-Remaining for Task 9: slice 2 (Workbench `Publish draft` + Release surface
-wiring) and a restaurant real-model acceptance harness.
+Slice 2 is `delivered`: the Workbench `Publish draft` and `Compile` primary
+actions now route a Restaurant V3 template Draft through the same
+`publishDraft`/`createCompilation` lifecycle (the `publishTemplateDraft` and
+`queueTemplateCompilation` controller methods plus the shell `canPublish`/
+`published`/`onPublish`/`onCompile` wiring), and the template Builder navigation
+now exposes the Access editor (correcting the earlier reachability gap). Full
+Workbench 528/528, Control Plane 441/441, and Compiler Worker 227/227 pass.
+
+Remaining for Task 9: a restaurant acceptance harness (the existing golden-path
+e2e is a stale V1 Expense/Appointment closure) and the guarded acceptance run,
+then non-force `main` integration and the repository release.
 
 ## Deferred work
 
