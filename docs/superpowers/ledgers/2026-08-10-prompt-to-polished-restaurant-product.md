@@ -5358,8 +5358,30 @@ Acceptance evidence:
   tag are pushed, and a GitHub Release is created when authenticated tooling is
   available without claiming cloud deployment.
 
-Blocked by: Tasks 3–8 reviewed, D0 delivered, and a separately frozen honest
-V3 Publish/Compilation/launch closure.
+Blocked by: Tasks 3–8 reviewed, D0 delivered, and the remaining production
+slices 9A/9B plus the 9C acceptance harness (the V3 Publish/Compilation closure
+is now delivered; the "separately frozen honest V3 … launch closure" blocker is
+cleared).
+
+### Task 9 remaining slices
+
+- **9A — Describe -> Restaurant V3.** The `composeProductRecipe` Restaurant V3
+  composer exists but production does not call it: the Describe path still calls
+  the V1 `composeProductDraft`, so a restaurant prompt yields a generic V1 graph
+  while "Start from a template" yields Restaurant V3. Route a verified restaurant
+  `intent`/`experience` deterministically into `composeProductRecipe` to create a
+  V3 Draft/Snapshot; keep the non-restaurant V1 path unchanged.
+- **9B — V3 launch + verification.** The V3 bundle has a Node boot script but no
+  `docker-compose.yml` (required by `PreviewRunner`), and the verification queue
+  accepts only `ApplicationGraphV1`. Add a governed V3 launch artifact (or a V3
+  native runner) and extend the verification queue to strict V1/V3 dispatch, then
+  run Customer/Merchant journeys.
+- **9C — Restaurant acceptance harness.** A new Restaurant harness covering:
+  restaurant Describe with at most one critical clarification; fifteen screens
+  and two surfaces; Page/Data/Experience/Access edits; immutable Publish + V3
+  Compile; Source view/export; Verify, Preview, Customer/Merchant operations;
+  accessibility at 390px/desktop; stop + cleanup; and one environment-only
+  real-model run.
 
 ### Task 9 execution attempt — 2026-08-15
 

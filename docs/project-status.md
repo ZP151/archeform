@@ -311,11 +311,15 @@ historical evidence, not the executable Task 2/Task 3 contract.
   contextual-editing acceptance.
 - Task 9 guarded real-model acceptance, `main` integration, and the repository
   release require the environment-only OpenAI credential and the Docker/Compose
-  full stack, which are now available, but are blocked on the not-yet-delivered
-  honest V3 Publish/Compilation/launch closure for the Restaurant product and a
-  restaurant real-model acceptance harness (the existing golden-path e2e is a
-  stale V1 Expense/Appointment closure). The Docker image build chains were
-  corrected at `854292c0` so a fresh isolated stack builds and boots.
+  full stack (both available). The V3 Publish/Compilation closure is delivered
+  (ADR-0023: slice 1 lifecycle + slice 2 Workbench + the template-instance
+  compile fix), so a template Draft now publishes and compiles to 18 artifacts.
+  The remaining Task 9 work is three slices: 9A wire the Describe entry to the
+  Restaurant V3 composer (today it still produces a generic V1 graph), 9B add the
+  V3 launch artifact and V1/V3 verification-queue dispatch (the V3 bundle lacks
+  `docker-compose.yml` and the verification queue is V1-only), and 9C a real
+  Restaurant Describe->Edit->Publish->Compile->Verify->Preview->cleanup
+  acceptance harness.
 
 No founder technology decision is currently blocking this prerequisite.
 [`ADR-0011`](adr/adr-0011-product-recipe-surface-page-ownership.md) is Accepted

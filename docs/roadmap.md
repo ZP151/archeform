@@ -762,10 +762,14 @@ Task 8B Source Search is delivered at `84a90c4b`; Task 8C Verified Source
 Transfer is delivered at `97b6dbdb`. ADR-0018 D0 Restaurant V3 Runtime Catalog
 Parity is delivered at `74c68a13`. ADR-0019 Task 8 source breadth (compiler core)
 is delivered: deterministic source manifest, controlled overlay apply,
-generated-file diff, deterministic ZIP export, and Graph-first Git export. The
-Workbench download/diff surface remains deferred to a follow-up source-export
-route; every other Data, Access, Users, Workflow, Experience, Source edit,
-Publish, Compilation creation, block edit, and generated-runtime change remains
-serialized behind a later reviewed freeze.
+generated-file diff, deterministic ZIP export, and Graph-first Git export.
+ADR-0020 delivers the read-only tenant/digest-scoped source-export route and the
+Workbench download surface. ADR-0021 delivers the generated runtime Graph-valid
+permission/actor enforcement; ADR-0022 the compiler admission of role/permission
+additions; the Workbench Access contextual editor is delivered; and ADR-0023
+delivers the V3 Publish/Compilation closure (slice 1 lifecycle + slice 2
+Workbench + the template-instance compile fix). Remaining: wire the Describe
+entry to the Restaurant V3 composer, add the V3 launch artifact plus V1/V3
+verification dispatch, and build the Restaurant acceptance harness.
 Provider, service, Docker, cloud/deployment, and production-payment work remain
 unauthorized.
