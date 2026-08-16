@@ -40,7 +40,9 @@ const PLAN_OBSERVER_TIMEOUT_MS = 1_800_000;
 const COMPILATION_TIMEOUT_MS = 315_000;
 const VERIFICATION_TIMEOUT_MS = 910_000;
 
-test.describe.configure({ mode: "serial" });
+// The real-model plan step is non-deterministic, so a failed interpretation
+// or plan is retried (each retry is a fresh real-model run).
+test.describe.configure({ mode: "serial", retries: 2 });
 
 function dockerOutput(args: readonly string[]): string {
   return execFileSync("docker", [...args], {
