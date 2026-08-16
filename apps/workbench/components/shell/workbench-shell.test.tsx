@@ -457,7 +457,7 @@ describe("Workbench shell", () => {
       "utf8",
     );
     expect(tokens).toContain("--canvas: #f5f7f9;");
-    expect(tokens).toContain("--accent: #07936f;");
+    expect(tokens).toContain("--accent: #067a5c;");
     expect(tokens).toContain("--canvas: #10161d;");
     const shellCss = readFileSync(
       join(process.cwd(), "styles/shell.css"),
