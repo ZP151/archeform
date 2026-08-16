@@ -58,6 +58,7 @@ function prismaMock() {
       findFirst: vi.fn(),
       findMany: vi.fn(),
       findUnique: vi.fn(),
+      update: vi.fn(),
     },
     draftRevision: {
       create: vi.fn(),
@@ -1142,6 +1143,16 @@ describe("ProductCompositionService restaurant V3 routing", () => {
       key: "expense-approval",
       name: "Expense Approval",
     });
+    prisma.applicationGraph.update.mockResolvedValue({
+      id: "graph-1",
+      key: "expense-approval",
+      name: "Expense Approval",
+      templateOrigin: {
+        templateKey: "restaurant-dual-surface",
+        templateVersion: "1.0.0",
+        templateGraphChecksum: expect.any(String),
+      },
+    });
     prisma.compositionReview.updateMany.mockImplementation(async ({ data }) => {
       storedReview = { ...storedReview, ...data };
       return { count: 1 };
@@ -1171,5 +1182,15 @@ describe("ProductCompositionService restaurant V3 routing", () => {
       }),
     });
     expect(result.review.status).toBe("applied");
+    expect(prisma.applicationGraph.update).toHaveBeenCalledWith({
+      where: { id: "graph-1" },
+      data: {
+        templateOrigin: expect.objectContaining({
+          templateKey: "restaurant-dual-surface",
+          templateVersion: "1.0.0",
+          templateGraphChecksum: expect.stringMatching(/^sha256:/),
+        }),
+      },
+    });
   });
 });

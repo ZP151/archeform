@@ -43,6 +43,8 @@ import {
   restaurantOrderingProductIntent,
 } from "@factory/capabilities";
 
+import { originRecord } from "../template/template.service.js";
+
 import {
   LifecycleService,
   exactRecord,
@@ -846,6 +848,12 @@ export class ProductCompositionService {
       }
       throw new ConflictException("Product application conflicted.");
     }
+    await transaction.applicationGraph.update({
+      where: { id: application.id },
+      data: {
+        templateOrigin: originRecord() as unknown as Prisma.InputJsonValue,
+      },
+    });
     const draftRevision = await transaction.draftRevision.create({
       data: {
         applicationGraphId: review.applicationGraphId,

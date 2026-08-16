@@ -899,6 +899,34 @@ export function useWorkbenchController({
   const applyComposedProduct = useCallback(async (): Promise<void> => {
     const applied = await journey.applyProduct();
     if (applied === null) return; // failed; the composer shows the bounded error
+    const apiVersion = (
+      applied.graph as unknown as { readonly apiVersion?: string }
+    ).apiVersion;
+    if (apiVersion === "factory.application-graph/v3") {
+      // A restaurant Describe product adopts the canonical V3 Graph, so it
+      // opens through the template-draft workspace (snapshot + surface
+      // previews) instead of the V1 studio bootstrap.
+      const applicationKey = applied.graph.metadata.id;
+      setTemplateBusy(true);
+      setTemplateError(null);
+      try {
+        const instance = await controlPlane.openTemplateDraft(applicationKey);
+        setTemplateDraft(instance);
+        await refreshApplications();
+        journey.reset();
+        dispatch({ type: "open", surface: "home" });
+      } catch (error) {
+        setConnectionState("offline");
+        setOperationError(
+          error instanceof Error
+            ? error.message
+            : "The composed product could not be opened.",
+        );
+      } finally {
+        setTemplateBusy(false);
+      }
+      return;
+    }
     try {
       await bootstrapGraph(applied.graph);
     } catch (error) {
@@ -912,7 +940,7 @@ export function useWorkbenchController({
     journey.reset();
     dispatch({ type: "open", surface: "page" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [journey, bootstrapGraph, refreshApplications]);
+  }, [journey, bootstrapGraph, refreshApplications, controlPlane]);
 
   const openApplication = useCallback(
     (applicationKey: string) => {

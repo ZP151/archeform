@@ -324,7 +324,7 @@ function templateDefinition(): CuratedTemplateV1 {
   });
 }
 
-function originRecord(): TemplateOriginV1 {
+export function originRecord(): TemplateOriginV1 {
   const template = templateDefinition();
   return {
     templateKey: template.key,
