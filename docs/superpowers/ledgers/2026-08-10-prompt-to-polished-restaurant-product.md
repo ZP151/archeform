@@ -5419,8 +5419,23 @@ cleared).
      selectors (`Builder navigation`, `Preview synced · Draft r.N`, `Publish
      draft`, `Run verification`) plus the golden-path isolated-stack/
      real-model infrastructure.
-  The harness requires the isolated `factory-t9-*` Compose stack and an
-  environment-only real-model key to write + validate, and is the next slice.
+  The harness spec is written at `0fc19c91` (`e2e/restaurant-v3.spec.ts`,
+  305 lines): restaurant Describe → V3 apply → template workspace → Page/Data/
+  Experience edits → Publish → Compile → Run verification (generated journeys)
+  → Preview (customer + merchant `/health`) → accessibility (axe desktop +
+  390px) → Stop preview. The guarded real-model acceptance run requires the
+  isolated `factory-t9-*` Compose stack (brought up from `infra/docker-compose.yml`
+  with the root `.env` model key) and is the next gate.
+  3. **Real-model interpretation was rejected until `7e7c3ff4`.** The first
+     guarded run failed in 0.6s with `requirement.provider_rejected`: the
+     OpenAI strict-JSON `interpretationJsonSchema` listed `productType` under
+     `properties` but not `required`, and the OpenAI strict mode rejects any
+     object property missing from `required` (a fast local 400, not a network
+     round trip). Fixed by making `productType` required + nullable in the JSON
+     schema and nullable-optional in `modelRequirementSchema`
+     (`optionalText`), plus a regression test that recursively asserts every
+     object property is required. The real model now interprets the restaurant
+     brief into `productType: "restaurant-ordering"` in ~75s.
 
 ### Task 9 execution attempt — 2026-08-15
 
