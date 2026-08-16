@@ -5403,20 +5403,22 @@ cleared).
   Customer/Merchant operations; accessibility at 390px/desktop; stop + cleanup;
   and one environment-only real-model run. Two load-bearing facts for the
   harness, both recorded 2026-08-15:
-  1. **The V3 verification has no Workbench UI trigger.** The V1 `release`
-     journey (seeded by `remoteDraft`) owns the only "Run Isolated
-     Verification" button; the V3 template-draft publish/compile path
-     (`publishTemplateDraft`/`queueTemplateCompilation`) opens the source
-     canvas with preview controls but no verification action. The V1/V3
-     verification queue dispatch (`a8c79340`) is complete at the backend, so the
-     acceptance harness triggers `Verify` through the Control Plane API
-     (`POST /compilations/:id/verification-runs`) and polls the run; a V3
-     verification UI trigger is a deferred product-completeness follow-up.
+  1. **The V3 verification Workbench UI trigger is delivered at `1b26e9b8`.**
+     The code canvas (opened by the V3 `queueTemplateCompilation` path) now
+     exposes a "Run verification" action that calls `createVerificationRun`
+     and polls the run, rendering the generated journey evidence steps
+     (customer / merchant / shared-state / cleanup). A request token cancels
+     an in-flight poll when the compilation changes, so stale evidence is never
+     shown under a new compilation. Workbench 530/530. Independent Sol review
+     returned REQUEST_CHANGES with one Medium (stale-evidence race) that was
+     fixed by the request token; the one Low (same-tick double-click, already
+     blocked by the disabled button) is recorded as deferred non-blocking.
   2. **The stale `e2e/golden-path.spec.ts` is V1 Expense/Appointment and
      `e2e/generated-restaurant.spec.ts` is the V1 restaurant runtime**, so the
      9C harness must be a new spec modeled on the template-draft workspace
      selectors (`Builder navigation`, `Preview synced · Draft r.N`, `Publish
-     draft`) plus the golden-path isolated-stack/real-model infrastructure.
+     draft`, `Run verification`) plus the golden-path isolated-stack/
+     real-model infrastructure.
   The harness requires the isolated `factory-t9-*` Compose stack and an
   environment-only real-model key to write + validate, and is the next slice.
 
