@@ -466,7 +466,15 @@ import { restaurantSeed } from "./seed.mjs";
 
 export async function startRestaurantServer(options = {}) {
   const host = options.host ?? "127.0.0.1";
-  if (host !== "127.0.0.1" && host !== "::1" && host !== "localhost") throw new Error("Restaurant runtime only binds loopback by default.");
+  if (
+    host !== "127.0.0.1" &&
+    host !== "::1" &&
+    host !== "localhost" &&
+    host !== "0.0.0.0"
+  )
+    throw new Error(
+      "Restaurant runtime only binds loopback by default, or all interfaces for an isolated preview.",
+    );
   const store = createStateStore(options.statePath, restaurantSeed, ${JSON.stringify(revisionId)});
   await store.read();
   const server = createServer(createRestaurantApiHandler(store, options.principalRole ?? "customer"));
@@ -475,7 +483,7 @@ export async function startRestaurantServer(options = {}) {
   return { port: typeof address === "object" && address ? address.port : 0, close: () => new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve())) };
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  const started = await startRestaurantServer({ statePath: resolve(".restaurant-state/state.json"), port: Number(process.env.PORT ?? 0), host: "127.0.0.1", principalRole: "customer" });
+  const started = await startRestaurantServer({ statePath: resolve(".restaurant-state/state.json"), port: Number(process.env.PORT ?? 0), host: process.env.HOST ?? "127.0.0.1", principalRole: "customer" });
   console.log("Restaurant customer runtime listening on http://127.0.0.1:" + started.port);
 }
 `;

@@ -121,6 +121,7 @@ describe("Restaurant product V3 target", () => {
     expect(compose).toContain("api:");
     expect(compose).toContain('"127.0.0.1:${FACTORY_WEB_PORT:-0}:3000"');
     expect(compose).toContain('"127.0.0.1:${FACTORY_API_PORT:-0}:3001"');
+    expect(compose).toContain('HOST: "0.0.0.0"');
     expect(compose).toContain("shared-state:/app/.restaurant-state");
     expect(compose).toContain("volumes:");
     expect(files["Dockerfile"]).toContain("FROM node:22-alpine");
