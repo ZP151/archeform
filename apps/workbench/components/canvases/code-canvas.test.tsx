@@ -8,6 +8,7 @@ import type {
   WorkbenchArtifactContent,
   WorkbenchCompilation,
   WorkbenchCompilationArtifact,
+  WorkbenchVerificationRun,
 } from "../../lib/control-plane-client";
 import { workbenchGraph } from "../../lib/workbench-graph";
 import { CodeCanvas } from "./code-canvas";
@@ -89,6 +90,9 @@ describe("CodeCanvas Source explorer", () => {
     artifactError = null,
     onInspectArtifact = vi.fn(),
     onDownloadSourceArchive = vi.fn(),
+    onStartVerification = vi.fn(),
+    verificationRun = null,
+    verificationBusy = false,
   }: {
     currentCompilation?: WorkbenchCompilation | null;
     selectedArtifact?: WorkbenchCompilationArtifact | null;
@@ -97,6 +101,9 @@ describe("CodeCanvas Source explorer", () => {
     artifactError?: string | null;
     onInspectArtifact?: (path: string) => void;
     onDownloadSourceArchive?: (format: "zip" | "git") => void;
+    onStartVerification?: () => void;
+    verificationRun?: WorkbenchVerificationRun | null;
+    verificationBusy?: boolean;
   } = {}) {
     act(() => {
       root.render(
@@ -115,13 +122,16 @@ describe("CodeCanvas Source explorer", () => {
           onOpenPreview={vi.fn()}
           onStartPreview={vi.fn()}
           onStopPreview={vi.fn()}
+          onStartVerification={onStartVerification}
           previewRun={null}
+          verificationRun={verificationRun}
+          verificationBusy={verificationBusy}
           publishedRevision={null}
           selectedArtifact={selectedArtifact}
         />,
       );
     });
-    return { onInspectArtifact, onDownloadSourceArchive };
+    return { onInspectArtifact, onDownloadSourceArchive, onStartVerification };
   }
 
   function inputLabelled(labelText: string) {
@@ -1164,5 +1174,55 @@ describe("CodeCanvas Source explorer", () => {
 
     expect(container.textContent).not.toContain("Download source ZIP");
     expect(container.textContent).not.toContain("Download source Git export");
+  });
+
+  it("runs the generated verification and renders the evidence steps", () => {
+    const verificationRun: WorkbenchVerificationRun = {
+      verificationRunId: "verify-1",
+      compilationId: "compilation-1",
+      profileKey: null,
+      status: "succeeded",
+      stepIds: [
+        "customer-journey",
+        "merchant-journey",
+        "shared-state",
+        "cleanup",
+      ],
+      evidenceDigest: null,
+      evidence: {
+        steps: [
+          { stepId: "customer-journey", status: "passed" },
+          { stepId: "merchant-journey", status: "passed" },
+          { stepId: "shared-state", status: "passed" },
+          { stepId: "cleanup", status: "passed" },
+        ],
+      },
+      diagnosis: null,
+      draftDiff: null,
+    };
+    const { onStartVerification } = renderSource({
+      currentCompilation: compilation("succeeded"),
+      verificationRun,
+    });
+
+    const runVerification = buttonLabelled("Run verification");
+    expect(runVerification.disabled).toBe(false);
+    const steps = container.querySelectorAll(
+      '[aria-label="Verification evidence steps"] li',
+    );
+    expect(steps).toHaveLength(4);
+    expect(container.textContent).toContain("customer-journey");
+
+    act(() => runVerification.click());
+    expect(onStartVerification).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables the verification trigger while a run is busy", () => {
+    renderSource({
+      currentCompilation: compilation("succeeded"),
+      verificationBusy: true,
+    });
+
+    expect(buttonLabelled("Verifying…").disabled).toBe(true);
   });
 });

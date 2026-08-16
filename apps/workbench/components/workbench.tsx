@@ -250,8 +250,11 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
             onOpenPreview={controller.openPreview}
             onStartPreview={controller.startPreview}
             onStopPreview={controller.stopPreview}
+            onStartVerification={controller.startVerification}
             publishedRevision={controller.publishedRevision}
             previewRun={controller.previewRun}
+            verificationRun={controller.verificationRun}
+            verificationBusy={controller.verificationBusy}
             selectedArtifact={controller.selectedArtifact}
           />
         );

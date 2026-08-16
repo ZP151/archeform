@@ -31,6 +31,7 @@ import {
   type WorkbenchOpenedApplication,
   type WorkbenchPreviewRun,
   type WorkbenchPublishedRevision,
+  type WorkbenchVerificationRun,
   type WorkbenchRevisionTimeline,
   type WorkbenchWorkspacePortfolioSummary,
   type WorkbenchCuratedTemplate,
@@ -58,6 +59,8 @@ import {
  */
 const BOOTSTRAP_RETRY_DELAY_MS = 2_000;
 const BOOTSTRAP_RETRY_LIMIT = 45;
+/** Bound on the V3 verification polling loop (matches the worker timeout). */
+const VERIFICATION_POLL_TIMEOUT_MS = 910_000;
 
 /**
  * The workbench controller owns server state and commands; shell components
@@ -72,6 +75,8 @@ export type WorkbenchController = {
   readonly publishedRevision: WorkbenchPublishedRevision | null;
   readonly compilation: WorkbenchCompilation | null;
   readonly previewRun: WorkbenchPreviewRun | null;
+  readonly verificationRun: WorkbenchVerificationRun | null;
+  readonly verificationBusy: boolean;
   readonly connectionState:
     | "connecting"
     | "ready"
@@ -154,6 +159,7 @@ export type WorkbenchController = {
   readonly startPreview: () => void;
   readonly stopPreview: () => void;
   readonly openPreview: () => void;
+  readonly startVerification: () => void;
   readonly exportPublishedGraph: () => void;
   readonly importPublishedGraph: (file: File) => void;
   readonly changePageModel: (page: PageModel) => void;
@@ -202,6 +208,9 @@ export function useWorkbenchController({
   const [previewRun, setPreviewRun] = useState<WorkbenchPreviewRun | null>(
     null,
   );
+  const [verificationRun, setVerificationRun] =
+    useState<WorkbenchVerificationRun | null>(null);
+  const [verificationBusy, setVerificationBusy] = useState(false);
   const [connectionState, setConnectionState] =
     useState<WorkbenchController["connectionState"]>("connecting");
   const [draftDirty, setDraftDirty] = useState(false);
@@ -241,6 +250,7 @@ export function useWorkbenchController({
   const [templateError, setTemplateError] = useState<string | null>(null);
   const bootstrapRequest = useRef(0);
   const artifactRequestToken = useRef(0);
+  const verificationRequestToken = useRef(0);
   const selectedArtifact =
     artifactSelection !== null &&
     artifactSelection.compilationId === compilation?.id
@@ -253,6 +263,8 @@ export function useWorkbenchController({
     setArtifactSnapshot(null);
     setArtifactError(null);
     setArtifactLoading(false);
+    verificationRequestToken.current += 1;
+    setVerificationRun(null);
   }, [compilation?.id]);
   const applicationsRequest = useRef(0);
   const portfolioRequest = useRef(0);
@@ -758,6 +770,40 @@ export function useWorkbenchController({
     if (previewRun?.status !== "ready" || !previewRun.previewUrl) return;
     window.open(previewRun.previewUrl, "_blank", "noopener,noreferrer");
   }, [previewRun]);
+
+  const startVerification = useCallback(() => {
+    if (!compilation || compilation.result.status !== "succeeded") return;
+    if (verificationBusy) return;
+    setVerificationBusy(true);
+    setOperationError(null);
+    const verificationRunId = `verify-${crypto.randomUUID()}`;
+    const token = ++verificationRequestToken.current;
+    void (async () => {
+      try {
+        let latest = await controlPlane.createVerificationRun(
+          compilation.id,
+          verificationRunId,
+        );
+        if (verificationRequestToken.current !== token) return;
+        setVerificationRun(latest);
+        const deadline = Date.now() + VERIFICATION_POLL_TIMEOUT_MS;
+        while (latest.status === "pending" && Date.now() < deadline) {
+          await new Promise((resolve) => setTimeout(resolve, 2_000));
+          latest = await controlPlane.getVerificationRun(verificationRunId);
+          if (verificationRequestToken.current !== token) return;
+          setVerificationRun(latest);
+        }
+      } catch (error) {
+        setOperationError(
+          error instanceof Error
+            ? error.message
+            : "Generated verification failed.",
+        );
+      } finally {
+        setVerificationBusy(false);
+      }
+    })();
+  }, [compilation, verificationBusy, controlPlane]);
 
   const downloadPublishedGraphExchange = (
     exchange: PublishedGraphExchangeV1,
@@ -1306,6 +1352,8 @@ export function useWorkbenchController({
     publishedRevision,
     compilation,
     previewRun,
+    verificationRun,
+    verificationBusy,
     connectionState,
     draftDirty,
     operationError,
@@ -1363,6 +1411,7 @@ export function useWorkbenchController({
     startPreview,
     stopPreview,
     openPreview,
+    startVerification,
     exportPublishedGraph,
     importPublishedGraph,
     changePageModel,

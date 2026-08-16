@@ -10,6 +10,7 @@ import type {
   WorkbenchCompilationArtifact,
   WorkbenchPreviewRun,
   WorkbenchPublishedRevision,
+  WorkbenchVerificationRun,
 } from "../../lib/control-plane-client";
 import type { ApplicationGraphV1 } from "@factory/graph";
 
@@ -121,6 +122,22 @@ function sameSourceTransferAuthority(
   );
 }
 
+/** Verification evidence steps, extracted defensively from the evidence bundle. */
+function verificationStepsOf(
+  run: WorkbenchVerificationRun | null,
+): readonly { readonly stepId: string; readonly status: string }[] {
+  if (!run?.evidence || typeof run.evidence !== "object") return [];
+  const steps = (run.evidence as { readonly steps?: unknown }).steps;
+  if (!Array.isArray(steps)) return [];
+  return steps.filter(
+    (step) =>
+      step !== null &&
+      typeof step === "object" &&
+      typeof (step as { readonly stepId?: unknown }).stepId === "string" &&
+      typeof (step as { readonly status?: unknown }).status === "string",
+  ) as readonly { readonly stepId: string; readonly status: string }[];
+}
+
 /**
  * The Code canvas: the published Graph projection, its diff from the Draft,
  * the immutable Compilation status, its registered Source artifacts, and the
@@ -143,7 +160,10 @@ export function CodeCanvas({
   onOpenPreview,
   onStartPreview,
   onStopPreview,
+  onStartVerification,
   previewRun,
+  verificationRun,
+  verificationBusy,
   selectedArtifact,
 }: {
   graph: ApplicationGraphV1;
@@ -161,7 +181,10 @@ export function CodeCanvas({
   onOpenPreview: () => void;
   onStartPreview: () => void;
   onStopPreview: () => void;
+  onStartVerification: () => void;
   previewRun: WorkbenchPreviewRun | null;
+  verificationRun: WorkbenchVerificationRun | null;
+  verificationBusy: boolean;
   selectedArtifact: WorkbenchCompilationArtifact | null;
 }) {
   const importInput = useRef<HTMLInputElement>(null);
@@ -185,6 +208,8 @@ export function CodeCanvas({
     compilation?.result.status === "succeeded",
     previewRun,
   );
+  const canVerify = compilation?.result.status === "succeeded";
+  const verificationSteps = verificationStepsOf(verificationRun);
   const artifacts = [...(compilation?.artifacts ?? [])].sort((left, right) =>
     left.path < right.path ? -1 : left.path > right.path ? 1 : 0,
   );
@@ -675,6 +700,57 @@ export function CodeCanvas({
               type="button"
             >
               Stop preview
+            </button>
+          </div>
+        </section>
+      )}
+      {preview.visible && (
+        <section
+          className="generated-verification"
+          aria-label="Generated verification"
+        >
+          <div>
+            <strong>Generated verification</strong>
+            <small role="status">
+              {verificationBusy
+                ? "Verifying…"
+                : verificationRun === null
+                  ? "Not verified"
+                  : verificationRun.status}
+            </small>
+          </div>
+          <p>
+            Runs the generated customer, merchant, and shared-state journeys
+            against the immutable Compilation.
+          </p>
+          {verificationRun?.status === "failed" && (
+            <small className="generated-verification-diagnostic">
+              Verification failed.
+            </small>
+          )}
+          {verificationSteps.length > 0 && (
+            <ol
+              className="generated-verification-steps"
+              aria-label="Verification evidence steps"
+            >
+              {verificationSteps.map((step) => (
+                <li
+                  key={step.stepId}
+                  className={`generated-verification-step generated-verification-${step.status}`}
+                >
+                  <code>{step.stepId}</code>
+                  <span>{step.status}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+          <div className="generated-verification-actions">
+            <button
+              disabled={!canVerify || verificationBusy}
+              onClick={onStartVerification}
+              type="button"
+            >
+              {verificationBusy ? "Verifying…" : "Run verification"}
             </button>
           </div>
         </section>
