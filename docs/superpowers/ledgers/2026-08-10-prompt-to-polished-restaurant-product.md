@@ -5440,6 +5440,10 @@ compile of a template instance failed on three defects, all now closed:
 Full-stack evidence: a fresh `restaurant-template-*` clone publishes and
 compiles to `succeeded` with 18 deterministic artifacts. Suites: Control Plane
 441/441, Compiler Worker 227/227, Compiler 614/614 (contract 73/73).
+Independent Sol review returned ACCEPT with P0/P1/P2=0/0/2; the two P2s (a
+non-canonical `workspaceId` normalization test-coverage gap and a cosmetic
+profile-guard placement inside the transaction) are recorded as deferred
+non-blocking.
 
 Remaining for Task 9: a restaurant acceptance harness (the existing golden-path
 e2e is a stale V1 Expense/Appointment closure) and the guarded acceptance run,
