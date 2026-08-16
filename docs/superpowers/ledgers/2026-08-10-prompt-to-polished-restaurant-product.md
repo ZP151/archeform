@@ -5365,16 +5365,19 @@ cleared).
 
 ### Task 9 remaining slices
 
-- **9A — Describe -> Restaurant V3.** In progress. The composition core is
-  delivered: `RequirementSpecV1` gains an optional `productType`
-  (`7bbd31d8`), and the Control Plane `chooseProductPlan`/`applyProduct` route
-  `productType === "restaurant-ordering"` through `composeProductRecipe` with
-  the canonical `restaurantOrderingProductIntent()`/`restaurantOrderingExperienceBrief()`
-  plus the `composeDefaultCapabilityDraft({profile:"restaurant-ordering"})` base,
-  writing a V3 Draft (revision +1). The OpenAI interpreter now emits `productType`
-  for restaurant briefs (`441da2d0`). The non-restaurant V1 path is byte-identical.
-  Remaining: the Workbench must display and edit the Describe-composed V3 Draft
-  (today `applyComposedProduct` bootstraps only a V1 graph).
+- **9A — Describe -> Restaurant V3.** Delivered. The composition core routes
+  `productType === "restaurant-ordering"` through `composeProductRecipe` with the
+  canonical `restaurantOrderingProductIntent()`/`restaurantOrderingExperienceBrief()`
+  plus the `composeDefaultCapabilityDraft({profile:"restaurant-ordering"})` base
+  (`RequirementSpecV1.productType` at `7bbd31d8`; the interpreter emits it at
+  `441da2d0`), writing a V3 Draft (revision +1). The Workbench display path is
+  delivered at `be74379a`: the restaurant apply stamps the canonical
+  `originRecord()` template origin on the application inside the Serializable
+  transaction, and `applyComposedProduct` routes a
+  `factory.application-graph/v3` result through `openTemplateDraft` (snapshot +
+  dual-surface previews + Page/Data/Experience/Access editors + Publish + V3
+  Compile) instead of the V1 studio bootstrap. The non-restaurant V1 path is
+  byte-identical. Independent Sol review returned ACCEPT (P0/P1/P2 = 0/0/0).
 - **9B — V3 launch + verification.** The V3 bundle has a Node boot script but no
   `docker-compose.yml` (required by `PreviewRunner`), and the verification queue
   accepts only `ApplicationGraphV1`. Add a governed V3 launch artifact (or a V3
