@@ -385,12 +385,6 @@ describe("Restaurant V3 compilation contract", () => {
         input.publishedGraph.graph.integration.capabilities.reverse();
       },
     ],
-    [
-      "application identity",
-      (input: any) => {
-        input.publishedGraph.graph.metadata.id = "hostile-application";
-      },
-    ],
   ])("rejects r.6 plus unlisted %s drift", (_label, mutate) => {
     const input = restaurantV6Input();
     mutate(input);
@@ -430,6 +424,21 @@ describe("Restaurant V3 compilation contract", () => {
     expect(captured.publishedGraph.graphHash).toBe(
       hashApplicationGraphV3(input.publishedGraph.graph),
     );
+  });
+
+  it("admits an independent template instance identity over the canonical product", () => {
+    const input = restaurantV6Input();
+    input.publishedGraph.graph.metadata.id = "restaurant-template-001";
+    input.publishedGraph.graph.metadata.workspaceId = "local-workspace";
+    input.publishedGraph.graph.metadata.name = "Maison Rivage";
+    rehashIfValid(input);
+
+    const captured = assertRestaurantProductCompilationInput(input);
+
+    expect(captured.publishedGraph.graph.metadata.id).toBe(
+      "restaurant-template-001",
+    );
+    expect(captured.publishedGraph.graph.metadata.name).toBe("Maison Rivage");
   });
 
   it("rejects a self-consistent lock that was not derived from the captured Graph", () => {

@@ -152,10 +152,10 @@ function restaurantRuntimeCatalog(
     for (const category of categories) {
       assertGraphKey(category.id);
       if (
-        !isDeepStrictEqual(Object.keys(category.values), [
+        !isDeepStrictEqual(Object.keys(category.values).sort(), [
+          "active",
           "name",
           "sortOrder",
-          "active",
         ])
       ) {
         failInvalid();
@@ -170,15 +170,15 @@ function restaurantRuntimeCatalog(
       items.map(({ id, values }) => {
         assertGraphKey(id);
         if (
-          !isDeepStrictEqual(Object.keys(values), [
-            "categoryKey",
-            "name",
-            "description",
-            "price",
+          !isDeepStrictEqual(Object.keys(values).sort(), [
             "available",
-            "stock",
-            "preparationMinutes",
+            "categoryKey",
+            "description",
             "imageUrl",
+            "name",
+            "preparationMinutes",
+            "price",
+            "stock",
           ])
         ) {
           failInvalid();

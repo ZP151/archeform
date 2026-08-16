@@ -13,6 +13,7 @@ import { isDeepStrictEqual } from "node:util";
 import { Prisma } from "@prisma/client";
 import {
   assertGoldenCapabilityAssetLocks,
+  composeDefaultCapabilityDraft,
   createCapabilityCompositionLock,
   type CapabilityCompositionLockV1,
   type CapabilitySelectionV1,
@@ -1038,9 +1039,17 @@ export class LifecycleService {
         graphHash,
         graph,
       };
+      if (graph.integration.compositionProfile !== "restaurant-ordering") {
+        throw new BadRequestException(
+          "Unsupported Restaurant composition profile.",
+        );
+      }
+      const canonicalBase = composeDefaultCapabilityDraft({
+        profile: "restaurant-ordering",
+      });
       const compositionLock = createCapabilityCompositionLock({
         graphChecksum: graphHash,
-        selections: graph.integration.compositionSelections ?? [],
+        selections: canonicalBase.graph.integration.compositionSelections ?? [],
       });
       return transaction.publishedRevision.create({
         data: {

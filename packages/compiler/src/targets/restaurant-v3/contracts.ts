@@ -258,10 +258,10 @@ function assertCatalogSeed(
   const categoryKeys = new Set(categories.map(({ id }) => id));
   for (const category of categories) {
     if (
-      !isDeepStrictEqual(Object.keys(category.values), [
+      !isDeepStrictEqual(Object.keys(category.values).sort(), [
+        "active",
         "name",
         "sortOrder",
-        "active",
       ])
     ) {
       failInvalid();
@@ -272,15 +272,15 @@ function assertCatalogSeed(
   }
   for (const item of items) {
     if (
-      !isDeepStrictEqual(Object.keys(item.values), [
-        "categoryKey",
-        "name",
-        "description",
-        "price",
+      !isDeepStrictEqual(Object.keys(item.values).sort(), [
         "available",
-        "stock",
-        "preparationMinutes",
+        "categoryKey",
+        "description",
         "imageUrl",
+        "name",
+        "preparationMinutes",
+        "price",
+        "stock",
       ])
     ) {
       failInvalid();
@@ -333,6 +333,8 @@ function normalizeAllowedRestaurantValues(
   graph: PublishedApplicationGraphV3Input["graph"],
 ): PublishedApplicationGraphV3Input["graph"] {
   const normalized = structuredClone(graph);
+  normalized.metadata.id = "restaurant-ordering";
+  normalized.metadata.workspaceId = "local-workspace";
   normalized.metadata.name = "Maison Aurelia private dining";
   normalized.page.pages.find(({ id }) => id === "customer-menu")!.title =
     "Menu";
