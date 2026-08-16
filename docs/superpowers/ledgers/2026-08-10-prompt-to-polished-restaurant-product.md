@@ -5556,6 +5556,14 @@ to a `docs/releases/factory-pilot-v0.1.0.md` release manifest. A GitHub Release
 is created when authenticated tooling is available, without claiming cloud
 deployment.
 
+Release completed 2026-08-16: `main` was integrated non-force via reviewed PR
+#1 (merge commit `a66d290e`, tree identical to the accepted feature branch),
+the release gate reran at the merged commit (typecheck 29/29, tests 29/29,
+build 17/17, `verify:third-party` + `verify:source-studies` pass), the
+annotated tag `factory-pilot-v0.1.0` was pushed, and the GitHub Release was
+created at `https://github.com/ZP151/archeform/releases/tag/factory-pilot-v0.1.0`.
+No cloud deployment is claimed.
+
 ## Deferred work
 
 The following remain outside this iteration until Task 9 is accepted:
