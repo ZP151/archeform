@@ -5365,12 +5365,16 @@ cleared).
 
 ### Task 9 remaining slices
 
-- **9A — Describe -> Restaurant V3.** The `composeProductRecipe` Restaurant V3
-  composer exists but production does not call it: the Describe path still calls
-  the V1 `composeProductDraft`, so a restaurant prompt yields a generic V1 graph
-  while "Start from a template" yields Restaurant V3. Route a verified restaurant
-  `intent`/`experience` deterministically into `composeProductRecipe` to create a
-  V3 Draft/Snapshot; keep the non-restaurant V1 path unchanged.
+- **9A — Describe -> Restaurant V3.** In progress. The composition core is
+  delivered: `RequirementSpecV1` gains an optional `productType`
+  (`7bbd31d8`), and the Control Plane `chooseProductPlan`/`applyProduct` route
+  `productType === "restaurant-ordering"` through `composeProductRecipe` with
+  the canonical `restaurantOrderingProductIntent()`/`restaurantOrderingExperienceBrief()`
+  plus the `composeDefaultCapabilityDraft({profile:"restaurant-ordering"})` base,
+  writing a V3 Draft (revision +1). The OpenAI interpreter now emits `productType`
+  for restaurant briefs (`441da2d0`). The non-restaurant V1 path is byte-identical.
+  Remaining: the Workbench must display and edit the Describe-composed V3 Draft
+  (today `applyComposedProduct` bootstraps only a V1 graph).
 - **9B — V3 launch + verification.** The V3 bundle has a Node boot script but no
   `docker-compose.yml` (required by `PreviewRunner`), and the verification queue
   accepts only `ApplicationGraphV1`. Add a governed V3 launch artifact (or a V3
