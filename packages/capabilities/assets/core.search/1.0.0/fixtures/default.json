@@ -1,0 +1,7 @@
+{
+  "event": "search.execute",
+  "indexEntity": "product",
+  "searchField": "description",
+  "query": "deterministic-query",
+  "failuresBeforeSuccess": 0
+}

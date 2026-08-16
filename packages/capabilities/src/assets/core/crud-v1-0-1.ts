@@ -3,6 +3,7 @@ import type { CapabilityAssetV1 } from "../contract.js";
 export const crudAssetV1_0_1: CapabilityAssetV1 = {
   manifest: {
     apiVersion: "factory.capability/v1",
+    bindingContract: "factory.capability-binding/v1",
     key: "core.crud",
     version: "1.0.1",
     category: "core",
@@ -11,11 +12,14 @@ export const crudAssetV1_0_1: CapabilityAssetV1 = {
       "Creates, reads, updates, and deletes validated domain records.",
     packageRoot: "packages/capabilities/assets/core.crud/1.0.1",
     manifestDigest:
-      "sha256:ac6197b00e529f519f1b062c9189a368eb9b94be125444a7c2f90cec46200f26",
+      "sha256:8dede9ba8d63bea9b09c7bf7ac6ce784c52595b644d03eca52ea6996a31882d1",
     lifecycle: "golden",
     profiles: ["expense-approval", "restaurant-ordering", "simple-ecommerce"],
     effects: ["data.create", "data.read", "data.update", "data.delete"],
-    inputSchema: [{ key: "entities", type: "domain.entities", required: true }],
+    inputSchema: [
+      { key: "entityKey", type: "domain.entity", required: true },
+      { key: "routeKey", type: "page.page", required: true },
+    ],
     outputSlots: [
       "api.runtime",
       "database.schema",
@@ -78,7 +82,11 @@ export const crudAssetV1_0_1: CapabilityAssetV1 = {
     ],
     verification: {
       fixture: "fixtures/default.json",
+      fixtureDigest:
+        "sha256:43e83c12606bf900ae30fd02a6e3f77e61d2629f9cd7c75c5376d8d5d9d8de5a",
       contractTest: "tests/contract.json",
+      contractTestDigest:
+        "sha256:5c17c71d7ac9863cae94372dfe4ecf4536009c3f18923a118a0b7237f0b27f9b",
       status: "verified",
     },
   },

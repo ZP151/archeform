@@ -19,12 +19,36 @@
     "order.history"
   ],
   "inputSchema": [
-    { "key": "orderEntity", "type": "domain.entity", "required": true },
-    { "key": "orderLineEntity", "type": "domain.entity", "required": true },
-    { "key": "orderFlow", "type": "flow.flow", "required": true },
-    { "key": "menuPage", "type": "page.page", "required": true },
-    { "key": "cartPage", "type": "page.page", "required": true },
-    { "key": "customerRole", "type": "policy.role", "required": true }
+    {
+      "key": "orderEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "orderLineEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "orderFlow",
+      "type": "flow.flow",
+      "required": true
+    },
+    {
+      "key": "menuPage",
+      "type": "page.page",
+      "required": true
+    },
+    {
+      "key": "cartPage",
+      "type": "page.page",
+      "required": true
+    },
+    {
+      "key": "customerRole",
+      "type": "policy.role",
+      "required": true
+    }
   ],
   "outputSlots": [
     "api.runtime",
@@ -45,12 +69,36 @@
     }
   ],
   "parameters": [
-    { "key": "orderEntity", "type": "graph-symbol", "required": true },
-    { "key": "orderLineEntity", "type": "graph-symbol", "required": true },
-    { "key": "orderFlow", "type": "graph-symbol", "required": true },
-    { "key": "menuPage", "type": "graph-symbol", "required": true },
-    { "key": "cartPage", "type": "graph-symbol", "required": true },
-    { "key": "customerRole", "type": "graph-symbol", "required": true }
+    {
+      "key": "orderEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "orderLineEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "orderFlow",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "menuPage",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "cartPage",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "customerRole",
+      "type": "graph-symbol",
+      "required": true
+    }
   ],
   "verification": {
     "fixture": "fixtures/default.json",

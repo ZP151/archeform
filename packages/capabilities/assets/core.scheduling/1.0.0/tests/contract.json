@@ -1,0 +1,10 @@
+{
+  "status": "verified",
+  "checks": [
+    "plan-schedule",
+    "append-capability-event",
+    "schedule-entity-binding",
+    "schedule-field-binding",
+    "remove-effect"
+  ]
+}

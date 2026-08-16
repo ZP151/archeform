@@ -358,6 +358,31 @@ describe("typed capability binding contract", () => {
     ).toThrow("required must be a boolean");
   });
 
+  it.each(["fieldRequired", "fieldUnique"])(
+    "rejects a non-boolean own %s constraint on a domain.field input",
+    (constraint) => {
+      const manifest = strictManifest(
+        [requiredEntity, { ...requiredField, [constraint]: "yes" }],
+        [entityParameter, fieldParameter],
+      );
+
+      expect(() => resolveStrictManifest(manifest, validBindings)).toThrow(
+        `${constraint} must be a boolean`,
+      );
+    },
+  );
+
+  it("rejects a strict parameter that is not a graph-symbol type", () => {
+    const manifest = strictManifest(
+      [requiredEntity],
+      [{ ...entityParameter, type: "number" }],
+    );
+
+    expect(() => resolveStrictManifest(manifest)).toThrow(
+      "must use graph-symbol",
+    );
+  });
+
   it("rejects an unsupported domain field scalar type", () => {
     const manifest = strictManifest(
       [requiredEntity, { ...requiredField, fieldTypes: ["money"] }],
@@ -494,6 +519,55 @@ describe("typed capability binding contract", () => {
       delete (Object.prototype as Record<string, unknown>).ownerBinding;
       delete (Object.prototype as Record<string, unknown>).fieldTypes;
     }
+  });
+
+  it("accepts a bounded enum parameter paired with a message.template input", () => {
+    const manifest = strictManifest(
+      [{ key: "template", type: "message.template", required: false }],
+      [
+        {
+          key: "template",
+          type: "enum",
+          required: false,
+          values: ["ecommerce.order-outcome", "expense.approval-outcome"],
+        },
+      ],
+    );
+
+    expect(() =>
+      resolveStrictManifest(manifest, {
+        template: "ecommerce.order-outcome",
+      }),
+    ).not.toThrow();
+  });
+
+  it("rejects a bounded enum parameter paired with any non-message.template input", () => {
+    const manifest = strictManifest(
+      [{ key: "template", type: "policy.role", required: false }],
+      [
+        {
+          key: "template",
+          type: "enum",
+          required: false,
+          values: ["ecommerce.order-outcome"],
+        },
+      ],
+    );
+
+    expect(() => resolveStrictManifest(manifest)).toThrow(
+      "must pair with a message.template binding input",
+    );
+  });
+
+  it("rejects a graph-symbol parameter paired with a message.template input", () => {
+    const manifest = strictManifest(
+      [{ key: "flowKey", type: "message.template", required: true }],
+      [{ key: "flowKey", type: "graph-symbol", required: true }],
+    );
+
+    expect(() => resolveStrictManifest(manifest)).toThrow(
+      "must not pair with a message.template binding input",
+    );
   });
 
   it("rejects a strict parameter that inherits its declaration", () => {

@@ -27,6 +27,8 @@ services:
       ]
     environment:
       FACTORY_REDIS_PASSWORD: ${FACTORY_REDIS_PASSWORD:?required}
+    ports:
+      - "127.0.0.1:${FACTORY_REDIS_PORT:-6379}:6379"
     healthcheck:
       test:
         [
@@ -48,8 +50,9 @@ services:
       FACTORY_INTERNAL_WORKER_TOKEN: ${FACTORY_INTERNAL_WORKER_TOKEN:?required}
       PORT: 3000
       FACTORY_ARTIFACT_ROOT: /artifacts
-      # Optional and intentionally passed only into the local Control Plane.
-      # Neither the Worker nor generated applications receive model credentials.
+      # Optional model credentials for the local server boundaries only.
+      # The Workbench receives them at its own boundary below; neither the
+      # Worker nor generated applications receive model credentials.
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5}
     depends_on:
@@ -66,12 +69,17 @@ services:
     build:
       context: ..
       dockerfile: apps/compiler-worker/Dockerfile
+    # The verification probes and the worker's docker CLI both address the
+    # generated previews through the host loopback (docker publishes the
+    # generated compose ports on 127.0.0.1), so the worker must share the
+    # host network namespace instead of the compose bridge.
+    network_mode: host
     environment:
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://127.0.0.1:${FACTORY_REDIS_PORT:-6379}
       FACTORY_REDIS_PASSWORD: ${FACTORY_REDIS_PASSWORD:?required}
       FACTORY_INTERNAL_WORKER_TOKEN: ${FACTORY_INTERNAL_WORKER_TOKEN:?required}
       FACTORY_ARTIFACT_ROOT: /artifacts
-      FACTORY_CONTROL_PLANE_URL: http://control-plane:3000
+      FACTORY_CONTROL_PLANE_URL: http://127.0.0.1:${FACTORY_CONTROL_PLANE_PORT:-3000}
       RESTAURANT_DEMO_TABLE_TOKEN: ${RESTAURANT_DEMO_TABLE_TOKEN:-}
     depends_on:
       redis:
@@ -92,6 +100,20 @@ services:
       - control-plane
     environment:
       NEXT_PUBLIC_CONTROL_PLANE_URL: ${FACTORY_PUBLIC_CONTROL_PLANE_URL:-http://localhost:${FACTORY_CONTROL_PLANE_PORT:-3000}}
+      # The Golden Path plan route reads recipe fixtures from the repository
+      # root (the whole workspace is copied into the image at /workspace).
+      FACTORY_REPOSITORY_ROOT: /workspace
+      # Model credentials for the requirement interpretation route, which
+      # runs in the Workbench server. Interpolated from the local
+      # environment at compose time (never a committed literal) and never
+      # exposed through a NEXT_PUBLIC_* name: Next.js would inline those
+      # into browser bundles.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5}
+      # Explicit development/E2E-only lever for the deterministic fixture
+      # interpreter; default off, never a fallback. Final acceptance runs
+      # without it and fails closed unless a real provider key is configured.
+      FACTORY_FIXTURE_MODE: ${FACTORY_FIXTURE_MODE:-}
     ports:
       - "${FACTORY_WORKBENCH_PORT:-5174}:5174"
 

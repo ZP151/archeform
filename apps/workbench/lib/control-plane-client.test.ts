@@ -1,8 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
-import { createPublishedGraphExchange } from "@factory/graph";
+import {
+  createPublishedGraphExchange,
+  hashApplicationGraphV3,
+  hashDraftPreviewSnapshotV2,
+} from "@factory/graph";
+import { templateDraftResponse } from "../test/template-draft-fixture";
 
 import {
+  admitCompilationArtifactContent,
   ControlPlaneClient,
+  ControlPlaneError,
+  deriveTemplateDataFieldValue,
+  deriveTemplateExperienceThemeMode,
+  deriveTemplateAccessState,
+  type AppendTemplateDataFieldRevisionInput,
+  type AppendTemplateExperienceThemeRevisionInput,
+  type AppendTemplateAccessRevisionInput,
+  type WorkbenchCompilationArtifact,
   type WorkbenchPreviewRun,
 } from "./control-plane-client";
 import { workbenchGraph } from "./workbench-graph";
@@ -43,6 +57,779 @@ const profileCoverage = [
 ];
 
 describe("ControlPlaneClient", () => {
+  it("lists, clones, and revises a strict curated template Draft", async () => {
+    const first = templateDraftResponse(1);
+    const second = templateDraftResponse(2);
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([first.template]), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(first), { status: 201 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(second), { status: 201 }),
+      );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(client.listCuratedTemplates()).resolves.toEqual([
+      first.template,
+    ]);
+    const cloned = await client.instantiateCuratedTemplate(
+      "restaurant-dual-surface",
+      {
+        requestId: "restaurant-template-001",
+        name: "Maison Aurelia",
+      },
+    );
+    const revised = await client.appendTemplateDraftRevision("application-1", {
+      baseDraftRevisionId: "draft-1",
+      name: "Maison Rivage",
+    });
+    expect(cloned).toMatchObject({
+      template: first.template,
+      draft: { revisionNumber: 1 },
+      snapshot: { id: "preview-1", state: "active" },
+    });
+    expect(revised).toMatchObject({
+      template: second.template,
+      draft: { revisionNumber: 2 },
+      snapshot: { id: "preview-2", state: "active" },
+    });
+    expect(cloned.previews.map(({ surface }) => surface.pages.length)).toEqual([
+      8, 7,
+    ]);
+
+    expect(fetcher).toHaveBeenNthCalledWith(
+      2,
+      "http://control-plane.test/workspaces/local/curated-templates/restaurant-dual-surface/instances",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          requestId: "restaurant-template-001",
+          name: "Maison Aurelia",
+        }),
+      }),
+    );
+    expect(fetcher).toHaveBeenNthCalledWith(
+      3,
+      "http://control-plane.test/template-draft-instances/application-1/revisions",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          baseDraftRevisionId: "draft-1",
+          name: "Maison Rivage",
+        }),
+      }),
+    );
+  });
+
+  it("rejects malformed template responses instead of guessing by shape", async () => {
+    const valid = templateDraftResponse(1);
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            ...valid,
+            apiVersion: "factory.template-draft-instance/v2",
+          }),
+          { status: 201 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ ...valid, previews: valid.previews.slice(0, 1) }),
+          { status: 201 },
+        ),
+      );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(
+      client.instantiateCuratedTemplate("restaurant-dual-surface", {
+        requestId: "restaurant-template-001",
+      }),
+    ).rejects.toThrow("Control Plane template response is invalid.");
+    await expect(
+      client.instantiateCuratedTemplate("restaurant-dual-surface", {
+        requestId: "restaurant-template-002",
+      }),
+    ).rejects.toThrow("Control Plane template response is invalid.");
+  });
+
+  it("appends a page revision through the exact route and rejects projection drift", async () => {
+    const revised = templateDraftResponse(3);
+    const drifted = structuredClone(revised);
+    drifted.previews[0].surface.pages[1]!.title = "Invented menu";
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(revised), { status: 201 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(drifted), { status: 201 }),
+      );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+    const input = {
+      baseDraftRevisionId: "draft-2",
+      surfaceKey: "customer-mobile" as const,
+      pageId: "customer-menu",
+      title: "Seasonal Menu",
+    };
+
+    await expect(
+      client.appendTemplatePageRevision("application-1", input),
+    ).resolves.toMatchObject({
+      draft: { revisionNumber: 3 },
+      snapshot: { id: "preview-3", state: "active" },
+    });
+    expect(fetcher).toHaveBeenNthCalledWith(
+      1,
+      "http://control-plane.test/template-draft-instances/application-1/page-revisions",
+      expect.objectContaining({ method: "POST", body: JSON.stringify(input) }),
+    );
+    await expect(
+      client.appendTemplatePageRevision("application-1", input),
+    ).rejects.toThrow("Control Plane template response is invalid.");
+  });
+
+  it("appends an exact block-order revision and rejects a projection not matching Graph order", async () => {
+    const revised = templateDraftResponse(4, undefined, {
+      pageId: "customer-home",
+      blockIds: ["home-items", "home-hero", "home-categories"],
+    });
+    const drifted = structuredClone(revised);
+    drifted.previews[0].surface.pages[0]!.blocks.reverse();
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(revised), { status: 201 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(drifted), { status: 201 }),
+      );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+    const input = {
+      baseDraftRevisionId: "draft-3",
+      surfaceKey: "customer-mobile" as const,
+      pageId: "customer-home",
+      regionKey: "main" as const,
+      blockIds: ["home-items", "home-hero", "home-categories"],
+    };
+
+    await expect(
+      client.appendTemplatePageBlockOrderRevision("application-1", input),
+    ).resolves.toMatchObject({
+      draft: { revisionNumber: 4 },
+      snapshot: { id: "preview-4", state: "active" },
+    });
+    expect(fetcher).toHaveBeenNthCalledWith(
+      1,
+      "http://control-plane.test/template-draft-instances/application-1/page-block-order-revisions",
+      expect.objectContaining({ method: "POST", body: JSON.stringify(input) }),
+    );
+    await expect(
+      client.appendTemplatePageBlockOrderRevision("application-1", input),
+    ).rejects.toThrow("Control Plane template response is invalid.");
+  });
+
+  it("appends the exact five-field Restaurant data command and admits only the strict r.5 response", async () => {
+    const revised = templateDraftResponse(
+      5,
+      undefined,
+      undefined,
+      "Heirloom tomato pizza",
+    );
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify(revised), { status: 201 }),
+      );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+    const input: AppendTemplateDataFieldRevisionInput = {
+      baseDraftRevisionId: "draft-4",
+      entityKey: "menu-item",
+      recordId: "margherita-pizza",
+      fieldKey: "name",
+      value: "Heirloom tomato pizza",
+    };
+
+    const result = await client.appendTemplateDataFieldRevision(
+      "application/1",
+      input,
+    );
+
+    expect(result.draft.revisionNumber).toBe(5);
+    expect(deriveTemplateDataFieldValue(result)).toBe("Heirloom tomato pizza");
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/template-draft-instances/application%2F1/data-field-revisions",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    );
+  });
+
+  it("admits an index-aligned scenario mirror whose object keys use a different order", async () => {
+    const response = structuredClone(
+      templateDraftResponse(5, undefined, undefined, "Heirloom tomato pizza"),
+    );
+    const scenarioRecord = response.draft.graph.seedScenarios[0]!.records.find(
+      ({ entityKey, values }) =>
+        entityKey === "menu-item" && values.name === "Heirloom tomato pizza",
+    )!;
+    scenarioRecord.values = Object.fromEntries(
+      Object.entries(scenarioRecord.values).reverse(),
+    );
+    response.snapshot.graphChecksum = hashApplicationGraphV3(
+      response.draft.graph,
+    );
+    response.snapshot.snapshotChecksum = hashDraftPreviewSnapshotV2(
+      response.snapshot,
+    );
+    response.previews.forEach((preview) => {
+      preview.graphChecksum = response.snapshot.graphChecksum;
+    });
+    const client = new ControlPlaneClient(
+      "http://control-plane.test",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(JSON.stringify(response), { status: 201 }),
+        ),
+    );
+
+    await expect(
+      client.appendTemplateDataFieldRevision("application-1", {
+        baseDraftRevisionId: "draft-4",
+        entityKey: "menu-item",
+        recordId: "margherita-pizza",
+        fieldKey: "name",
+        value: "Heirloom tomato pizza",
+      }),
+    ).resolves.toMatchObject({ draft: { revisionNumber: 5 } });
+  });
+
+  it("rejects a hostile scenario value without invoking its accessor or echoing its error", () => {
+    const response = structuredClone(templateDraftResponse(5));
+    const scenarioRecord = response.draft.graph.seedScenarios[0]!.records.find(
+      ({ entityKey, values }) =>
+        entityKey === "menu-item" && values.name === "Margherita pizza",
+    )!;
+    let getterCalls = 0;
+    Object.defineProperty(scenarioRecord.values, "name", {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        throw new Error("HOSTILE_SCENARIO_ACCESSOR");
+      },
+    });
+
+    expect(() => deriveTemplateDataFieldValue(response)).toThrow(
+      "Control Plane template response is invalid.",
+    );
+    expect(getterCalls).toBe(0);
+  });
+
+  it.each([
+    "scenario mirror",
+    "seed identity",
+    "Draft binding",
+    "preview pair",
+  ] as const)(
+    "rejects a data response with %s drift before replacement",
+    async (drift) => {
+      const response = structuredClone(
+        templateDraftResponse(5, undefined, undefined, "Heirloom tomato pizza"),
+      );
+      if (drift === "scenario mirror") {
+        const record = response.draft.graph.seedScenarios[0]!.records.find(
+          ({ entityKey, values }) =>
+            entityKey === "menu-item" &&
+            values.name === "Heirloom tomato pizza",
+        )!;
+        record.values.name = "Scenario drift";
+      } else if (drift === "seed identity") {
+        response.draft.graph.domain.seedData!.find(
+          ({ id }) => id === "margherita-pizza",
+        )!.id = "unsupported-pizza";
+      } else if (drift === "Draft binding") {
+        response.draft.draftRevisionId = "draft-foreign";
+      } else {
+        (response.previews as unknown as unknown[]).reverse();
+      }
+      if (drift === "scenario mirror" || drift === "seed identity") {
+        response.snapshot.graphChecksum = hashApplicationGraphV3(
+          response.draft.graph,
+        );
+        response.snapshot.snapshotChecksum = hashDraftPreviewSnapshotV2(
+          response.snapshot,
+        );
+        response.previews.forEach((preview) => {
+          preview.graphChecksum = response.snapshot.graphChecksum;
+        });
+      }
+      const client = new ControlPlaneClient(
+        "http://control-plane.test",
+        vi
+          .fn()
+          .mockResolvedValue(
+            new Response(JSON.stringify(response), { status: 201 }),
+          ),
+      );
+
+      await expect(
+        client.appendTemplateDataFieldRevision("application-1", {
+          baseDraftRevisionId: "draft-4",
+          entityKey: "menu-item",
+          recordId: "margherita-pizza",
+          fieldKey: "name",
+          value: "Heirloom tomato pizza",
+        }),
+      ).rejects.toThrow("Control Plane template response is invalid.");
+    },
+  );
+
+  it("rejects a checksum-mismatched Graph before its visible seed value can be derived", async () => {
+    const response = templateDraftResponse(
+      5,
+      undefined,
+      undefined,
+      "Heirloom tomato pizza",
+    );
+    response.snapshot.graphChecksum =
+      "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+    const client = new ControlPlaneClient(
+      "http://control-plane.test",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(JSON.stringify(response), { status: 201 }),
+        ),
+    );
+
+    await expect(
+      client.appendTemplateDataFieldRevision("application-1", {
+        baseDraftRevisionId: "draft-4",
+        entityKey: "menu-item",
+        recordId: "margherita-pizza",
+        fieldKey: "name",
+        value: "Heirloom tomato pizza",
+      }),
+    ).rejects.toThrow("Control Plane template response is invalid.");
+  });
+
+  it("appends the exact two-field Experience command and admits a key-reordered strict r.6 response", async () => {
+    const revised = templateDraftResponse(
+      6,
+      { pageId: "customer-menu", title: "Seasonal Menu" },
+      {
+        pageId: "customer-home",
+        blockIds: ["home-items", "home-hero", "home-categories"],
+      },
+      "Heirloom tomato pizza",
+      "dark",
+    );
+    const reordered = Object.fromEntries(Object.entries(revised).reverse());
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify(reordered), { status: 201 }),
+      );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+    const input: AppendTemplateExperienceThemeRevisionInput = {
+      baseDraftRevisionId: "draft-5",
+      mode: "dark",
+    };
+
+    const result = await client.appendTemplateExperienceThemeRevision(
+      "application/1",
+      input,
+    );
+
+    expect(result.draft.revisionNumber).toBe(6);
+    expect(deriveTemplateExperienceThemeMode(result)).toBe("dark");
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/template-draft-instances/application%2F1/experience-theme-revisions",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    );
+  });
+
+  it("derives light and dark only from admitted Graph instances", () => {
+    expect(deriveTemplateExperienceThemeMode(templateDraftResponse(5))).toBe(
+      "light",
+    );
+    expect(
+      deriveTemplateExperienceThemeMode(
+        templateDraftResponse(
+          6,
+          undefined,
+          undefined,
+          "Heirloom tomato pizza",
+          "dark",
+        ),
+      ),
+    ).toBe("dark");
+  });
+
+  it("posts an exact Access role command and derives the declared roles", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify(templateDraftResponse(7)), { status: 201 }),
+      );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+    const input: AppendTemplateAccessRevisionInput = {
+      baseDraftRevisionId: "draft-6",
+      roleKey: "host",
+    };
+
+    const result = await client.appendTemplateAccessRevision(
+      "application-1",
+      input,
+    );
+
+    expect(result.draft.revisionNumber).toBe(7);
+    expect(deriveTemplateAccessState(result).roles).toEqual([
+      "customer",
+      "cashier",
+      "kitchen",
+      "manager",
+    ]);
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/template-draft-instances/application-1/access-revisions",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    );
+  });
+
+  it("derives the declared roles and permissions only from admitted instances", () => {
+    expect(deriveTemplateAccessState(templateDraftResponse(6))).toMatchObject({
+      roles: ["customer", "cashier", "kitchen", "manager"],
+    });
+    const hostile = structuredClone(templateDraftResponse(6));
+    (hostile.draft.graph.policy as unknown as { roles: unknown }).roles = null;
+    expect(() => deriveTemplateAccessState(hostile)).toThrow(
+      "Control Plane template response is invalid.",
+    );
+  });
+
+  it.each([
+    "Graph checksum",
+    "latest Draft identity",
+    "latest Snapshot identity",
+    "active Snapshot state",
+    "preview pair",
+    "unsupported system theme",
+  ] as const)(
+    "rejects Experience response %s drift before replacement",
+    async (drift) => {
+      const response = structuredClone(
+        templateDraftResponse(
+          6,
+          undefined,
+          undefined,
+          "Heirloom tomato pizza",
+          "dark",
+        ),
+      );
+      if (drift === "Graph checksum") {
+        response.snapshot.graphChecksum =
+          "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+      } else if (drift === "latest Draft identity") {
+        response.draft.draftRevisionId = "draft-foreign";
+      } else if (drift === "latest Snapshot identity") {
+        response.snapshot.draftRevisionId = "draft-foreign";
+        response.snapshot.snapshotChecksum = hashDraftPreviewSnapshotV2(
+          response.snapshot,
+        );
+      } else if (drift === "active Snapshot state") {
+        (response.snapshot as { state: string }).state = "rendering";
+        response.snapshot.snapshotChecksum = hashDraftPreviewSnapshotV2(
+          response.snapshot,
+        );
+      } else if (drift === "preview pair") {
+        (response.previews as unknown as unknown[]).reverse();
+      } else {
+        response.draft.graph.experience.theme.mode = "system";
+        response.snapshot.graphChecksum = hashApplicationGraphV3(
+          response.draft.graph,
+        );
+        response.snapshot.snapshotChecksum = hashDraftPreviewSnapshotV2(
+          response.snapshot,
+        );
+        response.previews.forEach((preview) => {
+          preview.graphChecksum = response.snapshot.graphChecksum;
+        });
+      }
+      const client = new ControlPlaneClient(
+        "http://control-plane.test",
+        vi
+          .fn()
+          .mockResolvedValue(
+            new Response(JSON.stringify(response), { status: 201 }),
+          ),
+      );
+
+      await expect(
+        client.appendTemplateExperienceThemeRevision("application-1", {
+          baseDraftRevisionId: "draft-5",
+          mode: "dark",
+        }),
+      ).rejects.toThrow("Control Plane template response is invalid.");
+    },
+  );
+
+  it("rejects a checksum-mismatched dark Graph before visible theme derivation", async () => {
+    const response = templateDraftResponse(
+      6,
+      undefined,
+      undefined,
+      "Heirloom tomato pizza",
+      "dark",
+    );
+    response.snapshot.graphChecksum =
+      "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+    const client = new ControlPlaneClient(
+      "http://control-plane.test",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(JSON.stringify(response), { status: 201 }),
+        ),
+    );
+
+    await expect(
+      client.appendTemplateExperienceThemeRevision("application-1", {
+        baseDraftRevisionId: "draft-5",
+        mode: "dark",
+      }),
+    ).rejects.toThrow("Control Plane template response is invalid.");
+  });
+
+  it("rejects a template response whose Graph and Snapshot identity do not match", async () => {
+    const checksumDrift = structuredClone(templateDraftResponse(1));
+    checksumDrift.draft.graph.metadata.name = "Checksum drift";
+    const workspaceDrift = structuredClone(templateDraftResponse(1));
+    workspaceDrift.draft.graph.metadata.workspaceId = "other-workspace";
+    workspaceDrift.snapshot = {
+      ...workspaceDrift.snapshot,
+      graphChecksum: hashApplicationGraphV3(workspaceDrift.draft.graph),
+      snapshotChecksum:
+        "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    };
+    workspaceDrift.snapshot.snapshotChecksum = hashDraftPreviewSnapshotV2(
+      workspaceDrift.snapshot,
+    );
+    workspaceDrift.previews = [
+      {
+        ...workspaceDrift.previews[0],
+        graphChecksum: workspaceDrift.snapshot.graphChecksum,
+      },
+      {
+        ...workspaceDrift.previews[1],
+        graphChecksum: workspaceDrift.snapshot.graphChecksum,
+      },
+    ];
+    const projectionDrift = structuredClone(templateDraftResponse(1));
+    projectionDrift.previews[0].surface.pages[0]!.title = "Invented title";
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(checksumDrift), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(workspaceDrift), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(projectionDrift), { status: 200 }),
+      );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(
+      client.openTemplateDraft("restaurant-template-001"),
+    ).rejects.toThrow("Control Plane template response is invalid.");
+    await expect(
+      client.openTemplateDraft("restaurant-template-001"),
+    ).rejects.toThrow("Control Plane template response is invalid.");
+    await expect(
+      client.openTemplateDraft("restaurant-template-001"),
+    ).rejects.toThrow("Control Plane template response is invalid.");
+  });
+
+  it("copies only the template preview fields consumed by the default product view", async () => {
+    const valid = templateDraftResponse(1);
+    const hostile = structuredClone(valid) as unknown as Record<
+      string,
+      unknown
+    >;
+    (hostile.template as Record<string, unknown>).internalEvidence =
+      "HOSTILE-TECHNICAL-SENTINEL";
+    const firstPage = (
+      (hostile.previews as Record<string, unknown>[])[0]?.surface as Record<
+        string,
+        unknown
+      >
+    ).pages as Record<string, unknown>[];
+    firstPage[0]!.internalEvidence = "HOSTILE-TECHNICAL-SENTINEL";
+    (firstPage[0]!.recipe as Record<string, unknown>).internalEvidence =
+      "HOSTILE-TECHNICAL-SENTINEL";
+    const firstBlock = (firstPage[0]!.blocks as Record<string, unknown>[])[0]!;
+    firstBlock.internalEvidence = "HOSTILE-TECHNICAL-SENTINEL";
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify(hostile), { status: 200 }),
+      );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    const parsed = await client.openTemplateDraft("restaurant-template-001");
+
+    expect(JSON.stringify(parsed)).not.toContain("HOSTILE-TECHNICAL-SENTINEL");
+  });
+  it("propagates the caller AbortSignal through product choice and apply transport", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ checksum: "sha256:diff" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            draftRevision: {
+              id: "draft-2",
+              revisionNumber: 2,
+              graph: workbenchGraph,
+            },
+            review: {
+              applicationGraphId: "graph-1",
+              status: "applied",
+            },
+          }),
+          {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          },
+        ),
+      );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+    const choiceController = new AbortController();
+    const applyController = new AbortController();
+
+    await client.chooseProductPlan(
+      "review-1",
+      "standard",
+      choiceController.signal,
+    );
+    await client.applyProduct("review-1", applyController.signal);
+
+    expect(fetcher).toHaveBeenNthCalledWith(
+      1,
+      "http://control-plane.test/product/requirements/review-1/choices",
+      expect.objectContaining({ signal: choiceController.signal }),
+    );
+    expect(fetcher).toHaveBeenNthCalledWith(
+      2,
+      "http://control-plane.test/product/requirements/review-1/apply",
+      expect.objectContaining({ signal: applyController.signal }),
+    );
+  });
+
+  it.each([
+    "composition.request_envelope_invalid",
+    "composition.request_identity_invalid",
+    "composition.requirement_invalid",
+    "composition.blueprint_invalid",
+    "composition.requirement_blueprint_checksum_mismatch",
+  ])(
+    "retains the approved rejection code %s without exposing its response",
+    async (code) => {
+      const fetcher = vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            statusCode: 400,
+            error: "Bad Request",
+            code,
+            message: "Rejected value must-not-echo failed validation.",
+            rejectedValue: "must-not-echo",
+          }),
+          { status: 400, headers: { "content-type": "application/json" } },
+        ),
+      );
+      const client = new ControlPlaneClient(
+        "http://control-plane.test",
+        fetcher,
+      );
+
+      let rejection: ControlPlaneError | undefined;
+      try {
+        await client.createProductRequirement({
+          requestId: "request-client-1234",
+          requirement: {} as never,
+          blueprint: {} as never,
+        });
+      } catch (error) {
+        if (error instanceof ControlPlaneError) rejection = error;
+        else throw error;
+      }
+
+      expect(rejection).toMatchObject({ status: 400, code });
+      expect(rejection?.message).toBe("Control Plane request failed with 400.");
+      expect(JSON.stringify(rejection)).not.toContain("must-not-echo");
+    },
+  );
+
+  it.each([
+    [
+      "unknown code",
+      JSON.stringify({
+        code: "composition.unapproved",
+        message: "must-not-echo",
+      }),
+    ],
+    [
+      "non-string code",
+      JSON.stringify({
+        code: ["composition.requirement_invalid"],
+        message: "must-not-echo",
+      }),
+    ],
+    ["malformed body", "{not-json:must-not-echo"],
+  ])("drops rejection codes from a %s response", async (_label, body) => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(body, {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    let rejection: ControlPlaneError | undefined;
+    try {
+      await client.createProductRequirement({
+        requestId: "request-client-1234",
+        requirement: {} as never,
+        blueprint: {} as never,
+      });
+    } catch (error) {
+      if (error instanceof ControlPlaneError) rejection = error;
+      else throw error;
+    }
+
+    expect(rejection).toMatchObject({ status: 400 });
+    expect(rejection?.code).toBeUndefined();
+    expect(JSON.stringify(rejection)).not.toContain("must-not-echo");
+  });
+
   it("reads only safe Workspace Portfolio summary fields", async () => {
     const fetcher = vi.fn().mockResolvedValue(
       new Response(
@@ -321,6 +1108,7 @@ describe("ControlPlaneClient", () => {
         id: "graph-restaurant",
         key: "restaurant-ordering",
         name: "Restaurant ordering",
+        templateOrigin: null,
         compositionProfile: "restaurant-ordering",
         latestDraft: {
           revisionNumber: 3,
@@ -442,6 +1230,137 @@ describe("ControlPlaneClient", () => {
     expect(fetcher).toHaveBeenCalledWith(
       "http://control-plane.test/preview-runs/preview-1/stop",
       expect.objectContaining({ method: "POST", body: JSON.stringify({}) }),
+    );
+  });
+
+  it("starts a verification run bound to the immutable compilation identifier", async () => {
+    const run = {
+      verificationRunId: "verification-run-1",
+      compilationId: "compilation-1",
+      profileKey: "expense-approval",
+      status: "pending",
+      stepIds: [],
+      evidenceDigest: null,
+      evidence: null,
+      diagnosis: null,
+      draftDiff: null,
+    };
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify(run), { status: 201 }));
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(
+      client.createVerificationRun(
+        "compilation-1",
+        "verification-run-1",
+        "expense-approval",
+      ),
+    ).resolves.toEqual(run);
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/compilations/compilation-1/verification-runs",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          verificationRunId: "verification-run-1",
+          profileKey: "expense-approval",
+        }),
+      }),
+    );
+  });
+
+  it("creates a verification run without a profile key so the worker derives the plan from the Published Graph", async () => {
+    const run = {
+      verificationRunId: "verification-run-2",
+      compilationId: "compilation-1",
+      profileKey: null,
+      status: "pending",
+      stepIds: [],
+      evidenceDigest: null,
+      evidence: null,
+      diagnosis: null,
+      draftDiff: null,
+    };
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify(run), { status: 201 }));
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(
+      client.createVerificationRun("compilation-1", "verification-run-2"),
+    ).resolves.toEqual(run);
+    // The profile key is absent from the request body entirely — the worker
+    // derives the verification plan from the Published Graph itself.
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/compilations/compilation-1/verification-runs",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ verificationRunId: "verification-run-2" }),
+      }),
+    );
+  });
+
+  it("reads a verification run by its Factory-issued identifier", async () => {
+    const run = {
+      verificationRunId: "verification-run-1",
+      compilationId: "compilation-1",
+      profileKey: "expense-approval",
+      status: "succeeded",
+      stepIds: ["isolated-boot", "employee-submit"],
+      evidenceDigest: "sha256:" + "b".repeat(64),
+      evidence: { steps: [] },
+      diagnosis: null,
+      draftDiff: null,
+    };
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify(run), { status: 200 }));
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(
+      client.getVerificationRun("verification-run-1"),
+    ).resolves.toEqual(run);
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/verification-runs/verification-run-1",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("approves a reviewable Draft Diff into the next immutable Draft revision", async () => {
+    const draftDiff = { apiVersion: "factory.draft-diff/v1", operations: [] };
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          draftRevision: {
+            id: "draft-4",
+            applicationGraphId: "graph-1",
+            revisionNumber: 4,
+            graph: workbenchGraph,
+          },
+          draftDiff,
+        }),
+        { status: 200 },
+      ),
+    );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(
+      client.approveVerificationDraftDiff("verification-run-1", draftDiff),
+    ).resolves.toEqual({
+      draft: {
+        applicationGraphId: "graph-1",
+        draftRevisionId: "draft-4",
+        revisionNumber: 4,
+        graph: workbenchGraph,
+      },
+      draftDiff,
+    });
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://control-plane.test/verification-runs/verification-run-1/approve",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ draftDiff }),
+      }),
     );
   });
 
@@ -645,6 +1564,10 @@ describe("ControlPlaneClient", () => {
           id: "compilation-1",
           publishedRevisionId: "published-1",
           target: "application-bundle",
+          sequence: 1,
+          inputGraphHash: "sha256:" + "a".repeat(64),
+          compilerVersion: "factory-compiler/v1",
+          compiledAt: "2026-08-10T11:59:00.000Z",
           result: { status: "queued" },
         }),
         { status: 201, headers: { "content-type": "application/json" } },
@@ -652,11 +1575,10 @@ describe("ControlPlaneClient", () => {
     );
     const client = new ControlPlaneClient("http://control-plane.test", fetcher);
 
-    await expect(
-      client.createCompilation("published-1"),
-    ).resolves.toMatchObject({
+    await expect(client.createCompilation("published-1")).resolves.toEqual({
       id: "compilation-1",
       publishedRevisionId: "published-1",
+      target: "application-bundle",
       result: { status: "queued" },
     });
     expect(fetcher).toHaveBeenCalledWith(
@@ -679,11 +1601,16 @@ describe("ControlPlaneClient", () => {
           id: "compilation-1",
           publishedRevisionId: "published-1",
           target: "application-bundle",
-          result: { status: "succeeded" },
+          result: {
+            status: "succeeded",
+            artifactCount: 1,
+            completedAt: "2026-08-10T12:00:00.000Z",
+          },
           artifacts: [
             {
               path: "web/app/page.tsx",
-              digest: "sha256:abc",
+              digest:
+                "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
               mediaType: "text/typescript",
             },
           ],
@@ -696,7 +1623,11 @@ describe("ControlPlaneClient", () => {
     await expect(client.getCompilation("compilation-1")).resolves.toMatchObject(
       {
         id: "compilation-1",
-        result: { status: "succeeded" },
+        result: {
+          status: "succeeded",
+          artifactCount: 1,
+          completedAt: "2026-08-10T12:00:00.000Z",
+        },
         artifacts: [{ path: "web/app/page.tsx" }],
       },
     );
@@ -706,7 +1637,413 @@ describe("ControlPlaneClient", () => {
     );
   });
 
-  it("reads only a registered generated artifact snapshot by compilation and encoded path", async () => {
+  it("preserves a complete safe unique artifact manifest when a consumer sorts a copy", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: "compilation-1",
+          publishedRevisionId: "published-1",
+          target: "application-bundle",
+          result: {
+            status: "succeeded",
+            artifactCount: 2,
+            completedAt: "2026-08-14T12:00:00.000Z",
+          },
+          artifacts: [
+            {
+              path: "web/app/page.tsx",
+              digest:
+                "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              mediaType: "text/typescript",
+              sizeBytes: 256,
+            },
+            {
+              path: "api/package.json",
+              digest:
+                "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              mediaType: "application/json",
+              sizeBytes: 128,
+            },
+          ],
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    const compilation = await client.getCompilation("compilation-1");
+    expect(compilation.artifacts).toEqual([
+      {
+        path: "web/app/page.tsx",
+        digest:
+          "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        mediaType: "text/typescript",
+        sizeBytes: 256,
+      },
+      {
+        path: "api/package.json",
+        digest:
+          "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        mediaType: "application/json",
+        sizeBytes: 128,
+      },
+    ]);
+
+    const ordered = [...compilation.artifacts!].sort((left, right) =>
+      left.path < right.path ? -1 : left.path > right.path ? 1 : 0,
+    );
+    expect(ordered.map(({ path }) => path)).toEqual([
+      "api/package.json",
+      "web/app/page.tsx",
+    ]);
+    expect(compilation.artifacts?.map(({ path }) => path)).toEqual([
+      "web/app/page.tsx",
+      "api/package.json",
+    ]);
+  });
+
+  it.each([
+    [
+      "empty path",
+      [
+        {
+          path: "",
+          digest: `sha256:${"a".repeat(64)}`,
+          mediaType: "text/plain",
+        },
+      ],
+    ],
+    [
+      "absolute path",
+      [
+        {
+          path: "/api/main.ts",
+          digest: `sha256:${"a".repeat(64)}`,
+          mediaType: "text/plain",
+        },
+      ],
+    ],
+    [
+      "drive path",
+      [
+        {
+          path: "C:/api/main.ts",
+          digest: `sha256:${"a".repeat(64)}`,
+          mediaType: "text/plain",
+        },
+      ],
+    ],
+    [
+      "backslash path",
+      [
+        {
+          path: "api\\main.ts",
+          digest: `sha256:${"a".repeat(64)}`,
+          mediaType: "text/plain",
+        },
+      ],
+    ],
+    [
+      "dot segment",
+      [
+        {
+          path: "api/./main.ts",
+          digest: `sha256:${"a".repeat(64)}`,
+          mediaType: "text/plain",
+        },
+      ],
+    ],
+    [
+      "parent segment",
+      [
+        {
+          path: "api/../main.ts",
+          digest: `sha256:${"a".repeat(64)}`,
+          mediaType: "text/plain",
+        },
+      ],
+    ],
+    [
+      "short digest",
+      [{ path: "api/main.ts", digest: "sha256:abc", mediaType: "text/plain" }],
+    ],
+    [
+      "uppercase digest",
+      [
+        {
+          path: "api/main.ts",
+          digest: `sha256:${"A".repeat(64)}`,
+          mediaType: "text/plain",
+        },
+      ],
+    ],
+    [
+      "empty media type",
+      [
+        {
+          path: "api/main.ts",
+          digest: `sha256:${"a".repeat(64)}`,
+          mediaType: "",
+        },
+      ],
+    ],
+    [
+      "negative size",
+      [
+        {
+          path: "api/main.ts",
+          digest: `sha256:${"a".repeat(64)}`,
+          mediaType: "text/plain",
+          sizeBytes: -1,
+        },
+      ],
+    ],
+    [
+      "fractional size",
+      [
+        {
+          path: "api/main.ts",
+          digest: `sha256:${"a".repeat(64)}`,
+          mediaType: "text/plain",
+          sizeBytes: 1.5,
+        },
+      ],
+    ],
+    [
+      "unsafe size",
+      [
+        {
+          path: "api/main.ts",
+          digest: `sha256:${"a".repeat(64)}`,
+          mediaType: "text/plain",
+          sizeBytes: Number.MAX_SAFE_INTEGER + 1,
+        },
+      ],
+    ],
+    [
+      "duplicate path",
+      [
+        {
+          path: "api/main.ts",
+          digest: `sha256:${"a".repeat(64)}`,
+          mediaType: "text/plain",
+        },
+        {
+          path: "api/main.ts",
+          digest: `sha256:${"b".repeat(64)}`,
+          mediaType: "text/typescript",
+        },
+      ],
+    ],
+  ])("rejects a compilation manifest with %s", async (_label, artifacts) => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: "compilation-1",
+          publishedRevisionId: "published-1",
+          target: "application-bundle",
+          result: {
+            status: "succeeded",
+            artifactCount: artifacts.length,
+            completedAt: "2026-08-14T12:00:00.000Z",
+          },
+          artifacts,
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    const client = new ControlPlaneClient("http://control-plane.test", fetcher);
+
+    await expect(client.getCompilation("compilation-1")).rejects.toThrow(
+      "Control Plane compilation response is invalid.",
+    );
+  });
+
+  it("admits either JSON key order as a fresh frozen descriptor-bound primitive copy", () => {
+    const selected: WorkbenchCompilationArtifact = {
+      path: "web/app/page.tsx",
+      digest:
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      mediaType: "text/typescript",
+      sizeBytes: 27,
+    };
+    const first = {
+      content: "export const ready = true;\n",
+      digest: selected.digest,
+      path: selected.path,
+    };
+    const second = {
+      path: selected.path,
+      digest: selected.digest,
+      content: "export const ready = true;\n",
+    };
+
+    const admittedFirst = admitCompilationArtifactContent(first, selected);
+    const admittedSecond = admitCompilationArtifactContent(second, selected);
+    expect(admittedFirst).toEqual({
+      path: "web/app/page.tsx",
+      digest:
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      content: "export const ready = true;\n",
+    });
+    expect(admittedSecond).toEqual(admittedFirst);
+    expect(admittedFirst).not.toBe(first);
+    expect(Object.isFrozen(admittedFirst)).toBe(true);
+    first.content = "changed after admission";
+    expect(admittedFirst.content).toBe("export const ready = true;\n");
+  });
+
+  it("rejects hostile artifact responses with one fixed error and invokes no accessors or conversions", () => {
+    const selected: WorkbenchCompilationArtifact = {
+      path: "web/app/page.tsx",
+      digest:
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      mediaType: "text/typescript",
+    };
+    let getterCalls = 0;
+    let conversionCalls = 0;
+    const accessor = {
+      path: selected.path,
+      digest: selected.digest,
+      get content() {
+        getterCalls += 1;
+        return "must not be read";
+      },
+    };
+    const nonEnumerable = {
+      path: selected.path,
+      digest: selected.digest,
+      content: "hidden",
+    };
+    Object.defineProperty(nonEnumerable, "content", { enumerable: false });
+    const symbol = {
+      path: selected.path,
+      digest: selected.digest,
+      content: "extra symbol",
+      [Symbol("extra")]: true,
+    };
+    const inherited = Object.create({ inherited: true });
+    Object.assign(inherited, {
+      path: selected.path,
+      digest: selected.digest,
+      content: "custom prototype",
+    });
+    const conversions = {
+      toJSON() {
+        conversionCalls += 1;
+        return "converted";
+      },
+      toString() {
+        conversionCalls += 1;
+        return "converted";
+      },
+      valueOf() {
+        conversionCalls += 1;
+        return "converted";
+      },
+    };
+    const throwingProxy = new Proxy(
+      {},
+      {
+        ownKeys() {
+          throw new Error("HOSTILE_PROXY_DETAIL");
+        },
+      },
+    );
+    const revoked = Proxy.revocable({}, {});
+    revoked.revoke();
+    const cases: readonly unknown[] = [
+      null,
+      [],
+      new String("boxed"),
+      inherited,
+      {
+        path: selected.path,
+        digest: selected.digest,
+        content: "extra",
+        extra: true,
+      },
+      symbol,
+      nonEnumerable,
+      accessor,
+      throwingProxy,
+      revoked.proxy,
+      {
+        path: "api/package.json",
+        digest: selected.digest,
+        content: "wrong path",
+      },
+      {
+        path: selected.path,
+        digest:
+          "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        content: "wrong digest",
+      },
+      { path: selected.path, digest: "sha256:abc", content: "bad digest" },
+      { path: selected.path, digest: selected.digest, content: 42 },
+      { path: selected.path, digest: selected.digest, content: conversions },
+      {
+        path: selected.path,
+        digest: selected.digest,
+        content: "é".repeat(500_001),
+      },
+    ];
+
+    for (const input of cases) {
+      expect(() => admitCompilationArtifactContent(input, selected)).toThrow(
+        "Control Plane artifact response is invalid.",
+      );
+    }
+    expect(getterCalls).toBe(0);
+    expect(conversionCalls).toBe(0);
+  });
+
+  it.each(["createCompilation", "getCompilation"] as const)(
+    "%s rejects unsafe compilation result fields instead of casting them",
+    async (method) => {
+      const fetcher = vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            id: "compilation-1",
+            publishedRevisionId: "published-1",
+            target: "application-bundle",
+            sequence: 1,
+            compilerVersion: "factory-compiler/v1",
+            compiledAt: "2026-08-10T11:59:00.000Z",
+            result: {
+              status: "failed",
+              failureCode: "compilation.failed",
+              completedAt: "2026-08-10T12:00:00.000Z",
+              response: "must-not-surface",
+            },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      );
+      const client = new ControlPlaneClient(
+        "http://control-plane.test",
+        fetcher,
+      );
+
+      const request =
+        method === "createCompilation"
+          ? client.createCompilation("published-1")
+          : client.getCompilation("compilation-1");
+
+      await expect(request).rejects.toThrow(
+        "Control Plane compilation result is invalid.",
+      );
+    },
+  );
+
+  it("reads only the selected registered descriptor by compilation and encoded path", async () => {
+    const selected: WorkbenchCompilationArtifact = {
+      path: "docs/api-reference.md",
+      digest:
+        "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      mediaType: "text/markdown",
+      sizeBytes: 16,
+    };
     const fetcher = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -721,7 +2058,7 @@ describe("ControlPlaneClient", () => {
     const client = new ControlPlaneClient("http://control-plane.test", fetcher);
 
     await expect(
-      client.getCompilationArtifact("compilation-1", "docs/api-reference.md"),
+      client.getCompilationArtifact("compilation-1", selected),
     ).resolves.toEqual({
       path: "docs/api-reference.md",
       digest:
@@ -733,6 +2070,45 @@ describe("ControlPlaneClient", () => {
       expect.objectContaining({ method: "GET" }),
     );
   });
+
+  it.each([
+    {
+      path: "api/package.json",
+      digest:
+        "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      content: "wrong registered path",
+    },
+    {
+      path: "docs/api-reference.md",
+      digest:
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      content: "wrong registered digest",
+    },
+  ])(
+    "rejects artifact content that is not bound to the selected descriptor",
+    async (response) => {
+      const selected: WorkbenchCompilationArtifact = {
+        path: "docs/api-reference.md",
+        digest:
+          "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        mediaType: "text/markdown",
+      };
+      const fetcher = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(response), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+      const client = new ControlPlaneClient(
+        "http://control-plane.test",
+        fetcher,
+      );
+
+      await expect(
+        client.getCompilationArtifact("compilation-1", selected),
+      ).rejects.toThrow("Control Plane artifact response is invalid.");
+    },
+  );
 
   it("reads ordered Draft and Published revision snapshots for the Workbench timeline", async () => {
     const fetcher = vi
@@ -888,5 +2264,50 @@ describe("ControlPlaneClient", () => {
         body: JSON.stringify({ exchange }),
       }),
     );
+  });
+
+  describe("getCompilationSourceArchive", () => {
+    it("returns the archive bytes and derived filename for ZIP", async () => {
+      const bytes = new Uint8Array([0x50, 0x4b, 0x03, 0x04]);
+      const fetcher = vi.fn().mockResolvedValue(
+        new Response(bytes, {
+          status: 200,
+          headers: { "content-type": "application/zip" },
+        }),
+      );
+      const client = new ControlPlaneClient(
+        "http://control-plane.test",
+        fetcher,
+      );
+
+      const archive = await client.getCompilationSourceArchive(
+        "compilation-1",
+        "zip",
+      );
+
+      expect(archive.filename).toBe("compilation-1.zip");
+      expect(archive.contentType).toBe("application/zip");
+      expect([...archive.bytes]).toEqual([0x50, 0x4b, 0x03, 0x04]);
+      expect(fetcher).toHaveBeenCalledWith(
+        "http://control-plane.test/compilations/compilation-1/source-archive?format=zip",
+        expect.objectContaining({ method: "GET" }),
+      );
+    });
+
+    it("throws ControlPlaneError on a non-ok response", async () => {
+      const fetcher = vi
+        .fn()
+        .mockResolvedValue(
+          new Response(JSON.stringify({ message: "nope" }), { status: 400 }),
+        );
+      const client = new ControlPlaneClient(
+        "http://control-plane.test",
+        fetcher,
+      );
+
+      await expect(
+        client.getCompilationSourceArchive("compilation-1", "git"),
+      ).rejects.toThrow(ControlPlaneError);
+    });
   });
 });

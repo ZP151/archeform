@@ -17,6 +17,10 @@
     "./browser": {
       "types": "./dist/browser.d.ts",
       "default": "./dist/browser.js"
+    },
+    "./requirements/browser": {
+      "types": "./dist/requirements-browser.d.ts",
+      "default": "./dist/requirements-browser.js"
     }
   },
   "scripts": {
@@ -26,6 +30,7 @@
     "lint": "prettier --check src test"
   },
   "dependencies": {
+    "@factory/capabilities": "workspace:*",
     "@factory/graph": "workspace:*",
     "@xyflow/react": "^12.3.6",
     "@puckeditor/core": "^0.22.3",

@@ -4,10 +4,75 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { FixtureRequirementInterpreter } from "@factory/adapters";
+
+import { metadata } from "../app/layout";
 import type { WorkbenchApplicationSummary } from "../lib/control-plane-client";
 import { workbenchGraph } from "../lib/workbench-graph";
+import type { PlanReviewAlternative } from "./journey/plan-review";
 import { Workbench } from "./workbench";
-import { WorkbenchHome } from "./workbench-home";
+import {
+  WorkbenchHome,
+  type WorkbenchHomeJourneyProps,
+} from "./workbench-home";
+
+const expenseBrief =
+  "Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions.";
+const vagueBrief =
+  "I need an application where people can submit things for approval.";
+
+function briefJourney(
+  overrides: Partial<WorkbenchHomeJourneyProps> = {},
+): WorkbenchHomeJourneyProps {
+  return {
+    stage: "brief",
+    busy: false,
+    error: null,
+    failure: null,
+    brief: "",
+    onBriefChange: vi.fn(),
+    onInterpret: vi.fn(),
+    examplePrompts: [
+      expenseBrief,
+      "Build an appointment booking application. Customers choose a service and an available time, staff confirm or reschedule appointments, and administrators manage services, schedules, and cancellations.",
+    ],
+    onApplyExample: vi.fn(),
+    requirement: null,
+    blueprintTitle: "Requirement",
+    openQuestions: [],
+    answers: {},
+    onAnswerChange: vi.fn(),
+    onContinue: vi.fn(),
+    planAlternatives: null,
+    chosenKey: null,
+    onChoose: vi.fn(),
+    diffChecksum: null,
+    onApply: vi.fn(),
+    ...overrides,
+  };
+}
+
+const planAlternatives: readonly PlanReviewAlternative[] = [
+  {
+    key: "standard",
+    label: "Standard",
+    capabilityLocks: [
+      { key: "core.identity-policy", version: "1.0.0" },
+      { key: "commerce.catalog", version: "1.0.0" },
+    ],
+    operations: 4,
+    complexity: "standard",
+    acceptanceJourneys: 2,
+  },
+  {
+    key: "minimal",
+    label: "Minimal",
+    capabilityLocks: [{ key: "core.identity-policy", version: "1.0.0" }],
+    operations: 2,
+    complexity: "minimal",
+    acceptanceJourneys: 1,
+  },
+];
 
 const restaurantDraft: WorkbenchApplicationSummary = {
   id: "graph-restaurant",
@@ -91,6 +156,53 @@ describe("WorkbenchHome", () => {
     root = createRoot(container);
   });
 
+  it("offers Describe and one real curated-template action as equal product starts", () => {
+    const onStartTemplate = vi.fn();
+    act(() => {
+      root.render(
+        <WorkbenchHome
+          applications={[]}
+          loading={false}
+          onCompile={vi.fn()}
+          onOpen={vi.fn()}
+          journey={briefJourney()}
+          curatedTemplates={[
+            {
+              apiVersion: "factory.curated-template/v1",
+              key: "restaurant-dual-surface",
+              version: "1.0.0",
+              name: "Maison Aurelia",
+              description:
+                "A polished customer ordering app and merchant operations workspace.",
+              surfaces: ["customer-mobile", "merchant-desktop"],
+              graphChecksum:
+                "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            },
+          ]}
+          templatesLoading={false}
+          templateBusy={false}
+          onStartTemplate={onStartTemplate}
+        />,
+      );
+    });
+
+    expect(container.textContent).toContain("Describe a product");
+    expect(container.textContent).toContain("Start from a template");
+    expect(container.textContent).toContain("Maison Aurelia");
+    expect(container.textContent).toContain("Customer mobile");
+    expect(container.textContent).toContain("Merchant desktop");
+    expect(container.textContent).not.toContain("sha256:");
+
+    act(() => {
+      container
+        .querySelector<HTMLButtonElement>(
+          'button[aria-label="Start from Maison Aurelia"]',
+        )
+        ?.click();
+    });
+    expect(onStartTemplate).toHaveBeenCalledWith("restaurant-dual-surface");
+  });
+
   afterEach(() => {
     act(() => root.unmount());
     container.remove();
@@ -98,169 +210,239 @@ describe("WorkbenchHome", () => {
     vi.unstubAllGlobals();
   });
 
-  it("renders every registered Profile as a creation-ready Home card", () => {
+  it("makes the requirement composer the default Home decision", () => {
     act(() => {
       root.render(
         <WorkbenchHome
           applications={[]}
           loading={false}
           onCompile={vi.fn()}
-          onCreate={vi.fn()}
           onOpen={vi.fn()}
+          journey={briefJourney()}
         />,
       );
     });
 
-    expect(container.textContent).toContain("Expense approval");
-    expect(container.textContent).toContain("Restaurant ordering");
-    expect(container.textContent).toContain("Simple ecommerce");
-    expect(container.textContent).toContain("Retail counter");
-    expect(container.textContent).toContain("Grocery pickup");
-    expect(container.querySelector('[title="Profile starter"]')).not.toBeNull();
+    expect(
+      container.querySelector('textarea[aria-label="Requirement brief"]'),
+    ).not.toBeNull();
+    expect(metadata.title).toBe("Archeform · 元象");
+    expect(
+      container.querySelector('section[aria-label="Apps"]'),
+    ).not.toBeNull();
+    expect(
+      container.querySelector('section[aria-label="Describe a product"]'),
+    ).not.toBeNull();
+    expect(container.textContent).toContain("Create product");
+    expect(container.textContent).toContain("Example prompts");
+    // No Profile starter cards, no template picker, no separate creation
+    // button: composition starts from the free-form requirement.
+    expect(container.querySelector('[title="Profile starter"]')).toBeNull();
     expect(container.querySelector('[title="Golden Profile"]')).toBeNull();
+    expect(
+      container.querySelector('button[aria-label="Create a new application"]'),
+    ).toBeNull();
+    expect(container.textContent).not.toContain("Profiles");
+    expect(container.textContent).not.toMatch(
+      /Factory Pilot|Graph|Inspector|capability lock/i,
+    );
   });
 
-  it("shows safe capability, intake, and compilation intelligence", () => {
+  it("replaces the composer with clarification questions when the journey asks them", async () => {
+    const interpretation = await new FixtureRequirementInterpreter().interpret({
+      brief: vagueBrief,
+      answers: {},
+    });
     act(() => {
       root.render(
         <WorkbenchHome
           applications={[]}
           loading={false}
           onCompile={vi.fn()}
-          onCreate={vi.fn()}
           onOpen={vi.fn()}
-          portfolioSummary={{
-            apiVersion: "factory.workspace-portfolio-summary/v1",
-            profiles: [
-              {
-                profile: "restaurant-ordering",
-                label: "Restaurant ordering",
-                category: "commerce",
-                requiredPackages: 18,
-                optionalPackages: 1,
-              },
-            ],
-            readiness: [
-              {
-                apiVersion: "factory.profile-readiness/v1",
-                profile: "restaurant-ordering",
-                label: "Restaurant ordering",
-                generatedTargets: [
-                  "simulator",
-                  "web",
-                  "api",
-                  "database",
-                  "tests",
-                  "docs",
-                ],
-                capabilities: [
-                  { key: "commerce.catalog", status: "available" },
-                  { key: "commerce.transaction", status: "partial" },
-                  { key: "commerce.order-amendment", status: "partial" },
-                  { key: "payment.provider", status: "provider-required" },
-                ],
-              },
-              {
-                apiVersion: "factory.profile-readiness/v1",
-                profile: "simple-ecommerce",
-                label: "Simple ecommerce",
-                generatedTargets: [
-                  "simulator",
-                  "web",
-                  "api",
-                  "database",
-                  "tests",
-                  "docs",
-                ],
-                capabilities: [
-                  { key: "commerce.catalog", status: "available" },
-                  { key: "commerce.transaction", status: "partial" },
-                  { key: "payment.provider", status: "provider-required" },
-                ],
-              },
-            ],
-            coverage: [
-              {
-                apiVersion: "factory.profile-coverage/v1",
-                key: "commerce.order-operations",
-                label: "Order operations",
-                status: "partial",
-                packageKeys: [
-                  "commerce.order",
-                  "commerce.inventory",
-                  "core.audit",
-                ],
-                profiles: [
-                  "restaurant-ordering",
-                  "simple-ecommerce",
-                  "retail-counter",
-                  "grocery-pickup",
-                ],
-              },
-            ],
-            capabilities: {
-              golden: 23,
-              lockedVersions: 48,
-              candidate: 0,
-              provider: 0,
-            },
-            capabilityFamilies: [
-              {
-                key: "core.identity-policy",
-                lifecycle: "golden",
-                version: "1.0.0",
-                profileCount: 2,
-                validation: "verified",
-                generatedTargetState: "ready",
-              },
-            ],
-            intake: {
-              portfolioSources: 43,
-              intakeEligible: 19,
-              candidateBlueprints: 19,
-              quarantined: 0,
-              blocked: 0,
-            },
-            supply: {
-              apiVersion: "factory.capability-supply-summary/v1",
-              families: [
-                {
-                  key: "commerce-transaction",
-                  profiles: [
-                    "restaurant-ordering",
-                    "simple-ecommerce",
-                    "retail-counter",
-                    "grocery-pickup",
-                  ],
-                  discovery: 4,
-                  quarantined: 0,
-                  blocked: 0,
-                  action: "integrate",
-                },
-              ],
-            },
-            compilations: { queued: 0, running: 1, succeeded: 3, failed: 1 },
-          }}
+          journey={briefJourney({
+            stage: "clarifying",
+            requirement: interpretation.spec,
+            blueprintTitle: interpretation.blueprint.title,
+            openQuestions: interpretation.clarifications.flatMap(
+              (clarification) => clarification.questions,
+            ),
+          })}
         />,
       );
     });
 
-    expect(container.textContent).toContain("Capability coverage");
-    expect(container.textContent).toContain("Source intake");
-    expect(container.textContent).toContain("Compilation health");
-    expect(container.textContent).toContain("Restaurant ordering");
-    expect(container.textContent).toContain("Golden");
-    expect(container.textContent).toContain("Eligible");
-    expect(container.textContent).toContain("Profile readiness");
-    expect(container.textContent).toContain("Profile coverage");
-    expect(container.textContent).toContain("Order operations");
-    expect(container.textContent).toContain("Planned");
-    expect(container.textContent).toContain("Capability supply");
-    expect(container.textContent).toContain("commerce-transaction");
-    expect(container.textContent).toContain("Identity and policy");
-    expect(container.textContent).toContain("Available 1");
-    expect(container.textContent).toContain("Provider 1");
-    expect(container.textContent).not.toContain("https://github.com");
+    expect(
+      container.querySelector('textarea[aria-label="Requirement summary"]'),
+    ).not.toBeNull();
+    expect(container.textContent).toContain("Answer the open questions");
+    expect(
+      container.querySelector('input[aria-label="approval-object"]'),
+    ).not.toBeNull();
+    expect(container.textContent).toContain("Continue");
+  });
+
+  it("shows the deterministic plan alternatives for comparison", async () => {
+    const interpretation = await new FixtureRequirementInterpreter().interpret({
+      brief: expenseBrief,
+      answers: {},
+    });
+    act(() => {
+      root.render(
+        <WorkbenchHome
+          applications={[]}
+          loading={false}
+          onCompile={vi.fn()}
+          onOpen={vi.fn()}
+          journey={briefJourney({
+            stage: "planning",
+            requirement: interpretation.spec,
+            blueprintTitle: interpretation.blueprint.title,
+            planAlternatives,
+          })}
+        />,
+      );
+    });
+
+    expect(container.textContent).toContain(
+      "Choose how the product is composed",
+    );
+    expect(container.textContent).toContain("Choose Standard");
+    expect(container.textContent).toContain("Choose Minimal");
+    expect(container.textContent).toContain("4 operations");
+    expect(container.textContent).toContain("2 acceptance journeys");
+  });
+
+  it("reviews the approved plan Diff before applying it to the Draft", () => {
+    act(() => {
+      root.render(
+        <WorkbenchHome
+          applications={[]}
+          loading={false}
+          onCompile={vi.fn()}
+          onOpen={vi.fn()}
+          journey={briefJourney({
+            stage: "reviewing",
+            diffChecksum: "sha256:diff",
+          })}
+        />,
+      );
+    });
+
+    expect(container.textContent).toContain("Plan Diff accepted");
+    expect(container.textContent).toContain("sha256:diff");
+    expect(container.textContent).toContain("Apply to Draft");
+  });
+
+  it("returns to the composer with the bounded error after a failed journey", () => {
+    act(() => {
+      root.render(
+        <WorkbenchHome
+          applications={[]}
+          loading={false}
+          onCompile={vi.fn()}
+          onOpen={vi.fn()}
+          journey={briefJourney({
+            stage: "failed",
+            error: "The control plane is not ready yet; try again shortly.",
+            failure: {
+              phase: "review",
+              code: "product.unavailable",
+              message: "The control plane is not ready yet; try again shortly.",
+            },
+          })}
+        />,
+      );
+    });
+
+    expect(
+      container.querySelector('textarea[aria-label="Requirement brief"]'),
+    ).not.toBeNull();
+    expect(container.textContent).toContain("not ready yet");
+    expect(container.textContent).toContain("Create product");
+  });
+
+  it("exposes an accepted requirement outcome independently from later planning", async () => {
+    const interpretation = await new FixtureRequirementInterpreter().interpret({
+      brief: expenseBrief,
+      answers: {},
+    });
+    act(() => {
+      root.render(
+        <WorkbenchHome
+          applications={[]}
+          loading={false}
+          onCompile={vi.fn()}
+          onOpen={vi.fn()}
+          journey={briefJourney({
+            stage: "planning",
+            requirement: interpretation.spec,
+            blueprintTitle: interpretation.blueprint.title,
+            planAlternatives: null,
+          })}
+        />,
+      );
+    });
+
+    const region = container.querySelector('[aria-label="Product creation"]');
+    expect(region?.getAttribute("data-requirement-outcome")).toBe("accepted");
+    expect(region?.hasAttribute("data-requirement-failure-code")).toBe(false);
+  });
+
+  it("exposes only a scoped requirement failure code and phase", () => {
+    act(() => {
+      root.render(
+        <WorkbenchHome
+          applications={[]}
+          loading={false}
+          onCompile={vi.fn()}
+          onOpen={vi.fn()}
+          journey={briefJourney({
+            stage: "failed",
+            error: "Requirement interpretation was rejected.",
+            failure: {
+              phase: "interpretation",
+              code: "requirement.output_invalid",
+              message: "Requirement interpretation was rejected.",
+            },
+          })}
+        />,
+      );
+    });
+
+    const region = container.querySelector('[aria-label="Product creation"]');
+    expect(region?.getAttribute("data-requirement-outcome")).toBe("failed");
+    expect(region?.getAttribute("data-journey-failure-phase")).toBe(
+      "interpretation",
+    );
+    expect(region?.getAttribute("data-requirement-failure-code")).toBe(
+      "requirement.output_invalid",
+    );
+  });
+
+  it("keeps Home focused on creation; portfolio intelligence lives in the Library", () => {
+    act(() => {
+      root.render(
+        <WorkbenchHome
+          applications={[restaurantDraft]}
+          loading={false}
+          onCompile={vi.fn()}
+          onOpen={vi.fn()}
+          journey={briefJourney()}
+        />,
+      );
+    });
+
+    // Home is the composer plus the compact recent-products row. The
+    // read-only portfolio panels moved to the Library drawer (covered in the
+    // shell suite) so nothing competes with the primary creation decision.
+    expect(
+      container.querySelector('textarea[aria-label="Requirement brief"]'),
+    ).not.toBeNull();
+    expect(container.textContent).toContain("Recent products");
+    expect(container.textContent).not.toContain("Portfolio intelligence");
+    expect(container.textContent).not.toContain("Capability supply");
+    expect(container.textContent).not.toContain("Profile readiness");
   });
 
   it("opens Restaurant from Home and keeps compilation disabled until publish", () => {
@@ -273,19 +455,13 @@ describe("WorkbenchHome", () => {
           applications={[restaurantDraft]}
           loading={false}
           onCompile={onCompile}
-          onCreate={vi.fn()}
           onOpen={onOpen}
+          journey={briefJourney()}
         />,
       );
     });
 
     expect(container.textContent).toContain("Restaurant ordering");
-    expect(
-      Array.from(container.querySelectorAll("h3")).some(
-        (heading) => heading.textContent === "Restaurant ordering",
-      ),
-    ).toBe(true);
-    expect(container.textContent).toContain("6 / 6 Golden assets");
     expect(container.textContent).toContain("Draft r.3");
     const open = container.querySelector<HTMLButtonElement>(
       'button[aria-label="Open Restaurant ordering"]',
@@ -303,8 +479,7 @@ describe("WorkbenchHome", () => {
     expect(onCompile).not.toHaveBeenCalled();
   });
 
-  it("reuses create and compile actions while surfacing failed recent activity", () => {
-    const onCreate = vi.fn();
+  it("surfaces failed recent activity while compile stays actionable", () => {
     const onCompile = vi.fn();
 
     act(() => {
@@ -313,40 +488,24 @@ describe("WorkbenchHome", () => {
           applications={[failedExpense, restaurantDraft]}
           loading={false}
           onCompile={onCompile}
-          onCreate={onCreate}
           onOpen={vi.fn()}
+          journey={briefJourney()}
         />,
       );
     });
 
-    expect(container.textContent).toContain("Profiles");
-    expect(
-      Array.from(container.querySelectorAll("h3")).map(
-        (heading) => heading.textContent,
-      ),
-    ).toEqual(
-      expect.arrayContaining([
-        "Restaurant ordering projects",
-        "Expense approval projects",
-      ]),
-    );
-    expect(container.textContent).toContain("Recent activity");
-    expect(container.textContent).toContain("Needs attention");
+    expect(container.textContent).toContain("Recent products");
+    expect(container.textContent).toContain("Failed");
     expect(container.textContent).toContain("Draft r.4 · Published r.2");
-    const create = container.querySelector<HTMLButtonElement>(
-      'button[aria-label="Create a new application"]',
-    );
     const compile = container.querySelector<HTMLButtonElement>(
       'button[aria-label="Compile Expense approval"]',
     );
     expect(compile?.disabled).toBe(false);
 
     act(() => {
-      create?.click();
       compile?.click();
     });
 
-    expect(onCreate).toHaveBeenCalledOnce();
     expect(onCompile).toHaveBeenCalledWith("expense-approval");
   });
 
@@ -430,6 +589,78 @@ describe("WorkbenchHome", () => {
 
     expect(container.textContent).toContain("Compilation failed");
     expect(container.textContent).not.toContain("Compilation queued");
+  });
+
+  it("retries the control-plane bootstrap while the plane is still booting", async () => {
+    vi.useFakeTimers();
+    try {
+      let bootstrapAttempts = 0;
+      const fetcher = vi.fn(
+        async (input: RequestInfo | URL, init?: RequestInit) => {
+          const url = new URL(String(input));
+          const method = init?.method ?? "GET";
+          if (
+            method === "GET" &&
+            url.pathname ===
+              "/workspaces/local/application-graphs/ops-workspace"
+          ) {
+            bootstrapAttempts += 1;
+            if (bootstrapAttempts < 3) {
+              // The compose stack starts the control plane cold; until it
+              // accepts connections the mount-time bootstrap fails.
+              throw new Error("connection refused");
+            }
+            return responseJson({
+              id: "graph-initial",
+              draftRevisions: [
+                {
+                  id: "draft-initial",
+                  revisionNumber: 1,
+                  graph: workbenchGraph,
+                },
+              ],
+              publishedRevisions: [],
+            });
+          }
+          if (
+            method === "GET" &&
+            url.pathname === "/workspaces/local/application-graphs"
+          ) {
+            return responseJson([]);
+          }
+          return new Response("unexpected request", { status: 500 });
+        },
+      );
+      vi.stubGlobal("fetch", fetcher);
+
+      await act(async () => {
+        root.render(
+          <Workbench
+            controlPlaneUrl="http://control-plane.test"
+            initialGraph={workbenchGraph}
+          />,
+        );
+      });
+
+      // The first attempt fails; the shell must not stay wedged on the
+      // unavailable state forever.
+      expect(bootstrapAttempts).toBe(1);
+      expect(container.textContent).toContain("Control Plane unavailable");
+
+      // Advance the bounded retry schedule: attempt 2 fails again, attempt 3
+      // succeeds and the shell reports the plane ready.
+      await act(async () => {
+        vi.advanceTimersByTime(2_000);
+      });
+      expect(bootstrapAttempts).toBe(2);
+      await act(async () => {
+        vi.advanceTimersByTime(2_000);
+      });
+      expect(bootstrapAttempts).toBe(3);
+      expect(container.textContent).toContain("Control Plane ready");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it.each(["succeeded", "failed"] as const)(
@@ -531,10 +762,18 @@ describe("WorkbenchHome", () => {
               id: "compilation-1",
               publishedRevisionId: "published-restaurant",
               target: "application-bundle",
-              result: {
-                status: terminalStatus,
-                completedAt: "2026-07-30T04:00:00.000Z",
-              },
+              result:
+                terminalStatus === "succeeded"
+                  ? {
+                      status: "succeeded",
+                      artifactCount: 0,
+                      completedAt: "2026-07-30T04:00:00.000Z",
+                    }
+                  : {
+                      status: "failed",
+                      failureCode: "compilation.failed",
+                      completedAt: "2026-07-30T04:00:00.000Z",
+                    },
             });
           }
           if (
@@ -584,7 +823,7 @@ describe("WorkbenchHome", () => {
 
       act(() => {
         container
-          .querySelector<HTMLButtonElement>('button[aria-label="Home"]')
+          .querySelector<HTMLButtonElement>('button[aria-label="Apps"]')
           ?.click();
       });
       await waitForAssertion(() => {

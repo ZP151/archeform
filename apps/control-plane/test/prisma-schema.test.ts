@@ -24,11 +24,13 @@ describe("control-plane lifecycle schema", () => {
         "Workspace",
         "ApplicationGraph",
         "DraftRevision",
+        "DraftPreviewSnapshot",
         "PublishedRevision",
         "Compilation",
         "PreviewRun",
         "Artifact",
         "ProviderMetadata",
+        "VerificationRun",
       ]),
     );
 
@@ -60,6 +62,61 @@ describe("control-plane lifecycle schema", () => {
       type: "ProviderMetadata",
       isList: true,
     });
+    expect(field("Compilation", "verificationRuns")).toMatchObject({
+      type: "VerificationRun",
+      isList: true,
+    });
+  });
+
+  it("persists bounded verification evidence against an immutable compilation", () => {
+    expect(field("VerificationRun", "verificationRunId")).toMatchObject({
+      type: "String",
+      isRequired: true,
+      isUnique: true,
+    });
+    expect(field("VerificationRun", "compilationId")).toMatchObject({
+      type: "String",
+      isRequired: true,
+    });
+    // Optional: without a profile key the worker derives the verification
+    // plan from the Published Graph itself.
+    expect(field("VerificationRun", "profileKey")).toMatchObject({
+      type: "String",
+      isRequired: false,
+    });
+    expect(field("VerificationRun", "status")).toMatchObject({
+      type: "String",
+      isRequired: true,
+    });
+    expect(field("VerificationRun", "stepIds")).toMatchObject({
+      type: "Json",
+      isRequired: true,
+    });
+    expect(field("VerificationRun", "evidenceDigest")).toMatchObject({
+      type: "String",
+      isRequired: false,
+    });
+    expect(field("VerificationRun", "evidence")).toMatchObject({
+      type: "Json",
+      isRequired: false,
+    });
+    expect(field("VerificationRun", "diagnosis")).toMatchObject({
+      type: "Json",
+      isRequired: false,
+    });
+    expect(field("VerificationRun", "draftDiff")).toMatchObject({
+      type: "Json",
+      isRequired: false,
+    });
+    expect(field("VerificationRun", "compilation")).toMatchObject({
+      type: "Compilation",
+      isRequired: true,
+    });
+    expect(
+      model("VerificationRun").fields.some(({ name }) =>
+        /secret|token|credential|password/i.test(name),
+      ),
+    ).toBe(false);
   });
 
   it("persists preview runs against an immutable compilation without runtime source or credentials", () => {
@@ -124,6 +181,39 @@ describe("control-plane lifecycle schema", () => {
     });
   });
 
+  it("stores curated-template origin separately from Graph truth and binds append-only preview snapshots to a Draft", () => {
+    expect(field("ApplicationGraph", "templateOrigin")).toMatchObject({
+      type: "Json",
+      isRequired: false,
+    });
+    expect(field("ApplicationGraph", "draftPreviewSnapshots")).toMatchObject({
+      type: "DraftPreviewSnapshot",
+      isList: true,
+    });
+    expect(field("DraftRevision", "draftPreviewSnapshots")).toMatchObject({
+      type: "DraftPreviewSnapshot",
+      isList: true,
+    });
+    expect(field("DraftPreviewSnapshot", "snapshot")).toMatchObject({
+      type: "Json",
+      isRequired: true,
+    });
+    expect(field("DraftPreviewSnapshot", "draftRevision")).toMatchObject({
+      relationFromFields: ["draftRevisionId", "applicationGraphId"],
+      relationToFields: ["id", "applicationGraphId"],
+    });
+    expect(field("DraftPreviewSnapshot", "draftRevisionId").isUnique).toBe(
+      false,
+    );
+    expect(
+      model("DraftPreviewSnapshot").fields.some(({ name }) =>
+        /secret|credential|provider|prompt|response|source|environment/i.test(
+          name,
+        ),
+      ),
+    ).toBe(false);
+  });
+
   it("allows compilations to consume only immutable published revisions", () => {
     expect(field("Compilation", "publishedRevisionId")).toMatchObject({
       type: "String",
@@ -185,6 +275,71 @@ describe("control-plane lifecycle schema", () => {
     expect(
       model("ProviderMetadata").fields.some(({ name }) =>
         /secret|token|credential|password/i.test(name),
+      ),
+    ).toBe(false);
+  });
+
+  it("persists only schema-valid composition review records against a Draft", () => {
+    expect(field("CompositionReview", "applicationGraphId")).toMatchObject({
+      type: "String",
+      isRequired: true,
+    });
+    expect(field("CompositionReview", "draftRevisionId")).toMatchObject({
+      type: "String",
+      isRequired: true,
+    });
+    expect(field("CompositionReview", "requirement")).toMatchObject({
+      type: "Json",
+      isRequired: true,
+    });
+    expect(field("CompositionReview", "requirementChecksum")).toMatchObject({
+      type: "String",
+      isRequired: true,
+    });
+    expect(field("CompositionReview", "draftBaseChecksum")).toMatchObject({
+      type: "String",
+      isRequired: true,
+    });
+    expect(field("CompositionReview", "plan")).toMatchObject({
+      type: "Json",
+      isRequired: false,
+    });
+    expect(field("CompositionReview", "planChecksum")).toMatchObject({
+      type: "String",
+      isRequired: false,
+    });
+    expect(field("CompositionReview", "clarification")).toMatchObject({
+      type: "Json",
+      isRequired: false,
+    });
+    expect(field("CompositionReview", "safeSummary")).toMatchObject({
+      type: "Json",
+      isRequired: false,
+    });
+    expect(field("CompositionReview", "diff")).toMatchObject({
+      type: "Json",
+      isRequired: false,
+    });
+    expect(field("CompositionReview", "diffChecksum")).toMatchObject({
+      type: "String",
+      isRequired: false,
+    });
+    expect(field("CompositionReview", "decision")).toMatchObject({
+      type: "Json",
+      isRequired: false,
+    });
+    expect(field("CompositionReview", "decisionId")).toMatchObject({
+      type: "String",
+      isRequired: false,
+      isUnique: true,
+    });
+    expect(field("CompositionReview", "draftRevision")).toMatchObject({
+      relationFromFields: ["draftRevisionId", "applicationGraphId"],
+      relationToFields: ["id", "applicationGraphId"],
+    });
+    expect(
+      model("CompositionReview").fields.some(({ name }) =>
+        /secret|token|credential|password|prompt|rawModel/i.test(name),
       ),
     ).toBe(false);
   });

@@ -8,10 +8,16 @@ import {
   Param,
   Post,
   Query,
+  Res,
+  StreamableFile,
 } from "@nestjs/common";
 
 import { LifecycleService } from "./lifecycle.service.js";
 import { assertInternalWorkerToken } from "./internal-worker-auth.js";
+
+type PassthroughResponse = {
+  setHeader(name: string, value: string): void;
+};
 
 function emptyBody(body: unknown): void {
   if (body === undefined) return;
@@ -124,6 +130,24 @@ export class LifecycleController {
     return this.lifecycle.getCompilationArtifact(compilationId, path);
   }
 
+  @Get("compilations/:compilationId/source-archive")
+  async getCompilationSourceArchive(
+    @Param("compilationId") compilationId: string,
+    @Query("format") format: string | undefined,
+    @Res({ passthrough: true }) response: PassthroughResponse,
+  ) {
+    const archive = await this.lifecycle.getCompilationSourceArchive(
+      compilationId,
+      format,
+    );
+    response.setHeader("Content-Type", archive.contentType);
+    response.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${archive.filename}"`,
+    );
+    return new StreamableFile(Buffer.from(archive.bytes));
+  }
+
   @Post("compilations/:compilationId/preview-runs")
   createPreviewRun(
     @Param("compilationId") compilationId: string,
@@ -155,6 +179,16 @@ export class LifecycleController {
   ) {
     assertInternalWorkerToken(internalToken);
     return this.lifecycle.completeCompilation(compilationId, body);
+  }
+
+  @Post("internal/compilations/:compilationId/failed")
+  failCompilation(
+    @Param("compilationId") compilationId: string,
+    @Body() body: unknown,
+    @Headers("x-factory-internal-token") internalToken: string | undefined,
+  ) {
+    assertInternalWorkerToken(internalToken);
+    return this.lifecycle.failCompilation(compilationId, body);
   }
 
   @Get("internal/preview-runs/:previewRunId/dispatch")

@@ -1,0 +1,6 @@
+{
+  "event": "approval.request",
+  "approvalEntity": "expense",
+  "approvalRole": "manager",
+  "failuresBeforeSuccess": 0
+}

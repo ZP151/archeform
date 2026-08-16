@@ -1,19 +1,32 @@
 {
   "apiVersion": "factory.capability/v1",
+  "bindingContract": "factory.capability-binding/v1",
   "key": "core.identity-context",
   "version": "1.0.0",
   "category": "core",
   "name": "Identity context",
   "description": "Resolves a provider-neutral principal and session into a declared role context.",
   "packageRoot": "packages/capabilities/assets/core.identity-context/1.0.0",
-  "manifestDigest": "sha256:6d717ecf2dc70db0096cf75d3241f55462402d7e0822c52e66c80677d20b5ec5",
+  "manifestDigest": "sha256:c2fc92f426d6e3995565681e55a8d7d5a5c8379c30ce4b9d2ecb0b538c2b8ca1",
   "lifecycle": "golden",
   "profiles": ["restaurant-ordering", "simple-ecommerce"],
   "effects": ["identity.context.resolve", "identity.context.validate"],
   "inputSchema": [
-    { "key": "principalEntity", "type": "domain.entity", "required": true },
-    { "key": "sessionEntity", "type": "domain.entity", "required": true },
-    { "key": "defaultRole", "type": "policy.role", "required": true }
+    {
+      "key": "principalEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "sessionEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "defaultRole",
+      "type": "policy.role",
+      "required": true
+    }
   ],
   "outputSlots": [
     "api.runtime",
@@ -32,9 +45,21 @@
     }
   ],
   "parameters": [
-    { "key": "principalEntity", "type": "graph-symbol", "required": true },
-    { "key": "sessionEntity", "type": "graph-symbol", "required": true },
-    { "key": "defaultRole", "type": "graph-symbol", "required": true }
+    {
+      "key": "principalEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "sessionEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "defaultRole",
+      "type": "graph-symbol",
+      "required": true
+    }
   ],
   "graphContributions": [
     {
@@ -61,7 +86,10 @@
     }
   ],
   "provides": [
-    { "interfaceKey": "core.principal-context", "version": "v1" }
+    {
+      "interfaceKey": "core.principal-context",
+      "version": "v1"
+    }
   ],
   "verification": {
     "fixture": "fixtures/default.json",

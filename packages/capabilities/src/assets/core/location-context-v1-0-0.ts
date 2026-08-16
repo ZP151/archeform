@@ -3,6 +3,7 @@ import type { CapabilityAssetV1 } from "../contract.js";
 export const locationContextAssetV1_0_0: CapabilityAssetV1 = {
   manifest: {
     apiVersion: "factory.capability/v1",
+    bindingContract: "factory.capability-binding/v1",
     key: "core.location-context",
     version: "1.0.0",
     category: "core",
@@ -11,14 +12,21 @@ export const locationContextAssetV1_0_0: CapabilityAssetV1 = {
       "Resolves an opaque session or validated manual code into a safe location context.",
     packageRoot: "packages/capabilities/assets/core.location-context/1.0.0",
     manifestDigest:
-      "sha256:82cf5bf06758c6cac3f144dd15f177ae1582bca4cee1f6ce313ec3a65090ac84",
+      "sha256:591b260f53f2fa0b8e838cb8b9ab350819aa720326b49c1a67f99990ae61df0d",
     lifecycle: "golden",
     profiles: ["restaurant-ordering", "simple-ecommerce"],
     effects: ["location.context.resolve", "location.context.validate"],
     inputSchema: [
       { key: "locationEntity", type: "domain.entity", required: true },
       { key: "contextEntity", type: "domain.entity", required: true },
-      { key: "locationCodeField", type: "domain.field", required: true },
+      {
+        key: "locationCodeField",
+        type: "domain.field",
+        required: true,
+        ownerBinding: "locationEntity",
+        fieldTypes: ["string"],
+        fieldRequired: true,
+      },
       { key: "customerRole", type: "policy.role", required: true },
     ],
     outputSlots: [

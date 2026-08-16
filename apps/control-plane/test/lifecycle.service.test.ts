@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createPublishedGraphExchange,
   hashApplicationGraph,
+  hashApplicationGraphV3,
 } from "@factory/graph";
 import {
   createCapabilityCompositionLock,
@@ -19,6 +20,7 @@ import {
 
 import { LifecycleService } from "../src/lifecycle.service.js";
 import type { PrismaService } from "../src/prisma.service.js";
+import { createCuratedRestaurantTemplateGraph } from "../src/template/template.service.js";
 import { localApplicationGraph } from "./application-graph.fixture.js";
 
 const repositoryRoot = resolve(
@@ -49,6 +51,7 @@ function prismaMock() {
       create: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
     },
     artifact: { createMany: vi.fn(), findFirst: vi.fn() },
     previewRun: {
@@ -616,6 +619,7 @@ describe("LifecycleService", () => {
         id: "graph-restaurant",
         key: "restaurant-ordering",
         name: "Restaurant ordering",
+        templateOrigin: null,
         draftRevisions: [
           {
             revisionNumber: 3,
@@ -662,6 +666,7 @@ describe("LifecycleService", () => {
         id: "graph-restaurant",
         key: "restaurant-ordering",
         name: "Restaurant ordering",
+        templateOrigin: null,
         compositionProfile: "restaurant-ordering",
         latestDraft: {
           revisionNumber: 3,
@@ -690,6 +695,7 @@ describe("LifecycleService", () => {
         id: true,
         key: true,
         name: true,
+        templateOrigin: true,
         draftRevisions: {
           orderBy: { revisionNumber: "desc" },
           take: 1,
@@ -863,6 +869,54 @@ describe("LifecycleService", () => {
         compositionLockHash: emptyCompositionLock.lockDigest,
       },
     });
+  });
+
+  it("publishes a V3 Restaurant Draft to an immutable V3 Published Revision", async () => {
+    const v3Graph = createCuratedRestaurantTemplateGraph(
+      "restaurant-template-001",
+      "Maison Rivage",
+    );
+    prisma.draftRevision.findFirst.mockResolvedValue({
+      ...draftRevision,
+      graph: v3Graph,
+      applicationGraph: {
+        ...applicationGraph,
+        key: "restaurant-template-001",
+        name: "Maison Rivage",
+        workspace,
+      },
+    });
+    prisma.publishedRevision.findFirst.mockResolvedValue(null);
+    prisma.publishedRevision.count.mockResolvedValue(0);
+    prisma.publishedRevision.create.mockImplementation(async ({ data }) => ({
+      id: "published-1",
+      ...data,
+    }));
+
+    const published = await service.publishDraft(applicationGraph.id, {
+      draftRevisionId: draftRevision.id,
+    });
+
+    const graphHash = hashApplicationGraphV3(v3Graph);
+    expect(published).toMatchObject({
+      graphHash,
+      revisionNumber: 1,
+      graph: {
+        kind: "published-application-graph",
+        status: "published",
+        graphVersion: "factory.application-graph/v3",
+        revisionId: "restaurant-template-001-published-1",
+        revisionNumber: 1,
+        graphHash,
+      },
+      compositionLock: {
+        apiVersion: "factory.composition/v1",
+        applicationGraphChecksum: graphHash,
+      },
+    });
+    expect(published.compositionLockHash).toBe(
+      published.compositionLock.lockDigest,
+    );
   });
 
   it("stores an immutable composition lock only when a validated Draft is published", async () => {
@@ -1227,10 +1281,60 @@ describe("LifecycleService", () => {
       publishedRevisionId: "published-1",
       target: "application-bundle",
       compilerVersion: "0.1.0",
+      graphVersion: "factory.application-graph/v1",
       graph: localApplicationGraph,
       compositionLock: expect.objectContaining({
         apiVersion: "factory.composition/v1",
       }),
+    });
+  });
+
+  it("queues a V3 Published Graph through the Restaurant V3 target", async () => {
+    const v3Graph = createCuratedRestaurantTemplateGraph(
+      "restaurant-template-001",
+      "Maison Rivage",
+    );
+    const v3GraphHash = hashApplicationGraphV3(v3Graph);
+    const v3PublishedGraph = {
+      kind: "published-application-graph" as const,
+      status: "published" as const,
+      graphVersion: "factory.application-graph/v3" as const,
+      revisionId: "restaurant-template-001-published-1",
+      revisionNumber: 1,
+      graphHash: v3GraphHash,
+      graph: v3Graph,
+    };
+    const v3CompositionLock = createCapabilityCompositionLock({
+      graphChecksum: v3GraphHash,
+      selections: v3Graph.integration.compositionSelections ?? [],
+    });
+    prisma.publishedRevision.findUnique.mockResolvedValue({
+      id: "published-1",
+      graph: v3PublishedGraph,
+      graphHash: v3GraphHash,
+      compositionLock: v3CompositionLock,
+      compositionLockHash: v3CompositionLock.lockDigest,
+    });
+    prisma.compilation.count.mockResolvedValue(0);
+    prisma.compilation.create.mockResolvedValue({ id: "compilation-1" });
+    queue.enqueue.mockResolvedValue(undefined);
+
+    await expect(
+      service.createCompilation({
+        publishedRevisionId: "published-1",
+        target: "restaurant-v3",
+        compilerVersion: "0.1.0",
+      }),
+    ).resolves.toEqual({ id: "compilation-1" });
+
+    expect(queue.enqueue).toHaveBeenCalledWith({
+      compilationId: "compilation-1",
+      publishedRevisionId: "published-1",
+      target: "restaurant-v3",
+      compilerVersion: "0.1.0",
+      graphVersion: "factory.application-graph/v3",
+      publishedGraph: v3PublishedGraph,
+      compositionLock: v3CompositionLock,
     });
   });
 
@@ -1319,9 +1423,10 @@ describe("LifecycleService", () => {
       inputGraphHash:
         "sha256:762e834186c8fec51569cc8fe690f4ca90219c6f5b179fa6121bb73867c268fb",
       result: { status: "queued" },
+      artifacts: [],
     });
     prisma.artifact.createMany.mockResolvedValue({ count: 1 });
-    prisma.compilation.update.mockResolvedValue({ id: "compilation-1" });
+    prisma.compilation.updateMany.mockResolvedValue({ count: 1 });
 
     await expect(
       service.completeCompilation("compilation-1", {
@@ -1337,7 +1442,14 @@ describe("LifecycleService", () => {
           },
         ],
       }),
-    ).resolves.toEqual({ id: "compilation-1" });
+    ).resolves.toMatchObject({
+      id: "compilation-1",
+      result: {
+        status: "succeeded",
+        artifactCount: 1,
+        completedAt: "2026-07-30T04:00:00.000Z",
+      },
+    });
 
     expect(prisma.artifact.createMany).toHaveBeenCalledWith({
       data: [
@@ -1353,8 +1465,11 @@ describe("LifecycleService", () => {
         },
       ],
     });
-    expect(prisma.compilation.update).toHaveBeenCalledWith({
-      where: { id: "compilation-1" },
+    expect(prisma.compilation.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: "compilation-1",
+        result: { equals: { status: "queued" } },
+      },
       data: {
         result: {
           status: "succeeded",
@@ -1363,6 +1478,296 @@ describe("LifecycleService", () => {
         },
       },
     });
+  });
+
+  it("terminalizes a queued compilation as failed with only canonical Control Plane evidence", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-30T04:05:00.000Z"));
+    prisma.compilation.findUnique.mockResolvedValue({
+      id: "compilation-1",
+      result: { status: "queued" },
+      artifacts: [],
+    });
+    prisma.compilation.updateMany.mockResolvedValue({ count: 1 });
+
+    await expect(
+      service.failCompilation("compilation-1", {
+        apiVersion: "factory.compilation-failure/v1",
+        failureCode: "compilation.failed",
+      }),
+    ).resolves.toMatchObject({
+      id: "compilation-1",
+      result: {
+        status: "failed",
+        failureCode: "compilation.failed",
+        completedAt: "2026-07-30T04:05:00.000Z",
+      },
+    });
+
+    expect(prisma.compilation.updateMany).toHaveBeenCalledWith({
+      where: { id: "compilation-1", result: { equals: { status: "queued" } } },
+      data: {
+        result: {
+          status: "failed",
+          failureCode: "compilation.failed",
+          completedAt: "2026-07-30T04:05:00.000Z",
+        },
+      },
+    });
+    expect(prisma.artifact.createMany).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {},
+    {
+      apiVersion: "factory.compilation-failure/v1",
+      failureCode: "compilation.failed",
+      message: "must-not-persist",
+    },
+    {
+      apiVersion: "factory.compilation-failure/v1",
+      failureCode: "provider.secret",
+    },
+  ])(
+    "rejects malformed or expanded compilation failure evidence",
+    async (body) => {
+      await expect(
+        service.failCompilation("compilation-1", body),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.compilation.findUnique).not.toHaveBeenCalled();
+      expect(prisma.compilation.updateMany).not.toHaveBeenCalled();
+    },
+  );
+
+  it("treats an identical failure retry as idempotent without changing completedAt", async () => {
+    const failed = {
+      id: "compilation-1",
+      result: {
+        status: "failed",
+        failureCode: "compilation.failed",
+        completedAt: "2026-07-30T04:05:00.000Z",
+      },
+      artifacts: [],
+    };
+    prisma.compilation.findUnique.mockResolvedValue(failed);
+
+    await expect(
+      service.failCompilation("compilation-1", {
+        apiVersion: "factory.compilation-failure/v1",
+        failureCode: "compilation.failed",
+      }),
+    ).resolves.toEqual(failed);
+    expect(prisma.compilation.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects a failed terminal row that carries orphan artifacts", async () => {
+    prisma.compilation.findUnique.mockResolvedValue({
+      id: "compilation-1",
+      result: {
+        status: "failed",
+        failureCode: "compilation.failed",
+        completedAt: "2026-07-30T04:05:00.000Z",
+      },
+      artifacts: [{ path: "orphan.ts" }],
+    });
+
+    await expect(
+      service.failCompilation("compilation-1", {
+        apiVersion: "factory.compilation-failure/v1",
+        failureCode: "compilation.failed",
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it("treats identical success evidence as idempotent without changing completedAt or artifacts", async () => {
+    const graphHash =
+      "sha256:762e834186c8fec51569cc8fe690f4ca90219c6f5b179fa6121bb73867c268fb";
+    const succeeded = {
+      id: "compilation-1",
+      inputGraphHash: graphHash,
+      result: {
+        status: "succeeded",
+        artifactCount: 1,
+        completedAt: "2026-07-30T04:00:00.000Z",
+      },
+      artifacts: [
+        {
+          path: "api/src/main.ts",
+          digest:
+            "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          sizeBytes: 48,
+          metadata: { rootDirectory: "expense-approval-published-1" },
+        },
+      ],
+    };
+    prisma.compilation.findUnique.mockResolvedValue(succeeded);
+
+    await expect(
+      service.completeCompilation("compilation-1", {
+        graphHash,
+        rootDirectory: "expense-approval-published-1",
+        artifacts: [
+          {
+            path: "api/src/main.ts",
+            digest:
+              "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            sizeBytes: 48,
+          },
+        ],
+      }),
+    ).resolves.toEqual(succeeded);
+    expect(prisma.compilation.updateMany).not.toHaveBeenCalled();
+    expect(prisma.artifact.createMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects different evidence for an already successful compilation", async () => {
+    const graphHash =
+      "sha256:762e834186c8fec51569cc8fe690f4ca90219c6f5b179fa6121bb73867c268fb";
+    prisma.compilation.findUnique.mockResolvedValue({
+      id: "compilation-1",
+      inputGraphHash: graphHash,
+      result: {
+        status: "succeeded",
+        artifactCount: 1,
+        completedAt: "2026-07-30T04:00:00.000Z",
+      },
+      artifacts: [
+        {
+          path: "api/src/main.ts",
+          digest:
+            "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          sizeBytes: 48,
+          metadata: { rootDirectory: "expense-approval-published-1" },
+        },
+      ],
+    });
+
+    await expect(
+      service.completeCompilation("compilation-1", {
+        graphHash,
+        rootDirectory: "expense-approval-published-1",
+        artifacts: [
+          {
+            path: "api/src/main.ts",
+            digest:
+              "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            sizeBytes: 48,
+          },
+        ],
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(prisma.compilation.updateMany).not.toHaveBeenCalled();
+    expect(prisma.artifact.createMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects a cross-terminal failure callback and preserves successful artifacts", async () => {
+    prisma.compilation.findUnique.mockResolvedValue({
+      id: "compilation-1",
+      result: {
+        status: "succeeded",
+        artifactCount: 1,
+        completedAt: "2026-07-30T04:00:00.000Z",
+      },
+      artifacts: [{ path: "api/src/main.ts" }],
+    });
+
+    await expect(
+      service.failCompilation("compilation-1", {
+        apiVersion: "factory.compilation-failure/v1",
+        failureCode: "compilation.failed",
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(prisma.compilation.updateMany).not.toHaveBeenCalled();
+    expect(prisma.artifact.createMany).not.toHaveBeenCalled();
+  });
+
+  it("makes success and failure callbacks compete through one queued-state CAS without orphan artifacts", async () => {
+    const inputGraphHash =
+      "sha256:762e834186c8fec51569cc8fe690f4ca90219c6f5b179fa6121bb73867c268fb";
+    let stored = {
+      id: "compilation-race",
+      inputGraphHash,
+      result: { status: "queued" } as Record<string, unknown>,
+    };
+    const storedArtifacts: Array<Record<string, unknown>> = [];
+    prisma.compilation.findUnique.mockImplementation(async () => ({
+      ...stored,
+      artifacts: [...storedArtifacts],
+    }));
+    prisma.compilation.updateMany.mockImplementation(async ({ data }) => {
+      if (stored.result.status !== "queued") return { count: 0 };
+      stored = { ...stored, result: data.result as Record<string, unknown> };
+      return { count: 1 };
+    });
+    prisma.artifact.createMany.mockImplementation(async ({ data }) => {
+      storedArtifacts.push(...data);
+      return { count: data.length };
+    });
+
+    const success = service.completeCompilation("compilation-race", {
+      graphHash: inputGraphHash,
+      rootDirectory: "expense-approval-published-1",
+      artifacts: [
+        {
+          path: "api/src/main.ts",
+          digest:
+            "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          sizeBytes: 48,
+        },
+      ],
+    });
+    const failure = service.failCompilation("compilation-race", {
+      apiVersion: "factory.compilation-failure/v1",
+      failureCode: "compilation.failed",
+    });
+
+    const outcomes = await Promise.allSettled([success, failure]);
+    expect(
+      outcomes.filter(({ status }) => status === "fulfilled"),
+    ).toHaveLength(1);
+    expect(outcomes.filter(({ status }) => status === "rejected")).toHaveLength(
+      1,
+    );
+    expect(stored.result.status).toMatch(/^(succeeded|failed)$/);
+    expect(storedArtifacts).toHaveLength(
+      stored.result.status === "succeeded" ? 1 : 0,
+    );
+  });
+
+  it("retries a PostgreSQL serialization conflict and resolves an identical terminal callback", async () => {
+    const failed = {
+      id: "compilation-1",
+      result: {
+        status: "failed",
+        failureCode: "compilation.failed",
+        completedAt: "2026-07-30T04:05:00.000Z",
+      },
+      artifacts: [],
+    };
+    prisma.$transaction
+      .mockRejectedValueOnce({ code: "P2034" })
+      .mockImplementationOnce(async (operation) => operation(prisma));
+    prisma.compilation.findUnique.mockResolvedValue(failed);
+
+    await expect(
+      service.failCompilation("compilation-1", {
+        apiVersion: "factory.compilation-failure/v1",
+        failureCode: "compilation.failed",
+      }),
+    ).resolves.toEqual(failed);
+    expect(prisma.$transaction).toHaveBeenCalledTimes(2);
+  });
+
+  it("maps repeated PostgreSQL serialization conflicts to a bounded 409", async () => {
+    prisma.$transaction.mockRejectedValue({ code: "P2034" });
+
+    await expect(
+      service.failCompilation("compilation-1", {
+        apiVersion: "factory.compilation-failure/v1",
+        failureCode: "compilation.failed",
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(prisma.$transaction).toHaveBeenCalledTimes(3);
   });
 
   it("rejects compilation inputs containing a DraftRevision or mutable Graph", async () => {

@@ -1,0 +1,7 @@
+{
+  "event": "schedule.plan",
+  "scheduleEntity": "delivery",
+  "scheduleField": "scheduledAt",
+  "slot": "deterministic-slot",
+  "failuresBeforeSuccess": 0
+}

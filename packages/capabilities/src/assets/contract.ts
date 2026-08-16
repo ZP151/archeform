@@ -75,7 +75,8 @@ export type CapabilityBindingInputTypeV1 =
   | "policy.role"
   | "flow.flow"
   | "integration.provider"
-  | "experience.token";
+  | "experience.token"
+  | "message.template";
 
 export type CapabilityBindingFieldTypeV1 =
   ApplicationGraphV1["domain"]["entities"][number]["fields"][number]["type"];

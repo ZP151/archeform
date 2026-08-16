@@ -17,6 +17,7 @@ import { LifecycleService } from "../src/lifecycle.service.js";
 const lifecycle = {
   appendDraftRevision: vi.fn(),
   completeCompilation: vi.fn(),
+  failCompilation: vi.fn(),
   createPreviewRun: vi.fn(),
   createCompilation: vi.fn(),
   createLocalApplicationGraph: vi.fn(),
@@ -290,6 +291,24 @@ describe("LifecycleController", () => {
       response: { id: "compilation-1" },
     },
     {
+      method: "POST",
+      path: "/internal/compilations/compilation-1/failed",
+      internal: true,
+      body: {
+        apiVersion: "factory.compilation-failure/v1",
+        failureCode: "compilation.failed",
+      },
+      handler: lifecycle.failCompilation,
+      arguments: [
+        "compilation-1",
+        {
+          apiVersion: "factory.compilation-failure/v1",
+          failureCode: "compilation.failed",
+        },
+      ],
+      response: { id: "compilation-1", result: { status: "failed" } },
+    },
+    {
       method: "GET",
       path: "/internal/preview-runs/preview-1/dispatch?action=start",
       internal: true,
@@ -328,6 +347,12 @@ describe("LifecycleController", () => {
       path: "/internal/compilations/compilation-1/complete",
       body: {},
       handler: lifecycle.completeCompilation,
+    },
+    {
+      method: "POST",
+      path: "/internal/compilations/compilation-1/failed",
+      body: {},
+      handler: lifecycle.failCompilation,
     },
     {
       method: "GET",

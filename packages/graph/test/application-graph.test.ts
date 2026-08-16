@@ -117,6 +117,63 @@ function draftGraphWithBindings(bindings: Record<string, unknown>): unknown {
 }
 
 describe("ApplicationGraphV1", () => {
+  it.each([
+    {
+      name: "optional string",
+      fields: [{ key: "id", type: "string", required: false }],
+    },
+    {
+      name: "required non-string",
+      fields: [{ key: "id", type: "integer", required: true }],
+    },
+    {
+      name: "empty seed value",
+      fields: [{ key: "id", type: "string", required: true }],
+      seedData: [{ entity: "expense", values: { id: "" } }],
+    },
+    {
+      name: "duplicate declarations",
+      fields: [
+        { key: "id", type: "string", required: true },
+        { key: "id", type: "integer", required: false },
+      ],
+    },
+  ])(
+    "rejects $name entity-declared Factory identity with one safe semantic error",
+    ({ fields, seedData }) => {
+      const graph = structuredClone(expenseGraph) as unknown as {
+        domain: {
+          entities: Array<{ fields: unknown[] }>;
+          seedData?: unknown;
+        };
+      };
+      graph.domain.entities[0].fields = fields;
+      if (seedData !== undefined) graph.domain.seedData = seedData;
+
+      const reservedIssues = validateApplicationGraph(graph).filter(
+        (issue) => issue.code === "domain.field.factory_identity_reserved",
+      );
+      expect(reservedIssues).toHaveLength(fields.length);
+      expect(reservedIssues).toEqual(
+        fields.map((_, index) => ({
+          code: "domain.field.factory_identity_reserved",
+          message:
+            "Entity fields cannot declare Factory-owned record identity 'id'.",
+          path: ["domain", "entities", 0, "fields", index, "key"],
+        })),
+      );
+      expect(() => parseApplicationGraph(graph)).toThrow(GraphSemanticError);
+      try {
+        parseApplicationGraph(graph);
+      } catch (error) {
+        expect(error).toBeInstanceOf(GraphSemanticError);
+        expect((error as GraphSemanticError).issues).toEqual(
+          expect.arrayContaining(reservedIssues),
+        );
+      }
+    },
+  );
+
   it("resolves duplicate field keys only under their declared entity owner", () => {
     const graph = structuredClone(expenseGraph);
     graph.domain.entities.push(
@@ -725,5 +782,172 @@ describe("ApplicationGraphV1", () => {
         ],
       }),
     ).toThrow(GraphDiffError);
+  });
+
+  it("rejects a root-level /integration replace and removal", () => {
+    const draft = createDraftRevision(expenseGraph, "draft-1");
+
+    expect(() =>
+      applyGraphDiffToDraft(draft, {
+        apiVersion: "factory.graph-diff/v1",
+        operations: [
+          {
+            op: "replace",
+            path: "/integration",
+            value: {
+              providers: [],
+              capabilities: [],
+              assetLocks: [],
+              compositionProfile: "expense-approval",
+            },
+          },
+        ],
+      }),
+    ).toThrow(GraphDiffError);
+
+    expect(() =>
+      applyGraphDiffToDraft(draft, {
+        apiVersion: "factory.graph-diff/v1",
+        operations: [{ op: "remove", path: "/integration" }],
+      }),
+    ).toThrow(GraphDiffError);
+  });
+
+  it("rejects escaped and unescaped prototype-key add paths", () => {
+    const draft = createDraftRevision(expenseGraph, "draft-1");
+
+    expect(() =>
+      applyGraphDiffToDraft(draft, {
+        apiVersion: "factory.graph-diff/v1",
+        operations: [
+          { op: "add", path: "/page/~1__proto__", value: { injected: true } },
+        ],
+      }),
+    ).toThrow(GraphDiffError);
+
+    expect(() =>
+      applyGraphDiffToDraft(draft, {
+        apiVersion: "factory.graph-diff/v1",
+        operations: [
+          { op: "add", path: "/page/__proto__", value: { injected: true } },
+        ],
+      }),
+    ).toThrow(GraphDiffError);
+
+    // `~1` escapes decode to a `/` inside the segment; the guard must reject
+    // the decoded prototype tokens, not only whole-segment matches.
+    for (const token of ["constructor", "prototype"]) {
+      expect(() =>
+        applyGraphDiffToDraft(draft, {
+          apiVersion: "factory.graph-diff/v1",
+          operations: [
+            { op: "add", path: `/page/~1${token}`, value: { injected: true } },
+          ],
+        }),
+      ).toThrow(GraphDiffError);
+    }
+
+    // Case variants mirror the case-insensitive business-text guard.
+    for (const path of ["/page/Constructor", "/page/PROTOTYPE"]) {
+      expect(() =>
+        applyGraphDiffToDraft(draft, {
+          apiVersion: "factory.graph-diff/v1",
+          operations: [{ op: "add", path, value: { injected: true } }],
+        }),
+      ).toThrow(GraphDiffError);
+    }
+  });
+
+  it("rejects integration-root alias add paths", () => {
+    const draft = createDraftRevision(expenseGraph, "draft-1");
+
+    // Empty, ".", and ".." segments cannot be validated Graph keys; alias
+    // paths that collapse onto the protected integration root must be
+    // rejected rather than silently absorbed.
+    for (const alias of [
+      "/integration/",
+      "/integration/.",
+      "/integration/..",
+    ]) {
+      expect(() =>
+        applyGraphDiffToDraft(draft, {
+          apiVersion: "factory.graph-diff/v1",
+          operations: [{ op: "add", path: alias, value: { injected: true } }],
+        }),
+      ).toThrow(GraphDiffError);
+    }
+  });
+
+  it("rejects escaped URL material in a path without echoing it", () => {
+    // QA-4-1: a `~1`-escaped scheme decodes to a real URL after the raw
+    // string scan, so the raw pointer carries no literal `://` yet its
+    // decoded segment is a URL that would land in a record surface such as
+    // experience.theme.tokens. The decoded segments must fail closed with a
+    // fixed message that never echoes the host, scheme, or path.
+    const draft = createDraftRevision(expenseGraph, "draft-1");
+
+    let message = "";
+    try {
+      applyGraphDiffToDraft(draft, {
+        apiVersion: "factory.graph-diff/v1",
+        operations: [
+          {
+            op: "add",
+            path: "/experience/theme/tokens/https:~1~1evil.example.com",
+            value: "clean",
+          },
+        ],
+      });
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toMatch(/cannot carry URL/);
+    expect(message).not.toContain("evil.example.com");
+    expect(message).not.toContain("https:");
+    expect(message).not.toContain("https:~1~1evil.example.com");
+  });
+
+  it("rejects unescaped URL and drive-root material in raw Diff paths", () => {
+    // The raw boundary shares the same path material boundary as the
+    // composition layer: a URL or drive root in a pointer is never legitimate
+    // Graph structure, escaped or not.
+    const draft = createDraftRevision(expenseGraph, "draft-1");
+
+    for (const path of [
+      "/experience/theme/tokens/https://evil.example.com",
+      "/experience/theme/tokens/C:/windows/system32/x",
+      "/experience/theme/tokens/C:~1windows/x",
+    ]) {
+      expect(() =>
+        applyGraphDiffToDraft(draft, {
+          apiVersion: "factory.graph-diff/v1",
+          operations: [{ op: "add", path, value: "clean" }],
+        }),
+      ).toThrow(GraphDiffError);
+    }
+  });
+
+  it("applies ~1/~0-escaped literal segments with their decoded keys", () => {
+    // QA-4-1-R1: the decode-then-scan must never over-reject — legitimate
+    // `~1`/`~0` escapes decode to literal `/` and `~` in record keys and must
+    // apply with their decoded keys.
+    const draft = createDraftRevision(expenseGraph, "draft-1");
+    const result = applyGraphDiffToDraft(draft, {
+      apiVersion: "factory.graph-diff/v1",
+      operations: [
+        { op: "add", path: "/experience/theme/tokens/a~1b", value: "clean" },
+        {
+          op: "add",
+          path: "/experience/theme/tokens/a~0b~1c~0d",
+          value: "clean",
+        },
+      ],
+    });
+
+    expect(result.revision).toBe(2);
+    expect(result.graph.experience.theme.tokens).toMatchObject({
+      "a/b": "clean",
+      "a~b/c~d": "clean",
+    });
   });
 });

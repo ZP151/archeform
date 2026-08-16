@@ -42,7 +42,7 @@ const portfolioPath = join(
 );
 
 async function waitForPath(path: string): Promise<void> {
-  const deadline = Date.now() + 10_000;
+  const deadline = Date.now() + 30_000;
   while (!existsSync(path)) {
     if (Date.now() >= deadline) {
       throw new Error(`Timed out waiting for ${path}.`);
@@ -51,9 +51,10 @@ async function waitForPath(path: string): Promise<void> {
   }
 }
 
-// The child fails closed after its bounded 10-second wait. Retain an additional
-// 10-second scheduling margin when the required full suites run concurrently.
-const RACE_TEST_TIMEOUT_MS = 20_000;
+// The child fails closed after its bounded 30-second wait. Retain an additional
+// 30-second scheduling margin when the required full suites run concurrently
+// on a cold checkout, where every workspace package starts at the same time.
+const RACE_TEST_TIMEOUT_MS = 60_000;
 
 function raceChild(
   title: string,

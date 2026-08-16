@@ -367,7 +367,7 @@ function createGeneratedStores(
     },
   };
   const prisma = {
-    notificationOutbox,
+    factory_NotificationOutbox: notificationOutbox,
     async $transaction<T>(operation: (client: unknown) => Promise<T>) {
       return operation(prisma);
     },
@@ -446,7 +446,7 @@ function createTransactionalPrismaFixture() {
         return { count: 0 };
       },
     };
-    return { expense, notificationOutbox };
+    return { expense, factory_NotificationOutbox: notificationOutbox };
   };
   const prisma = {
     ...clientFor(state),

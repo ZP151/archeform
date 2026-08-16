@@ -13,21 +13,33 @@ import { isDeepStrictEqual } from "node:util";
 import { Prisma } from "@prisma/client";
 import {
   assertGoldenCapabilityAssetLocks,
+  composeDefaultCapabilityDraft,
   createCapabilityCompositionLock,
   type CapabilityCompositionLockV1,
   type CapabilitySelectionV1,
 } from "@factory/capabilities";
 import { createVerifiedCapabilityCompositionLock } from "@factory/capabilities/node";
 import {
+  adaptPublishedApplicationGraph,
   applyGraphDiffToDraft,
+  assertApplicationGraphV3,
   createDraftRevision,
   createPublishedGraphExchange,
   hashApplicationGraph,
+  hashApplicationGraphV3,
   parseApplicationGraph,
   parsePublishedGraphExchange,
   type ApplicationGraphV1,
+  type ApplicationGraphV3,
+  type PublishedApplicationGraphV3Input,
 } from "@factory/graph";
 import { GraphProposalError } from "@factory/adapters/ai";
+import {
+  buildGitExport,
+  buildSourceZip,
+  type GeneratedFile,
+  type GitExportV1,
+} from "@factory/compiler";
 
 import { GeneratedArtifactReader } from "./artifact-content.js";
 import { PrismaService } from "./prisma.service.js";
@@ -57,6 +69,10 @@ export type WorkbenchApplicationSummary = {
   readonly id: string;
   readonly key: string;
   readonly name: string;
+  readonly templateOrigin: {
+    readonly templateKey: string;
+    readonly templateVersion: string;
+  } | null;
   readonly compositionProfile: string | null;
   readonly latestDraft: {
     readonly revisionNumber: number;
@@ -78,7 +94,28 @@ export type WorkbenchApplicationSummary = {
   };
 };
 
-function exactRecord(
+function summaryTemplateOrigin(
+  input: unknown,
+): WorkbenchApplicationSummary["templateOrigin"] {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+  const record = input as UnknownRecord;
+  if (
+    Object.keys(record).sort().join(",") !==
+      "templateGraphChecksum,templateKey,templateVersion" ||
+    typeof record.templateKey !== "string" ||
+    typeof record.templateVersion !== "string" ||
+    typeof record.templateGraphChecksum !== "string" ||
+    !/^sha256:[a-f0-9]{64}$/.test(record.templateGraphChecksum)
+  ) {
+    return null;
+  }
+  return {
+    templateKey: record.templateKey,
+    templateVersion: record.templateVersion,
+  };
+}
+
+export function exactRecord(
   input: unknown,
   allowedKeys: readonly string[],
   requiredKeys: readonly string[],
@@ -102,7 +139,7 @@ function exactRecord(
   return record;
 }
 
-function requiredString(record: UnknownRecord, key: string): string {
+export function requiredString(record: UnknownRecord, key: string): string {
   const value = record[key];
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new BadRequestException(`${key} must be a non-empty string.`);
@@ -183,11 +220,13 @@ function artifactEvidence(input: unknown): ArtifactEvidence {
   return { path, digest: requiredSha256(record, "digest"), sizeBytes };
 }
 
-function completionEvidence(input: unknown): {
+type CompletionEvidence = {
   readonly graphHash: string;
   readonly rootDirectory: string;
   readonly artifacts: readonly ArtifactEvidence[];
-} {
+};
+
+function completionEvidence(input: unknown): CompletionEvidence {
   const body = exactRecord(
     input,
     ["graphHash", "rootDirectory", "artifacts"],
@@ -208,6 +247,112 @@ function completionEvidence(input: unknown): {
     rootDirectory: generatedRootDirectory(body),
     artifacts,
   };
+}
+
+const COMPILATION_FAILURE_API_VERSION = "factory.compilation-failure/v1";
+const COMPILATION_FAILURE_CODE = "compilation.failed";
+
+function compilationFailureEvidence(input: unknown): void {
+  const body = exactRecord(
+    input,
+    ["apiVersion", "failureCode"],
+    ["apiVersion", "failureCode"],
+  );
+  if (body.apiVersion !== COMPILATION_FAILURE_API_VERSION) {
+    throw new BadRequestException(
+      `apiVersion must be ${COMPILATION_FAILURE_API_VERSION}.`,
+    );
+  }
+  if (body.failureCode !== COMPILATION_FAILURE_CODE) {
+    throw new BadRequestException(
+      `failureCode must be ${COMPILATION_FAILURE_CODE}.`,
+    );
+  }
+}
+
+function hasExactKeys(
+  record: UnknownRecord,
+  expectedKeys: readonly string[],
+): boolean {
+  const actual = Object.keys(record).sort();
+  const expected = [...expectedKeys].sort();
+  return (
+    actual.length === expected.length &&
+    actual.every((key, index) => key === expected[index])
+  );
+}
+
+function canonicalIso(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const parsed = new Date(value);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString() === value;
+}
+
+function failedCompilation(result: unknown): boolean {
+  if (!result || typeof result !== "object" || Array.isArray(result)) {
+    return false;
+  }
+  const record = result as UnknownRecord;
+  return (
+    hasExactKeys(record, ["status", "failureCode", "completedAt"]) &&
+    record.status === "failed" &&
+    record.failureCode === COMPILATION_FAILURE_CODE &&
+    canonicalIso(record.completedAt)
+  );
+}
+
+function matchingSucceededCompilation(
+  compilation: {
+    readonly inputGraphHash: string;
+    readonly result: unknown;
+    readonly artifacts: readonly {
+      readonly path: string;
+      readonly digest: string;
+      readonly sizeBytes: number | null;
+      readonly metadata: unknown;
+    }[];
+  },
+  evidence: CompletionEvidence,
+): boolean {
+  if (
+    !compilation.result ||
+    typeof compilation.result !== "object" ||
+    Array.isArray(compilation.result)
+  ) {
+    return false;
+  }
+  const result = compilation.result as UnknownRecord;
+  if (
+    !hasExactKeys(result, ["status", "artifactCount", "completedAt"]) ||
+    result.status !== "succeeded" ||
+    result.artifactCount !== evidence.artifacts.length ||
+    !canonicalIso(result.completedAt) ||
+    compilation.inputGraphHash !== evidence.graphHash ||
+    compilation.artifacts.length !== evidence.artifacts.length
+  ) {
+    return false;
+  }
+  const stored = [...compilation.artifacts].sort((left, right) =>
+    left.path.localeCompare(right.path),
+  );
+  const reported = [...evidence.artifacts].sort((left, right) =>
+    left.path.localeCompare(right.path),
+  );
+  return stored.every((artifact, index) => {
+    const expected = reported[index];
+    const metadata = artifact.metadata;
+    const rootDirectory =
+      metadata && typeof metadata === "object" && !Array.isArray(metadata)
+        ? (metadata as UnknownRecord).rootDirectory
+        : undefined;
+    return (
+      expected !== undefined &&
+      artifact.path === expected.path &&
+      artifact.digest === expected.digest &&
+      artifact.sizeBytes === expected.sizeBytes &&
+      rootDirectory === evidence.rootDirectory
+    );
+  });
 }
 
 function queuedCompilation(result: unknown): boolean {
@@ -292,13 +437,41 @@ function summaryCompilationCompletedAt(result: unknown): string | null {
     : null;
 }
 
-function succeededCompilation(result: unknown): boolean {
+export function succeededCompilation(result: unknown): boolean {
   return (
     !!result &&
     typeof result === "object" &&
     !Array.isArray(result) &&
     (result as UnknownRecord).status === "succeeded"
   );
+}
+
+/**
+ * Serializes a Git object store into a deterministic, self-describing byte
+ * stream: one `<40-hex-id><4-byte big-endian length><zlib bytes>` record per
+ * object, sorted by id. Equal input produces byte-identical output.
+ */
+function serializeGitObjects(export_: GitExportV1): Uint8Array {
+  const ids = [...export_.objects.keys()].sort();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (const id of ids) {
+    const bytes = export_.objects.get(id)!;
+    const header = new Uint8Array(44);
+    for (let index = 0; index < 40; index += 1) {
+      header[index] = id.charCodeAt(index);
+    }
+    new DataView(header.buffer).setUint32(40, bytes.length, false);
+    chunks.push(header, bytes);
+    total += 44 + bytes.length;
+  }
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return out;
 }
 
 function previewPort(value: unknown, key: string): number {
@@ -383,6 +556,14 @@ function uniqueConstraint(error: unknown): boolean {
   );
 }
 
+function serializationConflict(error: unknown): boolean {
+  return (
+    !!error &&
+    typeof error === "object" &&
+    (error as { code?: unknown }).code === "P2034"
+  );
+}
+
 function jsonValue(value: unknown, key: string): Prisma.InputJsonValue {
   try {
     const serialized = JSON.stringify(value);
@@ -393,7 +574,7 @@ function jsonValue(value: unknown, key: string): Prisma.InputJsonValue {
   }
 }
 
-function validatedGraph(input: unknown): {
+export function validatedGraph(input: unknown): {
   graph: ApplicationGraphV1;
   graphHash: string;
 } {
@@ -461,7 +642,7 @@ function hasEqualJsonStructure(left: unknown, right: unknown): boolean {
   );
 }
 
-function verifiedPublishedCompositionLock(
+export function verifiedPublishedCompositionLock(
   input: unknown,
   storedHash: string | null,
   graphHash: string,
@@ -495,6 +676,29 @@ function verifiedPublishedCompositionLock(
 
 function assertGraphIdentity(
   graph: ApplicationGraphV1,
+  aggregate: { key: string; workspace: { slug: string } },
+): void {
+  if (
+    graph.metadata.id !== aggregate.key ||
+    graph.metadata.workspaceId !== aggregate.workspace.slug
+  ) {
+    throw new BadRequestException(
+      "Application Graph identity does not match its aggregate.",
+    );
+  }
+}
+
+function isV3Graph(input: unknown): boolean {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return false;
+  const record = input as Record<string, unknown>;
+  return (
+    record.apiVersion === "factory.application-graph/v3" ||
+    record.graphVersion === "factory.application-graph/v3"
+  );
+}
+
+function assertV3GraphIdentity(
+  graph: ApplicationGraphV3,
   aggregate: { key: string; workspace: { slug: string } },
 ): void {
   if (
@@ -547,6 +751,7 @@ export class LifecycleService {
         id: true,
         key: true,
         name: true,
+        templateOrigin: true,
         draftRevisions: {
           orderBy: { revisionNumber: "desc" },
           take: 1,
@@ -586,6 +791,7 @@ export class LifecycleService {
         id: application.id,
         key: application.key,
         name: application.name,
+        templateOrigin: summaryTemplateOrigin(application.templateOrigin),
         ...graphFields,
         latestDraft: latestDraft
           ? {
@@ -766,6 +972,9 @@ export class LifecycleService {
       throw new NotFoundException(
         "Draft revision was not found for this Graph.",
       );
+    if (isV3Graph(draft.graph)) {
+      return this.publishDraftV3(applicationGraphId, draftRevisionId, draft);
+    }
     const { graph } = validatedGraph(draft.graph);
     assertGraphIdentity(graph, draft.applicationGraph);
     return this.prisma.$transaction(async (transaction) => {
@@ -784,6 +993,64 @@ export class LifecycleService {
         publishedGraph,
         this.capabilityRepositoryRoot,
       );
+      return transaction.publishedRevision.create({
+        data: {
+          applicationGraphId,
+          sourceDraftRevisionId: draftRevisionId,
+          revisionNumber: publishedCount + 1,
+          graph: publishedGraph as unknown as Prisma.InputJsonValue,
+          graphHash,
+          compositionLock: jsonValue(compositionLock, "compositionLock"),
+          compositionLockHash: compositionLock.lockDigest,
+        },
+      });
+    });
+  }
+
+  private async publishDraftV3(
+    applicationGraphId: string,
+    draftRevisionId: string,
+    draft: {
+      readonly graph: unknown;
+      readonly applicationGraph: {
+        readonly key: string;
+        readonly workspace: { readonly slug: string };
+      };
+    },
+  ) {
+    const graph = assertApplicationGraphV3(draft.graph);
+    assertV3GraphIdentity(graph, draft.applicationGraph);
+    return this.prisma.$transaction(async (transaction) => {
+      const existing = await transaction.publishedRevision.findFirst({
+        where: { sourceDraftRevisionId: draftRevisionId, applicationGraphId },
+      });
+      if (existing)
+        throw new ConflictException("Draft revision is already published.");
+      const publishedCount = await transaction.publishedRevision.count({
+        where: { applicationGraphId },
+      });
+      const graphHash = hashApplicationGraphV3(graph);
+      const publishedGraph: PublishedApplicationGraphV3Input = {
+        kind: "published-application-graph",
+        status: "published",
+        graphVersion: "factory.application-graph/v3",
+        revisionId: `${draft.applicationGraph.key}-published-${publishedCount + 1}`,
+        revisionNumber: publishedCount + 1,
+        graphHash,
+        graph,
+      };
+      if (graph.integration.compositionProfile !== "restaurant-ordering") {
+        throw new BadRequestException(
+          "Unsupported Restaurant composition profile.",
+        );
+      }
+      const canonicalBase = composeDefaultCapabilityDraft({
+        profile: "restaurant-ordering",
+      });
+      const compositionLock = createCapabilityCompositionLock({
+        graphChecksum: graphHash,
+        selections: canonicalBase.graph.integration.compositionSelections ?? [],
+      });
       return transaction.publishedRevision.create({
         data: {
           applicationGraphId,
@@ -845,6 +1112,9 @@ export class LifecycleService {
     });
     if (!published)
       throw new NotFoundException("Published revision was not found.");
+    if (isV3Graph(published.graph)) {
+      return this.createV3Compilation(published, target, compilerVersion);
+    }
     const { graph, graphHash } = validatedGraph(published.graph);
     if (graphHash !== published.graphHash) {
       throw new ConflictException(
@@ -874,7 +1144,62 @@ export class LifecycleService {
       publishedRevisionId,
       target,
       compilerVersion,
+      graphVersion: "factory.application-graph/v1",
       graph,
+      compositionLock,
+    });
+    return compilation;
+  }
+
+  private async createV3Compilation(
+    published: {
+      readonly id: string;
+      readonly graphHash: string;
+      readonly compositionLock: unknown;
+      readonly compositionLockHash: string | null;
+      readonly graph: unknown;
+    },
+    target: string,
+    compilerVersion: string,
+  ) {
+    const publishedGraph = adaptPublishedApplicationGraph(published.graph);
+    if (publishedGraph.graphVersion !== "factory.application-graph/v3") {
+      throw new BadRequestException("Published revision is not a V3 Graph.");
+    }
+    const graphHash = hashApplicationGraphV3(publishedGraph.graph);
+    if (
+      graphHash !== published.graphHash ||
+      graphHash !== publishedGraph.graphHash
+    ) {
+      throw new ConflictException(
+        "Published Revision Graph hash does not match its stored hash.",
+      );
+    }
+    const compositionLock = verifiedPublishedCompositionLock(
+      published.compositionLock,
+      published.compositionLockHash,
+      graphHash,
+    );
+    const compilationCount = await this.prisma.compilation.count({
+      where: { publishedRevisionId: published.id },
+    });
+    const compilation = await this.prisma.compilation.create({
+      data: {
+        publishedRevisionId: published.id,
+        sequence: compilationCount + 1,
+        target,
+        inputGraphHash: published.graphHash,
+        compilerVersion,
+        result: jsonValue({ status: "queued" }, "result"),
+      },
+    });
+    await this.compilationQueue.enqueue({
+      compilationId: compilation.id,
+      publishedRevisionId: published.id,
+      target,
+      compilerVersion,
+      graphVersion: "factory.application-graph/v3",
+      publishedGraph,
       compositionLock,
     });
     return compilation;
@@ -922,6 +1247,75 @@ export class LifecycleService {
         "Generated artifact content does not match registered evidence.",
       );
     }
+  }
+
+  async getCompilationSourceArchive(
+    compilationId: string,
+    format: string | undefined,
+  ) {
+    const id = requiredString({ compilationId }, "compilationId");
+    const requestedFormat = format ?? "zip";
+    if (requestedFormat !== "zip" && requestedFormat !== "git") {
+      throw new BadRequestException(
+        "Source archive format must be 'zip' or 'git'.",
+      );
+    }
+    const compilation = await this.prisma.compilation.findUnique({
+      where: { id },
+      include: { artifacts: { orderBy: { path: "asc" } } },
+    });
+    if (!compilation) throw new NotFoundException("Compilation was not found.");
+    if (!succeededCompilation(compilation.result)) {
+      throw new ConflictException(
+        "Compilation must succeed before its source can be exported.",
+      );
+    }
+
+    const files: GeneratedFile[] = [];
+    for (const artifact of compilation.artifacts) {
+      const metadata = artifact.metadata;
+      const rootDirectory =
+        metadata && typeof metadata === "object" && !Array.isArray(metadata)
+          ? (metadata as UnknownRecord).rootDirectory
+          : undefined;
+      if (typeof rootDirectory !== "string") {
+        throw new ConflictException(
+          "Generated artifact has no registered root directory.",
+        );
+      }
+      try {
+        const read = await this.artifactReader.read({
+          rootDirectory,
+          path: artifact.path,
+          digest: artifact.digest,
+        });
+        files.push({ path: read.path, content: read.content });
+      } catch {
+        throw new ConflictException(
+          "Generated artifact content does not match registered evidence.",
+        );
+      }
+    }
+
+    if (requestedFormat === "zip") {
+      return {
+        filename: `${id}.zip`,
+        contentType: "application/zip",
+        bytes: buildSourceZip(files),
+      };
+    }
+    const gitExport = buildGitExport({
+      files,
+      message: `Graph-first source export for ${id}\n`,
+      author: "Archeform <dev@archeform.local>",
+      committer: "Archeform <dev@archeform.local>",
+      timestampSeconds: 0,
+    });
+    return {
+      filename: `${id}.git`,
+      contentType: "application/octet-stream",
+      bytes: serializeGitObjects(gitExport),
+    };
   }
 
   async createPreviewRun(compilationId: string) {
@@ -1164,42 +1558,136 @@ export class LifecycleService {
     return generatedRootDirectory({ rootDirectory: roots[0] });
   }
 
+  private async compilationTerminalTransaction<T>(
+    operation: (transaction: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(operation, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        });
+      } catch (error) {
+        if (!serializationConflict(error)) throw error;
+      }
+    }
+    throw new ConflictException("Compilation terminal evidence conflicted.");
+  }
+
   async completeCompilation(compilationId: string, input: unknown) {
     const evidence = completionEvidence(input);
-    const compilation = await this.prisma.compilation.findUnique({
-      where: { id: compilationId },
-    });
-    if (!compilation) throw new NotFoundException("Compilation was not found.");
-    if (!queuedCompilation(compilation.result)) {
-      throw new ConflictException(
-        "Compilation is no longer awaiting Worker evidence.",
-      );
-    }
-    if (compilation.inputGraphHash !== evidence.graphHash) {
-      throw new ConflictException(
-        "Worker evidence Graph hash does not match the Compilation input.",
-      );
-    }
-    await this.prisma.artifact.createMany({
-      data: evidence.artifacts.map((artifact) => ({
-        compilationId,
-        kind: "generated-file",
-        path: artifact.path,
-        digest: artifact.digest,
-        mediaType: "application/vnd.factory.generated-file",
-        sizeBytes: artifact.sizeBytes,
-        metadata: { rootDirectory: evidence.rootDirectory },
-      })),
-    });
-    return this.prisma.compilation.update({
-      where: { id: compilationId },
-      data: {
-        result: {
-          status: "succeeded",
-          artifactCount: evidence.artifacts.length,
-          completedAt: new Date().toISOString(),
+    return this.compilationTerminalTransaction(async (transaction) => {
+      const compilation = await transaction.compilation.findUnique({
+        where: { id: compilationId },
+        include: { artifacts: { orderBy: { path: "asc" } } },
+      });
+      if (!compilation) {
+        throw new NotFoundException("Compilation was not found.");
+      }
+      if (matchingSucceededCompilation(compilation, evidence)) {
+        return compilation;
+      }
+      if (!queuedCompilation(compilation.result)) {
+        throw new ConflictException(
+          "Compilation is no longer awaiting Worker evidence.",
+        );
+      }
+      if (compilation.inputGraphHash !== evidence.graphHash) {
+        throw new ConflictException(
+          "Worker evidence Graph hash does not match the Compilation input.",
+        );
+      }
+      const result = {
+        status: "succeeded",
+        artifactCount: evidence.artifacts.length,
+        completedAt: new Date().toISOString(),
+      };
+      const transitioned = await transaction.compilation.updateMany({
+        where: {
+          id: compilationId,
+          result: { equals: { status: "queued" } },
         },
-      },
+        data: { result },
+      });
+      if (transitioned.count !== 1) {
+        const terminal = await transaction.compilation.findUnique({
+          where: { id: compilationId },
+          include: { artifacts: { orderBy: { path: "asc" } } },
+        });
+        if (terminal && matchingSucceededCompilation(terminal, evidence)) {
+          return terminal;
+        }
+        throw new ConflictException(
+          "Compilation terminal evidence conflicted.",
+        );
+      }
+      await transaction.artifact.createMany({
+        data: evidence.artifacts.map((artifact) => ({
+          compilationId,
+          kind: "generated-file",
+          path: artifact.path,
+          digest: artifact.digest,
+          mediaType: "application/vnd.factory.generated-file",
+          sizeBytes: artifact.sizeBytes,
+          metadata: { rootDirectory: evidence.rootDirectory },
+        })),
+      });
+      return { ...compilation, result };
+    });
+  }
+
+  async failCompilation(compilationId: string, input: unknown) {
+    compilationFailureEvidence(input);
+    return this.compilationTerminalTransaction(async (transaction) => {
+      const compilation = await transaction.compilation.findUnique({
+        where: { id: compilationId },
+        include: { artifacts: { orderBy: { path: "asc" } } },
+      });
+      if (!compilation) {
+        throw new NotFoundException("Compilation was not found.");
+      }
+      if (
+        failedCompilation(compilation.result) &&
+        compilation.artifacts.length === 0
+      ) {
+        return compilation;
+      }
+      if (
+        !queuedCompilation(compilation.result) ||
+        compilation.artifacts.length
+      ) {
+        throw new ConflictException(
+          "Compilation is no longer awaiting Worker evidence.",
+        );
+      }
+      const result = {
+        status: "failed",
+        failureCode: COMPILATION_FAILURE_CODE,
+        completedAt: new Date().toISOString(),
+      };
+      const transitioned = await transaction.compilation.updateMany({
+        where: {
+          id: compilationId,
+          result: { equals: { status: "queued" } },
+        },
+        data: { result },
+      });
+      if (transitioned.count !== 1) {
+        const terminal = await transaction.compilation.findUnique({
+          where: { id: compilationId },
+          include: { artifacts: { orderBy: { path: "asc" } } },
+        });
+        if (
+          terminal &&
+          failedCompilation(terminal.result) &&
+          terminal.artifacts.length === 0
+        ) {
+          return terminal;
+        }
+        throw new ConflictException(
+          "Compilation terminal evidence conflicted.",
+        );
+      }
+      return { ...compilation, result };
     });
   }
 }

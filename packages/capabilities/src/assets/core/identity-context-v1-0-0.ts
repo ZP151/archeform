@@ -3,6 +3,7 @@ import type { CapabilityAssetV1 } from "../contract.js";
 export const identityContextAssetV1_0_0: CapabilityAssetV1 = {
   manifest: {
     apiVersion: "factory.capability/v1",
+    bindingContract: "factory.capability-binding/v1",
     key: "core.identity-context",
     version: "1.0.0",
     category: "core",
@@ -11,7 +12,7 @@ export const identityContextAssetV1_0_0: CapabilityAssetV1 = {
       "Resolves a provider-neutral principal and session into a declared role context.",
     packageRoot: "packages/capabilities/assets/core.identity-context/1.0.0",
     manifestDigest:
-      "sha256:6d717ecf2dc70db0096cf75d3241f55462402d7e0822c52e66c80677d20b5ec5",
+      "sha256:c2fc92f426d6e3995565681e55a8d7d5a5c8379c30ce4b9d2ecb0b538c2b8ca1",
     lifecycle: "golden",
     profiles: ["restaurant-ordering", "simple-ecommerce"],
     effects: ["identity.context.resolve", "identity.context.validate"],

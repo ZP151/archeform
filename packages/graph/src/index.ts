@@ -1,34 +1,32 @@
-import { createHash } from "node:crypto";
-
 import { z } from "zod";
 
+import { unsafeCompositionDiffPathPattern } from "./composition-shared.js";
 import {
   applicationGraphSchema,
   assertValidApplicationGraph,
   GraphSemanticError,
+  hashApplicationGraph,
   type ApplicationGraphV1,
 } from "./model.js";
 
 export * from "./model.js";
-
-function canonicalize(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalize);
-  if (value && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, nested]) => [key, canonicalize(nested)]),
-    );
-  }
-  return value;
-}
-
-/** A stable, content-addressable hash of a valid Graph. Array order is intentional Graph meaning. */
-export function hashApplicationGraph(input: unknown): string {
-  const graph = assertValidApplicationGraph(input);
-  const canonicalJson = JSON.stringify(canonicalize(graph));
-  return `sha256:${createHash("sha256").update(canonicalJson).digest("hex")}`;
-}
+export * from "./blank-application.js";
+export * from "./experience.js";
+export * from "./verification.js";
+export * from "./diagnosis.js";
+export * from "./composition-shared.js";
+export * from "./requirement-spec.js";
+export * from "./product-blueprint.js";
+export * from "./composition-plan.js";
+export * from "./profile-recipe-catalog.js";
+export * from "./product-intent.js";
+export * from "./product-recipe.js";
+export * from "./source-overlay.js";
+export * from "./application-graph-v2.js";
+export * from "./application-graph-v3.js";
+export * from "./draft-preview-snapshot.js";
+export * from "./draft-preview-snapshot-v2.js";
+export * from "./application-graph-adapter.js";
 
 export const publishedGraphExchangeSchema = z
   .object({
@@ -152,6 +150,31 @@ export function createDraftRevision(
   };
 }
 
+/**
+ * Appends the next immutable Draft revision from arbitrary valid Graph
+ * content (e.g. restoring an earlier revision's graph). Never mutates the
+ * current revision; the revision counter advances monotonically.
+ */
+export function appendDraftRevision(
+  graphInput: unknown,
+  draft: DraftRevisionV1,
+): DraftRevisionV1 {
+  if (draft.status !== "draft") {
+    throw new GraphSemanticError([
+      {
+        code: "revision.not_draft",
+        message: "Only mutable Draft revisions accept appended revisions.",
+        path: [],
+      },
+    ]);
+  }
+  return {
+    ...draft,
+    revision: draft.revision + 1,
+    graph: assertValidApplicationGraph(graphInput),
+  };
+}
+
 function decodePointer(path: string): string[] {
   return path
     .slice(1)
@@ -161,16 +184,51 @@ function decodePointer(path: string): string[] {
 
 function assertPermittedDiffPath(path: string): string[] {
   const segments = decodePointer(path);
+  // Escaped material decodes after a raw scan, so the raw boundary scans the
+  // decoded segments too: `/experience/theme/tokens/https:~1~1evil.example
+  // .com` carries no literal scheme yet its decoded segment is a URL that
+  // would land in a record surface such as experience.theme.tokens
+  // (QA-4-1). The joined string has no leading `/`, so the business-text
+  // `^\s*[\\/]` alternative cannot apply even if this pattern later grows.
+  if (!unsafeCompositionDiffPathPattern.test(segments.join("/"))) {
+    throw new GraphDiffError(
+      "Graph Diff paths cannot carry URL, absolute-path, or prototype-key material.",
+    );
+  }
+  // Guard checks run over decoded segments: `~1`-escaped pointers decode to
+  // `/`, so prototype material must be detected per slash-decoded token
+  // (`/page/~1constructor` decodes to a segment carrying the `constructor`
+  // token) and every validated Graph key is a plain identifier, so a token
+  // carrying `__proto__` or an exact prototype key is never legitimate
+  // structure. Paths are also normalized before root checks: JSON Pointer
+  // may encode empty, `.`, or `..` segments, but no validated Graph key can
+  // be one, so alias paths such as `/integration/` or `/integration/.`
+  // cannot slip past the protected-subtree guards. The raw segments are
+  // still returned for application — resolution follows JSON Pointer exactly
+  // and the Draft-only boundary absorbs any non-validated residual key.
+  const tokens = segments.flatMap((segment) => segment.split("/"));
+  // Compared case-insensitively, mirroring the business-text guard: `~1`
+  // escapes and case variants (`/page/Constructor`) are caught the same way
+  // `"constructor "` is caught in prose. No validated Graph key contains
+  // these strings in any case, so nothing legitimate is rejected.
   if (
-    segments.some((segment) =>
-      ["__proto__", "constructor", "prototype"].includes(segment),
-    )
+    tokens.some((token) => {
+      const lowered = token.toLowerCase();
+      return (
+        lowered.includes("__proto__") ||
+        lowered === "constructor" ||
+        lowered === "prototype"
+      );
+    })
   ) {
     throw new GraphDiffError(
       "Graph Diff paths cannot reference prototype keys.",
     );
   }
-  const [root, second] = segments;
+  const normalized = segments.filter(
+    (segment) => segment !== "" && segment !== "." && segment !== "..",
+  );
+  const [root, second] = normalized;
   if (
     ![
       "page",
@@ -189,6 +247,11 @@ function assertPermittedDiffPath(path: string): string[] {
   if (root === "metadata" && second !== "name") {
     throw new GraphDiffError(
       "Graph Diff may update metadata.name but never Graph identity or workspace scope.",
+    );
+  }
+  if (root === "integration" && second === undefined) {
+    throw new GraphDiffError(
+      "Graph Diff cannot replace the whole integration subtree (capability assets and composition profile are plan-selected).",
     );
   }
   if (

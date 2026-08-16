@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Factory Pilot Workbench",
-  description: "A controlled product-definition workbench.",
+  title: "Archeform · 元象",
+  description: "Describe, shape, and publish a working product.",
 };
 
 export default function RootLayout({

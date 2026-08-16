@@ -1,4 +1,12 @@
+import { sha256HexUtf8 } from "./sha256.js";
+
 import { z } from "zod";
+
+import { experienceDesignSystemSchema } from "./experience.js";
+import {
+  factoryOwnedRecordIdentityDeclarationError,
+  isFactoryOwnedRecordIdentityFieldKey,
+} from "./composition-shared.js";
 
 const identifier = z
   .string()
@@ -249,6 +257,7 @@ const experienceModelSchema = z.object({
     mode: z.enum(["light", "dark", "system"]),
     tokens: z.record(z.string().min(1)).default({}),
   }),
+  designSystem: experienceDesignSystemSchema.optional(),
   locales: z.array(z.string().min(2).max(32)).min(1),
 });
 
@@ -446,11 +455,37 @@ function ambiguousTypedSymbolIssues(
   ];
 }
 
+function factoryOwnedRecordIdentityIssues(
+  graph: ApplicationGraphV1,
+): GraphValidationIssue[] {
+  return graph.domain.entities.flatMap((entity, entityIndex) =>
+    entity.fields.flatMap((field, fieldIndex) =>
+      isFactoryOwnedRecordIdentityFieldKey(field.key)
+        ? [
+            {
+              code: "domain.field.factory_identity_reserved",
+              message: factoryOwnedRecordIdentityDeclarationError,
+              path: [
+                "domain",
+                "entities",
+                entityIndex,
+                "fields",
+                fieldIndex,
+                "key",
+              ] as const,
+            },
+          ]
+        : [],
+    ),
+  );
+}
+
 export function parseApplicationGraph(input: unknown): ApplicationGraphV1 {
   const graph = applicationGraphSchema.parse(input);
   const parsingIssues = [
     ...candidateCapabilityIssues(graph),
     ...ambiguousTypedSymbolIssues(graph),
+    ...factoryOwnedRecordIdentityIssues(graph),
     ...compositionGraphSymbolIssues(graph),
   ];
   if (parsingIssues.length > 0) {
@@ -572,6 +607,7 @@ export function validateApplicationGraph(
   ) => issues.push({ code, message, path });
   issues.push(...candidateCapabilityIssues(graph));
   issues.push(...ambiguousTypedSymbolIssues(graph));
+  issues.push(...factoryOwnedRecordIdentityIssues(graph));
 
   const pageIds = new Set(graph.page.pages.map((page) => page.id));
   for (const duplicate of duplicateValues(
@@ -609,6 +645,18 @@ export function validateApplicationGraph(
       );
     }
   });
+  graph.experience.designSystem?.selection.pageLayouts &&
+    Object.keys(graph.experience.designSystem.selection.pageLayouts).forEach(
+      (pageId) => {
+        if (!pageIds.has(pageId)) {
+          issue(
+            "experience.design_system.page_layout_unknown_page",
+            `Page layout references unknown page '${pageId}'.`,
+            ["experience", "designSystem", "selection", "pageLayouts", pageId],
+          );
+        }
+      },
+    );
 
   const entityKeys = new Set(graph.domain.entities.map((entity) => entity.key));
   for (const duplicate of duplicateValues(
@@ -849,4 +897,23 @@ export function assertValidApplicationGraph(
   const issues = validateApplicationGraph(graph);
   if (issues.length > 0) throw new GraphSemanticError(issues);
   return graph;
+}
+
+function canonicalize(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, nested]) => [key, canonicalize(nested)]),
+    );
+  }
+  return value;
+}
+
+/** A stable, content-addressable hash of a valid Graph. Array order is intentional Graph meaning. */
+export function hashApplicationGraph(input: unknown): string {
+  const graph = assertValidApplicationGraph(input);
+  const canonicalJson = JSON.stringify(canonicalize(graph));
+  return `sha256:${sha256HexUtf8(canonicalJson)}`;
 }

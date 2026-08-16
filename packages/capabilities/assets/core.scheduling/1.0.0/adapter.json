@@ -1,0 +1,22 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": ["api.runtime", "flow.effect"],
+  "parameters": [
+    { "key": "scheduleEntity", "type": "graph-symbol", "required": true },
+    { "key": "scheduleField", "type": "graph-symbol", "required": true }
+  ],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/core.scheduling.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:783d5ed9bfae85dde6fc08d015a44027dd4c9f66be3613abcaaa8dfdea6e44d5"
+    }
+  ],
+  "contributes": { "effects": ["schedule.plan"] },
+  "disable": {
+    "removeIntegrationCapabilities": ["schedule.plan"]
+  }
+}

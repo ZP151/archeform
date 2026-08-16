@@ -3,6 +3,7 @@ export interface WorkerConfig {
   readonly redisPassword: string | undefined;
   readonly queueName: string;
   readonly previewQueueName: string;
+  readonly verificationQueueName: string;
   readonly previewOperationTimeoutMs: number;
   readonly artifactRoot: string;
   readonly controlPlaneUrl: string;
@@ -34,6 +35,8 @@ export function readWorkerConfig(
     queueName: environment.FACTORY_COMPILATION_QUEUE ?? "factory-compilations",
     previewQueueName:
       environment.FACTORY_PREVIEW_QUEUE ?? "factory-preview-runs",
+    verificationQueueName:
+      environment.FACTORY_VERIFICATION_QUEUE ?? "factory-verification-runs",
     previewOperationTimeoutMs,
     artifactRoot: environment.FACTORY_ARTIFACT_ROOT ?? "generated",
     controlPlaneUrl:

@@ -25,12 +25,36 @@
     "order.refund"
   ],
   "inputSchema": [
-    { "key": "orderEntity", "type": "domain.entity", "required": true },
-    { "key": "orderFlow", "type": "flow.flow", "required": true },
-    { "key": "auditEntity", "type": "domain.entity", "required": true },
-    { "key": "inventoryEntity", "type": "domain.entity", "required": true },
-    { "key": "customerRole", "type": "policy.role", "required": true },
-    { "key": "merchantRole", "type": "policy.role", "required": true }
+    {
+      "key": "orderEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "orderFlow",
+      "type": "flow.flow",
+      "required": true
+    },
+    {
+      "key": "auditEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "inventoryEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "customerRole",
+      "type": "policy.role",
+      "required": true
+    },
+    {
+      "key": "merchantRole",
+      "type": "policy.role",
+      "required": true
+    }
   ],
   "outputSlots": [
     "api.runtime",
@@ -76,20 +100,56 @@
     }
   ],
   "parameters": [
-    { "key": "orderEntity", "type": "graph-symbol", "required": true },
-    { "key": "orderFlow", "type": "graph-symbol", "required": true },
-    { "key": "auditEntity", "type": "graph-symbol", "required": true },
-    { "key": "inventoryEntity", "type": "graph-symbol", "required": true },
-    { "key": "customerRole", "type": "graph-symbol", "required": true },
-    { "key": "merchantRole", "type": "graph-symbol", "required": true }
+    {
+      "key": "orderEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "orderFlow",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "auditEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "inventoryEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "customerRole",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "merchantRole",
+      "type": "graph-symbol",
+      "required": true
+    }
   ],
   "requires": [
-    { "interfaceKey": "commerce.order-event", "version": "v1" },
-    { "interfaceKey": "commerce.stock-movement", "version": "v1" }
+    {
+      "interfaceKey": "commerce.order-event",
+      "version": "v1"
+    },
+    {
+      "interfaceKey": "commerce.stock-movement",
+      "version": "v1"
+    }
   ],
   "provides": [
-    { "interfaceKey": "commerce.order-operations", "version": "v1" },
-    { "interfaceKey": "commerce.order-operation-receipt", "version": "v1" }
+    {
+      "interfaceKey": "commerce.order-operations",
+      "version": "v1"
+    },
+    {
+      "interfaceKey": "commerce.order-operation-receipt",
+      "version": "v1"
+    }
   ],
   "verification": {
     "fixture": "fixtures/default.json",

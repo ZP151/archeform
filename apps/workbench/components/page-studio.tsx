@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Puck, type Config, type Data } from "@puckeditor/core";
 import "@puckeditor/core/puck.css";
 import type { PuckPageDocument } from "@factory/adapters/browser";
-import type { PageModel } from "@factory/graph";
-import { addPage, setPageBlockEntity, setPageDetails } from "../lib/page-model";
+import {
+  EXPERIENCE_DESIGN_SYSTEM_CATALOGUE,
+  type ExperienceModel,
+  type PageModel,
+} from "@factory/graph";
+import { setPageBlockEntity, setPageDetails } from "../lib/page-model";
 import {
   applyPuckBlocksToPageModel,
   pageModelToPuckBlocks,
@@ -13,12 +17,30 @@ import {
   type PuckBlockType,
   type PuckVisualBlock,
 } from "../lib/puck-page-model";
+import {
+  applyStudioEdit,
+  insertableBlockTypes,
+  tokenGroups,
+  type StudioEdit,
+} from "../lib/product-journey/page-bindings";
 
 type Props = {
   pageDocument: PuckPageDocument;
+  experience: ExperienceModel;
   entityKeys: readonly string[];
+  selectedPageId: string;
   onPageModelChange: (page: PageModel) => void;
+  onExperienceModelChange: (experience: ExperienceModel) => void;
 };
+
+function dataBlockConfig(kind: string): Config["components"][string] {
+  return {
+    fields: { title: { type: "text" } },
+    render: (props: Record<string, unknown>) => (
+      <PuckDataBlock kind={kind} title={props.title} />
+    ),
+  };
+}
 
 const config: Config = {
   components: {
@@ -32,30 +54,17 @@ const config: Config = {
         </section>
       ),
     },
-    Collection: {
-      fields: { title: { type: "text" } },
-      render: ({ title }) => <PuckDataBlock kind="Collection" title={title} />,
-    },
-    Form: {
-      fields: { title: { type: "text" } },
-      render: ({ title }) => <PuckDataBlock kind="Form" title={title} />,
-    },
-    Catalog: {
-      fields: { title: { type: "text" } },
-      render: ({ title }) => <PuckDataBlock kind="Catalog" title={title} />,
-    },
-    Cart: {
-      fields: { title: { type: "text" } },
-      render: ({ title }) => <PuckDataBlock kind="Cart" title={title} />,
-    },
-    Queue: {
-      fields: { title: { type: "text" } },
-      render: ({ title }) => <PuckDataBlock kind="Queue" title={title} />,
-    },
-    Checkout: {
-      fields: { title: { type: "text" } },
-      render: ({ title }) => <PuckDataBlock kind="Checkout" title={title} />,
-    },
+    Collection: dataBlockConfig("Collection"),
+    Form: dataBlockConfig("Form"),
+    Catalog: dataBlockConfig("Catalog"),
+    Cart: dataBlockConfig("Cart"),
+    Queue: dataBlockConfig("Queue"),
+    Checkout: dataBlockConfig("Checkout"),
+    Stats: dataBlockConfig("Stats"),
+    List: dataBlockConfig("List"),
+    Detail: dataBlockConfig("Detail"),
+    Calendar: dataBlockConfig("Calendar"),
+    Settings: dataBlockConfig("Settings"),
   },
 };
 
@@ -83,12 +92,13 @@ function toEditorData(document: PuckPageDocument, pageId: string): Data {
 
 export function PageStudio({
   pageDocument,
+  experience,
   entityKeys,
+  selectedPageId,
   onPageModelChange,
+  onExperienceModelChange,
 }: Props) {
-  const [selectedPageId, setSelectedPageId] = useState(
-    pageDocument.pageModel.pages[0]?.id ?? "",
-  );
+  const studioRef = useRef<HTMLElement>(null);
   const selectedPage =
     pageDocument.pageModel.pages.find((page) => page.id === selectedPageId) ??
     pageDocument.pageModel.pages[0];
@@ -99,20 +109,21 @@ export function PageStudio({
   const [editorData, setEditorData] = useState<Data>(editorSeed);
   const [route, setRoute] = useState(selectedPage?.route ?? "");
   const [title, setTitle] = useState(selectedPage?.title ?? "");
-  const [newPageTitle, setNewPageTitle] = useState("");
   const [selectedBlockId, setSelectedBlockId] = useState(
     selectedPage?.blocks[0]?.id ?? "",
   );
+  const [newBlockType, setNewBlockType] = useState<
+    (typeof insertableBlockTypes)[number]
+  >(insertableBlockTypes[0]);
+  const [tokenGroup, setTokenGroup] = useState<(typeof tokenGroups)[number]>(
+    tokenGroups[0],
+  );
+  const [tokenMode, setTokenMode] = useState<"light" | "dark">("light");
+  const [tokenKey, setTokenKey] = useState("brand");
+  const [tokenValue, setTokenValue] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => setEditorData(editorSeed), [editorSeed]);
-  useEffect(() => {
-    if (
-      !pageDocument.pageModel.pages.some((page) => page.id === selectedPageId)
-    ) {
-      setSelectedPageId(pageDocument.pageModel.pages[0]?.id ?? "");
-    }
-  }, [pageDocument.pageModel.pages, selectedPageId]);
   useEffect(() => {
     setRoute(selectedPage?.route ?? "");
     setTitle(selectedPage?.title ?? "");
@@ -123,6 +134,53 @@ export function PageStudio({
       setSelectedBlockId(selectedPage.blocks[0]?.id ?? "");
     }
   }, [selectedBlockId, selectedPage]);
+  useEffect(() => {
+    const studio = studioRef.current;
+    if (!studio) return;
+
+    const labelViewportZoom = () => {
+      const zoom = studio.querySelector<HTMLSelectElement>(
+        'select[class*="_ViewportControls-zoomSelect_"]',
+      );
+      if (
+        zoom &&
+        !zoom.getAttribute("aria-label") &&
+        !zoom.getAttribute("aria-labelledby") &&
+        zoom.labels.length === 0
+      ) {
+        zoom.setAttribute("aria-label", "Viewport zoom");
+      }
+    };
+
+    labelViewportZoom();
+    const observer = new MutationObserver(labelViewportZoom);
+    observer.observe(studio, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+
+  const applyEdit = (edit: StudioEdit): boolean => {
+    try {
+      const result = applyStudioEdit(
+        {
+          page: pageDocument.pageModel,
+          experience,
+          entityKeys,
+        },
+        edit,
+      );
+      onPageModelChange(result.page);
+      onExperienceModelChange(result.experience);
+      setError(null);
+      return true;
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Unable to apply studio edit.",
+      );
+      return false;
+    }
+  };
 
   const proposeEditorData = (nextData: Data) => {
     setEditorData(nextData);
@@ -163,55 +221,16 @@ export function PageStudio({
     }
   };
 
-  const createPage = () => {
-    const name = newPageTitle.trim();
-    if (!name) return;
-    const slug = name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "");
-    if (!slug) {
-      setError("Page title needs at least one letter or number.");
-      return;
-    }
-    try {
-      const next = addPage(pageDocument.pageModel, {
-        id: `${slug}-page`,
-        route: `/${slug}`,
-        title: name,
-        blocks: [
-          {
-            id: `${slug}-hero`,
-            type: "hero",
-            props: { eyebrow: "New route", heading: name },
-          },
-        ],
-        navigation: { id: slug, label: name, icon: "layout" },
-      });
-      onPageModelChange(next);
-      setSelectedPageId(`${slug}-page`);
-      setNewPageTitle("");
-      setError(null);
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : "Unable to add page.",
-      );
-    }
-  };
-
   const selectedBlock = selectedPage?.blocks.find(
     (block) => block.id === selectedBlockId,
   );
 
   return (
-    <section className="studio-shell puck-studio" aria-label="Puck Page Studio">
-      <div className="studio-intro">
-        <div>
-          <span>Puck Page Studio</span>
-          <strong>Page composition</strong>
-        </div>
-        <small>Changes are proposed to this Draft only.</small>
-      </div>
+    <section
+      ref={studioRef}
+      className="page-studio-canvas"
+      aria-label="Puck Page Studio"
+    >
       <form
         className="page-route-editor"
         onSubmit={(event) => {
@@ -219,19 +238,6 @@ export function PageStudio({
           saveRouteDetails();
         }}
       >
-        <label>
-          Route
-          <select
-            value={selectedPage?.id ?? ""}
-            onChange={(event) => setSelectedPageId(event.target.value)}
-          >
-            {pageDocument.pageModel.pages.map((page) => (
-              <option key={page.id} value={page.id}>
-                {page.route}
-              </option>
-            ))}
-          </select>
-        </label>
         <label>
           Path
           <input
@@ -296,19 +302,215 @@ export function PageStudio({
           </select>
         </label>
         <button type="submit">Save route</button>
-        <label className="new-page-field">
-          New page
-          <input
-            placeholder="Order tracking"
-            value={newPageTitle}
-            onChange={(event) => setNewPageTitle(event.target.value)}
-          />
-        </label>
-        <button type="button" onClick={createPage}>
-          Add page
-        </button>
         {error && <small className="studio-error">{error}</small>}
       </form>
+      <div className="page-block-actions" aria-label="Block actions">
+        <label>
+          Component
+          <select
+            value={newBlockType}
+            onChange={(event) =>
+              setNewBlockType(event.target.value as typeof newBlockType)
+            }
+          >
+            {insertableBlockTypes.map((blockType) => (
+              <option key={blockType} value={blockType}>
+                {blockType}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          disabled={!selectedPage}
+          onClick={() =>
+            selectedPage &&
+            applyEdit({
+              type: "insert-block",
+              pageId: selectedPage.id,
+              blockType: newBlockType,
+            })
+          }
+        >
+          Insert block
+        </button>
+        <button
+          type="button"
+          disabled={!selectedPage || !selectedBlock}
+          onClick={() =>
+            selectedPage &&
+            selectedBlock &&
+            applyEdit({
+              type: "copy-block",
+              pageId: selectedPage.id,
+              blockId: selectedBlock.id,
+            })
+          }
+        >
+          Copy block
+        </button>
+        <button
+          type="button"
+          disabled={!selectedPage || !selectedBlock}
+          onClick={() =>
+            selectedPage &&
+            selectedBlock &&
+            applyEdit({
+              type: "delete-block",
+              pageId: selectedPage.id,
+              blockId: selectedBlock.id,
+            })
+          }
+        >
+          Delete block
+        </button>
+      </div>
+      <section className="design-panel" aria-label="Design panel">
+        <label>
+          Page layout
+          <select
+            value={
+              experience.designSystem?.selection.pageLayouts[
+                selectedPage?.id ?? ""
+              ] ?? ""
+            }
+            onChange={(event) =>
+              selectedPage &&
+              applyEdit({
+                type: "set-page-layout",
+                pageId: selectedPage.id,
+                layout: event.target.value as never,
+              })
+            }
+          >
+            <option value="">Auto</option>
+            {EXPERIENCE_DESIGN_SYSTEM_CATALOGUE.pageLayouts.map((layout) => (
+              <option key={layout} value={layout}>
+                {layout}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Density
+          <select
+            value={experience.designSystem?.selection.density ?? "standard"}
+            onChange={(event) =>
+              applyEdit({
+                type: "set-density",
+                density: event.target.value as never,
+              })
+            }
+          >
+            {EXPERIENCE_DESIGN_SYSTEM_CATALOGUE.density.map((density) => (
+              <option key={density} value={density}>
+                {density}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Shell
+          <select
+            value={experience.designSystem?.selection.shell ?? "sidebar"}
+            onChange={(event) =>
+              applyEdit({
+                type: "set-shell",
+                shell: event.target.value as never,
+              })
+            }
+          >
+            {EXPERIENCE_DESIGN_SYSTEM_CATALOGUE.shell.map((shell) => (
+              <option key={shell} value={shell}>
+                {shell}
+              </option>
+            ))}
+          </select>
+        </label>
+        {Object.entries(EXPERIENCE_DESIGN_SYSTEM_CATALOGUE.components).map(
+          ([component, variants]) => (
+            <label key={component}>
+              {component} variant
+              <select
+                value={
+                  experience.designSystem?.components[component] ?? variants[0]
+                }
+                onChange={(event) =>
+                  applyEdit({
+                    type: "set-component-variant",
+                    component,
+                    variant: event.target.value,
+                  })
+                }
+              >
+                {variants.map((variant) => (
+                  <option key={variant} value={variant}>
+                    {variant}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ),
+        )}
+        <label>
+          Token group
+          <select
+            value={tokenGroup}
+            onChange={(event) =>
+              setTokenGroup(event.target.value as typeof tokenGroup)
+            }
+          >
+            {tokenGroups.map((group) => (
+              <option key={group} value={group}>
+                {group}
+              </option>
+            ))}
+          </select>
+        </label>
+        {tokenGroup === "colour" && (
+          <label>
+            Mode
+            <select
+              value={tokenMode}
+              onChange={(event) =>
+                setTokenMode(event.target.value as "light" | "dark")
+              }
+            >
+              <option value="light">light</option>
+              <option value="dark">dark</option>
+            </select>
+          </label>
+        )}
+        <label>
+          Token key
+          <input
+            value={tokenKey}
+            onChange={(event) => setTokenKey(event.target.value)}
+          />
+        </label>
+        <label>
+          Token value
+          <input
+            value={tokenValue}
+            onChange={(event) => setTokenValue(event.target.value)}
+          />
+        </label>
+        <button
+          type="button"
+          onClick={() => {
+            const applied = applyEdit({
+              type: "set-design-token",
+              group: tokenGroup,
+              key: tokenKey.trim(),
+              value: tokenValue.trim(),
+              ...(tokenGroup === "colour" ? { mode: tokenMode } : {}),
+            });
+            if (applied) setTokenValue("");
+          }}
+        >
+          Set token
+        </button>
+      </section>
       <Puck
         config={config}
         data={editorData}

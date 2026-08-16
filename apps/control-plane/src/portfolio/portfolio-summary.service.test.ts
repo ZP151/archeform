@@ -29,7 +29,7 @@ describe("WorkspacePortfolioSummaryService", () => {
       profiles: expect.arrayContaining([
         expect.objectContaining({
           profile: "restaurant-ordering",
-          requiredPackages: 18,
+          requiredPackages: 20,
         }),
       ]),
       readiness: expect.arrayContaining([
@@ -49,8 +49,8 @@ describe("WorkspacePortfolioSummaryService", () => {
         }),
       ]),
       capabilities: {
-        golden: 23,
-        lockedVersions: 50,
+        golden: 27,
+        lockedVersions: 54,
         candidate: 0,
         provider: 0,
       },

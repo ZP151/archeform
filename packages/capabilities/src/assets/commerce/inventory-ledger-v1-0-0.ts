@@ -3,6 +3,7 @@ import type { CapabilityAssetV1 } from "../contract.js";
 export const inventoryLedgerAssetV1_0_0: CapabilityAssetV1 = {
   manifest: {
     apiVersion: "factory.capability/v1",
+    bindingContract: "factory.capability-binding/v1",
     key: "commerce.inventory-ledger",
     version: "1.0.0",
     category: "commerce",
@@ -11,7 +12,7 @@ export const inventoryLedgerAssetV1_0_0: CapabilityAssetV1 = {
       "Records immutable, idempotent stock movements scoped to a declared location.",
     packageRoot: "packages/capabilities/assets/commerce.inventory-ledger/1.0.0",
     manifestDigest:
-      "sha256:eaf32edcc1aedd8f79f6c44a27c72ba9781cb654061c25f82f9b52601047ff7e",
+      "sha256:611d7b77c806ffbaea4fbe262a7df4a459bb0f7a1d9e1b95150d8053744e4cbb",
     lifecycle: "golden",
     profiles: ["restaurant-ordering", "simple-ecommerce"],
     effects: [
@@ -23,7 +24,14 @@ export const inventoryLedgerAssetV1_0_0: CapabilityAssetV1 = {
     ],
     inputSchema: [
       { key: "catalogEntity", type: "domain.entity", required: true },
-      { key: "stockField", type: "domain.field", required: true },
+      {
+        key: "stockField",
+        type: "domain.field",
+        required: true,
+        ownerBinding: "catalogEntity",
+        fieldTypes: ["integer"],
+        fieldRequired: true,
+      },
       { key: "movementEntity", type: "domain.entity", required: true },
       { key: "orderEntity", type: "domain.entity", required: true },
       { key: "locationEntity", type: "domain.entity", required: true },

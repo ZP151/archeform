@@ -420,11 +420,17 @@ describe("capability catalog", () => {
       }),
       selection("commerce.inventory", {
         catalogEntity: { graphSymbol: "graph.domain.menu-item" },
-        stockField: { graphSymbol: "graph.domain.stock" },
+        stockField: {
+          graphSymbol: "graph.domain.menu-item",
+          fieldKey: "stock",
+        },
       }),
       selection("commerce.inventory-ledger", {
         catalogEntity: { graphSymbol: "graph.domain.menu-item" },
-        stockField: { graphSymbol: "graph.domain.stock" },
+        stockField: {
+          graphSymbol: "graph.domain.menu-item",
+          fieldKey: "stock",
+        },
         movementEntity: { graphSymbol: "graph.domain.inventory-ledger" },
         orderEntity: { graphSymbol: "graph.domain.order" },
         locationEntity: {
@@ -463,7 +469,10 @@ describe("capability catalog", () => {
       selection("core.location-context", {
         locationEntity: { graphSymbol: "graph.domain.restaurant-table" },
         contextEntity: { graphSymbol: "graph.domain.table-session" },
-        locationCodeField: { graphSymbol: "graph.domain.code" },
+        locationCodeField: {
+          graphSymbol: "graph.domain.restaurant-table",
+          fieldKey: "code",
+        },
         customerRole: { graphSymbol: "graph.policy.customer" },
       }),
     ] as const;
@@ -494,11 +503,17 @@ describe("capability catalog", () => {
       }),
       selection("commerce.inventory", {
         catalogEntity: { graphSymbol: "graph.domain.product" },
-        stockField: { graphSymbol: "graph.domain.stock" },
+        stockField: {
+          graphSymbol: "graph.domain.product",
+          fieldKey: "stock",
+        },
       }),
       selection("commerce.inventory-ledger", {
         catalogEntity: { graphSymbol: "graph.domain.product" },
-        stockField: { graphSymbol: "graph.domain.stock" },
+        stockField: {
+          graphSymbol: "graph.domain.product",
+          fieldKey: "stock",
+        },
         movementEntity: { graphSymbol: "graph.domain.stock-movement" },
         orderEntity: { graphSymbol: "graph.domain.order" },
         locationEntity: { graphSymbol: "graph.domain.store" },
@@ -533,7 +548,10 @@ describe("capability catalog", () => {
       selection("core.location-context", {
         locationEntity: { graphSymbol: "graph.domain.store" },
         contextEntity: { graphSymbol: "graph.domain.shopper-session" },
-        locationCodeField: { graphSymbol: "graph.domain.code" },
+        locationCodeField: {
+          graphSymbol: "graph.domain.store",
+          fieldKey: "code",
+        },
         customerRole: { graphSymbol: "graph.policy.shopper" },
       }),
     ] as const;
@@ -633,6 +651,10 @@ describe("capability catalog", () => {
       "core.identity-policy",
       "core.policy-declarations",
       "core.location-context",
+      "core.files-media",
+      "core.search",
+      "core.scheduling",
+      "core.approvals",
       "commerce.catalog",
       "commerce.cart",
       "commerce.line-configuration",
@@ -882,7 +904,7 @@ describe("capability catalog", () => {
   });
 
   it("verifies every registered capability manifest against its declared digest", () => {
-    expect(capabilityAssets).toHaveLength(50);
+    expect(capabilityAssets).toHaveLength(54);
     for (const asset of capabilityAssets) {
       expect(verifyCapabilityAssetDigest(asset)).toBe(true);
     }
@@ -1795,11 +1817,13 @@ describe("capability catalog", () => {
       "commerce.order-operations",
       "core.audit",
       "core.crud",
+      "core.files-media",
       "core.identity-context",
       "core.location-context",
       "core.workflow",
       "restaurant.cashier",
       "restaurant.kitchen",
+      "restaurant.menu",
       "restaurant.ordering",
       "restaurant.reporting",
       "restaurant.table-session",
@@ -1817,6 +1841,7 @@ describe("capability catalog", () => {
 
     const expectedProviders = {
       "audit.record": ["core.audit"],
+      "files.media.register": ["core.files-media"],
       "data.create": ["core.crud"],
       "data.read": ["core.crud"],
       "data.update": ["core.crud"],
@@ -1834,11 +1859,15 @@ describe("capability catalog", () => {
         "commerce.inventory",
         "commerce.inventory-ledger",
       ],
-      "inventory.adjust": ["commerce.inventory-ledger"],
+      "inventory.adjust": ["commerce.inventory-ledger", "restaurant.menu"],
       "inventory.ledger.read": ["commerce.inventory-ledger"],
       "line.configuration.validate": ["commerce.line-configuration"],
       "line.configuration.price": ["commerce.line-configuration"],
       "line.configuration.availability.manage": ["commerce.line-configuration"],
+      "menu.category.list": ["restaurant.menu"],
+      "menu.item.list": ["restaurant.menu"],
+      "menu.item.search": ["restaurant.menu"],
+      "menu.item.manage": ["restaurant.menu"],
       "pricing.quote": ["commerce.money-pricing"],
       "pricing.snapshot": ["commerce.money-pricing"],
       "payment.refund.allocate": ["commerce.money-pricing"],
@@ -1919,6 +1948,7 @@ describe("capability catalog", () => {
         .map(([effect, providers]) => [effect, providers.sort()])
         .sort(([left], [right]) => String(left).localeCompare(String(right))),
     ).toEqual([
+      ["inventory.adjust", ["commerce.inventory-ledger", "restaurant.menu"]],
       [
         "inventory.decrement",
         ["commerce.inventory", "commerce.inventory-ledger"],
@@ -1932,7 +1962,7 @@ describe("capability catalog", () => {
         ["commerce.inventory", "commerce.inventory-ledger"],
       ],
     ]);
-    expect(selectedAssets.map(({ manifest }) => manifest.key)).not.toContain(
+    expect(selectedAssets.map(({ manifest }) => manifest.key)).toContain(
       "restaurant.menu",
     );
   });
@@ -2072,12 +2102,15 @@ describe("capability catalog", () => {
     }
   });
 
-  it("ships deterministic catalog seed scenarios for Restaurant and Ecommerce", () => {
+  it("ships deterministic catalog seed scenarios for Restaurant, Ecommerce, and Expense Approval", () => {
     const restaurant = profileGraphs.find(
       ({ profile }) => profile === "restaurant-ordering",
     )!.graph;
     const ecommerce = profileGraphs.find(
       ({ profile }) => profile === "simple-ecommerce",
+    )!.graph;
+    const expense = profileGraphs.find(
+      ({ profile }) => profile === "expense-approval",
     )!.graph;
 
     expect(restaurant.domain.seedData).toEqual(
@@ -2087,6 +2120,19 @@ describe("capability catalog", () => {
     );
     expect(ecommerce.domain.seedData).toEqual(
       expect.arrayContaining([expect.objectContaining({ entity: "product" })]),
+    );
+    // The Expense Approval acceptance journeys move the declared fixture
+    // record through the flow (draft -> submitted -> approved), so the
+    // starter graph must carry it for the compiled app to pass its own
+    // isolated verification.
+    expect(expense.domain.seedData).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          entity: "expense",
+          id: "expense-fixture-01",
+          values: expect.objectContaining({ status: "draft" }),
+        }),
+      ]),
     );
   });
 

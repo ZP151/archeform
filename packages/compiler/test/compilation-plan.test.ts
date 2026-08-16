@@ -100,6 +100,28 @@ function profileGraph(
   return structuredClone(composeProfileDraft({ profile }).graph);
 }
 
+const compilerStorageModelNames = [
+  "AuditEvent",
+  "CapabilityEvent",
+  "CommerceLineItem",
+  "OrderOperationReceipt",
+  "NotificationOutbox",
+  "PriceSnapshot",
+  "PriceAllocation",
+] as const;
+
+function modelNames(schema: string): readonly string[] {
+  return [...schema.matchAll(/^model ([A-Za-z][A-Za-z0-9_]*) \{/gm)].map(
+    (match) => match[1]!,
+  );
+}
+
+function tableNames(migration: string): readonly string[] {
+  return [...migration.matchAll(/^CREATE TABLE "([^"]+)"/gm)].map(
+    (match) => match[1]!,
+  );
+}
+
 const compilerTestDirectory = dirname(fileURLToPath(import.meta.url));
 
 type GeneratedRuntime = {
@@ -333,6 +355,23 @@ describe("compilation target registry", () => {
       ]),
     );
     expect(generateApplicationBundle(publishedExpense)).toEqual(bundle);
+  });
+
+  it("renders the graph name as the document title in the generated app shell", () => {
+    // Real-model acceptance run 2026-08-09 23:03: the generated Next.js shell
+    // served by the isolated preview carried no <title>, so axe reported
+    // "document-title: Documents must have <title> element to aid in
+    // navigation" (serious, WCAG 2.4.2) and the accessibility gate failed
+    // after all 11 verification probes had passed. The shell must declare the
+    // graph name as the document title.
+    const bundle = generateApplicationBundle(publishedExpense);
+    const layout = bundle.files.find(
+      (file) => file.path === "web/app/layout.tsx",
+    );
+    expect(layout, "missing web/app/layout.tsx").toBeDefined();
+    expect(layout!.content).toContain(
+      'export const metadata = { title: "Expense approval" };',
+    );
   });
 
   it("declares every handler type emitted by a non-commerce capability contract", () => {
@@ -1146,7 +1185,7 @@ describe("compilation target registry", () => {
     ).toContain('CREATE TABLE "Expense"');
     expect(
       files["database/prisma/migrations/0001_initial/migration.sql"],
-    ).toContain('CREATE TABLE "AuditEvent"');
+    ).toContain('CREATE TABLE "Factory_AuditEvent"');
     expect(files["database/Dockerfile"]).toContain("prisma migrate deploy");
     expect(files["api/Dockerfile"]).not.toContain("prisma db push");
     expect(files["web/.dockerignore"]).toContain("node_modules");
@@ -1978,7 +2017,7 @@ describe("compilation target registry", () => {
       "api/prisma/schema.prisma",
       "database/prisma/schema.prisma",
     ]) {
-      expect(files[schemaPath]).toContain("model NotificationOutbox");
+      expect(files[schemaPath]).toContain("model Factory_NotificationOutbox");
       expect(files[schemaPath]).toContain("dedupeKey String @unique");
       expect(files[schemaPath]).toContain("availableAt DateTime");
       expect(files[schemaPath]).toContain("deliveredAt DateTime?");
@@ -1986,7 +2025,7 @@ describe("compilation target registry", () => {
     }
     expect(
       files["database/prisma/migrations/0001_initial/migration.sql"],
-    ).toContain('CREATE TABLE "NotificationOutbox"');
+    ).toContain('CREATE TABLE "Factory_NotificationOutbox"');
     expect(files["api/src/application-runtime.ts"]).toContain(
       "export type NotificationOutboxEntry",
     );
@@ -2134,10 +2173,10 @@ describe("compilation target registry", () => {
       "appendCapabilityEvent",
     );
     expect(files["api/src/prisma-record-store.ts"]).toContain(
-      "capabilityEvent",
+      "factory_CapabilityEvent",
     );
     expect(files["api/prisma/schema.prisma"]).toContain(
-      "model CapabilityEvent",
+      "model Factory_CapabilityEvent",
     );
     expect(files["api/test/journey.generated.test.ts"]).toContain(
       "capabilityEvents",
@@ -2147,7 +2186,7 @@ describe("compilation target registry", () => {
     );
     expect(
       files["database/prisma/migrations/0001_initial/migration.sql"],
-    ).toContain('CREATE TABLE "CapabilityEvent"');
+    ).toContain('CREATE TABLE "Factory_CapabilityEvent"');
   });
 
   it("compiles DomainModel seed scenarios into idempotent Prisma data", () => {
@@ -2207,17 +2246,17 @@ describe("compilation target registry", () => {
     );
 
     expect(files["api/prisma/schema.prisma"]).toContain(
-      "model CommerceLineItem",
+      "model Factory_CommerceLineItem",
     );
     expect(
       files["database/prisma/migrations/0001_initial/migration.sql"],
-    ).toContain('CREATE TABLE "CommerceLineItem"');
+    ).toContain('CREATE TABLE "Factory_CommerceLineItem"');
     expect(files["api/src/application-runtime.ts"]).toContain("addCartItem");
     expect(files["api/src/application-runtime.ts"]).toContain(
       "decrementInventory",
     );
     expect(files["api/src/prisma-record-store.ts"]).toContain(
-      "commerceLineItem",
+      "factory_CommerceLineItem",
     );
     expect(files["api/src/main.ts"]).toContain(
       "commerce/:entity/:recordId/items",
@@ -2227,5 +2266,134 @@ describe("compilation target registry", () => {
     expect(files["web/app/page-runtime.tsx"]).toContain(
       "Pay simulated payment",
     );
+  });
+});
+
+describe("compiler-owned database storage namespace", () => {
+  it("keeps a legitimate Expense audit-event model beside compiler audit persistence", () => {
+    const graph = structuredClone(publishedExpense.graph);
+    graph.domain.entities.push({
+      key: "audit-event",
+      label: "Audit event",
+      fields: [],
+      indexes: [],
+    });
+
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "published-expense-audit-event",
+        graph,
+      }).files.map((file) => [file.path, file.content]),
+    );
+    const schema = files["api/prisma/schema.prisma"]!;
+    const migration =
+      files["database/prisma/migrations/0001_initial/migration.sql"]!;
+    const store = files["api/src/prisma-record-store.ts"]!;
+
+    expect(modelNames(schema).filter((name) => name === "AuditEvent")).toEqual([
+      "AuditEvent",
+    ]);
+    expect(
+      modelNames(schema).filter((name) => name === "Factory_AuditEvent"),
+    ).toEqual(["Factory_AuditEvent"]);
+    expect(
+      tableNames(migration).filter((name) => name === "AuditEvent"),
+    ).toEqual(["AuditEvent"]);
+    expect(
+      tableNames(migration).filter((name) => name === "Factory_AuditEvent"),
+    ).toEqual(["Factory_AuditEvent"]);
+    expect(store).toContain('"audit-event": "auditEvent"');
+    expect(store).toContain("factory_AuditEvent: AuditDelegate");
+    expect(store).toContain(").factory_AuditEvent;");
+  });
+
+  it("isolates all seven compiler storage models from reachable Graph entity names", () => {
+    const graph = profileGraph("simple-ecommerce");
+    graph.domain.entities.push(
+      ...compilerStorageModelNames.map((modelName) => ({
+        key: modelName.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase(),
+        label: `Domain ${modelName}`,
+        fields: [],
+        indexes: [],
+      })),
+    );
+
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "published-all-storage-collisions",
+        graph,
+      }).files.map((file) => [file.path, file.content]),
+    );
+    const schema = files["api/prisma/schema.prisma"]!;
+    const migration =
+      files["database/prisma/migrations/0001_initial/migration.sql"]!;
+    const store = files["api/src/prisma-record-store.ts"]!;
+    const renderedModels = modelNames(schema);
+    const renderedTables = tableNames(migration);
+
+    expect(new Set(renderedModels).size).toBe(renderedModels.length);
+    expect(new Set(renderedTables).size).toBe(renderedTables.length);
+    for (const modelName of compilerStorageModelNames) {
+      expect(renderedModels.filter((name) => name === modelName)).toEqual([
+        modelName,
+      ]);
+      expect(
+        renderedModels.filter((name) => name === `Factory_${modelName}`),
+      ).toEqual([`Factory_${modelName}`]);
+      expect(renderedTables.filter((name) => name === modelName)).toEqual([
+        modelName,
+      ]);
+      expect(
+        renderedTables.filter((name) => name === `Factory_${modelName}`),
+      ).toEqual([`Factory_${modelName}`]);
+    }
+
+    expect(schema).toContain("allocations Factory_PriceAllocation[]");
+    expect(schema).toContain(
+      "snapshot Factory_PriceSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)",
+    );
+    expect(migration).toContain(
+      'CREATE UNIQUE INDEX "Factory_PriceSnapshot_orderEntity_orderRecordId_key" ON "Factory_PriceSnapshot"',
+    );
+    expect(migration).toContain(
+      'CONSTRAINT "Factory_PriceAllocation_snapshotId_fkey" FOREIGN KEY ("snapshotId") REFERENCES "Factory_PriceSnapshot"',
+    );
+    expect(migration).toContain(
+      'CREATE UNIQUE INDEX "Factory_PriceAllocation_snapshotId_lineRecordId_key" ON "Factory_PriceAllocation"',
+    );
+    for (const accessor of [
+      "factory_AuditEvent",
+      "factory_CapabilityEvent",
+      "factory_CommerceLineItem",
+      "factory_OrderOperationReceipt",
+      "factory_NotificationOutbox",
+    ]) {
+      expect(store).toContain(accessor);
+    }
+  });
+
+  it("keeps the closed Restaurant storage schema and runtime delegates unchanged", () => {
+    const graph = profileGraph("restaurant-ordering");
+    const files = Object.fromEntries(
+      generateApplicationBundle({
+        publishedRevisionId: "published-restaurant-storage-contract",
+        graph,
+      }).files.map((file) => [file.path, file.content]),
+    );
+    const schema = files["api/prisma/schema.prisma"]!;
+    const migration =
+      files["database/prisma/migrations/0001_initial/migration.sql"]!;
+    const store = files["api/src/prisma-record-store.ts"]!;
+
+    expect(schema).toContain("model AuditEvent {");
+    expect(schema).toContain("model CapabilityEvent {");
+    expect(schema).toContain("model CommerceLineItem {");
+    expect(schema).not.toContain("model Factory_");
+    expect(migration).toContain('CREATE TABLE "AuditEvent"');
+    expect(migration).not.toContain('CREATE TABLE "Factory_');
+    expect(store).toContain("auditEvent: AuditDelegate");
+    expect(store).toContain("capabilityEvent: CapabilityDelegate");
+    expect(store).toContain("commerceLineItem: CommerceLineDelegate");
+    expect(store).not.toContain("factory_AuditEvent");
   });
 });

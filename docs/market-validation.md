@@ -397,3 +397,80 @@ input is strict and sensitive-field checked. The missing scale mechanism is
 not another manual certification pass: it is a non-promoting transformation
 from an allowlisted Portfolio record and completed evidence into a constrained
 Candidate proposal with declarative artifacts and conformance fixtures.
+
+## 2026-08-08 Base44 product-workflow study
+
+**Decision investigated.** Which Base44 product patterns can reduce the time
+from requirement to a verified runnable product without replacing Factory's
+Application Graph, immutable lifecycle, compiler, or verifier.
+
+### Observed public facts
+
+- Base44 documents separate Default, Discuss, and Edit AI chat modes, prompt
+  queues, controls, reversion, and restoration or publication of previous
+  versions in its
+  [AI chat documentation](https://docs.base44.com/Building-your-app/AI-chat-modes).
+- Its [canvas](https://docs.base44.com/Building-your-app/Canvas) presents all
+  application pages as live-preview frames on one surface and supports notes,
+  drawings, images, collaboration, and instructions sent to AI.
+- A workspace
+  [design system](https://docs.base44.com/Building-your-app/Design-system)
+  defines colours, fonts, logo, and components once and applies them across
+  applications.
+- Base44 documents safe parallel experimentation and merging through
+  [branches](https://docs.base44.com/Building-your-app/working-with-branches),
+  and local version-control collaboration through its
+  [GitHub integration](https://docs.base44.com/developers/app-code/local-development/github).
+- The
+  [Activity Monitor](https://docs.base44.com/developers/app-code/editor/activity-monitor)
+  shows development-time API requests, responses, status codes, and timing.
+- Its
+  [connector catalogue](https://docs.base44.com/Integrations/connectors-catalog)
+  combines available integrations with example prompts and requested
+  permissions.
+- Base44 provides a documented
+  [pre-publish security scan](https://docs.base44.com/Setting-up-your-app/running-a-security-scan)
+  and recommends reviewing proposed remediation before applying it.
+- The commercial product also advertises an integrated managed backend,
+  authentication, payments, hosting, custom domains, and SEO. These are product
+  capabilities, not reusable open-source implementation assets.
+
+### Decision
+
+Factory will reuse these findings as independently implemented product
+patterns, not as copied code or a runtime dependency. The first adoption slice
+is a Base44-inspired Golden Path:
+
+```text
+Discuss -> RequirementSpec -> plan alternatives -> visual Graph Diff
+-> Draft -> role/data simulation -> Publish -> Compile -> Verify -> Preview
+```
+
+Adopt now: separated discussion/planning/mutation modes; an all-pages and
+application-lineage canvas; preview-before-apply alternatives; a coherent
+Experience System; deterministic role/data simulation; a bounded activity and
+evidence timeline; and one-action verified local preview.
+
+Adapt rather than copy: Base44 branches become Factory Draft revisions;
+Activity Monitor becomes redacted compiler/verifier evidence; security
+remediation may propose only a reviewable Draft Diff; data editing operates
+through DomainModel and seed scenarios rather than becoming a second source of
+truth.
+
+Defer: general connectors, GitHub product UX, realtime collaboration,
+production identity, real payments, custom domains, managed hosting, and a
+backend-as-a-service. Reject: arbitrary package/source import, source reverse
+parsing, unbounded AI edits, or any Base44-owned schema/runtime as Graph
+authority.
+
+### Roadmap consequence
+
+The principal near-term risk is product closure, not capability count. Pause
+new capability-family creation at the current 27-family portfolio and place a
+single Expense Approval Golden Path acceptance gate before the remaining
+25–35-family promotion, 100+ recipe, and 12-anchor breadth goals. Restaurant
+Ordering and Simple Ecommerce remain regression Profiles, but they do not
+block first acceptance of the complete user journey.
+
+The approved design is recorded in
+[`2026-08-08-base44-inspired-golden-path-design.md`](superpowers/specs/2026-08-08-base44-inspired-golden-path-design.md).

@@ -13,12 +13,17 @@
   },
   "dependencies": {
     "@factory/capabilities": "workspace:*",
+    "@factory/experience-recipes": "workspace:*",
     "@factory/graph": "workspace:*",
+    "@factory/screen-recipes": "workspace:*",
     "casbin": "^5.37.0",
     "xstate": "^5.19.2",
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@factory/adapters": "workspace:*",
+    "@types/react": "^19.0.0",
+    "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   }
 }

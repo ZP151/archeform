@@ -1,0 +1,10 @@
+{
+  "status": "verified",
+  "checks": [
+    "execute-search",
+    "append-capability-event",
+    "index-entity-binding",
+    "search-field-binding",
+    "remove-effect"
+  ]
+}

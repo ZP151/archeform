@@ -1,0 +1,223 @@
+.template-data-workspace {
+  display: grid;
+  width: min(1180px, 100%);
+  min-width: 0;
+  gap: 18px;
+  margin: 0 auto;
+}
+
+.template-data-heading {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+}
+
+.template-data-heading > button,
+.template-data-editor button,
+.template-data-workspace > button {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  color: var(--ink);
+  background: var(--paper);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 720;
+  cursor: pointer;
+}
+
+.template-data-heading > button:hover {
+  border-color: var(--accent);
+  color: var(--accent-dark);
+}
+
+.template-data-heading span,
+.template-data-editor form > div > span,
+.template-data-previews article > span {
+  color: var(--accent-dark);
+  font-size: 10px;
+  font-weight: 760;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.template-data-heading h1 {
+  margin: 3px 0;
+  font-size: clamp(25px, 3vw, 38px);
+  letter-spacing: -0.045em;
+}
+
+.template-data-heading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.template-data-heading [data-template-data-save-status] {
+  padding: 8px 10px;
+  border-radius: 999px;
+  color: var(--accent-dark);
+  background: var(--accent-soft);
+  font-weight: 700;
+}
+
+.template-data-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.25fr);
+  min-width: 0;
+  gap: 18px;
+  align-items: start;
+}
+
+.template-data-editor,
+.template-data-previews article {
+  display: grid;
+  min-width: 0;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.template-data-editor nav {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+}
+
+.template-data-editor nav span,
+.template-data-editor nav small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.template-data-editor nav strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.template-data-editor nav small {
+  padding-left: 12px;
+}
+
+.template-data-editor form {
+  display: grid;
+  min-width: 0;
+  gap: 12px;
+}
+
+.template-data-editor h2,
+.template-data-previews h2 {
+  margin: 5px 0;
+  font-size: 20px;
+  letter-spacing: -0.025em;
+}
+
+.template-data-editor p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.template-data-editor label {
+  color: var(--ink);
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.template-data-editor input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  color: var(--ink);
+  background: var(--paper);
+  font: inherit;
+}
+
+.template-data-editor button[type="submit"] {
+  border-color: var(--accent);
+  color: #fff;
+  background: var(--accent);
+}
+
+.template-data-editor button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.template-data-error,
+.template-data-workspace > [role="alert"] {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 42%, transparent);
+  border-radius: 9px;
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+  font-size: 12px;
+}
+
+.template-data-previews {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+  gap: 12px;
+}
+
+.template-data-previews article {
+  align-content: start;
+  min-height: 220px;
+  background: var(--paper);
+}
+
+.template-data-previews strong {
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+
+.template-data-previews small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.template-data-workspace button:focus-visible,
+.template-data-workspace input:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 760px) {
+  .template-data-heading,
+  .template-data-layout,
+  .template-data-previews {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .template-data-heading > button,
+  .template-data-heading [data-template-data-save-status] {
+    justify-self: start;
+  }
+
+  .template-data-editor,
+  .template-data-previews article {
+    padding: 14px;
+  }
+}

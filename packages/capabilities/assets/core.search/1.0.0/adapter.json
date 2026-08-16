@@ -1,0 +1,22 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": ["api.runtime", "flow.effect"],
+  "parameters": [
+    { "key": "searchEntity", "type": "graph-symbol", "required": true },
+    { "key": "searchField", "type": "graph-symbol", "required": true }
+  ],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/core.search.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:c474ea34a897a3861c6933d26cb4a15cbac0fb976b9f9100ad316cd9307ed29f"
+    }
+  ],
+  "contributes": { "effects": ["search.execute"] },
+  "disable": {
+    "removeIntegrationCapabilities": ["search.execute"]
+  }
+}

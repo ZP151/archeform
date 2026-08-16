@@ -1,0 +1,7 @@
+{
+  "event": "files.media.register",
+  "ownerEntity": "product",
+  "fileField": "imageUrl",
+  "reference": "deterministic-media-key",
+  "failuresBeforeSuccess": 0
+}

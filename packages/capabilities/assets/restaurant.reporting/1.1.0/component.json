@@ -12,10 +12,26 @@
   "profiles": ["restaurant-ordering"],
   "effects": ["report.restaurant.summary", "report.restaurant.low-stock"],
   "inputSchema": [
-    { "key": "orderEntity", "type": "domain.entity", "required": true },
-    { "key": "inventoryEntity", "type": "domain.entity", "required": true },
-    { "key": "analyticsPage", "type": "page.page", "required": true },
-    { "key": "merchantRole", "type": "policy.role", "required": true }
+    {
+      "key": "orderEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "inventoryEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "analyticsPage",
+      "type": "page.page",
+      "required": true
+    },
+    {
+      "key": "merchantRole",
+      "type": "policy.role",
+      "required": true
+    }
   ],
   "outputSlots": [
     "api.runtime",
@@ -33,10 +49,26 @@
     }
   ],
   "parameters": [
-    { "key": "orderEntity", "type": "graph-symbol", "required": true },
-    { "key": "inventoryEntity", "type": "graph-symbol", "required": true },
-    { "key": "analyticsPage", "type": "graph-symbol", "required": true },
-    { "key": "merchantRole", "type": "graph-symbol", "required": true }
+    {
+      "key": "orderEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "inventoryEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "analyticsPage",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "merchantRole",
+      "type": "graph-symbol",
+      "required": true
+    }
   ],
   "verification": {
     "fixture": "fixtures/default.json",

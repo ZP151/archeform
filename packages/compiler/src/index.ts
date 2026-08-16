@@ -18,10 +18,14 @@ import {
   type ResolvedCapabilityAssetTemplate,
 } from "@factory/capabilities/node";
 import {
+  adaptPublishedApplicationGraph,
   assertValidApplicationGraph,
   hashApplicationGraph,
+  resolveExperienceDesignSystem,
   type ApplicationGraphV1,
+  type PublishedApplicationGraphInput,
 } from "@factory/graph";
+import { renderJourneyTest } from "./journey-test-renderer.js";
 import { createGeneratedPageRuntimeProjection } from "./page-runtime-projection.js";
 import {
   renderRestaurantCustomerCommandRuntime,
@@ -32,6 +36,30 @@ import {
   renderRestaurantMerchantPageRuntime,
 } from "./restaurant-merchant-runtime.js";
 import { renderRestaurantRuntime } from "./restaurant-runtime.js";
+import {
+  assertSafeGeneratedFileSet,
+  type GeneratedFile,
+} from "./core/generated-files.js";
+import { createCompilerTargetRegistryV1 } from "./core/target-registry.js";
+import {
+  compilationTargets,
+  type CompilationTargetKey,
+  type PublishedCompilationInput,
+} from "./core/target-plugin.js";
+import { databaseTargetPlugin } from "./targets/database/target.js";
+import { documentationTargetPlugin } from "./targets/documentation/target.js";
+import { policyTargetPlugin } from "./targets/policy/target.js";
+import { generateRestaurantProductApplicationBundle } from "./targets/restaurant-v3/product-target.js";
+
+/**
+ * The facade-owned deterministic target registry. Migrated targets register
+ * here at module scope; `generateApplicationBundle` delegates their file sets
+ * through `supports -> plan -> render -> validate`.
+ */
+const compilerTargetRegistry = createCompilerTargetRegistryV1();
+compilerTargetRegistry.register(databaseTargetPlugin);
+compilerTargetRegistry.register(documentationTargetPlugin);
+compilerTargetRegistry.register(policyTargetPlugin);
 
 export {
   createGeneratedPageRuntimeProjection,
@@ -63,68 +91,74 @@ export {
   restaurantRuntimeEndpoints,
   type RestaurantRuntimeArtifacts,
 } from "./restaurant-runtime.js";
+export {
+  generateRestaurantCustomerApplicationBundle,
+  generateRestaurantProductApplicationBundle,
+  assertRestaurantDraftPreviewGraphClosure,
+  renderRestaurantDraftPreviewSurface,
+} from "./targets/restaurant-v3/index.js";
 
-export type CompilationTargetKey =
-  | "simulator"
-  | "next-web"
-  | "nest-api"
-  | "prisma-postgres"
-  | "casbin-policy"
-  | "xstate-flow"
-  | "test-suite"
-  | "documentation";
-
-export interface CompilationTarget {
-  readonly key: CompilationTargetKey;
-  readonly label: string;
-  readonly description: string;
-}
-export const compilationTargets: readonly CompilationTarget[] = Object.freeze([
-  {
-    key: "simulator",
-    label: "Role simulator",
-    description: "Browser-only seed scenario simulator.",
-  },
-  {
-    key: "next-web",
-    label: "Next.js web",
-    description: "Standalone customer and operator web application.",
-  },
-  {
-    key: "nest-api",
-    label: "NestJS API",
-    description: "Standalone REST API and flow handlers.",
-  },
-  {
-    key: "prisma-postgres",
-    label: "Prisma PostgreSQL",
-    description: "Schema, migrations, and seed data.",
-  },
-  {
-    key: "casbin-policy",
-    label: "Casbin policy",
-    description: "Compiled authorization policy and guards.",
-  },
-  {
-    key: "xstate-flow",
-    label: "XState flows",
-    description: "Compiled declared state machines.",
-  },
-  {
-    key: "test-suite",
-    label: "Journey tests",
-    description: "Role, API, flow, and smoke tests.",
-  },
-  {
-    key: "documentation",
-    label: "Documentation",
-    description: "API reference, ERD, and permission matrix.",
-  },
-]);
+// Compiler target plugin kernel (public facade re-exports).
+export {
+  compilationTargets,
+  type CompilationContextV1,
+  type CompilationTarget,
+  type CompilationTargetKey,
+  type CompilerTargetPluginV1,
+  type PublishedCompilationInput,
+  type TargetValidationIssue,
+  type TargetValidationResult,
+} from "./core/target-plugin.js";
+export {
+  assertSafeGeneratedFilePath,
+  assertSafeGeneratedFileSet,
+  sameGeneratedFileSet,
+  sha256Digest,
+  type GeneratedFile,
+} from "./core/generated-files.js";
+export {
+  assertSerializablePlan,
+  CompilerTargetRegistryV1,
+  createCompilerTargetRegistryV1,
+} from "./core/target-registry.js";
+export {
+  buildSourceManifest,
+  sourceBaselineDigest,
+  type SourceManifestEntryV1,
+  type SourceManifestInputV1,
+  type SourceManifestV1,
+  type SourceOriginV1,
+} from "./targets/source/source-manifest.js";
+export {
+  applySourceOverlay,
+  type SourceOverlayApplyInputV1,
+} from "./targets/source/overlay.js";
+export {
+  diffGeneratedFiles,
+  type ChangedFileDiffV1,
+  type GeneratedFileDiffV1,
+} from "./targets/source/diff.js";
+export { buildSourceZip } from "./targets/source/export-zip.js";
+export {
+  buildGitExport,
+  gitBlobObject,
+  gitCommitObject,
+  gitTreeObject,
+  type GitCommitInputV1,
+  type GitExportInputV1,
+  type GitExportV1,
+  type GitObjectV1,
+  type GitTreeEntryV1,
+} from "./targets/source/export-git.js";
 
 export interface PublishedGraphInput {
   readonly publishedRevisionId: string;
   readonly graph: ApplicationGraphV1;
+  readonly compositionLock: CapabilityCompositionLockV1;
+}
+
+export interface PublishedApplicationGraphCompilationInput {
+  readonly publishedGraph: PublishedApplicationGraphInput;
   readonly compositionLock: CapabilityCompositionLockV1;
 }
 
@@ -140,11 +174,6 @@ export interface CompilationPlan {
   readonly artifacts: readonly CompilationArtifactPlan[];
 }
 
-export interface GeneratedFile {
-  readonly path: string;
-  readonly content: string;
-}
-
 export interface GeneratedApplicationBundle {
   readonly rootDirectory: string;
   readonly graphHash: string;
@@ -154,18 +183,6 @@ export interface GeneratedApplicationBundle {
 interface PlannedGeneratedFile {
   readonly path: string;
   readonly render: () => string;
-}
-
-function assertUniqueGeneratedFilePaths(
-  files: readonly Pick<GeneratedFile, "path">[],
-): void {
-  const paths = new Set<string>();
-  for (const file of files) {
-    if (paths.has(file.path)) {
-      throw new Error(`Generated output collision at '${file.path}'.`);
-    }
-    paths.add(file.path);
-  }
 }
 
 export interface GenerateApplicationBundleOptions {
@@ -539,7 +556,56 @@ interface NotificationOutboxRuntimeContribution {
   readonly template: string | null;
 }
 
-const notificationOutboxPrismaSchema = `model NotificationOutbox {
+const COMPILER_STORAGE_PREFIX = "Factory_";
+
+function compilerStorageName(name: string): string {
+  return `${COMPILER_STORAGE_PREFIX}${name}`;
+}
+
+/**
+ * Capability contribution digests are verified while planning, before their
+ * rendered content reaches these persistence resolvers. Remap only complete
+ * Prisma identifier tokens in that verified content; signed asset source and
+ * its digest remain unchanged.
+ */
+function remapPrismaStorageNames(
+  source: string,
+  names: readonly string[],
+): string {
+  return names.reduce(
+    (rendered, name) =>
+      rendered.replace(
+        new RegExp(`(^|[^A-Za-z0-9_])${name}(?=$|[^A-Za-z0-9_])`, "gm"),
+        (_, prefix: string) => `${prefix}${compilerStorageName(name)}`,
+      ),
+    source,
+  );
+}
+
+/**
+ * SQL contribution identifiers are double quoted. Rename an exact model/table
+ * token and identifiers derived from it (indexes and constraints), while
+ * leaving columns and arbitrary string content untouched.
+ */
+function remapSqlStorageNames(
+  source: string,
+  names: readonly string[],
+): string {
+  const remapped = new Map(
+    names.map((name) => [name, compilerStorageName(name)]),
+  );
+  return source.replace(/"([^"]+)"/g, (quoted, identifier: string) => {
+    for (const [name, factoryName] of remapped) {
+      if (identifier === name) return `"${factoryName}"`;
+      if (identifier.startsWith(`${name}_`)) {
+        return `"${factoryName}${identifier.slice(name.length)}"`;
+      }
+    }
+    return quoted;
+  });
+}
+
+const notificationOutboxPrismaSchema = `model Factory_NotificationOutbox {
   id String @id @default(cuid())
   dedupeKey String @unique
   actor String
@@ -555,7 +621,7 @@ const notificationOutboxPrismaSchema = `model NotificationOutbox {
   @@index([status, availableAt])
 }`;
 
-const notificationOutboxMigration = `CREATE TABLE "NotificationOutbox" (
+const notificationOutboxMigration = `CREATE TABLE "Factory_NotificationOutbox" (
   "id" TEXT NOT NULL PRIMARY KEY,
   "dedupeKey" TEXT NOT NULL UNIQUE,
   "actor" TEXT NOT NULL,
@@ -569,7 +635,7 @@ const notificationOutboxMigration = `CREATE TABLE "NotificationOutbox" (
   "deliveredAt" TIMESTAMP(3),
   "lastError" TEXT
 );
-CREATE INDEX "NotificationOutbox_status_availableAt_idx" ON "NotificationOutbox" ("status", "availableAt");`;
+CREATE INDEX "Factory_NotificationOutbox_status_availableAt_idx" ON "Factory_NotificationOutbox" ("status", "availableAt");`;
 
 function renderNotificationOutboxWorker(): string {
   return `import type { NotificationOutboxEntry, RecordStore } from "./application-runtime.js";
@@ -792,8 +858,10 @@ function resolveOrderOperationsPersistenceContribution(
     );
   }
   return Object.freeze({
-    schema: schema.content,
-    migration: migration.content,
+    schema: remapPrismaStorageNames(schema.content, ["OrderOperationReceipt"]),
+    migration: remapSqlStorageNames(migration.content, [
+      "OrderOperationReceipt",
+    ]),
   });
 }
 
@@ -833,8 +901,14 @@ function resolveMoneyPricingPersistenceContribution(
     );
   }
   return Object.freeze({
-    schema: schema.content,
-    migration: migration.content,
+    schema: remapPrismaStorageNames(schema.content, [
+      "PriceSnapshot",
+      "PriceAllocation",
+    ]),
+    migration: remapSqlStorageNames(migration.content, [
+      "PriceSnapshot",
+      "PriceAllocation",
+    ]),
   });
 }
 
@@ -1330,37 +1404,12 @@ function toCamelCase(value: string): string {
   return pascal ? `${pascal[0]!.toLowerCase()}${pascal.slice(1)}` : pascal;
 }
 
-function pluralize(value: string): string {
-  return value.endsWith("s") ? `${value}es` : `${value}s`;
-}
-
 function hasCommerceCapabilities(graph: ApplicationGraphV1): boolean {
   return graph.integration.capabilities.some((capability) =>
     ["catalog.", "cart.", "inventory.", "order.", "payment."].some((prefix) =>
       capability.key.startsWith(prefix),
     ),
   );
-}
-
-function prismaType(
-  type: ApplicationGraphV1["domain"]["entities"][number]["fields"][number]["type"],
-): string {
-  switch (type) {
-    case "integer":
-      return "Int";
-    case "decimal":
-      return "Decimal";
-    case "boolean":
-      return "Boolean";
-    case "date":
-      return "DateTime @db.Date";
-    case "datetime":
-      return "DateTime";
-    case "json":
-      return "Json";
-    default:
-      return "String";
-  }
 }
 
 type GraphRelation = ApplicationGraphV1["domain"]["relations"][number];
@@ -1372,519 +1421,6 @@ interface ResolvedRelationForeignKey {
   readonly targetField: string;
   readonly required: boolean;
   readonly oneToOne: boolean;
-}
-
-function resolveRelationForeignKey(
-  graph: ApplicationGraphV1,
-  relation: GraphRelation,
-): ResolvedRelationForeignKey {
-  if (relation.kind === "many-to-many") {
-    throw new Error(
-      "Many-to-many relations do not have an owning scalar field.",
-    );
-  }
-  if (relation.field && relation.kind === "one-to-many") {
-    throw new Error(
-      `Relation '${relation.from}' to '${relation.to}' cannot declare owning field '${relation.field}' for one-to-many cardinality.`,
-    );
-  }
-
-  const sourceIsOne =
-    relation.kind === "one-to-many" || relation.kind === "one-to-one";
-  const ownerKey = relation.field
-    ? relation.from
-    : sourceIsOne
-      ? relation.to
-      : relation.from;
-  const targetKey = relation.field
-    ? relation.to
-    : sourceIsOne
-      ? relation.from
-      : relation.to;
-  const owner = graph.domain.entities.find((entity) => entity.key === ownerKey);
-  const target = graph.domain.entities.find(
-    (entity) => entity.key === targetKey,
-  );
-  if (!owner || !target) {
-    throw new Error(
-      `Relation '${relation.from}' to '${relation.to}' references an unknown entity.`,
-    );
-  }
-
-  const scalarField = relation.field ?? `${toCamelCase(targetKey)}Id`;
-  const declaredScalar = owner.fields.find(
-    (field) => field.key === scalarField,
-  );
-  if (relation.field && !declaredScalar) {
-    throw new Error(
-      `Relation '${relation.from}' to '${relation.to}' field '${relation.field}' is not declared on '${relation.from}'.`,
-    );
-  }
-  if (
-    relation.kind === "one-to-one" &&
-    declaredScalar &&
-    !declaredScalar.unique
-  ) {
-    throw new Error(
-      `One-to-one relation '${relation.from}' to '${relation.to}' requires unique owning field '${scalarField}'.`,
-    );
-  }
-
-  let targetField = "id";
-  if (relation.field) {
-    const naturalKeyCandidates = target.fields.filter(
-      (field) =>
-        field.unique === true &&
-        relation.field!.toLowerCase().endsWith(field.key.toLowerCase()),
-    );
-    if (naturalKeyCandidates.length === 1) {
-      targetField = naturalKeyCandidates[0]!.key;
-    } else if (
-      naturalKeyCandidates.length > 1 ||
-      !/(?:id|key)$/i.test(relation.field)
-    ) {
-      throw new Error(
-        `Relation '${relation.from}' to '${relation.to}' field '${relation.field}' cannot resolve a unique target field.`,
-      );
-    }
-  }
-
-  if (targetField !== "id") {
-    const referencedField = target.fields.find(
-      (field) => field.key === targetField,
-    )!;
-    if (declaredScalar?.type !== referencedField.type) {
-      throw new Error(
-        `Relation '${relation.from}' to '${relation.to}' field '${scalarField}' must match target field '${targetField}' type.`,
-      );
-    }
-  } else if (declaredScalar && declaredScalar.type !== "string") {
-    throw new Error(
-      `Relation '${relation.from}' to '${relation.to}' field '${scalarField}' must be a string to reference target id.`,
-    );
-  }
-
-  return {
-    ownerKey,
-    targetKey,
-    scalarField,
-    targetField,
-    required: declaredScalar?.required ?? false,
-    oneToOne: relation.kind === "one-to-one",
-  };
-}
-
-function renderPrismaSchema(
-  graph: ApplicationGraphV1,
-  orderOperationReceiptSchema?: string,
-  includeGenericCommerceLineItems = true,
-  additionalSchemaFragments: readonly string[] = [],
-): string {
-  const relationFields = (entityKey: string): readonly string[] =>
-    graph.domain.relations.flatMap((relation) => {
-      const relationName = `${toPascalCase(relation.from)}To${toPascalCase(relation.to)}`;
-      const fromModel = toPascalCase(relation.from);
-      const toModel = toPascalCase(relation.to);
-      const fromField = toCamelCase(relation.from);
-      const toField = toCamelCase(relation.to);
-
-      if (relation.kind === "many-to-many") {
-        if (entityKey === relation.from) {
-          return [
-            `  ${pluralize(toField)} ${toModel}[] @relation("${relationName}")`,
-          ];
-        }
-        if (entityKey === relation.to) {
-          return [
-            `  ${pluralize(fromField)} ${fromModel}[] @relation("${relationName}")`,
-          ];
-        }
-        return [];
-      }
-
-      const foreignKey = resolveRelationForeignKey(graph, relation);
-      const ownerModel = toPascalCase(foreignKey.ownerKey);
-      const targetModel = toPascalCase(foreignKey.targetKey);
-      const ownerField = toCamelCase(foreignKey.ownerKey);
-      const targetField = toCamelCase(foreignKey.targetKey);
-
-      if (entityKey === foreignKey.targetKey) {
-        return [
-          `  ${foreignKey.oneToOne ? ownerField : pluralize(ownerField)} ${ownerModel}${foreignKey.oneToOne ? "?" : "[]"} @relation("${relationName}")`,
-        ];
-      }
-      if (entityKey === foreignKey.ownerKey) {
-        const declaredScalar = graph.domain.entities
-          .find((entity) => entity.key === foreignKey.ownerKey)
-          ?.fields.find((field) => field.key === foreignKey.scalarField);
-        const optional = foreignKey.required ? "" : "?";
-        return [
-          ...(declaredScalar
-            ? []
-            : [
-                `  ${foreignKey.scalarField} String?${foreignKey.oneToOne ? " @unique" : ""}`,
-              ]),
-          `  ${targetField} ${targetModel}${optional} @relation("${relationName}", fields: [${foreignKey.scalarField}], references: [${foreignKey.targetField}])`,
-        ];
-      }
-      return [];
-    });
-  const models = graph.domain.entities.map((entity) => {
-    const fields = entity.fields.map((field) => {
-      const optional = field.required ? "" : "?";
-      const unique = field.unique ? " @unique" : "";
-      return `  ${field.key} ${prismaType(field.type)}${optional}${unique}`;
-    });
-    const indexes = entity.indexes.map(
-      (index) => `  @@index([${index.fields.join(", ")}])`,
-    );
-    return [
-      `model ${toPascalCase(entity.key)} {`,
-      "  id String @id @default(cuid())",
-      ...fields,
-      ...relationFields(entity.key),
-      "  createdAt DateTime @default(now())",
-      "  updatedAt DateTime @updatedAt",
-      ...indexes,
-      "}",
-    ].join("\n");
-  });
-  return [
-    "generator client {",
-    '  provider = "prisma-client-js"',
-    "}",
-    "",
-    "datasource db {",
-    '  provider = "postgresql"',
-    '  url = env("DATABASE_URL")',
-    "}",
-    "",
-    ...models,
-    "",
-    "model AuditEvent {",
-    "  id String @id @default(cuid())",
-    "  actor String",
-    "  action String",
-    "  entity String",
-    "  recordId String",
-    "  at DateTime @default(now())",
-    "  @@index([entity, recordId])",
-    "}",
-    "",
-    "model CapabilityEvent {",
-    "  id String @id @default(cuid())",
-    "  actor String",
-    "  capability String",
-    "  operation String",
-    "  entity String",
-    "  recordId String",
-    "  outcome String",
-    "  at DateTime @default(now())",
-    "  @@index([entity, recordId])",
-    "  @@index([capability, operation])",
-    "}",
-    ...(includeGenericCommerceLineItems && hasCommerceCapabilities(graph)
-      ? [
-          "",
-          "model CommerceLineItem {",
-          "  id String @id @default(cuid())",
-          "  actor String",
-          "  orderEntity String",
-          "  orderRecordId String",
-          "  catalogEntity String",
-          "  catalogRecordId String",
-          "  quantity Int",
-          "  createdAt DateTime @default(now())",
-          "  @@index([orderEntity, orderRecordId])",
-          "  @@index([catalogEntity, catalogRecordId])",
-          "}",
-        ]
-      : []),
-    ...(orderOperationReceiptSchema
-      ? ["", orderOperationReceiptSchema.trimEnd()]
-      : []),
-    ...additionalSchemaFragments.flatMap((fragment) => [
-      "",
-      fragment.trimEnd(),
-    ]),
-    "",
-  ].join("\n");
-}
-
-function postgresType(
-  type: ApplicationGraphV1["domain"]["entities"][number]["fields"][number]["type"],
-): string {
-  switch (type) {
-    case "integer":
-      return "INTEGER";
-    case "decimal":
-      return "DECIMAL";
-    case "boolean":
-      return "BOOLEAN";
-    case "date":
-      return "DATE";
-    case "datetime":
-      return "TIMESTAMP(3)";
-    case "json":
-      return "JSONB";
-    default:
-      return "TEXT";
-  }
-}
-
-function quoteSqlIdentifier(value: string): string {
-  return `"${value.replaceAll('"', '""')}"`;
-}
-
-function relationColumnDefinitions(
-  graph: ApplicationGraphV1,
-  entityKey: string,
-): readonly string[] {
-  return graph.domain.relations.flatMap((relation) => {
-    if (relation.kind === "many-to-many") return [];
-    const foreignKey = resolveRelationForeignKey(graph, relation);
-    if (entityKey !== foreignKey.ownerKey) return [];
-    if (
-      graph.domain.entities
-        .find((entity) => entity.key === foreignKey.ownerKey)
-        ?.fields.some((field) => field.key === foreignKey.scalarField)
-    ) {
-      return [];
-    }
-    return [
-      `${quoteSqlIdentifier(foreignKey.scalarField)} TEXT${foreignKey.oneToOne ? " UNIQUE" : ""}`,
-    ];
-  });
-}
-
-function renderInitialMigration(
-  graph: ApplicationGraphV1,
-  orderOperationReceiptMigration?: string,
-  includeGenericCommerceLineItems = true,
-  additionalMigrationFragments: readonly string[] = [],
-): string {
-  const createTables = graph.domain.entities.map((entity) => {
-    const columns = [
-      '"id" TEXT NOT NULL PRIMARY KEY',
-      ...entity.fields.map(
-        (field) =>
-          `${quoteSqlIdentifier(field.key)} ${postgresType(field.type)}${field.required ? " NOT NULL" : ""}${field.unique ? " UNIQUE" : ""}`,
-      ),
-      ...relationColumnDefinitions(graph, entity.key),
-      '"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP',
-      '"updatedAt" TIMESTAMP(3) NOT NULL',
-    ];
-    return `CREATE TABLE ${quoteSqlIdentifier(toPascalCase(entity.key))} (\n  ${columns.join(",\n  ")}\n);`;
-  });
-  const indexes = graph.domain.entities.flatMap((entity) =>
-    entity.indexes.map(
-      (index, indexNumber) =>
-        `CREATE ${index.unique ? "UNIQUE " : ""}INDEX ${quoteSqlIdentifier(`${toPascalCase(entity.key)}_${indexNumber}_idx`)} ON ${quoteSqlIdentifier(toPascalCase(entity.key))} (${index.fields.map(quoteSqlIdentifier).join(", ")});`,
-    ),
-  );
-  const relationTables = graph.domain.relations.flatMap((relation) => {
-    if (relation.kind !== "many-to-many") return [];
-    const relationName = `${toPascalCase(relation.from)}To${toPascalCase(relation.to)}`;
-    const sourceModel = toPascalCase(relation.from);
-    const targetModel = toPascalCase(relation.to);
-    return [
-      `CREATE TABLE ${quoteSqlIdentifier(`_${relationName}`)} (\n  "A" TEXT NOT NULL,\n  "B" TEXT NOT NULL,\n  CONSTRAINT ${quoteSqlIdentifier(`_${relationName}_AB_pkey`)} PRIMARY KEY ("A", "B"),\n  CONSTRAINT ${quoteSqlIdentifier(`_${relationName}_A_fkey`)} FOREIGN KEY ("A") REFERENCES ${quoteSqlIdentifier(sourceModel)} ("id") ON DELETE CASCADE ON UPDATE CASCADE,\n  CONSTRAINT ${quoteSqlIdentifier(`_${relationName}_B_fkey`)} FOREIGN KEY ("B") REFERENCES ${quoteSqlIdentifier(targetModel)} ("id") ON DELETE CASCADE ON UPDATE CASCADE\n);`,
-      `CREATE INDEX ${quoteSqlIdentifier(`_${relationName}_B_index`)} ON ${quoteSqlIdentifier(`_${relationName}`)} ("B");`,
-    ];
-  });
-  const relationConstraints = graph.domain.relations.flatMap((relation) => {
-    if (relation.kind === "many-to-many") return [];
-    const foreignKey = resolveRelationForeignKey(graph, relation);
-    const relationName = `${toPascalCase(foreignKey.targetKey)}To${toPascalCase(foreignKey.ownerKey)}`;
-    return [
-      `ALTER TABLE ${quoteSqlIdentifier(toPascalCase(foreignKey.ownerKey))} ADD CONSTRAINT ${quoteSqlIdentifier(`${relationName}_fkey`)} FOREIGN KEY (${quoteSqlIdentifier(foreignKey.scalarField)}) REFERENCES ${quoteSqlIdentifier(toPascalCase(foreignKey.targetKey))} (${quoteSqlIdentifier(foreignKey.targetField)}) ON DELETE RESTRICT ON UPDATE CASCADE;`,
-    ];
-  });
-  return [
-    "-- Generated from a Published Factory Application Graph. Do not edit manually.",
-    ...createTables,
-    'CREATE TABLE "AuditEvent" (\n  "id" TEXT NOT NULL PRIMARY KEY,\n  "actor" TEXT NOT NULL,\n  "action" TEXT NOT NULL,\n  "entity" TEXT NOT NULL,\n  "recordId" TEXT NOT NULL,\n  "at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP\n);',
-    'CREATE INDEX "AuditEvent_entity_recordId_idx" ON "AuditEvent" ("entity", "recordId");',
-    'CREATE TABLE "CapabilityEvent" (\n  "id" TEXT NOT NULL PRIMARY KEY,\n  "actor" TEXT NOT NULL,\n  "capability" TEXT NOT NULL,\n  "operation" TEXT NOT NULL,\n  "entity" TEXT NOT NULL,\n  "recordId" TEXT NOT NULL,\n  "outcome" TEXT NOT NULL,\n  "at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP\n);',
-    'CREATE INDEX "CapabilityEvent_entity_recordId_idx" ON "CapabilityEvent" ("entity", "recordId");',
-    'CREATE INDEX "CapabilityEvent_capability_operation_idx" ON "CapabilityEvent" ("capability", "operation");',
-    ...(includeGenericCommerceLineItems && hasCommerceCapabilities(graph)
-      ? [
-          'CREATE TABLE "CommerceLineItem" (\n  "id" TEXT NOT NULL PRIMARY KEY,\n  "actor" TEXT NOT NULL,\n  "orderEntity" TEXT NOT NULL,\n  "orderRecordId" TEXT NOT NULL,\n  "catalogEntity" TEXT NOT NULL,\n  "catalogRecordId" TEXT NOT NULL,\n  "quantity" INTEGER NOT NULL,\n  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP\n);',
-          'CREATE INDEX "CommerceLineItem_orderEntity_orderRecordId_idx" ON "CommerceLineItem" ("orderEntity", "orderRecordId");',
-          'CREATE INDEX "CommerceLineItem_catalogEntity_catalogRecordId_idx" ON "CommerceLineItem" ("catalogEntity", "catalogRecordId");',
-        ]
-      : []),
-    ...(orderOperationReceiptMigration
-      ? [orderOperationReceiptMigration.trimEnd()]
-      : []),
-    ...additionalMigrationFragments.map((fragment) => fragment.trimEnd()),
-    ...indexes,
-    ...relationTables,
-    ...relationConstraints,
-    "",
-  ].join("\n\n");
-}
-
-function renderPrismaSeed(
-  graph: ApplicationGraphV1,
-  hasRestaurantRuntime: boolean,
-): string {
-  const records = (graph.domain.seedData ?? []).map((seed, index) => ({
-    delegate: toCamelCase(seed.entity),
-    id: seed.id ?? `seed-${seed.entity}-${index + 1}`,
-    values: seed.values,
-  }));
-  const restaurantTableSeed = hasRestaurantRuntime
-    ? (graph.domain.seedData ?? []).find(
-        (seed) => seed.entity === "restaurant-table",
-      )
-    : undefined;
-  const restaurantTableCode = restaurantTableSeed?.values.code;
-  const restaurantMenuItemSeed = hasRestaurantRuntime
-    ? (graph.domain.seedData ?? []).find((seed) => seed.entity === "menu-item")
-    : undefined;
-  const restaurantTableId = records.find(
-    (record) => record.delegate === "restaurantTable",
-  )?.id;
-  const restaurantLocationId = records.find(
-    (record) => record.delegate === "restaurantLocation",
-  )?.id;
-  const restaurantMenuItemId = records.find(
-    (record) => record.delegate === "menuItem",
-  )?.id;
-  const restaurantMenuItemPrice = restaurantMenuItemSeed?.values.price;
-  if (
-    hasRestaurantRuntime &&
-    (typeof restaurantTableCode !== "string" ||
-      !restaurantTableCode ||
-      typeof restaurantLocationId !== "string" ||
-      !restaurantLocationId ||
-      typeof restaurantTableId !== "string" ||
-      !restaurantTableId ||
-      typeof restaurantMenuItemId !== "string" ||
-      !restaurantMenuItemId ||
-      typeof restaurantMenuItemPrice !== "number")
-  ) {
-    throw new Error(
-      "Restaurant seed generation requires table, location, and menu-item fixtures.",
-    );
-  }
-  const restaurantSessionSeed = restaurantTableSeed
-    ? {
-        id: `${restaurantTableSeed.id ?? "restaurant-table"}-demo-session`,
-        tableCode: restaurantTableCode as string,
-      }
-    : null;
-  return [
-    ...(restaurantSessionSeed
-      ? ['import { createHash } from "node:crypto";']
-      : []),
-    'import { PrismaClient } from "@prisma/client";',
-    "",
-    "const prisma = new PrismaClient();",
-    `const records = ${JSON.stringify(records, null, 2)} as const;`,
-    "",
-    "type SeedDelegate = { upsert(input: { where: { id: string }; update: Record<string, unknown>; create: Record<string, unknown> }): Promise<unknown> };",
-    "",
-    "export async function seed() {",
-    "  const delegates = prisma as unknown as Record<string, SeedDelegate>;",
-    "  for (const record of records) {",
-    "    await delegates[record.delegate]!.upsert({",
-    "      where: { id: record.id },",
-    "      update: record.values,",
-    "      create: { id: record.id, ...record.values },",
-    "    });",
-    "  }",
-    ...(restaurantSessionSeed
-      ? [
-          "  const demoTableToken = process.env.RESTAURANT_DEMO_TABLE_TOKEN;",
-          '  if (!demoTableToken || demoTableToken.length < 16) throw new Error("RESTAURANT_DEMO_TABLE_TOKEN must contain at least 16 characters.");',
-          '  const tokenDigest = createHash("sha256").update(demoTableToken, "utf8").digest("hex");',
-          "  const openedAt = new Date();",
-          "  const expiresAt = new Date(openedAt.getTime() + 24 * 60 * 60 * 1000);",
-          "  await prisma.tableSession.upsert({",
-          `    where: { id: ${JSON.stringify(restaurantSessionSeed.id)} },`,
-          '    update: { tokenDigest, status: "active", openedAt, expiresAt, guestCount: 2 },',
-          `    create: { id: ${JSON.stringify(restaurantSessionSeed.id)}, tableCode: ${JSON.stringify(restaurantSessionSeed.tableCode)}, tokenDigest, status: "active", openedAt, expiresAt, guestCount: 2 },`,
-          "  });",
-          `  await prisma.restaurantTable.update({ where: { id: ${JSON.stringify(restaurantTableId)} }, data: { restaurantLocationId: ${JSON.stringify(restaurantLocationId)} } });`,
-          '  const merchantFixtureOpenedAt = new Date("2026-07-30T00:00:00.000Z");',
-          '  const merchantFixtureExpiresAt = new Date("2099-12-31T23:59:59.000Z");',
-          '  const merchantFixtureSubmittedAt = new Date("2026-07-30T00:01:00.000Z");',
-          "  const merchantFixtureTables = [",
-          `    { id: "merchant-e2e-cashier-table", code: "E2E-CASHIER", number: 98, restaurantLocationId: ${JSON.stringify(restaurantLocationId)} },`,
-          `    { id: "merchant-e2e-cancellation-table", code: "E2E-CANCEL", number: 99, restaurantLocationId: ${JSON.stringify(restaurantLocationId)} },`,
-          "  ] as const;",
-          "  for (const table of merchantFixtureTables) {",
-          "    await prisma.restaurantTable.upsert({",
-          "      where: { id: table.id },",
-          '      update: { code: table.code, number: table.number, status: "open", active: true, resourceVersion: 0, restaurantLocationId: table.restaurantLocationId },',
-          '      create: { ...table, status: "open", active: true, resourceVersion: 0 },',
-          "    });",
-          "  }",
-          "  const merchantFixtureSessions = [",
-          '    { id: "merchant-e2e-cashier-session", tableCode: "E2E-CASHIER", tokenDigest: createHash("sha256").update(demoTableToken + ":merchant-e2e:cashier", "utf8").digest("hex") },',
-          '    { id: "merchant-e2e-cancellation-session", tableCode: "E2E-CANCEL", tokenDigest: createHash("sha256").update(demoTableToken + ":merchant-e2e:cancellation", "utf8").digest("hex") },',
-          "  ] as const;",
-          "  for (const session of merchantFixtureSessions) {",
-          "    await prisma.tableSession.upsert({",
-          "      where: { id: session.id },",
-          '      update: { tokenDigest: session.tokenDigest, status: "active", openedAt: merchantFixtureOpenedAt, expiresAt: merchantFixtureExpiresAt, guestCount: 2 },',
-          '      create: { ...session, status: "active", openedAt: merchantFixtureOpenedAt, expiresAt: merchantFixtureExpiresAt, guestCount: 2 },',
-          "    });",
-          "  }",
-          "  const merchantFixtureOrders = [",
-          `    { id: "merchant-e2e-cashier-order", tableSessionId: "merchant-e2e-cashier-session", priority: 2, total: ${JSON.stringify(restaurantMenuItemPrice)} },`,
-          `    { id: "merchant-e2e-cancellation-order", tableSessionId: "merchant-e2e-cancellation-session", priority: 1, total: ${JSON.stringify(restaurantMenuItemPrice)} },`,
-          "  ] as const;",
-          "  for (const order of merchantFixtureOrders) {",
-          "    await prisma.order.upsert({",
-          "      where: { id: order.id },",
-          '      update: { tableSessionId: order.tableSessionId, status: "submitted", paymentStatus: "unpaid", fulfilmentType: "dine-in", orderNote: "Merchant E2E fixture", priority: order.priority, total: order.total, orderVersion: 0, submittedAt: merchantFixtureSubmittedAt, paidAt: null },',
-          '      create: { ...order, status: "submitted", paymentStatus: "unpaid", fulfilmentType: "dine-in", orderNote: "Merchant E2E fixture", orderVersion: 0, submittedAt: merchantFixtureSubmittedAt, paidAt: null },',
-          "    });",
-          "  }",
-          "  const merchantFixtureLines = [",
-          `    { id: "merchant-e2e-cashier-line", orderId: "merchant-e2e-cashier-order", menuItemId: ${JSON.stringify(restaurantMenuItemId)} },`,
-          `    { id: "merchant-e2e-cancellation-line", orderId: "merchant-e2e-cancellation-order", menuItemId: ${JSON.stringify(restaurantMenuItemId)} },`,
-          "  ] as const;",
-          "  for (const line of merchantFixtureLines) {",
-          "    await prisma.orderLine.upsert({",
-          "      where: { id: line.id },",
-          `      update: { orderId: line.orderId, menuItemId: line.menuItemId, quantity: 1, unitPrice: ${JSON.stringify(restaurantMenuItemPrice)}, lineNote: "", modifiers: [] },`,
-          `      create: { ...line, quantity: 1, unitPrice: ${JSON.stringify(restaurantMenuItemPrice)}, lineNote: "", modifiers: [] },`,
-          "    });",
-          "  }",
-          `  await prisma.menuItem.update({ where: { id: ${JSON.stringify(restaurantMenuItemId)} }, data: { stock: 10, resourceVersion: 0 } });`,
-          "  const merchantFixtureReservations = [",
-          `    { id: "merchant-e2e-cashier-reservation", locationId: ${JSON.stringify(restaurantLocationId)}, orderId: "merchant-e2e-cashier-order", menuItemId: ${JSON.stringify(restaurantMenuItemId)}, idempotencyKey: "merchant-e2e-cashier-reservation" },`,
-          `    { id: "merchant-e2e-cancellation-reservation", locationId: ${JSON.stringify(restaurantLocationId)}, orderId: "merchant-e2e-cancellation-order", menuItemId: ${JSON.stringify(restaurantMenuItemId)}, idempotencyKey: "merchant-e2e-cancellation-reservation" },`,
-          "  ] as const;",
-          "  for (const reservation of merchantFixtureReservations) {",
-          "    await prisma.inventoryLedger.upsert({",
-          "      where: { id: reservation.id },",
-          '      update: { locationId: reservation.locationId, orderId: reservation.orderId, menuItemId: reservation.menuItemId, idempotencyKey: reservation.idempotencyKey, delta: -1, provenance: "order-reservation", adjustmentReason: null, recordedAt: merchantFixtureSubmittedAt },',
-          '      create: { ...reservation, delta: -1, provenance: "order-reservation", adjustmentReason: null, recordedAt: merchantFixtureSubmittedAt },',
-          "    });",
-          "  }",
-        ]
-      : []),
-    `  return { seeded: records.length${restaurantSessionSeed ? " + 11" : ""} };`,
-    "}",
-    "",
-    "void seed().catch((error: unknown) => { console.error(error); process.exitCode = 1; }).finally(() => prisma.$disconnect());",
-    "",
-  ].join("\n");
-}
-
-function renderCasbinPolicy(graph: ApplicationGraphV1): string {
-  const lines = graph.policy.permissions.flatMap((permission) =>
-    permission.actions.map(
-      (action) => `p, ${permission.role}, ${permission.resource}, ${action}`,
-    ),
-  );
-  return `${lines.join("\n")}\n`;
 }
 
 function renderFlowDefinitions(graph: ApplicationGraphV1): string {
@@ -1922,59 +1458,6 @@ function renderFlowMachines(): string {
     ");",
     "",
   ].join("\n");
-}
-
-function renderPolicyModule(graph: ApplicationGraphV1): string {
-  const model = [
-    "[request_definition]",
-    "r = sub, obj, act",
-    "",
-    "[policy_definition]",
-    "p = sub, obj, act",
-    "",
-    "[policy_effect]",
-    "e = some(where (p.eft == allow))",
-    "",
-    "[matchers]",
-    'm = r.sub == p.sub && (r.obj == p.obj || p.obj == "*") && r.act == p.act',
-  ].join("\n");
-  return [
-    'import { newEnforcer, newModelFromString, StringAdapter } from "casbin";',
-    "",
-    `const model = ${JSON.stringify(model)};`,
-    `const policy = ${JSON.stringify(renderCasbinPolicy(graph))};`,
-    "let enforcerPromise: ReturnType<typeof newEnforcer> | undefined;",
-    "",
-    "async function enforcer() {",
-    "  enforcerPromise ??= newEnforcer(newModelFromString(model), new StringAdapter(policy));",
-    "  return enforcerPromise;",
-    "}",
-    "",
-    "export async function enforce(role: string, resource: string, action: string): Promise<boolean> {",
-    "  return (await enforcer()).enforce(role, resource, action);",
-    "}",
-    "",
-  ].join("\n");
-}
-
-function runtimeDefinition(graph: ApplicationGraphV1) {
-  return {
-    entities: graph.domain.entities.map((entity) => ({
-      key: entity.key,
-      fields: entity.fields.map((field) => ({
-        key: field.key,
-        required: field.required,
-      })),
-    })),
-    permissions: graph.policy.permissions,
-    capabilities: graph.integration.capabilities,
-    seedData: (graph.domain.seedData ?? []).map((seed, index) => ({
-      entity: seed.entity,
-      id: seed.id ?? `seed-${seed.entity}-${index + 1}`,
-      values: seed.values,
-    })),
-    flows: graph.flow.flows,
-  };
 }
 
 function lockedRuntimeHandlerEntity(
@@ -2151,6 +1634,28 @@ function renderOrderOperationsRuntime(
 `;
 }
 
+function runtimeDefinition(graph: ApplicationGraphV1) {
+  return {
+    entities: graph.domain.entities.map((entity) => ({
+      key: entity.key,
+      fields: entity.fields
+        .filter((field) => field.key !== "id")
+        .map((field) => ({
+          key: field.key,
+          required: field.required,
+        })),
+    })),
+    permissions: graph.policy.permissions,
+    capabilities: graph.integration.capabilities,
+    seedData: (graph.domain.seedData ?? []).map((seed, index) => ({
+      entity: seed.entity,
+      id: seed.id ?? `seed-${seed.entity}-${index + 1}`,
+      values: seed.values,
+    })),
+    flows: graph.flow.flows,
+  };
+}
+
 function renderApplicationRuntime(
   graph: ApplicationGraphV1,
   useResolvedContributions: boolean,
@@ -2187,6 +1692,10 @@ function renderApplicationRuntime(
     'import { enforce } from "./policy.js";',
     "",
     "export type StoredRecord = Record<string, unknown> & { id: string; status?: string; version?: number };",
+    "export const factoryOwnedRecordIdentityInputError = \"Record input cannot declare Factory-owned record identity 'id'.\";",
+    "export function assertFactoryOwnedRecordIdentityInput(input: Record<string, unknown>): void {",
+    "  if (Object.prototype.hasOwnProperty.call(input, 'id')) throw new Error(factoryOwnedRecordIdentityInputError);",
+    "}",
     "export type AuditEvent = { actor: string; action: string; entity: string; recordId: string; at: string };",
     "export type CapabilityEvent = { actor: string; capability: string; operation: string; entity: string; recordId: string; outcome: 'completed'; at: string };",
     ...(notificationOutbox
@@ -2312,6 +1821,7 @@ function renderApplicationRuntime(
     ...(notificationOutbox
       ? [
           "  async create(entityKey: string, input: Record<string, unknown>): Promise<StoredRecord> {",
+          "    assertFactoryOwnedRecordIdentityInput(input);",
           "    return this.coordinateMutation(() => {",
           "      const collection = this.collection(entityKey);",
           "      const record: StoredRecord = { id: `${entityKey}-${collection.size + 1}`, ...input };",
@@ -2320,6 +1830,7 @@ function renderApplicationRuntime(
           "    });",
           "  }",
           "  async update(entityKey: string, recordId: string, input: Record<string, unknown>): Promise<StoredRecord> {",
+          "    assertFactoryOwnedRecordIdentityInput(input);",
           "    return this.coordinateMutation(() => {",
           "      const record = this.collection(entityKey).get(recordId);",
           "      if (!record) throw new Error(`Record '${recordId}' was not found.`);",
@@ -2332,12 +1843,14 @@ function renderApplicationRuntime(
         ]
       : [
           "  async create(entityKey: string, input: Record<string, unknown>): Promise<StoredRecord> {",
+          "    assertFactoryOwnedRecordIdentityInput(input);",
           "    const collection = this.collection(entityKey);",
           "    const record: StoredRecord = { id: `${entityKey}-${collection.size + 1}`, ...input };",
           "    collection.set(record.id, record);",
           "    return record;",
           "  }",
           "  async update(entityKey: string, recordId: string, input: Record<string, unknown>): Promise<StoredRecord> {",
+          "    assertFactoryOwnedRecordIdentityInput(input);",
           "    const record = await this.find(entityKey, recordId);",
           "    if (!record) throw new Error(`Record '${recordId}' was not found.`);",
           "    Object.assign(record, input);",
@@ -2612,6 +2125,7 @@ function renderApplicationRuntime(
     "  async create(role: string, entityKey: string, input: Record<string, unknown>): Promise<StoredRecord> {",
     "    const entity = this.entity(entityKey);",
     "    await this.assertAllowed(role, entityKey, 'create');",
+    "    assertFactoryOwnedRecordIdentityInput(input);",
     "    const allowedFields = new Set(entity.fields.map((field) => field.key));",
     "    const unknown = Object.keys(input).find((key) => !allowedFields.has(key));",
     "    if (unknown) throw new Error(`Unknown field '${unknown}' for '${entityKey}'.`);",
@@ -2854,6 +2368,15 @@ function renderPrismaRecordStore(
 ): string {
   const commerce = hasCommerceCapabilities(graph);
   const capabilityOutcome = hasRestaurantRuntime ? "succeeded" : "completed";
+  const auditAccessor = hasRestaurantRuntime
+    ? "auditEvent"
+    : "factory_AuditEvent";
+  const capabilityAccessor = hasRestaurantRuntime
+    ? "capabilityEvent"
+    : "factory_CapabilityEvent";
+  const commerceAccessor = hasRestaurantRuntime
+    ? "commerceLineItem"
+    : "factory_CommerceLineItem";
   const delegates = Object.fromEntries(
     graph.domain.entities.map((entity) => [
       entity.key,
@@ -2863,6 +2386,7 @@ function renderPrismaRecordStore(
   return [
     'import { PrismaClient } from "@prisma/client";',
     `import type { AuditEvent, CapabilityEvent,${commerce ? " CommerceLineItem," : ""}${notificationOutbox ? " NotificationOutboxEntry, NotificationOutboxInput," : ""}${persistentOrderOperationReceipts ? " OrderOperationReceipt," : ""} RecordStore, StoredRecord } from "./application-runtime.js";`,
+    'import { assertFactoryOwnedRecordIdentityInput } from "./application-runtime.js";',
     "",
     "type CrudDelegate = {",
     "  findMany(): Promise<unknown[]>;",
@@ -2929,23 +2453,23 @@ function renderPrismaRecordStore(
     "  }",
     "",
     "  private auditDelegate(): AuditDelegate {",
-    "    return (this.prisma as unknown as { auditEvent: AuditDelegate }).auditEvent;",
+    `    return (this.prisma as unknown as { ${auditAccessor}: AuditDelegate }).${auditAccessor};`,
     "  }",
     "",
     "  private capabilityDelegate(): CapabilityDelegate {",
-    "    return (this.prisma as unknown as { capabilityEvent: CapabilityDelegate }).capabilityEvent;",
+    `    return (this.prisma as unknown as { ${capabilityAccessor}: CapabilityDelegate }).${capabilityAccessor};`,
     "  }",
     ...(notificationOutbox
       ? [
           "  private notificationOutboxDelegate(): NotificationOutboxDelegate {",
-          "    return (this.prisma as unknown as { notificationOutbox: NotificationOutboxDelegate }).notificationOutbox;",
+          "    return (this.prisma as unknown as { factory_NotificationOutbox: NotificationOutboxDelegate }).factory_NotificationOutbox;",
           "  }",
         ]
       : []),
     ...(persistentOrderOperationReceipts
       ? [
           "  private orderOperationReceiptDelegate(): OrderOperationReceiptDelegate {",
-          "    return (this.prisma as unknown as { orderOperationReceipt: OrderOperationReceiptDelegate }).orderOperationReceipt;",
+          "    return (this.prisma as unknown as { factory_OrderOperationReceipt: OrderOperationReceiptDelegate }).factory_OrderOperationReceipt;",
           "  }",
         ]
       : []),
@@ -2953,7 +2477,7 @@ function renderPrismaRecordStore(
       ? [
           "",
           "  private commerceLineDelegate(): CommerceLineDelegate {",
-          "    return (this.prisma as unknown as { commerceLineItem: CommerceLineDelegate }).commerceLineItem;",
+          `    return (this.prisma as unknown as { ${commerceAccessor}: CommerceLineDelegate }).${commerceAccessor};`,
           "  }",
         ]
       : []),
@@ -2968,10 +2492,12 @@ function renderPrismaRecordStore(
     "  }",
     "",
     "  async create(entityKey: string, input: Record<string, unknown>): Promise<StoredRecord> {",
+    "    assertFactoryOwnedRecordIdentityInput(input);",
     "    return asStoredRecord(await this.delegate(entityKey).create({ data: input }));",
     "  }",
     "",
     "  async update(entityKey: string, recordId: string, input: Record<string, unknown>): Promise<StoredRecord> {",
+    "    assertFactoryOwnedRecordIdentityInput(input);",
     "    return asStoredRecord(await this.delegate(entityKey).update({ where: { id: recordId }, data: input }));",
     "  }",
     "",
@@ -3141,10 +2667,13 @@ function renderPageRuntime(
     entities: graph.domain.entities.map((entity) => ({
       key: entity.key,
       label: entity.label,
-      fields: entity.fields.map((field) => ({
-        key: field.key,
-        required: field.required,
-      })),
+      fields: entity.fields
+        .filter((field) => field.key !== "id")
+        .map((field) => ({
+          key: field.key,
+          required: field.required,
+          type: field.type,
+        })),
     })),
     policy: graph.policy,
     flow: {
@@ -3176,9 +2705,9 @@ function renderPageRuntime(
     'import { useEffect, useState } from "react";',
     "",
     "type JsonRecord = Record<string, unknown>;",
-    "type PageRuntimeBlock = { readonly id: string; readonly type: 'hero' | 'form' | 'collection' | 'catalog' | 'catalog-configurator' | 'cart' | 'queue' | 'checkout'; readonly entity?: string; readonly props: Readonly<Record<string, string>> };",
+    "type PageRuntimeBlock = { readonly id: string; readonly type: 'hero' | 'form' | 'collection' | 'catalog' | 'catalog-configurator' | 'cart' | 'queue' | 'checkout' | 'stats' | 'list' | 'detail' | 'calendar' | 'settings'; readonly entity?: string; readonly props: Readonly<Record<string, string>> };",
     "type PageRuntimeProjection = { readonly apiVersion: 'factory.generated-page-runtime/v1'; readonly applicationName: string; readonly themeMode: 'light' | 'dark' | 'system'; readonly pages: readonly { readonly id: string; readonly route: string; readonly title: string; readonly blocks: readonly PageRuntimeBlock[] }[]; readonly navigation: readonly { readonly id: string; readonly label: string; readonly route: string }[]; readonly routeFallback: { readonly rootRoute: string | null; readonly unknownRoute: 'not-found' }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null } };",
-    "type RuntimeEntity = { readonly key: string; readonly label: string; readonly fields: readonly { readonly key: string; readonly required: boolean }[] };",
+    "type RuntimeEntity = { readonly key: string; readonly label: string; readonly fields: readonly { readonly key: string; readonly required: boolean; readonly type: string }[] };",
     "type RuntimeDefinition = { readonly applicationName: string; readonly themeMode: 'light' | 'dark' | 'system'; readonly entities: readonly RuntimeEntity[]; readonly policy: { readonly roles: readonly string[]; readonly permissions: readonly { readonly role: string; readonly resource: string; readonly actions: readonly string[] }[] }; readonly flow: { readonly flows: readonly { readonly entity: string; readonly transitions: readonly { readonly from: string; readonly event: string; readonly to: string; readonly roles: readonly string[] }[] }[] }; readonly commerce: { readonly orderEntity: string | null; readonly paymentEvent: string | null } };",
     "type BlockContext = { readonly role: string; readonly formRouteByEntity: Readonly<Record<string, string>>; readonly checkoutRoute: string | null; readonly cartItems: readonly JsonRecord[]; readonly cartId: string | null; readonly reportError: (reason: unknown) => void; readonly addToCart: (catalogEntity: string, catalogRecordId: string) => Promise<void>; readonly configureLine: (catalogEntity: string, catalogRecordId: string, optionIds: readonly string[]) => Promise<JsonRecord>; readonly checkoutCart: () => Promise<void> };",
     "",
@@ -3239,7 +2768,7 @@ function renderPageRuntime(
     "",
     "function FormBlock({ block, entity, role, reportError }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly role: string; readonly reportError: (reason: unknown) => void }) {",
     "  const [values, setValues] = useState<Record<string, string>>({});",
-    "  const fields = entity.fields.filter((field) => field.key !== 'status');",
+    "  const fields = entity.fields.filter((field) => field.key !== 'id' && field.key !== 'status');",
     "  if (!can(role, entity.key, 'create')) return <section className='generated-card'><h2>{block.props.title ?? \`Create ${entity.label}\`}</h2><p>Your selected role cannot create this record.</p></section>;",
     "  const createRecord = async () => {",
     "    const payload = Object.fromEntries(fields.map((field) => [field.key, values[field.key] ?? '']));",
@@ -3270,6 +2799,35 @@ function renderPageRuntime(
     "",
     "function QueueBlock({ block, entity, context }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly context: BlockContext }) {",
     "  return <EntityRecords block={block} entity={entity} role={context.role} reportError={context.reportError} />;",
+    "}",
+    "",
+    "function ListBlock({ block, entity, context }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly context: BlockContext }) {",
+    "  return <EntityRecords block={block} entity={entity} role={context.role} formRoute={context.formRouteByEntity[entity.key]} reportError={context.reportError} />;",
+    "}",
+    "",
+    "function DetailBlock({ block, entity, context }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly context: BlockContext }) {",
+    "  return <EntityRecords block={block} entity={entity} role={context.role} reportError={context.reportError} />;",
+    "}",
+    "",
+    "function CalendarBlock({ block, entity, context }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly context: BlockContext }) {",
+    "  const allowed = can(context.role, entity.key, 'read');",
+    "  const { records, error, refresh } = useEntityRecords(entity, context.role, allowed);",
+    "  const dateField = entity.fields.find((field) => field.type === 'date' || field.type === 'datetime');",
+    "  const groups = dateField ? records.reduce((grouped, record) => { const label = String(record[dateField.key] ?? '').slice(0, 10); if (!label) return grouped; const bucket = grouped.find((entry) => entry.label === label); if (bucket) bucket.records.push(record); else grouped.push({ label, records: [record] }); return grouped; }, [] as { label: string; records: JsonRecord[] }[]) : null;",
+    "  if (!allowed) return <section className='generated-card'><h2>{block.props.title ?? 'Schedule'}</h2><p>Your selected role cannot read this schedule.</p></section>;",
+    "  return <section className='generated-card'><div className='generated-section-heading'><div><p>{dateField ? 'calendar' : 'schedule'}</p><h2>{block.props.title ?? 'Schedule'}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}>Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}{groups ? <ul className='generated-calendar'>{groups.map((group) => <li key={group.label}><strong>{group.label}</strong><ul className='generated-records'>{group.records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code></li>)}</ul></li>)}</ul> : <ul className='generated-records'>{records.map((record) => <li key={String(record.id)}><code>{JSON.stringify(record)}</code></li>)}</ul>}</section>;",
+    "}",
+    "",
+    "function StatsBlock({ block, entity, context }: { readonly block: PageRuntimeBlock; readonly entity?: RuntimeEntity; readonly context: BlockContext }) {",
+    "  if (!entity) return <section className='generated-card generated-stats'><p>{block.props.eyebrow ?? 'overview'}</p><h2>{block.props.heading ?? block.props.title ?? 'Overview'}</h2><span>No entity bound</span></section>;",
+    "  const allowed = can(context.role, entity.key, 'read');",
+    "  const { records, error, refresh } = useEntityRecords(entity, context.role, allowed);",
+    "  return <section className='generated-card'><div className='generated-section-heading'><div><p>{block.props.eyebrow ?? 'overview'}</p><h2>{block.props.heading ?? block.props.title ?? `Overview`}</h2></div><button type='button' onClick={() => void refresh().catch(context.reportError)}>Refresh</button></div>{error ? <p className='generated-error' role='alert'>{error}</p> : null}<div className='generated-stats'><strong>{allowed ? records.length : '–'}</strong><span>{entity.label.toLowerCase()} records</span></div></section>;",
+    "}",
+    "",
+    "function SettingsBlock({ block, entity, context }: { readonly block: PageRuntimeBlock; readonly entity?: RuntimeEntity; readonly context: BlockContext }) {",
+    "  if (!entity) return <section className='generated-card'><p>settings</p><h2>{block.props.title ?? 'Settings'}</h2><span>{projection.applicationName}</span></section>;",
+    "  return <FormBlock block={block} entity={entity} role={context.role} reportError={context.reportError} />;",
     "}",
     "",
     "function CatalogBlock({ block, entity, context }: { readonly block: PageRuntimeBlock; readonly entity: RuntimeEntity; readonly context: BlockContext }) {",
@@ -3316,6 +2874,11 @@ function renderPageRuntime(
     "  if (block.type === 'catalog-configurator') return <CatalogConfiguratorBlock block={block} entity={entity} context={context} />;",
     "  if (block.type === 'cart') return <CartBlock block={block} context={context} />;",
     "  if (block.type === 'queue') return <QueueBlock block={block} entity={entity} context={context} />;",
+    "  if (block.type === 'list') return <ListBlock block={block} entity={entity} context={context} />;",
+    "  if (block.type === 'detail') return <DetailBlock block={block} entity={entity} context={context} />;",
+    "  if (block.type === 'calendar') return <CalendarBlock block={block} entity={entity} context={context} />;",
+    "  if (block.type === 'stats') return <StatsBlock block={block} entity={entity} context={context} />;",
+    "  if (block.type === 'settings') return <SettingsBlock block={block} entity={entity} context={context} />;",
     "  if (block.type === 'checkout') return <CheckoutBlock block={block} context={context} />;",
     "  return null;",
     "}",
@@ -3430,25 +2993,50 @@ function renderWebProxyRoute(
   ].join("\n");
 }
 
-function renderWebStyles(): string {
-  const lightTheme =
-    "--factory-bg: #f5f7f8; --factory-surface: #ffffff; --factory-surface-muted: #edf2f3; --factory-text: #152225; --factory-muted: #52646a; --factory-border: #cbd7da; --factory-accent: #0b766e; --factory-accent-text: #ffffff; --factory-danger: #b42318;";
-  const darkTheme =
-    "--factory-bg: #10191b; --factory-surface: #182426; --factory-surface-muted: #223235; --factory-text: #e8f1f2; --factory-muted: #b3c4c7; --factory-border: #3b5155; --factory-accent: #55c9ba; --factory-accent-text: #062522; --factory-danger: #ffb4ab;";
+function renderWebStyles(graph: ApplicationGraphV1): string {
+  // The generated application styles come entirely from the resolved
+  // Experience Design System: every token group (colour, typography,
+  // spacing, radius, elevation, motion) becomes a CSS variable, and the
+  // legacy alias surface keeps the rendered components stable. Token edits
+  // made in the Page Studio therefore survive Publish and compilation.
+  const system = resolveExperienceDesignSystem(graph.experience);
+  const themeBlock = (mode: "light" | "dark"): string => {
+    const tokenVars: string[] = [];
+    for (const [group, tokens] of Object.entries(system.tokens)) {
+      for (const [key, value] of Object.entries(
+        tokens as Record<string, unknown>,
+      )) {
+        // The colour group carries light/dark containers; only scalar
+        // token values become CSS variables.
+        if (typeof value !== "string") continue;
+        tokenVars.push(`--factory-${group}-${key}: ${value};`);
+      }
+    }
+    const colours = system.tokens.colour[mode];
+    for (const [key, value] of Object.entries(colours)) {
+      tokenVars.push(`--factory-colour-${key}: ${value};`);
+    }
+    const aliases =
+      " --factory-bg: var(--factory-colour-background); --factory-surface-muted: var(--factory-colour-surface); --factory-muted: var(--factory-colour-text-muted); --factory-accent: var(--factory-colour-brand); --factory-accent-text: var(--factory-colour-background); --factory-surface: var(--factory-colour-surface); --factory-text: var(--factory-colour-text); --factory-border: var(--factory-colour-border); --factory-danger: var(--factory-colour-danger);";
+    return tokenVars.join(" ") + aliases;
+  };
+  const lightTheme = themeBlock("light");
+  const darkTheme = themeBlock("dark");
   return [
-    ":root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; }",
+    "* { box-sizing: border-box; } body { margin: 0; } button, input, select { font: inherit; }",
     `.generated-app[data-theme='light'] { color-scheme: light; ${lightTheme} }`,
     `.generated-app[data-theme='dark'] { color-scheme: dark; ${darkTheme} }`,
     `.generated-app[data-theme='system'] { color-scheme: light dark; ${lightTheme} }`,
     `@media (prefers-color-scheme: dark) { .generated-app[data-theme='system'] { ${darkTheme} } }`,
-    "* { box-sizing: border-box; } body { margin: 0; } button, input, select { font: inherit; }",
-    ".generated-app { min-height: 100vh; margin: 0; padding: 40px max(20px, calc((100vw - 1120px) / 2)); background: var(--factory-bg); color: var(--factory-text); }",
-    ".generated-header, .generated-section-heading, .generated-app nav, .generated-records li { display: flex; align-items: center; gap: 16px; } .generated-header, .generated-section-heading { justify-content: space-between; } .generated-app h1, .generated-app h2, .generated-app h3, .generated-app p { margin: 0; } .generated-app p { color: var(--factory-muted); }",
-    ".generated-app nav { flex-wrap: wrap; margin: 24px 0; } .generated-app a, .generated-app button { border: 1px solid var(--factory-border); border-radius: 8px; padding: 8px 12px; background: var(--factory-surface); color: inherit; text-decoration: none; cursor: pointer; } .generated-app button:disabled { cursor: not-allowed; opacity: .55; } .generated-primary { border-color: var(--factory-accent) !important; background: var(--factory-accent) !important; color: var(--factory-accent-text) !important; }",
-    ".generated-page { display: grid; gap: 20px; } .generated-hero, .generated-card { border: 1px solid var(--factory-border); border-radius: 16px; background: var(--factory-surface); padding: 24px; } .generated-hero { display: grid; gap: 12px; min-height: 220px; align-content: center; } .generated-card { display: grid; gap: 16px; }",
-    ".generated-card form { display: grid; gap: 12px; } .generated-card form label { display: grid; gap: 6px; } .generated-card input, .generated-card select, .generated-header select { width: 100%; border: 1px solid var(--factory-border); border-radius: 8px; padding: 9px; background: var(--factory-surface); color: inherit; } .generated-header label { display: grid; gap: 6px; }",
-    ".generated-records { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; } .generated-records li { justify-content: space-between; flex-wrap: wrap; padding: 12px; background: var(--factory-surface-muted); border-radius: 10px; } .generated-records code { overflow-wrap: anywhere; } .generated-records span { display: flex; gap: 6px; flex-wrap: wrap; } .generated-cart-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px; background: var(--factory-surface-muted); border-radius: 12px; } .generated-error { color: var(--factory-danger) !important; }",
-    "@media (max-width: 720px) { .generated-app { padding: 24px 16px 48px; } .generated-header, .generated-section-heading, .generated-cart-summary { align-items: flex-start; flex-direction: column; } .generated-header label { width: 100%; } .generated-section-heading > div:last-child { display: flex; flex-wrap: wrap; gap: 8px; } }",
+    ".generated-app { font-family: var(--factory-typography-font-family); font-size: var(--factory-typography-font-size-base); min-height: 100vh; margin: 0; padding: var(--factory-spacing-space-8) max(var(--factory-spacing-space-4), calc((100vw - 1120px) / 2)); background: var(--factory-bg); color: var(--factory-text); }",
+    ".generated-header, .generated-section-heading, .generated-app nav, .generated-records li { display: flex; align-items: center; gap: var(--factory-spacing-space-4); } .generated-header, .generated-section-heading { justify-content: space-between; } .generated-app h1, .generated-app h2, .generated-app h3, .generated-app p { margin: 0; } .generated-app p { color: var(--factory-muted); }",
+    ".generated-app nav { flex-wrap: wrap; margin: var(--factory-spacing-space-6) 0; } .generated-app a, .generated-app button { border: 1px solid var(--factory-border); border-radius: var(--factory-radius-radius-base); padding: var(--factory-spacing-space-2) var(--factory-spacing-space-3); background: var(--factory-surface); color: inherit; text-decoration: none; cursor: pointer; transition: background var(--factory-motion-duration-fast) var(--factory-motion-easing-standard); } .generated-app button:disabled { cursor: not-allowed; opacity: .55; } .generated-primary { border-color: var(--factory-accent) !important; background: var(--factory-accent) !important; color: var(--factory-accent-text) !important; }",
+    ".generated-page { display: grid; gap: var(--factory-spacing-space-6); } .generated-hero, .generated-card { border: 1px solid var(--factory-border); border-radius: var(--factory-radius-radius-lg); background: var(--factory-surface); box-shadow: var(--factory-elevation-elevation-sm); padding: var(--factory-spacing-space-6); } .generated-hero { display: grid; gap: var(--factory-spacing-space-3); min-height: 220px; align-content: center; } .generated-card { display: grid; gap: var(--factory-spacing-space-4); }",
+    ".generated-card form { display: grid; gap: var(--factory-spacing-space-3); } .generated-card form label { display: grid; gap: var(--factory-spacing-space-2); } .generated-card input, .generated-card select, .generated-header select { width: 100%; border: 1px solid var(--factory-border); border-radius: var(--factory-radius-radius-base); padding: var(--factory-spacing-space-2); background: var(--factory-surface); color: inherit; } .generated-header label { display: grid; gap: var(--factory-spacing-space-2); }",
+    ".generated-records { display: grid; gap: var(--factory-spacing-space-2); padding: 0; margin: 0; list-style: none; } .generated-records li { justify-content: space-between; flex-wrap: wrap; padding: var(--factory-spacing-space-3); background: var(--factory-surface-muted); border-radius: var(--factory-radius-radius-base); } .generated-records code { overflow-wrap: anywhere; } .generated-records span { display: flex; gap: var(--factory-spacing-space-2); flex-wrap: wrap; } .generated-cart-summary { display: flex; align-items: center; justify-content: space-between; gap: var(--factory-spacing-space-3); padding: var(--factory-spacing-space-4); background: var(--factory-surface-muted); border-radius: var(--factory-radius-radius-base); } .generated-error { color: var(--factory-danger) !important; }",
+    ".generated-stats { display: grid; gap: var(--factory-spacing-space-2); align-items: baseline; grid-auto-flow: column; justify-content: start; } .generated-stats strong { font-size: var(--factory-typography-font-size-xl); } .generated-stats span { color: var(--factory-muted); }",
+    ".generated-calendar { display: grid; gap: var(--factory-spacing-space-4); padding: 0; margin: 0; list-style: none; } .generated-calendar > li { display: grid; gap: var(--factory-spacing-space-2); } .generated-calendar > li > strong { color: var(--factory-muted); text-transform: uppercase; font-size: var(--factory-typography-font-size-sm); }",
+    "@media (max-width: 720px) { .generated-app { padding: var(--factory-spacing-space-6) var(--factory-spacing-space-4) var(--factory-spacing-space-8); } .generated-header, .generated-section-heading, .generated-cart-summary { align-items: flex-start; flex-direction: column; } .generated-header label { width: 100%; } .generated-section-heading > div:last-child { display: flex; flex-wrap: wrap; gap: var(--factory-spacing-space-2); } }",
     "",
   ].join("\n");
 }
@@ -3676,278 +3264,6 @@ function renderApiMain(
   ].join("\n");
 }
 
-function defaultJourneyValue(
-  field: ApplicationGraphV1["domain"]["entities"][number]["fields"][number],
-  initialState: string | undefined,
-): unknown {
-  if (field.key === "status" && initialState) return initialState;
-  if (field.type === "integer" || field.type === "decimal") return 1;
-  if (field.type === "boolean") return true;
-  if (field.type === "date") return "2026-01-01";
-  if (field.type === "datetime") return "2026-01-01T00:00:00.000Z";
-  if (field.type === "enum") return field.values?.[0] ?? "sample";
-  if (field.type === "email") return "user@example.test";
-  if (field.type === "url") return "https://example.test";
-  if (field.type === "json") return { sample: true };
-  return `sample-${field.key}`;
-}
-
-function renderJourneyTest(graph: ApplicationGraphV1): string {
-  const flow = graph.flow.flows[0];
-  const entity =
-    flow &&
-    graph.domain.entities.find((candidate) => candidate.key === flow.entity);
-  const createPermission =
-    entity &&
-    graph.policy.permissions.find(
-      (permission) =>
-        permission.resource === entity.key &&
-        permission.actions.includes("create"),
-    );
-  if (!flow || !entity || !createPermission) {
-    return [
-      'import { describe, expect, it } from "vitest";',
-      "",
-      "describe('generated journey', () => {",
-      "  it('records that this Graph has no declared create-and-flow journey', () => {",
-      "    expect(true).toBe(true);",
-      "  });",
-      "});",
-      "",
-    ].join("\n");
-  }
-  const payload = Object.fromEntries(
-    entity.fields
-      .filter((field) => field.required)
-      .map((field) => [
-        field.key,
-        defaultJourneyValue(field, flow.initialState),
-      ]),
-  );
-  const transitions: ApplicationGraphV1["flow"]["flows"][number]["transitions"] =
-    [];
-  let state = flow.initialState;
-  const visited = new Set<string>();
-  while (true) {
-    const transition = flow.transitions.find(
-      (candidate) =>
-        candidate.from === state &&
-        !visited.has(`${candidate.from}:${candidate.event}`),
-    );
-    if (!transition) break;
-    transitions.push(transition);
-    visited.add(`${transition.from}:${transition.event}`);
-    state = transition.to;
-  }
-  const auditRole = graph.policy.permissions.find((permission) =>
-    permission.actions.includes("audit"),
-  )?.role;
-  const capabilityEffects = transitions.flatMap(
-    (transition) => transition.effects ?? [],
-  );
-  const catalogEntity = graph.domain.relations.find(
-    (relation) => relation.from === entity.key,
-  )?.to;
-  const catalogSeed = catalogEntity
-    ? graph.domain.seedData?.find((seed) => seed.entity === catalogEntity)
-    : undefined;
-  const includesCartAdd = graph.integration.capabilities.some(
-    (capability) =>
-      capability.key === "cart.add" && capability.operation === "add",
-  );
-  const cartJourney =
-    !!catalogEntity &&
-    !!catalogSeed &&
-    includesCartAdd &&
-    transitions.some((transition) =>
-      transition.effects?.some(
-        (effect) =>
-          effect.capability === "payment.simulate" ||
-          effect.capability === "inventory.decrement",
-      ),
-    );
-  const versionedOrderJourney =
-    entity.key === "order" &&
-    graph.integration.capabilities.some(
-      (capability) =>
-        capability.key === "order.transition" &&
-        capability.operation === "transition",
-    );
-  const capabilityEventPairs = [
-    ...(cartJourney ? [{ capability: "cart.add", operation: "add" }] : []),
-    ...capabilityEffects.flatMap((effect) =>
-      ["notification.send", "payment.simulate"].includes(effect.capability)
-        ? [effect, effect]
-        : [effect],
-    ),
-  ];
-  const auditEffectCount = capabilityEffects.filter(
-    (effect) => effect.capability === "audit.record",
-  ).length;
-  return [
-    'import { describe, expect, it } from "vitest";',
-    'import { applicationRuntime } from "../src/application-runtime.js";',
-    "",
-    "describe('generated role journey', () => {",
-    "  it('executes the declared record flow', async () => {",
-    `    const record = await applicationRuntime.create(${JSON.stringify(createPermission.role)}, ${JSON.stringify(entity.key)}, ${JSON.stringify(payload)});`,
-    `    expect(record.status).toBe(${JSON.stringify(flow.initialState)});`,
-    ...(cartJourney
-      ? [
-          `    await applicationRuntime.addCartItem(${JSON.stringify(createPermission.role)}, ${JSON.stringify(entity.key)}, record.id, ${JSON.stringify({ catalogEntity, catalogRecordId: catalogSeed!.id ?? `seed-${catalogSeed!.entity}-1`, quantity: 1 })});`,
-        ]
-      : []),
-    ...transitions.flatMap((transition, index) => [
-      `    await applicationRuntime.transition(${JSON.stringify(transition.roles?.[0] ?? createPermission.role)}, ${JSON.stringify(entity.key)}, record.id, ${JSON.stringify(transition.event)}${versionedOrderJourney ? `, { expectedVersion: ${index}, idempotencyKey: ${JSON.stringify(`generated-${transition.event}-${index + 1}`)} }` : ""});`,
-      `    expect(record.status).toBe(${JSON.stringify(transition.to)});`,
-    ]),
-    ...(auditRole
-      ? [
-          `    expect(await applicationRuntime.auditLog(${JSON.stringify(auditRole)})).toHaveLength(${transitions.length + 1 + auditEffectCount + (cartJourney ? 1 : 0)});`,
-        ]
-      : []),
-    ...(auditRole && capabilityEffects.length > 0
-      ? [
-          `    const capabilityEvents = await applicationRuntime.capabilityEvents(${JSON.stringify(auditRole)});`,
-          `    expect(capabilityEvents.map((entry) => [entry.capability, entry.operation])).toEqual(${JSON.stringify(capabilityEventPairs.map((effect) => [effect.capability, effect.operation]))});`,
-        ]
-      : []),
-    "  });",
-    "});",
-    "",
-  ].join("\n");
-}
-
-function markdownCell(value: string): string {
-  return value.replaceAll("|", "\\|").replaceAll("\n", " ");
-}
-
-function relationshipCardinality(
-  kind: ApplicationGraphV1["domain"]["relations"][number]["kind"],
-): readonly [string, string] {
-  switch (kind) {
-    case "one-to-one":
-      return ["1", "1"];
-    case "one-to-many":
-      return ["1", "*"];
-    case "many-to-one":
-      return ["*", "1"];
-    case "many-to-many":
-      return ["*", "*"];
-  }
-}
-
-function renderApiReference(
-  graph: ApplicationGraphV1,
-  usesFixtureSessions: boolean,
-): string {
-  const endpoints = [
-    ["GET", "/api/health", "Return generated application health."],
-    [
-      "GET",
-      "/api/:entity",
-      "List a declared DomainModel entity for the caller role.",
-    ],
-    [
-      "POST",
-      "/api/:entity",
-      "Create a declared DomainModel entity for the caller role.",
-    ],
-    [
-      "POST",
-      "/api/:entity/:recordId/events/:event",
-      "Trigger a declared FlowModel event when policy and state allow it.",
-    ],
-    [
-      "GET",
-      "/api/audit",
-      "Read immutable audit events when policy permits audit.",
-    ],
-    [
-      "GET",
-      "/api/capability-events",
-      "Read executed declared capability effects when policy permits audit.",
-    ],
-    ...(hasCommerceCapabilities(graph)
-      ? [
-          [
-            "GET",
-            "/api/commerce/:entity/:recordId/items",
-            "Read cart items for the caller role.",
-          ],
-          [
-            "POST",
-            "/api/commerce/:entity/:recordId/items",
-            "Add a declared catalog item to a cart for the caller role.",
-          ],
-        ]
-      : []),
-  ] as const;
-  const entities = graph.domain.entities.length
-    ? graph.domain.entities
-        .map((entity) => `- \`${entity.key}\` — ${entity.label}`)
-        .join("\n")
-    : "- No entities declared.";
-  const flows = graph.flow.flows.length
-    ? graph.flow.flows
-        .map(
-          (flow) =>
-            `- \`${flow.id}\` on \`${flow.entity}\`: ${flow.events.map((event) => `\`${event}\``).join(", ") || "no events"}`,
-        )
-        .join("\n")
-    : "- No flows declared.";
-  const identityBoundary = usesFixtureSessions
-    ? "Every request is bound to an opaque local fixture session during local compilation; the server resolves the principal and checks the declared resource/action before performing work."
-    : "Every request is role-scoped through the `x-factory-role` header.";
-  return `# API reference\n\nThis API is compiled from the immutable Published Graph for **${graph.metadata.name}**. ${identityBoundary}\n\n## Endpoints\n\n| Method | Path | Contract |\n| --- | --- | --- |\n${endpoints.map(([method, path, description]) => `| ${method} | \`${path}\` | ${description} |`).join("\n")}\n\n## Domain endpoints\n\n${entities}\n\n## Declared flow events\n\n${flows}\n`;
-}
-
-function renderEntityRelationshipDiagram(graph: ApplicationGraphV1): string {
-  const entities = graph.domain.entities.map((entity) => {
-    const fields = entity.fields.length
-      ? entity.fields
-          .map(
-            (field) =>
-              `- \`${field.key}\`: ${field.type}${field.required ? " (required)" : ""}${field.unique ? ", unique" : ""}`,
-          )
-          .join("\n")
-      : "- No fields declared.";
-    const indexes = entity.indexes.length
-      ? `\n\nIndexes: ${entity.indexes.map((index) => `\`${index.fields.join(", ")}\`${index.unique ? " (unique)" : ""}`).join("; ")}`
-      : "";
-    return `### ${entity.label} (\`${entity.key}\`)\n\n${fields}${indexes}`;
-  });
-  const relationships = graph.domain.relations.length
-    ? graph.domain.relations
-        .map((relation) => {
-          const [from, to] = relationshipCardinality(relation.kind);
-          return `- \`${relation.from}\` ${from} → ${to} \`${relation.to}\`${relation.field ? ` via \`${relation.field}\`` : ""}`;
-        })
-        .join("\n")
-    : "- No relationships declared.";
-  return `# Entity relationship diagram\n\nThis document is a deterministic DomainModel projection, not a reverse-engineered database schema.\n\n## Relationships\n\n${relationships}\n\n## Entities\n\n${entities.join("\n\n") || "No entities declared."}\n`;
-}
-
-function renderPermissionMatrix(graph: ApplicationGraphV1): string {
-  const rows = graph.policy.permissions.length
-    ? graph.policy.permissions
-        .map(
-          (permission) =>
-            `| ${markdownCell(permission.role)} | ${markdownCell(permission.resource)} | ${permission.actions.map(markdownCell).join(", ")} |`,
-        )
-        .join("\n")
-    : "| — | — | No permissions declared |";
-  return `# Permission matrix\n\nThis is the reviewable PolicyModel projection that compiles to \`api/policy/policy.csv\`.\n\n| Role | Resource | Allowed actions |\n| --- | --- | --- |\n${rows}\n\n## Declared roles\n\n${graph.policy.roles.length ? graph.policy.roles.map((role) => `- \`${role}\``).join("\n") : "- No roles declared."}\n`;
-}
-
-function renderDocumentation(graph: ApplicationGraphV1): string {
-  const entities = graph.domain.entities.map(
-    (entity) =>
-      `- **${entity.label}**: ${entity.fields.map((field) => field.key).join(", ") || "No fields"}`,
-  );
-  return `# ${graph.metadata.name}\n\nThis application was compiled from a Factory Published Graph.\n\n## Generated documentation\n\n- [API reference](api-reference.md)\n- [Entity relationship diagram](entity-relationship.md)\n- [Permission matrix](permission-matrix.md)\n\n## Entities\n${entities.join("\n") || "- No entities declared."}\n`;
-}
-
 function renderCapabilityLock(
   graph: ApplicationGraphV1,
   compositionLock: CapabilityCompositionLockV1,
@@ -3997,11 +3313,17 @@ function renderCapabilityTemplateLock(
  * This function is pure: the Worker owns filesystem writes, Compose identity,
  * artifact digests, and cleanup.
  */
-export function generateApplicationBundle(
+/**
+ * Resolves the explicit immutable compilation view consumed by target plugins.
+ * The facade builds it once from the validated Published Graph, the
+ * canonicalized composition lock, and the resolved contribution layer; every
+ * plugin renders only from this view, never from mutable Draft state or
+ * profile-name semantics.
+ */
+export function buildCompilationInput(
   input: PublishedGraphInput,
   options: GenerateApplicationBundleOptions = {},
-): GeneratedApplicationBundle {
-  const plan = buildCompilationPlan(input);
+): PublishedCompilationInput {
   const graph = assertValidApplicationGraph(input.graph);
   // A Published Graph deliberately does not retain mutable Draft selections.
   // The Compiler materializes a private lock view for Profile-specific
@@ -4013,18 +3335,9 @@ export function generateApplicationBundle(
   );
   const restaurantRuntimeEnabled =
     hasRestaurantOrderingComposition(rendererGraph);
-  let renderedRestaurantRuntime:
-    ReturnType<typeof renderRestaurantRuntime> | undefined;
-  const restaurantRuntime = () => {
-    if (!restaurantRuntimeEnabled) return null;
-    renderedRestaurantRuntime ??= renderRestaurantRuntime(rendererGraph);
-    return renderedRestaurantRuntime;
-  };
-  const capabilityTemplates = resolveCapabilityTemplateContributions(
-    graph,
-    input.compositionLock,
-    options.repositoryRoot,
-  );
+  const renderedRestaurantRuntime = restaurantRuntimeEnabled
+    ? renderRestaurantRuntime(rendererGraph)
+    : undefined;
   const targetContributionPlans = resolveTargetContributionPlans(
     input,
     options,
@@ -4068,6 +3381,98 @@ export function generateApplicationBundle(
       : []),
     ...(notificationOutbox ? [notificationOutboxMigration] : []),
   ];
+  return {
+    publishedRevisionId: input.publishedRevisionId,
+    graph,
+    compositionLock: input.compositionLock,
+    rendererGraph,
+    context: {
+      restaurantRuntimeEnabled,
+      restaurantArtifacts: {
+        apiReference: renderedRestaurantRuntime?.apiReference,
+        prismaSchema: renderedRestaurantRuntime?.prismaSchema,
+        initialMigration: renderedRestaurantRuntime?.initialMigration,
+      },
+      identityPolicyEnabled: identityPolicy !== undefined,
+      orderOperationsPersistence:
+        useGenericOrderOperationsPersistence && orderOperationsPersistence
+          ? {
+              schema: orderOperationsPersistence.schema,
+              migration: orderOperationsPersistence.migration,
+            }
+          : undefined,
+      useGenericOrderOperationsPersistence,
+      moneyPricingPersistence:
+        useGenericMoneyPricingPersistence && moneyPricingPersistence
+          ? {
+              schema: moneyPricingPersistence.schema,
+              migration: moneyPricingPersistence.migration,
+            }
+          : undefined,
+      useGenericMoneyPricingPersistence,
+      notificationOutboxEnabled: notificationOutbox !== undefined,
+      additionalPrismaSchemaFragments,
+      additionalMigrationFragments,
+    },
+  };
+}
+
+export function generateApplicationBundle(
+  input: PublishedGraphInput,
+  options: GenerateApplicationBundleOptions = {},
+): GeneratedApplicationBundle {
+  const plan = buildCompilationPlan(input);
+  const compilationInput = buildCompilationInput(input, options);
+  const graph = compilationInput.graph;
+  const rendererGraph = compilationInput.rendererGraph;
+  const {
+    restaurantRuntimeEnabled,
+    useGenericOrderOperationsPersistence,
+    additionalPrismaSchemaFragments,
+    additionalMigrationFragments,
+  } = compilationInput.context;
+  let renderedRestaurantRuntime:
+    ReturnType<typeof renderRestaurantRuntime> | undefined;
+  const restaurantRuntime = () => {
+    if (!restaurantRuntimeEnabled) return null;
+    renderedRestaurantRuntime ??= renderRestaurantRuntime(rendererGraph);
+    return renderedRestaurantRuntime;
+  };
+  const capabilityTemplates = resolveCapabilityTemplateContributions(
+    graph,
+    input.compositionLock,
+    options.repositoryRoot,
+  );
+  const targetContributionPlans = resolveTargetContributionPlans(
+    input,
+    options,
+  );
+  const renderedTargetContributions = targetContributionPlans.map(
+    renderTargetContribution,
+  );
+  const identityPolicy = resolveIdentityPolicyRuntimeContribution(
+    input,
+    renderedTargetContributions,
+  );
+  const orderOperationsPersistence =
+    resolveOrderOperationsPersistenceContribution(
+      input,
+      renderedTargetContributions,
+    );
+  const notificationOutbox =
+    resolveNotificationOutboxRuntimeContribution(input);
+  const renderedDocumentationFiles = compilerTargetRegistry.run(
+    "documentation",
+    compilationInput,
+  );
+  const renderedPolicyFiles = compilerTargetRegistry.run(
+    "casbin-policy",
+    compilationInput,
+  );
+  const renderedDatabaseFiles = compilerTargetRegistry.run(
+    "prisma-postgres",
+    compilationInput,
+  );
   const useResolvedContributions =
     input.compositionLock.resolvedContributionDigests.length > 0;
   const usePackageCartHandler = input.compositionLock.packages.some(
@@ -4216,7 +3621,7 @@ export function generateApplicationBundle(
     {
       path: "web/app/layout.tsx",
       render: () =>
-        'import type { ReactNode } from "react";\nimport "./globals.css";\n\nexport default function RootLayout({ children }: { children: ReactNode }) { return <html lang="en"><body>{children}</body></html>; }\n',
+        `import type { ReactNode } from "react";\nimport "./globals.css";\n\nexport const metadata = { title: ${JSON.stringify(graph.metadata.name)} };\n\nexport default function RootLayout({ children }: { children: ReactNode }) { return <html lang="en"><body>{children}</body></html>; }\n`,
     },
     {
       path: "web/app/page-runtime.tsx",
@@ -4253,7 +3658,7 @@ export function generateApplicationBundle(
     },
     {
       path: "web/app/globals.css",
-      render: () => renderWebStyles(),
+      render: () => renderWebStyles(rendererGraph),
     },
     {
       path: "api/package.json",
@@ -4403,49 +3808,14 @@ export function generateApplicationBundle(
           },
         ]
       : []),
-    {
-      path: "api/src/policy.ts",
-      render: () => renderPolicyModule(graph),
-    },
-    {
-      path: "api/prisma/schema.prisma",
-      render: () =>
-        restaurantRuntime()?.prismaSchema ??
-        renderPrismaSchema(
-          graph,
-          useGenericOrderOperationsPersistence
-            ? orderOperationsPersistence?.schema
-            : undefined,
-          useGenericOrderOperationsPersistence,
-          additionalPrismaSchemaFragments,
-        ),
-    },
-    {
-      path: "database/prisma/schema.prisma",
-      render: () =>
-        restaurantRuntime()?.prismaSchema ??
-        renderPrismaSchema(
-          graph,
-          useGenericOrderOperationsPersistence
-            ? orderOperationsPersistence?.schema
-            : undefined,
-          useGenericOrderOperationsPersistence,
-          additionalPrismaSchemaFragments,
-        ),
-    },
-    {
-      path: "database/prisma/migrations/0001_initial/migration.sql",
-      render: () =>
-        restaurantRuntime()?.initialMigration ??
-        renderInitialMigration(
-          graph,
-          useGenericOrderOperationsPersistence
-            ? orderOperationsPersistence?.migration
-            : undefined,
-          useGenericOrderOperationsPersistence,
-          additionalMigrationFragments,
-        ),
-    },
+    ...renderedPolicyFiles.map((file) => ({
+      path: file.path,
+      render: () => file.content,
+    })),
+    ...renderedDatabaseFiles.map((file) => ({
+      path: file.path,
+      render: () => file.content,
+    })),
     {
       path: "database/package.json",
       render: () =>
@@ -4467,10 +3837,6 @@ export function generateApplicationBundle(
         ) + "\n",
     },
     {
-      path: "database/prisma/seed.ts",
-      render: () => renderPrismaSeed(graph, restaurantRuntimeEnabled),
-    },
-    {
       path: "database/Dockerfile",
       render: () =>
         'FROM node:22-alpine\nWORKDIR /app\nCOPY package.json ./\nCOPY prisma ./prisma\nRUN npm config set fetch-retries 5 && npm install --global pnpm@9.0.0 && pnpm install && pnpm prisma generate --schema prisma/schema.prisma\nCMD ["sh", "-c", "pnpm prisma migrate deploy --schema prisma/schema.prisma && pnpm tsx prisma/seed.ts"]\n',
@@ -4478,15 +3844,6 @@ export function generateApplicationBundle(
     {
       path: "database/.dockerignore",
       render: () => "node_modules\n.env\n",
-    },
-    {
-      path: "api/policy/model.conf",
-      render: () =>
-        "[request_definition]\nr = sub, obj, act\n\n[policy_definition]\np = sub, obj, act\n\n[policy_effect]\ne = some(where (p.eft == allow))\n\n[matchers]\nm = r.sub == p.sub && r.obj == p.obj && r.act == p.act\n",
-    },
-    {
-      path: "api/policy/policy.csv",
-      render: () => renderCasbinPolicy(graph),
     },
     {
       path: "api/src/flows/definitions.ts",
@@ -4517,24 +3874,10 @@ export function generateApplicationBundle(
       path: "tests/journeys.generated.md",
       render: () => `# Generated role journeys\n\nGraph: ${plan.graphHash}\n`,
     },
-    {
-      path: "docs/api-reference.md",
-      render: () =>
-        restaurantRuntime()?.apiReference ??
-        renderApiReference(graph, Boolean(identityPolicy)),
-    },
-    {
-      path: "docs/entity-relationship.md",
-      render: () => renderEntityRelationshipDiagram(graph),
-    },
-    {
-      path: "docs/permission-matrix.md",
-      render: () => renderPermissionMatrix(graph),
-    },
-    {
-      path: "docs/application.md",
-      render: () => renderDocumentation(graph),
-    },
+    ...renderedDocumentationFiles.map((file) => ({
+      path: file.path,
+      render: () => file.content,
+    })),
     {
       path: "web/Dockerfile",
       render: () =>
@@ -4556,10 +3899,76 @@ export function generateApplicationBundle(
     },
   ];
 
-  assertUniqueGeneratedFilePaths(plannedFiles);
+  assertSafeGeneratedFileSet(plannedFiles);
   const files = plannedFiles.map(({ path, render }) => ({
     path,
     content: render(),
   }));
   return { rootDirectory, graphHash: plan.graphHash, files };
+}
+
+export function generateVersionedApplicationBundle(
+  input: PublishedApplicationGraphCompilationInput,
+  options?: GenerateApplicationBundleOptions,
+): GeneratedApplicationBundle {
+  const candidate = input as unknown;
+  const wrapperError =
+    "Versioned compilation input must be a plain record with exactly publishedGraph and compositionLock.";
+  if (
+    candidate === null ||
+    typeof candidate !== "object" ||
+    Array.isArray(candidate) ||
+    (Object.getPrototypeOf(candidate) !== Object.prototype &&
+      Object.getPrototypeOf(candidate) !== null) ||
+    Reflect.ownKeys(candidate).length !== 2 ||
+    !Object.prototype.hasOwnProperty.call(candidate, "publishedGraph") ||
+    !Object.prototype.hasOwnProperty.call(candidate, "compositionLock")
+  ) {
+    throw new Error(wrapperError);
+  }
+
+  const publishedGraphDescriptor = Object.getOwnPropertyDescriptor(
+    candidate,
+    "publishedGraph",
+  );
+  const compositionLockDescriptor = Object.getOwnPropertyDescriptor(
+    candidate,
+    "compositionLock",
+  );
+  if (
+    !publishedGraphDescriptor ||
+    publishedGraphDescriptor.enumerable !== true ||
+    !("value" in publishedGraphDescriptor) ||
+    !compositionLockDescriptor ||
+    compositionLockDescriptor.enumerable !== true ||
+    !("value" in compositionLockDescriptor)
+  ) {
+    throw new Error(wrapperError);
+  }
+
+  const publishedGraph = adaptPublishedApplicationGraph(
+    publishedGraphDescriptor.value,
+  );
+  if (publishedGraph.graphVersion === "factory.application-graph/v1") {
+    return generateApplicationBundle(
+      {
+        publishedRevisionId: publishedGraph.revisionId,
+        graph: publishedGraph.graph,
+        compositionLock: compositionLockDescriptor.value,
+      },
+      options,
+    );
+  }
+  if (publishedGraph.graphVersion === "factory.application-graph/v3") {
+    return generateRestaurantProductApplicationBundle(
+      {
+        publishedGraph,
+        compositionLock: compositionLockDescriptor.value,
+      },
+      options,
+    );
+  }
+  throw new Error(
+    `Published Application Graph version '${publishedGraph.graphVersion}' is not supported by the current compiler.`,
+  );
 }

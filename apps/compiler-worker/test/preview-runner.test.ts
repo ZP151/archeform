@@ -153,7 +153,10 @@ describe("preview runner", () => {
           operationTimeoutMs: 600,
           readinessTimeoutMs: 10,
         }),
-      ).rejects.toMatchObject({ code: "preview_health_check_failed" });
+      ).rejects.toMatchObject({
+        code: "preview_readiness_failed",
+        cleanupComplete: true,
+      });
 
       expect(healthChecks).toBeGreaterThanOrEqual(1);
       const downCommands = commands.filter((command) =>
@@ -201,7 +204,7 @@ describe("preview runner", () => {
           operationTimeoutMs: 20,
           readinessTimeoutMs: 600,
         }),
-      ).rejects.toMatchObject({ code: "preview_health_check_failed" });
+      ).rejects.toMatchObject({ code: "preview_readiness_failed" });
       expect(healthChecks).toBe(1);
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -286,7 +289,7 @@ describe("preview runner", () => {
           request(restaurantRegisteredArtifacts),
           processRunner,
         ),
-      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      ).rejects.toMatchObject({ code: "preview_artifact_failed" });
       expect(processRunner).not.toHaveBeenCalled();
     } finally {
       vi.unstubAllEnvs();
@@ -294,7 +297,7 @@ describe("preview runner", () => {
     }
   });
 
-  it("forwards only the required Restaurant bootstrap token to preview Docker commands", async () => {
+  it("forwards the bootstrap token and Docker CLI lookup variables to preview Docker commands", async () => {
     const { root } = await sourceFixture(restaurantCompose);
     const spawned: Parameters<PreviewProcessRunner>[0][] = [];
     const processRunner: PreviewProcessRunner = async (command) => {
@@ -305,6 +308,28 @@ describe("preview runner", () => {
         return "127.0.0.1:49102\n";
     };
     vi.stubEnv("RESTAURANT_DEMO_TABLE_TOKEN", "test-run-scoped-token");
+    // The Docker CLI on Windows discovers its compose plugin through host
+    // lookup variables (e.g. %ProgramFiles%\Docker\cli-plugins); without
+    // them the CLI cannot resolve `docker compose` at all.
+    const dockerLookupVariables = [
+      "PROGRAMFILES",
+      "ProgramW6432",
+      "PROGRAMDATA",
+      "APPDATA",
+      "LOCALAPPDATA",
+      "USERPROFILE",
+      "HOMEDRIVE",
+      "HOMEPATH",
+      "HOME",
+      "PATH",
+      "PATHEXT",
+      "SYSTEMROOT",
+      "WINDIR",
+      "SYSTEMDRIVE",
+      "COMSPEC",
+      "TEMP",
+      "TMP",
+    ];
 
     try {
       await expect(
@@ -316,12 +341,35 @@ describe("preview runner", () => {
       ).resolves.toMatchObject({ previewUrl: "http://127.0.0.1:49101" });
       expect(spawned).toHaveLength(4);
       for (const command of spawned) {
-        expect(command.environment).toEqual({
-          FACTORY_COMPOSE_PROJECT_NAME: "factory-preview-preview-1",
-          FACTORY_WEB_PORT: "0",
-          FACTORY_API_PORT: "0",
-          RESTAURANT_DEMO_TABLE_TOKEN: "test-run-scoped-token",
-        });
+        expect(command.environment).toEqual(
+          expect.objectContaining({
+            FACTORY_COMPOSE_PROJECT_NAME: "factory-preview-preview-1",
+            FACTORY_WEB_PORT: "0",
+            FACTORY_API_PORT: "0",
+            RESTAURANT_DEMO_TABLE_TOKEN: "test-run-scoped-token",
+          }),
+        );
+        for (const key of dockerLookupVariables) {
+          if (process.env[key] !== undefined) {
+            expect(command.environment[key]).toBe(process.env[key]);
+          }
+        }
+        // The forwarded environment must be exactly the preview variables,
+        // the bootstrap token, and the Docker CLI lookup allowlist: no other
+        // host variable may reach the preview Docker commands, or the
+        // "bounded allowlist" property of the fix is unenforced.
+        const allowlistedKeys = new Set([
+          "FACTORY_COMPOSE_PROJECT_NAME",
+          "FACTORY_WEB_PORT",
+          "FACTORY_API_PORT",
+          "RESTAURANT_DEMO_TABLE_TOKEN",
+          ...dockerLookupVariables,
+        ]);
+        expect(
+          Object.keys(command.environment).every((key) =>
+            allowlistedKeys.has(key),
+          ),
+        ).toBe(true);
       }
     } finally {
       vi.unstubAllEnvs();
@@ -446,7 +494,10 @@ describe("preview runner", () => {
         startPreviewRun(root, request(registeredArtifacts), processRunner, {
           operationTimeoutMs: 10,
         }),
-      ).rejects.toMatchObject({ code: "preview_start_timeout" });
+      ).rejects.toMatchObject({
+        code: "preview_start_timeout",
+        cleanupComplete: false,
+      });
       expect(commands).toHaveLength(2);
       expect(commands[0]?.args).toContain("up");
       expect(commands[1]?.args).toContain("down");
@@ -664,7 +715,7 @@ describe("preview runner", () => {
 
       await expect(
         startPreviewRun(root, request(registeredArtifacts), processRunner),
-      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      ).rejects.toMatchObject({ code: "preview_artifact_failed" });
       expect(processRunner).not.toHaveBeenCalled();
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -684,7 +735,7 @@ describe("preview runner", () => {
     try {
       await expect(
         startPreviewRun(root, request(wrongSize), processRunner),
-      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      ).rejects.toMatchObject({ code: "preview_artifact_failed" });
       expect(processRunner).not.toHaveBeenCalled();
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -701,7 +752,7 @@ describe("preview runner", () => {
 
       await expect(
         startPreviewRun(root, request(registeredArtifacts), processRunner),
-      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      ).rejects.toMatchObject({ code: "preview_artifact_failed" });
       expect(processRunner).not.toHaveBeenCalled();
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -721,7 +772,7 @@ describe("preview runner", () => {
 
       await expect(
         startPreviewRun(root, request(registeredArtifacts), processRunner),
-      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      ).rejects.toMatchObject({ code: "preview_artifact_failed" });
       expect(processRunner).not.toHaveBeenCalled();
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -740,7 +791,7 @@ describe("preview runner", () => {
           request([...registeredArtifacts, registeredArtifacts[1]!]),
           processRunner,
         ),
-      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      ).rejects.toMatchObject({ code: "preview_artifact_failed" });
       expect(processRunner).not.toHaveBeenCalled();
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -761,7 +812,7 @@ describe("preview runner", () => {
 
       await expect(
         startPreviewRun(root, request(registeredArtifacts), processRunner),
-      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      ).rejects.toMatchObject({ code: "preview_artifact_failed" });
       expect(processRunner).not.toHaveBeenCalled();
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -803,7 +854,7 @@ describe("preview runner", () => {
             request([registeredArtifacts[0]!, entry]),
             processRunner,
           ),
-        ).rejects.toMatchObject({ code: "preview_start_failed" });
+        ).rejects.toMatchObject({ code: "preview_artifact_failed" });
         expect(processRunner).not.toHaveBeenCalled();
       } finally {
         await rm(root, { recursive: true, force: true });
@@ -825,7 +876,7 @@ describe("preview runner", () => {
           request([artifact("src/app.ts", application)]),
           processRunner,
         ),
-      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      ).rejects.toMatchObject({ code: "preview_artifact_failed" });
       expect(processRunner).not.toHaveBeenCalled();
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -866,12 +917,20 @@ describe("preview runner", () => {
             "--volumes",
             "--remove-orphans",
           ],
-          environment: {
+          environment: expect.objectContaining({
             FACTORY_COMPOSE_PROJECT_NAME: "factory-preview-preview-1",
-          },
+          }),
         },
         expect.any(AbortSignal),
       );
+      // Stop needs the same Docker CLI host lookup allowlist as start:
+      // without PROGRAMFILES the compose plugin is undiscoverable on
+      // Windows and `down` would fail exactly like `up` did.
+      const stopCommand = processRunner.mock.calls.at(-1)?.[0];
+      expect(stopCommand?.environment.PROGRAMFILES).toBe(
+        process.env.PROGRAMFILES,
+      );
+      expect(stopCommand?.environment.FACTORY_WEB_PORT).toBeUndefined();
       await expect(readFile(join(source, "src", "app.ts"))).resolves.toEqual(
         application,
       );
@@ -1102,7 +1161,7 @@ describe("preview runner", () => {
     try {
       await expect(
         startPreviewRun(root, request(registeredArtifacts), processRunner),
-      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      ).rejects.toMatchObject({ code: "preview_compose_up_failed" });
       expect(commands).toHaveLength(1);
       expect(commands[0]?.args).toContain("up");
     } finally {
@@ -1124,7 +1183,7 @@ describe("preview runner", () => {
     try {
       await expect(
         startPreviewRun(root, request(registeredArtifacts), startRunner),
-      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      ).rejects.toMatchObject({ code: "preview_compose_up_failed" });
       await expect(readFile(join(preview, "src", "app.ts"))).resolves.toEqual(
         application,
       );
@@ -1146,6 +1205,27 @@ describe("preview runner", () => {
         application,
       );
       await expect(readFile(join(preview, "src", "app.ts"))).rejects.toThrow();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports invalid Compose loopback ports as port discovery failures", async () => {
+    const { root } = await sourceFixture();
+    const processRunner: PreviewProcessRunner = async (command) => {
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "web")
+        return "0.0.0.0:49101\n";
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "api")
+        return "127.0.0.1:49102\n";
+    };
+
+    try {
+      await expect(
+        startPreviewRun(root, request(registeredArtifacts), processRunner),
+      ).rejects.toMatchObject({
+        code: "preview_port_discovery_failed",
+        cleanupComplete: true,
+      });
     } finally {
       await rm(root, { recursive: true, force: true });
     }

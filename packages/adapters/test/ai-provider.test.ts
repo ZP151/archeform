@@ -1,4 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+const sdkCreate = vi.hoisted(() => vi.fn());
+
+vi.mock("openai", () => ({
+  default: class OpenAI {
+    public readonly responses = { create: sdkCreate };
+  },
+}));
 
 import {
   createDraftRevision,
@@ -175,6 +183,28 @@ describe("AI Graph proposal adapter", () => {
       type: "string",
       const: "factory.graph-diff/v1",
     });
+  });
+
+  it("preserves Graph proposal SDK defaults when optional transport policy is absent", async () => {
+    sdkCreate.mockResolvedValueOnce({
+      output_text: JSON.stringify({
+        diff: serializedAddReceiptField,
+        impact: {
+          summary: "Adds a receipt URL.",
+          affectedModels: ["domain"],
+          risks: [],
+        },
+        testSuggestions: [],
+      }),
+    });
+    const provider = new OpenAIGraphProposalProvider({
+      readEnvironment: () => "test-key",
+    });
+
+    await provider.propose({ graph, brief: "Add optional receipts." });
+
+    expect(sdkCreate).toHaveBeenCalledOnce();
+    expect(sdkCreate.mock.calls[0]).toHaveLength(1);
   });
 
   it("rejects a response whose Graph Diff cannot apply to the draft", async () => {

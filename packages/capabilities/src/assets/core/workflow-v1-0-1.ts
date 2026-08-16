@@ -3,6 +3,7 @@ import type { CapabilityAssetV1 } from "../contract.js";
 export const workflowAssetV1_0_1: CapabilityAssetV1 = {
   manifest: {
     apiVersion: "factory.capability/v1",
+    bindingContract: "factory.capability-binding/v1",
     key: "core.workflow",
     version: "1.0.1",
     category: "core",
@@ -10,11 +11,11 @@ export const workflowAssetV1_0_1: CapabilityAssetV1 = {
     description: "Runs declared state transitions, guards, and human tasks.",
     packageRoot: "packages/capabilities/assets/core.workflow/1.0.1",
     manifestDigest:
-      "sha256:8de6fdf5675c757d775ab5d563a738896f48473a0bbaa3d250790bccea5fcff0",
+      "sha256:16ebf7d8128f30e656d7c86e39ef36323991cf7af7ea18a5d81a3ac0e4c06884",
     lifecycle: "golden",
     profiles: ["expense-approval", "restaurant-ordering", "simple-ecommerce"],
     effects: ["flow.transition", "flow.assign-task"],
-    inputSchema: [{ key: "flows", type: "flow.model", required: true }],
+    inputSchema: [{ key: "flowKey", type: "flow.flow", required: true }],
     outputSlots: ["api.runtime", "flow.effect", "test.fixture"],
     templates: [
       {
@@ -29,7 +30,11 @@ export const workflowAssetV1_0_1: CapabilityAssetV1 = {
     parameters: [{ key: "flowKey", type: "graph-symbol", required: true }],
     verification: {
       fixture: "fixtures/default.json",
+      fixtureDigest:
+        "sha256:aa7783202e6f8c2148561f4f93b8577ff5768438315f06abdb4a0242ea514255",
       contractTest: "tests/contract.json",
+      contractTestDigest:
+        "sha256:0dcf1aa4e43a556075472cfe8e640974240fde538dd226588efa43f14d86d67a",
       status: "verified",
     },
   },

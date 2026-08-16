@@ -12,12 +12,34 @@
   "profiles": ["expense-approval", "simple-ecommerce"],
   "effects": ["identity.context.resolve", "authorization.decision"],
   "inputSchema": [
-    { "key": "principalEntity", "type": "domain.entity", "required": true },
-    { "key": "sessionEntity", "type": "domain.entity", "required": true },
-    { "key": "defaultRole", "type": "policy.role", "required": true },
-    { "key": "authenticatedRole", "type": "policy.role", "required": true }
+    {
+      "key": "principalEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "sessionEntity",
+      "type": "domain.entity",
+      "required": true
+    },
+    {
+      "key": "defaultRole",
+      "type": "policy.role",
+      "required": true
+    },
+    {
+      "key": "authenticatedRole",
+      "type": "policy.role",
+      "required": true
+    }
   ],
-  "outputSlots": ["api.runtime", "api.service", "policy.rule", "test.fixture", "web.navigation"],
+  "outputSlots": [
+    "api.runtime",
+    "api.service",
+    "policy.rule",
+    "test.fixture",
+    "web.navigation"
+  ],
   "templates": [
     {
       "id": "api-capability-module",
@@ -66,18 +88,46 @@
     }
   ],
   "parameters": [
-    { "key": "principalEntity", "type": "graph-symbol", "required": true },
-    { "key": "sessionEntity", "type": "graph-symbol", "required": true },
-    { "key": "defaultRole", "type": "graph-symbol", "required": true },
-    { "key": "authenticatedRole", "type": "graph-symbol", "required": true }
+    {
+      "key": "principalEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "sessionEntity",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "defaultRole",
+      "type": "graph-symbol",
+      "required": true
+    },
+    {
+      "key": "authenticatedRole",
+      "type": "graph-symbol",
+      "required": true
+    }
   ],
   "requires": [
-    { "interfaceKey": "policy.resource-action", "version": "v1" },
-    { "interfaceKey": "audit.event", "version": "v1" }
+    {
+      "interfaceKey": "policy.resource-action",
+      "version": "v1"
+    },
+    {
+      "interfaceKey": "audit.event",
+      "version": "v1"
+    }
   ],
   "provides": [
-    { "interfaceKey": "identity.principal-context", "version": "v1" },
-    { "interfaceKey": "authorization.decision", "version": "v1" }
+    {
+      "interfaceKey": "identity.principal-context",
+      "version": "v1"
+    },
+    {
+      "interfaceKey": "authorization.decision",
+      "version": "v1"
+    }
   ],
   "verification": {
     "fixture": "fixtures/default.json",

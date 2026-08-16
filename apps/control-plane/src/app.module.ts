@@ -6,6 +6,13 @@ import {
   BullMqCompilationQueue,
   COMPILATION_QUEUE,
 } from "./compilation-queue.js";
+import { CompositionController } from "./composition/composition.controller.js";
+import {
+  COMPOSITION_PLANNER,
+  CompositionService,
+  createCompositionPlannerProvider,
+} from "./composition/composition.service.js";
+import { ProductCompositionService } from "./composition/product-composition.service.js";
 import {
   createGraphProposalProvider,
   GRAPH_PROPOSAL_PROVIDER,
@@ -18,20 +25,47 @@ import {
   PREVIEW_RUN_QUEUE,
 } from "./preview-run-queue.js";
 import { PortfolioModule } from "./portfolio/portfolio.module.js";
+import { VerificationController } from "./verification/verification.controller.js";
+import { VerificationService } from "./verification/verification.service.js";
+import { TemplateController } from "./template/template.controller.js";
+import { TemplateService } from "./template/template.service.js";
+import {
+  BullMqVerificationRunQueue,
+  VERIFICATION_RUN_QUEUE,
+} from "./verification-run-queue.js";
 
 @Module({
   imports: [PrismaModule, PortfolioModule],
-  controllers: [AppController, LifecycleController],
+  controllers: [
+    AppController,
+    LifecycleController,
+    VerificationController,
+    CompositionController,
+    TemplateController,
+  ],
   providers: [
     AppService,
     LifecycleService,
+    VerificationService,
+    CompositionService,
+    ProductCompositionService,
+    TemplateService,
     BullMqCompilationQueue,
     BullMqPreviewRunQueue,
+    BullMqVerificationRunQueue,
     { provide: COMPILATION_QUEUE, useExisting: BullMqCompilationQueue },
     { provide: PREVIEW_RUN_QUEUE, useExisting: BullMqPreviewRunQueue },
     {
+      provide: VERIFICATION_RUN_QUEUE,
+      useExisting: BullMqVerificationRunQueue,
+    },
+    {
       provide: GRAPH_PROPOSAL_PROVIDER,
       useFactory: createGraphProposalProvider,
+    },
+    {
+      provide: COMPOSITION_PLANNER,
+      useFactory: createCompositionPlannerProvider,
     },
   ],
 })

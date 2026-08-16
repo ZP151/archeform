@@ -1,0 +1,22 @@
+{
+  "apiVersion": "factory.adapter/v1",
+  "kind": "declarative",
+  "outputSlots": ["api.runtime", "flow.effect"],
+  "parameters": [
+    { "key": "approvalEntity", "type": "graph-symbol", "required": true },
+    { "key": "approvalRole", "type": "graph-symbol", "required": true }
+  ],
+  "templates": [
+    {
+      "id": "api-capability-module",
+      "source": "templates/api/capability-module.ts.tpl",
+      "target": "api/src/capabilities/core.approvals.ts",
+      "outputSlot": "api.runtime",
+      "digest": "sha256:131d6bfe54716b07d718ca07aea20b01f2dbc5feb411b7d20dcdd3e2a6ff2d26"
+    }
+  ],
+  "contributes": { "effects": ["approval.request"] },
+  "disable": {
+    "removeIntegrationCapabilities": ["approval.request"]
+  }
+}

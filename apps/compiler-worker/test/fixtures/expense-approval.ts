@@ -1,0 +1,81 @@
+import {
+  composeDefaultCapabilityDraft,
+  createCapabilityCompositionLock,
+} from "@factory/capabilities";
+import type { PublishedGraphInput } from "@factory/compiler";
+import { hashApplicationGraph } from "@factory/graph";
+
+/**
+ * The deterministic acceptance profile for Task 6: the Expense Approval
+ * composition. The generated application is session-bound (the composition
+ * requires `core.identity-policy`, whose `local-fixture-sessions` contribution
+ * makes the API resolve principals from `x-factory-fixture-session` and deny
+ * 403 without one) and authorizes declared resource/action pairs before any
+ * record lookup.
+ *
+ * The composed draft declares the deterministic seed record
+ * (`expense-fixture-01` in the flow's initialState `draft`) from the profile
+ * starter graph; the generated app's migrate service seeds it at boot, which
+ * makes every journey replayable from a clean boot.
+ *
+ * The fixture is a pure function of the profile name: same input, same
+ * graph, same lock, same digest. It is consumed by the worker integration
+ * tests and the Docker-backed acceptance command.
+ */
+
+export const acceptanceProfileKey = "expense-approval";
+export const acceptancePublishedRevisionId = "published-expense-approval-1";
+
+export function acceptanceCompilation(): PublishedGraphInput {
+  const draft = composeDefaultCapabilityDraft({
+    profile: acceptanceProfileKey,
+  }).graph;
+  const selections = draft.integration.compositionSelections;
+  const graph = structuredClone(draft);
+  delete graph.integration.compositionSelections;
+  return {
+    publishedRevisionId: acceptancePublishedRevisionId,
+    graph,
+    compositionLock: createCapabilityCompositionLock({
+      graphChecksum: hashApplicationGraph(graph),
+      selections,
+    }),
+  };
+}
+
+/** The immutable artifact manifest the acceptance compilation records. */
+export function acceptanceManifest(): readonly {
+  readonly path: string;
+  readonly digest: string;
+  readonly sizeBytes: number;
+}[] {
+  return [
+    {
+      path: "docker-compose.yml",
+      digest:
+        "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      sizeBytes: 512,
+    },
+    {
+      path: "api/package.json",
+      digest:
+        "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      sizeBytes: 1024,
+    },
+    // The real generated bundle carries Next.js catch-all dynamic routes;
+    // the manifest must match the compiled shape or the evidence contract
+    // never sees the segments it actually has to allow.
+    {
+      path: "web/app/[...path]/page.tsx",
+      digest:
+        "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      sizeBytes: 2048,
+    },
+    {
+      path: "web/app/api/[...path]/route.ts",
+      digest:
+        "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      sizeBytes: 2048,
+    },
+  ];
+}

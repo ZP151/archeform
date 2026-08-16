@@ -42,6 +42,28 @@ export {
   createCapabilityCompositionLock,
   resolveCapabilityComposition,
 } from "./composition.js";
+export {
+  evaluateFoundryAdmission,
+  expectedFoundryLockDigest,
+} from "./foundry-admission.js";
+export type {
+  FoundryAdmissionEvidenceV1,
+  FoundryAdmissionResultV1,
+  FoundryAdmissionVerdictV1,
+  FoundryProfileLockEvidenceV1,
+} from "./foundry-admission.js";
+export {
+  declaredFoundryFamilyEvidence,
+  familyEvidenceToAdmissionEvidence,
+} from "./foundry-evidence.js";
+export type { FoundryFamilyEvidenceV1 } from "./foundry-evidence.js";
+export { buildFoundryMatrix } from "./foundry-matrix.js";
+export type {
+  FoundryMatrixCountsV1,
+  FoundryMatrixResultV1,
+  FoundryMatrixRowV1,
+  FoundryMatrixV1,
+} from "./foundry-matrix.js";
 export type {
   ProfileCapabilityReadinessV1,
   ProfileGeneratedTargetV1,
@@ -92,12 +114,61 @@ export type {
   CreateCapabilityCompositionLockInput,
   ResolveCapabilityCompositionInput,
 } from "./composition.js";
+export {
+  assertProductCapabilityCatalogue,
+  currentCapabilityCatalogue,
+  currentProductRecipeCatalogue,
+  selectProductRecipeForIntent,
+} from "./capability-catalogue.js";
+export type {
+  CatalogueAssetRefV1,
+  CapabilityTrigger,
+  ProductCapabilityCatalogueV1,
+  SelectProductRecipeForIntentInput,
+} from "./capability-catalogue.js";
+export {
+  composeProductRecipe,
+  composeProductDraft,
+  composeProductIntegration,
+  deriveProductOperations,
+  hasApprovalDecision,
+  primaryListPage,
+} from "./product-composer.js";
+export type {
+  ComposeProductRecipeInput,
+  ComposeProductRecipeOutcome,
+  ProductDerivationInput,
+  ProductDerivationOutcome,
+} from "./product-composer.js";
+export {
+  planProductAlternatives,
+  planProductRecipeAlternative,
+} from "./plan-alternatives.js";
+export type {
+  PlanProductAlternativesInput,
+  ProductPlanAlternative,
+  ProductPlanAlternativeKey,
+} from "./plan-alternatives.js";
 
 export {
   assertRestaurantOrderingProfile,
   hasRestaurantOrderingComposition,
   validateRestaurantOrderingProfile,
 } from "./restaurant/profile.js";
+export {
+  restaurantAcceptanceJourneyKeys,
+  restaurantOrderingProductRecipe,
+  restaurantProductPages,
+} from "./restaurant/product-recipe.js";
+export type { RestaurantProductPageDefinition } from "./restaurant/product-recipe.js";
+export { composeRestaurantProductGraph } from "./restaurant/product-graph.js";
+export type { ComposeRestaurantProductGraphInput } from "./restaurant/product-graph.js";
+export {
+  getCanonicalRestaurantAuthority,
+  restaurantOrderingExperienceBrief,
+  restaurantOrderingProductIntent,
+  type CanonicalRestaurantAuthorityV1,
+} from "./restaurant/canonical-restaurant.js";
 export type {
   RestaurantAdjustmentReason,
   RestaurantEntityKey,
@@ -491,6 +562,11 @@ const allowedEffectProviderOverlaps: Readonly<
   "inventory.reserve": ["commerce.inventory", "commerce.inventory-ledger"],
   "inventory.release": ["commerce.inventory", "commerce.inventory-ledger"],
   "inventory.decrement": ["commerce.inventory", "commerce.inventory-ledger"],
+  // Batch 5: restaurant.menu adjusts item stock on the menu-item entity;
+  // commerce.inventory-ledger records the same adjustment as a movement.
+  // One drives, one records — the same declared pair pattern as the
+  // reserve/release/decrement allowlist above.
+  "inventory.adjust": ["commerce.inventory-ledger", "restaurant.menu"],
 };
 
 function assertCapabilityEffectProviderOverlaps(
@@ -830,6 +906,7 @@ const compositionRecipes: Readonly<
 > = {
   "expense-approval": {
     requiredCapabilities: [
+      "core.approvals",
       "core.audit",
       "core.crud",
       "core.workflow",
@@ -842,6 +919,7 @@ const compositionRecipes: Readonly<
     requiredCapabilities: [
       "core.audit",
       "core.crud",
+      "core.files-media",
       "core.workflow",
       "commerce.catalog",
       "commerce.cart",
@@ -854,6 +932,7 @@ const compositionRecipes: Readonly<
       "core.identity-context",
       "core.location-context",
       "restaurant.table-session",
+      "restaurant.menu",
       "restaurant.ordering",
       "restaurant.kitchen",
       "restaurant.cashier",
@@ -865,7 +944,9 @@ const compositionRecipes: Readonly<
     requiredCapabilities: [
       "core.audit",
       "core.crud",
+      "core.files-media",
       "core.notification",
+      "core.search",
       "core.workflow",
       "commerce.catalog",
       "commerce.cart",
@@ -989,6 +1070,10 @@ const baseProfileCompositionBindings: Readonly<
   >
 > = {
   "expense-approval": {
+    "core.approvals": {
+      approvalEntity: { graphSymbol: "graph.domain.expense" },
+      approvalRole: { graphSymbol: "graph.policy.manager" },
+    },
     "core.audit": {
       actorRole: { graphSymbol: "graph.policy.employee" },
     },
@@ -1019,6 +1104,13 @@ const baseProfileCompositionBindings: Readonly<
       entityKey: { graphSymbol: "graph.domain.menu-item" },
       routeKey: { graphSymbol: "graph.page.customer-menu" },
     },
+    "core.files-media": {
+      mediaEntity: { graphSymbol: "graph.domain.menu-item" },
+      fileField: {
+        graphSymbol: "graph.domain.menu-item",
+        fieldKey: "imageUrl",
+      },
+    },
     "core.notification": {
       recipientRole: { graphSymbol: "graph.policy.customer" },
     },
@@ -1038,11 +1130,17 @@ const baseProfileCompositionBindings: Readonly<
     },
     "commerce.inventory": {
       catalogEntity: { graphSymbol: "graph.domain.menu-item" },
-      stockField: { graphSymbol: "graph.domain.stock" },
+      stockField: {
+        graphSymbol: "graph.domain.menu-item",
+        fieldKey: "stock",
+      },
     },
     "commerce.inventory-ledger": {
       catalogEntity: { graphSymbol: "graph.domain.menu-item" },
-      stockField: { graphSymbol: "graph.domain.stock" },
+      stockField: {
+        graphSymbol: "graph.domain.menu-item",
+        fieldKey: "stock",
+      },
       movementEntity: { graphSymbol: "graph.domain.inventory-ledger" },
       orderEntity: { graphSymbol: "graph.domain.order" },
       locationEntity: { graphSymbol: "graph.domain.restaurant-location" },
@@ -1094,7 +1192,10 @@ const baseProfileCompositionBindings: Readonly<
     "core.location-context": {
       locationEntity: { graphSymbol: "graph.domain.restaurant-table" },
       contextEntity: { graphSymbol: "graph.domain.table-session" },
-      locationCodeField: { graphSymbol: "graph.domain.code" },
+      locationCodeField: {
+        graphSymbol: "graph.domain.restaurant-table",
+        fieldKey: "code",
+      },
       customerRole: { graphSymbol: "graph.policy.customer" },
     },
     "restaurant.table-session": {
@@ -1102,6 +1203,11 @@ const baseProfileCompositionBindings: Readonly<
       sessionEntity: { graphSymbol: "graph.domain.table-session" },
       entryPage: { graphSymbol: "graph.page.table-entry" },
       customerRole: { graphSymbol: "graph.policy.customer" },
+    },
+    "restaurant.menu": {
+      categoryEntity: { graphSymbol: "graph.domain.menu-category" },
+      itemEntity: { graphSymbol: "graph.domain.menu-item" },
+      inventoryEntity: { graphSymbol: "graph.domain.menu-item" },
     },
     "restaurant.ordering": {
       orderEntity: { graphSymbol: "graph.domain.order" },
@@ -1139,9 +1245,20 @@ const baseProfileCompositionBindings: Readonly<
       entityKey: { graphSymbol: "graph.domain.product" },
       routeKey: { graphSymbol: "graph.page.catalog" },
     },
+    "core.files-media": {
+      mediaEntity: { graphSymbol: "graph.domain.product" },
+      fileField: {
+        graphSymbol: "graph.domain.product",
+        fieldKey: "imageUrl",
+      },
+    },
     "core.notification": {
       recipientRole: { graphSymbol: "graph.policy.shopper" },
       template: "ecommerce.order-outcome",
+    },
+    "core.search": {
+      searchEntity: { graphSymbol: "graph.domain.product" },
+      searchField: { graphSymbol: "graph.domain.product", fieldKey: "name" },
     },
     "core.workflow": {
       flowKey: { graphSymbol: "graph.flow.ecommerce-order" },
@@ -1159,11 +1276,17 @@ const baseProfileCompositionBindings: Readonly<
     },
     "commerce.inventory": {
       catalogEntity: { graphSymbol: "graph.domain.product" },
-      stockField: { graphSymbol: "graph.domain.stock" },
+      stockField: {
+        graphSymbol: "graph.domain.product",
+        fieldKey: "stock",
+      },
     },
     "commerce.inventory-ledger": {
       catalogEntity: { graphSymbol: "graph.domain.product" },
-      stockField: { graphSymbol: "graph.domain.stock" },
+      stockField: {
+        graphSymbol: "graph.domain.product",
+        fieldKey: "stock",
+      },
       movementEntity: { graphSymbol: "graph.domain.stock-movement" },
       orderEntity: { graphSymbol: "graph.domain.order" },
       locationEntity: { graphSymbol: "graph.domain.store" },
@@ -1217,7 +1340,10 @@ const baseProfileCompositionBindings: Readonly<
     "core.location-context": {
       locationEntity: { graphSymbol: "graph.domain.store" },
       contextEntity: { graphSymbol: "graph.domain.shopper-session" },
-      locationCodeField: { graphSymbol: "graph.domain.code" },
+      locationCodeField: {
+        graphSymbol: "graph.domain.store",
+        fieldKey: "code",
+      },
       customerRole: { graphSymbol: "graph.policy.shopper" },
     },
   },
@@ -1653,6 +1779,17 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
               to: "expense-principal",
               kind: "many-to-one",
               field: "subjectRef",
+            },
+          ],
+          seedData: [
+            {
+              entity: "expense",
+              id: "expense-fixture-01",
+              values: {
+                amount: "125.50",
+                description: "Team lunch",
+                status: "draft",
+              },
             },
           ],
         },
@@ -2870,6 +3007,7 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
                 { key: "name", type: "string", required: true },
                 { key: "price", type: "decimal", required: true },
                 { key: "stock", type: "integer", required: true },
+                { key: "imageUrl", type: "url", required: true },
               ],
               indexes: [],
             },
@@ -3051,12 +3189,22 @@ const profileBaseGraphTemplates: readonly ProfileGraphStarter[] = Object.freeze(
             {
               entity: "product",
               id: "everyday-tote",
-              values: { name: "Everyday tote", price: 48, stock: 20 },
+              values: {
+                name: "Everyday tote",
+                price: 48,
+                stock: 20,
+                imageUrl: "/products/everyday-tote.jpg",
+              },
             },
             {
               entity: "product",
               id: "studio-lamp",
-              values: { name: "Studio lamp", price: 85, stock: 8 },
+              values: {
+                name: "Studio lamp",
+                price: 85,
+                stock: 8,
+                imageUrl: "/products/studio-lamp.jpg",
+              },
             },
             {
               entity: "product-option-group",

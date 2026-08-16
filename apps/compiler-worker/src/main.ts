@@ -1,5 +1,13 @@
+import { spawnSync } from "node:child_process";
+import { join } from "node:path";
+
 import { Queue, Worker } from "bullmq";
 
+import { boundedFailureMessage } from "./diagnostics.js";
+import {
+  executeCompilation,
+  executeV3Compilation,
+} from "./compilation-executor.js";
 import { createControlPlaneReporter } from "./control-plane-reporter.js";
 import { readWorkerConfig } from "./config.js";
 import {
@@ -13,12 +21,56 @@ import {
 } from "./queued-preview-run.js";
 import { createPreviewReporter } from "./preview-reporter.js";
 import { createPreviewDispatchClient } from "./preview-dispatch-client.js";
+import {
+  runDockerCompose,
+  startPreviewRun,
+  stopPreviewRun,
+} from "./preview-runner.js";
+import { createVerificationReporter } from "./verification-reporter.js";
+import {
+  executeQueuedVerificationRun,
+  type VerificationRunInput,
+} from "./verifier/verification-job.js";
+import { createLoggedVerificationOperations } from "./verifier/verification-logging.js";
 
 const config = readWorkerConfig();
 const connection = {
   url: config.redisUrl,
   ...(config.redisPassword ? { password: config.redisPassword } : {}),
 };
+
+/**
+ * Runs one generated V3 bundle journey test file through the Node test runner
+ * and reports pass/fail. The V3 restaurant API is startup-role-bound and its
+ * merchant journey spans manager + kitchen roles, so the generated tests (which
+ * start each role sequentially over a shared state file) are the authoritative
+ * verification rather than header-bound HTTP probes.
+ */
+function runNodeTest(
+  directory: string,
+  testPath: string,
+  signal: AbortSignal,
+): Promise<{ passed: boolean }> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new Error("V3 verification was aborted."));
+      return;
+    }
+    const result = spawnSync(
+      process.execPath,
+      ["--test", join(directory, testPath)],
+      {
+        encoding: "utf8",
+        timeout: 60_000,
+      },
+    );
+    if (result.error) {
+      reject(result.error);
+      return;
+    }
+    resolve({ passed: result.status === 0 });
+  });
+}
 const reporter = createControlPlaneReporter(
   config.controlPlaneUrl,
   config.internalWorkerToken,
@@ -32,6 +84,10 @@ const previewDispatchClient = createPreviewDispatchClient(
   config.internalWorkerToken,
 );
 const previewRuntime = createPreviewRuntime(config.previewOperationTimeoutMs);
+const verificationReporter = createVerificationReporter(
+  config.controlPlaneUrl,
+  config.internalWorkerToken,
+);
 
 const queue = new Queue(config.queueName, { connection });
 const worker = new Worker<CompilationJob>(
@@ -54,6 +110,52 @@ const previewWorker = new Worker<PreviewRunJob>(
     ),
   { connection, concurrency: 2 },
 );
+const verificationQueue = new Queue(config.verificationQueueName, {
+  connection,
+});
+
+const verificationWorker = new Worker<VerificationRunInput>(
+  config.verificationQueueName,
+  async (job) => {
+    const loggedOperations = createLoggedVerificationOperations({
+      jobId: job.id,
+      executeCompilation,
+      startPreviewRun,
+      stopPreviewRun,
+      logger: console,
+    });
+    return executeQueuedVerificationRun(
+      config.artifactRoot,
+      job.data,
+      verificationReporter,
+      {
+        operationTimeoutMs: config.previewOperationTimeoutMs,
+        ...loggedOperations,
+        executeV3Compilation,
+        runNodeTest,
+        processRunner: runDockerCompose,
+        fetch,
+      },
+    );
+  },
+  { connection },
+);
+
+verificationWorker.on("failed", (job, error) => {
+  console.error(
+    `Factory verification job ${boundedFailureMessage(job?.id ?? "unknown")} failed: ${boundedFailureMessage(error)}`,
+  );
+});
+verificationWorker.on("stalled", (jobId) => {
+  console.error(
+    `Factory verification job stalled: ${boundedFailureMessage(jobId)}`,
+  );
+});
+verificationWorker.on("error", (error) => {
+  console.error(
+    `Factory verification worker error: ${boundedFailureMessage(error)}`,
+  );
+});
 
 worker.on("ready", () => {
   console.info(`Factory compiler worker ready for queue ${config.queueName}`);
@@ -63,6 +165,11 @@ previewWorker.on("ready", () => {
     `Factory preview worker ready for queue ${config.previewQueueName}`,
   );
 });
+verificationWorker.on("ready", () => {
+  console.info(
+    `Factory verification worker ready for queue ${config.verificationQueueName}`,
+  );
+});
 
 async function shutdown(): Promise<void> {
   await Promise.all([
@@ -70,6 +177,8 @@ async function shutdown(): Promise<void> {
     queue.close(),
     previewWorker.close(),
     previewQueue.close(),
+    verificationWorker.close(),
+    verificationQueue.close(),
   ]);
 }
 

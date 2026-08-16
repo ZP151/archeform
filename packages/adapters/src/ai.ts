@@ -119,6 +119,9 @@ export type OpenAITransportRequest = {
   store: false;
   strictJson: true;
   jsonSchema: Record<string, unknown>;
+  signal?: AbortSignal;
+  timeout?: 180_000;
+  maxRetries?: 0;
 };
 
 /**
@@ -228,20 +231,31 @@ class OpenAIResponsesApiTransport implements OpenAIResponseTransport {
     // The API key exists only in this invocation's stack frame. The OpenAI SDK and
     // this adapter are configured not to persist the response remotely or locally.
     const client = new OpenAI({ apiKey: request.apiKey });
-    const response = await client.responses.create({
+    const body = {
       model: request.model,
       instructions: request.instructions,
       input: request.input,
       store: request.store,
       text: {
         format: {
-          type: "json_schema",
+          type: "json_schema" as const,
           name: "factory_graph_diff_proposal",
           strict: request.strictJson,
           schema: request.jsonSchema,
         },
       },
-    });
+    };
+    const options = {
+      ...(request.signal === undefined ? {} : { signal: request.signal }),
+      ...(request.timeout === undefined ? {} : { timeout: request.timeout }),
+      ...(request.maxRetries === undefined
+        ? {}
+        : { maxRetries: request.maxRetries }),
+    };
+    const response =
+      Object.keys(options).length === 0
+        ? await client.responses.create(body)
+        : await client.responses.create(body, options);
     return { outputText: response.output_text };
   }
 }

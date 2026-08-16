@@ -10,6 +10,11 @@ const puckTypeByBlockType = {
   cart: "Cart",
   queue: "Queue",
   checkout: "Checkout",
+  stats: "Stats",
+  list: "List",
+  detail: "Detail",
+  calendar: "Calendar",
+  settings: "Settings",
 } as const;
 
 type SupportedBlockType = keyof typeof puckTypeByBlockType;

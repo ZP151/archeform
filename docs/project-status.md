@@ -1,1489 +1,827 @@
-# Factory Pilot delivery status
-
-Updated: 2026-08-06
-
-## Approved implementation target — 2026-08-02
-
-The forward implementation target is a **Graph-first verified application
-factory**, not a Graph-to-code generator or a collection of frameworks. The
-immutable Published Graph remains the sole compilation input; generated source,
-editors, AI, compiler targets, and providers remain adapters. The authoritative
-roadmap is [`roadmap.md`](roadmap.md).
-
-P0 is to modularise compilation through `CompilerTargetPluginV1`
-(`supports -> plan -> render -> validate`) and migrate docs, policy, and
-database targets only after comparison with current compiler output digests. In
-parallel, generated applications gain an isolated verification loop covering
-boot, migrations, health, APIs, role journeys, authorization denial,
-idempotency, cleanup, safe diagnosis, and a new reviewable Draft Diff. Neither
-the verifier nor diagnosis may patch generated source; Published Graphs and
-Compilations remain immutable.
-
-P1 is staged AI composition (`RequirementSpec -> CompositionPlan -> constrained
-Graph Diff`), cross-profile capabilities, and Workbench expansion through
-Factory-owned wrappers and the capability registry. P2 is managed deployment,
-observability, fleet upgrades, and rollbacks; P3 is additional framework
-adapters. Prospective Testcontainers for Node, fast-check, and ts-morph use,
-and source-study-only references, remain subject to the existing licence,
-provenance, notice, and security gates.
-
-Retail Counter and Grocery Pickup are independently accepted as local generated
-prototypes through the shared `commerce.order-operations@1.1.0` lock, including
-Preview stop and cleanup. This is not production readiness and does not alter
-the historical evidence below.
-
-The next bounded execution goal is the P0 Compiler Target Plugin Kernel. Its
-first gate reconciles Typed Capability Binding Task 2 with accepted Task 2A;
-plugin implementation cannot begin while that compiler-admission dependency is
-unexplained. After reconciliation, the goal introduces
-`CompilerTargetPluginV1` and serially migrates documentation, policy, and
-database targets through exact file/byte/digest parity. See
-`docs/superpowers/specs/2026-08-06-compiler-target-plugin-kernel-goal-design.md`.
-
-## Durable notification outbox across Expense and Ecommerce — 2026-08-01
-
-New Expense Approval and Simple Ecommerce Drafts now select the same immutable
-`core.notification@1.1.1` package and digest. Their validated recipe bindings
-remain profile-local: Expense targets `employee` with
-`expense.approval-outcome`, while Ecommerce targets `shopper` with
-`ecommerce.order-outcome`. Expense approval/rejection and Ecommerce payment
-outcomes now write notification intents through the generated transactional
-runtime.
-
-Focused generated-runtime evidence materialized both profile bundles, executed
-the Expense approval and Ecommerce payment journeys, drained each deterministic
-local worker, and observed one delivered entry with the locked profile role and
-template. The same suite keeps historical `core.notification@1.1.0` replay at
-`template: null`, exercises retry and terminal failure behavior, and rejects a
-recipe missing `recipientRole`. Temporary generated source directories are
-removed by the test harness. Isolated Compose previews, resource cleanup, full
-repository gates, and the guarded real-model check remain the separate final
-release-evidence task; no external notification provider is enabled.
-
-## Identity and policy cross-profile foundation — 2026-08-01
-
-`core.identity-policy@1.0.0` is a locked Golden package for Expense Approval
-and Simple Ecommerce. Generated local APIs now resolve an opaque local fixture
-principal and evaluate the exact declared event action before a protected
-mutation changes application state. A browser journey proved employee submit
-and manager approval while rejecting employee approval; it also proved shopper
-checkout and merchant fulfilment while rejecting shopper fulfilment. Both
-isolated generated previews were stopped and their resources cleaned up.
-
-The Workbench portfolio now exposes a source-free readiness projection for the
-locked family: package key, version, Golden lifecycle, Profile count,
-verification state, and generated-target state. It deliberately omits package
-source, policy source, fixture-session identifiers, provider metadata,
-credentials, and AI request or response data. This remains local-prototype
-identity only; provider-backed identity and fine-grained authorization are
-separate delivery slices. See
-`docs/acceptance/identity-policy-cross-profile.md` for the exact boundary and
-the completed guarded real-model check: one accepted Graph Diff was applied to
-an Expense Draft, then published and compiled successfully without retaining
-its prompt, response, or credential.
-
-## Current iteration — generated-product evidence and scalable reuse
-
-Factory Pilot remains an Application Graph composition platform, not yet a
-production-complete catalogue of one hundred applications. The current
-foundation is materially stronger than a label-only template catalogue:
-
-- Five starter Profiles exist: Expense Approval, Restaurant Ordering, Simple
-  Ecommerce, Retail Counter, and Grocery Pickup. The checked catalogue contains
-  twenty-three capability package keys and fifty physical version directories.
-  Counts are inventory, not a claim of full business completeness.
-- Before this acceptance slice, isolated Docker browser journeys passed for three generated
-  applications: specialised Restaurant Ordering (table session, menu ordering,
-  simulated payment, kitchen, cashier, audit, and cleanup), generic Expense
-  Approval (publish, compile, role-aware operation, stop, and cleanup), and
-  Simple Ecommerce (catalog, session-persisted cart, declared Checkout page,
-  submit, pay, merchant fulfilment, and cleanup).
-- The current Restaurant compiler output now persists option groups, line
-  options, location-scoped inventory idempotency keys, and their migration
-  schema. A generic capability-contract regression was also repaired so
-  generated non-commerce APIs declare every emitted handler type.
-- Retail Counter and Grocery Pickup now have independent isolated
-  generated-application acceptance: both followed Draft, Publish, immutable
-  Compilation, role operation, Preview stop, and exact cleanup. Retail Counter
-  ended at `receipt-issued`; Grocery Pickup progressed through `paid`,
-  `picking`, `pickup-ready`, and `handed-off`. The platform still lacks
-  production identity, real payments, durable provider delivery,
-  observability, fleet upgrades, and managed deployment. See
-  `docs/acceptance/retail-grocery-order-operations.md`.
-
-### Candidate Foundry acceleration
-
-The local Intake CLI now supports a bounded all-family GitHub metadata pass.
-It executes only Factory-owned fixed queries sequentially, resolves default
-branches before a record becomes eligible, and returns a source-free
-continuation checkpoint on a GitHub rate limit. It does not download source,
-create a Candidate, install a dependency, promote a Golden asset, or modify a
-Graph or generated application.
-
-A guarded live metadata pass completed the identity, catalog, and
-commerce-transaction families before GitHub requested a pause. It evaluated
-sixty metadata records: thirty-four passed the fixed-reference and declared
-license preflight for later quarantine study, and twenty-six were blocked by
-the license gate. No source content or Candidate was persisted. Fresh
-verification for this change: `@factory/intake-cli` 67 tests, typecheck,
-Prettier lint, and build all passed.
-
-The compiler's current-profile regression gate is also green after replacing
-a stale hard-coded current-asset version assertion with the compiler boundary
-it is intended to verify: the selected immutable Graph lock must be emitted
-unchanged, while the historical lock remains replayable. Fresh verification:
-the focused compilation-plan suite passed 49 tests; `@factory/compiler`
-passed 208 tests, typecheck, Prettier lint, and build.
-
-### Next smallest delivery slice
-
-Reconcile Typed Capability Binding Task 2 against accepted Task 2A using fresh
-focused evidence and its existing state machine. When that compiler-admission
-dependency is accepted, implement the `CompilerTargetPluginV1` kernel and
-migrate the documentation target with exact parity. `commerce.cart@1.0.1`
-already has a package-owned handler and is not the next unimplemented slice.
-
-## Persistent shared order operations — 2026-08-01
-
-`commerce.order-operations@1.1.0` is an immutable Golden package that owns a
-versioned payment/idempotency receipt persistence contribution. The historical
-`1.0.0` and `1.0.1` identities and digests remain resolvable. New Drafts for
-Restaurant Ordering, Simple Ecommerce, Retail Counter, and Grocery Pickup lock
-`1.1.0`.
-
-For the generic commerce compiler path, the package now emits an
-`OrderOperationReceipt` Prisma model and migration, a Store transaction
-boundary, and a Prisma `upsert` implementation that round-trips the package
-payment contract. The generated runtime no longer owns a process-local receipt
-Map: recreating it around the same Store rejects a duplicate idempotency key.
-
-Restaurant remains a separate specialised runtime. It already persists
-`RestaurantCommand`, `PaymentAttempt`, receipt, inventory, audit, and outbox
-records in a Prisma transaction; the generic receipt contribution is consumed
-by the Ecommerce, Retail Counter, and Grocery Pickup runtime path. All four
-paths now have fresh isolated generated-application browser journey evidence:
-Restaurant, Ecommerce, Retail Counter, and Grocery Pickup. The latter two are
-accepted local generated prototypes through the shared lock; this does not make
-the portfolio production-complete. See
-`docs/acceptance/retail-grocery-order-operations.md`.
-
-Fresh focused evidence:
-
-- `@factory/capabilities`: 81 package, lock, and composition tests passed;
-- `@factory/compiler`: 8 persistent order-operations compiler regressions and
-  84 Restaurant, transaction, and composition regressions passed; and
-- `@factory/compiler-worker`: 4 published-artifact materialisation regressions
-  passed for Restaurant, Ecommerce, Retail Counter, and Grocery Pickup, after
-  rebuilding the compiler package consumed by the Worker.
-
-This is not production acceptance. A generated app must still prove the
-PostgreSQL migration, runtime transaction, and role journeys in an isolated
-Compose project. Existing Factory containers do not constitute generated
-application acceptance evidence.
-
-## Candidate Foundry discovery implementation — 2026-08-01
-
-Factory Pilot now has a bounded, quarantine-only discovery path for expanding
-capability supply beyond manually authored Profile packages. It does not copy,
-execute, install, promote, or activate external code.
-
-- `@factory/external-intake` validates immutable Discovery Records, assigns
-  deterministic eligibility gates and scores, caps eligible GitHub source-study
-  batches at 1,000 entries, and rejects floating references, invalid
-  host/reuse-mode combinations, unknown executable licences, duplicate
-  identities, and sensitive fields.
-- The local Intake CLI supports fixture discovery and a fixed-query GitHub
-  metadata adapter. The adapter accepts no caller URL or query, confines the
-  optional environment-only GitHub token to `api.github.com`, resolves each
-  default branch to a full commit before it can become Intake-eligible, and
-  returns only redacted aggregate counts to its caller.
-- Evidence-complete Candidates can produce a deterministic Foundry scaffold:
-  manifest, fixture, adapter, and conformance-plan requirements plus an
-  optional declarative source-port plan. The scaffold has no source body,
-  package path, Graph, compiler, runtime, provider, or Golden authority.
-- The Control Plane and Workbench Home expose a source-free Capability Supply
-  queue covering thirteen business families and the five initial Profiles.
-  It is an operational backlog projection, not proof that a candidate is
-  installed, safe, Golden, or executable.
-
-Focused evidence completed before the final workspace regression:
-
-- `@factory/external-intake` Discovery (5 tests), Candidate Foundry scaffold
-  (7 tests), and public-summary boundary (1 test), plus package typecheck and
-  lint;
-- `@factory/intake-cli` discovery and GitHub metadata tests (5 tests), plus
-  typecheck and lint;
-- `@factory/portfolio-public` summary tests, typecheck, build, and lint;
-- `@factory/control-plane` Portfolio summary tests and typecheck; and
-- `@factory/workbench` parser, model, and Home tests (29 tests), typecheck,
-  and lint.
-
-The first full `pnpm test` execution identified one stale exact-equality
-assertion in the External Intake public-summary boundary after the safe supply
-projection was added. The boundary assertion was updated to explicitly allow
-only the new source-free aggregate. A second full `pnpm test` run is green:
-Turbo completed 16 tasks, with the changed External Intake (430 tests) and
-Intake CLI (64 tests) tasks executed and unaffected tasks restored from cache.
-This is regression evidence for the Candidate Foundry slice, not acceptance of
-a generated production-application Profile.
-
-A manual live GitHub metadata check for the `commerce-transaction` family
-returned 20 records: 9 eligible for further quarantine intake and 11 blocked
-by the declared-license gate. The command emitted aggregate counts only; it
-did not persist a Candidate, fetch an archive, copy source, install a package,
-or change a Graph, Generated Application, or Golden asset.
-
-## Candidate Foundry source-expansion research — 2026-08-01
-
-Two public-source research records now define a scalable intake path for the
-next capability expansion. The recommended shape is a Discovery Index feeding
-the existing immutable quarantine pipeline, rather than manually creating one
-capability package for every business scenario or copying complete upstream
-applications into generated products.
-
-- `docs/research/2026-08-01-oss-capability-intake-mechanisms.md` records the
-  batch discovery, fixed-reference, SBOM, licence, vulnerability, provenance,
-  AST-inventory, Candidate-artifact, and promotion path. It identifies four
-  narrow reuse modes: pinned dependency, template adapter, Provider adapter,
-  selective source port, and reference-only.
-- `docs/research/2026-08-01-permissive-profile-component-intake.md` records
-  fifteen additional direct-dependency or Provider candidates and a ranked
-  ten-item Foundry batch spanning money, identity, media, interchange, search,
-  inbound communication, barcode/scan, and release-control seams.
-
-No researched source has been installed, copied, activated as a Provider, or
-promoted to Golden. The existing `external-intake` package can batch fixed
-source requests, preserve quarantine evidence, and emit non-promoting
-Candidate proposals. The next product slice is Discovery Index and triage
-automation, followed by Factory-owned candidate package scaffolds for
-allowlisted, evidence-complete source modules.
-
-Fresh root regression confirmation: `pnpm test` exited successfully for all
-sixteen workspace tasks. Turbo replayed prior task results from its local cache,
-so this confirms no known regression in the checked worktree but is not a new
-generated-application release acceptance.
-
-## Profile readiness and quarantined Candidate port planning — 2026-08-01
-
-Commits `9de4b74`, `80b5a15`, and `a0a015c` make portfolio maturity visible
-without widening the execution boundary. Every registered Profile now has an
-immutable, source-free readiness record. The Control Plane and Workbench
-project only capability keys, four maturity states, and generated-target
-counts; unknown states are rejected and source-shaped response fields are not
-retained by the client.
-
-External intake can now turn a completed safe Candidate into a deterministic
-Candidate port plan. The plan names a reuse mode, one evidence-matching module
-identity, and the licence, notice, SBOM, scan, conformance, and removal-test
-gates required before a later source-study decision. It cannot copy source,
-write a package, promote a Candidate, mutate an Application Graph, activate a
-Provider, or expose source content, URLs, prompts, or credentials.
-
-Fresh verification: `@factory/capabilities` passed 239 tests plus typecheck
-and lint; `@factory/control-plane` passed 120 tests plus typecheck;
-`@factory/workbench` passed 71 tests plus typecheck, lint, and production
-build; `@factory/external-intake` passed 418 tests plus typecheck and lint.
-This is readiness and supply-chain preparation, not a business-capability
-completion claim. The next execution slice remains the shared
-`commerce.transaction` generated-runtime kernel across Restaurant, Ecommerce,
-Retail Counter, and Grocery Pickup.
-
-## Strict Restaurant package bindings — 2026-08-01
-
-Commit `3163a68` turns the active Restaurant Ordering package selection into
-five independently versioned, strict `factory.capability-binding/v1` assets:
-table session, ordering, kitchen, cashier, and reporting. Each current
-`1.1.0` package now declares typed Graph inputs, a physical immutable package
-directory, a digest, a fixture, template contributions, and negative binding
-evidence. Historical `1.0.0` locks remain replayable; an invalid binding such
-as a PageModel symbol supplied where a DomainModel entity is required fails
-closed.
-
-Fresh focused and package verification completed before the commit:
-
-- `@factory/capabilities`: 237 tests, build, typecheck, lint;
-- `@factory/compiler`: 200 tests, build, typecheck, lint;
-- `@factory/control-plane`: 120 tests and typecheck;
-- changed files and immutable package directories passed Prettier and
-  `git diff --check`.
-
-The catalogue now has 20 capability families and 43 versioned asset packages.
-This is a component-contract milestone, not yet package-owned target runtime:
-the next required migration moves Restaurant target contributions out of
-compiler Profile switches and then proves common transaction behaviour in both
-Restaurant and Ecommerce.
-
-## Portfolio intelligence delivery — 2026-08-01
-
-The current worktree adds a read-only Workspace Portfolio Summary to the
-Control Plane and Home. It exposes only safe aggregate state: five Profile
-starters, 20 capability families, 43 versioned asset packages, the 43-source /
-108 source-to-scenario mapping discovery portfolio, Candidate/Provider counts,
-and compilation health. The separate 122-recipe planning taxonomy is broader
-than the immutable source portfolio and is not surfaced as installed product
-coverage. The summary deliberately does not expose upstream URLs, fixed
-references, source paths, raw AI material, or credentials.
-
-Fresh package evidence for this worktree: `@factory/portfolio-public` passed
-1 test plus typecheck/build; `@factory/external-intake` passed 411 tests;
-`@factory/control-plane` passed 120 tests plus typecheck/build; and
-`@factory/workbench` passed 70 tests plus typecheck and a production Next.js
-build. This is truthful portfolio visibility, not capability promotion: the
-portfolio now derives one deterministic, non-promoting Candidate blueprint for
-each of its 19 intake-eligible source records. Source-fragment Candidates
-remain blocked until their evidence carries an approved licence decision; zero
-Candidates are installed as Golden capabilities and zero external Providers
-are active.
-
-## Latest capability and supply-chain audit — 2026-08-01
-
-Factory Pilot has a working composition and compilation foundation, but its
-current capability catalogue is not yet a broad production-application
-platform.
-
-- `pnpm test` completed successfully for all 14 workspace tasks on this
-  worktree. The current task run reused local Turbo test cache entries, so this
-  is regression evidence for the checked revisions rather than a new
-  end-to-end release acceptance.
-- Five Profile starters are available: Expense Approval, Restaurant Ordering,
-  Simple Ecommerce, Retail Counter, and Grocery Pickup. The latter three reuse
-  shared commerce composition locks, but that does not make their business
-  operations complete or independently accepted.
-- The catalogue contains 20 capability families and 43 physical, versioned
-  package directories. Only a smaller subset clearly owns executable runtime
-  behaviour: core CRUD/workflow/audit/notification plus selected cart,
-  inventory, and simulated-payment contributions. Generic catalogue and order
-  behaviour, and several Restaurant behaviours, still have compiler-owned or
-  Profile-specific implementations.
-- The Restaurant Profile has accepted local evidence for its bounded
-  table-to-order lifecycle, simulated payment, inventory effects, kitchen and
-  cashier flows, audit, and generated artifacts. Identity, membership,
-  promotion, real payment, settlement, delivery, reservations, realtime,
-  offline operation, and production observability remain absent or partial.
-- The external-source portfolio records 43 fixed sources and 108 demand
-  mappings. It is a discovery and intake input, not an installed capability
-  catalogue. The current pipeline creates immutable quarantine evidence and
-  source-study projections, deterministically derives a declarative Candidate
-  proposal for each of its 19 intake-eligible sources, and isolates batch-item
-  failure without promoting any Candidate. It does not create Factory
-  capability packages.
-
-### Supply-chain release gate
-
-An earlier independent review reported two P1 isolation gaps in external
-intake. Both are already addressed by ancestor commit `aba30f5`: batch parsing
-keeps each opaque request inside the item-level validation boundary, and
-source-study input is parsed with a strict runtime schema plus sensitive-key
-rejection. The focused regression tests are present and the full workspace
-test run passes. Automatic Portfolio-to-Candidate creation can therefore begin
-from the existing release boundary. The intended scale path remains: fixed
-source portfolio -> quarantine -> licence/SBOM/security evidence -> strict
-source study -> non-promoting Candidate proposal -> Factory-owned package or
-provider adapter. Whole-repository copying remains outside the supported path
-because it bypasses licence scope, provenance, compatibility, and Application
-Graph authority controls.
-
-## Current product and reuse assessment — 2026-08-01
-
-Factory Pilot is a working Application Graph composition foundation, not yet a
-production-complete catalogue of one hundred application types.
-
-- Five Profile starters compile from Published Graphs today: Expense Approval,
-  Restaurant Ordering, Simple Ecommerce, Retail Counter, and Grocery Pickup.
-  Only Restaurant has a specialised transaction-oriented runtime; the other
-  commerce Profiles share a smaller generic runtime.
-- The current catalogue has 20 capability families and 43 versioned physical
-  asset packages. Package counts do not prove business completeness. Core
-  CRUD/workflow/audit/notification plus selected commerce handlers are
-  executable; some catalogue/order concerns remain compiler-owned and several
-  restaurant behaviours remain Profile-specific.
-- The completed inventory slice introduces `commerce.inventory@1.1.0`.
-  Simple Ecommerce, Retail Counter, and Grocery Pickup now prove a common
-  `cart -> submitted -> paid` lifecycle where submit reserves stock and a
-  privileged cancellation compensates it. The generic Prisma path still lacks
-  a database transaction, idempotent command receipt, ledger write, and outbox
-  spanning the order and inventory changes.
-- The broader planning taxonomy contains 122 Profile recipes, while the
-  immutable source portfolio contains 43 fixed-source records and 108
-  source-to-scenario mappings. Neither is installed product coverage. The
-  quarantine pipeline can acquire fixed references, isolate a prohibited batch
-  sibling, capture redacted evidence, and create a strict source-study
-  projection. It now derives all 19 eligible Portfolio sources into
-  quarantined, non-promoting Candidate proposals; it does not create a Golden
-  package or activate an external runtime.
-
-### Decision: scale reuse without importing upstream authority
-
-The supported high-throughput reuse routes are:
-
-1. **Pinned dependency:** import a small published technical library with its
-   licence notice and update policy.
-2. **Provider adapter:** connect a mature external runtime through a typed,
-   replaceable Factory contract while Factory retains the Application Graph.
-3. **Selective source copy:** copy only an identified, permissively licensed,
-   compact source path after an immutable source study, copy ledger, notice,
-   fixture, conformance and removal test.
-4. **Reference only:** learn domain vocabulary from copyleft,
-   source-available, commercial, or architecture-incompatible projects.
-
-Bulk cloning full vertical repositories is not an acceptable fourth route. It
-would import unknown transitive licences, assumptions, credentials and data
-models into the compiler, while making upstream code the de facto business
-source of truth. The high-leverage next sequence is to complete the generic
-transaction kernel, repair the intake isolation boundaries, then automate
-allowlisted fixed-reference acquisition into non-promoting Candidate proposals.
-
-## Historical execution snapshot — 2026-08-01
-
-The latest capability and supply-chain audit above is authoritative. The
-following retained execution notes describe earlier increments and may use
-superseded counts or in-progress wording.
-
-Factory Pilot has a credible composition foundation, but it is not yet a
-production-complete application platform or a catalogue of one hundred ready
-business products.
-
-- The repository currently contains 19 capability families and 33 physical,
-  versioned package directories. Five Profile starters are available:
-  Expense Approval, Restaurant Ordering, Simple Ecommerce, Retail Counter,
-  and Grocery Pickup. Their published Graphs, package locks, generated targets,
-  and acceptance depth are not interchangeable claims of production readiness.
-- Eight shared packages have executable package contributions today: CRUD,
-  workflow, audit, notification, inventory, simulated payment, cart, and line
-  configuration. Catalog, order, and several Restaurant flows are still at
-  different stages of extraction from compiler-owned behaviour. Several Restaurant flows
-  are still Profile-specific compiler behaviour. The library is therefore
-  useful but uneven; it is not yet an independently replaceable domain kernel.
-- The generic line-configuration slice now has focused green evidence:
-  `commerce.line-configuration@1.1.1` is a new immutable Golden successor;
-  `1.1.0` remains replayable. The generated runtime resolves options only from
-  published records, rejects cross-catalog or unavailable selections, derives
-  labels and price deltas server-side, and exposes a bounded
-  `catalog-configurator` PageModel block. Full Capabilities and Compiler
-  verification passed on 2026-08-01; broader product and generated-application
-  acceptance remain release gates for the platform.
-- The external-intake lane can bulk acquire fixed public references into
-  quarantine and record redacted provenance evidence. It can derive an
-  allowlisted quarantined Candidate but cannot promote Golden packages
-  automatically. The next supply
-  chain milestone is a bounded Candidate-proposal generator with licence,
-  SBOM, security, fixture, conformance, and provenance gates.
-
-### Product implication
-
-The shortest path to broad coverage is not one hundred copied vertical
-applications. It is a small, executable cross-profile kernel plus Profile
-recipes and provider adapters. A bulk intake pipeline should automate
-discovery, fixed-SHA acquisition, licence classification, dependency/SBOM
-analysis, fixture generation, and Candidate task creation; it must not allow
-an upstream repository, schema, credential, or arbitrary source tree to become
-an executable Graph or compiler input without Factory-owned contracts and
-tests.
-
-## Current Profile and external-reuse refresh — 2026-07-31
-
-Factory Pilot is a working **Application Graph composition foundation**, not a
-complete catalogue of production business applications yet.
-
-### Verified current capability evidence
-
-- Five Graph-backed Profile starters are registered: Expense Approval,
-  Restaurant Ordering, Simple Ecommerce, Retail Counter, and Grocery Pickup.
-  Their shared commerce recipes retain versioned package locks while using
-  distinct entities, roles, routes, state machines, seed data, and policies.
-- `commerce.line-configuration@1.1.0` is now the current portable commerce
-  package. Restaurant, Ecommerce, Retail Counter, and Grocery Pickup all lock
-  the same package version and bind it only through declared Graph symbols.
-  The package requires a catalog-to-option-group-to-option relation and a
-  line-to-immutable-snapshot relation. It exposes selection mode, cardinality,
-  ordered options, server-side pricing inputs, and snapshot fields without
-  selecting behavior from a Profile name.
-- The Compiler now substitutes declared template parameters exclusively from
-  the immutable Composition Lock. A generated Restaurant configuration module
-  receives `menu-item`; the equivalent Ecommerce module receives `product`.
-  It cannot read mutable draft state or arbitrary Graph paths while rendering.
-- Fresh verification on this worktree passed: `@factory/capabilities` has
-  233 tests plus typecheck/lint/build; `@factory/compiler` has 192 tests plus
-  typecheck/lint; `git diff --check` passed.
-
-### Production completeness: truthful position
-
-The Restaurant Profile has meaningful local proof for table session, catalog,
-cart, order lifecycle, simulated payment, kitchen/cashier flows, inventory,
-audit, generated API/Web/database/test artifacts, and a Merchant console.
-It is **not** a full production restaurant suite. The following capability
-families are still absent or only represented by a narrow simulation:
-
-- real identity, payment, refund, split settlement, tax, loyalty, promotion,
-  membership, receipts/printers, delivery, reservations, waitlists, offline
-  conflict handling, realtime provider delivery, and production observability;
-- cross-profile packages for party/customer, availability, reservation,
-  pricing, fulfilment, shipment, documents, support, reporting, and
-  authorization providers;
-- a source-to-Candidate pipeline that can turn a checked external source
-  study into a Factory-authored package proposal with fixtures, conformance
-  tests, and provenance.
-
-The current generated configuration module proves package parameterisation;
-the next compiler slice must add the generic request/validation handler and
-PageModel blocks that exercise configured-line choices at runtime. Until that
-slice has generated-application journey evidence, it must not be described as
-an independently complete production feature.
-
-### Scale strategy: many scenarios from a small capability kernel
-
-The 122-scenario map and 43 fixed-reference source records are planning and
-intake inputs, not installed applications. Factory should reach 100+ scenarios
-by composing a shared capability kernel, rather than cloning 100 vertical
-repositories. The scalable delivery lanes are:
-
-1. **Direct dependencies** for bounded technical functions (for example
-   editors, charts, QR rendering, cache, or state machines), each pinned with
-   its notice and package update policy.
-2. **Provider adapters** for mature systems whose runtime should remain
-   external (for example a commerce, authorization, print, or realtime
-   provider). Factory retains the Application Graph and provider contract.
-3. **Fixed-reference source studies** for permissively licensed implementations
-   whose small, identified algorithms or domain rules can be re-authored into
-   a Factory package. Automated intake fetches a commit SHA into quarantine,
-   records licence/SBOM/security/module evidence, derives a candidate task,
-   and runs offline fixtures. It never promotes raw repository code into a
-   Graph, Compiler, or generated runtime.
-
-Whole-repository copying is not a scalable shortcut: the selected projects use
-different runtimes and data models, carry transitive licences, and often embed
-assumptions that conflict with Draft → Publish → immutable Compilation. The
-fast path is automated discovery and quarantine plus targeted, attributable
-adapters or re-authored fragments. This removes one-by-one manual discovery
-without allowing an unreviewed upstream repository to become execution
-authority.
-
-## Current evidence audit — 2026-08-01
-
-The repository is a credible **composition foundation**, not yet a complete
-library of production application profiles. The following facts were checked
-against the current worktree:
-
-- The current worktree expands the reusable Order Operations slice from three
-  starter Profiles to five: Expense Approval, Restaurant Ordering, Simple
-  Ecommerce, Retail Counter, and Grocery Pickup. Retail Counter and Grocery
-  Pickup compile from the same current Catalog/Cart/Order capability-lock set
-  as Ecommerce, with distinct Graph entities, roles, routes, seed data, and
-  fulfilment transitions. This is current-worktree evidence pending its
-  dedicated commit; it is not a claim that five production Profiles are
-  accepted.
-- Fresh targeted verification passed: the Compiler has 192 tests, the
-  Compiler Worker has 76 tests, both packages typecheck and lint, both build
-  targets required by the slice pass, and `git diff --check` is clean. The
-  Worker tests materialise isolated Retail Counter and Grocery Pickup outputs
-  and assert that no Restaurant command runtime artifact is emitted.
-- `pnpm test` completed successfully with 14 Turbo tasks. The command reused
-  verified local cache entries; its package evidence reports 32 Graph, 66
-  Workbench, 116 Control Plane, 74 Worker, 182 Compiler, 219 Capabilities,
-  402 External Intake, 61 Intake CLI, and 20 Adapter tests.
-- `packages/capabilities/assets` contains 19 named capability families across
-  30 versioned package directories. Package count is not equivalent to
-  executable coverage: `core.crud`, `core.workflow`, `core.audit`,
-  `core.notification`, `commerce.inventory`,
-  `commerce.simulated-payment`, `commerce.cart@1.0.1`,
-  `commerce.catalog@1.2.0`, and `commerce.order@1.2.0` have package-local
-  executable contributions. Several Restaurant behaviours intentionally
-  remain profile-specific extensions.
-- The fixed-reference portfolio contains 43 source records and 108 scenario
-  demand mappings: 1 direct dependency, 7 provider candidates, 11 selective
-  source-study candidates, 8 architecture-only references, and 16 exclusions.
-  These are research and intake inputs, never installed capabilities or
-  production readiness evidence.
-- A guarded live acquisition attempt for TastyIgniter, its Cart extension, and
-  InvenTree was blocked by public GitHub metadata `403` responses. The command
-  created only ignored, redacted quarantine receipts and acquired no source
-  content, Candidate, Golden package, provider, Graph, or generated runtime.
-  A local environment-only GitHub read token is required before retrying live
-  metadata acquisition; it must not be inspected, logged, persisted, or
-  committed.
-
-The immediate product priority is two coupled tracks: (1) extract
-compiler-owned generic catalogue/order behaviour behind physical capability
-packages, then prove it across at least Restaurant and Ecommerce; (2) use the
-existing intake pipeline to turn a small number of fixed, permissively
-licensed source studies into narrow, Factory-authored Candidate proposals with
-fixtures and conformance evidence. Factory must not bulk-clone vertical
-repositories or treat any external schema/runtime as Application Graph truth.
-The detailed 122-recipe portfolio and source classifications are in
-[`research/2026-08-01-100-profile-capability-ecosystem.md`](research/2026-08-01-100-profile-capability-ecosystem.md);
-the Restaurant gap audit is in
-[`audits/restaurant-ordering-requirements-audit.md`](audits/restaurant-ordering-requirements-audit.md).
-
-## Capability ecosystem status correction
-
-Factory Pilot currently proves three independently modeled Profile families:
-Expense Approval, Restaurant Ordering, and Simple Ecommerce. A Published
-Application Graph can be compiled into a local bundle with generated Web/API,
-database, policy, flow, test, and documentation outputs. This is a functional
-foundation, not evidence that Factory Pilot already supports one hundred
-production-ready application types.
-
-The repository contains 19 current capability families and historical locked
-versions. The reusable capability boundary is uneven: `core.crud`,
-`core.workflow`, `core.audit`, `core.notification`, `commerce.inventory`,
-`commerce.simulated-payment`, and `commerce.cart@1.0.1` have executable,
-version-locked package contributions. The cart migration now includes a
-manifest-declared runtime handler, template, fixtures, contract tests, and
-historical-lock replay evidence. `commerce.catalog`, `commerce.order`, and
-several Restaurant behaviors still rely on compiler-owned generic or
-profile-specific runtime code; their package records alone are not yet proof
-of independently replaceable implementation.
-
-The 122-scenario research taxonomy is a mapping of Profile recipes, shared
-capability locks, fixtures, and acceptance journeys. The separately executable
-external-source portfolio currently contains 43 source records and 108 demand
-signals; the two planning counts must not be conflated. Neither is an installed
-component catalogue or a production-readiness claim. The next high-leverage
-product milestone is a bulk capability supply chain: curated source portfolio
--> fixed-reference quarantine -> licence/SBOM/security/module evidence ->
-source study -> Candidate artifact -> offline conformance -> Factory-authored
-Golden package or provider adapter. Until that pipeline is implemented,
-external source intake remains deliberately limited to immutable quarantine
-evidence and cannot create a Candidate, copy source, alter a Graph, or
-influence a compiler/runtime. The local `portfolio acquire` CLI command now
-constructs a strict batch from explicitly selected, intake-eligible portfolio
-IDs; it adds no authority beyond that quarantine boundary.
-
-The source-acquisition CLI now has an optional local read-token transport for
-GitHub metadata. `FACTORY_GITHUB_READ_TOKEN` is consumed only from the process
-environment and is scoped to `api.github.com`; archive and all other requests
-have authorization removed. Its focused tests prove token host confinement and
-non-echoing invalid configuration. Intake CLI verification currently passes
-61 tests, typecheck, lint, build, and `git diff --check`. No live external
-source has been claimed acquired by this change: materialization, scanning,
-Candidate creation, conformance, and Golden promotion remain separate gates.
-
-## Current milestone
-
-### Parallel delivery track: Live External Source Acquisition
-
-Status: `ready_for_qa`. The current worktree now has a CLI-only fixed-source
-acquisition lane: a strict batch can resolve an exact public GitHub tag or SHA,
-persist immutable quarantine evidence, and project redacted source-study
-metadata. It cannot extract or execute downloaded source, run a scanner, create
-a Candidate, promote a Golden asset, copy source, mutate the Application Graph,
-or become a compiler/runtime input. Deterministic evidence is recorded in
-`docs/acceptance/live-external-source-acquisition.md`; the one guarded public
-smoke terminally blocked and was cleaned up, so it is not live-source success
-evidence. Independent task review and QA remain required.
-
-Typed Capability Binding Validation is the current hardening milestone.
-ADRs 0006, 0007, and 0008 are `Accepted` under Factory controller authority;
-the amended design, implementation plans, and ledger now govern the work.
-ADR-0008 was accepted after independent reproduction showed the repair-round-4
-P1 is a shared resolution-input ownership failure rather than a bounded local
-parameter defect. Task 1, **pure typed Graph symbol index**, is `accepted` after
-bounded repair round 1. Original implementation commit
-`86d5a00f26d5f331764de0e8bf7694e657cd2514` passed independent Task 1 review
-and behavioral QA with no P0/P1/P2, but release review then found one
-load-bearing P1 in duplicate navigation/flow identifier handling. Repair commit
-`784ebb0b3f30d3dad4cb7cc6ac7b4f1efc42fa50` passed independent re-review and
-repair-round behavioral QA with no P0/P1/P2. Final release review returned
-RELEASE PASS with no P0/P1/P2, and fresh verification passed.
-
-Task 2, **typed manifest and binding contracts**, is `implementing` in repair
-round 4. Its bounded writer is Typed Manifest Contract Integration, its
-contract owner is Capability Binding Contract, and its write boundary is the
-exact four Capabilities paths recorded below. Independent review of implementation commit
-`4458bfc7c8ffcaef29dfebb755d8399e12000198` found two P1s, so Task 2 does not
-advance. Repair round 1 commit
-`a7331df0ac6a6f54f82bf61a060607777bc06dc0` stays inside the existing path
-boundary and passed independent repair re-review with no P0/P1/P2. Task 2 stays
-inside its exact four-path boundary. After architecture amendment commit
-`36317bf`, the PM records `implementing -> ready_for_qa`. Accepted ADR-0007
-assigns owner-aware Draft Graph serialization to new Task 3 without expanding
-Task 2. Independent behavioral QA passed 45/45 focused typed contract tests,
-188/188 full Capabilities tests, typecheck, lint, build, bounded scope checks,
-and strict public probes. The PM previously recorded
-`ready_for_qa -> reviewed`. Independent release review then found one P1:
-prototype-backed schema or binding data could influence canonical binding-lock
-semantics despite the strict own-key contract. The PM records
-`reviewed -> implementing`. Repair round 2 commit
-`565c64c5e79799261f8dc72c7e0da298fef4742d` changes only
-`packages/capabilities/src/composition.ts` and
-`packages/capabilities/test/typed-binding-contract.test.ts`, but independent
-task re-review returned FAIL: required `ownerBinding`/`fieldTypes`, optional
-field constraints, and an empty-string unknown own key were not all enforced
-with exact own-property semantics. Repair round 3 commit
-`00ac760c54f353f6ae242f92a5dd4809791cd633` stays inside those exact two
-Capabilities paths and adds focused `Object.prototype` pollution and empty-key
-regressions. Fresh implementation verification passed 49/49 focused tests,
-Capabilities typecheck, and Capabilities lint. Independent repair-round-3 task
-review passed with no P0/P1/P2 after 29/29 typed-binding and 20/20 composition
-tests, and confirmed the exact two-path diff. The PM recorded
-`implementing -> ready_for_qa`. Independent repair-round-3 behavioral QA then
-returned PASS: 49/49 focused tests, 192/192 full Capabilities tests,
-Capabilities typecheck/lint/build, 180/180 Compiler tests, and the adversarial
-compiled probe passed. The PM previously recorded
-`ready_for_qa -> reviewed`. Independent release review then returned FAIL with
-two P1s: accessor-backed bindings could validate one value and expose another
-before canonical lock selection, and strict parameters accepted
-prototype-supplied `key`, `type`, and `required` values. The PM records
-`reviewed -> implementing` for repair round 4. Repair commit
-`b85dbda063fe6fa6db3b712f5891b013285e0356` snapshots immutable own-enumerable
-data for strict schemas, parameters, and bindings, then uses the normalized
-binding snapshot for validation and canonicalization. It changes only the
-same two authorized Capabilities repair paths. Fresh engineer verification
-passed 195/195 Capabilities tests plus Capabilities typecheck, lint, and build,
-and 180/180 Compiler tests plus Compiler typecheck and lint. This remains
-implementation evidence only. Independent task review of the repair returned
-FAIL with one new P1: `manifest.parameters` is snapshotted separately during
-schema validation and binding validation, so a getter can supply different
-parameter schemas at those two stages. Task 2 remains `implementing` and is not
-accepted. Controller-accepted ADR-0008 stops further local Task 2 repair and
-its remaining review gates. Task 2A, **immutable composition resolution
-boundary**, is now `accepted` after repair round 2. Its bounded writer is
-**Immutable Composition Resolution Integration**, and its contract owner is
-**Capability Composition Resolution Boundary**. Plan Tasks 1 through 3 produced commits
-`b310d8e`, `c9e5ca3`, and
-`73accc24a68d55308d127717e36cd63130024f3e`; independent review of plan Task 3
-then returned FAIL with two P1s. Governance commit `76274e3` formally amended
-the repair boundary to five exact Capabilities paths. Repair commit
-`a09d459077f80fa82161df928137b1f2052a75bb` stayed inside those paths, and
-independent repair review returned SPEC PASS and QUALITY PASS with no
-P0/P1/P2. Independent behavioral QA at `a09d459` then passed with no P0/P1/P2:
-Capabilities passed 214/214 with its package checks, Compiler passed 180/180
-with its package checks, every public accessor probe observed zero getter
-invocations and rejected with the capture error, the frozen digest remained
-exact, and the largest 13-selection composition produced one digest across
-1,000 resolutions at p95 2.708 ms. Scope and diff checks were clean. The PM
-previously recorded `ready_for_qa -> reviewed`. Independent release review then
-returned FAIL with one P1: `resolveCapabilityAssetLock`,
-`assertGoldenCapabilityAssetLocks`, `assertGoldenCapabilityComposition`,
-`composeDefaultCapabilityDraft`, and `composeProfileDraft` observe caller-owned
-input or context before descriptor capture. Direct probes invoked getters, and
-a self-changing `profile` getter produced incoherent output. The Controller
-authorized repair round 2 inside the unchanged five-path boundary, and the PM
-previously recorded `reviewed -> implementing`. Repair round 2 commit
-`40096847c4a4b28c3d02fd33d01805d46da0bded` changes three authorized paths and
-received independent SPEC PASS and QUALITY PASS with no P0/P1/P2. The reviewer
-audited all eight exported structured composition/lock boundaries and their
-self-redefining accessor and alias probes. The PM previously recorded
-`implementing -> ready_for_qa`. Fresh repair-round-2 behavioral QA against
-`40096847c4a4b28c3d02fd33d01805d46da0bded` returned PASS with no P0/P1/P2:
-Capabilities passed 219/219, Compiler passed 180/180, all eight public
-boundaries rejected with the capture error and zero getter invocations, and
-the alias, server-lock, deep-freeze, digest, and largest-composition
-single-digest probes passed at p95 2.884 ms. The PM previously recorded
-`ready_for_qa -> reviewed`. Final independent release review at governance
-commit `27c45b54951d00869f7cf6c58cc537c1a9b8ef35` against source commit
-`40096847c4a4b28c3d02fd33d01805d46da0bded` returned RELEASE PASS with no
-P0/P1/P2. Fresh Node `v22.11.0` acceptance verification passed 219/219
-Capabilities tests, 180/180 Compiler tests, and 76/76 focused tests. The
-largest registered composition produced one digest across 1,000 resolutions
-at p95 2.554 ms; source/governance drift and secret checks were clean. The PM
-reconciles the ordered gates as `reviewed -> accepted`. The earlier task-review
-and QA results against `a09d459` remain historical, not acceptance evidence.
-Owner-aware Graph persistence remains explicitly owned by planned Graph Task
-3, which is still blocked because Task 2 remains `implementing`. Physical
-assets remain Task 4; Tasks 4 through 7 remain serially blocked.
-
-Commercial Capability Foundation Task 2 remains `implementing` and escalated
-after its five permitted repair rounds. It is blocked on accepted Typed
-Capability Binding Validation Task 7 and later PM reconciliation; it is not
-accepted. Commercial Foundation Tasks 3 and 4 remain `planned` and blocked.
-
-The Application Graph remains the source of truth. External intake artifacts
-remain quarantined Candidate evidence or pending-review packets; they are not
-Golden capabilities, Graph input, compiler input, generated runtime authority,
-provider authority, approval, or source-copy execution.
-
-## Completed evidence
-
-ADR-0006 fixes the typed-binding architecture under controller authority:
-
-- `factory.capability-binding/v1` is manifest-owned and interpreted by generic
-  composition validation.
-- The Graph owns a capability-agnostic typed index with separate symbol
-  namespaces and fields resolved only under their entity owner.
-- Draft composition, verified Publish lock creation, and compiler admission
-  validate the exact Graph and selected locks.
-- Historical Golden bytes, digests, Published revisions, and locks remain
-  immutable. New current recipes migrate to verified
-  `core.location-context@1.0.1`,
-  `commerce.inventory-ledger@1.0.1`, and
-  `commerce.inventory@2.0.0`.
-- No validator may dispatch on Profile name, package version, field name,
-  source path, compiler target, or output path.
-
-ADR-0007 fixes serialized owner-aware selection ownership under controller
-authority:
-
-- Draft Graph bindings add the owner-aware
-  `{ graphSymbol: "graph.domain.<entity>", fieldKey }` value without removing
-  existing number, boolean, or historic `{ graphSymbol }` values.
-- Graph parsing and validation prove exact entity/field existence only;
-  Capabilities retains scalar, required, unique, and manifest-kind admission.
-- Historic Draft JSON stays readable without owner inference or hash rewrite.
-  Published Graphs remain selection-free and immutable locks retain bindings
-  and digests.
-- New Task 3 owns only the Graph schema, parser/validator, hashing regressions,
-  browser-entry regressions, and exact three Graph paths recorded in the ledger.
-
-ADR-0008 fixes the composition-resolution ownership boundary under controller
-authority:
-
-- Public composition and lock creation capture one descriptor-validated,
-  Factory-owned snapshot before any matching, validation, normalization,
-  resolution, canonicalization, or hashing.
-- Records and arrays must be ordinary own-data structures; accessors, symbols,
-  sparse or inherited indices, extra array properties, custom prototypes, and
-  cycles fail closed.
-- Existing valid `factory.capability/v1`, `factory.capability-binding/v1`, and
-  `factory.composition/v1` bytes and lock digests remain unchanged.
-- Commits `b310d8e`, `c9e5ca3`, and `73accc2` are historical implementation
-  evidence. Governance amendment `76274e3` authorized the exact five-path
-  repair, and repair commit `a09d459077f80fa82161df928137b1f2052a75bb`
-  stayed within it. Independent repair review returned SPEC PASS and QUALITY
-  PASS with no P0/P1/P2. Independent behavioral QA then passed with no
-  P0/P1/P2 after 214/214 Capabilities tests, 180/180 Compiler tests, zero-getter
-  public capture probes, exact digest compatibility, and a single digest across
-  1,000 resolutions of the 13-selection composition at p95 2.708 ms. The PM
-  records the historical Task 2A `ready_for_qa -> reviewed` transition.
-  Subsequent release review returned FAIL with one P1 in the five exported
-  wrappers named above. Their task-review and QA results remain historical;
-  Controller-authorized repair round 2 returned Task 2A
-  `reviewed -> implementing` under the unchanged five-path boundary. Repair
-  commit `40096847c4a4b28c3d02fd33d01805d46da0bded` changes only
-  `packages/capabilities/src/composition.ts`,
-  `packages/capabilities/src/index.ts`, and
-  `packages/capabilities/test/composition-contract.test.ts`. Independent
-  repair-round-2 review returned SPEC PASS and QUALITY PASS with no P0/P1/P2
-  after auditing all eight exported structured composition/lock boundaries and
-  the self-redefining accessor/alias probes. The PM previously recorded
-  `implementing -> ready_for_qa`. Fresh repair-round-2 behavioral QA against
-  `40096847c4a4b28c3d02fd33d01805d46da0bded` passed with no P0/P1/P2 after
-  219/219 Capabilities tests, 180/180 Compiler tests, zero-getter capture-error
-  rejection at all eight public boundaries, and passing alias, server-lock,
-  deep-freeze, digest, and largest-composition single-digest probes at p95
-  2.884 ms. The PM previously recorded `ready_for_qa -> reviewed`. Final
-  independent release review at governance commit
-  `27c45b54951d00869f7cf6c58cc537c1a9b8ef35` against source commit
-  `40096847c4a4b28c3d02fd33d01805d46da0bded` returned RELEASE PASS with no
-  P0/P1/P2. Fresh Node `v22.11.0` acceptance verification passed 219/219
-  Capabilities tests, 180/180 Compiler tests, and 76/76 focused tests, with one
-  digest across 1,000 largest-composition resolutions at p95 2.554 ms and clean
-  source/governance drift and secret checks. The PM records
-  `reviewed -> accepted` for Task 2A only.
-
-The approved design and plan are recorded at
-`docs/superpowers/specs/2026-08-01-typed-capability-binding-validation-design.md`
-and
-`docs/superpowers/plans/2026-08-01-typed-capability-binding-validation.md`, with
-the Task 2A boundary plan at
-`docs/superpowers/plans/2026-08-01-immutable-composition-resolution-input.md`.
-The governed task state is recorded in
-`docs/superpowers/ledgers/2026-08-01-typed-capability-binding-validation.md`.
-This status/ledger synchronization changes no product code, source manifest,
-physical package, shared contract, or existing Commercial Foundation ledger.
-
-Typed Binding Task 1 implementation, review, and QA evidence is:
-
-- Reviewed code commit:
-  `86d5a00f26d5f331764de0e8bf7694e657cd2514`
-  (`feat: index typed graph symbols`).
-- The implementation changes only `packages/graph/src/model.ts` and
-  `packages/graph/test/application-graph.test.ts`, inside the exact four-path
-  boundary.
-- Fresh Node `v22.11.0` verification passed 30/30 focused application-Graph and
-  browser-entry tests, Graph typecheck, Graph lint, and implementation diff
-  checks.
-- Independent Task 1 review of
-  `4617cb23752e17eaa223bdddb1b3f3164472f2a3..86d5a00f26d5f331764de0e8bf7694e657cd2514`
-  returned PASS with no P0/P1/P2.
-- Independent behavioral QA on Node `v22.11.0` passed
-  `pnpm --filter @factory/graph test -- --run` at 30/30 tests, plus Graph
-  typecheck, lint, and build.
-- A direct public `dist/browser.js` probe passed 17/17 owner-scoped
-  duplicate/wrong/missing-field assertions and 18/18 isolated-namespace
-  assertions. Wrong or missing owners and fields returned `undefined`.
-- Browser/model source and built output contained no Node builtin or
-  `@factory/capabilities` import. The implementation and documentation-only
-  follow-up diffs were bounded and clean.
-- QA returned PASS with no P0/P1/P2. The PM reconciled this as sufficient only
-  for `ready_for_qa -> reviewed`; it is not release review or acceptance.
-- Release review then found one verified P1: generic `indexBy` uses
-  last-write-wins `Map` construction, while semantic Graph validation omits
-  duplicate navigation-entry-ID and flow-ID checks. An invalid Graph can
-  therefore resolve one of those typed symbols by declaration order instead of
-  failing closed.
-- The PM returned Task 1 `reviewed -> implementing` and authorized bounded
-  repair round 1. Earlier task-review and QA evidence remains historical but
-  cannot support acceptance while this finding is open.
-- Repair commit `784ebb0b3f30d3dad4cb7cc6ac7b4f1efc42fa50`
-  makes generic indexing fail closed on duplicate keys and adds semantic
-  duplicate navigation-entry-ID and flow-ID issues. The repair changes only
-  `packages/graph/src/model.ts` and
-  `packages/graph/test/application-graph.test.ts`.
-- Fresh Node `v22.11.0` verification passed 32/32 focused application/browser
-  tests and 32/32 full Graph tests, plus Graph typecheck, lint, build, and
-  repair diff checks.
-- Independent re-review of
-  `7a0ee76e620d92032c07c7272d2b637e6835a8cc..784ebb0b3f30d3dad4cb7cc6ac7b4f1efc42fa50`
-  returned PASS with no P0/P1/P2. The PM reconciled this as sufficient only for
-  `implementing -> ready_for_qa`.
-- Independent repair-round re-QA on Node `v22.11.0` passed 32/32 Graph tests,
-  Graph typecheck, lint, build, and repair diff checks.
-- Public built-browser probes proved validation, parsing, and indexing reject
-  duplicate navigation-entry and flow IDs. Owner-scoped field and isolated
-  namespace probes passed, and browser/model source plus built output contained
-  no Node builtin or `@factory/capabilities` import.
-- Re-QA confirmed the repair scope remained exactly
-  `packages/graph/src/model.ts` and
-  `packages/graph/test/application-graph.test.ts` and returned PASS with no
-  P0/P1/P2. The PM reconciled this as `ready_for_qa -> reviewed`.
-- Deferred limitation: `parseApplicationGraph` still accepts a duplicate
-  domain field, while validation, `assertValidApplicationGraph`, and typed
-  indexing reject it. Repair round 1 was bounded to the missing navigation/flow
-  parse rejection and did not change this pre-existing parser behavior.
-- Final independent release review of repair commit
-  `784ebb0b3f30d3dad4cb7cc6ac7b4f1efc42fa50` and reconciled governance
-  baseline `d6f8b994fef491ef5405fee44ae015f01de788e5` returned RELEASE PASS with
-  no P0/P1/P2.
-- Fresh Node `v22.11.0` acceptance verification passed 32/32 Graph tests,
-  Graph typecheck, lint, build, and the bounded repair diff check. The PM
-  records Task 1 `reviewed -> accepted`.
-- Task 1 acceptance is limited to the pure Graph index. Typed manifests,
-  serialized selections, safe assets, and Draft/Publish/compiler enforcement
-  remain Tasks 2 through 6; the
-  parent Foundation defect remains open.
-
-Typed Binding Task 2 implementation, repair-review, and QA evidence is:
-
-- Implementation commit `4458bfc7c8ffcaef29dfebb755d8399e12000198`
-  (`feat: define typed capability bindings`) is a direct child of dispatch
-  `bf77d90a5e2e7627ad806b7851462935b2add7e0` and changes exactly the four
-  authorized Task 2 paths.
-- Independent review of
-  `bf77d90a5e2e7627ad806b7851462935b2add7e0..4458bfc7c8ffcaef29dfebb755d8399e12000198`
-  found two P1s; Task 2 remained `implementing` at that review point.
-- P1 1: strict field and non-field manifest declarations do not have exact
-  own-key allowlists, and duplicate `fieldTypes` entries are accepted. Repair
-  round 1 stays inside the existing Task 2 paths and writer ownership.
-- Repair implementation commit
-  `a7331df0ac6a6f54f82bf61a060607777bc06dc0` changes only
-  `packages/capabilities/src/composition.ts` and
-  `packages/capabilities/test/typed-binding-contract.test.ts`.
-- Independent repair re-review of
-  `4458bfc7c8ffcaef29dfebb755d8399e12000198..a7331df0ac6a6f54f82bf61a060607777bc06dc0`
-  returned PASS with no P0/P1/P2. It confirmed exact strict-key allowlists,
-  duplicate-`fieldTypes` rejection, preserved specific non-field rejection, and
-  the exact two-path repair diff.
-- Repair verification passed 45/45 focused contract tests and 188/188 full
-  Capabilities tests, plus Capabilities typecheck, lint, build, and bounded diff
-  checks.
-- Architecture amendment commit `36317bf` finalized Task 3 ownership. The PM
-  reconciles the clean implementation, verification, bounded diff, and passing
-  independent re-review as `implementing -> ready_for_qa`.
-- Independent behavioral QA then passed 45/45 focused typed contract tests and
-  188/188 full Capabilities tests, plus Capabilities typecheck, lint, and build.
-  Strict public-package probes and bounded scope checks also passed.
-- QA confirmed the implementation stayed inside Task 2's exact four
-  Capabilities paths and the repair stayed inside its exact two-path subset.
-  The PM previously recorded `ready_for_qa -> reviewed`.
-- Independent release review then returned FAIL with one P1. Strict validation
-  and canonical selection could read inherited schema constraints or an
-  inherited binding `fieldKey`, allowing prototype-backed data to influence
-  the canonical binding value persisted in a lock. The prior task-review and
-  QA evidence remains historical and cannot support acceptance while this
-  finding is open. The PM records `reviewed -> implementing` for repair round 2.
-- Repair implementation commit
-  `565c64c5e79799261f8dc72c7e0da298fef4742d`
-  (`fix: reject prototype-backed capability bindings`) changes only
-  `packages/capabilities/src/composition.ts` and
-  `packages/capabilities/test/typed-binding-contract.test.ts`. It adds
-  plain-record/exact-own-key enforcement and focused regressions for inherited
-  field-binding and schema values.
-- Fresh local Node `v22.11.0` focused verification passed 47/47 tests across
-  `typed-binding-contract.test.ts` and `composition-contract.test.ts`. This is
-  repair-round-2 implementation evidence only.
-- Independent task re-review of repair round 2 returned FAIL. Required
-  `ownerBinding` and `fieldTypes` could still be satisfied through inherited
-  values, optional `fieldRequired` and `fieldUnique` constraints were not
-  governed solely by own-property presence, and the unknown-key guard did not
-  reject an empty-string own key.
-- Repair round 3 remains owned by **Typed Manifest Contract Integration** under
-  the unchanged **Capability Binding Contract**. Its exact repair paths remain
-  `packages/capabilities/src/composition.ts` and
-  `packages/capabilities/test/typed-binding-contract.test.ts`.
-- Repair implementation commit
-  `00ac760c54f353f6ae242f92a5dd4809791cd633`
-  (`fix: require own strict binding constraints`) requires own
-  `ownerBinding`/`fieldTypes`, evaluates optional field constraints only when
-  they are own properties, and rejects an empty-string unknown own key. New
-  focused regressions cover `Object.prototype` pollution and the empty key.
-- Fresh local Node `v22.11.0` implementation verification passed 49/49 tests
-  across `typed-binding-contract.test.ts` and `composition-contract.test.ts`,
-  plus Capabilities typecheck and lint. The commit changes exactly the two
-  repair paths above.
-- Independent repair-round-3 task review returned PASS with no P0/P1/P2. It
-  passed 29/29 `typed-binding-contract.test.ts` tests and 20/20
-  `composition-contract.test.ts` tests, verified the own-property and empty-key
-  regressions, and confirmed the exact two-path diff.
-- The PM reconciled the bounded implementation, fresh checks, and clean task
-  review as `implementing -> ready_for_qa`.
-- Independent repair-round-3 behavioral QA returned PASS. It passed 49/49
-  focused tests, 192/192 full Capabilities tests, Capabilities typecheck, lint,
-  and build, 180/180 Compiler tests, and the adversarial compiled probe.
-- The PM previously reconciled that passing QA evidence as
-  `ready_for_qa -> reviewed`.
-- Independent release review then returned FAIL with two P1s. First,
-  accessor-backed binding values could return one value during validation and
-  another before canonicalization, so lock bytes could diverge from the value
-  that passed validation. Second, strict parameter declarations could obtain
-  `key`, `type`, and `required` through their prototype rather than exact own
-  data, allowing inherited state to influence the strict contract.
-- The prior repair-round-3 task-review and QA evidence remains historical and
-  cannot support acceptance while these findings await independent repair
-  review. The PM records `reviewed -> implementing` for repair round 4.
-- Repair commit `b85dbda063fe6fa6db3b712f5891b013285e0356`
-  (`fix: snapshot strict composition inputs`) changes only
-  `packages/capabilities/src/composition.ts` and
-  `packages/capabilities/test/typed-binding-contract.test.ts`. It snapshots
-  exact own, enumerable data records; rejects accessor-backed and inherited
-  strict inputs; normalizes binding values once; and uses that immutable
-  snapshot for both validation and canonical selection.
-- Fresh engineer verification passed 195/195 Capabilities tests plus
-  Capabilities typecheck, lint, and build. Compiler regression verification
-  passed 180/180 tests plus Compiler typecheck and lint. The bounded diff is
-  exactly the same two-path repair subset above.
-- This is repair implementation evidence only. Independent task review of
-  `b85dbda063fe6fa6db3b712f5891b013285e0356` returned FAIL with one new P1:
-  `validateCapabilityBindingSchema` and `validateBindings` independently read
-  and snapshot `manifest.parameters`, allowing a getter-backed manifest to
-  return different strict parameter schemas between the two stages.
-- The original two release P1 repairs and engineer checks remain historical
-  implementation evidence, but `b85dbda063fe6fa6db3b712f5891b013285e0356`
-  cannot advance to QA. Independent reproduction showed the remaining witness
-  belongs to the shared immutable resolution-input boundary. Task 2A is now
-  independently accepted, but Task 2 remains `implementing`; its local repair
-  and review gates stay stopped until a separate PM reconciliation. Task 2 is
-  not `accepted`.
-- P1 2: `fieldKey` can exist in the Capabilities binding type but cannot persist
-  through the strict `ApplicationGraphV1` composition-binding schema, which
-  accepts only `{ graphSymbol }`.
-- Accepted ADR-0007 and the synchronized design/plan/ledger amendment route the
-  second finding to new Task 3. Task 2 remains inside its four Capabilities
-  paths, Task 3 remains `planned` until Tasks 2 and 2A are accepted, and this
-  update authorizes no Graph implementation.
-
-Commercial Capability Foundation Task 1 is accepted and frozen. Its verified
-`1.0.0` identities are `core.identity-context`, `core.location-context`,
-`commerce.line-configuration`, and `commerce.inventory-ledger`; their physical
-package, evidence-digest, verified-lock, and Publish-boundary contracts remain
+# Archeform delivery status
+
+Updated: 2026-08-14
+
+## Product outcome
+
+Archeform is an Application Graph platform whose default experience is:
+
+```text
+Apps -> Describe -> Building / Live Preview -> Edit -> Publish
+```
+
+The user describes a product in business language and receives a polished,
+runnable default. The Application Graph remains the durable business source of
+truth, but Graph internals, capability locks, lineage, and evidence stay in
+Advanced surfaces unless an exception requires attention. Page design, data,
+users, permissions, workflows, and experience remain editable. Generated
+source remains visible, searchable, diffable, exportable, and subject to
+controlled extension boundaries.
+
+The full status history through 2026-08-09 is preserved verbatim in
+[`archive/status-history/2026-08-09-project-status.md`](archive/status-history/2026-08-09-project-status.md).
+
+## Current milestone — Restaurant dual-surface compiler/runtime
+
+### Current authoritative checkpoint — 2026-08-14
+
+Graph V3 is delivered and its gate is consumed. Controller commit
+`8230197241589865f289c223fc346b6d91a438ae` has the exact subject
+`feat(graph): add application graph v3 contracts`, exactly the frozen 16 paths,
+and a successful non-force push on
+`feat/governed-composition-capability-foundry`. Local `HEAD` equals upstream at
+that exact hash and the delivered baseline was clean. Before delivery, focused
+Graph/browser 111/111, dispatch 12/12, Graph 465/465, compiler 415/415,
+typecheck/build, formatting/diff, declaration/browser/import, exact-manifest,
+and sensitive checks passed. Staged Expected16/Actual16 equality had no missing,
+unexpected, unstaged, or untracked path.
+
+The shared contract, now refrozen for Product Recipe V2, is
+[`superpowers/specs/2026-08-12-restaurant-task2-task3-key-binding-contract.md`](superpowers/specs/2026-08-12-restaurant-task2-task3-key-binding-contract.md).
+Its formatted SHA-256 is
+`ffa017cf14cd911495d70d8cf490bb637b570057235d3d841657e0f7c732b732`.
+It fixes two surfaces, fifteen page/route/recipe identities, the legacy mapping,
+registry namespaces, the complete field-authority classification, three flows,
+seven step-scoped V3 journeys, transition/UI Policy keys, and every page/block
+Domain/Flow/Policy binding port. The legacy actorless table-session expiry paths
+become explicit manager-granted V3 transitions; V1/V2 bytes and validators are
 unchanged.
 
-Commercial Capability Foundation Task 2 completed two bounded fix rounds
-within its exact five paths:
+A pre-write shared-contract check found that this manifest cannot be expressed
+by delivered `ProductRecipeV1`. Its surface owner set is exactly
+`entryPageKey` plus `navigation.items[].pageKey`, and it rejects every unowned
+screen. The manifest requires `customer-dish-detail`, `customer-checkout`, and
+`customer-order-detail` to belong to `customer-mobile` while deliberately
+excluding them from the five-item bottom-tab navigation. Adding hidden or
+duplicate navigation entries would violate the exact navigation contract.
+The stop-both rule was active until Product Recipe V2 delivery. The pre-V2 hash
+`75d67d44e922c3064fd5a63fc877366e2d17259be4fcebace1adbc4a6a8a4423` remains
+historical evidence, not the executable Task 2/Task 3 contract.
 
-- Initial implementation `35aa96e` composed the two profile recipes. Fix round
-  1, `ed3c2ba`, added configurable-line PolicyModel permissions, exact provider
-  ownership, and complete cross-profile output assertions.
-- The first scoped re-review found one remaining P1 in notification-provider
-  coverage. Fix round 2, `ac43247`, added that ownership and an exact
-  expected-effect-union assertion.
-- Scoped re-review of `35aa96e + ed3c2ba + ac43247` returned PASS with all
-  findings addressed and no P0/P1.
-- Fresh Node `v22.11.0` verification passed 107/107 focused tests across
-  `capability-registry`, `restaurant-profile`, and
-  `commercial-profile-composition`; Capabilities typecheck and formatting also
-  passed.
-- Subsequent release review found four P1 semantic defects not covered by that
-  scoped evidence. The earlier task-review and verification results remain
-  historical evidence only; they do not support QA or acceptance while these
-  findings are open.
-- Fix round 3, `e61e790`, stayed inside the same exact five paths and closed all
-  four findings:
-  1. Simple Ecommerce now uses coherent `shopper` and `merchant` roles across
-     bindings, permissions, and fulfillment.
-  2. Composition now enforces fail-closed PolicyModel requirements for all four
-     Foundation packages in both profiles.
-  3. Restaurant stock movements now require location scope, a unique
-     idempotency key/index, and item, order, and location relations, with
-     adversarial validation.
-  4. Production composition now admits only the three declared inventory
-     co-provider effects and rejects every other overlap through the full
-     profile entry points.
-- Independent scoped re-review approved the repair with all four original P1s
-  addressed and no P0/P1. Fresh Node `v22.11.0` verification passed 126/126
-  focused tests across the three Task 2 suites; Capabilities typecheck and
-  formatting also passed.
-- Independent re-QA of the four-commit set passed 145/145 focused Task 2 tests
-  and 152/152 full Capabilities tests. Build, typecheck, formatting, bounded
-  diff checks, and direct checks of the four fix-round-3 categories passed.
-  Re-QA nevertheless returned FAIL with one P1: those green suites do not prove
-  Restaurant semantic rejection on the active default composition path.
-- Fix round 4, `bf0b16f`, stayed inside two of the same exact five paths and
-  closed that P1:
-  - public `composeCapabilityDraft` now applies package- and binding-derived
-    inventory-ledger semantic validation after composition resolution and
-    symbol validation;
-  - the validator is bounded by selection of `commerce.inventory-ledger`,
-    derives movement and location entities from its bindings, and contains no
-    profile-name or package-version dispatch; and
-  - active `composeDefaultCapabilityDraft -> composeCapabilityDraft`
-    regressions reject a non-unique idempotency key, a missing unique
-    idempotency index, and a missing movement-to-location relation.
-- Independent scoped re-review approved the repair with no P0/P1. Fresh Node
-  `v22.11.0` verification passed all 155 Capabilities tests, including 28/28
-  commercial-profile-composition tests; build, typecheck, and formatting also
-  passed.
-- Second independent re-QA then passed 148/148 focused Task 2 tests and 155/155
-  full Capabilities tests. Build, typecheck, formatting, exact five-path diff
-  checks, 56 remove-one-permission cases, the three active ledger mutations,
-  no-ledger composition, and provider-overlap rejection all passed with no
-  P0/P1/P2 demonstrated.
-- Final release review nevertheless returned FAIL with one P1: the active
-  generic validator still accepts inventory-ledger relations with a missing or
-  wrong location source field and accepts missing catalog or order provenance
-  relations. The green re-QA evidence does not justify acceptance while that
-  public-boundary gap remains open.
-- Final fix round 5, `6433940`, stayed inside two of the same exact five paths
-  and closed that P1:
-  - public inventory-provenance validation resolves movement, location,
-    catalog, and order targets from the selected package's exact bindings;
-  - it requires exactly one `many-to-one` relation to each target, an explicit
-    declared string source field, required location/catalog fields, and
-    distinct source fields; and
-  - public-boundary tests reject missing, wrong, or reused relation fields and
-    missing catalog or order relations while preserving no-ledger composition.
-- Simple Ecommerce now includes the bound stock-movement-to-order relation via
-  `orderId`. No profile-name, package-version, or provenance-field-name
-  dispatch was introduced.
-- Final scoped re-review approved the repair with no P0/P1 and the frozen scope
-  intact. Fresh Node `v22.11.0` verification passed all 162 Capabilities tests,
-  including 35/35 commercial-profile-composition tests; build, typecheck,
-  formatting, and repair diff checks also passed.
-- Final independent QA then passed 155/155 focused Task 2 tests and 162/162 full
-  Capabilities tests. Build, typecheck, formatting, exact five-path diff checks,
-  56 permission removals, inventory provenance mutations, no-ledger
-  composition, and exact provider-overlap checks all passed with no P0/P1/P2
-  demonstrated.
-- Final release review nevertheless returned FAIL with one P1. Direct
-  public-package probes proved that composition accepts both
-  `core.location-context.locationCodeField = graph.domain.price` and
-  `commerce.inventory-ledger.stockField = graph.domain.price`. The final QA
-  evidence remains historical but cannot support acceptance because it did not
-  exercise wrong-entity or wrong-type field substitutions.
+### Active work
 
-The complete External Capability Intake project is accepted and frozen. Its
-Task 6 writer record is
-[`acceptance/external-capability-intake.md`](acceptance/external-capability-intake.md).
-On Node `v22.11.0`, it records:
+- Product Recipe V2 is `delivered` at
+  `0aeae1c0ba7afcb1f074329a30e51bb18c8aacfa` with the exact subject and 17-path
+  manifest. The non-force push succeeded despite an informational moved-repo
+  notice; remote configuration remains unchanged. Local `HEAD` equals upstream,
+  tracked dirty and staged counts are zero, and the residual untracked set is
+  exactly the Task 3 inventory plus 21 scaffolds. The prerequisite delivery gate
+  is consumed.
+- The Restaurant shared manifest is refrozen for
+  `factory.product-recipe/v2` at formatted SHA-256
+  `ffa017cf14cd911495d70d8cf490bb637b570057235d3d841657e0f7c732b732` on base
+  `0aeae1c0ba7afcb1f074329a30e51bb18c8aacfa`.
+- Task 2 is delivered and pushed at
+  `fbcf92eaf916c9eefa618cad163b44c34dcb0c3c` with exactly eleven capability
+  paths. Fresh evidence passes focused 20/20, full Capabilities 384/384, Graph
+  661/661, both typechecks/builds, exact containment, and independent review
+  P0/P1/P2=0/0/0. It provides the deterministic Product Recipe V2 and Graph V3
+  Restaurant semantics without dependency or runtime expansion.
+- Task 3 is delivered and pushed at
+  `8313e7ae49f8782bd3ab104d0141c60c96f6e4c3` with exactly 31 paths: the reuse
+  inventory, seven private packages, one notice, and seven importer-only lock
+  additions. Fresh evidence passes 44/44 tests, seven typechecks/builds, 270
+  normal renderer executions, 135 hostile-state rejections, 135 unsafe-URL
+  scrubs, all fifteen screen-source ESM imports, full-product ESM import, and
+  independent review P0/P1/P2=0/0/0. The lock delta is exactly `+72/-0` with no
+  package or snapshot drift.
+- Cross-task closure passes for the exact fifteen pages, seven journeys,
+  surface ownership, generated block ports, and the 53,497-byte complete
+  product source selection. The shared contract SHA remains
+  `ffa017cf14cd911495d70d8cf490bb637b570057235d3d841657e0f7c732b732`.
+- Task 4 is delivered at `0e85ed6135abeea3f3c44624856b796fa05c2c03`.
+  Task 5 is delivered at `96712e8653507910f4c78ebe9c964a9428f9fef5`
+  with exactly 17 compiler paths, the exact subject
+  `feat(compiler): add restaurant merchant v3 target`, non-force push,
+  local/upstream equality, and a clean tree. Fresh delivery evidence passes
+  focused 67/67, Compiler 491/491, Graph 661/661, Capabilities 384/384,
+  type/build/static gates, and independent P0/P1/P2=0/0/0.
+- Task 6A is delivered and pushed at
+  `1a659a2700056fa5c6814aadd6cb0fb924f27596`. It replaces the former mixed
+  shell with distinct Apps and Builder contexts, makes Advanced progressive,
+  and preserves the existing V1 product journey. Fresh delivery evidence passed
+  375 Workbench tests and independent review had no blocking finding.
+- Task 6B is delivered by the enclosing Task 6B commit under accepted
+  [`ADR-0012`](adr/adr-0012-curated-template-draft-preview-lifecycle.md). The
+  delivered slice adds one first-party Restaurant template, an independent V3
+  Draft clone, append-only Snapshot V2 persistence, a dual-surface product
+  preview, and rename-only Draft r.2 editing. It does not widen Graph, V3
+  Publish, or Compilation. Fresh evidence passes Control Plane 253/253,
+  Workbench 384/384, the real browser clone/preview/rename journey 1/1, both
+  package typechecks/builds, and final independent review P0/P1/P2=0/0/0.
+- Task 7A is delivered by its enclosing reviewed commit under accepted
+  [`ADR-0013`](adr/adr-0013-template-page-draft-revision-operation.md). It is
+  limited to selecting one delivered Restaurant page, changing only its title,
+  and appending Graph V3 Draft r.3 plus a new immutable Snapshot V2. Graph,
+  Puck, Data, Users, Workflow, Experience, Publish, Compilation, dependencies,
+  providers, and deployment remain unchanged. Fresh evidence passes Control
+  Plane 278/278, Workbench 390/390, Graph 661/661, Capabilities 384/384,
+  Compiler 491/491, both typechecks/builds, Prisma validation, browser journey
+  1/1, exact 28-path containment, and independent P0/P1/P2=0/0/0 review.
+- Task 7B is delivered by its enclosing reviewed commit under accepted
+  [`ADR-0014`](adr/adr-0014-template-page-block-order-round-trip.md). It is the
+  bounded visible Page slice: reorder the existing exact block set in one
+  Graph V3 `main` region, append a Draft and immutable Snapshot V2, and show the
+  server-authoritative order in Workbench. Its exact 25 implementation paths are
+  frozen in
+  [`the executable plan`](superpowers/plans/2026-08-14-template-page-block-order.md).
+  Puck permits drag only; insert, edit, duplicate, and delete remain disabled.
+  Graph, Product Recipe, Screen Recipe, generated runtime, Publish,
+  Compilation, Prisma, dependencies, lockfiles, providers, services, and
+  deployment remain unchanged.
+- Task 7C is delivered at
+  `78955444cb82d95346fb4fbded03167f982eb693` with exact subject
+  `feat(workbench): add governed restaurant data editing`, non-force push,
+  local/upstream equality, and a clean tree. Accepted
+  [`ADR-0015`](adr/adr-0015-template-restaurant-seed-data-edit.md) authorizes
+  only `Menu items -> Margherita pizza -> Dish name`: update the mirrored
+  `menu-item.name` seed/scenario value to `Heirloom tomato pizza`, append Draft
+  r.5 and one active immutable Snapshot V2, then update Customer Menu and
+  Merchant Menu Management only from the strict checksum-matched response. The
+  [`executable plan`](superpowers/plans/2026-08-14-template-restaurant-seed-data-edit.md)
+  freezes exactly 22 implementation paths. Graph, Capabilities, recipes,
+  Compiler, Prisma, packages, lockfiles, generated runtime, Publish, Source,
+  providers, services, and deployment remain excluded. Final evidence passes
+  focused Control Plane 90 and Workbench 86; full Control Plane 370, Workbench
+  439, Graph 661, Capabilities 384, Compiler 501; five no-emits, builds, Prisma,
+  Next, Playwright 1/1, and exact-28/static gates. Final Sol returns
+  `RELEASE_ACCEPT` and targeted Terra returns `PASS`, both P0/P1/P2=0/0/0.
+- Task 7D Experience is delivered at
+  `35da63df867dc0271254b1cbad38e5613a27c348` with exact subject
+  `feat(workbench): add governed restaurant theme editing`, non-force push,
+  local/upstream equality, and a clean tree. Accepted
+  [`ADR-0016`](adr/adr-0016-template-restaurant-experience-theme-revision.md).
+  Its exact outcome is Builder -> Experience -> Theme, Light -> Dark: append
+  Draft r.6 and one active immutable Snapshot V2, then switch the Customer and
+  Merchant Workbench preview frames only from a strict checksum-bound response.
+  The [design](superpowers/specs/2026-08-14-template-restaurant-experience-theme-design.md)
+  and [executable plan](superpowers/plans/2026-08-14-template-restaurant-experience-theme.md)
+  freeze exactly 23 implementation paths and an additive Workbench Experience
+  destination. Graph, Capabilities, recipes, Compiler, generated runtime,
+  Prisma, dependencies, providers, services, and deployment remain unchanged.
+  Independent review passes after the P1 repair, targeted Terra passes, and
+  final Sol returns `RELEASE_ACCEPT`, actionable P0/P1/P2=0/0/0. Controller
+  delivery consumed the exact 29 paths.
+- Task 8A Source Explorer is delivered at
+  `8c2767bb2c333d2086ca1b2d0f8cdc4c348bf7f0` with exact subject
+  `feat(workbench): add governed source explorer`, non-force push,
+  local/upstream equality, and a clean tree. Accepted
+  [`ADR-0017`](adr/adr-0017-workbench-source-explorer.md). It adds only
+  Builder -> Code -> Source for a succeeded immutable Compilation: show the
+  complete registered artifact tree ordered by path, then display a selected
+  file only after exact manifest path/digest admission and the existing server
+  rehash. The [design](superpowers/specs/2026-08-14-workbench-source-explorer-design.md)
+  and [plan](superpowers/plans/2026-08-14-workbench-source-explorer.md) freeze
+  exactly nine Workbench paths. The ninth is only the existing shell test for a
+  valid 64-lowercase-hex digest fixture; no production contract changes. Search,
+  diff, edit, overlays, ZIP, Git, Draft
+  Snapshot source, and all Control Plane/Graph/Compiler/runtime expansion are
+  deferred.
+  Repaired-tree independent re-review is clean, targeted Terra returns `PASS`,
+  and final Sol returns `RELEASE_ACCEPT`, actionable P0/P1/P2=0/0/0, after
+  stale-failure and valid-success A/B characterization. Controller delivery
+  consumed the exact 15 paths.
+- Task 8B Source Search is delivered at
+  `84a90c4b17fe30bc35921fb25aebf228009678be` with exact subject
+  `feat(workbench): add source search`, non-force push, local/upstream equality,
+  and a clean tree. It adds only local
+  case-insensitive manifest-path filtering and bounded inert find-in-current-
+  verified-file highlighting. The
+  [executable plan](superpowers/plans/2026-08-14-workbench-source-search.md)
+  freezes exactly four Workbench paths, 120-character queries, exact
+  non-overlapping match counts, and at most 500 rendered marks. No API, client,
+  hook, service, index, preload, Diff/edit/overlay/ZIP/Git, or Snapshot work is
+  authorized.
+  Mandatory RED is unit 6/15 plus browser 1/1; initial GREEN passes focused 15,
+  full Workbench 488, no-emit, Next, and browser 1/1. Independent review's one
+  same-ID Compilation replacement P1 is repaired RED 1/16 -> GREEN 16/16; fresh
+  full Workbench 489, no-emit, Next, browser 1/1, and exact-eight static gates
+  pass. The same reviewer returns P0/P1/P2=0/0/0 and
+  `READY_FOR_DELIVERY YES`; controller delivery consumed the exact eight paths.
+- Task 8C Verified Source Transfer is delivered at
+  `97b6dbdb6176ca26af6d7fa2b71dad6bbc692e19` with exact subject
+  `feat(workbench): add verified source transfer`, non-force push,
+  local/upstream equality, and a clean tree. Under the founder standing
+  instruction and ordinary deterministic UI delivery policy, the
+  [executable plan](superpowers/plans/2026-08-14-workbench-verified-source-transfer.md)
+  freezes the same exact four Workbench paths. Only the current verified file
+  can be copied or downloaded; copy transfers the exact admitted content with a
+  stale-completion token, while download emits the exact UTF-8 bytes using a
+  scrubbed safe basename hint and deterministic Object URL cleanup. Selection,
+  pending/failure, or Compilation invalidation clears/disables transfer state.
+  No new request, client, hook, API, Control Plane, dependency, ZIP, Diff, Git,
+  overlay, or persistence work is authorized.
+  Mandatory RED is unit 28/44 plus browser 1/1 with production untouched. GREEN
+  passes focused 44, full Workbench 517, no-emit, Next, browser 1/1, and clean
+  exact-eight static/containment gates. The independent review returns
+  P0/P1/P2=0/0/0 and `READY_FOR_DELIVERY YES`; controller delivery consumed the
+  exact eight paths.
+- D0 Restaurant V3 Runtime Catalog Parity is `delivered` at
+  `74c68a132f48b3230992fad2f3fa80abfb066b84` with exact subject
+  `fix(compiler): bind restaurant runtime catalog to graph seed`, non-force push,
+  local/upstream equality, and a clean tree.
+  [ADR-0018](adr/adr-0018-restaurant-v3-runtime-catalog-parity.md) replaces only
+  the Restaurant compiler's blanket canonical Graph hash pin with an exact
+  r.6-family normalize-to-canonical-hash proof and binds both generated surfaces
+  to one strict Graph-seeded runtime catalog. USD Graph prices remain major-unit
+  numbers with finite `0..100000` and at most two decimals; runtime/API rows emit
+  integer minor units. Focused 121/121, full Compiler 579, Graph 661, and
+  Capabilities 384 passed with all three no-emit/build gates; independent Sol
+  review returned P0/P1/P2=0/0/0.
+- Task 8 source breadth (compiler core) is `delivered` under accepted
+  [ADR-0019](adr/adr-0019-workbench-source-diff-export-overlay.md). It adds the
+  deterministic source manifest, controlled overlay apply, generated-file diff,
+  deterministic ZIP export, and Graph-first Git export in
+  `packages/compiler/src/targets/source/`. No Graph, Capability, Recipe, schema,
+  dependency, Control Plane route, provider, service, Docker, Compose, or
+  deployment change. Independent Sol review returned ACCEPT with P0/P1/P2=0/0/5;
+  the five non-blocking P2s (git file/dir prefix-collision rejection now closed,
+  package/config/entry exclusion deferred to the source-export admission layer,
+  diff/mediaType/origin contract clarifications) are recorded as deferred. The
+  Workbench download/diff surface and its E2E journey are deferred to a follow-up
+  slice that adds a tenant- and digest-scoped read-only source-export route.
+- Task 8 source-export route and Workbench download surface is `delivered` under
+  accepted [ADR-0020](adr/adr-0020-workbench-source-export-route.md). It adds one
+  read-only, tenant- and digest-scoped
+  `GET /compilations/:id/source-archive?format=zip|git` route that rehashes every
+  registered artifact through `GeneratedArtifactReader` and builds the archive via
+  the delivered `buildSourceZip`/`buildGitExport`, plus the Workbench download
+  buttons and client transport. No Graph, Capability, Recipe, schema, dependency,
+  provider, service, Docker, Compose, or deployment change. Independent Sol review
+  returned ACCEPT with P0/P1/P2=0/0/0. The
+  `e2e/restaurant-source-export.spec.ts` journey is deferred to Task 9's
+  full-stack acceptance.
+- Generated runtime Graph-valid permission and actor enforcement is `delivered`
+  under accepted
+  [ADR-0021](adr/adr-0021-generated-runtime-permission-actor-enforcement.md). It
+  replaces the fixed capability-flag authorization with generic
+  `permission`/`transition`/`flowRequest`/`clientField`/`writableField` predicates
+  over the serialized Published Graph `policy.permissions`, `flows`,
+  `fieldAuthorities`, and `bindingPolicies`, so any Graph-valid permission or actor
+  addition is enforced and any removal fails closed. Independent Sol review
+  returned ACCEPT with P0/P1/P2=0/0/0 after two P1 and one P2 repair. This is the
+  prerequisite for the Access and Workflow contextual editors.
+- Compiler admission of Graph-valid permission and actor additions is
+  `delivered` under accepted
+  [ADR-0022](adr/adr-0022-compiler-admission-permission-actor-additions.md). It
+  extracts a cached `getCanonicalRestaurantAuthority()` into
+  `@factory/capabilities` (composed from source-level standard Restaurant
+  `intent`/`experience`, not test fixtures) and admits bounded additions to
+  `policy.roles` and `policy.permissions` while `normalizeAllowedRestaurantValues`
+  restores the canonical roles and permissions so the canonical-hash negative
+  space still holds. Flows, journeys, field authorities, and bindings remain
+  pinned; flow and journey admission is deferred to the Workflow editor slice.
+  Independent Sol review returned ACCEPT with P0/P1/P2=0/0/2; the two non-
+  blocking P2s (package-internal circular import hazard and role/permission
+  ordering-drift acceptance) are recorded as deferred.
+- The Workbench Access contextual editor is `delivered` under ADR-0021 and
+  ADR-0022. Builder -> Access on the Restaurant template Draft renders the
+  declared roles/permissions and admits one bounded write — add a team role
+  (Graph key, 1..128, `^[a-z][a-zA-Z0-9-]*$`, not already declared) with a
+  bounded `table-session`/`read` permission — appended as Draft r.7 and one
+  active immutable Snapshot V2. It is the
+  [design](superpowers/specs/2026-08-14-workbench-access-contextual-editor-design.md)
+  and [plan](superpowers/plans/2026-08-14-workbench-access-contextual-editor.md)
+  freeze, implemented across the Control Plane `template-access-edit.ts`
+  capture/apply, the `appendTemplateAccessRevision` service method and
+  `POST /template-draft-instances/:id/access-revisions` route, and the
+  Workbench client/controller/`template-access-workspace` surface. Only
+  `policy.roles` and `policy.permissions` change; the resulting Draft must
+  still pass `assertApplicationGraphV3` and
+  `assertRestaurantDraftPreviewGraphClosure`, and duplicate, malformed, or
+  canonical-role-removing edits fail closed. Independent Sol review returned
+  ACCEPT with P0/P1/P2=0/0/4 after a same-reviewer P1 repair; the four P2s
+  (negative-injection parity, routing-test, r.7 fixture-role, and
+  branch-isolation canaries) are recorded as deferred non-blocking.
+- The first independent two-axis Task 7B review returned NOT READY with
+  P0/P1/P2=0/6/3. Actionable findings cover hostile array reflection
+  amplification, unchanged-order 400 versus fixed 409, registry closure after
+  Draft-create attempt, hostile/extra Puck data, real Puck canvas synchronization,
+  and the mandatory full release-gate sequence. PM froze same-writer TDD repair,
+  added only the existing Compiler preview and two barrel paths needed for a pure
+  pre-append closure assertion, and corrected the scope to 25 implementation / 31
+  delivery paths. No Graph, recipe, runtime, database, dependency, or lockfile
+  expansion is authorized.
 
-- A fixture-only CLI preflight of exactly 43 portfolio sources and 108 demand
-  signals: 19 independent requested results, 24 independent policy-only
-  blocks, stable redacted repeat output, no Candidate creation, and exact
-  run-owned cleanup.
-- Release-boundary regressions that reject Candidate artifacts at Golden,
-  Graph, and compiler entry points; reject Golden/Graph/compiler/generated/
-  runtime/provider/approval/copy-execution fields; and preserve package-root
-  importer isolation.
-- Independent re-QA after document repair `0b558fc` passed; PM ledger
-  `77b4062` moved Task 6 `ready_for_qa -> reviewed`. Release review against
-  `77b4062` then found two P2/no-P0/P1: the concurrent real
-  directory-replacement race exceeded Vitest's 5-second default, and the prior
-  documents were stale at `ready_for_qa`.
-- Controller repair authorization `a9867b8` led to implementation commits
-  `4924ec0 + dc6ca19`, which passed independent task review with no P0/P1/P2.
-  PM ledger `43913ae` then moved Task 6 `implementing -> ready_for_qa`.
-- Fresh re-QA at `43913ae` concurrently passed External Intake 392/392, Intake
-  CLI 56/56, Graph 28/28, Capabilities 123/123, and Compiler 180/180. The
-  directory and junction races completed in 6,361 ms and 3,688 ms.
-- A serial Intake CLI run passed 56/56 with those races at 1,941 ms and 1,858
-  ms; focused release-boundary and bulk-intake tests passed 3/3 and 1/1. All
-  five affected typecheck/lint gates, targeted Prettier, `git diff --check`,
-  and clean-worktree verification passed.
+### Blocked decisions and risks
 
-## Active work
+- The Workflow contextual editor (flow/journey admission) remains deferred; only
+  role/permission additions are admitted (ADR-0022) and edited (the delivered
+  Access editor). Page/Data/Experience/Access satisfy Task 9's
+  contextual-editing acceptance.
+- Task 9 guarded real-model acceptance, `main` integration, and the repository
+  release require the environment-only OpenAI credential and the Docker/Compose
+  full stack (both available). The V3 Publish/Compilation closure is delivered
+  (ADR-0023: slice 1 lifecycle + slice 2 Workbench + the template-instance
+  compile fix), so a template Draft now publishes and compiles to 18 artifacts.
+  The remaining Task 9 work is three slices: 9A wire the Describe entry to the
+  Restaurant V3 composer (today it still produces a generic V1 graph), 9B add the
+  V3 launch artifact and V1/V3 verification-queue dispatch (the V3 bundle lacks
+  `docker-compose.yml` and the verification queue is V1-only), and 9C a real
+  Restaurant Describe->Edit->Publish->Compile->Verify->Preview->cleanup
+  acceptance harness.
 
-- Typed Binding Task 1 is `accepted` and frozen under its pure Application
-  Graph Type System contract. Its deferred parser limitation remains recorded.
-- Typed Binding Task 2 is `implementing` in repair round 4 under the
-  accepted ADR, design, plan, and Task 1 dependency. The implementation owner
-  of record remains Typed Manifest Contract Integration and the contract owner
-  remains Capability Binding Contract.
-- Task 2's exact allowed paths are:
-  `packages/capabilities/src/assets/contract.ts`,
-  `packages/capabilities/src/composition.ts`,
-  `packages/capabilities/test/composition-contract.test.ts`, and
-  `packages/capabilities/test/typed-binding-contract.test.ts`.
-- Repair round 1 commit `a7331df0ac6a6f54f82bf61a060607777bc06dc0`
-  and its task-review/QA evidence remain historical after release review found
-  the prototype-backed binding-lock P1.
-- Repair round 2 commit `565c64c5e79799261f8dc72c7e0da298fef4742d`
-  remains inside the exact two-path repair boundary, but independent task
-  re-review returned FAIL on exact own-property enforcement.
-- Repair round 3 commit `00ac760c54f353f6ae242f92a5dd4809791cd633`
-  changes only `packages/capabilities/src/composition.ts` and
-  `packages/capabilities/test/typed-binding-contract.test.ts`. Fresh local
-  verification passed 49/49 focused tests, Capabilities typecheck, and
-  Capabilities lint. Independent task review passed with no P0/P1/P2 after
-  29/29 typed-binding and 20/20 composition tests. Independent behavioral QA
-  then returned PASS after 49/49 focused tests, 192/192 full Capabilities
-  tests, Capabilities typecheck/lint/build, 180/180 Compiler tests, and the
-  adversarial compiled probe. Release review subsequently failed with the two
-  accessor/prototype P1s recorded above, so this evidence is historical.
-- Repair round 4 commit `b85dbda063fe6fa6db3b712f5891b013285e0356`
-  changes the same exact two paths. It replaces repeated reads of caller-owned
-  strict inputs with exact own-enumerable data snapshots and normalized
-  binding values shared by validation and canonical selection. Fresh engineer
-  verification passed 195/195 Capabilities tests, Capabilities typecheck,
-  lint, and build, plus 180/180 Compiler tests and Compiler typecheck/lint.
-  Independent task review then returned FAIL: separate reads of
-  `manifest.parameters` in schema validation and binding validation allow a
-  getter to supply different strict parameter schemas between stages. Repair
-  round 4 remains `implementing`, but independent reproduction and accepted
-  ADR-0008 stop further local Task 2 repair. Task 2A is now accepted; Task 2
-  review, QA, release review, and acceptance verification remain stopped until
-  a separate PM reconciliation authorizes its remaining gates.
-- Repair round 4 may not change physical package roots and registrations,
-  profile recipes, public Draft composition, Publish, compiler, Workbench,
-  lifecycle, historical bindings, or introduce
-  Profile/package/version/field-name dispatch.
-- Typed Binding Task 2A, **immutable composition resolution boundary**, is
-  `accepted` after repair round 2 under the **Capability Composition
-  Resolution Boundary**
-  contract owner and accepted ADR-0008. Its bounded writer is **Immutable
-  Composition Resolution Integration**. Its exact allowed paths are:
-  `packages/capabilities/src/node.ts`,
-  `packages/capabilities/src/index.ts`,
-  `packages/capabilities/src/composition.ts`,
-  `packages/capabilities/test/composition-contract.test.ts`, and
-  `packages/capabilities/test/typed-binding-contract.test.ts`.
-- Independent review of plan Task 3 commit
-  `73accc24a68d55308d127717e36cd63130024f3e` returned FAIL with two P1s.
-  `createVerifiedCapabilityCompositionLock` and `composeCapabilityDraft` read
-  caller-owned selections or locks before capture, allowing a self-redefining
-  accessor to make verification or provider-overlap checks observe different
-  assets from resolution or lock creation. Compiled parameter- and
-  binding-schema maps also retain runtime-mutable schema values.
-- Controller-authorized repair round 1 requires capture before every public
-  package-verification, provider-overlap, or other selection/lock read, reuse of
-  that same owned snapshot downstream, and deep runtime immutability for every
-  compiled schema value, including nested records and arrays. Governance commit
-  `76274e304e1d09f58b847bcfd4c80e3db1072e28` formally amended the scope to
-  those exact five paths.
-- Repair commit `a09d459077f80fa82161df928137b1f2052a75bb` changes exactly the
-  five authorized paths. Independent repair review returned SPEC PASS and
-  QUALITY PASS with no P0/P1/P2 and no remaining task-review finding. The PM
-  records `implementing -> ready_for_qa` at that task-review gate.
-- Independent behavioral QA against `a09d459` returned PASS with no P0/P1/P2.
-  Capabilities passed 214/214 with its package checks, and Compiler passed
-  180/180 with its package checks. All public accessor probes observed zero
-  getter invocations and rejected with the capture error; the valid frozen
-  digest remained exact. The largest registered 13-selection composition
-  resolved 1,000 times with exactly one digest and p95 2.708 ms, below the 20 ms
-  ceiling. The exact five-path scope and diff checks were clean.
-- Host default Node PATH is unusable because the configured NVM symlink is
-  absent. Node v22.11.0 was available and every QA command used a process-local
-  PATH to that binary; QA made no machine or persistent environment change.
-- The PM previously reconciled QA and its environment limitation as
-  `ready_for_qa -> reviewed`. Independent release review of `a09d459` then
-  returned FAIL with one P1: `resolveCapabilityAssetLock`,
-  `assertGoldenCapabilityAssetLocks`, `assertGoldenCapabilityComposition`,
-  `composeDefaultCapabilityDraft`, and `composeProfileDraft` read caller-owned
-  input or context before descriptor capture. Direct probes observed getter
-  invocation, and a self-changing `profile` getter produced incoherent output.
-- The Controller authorizes repair round 2 inside the same exact five paths.
-  Every exported composition/lock public entry point must capture before any
-  input or context observation and consume only the owned snapshot afterward.
-  Exhaustive tests must prove zero getter invocations and self-changing-accessor
-  coherence across all five wrappers. The PM records
-  `reviewed -> implementing`; prior task-review and QA evidence remains
-  historical. At that transition, fresh task review, QA, release review, and
-  acceptance verification were required.
-- Repair round 2 commit `40096847c4a4b28c3d02fd33d01805d46da0bded`
-  changes only `packages/capabilities/src/composition.ts`,
-  `packages/capabilities/src/index.ts`, and
-  `packages/capabilities/test/composition-contract.test.ts`, a subset of the
-  unchanged five authorized paths. Independent repair-round-2 review returned
-  SPEC PASS and QUALITY PASS with no P0/P1/P2 after auditing all eight exported
-  structured composition/lock boundaries and their self-redefining accessor
-  and alias probes. The PM previously recorded `implementing -> ready_for_qa`.
-  Prior QA against `a09d459` remains historical. Fresh repair-round-2
-  behavioral QA against `40096847c4a4b28c3d02fd33d01805d46da0bded`
-  returned PASS with no P0/P1/P2. Capabilities passed 219/219 and Compiler
-  passed 180/180; all eight public boundaries rejected with the capture error
-  and zero getter invocations; alias, server-lock, deep-freeze, and digest
-  checks passed; and the largest registered composition retained one digest at
-  p95 2.884 ms. The PM previously recorded `ready_for_qa -> reviewed`.
-- Final independent release review at governance commit
-  `27c45b54951d00869f7cf6c58cc537c1a9b8ef35` against source commit
-  `40096847c4a4b28c3d02fd33d01805d46da0bded` returned RELEASE PASS with no
-  P0/P1/P2. Fresh Node `v22.11.0` acceptance verification passed 219/219
-  Capabilities tests, 180/180 Compiler tests, and 76/76 focused tests. The
-  1,000-resolution probe retained one digest at p95 2.554 ms, with no
-  source/governance drift or secrets. The PM records `reviewed -> accepted`.
-- Typed Binding Task 3 remains `planned`. Its Task 2A dependency is accepted,
-  but Task 2 remains `implementing`, so Task 3 stays blocked. It owns exactly:
-  `packages/graph/src/model.ts`,
-  `packages/graph/test/application-graph.test.ts`, and
-  `packages/graph/test/browser-entry.test.ts`.
-- Physical assets remain Task 4 and blocked until Task 3 is accepted. Tasks 5
-  and 6 remain serially blocked on their preceding accepted task. Task 7
-  remains `planned` until Tasks 1, 2, 2A, and 3 through 6 are all `accepted`.
-- Commercial Foundation Task 2 remains `implementing` and escalated. No sixth
-  repair is authorized; its previous exact five-path implementation boundary
-  remains historical release evidence only. It cannot resume acceptance until
-  Typed Binding Task 7 is accepted and the PM reconciles the parent ledger.
-- This PM transition changes only the typed-binding ledger and project status.
-  It modifies no implementation code, source manifest, physical package,
-  shared contract, or existing Commercial Foundation ledger.
+No founder technology decision is currently blocking this prerequisite.
+[`ADR-0011`](adr/adr-0011-product-recipe-surface-page-ownership.md) is Accepted
+from the exact 2026-08-14 founder response
+`参考以下总结，若符合项目目标，则持续接受而迭代。`; PM confirmed that the referenced
+summary matches the current evidence and accepted Restaurant goal. The accepted
+additive contract preserves V1 and separates owned pages from visible
+navigation. Copied shadcn/ui source, direct Radix, another external coordinate,
+provider/model/network/service work, Docker, Compose, and unassigned Workbench
+API/Control Plane expansion remain unauthorized. ADR-0013 authorizes only the
+delivered Page-title command and ADR-0014 only the delivered same-set Page
+block-order operation. ADR-0015 is accepted under the same standing founder
+direction only for the exact mirrored Restaurant seed-name operation; it does
+not authorize generic Data CRUD, generated-runtime changes, another Graph
+contract, or broader editor behavior.
 
-## Blocked decisions
+Access and Workflow follow-ups remain `blocked_at_design`: Graph-valid
+permission or actor additions are not enforced by the current Restaurant
+compiler/runtime, so Workbench must not present them as product behavior.
 
-- No Candidate has been approved, promoted, registered as Golden, linked to a
-  Graph, provided runtime authority, or copied into Factory-owned code.
-- The Task 6 fixture-only clarification excludes the plan's former public-source
-  smoke probe. No public network, repository resolution/download, vendor
-  contact, credentials, or external commitment is authorized by this slice.
-- This slice is fixture-only and provides no public-network or live-service
-  evidence. Acceptance grants no promotion, approval, Golden, Graph, compiler,
-  generated-runtime, provider, or source-copy authority.
-- Foundation Tasks 3 and 4 are blocked on accepted Task 2 profile composition
-  metadata. Task 2 is back in `implementing` and escalated; neither downstream
-  task is dispatched by this update.
-- Typed Binding Task 2 is `implementing` in repair round 4 after independent
-  release review found two P1s in accessor-backed binding canonicalization and
-  prototype-supplied strict parameters. Commit
-  `b85dbda063fe6fa6db3b712f5891b013285e0356` is implementation evidence only;
-  independent task review failed on the separate `manifest.parameters`
-  snapshot gap. Accepted ADR-0008 supersedes further local repair with Task 2A,
-  now `accepted` after repair round 2 at commit
-  `40096847c4a4b28c3d02fd33d01805d46da0bded` passed independent SPEC and
-  QUALITY review with no P0/P1/P2. Release review of amended repair commit
-  `a09d459` and its earlier QA remain historical. Fresh repair-round-2 QA
-  against `40096847c4a4b28c3d02fd33d01805d46da0bded` passed with no P0/P1/P2,
-  219/219 Capabilities tests, 180/180 Compiler tests, zero-getter capture-error
-  rejection at all eight public boundaries, passing alias/server-lock/
-  deep-freeze/digest checks, and one largest-composition digest at p95 2.884 ms.
-  Final release review and fresh acceptance verification then passed against
-  source `40096847c4a4b28c3d02fd33d01805d46da0bded` and governance
-  `27c45b54951d00869f7cf6c58cc537c1a9b8ef35` with no P0/P1/P2; acceptance
-  verification passed 219/219 Capabilities, 180/180 Compiler, and 76/76 focused
-  tests, plus one digest across 1,000 resolutions at p95 2.554 ms and clean
-  drift/secret checks. The PM records `reviewed -> accepted` for Task 2A. This
-  does not advance Task 2, which remains `implementing` pending separate PM
-  reconciliation.
-  Graph Task 3 remains `planned` and blocked on Task 2 acceptance; its Task 2A
-  dependency is now accepted.
-  It, not either Capabilities task, owns owner-aware Graph persistence. Tasks 4
-  through 6 cannot overlap or start before the preceding task is `accepted`.
-- Physical asset Task 4 is additionally blocked on accepted Task 3 serialized
-  Graph round-trip, structural validation, hash, and browser evidence.
-- Typed Binding Task 7 cannot start before Tasks 1, 2, 2A, and 3 through 6 are all
-  `accepted`. Its acceptance does not automatically accept Commercial
-  Foundation Task 2; the PM must reconcile that parent state separately.
-- No sixth Commercial Foundation Task 2 repair is authorized. ADR-0006 governs
-  the dedicated hardening project; any change to its accepted contract,
-  dependency chain, or exact task paths stops downstream work for PM and
-  architecture review.
+The main risks are shared-contract drift, accidental lockfile resolution drift,
+client relabeling of server totals/state/payment/inventory/audit fields, and UI
+ports that imply authority. Frozen tests and the stop-both rule address these.
 
-## Risks and limitations
+### Next smallest valuable slice
 
-- Fixture evidence proves deterministic local behavior only; it does not prove
-  availability or behavior of a live source, scanner, provider, or vendor.
-- The repository-local CLI retains the accepted single-purpose `process.chdir`
-  limitation for promotion-packet output anchoring; it is unchanged here.
-- The preflight creates intake requests only. It cannot make a licence decision,
-  promote a Candidate, or execute a source copy.
-- Task 2 must not confuse accepted physical Foundation contracts with completed
-  Restaurant or Ecommerce product behavior. Cross-profile bindings and
-  deterministic recipe evidence are the gate.
-- Task 2 intentionally records `commerce.inventory` and
-  `commerce.inventory-ledger` as co-providers of `inventory.reserve`,
-  `inventory.release`, and `inventory.decrement`. Fix round 3 now rejects the
-  formerly undeclared `inventory.adjust` overlap, but future Task 3 must still
-  define and prove lock-derived runtime resolution that cannot double-execute
-  any of the three intentional stock movements or select behavior by profile
-  name. This is a downstream risk, not authority to start Task 3.
-- The flattened graph-symbol namespace allows an existing field symbol from the
-  wrong entity or semantic type to satisfy a Foundation binding. Until Typed
-  Binding Tasks 1, 2, 2A, and 3 through 7 are accepted, immutable locks can
-  direct location or inventory behavior at unrelated data, including price
-  fields.
-- Task 1 provides the pure typed index but does not define typed manifest
-  requirements, serialize owner-aware selections, publish safe assets, or
-  enforce binding semantics at Draft, Publish, or compiler admission. Tasks 2
-  through 6 are still required before recipe migration and parent closure.
-- Task 2 repair round 1 closes the unexpected-own-key and duplicate-`fieldTypes`
-  defects in implementation and task re-review, but its independent behavioral
-  QA is historical after release review found that prototype-backed schema or
-  binding values could influence lock canonicalization. Repair round 2 then
-  failed independent task re-review because required and optional constraints
-  were not fully own-property-bound and an empty-string own key escaped the
-  unknown-key check. Repair round 3 is present inside the exact two-path repair
-  boundary and passed independent task review with no P0/P1/P2. Behavioral QA
-  then passed its focused, full Capabilities, compiler-regression, build-gate,
-  and adversarial compiled-probe evidence, but release review then found that
-  accessor-backed bindings could change between validation and
-  canonicalization and that strict parameters could inherit their declaration.
-  Repair round 4 commit `b85dbda063fe6fa6db3b712f5891b013285e0356`
-  snapshots exact own-enumerable strict input data and passed fresh engineer
-  package checks, but independent task review found a remaining time-of-check/
-  time-of-use gap because `manifest.parameters` is fetched and snapshotted
-  separately by schema validation and binding validation. A getter can return
-  different parameter schemas between those stages. Independent reproduction
-  expanded the risk to all caller-owned composition inputs. ADR-0008 assigns
-  that boundary to Task 2A. Task 2A is accepted, but local Task 2 repair and
-  review remain stopped until a separate PM reconciliation determines the
-  remaining Task 2 gates.
-- Task 2A plan Task 3 commit
-  `73accc24a68d55308d127717e36cd63130024f3e` left public pre-capture reads and
-  runtime-mutable compiled schema values. Governance amendment `76274e3`
-  formalized the five-path repair, and repair commit
-  `a09d459077f80fa82161df928137b1f2052a75bb` passed independent SPEC and
-  QUALITY review with no P0/P1/P2. Independent behavioral QA also passed with
-  no P0/P1/P2, 214/214 Capabilities tests, 180/180 Compiler tests, zero-getter
-  capture rejection, exact digest compatibility, and one digest across the
-  1,000-run performance probe at p95 2.708 ms. Release review then returned Task
-  2A to `implementing` for repair round 2 after finding that five exported
-  composition/lock wrappers still observe caller-owned inputs or context before
-  capture. Direct probes invoked getters, and a changing profile getter
-  produced incoherent output. The existing review and QA evidence is
-  historical. Repair round 2
-  commit `40096847c4a4b28c3d02fd33d01805d46da0bded` changes three of the five
-  authorized paths and passed independent task review with SPEC PASS, QUALITY
-  PASS, and no P0/P1/P2 after an audit of all eight exported structured
-  composition/lock boundaries and self-redefining accessor/alias probes. Fresh
-  behavioral QA against that commit passed with no P0/P1/P2: Capabilities
-  passed 219/219, Compiler passed 180/180, every one of the eight public
-  boundaries rejected with the capture error and zero getter invocations, and
-  alias, server-lock, deep-freeze, digest, and largest-composition
-  single-digest probes passed at p95 2.884 ms. Final release review then passed
-  with no P0/P1/P2. Fresh Node `v22.11.0` acceptance verification passed
-  219/219 Capabilities, 180/180 Compiler, and 76/76 focused tests, plus one
-  digest across 1,000 resolutions at p95 2.554 ms and clean source/governance
-  drift and secret checks. Task 2A is `accepted`; this grants no Profile,
-  physical asset, Provider, Candidate Intake, or external source authority.
-- Owner-aware field bindings cannot currently survive the Application Graph
-  schema. ADR-0007 assigns the repair to Task 3, but the risk remains until that
-  task passes independent review, QA, release review, and fresh verification.
-  No downstream Draft, Publish, or compiler gate may assume the serialized
-  `{ graphSymbol, fieldKey }` value exists before then.
-- Repair round 1 rejects duplicate navigation-entry and flow IDs and makes
-  `indexBy` fail closed. Independent re-QA, release review, and fresh
-  verification passed; Task 1 is accepted.
-- `parseApplicationGraph` still accepts a duplicate domain field even though
-  validation, assertion, and typed indexing reject it. This is a documented
-  deferred limitation outside the bounded navigation/flow repair.
-- New safe versions must be created and digest-verified; accepted historical
-  package roots and locks cannot be edited in place. Current recipes must
-  migrate through a new Draft revision.
-- Publish and compiler admission must become Graph-aware without restoring an
-  unsafe lock-only overload or allowing compiler output before validation.
+Authorize one Sol writer for D0's exact-ten Compiler tree only after the exact
+governance freeze, base equality, and clean-tree checks. Keep Access, Workflow,
+Source breadth, Publish, worker/Compilation lifecycle, visible title/order/theme
+runtime parity, and every broader generated-runtime change deferred.
 
-## Next smallest valuable slice
+### Retained historical reconciliation through V3 acceptance
 
-Reconcile accepted Task 2A against Task 2's repair-round-4 repeated-read P1 and
-determine the smallest bounded Task 2 re-review or repair gate. Keep Task 2
-`implementing` until that separate reconciliation is complete. Do not start
-Graph Task 3; keep Typed Binding Graph Tasks 3 through 7 `planned` and blocked,
-Commercial Foundation Task 2 `implementing` and escalated, and its Tasks 3 and
-4 `planned` and blocked.
+Task 0 Product Closure is `accepted` on the current reviewed tree. Final Terra
+release QA passed, and independent Sol release review returned `ACCEPT` with
+P0/P1/P2=0/0/4. The four P2s are recorded as deferred and nonblocking in the
+active PM ledger. No Product Closure code or live-provider work remains.
+
+Accepted current-tree evidence includes:
+
+- exact clean-checkout reconstruction of 105 tracked and 56 untracked manifest
+  paths, frozen install, 16/16 typecheck tasks, 16/16 test tasks, and 10/10
+  builds;
+- environment-only real-model Prompt A and Prompt B journeys passing 2/2 in
+  20.3 minutes with no credential or raw model material in output or evidence;
+- materially different Published Graphs, accessibility and theme evidence,
+  live action inventory 22/22, and exactly 26 canonical evidence PNGs with
+  repository/clean-checkout hash equality;
+- isolated cleanup at 0 containers, 0 networks, and 0 volumes, with the
+  post-run preview guard passing.
+
+The controller-owned reviewed commit and push remain pending, followed by proof
+that local HEAD equals the remote branch tip. D0 is `reviewed`, not accepted:
+restarted Terra QA passes with P0/P1/P2=0/0/0 and the full provider-free
+governance suite passed 11/11 before the decision. The founder accepted ADR-0009
+in founder chat on 2026-08-11 with the exact response `接受，继续`. The required
+post-decision check is RED 10/11 and the CLI verifier fails on the same single
+issue because it still hardcodes ADR status `Proposed`. D0 remains `reviewed`,
+not accepted. Founder-transition fix round 3 then fails scoped Sol re-review
+with P0/P1/P2=0/1/0: accepted and not-recorded decision markers can coexist, and
+proposed status does not reject orphan accepted-decision metadata. Fresh Sol
+fix round 4/5 is limited to the verifier and its tests. That repair now passes
+RED 18/20 to GREEN 20/20, source-native checks 26/26, and scoped Sol re-review
+with P0/P1/P2=0/0/0. Terra recheck is next on the exact tree and complete prior
+provider-free evidence. That recheck now passes P0/P1/P2=0/0/0 with focused
+20/20, source-native 26/26, CLI, and all prior D0 evidence clean. D0 remains
+`reviewed`, not accepted; ADR-0009 remains `Accepted`. Exactly one final
+independent Sol release review then returns `REJECT` with P0/P1/P2=0/3/0. PM
+acceptance and commit/push are not authorized. The single remaining repair,
+round 5/5, is limited to technology governance, the workstream, and the D0
+verifier/test. It must remove stale live-state authority, verify the actual
+D0/Task 1 fields, and compare every Golden-profile table row bidirectionally to
+tracked runtime authorities. Final round-5 scoped Sol re-review returns `ACCEPT`
+with P0/P1/P2=0/0/0, and final Terra QA passes P0/P1/P2=0/0/0 with source-native
+52/52, CLI, and every governance evidence gate fresh green. PM accepts D0 on
+2026-08-12. Controller verification of that exact accepted tree then fails:
+source-native governance tests pass 51/52 and the direct CLI exits 1 because the
+verifier rejects legitimate D0 state `accepted` and requires `reviewed`.
+Independent Sol classifies this as P0/P1/P2=0/1/0 and load-bearing. The prior
+Terra result predates the state transition. The round-5/5 cap is exhausted, so
+stage/commit/push authority is revoked and delivery is blocked. New explicit
+founder authority was required to reopen a minimal post-accept transition
+repair. The founder then explicitly responded `接受，继续` in founder chat on
+2026-08-12. This reopens exactly one verifier/test-only repair. D0 returns to
+`implementing` for that repair while ADR-0009 remains accepted and the prior
+acceptance/delivery history is preserved. Task 1 and Restaurant Product code
+remain blocked. The exact two-path writer handoff is now complete: RED
+reproduces the reviewed-only rejection, GREEN passes the combined source-native
+command 58/58 (governance 52/52 plus no-preview 6/6) and the CLI verifier, and
+formatting/diff/scope checks pass. Independent Sol review then returns `FAIL`
+with P0/P1/P2=0/2/0: historical whole-ledger authorization markers can replay
+after supersession/revocation, and the original evidence label obscured the
+52+6 composition. The same verifier/test-only writer scope is repairing ordered
+single-record authorization and supersession. D0 remains `implementing`; Terra
+QA and delivery remain unauthorized pending a clean re-review. The same-scope
+writer re-handoff now records RED 0/5 for stale/split/revoked/consumed/duplicate
+authority and GREEN combined 63/63 (governance 57/57 plus no-preview 6/6),
+focused 7/7, broader 25/25, CLI, formatting, diff, and two-path scope. The same
+Sol reviewer recheck is in progress; no later gate is authorized yet.
+The same Sol re-review now passes P0/P1/P2=0/0/0 with focused 7/7, broader
+25/25, combined 63/63 (governance 57/57 plus no-preview 6/6), CLI, formatting,
+and diff checks green. D0 is `ready_for_qa` for one exact-tree, provider-free
+Terra pass over authorization freshness, live state/blockers, and the complete
+D0 evidence. Terra stops before the full run with P0/P1/P2=0/1/0: the current
+CLI exits 1 and the checked-in contract passes 0/1 because the verifier rejects
+the legitimate `ready_for_qa` transition. D0 returns to `implementing` for the
+same exact two-path, founder-authorized repair. It must validate one current
+ordered Sol-PASS/Terra-authorization record and reject missing, split, stale,
+failed, revoked, superseded, or consumed records. Same-Sol re-review must pass
+before Terra restarts. The same-scope re-handoff now records RED 0/10 across the
+complete authorization lifecycle, then GREEN focused 10/10, broader 34/34, and
+combined 72/72 (governance 66/66 plus no-preview 6/6), with CLI,
+formatting/diff, and two-path scope clean. The same Sol re-review is in progress.
+D0 remains `implementing`; Terra, delivery, and Task 1 remain unauthorized. The
+same Sol re-review then fails P0/P1/P2=0/1/0 because invalidation misses the
+repository-native `Sol task review returns FAIL` wording. The same two-path
+repair now requires a bounded semantic Sol/Terra gate-outcome classifier across
+review, re-review, task review, release review, QA, and recheck vocabulary, with
+parameterized REDs and false-positive controls. No broader ledger schema or
+scope is authorized. The resulting handoff declares combined source-native
+82/82 (governance 76/76 plus no-preview 6/6), CLI, formatting, diff, and scope
+green, but the same Sol re-review returns `FAIL` with P0/P1/P2=0/1/0: the
+classifier checks only the first severity tuple, so an earlier 0/0/0 masks a
+later current 0/1/0 in the same gate record. The correction remains frozen to
+the verifier and its test only. It must evaluate every non-quoted tuple, cover
+both tuple orders and mixed PASS/FAIL wording, and retain quoted-history and
+all-zero false-positive controls. Fresh controller evidence on the active TDD
+tree is RED at governance 79/81 on the zero-then-nonzero and mixed-outcome
+controls; the reverse order, quoted-history, and all-zero controls pass. The
+all-tuples GREEN handoff now passes focused 5/5, broader ledger 49/49, and
+combined source-native 87/87 (governance 81/81 plus no-preview 6/6), together
+with CLI, formatting, diff, and exact two-path scope. The same Sol re-review now
+returns `FAIL` with P0/P1/P2=0/1/0: Markdown inline-code historical tuples are
+not excluded, so a valid current 0/0/0 record is consumed by a backtick-quoted
+`historical P0/P1/P2=0/1/0` explanation. The repair remains on the exact
+verifier/test pair and must add backtick, straight-single, and curly quote
+controls while retaining genuine backticked PASS/FAIL verdict detection and
+unquoted nonzero-tuple invalidation. The inline-code fix records focused RED 4/5
+on exactly that false positive, then GREEN focused 5/5, broader ledger 53/53,
+and combined source-native 91/91 (governance 85/85 plus no-preview 6/6), with
+CLI, formatting, diff, and exact two-path scope green. The same Sol final
+re-review returns `FAIL` with P0/P1/P2=0/1/0 because the exact explanatory-span
+boundary is still uncovered: the sanitizer handles a backtick span containing
+only the tuple, while the ledger requires
+`historical P0/P1/P2=0/1/0` inside the paired span and also requires ASCII
+single-quoted history rather than only double-quoted coverage. The same
+verifier/test repair must remove complete tuple-containing paired spans for
+Markdown backticks, ASCII single/double quotes, and curly single/double quotes,
+while leaving genuine standalone backticked PASS/FAIL verdict tokens visible.
+The complete paired-span fix records focused RED 2/5 on the backtick phrase,
+ASCII single-quoted phrase, and curly single-quoted phrase, then GREEN focused
+5/5, broader ledger 56/56, and combined source-native 94/94 (governance 88/88
+plus no-preview 6/6), with CLI, formatting, diff, and exact two-path scope green.
+The same Sol re-review returns `FAIL` with P0/P1/P2=0/1/0: the paired-span regex
+mistakes intra-word ASCII and curly apostrophes for quote delimiters, so a
+genuine unquoted nonzero tuple between possessives can be removed and stale
+ready authority can pass. The exact verifier/test repair must replace that
+single-quote regex behavior with a boundary-aware paired-span scanner where
+single quotes delimit only at non-word boundaries. Focused controls must cover
+ASCII and curly possessives, contractions, exact quote positives, and unmatched
+or mixed delimiters. The boundary-aware scanner handoff records focused RED
+9/11 on the possessive/contraction controls, then GREEN focused 11/11, broader
+ledger 64/64, and combined source-native 102/102 (governance 96/96 plus
+no-preview 6/6), with CLI, formatting, diff, and exact two-path scope green. The
+same Sol re-review now passes P0/P1/P2=0/0/0 with fresh scanner 11/11, complete
+102/102, CLI, formatting, and diff evidence; lifecycle, ADR-0009, Task 1 state
+and proposed contract, and the push-equality blocker remain strict. D0 advances
+to `ready_for_qa` for one exact-tree, provider-free, read-only Terra restart.
+Task 1 and delivery remain blocked; PM re-acceptance and every
+product/provider/service/Docker action remain unauthorized pending Terra PASS
+with no open P0/P1. The final exact-tree Terra restart now passes
+P0/P1/P2=0/0/0 with combined source-native 102/102 (governance 96/96 plus
+no-preview 6/6), CLI, complete scanner/lifecycle/ADR/Task 1 contract and blocker,
+Golden-profile, provenance, threat-model, recovery, all 11 TOMLs, formatting,
+diff, exact 19-path, and clean sensitive-material evidence. PM re-accepts D0 on
+2026-08-12. D0 is `accepted`; Task 1 remains `planned`, its contract `proposed`,
+and blocked until PM records the reviewed D0 commit pushed with local HEAD equal
+to the remote branch tip. The controller may now perform only the accepted-state
+CLI, exact 19-path stage audit, reviewed commit, non-force push, and local/remote
+equality verification. Product/provider/service/Docker work remains
+unauthorized. Controller pre-commit verification then fails combined
+source-native 101/102 on one fixture-only P1: the positive authorized-repair
+fixture changes its copied ledger to `implementing` but leaves the later PM
+re-acceptance in place, so production correctly rejects the authority as
+consumed. The direct accepted-state CLI remains green. D0 stays `accepted`, but
+delivery authority is revoked while a test-only correction reconstructs the
+historical positive slice before re-acceptance; the stale-authority negative
+must keep the full final history. The same Sol review and one exact accepted-tree
+Terra QA pass are required before PM can restore delivery. Task 1 and every
+product/provider/service/Docker action remain blocked. The fixture-only handoff
+records RED 0/1 on the consumed-authority positive, then GREEN post-accept 7/7
+and combined source-native 102/102 (governance 96/96 plus no-preview 6/6), with
+the accepted-state CLI, formatting, diff, and exact test-only scope green.
+Production verification remains unchanged. The same Sol review is in progress;
+D0 remains `accepted`, and delivery and Terra QA remain blocked pending the
+verdict. The same Sol fixture re-review now passes P0/P1/P2=0/0/0 with fresh
+post-accept 7/7, complete 102/102, accepted-state CLI, formatting, and diff
+evidence; production remains unchanged. One exact accepted-tree, provider-free,
+read-only Terra QA pass is now authorized. Delivery remains revoked, and Task 1
+remains blocked, until Terra passes with no open P0/P1 and PM explicitly restores
+the exact 19-path delivery authority. Final accepted-tree Terra QA now passes
+P0/P1/P2=0/0/0 with combined source-native 102/102 (governance 96/96 plus
+no-preview 6/6), accepted-state CLI, complete fixture/scanner/lifecycle/ADR/Task
+1 contract and blocker, Golden-profile, provenance, threat-model, recovery, all
+11 TOMLs, all five maps, formatting, diff, exact 19-path, and clean
+sensitive-material evidence. PM restores the exact 19-path controller delivery
+authority. D0 remains `accepted`; Task 1 remains `planned`, `proposed`, and
+blocked until PM records the pushed local/remote equality. No product, provider,
+service, Docker, or cloud action is authorized. D0 delivery is now complete at
+commit `484aa5c42a481efdd8e7c4a2e234c7773d7e5857`
+(`docs: establish executable technology governance`). The commit contains the
+exact 19 authorized paths and was pushed without force to
+`feat/governed-composition-capability-foundry`; fresh evidence records local
+HEAD equal to the upstream remote tip at the same hash, worktree status count
+0, and the committed accepted-state governance CLI passing. D0 delivery is
+fully closed.
+
+Task 1 is `delivered` under integration ownership after independent final Sol
+release review `ACCEPT` with P0/P1/P2=0/0/0, fresh PM acceptance
+reconciliation, and controller delivery. Commit
+`a6e4e6945e79f7ca7cf93686ee00628534f98acd` has the exact subject
+`feat(graph): add application graph v2 contracts`, contains the exact 17-path
+manifest, and was pushed without force to
+`feat/governed-composition-capability-foundry`. Fresh post-push evidence records
+local `HEAD` equal to the upstream branch tip at that hash and an empty
+worktree. The Task 1 delivery gate is closed and consumed. ADR-0009 remains
+accepted, and the additive `factory.application-graph/v2` contract remains
+frozen without changing the current Golden runtime profile.
+
+The formerly implicit Task 1 shared boundaries are frozen in the PM ledger:
+strict Published V1/V2 envelopes and version adapter, an explicit
+Published-V1-to-new-V2-Draft upgrade context with immutable source lineage and
+hashes, exact Draft Preview Snapshot transition commands/results and prohibited
+production actions, a Graph V2 `journeys` namespace, intrinsic total
+`fieldAuthorities`, and matching per-binding `bindingPolicies`. The original
+three P1s—intrinsic field authority, own-`__proto__` V1 rejection, and a literal
+V2 hash vector—are repaired. A same-Sol re-review P1 for inherited
+`constructor` binding lookup is also repaired through own-property validation.
+Fresh acceptance evidence passes the six Task 1 files 142/142, Source Overlay
+89/89, full Graph 370/370 across 18 files, strict/hash/V1/browser 176/176,
+typecheck, build, exact-14 and PM-document formatting, diff/whitespace,
+containment, declarations, browser checks, prior A–E regressions, the complete
+Windows/DOS matrix, and the journey probe. The exact changed-path manifest is
+17/17—14 Graph paths plus this ledger, project status, and roadmap—with zero
+sensitive-pattern matches. Broad Prettier still warns only on the same two
+unmodified inherited tests.
+
+Task 2 Restaurant semantics and Task 3 UI Registry remain `planned`, with zero
+immediate writer authority. The post-delivery shared-contract audit found three
+material blockers:
+
+- Graph V2 requires each journey actor to appear in every transition of every
+  referenced flow, but the existing Restaurant order flow deliberately divides
+  transitions among customer, kitchen, cashier, and manager;
+- Graph V2 block bindings and their policies resolve only exact
+  `graph.domain.<entity>.<field>` targets, while the Task 3 plan calls for
+  Domain/Flow/Policy registry bindings; the plan does not say whether Flow and
+  Policy are registry metadata or Graph block bindings;
+- Task 3 proposed new UI workspace packages and pinned shadcn/ui Radix
+  source/dependency intake without a technology decision. Accepted ADR-0010 now
+  permits only the private-package experiment on existing accepted coordinates
+  and rejects copied shadcn/ui source and new direct Radix dependencies.
+
+The exact fifteen page keys, recipe keys, block/registry keys, binding ports,
+field authorities, journey/flow partition, and legacy-to-new-screen map are
+therefore not frozen. Task 2 has one prospective backend writer over the eleven
+exact capability paths listed in the ledger; Task 3 has one prospective
+frontend writer over the exact private UI package paths listed there. Neither
+task is `implementing`, and no RED, package, dependency, copied source, provider,
+service, network, Docker, or Compose work is authorized yet.
+
+Founder accepted
+`docs/adr/adr-0010-restaurant-product-graph-v3-and-ui-registry-boundary.md`.
+The explicit founder response in founder chat on 2026-08-12 was verbatim
+`接受`. The accepted ADR records `keep` for the Golden runtime and immutable
+Graph V1/V2;
+`migrate` for an additive `factory.application-graph/v3` with step-scoped
+journey actors, typed Domain/Flow/Policy binding policies, V2-to-V3 Draft
+lineage, and `factory.draft-preview-snapshot/v2`; `experiment` for the seven
+private version `0.1.0` UI/recipe workspace packages using only the accepted
+React, TypeScript, Vitest, and Lucide coordinates; and `reject` for copied
+shadcn/ui source or new direct Radix dependencies in this wave. Flow and Policy
+bindings are non-authoritative declarations; server-side tenant, actor, policy,
+transition, revision, idempotency, and concurrency checks remain mandatory.
+
+The founder separately wrote verbatim `Task 2/3 也授权，如果需要` in founder chat
+on 2026-08-12. This is conditional future authorization, not an immediate
+dispatch.
+
+The serialized Graph V3 prerequisite first advanced to `ready_for_qa` with contract
+`frozen` in
+`superpowers/ledgers/2026-08-12-application-graph-v3-prerequisite.md` and exact
+plan `superpowers/plans/2026-08-12-application-graph-v3-prerequisite.md`. The
+completed writer slice owns exactly ten paths: new Graph V3 and Snapshot V2 source/tests; the
+Graph adapter, adapter test, Node and browser exports; the compiler facade; and
+one compiler version-dispatch test. No manifest, lockfile, capability, UI,
+Workbench, Control Plane, worker, provider, service, Docker, Compose,
+target-plugin, generated-template, PM document, commit, or push is authorized.
+
+The exact contract uses ordered step-scoped journey actors; strict
+Domain/Flow/Policy binding discriminators; immutable Published V2-to-new-V3
+Draft conversion with Domain-only policy wrapping and source lineage; strict
+Published V1/V2/V3 dispatch; and a Graph-V3-only Draft Preview Snapshot V2.
+Compiler reconciliation corrects the earlier assumption that V2 compilation
+already exists: the current compiler remains V1-only. The new versioned wrapper
+strict-adapts first, delegates V1 byte-identically, rejects V2/V3 with exact
+unsupported-version errors, and performs no projection or down-conversion.
+
+Initial RED was Graph 6 failed/12 passed and compiler dispatch 7/7 failed with
+production untouched. The completed writer and repair evidence passes focused
+Graph 51/51, adapter 26/26, focused compatibility 85/85, compiler dispatch 8/8,
+full Graph 414/414, full compiler 411/411, typecheck, build, exact-10 formatting,
+diff, containment, declarations, browser exports, and banned-import checks. A
+Sol task-review P1 for recursive symbol-keyed/non-enumerable Published and
+context inputs was repaired from adapter RED 8 failed/18 passed. Final same-Sol
+re-review returns specification `COMPLIANT`, code quality `APPROVED`, and
+P0/P1/P2=0/0/0, with independent adapter 26/26 and 8/8 adversarial probes
+rejected.
+
+Fresh Terra QA now returns `PASS` with P0/P1/P2=0/0/0. It passes focused Graph
+59/59, broader behavior 71/71, compiler dispatch 8/8, full Graph 20 files and
+414/414, full compiler 23 files and 411/411, both typecheck/build gates,
+exact-10 formatting, diff, implementation containment 10/10, delivery
+containment 16/16, declarations 21/21, dynamic browser exports 8/8, zero banned
+Node imports, and zero changed-hunk sensitive-material matches. The inherited
+non-failing `punycode` warning is unchanged. Terra made no edit and used no
+provider, model, network, service, Docker, or Compose action.
+
+Final Sol release review returns `REJECT` with P0/P1/P2=0/2/0 while focused
+Graph 59/59 and compiler dispatch 8/8 remain green. The missing matrix permits
+adapter array subclasses/custom prototypes and caller-controlled `.map()`, and
+permits direct Graph V3/Snapshot V2 Zod parsing to normalize inherited,
+symbol-keyed, non-enumerable, accessor, or nested hostile inputs. The Graph V3
+prerequisite returns to `implementing`; the prior Terra PASS is historical
+evidence only.
+
+The six-path repair is handed off. RED evidence is adapter P1 A 20 failed/26
+passed and direct V3/Snapshot P1 B 15 failed/41 passed with production untouched.
+GREEN passes combined repair 110/110, compatibility 180/180, full Graph 465/465,
+compiler 411/411, dispatch 8/8, typecheck/build, format/diff, exact 6/10/16
+containment, declarations, browser/import, sensitive-scan, and pinned-hash gates.
+Same-Sol re-review returns `COMPLIANT`/`APPROVED`, P0/P1/P2=0/0/0, with 121
+hostile checks, zero failures, and zero caller invocations. At that repair
+checkpoint the prerequisite advanced to `ready_for_qa` and the writer paused.
+
+Fresh repaired-tree Terra QA returns `PASS`, P0/P1/P2=0/0/0. It passes focused
+repair 110/110, compatibility/browser 180/180, hostile arrays 28/28, direct
+Node/browser V3/Snapshot boundaries 23/23, corrected helper 6/6 with zero caller
+invocations, compiler dispatch 8/8, Graph 465/465, compiler 411/411, typecheck/
+build/format/diff, exact 6/10/16 containment, declarations 23/23, identical
+browser exports 8/8, zero banned imports, pinned hashes 3/3, zero sensitive
+matches, and no drift. The initial QA anomaly was helper inversion/object spread
+only; the corrected probe is green, with no product finding or QA edit.
+
+New independent final Sol review returns `RELEASE_REJECT`, P0/P1/P2=0/1/0. The
+compiler wrapper validates prototype/key ownership but not enumerable data
+descriptors, then dereferences both required fields. A getter executes
+(independent probe calls=1), and hidden required values are accepted. Both prior
+Graph release P1 families remain closed; there is no other finding. V3 returns
+to `implementing`.
+
+The compiler repair is handed off. RED is 4 failed/8 passed with production
+untouched. GREEN passes focused 12/12, compiler 415/415, Graph 465/465, hostile
+110/110, compatibility/browser 180/180, all static gates, exact 2/10/16
+containment, declarations, browser/import, sensitive, and hash checks. Same-Sol
+re-review is `COMPLIANT`/`APPROVED`, P0/P1/P2=0/0/0; independent accessors and
+hidden data for both required fields reject exactly with zero calls, and parity,
+ordering, symbol/inherited/non-plain rejection, and V2/V3 errors remain exact.
+At that compiler-repair checkpoint V3 advanced to `ready_for_qa` and the writer
+paused.
+
+Compiler-repaired Terra QA returns `PASS`, P0/P1/P2=0/0/0. It passes dispatch
+12/12, hostile 110/110, compatibility/browser 180/180, Graph 465/465,
+independent descriptor 13/13 and direct Graph/Snapshot 8/8 probes with zero
+calls, type/build/format/diff, 2/10/16 containment, declarations 23/23, browser
+8/8, zero imports/sensitive matches, and all pins. Three full compiler processes
+exited 0, but captured aggregate stdout truncated after database parity, so
+Terra does not independently claim the exact 415 count. Prior writer/reviewer/
+PM 415/415 evidence remains separate; no product defect or QA edit was found.
+
+Escalated final Sol returns `RELEASE_ACCEPT`, P0/P1/P2=0/0/0. Independent
+compiler/adapter/direct-browser probes complete 70/10/70 checks with zero
+getter/caller invocation. Final and fresh PM evidence passes focused Graph/
+browser 111/111, dispatch 12/12, Graph 465/465, compiler 23 files/415 tests with
+raw exit 0, both typechecks/builds, exact-10 format/diff, implementation 10/10
+and delivery 16/16 containment, declarations 23/23, browser 8/8, zero imports/
+sensitive matches, and all three pins. The complete compiler output resolves
+Terra's prior evidence-capture limitation.
+
+The Graph V3 prerequisite is `accepted` but not delivered. The next smallest
+valuable slice is controller-only delivery of exactly the frozen 16 paths with
+subject `feat(graph): add application graph v3 contracts`: explicit staging,
+staged manifest equality/diff/sensitive checks, one commit, non-force push, and
+proof that local `HEAD` equals upstream with a clean worktree. No provider,
+service, Docker, Compose, or cloud action is authorized. Task 2/Task 3 remain
+`planned` with zero writers until PM separately records delivery equality and
+freezes their shared key-and-binding manifest.
+
+Authorities:
+
+- [Product Closure plan](superpowers/plans/2026-08-09-honest-requirement-to-product-closure.md)
+- [Product Closure ledger](superpowers/ledgers/2026-08-09-honest-requirement-to-product-closure.md)
+- [Product Closure acceptance record](acceptance/requirement-to-product-closure.md)
+
+## Sole P1 after Product Closure
+
+After the closure gate is sealed, the only P1 product target is
+**Prompt-to-Polished Restaurant Product**. One fine-dining restaurant brief
+must create one immutable Published Application Graph with two coherent
+surfaces:
+
+- a customer mobile application with Home, Menu, Dish Detail, Cart, Checkout,
+  Orders, Order Detail, and Profile;
+- a merchant desktop application with Dashboard, Menu Management, Orders,
+  Kitchen Queue, Tables, Users/Roles, and Settings.
+
+Both surfaces share catalog, modifiers, pricing, cart totals, orders,
+idempotency, inventory, simulated payment, identity, policy, workflow, and
+audit semantics. The default Workbench journey hides database, policy-engine,
+and infrastructure details while keeping contextual editors and Advanced
+inspection available.
+
+## Product-entry decision
+
+The current Workbench intentionally exposes no Profile starter or template
+picker. Product review has identified this as a gap. The accepted correction is
+to offer two equal creation paths: `Describe a product` and `Start from a
+template`. A template is a versioned, published, first-party Product
+Recipe and Graph snapshot that is instantiated as an independent editable
+Draft workspace with seed data and an immediate Draft Preview Snapshot. It
+would retain origin/version metadata but would not auto-merge future template
+updates.
+
+The first iteration uses curated official templates only. Community publishing,
+template commerce, and automatic template-update propagation remain deferred.
+The three product contexts are Workspace Home, Builder Workspace, and
+application-scoped Management; the last exposes only capabilities backed by
+real behavior and tests.
+
+The current Workbench screenshot does not yet meet this decision. It uses a
+generic dotted canvas, exposes workspace/revision/lifecycle mechanics early,
+opens the Inspector by default, shows fragmented cards and large empty areas,
+and renders several requirement-composer controls without their intended
+component styles. This is now treated as an information-architecture and source
+ownership problem rather than a color-polish task.
+
+The accepted UI source stack is:
+
+```text
+ui-primitives -> ui-patterns -> workbench-ui / generated-ui
+              -> screen-recipes -> experience-recipes -> product-recipes
+```
+
+The 3,818-line `globals.css`, 907-line `use-workbench-controller.ts`, and
+1,131-line `control-plane-client.ts` are mandatory Task 6 decomposition inputs.
+The new Workspace Home, Builder Workspace, and App Management behavior will not
+be appended to those monoliths.
+
+The public product identity is Archeform · 元象, following the root README.
+Stable `@factory/*` package names, `factory.application-graph/*` serialized
+protocols, Git paths, history, and immutable hashes remain unchanged until a
+separate versioned internal-namespace migration is approved.
+
+Authorities:
+
+- [Product reset](iterations/2026-08-10-prompt-to-polished-product-reset.md)
+- [Restaurant Product design](superpowers/specs/2026-08-10-prompt-to-polished-restaurant-product-design.md)
+- [Restaurant Product plan](superpowers/plans/2026-08-10-prompt-to-polished-restaurant-product.md)
+- [Restaurant Product ledger](superpowers/ledgers/2026-08-10-prompt-to-polished-restaurant-product.md)
+- [Product-builder ecosystem research](research/2026-08-10-product-builder-ui-ecosystem.md)
+
+## Next gate
+
+Tasks 0-8C, the Task 8 source-breadth compiler core, the Task 8 source-export
+route plus Workbench download surface, the generated-runtime Graph-valid
+permission/actor enforcement, the ADR-0022 compiler admission of
+role/permission additions, the Workbench Access contextual editor, and the
+V3 Publish/Compilation closure (slice 1 lifecycle + slice 2 Workbench
+`Publish draft`/`Compile`, under accepted ADR-0023) are delivered. A follow-up
+fix (`a4ff5a5d`) closed the template-instance compile path (canonical metadata
+identity normalization, sorted seed-value keys, and canonical composition-lock
+derivation), proven by a fresh clone publishing and compiling to `succeeded`
+with 18 artifacts. The next gate is a restaurant acceptance harness (the
+existing golden-path e2e is a stale V1 Expense/Appointment closure), then Task 9
+guarded real-model acceptance and `main` integration/release. The Workflow
+editor (flow/journey admission) remains deferred.
+
+## Explicitly deferred
+
+Until Restaurant Product acceptance, do not resume:
+
+- 100+ Profile or broad capability-family expansion;
+- production payments;
+- cloud deployment, application fleet, or managed operations;
+- connector-marketplace or unrestricted third-party runtime ingestion;
+- unrestricted generated-source editing or reverse parsing;
+- Figma or Stitch runtime integration;
+- production use of Aceternity candidates without item-level evidence.
+
+## Evidence boundary
+
+This page is a current delivery summary, not a release claim. The PM ledger and
+acceptance records control task state. Credentials and raw model prompts or
+responses must never enter documentation, evidence, generated source, or
+runtime logs.

@@ -99,13 +99,19 @@ describe("commercial profile composition", () => {
       restaurant: {
         locationEntity: { graphSymbol: "graph.domain.restaurant-table" },
         contextEntity: { graphSymbol: "graph.domain.table-session" },
-        locationCodeField: { graphSymbol: "graph.domain.code" },
+        locationCodeField: {
+          graphSymbol: "graph.domain.restaurant-table",
+          fieldKey: "code",
+        },
         customerRole: { graphSymbol: "graph.policy.customer" },
       },
       ecommerce: {
         locationEntity: { graphSymbol: "graph.domain.store" },
         contextEntity: { graphSymbol: "graph.domain.shopper-session" },
-        locationCodeField: { graphSymbol: "graph.domain.code" },
+        locationCodeField: {
+          graphSymbol: "graph.domain.store",
+          fieldKey: "code",
+        },
         customerRole: { graphSymbol: "graph.policy.shopper" },
       },
     },
@@ -140,7 +146,10 @@ describe("commercial profile composition", () => {
       key: "commerce.inventory-ledger" as const,
       restaurant: {
         catalogEntity: { graphSymbol: "graph.domain.menu-item" },
-        stockField: { graphSymbol: "graph.domain.stock" },
+        stockField: {
+          graphSymbol: "graph.domain.menu-item",
+          fieldKey: "stock",
+        },
         movementEntity: { graphSymbol: "graph.domain.inventory-ledger" },
         orderEntity: { graphSymbol: "graph.domain.order" },
         locationEntity: {
@@ -151,7 +160,10 @@ describe("commercial profile composition", () => {
       },
       ecommerce: {
         catalogEntity: { graphSymbol: "graph.domain.product" },
-        stockField: { graphSymbol: "graph.domain.stock" },
+        stockField: {
+          graphSymbol: "graph.domain.product",
+          fieldKey: "stock",
+        },
         movementEntity: { graphSymbol: "graph.domain.stock-movement" },
         orderEntity: { graphSymbol: "graph.domain.order" },
         locationEntity: { graphSymbol: "graph.domain.store" },
@@ -559,11 +571,22 @@ describe("commercial profile composition", () => {
     const composition = composeDefaultCapabilityDraft({
       profile: "restaurant-ordering",
     });
+    // Batch 5: restaurant.menu is now a declared recipe member (its
+    // inventory.adjust pair with commerce.inventory-ledger is allowlisted),
+    // so the undeclared-overlap probe uses the pair that is deliberately
+    // NOT allowlisted: commerce.simulated-payment declares payment.simulate,
+    // which restaurant.cashier owns in this profile. The overlap guard fires
+    // before binding resolution — the simulated-payment binding points at
+    // graph.flow.ecommerce-order, which does not exist in the restaurant
+    // graph, and the guard must reject for the overlap, not the symbol.
     const selections = [
       ...(composition.graph.integration.compositionSelections ?? []),
       {
-        lock: lockCapabilityAsset(getCapabilityAsset("restaurant.menu")),
-        bindings: {},
+        lock: lockCapabilityAsset(getCapabilityAsset("commerce.simulated-payment")),
+        bindings: {
+          orderEntity: { graphSymbol: "graph.domain.order" },
+          orderFlow: { graphSymbol: "graph.flow.ecommerce-order" },
+        },
       },
     ];
 
@@ -572,7 +595,7 @@ describe("commercial profile composition", () => {
         graph: composition.graph,
         selections,
       }),
-    ).toThrow("inventory.adjust");
+    ).toThrow("payment.simulate");
   });
 
   it.each([

@@ -31,7 +31,11 @@ const expectedStudies: readonly ExpectedStudy[] = [
 ];
 
 function readStudy(study: ExpectedStudy): string {
-  const path = resolve(repositoryRoot, "docs/ecosystem/source-studies", study.file);
+  const path = resolve(
+    repositoryRoot,
+    "docs/ecosystem/source-studies",
+    study.file,
+  );
   if (!existsSync(path)) return "";
   return readFileSync(path, "utf8");
 }
@@ -51,7 +55,9 @@ describe("ecosystem source studies", () => {
       expect(study).toContain(`license: ${expected.license}`);
       expect(study).toContain("decision: reference-only");
       expect(study).toContain("sourceCopied: false");
-      expect(readIncludedPaths(study).every((path) => !path.startsWith("ee/"))).toBe(true);
+      expect(
+        readIncludedPaths(study).every((path) => !path.startsWith("ee/")),
+      ).toBe(true);
 
       if (expected.excludedPath) {
         expect(study).toContain(`- ${expected.excludedPath}`);

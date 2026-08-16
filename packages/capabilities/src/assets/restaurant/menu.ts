@@ -3,6 +3,7 @@ import type { CapabilityAssetV1 } from "../contract.js";
 export const restaurantMenuAsset: CapabilityAssetV1 = {
   manifest: {
     apiVersion: "factory.capability/v1",
+    bindingContract: "factory.capability-binding/v1",
     key: "restaurant.menu",
     version: "1.0.0",
     category: "restaurant",
@@ -11,7 +12,7 @@ export const restaurantMenuAsset: CapabilityAssetV1 = {
       "Lists and searches the customer menu and manages merchant inventory.",
     packageRoot: "packages/capabilities/assets/restaurant.menu/1.0.0",
     manifestDigest:
-      "sha256:0f02482633421d04ef987e5239ad717f1b1b207d5ad6319e1d5f3604e7313fcd",
+      "sha256:1efb3891dba96a724ac2e07050d4d0d0ce34648bb0745c48799c85c2b486bf30",
     lifecycle: "golden",
     profiles: ["restaurant-ordering"],
     effects: [
@@ -25,6 +26,11 @@ export const restaurantMenuAsset: CapabilityAssetV1 = {
       { key: "categoryEntity", type: "domain.entity", required: true },
       { key: "itemEntity", type: "domain.entity", required: true },
       { key: "inventoryEntity", type: "domain.entity", required: true },
+    ],
+    parameters: [
+      { key: "categoryEntity", type: "graph-symbol", required: true },
+      { key: "itemEntity", type: "graph-symbol", required: true },
+      { key: "inventoryEntity", type: "graph-symbol", required: true },
     ],
     outputSlots: [
       "api.runtime",

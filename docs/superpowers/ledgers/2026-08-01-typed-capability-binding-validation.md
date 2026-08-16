@@ -1,6 +1,6 @@
 # Typed Capability Binding Validation Project Ledger
 
-Updated: 2026-08-01
+Updated: 2026-08-06
 
 ADR:
 `docs/adr/adr-0006-typed-capability-binding-validation.md` and
@@ -179,6 +179,18 @@ not acceptance.
   source/governance drift and secret checks were clean. The PM records
   `reviewed -> accepted` for Task 2A only. Tasks 3 through 7 remain `planned`;
   none of them is dispatched by this transition.
+- Under the approved compiler-target-plugin-kernel Goal (Stage 0), Task 2
+  completed its final gates: fresh independent release review at the
+  remote-reachable Target-Commit
+  `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` returned RELEASE PASS with no
+  P0/P1/P2, and fresh verification passed the focused suites 83/83 (37
+  typed-binding-contract, 46 composition-contract) including the single-digest
+  determinism probe. The PM records Task 2 `reviewed -> accepted`. Task 2
+  acceptance is limited to the typed manifest and binding contracts; Typed
+  Binding Graph Tasks 3 through 7 remain `planned` and blocked, and Commercial
+  Foundation Task 2 remains `implementing` and escalated. Task 2 acceptance
+  unblocks Stage 1 of the compiler-target-plugin-kernel Goal but does not
+  accept that Goal.
 - No frontend/backend parallel implementation is permitted in this project.
 - Commercial Capability Foundation Task 2 remains `implementing` and
   escalated. It cannot resume acceptance until this project's Task 7 is
@@ -188,16 +200,153 @@ not acceptance.
 
 ## Project state
 
-| Task                                           | State          | Specialization | Contract owner                               | Contract status                                 |
-| ---------------------------------------------- | -------------- | -------------- | -------------------------------------------- | ----------------------------------------------- |
-| 1. Pure typed Graph symbol index               | `accepted`     | `integration`  | Application Graph Type System                | Release review and fresh verification passed.   |
-| 2. Typed manifest and binding contracts        | `implementing` | `integration`  | Capability Binding Contract                  | Repair round 4 task review failed with one P1.  |
-| 2A. Immutable composition resolution boundary  | `accepted`     | `integration`  | Capability Composition Resolution Boundary   | Release review and fresh verification passed.   |
-| 3. Serialized owner-aware Graph selections     | `planned`      | `integration`  | Application Graph Serialization              | Blocked on accepted Tasks 2 and 2A.             |
-| 4. Safe versioned physical capability assets   | `planned`      | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 3 serialized contract. |
-| 5. Manifest-aware Draft composition validation | `planned`      | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-4.                  |
-| 6. Graph-aware Publish and compiler admission  | `planned`      | `backend`      | Published Graph and Compiler Admission       | Blocked on accepted Tasks 1-5.                  |
-| 7. Current recipe migration and acceptance     | `planned`      | `integration`  | Typed Binding Migration and Release Evidence | Blocked on accepted Tasks 1, 2, 2A, and 3-6.    |
+| Task                                           | State      | Specialization | Contract owner                               | Contract status                                                               |
+| ---------------------------------------------- | ---------- | -------------- | -------------------------------------------- | ----------------------------------------------------------------------------- |
+| 1. Pure typed Graph symbol index               | `accepted` | `integration`  | Application Graph Type System                | Release review and fresh verification passed.                                 |
+| 2. Typed manifest and binding contracts        | `accepted` | `integration`  | Capability Binding Contract                  | Release review and fresh verification passed at 0dbe0cf with no P0/P1/P2.     |
+| 2A. Immutable composition resolution boundary  | `accepted` | `integration`  | Capability Composition Resolution Boundary   | Release review and fresh verification passed.                                 |
+| 3. Serialized owner-aware Graph selections     | `planned`  | `integration`  | Application Graph Serialization              | Remains `planned` and blocked; Graph tasks do not start on Task 2 acceptance. |
+| 4. Safe versioned physical capability assets   | `planned`  | `integration`  | Golden Capability Asset Registry             | Blocked on accepted Task 3 serialized contract.                               |
+| 5. Manifest-aware Draft composition validation | `planned`  | `integration`  | Draft Composition Admission                  | Blocked on accepted Tasks 1-4.                                                |
+| 6. Graph-aware Publish and compiler admission  | `planned`  | `backend`      | Published Graph and Compiler Admission       | Blocked on accepted Tasks 1-5.                                                |
+| 7. Current recipe migration and acceptance     | `planned`  | `integration`  | Typed Binding Migration and Release Evidence | Blocked on accepted Tasks 1, 2, 2A, and 3-6.                                  |
+
+## Task 2 reconciliation with accepted Task 2A — 2026-08-06
+
+Under the approved compiler-target-plugin-kernel Goal (Stage 0), the PM
+reconciliation of Task 2's repair-round-4 repeated-read P1 was completed with
+fresh focused evidence on the `feat/compiler-target-plugin-kernel` feature
+branch of the current repository tree.
+
+**Target-Commit:** `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec`, the
+remote-reachable tip of `feat/compiler-target-plugin-kernel` (pushed to
+origin, clean worktree). The reconciliation was originally recorded at commit
+`fa57d52` (`docs: reconcile typed binding task 2`); repair commit
+`0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` (`test: cover strict binding
+validation branches`) then added two P2 regression tests to
+`packages/capabilities/test/typed-binding-contract.test.ts` only (+25 lines)
+and became the new branch tip. Every remaining Task 2 gate cites `0dbe0cf`.
+
+**Decision:** the accepted Task 2A immutable composition resolution boundary
+closes Task 2's repair-round-4 P1. No further bounded local Task 2 repair is
+required. Task 2 resumes its declared review, QA, release review, and PM
+state transitions at the current tree and will only become `accepted` after
+every remaining gate passes in order.
+
+**Reconciliation evidence at the original tip `fa57d52` (Node `v22.11.0`):**
+
+- `pnpm --filter @factory/capabilities test -- --run test/typed-binding-contract.test.ts test/composition-contract.test.ts`
+  passed 80/80 focused tests (34 typed-binding-contract, 46
+  composition-contract).
+- The dedicated repeated-read witness test
+  `rejects an accessor-backed parameters declaration without invoking it`
+  (`packages/capabilities/test/composition-contract.test.ts`) exercises a
+  `manifest.parameters` getter that returns a required `graph-symbol` schema
+  on the first read and an optional `number` schema on the second read. The
+  public composition resolution path rejects the composition and the probe
+  asserts `parameterReads === 0`: the descriptor-based capture fails closed
+  before any raw read. Schema validation
+  (`validateCapabilityBindingSchemaSnapshot`) and binding validation
+  (`validateBindings`) now consume the same frozen, Factory-owned snapshot
+  compiled once by `compileValidatedManifestContract`, so a getter-backed
+  manifest cannot supply different strict parameter schemas between stages
+  through any public path.
+- `pnpm --filter @factory/capabilities test -- --run` passed 279/279 tests
+  (20 files).
+- `pnpm --filter @factory/compiler test -- --run` passed 237/237 tests
+  (13 files).
+- `git status` and `git diff --check` were clean before the reconciliation
+  record.
+
+**Fresh independent task review at Target-Commit
+`0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` (Node `v22.11.0`):**
+
+- Independent task review (read-only reviewer, fresh context) of the
+  remote-reachable Target-Commit returned `TASK_REVIEW_PASS` with SPEC PASS,
+  QUALITY PASS, and no P0/P1/P2 findings; the two P2s from the regression
+  repair are closed.
+- The repair at `0dbe0cf` added two P2 regression tests to
+  `packages/capabilities/test/typed-binding-contract.test.ts` only (+25
+  lines). The reviewer confirmed both are RED-sensitive: each fails against
+  the pre-repair code and passes only with the strict binding-validation
+  branches covered. The focused suites therefore grew from the
+  reconciliation's 80/80 (34 typed-binding-contract, 46 composition-contract)
+  to 83/83 (37 typed-binding-contract, 46 composition-contract), and the full
+  Capabilities suite from 279/279 to 282/282 (20 files).
+- The reviewer's governance note is recorded: every remaining Task 2 gate
+  cites `0dbe0cf`, because the repair commit moved the branch tip from
+  `fa57d52`.
+
+**Transition recorded:** independent task review at
+`0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` reports no open P0/P1 (the P2s are
+closed), satisfying the ledger state machine's `implementing -> ready_for_qa`
+condition. The PM records **Task 2 `implementing -> ready_for_qa`** citing
+that Target-Commit. This was not behavioral QA, release review, or acceptance.
+
+**Independent behavioral QA at Target-Commit
+`0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` (Node `v22.11.0`):**
+
+- Independent behavioral QA (read-only QA context, clean worktree; product
+  code byte-identical to `0dbe0cf` at HEAD `f530306`) returned PASS with no
+  P0/P1/P2.
+- The focused suites passed 83/83 (37 typed-binding-contract, 46
+  composition-contract); the full Capabilities suite passed 282/282
+  (20 files) and the Compiler suite passed 237/237 (13 files).
+- Capabilities typecheck, lint (Prettier), and build all pass.
+- Adversarial name-filtered probes all pass: `accessor-backed parameters
+declaration` (zero-getter counter asserted), `accessor-backed fieldTypes
+element`, `strict parameter that exposes its declaration through
+accessors`, `non-boolean own` (2/2), and `not a graph-symbol type` (1/1).
+- Determinism: `keeps one digest across 100 resolutions of the largest
+default composition` (18 selections, single sha256 digest) passed.
+- Scope: `git show 0dbe0cf --stat` is exactly
+  `packages/capabilities/test/typed-binding-contract.test.ts` +25 lines;
+  `git diff 0dbe0cf HEAD --stat` is governance docs only; `git diff --check`
+  is clean. Target-Commit verified reachable from
+  `origin/feat/compiler-target-plugin-kernel`.
+
+**Transition recorded:** independent behavioral QA at
+`0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` passed with no P0/P1/P2,
+satisfying the ledger state machine's `ready_for_qa -> reviewed` condition.
+The PM records **Task 2 `ready_for_qa -> reviewed`** citing that
+Target-Commit. This is not release review or acceptance.
+
+**Independent release review at Target-Commit
+`0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` (read-only release-review context,
+Node `v22.11.0`):**
+
+- Release review returned RELEASE PASS with no P0/P1/P2 findings at the
+  remote-reachable Target-Commit `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec`
+  (`origin/feat/compiler-target-plugin-kernel`).
+- Audit: `0dbe0cf` changed only
+  `packages/capabilities/test/typed-binding-contract.test.ts` (+25 lines),
+  inside both Task 2's four authorized paths and Task 2A's five-path boundary.
+  The reconciliation range `fa57d52~1..0dbe0cf` is exactly three files: this
+  typed-binding ledger, `docs/project-status.md`, and the authorized test
+  path. Product code is byte-identical between `0dbe0cf` and HEAD (branch tip
+  `2cc799f`); the remaining diff to HEAD is governance docs only.
+- Lifecycle: no Graph serialization, Published revision, lock, digest, or
+  Draft -> Publish -> Compilation change; ADR-0006/0007/0008 unchanged.
+- Provenance and secrets: no credentials, raw prompts or responses, or local
+  URLs appear in the range.
+- Git: linear history with no force-push or rewrite; `git diff --check` clean;
+  worktree clean.
+- Fresh safe re-run: the focused suites passed 83/83 (37
+  typed-binding-contract, 46 composition-contract), including the
+  single-digest determinism probe.
+
+**Transition recorded:** independent release review and fresh verification
+passed at `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` with no unresolved
+load-bearing finding, satisfying the ledger state machine's
+`reviewed -> accepted` condition. The PM records **Task 2
+`reviewed -> accepted`** citing that Target-Commit.
+
+**Acceptance limitation:** Task 2 acceptance is limited to the typed manifest
+and binding contracts. Typed Binding Graph Tasks 3 through 7 remain `planned`
+and blocked; Commercial Foundation Task 2 remains `implementing` and
+escalated. Task 2 acceptance unblocks Stage 1 of the
+compiler-target-plugin-kernel Goal but does not accept that Goal. This
+reconciliation changes no product code, contract, ADR, or task path.
 
 ## Task 1: Add a pure typed Graph symbol index
 
@@ -408,7 +557,9 @@ not acceptance.
 
 ## Task 2: Freeze typed manifest and binding contracts
 
-- **State:** `implementing` (repair round 4)
+- **State:** `accepted` (reconciled with accepted Task 2A; independent task
+  review, behavioral QA, release review, and fresh verification passed at
+  `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec`)
 - **Specialization:** `integration`
 - **Bounded writer:** Typed Manifest Contract Integration
 - **Contract owner:** Capability Binding Contract
@@ -671,7 +822,14 @@ not acceptance.
   key-or-required mismatch, field constraints on non-fields, missing field keys,
   and field keys on non-field inputs.
 - Contract tests, Capabilities typecheck, task review, QA, release review, and
-  fresh verification pass before `accepted`.
+  fresh verification passed at Target-Commit
+  `0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` with no P0/P1/P2 (see the
+  2026-08-06 reconciliation section). The PM records Task 2
+  `reviewed -> accepted`. Task 2 acceptance is limited to the typed manifest
+  and binding contracts; Typed Binding Graph Tasks 3 through 7 remain
+  `planned` and blocked, and Commercial Foundation Task 2 remains `implementing`
+  and escalated. Task 2 acceptance unblocks Stage 1 of the
+  compiler-target-plugin-kernel Goal but does not accept that Goal.
 
 ## Task 2A: Establish an immutable composition resolution boundary
 
@@ -685,10 +843,12 @@ not acceptance.
   verification with no P0/P1/P2. Task 2A is accepted and frozen.
 - **Contract artifact:** ADR-0008 DEC-001 through DEC-005 and
   `docs/superpowers/plans/2026-08-01-immutable-composition-resolution-input.md`.
-- **Dependencies:** Task 1 `accepted` and ADR-0008 `Accepted`. Task 2 remains
+- **Dependencies:** Task 1 `accepted` and ADR-0008 `Accepted`. Task 2 was
   `implementing`, with local repair and review stopped pending separate PM
-  reconciliation of the accepted Task 2A evidence; it was not an implementation
-  dependency for the architecture-owned boundary repair.
+  reconciliation of the accepted Task 2A evidence; the 2026-08-06 Stage 0
+  reconciliation then recorded Task 2 `reviewed -> accepted` at `0dbe0cf`.
+  Task 2 was not an implementation dependency for the architecture-owned
+  boundary repair.
 - **Produces:** one descriptor-validated, Factory-owned, frozen composition
   resolution snapshot consumed by public package verification and
   provider-overlap checks, matching, validation, normalization, dependency
@@ -880,10 +1040,10 @@ not acceptance.
 - **Contract owner:** Application Graph Serialization
 - **Contract artifact:** ADR-0007 DEC-001 through DEC-005 and the design's
   serialized Draft Graph contract.
-- **Dependencies:** Tasks 1, 2, and 2A `accepted`. Tasks 1 and 2A are accepted;
-  Task 2 remains `implementing` with local repair and review stopped pending
-  separate PM reconciliation. Graph implementation remains blocked until Task
-  2 is independently accepted and reconciled.
+- **Dependencies:** Tasks 1, 2, and 2A `accepted`; all three are now accepted.
+  Graph implementation nevertheless remains blocked: Typed Binding Graph Tasks
+  3 through 7 remain `planned` and blocked and do not start on Task 2
+  acceptance (see the 2026-08-06 reconciliation acceptance limitation).
 - **Produces:** additive `SerializedCompositionBindingV1` support for exact
   owner-aware field objects, structural owner/field validation, deterministic
   Graph-hash coverage, historic hash stability, and browser-safe behavior.
@@ -1162,8 +1322,16 @@ not acceptance.
 
 ## Next smallest valuable slice
 
-Reconcile accepted Task 2A against Task 2's repair-round-4 repeated-read P1 and
-determine the smallest bounded Task 2 re-review or repair gate. Keep Task 2
-`implementing` until that separate reconciliation is complete. Do not start
-Graph Task 3; keep Graph Tasks 3 through 7 `planned` and blocked until their
-serialized dependencies are accepted.
+Task 2's repair-round-4 repeated-read P1 is closed by the accepted Task 2A
+boundary, and independent task review, behavioral QA, release review, and
+fresh verification all passed at the remote-reachable Target-Commit
+`0dbe0cf7959e39306bdd4693bef5402a2a2b1dec` with no P0/P1/P2 (see the
+2026-08-06 reconciliation section above). The PM records Task 2
+`reviewed -> accepted`. Task 2 acceptance is limited to the typed manifest
+and binding contracts; Typed Binding Graph Tasks 3 through 7 remain `planned`
+and blocked, and Commercial Foundation Task 2 remains `implementing` and
+escalated. Task 2 acceptance unblocks Stage 1 of the
+compiler-target-plugin-kernel Goal (`feat(compiler): add target plugin
+kernel`) but does not accept that Goal. The next smallest slice is that Stage
+1 implementation; keep Graph Tasks 3 through 7 `planned` and blocked until
+their serialized dependencies are accepted.
