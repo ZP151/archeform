@@ -192,6 +192,15 @@ function renderFiles(
       content: merchantFiles["test/merchant-journey.test.mjs"]!,
     },
     { path: "test/shared-state.test.mjs", content: sharedStateTest(plan) },
+    {
+      path: "Dockerfile",
+      content:
+        'FROM node:22-alpine\nWORKDIR /app\nCOPY . .\nCMD ["node", "src/server.mjs", "customer"]\n',
+    },
+    {
+      path: "docker-compose.yml",
+      content: `name: \${FACTORY_COMPOSE_PROJECT_NAME:-factory-${rootDirectory}}\n\nservices:\n  web:\n    build: .\n    command: ["node", "src/server.mjs", "customer"]\n    environment:\n      PORT: "3000"\n    volumes:\n      - shared-state:/app/.restaurant-state\n    ports:\n      - "127.0.0.1:\${FACTORY_WEB_PORT:-0}:3000"\n  api:\n    build: .\n    command: ["node", "src/server.mjs", "manager"]\n    environment:\n      PORT: "3001"\n    volumes:\n      - shared-state:/app/.restaurant-state\n    ports:\n      - "127.0.0.1:\${FACTORY_API_PORT:-0}:3001"\n\nvolumes:\n  shared-state:\n`,
+    },
   ];
   assertSafeGeneratedFileSet(files);
   return { rootDirectory, graphHash: plan.graphHash, files };
