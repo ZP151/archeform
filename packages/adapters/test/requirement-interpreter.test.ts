@@ -1271,6 +1271,51 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
     expect(calls).toBe(1);
   });
 
+  it("declares a strict-mode JSON schema where every object property is required", async () => {
+    let captured: unknown;
+    const adapter = new OpenAIRequirementInterpreterAdapter({
+      transport: {
+        async create(request) {
+          captured = request.jsonSchema;
+          return { outputText: JSON.stringify(openaiExpenseCandidate()) };
+        },
+      },
+      readEnvironment: () => "test-key",
+    });
+
+    await adapter.interpret({ brief: expenseApprovalBrief, answers: {} });
+
+    const violations: string[] = [];
+    const walk = (node: unknown, path: string): void => {
+      if (node === null || typeof node !== "object" || Array.isArray(node)) {
+        return;
+      }
+      const record = node as Record<string, unknown>;
+      if (record.type === "object") {
+        if (record.additionalProperties !== false) {
+          violations.push(`${path}: additionalProperties must be false`);
+        }
+        const required = Array.isArray(record.required)
+          ? (record.required as string[])
+          : [];
+        const properties =
+          record.properties !== null && typeof record.properties === "object"
+            ? Object.keys(record.properties as Record<string, unknown>)
+            : [];
+        for (const key of properties) {
+          if (!required.includes(key)) {
+            violations.push(`${path}.properties.${key}: missing from required`);
+          }
+        }
+      }
+      for (const [key, value] of Object.entries(record)) {
+        walk(value, `${path}.${key}`);
+      }
+    };
+    walk(captured, "schema");
+    expect(violations).toEqual([]);
+  });
+
   it("types malformed JSON and semantic exhaustion as output_invalid", async () => {
     for (const outputText of [
       "not-json",

@@ -59,9 +59,9 @@ const modelRequirementSchema = z
     // authoritative graphKeySchema so the model can never propose a key the
     // seam would later reject.
     requirementId: graphKeySchema,
-    productType: z
-      .enum(["restaurant-ordering", "commerce", "workflow", "custom"])
-      .optional(),
+    productType: optionalText(
+      z.enum(["restaurant-ordering", "commerce", "workflow", "custom"]),
+    ),
     outcome: safeBusinessTextSchema,
     actors: z.array(modelNamedItemSchema).min(1).max(30),
     domainConcepts: z.array(modelNamedItemSchema).max(60),
@@ -387,6 +387,7 @@ const interpretationJsonSchema: Record<string, unknown> = {
       required: [
         "apiVersion",
         "requirementId",
+        "productType",
         "outcome",
         "actors",
         "domainConcepts",
@@ -399,8 +400,13 @@ const interpretationJsonSchema: Record<string, unknown> = {
         apiVersion: { type: "string", const: "factory.requirement-spec/v1" },
         requirementId: { type: "string", pattern: graphKeyJsonPattern },
         productType: {
-          type: "string",
-          enum: ["restaurant-ordering", "commerce", "workflow", "custom"],
+          anyOf: [
+            {
+              type: "string",
+              enum: ["restaurant-ordering", "commerce", "workflow", "custom"],
+            },
+            { type: "null" },
+          ],
         },
         outcome: { type: "string", minLength: 1, maxLength: 2000 },
         actors: {
