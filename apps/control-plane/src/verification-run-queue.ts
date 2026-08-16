@@ -2,7 +2,10 @@ import { Injectable, type OnModuleDestroy } from "@nestjs/common";
 import { Queue } from "bullmq";
 
 import type { CapabilityCompositionLockV1 } from "@factory/capabilities";
-import type { ApplicationGraphV1 } from "@factory/graph";
+import type {
+  ApplicationGraphV1,
+  PublishedApplicationGraphV3Input,
+} from "@factory/graph";
 
 import { redisConnection } from "./compilation-queue.js";
 
@@ -14,14 +17,18 @@ export const VERIFICATION_RUN_QUEUE = Symbol("VERIFICATION_RUN_QUEUE");
  * key (absent for graph-derived verification plans), and the Published Graph
  * + composition lock + artifact manifest the compilation recorded. The graph
  * is intentionally NOT an exchange envelope — the worker validates the exact
- * keys fail closed before anything runs.
+ * keys fail closed before anything runs. The job is versioned: a V1 job
+ * carries `graph` and a V3 job carries the immutable `publishedGraph` wrapper.
  */
 export interface VerificationJob {
   readonly verificationRunId: string;
   readonly compilationId: string;
   readonly profileKey?: string;
   readonly publishedRevisionId: string;
-  readonly graph: ApplicationGraphV1;
+  readonly graphVersion:
+    "factory.application-graph/v1" | "factory.application-graph/v3";
+  readonly graph?: ApplicationGraphV1;
+  readonly publishedGraph?: PublishedApplicationGraphV3Input;
   readonly compositionLock: CapabilityCompositionLockV1;
   readonly artifacts: readonly {
     readonly path: string;

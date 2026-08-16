@@ -8,11 +8,13 @@ import {
 } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import {
+  adaptPublishedApplicationGraph,
   applyGraphDiffToDraft,
   createDraftRevision,
   GraphDiffError,
   GraphSemanticError,
   hashApplicationGraph,
+  hashApplicationGraphV3,
   parseApplicationGraph,
   parseDiagnosis,
   parseDraftDiff,
@@ -191,6 +193,26 @@ export class VerificationService {
     // the published graph must hash to the recorded revision hash, and the
     // stored composition lock must match its recorded digest. Rejected input
     // never leaves a run row behind and never enqueues a job.
+    const artifacts = compilation.artifacts.map(
+      ({ path, digest, sizeBytes }) => {
+        if (sizeBytes === null) {
+          throw new ConflictException(
+            "Compilation artifacts must record their size.",
+          );
+        }
+        return { path, digest, sizeBytes };
+      },
+    );
+    const storedGraph = compilation.publishedRevision.graph as unknown as {
+      readonly graphVersion?: string;
+    } | null;
+    if (storedGraph?.graphVersion === "factory.application-graph/v3") {
+      return this.createV3Run(compilation, {
+        verificationRunId,
+        profileKey,
+        artifacts,
+      });
+    }
     const { graph, graphHash } = validatedGraph(
       compilation.publishedRevision.graph,
     );
@@ -218,16 +240,73 @@ export class VerificationService {
       compilationId,
       profileKey,
       publishedRevisionId: compilation.publishedRevision.id,
+      graphVersion: "factory.application-graph/v1",
       graph,
       compositionLock,
-      artifacts: compilation.artifacts.map(({ path, digest, sizeBytes }) => {
-        if (sizeBytes === null) {
-          throw new ConflictException(
-            "Compilation artifacts must record their size.",
-          );
-        }
-        return { path, digest, sizeBytes };
-      }),
+      artifacts,
+    });
+    return run;
+  }
+
+  private async createV3Run(
+    compilation: {
+      readonly id: string;
+      readonly publishedRevision: {
+        readonly id: string;
+        readonly graphHash: string;
+        readonly compositionLock: unknown;
+        readonly compositionLockHash: string | null;
+        readonly graph: unknown;
+      };
+    },
+    options: {
+      readonly verificationRunId: string;
+      readonly profileKey?: string;
+      readonly artifacts: readonly {
+        readonly path: string;
+        readonly digest: string;
+        readonly sizeBytes: number;
+      }[];
+    },
+  ) {
+    const publishedGraph = adaptPublishedApplicationGraph(
+      compilation.publishedRevision.graph,
+    );
+    if (publishedGraph.graphVersion !== "factory.application-graph/v3") {
+      throw new ConflictException("Published revision is not a V3 Graph.");
+    }
+    const graphHash = hashApplicationGraphV3(publishedGraph.graph);
+    if (
+      graphHash !== compilation.publishedRevision.graphHash ||
+      graphHash !== publishedGraph.graphHash
+    ) {
+      throw new ConflictException(
+        "Published graph hash does not match the recorded revision.",
+      );
+    }
+    const compositionLock = verifiedPublishedCompositionLock(
+      compilation.publishedRevision.compositionLock,
+      compilation.publishedRevision.compositionLockHash,
+      graphHash,
+    );
+    const run = await this.prisma.verificationRun.create({
+      data: {
+        verificationRunId: options.verificationRunId,
+        compilationId: compilation.id,
+        profileKey: options.profileKey ?? null,
+        status: "pending",
+        stepIds: [],
+      },
+    });
+    await this.verificationQueue.enqueue({
+      verificationRunId: options.verificationRunId,
+      compilationId: compilation.id,
+      profileKey: options.profileKey,
+      publishedRevisionId: compilation.publishedRevision.id,
+      graphVersion: "factory.application-graph/v3",
+      publishedGraph,
+      compositionLock,
+      artifacts: options.artifacts,
     });
     return run;
   }

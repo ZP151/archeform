@@ -1,9 +1,17 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import type { PublishedGraphInput } from "@factory/compiler";
-import { createCapabilityCompositionLock } from "@factory/capabilities";
 import {
+  composeDefaultCapabilityDraft,
+  composeRestaurantProductGraph,
+  createCapabilityCompositionLock,
+  restaurantOrderingExperienceBrief,
+  restaurantOrderingProductIntent,
+} from "@factory/capabilities";
+import {
+  createDraftRevision,
   hashApplicationGraph,
+  hashApplicationGraphV3,
   parseVerificationEvidence,
 } from "@factory/graph";
 
@@ -29,6 +37,7 @@ function jobInput() {
     compilationId: "compilation-1",
     profileKey: acceptanceProfileKey,
     publishedRevisionId,
+    graphVersion: "factory.application-graph/v1",
     graph,
     compositionLock,
     artifacts: acceptanceManifest(),
@@ -94,6 +103,13 @@ function collaborators(
   }));
   const stopPreviewRun = vi.fn(async () => undefined);
   const processRunner = vi.fn(async () => undefined);
+  const executeV3Compilation = vi.fn(async () => ({
+    graphHash:
+      "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    rootDirectory: "restaurant-product-published-1",
+    artifacts: [...acceptanceManifest()],
+  }));
+  const runNodeTest = vi.fn(async () => ({ passed: true }));
   const fetch = fakeApi(routes);
   const reporter: VerificationReporter = {
     report: vi.fn().mockResolvedValue(undefined),
@@ -101,9 +117,11 @@ function collaborators(
   const dependencies = {
     operationTimeoutMs: 1_000,
     executeCompilation,
+    executeV3Compilation,
     startPreviewRun,
     stopPreviewRun,
     processRunner,
+    runNodeTest,
     fetch: fetch as unknown as typeof fetch,
     // A declared clock: identical job inputs must produce byte-identical
     // evidence (the control plane compares evidence digests for idempotency).
@@ -112,8 +130,10 @@ function collaborators(
   };
   return {
     executeCompilation,
+    executeV3Compilation,
     startPreviewRun,
     stopPreviewRun,
+    runNodeTest,
     fetch,
     reporter,
     dependencies,
@@ -215,6 +235,7 @@ describe("queued verification run", () => {
       verificationRunId: "verify-graph-derived",
       compilationId: "compilation-1",
       publishedRevisionId: "rev-graph-derived",
+      graphVersion: "factory.application-graph/v1",
       graph,
       compositionLock: graphLock([{ key: "core.identity-policy" }]),
       artifacts: acceptanceManifest(),
@@ -533,5 +554,128 @@ describe("queued verification run", () => {
       });
       expect(reporter.report).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it("runs the V3 verification through the generated journey tests", async () => {
+    const intent = restaurantOrderingProductIntent();
+    const experience = restaurantOrderingExperienceBrief();
+    const base = composeDefaultCapabilityDraft({
+      profile: "restaurant-ordering",
+    });
+    const baseDraft = createDraftRevision(
+      base.graph,
+      "restaurant-ordering-draft",
+    );
+    const graph = composeRestaurantProductGraph({
+      intent,
+      experience,
+      baseDraft,
+    });
+    const graphHash = hashApplicationGraphV3(graph);
+    const publishedGraph = {
+      kind: "published-application-graph" as const,
+      status: "published" as const,
+      graphVersion: "factory.application-graph/v3" as const,
+      revisionId: "restaurant-product-v3-published-1",
+      revisionNumber: 1,
+      graphHash,
+      graph,
+    };
+    const compositionLock = createCapabilityCompositionLock({
+      graphChecksum: graphHash,
+      selections: base.graph.integration.compositionSelections ?? [],
+    });
+    const input = {
+      verificationRunId: "verify-v3",
+      compilationId: "compilation-1",
+      publishedRevisionId: "restaurant-product-v3-published-1",
+      graphVersion: "factory.application-graph/v3",
+      publishedGraph,
+      compositionLock,
+      artifacts: acceptanceManifest(),
+    };
+    const { reporter, dependencies, executeV3Compilation, runNodeTest } =
+      collaborators();
+
+    const evidence = await executeQueuedVerificationRun(
+      "generated",
+      input,
+      reporter,
+      dependencies,
+    );
+
+    expect(executeV3Compilation).toHaveBeenCalledWith(
+      "generated",
+      expect.objectContaining({ publishedGraph }),
+    );
+    expect(runNodeTest).toHaveBeenCalledTimes(3);
+    expect(evidence.steps.map(({ stepId }) => stepId)).toEqual([
+      "customer-journey",
+      "merchant-journey",
+      "shared-state",
+      "cleanup",
+    ]);
+    expect(evidence.steps.every((step) => step.status === "passed")).toBe(true);
+    expect(evidence.cleanup.succeeded).toBe(true);
+    expect(reporter.report).toHaveBeenCalledTimes(1);
+  });
+
+  it("records a failed step when a V3 generated journey fails", async () => {
+    const intent = restaurantOrderingProductIntent();
+    const experience = restaurantOrderingExperienceBrief();
+    const base = composeDefaultCapabilityDraft({
+      profile: "restaurant-ordering",
+    });
+    const baseDraft = createDraftRevision(
+      base.graph,
+      "restaurant-ordering-draft",
+    );
+    const graph = composeRestaurantProductGraph({
+      intent,
+      experience,
+      baseDraft,
+    });
+    const graphHash = hashApplicationGraphV3(graph);
+    const publishedGraph = {
+      kind: "published-application-graph" as const,
+      status: "published" as const,
+      graphVersion: "factory.application-graph/v3" as const,
+      revisionId: "restaurant-product-v3-published-1",
+      revisionNumber: 1,
+      graphHash,
+      graph,
+    };
+    const compositionLock = createCapabilityCompositionLock({
+      graphChecksum: graphHash,
+      selections: base.graph.integration.compositionSelections ?? [],
+    });
+    const input = {
+      verificationRunId: "verify-v3",
+      compilationId: "compilation-1",
+      publishedRevisionId: "restaurant-product-v3-published-1",
+      graphVersion: "factory.application-graph/v3",
+      publishedGraph,
+      compositionLock,
+      artifacts: acceptanceManifest(),
+    };
+    const { reporter, dependencies, runNodeTest } = collaborators();
+    runNodeTest.mockResolvedValueOnce({ passed: false });
+
+    const evidence = await executeQueuedVerificationRun(
+      "generated",
+      input,
+      reporter,
+      dependencies,
+    );
+
+    expect(evidence.steps[0]).toMatchObject({
+      stepId: "customer-journey",
+      status: "failed",
+      failureCode: "journey.failed",
+    });
+    expect(
+      evidence.steps.slice(1, -1).every((step) => step.status === "passed"),
+    ).toBe(true);
+    expect(reporter.report).toHaveBeenCalledTimes(1);
   });
 });

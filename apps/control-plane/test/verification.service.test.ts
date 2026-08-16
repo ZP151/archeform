@@ -7,12 +7,13 @@ import {
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { createCapabilityCompositionLock } from "@factory/capabilities";
-import { hashApplicationGraph } from "@factory/graph";
+import { hashApplicationGraph, hashApplicationGraphV3 } from "@factory/graph";
 
 import type { ApplicationGraphV1 } from "@factory/graph";
 import type { PrismaService } from "../src/prisma.service.js";
 import type { VerificationRunQueue } from "../src/verification-run-queue.js";
 import { VerificationService } from "../src/verification/verification.service.js";
+import { createCuratedRestaurantTemplateGraph } from "../src/template/template.service.js";
 import { localApplicationGraph } from "./application-graph.fixture.js";
 
 const graph: ApplicationGraphV1 = {
@@ -395,6 +396,7 @@ describe("VerificationService", () => {
       compilationId: "compilation-1",
       profileKey: undefined,
       publishedRevisionId: "published-1",
+      graphVersion: "factory.application-graph/v1",
       graph,
       compositionLock,
       artifacts: [
@@ -405,6 +407,111 @@ describe("VerificationService", () => {
         },
       ],
     });
+  });
+
+  it("dispatches a V3 verification job with the immutable Published V3 wrapper", async () => {
+    const prisma = prismaMock();
+    const queue = queueMock();
+    const v3Graph = createCuratedRestaurantTemplateGraph(
+      "restaurant-template-001",
+      "Maison Rivage",
+    );
+    const v3GraphHash = hashApplicationGraphV3(v3Graph);
+    const v3PublishedGraph = {
+      kind: "published-application-graph" as const,
+      status: "published" as const,
+      graphVersion: "factory.application-graph/v3" as const,
+      revisionId: "restaurant-template-001-published-1",
+      revisionNumber: 1,
+      graphHash: v3GraphHash,
+      graph: v3Graph,
+    };
+    const v3CompositionLock = createCapabilityCompositionLock({
+      graphChecksum: v3GraphHash,
+      selections: v3Graph.integration.compositionSelections ?? [],
+    });
+    prisma.compilation.findUnique.mockResolvedValue({
+      ...compilation,
+      publishedRevision: {
+        id: "published-1",
+        applicationGraphId: "graph-1",
+        sourceDraftRevisionId: "draft-cuid-0",
+        revisionNumber: 1,
+        graph: v3PublishedGraph,
+        graphHash: v3GraphHash,
+        compositionLock: v3CompositionLock,
+        compositionLockHash: v3CompositionLock.lockDigest,
+        publishedAt: new Date("2026-08-07T00:00:00.000Z"),
+      },
+    });
+    prisma.verificationRun.create.mockResolvedValue(runRow);
+    const service = verificationService(prisma, queue);
+
+    await service.createRun("compilation-1", {
+      verificationRunId: "verify-01h3k6f",
+    });
+
+    expect(queue.enqueue).toHaveBeenCalledWith({
+      verificationRunId: "verify-01h3k6f",
+      compilationId: "compilation-1",
+      profileKey: undefined,
+      publishedRevisionId: "published-1",
+      graphVersion: "factory.application-graph/v3",
+      publishedGraph: v3PublishedGraph,
+      compositionLock: v3CompositionLock,
+      artifacts: [
+        {
+          path: "docker-compose.yml",
+          digest: digestOf("compose"),
+          sizeBytes: 512,
+        },
+      ],
+    });
+  });
+
+  it("rejects a V3 verification when the stored wrapper hash drifts", async () => {
+    const prisma = prismaMock();
+    const queue = queueMock();
+    const v3Graph = createCuratedRestaurantTemplateGraph(
+      "restaurant-template-001",
+      "Maison Rivage",
+    );
+    const v3GraphHash = hashApplicationGraphV3(v3Graph);
+    const v3PublishedGraph = {
+      kind: "published-application-graph" as const,
+      status: "published" as const,
+      graphVersion: "factory.application-graph/v3" as const,
+      revisionId: "restaurant-template-001-published-1",
+      revisionNumber: 1,
+      graphHash: v3GraphHash,
+      graph: v3Graph,
+    };
+    const v3CompositionLock = createCapabilityCompositionLock({
+      graphChecksum: v3GraphHash,
+      selections: v3Graph.integration.compositionSelections ?? [],
+    });
+    prisma.compilation.findUnique.mockResolvedValue({
+      ...compilation,
+      publishedRevision: {
+        id: "published-1",
+        applicationGraphId: "graph-1",
+        sourceDraftRevisionId: "draft-cuid-0",
+        revisionNumber: 1,
+        graph: v3PublishedGraph,
+        graphHash: `sha256:${"0".repeat(64)}`,
+        compositionLock: v3CompositionLock,
+        compositionLockHash: v3CompositionLock.lockDigest,
+        publishedAt: new Date("2026-08-07T00:00:00.000Z"),
+      },
+    });
+    const service = verificationService(prisma, queue);
+
+    await expect(
+      service.createRun("compilation-1", {
+        verificationRunId: "verify-01h3k6f",
+      }),
+    ).rejects.toThrow(ConflictException);
+    expect(queue.enqueue).not.toHaveBeenCalled();
   });
 
   it("reports evidence and marks a fully passing run succeeded", async () => {
@@ -846,6 +953,7 @@ describe("VerificationService", () => {
       compilationId: "compilation-1",
       profileKey: "expense-approval",
       publishedRevisionId: "published-1",
+      graphVersion: "factory.application-graph/v1",
       graph,
       compositionLock,
       artifacts: [

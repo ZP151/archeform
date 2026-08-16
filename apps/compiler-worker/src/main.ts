@@ -1,7 +1,13 @@
+import { spawnSync } from "node:child_process";
+import { join } from "node:path";
+
 import { Queue, Worker } from "bullmq";
 
 import { boundedFailureMessage } from "./diagnostics.js";
-import { executeCompilation } from "./compilation-executor.js";
+import {
+  executeCompilation,
+  executeV3Compilation,
+} from "./compilation-executor.js";
 import { createControlPlaneReporter } from "./control-plane-reporter.js";
 import { readWorkerConfig } from "./config.js";
 import {
@@ -32,6 +38,39 @@ const connection = {
   url: config.redisUrl,
   ...(config.redisPassword ? { password: config.redisPassword } : {}),
 };
+
+/**
+ * Runs one generated V3 bundle journey test file through the Node test runner
+ * and reports pass/fail. The V3 restaurant API is startup-role-bound and its
+ * merchant journey spans manager + kitchen roles, so the generated tests (which
+ * start each role sequentially over a shared state file) are the authoritative
+ * verification rather than header-bound HTTP probes.
+ */
+function runNodeTest(
+  directory: string,
+  testPath: string,
+  signal: AbortSignal,
+): Promise<{ passed: boolean }> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new Error("V3 verification was aborted."));
+      return;
+    }
+    const result = spawnSync(
+      process.execPath,
+      ["--test", join(directory, testPath)],
+      {
+        encoding: "utf8",
+        timeout: 60_000,
+      },
+    );
+    if (result.error) {
+      reject(result.error);
+      return;
+    }
+    resolve({ passed: result.status === 0 });
+  });
+}
 const reporter = createControlPlaneReporter(
   config.controlPlaneUrl,
   config.internalWorkerToken,
@@ -92,6 +131,8 @@ const verificationWorker = new Worker<VerificationRunInput>(
       {
         operationTimeoutMs: config.previewOperationTimeoutMs,
         ...loggedOperations,
+        executeV3Compilation,
+        runNodeTest,
         processRunner: runDockerCompose,
         fetch,
       },

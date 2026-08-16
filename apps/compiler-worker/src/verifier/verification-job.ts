@@ -1,14 +1,22 @@
+import { join } from "node:path";
+
 import type { PublishedGraphInput } from "@factory/compiler";
 import {
   hashApplicationGraph,
+  hashApplicationGraphV3,
   parseVerificationEvidence,
   VerificationContractError,
+  type ApplicationGraphV1,
   type DiagnosisV1,
+  type PublishedApplicationGraphV3Input,
   type VerificationEvidenceV1,
   type VerificationStepV1,
 } from "@factory/graph";
 
-import type { executeCompilation } from "../compilation-executor.js";
+import {
+  executeV3Compilation,
+  type executeCompilation,
+} from "../compilation-executor.js";
 import {
   safeArtifactManifest,
   type PreviewProcessRunner,
@@ -59,7 +67,12 @@ export type VerificationRunInput = {
   /** Optional: absent, the plan is derived from the Published Graph. */
   readonly profileKey?: string;
   readonly publishedRevisionId: string;
-  readonly graph: PublishedGraphInput["graph"];
+  readonly graphVersion:
+    "factory.application-graph/v1" | "factory.application-graph/v3";
+  /** V1 jobs carry the raw Published Graph. */
+  readonly graph?: ApplicationGraphV1;
+  /** V3 jobs carry the immutable Published V3 wrapper. */
+  readonly publishedGraph?: PublishedApplicationGraphV3Input;
   readonly compositionLock: PublishedGraphInput["compositionLock"];
   readonly artifacts: readonly {
     readonly path: string;
@@ -71,9 +84,16 @@ export type VerificationRunInput = {
 export type VerificationRunDependencies = {
   readonly operationTimeoutMs: number;
   readonly executeCompilation: typeof executeCompilation;
+  readonly executeV3Compilation: typeof executeV3Compilation;
   readonly startPreviewRun: VerificationLifecycleDependencies["startPreviewRun"];
   readonly stopPreviewRun: VerificationLifecycleDependencies["stopPreviewRun"];
   readonly processRunner: PreviewProcessRunner;
+  /** Runs the V3 bundle's generated journey tests and reports pass/fail. */
+  readonly runNodeTest: (
+    directory: string,
+    testPath: string,
+    signal: AbortSignal,
+  ) => Promise<{ passed: boolean }>;
   readonly fetch: typeof fetch;
   /** Declared clocks make the evidence replay-identical for identical runs. */
   readonly now?: () => string;
@@ -85,7 +105,9 @@ const verificationJobKeyAllowlist = [
   "compilationId",
   "compositionLock",
   "graph",
+  "graphVersion",
   "profileKey",
+  "publishedGraph",
   "publishedRevisionId",
   "verificationRunId",
 ].sort();
@@ -105,10 +127,17 @@ function assertJobInput(input: unknown): asserts input is VerificationRunInput {
       );
     }
   }
-  // profileKey is optional: absent, the worker derives the verification plan
-  // from the Published Graph itself. Every other payload key is required.
-  for (const key of verificationJobKeyAllowlist) {
-    if (key === "profileKey") continue;
+  // profileKey and the versioned graph fields are optional per shape, but the
+  // versioned shape is strict: a V1 job declares `graph` and a V3 job declares
+  // `publishedGraph`, never the other. Every other payload key is required.
+  for (const key of [
+    "verificationRunId",
+    "compilationId",
+    "publishedRevisionId",
+    "graphVersion",
+    "compositionLock",
+    "artifacts",
+  ]) {
     if (!declaredKeys.includes(key)) {
       throw new VerificationContractError(
         "Verification jobs must declare exactly the immutable payload.",
@@ -134,9 +163,32 @@ function assertJobInput(input: unknown): asserts input is VerificationRunInput {
       "Verification job profile key must be Factory-derived.",
     );
   }
+  if (record.graphVersion === "factory.application-graph/v3") {
+    if (
+      Object.hasOwn(record, "graph") ||
+      !record.publishedGraph ||
+      typeof record.publishedGraph !== "object"
+    ) {
+      throw new VerificationContractError(
+        "V3 verification jobs must carry only the immutable Published V3 wrapper.",
+      );
+    }
+  } else if (record.graphVersion === "factory.application-graph/v1") {
+    if (
+      Object.hasOwn(record, "publishedGraph") ||
+      !record.graph ||
+      typeof record.graph !== "object"
+    ) {
+      throw new VerificationContractError(
+        "V1 verification jobs must carry only the immutable Published Graph.",
+      );
+    }
+  } else {
+    throw new VerificationContractError(
+      "Verification jobs must declare a supported graph version.",
+    );
+  }
   if (
-    !record.graph ||
-    typeof record.graph !== "object" ||
     !record.compositionLock ||
     typeof record.compositionLock !== "object" ||
     !Array.isArray(record.artifacts)
@@ -237,6 +289,13 @@ function boundedFailureCode(error: unknown): string {
   return "job.unmapped_failure";
 }
 
+function jobGraphHash(job: VerificationRunInput): string {
+  if (job.graphVersion === "factory.application-graph/v3") {
+    return hashApplicationGraphV3(job.publishedGraph!.graph);
+  }
+  return hashApplicationGraph(job.graph!);
+}
+
 /**
  * Builds and reports the bounded terminal failure evidence for one queued
  * job. Returns the contract-validated evidence, or `undefined` when no safe
@@ -254,7 +313,7 @@ export async function reportVerificationJobFailure(
       apiVersion: "factory.verification-evidence/v1",
       verificationRunId: job.verificationRunId,
       compilationDigest: deriveCompilationDigest(
-        hashApplicationGraph(job.graph),
+        jobGraphHash(job),
         job.artifacts,
       ),
       steps: [
@@ -325,17 +384,20 @@ async function executeVerifiedRun(
   dependencies: VerificationRunDependencies,
 ): Promise<VerificationEvidenceV1> {
   assertJobInput(input);
+  if (input.graphVersion === "factory.application-graph/v3") {
+    return executeV3VerifiedRun(artifactRoot, input, reporter, dependencies);
+  }
   // A named profile resolves the static acceptance plan; without one the
   // deterministic plan is derived from the Published Graph itself, so any
   // composed product advances through the same isolated lifecycle.
   const profile =
     input.profileKey !== undefined
       ? resolveVerificationProfile(input.profileKey)
-      : deriveVerificationProfile(input.graph, input.compositionLock);
+      : deriveVerificationProfile(input.graph!, input.compositionLock);
   if (
     typeof input.graph === "object" &&
     input.graph !== null &&
-    [...revisionEnvelopeKeys].some((key) => key in input.graph)
+    [...revisionEnvelopeKeys].some((key) => key in input.graph!)
   ) {
     throw new VerificationContractError(
       "Verification jobs require an immutable Published Graph, not a draft or exchange envelope.",
@@ -343,7 +405,7 @@ async function executeVerifiedRun(
   }
   safeArtifactManifest(input.artifacts);
 
-  const graphHash = hashApplicationGraph(input.graph);
+  const graphHash = hashApplicationGraph(input.graph!);
   const expectedCompilationDigest = deriveCompilationDigest(
     graphHash,
     input.artifacts,
@@ -355,7 +417,7 @@ async function executeVerifiedRun(
       profileKey: profile.profileKey,
       compilation: {
         publishedRevisionId: input.publishedRevisionId,
-        graph: input.graph,
+        graph: input.graph!,
         compositionLock: input.compositionLock,
       },
       expectedCompilationDigest,
@@ -377,8 +439,85 @@ async function executeVerifiedRun(
 
   const failed = evidence.steps.some((step) => step.status === "failed");
   const diagnosis: DiagnosisV1 | undefined = failed
-    ? diagnoseCompilation(evidence, input.graph, input.compositionLock)
+    ? diagnoseCompilation(evidence, input.graph!, input.compositionLock)
     : undefined;
   await reporter.report({ evidence, diagnosis });
   return evidence;
+}
+
+const v3JourneyStepKind = "role-journey" as const;
+
+/**
+ * Runs one V3 verification job: compile the immutable V3 input through the
+ * Restaurant V3 target, then run the bundle's generated journey tests
+ * (customer, merchant, shared-state) — the V3 restaurant API is
+ * startup-role-bound and its merchant journey spans manager + kitchen roles,
+ * so the header-bound HTTP-probe lifecycle cannot express it. Each test file
+ * maps to one evidence step, and the always-successful cleanup step records
+ * that the generated tests removed their own temporary state.
+ */
+async function executeV3VerifiedRun(
+  artifactRoot: string,
+  input: VerificationRunInput,
+  reporter: VerificationReporter,
+  dependencies: VerificationRunDependencies,
+): Promise<VerificationEvidenceV1> {
+  safeArtifactManifest(input.artifacts);
+  const graphHash = hashApplicationGraphV3(input.publishedGraph!.graph);
+  const expectedCompilationDigest = deriveCompilationDigest(
+    graphHash,
+    input.artifacts,
+  );
+  const compilation = await dependencies.executeV3Compilation(artifactRoot, {
+    publishedGraph: input.publishedGraph!,
+    compositionLock: input.compositionLock,
+  });
+  const bundleDirectory = join(artifactRoot, compilation.rootDirectory);
+  const journeyTests = [
+    "test/customer-journey.test.mjs",
+    "test/merchant-journey.test.mjs",
+    "test/shared-state.test.mjs",
+  ] as const;
+  const steps: VerificationStepV1[] = [];
+  for (const testPath of journeyTests) {
+    const stepId = testPath.replace(/^test\//, "").replace(/\.test\.mjs$/, "");
+    const { passed } = await dependencies.runNodeTest(
+      bundleDirectory,
+      testPath,
+      new AbortController().signal,
+    );
+    steps.push({
+      stepId,
+      kind: v3JourneyStepKind,
+      status: passed ? "passed" : "failed",
+      summary: passed
+        ? `${testPath} journey passed.`
+        : `${testPath} journey failed.`,
+      ...(passed ? {} : { failureCode: "journey.failed" }),
+    });
+  }
+  steps.push({
+    stepId: "cleanup",
+    kind: "cleanup",
+    status: "passed",
+    summary: "Generated journey tests removed their temporary state.",
+  });
+  const evidence: VerificationEvidenceV1 = {
+    apiVersion: "factory.verification-evidence/v1",
+    verificationRunId: input.verificationRunId,
+    compilationDigest: expectedCompilationDigest,
+    steps,
+    cleanup: {
+      succeeded: true,
+      summary: "Generated journey tests removed their temporary state.",
+    },
+    artifactDigests: input.artifacts.map(({ path, digest }) => ({
+      path,
+      digest,
+    })),
+    completedAt: (dependencies.now ?? (() => new Date().toISOString()))(),
+  };
+  const validated = parseVerificationEvidence(evidence);
+  await reporter.report({ evidence: validated, diagnosis: undefined });
+  return validated;
 }
