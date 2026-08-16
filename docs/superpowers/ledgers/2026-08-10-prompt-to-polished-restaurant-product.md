@@ -5378,11 +5378,17 @@ cleared).
   dual-surface previews + Page/Data/Experience/Access editors + Publish + V3
   Compile) instead of the V1 studio bootstrap. The non-restaurant V1 path is
   byte-identical. Independent Sol review returned ACCEPT (P0/P1/P2 = 0/0/0).
-- **9B — V3 launch + verification.** The V3 bundle has a Node boot script but no
-  `docker-compose.yml` (required by `PreviewRunner`), and the verification queue
-  accepts only `ApplicationGraphV1`. Add a governed V3 launch artifact (or a V3
-  native runner) and extend the verification queue to strict V1/V3 dispatch, then
-  run Customer/Merchant journeys.
+- **9B — V3 launch + verification.** The launch artifact is delivered at
+  `49ba4eca`: the V3 bundle now emits a `Dockerfile` and a `docker-compose.yml`
+  with `web` (customer, port 3000) + `api` (merchant manager, port 3001) services
+  over a shared state volume, so `PreviewRunner` can boot it (Compiler 614/614,
+  Compiler Worker 227/227). Remaining: the verification queue still accepts only
+  `ApplicationGraphV1`. The V3 restaurant API is startup-role-bound (not
+  header-bound) and its merchant journey spans `manager` + `kitchen` roles, so V3
+  verification must run the bundle's generated `node --test` journeys rather than
+  the V1 header-bound HTTP-probe lifecycle; extend the queue to strict V1/V3
+  dispatch with that V3-native verification, then run Customer/Merchant journeys
+  + authorization denial + cleanup.
 - **9C — Restaurant acceptance harness.** A new Restaurant harness covering:
   restaurant Describe with at most one critical clarification; fifteen screens
   and two surfaces; Page/Data/Experience/Access edits; immutable Publish + V3
