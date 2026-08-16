@@ -59,6 +59,9 @@ const modelRequirementSchema = z
     // authoritative graphKeySchema so the model can never propose a key the
     // seam would later reject.
     requirementId: graphKeySchema,
+    productType: z
+      .enum(["restaurant-ordering", "commerce", "workflow", "custom"])
+      .optional(),
     outcome: safeBusinessTextSchema,
     actors: z.array(modelNamedItemSchema).min(1).max(30),
     domainConcepts: z.array(modelNamedItemSchema).max(60),
@@ -395,6 +398,10 @@ const interpretationJsonSchema: Record<string, unknown> = {
       properties: {
         apiVersion: { type: "string", const: "factory.requirement-spec/v1" },
         requirementId: { type: "string", pattern: graphKeyJsonPattern },
+        productType: {
+          type: "string",
+          enum: ["restaurant-ordering", "commerce", "workflow", "custom"],
+        },
         outcome: { type: "string", minLength: 1, maxLength: 2000 },
         actors: {
           type: "array",
@@ -708,6 +715,7 @@ const interpretationInstructions = [
   "You are the Factory Pilot requirement interpreter adapter.",
   "Return only a JSON object matching the provided schema.",
   "Interpret the brief into a factory.requirement-spec/v1 requirement and a factory.product-blueprint/v1 product blueprint.",
+  "Set the requirement's productType to 'restaurant-ordering' when the brief describes a restaurant, dining, or food-ordering product (guests order dishes; staff manage the menu, kitchen, tables, and service). Leave productType absent for every other product.",
   "The blueprint proposes business semantics only: actors with entity permissions, entities with typed fields, page intents from the approved enum, workflows with states and transitions, and acceptance journeys.",
   "Never propose routes, URLs, paths, capability or package selections, source, code, providers, or credentials.",
   "Business text must not contain URLs, absolute or Windows paths, traversal segments, or prototype-key material.",
