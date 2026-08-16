@@ -1014,7 +1014,7 @@
 .code-canvas i {
   display: inline-block;
   width: 30px;
-  color: #52687a;
+  color: #8395a6;
   font-style: normal;
   user-select: none;
 }
@@ -1421,7 +1421,7 @@
   grid-column: 1 / -1;
 }
 .source-artifact-digest {
-  color: #52687a;
+  color: #8395a6;
 }
 .source-content-viewer {
   display: grid;
@@ -1440,7 +1440,7 @@
   overflow-wrap: anywhere;
 }
 .source-selected-digest {
-  color: #52687a;
+  color: #8395a6;
 }
 .source-transfer-actions {
   display: flex;
