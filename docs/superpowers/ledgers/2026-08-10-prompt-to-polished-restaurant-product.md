@@ -5420,6 +5420,27 @@ actions now route a Restaurant V3 template Draft through the same
 now exposes the Access editor (correcting the earlier reachability gap). Full
 Workbench 528/528, Control Plane 441/441, and Compiler Worker 227/227 pass.
 
+Slice 1/2 follow-up fix is `delivered` at `a4ff5a5d` with subject
+`fix(compiler): admit template-instance v3 published graphs`. The full-stack
+compile of a template instance failed on three defects, all now closed:
+
+- `normalizeAllowedRestaurantValues` did not normalize `metadata.id`/
+  `metadata.workspaceId`, so a dynamic instance key hashed away from the
+  canonical hash; it now normalizes both to `restaurant-ordering`/
+  `local-workspace` (the canonical hash constant is unchanged).
+- `assertCatalogSeed` (contracts.ts) and `renderRestaurantCustomerRuntime`
+  (runtime-api.ts) compared `Object.keys(seed values)` to a fixed literal array;
+  PostgreSQL `jsonb` reorders object keys, so the round-tripped graph failed.
+  Both now compare sorted keys.
+- `publishDraftV3` derived the composition lock from the preview-remapped
+  `graph.integration.compositionSelections`, which is non-idempotent; it now
+  derives from `composeDefaultCapabilityDraft({profile:"restaurant-ordering"})`
+  canonical base selections and guards the profile.
+
+Full-stack evidence: a fresh `restaurant-template-*` clone publishes and
+compiles to `succeeded` with 18 deterministic artifacts. Suites: Control Plane
+441/441, Compiler Worker 227/227, Compiler 614/614 (contract 73/73).
+
 Remaining for Task 9: a restaurant acceptance harness (the existing golden-path
 e2e is a stale V1 Expense/Appointment closure) and the guarded acceptance run,
 then non-force `main` integration and the repository release.

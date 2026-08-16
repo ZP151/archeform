@@ -794,11 +794,14 @@ route plus Workbench download surface, the generated-runtime Graph-valid
 permission/actor enforcement, the ADR-0022 compiler admission of
 role/permission additions, the Workbench Access contextual editor, and the
 V3 Publish/Compilation closure (slice 1 lifecycle + slice 2 Workbench
-`Publish draft`/`Compile`, under accepted ADR-0023) are delivered. The next
-gate is a restaurant acceptance harness (the existing golden-path e2e is a
-stale V1 Expense/Appointment closure), then Task 9 guarded real-model
-acceptance and `main` integration/release. The Workflow editor (flow/journey
-admission) remains deferred.
+`Publish draft`/`Compile`, under accepted ADR-0023) are delivered. A follow-up
+fix (`a4ff5a5d`) closed the template-instance compile path (canonical metadata
+identity normalization, sorted seed-value keys, and canonical composition-lock
+derivation), proven by a fresh clone publishing and compiling to `succeeded`
+with 18 artifacts. The next gate is a restaurant acceptance harness (the
+existing golden-path e2e is a stale V1 Expense/Appointment closure), then Task 9
+guarded real-model acceptance and `main` integration/release. The Workflow
+editor (flow/journey admission) remains deferred.
 
 ## Explicitly deferred
 
