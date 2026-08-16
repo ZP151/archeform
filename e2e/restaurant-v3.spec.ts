@@ -153,8 +153,9 @@ test("Restaurant Describe yields a V3 Draft, edits, publishes, compiles, verifie
   await expect(apply).toBeEnabled({ timeout: 60_000 });
   await apply.click();
 
-  // The Describe-composed V3 Draft opens in the template-draft workspace.
-  await expect(page.getByText(/Preview synced · Draft r\./)).toBeVisible({
+  // The Describe-composed V3 Draft opens in the template-draft workspace at
+  // revision r.2 (the blank r.1 + the applied V3 Draft).
+  await expect(page.getByText("Preview synced · Draft r.2")).toBeVisible({
     timeout: 90_000,
   });
   await expect(page.getByText("8 customer pages")).toBeVisible();
@@ -163,7 +164,7 @@ test("Restaurant Describe yields a V3 Draft, edits, publishes, compiles, verifie
     page.getByRole("button", { name: "Publish draft" }),
   ).toBeEnabled();
 
-  // Page edit: rename the Menu page.
+  // Page edit: rename the Menu page (r.2 -> r.3).
   await page.getByRole("button", { name: "Select Menu" }).click();
   await page.getByRole("button", { name: "Edit Menu" }).click();
   await expect(
@@ -172,9 +173,9 @@ test("Restaurant Describe yields a V3 Draft, edits, publishes, compiles, verifie
   const pageTitle = page.getByRole("textbox", { name: "Page title" });
   await pageTitle.fill("Seasonal Menu");
   await pageTitle.press("Enter");
-  await expect(page.getByText(/Draft r\.\d+ · Preview active/)).toBeVisible();
+  await expect(page.getByText("Draft r.3 · Preview active")).toBeVisible();
 
-  // Data edit: rename a seeded dish.
+  // Data edit: rename a seeded dish (r.3 -> r.4).
   await page
     .getByRole("navigation", { name: "Builder navigation" })
     .getByRole("button", { name: "Data" })
@@ -188,9 +189,9 @@ test("Restaurant Describe yields a V3 Draft, edits, publishes, compiles, verifie
   await page
     .getByRole("button", { name: "Save dish name as new Draft" })
     .click();
-  await expect(page.getByText(/Draft r\.\d+ · Preview active/)).toBeVisible();
+  await expect(page.getByText("Draft r.4 · Preview active")).toBeVisible();
 
-  // Experience edit: dark theme.
+  // Experience edit: dark theme (r.4 -> r.5).
   await page
     .getByRole("navigation", { name: "Builder navigation" })
     .getByRole("button", { name: "Experience" })
@@ -202,7 +203,20 @@ test("Restaurant Describe yields a V3 Draft, edits, publishes, compiles, verifie
   await page
     .getByRole("button", { name: "Save dark theme as new Draft" })
     .click();
-  await expect(page.getByText(/Draft r\.\d+ · Preview active/)).toBeVisible();
+  await expect(page.getByText("Draft r.5 · Preview active")).toBeVisible();
+
+  // Access edit: declare a role (r.5 -> r.6).
+  await page
+    .getByRole("navigation", { name: "Builder navigation" })
+    .getByRole("button", { name: "Access" })
+    .click();
+  await expect(
+    page.getByRole("region", { name: "Template Access workspace" }),
+  ).toBeVisible();
+  const roleKey = page.getByRole("textbox", { name: "Role key" });
+  await roleKey.fill("waiter");
+  await page.getByRole("button", { name: "Save role as new Draft" }).click();
+  await expect(page.getByText("Draft r.6 · Preview active")).toBeVisible();
 
   // Publish the immutable revision, then compile through the V3 target.
   const publishedResponse = page.waitForResponse(
