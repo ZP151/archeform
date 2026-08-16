@@ -36,6 +36,12 @@ import {
   composeProductDraft,
   type ProductPlanAlternative,
 } from "@factory/capabilities/node";
+import {
+  composeDefaultCapabilityDraft,
+  composeProductRecipe,
+  restaurantOrderingExperienceBrief,
+  restaurantOrderingProductIntent,
+} from "@factory/capabilities";
 
 import {
   LifecycleService,
@@ -198,6 +204,50 @@ export class ProductCompositionService {
       );
     }
     return { review, plan, diff, checksum: review.diffChecksum };
+  }
+
+  private async chooseRestaurantProductPlan(
+    review: CompositionReview,
+    reviewId: string,
+    alternative: { readonly key: string; readonly label: string },
+    plan: CompositionPlanV1,
+  ) {
+    const decision = {
+      apiVersion: "factory.composition-decision/v1" as const,
+      decisionId: `product-${reviewId}-${alternative.key}`,
+      draftId: review.draftRevisionId,
+      planChecksum: hashCompositionPlan(plan),
+      diffChecksum: "restaurant-v3",
+      reviewer: "product-planner",
+      decision: "approved" as const,
+      rationale:
+        "Deterministic Restaurant V3 composition over the canonical intent/experience.",
+      decidedAt: new Date().toISOString(),
+    };
+    const transitioned = await this.prisma.compositionReview.updateMany({
+      where: { id: reviewId, status: "planned", decisionId: null },
+      data: {
+        plan: plan as unknown as Prisma.InputJsonValue,
+        planChecksum: decision.planChecksum,
+        planId: plan.planId,
+        decision: decision as unknown as Prisma.InputJsonValue,
+        decisionId: decision.decisionId,
+        safeSummary: safePlanSummary(plan) as unknown as Prisma.InputJsonValue,
+        status: "approved",
+      },
+    });
+    const stored = await this.findReview(reviewId);
+    if (transitioned.count !== 1 && stored.decisionId !== decision.decisionId) {
+      throw new ConflictException(
+        "Product requirement already has a decision.",
+      );
+    }
+    return {
+      review: stored,
+      plan,
+      diff: null,
+      checksum: decision.diffChecksum,
+    };
   }
 
   /**
@@ -529,6 +579,14 @@ export class ProductCompositionService {
     const plan = assertCompositionPlan(alternative.plan);
     const blueprint = this.storedBlueprint(review);
     const baseDraft = await this.reviewBaseDraft(review);
+    if (this.storedRequirement(review).productType === "restaurant-ordering") {
+      return this.chooseRestaurantProductPlan(
+        review,
+        reviewId,
+        alternative,
+        plan,
+      );
+    }
     let composed;
     try {
       composed = composeProductDraft({ plan, blueprint, baseDraft });
@@ -663,6 +721,9 @@ export class ProductCompositionService {
         "Draft revision moved since the requirement was created; re-create the requirement.",
       );
     }
+    if (this.storedRequirement(review).productType === "restaurant-ordering") {
+      return this.applyRestaurantProductTransaction(transaction, review, base);
+    }
     const baseDraft = createDraftRevision(graph, base.id);
     let composed;
     try {
@@ -724,6 +785,76 @@ export class ProductCompositionService {
     });
     const updated = await transaction.compositionReview.findUnique({
       where: { id: reviewId },
+    });
+    if (!updated || updated.status !== "applied") {
+      throw new ConflictException("Product application conflicted.");
+    }
+    return { draftRevision, review: updated };
+  }
+
+  private async applyRestaurantProductTransaction(
+    transaction: Prisma.TransactionClient,
+    review: CompositionReview,
+    base: DraftRevision,
+  ) {
+    const requirement = this.storedRequirement(review);
+    const application = await transaction.applicationGraph.findUnique({
+      where: { id: review.applicationGraphId },
+    });
+    if (!application) {
+      throw new ConflictException("Application Graph was not found.");
+    }
+    let restaurantGraph;
+    try {
+      const restaurantBase = composeDefaultCapabilityDraft({
+        profile: "restaurant-ordering",
+      });
+      const restaurant = composeProductRecipe({
+        intent: restaurantOrderingProductIntent(),
+        experience: restaurantOrderingExperienceBrief(),
+        baseDraft: createDraftRevision(restaurantBase.graph, base.id),
+      });
+      restaurantGraph = {
+        ...restaurant.graph,
+        metadata: {
+          ...restaurant.graph.metadata,
+          id: application.key,
+          workspaceId: LOCAL_WORKSPACE_SLUG,
+          name: application.name,
+        },
+      };
+    } catch (error) {
+      if (error instanceof CompositionError) {
+        throw new ConflictException(`Composition refused: ${error.message}`);
+      }
+      throw error;
+    }
+    const transitioned = await transaction.compositionReview.updateMany({
+      where: {
+        id: review.id,
+        status: "approved",
+        decisionId: review.decisionId,
+      },
+      data: { status: "applied" },
+    });
+    if (transitioned.count !== 1) {
+      const current = await transaction.compositionReview.findUnique({
+        where: { id: review.id },
+      });
+      if (current?.status === "applied") {
+        return this.reconstructAppliedProduct(transaction, current);
+      }
+      throw new ConflictException("Product application conflicted.");
+    }
+    const draftRevision = await transaction.draftRevision.create({
+      data: {
+        applicationGraphId: review.applicationGraphId,
+        revisionNumber: base.revisionNumber + 1,
+        graph: restaurantGraph as unknown as Prisma.InputJsonValue,
+      },
+    });
+    const updated = await transaction.compositionReview.findUnique({
+      where: { id: review.id },
     });
     if (!updated || updated.status !== "applied") {
       throw new ConflictException("Product application conflicted.");

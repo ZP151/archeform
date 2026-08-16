@@ -1091,3 +1091,85 @@ describe("ProductCompositionService.applyProduct", () => {
     expect(prisma.compositionReview.update).not.toHaveBeenCalled();
   });
 });
+
+describe("ProductCompositionService restaurant V3 routing", () => {
+  const restaurantRequirement = {
+    ...requirement,
+    productType: "restaurant-ordering" as const,
+  };
+  const restaurantBlueprint = {
+    ...blueprint,
+    requirementChecksum: hashRequirementSpec(restaurantRequirement),
+  };
+  const [standard] = realAlternatives();
+  const standardPlan = standard.plan;
+
+  function restaurantReview(overrides: Record<string, unknown> = {}) {
+    return reviewRow({
+      requirement: restaurantRequirement,
+      requirementChecksum: hashRequirementSpec(restaurantRequirement),
+      blueprint: restaurantBlueprint,
+      productAlternatives: realAlternatives(),
+      plan: standardPlan,
+      planChecksum: hashCompositionPlan(standardPlan),
+      decision: {
+        apiVersion: "factory.composition-decision/v1",
+        decisionId: "product-review-1-standard",
+        draftId: "draft-cuid-1",
+        planChecksum: hashCompositionPlan(standardPlan),
+        diffChecksum: "restaurant-v3",
+        reviewer: "product-planner",
+        decision: "approved",
+        rationale: "Deterministic Restaurant V3 composition.",
+        decidedAt: "2026-08-09T00:00:00.000Z",
+      },
+      decisionId: "product-review-1-standard",
+      status: "approved",
+      ...overrides,
+    });
+  }
+
+  it("applies a restaurant requirement as a V3 Draft via the deterministic composer", async () => {
+    const prisma = prismaMock();
+    let storedReview = restaurantReview();
+    prisma.compositionReview.findUnique.mockImplementation(
+      async () => storedReview,
+    );
+    prisma.draftRevision.findUnique.mockResolvedValue(latestBlankDraft);
+    prisma.draftRevision.findFirst.mockResolvedValue(latestBlankDraft);
+    prisma.applicationGraph.findUnique.mockResolvedValue({
+      id: "graph-1",
+      key: "expense-approval",
+      name: "Expense Approval",
+    });
+    prisma.compositionReview.updateMany.mockImplementation(async ({ data }) => {
+      storedReview = { ...storedReview, ...data };
+      return { count: 1 };
+    });
+    prisma.draftRevision.create.mockImplementation(async ({ data }) => ({
+      id: "draft-cuid-2",
+      ...data,
+    }));
+    const { product } = serviceWith(prisma, plannerStub(null));
+
+    const result = await product.applyProduct("review-1");
+
+    expect(prisma.draftRevision.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        applicationGraphId: "graph-1",
+        revisionNumber: 2,
+        graph: expect.objectContaining({
+          apiVersion: "factory.application-graph/v3",
+          metadata: expect.objectContaining({
+            id: "expense-approval",
+            name: "Expense Approval",
+          }),
+          policy: expect.objectContaining({
+            roles: ["customer", "cashier", "kitchen", "manager"],
+          }),
+        }),
+      }),
+    });
+    expect(result.review.status).toBe("applied");
+  });
+});

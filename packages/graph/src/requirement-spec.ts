@@ -30,6 +30,9 @@ export const requirementSpecSchema = z
     // symbols (`graph.domain.<requirementId>-principal`), so it must be a
     // lowercase-kebab graph key, not a general identifier.
     requirementId: graphKeySchema,
+    productType: z
+      .enum(["restaurant-ordering", "commerce", "workflow", "custom"])
+      .optional(),
     outcome: safeBusinessTextSchema,
     actors: z.array(namedItemSchema).min(1).max(30),
     domainConcepts: z.array(namedItemSchema).max(60),
