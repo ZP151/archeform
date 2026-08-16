@@ -5440,15 +5440,23 @@ cleared).
      `factory-t9-acceptance` stack booted healthy, and the real model
      interpreted the restaurant brief into `productType: "restaurant-ordering"`
      → the V3 composer produced the canonical graph → the application
-     `restaurant-ordering-basic` was created with a stamped template origin and
-     edited to Draft r.3 (Page title). Two open harness items remain before the
-     full 9C acceptance is green: (a) the plan step is non-deterministic — one
-     run's `createProduct` plan succeeded while the next failed at
-     `waitForPlanChoice`, so the acceptance must tolerate/retry the real-model
-     plan; and (b) the edit phase hung after r.3 (the Data-workspace navigation
-     did not advance to r.4), which needs a selector/flow correction in the
-     spec. The harness itself is committed (`0fc19c91`); these two items are the
-     next 9C refinement. The isolated stack was torn down cleanly.
+     `restaurant-ordering-basic` was created with a stamped template origin.
+     The harness was refined through four P1/P2 fixes and is now GREEN in one
+     environment-only real-model run (3.2m): Describe → V3 apply (r.2) → Page/
+     Data/Experience/Access edits (r.3–r.6) → Publish → Compile → Run
+     verification (customer / merchant / shared-state / cleanup evidence) →
+     Preview (customer + merchant `/health` 200) → axe accessibility (desktop +
+     390px, zero violations) → Stop preview. The fixes, all committed:
+     - `94d6366b` pin exact revision waits (the `/Draft r\.\d+/` regex matched
+       the pre-save status and raced ahead) and add the Access edit;
+     - `ad7cace9` bind the preview runtime to `0.0.0.0` inside the container
+       (the loopback-only default made the host-mapped port unreachable);
+     - `2fe66a54` + `492848de` + `911b177f` + `cf2d746a` raise the light-theme
+       muted/amber/accent and code-canvas verification/source-digest colors to
+       WCAG AA contrast (axe violations otherwise fail the acceptance);
+     - `59fad99d` retry the real-model run twice (the plan step is
+       non-deterministic). The isolated stack and every preview project were
+       torn down cleanly (cleanup empty).
 
 ### Task 9 execution attempt — 2026-08-15
 
@@ -5534,9 +5542,9 @@ non-canonical `workspaceId` normalization test-coverage gap and a cosmetic
 profile-guard placement inside the transaction) are recorded as deferred
 non-blocking.
 
-Remaining for Task 9: a restaurant acceptance harness (the existing golden-path
-e2e is a stale V1 Expense/Appointment closure) and the guarded acceptance run,
-then non-force `main` integration and the repository release.
+Task 9 slices 9A, 9B, and 9C are delivered, and the guarded real-model
+acceptance run is GREEN. Remaining for Task 9: non-force `main` integration
+(the branch leads `main` by ~205 commits) and the repository release.
 
 ## Deferred work
 
