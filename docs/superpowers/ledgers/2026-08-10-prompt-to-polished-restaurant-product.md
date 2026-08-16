@@ -5436,6 +5436,19 @@ cleared).
      (`optionalText`), plus a regression test that recursively asserts every
      object property is required. The real model now interprets the restaurant
      brief into `productType: "restaurant-ordering"` in ~75s.
+  4. **Guarded real-model run evidence (2026-08-16).** The isolated
+     `factory-t9-acceptance` stack booted healthy, and the real model
+     interpreted the restaurant brief into `productType: "restaurant-ordering"`
+     → the V3 composer produced the canonical graph → the application
+     `restaurant-ordering-basic` was created with a stamped template origin and
+     edited to Draft r.3 (Page title). Two open harness items remain before the
+     full 9C acceptance is green: (a) the plan step is non-deterministic — one
+     run's `createProduct` plan succeeded while the next failed at
+     `waitForPlanChoice`, so the acceptance must tolerate/retry the real-model
+     plan; and (b) the edit phase hung after r.3 (the Data-workspace navigation
+     did not advance to r.4), which needs a selector/flow correction in the
+     spec. The harness itself is committed (`0fc19c91`); these two items are the
+     next 9C refinement. The isolated stack was torn down cleanly.
 
 ### Task 9 execution attempt — 2026-08-15
 
