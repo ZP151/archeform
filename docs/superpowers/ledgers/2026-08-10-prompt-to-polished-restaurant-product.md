@@ -5333,7 +5333,7 @@ push, local/upstream equality, clean tree.
 
 ## Task 9 — Close the Restaurant Product with guarded real-model acceptance
 
-State: `planned`.
+State: `accepted`.
 
 Owner: `qa`, followed by independent `reviewer` and PM acceptance.
 
@@ -5545,6 +5545,16 @@ non-blocking.
 Task 9 slices 9A, 9B, and 9C are delivered, and the guarded real-model
 acceptance run is GREEN. Remaining for Task 9: non-force `main` integration
 (the branch leads `main` by ~205 commits) and the repository release.
+
+### Repository release
+
+Release version: `v0.1.0` (the `factory-pilot` package version). Planned
+annotated tag `factory-pilot-v0.1.0` at the exact accepted `main` commit.
+Release notes: this ledger's Task 9 delivery + acceptance evidence (safe
+summaries and digests only, never credentials or raw model material), mirrored
+to a `docs/releases/factory-pilot-v0.1.0.md` release manifest. A GitHub Release
+is created when authenticated tooling is available, without claiming cloud
+deployment.
 
 ## Deferred work
 
