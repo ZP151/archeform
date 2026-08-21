@@ -104,6 +104,7 @@ export type WorkbenchController = {
   readonly compilingApplicationKey: string | null;
   readonly curatedTemplates: readonly WorkbenchCuratedTemplate[];
   readonly templatesLoading: boolean;
+  readonly templateListError: string | null;
   readonly templateDraft: WorkbenchTemplateDraftInstance | null;
   readonly templateBusy: boolean;
   readonly templateError: string | null;
@@ -135,6 +136,7 @@ export type WorkbenchController = {
   readonly openApplication: (applicationKey: string) => void;
   readonly compileApplication: (applicationKey: string) => void;
   readonly startCuratedTemplate: (templateKey: string) => void;
+  readonly retryCuratedTemplates: () => void;
   readonly renameTemplateDraft: (name: string) => void;
   readonly editTemplatePageTitle: (
     input: {
@@ -244,6 +246,9 @@ export function useWorkbenchController({
     readonly WorkbenchCuratedTemplate[]
   >([]);
   const [templatesLoading, setTemplatesLoading] = useState(true);
+  const [templateListError, setTemplateListError] = useState<string | null>(
+    null,
+  );
   const [templateDraft, setTemplateDraft] =
     useState<WorkbenchTemplateDraftInstance | null>(null);
   const [templateBusy, setTemplateBusy] = useState(false);
@@ -268,6 +273,8 @@ export function useWorkbenchController({
   }, [compilation?.id]);
   const applicationsRequest = useRef(0);
   const portfolioRequest = useRef(0);
+  const curatedTemplatesRequest = useRef(0);
+  const curatedTemplatesMounted = useRef(false);
   const templateCloneRequest = useRef<{
     readonly templateKey: string;
     readonly requestId: string;
@@ -443,24 +450,47 @@ export function useWorkbenchController({
     };
   }, [bootstrapGraph, initialGraph, refreshApplications, refreshPortfolio]);
 
-  useEffect(() => {
-    let active = true;
+  const refreshCuratedTemplates = useCallback(async (): Promise<void> => {
+    if (!curatedTemplatesMounted.current) return;
+    const request = ++curatedTemplatesRequest.current;
     setTemplatesLoading(true);
-    void controlPlane
-      .listCuratedTemplates()
-      .then((templates) => {
-        if (active) setCuratedTemplates(templates);
-      })
-      .catch(() => {
-        if (active) setCuratedTemplates([]);
-      })
-      .finally(() => {
-        if (active) setTemplatesLoading(false);
-      });
-    return () => {
-      active = false;
-    };
+    setTemplateListError(null);
+    try {
+      const templates = await controlPlane.listCuratedTemplates();
+      if (
+        curatedTemplatesMounted.current &&
+        request === curatedTemplatesRequest.current
+      ) {
+        setCuratedTemplates(templates);
+      }
+    } catch {
+      if (
+        curatedTemplatesMounted.current &&
+        request === curatedTemplatesRequest.current
+      ) {
+        setCuratedTemplates([]);
+        setTemplateListError(
+          "Curated templates could not be loaded. Try again.",
+        );
+      }
+    } finally {
+      if (
+        curatedTemplatesMounted.current &&
+        request === curatedTemplatesRequest.current
+      ) {
+        setTemplatesLoading(false);
+      }
+    }
   }, [controlPlane]);
+
+  useEffect(() => {
+    curatedTemplatesMounted.current = true;
+    void refreshCuratedTemplates();
+    return () => {
+      curatedTemplatesMounted.current = false;
+      curatedTemplatesRequest.current += 1;
+    };
+  }, [refreshCuratedTemplates]);
 
   useEffect(() => {
     if (state.activeSurface === "home") {
@@ -1373,6 +1403,7 @@ export function useWorkbenchController({
     compilingApplicationKey,
     curatedTemplates,
     templatesLoading,
+    templateListError,
     templateDraft,
     templateBusy,
     templateError,
@@ -1398,6 +1429,9 @@ export function useWorkbenchController({
     openApplication,
     compileApplication,
     startCuratedTemplate,
+    retryCuratedTemplates: () => {
+      void refreshCuratedTemplates();
+    },
     renameTemplateDraft,
     editTemplatePageTitle,
     editTemplateDataField,

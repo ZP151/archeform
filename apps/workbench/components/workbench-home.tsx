@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import type {
   CompositionClarificationV1,
   RequirementSpecV1,
@@ -62,15 +63,21 @@ type Props = {
   readonly curatedTemplates?: readonly WorkbenchCuratedTemplate[];
   readonly templatesLoading?: boolean;
   readonly templateBusy?: boolean;
+  readonly templateListError?: string | null;
   readonly onStartTemplate?: (templateKey: string) => void;
+  readonly onRetryTemplates?: () => void;
 };
 
 export function ProductConversation({
   journey,
   commandFocusToken,
+  autoFocusRequest = 0,
+  onAutoFocusHandled,
 }: {
   readonly journey: WorkbenchHomeJourneyProps;
   readonly commandFocusToken?: number;
+  readonly autoFocusRequest?: number;
+  readonly onAutoFocusHandled?: () => void;
 }) {
   if (journey.stage === "clarifying" && journey.requirement !== null) {
     return (
@@ -125,6 +132,8 @@ export function ProductConversation({
       examplePrompts={journey.examplePrompts}
       onApplyExample={journey.onApplyExample}
       commandFocusToken={commandFocusToken}
+      autoFocusRequest={autoFocusRequest}
+      onAutoFocusHandled={onAutoFocusHandled}
     />
   );
 }
@@ -140,8 +149,12 @@ export function WorkbenchHome({
   curatedTemplates = [],
   templatesLoading = false,
   templateBusy = false,
+  templateListError = null,
   onStartTemplate = () => undefined,
+  onRetryTemplates = () => undefined,
 }: Props) {
+  const [autoFocusRequest, setAutoFocusRequest] = useState(0);
+  const hasAttemptedAutoFocus = useRef(false);
   const requirementFailure =
     journey.failure?.phase === "interpretation" ||
     journey.failure?.phase === "clarification"
@@ -153,6 +166,15 @@ export function WorkbenchHome({
       : requirementFailure === null
         ? undefined
         : "failed";
+  useEffect(() => {
+    const canAutoFocus =
+      !loading && applications.length === 0 && journey.stage === "brief";
+    if (hasAttemptedAutoFocus.current || !canAutoFocus) return;
+    hasAttemptedAutoFocus.current = true;
+    if (document.activeElement === document.body) {
+      setAutoFocusRequest((request) => request + 1);
+    }
+  }, [applications.length, journey.stage, loading]);
   return (
     <section className="workbench-home" aria-label="Apps">
       <section className="home-start-grid" aria-label="Start a product">
@@ -168,16 +190,35 @@ export function WorkbenchHome({
           <ProductConversation
             journey={journey}
             commandFocusToken={commandFocusToken}
+            autoFocusRequest={autoFocusRequest}
+            onAutoFocusHandled={() => setAutoFocusRequest(0)}
           />
         </section>
-        <aside className="template-start" aria-label="Start from a template">
+        <section className="template-start" aria-label="Start from a template">
           <header>
-            <span>Start from a template</span>
+            <h2>Start from a template</h2>
             <p>Clone a complete product and make it yours.</p>
           </header>
           {templatesLoading ? (
             <p className="template-loading" role="status">
-              Loading templates…
+              Loading curated templates…
+            </p>
+          ) : templateListError !== null ? (
+            <div className="template-list-error" role="alert">
+              <p>{templateListError}</p>
+              <button
+                type="button"
+                className="secondary-action"
+                aria-label="Retry curated templates"
+                disabled={templateBusy}
+                onClick={onRetryTemplates}
+              >
+                Retry
+              </button>
+            </div>
+          ) : curatedTemplates.length === 0 ? (
+            <p className="template-empty">
+              No curated templates are available right now.
             </p>
           ) : (
             curatedTemplates.map((template) => (
@@ -200,7 +241,7 @@ export function WorkbenchHome({
                   type="button"
                   className="template-start-button"
                   aria-label={`Start from ${template.name}`}
-                  disabled={templateBusy}
+                  disabled={templatesLoading || templateBusy}
                   onClick={() => onStartTemplate(template.key)}
                 >
                   {templateBusy ? "Creating Draft…" : "Use template"}
@@ -208,7 +249,7 @@ export function WorkbenchHome({
               </article>
             ))
           )}
-        </aside>
+        </section>
       </section>
       <RecentProducts
         applications={applications}

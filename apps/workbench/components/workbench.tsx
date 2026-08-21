@@ -136,8 +136,10 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
             journey={journeyProps}
             curatedTemplates={controller.curatedTemplates}
             templatesLoading={controller.templatesLoading}
+            templateListError={controller.templateListError}
             templateBusy={controller.templateBusy}
             onStartTemplate={controller.startCuratedTemplate}
+            onRetryTemplates={controller.retryCuratedTemplates}
           />
         );
       case "page":

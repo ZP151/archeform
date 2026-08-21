@@ -19,6 +19,9 @@ export interface RequirementComposerProps {
   readonly onApplyExample: (brief: string) => void;
   /** Bumped by the shell's Ctrl+K (or Cmd+K) to land focus here. */
   readonly commandFocusToken?: number;
+  /** A one-shot request from Home to focus the empty-workspace entry. */
+  readonly autoFocusRequest?: number;
+  readonly onAutoFocusHandled?: () => void;
 }
 
 export function RequirementComposer({
@@ -30,10 +33,21 @@ export function RequirementComposer({
   examplePrompts,
   onApplyExample,
   commandFocusToken,
+  autoFocusRequest = 0,
+  onAutoFocusHandled,
 }: RequirementComposerProps) {
   const [examplesOpen, setExamplesOpen] = useState(false);
   const briefRef = useRef<HTMLTextAreaElement>(null);
+  const lastAutoFocusRequest = useRef(0);
   const canInterpret = brief.trim().length > 0 && !busy;
+
+  useEffect(() => {
+    if (autoFocusRequest > lastAutoFocusRequest.current) {
+      lastAutoFocusRequest.current = autoFocusRequest;
+      briefRef.current?.focus();
+      onAutoFocusHandled?.();
+    }
+  }, [autoFocusRequest, onAutoFocusHandled]);
 
   useEffect(() => {
     if (commandFocusToken !== undefined && commandFocusToken > 0) {

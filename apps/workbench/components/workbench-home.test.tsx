@@ -192,6 +192,16 @@ describe("WorkbenchHome", () => {
     expect(container.textContent).toContain("Customer mobile");
     expect(container.textContent).toContain("Merchant desktop");
     expect(container.textContent).not.toContain("sha256:");
+    const entryRegions = container.querySelectorAll(
+      ".home-start-grid > section",
+    );
+    expect(entryRegions).toHaveLength(2);
+    expect(entryRegions[0]?.querySelector("h2")?.textContent).toBe(
+      "Describe a product",
+    );
+    expect(entryRegions[1]?.querySelector("h2")?.textContent).toBe(
+      "Start from a template",
+    );
 
     act(() => {
       container
@@ -201,6 +211,214 @@ describe("WorkbenchHome", () => {
         ?.click();
     });
     expect(onStartTemplate).toHaveBeenCalledWith("restaurant-dual-surface");
+  });
+
+  it("communicates curated-template loading, empty, and bounded retry states", () => {
+    const onRetryTemplates = vi.fn();
+    const render = (
+      props: Partial<React.ComponentProps<typeof WorkbenchHome>> = {},
+    ) => {
+      act(() => {
+        root.render(
+          <WorkbenchHome
+            applications={[]}
+            loading={false}
+            onCompile={vi.fn()}
+            onOpen={vi.fn()}
+            journey={briefJourney()}
+            onRetryTemplates={onRetryTemplates}
+            {...props}
+          />,
+        );
+      });
+    };
+
+    render({ templatesLoading: true });
+    expect(container.querySelector('[role="status"]')?.textContent).toContain(
+      "Loading curated templates",
+    );
+    expect(container.querySelector(".template-start button")).toBeNull();
+
+    render({ templatesLoading: false, curatedTemplates: [] });
+    expect(container.textContent).toContain(
+      "No curated templates are available right now.",
+    );
+
+    render({
+      templatesLoading: false,
+      curatedTemplates: [],
+      templateListError: "Curated templates could not be loaded. Try again.",
+    });
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+      "Curated templates could not be loaded. Try again.",
+    );
+    expect(container.textContent).not.toContain("HOSTILE_TEMPLATE_LIST_DETAIL");
+    const retry = container.querySelector<HTMLButtonElement>(
+      'button[aria-label="Retry curated templates"]',
+    );
+    expect(retry?.disabled).toBe(false);
+    act(() => retry?.click());
+    expect(onRetryTemplates).toHaveBeenCalledTimes(1);
+  });
+
+  it("focuses the empty Home brief once after application loading settles", () => {
+    const render = (loading: boolean) => {
+      act(() => {
+        root.render(
+          <WorkbenchHome
+            applications={[]}
+            loading={loading}
+            onCompile={vi.fn()}
+            onOpen={vi.fn()}
+            journey={briefJourney()}
+          />,
+        );
+      });
+    };
+
+    render(true);
+    const textarea = container.querySelector<HTMLTextAreaElement>(
+      'textarea[aria-label="Requirement brief"]',
+    );
+    expect(document.activeElement).not.toBe(textarea);
+
+    render(false);
+    expect(document.activeElement).toBe(textarea);
+
+    const examples = [
+      ...container.querySelectorAll<HTMLButtonElement>("button"),
+    ].find((button) => button.textContent?.includes("Example prompts"));
+    act(() => examples?.focus());
+    render(false);
+    expect(document.activeElement).toBe(examples);
+  });
+
+  it("does not steal focus chosen before empty application loading settles", () => {
+    const render = (loading: boolean) => {
+      act(() => {
+        root.render(
+          <WorkbenchHome
+            applications={[]}
+            loading={loading}
+            onCompile={vi.fn()}
+            onOpen={vi.fn()}
+            journey={briefJourney()}
+          />,
+        );
+      });
+    };
+
+    render(true);
+    const examples = [
+      ...container.querySelectorAll<HTMLButtonElement>("button"),
+    ].find((button) => button.textContent?.includes("Example prompts"));
+    act(() => examples?.focus());
+    render(false);
+
+    expect(document.activeElement).toBe(examples);
+  });
+
+  it("does not autofocus the brief when Home already has applications", () => {
+    act(() => {
+      root.render(
+        <WorkbenchHome
+          applications={[restaurantDraft]}
+          loading={false}
+          onCompile={vi.fn()}
+          onOpen={vi.fn()}
+          journey={briefJourney()}
+        />,
+      );
+    });
+
+    const textarea = container.querySelector<HTMLTextAreaElement>(
+      'textarea[aria-label="Requirement brief"]',
+    );
+    expect(document.activeElement).not.toBe(textarea);
+  });
+
+  it("keeps the template action disabled while a template Draft is creating", () => {
+    act(() => {
+      root.render(
+        <WorkbenchHome
+          applications={[]}
+          loading={false}
+          onCompile={vi.fn()}
+          onOpen={vi.fn()}
+          journey={briefJourney()}
+          curatedTemplates={[
+            {
+              apiVersion: "factory.curated-template/v1",
+              key: "restaurant-dual-surface",
+              version: "1.0.0",
+              name: "Maison Aurelia",
+              description:
+                "A polished customer ordering app and merchant operations workspace.",
+              surfaces: ["customer-mobile", "merchant-desktop"],
+              graphChecksum:
+                "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            },
+          ]}
+          templateBusy
+        />,
+      );
+    });
+
+    expect(
+      container.querySelector<HTMLButtonElement>(
+        'button[aria-label="Start from Maison Aurelia"]',
+      )?.disabled,
+    ).toBe(true);
+  });
+
+  it("does not refocus the brief after the journey returns from clarification and planning", async () => {
+    const interpretation = await new FixtureRequirementInterpreter().interpret({
+      brief: vagueBrief,
+      answers: {},
+    });
+    const render = (journey: WorkbenchHomeJourneyProps, loading = false) => {
+      act(() => {
+        root.render(
+          <WorkbenchHome
+            applications={[]}
+            loading={loading}
+            onCompile={vi.fn()}
+            onOpen={vi.fn()}
+            journey={journey}
+          />,
+        );
+      });
+    };
+
+    render(briefJourney(), true);
+    render(briefJourney());
+    expect(document.activeElement).toBe(
+      container.querySelector('textarea[aria-label="Requirement brief"]'),
+    );
+
+    render(
+      briefJourney({
+        stage: "clarifying",
+        requirement: interpretation.spec,
+        blueprintTitle: interpretation.blueprint.title,
+        openQuestions: interpretation.clarifications.flatMap(
+          (clarification) => clarification.questions,
+        ),
+      }),
+    );
+    render(
+      briefJourney({
+        stage: "planning",
+        requirement: interpretation.spec,
+        blueprintTitle: interpretation.blueprint.title,
+        planAlternatives,
+      }),
+    );
+    render(briefJourney());
+
+    expect(document.activeElement).not.toBe(
+      container.querySelector('textarea[aria-label="Requirement brief"]'),
+    );
   });
 
   afterEach(() => {
