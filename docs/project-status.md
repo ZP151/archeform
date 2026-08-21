@@ -1,6 +1,6 @@
 # Archeform delivery status
 
-Updated: 2026-08-14
+Updated: 2026-08-21
 
 ## Product outcome
 
@@ -21,9 +21,70 @@ controlled extension boundaries.
 The full status history through 2026-08-09 is preserved verbatim in
 [`archive/status-history/2026-08-09-project-status.md`](archive/status-history/2026-08-09-project-status.md).
 
-## Current milestone — Restaurant dual-surface compiler/runtime
+## Current milestone — Post-v0.1.0 product usability
 
-### Current authoritative checkpoint — 2026-08-14
+### Current authoritative checkpoint — 2026-08-21
+
+The Restaurant dual-surface product milestone is complete and recorded as
+`factory-pilot v0.1.0`. The release includes Describe-to-Restaurant V3,
+dual-surface launch and verification, and the guarded Restaurant acceptance
+harness. Its recorded release gate passed 29/29 package typechecks, 29/29 test
+tasks, 17/17 builds, third-party/source-study checks, one environment-only
+real-model journey, desktop and 390px accessibility with zero violations, and
+empty cleanup. This proves a credible local product Alpha; it does not prove a
+hosted or multi-user product.
+
+The current branch is a post-release Workbench usability line at `4d99fd2`
+(`feat(workbench): polish home creation entries`). It improves the two creation
+entries, curated-template loading/empty/retry behavior, and bounded empty-home
+focus behavior. The working tree was clean before this status refresh. After
+building Workbench dependencies, fresh local evidence passes the six-package
+Workbench dependency build, all 45 Workbench test files / 536 tests, Workbench
+typecheck, and Workbench formatting. The first test attempt before dependency
+build failed only because workspace package build artifacts were absent. The
+current container uses Node 24.15.0 while the repository declares Node
+`>=22.11.0 <23`; passing checks are useful evidence, but the supported Node 22
+release gate still needs to be used for the next accepted product delivery.
+
+### Distance to the next product gate
+
+- **Current product position:** local Alpha is shipped. The core
+  Describe/Edit/Publish/Compile/Verify/Preview loop and the Restaurant customer
+  and merchant surfaces are delivered.
+- **Next credible product:** a small-user Private Beta is not yet an active,
+  frozen iteration. The repository still explicitly defers cloud deployment,
+  application-fleet operations, production payments, and unrestricted product
+  breadth. A hosted production claim would additionally require explicit
+  technology/security decisions and operational acceptance.
+- **Nearest valuable gate:** freeze a bounded post-release iteration around
+  user-ready local onboarding and repeatable supported-environment acceptance,
+  starting with the already delivered Home creation-entry polish. Define the
+  target user cohort and acceptance evidence before adding another capability,
+  Graph version, provider, or deployment topology.
+- **Planning distance:** the historical delivery assessment estimated a
+  small-user Private Beta at 2–3 months total and a production platform at
+  6–12 months total, but those estimates predate the v0.1.0 release. With no
+  current Beta scope, owner, or acceptance ledger, a new calendar estimate
+  would be speculation. The immediate planning gap is one iteration-definition
+  slice; the substantive Beta gap remains identity/tenant operations,
+  deployment, observability/support, and repeated small-user evidence.
+
+### Risks and next smallest slice
+
+- The active status ledger lagged behind the completed v0.1.0 release and still
+  described Task 9 as pending; this checkpoint corrects the current top-level
+  state while retaining the detailed Restaurant delivery history below.
+- This checkout has no configured remote or release tag refs, so the release
+  record is the available repository evidence; remote/tag equality cannot be
+  re-proven from this checkout.
+- The next smallest slice is product-management work: write and accept a concise
+  post-v0.1.0 iteration brief with one target cohort, one end-to-end user
+  outcome, measurable usability/reliability gates, owned paths, and an explicit
+  decision on whether the target remains local or introduces hosting. Any new
+  runtime, identity, tenant, provider, deployment, or security boundary must go
+  through the required ADR and founder-acceptance flow before implementation.
+
+### Restaurant delivery history — checkpoint 2026-08-14
 
 Graph V3 is delivered and its gate is consumed. Controller commit
 `8230197241589865f289c223fc346b6d91a438ae` has the exact subject
@@ -303,53 +364,13 @@ historical evidence, not the executable Task 2/Task 3 contract.
   delivery paths. No Graph, recipe, runtime, database, dependency, or lockfile
   expansion is authorized.
 
-### Blocked decisions and risks
+### Historical blocked decisions and risks at the 2026-08-14 checkpoint
 
-- The Workflow contextual editor (flow/journey admission) remains deferred; only
-  role/permission additions are admitted (ADR-0022) and edited (the delivered
-  Access editor). Page/Data/Experience/Access satisfy Task 9's
-  contextual-editing acceptance.
-- Task 9 guarded real-model acceptance, `main` integration, and the repository
-  release require the environment-only OpenAI credential and the Docker/Compose
-  full stack (both available). The V3 Publish/Compilation closure is delivered
-  (ADR-0023: slice 1 lifecycle + slice 2 Workbench + the template-instance
-  compile fix), so a template Draft now publishes and compiles to 18 artifacts.
-  The remaining Task 9 work is three slices: 9A wire the Describe entry to the
-  Restaurant V3 composer (today it still produces a generic V1 graph), 9B add the
-  V3 launch artifact and V1/V3 verification-queue dispatch (the V3 bundle lacks
-  `docker-compose.yml` and the verification queue is V1-only), and 9C a real
-  Restaurant Describe->Edit->Publish->Compile->Verify->Preview->cleanup
-  acceptance harness.
-
-No founder technology decision is currently blocking this prerequisite.
-[`ADR-0011`](adr/adr-0011-product-recipe-surface-page-ownership.md) is Accepted
-from the exact 2026-08-14 founder response
-`参考以下总结，若符合项目目标，则持续接受而迭代。`; PM confirmed that the referenced
-summary matches the current evidence and accepted Restaurant goal. The accepted
-additive contract preserves V1 and separates owned pages from visible
-navigation. Copied shadcn/ui source, direct Radix, another external coordinate,
-provider/model/network/service work, Docker, Compose, and unassigned Workbench
-API/Control Plane expansion remain unauthorized. ADR-0013 authorizes only the
-delivered Page-title command and ADR-0014 only the delivered same-set Page
-block-order operation. ADR-0015 is accepted under the same standing founder
-direction only for the exact mirrored Restaurant seed-name operation; it does
-not authorize generic Data CRUD, generated-runtime changes, another Graph
-contract, or broader editor behavior.
-
-Access and Workflow follow-ups remain `blocked_at_design`: Graph-valid
-permission or actor additions are not enforced by the current Restaurant
-compiler/runtime, so Workbench must not present them as product behavior.
-
-The main risks are shared-contract drift, accidental lockfile resolution drift,
-client relabeling of server totals/state/payment/inventory/audit fields, and UI
-ports that imply authority. Frozen tests and the stop-both rule address these.
-
-### Next smallest valuable slice
-
-Authorize one Sol writer for D0's exact-ten Compiler tree only after the exact
-governance freeze, base equality, and clean-tree checks. Keep Access, Workflow,
-Source breadth, Publish, worker/Compilation lifecycle, visible title/order/theme
-runtime parity, and every broader generated-runtime change deferred.
+The following detailed Restaurant history predates the v0.1.0 completion.
+Workflow editing, production payments, cloud deployment, fleet operations, and
+unrestricted source editing remain deferred; Task 9 itself is no longer
+pending. See the current checkpoint above and the release record for the
+controlling state.
 
 ### Retained historical reconciliation through V3 acceptance
 
@@ -793,23 +814,16 @@ Authorities:
 
 ## Next gate
 
-Tasks 0-8C, the Task 8 source-breadth compiler core, the Task 8 source-export
-route plus Workbench download surface, the generated-runtime Graph-valid
-permission/actor enforcement, the ADR-0022 compiler admission of
-role/permission additions, the Workbench Access contextual editor, and the
-V3 Publish/Compilation closure (slice 1 lifecycle + slice 2 Workbench
-`Publish draft`/`Compile`, under accepted ADR-0023) are delivered. A follow-up
-fix (`a4ff5a5d`) closed the template-instance compile path (canonical metadata
-identity normalization, sorted seed-value keys, and canonical composition-lock
-derivation), proven by a fresh clone publishing and compiling to `succeeded`
-with 18 artifacts. The next gate is a restaurant acceptance harness (the
-existing golden-path e2e is a stale V1 Expense/Appointment closure), then Task 9
-guarded real-model acceptance and `main` integration/release. The Workflow
-editor (flow/journey admission) remains deferred.
+`factory-pilot v0.1.0` completed the Restaurant Product and Task 9 release gate.
+The next product gate has not yet been frozen. Before implementation expands,
+PM must define the post-release target cohort, local-versus-hosted boundary,
+measurable acceptance journey, ownership, and supported Node 22 verification
+matrix. The already delivered Home creation-entry polish is the first bounded
+usability input, not by itself a new product release.
 
 ## Explicitly deferred
 
-Until Restaurant Product acceptance, do not resume:
+Until a post-v0.1.0 iteration explicitly authorizes them, do not resume:
 
 - 100+ Profile or broad capability-family expansion;
 - production payments;
