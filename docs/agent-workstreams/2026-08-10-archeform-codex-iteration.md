@@ -62,20 +62,27 @@ them from this document or from historical checkpoint prose.
 
 ## Model routing
 
-| Work                                                                                   | Role/model                                  | Boundary                                            |
-| -------------------------------------------------------------------------------------- | ------------------------------------------- | --------------------------------------------------- |
-| Coordination, Graph/lifecycle, hard debugging, cross-package integration               | controller or `engineer` / GPT-5.6-Sol      | Owns load-bearing decisions                         |
-| Quick code mapping and test discovery                                                  | `explorer` / GPT-5.3-Codex-Spark            | Read-only                                           |
-| CSS/components, one hook/client extraction, fixtures, focused tests, registry metadata | `spark_worker` / GPT-5.3-Codex-Spark        | Frozen contract, normally 1–3 files, disjoint paths |
-| Small diff or fix-round review                                                         | `spark_reviewer` / GPT-5.3-Codex-Spark      | Supplemental, read-only                             |
-| Task specification/quality gate and release review                                     | `task_reviewer` or `reviewer` / GPT-5.6-Sol | Required for acceptance                             |
-| QA and adversarial runtime verification                                                | `qa` / GPT-5.6-Terra                        | Starts only at ledger QA gate                       |
+| Work                                                                                   | Role/model                             | Boundary                                            |
+| -------------------------------------------------------------------------------------- | -------------------------------------- | --------------------------------------------------- |
+| Coordination, Graph/lifecycle, hard debugging, cross-package integration               | controller or Sol owner / GPT-5.6-Sol  | Owns load-bearing decisions                         |
+| Quick code mapping and test discovery                                                  | `explorer` / GPT-5.3-Codex-Spark       | Read-only                                           |
+| Ordinary bounded implementation                                                        | `engineer` / GPT-5.6-Terra             | Accepted scope, frozen contract, assigned paths     |
+| CSS/components, one hook/client extraction, fixtures, focused tests, registry metadata | `spark_worker` / GPT-5.3-Codex-Spark   | Frozen contract, normally 1–3 files, disjoint paths |
+| Small diff or fix-round review                                                         | `spark_reviewer` / GPT-5.3-Codex-Spark | Supplemental, read-only                             |
+| Task specification/quality gate                                                        | `task_reviewer` / GPT-5.6-Terra        | Independent pre-QA review                           |
+| Final risk/release review                                                              | `reviewer` / GPT-5.6-Sol               | Required for final acceptance                       |
+| QA and adversarial runtime verification                                                | `qa` / GPT-5.6-Terra                   | Starts only at ledger QA gate                       |
+| Public market/ecosystem research                                                       | `market_researcher` / GPT-5.6-Terra    | Public evidence only                                |
 
-Spark work is promoted to Sol immediately when it encounters a contract
-question, security/lifecycle behavior, a cross-package signature, Prisma/Compose
-topology, a third failed repair, or uncertainty that affects downstream tasks.
-Spark agents never call the real model provider, update the PM ledger, accept
-their own work, or commit/push independently.
+The controller dispatches the least expensive capable model and names allowed
+paths explicitly. Engineer and task-review work is promoted to Sol when it
+encounters a Graph/lifecycle contract, security or authority boundary,
+cross-package signature, hard debugging, or uncertainty that affects
+downstream tasks. Any worker stops after the third failed repair cycle and
+returns to the controller for re-routing. PM uses `high` by default and
+requests `xhigh` only for explicitly identified major planning or irreversible
+scope decisions. Spark agents never call the real model provider, update the
+PM ledger, accept their own work, or commit/push independently.
 
 ## Execution waves
 
@@ -137,9 +144,11 @@ For ordinary deterministic components, pages, recipes, fixtures, and local
 integration inside the accepted Restaurant scope, use focused TDD, relevant
 package checks, one independent review, PM reconciliation, and controller
 commit/push. Do not add per-slice Terra QA or Sol release review unless the
-ledger identifies a concrete load-bearing risk. Ordinary provider-free local
-repairs are not counted against a repair cap; continue them within the frozen
-write manifest until tests and review are clean.
+ledger identifies a concrete load-bearing risk. For ordinary provider-free local
+repairs, the third repeated failed cycle is the ownership handoff threshold:
+current workers return to the controller for re-routing/escalation, while the
+controller can reassign the same ordinary fix to continue within the frozen
+manifest until deterministic checks/review are clean.
 
 For UI tasks, the brief and hand-off must contain a reuse inventory: searched
 registries/templates, reused keys and paths, parameterization, rejected
@@ -206,9 +215,11 @@ Codex multi-agent orchestration and the model routing in the workstream. Prefer
 GPT-5.3-Codex-Spark for bounded exploration, mechanical 1–3-file edits,
 CSS/component details, fixtures, focused tests, formatting, and scoped
 re-review. Use GPT-5.6-Sol for Graph and lifecycle contracts, cross-package
-integration, hard debugging, security, task gates, and final release review;
-use GPT-5.6-Terra for QA. Always specify the subagent model and allowed paths
-explicitly.
+integration, hard debugging, security, technology governance, and final release
+review; use GPT-5.6-Terra for ordinary implementation, task review, and QA.
+Always specify the subagent model and allowed paths explicitly. This model
+optimization does not authorize new parallel writers: the existing
+frozen-contract and disjoint-path rules remain mandatory.
 
 After Task 1 is reviewed and frozen, run only the approved disjoint writer
 waves: Task 2 Restaurant semantics in parallel with Task 3 UI Registry/source
@@ -238,8 +249,11 @@ findings, conflicts within assigned paths, and slow commands autonomously.
 Stop only for a product-scope or irreversible-architecture founder decision,
 new external/credential/cloud/deployment authority, a load-bearing issue that
 survives an applicable real-model or high-cost rerun cap, or full accepted
-completion. Ordinary provider-free local fixes are uncapped within their frozen
-manifest.
+completion. Ordinary provider-free local fixes are not globally capped; they use a
+third-failure ownership threshold: any worker stops after the third failed cycle
+and returns to the controller for re-routing/escalation. The controller can
+continue assignment to keep the ordinary fix progressing inside the frozen
+manifest until deterministic checks/review are clean.
 Mark the Goal complete and print GOAL_COMPLETE only after D0 and Tasks 0–9 are
 accepted, all required runtime/clean-checkout/accessibility/security evidence
 passes, cleanup is empty, the ledger is accepted, and local HEAD equals the

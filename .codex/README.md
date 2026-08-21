@@ -19,26 +19,32 @@ This folder defines project-scoped Codex custom agents. Codex loads one TOML fil
 
 ## Model allocation
 
-The controller and permanent roles keep model choice proportional to risk:
+Dispatch the least expensive model that can safely own the work. The current
+risk-based allocation is:
 
-- `gpt-5.6-sol`: PM, Tech Lead, integration/architecture work, complex
-  implementation, contract review, security/lifecycle review, and release
-  judgment.
-- `gpt-5.6-terra`: QA and public ecosystem research where broad verification
-  or synthesis matters more than local edit latency.
-- `gpt-5.3-codex-spark`: the default subagent, Explorer, bounded mechanical
-  implementation, UI detail work, focused tests, fixtures, formatting, and
-  scoped fix re-review.
+| Role/work                                                                                            | Model                 | Reasoning       | Allocation boundary                                                                                                                                               |
+| ---------------------------------------------------------------------------------------------------- | --------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PM and scope/status coordination                                                                     | `gpt-5.6-sol`         | `high`          | Use `xhigh` only when the controller explicitly identifies major planning, an irreversible scope decision, or equivalent load-bearing judgment.                   |
+| Tech Lead and technology-governance proposals                                                        | `gpt-5.6-sol`         | `high`          | Sol stays on profile, contract, security, lifecycle, and architecture decisions; it proposes ADRs but does not approve them.                                      |
+| Ordinary bounded implementation                                                                      | `gpt-5.6-terra`       | `high`          | Engineer owns one PM-assigned slice; re-route to Sol for Graph/lifecycle, security, cross-package contracts, hard debugging, or downstream-affecting uncertainty. |
+| Ordinary task specification and quality review                                                       | `gpt-5.6-terra`       | `high`          | Task Reviewer remains independent and escalates contract, security, lifecycle, or hard-debugging findings to the Sol gate.                                        |
+| QA and adversarial verification                                                                      | `gpt-5.6-terra`       | `high`          | Starts only at the ledger QA gate and edits only explicitly assigned test paths.                                                                                  |
+| Final risk/release review                                                                            | `gpt-5.6-sol`         | `high`          | Reserved for security, lifecycle, cross-package, and release judgment after task review and QA.                                                                   |
+| Exploration, mechanical edits, UI details, fixtures, focused tests, formatting, and scoped re-review | `gpt-5.3-codex-spark` | `medium`/`high` | Read-only or frozen-contract work with explicit allowed paths; normally 1–3 files.                                                                                |
+| Public ecosystem research                                                                            | `gpt-5.6-terra`       | `high`          | Public evidence only, without founder outreach or external commitments.                                                                                           |
 
+The controller must specify the model and allowed paths for every dispatch.
 Spark never owns Graph/lifecycle contract changes, shared API/Prisma/Compose
 changes, security adjudication, ledger transitions, real-model acceptance, or
-the final release decision. A Spark task must name its allowed paths and fit a
-frozen contract; otherwise dispatch `engineer` or return to the controller.
+the final release decision. Any worker escalates rather than switching itself
+to a stronger model when it encounters a contract question, a security or
+lifecycle boundary, hard debugging, or a third failed repair cycle.
 
 The project permits up to three subagents beside the controller. Parallel
 writers are allowed only when the active plan explicitly names the wave, the
-shared contract is frozen, and paths are disjoint. Read-only exploration and
-review may otherwise fill unused slots.
+shared contract is frozen, and paths are disjoint. Model-cost optimization
+does not authorize additional writers or weaken the existing review gates;
+read-only exploration and review may fill unused slots.
 
 ## UI reuse and delivery
 
