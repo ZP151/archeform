@@ -1,6 +1,6 @@
 # Archeform delivery status
 
-Updated: 2026-09-01
+Updated: 2026-09-02
 
 ## Product outcome
 
@@ -34,11 +34,11 @@ empty cleanup. Hosted or multi-user operation, production identity/tenant
 isolation, cloud deployment, new Graph/capability/provider contracts, and
 Compose topology changes remain excluded.
 
-The active branch is `codex/post-v0.1-local-readiness` at `140f8646`, exactly
+The active branch is `codex/post-v0.1-local-readiness` at `7ff692f7`, exactly
 equal to its upstream `origin/codex/post-v0.1-local-readiness` at ahead/behind
-`0/0` before ADR-0030 acceptance reconciliation. D0, U1, U2, F0, V0, their
-governing ADRs through ADR-0029, and the portable Compiler missing-root fixture
-are delivered on that branch.
+`0/0` before this PM reconciliation. D0, U1, U2, F0, V0, their governing ADRs
+through ADR-0030, and the portable Compiler missing-root fixture are delivered
+on that branch. ADR-0031 remains unaccepted local proposal evidence.
 
 The founder explicitly accepted ADR-0029 on 2026-09-01 and established a
 standing independent-agent review policy for future Tech Lead ADRs. A separate
@@ -63,6 +63,9 @@ non-qualifying or material-risk decisions stop or escalate.
   every configured step in both Node `22.11.0` and current `22.x` lanes. This
   accepts U2 and F0; it does not erase the separately reproduced scheduler-
   dependent Candidate race now governed by ADR-0030.
+- GitHub Actions run `33532141089` at commit `7ff692f7` also passed every
+  configured step in both Node lanes. No test process, Compose project, or
+  branch CI run remained active at the founder's scope decision.
 - Two remote archive tags now preserve the exact former local-only branch tips:
   `archive/agent-console-next-shadcn-2026-08-31` peels to `dbf0ba40`, and
   `archive/commerce-transaction-v1-2026-08-31` peels to `b481fc78`. The local
@@ -84,12 +87,15 @@ non-qualifying or material-risk decisions stop or escalate.
 - **V0 — generated notification outbox verifier repair:** `accepted` on
   2026-09-01; ADR and task reviews are clean, controller gates passed, and
   commit `0bed0d3e` is pushed at local/upstream `0/0`.
-- **R0 — Candidate durable-winner convergence:** `implementing` under accepted
-  ADR-0030. The first independent ADR review found one staging-isolation P1;
-  the revised ADR received a fresh `0/0/0` review and
-  `APPROVED_FOR_STANDING_ACCEPTANCE: yes` under the founder's standing policy.
-- **U3 — real Home template product acceptance:** `planned`, serialized, and
-  queued behind R0; no U3 implementation is authorized.
+- **R0 — Candidate durable-winner convergence:** `blocked/parked`. Windows and
+  Node's path-based hard-link API cannot satisfy the current threat model's
+  pre-write containment requirement under a junction-replacement race.
+  ADR-0031 remains unaccepted, the two focused RED tests remain local evidence,
+  and R0 is neither resolved nor an active U3 prerequisite.
+- **U3 — real Home template product acceptance:** `implementing` under the
+  founder's explicit 2026-09-02 scope-decoupling authorization. U3 must remain
+  independent of External Intake, Candidate registry, and the unfinished
+  ADR-0030/ADR-0031 implementation path.
 - **U4 — QA, release review, and delivery:** `planned`; blocked by accepted U1,
   U2, and U3.
 
@@ -104,19 +110,20 @@ P0/P1/P2=`0/0/0`.
 
 ### Risks, blockers, and next smallest slice
 
-- **Delivery state:** U2, F0, V0, and the portable Compiler fixture are pushed
-  through `140f8646` with local/upstream equality before ADR-0030 acceptance
-  reconciliation. Replacement CI is green in both Node lanes.
-- **Current gate:** implement and independently verify the accepted ADR-0030
-  four-path Candidate convergence repair. U3 remains planned behind R0.
+- **Delivery state:** governance through `7ff692f7` is pushed with
+  local/upstream equality, and run `33532141089` is green in both Node lanes.
+  The two R0 RED tests and proposed ADR-0031 remain deliberately uncommitted.
+- **Current gate:** execute only the first isolated U3 runner RED on branch
+  `codex/post-v0.1-local-readiness-u3`, with no External Intake or Candidate
+  dependency. R0 remains parked.
 - **Evidence gap:** the `pm-status` workflow names `docs/mvp.md`, but that file
   does not exist. This refresh used `docs/roadmap.md`, the current delivery
   assessment, the readiness design, and its PM ledger as the available scope
   authorities.
-- **Next smallest slice:** capture deterministic Candidate/Store RED, implement
-  atomic isolated publication and strict durable-winner recovery, then obtain
-  independent task/QA and replacement CI evidence. Do not begin U3 until R0 is
-  accepted.
+- **Next smallest slice:** create an isolated clean U3 worktree at the PM
+  reconciliation commit, add only the first focused local-acceptance runner
+  test, and reproduce the missing target API RED. Do not start Docker, Compose,
+  production implementation, full-repository gates, or R0 work in that slice.
 
 ### Previous release checkpoint — 2026-08-21
 
