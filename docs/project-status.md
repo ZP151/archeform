@@ -61,42 +61,40 @@ ADR-0025; U1 is not accepted or delivered.
 - **D0 — design and governance:** `accepted` on 2026-09-01. The founder
   explicitly accepted ADR-0024 and directed continued execution under a
   long-running goal. The remote branch-asset tags are reconciled.
-- **U1 — supported toolchain doctor:** `ready_for_qa`, acceptance paused because
-  the local Docker Engine is unavailable. The founder accepted ADR-0025 on
-  2026-09-01, making `pnpm run doctor` and `pnpm run doctor:toolchain` the
-  supported spellings.
-- **U2 — credential-free CI:** `planned`; blocked by accepted U1.
-- **U3 — real Home template product acceptance:** `planned`; blocked by
-  accepted U1 and remains serialized integration work.
+- **U1 — supported toolchain doctor:** `accepted` on 2026-09-01. The founder
+  accepted ADR-0025, making `pnpm run doctor` and `pnpm run doctor:toolchain`
+  the supported spellings.
+- **U2 — credential-free CI:** `implementing`; it is the sole implementation
+  task authorized by accepted U1 and the frozen explicit Doctor command contract.
+- **U3 — real Home template product acceptance:** `planned`, serialized, and
+  queued behind U2; no U3 implementation is authorized.
 - **U4 — QA, release review, and delivery:** `planned`; blocked by accepted U1,
   U2, and U3.
 
-U1 has reproducible implementation evidence but no task acceptance or delivery
-claim. Under Node `22.11.0` and pnpm `9.0.0`, its focused suite passes 35/35 and
-`pnpm run doctor:toolchain` passes all six checks. Historical characterization
-proves obsolete `pnpm doctor` resolves pnpm's built-in command and exits zero
-without an Archeform result; the accepted `pnpm run doctor` invokes the project
-script and currently fails closed because Docker Desktop processes are present
-but the Docker Engine is unavailable. The bounded command timeout returns
-control without creating Compose resources. Independent review closed its
-Docker-output, command-timeout, Git-state, Apple Git, and suffixed Docker-version
-findings with P0/P1/P2=`0/0/0`; a fresh local Doctor pass remains required.
+U1 is accepted with fresh supported-environment evidence: Node `v22.11.0`, pnpm
+`9.0.0`, Doctor tests 35/35, explicit toolchain Doctor PASS, and explicit local
+Doctor PASS with Docker server `29.6.2`. The exact selector, focused formatting,
+diff, unchanged lockfile, active-reference, sensitive-pattern, and four-path
+containment checks also pass. Historical characterization retains obsolete
+`pnpm doctor` only as collision evidence; the explicit command is the supported
+local preflight. No Compose resources were created. Independent review recorded
+P0/P1/P2=`0/0/0`.
 
 ### Risks, blockers, and next smallest slice
 
 - **Delivery state:** D0 is pushed at `14803a83` with local/upstream equality.
-  U1 remains uncommitted on exactly `.node-version`, `package.json`,
-  `scripts/doctor.mjs`, and `scripts/doctor.test.mjs`; accepted ADR-0025 is the
-  only additional governance path.
-- **Current gate:** restore the Docker Engine and obtain a fresh passing
-  `pnpm run doctor`. U2 and U3 remain blocked by accepted U1.
+  U1 is accepted but remains uncommitted on exactly `.node-version`,
+  `package.json`, `scripts/doctor.mjs`, and `scripts/doctor.test.mjs`; accepted
+  ADR-0025 is the only additional governance path.
+- **Current gate:** execute U2's credential-free CI slice. U3 remains planned
+  and queued behind U2.
 - **Evidence gap:** the `pm-status` workflow names `docs/mvp.md`, but that file
   does not exist. This refresh used `docs/roadmap.md`, the current delivery
   assessment, the readiness design, and its PM ledger as the available scope
   authorities.
-- **Next smallest slice:** restore the local Docker Engine, rerun the explicit
-  local Doctor and static evidence, then reconcile U1 only if the full local
-  preflight passes. No U2/U3 authorization is implied while that gate fails.
+- **Next smallest slice:** complete the U2 credential-free CI evidence on its
+  assigned paths. Do not begin U3 until U2 is accepted and PM records the next
+  serialized authorization.
 
 ### Previous release checkpoint — 2026-08-21
 
