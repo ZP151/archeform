@@ -34,11 +34,11 @@ empty cleanup. Hosted or multi-user operation, production identity/tenant
 isolation, cloud deployment, new Graph/capability/provider contracts, and
 Compose topology changes remain excluded.
 
-The active branch is `codex/post-v0.1-local-readiness` at `1e542942`, exactly
+The active branch is `codex/post-v0.1-local-readiness` at `0bed0d3e`, exactly
 equal to its upstream `origin/codex/post-v0.1-local-readiness` at ahead/behind
-`0/0` before the accepted ADR-0029 reconciliation. D0, ADR-0025, U1,
-ADR-0026, the independently reviewed U2 workflow, ADR-0027, and ADR-0028 are
-delivered on that branch.
+`0/0` before V0 acceptance reconciliation. D0, ADR-0025, U1, ADR-0026, the
+independently reviewed U2 workflow, ADR-0027, ADR-0028, accepted ADR-0029
+governance, and the V0 verifier repair are delivered on that branch.
 
 The founder explicitly accepted ADR-0029 on 2026-09-01 and established a
 standing independent-agent review policy for future Tech Lead ADRs. A separate
@@ -75,12 +75,12 @@ non-qualifying or material-risk decisions stop or escalate.
 - **U2 — credential-free CI:** `ready_for_qa`; its implementation is pushed and
   independently approved, but acceptance awaits the ADR-0027/ADR-0028
   formatting baseline and a replacement green remote run.
-- **F0 — repository format baseline:** `frozen_pending_verifier_repair`; it is
-  authorized by accepted ADR-0027 as amended by accepted ADR-0028. Its exact
-  58-path candidate has no active writer pending the separate verifier repair.
-- **V0 — generated notification outbox verifier repair:**
-  `implementing`; ADR-0029 is explicitly accepted and independent reviewer
-  `/root/review_adr_0029` approved standing acceptance with P0/P1/P2 `0/0/0`.
+- **F0 — repository format baseline:** `ready_for_review`; its exact 58-path
+  candidate has no active implementation writer and every required local gate
+  is green after accepted V0.
+- **V0 — generated notification outbox verifier repair:** `accepted` on
+  2026-09-01; ADR and task reviews are clean, controller gates passed, and
+  commit `0bed0d3e` is pushed at local/upstream `0/0`.
 - **U3 — real Home template product acceptance:** `planned`, serialized, and
   queued behind U2; no U3 implementation is authorized.
 - **U4 — QA, release review, and delivery:** `planned`; blocked by accepted U1,
@@ -97,21 +97,18 @@ P0/P1/P2=`0/0/0`.
 
 ### Risks, blockers, and next smallest slice
 
-- **Delivery state:** governance and U2 are pushed through `1e542942` with
-  local/upstream equality before the ADR-0029 reconciliation. ADR-0029 is
-  explicitly accepted and independently approved; its PM updates are pending
-  bounded delivery.
-- **Current gate:** independently approve and deliver the two-delegate V0
-  verifier correction without changing generated contracts, then review and
-  deliver the frozen F0 candidate and rerun U2 CI. U3 remains planned and
-  queued behind accepted F0 and U2.
+- **Delivery state:** governance, U2, and V0 are pushed through `0bed0d3e` with
+  local/upstream equality before this V0 acceptance reconciliation. The exact
+  58-path F0 candidate remains uncommitted and isolated.
+- **Current gate:** independently review and deliver the frozen F0 candidate,
+  then rerun U2 CI. U3 remains planned and queued behind accepted F0 and U2.
 - **Evidence gap:** the `pm-status` workflow names `docs/mvp.md`, but that file
   does not exist. This refresh used `docs/roadmap.md`, the current delivery
   assessment, the readiness design, and its PM ledger as the available scope
   authorities.
-- **Next smallest slice:** complete V0's isolated two-delegate verifier repair,
-  then obtain independent F0 review and rerun U2 CI. Do not begin U3 until both
-  F0 and U2 are accepted and PM records the next serialized authorization.
+- **Next smallest slice:** obtain independent F0 review, deliver its exact
+  58-path candidate, and rerun U2 CI. Do not begin U3 until both F0 and U2 are
+  accepted and PM records the next serialized authorization.
 
 ### Previous release checkpoint — 2026-08-21
 
