@@ -34,11 +34,11 @@ empty cleanup. Hosted or multi-user operation, production identity/tenant
 isolation, cloud deployment, new Graph/capability/provider contracts, and
 Compose topology changes remain excluded.
 
-The active branch is `codex/post-v0.1-local-readiness` at `14803a83`, exactly
+The active branch is `codex/post-v0.1-local-readiness` at `ac3da5c9`, exactly
 equal to its upstream `origin/codex/post-v0.1-local-readiness` at ahead/behind
-`0/0`. The accepted D0 governance baseline and executable plan are delivered
-on that branch. U1 has four uncommitted implementation paths plus accepted
-ADR-0025; U1 is not accepted or delivered.
+`0/0` before the accepted ADR-0026 reconciliation. D0, ADR-0025, and U1 are
+delivered on that branch. U2 remains uncommitted while its accepted no-cache
+authority boundary is repaired and reviewed.
 
 ### Remote repository alignment
 
@@ -65,7 +65,8 @@ ADR-0025; U1 is not accepted or delivered.
   accepted ADR-0025, making `pnpm run doctor` and `pnpm run doctor:toolchain`
   the supported spellings.
 - **U2 — credential-free CI:** `implementing`; it is the sole implementation
-  task authorized by accepted U1 and the frozen explicit Doctor command contract.
+  task authorized by accepted U1, the frozen explicit Doctor command contract,
+  and accepted ADR-0026. CI must not restore or save dependency-cache state.
 - **U3 — real Home template product acceptance:** `planned`, serialized, and
   queued behind U2; no U3 implementation is authorized.
 - **U4 — QA, release review, and delivery:** `planned`; blocked by accepted U1,
@@ -82,12 +83,11 @@ P0/P1/P2=`0/0/0`.
 
 ### Risks, blockers, and next smallest slice
 
-- **Delivery state:** D0 is pushed at `14803a83` with local/upstream equality.
-  U1 is accepted but remains uncommitted on exactly `.node-version`,
-  `package.json`, `scripts/doctor.mjs`, and `scripts/doctor.test.mjs`; accepted
-  ADR-0025 is the only additional governance path.
-- **Current gate:** execute U2's credential-free CI slice. U3 remains planned
-  and queued behind U2.
+- **Delivery state:** D0, ADR-0025, and U1 are pushed through `ac3da5c9` with
+  local/upstream equality before the ADR-0026 reconciliation. ADR-0026 is
+  accepted; its governance and plan updates are pending bounded delivery.
+- **Current gate:** repair and independently re-review U2 against ADR-0026's
+  no-dependency-cache boundary. U3 remains planned and queued behind U2.
 - **Evidence gap:** the `pm-status` workflow names `docs/mvp.md`, but that file
   does not exist. This refresh used `docs/roadmap.md`, the current delivery
   assessment, the readiness design, and its PM ledger as the available scope
