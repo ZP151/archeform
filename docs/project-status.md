@@ -34,11 +34,11 @@ empty cleanup. Hosted or multi-user operation, production identity/tenant
 isolation, cloud deployment, new Graph/capability/provider contracts, and
 Compose topology changes remain excluded.
 
-The active branch is `codex/post-v0.1-local-readiness` at `ac3da5c9`, exactly
+The active branch is `codex/post-v0.1-local-readiness` at `12458713`, exactly
 equal to its upstream `origin/codex/post-v0.1-local-readiness` at ahead/behind
-`0/0` before the accepted ADR-0026 reconciliation. D0, ADR-0025, and U1 are
-delivered on that branch. U2 remains uncommitted while its accepted no-cache
-authority boundary is repaired and reviewed.
+`0/0` before the accepted ADR-0027 reconciliation. D0, ADR-0025, U1,
+ADR-0026, and the independently reviewed U2 workflow are delivered on that
+branch.
 
 ### Remote repository alignment
 
@@ -49,8 +49,10 @@ authority boundary is repaired and reviewed.
   no open pull request for the current readiness iteration.
 - GitHub records the non-draft, non-prerelease `factory-pilot v0.1.0` release.
   Its annotated tag peels to merge commit `a66d290e`.
-- GitHub Actions has no recorded workflow run. Credential-free CI remains U2
-  planned work rather than delivered remote evidence.
+- GitHub Actions run `33510492402` executed both U2 Node lanes. Both passed
+  checkout, setup, frozen install, toolchain Doctor, and Prisma generation,
+  then failed the inherited root formatting baseline. The failure contains no
+  evidence of a workflow, permission, credential, or dependency-cache defect.
 - Two remote archive tags now preserve the exact former local-only branch tips:
   `archive/agent-console-next-shadcn-2026-08-31` peels to `dbf0ba40`, and
   `archive/commerce-transaction-v1-2026-08-31` peels to `b481fc78`. The local
@@ -64,9 +66,11 @@ authority boundary is repaired and reviewed.
 - **U1 — supported toolchain doctor:** `accepted` on 2026-09-01. The founder
   accepted ADR-0025, making `pnpm run doctor` and `pnpm run doctor:toolchain`
   the supported spellings.
-- **U2 — credential-free CI:** `implementing`; it is the sole implementation
-  task authorized by accepted U1, the frozen explicit Doctor command contract,
-  and accepted ADR-0026. CI must not restore or save dependency-cache state.
+- **U2 — credential-free CI:** `ready_for_qa`; its implementation is pushed and
+  independently approved, but acceptance awaits the ADR-0027 formatting
+  baseline and a replacement green remote run.
+- **F0 — repository format baseline:** `implementing`; it is the sole writer
+  authorized by accepted ADR-0027 and the frozen 101/39/62/58+4 manifest.
 - **U3 — real Home template product acceptance:** `planned`, serialized, and
   queued behind U2; no U3 implementation is authorized.
 - **U4 — QA, release review, and delivery:** `planned`; blocked by accepted U1,
@@ -83,18 +87,20 @@ P0/P1/P2=`0/0/0`.
 
 ### Risks, blockers, and next smallest slice
 
-- **Delivery state:** D0, ADR-0025, and U1 are pushed through `ac3da5c9` with
-  local/upstream equality before the ADR-0026 reconciliation. ADR-0026 is
-  accepted; its governance and plan updates are pending bounded delivery.
-- **Current gate:** repair and independently re-review U2 against ADR-0026's
-  no-dependency-cache boundary. U3 remains planned and queued behind U2.
+- **Delivery state:** governance and U2 are pushed through `12458713` with
+  local/upstream equality before the ADR-0027 reconciliation. ADR-0027 is
+  accepted; its plan and PM updates are pending bounded delivery.
+- **Current gate:** deliver the accepted repository format baseline without
+  changing product semantics or protected copied-source blobs, then rerun U2
+  CI. U3 remains planned and queued behind accepted F0 and U2.
 - **Evidence gap:** the `pm-status` workflow names `docs/mvp.md`, but that file
   does not exist. This refresh used `docs/roadmap.md`, the current delivery
   assessment, the readiness design, and its PM ledger as the available scope
   authorities.
-- **Next smallest slice:** complete the U2 credential-free CI evidence on its
-  assigned paths. Do not begin U3 until U2 is accepted and PM records the next
-  serialized authorization.
+- **Next smallest slice:** complete F0's exact 58-path formatting migration plus
+  `.prettierignore`, obtain independent review, and rerun U2 CI. Do not begin
+  U3 until both F0 and U2 are accepted and PM records the next serialized
+  authorization.
 
 ### Previous release checkpoint — 2026-08-21
 
