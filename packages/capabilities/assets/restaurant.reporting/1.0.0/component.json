@@ -9,10 +9,7 @@
   "manifestDigest": "sha256:7725e06fba76c691a9d5ef2d02ec669a40dba05a8e03db6d8c26797c70ddb4cc",
   "lifecycle": "golden",
   "profiles": ["restaurant-ordering"],
-  "effects": [
-    "report.restaurant.summary",
-    "report.restaurant.low-stock"
-  ],
+  "effects": ["report.restaurant.summary", "report.restaurant.low-stock"],
   "inputSchema": [
     { "key": "orderEntity", "type": "domain.entity", "required": true },
     { "key": "inventoryEntity", "type": "domain.entity", "required": true },

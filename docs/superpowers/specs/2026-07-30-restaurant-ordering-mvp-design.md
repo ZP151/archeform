@@ -105,18 +105,18 @@ Restaurant contract after the base `@factory/graph` validator succeeds.
 
 ### Required domain entities
 
-| Entity | Required fields | Purpose |
-| --- | --- | --- |
-| `restaurant-location` | `name`, `currency`, `active` | The single accepted location and its currency. |
-| `restaurant-table` | `code`, `number`, `status`, `active` | A physical table and its operational state. |
-| `table-session` | `tableCode`, `tokenDigest`, `status`, `openedAt`, `expiresAt`, `guestCount` | The customer entry boundary; tokens are stored only as a digest. |
-| `menu-category` | `name`, `sortOrder`, `active` | Customer menu grouping. |
-| `menu-item` | `categoryKey`, `name`, `description`, `price`, `available`, `stock`, `preparationMinutes`, `imageUrl` | Saleable menu entry and stock counter. |
-| `order` | `tableSessionId`, `status`, `paymentStatus`, `fulfilmentType`, `orderNote`, `priority`, `total`, `orderVersion`, `submittedAt`, `paidAt` | Order state and concurrency-visible version. |
-| `order-line` | `orderId`, `menuItemId`, `quantity`, `unitPrice`, `lineNote`, `modifiers` | An item, its note, and selected declared modifiers. |
-| `payment-attempt` | `orderId`, `method`, `amount`, `status`, `idempotencyKey`, `paidAt` | Simulated, full payment evidence. |
-| `kitchen-ticket` | `orderId`, `tableNumber`, `priority`, `status`, `acceptedAt`, `startedAt`, `readyAt` | Kitchen board projection. |
-| `inventory-ledger` | `menuItemId`, `orderId`, `delta`, `reason`, `recordedAt` | Immutable inventory evidence for reservation, decrement, release, and adjustment. |
+| Entity                | Required fields                                                                                                                          | Purpose                                                                           |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `restaurant-location` | `name`, `currency`, `active`                                                                                                             | The single accepted location and its currency.                                    |
+| `restaurant-table`    | `code`, `number`, `status`, `active`                                                                                                     | A physical table and its operational state.                                       |
+| `table-session`       | `tableCode`, `tokenDigest`, `status`, `openedAt`, `expiresAt`, `guestCount`                                                              | The customer entry boundary; tokens are stored only as a digest.                  |
+| `menu-category`       | `name`, `sortOrder`, `active`                                                                                                            | Customer menu grouping.                                                           |
+| `menu-item`           | `categoryKey`, `name`, `description`, `price`, `available`, `stock`, `preparationMinutes`, `imageUrl`                                    | Saleable menu entry and stock counter.                                            |
+| `order`               | `tableSessionId`, `status`, `paymentStatus`, `fulfilmentType`, `orderNote`, `priority`, `total`, `orderVersion`, `submittedAt`, `paidAt` | Order state and concurrency-visible version.                                      |
+| `order-line`          | `orderId`, `menuItemId`, `quantity`, `unitPrice`, `lineNote`, `modifiers`                                                                | An item, its note, and selected declared modifiers.                               |
+| `payment-attempt`     | `orderId`, `method`, `amount`, `status`, `idempotencyKey`, `paidAt`                                                                      | Simulated, full payment evidence.                                                 |
+| `kitchen-ticket`      | `orderId`, `tableNumber`, `priority`, `status`, `acceptedAt`, `startedAt`, `readyAt`                                                     | Kitchen board projection.                                                         |
+| `inventory-ledger`    | `menuItemId`, `orderId`, `delta`, `reason`, `recordedAt`                                                                                 | Immutable inventory evidence for reservation, decrement, release, and adjustment. |
 
 The Profile may add presentation-only fields, but it cannot remove these
 entities or change the meaning of their required fields. Database relations are
@@ -126,12 +126,12 @@ does not encode a database foreign-key name.
 
 ### Required policies and roles
 
-| Role | Scope |
-| --- | --- |
+| Role       | Scope                                                                                          |
+| ---------- | ---------------------------------------------------------------------------------------------- |
 | `customer` | Reads published active menu data and creates/reads records tied to its verified table session. |
-| `kitchen` | Reads paid kitchen tickets and transitions accepted/preparing/ready workflow states. |
-| `cashier` | Reads active orders, records simulated payment attempts, serves orders, and renders receipts. |
-| `manager` | Manages tables, menu, stock adjustments, cancellations, audit evidence, and reporting. |
+| `kitchen`  | Reads paid kitchen tickets and transitions accepted/preparing/ready workflow states.           |
+| `cashier`  | Reads active orders, records simulated payment attempts, serves orders, and renders receipts.  |
+| `manager`  | Manages tables, menu, stock adjustments, cancellations, audit evidence, and reporting.         |
 
 `x-factory-role` remains test-only generated-app role simulation. It is not an
 authentication mechanism. The customer runtime uses a table-session token
@@ -167,10 +167,10 @@ inventory or audit effects.
 The compiler adds these bounded PageModel block types, each with a typed
 Factory projection rather than arbitrary React component references:
 
-| Group | Route examples | Block types |
-| --- | --- | --- |
-| Customer | `/table/:token`, `/menu`, `/cart`, `/orders/current`, `/receipt/:id` | `restaurant-entry`, `menu-browser`, `order-cart`, `payment-checkout`, `order-tracker`, `receipt` |
-| Merchant | `/merchant/tables`, `/merchant/menu`, `/merchant/kitchen`, `/merchant/cashier`, `/merchant/analytics` | `table-board`, `menu-manager`, `kitchen-board`, `cashier-console`, `restaurant-dashboard` |
+| Group    | Route examples                                                                                        | Block types                                                                                      |
+| -------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Customer | `/table/:token`, `/menu`, `/cart`, `/orders/current`, `/receipt/:id`                                  | `restaurant-entry`, `menu-browser`, `order-cart`, `payment-checkout`, `order-tracker`, `receipt` |
+| Merchant | `/merchant/tables`, `/merchant/menu`, `/merchant/kitchen`, `/merchant/cashier`, `/merchant/analytics` | `table-board`, `menu-manager`, `kitchen-board`, `cashier-console`, `restaurant-dashboard`        |
 
 Each block receives only data declared by the validated profile projection.
 Generated Web code cannot receive arbitrary component names, URLs, executable
@@ -180,14 +180,14 @@ props, provider credentials, or page scripts from a Graph.
 
 The initial package set is Factory-owned and independently versioned:
 
-| Asset | Main operations | Primary compiler outputs |
-| --- | --- | --- |
-| `restaurant.table-session` | create, validate, close, expire | API resolver, database model, customer-entry page block, fixtures |
-| `restaurant.menu` | category/list/search, create/update, availability, stock adjustment | API module, customer menu, merchant menu management, fixtures |
-| `restaurant.ordering` | add/update/remove line, submit, cancel, history | transactional API module, order/cart/track blocks, tests |
-| `restaurant.kitchen` | create ticket, prioritise, accept, prepare, ready | API module, kitchen board, event projection, tests |
-| `restaurant.cashier` | simulate payment, reversal request, serve, receipt projection | API module, cashier and receipt blocks, tests |
-| `restaurant.reporting` | operational aggregates and low-stock query | read-model module, dashboard block, fixtures |
+| Asset                      | Main operations                                                     | Primary compiler outputs                                          |
+| -------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `restaurant.table-session` | create, validate, close, expire                                     | API resolver, database model, customer-entry page block, fixtures |
+| `restaurant.menu`          | category/list/search, create/update, availability, stock adjustment | API module, customer menu, merchant menu management, fixtures     |
+| `restaurant.ordering`      | add/update/remove line, submit, cancel, history                     | transactional API module, order/cart/track blocks, tests          |
+| `restaurant.kitchen`       | create ticket, prioritise, accept, prepare, ready                   | API module, kitchen board, event projection, tests                |
+| `restaurant.cashier`       | simulate payment, reversal request, serve, receipt projection       | API module, cashier and receipt blocks, tests                     |
+| `restaurant.reporting`     | operational aggregates and low-stock query                          | read-model module, dashboard block, fixtures                      |
 
 The Profile continues to lock and compose `core.audit`, `core.crud`,
 `core.notification`, `core.workflow`, `commerce.catalog`, `commerce.cart`,

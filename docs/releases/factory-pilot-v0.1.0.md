@@ -14,10 +14,10 @@ Task 9 closes the Restaurant product end to end:
   producing a V3 Draft with a stamped template origin and dual-surface previews;
   the non-restaurant V1 path stays byte-identical.
 - **9B — V3 launch + verification.** The V3 bundle emits a `docker-compose.yml`
-  + `Dockerfile` (`web` customer :3000, `api` merchant-manager :3001, shared
-  state volume), and the verification queue dispatches V1/V3 strictly, running
-  the V3 bundle's generated customer / merchant / shared-state journeys. The
-  code canvas exposes a "Run verification" action with evidence steps.
+  - `Dockerfile` (`web` customer :3000, `api` merchant-manager :3001, shared
+    state volume), and the verification queue dispatches V1/V3 strictly, running
+    the V3 bundle's generated customer / merchant / shared-state journeys. The
+    code canvas exposes a "Run verification" action with evidence steps.
 - **9C — Restaurant acceptance harness.** A dedicated Playwright harness
   (`e2e/restaurant-v3.spec.ts`) drives Describe → V3 apply → Page/Data/
   Experience/Access edits → Publish → Compile → Verify → Preview → accessibility

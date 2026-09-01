@@ -1,7 +1,13 @@
 {
   "apiVersion": "factory.adapter/v1",
   "kind": "declarative",
-  "outputSlots": ["api.runtime", "api.service", "policy.rule", "test.fixture", "web.navigation"],
+  "outputSlots": [
+    "api.runtime",
+    "api.service",
+    "policy.rule",
+    "test.fixture",
+    "web.navigation"
+  ],
   "templates": [
     {
       "id": "api-capability-module",

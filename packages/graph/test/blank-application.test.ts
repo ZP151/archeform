@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { createBlankApplicationDraft, hashApplicationGraph } from "../src/index.js";
+import {
+  createBlankApplicationDraft,
+  hashApplicationGraph,
+} from "../src/index.js";
 
 describe("createBlankApplicationDraft", () => {
   it("creates a valid mutable Draft revision with no product content", () => {

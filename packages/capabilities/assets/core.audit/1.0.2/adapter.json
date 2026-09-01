@@ -11,7 +11,9 @@
       "digest": "sha256:00295cb26b710cad5cb4af026fff5d55836f26381be6ccc74cf1444a6867f7b6"
     }
   ],
-  "parameters": [{ "key": "actorRole", "type": "graph-symbol", "required": true }],
+  "parameters": [
+    { "key": "actorRole", "type": "graph-symbol", "required": true }
+  ],
   "contributes": { "effects": ["audit.record"] },
   "disable": {
     "removeIntegrationCapabilities": ["audit.record"],

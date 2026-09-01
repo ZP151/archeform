@@ -24,7 +24,9 @@ describe("hashProductCompositionDiff", () => {
             id: "expense-list",
             route: "/expense-list",
             title: "Expenses",
-            blocks: [{ id: "expense-list-list", type: "list", entity: "expense" }],
+            blocks: [
+              { id: "expense-list-list", type: "list", entity: "expense" },
+            ],
           },
         },
         {
@@ -48,7 +50,12 @@ describe("hashProductCompositionDiff", () => {
         {
           op: "add",
           path: "/page/pages/-",
-          value: { id: "expense-list", route: "/expense-list", title: "Expenses", blocks: [] },
+          value: {
+            id: "expense-list",
+            route: "/expense-list",
+            title: "Expenses",
+            blocks: [],
+          },
         },
       ],
     };
@@ -58,7 +65,12 @@ describe("hashProductCompositionDiff", () => {
         {
           op: "add",
           path: "/page/pages/-",
-          value: { id: "expense-list", route: "/expense-list", title: "Expenses queue", blocks: [] },
+          value: {
+            id: "expense-list",
+            route: "/expense-list",
+            title: "Expenses queue",
+            blocks: [],
+          },
         },
       ],
     };
@@ -68,16 +80,29 @@ describe("hashProductCompositionDiff", () => {
   });
 
   it("rejects malformed diffs and key-order-independent hashing", () => {
-    expect(() => hashProductCompositionDiff({ apiVersion: "factory.graph-diff/v1", operations: [] })).toThrow();
+    expect(() =>
+      hashProductCompositionDiff({
+        apiVersion: "factory.graph-diff/v1",
+        operations: [],
+      }),
+    ).toThrow();
     const first = {
       apiVersion: "factory.graph-diff/v1",
       operations: [
-        { op: "add", path: "/domain/entities/-", value: { key: "a", label: "A", fields: [] } },
+        {
+          op: "add",
+          path: "/domain/entities/-",
+          value: { key: "a", label: "A", fields: [] },
+        },
       ],
     };
     const reordered = {
       operations: [
-        { op: "add", path: "/domain/entities/-", value: { fields: [], label: "A", key: "a" } },
+        {
+          op: "add",
+          path: "/domain/entities/-",
+          value: { fields: [], label: "A", key: "a" },
+        },
       ],
       apiVersion: "factory.graph-diff/v1",
     };

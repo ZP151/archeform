@@ -404,7 +404,7 @@ path.
 **Task 6 Batch 4 gate round closed: the QA P2 was repaired in the closure
 commit.** All four gates ran against `36d04f2`: independent task review
 PASS (zero findings), independent behavioral QA PASS with one P2 (the
-admission boundary validated evidence digest *presence* only — a
+admission boundary validated evidence digest _presence_ only — a
 wrong-but-present `fixtureDigest`/`contractTestDigest` value passed as
 eligible), independent release review PASS (zero findings), and PM accept
 (three P2-informational notes). The closure commit adds a

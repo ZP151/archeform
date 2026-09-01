@@ -18,7 +18,13 @@
     { "key": "customerRole", "type": "policy.role", "required": true },
     { "key": "merchantRole", "type": "policy.role", "required": true }
   ],
-  "outputSlots": ["api.runtime", "database.schema", "database.migration", "flow.effect", "test.fixture"],
+  "outputSlots": [
+    "api.runtime",
+    "database.schema",
+    "database.migration",
+    "flow.effect",
+    "test.fixture"
+  ],
   "templates": [
     {
       "id": "api-capability-module",

@@ -28,15 +28,15 @@ leak, or cleanup failure returns the task to `implementing` with evidence.
 
 ## Task ledger
 
-| Task | Deliverable                                        | State   | Target commit | Evidence |
-| ---- | -------------------------------------------------- | ------- | ------------- | -------- |
-| 1    | Verification/evidence/Draft-Diff contracts         | accepted | f804d67       | task review, QA, and release review each PASSed f804d67; worker baseline 81/81 |
-| 2    | Isolated lifecycle and cleanup                     | accepted | 9b954ea       | task review PASS (9b954ea, re-review 2a23b0b, P2s d01e5f3); QA FAIL P1 (9b954ea) then PASS (d01e5f3); release review PASS (f392446); focused 19/19; worker 100/100; graph 70/70 |
-| 3    | Migration, API, role, denial, idempotency probes   | accepted | fe50aca       | task review FAIL P2 (header names) repaired d652bfc, re-review PASS d652bfc; QA FAIL P1 (unreachable endpoints emitted httpStatus 0 → evidence contract rejected → probe.crashed) repaired de2e667, QA re-run PASS de2e667 (P1 symptom reproduced on old code, closed end-to-end; 147-check contract sweep; RED 5/27 → GREEN 27/27 + 20/20 lifecycle); worker 128/128; typecheck/lint clean; release review FAIL 2 P2s (plan checkboxes unchecked; residual-risk overstatement) remediated fe50aca, re-review PASS fe50aca; PM acceptance at fe50aca |
-| 4    | Deterministic diagnosis and constrained Draft Diff | accepted   | e7ffb02       | feature `feat: add safe verification diagnosis` (9637528); RED graph 26/26 + worker 4/4 (module missing), GREEN 26/26 + 4/4; full graph 98/98, worker 132/132; graph typecheck/lint/build clean; worker typecheck/lint clean; task review FAIL P2 (derived diagnosisId/baseDraftRevisionId overflow factoryId 128 at schema-extreme inputs, reproduced by reviewer) repaired 3a032a0 (bounded derived IDs, RED 2/28 → GREEN 28/28); re-review PASS at 3a032a0 (P2 independently reproduced at 9637528 length 138 and closed; edge-math probes 128/119/118/117/1-char green; identity binding untrimmed; gates 28/98/4 + worker 132/132, typecheck/lint/build clean; P0/P1/P2 none); QA PASS at 3a032a0 (P2 reproduced at parent 26/2 test fail + 138/134-char overflow, closed at fix; sweep 28/98/4 + worker 132/132; 9/9 adversarial probes incl. round-trip and identity binding; commit hygiene 2 files; P0/P1/P2 none); release review FAIL 2 P2s (blocked-segment entity keys produce schema-invalid affectedPaths, reproduced by probe; undocumented baseDraftRevisionId resolution seam) repaired e7ffb02 (blockedPathSegments guard fails closed to graph.unknown_entity, RED 4/32 → GREEN 32/32, full graph 102/102, worker 132/132; resolution contract documented in module docstring + plan); release re-review PASS at e7ffb02 (both P2s reproduced at parent 3a032a0 incl. parseDiagnosis throw and add-binding diff failure, closed at fix; 0/9 collateral differences; 32/102/4 + worker 132/132; typecheck/lint/build clean; P0/P1/P2 none); PM acceptance at e7ffb02 (independent check: clean tree, remediation diff read, PM runs 32/102/4/132 green) |
-| 5    | Control Plane persistence and review APIs          | accepted | 4ad23f3       | feature `feat: expose verification evidence review` (4ad23f3); RED service 17/17 + controller 6/6 module-missing; GREEN 17/17 + 6/6 + prisma-schema 8/8; full control-plane 145/145; typecheck/lint/build clean; task review PASS 4ad23f3 (28/28 probes, non-blocking races/diagnosis-bind/migration-static/approval-gate notes accepted); QA PASS 4ad23f3 (RED reproduced at parent 3a032a0 module-missing; 28/28 probes; 4 non-blocking notes confirmed none escalated); release review PASS 4ad23f3 (60/60 probes incl. pointer hygiene, type-constraints, persisted-key allowlist, token timingSafeEqual; pre-existing no-baseline-migration note accepted); PM acceptance at 4ad23f3 (own runs 31/31 + 145/145 + typecheck/lint/build clean) |
-| 6    | BullMQ integration and one profile acceptance      | planned | —             | —        |
-| 7    | Independent gates and release hand-off             | planned | —             | —        |
+| Task | Deliverable                                        | State    | Target commit | Evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ---- | -------------------------------------------------- | -------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | Verification/evidence/Draft-Diff contracts         | accepted | f804d67       | task review, QA, and release review each PASSed f804d67; worker baseline 81/81                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 2    | Isolated lifecycle and cleanup                     | accepted | 9b954ea       | task review PASS (9b954ea, re-review 2a23b0b, P2s d01e5f3); QA FAIL P1 (9b954ea) then PASS (d01e5f3); release review PASS (f392446); focused 19/19; worker 100/100; graph 70/70                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 3    | Migration, API, role, denial, idempotency probes   | accepted | fe50aca       | task review FAIL P2 (header names) repaired d652bfc, re-review PASS d652bfc; QA FAIL P1 (unreachable endpoints emitted httpStatus 0 → evidence contract rejected → probe.crashed) repaired de2e667, QA re-run PASS de2e667 (P1 symptom reproduced on old code, closed end-to-end; 147-check contract sweep; RED 5/27 → GREEN 27/27 + 20/20 lifecycle); worker 128/128; typecheck/lint clean; release review FAIL 2 P2s (plan checkboxes unchecked; residual-risk overstatement) remediated fe50aca, re-review PASS fe50aca; PM acceptance at fe50aca                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 4    | Deterministic diagnosis and constrained Draft Diff | accepted | e7ffb02       | feature `feat: add safe verification diagnosis` (9637528); RED graph 26/26 + worker 4/4 (module missing), GREEN 26/26 + 4/4; full graph 98/98, worker 132/132; graph typecheck/lint/build clean; worker typecheck/lint clean; task review FAIL P2 (derived diagnosisId/baseDraftRevisionId overflow factoryId 128 at schema-extreme inputs, reproduced by reviewer) repaired 3a032a0 (bounded derived IDs, RED 2/28 → GREEN 28/28); re-review PASS at 3a032a0 (P2 independently reproduced at 9637528 length 138 and closed; edge-math probes 128/119/118/117/1-char green; identity binding untrimmed; gates 28/98/4 + worker 132/132, typecheck/lint/build clean; P0/P1/P2 none); QA PASS at 3a032a0 (P2 reproduced at parent 26/2 test fail + 138/134-char overflow, closed at fix; sweep 28/98/4 + worker 132/132; 9/9 adversarial probes incl. round-trip and identity binding; commit hygiene 2 files; P0/P1/P2 none); release review FAIL 2 P2s (blocked-segment entity keys produce schema-invalid affectedPaths, reproduced by probe; undocumented baseDraftRevisionId resolution seam) repaired e7ffb02 (blockedPathSegments guard fails closed to graph.unknown_entity, RED 4/32 → GREEN 32/32, full graph 102/102, worker 132/132; resolution contract documented in module docstring + plan); release re-review PASS at e7ffb02 (both P2s reproduced at parent 3a032a0 incl. parseDiagnosis throw and add-binding diff failure, closed at fix; 0/9 collateral differences; 32/102/4 + worker 132/132; typecheck/lint/build clean; P0/P1/P2 none); PM acceptance at e7ffb02 (independent check: clean tree, remediation diff read, PM runs 32/102/4/132 green) |
+| 5    | Control Plane persistence and review APIs          | accepted | 4ad23f3       | feature `feat: expose verification evidence review` (4ad23f3); RED service 17/17 + controller 6/6 module-missing; GREEN 17/17 + 6/6 + prisma-schema 8/8; full control-plane 145/145; typecheck/lint/build clean; task review PASS 4ad23f3 (28/28 probes, non-blocking races/diagnosis-bind/migration-static/approval-gate notes accepted); QA PASS 4ad23f3 (RED reproduced at parent 3a032a0 module-missing; 28/28 probes; 4 non-blocking notes confirmed none escalated); release review PASS 4ad23f3 (60/60 probes incl. pointer hygiene, type-constraints, persisted-key allowlist, token timingSafeEqual; pre-existing no-baseline-migration note accepted); PM acceptance at 4ad23f3 (own runs 31/31 + 145/145 + typecheck/lint/build clean)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 6    | BullMQ integration and one profile acceptance      | planned  | —             | —                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 7    | Independent gates and release hand-off             | planned  | —             | —                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 ## Task 1 — verification contracts — 2026-08-06
 
@@ -84,6 +84,7 @@ still accepts 3-char tokens (`basic API contract`, `basic 200 response`).
 Regression tests confirmed failing first (RED) then green (GREEN).
 
 **Evidence (Node v22.11.0):**
+
 - Focused `verification-contract.test.ts`: 35/35 — valid run/evidence/diff/
   diagnosis records; unknown run status, step kind, step status, diagnosis
   category rejection; non-sha256 compilation digest and step digest rejection;
@@ -114,7 +115,7 @@ Regression tests confirmed failing first (RED) then green (GREEN).
 **Residual risk (redaction backstop):** bare credentials that are neither
 assigned nor bearer/Basic-shaped (e.g. a bare `sk-live-...` value) are out of
 backstop scope by design — the allowlisted evidence vocabulary is the first
-line of defense, and the backstop covers credential-like *assignments* and
+line of defense, and the backstop covers credential-like _assignments_ and
 separator-less bearer/Basic forms.
 
 **Contracts:** `VerificationRunV1` (immutable `compilationDigest`, profileKey,
@@ -178,6 +179,7 @@ predated Task 1) was rebuilt; the graph barrel re-export now carries the
 verification contracts, and the graph suite still passes 70/70.
 
 **Evidence (Node v22.11.0):**
+
 - Focused `verification-lifecycle.test.ts`: 16/16 — declared-order probes with
   cleanup last and evidence bound to the derived run (identity, digest,
   ordered step IDs, digest-only artifact manifest, ISO timestamps); digest
@@ -195,7 +197,7 @@ verification contracts, and the graph suite still passes 70/70.
   deterministic across manifest reordering and sensitive to graph hash and
   artifact set; environment delegates boot/cleanup to the preview runner with
   bounded options; migrations run through a bounded `docker compose exec -T
-  migrate` command shape; untrusted command tokens rejected before any process
+migrate` command shape; untrusted command tokens rejected before any process
   run; bounded health/request statuses via injected fetch (body never read);
   request paths with traversal/query/`#` rejected before any fetch.
 - Full `@factory/compiler-worker` suite: 97/97 (81 baseline + 16 new);
@@ -378,6 +380,7 @@ acceptance fixture. The environment never reads response bodies; probes return
 only fixed allowlisted prose plus declared status/role/action facts.
 
 **Evidence (Node v22.11.0, e58b5a6):**
+
 - Focused `verification-probes.test.ts`: 21/21 — migration applied/unapplied;
   health 200/unreachable; API action expected status, unexpected status, and
   untrusted-route fail-closed; Expense create journey as employee with
@@ -609,13 +612,14 @@ worker 4/4 + 132/132, typecheck/lint/build clean) plus 8 independent probes
 (all 13 probe-emittable failure codes map deterministically; credential-shaped
 evidence rejected; determinism; worker boundary fail-closed) and FAILed the
 gate with two P2s, both independently reproduced:
+
 - P2-1: the domain entity-key schema permits blocked graphEvidencePath
   segments (`constructor`/`prototype`), so a schema-legal published graph with
   such an entity made the mapper emit `affectedPaths: ["/domain/constructor"]`
   — a path the contract refuses — producing a DiagnosisV1 that failed
   `parseDiagnosis` (confirmed by probe for both keys; reachable through
   status-mismatch, denial, and idempotency mappings). Repaired with TDD at e7ffb02:
-  `blockedPathSegments` (".", "..", "__proto__", "constructor", "prototype")
+  `blockedPathSegments` (".", "..", "**proto**", "constructor", "prototype")
   guards `entityKnown` in `mapFailure`, so such entities fail closed to
   `graph.unknown_entity` with `["/domain"]` and never emit a blocked path; the
   fixed summary now reads "does not define or cannot address" (honest for both
@@ -637,43 +641,43 @@ gate with two P2s, both independently reproduced:
   `baseGraphHash` (a draft edited after the published snapshot is not a valid
   approval base). Task 4 re-advanced to `ready_for_qa` at e7ffb02; release
   re-review launched next.
-**Release re-review (PASS at e7ffb02):** the release reviewer re-ran the gate
-in a detached worktree and confirmed both P2s closed: P2-1 reproduced at the
-parent 3a032a0 exactly as found (binding.status_mismatch with
-`["/domain/constructor"]` — `parseDiagnosis` throwing "Affected paths must be
-mutable Graph paths."; the denial case emitted the add-binding diff with a
-blocked affected path failing `parseDraftDiff`; the four regression tests fail
-28/4 at the parent) and closed at e7ffb02 (every blocked-entity case fails
-closed to graph.unknown_entity with ["/domain"], unreachable to ["/metadata"],
-draftDiff null, every diagnosis round-trips; the blocked set exactly matches
-the five graphEvidencePath-refused segments, and the entity-key schema admits
-only constructor/prototype of them — "."/".."/"__proto__" are defense in
-depth); P2-2 verified against code (assertGraphIdentity enforces
-metadata.id === aggregate.key on every appendDraftRevision, latest-draft
-selection by revisionNumber desc, hashApplicationGraph exported) and the
-contract is sufficient for Task 5's approval interface. Gates: 32/32, 102/102,
-4/4, full worker 132/132 single clean run, typecheck/lint/build clean.
-Adversarial battery: 0/9 collateral differences vs the parent across a 9-case
-normal-mapping comparison; no diff op for blocked entities; determinism holds;
-no stale consumers of the old summary. Commit hygiene: e7ffb02^..e7ffb02
-touches exactly diagnosis.ts (+31), diagnosis-contract.test.ts (+112), plan
-(+1); diff --check clean. VERDICT PASS — P0/P1/P2 none. Non-blocking notes
-(transient @factory/capabilities build TS7006 in a file untouched by this
-diff, environmental; the blockedPathSegments and graphEvidencePath segment
-lists are coupled across files with no equality test — recorded as residual
-risk, noted for Task 7 hardening) accepted.
-**PM acceptance at e7ffb02:** the PM independently verified at the commit —
-working tree clean; the remediation diff read directly (the `entityKnown`
-choke point covers every `/domain/<entity>` emission site, summary prose
-honest, resolution contract documented); the PM's own runs at the commit:
-diagnosis-contract 32/32, full graph 102/102, worker verification-diagnosis
-4/4, full worker 132/132, graph typecheck/lint/build clean, worker
-typecheck/lint clean. Task 4 is ACCEPTED: deterministic diagnosis and
-reviewable Draft Diff are delivered as designed — first-failed-step-wins
-mapping over the full probe failure-code vocabulary, immutable Published
-Graph protection at both boundaries, bounded derived IDs, hostile-evidence
-fail-closed, and draft diffs emitted only when a concrete safe operation is
-derivable, with the approval resolution contract documented for Task 5.
+  **Release re-review (PASS at e7ffb02):** the release reviewer re-ran the gate
+  in a detached worktree and confirmed both P2s closed: P2-1 reproduced at the
+  parent 3a032a0 exactly as found (binding.status_mismatch with
+  `["/domain/constructor"]` — `parseDiagnosis` throwing "Affected paths must be
+  mutable Graph paths."; the denial case emitted the add-binding diff with a
+  blocked affected path failing `parseDraftDiff`; the four regression tests fail
+  28/4 at the parent) and closed at e7ffb02 (every blocked-entity case fails
+  closed to graph.unknown_entity with ["/domain"], unreachable to ["/metadata"],
+  draftDiff null, every diagnosis round-trips; the blocked set exactly matches
+  the five graphEvidencePath-refused segments, and the entity-key schema admits
+  only constructor/prototype of them — "."/".."/"**proto**" are defense in
+  depth); P2-2 verified against code (assertGraphIdentity enforces
+  metadata.id === aggregate.key on every appendDraftRevision, latest-draft
+  selection by revisionNumber desc, hashApplicationGraph exported) and the
+  contract is sufficient for Task 5's approval interface. Gates: 32/32, 102/102,
+  4/4, full worker 132/132 single clean run, typecheck/lint/build clean.
+  Adversarial battery: 0/9 collateral differences vs the parent across a 9-case
+  normal-mapping comparison; no diff op for blocked entities; determinism holds;
+  no stale consumers of the old summary. Commit hygiene: e7ffb02^..e7ffb02
+  touches exactly diagnosis.ts (+31), diagnosis-contract.test.ts (+112), plan
+  (+1); diff --check clean. VERDICT PASS — P0/P1/P2 none. Non-blocking notes
+  (transient @factory/capabilities build TS7006 in a file untouched by this
+  diff, environmental; the blockedPathSegments and graphEvidencePath segment
+  lists are coupled across files with no equality test — recorded as residual
+  risk, noted for Task 7 hardening) accepted.
+  **PM acceptance at e7ffb02:** the PM independently verified at the commit —
+  working tree clean; the remediation diff read directly (the `entityKnown`
+  choke point covers every `/domain/<entity>` emission site, summary prose
+  honest, resolution contract documented); the PM's own runs at the commit:
+  diagnosis-contract 32/32, full graph 102/102, worker verification-diagnosis
+  4/4, full worker 132/132, graph typecheck/lint/build clean, worker
+  typecheck/lint clean. Task 4 is ACCEPTED: deterministic diagnosis and
+  reviewable Draft Diff are delivered as designed — first-failed-step-wins
+  mapping over the full probe failure-code vocabulary, immutable Published
+  Graph protection at both boundaries, bounded derived IDs, hostile-evidence
+  fail-closed, and draft diffs emitted only when a concrete safe operation is
+  derivable, with the approval resolution contract documented for Task 5.
 
 ## Task 5 — persist run evidence and expose review APIs — 2026-08-07
 
@@ -703,6 +707,7 @@ module-missing).
 control-plane 145/145; typecheck, lint, and build clean at 4ad23f3. All four
 RED-round iterations were test-fixture or error-classification bugs, not logic
 bugs, and are recorded here for the reviewers:
+
 - the stale-base fixture used an empty domain (`entities: []`), which is
   semantically invalid — the policy permissions reference the removed expense
   entity — so `parseApplicationGraph` threw `GraphSemanticError` before the
@@ -794,101 +799,102 @@ check-then-create races on idempotent createRun and concurrent approvals
 (consistent with existing repo patterns, not spec-demanded); diagnosis
 verificationRunId parsed but not cross-bound against the addressed run
 (evidence is the authoritative record); migration validated field-for-field
-+ `prisma validate` (no live Postgres on this machine); approveDraftDiff
-imposes no run-status gate and affectedPaths are advisory (spec requires
-neither). Task 5 stands `ready_for_qa` at 4ad23f3; QA gate launched next.
-**QA gate (PASS at 4ad23f3):** QA ran independently in its own detached
-worktrees. RED at the parent (3a032a0): both suites absent there; run with
-the gate's test files in the parent worktree they failed 2/2 suites, the
-only error being module-missing for `src/verification/*` (vitest 2.x counts
-a collection failure as 0 tests per file, so the ledger's "17/17, 6/6
-module-missing" framing is a count-style claim; the cause is exactly as
-stated). GREEN at the gate: graph build clean, prisma generate clean with
-VerificationRun present, focused 31/31 (17+6+8), full control-plane 145/145
-across 14 files run twice, typecheck/lint/build clean. Adversarial battery
-28/28 across 20+ scenarios incl. key-order-shuffled evidence -> identical
-canonical digest (parser canonicalizes to schema order), 128-char boundary
-accepted vs 129-char rejected, no draftRevision created on any refusal,
-success path applies at `/domain/entities/0/fields/0/unique` with
-revisionNumber latest+1, corrupt persisted draft -> draft_diff_rejected,
-idempotent createRun retry (3 calls, 1 create). Migration validation:
-`prisma validate` OK, Prisma-engine `migrate diff --from-empty
+
+- `prisma validate` (no live Postgres on this machine); approveDraftDiff
+  imposes no run-status gate and affectedPaths are advisory (spec requires
+  neither). Task 5 stands `ready_for_qa` at 4ad23f3; QA gate launched next.
+  **QA gate (PASS at 4ad23f3):** QA ran independently in its own detached
+  worktrees. RED at the parent (3a032a0): both suites absent there; run with
+  the gate's test files in the parent worktree they failed 2/2 suites, the
+  only error being module-missing for `src/verification/*` (vitest 2.x counts
+  a collection failure as 0 tests per file, so the ledger's "17/17, 6/6
+  module-missing" framing is a count-style claim; the cause is exactly as
+  stated). GREEN at the gate: graph build clean, prisma generate clean with
+  VerificationRun present, focused 31/31 (17+6+8), full control-plane 145/145
+  across 14 files run twice, typecheck/lint/build clean. Adversarial battery
+  28/28 across 20+ scenarios incl. key-order-shuffled evidence -> identical
+  canonical digest (parser canonicalizes to schema order), 128-char boundary
+  accepted vs 129-char rejected, no draftRevision created on any refusal,
+  success path applies at `/domain/entities/0/fields/0/unique` with
+  revisionNumber latest+1, corrupt persisted draft -> draft_diff_rejected,
+  idempotent createRun retry (3 calls, 1 create). Migration validation:
+  `prisma validate` OK, Prisma-engine `migrate diff --from-empty
 --to-schema-datamodel` confirms table/constraint set matches migration.sql,
-schema test against generated DMMF 8/8; live-DB application impossible (no
-Postgres on this machine). Commit hygiene: exactly the 9 claimed files,
-diff --check clean, lifecycle.service.ts diff exactly the three
-function->export changes. VERDICT PASS — P0/P1/P2 none; all four prior
-non-blocking notes independently confirmed, none escalated (race worst case
-is a DB-unique-constraint-backed transient 500, retryable — the repo's
-`startPreview` race-resilient pattern exists but the new code mirrors the
-pre-existing appendDraftRevision/proposeDraftRevision check-then-create and
-no corruption path exists; diagnosis run identity nit with evidence
-authoritative; migration static validation; approval without run-status
-gate and advisory affectedPaths — plan requires none). Observation for the
-record: `reportEvidence` does not cross-check `evidence.compilationDigest`
-against the compilation's `inputGraphHash` at the control-plane boundary —
-the contract's full cross-bind exists for the Task 6 worker and the plan's
-Task 5 interfaces do not demand it here. Release-review gate launched
-next.
-**Release-review gate (PASS at 4ad23f3):** the release reviewer ran the full
-sweep in a detached worktree at the exact gate hash (graph build/
-typecheck/lint clean, graph tests 102/102, prisma generate + validate clean,
-focused 31/31, full control-plane 145/145, control-plane typecheck/lint/
-build clean; migration DDL identical to `prisma migrate diff --from-empty
+  schema test against generated DMMF 8/8; live-DB application impossible (no
+  Postgres on this machine). Commit hygiene: exactly the 9 claimed files,
+  diff --check clean, lifecycle.service.ts diff exactly the three
+  function->export changes. VERDICT PASS — P0/P1/P2 none; all four prior
+  non-blocking notes independently confirmed, none escalated (race worst case
+  is a DB-unique-constraint-backed transient 500, retryable — the repo's
+  `startPreview` race-resilient pattern exists but the new code mirrors the
+  pre-existing appendDraftRevision/proposeDraftRevision check-then-create and
+  no corruption path exists; diagnosis run identity nit with evidence
+  authoritative; migration static validation; approval without run-status
+  gate and advisory affectedPaths — plan requires none). Observation for the
+  record: `reportEvidence` does not cross-check `evidence.compilationDigest`
+  against the compilation's `inputGraphHash` at the control-plane boundary —
+  the contract's full cross-bind exists for the Task 6 worker and the plan's
+  Task 5 interfaces do not demand it here. Release-review gate launched
+  next.
+  **Release-review gate (PASS at 4ad23f3):** the release reviewer ran the full
+  sweep in a detached worktree at the exact gate hash (graph build/
+  typecheck/lint clean, graph tests 102/102, prisma generate + validate clean,
+  focused 31/31, full control-plane 145/145, control-plane typecheck/lint/
+  build clean; migration DDL identical to `prisma migrate diff --from-empty
 --to-schema-datamodel`, 20 normalized statements) plus a 60/60 adversarial
-battery across 13 groups, including the release angles: affectedPaths
-naming an unrelated root does not redirect the mutation (mutation lands on
-the ops-named entity/field; traversal segments rejected at contract parse;
-path derivation is numeric-index + 3-value enum, re-gated by
-`assertPermittedDiffPath` — no caller string can reach a JSON pointer);
-type-constraint approvals (type "unique" -> draft_diff_rejected, type=true
--> draft_diff_rejected, type "string" on an enum field persists a
-contract-valid graph — the graph package enforces no enum/value consistency
-rule, acceptable per mandate); persisted-key allowlist (persisted evidence
-keys exactly the 7 contract keys; diagnosis/draftDiff columns null when
-absent); 128/129-char and 400/401-char boundaries; missing cleanup and
-missing artifactDigests fail closed with nothing persisted (artifactDigests
-is contract-REQUIRED, not optional — reviewer's initial probe expectation
-was wrong, the service was right); 20 ops applied vs 21 ops rejected at
-parse; token guard compares sha256 digests via `timingSafeEqual` with
-constant 32-byte buffers (no length-timing leak); digest determinism under
-key-order shuffle; zero revisions created on every refusal. Hygiene: diff
-exactly the 9 claimed files, diff --check clean, `4ad23f3^..HEAD` = feature
-commit + three ledger/docs commits only; security vocabulary scan clean
-(test-only fixture strings, token read solely from
-process.env.FACTORY_INTERNAL_WORKER_TOKEN, .env gitignored); boundary
-surface exactly 4 routes / 4 service methods / 1 controller + 1 provider;
-plan Task 5 checkboxes all [x]; ledger complete. VERDICT PASS — P0/P1/P2
-none. Non-blocking notes accepted: (1) the baseline schema has NO tracked
-migration repo-wide (only 20260730_add_composition_lock ALTER + the new
-20260807_add_verification_run exist; identical state at parent) — pre-
-existing, out of Task 5 scope, provisioning via migrate dev/db push;
-recommend a baseline migration outside this program; (2) type "string" on
-an enum field persists a contract-valid graph (no enum/value consistency
-rule in the graph package) — worth Task 6 worker consideration; (3) no
-run-status gate on approval + advisory affectedPaths (accepted by plan);
-(4) artifactDigests contract-required, fail-closed; (5) concurrency worst
-case retryable DB-unique-violation 500, never corruption; (6)
-compilationDigest cross-bind belongs to the Task 6 worker (already
-recorded). PM acceptance launched next.
-**PM acceptance at 4ad23f3:** the PM independently verified at the commit —
-working tree clean (main tree HEAD c62c9ea, feature commit 4ad23f3 in
-history); the implementation read directly against the plan's Task 5
-interfaces (the boundary design above was authored and reviewed in this
-session; the three gate reviewers each re-read it independently); the PM's
-own runs at the commit: focused 31/31 (service 17, controller 6,
-prisma-schema 8), full control-plane 145/145, typecheck/lint/build clean.
-Task 5 is ACCEPTED: VerificationRun persistence bound to an immutable
-compilation — run identity ownership with idempotent retry and 409 on
-conflict, succeeded-compilation gate, deterministic sha256 evidence digest
-over the schema-ordered bundle, contract redaction backstop with run-identity
-binding, terminal-run same-digest idempotency vs 409 on divergence,
-worker-token-guarded internal evidence route, and Draft Diff approval that
-resolves `draft-<metadata id>` by application-graph identity against the
-latest mutable draft, refuses mismatch/stale/not-applicable/rejected, and
-translates only change-constraint operations into index-derived Graph Diff
-paths — raw requests, responses, and generated material are never
-persisted.
+  battery across 13 groups, including the release angles: affectedPaths
+  naming an unrelated root does not redirect the mutation (mutation lands on
+  the ops-named entity/field; traversal segments rejected at contract parse;
+  path derivation is numeric-index + 3-value enum, re-gated by
+  `assertPermittedDiffPath` — no caller string can reach a JSON pointer);
+  type-constraint approvals (type "unique" -> draft_diff_rejected, type=true
+  -> draft_diff_rejected, type "string" on an enum field persists a
+  contract-valid graph — the graph package enforces no enum/value consistency
+  rule, acceptable per mandate); persisted-key allowlist (persisted evidence
+  keys exactly the 7 contract keys; diagnosis/draftDiff columns null when
+  absent); 128/129-char and 400/401-char boundaries; missing cleanup and
+  missing artifactDigests fail closed with nothing persisted (artifactDigests
+  is contract-REQUIRED, not optional — reviewer's initial probe expectation
+  was wrong, the service was right); 20 ops applied vs 21 ops rejected at
+  parse; token guard compares sha256 digests via `timingSafeEqual` with
+  constant 32-byte buffers (no length-timing leak); digest determinism under
+  key-order shuffle; zero revisions created on every refusal. Hygiene: diff
+  exactly the 9 claimed files, diff --check clean, `4ad23f3^..HEAD` = feature
+  commit + three ledger/docs commits only; security vocabulary scan clean
+  (test-only fixture strings, token read solely from
+  process.env.FACTORY_INTERNAL_WORKER_TOKEN, .env gitignored); boundary
+  surface exactly 4 routes / 4 service methods / 1 controller + 1 provider;
+  plan Task 5 checkboxes all [x]; ledger complete. VERDICT PASS — P0/P1/P2
+  none. Non-blocking notes accepted: (1) the baseline schema has NO tracked
+  migration repo-wide (only 20260730_add_composition_lock ALTER + the new
+  20260807_add_verification_run exist; identical state at parent) — pre-
+  existing, out of Task 5 scope, provisioning via migrate dev/db push;
+  recommend a baseline migration outside this program; (2) type "string" on
+  an enum field persists a contract-valid graph (no enum/value consistency
+  rule in the graph package) — worth Task 6 worker consideration; (3) no
+  run-status gate on approval + advisory affectedPaths (accepted by plan);
+  (4) artifactDigests contract-required, fail-closed; (5) concurrency worst
+  case retryable DB-unique-violation 500, never corruption; (6)
+  compilationDigest cross-bind belongs to the Task 6 worker (already
+  recorded). PM acceptance launched next.
+  **PM acceptance at 4ad23f3:** the PM independently verified at the commit —
+  working tree clean (main tree HEAD c62c9ea, feature commit 4ad23f3 in
+  history); the implementation read directly against the plan's Task 5
+  interfaces (the boundary design above was authored and reviewed in this
+  session; the three gate reviewers each re-read it independently); the PM's
+  own runs at the commit: focused 31/31 (service 17, controller 6,
+  prisma-schema 8), full control-plane 145/145, typecheck/lint/build clean.
+  Task 5 is ACCEPTED: VerificationRun persistence bound to an immutable
+  compilation — run identity ownership with idempotent retry and 409 on
+  conflict, succeeded-compilation gate, deterministic sha256 evidence digest
+  over the schema-ordered bundle, contract redaction backstop with run-identity
+  binding, terminal-run same-digest idempotency vs 409 on divergence,
+  worker-token-guarded internal evidence route, and Draft Diff approval that
+  resolves `draft-<metadata id>` by application-graph identity against the
+  latest mutable draft, refuses mismatch/stale/not-applicable/rejected, and
+  translates only change-constraint operations into index-derived Graph Diff
+  paths — raw requests, responses, and generated material are never
+  persisted.
 
 ## Task 6: Integrate the Worker queue and one end-to-end profile
 
@@ -926,7 +932,7 @@ deterministic:
    deterministic seed record (`expense` / `expense-fixture-01` / amount,
    description, status `draft` — the flow's initialState) which the generated
    app's migrate service seeds at boot (`prisma migrate deploy && tsx
-   prisma/seed.ts`), so every journey is replayable from a clean boot.
+prisma/seed.ts`), so every journey is replayable from a clean boot.
 2. The probe header allowlist is exactly `x-factory-role` today; the
    fixture-session app ignores `x-factory-role`, so role journeys must send
    `x-factory-fixture-session`. Journey fixtures gain a declared optional
@@ -1013,10 +1019,10 @@ Failing tests first (planned):
 **RED observed 2026-08-07 (pre-implementation, uncommitted):**
 
 - `verification-profiles.test.ts` — suite FAILS TO LOAD: `Failed to load url
-  ../src/verifier/verification-profiles.js … Does the file exist?` (module not
+../src/verifier/verification-profiles.js … Does the file exist?` (module not
   yet implemented).
 - `verification-job.test.ts` — suite FAILS TO LOAD: `Failed to load url
-  ../src/verifier/verification-job.js … Does the file exist?` (module not yet
+../src/verifier/verification-job.js … Does the file exist?` (module not yet
   implemented).
 - `verification-probes.test.ts` — 3/13 fail, exactly the three new session
   tests: (a) the declared fixture-session header is not forwarded by
@@ -1050,9 +1056,9 @@ commit):**
 - Lint: `prettier --check src test` clean for both apps (11 files written by
   `prettier --write` after the first lint pass flagged them: worker
   `src/verification-reporter.ts`, `src/verifier/{verification-job.ts,
-  verification-profiles.ts, verification-environment.ts, probes.ts,
-  role-journey.ts}`, `test/{verification-job,verification-probes,
-  verification-profiles}.test.ts`, `test/fixtures/expense-approval.ts`;
+verification-profiles.ts, verification-environment.ts, probes.ts,
+role-journey.ts}`, `test/{verification-job,verification-probes,
+verification-profiles}.test.ts`, `test/fixtures/expense-approval.ts`;
   control-plane `src/app.module.ts`, `src/verification/verification.service.ts`,
   `test/verification.service.test.ts`).
 - Implementation notes recorded for the gates:
@@ -1076,7 +1082,7 @@ commit):**
     both worker-config tests updated to expect it.
   - **Cross-task defect found during acceptance design (Task 3 probe).** The
     migration probe ran `docker compose exec -T migrate npx prisma migrate
-    status`, but the generated migrate service is one-shot (applies the
+status`, but the generated migrate service is one-shot (applies the
     schema, seeds, and exits), and `docker compose exec` fails against an
     exited container (verified empirically). Fix: the environment's
     `migrate()` now execs into the long-running `api` service, which runs the
@@ -1085,13 +1091,13 @@ commit):**
     re-verified 153/153 after the change).
 - Changed paths for this task: worker
   `src/{config.ts,main.ts,verification-reporter.ts,verifier/diagnosis.ts,
-  verifier/probes.ts,verifier/role-journey.ts,verifier/verification-environment.ts,
-  verifier/verification-job.ts,verifier/verification-profiles.ts}`,
+verifier/probes.ts,verifier/role-journey.ts,verifier/verification-environment.ts,
+verifier/verification-job.ts,verifier/verification-profiles.ts}`,
   `test/{verification-job.test.ts,verification-probes.test.ts,
-  verification-profiles.test.ts,worker-config.test.ts,
-  fixtures/expense-approval.ts}`; control-plane
+verification-profiles.test.ts,worker-config.test.ts,
+fixtures/expense-approval.ts}`; control-plane
   `src/{app.module.ts,verification-run-queue.ts,
-  verification/verification.service.ts,lifecycle.service.ts}` (exports),
+verification/verification.service.ts,lifecycle.service.ts}` (exports),
   `test/verification.service.test.ts`.
 - Security/redaction: no generated source, graph, credentials, prompts, or raw
   probe bodies persisted anywhere in this task; evidence summaries remain

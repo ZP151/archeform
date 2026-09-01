@@ -1,7 +1,13 @@
 {
   "apiVersion": "factory.adapter/v1",
   "kind": "declarative",
-  "outputSlots": ["api.runtime", "database.schema", "database.migration", "flow.effect", "test.fixture"],
+  "outputSlots": [
+    "api.runtime",
+    "database.schema",
+    "database.migration",
+    "flow.effect",
+    "test.fixture"
+  ],
   "templates": [
     {
       "id": "api-capability-module",

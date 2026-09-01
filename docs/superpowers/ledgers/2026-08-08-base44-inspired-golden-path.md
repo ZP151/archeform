@@ -42,16 +42,16 @@ owning slice to `implementing`.
 
 ## Delivery slices
 
-| Slice | Scope                                              | State | Latest commit | Evidence |
-| ----- | -------------------------------------------------- | ----- | ------------- | -------- |
-| S1    | Discuss mode: RequirementSpec brief + clarifications | implementing | 2fe78d30 | 11 focused tests; workbench 84/84; graph 175/175 |
-| S2    | Plan mode: deterministic alternatives + visual Diff | implementing | 671e45b2 | 12 focused tests; workbench 96/96; capabilities 356/356 |
-| S3    | Build mode: accepted plan to Draft + Experience System | implementing | (see record) | 14 focused tests; workbench 110/110; graph 188/188; capabilities 356/356; control-plane 184/184; compiler-worker 183/183 |
-| S4    | Role and data simulation over the mutable Draft | implementing | 5c3a3c52 | 16 focused tests; workbench 126/126; graph 188/188; capabilities 356/356; control-plane 184/184; compiler-worker 183/183 |
-| S5    | Unified bounded Activity/Evidence Timeline | implementing | 3989e3cf | 13 focused tests; workbench 139/139; graph 188/188; capabilities 356/356; control-plane 184/184; compiler-worker 183/183 |
-| S6    | One-action Publish -> Compile -> Verify -> Preview + cleanup | implementing | (see record) | 13 focused + 3 client tests; workbench 155/155; graph 188/188; control-plane 184/184 |
-| S7    | Mode shell UI, lineage canvas, browser E2E acceptance | implementing | 395ca36a | workbench 222/222; capabilities 356/356; graph 190/190; adapters 34/34; control-plane 184/184; compiler-worker 183/183; compiler 332/332; browser E2E green (2.3m, incl. cleanup proof) |
-| S8    | Clean-checkout acceptance + gates + close | implementing | 89bd684 | clean clone: build 10/10; workbench 222/222; graph 190/190; capabilities 356/356; adapters 34/34; compiler-worker 183/183; control-plane 184/184; compiler 332/332; E2E green (2.1m); acceptance gates reviewed |
+| Slice | Scope                                                        | State        | Latest commit | Evidence                                                                                                                                                                                                        |
+| ----- | ------------------------------------------------------------ | ------------ | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| S1    | Discuss mode: RequirementSpec brief + clarifications         | implementing | 2fe78d30      | 11 focused tests; workbench 84/84; graph 175/175                                                                                                                                                                |
+| S2    | Plan mode: deterministic alternatives + visual Diff          | implementing | 671e45b2      | 12 focused tests; workbench 96/96; capabilities 356/356                                                                                                                                                         |
+| S3    | Build mode: accepted plan to Draft + Experience System       | implementing | (see record)  | 14 focused tests; workbench 110/110; graph 188/188; capabilities 356/356; control-plane 184/184; compiler-worker 183/183                                                                                        |
+| S4    | Role and data simulation over the mutable Draft              | implementing | 5c3a3c52      | 16 focused tests; workbench 126/126; graph 188/188; capabilities 356/356; control-plane 184/184; compiler-worker 183/183                                                                                        |
+| S5    | Unified bounded Activity/Evidence Timeline                   | implementing | 3989e3cf      | 13 focused tests; workbench 139/139; graph 188/188; capabilities 356/356; control-plane 184/184; compiler-worker 183/183                                                                                        |
+| S6    | One-action Publish -> Compile -> Verify -> Preview + cleanup | implementing | (see record)  | 13 focused + 3 client tests; workbench 155/155; graph 188/188; control-plane 184/184                                                                                                                            |
+| S7    | Mode shell UI, lineage canvas, browser E2E acceptance        | implementing | 395ca36a      | workbench 222/222; capabilities 356/356; graph 190/190; adapters 34/34; control-plane 184/184; compiler-worker 183/183; compiler 332/332; browser E2E green (2.3m, incl. cleanup proof)                         |
+| S8    | Clean-checkout acceptance + gates + close                    | implementing | 89bd684       | clean clone: build 10/10; workbench 222/222; graph 190/190; capabilities 356/356; adapters 34/34; compiler-worker 183/183; control-plane 184/184; compiler 332/332; E2E green (2.1m); acceptance gates reviewed |
 
 ## Slice records
 

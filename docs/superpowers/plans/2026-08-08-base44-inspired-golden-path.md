@@ -76,7 +76,7 @@ clean.
   deferred), acceptance scenarios. Deterministic clarification-question set
   for the Expense Approval outcome (budget approval threshold, manager role,
   audit trail requirement, multi-level approval). Fail-closed: Discuss cannot
-  mutate a Draft; unresolved *required* questions block Plan.
+  mutate a Draft; unresolved _required_ questions block Plan.
 - Deterministic Expense Approval starter requirement fixture so the journey
   is reproducible without AI.
 

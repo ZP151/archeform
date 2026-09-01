@@ -162,7 +162,10 @@ function renderExpectedEffectPairs(
     );
   }
   return declared.effects
-    .map((effect) => `${JSON.stringify(`${effect.capability}/${effect.operation}`)}`)
+    .map(
+      (effect) =>
+        `${JSON.stringify(`${effect.capability}/${effect.operation}`)}`,
+    )
     .join(", ");
 }
 

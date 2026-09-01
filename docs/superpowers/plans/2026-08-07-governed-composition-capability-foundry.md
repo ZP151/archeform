@@ -173,18 +173,18 @@
       unrecognized-key/invalid-enum messages and the mutable-root rejection
       echoed offending material). Per the state vocabulary Task 4 returns to
       `implementing`.
-- [x] Repair at `52432a6b` (`fix(graph): scan Diff paths for material and
-      never echo rejected material`): `unsafeCompositionDiffPathPattern`
-      applied to raw paths in `assertSafeCompositionOperationPath` and
-      `hashCompositionDiff` (a Diff clears the same path guards as a plan);
-      `parseStrict` maps `unrecognized_keys`/`invalid_enum_value` to fixed
-      failure-class details; the mutable-root rejection no longer quotes the
-      path. RED evidence: graph 5 failed | 33 passed, seam 1 failed | 4
-      passed. Fresh verification: graph 167/167, control-plane 182/182,
-      adapters 34/34, capabilities 313/313, typecheck, Prettier, build
-      green; graph `dist/` rebuilt. Additivity vs `e13bef1`: strictly
-      narrowing (only rejects paths already forbidden; messages only remove
-      material).
+  - [x] Repair at `52432a6b` (`fix(graph): scan Diff paths for material and
+never echo rejected material`): `unsafeCompositionDiffPathPattern`
+        applied to raw paths in `assertSafeCompositionOperationPath` and
+        `hashCompositionDiff` (a Diff clears the same path guards as a plan);
+        `parseStrict` maps `unrecognized_keys`/`invalid_enum_value` to fixed
+        failure-class details; the mutable-root rejection no longer quotes the
+        path. RED evidence: graph 5 failed | 33 passed, seam 1 failed | 4
+        passed. Fresh verification: graph 167/167, control-plane 182/182,
+        adapters 34/34, capabilities 313/313, typecheck, Prettier, build
+        green; graph `dist/` rebuilt. Additivity vs `e13bef1`: strictly
+        narrowing (only rejects paths already forbidden; messages only remove
+        material).
 - [x] Re-verification round at `7ab4c5ed`: task review TASK_REVIEW_PASS (no
       findings) at `52432a6b`; behavioral QA returned QA_FAIL with one P0
       (QA-4-1): `~1`-escaped URL material decodes after the raw scan,

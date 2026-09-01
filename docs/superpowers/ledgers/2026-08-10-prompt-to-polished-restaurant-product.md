@@ -5417,15 +5417,15 @@ cleared).
      `e2e/generated-restaurant.spec.ts` is the V1 restaurant runtime**, so the
      9C harness must be a new spec modeled on the template-draft workspace
      selectors (`Builder navigation`, `Preview synced · Draft r.N`, `Publish
-     draft`, `Run verification`) plus the golden-path isolated-stack/
+draft`, `Run verification`) plus the golden-path isolated-stack/
      real-model infrastructure.
-  The harness spec is written at `0fc19c91` (`e2e/restaurant-v3.spec.ts`,
-  305 lines): restaurant Describe → V3 apply → template workspace → Page/Data/
-  Experience edits → Publish → Compile → Run verification (generated journeys)
-  → Preview (customer + merchant `/health`) → accessibility (axe desktop +
-  390px) → Stop preview. The guarded real-model acceptance run requires the
-  isolated `factory-t9-*` Compose stack (brought up from `infra/docker-compose.yml`
-  with the root `.env` model key) and is the next gate.
+     The harness spec is written at `0fc19c91` (`e2e/restaurant-v3.spec.ts`,
+     305 lines): restaurant Describe → V3 apply → template workspace → Page/Data/
+     Experience edits → Publish → Compile → Run verification (generated journeys)
+     → Preview (customer + merchant `/health`) → accessibility (axe desktop +
+     390px) → Stop preview. The guarded real-model acceptance run requires the
+     isolated `factory-t9-*` Compose stack (brought up from `infra/docker-compose.yml`
+     with the root `.env` model key) and is the next gate.
   3. **Real-model interpretation was rejected until `7e7c3ff4`.** The first
      guarded run failed in 0.6s with `requirement.provider_rejected`: the
      OpenAI strict-JSON `interpretationJsonSchema` listed `productType` under

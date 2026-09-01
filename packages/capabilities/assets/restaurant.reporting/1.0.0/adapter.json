@@ -17,9 +17,6 @@
     }
   ],
   "contributes": {
-    "effects": [
-      "report.restaurant.summary",
-      "report.restaurant.low-stock"
-    ]
+    "effects": ["report.restaurant.summary", "report.restaurant.low-stock"]
   }
 }
