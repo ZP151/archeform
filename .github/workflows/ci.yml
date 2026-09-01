@@ -1,0 +1,35 @@
+name: CI
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22.11.0, 22.x]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: ${{ matrix.node }}
+      - run: corepack enable
+      - run: corepack prepare pnpm@9.0.0 --activate
+      - run: node --version && pnpm --version
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run doctor:toolchain
+      - run: pnpm --filter @factory/control-plane prisma:generate
+        env:
+          DATABASE_URL: postgresql://factory:factory@127.0.0.1:1/factory_pilot?schema=public
+      - run: pnpm format:check
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - run: pnpm verify:third-party
+      - run: pnpm verify:source-studies
