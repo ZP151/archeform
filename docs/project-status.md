@@ -34,11 +34,11 @@ empty cleanup. Hosted or multi-user operation, production identity/tenant
 isolation, cloud deployment, new Graph/capability/provider contracts, and
 Compose topology changes remain excluded.
 
-The active branch is `codex/post-v0.1-local-readiness` at `12458713`, exactly
+The active branch is `codex/post-v0.1-local-readiness` at `c007109f`, exactly
 equal to its upstream `origin/codex/post-v0.1-local-readiness` at ahead/behind
-`0/0` before the accepted ADR-0027 reconciliation. D0, ADR-0025, U1,
-ADR-0026, and the independently reviewed U2 workflow are delivered on that
-branch.
+`0/0` before the accepted ADR-0028 reconciliation. D0, ADR-0025, U1,
+ADR-0026, the independently reviewed U2 workflow, and ADR-0027 are delivered
+on that branch.
 
 ### Remote repository alignment
 
@@ -67,10 +67,11 @@ branch.
   accepted ADR-0025, making `pnpm run doctor` and `pnpm run doctor:toolchain`
   the supported spellings.
 - **U2 — credential-free CI:** `ready_for_qa`; its implementation is pushed and
-  independently approved, but acceptance awaits the ADR-0027 formatting
-  baseline and a replacement green remote run.
+  independently approved, but acceptance awaits the ADR-0027/ADR-0028
+  formatting baseline and a replacement green remote run.
 - **F0 — repository format baseline:** `implementing`; it is the sole writer
-  authorized by accepted ADR-0027 and the frozen 101/39/62/58+4 manifest.
+  authorized by accepted ADR-0027 as amended by accepted ADR-0028 and the
+  frozen 101 = 39 + 1 + 61 and 61 = 57 + 4 manifest.
 - **U3 — real Home template product acceptance:** `planned`, serialized, and
   queued behind U2; no U3 implementation is authorized.
 - **U4 — QA, release review, and delivery:** `planned`; blocked by accepted U1,
@@ -87,20 +88,21 @@ P0/P1/P2=`0/0/0`.
 
 ### Risks, blockers, and next smallest slice
 
-- **Delivery state:** governance and U2 are pushed through `12458713` with
-  local/upstream equality before the ADR-0027 reconciliation. ADR-0027 is
-  accepted; its plan and PM updates are pending bounded delivery.
+- **Delivery state:** governance and U2 are pushed through `c007109f` with
+  local/upstream equality before the ADR-0028 reconciliation. ADR-0028 is
+  explicitly accepted; its plan and PM updates are pending bounded delivery.
 - **Current gate:** deliver the accepted repository format baseline without
-  changing product semantics or protected copied-source blobs, then rerun U2
-  CI. U3 remains planned and queued behind accepted F0 and U2.
+  changing product semantics, the 39 protected copied-source blobs, or the
+  byte-integrity-protected `core.audit` evidence, then rerun U2 CI. U3 remains
+  planned and queued behind accepted F0 and U2.
 - **Evidence gap:** the `pm-status` workflow names `docs/mvp.md`, but that file
   does not exist. This refresh used `docs/roadmap.md`, the current delivery
   assessment, the readiness design, and its PM ledger as the available scope
   authorities.
-- **Next smallest slice:** complete F0's exact 58-path formatting migration plus
-  `.prettierignore`, obtain independent review, and rerun U2 CI. Do not begin
-  U3 until both F0 and U2 are accepted and PM records the next serialized
-  authorization.
+- **Next smallest slice:** complete F0's exact 57-path formatting migration plus
+  `.prettierignore` for a 58-path implementation diff, obtain independent
+  review, and rerun U2 CI. Do not begin U3 until both F0 and U2 are accepted and
+  PM records the next serialized authorization.
 
 ### Previous release checkpoint — 2026-08-21
 
