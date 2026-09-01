@@ -8,15 +8,41 @@ data contract, provider, security boundary, or deployment choice. Product
 designs, plans, research, and generated proposals cannot silently supersede
 this authority or the current threat model in `docs/threat-model.md`.
 
-| Role      | Authority                                                                                                                   |
-| --------- | --------------------------------------------------------------------------------------------------------------------------- |
-| PM        | Detects governance triggers, records live state, and authorizes implementation only after the required decision gates.      |
-| Tech Lead | Investigates one concrete trigger, writes only a proposed ADR, and recommends `keep`, `experiment`, `migrate`, or `reject`. |
-| Founder   | Explicitly accepts or rejects a proposed ADR. No other role can approve a profile or stable-contract transition.            |
-| Engineer  | Implements only an accepted decision and only within PM-assigned paths.                                                     |
+| Role      | Authority                                                                                                                             |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| PM        | Detects governance triggers, records live state, and authorizes implementation only after the required decision gates.                |
+| Tech Lead | Investigates one concrete trigger, writes only a proposed ADR, and recommends `keep`, `experiment`, `migrate`, or `reject`.           |
+| Founder   | Explicitly accepts or rejects a proposed ADR and may record a standing conditional-acceptance policy with an independent review gate. |
+| Engineer  | Implements only an accepted decision and only within PM-assigned paths.                                                               |
 
-A Tech Lead recommendation is not approval. Explicit founder acceptance must be
+A Tech Lead recommendation is not approval. Founder acceptance, either direct
+or through the exact standing independent-review authorization below, must be
 recorded by PM before implementation of a proposed technology transition.
+
+### Founder standing independent-review authorization — 2026-09-01
+
+The founder explicitly authorizes PM to treat a future Tech Lead ADR as
+founder-accepted without another founder interruption only when a separate,
+qualified, read-only reviewer agent returns
+`APPROVED_FOR_STANDING_ACCEPTANCE: yes` and all of these conditions hold:
+
+- the reviewer is not the proposing Tech Lead or an implementation writer;
+- the ADR satisfies every decision-gate requirement in this document and is
+  consistent with the current threat model and actual repository authorities;
+- review reports P0/P1 `0/0`, a bounded and reversible implementation, and no
+  unresolved ambiguity or material product or business choice;
+- the decision stays inside the founder-approved active goal and grants no
+  repository release, Product Publish, external provider call, paid resource,
+  cloud action, deployment, credential exposure, security-boundary weakening,
+  destructive migration, or irreversible step.
+
+PM records the exact ADR, reviewer identity, verdict, evidence, and this
+standing founder authorization before implementation. A `no` verdict, a P0/P1
+finding, scope expansion, material trade-off, security weakening, destructive
+or irreversible action, or reviewer uncertainty is not accepted under this
+policy and must be stopped or escalated to the founder. The reviewer cannot
+rewrite the Tech Lead's proposal or approve an implementation diff; normal
+task review, QA, and controller-only delivery gates still apply.
 
 ## Current accepted Golden profile
 
@@ -90,7 +116,8 @@ generated artifacts, logs, evidence, or browser bundles.
 
 A proposed profile is not part of the current accepted Golden profile. It must
 remain isolated behind a proposed ADR until the founder explicitly accepts or
-rejects it and PM records that decision.
+rejects it, or the recorded standing independent-review authorization above is
+satisfied, and PM records that decision.
 
 ADR-0009 is founder-accepted. It keeps the current Golden runtime profile and
 authorizes an additive `factory.application-graph/v2` shared data contract, but
@@ -130,10 +157,11 @@ A proposed ADR must include:
 5. migration, rollback, abort conditions, irreversible steps, and ownership;
 6. measurable verification commands and the ledger evidence location.
 
-The Tech Lead stops after proposing. Founder acceptance or rejection is an
-explicit separate event. PM records the decision and may authorize work only
-after acceptance; inference from plan prose, implementation intent, or task
-ordering is forbidden.
+The Tech Lead stops after proposing. Founder acceptance or rejection is a
+separate event, including when the standing policy's independent reviewer
+supplies its required verdict. PM records the decision and may authorize work
+only after acceptance; inference from plan prose, implementation intent, or
+task ordering is forbidden.
 
 ## Frozen contracts and parallel work
 
