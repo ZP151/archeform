@@ -23,7 +23,7 @@ The full status history through 2026-08-09 is preserved verbatim in
 
 ## Current milestone — Post-v0.1 Local Restaurant Readiness
 
-### Current authoritative checkpoint — 2026-09-01
+### Current authoritative checkpoint — 2026-09-02
 
 `factory-pilot v0.1.0` remains the delivered local Alpha baseline. The active
 follow-up is now a bounded local-only iteration for one to five invited
@@ -34,11 +34,11 @@ empty cleanup. Hosted or multi-user operation, production identity/tenant
 isolation, cloud deployment, new Graph/capability/provider contracts, and
 Compose topology changes remain excluded.
 
-The active branch is `codex/post-v0.1-local-readiness` at `0bed0d3e`, exactly
+The active branch is `codex/post-v0.1-local-readiness` at `140f8646`, exactly
 equal to its upstream `origin/codex/post-v0.1-local-readiness` at ahead/behind
-`0/0` before V0 acceptance reconciliation. D0, ADR-0025, U1, ADR-0026, the
-independently reviewed U2 workflow, ADR-0027, ADR-0028, accepted ADR-0029
-governance, and the V0 verifier repair are delivered on that branch.
+`0/0` before ADR-0030 acceptance reconciliation. D0, U1, U2, F0, V0, their
+governing ADRs through ADR-0029, and the portable Compiler missing-root fixture
+are delivered on that branch.
 
 The founder explicitly accepted ADR-0029 on 2026-09-01 and established a
 standing independent-agent review policy for future Tech Lead ADRs. A separate
@@ -59,6 +59,10 @@ non-qualifying or material-risk decisions stop or escalate.
   checkout, setup, frozen install, toolchain Doctor, and Prisma generation,
   then failed the inherited root formatting baseline. The failure contains no
   evidence of a workflow, permission, credential, or dependency-cache defect.
+- Replacement GitHub Actions run `33530986071` at commit `140f8646` passed
+  every configured step in both Node `22.11.0` and current `22.x` lanes. This
+  accepts U2 and F0; it does not erase the separately reproduced scheduler-
+  dependent Candidate race now governed by ADR-0030.
 - Two remote archive tags now preserve the exact former local-only branch tips:
   `archive/agent-console-next-shadcn-2026-08-31` peels to `dbf0ba40`, and
   `archive/commerce-transaction-v1-2026-08-31` peels to `b481fc78`. The local
@@ -72,17 +76,20 @@ non-qualifying or material-risk decisions stop or escalate.
 - **U1 — supported toolchain doctor:** `accepted` on 2026-09-01. The founder
   accepted ADR-0025, making `pnpm run doctor` and `pnpm run doctor:toolchain`
   the supported spellings.
-- **U2 — credential-free CI:** `ready_for_qa`; its implementation is pushed and
-  independently approved, but acceptance awaits the ADR-0027/ADR-0028
-  formatting baseline and a replacement green remote run.
-- **F0 — repository format baseline:** `ready_for_review`; its exact 58-path
-  candidate has no active implementation writer and every required local gate
-  is green after accepted V0.
+- **U2 — credential-free CI:** `accepted`; replacement run `33530986071`
+  passed both complete Node lanes.
+- **F0 — repository format baseline:** `accepted`; its exact 58-path commit
+  `e0cfaa94` passed independent review, byte-integrity gates, and replacement
+  remote CI.
 - **V0 — generated notification outbox verifier repair:** `accepted` on
   2026-09-01; ADR and task reviews are clean, controller gates passed, and
   commit `0bed0d3e` is pushed at local/upstream `0/0`.
+- **R0 — Candidate durable-winner convergence:** `implementing` under accepted
+  ADR-0030. The first independent ADR review found one staging-isolation P1;
+  the revised ADR received a fresh `0/0/0` review and
+  `APPROVED_FOR_STANDING_ACCEPTANCE: yes` under the founder's standing policy.
 - **U3 — real Home template product acceptance:** `planned`, serialized, and
-  queued behind U2; no U3 implementation is authorized.
+  queued behind R0; no U3 implementation is authorized.
 - **U4 — QA, release review, and delivery:** `planned`; blocked by accepted U1,
   U2, and U3.
 
@@ -97,18 +104,19 @@ P0/P1/P2=`0/0/0`.
 
 ### Risks, blockers, and next smallest slice
 
-- **Delivery state:** governance, U2, and V0 are pushed through `0bed0d3e` with
-  local/upstream equality before this V0 acceptance reconciliation. The exact
-  58-path F0 candidate remains uncommitted and isolated.
-- **Current gate:** independently review and deliver the frozen F0 candidate,
-  then rerun U2 CI. U3 remains planned and queued behind accepted F0 and U2.
+- **Delivery state:** U2, F0, V0, and the portable Compiler fixture are pushed
+  through `140f8646` with local/upstream equality before ADR-0030 acceptance
+  reconciliation. Replacement CI is green in both Node lanes.
+- **Current gate:** implement and independently verify the accepted ADR-0030
+  four-path Candidate convergence repair. U3 remains planned behind R0.
 - **Evidence gap:** the `pm-status` workflow names `docs/mvp.md`, but that file
   does not exist. This refresh used `docs/roadmap.md`, the current delivery
   assessment, the readiness design, and its PM ledger as the available scope
   authorities.
-- **Next smallest slice:** obtain independent F0 review, deliver its exact
-  58-path candidate, and rerun U2 CI. Do not begin U3 until both F0 and U2 are
-  accepted and PM records the next serialized authorization.
+- **Next smallest slice:** capture deterministic Candidate/Store RED, implement
+  atomic isolated publication and strict durable-winner recovery, then obtain
+  independent task/QA and replacement CI evidence. Do not begin U3 until R0 is
+  accepted.
 
 ### Previous release checkpoint — 2026-08-21
 
