@@ -34,12 +34,11 @@ empty cleanup. Hosted or multi-user operation, production identity/tenant
 isolation, cloud deployment, new Graph/capability/provider contracts, and
 Compose topology changes remain excluded.
 
-The active branch is `codex/post-v0.1-local-readiness` at `abcae804`, exactly
-equal to local and remote `main`. It has no upstream branch and the remote has
-no branch with this name. There are no iteration commits or implementation
-changes. Apart from this status refresh, the working tree contains exactly
-three untracked governance drafts: the readiness design, PM ledger, and
-proposed ADR-0024. Their focused Prettier check passes.
+The active branch is `codex/post-v0.1-local-readiness` at `14803a83`, exactly
+equal to its upstream `origin/codex/post-v0.1-local-readiness` at ahead/behind
+`0/0`. The accepted D0 governance baseline and executable plan are delivered
+on that branch. U1 has four uncommitted implementation paths plus accepted
+ADR-0025; U1 is not accepted or delivered.
 
 ### Remote repository alignment
 
@@ -62,35 +61,42 @@ proposed ADR-0024. Their focused Prettier check passes.
 - **D0 — design and governance:** `accepted` on 2026-09-01. The founder
   explicitly accepted ADR-0024 and directed continued execution under a
   long-running goal. The remote branch-asset tags are reconciled.
-- **U1 — supported toolchain doctor:** `implementing`; it is the sole current
-  implementation writer.
+- **U1 — supported toolchain doctor:** `ready_for_qa`, acceptance paused because
+  the local Docker Engine is unavailable. The founder accepted ADR-0025 on
+  2026-09-01, making `pnpm run doctor` and `pnpm run doctor:toolchain` the
+  supported spellings.
 - **U2 — credential-free CI:** `planned`; blocked by accepted U1.
 - **U3 — real Home template product acceptance:** `planned`; blocked by
   accepted U1 and remains serialized integration work.
 - **U4 — QA, release review, and delivery:** `planned`; blocked by accepted U1,
   U2, and U3.
 
-This is planning/governance progress only. It is not implementation, QA,
-release, or product-acceptance progress. The current shell resolves Node
-`24.18.0` and pnpm `11.19.0`, outside the iteration's proposed exact Node
-`22.11.0` / pnpm `9.0.0` evidence profile, so no supported-environment claim is
-made from this refresh.
+U1 has reproducible implementation evidence but no task acceptance or delivery
+claim. Under Node `22.11.0` and pnpm `9.0.0`, its focused suite passes 35/35 and
+`pnpm run doctor:toolchain` passes all six checks. Historical characterization
+proves obsolete `pnpm doctor` resolves pnpm's built-in command and exits zero
+without an Archeform result; the accepted `pnpm run doctor` invokes the project
+script and currently fails closed because Docker Desktop processes are present
+but the Docker Engine is unavailable. The bounded command timeout returns
+control without creating Compose resources. Independent review closed its
+Docker-output, command-timeout, Git-state, Apple Git, and suffixed Docker-version
+findings with P0/P1/P2=`0/0/0`; a fresh local Doctor pass remains required.
 
 ### Risks, blockers, and next smallest slice
 
-- **Delivery state:** the D0 governance baseline and implementation plan are
-  uncommitted, and the iteration branch is not pushed. U1 is authorized but no
-  implementation path has been written yet. Losing this working tree would
-  lose the current governance drafts.
-- **Current gate:** D0 must pass document self-review, formatting, exact-path,
-  and sensitive-material checks before controller delivery. U1 may then proceed
-  only on its four authorized paths.
+- **Delivery state:** D0 is pushed at `14803a83` with local/upstream equality.
+  U1 remains uncommitted on exactly `.node-version`, `package.json`,
+  `scripts/doctor.mjs`, and `scripts/doctor.test.mjs`; accepted ADR-0025 is the
+  only additional governance path.
+- **Current gate:** restore the Docker Engine and obtain a fresh passing
+  `pnpm run doctor`. U2 and U3 remain blocked by accepted U1.
 - **Evidence gap:** the `pm-status` workflow names `docs/mvp.md`, but that file
   does not exist. This refresh used `docs/roadmap.md`, the current delivery
   assessment, the readiness design, and its PM ledger as the available scope
   authorities.
-- **Next smallest slice:** deliver the accepted D0 governance baseline, then run
-  U1's focused RED/GREEN cycle for the exact four-path toolchain-doctor slice.
+- **Next smallest slice:** restore the local Docker Engine, rerun the explicit
+  local Doctor and static evidence, then reconcile U1 only if the full local
+  preflight passes. No U2/U3 authorization is implied while that gate fails.
 
 ### Previous release checkpoint — 2026-08-21
 
