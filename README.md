@@ -126,21 +126,32 @@ artifacts, and acceptance evidence.
 
 - Node.js `>=22.11.0 <23`
 - pnpm `>=9`
-- Docker for local infrastructure and isolated acceptance flows
+- Docker with Docker Compose `>=2.24.4` for local infrastructure and isolated
+  acceptance flows
 
 ### Install
 
 ```powershell
-git clone https://github.com/ZP151/assembler.git
-cd assembler
-pnpm install
+git clone https://github.com/ZP151/archeform.git
+cd archeform
+corepack enable
+corepack prepare pnpm@9.0.0 --activate
+pnpm run doctor:toolchain
+pnpm install --frozen-lockfile
 Copy-Item .env.example .env
+pnpm run doctor
+pnpm accept:local
 ```
 
-The repository-root `.env` is used for local configuration. The OpenAI API key
-is optional for normal development; leave it blank unless you are running a
-guarded real-model acceptance. Credentials, prompts, and model responses are
-not persisted as product data.
+The repository-root `.env` is used for local configuration. The supported local
+acceptance creates an isolated Restaurant application, edits a Draft, publishes
+an immutable revision, compiles and verifies it, exercises the generated
+customer and merchant journeys, checks accessibility, and removes its local
+resources. It does not require fixture mode or an OpenAI API key.
+
+Leave `OPENAI_API_KEY` blank unless you are separately running a guarded
+real-model acceptance. Credentials, prompts, and model responses are not
+persisted as product data.
 
 ### Run the Workbench
 
