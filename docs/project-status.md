@@ -104,6 +104,8 @@ non-qualifying or material-risk decisions stop or escalate.
   ADR-0032 now governs a bounded test-first repair: acceptance-only fixed-role
   merchant services plus a runner-owned exact preview lease and interruption
   cleanup. Its independent standing-acceptance review is P0/P1/P2 `0/0/0`.
+  Accepted ADR-0033 adds the missing local-only compiler-worker profile
+  activation adapter; its repaired standing-acceptance review is also `0/0/0`.
 
 U1 is accepted with fresh supported-environment evidence: Node `v22.11.0`, pnpm
 `9.0.0`, Doctor tests 35/35, explicit toolchain Doctor PASS, and explicit local
