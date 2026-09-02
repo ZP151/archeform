@@ -98,8 +98,12 @@ non-qualifying or material-risk decisions stop or escalate.
   The supported local run passed all 11 steps, four zero Axe counts, four zero
   cleanup counts, exact V3 customer and generated role-journey evidence, and
   final independent review P0/P1/P2 `0/0/0`. It remains independent of R0.
-- **U4 — QA, release review, and delivery:** `implementing`; U1, U2, and U3 are
-  accepted, so controller gates and branch delivery are now authorized.
+- **U4 — QA, release review, and delivery:** `implementing`; the first full
+  iteration QA reported P0/P1/P2 `0/1/1` and release review reported `0/2/0`,
+  so branch delivery and `main` integration are not authorized. Accepted
+  ADR-0032 now governs a bounded test-first repair: acceptance-only fixed-role
+  merchant services plus a runner-owned exact preview lease and interruption
+  cleanup. Its independent standing-acceptance review is P0/P1/P2 `0/0/0`.
 
 U1 is accepted with fresh supported-environment evidence: Node `v22.11.0`, pnpm
 `9.0.0`, Doctor tests 35/35, explicit toolchain Doctor PASS, and explicit local
@@ -116,16 +120,17 @@ P0/P1/P2=`0/0/0`.
   `33535594901` is green in both Node lanes. The reviewed U3 candidate remains
   local until the fresh U4 controller gates pass. The two R0 RED tests and
   proposed ADR-0031 remain deliberately uncommitted in the original workspace.
-- **Current gate:** run the full repository gates, stage only the exact U3 and
-  PM reconciliation manifest, commit and push without force, verify upstream
-  equality, and require green branch CI. R0 remains parked.
+- **Current gate:** record focused failing tests for the exact ADR-0032 paths,
+  implement the fixed-role live merchant journey and runner-owned preview
+  lease, prove all interruption windows clean, then rerun task review, QA, full
+  release review, and repository gates. R0 remains parked.
 - **Evidence gap:** the `pm-status` workflow names `docs/mvp.md`, but that file
   does not exist. This refresh used `docs/roadmap.md`, the current delivery
   assessment, the readiness design, and its PM ledger as the available scope
   authorities.
-- **Next smallest slice:** complete U4 branch delivery and CI observation. Do
-  not merge `main`, create a release, perform Product Publish, deploy to cloud,
-  or resume R0 under this authorization.
+- **Next smallest slice:** complete the ADR-0032 U4 repair and independent
+  re-verification. Do not merge `main`, create a release, perform Product
+  Publish, deploy to cloud, or resume R0 until every U4 gate is green.
 
 ### Previous release checkpoint — 2026-08-21
 
