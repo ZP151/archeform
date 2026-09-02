@@ -109,9 +109,12 @@ non-qualifying or material-risk decisions stop or escalate.
   ADR-0034's supervisor-only interruption experiment is rejected after review
   `0/5/2` exposed an unknowable preview-start side effect under the frozen
   server-assigned identity contract; its revised reject/no-implementation
-  decision passed standing review at `0/0/0`. U4 now requires a separate,
-  minimal shared preview-intent identity ADR before interruption repair can
-  resume.
+  decision passed standing review at `0/0/0`. Accepted ADR-0035 now freezes the
+  minimal pre-owned preview-intent identity, dual run-scoped capability, and
+  detached single-owner cleanup contract after review rounds `0/4/1`, `0/1/1`,
+  then `0/0/0`. Serialized test-first implementation may resume; delivery and
+  `main` integration remain blocked on native interruption and independent
+  gates.
 
 U1 is accepted with fresh supported-environment evidence: Node `v22.11.0`, pnpm
 `9.0.0`, Doctor tests 35/35, explicit toolchain Doctor PASS, and explicit local
@@ -128,10 +131,10 @@ P0/P1/P2=`0/0/0`.
   `33535594901` is green in both Node lanes. The reviewed U3 candidate remains
   local until the fresh U4 controller gates pass. The two R0 RED tests and
   proposed ADR-0031 remain deliberately uncommitted in the original workspace.
-- **Current gate:** govern a minimal shared preview-intent identity contract,
-  then complete the accepted role journey and deterministic interruption
-  cleanup, prove all real terminal windows clean, and rerun task review, QA,
-  full release review, and repository gates. R0 remains parked.
+- **Current gate:** implement the accepted ADR-0035 intent/supervisor contract
+  from focused RED, prove every native terminal window and exact Docker cleanup,
+  then rerun task review, QA, full release review, and repository gates. R0
+  remains parked.
 - **Evidence gap:** the `pm-status` workflow names `docs/mvp.md`, but that file
   does not exist. This refresh used `docs/roadmap.md`, the current delivery
   assessment, the readiness design, and its PM ledger as the available scope
