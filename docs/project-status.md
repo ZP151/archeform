@@ -106,6 +106,12 @@ non-qualifying or material-risk decisions stop or escalate.
   cleanup. Its independent standing-acceptance review is P0/P1/P2 `0/0/0`.
   Accepted ADR-0033 adds the missing local-only compiler-worker profile
   activation adapter; its repaired standing-acceptance review is also `0/0/0`.
+  ADR-0034's supervisor-only interruption experiment is rejected after review
+  `0/5/2` exposed an unknowable preview-start side effect under the frozen
+  server-assigned identity contract; its revised reject/no-implementation
+  decision passed standing review at `0/0/0`. U4 now requires a separate,
+  minimal shared preview-intent identity ADR before interruption repair can
+  resume.
 
 U1 is accepted with fresh supported-environment evidence: Node `v22.11.0`, pnpm
 `9.0.0`, Doctor tests 35/35, explicit toolchain Doctor PASS, and explicit local
@@ -122,10 +128,10 @@ P0/P1/P2=`0/0/0`.
   `33535594901` is green in both Node lanes. The reviewed U3 candidate remains
   local until the fresh U4 controller gates pass. The two R0 RED tests and
   proposed ADR-0031 remain deliberately uncommitted in the original workspace.
-- **Current gate:** record focused failing tests for the exact ADR-0032 paths,
-  implement the fixed-role live merchant journey and runner-owned preview
-  lease, prove all interruption windows clean, then rerun task review, QA, full
-  release review, and repository gates. R0 remains parked.
+- **Current gate:** govern a minimal shared preview-intent identity contract,
+  then complete the accepted role journey and deterministic interruption
+  cleanup, prove all real terminal windows clean, and rerun task review, QA,
+  full release review, and repository gates. R0 remains parked.
 - **Evidence gap:** the `pm-status` workflow names `docs/mvp.md`, but that file
   does not exist. This refresh used `docs/roadmap.md`, the current delivery
   assessment, the readiness design, and its PM ledger as the available scope
