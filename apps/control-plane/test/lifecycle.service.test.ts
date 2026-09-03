@@ -1837,6 +1837,266 @@ describe("LifecycleService", () => {
     });
   });
 
+  it("creates an exact local acceptance preview intent once and replays it observationally", async () => {
+    const previewRunId = `preview-${"a".repeat(64)}`;
+    const created = {
+      id: previewRunId,
+      compilationId: "compilation-succeeded",
+      composeProjectName: `factory-preview-${previewRunId}`,
+      status: "starting",
+    };
+    prisma.previewRun.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(created);
+    prisma.compilation.findUnique.mockResolvedValue({
+      id: "compilation-succeeded",
+      result: { status: "succeeded", artifactCount: 1 },
+      artifacts: [
+        { metadata: { rootDirectory: "expense-approval-published-1" } },
+      ],
+    });
+    prisma.previewRun.findFirst.mockResolvedValue(null);
+    prisma.previewRun.count.mockResolvedValue(0);
+    prisma.previewRun.create.mockResolvedValue(created);
+
+    await expect(
+      service.createLocalAcceptancePreviewRun("compilation-succeeded", {
+        apiVersion: "factory.local-preview-intent/v1",
+        previewRunId,
+      }),
+    ).resolves.toEqual({
+      apiVersion: "factory.local-preview-intent/v1",
+      compilationId: "compilation-succeeded",
+      composeProjectName: `factory-preview-${previewRunId}`,
+      previewRunId,
+      status: "starting",
+    });
+    await expect(
+      service.createLocalAcceptancePreviewRun("compilation-succeeded", {
+        apiVersion: "factory.local-preview-intent/v1",
+        previewRunId,
+      }),
+    ).resolves.toMatchObject({ previewRunId, status: "starting" });
+    expect(previewQueue.enqueue).toHaveBeenCalledTimes(1);
+  });
+
+  it("retains a failed local acceptance intent when enqueue acknowledgement is uncertain", async () => {
+    const previewRunId = `preview-${"b".repeat(64)}`;
+    prisma.previewRun.findUnique.mockResolvedValue(null);
+    prisma.compilation.findUnique.mockResolvedValue({
+      id: "compilation-succeeded",
+      result: { status: "succeeded" },
+      artifacts: [
+        { metadata: { rootDirectory: "expense-approval-published-1" } },
+      ],
+    });
+    prisma.previewRun.findFirst.mockResolvedValue(null);
+    prisma.previewRun.count.mockResolvedValue(0);
+    prisma.previewRun.create.mockImplementation(async ({ data }) => data);
+    previewQueue.enqueue.mockRejectedValue(
+      new Error("Redis acknowledgement lost"),
+    );
+    prisma.previewRun.updateMany.mockResolvedValue({ count: 1 });
+
+    await expect(
+      service.createLocalAcceptancePreviewRun("compilation-succeeded", {
+        apiVersion: "factory.local-preview-intent/v1",
+        previewRunId,
+      }),
+    ).rejects.toMatchObject({ status: 503 });
+    expect(prisma.previewRun.deleteMany).not.toHaveBeenCalled();
+    expect(prisma.previewRun.updateMany).toHaveBeenCalledWith({
+      where: { id: previewRunId, status: "starting" },
+      data: {
+        diagnostic: "Local acceptance preview enqueue acknowledgement failed.",
+        status: "failed",
+      },
+    });
+  });
+
+  it.each([
+    null,
+    [],
+    {},
+    { apiVersion: "factory.local-preview-intent/v1" },
+    { previewRunId: `preview-${"a".repeat(64)}` },
+    {
+      apiVersion: "factory.local-preview-intent/v1",
+      previewRunId: `preview-${"a".repeat(64)}`,
+      extra: true,
+    },
+    {
+      apiVersion: "factory.local-preview-intent/V1",
+      previewRunId: `preview-${"a".repeat(64)}`,
+    },
+    {
+      apiVersion: "factory.local-preview-intent/v1",
+      previewRunId: "preview-550e8400-e29b-41d4-a716-446655440000",
+    },
+    {
+      apiVersion: "factory.local-preview-intent/v1",
+      previewRunId: `preview-${"A".repeat(64)}`,
+    },
+    {
+      apiVersion: "factory.local-preview-intent/v1",
+      previewRunId: ` preview-${"a".repeat(64)}`,
+    },
+  ])(
+    "rejects a non-exact local preview intent before state access",
+    async (body) => {
+      await expect(
+        service.createLocalAcceptancePreviewRun("compilation-succeeded", body),
+      ).rejects.toMatchObject({ status: 400 });
+      expect(prisma.previewRun.findUnique).not.toHaveBeenCalled();
+      expect(prisma.compilation.findUnique).not.toHaveBeenCalled();
+      expect(previewQueue.enqueue).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["starting", "ready", "stopping", "stopped", "failed"])(
+    "replays an exact local intent observationally while status is %s",
+    async (status) => {
+      const previewRunId = `preview-${"c".repeat(64)}`;
+      prisma.previewRun.findUnique.mockResolvedValue({
+        id: previewRunId,
+        compilationId: "compilation-succeeded",
+        composeProjectName: `factory-preview-${previewRunId}`,
+        status,
+      });
+
+      await expect(
+        service.createLocalAcceptancePreviewRun("compilation-succeeded", {
+          apiVersion: "factory.local-preview-intent/v1",
+          previewRunId,
+        }),
+      ).resolves.toMatchObject({ previewRunId, status });
+      expect(prisma.previewRun.create).not.toHaveBeenCalled();
+      expect(prisma.compilation.findUnique).not.toHaveBeenCalled();
+      expect(previewQueue.enqueue).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    {
+      compilationId: "different-compilation",
+      composeProjectName: `factory-preview-preview-${"d".repeat(64)}`,
+      status: "starting",
+    },
+    {
+      compilationId: "compilation-succeeded",
+      composeProjectName: "factory-preview-wrong",
+      status: "starting",
+    },
+    {
+      compilationId: "compilation-succeeded",
+      composeProjectName: `factory-preview-preview-${"d".repeat(64)}`,
+      status: "unknown",
+    },
+  ])(
+    "rejects a requested ID with conflicting persisted identity",
+    async (row) => {
+      const previewRunId = `preview-${"d".repeat(64)}`;
+      prisma.previewRun.findUnique.mockResolvedValue({
+        id: previewRunId,
+        ...row,
+      });
+
+      await expect(
+        service.createLocalAcceptancePreviewRun("compilation-succeeded", {
+          apiVersion: "factory.local-preview-intent/v1",
+          previewRunId,
+        }),
+      ).rejects.toMatchObject({ status: 409 });
+      expect(previewQueue.enqueue).not.toHaveBeenCalled();
+    },
+  );
+
+  it("rejects another ID holding the Compilation active key", async () => {
+    const previewRunId = `preview-${"e".repeat(64)}`;
+    prisma.previewRun.findUnique.mockResolvedValue(null);
+    prisma.compilation.findUnique.mockResolvedValue({
+      id: "compilation-succeeded",
+      result: { status: "succeeded" },
+      artifacts: [
+        { metadata: { rootDirectory: "expense-approval-published-1" } },
+      ],
+    });
+    prisma.previewRun.findFirst.mockResolvedValue({
+      id: `preview-${"f".repeat(64)}`,
+      activeKey: "compilation-succeeded",
+      status: "starting",
+    });
+
+    await expect(
+      service.createLocalAcceptancePreviewRun("compilation-succeeded", {
+        apiVersion: "factory.local-preview-intent/v1",
+        previewRunId,
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+    expect(prisma.previewRun.create).not.toHaveBeenCalled();
+    expect(previewQueue.enqueue).not.toHaveBeenCalled();
+  });
+
+  it("treats an exact uniqueness-race winner as replay without enqueue", async () => {
+    const previewRunId = `preview-${"1".repeat(64)}`;
+    const winner = {
+      id: previewRunId,
+      compilationId: "compilation-succeeded",
+      composeProjectName: `factory-preview-${previewRunId}`,
+      status: "starting",
+    };
+    prisma.previewRun.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(winner);
+    prisma.compilation.findUnique.mockResolvedValue({
+      id: "compilation-succeeded",
+      result: { status: "succeeded" },
+      artifacts: [
+        { metadata: { rootDirectory: "expense-approval-published-1" } },
+      ],
+    });
+    prisma.previewRun.findFirst.mockResolvedValue(null);
+    prisma.previewRun.count.mockResolvedValue(0);
+    prisma.previewRun.create.mockRejectedValue(
+      Object.assign(new Error("unique"), { code: "P2002" }),
+    );
+
+    await expect(
+      service.createLocalAcceptancePreviewRun("compilation-succeeded", {
+        apiVersion: "factory.local-preview-intent/v1",
+        previewRunId,
+      }),
+    ).resolves.toMatchObject({ previewRunId, status: "starting" });
+    expect(previewQueue.enqueue).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when a uniqueness race has no exact requested-ID winner", async () => {
+    const previewRunId = `preview-${"2".repeat(64)}`;
+    prisma.previewRun.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null);
+    prisma.compilation.findUnique.mockResolvedValue({
+      id: "compilation-succeeded",
+      result: { status: "succeeded" },
+      artifacts: [
+        { metadata: { rootDirectory: "expense-approval-published-1" } },
+      ],
+    });
+    prisma.previewRun.findFirst.mockResolvedValue(null);
+    prisma.previewRun.count.mockResolvedValue(0);
+    prisma.previewRun.create.mockRejectedValue(
+      Object.assign(new Error("unique"), { code: "P2002" }),
+    );
+
+    await expect(
+      service.createLocalAcceptancePreviewRun("compilation-succeeded", {
+        apiVersion: "factory.local-preview-intent/v1",
+        previewRunId,
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+    expect(previewQueue.enqueue).not.toHaveBeenCalled();
+  });
+
   it.each([
     { action: "start" as const, status: "starting" },
     { action: "stop" as const, status: "stopping" },

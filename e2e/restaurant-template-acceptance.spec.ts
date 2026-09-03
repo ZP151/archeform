@@ -6,6 +6,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { execFileSync } from "node:child_process";
+import { lstat, readFile, writeFile } from "node:fs/promises";
 
 type PublishedRevisionResponse = {
   readonly id: string;
@@ -24,11 +25,28 @@ type CompilationResponse = {
 };
 
 type PreviewRunResponse = {
+  readonly apiPort: number | null;
   readonly id: string;
   readonly compilationId: string;
   readonly composeProjectName: string;
   readonly previewUrl: string | null;
   readonly status: string;
+};
+
+type VerificationRunResponse = {
+  readonly compilationId: string;
+  readonly evidence: unknown;
+  readonly status: string;
+  readonly verificationRunId: string;
+};
+
+type LocalPreviewLease = {
+  readonly apiVersion: "factory.local-preview-lease/v1";
+  readonly compilationId: string;
+  readonly composeProjectName: string;
+  readonly factoryProjectName: string;
+  readonly previewDirectoryRelativePath: string;
+  readonly previewRunId: string;
 };
 
 type AccessibilityEvidence = {
@@ -40,6 +58,12 @@ type AccessibilityEvidence = {
 
 const factoryProject = process.env.FACTORY_E2E_FACTORY_PROJECT;
 const controlPlaneBaseUrl = process.env.FACTORY_E2E_CONTROL_PLANE_URL;
+const requiredVerificationStepIds = [
+  "customer-journey",
+  "merchant-journey",
+  "shared-state",
+  "cleanup",
+] as const;
 
 test.describe.configure({ mode: "serial" });
 
@@ -49,6 +73,23 @@ function reportStage(stage: string): void {
 
 function reportCleanupStage(stage: string): void {
   console.info("FACTORY_ACCEPTANCE_CLEANUP_STAGE", stage);
+}
+
+function hasExactPassedRequiredSteps(value: unknown): boolean {
+  if (!Array.isArray(value)) return false;
+  return requiredVerificationStepIds.every((stepId) => {
+    const matches = value.filter(
+      (step) =>
+        step &&
+        typeof step === "object" &&
+        !Array.isArray(step) &&
+        (step as Record<string, unknown>).stepId === stepId,
+    );
+    return (
+      matches.length === 1 &&
+      (matches[0] as Record<string, unknown>).status === "passed"
+    );
+  });
 }
 
 function dockerOutput(args: readonly string[]): string {
@@ -76,72 +117,94 @@ async function accessibilityViolations(page: Page): Promise<number> {
   return result.violations.length;
 }
 
-function previewResourcesRemoved(
-  previewRunId: string,
-  composeProjectName: string,
-): boolean {
-  if (!factoryProject) {
-    throw new Error(
-      "FACTORY_E2E_FACTORY_PROJECT is required for cleanup evidence.",
-    );
-  }
-  try {
-    const workerContainer = dockerOutput([
-      "ps",
-      "--filter",
-      `label=com.docker.compose.project=${factoryProject}`,
-      "--filter",
-      "label=com.docker.compose.service=compiler-worker",
-      "--quiet",
-    ]);
-    if (!/\S/u.test(workerContainer)) return false;
-    dockerOutput([
-      "exec",
-      workerContainer,
-      "test",
-      "!",
-      "-d",
-      `/artifacts/.preview-runs/${previewRunId}`,
-    ]);
-    return (
-      [
-        [
-          "ps",
-          "--all",
-          "--filter",
-          `label=com.docker.compose.project=${composeProjectName}`,
-          "--quiet",
-        ],
-        [
-          "network",
-          "ls",
-          "--filter",
-          `label=com.docker.compose.project=${composeProjectName}`,
-          "--quiet",
-        ],
-        [
-          "volume",
-          "ls",
-          "--filter",
-          `label=com.docker.compose.project=${composeProjectName}`,
-          "--quiet",
-        ],
-      ] as const
-    ).every((args) => dockerOutput(args) === "");
-  } catch {
-    return false;
-  }
+function exactContainerId(output: string): string {
+  const ids = output.split(/\r?\n/u).filter(Boolean);
+  expect(ids).toHaveLength(1);
+  expect(ids[0]).toMatch(/^[a-f0-9]{12,64}$/u);
+  return ids[0]!;
 }
 
-async function expectPreviewResourcesRemoved(
-  previewRunId: string,
+function roleOrigin(
   composeProjectName: string,
-): Promise<void> {
+  service: "cashier" | "kitchen",
+  targetPort: 3002 | 3003,
+): URL {
+  const containerId = exactContainerId(
+    dockerOutput([
+      "ps",
+      "--filter",
+      `label=com.docker.compose.project=${composeProjectName}`,
+      "--filter",
+      `label=com.docker.compose.service=${service}`,
+      "--format",
+      "{{.ID}}",
+    ]),
+  );
+  const binding = dockerOutput(["port", containerId, String(targetPort)]);
+  expect(binding).toMatch(/^127\.0\.0\.1:(\d+)$/u);
+  return new URL(`http://${binding}`);
+}
+
+function previewRequestPath(): string {
+  const path = process.env.FACTORY_E2E_PREVIEW_REQUEST_PATH;
+  if (!path) throw new Error("Runner-owned preview request path is required.");
+  return path;
+}
+
+function previewLeasePath(): string {
+  const path = process.env.FACTORY_E2E_PREVIEW_LEASE_PATH;
+  if (!path) throw new Error("Runner-owned preview lease path is required.");
+  return path;
+}
+
+async function requestRunnerOwnedPreview(compilationId: string): Promise<void> {
+  await writeFile(previewRequestPath(), `${compilationId}\n`, {
+    encoding: "utf8",
+    flag: "wx",
+  });
+}
+
+function exactLease(
+  value: unknown,
+  compilationId: string,
+): value is LocalPreviewLease {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const lease = value as Record<string, unknown>;
+  return (
+    Object.keys(lease).sort().join(",") ===
+      "apiVersion,compilationId,composeProjectName,factoryProjectName,previewDirectoryRelativePath,previewRunId" &&
+    lease.apiVersion === "factory.local-preview-lease/v1" &&
+    lease.compilationId === compilationId &&
+    lease.factoryProjectName === factoryProject &&
+    typeof lease.previewRunId === "string" &&
+    /^preview-[a-z0-9-]+$/u.test(lease.previewRunId) &&
+    lease.composeProjectName === `factory-preview-${lease.previewRunId}` &&
+    lease.previewDirectoryRelativePath === `.preview-runs/${lease.previewRunId}`
+  );
+}
+
+async function runnerOwnedLease(
+  compilationId: string,
+): Promise<LocalPreviewLease> {
+  let lease: LocalPreviewLease | null = null;
   await expect
-    .poll(() => previewResourcesRemoved(previewRunId, composeProjectName), {
-      timeout: 60_000,
-    })
+    .poll(
+      async () => {
+        try {
+          const entry = await lstat(previewLeasePath());
+          if (entry.isSymbolicLink() || !entry.isFile()) return false;
+          const parsed = JSON.parse(await readFile(previewLeasePath(), "utf8"));
+          if (!exactLease(parsed, compilationId)) return false;
+          lease = parsed;
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      { timeout: 315_000 },
+    )
     .toBe(true);
+  return lease!;
 }
 
 async function currentPreview(
@@ -172,42 +235,6 @@ async function currentPreview(
     return { ...preview, composeProjectName } as PreviewRunResponse;
   } catch {
     return null;
-  }
-}
-
-async function waitForPreviewStopped(
-  request: APIRequestContext,
-  compilationId: string,
-): Promise<void> {
-  await expect
-    .poll(
-      async () => {
-        const preview = await currentPreview(request, compilationId);
-        return preview?.status;
-      },
-      { timeout: 120_000 },
-    )
-    .toBe("stopped");
-}
-
-async function stopPreviewWithFallback(
-  page: Page,
-  request: APIRequestContext,
-  compilationId: string,
-  previewRunId: string,
-): Promise<void> {
-  try {
-    const stopPreview = page.getByRole("button", { name: "Stop preview" });
-    await expect(stopPreview).toBeEnabled({ timeout: 60_000 });
-    await stopPreview.click();
-    await waitForPreviewStopped(request, compilationId);
-    return;
-  } catch {
-    const response = await request.post(
-      controlPlaneUrl(`/preview-runs/${encodeURIComponent(previewRunId)}/stop`),
-    );
-    expect(response.ok(), "preview API cleanup fallback").toBeTruthy();
-    await waitForPreviewStopped(request, compilationId);
   }
 }
 
@@ -302,18 +329,51 @@ test("Maison Aurelia edits, publishes, compiles, verifies, operates, and cleans 
   expect(composeArtifact?.digest).toMatch(/^sha256:[a-f0-9]{64}$/u);
 
   reportStage("verify");
+  const verificationStartedResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname ===
+        `/compilations/${queuedCompilation.id}/verification-runs`,
+  );
   await runVerification.click();
-  const verificationSteps = page.getByLabel("Verification evidence steps");
-  await expect(verificationSteps).toBeVisible({ timeout: 910_000 });
-  for (const step of [
-    "customer-journey",
-    "merchant-journey",
-    "shared-state",
-    "cleanup",
-    "passed",
-  ]) {
-    await expect(verificationSteps).toContainText(step);
-  }
+  const startedVerification = (await (
+    await verificationStartedResponse
+  ).json()) as VerificationRunResponse;
+  expect(startedVerification.compilationId).toBe(queuedCompilation.id);
+  expect(startedVerification.verificationRunId).toMatch(/^verify-[a-z0-9-]+$/u);
+  let completedVerification: VerificationRunResponse | null = null;
+  await expect
+    .poll(
+      async () => {
+        const response = await request.get(
+          controlPlaneUrl(
+            `/verification-runs/${encodeURIComponent(startedVerification.verificationRunId)}`,
+          ),
+        );
+        if (!response.ok()) return null;
+        const verification = (await response.json()) as VerificationRunResponse;
+        completedVerification = verification;
+        return verification.status;
+      },
+      { timeout: 910_000 },
+    )
+    .toBe("succeeded");
+  const evidence = completedVerification?.evidence as
+    | {
+        readonly cleanup?: { readonly succeeded?: unknown };
+        readonly steps?: unknown;
+      }
+    | undefined;
+  expect(evidence?.cleanup?.succeeded).toBe(true);
+  const duplicateConflictFixture = [
+    ...requiredVerificationStepIds.map((stepId) => ({
+      status: "passed",
+      stepId,
+    })),
+    { status: "failed", stepId: "cleanup" },
+  ];
+  expect(hasExactPassedRequiredSteps(duplicateConflictFixture)).toBe(false);
+  expect(hasExactPassedRequiredSteps(evidence?.steps)).toBe(true);
 
   reportStage("workbench-accessibility");
   const accessibility: AccessibilityEvidence = {
@@ -326,51 +386,26 @@ test("Maison Aurelia edits, publishes, compiles, verifies, operates, and cleans 
   accessibility.workbenchNarrow = await accessibilityViolations(page);
   await page.setViewportSize({ width: 1280, height: 720 });
 
-  let previewRunId: string | null = null;
-  let previewProjectName: string | null = null;
   let generated: Page | null = null;
-  let previewStartAttempted = false;
   try {
     reportStage("preview-start");
-    const startResponse = page.waitForResponse(
-      (response) =>
-        response.request().method() === "POST" &&
-        /\/compilations\/[^/]+\/preview-runs$/u.test(
-          new URL(response.url()).pathname,
-        ),
-    );
-    previewStartAttempted = true;
-    await page.getByRole("button", { name: "Start preview" }).click();
-    const startedPreview = (await (
-      await startResponse
-    ).json()) as PreviewRunResponse;
-    previewRunId = startedPreview.id;
-    previewProjectName = startedPreview.composeProjectName;
-    expect(previewRunId).toMatch(/^preview-[a-z0-9-]+$/u);
-    expect(startedPreview.compilationId).toBe(queuedCompilation.id);
-    expect(previewProjectName).toBe(`factory-preview-${previewRunId}`);
+    await requestRunnerOwnedPreview(queuedCompilation.id);
+    const lease = await runnerOwnedLease(queuedCompilation.id);
 
     await expect
       .poll(
         async () => {
-          const response = await request.get(
-            controlPlaneUrl(
-              `/compilations/${encodeURIComponent(queuedCompilation.id)}/preview-runs/current`,
-            ),
-          );
-          return ((await response.json()) as PreviewRunResponse).status;
+          const preview = await currentPreview(request, queuedCompilation.id);
+          return preview?.id === lease.previewRunId ? preview.status : null;
         },
         { timeout: 315_000 },
       )
       .toBe("ready");
-    const previewResponse = await request.get(
-      controlPlaneUrl(
-        `/compilations/${encodeURIComponent(queuedCompilation.id)}/preview-runs/current`,
-      ),
-    );
-    const readyPreview = (await previewResponse.json()) as PreviewRunResponse;
-    expect(readyPreview.previewUrl).toBeTruthy();
-    const previewOrigin = new URL(readyPreview.previewUrl!);
+    const readyPreview = await currentPreview(request, queuedCompilation.id);
+    expect(readyPreview?.id).toBe(lease.previewRunId);
+    expect(readyPreview?.composeProjectName).toBe(lease.composeProjectName);
+    expect(readyPreview?.previewUrl).toBeTruthy();
+    const previewOrigin = new URL(readyPreview!.previewUrl!);
     expect(previewOrigin.hostname).toBe("127.0.0.1");
 
     generated = await page.context().newPage();
@@ -432,21 +467,89 @@ test("Maison Aurelia edits, publishes, compiles, verifies, operates, and cleans 
     await expect(generated.getByText("simulated-paid")).toBeVisible();
     reportStage("customer-paid");
 
-    // The live V3 preview is intentionally customer-principal-bound. The
-    // role-specific generated verifier above proves the merchant journey;
-    // this browser boundary proves customer principals cannot invoke it.
-    const kitchenUrl = new URL(previewOrigin);
-    kitchenUrl.pathname = "/merchant/kitchen";
-    const kitchenResponse = await generated.goto(kitchenUrl.toString());
-    expect(kitchenResponse?.ok(), "generated kitchen response").toBeTruthy();
-    await expect(
-      generated.getByRole("heading", { name: "Kitchen ticket" }),
-    ).toBeVisible();
-    for (const action of ["Accept order", "Start preparing", "Mark ready"]) {
-      await expect(
-        generated.getByRole("button", { name: action }),
-      ).toBeDisabled();
+    expect(readyPreview!.apiPort).toEqual(expect.any(Number));
+    const managerOrigin = new URL(`http://127.0.0.1:${readyPreview!.apiPort!}`);
+    const cashierOrigin = roleOrigin(lease.composeProjectName, "cashier", 3003);
+    const kitchenOrigin = roleOrigin(lease.composeProjectName, "kitchen", 3002);
+    const merchantOrders = async (origin: URL) => {
+      const response = await request.get(
+        new URL("/api/merchant/orders", origin).toString(),
+      );
+      expect(response.ok()).toBeTruthy();
+      const body = (await response.json()) as {
+        readonly orders?: readonly {
+          readonly id: string;
+          readonly status: string;
+          readonly version: number;
+        }[];
+      };
+      expect(body.orders).toEqual(expect.any(Array));
+      return body.orders!;
+    };
+    const managerPaidOrder = (await merchantOrders(managerOrigin)).find(
+      (order) => order.status === "paid",
+    );
+    expect(managerPaidOrder).toBeDefined();
+    const orderId = managerPaidOrder!.id;
+    expect(
+      (await merchantOrders(cashierOrigin)).find(
+        (order) => order.id === orderId,
+      )?.status,
+    ).toBe("paid");
+    reportStage("merchant-observed");
+
+    for (const [action, expectedVersion] of [
+      ["accept", 1],
+      ["start-preparing", 2],
+      ["mark-ready", 3],
+    ] as const) {
+      const response = await request.post(
+        new URL(
+          `/api/merchant/kitchen/${encodeURIComponent(orderId)}/actions`,
+          kitchenOrigin,
+        ).toString(),
+        {
+          data: { action, expectedVersion },
+          headers: {
+            "content-type": "application/json",
+            "idempotency-key": `acceptance-${action}`,
+          },
+        },
+      );
+      expect(response.ok(), `kitchen ${action}`).toBeTruthy();
     }
+    reportStage("kitchen-ready");
+
+    const customerKitchenDenied = await request.post(
+      new URL(
+        `/api/merchant/kitchen/${encodeURIComponent(orderId)}/actions`,
+        previewOrigin,
+      ).toString(),
+      {
+        data: { action: "accept", expectedVersion: 4 },
+        headers: {
+          "content-type": "application/json",
+          "idempotency-key": "acceptance-customer-denied",
+        },
+      },
+    );
+    expect(customerKitchenDenied.status()).toBe(403);
+    const customerReady = await generated.evaluate(async (id) => {
+      const response = await fetch(`/api/orders/${encodeURIComponent(id)}`);
+      return { body: await response.json(), status: response.status };
+    }, orderId);
+    expect(customerReady.status).toBe(200);
+    expect(customerReady.body.order?.status).toBe("ready");
+    expect(
+      (await merchantOrders(managerOrigin)).find(
+        (order) => order.id === orderId,
+      )?.status,
+    ).toBe("ready");
+    expect(
+      (await merchantOrders(cashierOrigin)).find(
+        (order) => order.id === orderId,
+      )?.status,
+    ).toBe("ready");
     reportStage("merchant-denial");
 
     reportStage("generated-accessibility");
@@ -454,36 +557,12 @@ test("Maison Aurelia edits, publishes, compiles, verifies, operates, and cleans 
     await generated.setViewportSize({ width: 390, height: 844 });
     accessibility.generatedNarrow = await accessibilityViolations(generated);
   } finally {
-    reportCleanupStage("start");
     try {
       await generated?.close();
     } catch {
-      // Preview teardown must continue even if the browser page already died.
+      // The runner owns preview teardown even if the browser page already died.
     }
     reportCleanupStage("page-closed");
-    if (previewStartAttempted && (!previewRunId || !previewProjectName)) {
-      const recovered = await currentPreview(request, queuedCompilation.id);
-      if (recovered) {
-        previewRunId = recovered.id;
-        previewProjectName = recovered.composeProjectName;
-      }
-    }
-    if (previewRunId && previewProjectName) {
-      reportCleanupStage("stop");
-      try {
-        await stopPreviewWithFallback(
-          page,
-          request,
-          queuedCompilation.id,
-          previewRunId,
-        );
-        reportCleanupStage("stopped");
-      } finally {
-        reportCleanupStage("resource-proof");
-        await expectPreviewResourcesRemoved(previewRunId, previewProjectName);
-        reportCleanupStage("resources-removed");
-      }
-    }
   }
 
   expect(Object.values(accessibility)).toEqual([0, 0, 0, 0]);
@@ -492,7 +571,6 @@ test("Maison Aurelia edits, publishes, compiles, verifies, operates, and cleans 
     "FACTORY_ACCEPTANCE_EVIDENCE",
     JSON.stringify({
       accessibility,
-      cleanup: { previewDirectories: 0 },
       digests: {
         compilation: composeArtifact!.digest,
         publishedRevision: published.graphHash,

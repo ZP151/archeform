@@ -18,6 +18,7 @@ const lifecycle = {
   appendDraftRevision: vi.fn(),
   completeCompilation: vi.fn(),
   failCompilation: vi.fn(),
+  createLocalAcceptancePreviewRun: vi.fn(),
   createPreviewRun: vi.fn(),
   createCompilation: vi.fn(),
   createLocalApplicationGraph: vi.fn(),
@@ -50,9 +51,11 @@ describe("LifecycleController", () => {
   let app: INestApplication;
   let baseUrl: string;
   const originalWorkerToken = process.env.FACTORY_INTERNAL_WORKER_TOKEN;
+  const originalAcceptanceToken = process.env.FACTORY_LOCAL_ACCEPTANCE_TOKEN;
 
   beforeAll(async () => {
     process.env.FACTORY_INTERNAL_WORKER_TOKEN = "configured-worker-token";
+    process.env.FACTORY_LOCAL_ACCEPTANCE_TOKEN = "a".repeat(64);
     app = await NestFactory.create(TestModule, { logger: ["error"] });
     await app.listen(0, "127.0.0.1");
     const address = app.getHttpServer().address() as AddressInfo;
@@ -67,6 +70,11 @@ describe("LifecycleController", () => {
     } else {
       process.env.FACTORY_INTERNAL_WORKER_TOKEN = originalWorkerToken;
     }
+    if (originalAcceptanceToken === undefined) {
+      delete process.env.FACTORY_LOCAL_ACCEPTANCE_TOKEN;
+    } else {
+      process.env.FACTORY_LOCAL_ACCEPTANCE_TOKEN = originalAcceptanceToken;
+    }
     await app.close();
   });
 
@@ -77,6 +85,32 @@ describe("LifecycleController", () => {
       handler: lifecycle.createPreviewRun,
       arguments: ["compilation-1"],
       response: { id: "preview-1", status: "starting" },
+    },
+    {
+      method: "POST",
+      path: "/internal/compilations/compilation-1/preview-runs",
+      internal: true,
+      acceptance: true,
+      status: 200,
+      body: {
+        apiVersion: "factory.local-preview-intent/v1",
+        previewRunId: `preview-${"b".repeat(64)}`,
+      },
+      handler: lifecycle.createLocalAcceptancePreviewRun,
+      arguments: [
+        "compilation-1",
+        {
+          apiVersion: "factory.local-preview-intent/v1",
+          previewRunId: `preview-${"b".repeat(64)}`,
+        },
+      ],
+      response: {
+        apiVersion: "factory.local-preview-intent/v1",
+        compilationId: "compilation-1",
+        previewRunId: `preview-${"b".repeat(64)}`,
+        composeProjectName: `factory-preview-preview-${"b".repeat(64)}`,
+        status: "starting",
+      },
     },
     {
       method: "GET",
@@ -332,11 +366,20 @@ describe("LifecycleController", () => {
         ...("internal" in scenario && scenario.internal
           ? { "x-factory-internal-token": "configured-worker-token" }
           : {}),
+        ...("acceptance" in scenario && scenario.acceptance
+          ? { "x-factory-local-acceptance-token": "a".repeat(64) }
+          : {}),
       },
       body: scenario.body ? JSON.stringify(scenario.body) : undefined,
     });
 
-    expect(response.status).toBe(scenario.method === "POST" ? 201 : 200);
+    expect(response.status).toBe(
+      "status" in scenario
+        ? scenario.status
+        : scenario.method === "POST"
+          ? 201
+          : 200,
+    );
     expect(await response.json()).toEqual(scenario.response);
     expect(scenario.handler).toHaveBeenCalledWith(...scenario.arguments);
   });
@@ -392,6 +435,82 @@ describe("LifecycleController", () => {
       expect(response.status).toBe(401);
       expect(scenario.handler).not.toHaveBeenCalled();
     }
+  });
+
+  it.each([
+    [{ "x-factory-internal-token": "configured-worker-token" }],
+    [{ "x-factory-local-acceptance-token": "a".repeat(64) }],
+    [
+      {
+        "x-factory-internal-token": "wrong-worker-token",
+        "x-factory-local-acceptance-token": "a".repeat(64),
+      },
+    ],
+    [
+      {
+        "x-factory-internal-token": "configured-worker-token",
+        "x-factory-local-acceptance-token": "b".repeat(64),
+      },
+    ],
+  ])("requires both exact local-acceptance capabilities", async (headers) => {
+    const response = await fetch(
+      `${baseUrl}/internal/compilations/compilation-1/preview-runs`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", ...headers },
+        body: JSON.stringify({
+          apiVersion: "factory.local-preview-intent/v1",
+          previewRunId: `preview-${"b".repeat(64)}`,
+        }),
+      },
+    );
+
+    expect(response.status).toBe(401);
+    expect(lifecycle.createLocalAcceptancePreviewRun).not.toHaveBeenCalled();
+  });
+
+  it("rejects duplicate local-acceptance capabilities", async () => {
+    const headers = new Headers({
+      "content-type": "application/json",
+      "x-factory-internal-token": "configured-worker-token",
+    });
+    headers.append("x-factory-local-acceptance-token", "a".repeat(64));
+    headers.append("x-factory-local-acceptance-token", "a".repeat(64));
+    const response = await fetch(
+      `${baseUrl}/internal/compilations/compilation-1/preview-runs`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          apiVersion: "factory.local-preview-intent/v1",
+          previewRunId: `preview-${"b".repeat(64)}`,
+        }),
+      },
+    );
+
+    expect(response.status).toBe(401);
+    expect(lifecycle.createLocalAcceptancePreviewRun).not.toHaveBeenCalled();
+  });
+
+  it("rejects local-acceptance preview intents with query parameters", async () => {
+    const response = await fetch(
+      `${baseUrl}/internal/compilations/compilation-1/preview-runs?unexpected=1`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-factory-internal-token": "configured-worker-token",
+          "x-factory-local-acceptance-token": "a".repeat(64),
+        },
+        body: JSON.stringify({
+          apiVersion: "factory.local-preview-intent/v1",
+          previewRunId: `preview-${"b".repeat(64)}`,
+        }),
+      },
+    );
+
+    expect(response.status).toBe(400);
+    expect(lifecycle.createLocalAcceptancePreviewRun).not.toHaveBeenCalled();
   });
 
   it("rejects preview requests that attach caller-controlled runtime fields", async () => {

@@ -1,6 +1,6 @@
 # Archeform delivery status
 
-Updated: 2026-09-02
+Updated: 2026-09-03
 
 ## Product outcome
 
@@ -23,7 +23,7 @@ The full status history through 2026-08-09 is preserved verbatim in
 
 ## Current milestone — Post-v0.1 Local Restaurant Readiness
 
-### Current authoritative checkpoint — 2026-09-02
+### Current authoritative checkpoint — 2026-09-03
 
 `factory-pilot v0.1.0` remains the delivered local Alpha baseline. The active
 follow-up is now a bounded local-only iteration for one to five invited
@@ -35,10 +35,12 @@ isolation, cloud deployment, new Graph/capability/provider contracts, and
 Compose topology changes remain excluded.
 
 The active isolated branch is `codex/post-v0.1-local-readiness-u3`, based on
-delivered PM decoupling commit `48d5c5fb`. Its reviewed U3 candidate is not yet
-pushed while U4 controller gates run. D0, U1, U2, F0, V0, their governing ADRs
-through ADR-0030, and the portable Compiler missing-root fixture are delivered.
-ADR-0031 remains unaccepted local proposal evidence in the original workspace.
+delivered PM decoupling commit `48d5c5fb`. U3 candidate `46b4d87a` and the
+accepted U4 governance sequence through `65f40fb4` are remotely preserved. The
+U4 implementation is release-approved and awaiting controller commit/push. D0,
+U1, U2, F0, V0, their governing ADRs through ADR-0030, and the portable Compiler
+missing-root fixture are delivered. ADR-0031 remains unaccepted local proposal
+evidence in the original workspace.
 
 The founder explicitly accepted ADR-0029 on 2026-09-01 and established a
 standing independent-agent review policy for future Tech Lead ADRs. A separate
@@ -48,8 +50,10 @@ non-qualifying or material-risk decisions stop or escalate.
 
 ### Remote repository alignment
 
-- A fresh `fetch --prune --tags` proves local `HEAD`, local `main`, and
-  `origin/main` all equal `abcae804`, with ahead/behind `0/0`.
+- The last delivered `main` checkpoint has local `main` and `origin/main` at
+  `abcae804`; controller delivery will fetch again before integration. The
+  active iteration branch is separately based on `48d5c5fb` and remotely
+  preserved through `65f40fb4`.
 - GitHub records exactly two pull requests, both merged into `main`: Restaurant
   Product closure PR #1 and the post-release status/Home-polish PR #2. There is
   no open pull request for the current readiness iteration.
@@ -98,7 +102,8 @@ non-qualifying or material-risk decisions stop or escalate.
   The supported local run passed all 11 steps, four zero Axe counts, four zero
   cleanup counts, exact V3 customer and generated role-journey evidence, and
   final independent review P0/P1/P2 `0/0/0`. It remains independent of R0.
-- **U4 — QA, release review, and delivery:** `implementing`; the first full
+- **U4 — QA, release review, and delivery:** `release-approved`; controller
+  delivery is pending. The first full
   iteration QA reported P0/P1/P2 `0/1/1` and release review reported `0/2/0`,
   so branch delivery and `main` integration are not authorized. Accepted
   ADR-0032 now governs a bounded test-first repair: acceptance-only fixed-role
@@ -112,9 +117,19 @@ non-qualifying or material-risk decisions stop or escalate.
   decision passed standing review at `0/0/0`. Accepted ADR-0035 now freezes the
   minimal pre-owned preview-intent identity, dual run-scoped capability, and
   detached single-owner cleanup contract after review rounds `0/4/1`, `0/1/1`,
-  then `0/0/0`. Serialized test-first implementation may resume; delivery and
-  `main` integration remain blocked on native interruption and independent
-  gates.
+  then `0/0/0`. The founder-authorized cleanup removed exactly the stale U4
+  resources at container/network/volume counts `5/1/2` plus 24 stale private
+  roots. Docker Desktop WSL integration and Ubuntu now provide the supported
+  POSIX surface at Node `22.11.0`, pnpm `9.0.0`, Docker `29.6.2`, and Compose
+  `5.3.1`. The native matrices pass Windows Ctrl+C/Ctrl+Break `40/40` and POSIX
+  SIGINT/SIGTERM `40/40`, each with final containers/networks/volumes, helpers,
+  private roots, and lease entries at zero. Complete provider-free acceptance
+  passes on both Windows and POSIX with four Axe counts and four cleanup counts
+  at zero. Independent task review and QA are `0/0/0`; final release review's
+  sole query-parameter P2 was repaired test-first and re-reviewed at `0/0/0`.
+  Fresh focused and repository gates are green. PM reconciliation may proceed;
+  commit, push, PR integration, and the exact merged-`main` release gate remain
+  controller delivery steps.
 
 U1 is accepted with fresh supported-environment evidence: Node `v22.11.0`, pnpm
 `9.0.0`, Doctor tests 35/35, explicit toolchain Doctor PASS, and explicit local
@@ -127,21 +142,22 @@ P0/P1/P2=`0/0/0`.
 
 ### Risks, blockers, and next smallest slice
 
-- **Delivery state:** the clean U3 base `48d5c5fb` is pushed and run
-  `33535594901` is green in both Node lanes. The reviewed U3 candidate remains
-  local until the fresh U4 controller gates pass. The two R0 RED tests and
-  proposed ADR-0031 remain deliberately uncommitted in the original workspace.
-- **Current gate:** implement the accepted ADR-0035 intent/supervisor contract
-  from focused RED, prove every native terminal window and exact Docker cleanup,
-  then rerun task review, QA, full release review, and repository gates. R0
-  remains parked.
+- **Delivery state:** the clean U3 base `48d5c5fb`, U3 task commit `46b4d87a`,
+  and accepted U4 governance through `65f40fb4` are pushed. U4 implementation,
+  native evidence, task review, QA, and final release review are green; the
+  bounded implementation commit and branch push are the next controller step.
+  The two R0 RED tests and proposed ADR-0031 remain deliberately uncommitted in
+  the original workspace.
+- **Current gate:** create and push the bounded U4 task commit, verify upstream
+  equality, record PM acceptance, integrate through a reviewed PR, then rerun
+  the release gate at the exact merged `main` commit. R0 remains parked.
 - **Evidence gap:** the `pm-status` workflow names `docs/mvp.md`, but that file
   does not exist. This refresh used `docs/roadmap.md`, the current delivery
   assessment, the readiness design, and its PM ledger as the available scope
   authorities.
-- **Next smallest slice:** complete the ADR-0032 U4 repair and independent
-  re-verification. Do not merge `main`, create a release, perform Product
-  Publish, deploy to cloud, or resume R0 until every U4 gate is green.
+- **Next smallest slice:** controller delivery of the release-approved U4 tree,
+  followed by exact merged-`main` verification. Do not create a repository
+  release, perform Product Publish, deploy to cloud, or resume R0.
 
 ### Previous release checkpoint — 2026-08-21
 

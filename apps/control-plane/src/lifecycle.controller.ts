@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   Headers,
+  HttpCode,
   Inject,
   Param,
   Post,
@@ -14,6 +15,7 @@ import {
 
 import { LifecycleService } from "./lifecycle.service.js";
 import { assertInternalWorkerToken } from "./internal-worker-auth.js";
+import { assertLocalAcceptanceCapability } from "./local-acceptance-auth.js";
 
 type PassthroughResponse = {
   setHeader(name: string, value: string): void;
@@ -28,6 +30,15 @@ function emptyBody(body: unknown): void {
   if (fields.length > 0) {
     throw new BadRequestException(
       `Unsupported request field: ${fields.sort()[0]}.`,
+    );
+  }
+}
+
+function emptyQuery(query: Record<string, unknown>): void {
+  const fields = Object.keys(query);
+  if (fields.length > 0) {
+    throw new BadRequestException(
+      `Unsupported query parameter: ${fields.sort()[0]}.`,
     );
   }
 }
@@ -169,6 +180,21 @@ export class LifecycleController {
   ) {
     emptyBody(body);
     return this.lifecycle.stopPreviewRun(previewRunId);
+  }
+
+  @Post("internal/compilations/:compilationId/preview-runs")
+  @HttpCode(200)
+  createLocalAcceptancePreviewRun(
+    @Param("compilationId") compilationId: string,
+    @Body() body: unknown,
+    @Query() query: Record<string, unknown>,
+    @Headers("x-factory-internal-token") internalToken: string | undefined,
+    @Headers("x-factory-local-acceptance-token")
+    acceptanceToken: string | undefined,
+  ) {
+    assertLocalAcceptanceCapability(internalToken, acceptanceToken);
+    emptyQuery(query);
+    return this.lifecycle.createLocalAcceptancePreviewRun(compilationId, body);
   }
 
   @Post("internal/compilations/:compilationId/complete")

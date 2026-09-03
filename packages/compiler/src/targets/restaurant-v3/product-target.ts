@@ -78,12 +78,15 @@ function renderFiles(
     .replace('"./seed.mjs"', '"./runtime/seed.mjs"')
     .replace(
       'import { restaurantSeed } from "./runtime/seed.mjs";',
-      'import { restaurantSeed } from "./runtime/seed.mjs";\nimport { readFile } from "node:fs/promises";\nimport { matchCustomerRoute, renderCustomerPage } from "./customer/app.mjs";\nimport { matchMerchantRoute, renderMerchantPage } from "./merchant/app.mjs";',
+      'import { restaurantSeed } from "./runtime/seed.mjs";\nimport { readFile } from "node:fs/promises";\nimport { trustedStartupRoles } from "./runtime/policy.mjs";\nimport { matchCustomerRoute, renderCustomerPage } from "./customer/app.mjs";\nimport { matchMerchantRoute, renderMerchantPage } from "./merchant/app.mjs";',
+    )
+    .replace(
+      "  const store = createStateStore(options.statePath, restaurantSeed,",
+      '  const principalRole = options.principalRole ?? "customer";\n  if (!trustedStartupRoles.includes(principalRole)) throw new Error("Restaurant runtime principal must be a trusted startup role.");\n  const store = createStateStore(options.statePath, restaurantSeed,',
     )
     .replace(
       'const server = createServer(createRestaurantApiHandler(store, options.principalRole ?? "customer"));',
-      `const principalRole = options.principalRole ?? "customer";
-  const apiHandler = createRestaurantApiHandler(store, principalRole);
+      `const apiHandler = createRestaurantApiHandler(store, principalRole);
   const server = createServer(async (request, response) => {
     const pathname = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
     const assets = { "/customer/styles.css": "./customer/styles.css", "/customer/app.mjs": "./customer/app.mjs", "/generated/customer-restaurant-ui.mjs": "./generated/customer-restaurant-ui.mjs", "/merchant/styles.css": "./merchant/styles.css", "/merchant/app.mjs": "./merchant/app.mjs", "/generated/merchant-restaurant-ui.mjs": "./generated/merchant-restaurant-ui.mjs" };
@@ -199,7 +202,7 @@ function renderFiles(
     },
     {
       path: "docker-compose.yml",
-      content: `name: \${FACTORY_COMPOSE_PROJECT_NAME:-factory-${rootDirectory}}\n\nservices:\n  web:\n    build: .\n    command: ["node", "src/server.mjs", "customer"]\n    environment:\n      PORT: "3000"\n      HOST: "0.0.0.0"\n    volumes:\n      - shared-state:/app/.restaurant-state\n    ports:\n      - "127.0.0.1:\${FACTORY_WEB_PORT:-0}:3000"\n  api:\n    build: .\n    command: ["node", "src/server.mjs", "manager"]\n    environment:\n      PORT: "3001"\n      HOST: "0.0.0.0"\n    volumes:\n      - shared-state:/app/.restaurant-state\n    ports:\n      - "127.0.0.1:\${FACTORY_API_PORT:-0}:3001"\n\nvolumes:\n  shared-state:\n`,
+      content: `name: \${FACTORY_COMPOSE_PROJECT_NAME:-factory-${rootDirectory}}\n\nservices:\n  web:\n    build: .\n    command: ["node", "src/server.mjs", "customer"]\n    environment:\n      PORT: "3000"\n      HOST: "0.0.0.0"\n    volumes:\n      - shared-state:/app/.restaurant-state\n    ports:\n      - "127.0.0.1:\${FACTORY_WEB_PORT:-0}:3000"\n  api:\n    build: .\n    command: ["node", "src/server.mjs", "manager"]\n    environment:\n      PORT: "3001"\n      HOST: "0.0.0.0"\n    volumes:\n      - shared-state:/app/.restaurant-state\n    ports:\n      - "127.0.0.1:\${FACTORY_API_PORT:-0}:3001"\n  kitchen:\n    build: .\n    command: ["node", "src/server.mjs", "kitchen"]\n    profiles:\n      - acceptance\n    environment:\n      PORT: "3002"\n      HOST: "0.0.0.0"\n    volumes:\n      - shared-state:/app/.restaurant-state\n    ports:\n      - "127.0.0.1:\${FACTORY_KITCHEN_PORT:-0}:3002"\n  cashier:\n    build: .\n    command: ["node", "src/server.mjs", "cashier"]\n    profiles:\n      - acceptance\n    environment:\n      PORT: "3003"\n      HOST: "0.0.0.0"\n    volumes:\n      - shared-state:/app/.restaurant-state\n    ports:\n      - "127.0.0.1:\${FACTORY_CASHIER_PORT:-0}:3003"\n\nvolumes:\n  shared-state:\n`,
     },
   ];
   assertSafeGeneratedFileSet(files);
