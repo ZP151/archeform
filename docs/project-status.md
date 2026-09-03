@@ -37,8 +37,9 @@ Compose topology changes remain excluded.
 The active isolated branch is `codex/post-v0.1-local-readiness-u3`, based on
 delivered PM decoupling commit `48d5c5fb`. U3 candidate `46b4d87a` and the
 accepted U4 governance sequence through `65f40fb4` are remotely preserved. The
-U4 implementation is release-approved and awaiting controller commit/push. D0,
-U1, U2, F0, V0, their governing ADRs through ADR-0030, and the portable Compiler
+U4 implementation is accepted at task commit `ee32fd1c` and pushed with exact
+local/upstream equality; reviewed PR integration remains pending. D0, U1, U2,
+F0, V0, their governing ADRs through ADR-0030, and the portable Compiler
 missing-root fixture are delivered. ADR-0031 remains unaccepted local proposal
 evidence in the original workspace.
 
@@ -53,7 +54,7 @@ non-qualifying or material-risk decisions stop or escalate.
 - The last delivered `main` checkpoint has local `main` and `origin/main` at
   `abcae804`; controller delivery will fetch again before integration. The
   active iteration branch is separately based on `48d5c5fb` and remotely
-  preserved through `65f40fb4`.
+  preserved through accepted U4 task commit `ee32fd1c`.
 - GitHub records exactly two pull requests, both merged into `main`: Restaurant
   Product closure PR #1 and the post-release status/Home-polish PR #2. There is
   no open pull request for the current readiness iteration.
@@ -102,8 +103,8 @@ non-qualifying or material-risk decisions stop or escalate.
   The supported local run passed all 11 steps, four zero Axe counts, four zero
   cleanup counts, exact V3 customer and generated role-journey evidence, and
   final independent review P0/P1/P2 `0/0/0`. It remains independent of R0.
-- **U4 — QA, release review, and delivery:** `release-approved`; controller
-  delivery is pending. The first full
+- **U4 — QA, release review, and delivery:** `accepted`; reviewed PR integration
+  and exact merged-`main` verification are pending. The first full
   iteration QA reported P0/P1/P2 `0/1/1` and release review reported `0/2/0`,
   so branch delivery and `main` integration are not authorized. Accepted
   ADR-0032 now governs a bounded test-first repair: acceptance-only fixed-role
@@ -127,9 +128,9 @@ non-qualifying or material-risk decisions stop or escalate.
   passes on both Windows and POSIX with four Axe counts and four cleanup counts
   at zero. Independent task review and QA are `0/0/0`; final release review's
   sole query-parameter P2 was repaired test-first and re-reviewed at `0/0/0`.
-  Fresh focused and repository gates are green. PM reconciliation may proceed;
-  commit, push, PR integration, and the exact merged-`main` release gate remain
-  controller delivery steps.
+  Fresh focused and repository gates are green. Accepted task commit `ee32fd1c`
+  is pushed with local/upstream equality. Reviewed PR integration and the exact
+  merged-`main` release gate remain controller delivery steps.
 
 U1 is accepted with fresh supported-environment evidence: Node `v22.11.0`, pnpm
 `9.0.0`, Doctor tests 35/35, explicit toolchain Doctor PASS, and explicit local
@@ -144,18 +145,18 @@ P0/P1/P2=`0/0/0`.
 
 - **Delivery state:** the clean U3 base `48d5c5fb`, U3 task commit `46b4d87a`,
   and accepted U4 governance through `65f40fb4` are pushed. U4 implementation,
-  native evidence, task review, QA, and final release review are green; the
-  bounded implementation commit and branch push are the next controller step.
-  The two R0 RED tests and proposed ADR-0031 remain deliberately uncommitted in
-  the original workspace.
-- **Current gate:** create and push the bounded U4 task commit, verify upstream
-  equality, record PM acceptance, integrate through a reviewed PR, then rerun
-  the release gate at the exact merged `main` commit. R0 remains parked.
+  native evidence, task review, QA, and final release review are green; accepted
+  task commit `ee32fd1c` is pushed with local/upstream equality. The two R0 RED
+  tests and proposed ADR-0031 remain deliberately uncommitted in the original
+  workspace.
+- **Current gate:** push this PM acceptance record, integrate through a reviewed
+  PR, then rerun the release gate at the exact merged `main` commit. R0 remains
+  parked.
 - **Evidence gap:** the `pm-status` workflow names `docs/mvp.md`, but that file
   does not exist. This refresh used `docs/roadmap.md`, the current delivery
   assessment, the readiness design, and its PM ledger as the available scope
   authorities.
-- **Next smallest slice:** controller delivery of the release-approved U4 tree,
+- **Next smallest slice:** reviewed PR integration of the accepted U4 tree,
   followed by exact merged-`main` verification. Do not create a repository
   release, perform Product Publish, deploy to cloud, or resume R0.
 
