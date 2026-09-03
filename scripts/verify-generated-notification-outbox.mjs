@@ -73,7 +73,7 @@ async function main(): Promise<void> {
       deliveredCandidate.id,
       "submit",
     );
-    const pendingBeforeDrain = await prisma.notificationOutbox.count({
+    const pendingBeforeDrain = await prisma.factory_NotificationOutbox.count({
       where: { recordId: deliveredCandidate.id, status: "pending" },
     });
 
@@ -108,7 +108,7 @@ async function main(): Promise<void> {
     const rollbackRecord = await prisma.expense.findUnique({
       where: { id: rollbackCandidate.id },
     });
-    const rollbackOutbox = await prisma.notificationOutbox.count({
+    const rollbackOutbox = await prisma.factory_NotificationOutbox.count({
       where: { recordId: rollbackCandidate.id },
     });
     if (

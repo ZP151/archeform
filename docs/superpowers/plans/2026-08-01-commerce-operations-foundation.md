@@ -39,32 +39,29 @@ Casbin, existing capability package/asset contracts, Candidate Foundry.
 
 ## File structure
 
-| Path | Responsibility |
-| --- | --- |
-| `packages/capabilities/src/profile-coverage.ts` | Factory-owned source-free capability matrix and validation for Profile coverage. |
-| `packages/capabilities/src/profile-readiness.ts` | Projects versioned coverage data into existing readiness records. |
-| `packages/capabilities/src/commerce/order-operations.ts` | Pure order command, transition, compensation, and invariant contract. |
-| `packages/capabilities/src/assets/commerce/order-operations-v1-0-0.ts` | Golden asset manifest for the new package. |
-| `packages/capabilities/assets/commerce.order-operations/1.0.0/` | Immutable physical manifest, adapter, fixture, contract, and API template. |
-| `packages/capabilities/src/index.ts` | Registers the package and binds it into Restaurant/Ecommerce compositions. |
-| `packages/capabilities/src/restaurant/profile.ts` | Requires the shared operations lock and validates Restaurant-specific bindings. |
-| `packages/compiler/src/index.ts` | Resolves the package-owned handler and emits generated runtime contributions. |
-| `packages/compiler/src/restaurant-runtime.ts` | Adapts Restaurant table/kitchen experience to the neutral operation events only. |
-| `packages/compiler/test/order-operations-runtime.test.ts` | Tests generated API/database/web contract for shared operations. |
-| `apps/control-plane/src/portfolio/portfolio-summary.service.ts` | Returns coverage with the existing safe workspace summary. |
-| `apps/workbench/lib/control-plane-client.ts` | Strictly parses coverage and rejects source-shaped fields. |
-| `apps/workbench/lib/portfolio-summary.ts` | Maps coverage to Home view data. |
-| `apps/workbench/components/workbench-home.tsx` | Renders a compact source-free Profile Coverage panel. |
-| `packages/external-intake/src/discovery.ts` | Adds fixed Commerce/Operations source-study batch configuration only after the runtime contract is frozen. |
+| Path                                                                   | Responsibility                                                                                             |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `packages/capabilities/src/profile-coverage.ts`                        | Factory-owned source-free capability matrix and validation for Profile coverage.                           |
+| `packages/capabilities/src/profile-readiness.ts`                       | Projects versioned coverage data into existing readiness records.                                          |
+| `packages/capabilities/src/commerce/order-operations.ts`               | Pure order command, transition, compensation, and invariant contract.                                      |
+| `packages/capabilities/src/assets/commerce/order-operations-v1-0-0.ts` | Golden asset manifest for the new package.                                                                 |
+| `packages/capabilities/assets/commerce.order-operations/1.0.0/`        | Immutable physical manifest, adapter, fixture, contract, and API template.                                 |
+| `packages/capabilities/src/index.ts`                                   | Registers the package and binds it into Restaurant/Ecommerce compositions.                                 |
+| `packages/capabilities/src/restaurant/profile.ts`                      | Requires the shared operations lock and validates Restaurant-specific bindings.                            |
+| `packages/compiler/src/index.ts`                                       | Resolves the package-owned handler and emits generated runtime contributions.                              |
+| `packages/compiler/src/restaurant-runtime.ts`                          | Adapts Restaurant table/kitchen experience to the neutral operation events only.                           |
+| `packages/compiler/test/order-operations-runtime.test.ts`              | Tests generated API/database/web contract for shared operations.                                           |
+| `apps/control-plane/src/portfolio/portfolio-summary.service.ts`        | Returns coverage with the existing safe workspace summary.                                                 |
+| `apps/workbench/lib/control-plane-client.ts`                           | Strictly parses coverage and rejects source-shaped fields.                                                 |
+| `apps/workbench/lib/portfolio-summary.ts`                              | Maps coverage to Home view data.                                                                           |
+| `apps/workbench/components/workbench-home.tsx`                         | Renders a compact source-free Profile Coverage panel.                                                      |
+| `packages/external-intake/src/discovery.ts`                            | Adds fixed Commerce/Operations source-study batch configuration only after the runtime contract is frozen. |
 
 ## Shared interfaces
 
 ```ts
 export type ProfileCoverageStatusV1 =
-  | "available"
-  | "partial"
-  | "planned"
-  | "provider-required";
+  "available" | "partial" | "planned" | "provider-required";
 
 export type ProfileCoverageItemV1 = {
   readonly key: string;
@@ -112,6 +109,7 @@ declared effects.
 ### Task 1: Source-free Profile Coverage projection
 
 **Files:**
+
 - Create: `packages/capabilities/src/profile-coverage.ts`
 - Create: `packages/capabilities/test/profile-coverage.test.ts`
 - Modify: `packages/capabilities/src/index.ts`
@@ -154,10 +152,12 @@ it("maps commerce order operations to all four commerce Profiles", () => {
 });
 
 it("rejects source-shaped values from a public coverage projection", () => {
-  expect(() => parseProfileCoverage({
-    key: "commerce.order-operations",
-    sourceUrl: "https://example.invalid/source",
-  })).toThrow("Profile coverage is invalid.");
+  expect(() =>
+    parseProfileCoverage({
+      key: "commerce.order-operations",
+      sourceUrl: "https://example.invalid/source",
+    }),
+  ).toThrow("Profile coverage is invalid.");
 });
 ```
 
@@ -187,11 +187,13 @@ export const profileCoverage: readonly ProfileCoverageItemV1[] = Object.freeze([
 ]);
 
 export function listProfileCoverage(): readonly ProfileCoverageItemV1[] {
-  return profileCoverage.map((item) => Object.freeze({
-    ...item,
-    packageKeys: Object.freeze([...item.packageKeys]),
-    profiles: Object.freeze([...item.profiles]),
-  }));
+  return profileCoverage.map((item) =>
+    Object.freeze({
+      ...item,
+      packageKeys: Object.freeze([...item.packageKeys]),
+      profiles: Object.freeze([...item.profiles]),
+    }),
+  );
 }
 ```
 
@@ -231,6 +233,7 @@ git commit -m "feat(workbench): show reusable profile coverage"
 ### Task 2: Pure shared order-operations contract
 
 **Files:**
+
 - Create: `packages/capabilities/src/commerce/order-operations.ts`
 - Create: `packages/capabilities/test/order-operations-contract.test.ts`
 - Modify: `packages/capabilities/src/index.ts`
@@ -246,14 +249,16 @@ records or render Profile UI.
 
 ```ts
 it("plans an authorised paid-order cancellation as refund plus audit", () => {
-  expect(planCommerceOrderOperation(paidOrder, {
-    command: "cancel",
-    orderId: "order-1",
-    expectedVersion: 4,
-    idempotencyKey: "cancel-1",
-    actorRole: "manager",
-    reason: "duplicate order",
-  })).toEqual({
+  expect(
+    planCommerceOrderOperation(paidOrder, {
+      command: "cancel",
+      orderId: "order-1",
+      expectedVersion: 4,
+      idempotencyKey: "cancel-1",
+      actorRole: "manager",
+      reason: "duplicate order",
+    }),
+  ).toEqual({
     nextState: "cancelled",
     incrementVersion: true,
     paymentDelta: "refund-full",
@@ -263,8 +268,12 @@ it("plans an authorised paid-order cancellation as refund plus audit", () => {
 });
 
 it("rejects an amendment after fulfilment and a payment command with a stale version", () => {
-  expect(() => planCommerceOrderOperation(fulfilledOrder, amendCommand)).toThrow();
-  expect(() => planCommerceOrderOperation(staleOrder, capturePaymentCommand)).toThrow();
+  expect(() =>
+    planCommerceOrderOperation(fulfilledOrder, amendCommand),
+  ).toThrow();
+  expect(() =>
+    planCommerceOrderOperation(staleOrder, capturePaymentCommand),
+  ).toThrow();
 });
 ```
 
@@ -287,14 +296,20 @@ outside this module.
 - [ ] **Step 4: Add property and boundary tests**
 
 ```ts
-it.each(["url", "source", "template", "provider", "graph"]) (
+it.each(["url", "source", "template", "provider", "graph"])(
   "rejects a %s-shaped command field",
-  (field) => expect(() => parseCommerceOrderCommand({ ...command, [field]: "x" })).toThrow(),
+  (field) =>
+    expect(() =>
+      parseCommerceOrderCommand({ ...command, [field]: "x" }),
+    ).toThrow(),
 );
 
 it("returns the same plan for equivalent command values", () => {
   expect(planCommerceOrderOperation(order, command)).toEqual(
-    planCommerceOrderOperation(structuredClone(order), structuredClone(command)),
+    planCommerceOrderOperation(
+      structuredClone(order),
+      structuredClone(command),
+    ),
   );
 });
 ```
@@ -323,6 +338,7 @@ git commit -m "feat(capabilities): define shared order operations"
 ### Task 3: Versioned Golden package and generated API contribution
 
 **Files:**
+
 - Create: `packages/capabilities/src/assets/commerce/order-operations-v1-0-0.ts`
 - Create: `packages/capabilities/assets/commerce.order-operations/1.0.0/component.json`
 - Create: `packages/capabilities/assets/commerce.order-operations/1.0.0/adapter.json`
@@ -343,16 +359,25 @@ git commit -m "feat(capabilities): define shared order operations"
 
 ```ts
 it("verifies one physical order-operations package with a locked handler", () => {
-  expect(resolveCapabilityAssetLock({
-    key: "commerce.order-operations",
-    version: "1.0.0",
-  } as never).manifest.runtimeHandlers).toEqual(["orderOperations"]);
+  expect(
+    resolveCapabilityAssetLock({
+      key: "commerce.order-operations",
+      version: "1.0.0",
+    } as never).manifest.runtimeHandlers,
+  ).toEqual(["orderOperations"]);
 });
 
 it.each(["restaurant-ordering", "simple-ecommerce"] as const)(
   "%s selects the same shared order-operations package",
-  (profile) => expect(composeDefaultCapabilityDraft({ profile }).assetLocks)
-    .toEqual(expect.arrayContaining([expect.objectContaining({ key: "commerce.order-operations", version: "1.0.0" })])),
+  (profile) =>
+    expect(composeDefaultCapabilityDraft({ profile }).assetLocks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "commerce.order-operations",
+          version: "1.0.0",
+        }),
+      ]),
+    ),
 );
 ```
 
@@ -407,6 +432,7 @@ git commit -m "feat(capabilities): package shared order operations"
 ### Task 4: Compiler and generated-runtime enforcement
 
 **Files:**
+
 - Modify: `packages/compiler/src/index.ts`
 - Modify: `packages/compiler/src/restaurant-runtime.ts`
 - Create: `packages/compiler/test/order-operations-runtime.test.ts`
@@ -424,12 +450,12 @@ contributions for operations; Restaurant remains an experience adapter.
 it("emits locked order-operation routes for Restaurant and Ecommerce", () => {
   for (const profile of ["restaurant-ordering", "simple-ecommerce"] as const) {
     const bundle = generateProfileBundle(profile);
-    expect(file(bundle, "api/src/capabilities/commerce.order-operations.ts")).toContain(
-      "planCommerceOrderOperation",
-    );
-    expect(file(bundle, "api/test/order-operations.generated.test.ts")).toContain(
-      "refund",
-    );
+    expect(
+      file(bundle, "api/src/capabilities/commerce.order-operations.ts"),
+    ).toContain("planCommerceOrderOperation");
+    expect(
+      file(bundle, "api/test/order-operations.generated.test.ts"),
+    ).toContain("refund");
   }
 });
 
@@ -479,6 +505,7 @@ git commit -m "feat(compiler): generate locked order operations"
 ### Task 5: Independent Restaurant and Ecommerce evidence
 
 **Files:**
+
 - Modify: `packages/capabilities/test/restaurant-profile.test.ts`
 - Modify: `packages/capabilities/test/commerce-profile.test.ts`
 - Modify: `apps/compiler-worker/test/compilation-executor.test.ts`
@@ -495,14 +522,17 @@ that each generated runtime performs its own role journeys.
 
 ```ts
 it("uses identical order-operations locks while preserving profile-specific UI", () => {
-  expect(lock("restaurant-ordering", "commerce.order-operations"))
-    .toEqual(lock("simple-ecommerce", "commerce.order-operations"));
+  expect(lock("restaurant-ordering", "commerce.order-operations")).toEqual(
+    lock("simple-ecommerce", "commerce.order-operations"),
+  );
   expect(customerRoutes("restaurant-ordering")).toContain("/table/:token");
   expect(customerRoutes("simple-ecommerce")).not.toContain("/table/:token");
 });
 
 it("runs Restaurant submit, amend, pay, kitchen, refund, and audit journeys", async () => {
-  await expect(runGeneratedRestaurantJourney()).resolves.toMatchObject({ status: "passed" });
+  await expect(runGeneratedRestaurantJourney()).resolves.toMatchObject({
+    status: "passed",
+  });
 });
 ```
 
@@ -553,6 +583,7 @@ git commit -m "test(profiles): verify shared order operations"
 ### Task 6: Candidate Foundry commerce/operations batch
 
 **Files:**
+
 - Modify: `packages/external-intake/src/discovery.ts`
 - Modify: `packages/external-intake/test/discovery.test.ts`
 - Modify: `apps/intake-cli/src/github-discovery-client.ts`
@@ -570,9 +601,12 @@ fulfilment, reservation/queue, membership/promotion, and operations analytics.
 
 ```ts
 it("supports only factory-owned commerce operations batch keys", async () => {
-  await expect(client.discover("commerce-order-operations" as never)).resolves
-    .toHaveLength(expect.any(Number));
-  await expect(client.discover("https://untrusted.invalid" as never)).rejects.toThrow();
+  await expect(
+    client.discover("commerce-order-operations" as never),
+  ).resolves.toHaveLength(expect.any(Number));
+  await expect(
+    client.discover("https://untrusted.invalid" as never),
+  ).rejects.toThrow();
 });
 
 it("keeps a candidate batch aggregate-only", () => {

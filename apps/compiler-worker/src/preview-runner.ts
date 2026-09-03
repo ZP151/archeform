@@ -159,6 +159,7 @@ function composeCommand(
   directory: string,
   composeFile: string,
   project: string,
+  profile: "acceptance" | undefined,
   args: readonly string[],
   environment: Readonly<Record<string, string>>,
 ): PreviewProcessCommand {
@@ -166,6 +167,7 @@ function composeCommand(
     file: "docker",
     args: [
       "compose",
+      ...(profile === undefined ? [] : ["--profile", profile]),
       "--file",
       composeFile,
       "--project-name",
@@ -387,6 +389,53 @@ type ArtifactEvidence = PreviewRuntimeRequest["artifacts"][number];
 
 const restaurantDemoTokenComposeContract =
   'RESTAURANT_DEMO_TABLE_TOKEN: "${RESTAURANT_DEMO_TABLE_TOKEN:?Set RESTAURANT_DEMO_TABLE_TOKEN for local demo bootstrap}"';
+const localPreviewProfileKey = "FACTORY_LOCAL_PREVIEW_PROFILE";
+const localAcceptanceProfile = "factory.local-preview-profile/v1:acceptance";
+
+function localPreviewProfile(): "acceptance" | undefined {
+  if (!Object.hasOwn(process.env, localPreviewProfileKey)) return undefined;
+  if (process.env[localPreviewProfileKey] !== localAcceptanceProfile) {
+    throw new Error("Invalid local preview profile.");
+  }
+  return "acceptance";
+}
+
+function hasExactAcceptanceProfile(
+  compose: Buffer,
+  service: "kitchen" | "cashier",
+): boolean {
+  const lines = compose.toString("utf8").replace(/\r\n/g, "\n").split("\n");
+  const serviceLines = lines
+    .map((line, index) => ({ line, index }))
+    .filter(({ line }) => line === `  ${service}:`);
+  if (serviceLines.length !== 1) return false;
+  const start = serviceLines[0]!.index + 1;
+  const end = lines.findIndex(
+    (line, index) => index >= start && /^  [a-z0-9-]+:$/.test(line),
+  );
+  const block = lines.slice(start, end === -1 ? lines.length : end);
+  const profileLines = block
+    .map((line, index) => ({ line, index }))
+    .filter(({ line }) => line === "    profiles:");
+  if (profileLines.length !== 1) return false;
+  const profileStart = profileLines[0]!.index + 1;
+  const profileEnd = block.findIndex(
+    (line, index) => index >= profileStart && /^    [a-z0-9-]+:$/.test(line),
+  );
+  const entries = block
+    .slice(profileStart, profileEnd === -1 ? block.length : profileEnd)
+    .filter((line) => /^      - /.test(line));
+  return entries.length === 1 && entries[0] === "      - acceptance";
+}
+
+function assertAcceptanceProfile(compose: Buffer): void {
+  if (
+    !hasExactAcceptanceProfile(compose, "kitchen") ||
+    !hasExactAcceptanceProfile(compose, "cashier")
+  ) {
+    throw new Error("Generated acceptance profile is invalid.");
+  }
+}
 
 export function safeArtifactManifest(
   artifacts: PreviewRuntimeRequest["artifacts"],
@@ -494,13 +543,15 @@ async function verifiedArtifactContents(
 async function verifyComposeArtifact(
   composeFile: string,
   artifacts: PreviewRuntimeRequest["artifacts"],
+  profile: "acceptance" | undefined,
 ): Promise<void> {
   const manifest = safeArtifactManifest(artifacts);
   const composeArtifact = manifest.find(
     (artifact) => artifact.path === "docker-compose.yml",
   );
   if (!composeArtifact) throw new Error("Invalid artifact manifest.");
-  await verifiedArtifactContents(composeFile, composeArtifact);
+  const compose = await verifiedArtifactContents(composeFile, composeArtifact);
+  if (profile !== undefined) assertAcceptanceProfile(compose);
 }
 
 /**
@@ -549,6 +600,7 @@ async function previewEnvironment(
   project: string,
   includePorts: boolean,
   missingTokenFailure: PreviewFailureCode,
+  profile: "acceptance" | undefined,
 ): Promise<Readonly<Record<string, string>>> {
   const manifest = safeArtifactManifest(artifacts);
   const composeArtifact = manifest.find(
@@ -556,6 +608,7 @@ async function previewEnvironment(
   );
   if (!composeArtifact) throw new Error("Invalid artifact manifest.");
   const compose = await verifiedArtifactContents(composeFile, composeArtifact);
+  if (profile !== undefined) assertAcceptanceProfile(compose);
   const environment: Record<string, string> = {
     FACTORY_COMPOSE_PROJECT_NAME: project,
     ...(includePorts ? { FACTORY_WEB_PORT: "0", FACTORY_API_PORT: "0" } : {}),
@@ -630,6 +683,7 @@ export async function startPreviewRun(
   let directory: string;
   let project: string;
   let environment: Readonly<Record<string, string>>;
+  let profile: "acceptance" | undefined;
   try {
     sourceDirectory = generatedDirectory(artifactRoot, request.rootDirectory);
     directory = previewDirectory(artifactRoot, request.previewRunId);
@@ -640,12 +694,14 @@ export async function startPreviewRun(
     throw failure;
   }
   try {
+    profile = localPreviewProfile();
     environment = await previewEnvironment(
       join(sourceDirectory, "docker-compose.yml"),
       request.artifacts,
       project,
       true,
       "preview_start_failed",
+      profile,
     );
   } catch (error) {
     throw new PreviewRunFailure("preview_artifact_failed", true);
@@ -679,6 +735,7 @@ export async function startPreviewRun(
             directory,
             composeFile,
             project,
+            profile,
             ["up", "--build", "--detach", "--wait"],
             environment,
           ),
@@ -699,6 +756,7 @@ export async function startPreviewRun(
               directory,
               composeFile,
               project,
+              profile,
               ["port", "web", "3000"],
               environment,
             ),
@@ -714,6 +772,7 @@ export async function startPreviewRun(
               directory,
               composeFile,
               project,
+              profile,
               ["port", "api", "3001"],
               environment,
             ),
@@ -732,6 +791,7 @@ export async function startPreviewRun(
             directory,
             composeFile,
             project,
+            profile,
             [
               "exec",
               "-T",
@@ -760,13 +820,14 @@ export async function startPreviewRun(
       }
       let cleanupComplete = false;
       try {
-        await verifyComposeArtifact(composeFile, request.artifacts);
+        await verifyComposeArtifact(composeFile, request.artifacts, profile);
         await runPreviewOperation(
           processRunner,
           composeCommand(
             directory,
             composeFile,
             project,
+            profile,
             ["down", "--volumes", "--remove-orphans"],
             environment,
           ),
@@ -803,6 +864,7 @@ export async function stopPreviewRun(
   const project = factoryProjectName(request);
   const composeFile = join(directory, "docker-compose.yml");
   try {
+    const profile = localPreviewProfile();
     const activeStart = activePreviewStarts.get(request.previewRunId);
     if (activeStart) {
       activeStart.controller.abort(
@@ -810,13 +872,14 @@ export async function stopPreviewRun(
       );
       await activeStart.settled;
     }
-    await verifyComposeArtifact(composeFile, request.artifacts);
+    await verifyComposeArtifact(composeFile, request.artifacts, profile);
     const environment = await previewEnvironment(
       composeFile,
       request.artifacts,
       project,
       false,
       "preview_stop_failed",
+      profile,
     );
     await runPreviewOperation(
       processRunner,
@@ -824,6 +887,7 @@ export async function stopPreviewRun(
         directory,
         composeFile,
         project,
+        profile,
         ["down", "--volumes", "--remove-orphans"],
         environment,
       ),

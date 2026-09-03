@@ -24,19 +24,19 @@
 
 ## File Structure
 
-| Path | Responsibility |
-| --- | --- |
-| `apps/control-plane/src/internal-worker-auth.ts` | Validate Worker token for internal HTTP boundaries. |
-| `apps/control-plane/src/preview-run-queue.ts` | Dispatch only preview ID and action. |
-| `apps/control-plane/src/lifecycle.service.ts` | Produce an authority-checked preview dispatch with registered artifact evidence. |
-| `apps/control-plane/src/lifecycle.controller.ts` | Guard internal callbacks/dispatch and permit cancelling `starting` previews. |
-| `apps/compiler-worker/src/config.ts` | Require Worker token and bounded preview operation timeout. |
-| `apps/compiler-worker/src/preview-dispatch-client.ts` | Fetch a minimal authenticated dispatch record. |
-| `apps/compiler-worker/src/preview-runner.ts` | Verify/reconstruct artifact manifests, run explicit Compose with deadlines, cancel exact projects. |
-| `apps/compiler-worker/src/queued-preview-run.ts` | Resolve an authoritative dispatch before privileged runtime work. |
-| `apps/compiler-worker/src/*-reporter.ts` | Authenticate Worker evidence callbacks. |
-| `infra/docker-compose.yml` | Restrict Redis and inject local-only service secrets into exactly the services that need them. |
-| `apps/workbench/lib/workbench-model.ts` | Present failed previews as stop/recovery-only. |
+| Path                                                  | Responsibility                                                                                     |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `apps/control-plane/src/internal-worker-auth.ts`      | Validate Worker token for internal HTTP boundaries.                                                |
+| `apps/control-plane/src/preview-run-queue.ts`         | Dispatch only preview ID and action.                                                               |
+| `apps/control-plane/src/lifecycle.service.ts`         | Produce an authority-checked preview dispatch with registered artifact evidence.                   |
+| `apps/control-plane/src/lifecycle.controller.ts`      | Guard internal callbacks/dispatch and permit cancelling `starting` previews.                       |
+| `apps/compiler-worker/src/config.ts`                  | Require Worker token and bounded preview operation timeout.                                        |
+| `apps/compiler-worker/src/preview-dispatch-client.ts` | Fetch a minimal authenticated dispatch record.                                                     |
+| `apps/compiler-worker/src/preview-runner.ts`          | Verify/reconstruct artifact manifests, run explicit Compose with deadlines, cancel exact projects. |
+| `apps/compiler-worker/src/queued-preview-run.ts`      | Resolve an authoritative dispatch before privileged runtime work.                                  |
+| `apps/compiler-worker/src/*-reporter.ts`              | Authenticate Worker evidence callbacks.                                                            |
+| `infra/docker-compose.yml`                            | Restrict Redis and inject local-only service secrets into exactly the services that need them.     |
+| `apps/workbench/lib/workbench-model.ts`               | Present failed previews as stop/recovery-only.                                                     |
 
 ### Task 1: Authenticate Worker transport and authoritative preview dispatch
 

@@ -1,6 +1,6 @@
 # Archeform delivery status
 
-Updated: 2026-08-21
+Updated: 2026-09-03
 
 ## Product outcome
 
@@ -21,68 +21,154 @@ controlled extension boundaries.
 The full status history through 2026-08-09 is preserved verbatim in
 [`archive/status-history/2026-08-09-project-status.md`](archive/status-history/2026-08-09-project-status.md).
 
-## Current milestone — Post-v0.1.0 product usability
+## Current milestone — Post-v0.1 Local Restaurant Readiness
 
-### Current authoritative checkpoint — 2026-08-21
+### Current authoritative checkpoint — 2026-09-03
+
+`factory-pilot v0.1.0` remains the delivered local Alpha baseline. The active
+follow-up is now a bounded local-only iteration for one to five invited
+technical evaluators: supported Node 22 preflight, credential-free CI, and one
+repeatable real Home-template journey through edit, immutable Publish,
+Compilation, verification, customer order, merchant fulfilment, preview, and
+empty cleanup. Hosted or multi-user operation, production identity/tenant
+isolation, cloud deployment, new Graph/capability/provider contracts, and
+Compose topology changes remain excluded.
+
+The active isolated branch is `codex/post-v0.1-local-readiness-u3`, based on
+delivered PM decoupling commit `48d5c5fb`. U3 candidate `46b4d87a` and the
+accepted U4 governance sequence through `65f40fb4` are remotely preserved. The
+U4 implementation is accepted at task commit `ee32fd1c` and pushed with exact
+local/upstream equality; reviewed PR integration remains pending. D0, U1, U2,
+F0, V0, their governing ADRs through ADR-0030, and the portable Compiler
+missing-root fixture are delivered. ADR-0031 remains unaccepted local proposal
+evidence in the original workspace.
+
+The founder explicitly accepted ADR-0029 on 2026-09-01 and established a
+standing independent-agent review policy for future Tech Lead ADRs. A separate
+qualified reviewer may authorize automatic continuation only under the exact
+boundedness and P0/P1 `0/0` conditions recorded in `docs/tech-governance.md`;
+non-qualifying or material-risk decisions stop or escalate.
+
+### Remote repository alignment
+
+- The last delivered `main` checkpoint has local `main` and `origin/main` at
+  `abcae804`; controller delivery will fetch again before integration. The
+  active iteration branch is separately based on `48d5c5fb` and remotely
+  preserved through accepted U4 task commit `ee32fd1c`.
+- GitHub records exactly two pull requests, both merged into `main`: Restaurant
+  Product closure PR #1 and the post-release status/Home-polish PR #2. There is
+  no open pull request for the current readiness iteration.
+- GitHub records the non-draft, non-prerelease `factory-pilot v0.1.0` release.
+  Its annotated tag peels to merge commit `a66d290e`.
+- GitHub Actions run `33510492402` executed both U2 Node lanes. Both passed
+  checkout, setup, frozen install, toolchain Doctor, and Prisma generation,
+  then failed the inherited root formatting baseline. The failure contains no
+  evidence of a workflow, permission, credential, or dependency-cache defect.
+- Replacement GitHub Actions run `33530986071` at commit `140f8646` passed
+  every configured step in both Node `22.11.0` and current `22.x` lanes. This
+  accepts U2 and F0; it does not erase the separately reproduced scheduler-
+  dependent Candidate race now governed by ADR-0030.
+- GitHub Actions run `33532141089` at commit `7ff692f7` also passed every
+  configured step in both Node lanes. No test process, Compose project, or
+  branch CI run remained active at the founder's scope decision.
+- GitHub Actions run `33535594901` at PM decoupling commit `48d5c5fb` passed
+  every configured step in both Node lanes and is the clean U3 base evidence.
+- Two remote archive tags now preserve the exact former local-only branch tips:
+  `archive/agent-console-next-shadcn-2026-08-31` peels to `dbf0ba40`, and
+  `archive/commerce-transaction-v1-2026-08-31` peels to `b481fc78`. The local
+  branch names remain present and neither branch is an iteration input.
+
+### Milestone state
+
+- **D0 — design and governance:** `accepted` on 2026-09-01. The founder
+  explicitly accepted ADR-0024 and directed continued execution under a
+  long-running goal. The remote branch-asset tags are reconciled.
+- **U1 — supported toolchain doctor:** `accepted` on 2026-09-01. The founder
+  accepted ADR-0025, making `pnpm run doctor` and `pnpm run doctor:toolchain`
+  the supported spellings.
+- **U2 — credential-free CI:** `accepted`; replacement run `33530986071`
+  passed both complete Node lanes.
+- **F0 — repository format baseline:** `accepted`; its exact 58-path commit
+  `e0cfaa94` passed independent review, byte-integrity gates, and replacement
+  remote CI.
+- **V0 — generated notification outbox verifier repair:** `accepted` on
+  2026-09-01; ADR and task reviews are clean, controller gates passed, and
+  commit `0bed0d3e` is pushed at local/upstream `0/0`.
+- **R0 — Candidate durable-winner convergence:** `blocked/parked`. Windows and
+  Node's path-based hard-link API cannot satisfy the current threat model's
+  pre-write containment requirement under a junction-replacement race.
+  ADR-0031 remains unaccepted, the two focused RED tests remain local evidence,
+  and R0 is neither resolved nor an active U3 prerequisite.
+- **U3 — real Home template product acceptance:** `accepted` on 2026-09-02.
+  The supported local run passed all 11 steps, four zero Axe counts, four zero
+  cleanup counts, exact V3 customer and generated role-journey evidence, and
+  final independent review P0/P1/P2 `0/0/0`. It remains independent of R0.
+- **U4 — QA, release review, and delivery:** `accepted`; reviewed PR integration
+  and exact merged-`main` verification are pending. The first full
+  iteration QA reported P0/P1/P2 `0/1/1` and release review reported `0/2/0`,
+  so branch delivery and `main` integration are not authorized. Accepted
+  ADR-0032 now governs a bounded test-first repair: acceptance-only fixed-role
+  merchant services plus a runner-owned exact preview lease and interruption
+  cleanup. Its independent standing-acceptance review is P0/P1/P2 `0/0/0`.
+  Accepted ADR-0033 adds the missing local-only compiler-worker profile
+  activation adapter; its repaired standing-acceptance review is also `0/0/0`.
+  ADR-0034's supervisor-only interruption experiment is rejected after review
+  `0/5/2` exposed an unknowable preview-start side effect under the frozen
+  server-assigned identity contract; its revised reject/no-implementation
+  decision passed standing review at `0/0/0`. Accepted ADR-0035 now freezes the
+  minimal pre-owned preview-intent identity, dual run-scoped capability, and
+  detached single-owner cleanup contract after review rounds `0/4/1`, `0/1/1`,
+  then `0/0/0`. The founder-authorized cleanup removed exactly the stale U4
+  resources at container/network/volume counts `5/1/2` plus 24 stale private
+  roots. Docker Desktop WSL integration and Ubuntu now provide the supported
+  POSIX surface at Node `22.11.0`, pnpm `9.0.0`, Docker `29.6.2`, and Compose
+  `5.3.1`. The native matrices pass Windows Ctrl+C/Ctrl+Break `40/40` and POSIX
+  SIGINT/SIGTERM `40/40`, each with final containers/networks/volumes, helpers,
+  private roots, and lease entries at zero. Complete provider-free acceptance
+  passes on both Windows and POSIX with four Axe counts and four cleanup counts
+  at zero. Independent task review and QA are `0/0/0`; final release review's
+  sole query-parameter P2 was repaired test-first and re-reviewed at `0/0/0`.
+  Fresh focused and repository gates are green. Accepted task commit `ee32fd1c`
+  is pushed with local/upstream equality. Reviewed PR integration and the exact
+  merged-`main` release gate remain controller delivery steps.
+
+U1 is accepted with fresh supported-environment evidence: Node `v22.11.0`, pnpm
+`9.0.0`, Doctor tests 35/35, explicit toolchain Doctor PASS, and explicit local
+Doctor PASS with Docker server `29.6.2`. The exact selector, focused formatting,
+diff, unchanged lockfile, active-reference, sensitive-pattern, and four-path
+containment checks also pass. Historical characterization retains obsolete
+`pnpm doctor` only as collision evidence; the explicit command is the supported
+local preflight. No Compose resources were created. Independent review recorded
+P0/P1/P2=`0/0/0`.
+
+### Risks, blockers, and next smallest slice
+
+- **Delivery state:** the clean U3 base `48d5c5fb`, U3 task commit `46b4d87a`,
+  and accepted U4 governance through `65f40fb4` are pushed. U4 implementation,
+  native evidence, task review, QA, and final release review are green; accepted
+  task commit `ee32fd1c` is pushed with local/upstream equality. The two R0 RED
+  tests and proposed ADR-0031 remain deliberately uncommitted in the original
+  workspace.
+- **Current gate:** push this PM acceptance record, integrate through a reviewed
+  PR, then rerun the release gate at the exact merged `main` commit. R0 remains
+  parked.
+- **Evidence gap:** the `pm-status` workflow names `docs/mvp.md`, but that file
+  does not exist. This refresh used `docs/roadmap.md`, the current delivery
+  assessment, the readiness design, and its PM ledger as the available scope
+  authorities.
+- **Next smallest slice:** reviewed PR integration of the accepted U4 tree,
+  followed by exact merged-`main` verification. Do not create a repository
+  release, perform Product Publish, deploy to cloud, or resume R0.
+
+### Previous release checkpoint — 2026-08-21
 
 The Restaurant dual-surface product milestone is complete and recorded as
-`factory-pilot v0.1.0`. The release includes Describe-to-Restaurant V3,
-dual-surface launch and verification, and the guarded Restaurant acceptance
-harness. Its recorded release gate passed 29/29 package typechecks, 29/29 test
-tasks, 17/17 builds, third-party/source-study checks, one environment-only
-real-model journey, desktop and 390px accessibility with zero violations, and
-empty cleanup. This proves a credible local product Alpha; it does not prove a
-hosted or multi-user product.
-
-The current branch is a post-release Workbench usability line at `4d99fd2`
-(`feat(workbench): polish home creation entries`). It improves the two creation
-entries, curated-template loading/empty/retry behavior, and bounded empty-home
-focus behavior. The working tree was clean before this status refresh. After
-building Workbench dependencies, fresh local evidence passes the six-package
-Workbench dependency build, all 45 Workbench test files / 536 tests, Workbench
-typecheck, and Workbench formatting. The first test attempt before dependency
-build failed only because workspace package build artifacts were absent. The
-current container uses Node 24.15.0 while the repository declares Node
-`>=22.11.0 <23`; passing checks are useful evidence, but the supported Node 22
-release gate still needs to be used for the next accepted product delivery.
-
-### Distance to the next product gate
-
-- **Current product position:** local Alpha is shipped. The core
-  Describe/Edit/Publish/Compile/Verify/Preview loop and the Restaurant customer
-  and merchant surfaces are delivered.
-- **Next credible product:** a small-user Private Beta is not yet an active,
-  frozen iteration. The repository still explicitly defers cloud deployment,
-  application-fleet operations, production payments, and unrestricted product
-  breadth. A hosted production claim would additionally require explicit
-  technology/security decisions and operational acceptance.
-- **Nearest valuable gate:** freeze a bounded post-release iteration around
-  user-ready local onboarding and repeatable supported-environment acceptance,
-  starting with the already delivered Home creation-entry polish. Define the
-  target user cohort and acceptance evidence before adding another capability,
-  Graph version, provider, or deployment topology.
-- **Planning distance:** the historical delivery assessment estimated a
-  small-user Private Beta at 2–3 months total and a production platform at
-  6–12 months total, but those estimates predate the v0.1.0 release. With no
-  current Beta scope, owner, or acceptance ledger, a new calendar estimate
-  would be speculation. The immediate planning gap is one iteration-definition
-  slice; the substantive Beta gap remains identity/tenant operations,
-  deployment, observability/support, and repeated small-user evidence.
-
-### Risks and next smallest slice
-
-- The active status ledger lagged behind the completed v0.1.0 release and still
-  described Task 9 as pending; this checkpoint corrects the current top-level
-  state while retaining the detailed Restaurant delivery history below.
-- This checkout has no configured remote or release tag refs, so the release
-  record is the available repository evidence; remote/tag equality cannot be
-  re-proven from this checkout.
-- The next smallest slice is product-management work: write and accept a concise
-  post-v0.1.0 iteration brief with one target cohort, one end-to-end user
-  outcome, measurable usability/reliability gates, owned paths, and an explicit
-  decision on whether the target remains local or introduces hosting. Any new
-  runtime, identity, tenant, provider, deployment, or security boundary must go
-  through the required ADR and founder-acceptance flow before implementation.
+`factory-pilot v0.1.0`. Its recorded release gate passed 29/29 package
+typechecks, 29/29 test tasks, 17/17 builds, third-party/source-study checks, one
+environment-only real-model journey, desktop and 390px accessibility with zero
+violations, and empty cleanup. The post-release Home creation-entry polish is
+delivered at `4d99fd2`. This proves a credible local product Alpha; it does not
+prove a hosted or multi-user product.
 
 ### Restaurant delivery history — checkpoint 2026-08-14
 

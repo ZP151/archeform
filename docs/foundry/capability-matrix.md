@@ -35,11 +35,11 @@ and accountable.
 
 ## Families by category
 
-| Category       | Families                                                                                                                   |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Category       | Families                                                                                                                                                  |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Core (12)      | audit, crud, workflow, notification, identity-context, identity-policy, policy-declarations, location-context, files-media, search, scheduling, approvals |
-| Commerce (9)   | catalog, cart, line-configuration, money-pricing, inventory, inventory-ledger, order, order-operations, simulated-payment  |
-| Restaurant (6) | table-session, menu, ordering, kitchen, cashier, reporting                                                                 |
+| Commerce (9)   | catalog, cart, line-configuration, money-pricing, inventory, inventory-ledger, order, order-operations, simulated-payment                                 |
+| Restaurant (6) | table-session, menu, ordering, kitchen, cashier, reporting                                                                                                |
 
 ## Eligible — two-Profile locks and reviewed verification digests (16)
 

@@ -154,9 +154,7 @@ describe("declaredFoundryFamilyEvidence", () => {
         expect(lock.verifierStatus).toBe("passed");
         expect(lock.lockDigest).toBe(expectedFoundryLockDigest(asset));
         expect(VERIFIER_PROFILES.has(lock.profile)).toBe(true);
-        expect(lock.graphChecksum).toBe(
-          PROFILE_GRAPH_CHECKSUMS[lock.profile],
-        );
+        expect(lock.graphChecksum).toBe(PROFILE_GRAPH_CHECKSUMS[lock.profile]);
         expect(seen.has(lock.profile)).toBe(false); // one lock per profile
         seen.add(lock.profile);
       }

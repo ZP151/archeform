@@ -31,17 +31,17 @@
 
 ## File map
 
-| Path | Responsibility |
-| --- | --- |
-| packages/capabilities/src/restaurant/profile.ts | Restaurant semantic validator and compiler projection |
-| packages/capabilities/src/assets/restaurant/*.ts | Restaurant package manifests |
+| Path                                             | Responsibility                                                    |
+| ------------------------------------------------ | ----------------------------------------------------------------- |
+| packages/capabilities/src/restaurant/profile.ts  | Restaurant semantic validator and compiler projection             |
+| packages/capabilities/src/assets/restaurant/*.ts | Restaurant package manifests                                      |
 | packages/capabilities/assets/restaurant.*/1.0.0/ | Package manifest, adapter, templates, fixtures, contract evidence |
-| packages/compiler/src/restaurant-runtime.ts | Transactional command, persistence, and outbox renderer |
-| packages/compiler/src/restaurant-page-runtime.ts | Customer and merchant generated page-block renderer |
-| apps/control-plane/src/lifecycle.service.ts | Safe application-summary aggregation |
-| apps/workbench/components/workbench-home.tsx | Profile portfolio and application Home |
-| e2e/generated-restaurant.spec.ts | Generated customer and merchant browser journey |
-| docs/ecosystem/source-studies/ | Exact source evidence for any admitted dependency |
+| packages/compiler/src/restaurant-runtime.ts      | Transactional command, persistence, and outbox renderer           |
+| packages/compiler/src/restaurant-page-runtime.ts | Customer and merchant generated page-block renderer               |
+| apps/control-plane/src/lifecycle.service.ts      | Safe application-summary aggregation                              |
+| apps/workbench/components/workbench-home.tsx     | Profile portfolio and application Home                            |
+| e2e/generated-restaurant.spec.ts                 | Generated customer and merchant browser journey                   |
+| docs/ecosystem/source-studies/                   | Exact source evidence for any admitted dependency                 |
 
 ---
 
@@ -60,7 +60,7 @@
 
 **Produces:**
 
-~~~ts
+```ts
 export type RestaurantProfileValidationIssue = {
   readonly code: string;
   readonly message: string;
@@ -94,7 +94,7 @@ export function validateRestaurantOrderingProfile(
 export function assertRestaurantOrderingProfile(
   graph: ApplicationGraphV1,
 ): RestaurantProfileProjectionV1;
-~~~
+```
 
 CapabilityCategory gains restaurant. CapabilityOutputSlot gains api.command,
 web.customer, web.merchant, report.read-model, and realtime.event. These are
@@ -102,7 +102,7 @@ declarations only; the Composer remains the only writer of generated paths.
 
 - [ ] **Step 1: Write the failing tests**
 
-~~~ts
+```ts
 it("accepts the complete Restaurant starter and returns a bounded projection", () => {
   const graph = composeProfileDraft({ profile: "restaurant-ordering" }).graph;
 
@@ -114,11 +114,13 @@ it("accepts the complete Restaurant starter and returns a bounded projection", (
 
 it("rejects a Restaurant Graph without a table-session token digest", () => {
   const graph = composeProfileDraft({ profile: "restaurant-ordering" }).graph;
-  graph.domain.entities.find((entity) => entity.key === "table-session")!.fields = [];
+  graph.domain.entities.find(
+    (entity) => entity.key === "table-session",
+  )!.fields = [];
 
   expect(() => assertRestaurantOrderingProfile(graph)).toThrow("tokenDigest");
 });
-~~~
+```
 
 - [ ] **Step 2: Verify RED**
 
@@ -135,7 +137,7 @@ page-block, capability-lock, and flow requirements from the approved design.
 
 Validate exact order states:
 
-~~~ts
+```ts
 const requiredOrderStates = [
   "cart",
   "submitted",
@@ -146,7 +148,7 @@ const requiredOrderStates = [
   "served",
   "cancelled",
 ] as const;
-~~~
+```
 
 Return every missing role, field, lock, page, block, event, or transition as a
 deterministically sorted issue. Update the roadmap to state the customer and
@@ -161,20 +163,20 @@ asset. Assert every declared operation is supplied by exactly one asset.
 
 Run:
 
-~~~powershell
+```powershell
 pnpm --filter @factory/capabilities test
 pnpm --filter @factory/capabilities typecheck
 pnpm --filter @factory/capabilities lint
-~~~
+```
 
 Expected: complete Restaurant Graph and capability registry pass.
 
 - [ ] **Step 6: Commit**
 
-~~~powershell
+```powershell
 git add packages/capabilities docs/roadmap.md
 git commit -m "feat: define restaurant profile contract"
-~~~
+```
 
 ---
 
@@ -206,7 +208,7 @@ only templates declared by its adapter.
 
 - [ ] **Step 1: Write failing asset tests**
 
-~~~ts
+```ts
 it.each([
   "restaurant.table-session",
   "restaurant.menu",
@@ -215,13 +217,15 @@ it.each([
   "restaurant.cashier",
   "restaurant.reporting",
 ])("locks verified Restaurant asset %s", (key) => {
-  const asset = capabilityAssets.find((candidate) => candidate.manifest.key === key);
+  const asset = capabilityAssets.find(
+    (candidate) => candidate.manifest.key === key,
+  );
 
   expect(asset?.manifest.lifecycle).toBe("golden");
   expect(asset?.manifest.templates.length).toBeGreaterThan(0);
   expect(asset?.manifest.verification.status).toBe("verified");
 });
-~~~
+```
 
 - [ ] **Step 2: Verify RED**
 
@@ -233,33 +237,47 @@ Expected: FAIL because the Restaurant packages do not exist.
 
 Use these exact operation sets:
 
-~~~ts
+```ts
 const restaurantOperations = {
   "restaurant.table-session": [
-    "table-session.create", "table-session.validate",
-    "table-session.close", "table-session.expire",
+    "table-session.create",
+    "table-session.validate",
+    "table-session.close",
+    "table-session.expire",
   ],
   "restaurant.menu": [
-    "menu.category.list", "menu.item.list", "menu.item.search",
-    "menu.item.manage", "inventory.adjust",
+    "menu.category.list",
+    "menu.item.list",
+    "menu.item.search",
+    "menu.item.manage",
+    "inventory.adjust",
   ],
   "restaurant.ordering": [
-    "order.line.add", "order.line.update", "order.line.remove",
-    "order.submit", "order.cancel", "order.history",
+    "order.line.add",
+    "order.line.update",
+    "order.line.remove",
+    "order.submit",
+    "order.cancel",
+    "order.history",
   ],
   "restaurant.kitchen": [
-    "kitchen.ticket.create", "kitchen.ticket.accept",
-    "kitchen.ticket.prepare", "kitchen.ticket.ready",
+    "kitchen.ticket.create",
+    "kitchen.ticket.accept",
+    "kitchen.ticket.prepare",
+    "kitchen.ticket.ready",
   ],
   "restaurant.cashier": [
-    "payment.simulate", "payment.reversal.request",
-    "order.serve", "receipt.render",
+    "payment.simulate",
+    "payment.reversal.request",
+    "order.serve",
+    "receipt.render",
   ],
   "restaurant.reporting": [
-    "report.restaurant.summary", "report.restaurant.low-stock",
+    "report.restaurant.summary",
+    "report.restaurant.low-stock",
   ],
 } as const;
-~~~
+```
 
 Each adapter declares only approved target path families and output slots.
 Compute stored SHA-256 digests for every template and verify TypeScript
@@ -274,18 +292,18 @@ and that no adapter contribution can target outside its declared output slots.
 
 Run:
 
-~~~powershell
+```powershell
 pnpm --filter @factory/capabilities test
 pnpm --filter @factory/capabilities typecheck
 pnpm --filter @factory/capabilities lint
-~~~
+```
 
 - [ ] **Step 6: Commit**
 
-~~~powershell
+```powershell
 git add packages/capabilities
 git commit -m "feat: add restaurant capability assets"
-~~~
+```
 
 ---
 
@@ -307,11 +325,13 @@ InMemoryRecordStore instance.
 
 - [ ] **Step 1: Write failing compiler tests**
 
-~~~ts
+```ts
 it("emits atomic Restaurant commands instead of in-memory state", () => {
   const files = filesFor("restaurant-ordering");
 
-  expect(files["api/src/restaurant/restaurant-command.service.ts"]).toContain("$transaction");
+  expect(files["api/src/restaurant/restaurant-command.service.ts"]).toContain(
+    "$transaction",
+  );
   expect(files["api/src/main.ts"]).toContain("PrismaRecordStore");
   expect(files["api/src/main.ts"]).not.toContain("new InMemoryRecordStore");
 });
@@ -323,7 +343,7 @@ it("persists idempotency, outbox, and inventory ledger models", () => {
   expect(schema).toContain("model RestaurantOutboxEvent");
   expect(schema).toContain("model InventoryLedger");
 });
-~~~
+```
 
 - [ ] **Step 2: Verify RED**
 
@@ -335,7 +355,7 @@ Expected: FAIL because no Restaurant transaction renderer exists.
 
 Restaurant runtime accepts only RestaurantProfileProjectionV1 and renders:
 
-~~~text
+```text
 POST /api/restaurant/table-sessions/resolve
 POST /api/restaurant/orders/:id/lines
 PATCH /api/restaurant/orders/:id/lines/:lineId
@@ -346,7 +366,7 @@ POST /api/restaurant/kitchen-tickets/:id/events/:event
 POST /api/restaurant/orders/:id/serve
 GET  /api/restaurant/reports/summary
 GET  /api/restaurant/reports/low-stock
-~~~
+```
 
 All mutations require x-factory-idempotency-key and body.expectedVersion.
 Generate a unique command record on scope plus idempotency key. Same key with a
@@ -370,18 +390,18 @@ cancellation, and denied access.
 
 Run:
 
-~~~powershell
+```powershell
 pnpm --filter @factory/compiler test
 pnpm --filter @factory/compiler typecheck
 pnpm --filter @factory/compiler lint
-~~~
+```
 
 - [ ] **Step 6: Commit**
 
-~~~powershell
+```powershell
 git add packages/compiler
 git commit -m "feat: compile restaurant transaction runtime"
-~~~
+```
 
 ---
 
@@ -407,16 +427,22 @@ receipt, and session history.
 
 - [ ] **Step 1: Write failing projection and browser tests**
 
-~~~ts
+```ts
 it("rejects a customer menu block without validated table-session binding", () => {
-  const graph = restaurantGraphWithBlock("menu-browser", { session: "raw-table-12" });
+  const graph = restaurantGraphWithBlock("menu-browser", {
+    session: "raw-table-12",
+  });
 
-  expect(() => createGeneratedPageRuntimeProjection(graph)).toThrow("table-session");
+  expect(() => createGeneratedPageRuntimeProjection(graph)).toThrow(
+    "table-session",
+  );
 });
-~~~
+```
 
-~~~ts
-test("customer resolves a table session, adds notes, pays, and sees status", async ({ page }) => {
+```ts
+test("customer resolves a table session, adds notes, pays, and sees status", async ({
+  page,
+}) => {
   await page.goto(tableUrl);
   await page.getByRole("button", { name: "Add Margherita pizza" }).click();
   await page.getByLabel("Item note").fill("No basil");
@@ -425,16 +451,16 @@ test("customer resolves a table session, adds notes, pays, and sees status", asy
 
   await expect(page.getByText("Paid")).toBeVisible();
 });
-~~~
+```
 
 - [ ] **Step 2: Verify RED**
 
 Run:
 
-~~~powershell
+```powershell
 pnpm --filter @factory/compiler test -- restaurant-page-runtime.test.ts
 pnpm exec playwright test e2e/generated-restaurant.spec.ts --grep "customer"
-~~~
+```
 
 - [ ] **Step 3: Implement bounded Customer blocks**
 
@@ -459,18 +485,18 @@ online-required message.
 
 Run:
 
-~~~powershell
+```powershell
 pnpm --filter @factory/compiler test
 pnpm --filter @factory/compiler typecheck
 pnpm exec playwright test e2e/generated-restaurant.spec.ts --grep "customer"
-~~~
+```
 
 - [ ] **Step 6: Commit**
 
-~~~powershell
+```powershell
 git add packages/compiler e2e docs/ecosystem/source-studies docs/third-party-notices.md
 git commit -m "feat: generate restaurant customer experience"
-~~~
+```
 
 ---
 
@@ -497,9 +523,13 @@ browser receipt, reporting dashboard, and transport-neutral outbox.
 
 - [ ] **Step 1: Write failing merchant tests**
 
-~~~ts
+```ts
 it("sorts kitchen tickets by priority, paid time, then table number", () => {
-  const tickets = restaurantKitchenProjection([lowLater, highLater, highEarlier]);
+  const tickets = restaurantKitchenProjection([
+    lowLater,
+    highLater,
+    highEarlier,
+  ]);
 
   expect(tickets.map((ticket) => ticket.id)).toEqual([
     "high-earlier",
@@ -507,10 +537,12 @@ it("sorts kitchen tickets by priority, paid time, then table number", () => {
     "low-later",
   ]);
 });
-~~~
+```
 
-~~~ts
-test("manager cancellation compensates inventory and records its reason", async ({ page }) => {
+```ts
+test("manager cancellation compensates inventory and records its reason", async ({
+  page,
+}) => {
   await page.getByLabel("Role").selectOption("manager");
   await page.getByRole("button", { name: "Cancel order" }).click();
   await page.getByLabel("Cancellation reason").fill("Guest left");
@@ -519,7 +551,7 @@ test("manager cancellation compensates inventory and records its reason", async 
   await expect(page.getByText("Inventory released")).toBeVisible();
   await expect(page.getByText("Guest left")).toBeVisible();
 });
-~~~
+```
 
 - [ ] **Step 2: Verify RED**
 
@@ -538,7 +570,7 @@ change workflow state or use client-side totals.
 
 - [ ] **Step 4: Implement outbox contract and optional realtime adapter**
 
-~~~ts
+```ts
 export type RestaurantEventV1 = {
   readonly type: "order.created" | "order.transitioned" | "inventory.changed";
   readonly orderId?: string;
@@ -550,7 +582,7 @@ export type RestaurantEventV1 = {
 export interface RestaurantEventPublisher {
   publish(event: RestaurantEventV1): Promise<void>;
 }
-~~~
+```
 
 The baseline publisher records test events. If Socket.IO passes a source study,
 generate an adapter that publishes committed events only. A socket message
@@ -560,18 +592,18 @@ cannot invoke a command or transition.
 
 Run:
 
-~~~powershell
+```powershell
 pnpm --filter @factory/compiler test
 pnpm --filter @factory/compiler typecheck
 pnpm exec playwright test e2e/generated-restaurant.spec.ts --grep "merchant|kitchen|cashier"
-~~~
+```
 
 - [ ] **Step 6: Commit**
 
-~~~powershell
+```powershell
 git add packages/compiler e2e docs/ecosystem/source-studies docs/third-party-notices.md
 git commit -m "feat: generate restaurant merchant operations"
-~~~
+```
 
 ---
 
@@ -599,17 +631,19 @@ actions.
 
 - [ ] **Step 1: Write failing Control Plane and Workbench tests**
 
-~~~ts
+```ts
 it("returns summaries without Draft Graph or artifact content", async () => {
   const result = await service.listLocalApplicationSummaries();
 
-  expect(result[0]).toEqual(expect.objectContaining({ key: "restaurant-ordering" }));
+  expect(result[0]).toEqual(
+    expect.objectContaining({ key: "restaurant-ordering" }),
+  );
   expect(JSON.stringify(result)).not.toContain('"domain"');
   expect(JSON.stringify(result)).not.toContain("artifactContent");
 });
-~~~
+```
 
-~~~ts
+```ts
 it("opens Restaurant from Home and keeps compilation disabled until publish", async () => {
   render(<WorkbenchHome applications={[restaurantDraftSummary]} />);
 
@@ -617,33 +651,43 @@ it("opens Restaurant from Home and keeps compilation disabled until publish", as
 
   expect(onOpen).toHaveBeenCalledWith("restaurant-ordering");
 });
-~~~
+```
 
 - [ ] **Step 2: Verify RED**
 
 Run:
 
-~~~powershell
+```powershell
 pnpm --filter @factory/control-plane test -- lifecycle.service.test.ts lifecycle.controller.test.ts
 pnpm --filter @factory/workbench test -- workbench-home.test.ts
-~~~
+```
 
 - [ ] **Step 3: Implement summary endpoint and client**
 
 Expose only application ID/key/name, composition Profile, latest Draft,
 Published revision, most recent Compilation, and Golden asset maturity.
 
-~~~ts
+```ts
 export type WorkbenchApplicationSummary = {
   readonly id: string;
   readonly key: string;
   readonly name: string;
   readonly compositionProfile: string | null;
-  readonly latestDraft: { readonly revisionNumber: number; readonly createdAt: string } | null;
-  readonly latestPublished: { readonly revisionNumber: number; readonly publishedAt: string } | null;
-  readonly latestCompilation: { readonly id: string; readonly status: string; readonly completedAt: string | null } | null;
+  readonly latestDraft: {
+    readonly revisionNumber: number;
+    readonly createdAt: string;
+  } | null;
+  readonly latestPublished: {
+    readonly revisionNumber: number;
+    readonly publishedAt: string;
+  } | null;
+  readonly latestCompilation: {
+    readonly id: string;
+    readonly status: string;
+    readonly completedAt: string | null;
+  } | null;
 };
-~~~
+```
 
 Scope Prisma aggregation to the local workspace. Never return a Graph body,
 raw AI field, artifact body, or credential.
@@ -660,20 +704,20 @@ API.
 
 Run:
 
-~~~powershell
+```powershell
 pnpm --filter @factory/control-plane test
 pnpm --filter @factory/control-plane typecheck
 pnpm --filter @factory/workbench test
 pnpm --filter @factory/workbench typecheck
 pnpm exec playwright test e2e/workbench.spec.ts --grep "Home|Restaurant"
-~~~
+```
 
 - [ ] **Step 6: Commit**
 
-~~~powershell
+```powershell
 git add apps/control-plane apps/workbench e2e
 git commit -m "feat: add workbench application home"
-~~~
+```
 
 ---
 
@@ -695,28 +739,32 @@ runs, exercises, stops, and cleans up only its own isolated resources.
 
 - [ ] **Step 1: Write failing acceptance tests**
 
-~~~ts
-test("runs generated Restaurant customer and merchant journey in isolated Compose", async ({ page }) => {
+```ts
+test("runs generated Restaurant customer and merchant journey in isolated Compose", async ({
+  page,
+}) => {
   await page.goto(tableUrl);
   await completeCustomerOrder(page);
   await completeKitchenAndCashierOrder(page);
   await expectRestaurantAuditAndDashboard(page);
 });
 
-test("removes only generated Restaurant preview resources after stop", async ({ page }) => {
+test("removes only generated Restaurant preview resources after stop", async ({
+  page,
+}) => {
   await stopGeneratedPreview(page);
   expectPreviewResourcesRemoved(previewRunId, composeProjectName);
 });
-~~~
+```
 
 - [ ] **Step 2: Verify RED**
 
 Run:
 
-~~~powershell
+```powershell
 $env:FACTORY_E2E_FACTORY_PROJECT = "factory-restaurant-acceptance"
 pnpm exec playwright test e2e/generated-restaurant.spec.ts
-~~~
+```
 
 - [ ] **Step 3: Extend Worker evidence without weakening safety**
 
@@ -739,19 +787,19 @@ document. Do not record credentials or raw model data.
 
 Run:
 
-~~~powershell
+```powershell
 pnpm --filter @factory/compiler-worker test
 pnpm --filter @factory/compiler-worker typecheck
 $env:FACTORY_E2E_FACTORY_PROJECT = "factory-restaurant-acceptance"
 pnpm exec playwright test e2e/generated-restaurant.spec.ts e2e/workbench.spec.ts
-~~~
+```
 
 - [ ] **Step 6: Commit**
 
-~~~powershell
+```powershell
 git add apps/compiler-worker e2e docs/acceptance
 git commit -m "test: accept generated restaurant ordering MVP"
-~~~
+```
 
 ---
 
@@ -771,27 +819,27 @@ environment is configured.
 
 - [ ] **Step 1: Write AI-boundary negative test**
 
-~~~ts
+```ts
 it("rejects an AI proposal that selects packages, paths, URLs, or arbitrary code", async () => {
   const result = await proposeGraphDiff(restaurantDraft, hostileModelResponse);
 
   expect(result.status).toBe("rejected");
   expect(result.draft).toEqual(restaurantDraft);
 });
-~~~
+```
 
 - [ ] **Step 2: Verify deterministic suite before real model request**
 
 Run:
 
-~~~powershell
+```powershell
 pnpm test
 pnpm typecheck
 pnpm lint
 pnpm format:check
 pnpm verify:third-party
 pnpm verify:source-studies
-~~~
+```
 
 Expected: all fixture-based checks pass first.
 
@@ -814,10 +862,10 @@ and resource cleanup. Record P0/P1/P2 results and a release decision.
 
 Mark the Profile accepted only when no P0/P1 review finding remains.
 
-~~~powershell
+```powershell
 git add docs/acceptance docs/project-status.md docs/roadmap.md
 git commit -m "docs: review restaurant ordering release"
-~~~
+```
 
 ---
 
@@ -828,4 +876,3 @@ coupons, reviews, account login, real payments, split settlement, thermal
 printing, native mobile, or external commerce providers. Each becomes a
 separate capability design after Task 8. Every new Profile must independently
 prove Published Graph -> generated Web/API/database/tests/docs behavior.
-

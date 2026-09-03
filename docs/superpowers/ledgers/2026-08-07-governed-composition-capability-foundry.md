@@ -762,7 +762,7 @@ review cites `68bea3c5`; behavioral QA and release review cite `d3e18f5a`
   legitimate move to 27 golden / 54 locked made the suite deterministically
   182/183 — was repaired at the test+docs-only commit `d3e18f5a`
   (`fix(control-plane): repair portfolio count pin for 27-family
-  portfolio`; pin → 27/54; the gate-round ledger section above landed in the
+portfolio`; pin → 27/54; the gate-round ledger section above landed in the
   same commit) and re-verified at the repair: control-plane 183/183 (17
   files), capabilities 352/352, graph 175/175, adapters 34/34, typecheck
   clean, outbox runtime
@@ -1080,7 +1080,7 @@ Four independent gates ran against Target-Commit `36d04f2` (diff
 
 - **Task review — `TASK_REVIEW_PASS`**, zero P0/P1/P2 findings.
 - **QA — `QA_PASS` with one P2 behavioral finding (probe a2)**:
-  `evaluateFoundryAdmission` validated evidence digest *presence* only — a
+  `evaluateFoundryAdmission` validated evidence digest _presence_ only — a
   wrong-but-present `fixtureDigest`/`contractTestDigest` value passed as
   eligible at the admission boundary; runtime enforcement relied on the
   mirror self-check test and load-time package verification. QA did not
@@ -1179,11 +1179,11 @@ because the generated apps and composition locks changed).** Observed
 results, all `status: succeeded` with every step green and
 `generatedTests: passed`:
 
-| Profile            | Evidence digest                    | Compilation digest                  |
-| ------------------ | ---------------------------------- | ----------------------------------- |
-| expense-approval   | `sha256:94365800…` (943658005d36…) | `sha256:723c0d7d…`                  |
-| simple-ecommerce   | `sha256:830996eb…` (830996eb6acb…) | `sha256:2a81fe5b…`                  |
-| restaurant-ordering| `sha256:7f7f02a9…` (7f7f02a9c2ce…) | `sha256:c1367e3f…`                  |
+| Profile             | Evidence digest                    | Compilation digest |
+| ------------------- | ---------------------------------- | ------------------ |
+| expense-approval    | `sha256:94365800…` (943658005d36…) | `sha256:723c0d7d…` |
+| simple-ecommerce    | `sha256:830996eb…` (830996eb6acb…) | `sha256:2a81fe5b…` |
+| restaurant-ordering | `sha256:7f7f02a9…` (7f7f02a9c2ce…) | `sha256:c1367e3f…` |
 
 Each run exercised the full step sequence against the freshly composed
 generated app (migration, health, positive path, fail-closed denial,

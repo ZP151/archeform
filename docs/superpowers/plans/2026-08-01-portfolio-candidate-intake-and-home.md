@@ -46,12 +46,14 @@
 ## Task 1: Derive a Candidate proposal from exact Portfolio evidence
 
 **Files:**
+
 - Create: packages/external-intake/src/portfolio-candidate-proposal.ts
 - Modify: packages/external-intake/src/portfolio.ts
 - Modify: packages/external-intake/src/index.ts
 - Test: packages/external-intake/test/portfolio-candidate-proposal.test.ts
 
 **Interfaces:**
+
 - Consumes: ExternalPortfolioV1, IntakeJobV1, CompletedEvidenceRefV1, an
   exact Intake request reference, ExternalIntakeStore, StoredRecordRef, and
   CandidateProposalV1.
@@ -60,7 +62,7 @@
 
 - [ ] **Step 1: Write the failing deterministic proposal test**
 
-~~~ts
+```ts
 const proposal = createPortfolioCandidateProposal({
   portfolio,
   sourceId: "medusa",
@@ -82,7 +84,7 @@ expect(proposal.artifacts.adapter.effects).toEqual([
   "candidate.project",
   "candidate.validate",
 ]);
-~~~
+```
 
 - [ ] **Step 2: Run the focused test and verify it fails**
 
@@ -92,7 +94,7 @@ Expected: FAIL with an import or missing-function error for createPortfolioCandi
 
 - [ ] **Step 3: Define the narrow input and constructor**
 
-~~~ts
+```ts
 export interface PortfolioCandidateProposalInputV1 {
   readonly portfolio: ExternalPortfolioV1;
   readonly sourceId: string;
@@ -109,7 +111,7 @@ export interface PortfolioCandidateProposalInputV1 {
 export function createPortfolioCandidateProposal(
   input: PortfolioCandidateProposalInputV1,
 ): CandidateProposalV1;
-~~~
+```
 
 Resolve exactly one Portfolio source; reject architecture-only and excluded
 sources; require the persisted Intake request's Portfolio record, repository,
@@ -122,7 +124,7 @@ upstream snapshot.
 
 - [ ] **Step 4: Produce bounded declarative artifacts**
 
-~~~ts
+```ts
 const artifacts = {
   manifest: {
     apiVersion: "factory.candidate-manifest/v1",
@@ -133,26 +135,41 @@ const artifacts = {
     outputSchema,
     effects: ["candidate.observe", "candidate.project", "candidate.validate"],
   },
-  fixture: { apiVersion: "factory.candidate-fixture/v1", id, input, expectedOutput },
-  adapter: { apiVersion: "factory.candidate-adapter/v1", id, projection, effects },
-  conformancePlan: { apiVersion: "factory.candidate-conformance-plan/v1", cases },
+  fixture: {
+    apiVersion: "factory.candidate-fixture/v1",
+    id,
+    input,
+    expectedOutput,
+  },
+  adapter: {
+    apiVersion: "factory.candidate-adapter/v1",
+    id,
+    projection,
+    effects,
+  },
+  conformancePlan: {
+    apiVersion: "factory.candidate-conformance-plan/v1",
+    cases,
+  },
 };
-~~~
+```
 
 Use only Factory-authored safe scalar fields. Select only modules already
 accepted by evidenceJob.snapshotView; never invent a module path.
 
 - [ ] **Step 5: Add fail-closed tests**
 
-~~~ts
+```ts
 expect(() => createPortfolioCandidateProposal(policyOnlyInput)).toThrow(
   "policy-only",
 );
 expect(() => createPortfolioCandidateProposal(mismatchedEvidenceInput)).toThrow(
   "does not match",
 );
-expect(JSON.stringify(proposal)).not.toMatch(/https?:\/\/|token|password|secret/iu);
-~~~
+expect(JSON.stringify(proposal)).not.toMatch(
+  /https?:\/\/|token|password|secret/iu,
+);
+```
 
 Cover policy-only source, source/evidence mismatch, invalid completed evidence,
 unsupported source without a blueprint, duplicate identity, and repeated
@@ -167,19 +184,21 @@ portfolio-proposal tests.
 
 - [ ] **Step 7: Commit**
 
-~~~bash
+```bash
 git add packages/external-intake/src/portfolio.ts packages/external-intake/src/portfolio-candidate-proposal.ts packages/external-intake/src/index.ts packages/external-intake/test/portfolio-candidate-proposal.test.ts
 git commit -m "feat: derive candidates from portfolio evidence"
-~~~
+```
 
 ## Task 2: Store the proposal in Candidate Registry without promotion
 
 **Files:**
+
 - Modify: packages/external-intake/src/api.ts
 - Modify: packages/external-intake/test/api.test.ts
 - Modify: packages/external-intake/test/portfolio-candidate-proposal.test.ts
 
 **Interfaces:**
+
 - Consumes: PortfolioCandidateProposalInputV1 without a caller-supplied Store;
   the repository-local API injects its own ExternalIntakeStore before
   construction.
@@ -188,15 +207,17 @@ git commit -m "feat: derive candidates from portfolio evidence"
 
 - [ ] **Step 1: Write the failing API integration test**
 
-~~~ts
+```ts
 const ref = await api.portfolioCandidateCreate(input);
 expect(ref.status).toBe("quarantined");
 await expect(api.candidateList({ status: "quarantined" })).resolves.toEqual(
   expect.arrayContaining([
-    expect.objectContaining({ proposedFactoryKey: "candidate.commerce.medusa-provider" }),
+    expect.objectContaining({
+      proposedFactoryKey: "candidate.commerce.medusa-provider",
+    }),
   ]),
 );
-~~~
+```
 
 - [ ] **Step 2: Run the focused test and verify it fails**
 
@@ -206,11 +227,11 @@ Expected: FAIL until portfolioCandidateCreate exists.
 
 - [ ] **Step 3: Expose one narrow repository-local API operation**
 
-~~~ts
+```ts
 portfolioCandidateCreate(
   input: PortfolioCandidateProposalInputV1,
 ): Promise<StoredCandidateRefV1>;
-~~~
+```
 
 The implementation injects its own Store, then calls
 createPortfolioCandidateProposal and the existing CandidateRegistryV1.create.
@@ -218,11 +239,13 @@ It accepts no caller-supplied Candidate artifact or Store.
 
 - [ ] **Step 4: Add non-promotion and privacy tests**
 
-~~~ts
+```ts
 expect(await api.candidateVerify(ref)).toMatchObject({ valid: true });
-expect(() => getCapabilityAsset("candidate.commerce.medusa-provider")).toThrow();
+expect(() =>
+  getCapabilityAsset("candidate.commerce.medusa-provider"),
+).toThrow();
 expect(serializedCandidate).not.toContain("raw-source");
-~~~
+```
 
 Use accepted quarantine fixtures. Assert no capability asset registry,
 Application Graph, compiler, or Provider registry changes after creation.
@@ -235,14 +258,15 @@ Expected: all commands pass.
 
 - [ ] **Step 6: Commit**
 
-~~~bash
+```bash
 git add packages/external-intake/src/api.ts packages/external-intake/test/api.test.ts packages/external-intake/test/portfolio-candidate-proposal.test.ts
 git commit -m "feat: create quarantined portfolio candidates"
-~~~
+```
 
 ## Task 3: Create a source-free Portfolio public projection and Workspace summary
 
 **Files:**
+
 - Create: packages/portfolio-public/package.json
 - Create: packages/portfolio-public/tsconfig.json
 - Create: packages/portfolio-public/src/index.ts
@@ -257,27 +281,31 @@ git commit -m "feat: create quarantined portfolio candidates"
 - Test: apps/control-plane/test/portfolio-summary.controller.test.ts
 
 **Interfaces:**
+
 - Consumes: local Profile descriptors, Golden asset metadata, source-free Portfolio counts, Candidate summaries, and compilation records.
 - Produces: WorkspacePortfolioSummaryV1 through GET /workspaces/:workspaceId/portfolio-summary.
 - Invariant: @factory/portfolio-public has no dependency on @factory/external-intake and response contains counts, labels, statuses, and timestamps only.
 
 - [ ] **Step 1: Write failing service tests**
 
-~~~ts
+```ts
 expect(summary).toEqual({
   apiVersion: "factory.workspace-portfolio-summary/v1",
   profiles: expect.arrayContaining([
-    expect.objectContaining({ profile: "restaurant-ordering", requiredPackages: 13 }),
+    expect.objectContaining({
+      profile: "restaurant-ordering",
+      requiredPackages: 13,
+    }),
   ]),
   capabilities: expect.objectContaining({ golden: expect.any(Number) }),
   intake: expect.objectContaining({ portfolioSources: 43 }),
   compilations: expect.objectContaining({ failed: expect.any(Number) }),
 });
-~~~
+```
 
 Write public-package tests before implementation:
 
-~~~ts
+```ts
 expect(portfolioPublicSummary).toEqual({
   apiVersion: "factory.portfolio-public-summary/v1",
   sourceCounts: {
@@ -293,7 +321,7 @@ expect(portfolioPublicSummary).toEqual({
 expect(JSON.stringify(portfolioPublicSummary)).not.toMatch(
   /https?:\/\/|\.git|sha256:|token|secret|password/iu,
 );
-~~~
+```
 
 - [ ] **Step 2: Run the focused service tests and verify failure**
 
@@ -304,7 +332,7 @@ WorkspacePortfolioSummaryService are absent.
 
 - [ ] **Step 3: Define the source-free public package and DTO**
 
-~~~ts
+```ts
 export interface PortfolioPublicSummaryV1 {
   readonly apiVersion: "factory.portfolio-public-summary/v1";
   readonly scenarioCount: number;
@@ -319,7 +347,7 @@ export interface PortfolioPublicSummaryV1 {
 }
 
 export const portfolioPublicSummary: PortfolioPublicSummaryV1;
-~~~
+```
 
 The public package contains no source record, URL, fixed reference, evidence
 digest, source path, Candidate artifact, or import from External Intake. Add an
@@ -328,7 +356,7 @@ counts equal the public projection.
 
 - [ ] **Step 4: Define the Workspace DTO and aggregation service**
 
-~~~ts
+```ts
 export interface WorkspacePortfolioSummaryV1 {
   readonly apiVersion: "factory.workspace-portfolio-summary/v1";
   readonly profiles: readonly ProfilePortfolioSummaryV1[];
@@ -340,7 +368,7 @@ export interface WorkspacePortfolioSummaryV1 {
 export class WorkspacePortfolioSummaryService {
   async get(workspaceId: string): Promise<WorkspacePortfolioSummaryV1>;
 }
-~~~
+```
 
 Read application and compilation counts through Prisma. Read profile and Golden
 asset metadata through Factory packages, and import only
@@ -349,12 +377,12 @@ counts as a numeric zero, not a fabricated Candidate record.
 
 - [ ] **Step 5: Add the read-only controller and privacy boundary**
 
-~~~ts
+```ts
 @Get("workspaces/:workspaceId/portfolio-summary")
 getPortfolioSummary(@Param("workspaceId") workspaceId: string) {
   return this.service.get(workspaceId);
 }
-~~~
+```
 
 Return 404 for an unknown workspace. Do not import @factory/external-intake or
 read quarantine storage. Do not provide source URLs, source paths,
@@ -362,12 +390,12 @@ Candidate IDs, evidence digests, artifact bodies, raw errors, or query filters.
 
 - [ ] **Step 6: Add controller privacy and lifecycle tests**
 
-~~~ts
+```ts
 expect(JSON.stringify(response.body)).not.toMatch(
   /https?:\/\/|artifact|prompt|response|token|secret|password/iu,
 );
 expect(response.status).toBe(200);
-~~~
+```
 
 Use published and failed compilation fixtures. Assert no Draft, Published
 Revision, Compilation, or Candidate record is created. Assert the Control Plane
@@ -381,14 +409,15 @@ Expected: all commands pass.
 
 - [ ] **Step 8: Commit**
 
-~~~bash
+```bash
 git add packages/portfolio-public packages/external-intake/test/portfolio-public-summary.test.ts apps/control-plane/src/portfolio apps/control-plane/src/app.module.ts apps/control-plane/test/portfolio-summary.controller.test.ts
 git commit -m "feat: expose safe workspace portfolio summary"
-~~~
+```
 
 ## Task 4: Render Portfolio Intelligence on Workbench Home
 
 **Files:**
+
 - Modify: apps/workbench/lib/control-plane-client.ts
 - Create: apps/workbench/lib/portfolio-summary.ts
 - Create: apps/workbench/lib/portfolio-summary.test.ts
@@ -397,19 +426,20 @@ git commit -m "feat: expose safe workspace portfolio summary"
 - Modify: apps/workbench/components/workbench.tsx
 
 **Interfaces:**
+
 - Consumes: WorkspacePortfolioSummaryV1.
 - Produces: Profile catalog, Capability coverage, Source intake, and Compilation health panels.
 - Invariant: existing create, open, compile, and stale-refresh ordering behavior remains unchanged.
 
 - [ ] **Step 1: Write failing Home tests**
 
-~~~tsx
+```tsx
 expect(container.textContent).toContain("Capability coverage");
 expect(container.textContent).toContain("Source intake");
 expect(container.textContent).toContain("Compilation health");
 expect(container.textContent).toContain("Restaurant ordering");
 expect(container.textContent).not.toContain("https://github.com");
-~~~
+```
 
 - [ ] **Step 2: Run the focused Workbench tests and verify failure**
 
@@ -419,7 +449,7 @@ Expected: FAIL because the summary client and panels are absent.
 
 - [ ] **Step 3: Add typed client and view model**
 
-~~~ts
+```ts
 export async function getWorkspacePortfolioSummary(
   controlPlaneUrl: string,
   workspaceId: string,
@@ -428,7 +458,7 @@ export async function getWorkspacePortfolioSummary(
 export function toPortfolioHomeModel(
   summary: WorkspacePortfolioSummaryV1,
 ): PortfolioHomeModel;
-~~~
+```
 
 Parse only the exact API version and safe scalar fields. On a fetch failure,
 render a compact unavailable state without rendering server error bodies.
@@ -454,31 +484,33 @@ Expected: all commands pass.
 
 - [ ] **Step 7: Commit**
 
-~~~bash
+```bash
 git add apps/workbench/lib/control-plane-client.ts apps/workbench/lib/portfolio-summary.ts apps/workbench/lib/portfolio-summary.test.ts apps/workbench/components/workbench-home.tsx apps/workbench/components/workbench-home.test.tsx apps/workbench/components/workbench.tsx
 git commit -m "feat: show portfolio intelligence on home"
-~~~
+```
 
 ## Task 5: Verify vertical boundaries and record live status
 
 **Files:**
+
 - Modify: docs/project-status.md
 - Modify: packages/external-intake/test/release-boundary.test.ts
 - Modify: apps/control-plane/test/portfolio-summary.controller.test.ts
 - Modify: apps/workbench/components/workbench-home.test.tsx
 
 **Interfaces:**
+
 - Consumes: Tasks 1 through 4.
 - Produces: read-only boundary proof and a single accurate project-status snapshot.
 - Invariant: a Portfolio source may create a quarantined Candidate only.
 
 - [ ] **Step 1: Add release-boundary regression assertions**
 
-~~~ts
+```ts
 expect(forbiddenRuntimeImports).toEqual([]);
 expect(portfolioCandidateResult.status).toBe("quarantined");
 expect(goldenRegistryKeys).not.toContain("candidate.commerce.medusa-provider");
-~~~
+```
 
 - [ ] **Step 2: Run focused cross-package verification**
 
@@ -502,35 +534,37 @@ Expected: all Turbo test tasks pass.
 
 - [ ] **Step 5: Check diff hygiene and commit**
 
-~~~bash
+```bash
 git diff --check
 git add docs/project-status.md packages/external-intake/test/release-boundary.test.ts apps/control-plane/test/portfolio-summary.controller.test.ts apps/workbench/components/workbench-home.test.tsx
 git commit -m "docs: record portfolio intelligence evidence"
-~~~
+```
 
 ## Task 6: Prepare reusable order amendment as the follow-on capability project
 
 **Files:**
+
 - Create: docs/superpowers/specs/2026-08-01-order-amendment-capability-design.md
 - Create: docs/superpowers/plans/2026-08-01-order-amendment-capability.md
 - Modify: docs/roadmap.md
 
 **Interfaces:**
+
 - Consumes: published Graph owner-aware field bindings, generic transaction kernel, and catalog/cart/inventory/order package contracts.
 - Produces: approved commerce.order-amendment/v1 package boundary.
 - Invariant: merchant changes are versioned, authorised, audited, outbox-backed, inventory-compensated, and report-consistent.
 
 - [ ] **Step 1: Record supported commands**
 
-    add-line, remove-line, set-quantity, set-configuration, cancel-unpaid-order
+  add-line, remove-line, set-quantity, set-configuration, cancel-unpaid-order
 
 For each command define precondition, expected version, inventory delta,
 recalculated total, audit event, outbox event, and report effect.
 
 - [ ] **Step 2: Record exact exclusions**
 
-    split settlement, external payment capture, refund, discount engine,
-    membership wallet, source copying, and Provider activation
+  split settlement, external payment capture, refund, discount engine,
+  membership wallet, source copying, and Provider activation
 
 - [ ] **Step 3: Map generated-journey proofs**
 
@@ -540,10 +574,10 @@ and Grocery Pickup journeys.
 
 - [ ] **Step 4: Commit**
 
-~~~bash
+```bash
 git add docs/superpowers/specs/2026-08-01-order-amendment-capability-design.md docs/superpowers/plans/2026-08-01-order-amendment-capability.md docs/roadmap.md
 git commit -m "docs: plan reusable order amendment capability"
-~~~
+```
 
 ## Final verification checklist
 

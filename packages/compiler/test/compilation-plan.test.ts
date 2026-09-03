@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -1155,21 +1156,25 @@ describe("compilation target registry", () => {
     },
   );
 
-  it("rejects a locked package when its Factory repository root is unavailable", () => {
+  it("rejects a locked package when its Factory repository root is unavailable", async () => {
     const graph = composeProfileDraft({
       profile: "expense-approval",
       optionalCapabilities: [],
     }).graph;
-
-    expect(() =>
-      generateApplicationBundle(
-        {
-          publishedRevisionId: "published-missing-package-root-1",
-          graph,
-        },
-        { repositoryRoot: resolve("C:/factory-missing-root") },
-      ),
-    ).toThrow("could not be resolved");
+    const missingRoot = await mkdtemp(join(tmpdir(), "factory-missing-root-"));
+    try {
+      expect(() =>
+        generateApplicationBundle(
+          {
+            publishedRevisionId: "published-missing-package-root-1",
+            graph,
+          },
+          { repositoryRoot: missingRoot },
+        ),
+      ).toThrow("could not be resolved");
+    } finally {
+      await rm(missingRoot, { recursive: true, force: true });
+    }
   });
 
   it("emits a deployable initial Prisma migration and isolated Compose lifecycle", () => {

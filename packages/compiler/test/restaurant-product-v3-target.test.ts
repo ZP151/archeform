@@ -130,6 +130,43 @@ describe("Restaurant product V3 target", () => {
     );
   });
 
+  it("registers fixed kitchen and cashier services only in the acceptance profile", () => {
+    const files = Object.fromEntries(
+      compile().files.map(({ path, content }) => [path, content]),
+    );
+    const compose = files["docker-compose.yml"];
+    expect(compose).toContain("  kitchen:");
+    expect(compose).toContain("  cashier:");
+    expect(compose).toContain('command: ["node", "src/server.mjs", "kitchen"]');
+    expect(compose).toContain('command: ["node", "src/server.mjs", "cashier"]');
+    expect(compose.match(/profiles:\n      - acceptance/g)).toHaveLength(2);
+    expect(compose).toContain('"127.0.0.1:${FACTORY_KITCHEN_PORT:-0}:3002"');
+    expect(compose).toContain('"127.0.0.1:${FACTORY_CASHIER_PORT:-0}:3003"');
+    expect(files["src/server.mjs"]).toContain(
+      "trustedStartupRoles.includes(principalRole)",
+    );
+  });
+
+  it("rejects an untrusted explicit startup role before the generated server listens", async () => {
+    const root = await mkdtemp(join(tmpdir(), "archeform-product-role-"));
+    roots.push(root);
+    for (const file of compile().files) {
+      const path = join(root, file.path);
+      await mkdir(dirname(path), { recursive: true });
+      await writeFile(path, file.content, "utf8");
+    }
+    const result = spawnSync(
+      process.execPath,
+      [join(root, "src/server.mjs"), "KITCHEN"],
+      {
+        encoding: "utf8",
+        timeout: 5_000,
+      },
+    );
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("trusted startup role");
+  });
+
   it("executes generated customer, merchant, and cross-surface journeys", async () => {
     const bundle = compile();
     const root = await mkdtemp(join(tmpdir(), "archeform-product-target-"));

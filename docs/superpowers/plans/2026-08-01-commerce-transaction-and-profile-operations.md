@@ -24,28 +24,28 @@
 
 ## File Map
 
-| Path | Responsibility |
-| --- | --- |
-| `packages/capabilities/src/assets/contract.ts` | Extends the permitted runtime-handler vocabulary for the transaction package. |
-| `packages/capabilities/src/assets/commerce/transaction-v1-0-0.ts` | Canonical TypeScript manifest for `commerce.transaction@1.0.0`. |
-| `packages/capabilities/assets/commerce.transaction/1.0.0/*` | Immutable package manifest, declarative adapter, fixture, template contributions, and contract evidence. |
-| `packages/capabilities/src/assets/index.ts` | Registers the new current Golden asset and preserves older assets as explicit historical versions only. |
-| `packages/capabilities/src/commerce/profile.ts` | Selects the transaction package in every supported Commerce profile recipe. |
-| `packages/capabilities/src/profile-readiness.ts` | Derives transaction readiness from actual selected package/target evidence rather than an unconditional hard-coded `partial` label. |
-| `packages/capabilities/test/commerce-transaction-package.test.ts` | Verifies asset completeness, lockability, input bindings, interfaces, and negative registry cases. |
-| `packages/capabilities/test/profile-readiness.test.ts` | Proves accurate available/partial/planned/provider-required projections. |
-| `packages/compiler/src/commerce-transaction-runtime.ts` | Renders the shared simulator and Prisma transaction implementations used by generated applications. |
-| `packages/compiler/src/index.ts` | Selects the renderer only when the immutable lock includes the verified transaction package; emits schema, API, test, and document outputs. |
-| `packages/compiler/test/commerce-transaction-runtime.test.ts` | Extends transaction behavior from in-memory state to duplicate, stale, changed-payload, atomic rollback, and generated-Prisma evidence. |
-| `packages/compiler/test/compilation-plan.test.ts` | Verifies deterministic files, package lock dependency, generated migration, API route wiring, and all four profile outputs. |
-| `apps/control-plane/src/portfolio/portfolio-summary.service.ts` | Returns source-free per-capability operational data for a workspace. |
-| `apps/control-plane/src/portfolio/portfolio-summary.controller.ts` | Serves the v2 portfolio projection behind the existing local workspace boundary. |
-| `apps/control-plane/src/portfolio/portfolio-summary.service.test.ts` | Verifies no source URL, source path, source bytes, prompt, credential, or raw evidence can enter the Home projection. |
-| `apps/workbench/lib/portfolio-summary.ts` | Converts the control-plane response into deterministic view models and action states. |
-| `apps/workbench/components/profile-capability-map.tsx` | Shows one profile's grouped capability state, lock, dependencies, evidence summary, and next action. |
-| `apps/workbench/components/workbench-home.tsx` | Adds Home actions to open a profile map and begin a profile-based Draft; does not add a direct compilation path for Drafts. |
-| `apps/workbench/components/*.test.tsx` | Covers Home drill-down, action enablement, and safe rendering of source-free data. |
-| `docs/acceptance/commerce-transaction-v1.md` | Records the four-profile acceptance command matrix and the production claims that remain out of scope. |
+| Path                                                                 | Responsibility                                                                                                                              |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/capabilities/src/assets/contract.ts`                       | Extends the permitted runtime-handler vocabulary for the transaction package.                                                               |
+| `packages/capabilities/src/assets/commerce/transaction-v1-0-0.ts`    | Canonical TypeScript manifest for `commerce.transaction@1.0.0`.                                                                             |
+| `packages/capabilities/assets/commerce.transaction/1.0.0/*`          | Immutable package manifest, declarative adapter, fixture, template contributions, and contract evidence.                                    |
+| `packages/capabilities/src/assets/index.ts`                          | Registers the new current Golden asset and preserves older assets as explicit historical versions only.                                     |
+| `packages/capabilities/src/commerce/profile.ts`                      | Selects the transaction package in every supported Commerce profile recipe.                                                                 |
+| `packages/capabilities/src/profile-readiness.ts`                     | Derives transaction readiness from actual selected package/target evidence rather than an unconditional hard-coded `partial` label.         |
+| `packages/capabilities/test/commerce-transaction-package.test.ts`    | Verifies asset completeness, lockability, input bindings, interfaces, and negative registry cases.                                          |
+| `packages/capabilities/test/profile-readiness.test.ts`               | Proves accurate available/partial/planned/provider-required projections.                                                                    |
+| `packages/compiler/src/commerce-transaction-runtime.ts`              | Renders the shared simulator and Prisma transaction implementations used by generated applications.                                         |
+| `packages/compiler/src/index.ts`                                     | Selects the renderer only when the immutable lock includes the verified transaction package; emits schema, API, test, and document outputs. |
+| `packages/compiler/test/commerce-transaction-runtime.test.ts`        | Extends transaction behavior from in-memory state to duplicate, stale, changed-payload, atomic rollback, and generated-Prisma evidence.     |
+| `packages/compiler/test/compilation-plan.test.ts`                    | Verifies deterministic files, package lock dependency, generated migration, API route wiring, and all four profile outputs.                 |
+| `apps/control-plane/src/portfolio/portfolio-summary.service.ts`      | Returns source-free per-capability operational data for a workspace.                                                                        |
+| `apps/control-plane/src/portfolio/portfolio-summary.controller.ts`   | Serves the v2 portfolio projection behind the existing local workspace boundary.                                                            |
+| `apps/control-plane/src/portfolio/portfolio-summary.service.test.ts` | Verifies no source URL, source path, source bytes, prompt, credential, or raw evidence can enter the Home projection.                       |
+| `apps/workbench/lib/portfolio-summary.ts`                            | Converts the control-plane response into deterministic view models and action states.                                                       |
+| `apps/workbench/components/profile-capability-map.tsx`               | Shows one profile's grouped capability state, lock, dependencies, evidence summary, and next action.                                        |
+| `apps/workbench/components/workbench-home.tsx`                       | Adds Home actions to open a profile map and begin a profile-based Draft; does not add a direct compilation path for Drafts.                 |
+| `apps/workbench/components/*.test.tsx`                               | Covers Home drill-down, action enablement, and safe rendering of source-free data.                                                          |
+| `docs/acceptance/commerce-transaction-v1.md`                         | Records the four-profile acceptance command matrix and the production claims that remain out of scope.                                      |
 
 ## Interfaces
 
@@ -57,20 +57,29 @@ export type CommerceTransactionCommandV1 = Readonly<{
   aggregate: { entityKey: string; recordId: string; expectedVersion: number };
   idempotencyKey: string;
   payload: Readonly<Record<string, unknown>>;
-  effects: readonly ("reserve-stock" | "release-stock" | "append-audit" | "append-outbox")[];
+  effects: readonly (
+    "reserve-stock" | "release-stock" | "append-audit" | "append-outbox"
+  )[];
 }>;
 
 export type CommerceTransactionOutcomeV1 = Readonly<{
   receiptId: string;
   replayed: boolean;
-  aggregate: { entityKey: string; recordId: string; status: string; version: number };
+  aggregate: {
+    entityKey: string;
+    recordId: string;
+    status: string;
+    version: number;
+  };
   inventoryMovementIds: readonly string[];
   auditEventId: string;
   outboxEventId: string;
 }>;
 
 export interface CommerceTransactionExecutorV1 {
-  execute(command: CommerceTransactionCommandV1): Promise<CommerceTransactionOutcomeV1>;
+  execute(
+    command: CommerceTransactionCommandV1,
+  ): Promise<CommerceTransactionOutcomeV1>;
 }
 ```
 
@@ -79,6 +88,7 @@ export interface CommerceTransactionExecutorV1 {
 ### Task 1: Define and register the Golden transaction asset
 
 **Files:**
+
 - Create: `packages/capabilities/src/assets/commerce/transaction-v1-0-0.ts`
 - Create: `packages/capabilities/assets/commerce.transaction/1.0.0/component.json`
 - Create: `packages/capabilities/assets/commerce.transaction/1.0.0/adapter.json`
@@ -157,6 +167,7 @@ git commit -m "feat: add Golden commerce transaction package"
 ### Task 2: Bind the transaction asset into all Commerce recipes and readiness
 
 **Files:**
+
 - Modify: `packages/capabilities/src/commerce/profile.ts`
 - Modify: `packages/capabilities/src/profile-readiness.ts`
 - Test: `packages/capabilities/test/commerce-profile.test.ts`
@@ -169,21 +180,35 @@ git commit -m "feat: add Golden commerce transaction package"
 - [ ] **Step 1: Write failing recipe and readiness tests**
 
 ```ts
-it.each(["restaurant-ordering", "simple-ecommerce", "retail-counter", "grocery-pickup"] as const)(
-  "%s locks commerce.transaction@1.0.0",
-  (profile) => {
-    const { graph } = composeDefaultCapabilityDraft({ profile });
-    expect(graph.integration.compositionSelections).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ lock: expect.objectContaining({ key: "commerce.transaction", version: "1.0.0" }) }),
-      ]),
-    );
-  },
-);
+it.each([
+  "restaurant-ordering",
+  "simple-ecommerce",
+  "retail-counter",
+  "grocery-pickup",
+] as const)("%s locks commerce.transaction@1.0.0", (profile) => {
+  const { graph } = composeDefaultCapabilityDraft({ profile });
+  expect(graph.integration.compositionSelections).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        lock: expect.objectContaining({
+          key: "commerce.transaction",
+          version: "1.0.0",
+        }),
+      }),
+    ]),
+  );
+});
 
 it("does not label a transaction as available when a required compiled target is absent", () => {
-  expect(createProfileReadiness([{ profile: "simple-ecommerce", label: "Simple Ecommerce", availableCapabilities: ["commerce.transaction"] }])[0]?.capabilities)
-    .toContainEqual({ key: "commerce.transaction", status: "partial" });
+  expect(
+    createProfileReadiness([
+      {
+        profile: "simple-ecommerce",
+        label: "Simple Ecommerce",
+        availableCapabilities: ["commerce.transaction"],
+      },
+    ])[0]?.capabilities,
+  ).toContainEqual({ key: "commerce.transaction", status: "partial" });
 });
 ```
 
@@ -219,6 +244,7 @@ git commit -m "feat: compose transaction package into commerce profiles"
 ### Task 3: Compile a transaction boundary for simulator and generated Prisma APIs
 
 **Files:**
+
 - Create: `packages/compiler/src/commerce-transaction-runtime.ts`
 - Modify: `packages/compiler/src/index.ts`
 - Modify: `packages/compiler/test/commerce-transaction-runtime.test.ts`
@@ -234,17 +260,29 @@ git commit -m "feat: compose transaction package into commerce profiles"
 ```ts
 it("replays one completed receipt and rejects a changed payload under the same scope key", async () => {
   const first = await runtime.execute(command({ idempotencyKey: "submit-1" }));
-  await expect(runtime.execute(command({ idempotencyKey: "submit-1" }))).resolves.toMatchObject({
+  await expect(
+    runtime.execute(command({ idempotencyKey: "submit-1" })),
+  ).resolves.toMatchObject({
     receiptId: first.receiptId,
     replayed: true,
   });
-  await expect(runtime.execute(command({ idempotencyKey: "submit-1", payload: { note: "changed" } })))
-    .rejects.toThrow("idempotency key");
+  await expect(
+    runtime.execute(
+      command({ idempotencyKey: "submit-1", payload: { note: "changed" } }),
+    ),
+  ).rejects.toThrow("idempotency key");
 });
 
 it("rolls back receipt, inventory, audit, and outbox records when an effect fails", async () => {
-  await expect(runtime.execute(command({ effects: ["reserve-stock", "append-audit"] }))).rejects.toThrow("audit");
-  await expect(runtime.inspect()).resolves.toEqual({ receipts: 0, movements: 0, audits: 0, outbox: 0 });
+  await expect(
+    runtime.execute(command({ effects: ["reserve-stock", "append-audit"] })),
+  ).rejects.toThrow("audit");
+  await expect(runtime.inspect()).resolves.toEqual({
+    receipts: 0,
+    movements: 0,
+    audits: 0,
+    outbox: 0,
+  });
 });
 ```
 
@@ -260,11 +298,21 @@ In `commerce-transaction-runtime.ts`, render these generated public types and fu
 
 ```ts
 export interface CommerceTransactionStoreV1 {
-  execute<T>(operation: (tx: CommerceTransactionStoreV1) => Promise<T>): Promise<T>;
-  findReceipt(scope: string, idempotencyKey: string): Promise<CommerceCommandReceiptV1 | null>;
+  execute<T>(
+    operation: (tx: CommerceTransactionStoreV1) => Promise<T>,
+  ): Promise<T>;
+  findReceipt(
+    scope: string,
+    idempotencyKey: string,
+  ): Promise<CommerceCommandReceiptV1 | null>;
   insertReceipt(receipt: PendingCommerceCommandReceiptV1): Promise<void>;
-  updateReceipt(receiptId: string, outcome: CommerceTransactionOutcomeV1): Promise<void>;
-  conditionalAggregateUpdate(input: ConditionalAggregateUpdateV1): Promise<AggregateStateV1 | null>;
+  updateReceipt(
+    receiptId: string,
+    outcome: CommerceTransactionOutcomeV1,
+  ): Promise<void>;
+  conditionalAggregateUpdate(
+    input: ConditionalAggregateUpdateV1,
+  ): Promise<AggregateStateV1 | null>;
   appendInventoryMovement(input: InventoryMovementInputV1): Promise<string>;
   appendAudit(input: AuditInputV1): Promise<string>;
   appendOutbox(input: OutboxInputV1): Promise<string>;
@@ -285,14 +333,22 @@ Before generating a Commerce target, resolve the immutable composition lock and 
 - [ ] **Step 5: Add the four-profile compilation matrix**
 
 ```ts
-it.each(["restaurant-ordering", "simple-ecommerce", "retail-counter", "grocery-pickup"] as const)(
-  "compiles %s with the locked transaction migration, route, and journey", (profile) => {
+it.each([
+  "restaurant-ordering",
+  "simple-ecommerce",
+  "retail-counter",
+  "grocery-pickup",
+] as const)(
+  "compiles %s with the locked transaction migration, route, and journey",
+  (profile) => {
     const bundle = generateApplicationBundle(inputFor(profile));
-    expect(filePaths(bundle)).toEqual(expect.arrayContaining([
-      "api/src/commerce-transaction-runtime.ts",
-      "api/prisma/commerce-transaction.prisma",
-      "tests/commerce-transaction.journey.test.ts",
-    ]));
+    expect(filePaths(bundle)).toEqual(
+      expect.arrayContaining([
+        "api/src/commerce-transaction-runtime.ts",
+        "api/prisma/commerce-transaction.prisma",
+        "tests/commerce-transaction.journey.test.ts",
+      ]),
+    );
   },
 );
 ```
@@ -321,6 +377,7 @@ git commit -m "feat: compile atomic commerce transaction runtime"
 ### Task 4: Expose source-free Profile capability operations on Home
 
 **Files:**
+
 - Modify: `apps/control-plane/src/portfolio/portfolio-summary.service.ts`
 - Modify: `apps/control-plane/src/portfolio/portfolio-summary.controller.ts`
 - Modify: `apps/control-plane/src/portfolio/portfolio-summary.service.test.ts`
@@ -394,6 +451,7 @@ git commit -m "feat: add profile capability operations to workbench home"
 ### Task 5: Verify release evidence and record the next supply-chain handoff
 
 **Files:**
+
 - Modify: `docs/project-status.md`
 - Modify: `docs/superpowers/ledgers/composable-internal-approval-suite.md` only if it remains the active project ledger; otherwise create `docs/superpowers/ledgers/commerce-transaction-v1.md`
 - Modify: `docs/superpowers/specs/2026-08-01-composable-restaurant-profile-supply-design.md`

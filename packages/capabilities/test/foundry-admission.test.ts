@@ -27,10 +27,10 @@ function evidenceFixture(
     // never invented in the registry (see the same invariant in
     // foundry-evidence.test.ts). A wrong-but-present digest must NOT be
     // eligible: the admission boundary value-compares below.
-    fixtureDigest: orderOperationsAssetV1_1_0.manifest.verification
-      ?.fixtureDigest,
-    contractTestDigest: orderOperationsAssetV1_1_0.manifest.verification
-      ?.contractTestDigest,
+    fixtureDigest:
+      orderOperationsAssetV1_1_0.manifest.verification?.fixtureDigest,
+    contractTestDigest:
+      orderOperationsAssetV1_1_0.manifest.verification?.contractTestDigest,
     profileLocks: [
       {
         profile: "simple-ecommerce",

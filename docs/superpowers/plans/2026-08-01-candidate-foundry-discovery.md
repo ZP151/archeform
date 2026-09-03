@@ -35,32 +35,42 @@ External Intake file store, existing GitHub metadata fetch boundary.
 
 ## File structure
 
-| Path | Responsibility |
-| --- | --- |
-| `packages/external-intake/src/discovery.ts` | Discovery schemas, immutable-record validation, deterministic scoring, batch conversion, and public-safe aggregation inputs. |
-| `packages/external-intake/src/discovery-scaffold.ts` | Declarative candidate port scaffold generated from verified Candidate evidence; contains no source body or executable code. |
-| `packages/external-intake/src/index.ts` | Quarantine-only exports for Discovery contracts and scaffold APIs. |
-| `packages/external-intake/test/discovery.test.ts` | Contract, ordering, score, blocker, cap, duplicate, and redaction tests. |
-| `packages/external-intake/test/discovery-scaffold.test.ts` | Scaffold determinism and source-free boundary tests. |
-| `apps/intake-cli/src/github-discovery-client.ts` | GitHub public-metadata adapter, restricted to the existing API-host token fetch. |
-| `apps/intake-cli/src/main.ts` | New bounded discovery commands and context-specific redacted CLI output. |
-| `apps/intake-cli/test/discovery-cli.test.ts` | Fixture discovery, safe output, and invalid command tests. |
-| `packages/portfolio-public/src/summary.ts` | Static source-free Capability Supply Queue projection. |
-| `packages/portfolio-public/test/summary.test.ts` | Projection schema and source-redaction tests. |
-| `apps/control-plane/src/portfolio/portfolio-summary.service.ts` | Adds public supply projection to Workspace Portfolio Summary. |
-| `apps/control-plane/src/portfolio/portfolio-summary.service.test.ts` | Verifies summary shape and source-free response. |
-| `apps/workbench/lib/control-plane-client.ts` | Strict parsing for the supply projection. |
-| `apps/workbench/lib/portfolio-summary.ts` | Converts safe supply records into Home view model. |
-| `apps/workbench/components/workbench-home.tsx` | Read-only Capability Supply Queue card. |
-| `apps/workbench/lib/control-plane-client.test.ts`, `apps/workbench/lib/portfolio-summary.test.ts`, `apps/workbench/components/workbench-home.test.tsx` | Parser, mapping, and rendered UI evidence. |
+| Path                                                                                                                                                   | Responsibility                                                                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| `packages/external-intake/src/discovery.ts`                                                                                                            | Discovery schemas, immutable-record validation, deterministic scoring, batch conversion, and public-safe aggregation inputs. |
+| `packages/external-intake/src/discovery-scaffold.ts`                                                                                                   | Declarative candidate port scaffold generated from verified Candidate evidence; contains no source body or executable code.  |
+| `packages/external-intake/src/index.ts`                                                                                                                | Quarantine-only exports for Discovery contracts and scaffold APIs.                                                           |
+| `packages/external-intake/test/discovery.test.ts`                                                                                                      | Contract, ordering, score, blocker, cap, duplicate, and redaction tests.                                                     |
+| `packages/external-intake/test/discovery-scaffold.test.ts`                                                                                             | Scaffold determinism and source-free boundary tests.                                                                         |
+| `apps/intake-cli/src/github-discovery-client.ts`                                                                                                       | GitHub public-metadata adapter, restricted to the existing API-host token fetch.                                             |
+| `apps/intake-cli/src/main.ts`                                                                                                                          | New bounded discovery commands and context-specific redacted CLI output.                                                     |
+| `apps/intake-cli/test/discovery-cli.test.ts`                                                                                                           | Fixture discovery, safe output, and invalid command tests.                                                                   |
+| `packages/portfolio-public/src/summary.ts`                                                                                                             | Static source-free Capability Supply Queue projection.                                                                       |
+| `packages/portfolio-public/test/summary.test.ts`                                                                                                       | Projection schema and source-redaction tests.                                                                                |
+| `apps/control-plane/src/portfolio/portfolio-summary.service.ts`                                                                                        | Adds public supply projection to Workspace Portfolio Summary.                                                                |
+| `apps/control-plane/src/portfolio/portfolio-summary.service.test.ts`                                                                                   | Verifies summary shape and source-free response.                                                                             |
+| `apps/workbench/lib/control-plane-client.ts`                                                                                                           | Strict parsing for the supply projection.                                                                                    |
+| `apps/workbench/lib/portfolio-summary.ts`                                                                                                              | Converts safe supply records into Home view model.                                                                           |
+| `apps/workbench/components/workbench-home.tsx`                                                                                                         | Read-only Capability Supply Queue card.                                                                                      |
+| `apps/workbench/lib/control-plane-client.test.ts`, `apps/workbench/lib/portfolio-summary.test.ts`, `apps/workbench/components/workbench-home.test.tsx` | Parser, mapping, and rendered UI evidence.                                                                                   |
 
 ## Shared interfaces
 
 ```ts
 export const capabilityFamilyKeys = [
-  "identity", "catalog", "commerce-transaction", "inventory",
-  "availability", "queue", "payment", "fulfillment", "notification",
-  "document", "search", "analytics", "integration",
+  "identity",
+  "catalog",
+  "commerce-transaction",
+  "inventory",
+  "availability",
+  "queue",
+  "payment",
+  "fulfillment",
+  "notification",
+  "document",
+  "search",
+  "analytics",
+  "integration",
 ] as const;
 
 export type DiscoveryRecordV1 = {
@@ -89,10 +99,16 @@ export type DiscoveryRecordV1 = {
 export type CandidateFoundryScaffoldV1 = {
   readonly apiVersion: "factory.candidate-foundry-scaffold/v1";
   readonly candidate: { readonly id: string; readonly version: string };
-  readonly mode: "direct-dependency" | "provider-adapter" | "selective-source-copy";
+  readonly mode:
+    "direct-dependency" | "provider-adapter" | "selective-source-copy";
   readonly targetCapability: string;
   readonly sourcePortPlan?: CandidatePortPlanV1;
-  readonly requiredArtifacts: readonly ["manifest", "fixture", "adapter", "conformance-plan"];
+  readonly requiredArtifacts: readonly [
+    "manifest",
+    "fixture",
+    "adapter",
+    "conformance-plan",
+  ];
 };
 ```
 
@@ -104,11 +120,13 @@ Workbench state.
 ### Task 1: Discovery contract and deterministic triage
 
 **Files:**
+
 - Create: `packages/external-intake/src/discovery.ts`
 - Create: `packages/external-intake/test/discovery.test.ts`
 - Modify: `packages/external-intake/src/index.ts`
 
 **Interfaces:**
+
 - Consumes: `canonicalRecordDigest`, `parseIntakeRequest`, and
   `ExternalIntakeBatchV1` from existing External Intake contracts.
 - Produces: `parseDiscoveryRecord`, `triageDiscoveryRecord`,
@@ -127,7 +145,10 @@ it("creates the same eligible discovery record and digest from equivalent metada
 });
 
 it("blocks a floating reference without preventing an eligible sibling", () => {
-  const result = triageDiscoveryRecords([fixtureFloatingRef, fixtureRepository]);
+  const result = triageDiscoveryRecords([
+    fixtureFloatingRef,
+    fixtureRepository,
+  ]);
   expect(result.byId["floating-source"]?.triage.status).toBe("blocked");
   expect(result.byId["eligible-source"]?.triage.status).toBe("eligible");
 });
@@ -142,18 +163,27 @@ Expected: FAIL because `discovery.ts` exports do not exist.
 - [ ] **Step 3: Implement the strict schemas and triage functions**
 
 ```ts
-export function triageDiscoveryRecord(input: DiscoveryRecordInputV1): DiscoveryRecordV1 {
+export function triageDiscoveryRecord(
+  input: DiscoveryRecordInputV1,
+): DiscoveryRecordV1 {
   const parsed = discoveryInputSchema.parse(input);
   const gateCategories = blockedGateCategories(parsed);
-  const status = gateCategories.length > 0
-    ? "blocked"
-    : parsed.reuseMode === "reference-only"
-      ? "reference-only"
-      : "eligible";
+  const status =
+    gateCategories.length > 0
+      ? "blocked"
+      : parsed.reuseMode === "reference-only"
+        ? "reference-only"
+        : "eligible";
   return Object.freeze({
     ...normaliseDiscoveryInput(parsed),
-    triage: Object.freeze({ score: scoreDiscovery(parsed, status), status, gateCategories }),
-    metadataDigest: canonicalRecordDigest(normaliseDiscoveryDigestInput(parsed)),
+    triage: Object.freeze({
+      score: scoreDiscovery(parsed, status),
+      status,
+      gateCategories,
+    }),
+    metadataDigest: canonicalRecordDigest(
+      normaliseDiscoveryDigestInput(parsed),
+    ),
   });
 }
 ```
@@ -198,11 +228,13 @@ git commit -m "feat(intake): add deterministic discovery triage"
 ### Task 2: Quarantined Candidate Foundry scaffold
 
 **Files:**
+
 - Create: `packages/external-intake/src/discovery-scaffold.ts`
 - Create: `packages/external-intake/test/discovery-scaffold.test.ts`
 - Modify: `packages/external-intake/src/index.ts`
 
 **Interfaces:**
+
 - Consumes: an evidenced `CandidateProposalV1` and existing
   `createCandidatePortPlan`.
 - Produces: `createCandidateFoundryScaffold` returning
@@ -212,13 +244,19 @@ git commit -m "feat(intake): add deterministic discovery triage"
 
 ```ts
 it("creates a source-free deterministic selective-port scaffold", () => {
-  const scaffold = createCandidateFoundryScaffold({ portfolio, sourceId, candidate });
+  const scaffold = createCandidateFoundryScaffold({
+    portfolio,
+    sourceId,
+    candidate,
+  });
   expect(scaffold).toMatchObject({
     apiVersion: "factory.candidate-foundry-scaffold/v1",
     mode: "selective-source-copy",
     targetCapability: candidate.proposedFactoryKey,
   });
-  expect(JSON.stringify(scaffold)).not.toMatch(/sourceText|repositoryUrl|secret|token/i);
+  expect(JSON.stringify(scaffold)).not.toMatch(
+    /sourceText|repositoryUrl|secret|token/i,
+  );
 });
 
 it("rejects a Candidate whose evidence module is not safe for a source port", () => {
@@ -246,8 +284,15 @@ export function createCandidateFoundryScaffold(
     candidate: Object.freeze({ ...portPlan.candidate }),
     mode: portPlan.reuseMode,
     targetCapability: portPlan.targetCapability,
-    ...(portPlan.reuseMode === "selective-source-copy" ? { sourcePortPlan: portPlan } : {}),
-    requiredArtifacts: Object.freeze(["manifest", "fixture", "adapter", "conformance-plan"]),
+    ...(portPlan.reuseMode === "selective-source-copy"
+      ? { sourcePortPlan: portPlan }
+      : {}),
+    requiredArtifacts: Object.freeze([
+      "manifest",
+      "fixture",
+      "adapter",
+      "conformance-plan",
+    ]),
   });
 }
 ```
@@ -258,7 +303,7 @@ Golden asset, or add an executable contribution.
 - [ ] **Step 4: Add negative boundary tests**
 
 ```ts
-it.each(["graph", "assetLocks", "compiler", "runtime", "provider"]) (
+it.each(["graph", "assetLocks", "compiler", "runtime", "provider"])(
   "does not emit a %s authority field",
   (forbidden) => expect(JSON.stringify(scaffold)).not.toContain(forbidden),
 );
@@ -282,12 +327,14 @@ git commit -m "feat(intake): scaffold quarantined candidate ports"
 ### Task 3: Fixture and GitHub metadata discovery through Intake CLI
 
 **Files:**
+
 - Create: `apps/intake-cli/src/github-discovery-client.ts`
 - Create: `apps/intake-cli/test/discovery-cli.test.ts`
 - Modify: `apps/intake-cli/src/main.ts`
 - Modify: `apps/intake-cli/test/github-source-client.test.ts`
 
 **Interfaces:**
+
 - Consumes: `createEnvironmentGitHubSourceClient` token-host restriction and
   the Task 1 discovery contract.
 - Produces: `discovery fixture --file <local-json>` and
@@ -298,16 +345,20 @@ git commit -m "feat(intake): scaffold quarantined candidate ports"
 ```ts
 it("prints only opaque discovery counts and gate categories for a fixture run", async () => {
   const result = await runIntakeCli(
-    ["discovery", "fixture", "--file", "fixtures/discovery.json"], options,
+    ["discovery", "fixture", "--file", "fixtures/discovery.json"],
+    options,
   );
   expect(result).toBe(0);
   expect(stdout()).toContain('"eligible":1');
-  expect(stdout()).not.toMatch(/github\.com|canonicalIdentifier|token|sourceText/i);
+  expect(stdout()).not.toMatch(
+    /github\.com|canonicalIdentifier|token|sourceText/i,
+  );
 });
 
 it("rejects an unregistered family before it invokes GitHub", async () => {
-  await expect(runIntakeCli(["discovery", "github", "--family", "unknown"], options))
-    .resolves.toBe(2);
+  await expect(
+    runIntakeCli(["discovery", "github", "--family", "unknown"], options),
+  ).resolves.toBe(2);
   expect(fetch).not.toHaveBeenCalled();
 });
 ```
@@ -328,7 +379,9 @@ const githubDiscoveryQueries: Readonly<Record<CapabilityFamilyKey, string>> = {
 };
 
 if (args[0] === "discovery" && args[1] === "fixture" && args[2] === "--file") {
-  result = discoveryOutput(createDiscoveryRecords(localJson(args[3], options.cwd)));
+  result = discoveryOutput(
+    createDiscoveryRecords(localJson(args[3], options.cwd)),
+  );
   outputContext = "discovery";
 }
 ```
@@ -372,12 +425,14 @@ git commit -m "feat(intake-cli): discover quarantined capability sources"
 ### Task 4: Source-free Capability Supply Queue contract and API
 
 **Files:**
+
 - Modify: `packages/portfolio-public/src/summary.ts`
 - Modify: `packages/portfolio-public/test/summary.test.ts`
 - Modify: `apps/control-plane/src/portfolio/portfolio-summary.service.ts`
 - Modify: `apps/control-plane/src/portfolio/portfolio-summary.service.test.ts`
 
 **Interfaces:**
+
 - Consumes: Factory-owned static safe supply records from Portfolio Public.
 - Produces: `CapabilitySupplySummaryV1` nested in
   `WorkspacePortfolioSummaryV1` as `supply`.
@@ -388,7 +443,15 @@ git commit -m "feat(intake-cli): discover quarantined capability sources"
 expect(portfolioPublicSummary.supply).toEqual({
   apiVersion: "factory.capability-supply-summary/v1",
   families: expect.arrayContaining([
-    expect.objectContaining({ key: "commerce-transaction", profiles: ["restaurant-ordering", "simple-ecommerce", "retail-counter", "grocery-pickup"] }),
+    expect.objectContaining({
+      key: "commerce-transaction",
+      profiles: [
+        "restaurant-ordering",
+        "simple-ecommerce",
+        "retail-counter",
+        "grocery-pickup",
+      ],
+    }),
   ]),
 });
 expect(JSON.stringify(portfolioPublicSummary.supply)).not.toMatch(
@@ -424,8 +487,12 @@ only. Do not import External Intake into the Control Plane.
 - [ ] **Step 4: Add malformed and source-shaped response rejection tests**
 
 ```ts
-expect(() => workspacePortfolioSummary({ ...valid, supply: { families: [{ key: "catalog", canonicalIdentifier: "blocked" }] } }))
-  .toThrow("Control Plane Capability supply is invalid.");
+expect(() =>
+  workspacePortfolioSummary({
+    ...valid,
+    supply: { families: [{ key: "catalog", canonicalIdentifier: "blocked" }] },
+  }),
+).toThrow("Control Plane Capability supply is invalid.");
 ```
 
 - [ ] **Step 5: Run the focused tests to verify GREEN**
@@ -447,6 +514,7 @@ git commit -m "feat(portfolio): expose capability supply summary"
 ### Task 5: Workbench Home Capability Supply Queue
 
 **Files:**
+
 - Modify: `apps/workbench/lib/control-plane-client.ts`
 - Modify: `apps/workbench/lib/control-plane-client.test.ts`
 - Modify: `apps/workbench/lib/portfolio-summary.ts`
@@ -455,6 +523,7 @@ git commit -m "feat(portfolio): expose capability supply summary"
 - Modify: `apps/workbench/components/workbench-home.test.tsx`
 
 **Interfaces:**
+
 - Consumes: Task 4 `supply` payload only.
 - Produces: a read-only Home panel with Factory family, affected Profiles,
   counts, and fixed next-action label.
@@ -464,10 +533,14 @@ git commit -m "feat(portfolio): expose capability supply summary"
 ```tsx
 it("renders the capability supply queue without source-origin data", () => {
   render(<WorkbenchHome {...props} portfolioSummary={summaryWithSupply} />);
-  expect(screen.getByRole("heading", { name: "Capability supply" })).toBeVisible();
+  expect(
+    screen.getByRole("heading", { name: "Capability supply" }),
+  ).toBeVisible();
   expect(screen.getByText("commerce-transaction")).toBeVisible();
   expect(screen.getByText("evidence required")).toBeVisible();
-  expect(screen.queryByText(/github|http|sha256|path/i)).not.toBeInTheDocument();
+  expect(
+    screen.queryByText(/github|http|sha256|path/i),
+  ).not.toBeInTheDocument();
 });
 ```
 
@@ -481,7 +554,15 @@ Expected: FAIL because the Workbench parser and Home model do not know `supply`.
 
 ```ts
 const supply = parseCapabilitySupply(record.supply);
-return { apiVersion: "factory.workspace-portfolio-summary/v1", profiles, readiness, capabilities, intake, supply, compilations };
+return {
+  apiVersion: "factory.workspace-portfolio-summary/v1",
+  profiles,
+  readiness,
+  capabilities,
+  intake,
+  supply,
+  compilations,
+};
 ```
 
 Accept only the Task 4 API version, family-key allowlist, registered Profile
@@ -532,10 +613,12 @@ git commit -m "feat(workbench): show capability supply queue"
 ### Task 6: Boundary regression and release evidence
 
 **Files:**
+
 - Modify: `packages/external-intake/test/release-boundary.test.ts`
 - Modify: `docs/project-status.md`
 
 **Interfaces:**
+
 - Consumes: all prior tasks.
 - Produces: proof that Discovery and Candidate scaffolding remain
   quarantine-only, plus truthful capability-supply status.

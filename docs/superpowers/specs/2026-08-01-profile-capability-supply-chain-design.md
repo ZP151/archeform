@@ -47,12 +47,12 @@ content, executable snippets, URLs, arbitrary SQL, or Graph mutation authority.
 
 ## Reuse lanes
 
-| Lane | Use | Required outcome |
-| --- | --- | --- |
-| Pinned dependency | A small technical primitive such as Puck or XState | Pinned version, notice, wrapper, regression and removal test |
-| Provider adapter | A mature external runtime such as Keycloak or Gotenberg | Factory contract, fake provider, conformance, redaction and replacement path |
-| Selective source study | A small permissively licensed implementation fragment | Fixed commit, exact paths, copy ledger, notice, fixture, conformance and removal test |
-| Reference only | Domain vocabulary or architecture such as ERPNext or Odoo | No copied source, package, UI asset, schema, or runtime |
+| Lane                   | Use                                                       | Required outcome                                                                      |
+| ---------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Pinned dependency      | A small technical primitive such as Puck or XState        | Pinned version, notice, wrapper, regression and removal test                          |
+| Provider adapter       | A mature external runtime such as Keycloak or Gotenberg   | Factory contract, fake provider, conformance, redaction and replacement path          |
+| Selective source study | A small permissively licensed implementation fragment     | Fixed commit, exact paths, copy ledger, notice, fixture, conformance and removal test |
+| Reference only         | Domain vocabulary or architecture such as ERPNext or Odoo | No copied source, package, UI asset, schema, or runtime                               |
 
 Whole-repository imports, Git submodules, and source-directory imports from
 external repositories are prohibited. A permissive licence enables evaluation;
@@ -60,18 +60,18 @@ it does not grant an automated source-copy decision.
 
 ## Restaurant capability map
 
-| Capability subgraph | Current state | First Factory target | Cross-profile use |
-| --- | --- | --- | --- |
-| Table/session and location context | Present, Restaurant-specific | typed location/session bindings | pickup, appointment, venue, counter sale |
-| Catalog and configured line | Present or partial | menu options, modifiers, price deltas, availability | ecommerce, retail, spare parts, booking extras |
-| Cart, order, stock and audit | Present; generic kernel incomplete | durable order amendment and compensation | ecommerce, retail, grocery, service parts |
-| Customer identity and membership | Gap | identity context, member tier, wallet and points projection | CRM, B2B portal, loyalty, subscriptions |
-| Pricing and promotion | Gap | rules, coupons, member price and calculated discount projection | commerce, booking, billing |
-| Reservation and waitlist | Gap | availability, reservation, queue, estimate and reminders | restaurant, appointments, rooms, rentals |
-| Fulfilment | Narrow pickup field | pickup, delivery address, dispatch state and tracking events | grocery, delivery, field service, ecommerce |
-| Kitchen and realtime | Kitchen flow present; transport absent | transport-neutral order event contract | service dispatch, support queue, fulfilment |
-| Settlement and printing | Simulated full payment and browser print | settlement contract, receipt and label render Provider | invoices, certificates, reports, retail |
-| Analytics and export | Basic Restaurant metrics | aggregate metric contract, governed export and dashboard projection | every Profile family |
+| Capability subgraph                | Current state                            | First Factory target                                                | Cross-profile use                              |
+| ---------------------------------- | ---------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------- |
+| Table/session and location context | Present, Restaurant-specific             | typed location/session bindings                                     | pickup, appointment, venue, counter sale       |
+| Catalog and configured line        | Present or partial                       | menu options, modifiers, price deltas, availability                 | ecommerce, retail, spare parts, booking extras |
+| Cart, order, stock and audit       | Present; generic kernel incomplete       | durable order amendment and compensation                            | ecommerce, retail, grocery, service parts      |
+| Customer identity and membership   | Gap                                      | identity context, member tier, wallet and points projection         | CRM, B2B portal, loyalty, subscriptions        |
+| Pricing and promotion              | Gap                                      | rules, coupons, member price and calculated discount projection     | commerce, booking, billing                     |
+| Reservation and waitlist           | Gap                                      | availability, reservation, queue, estimate and reminders            | restaurant, appointments, rooms, rentals       |
+| Fulfilment                         | Narrow pickup field                      | pickup, delivery address, dispatch state and tracking events        | grocery, delivery, field service, ecommerce    |
+| Kitchen and realtime               | Kitchen flow present; transport absent   | transport-neutral order event contract                              | service dispatch, support queue, fulfilment    |
+| Settlement and printing            | Simulated full payment and browser print | settlement contract, receipt and label render Provider              | invoices, certificates, reports, retail        |
+| Analytics and export               | Basic Restaurant metrics                 | aggregate metric contract, governed export and dashboard projection | every Profile family                           |
 
 The next executable Restaurant capability will be commerce.order-amendment/v1.
 Merchant add, remove, quantity, modifier, and cancellation changes must be

@@ -4,6 +4,7 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
   UnprocessableEntityException,
 } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
@@ -554,6 +555,56 @@ function uniqueConstraint(error: unknown): boolean {
     typeof error === "object" &&
     (error as { code?: unknown }).code === "P2002"
   );
+}
+
+const localPreviewIntentApiVersion = "factory.local-preview-intent/v1";
+const localPreviewRunIdPattern = /^preview-[a-f0-9]{64}$/u;
+const previewRunStatuses = new Set([
+  "starting",
+  "ready",
+  "stopping",
+  "stopped",
+  "failed",
+]);
+
+function localPreviewIntent(input: unknown): { readonly previewRunId: string } {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new BadRequestException("Local preview intent is invalid.");
+  }
+  const body = input as UnknownRecord;
+  if (
+    Object.keys(body).sort().join(",") !== "apiVersion,previewRunId" ||
+    body.apiVersion !== localPreviewIntentApiVersion ||
+    typeof body.previewRunId !== "string" ||
+    !localPreviewRunIdPattern.test(body.previewRunId)
+  ) {
+    throw new BadRequestException("Local preview intent is invalid.");
+  }
+  return { previewRunId: body.previewRunId };
+}
+
+function localPreviewIntentResponse(
+  preview: UnknownRecord,
+  compilationId: string,
+  previewRunId: string,
+) {
+  const composeProjectName = `factory-preview-${previewRunId}`;
+  if (
+    preview.id !== previewRunId ||
+    preview.compilationId !== compilationId ||
+    preview.composeProjectName !== composeProjectName ||
+    typeof preview.status !== "string" ||
+    !previewRunStatuses.has(preview.status)
+  ) {
+    throw new ConflictException("Local preview intent conflicted.");
+  }
+  return {
+    apiVersion: localPreviewIntentApiVersion,
+    compilationId,
+    previewRunId,
+    composeProjectName,
+    status: preview.status,
+  };
 }
 
 function serializationConflict(error: unknown): boolean {
@@ -1379,6 +1430,99 @@ export class LifecycleService {
       throw error;
     }
     return preview;
+  }
+
+  async createLocalAcceptancePreviewRun(compilationId: string, input: unknown) {
+    const id = requiredString({ compilationId }, "compilationId");
+    const { previewRunId } = localPreviewIntent(input);
+    const composeProjectName = `factory-preview-${previewRunId}`;
+    const existing = await this.prisma.previewRun.findUnique({
+      where: { id: previewRunId },
+    });
+    if (existing) {
+      return localPreviewIntentResponse(
+        existing as UnknownRecord,
+        id,
+        previewRunId,
+      );
+    }
+
+    const compilation = await this.prisma.compilation.findUnique({
+      where: { id },
+      include: { artifacts: true },
+    });
+    if (!compilation) throw new NotFoundException("Compilation was not found.");
+    if (!succeededCompilation(compilation.result)) {
+      throw new ConflictException(
+        "Compilation must succeed before a preview can start.",
+      );
+    }
+    this.previewRootDirectory(compilation.artifacts);
+    const current = await this.prisma.previewRun.findFirst({
+      where: { compilationId: id },
+      orderBy: { sequence: "desc" },
+    });
+    if (
+      current?.activeKey === id ||
+      current?.status === "starting" ||
+      current?.status === "ready" ||
+      current?.status === "stopping" ||
+      current?.status === "failed"
+    ) {
+      throw new ConflictException("Local preview intent conflicted.");
+    }
+    const sequence =
+      (await this.prisma.previewRun.count({ where: { compilationId: id } })) +
+      1;
+    let preview;
+    try {
+      preview = await this.prisma.previewRun.create({
+        data: {
+          id: previewRunId,
+          compilationId: id,
+          activeKey: id,
+          sequence,
+          composeProjectName,
+          status: "starting",
+        },
+      });
+    } catch (error) {
+      if (!uniqueConstraint(error)) throw error;
+      const winner = await this.prisma.previewRun.findUnique({
+        where: { id: previewRunId },
+      });
+      if (winner) {
+        return localPreviewIntentResponse(
+          winner as UnknownRecord,
+          id,
+          previewRunId,
+        );
+      }
+      throw new ConflictException("Local preview intent conflicted.");
+    }
+    try {
+      await this.previewRunQueue.enqueue({
+        action: "start",
+        previewRunId,
+      });
+    } catch {
+      await this.prisma.previewRun.updateMany({
+        where: { id: previewRunId, status: "starting" },
+        data: {
+          status: "failed",
+          diagnostic:
+            "Local acceptance preview enqueue acknowledgement failed.",
+        },
+      });
+      throw new ServiceUnavailableException(
+        "Local acceptance preview could not be queued.",
+      );
+    }
+    return localPreviewIntentResponse(
+      preview as UnknownRecord,
+      id,
+      previewRunId,
+    );
   }
 
   async getCurrentPreviewRun(compilationId: string) {

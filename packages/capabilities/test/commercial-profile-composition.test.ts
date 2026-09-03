@@ -582,7 +582,9 @@ describe("commercial profile composition", () => {
     const selections = [
       ...(composition.graph.integration.compositionSelections ?? []),
       {
-        lock: lockCapabilityAsset(getCapabilityAsset("commerce.simulated-payment")),
+        lock: lockCapabilityAsset(
+          getCapabilityAsset("commerce.simulated-payment"),
+        ),
         bindings: {
           orderEntity: { graphSymbol: "graph.domain.order" },
           orderFlow: { graphSymbol: "graph.flow.ecommerce-order" },

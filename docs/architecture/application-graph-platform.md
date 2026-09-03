@@ -54,12 +54,12 @@ and source-intake rules for each external project.
 
 ## Ecosystem adoption boundary
 
-| Tier | Meaning | Examples |
-| --- | --- | --- |
-| Direct dependency | A pinned published package is invoked through a Factory-owned adapter or compiler boundary. | Puck, React Flow, XState, Prisma, node-casbin |
-| Provider contract | Factory owns the Graph mapping; an external service is optional and replaceable. | Appwrite, Medusa, OpenFGA |
-| Source study | An exact upstream commit is inspected for patterns or a separately approved, legally compatible fragment. | Amplication |
-| Reference only | Architecture may be studied but source is not copied, linked, or embedded. | Vendure |
+| Tier              | Meaning                                                                                                   | Examples                                      |
+| ----------------- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| Direct dependency | A pinned published package is invoked through a Factory-owned adapter or compiler boundary.               | Puck, React Flow, XState, Prisma, node-casbin |
+| Provider contract | Factory owns the Graph mapping; an external service is optional and replaceable.                          | Appwrite, Medusa, OpenFGA                     |
+| Source study      | An exact upstream commit is inspected for patterns or a separately approved, legally compatible fragment. | Amplication                                   |
+| Reference only    | Architecture may be studied but source is not copied, linked, or embedded.                                | Vendure                                       |
 
 No whole-repository copy is an integration strategy. Before a source fragment
 can be copied, the source-study record must name its repository, immutable

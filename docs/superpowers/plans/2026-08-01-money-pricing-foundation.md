@@ -35,27 +35,29 @@ PostgreSQL, Playwright, Docker Compose.
 
 ## File structure
 
-| Path | Responsibility |
-| --- | --- |
-| `packages/capabilities/src/money/pricing.ts` | Factory-owned amount parsing, rounding, price quote, tax, promotion, and refund allocation rules. |
-| `packages/capabilities/test/money-pricing.test.ts` | Pure money rule, invalid input, and deterministic allocation evidence. |
-| `packages/capabilities/src/assets/commerce/money-pricing-v1-0-0.ts` | In-memory typed manifest registered with the asset catalogue. |
-| `packages/capabilities/assets/commerce.money-pricing/1.0.0/` | Physical immutable package manifest, declarative adapter, template, fixture, and contract evidence. |
-| `packages/capabilities/src/assets/index.ts` | Registers the new Golden version without replacing historical assets. |
-| `packages/capabilities/src/index.ts` | Adds validated profile bindings and composition recipes for Restaurant/Ecommerce. |
-| `packages/compiler/src/index.ts` | Validates the locked money contribution and emits generated persistence/API outputs. |
-| `packages/compiler/test/money-pricing-runtime.test.ts` | Verifies generated price snapshot behavior and compiler failure modes. |
-| `e2e/generated-restaurant.spec.ts` | Proves Restaurant price/promotion/tax journey against an isolated generated app. |
-| `e2e/generated-ecommerce.spec.ts` | Proves Ecommerce price/promotion/tax/refund journey against an isolated generated app. |
+| Path                                                                | Responsibility                                                                                      |
+| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `packages/capabilities/src/money/pricing.ts`                        | Factory-owned amount parsing, rounding, price quote, tax, promotion, and refund allocation rules.   |
+| `packages/capabilities/test/money-pricing.test.ts`                  | Pure money rule, invalid input, and deterministic allocation evidence.                              |
+| `packages/capabilities/src/assets/commerce/money-pricing-v1-0-0.ts` | In-memory typed manifest registered with the asset catalogue.                                       |
+| `packages/capabilities/assets/commerce.money-pricing/1.0.0/`        | Physical immutable package manifest, declarative adapter, template, fixture, and contract evidence. |
+| `packages/capabilities/src/assets/index.ts`                         | Registers the new Golden version without replacing historical assets.                               |
+| `packages/capabilities/src/index.ts`                                | Adds validated profile bindings and composition recipes for Restaurant/Ecommerce.                   |
+| `packages/compiler/src/index.ts`                                    | Validates the locked money contribution and emits generated persistence/API outputs.                |
+| `packages/compiler/test/money-pricing-runtime.test.ts`              | Verifies generated price snapshot behavior and compiler failure modes.                              |
+| `e2e/generated-restaurant.spec.ts`                                  | Proves Restaurant price/promotion/tax journey against an isolated generated app.                    |
+| `e2e/generated-ecommerce.spec.ts`                                   | Proves Ecommerce price/promotion/tax/refund journey against an isolated generated app.              |
 
 ### Task 1: Establish Factory money primitives
 
 **Files:**
+
 - Create: `packages/capabilities/src/money/pricing.ts`
 - Create: `packages/capabilities/test/money-pricing.test.ts`
 - Modify: `packages/capabilities/src/index.ts`
 
 **Interfaces:**
+
 - Produces `parseMoneyAmount`, `quotePrice`, and `allocateRefund` from
   `packages/capabilities/src/money/pricing.ts`.
 - `MoneyAmountV1` is `{ readonly minor: string; readonly currency: string }`.
@@ -78,12 +80,30 @@ describe("Factory money pricing", () => {
         promotions: [{ key: "welcome", kind: "percent", basisPoints: 1000 }],
         taxBasisPoints: 850,
       }),
-    ).toMatchObject({ subtotalMinor: "597", discountMinor: "60", taxMinor: "46", totalMinor: "583" });
+    ).toMatchObject({
+      subtotalMinor: "597",
+      discountMinor: "60",
+      taxMinor: "46",
+      totalMinor: "583",
+    });
   });
 
   it("rejects a floating-point amount, mixed currency, and over-refund", () => {
-    expect(() => quotePrice({ currency: "USD", lines: [{ key: "tea", unitMinor: "1.99", quantity: 1 }], promotions: [], taxBasisPoints: 0 })).toThrow("minor");
-    expect(() => allocateRefund({ capturedMinor: "100", requestedMinor: "101", currency: "USD" })).toThrow("refund");
+    expect(() =>
+      quotePrice({
+        currency: "USD",
+        lines: [{ key: "tea", unitMinor: "1.99", quantity: 1 }],
+        promotions: [],
+        taxBasisPoints: 0,
+      }),
+    ).toThrow("minor");
+    expect(() =>
+      allocateRefund({
+        capturedMinor: "100",
+        requestedMinor: "101",
+        currency: "USD",
+      }),
+    ).toThrow("refund");
   });
 });
 ```
@@ -97,10 +117,16 @@ Expected: FAIL because the money module does not exist.
 - [ ] **Step 3: Implement the deterministic primitives**
 
 ```ts
-export interface MoneyAmountV1 { readonly minor: string; readonly currency: string; }
+export interface MoneyAmountV1 {
+  readonly minor: string;
+  readonly currency: string;
+}
 
 export function quotePrice(input: PriceQuoteInputV1): PriceQuoteV1 {
-  const subtotal = input.lines.reduce((sum, line) => sum + parseMinor(line.unitMinor) * line.quantity, 0n);
+  const subtotal = input.lines.reduce(
+    (sum, line) => sum + parseMinor(line.unitMinor) * line.quantity,
+    0n,
+  );
   const discount = calculateBoundedDiscount(subtotal, input.promotions);
   const taxable = subtotal - discount;
   const tax = roundHalfUp(taxable * BigInt(input.taxBasisPoints), 10_000n);
@@ -129,6 +155,7 @@ git commit -m "feat: add deterministic money pricing primitives"
 ### Task 2: Release the physical Money capability package
 
 **Files:**
+
 - Create: `packages/capabilities/src/assets/commerce/money-pricing-v1-0-0.ts`
 - Create: `packages/capabilities/assets/commerce.money-pricing/1.0.0/component.json`
 - Create: `packages/capabilities/assets/commerce.money-pricing/1.0.0/adapter.json`
@@ -139,6 +166,7 @@ git commit -m "feat: add deterministic money pricing primitives"
 - Modify: `packages/capabilities/test/capability-registry.test.ts`
 
 **Interfaces:**
+
 - Provides `money.price-quote/v1`, `money.price-snapshot/v1`, and
   `money.refund-allocation/v1`.
 - Requires `commerce.catalog-item/v1` and `commerce.order-operation/v1`.
@@ -191,11 +219,13 @@ git commit -m "feat: add locked money pricing capability package"
 ### Task 3: Compose Money into two Profile Graphs
 
 **Files:**
+
 - Modify: `packages/capabilities/src/index.ts`
 - Create: `packages/capabilities/test/money-pricing-profile.test.ts`
 - Modify: `packages/capabilities/test/commercial-profile-composition.test.ts`
 
 **Interfaces:**
+
 - Restaurant binds menu item, order, order line, cashier role, customer role,
   and table-session flow.
 - Ecommerce binds catalog item, order, order line, merchant role, shopper role,
@@ -207,8 +237,12 @@ git commit -m "feat: add locked money pricing capability package"
 
 ```ts
 it("locks the same money package for Restaurant and Ecommerce with distinct bindings", () => {
-  const restaurant = composeDefaultCapabilityDraft({ profile: "restaurant-ordering" }).graph;
-  const ecommerce = composeDefaultCapabilityDraft({ profile: "simple-ecommerce" }).graph;
+  const restaurant = composeDefaultCapabilityDraft({
+    profile: "restaurant-ordering",
+  }).graph;
+  const ecommerce = composeDefaultCapabilityDraft({
+    profile: "simple-ecommerce",
+  }).graph;
   expect(lockedPackage(restaurant, "commerce.money-pricing")).toEqual(
     expect.objectContaining({ version: "1.0.0" }),
   );
@@ -248,11 +282,13 @@ git commit -m "feat: compose money pricing across commerce profiles"
 ### Task 4: Compile authoritative price snapshots
 
 **Files:**
+
 - Modify: `packages/compiler/src/index.ts`
 - Create: `packages/compiler/test/money-pricing-runtime.test.ts`
 - Modify: `packages/compiler/test/composition-compilation.test.ts`
 
 **Interfaces:**
+
 - `resolveMoneyPricingContribution(input)` returns a validated locked package
   contribution or throws before output materialization.
 - Generated API exports `quoteOrderPrice` and `allocateOrderRefund`, accepting
@@ -265,12 +301,16 @@ git commit -m "feat: compose money pricing across commerce profiles"
 ```ts
 it("emits an authoritative price-snapshot path from the locked Money package", () => {
   const files = filesForPublishedEcommerce();
-  expect(files["api/src/capabilities/commerce.money-pricing.ts"]).toContain("quoteOrderPrice");
+  expect(files["api/src/capabilities/commerce.money-pricing.ts"]).toContain(
+    "quoteOrderPrice",
+  );
   expect(files["api/prisma/schema.prisma"]).toContain("model PriceSnapshot");
 });
 
 it("rejects a money package contribution outside its declared slot", () => {
-  expect(() => generateApplicationBundle(tamperedMoneyLock)).toThrow("contribution");
+  expect(() => generateApplicationBundle(tamperedMoneyLock)).toThrow(
+    "contribution",
+  );
 });
 ```
 
@@ -305,11 +345,13 @@ git commit -m "feat: compile authoritative money price snapshots"
 ### Task 5: Prove isolated Restaurant and Ecommerce journeys
 
 **Files:**
+
 - Modify: `e2e/generated-restaurant.spec.ts`
 - Modify: `e2e/generated-ecommerce.spec.ts`
 - Modify: `apps/compiler-worker/test/queued-preview-run.test.ts`
 
 **Interfaces:**
+
 - Each test creates a separate Published Graph, immutable composition lock,
   artifact directory, and Compose project.
 - Restaurant journey: menu modifier -> quote -> declared promotion/tax ->
@@ -358,6 +400,7 @@ git commit -m "test: prove money pricing across generated commerce apps"
 ### Task 6: Release review for Money
 
 **Files:**
+
 - Create: `docs/acceptance/money-pricing-cross-profile.md`
 - Modify: `docs/project-status.md`
 

@@ -60,13 +60,13 @@ scan output, upstream description, source code, prompt, response, or secret.
 
 Each triaged record has exactly one non-promoting reuse mode.
 
-| Mode | Intended result | Required evidence | Never allowed |
-| --- | --- | --- | --- |
-| `direct-dependency` | Version-pinned Factory wrapper around a small library | integrity, license/notice, SBOM, advisory result, Factory wrapper fixture | Graph ownership, dynamic download, user-selected package URL |
-| `template-adapter` | Factory-owned output-slot adapter for a static template | fixed commit, declared parameter schema, dry-run fixture, snapshot | template actions, scripts, remote includes, arbitrary output paths |
-| `provider-adapter` | Factory-owned contract plus local fake | API or SDK digest, term classification, scope/data map, fake fixture | provider-defined canonical domain, live credential in Graph, automatic activation |
-| `selective-source-port` | A later named, small Factory-owned implementation | fixed commit, exact path/range ledger, compatible license decision, notices, tests, removal path | whole repository, ORM, migration, UI shell, source body in Candidate scaffold |
-| `reference-only` | Profile vocabulary and independent acceptance scenarios | fixed public reference and policy classification | dependency, copied code, runtime, generated output |
+| Mode                    | Intended result                                         | Required evidence                                                                                | Never allowed                                                                     |
+| ----------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| `direct-dependency`     | Version-pinned Factory wrapper around a small library   | integrity, license/notice, SBOM, advisory result, Factory wrapper fixture                        | Graph ownership, dynamic download, user-selected package URL                      |
+| `template-adapter`      | Factory-owned output-slot adapter for a static template | fixed commit, declared parameter schema, dry-run fixture, snapshot                               | template actions, scripts, remote includes, arbitrary output paths                |
+| `provider-adapter`      | Factory-owned contract plus local fake                  | API or SDK digest, term classification, scope/data map, fake fixture                             | provider-defined canonical domain, live credential in Graph, automatic activation |
+| `selective-source-port` | A later named, small Factory-owned implementation       | fixed commit, exact path/range ledger, compatible license decision, notices, tests, removal path | whole repository, ORM, migration, UI shell, source body in Candidate scaffold     |
+| `reference-only`        | Profile vocabulary and independent acceptance scenarios | fixed public reference and policy classification                                                 | dependency, copied code, runtime, generated output                                |
 
 ## Discovery Index contract
 

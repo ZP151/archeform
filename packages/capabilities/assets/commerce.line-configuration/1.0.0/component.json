@@ -101,9 +101,7 @@
     { "interfaceKey": "commerce.catalog-item", "version": "v1" },
     { "interfaceKey": "core.location-context", "version": "v1" }
   ],
-  "provides": [
-    { "interfaceKey": "commerce.configured-line", "version": "v1" }
-  ],
+  "provides": [{ "interfaceKey": "commerce.configured-line", "version": "v1" }],
   "verification": {
     "fixture": "fixtures/default.json",
     "fixtureDigest": "sha256:e511cab8cf25fbdb7631861efbae140186165aa42ab312beafdae01e33444bf0",

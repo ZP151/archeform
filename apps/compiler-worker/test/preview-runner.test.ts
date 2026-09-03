@@ -95,8 +95,90 @@ const restaurantRegisteredArtifacts = [
   artifact("docker-compose.yml", restaurantCompose),
   artifact("src/app.ts", application),
 ];
+const acceptanceCompose = Buffer.from(
+  "services:\n  web:\n    image: example\n  api:\n    image: example\n  kitchen:\n    image: example\n    profiles:\n      - acceptance\n  cashier:\n    image: example\n    profiles:\n      - acceptance\n",
+  "utf8",
+);
+const acceptanceRegisteredArtifacts = [
+  artifact("docker-compose.yml", acceptanceCompose),
+  artifact("src/app.ts", application),
+];
 
 describe("preview runner", () => {
+  it("uses only the exact acceptance signal to activate the registered profile", async () => {
+    const { root } = await sourceFixture(acceptanceCompose);
+    const commands: Parameters<PreviewProcessRunner>[0][] = [];
+    const processRunner: PreviewProcessRunner = async (command) => {
+      commands.push(command);
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "web")
+        return "127.0.0.1:49101\n";
+      if (command.args.at(-3) === "port" && command.args.at(-2) === "api")
+        return "127.0.0.1:49102\n";
+    };
+    vi.stubEnv(
+      "FACTORY_LOCAL_PREVIEW_PROFILE",
+      "factory.local-preview-profile/v1:acceptance",
+    );
+
+    try {
+      await startPreviewRun(
+        root,
+        request(acceptanceRegisteredArtifacts),
+        processRunner,
+      );
+      await stopPreviewRun(
+        root,
+        request(acceptanceRegisteredArtifacts),
+        processRunner,
+      );
+
+      expect(commands).not.toHaveLength(0);
+      for (const command of commands) {
+        expect(command.args.slice(0, 3)).toEqual([
+          "compose",
+          "--profile",
+          "acceptance",
+        ]);
+        expect(
+          command.environment.FACTORY_LOCAL_PREVIEW_PROFILE,
+        ).toBeUndefined();
+      }
+    } finally {
+      vi.unstubAllEnvs();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    "",
+    " factory.local-preview-profile/v1:acceptance",
+    "factory.local-preview-profile/v1:acceptance ",
+    "factory.local-preview-profile/v1:Acceptance",
+    "factory.local-preview-profile/v0:acceptance",
+    "factory.local-preview-profile/v2:acceptance",
+    "factory.local-preview-profile/v1:acceptance,other",
+  ])("rejects present profile signal %j before Docker runs", async (value) => {
+    const { root } = await sourceFixture(acceptanceCompose);
+    const processRunner = vi
+      .fn<PreviewProcessRunner>()
+      .mockResolvedValue(undefined);
+    vi.stubEnv("FACTORY_LOCAL_PREVIEW_PROFILE", value);
+
+    try {
+      await expect(
+        startPreviewRun(
+          root,
+          request(acceptanceRegisteredArtifacts),
+          processRunner,
+        ),
+      ).rejects.toMatchObject({ code: "preview_artifact_failed" });
+      expect(processRunner).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("retries a transient generated web readiness failure", async () => {
     const { root } = await sourceFixture();
     const commands: Parameters<PreviewProcessRunner>[0][] = [];

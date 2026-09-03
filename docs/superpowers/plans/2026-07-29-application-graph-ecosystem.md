@@ -23,12 +23,14 @@
 ### Task 1: Establish third-party inventory and notice enforcement
 
 **Files:**
+
 - Create: `docs/third-party-notices.md`
 - Create: `docs/ecosystem/source-studies/README.md`
 - Modify: `package.json`
 - Test: `scripts/verify-third-party-notices.mjs`
 
 **Interfaces:**
+
 - Consumes: dependency manifests in each `apps/*/package.json` and `packages/*/package.json`.
 - Produces: `verify-third-party-notices` script that exits non-zero when an adopted direct dependency has no inventory entry.
 
@@ -51,9 +53,16 @@ Expected: failure because the notices inventory does not exist.
 - [ ] **Step 3: Add the inventory and verifier**
 
 ```ts
-const required = ["@puckeditor/core", "@xyflow/react", "xstate", "prisma", "casbin"];
+const required = [
+  "@puckeditor/core",
+  "@xyflow/react",
+  "xstate",
+  "prisma",
+  "casbin",
+];
 const missing = required.filter((key) => !noticeKeys.has(key));
-if (missing.length > 0) throw new Error(`Missing third-party notices: ${missing.join(", ")}`);
+if (missing.length > 0)
+  throw new Error(`Missing third-party notices: ${missing.join(", ")}`);
 ```
 
 - [ ] **Step 4: Run the verifier**
@@ -72,11 +81,13 @@ git commit -m "docs: record direct ecosystem dependencies"
 ### Task 2: Complete direct-toolchain conformance tests
 
 **Files:**
+
 - Modify: `packages/adapters/test/graph-editor-adapters.test.ts`
 - Modify: `packages/compiler/test/compilation-plan.test.ts`
 - Modify: `packages/graph/test/application-graph.test.ts`
 
 **Interfaces:**
+
 - Consumes: `pageModelToPuckDocument`, `puckDocumentToPageModel`, `flowModelToReactFlow`, `generateApplicationBundle`, and `validateApplicationGraph`.
 - Produces: conformance tests proving that direct integrations project Graph data without owning it.
 
@@ -84,9 +95,13 @@ git commit -m "docs: record direct ecosystem dependencies"
 
 ```ts
 expect(puckDocumentToPageModel(puckDocument)).toEqual(graph.page);
-expect(flowModelToReactFlow(graph.flow).edges).toEqual(expect.arrayContaining([
-  expect.objectContaining({ data: expect.objectContaining({ event: "submit" }) }),
-]));
+expect(flowModelToReactFlow(graph.flow).edges).toEqual(
+  expect.arrayContaining([
+    expect.objectContaining({
+      data: expect.objectContaining({ event: "submit" }),
+    }),
+  ]),
+);
 expect(() => validateApplicationGraph(persistedPuckDocument)).toThrow();
 ```
 
@@ -99,7 +114,9 @@ Expected: failure until the invalid persisted external format is explicitly reje
 - [ ] **Step 3: Implement only the Graph-first validation and adapters needed**
 
 ```ts
-export function assertApplicationGraphInput(input: unknown): ApplicationGraphV1 {
+export function assertApplicationGraphInput(
+  input: unknown,
+): ApplicationGraphV1 {
   return ApplicationGraphV1Schema.parse(input);
 }
 ```
@@ -120,20 +137,27 @@ git commit -m "test: enforce Graph-first ecosystem adapters"
 ### Task 3: Build authoring-adapter contracts before adding Blockly, BPMN, or GrapesJS
 
 **Files:**
+
 - Create: `packages/adapters/src/authoring-contract.ts`
 - Create: `packages/adapters/test/authoring-contract.test.ts`
 - Create: `docs/ecosystem/contracts/authoring-adapter-v1.md`
 
 **Interfaces:**
+
 - Produces: `AuthoringAdapterV1<TDocument>` with `exportGraph` and `importGraph` methods that operate on declared Graph fragments.
 
 - [ ] **Step 1: Write failing contract tests**
 
 ```ts
-expect(() => adapter.importGraph({ kind: "script", code: "fetch('https://example.test')" })).toThrow(
-  "Unsupported authoring document",
+expect(() =>
+  adapter.importGraph({
+    kind: "script",
+    code: "fetch('https://example.test')",
+  }),
+).toThrow("Unsupported authoring document");
+expect(adapter.exportGraph(flowModel)).toEqual(
+  expect.objectContaining({ apiVersion: "factory.authoring-adapter/v1" }),
 );
-expect(adapter.exportGraph(flowModel)).toEqual(expect.objectContaining({ apiVersion: "factory.authoring-adapter/v1" }));
 ```
 
 - [ ] **Step 2: Run the test**
@@ -168,11 +192,13 @@ git commit -m "feat: define constrained authoring adapter contract"
 ### Task 4: Add provider-contract conformance harness
 
 **Files:**
+
 - Create: `packages/adapters/src/provider-contract.ts`
 - Create: `packages/adapters/test/provider-contract.test.ts`
 - Create: `docs/ecosystem/contracts/runtime-provider-v1.md`
 
 **Interfaces:**
+
 - Produces: `RuntimeProviderV1` with provider metadata, a Graph-to-provider projection, fixture execution, and teardown.
 
 - [ ] **Step 1: Write a failing fixture-provider test**
@@ -216,11 +242,13 @@ git commit -m "feat: add replaceable runtime provider contract"
 ### Task 5: Create the Amplication and Medusa source-study records
 
 **Files:**
+
 - Create: `docs/ecosystem/source-studies/amplication-amplication-7656495d27f0dceff89657590c3f14149e45c7a6.md`
 - Create: `docs/ecosystem/source-studies/medusajs-medusa-dde167d0be4c23ed37aa7a3d71721728e31f3e96.md`
 - Modify: `docs/third-party-notices.md`
 
 **Interfaces:**
+
 - Consumes: immutable upstream commit SHAs and authoritative licence files.
 - Produces: zero-or-more approved source fragments; until then, research-only records.
 
@@ -263,11 +291,13 @@ git commit -m "docs: record ecosystem source studies"
 ### Task 6: Add the OpenFGA provider only after an independently accepted profile
 
 **Files:**
+
 - Create: `packages/adapters/src/openfga-provider.ts`
 - Create: `packages/adapters/test/openfga-provider.test.ts`
 - Modify: `docs/roadmap.md`
 
 **Interfaces:**
+
 - Consumes: `RuntimeProviderV1`, a Published Graph, capability contracts, and a provider-specific fixture.
 - Produces: provider compilation metadata without changing Graph semantics.
 
@@ -277,7 +307,9 @@ git commit -m "docs: record ecosystem source studies"
 await expect(openFgaProvider.compile(publishedGraph)).resolves.toEqual(
   expect.objectContaining({ graphHash: hashApplicationGraph(publishedGraph) }),
 );
-await expect(openFgaProvider.compile(mutableDraft as ApplicationGraphV1)).rejects.toThrow("Published revision required");
+await expect(
+  openFgaProvider.compile(mutableDraft as ApplicationGraphV1),
+).rejects.toThrow("Published revision required");
 ```
 
 - [ ] **Step 2: Run the focused test**
@@ -292,8 +324,12 @@ Expected: failure until that provider adapter exists.
 export const openFgaProvider: RuntimeProviderV1 = {
   key: "openfga",
   version: "1",
-  async compile(graph) { return compileFixtureProjection(graph); },
-  async teardown(result) { await destroyFixtureProjection(result); },
+  async compile(graph) {
+    return compileFixtureProjection(graph);
+  },
+  async teardown(result) {
+    await destroyFixtureProjection(result);
+  },
 };
 ```
 
@@ -313,6 +349,7 @@ git commit -m "feat: add optional OpenFGA contract adapter"
 ### Task 7: Add Appwrite and Medusa provider contracts in separate reviewable slices
 
 **Files:**
+
 - Create: `packages/adapters/src/appwrite-provider.ts`
 - Create: `packages/adapters/test/appwrite-provider.test.ts`
 - Create: `packages/adapters/src/medusa-provider.ts`
@@ -320,6 +357,7 @@ git commit -m "feat: add optional OpenFGA contract adapter"
 - Modify: `docs/ecosystem/open-source-adoption.md`
 
 **Interfaces:**
+
 - Consumes: `RuntimeProviderV1`, Published Graph capability requirements, and
   provider-specific fixtures.
 - Produces: optional Appwrite and Medusa projections that remain replaceable by
@@ -331,7 +369,9 @@ git commit -m "feat: add optional OpenFGA contract adapter"
 ```ts
 for (const provider of [appwriteProvider, medusaProvider]) {
   await expect(provider.compile(publishedGraph)).resolves.toEqual(
-    expect.objectContaining({ graphHash: hashApplicationGraph(publishedGraph) }),
+    expect.objectContaining({
+      graphHash: hashApplicationGraph(publishedGraph),
+    }),
   );
 }
 ```
@@ -345,8 +385,14 @@ Expected: failure because neither provider adapter exists.
 - [ ] **Step 3: Implement fixture-only projections**
 
 ```ts
-export const appwriteProvider = createFixtureRuntimeProvider({ key: "appwrite", version: "1" });
-export const medusaProvider = createFixtureRuntimeProvider({ key: "medusa", version: "1" });
+export const appwriteProvider = createFixtureRuntimeProvider({
+  key: "appwrite",
+  version: "1",
+});
+export const medusaProvider = createFixtureRuntimeProvider({
+  key: "medusa",
+  version: "1",
+});
 ```
 
 - [ ] **Step 4: Verify provider isolation**

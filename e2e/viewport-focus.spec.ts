@@ -14,9 +14,14 @@ for (const viewport of VIEWPORTS) {
   test(`primary action + active rail visible without scrolling at ${viewport.name}`, async ({
     page,
   }) => {
-    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.setViewportSize({
+      width: viewport.width,
+      height: viewport.height,
+    });
     await page.goto("/");
-    await page.waitForSelector('[aria-label="Home"].is-active', { timeout: 10_000 });
+    await page.waitForSelector('[aria-label="Home"].is-active', {
+      timeout: 10_000,
+    });
 
     const homeRail = page.locator('[aria-label="Home"]');
     await expect(homeRail).toBeVisible();
@@ -27,7 +32,9 @@ for (const viewport of VIEWPORTS) {
     const activeLabel = homeRail.locator("span");
     await expect(activeLabel).toBeVisible();
 
-    const interpret = page.getByRole("button", { name: "Interpret requirement" });
+    const interpret = page.getByRole("button", {
+      name: "Interpret requirement",
+    });
     await expect(interpret).toBeVisible();
 
     // Visible without scrolling: the bounding box must sit inside the viewport.
@@ -39,6 +46,8 @@ for (const viewport of VIEWPORTS) {
     const actionBox = await interpret.boundingBox();
     expect(actionBox).not.toBeNull();
     expect(actionBox!.y).toBeGreaterThanOrEqual(0);
-    expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(viewport.height);
+    expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(
+      viewport.height,
+    );
   });
 }
