@@ -82,7 +82,7 @@ consumer reset/research documents, and current status/roadmap pointers.
       contract changes; no retries that convert intermittent failures into success.
 - [x] Run helper tests and both lanes in the isolated worktree. Record duration,
       stage results, relevant omissions, and exact code revision or diff scope.
-- [ ] Conduct one independent review; fix findings in scope, run affected
+- [x] Conduct one independent review; fix findings in scope, run affected
       checks, update the ledger, commit and push the bounded task branch.
 
 **Exit:** Commands work on the current Windows checkout, fail honestly, and
