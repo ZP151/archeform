@@ -1,6 +1,41 @@
 # Archeform delivery status
 
-Updated: 2026-09-03
+Updated: 2026-09-08
+
+## Current authoritative checkpoint — consumer generation
+
+The founder approved the consumer product correction on September 7. The
+default outcome is now **describe a need -> answer only necessary business
+questions -> use/share a complete application**. Technical planning, repeated
+user edits, and manual Publish/Compile/Verify steps are not required product
+stages. The platform retains the immutable Graph lifecycle internally.
+
+The [active ledger](superpowers/ledgers/2026-09-07-consumer-generation-delivery.md)
+is the single current task and product-metric authority. The
+[detailed roadmap](superpowers/plans/2026-09-07-consumer-generation-delivery.md)
+orders delivery as regression foundation, complete ordering generation,
+intake/approval, appointment, then measured catalog expansion. Hosted usability
+starts alongside the first business slice and is required before declaring the
+first externally usable milestone complete.
+
+The current task establishes planning and additive regression tooling on
+`codex/consumer-delivery-roadmap`, based on main `ff9ae7ec`. It does not yet
+deliver a consumer generation journey. Actual smoke passed in 17.11 seconds;
+the selected product packages passed 2,271 tests in 167.39 seconds, with an
+unchanged cached run taking 0.99 seconds. First-pass success, user effort,
+questions, and time to a usable hosted app are still unmeasured.
+
+Readiness PR #3 is merged into main; the latest inspected main CI run
+`33756827488` remains failed in the Node 22.11 Candidate test lane. The stopped
+R0 publication experiment is inconclusive and is not restarted here. A green
+selected regression lane does not resolve that release baseline. See the
+ledger for branch, review, regression and delivery evidence.
+
+## Historical checkpoint — through 2026-09-03
+
+Everything below is retained historical context. Its task order, technical-
+evaluator framing, branch tips, and pending integration claims are superseded
+by the current checkpoint and active ledger above.
 
 ## Product outcome
 

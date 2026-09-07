@@ -1,5 +1,27 @@
 # Archeform roadmap
 
+## Active delivery roadmap — 2026-09-07
+
+The founder-approved priority is to reduce ordinary users' application-building
+effort: **describe -> minimal business questions -> use/share a complete app**.
+The [detailed iteration plan](superpowers/plans/2026-09-07-consumer-generation-delivery.md)
+defines business slices, inspected implementation paths, acceptance journeys,
+regression requirements, dependencies and estimated timeboxes. The
+[active ledger and scorecard](superpowers/ledgers/2026-09-07-consumer-generation-delivery.md)
+tracks actual evidence separately from goals.
+
+First demonstrate automatic completion using the existing ordering runtime;
+then prove cross-business reuse with intake/approval and appointment. Design
+hosted usability alongside the first slice and complete it before claiming an
+externally usable milestone. Scale definitions from 30 / 3 families toward
+100 / about 10 families only after working journeys and ordinary-user evidence.
+Hundreds of market references or UI variants do not count as delivered apps.
+
+The historical roadmap below preserves architecture and prior achievement
+evidence. Its chronology does not override these product priorities. New
+technology, security, persistence and deployment decisions continue to follow
+their existing authorities.
+
 ## Product direction
 
 Archeform is a **Graph-first verified application factory**. The versioned

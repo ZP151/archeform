@@ -67,6 +67,18 @@ irreversible architecture decision, needs external credentials or authority,
 performs cloud/deployment action, or leaves a load-bearing issue unresolved
 after the applicable high-cost repair cap.
 
+For ordinary in-scope corrections, reuse still-valid test and review evidence;
+rerun only checks affected by the correction or a concrete unresolved risk.
+Do not start another full audit, QA pass, release review, or PM amendment gate
+for a documentation, formatting, fixture, or mechanical fix. The active ledger
+records the ownership and correction together with the accepted task.
+
+Keep user-facing business acceptance separate from developer convenience
+checks. The consumer regression helper provides optional short feedback loops;
+its green result does not waive an existing full-suite failure, security check,
+integration requirement, or repository release gate. Full gates remain at their
+applicable contract and release boundaries, not after every ordinary edit.
+
 ## Task commits and pushes
 
 The controller, not a worker, owns normal Git mutations after review.
