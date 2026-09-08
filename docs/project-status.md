@@ -58,8 +58,29 @@ No model, Docker or cloud execution was needed. The two existing complete
 factory acceptance files were aligned to the new copy and DOM assertion but
 were not rerun; retained D1.3 generation evidence remains separate.
 
-The enclosing D1.4 commit is the bounded branch delivery checkpoint, based on
-`c61fedff`. Next is the observed 14-question unsupported-payment interaction:
+D1.4 was delivered as `88ec618f`. Founder feedback rejected its visual
+completeness: business readability passed, but the actual mobile output still
+looked unfinished. D1.5 corrects the generated customer shell and order view
+using the existing Fine Dining palette, a brand header, clear status hierarchy,
+receipt layout and persistent touch-sized native navigation with a current-page
+state. Browser diagnosis confirmed healthy CSS/module loading; the cause was
+incomplete target styling, not a missing component dependency.
+
+D1.5 focused validation is 18/18 compiler target tests plus build/types/lint;
+the real emitted-browser journey passed 1/1 in 4.2 s, with no resource failures
+or page errors, native refresh and current navigation, minimum 44px navigation
+targets, no mobile action occlusion, and axe/overflow at 320/390/768/1440 px.
+Mobile, desktop and empty-state screenshots were inspected together. Exact
+generated file comparison preserves shared registry sources/digests, merchant,
+runtime state/API and manifests; only customer rendering/CSS and customer-only
+server's embedded CSS literal change. Final product regression passed 2,311
+tests / 147 files (fresh compiler 621/37 in 184.94 s; unchanged package caches
+retained). Independent scoped review passed P0/P1/P2 0/0/0, including a fresh
+11/11 focused run and inspection of all four visual artifacts. D1.5 is accepted;
+the enclosing branch commit, parent `88ec618f`, is its delivery checkpoint.
+No model, Docker or cloud execution was needed for this correction.
+
+Next is the observed 14-question unsupported-payment interaction:
 show a concise capability boundary and one meaningful explicit choice while
 preserving unsatisfied requirements. Then continue required parameter binding,
 ten frozen Restaurant cases and persistence. Full D1 and a mature hosted

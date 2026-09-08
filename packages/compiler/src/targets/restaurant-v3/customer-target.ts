@@ -78,7 +78,10 @@ export function normalizeCustomerFormAction(values, data) {
   };
 }
 export const customerRenderers = Object.freeze({ renderMobileProductShell, renderMenuHero, renderCategoryRail, renderMenuItemCard, renderDishConfigurator, renderCartLine, renderOrderSummary, renderPaymentState, renderActiveOrderList, renderOrderTimeline, renderCustomerProfileForm });
-const navigation = '<nav class="customer-tabs" aria-label="Customer"><a href="/">Home</a><a href="/menu">Menu</a><a href="/cart">Cart</a><a href="/orders">Orders</a><a href="/profile">Profile</a></nav>';
+const renderNavigation = (pathname) => {
+  const destination = pathname === "/checkout" ? "/cart" : pathname.startsWith("/menu/") ? "/menu" : pathname.startsWith("/orders/") ? "/orders" : pathname;
+  return '<nav class="customer-tabs" aria-label="Customer">' + customerTabs.map(({ label, route }) => '<a href="' + route + '"' + (route === destination ? ' aria-current="page"' : '') + '>' + label + '</a>').join('') + '</nav>';
+};
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
 const statusLabels = Object.freeze({ paid: "Order confirmed", accepted: "Accepted", preparing: "Preparing", ready: "Ready", served: "Served", cancelled: "Cancelled" });
 const formatStatus = (status) => typeof status === "string" && Object.hasOwn(statusLabels, status) ? statusLabels[status] : "Status unavailable";
@@ -98,7 +101,7 @@ const refreshLink = (route) => '<a class="customer-order-refresh" href="' + rout
 const renderOrderCard = (order, settings, showDetailLink = true) => {
   const href = "/orders/" + encodeURIComponent(String(order.id));
   const detailLink = showDetailLink ? '<a href="' + href + '">Order detail</a>' : '<a href="/orders">All orders</a>';
-  return '<section class="customer-order-card"><h2>Order ' + escapeHtml(order.id) + '</h2><h3>Items</h3>' + itemsSummary(order.items) + '<dl class="customer-order-facts"><div><dt>Payment</dt><dd>' + escapeHtml(formatPaymentStatus(order.paymentStatus)) + '</dd></div><div><dt>Total</dt><dd>' + escapeHtml(formatMoney(order.total, settings)) + '</dd></div><div><dt>Fulfilment</dt><dd>' + escapeHtml(formatStatus(order.status)) + '</dd></div></dl><div class="customer-order-actions">' + detailLink + '</div></section>';
+  return '<section class="customer-order-card"><h2>Order ' + escapeHtml(order.id) + '</h2><dl class="customer-order-status"><dt>Fulfilment</dt><dd>' + escapeHtml(formatStatus(order.status)) + '</dd></dl><div class="customer-order-receipt"><h3>Items</h3>' + itemsSummary(order.items) + '<dl class="customer-order-facts"><div><dt>Payment</dt><dd>' + escapeHtml(formatPaymentStatus(order.paymentStatus)) + '</dd></div><div><dt>Total</dt><dd>' + escapeHtml(formatMoney(order.total, settings)) + '</dd></div></dl><div class="customer-order-actions">' + detailLink + '</div></div></section>';
 };
 const orderHeader = (route) => '<header class="customer-orders-header"><div><h2>Your orders</h2><p>Refresh to see the latest progress from the kitchen.</p></div>' + refreshLink(route) + '</header>';
 const renderOrderEmptyState = () => '<div class="customer-orders-empty"><h2>No orders yet</h2><p>Your orders will appear here after checkout.</p><a href="/menu">Browse menu</a></div>';
@@ -127,7 +130,7 @@ export function renderCustomerPage(pathname, state) {
   if (route === "/menu/:itemId") content = content.replace('<form class="factory-block"', '<form class="factory-block" data-customer-action="cart.add" data-item-id="' + (item?.id ?? "") + '" data-expected-version="' + state.cart.version + '"><input type="hidden" name="quantity" value="1" />');
   if (route === "/checkout") content = content.replace('<form class="factory-block"', '<form class="factory-block" data-customer-action="checkout.pay" data-expected-version="' + state.cart.version + '"');
   if (route === "/profile") content = content.replace('<form class="factory-block"', '<form class="factory-block" data-customer-action="profile.update" data-expected-version="' + state.profile.version + '"><input type="hidden" name="marketingOptIn" value="' + String(state.profile.marketingOptIn) + '" />');
-  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/customer/styles.css"><title>Maison Aurelia</title></head><body>' + renderMobileProductShell({ title: "Maison Aurelia", content, navigation }) + '<script type="module">import { attachCustomerController } from "/customer/app.mjs"; attachCustomerController();</script></body></html>';
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/customer/styles.css"><title>Maison Aurelia</title></head><body>' + renderMobileProductShell({ title: "Maison Aurelia", content, navigation: renderNavigation(pathname) }) + '<script type="module">import { attachCustomerController } from "/customer/app.mjs"; attachCustomerController();</script></body></html>';
 }
 export function attachCustomerController(root = document) {
   root.addEventListener("submit", async (event) => {
@@ -151,22 +154,29 @@ export function attachCustomerController(root = document) {
 }
 
 export function renderRestaurantCustomerStyles(): string {
-  return `:root{font-family:ui-serif,Georgia,serif;background:var(--surface,#fffaf2);color:var(--text,#20170f)}
-.customer-tabs{position:sticky;bottom:0;display:grid;grid-template-columns:repeat(5,1fr);gap:.5rem;padding:1rem 0;background:var(--surface,#fffaf2)}
-.customer-orders-header,.customer-order-list,.customer-orders-empty,.customer-order-card{box-sizing:border-box;max-width:64rem;margin-inline:auto}
-.customer-orders-header{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.5rem 0}
-.customer-orders-header h2{margin:0;font-size:1.8rem}.customer-orders-header p{margin:.5rem 0 0;line-height:1.5}
-.customer-order-list{display:grid;gap:1rem}.customer-order-card{width:100%;padding:1.5rem;border:1px solid var(--border,#ddc7aa);border-radius:12px;overflow-wrap:anywhere}
-.customer-order-card h2{font-size:1.2rem;margin:0 0 1.5rem}.customer-order-card h3{font-size:1rem;margin:0 0 .75rem}
-.customer-order-items{list-style:none;padding:0;margin:0 0 1.5rem;display:grid;gap:.75rem}.customer-order-items li{display:flex;justify-content:space-between;gap:1rem;line-height:1.5}.customer-order-quantity{white-space:nowrap;font-variant-numeric:tabular-nums}
-.customer-order-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.25rem;margin:0;padding-block:1.25rem;border-top:1px solid var(--border,#ddc7aa)}
-.customer-order-facts dt{font-size:.875rem;margin-bottom:.5rem}.customer-order-facts dd{margin:0;font-weight:bold;line-height:1.5;font-variant-numeric:tabular-nums}
-.customer-order-actions{padding-top:.5rem}.customer-order-actions a,.customer-orders-empty a{color:inherit;text-underline-offset:4px}
-.customer-order-refresh{display:inline-block;flex-shrink:0;padding:.75rem 1rem;border:1px solid var(--text,#20170f);border-radius:8px;color:inherit;text-decoration:none;min-height:44px;box-sizing:border-box}
-.customer-order-refresh:hover{background:var(--text,#20170f);color:var(--surface,#fffaf2)}
-.customer-orders-empty{padding:2rem 1rem;text-align:center;line-height:1.5}
-.customer-order-refresh:focus-visible,.customer-order-actions a:focus-visible,.customer-orders-empty a:focus-visible{outline:3px solid var(--accent,#925f2a);outline-offset:4px}
-@media(max-width:640px){.customer-orders-header{align-items:flex-start;flex-direction:column}.customer-order-card{padding:1rem}.customer-order-facts{grid-template-columns:repeat(2,minmax(0,1fr))}.customer-order-facts>div:last-child{grid-column:1/-1}}
+  const { surface, text, accent, border } =
+    selectRestaurantExperienceSource().tokens.light;
+  return `:root{--surface:${surface};--text:${text};--accent:${accent};--border:${border};font-family:ui-sans-serif,system-ui,sans-serif;background:var(--surface);color:var(--text);line-height:1.5;color-scheme:light}
+*,*::before,*::after{box-sizing:border-box}body{margin:0;min-height:100svh}button,input,select,textarea{font:inherit;color:inherit}button,a,input,select,textarea{-webkit-tap-highlight-color:transparent}img,video{max-width:100%;height:auto}a{color:inherit;text-underline-offset:4px}button{cursor:pointer}button:disabled{cursor:default;opacity:.6}::selection{background:var(--accent);color:var(--surface)}:focus-visible{outline:3px solid var(--accent);outline-offset:4px}
+h1,h2,h3,p{overflow-wrap:anywhere}h1,h2{font-family:ui-serif,Georgia,serif;font-weight:400;text-wrap:balance}h1,h2,h3{line-height:1.15}input,textarea{caret-color:var(--accent)}
+.mobile-shell{min-height:100svh;display:grid;grid-template-rows:auto 1fr;padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))}
+.mobile-shell>header{padding:24px max(24px,calc((100% - 1000px)/2));background:var(--text);color:var(--surface)}.mobile-shell>header h1{margin:0;font-size:1.75rem;letter-spacing:-.025em}
+.mobile-shell>#content{width:100%;max-width:1048px;margin-inline:auto;padding:0 24px 40px;min-width:0}
+.customer-tabs{position:fixed;z-index:2;bottom:0;left:0;right:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;padding:12px 12px calc(12px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--border)}
+.customer-tabs a{display:flex;align-items:center;justify-content:center;min-width:44px;min-height:48px;padding:8px 4px;border-radius:8px;font-size:.8125rem;font-weight:600;text-decoration:none}.customer-tabs a[aria-current=page]{background:var(--text);color:var(--surface)}.customer-tabs a:hover:not([aria-current=page]){background:var(--border)}
+.customer-orders-header{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:36px 0 28px}.customer-orders-header h2{margin:0;font-size:clamp(2.25rem,5vw,3.25rem);letter-spacing:-.03em}.customer-orders-header p{max-width:40ch;margin:12px 0 0;font-size:.875rem;line-height:1.6;color:var(--accent)}
+.customer-order-list{display:grid;gap:24px}.customer-order-card{width:100%;border:1px solid var(--border);border-radius:16px;overflow-wrap:anywhere;overflow:hidden}
+.customer-order-card>h2{margin:0;padding:24px 28px 0;font-family:inherit;font-size:.8125rem;font-weight:600;line-height:1.5;color:var(--accent)}
+.customer-order-status{margin:0;padding:16px 28px 28px;border-bottom:1px solid var(--border)}.customer-order-status dt{font-size:.8125rem;margin-bottom:4px}.customer-order-status dd{margin:0;font-family:ui-serif,Georgia,serif;font-size:clamp(2.25rem,5vw,3rem);line-height:1.15;letter-spacing:-.025em;color:var(--accent)}
+.customer-order-receipt{padding:28px}.customer-order-receipt h3{margin:0 0 16px;font-size:.8125rem;font-weight:600;color:var(--accent)}
+.customer-order-items{list-style:none;padding:0;margin:0 0 24px;display:grid;gap:16px}.customer-order-items li{display:flex;justify-content:space-between;gap:20px;line-height:1.5;font-weight:500}.customer-order-quantity{white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:400;color:var(--accent)}
+.customer-order-facts{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;margin:0;padding:24px 0;border-top:1px solid var(--border)}.customer-order-facts dt{font-size:.75rem;color:var(--accent);margin-bottom:6px}.customer-order-facts dd{margin:0;font-size:.9375rem;font-weight:600;line-height:1.5;font-variant-numeric:tabular-nums}.customer-order-facts>div:last-child{text-align:right}
+.customer-order-actions a,.customer-orders-empty a{display:flex;justify-content:center;align-items:center;min-height:48px;padding:12px 20px;background:var(--text);color:var(--surface);border-radius:8px;font-size:.875rem;font-weight:600;text-decoration:none}.customer-order-actions a:hover,.customer-orders-empty a:hover{background:var(--accent)}
+.customer-order-refresh{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;min-height:48px;padding:12px 20px;border:1px solid var(--border);border-radius:8px;font-size:.8125rem;font-weight:600;text-decoration:none}.customer-order-refresh:hover{border-color:var(--accent);background:var(--border)}
+.customer-orders-empty{max-width:36rem;margin:24px auto;text-align:center;padding:48px 24px;border-block:1px solid var(--border)}.customer-orders-empty h2{font-size:2rem;margin:0 0 16px}.customer-orders-empty p{font-size:.9375rem;margin:0 0 28px}.customer-orders-empty a{max-width:16rem;margin-inline:auto}
+@media(max-width:767px){.customer-orders-header{align-items:flex-start;flex-direction:column;gap:20px}.customer-order-refresh{align-self:flex-start}.customer-order-card>h2{padding:20px 20px 0}.customer-order-status{padding:12px 20px 24px}.customer-order-receipt{padding:24px 20px}}
+@media(max-width:359px){.mobile-shell>#content{padding-inline:16px}.mobile-shell>header{padding-inline:16px}.customer-order-facts{grid-template-columns:minmax(0,1fr);gap:16px}.customer-order-facts>div:last-child{text-align:left}}
+@media(min-width:768px){.mobile-shell{padding-bottom:0;grid-template-rows:auto auto 1fr}.customer-tabs{position:static;grid-row:2;padding:12px max(24px,calc((100% - 1000px)/2));border-top:0;border-bottom:1px solid var(--border)}.customer-tabs a{font-size:.875rem}.mobile-shell>#content{grid-row:3}.customer-order-list{max-width:760px;margin-inline:auto}.customer-order-card{max-width:760px;margin-inline:auto}.customer-order-actions a{max-width:240px;margin-left:auto}}
 `;
 }
 

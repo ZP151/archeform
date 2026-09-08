@@ -816,3 +816,85 @@ The next functional priority is the real unsupported-payment case's 14-question
 interaction, followed by parameter binding, ten-case reliability and persistence.
 Full D1 and hosted usability remain open. Do not claim live automatic updates:
 customers explicitly select Refresh status to see authoritative progress.
+
+### D1.5 — customer visual completeness (active)
+
+The founder's September 8 continuation explicitly prioritizes the visibly
+unfinished mobile customer output. Root continues from `88ec618f` in the same
+isolated iteration worktree. Root owns `customer-target.ts`, its focused test,
+`e2e/restaurant-orders.spec.ts`, this ledger, the active plan and project status.
+Tech Lead `d15_design_decision` owns only proposed ADR-0042; no product writer
+starts before the required standing decision review. Spark's prior quota failure
+remains unresolved, so root performs the bounded implementation serially.
+
+Reproduction: the real generated bundle loads one stylesheet (HTTP 200,
+text/css), all module requests succeed and no page errors occur. Its actual CSS
+leaves the browser body margin at 8px and navigation has no active destination.
+This is incomplete target styling, not a missing UI package or CDN outage.
+Browser RED (6.7 s) and focused compiler RED reproduce missing aria-current.
+
+Design: retain fine-dining colors, native document navigation, existing shell
+and truthful order data. Add a deliberate brand header, padded content, clear
+serif heading / sans-serif information hierarchy, prominent fulfilment state,
+readable receipt rows, and persistent touch-sized navigation with the current
+page identified. Do not add decorative images, third-party assets or a package.
+The previous functional acceptance did not establish sufficient visual quality;
+new rendered evidence must show the actual generated application.
+
+ADR-0042 is accepted under the founder's September 1 standing authorization.
+Exact SHA-256: `1060ef0e97dc67bdabb722fa2450b46e0119f73f02ad3ff2bcc1f34fe69da538`.
+Tech Lead `d15_design_decision` recommends keep; independent read-only
+`d1_decision_review` returns P0/P1 0/0 and
+`APPROVED_FOR_STANDING_ACCEPTANCE: yes`. Root now authorizes the serialized
+implementation within the above owned paths. The server's embedded stylesheet
+literal may change; routing, APIs/state, merchant and shared generated sources
+remain unchanged. This record precedes product edits. Root captured both prior
+compiled file maps locally for exact output comparison after build.
+
+D1.5 implementation GREEN: all 18 focused customer/product target tests passed
+in 19.42 s, including all eight navigation routes. Compiler build, typecheck,
+and lint passed. The real generated-browser case passed 1/1 in 4.2 s (5.8 s
+runner total): stylesheet 200, zero failed requests/page errors, one current
+navigation destination, zero body margin, 44px minimum navigation targets,
+visible native refresh to Ready, zero page mutations, and axe/overflow checks
+at 320/390/768/1440 px. Mobile fixed navigation does not cover the order action.
+
+Root inspected the emitted mobile, desktop and empty-state screenshots in one
+batch. The new presentation uses the existing Fine Dining colors, brand header,
+serif display and system information text, prominent truthful fulfilment and
+receipt rows. No external asset, font, icon or framework was introduced.
+Impeccable detection exited zero with no findings.
+
+Comparison against the preceding built bundles proves identical generated path
+sets and unchanged shared UI/experience source, manifests, runtime state/API and
+merchant source. Customer-only changes app.mjs, styles.css and the exact embedded
+CSS response literal in server.mjs; dual-surface changes only customer app.mjs
+and styles.css because its server reads the file. The initial comparison helper
+incorrectly required a server change for both bundles; correcting that harness
+expectation confirmed the actual narrower dual-surface scope. No product fix
+was required for that comparison. Product regression and scoped review pending.
+
+Final D1.5 product regression succeeded: 2,311 tests / 147 files, including
+fresh compiler 621/37 in 184.94 s and retained unchanged-package cache evidence
+(Graph 661/21, adapters 84/10, capabilities 384/32, Workbench 561/47).
+No generated-browser temporary roots remain; both test servers closed normally.
+
+### D1.5 accepted and branch delivery
+
+Independent `d1_decision_review` approves the scoped implementation, P0/P1/P2
+0/0/0, after checking all four screenshots, boundaries and tests, independently
+rerunning customer focused tests 11/11 in 12.58 s, and checking the exact ADR
+hash. Root's 18/18 combined target tests, browser 1/1, build/types/lint, exact
+file comparison, product 2,311/147 and cleanup complete the task evidence.
+PM accepts D1.5 and authorizes controller commit/push on the existing branch.
+The enclosing commit, parent `88ec618f`, is the bounded delivery checkpoint;
+controller verifies local/remote equality. No main merge, repository release or
+cloud deployment is included. New generated applications inherit this visual
+correction; existing immutable compilations retain their prior output.
+
+Product outcome: remove the unfinished browser-default appearance from customer
+orders and navigation without adding user configuration or iteration steps.
+Functional and visual acceptance are separate: the founder's D1.4 feedback is
+retained as evidence that passing business/a11y tests did not prove visual
+completion. Next remains the 14-question unsupported-payment interaction,
+then business parameter binding, frozen case reliability and hosted usability.

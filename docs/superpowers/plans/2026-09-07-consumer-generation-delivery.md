@@ -474,3 +474,26 @@ At each business-slice close, compare the scorecard with the previous accepted
 slice and select the next task by user effort removed. If D1 cannot show a
 working default within its timebox, reduce optional scope and name the concrete
 blocker before adding more catalog entries or architecture work.
+
+## D1.5 — complete the generated customer visual presentation
+
+User-directed correction following D1.4: the existing mobile order screenshot
+looks unfinished despite successful module and stylesheet loading. Preserve the
+accepted lifecycle and customer business behavior; refine the existing target.
+
+- [x] Reproduce loading and identify the missing presentation: native browser
+      defaults, weak hierarchy and absent current-page navigation.
+- [x] Add focused RED for native route selection and browser asset diagnostics.
+- [x] Accept the bounded Tech Lead decision using the existing standing review.
+- [x] Refine customer shell, order composition and shared target CSS. Reuse
+      fine-dining tokens and existing generated shell; keep registry keys,
+      generated shared-source digests, merchant and runtime unchanged.
+- [x] Verify all customer navigation routes, generated target tests, package
+      types/lint/build, and actual mobile/tablet/desktop order journeys including
+      asset loading, touch targets, no overlap/overflow, axe and native refresh.
+- [x] Inspect desktop/mobile screenshots together, obtain one scoped review,
+      update product evidence and deliver one bounded commit to the branch.
+
+Root owns the target, focused customer test, existing order browser test and PM
+records. ADR-0042 records the frozen boundary before implementation. The
+unsupported-payment question reduction remains the next business priority.

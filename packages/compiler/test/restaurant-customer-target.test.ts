@@ -81,6 +81,25 @@ async function loadGeneratedCustomerApp(input = canonicalInput()) {
 }
 
 describe("Restaurant customer bundle target", () => {
+  it("marks exactly one native navigation destination for customer routes", async () => {
+    const { app } = await loadGeneratedCustomerApp();
+    const state = { catalog: [], orders: [], cart: { items: [] }, profile: {} };
+    for (const [path, destination] of [
+      ["/", "/"],
+      ["/menu", "/menu"],
+      ["/menu/missing", "/menu"],
+      ["/cart", "/cart"],
+      ["/checkout", "/cart"],
+      ["/orders", "/orders"],
+      ["/orders/missing", "/orders"],
+      ["/profile", "/profile"],
+    ]) {
+      const html = app.renderCustomerPage(path, state);
+      expect(html.match(/aria-current="page"/g), path).toHaveLength(1);
+      expect(html, path).toContain(`href="${destination}" aria-current="page"`);
+    }
+  });
+
   it("renders the exact safe deterministic customer bundle", () => {
     const first = compile();
     const second = compile();

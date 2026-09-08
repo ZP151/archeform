@@ -55,10 +55,51 @@ test("customers can read orders and refresh visible fulfilment without generatin
     });
     const customer = `http://127.0.0.1:${servers[0]!.port}`;
     const kitchen = `http://127.0.0.1:${servers[1]!.port}`;
+    const assetFailures: string[] = [];
+    const pageErrors: string[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+    page.on("requestfailed", (failed) =>
+      assetFailures.push(new URL(failed.url()).pathname),
+    );
+    page.on("response", (response) => {
+      if (response.status() >= 400)
+        assetFailures.push(new URL(response.url()).pathname);
+    });
     await page.goto(`${customer}/orders`);
+    await page.waitForLoadState("networkidle");
+    const styles = await request.get(`${customer}/customer/styles.css`);
+    expect(styles.status()).toBe(200);
+    expect(styles.headers()["content-type"]).toContain("text/css");
+    console.info(
+      "FACTORY_CUSTOMER_STYLE_DIAGNOSIS",
+      await page.evaluate(() => ({
+        stylesheets: document.styleSheets.length,
+        background: getComputedStyle(document.documentElement).backgroundColor,
+        bodyMargin: getComputedStyle(document.body).margin,
+        navigationPosition: getComputedStyle(
+          document.querySelector(".customer-tabs")!,
+        ).position,
+        currentPageLinks: document.querySelectorAll('[aria-current="page"]')
+          .length,
+      })),
+    );
+    expect(assetFailures).toEqual([]);
+    expect(pageErrors).toEqual([]);
+    await expect(
+      page
+        .getByRole("navigation", { name: "Customer" })
+        .getByRole("link", { name: "Orders", exact: true }),
+    ).toHaveAttribute("aria-current", "page");
     await expect(
       page.getByText("No orders yet", { exact: true }),
     ).toBeVisible();
+    const output = resolve("acceptance-artifacts/d1.5");
+    await mkdir(output, { recursive: true });
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.screenshot({
+      path: join(output, "orders-empty-390.png"),
+      fullPage: true,
+    });
     const cartResponse = await request.get(`${customer}/api/cart`);
     expect(cartResponse.ok()).toBeTruthy();
     const cart = (await cartResponse.json()).cart;
@@ -127,9 +168,28 @@ test("customers can read orders and refresh visible fulfilment without generatin
     await expect(
       page.getByRole("link", { name: "Refresh status", exact: true }),
     ).toHaveAttribute("href", `/orders/${encodeURIComponent(orderId)}`);
+    await page.screenshot({
+      path: join(output, "order-detail-390.png"),
+      fullPage: true,
+    });
     await page.goto(`${customer}/orders`);
-    for (const width of [390, 768, 1440]) {
+    for (const width of [320, 390, 768, 1440]) {
       await page.setViewportSize({ width, height: 900 });
+      const navigation = page.getByRole("navigation", { name: "Customer" });
+      for (const link of await navigation.getByRole("link").all()) {
+        const box = await link.boundingBox();
+        expect(box!.height).toBeGreaterThanOrEqual(44);
+        expect(box!.width).toBeGreaterThanOrEqual(44);
+      }
+      await expect(page.locator("body")).toHaveCSS("margin", "0px");
+      if (width < 768) {
+        await expect(navigation).toHaveCSS("position", "fixed");
+        const navBox = await navigation.boundingBox();
+        expect(navBox!.y + navBox!.height).toBeLessThanOrEqual(900);
+        await detail.scrollIntoViewIfNeeded();
+        const actionBox = await detail.boundingBox();
+        expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(navBox!.y);
+      }
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth),
       ).toBe(width);
@@ -140,9 +200,7 @@ test("customers can read orders and refresh visible fulfilment without generatin
             .analyze()
         ).violations,
       ).toEqual([]);
-      if (width !== 768) {
-        const output = resolve("acceptance-artifacts/d1.4");
-        await mkdir(output, { recursive: true });
+      if (width === 390 || width === 1440) {
         await page.screenshot({
           path: join(output, `orders-${width}.png`),
           fullPage: true,
@@ -153,12 +211,16 @@ test("customers can read orders and refresh visible fulfilment without generatin
       browserMutations,
       "order reads and refresh must not submit mutations",
     ).toBe(0);
+    expect(assetFailures).toEqual([]);
+    expect(pageErrors).toEqual([]);
     console.info(
       "FACTORY_ORDER_BROWSER_EVIDENCE",
       JSON.stringify({
         providerCalls: 0,
         statusVisible: true,
-        viewports: [390, 768, 1440],
+        viewports: [320, 390, 768, 1440],
+        assetFailures: 0,
+        pageErrors: 0,
       }),
     );
   } finally {
