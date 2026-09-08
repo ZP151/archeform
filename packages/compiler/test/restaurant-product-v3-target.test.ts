@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 import { createCapabilityCompositionLock } from "@factory/capabilities";
@@ -58,6 +59,21 @@ function restaurantV6Input() {
 
 function compile(input = canonicalInput()) {
   return generateRestaurantProductApplicationBundle(input);
+}
+
+async function loadGeneratedProductApp(input = canonicalInput()) {
+  const root = await mkdtemp(join(tmpdir(), "archeform-product-app-"));
+  roots.push(root);
+  const bundle = compile(input);
+  for (const file of bundle.files) {
+    const path = join(root, file.path);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, file.content, "utf8");
+  }
+  const app = await import(
+    `${pathToFileURL(join(root, "src/customer/app.mjs")).href}?v=${Date.now()}`
+  );
+  return { root, app };
 }
 
 describe("Restaurant product V3 target", () => {
@@ -205,6 +221,34 @@ describe("Restaurant product V3 target", () => {
     );
     expect(files["src/customer/app.mjs"]).not.toContain("merchantRoutes");
     expect(files["src/merchant/app.mjs"]).not.toContain("customerRoutes");
+  });
+
+  it("reuses readable customer order rendering in dual-surface generated customer bundle", async () => {
+    const { app } = await loadGeneratedProductApp();
+    const state = {
+      settings: { currency: "SGD" },
+      catalog: [],
+      cart: { version: 1, items: [] },
+      profile: { version: 1, marketingOptIn: false },
+      orders: [
+        {
+          id: "order-14",
+          items: [{ id: "line-1", name: "Margherita pizza", quantity: 2 }],
+          total: 1400,
+          paymentStatus: "simulated-paid",
+          status: "served",
+        },
+      ],
+    };
+    const list = app.renderCustomerPage("/orders", state);
+    const detail = app.renderCustomerPage("/orders/order-14", state);
+    expect(list).toContain("Items");
+    expect(list).toContain("Payment");
+    expect(list).toContain("Total");
+    expect(list).toContain("Fulfilment");
+    expect(list).toContain("SGD 14.00");
+    expect(detail).toContain("Served");
+    expect(detail).toContain("Paid (simulated)");
   });
 
   it("executes one r.6 bundle whose customer and merchant share the Graph-derived catalog state", async () => {

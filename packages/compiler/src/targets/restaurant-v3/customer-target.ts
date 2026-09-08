@@ -79,19 +79,50 @@ export function normalizeCustomerFormAction(values, data) {
 }
 export const customerRenderers = Object.freeze({ renderMobileProductShell, renderMenuHero, renderCategoryRail, renderMenuItemCard, renderDishConfigurator, renderCartLine, renderOrderSummary, renderPaymentState, renderActiveOrderList, renderOrderTimeline, renderCustomerProfileForm });
 const navigation = '<nav class="customer-tabs" aria-label="Customer"><a href="/">Home</a><a href="/menu">Menu</a><a href="/cart">Cart</a><a href="/orders">Orders</a><a href="/profile">Profile</a></nav>';
+const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
+const statusLabels = Object.freeze({ paid: "Order confirmed", accepted: "Accepted", preparing: "Preparing", ready: "Ready", served: "Served", cancelled: "Cancelled" });
+const formatStatus = (status) => typeof status === "string" && Object.hasOwn(statusLabels, status) ? statusLabels[status] : "Status unavailable";
+const formatPaymentStatus = (status) => status === "simulated-paid" ? "Paid (simulated)" : "Payment unavailable";
+const formatMoney = (amount, settings) => {
+  if (typeof settings?.currency !== "string" || !/^[A-Z]{3}$/.test(settings.currency)) return "Currency unavailable";
+  if (!Number.isSafeInteger(amount) || amount < 0) return "Amount unavailable";
+  return settings.currency + " " + (amount / 100).toFixed(2);
+};
+const itemsSummary = (items) => {
+  if (!Array.isArray(items) || items.length === 0) return '<p>No items</p>';
+  return '<ul class="customer-order-items">' + items.map((line) =>
+    '<li><span>' + escapeHtml(line?.name ?? "Item unavailable") + '</span><span class="customer-order-quantity">× ' + escapeHtml(Number.isInteger(line?.quantity) && line.quantity > 0 ? line.quantity : "Quantity unavailable") + '</span></li>'
+  ).join("") + '</ul>';
+};
+const refreshLink = (route) => '<a class="customer-order-refresh" href="' + route + '">Refresh status</a>';
+const renderOrderCard = (order, settings, showDetailLink = true) => {
+  const href = "/orders/" + encodeURIComponent(String(order.id));
+  const detailLink = showDetailLink ? '<a href="' + href + '">Order detail</a>' : '<a href="/orders">All orders</a>';
+  return '<section class="customer-order-card"><h2>Order ' + escapeHtml(order.id) + '</h2><h3>Items</h3>' + itemsSummary(order.items) + '<dl class="customer-order-facts"><div><dt>Payment</dt><dd>' + escapeHtml(formatPaymentStatus(order.paymentStatus)) + '</dd></div><div><dt>Total</dt><dd>' + escapeHtml(formatMoney(order.total, settings)) + '</dd></div><div><dt>Fulfilment</dt><dd>' + escapeHtml(formatStatus(order.status)) + '</dd></div></dl><div class="customer-order-actions">' + detailLink + '</div></section>';
+};
+const orderHeader = (route) => '<header class="customer-orders-header"><div><h2>Your orders</h2><p>Refresh to see the latest progress from the kitchen.</p></div>' + refreshLink(route) + '</header>';
+const renderOrderEmptyState = () => '<div class="customer-orders-empty"><h2>No orders yet</h2><p>Your orders will appear here after checkout.</p><a href="/menu">Browse menu</a></div>';
 export function renderCustomerPage(pathname, state) {
   const route = matchCustomerRoute(pathname);
   if (!route) return null;
   const item = route === "/menu/:itemId" ? state.catalog.find((value) => value.id === pathname.slice(6)) : state.catalog[0];
-  const order = route === "/orders/:orderId" ? state.orders.find((value) => value.id === pathname.slice(8)) : state.orders[0];
+  const requestedOrderId = pathname.slice(8);
+  const safeRequestedOrderId = (() => {
+    try {
+      return decodeURIComponent(requestedOrderId);
+    } catch {
+      return requestedOrderId;
+    }
+  })();
+  const order = route === "/orders/:orderId" ? (state.orders ?? []).find((value) => value.id === safeRequestedOrderId) : state.orders[0];
   let content = route === "/"
     ? renderMenuHero({ locationName: "Maison Aurelia", serviceOpen: true }) + renderCategoryRail({ categoryName: "Dinner", categoryActive: true }) + state.catalog.map((value) => renderMenuItemCard(value)).join("")
     : route === "/menu" ? state.catalog.map((value) => renderMenuItemCard(value)).join("")
     : route === "/menu/:itemId" ? renderDishConfigurator({ ...item, canAdd: Boolean(item) })
     : route === "/cart" ? state.cart.items.map((value) => renderCartLine(value).replace('<form class="factory-block"', '<form class="factory-block" data-customer-action="cart.update" data-line-id="' + value.id + '" data-expected-version="' + state.cart.version + '"').replace('</form>', '<button type="button" data-customer-action="cart.delete" data-line-id="' + value.id + '" data-expected-version="' + state.cart.version + '">Remove</button></form>')).join("") + renderOrderSummary(state.cart)
     : route === "/checkout" ? renderOrderSummary(state.cart) + renderPaymentState({ amount: state.cart.total, method: "simulated-card", canPay: state.cart.items.length > 0 })
-    : route === "/orders" ? state.orders.map((value) => renderActiveOrderList(value)).join("")
-    : route === "/orders/:orderId" ? renderOrderSummary(order ?? {}) + renderPaymentState({ amount: order?.total, paymentStatus: order?.paymentStatus }) + renderOrderTimeline(order ?? {})
+    : route === "/orders" ? orderHeader("/orders") + (Array.isArray(state.orders) && state.orders.length > 0 ? '<div class="customer-order-list">' + state.orders.map((value) => renderOrderCard(value, state.settings)).join("") + "</div>" : renderOrderEmptyState())
+    : route === "/orders/:orderId" ? orderHeader("/orders/" + encodeURIComponent(safeRequestedOrderId)) + (order ? renderOrderCard(order, state.settings, false) : '<div class="customer-orders-empty"><h2>Order unavailable</h2><p>This order could not be found.</p><a href="/orders">All orders</a></div>')
     : renderCustomerProfileForm(state.profile);
   if (route === "/menu/:itemId") content = content.replace('<form class="factory-block"', '<form class="factory-block" data-customer-action="cart.add" data-item-id="' + (item?.id ?? "") + '" data-expected-version="' + state.cart.version + '"><input type="hidden" name="quantity" value="1" />');
   if (route === "/checkout") content = content.replace('<form class="factory-block"', '<form class="factory-block" data-customer-action="checkout.pay" data-expected-version="' + state.cart.version + '"');
@@ -116,6 +147,26 @@ export function attachCustomerController(root = document) {
     location.reload();
   });
 }
+`;
+}
+
+export function renderRestaurantCustomerStyles(): string {
+  return `:root{font-family:ui-serif,Georgia,serif;background:var(--surface,#fffaf2);color:var(--text,#20170f)}
+.customer-tabs{position:sticky;bottom:0;display:grid;grid-template-columns:repeat(5,1fr);gap:.5rem;padding:1rem 0;background:var(--surface,#fffaf2)}
+.customer-orders-header,.customer-order-list,.customer-orders-empty,.customer-order-card{box-sizing:border-box;max-width:64rem;margin-inline:auto}
+.customer-orders-header{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.5rem 0}
+.customer-orders-header h2{margin:0;font-size:1.8rem}.customer-orders-header p{margin:.5rem 0 0;line-height:1.5}
+.customer-order-list{display:grid;gap:1rem}.customer-order-card{width:100%;padding:1.5rem;border:1px solid var(--border,#ddc7aa);border-radius:12px;overflow-wrap:anywhere}
+.customer-order-card h2{font-size:1.2rem;margin:0 0 1.5rem}.customer-order-card h3{font-size:1rem;margin:0 0 .75rem}
+.customer-order-items{list-style:none;padding:0;margin:0 0 1.5rem;display:grid;gap:.75rem}.customer-order-items li{display:flex;justify-content:space-between;gap:1rem;line-height:1.5}.customer-order-quantity{white-space:nowrap;font-variant-numeric:tabular-nums}
+.customer-order-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.25rem;margin:0;padding-block:1.25rem;border-top:1px solid var(--border,#ddc7aa)}
+.customer-order-facts dt{font-size:.875rem;margin-bottom:.5rem}.customer-order-facts dd{margin:0;font-weight:bold;line-height:1.5;font-variant-numeric:tabular-nums}
+.customer-order-actions{padding-top:.5rem}.customer-order-actions a,.customer-orders-empty a{color:inherit;text-underline-offset:4px}
+.customer-order-refresh{display:inline-block;flex-shrink:0;padding:.75rem 1rem;border:1px solid var(--text,#20170f);border-radius:8px;color:inherit;text-decoration:none;min-height:44px;box-sizing:border-box}
+.customer-order-refresh:hover{background:var(--text,#20170f);color:var(--surface,#fffaf2)}
+.customer-orders-empty{padding:2rem 1rem;text-align:center;line-height:1.5}
+.customer-order-refresh:focus-visible,.customer-order-actions a:focus-visible,.customer-orders-empty a:focus-visible{outline:3px solid var(--accent,#925f2a);outline-offset:4px}
+@media(max-width:640px){.customer-orders-header{align-items:flex-start;flex-direction:column}.customer-order-card{padding:1rem}.customer-order-facts{grid-template-columns:repeat(2,minmax(0,1fr))}.customer-order-facts>div:last-child{grid-column:1/-1}}
 `;
 }
 
@@ -194,7 +245,7 @@ function renderFiles(input: PublishedApplicationGraphCompilationInput): {
   const experience = selectRestaurantExperienceSource();
   const runtime = renderRestaurantCustomerRuntime(plan);
   const rootDirectory = `restaurant-product-${plan.publishedRevisionId}`;
-  const customerStyles = `:root{font-family:ui-serif,Georgia,serif;background:var(--surface,#fffaf2);color:var(--text,#20170f)}\n.customer-tabs{position:sticky;bottom:0;display:grid;grid-template-columns:repeat(5,1fr)}\n`;
+  const customerStyles = renderRestaurantCustomerStyles();
   const relocatedServer = runtime.serverModule
     .replace('"./state.mjs"', '"./runtime/state.mjs"')
     .replace('"./api.mjs"', '"./runtime/api.mjs"')

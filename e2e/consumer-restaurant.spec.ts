@@ -483,7 +483,9 @@ test("fresh Restaurant Describe automatically delivers a local customer and merc
     const orders = new URL(previewOrigin);
     orders.pathname = "/orders";
     await generated.goto(orders.toString());
-    await expect(generated.getByText("simulated-paid")).toBeVisible();
+    await expect(
+      generated.getByText("Paid (simulated)", { exact: true }),
+    ).toBeVisible();
 
     expect(readyPreview?.apiPort).toEqual(expect.any(Number));
     const managerOrigin = new URL(`http://127.0.0.1:${readyPreview!.apiPort!}`);
@@ -598,6 +600,10 @@ test("fresh Restaurant Describe automatically delivers a local customer and merc
         (order) => order.id === paid!.id,
       )?.status,
     ).toBe("ready");
+    await generated
+      .getByRole("link", { name: "Refresh status", exact: true })
+      .click();
+    await expect(generated.getByText("Ready", { exact: true })).toBeVisible();
     await expectNoOverflow(generated, 1440);
     await expectNoOverflow(generated, 390);
     await captureSafeScreenshot(generated, "generated-mobile").catch(

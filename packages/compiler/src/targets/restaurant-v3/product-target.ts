@@ -11,6 +11,7 @@ import type {
 import { assertRestaurantProductCompilationInput } from "./contracts.js";
 import {
   renderRestaurantCustomerAppModule,
+  renderRestaurantCustomerStyles,
   renderRestaurantCustomerJourneyTest,
 } from "./customer-target.js";
 import { renderRestaurantMerchantContribution } from "./merchant-target.js";
@@ -67,8 +68,7 @@ function renderFiles(
   const customerSource = selectRestaurantSurfaceSource("customer-mobile");
   const experience = selectRestaurantExperienceSource();
   const runtime = renderRestaurantCustomerRuntime(plan);
-  const customerStyles =
-    ":root{font-family:ui-serif,Georgia,serif;background:var(--surface,#fffaf2);color:var(--text,#20170f)}\n.customer-tabs{position:sticky;bottom:0;display:grid;grid-template-columns:repeat(5,1fr)}\n";
+  const customerStyles = renderRestaurantCustomerStyles();
   const merchantFiles = Object.fromEntries(
     merchant.files.map(({ path, content }) => [path, content]),
   );

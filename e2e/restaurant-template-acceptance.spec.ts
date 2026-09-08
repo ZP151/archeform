@@ -464,7 +464,9 @@ test("Maison Aurelia edits, publishes, compiles, verifies, operates, and cleans 
     ordersUrl.pathname = "/orders";
     await generated.goto(ordersUrl.toString());
     reportStage("customer-orders");
-    await expect(generated.getByText("simulated-paid")).toBeVisible();
+    await expect(
+      generated.getByText("Paid (simulated)", { exact: true }),
+    ).toBeVisible();
     reportStage("customer-paid");
 
     expect(readyPreview!.apiPort).toEqual(expect.any(Number));
@@ -552,6 +554,10 @@ test("Maison Aurelia edits, publishes, compiles, verifies, operates, and cleans 
     ).toBe("ready");
     reportStage("merchant-denial");
 
+    await generated
+      .getByRole("link", { name: "Refresh status", exact: true })
+      .click();
+    await expect(generated.getByText("Ready", { exact: true })).toBeVisible();
     reportStage("generated-accessibility");
     accessibility.generatedDesktop = await accessibilityViolations(generated);
     await generated.setViewportSize({ width: 390, height: 844 });

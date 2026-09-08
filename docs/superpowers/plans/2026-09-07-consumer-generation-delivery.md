@@ -274,10 +274,10 @@ eliminating that redundant generation is the next functional correction.
 D1.3 proves the automatic supported-default chain in one prepared local case;
 it does not close full D1. Prioritize the observed output over more definitions.
 
-- [ ] Inspect/reuse the existing generated order-page recipe and renderer; show
+- [x] Inspect/reuse the existing generated order-page recipe and renderer; show
       readable item, payment, total and fulfilment fields. Avoid concatenated
       internal status values. Record the concrete reuse gap before adding an asset.
-- [ ] Make the customer see the latest fulfilment status through a clear refresh
+- [x] Make the customer see the latest fulfilment status through a clear refresh
       or existing runtime update mechanism. Begin with a failing browser test
       where merchant fulfilment changes the visible customer DOM; an API assertion
       alone is insufficient. Do not introduce polling/provider contracts silently.
@@ -292,6 +292,36 @@ it does not close full D1. Prioritize the observed output over more definitions.
 A generated-template, API or other governance trigger receives one bounded
 Tech Lead decision before the exact writer assignment. Reuse still-valid
 regression/review evidence; no broad audit or catalog expansion is a prerequisite.
+
+### D1.4 execution — customer order readability and explicit refresh
+
+Started September 8 from delivered `c61fedff`. The scoped generated-template
+ADR-0041 is accepted; exact standing acceptance and writer identity are recorded
+in the active ledger before product edits. This uses the existing dependency-free
+runtime, canonical Published fixture and fine-dining shell. No provider replay
+or Docker provisioning is needed to test a presentation correction.
+
+**Product paths:** `packages/compiler/src/targets/restaurant-v3/customer-target.ts`
+and `product-target.ts`; tests `packages/compiler/test/restaurant-customer-target.test.ts`
+and `restaurant-product-v3-target.test.ts`. Root owns `e2e/restaurant-orders.spec.ts`.
+
+- [x] Reproduce missing order presentation in a real generated browser fixture;
+      the first meaningful RED is the absent `No orders yet` message.
+- [x] Record exact ADR-0041 acceptance and assign one serialized compiler writer.
+- [x] Add focused RED/GREEN for readable existing order data, currency display,
+      escaped content, distinct links, missing/unknown values and native refresh.
+      Keep registry keys, merchant output, APIs and runtime state unchanged.
+- [x] Render the same presentation from customer-only and dual-surface bundles.
+      Use the existing palette and readable spacing without a new UI registry asset.
+- [x] Pass focused compiler tests/types/lint and the affected product lane;
+      obtain one scoped independent implementation review.
+- [x] Exercise real generated customer/kitchen servers: create/pay an order,
+      fulfil it, select `Refresh status` and assert `Ready` in the visible DOM.
+      Verify fields and empty/detail paths, keyboard, axe and overflow at
+      390/768/1440 px. Inspect safe screenshots and prove exact server/temp cleanup.
+- [x] Record measured outcome and remaining gaps, then commit/push the bounded
+      task. Keep unsupported-request effort, parameter binding, ten-case coverage,
+      persistence and hosted delivery as subsequent product work.
 
 ## B1 — converge the release baseline without repeating the stopped experiment
 

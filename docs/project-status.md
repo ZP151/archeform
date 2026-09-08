@@ -37,19 +37,33 @@ The retained manual V3 acceptance also passed 1/1 in 243.85 seconds.
 
 The distinct live-payment negative passed: HTTP 200 clarification in 30.343
 seconds and zero delivery mutations. Its 14 questions (4 integration) expose a
-remaining user-effort defect. Visual inspection also found the generated order
-page has poorly separated values and did not demonstrate live customer status
-refresh. Backend state checks do not close that UI gap. These concrete issues,
-required business parameter binding, ten-case coverage and persistence are the
-next D1 work; catalog expansion is secondary. Hosted delivery remains H1.
+remaining user-effort defect. D1.4 now closes the observed order-page display
+and explicit refresh gaps. Required business parameter binding, ten-case coverage,
+persistence and hosted delivery remain open; catalog expansion is secondary.
 
-Validation: 2,306 selected product tests / 147 files passed in 229.47 seconds;
-final focused adapter tests passed 49/49 after the last instruction correction;
-5 mocked browser cases passed; production Workbench build and one scoped
-independent implementation review passed (P0/P1/P2 0/0/0). Final isolated runtime
-cleanup left zero owned containers, networks and volumes. The enclosing task
-commit is the bounded branch delivery checkpoint under the existing policy. Full D1 and a
-mature consumer product are not declared complete.
+D1.4 is accepted: generated customer list/detail pages show item quantities,
+payment, currency-aware totals and fulfilment labels. A native `Refresh status`
+link reads the existing page, including from the empty state, and customer DOM
+now shows `Ready` after kitchen fulfilment. Shared registry, merchant, Graph,
+API, runtime state and provider behavior are unchanged. Existing immutable
+Compilations are preserved; the change affects newly compiled output.
+
+Validation: **2,310 selected product tests / 147 files** passed in **192.93 s**;
+**17 focused compiler tests** passed; build/types/lint and one independent scoped
+review passed (P0/P1/P2 0/0/0). The new provider-free browser acceptance passed
+**1/1 in 4.2 s**, including keyboard refresh, list/detail values, zero page
+mutations, axe and overflow at 390/768/1440 px. Root inspected desktop/mobile
+screenshots, and the temporary state and both loopback servers were cleaned up.
+No model, Docker or cloud execution was needed. The two existing complete
+factory acceptance files were aligned to the new copy and DOM assertion but
+were not rerun; retained D1.3 generation evidence remains separate.
+
+The enclosing D1.4 commit is the bounded branch delivery checkpoint, based on
+`c61fedff`. Next is the observed 14-question unsupported-payment interaction:
+show a concise capability boundary and one meaningful explicit choice while
+preserving unsatisfied requirements. Then continue required parameter binding,
+ten frozen Restaurant cases and persistence. Full D1 and a mature hosted
+consumer platform are not declared complete.
 
 Readiness PR #3 is merged into main; the latest inspected main CI run
 `33756827488` remains failed in the Node 22.11 Candidate test lane. The latest
