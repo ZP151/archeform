@@ -17,6 +17,9 @@ export interface RequirementComposerProps {
   readonly onInterpret: () => void;
   readonly examplePrompts: readonly string[];
   readonly onApplyExample: (brief: string) => void;
+  /** Retains the existing plan and lifecycle review for this one run. */
+  readonly manualReview?: boolean;
+  readonly onManualReviewChange?: (manual: boolean) => void;
   /** Bumped by the shell's Ctrl+K (or Cmd+K) to land focus here. */
   readonly commandFocusToken?: number;
   /** A one-shot request from Home to focus the empty-workspace entry. */
@@ -32,6 +35,8 @@ export function RequirementComposer({
   onInterpret,
   examplePrompts,
   onApplyExample,
+  manualReview = false,
+  onManualReviewChange,
   commandFocusToken,
   autoFocusRequest = 0,
   onAutoFocusHandled,
@@ -102,6 +107,18 @@ export function RequirementComposer({
           {error}
         </p>
       )}
+      <details className="composer-advanced-options">
+        <summary>Advanced options</summary>
+        <label>
+          <input
+            type="checkbox"
+            checked={manualReview}
+            disabled={busy}
+            onChange={(event) => onManualReviewChange?.(event.target.checked)}
+          />
+          Review the Restaurant plan and delivery steps myself
+        </label>
+      </details>
       <button
         type="button"
         className="primary-action"

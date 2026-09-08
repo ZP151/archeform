@@ -18,15 +18,43 @@ intake/approval, appointment, then measured catalog expansion. Hosted usability
 starts alongside the first business slice and is required before declaring the
 first externally usable milestone complete.
 
-The current task establishes planning and additive regression tooling on
-`codex/consumer-delivery-roadmap`, based on main `ff9ae7ec`. It does not yet
-deliver a consumer generation journey. Actual smoke passed in 17.11 seconds;
-the selected product packages passed 2,271 tests in 167.39 seconds, with an
-unchanged cached run taking 0.99 seconds. First-pass success, user effort,
-questions, and time to a usable hosted app are still unmeasured.
+The bounded D1.1-D1.3 supported Restaurant generation slice is accepted locally
+on `codex/consumer-delivery-roadmap`, based on delivered D0 `dfc0f71d`. A fresh
+rough need now selects the canonical definition and automatically applies,
+publishes, compiles, verifies and provides a local app link. Optional manual review
+remains available. The private concise interpretation avoids redundant
+model-authored Restaurant blueprint generation; public Graph/API/lifecycle
+contracts remain unchanged.
+
+The unchanged coarse real case passed **1/1 with zero retries**, **0 business
+questions**, **0 technical handoffs**, **21.385 seconds to verified ready** and
+**40.79 seconds for the complete test**, in a prepared local environment with
+warm caches. Customer checkout, merchant fulfilment APIs, state consistency,
+idempotency, role denial, accessibility/responsive checks and exact runtime
+cleanup passed. Four earlier coarse failures remain recorded; one successful
+case is not a reliability benchmark, cold-start measurement or hosted result.
+The retained manual V3 acceptance also passed 1/1 in 243.85 seconds.
+
+The distinct live-payment negative passed: HTTP 200 clarification in 30.343
+seconds and zero delivery mutations. Its 14 questions (4 integration) expose a
+remaining user-effort defect. Visual inspection also found the generated order
+page has poorly separated values and did not demonstrate live customer status
+refresh. Backend state checks do not close that UI gap. These concrete issues,
+required business parameter binding, ten-case coverage and persistence are the
+next D1 work; catalog expansion is secondary. Hosted delivery remains H1.
+
+Validation: 2,306 selected product tests / 147 files passed in 229.47 seconds;
+final focused adapter tests passed 49/49 after the last instruction correction;
+5 mocked browser cases passed; production Workbench build and one scoped
+independent implementation review passed (P0/P1/P2 0/0/0). Final isolated runtime
+cleanup left zero owned containers, networks and volumes. The enclosing task
+commit is the bounded branch delivery checkpoint under the existing policy. Full D1 and a
+mature consumer product are not declared complete.
 
 Readiness PR #3 is merged into main; the latest inspected main CI run
-`33756827488` remains failed in the Node 22.11 Candidate test lane. The stopped
+`33756827488` remains failed in the Node 22.11 Candidate test lane. The latest
+branch checkpoint `34141740418` at `dfc0f71d` also failed Node 22.11 Candidate
+tests while Node 22.x passed. The stopped
 R0 publication experiment is inconclusive and is not restarted here. A green
 selected regression lane does not resolve that release baseline. See the
 ledger for branch, review, regression and delivery evidence.

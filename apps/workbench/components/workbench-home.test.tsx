@@ -213,6 +213,44 @@ describe("WorkbenchHome", () => {
     expect(onStartTemplate).toHaveBeenCalledWith("restaurant-dual-surface");
   });
 
+  it("shows supported Restaurant delivery progress and only a verified local app link", () => {
+    const journey = {
+      ...briefJourney(),
+      consumer: {
+        manualReview: false,
+        setManualReview: vi.fn(),
+        active: true,
+        status: "Your local Restaurant app is ready.",
+        readyUrl: "http://127.0.0.1:34123",
+        retry: vi.fn(),
+      },
+    } as WorkbenchHomeJourneyProps;
+    act(() => {
+      root.render(
+        <WorkbenchHome
+          applications={[]}
+          loading={false}
+          onCompile={vi.fn()}
+          onOpen={vi.fn()}
+          journey={journey}
+        />,
+      );
+    });
+
+    expect(container.textContent).toContain(
+      "Your local Restaurant app is ready.",
+    );
+    expect(container.textContent).toContain(
+      "standard Restaurant configuration",
+    );
+    expect(container.textContent).toContain("local demo");
+    expect(
+      container.querySelector<HTMLAnchorElement>(
+        'a[href="http://127.0.0.1:34123"]',
+      ),
+    ).not.toBeNull();
+  });
+
   it("communicates curated-template loading, empty, and bounded retry states", () => {
     const onRetryTemplates = vi.fn();
     const render = (

@@ -49,6 +49,15 @@ export type WorkbenchHomeJourneyProps = {
   readonly onChoose: (key: string) => void;
   readonly diffChecksum: string | null;
   readonly onApply: () => void;
+  /** The short-lived default Restaurant delivery state, if this tab started it. */
+  readonly consumer?: {
+    readonly manualReview: boolean;
+    readonly setManualReview: (manual: boolean) => void;
+    readonly active: boolean;
+    readonly status: string | null;
+    readonly readyUrl: string | null;
+    readonly retry: () => void;
+  };
 };
 
 type Props = {
@@ -79,6 +88,9 @@ export function ProductConversation({
   readonly autoFocusRequest?: number;
   readonly onAutoFocusHandled?: () => void;
 }) {
+  if (journey.consumer?.active) {
+    return <ConsumerDelivery journey={journey} />;
+  }
   if (journey.stage === "clarifying" && journey.requirement !== null) {
     return (
       <ClarificationPanel
@@ -131,10 +143,53 @@ export function ProductConversation({
       onInterpret={journey.onInterpret}
       examplePrompts={journey.examplePrompts}
       onApplyExample={journey.onApplyExample}
+      manualReview={journey.consumer?.manualReview}
+      onManualReviewChange={journey.consumer?.setManualReview}
       commandFocusToken={commandFocusToken}
       autoFocusRequest={autoFocusRequest}
       onAutoFocusHandled={onAutoFocusHandled}
     />
+  );
+}
+
+function ConsumerDelivery({
+  journey,
+}: {
+  readonly journey: WorkbenchHomeJourneyProps;
+}) {
+  const consumer = journey.consumer;
+  if (consumer === undefined) return null;
+  const paused = consumer.status?.startsWith("Delivery paused") ?? false;
+  return (
+    <section aria-label="Restaurant delivery" className="consumer-delivery">
+      <h2>Your Restaurant app</h2>
+      <p role="status">{consumer.status ?? "Preparing your Restaurant app…"}</p>
+      <p>
+        This uses the standard Restaurant configuration in a local demo.
+        Includes a customer menu, table orders, and a merchant workspace. Uses
+        sample menu items and simulated payments on this computer. Custom rules
+        and live integrations still need setup.
+      </p>
+      {consumer.readyUrl !== null && (
+        <a
+          className="primary-action"
+          href={consumer.readyUrl}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Open local app
+        </a>
+      )}
+      {paused && (
+        <button
+          type="button"
+          className="secondary-action"
+          onClick={consumer.retry}
+        >
+          Restart local delivery
+        </button>
+      )}
+    </section>
   );
 }
 

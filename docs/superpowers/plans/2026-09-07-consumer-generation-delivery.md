@@ -110,7 +110,7 @@ Those are valuable existing implementations with explicit review/edit/lifecycle
 steps. They do not establish the new low-effort or hosted targets. Reuse their
 fixtures and runtime behavior in D2/D3 instead of starting again.
 
-- [ ] Author 10 structured ordering cases covering coarse intent, supplied
+- [x] Author 10 structured ordering cases covering coarse intent, supplied
       business detail, safe omitted details, unavailable integration, and recovery.
       Record intent attributes and expected outcomes, never captured raw prompts.
 - [ ] Add a failing Workbench journey proving the current manual technical
@@ -138,6 +138,160 @@ fixtures and runtime behavior in D2/D3 instead of starting again.
 environment; no required technical screens, no developer repair for these
 cases, and no concealed external-service prerequisites. Hosted usability
 remains pending H1. No new Restaurant feature backlog is a prerequisite.
+
+### D1.1 execution slice — automatic completion of the supported default
+
+Started September 8 under the founder's iteration instruction. The existing
+Restaurant composer uses canonical business definitions; arbitrary prompt
+detail is not yet bound to that model. Therefore this first slice removes
+manual handoffs for the supported Restaurant default, while D1 remains open
+for definition binding, ten-case business acceptance and measured usefulness.
+
+- [x] Accept and record ADR-0038 through the applicable existing decision route.
+- [x] Add a failing focused test for fresh Restaurant Describe automatically
+      choosing exactly `standard` and reaching the freshly applied V3 target.
+- [x] Implement one-time, session-scoped orchestration through existing APIs.
+      Never auto-publish bootstrap, opened, edited, refreshed or generic apps.
+- [x] Preserve necessary clarification and a retained optional manual review
+      path; adapt the existing manual Restaurant acceptance to select that path.
+- [x] Present automatic progress and a verified local app link using existing
+      Workbench components. Disclose the standard configuration and local/demo
+      limitations. Keep the provider's raw input/output out of evidence.
+- [x] Prove ordered progression, non-empty verification evidence, loopback
+      preview, duplicate-click/StrictMode protection, stale-target refusal,
+      phase failure, bounded timeout and cleanup behavior with focused tests.
+- [x] Run actual browser interaction at mobile/tablet/desktop sizes and the
+      appropriate real-runtime journey. Record mocked and real evidence apart.
+- [x] Review once at the ordinary frozen-contract boundary, fix concrete
+      findings, commit/push the accepted slice and update the product scorecard.
+
+An automatic UI success in mocked browser tests is not the full D1 acceptance,
+an independently usable hosted app, or proof that arbitrary requested rules
+were generated. The next functional slice must address whichever measured gap
+most prevents first-result usefulness; do not return to catalog-count growth.
+
+### Next D1 correction — definition-aware clarification
+
+The first real run exceeded the three-question ceiling before composition;
+the instrumented follow-up observed four questions in the initial response.
+The follow-up also exposed a test-only diagnostic closure defect, so it is not
+a completed acceptance run. Do not repeat unchanged provider calls to obtain a
+passing sample. This is now the next product priority after the current
+orchestration corrections, ahead of catalog expansion.
+
+1. Trace the existing canonical Restaurant definition into the requirement
+   interpreter. It currently creates a detailed blueprint even though the
+   Restaurant composer uses its canonical definition; identify which decisions
+   are actually bound and which provider work the existing recipe makes
+   unnecessary. Keep source, runtime, provider and Graph contracts unchanged
+   unless one consolidated Tech Lead decision explicitly approves a difference.
+2. Design a compact supported-default guide using the existing definition:
+   sample menu, local table ordering, simulated payment, private staff access,
+   and the implemented customer/merchant roles. Retain genuine access and
+   business ambiguity; surface unsupported integrations before claiming a
+   result. Do not silently truncate questions or substitute public access.
+3. Add provider-free regressions for a coarse supported request, omitted
+   noncritical details, unresolved ownership and an unavailable integration.
+   Assert semantic preservation and the question budget separately. Keep the
+   original coarse acceptance brief and the existing three-question/two-cycle
+   ceilings; answer actual business decisions rather than bypassing the UI.
+4. After a reproducible behavior correction, run one bounded real acceptance
+   and record every attempt, including failures. Require the automatic local
+   result and actual order/fulfilment/denial/duplicate-action outcomes. Keep
+   restart persistence, ten-case coverage, custom rule binding and hosted
+   delivery open until separately exercised.
+
+This is the queued corrective brief, not a silent expansion of ADR-0038's
+frontend-only implementation authority. PM assigns exact paths after the
+relevant contract decision; ordinary in-scope fixes keep one review and the
+focused regression lane. No additional general audit is planned.
+
+### D1.2 execution steps — reuse the canonical definition during interpretation
+
+The founder requested continued iteration and obstacle resolution. This is the
+bounded implementation of the preceding corrective brief, after the exact
+Tech Lead proposal receives the existing standing independent acceptance.
+
+**Frozen product paths:** `packages/adapters/src/requirements/openai-interpreter.ts`
+and `packages/adapters/test/requirement-interpreter.test.ts`. One serialized
+adapter writer owns both. Root owns this plan, the ledger, status, runtime
+preparation and actual acceptance. Existing D1.1 product/test paths stay frozen
+unless an actual acceptance defect needs a recorded targeted handoff.
+
+- [x] Record the exact accepted adapter-boundary decision and writer assignment.
+- [x] Add focused failing tests that the provider request receives an authored,
+      business-only guide projected from the existing canonical Restaurant
+      definitions, while preserving the original brief and response contract.
+- [x] Include first-response defaults and concise blueprint guidance, retain
+      unresolved access and unsupported integration questions, and prove that
+      parsing does not discard material questions or leak provider material.
+- [x] Implement the projection and instructions without adding packages,
+      schema fields, runtime policy, template variants or question truncation.
+- [x] Pass focused adapter tests, adapter/Workbench types, formatting and the
+      affected product regression. Review the bounded diff once and correct
+      concrete findings without another general audit.
+- [ ] Build the final Workbench and run the unchanged coarse consumer case
+      against the isolated real provider/runtime, with the repaired diagnostics.
+      Preserve failed attempts; prove order, fulfilment, denial and idempotency.
+- [ ] Validate the retained manual entry at unchanged assertion strength,
+      confirm exact runtime cleanup, and reconcile local delivery separately
+      from the still-open full D1, hosted milestone and baseline release defect.
+
+### D1.3 execution — concise supported-definition interpretation
+
+The unchanged coarse case still returned `requirement.output_invalid` after
+349.123 seconds on the D1.2 reference correction. Preserve the four failed
+consumer attempts and the separately passing manual path. Model-authored
+Restaurant blueprint details are not used by the canonical V3 composer;
+eliminating that redundant generation is the next functional correction.
+
+- [x] Accept one bounded Tech Lead decision for the internal compact selection
+      and deterministic first-party projection, with exact write ownership.
+- [x] Start with focused failing tests: a coarse supported default returns the
+      existing validated interpretation envelope without model-authored Graph
+      detail; the result can use the existing real deterministic planner.
+- [x] Preserve material authorization/privacy/business/integration questions;
+      explicit unavailable live services and custom rules do not become a
+      satisfied standard result. Test contradictory, missing and unknown
+      selection values and preservation through clarification.
+- [x] Keep generic Expense/Appointment interpretation valid, checksum binding,
+      strict validation, provider-failure behavior and privacy protection.
+      Never use a test fixture, keyword-only bypass or raw-output persistence.
+- [x] Implement only the accepted boundary, pass focused/product regressions,
+      build and complete one independent scoped implementation review.
+- [x] Run the distinct explicit live-payment negative once: retain a material
+      integration question and prevent automatic delivery.
+- [x] Run the original coarse real acceptance once after the substantive
+      correction. Require at most three questions, zero technical handoffs,
+      actual customer/merchant task completion, denial, idempotency, non-empty
+      verification and exact cleanup. Record time and every failure separately.
+- [x] Reconcile the accepted bounded task and deliver its branch checkpoint.
+      Keep broader custom-rule binding, ten-case reliability, persistence,
+      ordinary-user validation and hosted delivery open until measured.
+
+### Next D1 slice — make the delivered result usable
+
+D1.3 proves the automatic supported-default chain in one prepared local case;
+it does not close full D1. Prioritize the observed output over more definitions.
+
+- [ ] Inspect/reuse the existing generated order-page recipe and renderer; show
+      readable item, payment, total and fulfilment fields. Avoid concatenated
+      internal status values. Record the concrete reuse gap before adding an asset.
+- [ ] Make the customer see the latest fulfilment status through a clear refresh
+      or existing runtime update mechanism. Begin with a failing browser test
+      where merchant fulfilment changes the visible customer DOM; an API assertion
+      alone is insufficient. Do not introduce polling/provider contracts silently.
+- [ ] Replace the observed 14-question unsupported-payment interaction with a
+      concise capability explanation and meaningful supported alternative, while
+      retaining every unsatisfied material requirement and requiring an explicit
+      choice before changing the requested business outcome.
+- [ ] Bind required Restaurant business parameters and evaluate ten frozen cases,
+      including local restart persistence. Keep cold/prepared and local/hosted
+      timings separate and preserve failed attempts.
+
+A generated-template, API or other governance trigger receives one bounded
+Tech Lead decision before the exact writer assignment. Reuse still-valid
+regression/review evidence; no broad audit or catalog expansion is a prerequisite.
 
 ## B1 — converge the release baseline without repeating the stopped experiment
 

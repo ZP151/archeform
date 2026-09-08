@@ -4,6 +4,7 @@ import type { ApplicationGraphV1 } from "@factory/graph";
 import { useState } from "react";
 
 import { useWorkbenchController } from "../hooks/use-workbench-controller";
+import { useConsumerGeneration } from "../lib/product-journey/use-consumer-generation";
 import { WorkbenchShell } from "./shell/workbench-shell";
 import { WorkbenchHome } from "./workbench-home";
 import { ProductStudio } from "./journey/product-studio";
@@ -44,6 +45,12 @@ type Props = {
  */
 export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   const controller = useWorkbenchController({ initialGraph, controlPlaneUrl });
+  const consumer = useConsumerGeneration({
+    journey: controller.journey,
+    release: controller.release,
+    applyComposedProduct: controller.applyComposedProduct,
+    onStartOver: controller.commandFocus,
+  });
   const [templateSelection, setTemplateSelection] =
     useState<TemplatePageSelection | null>(null);
   const { state, graph, journey, flowDiagram } = controller;
@@ -94,6 +101,7 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
     onApply: () => {
       void controller.applyComposedProduct();
     },
+    consumer,
   };
   const context = resolveWorkbenchContext(
     state.activeSurface === "experience" ? "page" : state.activeSurface,
@@ -104,7 +112,7 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
   const surface = (() => {
     switch (state.activeSurface) {
       case "home":
-        return controller.templateDraft ? (
+        return controller.templateDraft && !consumer.active ? (
           <TemplateDraftWorkspace
             instance={controller.templateDraft}
             selection={activeTemplateSelection!}

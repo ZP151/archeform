@@ -13,6 +13,11 @@ import {
   parseStrict,
   safeBusinessTextSchema,
 } from "@factory/graph";
+import {
+  restaurantOrderingExperienceBrief,
+  restaurantOrderingProductIntent,
+  restaurantOrderingProductRecipe,
+} from "@factory/capabilities";
 
 import {
   type OpenAIResponseTransport,
@@ -27,6 +32,10 @@ import {
   type RequirementInterpreterAdapterV1,
   type RequirementInterpretationV1,
 } from "./requirement-interpreter.js";
+import {
+  projectRestaurantDefinitionSelection,
+  restaurantDefinitionSelectionSchema,
+} from "./restaurant-definition-selection.js";
 
 /** Optional text fields arrive as `null` from strict JSON mode. */
 function optionalText<T extends z.ZodTypeAny>(
@@ -165,7 +174,7 @@ const modelFieldSchema = z
     options: optionalText(
       z.array(safeBusinessTextSchema.max(160)).min(2).max(50),
     ),
-    referenceTo: optionalText(identifierSchema),
+    referenceTo: optionalText(graphKeySchema),
   })
   .strict();
 
@@ -195,7 +204,7 @@ const modelActorSchema = z
       .array(
         z
           .object({
-            entityKey: identifierSchema,
+            entityKey: graphKeySchema,
             actions: z.array(blueprintActionSchema).min(1).max(12),
           })
           .strict(),
@@ -210,7 +219,7 @@ const modelPageIntentSchema = z
     key: graphKeySchema,
     label: safeBusinessTextSchema.max(160),
     intent: pageIntentSchema,
-    entityKey: optionalText(identifierSchema),
+    entityKey: optionalText(graphKeySchema),
   })
   .strict();
 
@@ -227,10 +236,10 @@ const modelStateSchema = z
 const modelTransitionSchema = z
   .object({
     key: z.enum(blueprintActionVerbs),
-    from: identifierSchema,
-    to: identifierSchema,
+    from: graphKeySchema,
+    to: graphKeySchema,
     label: safeBusinessTextSchema.max(160),
-    actorKey: identifierSchema,
+    actorKey: graphKeySchema,
   })
   .strict();
 
@@ -238,7 +247,7 @@ const modelWorkflowSchema = z
   .object({
     key: graphKeySchema,
     label: safeBusinessTextSchema.max(160),
-    entityKey: identifierSchema,
+    entityKey: graphKeySchema,
     states: z.array(modelStateSchema).min(2).max(20),
     transitions: z.array(modelTransitionSchema).min(1).max(40),
   })
@@ -252,7 +261,7 @@ const modelJourneySchema = z
       .array(
         z
           .object({
-            actorKey: identifierSchema,
+            actorKey: graphKeySchema,
             action: safeBusinessTextSchema.max(500),
           })
           .strict(),
@@ -289,6 +298,43 @@ const modelInterpretationSchema = z
 
 type ModelInterpretation = z.infer<typeof modelInterpretationSchema>;
 
+const providerInterpretationResultSchema = z
+  .object({
+    resultKind: z.enum(["definition-selection", "generated-blueprint"]),
+    definitionSelection: restaurantDefinitionSelectionSchema.nullable(),
+    generatedInterpretation: modelInterpretationSchema.nullable(),
+  })
+  .strict()
+  .superRefine((result, context) => {
+    if (
+      result.resultKind === "definition-selection" &&
+      (result.definitionSelection === null ||
+        result.generatedInterpretation !== null)
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Definition selections must be exclusive.",
+      });
+    }
+    if (
+      result.resultKind === "generated-blueprint" &&
+      (result.generatedInterpretation === null ||
+        result.definitionSelection !== null ||
+        result.generatedInterpretation?.spec.productType ===
+          "restaurant-ordering")
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "Generated interpretations must be exclusive and non-Restaurant.",
+      });
+    }
+  });
+
+type ProviderInterpretationResult = z.infer<
+  typeof providerInterpretationResultSchema
+>;
+
 /**
  * Same grammar as graphKeySchema: the provider-side lock for keys that become
  * graph-symbol segments verbatim (`graph.flow.<key>`, `graph.domain.<key>`,
@@ -308,6 +354,64 @@ const graphKeyJsonPattern = "^[a-z][a-z0-9-]*$";
  */
 const graphFieldKeyJsonPattern =
   "^([a-hj-z][a-zA-Z0-9_]*|i|i[a-ce-zA-Z0-9_][a-zA-Z0-9_]*|id[a-zA-Z0-9_]+)$";
+
+/**
+ * A deliberately narrow, transient projection of the supported Restaurant
+ * definition. It gives the provider product defaults without granting it
+ * implementation, integration, or runtime authority.
+ */
+function supportedRestaurantDefaultGuide(): {
+  readonly productType: ReturnType<
+    typeof restaurantOrderingProductIntent
+  >["productType"];
+  readonly actorKeys: readonly string[];
+  readonly acceptanceJourneyKeys: readonly string[];
+  readonly constraints: {
+    readonly moneyMovement: ReturnType<
+      typeof restaurantOrderingProductIntent
+    >["constraints"]["moneyMovement"];
+    readonly externalSideEffects: ReturnType<
+      typeof restaurantOrderingProductIntent
+    >["constraints"]["externalSideEffects"];
+  };
+  readonly surfaces: readonly {
+    readonly key: string;
+    readonly device: ReturnType<
+      typeof restaurantOrderingExperienceBrief
+    >["surfaces"][number]["device"];
+    readonly audience: readonly string[];
+    readonly navigation: ReturnType<
+      typeof restaurantOrderingExperienceBrief
+    >["surfaces"][number]["navigation"];
+  }[];
+} {
+  const intent = restaurantOrderingProductIntent();
+  const experience = restaurantOrderingExperienceBrief();
+  const recipe = restaurantOrderingProductRecipe();
+  return {
+    productType: intent.productType,
+    actorKeys: intent.actors.map((actor) => actor.key),
+    acceptanceJourneyKeys: recipe.acceptanceJourneyKeys,
+    constraints: {
+      moneyMovement: intent.constraints.moneyMovement,
+      externalSideEffects: intent.constraints.externalSideEffects,
+    },
+    surfaces: experience.surfaces.map((surface) => ({
+      key: surface.key,
+      device: surface.device,
+      audience: surface.audience,
+      navigation: surface.navigation,
+    })),
+  };
+}
+
+const supportedRestaurantDefaultInstruction = [
+  "For every Restaurant brief, use this scoped canonical Restaurant definition when deciding its definition-selection disposition:",
+  `<supported-restaurant-default>${JSON.stringify(supportedRestaurantDefaultGuide())}</supported-restaurant-default>`,
+  "Treat omitted canonical details as resolved standard defaults only for supported-default. Every Restaurant result returns definition-selection with generatedInterpretation null; do not produce a full blueprint.",
+  "An explicit contradiction remains unresolved. Do not suppress material access, privacy, business-rule, data or compliance, or integration questions. A request for live payment remains an unresolved integration decision; the simulated money movement and no external side effects default do not satisfy it.",
+  "Only non-Restaurant products follow the generated-blueprint interpretation rules.",
+].join(" ");
 
 function namedItemJsonSchema(): Record<string, unknown> {
   return {
@@ -368,7 +472,7 @@ function fieldJsonSchema(): Record<string, unknown> {
       },
       referenceTo: {
         anyOf: [
-          { type: "string", pattern: "^[a-z][a-zA-Z0-9-]*$" },
+          { type: "string", pattern: graphKeyJsonPattern },
           { type: "null" },
         ],
       },
@@ -529,7 +633,7 @@ const interpretationJsonSchema: Record<string, unknown> = {
                   properties: {
                     entityKey: {
                       type: "string",
-                      pattern: "^[a-z][a-zA-Z0-9-]*$",
+                      pattern: graphKeyJsonPattern,
                     },
                     actions: {
                       type: "array",
@@ -605,7 +709,7 @@ const interpretationJsonSchema: Record<string, unknown> = {
               },
               entityKey: {
                 anyOf: [
-                  { type: "string", pattern: "^[a-z][a-zA-Z0-9-]*$" },
+                  { type: "string", pattern: graphKeyJsonPattern },
                   { type: "null" },
                 ],
               },
@@ -623,7 +727,7 @@ const interpretationJsonSchema: Record<string, unknown> = {
             properties: {
               key: { type: "string", pattern: graphKeyJsonPattern },
               label: { type: "string", minLength: 1, maxLength: 160 },
-              entityKey: { type: "string", pattern: "^[a-z][a-zA-Z0-9-]*$" },
+              entityKey: { type: "string", pattern: graphKeyJsonPattern },
               states: {
                 type: "array",
                 minItems: 2,
@@ -668,12 +772,12 @@ const interpretationJsonSchema: Record<string, unknown> = {
                         "manage",
                       ],
                     },
-                    from: { type: "string", pattern: "^[a-z][a-zA-Z0-9-]*$" },
-                    to: { type: "string", pattern: "^[a-z][a-zA-Z0-9-]*$" },
+                    from: { type: "string", pattern: graphKeyJsonPattern },
+                    to: { type: "string", pattern: graphKeyJsonPattern },
                     label: { type: "string", minLength: 1, maxLength: 160 },
                     actorKey: {
                       type: "string",
-                      pattern: "^[a-z][a-zA-Z0-9-]*$",
+                      pattern: graphKeyJsonPattern,
                     },
                   },
                 },
@@ -703,7 +807,7 @@ const interpretationJsonSchema: Record<string, unknown> = {
                   properties: {
                     actorKey: {
                       type: "string",
-                      pattern: "^[a-z][a-zA-Z0-9-]*$",
+                      pattern: graphKeyJsonPattern,
                     },
                     action: { type: "string", minLength: 1, maxLength: 500 },
                   },
@@ -717,21 +821,87 @@ const interpretationJsonSchema: Record<string, unknown> = {
   },
 };
 
+const providerInterpretationResultJsonSchema: Record<string, unknown> = {
+  type: "object",
+  additionalProperties: false,
+  required: ["resultKind", "definitionSelection", "generatedInterpretation"],
+  properties: {
+    resultKind: {
+      type: "string",
+      enum: ["definition-selection", "generated-blueprint"],
+    },
+    definitionSelection: {
+      anyOf: [
+        {
+          type: "object",
+          additionalProperties: false,
+          required: [
+            "definitionKey",
+            "disposition",
+            "requirementId",
+            "title",
+            "outcome",
+            "materialQuestions",
+          ],
+          properties: {
+            definitionKey: { type: "string", const: "restaurant-ordering" },
+            disposition: {
+              type: "string",
+              enum: ["supported-default", "needs-clarification"],
+            },
+            requirementId: { type: "string", pattern: graphKeyJsonPattern },
+            title: { type: "string", minLength: 1, maxLength: 200 },
+            outcome: { type: "string", minLength: 1, maxLength: 2000 },
+            materialQuestions: {
+              type: "array",
+              maxItems: 30,
+              items: {
+                type: "object",
+                additionalProperties: false,
+                required: ["category", "question"],
+                properties: {
+                  category: {
+                    type: "string",
+                    enum: [
+                      "authorization",
+                      "visibility",
+                      "role",
+                      "business-rule",
+                      "data",
+                      "integration",
+                    ],
+                  },
+                  question: { type: "string", minLength: 1, maxLength: 500 },
+                },
+              },
+            },
+          },
+        },
+        { type: "null" },
+      ],
+    },
+    generatedInterpretation: {
+      anyOf: [interpretationJsonSchema, { type: "null" }],
+    },
+  },
+};
+
 const interpretationInstructions = [
   "You are the Factory Pilot requirement interpreter adapter.",
   "Return only a JSON object matching the provided schema.",
-  "Interpret the brief into a factory.requirement-spec/v1 requirement and a factory.product-blueprint/v1 product blueprint.",
-  "Set the requirement's productType to 'restaurant-ordering' when the brief describes a restaurant, dining, or food-ordering product (guests order dishes; staff manage the menu, kitchen, tables, and service). Leave productType absent for every other product.",
-  "The blueprint proposes business semantics only: actors with entity permissions, entities with typed fields, page intents from the approved enum, workflows with states and transitions, and acceptance journeys.",
+  "For a generated-blueprint result, interpret the brief into a factory.requirement-spec/v1 requirement and a factory.product-blueprint/v1 product blueprint.",
+  "Every Restaurant brief returns definition-selection. Use supported-default only when it fits the supported Restaurant default; use needs-clarification for every difference, access, privacy, business-rule, data or compliance, external integration, or live payment decision, preserving every material question. Only non-Restaurant products return generated-blueprint.",
+  supportedRestaurantDefaultInstruction,
+  "A generated blueprint proposes business semantics only: actors with entity permissions, entities with typed fields, page intents from the approved enum, workflows with states and transitions, and acceptance journeys.",
   "Never propose routes, URLs, paths, capability or package selections, source, code, providers, or credentials.",
   "Business text must not contain URLs, absolute or Windows paths, traversal segments, or prototype-key material.",
   "Do not invent actors, entities, workflows, or acceptance scenarios the brief does not imply.",
-  "If the brief is ambiguous, leave an open question in the spec instead of guessing.",
+  "If the brief is ambiguous, leave an open question in the spec instead of guessing unless an applicable supported definition resolves the omitted detail.",
   "Consolidate every material clarification into the first response; never ask one question at a time.",
-  "When clarification answers are supplied, treat them as authoritative business input, apply them to the complete spec and blueprint, and mark the corresponding open questions answered.",
-  "clarificationContext contains the original category, question, and user answer for each opaque answer key; use that semantic context and do not ask for the same decision again.",
-  "When priorInterpretation is supplied, treat it as the validated baseline: revise only semantics affected by the supplied answers, preserve stable identifiers and unaffected actors, entities, fields, workflows, pages, and journeys, and return the complete revised interpretation.",
-  "Do not repeat, rephrase, or progressively reveal additional questions after answers are supplied. Leave only a genuinely new safety-critical ambiguity open; use conventional product defaults for any remaining noncritical detail.",
+  "For generated-blueprint results, when clarification answers are supplied, treat them as authoritative business input, apply them to the complete spec and blueprint, and mark the corresponding open questions answered.",
+  "For generated-blueprint results, clarificationContext contains the original category, question, and user answer for each opaque answer key; use that semantic context and do not ask for the same decision again.",
+  "For generated-blueprint results, when priorInterpretation is supplied, treat it as the validated baseline: revise only semantics affected by the supplied answers, preserve stable identifiers and unaffected actors, entities, fields, workflows, pages, and journeys, and return the complete revised interpretation. For Restaurant follow-ups, reevaluate definition fit and preserve every still-material question even when it resembles an answered question.",
+  "For generated-blueprint results, do not repeat, rephrase, or progressively reveal additional questions after answers are supplied. Leave only a genuinely new safety-critical ambiguity open; use conventional product defaults for any remaining noncritical detail.",
   "Classify every open question using its narrow Factory category. Use experience.visual-style only for optional aesthetic direction; authorization, visibility, role, business-rule, data, and integration questions are never optional visual preferences.",
   "Every workflow must be internally consistent with the actors and permissions: each transition's from and to must be states declared in the same workflow, the transition's actor must be a declared actor, and that actor's permissions must grant the transition's event as an action on the workflow's entity.",
   "Transition events and permission grants may only use the bounded action vocabulary: create, read, update, delete, submit, approve, reject, confirm, reschedule, cancel, audit, manage — never invent a verb outside this vocabulary.",
@@ -740,6 +910,7 @@ const interpretationInstructions = [
   "Keys that become graph symbols — the requirementId and every actor, entity, workflow, page-intent, and workflow-state key — must be lowercase kebab-case: lowercase letters, digits, and hyphens only, starting with a lowercase letter. Never use camelCase for these keys (for example expense-approval, not expenseApproval).",
   "Entity field keys use the opposite grammar: lowercase-first camelCase with letters, digits, and underscores only, and never a hyphen — for example submittedBy, never submitted-by. Do not apply the kebab-case rule to field keys.",
   "Identity is Factory-owned. Never declare an entity field with the exact key id; the runtime supplies record identity outside blueprint fields.",
+  "Blueprint references must exactly reuse the matching declared entity, actor, or workflow-state key; never introduce a different spelling.",
   "Journey steps may only reference declared actors.",
   "The composed runtime rejects inconsistent flows, so never declare a transition, state, journey step, or actor that you do not fully grant.",
   "If a repair note is included, adjust the proposal to satisfy it exactly and return a complete, valid interpretation.",
@@ -1009,7 +1180,7 @@ export class OpenAIRequirementInterpreterAdapter implements RequirementInterpret
               }),
               store: false,
               strictJson: true,
-              jsonSchema: interpretationJsonSchema,
+              jsonSchema: providerInterpretationResultJsonSchema,
               signal: combined.signal,
               timeout: PROVIDER_ROUND_TIMEOUT_MS,
               maxRetries: 0,
@@ -1031,18 +1202,43 @@ export class OpenAIRequirementInterpreterAdapter implements RequirementInterpret
           throw timeoutFailure();
         }
 
-        let candidate: ModelInterpretation;
+        let providerResult: ProviderInterpretationResult;
         try {
           const parsed = JSON.parse(outputText) as unknown;
-          candidate = parseStrict(modelInterpretationSchema, parsed);
+          providerResult = parseStrict(
+            providerInterpretationResultSchema,
+            parsed,
+          );
         } catch {
           if (round >= MAX_REPAIR_ROUNDS) throw outputFailure();
           repairNote = FIXED_REPAIR_INSTRUCTION;
           continue;
         }
 
+        if (providerResult.resultKind === "definition-selection") {
+          let interpretation: RequirementInterpretationV1;
+          try {
+            interpretation = projectRestaurantDefinitionSelection(
+              providerResult.definitionSelection!,
+            );
+          } catch {
+            if (round >= MAX_REPAIR_ROUNDS) throw outputFailure();
+            repairNote = FIXED_REPAIR_INSTRUCTION;
+            continue;
+          }
+          if (
+            (input.clarificationContext?.length ?? 0) > 0 &&
+            interpretation.clarifications.length > 0
+          ) {
+            if (round >= MAX_REPAIR_ROUNDS) throw outputFailure();
+            repairNote = FIXED_REPAIR_INSTRUCTION;
+            continue;
+          }
+          return interpretation;
+        }
+
         const spec = reconcileClarificationAnswers(
-          candidate.spec,
+          providerResult.generatedInterpretation!.spec,
           input.answers,
           input.clarificationContext ?? [],
         );
@@ -1056,7 +1252,7 @@ export class OpenAIRequirementInterpreterAdapter implements RequirementInterpret
           continue;
         }
         const blueprint = {
-          ...candidate.blueprint,
+          ...providerResult.generatedInterpretation!.blueprint,
           requirementChecksum: hashRequirementSpec(spec),
         };
         try {
