@@ -174,3 +174,15 @@ writers and returns the work to serialized integration ownership.
 Generated templates, shared Graph/API contracts, Compose topology, migrations,
 and end-to-end smoke paths remain serialized integration work even when their
 consumers can later proceed in parallel.
+
+### Accepted compiler icon asset coordinate — ADR-0043
+
+The founder's standing independent review accepted ADR-0043 (exact hash and
+acceptance are recorded in the consumer delivery ledger). The compiler directly
+pins `lucide-static` **0.468.0** for a fixed local SVG allowlist only. This adds
+one compiler asset input; it does not change the frozen D0 Golden runtime table
+or introduce a generated runtime dependency. The package has no dependencies;
+its npm integrity, source hashes and retained license are recorded in
+`packages/compiler/THIRD_PARTY_NOTICES.md` and the exact pnpm lock entry.
+New generated Restaurant bundles include the upstream license. Shared registry
+keys/digests, Graph/API/state and immutable prior Compilations remain unchanged.

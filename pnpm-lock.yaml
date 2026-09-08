@@ -217,6 +217,9 @@ importers:
       casbin:
         specifier: ^5.37.0
         version: 5.51.1
+      lucide-static:
+        specifier: 0.468.0
+        version: 0.468.0
       xstate:
         specifier: ^5.19.2
         version: 5.32.5
@@ -4178,6 +4181,12 @@ packages:
       }
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0-rc
+
+  lucide-static@0.468.0:
+    resolution:
+      {
+        integrity: sha512-JvpWui2umxRyEVMoETfMzb+qKqibV/sdoqJbKmW1JLdkuhXluJKoO6NqCbvCK/vAbUuH5bTEFD4T6uECsrNcnA==,
+      }
 
   luxon@3.7.2:
     resolution:
@@ -8153,6 +8162,8 @@ snapshots:
   lucide-react@0.468.0(react@19.2.8):
     dependencies:
       react: 19.2.8
+
+  lucide-static@0.468.0: {}
 
   luxon@3.7.2: {}
 

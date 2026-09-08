@@ -22,6 +22,7 @@ import {
   selectRestaurantSurfaceSource,
 } from "./source-registry.js";
 import { projectRestaurantSurface } from "./surface-projection.js";
+import { getCustomerIconAssets } from "./customer-icons.js";
 
 function sharedStateTest(
   plan: ReturnType<typeof planRestaurantProduct>,
@@ -124,6 +125,7 @@ function renderFiles(
       path: "README.md",
       content: `# ${plan.application.name}\n\nDependency-free dual-surface Restaurant application compiled from immutable Published revision \`${plan.publishedRevisionId}\`. Customer and trusted merchant startup entries share one schema-version-1 atomic local state file.\n`,
     },
+    { path: "THIRD_PARTY_NOTICES.md", content: getCustomerIconAssets().notice },
     {
       path: "graph/manifest.json",
       content:

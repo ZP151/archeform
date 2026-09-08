@@ -4,9 +4,7 @@ import { access, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-
-import { generateRestaurantProductApplicationBundle } from "../packages/compiler/src/index";
-import { restaurantProductV3Fixture } from "../packages/compiler/test/fixtures/restaurant-product-v3";
+import { execFileSync } from "node:child_process";
 
 type RunningServer = { port: number; close: () => Promise<void> };
 test.describe.configure({ retries: 0 });
@@ -19,11 +17,25 @@ test("customers can read orders and refresh visible fulfilment without generatin
   const root = await mkdtemp(join(tmpdir(), "archeform-order-browser-"));
   const servers: RunningServer[] = [];
   try {
-    const { publishedGraph, compositionLock } = restaurantProductV3Fixture();
-    const bundle = generateRestaurantProductApplicationBundle({
-      publishedGraph,
-      compositionLock,
-    });
+    // Build @factory/compiler first. Run its actual ESM entry and authored
+    // fixture outside Playwright's CommonJS module transform/cache.
+    const bundle = JSON.parse(
+      execFileSync(
+        process.execPath,
+        [
+          "--experimental-strip-types",
+          "--input-type=module",
+          "-e",
+          `import { generateRestaurantProductApplicationBundle } from './packages/compiler/dist/index.js';
+       import { restaurantProductV3Fixture } from './packages/compiler/test/fixtures/restaurant-product-v3.ts';
+       const { publishedGraph, compositionLock } = restaurantProductV3Fixture();
+       process.stdout.write(JSON.stringify(generateRestaurantProductApplicationBundle({ publishedGraph, compositionLock })));`,
+        ],
+        { encoding: "utf8", maxBuffer: 5 * 1024 * 1024, timeout: 30_000 },
+      ),
+    ) as {
+      files: { path: string; content: string }[];
+    };
     for (const file of bundle.files) {
       const target = resolve(root, file.path);
       const within = relative(root, target);
@@ -57,6 +69,11 @@ test("customers can read orders and refresh visible fulfilment without generatin
     const kitchen = `http://127.0.0.1:${servers[1]!.port}`;
     const assetFailures: string[] = [];
     const pageErrors: string[] = [];
+    const externalRequests: string[] = [];
+    page.on("request", (outgoing) => {
+      if (new URL(outgoing.url()).origin !== customer)
+        externalRequests.push(new URL(outgoing.url()).origin);
+    });
     page.on("pageerror", (error) => pageErrors.push(error.message));
     page.on("requestfailed", (failed) =>
       assetFailures.push(new URL(failed.url()).pathname),
@@ -93,7 +110,18 @@ test("customers can read orders and refresh visible fulfilment without generatin
     await expect(
       page.getByText("No orders yet", { exact: true }),
     ).toBeVisible();
-    const output = resolve("acceptance-artifacts/d1.5");
+    const tabs = page.getByRole("navigation", { name: "Customer" });
+    for (const link of await tabs.getByRole("link").all()) {
+      const icon = link.locator("svg");
+      await expect(icon).toBeVisible();
+      await expect(icon).toHaveAttribute("aria-hidden", "true");
+      await expect(icon).toHaveAttribute("focusable", "false");
+      expect(await link.innerText()).not.toBe("");
+    }
+    await expect(
+      page.locator(".customer-orders-empty svg.lucide-receipt-text"),
+    ).toBeVisible();
+    const output = resolve("acceptance-artifacts/d1.6");
     await mkdir(output, { recursive: true });
     await page.setViewportSize({ width: 390, height: 900 });
     await page.screenshot({
@@ -150,6 +178,9 @@ test("customers can read orders and refresh visible fulfilment without generatin
     await refresh.press("Enter");
     await expect(page.getByText("Ready", { exact: true })).toBeVisible();
     await expect(
+      page.locator(".customer-order-status svg.lucide-circle-check"),
+    ).toBeVisible();
+    await expect(
       page.getByText("Paid (simulated)", { exact: true }),
     ).toBeVisible();
     await expect(page.getByText("USD 14.00", { exact: true })).toBeVisible();
@@ -201,6 +232,7 @@ test("customers can read orders and refresh visible fulfilment without generatin
         ).violations,
       ).toEqual([]);
       if (width === 390 || width === 1440) {
+        await page.mouse.move(0, 0);
         await page.screenshot({
           path: join(output, `orders-${width}.png`),
           fullPage: true,
@@ -213,6 +245,7 @@ test("customers can read orders and refresh visible fulfilment without generatin
     ).toBe(0);
     expect(assetFailures).toEqual([]);
     expect(pageErrors).toEqual([]);
+    expect(externalRequests).toEqual([]);
     console.info(
       "FACTORY_ORDER_BROWSER_EVIDENCE",
       JSON.stringify({

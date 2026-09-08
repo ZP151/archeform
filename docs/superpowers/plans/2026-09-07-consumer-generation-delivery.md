@@ -497,3 +497,26 @@ accepted lifecycle and customer business behavior; refine the existing target.
 Root owns the target, focused customer test, existing order browser test and PM
 records. ADR-0042 records the frozen boundary before implementation. The
 unsupported-payment question reduction remains the next business priority.
+
+## D1.6 — introduce local library icons
+
+- [x] Inspect approved UI/recipe assets and verify the published Lucide Static
+      coordinate, package license and static SVG layout from primary sources.
+- [x] Add focused RED and browser assertions for visible, accessible local icons.
+- [x] Accept ADR-0043 with exact dependency, provenance and generated-file scope.
+- [x] Add the compile-time icon adapter and license output; use fixed icon
+      selections for navigation, refresh, details, order state and empty state.
+      Preserve readable names, authoritative status, existing routes and tokens.
+- [x] Verify package integrity, selected SVG provenance/license retention,
+      deterministic customer-only and dual-surface output, generated journeys,
+      responsive/accessibility behavior and zero icon network requests.
+- [x] Inspect real mobile/desktop/empty output, obtain one scoped implementation
+      review, update evidence and deliver the bounded iteration branch commit.
+
+This implements the founder's explicit icon-library request. Business parameter
+binding, unsupported-capability question reduction and hosted usability remain
+in the broader consumer roadmap; do not equate a visual slice with full D1.
+
+Browser command prerequisite: run `pnpm --filter @factory/compiler build`, then
+`node node_modules/@playwright/test/cli.js test e2e/restaurant-orders.spec.ts --workers=1 --retries=0`.
+The test uses the actual built Node ESM compiler outside Playwright transforms.

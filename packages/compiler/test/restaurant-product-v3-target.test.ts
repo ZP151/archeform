@@ -83,6 +83,7 @@ describe("Restaurant product V3 target", () => {
     expect(first.files.map(({ path }) => path)).toEqual([
       "package.json",
       "README.md",
+      "THIRD_PARTY_NOTICES.md",
       "graph/manifest.json",
       "src/server.mjs",
       "src/runtime/state.mjs",

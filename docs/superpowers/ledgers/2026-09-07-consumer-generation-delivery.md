@@ -898,3 +898,86 @@ Functional and visual acceptance are separate: the founder's D1.4 feedback is
 retained as evidence that passing business/a11y tests did not prove visual
 completion. Next remains the 14-question unsupported-payment interaction,
 then business parameter binding, frozen case reliability and hosted usability.
+
+### D1.6 — local icon library in generated customer UI (active)
+
+Founder explicitly requests a library for icons or images and a concise visual
+interface rather than text-only components. Continue from `bdd54f28`. Reuse
+inventory finds existing Lucide policy/React coordinate in UI primitives and
+Workbench, but generated native navigation is text-only and the generic tab
+pattern emits unresolved data-lucide placeholders. Root recommends the same
+Lucide family through compile-time static SVG; selected icons are shipped inline,
+with labels on navigation/status and an accessible icon-only refresh action.
+No stock images are introduced into order data or represented as actual dishes.
+
+Root owns compiler customer/product targets, new target-local icon adapter and
+its focused test, existing two target tests, compiler package manifest, lockfile,
+provenance/notice records, existing order browser acceptance and PM documents.
+Tech Lead `d15_design_decision` owns only proposed ADR-0043. Product and dependency
+implementation waits for its standing independent decision review. Spark quota
+failure is retained; root performs serialized implementation. User direction and
+existing consumer scope cover routine visual choices without another design
+approval loop. Focused RED (7.24 s runner) confirms emitted output has no Lucide
+house icon. Browser assertions require real visible SVG, accessible labels,
+non-focusable decorative icons, truthful status symbols and native navigation.
+
+ADR-0043 is accepted under the founder's September 1 standing authorization.
+Exact SHA-256: `bfcc41be6eae359700176a8be0365acf94d17559546b27012af7810903c44290`.
+Tech Lead `d15_design_decision` recommends migrate; independent
+`d1_decision_review` returns P0/P1 0/0 and
+`APPROVED_FOR_STANDING_ACCEPTANCE: yes`, independently matching package facts.
+PM authorizes root's serialized dependency, helper, target, notice and test
+implementation on the frozen paths. The helper test path is
+`packages/compiler/test/restaurant-customer-icons.test.ts`. This acceptance
+precedes dependency installation and product edits. The source package is
+approximately 31 MB installed; only selected inline SVGs reach generated apps.
+
+D1.6 focused GREEN: 24/24 across customer/product targets and icon helper in
+21.69 s. Missing or changed pinned SVG inputs and unknown internal icon names
+are refused; original package version, license and fixed geometry are checked.
+Compiler build/types/lint, frozen install, existing third-party/source-study
+checks and Impeccable detection passed. The lockfile delta is exactly the new
+compiler importer, package integrity and empty dependency snapshot (11 lines);
+pnpm's unrelated formatting and importer order changes were removed.
+
+Browser harness correction: Playwright's root CommonJS transform misclassified
+import.meta-based package resolution, then a mixed native/transformed Graph
+module cache failed. The test now runs the built compiler ESM entry and authored
+fixture in a bounded native Node child, receives the bundle in memory, and
+starts its real generated servers as before. Build compiler before this browser
+command. No product/runtime workaround was added for the test runner.
+Browser acceptance then passed 1/1 in 4.6 s (5.8 s runner): actual visible SVGs,
+accessible navigation names and decorative semantics, native Refresh to Ready,
+zero external requests/page errors/mutations, and axe/overflow/touch/occlusion
+checks at 320/390/768/1440 px. Root inspected mobile, desktop and empty screenshots
+in one batch. All temporary state was removed and both servers closed.
+
+Exact generated comparison against the prior built bundles proves only the new
+THIRD_PARTY_NOTICES.md path plus customer app/styles (and customer-only server's
+embedded CSS literal) changed. Shared registry/experience sources and digests,
+Graph manifests, API/state/seed, merchant and generated package manifests remain
+byte-identical. Product regression and scoped implementation review are pending.
+
+Final D1.6 product regression succeeded: selected 2,317 tests / 148 files,
+including fresh compiler 627/38 in 188.76 s and unchanged-package cache evidence
+(Graph 661/21, adapters 84/10, capabilities 384/32, Workbench 561/47).
+The direct package pin, integrity and zero transitive dependencies are verified
+by frozen installation and focused helper checks; the existing ecosystem notice
+and source-study gates cover their pre-existing scopes separately.
+
+### D1.6 accepted and branch delivery
+
+Independent `d1_decision_review` approves the bounded implementation with
+P0/P1/P2 0/0/0, independent affected tests 24/24 in 19.38 s and inspection of all
+four screenshots. Root's focused 24/24, browser 1/1, package/build/frozen-install
+checks, exact file comparison, product 2,317/148 and cleanup complete acceptance.
+PM accepts D1.6 and authorizes one normal controller commit/push. The enclosing
+commit, parent `bdd54f28`, is the task delivery checkpoint; controller verifies
+local/remote equality. No main merge, repository release or cloud deployment.
+
+The generated customer app now uses a real library visual vocabulary without
+asking users to choose/install icons or repair missing loaders. The fixed set
+adds less than 15 KB of serialized SVG strings (focused budget assertion), not
+the full library, to each generated customer module. Imagery/photo selection is
+not part of this icon slice; the broader business priorities remain material
+question reduction, required parameters, reliability and hosted usability.

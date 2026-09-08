@@ -80,7 +80,26 @@ retained). Independent scoped review passed P0/P1/P2 0/0/0, including a fresh
 the enclosing branch commit, parent `88ec618f`, is its delivery checkpoint.
 No model, Docker or cloud execution was needed for this correction.
 
-Next is the observed 14-question unsupported-payment interaction:
+D1.6 implements the founder's explicit icon-library direction using exact
+`lucide-static 0.468.0` at compiler time. Thirteen pinned local SVGs supply
+navigation, status, refresh, detail/back and empty-state imagery. Navigation and
+status retain text; the compact refresh has an accessible name and 48px target.
+Generated apps carry their upstream license, use no icon loader/CDN and acquire
+no runtime dependency. Existing UI registry assets and source digests are intact.
+
+Focused icon/customer/product checks passed 24/24; compiler build/types/lint,
+frozen install and notice/source checks passed. Actual generated-browser
+acceptance passed 1/1 in 4.6 s with visible SVGs, decorative semantics, zero
+external requests/errors, keyboard refresh and four-width accessibility/layout
+checks. The browser harness uses the built compiler in native Node to preserve
+ESM package resolution. Fresh mobile/desktop/empty screenshots were inspected;
+state and servers were cleaned up. Product regression passed 2,317 tests / 148
+files (fresh compiler 627/38 in 188.76 s, unchanged package caches retained).
+Independent scoped review passed P0/P1/P2 0/0/0 with a fresh 24/24 run and
+inspection of all four screenshots. D1.6 is accepted; the enclosing branch
+commit, parent `bdd54f28`, records delivery. Full D1/hosted readiness remains open.
+
+The next business priority remains the observed 14-question unsupported-payment interaction:
 show a concise capability boundary and one meaningful explicit choice while
 preserving unsatisfied requirements. Then continue required parameter binding,
 ten frozen Restaurant cases and persistence. Full D1 and a mature hosted

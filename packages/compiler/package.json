@@ -17,6 +17,7 @@
     "@factory/graph": "workspace:*",
     "@factory/screen-recipes": "workspace:*",
     "casbin": "^5.37.0",
+    "lucide-static": "0.468.0",
     "xstate": "^5.19.2",
     "zod": "^3.24.1"
   },

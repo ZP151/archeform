@@ -81,6 +81,31 @@ async function loadGeneratedCustomerApp(input = canonicalInput()) {
 }
 
 describe("Restaurant customer bundle target", () => {
+  it("renders local library icons with accessible text and retains the upstream license", async () => {
+    const { app, files } = await loadGeneratedCustomerApp();
+    const state = { catalog: [], orders: [], cart: { items: [] }, profile: {} };
+    const empty = app.renderCustomerPage("/orders", state);
+    expect(empty).toContain('class="lucide lucide-house"');
+    expect(empty).toContain('class="lucide lucide-receipt-text"');
+    expect(empty).toContain('aria-label="Refresh status"');
+    expect(empty).not.toContain("data-lucide=");
+    expect(files["THIRD_PARTY_NOTICES.md"]).toContain("lucide-static 0.468.0");
+    expect(files["THIRD_PARTY_NOTICES.md"]).toContain("ISC License");
+    expect(files["src/customer/app.mjs"]).not.toMatch(/from ["']lucide/);
+    for (const [status, icon] of [
+      ["preparing", "chef-hat"],
+      ["ready", "circle-check"],
+      ["cancelled", "circle-x"],
+      ["toString", "circle-help"],
+    ]) {
+      const html = app.renderCustomerPage("/orders", {
+        ...state,
+        orders: [{ id: "1", items: [], status }],
+      });
+      expect(html).toContain(`class="lucide lucide-${icon}"`);
+    }
+  });
+
   it("marks exactly one native navigation destination for customer routes", async () => {
     const { app } = await loadGeneratedCustomerApp();
     const state = { catalog: [], orders: [], cart: { items: [] }, profile: {} };
@@ -112,6 +137,7 @@ describe("Restaurant customer bundle target", () => {
     expect(first.files.map(({ path }) => path)).toEqual([
       "package.json",
       "README.md",
+      "THIRD_PARTY_NOTICES.md",
       "graph/manifest.json",
       "src/server.mjs",
       "src/runtime/state.mjs",
@@ -310,7 +336,7 @@ describe("Restaurant customer bundle target", () => {
       orders: [order, { ...order, id: "second-order", status: "constructor" }],
     };
     const list = app.renderCustomerPage("/orders", state);
-    expect(list.match(/>Refresh status<\/a>/g)).toHaveLength(1);
+    expect(list.match(/aria-label="Refresh status"/g)).toHaveLength(1);
     expect(list.match(/Status unavailable/g)).toHaveLength(2);
     expect(list).not.toContain("function");
     expect(list).toContain("ZZZ 14.00");
@@ -320,7 +346,7 @@ describe("Restaurant customer bundle target", () => {
     expect(detail).not.toContain("%252F");
     expect(detail).toContain("Pizza");
     const empty = app.renderCustomerPage("/orders", { ...state, orders: [] });
-    expect(empty.match(/>Refresh status<\/a>/g)).toHaveLength(1);
+    expect(empty.match(/aria-label="Refresh status"/g)).toHaveLength(1);
     const missing = app.renderCustomerPage("/orders/missing", state);
     expect(missing).toContain("Order unavailable");
     expect(missing).not.toContain("Order Unknown");

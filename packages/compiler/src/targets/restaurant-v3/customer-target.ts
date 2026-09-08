@@ -16,9 +16,14 @@ import {
   selectRestaurantSurfaceSource,
 } from "./source-registry.js";
 import { projectRestaurantSurface } from "./surface-projection.js";
+import { getCustomerIconAssets } from "./customer-icons.js";
 
 export function renderRestaurantCustomerAppModule(): string {
   return `import { renderMobileProductShell, renderMenuHero, renderCategoryRail, renderMenuItemCard, renderDishConfigurator, renderCartLine, renderOrderSummary, renderPaymentState, renderActiveOrderList, renderOrderTimeline, renderCustomerProfileForm } from "../generated/customer-restaurant-ui.mjs";
+
+const customerIcons = Object.freeze(${JSON.stringify(getCustomerIconAssets().icons)});
+const navigationIcons = Object.freeze({ "/": "house", "/menu": "utensils-crossed", "/cart": "shopping-bag", "/orders": "receipt-text", "/profile": "user-round" });
+const statusIcons = Object.freeze({ paid: "circle-check", accepted: "clock", preparing: "chef-hat", ready: "circle-check", served: "circle-check", cancelled: "circle-x" });
 
 export const customerRoutes = Object.freeze(["/", "/menu", "/menu/:itemId", "/cart", "/checkout", "/orders", "/orders/:orderId", "/profile"]);
 export const customerTabs = Object.freeze([
@@ -80,7 +85,7 @@ export function normalizeCustomerFormAction(values, data) {
 export const customerRenderers = Object.freeze({ renderMobileProductShell, renderMenuHero, renderCategoryRail, renderMenuItemCard, renderDishConfigurator, renderCartLine, renderOrderSummary, renderPaymentState, renderActiveOrderList, renderOrderTimeline, renderCustomerProfileForm });
 const renderNavigation = (pathname) => {
   const destination = pathname === "/checkout" ? "/cart" : pathname.startsWith("/menu/") ? "/menu" : pathname.startsWith("/orders/") ? "/orders" : pathname;
-  return '<nav class="customer-tabs" aria-label="Customer">' + customerTabs.map(({ label, route }) => '<a href="' + route + '"' + (route === destination ? ' aria-current="page"' : '') + '>' + label + '</a>').join('') + '</nav>';
+  return '<nav class="customer-tabs" aria-label="Customer">' + customerTabs.map(({ label, route }) => '<a href="' + route + '"' + (route === destination ? ' aria-current="page"' : '') + '>' + customerIcons[navigationIcons[route]] + '<span>' + label + '</span></a>').join('') + '</nav>';
 };
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
 const statusLabels = Object.freeze({ paid: "Order confirmed", accepted: "Accepted", preparing: "Preparing", ready: "Ready", served: "Served", cancelled: "Cancelled" });
@@ -97,14 +102,15 @@ const itemsSummary = (items) => {
     '<li><span>' + escapeHtml(line?.name ?? "Item unavailable") + '</span><span class="customer-order-quantity">× ' + escapeHtml(Number.isInteger(line?.quantity) && line.quantity > 0 ? line.quantity : "Quantity unavailable") + '</span></li>'
   ).join("") + '</ul>';
 };
-const refreshLink = (route) => '<a class="customer-order-refresh" href="' + route + '">Refresh status</a>';
+const refreshLink = (route) => '<a class="customer-order-refresh" href="' + route + '" aria-label="Refresh status" title="Refresh status">' + customerIcons["refresh-cw"] + '</a>';
 const renderOrderCard = (order, settings, showDetailLink = true) => {
   const href = "/orders/" + encodeURIComponent(String(order.id));
-  const detailLink = showDetailLink ? '<a href="' + href + '">Order detail</a>' : '<a href="/orders">All orders</a>';
-  return '<section class="customer-order-card"><h2>Order ' + escapeHtml(order.id) + '</h2><dl class="customer-order-status"><dt>Fulfilment</dt><dd>' + escapeHtml(formatStatus(order.status)) + '</dd></dl><div class="customer-order-receipt"><h3>Items</h3>' + itemsSummary(order.items) + '<dl class="customer-order-facts"><div><dt>Payment</dt><dd>' + escapeHtml(formatPaymentStatus(order.paymentStatus)) + '</dd></div><div><dt>Total</dt><dd>' + escapeHtml(formatMoney(order.total, settings)) + '</dd></div></dl><div class="customer-order-actions">' + detailLink + '</div></div></section>';
+  const detailLink = showDetailLink ? '<a href="' + href + '"><span>Order detail</span>' + customerIcons["arrow-right"] + '</a>' : '<a href="/orders">' + customerIcons["arrow-left"] + '<span>All orders</span></a>';
+  const statusIcon = typeof order.status === "string" && Object.hasOwn(statusIcons, order.status) ? statusIcons[order.status] : "circle-help";
+  return '<section class="customer-order-card"><h2>Order ' + escapeHtml(order.id) + '</h2><dl class="customer-order-status"><dt>Fulfilment</dt><dd>' + customerIcons[statusIcon] + '<span>' + escapeHtml(formatStatus(order.status)) + '</span></dd></dl><div class="customer-order-receipt"><h3>Items</h3>' + itemsSummary(order.items) + '<dl class="customer-order-facts"><div><dt>Payment</dt><dd>' + escapeHtml(formatPaymentStatus(order.paymentStatus)) + '</dd></div><div><dt>Total</dt><dd>' + escapeHtml(formatMoney(order.total, settings)) + '</dd></div></dl><div class="customer-order-actions">' + detailLink + '</div></div></section>';
 };
 const orderHeader = (route) => '<header class="customer-orders-header"><div><h2>Your orders</h2><p>Refresh to see the latest progress from the kitchen.</p></div>' + refreshLink(route) + '</header>';
-const renderOrderEmptyState = () => '<div class="customer-orders-empty"><h2>No orders yet</h2><p>Your orders will appear here after checkout.</p><a href="/menu">Browse menu</a></div>';
+const renderOrderEmptyState = () => '<div class="customer-orders-empty">' + customerIcons["receipt-text"] + '<h2>No orders yet</h2><p>Your orders will appear here after checkout.</p><a href="/menu"><span>Browse menu</span>' + customerIcons["arrow-right"] + '</a></div>';
 export function renderCustomerPage(pathname, state) {
   const route = matchCustomerRoute(pathname);
   if (!route) return null;
@@ -163,20 +169,21 @@ h1,h2,h3,p{overflow-wrap:anywhere}h1,h2{font-family:ui-serif,Georgia,serif;font-
 .mobile-shell>header{padding:24px max(24px,calc((100% - 1000px)/2));background:var(--text);color:var(--surface)}.mobile-shell>header h1{margin:0;font-size:1.75rem;letter-spacing:-.025em}
 .mobile-shell>#content{width:100%;max-width:1048px;margin-inline:auto;padding:0 24px 40px;min-width:0}
 .customer-tabs{position:fixed;z-index:2;bottom:0;left:0;right:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;padding:12px 12px calc(12px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--border)}
-.customer-tabs a{display:flex;align-items:center;justify-content:center;min-width:44px;min-height:48px;padding:8px 4px;border-radius:8px;font-size:.8125rem;font-weight:600;text-decoration:none}.customer-tabs a[aria-current=page]{background:var(--text);color:var(--surface)}.customer-tabs a:hover:not([aria-current=page]){background:var(--border)}
-.customer-orders-header{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:36px 0 28px}.customer-orders-header h2{margin:0;font-size:clamp(2.25rem,5vw,3.25rem);letter-spacing:-.03em}.customer-orders-header p{max-width:40ch;margin:12px 0 0;font-size:.875rem;line-height:1.6;color:var(--accent)}
+.customer-tabs a{display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center;min-width:44px;min-height:56px;padding:6px 4px;border-radius:8px;font-size:.8125rem;font-weight:600;text-decoration:none}.customer-tabs a[aria-current=page]{background:var(--text);color:var(--surface)}.customer-tabs a:hover:not([aria-current=page]){background:var(--border)}
+.customer-orders-header{display:grid;grid-template-columns:minmax(0,1fr) 48px;align-items:start;gap:16px;padding:36px 0 28px}.customer-orders-header h2{margin:0;font-size:clamp(2.25rem,5vw,3.25rem);letter-spacing:-.03em}.customer-orders-header p{max-width:40ch;margin:12px 0 0;font-size:.875rem;line-height:1.6;color:var(--accent)}
 .customer-order-list{display:grid;gap:24px}.customer-order-card{width:100%;border:1px solid var(--border);border-radius:16px;overflow-wrap:anywhere;overflow:hidden}
 .customer-order-card>h2{margin:0;padding:24px 28px 0;font-family:inherit;font-size:.8125rem;font-weight:600;line-height:1.5;color:var(--accent)}
-.customer-order-status{margin:0;padding:16px 28px 28px;border-bottom:1px solid var(--border)}.customer-order-status dt{font-size:.8125rem;margin-bottom:4px}.customer-order-status dd{margin:0;font-family:ui-serif,Georgia,serif;font-size:clamp(2.25rem,5vw,3rem);line-height:1.15;letter-spacing:-.025em;color:var(--accent)}
+.customer-order-status{margin:0;padding:16px 28px 28px;border-bottom:1px solid var(--border)}.customer-order-status dt{font-size:.8125rem;margin-bottom:4px}.customer-order-status dd{display:flex;align-items:center;gap:12px;margin:0;font-family:ui-serif,Georgia,serif;font-size:clamp(2.25rem,5vw,3rem);line-height:1.15;letter-spacing:-.025em;color:var(--accent)}
 .customer-order-receipt{padding:28px}.customer-order-receipt h3{margin:0 0 16px;font-size:.8125rem;font-weight:600;color:var(--accent)}
 .customer-order-items{list-style:none;padding:0;margin:0 0 24px;display:grid;gap:16px}.customer-order-items li{display:flex;justify-content:space-between;gap:20px;line-height:1.5;font-weight:500}.customer-order-quantity{white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:400;color:var(--accent)}
 .customer-order-facts{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;margin:0;padding:24px 0;border-top:1px solid var(--border)}.customer-order-facts dt{font-size:.75rem;color:var(--accent);margin-bottom:6px}.customer-order-facts dd{margin:0;font-size:.9375rem;font-weight:600;line-height:1.5;font-variant-numeric:tabular-nums}.customer-order-facts>div:last-child{text-align:right}
-.customer-order-actions a,.customer-orders-empty a{display:flex;justify-content:center;align-items:center;min-height:48px;padding:12px 20px;background:var(--text);color:var(--surface);border-radius:8px;font-size:.875rem;font-weight:600;text-decoration:none}.customer-order-actions a:hover,.customer-orders-empty a:hover{background:var(--accent)}
-.customer-order-refresh{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;min-height:48px;padding:12px 20px;border:1px solid var(--border);border-radius:8px;font-size:.8125rem;font-weight:600;text-decoration:none}.customer-order-refresh:hover{border-color:var(--accent);background:var(--border)}
+.customer-order-actions a,.customer-orders-empty a{display:flex;justify-content:center;align-items:center;gap:12px;min-height:48px;padding:12px 20px;background:var(--text);color:var(--surface);border-radius:8px;font-size:.875rem;font-weight:600;text-decoration:none}.customer-order-actions a:hover,.customer-orders-empty a:hover{background:var(--accent)}
+.customer-order-refresh{display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;min-height:48px;padding:0;border:1px solid var(--border);border-radius:8px;font-size:.8125rem;font-weight:600;text-decoration:none}.customer-order-refresh:hover{border-color:var(--accent);background:var(--border)}
 .customer-orders-empty{max-width:36rem;margin:24px auto;text-align:center;padding:48px 24px;border-block:1px solid var(--border)}.customer-orders-empty h2{font-size:2rem;margin:0 0 16px}.customer-orders-empty p{font-size:.9375rem;margin:0 0 28px}.customer-orders-empty a{max-width:16rem;margin-inline:auto}
-@media(max-width:767px){.customer-orders-header{align-items:flex-start;flex-direction:column;gap:20px}.customer-order-refresh{align-self:flex-start}.customer-order-card>h2{padding:20px 20px 0}.customer-order-status{padding:12px 20px 24px}.customer-order-receipt{padding:24px 20px}}
+.lucide{display:inline-block;flex-shrink:0;width:22px;height:22px;vertical-align:middle}.customer-order-status .lucide{width:36px;height:36px}.customer-orders-empty>.lucide{width:48px;height:48px;color:var(--accent);margin-bottom:24px}
+@media(max-width:767px){.customer-orders-header{gap:16px}.customer-order-refresh{align-self:flex-start}.customer-order-card>h2{padding:20px 20px 0}.customer-order-status{padding:12px 20px 24px}.customer-order-receipt{padding:24px 20px}}
 @media(max-width:359px){.mobile-shell>#content{padding-inline:16px}.mobile-shell>header{padding-inline:16px}.customer-order-facts{grid-template-columns:minmax(0,1fr);gap:16px}.customer-order-facts>div:last-child{text-align:left}}
-@media(min-width:768px){.mobile-shell{padding-bottom:0;grid-template-rows:auto auto 1fr}.customer-tabs{position:static;grid-row:2;padding:12px max(24px,calc((100% - 1000px)/2));border-top:0;border-bottom:1px solid var(--border)}.customer-tabs a{font-size:.875rem}.mobile-shell>#content{grid-row:3}.customer-order-list{max-width:760px;margin-inline:auto}.customer-order-card{max-width:760px;margin-inline:auto}.customer-order-actions a{max-width:240px;margin-left:auto}}
+@media(min-width:768px){.mobile-shell{padding-bottom:0;grid-template-rows:auto auto 1fr}.customer-tabs{position:static;grid-row:2;padding:12px max(24px,calc((100% - 1000px)/2));border-top:0;border-bottom:1px solid var(--border)}.customer-tabs a{flex-direction:row;gap:10px;font-size:.875rem}.mobile-shell>#content{grid-row:3}.customer-order-list{max-width:760px;margin-inline:auto}.customer-order-card{max-width:760px;margin-inline:auto}.customer-order-actions a{max-width:240px;margin-left:auto}}
 `;
 }
 
@@ -298,6 +305,7 @@ function renderFiles(input: PublishedApplicationGraphCompilationInput): {
       path: "README.md",
       content: `# ${plan.application.name}\n\nDependency-free local Restaurant customer application compiled from Published revision \`${plan.publishedRevisionId}\`. The loopback server uses a versioned file-backed state store, atomic replacement, and simulated payment only.\n\nRun \`node src/server.mjs\` or \`node --test test/customer-journey.test.mjs\`.\n`,
     },
+    { path: "THIRD_PARTY_NOTICES.md", content: getCustomerIconAssets().notice },
     {
       path: "graph/manifest.json",
       content:
