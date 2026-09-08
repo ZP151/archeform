@@ -111,6 +111,17 @@ const renderOrderCard = (order, settings, showDetailLink = true) => {
 };
 const orderHeader = (route) => '<header class="customer-orders-header"><div><h2>Your orders</h2><p>Refresh to see the latest progress from the kitchen.</p></div>' + refreshLink(route) + '</header>';
 const renderOrderEmptyState = () => '<div class="customer-orders-empty">' + customerIcons["receipt-text"] + '<h2>No orders yet</h2><p>Your orders will appear here after checkout.</p><a href="/menu"><span>Browse menu</span>' + customerIcons["arrow-right"] + '</a></div>';
+const renderCatalogCard = (value, settings) => {
+  const display = { ...value, price: formatMoney(value.price, settings) };
+  if (value.imageUrl === "#") {
+    return '<article class="factory-block customer-provided-menu-card"><div class="customer-menu-placeholder" aria-hidden="true">' + customerIcons["utensils-crossed"] + '</div><div class="customer-provided-menu-copy"><h2>' + escapeHtml(value.name) + '</h2><p>' + escapeHtml(value.description) + '</p></div><div class="customer-provided-menu-purchase"><output aria-label="Price">' + escapeHtml(display.price) + '</output><a href="/menu/' + encodeURIComponent(value.id) + '">View dish</a></div></article>';
+  }
+  return renderMenuItemCard(display);
+};
+const renderCatalog = (state) => {
+  const cards = state.catalog.map((value) => renderCatalogCard(value, state.settings)).join("");
+  return state.catalog.length > 0 && state.catalog.every((value) => value.id.startsWith("menu-item-")) ? '<section class="customer-provided-menu" aria-label="Menu">' + cards + '</section>' : cards;
+};
 export function renderCustomerPage(pathname, state) {
   const route = matchCustomerRoute(pathname);
   if (!route) return null;
@@ -126,9 +137,9 @@ export function renderCustomerPage(pathname, state) {
   const restaurantName = typeof state.settings?.name === "string" && state.settings.name.trim() ? state.settings.name : "Restaurant";
   const order = route === "/orders/:orderId" ? (state.orders ?? []).find((value) => value.id === safeRequestedOrderId) : state.orders[0];
   let content = route === "/"
-    ? renderMenuHero({ locationName: restaurantName, serviceOpen: true }) + renderCategoryRail({ categoryName: "Dinner", categoryActive: true }) + state.catalog.map((value) => renderMenuItemCard(value)).join("")
-    : route === "/menu" ? state.catalog.map((value) => renderMenuItemCard(value)).join("")
-    : route === "/menu/:itemId" ? renderDishConfigurator({ ...item, canAdd: Boolean(item) })
+    ? renderMenuHero({ locationName: restaurantName, serviceOpen: true }) + renderCategoryRail({ categoryName: "Dinner", categoryActive: true }) + renderCatalog(state)
+    : route === "/menu" ? renderCatalog(state)
+    : route === "/menu/:itemId" ? renderDishConfigurator({ ...item, price: formatMoney(item?.price, state.settings), canAdd: Boolean(item) }).replace(item?.id?.startsWith("menu-item-") ? /<fieldset>[\\s\\S]*?<\\/fieldset>/ : /$^/, "")
     : route === "/cart" ? state.cart.items.map((value) => renderCartLine(value).replace('<form class="factory-block"', '<form class="factory-block" data-customer-action="cart.update" data-line-id="' + value.id + '" data-expected-version="' + state.cart.version + '"').replace('</form>', '<button type="button" data-customer-action="cart.delete" data-line-id="' + value.id + '" data-expected-version="' + state.cart.version + '">Remove</button></form>')).join("") + renderOrderSummary(state.cart)
     : route === "/checkout" ? renderOrderSummary(state.cart) + renderPaymentState({ amount: state.cart.total, method: "simulated-card", canPay: state.cart.items.length > 0 })
     : route === "/orders" ? orderHeader("/orders") + (Array.isArray(state.orders) && state.orders.length > 0 ? '<div class="customer-order-list">' + state.orders.map((value) => renderOrderCard(value, state.settings)).join("") + "</div>" : renderOrderEmptyState())
@@ -182,6 +193,8 @@ h1,h2,h3,p{overflow-wrap:anywhere}h1,h2{font-family:ui-serif,Georgia,serif;font-
 .customer-order-refresh{display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;min-height:48px;padding:0;border:1px solid var(--border);border-radius:8px;font-size:.8125rem;font-weight:600;text-decoration:none}.customer-order-refresh:hover{border-color:var(--accent);background:var(--border)}
 .customer-orders-empty{max-width:36rem;margin:24px auto;text-align:center;padding:48px 24px;border-block:1px solid var(--border)}.customer-orders-empty h2{font-size:2rem;margin:0 0 16px}.customer-orders-empty p{font-size:.9375rem;margin:0 0 28px}.customer-orders-empty a{max-width:16rem;margin-inline:auto}
 .lucide{display:inline-block;flex-shrink:0;width:22px;height:22px;vertical-align:middle}.customer-order-status .lucide{width:36px;height:36px}.customer-orders-empty>.lucide{width:48px;height:48px;color:var(--accent);margin-bottom:24px}
+.customer-provided-menu{display:grid;gap:12px;margin-block:24px}.customer-provided-menu-card{display:grid;grid-template-columns:48px minmax(0,1fr);gap:12px;padding:16px;border:1px solid var(--border);border-radius:12px}.customer-menu-placeholder{width:48px;height:48px;display:grid;place-items:center;background:var(--border);border-radius:10px}.customer-menu-placeholder .lucide{width:22px;height:22px}.customer-provided-menu-copy h2{margin:0;font-size:1.25rem}.customer-provided-menu-copy p{margin:6px 0 0;color:var(--accent);font-size:.875rem}.customer-provided-menu-purchase{grid-column:2;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:4px;flex-wrap:wrap}.customer-provided-menu-purchase output{white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600}.customer-provided-menu-purchase a{display:inline-flex;align-items:center;justify-content:center;min-width:96px;min-height:44px;padding:8px 12px;border:1px solid var(--text);border-radius:8px;font-size:.875rem;font-weight:600;text-decoration:none}.customer-provided-menu-purchase a:hover{background:var(--text);color:var(--surface)}
+@media(min-width:1024px){.customer-provided-menu{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.customer-provided-menu-card{padding:20px}.customer-provided-menu-purchase{grid-column:1/-1;border-top:1px solid var(--border);padding-top:12px}}
 @media(max-width:767px){.customer-orders-header{gap:16px}.customer-order-refresh{align-self:flex-start}.customer-order-card>h2{padding:20px 20px 0}.customer-order-status{padding:12px 20px 24px}.customer-order-receipt{padding:24px 20px}}
 @media(max-width:359px){.mobile-shell>#content{padding-inline:16px}.mobile-shell>header{padding-inline:16px}.customer-order-facts{grid-template-columns:minmax(0,1fr);gap:16px}.customer-order-facts>div:last-child{text-align:left}}
 @media(min-width:768px){.mobile-shell{padding-bottom:0;grid-template-rows:auto auto 1fr}.customer-tabs{position:static;grid-row:2;padding:12px max(24px,calc((100% - 1000px)/2));border-top:0;border-bottom:1px solid var(--border)}.customer-tabs a{flex-direction:row;gap:10px;font-size:.875rem}.mobile-shell>#content{grid-row:3}.customer-order-list{max-width:760px;margin-inline:auto}.customer-order-card{max-width:760px;margin-inline:auto}.customer-order-actions a{max-width:240px;margin-left:auto}}
@@ -195,7 +208,7 @@ export function renderRestaurantCustomerJourneyTest(
     ({ entity }) => entity === "menu-item",
   );
   const primary = menuItems[0]!;
-  const secondary = menuItems[1]!;
+  const secondary = menuItems[1] ?? primary;
   return `import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";

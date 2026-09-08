@@ -40,21 +40,22 @@ const request = async (base, path, init = {}) => { const response = await fetch(
 const post = (body, key) => ({ method: "POST", headers: { "content-type": "application/json", "idempotency-key": key }, body: JSON.stringify(body) });
 test("customer and merchant share orders, kitchen, inventory, and settings", async () => {
   const root = await mkdtemp(join(tmpdir(), "restaurant-shared-generated-")); const statePath = join(root, "state.json");
+  let server;
   try {
-    let server = await startRestaurantServer({ statePath, principalRole: "customer" }); let base = "http://127.0.0.1:" + server.port;
-    const customerItem = (await request(base, "/api/catalog")).body.items[0]; assert.deepEqual({ id: customerItem.id, name: customerItem.name }, { id: ${JSON.stringify(primary.id)}, name: ${JSON.stringify(primary.values.name)} }); assert.equal(customerItem.price, 1400);
-    await request(base, "/api/cart/items", post({ itemId: ${JSON.stringify(primary.id)}, quantity: 1, expectedVersion: 1 }, "add")); await request(base, "/api/checkout", post({ expectedVersion: 2, method: "simulated-card" }, "checkout")); await server.close();
+    server = await startRestaurantServer({ statePath, principalRole: "customer" }); let base = "http://127.0.0.1:" + server.port;
+    const customerItem = (await request(base, "/api/catalog")).body.items[0]; assert.deepEqual({ id: customerItem.id, name: customerItem.name }, { id: ${JSON.stringify(primary.id)}, name: ${JSON.stringify(primary.values.name)} }); assert.equal(customerItem.price, ${JSON.stringify(Math.round(Number(primary.values.price) * 100))});
+    await request(base, "/api/cart/items", post({ itemId: ${JSON.stringify(primary.id)}, quantity: 1, expectedVersion: 1 }, "add")); await request(base, "/api/checkout", post({ expectedVersion: 2, method: "simulated-card" }, "checkout")); await server.close(); server = undefined;
     server = await startRestaurantServer({ statePath, principalRole: "manager" }); base = "http://127.0.0.1:" + server.port;
     assert.equal((await request(base, "/api/merchant/orders")).body.orders[0].id, "order-0001");
     const merchantItem = (await request(base, "/api/merchant/catalog")).body.items[0]; assert.equal(merchantItem.name, ${JSON.stringify(primary.values.name)}); assert.equal(merchantItem.price, customerItem.price);
     const updated = await request(base, "/api/merchant/catalog/" + ${JSON.stringify(primary.id)}, { method: "PATCH", headers: { "content-type": "application/json", "idempotency-key": "catalog" }, body: JSON.stringify({ expectedVersion: merchantItem.version, available: false, stock: 5 }) }); assert.equal(updated.body.item.available, false);
-    await request(base, "/api/merchant/settings", { method: "PUT", headers: { "content-type": "application/json", "idempotency-key": "settings" }, body: JSON.stringify({ expectedVersion: 1, name: "Maison Shared", currency: "SGD", taxRate: 9, serviceChargeRate: 10, timezone: "Asia/Singapore", logoUrl: "", serviceOpen: true }) }); await server.close();
+    await request(base, "/api/merchant/settings", { method: "PUT", headers: { "content-type": "application/json", "idempotency-key": "settings" }, body: JSON.stringify({ expectedVersion: 1, name: "Maison Shared", currency: "SGD", taxRate: 9, serviceChargeRate: 10, timezone: "Asia/Singapore", logoUrl: "", serviceOpen: true }) }); await server.close(); server = undefined;
     server = await startRestaurantServer({ statePath, principalRole: "kitchen" }); base = "http://127.0.0.1:" + server.port;
-    for (const [action, expectedVersion] of [["accept", 1], ["start-preparing", 2], ["mark-ready", 3]]) await request(base, "/api/merchant/kitchen/order-0001/actions", post({ action, expectedVersion }, action)); await server.close();
+    for (const [action, expectedVersion] of [["accept", 1], ["start-preparing", 2], ["mark-ready", 3]]) await request(base, "/api/merchant/kitchen/order-0001/actions", post({ action, expectedVersion }, action)); await server.close(); server = undefined;
     server = await startRestaurantServer({ statePath, principalRole: "customer" }); base = "http://127.0.0.1:" + server.port;
-    assert.equal((await request(base, "/api/orders/order-0001")).body.order.status, "ready"); const restartedItem = (await request(base, "/api/catalog")).body.items[0]; assert.equal(restartedItem.name, ${JSON.stringify(primary.values.name)}); assert.equal(restartedItem.available, false); await server.close();
-    server = await startRestaurantServer({ statePath, principalRole: "manager" }); base = "http://127.0.0.1:" + server.port; assert.equal((await request(base, "/api/merchant/settings")).body.settings.name, "Maison Shared"); await server.close();
-  } finally { await rm(root, { recursive: true, force: true }); }
+    assert.equal((await request(base, "/api/orders/order-0001")).body.order.status, "ready"); const restartedItem = (await request(base, "/api/catalog")).body.items[0]; assert.equal(restartedItem.name, ${JSON.stringify(primary.values.name)}); assert.equal(restartedItem.available, false); await server.close(); server = undefined;
+    server = await startRestaurantServer({ statePath, principalRole: "manager" }); base = "http://127.0.0.1:" + server.port; assert.equal((await request(base, "/api/merchant/settings")).body.settings.name, "Maison Shared"); await server.close(); server = undefined;
+  } finally { await server?.close(); await rm(root, { recursive: true, force: true }); }
 });
 `;
 }

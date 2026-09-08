@@ -9,6 +9,305 @@ import { execFileSync } from "node:child_process";
 type RunningServer = { port: number; close: () => Promise<void> };
 test.describe.configure({ retries: 0 });
 
+for (const itemCount of [1, 3, 100]) {
+  test(`a supplied ${itemCount}-item menu renders and orders at its exact price`, async ({
+    page,
+    request,
+  }) => {
+    test.setTimeout(90_000);
+    const root = await mkdtemp(join(tmpdir(), "archeform-menu-browser-"));
+    const servers: RunningServer[] = [];
+    try {
+      const bundle = JSON.parse(
+        execFileSync(
+          process.execPath,
+          [
+            "--experimental-strip-types",
+            "--input-type=module",
+            "-e",
+            `import { generateRestaurantProductApplicationBundle } from './packages/compiler/dist/index.js';
+         import { hashApplicationGraphV3 } from './packages/graph/dist/index.js';
+         import { bindRestaurantMenuParameters, createCapabilityCompositionLock } from './packages/capabilities/dist/index.js';
+         import { restaurantProductV3Fixture } from './packages/compiler/test/fixtures/restaurant-product-v3.ts';
+         const count = Number(process.argv[1]);
+         const { publishedGraph } = restaurantProductV3Fixture();
+         publishedGraph.graph.metadata.name = 'Cedar & Sage';
+         publishedGraph.graph = bindRestaurantMenuParameters(publishedGraph.graph, {
+           apiVersion: 'factory.restaurant-menu-parameters/v1', mode: 'provided', currency: 'USD',
+           items: Array.from({length: count}, (_, i) => ({name: 'House dish ' + (i + 1), description: null, priceMinor: 1201 + i * 137}))
+         });
+         publishedGraph.graphHash = hashApplicationGraphV3(publishedGraph.graph);
+         const compositionLock = createCapabilityCompositionLock({graphChecksum: publishedGraph.graphHash, selections: publishedGraph.graph.integration.compositionSelections ?? []});
+         process.stdout.write(JSON.stringify(generateRestaurantProductApplicationBundle({publishedGraph, compositionLock})));`,
+            String(itemCount),
+          ],
+          { encoding: "utf8", maxBuffer: 5 * 1024 * 1024, timeout: 30_000 },
+        ),
+      ) as { files: { path: string; content: string }[] };
+      for (const file of bundle.files) {
+        const target = resolve(root, file.path);
+        const within = relative(root, target);
+        if (within.startsWith("..") || isAbsolute(within))
+          throw new Error("Generated path escaped acceptance root.");
+        await mkdir(dirname(target), { recursive: true });
+        await writeFile(target, file.content, "utf8");
+      }
+      const runtime = await import(
+        pathToFileURL(join(root, "src/server.mjs")).href
+      );
+      for (const principalRole of ["customer", "kitchen", "manager"]) {
+        servers.push(
+          await runtime.startRestaurantServer({
+            statePath: join(root, "state.json"),
+            host: "127.0.0.1",
+            port: 0,
+            principalRole,
+          }),
+        );
+      }
+      const customer = `http://127.0.0.1:${servers[0]!.port}`;
+      const kitchen = `http://127.0.0.1:${servers[1]!.port}`;
+      const manager = `http://127.0.0.1:${servers[2]!.port}`;
+      let imageRequests = 0;
+      let externalRequests = 0;
+      let failedAssets = 0;
+      let pageErrors = 0;
+      page.on("request", (outgoing) => {
+        if (outgoing.resourceType() === "image") imageRequests += 1;
+        if (new URL(outgoing.url()).origin !== customer) externalRequests += 1;
+      });
+      page.on("requestfailed", () => {
+        failedAssets += 1;
+      });
+      page.on("pageerror", () => {
+        pageErrors += 1;
+      });
+      page.on("response", (response) => {
+        if (response.status() >= 400) failedAssets += 1;
+      });
+      await page.goto(`${customer}/menu`);
+      await expect(page).toHaveTitle("Cedar & Sage");
+      const catalogResponse = await request.get(`${customer}/api/catalog`);
+      expect(catalogResponse.ok()).toBeTruthy();
+      const catalog = (await catalogResponse.json()).items;
+      expect(catalog).toHaveLength(itemCount);
+      expect(catalog.map((item: { id: string }) => item.id)).toEqual(
+        Array.from(
+          { length: itemCount },
+          (_, i) => `menu-item-${String(i + 1).padStart(3, "0")}`,
+        ),
+      );
+      await expect(page.locator("main img, #content img")).toHaveCount(0);
+      expect(
+        await page.locator("#content svg.lucide-utensils-crossed").count(),
+      ).toBe(itemCount);
+      for (const index of [0, itemCount - 1]) {
+        expect(catalog[index]).toMatchObject({
+          name: `House dish ${index + 1}`,
+          price: 1201 + index * 137,
+          description: "Description not provided.",
+          imageUrl: "#",
+        });
+        await expect(
+          page.getByRole("heading", {
+            name: `House dish ${index + 1}`,
+            exact: true,
+          }),
+        ).toBeVisible();
+        await expect(
+          page.getByText(`USD ${((1201 + index * 137) / 100).toFixed(2)}`, {
+            exact: false,
+          }),
+        ).toBeVisible();
+      }
+      const selectedIndex = Math.min(2, itemCount - 1);
+      const selectedId = `menu-item-${String(selectedIndex + 1).padStart(3, "0")}`;
+      const expectedMinor = 1201 + selectedIndex * 137;
+      const selectedName = `House dish ${selectedIndex + 1}`;
+      await page.goto(`${customer}/menu/${selectedId}`);
+      await expect(
+        page.getByRole("heading", { name: selectedName, exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText(`USD ${(expectedMinor / 100).toFixed(2)}`, {
+          exact: false,
+        }),
+      ).toBeVisible();
+      const added = page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          new URL(response.url()).pathname === "/api/cart/items",
+      );
+      const reloaded = page.waitForNavigation();
+      void reloaded.catch(() => undefined);
+      await page.getByRole("button", { name: "Add to order" }).press("Enter");
+      expect((await added).ok()).toBeTruthy();
+      await reloaded;
+      const cart = (await (await request.get(`${customer}/api/cart`)).json())
+        .cart;
+      expect(cart.total).toBe(expectedMinor);
+      expect(cart.items).toHaveLength(1);
+      await page.goto(`${customer}/checkout`);
+      const paidResponse = page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          new URL(response.url()).pathname === "/api/checkout",
+      );
+      const paidReload = page.waitForNavigation();
+      void paidReload.catch(() => undefined);
+      await page.getByRole("button", { name: "Pay", exact: true }).click();
+      const paid = await paidResponse;
+      expect(paid.ok()).toBeTruthy();
+      await paidReload;
+      const ordersResponse = await request.get(`${customer}/api/orders`);
+      expect(ordersResponse.ok()).toBeTruthy();
+      const orders = (await ordersResponse.json()).orders;
+      expect(orders).toHaveLength(1);
+      const paidOrder = orders[0];
+      expect(paidOrder.total).toBe(expectedMinor);
+      const orderId = paidOrder.id;
+      const actionPath = `/api/merchant/kitchen/${orderId}/actions`;
+      for (const [action, expectedVersion] of [
+        ["accept", 1],
+        ["start-preparing", 2],
+        ["mark-ready", 3],
+      ] as const) {
+        const options = {
+          data: { action, expectedVersion },
+          headers: { "idempotency-key": `menu-browser-${action}` },
+        };
+        const changed = await request.post(`${kitchen}${actionPath}`, options);
+        expect(changed.ok()).toBeTruthy();
+        const replay = await request.post(`${kitchen}${actionPath}`, options);
+        expect(replay.status()).toBe(changed.status());
+        expect(await replay.json()).toEqual(await changed.json());
+      }
+      const denied = await request.post(`${customer}${actionPath}`, {
+        data: { action: "complete", expectedVersion: 4 },
+        headers: { "idempotency-key": "menu-browser-denied" },
+      });
+      expect(denied.status()).toBe(403);
+      const merchant = await request.get(`${manager}/api/merchant/catalog`);
+      expect(merchant.ok()).toBeTruthy();
+      const merchantItem = (await merchant.json()).items[selectedIndex];
+      expect(merchantItem).toMatchObject({
+        id: selectedId,
+        name: selectedName,
+        price: expectedMinor,
+      });
+      const repriced = await request.patch(
+        `${manager}/api/merchant/catalog/${selectedId}`,
+        {
+          data: {
+            expectedVersion: merchantItem.version,
+            price: expectedMinor + 100,
+          },
+          headers: { "idempotency-key": "menu-browser-reprice" },
+        },
+      );
+      expect(repriced.ok()).toBeTruthy();
+      expect((await repriced.json()).item.price).toBe(expectedMinor + 100);
+      await page.goto(`${customer}/orders/${orderId}`);
+      await expect(page.getByText(selectedName, { exact: true })).toBeVisible();
+      await expect(page.getByText("Ready", { exact: true })).toBeVisible();
+      await expect(
+        page.getByText(`USD ${(expectedMinor / 100).toFixed(2)}`, {
+          exact: true,
+        }),
+      ).toBeVisible();
+      const customerPort = servers[0]!.port;
+      await servers[0]!.close();
+      servers[0] = await runtime.startRestaurantServer({
+        statePath: join(root, "state.json"),
+        host: "127.0.0.1",
+        port: customerPort,
+        principalRole: "customer",
+      });
+      await page.reload();
+      const retainedCatalog = await request.get(`${customer}/api/catalog`);
+      expect(retainedCatalog.ok()).toBeTruthy();
+      expect((await retainedCatalog.json()).items[selectedIndex].price).toBe(
+        expectedMinor + 100,
+      );
+      await expect(page.getByText("Ready", { exact: true })).toBeVisible();
+      await expect(
+        page.getByText(`USD ${(expectedMinor / 100).toFixed(2)}`, {
+          exact: true,
+        }),
+      ).toBeVisible();
+      if (itemCount === 3) {
+        const output = resolve("acceptance-artifacts/d1.9");
+        await mkdir(output, { recursive: true });
+        for (const width of [390, 768, 1440]) {
+          await page.setViewportSize({ width, height: 900 });
+          await page.goto(`${customer}/menu`);
+          for (const link of await page
+            .getByRole("link", { name: "View dish", exact: true })
+            .all()) {
+            const box = await link.boundingBox();
+            expect(box!.height).toBeGreaterThanOrEqual(44);
+            expect(box!.width).toBeGreaterThanOrEqual(44);
+          }
+          expect(
+            await page.evaluate(() => document.documentElement.scrollWidth),
+          ).toBe(width);
+          expect(
+            (
+              await new AxeBuilder({ page })
+                .withTags(["wcag2a", "wcag2aa"])
+                .analyze()
+            ).violations,
+          ).toEqual([]);
+          await page.screenshot({
+            path: join(output, `supplied-menu-${width}.png`),
+            fullPage: true,
+          });
+        }
+      }
+      expect({
+        imageRequests,
+        externalRequests,
+        failedAssets,
+        pageErrors,
+      }).toEqual({
+        imageRequests: 0,
+        externalRequests: 0,
+        failedAssets: 0,
+        pageErrors: 0,
+      });
+      console.info(
+        "FACTORY_SUPPLIED_MENU_BROWSER_EVIDENCE",
+        JSON.stringify({
+          itemCount,
+          providerCalls: 0,
+          exactPrice: true,
+          orderReady: true,
+          replayReconciled: true,
+          staffDenied: true,
+          restartRetained: true,
+          imageRequests: 0,
+        }),
+      );
+    } finally {
+      await page.close().catch(() => undefined);
+      const closed = await Promise.allSettled(
+        servers.map((server) => server.close()),
+      );
+      const withinTemp = relative(resolve(tmpdir()), resolve(root));
+      if (
+        withinTemp.startsWith("..") ||
+        isAbsolute(withinTemp) ||
+        !withinTemp.startsWith("archeform-menu-browser-")
+      )
+        throw new Error("Acceptance cleanup escaped its temporary root.");
+      await rm(root, { recursive: true, force: true });
+      await expect(access(root)).rejects.toThrow();
+      if (closed.some((result) => result.status === "rejected"))
+        throw new Error("Acceptance server cleanup failed.");
+    }
+  });
+}
+
 test("customers can read orders and refresh visible fulfilment without generating again", async ({
   page,
   request,

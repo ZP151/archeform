@@ -51,6 +51,7 @@ export type WorkbenchHomeJourneyProps = {
   readonly onApply: () => void;
   /** The short-lived default Restaurant delivery state, if this tab started it. */
   readonly consumer?: {
+    readonly suppliedMenu?: boolean;
     readonly manualReview: boolean;
     readonly setManualReview: (manual: boolean) => void;
     readonly active: boolean;
@@ -167,8 +168,11 @@ function ConsumerDelivery({
       <p>
         This uses the standard Restaurant configuration in a local demo.
         Includes a customer menu, table orders, and a merchant workspace. Uses
-        sample menu items and simulated payments on this computer. Custom rules
-        and live integrations still need setup.
+        {journey.consumer?.suppliedMenu
+          ? "supplied menu items"
+          : "sample menu items"}{" "}
+        and simulated payments on this computer. Custom rules and live
+        integrations still need setup.
       </p>
       {consumer.readyUrl !== null && (
         <a

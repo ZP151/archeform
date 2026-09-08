@@ -522,11 +522,13 @@ describe("page bindings", () => {
 
 describe("page bindings on composed products", () => {
   it("keeps a bounded studio edit sequence valid on a real composed Graph", async () => {
-    const interpretation = await fixtureInterpreter.interpret({
-      brief:
-        "Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions.",
-      answers: {},
-    });
+    const interpretation = (
+      await fixtureInterpreter.interpret({
+        brief:
+          "Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions.",
+        answers: {},
+      })
+    ).interpretation;
     const baseDraft = createBlankApplicationDraft({
       applicationId: interpretation.spec.requirementId,
       workspaceId: "local-workspace",

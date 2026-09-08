@@ -83,7 +83,7 @@ export function Workbench({ initialGraph, controlPlaneUrl }: Props) {
     },
     examplePrompts: EXAMPLE_PROMPTS,
     onApplyExample: (brief: string) => journey.setBriefDraft(brief),
-    requirement: journey.state.interpretation?.spec ?? null,
+    requirement: journey.state.interpretation?.interpretation.spec ?? null,
     blueprintTitle: journey.blueprintTitle,
     openQuestions: journey.openQuestions,
     answers: journey.answers,

@@ -14,7 +14,7 @@ describe("interpretation response contract", () => {
       answers: {},
     });
     expect(
-      parseInterpretationResponse(200, { interpretation }, "interpretation"),
+      parseInterpretationResponse(200, interpretation, "interpretation"),
     ).toEqual({ ok: true, interpretation });
     expect(
       parseInterpretationResponse(

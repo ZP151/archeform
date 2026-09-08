@@ -10,7 +10,7 @@ import {
 import type {
   ClarificationAnswerContextV1,
   ClarificationQuestionV1,
-  RequirementInterpretationV1,
+  RequirementInterpretationResultV1,
 } from "@factory/adapters/requirements/browser";
 import { resolveClarificationCycle } from "@factory/adapters/requirements/browser";
 import type { ApplicationGraphV1 } from "@factory/graph";
@@ -77,8 +77,8 @@ async function interpretRoute(
   answers: Readonly<Record<string, string>>,
   phase: "interpretation" | "clarification",
   clarificationContext: readonly ClarificationAnswerContextV1[] = [],
-  priorInterpretation?: RequirementInterpretationV1,
-): Promise<RequirementInterpretationV1> {
+  priorInterpretation?: RequirementInterpretationResultV1,
+): Promise<RequirementInterpretationResultV1> {
   const controller = new AbortController();
   let timedOut = false;
   let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -102,7 +102,7 @@ async function interpretRoute(
           signal: controller.signal,
         });
         const body = (await response.json().catch(() => null)) as {
-          interpretation?: RequirementInterpretationV1;
+          interpretation?: RequirementInterpretationResultV1;
         } | null;
         return { response, body };
       })(),
@@ -407,7 +407,7 @@ export function useProductJourney(
         );
         if (!isCurrent()) return;
         const resolved = resolveClarificationCycle({
-          interpretation: proposed,
+          interpretation: proposed.interpretation,
           priorQuestions,
           answers: cumulativeAnswers,
           applySafeDefaults: true,
@@ -415,7 +415,10 @@ export function useProductJourney(
         dispatch({ type: "clarify-answered", answers: resolved.answers });
         dispatch({
           type: "interpretation-accepted",
-          interpretation: resolved.interpretation,
+          interpretation: {
+            ...proposed,
+            interpretation: resolved.interpretation,
+          },
         });
         setAnswers({ ...resolved.answers });
       } catch (error) {
@@ -442,9 +445,12 @@ export function useProductJourney(
         productRequestIdRef.current ??= `request-${globalThis.crypto.randomUUID()}`;
         const request = {
           requestId: productRequestIdRef.current,
-          name: state.interpretation?.blueprint.title,
+          name: state.interpretation?.interpretation.blueprint.title,
           requirement: input.requirement,
           blueprint: input.blueprint,
+          ...(input.businessParameters?.mode === "canonical-default"
+            ? {}
+            : { businessParameters: input.businessParameters }),
         };
         review = await withRecoverableProductPhase({
           operation: (signal) =>
@@ -595,7 +601,8 @@ export function useProductJourney(
   }, []);
 
   const openQuestions = openClarificationQuestions(state);
-  const blueprintTitle = state.interpretation?.blueprint.title ?? "Requirement";
+  const blueprintTitle =
+    state.interpretation?.interpretation.blueprint.title ?? "Requirement";
   const planAlternatives = useMemo(
     () =>
       state.alternatives === null

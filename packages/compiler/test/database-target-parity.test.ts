@@ -216,7 +216,7 @@ describe("seed renders Prisma-valid ISO-8601 for date and datetime fields", () =
     "Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions.";
 
   async function composedExpenseGraph(): Promise<ApplicationGraphV1> {
-    const interpretation = await fixtureInterpreter.interpret({
+    const { interpretation } = await fixtureInterpreter.interpret({
       brief: expenseBrief,
     });
     const baseDraft = createBlankApplicationDraft({
@@ -384,7 +384,7 @@ describe("seed binds required foreign-key scalars to seeded target records", () 
     readonly relationFieldCollision?: boolean;
     readonly longServiceReferences?: boolean;
   }): Promise<ApplicationGraphV1> {
-    const interpretation = await fixtureInterpreter.interpret({
+    const { interpretation } = await fixtureInterpreter.interpret({
       brief: bookingBrief,
     });
     const blueprint = options?.duplicateServiceReference
@@ -2214,7 +2214,7 @@ describe("database target renders Prisma-valid optional native-typed fields", ()
     "Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions.";
 
   async function composedExpenseGraph(): Promise<ApplicationGraphV1> {
-    const interpretation = await fixtureInterpreter.interpret({
+    const { interpretation } = await fixtureInterpreter.interpret({
       brief: expenseBrief,
     });
     const baseDraft = createBlankApplicationDraft({
@@ -2297,7 +2297,7 @@ describe("database target handles factory base fields", () => {
     "Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions.";
 
   async function composedExpenseGraph(): Promise<ApplicationGraphV1> {
-    const interpretation = await fixtureInterpreter.interpret({
+    const { interpretation } = await fixtureInterpreter.interpret({
       brief: expenseBrief,
     });
     const baseDraft = createBlankApplicationDraft({

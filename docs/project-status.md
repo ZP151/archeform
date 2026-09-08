@@ -1,6 +1,6 @@
 # Archeform delivery status
 
-Updated: 2026-09-08
+Updated: 2026-09-09
 
 ## Current authoritative checkpoint — consumer generation
 
@@ -128,8 +128,28 @@ is reused with affected checks. Exact local preview and factory cleanup passed.
 The enclosing bounded branch commit records D1.8 delivery; these four cases
 do not establish the frozen ten-case benchmark or hosted reliability.
 
-The next business priority is supplied menu/price binding, followed by ten
-frozen Restaurant cases and broader persistence evidence. The previous
+D1.8 was delivered as `f9d32e08`. D1.9 now carries a supplied initial USD menu
+through validated interpretation, persisted review, immutable Graph and the
+generated customer/merchant app. One to 100 dishes compile; omitted images use
+the existing local icon library. The generated browser matrix passed 4/4,
+including keyboard orders, exact prices, fulfilment, role denial, replay and
+restart persistence at mobile/tablet/desktop widths.
+
+Actual supplied-menu generation required zero questions: 25.577 seconds to the
+verified ready local app and 26.367 seconds to a fulfilled order. Missing-price
+and non-USD requests each stopped at one material question with zero delivery
+mutations. The initial supplied-menu browser harness failed on JSON key order;
+the corrected run passes and both observations remain in the ledger. Selected
+product regression passes 2,385 tests; independent task review and QA are clean.
+Exact preview/factory cleanup is proven. The final review's canonical-menu
+preservation finding is fixed; full adapters now pass 112/112 and the scoped
+recheck is clean. D1.9 is PM accepted. Its enclosing bounded branch commit,
+parent `f9d32e08`, records delivery; these observations are not a ten-case
+reliability rate.
+
+The next business priority is the ten frozen Restaurant cases and broader
+persistence evidence, followed by the accepted hosted-delivery decision and
+cross-business families. The previous
 14-question payment interaction is retained historical evidence; D1.7's
 one-question correction is delivered. Full D1 and a mature hosted consumer
 platform are not declared complete.

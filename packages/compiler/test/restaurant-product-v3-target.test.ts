@@ -5,7 +5,10 @@ import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
-import { createCapabilityCompositionLock } from "@factory/capabilities";
+import {
+  bindRestaurantMenuParameters,
+  createCapabilityCompositionLock,
+} from "@factory/capabilities";
 import { hashApplicationGraphV3 } from "@factory/graph";
 
 import { restaurantProductV3Fixture } from "./fixtures/restaurant-product-v3.js";
@@ -210,28 +213,51 @@ describe("Restaurant product V3 target", () => {
     expect(result.stderr).toContain("trusted startup role");
   });
 
-  it("executes generated customer, merchant, and cross-surface journeys", async () => {
-    const bundle = compile();
-    const root = await mkdtemp(join(tmpdir(), "archeform-product-target-"));
-    roots.push(root);
-    for (const file of bundle.files) {
-      const path = join(root, file.path);
-      await mkdir(dirname(path), { recursive: true });
-      await writeFile(path, file.content, "utf8");
-    }
-    const result = spawnSync(
-      process.execPath,
-      [
-        "--test",
-        join(root, "test/customer-journey.test.mjs"),
-        join(root, "test/merchant-journey.test.mjs"),
-        join(root, "test/shared-state.test.mjs"),
-      ],
-      { encoding: "utf8", timeout: 30_000 },
-    );
-    expect(result.status, result.stderr || result.stdout).toBe(0);
-    expect(result.stdout).toMatch(/pass 4/);
-  });
+  it.each([false, true])(
+    "executes generated customer, merchant, and cross-surface journeys with single supplied item %s",
+    async (single) => {
+      const input = canonicalInput();
+      if (single) {
+        input.publishedGraph.graph = bindRestaurantMenuParameters(
+          input.publishedGraph.graph,
+          {
+            apiVersion: "factory.restaurant-menu-parameters/v1",
+            mode: "provided",
+            currency: "USD",
+            items: [{ name: "Soup", description: null, priceMinor: 1234 }],
+          },
+        );
+        input.publishedGraph.graphHash = hashApplicationGraphV3(
+          input.publishedGraph.graph,
+        );
+        input.compositionLock = createCapabilityCompositionLock({
+          graphChecksum: input.publishedGraph.graphHash,
+          selections:
+            input.publishedGraph.graph.integration.compositionSelections ?? [],
+        });
+      }
+      const bundle = compile(input);
+      const root = await mkdtemp(join(tmpdir(), "archeform-product-target-"));
+      roots.push(root);
+      for (const file of bundle.files) {
+        const path = join(root, file.path);
+        await mkdir(dirname(path), { recursive: true });
+        await writeFile(path, file.content, "utf8");
+      }
+      const result = spawnSync(
+        process.execPath,
+        [
+          "--test",
+          join(root, "test/customer-journey.test.mjs"),
+          join(root, "test/merchant-journey.test.mjs"),
+          join(root, "test/shared-state.test.mjs"),
+        ],
+        { encoding: "utf8", timeout: 30_000 },
+      );
+      expect(result.status, result.stderr || result.stdout).toBe(0);
+      expect(result.stdout).toMatch(/pass 4/);
+    },
+  );
 
   it("contains only static local generated imports and both exact route trees", () => {
     const files = Object.fromEntries(

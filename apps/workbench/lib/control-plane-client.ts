@@ -1,3 +1,4 @@
+import type { RestaurantMenuParametersV1 } from "@factory/capabilities";
 import type { ProductPlanAlternativeKey } from "@factory/capabilities/node";
 import type {
   ApplicationGraphV1,
@@ -1966,6 +1967,7 @@ export class ControlPlaneClient {
       readonly name?: string;
       readonly requirement: RequirementSpecV1;
       readonly blueprint: ProductBlueprintV1;
+      readonly businessParameters?: RestaurantMenuParametersV1 | null;
     },
     signal?: AbortSignal,
   ): Promise<WorkbenchProductReview> {

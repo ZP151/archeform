@@ -1,4 +1,8 @@
 import {
+  canonicalRestaurantMenuParameters,
+  hashRestaurantMenuParameters,
+} from "@factory/capabilities";
+import {
   BadRequestException,
   ConflictException,
   NotFoundException,
@@ -97,6 +101,9 @@ function reviewRow(overrides: Record<string, unknown> = {}) {
     requirement,
     requirementChecksum: hashRequirementSpec(requirement),
     blueprint,
+    businessParameters: null,
+    businessParametersChecksum: null,
+    businessParametersProvided: null,
     productAlternatives: null,
     draftBaseChecksum: blankGraphHash,
     plan: null,
@@ -1130,67 +1137,238 @@ describe("ProductCompositionService restaurant V3 routing", () => {
     });
   }
 
-  it("applies a restaurant requirement as a V3 Draft via the deterministic composer", async () => {
+  const suppliedMenu = {
+    apiVersion: "factory.restaurant-menu-parameters/v1",
+    mode: "provided",
+    currency: "USD",
+    items: [1, 2, 3].map((i) => ({
+      name: `Dish ${i}`,
+      description: null,
+      priceMinor: 1230 + i,
+    })),
+  };
+  it.each([false, true])(
+    "persists canonical menu/checksum and exact presence %s",
+    async (provided) => {
+      const prisma = prismaMock();
+      prisma.workspace.upsert.mockResolvedValue({ id: "ws-1" });
+      prisma.applicationGraph.create.mockResolvedValue({
+        id: "graph-1",
+        draftRevisions: [latestBlankDraft],
+      });
+      prisma.compositionReview.create.mockImplementation(
+        async ({ data }) => data,
+      );
+      const { product } = serviceWith(prisma, plannerStub(realAlternatives()));
+      const result = await product.createProductRequirement({
+        requestId: "request-menu-1234",
+        requirement: restaurantRequirement,
+        blueprint: restaurantBlueprint,
+        ...(provided ? { businessParameters: suppliedMenu } : {}),
+      });
+      expect(result.review).toMatchObject({
+        businessParameters: provided
+          ? suppliedMenu
+          : canonicalRestaurantMenuParameters(),
+        businessParametersChecksum: hashRestaurantMenuParameters(
+          provided ? suppliedMenu : canonicalRestaurantMenuParameters(),
+        ),
+        businessParametersProvided: provided,
+      });
+    },
+  );
+  it.each([
+    "exact",
+    "presence",
+    "changed",
+    "legacy-omitted",
+    "legacy-explicit",
+    "corrupt-checksum",
+    "corrupt-false",
+    "half-populated",
+  ])("reconciles menu replay only when valid: %s", async (mode) => {
+    const canonical = canonicalRestaurantMenuParameters();
+    const row = restaurantReview({
+      businessParameters: canonical,
+      businessParametersChecksum: hashRestaurantMenuParameters(canonical),
+      businessParametersProvided: true,
+    });
+    if (mode.startsWith("legacy"))
+      Object.assign(row, {
+        businessParameters: null,
+        businessParametersChecksum: null,
+        businessParametersProvided: null,
+      });
+    if (mode === "corrupt-checksum")
+      row.businessParametersChecksum = "sha256:" + "0".repeat(64);
+    if (mode === "half-populated") row.businessParametersProvided = null;
+    if (mode === "corrupt-false")
+      Object.assign(row, {
+        businessParameters: suppliedMenu,
+        businessParametersChecksum: hashRestaurantMenuParameters(suppliedMenu),
+        businessParametersProvided: false,
+      });
     const prisma = prismaMock();
-    let storedReview = restaurantReview();
-    prisma.compositionReview.findUnique.mockImplementation(
-      async () => storedReview,
-    );
-    prisma.draftRevision.findUnique.mockResolvedValue(latestBlankDraft);
-    prisma.draftRevision.findFirst.mockResolvedValue(latestBlankDraft);
+    prisma.compositionReview.findUnique.mockResolvedValue(row);
     prisma.applicationGraph.findUnique.mockResolvedValue({
-      id: "graph-1",
-      key: "expense-approval",
-      name: "Expense Approval",
+      name: restaurantRequirement.requirementId,
     });
-    prisma.applicationGraph.update.mockResolvedValue({
-      id: "graph-1",
-      key: "expense-approval",
-      name: "Expense Approval",
-      templateOrigin: {
-        templateKey: "restaurant-dual-surface",
-        templateVersion: "1.0.0",
-        templateGraphChecksum: expect.any(String),
-      },
-    });
-    prisma.compositionReview.updateMany.mockImplementation(async ({ data }) => {
-      storedReview = { ...storedReview, ...data };
-      return { count: 1 };
-    });
-    prisma.draftRevision.create.mockImplementation(async ({ data }) => ({
-      id: "draft-cuid-2",
-      ...data,
-    }));
     const { product } = serviceWith(prisma, plannerStub(null));
-
-    const result = await product.applyProduct("review-1");
-
-    expect(prisma.draftRevision.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        applicationGraphId: "graph-1",
-        revisionNumber: 2,
-        graph: expect.objectContaining({
-          apiVersion: "factory.application-graph/v3",
-          metadata: expect.objectContaining({
-            id: "expense-approval",
-            name: "Expense Approval",
+    const promise = product.createProductRequirement({
+      requestId: "request-menu-1234",
+      requirement: restaurantRequirement,
+      blueprint: restaurantBlueprint,
+      ...(["presence", "legacy-omitted"].includes(mode)
+        ? {}
+        : {
+            businessParameters: mode === "changed" ? suppliedMenu : canonical,
           }),
-          policy: expect.objectContaining({
-            roles: ["customer", "cashier", "kitchen", "manager"],
-          }),
-        }),
-      }),
     });
-    expect(result.review.status).toBe("applied");
-    expect(prisma.applicationGraph.update).toHaveBeenCalledWith({
-      where: { id: "graph-1" },
-      data: {
-        templateOrigin: expect.objectContaining({
+    if (["exact", "legacy-omitted"].includes(mode))
+      await expect(promise).resolves.toBeDefined();
+    else await expect(promise).rejects.toThrow(ConflictException);
+    expect(prisma.compositionReview.create).not.toHaveBeenCalled();
+  });
+  it("rejects explicit null Restaurant parameters and non-Restaurant objects before persistence", async () => {
+    const prisma = prismaMock();
+    const { product } = serviceWith(prisma, plannerStub(null));
+    for (const input of [
+      {
+        requirement: restaurantRequirement,
+        blueprint: restaurantBlueprint,
+        businessParameters: null,
+      },
+      { requirement, blueprint, businessParameters: suppliedMenu },
+    ])
+      await expect(
+        product.createProductRequirement({
+          requestId: "request-menu-1234",
+          ...input,
+        }),
+      ).rejects.toThrow(BadRequestException);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+  it.each(["checksum", "half"])(
+    "rejects %s corruption before any apply transition",
+    async (mode) => {
+      const prisma = prismaMock();
+      prisma.compositionReview.findUnique.mockResolvedValue(
+        restaurantReview({
+          businessParameters: suppliedMenu,
+          businessParametersChecksum:
+            mode === "checksum"
+              ? "sha256:" + "0".repeat(64)
+              : hashRestaurantMenuParameters(suppliedMenu),
+          businessParametersProvided: mode === "half" ? null : true,
+        }),
+      );
+      prisma.draftRevision.findUnique.mockResolvedValue(latestBlankDraft);
+      prisma.draftRevision.findFirst.mockResolvedValue(latestBlankDraft);
+      prisma.applicationGraph.findUnique.mockResolvedValue({
+        id: "graph-1",
+        key: "expense-approval",
+        name: "Expense Approval",
+      });
+      const { product } = serviceWith(prisma, plannerStub(null));
+      await expect(product.applyProduct("review-1")).rejects.toThrow(
+        ConflictException,
+      );
+      expect(prisma.draftRevision.create).not.toHaveBeenCalled();
+      expect(prisma.compositionReview.updateMany).not.toHaveBeenCalled();
+    },
+  );
+  it.each([false, true])(
+    "applies a restaurant requirement as a V3 Draft with provided menu %s",
+    async (provided) => {
+      const prisma = prismaMock();
+      let storedReview = restaurantReview(
+        provided
+          ? {
+              businessParameters: suppliedMenu,
+              businessParametersChecksum:
+                hashRestaurantMenuParameters(suppliedMenu),
+              businessParametersProvided: true,
+            }
+          : {},
+      );
+      prisma.compositionReview.findUnique.mockImplementation(
+        async () => storedReview,
+      );
+      prisma.draftRevision.findUnique.mockResolvedValue(latestBlankDraft);
+      prisma.draftRevision.findFirst.mockResolvedValue(latestBlankDraft);
+      prisma.applicationGraph.findUnique.mockResolvedValue({
+        id: "graph-1",
+        key: "expense-approval",
+        name: "Expense Approval",
+      });
+      prisma.applicationGraph.update.mockResolvedValue({
+        id: "graph-1",
+        key: "expense-approval",
+        name: "Expense Approval",
+        templateOrigin: {
           templateKey: "restaurant-dual-surface",
           templateVersion: "1.0.0",
-          templateGraphChecksum: expect.stringMatching(/^sha256:/),
+          templateGraphChecksum: expect.any(String),
+        },
+      });
+      prisma.compositionReview.updateMany.mockImplementation(
+        async ({ data }) => {
+          storedReview = { ...storedReview, ...data };
+          return { count: 1 };
+        },
+      );
+      prisma.draftRevision.create.mockImplementation(async ({ data }) => ({
+        id: "draft-cuid-2",
+        ...data,
+      }));
+      const { product } = serviceWith(prisma, plannerStub(null));
+
+      const result = await product.applyProduct("review-1");
+
+      expect(prisma.draftRevision.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          applicationGraphId: "graph-1",
+          revisionNumber: 2,
+          graph: expect.objectContaining({
+            apiVersion: "factory.application-graph/v3",
+            metadata: expect.objectContaining({
+              id: "expense-approval",
+              name: "Expense Approval",
+            }),
+            policy: expect.objectContaining({
+              roles: ["customer", "cashier", "kitchen", "manager"],
+            }),
+          }),
         }),
-      },
-    });
-  });
+      });
+      expect(result.review.status).toBe("applied");
+      if (provided) {
+        const graph = result.draftRevision.graph as any;
+        const items = graph.domain.seedData.filter(
+          (x: any) => x.entity === "menu-item",
+        );
+        expect(items.map((x: any) => [x.id, x.values.price])).toEqual([
+          ["menu-item-001", 12.31],
+          ["menu-item-002", 12.32],
+          ["menu-item-003", 12.33],
+        ]);
+        expect(graph.seedScenarios[0].records).toEqual(
+          graph.domain.seedData.map(({ entity, values }: any) => ({
+            entityKey: entity,
+            values,
+          })),
+        );
+      }
+      expect(prisma.applicationGraph.update).toHaveBeenCalledWith({
+        where: { id: "graph-1" },
+        data: {
+          templateOrigin: expect.objectContaining({
+            templateKey: "restaurant-dual-surface",
+            templateVersion: "1.0.0",
+            templateGraphChecksum: expect.stringMatching(/^sha256:/),
+          }),
+        },
+      });
+    },
+  );
 });

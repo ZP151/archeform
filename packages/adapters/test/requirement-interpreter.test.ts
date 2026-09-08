@@ -43,10 +43,12 @@ const vagueApprovalBrief = [
 describe("RequirementInterpreterAdapterV1 contract", () => {
   it("interpretations carry exactly the spec, blueprint, and clarifications — never the brief", async () => {
     const interpreter = new FixtureRequirementInterpreter();
-    const interpretation = await interpreter.interpret({
-      brief: expenseApprovalBrief,
-      answers: {},
-    });
+    const interpretation = (
+      await interpreter.interpret({
+        brief: expenseApprovalBrief,
+        answers: {},
+      })
+    ).interpretation;
     expect(Object.keys(interpretation).sort()).toEqual([
       "blueprint",
       "clarifications",
@@ -124,10 +126,12 @@ describe("clarification question identity", () => {
 describe("FixtureRequirementInterpreter (test authority)", () => {
   it("Prompt A yields a schema-valid spec and blueprint bound to the exact requirement checksum", async () => {
     const interpreter = new FixtureRequirementInterpreter();
-    const interpretation = await interpreter.interpret({
-      brief: expenseApprovalBrief,
-      answers: {},
-    });
+    const interpretation = (
+      await interpreter.interpret({
+        brief: expenseApprovalBrief,
+        answers: {},
+      })
+    ).interpretation;
 
     const spec = parseRequirementSpec(interpretation.spec);
     const blueprint = parseProductBlueprint(interpretation.blueprint);
@@ -178,10 +182,12 @@ describe("FixtureRequirementInterpreter (test authority)", () => {
 
   it("Prompt B yields a materially different spec and blueprint", async () => {
     const interpreter = new FixtureRequirementInterpreter();
-    const interpretation = await interpreter.interpret({
-      brief: appointmentBookingBrief,
-      answers: {},
-    });
+    const interpretation = (
+      await interpreter.interpret({
+        brief: appointmentBookingBrief,
+        answers: {},
+      })
+    ).interpretation;
 
     const spec = parseRequirementSpec(interpretation.spec);
     const blueprint = parseProductBlueprint(interpretation.blueprint);
@@ -222,10 +228,12 @@ describe("FixtureRequirementInterpreter (test authority)", () => {
     expect(() => parseProductBlueprint(interpretation.blueprint)).not.toThrow();
 
     // Material difference: neither spec hash nor blueprint hash may collide.
-    const other = await interpreter.interpret({
-      brief: expenseApprovalBrief,
-      answers: {},
-    });
+    const other = (
+      await interpreter.interpret({
+        brief: expenseApprovalBrief,
+        answers: {},
+      })
+    ).interpretation;
     expect(hashRequirementSpec(spec)).not.toBe(
       hashRequirementSpec(parseRequirementSpec(other.spec)),
     );
@@ -236,23 +244,27 @@ describe("FixtureRequirementInterpreter (test authority)", () => {
 
   it("a vague brief surfaces bounded clarifications; answers close them", async () => {
     const interpreter = new FixtureRequirementInterpreter();
-    const initial = await interpreter.interpret({
-      brief: vagueApprovalBrief,
-      answers: {},
-    });
+    const initial = (
+      await interpreter.interpret({
+        brief: vagueApprovalBrief,
+        answers: {},
+      })
+    ).interpretation;
     expect(initial.clarifications.length).toBeGreaterThan(0);
     const questionKeys = initial.clarifications.flatMap((clarification) =>
       clarification.questions.map((question) => question.key),
     );
     expect(questionKeys).toEqual(["approval-object", "approval-levels"]);
 
-    const answered = await interpreter.interpret({
-      brief: vagueApprovalBrief,
-      answers: {
-        "approval-object": "expense claims",
-        "approval-levels": "one level",
-      },
-    });
+    const answered = (
+      await interpreter.interpret({
+        brief: vagueApprovalBrief,
+        answers: {
+          "approval-object": "expense claims",
+          "approval-levels": "one level",
+        },
+      })
+    ).interpretation;
     expect(answered.clarifications).toEqual([]);
     const spec = parseRequirementSpec(answered.spec);
     const answeredQuestions = spec.openQuestions.filter(
@@ -447,6 +459,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
     return {
       resultKind: "definition-selection",
       definitionSelection: {
+        businessParameters: capabilities.canonicalRestaurantMenuParameters(),
         definitionKey: "restaurant-ordering",
         disposition: input?.disposition ?? "supported-default",
         requirementId: "restaurant-ordering-requirement",
@@ -579,10 +592,12 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       transport,
       readEnvironment: () => "test-key",
     });
-    const interpretation = await adapter.interpret({
-      brief: expenseApprovalBrief,
-      answers: { threshold: "1000" },
-    });
+    const interpretation = (
+      await adapter.interpret({
+        brief: expenseApprovalBrief,
+        answers: { threshold: "1000" },
+      })
+    ).interpretation;
 
     const spec = parseRequirementSpec(interpretation.spec);
     const blueprint = parseProductBlueprint(interpretation.blueprint);
@@ -609,10 +624,12 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       readEnvironment: () => "test-key",
     });
 
-    const interpretation = await adapter.interpret({
-      brief: "Build a restaurant ordering application.",
-      answers: {},
-    });
+    const interpretation = (
+      await adapter.interpret({
+        brief: "Build a restaurant ordering application.",
+        answers: {},
+      })
+    ).interpretation;
 
     expect(interpretation.spec.productType).toBe("restaurant-ordering");
     expect(interpretation.spec.openQuestions).toEqual([]);
@@ -676,10 +693,12 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       readEnvironment: () => "test-key",
     });
 
-    const interpretation = await adapter.interpret({
-      brief: "Build a restaurant app named Saffron Table.",
-      answers: {},
-    });
+    const interpretation = (
+      await adapter.interpret({
+        brief: "Build a restaurant app named Saffron Table.",
+        answers: {},
+      })
+    ).interpretation;
 
     expect(interpretation.blueprint.title).toBe("Saffron Table");
     expect(interpretation.clarifications).toEqual([]);
@@ -711,10 +730,12 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
     });
 
     await expect(
-      adapter.interpret({
-        brief: "Build a restaurant app named Go.",
-        answers: {},
-      }),
+      adapter
+        .interpret({
+          brief: "Build a restaurant app named Go.",
+          answers: {},
+        })
+        .then((result) => result.interpretation),
     ).resolves.toMatchObject({ blueprint: { title } });
 
     const schema = requests[0]?.jsonSchema as {
@@ -774,10 +795,12 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
     });
 
     await expect(
-      adapter.interpret({
-        brief: "Build a restaurant app named Saffron & Sage.",
-        answers: {},
-      }),
+      adapter
+        .interpret({
+          brief: "Build a restaurant app named Saffron & Sage.",
+          answers: {},
+        })
+        .then((result) => result.interpretation),
     ).resolves.toMatchObject({ blueprint: { title } });
   });
 
@@ -792,10 +815,12 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
     });
 
     await expect(
-      adapter.interpret({
-        brief: "Build a restaurant app named Café & Sage.",
-        answers: {},
-      }),
+      adapter
+        .interpret({
+          brief: "Build a restaurant app named Café & Sage.",
+          answers: {},
+        })
+        .then((result) => result.interpretation),
     ).resolves.toMatchObject({ blueprint: { title } });
   });
 
@@ -854,27 +879,29 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
     });
 
     await expect(
-      adapter.interpret({
-        brief:
-          "Build a restaurant ordering application named Saffron Table with a sample menu customers can browse.",
-        answers: {},
-      }),
+      adapter
+        .interpret({
+          brief:
+            "Build a restaurant ordering application named Saffron Table with a sample menu customers can browse.",
+          answers: {},
+        })
+        .then((result) => result.interpretation),
     ).resolves.toMatchObject({
       blueprint: { title: "Saffron Table" },
       clarifications: [],
     });
     expect(requests[0]?.instructions).toContain(
-      "Treat an explicit request for a sample, demo, or default menu, or generic menu browsing alone, as the existing canonical default; application branding is not menu content.",
+      "Treat a sample, demo, or default menu, generic menu browsing, and application branding as canonical-default menu parameters with currency USD and zero items.",
     );
   });
 
-  it("keeps requested custom menu data fail-closed after an answer", async () => {
+  it("keeps unsupported menu currency fail-closed after an answer", async () => {
     // Changing the data category, accepting an answered custom-menu request,
     // or removing the boundary instruction would make this existing
     // clarification projection stop protecting unbound menu data. The mocked
     // selection does not prove model classification.
     const question =
-      "Custom menu items and prices are outside the current restaurant binding. Accept the canonical menu, or retain custom menu data as required?";
+      "The menu requires EUR. Can the application use USD, or is EUR required?";
     const { requests, transport } = capturingTransport(
       restaurantDefinitionSelection({
         disposition: "needs-clarification",
@@ -888,23 +915,22 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
 
     await expect(
       adapter.interpret({
-        brief:
-          "Build a restaurant with a custom tasting menu including Black Cod priced at 120.",
-        answers: { "q-menu-data": "Keep the custom menu data as required." },
+        brief: "Build a restaurant with Black Cod priced at EUR 120.",
+        answers: { "q-menu-data": "Keep EUR as required." },
         clarificationContext: [
           {
             key: "q-menu-data",
             category: "data",
             defaultPolicy: "required",
             question,
-            answer: "Keep the custom menu data as required.",
+            answer: "Keep EUR as required.",
           },
         ],
       }),
     ).rejects.toMatchObject({ code: "output_invalid" });
     expect(requests).toHaveLength(3);
     expect(requests[0]?.instructions).toContain(
-      "An explicit request for a custom or noncanonical menu, or supplied actual dish names or price values, is custom menu data. When either is explicit, it is outside the current canonical binding: return needs-clarification with one consolidated data scope question, and do not encode menu data in title.",
+      "Explicit currency other than USD, stock, availability, preparation time, images, categories, options, tax, or service-charge requirements remain material data clarification; never discard these requirements, convert another currency, or relabel it USD.",
     );
   });
 
@@ -913,7 +939,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
     // emitted instruction. It does not claim that a mocked response proves
     // model semantic classification.
     const question =
-      "Custom menu data is outside the current restaurant binding. Accept the canonical menu, or retain the custom menu as required?";
+      "What are the custom menu dish names and their USD prices?";
     const { requests, transport } = capturingTransport(
       restaurantDefinitionSelection({
         disposition: "needs-clarification",
@@ -926,27 +952,31 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
     });
 
     await expect(
-      adapter.interpret({
-        brief:
-          "Build a restaurant ordering application that uses my custom menu.",
-        answers: {},
-      }),
+      adapter
+        .interpret({
+          brief:
+            "Build a restaurant ordering application that uses my custom menu.",
+          answers: {},
+        })
+        .then((result) => result.interpretation),
     ).resolves.toMatchObject({
       clarifications: [{ questions: [{ category: "data", question }] }],
     });
     expect(requests[0]?.instructions).toContain(
-      "Treat an explicit request for a sample, demo, or default menu, or generic menu browsing alone, as the existing canonical default; application branding is not menu content.",
+      "Treat a sample, demo, or default menu, generic menu browsing, and application branding as canonical-default menu parameters with currency USD and zero items.",
     );
     expect(requests[0]?.instructions).toContain(
-      "An explicit request for a custom or noncanonical menu, or supplied actual dish names or price values, is custom menu data.",
+      "A complete supplied initial menu of 1 through 100 dishes with names and explicit USD prices is supported:",
     );
   });
 
   it("preserves the generated Appointment envelope through the private provider branch", async () => {
-    const fixture = await new FixtureRequirementInterpreter().interpret({
-      brief: appointmentBookingBrief,
-      answers: {},
-    });
+    const fixture = (
+      await new FixtureRequirementInterpreter().interpret({
+        brief: appointmentBookingBrief,
+        answers: {},
+      })
+    ).interpretation;
     const { requirementChecksum: _checksum, ...blueprint } = fixture.blueprint;
     const { transport } = capturingTransport({
       spec: fixture.spec,
@@ -958,7 +988,9 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
     });
 
     await expect(
-      adapter.interpret({ brief: appointmentBookingBrief, answers: {} }),
+      adapter
+        .interpret({ brief: appointmentBookingBrief, answers: {} })
+        .then((result) => result.interpretation),
     ).resolves.toEqual(fixture);
   });
 
@@ -1133,7 +1165,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
     ).rejects.toMatchObject({ code: "output_invalid" });
     expect(requests).toHaveLength(3);
     expect(requests[0]?.instructions).toContain(
-      "A Restaurant follow-up may return supported-default only when the supplied answer explicitly accepts the supported scope and no unresolved material requirement remains.",
+      "A Restaurant follow-up may return supported-default when the supplied answer resolves its material question and no unresolved material requirement remains: missing menu names or USD prices must become complete, and an unsupported-scope question requires explicit acceptance of the supported scope.",
     );
     expect(requests[0]?.instructions).toContain(
       "If an answer continues to require unsupported live payment or another external capability, retain needs-clarification.",
@@ -1200,12 +1232,15 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       readEnvironment: () => "test-key",
     });
 
-    const interpretation = await adapter.interpret({
-      brief: expenseApprovalBrief,
-      answers: {
-        "q-who-may-approve-an-expense": "Managers approve submitted expenses.",
-      },
-    });
+    const interpretation = (
+      await adapter.interpret({
+        brief: expenseApprovalBrief,
+        answers: {
+          "q-who-may-approve-an-expense":
+            "Managers approve submitted expenses.",
+        },
+      })
+    ).interpretation;
 
     expect(interpretation.clarifications).toEqual([]);
   });
@@ -1231,12 +1266,15 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       readEnvironment: () => "test-key",
     });
 
-    const interpretation = await adapter.interpret({
-      brief: expenseApprovalBrief,
-      answers: {
-        "q-who-may-approve-an-expense": "Managers approve submitted expenses.",
-      },
-    });
+    const interpretation = (
+      await adapter.interpret({
+        brief: expenseApprovalBrief,
+        answers: {
+          "q-who-may-approve-an-expense":
+            "Managers approve submitted expenses.",
+        },
+      })
+    ).interpretation;
 
     expect(interpretation.clarifications).toEqual([]);
     expect(parseRequirementSpec(interpretation.spec).openQuestions).toEqual([
@@ -1448,10 +1486,12 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       readEnvironment: () => "test-key",
     });
 
-    const interpretation = await adapter.interpret({
-      brief: "Build a restaurant ordering application.",
-      answers: {},
-    });
+    const interpretation = (
+      await adapter.interpret({
+        brief: "Build a restaurant ordering application.",
+        answers: {},
+      })
+    ).interpretation;
 
     expect(
       parseRequirementSpec(interpretation.spec).openQuestions.map(
@@ -1499,10 +1539,12 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       readEnvironment: () => "test-key",
     });
 
-    const interpretation = await adapter.interpret({
-      brief: "Build a restaurant ordering application with live payment.",
-      answers: {},
-    });
+    const interpretation = (
+      await adapter.interpret({
+        brief: "Build a restaurant ordering application with live payment.",
+        answers: {},
+      })
+    ).interpretation;
 
     expect(interpretation.spec.openQuestions).toEqual([
       { category: "integration", question },
@@ -1536,19 +1578,21 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       readEnvironment: () => "test-key",
     });
 
-    const interpretation = await adapter.interpret({
-      brief: "Build a restaurant ordering application with live payment.",
-      answers: { "q-live-payment-scope": answer },
-      clarificationContext: [
-        {
-          key: "q-live-payment-scope",
-          category: "integration",
-          defaultPolicy: "required",
-          question,
-          answer,
-        },
-      ],
-    });
+    const interpretation = (
+      await adapter.interpret({
+        brief: "Build a restaurant ordering application with live payment.",
+        answers: { "q-live-payment-scope": answer },
+        clarificationContext: [
+          {
+            key: "q-live-payment-scope",
+            category: "integration",
+            defaultPolicy: "required",
+            question,
+            answer,
+          },
+        ],
+      })
+    ).interpretation;
 
     expect(interpretation.spec.productType).toBe("restaurant-ordering");
     expect(interpretation.clarifications).toEqual([]);
@@ -1557,7 +1601,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       clarificationContext: [{ question, answer }],
     });
     expect(requests[0]?.instructions).toContain(
-      "A Restaurant follow-up may return supported-default only when the supplied answer explicitly accepts the supported scope and no unresolved material requirement remains.",
+      "A Restaurant follow-up may return supported-default when the supplied answer resolves its material question and no unresolved material requirement remains: missing menu names or USD prices must become complete, and an unsupported-scope question requires explicit acceptance of the supported scope.",
     );
   });
 
@@ -1633,19 +1677,21 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       readEnvironment: () => "test-key",
     });
 
-    const interpretation = await adapter.interpret({
-      brief: expenseApprovalBrief,
-      answers: { "approval-role": "Managers approve every request." },
-      clarificationContext: [
-        {
-          key: "approval-role",
-          category: "authorization",
-          defaultPolicy: "required",
-          question: "Who may approve a request?",
-          answer: "Managers approve every request.",
-        },
-      ],
-    });
+    const interpretation = (
+      await adapter.interpret({
+        brief: expenseApprovalBrief,
+        answers: { "approval-role": "Managers approve every request." },
+        clarificationContext: [
+          {
+            key: "approval-role",
+            category: "authorization",
+            defaultPolicy: "required",
+            question: "Who may approve a request?",
+            answer: "Managers approve every request.",
+          },
+        ],
+      })
+    ).interpretation;
 
     expect(interpretation.clarifications).toEqual([]);
     expect(calls).toHaveLength(2);
@@ -1682,10 +1728,12 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       transport,
       readEnvironment: () => "test-key",
     });
-    const interpretation = await adapter.interpret({
-      brief: expenseApprovalBrief,
-      answers: {},
-    });
+    const interpretation = (
+      await adapter.interpret({
+        brief: expenseApprovalBrief,
+        answers: {},
+      })
+    ).interpretation;
     const blueprint = parseProductBlueprint(interpretation.blueprint);
     expect(blueprint.title).toBe("Expense Approval");
 
@@ -1821,10 +1869,12 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       readEnvironment: () => "test-key",
     });
 
-    const interpretation = await adapter.interpret({
-      brief: expenseApprovalBrief,
-      answers: {},
-    });
+    const interpretation = (
+      await adapter.interpret({
+        brief: expenseApprovalBrief,
+        answers: {},
+      })
+    ).interpretation;
 
     expect(interpretation.blueprint.title).toBe("Expense Approval");
     expect(interpretation.blueprint.entities[0]?.fields[0]?.key).toBe(

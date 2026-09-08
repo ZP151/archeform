@@ -1,6 +1,6 @@
 # Consumer Generation Delivery Ledger
 
-Updated: 2026-09-08 (Asia/Singapore). PM is the single task-state and
+Updated: 2026-09-09 (Asia/Singapore). PM is the single task-state and
 product-scorecard owner. The task and approval started on September 7.
 
 ## Approved objective and authority
@@ -63,20 +63,20 @@ Planning targets apply to the three-family pilot. They are not current
 performance claims. Synthetic benchmark and real-user observations are reported
 separately. Show numerator/denominator per family as well as pooled results.
 
-| Metric                       | Definition                                                                                                                           | Pilot target                                                                                      | Current value                                                                                                                     | Evidence owner / next update                    |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| First-result success         | First generated result completes all declared core role journeys with no user correction or developer repair / all eligible attempts | At least 90%, at least 27/30 benchmark cases; no family below 8/10                                | D1.3 coarse case 1/1 passed; four prior coarse failures retained; no multi-case benchmark rate                                    | QA; first D1 ten-case run, then D3 30-case run  |
-| User questions               | Business questions answered before usable result; count each question even when batched                                              | Median at most 1; at most 3 for ordinary supported requests                                       | D1.3 supported: 0; D1.7 live-payment: 1 integration question / 12.840 s; prior 14-question failure retained                       | Workbench owner; D1 structured journey events   |
-| Required technical decisions | Framework, schema, provider, manual compilation or similar decisions required of the ordinary user                                   | 0                                                                                                 | 0 in the D1.3 supported automated case                                                                                            | UX/QA; D1 journey observation                   |
-| Active user effort           | Time typing/choosing/correcting from request start until first successful business task; machine wait reported separately            | Establish baseline in D1; reduce each slice without reducing success                              | Unmeasured                                                                                                                        | PM/QA; D1 and invited-user sessions             |
-| Time to usable app           | Accepted request until ready address plus successful core task; includes clarification, generation, verification and deployment wait | Prepared environment p50 at most 5 min, p95 at most 10 min                                        | D1.3: 21.385 s to verified ready, 40.79 s complete test; prepared local warm caches, no percentile                                | Platform/QA; D1 local and H1 hosted separately  |
-| Cold-start delivery          | Same clock with first provisioning/install included                                                                                  | Record p50/p95 and failures separately; no hidden exclusion                                       | Unmeasured                                                                                                                        | Platform; H1                                    |
-| Developer rescue             | Attempts requiring staff to edit code/configuration or steer the user / all attempts                                                 | 0 in accepted benchmark; pilot observation reported honestly                                      | Unmeasured                                                                                                                        | PM/QA; D1/D4                                    |
-| Platform repair              | Automatic repair count and elapsed time before usable result                                                                         | Bounded by the accepted repair policy; visible in measurements                                    | Unmeasured                                                                                                                        | Platform; D1                                    |
-| Durable hosted success       | Intended user completes task from another device; state survives supported restart; unauthorized user is denied                      | Every accepted hosted pilot case                                                                  | Unmeasured                                                                                                                        | Platform/QA; H1                                 |
-| Executable coverage          | Distinct definitions with bound recipes and passing end-to-end business acceptance; cases and families counted separately            | 3 families / 30 benchmark cases; then build toward 30 distinct definitions before broad expansion | One standard Restaurant case passed locally; broader D1 and hosted coverage remain open                                           | PM; D1/D2/D3/D5                                 |
-| Validated demand             | Participants independently completing a useful task they actually need                                                               | 5–8 invited non-programmers; report counts and unmet needs                                        | Unmeasured                                                                                                                        | PM; D4                                          |
-| Feedback cost                | Duration of focused test, smoke, product and existing full checks, separately                                                        | Initial budgets: smoke 30 s, warm product 120 s; optimize after measuring                         | Smoke 17.11 s retained; D1.8 product 2,334 tests / 148 files, compiler 193.30 s; browser 4.9 s; later prompt-only checks separate | Integration owner; every meaningful lane change |
+| Metric                       | Definition                                                                                                                           | Pilot target                                                                                      | Current value                                                                                                      | Evidence owner / next update                    |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| First-result success         | First generated result completes all declared core role journeys with no user correction or developer repair / all eligible attempts | At least 90%, at least 27/30 benchmark cases; no family below 8/10                                | D1.9 supplied-menu interpretation passed twice; first harness failed, corrected delivery passed; no benchmark rate | QA; first D1 ten-case run, then D3 30-case run  |
+| User questions               | Business questions answered before usable result; count each question even when batched                                              | Median at most 1; at most 3 for ordinary supported requests                                       | D1.9 supplied menu: 0; missing-price and GBP: 1 each; prior 14-question failure retained                           | Workbench owner; D1 structured journey events   |
+| Required technical decisions | Framework, schema, provider, manual compilation or similar decisions required of the ordinary user                                   | 0                                                                                                 | 0 in D1.9 supplied-menu delivery                                                                                   | UX/QA; D1 journey observation                   |
+| Active user effort           | Time typing/choosing/correcting from request start until first successful business task; machine wait reported separately            | Establish baseline in D1; reduce each slice without reducing success                              | Unmeasured                                                                                                         | PM/QA; D1 and invited-user sessions             |
+| Time to usable app           | Accepted request until ready address plus successful core task; includes clarification, generation, verification and deployment wait | Prepared environment p50 at most 5 min, p95 at most 10 min                                        | D1.9: 25.577 s verified ready, 26.367 s fulfilled order; prepared local environment, no percentile                 | Platform/QA; D1 local and H1 hosted separately  |
+| Cold-start delivery          | Same clock with first provisioning/install included                                                                                  | Record p50/p95 and failures separately; no hidden exclusion                                       | Unmeasured                                                                                                         | Platform; H1                                    |
+| Developer rescue             | Attempts requiring staff to edit code/configuration or steer the user / all attempts                                                 | 0 in accepted benchmark; pilot observation reported honestly                                      | Unmeasured                                                                                                         | PM/QA; D1/D4                                    |
+| Platform repair              | Automatic repair count and elapsed time before usable result                                                                         | Bounded by the accepted repair policy; visible in measurements                                    | Unmeasured                                                                                                         | Platform; D1                                    |
+| Durable hosted success       | Intended user completes task from another device; state survives supported restart; unauthorized user is denied                      | Every accepted hosted pilot case                                                                  | Unmeasured                                                                                                         | Platform/QA; H1                                 |
+| Executable coverage          | Distinct definitions with bound recipes and passing end-to-end business acceptance; cases and families counted separately            | 3 families / 30 benchmark cases; then build toward 30 distinct definitions before broad expansion | Restaurant canonical and supplied menus (1/3/100) validated locally; broader families and hosted coverage open     | PM; D1/D2/D3/D5                                 |
+| Validated demand             | Participants independently completing a useful task they actually need                                                               | 5–8 invited non-programmers; report counts and unmet needs                                        | Unmeasured                                                                                                         | PM; D4                                          |
+| Feedback cost                | Duration of focused test, smoke, product and existing full checks, separately                                                        | Initial budgets: smoke 30 s, warm product 120 s; optimize after measuring                         | D1.9 product 2,385 tests / 151 files, fresh compiler 218.80 s; generated-browser matrix 10.9 s                     | Integration owner; every meaningful lane change |
 
 At 30 cases, tail-latency estimates are directional; publish the observed
 distribution and failures instead of claiming a stable production percentile.
@@ -1405,3 +1405,237 @@ Root is the sole Git writer. Stage only the D1.8 production/tests, ADR-0044,
 and reconciled status/plan/ledger; ADR-0045 stays outside this commit. Do not
 integrate main, release or deploy. Record the resulting local/remote equality
 before assigning D1.9 production. The long-task goal remains active.
+
+### D1.9 serialized implementation authorization
+
+D1.8 was committed and pushed as
+`f9d32e0873b527bc3bef00c5a1aee75d6b0aeb38`; `git ls-remote` confirmed exact
+local/remote branch equality. Only the prepared ADR-0045 remained untracked.
+PM reaffirms the recorded standing founder acceptance of ADR-0045 SHA-256
+`5d9219ceeab24136a201bb515bf48d28d84aaab63c344f32924242c23f3551a7`
+after D1.8 delivery. Tech Lead proposed migrate, and independent
+`d1_decision_review` approved standing acceptance with P0/P1 0/0.
+
+Assign fresh `d19_menu_implementation` as the sole serialized production/test writer
+for this bounded initial-menu slice: the capabilities menu contract/binder and
+exports, interpretation adapter and result wrapper, Workbench interpretation
+and Product transport, Control Plane Product persistence/apply plus the
+additive nullable Prisma migration, compiler menu admission/catalog/placeholder
+rendering, and their affected focused tests. Root owns PM documents, acceptance
+execution, and all Git operations. Root may inspect but will not write shared
+implementation paths during this wave. No other production writer is active.
+
+Read ADR-0045 and both authorities before writing; start with focused failures.
+Preserve all omitted-menu defaults and D1.8 name behavior. Do not expand USD,
+stock/options/category requirements, runtime CRUD, dependencies, deployment or
+security authority. Stop for a concrete contract conflict rather than inventing
+a parallel contract. Complete one serialized implementation, then the required
+task review, independent QA, release review and PM acceptance sequence once.
+The real supplied-menu journey and unsupported-currency boundary remain
+root-owned after source freeze; keep paid/model retries bounded and preserve
+failed observations. No ten-case reliability or hosted claim is preaccepted.
+
+Initial dispatch `d19_menu_binding` failed before execution because its default
+Spark model hit the existing quota. No files changed. Redispatch the same
+bounded contract work to GPT-6 Astra under AGENTS' strongest-model rule for
+Graph, lifecycle, cross-package contracts and hard debugging; do not consume
+a usage reset or introduce a second concurrent writer.
+
+The implementation owner identified one concrete persistence ambiguity before
+writing that seam: canonical parameters plus their canonical checksum cannot
+distinguish an omitted menu request from an explicitly supplied canonical-default
+request, but PRO-008 requires this idempotency distinction. PM pauses the
+presence-dependent persistence seam and dispatches Tech Lead
+`d12_definition_decision` to amend only proposed ADR-0045 with a nullable
+request-presence marker and explicit legacy/corruption/replay rules. Independent
+capabilities/adapter/compiler work may continue under the unchanged accepted
+contract. No implementation may silently reinterpret the missing presence bit.
+The amended proposal needs exact independent standing reacceptance before the
+persistence seam resumes. Root remains the sole PM/Git writer.
+
+PM supersedes the prior ADR-0045 acceptance with the exact revised proposal
+SHA-256 `6bb3882c5f2a40e77b3fa7ab10ccafebbd678842cbfde4ee9c626792a33351e0`.
+Tech Lead `d12_definition_decision` recommends migrate. Separate qualified
+read-only `d18_acceptance` reviewed this amendment (not its writer or the D1.9
+implementation writer) and returned P0/P1 0/0 with
+`APPROVED_FOR_STANDING_ACCEPTANCE: yes`. Under the September 1 founder standing
+authorization, PM accepts these exact bytes and unpauses the persistence seam.
+New Restaurant rows persist the canonical object/checksum plus
+`businessParametersProvided` false for omission or true for an explicit object;
+legacy/non-Restaurant triple-null handling and corrupt-state refusal are frozen.
+Explicit Restaurant null is invalid. No other shared contract changes.
+
+Root reuses D1.8 browser lifecycle/diagnostic helpers in
+`e2e/helpers/restaurant-delivery.ts` for the separately owned D1.9 live test,
+without changing their behavior. Root added authored 1/3/100-item cases to
+`e2e/restaurant-orders.spec.ts`. The initial focused third-item browser RED
+failed in 1.9 s at the actual built compiler's canonical-only admission, before
+starting servers. The final test will prove exact cents, keyboard ordering,
+fulfilment, replay, staff denial, restart persistence and no image requests.
+
+Root's extracted helper is mechanically unchanged: TypeScript AST declaration
+printing compared all 23 helper declarations with delivered D1.8 and found zero
+differences after stripping export modifiers. The new real test uses the exact
+versioned response wrapper and boolean-only parameter/persistence/Graph checks;
+its three-item and non-USD requests are authored fixtures fixed before any
+provider execution. D1.8's former blanket custom-menu refusal now checks a
+specific missing-price case. No D1.9 real provider call has run yet.
+
+The first actual generated-browser run retained the canonical order case
+(4.4 s) but found a one-item production defect: generated customer journey
+code dereferenced a nonexistent second menu item. The sole implementation
+owner is correcting that template assumption with a full-bundle test. The
+three- and hundred-item tests initially hit a harness race reading a browser
+response body during its reload; root now reads authoritative order state
+after navigation. Those changed-harness cases then passed 2/2 in 6.4 s,
+including exact cents, kitchen fulfilment, replay, denial, manager reprice,
+restart and zero image requests. This is provider-free evidence only.
+
+One batched mobile/desktop inspection found the provided-menu branch lacked
+usable layout: price touched its link and the action was only 21 px tall.
+A focused browser assertion failed against the required 44 px action. Spark
+`d1_browser` owns only a read-only CSS/markup recommendation using those exact
+screenshots; `d19_menu_implementation` remains the sole production writer.
+Preserve existing visual tokens/icons and use one correction plus one batched
+confirmation, not an open-ended polish or audit loop. This fixes the new
+branch's concrete mobile usability defect within the accepted D1.9 scope.
+
+The generated one-item journey exposed a second old assumption in
+`product-target.ts`: its shared-state test expected the canonical price 1400.
+The owner bound that assertion to the actual primary Graph price and added
+finally cleanup. The corrected generated canonical/one-item executions passed
+2/2 (four emitted journeys each) in 6.19 s; no owned test processes remained.
+
+Final provider-free browser matrix passed 4/4 with zero retries in 10.9 s:
+provided 1/3/100 items took 1.8/2.6/1.6 s; retained canonical order/branding
+took 3.5 s. Supplied cases verify visible exact prices, keyboard add/payment,
+kitchen Ready, exact replay, denied staff action, manager price change, and
+restart preserving the changed catalog price and original order price.
+There were zero image/external requests or browser/asset errors. The three-item
+390/768/1440 checks passed accessibility, overflow and 44 px touch assertions.
+Root inspected the final mobile/desktop screenshots together; price/actions
+are separated and desktop uses the available width. The single final
+Impeccable mechanical check returned `[]`, exit 0. Visual correction is complete;
+reuse this evidence unless a later substantive change affects these paths.
+
+### D1.9 task-review corrections and product regression
+
+The required single task review by independent `d18_acceptance` returned
+P0/P1/P2 0/3/0. PM assigns the same writer three corrections: omit
+canonical-default menu parameters from the ordinary Workbench Product request
+(the server still distinguishes explicit canonical DTOs); preserve a complete
+provided menu through unrelated data clarifications instead of exempting every
+data question; strip the persistence-only Boolean from public composition
+review responses. Validated menu/checksum remain public. Root's live test now
+asserts the Boolean is absent and leaves stored-marker assertions to server
+tests. The controller and its focused test are added to the writer's boundary;
+internal rows and transactions retain the field.
+
+The first full product lane failed on an incomplete test-fixture migration:
+compiler 57 failed / 592 passed, 39 files, 192.78 s. Every failure was in three
+tests still reading the old FixtureInterpreter result. Capabilities passed
+403/33 in 28.04 s, adapters 106/11 in 9.64 s and Workbench 562/47 in 31.46 s;
+unchanged Graph evidence is retained. The exact response wrapper is frozen.
+PM assigns Spark `d1_browser` only
+`packages/compiler/test/composition-page-runtime.test.ts`,
+`packages/compiler/test/database-target-parity.test.ts`, and
+`packages/compiler/test/role-journey-runtime.test.ts` to mechanically unwrap
+the authored fixture results and run these three files. All assertions and
+scenarios remain. The primary writer acknowledges these disjoint paths and
+will not edit them; no shared contract is being revised in this parallel fix.
+
+All three isolated D1.9 factory images built, but no service or provider request
+has started. After corrections, rebuild only Workbench/Control Plane; retain
+the unchanged compiler-worker image and generated-browser evidence. Run one
+final product lane after the demonstrated failures are corrected, and let the
+same reviewer recheck only the findings plus the mechanical fixture migration.
+Do not treat the first failed lane as passing or claim D1.9 delivered yet.
+
+All three corrections reproduced focused RED and now pass: adapters 75/75,
+Workbench 46/46 and Control Plane 60/60. Affected types/lint and adapter/Control
+Plane builds pass. The same independent reviewer returned scoped P0/P1/P2
+0/0/0. Spark's seven fixture destructures passed the three affected compiler
+files, 76/76, without changing their scenarios or assertions.
+
+The final product lane succeeds (exit 0): 2,385 tests, including fresh compiler
+649/39 in 218.80 s, adapters 110/11 in 5.62 s and Workbench 562/47 in 27.43 s;
+unchanged capabilities 403/33 and Graph 661/21 evidence is reused from cache.
+Affected Workbench/Control Plane images rebuilt successfully. The isolated
+`factory-t9-consumer-d19-20260909` stack reports both health endpoints 200.
+Running source hashes match 11 Control Plane, 16 Workbench and six worker
+paths. Provider configuration exists only on the two server interpretation
+boundaries; fixtures are off and the worker uses the accepted preview profile.
+
+Independent Terra QA `d19_qa` has no substantive finding after focused fresh
+capabilities 19/19, Control Plane 60/60 and compiler menu 18/18 runs. Its final
+disposition remains pending the actual-provider outcomes and runtime cleanup.
+
+The first live three-item request returned 200 with the exact authored name,
+menu and cents and zero questions. It compiled successfully but the browser
+harness stopped before verification: it compared PostgreSQL JSON objects by
+serialized key order. A safe in-memory check proves structural equality true
+and serialized equality false. The cleanup helper then masked this assertion
+by parsing an empty successful no-preview response as JSON. Root corrects only
+these two harness defects: structural comparison and empty-response handling.
+The first failed 24.3 s test remains recorded; it is not an accepted first-run
+delivery. No product correction or image rebuild is required.
+
+The separate first live GBP case passed in 33.7 s (33.264 s to the outcome):
+one data question and zero lifecycle mutations. It will not be repeated.
+One justified corrected three-item run and the distinct missing-price case are
+now running with zero test retries. Raw provider content remains unrecorded.
+
+The corrected three-item run passed in 38.9 s: zero business questions and
+technical handoffs, 25.577 s to the verified ready local app, and 26.367 s to
+the customer-visible fulfilled order. Exact menu/name/cents, persisted checksum,
+public marker omission, Published seed/scenario equivalence, immutable
+compilation linkage, both catalogs, local icons and the USD 23.75 order all
+passed. The first distinct missing-price case passed in 25.6 s: one data
+question after 25.123 s and zero lifecycle mutations. This pair passed 2/2 in
+1.1 minutes with zero retries; retain the previous first-attempt harness failure.
+
+The generated preview was stopped by its exact ID. The preview-resource
+verifier exited 0. The exact D1.9 factory stack was removed with its volumes;
+follow-up inspection found zero project containers, networks or volumes and
+port 15179 closed. No cloud action occurred. All production paths remain frozen
+for the one required independent release judgment after final QA acceptance.
+
+Independent Terra QA is clean. The final Sol release review found one P1 in
+the complete-menu preservation guard: only provided menus were locked; a
+canonical-default menu could silently become invented supplied dishes during
+an unrelated clarification. Root now owns only the adapter implementation and
+its menu-result test for this correction; the previous writer is complete.
+Two focused RED cases reproduce the defect for integration and data questions
+(2 failed / 10 passed). Extend the existing complete-parameter checksum guard
+to every non-null prior menu. Null incomplete menus remain fillable. This is
+the existing accepted preservation contract, not a new editing capability.
+Run affected adapter checks and the same reviewer's scoped finding recheck;
+retain unaffected browser/runtime/QA evidence and avoid another full audit.
+
+The correction is one guard condition (`prior businessParameters != null`).
+Final full adapters pass 112/11 in 4.35 s, including the two new cases and
+retained supplied-menu/null-menu tests; types/lint/build and diff checks pass.
+The prior 2,385-test lane is reused with these affected checks, not described
+as a fresh final-source whole run. Actual D1.9 live cases all used initial
+requests without a prior interpretation, so their executed branch is unchanged.
+Generated runtime and UI are also unchanged. Retain those completed actual
+results and cleanup; no new Docker build or paid retry is justified for the
+transport-only follow-up guard. The same reviewer checks only this finding.
+
+### D1.9 PM acceptance and delivery boundary
+
+Sol's scoped recheck is clean: the canonical/provided non-null prior lock is
+correct, invented items are rejected, unchanged canonical menus pass and null
+missing menus remain fillable. No P0/P1/P2 remains. PM accepts D1.9 after the
+completed task review, independent Terra QA and independent Sol judgment.
+Root is the sole controller and may create one bounded English commit over
+the 52 owned changed/new paths, with delivered parent `f9d32e08`, then push
+`codex/consumer-delivery-roadmap` and verify the exact remote tip. No main
+integration, tag, repository release or cloud deployment is authorized here.
+
+D1.9 delivers initial 1..100-item USD menu binding with zero extra questions
+for complete supported input, local icon presentation and a working generated
+order/merchant loop. It does not claim multi-currency, menu CRUD, ten-case
+reliability or hosted maturity. D1.10 is next: preserve user effort through
+failure/recovery, execute the frozen cases with separated evidence types, then
+move product investment toward H1 and D2. The long-task goal remains active.

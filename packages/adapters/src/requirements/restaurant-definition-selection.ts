@@ -8,6 +8,8 @@ import {
 } from "@factory/graph";
 import {
   getCanonicalRestaurantAuthority,
+  parseRestaurantMenuParameters,
+  type RestaurantMenuParametersV1,
   restaurantOrderingExperienceBrief,
   restaurantOrderingProductIntent,
   restaurantOrderingProductRecipe,
@@ -48,6 +50,20 @@ export const restaurantDefinitionSelectionSchema = z
       ),
     outcome: safeBusinessTextSchema.max(2000),
     materialQuestions: z.array(materialQuestionSchema).max(30),
+    businessParameters: z
+      .unknown()
+      .transform((value, context): RestaurantMenuParametersV1 | null => {
+        if (value === null) return null;
+        try {
+          return parseRestaurantMenuParameters(value);
+        } catch {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Invalid Restaurant menu parameters.",
+          });
+          return z.NEVER;
+        }
+      }),
   })
   .strict()
   .superRefine((selection, context) => {

@@ -1,3 +1,4 @@
+import { canonicalRestaurantMenuParameters } from "@factory/capabilities";
 import { FixtureRequirementInterpreter } from "@factory/adapters";
 import { planProductAlternatives } from "@factory/capabilities/node";
 import {
@@ -81,11 +82,13 @@ export async function installConsumerGenerationFixture(
   page: Page,
   options: ConsumerGenerationFixtureOptions = {},
 ): Promise<ConsumerGenerationFixture> {
-  const interpreted = await new FixtureRequirementInterpreter().interpret({
-    brief:
-      "Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions.",
-    answers: {},
-  });
+  const interpreted = (
+    await new FixtureRequirementInterpreter().interpret({
+      brief:
+        "Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions.",
+      answers: {},
+    })
+  ).interpretation;
   const requirement = {
     ...interpreted.spec,
     productType: "restaurant-ordering",
@@ -141,7 +144,13 @@ export async function installConsumerGenerationFixture(
       return;
     }
     requests.push("interpret");
-    await route.fulfill(response({ interpretation }));
+    await route.fulfill(
+      response({
+        apiVersion: "factory.requirement-interpretation-result/v1",
+        interpretation,
+        businessParameters: canonicalRestaurantMenuParameters(),
+      }),
+    );
   });
 
   const controlPlaneRoute = async (route: Route) => {

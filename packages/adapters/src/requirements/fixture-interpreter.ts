@@ -7,6 +7,8 @@ import {
 import {
   RequirementInterpreterError,
   assertRequirementInterpretation,
+  assertRequirementInterpretationResult,
+  type RequirementInterpretationResultV1,
   type RequirementInterpreterAdapterV1,
   type RequirementInterpretationV1,
 } from "./requirement-interpreter.js";
@@ -789,7 +791,7 @@ export class FixtureRequirementInterpreter implements RequirementInterpreterAdap
     readonly brief: string;
     readonly answers: Readonly<Record<string, string>>;
     readonly signal?: AbortSignal;
-  }): Promise<RequirementInterpretationV1> {
+  }): Promise<RequirementInterpretationResultV1> {
     if (input.signal?.aborted) {
       throw new RequirementInterpreterError(
         "Requirement interpretation timed out.",
@@ -809,6 +811,10 @@ export class FixtureRequirementInterpreter implements RequirementInterpreterAdap
         "request_invalid",
       );
     }
-    return assertRequirementInterpretation(factory(input.answers));
+    return assertRequirementInterpretationResult({
+      apiVersion: "factory.requirement-interpretation-result/v1",
+      interpretation: assertRequirementInterpretation(factory(input.answers)),
+      businessParameters: null,
+    });
   }
 }

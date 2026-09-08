@@ -39,7 +39,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       ...payload,
       signal: request.signal,
     });
-    return NextResponse.json({ interpretation: result });
+    return NextResponse.json(result);
   } catch (error) {
     const classified = classifyInterpretationError(error);
     return NextResponse.json(classified.body, { status: classified.status });

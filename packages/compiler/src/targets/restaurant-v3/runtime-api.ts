@@ -141,9 +141,21 @@ function restaurantRuntimeCatalog(
     if (
       categories.length !== 1 ||
       categories[0]!.id !== "mains" ||
-      items.length !== 2 ||
-      items[0]!.id !== "margherita-pizza" ||
-      items[1]!.id !== "mushroom-risotto"
+      !(
+        (items.length === 2 &&
+          items[0]!.id === "margherita-pizza" &&
+          items[1]!.id === "mushroom-risotto") ||
+        (items.length >= 1 &&
+          items.length <= 100 &&
+          items.every(
+            (item, index) =>
+              item.id === `menu-item-${String(index + 1).padStart(3, "0")}`,
+          ) &&
+          !seedData.some(
+            ({ entity }) =>
+              entity === "menu-option-group" || entity === "menu-option",
+          ))
+      )
     ) {
       failInvalid();
     }

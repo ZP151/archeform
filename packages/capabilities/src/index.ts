@@ -3787,3 +3787,4 @@ export function composeProfileDraft(
     assetLocks: validatedGraph.integration.assetLocks ?? [],
   };
 }
+export * from "./restaurant/menu-parameters.js";

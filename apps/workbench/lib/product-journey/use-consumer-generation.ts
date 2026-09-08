@@ -14,6 +14,7 @@ import type {
  * controllers after their preceding authoritative state has succeeded.
  */
 export interface ConsumerGenerationController {
+  readonly suppliedMenu: boolean;
   readonly manualReview: boolean;
   readonly setManualReview: (manual: boolean) => void;
   readonly active: boolean;
@@ -33,7 +34,7 @@ type Input = {
 
 function sessionKeyOf(state: ProductJourneyController["state"]): string | null {
   const reviewId = state.review?.id;
-  const productType = state.interpretation?.spec.productType;
+  const productType = state.interpretation?.interpretation.spec.productType;
   return reviewId !== undefined && productType === "restaurant-ordering"
     ? `${reviewId}@${productType}`
     : null;
@@ -134,6 +135,7 @@ export function useConsumerGeneration({
 }: Input): ConsumerGenerationController {
   const [manualReview, setManualReview] = useState(false);
   const [target, setTarget] = useState<ReleaseTarget | null>(null);
+  const [targetSuppliedMenu, setTargetSuppliedMenu] = useState(false);
   const [adoptionFailureSession, setAdoptionFailureSession] = useState<
     string | null
   >(null);
@@ -158,7 +160,8 @@ export function useConsumerGeneration({
 
   const eligible =
     !manualReview &&
-    journey.state.interpretation?.spec.productType === "restaurant-ordering" &&
+    journey.state.interpretation?.interpretation.spec.productType ===
+      "restaurant-ordering" &&
     hasOneStandardAlternative(journey);
 
   useEffect(() => {
@@ -201,6 +204,9 @@ export function useConsumerGeneration({
         setAdoptionFailureSession(sessionKey);
         return;
       }
+      setTargetSuppliedMenu(
+        journey.state.interpretation?.businessParameters?.mode === "provided",
+      );
       setTarget(freshTarget);
       awaitingReleaseTargetRef.current = `${freshTarget.applicationGraphId}@${freshTarget.draftRevisionId}`;
       journey.reset();
@@ -326,6 +332,10 @@ export function useConsumerGeneration({
         applyingSessionRef.current === sessionKey));
 
   return {
+    suppliedMenu:
+      target !== null
+        ? targetSuppliedMenu
+        : journey.state.interpretation?.businessParameters?.mode === "provided",
     manualReview,
     setManualReview,
     active: target !== null || automaticInFlight,

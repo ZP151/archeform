@@ -23,10 +23,12 @@ const expenseBrief =
   "Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions.";
 
 async function composedExpenseGraph(): Promise<ApplicationGraphV1> {
-  const interpretation = await fixtureInterpreter.interpret({
-    brief: expenseBrief,
-    answers: {},
-  });
+  const interpretation = (
+    await fixtureInterpreter.interpret({
+      brief: expenseBrief,
+      answers: {},
+    })
+  ).interpretation;
   const baseDraft = createBlankApplicationDraft({
     applicationId: interpretation.spec.requirementId,
     workspaceId: "local-workspace",

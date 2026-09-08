@@ -410,10 +410,12 @@ describe("WorkbenchHome", () => {
   });
 
   it("does not refocus the brief after the journey returns from clarification and planning", async () => {
-    const interpretation = await new FixtureRequirementInterpreter().interpret({
-      brief: vagueBrief,
-      answers: {},
-    });
+    const interpretation = (
+      await new FixtureRequirementInterpreter().interpret({
+        brief: vagueBrief,
+        answers: {},
+      })
+    ).interpretation;
     const render = (journey: WorkbenchHomeJourneyProps, loading = false) => {
       act(() => {
         root.render(
@@ -505,10 +507,12 @@ describe("WorkbenchHome", () => {
   });
 
   it("replaces the composer with clarification questions when the journey asks them", async () => {
-    const interpretation = await new FixtureRequirementInterpreter().interpret({
-      brief: vagueBrief,
-      answers: {},
-    });
+    const interpretation = (
+      await new FixtureRequirementInterpreter().interpret({
+        brief: vagueBrief,
+        answers: {},
+      })
+    ).interpretation;
     act(() => {
       root.render(
         <WorkbenchHome
@@ -539,10 +543,12 @@ describe("WorkbenchHome", () => {
   });
 
   it("shows the deterministic plan alternatives for comparison", async () => {
-    const interpretation = await new FixtureRequirementInterpreter().interpret({
-      brief: expenseBrief,
-      answers: {},
-    });
+    const interpretation = (
+      await new FixtureRequirementInterpreter().interpret({
+        brief: expenseBrief,
+        answers: {},
+      })
+    ).interpretation;
     act(() => {
       root.render(
         <WorkbenchHome
@@ -619,10 +625,12 @@ describe("WorkbenchHome", () => {
   });
 
   it("exposes an accepted requirement outcome independently from later planning", async () => {
-    const interpretation = await new FixtureRequirementInterpreter().interpret({
-      brief: expenseBrief,
-      answers: {},
-    });
+    const interpretation = (
+      await new FixtureRequirementInterpreter().interpret({
+        brief: expenseBrief,
+        answers: {},
+      })
+    ).interpretation;
     act(() => {
       root.render(
         <WorkbenchHome

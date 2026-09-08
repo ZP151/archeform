@@ -563,23 +563,79 @@ existing 2..80-character application-name contract. The scoped review found
 the wider private limit could cause late failure; preserve the completed
 runtime/browser evidence while closing this interpretation boundary defect.
 
-## D1.9 — supply the initial menu in the same request (next)
+## D1.9 — supply the initial menu in the same request
 
 ADR-0045 supplies the contract for this slice; its exact proposed text has
 standing decision acceptance recorded in the ledger. Begin production
 implementation only after D1.8 delivery and a serialized write assignment.
 
-- [ ] Freeze the validated menu parameter contract and serialized write owner.
-- [ ] Add failing boundary and atomic-binding tests, then carry supplied USD
+- [x] Freeze the validated menu parameter contract and serialized write owner.
+- [x] Add failing boundary and atomic-binding tests, then carry supplied USD
       names/prices from interpretation through the Product request and stored
       review into Graph seed data and its scenario mirror.
-- [ ] Compile both the unchanged canonical menu and a bounded supplied menu;
+- [x] Compile both the unchanged canonical menu and a bounded supplied menu;
       show local placeholders for omitted photos using existing icon assets.
-- [ ] Prove a supplied third item can be ordered at its exact supplied price,
+- [x] Prove a supplied third item can be ordered at its exact supplied price,
       fulfilled, and seen by the customer; preserve manager updates and role
       denial. Reject incomplete or unsupported required details before delivery.
-- [ ] Run focused integration checks, the required contract acceptance sequence
+- [x] Run focused integration checks, the required contract acceptance sequence
       once, and distinct real supplied-menu/unsupported-currency cases without
       retries; preserve failures and exact runtime cleanup evidence.
-- [ ] Deliver the bounded branch commit and continue the frozen ten-case
-      Restaurant benchmark; do not expand template counts ahead of usefulness.
+- [x] Accept the bounded slice for controller branch delivery. Continue the
+      frozen Restaurant benchmark in D1.10; do not expand template counts ahead
+      of usefulness. The ledger records the exact push verification.
+
+Root's D1.9 business acceptance is fixed before the first live request:
+
+- Named Restaurant, three authored USD items with distinct integer-cent prices,
+  omitted descriptions/photos and simulated payment; require zero clarification
+  for these supported details. Verify the third item's exact name and price in
+  Published seed/scenario, generated catalog, visible menu, cart and order.
+- Complete payment and kitchen fulfilment; verify customer-visible status,
+  denied customer staff mutation, duplicate-action reconciliation and retained
+  order data after the supported runtime restart. Use actual generated runtime
+  for deterministic persistence, separately from real interpretation evidence.
+- Omitted photos show the existing local utensils icon with no image request.
+  Inspect 390/768/1440 px, keyboard interaction, accessibility and readable
+  empty/error states; reuse existing generated browser harness and UI assets.
+- A distinct authored non-USD request remains one material currency/data scope
+  decision with no fabricated successful USD delivery. Preserve all first
+  results and use zero test retries; a repair requires an identified defect.
+
+The ten existing O01–O10 definitions remain frozen in the ledger. Run business
+generation cases separately from deterministic fault-injection/recovery cases;
+report their denominators and latency separately. The latter can establish
+orchestration behavior but cannot raise the real-model first-result success
+rate. Previously passing cases are regression evidence, not new benchmark runs.
+
+## D1.10 — verify recovery without making users repeat work (next)
+
+Keep the existing O01–O10 definitions. This slice first closes browser-level
+recovery coverage, then runs the frozen business-generation sample. It does not
+introduce another test framework, gate, automatic provider retry or Graph shape.
+
+- [ ] Reuse `apps/workbench/e2e/consumer-generation.pw.ts` and its existing
+      fixture. Exercise interpretation/planning failure, compile/verify/preview
+      failure, one necessary clarification followed by continuation, and a
+      repeated submit or navigation with an in-flight response.
+- [ ] Assert user-visible recovery, retained in-session input, no false ready
+      link, no implicit repair approval, no hidden repeated interpretation and
+      no duplicate or stale lifecycle mutation. Add deterministic coverage only
+      where existing tests do not prove that outcome.
+- [ ] Fix demonstrated product gaps with focused failing tests and one named
+      writer. Preserve accepted public contracts and reuse current UI assets.
+      Do not rebuild or rerun the whole product lane for a fixture-only change.
+- [ ] Run O01/O02/O03/O04/O05/O06/O10 as a separately declared real-generation
+      sample using the existing isolated browser/runtime helpers. Freeze intent
+      attributes and expected outcomes before calls; retain each first result,
+      question count, handoffs, latency and rescue. A named defect is required
+      before an affected paid correction run.
+- [ ] Record O07/O08/O09 deterministic fault results separately from the real
+      sample. Reuse existing role/persistence assertions in actual generated
+      apps for O05/O10. Never report a combined mocked/real 10/10 success rate.
+- [ ] Obtain one scoped independent review for in-contract recovery changes,
+      update the product scorecard and deliver the bounded branch commit.
+
+After this first-family evidence, prioritize H1's explicit hosted delivery
+decision and the D2 intake/approval family. Additional Restaurant styling or
+large template counts must not displace those user-visible capabilities.

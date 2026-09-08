@@ -32,7 +32,7 @@ const bookingBrief =
  * that Graph's declared scenario — never from a product template.
  */
 async function composedGraphFor(brief: string): Promise<ApplicationGraphV1> {
-  const interpretation = await fixtureInterpreter.interpret({ brief });
+  const { interpretation } = await fixtureInterpreter.interpret({ brief });
   const baseDraft = createBlankApplicationDraft({
     applicationId: interpretation.spec.requirementId,
     workspaceId: "local-workspace",

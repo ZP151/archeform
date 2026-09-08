@@ -32,10 +32,12 @@ const bookingBrief =
  * composed Graphs the products publish.
  */
 async function composedGraphFor(brief: string): Promise<ApplicationGraphV1> {
-  const interpretation = await fixtureInterpreter.interpret({
-    brief,
-    answers: {},
-  });
+  const interpretation = (
+    await fixtureInterpreter.interpret({
+      brief,
+      answers: {},
+    })
+  ).interpretation;
   const baseDraft = createBlankApplicationDraft({
     applicationId: interpretation.spec.requirementId,
     workspaceId: "local-workspace",

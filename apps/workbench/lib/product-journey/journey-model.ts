@@ -1,4 +1,4 @@
-import type { RequirementInterpretationV1 } from "@factory/adapters";
+import type { RequirementInterpretationResultV1 } from "@factory/adapters";
 import type { ProductPlanAlternative } from "@factory/capabilities/node";
 import type {
   CompositionClarificationV1,
@@ -38,7 +38,7 @@ export interface ProductJourneyState {
   readonly brief: string;
   readonly answers: Readonly<Record<string, string>>;
   readonly interpretationCycles: number;
-  readonly interpretation: RequirementInterpretationV1 | null;
+  readonly interpretation: RequirementInterpretationResultV1 | null;
   readonly review: ProductJourneyReview | null;
   readonly alternatives: readonly ProductPlanAlternative[] | null;
   readonly selectedAlternativeKey: string | null;
@@ -51,7 +51,7 @@ export type ProductJourneyAction =
   | { type: "submit-brief"; brief: string }
   | {
       type: "interpretation-accepted";
-      interpretation: RequirementInterpretationV1;
+      interpretation: RequirementInterpretationResultV1;
     }
   | { type: "clarify-answered"; answers: Readonly<Record<string, string>> }
   | { type: "review-created"; review: ProductJourneyReview }
@@ -83,7 +83,7 @@ export function beginProductJourney(): ProductJourneyState {
 
 function requireInterpretation(
   state: ProductJourneyState,
-): RequirementInterpretationV1 {
+): RequirementInterpretationResultV1 {
   if (state.interpretation === null) {
     throw new Error(
       "Interpret the requirement before creating a product review.",
@@ -143,7 +143,7 @@ export function journeyTransition(
       }
       if (
         interpretationCycles === 2 &&
-        action.interpretation.clarifications.length > 0
+        action.interpretation.interpretation.clarifications.length > 0
       ) {
         const failure: ProductJourneyFailure = {
           phase: "clarification",
@@ -165,7 +165,7 @@ export function journeyTransition(
         interpretation: action.interpretation,
         interpretationCycles,
         stage:
-          action.interpretation.clarifications.length > 0
+          action.interpretation.interpretation.clarifications.length > 0
             ? "clarifying"
             : "planning",
         error: null,
@@ -198,7 +198,7 @@ export function journeyTransition(
       const interpretation = requireInterpretation(state);
       if (
         action.review.requirementChecksum !==
-        interpretation.blueprint.requirementChecksum
+        interpretation.interpretation.blueprint.requirementChecksum
       ) {
         throw new Error(
           "The product review must bind the exact requirement checksum.",
@@ -274,7 +274,7 @@ export function openClarificationQuestions(
   state: ProductJourneyState,
 ): readonly CompositionClarificationV1["questions"][number][] {
   return (
-    state.interpretation?.clarifications.flatMap(
+    state.interpretation?.interpretation.clarifications.flatMap(
       (clarification) => clarification.questions,
     ) ?? []
   );
@@ -299,12 +299,14 @@ export function planAlternativeSummary(plan: CompositionPlanV1) {
  * checksum-bound blueprint. The brief and answers never cross this boundary.
  */
 export function createRequirementInput(state: ProductJourneyState): {
-  requirement: RequirementInterpretationV1["spec"];
-  blueprint: RequirementInterpretationV1["blueprint"];
+  requirement: RequirementInterpretationResultV1["interpretation"]["spec"];
+  blueprint: RequirementInterpretationResultV1["interpretation"]["blueprint"];
+  businessParameters: RequirementInterpretationResultV1["businessParameters"];
 } {
   const interpretation = requireInterpretation(state);
   return {
-    requirement: interpretation.spec,
-    blueprint: interpretation.blueprint,
+    requirement: interpretation.interpretation.spec,
+    blueprint: interpretation.interpretation.blueprint,
+    businessParameters: interpretation.businessParameters,
   };
 }

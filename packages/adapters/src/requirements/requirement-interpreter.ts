@@ -1,4 +1,8 @@
 import {
+  parseRestaurantMenuParameters,
+  type RestaurantMenuParametersV1,
+} from "@factory/capabilities";
+import {
   hashRequirementSpec,
   parseCompositionClarification,
   parseProductBlueprint,
@@ -30,6 +34,81 @@ export interface RequirementInterpretationV1 {
   readonly clarifications: readonly CompositionClarificationV1[];
 }
 
+export interface RequirementInterpretationResultV1 {
+  readonly apiVersion: "factory.requirement-interpretation-result/v1";
+  readonly interpretation: RequirementInterpretationV1;
+  readonly businessParameters: RestaurantMenuParametersV1 | null;
+}
+
+export function assertRequirementInterpretationResult(
+  input: unknown,
+): RequirementInterpretationResultV1 {
+  try {
+    if (
+      !input ||
+      typeof input !== "object" ||
+      Object.getPrototypeOf(input) !== Object.prototype
+    )
+      throw new Error();
+    const keys = Reflect.ownKeys(input);
+    if (
+      keys.length !== 3 ||
+      keys.some(
+        (key) =>
+          typeof key !== "string" ||
+          !["apiVersion", "interpretation", "businessParameters"].includes(key),
+      )
+    )
+      throw new Error();
+    for (const key of keys) {
+      const descriptor = Object.getOwnPropertyDescriptor(input, key);
+      if (!descriptor || !("value" in descriptor) || !descriptor.enumerable)
+        throw new Error();
+    }
+    const value = input as RequirementInterpretationResultV1;
+    if (value.apiVersion !== "factory.requirement-interpretation-result/v1")
+      throw new Error();
+    const inner = value.interpretation;
+    if (
+      !inner ||
+      typeof inner !== "object" ||
+      Object.getPrototypeOf(inner) !== Object.prototype ||
+      Reflect.ownKeys(inner).length !== 3
+    )
+      throw new Error();
+    for (const key of ["spec", "blueprint", "clarifications"]) {
+      const descriptor = Object.getOwnPropertyDescriptor(inner, key);
+      if (!descriptor || !("value" in descriptor) || !descriptor.enumerable)
+        throw new Error();
+    }
+    if (!Array.isArray(inner.clarifications)) throw new Error();
+    const interpretation = assertRequirementInterpretation(inner);
+    const businessParameters =
+      value.businessParameters === null
+        ? null
+        : parseRestaurantMenuParameters(value.businessParameters);
+    if (interpretation.spec.productType === "restaurant-ordering") {
+      if (
+        businessParameters === null &&
+        !interpretation.clarifications.some((c) =>
+          c.questions.some((q) => q.category === "data"),
+        )
+      )
+        throw new Error();
+    } else if (businessParameters !== null) throw new Error();
+    return {
+      apiVersion: "factory.requirement-interpretation-result/v1",
+      interpretation,
+      businessParameters,
+    };
+  } catch {
+    throw new RequirementInterpreterError(
+      "Requirement interpretation output was invalid.",
+      "output_invalid",
+    );
+  }
+}
+
 export type ClarificationQuestionV1 =
   CompositionClarificationV1["questions"][number];
 
@@ -48,10 +127,10 @@ export interface RequirementInterpreterAdapterV1 {
     readonly answers: Readonly<Record<string, string>>;
     readonly clarificationContext?: readonly ClarificationAnswerContextV1[];
     /** Validated transient baseline for an incremental clarification pass. */
-    readonly priorInterpretation?: RequirementInterpretationV1;
+    readonly priorInterpretation?: RequirementInterpretationResultV1;
     /** Caller cancellation is transient and must reach the provider request. */
     readonly signal?: AbortSignal;
-  }): Promise<RequirementInterpretationV1>;
+  }): Promise<RequirementInterpretationResultV1>;
 }
 
 export type RequirementInterpreterErrorCode =

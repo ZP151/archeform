@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 
+import { canonicalRestaurantMenuParameters } from "@factory/capabilities";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -52,7 +53,7 @@ function journeyFor(
       answers: {},
       interpretationCycles: 1,
       interpretation: {
-        spec: { productType: "restaurant-ordering" },
+        interpretation: { spec: { productType: "restaurant-ordering" } },
       },
       review: {
         id: "review-restaurant",
@@ -178,11 +179,13 @@ describe("useConsumerGeneration", () => {
     container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);
-    const fixture = await new FixtureRequirementInterpreter().interpret({
-      brief:
-        "Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions.",
-      answers: {},
-    });
+    const fixture = (
+      await new FixtureRequirementInterpreter().interpret({
+        brief:
+          "Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions.",
+        answers: {},
+      })
+    ).interpretation;
     validAlternatives = planProductAlternatives({
       requirement: fixture.spec,
       blueprint: fixture.blueprint,
@@ -265,7 +268,9 @@ describe("useConsumerGeneration", () => {
   it("keeps generic, missing-standard, and duplicate-standard plans in manual review", async () => {
     const excludedJourneys = [
       journeyFor({
-        interpretation: { spec: { productType: "expense-approval" } } as never,
+        interpretation: {
+          interpretation: { spec: { productType: "expense-approval" } },
+        } as never,
       }),
       journeyFor({ alternatives: [] }),
       journeyFor({ alternatives: { malformed: true } as never }),
@@ -410,123 +415,146 @@ describe("useConsumerGeneration", () => {
     expect(failed.publishRelease).not.toHaveBeenCalled();
   });
 
-  it("starts from this tab's Describe submission before selecting standard and applying once", async () => {
-    const interpreter = new FixtureRequirementInterpreter();
-    const fixture = await interpreter.interpret({
-      brief:
-        "Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions.",
-      answers: {},
-    });
-    const requirement = {
-      ...fixture.spec,
-      productType: "restaurant-ordering",
-    } as typeof fixture.spec;
-    const interpretation = {
-      ...fixture,
-      spec: requirement,
-      blueprint: {
-        ...fixture.blueprint,
-        requirementChecksum: hashRequirementSpec(requirement),
-      },
-    };
-    const alternatives = planProductAlternatives({
-      requirement: fixture.spec,
-      blueprint: fixture.blueprint,
-      baseDraft: createBlankApplicationDraft({
-        applicationId: fixture.spec.requirementId,
-        workspaceId: "local-workspace",
-        name: "Restaurant ordering",
-      }),
-    }).map(({ key, label, plan }) => ({ key, label, plan }));
-    const calls: string[] = [];
-    const choiceBodies: unknown[] = [];
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = new URL(String(input), "http://workbench.test");
-        const method = init?.method ?? "GET";
-        calls.push(`${method} ${url.pathname}`);
-        const json = (value: unknown) =>
-          new Response(JSON.stringify(value), {
+  it.each([false, true])(
+    "starts from this tab's Describe submission and retains supplied menu %s",
+    async (provided) => {
+      const businessParameters = provided
+        ? {
+            apiVersion: "factory.restaurant-menu-parameters/v1",
+            mode: "provided",
+            currency: "USD",
+            items: [{ name: "Soup", description: null, priceMinor: 599 }],
+          }
+        : canonicalRestaurantMenuParameters();
+      const interpreter = new FixtureRequirementInterpreter();
+      const fixture = (
+        await interpreter.interpret({
+          brief:
+            "Build an expense approval application. Employees submit expenses with amount, category, date, receipt, and notes. Managers approve or reject them, and finance can audit all decisions.",
+          answers: {},
+        })
+      ).interpretation;
+      const requirement = {
+        ...fixture.spec,
+        productType: "restaurant-ordering",
+      } as typeof fixture.spec;
+      const interpretation = {
+        ...fixture,
+        spec: requirement,
+        blueprint: {
+          ...fixture.blueprint,
+          requirementChecksum: hashRequirementSpec(requirement),
+        },
+      };
+      const alternatives = planProductAlternatives({
+        requirement: fixture.spec,
+        blueprint: fixture.blueprint,
+        baseDraft: createBlankApplicationDraft({
+          applicationId: fixture.spec.requirementId,
+          workspaceId: "local-workspace",
+          name: "Restaurant ordering",
+        }),
+      }).map(({ key, label, plan }) => ({ key, label, plan }));
+      const calls: string[] = [];
+      const choiceBodies: unknown[] = [];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+          const url = new URL(String(input), "http://workbench.test");
+          const method = init?.method ?? "GET";
+          calls.push(`${method} ${url.pathname}`);
+          const json = (value: unknown) =>
+            new Response(JSON.stringify(value), {
+              headers: { "content-type": "application/json" },
+            });
+          if (url.pathname === "/api/requirements/interpret") {
+            return json({
+              apiVersion: "factory.requirement-interpretation-result/v1",
+              interpretation,
+              businessParameters,
+            });
+          }
+          if (method === "POST" && url.pathname === "/product/requirements") {
+            const request = JSON.parse(String(init?.body));
+            if (provided)
+              expect(request.businessParameters).toEqual(businessParameters);
+            else
+              expect(Object.hasOwn(request, "businessParameters")).toBe(false);
+            return json({
+              review: {
+                id: "review-restaurant",
+                applicationGraphId: "restaurant-ordering",
+                status: "planning",
+                requirementChecksum: hashRequirementSpec(interpretation.spec),
+                draftBaseChecksum: "sha256:base",
+              },
+            });
+          }
+          if (method === "POST" && url.pathname.endsWith("/plan")) {
+            return json({ alternatives });
+          }
+          if (method === "POST" && url.pathname.endsWith("/choices")) {
+            choiceBodies.push(JSON.parse(String(init?.body ?? "{}")));
+            return json({ checksum: "sha256:restaurant-diff" });
+          }
+          if (method === "POST" && url.pathname.endsWith("/apply")) {
+            return json({
+              draftRevision: {
+                id: TARGET.draftRevisionId,
+                revisionNumber: 2,
+                graph: createBlankApplicationDraft({
+                  applicationId: "restaurant-ordering",
+                  workspaceId: "local-workspace",
+                  name: "Restaurant ordering",
+                }).graph,
+              },
+              review: {
+                applicationGraphId: TARGET.applicationGraphId,
+                status: "applied",
+              },
+            });
+          }
+          return new Response(JSON.stringify({ error: "Unexpected route." }), {
+            status: 500,
             headers: { "content-type": "application/json" },
           });
-        if (url.pathname === "/api/requirements/interpret") {
-          return json({ interpretation });
-        }
-        if (method === "POST" && url.pathname === "/product/requirements") {
-          return json({
-            review: {
-              id: "review-restaurant",
-              applicationGraphId: "restaurant-ordering",
-              status: "planning",
-              requirementChecksum: hashRequirementSpec(interpretation.spec),
-              draftBaseChecksum: "sha256:base",
-            },
-          });
-        }
-        if (method === "POST" && url.pathname.endsWith("/plan")) {
-          return json({ alternatives });
-        }
-        if (method === "POST" && url.pathname.endsWith("/choices")) {
-          choiceBodies.push(JSON.parse(String(init?.body ?? "{}")));
-          return json({ checksum: "sha256:restaurant-diff" });
-        }
-        if (method === "POST" && url.pathname.endsWith("/apply")) {
-          return json({
-            draftRevision: {
-              id: TARGET.draftRevisionId,
-              revisionNumber: 2,
-              graph: createBlankApplicationDraft({
-                applicationId: "restaurant-ordering",
-                workspaceId: "local-workspace",
-                name: "Restaurant ordering",
-              }).graph,
-            },
-            review: {
-              applicationGraphId: TARGET.applicationGraphId,
-              status: "applied",
-            },
-          });
-        }
-        return new Response(JSON.stringify({ error: "Unexpected route." }), {
-          status: 500,
-          headers: { "content-type": "application/json" },
-        });
-      }),
-    );
-    const applyComposedProduct = vi.fn(async () => {
-      await globalThis.__freshJourney?.applyProduct();
-      return TARGET;
-    });
-
-    await act(async () => {
-      root.render(
-        <FreshDescribeHarness
-          release={releaseFor()}
-          applyComposedProduct={applyComposedProduct}
-        />,
+        }),
       );
-    });
-    act(() => {
-      globalThis.__freshJourney?.setBriefDraft(
-        "Build a restaurant ordering application.",
-      );
-    });
-    await act(async () => {
-      await globalThis.__freshJourney?.submitBrief();
-    });
-    await waitFor(() => {
-      expect(globalThis.__freshJourney?.state.stage).toBe("brief");
-      expect(applyComposedProduct).toHaveBeenCalledTimes(1);
-    });
+      const applyComposedProduct = vi.fn(async () => {
+        await globalThis.__freshJourney?.applyProduct();
+        return TARGET;
+      });
 
-    expect(calls).toEqual([
-      "POST /api/requirements/interpret",
-      "POST /product/requirements",
-      "POST /product/requirements/review-restaurant/plan",
-      "POST /product/requirements/review-restaurant/choices",
-      "POST /product/requirements/review-restaurant/apply",
-    ]);
-    expect(choiceBodies).toEqual([{ alternativeKey: "standard" }]);
-  });
+      await act(async () => {
+        root.render(
+          <FreshDescribeHarness
+            release={releaseFor()}
+            applyComposedProduct={applyComposedProduct}
+          />,
+        );
+      });
+      act(() => {
+        globalThis.__freshJourney?.setBriefDraft(
+          "Build a restaurant ordering application.",
+        );
+      });
+      await act(async () => {
+        await globalThis.__freshJourney?.submitBrief();
+      });
+      await waitFor(() => {
+        expect(globalThis.__freshJourney?.state.stage).toBe("brief");
+        expect(applyComposedProduct).toHaveBeenCalledTimes(1);
+      });
+
+      expect(globalThis.__consumerGeneration?.suppliedMenu).toBe(provided);
+      expect(calls).toEqual([
+        "POST /api/requirements/interpret",
+        "POST /product/requirements",
+        "POST /product/requirements/review-restaurant/plan",
+        "POST /product/requirements/review-restaurant/choices",
+        "POST /product/requirements/review-restaurant/apply",
+      ]);
+      expect(choiceBodies).toEqual([{ alternativeKey: "standard" }]);
+    },
+  );
 });

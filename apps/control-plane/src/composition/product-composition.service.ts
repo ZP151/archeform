@@ -39,6 +39,11 @@ import {
 import {
   composeDefaultCapabilityDraft,
   composeProductRecipe,
+  bindRestaurantMenuParameters,
+  canonicalRestaurantMenuParameters,
+  parseRestaurantMenuParameters,
+  hashRestaurantMenuParameters,
+  type RestaurantMenuParametersV1,
   restaurantOrderingExperienceBrief,
   restaurantOrderingProductIntent,
 } from "@factory/capabilities";
@@ -121,6 +126,47 @@ export class ProductCompositionService {
       return parseFn(input);
     } catch {
       throw new BadRequestException("Composition record is invalid.");
+    }
+  }
+
+  private storedBusinessParameters(
+    review: {
+      businessParameters: unknown;
+      businessParametersChecksum: string | null;
+      businessParametersProvided: boolean | null;
+    },
+    restaurant: boolean,
+  ): {
+    parameters: RestaurantMenuParametersV1 | null;
+    provided: boolean | null;
+  } {
+    const {
+      businessParameters: value,
+      businessParametersChecksum: checksum,
+      businessParametersProvided: provided,
+    } = review;
+    if (value === null && checksum === null && provided === null)
+      return {
+        parameters: restaurant ? canonicalRestaurantMenuParameters() : null,
+        provided: restaurant ? false : null,
+      };
+    try {
+      if (
+        !restaurant ||
+        value === null ||
+        typeof checksum !== "string" ||
+        typeof provided !== "boolean"
+      )
+        throw new Error();
+      const parameters = parseRestaurantMenuParameters(value);
+      if (
+        hashRestaurantMenuParameters(parameters) !== checksum ||
+        (!provided && parameters.mode !== "canonical-default")
+      )
+        throw new Error();
+      return { parameters, provided };
+    } catch {
+      throw new ConflictException("Product business parameters are invalid.");
     }
   }
 
@@ -267,7 +313,7 @@ export class ProductCompositionService {
     try {
       body = exactRecord(
         input,
-        ["requestId", "name", "requirement", "blueprint"],
+        ["requestId", "name", "requirement", "blueprint", "businessParameters"],
         ["requestId", "requirement", "blueprint"],
       );
     } catch {
@@ -315,6 +361,34 @@ export class ProductCompositionService {
         "Product blueprint does not bind the requirement.",
       );
     }
+    const restaurant = requirement.productType === "restaurant-ordering";
+    const businessParametersProvided = restaurant
+      ? Object.hasOwn(body, "businessParameters")
+      : null;
+    let businessParameters: RestaurantMenuParametersV1 | null;
+    try {
+      if (restaurant)
+        businessParameters = businessParametersProvided
+          ? parseRestaurantMenuParameters(body.businessParameters)
+          : canonicalRestaurantMenuParameters();
+      else {
+        if (
+          Object.hasOwn(body, "businessParameters") &&
+          body.businessParameters !== null
+        )
+          throw new Error();
+        businessParameters = null;
+      }
+    } catch {
+      throw productCompositionRejection(
+        "composition.request_envelope_invalid",
+        "Product business parameters are invalid.",
+      );
+    }
+    const businessParametersChecksum =
+      businessParameters === null
+        ? null
+        : hashRestaurantMenuParameters(businessParameters);
     let name = requirement.requirementId;
     if (body.name !== undefined) {
       try {
@@ -335,6 +409,8 @@ export class ProductCompositionService {
         requirement,
         blueprint,
         name,
+        businessParameters,
+        businessParametersProvided,
       );
     }
     const blank = createBlankApplicationDraft({
@@ -382,6 +458,12 @@ export class ProductCompositionService {
             requirement: requirement as unknown as Prisma.InputJsonValue,
             requirementChecksum: hashRequirementSpec(requirement),
             blueprint: blueprint as unknown as Prisma.InputJsonValue,
+            businessParameters:
+              businessParameters === null
+                ? Prisma.DbNull
+                : (businessParameters as unknown as Prisma.InputJsonValue),
+            businessParametersChecksum,
+            businessParametersProvided,
             draftBaseChecksum: hashApplicationGraph(blank.graph),
             productAlternatives:
               storedAlternatives as unknown as Prisma.InputJsonValue,
@@ -401,6 +483,8 @@ export class ProductCompositionService {
             requirement,
             blueprint,
             name,
+            businessParameters,
+            businessParametersProvided,
           );
         }
         throw new ConflictException(
@@ -419,13 +503,34 @@ export class ProductCompositionService {
       requirement: unknown;
       requirementChecksum: string;
       blueprint: unknown;
+      businessParameters: unknown;
+      businessParametersChecksum: string | null;
+      businessParametersProvided: boolean | null;
     },
     requirement: RequirementSpecV1,
     blueprint: ProductBlueprintV1,
     name: string,
+    businessParameters: RestaurantMenuParametersV1 | null,
+    businessParametersProvided: boolean | null,
   ) {
     const storedRequirement = this.storedRequirement(review);
     const storedBlueprint = this.storedBlueprint(review);
+    const stored = this.storedBusinessParameters(
+      review,
+      storedRequirement.productType === "restaurant-ordering",
+    );
+    if (
+      stored.provided !== businessParametersProvided ||
+      (stored.parameters === null
+        ? null
+        : hashRestaurantMenuParameters(stored.parameters)) !==
+        (businessParameters === null
+          ? null
+          : hashRestaurantMenuParameters(businessParameters))
+    )
+      throw new ConflictException(
+        "Product request identity is already bound to different input.",
+      );
     if (
       review.requirementChecksum !== hashRequirementSpec(requirement) ||
       hashRequirementSpec(storedRequirement) !==
@@ -687,6 +792,10 @@ export class ProductCompositionService {
     if (!review) {
       throw new NotFoundException("Product requirement was not found.");
     }
+    this.storedBusinessParameters(
+      review,
+      this.storedRequirement(review).productType === "restaurant-ordering",
+    );
     if (review.status === "applied") {
       return this.reconstructAppliedProduct(transaction, review);
     }
@@ -800,6 +909,7 @@ export class ProductCompositionService {
     base: DraftRevision,
   ) {
     const requirement = this.storedRequirement(review);
+    const menu = this.storedBusinessParameters(review, true).parameters!;
     const application = await transaction.applicationGraph.findUnique({
       where: { id: review.applicationGraphId },
     });
@@ -817,7 +927,7 @@ export class ProductCompositionService {
         baseDraft: createDraftRevision(restaurantBase.graph, base.id),
       });
       restaurantGraph = {
-        ...restaurant.graph,
+        ...bindRestaurantMenuParameters(restaurant.graph, menu),
         metadata: {
           ...restaurant.graph.metadata,
           id: application.key,

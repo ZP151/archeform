@@ -39,7 +39,7 @@ const bookingBrief =
  * through the projection and the generated application bundle.
  */
 async function composedGraphFor(brief: string): Promise<ApplicationGraphV1> {
-  const interpretation = await fixtureInterpreter.interpret({ brief });
+  const { interpretation } = await fixtureInterpreter.interpret({ brief });
   const baseDraft = createBlankApplicationDraft({
     applicationId: interpretation.spec.requirementId,
     workspaceId: "local-workspace",
@@ -143,7 +143,7 @@ function withBoundedStudioEdits(graph: ApplicationGraphV1): ApplicationGraphV1 {
 
 describe("composition page runtime round trip", () => {
   it("compiles a valid composed graph with two references to the same target", async () => {
-    const interpretation = await fixtureInterpreter.interpret({
+    const { interpretation } = await fixtureInterpreter.interpret({
       brief: bookingBrief,
     });
     const blueprint = assertProductBlueprint({

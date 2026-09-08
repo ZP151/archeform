@@ -1,6 +1,6 @@
 import {
-  assertRequirementInterpretation,
-  type RequirementInterpretationV1,
+  assertRequirementInterpretationResult,
+  type RequirementInterpretationResultV1,
 } from "@factory/adapters/requirements/browser";
 
 export type RequirementInterpretationFailureCode =
@@ -120,7 +120,7 @@ export function productJourneyFailure(
 export type ParsedInterpretationResponse =
   | {
       readonly ok: true;
-      readonly interpretation: RequirementInterpretationV1;
+      readonly interpretation: RequirementInterpretationResultV1;
     }
   | { readonly ok: false; readonly failure: ProductJourneyFailure };
 
@@ -130,28 +130,10 @@ export function parseInterpretationResponse(
   phase: "interpretation" | "clarification",
 ): ParsedInterpretationResponse {
   if (status === 200) {
-    if (!isPlainRecord(body) || !hasExactKeys(body, ["interpretation"])) {
-      return {
-        ok: false,
-        failure: requirementFailure(phase, "requirement.failed"),
-      };
-    }
     try {
-      const candidate = body.interpretation;
-      if (
-        !isPlainRecord(candidate) ||
-        !hasExactKeys(candidate, ["spec", "blueprint", "clarifications"]) ||
-        !Array.isArray(candidate.clarifications)
-      ) {
-        throw new Error("Invalid interpretation envelope.");
-      }
       return {
         ok: true,
-        interpretation: assertRequirementInterpretation({
-          spec: candidate.spec,
-          blueprint: candidate.blueprint,
-          clarifications: candidate.clarifications,
-        }),
+        interpretation: assertRequirementInterpretationResult(body),
       };
     } catch {
       return {

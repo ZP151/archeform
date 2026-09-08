@@ -7,6 +7,8 @@
  */
 export {
   assertRequirementInterpretation,
+  assertRequirementInterpretationResult,
+  type RequirementInterpretationResultV1,
   resolveClarificationCycle,
   type ClarificationAnswerContextV1,
   type ClarificationQuestionV1,

@@ -14,6 +14,7 @@ import {
   safeBusinessTextSchema,
 } from "@factory/graph";
 import {
+  hashRestaurantMenuParameters,
   restaurantOrderingExperienceBrief,
   restaurantOrderingProductIntent,
   restaurantOrderingProductRecipe,
@@ -26,6 +27,8 @@ import {
 import {
   RequirementInterpreterError,
   assertRequirementInterpretation,
+  assertRequirementInterpretationResult,
+  type RequirementInterpretationResultV1,
   clarificationQuestionsMatch,
   deriveClarifications,
   type ClarificationAnswerContextV1,
@@ -410,9 +413,10 @@ const supportedRestaurantDefaultInstruction = [
   `<supported-restaurant-default>${JSON.stringify(supportedRestaurantDefaultGuide())}</supported-restaurant-default>`,
   "Apply every omitted canonical Restaurant detail as its own supported default, independently of whether another requested capability needs clarification. Every Restaurant result returns definition-selection with generatedInterpretation null; do not produce a full blueprint.",
   "When a Restaurant brief explicitly supplies an application display name, place that exact validated display name in the existing definition-selection title. A Restaurant display name must be trimmed safe business text from 2 through 80 characters. It must have no leading or trailing whitespace and no control characters. When no application display name is explicit, keep the validated provider title and do not ask a naming question. If an explicit display name is invalid, return needs-clarification with one material question that asks for a valid shorter display name; never truncate, replace, or encode the invalid name in title. If an answer still lacks a valid display name, retain needs-clarification so the existing bounded fail-closed follow-up behavior applies. Do not infer a legal or corporate identity from an application display name.",
-  "Treat an explicit request for a sample, demo, or default menu, or generic menu browsing alone, as the existing canonical default; application branding is not menu content. An explicit request for a custom or noncanonical menu, or supplied actual dish names or price values, is custom menu data. When either is explicit, it is outside the current canonical binding: return needs-clarification with one consolidated data scope question, and do not encode menu data in title. If an answer retains custom menu data as required, remain needs-clarification so the existing bounded fail-closed follow-up behavior applies.",
+  "Treat a sample, demo, or default menu, generic menu browsing, and application branding as canonical-default menu parameters with currency USD and zero items. A complete supplied initial menu of 1 through 100 dishes with names and explicit USD prices is supported: return provided businessParameters in supplied order, convert explicit prices exactly to integer minor units (cents), and use null description when omitted. Do not ask to edit a complete menu. Names must be trimmed safe text of 1..120 characters and non-null descriptions 1..1000, normalized to NFC; integer prices are 0..10000000. Never invent a missing name or price. An incomplete or unspecified custom menu requires businessParameters null and one consolidated material data question asking for the missing names and USD prices. Never encode menu data in title or other free-text fields as a transport substitute.",
+  "The supplied-menu contract supports only names, optional descriptions, explicit USD prices, and order. Explicit currency other than USD, stock, availability, preparation time, images, categories, options, tax, or service-charge requirements remain material data clarification; never discard these requirements, convert another currency, or relabel it USD. Fixed omitted details are category mains, availability true, stock 100, preparation 15 minutes, and a local no-photo placeholder. Preserve a complete businessParameters value during unrelated material questions. For follow-ups, priorInterpretation is the exact versioned result wrapper: carry any complete provided menu unchanged through every clarification, including data questions about stock, currency, and options. Menu editing during clarification is not supported; incomplete null prior menu data may be completed with missing names and USD prices. Reevaluate and retain every independent unsupported requirement.",
   "An explicit contradiction remains unresolved. Do not suppress material access, privacy, business-rule, data or compliance, or integration questions. Never silently discard a material question or impose a count target to return supported-default. For an unsupported live payment or external capability, clearly state the current supported limitation and ask one meaningful scope decision for each genuinely independent material difference. When an unavailable external capability is the only explicit difference from the canonical Restaurant default, return exactly one integration material question that states the current supported limitation and asks whether to accept the supported scope or retain that capability as required. Do not infer downstream policy, data, authorization, implementation, processor, setup, or configuration questions from that one unavailable external capability. Preserve an access, privacy, data, or business-rule decision when the brief separately makes it explicit. Do not ask for provider setup, credentials, configuration, or integration implementation details that the supported product cannot implement. The simulated money movement and no external side effects default do not satisfy an explicit live payment request.",
-  "A Restaurant follow-up may return supported-default only when the supplied answer explicitly accepts the supported scope and no unresolved material requirement remains. If an answer continues to require unsupported live payment or another external capability, retain needs-clarification.",
+  "A Restaurant follow-up may return supported-default when the supplied answer resolves its material question and no unresolved material requirement remains: missing menu names or USD prices must become complete, and an unsupported-scope question requires explicit acceptance of the supported scope. If an answer continues to require unsupported live payment or another external capability, retain needs-clarification.",
   "Only non-Restaurant products follow the generated-blueprint interpretation rules.",
 ].join(" ");
 
@@ -845,6 +849,7 @@ const providerInterpretationResultJsonSchema: Record<string, unknown> = {
             "title",
             "outcome",
             "materialQuestions",
+            "businessParameters",
           ],
           properties: {
             definitionKey: { type: "string", const: "restaurant-ordering" },
@@ -861,6 +866,54 @@ const providerInterpretationResultJsonSchema: Record<string, unknown> = {
                 "^[^\\s\\u0000-\\u001F\\u007F][^\\u0000-\\u001F\\u007F]*[^\\s\\u0000-\\u001F\\u007F]$",
             },
             outcome: { type: "string", minLength: 1, maxLength: 2000 },
+            businessParameters: {
+              anyOf: [
+                {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["apiVersion", "mode", "currency", "items"],
+                  properties: {
+                    apiVersion: {
+                      type: "string",
+                      const: "factory.restaurant-menu-parameters/v1",
+                    },
+                    mode: {
+                      type: "string",
+                      enum: ["canonical-default", "provided"],
+                    },
+                    currency: { type: "string", const: "USD" },
+                    items: {
+                      type: "array",
+                      maxItems: 100,
+                      items: {
+                        type: "object",
+                        additionalProperties: false,
+                        required: ["name", "description", "priceMinor"],
+                        properties: {
+                          name: {
+                            type: "string",
+                            minLength: 1,
+                            maxLength: 120,
+                          },
+                          description: {
+                            anyOf: [
+                              { type: "string", minLength: 1, maxLength: 1000 },
+                              { type: "null" },
+                            ],
+                          },
+                          priceMinor: {
+                            type: "integer",
+                            minimum: 0,
+                            maximum: 10000000,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                { type: "null" },
+              ],
+            },
             materialQuestions: {
               type: "array",
               maxItems: 30,
@@ -1124,9 +1177,9 @@ export class OpenAIRequirementInterpreterAdapter implements RequirementInterpret
     readonly brief: string;
     readonly answers: Readonly<Record<string, string>>;
     readonly clarificationContext?: readonly ClarificationAnswerContextV1[];
-    readonly priorInterpretation?: RequirementInterpretationV1;
+    readonly priorInterpretation?: RequirementInterpretationResultV1;
     readonly signal?: AbortSignal;
-  }): Promise<RequirementInterpretationV1> {
+  }): Promise<RequirementInterpretationResultV1> {
     if (typeof input.brief !== "string" || input.brief.trim().length === 0) {
       throw new RequirementInterpreterError(
         "The requirement brief must be non-empty prose text.",
@@ -1144,7 +1197,7 @@ export class OpenAIRequirementInterpreterAdapter implements RequirementInterpret
     const priorInterpretation =
       input.priorInterpretation === undefined
         ? undefined
-        : assertRequirementInterpretation(input.priorInterpretation);
+        : assertRequirementInterpretationResult(input.priorInterpretation);
 
     // One invocation owns a hard total deadline. Each semantic call also owns
     // a round deadline; provider/network failures never enter the repair loop.
@@ -1224,6 +1277,21 @@ export class OpenAIRequirementInterpreterAdapter implements RequirementInterpret
           continue;
         }
 
+        if (priorInterpretation?.businessParameters != null) {
+          const next = providerResult.definitionSelection?.businessParameters;
+          if (
+            next == null ||
+            hashRestaurantMenuParameters(next) !==
+              hashRestaurantMenuParameters(
+                priorInterpretation.businessParameters,
+              )
+          ) {
+            if (round >= MAX_REPAIR_ROUNDS) throw outputFailure();
+            repairNote = FIXED_REPAIR_INSTRUCTION;
+            continue;
+          }
+        }
+
         if (providerResult.resultKind === "definition-selection") {
           let interpretation: RequirementInterpretationV1;
           try {
@@ -1243,7 +1311,18 @@ export class OpenAIRequirementInterpreterAdapter implements RequirementInterpret
             repairNote = FIXED_REPAIR_INSTRUCTION;
             continue;
           }
-          return interpretation;
+          try {
+            return assertRequirementInterpretationResult({
+              apiVersion: "factory.requirement-interpretation-result/v1",
+              interpretation,
+              businessParameters:
+                providerResult.definitionSelection!.businessParameters,
+            });
+          } catch {
+            if (round >= MAX_REPAIR_ROUNDS) throw outputFailure();
+            repairNote = FIXED_REPAIR_INSTRUCTION;
+            continue;
+          }
         }
 
         const spec = reconcileClarificationAnswers(
@@ -1265,10 +1344,14 @@ export class OpenAIRequirementInterpreterAdapter implements RequirementInterpret
           requirementChecksum: hashRequirementSpec(spec),
         };
         try {
-          return assertRequirementInterpretation({
-            spec,
-            blueprint,
-            clarifications,
+          return assertRequirementInterpretationResult({
+            apiVersion: "factory.requirement-interpretation-result/v1",
+            businessParameters: null,
+            interpretation: assertRequirementInterpretation({
+              spec,
+              blueprint,
+              clarifications,
+            }),
           });
         } catch {
           if (round >= MAX_REPAIR_ROUNDS) throw outputFailure();
