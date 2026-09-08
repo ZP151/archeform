@@ -123,9 +123,10 @@ export function renderCustomerPage(pathname, state) {
       return requestedOrderId;
     }
   })();
+  const restaurantName = typeof state.settings?.name === "string" && state.settings.name.trim() ? state.settings.name : "Restaurant";
   const order = route === "/orders/:orderId" ? (state.orders ?? []).find((value) => value.id === safeRequestedOrderId) : state.orders[0];
   let content = route === "/"
-    ? renderMenuHero({ locationName: "Maison Aurelia", serviceOpen: true }) + renderCategoryRail({ categoryName: "Dinner", categoryActive: true }) + state.catalog.map((value) => renderMenuItemCard(value)).join("")
+    ? renderMenuHero({ locationName: restaurantName, serviceOpen: true }) + renderCategoryRail({ categoryName: "Dinner", categoryActive: true }) + state.catalog.map((value) => renderMenuItemCard(value)).join("")
     : route === "/menu" ? state.catalog.map((value) => renderMenuItemCard(value)).join("")
     : route === "/menu/:itemId" ? renderDishConfigurator({ ...item, canAdd: Boolean(item) })
     : route === "/cart" ? state.cart.items.map((value) => renderCartLine(value).replace('<form class="factory-block"', '<form class="factory-block" data-customer-action="cart.update" data-line-id="' + value.id + '" data-expected-version="' + state.cart.version + '"').replace('</form>', '<button type="button" data-customer-action="cart.delete" data-line-id="' + value.id + '" data-expected-version="' + state.cart.version + '">Remove</button></form>')).join("") + renderOrderSummary(state.cart)
@@ -136,7 +137,7 @@ export function renderCustomerPage(pathname, state) {
   if (route === "/menu/:itemId") content = content.replace('<form class="factory-block"', '<form class="factory-block" data-customer-action="cart.add" data-item-id="' + (item?.id ?? "") + '" data-expected-version="' + state.cart.version + '"><input type="hidden" name="quantity" value="1" />');
   if (route === "/checkout") content = content.replace('<form class="factory-block"', '<form class="factory-block" data-customer-action="checkout.pay" data-expected-version="' + state.cart.version + '"');
   if (route === "/profile") content = content.replace('<form class="factory-block"', '<form class="factory-block" data-customer-action="profile.update" data-expected-version="' + state.profile.version + '"><input type="hidden" name="marketingOptIn" value="' + String(state.profile.marketingOptIn) + '" />');
-  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/customer/styles.css"><title>Maison Aurelia</title></head><body>' + renderMobileProductShell({ title: "Maison Aurelia", content, navigation: renderNavigation(pathname) }) + '<script type="module">import { attachCustomerController } from "/customer/app.mjs"; attachCustomerController();</script></body></html>';
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/customer/styles.css"><title>' + escapeHtml(restaurantName) + '</title></head><body>' + renderMobileProductShell({ title: restaurantName, content, navigation: renderNavigation(pathname) }) + '<script type="module">import { attachCustomerController } from "/customer/app.mjs"; attachCustomerController();</script></body></html>';
 }
 export function attachCustomerController(root = document) {
   root.addEventListener("submit", async (event) => {

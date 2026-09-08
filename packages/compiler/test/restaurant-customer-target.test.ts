@@ -81,6 +81,23 @@ async function loadGeneratedCustomerApp(input = canonicalInput()) {
 }
 
 describe("Restaurant customer bundle target", () => {
+  it("escapes the current settings name in the customer document, shell, and hero", async () => {
+    const { app } = await loadGeneratedCustomerApp();
+    const name = 'Saffron & Sons <script>alert("name")</script>';
+    const html = app.renderCustomerPage("/", {
+      settings: { name, currency: "USD" },
+      catalog: [],
+      cart: { version: 1, items: [] },
+      profile: { version: 1, marketingOptIn: false },
+      orders: [],
+    });
+    const escaped =
+      "Saffron &amp; Sons &lt;script&gt;alert(&quot;name&quot;)&lt;/script&gt;";
+    expect(html).toContain(`<title>${escaped}</title>`);
+    expect(html).toContain(escaped);
+    expect(html).not.toContain(name);
+  });
+
   it("renders local library icons with accessible text and retains the upstream license", async () => {
     const { app, files } = await loadGeneratedCustomerApp();
     const state = { catalog: [], orders: [], cart: { items: [] }, profile: {} };

@@ -11,6 +11,11 @@ import { lstat, readFile, writeFile } from "node:fs/promises";
 type PublishedRevisionResponse = {
   readonly id: string;
   readonly graphHash: string;
+  readonly graph?: {
+    readonly graph?: {
+      readonly metadata?: { readonly name?: unknown };
+    };
+  };
 };
 
 type CompilationResponse = {
@@ -290,6 +295,10 @@ test("Maison Aurelia edits, publishes, compiles, verifies, operates, and cleans 
   ).json()) as PublishedRevisionResponse;
   expect(published.id).toMatch(/\S/u);
   expect(published.graphHash).toMatch(/^sha256:[a-f0-9]{64}$/u);
+  const publishedName = published.graph?.graph?.metadata?.name;
+  if (typeof publishedName !== "string" || publishedName.length === 0) {
+    throw new Error("Published graph response was invalid.");
+  }
 
   reportStage("compile");
   const compileButton = page.getByRole("button", { name: "Compile" });
@@ -412,9 +421,11 @@ test("Maison Aurelia edits, publishes, compiles, verifies, operates, and cleans 
     reportStage("customer-page-created");
     const rootResponse = await generated.goto(previewOrigin.toString());
     expect(rootResponse?.ok(), "generated customer root response").toBeTruthy();
-    await expect(
-      generated.getByRole("heading", { level: 1, name: "Maison Aurelia" }),
-    ).toBeVisible();
+    await expect(generated.getByRole("heading", { level: 1 })).toBeVisible();
+    expect(
+      (await generated.getByRole("heading", { level: 1 }).textContent()) ===
+        publishedName,
+    ).toBe(true);
     reportStage("customer-root");
 
     const dishUrl = new URL(previewOrigin);

@@ -442,6 +442,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
   function restaurantDefinitionSelection(input?: {
     readonly disposition?: "supported-default" | "needs-clarification";
     readonly materialQuestions?: readonly Record<string, unknown>[];
+    readonly title?: string;
   }): Record<string, unknown> {
     return {
       resultKind: "definition-selection",
@@ -449,7 +450,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
         definitionKey: "restaurant-ordering",
         disposition: input?.disposition ?? "supported-default",
         requirementId: "restaurant-ordering-requirement",
-        title: "Restaurant Ordering",
+        title: input?.title ?? "Restaurant Ordering",
         outcome: "Guests place restaurant orders while staff serve them.",
         materialQuestions: input?.materialQuestions ?? [],
       },
@@ -660,6 +661,285 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
         ({ plan }) => plan.compatibility.result === "compatible",
       ),
     ).toBe(true);
+  });
+
+  it("keeps an explicit Restaurant display name in the existing title projection", async () => {
+    // Removing the title mapping or the private name instruction would either
+    // lose the selected display name or leave the provider to invent a new
+    // naming question. This transport fixture checks the adapter boundary; it
+    // does not claim a model semantically extracted the name.
+    const { requests, transport } = capturingTransport(
+      restaurantDefinitionSelection({ title: "Saffron Table" }),
+    );
+    const adapter = new OpenAIRequirementInterpreterAdapter({
+      transport,
+      readEnvironment: () => "test-key",
+    });
+
+    const interpretation = await adapter.interpret({
+      brief: "Build a restaurant app named Saffron Table.",
+      answers: {},
+    });
+
+    expect(interpretation.blueprint.title).toBe("Saffron Table");
+    expect(interpretation.clarifications).toEqual([]);
+    expect(requests[0]?.instructions).toContain(
+      "When a Restaurant brief explicitly supplies an application display name, place that exact validated display name in the existing definition-selection title.",
+    );
+    expect(requests[0]?.instructions).toContain(
+      "When no application display name is explicit, keep the validated provider title and do not ask a naming question.",
+    );
+    expect(requests[0]?.instructions).toContain(
+      "A Restaurant display name must be trimmed safe business text from 2 through 80 characters.",
+    );
+    expect(requests[0]?.instructions).toContain(
+      "It must have no leading or trailing whitespace and no control characters.",
+    );
+    expect(requests[0]?.instructions).toContain(
+      "If an explicit display name is invalid, return needs-clarification with one material question that asks for a valid shorter display name; never truncate, replace, or encode the invalid name in title.",
+    );
+  });
+
+  it("retains an exact two-character Restaurant display name and advertises its private bounds", async () => {
+    const title = "Go";
+    const { requests, transport } = capturingTransport(
+      restaurantDefinitionSelection({ title }),
+    );
+    const adapter = new OpenAIRequirementInterpreterAdapter({
+      transport,
+      readEnvironment: () => "test-key",
+    });
+
+    await expect(
+      adapter.interpret({
+        brief: "Build a restaurant app named Go.",
+        answers: {},
+      }),
+    ).resolves.toMatchObject({ blueprint: { title } });
+
+    const schema = requests[0]?.jsonSchema as {
+      readonly properties: {
+        readonly definitionSelection: {
+          readonly anyOf: readonly [
+            {
+              readonly properties: {
+                readonly title: {
+                  readonly type: string;
+                  readonly minLength: number;
+                  readonly maxLength: number;
+                  readonly pattern: string;
+                };
+              };
+            },
+            unknown,
+          ];
+        };
+      };
+    };
+    const titleSchema =
+      schema.properties.definitionSelection.anyOf[0].properties.title;
+    expect(titleSchema).toEqual({
+      type: "string",
+      minLength: 2,
+      maxLength: 80,
+      pattern:
+        "^[^\\s\\u0000-\\u001F\\u007F][^\\u0000-\\u001F\\u007F]*[^\\s\\u0000-\\u001F\\u007F]$",
+    });
+    expect(titleSchema.pattern).not.toContain("(?");
+
+    const permitsTitle = (value: string): boolean =>
+      value.length >= titleSchema.minLength &&
+      value.length <= titleSchema.maxLength &&
+      new RegExp(titleSchema.pattern, "u").test(value);
+    expect(permitsTitle("Go")).toBe(true);
+    expect(permitsTitle("Saffron & Sage " + "x".repeat(65))).toBe(true);
+    expect(permitsTitle("Café & Sage")).toBe(true);
+    expect(permitsTitle("S")).toBe(false);
+    expect(permitsTitle("S".repeat(81))).toBe(false);
+    expect(permitsTitle(" Saffron")).toBe(false);
+    expect(permitsTitle("Saffron ")).toBe(false);
+    expect(permitsTitle("Saffron\u0000Sage")).toBe(false);
+    expect(permitsTitle("Saffron\u007fSage")).toBe(false);
+  });
+
+  it("retains an exact 80-character escaped Restaurant display name", async () => {
+    const title = "Saffron & Sage " + "x".repeat(65);
+    expect(title).toHaveLength(80);
+    const { transport } = capturingTransport(
+      restaurantDefinitionSelection({ title }),
+    );
+    const adapter = new OpenAIRequirementInterpreterAdapter({
+      transport,
+      readEnvironment: () => "test-key",
+    });
+
+    await expect(
+      adapter.interpret({
+        brief: "Build a restaurant app named Saffron & Sage.",
+        answers: {},
+      }),
+    ).resolves.toMatchObject({ blueprint: { title } });
+  });
+
+  it("retains an exact Restaurant display name with internal spaces and Unicode", async () => {
+    const title = "Café & Sage";
+    const { transport } = capturingTransport(
+      restaurantDefinitionSelection({ title }),
+    );
+    const adapter = new OpenAIRequirementInterpreterAdapter({
+      transport,
+      readEnvironment: () => "test-key",
+    });
+
+    await expect(
+      adapter.interpret({
+        brief: "Build a restaurant app named Café & Sage.",
+        answers: {},
+      }),
+    ).resolves.toMatchObject({ blueprint: { title } });
+  });
+
+  it.each([1, 81, 200])(
+    "fails closed instead of truncating an explicit %i-character Restaurant display name",
+    async (length) => {
+      const { requests, transport } = capturingTransport(
+        restaurantDefinitionSelection({ title: "S".repeat(length) }),
+      );
+      const adapter = new OpenAIRequirementInterpreterAdapter({
+        transport,
+        readEnvironment: () => "test-key",
+      });
+
+      await expect(
+        adapter.interpret({
+          brief: "Build a restaurant app with an explicit display name.",
+          answers: {},
+        }),
+      ).rejects.toMatchObject({ code: "output_invalid" });
+      expect(requests).toHaveLength(3);
+    },
+  );
+
+  it.each([" Saffron", "Saffron ", "Saffron\u0000Sage", "Saffron\u007fSage"])(
+    "fails closed instead of trimming or accepting an unsafe Restaurant display name",
+    async (title) => {
+      const { requests, transport } = capturingTransport(
+        restaurantDefinitionSelection({ title }),
+      );
+      const adapter = new OpenAIRequirementInterpreterAdapter({
+        transport,
+        readEnvironment: () => "test-key",
+      });
+
+      await expect(
+        adapter.interpret({
+          brief: "Build a restaurant app.",
+          answers: {},
+        }),
+      ).rejects.toMatchObject({ code: "output_invalid" });
+      expect(requests).toHaveLength(3);
+    },
+  );
+
+  it("keeps a requested canonical sample menu in the supported Restaurant default", async () => {
+    // This known provider output exercises the adapter boundary and its
+    // instruction emission. It does not claim that a mocked response proves
+    // model semantic classification.
+    const { requests, transport } = capturingTransport(
+      restaurantDefinitionSelection({ title: "Saffron Table" }),
+    );
+    const adapter = new OpenAIRequirementInterpreterAdapter({
+      transport,
+      readEnvironment: () => "test-key",
+    });
+
+    await expect(
+      adapter.interpret({
+        brief:
+          "Build a restaurant ordering application named Saffron Table with a sample menu customers can browse.",
+        answers: {},
+      }),
+    ).resolves.toMatchObject({
+      blueprint: { title: "Saffron Table" },
+      clarifications: [],
+    });
+    expect(requests[0]?.instructions).toContain(
+      "Treat an explicit request for a sample, demo, or default menu, or generic menu browsing alone, as the existing canonical default; application branding is not menu content.",
+    );
+  });
+
+  it("keeps requested custom menu data fail-closed after an answer", async () => {
+    // Changing the data category, accepting an answered custom-menu request,
+    // or removing the boundary instruction would make this existing
+    // clarification projection stop protecting unbound menu data. The mocked
+    // selection does not prove model classification.
+    const question =
+      "Custom menu items and prices are outside the current restaurant binding. Accept the canonical menu, or retain custom menu data as required?";
+    const { requests, transport } = capturingTransport(
+      restaurantDefinitionSelection({
+        disposition: "needs-clarification",
+        materialQuestions: [{ category: "data", question }],
+      }),
+    );
+    const adapter = new OpenAIRequirementInterpreterAdapter({
+      transport,
+      readEnvironment: () => "test-key",
+    });
+
+    await expect(
+      adapter.interpret({
+        brief:
+          "Build a restaurant with a custom tasting menu including Black Cod priced at 120.",
+        answers: { "q-menu-data": "Keep the custom menu data as required." },
+        clarificationContext: [
+          {
+            key: "q-menu-data",
+            category: "data",
+            defaultPolicy: "required",
+            question,
+            answer: "Keep the custom menu data as required.",
+          },
+        ],
+      }),
+    ).rejects.toMatchObject({ code: "output_invalid" });
+    expect(requests).toHaveLength(3);
+    expect(requests[0]?.instructions).toContain(
+      "An explicit request for a custom or noncanonical menu, or supplied actual dish names or price values, is custom menu data. When either is explicit, it is outside the current canonical binding: return needs-clarification with one consolidated data scope question, and do not encode menu data in title.",
+    );
+  });
+
+  it("keeps explicit custom-menu intent material without supplied menu values", async () => {
+    // This known provider output checks the adapter clarification boundary and
+    // emitted instruction. It does not claim that a mocked response proves
+    // model semantic classification.
+    const question =
+      "Custom menu data is outside the current restaurant binding. Accept the canonical menu, or retain the custom menu as required?";
+    const { requests, transport } = capturingTransport(
+      restaurantDefinitionSelection({
+        disposition: "needs-clarification",
+        materialQuestions: [{ category: "data", question }],
+      }),
+    );
+    const adapter = new OpenAIRequirementInterpreterAdapter({
+      transport,
+      readEnvironment: () => "test-key",
+    });
+
+    await expect(
+      adapter.interpret({
+        brief:
+          "Build a restaurant ordering application that uses my custom menu.",
+        answers: {},
+      }),
+    ).resolves.toMatchObject({
+      clarifications: [{ questions: [{ category: "data", question }] }],
+    });
+    expect(requests[0]?.instructions).toContain(
+      "Treat an explicit request for a sample, demo, or default menu, or generic menu browsing alone, as the existing canonical default; application branding is not menu content.",
+    );
+    expect(requests[0]?.instructions).toContain(
+      "An explicit request for a custom or noncanonical menu, or supplied actual dish names or price values, is custom menu data.",
+    );
   });
 
   it("preserves the generated Appointment envelope through the private provider branch", async () => {

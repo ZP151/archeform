@@ -58,6 +58,12 @@ function restaurantV6Plan() {
   });
 }
 
+function namedRestaurantPlan() {
+  const plan = structuredClone(canonicalPlan());
+  plan.application.name = 'Saffron "Table" 東京';
+  return plan;
+}
+
 async function seedForPlan(plan: ReturnType<typeof canonicalPlan>) {
   const source = renderRestaurantCustomerRuntime(plan).seedModule;
   return (
@@ -108,6 +114,46 @@ async function json(base: string, path: string, init: RequestInit = {}) {
 }
 
 describe("generated Restaurant customer runtime", () => {
+  it("seeds settings from the published application name while preserving USD", async () => {
+    const seed = await seedForPlan(namedRestaurantPlan());
+    expect(seed.settings).toMatchObject({
+      name: 'Saffron "Table" 東京',
+      currency: "USD",
+    });
+    const app = await startRuntime("manager", namedRestaurantPlan());
+    const initial = await json(app.base, "/api/merchant/settings");
+    expect(initial.response.status).toBe(200);
+    expect(initial.body.settings).toMatchObject({
+      name: 'Saffron "Table" 東京',
+      currency: "USD",
+      version: 1,
+    });
+    const updated = await json(app.base, "/api/merchant/settings", {
+      method: "PUT",
+      headers: {
+        "content-type": "application/json",
+        "idempotency-key": "settings-name-update",
+      },
+      body: JSON.stringify({
+        expectedVersion: 1,
+        name: "Saffron & Sage",
+        currency: "USD",
+        taxRate: 0,
+        serviceChargeRate: 0,
+        timezone: "UTC",
+        logoUrl: "",
+        serviceOpen: true,
+      }),
+    });
+    expect(updated.response.status).toBe(200);
+    expect(updated.body.settings).toMatchObject({
+      name: "Saffron & Sage",
+      currency: "USD",
+      version: 2,
+    });
+    await app.started.close();
+  });
+
   it("migrates before health and serves catalog and dish detail", async () => {
     const app = await startRuntime();
     const health = await json(app.base, "/health");

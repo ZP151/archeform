@@ -27,6 +27,14 @@ type PreviewRun = {
   readonly composeProjectName: string;
 };
 
+type PublishedRevisionResponse = {
+  readonly graph?: {
+    readonly graph?: {
+      readonly metadata?: { readonly name?: unknown };
+    };
+  };
+};
+
 const factoryProject = process.env.FACTORY_E2E_FACTORY_PROJECT;
 const controlPlaneBaseUrl = process.env.FACTORY_E2E_CONTROL_PLANE_URL;
 const INTERPRETATION_TIMEOUT_MS = 570_000;
@@ -231,6 +239,26 @@ test("fresh Restaurant Describe automatically delivers a local customer and merc
   let generated: Page | null = null;
 
   try {
+    const publishedName = page
+      .waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          /\/published-revisions$/u.test(new URL(response.url()).pathname),
+        { timeout: LIFECYCLE_RESPONSE_TIMEOUT_MS },
+      )
+      .then(async (response) => {
+        expect(
+          response.ok(),
+          "automatic published graph response",
+        ).toBeTruthy();
+        const body = (await response.json()) as PublishedRevisionResponse;
+        const name = body.graph?.graph?.metadata?.name;
+        if (typeof name !== "string" || name.length === 0) {
+          throw new Error("Automatic published graph response was invalid.");
+        }
+        return name;
+      });
+    void publishedName.catch(() => undefined);
     const compilationStarted = page
       .waitForResponse(
         (response) =>
@@ -376,6 +404,7 @@ test("fresh Restaurant Describe automatically delivers a local customer and merc
 
     const observedCompilationId = await compilationStarted;
     expect(observedCompilationId).toBe(compilationId);
+    const observedPublishedName = await publishedName;
     const observedVerificationRunId = await verificationStarted;
     expect(observedVerificationRunId).toBe(verificationRunId);
     await expect
@@ -444,9 +473,11 @@ test("fresh Restaurant Describe automatically delivers a local customer and merc
 
     generated = await context.newPage();
     expect((await generated.goto(previewOrigin.toString()))?.ok()).toBeTruthy();
-    await expect(
-      generated.getByRole("heading", { level: 1, name: "Maison Aurelia" }),
-    ).toBeVisible();
+    await expect(generated.getByRole("heading", { level: 1 })).toBeVisible();
+    expect(
+      (await generated.getByRole("heading", { level: 1 }).textContent()) ===
+        observedPublishedName,
+    ).toBe(true);
     const dish = new URL(previewOrigin);
     dish.pathname = "/menu/margherita-pizza";
     expect((await generated.goto(dish.toString()))?.ok()).toBeTruthy();

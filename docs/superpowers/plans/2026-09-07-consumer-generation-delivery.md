@@ -537,3 +537,49 @@ The test uses the actual built Node ESM compiler outside Playwright transforms.
 The long-task goal tracks these functional outcomes across bounded deliveries.
 The follow-up repair policy remains unchanged until its existing authority and
 the actual failure path have been assessed.
+
+## D1.8 — show the supplied application name
+
+- [x] Accept ADR-0044 through independent standing review; freeze one serialized
+      engineer and root-owned live/browser acceptance paths in the ledger.
+- [x] Start with focused failures for Published name propagation, escaping,
+      unchanged currency behavior, omitted names and menu refusal.
+- [x] Bind existing validated title/metadata to initial runtime settings and
+      current settings to customer title, shell and hero; preserve merchant edits.
+- [x] Run the actual generated browser with an authored name, then
+      separately verify a real named request through Published Graph and app.
+- [x] Verify menu refusal, retained coarse/default and unsupported-payment
+      boundaries; run relevant package/product checks and one scoped review.
+- [x] Update observed product metrics and deliver a bounded branch commit.
+
+This supplies application branding without extra editing. It is not legal-name
+verification or custom menu/price binding; those remain separate capabilities.
+
+The revised ADR keeps currency unchanged: the frozen canonical input guard
+rejects a Graph currency override. Do not expand that contract in this slice.
+
+Before live acceptance, align the private Restaurant title limit with the
+existing 2..80-character application-name contract. The scoped review found
+the wider private limit could cause late failure; preserve the completed
+runtime/browser evidence while closing this interpretation boundary defect.
+
+## D1.9 — supply the initial menu in the same request (next)
+
+ADR-0045 supplies the contract for this slice; its exact proposed text has
+standing decision acceptance recorded in the ledger. Begin production
+implementation only after D1.8 delivery and a serialized write assignment.
+
+- [ ] Freeze the validated menu parameter contract and serialized write owner.
+- [ ] Add failing boundary and atomic-binding tests, then carry supplied USD
+      names/prices from interpretation through the Product request and stored
+      review into Graph seed data and its scenario mirror.
+- [ ] Compile both the unchanged canonical menu and a bounded supplied menu;
+      show local placeholders for omitted photos using existing icon assets.
+- [ ] Prove a supplied third item can be ordered at its exact supplied price,
+      fulfilled, and seen by the customer; preserve manager updates and role
+      denial. Reject incomplete or unsupported required details before delivery.
+- [ ] Run focused integration checks, the required contract acceptance sequence
+      once, and distinct real supplied-menu/unsupported-currency cases without
+      retries; preserve failures and exact runtime cleanup evidence.
+- [ ] Deliver the bounded branch commit and continue the frozen ten-case
+      Restaurant benchmark; do not expand template counts ahead of usefulness.

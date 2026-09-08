@@ -57,6 +57,18 @@ function restaurantV6Input() {
   return input;
 }
 
+function namedRestaurantInput() {
+  const input = canonicalInput();
+  const graph = input.publishedGraph.graph;
+  graph.metadata.name = "Saffron Table";
+  input.publishedGraph.graphHash = hashApplicationGraphV3(graph);
+  input.compositionLock = createCapabilityCompositionLock({
+    graphChecksum: input.publishedGraph.graphHash,
+    selections: graph.integration.compositionSelections ?? [],
+  });
+  return input;
+}
+
 function compile(input = canonicalInput()) {
   return generateRestaurantProductApplicationBundle(input);
 }
@@ -77,6 +89,20 @@ async function loadGeneratedProductApp(input = canonicalInput()) {
 }
 
 describe("Restaurant product V3 target", () => {
+  it("uses the Graph-derived name and preserves USD in the dual-surface runtime seed", async () => {
+    const { root, app } = await loadGeneratedProductApp(namedRestaurantInput());
+    const seed = await import(
+      `${pathToFileURL(join(root, "src/runtime/seed.mjs")).href}?v=${Date.now()}`
+    );
+    expect(seed.restaurantSeed.settings).toMatchObject({
+      name: "Saffron Table",
+      currency: "USD",
+    });
+    const customer = app.renderCustomerPage("/", seed.restaurantSeed);
+    expect(customer).toContain("<title>Saffron Table</title>");
+    expect(customer).toContain("Saffron Table");
+  });
+
   it("assembles one deterministic dual-surface bundle with shared runtime and trusted starts", () => {
     const first = compile();
     const second = compile();

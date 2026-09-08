@@ -27,8 +27,13 @@ test("customers can read orders and refresh visible fulfilment without generatin
           "--input-type=module",
           "-e",
           `import { generateRestaurantProductApplicationBundle } from './packages/compiler/dist/index.js';
+       import { hashApplicationGraphV3 } from './packages/graph/dist/index.js';
+       import { createCapabilityCompositionLock } from './packages/capabilities/dist/index.js';
        import { restaurantProductV3Fixture } from './packages/compiler/test/fixtures/restaurant-product-v3.ts';
-       const { publishedGraph, compositionLock } = restaurantProductV3Fixture();
+       const { publishedGraph } = restaurantProductV3Fixture();
+       publishedGraph.graph.metadata.name = 'Saffron & Sage';
+       publishedGraph.graphHash = hashApplicationGraphV3(publishedGraph.graph);
+       const compositionLock = createCapabilityCompositionLock({ graphChecksum: publishedGraph.graphHash, selections: publishedGraph.graph.integration.compositionSelections ?? [] });
        process.stdout.write(JSON.stringify(generateRestaurantProductApplicationBundle({ publishedGraph, compositionLock })));`,
         ],
         { encoding: "utf8", maxBuffer: 5 * 1024 * 1024, timeout: 30_000 },
@@ -51,7 +56,7 @@ test("customers can read orders and refresh visible fulfilment without generatin
     const runtime = await import(
       pathToFileURL(join(root, "src/server.mjs")).href
     );
-    for (const principalRole of ["customer", "kitchen"]) {
+    for (const principalRole of ["customer", "kitchen", "manager"]) {
       servers.push(
         await runtime.startRestaurantServer({
           statePath: join(root, "state.json"),
@@ -67,6 +72,7 @@ test("customers can read orders and refresh visible fulfilment without generatin
     });
     const customer = `http://127.0.0.1:${servers[0]!.port}`;
     const kitchen = `http://127.0.0.1:${servers[1]!.port}`;
+    const manager = `http://127.0.0.1:${servers[2]!.port}`;
     const assetFailures: string[] = [];
     const pageErrors: string[] = [];
     const externalRequests: string[] = [];
@@ -82,6 +88,25 @@ test("customers can read orders and refresh visible fulfilment without generatin
       if (response.status() >= 400)
         assetFailures.push(new URL(response.url()).pathname);
     });
+    await page.goto(`${customer}/orders`);
+    await expect(page).toHaveTitle("Saffron & Sage");
+    const settingsResponse = await request.get(
+      `${manager}/api/merchant/settings`,
+    );
+    expect(settingsResponse.ok()).toBeTruthy();
+    const settings = (await settingsResponse.json()).settings;
+    expect(settings).toMatchObject({ name: "Saffron & Sage", currency: "USD" });
+    await expect(
+      page.getByText("Saffron & Sage", { exact: true }),
+    ).toBeVisible();
+    await page.goto(customer);
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: "Saffron & Sage",
+        exact: true,
+      }),
+    ).toBeVisible();
     await page.goto(`${customer}/orders`);
     await page.waitForLoadState("networkidle");
     const styles = await request.get(`${customer}/customer/styles.css`);
@@ -121,7 +146,7 @@ test("customers can read orders and refresh visible fulfilment without generatin
     await expect(
       page.locator(".customer-orders-empty svg.lucide-receipt-text"),
     ).toBeVisible();
-    const output = resolve("acceptance-artifacts/d1.6");
+    const output = resolve("acceptance-artifacts/d1.8");
     await mkdir(output, { recursive: true });
     await page.setViewportSize({ width: 390, height: 900 });
     await page.screenshot({
@@ -239,6 +264,46 @@ test("customers can read orders and refresh visible fulfilment without generatin
         });
       }
     }
+    const updatedSettings = await request.put(
+      `${manager}/api/merchant/settings`,
+      {
+        data: {
+          expectedVersion: settings.version,
+          name: "Saffron & Sage Evening",
+          currency: settings.currency,
+          taxRate: settings.taxRate,
+          serviceChargeRate: settings.serviceChargeRate,
+          timezone: settings.timezone,
+          logoUrl: settings.logoUrl,
+          serviceOpen: settings.serviceOpen,
+        },
+        headers: { "idempotency-key": "orders-browser-name" },
+      },
+    );
+    expect(updatedSettings.ok()).toBeTruthy();
+    const customerPort = servers[0]!.port;
+    await servers[0]!.close();
+    servers[0] = await runtime.startRestaurantServer({
+      statePath: join(root, "state.json"),
+      host: "127.0.0.1",
+      port: customerPort,
+      principalRole: "customer",
+    });
+    await page.goto(`${customer}/orders`);
+    await expect(page).toHaveTitle("Saffron & Sage Evening");
+    await expect(
+      page.getByText("Saffron & Sage Evening", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText("Ready", { exact: true })).toBeVisible();
+    await expect(page.getByText("USD 14.00", { exact: true })).toBeVisible();
+    await page.goto(customer);
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: "Saffron & Sage Evening",
+        exact: true,
+      }),
+    ).toBeVisible();
     expect(
       browserMutations,
       "order reads and refresh must not submit mutations",
@@ -251,6 +316,9 @@ test("customers can read orders and refresh visible fulfilment without generatin
       JSON.stringify({
         providerCalls: 0,
         statusVisible: true,
+        suppliedNameVisible: true,
+        renamedAfterRestart: true,
+        orderRetainedAfterRestart: true,
         viewports: [320, 390, 768, 1440],
         assetFailures: 0,
         pageErrors: 0,

@@ -112,16 +112,27 @@ unsupported follow-ups retain the accepted fail-closed behavior.
 
 Focused interpreter 51/51, full adapters 86/10, affected Workbench 36/4,
 types/lint/build, scoped review P0/P1/P2 0/0/0 and exact local cleanup passed.
-The enclosing bounded branch commit, parent `e237ed75`, records delivery. No
-whole-repository, main, release or hosted claim is implied. D1.8 next binds the
-existing Graph application name into visible generated branding/settings;
-custom menu/price binding remains separate. Its decision review is in progress.
+D1.7 was delivered as `2db84e41`; local and remote branch tips matched. No
+whole-repository, main, release or hosted claim is implied. D1.8 is accepted and binds the
+existing Graph application name into visible generated branding/settings under
+accepted name-only ADR-0044. Focused and actual generated-browser checks pass,
+including name changes and order persistence after a customer server restart;
+real named interpretation-to-app acceptance passed with zero questions in
+21.054 seconds. The retained coarse request also reached verified ready with
+zero questions/handoffs in 21.031 seconds. Custom-menu and live-payment requests
+each retained exactly one material question and zero delivery mutations. All
+four real cases passed with zero retries on the corrected source; earlier
+failed diagnostics remain in the ledger. Scoped review is P0/P1/P2 0/0/0,
+final adapters are 100/100, and the previously passing 2,334-test product lane
+is reused with affected checks. Exact local preview and factory cleanup passed.
+The enclosing bounded branch commit records D1.8 delivery; these four cases
+do not establish the frozen ten-case benchmark or hosted reliability.
 
-The next business priority remains the observed 14-question unsupported-payment interaction:
-show a concise capability boundary and one meaningful explicit choice while
-preserving unsatisfied requirements. Then continue required parameter binding,
-ten frozen Restaurant cases and persistence. Full D1 and a mature hosted
-consumer platform are not declared complete.
+The next business priority is supplied menu/price binding, followed by ten
+frozen Restaurant cases and broader persistence evidence. The previous
+14-question payment interaction is retained historical evidence; D1.7's
+one-question correction is delivered. Full D1 and a mature hosted consumer
+platform are not declared complete.
 
 Readiness PR #3 is merged into main; the latest inspected main CI run
 `33756827488` remains failed in the Node 22.11 Candidate test lane. The latest

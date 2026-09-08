@@ -38,7 +38,14 @@ export const restaurantDefinitionSelectionSchema = z
     definitionKey: z.literal("restaurant-ordering"),
     disposition: z.enum(["supported-default", "needs-clarification"]),
     requirementId: graphKeySchema,
-    title: safeBusinessTextSchema.max(200),
+    title: safeBusinessTextSchema
+      .min(2)
+      .max(80)
+      .refine(
+        (value) =>
+          value.trim() === value && !/[\u0000-\u001f\u007f]/.test(value),
+        "Restaurant display names must be trimmed and exclude control characters.",
+      ),
     outcome: safeBusinessTextSchema.max(2000),
     materialQuestions: z.array(materialQuestionSchema).max(30),
   })

@@ -409,6 +409,8 @@ const supportedRestaurantDefaultInstruction = [
   "For every Restaurant brief, use this scoped canonical Restaurant definition when deciding its definition-selection disposition:",
   `<supported-restaurant-default>${JSON.stringify(supportedRestaurantDefaultGuide())}</supported-restaurant-default>`,
   "Apply every omitted canonical Restaurant detail as its own supported default, independently of whether another requested capability needs clarification. Every Restaurant result returns definition-selection with generatedInterpretation null; do not produce a full blueprint.",
+  "When a Restaurant brief explicitly supplies an application display name, place that exact validated display name in the existing definition-selection title. A Restaurant display name must be trimmed safe business text from 2 through 80 characters. It must have no leading or trailing whitespace and no control characters. When no application display name is explicit, keep the validated provider title and do not ask a naming question. If an explicit display name is invalid, return needs-clarification with one material question that asks for a valid shorter display name; never truncate, replace, or encode the invalid name in title. If an answer still lacks a valid display name, retain needs-clarification so the existing bounded fail-closed follow-up behavior applies. Do not infer a legal or corporate identity from an application display name.",
+  "Treat an explicit request for a sample, demo, or default menu, or generic menu browsing alone, as the existing canonical default; application branding is not menu content. An explicit request for a custom or noncanonical menu, or supplied actual dish names or price values, is custom menu data. When either is explicit, it is outside the current canonical binding: return needs-clarification with one consolidated data scope question, and do not encode menu data in title. If an answer retains custom menu data as required, remain needs-clarification so the existing bounded fail-closed follow-up behavior applies.",
   "An explicit contradiction remains unresolved. Do not suppress material access, privacy, business-rule, data or compliance, or integration questions. Never silently discard a material question or impose a count target to return supported-default. For an unsupported live payment or external capability, clearly state the current supported limitation and ask one meaningful scope decision for each genuinely independent material difference. When an unavailable external capability is the only explicit difference from the canonical Restaurant default, return exactly one integration material question that states the current supported limitation and asks whether to accept the supported scope or retain that capability as required. Do not infer downstream policy, data, authorization, implementation, processor, setup, or configuration questions from that one unavailable external capability. Preserve an access, privacy, data, or business-rule decision when the brief separately makes it explicit. Do not ask for provider setup, credentials, configuration, or integration implementation details that the supported product cannot implement. The simulated money movement and no external side effects default do not satisfy an explicit live payment request.",
   "A Restaurant follow-up may return supported-default only when the supplied answer explicitly accepts the supported scope and no unresolved material requirement remains. If an answer continues to require unsupported live payment or another external capability, retain needs-clarification.",
   "Only non-Restaurant products follow the generated-blueprint interpretation rules.",
@@ -851,7 +853,13 @@ const providerInterpretationResultJsonSchema: Record<string, unknown> = {
               enum: ["supported-default", "needs-clarification"],
             },
             requirementId: { type: "string", pattern: graphKeyJsonPattern },
-            title: { type: "string", minLength: 1, maxLength: 200 },
+            title: {
+              type: "string",
+              minLength: 2,
+              maxLength: 80,
+              pattern:
+                "^[^\\s\\u0000-\\u001F\\u007F][^\\u0000-\\u001F\\u007F]*[^\\s\\u0000-\\u001F\\u007F]$",
+            },
             outcome: { type: "string", minLength: 1, maxLength: 2000 },
             materialQuestions: {
               type: "array",
