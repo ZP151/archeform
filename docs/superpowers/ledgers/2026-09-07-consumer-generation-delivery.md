@@ -981,3 +981,127 @@ adds less than 15 KB of serialized SVG strings (focused budget assertion), not
 the full library, to each generated customer module. Imagery/photo selection is
 not part of this icon slice; the broader business priorities remain material
 question reduction, required parameters, reliability and hosted usability.
+
+### D1.7 — reduce unsupported-capability clarification effort (active)
+
+The founder requests continued execution and an explicit long-task goal. Root
+activates that goal against the accepted consumer roadmap, starting at
+`e237ed75`. The retained live-payment case required 14 questions, including four
+integration questions. This slice preserves canonical defaults independently
+for omitted Restaurant details when another capability is unsupported. Ask one
+scope decision per independent material difference, state unsupported capability
+limits clearly, and avoid provider setup or credentials questions for unavailable
+integrations. Preserve all actual independent access, privacy, business and data
+decisions; no question truncation, keyword classifier or silent substitution.
+
+Engineer `d17_clarification` exclusively owns
+`packages/adapters/src/requirements/openai-interpreter.ts` and
+`packages/adapters/test/requirement-interpreter.test.ts`. Root owns the existing
+`e2e/restaurant-definition-selection.spec.ts`, PM plan/ledger/status and Git.
+The frozen scope is a prompt-policy correction within accepted ADR-0040: no
+private/public schema, Graph, runtime, deadline or repair-policy change. Focused
+failing tests precede implementation. A discovered follow-up repair rejection
+is being assessed separately before broadening this boundary.
+
+Acceptance requires focused regressions, one scoped independent review and a
+bounded live probe with safe count/timing evidence. Mock transport tests establish
+instruction/projection behavior only; they do not establish live-model semantic
+reliability. The authored single unsupported-payment probe targets one material
+scope question with no delivery mutations. Update the product scorecard with
+observed results and deliver the accepted slice before proceeding to parameter
+binding. Full D1, frozen-case reliability and hosted usability remain open.
+
+In parallel, Tech Lead `d15_design_decision` owns only proposed
+`docs/adr/adr-0044-restaurant-business-parameter-binding.md` for D1.8. Assess
+existing binding seams and the smallest useful business-name/menu parameter
+slice. This is decision preparation only; no shared or product writes are
+authorized before exact proposal review and PM acceptance. D1.7's frozen
+prompt-only contract is independent and remains unchanged.
+
+D1.7 local GREEN: focused interpreter 51/51, full adapter package 86/10 in
+4.52 s, affected Workbench interpretation/clarification/orchestration 36/4 in
+4.49 s, adapter types/lint and diff checks passed. Existing mixed authorization,
+data, integration and role preservation remains covered. ADR-0040 PRO-004
+explicitly retains bounded fail-closed behavior after a reiterated unsupported
+answer; changing that return path is deferred to a separate decision.
+
+The live negative uses an isolated Workbench-only local Compose project, with
+the control-plane endpoint offline and fixture mode disabled. This focused
+probe measures actual interpretation and visible clarification, including any
+attempted delivery requests; it does not claim full lifecycle/runtime acceptance.
+Only status, count and timing evidence is emitted. The first build started
+before the engineer's final instruction freeze and is superseded before any
+provider call. That first tested interpreter source SHA-256 is
+`1c64ffc08e1752e1592131254f4c8a3134b38d790d77afec0c836b5bb74afc73`.
+
+Initial focused RED was 47 passed / 3 failed out of 50: the independent-default
+and explicit supported-scope follow-up instruction assertions were absent.
+After restoring mixed-category coverage, RED was 50 passed / 1 failed out of
+51 for the explicit no-discard/no-count-target instruction. Both preceded
+their minimal prompt corrections and the final 51/51 GREEN.
+
+The first real D1.7 probe failed the exact-one acceptance: HTTP 200 in 21,161 ms,
+two questions including one integration question, zero delivery attempts,
+25.1 s test duration. The image source hash matches the frozen implementation;
+fixture mode is off. This reduces the historical 14/4 interaction but is not an
+accepted fix. Independent review records one P1 against the unmet criterion.
+No raw questions were retained, so the other category cannot be reconstructed.
+Root authorizes one explicitly diagnostic provider invocation after adding
+allowlisted category-only evidence. It is not a new passing acceptance sample
+or a retry that erases the first failure. Product source remains frozen while
+the engineer assesses instruction interactions read-only.
+
+The diagnostic invocation also failed: HTTP 200 in 22,605 ms, six questions
+(`integration`, `business-rule`, `data`, `authorization`, `data`, `business-rule`),
+one integration question and zero delivery attempts; test duration 23.2 s.
+These two observations demonstrate unstable over-questioning, not a reliable
+two-question improvement. The authored brief contains only one noncanonical
+requirement; broad ambiguity guidance still allows the model to infer downstream
+decisions about a capability the platform cannot implement. Root authorizes one
+prompt-only correction on the same two engineer-owned files: distinguish such
+inferred consequences from independently requested material differences, with
+a single-payment scope example. Preserve every actual independent requirement,
+private/public shapes and existing fail-closed behavior. One fresh acceptance
+probe follows the final frozen source and focused checks; no assertion is relaxed.
+
+D1.8 proposal scope is narrowed before decision freeze: first propagate the
+already-authoritative Graph application name into generated branding/settings,
+instead of adding a parameter sidecar, database fields or an arbitrary two-item
+menu contract. The Tech Lead verifies this existing seam and records remaining
+menu/price binding separately. No broader parameter architecture is authorized.
+
+The bounded D1.7 fix first produced focused RED 49 passed / 2 failed, then
+51/51 GREEN. Scoped review additionally identified that the exact-one
+`integration` instruction must explicitly apply to external capabilities so
+non-external business-rule differences keep their category. The mechanical
+correction produced RED 50 passed / 1 failed, then focused 51/51, full adapters
+86/10, types/lint and diff checks passed. Independent scoped recheck confirms
+that finding closed, with a fresh 51/51 run in 4.22 s. Final source SHA-256:
+`bb7678be9261be48703de90ba7fe1557b1c052e26e488360a52839ffe14768c8`.
+The live criterion remains open until the final-source image is exercised.
+
+ADR-0044's proposed narrow name/currency binding is under independent standing
+decision review by `d1_decision_review`; it is not accepted or assigned for
+implementation. Its initial proposal SHA-256 is
+`ac6b6014c8639f26760f5dbd416dd2bba29667102c15a613405aca445cf7a1e0`.
+
+### D1.7 accepted and branch delivery
+
+Final-source image and configured real provider are verified; fixture mode is
+off. The fresh authored live-payment case passed 1/1, zero retries: HTTP 200,
+12,840 ms to one visible `integration` question, zero delivery attempts, 14.2 s
+test / 15.4 s runner. Both earlier failures remain above; no general reliability
+claim follows from one pass. The exact local project was removed and root
+confirmed zero owned containers, networks and volumes plus the closed probe
+port. No generated app or cloud resource was created.
+
+Independent `d1_decision_review` returns final P0/P1/P2 0/0/0. Focused RED/GREEN,
+full adapters 86/10, affected Workbench 36/4, types/lint, actual production image
+build, final live probe and cleanup complete this ordinary prompt-only slice.
+Root also reran final focused 51/51 in 4.65 s. Unchanged compiler/runtime full
+regressions retain D1.6 evidence; they are not claimed freshly executed here.
+PM accepts D1.7 and authorizes one normal controller commit/push with parent
+`e237ed75`, followed by local/remote equality verification. The pending D1.8 ADR
+remains separately owned proposal work, outside this bounded product commit.
+Full D1, required business binding, frozen reliability and hosted usability stay
+open, and the long-task goal remains active for the next functional delivery.

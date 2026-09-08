@@ -99,6 +99,24 @@ Independent scoped review passed P0/P1/P2 0/0/0 with a fresh 24/24 run and
 inspection of all four screenshots. D1.6 is accepted; the enclosing branch
 commit, parent `bdd54f28`, records delivery. Full D1/hosted readiness remains open.
 
+D1.6 was delivered as `e237ed75`. The founder's long-task goal remains active:
+reduce unsupported-request clarification effort, bind business parameters, then
+validate the frozen business cases. D1.7 is accepted: a single unsupported
+external capability no longer reopens unrelated canonical defaults or inferred
+implementation decisions. The final real live-payment case passed 1/1 with
+zero retries: **one integration scope question in 12.840 seconds**, zero delivery
+attempts, 14.2 s test duration. Earlier two- and six-question failures remain
+recorded; one passing case is not a reliability benchmark. Explicit independent
+access, privacy, data and business-rule questions remain, and reiterated
+unsupported follow-ups retain the accepted fail-closed behavior.
+
+Focused interpreter 51/51, full adapters 86/10, affected Workbench 36/4,
+types/lint/build, scoped review P0/P1/P2 0/0/0 and exact local cleanup passed.
+The enclosing bounded branch commit, parent `e237ed75`, records delivery. No
+whole-repository, main, release or hosted claim is implied. D1.8 next binds the
+existing Graph application name into visible generated branding/settings;
+custom menu/price binding remains separate. Its decision review is in progress.
+
 The next business priority remains the observed 14-question unsupported-payment interaction:
 show a concise capability boundary and one meaningful explicit choice while
 preserving unsatisfied requirements. Then continue required parameter binding,

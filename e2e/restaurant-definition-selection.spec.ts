@@ -56,8 +56,38 @@ test("a live-payment Restaurant request remains a business clarification", async
         'ol.clarification-questions input[data-clarification-category="integration"]',
       )
       .count();
-    expect(integrationQuestionCount).toBeGreaterThan(0);
-    expect(await questions.count()).toBeGreaterThan(0);
+    const questionCount = await questions.count();
+    const questionCategories = await questions.evaluateAll((inputs) => {
+      const allowed = new Set([
+        "authorization",
+        "visibility",
+        "role",
+        "business-rule",
+        "data",
+        "integration",
+        "experience.visual-style",
+      ]);
+      return inputs.map((input) => {
+        const category = input.getAttribute("data-clarification-category");
+        return category !== null && allowed.has(category)
+          ? category
+          : "unknown";
+      });
+    });
+    console.info(
+      "FACTORY_RESTAURANT_SELECTION_NEGATIVE_EVIDENCE",
+      JSON.stringify({
+        elapsedToClarificationMs: Date.now() - submittedAt,
+        questionCount,
+        questionCategories,
+        integrationQuestionCount,
+        deliveryMutations,
+      }),
+    );
+    // This authored brief has one unsupported capability. Other canonical
+    // decisions are omitted and must not be reopened as unrelated questions.
+    expect(integrationQuestionCount).toBe(1);
+    expect(questionCount).toBe(1);
     await expect(
       page.getByRole("region", { name: "Restaurant delivery" }),
     ).toHaveCount(0);
@@ -65,15 +95,6 @@ test("a live-payment Restaurant request remains a business clarification", async
       page.getByRole("link", { name: "Open local app" }),
     ).toHaveCount(0);
     expect(deliveryMutations).toBe(0);
-    console.info(
-      "FACTORY_RESTAURANT_SELECTION_NEGATIVE_EVIDENCE",
-      JSON.stringify({
-        elapsedToClarificationMs: Date.now() - submittedAt,
-        questionCount: await questions.count(),
-        integrationQuestionCount,
-        deliveryMutations,
-      }),
-    );
   } finally {
     await finishDiagnostics();
   }

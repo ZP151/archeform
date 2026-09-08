@@ -520,3 +520,20 @@ in the broader consumer roadmap; do not equate a visual slice with full D1.
 Browser command prerequisite: run `pnpm --filter @factory/compiler build`, then
 `node node_modules/@playwright/test/cli.js test e2e/restaurant-orders.spec.ts --workers=1 --retries=0`.
 The test uses the actual built Node ESM compiler outside Playwright transforms.
+
+## D1.7 — preserve defaults when a capability is unsupported
+
+- [x] Identify the prompt rule that reopens canonical decisions and freeze the
+      two-file adapter ownership plus root-owned live probe in the ledger.
+- [x] Add focused failing instruction/transport regressions, then apply canonical
+      defaults independently of the overall Restaurant disposition.
+- [x] Preserve unsupported requirements and independent material questions while
+      consolidating each unavailable capability into one explicit scope decision.
+- [x] Verify affected regressions and one bounded live-payment browser case;
+      record actual effort, latency and absence of unintended delivery actions.
+- [x] Obtain one scoped review, update product-goal evidence and commit/push the
+      accepted iteration. Continue required business parameter binding next.
+
+The long-task goal tracks these functional outcomes across bounded deliveries.
+The follow-up repair policy remains unchanged until its existing authority and
+the actual failure path have been assessed.

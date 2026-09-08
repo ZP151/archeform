@@ -631,7 +631,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       "Only non-Restaurant products return generated-blueprint",
     );
     expect(requests[0]?.instructions).toContain(
-      "For Restaurant follow-ups, reevaluate definition fit and preserve every still-material question",
+      "For Restaurant follow-ups, reevaluate definition fit and retain needs-clarification for every still-material question or new material difference",
     );
     expect(requests[0]?.instructions).toContain(
       "For generated-blueprint results, do not repeat, rephrase, or progressively reveal additional questions",
@@ -823,7 +823,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
     }
   });
 
-  it("preserves a continued unsupported Restaurant question after an answer", async () => {
+  it("fails closed when a Restaurant answer still requires unsupported live payment", async () => {
     const question = "Should checkout use a live payment provider?";
     const { requests, transport } = capturingTransport(
       restaurantDefinitionSelection({
@@ -852,6 +852,12 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       }),
     ).rejects.toMatchObject({ code: "output_invalid" });
     expect(requests).toHaveLength(3);
+    expect(requests[0]?.instructions).toContain(
+      "A Restaurant follow-up may return supported-default only when the supplied answer explicitly accepts the supported scope and no unresolved material requirement remains.",
+    );
+    expect(requests[0]?.instructions).toContain(
+      "If an answer continues to require unsupported live payment or another external capability, retain needs-clarification.",
+    );
   });
 
   it("steers every blueprint cross-reference to the declared Graph-key grammar", async () => {
@@ -1131,7 +1137,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
     );
   });
 
-  it("keeps material Restaurant questions unresolved while defaulting only canonical details", async () => {
+  it("keeps independent material Restaurant questions unresolved", async () => {
     // A future question filter must not silently remove access, data, or live
     // integration decisions merely because the supported default is grounded.
     const { requests, transport } = capturingTransport(
@@ -1183,13 +1189,95 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       "Which staff role may cancel a submitted order?",
     ]);
     expect(requests[0]?.instructions).toContain(
-      "Treat omitted canonical details as resolved standard defaults",
+      "Apply every omitted canonical Restaurant detail as its own supported default, independently of whether another requested capability needs clarification.",
     );
     expect(requests[0]?.instructions).toContain(
-      "Do not suppress material access, privacy, business-rule, data or compliance, or integration questions",
+      "For an unsupported live payment or external capability, clearly state the current supported limitation and ask one meaningful scope decision for each genuinely independent material difference.",
     );
     expect(requests[0]?.instructions).toContain(
-      "A request for live payment remains an unresolved integration decision",
+      "Do not ask for provider setup, credentials, configuration, or integration implementation details that the supported product cannot implement.",
+    );
+    expect(requests[0]?.instructions).toContain(
+      "Never silently discard a material question or impose a count target to return supported-default.",
+    );
+    expect(requests[0]?.instructions).toContain(
+      "Preserve an access, privacy, data, or business-rule decision when the brief separately makes it explicit.",
+    );
+  });
+
+  it("keeps canonical defaults while one unsupported payment scope decision remains", async () => {
+    const question =
+      "Live payment is not supported. Use simulated checkout, or keep live payment as a required scope?";
+    const { requests, transport } = capturingTransport(
+      restaurantDefinitionSelection({
+        disposition: "needs-clarification",
+        materialQuestions: [{ category: "integration", question }],
+      }),
+    );
+    const adapter = new OpenAIRequirementInterpreterAdapter({
+      transport,
+      readEnvironment: () => "test-key",
+    });
+
+    const interpretation = await adapter.interpret({
+      brief: "Build a restaurant ordering application with live payment.",
+      answers: {},
+    });
+
+    expect(interpretation.spec.openQuestions).toEqual([
+      { category: "integration", question },
+    ]);
+    expect(
+      interpretation.clarifications.flatMap((clarification) =>
+        clarification.questions.map((item) => item.question),
+      ),
+    ).toEqual([question]);
+    expect(requests[0]?.instructions).toContain(
+      "Apply every omitted canonical Restaurant detail as its own supported default, independently of whether another requested capability needs clarification.",
+    );
+    expect(requests[0]?.instructions).toContain(
+      "When an unavailable external capability is the only explicit difference from the canonical Restaurant default, return exactly one integration material question that states the current supported limitation and asks whether to accept the supported scope or retain that capability as required.",
+    );
+    expect(requests[0]?.instructions).toContain(
+      "Do not infer downstream policy, data, authorization, implementation, processor, setup, or configuration questions from that one unavailable external capability.",
+    );
+  });
+
+  it("accepts the supported Restaurant scope only after an explicit follow-up answer", async () => {
+    const question =
+      "Live payment is not supported. Use simulated checkout, or keep live payment as a required scope?";
+    const answer =
+      "Use the supported simulated checkout; live payment is not required.";
+    const { requests, transport } = capturingTransport(
+      restaurantDefinitionSelection(),
+    );
+    const adapter = new OpenAIRequirementInterpreterAdapter({
+      transport,
+      readEnvironment: () => "test-key",
+    });
+
+    const interpretation = await adapter.interpret({
+      brief: "Build a restaurant ordering application with live payment.",
+      answers: { "q-live-payment-scope": answer },
+      clarificationContext: [
+        {
+          key: "q-live-payment-scope",
+          category: "integration",
+          defaultPolicy: "required",
+          question,
+          answer,
+        },
+      ],
+    });
+
+    expect(interpretation.spec.productType).toBe("restaurant-ordering");
+    expect(interpretation.clarifications).toEqual([]);
+    expect(JSON.parse(requests[0]!.input)).toMatchObject({
+      answers: { "q-live-payment-scope": answer },
+      clarificationContext: [{ question, answer }],
+    });
+    expect(requests[0]?.instructions).toContain(
+      "A Restaurant follow-up may return supported-default only when the supplied answer explicitly accepts the supported scope and no unresolved material requirement remains.",
     );
   });
 
