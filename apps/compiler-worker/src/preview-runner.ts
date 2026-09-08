@@ -13,6 +13,10 @@ import {
   win32,
 } from "node:path";
 
+import {
+  PreviewPortReservationFailure,
+  reservePreviewPorts,
+} from "./preview-port-reservation.js";
 import type { PreviewDispatch } from "./preview-dispatch-client.js";
 
 export type PreviewRuntimeRequest = Omit<PreviewDispatch, "action">;
@@ -359,6 +363,7 @@ async function waitForWebReadiness(
 }
 
 type ActivePreviewStart = {
+  preDockerCleanupComplete?: boolean;
   readonly controller: AbortController;
   readonly settled: Promise<void>;
   settle(): void;
@@ -598,7 +603,7 @@ async function previewEnvironment(
   composeFile: string,
   artifacts: PreviewRuntimeRequest["artifacts"],
   project: string,
-  includePorts: boolean,
+  includePorts: false | { readonly webPort: number; readonly apiPort: number },
   missingTokenFailure: PreviewFailureCode,
   profile: "acceptance" | undefined,
 ): Promise<Readonly<Record<string, string>>> {
@@ -611,7 +616,12 @@ async function previewEnvironment(
   if (profile !== undefined) assertAcceptanceProfile(compose);
   const environment: Record<string, string> = {
     FACTORY_COMPOSE_PROJECT_NAME: project,
-    ...(includePorts ? { FACTORY_WEB_PORT: "0", FACTORY_API_PORT: "0" } : {}),
+    ...(includePorts
+      ? {
+          FACTORY_WEB_PORT: String(includePorts.webPort),
+          FACTORY_API_PORT: String(includePorts.apiPort),
+        }
+      : {}),
     ...dockerHostLookupEnvironment(),
   };
   if (!compose.toString("utf8").includes(restaurantDemoTokenComposeContract))
@@ -699,7 +709,7 @@ export async function startPreviewRun(
       join(sourceDirectory, "docker-compose.yml"),
       request.artifacts,
       project,
-      true,
+      false,
       "preview_start_failed",
       profile,
     );
@@ -726,6 +736,50 @@ export async function startPreviewRun(
         "preview_artifact_failed",
         error instanceof PreviewRunFailure && error.cleanupComplete,
       );
+    }
+    let reservedPorts: { readonly webPort: number; readonly apiPort: number };
+    let reservationReleased = false;
+    try {
+      const reservation = await reservePreviewPorts(
+        activeStart.controller.signal,
+      );
+      reservedPorts = reservation;
+      environment = {
+        ...environment,
+        FACTORY_WEB_PORT: String(reservation.webPort),
+        FACTORY_API_PORT: String(reservation.apiPort),
+      };
+      await reservation.release();
+      reservationReleased = true;
+      if (activeStart.controller.signal.aborted)
+        throw previewAbortReason(activeStart.controller.signal.reason);
+    } catch (error) {
+      // No Docker operation is safe until every reservation has closed.
+      if (activeStart.controller.signal.aborted) {
+        if (
+          !reservationReleased &&
+          !(
+            error instanceof PreviewPortReservationFailure &&
+            error.cleanupComplete
+          )
+        )
+          activeStart.preDockerCleanupComplete = false;
+        throw previewAbortReason(activeStart.controller.signal.reason);
+      }
+      let cleanupComplete = false;
+      activeStart.preDockerCleanupComplete = false;
+      try {
+        await removePreviewDirectory(directory);
+        cleanupComplete =
+          error instanceof PreviewPortReservationFailure &&
+          error.cleanupComplete;
+      } catch {
+        cleanupComplete = false;
+      }
+      activeStart.preDockerCleanupComplete = cleanupComplete;
+      if (activeStart.controller.signal.aborted)
+        throw previewAbortReason(activeStart.controller.signal.reason);
+      throw startFailure(error, cleanupComplete);
     }
     try {
       try {
@@ -781,6 +835,13 @@ export async function startPreviewRun(
             activeStart.controller.signal,
           ),
         );
+        if (
+          webPort !== reservedPorts.webPort ||
+          apiPort !== reservedPorts.apiPort
+        )
+          throw new Error(
+            "Discovered preview ports do not match their reservation.",
+          );
       } catch (error) {
         throw stageFailure(error, "preview_port_discovery_failed");
       }
@@ -871,6 +932,10 @@ export async function stopPreviewRun(
         new PreviewRunFailure("preview_start_cancelled"),
       );
       await activeStart.settled;
+      if (activeStart.preDockerCleanupComplete !== undefined) {
+        if (activeStart.preDockerCleanupComplete) return;
+        throw new PreviewRunFailure("preview_stop_failed");
+      }
     }
     await verifyComposeArtifact(composeFile, request.artifacts, profile);
     const environment = await previewEnvironment(

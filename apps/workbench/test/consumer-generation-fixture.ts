@@ -28,6 +28,10 @@ export type ConsumerGenerationFixtureOptions = {
   readonly holdChoice?: boolean;
   readonly publishUnavailable?: boolean;
   readonly previewUrl?: string | null;
+  readonly failOnce?: "interpretation" | "planning";
+  readonly deliveryFailure?: "compilation" | "verification" | "preview";
+  readonly askScope?: boolean;
+  readonly holdInterpretation?: boolean;
 };
 
 export type ConsumerGenerationFixture = {
@@ -35,6 +39,7 @@ export type ConsumerGenerationFixture = {
   readonly requests: string[];
   readonly selectedAlternativeKeys: string[];
   readonly releaseChoice: () => void;
+  readonly releaseInterpretation: () => void;
 };
 
 function response(
@@ -128,6 +133,14 @@ export async function installConsumerGenerationFixture(
   const pageErrors: string[] = [];
   const requests: string[] = [];
   const selectedAlternativeKeys: string[] = [];
+  let interpretationAttempts = 0;
+  let planningAttempts = 0;
+  let releaseInterpretation: () => void = () => {};
+  const interpretationGate = options.holdInterpretation
+    ? new Promise<void>((resolve) => {
+        releaseInterpretation = resolve;
+      })
+    : null;
   let releaseChoice: () => void = () => {};
   const choiceGate = options.holdChoice
     ? new Promise<void>((resolve) => {
@@ -144,10 +157,55 @@ export async function installConsumerGenerationFixture(
       return;
     }
     requests.push("interpret");
+    interpretationAttempts += 1;
+    await interpretationGate;
+    if (options.failOnce === "interpretation" && interpretationAttempts === 1) {
+      await route.fulfill(
+        response(
+          {
+            error: {
+              apiVersion: "factory.requirement-interpretation-error/v1",
+              code: "requirement.provider_unavailable",
+            },
+          },
+          503,
+        ),
+      );
+      return;
+    }
+    let nextInterpretation = interpretation;
+    if (options.askScope && interpretationAttempts === 1) {
+      const question = {
+        category: "business-rule" as const,
+        question: "Is this for restaurant table ordering?",
+      };
+      const spec = { ...interpretation.spec, openQuestions: [question] };
+      const checksum = hashRequirementSpec(spec);
+      nextInterpretation = {
+        spec,
+        blueprint: {
+          ...interpretation.blueprint,
+          requirementChecksum: checksum,
+        },
+        clarifications: [
+          {
+            apiVersion: "factory.composition-clarification/v1",
+            requirementChecksum: checksum,
+            questions: [
+              {
+                ...question,
+                key: "restaurant-scope",
+                defaultPolicy: "required",
+              },
+            ],
+          },
+        ],
+      };
+    }
     await route.fulfill(
       response({
         apiVersion: "factory.requirement-interpretation-result/v1",
-        interpretation,
+        interpretation: nextInterpretation,
         businessParameters: canonicalRestaurantMenuParameters(),
       }),
     );
@@ -203,6 +261,11 @@ export async function installConsumerGenerationFixture(
       path === "/product/requirements/review-restaurant/plan"
     ) {
       record("plan");
+      planningAttempts += 1;
+      if (options.failOnce === "planning" && planningAttempts === 1) {
+        await route.fulfill(response({}, 503));
+        return;
+      }
       await route.fulfill(response({ alternatives: plannedAlternatives }));
       return;
     }
@@ -271,6 +334,12 @@ export async function installConsumerGenerationFixture(
     }
     if (method === "GET" && path === `/compilations/${compilationId}`) {
       record("compilation-status");
+      if (options.deliveryFailure === "compilation") {
+        await route.fulfill(
+          response({ ...compilation("queued"), result: { status: "failed" } }),
+        );
+        return;
+      }
       await route.fulfill(response(compilation("succeeded")));
       return;
     }
@@ -304,15 +373,45 @@ export async function installConsumerGenerationFixture(
           verificationRunId,
           compilationId,
           profileKey: null,
-          status: "succeeded",
+          status:
+            options.deliveryFailure === "verification" ? "failed" : "succeeded",
           stepIds: ["customer-journey"],
           evidenceDigest:
             "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
           evidence: {
-            steps: [{ stepId: "customer-journey", status: "passed" }],
+            steps: [
+              {
+                stepId: "customer-journey",
+                status:
+                  options.deliveryFailure === "verification"
+                    ? "failed"
+                    : "passed",
+              },
+            ],
           },
-          diagnosis: null,
-          draftDiff: null,
+          diagnosis:
+            options.deliveryFailure === "verification"
+              ? { code: "binding.denial_policy_not_bound" }
+              : null,
+          draftDiff:
+            options.deliveryFailure === "verification"
+              ? {
+                  apiVersion: "factory.draft-diff/v1",
+                  baseDraftRevisionId: draftRevisionId,
+                  baseGraphHash: "sha256:" + "a".repeat(64),
+                  operations: [
+                    {
+                      op: "add-binding",
+                      capability: "core.identity-policy",
+                      graphSymbol: "graph.domain.order",
+                    },
+                  ],
+                  affectedPaths: ["/domain/order"],
+                  rationaleCode: "binding.denial-policy-not-bound",
+                  summary:
+                    "Bind the identity policy so declared denials are enforced.",
+                }
+              : null,
         }),
       );
       return;
@@ -330,6 +429,10 @@ export async function installConsumerGenerationFixture(
       path === `/compilations/${compilationId}/preview-runs/current`
     ) {
       record("preview-status");
+      if (options.deliveryFailure === "preview") {
+        await route.fulfill(response({ ...preview(null), status: "failed" }));
+        return;
+      }
       await route.fulfill(response(preview(previewUrl)));
       return;
     }
@@ -349,5 +452,11 @@ export async function installConsumerGenerationFixture(
     await page.route(pattern, controlPlaneRoute);
   }
 
-  return { pageErrors, requests, selectedAlternativeKeys, releaseChoice };
+  return {
+    pageErrors,
+    requests,
+    selectedAlternativeKeys,
+    releaseChoice,
+    releaseInterpretation,
+  };
 }

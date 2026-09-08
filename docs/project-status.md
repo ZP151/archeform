@@ -154,6 +154,23 @@ cross-business families. The previous
 one-question correction is delivered. Full D1 and a mature hosted consumer
 platform are not declared complete.
 
+D1.9 delivery is verified at `1c525c5e`. D1.10 is accepted for branch delivery: eight deterministic
+page-recovery cases and the five existing consumer browser cases pass. The
+four real request scenarios returned three expected outcomes on the first
+attempt: two of three supported generation scenarios completed all declared
+checks, and the one unsupported-payment scenario was handled honestly. The
+coarse scenario generated in 25.483 seconds but failed its restart-address
+check. A provider-free reproduction confirms Docker reallocates both web/API
+ports after same-container restart while order data remains intact. The accepted ADR-0046 correction now passes provider-free restart acceptance:
+both original addresses, the complete order and customer-visible Ready state
+survive. Real bind contention fails closed with exact cleanup. Full worker
+regression passes 271 tests after correcting reservation-failure directory
+cleanup and concurrent cancellation; the earlier independent QA passes 89
+affected tests. Final Sol recheck is clean; the enclosing bounded commit is the
+D1.10 delivery checkpoint. H1 hosted delivery and D2 intake/approval are next.
+This does not turn the
+first sample into 10/10 reliability or establish hosted delivery.
+
 Readiness PR #3 is merged into main; the latest inspected main CI run
 `33756827488` remains failed in the Node 22.11 Candidate test lane. The latest
 branch checkpoint `34141740418` at `dfc0f71d` also failed Node 22.11 Candidate

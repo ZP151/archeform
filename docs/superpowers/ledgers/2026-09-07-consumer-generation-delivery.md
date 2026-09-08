@@ -37,18 +37,18 @@ read again on September 7; recheck the remote tip before future integration.
 
 ## Task board and write ownership
 
-| Task                           | Status                                       | Owner / write boundary                                                                                  | Next evidence                                                                 |
-| ------------------------------ | -------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| D0 planning and tracking       | Accepted and delivered                       | Root PM: this ledger, plan, reset/research docs, testing guide, status/roadmap/delivery-policy pointers | Reviewed coherent roadmap and safe metric definitions                         |
-| ADR-0037 proposal              | Accepted under founder standing policy       | Tech Lead `regression_scope`; independent reviewer `regression_decision_review`                         | Decision record below; implementation review remains separate                 |
-| D0 regression helper           | Accepted and delivered                       | Engineer `regression_implementation`: `scripts/regression.mjs` and `scripts/regression.test.mjs` only   | Focused RED/GREEN, both actual lanes, one independent implementation review   |
-| D1 first complete ordering app | Default automation accepted; broader D1 open | Root integration; completed D1 writers and exact path handoffs recorded below                           | D1.7 delivered; finish name binding, supplied menu, ten cases and persistence |
-| H1 hosted usability            | Planned with D1                              | Tech Lead proposal first; implementation unassigned                                                     | Smallest identity/persistence/hosting decision and external prerequisites     |
-| D2 intake/approval             | Planned                                      | Unassigned; reuse existing profiles and capability boundaries                                           | Full submit/review/result journey in the common entry                         |
-| D3 appointment                 | Planned                                      | Unassigned; schedule contract gaps first                                                                | Conflict/cancel/timezone tests and 30-case cross-family evaluation            |
-| D4 ordinary-user validation    | Planned                                      | PM/QA, invited participants                                                                             | 5–8 non-programmer sessions; structured observations                          |
-| D5 catalog expansion           | Conditional                                  | PM + research + implementation, disjoint assignments                                                    | Demand, reusable coverage, first-pass evidence and maintenance cost           |
-| B1 baseline repair / release   | Separate blocked baseline                    | Existing governance; no writer assigned here                                                            | Specific disposition and a repair that passes unchanged concurrency tests     |
+| Task                           | Status                                       | Owner / write boundary                                                                                  | Next evidence                                                               |
+| ------------------------------ | -------------------------------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| D0 planning and tracking       | Accepted and delivered                       | Root PM: this ledger, plan, reset/research docs, testing guide, status/roadmap/delivery-policy pointers | Reviewed coherent roadmap and safe metric definitions                       |
+| ADR-0037 proposal              | Accepted under founder standing policy       | Tech Lead `regression_scope`; independent reviewer `regression_decision_review`                         | Decision record below; implementation review remains separate               |
+| D0 regression helper           | Accepted and delivered                       | Engineer `regression_implementation`: `scripts/regression.mjs` and `scripts/regression.test.mjs` only   | Focused RED/GREEN, both actual lanes, one independent implementation review |
+| D1 first complete ordering app | Default automation accepted; broader D1 open | Root integration; completed D1 writers and exact path handoffs recorded below                           | D1.9 delivered; D1.10 accepted for branch delivery; H1 and D2 next          |
+| H1 hosted usability            | Planned with D1                              | Tech Lead proposal first; implementation unassigned                                                     | Smallest identity/persistence/hosting decision and external prerequisites   |
+| D2 intake/approval             | Planned                                      | Unassigned; reuse existing profiles and capability boundaries                                           | Full submit/review/result journey in the common entry                       |
+| D3 appointment                 | Planned                                      | Unassigned; schedule contract gaps first                                                                | Conflict/cancel/timezone tests and 30-case cross-family evaluation          |
+| D4 ordinary-user validation    | Planned                                      | PM/QA, invited participants                                                                             | 5–8 non-programmer sessions; structured observations                        |
+| D5 catalog expansion           | Conditional                                  | PM + research + implementation, disjoint assignments                                                    | Demand, reusable coverage, first-pass evidence and maintenance cost         |
+| B1 baseline repair / release   | Separate blocked baseline                    | Existing governance; no writer assigned here                                                            | Specific disposition and a repair that passes unchanged concurrency tests   |
 
 Do not write outside an assignment. A shared-contract change stops its parallel
 wave for one consolidated decision. Routine fixes inside the frozen scope do
@@ -63,20 +63,20 @@ Planning targets apply to the three-family pilot. They are not current
 performance claims. Synthetic benchmark and real-user observations are reported
 separately. Show numerator/denominator per family as well as pooled results.
 
-| Metric                       | Definition                                                                                                                           | Pilot target                                                                                      | Current value                                                                                                      | Evidence owner / next update                    |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
-| First-result success         | First generated result completes all declared core role journeys with no user correction or developer repair / all eligible attempts | At least 90%, at least 27/30 benchmark cases; no family below 8/10                                | D1.9 supplied-menu interpretation passed twice; first harness failed, corrected delivery passed; no benchmark rate | QA; first D1 ten-case run, then D3 30-case run  |
-| User questions               | Business questions answered before usable result; count each question even when batched                                              | Median at most 1; at most 3 for ordinary supported requests                                       | D1.9 supplied menu: 0; missing-price and GBP: 1 each; prior 14-question failure retained                           | Workbench owner; D1 structured journey events   |
-| Required technical decisions | Framework, schema, provider, manual compilation or similar decisions required of the ordinary user                                   | 0                                                                                                 | 0 in D1.9 supplied-menu delivery                                                                                   | UX/QA; D1 journey observation                   |
-| Active user effort           | Time typing/choosing/correcting from request start until first successful business task; machine wait reported separately            | Establish baseline in D1; reduce each slice without reducing success                              | Unmeasured                                                                                                         | PM/QA; D1 and invited-user sessions             |
-| Time to usable app           | Accepted request until ready address plus successful core task; includes clarification, generation, verification and deployment wait | Prepared environment p50 at most 5 min, p95 at most 10 min                                        | D1.9: 25.577 s verified ready, 26.367 s fulfilled order; prepared local environment, no percentile                 | Platform/QA; D1 local and H1 hosted separately  |
-| Cold-start delivery          | Same clock with first provisioning/install included                                                                                  | Record p50/p95 and failures separately; no hidden exclusion                                       | Unmeasured                                                                                                         | Platform; H1                                    |
-| Developer rescue             | Attempts requiring staff to edit code/configuration or steer the user / all attempts                                                 | 0 in accepted benchmark; pilot observation reported honestly                                      | Unmeasured                                                                                                         | PM/QA; D1/D4                                    |
-| Platform repair              | Automatic repair count and elapsed time before usable result                                                                         | Bounded by the accepted repair policy; visible in measurements                                    | Unmeasured                                                                                                         | Platform; D1                                    |
-| Durable hosted success       | Intended user completes task from another device; state survives supported restart; unauthorized user is denied                      | Every accepted hosted pilot case                                                                  | Unmeasured                                                                                                         | Platform/QA; H1                                 |
-| Executable coverage          | Distinct definitions with bound recipes and passing end-to-end business acceptance; cases and families counted separately            | 3 families / 30 benchmark cases; then build toward 30 distinct definitions before broad expansion | Restaurant canonical and supplied menus (1/3/100) validated locally; broader families and hosted coverage open     | PM; D1/D2/D3/D5                                 |
-| Validated demand             | Participants independently completing a useful task they actually need                                                               | 5–8 invited non-programmers; report counts and unmet needs                                        | Unmeasured                                                                                                         | PM; D4                                          |
-| Feedback cost                | Duration of focused test, smoke, product and existing full checks, separately                                                        | Initial budgets: smoke 30 s, warm product 120 s; optimize after measuring                         | D1.9 product 2,385 tests / 151 files, fresh compiler 218.80 s; generated-browser matrix 10.9 s                     | Integration owner; every meaningful lane change |
+| Metric                       | Definition                                                                                                                           | Pilot target                                                                                      | Current value                                                                                                  | Evidence owner / next update                    |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| First-result success         | First generated result completes all declared core role journeys with no user correction or developer repair / all eligible attempts | At least 90%, at least 27/30 benchmark cases; no family below 8/10                                | D1.10 first sample: 2/3 supported complete; unsupported handled 1/1; restart failure retained                  | QA; first D1 ten-case run, then D3 30-case run  |
+| User questions               | Business questions answered before usable result; count each question even when batched                                              | Median at most 1; at most 3 for ordinary supported requests                                       | D1.10 coarse/detailed: 0; ambiguous scope/live payment: 1 each; earlier failures retained                      | Workbench owner; D1 structured journey events   |
+| Required technical decisions | Framework, schema, provider, manual compilation or similar decisions required of the ordinary user                                   | 0                                                                                                 | 0 in all four D1.10 request scenarios                                                                          | UX/QA; D1 journey observation                   |
+| Active user effort           | Time typing/choosing/correcting from request start until first successful business task; machine wait reported separately            | Establish baseline in D1; reduce each slice without reducing success                              | Unmeasured                                                                                                     | PM/QA; D1 and invited-user sessions             |
+| Time to usable app           | Accepted request until ready address plus successful core task; includes clarification, generation, verification and deployment wait | Prepared environment p50 at most 5 min, p95 at most 10 min                                        | D1.10 ready: coarse 25.483 s, supplied 26.437 s, one-answer 121.579 s; local, no percentile                    | Platform/QA; D1 local and H1 hosted separately  |
+| Cold-start delivery          | Same clock with first provisioning/install included                                                                                  | Record p50/p95 and failures separately; no hidden exclusion                                       | Unmeasured                                                                                                     | Platform; H1                                    |
+| Developer rescue             | Attempts requiring staff to edit code/configuration or steer the user / all attempts                                                 | 0 in accepted benchmark; pilot observation reported honestly                                      | D1.10: 1/3 supported scenarios required the restart-address runtime correction                                 | PM/QA; D1/D4                                    |
+| Platform repair              | Automatic repair count and elapsed time before usable result                                                                         | Bounded by the accepted repair policy; visible in measurements                                    | Unmeasured                                                                                                     | Platform; D1                                    |
+| Durable hosted success       | Intended user completes task from another device; state survives supported restart; unauthorized user is denied                      | Every accepted hosted pilot case                                                                  | Unmeasured                                                                                                     | Platform/QA; H1                                 |
+| Executable coverage          | Distinct definitions with bound recipes and passing end-to-end business acceptance; cases and families counted separately            | 3 families / 30 benchmark cases; then build toward 30 distinct definitions before broad expansion | Restaurant canonical and supplied menus (1/3/100) validated locally; broader families and hosted coverage open | PM; D1/D2/D3/D5                                 |
+| Validated demand             | Participants independently completing a useful task they actually need                                                               | 5–8 invited non-programmers; report counts and unmet needs                                        | Unmeasured                                                                                                     | PM; D4                                          |
+| Feedback cost                | Duration of focused test, smoke, product and existing full checks, separately                                                        | Initial budgets: smoke 30 s, warm product 120 s; optimize after measuring                         | D1.9 product 2,385 tests / 151 files, fresh compiler 218.80 s; generated-browser matrix 10.9 s                 | Integration owner; every meaningful lane change |
 
 At 30 cases, tail-latency estimates are directional; publish the observed
 distribution and failures instead of claiming a stable production percentile.
@@ -1639,3 +1639,265 @@ order/merchant loop. It does not claim multi-currency, menu CRUD, ten-case
 reliability or hosted maturity. D1.10 is next: preserve user effort through
 failure/recovery, execute the frozen cases with separated evidence types, then
 move product investment toward H1 and D2. The long-task goal remains active.
+
+D1.9 delivered as `1c525c5e70d995c8d9c672631b80cc6c81ec5413`; push succeeded
+and `git ls-remote` matched local HEAD exactly. The delivery tree was clean.
+
+### D1.10 recovery browser slice — active
+
+The existing plan and O06–O09 definitions authorize this provider-free slice.
+Freeze public/Graph/runtime/provider contracts. Reuse the existing consumer
+fixture and browser configuration; no new framework or UI asset is introduced.
+PM assigns a bounded Spark worker only
+`apps/workbench/test/consumer-generation-fixture.ts` and
+`apps/workbench/e2e/consumer-recovery.pw.ts` to exercise real page behavior
+with authored intercepted responses. Root owns PM evidence, Git and any
+subsequently demonstrated production correction. No other writer is active.
+The worker must not edit production, relax assertions, start Docker, call a
+provider or commit. Report failures for root's focused diagnosis. Use one
+scoped review after this in-contract slice; retain D1.9 evidence.
+
+Root separately owns `e2e/consumer-restaurant.spec.ts` for the real benchmark
+harness. Before any call, freeze four independent authored request scenarios:
+coarse Restaurant ordering (O01, omitted-content O03, customer denial O05 and
+post-order restart O10), detailed supplied-menu ordering (O02, existing D1.9
+test), unavailable live payment (O04, existing selection test), and ambiguous
+orders followed by one Restaurant scope answer (O06). Count four request
+scenarios, not seven independent generations; O06 has an initial and one
+explicit clarification interpretation. The three deterministic fault cases
+O07/O08/O09 have a separate denominator. No previous D1.9 pass is relabeled as
+a newly executed benchmark result. Freeze zero questions for the supported
+coarse/detailed requests and exactly one material scope decision for O04/O06.
+
+Root also owns the one-line page-close addition in
+`e2e/restaurant-definition-selection.spec.ts`: close the live question page
+before Playwright failure context can persist generated question text. The
+same cleanup applies to the revised consumer benchmark. Diagnostic output
+contains only fixed case IDs, counts, codes and timings. No real call has run
+for D1.10 yet.
+
+The bounded Spark worker made no edits or test runs and reported no blocker
+after the controller requested a handoff. To avoid idle delivery time, root
+takes over its two fixture/browser paths. The worker has stopped with no
+background processes. No new product authority or test contract is introduced.
+
+Root's eight new provider-free browser cases passed in 57.0 s; the five
+existing consumer cases passed in 19.7 s. The verification failure fixture was
+strengthened to carry a valid reviewable Draft Diff and failed evidence step;
+its no-auto-approval browser case passed again in 12.7 s. Workbench types and
+changed-file formatting/diff checks pass. Independent scoped Spark review is
+clean after preserving case-specific screenshot names and explicit sequential
+`mode: default`; unlike serial groups, a failed case does not skip the next.
+
+The first real benchmark batch completed with 3/4 passing request scenarios,
+zero retries, in 4.7 minutes. Coarse O01/O03/O05/O10 reached verified ready in
+25.483 s with zero questions/handoffs but failed the original-address restart
+assertion. O06 asked one data scope question, accepted the one authored answer,
+and reached verified ready in 121.579 s / kitchen Ready in 124.211 s, with no
+technical handoff. O04 produced one integration question in 19.858 s and zero
+delivery mutations (24.3 s test). O02 supplied-menu generation reached ready
+in 26.437 s / order Ready in 27.207 s (39.8 s test). Preserve the failed coarse
+scenario in the first-result denominator; do not report a 10/10 combined rate.
+
+Provider-free diagnosis reused the failed scenario's immutable compilation
+`cmtsx28na000dp44t464q7oga`, without another interpretation. Docker restart
+changed the generated web binding from port 32804 to 32805 while the stored
+preview URL stayed unchanged. A second provider-free order/restart probe
+confirmed the complete order and exact USD price survive at the new port.
+The failure is the local address contract, not demonstrated data loss.
+
+This is an operability trigger. Stop production changes and dispatch Tech Lead
+for proposed ADR-0046: a bounded, reversible way for same-container local
+preview restart to keep its selected public web/API ports. Preserve loopback
+binding, immutable artifacts, existing environment/token allowlists, cleanup,
+timeouts and fail-closed handling. No package/provider/cloud/security expansion.
+Root owns the pending acceptance harness and PM/Git; Tech Lead may write only
+the proposed ADR. An exact separate standing review is required before a
+runtime writer can implement. Completed interpretation/recovery evidence stays
+valid and must not be repeatedly rerun.
+
+Root owns new `e2e/restaurant-preview-restart.spec.ts` as the focused
+provider-free correction acceptance: reuse an already verified immutable
+compilation, place/pay/prepare an order, restart the exact derived web/API
+containers, assert both original URLs, complete order equality and visible
+Ready state, then stop the exact preview. Its actual RED failed in 28.0 s:
+both public URLs changed; provider calls were zero. This is the correction
+loop for O10, not a fresh real-generation sample or an erased first failure.
+
+### D1.10 ADR-0046 acceptance and runtime assignment
+
+PM records founder standing acceptance (2026-09-01 policy) of exact ADR-0046
+SHA-256 `29f36f2c7f63857f8364bcd2cb841de3640b8f80bec9a000e6bde8d101b45a92`.
+Separate qualified Sol reviewer `d110_port_standing_review` returned P0/P1/P2
+0/0/0 and `APPROVED_FOR_STANDING_ACCEPTANCE: yes`. The reviewer was neither
+Tech Lead nor an implementation writer. Recommendation KEEP is bounded and
+reversible; it changes no package, Graph/API/data, generated artifact or
+external authority. The proposal remains immutable; this ledger is acceptance.
+
+PM assigns existing strongest runtime writer `d19_menu_implementation` only
+`apps/compiler-worker/src/preview-port-reservation.ts`,
+`apps/compiler-worker/src/preview-runner.ts`,
+`apps/compiler-worker/test/preview-port-reservation.test.ts`, and
+`apps/compiler-worker/test/preview-runner.test.ts`. Root retains all E2E,
+fixture, PM and Git paths. No parallel shared-contract writer is authorized.
+Begin focused RED/GREEN, then worker tests/types/lint/build. No provider calls,
+Docker operations or Git writes by the runtime writer. Root executes existing
+immutable-compilation acceptance only after the implementation is frozen and
+reviewed. Reuse valid D1.9 package evidence under delivery-policy rather than
+rerunning unrelated repository gates; the standing reviewer explicitly
+confirmed this interpretation of VER-008. Main's separate baseline remains red.
+
+The runtime writer froze all four assigned paths after a focused runner RED
+(6 failed / 44 passed, 1.99 s) and full worker GREEN (261/261, 19 files,
+8.91 s). Typecheck, lint and build passed. The controller verified the reported
+four SHA-256 values and retained the exact local manifest. Real-socket cases
+include immediate acquisition abort and destruction of accepted connections;
+runner coverage includes duplicate rejection, cancellation and fixed-port
+contention. Root is building only the worker image; interpretation and generated
+artifacts remain unchanged.
+
+Fresh reviewer dispatch reached the agent-thread limit. PM assigns available
+independent strongest reviewer `d12_interpretation` (not this runtime or E2E
+writer) the bounded task review over the four runtime paths plus root's new
+restart test and ignored real bind-race probe. Prior clean Spark review of the
+four recovery/benchmark paths is reused. No new general audit is authorized.
+
+The independent bounded task review returned clean P0/P1/P2 0/0/0, including
+the four frozen runtime paths and both root acceptance harnesses. PM dispatches
+independent Terra `d19_qa` for affected worker regression only. Root rebuilt and
+recreated only the isolated D1.10 worker; both changed source and emitted JS
+hashes matched the running container (4/4). CP and Workbench are retained from
+the completed first benchmark; no new interpretation is required. Root's
+provider-free restart acceptance is running against the same original immutable
+Compilation. Real bind-race and exact cleanup acceptance follow serially.
+
+### D1.10 corrected runtime acceptance and independent QA
+
+Provider-free restart GREEN: `e2e/restaurant-preview-restart.spec.ts` passed
+1/1 in 29.3 s (28.3 s test), zero retries, using the original failed scenario's
+immutable Compilation. Both original public URLs were unchanged after restarting
+the same web/API containers. The full fulfilled order, exact USD total, merchant
+record and customer-visible Ready state survived. No interpretation/provider
+call ran. This corrects O10 functionality but does not erase its first failure.
+
+The separately reviewed real bind-race probe ran the actual worker adapter and
+Docker Compose against the same immutable artifact manifest. A competing
+loopback listener claimed the chosen web port immediately before Compose up.
+The operation failed with `preview_compose_up_failed`, no ready result and
+`cleanupComplete: true`. Exact project containers/networks/volumes and preview
+directory were absent; the unused API port was bindable. The unrelated listener
+and existing factory PostgreSQL Compose sentinel retained their identities and
+liveness. The probe then closed its own listener. This was provider-free.
+
+Cleanup was verified before deleting the isolated acceptance environment:
+PreviewRun stopped, both original public listeners absent, zero preview
+directories and `verify-no-preview-resources.mjs` exit 0. Root then ran the exact
+D1.10 Compose project `down --volumes`; containers/networks/volumes are 0/0/0,
+and ports 5174/15180/13020/15440/16380 have no listeners. Other worktrees and
+Compose projects were not removed.
+
+Independent Terra QA `d19_qa` returned CLEAN with no P0/P1. Its fresh affected
+worker run passed 89/89 in four files, 2.17 s; typecheck, lint and diff checks
+passed. QA reviewed and accepted root's serialized actual runtime/cleanup
+evidence without another Docker run. One final bounded independent Sol judgment
+is assigned to `d19_release`; no full-project audit, provider retry or main
+integration is part of this task.
+
+D1.10 evidence remains separated: 8 new deterministic recovery browser cases
+plus 5 existing consumer cases; 4 first-result real request scenarios, of which
+2/3 supported scenarios completed all checks and 1/1 unsupported scenario was
+handled honestly; a separate corrected provider-free restart pass and bind-race
+pass. No combined 10/10 first-result reliability rate is claimed. Local same-
+container restart does not establish hosted, host/daemon restart or recreation
+durability.
+
+### D1.10 final review correction — pre-Docker directory cleanup
+
+Sol final review found one confirmed P1: acquisition/release failure occurs
+after immutable artifacts are materialized, but the pre-Docker catch did not
+remove the derived preview directory. Ordinary queue failure reporting does not
+invoke stop; fixture-finally cleanup masked this leak in existing tests. PM
+keeps D1.10 pending and assigns the same four-path runtime writer a focused fix.
+Remove only the owned materialized directory on non-cancelled reservation
+failure, retain concurrent-stop cancellation ownership, and report cleanupComplete
+only when listener closure and directory removal are both proven. Unknown
+listener-close state remains false even when the directory was removed.
+
+Add actual failing assertions before fixture teardown for acquire/release,
+removal failure and unrelated-source preservation. No shared API, dependency,
+generated artifact or new decision is required. Reuse successful restart and
+bind-race runtime evidence because this correction changes only the previously
+unexercised pre-Docker failure branch; rerun affected worker tests and the same
+reviewer's single finding recheck. No new whole audit or paid call is warranted.
+
+The same Sol reviewer could not be resumed: both follow-up and message tools
+returned the agent-thread limit. To avoid a workflow-only delivery block, PM
+assigns available independent Sol `d12_definition_decision` the single finding
+recheck. Its earlier authorship was ADR-0045, not the current ADR-0046 or this
+implementation; it owns no D1.10 runtime/E2E changes. This is a read-only Sol
+acceptance judgment, not another ADR or a whole-branch audit. The already clean
+scope outside the confirmed P1 remains accepted evidence.
+
+The P1 correction reproduced both directory-absence failures (2/2 RED,
+0.787 s), then four cleanup-status/removal-fault failures (4/4 RED, 0.893 s).
+Focused GREEN is 73/73 in 1.93 s; final worker regression is 265/265 in 19
+files, 7.03 s. Typecheck/lint/build all passed. The helper's internal error
+records only proven listener cleanup; the runner removes the exact derived
+directory and combines both facts. Generic errors, listener-close uncertainty
+and forced directory-removal failure remain cleanupComplete false. Tests assert
+source/unrelated directory preservation and zero Docker before fixture cleanup.
+The controller verified all four final file hashes and retained a separate
+final freeze manifest. The earlier image/runtime acceptance remains explicitly
+pre-P1-fix evidence of unchanged successful paths, reused with the final
+failure-path checks; no fresh final-source Docker run is claimed.
+
+The scoped Sol recheck found a cancellation race in that correction: Stop can
+arrive while the new asynchronous directory removal is pending, wait for Start,
+then incorrectly fail verification of the already removed Compose file. PM
+keeps the same writer and four-path scope. Add a controlled removal barrier RED
+and an internal active-start cleanup outcome so waiting Stop succeeds only for
+proven closed listeners plus removed exact directory. Distinguish normal Stop
+ownership from failed/uncertain pre-Docker cleanup; uncertainty cannot fall
+through to Compose down and be falsely reported as complete. Public contracts
+and the previously tested successful restart/bind-contention paths stay frozen.
+
+The cancellation interleaving reproduced 3/3 focused failures in 1.06 s using
+an asynchronous removal barrier. Final worker GREEN is 271/271 across 19 files
+in 7.00 s, including 79 focused reservation/runner cases; types/lint/build pass.
+The internal active-start outcome now distinguishes normal Stop ownership,
+proven pre-Docker cleanup and uncertain cleanup. Waiting Stop returns success
+only for proven closure and removal; uncertainty fails without Docker. Start
+rechecks cancellation after removal. Tests cover all four listener-closure /
+directory-removal combinations and typed/unknown uncertain cancellation.
+Controller verified the final four hashes. Only the same Sol race/P1 recheck
+remains; successful runtime evidence is reused with these fresh failure checks.
+
+### D1.10 PM acceptance and controller delivery
+
+Independent Sol `d12_definition_decision` returned final PASS on the exact
+four final hashes: no remaining finding in the assigned P1 cleanup/cancellation
+scope. The original directory-leak finding and its cancellation interleaving
+are both closed; earlier clean task-review, independent QA and the unaffected
+scope of Sol review remain valid. Final affected evidence is 271 worker tests /
+19 files, including 79 focused reservation/runner cases, plus types/lint/build.
+The actual provider-free restart and bind-race successes are retained with an
+explicit unchanged-success-path boundary. Exact environment cleanup is proven.
+No P0/P1/P2 remains in this accepted bounded slice.
+
+PM accepts D1.10 and authorizes root as sole Git writer to commit exactly the
+13 owned changed/new paths with delivered parent
+`1c525c5e70d995c8d9c672631b80cc6c81ec5413`, then push
+`codex/consumer-delivery-roadmap` and verify exact local/remote tip equality.
+The enclosing bounded commit is the D1.10 delivery checkpoint. No main merge,
+repository release, tag, cloud action or hosted maturity is authorized or
+claimed. The current long-task objective is fulfilled once branch delivery is
+verified: unsupported-question reduction, initial name/menu binding and frozen
+first-family reliability validation have been delivered with measured limits.
+
+Product investment now moves to the plan's H1 hosted delivery decision and D2
+intake/approval journey, reusing existing profiles and runtime behavior. Keep
+user questions, developer rescue and useful first results ahead of extra
+Restaurant polish or catalog-count expansion. The first real sample remains
+2/3 supported successes plus unsupported 1/1; corrected runtime acceptance does
+not rewrite that measurement. Ordinary-user trials, cold starts, cross-device
+hosting and the separate main Candidate baseline remain open.

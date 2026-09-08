@@ -113,31 +113,37 @@ fixtures and runtime behavior in D2/D3 instead of starting again.
 - [x] Author 10 structured ordering cases covering coarse intent, supplied
       business detail, safe omitted details, unavailable integration, and recovery.
       Record intent attributes and expected outcomes, never captured raw prompts.
-- [ ] Add a failing Workbench journey proving the current manual technical
+- [x] Add a failing Workbench journey proving the current manual technical
       handoffs prevent automatic completion. Define the success screen and error
       states in business language before editing behavior.
-- [ ] Use existing requirement interpretation and recipe selection; apply safe
+- [x] Use existing requirement interpretation and recipe selection; apply safe
       defaults to appearance and optional content. Ask only about access or rules
       that materially change the product. Never default private data to public.
-- [ ] Connect existing lifecycle operations through one platform-owned journey.
+- [x] Connect existing lifecycle operations through one platform-owned journey.
       Check required decisions first if orchestration introduces a shared API or
       authority contract. Freeze the contract before assigning parallel writers.
-- [ ] Show live preview and usable app together; separate readiness from a
+- [x] Show live preview and usable app together; separate readiness from a
       screenshot or successful build. Present one actionable recovery choice when
       bounded automatic recovery cannot finish.
-- [ ] Prove customer submits -> merchant receives -> merchant fulfills ->
+- [x] Prove customer submits -> merchant receives -> merchant fulfills ->
       customer sees status, plus duplicate submission and unauthorized action
       denial. Make the generated data persist across the supported local restart.
-- [ ] Verify mobile at 390 px, tablet at 768 px, desktop at 1440 px; keyboard
+- [x] Verify mobile at 390 px, tablet at 768 px, desktop at 1440 px; keyboard
       completion and meaningful empty/loading/error states. Reuse the existing
       Home/template Playwright patterns and generated runtime journey tests.
-- [ ] Run focused tests, product regression, and relevant local acceptance;
+- [x] Run focused tests, product regression, and relevant local acceptance;
       record first-result usefulness, questions, interventions, time and blockers.
 
 **Exit:** 10/10 defined core journeys work in the supported prepared local
 environment; no required technical screens, no developer repair for these
 cases, and no concealed external-service prerequisites. Hosted usability
 remains pending H1. No new Restaurant feature backlog is a prerequisite.
+
+The implementation and local functional evidence below cover these work items.
+The first D1.10 real sample retains 2/3 supported successes and one corrected
+restart defect; it does not satisfy a 10/10 first-result reliability claim.
+Carry that quality metric into cross-family evaluation instead of delaying H1
+and D2 for repeated unchanged Restaurant samples.
 
 ### D1.1 execution slice — automatic completion of the supported default
 
@@ -608,34 +614,68 @@ report their denominators and latency separately. The latter can establish
 orchestration behavior but cannot raise the real-model first-result success
 rate. Previously passing cases are regression evidence, not new benchmark runs.
 
-## D1.10 — verify recovery without making users repeat work (next)
+## D1.10 — verify recovery without making users repeat work (accepted)
 
 Keep the existing O01–O10 definitions. This slice first closes browser-level
 recovery coverage, then runs the frozen business-generation sample. It does not
 introduce another test framework, gate, automatic provider retry or Graph shape.
 
-- [ ] Reuse `apps/workbench/e2e/consumer-generation.pw.ts` and its existing
+- [x] Reuse `apps/workbench/e2e/consumer-generation.pw.ts` and its existing
       fixture. Exercise interpretation/planning failure, compile/verify/preview
       failure, one necessary clarification followed by continuation, and a
       repeated submit or navigation with an in-flight response.
-- [ ] Assert user-visible recovery, retained in-session input, no false ready
+- [x] Assert user-visible recovery, retained in-session input, no false ready
       link, no implicit repair approval, no hidden repeated interpretation and
       no duplicate or stale lifecycle mutation. Add deterministic coverage only
       where existing tests do not prove that outcome.
-- [ ] Fix demonstrated product gaps with focused failing tests and one named
+- [x] Fix demonstrated product gaps with focused failing tests and one named
       writer. Preserve accepted public contracts and reuse current UI assets.
       Do not rebuild or rerun the whole product lane for a fixture-only change.
-- [ ] Run O01/O02/O03/O04/O05/O06/O10 as a separately declared real-generation
+- [x] Run O01/O02/O03/O04/O05/O06/O10 as a separately declared real-generation
       sample using the existing isolated browser/runtime helpers. Freeze intent
       attributes and expected outcomes before calls; retain each first result,
       question count, handoffs, latency and rescue. A named defect is required
       before an affected paid correction run.
-- [ ] Record O07/O08/O09 deterministic fault results separately from the real
+- [x] Record O07/O08/O09 deterministic fault results separately from the real
       sample. Reuse existing role/persistence assertions in actual generated
       apps for O05/O10. Never report a combined mocked/real 10/10 success rate.
-- [ ] Obtain one scoped independent review for in-contract recovery changes,
+- [x] Obtain one scoped independent review for in-contract recovery changes,
       update the product scorecard and deliver the bounded branch commit.
 
 After this first-family evidence, prioritize H1's explicit hosted delivery
 decision and the D2 intake/approval family. Additional Restaurant styling or
 large template counts must not displace those user-visible capabilities.
+
+The first real sample is four independent requests covering those seven case
+conditions: 2/3 supported scenarios complete all checks and 1/1 unsupported
+scenario is handled honestly. The failed O10 check is now a focused
+provider-free reproduction against the same immutable compilation: Docker
+same-container restart reallocates the public web/API ports. ADR-0046 has
+exact standing acceptance recorded in the ledger; one serialized runtime
+writer owns its bounded correction.
+Preserve this first failure and rerun only affected restart acceptance.
+
+The ADR-0046 correction passed focused and full worker regression, independent
+task review and Terra QA, then actual provider-free restart and bind-race
+acceptance against the same immutable compilation. Original customer/manager
+addresses, fulfilled order and visible Ready state were retained. Exact local
+resource cleanup passed. The final bounded Sol judgment is clean after the directory-cleanup and
+concurrent-cancellation corrections. The ledger accepts the enclosing branch
+delivery checkpoint; no new real-model sample was taken.
+
+## Next functional handoff — H1 and D2
+
+1. H1: define the smallest invited-user hosted journey and its identity, durable
+   storage, generated-app isolation, quota, rollback and external prerequisites.
+   Ask the Tech Lead for one consolidated proposal before implementation; no
+   existing local address should be presented as a remotely shareable result.
+2. D2: inspect the already implemented Expense Approval definition, recipe,
+   interpretation and runtime acceptance. Reuse the common consumer entry to
+   deliver submit -> private review -> decision -> requester-visible result.
+   Bind required business parameters and ask only material access/rule questions.
+3. Add focused regression for each demonstrated gap. Keep real generation,
+   injected failures, local persistence and hosted evidence in separate counts.
+   Carry current Restaurant regressions forward without another styling wave.
+4. Expand definitions after these journeys work. Measure additional required
+   questions, developer rescue and actual first-result success before catalog
+   size; preserve the failed first sample in the product scorecard.

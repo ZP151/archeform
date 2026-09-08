@@ -11,7 +11,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   PreviewRunFailure,
@@ -20,7 +20,31 @@ import {
   type PreviewProcessRunner,
   type PreviewRuntimeRequest,
 } from "../src/preview-runner.js";
+import { PreviewPortReservationFailure } from "../src/preview-port-reservation.js";
 import * as previewRunnerModule from "../src/preview-runner.js";
+
+const reservations = vi.hoisted(() => ({
+  acquire: vi.fn(),
+  release: vi.fn(),
+}));
+vi.mock("../src/preview-port-reservation.js", async (original) => ({
+  ...(await original<typeof import("../src/preview-port-reservation.js")>()),
+  reservePreviewPorts: reservations.acquire,
+}));
+beforeEach(() => {
+  reservations.release.mockReset().mockResolvedValue(undefined);
+  reservations.acquire.mockReset().mockResolvedValue({
+    webPort: 49101,
+    apiPort: 49102,
+    release: reservations.release,
+  });
+});
+
+const previewRemovalBarrier = vi.hoisted(() => ({
+  directory: "",
+  entered: undefined as (() => void) | undefined,
+  released: undefined as Promise<void> | undefined,
+}));
 
 const previewRemovalFailure = vi.hoisted(() => ({
   directory: "",
@@ -35,6 +59,10 @@ vi.mock("node:fs/promises", async (importOriginal) => {
   return {
     ...actual,
     rm: async (...args: Parameters<typeof actual.rm>) => {
+      if (String(args[0]) === previewRemovalBarrier.directory) {
+        previewRemovalBarrier.entered?.();
+        await previewRemovalBarrier.released;
+      }
       if (
         String(args[0]) === previewRemovalFailure.directory &&
         (previewRemovalFailure.persist ||
@@ -105,6 +133,401 @@ const acceptanceRegisteredArtifacts = [
 ];
 
 describe("preview runner", () => {
+  it("reserves after materialization and releases immediately before Docker up", async () => {
+    const { root } = await sourceFixture();
+    const order: string[] = [];
+    reservations.acquire.mockImplementationOnce(async () => {
+      expect(
+        await readFile(
+          join(root, ".preview-runs", "preview-1", "src", "app.ts"),
+        ),
+      ).toEqual(application);
+      order.push("acquire");
+      return {
+        webPort: 49101,
+        apiPort: 49102,
+        release: async () => {
+          order.push("release");
+        },
+      };
+    });
+    const runner: PreviewProcessRunner = async (command) => {
+      order.push(command.args.includes("up") ? "up" : "other");
+      expect(command.environment.FACTORY_WEB_PORT).toBe("49101");
+      expect(command.environment.FACTORY_API_PORT).toBe("49102");
+      if (command.args.at(-3) === "port")
+        return `127.0.0.1:${command.args.at(-2) === "web" ? 49101 : 49102}`;
+    };
+    try {
+      await startPreviewRun(root, request(registeredArtifacts), runner);
+      expect(order.slice(0, 3)).toEqual(["acquire", "release", "up"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each(["acquire", "release"])(
+    "removes only the derived directory without Docker on unknown reservation %s failure",
+    async (stage) => {
+      const { root, source } = await sourceFixture();
+      const directory = join(root, ".preview-runs", "preview-1");
+      const unrelated = join(
+        root,
+        ".preview-runs",
+        "preview-unrelated",
+        "keep.txt",
+      );
+      await mkdir(join(root, ".preview-runs", "preview-unrelated"), {
+        recursive: true,
+      });
+      await writeFile(unrelated, "keep");
+      reservations[stage].mockRejectedValueOnce(
+        new Error("Reservation failed."),
+      );
+      const runner = vi.fn<PreviewProcessRunner>();
+      try {
+        await expect(
+          startPreviewRun(root, request(registeredArtifacts), runner),
+        ).rejects.toMatchObject({
+          code: "preview_start_failed",
+          cleanupComplete: false,
+        });
+        await expect(
+          readFile(join(directory, "docker-compose.yml")),
+        ).rejects.toMatchObject({ code: "ENOENT" });
+        expect(await readFile(join(source, "src", "app.ts"))).toEqual(
+          application,
+        );
+        expect(await readFile(unrelated, "utf8")).toBe("keep");
+        expect(runner).not.toHaveBeenCalled();
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it.each([
+    ["acquire", true],
+    ["release", true],
+    ["release", false],
+  ] as const)(
+    "reports reservation %s listener cleanup %s only after removing the directory",
+    async (stage, closed) => {
+      const { root } = await sourceFixture();
+      const directory = join(root, ".preview-runs", "preview-1");
+      reservations[stage].mockRejectedValueOnce(
+        new PreviewPortReservationFailure(closed),
+      );
+      const runner = vi.fn<PreviewProcessRunner>();
+      try {
+        await expect(
+          startPreviewRun(root, request(registeredArtifacts), runner),
+        ).rejects.toMatchObject({
+          code: "preview_start_failed",
+          cleanupComplete: closed,
+        });
+        await expect(
+          readFile(join(directory, "docker-compose.yml")),
+        ).rejects.toMatchObject({ code: "ENOENT" });
+        expect(runner).not.toHaveBeenCalled();
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it("reports incomplete cleanup when derived directory removal fails after a closed reservation", async () => {
+    const { root, source } = await sourceFixture();
+    const directory = join(root, ".preview-runs", "preview-1");
+    reservations.acquire.mockImplementationOnce(async () => {
+      previewRemovalFailure.directory = directory;
+      previewRemovalFailure.persist = true;
+      previewRemovalFailure.code = "EPERM";
+      previewRemovalFailure.attempts = 0;
+      throw new PreviewPortReservationFailure(true);
+    });
+    const runner = vi.fn<PreviewProcessRunner>();
+    try {
+      await expect(
+        startPreviewRun(root, request(registeredArtifacts), runner),
+      ).rejects.toMatchObject({
+        code: "preview_start_failed",
+        cleanupComplete: false,
+      });
+      expect(previewRemovalFailure.attempts).toBe(4);
+      expect(await readFile(join(directory, "docker-compose.yml"))).toEqual(
+        compose,
+      );
+      expect(await readFile(join(source, "src", "app.ts"))).toEqual(
+        application,
+      );
+      expect(runner).not.toHaveBeenCalled();
+    } finally {
+      previewRemovalFailure.directory = "";
+      previewRemovalFailure.persist = false;
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    [true, false],
+    [false, false],
+    [true, true],
+    [false, true],
+  ] as const)(
+    "coordinates Stop during pre-Docker cleanup (listeners closed %s, removal fails %s)",
+    async (closed, removalFails) => {
+      const { root, source } = await sourceFixture();
+      const directory = join(root, ".preview-runs", "preview-1");
+      let entered!: () => void;
+      let release!: () => void;
+      const removing = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const released = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      reservations.acquire.mockImplementationOnce(async () => {
+        previewRemovalBarrier.directory = directory;
+        previewRemovalBarrier.entered = entered;
+        previewRemovalBarrier.released = released;
+        if (removalFails) {
+          previewRemovalFailure.directory = directory;
+          previewRemovalFailure.persist = true;
+          previewRemovalFailure.code = "EPERM";
+        }
+        throw new PreviewPortReservationFailure(closed);
+      });
+      const runner = vi.fn<PreviewProcessRunner>();
+      try {
+        const starting = startPreviewRun(
+          root,
+          request(registeredArtifacts),
+          runner,
+        );
+        const startResult = expect(starting).rejects.toMatchObject({
+          code: "preview_start_cancelled",
+        });
+        await removing;
+        const stopping = stopPreviewRun(
+          root,
+          request(registeredArtifacts),
+          runner,
+        );
+        const stopResult =
+          closed && !removalFails
+            ? expect(stopping).resolves.toBeUndefined()
+            : expect(stopping).rejects.toMatchObject({
+                code: "preview_stop_failed",
+              });
+        release();
+        await Promise.all([startResult, stopResult]);
+        expect(runner).not.toHaveBeenCalled();
+        if (removalFails)
+          expect(await readFile(join(directory, "docker-compose.yml"))).toEqual(
+            compose,
+          );
+        else
+          await expect(
+            readFile(join(directory, "docker-compose.yml")),
+          ).rejects.toMatchObject({ code: "ENOENT" });
+        expect(await readFile(join(source, "src", "app.ts"))).toEqual(
+          application,
+        );
+      } finally {
+        release();
+        previewRemovalBarrier.directory = "";
+        previewRemovalBarrier.entered = undefined;
+        previewRemovalBarrier.released = undefined;
+        previewRemovalFailure.directory = "";
+        previewRemovalFailure.persist = false;
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it.each(["typed", "unknown"])(
+    "fails Stop without Docker when %s reservation cancellation cannot confirm listener closure",
+    async (kind) => {
+      const { root } = await sourceFixture();
+      let acquired!: () => void;
+      const ready = new Promise<void>((resolve) => {
+        acquired = resolve;
+      });
+      reservations.acquire.mockImplementationOnce(
+        (signal: AbortSignal) =>
+          new Promise((_, reject) => {
+            signal.addEventListener(
+              "abort",
+              () =>
+                reject(
+                  kind === "typed"
+                    ? new PreviewPortReservationFailure(false)
+                    : new Error("Reservation failed."),
+                ),
+              { once: true },
+            );
+            acquired();
+          }),
+      );
+      const runner = vi.fn<PreviewProcessRunner>();
+      try {
+        const starting = startPreviewRun(
+          root,
+          request(registeredArtifacts),
+          runner,
+        );
+        const cancelled = expect(starting).rejects.toMatchObject({
+          code: "preview_start_cancelled",
+        });
+        await ready;
+        await expect(
+          stopPreviewRun(root, request(registeredArtifacts), runner),
+        ).rejects.toMatchObject({ code: "preview_stop_failed" });
+        await cancelled;
+        expect(runner).not.toHaveBeenCalled();
+        expect(
+          await readFile(
+            join(root, ".preview-runs", "preview-1", "docker-compose.yml"),
+          ),
+        ).toEqual(compose);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it.each(["web", "api"])(
+    "rejects a different discovered %s port and cleans the exact project",
+    async (service) => {
+      const { root } = await sourceFixture();
+      const runner = vi.fn<PreviewProcessRunner>(async (command) => {
+        if (command.args.at(-3) === "port")
+          return `127.0.0.1:${command.args.at(-2) === service ? 49103 : command.args.at(-2) === "web" ? 49101 : 49102}`;
+      });
+      try {
+        await expect(
+          startPreviewRun(root, request(registeredArtifacts), runner),
+        ).rejects.toMatchObject({
+          code: "preview_port_discovery_failed",
+          cleanupComplete: true,
+        });
+        const cleanup = runner.mock.calls.at(-1)![0];
+        expect(cleanup.args.slice(-3)).toEqual([
+          "down",
+          "--volumes",
+          "--remove-orphans",
+        ]);
+        expect(cleanup.environment.FACTORY_WEB_PORT).toBe("49101");
+        expect(cleanup.environment.FACTORY_API_PORT).toBe("49102");
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it("does not reserve ports before immutable verification succeeds", async () => {
+    const { root, source } = await sourceFixture();
+    const runner = vi.fn<PreviewProcessRunner>();
+    try {
+      await writeFile(join(source, "src", "app.ts"), "changed");
+      await expect(
+        startPreviewRun(root, request(registeredArtifacts), runner),
+      ).rejects.toMatchObject({ code: "preview_artifact_failed" });
+      expect(reservations.acquire).not.toHaveBeenCalled();
+      expect(runner).not.toHaveBeenCalled();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a duplicate before another reservation and cancels held ports before Stop", async () => {
+    const { root } = await sourceFixture();
+    let acquired!: () => void;
+    const ready = new Promise<void>((resolve) => {
+      acquired = resolve;
+    });
+    let releaseFinished = false;
+    reservations.acquire.mockImplementationOnce(
+      async (signal: AbortSignal) => ({
+        webPort: 49101,
+        apiPort: 49102,
+        release: () =>
+          new Promise<void>((resolve) => {
+            signal.addEventListener(
+              "abort",
+              () => {
+                releaseFinished = true;
+                resolve();
+              },
+              { once: true },
+            );
+            acquired();
+          }),
+      }),
+    );
+    const runner = vi.fn<PreviewProcessRunner>(async (command) => {
+      expect(releaseFinished).toBe(true);
+      expect(command.args.slice(-3)).toEqual([
+        "down",
+        "--volumes",
+        "--remove-orphans",
+      ]);
+      expect(command.environment.FACTORY_WEB_PORT).toBeUndefined();
+    });
+    try {
+      const starting = startPreviewRun(
+        root,
+        request(registeredArtifacts),
+        runner,
+      );
+      const rejected = expect(starting).rejects.toMatchObject({
+        code: "preview_start_cancelled",
+      });
+      await ready;
+      await expect(
+        startPreviewRun(root, request(registeredArtifacts), runner),
+      ).rejects.toMatchObject({ code: "preview_start_failed" });
+      expect(reservations.acquire).toHaveBeenCalledOnce();
+      expect(runner).not.toHaveBeenCalled();
+      await stopPreviewRun(root, request(registeredArtifacts), runner);
+      await rejected;
+      expect(runner).toHaveBeenCalledOnce();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("fails on post-release contention without selecting replacements and cleans the exact project", async () => {
+    const { root } = await sourceFixture();
+    const runner = vi.fn<PreviewProcessRunner>(async (command) => {
+      if (command.args.includes("up"))
+        throw new Error("Port is already allocated.");
+    });
+    try {
+      await expect(
+        startPreviewRun(root, request(registeredArtifacts), runner),
+      ).rejects.toMatchObject({
+        code: "preview_compose_up_failed",
+        cleanupComplete: true,
+      });
+      expect(reservations.acquire).toHaveBeenCalledOnce();
+      expect(reservations.release).toHaveBeenCalledOnce();
+      expect(runner).toHaveBeenCalledTimes(2);
+      const cleanup = runner.mock.calls[1]![0];
+      expect(cleanup.args).toContain("factory-preview-preview-1");
+      expect(cleanup.args.slice(-3)).toEqual([
+        "down",
+        "--volumes",
+        "--remove-orphans",
+      ]);
+      expect(cleanup.environment.FACTORY_WEB_PORT).toBe("49101");
+      expect(cleanup.environment.FACTORY_API_PORT).toBe("49102");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("uses only the exact acceptance signal to activate the registered profile", async () => {
     const { root } = await sourceFixture(acceptanceCompose);
     const commands: Parameters<PreviewProcessRunner>[0][] = [];
@@ -426,8 +849,8 @@ describe("preview runner", () => {
         expect(command.environment).toEqual(
           expect.objectContaining({
             FACTORY_COMPOSE_PROJECT_NAME: "factory-preview-preview-1",
-            FACTORY_WEB_PORT: "0",
-            FACTORY_API_PORT: "0",
+            FACTORY_WEB_PORT: "49101",
+            FACTORY_API_PORT: "49102",
             RESTAURANT_DEMO_TABLE_TOKEN: "test-run-scoped-token",
           }),
         );

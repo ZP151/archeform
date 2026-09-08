@@ -96,6 +96,7 @@ test("a live-payment Restaurant request remains a business clarification", async
     ).toHaveCount(0);
     expect(deliveryMutations).toBe(0);
   } finally {
+    await page.close().catch(() => undefined);
     await finishDiagnostics();
   }
 });
