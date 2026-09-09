@@ -19,6 +19,7 @@ import {
   assertValidApplicationGraph,
   createBlankApplicationDraft,
   hashApplicationGraph,
+  resolveExperienceDesignSystem,
   type ApplicationGraphV1,
 } from "@factory/graph";
 
@@ -415,7 +416,7 @@ describe("approval presentation compatibility", () => {
 function approvalModule(runtime: string) {
   const source =
     runtime +
-    "\nexport { calendarDateToPrisma, formPayload, fieldLabel, formatValue, validTransitions, safeResponseMessage, FieldControl, ApprovalIcon, actionIcon, stateIcon, EntityRecords, definition };";
+    "\nexport { calendarDateToPrisma, formPayload, fieldLabel, formatValue, validTransitions, safeResponseMessage, FieldControl, ApprovalIcon, actionIcon, stateIcon, selectSummaryFields, statusTone, EntityRecords, definition };";
   const compiled = transpileModule(source, {
     compilerOptions: { module: ModuleKind.CommonJS, jsx: JsxEmit.ReactJSX },
   }).outputText;
@@ -431,6 +432,148 @@ function approvalModule(runtime: string) {
 }
 
 describe("approval runtime behavior", () => {
+  it("selects only exact, unambiguous declared summary fields and neutralizes ambiguous status tones", async () => {
+    const { exports: runtime } = approvalModule(
+      runtimeFor(await composedGraphFor(expenseBrief)),
+    );
+    expect(
+      runtime.selectSummaryFields([
+        { key: "amount", type: "decimal", required: true },
+        { key: "category", type: "enum", required: true },
+        { key: "date", type: "date", required: true },
+        { key: "amountCents", type: "integer", required: true },
+      ]),
+    ).toEqual(["amount", "category", "date"]);
+    expect(
+      runtime.selectSummaryFields([
+        { key: "amount", type: "decimal", required: true },
+        { key: "category", type: "text", required: true },
+        { key: "date", type: "datetime", required: true },
+        { key: "amount", type: "integer", required: true },
+      ]),
+    ).toEqual([undefined, undefined, "date"]);
+    expect(runtime.selectSummaryFields([])).toEqual([
+      undefined,
+      undefined,
+      undefined,
+    ]);
+    expect(
+      runtime.selectSummaryFields([
+        { key: "amountValue", type: "decimal", required: true },
+        { key: "expense_category", type: "enum", required: true },
+        { key: "dateAt", type: "datetime", required: true },
+      ]),
+    ).toEqual([undefined, undefined, undefined]);
+    expect(runtime.statusTone("expense", "submitted")).toBe("pending");
+    expect(runtime.statusTone("expense", "approved")).toBe("positive");
+    expect(runtime.statusTone("expense", "rejected")).toBe("negative");
+    expect(runtime.statusTone("expense", "missing")).toBe("neutral");
+    expect(runtime.statusTone("expense", null)).toBe("neutral");
+    const ambiguous = structuredClone(runtime.definition);
+    ambiguous.flow.flows[0].transitions.push({
+      from: "submitted",
+      event: "approve",
+      to: "approved",
+      roles: [],
+    });
+    const original = runtime.definition.flow.flows;
+    runtime.definition.flow.flows = ambiguous.flow.flows;
+    expect(runtime.statusTone("expense", "approved")).toBe("neutral");
+    runtime.definition.flow.flows = original;
+  });
+
+  it("emits the compact approval shell, disclosure, semantic theme overrides, and desktop record grid", async () => {
+    const graph = await composedGraphFor(expenseBrief);
+    const themed = structuredClone(graph);
+    const designSystem = structuredClone(
+      resolveExperienceDesignSystem(graph.experience),
+    );
+    designSystem.tokens.colour.light.success = "#146c43";
+    designSystem.tokens.colour.light.warning = "#8a4b00";
+    designSystem.tokens.colour.light.danger = "#98251f";
+    designSystem.tokens.colour.dark.success = "#78d58a";
+    designSystem.tokens.colour.dark.warning = "#ffc05a";
+    designSystem.tokens.colour.dark.danger = "#ff7b73";
+    themed.experience = { ...themed.experience, designSystem };
+    const runtime = runtimeFor(graph);
+    const styles = generateApplicationBundle(bundleInputFor(themed)).files.find(
+      (file) => file.path === "web/app/globals.css",
+    )!.content;
+    expect(runtime).toContain(
+      "<h1>{definition.applicationName}</h1><p>Requests and approvals</p>",
+    );
+    expect(runtime).toContain(
+      "aria-current={item.route === requestedRoute ? 'page' : undefined}",
+    );
+    expect(runtime).toContain("<details><summary>Details</summary>");
+    expect(runtime).toContain(
+      "className={'approval-record approval-tone-' + tone}",
+    );
+    expect(runtime).toContain(
+      "<section className='generated-card approval-records-section'>",
+    );
+    expect(runtime).toContain(
+      "className='generated-primary' href={formRoute}>New {entity.label.toLowerCase()}</a>",
+    );
+    expect(styles).toContain(".approval-v1.generated-app");
+    expect(styles).toContain(
+      ".approval-v1 .approval-records-section { background: transparent;",
+    );
+    expect(styles).toContain(
+      ".approval-v1 .approval-summary-amount { grid-column: 1; grid-row: 1; }",
+    );
+    expect(styles).toContain(
+      ".approval-v1 .approval-summary-status { grid-column: 2; grid-row: 1; text-align: end; }",
+    );
+    expect(styles).toContain(
+      ".approval-v1 .approval-record summary { display: list-item;",
+    );
+    expect(styles).toContain(
+      ".approval-v1 .approval-record { display: grid; grid-template-columns: minmax(0, 1fr);",
+    );
+    expect(styles).toContain(
+      ".approval-v1 .approval-record > .approval-actions:empty { display: none; }",
+    );
+    expect(styles).toContain(
+      ".approval-v1 .generated-header label[for='demo-role'] { width: auto; flex: none;",
+    );
+    expect(styles).toContain(
+      ".approval-v1 .generated-header select { width: auto; min-width: 8rem;",
+    );
+    expect(styles).toContain(
+      ".approval-v1 .generated-header select { flex: 1 1 auto; min-width: 8rem;",
+    );
+    expect(styles).toContain(
+      ".approval-v1 .approval-records-section > .generated-section-heading { flex-direction: row; flex-wrap: wrap;",
+    );
+    expect(styles).toContain(".approval-v1 nav { flex-wrap: nowrap;");
+    expect(styles).toContain("overflow-x: auto;");
+    expect(styles).toContain(
+      "@media (min-width: 900px) { .approval-v1 .generated-records { grid-template-columns: repeat(2, minmax(0, 1fr)); }",
+    );
+    for (const colour of [
+      "#146c43",
+      "#8a4b00",
+      "#98251f",
+      "#78d58a",
+      "#ffc05a",
+      "#ff7b73",
+    ])
+      expect(styles).toContain(colour);
+    expect(styles).toContain(
+      ".approval-v1 .approval-tone-positive { border-color: var(--factory-colour-success);",
+    );
+    expect(styles).toContain(
+      ".approval-v1 .approval-tone-pending { border-color: var(--factory-colour-warning);",
+    );
+    expect(styles).toContain(
+      ".approval-v1 .approval-tone-negative { border-color: var(--factory-colour-danger);",
+    );
+    expect(styles).toContain(
+      "color-mix(in srgb, var(--factory-text) 72%, var(--factory-colour-success))",
+    );
+  });
+
   it("selects only an unambiguous structural approval flow independent of naming or order", async () => {
     const graph = await composedGraphFor(expenseBrief);
     expect(runtimeFor(graph)).toContain("Requests and approvals");

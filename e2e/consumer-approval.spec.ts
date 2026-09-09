@@ -26,6 +26,10 @@ const controlPlaneBase = process.env.FACTORY_E2E_CONTROL_PLANE_URL;
 const timeoutMs = 1_800_000;
 const realInterpretation = process.env.FACTORY_APPROVAL_REAL_ACCEPTANCE === "1";
 const privacyProbe = process.env.FACTORY_APPROVAL_PRIVACY_ACCEPTANCE === "1";
+const evidenceDirectory = resolve(
+  process.cwd(),
+  "docs/acceptance/evidence/consumer-approval",
+);
 // One separately reported real request, never included in fixture pass counts.
 const realApprovalBrief =
   approvalFixtureBrief +
@@ -112,12 +116,85 @@ function recordField(row: Locator, label: string): Locator {
     .locator("dd");
 }
 
+async function expectReadableApprovalLayout(page: Page): Promise<void> {
+  const facts = await page.evaluate(() => {
+    const select = document.querySelector<HTMLSelectElement>("#demo-role")!;
+    const selectStyle = getComputedStyle(select);
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d")!;
+    context.font = `${selectStyle.fontWeight} ${selectStyle.fontSize} ${selectStyle.fontFamily}`;
+    const textWidth = context.measureText(
+      select.selectedOptions[0]!.text,
+    ).width;
+    const availableWidth =
+      select.clientWidth -
+      parseFloat(selectStyle.paddingLeft) -
+      parseFloat(selectStyle.paddingRight) -
+      24;
+    const summariesFillCards = [
+      ...document.querySelectorAll<HTMLElement>(".approval-record"),
+    ].every((record) => {
+      const style = getComputedStyle(record);
+      const contentWidth =
+        record.clientWidth -
+        parseFloat(style.paddingLeft) -
+        parseFloat(style.paddingRight);
+      return (
+        record
+          .querySelector<HTMLElement>(".approval-summary")!
+          .getBoundingClientRect().width >=
+        contentWidth - 1
+      );
+    });
+    return { roleTextFits: availableWidth >= textWidth, summariesFillCards };
+  });
+  expect(
+    facts.roleTextFits,
+    "selected demo role is readable without clipping",
+  ).toBe(true);
+  expect(
+    facts.summariesFillCards,
+    "record summaries use available card width",
+  ).toBe(true);
+}
+
 async function createExpense(
   page: Page,
   marker: string,
   amount: string,
 ): Promise<string> {
   await page.getByRole("link", { name: "Expense list", exact: true }).click();
+  if (marker === "D24 synthetic approved claim") {
+    // The canonical composer starts with one untouched draft seed. Check the
+    // first valid action before mutations, without depending on API row order.
+    const records = page.locator(".generated-records > li");
+    await expect(records).toHaveCount(1);
+    const first = records.first();
+    await expect(recordField(first, "Status")).toHaveText("Draft");
+    for (const width of [390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await expect(recordField(first, "Amount")).toBeInViewport();
+      await expect(recordField(first, "Status")).toBeInViewport();
+      await expect(recordField(first, "ID")).not.toBeVisible();
+      await expectReadableApprovalLayout(page);
+      const action = first.getByRole("button", { name: "Submit", exact: true });
+      const box = await action.boundingBox();
+      expect(box, "first draft action is visible").not.toBeNull();
+      expect(
+        box!.y + box!.height,
+        "first draft action fits above fold",
+      ).toBeLessThanOrEqual(900);
+      console.info(
+        "FACTORY_APPROVAL_FIRST_VIEW",
+        JSON.stringify({
+          width,
+          firstActionBottom: Math.ceil(box!.y + box!.height),
+        }),
+      );
+    }
+    await page.setViewportSize({ width: 390, height: 900 });
+  }
   await page.getByRole("link", { name: "New expense", exact: true }).click();
   await page.getByLabel("Demo role", { exact: true }).selectOption("employee");
   await page.getByLabel("Amount", { exact: true }).fill(amount);
@@ -127,6 +204,14 @@ async function createExpense(
     .getByLabel("Receipt", { exact: true })
     .fill("https://example.test/synthetic-receipt");
   await page.getByLabel("Notes", { exact: true }).fill(marker);
+  if (marker === "D24 synthetic approved claim") {
+    await page.setViewportSize({ width: 390, height: 900 });
+    await mkdir(evidenceDirectory, { recursive: true });
+    await page.screenshot({
+      path: resolve(evidenceDirectory, "d24-form-390.png"),
+      fullPage: true,
+    });
+  }
   const createdResponse = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&
@@ -178,7 +263,7 @@ async function createExpense(
   return created.id;
 }
 
-test(`D2.3 ${privacyProbe ? "real requester-privacy requirement stays material" : `${realInterpretation ? "real" : "deterministic"} interpretation delivers a complete approval journey`}`, async ({
+test(`D2.4 ${privacyProbe ? "real requester-privacy requirement stays material" : `${realInterpretation ? "real" : "deterministic"} interpretation delivers a complete approval journey`}`, async ({
   page,
   context,
   request,
@@ -510,12 +595,12 @@ test(`D2.3 ${privacyProbe ? "real requester-privacy requirement stays material" 
     stage = "requester-submit";
     const approvedId = await createExpense(
       generated,
-      "D22 synthetic approved claim",
+      "D24 synthetic approved claim",
       "12.50",
     );
     const rejectedId = await createExpense(
       generated,
-      "D22 synthetic rejected claim",
+      "D24 synthetic rejected claim",
       "7.25",
     );
     const denied = await request.post(
@@ -536,8 +621,8 @@ test(`D2.3 ${privacyProbe ? "real requester-privacy requirement stays material" 
       .getByLabel("Demo role", { exact: true })
       .selectOption("manager");
     for (const [id, marker, action, status] of [
-      [approvedId, "D22 synthetic approved claim", "approve", "approved"],
-      [rejectedId, "D22 synthetic rejected claim", "reject", "rejected"],
+      [approvedId, "D24 synthetic approved claim", "approve", "approved"],
+      [rejectedId, "D24 synthetic rejected claim", "reject", "rejected"],
     ]) {
       const row = generated
         .locator(".generated-records > li")
@@ -573,8 +658,8 @@ test(`D2.3 ${privacyProbe ? "real requester-privacy requirement stays material" 
       .selectOption("employee");
     await generated.reload();
     for (const [marker, status] of [
-      ["D22 synthetic approved claim", "approved"],
-      ["D22 synthetic rejected claim", "rejected"],
+      ["D24 synthetic approved claim", "approved"],
+      ["D24 synthetic rejected claim", "rejected"],
     ]) {
       const row = generated
         .locator(".generated-records > li")
@@ -582,6 +667,15 @@ test(`D2.3 ${privacyProbe ? "real requester-privacy requirement stays material" 
       await expect(recordField(row, "Status")).toHaveText(
         status === "approved" ? "Approved" : "Rejected",
       );
+      const details = row.locator("details");
+      await expect(details).not.toHaveAttribute("open", "");
+      await expect(recordField(row, "ID")).not.toBeVisible();
+      const disclosure = details.locator("summary");
+      await disclosure.focus();
+      await disclosure.press("Enter");
+      await expect(recordField(row, "ID")).toBeVisible();
+      await expect(recordField(row, "Notes")).toBeVisible();
+      await expect(recordField(row, "Receipt")).toBeVisible();
       await expect(recordField(row, "Notes")).toHaveText(marker);
       await expect(recordField(row, "Date")).toHaveText("2026-09-09");
       await expect(
@@ -592,19 +686,72 @@ test(`D2.3 ${privacyProbe ? "real requester-privacy requirement stays material" 
         ),
       ).toHaveCount(1);
       await expect(row.locator("code")).toHaveCount(0);
+      await disclosure.press("Enter");
+      await expect(recordField(row, "ID")).not.toBeVisible();
     }
+    const navigation = generated.getByRole("navigation", {
+      name: "Application routes",
+    });
+    const declaredRoutes = await navigation
+      .getByRole("link")
+      .evaluateAll((links) =>
+        links.map((link) => ({
+          label: link.textContent!.trim(),
+          route: link.getAttribute("href")!,
+        })),
+      );
+    expect(declaredRoutes).toHaveLength(5);
+    for (const item of declaredRoutes) {
+      const link = navigation.getByRole("link", {
+        name: item.label,
+        exact: true,
+      });
+      await link.click();
+      await expect(generated).toHaveURL(new URL(item.route, href).toString());
+      await expect(link).toHaveAttribute("aria-current", "page");
+    }
+    await navigation
+      .getByRole("link", { name: "Expense list", exact: true })
+      .click();
     expect(pageErrors).toEqual([]);
-    const evidence = resolve(
-      process.cwd(),
-      "docs/acceptance/evidence/consumer-approval",
-    );
+    const evidence = evidenceDirectory;
     await mkdir(evidence, { recursive: true });
     for (const width of [390, 768, 1440]) {
       await generated.setViewportSize({ width, height: 900 });
+      await generated.evaluate(() => window.scrollTo(0, 0));
+      const firstRecord = generated.locator(".generated-records > li").first();
+      await expect(recordField(firstRecord, "Amount")).toBeVisible();
+      await expect(recordField(firstRecord, "Status")).toBeVisible();
+      await expect(generated.locator(".generated-records > li")).toHaveCount(3);
+      await expectReadableApprovalLayout(generated);
+      await expect(
+        generated.getByRole("link", { name: "New expense", exact: true }),
+      ).toBeInViewport();
+      if (width === 390) {
+        for (const control of await generated
+          .locator("main.generated-app")
+          .locator("a:visible, button:visible, select:visible, summary:visible")
+          .all()) {
+          const box = await control.boundingBox();
+          expect(
+            box?.height,
+            "mobile touch target height",
+          ).toBeGreaterThanOrEqual(44);
+          expect(
+            box?.width,
+            "mobile touch target width",
+          ).toBeGreaterThanOrEqual(44);
+        }
+      }
+      await expect(
+        generated
+          .getByRole("navigation", { name: "Application routes" })
+          .getByRole("link", { name: "Expense list", exact: true }),
+      ).toHaveAttribute("aria-current", "page");
       await generated.screenshot({
         path: resolve(
           evidence,
-          `${realInterpretation ? "d23-real" : "d23"}-results-${width}.png`,
+          `${realInterpretation ? "d24-real" : "d24"}-results-${width}.png`,
         ),
         fullPage: true,
       });
@@ -623,8 +770,39 @@ test(`D2.3 ${privacyProbe ? "real requester-privacy requirement stays material" 
       expect(violations, "generated approval accessibility").toEqual([]);
       console.info(
         "FACTORY_APPROVAL_PRESENTATION",
-        JSON.stringify({ width, overflow, violationIds: violations }),
+        JSON.stringify({
+          width,
+          overflow,
+          violationIds: violations,
+          internalIdsCollapsed: true,
+          keyboardDetails: true,
+        }),
       );
+    }
+    if (!realInterpretation) {
+      // Preserve only the emitted UI from this synthetic compilation for the
+      // local design detector. Do not copy environment, API or provider files.
+      const webContainer = docker([
+        "ps",
+        "--filter",
+        `label=com.docker.compose.project=${preview!.composeProjectName}`,
+        "--filter",
+        "label=com.docker.compose.service=web",
+        "--quiet",
+      ]);
+      expect(webContainer).toMatch(/^[a-f0-9]+$/);
+      const emittedUi = resolve(
+        process.cwd(),
+        ".superpowers/sdd/2026-09-10-approval-mobile-presentation/emitted-ui",
+      );
+      await mkdir(emittedUi, { recursive: true });
+      for (const file of ["page-runtime.tsx", "globals.css"]) {
+        docker([
+          "cp",
+          `${webContainer}:/app/app/${file}`,
+          resolve(emittedUi, file),
+        ]);
+      }
     }
     console.info(
       "FACTORY_APPROVAL_BUSINESS",

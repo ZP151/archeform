@@ -2,6 +2,33 @@
 
 Updated: 2026-09-10
 
+## Current delivery: D2.4 mobile usability correction
+
+The founder's review of `d23-real-results-390.png` rejects its visual quality.
+The earlier business and accessibility checks remain valid within their scope,
+but do not establish ordinary-user presentation acceptance. Loaded CSS/icons
+are not the issue: the generic shell and field stack obscure the task.
+
+[D2.4](superpowers/plans/2026-09-10-approval-mobile-presentation.md) now supplies
+compact record summaries, prominent amounts, textual status with icons and
+semantic color, accessible secondary details and a desktop two-column layout.
+The [new phone result](acceptance/evidence/consumer-approval/d24-results-390.png)
+is 390 x 1016, compared with the unchanged 390 x 2004 D2.3 baseline. This is a
+presentation comparison, not a measured user-effort reduction. The initial
+record's Submit button ends at 461 px in a 390 x 900 browser viewport.
+
+The final actual generated journey passes create/submit/approve/reject/reload
+and requester denial. At 390/768/1440 px, role text fits, summaries fill their
+cards, axe reports no violations and the document does not overflow. The fixed
+interpretation lane reaches ready in 171.646 seconds and completes business
+assertions in 177.411 seconds, with zero questions or technical handoffs. This
+prepared local run does not establish model reliability or physical-device UX.
+See the [acceptance record](acceptance/approval-mobile-presentation.md).
+
+Next: D2.5 coarse-intent and remaining A01-A10 business coverage, then real-phone
+user task validation. Resolve H1 identity/access/hosting separately before
+claiming shareable private apps. No new library or cloud resource was added.
+
 ## Active continuation: approval delivery and hosted decision
 
 The long-task goal continues on `codex/consumer-delivery-roadmap` from D1.10

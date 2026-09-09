@@ -1,6 +1,6 @@
 # Consumer Generation Delivery Ledger
 
-Updated: 2026-09-09 (Asia/Singapore). PM is the single task-state and
+Updated: 2026-09-10 (Asia/Singapore). PM is the single task-state and
 product-scorecard owner. The task and approval started on September 7.
 
 ## Approved objective and authority
@@ -2879,3 +2879,150 @@ coverage, ten-case gaps, mobile reading/navigation effort and cross-device user
 validation over catalog size or repeated unchanged audits. IDs and demo roles
 remain visible in the generated app; they do not constitute mature real-user
 identity, requester-owned privacy or polished mobile task navigation.
+
+### D2.4 visible mobile usability correction — 2026-09-10
+
+The founder rejected the D2.3 mobile result as bare and monotonous. PM treats
+this as a product acceptance gap: functional success and axe/layout checks did
+not establish a polished ordinary-user experience. Icons and styles loaded;
+the generated template's hierarchy, navigation and record density are at fault.
+Prioritize the [D2.4 plan](../plans/2026-09-10-approval-mobile-presentation.md)
+before broadening the intake matrix. The continuation goal now explicitly
+requires an actual generated-app before/after visual result.
+
+Base is `424c9c7c83f0e2f3e2f9ecdd5f2f5adcd1ac9045`, with the iteration branch
+clean and pushed before this slice. Root retains acceptance harness, evidence,
+plan/status/ledger and Git ownership. `/root/d24_ui_decision` is dispatched as
+Tech Lead and owns only proposed ADR-0053. No production implementation is
+authorized until its exact independent standing-acceptance verdict is recorded.
+Current Graph, API, provider, identity and runtime authorities remain unchanged.
+The previous Spark availability failure remains applicable; no reset credit
+or extra provider attempt is authorized. Use a bounded implementation fallback.
+
+This ordinary private template refinement uses focused tests, relevant compiler
+checks, actual deterministic browser acceptance and one independent task review.
+Do not add repeated unchanged QA/release waves or a new icon dependency. The
+root-owned local runtime lane will use the existing isolated Compose topology,
+synthetic authored data, no model request and exact-label cleanup. No external
+deployment, main integration or repository release is included.
+
+### ADR-0053 standing acceptance and D2.4 implementation ownership
+
+Independent non-author/non-writer `/root/d24_review` verified ADR-0053 SHA-256
+`9adbf1782020b96513626cbbd1bba3804e353559f2a965edbb18a3c36272fad3`,
+reported P0/P1 `0/0` and `APPROVED_FOR_STANDING_ACCEPTANCE: yes`. The initial
+proposal's semantic-token ambiguity and duplicate-runtime/preparation wording
+were corrected before acceptance. Root records founder acceptance under the
+September 1 standing authorization before any production write.
+
+Authorize one fresh compiler implementation owner for exactly
+`packages/compiler/src/index.ts` and
+`packages/compiler/test/composition-page-runtime.test.ts`. Follow ADR-0053's
+frozen private presentation rules and D2.4 plan. Root retains all acceptance,
+docs, evidence, runtime and Git paths; preparation already changed only tests
+and documents. No parallel shared-contract writers are authorized. Use the
+engineer fallback because the prescribed Spark is unavailable. Source freeze,
+focused RED/GREEN, compiler checks and one independent task review are required.
+
+Root separately authorizes the one provider-free canonical acceptance lane
+after compiler source freeze and package checks. Build the affected compiler
+image from the tracked Dockerfile, reuse accepted unchanged Control Plane and
+Workbench images, and use fresh exact project
+`factory-t9-consumer-d24-20260910` on the existing loopback test ports/topology.
+The lane may perform local Publish/Compile/Verify/Preview and the synthetic
+two-request UI journey under the approved consumer roadmap. Zero model/provider
+calls, one worker, zero retries, four new screenshots and exact resource cleanup
+bound this execution. The standing ADR itself grants no runtime or cloud action.
+
+### D2.4 actual visual correction and confirmation scope
+
+`/root/d24_mobile_implementation` completed the two paths. Full compiler checks
+passed 659 tests/39 files; subsequent CSS-only corrections passed 22 focused
+tests, types/build/formatting, with prior full evidence reused. Independent
+`/root/d24_review` reports no remaining P0/P1/P2 in source or root harness.
+
+The first actual canonical lane passed 1/1: 184826 ms to ready, 190426 ms to
+business assertions, zero questions/handoffs, two UI requests approved/rejected
+and retained after reload, requester approval 403, all route/current markers,
+keyboard Details, 44 px targets, and no overflow/axe violations at all three
+widths. Mobile Submit bottom was 509 px. Exact preview cleanup passed.
+
+The four-image visual inspection still found clipped mobile role text and an
+implicit grid track leaving record content too narrow. The single mechanical
+scan of exact emitted UI returned `[]`. First-pass screenshots, emitted UI and
+safe log remain in ignored D2.4 `visual-pass-1`; D2.3 evidence is unchanged.
+
+One final CSS batch fixes role sizing, full-width record tracks, empty action
+spacing and mobile heading layout. Root adds computed text-fit and content-width
+checks. Final source SHA-256 is
+`9ad9f27c04bbf8c371275d6b92a79a23718836a162957d595e30fc698731ecbe`;
+test `11c49f67946425932793f4bdcdfe0b14eedce1d642aa306669b01fe791ff2398`.
+Focused RED then 22/22 GREEN, types/build/formatting and scoped review pass.
+The tracked-Dockerfile image passes and its internal source hash matches;
+config is `c8b63470e6985667fb787eb66543d3ea6daf2396bf555845aa564b89a569b040`.
+
+Root authorizes one confirmation lane for this demonstrated correction on the
+same isolated Factory project, with a new application and fresh generated
+database. The earlier preview is stopped, unchanged CP/Workbench are reused,
+and the compiler service is recreated from the verified image. Workbench has no
+model key configured. Retain one final four-image inspection, exact cleanup and
+scoped final verdict before delivery; no further subjective polishing loop.
+
+### D2.4 responsive confirmation repair
+
+The confirmation stopped before request creation at the 768 px text-fit check;
+390 px passed with the initial Submit bottom at 461 px. Its immutable compilation
+and verification succeeded, and its exact generated preview cleanup passed.
+The failed safe log is retained as `confirmation-failure.log` in task scratch.
+
+A bounded native-control diagnostic using emitted theme CSS and current header
+rules reproduced the cause: employee text measured 69.28125 px; the desktop
+control supplied 68 px after padding and the test's conservative 24 px arrow
+reserve. This establishes insufficient sizing margin, not visually proven
+desktop clipping. The existing 8 rem mobile minimum supplies 86 px when applied
+at wider widths too. Root authorizes this single responsive minimum correction
+under the same two-file ownership and unchanged ADR, without weakening the guard.
+Reuse prior full-suite evidence; rerun focused checks and scoped delta review.
+After the changed compiler image hash is verified, run one corrected provider-free
+canonical lane with a fresh generated application. The previous confirmation
+produced no images, so the final four-image confirmation remains outstanding.
+No additional model, external deployment, or subjective design pass is authorized.
+
+### D2.4 accepted result and controller delivery
+
+Final source `4e21934b49caacf2b98473c68dc2007ebee0c2eb5d90dc443e43cbc6f6d5c08f`,
+test `6ef952efbd9b5a10fbbd6790d9b9662c7a70e10fa1c945533bdb28cd640171b5`,
+and root harness `a2f9240095cf2724938b9cd5f432be1b615d208e79e4eb65b1279374611f2b46`
+are frozen. The final image internal source matches; config
+`80d447bee8d706a979ff01c579e98f7c35da34f864688eab86aae50f28adc6ed`.
+The base select minimum correction has focused RED then 22/22 GREEN, successful
+types/build/formatting and clean scoped re-review. Prior unaffected 659-test
+compiler evidence remains valid; no redundant full audit wave was added.
+
+Final canonical browser confirmation passed 1/1 with zero retries. Ready was
+171646 ms, business completion 177411 ms, questions/handoffs 0/0. Two UI requests
+were approved/rejected and retained after reload; requester approval was denied 403. At all three widths the text-fit/content-width checks, route markers,
+keyboard Details, no-overflow and axe checks passed. First valid Submit ends at
+461/409/409 px for 390/768/1440 widths. The final four screenshots were inspected
+by root and the independent reviewer; mobile role text and record width defects
+are corrected. The phone list is 390 x 1016; the old D2.3 image remains unchanged.
+This is visual presentation evidence, not a measured reduction in user effort.
+
+Final compilation `cmtudzai3004jmt4t9ywx7rc0` and verification
+`cmtudzbpo006cmt4tderzq899` succeeded. Final preview
+`preview-ab09680e-ad94-45f2-8ac3-a6de1255d380` stopped. Exact-label queries after
+teardown found zero containers/networks/volumes for the Factory project and
+all three generated preview projects. Unrelated resources were not removed.
+
+Independent `/root/d24_review` reports P0/P1/P2 `0/0/0` and
+`APPROVED_FOR_LOCAL_ACCEPTANCE: yes` for the frozen scope, final images and
+cleanup. Root accepts D2.4 and authorizes one bounded English commit and normal
+push of `codex/consumer-delivery-roadmap`, followed by remote-tip equality.
+Git history identifies that delivery commit. Main/release/cloud are out of scope.
+
+The [acceptance record](../../acceptance/approval-mobile-presentation.md) and
+[D2.4 follow-on plan](../plans/2026-09-10-approval-mobile-presentation.md) now
+prioritize D2.5 coarse-intent and remaining business coverage, real-phone task
+validation, then accepted H1 identity/access/hosting work before expanding the
+catalog. Preserve real-model, deterministic-runtime and user-study evidence as
+separate measures. Local visual acceptance does not close those product gaps.

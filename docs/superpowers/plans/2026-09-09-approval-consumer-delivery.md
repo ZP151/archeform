@@ -260,10 +260,16 @@ Mobile/tablet/desktop checks and exact cleanup passed. The independent final
 verdict is P0/P1/P2 0/0/0 for this local slice. The controller delivers the
 bounded commit on the active iteration branch and verifies its remote tip.
 
-The next measured work is A01 coarse-intent coverage and the remaining A01-A10
-evidence gaps, followed by mobile task efficiency: fewer navigation choices,
-amount/category/status summaries, and accessible details using existing assets.
-Track first useful result, questions, technical handoffs, time, and task
-completion; do not count fake-provider cases as real intent accuracy. Appointment
-follows this coverage. H1 still requires accepted external infrastructure/access
-choices and does not inherit deployment authority from this local acceptance.
+The founder's screenshot review moves mobile task efficiency ahead of broader
+intake coverage. Follow the [D2.4 plan](2026-09-10-approval-mobile-presentation.md)
+for compact route navigation, amount/category/status summaries and accessible
+details using existing assets. Its actual generated screenshots must show the
+result; a functional or axe pass alone does not establish presentation quality.
+
+After D2.4, prioritize A01 coarse-intent coverage and the remaining A01-A10
+evidence gaps. Track first useful result, questions, technical handoffs, time,
+and business completion; do not count fixed interpretation fixtures as real
+intent accuracy. Validate ordinary-user task completion on real phones before
+expanding the catalog. Appointment follows this coverage. H1 still requires
+accepted external infrastructure/access choices and does not inherit deployment
+authority from this local acceptance.
