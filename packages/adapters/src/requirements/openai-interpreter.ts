@@ -1,3 +1,8 @@
+import {
+  approvalDefinitionSelectionSchema,
+  canonicalExpenseApprovalInterpretation,
+  projectApprovalDefinitionSelection,
+} from "./approval-definition-selection.js";
 import OpenAI from "openai";
 import { z } from "zod";
 
@@ -304,7 +309,12 @@ type ModelInterpretation = z.infer<typeof modelInterpretationSchema>;
 const providerInterpretationResultSchema = z
   .object({
     resultKind: z.enum(["definition-selection", "generated-blueprint"]),
-    definitionSelection: restaurantDefinitionSelectionSchema.nullable(),
+    definitionSelection: z
+      .union([
+        restaurantDefinitionSelectionSchema,
+        approvalDefinitionSelectionSchema,
+      ])
+      .nullable(),
     generatedInterpretation: modelInterpretationSchema.nullable(),
   })
   .strict()
@@ -417,7 +427,7 @@ const supportedRestaurantDefaultInstruction = [
   "The supplied-menu contract supports only names, optional descriptions, explicit USD prices, and order. Explicit currency other than USD, stock, availability, preparation time, images, categories, options, tax, or service-charge requirements remain material data clarification; never discard these requirements, convert another currency, or relabel it USD. Fixed omitted details are category mains, availability true, stock 100, preparation 15 minutes, and a local no-photo placeholder. Preserve a complete businessParameters value during unrelated material questions. For follow-ups, priorInterpretation is the exact versioned result wrapper: carry any complete provided menu unchanged through every clarification, including data questions about stock, currency, and options. Menu editing during clarification is not supported; incomplete null prior menu data may be completed with missing names and USD prices. Reevaluate and retain every independent unsupported requirement.",
   "An explicit contradiction remains unresolved. Do not suppress material access, privacy, business-rule, data or compliance, or integration questions. Never silently discard a material question or impose a count target to return supported-default. For an unsupported live payment or external capability, clearly state the current supported limitation and ask one meaningful scope decision for each genuinely independent material difference. When an unavailable external capability is the only explicit difference from the canonical Restaurant default, return exactly one integration material question that states the current supported limitation and asks whether to accept the supported scope or retain that capability as required. Do not infer downstream policy, data, authorization, implementation, processor, setup, or configuration questions from that one unavailable external capability. Preserve an access, privacy, data, or business-rule decision when the brief separately makes it explicit. Do not ask for provider setup, credentials, configuration, or integration implementation details that the supported product cannot implement. The simulated money movement and no external side effects default do not satisfy an explicit live payment request.",
   "A Restaurant follow-up may return supported-default when the supplied answer resolves its material question and no unresolved material requirement remains: missing menu names or USD prices must become complete, and an unsupported-scope question requires explicit acceptance of the supported scope. If an answer continues to require unsupported live payment or another external capability, retain needs-clarification.",
-  "Only non-Restaurant products follow the generated-blueprint interpretation rules.",
+  "Products outside Restaurant and Expense Approval follow the generated-blueprint interpretation rules.",
 ].join(" ");
 
 function namedItemJsonSchema(): Record<string, unknown> {
@@ -828,6 +838,74 @@ const interpretationJsonSchema: Record<string, unknown> = {
   },
 };
 
+// Private strict-mode union mirrors approval disposition/question cardinality.
+const approvalDefinitionSelectionJsonSchema = {
+  anyOf: (["supported-default", "needs-clarification"] as const).map(
+    (disposition) => ({
+      type: "object",
+      additionalProperties: false,
+      required: [
+        "definitionKey",
+        "disposition",
+        "requirementId",
+        "title",
+        "outcome",
+        "materialQuestions",
+        "businessParameters",
+      ],
+      properties: {
+        definitionKey: { type: "string", const: "expense-approval" },
+        disposition: { type: "string", const: disposition },
+        requirementId: {
+          type: "string",
+          minLength: 1,
+          maxLength: 128,
+          pattern: graphKeyJsonPattern,
+        },
+        title: {
+          type: "string",
+          minLength: 2,
+          maxLength: 80,
+        },
+        outcome: {
+          type: "string",
+          minLength: 1,
+          maxLength: 2000,
+        },
+        businessParameters: { type: "null" },
+        materialQuestions: {
+          type: "array",
+          minItems: disposition === "supported-default" ? 0 : 1,
+          maxItems: disposition === "supported-default" ? 0 : 30,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["category", "question"],
+            properties: {
+              category: {
+                type: "string",
+                enum: [
+                  "authorization",
+                  "visibility",
+                  "role",
+                  "business-rule",
+                  "data",
+                  "integration",
+                ],
+              },
+              question: {
+                type: "string",
+                minLength: 1,
+                maxLength: 500,
+              },
+            },
+          },
+        },
+      },
+    }),
+  ),
+};
+
 const providerInterpretationResultJsonSchema: Record<string, unknown> = {
   type: "object",
   additionalProperties: false,
@@ -939,6 +1017,7 @@ const providerInterpretationResultJsonSchema: Record<string, unknown> = {
             },
           },
         },
+        approvalDefinitionSelectionJsonSchema,
         { type: "null" },
       ],
     },
@@ -948,12 +1027,40 @@ const providerInterpretationResultJsonSchema: Record<string, unknown> = {
   },
 };
 
+function supportedExpenseDefaultGuide() {
+  const { actors, entities, pageIntents, workflows, acceptanceJourneys } =
+    canonicalExpenseApprovalInterpretation().blueprint;
+  return {
+    definitionKey: "expense-approval",
+    actors,
+    entities,
+    pageIntents,
+    workflows,
+    acceptanceJourneys,
+    identity:
+      "Local demo with explicitly selectable employee, manager and finance roles; role-wide reads, no requester-owned record privacy or tenant isolation.",
+    integrations:
+      "No external identity, HR, accounting, notification delivery or real receipt storage integration.",
+  };
+}
+
+const supportedExpenseDefaultInstruction = [
+  "Every Expense Approval brief returns definition-selection with definitionKey expense-approval, generatedInterpretation null and businessParameters null. Do not generate its blueprint or supply fields, pages, permissions or workflows in the selection.",
+  `<supported-expense-default>${JSON.stringify(supportedExpenseDefaultGuide())}</supported-expense-default>`,
+  "A coarse expense submission and manager approval request accepts omitted canonical fields, permissions, page intents and workflow details as supported defaults, with zero materialQuestions. A detailed request is supported-default only when every explicit requirement is compatible with this exact default. A display title and requirementId customize identity text only; neither changes business structure. Use a trimmed safe display title of 2 through 80 characters, a lowercase kebab-case requirementId of at most 128 characters and an outcome of at most 2000 characters.",
+  "The supported workflow is draft to submitted by employee, then approved or rejected by a single manager; finance audits all decisions. Amount, category and date are required; receipt and notes are optional; category options are travel, meals, software, office and other. Employee name is required and department optional. The roles are explicitly selectable demo roles with role-wide reads. Omitted routine details do not require questions.",
+  "Any explicit or ambiguous change to authority, visibility, identity, tenant boundary, fields or requiredness, enum values, workflow or integrations requires needs-clarification with at least one material question. Never discard or approximate an explicit incompatible requirement to select supported-default. Preserve every independent material question in the first response, using only authorization, visibility, role, business-rule, data or integration categories. Keep technical plans, packages, provider setup and credentials out of the questions.",
+  "Multiple approval levels, thresholds or an ambiguous decision owner require a role or business-rule question; missing reviewer read permission or changed decision rights require authorization clarification. Requester-only privacy, requests that each employee sees only their own records, and private multiuser access require visibility or authorization clarification: role-wide demo reads do not satisfy requester-only privacy. External authentication, SSO, tenant isolation or real users require authorization or integration clarification. Changed required fields require data clarification. Withdrawal, reopening, return for edits, resubmission and post-approval changes require business-rule clarification. HR, accounting, external notifications, file upload storage and other external integrations require integration clarification; a receipt placeholder is not real receipt storage.",
+  "For Expense Approval follow-ups, retain needs-clarification for every still-required unsupported capability, even when the user has answered a prior question. Only explicit acceptance of the exact supported scope can resolve an unsupported-scope question; an answer that still demands requester privacy, external identity or different authority/workflow is never supported-default. Never infer acceptance from an answer, omit a material requirement or implement unsupported semantics through title or outcome.",
+].join(" ");
+
 const interpretationInstructions = [
   "You are the Factory Pilot requirement interpreter adapter.",
   "Return only a JSON object matching the provided schema.",
   "For a generated-blueprint result, interpret the brief into a factory.requirement-spec/v1 requirement and a factory.product-blueprint/v1 product blueprint.",
-  "Every Restaurant brief returns definition-selection. Use supported-default only when every explicit requirement fits the supported Restaurant default and no material question remains; use needs-clarification for every genuinely independent material difference, access, privacy, business-rule, data or compliance, external integration, or live payment decision, preserving every material question. Only non-Restaurant products return generated-blueprint.",
+  "Every Restaurant brief returns definition-selection. Use supported-default only when every explicit requirement fits the supported Restaurant default and no material question remains; use needs-clarification for every genuinely independent material difference, access, privacy, business-rule, data or compliance, external integration, or live payment decision, preserving every material question. Products outside Restaurant and Expense Approval return generated-blueprint.",
   supportedRestaurantDefaultInstruction,
+  supportedExpenseDefaultInstruction,
   "A generated blueprint proposes business semantics only: actors with entity permissions, entities with typed fields, page intents from the approved enum, workflows with states and transitions, and acceptance journeys.",
   "Never propose routes, URLs, paths, capability or package selections, source, code, providers, or credentials.",
   "Business text must not contain URLs, absolute or Windows paths, traversal segments, or prototype-key material.",
@@ -987,9 +1094,25 @@ type OpenAIRequirementClient = {
         readonly timeout: 180_000;
         readonly maxRetries: 0;
       },
-    ): Promise<{ readonly output_text: string }>;
+    ): Promise<{
+      readonly status?: unknown;
+      readonly error?: unknown;
+      readonly output?: readonly {
+        readonly content?: readonly { readonly type?: unknown }[];
+      }[];
+      readonly output_text: string;
+    }>;
   };
 };
+
+const REQUIREMENT_MAX_OUTPUT_TOKENS = 25_000;
+
+/** Metadata failures are terminal; completed invalid text alone is repairable. */
+class TerminalRequirementResponseError extends RequirementInterpreterError {
+  public constructor() {
+    super("Requirement interpretation output was invalid.", "output_invalid");
+  }
+}
 
 export class OpenAIRequirementResponsesApiTransport implements OpenAIResponseTransport {
   private readonly createClient: (apiKey: string) => OpenAIRequirementClient;
@@ -1022,6 +1145,7 @@ export class OpenAIRequirementResponsesApiTransport implements OpenAIResponseTra
         instructions: request.instructions,
         input: request.input,
         store: request.store,
+        max_output_tokens: REQUIREMENT_MAX_OUTPUT_TOKENS,
         text: {
           format: {
             type: "json_schema",
@@ -1037,6 +1161,15 @@ export class OpenAIRequirementResponsesApiTransport implements OpenAIResponseTra
         maxRetries: request.maxRetries,
       },
     );
+    if (
+      response.status !== "completed" ||
+      response.error !== null ||
+      response.output?.some((item) =>
+        item.content?.some((content) => content.type === "refusal"),
+      )
+    ) {
+      throw new TerminalRequirementResponseError();
+    }
     return { outputText: response.output_text };
   }
 }
@@ -1081,7 +1214,12 @@ function composeAbortSignals(signals: readonly AbortSignal[]): {
 }
 
 async function withAbort<T>(work: Promise<T>, signal: AbortSignal): Promise<T> {
-  if (signal.aborted) throw new InterpretationAbort();
+  if (signal.aborted) {
+    // The SDK may abort synchronously while starting an already-created promise.
+    // Observe its eventual rejection without delaying cancellation precedence.
+    void work.catch(() => undefined);
+    throw new InterpretationAbort();
+  }
   let listener: (() => void) | undefined;
   try {
     return await Promise.race([
@@ -1254,6 +1392,7 @@ export class OpenAIRequirementInterpreterAdapter implements RequirementInterpret
           if (combined.signal.aborted || isProviderTimeout(error)) {
             throw timeoutFailure();
           }
+          if (error instanceof TerminalRequirementResponseError) throw error;
           throw providerFailure(error);
         } finally {
           clearTimeout(roundTimer);
@@ -1295,9 +1434,11 @@ export class OpenAIRequirementInterpreterAdapter implements RequirementInterpret
         if (providerResult.resultKind === "definition-selection") {
           let interpretation: RequirementInterpretationV1;
           try {
-            interpretation = projectRestaurantDefinitionSelection(
-              providerResult.definitionSelection!,
-            );
+            const selection = providerResult.definitionSelection!;
+            interpretation =
+              selection.definitionKey === "expense-approval"
+                ? projectApprovalDefinitionSelection(selection)
+                : projectRestaurantDefinitionSelection(selection);
           } catch {
             if (round >= MAX_REPAIR_ROUNDS) throw outputFailure();
             repairNote = FIXED_REPAIR_INSTRUCTION;

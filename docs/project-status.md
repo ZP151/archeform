@@ -1,6 +1,6 @@
 # Archeform delivery status
 
-Updated: 2026-09-09
+Updated: 2026-09-10
 
 ## Active continuation: approval delivery and hosted decision
 
@@ -31,15 +31,37 @@ seconds to business completion, with 0 questions and 0 technical handoffs in a
 prepared local environment. This is not a real-model reliability or cold-start
 benchmark. Earlier failed attempts remain in the ledger.
 
-The separate real-provider first attempt failed the one-step outcome: one request
-returned HTTP 200, but manual plan choices remained and no automatic delivery
-started (109.924 s to failure, 0 lifecycle operations, no retry). The specific
-semantic mismatch is not established by the safe diagnostic evidence. This is a
-first-request product gap, not a generated runtime regression. Its result is
-not combined with the fixture pass.
-D2 still needs ten representative approval cases and ordinary-user validation.
-The generated interface is now functional and readable; further visual hierarchy
-and business-specific summaries should be judged by faster task completion.
+D2.3 now passes the genuine supported Expense journey: **167.833 seconds to
+ready, zero questions and zero technical handoffs**, with one browser
+interpretation request. Two requests were created and submitted through the
+generated UI, then approved/rejected and retained after requester reload;
+unauthorized requester approval was denied. Business assertions completed in
+171.716 seconds. Layout and axe checks pass at 390/768/1440 px. This is one
+supported request in a prepared local environment, not a reliability rate or
+cold-start benchmark. Browser calls do not measure internal provider transports.
+
+The genuine requester-privacy case separately returned a consolidated set of
+three material questions in 20.054 seconds, with zero product creation or
+lifecycle. The local demo was not substituted for private authenticated access.
+The implementation reuses a complete canonical Expense definition (ADR-0050),
+stops semantic retries after incomplete provider responses (ADR-0051), and
+removes six complex provider-side text patterns while retaining exact local
+validation (ADR-0052). Earlier manual-handoff and HTTP 422 failures remain in
+the ledger; bounded diagnostics, including one exact pattern-removal contrast,
+guided the corrections rather than unchanged acceptance retries.
+
+Final evidence includes 174 adapter tests, 36 affected Workbench tests, four
+safe-diagnostic tests, package types/build, production image build, independent
+review and separate deterministic/real runtime lanes. Temporary preview and
+Factory resources were removed with exact-label zero counts. The
+[mobile result](acceptance/evidence/consumer-approval/d23-real-results-390.png)
+contains only authored synthetic business data.
+
+D2 still needs broader first-request coverage across its ten-case matrix and
+ordinary-user validation. Next measure coarse Expense intent, preserve material
+workflow/integration differences, and reduce mobile navigation and record-reading
+effort using existing assets. A larger template count is not the next success
+metric. Private real-user identity and hosted access remain separate gaps.
 
 Proposed ADR-0047 specifies an invited-user hosted experiment and required
 account, domain, host, access and spend decisions. No hosted infrastructure has

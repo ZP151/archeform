@@ -1,6 +1,8 @@
+import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  applyGraphDiffToDraft,
   createBlankApplicationDraft,
   hashProductBlueprint,
   hashRequirementSpec,
@@ -13,16 +15,100 @@ import {
   restaurantOrderingProductRecipe,
 } from "@factory/capabilities";
 import * as capabilities from "@factory/capabilities";
-import { planProductAlternatives } from "@factory/capabilities/node";
+import {
+  composeProductDraft,
+  planProductAlternatives,
+} from "@factory/capabilities/node";
+import { consumerFamilyFor } from "../../../apps/workbench/lib/product-journey/consumer-family.js";
 import type { OpenAIResponseTransport } from "../src/ai.js";
 import type { OpenAITransportRequest } from "../src/ai.js";
+import { approvalDefinitionSelectionSchema } from "../src/requirements/approval-definition-selection.js";
 import { FixtureRequirementInterpreter } from "../src/requirements/fixture-interpreter.js";
-import { OpenAIRequirementInterpreterAdapter } from "../src/requirements/openai-interpreter.js";
+import {
+  OpenAIRequirementInterpreterAdapter,
+  OpenAIRequirementResponsesApiTransport,
+} from "../src/requirements/openai-interpreter.js";
 import {
   clarificationQuestionsMatch,
   factoryClarificationDefault,
   RequirementInterpreterError,
 } from "../src/requirements/requirement-interpreter.js";
+
+// Evaluates only the JSON Schema vocabulary used by the private selection.
+// Unknown keywords fail the test rather than being silently ignored.
+type SelectionJsonSchema = {
+  type?: string;
+  const?: unknown;
+  enum?: unknown[];
+  anyOf?: SelectionJsonSchema[];
+  properties?: Record<string, SelectionJsonSchema>;
+  required?: string[];
+  additionalProperties?: boolean;
+  items?: SelectionJsonSchema;
+  minItems?: number;
+  maxItems?: number;
+  minLength?: number;
+  maxLength?: number;
+  pattern?: string;
+};
+
+function matchesSelectionJsonSchema(
+  schema: SelectionJsonSchema,
+  value: unknown,
+): boolean {
+  const keywords = [
+    "type",
+    "const",
+    "enum",
+    "anyOf",
+    "properties",
+    "required",
+    "additionalProperties",
+    "items",
+    "minItems",
+    "maxItems",
+    "minLength",
+    "maxLength",
+    "pattern",
+  ];
+  expect(Object.keys(schema).every((key) => keywords.includes(key))).toBe(true);
+  if (schema.anyOf)
+    return schema.anyOf.some((branch) =>
+      matchesSelectionJsonSchema(branch, value),
+    );
+  if ("const" in schema && value !== schema.const) return false;
+  if (schema.enum && !schema.enum.includes(value)) return false;
+  if (schema.type === "null") return value === null;
+  if (schema.type === "string")
+    return (
+      typeof value === "string" &&
+      value.length >= (schema.minLength ?? 0) &&
+      value.length <= (schema.maxLength ?? Infinity) &&
+      (!schema.pattern || new RegExp(schema.pattern).test(value))
+    );
+  if (schema.type === "array")
+    return (
+      Array.isArray(value) &&
+      value.length >= (schema.minItems ?? 0) &&
+      value.length <= (schema.maxItems ?? Infinity) &&
+      value.every((item) => matchesSelectionJsonSchema(schema.items!, item))
+    );
+  if (schema.type === "object") {
+    if (value === null || typeof value !== "object" || Array.isArray(value))
+      return false;
+    const record = value as Record<string, unknown>;
+    const properties = schema.properties!;
+    return (
+      (schema.required ?? []).every((key) => Object.hasOwn(record, key)) &&
+      Object.keys(record).every((key) =>
+        key in properties
+          ? matchesSelectionJsonSchema(properties[key]!, record[key])
+          : schema.additionalProperties !== false,
+      )
+    );
+  }
+  throw new Error("Unhandled private schema type.");
+}
 
 const expenseApprovalBrief = [
   "Build an expense approval application. Employees submit expenses with",
@@ -584,6 +670,709 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
     return { requests, transport };
   }
 
+  function approvalDefinitionSelection(
+    overrides: Record<string, unknown> = {},
+  ): Record<string, unknown> {
+    return {
+      resultKind: "definition-selection",
+      definitionSelection: {
+        definitionKey: "expense-approval",
+        disposition: "supported-default",
+        requirementId: "expense-approval-requirement",
+        title: "Expense Approval",
+        outcome:
+          "Employees submit expenses and managers decide them; finance audits the decisions.",
+        materialQuestions: [],
+        businessParameters: null,
+        ...overrides,
+      },
+      generatedInterpretation: null,
+    };
+  }
+
+  it.each([
+    ["A01", "Build an expense approval app for employees and managers."],
+    ["A02", expenseApprovalBrief],
+  ])(
+    "projects compact Expense selection %s into the exact canonical envelope",
+    async (_caseId, brief) => {
+      // Fake transport proves parser/projection, not model semantic classification.
+      const { requests, transport } = capturingTransport(
+        approvalDefinitionSelection(),
+      );
+      const adapter = new OpenAIRequirementInterpreterAdapter({
+        transport,
+        readEnvironment: () => "test-key",
+      });
+      const result = await adapter.interpret({ brief, answers: {} });
+      const fixture = await new FixtureRequirementInterpreter().interpret({
+        brief: expenseApprovalBrief,
+        answers: {},
+      });
+      expect(result).toEqual(fixture);
+      expect(
+        createHash("sha256").update(JSON.stringify(result)).digest("hex"),
+      ).toBe(
+        "6bb06e85fa6a33e3eef1b8ba39770dc6bfb55cc9f882c52fd46a9211f73587d8",
+      );
+      expect(result.interpretation.blueprint.requirementChecksum).toBe(
+        "sha256:4e62ff6314a43affe62a823ad0d7be7db53dc43336582dab9c480f692e5cd37d",
+      );
+      expect(requests).toHaveLength(1);
+      expect(result.businessParameters).toBeNull();
+    },
+  );
+
+  it("advertises the compact Expense schema and canonical defaults in the provider request", async () => {
+    const { requests, transport } = capturingTransport(
+      approvalDefinitionSelection(),
+    );
+    await new OpenAIRequirementInterpreterAdapter({
+      transport,
+      readEnvironment: () => "test-key",
+    }).interpret({ brief: expenseApprovalBrief, answers: {} });
+    const request = requests[0]!;
+    const schema = request.jsonSchema as {
+      properties: {
+        definitionSelection: { anyOf: Array<Record<string, any>> };
+      };
+    };
+    const approval = schema.properties.definitionSelection.anyOf.find(
+      (branch) =>
+        branch.anyOf?.[0]?.properties?.definitionKey?.const ===
+        "expense-approval",
+    );
+    expect(approval).toBeDefined();
+    expect(approval!.anyOf).toHaveLength(2);
+    const [supported, material] = approval!.anyOf;
+    expect(supported.properties.businessParameters).toEqual({ type: "null" });
+    expect(supported.properties.disposition.const).toBe("supported-default");
+    expect(supported.properties.materialQuestions.maxItems).toBe(0);
+    expect(material.properties.disposition.const).toBe("needs-clarification");
+    expect(material.properties.materialQuestions.minItems).toBe(1);
+    expect(material.properties.materialQuestions.maxItems).toBe(30);
+    for (const branch of [supported, material]) {
+      expect(branch.additionalProperties).toBe(false);
+      expect(branch.required.toSorted()).toEqual(
+        Object.keys(branch.properties).toSorted(),
+      );
+      expect(branch.properties.requirementId).toMatchObject({
+        minLength: 1,
+        maxLength: 128,
+      });
+      expect(branch.properties.title).not.toHaveProperty("pattern");
+      expect(branch.properties.outcome).not.toHaveProperty("pattern");
+      expect(
+        branch.properties.materialQuestions.items.properties.question,
+      ).not.toHaveProperty("pattern");
+      expect(branch.properties.title).toMatchObject({
+        minLength: 2,
+        maxLength: 80,
+      });
+      expect(branch.properties.outcome).toMatchObject({
+        minLength: 1,
+        maxLength: 2000,
+      });
+      expect(
+        branch.properties.materialQuestions.items.properties.category.enum,
+      ).toEqual([
+        "authorization",
+        "visibility",
+        "role",
+        "business-rule",
+        "data",
+        "integration",
+      ]);
+      expect(
+        branch.properties.materialQuestions.items.properties.question,
+      ).toMatchObject({ minLength: 1, maxLength: 500 });
+    }
+    const match = request.instructions.match(
+      /<supported-expense-default>(.*?)<\/supported-expense-default>/,
+    );
+    expect(match).not.toBeNull();
+    const defaults = JSON.parse(match![1]!);
+    const fixture = await new FixtureRequirementInterpreter().interpret({
+      brief: expenseApprovalBrief,
+      answers: {},
+    });
+    expect(defaults.entities).toEqual(
+      fixture.interpretation.blueprint.entities,
+    );
+    expect(defaults.actors).toEqual(fixture.interpretation.blueprint.actors);
+    expect(defaults.workflows).toEqual(
+      fixture.interpretation.blueprint.workflows,
+    );
+    expect(request.instructions).toContain("role-wide reads");
+    expect(request.instructions).toContain("requester-only privacy");
+    expect(request.instructions).toContain("businessParameters null");
+    expect(request.store).toBe(false);
+    expect(request.strictJson).toBe(true);
+  });
+
+  it.each(["A01", "A02"])(
+    "composes %s with exact approval locks, bindings and consumer eligibility",
+    async (caseId) => {
+      const { transport } = capturingTransport(
+        approvalDefinitionSelection({
+          requirementId: `expense-${caseId.toLowerCase()}`,
+          title: `Expense ${caseId}`,
+          outcome: `Employees submit expenses for manager decisions in ${caseId}.`,
+        }),
+      );
+      const result = await new OpenAIRequirementInterpreterAdapter({
+        transport,
+        readEnvironment: () => "test-key",
+      }).interpret({ brief: expenseApprovalBrief, answers: {} });
+      const { spec, blueprint } = result.interpretation;
+      expect(spec.requirementId).toBe(`expense-${caseId.toLowerCase()}`);
+      expect(spec.outcome).toBe(
+        `Employees submit expenses for manager decisions in ${caseId}.`,
+      );
+      expect(blueprint.title).toBe(`Expense ${caseId}`);
+      expect(blueprint.requirementChecksum).toBe(hashRequirementSpec(spec));
+      expect(blueprint.actors).toHaveLength(3);
+      expect(blueprint.entities).toHaveLength(2);
+      expect(blueprint.pageIntents).toHaveLength(6);
+      expect(blueprint.workflows).toHaveLength(1);
+      const baseDraft = createBlankApplicationDraft({
+        applicationId: spec.requirementId,
+        workspaceId: "local-workspace",
+        name: blueprint.title,
+      });
+      const alternatives = planProductAlternatives({
+        requirement: spec,
+        blueprint,
+        baseDraft,
+      });
+      const standard = alternatives.filter(({ key }) => key === "standard");
+      expect(standard).toHaveLength(1);
+      const plan = standard[0]!.plan;
+      expect(plan.compatibility.result).toBe("compatible");
+      expect(
+        plan.capabilityLocks
+          .map(({ key, version }) => `${key}@${version}`)
+          .toSorted(),
+      ).toEqual([
+        "core.audit@1.0.2",
+        "core.crud@1.0.1",
+        "core.identity-policy@1.0.0",
+        "core.notification@1.1.1",
+        "core.policy-declarations@1.0.0",
+        "core.workflow@1.0.1",
+      ]);
+      expect(
+        plan.graphBindings.filter(
+          ({ capabilityKey }) =>
+            capabilityKey === "core.crud" || capabilityKey === "core.workflow",
+        ),
+      ).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            capabilityKey: "core.workflow",
+            inputKey: "flowKey",
+            graphSymbol: "graph.flow.expense-approval",
+          }),
+          expect.objectContaining({
+            capabilityKey: "core.crud",
+            inputKey: "entityKey",
+            graphSymbol: "graph.domain.expense",
+          }),
+          expect.objectContaining({
+            capabilityKey: "core.crud",
+            inputKey: "routeKey",
+            graphSymbol: "graph.page.expense-list",
+          }),
+        ]),
+      );
+      expect(
+        consumerFamilyFor({
+          state: { interpretation: result, alternatives },
+          openQuestions: result.interpretation.clarifications.flatMap(
+            ({ questions }) => questions,
+          ),
+        } as Parameters<typeof consumerFamilyFor>[0]),
+      ).toBe("approval");
+      const { diff } = composeProductDraft({ plan, blueprint, baseDraft });
+      const composed = applyGraphDiffToDraft(baseDraft, diff);
+      expect(composed.status).toBe("draft");
+      expect(composed.graph.metadata.id).toBe(spec.requirementId);
+      expect(composed.graph.flow.flows[0]?.transitions).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            event: "reject",
+            from: "submitted",
+            to: "rejected",
+            roles: ["manager"],
+          }),
+        ]),
+      );
+    },
+  );
+
+  it.each([
+    [
+      "A04",
+      "data",
+      "Should receipt remain optional or must it become required?",
+    ],
+    [
+      "A06",
+      "role",
+      "Which approval authority is required beyond the supported single manager?",
+    ],
+    [
+      "A07",
+      "authorization",
+      "Must reviewers decide without the supported expense read permission?",
+    ],
+    [
+      "A08",
+      "business-rule",
+      "Must withdrawal or return and resubmit remain required beyond the supported workflow?",
+    ],
+    [
+      "A09",
+      "integration",
+      "Is external identity integration required beyond selectable demo roles?",
+    ],
+    [
+      "A10",
+      "visibility",
+      "Must requester-only privacy remain required beyond role-wide reads?",
+    ],
+    [
+      "tenant",
+      "authorization",
+      "Is tenant isolation required beyond the local demo?",
+    ],
+  ])(
+    "retains %s as a material %s selection and excludes consumer continuation",
+    async (_caseId, category, question) => {
+      const { requests, transport } = capturingTransport(
+        approvalDefinitionSelection({
+          disposition: "needs-clarification",
+          materialQuestions: [{ category, question }],
+        }),
+      );
+      const result = await new OpenAIRequirementInterpreterAdapter({
+        transport,
+        readEnvironment: () => "test-key",
+      }).interpret({
+        brief: "An expense application with a material business requirement.",
+        answers: {},
+      });
+      expect(result.interpretation.spec.openQuestions).toEqual([
+        { category, question },
+      ]);
+      expect(
+        result.interpretation.clarifications.flatMap(
+          ({ questions }) => questions,
+        ),
+      ).toEqual([
+        expect.objectContaining({
+          category,
+          question,
+          defaultPolicy: "required",
+        }),
+      ]);
+      expect(result.interpretation.blueprint.requirementChecksum).toBe(
+        hashRequirementSpec(result.interpretation.spec),
+      );
+      const alternatives = planProductAlternatives({
+        requirement: result.interpretation.spec,
+        blueprint: result.interpretation.blueprint,
+        baseDraft: createBlankApplicationDraft({
+          applicationId: "expense-clarification",
+          workspaceId: "local-workspace",
+          name: "Expense clarification",
+        }),
+      });
+      expect(
+        consumerFamilyFor({
+          state: { interpretation: result, alternatives },
+          openQuestions: result.interpretation.clarifications.flatMap(
+            ({ questions }) => questions,
+          ),
+        } as Parameters<typeof consumerFamilyFor>[0]),
+      ).toBeNull();
+      expect(requests).toHaveLength(1);
+      expect(result.businessParameters).toBeNull();
+    },
+  );
+
+  it.each([
+    { definitionKey: "unknown-approval" },
+    { definitionKey: "expenseApproval" },
+    { businessParameters: {} },
+    { businessParameters: capabilities.canonicalRestaurantMenuParameters() },
+    { disposition: "needs-clarification" },
+    {
+      disposition: "supported-default",
+      materialQuestions: [
+        { category: "visibility", question: "Who may read?" },
+      ],
+    },
+    { materialQuestions: null },
+    {
+      materialQuestions: [
+        { category: "experience.visual-style", question: "Which color?" },
+      ],
+    },
+    {
+      disposition: "needs-clarification",
+      materialQuestions: Array.from({ length: 31 }, () => ({
+        category: "role",
+        question: "Which role?",
+      })),
+    },
+    {
+      disposition: "needs-clarification",
+      materialQuestions: [
+        { category: "role", question: "Which role?", answer: "manager" },
+      ],
+    },
+    {
+      disposition: "needs-clarification",
+      materialQuestions: [{ category: "role", question: "x".repeat(501) }],
+    },
+    { title: "x" },
+    { title: "x".repeat(81) },
+    { title: " Expense " },
+    { title: "Expense\nApp" },
+    { title: "https://example.com" },
+    { requirementId: "expenseApproval" },
+    { requirementId: "x".repeat(129) },
+    { outcome: "x".repeat(2001) },
+    { outcome: " " },
+    { pageIntents: [{ key: "duplicate-list" }] },
+    { permissions: [] },
+  ])(
+    "rejects malformed compact Expense selection %# with bounded repair",
+    async (overrides) => {
+      const { requests, transport } = capturingTransport(
+        approvalDefinitionSelection(overrides),
+      );
+      await expect(
+        new OpenAIRequirementInterpreterAdapter({
+          transport,
+          readEnvironment: () => "test-key",
+        }).interpret({ brief: expenseApprovalBrief, answers: {} }),
+      ).rejects.toMatchObject({ code: "output_invalid" });
+      expect(requests).toHaveLength(3);
+      for (const request of requests.slice(1))
+        expect(JSON.parse(request.input).repair).toBe(
+          "The previous interpretation was invalid. Return one complete interpretation that satisfies the required schema and semantic contract.",
+        );
+    },
+  );
+
+  it("rejects mixed, null and incomplete Expense result envelopes", async () => {
+    const selection = approvalDefinitionSelection();
+    const incomplete = approvalDefinitionSelection();
+    delete (incomplete.definitionSelection as Record<string, unknown>)
+      .businessParameters;
+    for (const candidate of [
+      { ...selection, generatedInterpretation: openaiExpenseCandidate() },
+      { ...selection, resultKind: "generated-blueprint" },
+      { ...selection, definitionSelection: null },
+      { ...selection, extra: true },
+      incomplete,
+    ]) {
+      const { requests, transport } = capturingTransport(candidate);
+      await expect(
+        new OpenAIRequirementInterpreterAdapter({
+          transport,
+          readEnvironment: () => "test-key",
+        }).interpret({ brief: expenseApprovalBrief, answers: {} }),
+      ).rejects.toMatchObject({ code: "output_invalid" });
+      expect(requests).toHaveLength(3);
+    }
+  });
+
+  it("repairs an invalid Expense selection into a complete canonical selection", async () => {
+    let calls = 0;
+    const adapter = new OpenAIRequirementInterpreterAdapter({
+      readEnvironment: () => "test-key",
+      transport: {
+        async create() {
+          calls += 1;
+          return {
+            outputText: JSON.stringify(
+              approvalDefinitionSelection(
+                calls === 1 ? { businessParameters: {} } : {},
+              ),
+            ),
+          };
+        },
+      },
+    });
+    const result = await adapter.interpret({
+      brief: expenseApprovalBrief,
+      answers: {},
+    });
+    expect(result.interpretation.blueprint.pageIntents).toHaveLength(6);
+    expect(result.interpretation.clarifications).toEqual([]);
+    expect(calls).toBe(2);
+  });
+
+  it("keeps private Expense Zod and provider structural constraints in parity", async () => {
+    const { requests, transport } = capturingTransport(
+      approvalDefinitionSelection(),
+    );
+    await new OpenAIRequirementInterpreterAdapter({
+      transport,
+      readEnvironment: () => "test-key",
+    }).interpret({ brief: expenseApprovalBrief, answers: {} });
+    const schema = (
+      requests[0]!.jsonSchema as {
+        properties: { definitionSelection: { anyOf: SelectionJsonSchema[] } };
+      }
+    ).properties.definitionSelection.anyOf[1]!;
+    const selection = approvalDefinitionSelection()
+      .definitionSelection as Record<string, unknown>;
+    const valid = [
+      selection,
+      { ...selection, title: "AB" },
+      {
+        ...selection,
+        title: "x".repeat(80),
+        requirementId: "x".repeat(128),
+        outcome: "x".repeat(2000),
+      },
+      {
+        ...selection,
+        disposition: "needs-clarification",
+        materialQuestions: [
+          { category: "visibility", question: "Who may read?" },
+        ],
+      },
+      {
+        ...selection,
+        disposition: "needs-clarification",
+        materialQuestions: Array.from({ length: 30 }, () => ({
+          category: "role",
+          question: "x".repeat(500),
+        })),
+      },
+    ];
+    const invalid = [
+      null,
+      {},
+      { ...selection, unknown: true },
+      { ...selection, businessParameters: {} },
+      { ...selection, definitionKey: "unknown" },
+      { ...selection, disposition: "needs-clarification" },
+      {
+        ...selection,
+        materialQuestions: [{ category: "role", question: "Which role?" }],
+      },
+      {
+        ...selection,
+        disposition: "needs-clarification",
+        materialQuestions: [
+          { category: "experience.visual-style", question: "Which color?" },
+        ],
+      },
+      ...["", "x", "x".repeat(81)].map((title) => ({ ...selection, title })),
+      ...["", "expenseApproval", "x".repeat(129)].map((requirementId) => ({
+        ...selection,
+        requirementId,
+      })),
+      ...["", "x".repeat(2001)].map((outcome) => ({ ...selection, outcome })),
+      ...["", "x".repeat(501)].map((question) => ({
+        ...selection,
+        disposition: "needs-clarification",
+        materialQuestions: [{ category: "data", question }],
+      })),
+    ];
+    for (const candidate of valid) {
+      expect(
+        approvalDefinitionSelectionSchema.safeParse(candidate).success,
+      ).toBe(true);
+      expect(matchesSelectionJsonSchema(schema, candidate)).toBe(true);
+    }
+    for (const candidate of invalid) {
+      expect(
+        approvalDefinitionSelectionSchema.safeParse(candidate).success,
+      ).toBe(false);
+      expect(matchesSelectionJsonSchema(schema, candidate)).toBe(false);
+    }
+  });
+
+  it.each(["title", "outcome", "question"])(
+    "keeps unsafe %s provider-structural text rejected by authoritative local validation",
+    async (field) => {
+      for (const text of [
+        "https://example.com",
+        "WWW.example.com",
+        "C:\\private",
+        "../private",
+        "/private",
+        "__PrOtO__",
+        "Constructor",
+        "Prototype",
+        "  ",
+      ]) {
+        const candidate = approvalDefinitionSelection(
+          field === "question"
+            ? {
+                disposition: "needs-clarification",
+                materialQuestions: [{ category: "data", question: text }],
+              }
+            : { [field]: text },
+        );
+        const { requests, transport } = capturingTransport(candidate);
+        const pending = new OpenAIRequirementInterpreterAdapter({
+          transport,
+          readEnvironment: () => "test-key",
+        }).interpret({ brief: expenseApprovalBrief, answers: {} });
+        await expect(pending).rejects.toMatchObject({
+          code: "output_invalid",
+          message: "Requirement interpretation output was invalid.",
+        });
+        await expect(pending).rejects.not.toThrow(text);
+        expect(requests).toHaveLength(3);
+        const schema = (
+          requests[0]!.jsonSchema as {
+            properties: {
+              definitionSelection: { anyOf: SelectionJsonSchema[] };
+            };
+          }
+        ).properties.definitionSelection.anyOf[1]!;
+        expect(
+          matchesSelectionJsonSchema(schema, candidate.definitionSelection),
+        ).toBe(true);
+        expect(
+          approvalDefinitionSelectionSchema.safeParse(
+            candidate.definitionSelection,
+          ).success,
+        ).toBe(false);
+      }
+    },
+  );
+
+  it("keeps title-only trim and control exclusions at the local boundary", async () => {
+    for (const title of [
+      " Expense",
+      "Expense ",
+      "Expense\nApp",
+      "Expense\u0000App",
+    ]) {
+      const candidate = approvalDefinitionSelection({ title });
+      const { requests, transport } = capturingTransport(candidate);
+      await expect(
+        new OpenAIRequirementInterpreterAdapter({
+          transport,
+          readEnvironment: () => "test-key",
+        }).interpret({ brief: expenseApprovalBrief, answers: {} }),
+      ).rejects.toMatchObject({
+        code: "output_invalid",
+        message: "Requirement interpretation output was invalid.",
+      });
+      expect(requests).toHaveLength(3);
+      const schema = (
+        requests[0]!.jsonSchema as {
+          properties: { definitionSelection: { anyOf: SelectionJsonSchema[] } };
+        }
+      ).properties.definitionSelection.anyOf[1]!;
+      expect(
+        matchesSelectionJsonSchema(schema, candidate.definitionSelection),
+      ).toBe(true);
+      expect(
+        approvalDefinitionSelectionSchema.safeParse(
+          candidate.definitionSelection,
+        ).success,
+      ).toBe(false);
+    }
+  });
+
+  it.each(["outcome", "question"])(
+    "preserves valid multiline %s and permitted surrounding whitespace",
+    async (field) => {
+      const text = "  Employees submit expenses.\nManagers decide them.  ";
+      const candidate = approvalDefinitionSelection(
+        field === "question"
+          ? {
+              disposition: "needs-clarification",
+              materialQuestions: [{ category: "data", question: text }],
+            }
+          : { outcome: text },
+      );
+      const { requests, transport } = capturingTransport(candidate);
+      const result = await new OpenAIRequirementInterpreterAdapter({
+        transport,
+        readEnvironment: () => "test-key",
+      }).interpret({ brief: expenseApprovalBrief, answers: {} });
+      expect(requests).toHaveLength(1);
+      expect(
+        field === "outcome"
+          ? result.interpretation.spec.outcome
+          : result.interpretation.spec.openQuestions[0]!.question,
+      ).toBe(text);
+      expect(result.interpretation.blueprint.requirementChecksum).toBe(
+        hashRequirementSpec(result.interpretation.spec),
+      );
+    },
+  );
+
+  it("preserves all independent Expense questions and refuses unsupported follow-up approximation", async () => {
+    const materialQuestions = [
+      {
+        category: "visibility",
+        question: "Must requester-only privacy remain required?",
+      },
+      {
+        category: "integration",
+        question: "Must external identity remain required?",
+      },
+    ];
+    const { transport } = capturingTransport(
+      approvalDefinitionSelection({
+        disposition: "needs-clarification",
+        materialQuestions,
+      }),
+    );
+    const adapter = new OpenAIRequirementInterpreterAdapter({
+      transport,
+      readEnvironment: () => "test-key",
+    });
+    const first = await adapter.interpret({
+      brief: expenseApprovalBrief,
+      answers: {},
+    });
+    expect(first.interpretation.spec.openQuestions).toEqual(materialQuestions);
+    expect(
+      first.interpretation.clarifications.flatMap(({ questions }) => questions),
+    ).toHaveLength(2);
+    const question = first.interpretation.clarifications[0]!.questions[0]!;
+    const failed = capturingTransport(
+      approvalDefinitionSelection({
+        disposition: "needs-clarification",
+        materialQuestions,
+      }),
+    );
+    await expect(
+      new OpenAIRequirementInterpreterAdapter({
+        transport: failed.transport,
+        readEnvironment: () => "test-key",
+      }).interpret({
+        brief: expenseApprovalBrief,
+        answers: { [question.key]: "Requester-only privacy remains required." },
+        priorInterpretation: first,
+        clarificationContext: [
+          {
+            key: question.key,
+            category: question.category,
+            question: question.question,
+            answer: "Requester-only privacy remains required.",
+          },
+        ],
+      }),
+    ).rejects.toMatchObject({ code: "output_invalid" });
+    expect(failed.requests).toHaveLength(3);
+  });
+
   it("interprets a model candidate, computing the requirement checksum authoritatively", async () => {
     const { requests, transport } = capturingTransport(
       openaiExpenseCandidate(),
@@ -646,7 +1435,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       "Every Restaurant result returns definition-selection with generatedInterpretation null; do not produce a full blueprint",
     );
     expect(requests[0]?.instructions).toContain(
-      "Only non-Restaurant products return generated-blueprint",
+      "Products outside Restaurant and Expense Approval return generated-blueprint",
     );
     expect(requests[0]?.instructions).toContain(
       "For Restaurant follow-ups, reevaluate definition fit and retain needs-clarification for every still-material question or new material difference",
@@ -660,7 +1449,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
         generatedInterpretation: { anyOf: unknown[] };
       };
     };
-    expect(schema.properties.definitionSelection.anyOf).toHaveLength(2);
+    expect(schema.properties.definitionSelection.anyOf).toHaveLength(3);
     expect(schema.properties.generatedInterpretation.anyOf).toHaveLength(2);
     const alternatives = planProductAlternatives({
       requirement: interpretation.spec,
@@ -1620,7 +2409,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       "If the brief is ambiguous, leave an open question in the spec instead of guessing unless an applicable supported definition resolves the omitted detail.",
     );
     expect(requests[0]?.instructions).toContain(
-      "Only non-Restaurant products follow the generated-blueprint interpretation rules.",
+      "Products outside Restaurant and Expense Approval follow the generated-blueprint interpretation rules.",
     );
   });
 
@@ -2163,7 +2952,12 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
   });
 
   it("passes the composed signal and no-retry 180-second policy to the production SDK", async () => {
-    const create = vi.fn().mockResolvedValue({ output_text: "{}" });
+    const create = vi.fn().mockResolvedValue({
+      status: "completed",
+      error: null,
+      output: [],
+      output_text: "{}",
+    });
     const module =
       (await import("../src/requirements/openai-interpreter.js")) as Record<
         string,
@@ -2197,11 +2991,224 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
     });
 
     expect(create).toHaveBeenCalledOnce();
+    expect(create.mock.calls[0]?.[0]).toEqual({
+      model: "gpt-5",
+      instructions: "fixed",
+      input: "{}",
+      store: false,
+      max_output_tokens: 25000,
+      text: {
+        format: {
+          type: "json_schema",
+          name: "factory_requirement_interpretation",
+          strict: true,
+          schema: {},
+        },
+      },
+    });
     expect(create.mock.calls[0]?.[1]).toEqual({
       signal,
       timeout: 180_000,
       maxRetries: 0,
     });
+  });
+
+  function completedSdkResponse(outputText: string) {
+    return {
+      status: "completed",
+      error: null,
+      output: [],
+      output_text: outputText,
+    };
+  }
+
+  function sdkAdapter(create: ReturnType<typeof vi.fn>) {
+    return new OpenAIRequirementInterpreterAdapter({
+      transport: new OpenAIRequirementResponsesApiTransport({
+        createClient: () => ({ responses: { create } }),
+      }),
+      readEnvironment: () => "test-key",
+    });
+  }
+
+  it.each([
+    {
+      status: "incomplete",
+      incomplete_details: { reason: "max_output_tokens" },
+    },
+    { status: "incomplete", incomplete_details: { reason: "content_filter" } },
+    { status: "failed" },
+    { status: "queued" },
+    { status: "in_progress" },
+    { status: "cancelled" },
+    { status: undefined },
+    { status: "provider-canary-status" },
+    {
+      error: { code: "provider-canary-code", message: "provider-canary-error" },
+    },
+    { error: undefined },
+    {
+      output: [
+        { content: [{ type: "refusal", refusal: "provider-canary-refusal" }] },
+      ],
+    },
+  ])(
+    "stops terminal SDK response %# before semantic repair even with valid-looking text",
+    async (metadata) => {
+      const create = vi.fn().mockResolvedValue({
+        ...completedSdkResponse(JSON.stringify(approvalDefinitionSelection())),
+        ...metadata,
+      });
+      const pending = sdkAdapter(create).interpret({
+        brief: expenseApprovalBrief,
+        answers: {},
+      });
+      await expect(pending).rejects.toMatchObject({
+        code: "output_invalid",
+        message: "Requirement interpretation output was invalid.",
+      });
+      await expect(pending).rejects.not.toThrow("provider-canary");
+      expect(create).toHaveBeenCalledOnce();
+    },
+  );
+
+  it("does not read text from an incomplete SDK response", async () => {
+    let reads = 0;
+    const create = vi.fn().mockResolvedValue({
+      status: "incomplete",
+      error: null,
+      output: [],
+      get output_text() {
+        reads += 1;
+        return "provider-canary-text";
+      },
+    });
+    await expect(
+      sdkAdapter(create).interpret({
+        brief: expenseApprovalBrief,
+        answers: {},
+      }),
+    ).rejects.toMatchObject({ code: "output_invalid" });
+    expect(reads).toBe(0);
+    expect(create).toHaveBeenCalledOnce();
+  });
+
+  it("accepts a completed SDK Expense response with the fixed output budget", async () => {
+    const create = vi
+      .fn()
+      .mockResolvedValue(
+        completedSdkResponse(JSON.stringify(approvalDefinitionSelection())),
+      );
+    const result = await sdkAdapter(create).interpret({
+      brief: expenseApprovalBrief,
+      answers: {},
+    });
+    expect(result.interpretation.blueprint.requirementChecksum).toBe(
+      "sha256:4e62ff6314a43affe62a823ad0d7be7db53dc43336582dab9c480f692e5cd37d",
+    );
+    expect(create).toHaveBeenCalledOnce();
+    expect(create.mock.calls[0]?.[0]).toMatchObject({
+      max_output_tokens: 25000,
+      store: false,
+      text: { format: { strict: true } },
+    });
+    expect(create.mock.calls[0]?.[0]).not.toHaveProperty("reasoning");
+  });
+
+  it.each([
+    "not-json",
+    JSON.stringify(approvalDefinitionSelection({ businessParameters: {} })),
+  ])(
+    "keeps completed-invalid SDK repair bounded with the same budget %#",
+    async (outputText) => {
+      const create = vi
+        .fn()
+        .mockResolvedValue(completedSdkResponse(outputText));
+      await expect(
+        sdkAdapter(create).interpret({
+          brief: expenseApprovalBrief,
+          answers: {},
+        }),
+      ).rejects.toMatchObject({ code: "output_invalid" });
+      expect(create).toHaveBeenCalledTimes(3);
+      for (const [body, options] of create.mock.calls) {
+        expect(body).toMatchObject({
+          max_output_tokens: 25000,
+          store: false,
+          text: { format: { strict: true } },
+        });
+        expect(body).not.toHaveProperty("reasoning");
+        expect(options).toMatchObject({ timeout: 180_000, maxRetries: 0 });
+      }
+    },
+  );
+
+  it("repairs completed-invalid SDK content into a completed valid selection", async () => {
+    const create = vi
+      .fn()
+      .mockResolvedValueOnce(completedSdkResponse("not-json"))
+      .mockResolvedValueOnce(
+        completedSdkResponse(JSON.stringify(approvalDefinitionSelection())),
+      );
+    const result = await sdkAdapter(create).interpret({
+      brief: expenseApprovalBrief,
+      answers: {},
+    });
+    expect(result.interpretation.blueprint.pageIntents).toHaveLength(6);
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(
+      create.mock.calls.every(([body]) => body.max_output_tokens === 25000),
+    ).toBe(true);
+  });
+
+  it("keeps caller cancellation ahead of terminal SDK classification", async () => {
+    const caller = new AbortController();
+    const create = vi.fn().mockImplementation(async () => {
+      caller.abort(new Error("provider-canary-caller"));
+      return {
+        ...completedSdkResponse(JSON.stringify(approvalDefinitionSelection())),
+        status: "incomplete",
+      };
+    });
+    await expect(
+      sdkAdapter(create).interpret({
+        brief: expenseApprovalBrief,
+        answers: {},
+        signal: caller.signal,
+      }),
+    ).rejects.toMatchObject({
+      code: "timeout",
+      message: "Requirement interpretation timed out.",
+    });
+    expect(create).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the round deadline ahead of terminal SDK classification", async () => {
+    vi.useFakeTimers();
+    const create = vi.fn().mockImplementation(
+      async (_body, options) =>
+        new Promise((resolve) =>
+          options.signal.addEventListener("abort", () =>
+            resolve({
+              status: "incomplete",
+              error: null,
+              output: [],
+              output_text: "provider-canary-timeout",
+            }),
+          ),
+        ),
+    );
+    const pending = sdkAdapter(create).interpret({
+      brief: expenseApprovalBrief,
+      answers: {},
+    });
+    const rejected = expect(pending).rejects.toMatchObject({
+      code: "timeout",
+      message: "Requirement interpretation timed out.",
+    });
+    await vi.advanceTimersByTimeAsync(180_001);
+    await rejected;
+    expect(create).toHaveBeenCalledOnce();
   });
 
   it("does not repair a provider rejection", async () => {

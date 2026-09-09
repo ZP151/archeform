@@ -2290,8 +2290,10 @@ is a separately reported product metric. Earlier failed attempts remain above.
 The fresh isolated project `factory-t9-consumer-d22-real-20260909` reused the
 same images with a new empty database/artifact volume. Safe preflight required
 provider configured, fixture mode false and test mode false. One real
-interpretation request returned HTTP 200; no mock route was installed and no
-provider retry or clarification request was sent. The test recognized manual
+interpretation HTTP request returned 200; no mock route was installed and no
+acceptance-harness retry or clarification request was sent. The existing adapter
+may perform bounded internal repair; its provider transport count was not
+measured and is not inferred from the single browser HTTP request. The test recognized manual
 plan choices, then failed to find the automatic Approval delivery surface after
 60 seconds. Total elapsed time was 109924 ms, interpretation calls 1,
 questions 0, lifecycle operations 0. Database inspection confirmed 0 Compilations
@@ -2334,3 +2336,546 @@ consumer first-result goal, main integration or a repository release complete.
 Remote tip equality is required immediately after the normal branch push. The
 long task remains active for the demonstrated real-input handoff gap and its
 next focused correction, with no unchanged provider rerun authorized here.
+
+### D2.3 continuation: supported-definition intake gap
+
+Previous goal turn is progress: commit `6527ece91b0a6d09e89fa68a724c6682ee6d82b2`
+was pushed with exact remote equality and the two local runtime lanes passed;
+the separately measured real-provider first request exposed a manual-plan handoff.
+Current branch and clean worktree were revalidated before continuation. No live
+job remains; both owned Factory stacks were fully removed.
+
+Read-only source inspection establishes that only Restaurant may return the
+private `definition-selection` result; every approval request currently produces
+an unconstrained full ProductBlueprint, while consumer-family requires exact
+supported approval semantics. This explains a structural reliability gap, not
+the exact semantic mismatch in the prior unretained provider response.
+
+PM dispatches Tech Lead `h1_hosted_decision` for one proposed ADR-0050, owning
+only `docs/adr/adr-0050-approval-definition-selection.md`. Investigate canonical
+Expense reuse and a bounded private definition selection for supported local
+approval; preserve material questions, real identity/privacy limits, standard
+composition and immutable lifecycle. Compare a prompt-only correction with
+deterministic definition binding and keep unsupported requests explicit. Read
+both technology/security authorities. No implementation or provider action is
+authorized by that proposal. Root independently investigates current predicates
+and authored provider-free variants, and owns eventual safe acceptance diagnostics,
+plan/ledger/status. The exact implementation manifest is not frozen yet.
+
+Provider-free investigation executed
+`node --experimental-strip-types .superpowers/sdd/2026-09-09-approval-consumer-delivery/d23-predicate-probe.mjs`
+against current built Graph/capability/adapter packages and source consumer
+selector. Six authored variants reported fixed case IDs and booleans only:
+canonical and explicit workflow type are valid, compatible and auto-eligible;
+no queue page, an extra result list and missing reviewer read are valid and
+compatible but not auto-eligible; split duplicate actor permissions are rejected
+by Blueprint validation. No provider call occurred. The first three valid
+mismatches justify canonical supported-definition projection without weakening
+permissions or unique workflow/page requirements. The exact prior real response
+is still unknown. The D2 plan now records A01-A10 with separate interpretation,
+runtime and real-provider evidence expectations; ten authored rows are not ten
+accepted journeys.
+
+PM freezes a separate root-owned, test-only diagnostic correction while the
+Tech Lead finalizes the private producer decision. Paths:
+`e2e/helpers/approval-intake-diagnostics.ts`,
+`apps/workbench/test/approval-intake-diagnostics.test.ts`, and
+`e2e/consumer-approval.spec.ts`. Reuse the existing authoritative interpretation
+parser in memory. Return only an allowlisted product-type enum, fixed boolean
+facts and bounded counts of roles/entities/pages/workflows/questions; never
+return provider-authored names, keys, labels, content or parser errors. On
+invalid input return only `{ schemaValid: false }`. Capture this safe summary
+before the real/fixed consumer run closes its page, and report manual-choice
+presence separately in the failure record. No product predicate, request,
+provider schema, API, logging service or persistence behavior changes. This is
+an ordinary existing acceptance-harness correction under the accepted scope;
+focused privacy/variant tests and the same independent review suffice. It does
+not authorize implementing the proposed private definition-selection branch.
+
+Root's test-only diagnostic correction has two focused behavior RED failures,
+then 3/3 GREEN in
+`pnpm --filter @factory/workbench exec vitest run test/approval-intake-diagnostics.test.ts`.
+It distinguishes the complete shape from missing queue/reviewer read, excludes
+a synthetic business-content canary, and reduces malformed/accessor input to a
+single fixed flag. The consumer harness uses only the safe facts from transient
+successful interpretation responses and records manual-choice presence before
+closing. Browser test discovery passes. No provider call, container startup,
+consumer behavior or provider contract change occurred. This evidence prevents
+another uninformative live result; it is not the functional intake correction.
+
+Baseline requirement-interpreter suite freshly passed 65/65 in 5.49 s. Current
+FixtureRequirementInterpreter Expense envelope SHA-256 is
+`6bb06e85fa6a33e3eef1b8ba39770dc6bfb55cc9f882c52fd46a9211f73587d8`;
+its requirement checksum is
+`sha256:4e62ff6314a43affe62a823ad0d7be7db53dc43336582dab9c480f692e5cd37d`.
+This independently captured baseline can verify any proposed shared-definition
+extraction leaves the existing fixture unchanged.
+
+Tech Lead completed proposed ADR-0050 at
+`63c3a567f2999a78c5ef45742e3cfea28aa0d8c407706924d6e8c2846870c443`;
+read-only nonauthor/nonwriter `d21_review` now evaluates standing acceptance.
+No private schema or production interpretation change has started. Root's
+three-path diagnostic correction also passes Workbench typecheck. Root prepared
+new isolated project `factory-t9-consumer-d23-20260909` with the unchanged
+accepted Control Plane and compiler images and empty Factory volumes. Only
+PostgreSQL, Redis, Control Plane and compiler-worker are running; Workbench is
+not started and no provider request or lifecycle mutation has occurred. The
+same old images are reused deliberately; only the future affected Workbench
+image needs a rebuild. Exact cleanup remains root's responsibility.
+
+### ADR-0050 standing acceptance and D2.3 implementation ownership
+
+Independent nonauthor/nonwriter `d21_review` first rejected ADR-0050 hash
+`63c3a567f2999a78c5ef45742e3cfea28aa0d8c407706924d6e8c2846870c443`
+with one P1: only a genuine positive case would not validate that the classifier
+retains explicit requester privacy. Tech Lead revised VER-007/ABT-003 to require
+a separately authorized first-result, no-harness-retry real A10 privacy probe:
+material privacy/identity clarification or safe closed failure, zero lifecycle;
+supported-default/automatic lifecycle aborts acceptance. SEC-002 permits only
+declared synthetic generated-business screenshots under ADR-0049.
+
+The reviewer rechecked exact revised SHA-256
+`149188fba6c0323738969b152df4d64bd8cb97dc12a996e2473e98a9f6a57579`
+with P0/P1/P2 0/0/0 and `APPROVED_FOR_STANDING_ACCEPTANCE: yes`.
+PM records founder acceptance under the September 1 standing authorization in
+`docs/tech-governance.md` before product changes. This grants bounded reversible
+implementation, not a provider call, external resource or deployment.
+
+PM assigns fresh strongest-model `d23_definition` as sole product writer of
+exactly the four adapter paths in ADR-0050 MIG-002. Root remains sole writer of
+the three acceptance paths in MIG-003, plan/ledger/status and Git. No consumer
+predicate, public contract, catalog, compiler, security boundary or dependency
+path changes. The accepted private schema/canonical projection is frozen for
+this wave; any shared-contract change stops parallel work. Root's diagnostics
+now additionally expose only the authoritative category enum for material
+questions; focused category/privacy tests were RED then 4/4 GREEN.
+
+The independent acceptance-code review identified one bounded contract mismatch:
+a temporary `questionCategories` output was outside revised ADR-0050 MIG-003's
+exact diagnostic allowlist. Root removed that field instead of expanding the
+contract or starting another decision cycle. The privacy harness now checks
+visibility/authorization membership only transiently through the authoritative
+parser; it logs only accepted fixed counts/flags. The helper's fourth test
+requires no category array and no business-content canary. Four tests and
+Workbench types pass after the correction; final read-only recheck reports
+P0/P1/P2 0/0/0 for these three paths:
+
+- consumer harness: `a1471c95c1dcf34842f3cd2c5caf5c684e241362ffd117f301da5e92a7a8070e`;
+- diagnostic helper: `e07a8b88a791c6d60803d5d9b962db7d981173d601cae49684fd6a012ec88f2e`;
+- diagnostic test: `2a001a6f035bdc159ca84ac83d7157637281e81c184a2f1332a77434d73d4cdb`.
+
+A10 is a separate explicit real-only environment switch, never a default CI
+provider call. It sends one authored request, supplies no follow-up answer,
+requires a material visibility/authorization question or a recognized public
+closed failure, and asserts zero product creation, lifecycle, plan choices and
+delivery UI. A failed-closed outcome is a safety result, not successful semantic
+clarification or app generation. The combined review remains open for the
+four adapter files and actual runtime evidence. No live request has run in D2.3.
+
+### D2.3 producer source freeze
+
+The product owner froze all four paths after compact A01/A02 RED failures
+(`output_invalid`), subsequent 2/2 GREEN and a separate JSON Schema parity
+RED/GREEN correction. Final requirement interpretation suite passes 103/103;
+full adapters passes 150/150 in 11 files; scoped Workbench consumer/controller
+regression passes 36/36 (12 consumer + 24 controller, 18.57 s). Adapter types,
+build, owned Prettier and whitespace checks pass. Root's read-only
+`git diff --check` also passes. Exact original fixture envelope and requirement
+checksum remain unchanged. A01/A02 tests use the actual planner/composer,
+unchanged six locks/bindings and Workbench consumer predicate; authored material
+selections, mixed/unknown/invalid branches, JSON/Zod parity and bounded follow-up
+repair are covered without claiming genuine model classification.
+
+Frozen product SHA-256:
+
+- approval-definition-selection.ts: `48f22c91afbee47f2945c4ab497f02960d01c73edd5e6f93934d2b0685c87e24`;
+- fixture-interpreter.ts: `c5340d8c7b1d016b06b4375ad87ef48d1de70cf59ee80957336eb201ceb40983`;
+- openai-interpreter.ts: `21d926ceefff75d61fecfc1b40b027c1493a71377c1e1d4d9724a86c9483b5b2`;
+- requirement-interpreter.test.ts: `a7fece1272f28817096d10f0835c5ddb5c8bac6ab688b195479934f727288e0c`.
+
+The same independent reviewer now reviews only this producer delta, reusing the
+clean three-path acceptance review. Root is building only the Workbench image
+from frozen source; CP/compiler remain unchanged. Runtime and genuine-provider
+acceptance are pending and no D2.3 provider call has occurred.
+
+### D2.3 isolated execution scope
+
+Workbench build exited zero, including existing prerequisite package builds,
+Next production compilation, lint/types and static route generation. Image
+config is `sha256:64ef09360056f8a04092e17299b11e11ab7228f1b212bbd3f4364927cf0a9843`;
+manifest list is
+`sha256:6f3cb51840b24a031438f2f03051ecf2560d28b31a58ebff37a6f525430e813f`.
+After startup, both in-container adapter sources match their frozen hashes.
+The canonical deterministic consumer/runtime lane is now running with explicit
+real/privacy switches off; no provider request is involved.
+
+Root separately freezes the following genuine evaluation under the already
+founder-approved roadmap's real-model and business/privacy validation, not from
+ADR standing acceptance alone. Start only after the deterministic runtime pass
+and independent code verdict. Use the existing local configured provider and
+same frozen image, on independent empty Factory volumes. Make exactly one A10
+request with the authored requester-owned-record/sign-in condition first, then
+one unchanged A02 supported local Expense request. A10 receives no answer and
+no harness retry; at most one consolidated positive clarification may be
+answered using the existing frozen scope response. Each run has one worker,
+zero Playwright retries and no automatic rerun. The current adapter can perform
+up to two bounded internal repair rounds per HTTP request with SDK retries off;
+actual provider transport counts remain unmeasured. Thus browser HTTP counts
+are not reported as provider transport counts.
+
+Abort this acceptance if A10 selects a supported default or starts product
+creation/lifecycle; do not continue the positive case or weaken any predicate.
+A10 safe closed failure is reported as a safety outcome, never as successful
+clarification. A02 must complete the actual typed two-request submit, manager
+decision, requester reload and denied-action journey. Separate lane metrics,
+only accepted safe facts, synthetic generated screenshots and exact preview /
+Factory resource cleanup are required. No cloud account, hosting, real-user
+invite, deployment, spend commitment or new provider configuration is authorized.
+
+Exact owner commands (no reruns to gather this record):
+`pnpm --filter @factory/adapters exec vitest run test/requirement-interpreter.test.ts`
+103/103, 4.66 s;
+`pnpm --filter @factory/adapters test` 150/150, 11 files, 4.54 s;
+`pnpm --filter @factory/adapters typecheck` exit 0, 3.68 s;
+`pnpm --filter @factory/adapters build` exit 0, 2.94 s;
+`pnpm --filter @factory/workbench exec vitest run lib/product-journey/use-consumer-generation.test.tsx hooks/use-workbench-controller.test.ts`
+36/36, 18.57 s. Durations are Vitest where available and shell for types/build.
+
+D2.3 canonical deterministic interpretation through the actual runtime passed
+1/1 without retries in 3.1 minutes. Compilation `cmtu7z9en000dpl4t6a77e84a`
+and all ten verification steps succeeded. Preview
+`preview-b6e9f2e4-fb28-4cd2-b602-3e1141cc342d` was ready, then stopped with
+zero exact-label containers/networks/volumes. Business/presentation evidence:
+166718 ms to ready, 170861 ms to complete assertions, 0 questions, 0 technical
+handoffs, 2 UI-created/submitted requests, approved/rejected requester results
+after reload, requester approval 403; no overflow or axe violations at
+390/768/1440 px. Safe intake facts show the complete three-actor/two-entity/
+one-workflow shape with one requester, reviewer, form, queue and result list.
+
+After the run, root corrected only the screenshot filename prefix from d22 to
+d23 (real lane d23-real) so earlier accepted evidence is not overwritten.
+Current screenshots were retained under distinct D2.3 names; D2.2 screenshots
+were restored byte-for-byte from HEAD. Final consumer harness SHA-256 is
+`5cf8f57b29355ae1d020594c372b3dd4d818c653212327cbc6d372e3db984d0f`.
+This output-name correction does not change product or business assertions and
+requires no repeated runtime build/test. The next real runs consume it.
+
+### D2.3 first real outcomes and focused investigation
+
+The independently reviewed frozen source passed the deterministic runtime but
+did not pass the genuine positive lane. A10 returned HTTP 422 with the fixed
+`requirement.output_invalid` code in 13723 ms: one browser interpretation call,
+zero questions, product creations or lifecycle actions. This is a safe closed
+failure, not successful privacy clarification. The unchanged A02 then returned
+the same code in 5043 ms, with one browser call and zero creation/lifecycle.
+Playwright used one worker and zero retries in both cases. Database counts prove
+zero Compilation and PreviewRun records. D2.3 remains unaccepted; no failing
+implementation is committed as delivered.
+
+Read-only investigation distinguishes hypotheses. Transport HTTP 400 would map
+to `provider_rejected`, whereas a successful transport with invalid, empty or
+incomplete output can exhaust local repair and produce `output_invalid`.
+The reviewer found the existing root JSON Schema allows mixed/null result
+envelopes that the local exclusive parser rejects. This is reproducible but
+not established as the cause of either live result. SDK envelope handling is
+another falsifiable cause. No raw response was retained and no unchanged paid
+request is being retried to guess the cause.
+
+Root assigns one ignored diagnostic script to the same adapter owner. It must
+default to provider-free self-tests, leave production/dist bytes unchanged,
+memoize at most one explicitly enabled SDK response transiently for local
+adapter replay, and report only fixed metadata and validation-stage facts.
+Root will inspect it and freeze execution scope before any instrumented call.
+The existing four-path product manifest remains frozen during investigation.
+
+The reviewer withdrew the root-envelope observation as a D2.3 finding: it
+predates this slice, whose accepted contract explicitly preserves that shape.
+Scoped code review remains P0/P1/P2 0/0/0; real acceptance still fails. A nested
+envelope redesign is not authorized as a routine repair.
+
+Root inspected diagnostic SHA-256
+`542699b79a277b4cb0d7c65fe9fde9a299519a496ee102872afc7bf008fec35d`
+and independently ran its nine synthetic cases successfully. Root authorizes
+exactly one instrumented A02 diagnostic SDK request against the same container
+configuration under the ongoing approved failure investigation. It receives
+the existing authored A02 fixture through stdin, adds no business/lifecycle
+operation, and memoizes the first result for provider-free local replay. This
+is diagnostic evidence, not another acceptance sample or success-rate retry.
+Only fixed status/error enums, bounded text presence/length, and validation
+stage/allowlisted issue locations and codes may be reported. No raw input,
+response, provider key/message or credentials are retained. No follow-up live
+call is authorized by this diagnostic scope.
+
+The single diagnostic established this sample's failure stage: SDK status
+`incomplete`, reason `max_output_tokens`, zero text parts and zero output-text
+length, with no response error or refusal. JSON/private schema was never
+reached. Exactly one SDK request was memoized into three local adapter rounds.
+The unchanged transport ignores terminal SDK state and treats empty text as a
+repairable interpretation failure. This evidence does not retroactively prove
+the response metadata of the two earlier unretained calls, and the actual
+provider token usage/effective output limit remain unmeasured.
+
+Root dispatched Tech Lead for one narrow proposed ADR-0051: explicit bounded
+output budget and terminal response handling before semantic repair. Current
+model, dependencies, schema envelope, canonical definition, public failures,
+lifecycle and privacy authority stay unchanged. No implementation starts before
+its standing decision. Both D2.3 Factory stacks and the deterministic preview
+are removed; exact-label checks show zero containers, networks and volumes for
+all three. The ignored diagnostic disappeared with its temporary container.
+
+### ADR-0051 standing acceptance and two-path correction
+
+Tech Lead proposed ADR-0051. The independent non-author/non-writer
+`/root/d21_review` identified only missing exact commands/evidence location at
+initial hash `906ed417bdfab520cdf25838d81fcb90c8bd9d30c51a96ae137e490fab381fcc`.
+The author added those documentation details; no technical contract changed.
+The reviewer verified final SHA-256
+`2938afe895fbb75ce1c5b26abc4dd060b761196483910e1c11d40d1d3ad24257`,
+returned P0/P1/P2 0/0/0 and `APPROVED_FOR_STANDING_ACCEPTANCE: yes`.
+Root records founder standing acceptance under the September 1 policy before
+implementation. No further founder permission is needed for this bounded fix.
+
+The existing adapter owner is authorized to change only
+`packages/adapters/src/requirements/openai-interpreter.ts` and
+`packages/adapters/test/requirement-interpreter.test.ts`: focused RED first,
+fixed 25000 output cap, no reasoning/model change, terminal SDK metadata guard
+with existing safe failures and no semantic retry, completed-invalid repair
+and cancellation precedence retained. Other five product/acceptance paths stay
+frozen. Root owns documents, build/runtime acceptance and Git. The relevant
+adapter checks and one scoped independent review are required; unchanged
+Workbench/compiler/canonical runtime evidence remains valid. No provider call
+is granted by this acceptance; root will separately freeze corrected execution.
+
+### D2.3 corrected source and genuine execution scope
+
+The owner reproduced 17 focused failures for missing budget and terminal
+metadata handling. The first correction exposed a synchronous-caller-abort
+race: an already-created transport promise could reject without an observer.
+The same-file fix observes that promise while preserving immediate cancellation.
+The focused requirement suite now passes 121/121 with zero unhandled errors.
+Frozen SHA-256: interpreter
+`1416d2a73fbf087b5b5760cea8ed15541c0a9b959354a32ff6fe4fedf0232796`;
+test `4012dc269211db63c261c6752525fb43755691ff430f686b184cadbd1b7cbe99`.
+Root is building only the corrected Workbench image; independent review and
+remaining adapter package checks run against these frozen sources.
+
+Root separately authorizes one corrected A10/A02 genuine evaluation pair under
+the existing approved roadmap and the now-demonstrated response-boundary fix.
+Start only after successful build, required package checks and clean independent
+delta review. Use fresh Factory project `factory-t9-consumer-d23r1-real-20260909`,
+the existing local model/key configuration and unchanged accepted CP/compiler
+images. Run A10 first, with no answer or harness retry; require the existing
+material-privacy clarification or recognized safe failure, zero product creation
+and zero lifecycle. Abort acceptance if it silently selects the default.
+Then run the unchanged A02 once, with at most the existing one consolidated
+local-scope answer, no technical choices, and the full generated UI journey.
+
+Each Playwright lane has one worker and zero retries. Every SDK call has the
+same fixed 25000 output cap and zero SDK retries; terminal responses now stop
+without semantic repair. Completed-invalid content retains at most two internal
+repairs. Browser call counts are still distinct from unmeasured actual SDK
+transport counts. No automatic budget escalation, extra unchanged samples,
+model switch, provider configuration, cloud action or real-user data is granted.
+Retain safe first outcomes, product metrics and exact cleanup evidence.
+
+Final corrected test hash after a formatter-only adjustment is
+`171d95ea7640d09e84625ebcc0ad61cc62a463d2eac4683b7018cc19236bd1c5`;
+production interpreter remains `1416d2a7...`. The exact ADR commands passed:
+121/121 focused (4.45 s), 168/168 full adapters (6.49 s), typecheck (7.11 s),
+build (7.37 s), and two-file Prettier. Root independently reran the focused
+suite against final hashes: 121/121, no unhandled errors, 4.87 s. The same
+independent reviewer verified final hashes and returned P0/P1/P2 0/0/0 for the
+two-path budget/terminal/cancellation delta. No code finding remains; the
+corrected genuine acceptance pair is still required.
+
+The corrected Workbench image built successfully: config
+`sha256:6ff327a2de7d8b9133283aa544dcbdf6df32b77d016da4025b733156394878cc`,
+manifest list
+`sha256:61c185a133eab2992acda4255f516a3ceb96e875c3a6e9bd12503872598905b6`.
+In-container production source hash matches the freeze; provider is configured,
+fixture and test modes are off. The separately authorized corrected pair still
+does not pass real delivery: A10 returned safe closed HTTP 422 in 5537 ms and
+A02 returned HTTP 422 in 2572 ms, both `requirement.output_invalid`, one browser
+call, zero product creation or lifecycle. Both database counts remain zero.
+No retry ran. Fixed-budget sufficiency is not established and the latest
+response metadata is not yet known. Code review remains 0/0/0; actual D2.3
+acceptance remains failed.
+
+Root assigns an update to the ignored diagnostic only, matching the corrected
+terminal-state guard. Add fixed error-presence and configured-cap-match enums,
+retain existing safe stage facts, and record no token usage or raw material.
+This does not authorize another provider request until root reviews and freezes
+that instrumented diagnostic. No additional production change is authorized.
+
+Root inspected updated diagnostic SHA-256
+`258480c34fa11954e3eaa2d404792006ae020a4999fc2b82a8ef86f16bf6d78f`
+and independently verified its ten provider-free cases. Root authorizes one
+SDK request with the existing authored A02 input on the corrected image, solely
+to distinguish SDK metadata rejection, output incompleteness and later parsing.
+Returned budget is reduced to 25000/absent/other, error presence to fixed enums;
+token usage and raw material remain uninspected/unretained. The first response
+is memoized locally; no extra provider repairs or acceptance rerun are granted.
+
+The corrected diagnostic made exactly one SDK/adapter call and returned
+`incomplete` / `max_output_tokens`, null error, cap 25000, zero text and no
+refusal. It stopped at SDK metadata before JSON parsing. This proves the fixed
+cap was reflected in this response and the terminal guard avoids semantic
+retries; it does not prove a successful user result or explain why the model
+exhausted the cap. No budget increase or model change is authorized.
+
+Root assigns a minimal ignored control-diagnostic mode using the same model,
+25000 cap, store/timeout/no-retry policy and a tiny authored Boolean schema.
+This can distinguish a provider-wide inability to finish from complexity of
+the requirement contract, without changing production instructions or schema.
+Only fixed response metadata and a schema-valid Boolean may be reported. Root
+will inspect the no-cost test before authorizing exactly one control call.
+
+Root verified control diagnostic SHA-256
+`e138dbbd006934a7f52aee0d3455e1cb200c6cc623939bfa7574599c6a90da63`
+and independently passed its ten diagnostic cases plus control body/no-raw
+checks. Root authorizes exactly one `--control-once` SDK call on the current
+container, using its existing model/configuration and the same 25000 cap,
+180-second timeout, store false and zero SDK retries. This synthetic Boolean
+control is not app-generation acceptance. No further call follows automatically.
+
+The tiny control completed successfully with null error, cap 25000, one text
+part and schema-valid Boolean output. This rules out a blanket inability of
+the current SDK/model path to complete this simple request. It does not isolate
+which aspect of the requirement request caused incompleteness.
+
+The source comparison identifies six new provider-pattern occurrences in the
+two Approval disposition branches: title, outcome and material-question text.
+These introduce negative lookahead, lookbehind and zero-width-only matching,
+unlike the previous simple consuming identifier patterns. Root assigns one
+ignored diagnostic contrast that removes only these six pattern properties
+from a cloned SDK schema while retaining the exact input/instructions/model/
+budget and original authoritative local parser/projector. It makes no product
+change and cannot create an application. A no-cost exact-delta test must pass
+before root authorizes any single contrast request. The hypothesis is not yet
+an established cause. Spark exploration remains unavailable due to its usage
+limit; root completed the bounded source inventory.
+
+Root inspected diagnostic SHA-256
+`0073a73e26c2a1028221531cb810a93c48d59450f4991746bdb390e0aa855c91`
+and its passing exact-six-path, clone-preservation and no-raw self-tests. Root
+authorizes exactly one `--approval-pattern-control-once` request using authored
+A02 stdin on the existing corrected container. The request changes only those
+six provider-schema patterns; local authoritative validation is untouched.
+Only existing safe metadata and validation-stage facts are reported, with one
+SDK response memoized for local replay, no lifecycle or automatic follow-up.
+
+The exact-six-pattern contrast completed: one SDK/adapter call, completed/null
+error, cap 25000, one text part, original provider JSON Schema valid, original
+private parser/projection/public result accepted. No raw result was retained.
+Only the six pattern properties differed in the sent schema. This supports
+removing provider-side complex text patterns as the next bounded correction;
+it is one diagnostic observation, not a reliability or business-acceptance
+claim. Root dispatched ADR-0052 for that precise change. The authoritative
+safe-business-text, trimming/control-character and public checks must remain
+unchanged; no unsafe output may become accepted.
+
+### ADR-0052 standing acceptance and precise schema correction
+
+The Tech Lead clarified title-only control/trim rules in the proposal while
+retaining permitted multiline outcome/question text. Independent non-author/
+non-writer `/root/d21_review` verified final ADR-0052 SHA-256
+`4e7aee3ef7ded45df67c6048bc0aef19fa2c2adb173fa76fe8812d704ec406c7`,
+reported P0/P1/P2 0/0/0 and `APPROVED_FOR_STANDING_ACCEPTANCE: yes`.
+Root records acceptance under the founder's September 1 standing authorization
+before production implementation. This amends only ADR-0050's provider-side
+text-pattern parity. Local accepted output and security authority are unchanged.
+
+The same adapter owner may change only `openai-interpreter.ts` and the existing
+`requirement-interpreter.test.ts` in their recorded directories. Add focused
+RED tests first, remove the three source pattern fields (six emitted) and
+unused constant, and prove provider-permitted unsafe text still fails local
+validation without being returned. Preserve every other schema, canonical
+file, prompt, model, budget, terminal/repair rule and public contract. Root
+retains all acceptance/docs/runtime/Git ownership. Run exact ADR checks and one
+scoped independent review; reuse unchanged business-runtime evidence. No real
+call is authorized by this standing decision.
+
+The previous corrected Factory project is fully removed: exact-label container,
+network and volume counts are zero. Fresh project
+`factory-t9-consumer-d23r2-real-20260910` currently has only unchanged local
+CP/compiler/Postgres/Redis services; no Workbench/provider/lifecycle run yet.
+
+### D2.3 final source correction and execution scope
+
+ADR-0052 focused RED showed five expected failures; final focused suite passes
+127/127 (4.51 s), full adapters 174/174 (4.78 s), typecheck (4.39 s), build
+(4.52 s), and two-file Prettier. Final source SHA-256 is
+`32fa9b34987ba819d8f4c8edf39a230f17f2b36e5937a996bd7b8589b7eb1cd9`;
+test `eecebb08fab7965f36acd188376476cc19014a7c9630ff9215bf02d639483b7f`.
+The local approval schema and fixture hashes remain exact. The same independent
+reviewer returned P0/P1/P2 0/0/0 for this two-path delta. Root verified hashes
+and is building the final Workbench image; the previous diagnostic script is
+retired because it intentionally targets the removed pattern constant.
+
+Root separately authorizes one final corrected A10/A02 real evaluation pair
+after successful image build and required checks, using the fresh isolated
+`factory-t9-consumer-d23r2-real-20260910` project and current local configuration.
+This follows a demonstrated one-variable correction and grants no unchanged
+retry, extra sample, new model, reasoning, budget increase or cloud action.
+A10 runs first with no answer and must preserve a material privacy question or
+fail closed, with zero product/lifecycle. Silent default substitution aborts
+acceptance. A02 runs once with at most the existing consolidated scope answer,
+zero technical choices and the full two-request approval/rejection/reload/
+denial/mobile journey. One worker, zero Playwright retries, existing SDK and
+semantic call bounds, safe metrics and exact cleanup remain mandatory. Actual
+SDK call counts remain unmeasured in browser lanes and are not inferred from
+browser request counts.
+
+Final Workbench build passed with source hash verified inside the container:
+config `sha256:8d91e4c47a1cfda2ee2c57dbdebd0e54c17774e0430f9d38c6569f57aab51688`,
+manifest list
+`sha256:95dd8731b69cbeb3b95114780b45b68c7d71dbec9416bf5eb1b8a80cd6f343e5`.
+The final genuine A10 passed with HTTP 200 and a material clarification outcome:
+one browser call, three questions in the consolidated response, 20054 ms,
+zero product creation and zero lifecycle. The valid interpretation retained
+the complete canonical 3-actor/2-entity/1-workflow shape but remained blocked
+from automatic delivery by its privacy/identity clarification. No question
+text was retained. A02 is running separately; A10 success does not establish
+the positive journey or full D2 acceptance.
+
+### D2.3 final local acceptance
+
+The final genuine A02 browser lane passed 1/1 with one worker and zero retries:
+167833 ms to ready, 171716 ms to completed business assertions, zero questions,
+zero technical handoffs and one browser interpretation request. Two requests
+were created and submitted via typed UI controls, one approved and one rejected
+by the reviewer, both retained after requester reload. Requester approval was
+denied, UTC date submission passed, and the app did not present raw JSON records.
+All 390/768/1440 px layouts had no horizontal overflow and no axe violations.
+Only authored synthetic business screenshots were retained; root visually
+inspected `docs/acceptance/evidence/consumer-approval/d23-real-results-390.png`.
+
+Compilation `cmtuaxov3000do14t028vvkin` and verification
+`cmtuaxq2h0026o14t4eb6en48` succeeded. Preview
+`preview-095d6848-c034-4796-ade0-b9aec3c3a6f5` was ready, then stopped; exact
+preview-label container/network/volume counts are all zero. The final Factory
+project was removed with its volumes and its exact-label counts are also zero.
+All preceding D2.3 Factory projects were likewise removed as recorded above.
+
+The same independent reviewer `/root/d21_review` returned final P0/P1/P2 0/0/0
+and approved D2.3 local acceptance after the full 174-test adapter result,
+types/build/formatting, source/image checks, genuine privacy and positive
+journeys, responsive/role/persistence checks and cleanup. Root accepts this
+bounded slice. No full ten-case, ordinary-user, hosted or repository-release
+claim is made. H1 ADR-0047 remains proposed with external prerequisites pending.
+
+The delivery manifest is the seven frozen product/acceptance paths, ADR-0050,
+ADR-0051, ADR-0052, this ledger, the D2 plan, product status, and six distinct
+D2.3 synthetic result screenshots. Previous D2.2 artifacts remain unchanged.
+Root owns the bounded English commit and normal push to
+`origin/codex/consumer-delivery-roadmap`, followed by exact remote-tip equality.
+No main integration, tag, release, cloud provisioning or deployment is included.
+
+Product scorecard: one supported genuine Expense request reached a usable local
+app in under three minutes without questions or technical rescue; one separate
+genuine privacy request preserved material decisions. Earlier failed attempts
+remain evidence and are not hidden by these passes. Next prioritize coarse-input
+coverage, ten-case gaps, mobile reading/navigation effort and cross-device user
+validation over catalog size or repeated unchanged audits. IDs and demo roles
+remain visible in the generated app; they do not constitute mature real-user
+identity, requester-owned privacy or polished mobile task navigation.

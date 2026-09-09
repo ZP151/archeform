@@ -77,7 +77,7 @@ expect(fixture.selectedAlternativeKeys).toEqual(["standard"]);
 
 - [x] Run deterministic browser regressions with zero retries at 390/768/1440 px and existing axe checks. Provider-free fixtures establish orchestration only.
 - [x] Run the affected Workbench package checks and one independent review. Escalate to the full contract sequence only if implementation changes a shared or security boundary; do not rerun unrelated worker restart or Restaurant menu suites.
-- [ ] Root accepts the bounded slice, records evidence and commits/pushes only reviewed paths; verify exact remote tip equality. No main integration or repository release.
+- [x] Root accepted the bounded local slice in `6527ece91b0a6d09e89fa68a724c6682ee6d82b2`, pushed the iteration branch and verified exact remote tip equality. No main integration or repository release.
 
 ## Actual business acceptance and the next usability correction
 
@@ -117,7 +117,7 @@ success. The existing generic form/list screenshots confirm the usability gap.
 - [x] Root updates the real consumer runtime harness after compiler source freeze.
       Require two UI-created requests, submit, approve/reject, requester results
       after reload, direct-role denial, mobile screenshots and exact cleanup.
-- [ ] Obtain one independent in-contract review, resolve demonstrated findings,
+- [x] Obtain one independent in-contract review, resolve demonstrated findings,
       update scorecard and deliver the integrated bounded D2.1/D2.2 commit/push.
       Real-model interpretation and hosted results remain separate lanes.
 
@@ -147,3 +147,123 @@ separate real-provider result rather than adding unrelated UI or audit work:
    resources are accepted. Proceed with provider-free business work while
    those choices are pending. Appointment follows approval coverage; scaling
    template counts must follow measured reuse and success.
+
+### D2.3 structured approval case set
+
+These are authored intent attributes and expected outcomes, not captured model
+prompts or a claimed success distribution. Case IDs keep interpretation fit,
+actual runtime behavior and real-provider measurements separate. Existing D2.2
+runtime evidence can support unchanged cases; each new interpretation behavior
+still needs its own focused RED/GREEN case.
+
+| Case | Intent / condition                                                                | Expected user outcome                                                                                             | Existing or required evidence                                                                                        |
+| ---- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| A01  | Coarse expense submission and manager decision; omitted routine fields            | Select supported local expense definition with conventional fields; no technical plan choice; disclose demo roles | New supported-definition interpretation case and one bounded real request after correction                           |
+| A02  | Explicit amount/category/date/receipt/notes, employee/manager/finance, local demo | Preserve supported details; automatic standard composition and complete journey                                   | D2.3 real journey passed: 167.833 s ready, zero questions/handoffs; earlier failures retained                        |
+| A03  | Manager rejects one submitted request and approves another                        | Requester sees both correct terminal results after reload; no invalid action offered                              | D2.2 emitted and consumer actual UI lanes passed                                                                     |
+| A04  | Required amount/date absent or invalid; failed service request                    | Block invalid input; explain safe failure and retain entered values                                               | D2.2 typed form/browser evidence; interpretation projection must keep required fields                                |
+| A05  | Duplicate submit click while pending                                              | One creation/transition; visible pending feedback and stable result                                               | D2.2 emitted browser passed                                                                                          |
+| A06  | Multiple approval levels, thresholds or ambiguous decision owner                  | One consolidated material clarification; no silent standard approximation                                         | New definition-fit and clarification cases                                                                           |
+| A07  | Blueprint lacks reviewer read grant or has ambiguous request workflow             | Do not auto-publish an incomplete journey or invent authority                                                     | Existing eligibility regressions; canonical projection must independently preserve exact grants                      |
+| A08  | Withdraw, reopen, return for edits or post-approval modification                  | Explain unsupported workflow difference and retain material choice; do not claim it exists                        | New unsupported-selection cases; future workflow contract if demanded                                                |
+| A09  | External authentication, HR integration, notifications or real receipt storage    | Preserve integration requirement and required setup; local placeholders are not a completed integration           | New material integration cases; no external calls                                                                    |
+| A10  | Private per-requester records or real multiuser access                            | Preserve privacy requirement; do not substitute role-wide demo reads                                              | D2.3 genuine material clarification passed: three questions, zero creation/lifecycle; identity remains unimplemented |
+
+Root's source probe on authored variants found canonical approval and explicit
+workflow classification compatible and auto-eligible. Removing the queue page,
+adding a second result list, or removing reviewer read is still structurally
+valid and composition-compatible but correctly ineligible for automatic delivery.
+This proves full-blueprint generation permits outputs outside the consumer
+contract. It does not prove which variant appeared in the previous real response.
+The proposed correction must choose a complete known definition for supported
+intent, without weakening these safeguards to conceal the mismatch.
+
+### D2.3 implementation sequence
+
+Decision: ADR-0050 accepted under the standing policy at
+`149188fba6c0323738969b152df4d64bd8cb97dc12a996e2473e98a9f6a57579`.
+The independent P0/P1/P2 0/0/0 verdict and PM record precede implementation.
+The root-owned test-only diagnostics are a separate in-contract acceptance
+correction (2 RED -> 3 GREEN; Workbench typecheck and browser discovery pass).
+
+- [x] Record the independent exact-hash decision and assign one fresh adapter
+      owner to the four paths in ADR-0050 MIG-002. Freeze schema/builder work under
+      that owner; root owns only three acceptance paths and delivery documents.
+- [x] Add failing compact Expense selection tests. Extract the current Expense
+      fixture function into the private module and prove its original envelope
+      digest remains identical. Add strict private schema/JSON parity, material
+      question handling and canonical projection; no new public export or package.
+- [x] Prove A01/A02 result structure, six standard locks and consumer eligibility;
+      preserve A06-A10 material differences and explicit local demo limitations.
+      Keep Restaurant and generic non-Expense behavior compatible. Fake provider
+      tests prove handling of authored selections, not real model intent detection.
+- [x] Run the focused and full adapters tests, affected Workbench tests/types,
+      package types/build and owned formatting. One independent review covers the
+      in-contract product delta and root diagnostic helper; reuse unchanged compiler
+      and lifecycle evidence rather than adding unrelated audit waves.
+- [x] Rebuild only the affected Workbench image. Reuse the exact accepted
+      Control Plane and compiler images on fresh isolated Factory volumes. Run the
+      deterministic full consumer/runtime lane, then separately evaluate the frozen
+      A10 privacy probe first and A02 real request once against an independent empty
+      database. The A10 probe must retain a visibility/authorization question or
+      return a recognized safe failure, with zero product creation, automatic
+      lifecycle or manual plan choices. Abort acceptance if it projects a supported
+      default. Preserve first
+      outcomes, questions, manual choices and safe structural facts. Count browser
+      interpretation calls separately from unmeasured internal provider repairs.
+- [x] If the corrected real entry reaches automatic delivery, finish the actual
+      two-request approve/reject/reload/denial/mobile journey; otherwise reproduce
+      its safe mismatch before another correction. Never loosen eligibility solely
+      to obtain a pass or treat a fixture outcome as real-provider evidence.
+- [x] Prove exact temporary runtime cleanup, reconcile scorecard and next gap,
+      and commit/push reviewed paths with remote tip equality. Main/release/cloud
+      actions remain outside this slice.
+
+### D2.3 focused response-boundary correction
+
+The canonical deterministic lane passed. First genuine A10 failed closed and
+A02 failed before creation, both with HTTP 422. One separately authorized,
+instrumented SDK request then proved incomplete output due to its token limit,
+with zero text and no schema parsing. Effective prior cap and usage are unknown;
+the first result was replayed locally, never sent as three diagnostic requests.
+
+- [x] Record exact independent standing acceptance for ADR-0051 before writing
+      its two adapter paths. Keep model, reasoning, schema and public errors fixed.
+- [x] Add focused failing SDK-response tests, implement the fixed output budget
+      and terminal-state handling, prove no semantic retry for incomplete/error/
+      refusal responses and preserve bounded repair for completed invalid output.
+- [x] Run affected adapter checks and one scoped independent delta review. Reuse
+      valid Workbench, compiler and canonical runtime evidence.
+- [x] Build the corrected Workbench image, freeze a separate A10/A02 real run
+      scope on fresh local volumes, retain first outcomes and perform the full
+      business journey when the supported request reaches delivery.
+- [x] Clean exact runtime resources and reconcile the product scorecard before
+      the bounded D2.3 commit and iteration-branch push.
+
+The corrected real pair still failed before creation. Safe diagnostics then
+proved the response reflected the fixed cap but remained incomplete; a tiny
+same-model control completed. A contrast removing only six new complex Approval
+text regex properties completed and passed the original local acceptance
+schemas. ADR-0052 therefore proposes that precise provider-schema simplification,
+with local safety checks unchanged. Do not raise the cap or change the model.
+After its standing acceptance, test structurally permitted but locally rejected
+unsafe text, retain all definition/predicate checks, rebuild Workbench and run
+one separately authorized A10/A02 pair. Earlier failures remain recorded.
+
+### D2.3 accepted outcome and next product slice
+
+The final A10/A02 pair passed without Playwright retries. A10 retained three
+material questions and performed no creation or lifecycle; A02 required zero
+questions and technical handoffs, reached ready in 167.833 seconds and completed
+two-request approval/rejection/reload/denial assertions in 171.716 seconds.
+Mobile/tablet/desktop checks and exact cleanup passed. The independent final
+verdict is P0/P1/P2 0/0/0 for this local slice. The controller delivers the
+bounded commit on the active iteration branch and verifies its remote tip.
+
+The next measured work is A01 coarse-intent coverage and the remaining A01-A10
+evidence gaps, followed by mobile task efficiency: fewer navigation choices,
+amount/category/status summaries, and accessible details using existing assets.
+Track first useful result, questions, technical handoffs, time, and task
+completion; do not count fake-provider cases as real intent accuracy. Appointment
+follows this coverage. H1 still requires accepted external infrastructure/access
+choices and does not inherit deployment authority from this local acceptance.

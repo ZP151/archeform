@@ -11,6 +11,8 @@ import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { observeInterpretation } from "./helpers/interpretation-diagnostics";
+import { approvalIntakeFacts } from "./helpers/approval-intake-diagnostics";
+import { assertRequirementInterpretationResult } from "../packages/adapters/src/requirements/requirement-interpreter";
 
 import {
   approvalFixtureBrief,
@@ -23,10 +25,14 @@ const factoryProject = process.env.FACTORY_E2E_FACTORY_PROJECT;
 const controlPlaneBase = process.env.FACTORY_E2E_CONTROL_PLANE_URL;
 const timeoutMs = 1_800_000;
 const realInterpretation = process.env.FACTORY_APPROVAL_REAL_ACCEPTANCE === "1";
+const privacyProbe = process.env.FACTORY_APPROVAL_PRIVACY_ACCEPTANCE === "1";
 // One separately reported real request, never included in fixture pass counts.
 const realApprovalBrief =
   approvalFixtureBrief +
   " Use a local demo with selectable employee, manager, and finance roles.";
+const privateApprovalBrief =
+  approvalFixtureBrief +
+  " Each employee must sign in and only see their own expense records. Shared selectable demo roles and role-wide employee access are not acceptable.";
 const localApprovalAnswer =
   "Use the standard local demo with role-wide reads and selectable employee, manager, and finance roles. Employees submit requests; managers approve or reject every submitted request; finance reads decisions. Use the standard categories and no amount thresholds or external integrations.";
 type Preview = {
@@ -172,7 +178,7 @@ async function createExpense(
   return created.id;
 }
 
-test(`D2.2 ${realInterpretation ? "real" : "deterministic"} interpretation delivers and serves a complete approval role journey`, async ({
+test(`D2.3 ${privacyProbe ? "real requester-privacy requirement stays material" : `${realInterpretation ? "real" : "deterministic"} interpretation delivers a complete approval journey`}`, async ({
   page,
   context,
   request,
@@ -180,6 +186,7 @@ test(`D2.2 ${realInterpretation ? "real" : "deterministic"} interpretation deliv
   test.setTimeout(timeoutMs);
   context.setDefaultTimeout(30_000);
   expect(process.env.FACTORY_E2E_ISOLATED).toBe("1");
+  if (privacyProbe) expect(realInterpretation).toBe(true);
   expect(factoryProject).toMatch(/^factory-t9-[a-z0-9-]+$/);
   expect(
     docker([
@@ -219,9 +226,15 @@ test(`D2.2 ${realInterpretation ? "real" : "deterministic"} interpretation deliv
   // Fixture replay owns a fresh application identity. The provider lane runs
   // against a separately initialized, isolated acceptance database.
   let interpretationCalls = 0;
+  let productCreates = 0;
   let businessQuestions = 0;
   const finishDiagnostics = observeInterpretation(page);
   page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      new URL(request.url()).pathname === "/product/requirements"
+    )
+      productCreates++;
     if (
       request.method() === "POST" &&
       new URL(request.url()).pathname === "/api/requirements/interpret"
@@ -242,6 +255,7 @@ test(`D2.2 ${realInterpretation ? "real" : "deterministic"} interpretation deliv
     });
   }
   let compilationId: string | null = null;
+  let intakeFacts: ReturnType<typeof approvalIntakeFacts> | null = null;
   const pendingResponses: Promise<void>[] = [];
   const lifecycle: string[] = [];
   const pageErrors: string[] = [];
@@ -249,6 +263,19 @@ test(`D2.2 ${realInterpretation ? "real" : "deterministic"} interpretation deliv
   page.on("response", (response) => {
     if (response.request().method() !== "POST") return;
     const path = new URL(response.url()).pathname;
+    if (path === "/api/requirements/interpret" && response.ok()) {
+      pendingResponses.push(
+        response
+          .json()
+          .then((body: unknown) => {
+            intakeFacts = approvalIntakeFacts(body);
+          })
+          .catch(() => {
+            intakeFacts = { schemaValid: false };
+          }),
+      );
+      return;
+    }
     if (path.endsWith("/published-revisions")) lifecycle.push("publish");
     if (path === "/compilations") {
       lifecycle.push("compile");
@@ -270,7 +297,13 @@ test(`D2.2 ${realInterpretation ? "real" : "deterministic"} interpretation deliv
     await page.goto("/");
     await page
       .getByLabel("Requirement brief")
-      .fill(realInterpretation ? realApprovalBrief : approvalFixtureBrief);
+      .fill(
+        privacyProbe
+          ? privateApprovalBrief
+          : realInterpretation
+            ? realApprovalBrief
+            : approvalFixtureBrief,
+      );
     const firstInterpretation = page.waitForResponse(
       (response) =>
         response.request().method() === "POST" &&
@@ -279,10 +312,99 @@ test(`D2.2 ${realInterpretation ? "real" : "deterministic"} interpretation deliv
     );
     void firstInterpretation.catch(() => undefined);
     await page.getByRole("button", { name: "Create product" }).click();
-    expect(
-      (await firstInterpretation).status(),
-      "interpretation response",
-    ).toBe(200);
+    const interpretationResponse = await firstInterpretation;
+    if (privacyProbe) {
+      stage = "requester-privacy";
+      let outcome: "material-clarification" | "failed-closed";
+      if (interpretationResponse.status() === 200) {
+        const body: unknown = await interpretationResponse.json();
+        const facts = approvalIntakeFacts(body);
+        intakeFacts = facts;
+        expect(facts.schemaValid, "privacy interpretation is valid").toBe(true);
+        if (!facts.schemaValid)
+          throw new Error("Invalid privacy interpretation.");
+        businessQuestions = facts.questionCount;
+        expect(
+          facts.questionCount,
+          "requester privacy remains a material decision",
+        ).toBeGreaterThan(0);
+        expect(
+          assertRequirementInterpretationResult(
+            body,
+          ).interpretation.clarifications.some((group) =>
+            group.questions.some(
+              (question) =>
+                question.category === "visibility" ||
+                question.category === "authorization",
+            ),
+          ),
+          "privacy or identity clarification is preserved",
+        ).toBe(true);
+        await expect(
+          page.getByRole("region", { name: "Clarify the requirement" }),
+        ).toBeVisible({ timeout: 10_000 });
+        outcome = "material-clarification";
+      } else {
+        expect(
+          [422, 503, 504],
+          "privacy request fails closed with a public error",
+        ).toContain(interpretationResponse.status());
+        const failure = (await interpretationResponse
+          .json()
+          .catch(() => null)) as { error?: { code?: unknown } } | null;
+        const allowedFailureCodes = [
+          "requirement.output_invalid",
+          "requirement.provider_rejected",
+          "requirement.provider_not_configured",
+          "requirement.provider_unavailable",
+          "requirement.timeout",
+          "requirement.failed",
+        ];
+        const failureRecognized =
+          typeof failure?.error?.code === "string" &&
+          allowedFailureCodes.includes(failure.error.code);
+        expect(
+          failureRecognized,
+          "privacy failure has a recognized public code",
+        ).toBe(true);
+        outcome = "failed-closed";
+      }
+      await Promise.all(pendingResponses);
+      expect(interpretationCalls).toBe(1);
+      expect(
+        productCreates,
+        "unsupported privacy must not create a product",
+      ).toBe(0);
+      expect(
+        lifecycle,
+        "unsupported privacy must not start automatic delivery",
+      ).toEqual([]);
+      await expect(
+        page.getByRole("region", { name: "Approval delivery" }),
+      ).toHaveCount(0);
+      await expect(page.getByRole("button", { name: /^Choose / })).toHaveCount(
+        0,
+      );
+      console.info(
+        "FACTORY_APPROVAL_PRIVACY",
+        JSON.stringify({
+          caseId: "A10",
+          lane: "real-interpretation-negative",
+          outcome,
+          status: interpretationResponse.status(),
+          interpretationCalls,
+          questions: businessQuestions,
+          productCreates,
+          lifecycle,
+          elapsedMs: Date.now() - start,
+          intakeFacts,
+        }),
+      );
+      return;
+    }
+    expect(interpretationResponse.status(), "interpretation response").toBe(
+      200,
+    );
     const delivery = page.getByRole("region", { name: "Approval delivery" });
     if (realInterpretation) {
       const clarification = page.getByRole("region", {
@@ -482,7 +604,7 @@ test(`D2.2 ${realInterpretation ? "real" : "deterministic"} interpretation deliv
       await generated.screenshot({
         path: resolve(
           evidence,
-          `${realInterpretation ? "d22-real" : "d22"}-results-${width}.png`,
+          `${realInterpretation ? "d23-real" : "d23"}-results-${width}.png`,
         ),
         fullPage: true,
       });
@@ -522,9 +644,16 @@ test(`D2.2 ${realInterpretation ? "real" : "deterministic"} interpretation deliv
         elapsedToTaskMs: Date.now() - start,
         rawRecordPresentation: false,
         typedDateSubmission: true,
+        intakeFacts,
       }),
     );
   } catch (error) {
+    await Promise.allSettled(pendingResponses);
+    const manualChoicesVisible =
+      (await page
+        .getByRole("button", { name: /^Choose / })
+        .count()
+        .catch(() => 0)) > 0;
     console.info(
       "FACTORY_APPROVAL_FAILURE",
       JSON.stringify({
@@ -536,6 +665,10 @@ test(`D2.2 ${realInterpretation ? "real" : "deterministic"} interpretation deliv
         elapsedMs: Date.now() - start,
         interpretationCalls,
         lifecycle,
+        caseId: privacyProbe ? "A10" : "A02",
+        productCreates,
+        manualChoicesVisible,
+        intakeFacts,
       }),
     );
     throw error;
