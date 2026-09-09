@@ -20,6 +20,12 @@ this roadmap does not select them.
 
 ## Global constraints
 
+- Every new or changed product family uses the
+  [shared consumer acceptance matrix](../../acceptance/consumer-product-checklist.md)
+  before implementation and at the existing review. Map business completion,
+  user effort, interaction states, actual visual quality, responsive/accessibility,
+  access and delivery to concrete evidence. No family is accepted from technical
+  tests alone; preserve explicit limits and deferred outcomes in the ledger.
 - The founder approved the product correction on 2026-09-07 and requested a
   detailed delivery roadmap, efficient regression, and product-goal tracking.
 - English code, tests, UI, and documentation; no credentials or raw AI

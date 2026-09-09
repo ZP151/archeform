@@ -92,6 +92,13 @@ reported reset; root/assigned implementation fallback is recorded in the ledger.
 
 ### Next implementation entry and exit criteria
 
+All follow-on slices and new families inherit the
+[shared consumer acceptance matrix](../../acceptance/consumer-product-checklist.md).
+Before dispatch, map it to that family's actual business journey and screens;
+at acceptance, include generated visual evidence and all applicable outcomes
+in the existing review. D2.4's layout is an approval example, not a universal
+screen design. Missing required dimensions remain open even when tests pass.
+
 | Priority | Work                                                                                                                                                  | Evidence required to advance                                                                                                                                                                                                                              |
 | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | D2.5     | Exercise A01 coarse approval intent and classify the remaining A01-A10 gaps before changing code. Reuse the existing interpretation/composition path. | Keep each first real outcome separate from deterministic fixture results; record material questions, technical handoffs, time to usable app, task completion and manual rescue. Fix the first reproduced product gap with a focused regression.           |

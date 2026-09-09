@@ -2,6 +2,15 @@
 
 Updated: 2026-09-10
 
+All subsequent product types now inherit the
+[shared consumer acceptance matrix](acceptance/consumer-product-checklist.md)
+through delivery policy and the active roadmap. Each task must cover applicable
+business, effort, interaction-state, visual, responsive/accessibility, access and
+delivery outcomes. Actual generated screenshots require visual inspection;
+technical test success alone is insufficient. This uses the existing review,
+preserves valid regression evidence and introduces no additional audit stage.
+Adopting this requirement is not evidence that untested product families pass it.
+
 ## Current delivery: D2.4 mobile usability correction
 
 The founder's review of `d23-real-results-390.png` rejects its visual quality.

@@ -3026,3 +3026,30 @@ prioritize D2.5 coarse-intent and remaining business coverage, real-phone task
 validation, then accepted H1 identity/access/hosting work before expanding the
 catalog. Preserve real-model, deterministic-runtime and user-study evidence as
 separate measures. Local visual acceptance does not close those product gaps.
+
+### Cross-product acceptance correction — founder instruction, September 10
+
+The founder requires the D2.4 lesson to apply to subsequent product types and
+requires complete acceptance criteria. Root owns this documentation-only update:
+`docs/delivery-policy.md`, `docs/acceptance/consumer-product-checklist.md`, this
+ledger, `docs/project-status.md`, and the September 7 consumer roadmap and
+September 10 D2.4 follow-on plan. Define one reusable acceptance matrix and link
+it from the existing dispatch/delivery entry points. Preserve type-specific
+business semantics; do not turn the approval layout into a universal template.
+No runtime, template, dependency, Graph/API or security change is authorized by
+this documentation work. Check coverage, links, formatting and the bounded diff;
+reuse the completed D2.4 implementation review without a new audit wave.
+
+Root completed the shared eight-dimension checklist and connected it to delivery
+policy, the main roadmap, immediate follow-on dispatch and project status. It
+requires actual generated visual evidence, family-specific business cases,
+explicit pass/fail/deferred/not-applicable outcomes and separate evidence for
+real-model, local-runtime and ordinary-user claims. It does not require a new
+library, decorative media, another approval stage or unchanged full-suite reruns.
+
+Documentation coverage review, 45 local Markdown links across five entry/checklist
+documents, Prettier and diff checks passed. No application behavior changed;
+runtime and product tests were not rerun. Root accepts this founder-requested
+documentation correction for one bounded commit and normal iteration-branch
+push with remote-tip equality. Future family compliance remains to be proven
+by each task; the new policy is not retrospective product acceptance.
