@@ -3053,3 +3053,193 @@ runtime and product tests were not rerun. Root accepts this founder-requested
 documentation correction for one bounded commit and normal iteration-branch
 push with remote-tip equality. Future family compliance remains to be proven
 by each task; the new policy is not retrospective product acceptance.
+
+### Assembly supply expansion — next active goal
+
+The founder now prioritizes multi-type application tasks and a large reusable
+definition/material supply for rapid composition. Continue from pushed
+`3337f390856c9cea6493890d4749749a9167474f` in the existing isolated worktree.
+The active long-task goal covers attributable supply research, a bounded
+implemented assembly improvement, complete applicable acceptance and delivery.
+Root owns integration, plans, status, acceptance and Git. Independent
+`/root/assembly_sources` owns only
+`docs/research/2026-09-10-reusable-assembly-supply.md`; `/root/assembly_slice_scope`
+performs read-only PM slice selection. No production ownership is assigned yet.
+
+Initial source inspection confirms that runtime code is already deterministically
+generated; the model interprets business semantics rather than writing arbitrary
+application source. Only Restaurant and Expense currently expose canonical
+definition selection. The catalog has 27 current capability entries and the UI
+recipes are predominantly Restaurant-specific. An Appointment fixture and
+`core.scheduling` metadata do not prove a complete usable booking product.
+Select an integrated, reusable supply slice instead of inflating template counts
+or claiming unimplemented business behavior. Apply the shared acceptance matrix
+and the required technology decision to any new contract or template boundary.
+
+### B1 definition bank — standing acceptance and implementation ownership
+
+Root records standing acceptance of ADR-0054, recommendation `experiment`,
+SHA-256 `70caa3f131736491411c7f7c922da770695b901a0b0d98b759aac88a58d2ec22`.
+Independent read-only `/root/assembly_slice_scope`, neither proposal author nor
+implementation writer, verified that exact hash with P0/P1 `0/0` and
+`APPROVED_FOR_STANDING_ACCEPTANCE: yes`. This applies the existing founder
+standing decision policy; it adds no provider, runtime or cloud authorization.
+
+Serialized implementation owner `/root/d19_menu_implementation` owns exactly
+ADR-0054 MIG-001's nine adapter/compiler source and focused test paths. Root
+owns MIG-002's Workbench fixture/hook test, new Purchase E2E, plan, ledger,
+status and acceptance evidence. Shared contracts are frozen by that ADR.
+Writers preserve each other's work. No package export, dependency, Graph/API,
+Workbench production or other compiler path changes are authorized.
+
+Start focused RED/GREEN tests and preserve pre-change interpretation and ordered
+bundle hashes. Root will authorize one isolated provider-free runtime lane after
+source freeze and relevant checks. Use one scoped independent implementation
+review and the shared consumer checklist, without another unchanged audit wave.
+
+### B1 source freeze and bounded runtime authorization
+
+The serialized owner freezes the nine paths. Compiler source SHA-256 is
+`9b6ca694bf3c5c18a186b57d369adbb0a0dc66184e8f790a6b6222f2dea0759d`;
+catalogue `c6ba4b9f04e9303616af6880aa764519f2e3b92611fe3baaf812fc122ae6ffc8`;
+provider interpreter `de82747547f98bcea385e2639e0e3f151e21550755372b8e36acd8a5a6e1c420`.
+Full adapter tests pass 184/184; subsequent strengthened follow-up tests pass
+8/8. Relevant compiler tests pass 38/38 plus emitted Purchase strict TypeScript;
+both package builds/types and exact manifest formatting pass. Full compiler
+suite is still running and must be reconciled before acceptance. Root's affected
+Workbench tests pass 14/14 and types/formatting pass. The negative test harness
+was corrected to reflect the real controller's material-question state; no
+Workbench production change was required.
+
+Root now authorizes tracked-Dockerfile builds for new Workbench/compiler images
+and one provider-free canonical Purchase lane in fresh isolated Compose project
+`factory-t9-bank-b1-20260910`. Reuse the unchanged accepted Control Plane image;
+keep model keys empty in Workbench and Control Plane. The existing loopback
+ports 15180/13020/15440/16380 and host-network worker topology are unchanged.
+The ignored task overlay contains no credential. Verify image/source hashes;
+then exercise actual composition, Product Publish, immutable Compilation,
+Verification and Preview with synthetic data, under the predeclared eight-part
+acceptance record. Retain four actual images, safe timing/IDs, and exact-label
+Preview/Factory teardown. No model call, external deployment or repository
+release is authorized. The existing independent reviewer covers code, evidence
+and the final visual batch in one review.
+
+### B1 first runtime result and responsive correction
+
+The final full compiler suite passed 662/662 across 39 files. Both tracked image
+builds passed; their internal compiler/interpreter hashes match the freeze.
+Image configs are compiler
+`4cae9cbbf3fd37b927348d8762648795be9231c7c99afce8684af991d4f7a93f`
+and Workbench `6b59aa857d160dcaf739363505f254ad3b7bc0a8ac05b31cc726936d61639c16`.
+The existing reviewer found two harness coverage gaps; root added exact six-field
+payload and rendered values before/after reload, exact five navigation labels,
+and absence of excluded action/link surfaces before runtime. No product change
+was needed for those test corrections.
+
+First canonical runtime reached immutable delivery and created/submitted two
+requests, then approved/rejected them. Requester decision/audit denial and a
+repeated terminal decision returned 403. Initial Submit ended at 570/470/470 px
+for 390/768/1440. The lane failed at 161751 ms on the 768 px procurement role
+text-fit check; it is not an accepted run. Compilation
+`cmtug16h7000dpe4tgwjh28hs`, preview
+`preview-5ed3b4a4-0992-4c9e-af22-d6812fac37ec` stopped with zero exact-label
+containers/networks/volumes. Safe log and first form image remain in ignored
+task `first-pass`; Factory stays isolated for the correction.
+
+Read-only reproduction used actual emitted CSS and SSR with native Chromium.
+The 768/1440 selector supplies 90 px after padding and the conservative 24 px
+arrow allowance; procurement text measures 91.34 px. This proves insufficient
+guard margin, not visually proven clipping. At 390 px flex growth supplies
+209 px. A scratch-only 10 rem minimum supplies 118 px at wider widths with
+no document overflow and unchanged mobile width. The correction is one CSS
+rule only under the existing summary-extension predicate. Because PUR-007
+explicitly limited the original compiler delta, Tech Lead is amending that
+clause and the prior independent reviewer will check the exact delta/hash.
+Reuse the clean unchanged implementation review and regressions; do not start
+another general audit or full-suite wave for this sizing correction.
+
+Root records standing acceptance of the amended ADR-0054 exact SHA-256
+`1f1c4c63a44a53b884428941bf754a0b93c7cabc0b80fb9fa9ae02363a3814a0`.
+The same qualified nonauthor/nonwriter `/root/assembly_slice_scope` reviewed the
+delta, reports P0/P1 `0/0` and `APPROVED_FOR_STANDING_ACCEPTANCE: yes`.
+The existing serialized engineer now owns the one conditional 10 rem rule and
+focused regression in the same two compiler paths. No other implementation
+change is authorized. Root extends the existing E2E to check all three roles at
+all three widths, and authorizes one confirmation lane after corrected source
+and image hash verification. Reuse the isolated Factory/unchanged Workbench and
+Control Plane, create a fresh synthetic application/Preview, and retain separate
+first-pass failure and confirmation evidence with exact final cleanup.
+
+The one-rule correction is frozen at compiler source
+`5202c72ce443901c65f85f49b5ef4515c61ad7502facebe177cc299debc6100e`,
+test `0a940c2c9a2d668c1e9bf3082b796fa66794db46c96a185fc49b6742c326f20d`.
+Focused RED then 4/4 GREEN preserves four old ordered bundles; compiler
+types/build/format pass. Corrected image config
+`7fad4fbd13806001b15c3ee0bbbf4067c03bf82d790a188b870a176a52fe98e4`
+contains the exact source hash.
+
+Confirmation reached ready in 157624 ms. All three-width manager/procurement
+layout and axe checks passed, as did procurement audit API evidence and exact
+request values retained after reload. It then failed at 163613 ms because the
+root harness incorrectly expected the form in navigation. The unchanged
+composer's `NAV_INTENTS` excludes form/detail and adds a list for the secondary
+Requester entity; the actual five navigation entries match that accepted rule.
+Root corrects only the expected five-label array to dashboard, purchase list,
+approval queue, settings, Requester. No product source/image change is needed.
+Compilation `cmtuggx0f002gpe4tefu8j6rw`, preview
+`preview-c6d1adfd-caba-4dfb-8033-dd9d4639bb87` stopped with zero exact resources.
+Keep this separate failed harness log. Under ordinary in-scope correction
+authority, root authorizes one fresh canonical lane to complete remaining
+navigation, outcome screenshots and recoverable-state assertions with the
+corrected expectation. Reuse the successful responsive and product checks.
+
+The next lane reached ready in 166939 ms and completed business, procurement
+audit, reload, exact navigation and all nine role/viewport checks with zero axe
+violations. It captured all four screenshots, inspected by root: useful Item
+headings, prominent Amount/Status, visible Needed by, loaded icons and accessible
+Details; mobile is stacked and desktop uses two columns. At 175056 ms the injected
+service-error assertion matched both the application alert and Next.js's empty
+route announcer. The expected safe application error was present. Root scopes
+the two error assertions to `main.generated-app`; this is a harness-only fix.
+Product source and images are unchanged. Compilation
+`cmtugmf7m004jpe4ten1malo0`, preview
+`preview-ff415741-bacc-4d6c-af35-1b1bd48f2f85` stopped with zero exact resources.
+Root authorizes a final ordinary provider-free confirmation on the same isolated
+Factory to finish the corrected recoverable-state assertions and retain a clean
+complete lane. Preserve this separate failure log and the inspected image hashes;
+no new code, build, model call or audit stage is needed.
+
+### B1 accepted result and controller delivery
+
+Final E2E source `7d5cb42c18dd32c1066a52c46e6ae14170d42f846685d6a8b491beb4591505ee`
+passes 1/1 with zero runner retries. Compilation `cmtugsinf006mpe4t4x5i0ajy`
+reached ready in 155561 ms; business and recoverable-state assertions completed
+in 163345 ms. Two UI requests were approved/rejected; exact values persisted
+after reload; procurement audit API, requester denials and invalid terminal
+transition passed. Questions/technical handoffs/in-run rescue were 0/0/0.
+All three roles at all three widths passed layout and axe; exact routes,
+keyboard Details, native controls and mobile target checks passed. Injected
+loading/503/empty states recovered to the three actual stored records.
+
+Final preview `preview-67d39d75-e034-4c1c-b563-aab09efe3bf8` stopped. After Factory
+`down -v`, exact-label queries found zero containers (including stopped), networks
+and volumes for the Factory and all four Preview projects. All four final PNG
+hashes match the batch inspected by root and the independent reviewer. The
+[acceptance record](../../acceptance/reusable-definition-bank.md) retains every
+dimension, source/image hashes, all three earlier failed attempts and explicit
+local-demo, fixed-selection, audit-API and hosting limitations.
+
+Independent `/root/d24_review` reports P0/P1/P2 `0/0/0` and
+`APPROVED_FOR_LOCAL_ACCEPTANCE: yes` for the final diff, tests, actual runtime,
+visual evidence and cleanup. Root accepts B1 and authorizes one bounded English
+commit and normal push on `codex/consumer-delivery-roadmap`, with remote-tip
+equality afterward. Git history identifies the controller delivery commit.
+No main integration, repository release or cloud deployment is authorized.
+
+The implemented bank now has three canonical selection definitions within two
+consumer runtime families. Research adds 12 source candidates, no new dependency
+or media admission. B2 reusable material admission, B3 additional complete
+business families and B4 retrieval-backed 30/100/hundreds-thousands expansion
+are prioritized in the plan. Reuse pinned-library evidence and automated batch
+checks; new business outcomes still require their applicable consumer acceptance.
+H1 identity/access/hosting and real-model/real-user task validation remain open.

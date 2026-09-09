@@ -1,6 +1,26 @@
 # Market and ecosystem validation
 
-Updated: 2026-08-01
+Updated: 2026-09-10
+
+## 2026-09-10 reusable assembly supply
+
+The [current supply shortlist](research/2026-09-10-reusable-assembly-supply.md)
+examines machine-readable component registries, reusable behavior libraries and
+licensed media. The actionable direction is an internal definition bank feeding
+deterministic assembly, followed by selective asset admission when a concrete
+product needs it. A source catalog, icon count or possible combination does not
+establish a working application count.
+
+[shadcn's registry](https://ui.shadcn.com/docs/registry/getting-started) provides
+an attributable distribution reference;
+[TanStack Table](https://tanstack.com/table/latest/docs/overview) and
+[FullCalendar Standard](https://fullcalendar.io/license) are candidates for list
+and calendar behavior. Their adoption still requires compatibility and license
+checks under the existing authorities. Media engines and collections need
+asset-level license selection, independently from the engine's code license.
+No package or external source is adopted by this research. The next implemented
+slice reuses existing assets for a private definition bank and Purchase Request
+approval; it does not introduce a second UI framework.
 
 ## 2026-08-01 integration-ecosystem expansion
 

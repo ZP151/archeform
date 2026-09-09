@@ -1,5 +1,8 @@
 import { canonicalRestaurantMenuParameters } from "@factory/capabilities";
-import { FixtureRequirementInterpreter } from "@factory/adapters";
+import {
+  FixtureRequirementInterpreter,
+  OpenAIRequirementInterpreterAdapter,
+} from "@factory/adapters";
 import {
   composeProductDraft,
   planProductAlternatives,
@@ -47,6 +50,55 @@ export async function approvalInterpretationFixture(requirementId?: string) {
       },
     },
   };
+}
+
+export const purchaseRequestFixtureBrief =
+  "Build a local purchase request app. Requesters submit an item, amount, category, needed date, supplier and business justification. A manager approves or rejects; procurement reads and audits decisions. Use selectable demo roles and role-wide reads, with no ordering or payments.";
+
+// Exercise the real registered selection parser/projector with authored data.
+// No network or model call occurs; this does not measure intent classification.
+export async function purchaseRequestInterpretationFixture(
+  requirementId = "purchase-request-fixture",
+  requiresPrivateRecords = false,
+) {
+  return new OpenAIRequirementInterpreterAdapter({
+    readEnvironment: () => "test-key",
+    transport: {
+      async create() {
+        return {
+          outputText: JSON.stringify({
+            resultKind: "definition-selection",
+            definitionSelection: {
+              definitionKey: "purchase-request-approval",
+              requirementId,
+              title: "Purchase Requests",
+              outcome:
+                "Requesters submit purchases and managers decide them; procurement audits decisions.",
+              disposition: requiresPrivateRecords
+                ? "needs-clarification"
+                : "supported-default",
+              materialQuestions: requiresPrivateRecords
+                ? [
+                    {
+                      category: "visibility",
+                      question:
+                        "Does the supported local demo with role-wide reads meet your needs, or do you require private requester records?",
+                    },
+                  ]
+                : [],
+              businessParameters: null,
+            },
+            generatedInterpretation: null,
+          }),
+        };
+      },
+    },
+  }).interpret({
+    brief: requiresPrivateRecords
+      ? "Build a purchase request app where signed-in requesters can only see their own records."
+      : purchaseRequestFixtureBrief,
+    answers: {},
+  });
 }
 
 export type ConsumerGenerationFixtureOptions = {

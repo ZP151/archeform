@@ -28,6 +28,7 @@ import {
   type ConsumerGenerationController,
 } from "./use-consumer-generation";
 import { consumerFamilyFor } from "./consumer-family";
+import { purchaseRequestInterpretationFixture } from "../../test/consumer-generation-fixture";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -295,6 +296,95 @@ describe("useConsumerGeneration", () => {
     container.remove();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it("automatically assembles a registered Purchase definition through the existing approval family", async () => {
+    const interpretation = await purchaseRequestInterpretationFixture();
+    const { spec, blueprint } = interpretation.interpretation;
+    const alternatives = planProductAlternatives({
+      requirement: spec,
+      blueprint,
+      baseDraft: createBlankApplicationDraft({
+        applicationId: spec.requirementId,
+        workspaceId: "local-workspace",
+        name: blueprint.title,
+      }),
+    });
+    const journey = journeyFor({ interpretation, alternatives });
+    expect(consumerFamilyFor(journey)).toBe("approval");
+    const applyComposedProduct = vi.fn().mockResolvedValue(TARGET);
+    const release = releaseFor();
+    await act(async () => {
+      root.render(
+        <Harness
+          journey={journey}
+          release={release}
+          applyComposedProduct={applyComposedProduct}
+        />,
+      );
+    });
+    expect(journey.chooseAlternative).toHaveBeenCalledTimes(1);
+    expect(journey.chooseAlternative).toHaveBeenCalledWith("standard");
+    await act(async () => {
+      root.render(
+        <Harness
+          journey={{
+            ...journey,
+            state: {
+              ...journey.state,
+              stage: "reviewing",
+              selectedAlternativeKey: "standard",
+            },
+          }}
+          release={release}
+          applyComposedProduct={applyComposedProduct}
+        />,
+      );
+    });
+    expect(applyComposedProduct).toHaveBeenCalledTimes(1);
+    expect(applyComposedProduct).toHaveBeenCalledWith({
+      resetJourney: false,
+    });
+    expect(globalThis.__consumerGeneration?.family).toBe("approval");
+  });
+
+  it("keeps a Purchase privacy question outside automatic delivery", async () => {
+    const interpretation = await purchaseRequestInterpretationFixture(
+      "private-purchase",
+      true,
+    );
+    const { spec, blueprint } = interpretation.interpretation;
+    const alternatives = planProductAlternatives({
+      requirement: spec,
+      blueprint,
+      baseDraft: createBlankApplicationDraft({
+        applicationId: spec.requirementId,
+        workspaceId: "local-workspace",
+        name: blueprint.title,
+      }),
+    });
+    expect(spec.openQuestions).toHaveLength(1);
+    const journey = {
+      ...journeyFor({ interpretation, alternatives, stage: "clarifying" }),
+      openQuestions: interpretation.interpretation.clarifications.flatMap(
+        (group) => group.questions,
+      ),
+    };
+    expect(consumerFamilyFor(journey)).toBeNull();
+    const applyComposedProduct = vi.fn();
+    const release = releaseFor();
+    await act(async () => {
+      root.render(
+        <Harness
+          journey={journey}
+          release={release}
+          applyComposedProduct={applyComposedProduct}
+        />,
+      );
+    });
+    expect(journey.chooseAlternative).not.toHaveBeenCalled();
+    expect(applyComposedProduct).not.toHaveBeenCalled();
+    expect(release.publishRelease).not.toHaveBeenCalled();
   });
 
   it("rejects incomplete, ambiguous, or unbound approval semantics without consulting business names", () => {

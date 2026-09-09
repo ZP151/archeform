@@ -1,326 +1,96 @@
 import { z } from "zod";
-import {
-  graphKeySchema,
-  hashRequirementSpec,
-  safeBusinessTextSchema,
-  type ProductBlueprintV1,
-} from "@factory/graph";
-import {
-  assertRequirementInterpretation,
-  deriveClarifications,
-  type RequirementInterpretationV1,
-} from "./requirement-interpreter.js";
+import { createApprovalDefinition } from "./approval-definition-template.js";
 
-const materialQuestionSchema = z
-  .object({
-    category: z.enum([
-      "authorization",
-      "visibility",
-      "role",
-      "business-rule",
-      "data",
-      "integration",
-    ]),
-    question: safeBusinessTextSchema.max(500),
-  })
-  .strict();
+export const expenseApprovalDefinition = createApprovalDefinition({
+  definitionKey: "expense-approval",
+  guideTag: "supported-expense-default",
+  identity:
+    "Local demo with explicitly selectable employee, manager and finance roles; role-wide reads, no requester-owned record privacy or tenant isolation.",
+  integrations:
+    "No external identity, HR, accounting, notification delivery or real receipt storage integration.",
+  instruction: [
+    "Every Expense Approval brief returns definition-selection with definitionKey expense-approval, generatedInterpretation null and businessParameters null. Do not generate its blueprint or supply fields, pages, permissions or workflows in the selection.",
 
-/** Private provider selection; never a public Graph or package-root contract. */
-export const approvalDefinitionSelectionSchema = z
-  .object({
-    definitionKey: z.literal("expense-approval"),
-    disposition: z.enum(["supported-default", "needs-clarification"]),
-    requirementId: graphKeySchema,
-    title: safeBusinessTextSchema
-      .min(2)
-      .max(80)
-      .refine(
-        (value) =>
-          value.trim() === value && !/[\u0000-\u001f\u007f]/.test(value),
-        "Approval display names must be trimmed and exclude control characters.",
-      ),
-    outcome: safeBusinessTextSchema.max(2000),
-    materialQuestions: z.array(materialQuestionSchema).max(30),
-    businessParameters: z.null(),
-  })
-  .strict()
-  .superRefine((selection, context) => {
-    if (
-      (selection.disposition === "supported-default") !==
-      (selection.materialQuestions.length === 0)
-    ) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "The selection disposition must match its material questions.",
-      });
-    }
-  });
+    "A coarse expense submission and manager approval request accepts omitted canonical fields, permissions, page intents and workflow details as supported defaults, with zero materialQuestions. A detailed request is supported-default only when every explicit requirement is compatible with this exact default. A display title and requirementId customize identity text only; neither changes business structure. Use a trimmed safe display title of 2 through 80 characters, a lowercase kebab-case requirementId of at most 128 characters and an outcome of at most 2000 characters.",
+    "The supported workflow is draft to submitted by employee, then approved or rejected by a single manager; finance audits all decisions. Amount, category and date are required; receipt and notes are optional; category options are travel, meals, software, office and other. Employee name is required and department optional. The roles are explicitly selectable demo roles with role-wide reads. Omitted routine details do not require questions.",
+    "Any explicit or ambiguous change to authority, visibility, identity, tenant boundary, fields or requiredness, enum values, workflow or integrations requires needs-clarification with at least one material question. Never discard or approximate an explicit incompatible requirement to select supported-default. Preserve every independent material question in the first response, using only authorization, visibility, role, business-rule, data or integration categories. Keep technical plans, packages, provider setup and credentials out of the questions.",
+    "Multiple approval levels, thresholds or an ambiguous decision owner require a role or business-rule question; missing reviewer read permission or changed decision rights require authorization clarification. Requester-only privacy, requests that each employee sees only their own records, and private multiuser access require visibility or authorization clarification: role-wide demo reads do not satisfy requester-only privacy. External authentication, SSO, tenant isolation or real users require authorization or integration clarification. Changed required fields require data clarification. Withdrawal, reopening, return for edits, resubmission and post-approval changes require business-rule clarification. HR, accounting, external notifications, file upload storage and other external integrations require integration clarification; a receipt placeholder is not real receipt storage.",
+    "For Expense Approval follow-ups, retain needs-clarification for every still-required unsupported capability, even when the user has answered a prior question. Only explicit acceptance of the exact supported scope can resolve an unsupported-scope question; an answer that still demands requester privacy, external identity or different authority/workflow is never supported-default. Never infer acceptance from an answer, omit a material requirement or implement unsupported semantics through title or outcome.",
+  ].join(" "),
 
-export type ApprovalDefinitionSelectionV1 = z.infer<
-  typeof approvalDefinitionSelectionSchema
->;
-
-/** Canonical D2 authority, extracted unchanged from the deterministic fixture. */
-export function canonicalExpenseApprovalInterpretation(): RequirementInterpretationV1 {
-  const spec = {
-    apiVersion: "factory.requirement-spec/v1" as const,
+  fields: [
+    { key: "amount", label: "Amount", type: "currency", required: true },
+    {
+      key: "category",
+      label: "Category",
+      type: "enum",
+      required: true,
+      options: ["travel", "meals", "software", "office", "other"],
+    },
+    { key: "date", label: "Date", type: "date", required: true },
+    { key: "receipt", label: "Receipt", type: "file", required: false },
+    { key: "notes", label: "Notes", type: "long-text", required: false },
+  ],
+  copy: {
     requirementId: "expense-approval-requirement",
     outcome:
       "Employees submit expenses and managers decide them; finance audits the decisions.",
-    actors: [
-      {
-        key: "employee",
-        label: "Employee",
-        description:
-          "Submits expenses with amount, category, date, receipt, and notes.",
-      },
-      {
-        key: "manager",
-        label: "Manager",
-        description: "Approves or rejects submitted expenses.",
-      },
-      {
-        key: "finance",
-        label: "Finance",
-        description: "Audits all approval decisions.",
-      },
-    ],
-    domainConcepts: [
-      {
-        key: "expense",
-        label: "Expense",
-        description: "A claim for reimbursement.",
-      },
-      {
-        key: "approval",
-        label: "Approval",
-        description: "A manager decision on a submitted expense.",
-      },
-      {
-        key: "audit-trail",
-        label: "Audit trail",
-        description: "The record of every decision.",
-      },
-    ],
-    workflows: [
-      {
-        key: "expense-approval",
-        label: "Expense approval",
-        description: "From submission to decision.",
-      },
-    ],
-    constraints: [],
-    openQuestions: [],
-    acceptanceScenarios: [
-      {
-        key: "employee-submits",
-        given: "an employee with an expense",
-        when: "the employee submits it",
-        then: "the expense is submitted for approval",
-      },
-      {
-        key: "manager-approves",
-        given: "a submitted expense",
-        when: "the manager approves it",
-        then: "the expense is approved",
-      },
-      {
-        key: "manager-rejects",
-        given: "a submitted expense",
-        when: "the manager rejects it",
-        then: "the expense is rejected",
-      },
-      {
-        key: "finance-audits",
-        given: "decided expenses",
-        when: "finance audits them",
-        then: "every decision is recorded in the audit trail",
-      },
-    ],
-  };
-
-  const blueprint: ProductBlueprintV1 = {
-    apiVersion: "factory.product-blueprint/v1" as const,
-    requirementChecksum: "",
+    requesterKey: "employee",
+    requesterLabel: "Employee",
+    requesterDescription:
+      "Submits expenses with amount, category, date, receipt, and notes.",
+    reviewerKey: "manager",
+    reviewerLabel: "Manager",
+    reviewerDescription: "Approves or rejects submitted expenses.",
+    auditorKey: "finance",
+    auditorLabel: "Finance",
+    auditorDescription: "Audits all approval decisions.",
+    entityKey: "expense",
+    entityLabel: "Expense",
+    entityDescription: "A claim for reimbursement.",
+    decisionDescription: "A manager decision on a submitted expense.",
+    workflowLabel: "Expense approval",
+    submitScenarioKey: "employee-submits",
+    submitGiven: "an employee with an expense",
+    submitWhen: "the employee submits it",
+    submitThen: "the expense is submitted for approval",
+    approveScenarioKey: "manager-approves",
+    decisionGiven: "a submitted expense",
+    approveWhen: "the manager approves it",
+    approveThen: "the expense is approved",
+    rejectScenarioKey: "manager-rejects",
+    rejectWhen: "the manager rejects it",
+    rejectThen: "the expense is rejected",
+    auditScenarioKey: "finance-audits",
+    auditGiven: "decided expenses",
+    auditWhen: "finance audits them",
+    auditThen: "every decision is recorded in the audit trail",
     title: "Expense Approval",
-    actors: [
-      {
-        key: "employee",
-        label: "Employee",
-        permissions: [
-          { entityKey: "expense", actions: ["create", "read", "submit"] },
-          { entityKey: "employee", actions: ["read", "update"] },
-        ],
-      },
-      {
-        key: "manager",
-        label: "Manager",
-        permissions: [
-          { entityKey: "expense", actions: ["read", "approve", "reject"] },
-        ],
-      },
-      {
-        key: "finance",
-        label: "Finance",
-        permissions: [{ entityKey: "expense", actions: ["read", "audit"] }],
-      },
-    ],
-    entities: [
-      {
-        key: "expense",
-        label: "Expense",
-        description: "A claim for reimbursement.",
-        fields: [
-          { key: "amount", label: "Amount", type: "currency", required: true },
-          {
-            key: "category",
-            label: "Category",
-            type: "enum",
-            required: true,
-            options: ["travel", "meals", "software", "office", "other"],
-          },
-          { key: "date", label: "Date", type: "date", required: true },
-          { key: "receipt", label: "Receipt", type: "file", required: false },
-          { key: "notes", label: "Notes", type: "long-text", required: false },
-        ],
-      },
-      {
-        key: "employee",
-        label: "Employee",
-        description: "The person who submits expenses.",
-        fields: [
-          { key: "name", label: "Name", type: "text", required: true },
-          {
-            key: "department",
-            label: "Department",
-            type: "text",
-            required: false,
-          },
-        ],
-      },
-    ],
-    pageIntents: [
-      {
-        key: "expense-dashboard",
-        label: "Expense dashboard",
-        intent: "dashboard",
-        entityKey: "expense",
-      },
-      {
-        key: "expense-list",
-        label: "Expense list",
-        intent: "list",
-        entityKey: "expense",
-      },
-      {
-        key: "expense-form",
-        label: "New expense",
-        intent: "form",
-        entityKey: "expense",
-      },
-      {
-        key: "expense-detail",
-        label: "Expense detail",
-        intent: "detail",
-        entityKey: "expense",
-      },
-      {
-        key: "expense-queue",
-        label: "Approval queue",
-        intent: "queue",
-        entityKey: "expense",
-      },
-      {
-        key: "expense-settings",
-        label: "Expense settings",
-        intent: "settings",
-      },
-    ],
-    workflows: [
-      {
-        key: "expense-approval",
-        label: "Expense approval",
-        entityKey: "expense",
-        states: [
-          { key: "draft", label: "Draft" },
-          { key: "submitted", label: "Submitted" },
-          { key: "approved", label: "Approved" },
-          { key: "rejected", label: "Rejected" },
-        ],
-        transitions: [
-          {
-            key: "submit",
-            from: "draft",
-            to: "submitted",
-            label: "Submit",
-            actorKey: "employee",
-          },
-          {
-            key: "approve",
-            from: "submitted",
-            to: "approved",
-            label: "Approve",
-            actorKey: "manager",
-          },
-          {
-            key: "reject",
-            from: "submitted",
-            to: "rejected",
-            label: "Reject",
-            actorKey: "manager",
-          },
-        ],
-      },
-    ],
-    acceptanceJourneys: [
-      {
-        key: "employee-submits-expense",
-        description: "An employee submits an expense.",
-        steps: [{ actorKey: "employee", action: "submits an expense" }],
-      },
-      {
-        key: "manager-decides-expense",
-        description: "A manager approves or rejects a submitted expense.",
-        steps: [
-          { actorKey: "employee", action: "submits an expense" },
-          { actorKey: "manager", action: "approves or rejects it" },
-        ],
-      },
-      {
-        key: "finance-audits-decisions",
-        description: "Finance audits every decision.",
-        steps: [
-          { actorKey: "employee", action: "submits an expense" },
-          { actorKey: "manager", action: "decides it" },
-          { actorKey: "finance", action: "audits the decision" },
-        ],
-      },
-    ],
-  };
-  blueprint.requirementChecksum = hashRequirementSpec(spec);
-  return { spec, blueprint, clarifications: [] };
-}
-
-/** Substitute only validated presentation and requirement/question identity. */
-export function projectApprovalDefinitionSelection(
-  selection: ApprovalDefinitionSelectionV1,
-): RequirementInterpretationV1 {
-  const canonical = canonicalExpenseApprovalInterpretation();
-  const spec = {
-    ...canonical.spec,
-    requirementId: selection.requirementId,
-    outcome: selection.outcome,
-    openQuestions: selection.materialQuestions.map((question) => ({
-      ...question,
-    })),
-  };
-  return assertRequirementInterpretation({
-    spec,
-    blueprint: {
-      ...canonical.blueprint,
-      title: selection.title,
-      requirementChecksum: hashRequirementSpec(spec),
-    },
-    clarifications: deriveClarifications(spec),
-  });
-}
+    requesterEntityDescription: "The person who submits expenses.",
+    dashboardLabel: "Expense dashboard",
+    listLabel: "Expense list",
+    formLabel: "New expense",
+    detailLabel: "Expense detail",
+    settingsLabel: "Expense settings",
+    submitJourneyKey: "employee-submits-expense",
+    submitJourneyDescription: "An employee submits an expense.",
+    submitAction: "submits an expense",
+    decisionJourneyKey: "manager-decides-expense",
+    decisionJourneyDescription:
+      "A manager approves or rejects a submitted expense.",
+    decisionAction: "approves or rejects it",
+    auditJourneyKey: "finance-audits-decisions",
+    auditJourneyDescription: "Finance audits every decision.",
+    reviewAction: "decides it",
+    auditAction: "audits the decision",
+  },
+});
+export const approvalDefinitionSelectionSchema =
+  expenseApprovalDefinition.selectionSchema;
+export type ApprovalDefinitionSelectionV1 = z.infer<
+  typeof approvalDefinitionSelectionSchema
+>;
+export const canonicalExpenseApprovalInterpretation =
+  expenseApprovalDefinition.canonical;
+export const projectApprovalDefinitionSelection =
+  expenseApprovalDefinition.project;

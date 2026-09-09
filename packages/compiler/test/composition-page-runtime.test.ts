@@ -1,3 +1,4 @@
+import { canonicalPurchaseRequestApprovalInterpretation } from "../../adapters/src/requirements/purchase-request-definition-selection.js";
 import { createHash } from "node:crypto";
 import { transpileModule, ModuleKind, JsxEmit } from "typescript";
 import { getCustomerIconAssets } from "../src/targets/restaurant-v3/customer-icons.js";
@@ -281,7 +282,7 @@ describe("composition page runtime round trip", () => {
       }
     });
 
-    it.each([bookingBrief, expenseBrief])(
+    it.each([bookingBrief, expenseBrief, "purchase-request-approval"])(
       "emits a strictly type-checkable runtime for %s",
       async (brief) => {
         // The isolated preview build type-checks the emitted bundle (that is
@@ -289,7 +290,10 @@ describe("composition page runtime round trip", () => {
         // non-compiling emission before any pipeline run. The check runs inside
         // this package so "react" resolves to the @types/react devDependency;
         // the emitted file is otherwise self-contained.
-        const graph = await composedGraphFor(brief);
+        const graph =
+          brief === "purchase-request-approval"
+            ? await purchaseGraphFor()
+            : await composedGraphFor(brief);
         const bundle = generateApplicationBundle(bundleInputFor(graph));
         const runtime = bundle.files.find(
           (file) => file.path === "web/app/page-runtime.tsx",
@@ -382,6 +386,98 @@ function runtimeFor(graph: ApplicationGraphV1): string {
     (file) => file.path === "web/app/page-runtime.tsx",
   )!.content;
 }
+
+async function purchaseGraphFor(): Promise<ApplicationGraphV1> {
+  const interpretation = canonicalPurchaseRequestApprovalInterpretation();
+  const baseDraft = createBlankApplicationDraft({
+    applicationId: interpretation.spec.requirementId,
+    workspaceId: "local-workspace",
+    name: interpretation.blueprint.title,
+  });
+  const [standard] = planProductAlternatives({
+    requirement: interpretation.spec,
+    blueprint: interpretation.blueprint,
+    baseDraft,
+  });
+  const { diff } = composeProductDraft({
+    plan: standard!.plan,
+    blueprint: interpretation.blueprint,
+    baseDraft,
+  });
+  return applyGraphDiffToDraft(baseDraft, diff).graph;
+}
+
+describe("Purchase approval summary", () => {
+  it("reserves readable native role-selector width only in the enhanced approval CSS", async () => {
+    const rule = ".approval-v1 .generated-header select { min-width: 10rem; }";
+    const graph = await purchaseGraphFor();
+    const styles = generateApplicationBundle(bundleInputFor(graph)).files.find(
+      (file) => file.path === "web/app/globals.css",
+    )!.content;
+    expect(styles.includes(rule)).toBe(true);
+    const expenseStyles = generateApplicationBundle(
+      bundleInputFor(await composedGraphFor(expenseBrief)),
+    ).files.find((file) => file.path === "web/app/globals.css")!.content;
+    expect(expenseStyles.includes(rule)).toBe(false);
+  });
+
+  it("promotes only declared item identity and a unique temporal fallback", async () => {
+    const graph = await purchaseGraphFor();
+    const source = runtimeFor(graph);
+    expect(source.includes("<h3 className='approval-record-title'>")).toBe(
+      true,
+    );
+    const { exports: runtime } = approvalModule(
+      source + "\nexport { selectRecordTitleField };",
+    );
+    expect(
+      runtime.selectRecordTitleField([{ key: "item", type: "string" }])?.key,
+    ).toBe("item");
+    for (const fields of [
+      [],
+      [{ key: "item", type: "integer" }],
+      [
+        { key: "item", type: "string" },
+        { key: "item", type: "string" },
+      ],
+      [{ key: "name", type: "string" }],
+    ])
+      expect(runtime.selectRecordTitleField(fields)).toBeUndefined();
+    expect(
+      runtime.selectSummaryFields([{ key: "neededBy", type: "date" }]),
+    ).toEqual([undefined, undefined, "neededBy"]);
+    expect(
+      runtime.selectSummaryFields([
+        { key: "neededBy", type: "date" },
+        { key: "createdAt", type: "datetime" },
+      ]),
+    ).toEqual([undefined, undefined, undefined]);
+    expect(
+      runtime.selectSummaryFields([
+        { key: "date", type: "date" },
+        { key: "neededBy", type: "date" },
+      ]),
+    ).toEqual([undefined, undefined, "date"]);
+    expect(
+      runtime.selectSummaryFields([
+        { key: "date", type: "string" },
+        { key: "neededBy", type: "date" },
+      ]),
+    ).toEqual([undefined, undefined, undefined]);
+  });
+});
+
+describe("definition bank byte preservation", () => {
+  it("preserves the ordered Expense bundle captured before bank extraction", async () => {
+    expect(
+      orderedBundleDigest(
+        generateApplicationBundle(
+          bundleInputFor(await composedGraphFor(expenseBrief)),
+        ).files,
+      ),
+    ).toBe("4aa544c03beb9a9f61e10b3b5252a255e0c397411f5d887e4435a34979537332");
+  });
+});
 
 describe("approval presentation compatibility", () => {
   it("freezes ordered legacy bundles before the approval change", async () => {

@@ -1,3 +1,10 @@
+import {
+  definitionSelectionCatalogue,
+  definitionSelectionSchema,
+  validateDefinitionCatalogue,
+  projectDefinitionSelection,
+} from "../src/requirements/definition-selection-catalogue.js";
+import { canonicalExpenseApprovalInterpretation } from "../src/requirements/approval-definition-selection.js";
 import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -689,6 +696,336 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       generatedInterpretation: null,
     };
   }
+
+  it("keeps exactly three coherent registrations and refuses schema, guide and projector drift", () => {
+    expect(
+      definitionSelectionCatalogue.map((entry) => entry.definitionKey),
+    ).toEqual([
+      "restaurant-ordering",
+      "expense-approval",
+      "purchase-request-approval",
+    ]);
+    expect(Object.isFrozen(definitionSelectionCatalogue)).toBe(true);
+    expect(() =>
+      validateDefinitionCatalogue([
+        ...definitionSelectionCatalogue,
+        definitionSelectionCatalogue[0],
+      ]),
+    ).toThrow();
+    const purchase = definitionSelectionCatalogue[2];
+    expect(() =>
+      validateDefinitionCatalogue([{ ...purchase, definitionKey: "unknown" }]),
+    ).toThrow();
+    expect(() =>
+      validateDefinitionCatalogue([
+        { ...purchase, guide: { definitionKey: "expense-approval" } },
+      ]),
+    ).toThrow();
+    expect(() =>
+      validateDefinitionCatalogue([
+        {
+          ...purchase,
+          project: () => canonicalExpenseApprovalInterpretation(),
+        },
+      ]),
+    ).toThrow();
+    expect(() =>
+      projectDefinitionSelection({ definitionKey: "unknown" }),
+    ).toThrow();
+    expect(
+      createHash("sha256")
+        .update(JSON.stringify(canonicalExpenseApprovalInterpretation()))
+        .digest("hex"),
+    ).toBe("be71d62bcd3c124986629e0ec2fb06d9c1defebf9f34b0704d2b6e6fdb60f6a7");
+    expect(
+      createHash("sha256")
+        .update(
+          JSON.stringify(
+            projectDefinitionSelection({
+              definitionKey: "restaurant-ordering",
+              disposition: "supported-default",
+              requirementId: "bank-restaurant-baseline",
+              title: "Restaurant Baseline",
+              outcome: "Customers place orders and staff fulfill them.",
+              materialQuestions: [],
+              businessParameters: null,
+            }),
+          ),
+        )
+        .digest("hex"),
+    ).toBe("b3c502a4678cee1a1ac5299caf4db9f62ed9ceef2ed165cf5f05a7ce51a953eb");
+  });
+
+  it("derives provider fragments and instructions in bank order with cardinality parity", () => {
+    for (const entry of definitionSelectionCatalogue) {
+      const base = {
+        definitionKey: entry.definitionKey,
+        disposition: "supported-default",
+        requirementId: "bank-check",
+        title: "Bank Check",
+        outcome: "Review the supported definition.",
+        materialQuestions: [],
+        businessParameters: null,
+      };
+      for (const [disposition, materialQuestions, valid] of [
+        ["supported-default", [], true],
+        [
+          "supported-default",
+          [{ category: "data", question: "Accept the supported scope?" }],
+          false,
+        ],
+        ["needs-clarification", [], false],
+        [
+          "needs-clarification",
+          [{ category: "data", question: "Accept the supported scope?" }],
+          true,
+        ],
+      ] as const) {
+        const value = { ...base, disposition, materialQuestions };
+        expect(entry.selectionSchema.safeParse(value).success).toBe(valid);
+        expect(
+          matchesSelectionJsonSchema(
+            entry.jsonSchema as SelectionJsonSchema,
+            value,
+          ),
+        ).toBe(valid);
+      }
+    }
+  });
+
+  it.each([
+    "authorization",
+    "visibility",
+    "role",
+    "business-rule",
+    "data",
+    "integration",
+  ])(
+    "preserves Purchase material %s questions and strict selection parity",
+    async (category) => {
+      const selection = approvalDefinitionSelection({
+        definitionKey: "purchase-request-approval",
+        disposition: "needs-clarification",
+        materialQuestions: [
+          { category, question: "Accept the supported local demo scope?" },
+        ],
+      });
+      const { transport, requests } = capturingTransport(selection);
+      const result = await new OpenAIRequirementInterpreterAdapter({
+        transport,
+        readEnvironment: () => "test-key",
+      }).interpret({
+        brief:
+          "Purchase requests require a decision beyond the supported default.",
+      });
+      expect(result.interpretation.clarifications).toHaveLength(1);
+      expect(result.interpretation.spec.openQuestions[0]!.category).toBe(
+        category,
+      );
+      const providerSchema = requests[0]!.jsonSchema as {
+        properties: { definitionSelection: SelectionJsonSchema };
+      };
+      for (const invalid of [
+        { businessParameters: {} },
+        { fields: [] },
+        { disposition: "supported-default" },
+        { materialQuestions: [] },
+        { definitionKey: "unknown" },
+      ]) {
+        const value = {
+          ...(selection.definitionSelection as object),
+          ...invalid,
+        };
+        expect(definitionSelectionSchema.safeParse(value).success).toBe(false);
+        expect(
+          matchesSelectionJsonSchema(
+            providerSchema.properties.definitionSelection,
+            value,
+          ),
+        ).toBe(false);
+      }
+      expect(
+        matchesSelectionJsonSchema(
+          providerSchema.properties.definitionSelection,
+          selection.definitionSelection,
+        ),
+      ).toBe(true);
+    },
+  );
+
+  it("advertises Purchase scope through the bank and never resolves still-required exclusions on follow-up", async () => {
+    const selection = approvalDefinitionSelection({
+      definitionKey: "purchase-request-approval",
+      disposition: "needs-clarification",
+      materialQuestions: [
+        {
+          category: "integration",
+          question:
+            "Accept decision-only approval without purchase orders or payments?",
+        },
+      ],
+    });
+    const { requests, transport } = capturingTransport(selection);
+    const adapter = new OpenAIRequirementInterpreterAdapter({
+      transport,
+      readEnvironment: () => "test-key",
+    });
+    const initial = await adapter.interpret({
+      brief: "Purchase approvals must pay suppliers.",
+      answers: {},
+    });
+    expect(initial.interpretation.clarifications).toHaveLength(1);
+    const question = initial.interpretation.clarifications[0]!.questions[0]!;
+    const instructions = requests[0]!.instructions;
+    expect(instructions.indexOf("<supported-restaurant-default>")).toBeLessThan(
+      instructions.indexOf("<supported-expense-default>"),
+    );
+    expect(instructions.indexOf("<supported-expense-default>")).toBeLessThan(
+      instructions.indexOf("<supported-purchase-request-default>"),
+    );
+    for (const exclusion of [
+      "requester-only",
+      "SSO",
+      "thresholds",
+      "budgets",
+      "sequential reviewers",
+      "resubmit",
+      "requiredness",
+      "category options",
+      "currency codes",
+      "file storage",
+      "purchase orders",
+      "vendor management",
+      "inventory",
+      "fulfilment",
+      "invoices",
+      "payments",
+      "external notification",
+    ])
+      expect(instructions.includes(exclusion)).toBe(true);
+    await expect(
+      adapter.interpret({
+        brief: "Purchase approvals must pay suppliers.",
+        answers: { [question.key]: "Payments remain required." },
+        priorInterpretation: initial,
+        clarificationContext: [
+          {
+            key: question.key,
+            category: "integration",
+            question:
+              "Accept decision-only approval without purchase orders or payments?",
+            answer: "Payments remain required.",
+          },
+        ],
+      }),
+    ).rejects.toMatchObject({ code: "output_invalid" });
+    expect(requests).toHaveLength(4);
+  });
+
+  it("projects a registered Purchase selection through the unchanged approval planner", async () => {
+    const { transport } = capturingTransport(
+      approvalDefinitionSelection({
+        definitionKey: "purchase-request-approval",
+        requirementId: "purchase-request-requirement",
+        title: "Purchase Requests",
+        outcome:
+          "Requesters submit purchases and managers decide them; procurement audits decisions.",
+      }),
+    );
+    const result = await new OpenAIRequirementInterpreterAdapter({
+      transport,
+      readEnvironment: () => "test-key",
+    }).interpret({ brief: "Build a purchase request approval application." });
+    const { spec, blueprint } = result.interpretation;
+    expect(result.businessParameters).toBeNull();
+    expect(
+      blueprint.entities[0]!.fields.map(({ key, type, required }) => [
+        key,
+        type,
+        required,
+      ]),
+    ).toEqual([
+      ["amount", "currency", true],
+      ["category", "enum", true],
+      ["neededBy", "date", true],
+      ["item", "text", true],
+      ["supplier", "text", false],
+      ["businessJustification", "long-text", true],
+    ]);
+    expect(blueprint.actors.map(({ key }) => key)).toEqual([
+      "requester",
+      "manager",
+      "procurement",
+    ]);
+    expect(blueprint.requirementChecksum).toBe(hashRequirementSpec(spec));
+    const baseDraft = createBlankApplicationDraft({
+      applicationId: spec.requirementId,
+      workspaceId: "local-workspace",
+      name: blueprint.title,
+    });
+    const [standard] = planProductAlternatives({
+      requirement: spec,
+      blueprint,
+      baseDraft,
+    });
+    expect(standard).toBeDefined();
+    expect(standard!.plan.compatibility.result).toBe("compatible");
+    expect(
+      standard!.plan.capabilityLocks
+        .map(({ key, version }) => `${key}@${version}`)
+        .toSorted(),
+    ).toEqual([
+      "core.audit@1.0.2",
+      "core.crud@1.0.1",
+      "core.identity-policy@1.0.0",
+      "core.notification@1.1.1",
+      "core.policy-declarations@1.0.0",
+      "core.workflow@1.0.1",
+    ]);
+    expect(blueprint.entities[0]!.fields[1]!.options).toEqual([
+      "equipment",
+      "software",
+      "services",
+      "supplies",
+      "other",
+    ]);
+    expect(blueprint.pageIntents.map(({ key }) => key)).toEqual([
+      "purchase-request-dashboard",
+      "purchase-request-list",
+      "purchase-request-form",
+      "purchase-request-detail",
+      "purchase-request-queue",
+      "purchase-request-settings",
+    ]);
+    expect(blueprint.actors.map(({ permissions }) => permissions)).toEqual([
+      [
+        {
+          entityKey: "purchase-request",
+          actions: ["create", "read", "submit"],
+        },
+        { entityKey: "requester", actions: ["read", "update"] },
+      ],
+      [
+        {
+          entityKey: "purchase-request",
+          actions: ["read", "approve", "reject"],
+        },
+      ],
+      [{ entityKey: "purchase-request", actions: ["read", "audit"] }],
+    ]);
+    expect(
+      blueprint.workflows[0]!.transitions.map(({ key, from, to, actorKey }) => [
+        key,
+        from,
+        to,
+        actorKey,
+      ]),
+    ).toEqual([
+      ["submit", "draft", "submitted", "requester"],
+      ["approve", "submitted", "approved", "manager"],
+      ["reject", "submitted", "rejected", "manager"],
+    ]);
+  });
 
   it.each([
     ["A01", "Build an expense approval app for employees and managers."],
@@ -1435,10 +1772,10 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       "Every Restaurant result returns definition-selection with generatedInterpretation null; do not produce a full blueprint",
     );
     expect(requests[0]?.instructions).toContain(
-      "Products outside Restaurant and Expense Approval return generated-blueprint",
+      "Products outside the registered supported definitions return generated-blueprint",
     );
     expect(requests[0]?.instructions).toContain(
-      "For Restaurant follow-ups, reevaluate definition fit and retain needs-clarification for every still-material question or new material difference",
+      "For registered-definition follow-ups, reevaluate definition fit and retain needs-clarification for every still-material question or new material difference",
     );
     expect(requests[0]?.instructions).toContain(
       "For generated-blueprint results, do not repeat, rephrase, or progressively reveal additional questions",
@@ -1449,7 +1786,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
         generatedInterpretation: { anyOf: unknown[] };
       };
     };
-    expect(schema.properties.definitionSelection.anyOf).toHaveLength(3);
+    expect(schema.properties.definitionSelection.anyOf).toHaveLength(4);
     expect(schema.properties.generatedInterpretation.anyOf).toHaveLength(2);
     const alternatives = planProductAlternatives({
       requirement: interpretation.spec,
@@ -1532,14 +1869,18 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
         readonly definitionSelection: {
           readonly anyOf: readonly [
             {
-              readonly properties: {
-                readonly title: {
-                  readonly type: string;
-                  readonly minLength: number;
-                  readonly maxLength: number;
-                  readonly pattern: string;
-                };
-              };
+              readonly anyOf: readonly [
+                {
+                  readonly properties: {
+                    readonly title: {
+                      readonly type: string;
+                      readonly minLength: number;
+                      readonly maxLength: number;
+                      readonly pattern: string;
+                    };
+                  };
+                },
+              ];
             },
             unknown,
           ];
@@ -1547,7 +1888,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       };
     };
     const titleSchema =
-      schema.properties.definitionSelection.anyOf[0].properties.title;
+      schema.properties.definitionSelection.anyOf[0].anyOf[0].properties.title;
     expect(titleSchema).toEqual({
       type: "string",
       minLength: 2,
@@ -2409,7 +2750,7 @@ describe("OpenAIRequirementInterpreterAdapter", () => {
       "If the brief is ambiguous, leave an open question in the spec instead of guessing unless an applicable supported definition resolves the omitted detail.",
     );
     expect(requests[0]?.instructions).toContain(
-      "Products outside Restaurant and Expense Approval follow the generated-blueprint interpretation rules.",
+      "Products outside the registered supported definitions return generated-blueprint.",
     );
   });
 

@@ -1,8 +1,9 @@
 import {
-  approvalDefinitionSelectionSchema,
-  canonicalExpenseApprovalInterpretation,
-  projectApprovalDefinitionSelection,
-} from "./approval-definition-selection.js";
+  definitionSelectionSchema,
+  definitionSelectionJsonSchemas,
+  definitionSelectionInstructions,
+  projectDefinitionSelection,
+} from "./definition-selection-catalogue.js";
 import OpenAI from "openai";
 import { z } from "zod";
 
@@ -18,12 +19,7 @@ import {
   parseStrict,
   safeBusinessTextSchema,
 } from "@factory/graph";
-import {
-  hashRestaurantMenuParameters,
-  restaurantOrderingExperienceBrief,
-  restaurantOrderingProductIntent,
-  restaurantOrderingProductRecipe,
-} from "@factory/capabilities";
+import { hashRestaurantMenuParameters } from "@factory/capabilities";
 
 import {
   type OpenAIResponseTransport,
@@ -40,10 +36,6 @@ import {
   type RequirementInterpreterAdapterV1,
   type RequirementInterpretationV1,
 } from "./requirement-interpreter.js";
-import {
-  projectRestaurantDefinitionSelection,
-  restaurantDefinitionSelectionSchema,
-} from "./restaurant-definition-selection.js";
 
 /** Optional text fields arrive as `null` from strict JSON mode. */
 function optionalText<T extends z.ZodTypeAny>(
@@ -309,12 +301,7 @@ type ModelInterpretation = z.infer<typeof modelInterpretationSchema>;
 const providerInterpretationResultSchema = z
   .object({
     resultKind: z.enum(["definition-selection", "generated-blueprint"]),
-    definitionSelection: z
-      .union([
-        restaurantDefinitionSelectionSchema,
-        approvalDefinitionSelectionSchema,
-      ])
-      .nullable(),
+    definitionSelection: definitionSelectionSchema.nullable(),
     generatedInterpretation: modelInterpretationSchema.nullable(),
   })
   .strict()
@@ -373,63 +360,6 @@ const graphFieldKeyJsonPattern =
  * definition. It gives the provider product defaults without granting it
  * implementation, integration, or runtime authority.
  */
-function supportedRestaurantDefaultGuide(): {
-  readonly productType: ReturnType<
-    typeof restaurantOrderingProductIntent
-  >["productType"];
-  readonly actorKeys: readonly string[];
-  readonly acceptanceJourneyKeys: readonly string[];
-  readonly constraints: {
-    readonly moneyMovement: ReturnType<
-      typeof restaurantOrderingProductIntent
-    >["constraints"]["moneyMovement"];
-    readonly externalSideEffects: ReturnType<
-      typeof restaurantOrderingProductIntent
-    >["constraints"]["externalSideEffects"];
-  };
-  readonly surfaces: readonly {
-    readonly key: string;
-    readonly device: ReturnType<
-      typeof restaurantOrderingExperienceBrief
-    >["surfaces"][number]["device"];
-    readonly audience: readonly string[];
-    readonly navigation: ReturnType<
-      typeof restaurantOrderingExperienceBrief
-    >["surfaces"][number]["navigation"];
-  }[];
-} {
-  const intent = restaurantOrderingProductIntent();
-  const experience = restaurantOrderingExperienceBrief();
-  const recipe = restaurantOrderingProductRecipe();
-  return {
-    productType: intent.productType,
-    actorKeys: intent.actors.map((actor) => actor.key),
-    acceptanceJourneyKeys: recipe.acceptanceJourneyKeys,
-    constraints: {
-      moneyMovement: intent.constraints.moneyMovement,
-      externalSideEffects: intent.constraints.externalSideEffects,
-    },
-    surfaces: experience.surfaces.map((surface) => ({
-      key: surface.key,
-      device: surface.device,
-      audience: surface.audience,
-      navigation: surface.navigation,
-    })),
-  };
-}
-
-const supportedRestaurantDefaultInstruction = [
-  "For every Restaurant brief, use this scoped canonical Restaurant definition when deciding its definition-selection disposition:",
-  `<supported-restaurant-default>${JSON.stringify(supportedRestaurantDefaultGuide())}</supported-restaurant-default>`,
-  "Apply every omitted canonical Restaurant detail as its own supported default, independently of whether another requested capability needs clarification. Every Restaurant result returns definition-selection with generatedInterpretation null; do not produce a full blueprint.",
-  "When a Restaurant brief explicitly supplies an application display name, place that exact validated display name in the existing definition-selection title. A Restaurant display name must be trimmed safe business text from 2 through 80 characters. It must have no leading or trailing whitespace and no control characters. When no application display name is explicit, keep the validated provider title and do not ask a naming question. If an explicit display name is invalid, return needs-clarification with one material question that asks for a valid shorter display name; never truncate, replace, or encode the invalid name in title. If an answer still lacks a valid display name, retain needs-clarification so the existing bounded fail-closed follow-up behavior applies. Do not infer a legal or corporate identity from an application display name.",
-  "Treat a sample, demo, or default menu, generic menu browsing, and application branding as canonical-default menu parameters with currency USD and zero items. A complete supplied initial menu of 1 through 100 dishes with names and explicit USD prices is supported: return provided businessParameters in supplied order, convert explicit prices exactly to integer minor units (cents), and use null description when omitted. Do not ask to edit a complete menu. Names must be trimmed safe text of 1..120 characters and non-null descriptions 1..1000, normalized to NFC; integer prices are 0..10000000. Never invent a missing name or price. An incomplete or unspecified custom menu requires businessParameters null and one consolidated material data question asking for the missing names and USD prices. Never encode menu data in title or other free-text fields as a transport substitute.",
-  "The supplied-menu contract supports only names, optional descriptions, explicit USD prices, and order. Explicit currency other than USD, stock, availability, preparation time, images, categories, options, tax, or service-charge requirements remain material data clarification; never discard these requirements, convert another currency, or relabel it USD. Fixed omitted details are category mains, availability true, stock 100, preparation 15 minutes, and a local no-photo placeholder. Preserve a complete businessParameters value during unrelated material questions. For follow-ups, priorInterpretation is the exact versioned result wrapper: carry any complete provided menu unchanged through every clarification, including data questions about stock, currency, and options. Menu editing during clarification is not supported; incomplete null prior menu data may be completed with missing names and USD prices. Reevaluate and retain every independent unsupported requirement.",
-  "An explicit contradiction remains unresolved. Do not suppress material access, privacy, business-rule, data or compliance, or integration questions. Never silently discard a material question or impose a count target to return supported-default. For an unsupported live payment or external capability, clearly state the current supported limitation and ask one meaningful scope decision for each genuinely independent material difference. When an unavailable external capability is the only explicit difference from the canonical Restaurant default, return exactly one integration material question that states the current supported limitation and asks whether to accept the supported scope or retain that capability as required. Do not infer downstream policy, data, authorization, implementation, processor, setup, or configuration questions from that one unavailable external capability. Preserve an access, privacy, data, or business-rule decision when the brief separately makes it explicit. Do not ask for provider setup, credentials, configuration, or integration implementation details that the supported product cannot implement. The simulated money movement and no external side effects default do not satisfy an explicit live payment request.",
-  "A Restaurant follow-up may return supported-default when the supplied answer resolves its material question and no unresolved material requirement remains: missing menu names or USD prices must become complete, and an unsupported-scope question requires explicit acceptance of the supported scope. If an answer continues to require unsupported live payment or another external capability, retain needs-clarification.",
-  "Products outside Restaurant and Expense Approval follow the generated-blueprint interpretation rules.",
-].join(" ");
-
 function namedItemJsonSchema(): Record<string, unknown> {
   return {
     type: "object",
@@ -838,74 +768,6 @@ const interpretationJsonSchema: Record<string, unknown> = {
   },
 };
 
-// Private strict-mode union mirrors approval disposition/question cardinality.
-const approvalDefinitionSelectionJsonSchema = {
-  anyOf: (["supported-default", "needs-clarification"] as const).map(
-    (disposition) => ({
-      type: "object",
-      additionalProperties: false,
-      required: [
-        "definitionKey",
-        "disposition",
-        "requirementId",
-        "title",
-        "outcome",
-        "materialQuestions",
-        "businessParameters",
-      ],
-      properties: {
-        definitionKey: { type: "string", const: "expense-approval" },
-        disposition: { type: "string", const: disposition },
-        requirementId: {
-          type: "string",
-          minLength: 1,
-          maxLength: 128,
-          pattern: graphKeyJsonPattern,
-        },
-        title: {
-          type: "string",
-          minLength: 2,
-          maxLength: 80,
-        },
-        outcome: {
-          type: "string",
-          minLength: 1,
-          maxLength: 2000,
-        },
-        businessParameters: { type: "null" },
-        materialQuestions: {
-          type: "array",
-          minItems: disposition === "supported-default" ? 0 : 1,
-          maxItems: disposition === "supported-default" ? 0 : 30,
-          items: {
-            type: "object",
-            additionalProperties: false,
-            required: ["category", "question"],
-            properties: {
-              category: {
-                type: "string",
-                enum: [
-                  "authorization",
-                  "visibility",
-                  "role",
-                  "business-rule",
-                  "data",
-                  "integration",
-                ],
-              },
-              question: {
-                type: "string",
-                minLength: 1,
-                maxLength: 500,
-              },
-            },
-          },
-        },
-      },
-    }),
-  ),
-};
-
 const providerInterpretationResultJsonSchema: Record<string, unknown> = {
   type: "object",
   additionalProperties: false,
@@ -916,110 +778,7 @@ const providerInterpretationResultJsonSchema: Record<string, unknown> = {
       enum: ["definition-selection", "generated-blueprint"],
     },
     definitionSelection: {
-      anyOf: [
-        {
-          type: "object",
-          additionalProperties: false,
-          required: [
-            "definitionKey",
-            "disposition",
-            "requirementId",
-            "title",
-            "outcome",
-            "materialQuestions",
-            "businessParameters",
-          ],
-          properties: {
-            definitionKey: { type: "string", const: "restaurant-ordering" },
-            disposition: {
-              type: "string",
-              enum: ["supported-default", "needs-clarification"],
-            },
-            requirementId: { type: "string", pattern: graphKeyJsonPattern },
-            title: {
-              type: "string",
-              minLength: 2,
-              maxLength: 80,
-              pattern:
-                "^[^\\s\\u0000-\\u001F\\u007F][^\\u0000-\\u001F\\u007F]*[^\\s\\u0000-\\u001F\\u007F]$",
-            },
-            outcome: { type: "string", minLength: 1, maxLength: 2000 },
-            businessParameters: {
-              anyOf: [
-                {
-                  type: "object",
-                  additionalProperties: false,
-                  required: ["apiVersion", "mode", "currency", "items"],
-                  properties: {
-                    apiVersion: {
-                      type: "string",
-                      const: "factory.restaurant-menu-parameters/v1",
-                    },
-                    mode: {
-                      type: "string",
-                      enum: ["canonical-default", "provided"],
-                    },
-                    currency: { type: "string", const: "USD" },
-                    items: {
-                      type: "array",
-                      maxItems: 100,
-                      items: {
-                        type: "object",
-                        additionalProperties: false,
-                        required: ["name", "description", "priceMinor"],
-                        properties: {
-                          name: {
-                            type: "string",
-                            minLength: 1,
-                            maxLength: 120,
-                          },
-                          description: {
-                            anyOf: [
-                              { type: "string", minLength: 1, maxLength: 1000 },
-                              { type: "null" },
-                            ],
-                          },
-                          priceMinor: {
-                            type: "integer",
-                            minimum: 0,
-                            maximum: 10000000,
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-                { type: "null" },
-              ],
-            },
-            materialQuestions: {
-              type: "array",
-              maxItems: 30,
-              items: {
-                type: "object",
-                additionalProperties: false,
-                required: ["category", "question"],
-                properties: {
-                  category: {
-                    type: "string",
-                    enum: [
-                      "authorization",
-                      "visibility",
-                      "role",
-                      "business-rule",
-                      "data",
-                      "integration",
-                    ],
-                  },
-                  question: { type: "string", minLength: 1, maxLength: 500 },
-                },
-              },
-            },
-          },
-        },
-        approvalDefinitionSelectionJsonSchema,
-        { type: "null" },
-      ],
+      anyOf: [...definitionSelectionJsonSchemas, { type: "null" }],
     },
     generatedInterpretation: {
       anyOf: [interpretationJsonSchema, { type: "null" }],
@@ -1027,40 +786,12 @@ const providerInterpretationResultJsonSchema: Record<string, unknown> = {
   },
 };
 
-function supportedExpenseDefaultGuide() {
-  const { actors, entities, pageIntents, workflows, acceptanceJourneys } =
-    canonicalExpenseApprovalInterpretation().blueprint;
-  return {
-    definitionKey: "expense-approval",
-    actors,
-    entities,
-    pageIntents,
-    workflows,
-    acceptanceJourneys,
-    identity:
-      "Local demo with explicitly selectable employee, manager and finance roles; role-wide reads, no requester-owned record privacy or tenant isolation.",
-    integrations:
-      "No external identity, HR, accounting, notification delivery or real receipt storage integration.",
-  };
-}
-
-const supportedExpenseDefaultInstruction = [
-  "Every Expense Approval brief returns definition-selection with definitionKey expense-approval, generatedInterpretation null and businessParameters null. Do not generate its blueprint or supply fields, pages, permissions or workflows in the selection.",
-  `<supported-expense-default>${JSON.stringify(supportedExpenseDefaultGuide())}</supported-expense-default>`,
-  "A coarse expense submission and manager approval request accepts omitted canonical fields, permissions, page intents and workflow details as supported defaults, with zero materialQuestions. A detailed request is supported-default only when every explicit requirement is compatible with this exact default. A display title and requirementId customize identity text only; neither changes business structure. Use a trimmed safe display title of 2 through 80 characters, a lowercase kebab-case requirementId of at most 128 characters and an outcome of at most 2000 characters.",
-  "The supported workflow is draft to submitted by employee, then approved or rejected by a single manager; finance audits all decisions. Amount, category and date are required; receipt and notes are optional; category options are travel, meals, software, office and other. Employee name is required and department optional. The roles are explicitly selectable demo roles with role-wide reads. Omitted routine details do not require questions.",
-  "Any explicit or ambiguous change to authority, visibility, identity, tenant boundary, fields or requiredness, enum values, workflow or integrations requires needs-clarification with at least one material question. Never discard or approximate an explicit incompatible requirement to select supported-default. Preserve every independent material question in the first response, using only authorization, visibility, role, business-rule, data or integration categories. Keep technical plans, packages, provider setup and credentials out of the questions.",
-  "Multiple approval levels, thresholds or an ambiguous decision owner require a role or business-rule question; missing reviewer read permission or changed decision rights require authorization clarification. Requester-only privacy, requests that each employee sees only their own records, and private multiuser access require visibility or authorization clarification: role-wide demo reads do not satisfy requester-only privacy. External authentication, SSO, tenant isolation or real users require authorization or integration clarification. Changed required fields require data clarification. Withdrawal, reopening, return for edits, resubmission and post-approval changes require business-rule clarification. HR, accounting, external notifications, file upload storage and other external integrations require integration clarification; a receipt placeholder is not real receipt storage.",
-  "For Expense Approval follow-ups, retain needs-clarification for every still-required unsupported capability, even when the user has answered a prior question. Only explicit acceptance of the exact supported scope can resolve an unsupported-scope question; an answer that still demands requester privacy, external identity or different authority/workflow is never supported-default. Never infer acceptance from an answer, omit a material requirement or implement unsupported semantics through title or outcome.",
-].join(" ");
-
 const interpretationInstructions = [
   "You are the Factory Pilot requirement interpreter adapter.",
   "Return only a JSON object matching the provided schema.",
   "For a generated-blueprint result, interpret the brief into a factory.requirement-spec/v1 requirement and a factory.product-blueprint/v1 product blueprint.",
-  "Every Restaurant brief returns definition-selection. Use supported-default only when every explicit requirement fits the supported Restaurant default and no material question remains; use needs-clarification for every genuinely independent material difference, access, privacy, business-rule, data or compliance, external integration, or live payment decision, preserving every material question. Products outside Restaurant and Expense Approval return generated-blueprint.",
-  supportedRestaurantDefaultInstruction,
-  supportedExpenseDefaultInstruction,
+  "Registered products return definition-selection. Use supported-default only when every explicit requirement fits the selected supported default and no material question remains; use needs-clarification for every genuinely independent material difference, access, privacy, business-rule, data or compliance, external integration, or live payment decision, preserving every material question. Products outside the registered supported definitions return generated-blueprint.",
+  ...definitionSelectionInstructions,
   "A generated blueprint proposes business semantics only: actors with entity permissions, entities with typed fields, page intents from the approved enum, workflows with states and transitions, and acceptance journeys.",
   "Never propose routes, URLs, paths, capability or package selections, source, code, providers, or credentials.",
   "Business text must not contain URLs, absolute or Windows paths, traversal segments, or prototype-key material.",
@@ -1069,7 +800,7 @@ const interpretationInstructions = [
   "Consolidate every material clarification into the first response; never ask one question at a time.",
   "For generated-blueprint results, when clarification answers are supplied, treat them as authoritative business input, apply them to the complete spec and blueprint, and mark the corresponding open questions answered.",
   "For generated-blueprint results, clarificationContext contains the original category, question, and user answer for each opaque answer key; use that semantic context and do not ask for the same decision again.",
-  "For generated-blueprint results, when priorInterpretation is supplied, treat it as the validated baseline: revise only semantics affected by the supplied answers, preserve stable identifiers and unaffected actors, entities, fields, workflows, pages, and journeys, and return the complete revised interpretation. For Restaurant follow-ups, reevaluate definition fit and retain needs-clarification for every still-material question or new material difference, even when it resembles an answered question.",
+  "For generated-blueprint results, when priorInterpretation is supplied, treat it as the validated baseline: revise only semantics affected by the supplied answers, preserve stable identifiers and unaffected actors, entities, fields, workflows, pages, and journeys, and return the complete revised interpretation. For registered-definition follow-ups, reevaluate definition fit and retain needs-clarification for every still-material question or new material difference, even when it resembles an answered question.",
   "For generated-blueprint results, do not repeat, rephrase, or progressively reveal additional questions after answers are supplied. Leave only a genuinely new safety-critical ambiguity open; use conventional product defaults for any remaining noncritical detail.",
   "Classify every open question using its narrow Factory category. Use experience.visual-style only for optional aesthetic direction; authorization, visibility, role, business-rule, data, and integration questions are never optional visual preferences.",
   "Every workflow must be internally consistent with the actors and permissions: each transition's from and to must be states declared in the same workflow, the transition's actor must be a declared actor, and that actor's permissions must grant the transition's event as an action on the workflow's entity.",
@@ -1435,10 +1166,7 @@ export class OpenAIRequirementInterpreterAdapter implements RequirementInterpret
           let interpretation: RequirementInterpretationV1;
           try {
             const selection = providerResult.definitionSelection!;
-            interpretation =
-              selection.definitionKey === "expense-approval"
-                ? projectApprovalDefinitionSelection(selection)
-                : projectRestaurantDefinitionSelection(selection);
+            interpretation = projectDefinitionSelection(selection);
           } catch {
             if (round >= MAX_REPAIR_ROUNDS) throw outputFailure();
             repairNote = FIXED_REPAIR_INSTRUCTION;

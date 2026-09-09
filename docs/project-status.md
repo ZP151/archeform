@@ -11,7 +11,50 @@ technical test success alone is insufficient. This uses the existing review,
 preserves valid regression evidence and introduces no additional audit stage.
 Adopting this requirement is not evidence that untested product families pass it.
 
-## Current delivery: D2.4 mobile usability correction
+## Current delivery: B1 reusable definition and material supply
+
+The founder now prioritizes multi-type assembly. The
+[B1 plan](superpowers/plans/2026-09-10-reusable-definition-bank.md) integrates a
+private definition bank into the current provider interpretation path and uses
+Purchase Request approval to prove expansion without a separate application
+renderer. B1 is accepted locally: Restaurant, Expense and Purchase now use one
+private registered selection bank; Expense and Purchase share the same approval
+definition factory. The model selects reviewed semantics; the compiler produces
+runtime source. There are **three canonical selection definitions and two
+consumer runtime families**, not three separate renderer families or a thousand
+delivered applications.
+
+The actual Purchase lane passes create/submit/approve/reject, procurement audit
+API, role/state denials, exact values after reload, and loading/error/empty
+recovery. Ready was **155561 ms**, completion **163345 ms**, with zero questions,
+technical handoffs or in-run rescue. This uses a deterministic selection fixture
+with real immutable delivery/runtime; it does not measure model classification
+or ordinary-user usability. All three roles at 390/768/1440 pass layout/axe;
+four actual screenshots were inspected. A longer role-name sizing defect and
+two test-harness defects were repaired and recorded separately. Full adapter
+184/184, compiler 662/662 plus the focused sizing correction, Workbench 14/14,
+package checks and final Playwright 1/1 pass. Exact Factory/four-Preview cleanup
+is proven and independent review has no P0/P1/P2 findings. See the
+[acceptance record](acceptance/reusable-definition-bank.md) and
+[phone results](acceptance/evidence/consumer-purchase-request/b1-results-390.png).
+
+The [supply shortlist](research/2026-09-10-reusable-assembly-supply.md) covers
+12 public registry, behavior and media candidates with separate license and
+admission status. None is installed or adopted by the research. Track source
+materials, approved assets, authored definitions, runtime families and usable
+applications separately. Expand list/calendar/media supply and additional
+business families only with their applicable acceptance evidence.
+
+Next target: B2 selects a reusable list/calendar/media asset against an actual
+screen gap, followed by B3 Appointment, tasks/inventory and content/directory
+journeys. Prioritize TanStack Table, FullCalendar Standard and reviewed media
+intake from the research; none is adopted yet. Grow 30 detailed definitions,
+then 100 and eventually hundreds/thousands with bounded retrieval and shared
+family regressions. Batch library evidence and automated asset checks instead
+of repeating manual audits per cosmetic variant. H1 identity/access/hosting
+and D2.5 real-model/real-user validation remain separate essential milestones.
+
+## Previous delivery: D2.4 mobile usability correction
 
 The founder's review of `d23-real-results-390.png` rejects its visual quality.
 The earlier business and accessibility checks remain valid within their scope,
